@@ -105,7 +105,10 @@
   function addFlash(f) { if (f > flash) flash = f; }
   function triggerSlowmo() { slowmo = CONFIG.juice.parrySlowmo; }
   function addFloater(x, y, text, big, col) { floaters.push({ x, y, text, life: 0.8, big, col: col || "#000" }); }
-  function spawnSide() { return Math.random() < 0.5 ? 200 : W - 200; }
+  // a varied point in the left or right side band (not the exact same corner each time)
+  function spawnSide() {
+    return Math.random() < 0.5 ? 180 + Math.random() * 240 : (W - 180) - Math.random() * 240;
+  }
   function nearestEnemy(x, y) {
     let best = null, bd = Infinity;
     for (const e of enemies) { if (e.dead) continue; const d = len(e.x - x, e.y - y); if (d < bd) { bd = d; best = e; } }
@@ -285,6 +288,7 @@
       if (spec.type !== "flyer") { const pos = groundSpawn(e.hh); e.x = pos.x; e.y = pos.y; }
     }
     e.hpDisplay = e.hp;
+    e.spawnT = 0.35;   // brief materialize so spawns read as spawns (not teleports)
     enemies.push(e);
   }
 
@@ -302,7 +306,7 @@
   function updateWave(dt) {
     const R = CONFIG.run;
     if (run.spawnQueue.length && enemies.length < R.maxConcurrent) {
-      if (enemies.length === 0 && run.spawnTimer > 0.05) run.spawnTimer = 0.05; // no dead air when the screen empties
+      if (enemies.length === 0 && run.spawnTimer > 0.3) run.spawnTimer = 0.3; // short beat (not an instant pop) when the screen empties
       run.spawnTimer -= dt;
       if (run.spawnTimer <= 0) { spawnOne(run.spawnQueue.shift()); run.spawnTimer = R.spawnInterval; }
     }
@@ -403,7 +407,10 @@
     }
 
     updateWave(dt);
-    for (const e of enemies) e.update(dt, platforms, player, projectiles);
+    for (const e of enemies) {
+      if (e.spawnT > 0) { e.spawnT -= dt; continue; }   // materializing: hold still
+      e.update(dt, platforms, player, projectiles);
+    }
     FX.update(dt);
 
     // held blade vs enemies (slam / launch + hooks)
@@ -552,7 +559,7 @@
 
     // enemy contact damage
     for (const e of enemies) {
-      if (e.dead) continue;
+      if (e.dead || e.spawnT > 0) continue;
       if (aabbOverlap(player.x, player.y, player.hw, player.hh, e.x, e.y, e.hw, e.hh)) {
         if (player.takeDamage(e.contactDmg, e.x)) { loseStyle(); SFX.hurt(); }
       }
@@ -687,7 +694,14 @@
     ctx.fillStyle = "#000";
     for (const p of platforms) ctx.fillRect(p.x, p.y, p.w, p.h);
     for (const e of enemies) {
-      if (e.flash > 0) {   // hit-pop (squash)
+      if (e.spawnT > 0) {   // materializing: telegraph ring + fade in
+        const k = clamp(e.spawnT / 0.35, 0, 1);
+        ctx.strokeStyle = e.color; ctx.lineWidth = 2; ctx.globalAlpha = k;
+        ctx.beginPath(); ctx.arc(e.x, e.y, e.radius + 6 + k * 34, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = 1 - k * 0.65;
+        e.draw(ctx, player);
+        ctx.globalAlpha = 1;
+      } else if (e.flash > 0) {   // hit-pop (squash)
         ctx.save();
         const s = 1 + 0.14 * (e.flash / 0.08);
         ctx.translate(e.x, e.y); ctx.scale(s, s); ctx.translate(-e.x, -e.y);

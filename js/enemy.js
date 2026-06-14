@@ -18,6 +18,7 @@ class Enemy {
     this.contactDmg = cfg.contactDmg;
     this.elite = false;
     this.color = "#000";
+    this.spawnT = 0;       // >0 while materializing (telegraph + can't act)
   }
 
   get radius() { return Math.max(this.hw, this.hh); }
@@ -36,6 +37,7 @@ class Enemy {
   }
 
   integrate(dt, platforms) {
+    this.vx = clamp(this.vx, -1200, 1200);   // safety: knockback can never fling across the map
     this.vy += CONFIG.world.gravity * dt;
     if (this.vy > CONFIG.player.maxFall) this.vy = CONFIG.player.maxFall;
     this.x += this.vx * dt;
