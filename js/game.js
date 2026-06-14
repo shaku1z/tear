@@ -90,7 +90,8 @@
   let state = "menu";
   let player, blade, enemies, projectiles, floaters, hitStop, shake;
   let timeScale = 1, slowmo = 0, zoom = 1, flash = 0, bannerT = 0, dashGhostT = 0; // feel/juice
-  let whooshCd = 0, wasDashing = false; // audio cadence
+  let whooshCd = 0, wasDashing = false, wasOnGround = true; // audio cadence
+  let rankPopT = 0, rankPopText = "";   // style rank-up flash
   let run = null;             // { mode, diff, wave, score, mods, spawnQueue, spawnTimer, waveActive }
   let draftChoices = [];
   let overInfo = null;        // game-over summary
@@ -137,7 +138,11 @@
     run.lastTrick = kind;
     run.combo += pts;
     run.comboTimer = T.decay;
+    const prevRank = run.rank;
     recomputeTrick();
+    if (run.rank && run.rank !== prevRank && run.mult > 1) {   // climbed a tier
+      rankPopT = 1; rankPopText = run.rank; SFX.rankup();
+    }
     if (run.mult > run.wavePeak) run.wavePeak = run.mult;
   }
   function loseStyle() {
@@ -245,20 +250,30 @@
     SFX.wave();
   }
 
+  // ground spawn point: sometimes atop a one-way platform for variety
+  function groundSpawn(hh) {
+    const plats = platforms.filter((p) => p.oneway);
+    if (plats.length && Math.random() < 0.4) {
+      const p = plats[Math.floor(Math.random() * plats.length)];
+      return { x: p.x + 24 + Math.random() * (p.w - 48), y: p.y - hh };
+    }
+    return { x: spawnSide(), y: CONFIG.world.groundY - 80 };
+  }
+
   function spawnOne(spec) {
-    const gy = CONFIG.world.groundY - 80;
     let e;
     switch (spec.type) {
-      case "ranged":  e = new Ranged(spawnSide(), gy); break;
+      case "ranged":  e = new Ranged(0, 0); break;
       case "flyer":   e = new Flyer(spawnSide(), 200); break;
-      case "bomber":  e = new Bomber(spawnSide(), gy); break;
-      case "armored": e = new Armored(spawnSide(), gy); break;
+      case "bomber":  e = new Bomber(0, 0); break;
+      case "armored": e = new Armored(0, 0); break;
       case "boss":    e = new Boss(W / 2, CONFIG.world.groundY - 140); break;
-      default:        e = new Charger(spawnSide(), gy);
+      default:        e = new Charger(0, 0);
     }
     if (spec.type !== "boss") {
       if (spec.elite) e.makeElite();
       if (spec.hpScale) { e.hp *= spec.hpScale; e.maxHp *= spec.hpScale; }
+      if (spec.type !== "flyer") { const pos = groundSpawn(e.hh); e.x = pos.x; e.y = pos.y; }
     }
     enemies.push(e);
   }
@@ -266,7 +281,7 @@
   function bomberBlast(e) {
     const C = CONFIG.bomber;
     FX.ring(e.x, e.y, 14); FX.ring(e.x, e.y, 6); FX.burst(e.x, e.y, 0, -1, 14);
-    addShake(CONFIG.juice.shakeBig); SFX.slam();
+    addShake(CONFIG.juice.shakeBig); SFX.boom();
     dealAoE(e.x, e.y, C.blastRadius, C.blastDmg);
     if (len(player.x - e.x, player.y - e.y) <= C.blastRadius + player.hw) {
       if (player.takeDamage(C.blastDmg, e.x)) { loseStyle(); SFX.hurt(); }
@@ -352,6 +367,14 @@
         }
       }
     } else dashGhostT = 0;
+
+    // landing dust + thud when arriving on the ground from a real fall
+    if (player.onGround && !wasOnGround && player.vy >= 0) {
+      const feet = player.y + player.hh;
+      FX.burst(player.x, feet, 0, -1, 5);
+      SFX.land();
+    }
+    wasOnGround = player.onGround;
 
     if (Input.consumeThrow()) {
       if (blade.state === "held") {
@@ -456,22 +479,29 @@
       if (p.dead || p.deflected || blade.state !== "held") continue;
       if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, p.x, p.y, p.r + 4)) {
         if (blade.tipSpeed >= CONFIG.blade.deflectMinSpeed) {
-          const perfect = blade.tipSpeed >= CONFIG.blade.perfectSpeed;
+          // full counter: swinging straight back at the incoming shot lowers the
+          // perfect-parry threshold (dot of swing dir vs the shot's reverse dir)
+          const psp = len(p.vx, p.vy) || 1, ssp = blade.tipSpeed || 1;
+          const counter = clamp((blade.tipVX / ssp) * (-p.vx / psp) + (blade.tipVY / ssp) * (-p.vy / psp), 0, 1);
+          const effPerfect = CONFIG.blade.perfectSpeed * lerp(1, CONFIG.blade.counterParryFactor, counter);
+          const perfect = blade.tipSpeed >= effPerfect;
+          const fullCounter = perfect && counter > 0.7;
           let dirX = blade.tipVX, dirY = blade.tipVY;
           if (perfect) { const t = nearestEnemy(p.x, p.y); if (t) { dirX = t.x - p.x; dirY = t.y - p.y; } }
           p.deflect(dirX, dirY, blade.tipSpeed, perfect);
           if (run.mods.deflectPierce) { p.pierce = true; p.pierced = new Set(); }
           if (run.mods.deflectSplit) spawnSplitShards(p);
           FX.burst(p.x, p.y, dirX, dirY, perfect ? 12 : 5);
-          addFloater(p.x, p.y - 18, perfect ? "PARRY!" : "deflect", perfect);
+          addFloater(p.x, p.y - 18, fullCounter ? "COUNTER!" : (perfect ? "PARRY!" : "deflect"), perfect);
           hitStop = perfect ? CONFIG.hitStop.big : CONFIG.hitStop.small;
           addShake(perfect ? CONFIG.juice.shakeBig : CONFIG.juice.shakeSmall);
-          if (perfect) SFX.parry(); else SFX.deflect();
+          if (fullCounter) SFX.counter(); else if (perfect) SFX.parry(); else SFX.deflect();
           addStyle(perfect ? "parry" : "deflect");
           if (perfect) {
-            addZoom(CONFIG.juice.zoomParry);
-            addFlash(CONFIG.juice.flashParry);
+            addZoom(fullCounter ? CONFIG.juice.zoomParry * 1.4 : CONFIG.juice.zoomParry);
+            addFlash(fullCounter ? CONFIG.juice.flashParry * 1.3 : CONFIG.juice.flashParry);
             triggerSlowmo();
+            if (fullCounter) FX.ring(p.x, p.y, 10);
             fire(run.mods.onParry, makeEv(p.x, p.y, null));
           }
         }
@@ -544,6 +574,7 @@
       zoom = lerp(zoom, 1, clamp(9 * dt, 0, 1));
       if (flash > 0) flash = Math.max(0, flash - dt * 3.2);
       if (bannerT > 0) bannerT -= dt;
+      if (rankPopT > 0) rankPopT -= dt * 1.2;
 
       if (Input.pausePressed()) { state = "paused"; document.exitPointerLock(); }
       else if (hitStop > 0) { hitStop -= dt; }
@@ -581,6 +612,11 @@
       }
       drawHUD();
       if (state === "playing" && bannerT > 0) drawBanner();
+      if (state === "playing" && rankPopT > 0) {
+        ctx.save(); ctx.globalAlpha = clamp(rankPopT, 0, 1);
+        UI.title(ctx, rankPopText, W / 2, H / 2 - 140, 42 + (1 - clamp(rankPopT, 0, 1)) * 18);
+        ctx.restore();
+      }
     }
     if (state === "playing") drawReticle();
 
@@ -624,8 +660,24 @@
     ctx.translate(-cx, -cy);
     ctx.fillStyle = "#000";
     for (const p of platforms) ctx.fillRect(p.x, p.y, p.w, p.h);
+    const straggler = state === "playing" && run && run.spawnQueue.length === 0 && enemies.length > 0 && enemies.length <= 3;
+    const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 110);
     for (const e of enemies) {
-      e.draw(ctx, player);
+      // straggler marker so the last enemies are always easy to find
+      if (straggler) {
+        ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.globalAlpha = 0.35 + 0.5 * pulse;
+        ctx.beginPath(); ctx.arc(e.x, e.y, e.radius + 16 + pulse * 6, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      if (e.flash > 0) {   // hit-pop (squash)
+        ctx.save();
+        const s = 1 + 0.14 * (e.flash / 0.08);
+        ctx.translate(e.x, e.y); ctx.scale(s, s); ctx.translate(-e.x, -e.y);
+        e.draw(ctx, player);
+        ctx.restore();
+      } else {
+        e.draw(ctx, player);
+      }
       if (e.elite) {
         ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
         ctx.beginPath(); ctx.arc(e.x, e.y, e.radius + 9, 0, Math.PI * 2); ctx.stroke();

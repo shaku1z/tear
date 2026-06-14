@@ -56,6 +56,7 @@ const CONFIG = {
     deflectMinSpeed: 700, // tip speed needed to deflect a projectile
     deflectBoost: 1.25,   // speed multiplier applied to deflected projectiles
     perfectSpeed: 2400,   // tip speed for a PERFECT parry (homing ricochet, bonus dmg)
+    counterParryFactor: 0.55, // perfect-parry threshold multiplier when swinging straight back at the shot
     slamMultiplier: 1.8,  // damage multiplier for a downward airborne slam
     slamMinDownSpeed: 1750, // downward tip speed needed to count as a slam
     launchMinUpSpeed: 1250, // upward tip speed needed to pop an enemy airborne

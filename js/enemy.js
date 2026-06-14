@@ -37,17 +37,27 @@ class Enemy {
     this.vy += CONFIG.world.gravity * dt;
     if (this.vy > CONFIG.player.maxFall) this.vy = CONFIG.player.maxFall;
     this.x += this.vx * dt;
-    this._collideAxis(platforms, true);
+    this._collideAxis(platforms, true, 0);
+    const prevBottom = this.y + this.hh;
     this.y += this.vy * dt;
     this.onGround = false;
-    this._collideAxis(platforms, false);
+    this._collideAxis(platforms, false, prevBottom);
     this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
     if (this.y < this.hh) this.y = this.hh;   // never leave the top of the arena (stay killable)
   }
 
-  _collideAxis(platforms, horizontal) {
+  _collideAxis(platforms, horizontal, prevBottom) {
     for (const p of platforms) {
-      if (p.oneway) continue;   // enemies treat one-way platforms as non-solid
+      if (p.oneway) {
+        // one-way: enemies land on top (from above) but pass through sides/below
+        if (horizontal) continue;
+        const phw = p.w / 2;
+        if (this.vy >= 0 && prevBottom <= p.y + 1.5 &&
+            this.x + this.hw > p.x && this.x - this.hw < p.x + p.w) {
+          this.y = p.y - this.hh; this.vy = 0; this.onGround = true;
+        }
+        continue;
+      }
       const phw = p.w / 2, phh = p.h / 2;
       const pcx = p.x + phw, pcy = p.y + phh;
       if (!aabbOverlap(this.x, this.y, this.hw, this.hh, pcx, pcy, phw, phh)) continue;
