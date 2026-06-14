@@ -21,8 +21,6 @@ class Player {
     this.dashX = 0; this.dashY = 0;
 
     this.moveBoost = 1;         // set by the game (e.g. faster while blade is thrown)
-    this.dropThrough = 0;       // >0 while falling through a one-way platform
-    this.onOneway = false;      // standing on a one-way platform this frame?
   }
 
   get invulnerable() { return this.iframe > 0 || this.dashIframe > 0; }
@@ -36,17 +34,9 @@ class Player {
     if (this.dashIframe > 0) this.dashIframe -= dt;
     if (this.coyote > 0) this.coyote -= dt;
     if (this.jumpBuf > 0) this.jumpBuf -= dt;
-    if (this.dropThrough > 0) this.dropThrough -= dt;
 
     const dirX = (Input.right() ? 1 : 0) - (Input.left() ? 1 : 0);
     if (dirX !== 0) this.facing = dirX;
-
-    // hold S to drop through a one-way platform
-    if (Input.down() && this.onGround && this.onOneway) {
-      this.dropThrough = 0.18;
-      this.onGround = false;
-      this.vy = Math.max(this.vy, 60);
-    }
 
     // ---- dash trigger ----
     if (Input.dashPressed() && this.dashCd <= 0 && this.dashTimer <= 0) {
@@ -103,7 +93,6 @@ class Player {
     this.y += this.vy * dt;
     const wasOnGround = this.onGround;
     this.onGround = false;
-    this.onOneway = false;
     this._collideAxis(platforms, false, prevBottom);
     if (this.onGround) this.coyote = P.coyoteTime;
     else if (wasOnGround) this.coyote = P.coyoteTime;
@@ -121,9 +110,10 @@ class Player {
       if (p.oneway) {
         // one-way: only land on top, when falling and arriving from above
         if (horizontal) continue;
-        if (this.dropThrough > 0) continue;
+        // intentionally going down (hold S, or a downward dash) -> pass through, keep momentum
+        if (Input.down() || (this.dashTimer > 0 && this.dashY > 0)) continue;
         if (this.vy >= 0 && prevBottom <= p.y + 1.5) {
-          this.y = p.y - this.hh; this.vy = 0; this.onGround = true; this.onOneway = true;
+          this.y = p.y - this.hh; this.vy = 0; this.onGround = true;
         }
         continue;
       }
