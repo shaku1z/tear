@@ -31,10 +31,16 @@
   let shakeScale = 1;
   let settings = loadSettings();
   function loadSettings() {
-    try { return Object.assign({ sens: CONFIG.blade.aimSensitivity, shake: 1 }, JSON.parse(localStorage.getItem("tear_settings") || "{}")); }
-    catch (e) { return { sens: CONFIG.blade.aimSensitivity, shake: 1 }; }
+    const def = { sens: CONFIG.blade.aimSensitivity, shake: 1, vol: 0.6, music: true };
+    try { return Object.assign(def, JSON.parse(localStorage.getItem("tear_settings") || "{}")); }
+    catch (e) { return def; }
   }
-  function applySettings() { CONFIG.blade.aimSensitivity = settings.sens; shakeScale = settings.shake; }
+  function applySettings() {
+    CONFIG.blade.aimSensitivity = settings.sens;
+    shakeScale = settings.shake;
+    if (typeof SFX !== "undefined") { SFX.vol = settings.vol; SFX.musicOn = settings.music; SFX.setVol(settings.vol); SFX.setMusic(settings.music); }
+  }
+  if (typeof SFX !== "undefined") SFX.init();
   function saveSettings() { try { localStorage.setItem("tear_settings", JSON.stringify(settings)); } catch (e) {} }
   applySettings();
 
@@ -76,6 +82,7 @@
   let state = "menu";
   let player, blade, enemies, projectiles, floaters, hitStop, shake;
   let timeScale = 1, slowmo = 0, zoom = 1, flash = 0, bannerT = 0, dashGhostT = 0; // feel/juice
+  let whooshCd = 0, wasDashing = false; // audio cadence
   let run = null;             // { mode, diff, wave, score, mods, spawnQueue, spawnTimer, waveActive }
   let draftChoices = [];
   let overInfo = null;        // game-over summary
@@ -200,6 +207,7 @@
     run.waveActive = true;
     run.waveTime = 0; run.waveKills = 0; run.wavePeak = run.mult;
     bannerT = CONFIG.juice.bannerTime;
+    SFX.wave();
   }
 
   function spawnOne(spec) {
@@ -242,6 +250,7 @@
     overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew };
     state = "gameover";
     document.exitPointerLock();
+    SFX.gameover();
   }
 
   // ---- combat step (the PLAYING simulation) ----
@@ -253,6 +262,12 @@
     player.moveBoost = (blade.state !== "held") ? CONFIG.player.thrownMoveBoost : 1;
     player.update(dt, platforms);
     blade.update(dt, player, platforms);
+
+    // audio cadence: dash start + swing whoosh
+    if (player.dashTimer > 0 && !wasDashing) SFX.dash();
+    wasDashing = player.dashTimer > 0;
+    if (whooshCd > 0) whooshCd -= dt;
+    if (blade.state === "held" && blade.tipSpeed > 1000 && whooshCd <= 0) { SFX.swing(blade.tipSpeed); whooshCd = 0.12; }
 
     // dash afterimages (+ Phantom Dash ability damage)
     if (player.dashTimer > 0) {
@@ -273,11 +288,11 @@
 
     if (Input.consumeThrow()) {
       if (blade.state === "held") {
-        if (blade.throwBlade()) { FX.burst(blade.x, blade.y, blade.vx, blade.vy, 6); addShake(CONFIG.juice.shakeSmall); }
+        if (blade.throwBlade()) { FX.burst(blade.x, blade.y, blade.vx, blade.vy, 6); addShake(CONFIG.juice.shakeSmall); SFX.throwBlade(); }
       } else {
         const r = blade.tryRecall(player);
         const hand = blade.handPos(player);
-        if (r === "recalled") { FX.ring(blade.x, blade.y, 8); addShake(CONFIG.juice.shakeSmall); }
+        if (r === "recalled") { FX.ring(blade.x, blade.y, 8); addShake(CONFIG.juice.shakeSmall); SFX.recall(); }
         else if (r === "toofar") addFloater(hand.x, hand.y - 40, "too far", false);
       }
     }
@@ -322,6 +337,7 @@
           hitStop = big ? CONFIG.hitStop.big : CONFIG.hitStop.small;
           addShake(big || isLaunch ? CONFIG.juice.shakeBig : CONFIG.juice.shakeSmall);
           if (big) addZoom(CONFIG.juice.zoomBig);
+          SFX.hit(big); if (isSlam) SFX.slam(); else if (empowered) SFX.uppercut(); else if (isLaunch) SFX.launch();
           addStyle(isSlam ? "slam" : (empowered ? "uppercut" : (isLaunch ? "launch" : "hit")));
           fire(run.mods.onHit, makeEv(cp.px, cp.py, e));
           if (isSlam) fire(run.mods.onSlam, makeEv(e.x, e.y, e));
@@ -370,6 +386,7 @@
           addFloater(p.x, p.y - 18, perfect ? "PARRY!" : "deflect", perfect);
           hitStop = perfect ? CONFIG.hitStop.big : CONFIG.hitStop.small;
           addShake(perfect ? CONFIG.juice.shakeBig : CONFIG.juice.shakeSmall);
+          if (perfect) SFX.parry(); else SFX.deflect();
           addStyle(perfect ? "parry" : "deflect");
           if (perfect) {
             addZoom(CONFIG.juice.zoomParry);
@@ -398,7 +415,7 @@
           }
         }
       } else if (aabbOverlap(p.x, p.y, p.r, p.r, player.x, player.y, player.hw, player.hh)) {
-        if (player.takeDamage(CONFIG.proj.dmg, p.x)) { p.dead = true; loseStyle(); }
+        if (player.takeDamage(CONFIG.proj.dmg, p.x)) { p.dead = true; loseStyle(); SFX.hurt(); }
       }
     }
 
@@ -406,7 +423,7 @@
     for (const e of enemies) {
       if (e.dead) continue;
       if (aabbOverlap(player.x, player.y, player.hw, player.hh, e.x, e.y, e.hw, e.hh)) {
-        if (player.takeDamage(e.cfg.contactDmg, e.x)) loseStyle();
+        if (player.takeDamage(e.cfg.contactDmg, e.x)) { loseStyle(); SFX.hurt(); }
       }
     }
 
@@ -426,6 +443,7 @@
   function onKill(e) {
     addKillScore();
     FX.death(e.x, e.y, CONFIG.juice.deathShards);
+    SFX.death();
     fire(run.mods.onKill, makeEv(e.x, e.y, e));
   }
 
@@ -669,17 +687,26 @@
   }
 
   function renderSettings() {
-    UI.title(ctx, "SETTINGS", W / 2, 140, 40);
-    // mouse sensitivity (used while the mouse is captured)
-    UI.text(ctx, "Mouse sensitivity", W / 2 - 320, 270, 22);
-    UI.text(ctx, settings.sens.toFixed(2), W / 2 + 130, 270, 22, "center");
-    uiButtons.push({ x: W / 2 + 60, y: 248, w: 50, h: 36, label: "-", action: () => { settings.sens = clamp(+(settings.sens - 0.1).toFixed(2), 0.2, 3); applySettings(); saveSettings(); } });
-    uiButtons.push({ x: W / 2 + 200, y: 248, w: 50, h: 36, label: "+", action: () => { settings.sens = clamp(+(settings.sens + 0.1).toFixed(2), 0.2, 3); applySettings(); saveSettings(); } });
-    // screen shake
-    UI.text(ctx, "Screen shake", W / 2 - 320, 340, 22);
-    UI.text(ctx, Math.round(settings.shake * 100) + "%", W / 2 + 130, 340, 22, "center");
-    uiButtons.push({ x: W / 2 + 60, y: 318, w: 50, h: 36, label: "-", action: () => { settings.shake = clamp(+(settings.shake - 0.25).toFixed(2), 0, 2); applySettings(); saveSettings(); } });
-    uiButtons.push({ x: W / 2 + 200, y: 318, w: 50, h: 36, label: "+", action: () => { settings.shake = clamp(+(settings.shake + 0.25).toFixed(2), 0, 2); applySettings(); saveSettings(); } });
+    UI.title(ctx, "SETTINGS", W / 2, 120, 40);
+    const row = (label, valStr, y, dec, inc) => {
+      UI.text(ctx, label, W / 2 - 320, y + 22, 22);
+      UI.text(ctx, valStr, W / 2 + 130, y + 22, 22, "center");
+      uiButtons.push({ x: W / 2 + 60, y, w: 50, h: 36, label: "-", action: dec });
+      uiButtons.push({ x: W / 2 + 200, y, w: 50, h: 36, label: "+", action: inc });
+    };
+    row("Volume", Math.round(settings.vol * 100) + "%", 200,
+      () => { settings.vol = clamp(+(settings.vol - 0.1).toFixed(2), 0, 1); applySettings(); saveSettings(); },
+      () => { settings.vol = clamp(+(settings.vol + 0.1).toFixed(2), 0, 1); applySettings(); saveSettings(); });
+    // music toggle
+    UI.text(ctx, "Music", W / 2 - 320, 292, 22);
+    uiButtons.push({ x: W / 2 + 60, y: 270, w: 190, h: 36, label: settings.music ? "ON" : "OFF",
+      action: () => { settings.music = !settings.music; applySettings(); saveSettings(); } });
+    row("Mouse sensitivity", settings.sens.toFixed(2), 340,
+      () => { settings.sens = clamp(+(settings.sens - 0.1).toFixed(2), 0.2, 3); applySettings(); saveSettings(); },
+      () => { settings.sens = clamp(+(settings.sens + 0.1).toFixed(2), 0.2, 3); applySettings(); saveSettings(); });
+    row("Screen shake", Math.round(settings.shake * 100) + "%", 410,
+      () => { settings.shake = clamp(+(settings.shake - 0.25).toFixed(2), 0, 2); applySettings(); saveSettings(); },
+      () => { settings.shake = clamp(+(settings.shake + 0.25).toFixed(2), 0, 2); applySettings(); saveSettings(); });
     uiButtons.push({ x: W / 2 - 100, y: 600, w: 200, h: 52, label: "BACK", enabled: true, action: () => { state = "menu"; } });
   }
 
@@ -805,10 +832,10 @@
       if (Input.pressed.has("Digit3")) return chooseUpgrade(2);
     }
 
-    if (Input.confirmPressed()) { const b = uiButtons[focus]; if (b && b.enabled !== false) { b.action(); return; } }
+    if (Input.confirmPressed()) { const b = uiButtons[focus]; if (b && b.enabled !== false) { SFX.ui(); b.action(); return; } }
 
     const c = Input.takeClick();
-    if (c) for (const b of uiButtons) { if (b.enabled !== false && UI.pointIn(b, c.x, c.y)) { b.action(); break; } }
+    if (c) for (const b of uiButtons) { if (b.enabled !== false && UI.pointIn(b, c.x, c.y)) { SFX.ui(); b.action(); break; } }
   }
 
   requestAnimationFrame(frame);
