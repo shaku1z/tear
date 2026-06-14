@@ -16,6 +16,7 @@ class Enemy {
     this.speedMult = 1;
     this.contactDmg = cfg.contactDmg;
     this.elite = false;
+    this.color = "#000";
   }
 
   get radius() { return Math.max(this.hw, this.hh); }
@@ -49,10 +50,11 @@ class Enemy {
   _collideAxis(platforms, horizontal, prevBottom) {
     for (const p of platforms) {
       if (p.oneway) {
-        // one-way: enemies land on top (from above) but pass through sides/below
+        // one-way: land only when actually crossing THIS platform's top from above
+        // (must be above last frame AND at/through the top now) — prevents snapping
+        // down onto a lower platform that merely overlaps in x.
         if (horizontal) continue;
-        const phw = p.w / 2;
-        if (this.vy >= 0 && prevBottom <= p.y + 1.5 &&
+        if (this.vy >= 0 && prevBottom <= p.y + 1.5 && this.y + this.hh >= p.y &&
             this.x + this.hw > p.x && this.x - this.hw < p.x + p.w) {
           this.y = p.y - this.hh; this.vy = 0; this.onGround = true;
         }
@@ -107,7 +109,7 @@ class Enemy {
 
 // ---- Charger: melee rusher ----
 class Charger extends Enemy {
-  constructor(x, y) { super(x, y, CONFIG.enemy); }
+  constructor(x, y) { super(x, y, CONFIG.enemy); this.color = CONFIG.colors.charger; }
   update(dt, platforms, player) {
     this.tickTimers(dt);
     const dir = Math.sign(player.x - this.x) || 1;
@@ -116,15 +118,12 @@ class Charger extends Enemy {
   }
   draw(ctx) {
     const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2;
-    if (this.flash > 0) {
-      ctx.fillStyle = "#fff"; ctx.fillRect(x, y, w, h);
-      ctx.strokeStyle = "#000"; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h);
-    } else {
-      ctx.fillStyle = "#000"; ctx.fillRect(x, y, w, h);
-      ctx.fillStyle = "#fff";
-      const dir = Math.sign(this.vx) || 1;
-      ctx.fillRect(this.x + dir * 7 - 3, y + 11, 6, 6);
-    }
+    ctx.fillStyle = this.flash > 0 ? "#fff" : this.color;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h);
+    ctx.fillStyle = "#fff";
+    const dir = Math.sign(this.vx) || 1;
+    ctx.fillRect(this.x + dir * 7 - 3, y + 11, 6, 6);
     this.drawHpBar(ctx);
   }
 }
@@ -133,6 +132,7 @@ class Charger extends Enemy {
 class Ranged extends Enemy {
   constructor(x, y) {
     super(x, y, CONFIG.ranged);
+    this.color = CONFIG.colors.ranged;
     this.state = "kite";
     this.aimTimer = this.cfg.aimInterval * (0.4 + Math.random() * 0.6);
     this.windT = 0;
@@ -161,8 +161,8 @@ class Ranged extends Enemy {
     ctx.moveTo(this.x, this.y - r); ctx.lineTo(this.x + r, this.y);
     ctx.lineTo(this.x, this.y + r); ctx.lineTo(this.x - r, this.y);
     ctx.closePath();
-    if (this.flash > 0) { ctx.fillStyle = "#fff"; ctx.fill(); ctx.strokeStyle = "#000"; ctx.lineWidth = 3; ctx.stroke(); }
-    else { ctx.fillStyle = "#000"; ctx.fill(); }
+    ctx.fillStyle = this.flash > 0 ? "#fff" : this.color; ctx.fill();
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 2.5; ctx.stroke();
     if (this.state === "windup" && player) {
       const k = 1 - clamp(this.windT / this.cfg.windup, 0, 1);
       const dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
@@ -179,6 +179,7 @@ class Ranged extends Enemy {
 class Flyer extends Enemy {
   constructor(x, y) {
     super(x, y, CONFIG.flyer);
+    this.color = CONFIG.colors.flyer;
     this.state = "hover";
     this.aimTimer = this.cfg.swoopInterval * (0.5 + Math.random() * 0.6);
     this.swoopT = 0;
@@ -209,7 +210,7 @@ class Flyer extends Enemy {
   }
   draw(ctx) {
     const dir = Math.sign(this.vx) || 1, r = this.hw + 3;
-    ctx.fillStyle = this.flash > 0 ? "#fff" : "#000";
+    ctx.fillStyle = this.flash > 0 ? "#fff" : this.color;
     ctx.beginPath();
     ctx.moveTo(this.x + dir * r, this.y);
     ctx.lineTo(this.x - dir * r, this.y - this.hh);
@@ -217,7 +218,7 @@ class Flyer extends Enemy {
     ctx.lineTo(this.x - dir * r, this.y + this.hh);
     ctx.closePath();
     ctx.fill();
-    if (this.flash > 0) { ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke(); }
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke();
     this.drawHpBar(ctx);
   }
 }
@@ -226,6 +227,7 @@ class Flyer extends Enemy {
 class Bomber extends Enemy {
   constructor(x, y) {
     super(x, y, CONFIG.bomber);
+    this.color = CONFIG.colors.bomber;
     this.isBomber = true;
     this.armed = false;
     this.fuse = 0;
@@ -241,14 +243,14 @@ class Bomber extends Enemy {
     if (this.armed) { this.fuse -= dt; if (this.fuse <= 0) this.dead = true; }  // -> game triggers blast
   }
   draw(ctx) {
-    ctx.fillStyle = this.flash > 0 ? "#fff" : "#000";
+    ctx.fillStyle = this.flash > 0 ? "#fff" : this.color;
     ctx.beginPath(); ctx.arc(this.x, this.y, this.hw, 0, Math.PI * 2); ctx.fill();
-    if (this.flash > 0) { ctx.strokeStyle = "#000"; ctx.lineWidth = 3; ctx.stroke(); }
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 3; ctx.stroke();
     // fuse spark on top
     ctx.fillStyle = "#000"; ctx.fillRect(this.x - 2, this.y - this.hh - 8, 4, 8);
     if (this.armed) {
       const k = 1 - clamp(this.fuse / this.cfg.fuse, 0, 1);
-      ctx.strokeStyle = "#000"; ctx.lineWidth = 2 + k * 2;
+      ctx.strokeStyle = this.color; ctx.lineWidth = 2 + k * 3;
       ctx.beginPath(); ctx.arc(this.x, this.y, this.hw + 6 + k * 10, 0, Math.PI * 2); ctx.stroke();
     }
     this.drawHpBar(ctx);
@@ -257,7 +259,7 @@ class Bomber extends Enemy {
 
 // ---- Armored: shielded on the side it faces; needs a fast hit or a flank ----
 class Armored extends Enemy {
-  constructor(x, y) { super(x, y, CONFIG.armored); this.guardSide = 1; }
+  constructor(x, y) { super(x, y, CONFIG.armored); this.guardSide = 1; this.color = CONFIG.colors.armored; }
   update(dt, platforms, player) {
     this.tickTimers(dt);
     this.guardSide = Math.sign(player.x - this.x) || 1;
@@ -275,19 +277,19 @@ class Armored extends Enemy {
   draw(ctx) {
     const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2;
     const vulnerable = !this.onGround;   // launched -> takes full/extra damage
-    ctx.fillStyle = this.flash > 0 ? "#fff" : (this.stun > 0 ? "#888" : "#000");
+    ctx.fillStyle = this.flash > 0 ? "#fff" : (this.stun > 0 ? "#9aa6b2" : this.color);
     ctx.fillRect(x, y, w, h);
     ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h);
     // vulnerable (airborne) -> dashed double outline so it reads as "hit me now"
     if (vulnerable && this.stun <= 0) {
-      ctx.setLineDash([5, 4]); ctx.strokeRect(x - 4, y - 4, w + 8, h + 8); ctx.setLineDash([]);
+      ctx.strokeStyle = CONFIG.colors.slam;
+      ctx.setLineDash([5, 4]); ctx.lineWidth = 2; ctx.strokeRect(x - 4, y - 4, w + 8, h + 8); ctx.setLineDash([]);
     }
-    // bold shield: a thick offset bar with a gap on the guarded side
+    // bold cyan shield: a thick offset bar with prongs on the guarded side
     if (this.stun <= 0) {
       const gx = this.x + this.guardSide * (this.hw + 9);
-      ctx.fillStyle = "#000";
+      ctx.fillStyle = CONFIG.colors.armoredShield;
       ctx.fillRect(gx - 4, y - 6, 8, h + 12);
-      // little prongs
       ctx.fillRect(gx - this.guardSide * 6 - 1, y - 6, this.guardSide * 7, 5);
       ctx.fillRect(gx - this.guardSide * 6 - 1, y + h + 1, this.guardSide * 7, 5);
     }
@@ -299,6 +301,7 @@ class Armored extends Enemy {
 class Boss extends Enemy {
   constructor(x, y) {
     super(x, y, CONFIG.boss);
+    this.color = CONFIG.colors.boss;
     this.isBoss = true;
     this.fireTimer = 2;
   }
@@ -322,7 +325,7 @@ class Boss extends Enemy {
   }
   draw(ctx) {
     const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2;
-    ctx.fillStyle = this.flash > 0 ? "#fff" : "#000";
+    ctx.fillStyle = this.flash > 0 ? "#fff" : this.color;
     ctx.fillRect(x, y, w, h);
     ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.strokeRect(x, y, w, h);
     // eye + phase pips

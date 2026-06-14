@@ -1,44 +1,45 @@
-// ------- lightweight black-on-white FX: sparks + shockwave rings -------
+// ------- lightweight FX: sparks + shockwave rings + shards (color-aware) -------
 const FX = {
   list: [],
 
   reset() { this.list.length = 0; },
 
-  spark(x, y, dirX, dirY) {
+  spark(x, y, dirX, dirY, col) {
     const a = Math.atan2(dirY, dirX) + (Math.random() - 0.5) * 1.3;
     const sp = 220 + Math.random() * 460;
     this.list.push({
       type: "spark", x, y,
       vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+      col: col || "#000",
       life: 0.22 + Math.random() * 0.12, max: 0.34,
     });
   },
 
-  burst(x, y, dirX, dirY, n) {
-    for (let i = 0; i < n; i++) this.spark(x, y, dirX, dirY);
+  burst(x, y, dirX, dirY, n, col) {
+    for (let i = 0; i < n; i++) this.spark(x, y, dirX, dirY, col);
   },
 
-  ring(x, y, r0) {
-    this.list.push({ type: "ring", x, y, r: r0 || 6, life: 0.32, max: 0.32 });
+  ring(x, y, r0, col) {
+    this.list.push({ type: "ring", x, y, r: r0 || 6, col: col || "#000", life: 0.32, max: 0.32 });
   },
 
   // a spinning shard (used for enemy death shatter)
-  shard(x, y) {
+  shard(x, y, col) {
     const a = Math.random() * Math.PI * 2;
     const sp = 160 + Math.random() * 460;
     this.list.push({
       type: "shard", x, y,
       vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 120,
       rot: Math.random() * Math.PI, spin: (Math.random() - 0.5) * 18,
-      size: 5 + Math.random() * 7,
+      size: 5 + Math.random() * 7, col: col || "#000",
       life: 0.4 + Math.random() * 0.25, max: 0.65,
     });
   },
 
-  death(x, y, n) {
-    for (let i = 0; i < (n || 11); i++) this.shard(x, y);
-    this.ring(x, y, 10);
-    this.ring(x, y, 4);
+  death(x, y, n, col) {
+    for (let i = 0; i < (n || 11); i++) this.shard(x, y, col);
+    this.ring(x, y, 10, col);
+    this.ring(x, y, 4, col);
   },
 
   // a fading silhouette (dash afterimage)
@@ -70,14 +71,16 @@ const FX = {
     for (const p of this.list) {
       const a = clamp(p.life / p.max, 0, 1);
       ctx.globalAlpha = a;
-      ctx.strokeStyle = "#000";
+      const col = p.col || "#000";
       if (p.type === "spark") {
+        ctx.strokeStyle = col;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(p.x, p.y);
         ctx.lineTo(p.x - p.vx * 0.018, p.y - p.vy * 0.018);
         ctx.stroke();
       } else if (p.type === "ring") {
+        ctx.strokeStyle = col;
         ctx.lineWidth = 3 * a;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
@@ -86,7 +89,7 @@ const FX = {
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rot);
-        ctx.fillStyle = "#000";
+        ctx.fillStyle = col;
         const s = p.size;
         ctx.beginPath();
         ctx.moveTo(0, -s); ctx.lineTo(s * 0.7, s * 0.6); ctx.lineTo(-s * 0.7, s * 0.6);

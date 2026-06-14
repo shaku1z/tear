@@ -52,13 +52,16 @@ class Projectile {
   }
 
   draw(ctx) {
-    ctx.fillStyle = "#000";
+    const C = CONFIG.colors;
+    const col = this.deflected ? (this.perfect ? C.perfect : C.deflected) : C.enemyShot;
+    ctx.fillStyle = col;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.stroke();
     if (this.deflected) {
       // ring to show it's now yours (double ring if a perfect parry)
-      ctx.strokeStyle = "#000";
+      ctx.strokeStyle = col;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.r + 5, 0, Math.PI * 2);

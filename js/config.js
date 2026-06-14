@@ -135,6 +135,21 @@ const CONFIG = {
 
   proj: { r: 9, dmg: 10, speed: 540 },
 
+  // accent palette — player stays black on white; enemies/shots/FX carry the color
+  colors: {
+    charger: "#e23b3b",        // red
+    ranged: "#2f6df0",         // blue
+    flyer: "#8b3bd6",          // purple
+    bomber: "#ef8a17",         // orange
+    armored: "#3a4654",        // slate
+    armoredShield: "#15c2c2",  // cyan
+    boss: "#b01030",           // crimson
+    enemyShot: "#e23b3b",      // incoming projectile
+    deflected: "#1faf5a",      // your reflected projectile (green)
+    perfect: "#13c4d6",        // perfect parry / counter (cyan)
+    slam: "#ef8a17",           // slam impact (orange)
+  },
+
   hitStop: { threshold: 22, big: 0.07, small: 0.025 }, // freeze-frame on impact
 
   // ---- run / wave pacing (endless mode) ----
@@ -183,5 +198,7 @@ const CONFIG = {
       blurb: "Clear 8 waves, then face the boss." },
     { id: "gauntlet", label: "Endless + Bosses",   enabled: false,
       blurb: "Endless, with a boss every few waves. (Coming soon)" },
+    { id: "bossonly", label: "Boss Test",          enabled: true, bossOnly: true,
+      blurb: "Fight the boss right away (testing)." },
   ],
 };

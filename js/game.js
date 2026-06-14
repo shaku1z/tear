@@ -104,7 +104,7 @@
   function addZoom(p) { if (1 + p > zoom) zoom = 1 + p; }
   function addFlash(f) { if (f > flash) flash = f; }
   function triggerSlowmo() { slowmo = CONFIG.juice.parrySlowmo; }
-  function addFloater(x, y, text, big) { floaters.push({ x, y, text, life: 0.8, big }); }
+  function addFloater(x, y, text, big, col) { floaters.push({ x, y, text, life: 0.8, big, col: col || "#000" }); }
   function spawnSide() { return Math.random() < 0.5 ? 200 : W - 200; }
   function nearestEnemy(x, y) {
     let best = null, bd = Infinity;
@@ -119,9 +119,9 @@
       if (e.dead) continue;
       if (len(e.x - cx, e.y - cy) <= radius + e.radius) {
         e.hit(dmg, e.x - cx, e.y - cy);
-        FX.burst(e.x, e.y, e.x - cx, e.y - cy, 5);
+        FX.burst(e.x, e.y, e.x - cx, e.y - cy, 5, e.color);
         addFloater(e.x, e.y - 24, Math.round(dmg).toString(), false);
-        if (e.dead) { addKillScore(); FX.death(e.x, e.y, CONFIG.juice.deathShards); }
+        if (e.dead) { addKillScore(); FX.death(e.x, e.y, CONFIG.juice.deathShards, e.color); }
       }
     }
   }
@@ -166,6 +166,14 @@
   function fmtTime(s) {
     const m = Math.floor(s / 60), ss = Math.floor(s % 60);
     return m + ":" + String(ss).padStart(2, "0");
+  }
+  function trickColor(mult) {
+    const C = CONFIG.colors;
+    if (mult >= 5) return C.perfect;
+    if (mult >= 4) return C.charger;
+    if (mult >= 3) return C.bomber;
+    if (mult >= 2) return "#caa520";
+    return "#888";
   }
   // Scatter Parry: split a deflected shot into 3 weaker, bouncing shards
   // (speed is capped so the shards stay readable instead of pinballing wildly)
@@ -228,8 +236,9 @@
   function startNextWave() {
     run.wave++;
     const R = CONFIG.run;
+    const m = CONFIG.modes.find((x) => x.id === run.mode);
     const total = modeWaves(run.mode);
-    run.isBossWave = total > 0 && run.wave > total;
+    run.isBossWave = (m && m.bossOnly) || (total > 0 && run.wave > total);
     run.spawnQueue = [];
     if (run.isBossWave) {
       run.spawnQueue.push({ type: "boss" });
@@ -280,7 +289,8 @@
 
   function bomberBlast(e) {
     const C = CONFIG.bomber;
-    FX.ring(e.x, e.y, 14); FX.ring(e.x, e.y, 6); FX.burst(e.x, e.y, 0, -1, 14);
+    FX.ring(e.x, e.y, 14, CONFIG.colors.bomber); FX.ring(e.x, e.y, 6, CONFIG.colors.bomber);
+    FX.burst(e.x, e.y, 0, -1, 14, CONFIG.colors.bomber);
     addShake(CONFIG.juice.shakeBig); SFX.boom();
     dealAoE(e.x, e.y, C.blastRadius, C.blastDmg);
     if (len(player.x - e.x, player.y - e.y) <= C.blastRadius + player.hw) {
@@ -404,8 +414,8 @@
           // armored: blocked unless the hit is fast enough / from the flank
           if (e.blocks(blade.tipX, blade.tipSpeed)) {
             const cp = segPointDist(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y);
-            FX.burst(cp.px, cp.py, e.x - blade.tipX, e.y - blade.tipY, 5);
-            addFloater(e.x, e.y - 26, "block", false);
+            FX.burst(cp.px, cp.py, e.x - blade.tipX, e.y - blade.tipY, 5, CONFIG.colors.armoredShield);
+            addFloater(e.x, e.y - 26, "block", false, CONFIG.colors.armoredShield);
             e.hitCd = 0.12; hitStop = CONFIG.hitStop.small; SFX.deflect();
             continue;
           }
@@ -436,8 +446,8 @@
             FX.ring(e.x, e.y, 12);
           }
           const cp = segPointDist(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y);
-          FX.burst(cp.px, cp.py, blade.tipVX, blade.tipVY, CONFIG.juice.sparkCount);
-          if (isSlam || empowered) FX.ring(e.x, e.y, 8);
+          FX.burst(cp.px, cp.py, blade.tipVX, blade.tipVY, CONFIG.juice.sparkCount, e.color);
+          if (isSlam || empowered) FX.ring(e.x, e.y, 8, CONFIG.colors.slam);
           const tag = isSlam ? "!" : (isLaunch ? (empowered ? "⇈" : "↑") : "");
           addFloater(e.x, e.y - 26, Math.round(dmg) + tag, big || isLaunch);
           hitStop = big ? CONFIG.hitStop.big : CONFIG.hitStop.small;
@@ -468,7 +478,7 @@
             const s = 1 + run.mods.throwRamp;
             blade.throwDmg *= s; blade.vx *= s; blade.vy *= s;
           }
-          FX.burst(e.x, e.y, blade.vx, blade.vy, CONFIG.juice.sparkCount);
+          FX.burst(e.x, e.y, blade.vx, blade.vy, CONFIG.juice.sparkCount, e.color);
           addFloater(e.x, e.y - 26, Math.round(tdmg).toString(), true);
           hitStop = CONFIG.hitStop.small; addShake(CONFIG.juice.shakeSmall);
           addStyle("throwHit");
@@ -495,8 +505,9 @@
           p.deflect(dirX, dirY, blade.tipSpeed, perfect);
           if (run.mods.deflectPierce) { p.pierce = true; p.pierced = new Set(); }
           if (run.mods.deflectSplit) spawnSplitShards(p);
-          FX.burst(p.x, p.y, dirX, dirY, perfect ? 12 : 5);
-          addFloater(p.x, p.y - 18, fullCounter ? "COUNTER!" : (perfect ? "PARRY!" : "deflect"), perfect);
+          const pcol = perfect ? CONFIG.colors.perfect : CONFIG.colors.deflected;
+          FX.burst(p.x, p.y, dirX, dirY, perfect ? 12 : 5, pcol);
+          addFloater(p.x, p.y - 18, fullCounter ? "COUNTER!" : (perfect ? "PARRY!" : "deflect"), perfect, pcol);
           hitStop = perfect ? CONFIG.hitStop.big : CONFIG.hitStop.small;
           addShake(perfect ? CONFIG.juice.shakeBig : CONFIG.juice.shakeSmall);
           if (fullCounter) SFX.counter(); else if (perfect) SFX.parry(); else SFX.deflect();
@@ -505,7 +516,7 @@
             addZoom(fullCounter ? CONFIG.juice.zoomParry * 1.4 : CONFIG.juice.zoomParry);
             addFlash(fullCounter ? CONFIG.juice.flashParry * 1.3 : CONFIG.juice.flashParry);
             triggerSlowmo();
-            if (fullCounter) FX.ring(p.x, p.y, 10);
+            if (fullCounter) FX.ring(p.x, p.y, 10, CONFIG.colors.perfect);
             fire(run.mods.onParry, makeEv(p.x, p.y, null));
           }
         }
@@ -521,7 +532,7 @@
           if (p.pierce && p.pierced.has(e)) continue;
           if (len(p.x - e.x, p.y - e.y) <= p.r + e.radius) {
             e.hit(p.deflectDmg, p.vx, p.vy);
-            FX.burst(p.x, p.y, p.vx, p.vy, CONFIG.juice.sparkCount);
+            FX.burst(p.x, p.y, p.vx, p.vy, CONFIG.juice.sparkCount, CONFIG.colors.deflected);
             addFloater(e.x, e.y - 26, Math.round(p.deflectDmg).toString(), p.perfect);
             addShake(p.perfect ? CONFIG.juice.shakeBig : CONFIG.juice.shakeSmall);
             if (e.dead) onKill(e);
@@ -559,7 +570,7 @@
 
   function onKill(e) {
     addKillScore();
-    FX.death(e.x, e.y, CONFIG.juice.deathShards);
+    FX.death(e.x, e.y, CONFIG.juice.deathShards, e.color);
     SFX.death();
     fire(run.mods.onKill, makeEv(e.x, e.y, e));
   }
@@ -618,7 +629,9 @@
       if (state === "playing" && bannerT > 0) drawBanner();
       if (state === "playing" && rankPopT > 0) {
         ctx.save(); ctx.globalAlpha = clamp(rankPopT, 0, 1);
-        UI.title(ctx, rankPopText, W / 2, H / 2 - 140, 42 + (1 - clamp(rankPopT, 0, 1)) * 18);
+        ctx.fillStyle = trickColor(run.mult); ctx.textAlign = "center";
+        ctx.font = UI.font(42 + (1 - clamp(rankPopT, 0, 1)) * 18, true);
+        ctx.fillText(rankPopText, W / 2, H / 2 - 140);
         ctx.restore();
       }
     }
@@ -687,7 +700,7 @@
     ctx.textAlign = "center";
     for (const f of floaters) {
       ctx.globalAlpha = clamp(f.life / 0.8, 0, 1);
-      ctx.fillStyle = "#000";
+      ctx.fillStyle = f.col || "#000";
       const age = 0.8 - f.life;                       // pop: big at spawn, settle quickly
       const pop = age < 0.12 ? lerp(1.5, 1, age / 0.12) : 1;
       const base = f.big ? 26 : 16;
@@ -725,13 +738,14 @@
     UI.text(ctx, "SCORE " + run.score + "    enemies left: " + remaining + "    " + fmtTime(run.runTime),
       W / 2, 64, 15, "center", 0.8);
 
-    // trick meter (centered)
+    // trick meter (centered, colored by tier)
     if (run.mult > 1) {
-      ctx.fillStyle = "#000"; ctx.font = UI.font(22, true); ctx.textAlign = "center";
+      const tc = trickColor(run.mult);
+      ctx.fillStyle = tc; ctx.font = UI.font(22, true); ctx.textAlign = "center";
       ctx.fillText("x" + run.mult + (run.rank ? "  " + run.rank : ""), W / 2, 96);
       const bw2 = 220, bx = W / 2 - bw2 / 2, by = 104;
       ctx.lineWidth = 1.5; ctx.strokeStyle = "#000"; ctx.strokeRect(bx, by, bw2, 6);
-      ctx.fillStyle = "#000"; ctx.fillRect(bx, by, bw2 * clamp(run.comboTimer / CONFIG.trick.decay, 0, 1), 6);
+      ctx.fillStyle = tc; ctx.fillRect(bx, by, bw2 * clamp(run.comboTimer / CONFIG.trick.decay, 0, 1), 6);
     }
     ctx.textAlign = "left";
 
