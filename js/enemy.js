@@ -20,7 +20,8 @@ class Enemy {
 
   get radius() { return Math.max(this.hw, this.hh); }
   get speed() { return this.cfg.speed * this.speedMult; }
-  blocks() { return false; }   // armored overrides
+  blocks() { return false; }            // armored overrides
+  damageTakenMult() { return 1; }       // armored overrides (ground vs air)
 
   // turn this into a tougher elite variant
   makeElite() {
@@ -259,16 +260,25 @@ class Armored extends Enemy {
     const side = Math.sign(hitFromX - this.x) || 1;
     return side === this.guardSide && tipSpeed < this.cfg.breakSpeed;
   }
+  damageTakenMult() { return this.onGround ? CONFIG.armored.groundDR : CONFIG.armored.airDR; }
   draw(ctx) {
     const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2;
+    const vulnerable = !this.onGround;   // launched -> takes full/extra damage
     ctx.fillStyle = this.flash > 0 ? "#fff" : (this.stun > 0 ? "#888" : "#000");
     ctx.fillRect(x, y, w, h);
     ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h);
-    // shield arc on the guarded side
+    // vulnerable (airborne) -> dashed double outline so it reads as "hit me now"
+    if (vulnerable && this.stun <= 0) {
+      ctx.setLineDash([5, 4]); ctx.strokeRect(x - 4, y - 4, w + 8, h + 8); ctx.setLineDash([]);
+    }
+    // bold shield: a thick offset bar with a gap on the guarded side
     if (this.stun <= 0) {
-      ctx.strokeStyle = "#000"; ctx.lineWidth = 6;
-      const gx = this.x + this.guardSide * (this.hw + 4);
-      ctx.beginPath(); ctx.moveTo(gx, y - 2); ctx.lineTo(gx, y + h + 2); ctx.stroke();
+      const gx = this.x + this.guardSide * (this.hw + 9);
+      ctx.fillStyle = "#000";
+      ctx.fillRect(gx - 4, y - 6, 8, h + 12);
+      // little prongs
+      ctx.fillRect(gx - this.guardSide * 6 - 1, y - 6, this.guardSide * 7, 5);
+      ctx.fillRect(gx - this.guardSide * 6 - 1, y + h + 1, this.guardSide * 7, 5);
     }
     this.drawHpBar(ctx);
   }

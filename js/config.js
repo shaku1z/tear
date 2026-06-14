@@ -3,11 +3,11 @@
 //  All units are pixels and seconds unless noted.
 // ============================================================
 const CONFIG = {
-  view: { w: 1280, h: 720 },
+  view: { w: 1600, h: 900 },
 
   world: {
     gravity: 2400,        // downward accel on player/enemies
-    groundY: 640,         // top surface of the floor
+    groundY: 800,         // top surface of the floor
   },
 
   player: {
@@ -120,11 +120,12 @@ const CONFIG = {
   },
 
   // flyer: hovers and swoops, ignores gravity/platforms
-  flyer: { w: 36, h: 26, hp: 32, speed: 230, contactDmg: 10, knockbackTaken: 14, swoopInterval: 2.2, swoopSpeed: 700, hoverY: 150 },
+  flyer: { w: 36, h: 26, hp: 32, speed: 230, contactDmg: 10, knockbackTaken: 14, swoopInterval: 3.3, swoopSpeed: 700, hoverY: 150 },
   // bomber: rushes and detonates on a fuse or on death
-  bomber: { w: 34, h: 34, hp: 28, speed: 180, contactDmg: 0, knockbackTaken: 11, triggerDist: 150, fuse: 0.85, blastRadius: 125, blastDmg: 26 },
-  // armored: shielded on the side it faces; needs a fast hit or a flank
-  armored: { w: 46, h: 46, hp: 110, speed: 95, contactDmg: 14, knockbackTaken: 3, breakSpeed: 1500 },
+  bomber: { w: 34, h: 34, hp: 28, speed: 180, contactDmg: 0, knockbackTaken: 11, triggerDist: 150, fuse: 0.85, blastRadius: 165, blastDmg: 26 },
+  // armored: shielded on the side it faces; takes reduced damage on the ground,
+  // normal/extra in the air -> you must launch ("updraft") it to kill efficiently
+  armored: { w: 46, h: 46, hp: 110, speed: 95, contactDmg: 14, knockbackTaken: 3, breakSpeed: 1500, groundDR: 0.5, airDR: 1.15 },
   // boss: large, multi-phase
   boss: { w: 118, h: 118, hp: 1500, speed: 70, contactDmg: 20, knockbackTaken: 0.6, fireBase: 2.0 },
 

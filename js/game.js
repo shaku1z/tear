@@ -41,6 +41,12 @@
     if (typeof SFX !== "undefined") { SFX.vol = settings.vol; SFX.musicOn = settings.music; SFX.setVol(settings.vol); SFX.setMusic(settings.music); }
   }
   if (typeof SFX !== "undefined") SFX.init();
+  META.load();
+  function awardCoins(score) {
+    const earned = Math.floor(score * 0.05 * (1 + 0.15 * META.level("greed")));
+    META.addCoins(earned);
+    return earned;
+  }
   function saveSettings() { try { localStorage.setItem("tear_settings", JSON.stringify(settings)); } catch (e) {} }
   applySettings();
 
@@ -73,9 +79,11 @@
   // ---- world geometry ----
   const platforms = [
     { x: 0, y: CONFIG.world.groundY, w: W, h: H - CONFIG.world.groundY },  // solid floor
-    { x: 180, y: 470, w: 240, h: 24, oneway: true },
-    { x: 860, y: 470, w: 240, h: 24, oneway: true },
-    { x: 520, y: 300, w: 240, h: 24, oneway: true },
+    { x: 230, y: 650, w: 280, h: 24, oneway: true },
+    { x: 1090, y: 650, w: 280, h: 24, oneway: true },
+    { x: 640, y: 500, w: 320, h: 24, oneway: true },
+    { x: 150, y: 360, w: 250, h: 24, oneway: true },
+    { x: 1200, y: 360, w: 250, h: 24, oneway: true },
   ];
 
   // ---- state ----
@@ -188,6 +196,7 @@
       runTime: 0, waveTime: 0, waveKills: 0, wavePeak: 1, waveLog: [],
       combo: 0, comboTimer: 0, mult: 1, rank: "", lastTrick: "",
     };
+    META.apply({ player, blade, mods: run.mods });
     startNextWave();
     state = "playing";
     requestLock();
@@ -291,7 +300,8 @@
     if (run.waveActive) run.waveLog.push({ wave: run.wave, time: run.waveTime, kills: run.waveKills, peak: run.wavePeak, died: true });
     const best = getBest(run.mode, run.diff);
     const isNew = saveBest(run.mode, run.diff, run.wave, run.score);
-    overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew };
+    const earned = awardCoins(run.score);
+    overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, earned, coins: META.coins() };
     state = "gameover";
     document.exitPointerLock();
     SFX.gameover();
@@ -299,7 +309,8 @@
 
   function winRun() {
     const isNew = saveBest(run.mode, run.diff, run.wave, run.score);
-    overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, win: true };
+    const earned = awardCoins(run.score);
+    overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, win: true, earned, coins: META.coins() };
     state = "win";
     document.exitPointerLock();
     SFX.wave();
@@ -377,6 +388,7 @@
           let dmg = baseDmg * (isSlam ? CONFIG.blade.slamMultiplier : 1);
           if (isLaunch) dmg *= 1 + riseF * CONFIG.blade.risingDmgBonus;
           if (run.mods.berserk && player.hp < player.maxHp * 0.5) dmg *= 1.3;
+          dmg *= e.damageTakenMult();   // armored: reduced grounded, more airborne
           const big = isSlam || empowered || dmg >= CONFIG.hitStop.threshold;
           e.hit(dmg, blade.tipVX, blade.tipVY);
           if (isLaunch) e.vy = -CONFIG.blade.launchPower * (1 + riseF * CONFIG.blade.risingLaunchBonus);
@@ -417,6 +429,7 @@
           let tdmg = blade.throwDmg;
           if (blade.state === "returning" && run.mods.stormRecall) tdmg *= 2;   // Storm Recall
           if (run.mods.berserk && player.hp < player.maxHp * 0.5) tdmg *= 1.3;
+          tdmg *= e.damageTakenMult();
           e.hit(tdmg, blade.vx, blade.vy);
           // Razor Momentum: the blade speeds up and hits harder per pierce
           if (run.mods.throwRamp) {
@@ -567,6 +580,7 @@
     if (state === "playing") drawReticle();
 
     if (state === "menu") renderMenu();
+    else if (state === "shop") renderShop();
     else if (state === "setup") renderSetup();
     else if (state === "howto") renderHowto();
     else if (state === "highscores") renderHighscores();
@@ -642,6 +656,16 @@
     ctx.strokeRect(x, y + 26, 120, 8);
     ctx.fillRect(x, y + 26, 120 * ready, 8);
 
+    // owned abilities/upgrades list (left column)
+    let oy = y + 52;
+    for (const id in run.mods.owned) {
+      const up = UPGRADES.find((u) => u.id === id);
+      if (!up) continue;
+      const label = (up.unique ? "★ " : "") + up.name + (up.unique ? "" : " x" + run.mods.owned[id]);
+      UI.text(ctx, label, x, oy, 13, "left", 0.85);
+      oy += 17;
+    }
+
     // wave + timers (top center)
     UI.title(ctx, run.isBossWave ? "BOSS" : "WAVE " + run.wave, W / 2, 38, 26);
     UI.text(ctx, "wave " + run.waveTime.toFixed(1) + "s   ·   total " + fmtTime(run.runTime), W / 2, 58, 14, "center", 0.6);
@@ -700,14 +724,34 @@
   }
 
   function renderMenu() {
-    UI.title(ctx, "T E A R", W / 2, 200, 84);
-    UI.text(ctx, "a momentum-blade survival game", W / 2 - 0, 240, 16, "center", 0.6);
+    UI.title(ctx, "T E A R", W / 2, 220, 84);
+    UI.text(ctx, "a momentum-blade survival game", W / 2, 260, 16, "center", 0.6);
+    UI.text(ctx, META.coins() + " coins", W / 2, 300, 18, "center", 0.7);
     vmenu([
       { label: "PLAY", action: () => { state = "setup"; } },
+      { label: "SHOP", action: () => { state = "shop"; } },
       { label: "HOW TO PLAY", action: () => { state = "howto"; } },
       { label: "HIGH SCORES", action: () => { state = "highscores"; } },
       { label: "SETTINGS", action: () => { state = "settings"; } },
-    ], W / 2, 310, 300, 56, 16);
+    ], W / 2, 340, 300, 52, 14);
+  }
+
+  function renderShop() {
+    UI.title(ctx, "SHOP", W / 2, 90, 40);
+    UI.text(ctx, META.coins() + " coins", W / 2, 128, 22, "center");
+    UI.text(ctx, "permanent upgrades, applied at the start of every run", W / 2, 152, 14, "center", 0.55);
+    let y = 190;
+    for (const it of SHOP) {
+      const lv = META.level(it.id), maxed = lv >= it.maxLevel;
+      UI.text(ctx, it.name + "   (" + lv + "/" + it.maxLevel + ")", W / 2 - 380, y + 20, 20);
+      UI.text(ctx, it.desc, W / 2 - 380, y + 44, 14, "left", 0.6);
+      uiButtons.push({ x: W / 2 + 250, y: y + 6, w: 140, h: 44,
+        label: maxed ? "MAX" : META.cost(it) + "c",
+        enabled: !maxed && META.canBuy(it),
+        action: () => { if (META.buy(it)) SFX.ui(); } });
+      y += 72;
+    }
+    uiButtons.push({ x: W / 2 - 100, y: H - 90, w: 200, h: 50, label: "BACK", action: () => { state = "menu"; } });
   }
 
   function renderSetup() {
@@ -874,23 +918,25 @@
     UI.text(ctx, "wave " + overInfo.wave + "   ·   " + overInfo.score + " pts   ·   " + fmtTime(overInfo.time), W / 2, 150, 20, "center");
     if (overInfo.isNew) UI.title(ctx, "NEW BEST!", W / 2, 184, 22);
     else UI.text(ctx, "best: wave " + overInfo.best.wave + " · " + overInfo.best.score + " pts", W / 2, 184, 15, "center", 0.6);
-    drawResultsTable(230);
+    UI.text(ctx, "+" + overInfo.earned + " coins  (" + overInfo.coins + " total)", W / 2, 210, 16, "center", 0.7);
+    drawResultsTable(250);
     vmenu([
       { label: "RETRY", action: () => startRun(run.mode, run.diff) },
       { label: "MAIN MENU", action: () => { state = "menu"; } },
-    ], W / 2, 540, 260, 50, 16);
+    ], W / 2, 560, 260, 50, 16);
   }
 
   function renderWin() {
     UI.dim(ctx, W, H, 0.92);
     UI.title(ctx, "VICTORY", W / 2, 110, 54);
     UI.text(ctx, "boss down!   ·   " + overInfo.score + " pts   ·   " + fmtTime(overInfo.time), W / 2, 152, 20, "center");
-    if (overInfo.isNew) UI.title(ctx, "NEW BEST!", W / 2, 186, 22);
-    drawResultsTable(230);
+    if (overInfo.isNew) UI.title(ctx, "NEW BEST!", W / 2, 184, 22);
+    UI.text(ctx, "+" + overInfo.earned + " coins  (" + overInfo.coins + " total)", W / 2, 210, 16, "center", 0.7);
+    drawResultsTable(250);
     vmenu([
       { label: "PLAY AGAIN", action: () => startRun(run.mode, run.diff) },
       { label: "MAIN MENU", action: () => { state = "menu"; } },
-    ], W / 2, 540, 260, 50, 16);
+    ], W / 2, 560, 260, 50, 16);
   }
 
   // highlight hovered / keyboard-focused / selected, then draw

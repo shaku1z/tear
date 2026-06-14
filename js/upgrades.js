@@ -94,11 +94,19 @@ const UPGRADES = [
     apply: ({ mods }) => { mods.berserk = true; } },
 ];
 
-// roll N distinct choices; unique abilities already owned are excluded
+// roll N distinct choices; owned unique abilities are excluded, and uniques are
+// weighted to appear less often than stackable upgrades.
 function rollUpgrades(n, mods) {
-  const pool = UPGRADES.filter((u) => !(u.unique && mods && mods.owned[u.id]));
+  const pool = UPGRADES
+    .filter((u) => !(u.unique && mods && mods.owned[u.id]))
+    .map((u) => ({ u, w: u.unique ? 0.4 : 1 }));
   const out = [];
-  while (out.length < n && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  while (out.length < n && pool.length) {
+    let total = 0; for (const e of pool) total += e.w;
+    let r = Math.random() * total, idx = 0;
+    for (let i = 0; i < pool.length; i++) { if ((r -= pool[i].w) <= 0) { idx = i; break; } }
+    out.push(pool.splice(idx, 1)[0].u);
+  }
   return out;
 }
 
