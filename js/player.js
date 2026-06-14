@@ -21,6 +21,21 @@ class Player {
     this.dashX = 0; this.dashY = 0;
 
     this.moveBoost = 1;         // set by the game (e.g. faster while blade is thrown)
+    this.cape = [];             // trailing scarf points
+    for (let i = 0; i < 7; i++) this.cape.push({ x, y });
+  }
+
+  _updateCape() {
+    const backX = this.x - this.facing * this.hw * 0.7;
+    const topY = this.y - this.hh * 0.3;
+    this.cape[0].x = backX; this.cape[0].y = topY;
+    for (let i = 1; i < this.cape.length; i++) {
+      const prev = this.cape[i - 1], p = this.cape[i];
+      const tx = prev.x - this.facing * 7 - this.vx * 0.004;       // flows opposite to travel
+      const ty = prev.y + 6 + Math.abs(this.vx) * 0.002 + (this.vy < 0 ? this.vy * 0.004 : 0);
+      p.x = lerp(p.x, tx, 0.4);
+      p.y = lerp(p.y, ty, 0.4);
+    }
   }
 
   get invulnerable() { return this.iframe > 0 || this.dashIframe > 0; }
@@ -99,6 +114,7 @@ class Player {
 
     // keep inside the arena horizontally
     this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
+    this._updateCape();
   }
 
   _collideAxis(platforms, horizontal, prevBottom) {
@@ -146,11 +162,32 @@ class Player {
   draw(ctx) {
     // blink while invulnerable
     if (this.iframe > 0 && Math.floor(this.iframe * 20) % 2 === 0) return;
+
+    // flowing scarf (behind the body)
+    ctx.strokeStyle = CONFIG.colors.scarf;
+    ctx.lineCap = "round";
+    for (let i = 1; i < this.cape.length; i++) {
+      ctx.lineWidth = (1 - i / this.cape.length) * 9 + 1.5;
+      ctx.beginPath();
+      ctx.moveTo(this.cape[i - 1].x, this.cape[i - 1].y);
+      ctx.lineTo(this.cape[i].x, this.cape[i].y);
+      ctx.stroke();
+    }
+
+    // body with subtle squash/stretch from vertical speed
+    const v = clamp(this.vy / 2200, -1, 1);
+    const sy = this.onGround ? 1 : 1 - v * 0.12;   // taller when rising, flatter when falling
+    const sx = this.onGround ? 1 : 1 + v * 0.10;
+    ctx.save();
+    ctx.translate(this.x, this.y + this.hh);
+    ctx.scale(sx, sy);
+    ctx.translate(-this.x, -(this.y + this.hh));
     ctx.fillStyle = "#000";
     ctx.fillRect(this.x - this.hw, this.y - this.hh, this.hw * 2, this.hh * 2);
-    // a white eye to give it a face / facing cue
-    ctx.fillStyle = "#fff";
-    const ex = this.x + this.facing * 6;
-    ctx.fillRect(ex - 3, this.y - this.hh + 12, 6, 6);
+    // colored visor (facing cue)
+    ctx.fillStyle = CONFIG.colors.eye;
+    const ex = this.x + this.facing * 5;
+    ctx.fillRect(ex - 4, this.y - this.hh + 12, 8, 5);
+    ctx.restore();
   }
 }

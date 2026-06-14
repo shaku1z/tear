@@ -148,6 +148,10 @@ const CONFIG = {
     deflected: "#1faf5a",      // your reflected projectile (green)
     perfect: "#13c4d6",        // perfect parry / counter (cyan)
     slam: "#ef8a17",           // slam impact (orange)
+    scarf: "#d8324a",          // player's flowing scarf
+    bladeTrail: "#13c4d6",     // sword swoosh trail
+    bladeGlow: "#13c4d6",      // charged tip glow (fast swing)
+    eye: "#13c4d6",            // player visor
   },
 
   hitStop: { threshold: 22, big: 0.07, small: 0.025 }, // freeze-frame on impact

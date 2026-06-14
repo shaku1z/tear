@@ -204,14 +204,22 @@ class Blade {
 
     // step back along travel direction until the tip is just clear of the surface
     const m = len(this.vx, this.vy) || 1;
-    const bx = -(this.vx / m), by = -(this.vy / m);
+    const dx = this.vx / m, dy = this.vy / m;     // travel direction (into the wall)
     let guard = 0;
     while (inSolid(this.tipX, this.tipY) && guard < 60) {
-      this.x += bx * 3; this.y += by * 3;
+      this.x -= dx * 3; this.y -= dy * 3;
       this.tipX = this.x + Math.cos(this.angle) * L;
       this.tipY = this.y + Math.sin(this.angle) * L;
       guard++;
     }
+    // embed HILT-first: bury the hilt/ricasso at the surface and point the blade
+    // back out of the wall, so it reads as stuck by the handle (nicer to grab).
+    const sx = this.tipX, sy = this.tipY;          // contact point (just outside)
+    this.angle = Math.atan2(-dy, -dx);             // blade now points back outward
+    this.x = sx + dx * 8;                           // hilt buried ~8px into the surface
+    this.y = sy + dy * 8;
+    this.tipX = this.x + Math.cos(this.angle) * L;
+    this.tipY = this.y + Math.sin(this.angle) * L;
     return true;
   }
 
@@ -273,11 +281,11 @@ class Blade {
 
   _drawTrail(ctx) {
     const J = CONFIG.juice, tr = this.trail;
+    ctx.fillStyle = CONFIG.colors.bladeTrail;
     for (let i = 1; i < tr.length; i++) {
       const a = tr[i - 1], b = tr[i];
       if (len(b.tx - a.tx, b.ty - a.ty) < J.trailMinStep) continue;
-      ctx.globalAlpha = (i / tr.length) * J.trailAlpha;
-      ctx.fillStyle = "#000";
+      ctx.globalAlpha = (i / tr.length) * (J.trailAlpha + 0.22);
       ctx.beginPath();
       ctx.moveTo(a.hx, a.hy);
       ctx.lineTo(a.tx, a.ty);
@@ -286,6 +294,18 @@ class Blade {
       ctx.closePath();
       ctx.fill();
     }
+    ctx.globalAlpha = 1;
+  }
+
+  _drawTipGlow(ctx) {
+    if (this.state !== "held") return;
+    const v = clamp((this.tipSpeed - CONFIG.blade.minHitSpeed) / 3000, 0, 1);
+    if (v <= 0.04) return;
+    ctx.globalAlpha = 0.25 + v * 0.55;
+    ctx.fillStyle = CONFIG.colors.bladeGlow;
+    ctx.beginPath();
+    ctx.arc(this.tipX, this.tipY, 4 + v * 13, 0, Math.PI * 2);
+    ctx.fill();
     ctx.globalAlpha = 1;
   }
 
@@ -301,6 +321,7 @@ class Blade {
       ctx.moveTo(hand.x, hand.y);
       ctx.lineTo(this.x, this.y);
       ctx.stroke();
+      this._drawTipGlow(ctx);
       this._drawBody(ctx);
       return;
     }

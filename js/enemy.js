@@ -45,6 +45,9 @@ class Enemy {
     this._collideAxis(platforms, false, prevBottom);
     this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
     if (this.y < this.hh) this.y = this.hh;   // never leave the top of the arena (stay killable)
+    // hard floor: never sink below the floor surface (failsafe vs phasing through it)
+    const floorTop = CONFIG.world.groundY - this.hh;
+    if (this.y > floorTop) { this.y = floorTop; this.vy = 0; this.onGround = true; }
   }
 
   _collideAxis(platforms, horizontal, prevBottom) {

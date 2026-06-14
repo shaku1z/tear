@@ -552,6 +552,9 @@
       }
     }
 
+    // failsafe: an enemy that somehow ends up off the bottom dies instantly (never an unkillable straggler)
+    for (const e of enemies) if (e.y > CONFIG.view.h + 40) e.dead = true;
+
     // bombers that died (fuse or kill) detonate
     for (const e of enemies) if (e.dead && e.isBomber && !e.blasted) { e.blasted = true; bomberBlast(e); }
 
