@@ -67,9 +67,27 @@ const SFX = {
   _click(t, vol) { this._noise(0.03, t, { type: "highpass", freq: 6500, q: 0.7, vol: vol == null ? 0.2 : vol }); },
 
   // ---- events (crisp: sharp transient click + body) ----
+  // a crisp air "swish": white noise through a bandpass that sweeps high->low
   swing(speed) {
-    const v = clamp((speed - 800) / 2400, 0, 1); if (v <= 0) return;
-    this._noise(0.14, this.ctx.currentTime, { type: "bandpass", freq: 800 + v * 1800, q: 1.3, vol: 0.04 + v * 0.1 });
+    if (!this.ctx) return;
+    const v = clamp((speed - 1100) / 2600, 0, 1); if (v <= 0) return;
+    const t = this.ctx.currentTime, dur = 0.19;
+    const n = Math.floor(this.ctx.sampleRate * dur);
+    const buf = this.ctx.createBuffer(1, n, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const src = this.ctx.createBufferSource(); src.buffer = buf;
+    const f = this.ctx.createBiquadFilter();
+    f.type = "bandpass"; f.Q.value = 1.1;
+    f.frequency.setValueAtTime(2600 + v * 1400, t);
+    f.frequency.exponentialRampToValueAtTime(650, t + dur);
+    const g = this.ctx.createGain();
+    const vol = 0.07 + v * 0.13;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0006, t + dur);
+    src.connect(f).connect(g).connect(this.master);
+    src.start(t); src.stop(t + dur + 0.02);
   },
   hit(big) {
     const t = this.ctx.currentTime;

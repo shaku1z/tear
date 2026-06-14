@@ -90,7 +90,7 @@
   let state = "menu";
   let player, blade, enemies, projectiles, floaters, hitStop, shake;
   let timeScale = 1, slowmo = 0, zoom = 1, flash = 0, bannerT = 0, dashGhostT = 0; // feel/juice
-  let whooshCd = 0, wasDashing = false, wasOnGround = true; // audio cadence
+  let wasSwinging = false, wasDashing = false, wasOnGround = true; // audio cadence
   let rankPopT = 0, rankPopText = "";   // style rank-up flash
   let run = null;             // { mode, diff, wave, score, mods, spawnQueue, spawnTimer, waveActive }
   let draftChoices = [];
@@ -105,7 +105,7 @@
   function addFlash(f) { if (f > flash) flash = f; }
   function triggerSlowmo() { slowmo = CONFIG.juice.parrySlowmo; }
   function addFloater(x, y, text, big) { floaters.push({ x, y, text, life: 0.8, big }); }
-  function spawnSide() { return Math.random() < 0.5 ? 120 : W - 120; }
+  function spawnSide() { return Math.random() < 0.5 ? 200 : W - 200; }
   function nearestEnemy(x, y) {
     let best = null, bd = Infinity;
     for (const e of enemies) { if (e.dead) continue; const d = len(e.x - x, e.y - y); if (d < bd) { bd = d; best = e; } }
@@ -348,8 +348,12 @@
     // audio cadence: dash start + swing whoosh
     if (player.dashTimer > 0 && !wasDashing) SFX.dash();
     wasDashing = player.dashTimer > 0;
-    if (whooshCd > 0) whooshCd -= dt;
-    if (blade.state === "held" && blade.tipSpeed > 1000 && whooshCd <= 0) { SFX.swing(blade.tipSpeed); whooshCd = 0.12; }
+    // one swish per swing: trigger on crossing into a fast swing, reset when it slows (hysteresis)
+    if (blade.state === "held" && blade.tipSpeed > 1500) {
+      if (!wasSwinging) { SFX.swing(blade.tipSpeed); wasSwinging = true; }
+    } else if (blade.tipSpeed < 900) {
+      wasSwinging = false;
+    }
 
     // dash afterimages (+ Phantom Dash ability damage)
     if (player.dashTimer > 0) {
@@ -660,15 +664,7 @@
     ctx.translate(-cx, -cy);
     ctx.fillStyle = "#000";
     for (const p of platforms) ctx.fillRect(p.x, p.y, p.w, p.h);
-    const straggler = state === "playing" && run && run.spawnQueue.length === 0 && enemies.length > 0 && enemies.length <= 3;
-    const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 110);
     for (const e of enemies) {
-      // straggler marker so the last enemies are always easy to find
-      if (straggler) {
-        ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.globalAlpha = 0.35 + 0.5 * pulse;
-        ctx.beginPath(); ctx.arc(e.x, e.y, e.radius + 16 + pulse * 6, 0, Math.PI * 2); ctx.stroke();
-        ctx.globalAlpha = 1;
-      }
       if (e.flash > 0) {   // hit-pop (squash)
         ctx.save();
         const s = 1 + 0.14 * (e.flash / 0.08);
@@ -723,33 +719,30 @@
       oy += 17;
     }
 
-    // wave + timers (top center)
-    UI.title(ctx, run.isBossWave ? "BOSS" : "WAVE " + run.wave, W / 2, 38, 26);
-    UI.text(ctx, "wave " + run.waveTime.toFixed(1) + "s   ·   total " + fmtTime(run.runTime), W / 2, 58, 14, "center", 0.6);
+    // ---- center stack (kept off the edges so nothing clips) ----
+    const remaining = enemies.length + run.spawnQueue.length;
+    UI.title(ctx, run.isBossWave ? "BOSS" : "WAVE " + run.wave, W / 2, 40, 26);
+    UI.text(ctx, "SCORE " + run.score + "    enemies left: " + remaining + "    " + fmtTime(run.runTime),
+      W / 2, 64, 15, "center", 0.8);
 
-    // boss HP bar
-    const boss = enemies.find((e) => e.isBoss);
-    if (boss) {
-      const bw = 560, bx = (W - bw) / 2, by = 78;
-      ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(bx, by, bw, 14);
-      ctx.fillStyle = "#000"; ctx.fillRect(bx, by, bw * clamp(boss.hp / boss.maxHp, 0, 1), 14);
-      UI.text(ctx, "BOSS", bx, by - 4, 12, "left", 0.7);
-    }
-
-    // score + trick meter (top right)
-    ctx.textAlign = "right";
-    UI.text(ctx, "SCORE " + run.score, W - 20, 34, 18);
+    // trick meter (centered)
     if (run.mult > 1) {
-      ctx.fillStyle = "#000";
-      ctx.font = UI.font(22, true); ctx.textAlign = "right";
-      ctx.fillText("x" + run.mult + (run.rank ? "  " + run.rank : ""), W - 20, 62);
-      // depleting style bar
-      const bw2 = 200, bx = W - 20 - bw2, by = 70;
+      ctx.fillStyle = "#000"; ctx.font = UI.font(22, true); ctx.textAlign = "center";
+      ctx.fillText("x" + run.mult + (run.rank ? "  " + run.rank : ""), W / 2, 96);
+      const bw2 = 220, bx = W / 2 - bw2 / 2, by = 104;
       ctx.lineWidth = 1.5; ctx.strokeStyle = "#000"; ctx.strokeRect(bx, by, bw2, 6);
-      const frac = clamp(run.comboTimer / CONFIG.trick.decay, 0, 1);
-      ctx.fillStyle = "#000"; ctx.fillRect(bx, by, bw2 * frac, 6);
+      ctx.fillStyle = "#000"; ctx.fillRect(bx, by, bw2 * clamp(run.comboTimer / CONFIG.trick.decay, 0, 1), 6);
     }
     ctx.textAlign = "left";
+
+    // boss HP bar (centered, below the stack)
+    const boss = enemies.find((e) => e.isBoss);
+    if (boss) {
+      const bbw = 560, bx = (W - bbw) / 2, by = 122;
+      ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(bx, by, bbw, 14);
+      ctx.fillStyle = "#000"; ctx.fillRect(bx, by, bbw * clamp(boss.hp / boss.maxHp, 0, 1), 14);
+      UI.text(ctx, "BOSS", bx, by - 4, 12, "left", 0.7);
+    }
   }
 
   function drawBanner() {
