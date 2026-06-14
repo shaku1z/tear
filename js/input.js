@@ -26,8 +26,8 @@ const Input = {
         this.dy += e.movementY;
       } else {
         const r = canvas.getBoundingClientRect();
-        this.mouseX = (e.clientX - r.left) * (canvas.width / r.width);
-        this.mouseY = (e.clientY - r.top) * (canvas.height / r.height);
+        this.mouseX = (e.clientX - r.left) / r.width * CONFIG.view.w;
+        this.mouseY = (e.clientY - r.top) / r.height * CONFIG.view.h;
       }
     };
     canvas.addEventListener("mousemove", updateMouse);
@@ -36,8 +36,8 @@ const Input = {
     // left-click: capture the mouse while playing; otherwise it's a UI click
     canvas.addEventListener("click", (e) => {
       const r = canvas.getBoundingClientRect();
-      this.clickX = (e.clientX - r.left) * (canvas.width / r.width);
-      this.clickY = (e.clientY - r.top) * (canvas.height / r.height);
+      this.clickX = (e.clientX - r.left) / r.width * CONFIG.view.w;
+      this.clickY = (e.clientY - r.top) / r.height * CONFIG.view.h;
       this.clicked = true;
       if (this.allowLock && !this.locked && canvas.requestPointerLock) canvas.requestPointerLock();
     });

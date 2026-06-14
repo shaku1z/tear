@@ -6,6 +6,21 @@
 
   Input.init(canvas);
 
+  // render at device resolution (sharp on hi-dpi / upscaled displays), while all
+  // drawing still uses the 1280x720 logical coordinate system.
+  function resizeCanvas() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    const cssW = canvas.clientWidth || W;
+    const tw = Math.max(W, Math.round(cssW * dpr));
+    const th = Math.round(tw * H / W);
+    if (canvas.width !== tw || canvas.height !== th) { canvas.width = tw; canvas.height = th; }
+  }
+  window.addEventListener("resize", resizeCanvas);
+  document.addEventListener("fullscreenchange", resizeCanvas);
+  resizeCanvas();
+
+  function requestLock() { if (canvas.requestPointerLock) { try { canvas.requestPointerLock(); } catch (e) {} } }
+
   // pristine copy of all tunables, so per-run upgrades never leak across runs
   const BASE = JSON.parse(JSON.stringify(CONFIG));
   function restoreConfig() {
@@ -109,6 +124,7 @@
     run = { mode, diff, wave: 0, score: 0, mods: newMods(), spawnQueue: [], spawnTimer: 0, waveActive: false, clearTimer: -1 };
     startNextWave();
     state = "playing";
+    requestLock();
   }
 
   function startNextWave() {
@@ -202,14 +218,18 @@
         if (baseDmg > 0) {
           const isSlam = !player.onGround && blade.tipVY > CONFIG.blade.slamMinDownSpeed;
           const isLaunch = blade.tipVY < -CONFIG.blade.launchMinUpSpeed;
-          const dmg = baseDmg * (isSlam ? CONFIG.blade.slamMultiplier : 1);
-          const big = isSlam || dmg >= CONFIG.hitStop.threshold;
+          // rising uppercut: upward momentum (jump / up-dash) empowers the launch
+          const riseF = isLaunch ? clamp(Math.max(0, -player.vy) / CONFIG.blade.risingSpeedRef, 0, 1) : 0;
+          const empowered = isLaunch && riseF > 0.45;
+          let dmg = baseDmg * (isSlam ? CONFIG.blade.slamMultiplier : 1);
+          if (isLaunch) dmg *= 1 + riseF * CONFIG.blade.risingDmgBonus;
+          const big = isSlam || empowered || dmg >= CONFIG.hitStop.threshold;
           e.hit(dmg, blade.tipVX, blade.tipVY);
-          if (isLaunch) e.vy = -CONFIG.blade.launchPower;
+          if (isLaunch) e.vy = -CONFIG.blade.launchPower * (1 + riseF * CONFIG.blade.risingLaunchBonus);
           const cp = segPointDist(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y);
           FX.burst(cp.px, cp.py, blade.tipVX, blade.tipVY, CONFIG.juice.sparkCount);
-          if (isSlam) FX.ring(e.x, e.y, 8);
-          const tag = isSlam ? "!" : (isLaunch ? "↑" : "");
+          if (isSlam || empowered) FX.ring(e.x, e.y, 8);
+          const tag = isSlam ? "!" : (isLaunch ? (empowered ? "⇈" : "↑") : "");
           addFloater(e.x, e.y - 26, Math.round(dmg) + tag, big || isLaunch);
           hitStop = big ? CONFIG.hitStop.big : CONFIG.hitStop.small;
           addShake(big || isLaunch ? CONFIG.juice.shakeBig : CONFIG.juice.shakeSmall);
@@ -335,6 +355,9 @@
 
   // ---- rendering ----
   function render() {
+    // map the 1280x720 logical space onto the (hi-dpi) backing store
+    resizeCanvas();
+    ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, W, H);
@@ -585,13 +608,14 @@
     Input.consumeDelta();   // flush any movement built up while the cursor was free
     startNextWave();
     state = "playing";
+    requestLock();          // re-capture automatically (we're inside the pick gesture)
   }
 
   function renderPaused() {
     UI.dim(ctx, W, H, 0.8);
     UI.title(ctx, "PAUSED", W / 2, 220, 56);
     vmenu([
-      { label: "RESUME", action: () => { state = "playing"; } },
+      { label: "RESUME", action: () => { state = "playing"; requestLock(); } },
       { label: "RESTART", action: () => startRun(run.mode, run.diff) },
       { label: "MAIN MENU", action: () => { state = "menu"; } },
     ], W / 2, 300, 280, 54, 16);

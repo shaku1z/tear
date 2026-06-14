@@ -58,6 +58,9 @@ const CONFIG = {
     slamMinDownSpeed: 1400, // downward tip speed needed to count as a slam
     launchMinUpSpeed: 950, // upward tip speed needed to pop an enemy airborne
     launchPower: 780,     // upward velocity imparted by a launcher swing
+    risingSpeedRef: 850,  // player upward speed for a full rising-uppercut bonus
+    risingDmgBonus: 0.9,  // up to +90% launch damage while rising fast (jump / up-dash)
+    risingLaunchBonus: 0.7, // up to +70% extra pop/knockback on a rising uppercut
 
     // right-click to throw the blade; right-click near it (within reclaimDistance) to recall
     throw: {
