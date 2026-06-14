@@ -103,6 +103,7 @@ class Player {
 
   _collideAxis(platforms, horizontal, prevBottom) {
     for (const p of platforms) {
+      if (horizontal && p.floor) continue;   // full-width floor never blocks horizontal movement
       const phw = p.w / 2, phh = p.h / 2;
       const pcx = p.x + phw, pcy = p.y + phh;
       if (!aabbOverlap(this.x, this.y, this.hw, this.hh, pcx, pcy, phw, phh)) continue;

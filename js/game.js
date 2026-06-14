@@ -78,7 +78,7 @@
 
   // ---- world geometry ----
   const platforms = [
-    { x: 0, y: CONFIG.world.groundY, w: W, h: H - CONFIG.world.groundY },  // solid floor
+    { x: 0, y: CONFIG.world.groundY, w: W, h: H - CONFIG.world.groundY, floor: true },  // solid floor (full width)
     { x: 230, y: 650, w: 280, h: 24, oneway: true },
     { x: 1090, y: 650, w: 280, h: 24, oneway: true },
     { x: 640, y: 500, w: 320, h: 24, oneway: true },

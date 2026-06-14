@@ -75,7 +75,7 @@ const CONFIG = {
       damageFromSpeed: 0.008, // + per (px/s) of launch speed
       hiMult: 1.4,        // throw (outgoing) hits enemies ABOVE half HP harder
       loMult: 0.65,       // ...and below-half HP softer (recall is the reverse: a finisher)
-      reclaimDistance: 320, // how close you must be to recall (~tether)
+      reclaimDistance: 384, // how close you must be to recall (~tether)
       returnSpeed: 3400,  // speed the blade flies back to your hand (snappy)
       maxLife: 2.5,       // safety: embed after this long in flight
     },
