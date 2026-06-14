@@ -142,6 +142,7 @@ class Player {
 
   takeDamage(dmg, fromX) {
     if (this.invulnerable) return false;
+    dmg *= CONFIG.player.dmgTakenMult;
     this.hp = this.oneHit ? 0 : Math.max(0, this.hp - dmg);
     this.iframe = CONFIG.player.hitIframe;
     const dir = Math.sign(this.x - fromX) || 1;

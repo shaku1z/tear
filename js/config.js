@@ -23,6 +23,7 @@ const CONFIG = {
     maxFall: 1800,
     hp: 100,
     hitIframe: 0.9,       // invuln window after taking a hit
+    dmgTakenMult: 1,      // scaled down by the "Tough Hide" upgrade
   },
 
   dash: {
@@ -130,6 +131,7 @@ const CONFIG = {
     countPerWave: 1.0,    // + this many enemies per wave thereafter
     hpScalePerWave: 0.12, // +12% enemy HP per wave
     scorePerKill: 100,    // score per kill (x wave number)
+    scoreMult: 1,         // raised by the "Bounty Hunter" upgrade
     healEachWave: 20,     // HP restored on wave clear (Normal only)
     startDelay: 0.8,      // beat before the first spawn of a wave
     waveClearPause: 0.8,  // delay after the last enemy dies before the draft appears

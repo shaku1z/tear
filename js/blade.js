@@ -32,6 +32,7 @@ class Blade {
     this.throwDmg = 0;
     this.flyTime = 0;
     this.throwSizeMult = 1;       // blade length multiplier while thrown (ability)
+    this.freeRecall = false;      // ability: recall from any distance
   }
 
   // effective blade length (longer while thrown if the ability is owned)
@@ -233,7 +234,7 @@ class Blade {
   tryRecall(player) {
     if (this.state === "held" || this.state === "returning") return "busy";
     const hand = this.handPos(player);
-    if (len(this.x - hand.x, this.y - hand.y) <= CONFIG.blade.throw.reclaimDistance) {
+    if (this.freeRecall || len(this.x - hand.x, this.y - hand.y) <= CONFIG.blade.throw.reclaimDistance) {
       this.pierced = new Set();   // can pierce again on the way home
       this.state = "returning";
       return "recalled";

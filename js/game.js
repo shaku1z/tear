@@ -112,7 +112,7 @@
 
   // ---- score + "Attack Trick" style meter ----
   function addKillScore() {
-    run.score += Math.round(CONFIG.run.scorePerKill * run.wave * run.mult);
+    run.score += Math.round(CONFIG.run.scorePerKill * run.wave * run.mult * CONFIG.run.scoreMult);
     run.waveKills++;
   }
   function addStyle(kind) {
@@ -360,7 +360,7 @@
       if (p.dead || p.deflected || blade.state !== "held") continue;
       if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, p.x, p.y, p.r + 4)) {
         if (blade.tipSpeed >= CONFIG.blade.deflectMinSpeed) {
-          const perfect = blade.tipSpeed >= CONFIG.blade.perfectSpeed || run.mods.perfectGuard;
+          const perfect = blade.tipSpeed >= CONFIG.blade.perfectSpeed;
           let dirX = blade.tipVX, dirY = blade.tipVY;
           if (perfect) { const t = nearestEnemy(p.x, p.y); if (t) { dirX = t.x - p.x; dirY = t.y - p.y; } }
           p.deflect(dirX, dirY, blade.tipSpeed, perfect);

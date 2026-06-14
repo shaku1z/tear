@@ -16,7 +16,6 @@ function newMods() {
     tempest: false,       // empowered uppercut launches nearby enemies too
     stormRecall: false,   // the returning blade deals heavy damage
     phantomDash: 0,       // dash damages enemies you pass through (dmg amount)
-    perfectGuard: false,  // every deflect counts as a perfect parry
     berserk: false,       // +30% damage while below half HP
   };
 }
@@ -43,6 +42,19 @@ const UPGRADES = [
     apply: ({ mods }) => { mods.onHit.push((ev) => ev.player.heal(1)); } },
   { id: "riposte", name: "Riposte", unique: false, desc: "Perfect parry heals 12 HP.",
     apply: ({ mods }) => { mods.onParry.push((ev) => ev.player.heal(12)); } },
+  { id: "featherblade", name: "Featherblade", unique: false, desc: "Swings deal damage at lower speeds.",
+    apply: () => { CONFIG.blade.minHitSpeed *= 0.85; } },
+  { id: "tough_hide", name: "Tough Hide", unique: false, desc: "Take 15% less damage.",
+    apply: () => { CONFIG.player.dmgTakenMult *= 0.85; } },
+  { id: "burst_dash", name: "Burst Dash", unique: false, desc: "Dash is faster and travels farther.",
+    apply: () => { CONFIG.dash.speed *= 1.1; CONFIG.dash.duration *= 1.04; } },
+  { id: "bounty", name: "Bounty Hunter", unique: false, desc: "+20% score from kills.",
+    apply: () => { CONFIG.run.scoreMult *= 1.2; } },
+  { id: "glass_cannon", name: "Glass Cannon", unique: false, desc: "+25% swing damage, but -12 max HP.",
+    apply: ({ player }) => {
+      CONFIG.blade.damageScale *= 1.25; CONFIG.blade.maxDamage = Math.round(CONFIG.blade.maxDamage * 1.25);
+      player.maxHp = Math.max(20, player.maxHp - 12); player.hp = Math.min(player.hp, player.maxHp);
+    } },
 
   // ===== unique abilities =====
   { id: "seismic_slam", name: "Seismic Slam", unique: true, desc: "Slams blast nearby enemies for 22.",
@@ -74,9 +86,9 @@ const UPGRADES = [
   { id: "phantom_dash", name: "Phantom Dash", unique: true,
     desc: "Dashing slices enemies you pass through (great while unarmed).",
     apply: ({ mods }) => { mods.phantomDash = 26; } },
-  { id: "perfect_guard", name: "Perfect Guard", unique: true,
-    desc: "Every projectile deflect counts as a perfect parry.",
-    apply: ({ mods }) => { mods.perfectGuard = true; } },
+  { id: "boomerang", name: "Boomerang", unique: true,
+    desc: "Recall the thrown blade from any distance.",
+    apply: ({ blade }) => { blade.freeRecall = true; } },
   { id: "berserk", name: "Berserker", unique: true,
     desc: "+30% damage while below half HP.",
     apply: ({ mods }) => { mods.berserk = true; } },
