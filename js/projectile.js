@@ -28,7 +28,7 @@ class Projectile {
       else if (this.x > W - r) { this.x = W - r; this.vx = -Math.abs(this.vx); hit = true; }
       if (this.y < top + r) { this.y = top + r; this.vy = Math.abs(this.vy); hit = true; }
       else if (this.y > bottom - r) { this.y = bottom - r; this.vy = -Math.abs(this.vy); hit = true; }
-      if (hit) { this.bounces--; FX.ring(this.x, this.y, 4); }
+      if (hit) { this.bounces--; this.vx *= 0.85; this.vy *= 0.85; FX.ring(this.x, this.y, 4); }
       return;
     }
 

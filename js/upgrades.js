@@ -13,6 +13,7 @@ function newMods() {
     throwRamp: 0,         // per-pierce damage/speed ramp on a thrown blade
     deflectPierce: false, // deflected shots pass through enemies
     deflectSplit: false,  // deflected shots split into 3 bouncing shards
+    airBonus: 0,          // +damage fraction while airborne (Air Superiority)
     tempest: false,       // empowered uppercut launches nearby enemies too
     stormRecall: false,   // the returning blade deals heavy damage
     phantomDash: 0,       // dash damages enemies you pass through (dmg amount)
@@ -40,10 +41,10 @@ const UPGRADES = [
     apply: ({ mods }) => { mods.onKill.push((ev) => ev.player.heal(6)); } },
   { id: "vampiric", name: "Vampiric Edge", unique: false, desc: "Swing hits heal 1 HP.",
     apply: ({ mods }) => { mods.onHit.push((ev) => ev.player.heal(1)); } },
-  { id: "riposte", name: "Riposte", unique: false, desc: "Perfect parry heals 12 HP.",
-    apply: ({ mods }) => { mods.onParry.push((ev) => ev.player.heal(12)); } },
-  { id: "featherblade", name: "Featherblade", unique: false, desc: "Swings deal damage at lower speeds.",
-    apply: () => { CONFIG.blade.minHitSpeed *= 0.85; } },
+  { id: "riposte", name: "Riposte", unique: false, desc: "Perfect parry heals 6 HP.",
+    apply: ({ mods }) => { mods.onParry.push((ev) => ev.player.heal(6)); } },
+  { id: "air_superiority", name: "Air Superiority", unique: false, desc: "+20% damage while airborne.",
+    apply: ({ mods }) => { mods.airBonus += 0.2; } },
   { id: "tough_hide", name: "Tough Hide", unique: false, desc: "Take 15% less damage.",
     apply: () => { CONFIG.player.dmgTakenMult *= 0.85; } },
   { id: "burst_dash", name: "Burst Dash", unique: false, desc: "Dash is faster and travels farther.",

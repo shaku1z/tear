@@ -163,15 +163,18 @@
     return m + ":" + String(ss).padStart(2, "0");
   }
   // Scatter Parry: split a deflected shot into 3 weaker, bouncing shards
+  // (speed is capped so the shards stay readable instead of pinballing wildly)
   function spawnSplitShards(p) {
-    const spd = len(p.vx, p.vy) || CONFIG.proj.speed;
+    const spd = Math.min(len(p.vx, p.vy) || CONFIG.proj.speed, CONFIG.proj.speed * 1.4);
     const baseAng = Math.atan2(p.vy, p.vx);
     p.deflectDmg = Math.max(8, Math.round(p.deflectDmg * 0.5));
     p.bounces = 3;
+    p.vx = Math.cos(baseAng) * spd; p.vy = Math.sin(baseAng) * spd;   // cap the parent too
     for (const off of [-0.34, 0.34]) {
       const a = baseAng + off;
       const q = new Projectile(p.x, p.y, Math.cos(a) * spd, Math.sin(a) * spd);
       q.deflect(Math.cos(a), Math.sin(a), spd, p.perfect);
+      q.vx = Math.cos(a) * spd; q.vy = Math.sin(a) * spd;
       q.deflectDmg = p.deflectDmg;
       q.bounces = 3;
       if (p.pierce) { q.pierce = true; q.pierced = new Set(); }
@@ -273,6 +276,7 @@
   function updateWave(dt) {
     const R = CONFIG.run;
     if (run.spawnQueue.length && enemies.length < R.maxConcurrent) {
+      if (enemies.length === 0 && run.spawnTimer > 0.05) run.spawnTimer = 0.05; // no dead air when the screen empties
       run.spawnTimer -= dt;
       if (run.spawnTimer <= 0) { spawnOne(run.spawnQueue.shift()); run.spawnTimer = R.spawnInterval; }
     }
@@ -388,6 +392,7 @@
           let dmg = baseDmg * (isSlam ? CONFIG.blade.slamMultiplier : 1);
           if (isLaunch) dmg *= 1 + riseF * CONFIG.blade.risingDmgBonus;
           if (run.mods.berserk && player.hp < player.maxHp * 0.5) dmg *= 1.3;
+          if (!player.onGround && run.mods.airBonus) dmg *= 1 + run.mods.airBonus;  // Air Superiority
           dmg *= e.damageTakenMult();   // armored: reduced grounded, more airborne
           const big = isSlam || empowered || dmg >= CONFIG.hitStop.threshold;
           e.hit(dmg, blade.tipVX, blade.tipVY);

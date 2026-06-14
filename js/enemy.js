@@ -42,6 +42,7 @@ class Enemy {
     this.onGround = false;
     this._collideAxis(platforms, false);
     this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
+    if (this.y < this.hh) this.y = this.hh;   // never leave the top of the arena (stay killable)
   }
 
   _collideAxis(platforms, horizontal) {

@@ -49,16 +49,16 @@ const CONFIG = {
     angleSmooth: 35,      // how quickly the blade angle settles (higher = snappier)
     leadAmount: 0.45,     // how much a fast swing whips the tip ahead of the aim line
     leadSpeedRef: 2600,   // swing speed at which the lead is fully applied
-    minHitSpeed: 650,     // tip speed below this deals no damage
+    minHitSpeed: 950,     // tip speed below this deals no damage
     damageScale: 0.012,   // damage per (px/s) of tip speed over the minimum
     maxDamage: 70,
     enemyHitIframe: 0.18, // per-enemy cooldown between blade hits
-    deflectMinSpeed: 450, // tip speed needed to deflect a projectile
+    deflectMinSpeed: 700, // tip speed needed to deflect a projectile
     deflectBoost: 1.25,   // speed multiplier applied to deflected projectiles
-    perfectSpeed: 1600,   // tip speed for a PERFECT parry (homing ricochet, bonus dmg)
+    perfectSpeed: 2400,   // tip speed for a PERFECT parry (homing ricochet, bonus dmg)
     slamMultiplier: 1.8,  // damage multiplier for a downward airborne slam
-    slamMinDownSpeed: 1400, // downward tip speed needed to count as a slam
-    launchMinUpSpeed: 950, // upward tip speed needed to pop an enemy airborne
+    slamMinDownSpeed: 1750, // downward tip speed needed to count as a slam
+    launchMinUpSpeed: 1250, // upward tip speed needed to pop an enemy airborne
     launchPower: 780,     // upward velocity imparted by a launcher swing
     risingSpeedRef: 850,  // player upward speed for a full rising-uppercut bonus
     risingDmgBonus: 0.9,  // up to +90% launch damage while rising fast (jump / up-dash)
