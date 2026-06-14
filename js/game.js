@@ -193,15 +193,38 @@
     requestLock();
   }
 
+  function modeWaves(mode) { const m = CONFIG.modes.find((x) => x.id === mode); return (m && m.waves) || 0; }
+
+  // weighted enemy pick; new types unlock as waves progress
+  function pickEnemyType(wave) {
+    const pool = [["charger", 1]];
+    if (wave >= 2) pool.push(["ranged", 0.6]);
+    if (wave >= 3) pool.push(["flyer", 0.5]);
+    if (wave >= 4) pool.push(["bomber", 0.4]);
+    if (wave >= 5) pool.push(["armored", 0.35]);
+    let total = 0; for (const p of pool) total += p[1];
+    let r = Math.random() * total;
+    for (const [t, w] of pool) { if ((r -= w) <= 0) return t; }
+    return "charger";
+  }
+
   function startNextWave() {
     run.wave++;
     const R = CONFIG.run;
-    const count = R.firstWaveCount + Math.floor((run.wave - 1) * R.countPerWave);
-    const hpScale = 1 + (run.wave - 1) * R.hpScalePerWave;
+    const total = modeWaves(run.mode);
+    run.isBossWave = total > 0 && run.wave > total;
     run.spawnQueue = [];
-    for (let i = 0; i < count; i++) {
-      const ranged = run.wave >= 2 && Math.random() < 0.4;
-      run.spawnQueue.push({ type: ranged ? "ranged" : "charger", hpScale });
+    if (run.isBossWave) {
+      run.spawnQueue.push({ type: "boss" });
+    } else {
+      const count = R.firstWaveCount + Math.floor((run.wave - 1) * R.countPerWave);
+      const hpScale = 1 + (run.wave - 1) * R.hpScalePerWave;
+      const eliteChance = Math.min(CONFIG.elite.chanceMax, (run.wave - 2) * CONFIG.elite.chancePerWave);
+      for (let i = 0; i < count; i++) {
+        const spec = { type: pickEnemyType(run.wave), hpScale };
+        if (run.wave >= 3 && Math.random() < eliteChance) spec.elite = true;
+        run.spawnQueue.push(spec);
+      }
     }
     run.spawnTimer = R.startDelay;
     run.waveActive = true;
@@ -211,11 +234,31 @@
   }
 
   function spawnOne(spec) {
-    const e = spec.type === "ranged"
-      ? new Ranged(spawnSide(), CONFIG.world.groundY - 80)
-      : new Charger(spawnSide(), CONFIG.world.groundY - 80);
-    e.hp *= spec.hpScale; e.maxHp *= spec.hpScale;
+    const gy = CONFIG.world.groundY - 80;
+    let e;
+    switch (spec.type) {
+      case "ranged":  e = new Ranged(spawnSide(), gy); break;
+      case "flyer":   e = new Flyer(spawnSide(), 200); break;
+      case "bomber":  e = new Bomber(spawnSide(), gy); break;
+      case "armored": e = new Armored(spawnSide(), gy); break;
+      case "boss":    e = new Boss(W / 2, CONFIG.world.groundY - 140); break;
+      default:        e = new Charger(spawnSide(), gy);
+    }
+    if (spec.type !== "boss") {
+      if (spec.elite) e.makeElite();
+      if (spec.hpScale) { e.hp *= spec.hpScale; e.maxHp *= spec.hpScale; }
+    }
     enemies.push(e);
+  }
+
+  function bomberBlast(e) {
+    const C = CONFIG.bomber;
+    FX.ring(e.x, e.y, 14); FX.ring(e.x, e.y, 6); FX.burst(e.x, e.y, 0, -1, 14);
+    addShake(CONFIG.juice.shakeBig); SFX.slam();
+    dealAoE(e.x, e.y, C.blastRadius, C.blastDmg);
+    if (len(player.x - e.x, player.y - e.y) <= C.blastRadius + player.hw) {
+      if (player.takeDamage(C.blastDmg, e.x)) { loseStyle(); SFX.hurt(); }
+    }
   }
 
   function updateWave(dt) {
@@ -227,7 +270,8 @@
     // wave cleared -> wait a beat (let death FX finish) before the draft
     if (run.waveActive && run.spawnQueue.length === 0 && enemies.length === 0) {
       run.waveActive = false;
-      run.waveLog.push({ wave: run.wave, time: run.waveTime, kills: run.waveKills, peak: run.wavePeak });
+      run.waveLog.push({ wave: run.isBossWave ? "BOSS" : run.wave, time: run.waveTime, kills: run.waveKills, peak: run.wavePeak });
+      if (run.isBossWave) { winRun(); return; }   // victory!
       if (!player.oneHit) player.heal(R.healEachWave);
       run.clearTimer = R.waveClearPause;
     }
@@ -251,6 +295,14 @@
     state = "gameover";
     document.exitPointerLock();
     SFX.gameover();
+  }
+
+  function winRun() {
+    const isNew = saveBest(run.mode, run.diff, run.wave, run.score);
+    overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, win: true };
+    state = "win";
+    document.exitPointerLock();
+    SFX.wave();
   }
 
   // ---- combat step (the PLAYING simulation) ----
@@ -307,6 +359,16 @@
       if (e.dead || e.hitCd > 0) continue;
       if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y, e.radius + 4)) {
         if (baseDmg > 0) {
+          // armored: blocked unless the hit is fast enough / from the flank
+          if (e.blocks(blade.tipX, blade.tipSpeed)) {
+            const cp = segPointDist(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y);
+            FX.burst(cp.px, cp.py, e.x - blade.tipX, e.y - blade.tipY, 5);
+            addFloater(e.x, e.y - 26, "block", false);
+            e.hitCd = 0.12; hitStop = CONFIG.hitStop.small; SFX.deflect();
+            continue;
+          }
+          // breaking a guard with a fast frontal hit staggers the armored enemy
+          if (e.cfg.breakSpeed && Math.sign(blade.tipX - e.x) === e.guardSide && blade.tipSpeed >= e.cfg.breakSpeed) e.stun = 0.8;
           const isSlam = !player.onGround && blade.tipVY > CONFIG.blade.slamMinDownSpeed;
           const isLaunch = blade.tipVY < -CONFIG.blade.launchMinUpSpeed;
           // rising uppercut: upward momentum (jump / up-dash) empowers the launch
@@ -423,9 +485,12 @@
     for (const e of enemies) {
       if (e.dead) continue;
       if (aabbOverlap(player.x, player.y, player.hw, player.hh, e.x, e.y, e.hw, e.hh)) {
-        if (player.takeDamage(e.cfg.contactDmg, e.x)) { loseStyle(); SFX.hurt(); }
+        if (player.takeDamage(e.contactDmg, e.x)) { loseStyle(); SFX.hurt(); }
       }
     }
+
+    // bombers that died (fuse or kill) detonate
+    for (const e of enemies) if (e.dead && e.isBomber && !e.blasted) { e.blasted = true; bomberBlast(e); }
 
     enemies = enemies.filter((e) => !e.dead);
     projectiles = projectiles.filter((p) => !p.dead);
@@ -485,7 +550,7 @@
     ctx.fillRect(0, 0, W, H);
     uiButtons = [];
 
-    const playLike = state === "playing" || state === "draft" || state === "paused" || state === "gameover";
+    const playLike = state === "playing" || state === "draft" || state === "paused" || state === "gameover" || state === "win";
     if (playLike) {
       renderWorld();
       if (flash > 0) {
@@ -509,6 +574,7 @@
     else if (state === "draft") renderDraft();
     else if (state === "paused") renderPaused();
     else if (state === "gameover") renderGameover();
+    else if (state === "win") renderWin();
 
     // hover-draw buttons (skip in playing; draft draws its own cards)
     if (state !== "playing" && state !== "draft") drawButtons();
@@ -539,7 +605,14 @@
     ctx.translate(-cx, -cy);
     ctx.fillStyle = "#000";
     for (const p of platforms) ctx.fillRect(p.x, p.y, p.w, p.h);
-    for (const e of enemies) e.draw(ctx, player);
+    for (const e of enemies) {
+      e.draw(ctx, player);
+      if (e.elite) {
+        ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.arc(e.x, e.y, e.radius + 9, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
     for (const p of projectiles) p.draw(ctx);
     if (player) player.draw(ctx);
     if (blade) blade.draw(ctx, player);
@@ -570,8 +643,17 @@
     ctx.fillRect(x, y + 26, 120 * ready, 8);
 
     // wave + timers (top center)
-    UI.title(ctx, "WAVE " + run.wave, W / 2, 38, 26);
+    UI.title(ctx, run.isBossWave ? "BOSS" : "WAVE " + run.wave, W / 2, 38, 26);
     UI.text(ctx, "wave " + run.waveTime.toFixed(1) + "s   ·   total " + fmtTime(run.runTime), W / 2, 58, 14, "center", 0.6);
+
+    // boss HP bar
+    const boss = enemies.find((e) => e.isBoss);
+    if (boss) {
+      const bw = 560, bx = (W - bw) / 2, by = 78;
+      ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(bx, by, bw, 14);
+      ctx.fillStyle = "#000"; ctx.fillRect(bx, by, bw * clamp(boss.hp / boss.maxHp, 0, 1), 14);
+      UI.text(ctx, "BOSS", bx, by - 4, 12, "left", 0.7);
+    }
 
     // score + trick meter (top right)
     ctx.textAlign = "right";
@@ -594,7 +676,7 @@
     const a = Math.sin((1 - t) * Math.PI);                // fade in then out
     ctx.save();
     ctx.globalAlpha = clamp(a, 0, 1);
-    UI.title(ctx, "WAVE " + run.wave, W / 2, 150, 60 + (1 - a) * 10);
+    UI.title(ctx, run.isBossWave ? "BOSS" : "WAVE " + run.wave, W / 2, 150, 60 + (1 - a) * 10);
     ctx.restore();
   }
 
@@ -766,26 +848,17 @@
     ], W / 2, 300, 280, 54, 16);
   }
 
-  function renderGameover() {
-    UI.dim(ctx, W, H, 0.9);
-    UI.title(ctx, "DEFEATED", W / 2, 110, 50);
-    UI.text(ctx, "wave " + overInfo.wave + "   ·   " + overInfo.score + " pts   ·   " + fmtTime(overInfo.time), W / 2, 150, 20, "center");
-    if (overInfo.isNew) UI.title(ctx, "NEW BEST!", W / 2, 184, 22);
-    else UI.text(ctx, "best: wave " + overInfo.best.wave + " · " + overInfo.best.score + " pts", W / 2, 184, 15, "center", 0.6);
-
-    // per-wave results table
+  function drawResultsTable(startY) {
     const log = overInfo.log, rows = log.slice(-9);
     const tx = W / 2 - 270, tw = 540;
-    let ty = 230;
-    ctx.fillStyle = "#000";
-    ctx.font = UI.font(14, true);
-    ctx.textAlign = "left";  ctx.fillText("WAVE", tx, ty);
+    let ty = startY;
+    ctx.fillStyle = "#000"; ctx.font = UI.font(14, true);
+    ctx.textAlign = "left"; ctx.fillText("WAVE", tx, ty);
     ctx.textAlign = "right"; ctx.fillText("TIME", tx + 200, ty); ctx.fillText("KILLS", tx + 330, ty); ctx.fillText("BEST TRICK", tx + tw, ty);
     ctx.strokeStyle = "#000"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(tx, ty + 8); ctx.lineTo(tx + tw, ty + 8); ctx.stroke();
     ty += 30;
     for (const r of rows) {
-      ctx.textAlign = "left";
-      UI.text(ctx, (r.died ? "✗ " : "") + r.wave, tx, ty, 16);
+      ctx.textAlign = "left"; UI.text(ctx, (r.died ? "✗ " : "") + r.wave, tx, ty, 16);
       ctx.textAlign = "right";
       UI.text(ctx, r.time.toFixed(1) + "s", tx + 200, ty, 16);
       UI.text(ctx, "" + r.kills, tx + 330, ty, 16);
@@ -793,9 +866,29 @@
       ty += 26;
     }
     if (log.length > rows.length) UI.text(ctx, "(earlier waves omitted)", W / 2, ty + 2, 12, "center", 0.5);
+  }
 
+  function renderGameover() {
+    UI.dim(ctx, W, H, 0.9);
+    UI.title(ctx, "DEFEATED", W / 2, 110, 50);
+    UI.text(ctx, "wave " + overInfo.wave + "   ·   " + overInfo.score + " pts   ·   " + fmtTime(overInfo.time), W / 2, 150, 20, "center");
+    if (overInfo.isNew) UI.title(ctx, "NEW BEST!", W / 2, 184, 22);
+    else UI.text(ctx, "best: wave " + overInfo.best.wave + " · " + overInfo.best.score + " pts", W / 2, 184, 15, "center", 0.6);
+    drawResultsTable(230);
     vmenu([
       { label: "RETRY", action: () => startRun(run.mode, run.diff) },
+      { label: "MAIN MENU", action: () => { state = "menu"; } },
+    ], W / 2, 540, 260, 50, 16);
+  }
+
+  function renderWin() {
+    UI.dim(ctx, W, H, 0.92);
+    UI.title(ctx, "VICTORY", W / 2, 110, 54);
+    UI.text(ctx, "boss down!   ·   " + overInfo.score + " pts   ·   " + fmtTime(overInfo.time), W / 2, 152, 20, "center");
+    if (overInfo.isNew) UI.title(ctx, "NEW BEST!", W / 2, 186, 22);
+    drawResultsTable(230);
+    vmenu([
+      { label: "PLAY AGAIN", action: () => startRun(run.mode, run.diff) },
       { label: "MAIN MENU", action: () => { state = "menu"; } },
     ], W / 2, 540, 260, 50, 16);
   }

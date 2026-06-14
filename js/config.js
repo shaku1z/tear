@@ -119,6 +119,18 @@ const CONFIG = {
     projSpeed: 620,
   },
 
+  // flyer: hovers and swoops, ignores gravity/platforms
+  flyer: { w: 36, h: 26, hp: 32, speed: 230, contactDmg: 10, knockbackTaken: 14, swoopInterval: 2.2, swoopSpeed: 700, hoverY: 150 },
+  // bomber: rushes and detonates on a fuse or on death
+  bomber: { w: 34, h: 34, hp: 28, speed: 180, contactDmg: 0, knockbackTaken: 11, triggerDist: 150, fuse: 0.85, blastRadius: 125, blastDmg: 26 },
+  // armored: shielded on the side it faces; needs a fast hit or a flank
+  armored: { w: 46, h: 46, hp: 110, speed: 95, contactDmg: 14, knockbackTaken: 3, breakSpeed: 1500 },
+  // boss: large, multi-phase
+  boss: { w: 118, h: 118, hp: 1500, speed: 70, contactDmg: 20, knockbackTaken: 0.6, fireBase: 2.0 },
+
+  // elite variants of basic enemies
+  elite: { hpMult: 2.2, speedMult: 1.3, dmgMult: 1.5, sizeMult: 1.2, chancePerWave: 0.06, chanceMax: 0.35 },
+
   proj: { r: 9, dmg: 10, speed: 540 },
 
   hitStop: { threshold: 22, big: 0.07, small: 0.025 }, // freeze-frame on impact
@@ -165,8 +177,8 @@ const CONFIG = {
   modes: [
     { id: "endless", label: "Endless",            enabled: true,
       blurb: "Survive escalating waves. Chase your best." },
-    { id: "boss",    label: "Waves + Boss",        enabled: false,
-      blurb: "A set run ending in a boss. (Coming soon)" },
+    { id: "boss",    label: "Waves + Boss",        enabled: true, waves: 8,
+      blurb: "Clear 8 waves, then face the boss." },
     { id: "gauntlet", label: "Endless + Bosses",   enabled: false,
       blurb: "Endless, with a boss every few waves. (Coming soon)" },
   ],
