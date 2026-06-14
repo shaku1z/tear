@@ -8,6 +8,9 @@ class Projectile {
     this.deflected = false;   // once deflected, it hurts enemies instead of the player
     this.perfect = false;     // perfect parry: homed + bonus damage
     this.deflectDmg = 28;     // damage dealt to enemies after a deflect
+    this.pierce = false;      // ability: passes through enemies
+    this.pierced = null;      // set of enemies already hit (when piercing)
+    this.bounces = 0;         // ability: ricochets off walls this many times
     this.life = 6;            // seconds before it expires
   }
 
@@ -16,6 +19,19 @@ class Projectile {
     this.y += this.vy * dt;
     this.life -= dt;
     if (this.life <= 0) this.dead = true;
+
+    if (this.bounces > 0) {
+      // ricochet off the play-area edges
+      const r = this.r, W = CONFIG.view.w, top = 0, bottom = CONFIG.world.groundY;
+      let hit = false;
+      if (this.x < r) { this.x = r; this.vx = Math.abs(this.vx); hit = true; }
+      else if (this.x > W - r) { this.x = W - r; this.vx = -Math.abs(this.vx); hit = true; }
+      if (this.y < top + r) { this.y = top + r; this.vy = Math.abs(this.vy); hit = true; }
+      else if (this.y > bottom - r) { this.y = bottom - r; this.vy = -Math.abs(this.vy); hit = true; }
+      if (hit) { this.bounces--; FX.ring(this.x, this.y, 4); }
+      return;
+    }
+
     const m = 40;
     if (this.x < -m || this.x > CONFIG.view.w + m || this.y < -m || this.y > CONFIG.view.h + m) {
       this.dead = true;

@@ -13,6 +13,7 @@ const CONFIG = {
   player: {
     w: 32, h: 50,
     moveSpeed: 430,       // top horizontal run speed
+    thrownMoveBoost: 1.15, // +15% move speed while the blade is thrown (no weapon)
     groundAccel: 5000,    // how fast you reach moveSpeed on ground
     airAccel: 2800,       // air control
     friction: 6000,       // ground stopping power when no input
@@ -69,8 +70,8 @@ const CONFIG = {
       maxSpeed: 4200,
       damage: 34,         // base pierce damage
       damageFromSpeed: 0.012, // + per (px/s) of launch speed
-      reclaimDistance: 255, // how close you must be to recall (~tether)
-      returnSpeed: 2800,  // speed the blade flies back to your hand
+      reclaimDistance: 320, // how close you must be to recall (~tether)
+      returnSpeed: 3400,  // speed the blade flies back to your hand (snappy)
       maxLife: 2.5,       // safety: embed after this long in flight
     },
   },
@@ -132,6 +133,24 @@ const CONFIG = {
     healEachWave: 20,     // HP restored on wave clear (Normal only)
     startDelay: 0.8,      // beat before the first spawn of a wave
     waveClearPause: 0.8,  // delay after the last enemy dies before the draft appears
+  },
+
+  // ---- "Attack Trick" style meter ----
+  trick: {
+    decay: 2.6,         // seconds without a trick before the meter starts draining
+    drainRate: 26,      // gauge points lost per second once draining
+    hitLoss: 0.5,       // fraction of the gauge lost when you take a hit
+    variety: 1.5,       // points multiplier when the trick differs from the last one
+    // gauge thresholds -> score multiplier + rank name
+    tiers: [
+      { at: 0,   mult: 1, name: "" },
+      { at: 14,  mult: 1.5, name: "NICE" },
+      { at: 34,  mult: 2,   name: "STYLISH" },
+      { at: 64,  mult: 3,   name: "BRUTAL" },
+      { at: 110, mult: 4,   name: "SAVAGE" },
+      { at: 175, mult: 5,   name: "TEARING!" },
+    ],
+    pts: { hit: 2, throwHit: 4, deflect: 5, launch: 5, slam: 8, uppercut: 10, parry: 12 },
   },
 
   // ---- difficulties (selectable from the menu) ----

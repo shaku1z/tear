@@ -19,6 +19,10 @@ class Player {
     this.dashCd = 0;            // >0 while on cooldown
     this.dashIframe = 0;
     this.dashX = 0; this.dashY = 0;
+
+    this.moveBoost = 1;         // set by the game (e.g. faster while blade is thrown)
+    this.dropThrough = 0;       // >0 while falling through a one-way platform
+    this.onOneway = false;      // standing on a one-way platform this frame?
   }
 
   get invulnerable() { return this.iframe > 0 || this.dashIframe > 0; }
@@ -32,9 +36,17 @@ class Player {
     if (this.dashIframe > 0) this.dashIframe -= dt;
     if (this.coyote > 0) this.coyote -= dt;
     if (this.jumpBuf > 0) this.jumpBuf -= dt;
+    if (this.dropThrough > 0) this.dropThrough -= dt;
 
     const dirX = (Input.right() ? 1 : 0) - (Input.left() ? 1 : 0);
     if (dirX !== 0) this.facing = dirX;
+
+    // hold S to drop through a one-way platform
+    if (Input.down() && this.onGround && this.onOneway) {
+      this.dropThrough = 0.18;
+      this.onGround = false;
+      this.vy = Math.max(this.vy, 60);
+    }
 
     // ---- dash trigger ----
     if (Input.dashPressed() && this.dashCd <= 0 && this.dashTimer <= 0) {
@@ -60,9 +72,10 @@ class Player {
     } else {
       // ---- normal movement ----
       const accel = this.onGround ? P.groundAccel : P.airAccel;
+      const top = P.moveSpeed * this.moveBoost;
       if (dirX !== 0) {
         this.vx += dirX * accel * dt;
-        this.vx = clamp(this.vx, -P.moveSpeed, P.moveSpeed);
+        this.vx = clamp(this.vx, -top, top);
       } else if (this.onGround) {
         const f = P.friction * dt;
         if (Math.abs(this.vx) <= f) this.vx = 0;
@@ -85,11 +98,13 @@ class Player {
 
     // ---- integrate + collide (axis separated) ----
     this.x += this.vx * dt;
-    this._collideAxis(platforms, true);
+    this._collideAxis(platforms, true, 0);
+    const prevBottom = this.y + this.hh;   // bottom before the vertical move
     this.y += this.vy * dt;
     const wasOnGround = this.onGround;
     this.onGround = false;
-    this._collideAxis(platforms, false);
+    this.onOneway = false;
+    this._collideAxis(platforms, false, prevBottom);
     if (this.onGround) this.coyote = P.coyoteTime;
     else if (wasOnGround) this.coyote = P.coyoteTime;
 
@@ -97,11 +112,21 @@ class Player {
     this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
   }
 
-  _collideAxis(platforms, horizontal) {
+  _collideAxis(platforms, horizontal, prevBottom) {
     for (const p of platforms) {
       const phw = p.w / 2, phh = p.h / 2;
       const pcx = p.x + phw, pcy = p.y + phh;
       if (!aabbOverlap(this.x, this.y, this.hw, this.hh, pcx, pcy, phw, phh)) continue;
+
+      if (p.oneway) {
+        // one-way: only land on top, when falling and arriving from above
+        if (horizontal) continue;
+        if (this.dropThrough > 0) continue;
+        if (this.vy >= 0 && prevBottom <= p.y + 1.5) {
+          this.y = p.y - this.hh; this.vy = 0; this.onGround = true; this.onOneway = true;
+        }
+        continue;
+      }
 
       if (horizontal) {
         if (this.vx > 0) this.x = pcx - phw - this.hw;

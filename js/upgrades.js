@@ -1,99 +1,92 @@
-// ------- draft upgrades: stat boosts + on-action effects -------
-// Stat upgrades mutate CONFIG (read live by gameplay) and/or the live player.
-// Effect upgrades push handlers into `mods` hook arrays, fired by the game loop
-// with an `ev` object: { player, x, y, enemy, enemies, fx, dealAoE(x,y,r,dmg), addFloater }.
+// ------- draft upgrades -------
+// Two categories:
+//   UPGRADES (unique:false) — stackable numeric/heal boosts, can be drafted repeatedly.
+//   UNIQUE ABILITIES (unique:true) — qualitative mechanics, offered/owned only once.
+// Stat upgrades mutate CONFIG / the live player. Ability upgrades set flags on `mods`
+// (read by the combat loop) or push handlers into hook arrays.
 
 function newMods() {
   return {
     onHit: [], onKill: [], onParry: [], onSlam: [],
-    owned: {},      // id -> count
-    ownedList: [],  // order picked (for display)
+    owned: {}, ownedList: [],
+    // unique-ability flags, read by the combat loop:
+    throwRamp: 0,         // per-pierce damage/speed ramp on a thrown blade
+    deflectPierce: false, // deflected shots pass through enemies
+    deflectSplit: false,  // deflected shots split into 3 bouncing shards
+    tempest: false,       // empowered uppercut launches nearby enemies too
+    stormRecall: false,   // the returning blade deals heavy damage
+    phantomDash: 0,       // dash damages enemies you pass through (dmg amount)
+    perfectGuard: false,  // every deflect counts as a perfect parry
+    berserk: false,       // +30% damage while below half HP
   };
 }
 
 const UPGRADES = [
-  // ---- stat boosts ----
-  {
-    id: "vitality", name: "Vitality", kind: "stat",
-    desc: "+30 max HP, and heal 30.",
-    apply: ({ player }) => { player.maxHp += 30; player.heal(30); },
-  },
-  {
-    id: "keen_edge", name: "Keen Edge", kind: "stat",
-    desc: "+18% swing damage.",
-    apply: () => { CONFIG.blade.damageScale *= 1.18; CONFIG.blade.maxDamage = Math.round(CONFIG.blade.maxDamage * 1.12); },
-  },
-  {
-    id: "fleet", name: "Fleet Foot", kind: "stat",
-    desc: "+8% move speed, higher jump.",
-    apply: () => { CONFIG.player.moveSpeed *= 1.08; CONFIG.player.jumpSpeed *= 1.03; },
-  },
-  {
-    id: "quick_recovery", name: "Quick Recovery", kind: "stat",
-    desc: "-18% dash cooldown.",
-    apply: () => { CONFIG.dash.cooldown *= 0.82; },
-  },
-  {
-    id: "long_reach", name: "Long Reach", kind: "stat",
-    desc: "+ blade reach and length.",
-    apply: () => { CONFIG.blade.aimRadius += 18; CONFIG.blade.length += 8; CONFIG.blade.maxReach += 18; },
-  },
-  {
-    id: "heavy_swing", name: "Heavy Swing", kind: "stat",
-    desc: "+25% knockback, stronger launches.",
-    apply: () => { CONFIG.enemy.knockbackTaken *= 1.25; CONFIG.ranged.knockbackTaken *= 1.25; CONFIG.blade.launchPower *= 1.12; },
-  },
-  {
-    id: "deadly_throw", name: "Deadly Throw", kind: "stat",
-    desc: "+25% thrown-blade damage.",
-    apply: () => { CONFIG.blade.throw.damage *= 1.25; CONFIG.blade.throw.damageFromSpeed *= 1.2; },
-  },
+  // ===== stackable upgrades =====
+  { id: "vitality", name: "Vitality", unique: false, desc: "+30 max HP, and heal 30.",
+    apply: ({ player }) => { player.maxHp += 30; player.heal(30); } },
+  { id: "keen_edge", name: "Keen Edge", unique: false, desc: "+18% swing damage.",
+    apply: () => { CONFIG.blade.damageScale *= 1.18; CONFIG.blade.maxDamage = Math.round(CONFIG.blade.maxDamage * 1.12); } },
+  { id: "fleet", name: "Fleet Foot", unique: false, desc: "+8% move speed, higher jump.",
+    apply: () => { CONFIG.player.moveSpeed *= 1.08; CONFIG.player.jumpSpeed *= 1.03; } },
+  { id: "quick_recovery", name: "Quick Recovery", unique: false, desc: "-18% dash cooldown.",
+    apply: () => { CONFIG.dash.cooldown *= 0.82; } },
+  { id: "long_reach", name: "Long Reach", unique: false, desc: "+ blade reach and length.",
+    apply: () => { CONFIG.blade.aimRadius += 18; CONFIG.blade.length += 8; CONFIG.blade.maxReach += 18; } },
+  { id: "heavy_swing", name: "Heavy Swing", unique: false, desc: "+25% knockback, stronger launches.",
+    apply: () => { CONFIG.enemy.knockbackTaken *= 1.25; CONFIG.ranged.knockbackTaken *= 1.25; CONFIG.blade.launchPower *= 1.12; } },
+  { id: "deadly_throw", name: "Deadly Throw", unique: false, desc: "+25% thrown-blade damage.",
+    apply: () => { CONFIG.blade.throw.damage *= 1.25; CONFIG.blade.throw.damageFromSpeed *= 1.2; } },
+  { id: "harvest", name: "Harvest", unique: false, desc: "Each kill heals 6 HP.",
+    apply: ({ mods }) => { mods.onKill.push((ev) => ev.player.heal(6)); } },
+  { id: "vampiric", name: "Vampiric Edge", unique: false, desc: "Swing hits heal 1 HP.",
+    apply: ({ mods }) => { mods.onHit.push((ev) => ev.player.heal(1)); } },
+  { id: "riposte", name: "Riposte", unique: false, desc: "Perfect parry heals 12 HP.",
+    apply: ({ mods }) => { mods.onParry.push((ev) => ev.player.heal(12)); } },
 
-  // ---- on-action effects ----
-  {
-    id: "parry_leech", name: "Riposte", kind: "effect",
-    desc: "Perfect parry heals 12 HP.",
-    apply: ({ mods }) => { mods.onParry.push((ev) => ev.player.heal(12)); },
-  },
-  {
-    id: "harvest", name: "Harvest", kind: "effect",
-    desc: "Each kill heals 6 HP.",
-    apply: ({ mods }) => { mods.onKill.push((ev) => ev.player.heal(6)); },
-  },
-  {
-    id: "vampiric", name: "Vampiric Edge", kind: "effect",
-    desc: "Swing hits heal 1 HP.",
-    apply: ({ mods }) => { mods.onHit.push((ev) => ev.player.heal(1)); },
-  },
-  {
-    id: "seismic_slam", name: "Seismic Slam", kind: "effect",
-    desc: "Slams blast nearby enemies for 22.",
-    apply: ({ mods }) => {
-      mods.onSlam.push((ev) => { ev.dealAoE(ev.x, ev.y, 130, 22); ev.fx.ring(ev.x, ev.y, 10); });
-    },
-  },
-  {
-    id: "detonate", name: "Detonate", kind: "effect",
-    desc: "Kills explode for 18 to nearby foes.",
-    apply: ({ mods }) => {
-      mods.onKill.push((ev) => { ev.dealAoE(ev.x, ev.y, 120, 18); ev.fx.ring(ev.x, ev.y, 8); });
-    },
-  },
-  {
-    id: "adrenaline", name: "Adrenaline", kind: "effect",
-    desc: "Kills instantly refresh your dash.",
-    apply: ({ mods }) => { mods.onKill.push((ev) => { ev.player.dashCd = 0; ev.player.dashTimer = Math.min(ev.player.dashTimer, 0); }); },
-  },
+  // ===== unique abilities =====
+  { id: "seismic_slam", name: "Seismic Slam", unique: true, desc: "Slams blast nearby enemies for 22.",
+    apply: ({ mods }) => { mods.onSlam.push((ev) => { ev.dealAoE(ev.x, ev.y, 130, 22); ev.fx.ring(ev.x, ev.y, 10); }); } },
+  { id: "detonate", name: "Detonate", unique: true, desc: "Kills explode for 18 to nearby foes.",
+    apply: ({ mods }) => { mods.onKill.push((ev) => { ev.dealAoE(ev.x, ev.y, 120, 18); ev.fx.ring(ev.x, ev.y, 8); }); } },
+  { id: "adrenaline", name: "Adrenaline", unique: true, desc: "Kills instantly refresh your dash.",
+    apply: ({ mods }) => { mods.onKill.push((ev) => { ev.player.dashCd = 0; }); } },
+
+  { id: "throw_momentum", name: "Razor Momentum", unique: true,
+    desc: "A thrown blade grows faster & stronger with every enemy it pierces.",
+    apply: ({ mods }) => { mods.throwRamp = 0.18; } },
+  { id: "throw_giant", name: "Greatblade", unique: true,
+    desc: "The blade becomes huge while thrown (normal size in hand).",
+    apply: ({ blade }) => { blade.throwSizeMult = 1.7; } },
+  { id: "parry_pierce", name: "Piercing Parry", unique: true,
+    desc: "Parried projectiles pierce through every enemy.",
+    apply: ({ mods }) => { mods.deflectPierce = true; } },
+  { id: "parry_split", name: "Scatter Parry", unique: true,
+    desc: "Parried projectiles split into 3 that ricochet up to 3 times.",
+    apply: ({ mods }) => { mods.deflectSplit = true; } },
+
+  { id: "tempest", name: "Tempest", unique: true,
+    desc: "Rising uppercuts also launch all nearby enemies skyward.",
+    apply: ({ mods }) => { mods.tempest = true; } },
+  { id: "storm_recall", name: "Storm Recall", unique: true,
+    desc: "The returning blade tears through enemies for double damage.",
+    apply: ({ mods }) => { mods.stormRecall = true; } },
+  { id: "phantom_dash", name: "Phantom Dash", unique: true,
+    desc: "Dashing slices enemies you pass through (great while unarmed).",
+    apply: ({ mods }) => { mods.phantomDash = 26; } },
+  { id: "perfect_guard", name: "Perfect Guard", unique: true,
+    desc: "Every projectile deflect counts as a perfect parry.",
+    apply: ({ mods }) => { mods.perfectGuard = true; } },
+  { id: "berserk", name: "Berserker", unique: true,
+    desc: "+30% damage while below half HP.",
+    apply: ({ mods }) => { mods.berserk = true; } },
 ];
 
-// roll N distinct upgrade choices for a draft
-function rollUpgrades(n) {
-  const pool = UPGRADES.slice();
+// roll N distinct choices; unique abilities already owned are excluded
+function rollUpgrades(n, mods) {
+  const pool = UPGRADES.filter((u) => !(u.unique && mods && mods.owned[u.id]));
   const out = [];
-  while (out.length < n && pool.length) {
-    const i = Math.floor(Math.random() * pool.length);
-    out.push(pool.splice(i, 1)[0]);
-  }
+  while (out.length < n && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
   return out;
 }
 

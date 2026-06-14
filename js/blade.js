@@ -31,6 +31,12 @@ class Blade {
     this.pierced = new Set();     // enemies already hit by the current throw pass
     this.throwDmg = 0;
     this.flyTime = 0;
+    this.throwSizeMult = 1;       // blade length multiplier while thrown (ability)
+  }
+
+  // effective blade length (longer while thrown if the ability is owned)
+  get curLength() {
+    return CONFIG.blade.length * (this.state === "held" ? 1 : this.throwSizeMult);
   }
 
   // hand anchor follows the player
@@ -64,11 +70,11 @@ class Blade {
   }
 
   _recomputeTip(dt) {
-    const B = CONFIG.blade;
+    const L = this.curLength;
     this.prevTipX = this.tipX;
     this.prevTipY = this.tipY;
-    this.tipX = this.x + Math.cos(this.angle) * B.length;
-    this.tipY = this.y + Math.sin(this.angle) * B.length;
+    this.tipX = this.x + Math.cos(this.angle) * L;
+    this.tipY = this.y + Math.sin(this.angle) * L;
     this.tipVX = (this.tipX - this.prevTipX) / dt;
     this.tipVY = (this.tipY - this.prevTipY) / dt;
     this.tipSpeed = len(this.tipVX, this.tipVY);
@@ -185,7 +191,7 @@ class Blade {
   // back the blade out of any wall it has driven its tip into, or off-screen; returns
   // true if it should embed now.
   _embedIfHit(platforms) {
-    const V = CONFIG.view, B = CONFIG.blade;
+    const V = CONFIG.view, L = this.curLength;
     const inSolid = (tx, ty) => {
       if (tx < 0 || tx > V.w || ty < 0 || ty > V.h) return true;
       for (const p of platforms) {
@@ -201,8 +207,8 @@ class Blade {
     let guard = 0;
     while (inSolid(this.tipX, this.tipY) && guard < 60) {
       this.x += bx * 3; this.y += by * 3;
-      this.tipX = this.x + Math.cos(this.angle) * B.length;
-      this.tipY = this.y + Math.sin(this.angle) * B.length;
+      this.tipX = this.x + Math.cos(this.angle) * L;
+      this.tipY = this.y + Math.sin(this.angle) * L;
       guard++;
     }
     return true;
@@ -246,9 +252,10 @@ class Blade {
 
   // ---- drawing ----
   _drawBody(ctx) {
+    const thrownScale = this.state === "held" ? 1 : this.throwSizeMult;
     ctx.strokeStyle = "#000";
     ctx.lineCap = "round";
-    ctx.lineWidth = 7;
+    ctx.lineWidth = 7 * thrownScale;
     ctx.beginPath();
     ctx.moveTo(this.x, this.y);
     ctx.lineTo(this.tipX, this.tipY);

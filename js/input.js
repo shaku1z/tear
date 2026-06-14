@@ -61,7 +61,7 @@ const Input = {
   up()    { return this.held.has("KeyW") || this.held.has("ArrowUp"); },
   down()  { return this.held.has("KeyS") || this.held.has("ArrowDown"); },
 
-  jumpPressed() { return this.pressed.has("Space"); },
+  jumpPressed() { return this.pressed.has("Space") || this.pressed.has("KeyW") || this.pressed.has("ArrowUp"); },
   dashPressed() { return this.pressed.has("ShiftLeft") || this.pressed.has("ShiftRight"); },
   pausePressed() { return this.pressed.has("KeyP"); },
 
