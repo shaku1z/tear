@@ -39,6 +39,7 @@ const CONFIG = {
     handOffsetX: 0,       // hand anchor relative to player center
     handOffsetY: -6,
     aimRadius: 85,        // reticle orbits the player within this radius (= resting tether length)
+    minTether: 0.45,      // hold left-click -> tether eases down to this fraction of aimRadius
     aimSensitivity: 0.9,  // mouse-movement -> reticle movement (pointer-lock mode)
     springStiffness: 150, // pull of the blade toward the reticle (lag/momentum source)
     damping: 7.5,         // velocity damping (higher = less floaty)
@@ -67,11 +68,13 @@ const CONFIG = {
 
     // right-click to throw the blade; right-click near it (within reclaimDistance) to recall
     throw: {
-      speed: 1500,        // base launch speed
+      speed: 1900,        // base launch speed (faster than before)
       speedFromSwing: 0.45, // + this * tip speed at release (flinging adds speed)
-      maxSpeed: 4200,
-      damage: 34,         // base pierce damage
-      damageFromSpeed: 0.012, // + per (px/s) of launch speed
+      maxSpeed: 4600,
+      damage: 22,         // base pierce damage (lower than before)
+      damageFromSpeed: 0.008, // + per (px/s) of launch speed
+      hiMult: 1.4,        // throw (outgoing) hits enemies ABOVE half HP harder
+      loMult: 0.65,       // ...and below-half HP softer (recall is the reverse: a finisher)
       reclaimDistance: 320, // how close you must be to recall (~tether)
       returnSpeed: 3400,  // speed the blade flies back to your hand (snappy)
       maxLife: 2.5,       // safety: embed after this long in flight

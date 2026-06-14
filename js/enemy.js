@@ -8,6 +8,7 @@ class Enemy {
     this.hh = cfg.h / 2;
     this.hp = cfg.hp;
     this.maxHp = cfg.hp;
+    this.hpDisplay = cfg.hp;   // lagging bar for the drain effect
     this.onGround = false;
     this.dead = false;
     this.hitCd = 0;
@@ -88,6 +89,7 @@ class Enemy {
     if (this.hitCd > 0) this.hitCd -= dt;
     if (this.flash > 0) this.flash -= dt;
     if (this.stun > 0) this.stun -= dt;
+    if (this.hpDisplay > this.hp) this.hpDisplay += (this.hp - this.hpDisplay) * clamp(7 * dt, 0, 1);
   }
 
   hit(dmg, knockX, knockY) {
@@ -102,11 +104,12 @@ class Enemy {
   }
 
   drawHpBar(ctx) {
-    const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2;
-    ctx.fillStyle = "#ddd";
-    ctx.fillRect(x, y - 10, w, 4);
-    ctx.fillStyle = "#000";
-    ctx.fillRect(x, y - 10, w * clamp(this.hp / this.maxHp, 0, 1), 4);
+    const w = this.hw * 2, x = this.x - this.hw, y = this.y - this.hh - 13, h = 6;
+    const fr = clamp(this.hp / this.maxHp, 0, 1), fl = clamp(this.hpDisplay / this.maxHp, 0, 1);
+    ctx.fillStyle = "#000"; ctx.fillRect(x - 2, y - 2, w + 4, h + 4);     // border
+    ctx.fillStyle = "#2a2a2a"; ctx.fillRect(x, y, w, h);                  // track
+    if (fl > fr) { ctx.fillStyle = CONFIG.colors.slam; ctx.fillRect(x + w * fr, y, w * (fl - fr), h); } // recent damage
+    ctx.fillStyle = "#fff"; ctx.fillRect(x, y, w * fr, h);               // current hp
   }
 }
 

@@ -25,8 +25,8 @@ const UPGRADES = [
   // ===== stackable upgrades =====
   { id: "vitality", name: "Vitality", unique: false, desc: "+30 max HP, and heal 30.",
     apply: ({ player }) => { player.maxHp += 30; player.heal(30); } },
-  { id: "keen_edge", name: "Keen Edge", unique: false, desc: "+18% swing damage.",
-    apply: () => { CONFIG.blade.damageScale *= 1.18; CONFIG.blade.maxDamage = Math.round(CONFIG.blade.maxDamage * 1.12); } },
+  { id: "keen_edge", name: "Keen Edge", unique: false, desc: "+15% swing damage.",
+    apply: () => { CONFIG.blade.damageScale *= 1.15; CONFIG.blade.maxDamage = Math.round(CONFIG.blade.maxDamage * 1.1); } },
   { id: "fleet", name: "Fleet Foot", unique: false, desc: "+8% move speed, higher jump.",
     apply: () => { CONFIG.player.moveSpeed *= 1.08; CONFIG.player.jumpSpeed *= 1.03; } },
   { id: "quick_recovery", name: "Quick Recovery", unique: false, desc: "-18% dash cooldown.",
@@ -35,8 +35,8 @@ const UPGRADES = [
     apply: () => { CONFIG.blade.aimRadius += 18; CONFIG.blade.length += 8; CONFIG.blade.maxReach += 18; } },
   { id: "heavy_swing", name: "Heavy Swing", unique: false, desc: "+25% knockback, stronger launches.",
     apply: () => { CONFIG.enemy.knockbackTaken *= 1.25; CONFIG.ranged.knockbackTaken *= 1.25; CONFIG.blade.launchPower *= 1.12; } },
-  { id: "deadly_throw", name: "Deadly Throw", unique: false, desc: "+25% thrown-blade damage.",
-    apply: () => { CONFIG.blade.throw.damage *= 1.25; CONFIG.blade.throw.damageFromSpeed *= 1.2; } },
+  { id: "deadly_throw", name: "Deadly Throw", unique: false, desc: "+15% thrown-blade damage.",
+    apply: () => { CONFIG.blade.throw.damage *= 1.15; CONFIG.blade.throw.damageFromSpeed *= 1.12; } },
   { id: "harvest", name: "Harvest", unique: false, desc: "Each kill heals 6 HP.",
     apply: ({ mods }) => { mods.onKill.push((ev) => ev.player.heal(6)); } },
   { id: "vampiric", name: "Vampiric Edge", unique: false, desc: "Swing hits heal 1 HP.",
@@ -51,9 +51,9 @@ const UPGRADES = [
     apply: () => { CONFIG.dash.speed *= 1.1; CONFIG.dash.duration *= 1.04; } },
   { id: "bounty", name: "Bounty Hunter", unique: false, desc: "+20% score from kills.",
     apply: () => { CONFIG.run.scoreMult *= 1.2; } },
-  { id: "glass_cannon", name: "Glass Cannon", unique: false, desc: "+25% swing damage, but -12 max HP.",
+  { id: "glass_cannon", name: "Glass Cannon", unique: false, desc: "+15% swing damage, but -12 max HP.",
     apply: ({ player }) => {
-      CONFIG.blade.damageScale *= 1.25; CONFIG.blade.maxDamage = Math.round(CONFIG.blade.maxDamage * 1.25);
+      CONFIG.blade.damageScale *= 1.15; CONFIG.blade.maxDamage = Math.round(CONFIG.blade.maxDamage * 1.15);
       player.maxHp = Math.max(20, player.maxHp - 12); player.hp = Math.min(player.hp, player.maxHp);
     } },
 

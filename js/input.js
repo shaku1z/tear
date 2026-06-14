@@ -8,6 +8,7 @@ const Input = {
   locked: false,          // pointer lock active?
   allowLock: false,       // only request pointer lock while actually playing
   rmb: false,             // right mouse button edge (throw / recall)
+  lmb: false,             // left mouse button held (draw tether in close)
   clicked: false,         // left-click edge (for menu/UI)
   clickX: 0, clickY: 0,
 
@@ -43,7 +44,11 @@ const Input = {
     });
     // right-click = throw / recall the blade (no context menu)
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
-    canvas.addEventListener("mousedown", (e) => { if (e.button === 2) this.rmb = true; });
+    canvas.addEventListener("mousedown", (e) => {
+      if (e.button === 2) this.rmb = true;
+      if (e.button === 0) this.lmb = true;
+    });
+    window.addEventListener("mouseup", (e) => { if (e.button === 0) this.lmb = false; });
     document.addEventListener("pointerlockchange", () => {
       this.locked = document.pointerLockElement === canvas;
     });

@@ -18,6 +18,8 @@ class Blade {
     this.tipSpeed = 0;
     this.tipVX = 0;     // tip velocity components (slam/launch detection, knockback)
     this.tipVY = 0;
+    this.glowV = 0;     // smoothed "charge" level for the tip glow
+    this.tetherFactor = 1; // shrinks while holding left-click (closer control)
     this.trail = [];    // recent {hx,hy,tx,ty} for the swoosh
 
     // aim is an offset from the hand (player-relative reticle), starts overhead
@@ -49,7 +51,7 @@ class Blade {
   }
 
   // ---- aim / reticle (runs in every state so the throw direction stays current) ----
-  _updateAim(hand) {
+  _updateAim(hand, dt) {
     const B = CONFIG.blade;
     if (Input.locked) {
       // captured mouse: relative movement drives a player-anchored reticle
@@ -61,10 +63,14 @@ class Blade {
       this.aimX = Input.mouseX - hand.x;
       this.aimY = Input.mouseY - hand.y;
     }
+    // hold left-click to ease the tether in close (exponential approach) for finer control
+    const target = Input.lmb ? B.minTether : 1;
+    this.tetherFactor = lerp(this.tetherFactor, target, clamp(9 * (dt || 0.016), 0, 1));
+    const R = B.aimRadius * this.tetherFactor;
     const am = len(this.aimX, this.aimY);
-    if (am > B.aimRadius && am > 0) {
-      this.aimX = (this.aimX / am) * B.aimRadius;
-      this.aimY = (this.aimY / am) * B.aimRadius;
+    if (am > R && am > 0) {
+      this.aimX = (this.aimX / am) * R;
+      this.aimY = (this.aimY / am) * R;
     }
     this.reticleX = hand.x + this.aimX;
     this.reticleY = hand.y + this.aimY;
@@ -79,6 +85,8 @@ class Blade {
     this.tipVX = (this.tipX - this.prevTipX) / dt;
     this.tipVY = (this.tipY - this.prevTipY) / dt;
     this.tipSpeed = len(this.tipVX, this.tipVY);
+    const target = clamp((this.tipSpeed - CONFIG.blade.minHitSpeed) / 3000, 0, 1);
+    this.glowV = lerp(this.glowV, target, clamp(10 * dt, 0, 1));
   }
 
   _pushTrail() {
@@ -88,7 +96,7 @@ class Blade {
 
   update(dt, player, platforms) {
     const hand = this.handPos(player);
-    this._updateAim(hand);
+    this._updateAim(hand, dt);
 
     if (this.state === "held") this._updateHeld(dt, hand);
     else this._updateThrown(dt, player, platforms);
@@ -202,22 +210,18 @@ class Blade {
     };
     if (!inSolid(this.tipX, this.tipY)) return false;
 
-    // step back along travel direction until the tip is just clear of the surface
+    // blade sinks in tip-first, up to the hilt: keep the travel orientation and slide
+    // the hilt to the surface so most of the blade is buried (tip stays inside the wall).
     const m = len(this.vx, this.vy) || 1;
     const dx = this.vx / m, dy = this.vy / m;     // travel direction (into the wall)
-    let guard = 0;
-    while (inSolid(this.tipX, this.tipY) && guard < 60) {
-      this.x -= dx * 3; this.y -= dy * 3;
-      this.tipX = this.x + Math.cos(this.angle) * L;
-      this.tipY = this.y + Math.sin(this.angle) * L;
-      guard++;
+    let g = 0;
+    while (inSolid(this.x, this.y) && g < 80) { this.x -= dx * 3; this.y -= dy * 3; g++; } // if hilt is inside, back it out
+    g = 0;
+    while (g < 80) {                               // then advance the hilt up to the surface
+      const nx = this.x + dx * 3, ny = this.y + dy * 3;
+      if (inSolid(nx, ny)) break;
+      this.x = nx; this.y = ny; g++;
     }
-    // embed HILT-first: bury the hilt/ricasso at the surface and point the blade
-    // back out of the wall, so it reads as stuck by the handle (nicer to grab).
-    const sx = this.tipX, sy = this.tipY;          // contact point (just outside)
-    this.angle = Math.atan2(-dy, -dx);             // blade now points back outward
-    this.x = sx + dx * 8;                           // hilt buried ~8px into the surface
-    this.y = sy + dy * 8;
     this.tipX = this.x + Math.cos(this.angle) * L;
     this.tipY = this.y + Math.sin(this.angle) * L;
     return true;
@@ -227,7 +231,13 @@ class Blade {
   throwBlade() {
     if (this.state !== "held") return false;
     const T = CONFIG.blade.throw;
-    const dirX = Math.cos(this.angle), dirY = Math.sin(this.angle);
+    // throw toward the reticle (where you're aiming) — far more accurate than the
+    // momentum-led blade angle while you're moving/jumping/dashing.
+    let dirX = this.aimX, dirY = this.aimY;
+    const am = len(dirX, dirY);
+    if (am < 1) { dirX = Math.cos(this.angle); dirY = Math.sin(this.angle); }
+    else { dirX /= am; dirY /= am; }
+    this.angle = Math.atan2(dirY, dirX);   // blade points the way it's thrown
     const sp = clamp(T.speed + this.tipSpeed * T.speedFromSwing, T.speed, T.maxSpeed);
     this.vx = dirX * sp;
     this.vy = dirY * sp;
@@ -284,8 +294,12 @@ class Blade {
     ctx.fillStyle = CONFIG.colors.bladeTrail;
     for (let i = 1; i < tr.length; i++) {
       const a = tr[i - 1], b = tr[i];
-      if (len(b.tx - a.tx, b.ty - a.ty) < J.trailMinStep) continue;
-      ctx.globalAlpha = (i / tr.length) * (J.trailAlpha + 0.22);
+      // fade each band smoothly by how fast the tip was moving (no hard cutoff -> no blink)
+      const seg = len(b.tx - a.tx, b.ty - a.ty);
+      const speedA = clamp((seg - 1) / 22, 0, 1);
+      const al = (i / tr.length) * (J.trailAlpha + 0.3) * speedA;
+      if (al <= 0.002) continue;
+      ctx.globalAlpha = al;
       ctx.beginPath();
       ctx.moveTo(a.hx, a.hy);
       ctx.lineTo(a.tx, a.ty);
@@ -299,9 +313,9 @@ class Blade {
 
   _drawTipGlow(ctx) {
     if (this.state !== "held") return;
-    const v = clamp((this.tipSpeed - CONFIG.blade.minHitSpeed) / 3000, 0, 1);
+    const v = this.glowV;
     if (v <= 0.04) return;
-    ctx.globalAlpha = 0.25 + v * 0.55;
+    ctx.globalAlpha = 0.2 + v * 0.5;
     ctx.fillStyle = CONFIG.colors.bladeGlow;
     ctx.beginPath();
     ctx.arc(this.tipX, this.tipY, 4 + v * 13, 0, Math.PI * 2);

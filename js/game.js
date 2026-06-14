@@ -284,6 +284,7 @@
       if (spec.hpScale) { e.hp *= spec.hpScale; e.maxHp *= spec.hpScale; }
       if (spec.type !== "flyer") { const pos = groundSpawn(e.hh); e.x = pos.x; e.y = pos.y; }
     }
+    e.hpDisplay = e.hp;
     enemies.push(e);
   }
 
@@ -469,6 +470,11 @@
         if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y, e.radius + 4)) {
           blade.pierced.add(e);
           let tdmg = blade.throwDmg;
+          // outgoing throw favors high-HP foes (opener); recall favors low-HP (finisher)
+          const hiHp = e.hp > e.maxHp * 0.5;
+          const T = CONFIG.blade.throw;
+          if (blade.state === "returning") tdmg *= hiHp ? T.loMult : T.hiMult;
+          else tdmg *= hiHp ? T.hiMult : T.loMult;
           if (blade.state === "returning" && run.mods.stormRecall) tdmg *= 2;   // Storm Recall
           if (run.mods.berserk && player.hp < player.maxHp * 0.5) tdmg *= 1.3;
           tdmg *= e.damageTakenMult();
