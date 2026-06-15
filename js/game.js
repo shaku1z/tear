@@ -441,13 +441,13 @@
           dmg *= e.damageTakenMult();   // armored: reduced grounded, more airborne
           const big = isSlam || empowered || dmg >= CONFIG.hitStop.threshold;
           e.hit(dmg, blade.tipVX, blade.tipVY);
-          if (isLaunch) e.vy = -CONFIG.blade.launchPower * (1 + riseF * CONFIG.blade.risingLaunchBonus);
+          if (isLaunch) e.vy = -CONFIG.blade.launchPower * (1 + riseF * CONFIG.blade.risingLaunchBonus) / e.weight;
           // Tempest: an empowered uppercut also launches nearby enemies
           if (empowered && run.mods.tempest) {
             for (const e2 of enemies) {
               if (e2.dead || e2 === e) continue;
               if (len(e2.x - e.x, e2.y - e.y) < 175) {
-                e2.vy = -CONFIG.blade.launchPower; e2.hit(baseDmg * 0.5, 0, -1);
+                e2.vy = -CONFIG.blade.launchPower / e2.weight; e2.hit(baseDmg * 0.5, 0, -1);
                 FX.burst(e2.x, e2.y, 0, -1, 4); if (e2.dead) onKill(e2);
               }
             }

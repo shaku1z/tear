@@ -106,6 +106,7 @@ const CONFIG = {
     hp: 60,
     contactDmg: 12,
     knockbackTaken: 9,    // knockback per point of damage received
+    weight: 1,            // resists launches/flings (higher = harder to pop airborne)
     respawnDelay: 1.4,
   },
 
@@ -121,17 +122,18 @@ const CONFIG = {
     windup: 0.7,          // telegraph time before firing
     aimInterval: 2.3,     // time between shots while kiting
     projSpeed: 620,
+    weight: 1,
   },
 
   // flyer: hovers and swoops, ignores gravity/platforms
-  flyer: { w: 36, h: 26, hp: 32, speed: 230, contactDmg: 10, knockbackTaken: 14, swoopInterval: 3.3, swoopSpeed: 700, hoverY: 150 },
+  flyer: { w: 36, h: 26, hp: 32, speed: 230, contactDmg: 10, knockbackTaken: 14, weight: 0.75, swoopInterval: 3.3, swoopSpeed: 700, hoverY: 150 },
   // bomber: rushes and detonates on a fuse or on death
-  bomber: { w: 34, h: 34, hp: 28, speed: 180, contactDmg: 0, knockbackTaken: 11, triggerDist: 150, fuse: 0.85, blastRadius: 165, blastDmg: 26 },
+  bomber: { w: 34, h: 34, hp: 28, speed: 180, contactDmg: 0, knockbackTaken: 11, weight: 1, triggerDist: 150, fuse: 0.85, blastRadius: 165, blastDmg: 26 },
   // armored: shielded on the side it faces; takes reduced damage on the ground,
   // normal/extra in the air -> you must launch ("updraft") it to kill efficiently
-  armored: { w: 46, h: 46, hp: 110, speed: 95, contactDmg: 14, knockbackTaken: 3, breakSpeed: 1500, groundDR: 0.5, airDR: 1.15 },
-  // boss: large, multi-phase
-  boss: { w: 118, h: 118, hp: 1500, speed: 70, contactDmg: 20, knockbackTaken: 0.6, fireBase: 2.0 },
+  armored: { w: 46, h: 46, hp: 110, speed: 95, contactDmg: 14, knockbackTaken: 3, weight: 2.2, breakSpeed: 1500, groundDR: 0.5, airDR: 1.15 },
+  // boss: large, multi-phase (very heavy -> barely flinchable)
+  boss: { w: 118, h: 118, hp: 1500, speed: 70, contactDmg: 20, knockbackTaken: 0.6, weight: 6, fireBase: 2.0 },
 
   // elite variants of basic enemies
   elite: { hpMult: 2.2, speedMult: 1.3, dmgMult: 1.5, sizeMult: 1.2, chancePerWave: 0.06, chanceMax: 0.35 },

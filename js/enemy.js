@@ -19,6 +19,7 @@ class Enemy {
     this.elite = false;
     this.color = "#000";
     this.spawnT = 0;       // >0 while materializing (telegraph + can't act)
+    this.weight = cfg.weight || 1;   // resists launches (heavier = less pop)
   }
 
   get radius() { return Math.max(this.hw, this.hh); }
@@ -99,10 +100,10 @@ class Enemy {
     this.hp -= dmg;
     this.hitCd = CONFIG.blade.enemyHitIframe;
     this.flash = 0.08;
-    const kb = dmg * this.cfg.knockbackTaken;
+    const kb = dmg * this.cfg.knockbackTaken / this.weight;
     const m = len(knockX, knockY) || 1;
     this.vx += (knockX / m) * kb;
-    this.vy += (knockY / m) * kb - 120;
+    this.vy += (knockY / m) * kb - 120 / this.weight;
     if (this.hp <= 0) this.dead = true;
   }
 
