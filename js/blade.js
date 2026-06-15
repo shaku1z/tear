@@ -35,7 +35,11 @@ class Blade {
     this.flyTime = 0;
     this.throwSizeMult = 1;       // blade length multiplier while thrown (ability)
     this.freeRecall = false;      // ability: recall from any distance
+    this.throwType = "pierce";    // set by the equipped weapon ("pierce" | "lob")
+    this.embeddedNew = false;     // set the frame a flying blade embeds (for lob shockwave)
   }
+
+  forceEmbed() { this.state = "embedded"; this.vx = 0; this.vy = 0; }
 
   // effective blade length (longer while thrown if the ability is owned)
   get curLength() {
@@ -190,6 +194,7 @@ class Blade {
       if (this.flyTime >= T.maxLife || this._embedIfHit(platforms)) {
         this.state = "embedded";
         this.vx = 0; this.vy = 0;
+        this.embeddedNew = true;   // game triggers the lob shockwave on this edge
       }
     } else { // embedded
       this.vx = 0; this.vy = 0;

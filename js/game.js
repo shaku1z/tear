@@ -95,7 +95,7 @@
   let run = null;             // { mode, diff, wave, score, mods, spawnQueue, spawnTimer, waveActive }
   let draftChoices = [];
   let overInfo = null;        // game-over summary
-  let selMode = "endless", selDiff = "normal";
+  let selMode = "endless", selDiff = "normal", selWeapon = "sword";
   let uiButtons = [];
   let focus = -1, lastUiState = null;   // keyboard focus for menus/draft
 
@@ -201,11 +201,13 @@
   // ---- run / wave management ----
   function startRun(mode, diff) {
     restoreConfig();
+    const weapon = applyWeapon(selWeapon);   // weapon defines base feel; shop/upgrades stack on top
     applySettings();
     const d = CONFIG.difficulties.find((x) => x.id === diff) || CONFIG.difficulties[0];
     player = new Player(W * 0.5, CONFIG.world.groundY - 60);
     player.oneHit = d.oneHit;
     blade = new Blade();
+    blade.throwType = weapon.throwType;
     enemies = []; projectiles = []; floaters = [];
     hitStop = 0; shake = 0; FX.reset();
     timeScale = 1; slowmo = 0; zoom = 1; flash = 0; bannerT = 0; dashGhostT = 0;
@@ -292,6 +294,16 @@
     enemies.push(e);
   }
 
+  // hammer "lob" throw: a shockwave + stun where the thrown blade lands
+  function lobExplode(x, y) {
+    const T = CONFIG.blade.throw;
+    FX.ring(x, y, 16, CONFIG.colors.slam); FX.ring(x, y, 8, CONFIG.colors.slam);
+    FX.burst(x, y, 0, -1, 12, CONFIG.colors.slam);
+    addShake(CONFIG.juice.shakeBig); addZoom(CONFIG.juice.zoomBig); SFX.boom();
+    dealAoE(x, y, T.lobRadius, Math.round(blade.throwDmg * 0.8));
+    for (const e of enemies) if (!e.dead && len(e.x - x, e.y - y) <= T.lobRadius + e.radius) e.stun = Math.max(e.stun, T.lobStun);
+  }
+
   function bomberBlast(e) {
     const C = CONFIG.bomber;
     FX.ring(e.x, e.y, 14, CONFIG.colors.bomber); FX.ring(e.x, e.y, 6, CONFIG.colors.bomber);
@@ -359,6 +371,7 @@
     player.moveBoost = (blade.state !== "held") ? CONFIG.player.thrownMoveBoost : 1;
     player.update(dt, platforms);
     blade.update(dt, player, platforms);
+    if (blade.embeddedNew) { blade.embeddedNew = false; if (blade.throwType === "lob") lobExplode(blade.x, blade.y); }
 
     // audio cadence: dash start + swing whoosh
     if (player.dashTimer > 0 && !wasDashing) SFX.dash();
@@ -409,6 +422,7 @@
     updateWave(dt);
     for (const e of enemies) {
       if (e.spawnT > 0) { e.spawnT -= dt; continue; }   // materializing: hold still
+      if (e.stun > 0) { e.stun -= dt; continue; }        // stunned (hammer lob / guard break): frozen
       e.update(dt, platforms, player, projectiles);
     }
     FX.update(dt);
@@ -497,6 +511,8 @@
           addStyle("throwHit");
           fire(run.mods.onHit, makeEv(e.x, e.y, e));
           if (e.dead) onKill(e);
+          // hammer lob: stop on the first enemy and detonate
+          if (blade.throwType === "lob") { lobExplode(e.x, e.y); blade.forceEmbed(); break; }
         }
       }
     }
@@ -842,24 +858,29 @@
   }
 
   function renderSetup() {
-    UI.title(ctx, "SELECT RUN", W / 2, 130, 44);
-    UI.text(ctx, "Mode", W / 2 - 330, 210, 18, "left", 0.6);
-    CONFIG.modes.forEach((m, i) => {
-      uiButtons.push({ x: W / 2 - 330, y: 225 + i * 64, w: 300, h: 52, label: m.label + (m.enabled ? "" : " (soon)"),
-        enabled: m.enabled, size: 18, action: () => { if (m.enabled) selMode = m.id; },
-        sel: selMode === m.id });
-    });
-    UI.text(ctx, "Difficulty", W / 2 + 30, 210, 18, "left", 0.6);
-    CONFIG.difficulties.forEach((d, i) => {
-      uiButtons.push({ x: W / 2 + 30, y: 225 + i * 64, w: 300, h: 52, label: d.label, enabled: true, size: 18,
-        action: () => { selDiff = d.id; }, sel: selDiff === d.id });
-    });
-    const m = CONFIG.modes.find((x) => x.id === selMode);
-    if (m) UI.text(ctx, m.blurb, W / 2, 470, 15, "center", 0.7);
-    uiButtons.push({ x: W / 2 - 230, y: 520, w: 200, h: 56, label: "START", enabled: true,
-      action: () => startRun(selMode, selDiff) });
-    uiButtons.push({ x: W / 2 + 30, y: 520, w: 200, h: 56, label: "BACK", enabled: true,
-      action: () => { state = "menu"; } });
+    UI.title(ctx, "SELECT RUN", W / 2, 110, 40);
+    const top = 175, bw = 300, bh = 50, gap = 12;
+    const col = (label, x, items, get, set) => {
+      UI.text(ctx, label, x, top, 18, "left", 0.6);
+      items.forEach((it, i) => uiButtons.push({
+        x, y: top + 18 + i * (bh + gap), w: bw, h: bh, size: 16,
+        label: it.label + (it.enabled === false ? " (soon)" : ""),
+        enabled: it.enabled !== false,
+        action: () => { if (it.enabled !== false) set(it.id); },
+        sel: get() === it.id,
+      }));
+    };
+    col("Mode", 180, CONFIG.modes, () => selMode, (v) => selMode = v);
+    col("Difficulty", 650, CONFIG.difficulties.map((d) => ({ id: d.id, label: d.label })), () => selDiff, (v) => selDiff = v);
+    col("Weapon", 1120, WEAPONS.map((w) => ({ id: w.id, label: w.name })), () => selWeapon, (v) => selWeapon = v);
+
+    const wsel = WEAPONS.find((x) => x.id === selWeapon);
+    if (wsel) UI.text(ctx, wsel.blurb, W / 2, 560, 16, "center", 0.8);
+    const msel = CONFIG.modes.find((x) => x.id === selMode);
+    if (msel) UI.text(ctx, msel.blurb, W / 2, 588, 14, "center", 0.55);
+
+    uiButtons.push({ x: W / 2 - 230, y: 640, w: 200, h: 56, label: "START", action: () => startRun(selMode, selDiff) });
+    uiButtons.push({ x: W / 2 + 30, y: 640, w: 200, h: 56, label: "BACK", action: () => { state = "menu"; } });
   }
 
   function renderHowto() {
