@@ -4,12 +4,12 @@
 // reset, before shop/upgrade bonuses stack on top).
 const WEAPONS = [
   {
-    id: "sword", name: "Sword", throwType: "pierce",
+    id: "sword", name: "Sword", throwType: "pierce", model: "sword",
     blurb: "Balanced all-rounder. Throw pierces foes and embeds in walls.",
     apply: () => {},   // default = base config
   },
   {
-    id: "hammer", name: "Hammer", throwType: "lob",
+    id: "hammer", name: "Hammer", throwType: "lob", model: "hammer",
     blurb: "Slow & heavy: massive damage and launches, shorter reach. Throw lobs a shockwave.",
     apply: () => {
       const B = CONFIG.blade;

@@ -208,6 +208,7 @@
     player.oneHit = d.oneHit;
     blade = new Blade();
     blade.throwType = weapon.throwType;
+    blade.model = weapon.model || "sword";
     enemies = []; projectiles = []; floaters = [];
     hitStop = 0; shake = 0; FX.reset();
     timeScale = 1; slowmo = 0; zoom = 1; flash = 0; bannerT = 0; dashGhostT = 0;
@@ -425,6 +426,15 @@
       if (e.stun > 0) { e.stun -= dt; continue; }        // stunned (hammer lob / guard break): frozen
       e.update(dt, platforms, player, projectiles);
     }
+    // a spiked enemy slamming into the ground -> impact burst
+    for (const e of enemies) {
+      if (e.spiked && e.onGround) {
+        e.spiked = false;
+        const gy = e.y + e.hh;
+        FX.ring(e.x, gy, 10, CONFIG.colors.slam); FX.burst(e.x, gy, 0, -1, 7, CONFIG.colors.slam);
+        addShake(CONFIG.juice.shakeBig); SFX.slam();
+      }
+    }
     FX.update(dt);
 
     // held blade vs enemies (slam / launch + hooks)
@@ -445,17 +455,27 @@
           if (e.cfg.breakSpeed && Math.sign(blade.tipX - e.x) === e.guardSide && blade.tipSpeed >= e.cfg.breakSpeed) e.stun = 0.8;
           const isSlam = !player.onGround && blade.tipVY > CONFIG.blade.slamMinDownSpeed;
           const isLaunch = blade.tipVY < -CONFIG.blade.launchMinUpSpeed;
+          // spike: slamming an enemy that's still airborne drives it hard into the ground
+          const spike = isSlam && !e.onGround;
           // rising uppercut: upward momentum (jump / up-dash) empowers the launch
           const riseF = isLaunch ? clamp(Math.max(0, -player.vy) / CONFIG.blade.risingSpeedRef, 0, 1) : 0;
           const empowered = isLaunch && riseF > 0.45;
           let dmg = baseDmg * (isSlam ? CONFIG.blade.slamMultiplier : 1);
           if (isLaunch) dmg *= 1 + riseF * CONFIG.blade.risingDmgBonus;
+          // spike damage scales with how high the enemy is + how hard you struck
+          let heightF = 0, strikeF = 0;
+          if (spike) {
+            heightF = clamp(((CONFIG.world.groundY - e.hh) - e.y) / 400, 0, 1);
+            strikeF = clamp(blade.tipSpeed / 4000, 0, 1);
+            dmg *= 1 + heightF * 0.6 + strikeF * 0.3;
+          }
           if (run.mods.berserk && player.hp < player.maxHp * 0.5) dmg *= 1.3;
           if (!player.onGround && run.mods.airBonus) dmg *= 1 + run.mods.airBonus;  // Air Superiority
           dmg *= e.damageTakenMult();   // armored: reduced grounded, more airborne
-          const big = isSlam || empowered || dmg >= CONFIG.hitStop.threshold;
+          const big = isSlam || empowered || spike || dmg >= CONFIG.hitStop.threshold;
           e.hit(dmg, blade.tipVX, blade.tipVY);
-          if (isLaunch) e.vy = -CONFIG.blade.launchPower * (1 + riseF * CONFIG.blade.risingLaunchBonus) / e.weight;
+          if (spike) { e.vy = (1000 + heightF * 800 + strikeF * 500) / e.weight; e.spiked = true; }
+          else if (isLaunch) e.vy = -CONFIG.blade.launchPower * (1 + riseF * CONFIG.blade.risingLaunchBonus) / e.weight;
           // Tempest: an empowered uppercut also launches nearby enemies
           if (empowered && run.mods.tempest) {
             for (const e2 of enemies) {
@@ -470,7 +490,7 @@
           const cp = segPointDist(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y);
           FX.burst(cp.px, cp.py, blade.tipVX, blade.tipVY, CONFIG.juice.sparkCount, e.color);
           if (isSlam || empowered) FX.ring(e.x, e.y, 8, CONFIG.colors.slam);
-          const tag = isSlam ? "!" : (isLaunch ? (empowered ? "⇈" : "↑") : "");
+          const tag = spike ? "▼" : (isSlam ? "!" : (isLaunch ? (empowered ? "⇈" : "↑") : ""));
           addFloater(e.x, e.y - 26, Math.round(dmg) + tag, big || isLaunch);
           hitStop = big ? CONFIG.hitStop.big : CONFIG.hitStop.small;
           addShake(big || isLaunch ? CONFIG.juice.shakeBig : CONFIG.juice.shakeSmall);

@@ -20,6 +20,7 @@ class Enemy {
     this.color = "#000";
     this.spawnT = 0;       // >0 while materializing (telegraph + can't act)
     this.weight = cfg.weight || 1;   // resists launches (heavier = less pop)
+    this.spiked = false;   // slammed downward while airborne -> ground-impact on landing
   }
 
   get radius() { return Math.max(this.hw, this.hh); }

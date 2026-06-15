@@ -37,6 +37,7 @@ class Blade {
     this.freeRecall = false;      // ability: recall from any distance
     this.throwType = "pierce";    // set by the equipped weapon ("pierce" | "lob")
     this.embeddedNew = false;     // set the frame a flying blade embeds (for lob shockwave)
+    this.model = "sword";         // visual: "sword" | "hammer"
   }
 
   forceEmbed() { this.state = "embedded"; this.vx = 0; this.vy = 0; }
@@ -276,15 +277,35 @@ class Blade {
 
   // ---- drawing ----
   _drawBody(ctx) {
-    const thrownScale = this.state === "held" ? 1 : this.throwSizeMult;
+    const s = this.state === "held" ? 1 : this.throwSizeMult;
     ctx.strokeStyle = "#000";
+    ctx.fillStyle = "#000";
     ctx.lineCap = "round";
-    ctx.lineWidth = 7 * thrownScale;
+
+    if (this.model === "hammer") {
+      // thick shaft + a chunky head block at the tip
+      ctx.lineWidth = 7 * s;
+      ctx.beginPath();
+      ctx.moveTo(this.x, this.y);
+      ctx.lineTo(this.tipX, this.tipY);
+      ctx.stroke();
+      ctx.save();
+      ctx.translate(this.tipX, this.tipY);
+      ctx.rotate(this.angle);
+      const hl = 22 * s, hh = 16 * s;        // head: long across the shaft
+      ctx.fillRect(-hl * 0.35, -hh, hl, hh * 2);
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+      ctx.strokeRect(-hl * 0.35, -hh, hl, hh * 2);
+      ctx.restore();
+      return;
+    }
+
+    // sword: tapered line + crossguard
+    ctx.lineWidth = 7 * s;
     ctx.beginPath();
     ctx.moveTo(this.x, this.y);
     ctx.lineTo(this.tipX, this.tipY);
     ctx.stroke();
-
     const gx = Math.cos(this.angle + Math.PI / 2) * 9;
     const gy = Math.sin(this.angle + Math.PI / 2) * 9;
     ctx.lineWidth = 5;
