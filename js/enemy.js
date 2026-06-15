@@ -21,6 +21,15 @@ class Enemy {
     this.spawnT = 0;       // >0 while materializing (telegraph + can't act)
     this.weight = cfg.weight || 1;   // resists launches (heavier = less pop)
     this.spiked = false;   // slammed downward while airborne -> ground-impact on landing
+    // variant / affix state
+    this.kind = "enemy";
+    this.affixes = [];
+    this.affixCount = 0;
+    this.fireRateMult = 1; // <1 = shoots faster (Rapid)
+    this.volley = 1;       // shots per attack (Volley)
+    this.contactReach = 0; // extra contact range (Armed)
+    this.shield = 0;       // absorbs damage before HP (Warded)
+    this.maxShield = 0;
   }
 
   get radius() { return Math.max(this.hw, this.hh); }
@@ -98,9 +107,14 @@ class Enemy {
   }
 
   hit(dmg, knockX, knockY) {
-    this.hp -= dmg;
     this.hitCd = CONFIG.blade.enemyHitIframe;
     this.flash = 0.08;
+    if (this.shield > 0) {                       // Warded: shield absorbs first
+      this.shield -= dmg;
+      if (this.shield < 0) { this.hp += this.shield; this.shield = 0; }
+    } else {
+      this.hp -= dmg;
+    }
     const kb = dmg * this.cfg.knockbackTaken / this.weight;
     const m = len(knockX, knockY) || 1;
     this.vx += (knockX / m) * kb;
@@ -115,12 +129,16 @@ class Enemy {
     ctx.fillStyle = "#2a2a2a"; ctx.fillRect(x, y, w, h);                  // track
     if (fl > fr) { ctx.fillStyle = CONFIG.colors.slam; ctx.fillRect(x + w * fr, y, w * (fl - fr), h); } // recent damage
     ctx.fillStyle = "#fff"; ctx.fillRect(x, y, w * fr, h);               // current hp
+    if (this.maxShield > 0 && this.shield > 0) {                         // Warded shield
+      ctx.fillStyle = CONFIG.colors.perfect;
+      ctx.fillRect(x, y - 5, w * clamp(this.shield / this.maxShield, 0, 1), 3);
+    }
   }
 }
 
 // ---- Charger: melee rusher ----
 class Charger extends Enemy {
-  constructor(x, y) { super(x, y, CONFIG.enemy); this.color = CONFIG.colors.charger; }
+  constructor(x, y) { super(x, y, CONFIG.enemy); this.color = CONFIG.colors.charger; this.kind = "charger"; }
   update(dt, platforms, player) {
     this.tickTimers(dt);
     const dir = Math.sign(player.x - this.x) || 1;
@@ -135,6 +153,13 @@ class Charger extends Enemy {
     ctx.fillStyle = "#fff";
     const dir = Math.sign(this.vx) || 1;
     ctx.fillRect(this.x + dir * 7 - 3, y + 11, 6, 6);
+    if (this.contactReach > 0) {   // Armed: a weapon extending its reach
+      ctx.strokeStyle = "#000"; ctx.lineWidth = 5; ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(this.x + dir * this.hw, this.y);
+      ctx.lineTo(this.x + dir * (this.hw + this.contactReach), this.y);
+      ctx.stroke();
+    }
     this.drawHpBar(ctx);
   }
 }
@@ -144,6 +169,7 @@ class Ranged extends Enemy {
   constructor(x, y) {
     super(x, y, CONFIG.ranged);
     this.color = CONFIG.colors.ranged;
+    this.kind = "ranged";
     this.state = "kite";
     this.aimTimer = this.cfg.aimInterval * (0.4 + Math.random() * 0.6);
     this.windT = 0;
@@ -158,11 +184,21 @@ class Ranged extends Enemy {
       else if (dist > C.preferredDist * 1.3) move = -away;
       this.vx = lerp(this.vx, move * this.speed, clamp(6 * dt, 0, 1));
       this.aimTimer -= dt;
-      if (this.aimTimer <= 0) { this.state = "windup"; this.windT = C.windup; }
+      if (this.aimTimer <= 0) { this.state = "windup"; this.windT = C.windup * this.fireRateMult; }
     } else {
       this.vx = lerp(this.vx, 0, clamp(12 * dt, 0, 1));
       this.windT -= dt;
-      if (this.windT <= 0) { this.fireAt(player, projectiles, C.projSpeed); this.state = "kite"; this.aimTimer = C.aimInterval; }
+      if (this.windT <= 0) {
+        if (this.volley > 1) {                 // Volley: spread shot
+          const base = Math.atan2(player.y - this.y, player.x - this.x);
+          for (let i = 0; i < this.volley; i++) {
+            const a = base + (i - (this.volley - 1) / 2) * 0.22;
+            projectiles.push(new Projectile(this.x, this.y, Math.cos(a) * C.projSpeed, Math.sin(a) * C.projSpeed));
+          }
+        } else this.fireAt(player, projectiles, C.projSpeed);
+        this.state = "kite";
+        this.aimTimer = C.aimInterval * this.fireRateMult;   // Rapid: shorter interval
+      }
     }
     this.integrate(dt, platforms);
   }
@@ -191,6 +227,7 @@ class Flyer extends Enemy {
   constructor(x, y) {
     super(x, y, CONFIG.flyer);
     this.color = CONFIG.colors.flyer;
+    this.kind = "flyer";
     this.state = "hover";
     this.aimTimer = this.cfg.swoopInterval * (0.5 + Math.random() * 0.6);
     this.swoopT = 0;
@@ -239,6 +276,7 @@ class Bomber extends Enemy {
   constructor(x, y) {
     super(x, y, CONFIG.bomber);
     this.color = CONFIG.colors.bomber;
+    this.kind = "bomber";
     this.isBomber = true;
     this.armed = false;
     this.fuse = 0;
@@ -270,7 +308,7 @@ class Bomber extends Enemy {
 
 // ---- Armored: shielded on the side it faces; needs a fast hit or a flank ----
 class Armored extends Enemy {
-  constructor(x, y) { super(x, y, CONFIG.armored); this.guardSide = 1; this.color = CONFIG.colors.armored; }
+  constructor(x, y) { super(x, y, CONFIG.armored); this.guardSide = 1; this.color = CONFIG.colors.armored; this.kind = "armored"; }
   update(dt, platforms, player) {
     this.tickTimers(dt);
     this.guardSide = Math.sign(player.x - this.x) || 1;
@@ -313,6 +351,7 @@ class Boss extends Enemy {
   constructor(x, y) {
     super(x, y, CONFIG.boss);
     this.color = CONFIG.colors.boss;
+    this.kind = "boss";
     this.isBoss = true;
     this.fireTimer = 2;
   }

@@ -251,11 +251,13 @@
     } else {
       const count = R.firstWaveCount + Math.floor((run.wave - 1) * R.countPerWave);
       const hpScale = 1 + (run.wave - 1) * R.hpScalePerWave;
-      const eliteChance = Math.min(CONFIG.elite.chanceMax, (run.wave - 2) * CONFIG.elite.chancePerWave);
       for (let i = 0; i < count; i++) {
-        const spec = { type: pickEnemyType(run.wave), hpScale };
-        if (run.wave >= 3 && Math.random() < eliteChance) spec.elite = true;
-        run.spawnQueue.push(spec);
+        if (run.wave >= 4 && Math.random() < 0.15) {       // occasional authored sub-type
+          const p = PRESETS[Math.floor(Math.random() * PRESETS.length)];
+          run.spawnQueue.push({ type: p.type, hpScale, preset: p });
+        } else {
+          run.spawnQueue.push({ type: pickEnemyType(run.wave), hpScale });   // affixes rolled at spawn
+        }
       }
     }
     run.spawnTimer = R.startDelay;
@@ -286,8 +288,8 @@
       default:        e = new Charger(0, 0);
     }
     if (spec.type !== "boss") {
-      if (spec.elite) e.makeElite();
       if (spec.hpScale) { e.hp *= spec.hpScale; e.maxHp *= spec.hpScale; }
+      if (spec.preset) applyPreset(e, spec.preset); else rollAffixes(e, run.wave);
       if (spec.type !== "flyer") { const pos = groundSpawn(e.hh); e.x = pos.x; e.y = pos.y; }
     }
     e.hpDisplay = e.hp;
@@ -596,7 +598,7 @@
     // enemy contact damage
     for (const e of enemies) {
       if (e.dead || e.spawnT > 0) continue;
-      if (aabbOverlap(player.x, player.y, player.hw, player.hh, e.x, e.y, e.hw, e.hh)) {
+      if (aabbOverlap(player.x, player.y, player.hw, player.hh, e.x, e.y, e.hw + e.contactReach, e.hh)) {
         if (player.takeDamage(e.contactDmg, e.x)) { loseStyle(); SFX.hurt(); }
       }
     }
@@ -622,6 +624,7 @@
 
   function onKill(e) {
     addKillScore();
+    if (e.affixCount) run.score += Math.round(CONFIG.run.scorePerKill * run.wave * run.mult * 0.4 * e.affixCount);
     FX.death(e.x, e.y, CONFIG.juice.deathShards, e.color);
     SFX.death();
     fire(run.mods.onKill, makeEv(e.x, e.y, e));
@@ -745,11 +748,6 @@
         ctx.restore();
       } else {
         e.draw(ctx, player);
-      }
-      if (e.elite) {
-        ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
-        ctx.beginPath(); ctx.arc(e.x, e.y, e.radius + 9, 0, Math.PI * 2); ctx.stroke();
-        ctx.setLineDash([]);
       }
     }
     for (const p of projectiles) p.draw(ctx);
