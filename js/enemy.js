@@ -30,6 +30,8 @@ class Enemy {
     this.contactReach = 0; // extra contact range (Armed)
     this.shield = 0;       // absorbs damage before HP (Warded)
     this.maxShield = 0;
+    this.canJump = false;  // some ground enemies can hop onto platforms
+    this.jumpCd = 0;
   }
 
   get radius() { return Math.max(this.hw, this.hh); }
@@ -93,6 +95,13 @@ class Enemy {
     }
   }
 
+  // some grounded enemies hop toward the player when they're up on a platform
+  maybeJump(player, dt) {
+    if (this.jumpCd > 0) this.jumpCd -= dt;
+    if (!this.canJump || !this.onGround || this.jumpCd > 0) return;
+    if (player.y < this.y - 90 && Math.random() < 0.5) { this.vy = -1100; this.onGround = false; this.jumpCd = 1.8; }
+  }
+
   fireAt(player, projectiles, speed) {
     const dx = player.x - this.x, dy = player.y - this.y;
     const m = len(dx, dy) || 1;
@@ -143,6 +152,7 @@ class Charger extends Enemy {
     this.tickTimers(dt);
     const dir = Math.sign(player.x - this.x) || 1;
     this.vx = lerp(this.vx, dir * this.speed, clamp(8 * dt, 0, 1));
+    this.maybeJump(player, dt);
     this.integrate(dt, platforms);
   }
   draw(ctx) {
@@ -200,6 +210,7 @@ class Ranged extends Enemy {
         this.aimTimer = C.aimInterval * this.fireRateMult;   // Rapid: shorter interval
       }
     }
+    this.maybeJump(player, dt);
     this.integrate(dt, platforms);
   }
   draw(ctx, player) {
@@ -287,6 +298,7 @@ class Bomber extends Enemy {
     const C = this.cfg;
     const dir = Math.sign(player.x - this.x) || 1;
     this.vx = lerp(this.vx, dir * this.speed, clamp(7 * dt, 0, 1));
+    this.maybeJump(player, dt);
     this.integrate(dt, platforms);
     if (!this.armed && len(player.x - this.x, player.y - this.y) < C.triggerDist) { this.armed = true; this.fuse = C.fuse; }
     if (this.armed) { this.fuse -= dt; if (this.fuse <= 0) this.dead = true; }  // -> game triggers blast

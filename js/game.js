@@ -1,4 +1,4 @@
-// ------- main: state machine, menus, waves, draft, combat sim -------
+﻿// ------- main: state machine, menus, waves, draft, combat sim -------
 (function () {
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
@@ -53,13 +53,13 @@
   // ---- high scores ----
   function bestKey(mode, diff) { return `tear_best_${mode}_${diff}`; }
   function getBest(mode, diff) {
-    try { return Object.assign({ wave: 0, score: 0 }, JSON.parse(localStorage.getItem(bestKey(mode, diff)) || "{}")); }
-    catch (e) { return { wave: 0, score: 0 }; }
+    try { return Object.assign({ wave: 0, score: 0, time: 0 }, JSON.parse(localStorage.getItem(bestKey(mode, diff)) || "{}")); }
+    catch (e) { return { wave: 0, score: 0, time: 0 }; }
   }
-  function saveBest(mode, diff, wave, score) {
+  function saveBest(mode, diff, wave, score, time) {
     const b = getBest(mode, diff);
     if (wave > b.wave || (wave === b.wave && score > b.score)) {
-      try { localStorage.setItem(bestKey(mode, diff), JSON.stringify({ wave, score })); } catch (e) {}
+      try { localStorage.setItem(bestKey(mode, diff), JSON.stringify({ wave, score, time: time || 0 })); } catch (e) {}
       return true;
     }
     return false;
@@ -98,6 +98,7 @@
   let selMode = "endless", selDiff = "normal", selWeapon = "sword";
   let uiButtons = [];
   let focus = -1, lastUiState = null;   // keyboard focus for menus/draft
+  let listScroll = 0;                   // scroll offset for scrollable screens
 
   // ---- helpers ----
   function addShake(m) { const v = m * shakeScale; if (v > shake) shake = v; }
@@ -181,10 +182,10 @@
   // Scatter Parry: split a deflected shot into 3 weaker, bouncing shards
   // (speed is capped so the shards stay readable instead of pinballing wildly)
   function spawnSplitShards(p) {
-    const spd = Math.min(len(p.vx, p.vy) || CONFIG.proj.speed, CONFIG.proj.speed * 1.4);
+    const spd = Math.min(len(p.vx, p.vy) || CONFIG.proj.speed, CONFIG.proj.speed * 1.3);
     const baseAng = Math.atan2(p.vy, p.vx);
-    p.deflectDmg = Math.max(8, Math.round(p.deflectDmg * 0.5));
-    p.bounces = 3;
+    p.deflectDmg = Math.max(6, Math.round(p.deflectDmg * 0.4));
+    p.bounces = 2;
     p.vx = Math.cos(baseAng) * spd; p.vy = Math.sin(baseAng) * spd;   // cap the parent too
     for (const off of [-0.34, 0.34]) {
       const a = baseAng + off;
@@ -192,7 +193,7 @@
       q.deflect(Math.cos(a), Math.sin(a), spd, p.perfect);
       q.vx = Math.cos(a) * spd; q.vy = Math.sin(a) * spd;
       q.deflectDmg = p.deflectDmg;
-      q.bounces = 3;
+      q.bounces = 2;
       if (p.pierce) { q.pierce = true; q.pierced = new Set(); }
       projectiles.push(q);
     }
@@ -291,6 +292,8 @@
       if (spec.hpScale) { e.hp *= spec.hpScale; e.maxHp *= spec.hpScale; }
       if (spec.preset) applyPreset(e, spec.preset); else rollAffixes(e, run.wave);
       if (spec.type !== "flyer") { const pos = groundSpawn(e.hh); e.x = pos.x; e.y = pos.y; }
+      // some ground enemies can hop onto platforms
+      if (e.kind === "charger" || e.kind === "ranged" || e.kind === "bomber") e.canJump = Math.random() < 0.4;
     }
     e.hpDisplay = e.hp;
     e.spawnT = 0.35;   // brief materialize so spawns read as spawns (not teleports)
@@ -348,7 +351,7 @@
     // log the in-progress wave the player died on
     if (run.waveActive) run.waveLog.push({ wave: run.wave, time: run.waveTime, kills: run.waveKills, peak: run.wavePeak, died: true });
     const best = getBest(run.mode, run.diff);
-    const isNew = saveBest(run.mode, run.diff, run.wave, run.score);
+    const isNew = saveBest(run.mode, run.diff, run.wave, run.score, run.runTime);
     const earned = awardCoins(run.score);
     overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, earned, coins: META.coins() };
     state = "gameover";
@@ -357,7 +360,7 @@
   }
 
   function winRun() {
-    const isNew = saveBest(run.mode, run.diff, run.wave, run.score);
+    const isNew = saveBest(run.mode, run.diff, run.wave, run.score, run.runTime);
     const earned = awardCoins(run.score);
     overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, win: true, earned, coins: META.coins() };
     state = "win";
@@ -463,6 +466,8 @@
           const riseF = isLaunch ? clamp(Math.max(0, -player.vy) / CONFIG.blade.risingSpeedRef, 0, 1) : 0;
           const empowered = isLaunch && riseF > 0.45;
           let dmg = baseDmg * (isSlam ? CONFIG.blade.slamMultiplier : 1);
+          // a fast descent (downward dash / big fall) makes slams hit harder
+          if (isSlam) dmg *= 1 + clamp(player.vy / 1700, 0, 1) * 0.5;
           if (isLaunch) dmg *= 1 + riseF * CONFIG.blade.risingDmgBonus;
           // spike damage scales with how high the enemy is + how hard you struck
           let heightF = 0, strikeF = 0;
@@ -522,10 +527,12 @@
           if (run.mods.berserk && player.hp < player.maxHp * 0.5) tdmg *= 1.3;
           tdmg *= e.damageTakenMult();
           e.hit(tdmg, blade.vx, blade.vy);
-          // Razor Momentum: the blade speeds up and hits harder per pierce
+          // Razor Momentum: ramps per pierce, but capped so it can't snowball
           if (run.mods.throwRamp) {
             const s = 1 + run.mods.throwRamp;
-            blade.throwDmg *= s; blade.vx *= s; blade.vy *= s;
+            blade.throwDmg = Math.min(blade.throwDmg * s, blade.throwBaseDmg * 2);
+            const cap = CONFIG.blade.throw.maxSpeed * 1.2;
+            blade.vx = clamp(blade.vx * s, -cap, cap); blade.vy = clamp(blade.vy * s, -cap, cap);
           }
           FX.burst(e.x, e.y, blade.vx, blade.vy, CONFIG.juice.sparkCount, e.color);
           addFloater(e.x, e.y - 26, Math.round(tdmg).toString(), true);
@@ -555,7 +562,7 @@
           if (perfect) { const t = nearestEnemy(p.x, p.y); if (t) { dirX = t.x - p.x; dirY = t.y - p.y; } }
           p.deflect(dirX, dirY, blade.tipSpeed, perfect);
           if (run.mods.deflectPierce) { p.pierce = true; p.pierced = new Set(); }
-          if (run.mods.deflectSplit) spawnSplitShards(p);
+          if (perfect && run.mods.deflectSplit) spawnSplitShards(p);   // Scatter only on a real parry
           const pcol = perfect ? CONFIG.colors.perfect : CONFIG.colors.deflected;
           FX.burst(p.x, p.y, dirX, dirY, perfect ? 12 : 5, pcol);
           addFloater(p.x, p.y - 18, fullCounter ? "COUNTER!" : (perfect ? "PARRY!" : "deflect"), perfect, pcol);
@@ -669,7 +676,7 @@
     ctx.fillRect(0, 0, W, H);
     uiButtons = [];
 
-    const playLike = state === "playing" || state === "draft" || state === "paused" || state === "gameover" || state === "win";
+    const playLike = state === "playing" || state === "draft" || state === "paused" || state === "gameover" || state === "win" || state === "confirmquit";
     if (playLike) {
       renderWorld();
       if (flash > 0) {
@@ -694,12 +701,14 @@
 
     if (state === "menu") renderMenu();
     else if (state === "shop") renderShop();
+    else if (state === "codex") renderCodex();
     else if (state === "setup") renderSetup();
     else if (state === "howto") renderHowto();
     else if (state === "highscores") renderHighscores();
     else if (state === "settings") renderSettings();
     else if (state === "draft") renderDraft();
     else if (state === "paused") renderPaused();
+    else if (state === "confirmquit") renderConfirmQuit();
     else if (state === "gameover") renderGameover();
     else if (state === "win") renderWin();
 
@@ -709,8 +718,8 @@
     // mouse cursor in non-playing screens
     if (state !== "playing") UI.cursor(ctx, Input.mouseX, Input.mouseY);
 
-    // reset keyboard focus to the first option when the screen changes
-    if (state !== lastUiState) { lastUiState = state; focus = firstEnabledButton(); }
+    // reset keyboard focus + scroll when the screen changes
+    if (state !== lastUiState) { lastUiState = state; focus = firstEnabledButton(); listScroll = 0; }
 
     if (lockHint) lockHint.style.display = (state === "playing" && !Input.locked) ? "block" : "none";
     if (hintEl) hintEl.style.display = (state === "playing") ? "block" : "none";
@@ -851,10 +860,31 @@
     vmenu([
       { label: "PLAY", action: () => { state = "setup"; } },
       { label: "SHOP", action: () => { state = "shop"; } },
+      { label: "ABILITIES", action: () => { state = "codex"; } },
       { label: "HOW TO PLAY", action: () => { state = "howto"; } },
       { label: "HIGH SCORES", action: () => { state = "highscores"; } },
       { label: "SETTINGS", action: () => { state = "settings"; } },
-    ], W / 2, 340, 300, 52, 14);
+    ], W / 2, 320, 300, 48, 12);
+  }
+
+  // codex: every upgrade & unique ability and what it does (scrollable)
+  function renderCodex() {
+    UI.title(ctx, "ABILITIES", W / 2, 80, 38);
+    UI.text(ctx, "Upgrades stack · ★ Unique abilities are one-time · scroll for more", W / 2, 116, 14, "center", 0.55);
+    const list = UPGRADES.slice().sort((a, b) => (a.unique === b.unique) ? 0 : (a.unique ? 1 : -1));
+    const x = W / 2 - 420, top = 150, rowH = 40, visible = 11;
+    const maxOff = Math.max(0, list.length - visible);
+    const off = clamp(Math.round(listScroll / rowH), 0, maxOff);
+    let y = top;
+    for (const u of list.slice(off, off + visible)) {
+      ctx.fillStyle = u.unique ? CONFIG.colors.perfect : "#000";
+      ctx.font = UI.font(18, true); ctx.textAlign = "left";
+      ctx.fillText((u.unique ? "★ " : "") + u.name, x, y);
+      UI.text(ctx, u.desc, x + 300, y, 16, "left", 0.7);
+      y += rowH;
+    }
+    if (maxOff > 0) UI.text(ctx, (off > 0 ? "▲ " : "") + "scroll" + (off < maxOff ? " ▼" : ""), W / 2, H - 110, 13, "center", 0.5);
+    uiButtons.push({ x: W / 2 - 100, y: H - 80, w: 200, h: 50, label: "BACK", action: () => { state = "menu"; } });
   }
 
   function renderShop() {
@@ -928,9 +958,9 @@
     CONFIG.modes.forEach((m) => {
       CONFIG.difficulties.forEach((d) => {
         const b = getBest(m.id, d.id);
-        UI.text(ctx, `${m.label} · ${d.label}`, W / 2 - 320, y, 20);
+        UI.text(ctx, `${m.label} · ${d.label}`, W / 2 - 360, y, 20);
         ctx.textAlign = "right";
-        UI.text(ctx, `wave ${b.wave}   ·   ${b.score} pts`, W / 2 + 320, y, 20);
+        UI.text(ctx, `wave ${b.wave}   ·   ${b.score} pts   ·   ${fmtTime(b.time || 0)}`, W / 2 + 360, y, 20);
         ctx.textAlign = "left";
         y += 44;
       });
@@ -1014,12 +1044,27 @@
     vmenu([
       { label: "RESUME", action: () => { state = "playing"; requestLock(); } },
       { label: "RESTART", action: () => startRun(run.mode, run.diff) },
-      { label: "MAIN MENU", action: () => { state = "menu"; } },
+      { label: "MAIN MENU", action: () => { state = "confirmquit"; } },
     ], W / 2, 300, 280, 54, 16);
   }
 
+  function quitRun() {
+    // save progress from the last fully-cleared wave, then bail to the menu
+    const completed = run.waveLog.length;
+    if (completed > 0) { saveBest(run.mode, run.diff, completed, run.score, run.runTime); awardCoins(run.score); }
+    state = "menu";
+  }
+
+  function renderConfirmQuit() {
+    UI.dim(ctx, W, H, 0.85);
+    UI.title(ctx, "QUIT RUN?", W / 2, 250, 48);
+    UI.text(ctx, "Your progress (cleared waves & score) is saved to High Scores.", W / 2, 300, 16, "center", 0.7);
+    uiButtons.push({ x: W / 2 - 230, y: 350, w: 200, h: 56, label: "QUIT", action: quitRun });
+    uiButtons.push({ x: W / 2 + 30, y: 350, w: 200, h: 56, label: "CANCEL", action: () => { state = "paused"; } });
+  }
+
   function drawResultsTable(startY) {
-    const log = overInfo.log, rows = log.slice(-9);
+    const log = overInfo.log;
     const tx = W / 2 - 270, tw = 540;
     let ty = startY;
     ctx.fillStyle = "#000"; ctx.font = UI.font(14, true);
@@ -1027,7 +1072,9 @@
     ctx.textAlign = "right"; ctx.fillText("TIME", tx + 200, ty); ctx.fillText("KILLS", tx + 330, ty); ctx.fillText("BEST TRICK", tx + tw, ty);
     ctx.strokeStyle = "#000"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(tx, ty + 8); ctx.lineTo(tx + tw, ty + 8); ctx.stroke();
     ty += 30;
-    for (const r of rows) {
+    const visible = 8, maxOff = Math.max(0, log.length - visible);
+    const off = clamp(Math.round(listScroll / 26), 0, maxOff);
+    for (const r of log.slice(off, off + visible)) {
       ctx.textAlign = "left"; UI.text(ctx, (r.died ? "✗ " : "") + r.wave, tx, ty, 16);
       ctx.textAlign = "right";
       UI.text(ctx, r.time.toFixed(1) + "s", tx + 200, ty, 16);
@@ -1035,7 +1082,7 @@
       UI.text(ctx, "x" + r.peak, tx + tw, ty, 16);
       ty += 26;
     }
-    if (log.length > rows.length) UI.text(ctx, "(earlier waves omitted)", W / 2, ty + 2, 12, "center", 0.5);
+    if (maxOff > 0) UI.text(ctx, (off > 0 ? "▲ " : "") + "scroll" + (off < maxOff ? " ▼" : ""), W / 2, ty + 6, 12, "center", 0.5);
   }
 
   function renderGameover() {
@@ -1078,6 +1125,7 @@
   // unified menu/draft input: mouse hover + click, arrow/WASD nav, Enter/Space, 1/2/3
   function handleUI() {
     if (state === "playing") return;
+    listScroll = clamp(listScroll + Input.takeWheel(), 0, 6000);
     const enabled = [];
     uiButtons.forEach((b, i) => { if (b.enabled !== false) enabled.push(i); });
     if (!enabled.length) { Input.takeClick(); return; }
@@ -1105,3 +1153,4 @@
 
   requestAnimationFrame(frame);
 })();
+

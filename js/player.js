@@ -21,6 +21,7 @@ class Player {
     this.dashX = 0; this.dashY = 0;
 
     this.moveBoost = 1;         // set by the game (e.g. faster while blade is thrown)
+    this.downBufferT = 0;       // brief buffer of "down held" so dash-down is forgiving
   }
 
   get invulnerable() { return this.iframe > 0 || this.dashIframe > 0; }
@@ -37,11 +38,13 @@ class Player {
 
     const dirX = (Input.right() ? 1 : 0) - (Input.left() ? 1 : 0);
     if (dirX !== 0) this.facing = dirX;
+    this.downBufferT = Input.down() ? 0.12 : Math.max(0, this.downBufferT - dt);
+    const downHeld = Input.down() || this.downBufferT > 0;
 
     // ---- dash trigger ----
     if (Input.dashPressed() && this.dashCd <= 0 && this.dashTimer <= 0) {
       let ax = (Input.right() ? 1 : 0) - (Input.left() ? 1 : 0);
-      let ay = (Input.down() ? 1 : 0) - (Input.up() ? 1 : 0);
+      let ay = (downHeld ? 1 : 0) - (Input.up() ? 1 : 0);
       if (ax === 0 && ay === 0) ax = this.facing; // default: dash where you face
       const m = len(ax, ay) || 1;
       this.dashX = ax / m; this.dashY = ay / m;
@@ -112,7 +115,7 @@ class Player {
         // one-way: only land on top, when falling and arriving from above
         if (horizontal) continue;
         // intentionally going down (hold S, or a downward dash) -> pass through, keep momentum
-        if (Input.down() || (this.dashTimer > 0 && this.dashY > 0)) continue;
+        if (Input.down() || this.downBufferT > 0 || (this.dashTimer > 0 && (this.dashY > 0 || this.vy > 80))) continue;
         if (this.vy >= 0 && prevBottom <= p.y + 1.5) {
           this.y = p.y - this.hh; this.vy = 0; this.onGround = true;
         }

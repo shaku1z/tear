@@ -51,8 +51,8 @@ const CONFIG = {
     leadAmount: 0.45,     // how much a fast swing whips the tip ahead of the aim line
     leadSpeedRef: 2600,   // swing speed at which the lead is fully applied
     minHitSpeed: 950,     // tip speed below this deals no damage
-    damageScale: 0.012,   // damage per (px/s) of tip speed over the minimum
-    maxDamage: 70,
+    damageScale: 0.0092,  // damage per (px/s) of tip speed over the minimum (lower base)
+    maxDamage: 58,
     enemyHitIframe: 0.18, // per-enemy cooldown between blade hits
     deflectMinSpeed: 700, // tip speed needed to deflect a projectile
     deflectBoost: 1.25,   // speed multiplier applied to deflected projectiles
@@ -105,7 +105,7 @@ const CONFIG = {
   enemy: {
     w: 40, h: 40,
     speed: 150,
-    hp: 60,
+    hp: 78,
     contactDmg: 12,
     knockbackTaken: 9,    // knockback per point of damage received
     weight: 1,            // resists launches/flings (higher = harder to pop airborne)
@@ -116,7 +116,7 @@ const CONFIG = {
   ranged: {
     w: 34, h: 44,
     speed: 175,
-    hp: 42,
+    hp: 54,
     contactDmg: 8,
     knockbackTaken: 12,
     preferredDist: 380,   // distance it likes to sit at
@@ -128,14 +128,14 @@ const CONFIG = {
   },
 
   // flyer: hovers and swoops, ignores gravity/platforms
-  flyer: { w: 36, h: 26, hp: 32, speed: 230, contactDmg: 10, knockbackTaken: 14, weight: 0.75, swoopInterval: 3.3, swoopSpeed: 700, hoverY: 150 },
+  flyer: { w: 36, h: 26, hp: 40, speed: 230, contactDmg: 10, knockbackTaken: 14, weight: 0.75, swoopInterval: 3.3, swoopSpeed: 700, hoverY: 150 },
   // bomber: rushes and detonates on a fuse or on death
-  bomber: { w: 34, h: 34, hp: 28, speed: 180, contactDmg: 0, knockbackTaken: 11, weight: 1, triggerDist: 150, fuse: 0.85, blastRadius: 165, blastDmg: 26 },
+  bomber: { w: 34, h: 34, hp: 36, speed: 180, contactDmg: 0, knockbackTaken: 11, weight: 1, triggerDist: 150, fuse: 0.85, blastRadius: 165, blastDmg: 26 },
   // armored: shielded on the side it faces; takes reduced damage on the ground,
   // normal/extra in the air -> you must launch ("updraft") it to kill efficiently
-  armored: { w: 46, h: 46, hp: 110, speed: 95, contactDmg: 14, knockbackTaken: 3, weight: 2.2, breakSpeed: 1500, groundDR: 0.5, airDR: 1.15 },
+  armored: { w: 46, h: 46, hp: 140, speed: 95, contactDmg: 14, knockbackTaken: 3, weight: 2.2, breakSpeed: 1500, groundDR: 0.5, airDR: 1.15 },
   // boss: large, multi-phase (very heavy -> barely flinchable)
-  boss: { w: 118, h: 118, hp: 1500, speed: 70, contactDmg: 20, knockbackTaken: 0.6, weight: 6, fireBase: 2.0 },
+  boss: { w: 118, h: 118, hp: 1900, speed: 70, contactDmg: 20, knockbackTaken: 0.6, weight: 6, fireBase: 2.0 },
 
   // elite variants of basic enemies
   elite: { hpMult: 2.2, speedMult: 1.3, dmgMult: 1.5, sizeMult: 1.2, chancePerWave: 0.06, chanceMax: 0.35 },

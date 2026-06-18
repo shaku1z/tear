@@ -248,6 +248,7 @@ class Blade {
     this.vx = dirX * sp;
     this.vy = dirY * sp;
     this.throwDmg = T.damage + sp * T.damageFromSpeed;
+    this.throwBaseDmg = this.throwDmg;   // ramp (Razor Momentum) is capped relative to this
     this.pierced = new Set();
     this.flyTime = 0;
     this.state = "flying";

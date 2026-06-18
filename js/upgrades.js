@@ -35,8 +35,8 @@ const UPGRADES = [
     apply: () => { CONFIG.blade.aimRadius += 18; CONFIG.blade.length += 8; CONFIG.blade.maxReach += 18; } },
   { id: "heavy_swing", name: "Heavy Swing", unique: false, desc: "+25% knockback, stronger launches.",
     apply: () => { CONFIG.enemy.knockbackTaken *= 1.25; CONFIG.ranged.knockbackTaken *= 1.25; CONFIG.blade.launchPower *= 1.12; } },
-  { id: "deadly_throw", name: "Deadly Throw", unique: false, desc: "+15% thrown-blade damage.",
-    apply: () => { CONFIG.blade.throw.damage *= 1.15; CONFIG.blade.throw.damageFromSpeed *= 1.12; } },
+  { id: "deadly_throw", name: "Deadly Throw", unique: false, desc: "+10% thrown-blade damage.",
+    apply: () => { CONFIG.blade.throw.damage *= 1.10; CONFIG.blade.throw.damageFromSpeed *= 1.08; } },
   { id: "harvest", name: "Harvest", unique: false, desc: "Each kill heals 6 HP.",
     apply: ({ mods }) => { mods.onKill.push((ev) => ev.player.heal(6)); } },
   { id: "vampiric", name: "Vampiric Edge", unique: false, desc: "Swing hits heal 1 HP.",
@@ -65,9 +65,10 @@ const UPGRADES = [
   { id: "adrenaline", name: "Adrenaline", unique: true, desc: "Kills instantly refresh your dash.",
     apply: ({ mods }) => { mods.onKill.push((ev) => { ev.player.dashCd = 0; }); } },
 
+  // (Razor Momentum) per-pierce ramp, capped in the combat loop so it can't snowball
   { id: "throw_momentum", name: "Razor Momentum", unique: true,
     desc: "A thrown blade grows faster & stronger with every enemy it pierces.",
-    apply: ({ mods }) => { mods.throwRamp = 0.18; } },
+    apply: ({ mods }) => { mods.throwRamp = 0.1; } },
   { id: "throw_giant", name: "Greatblade", unique: true,
     desc: "The blade becomes huge while thrown (normal size in hand).",
     apply: ({ blade }) => { blade.throwSizeMult = 1.7; } },

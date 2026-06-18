@@ -11,6 +11,7 @@ const Input = {
   lmb: false,             // left mouse button held (draw tether in close)
   clicked: false,         // left-click edge (for menu/UI)
   clickX: 0, clickY: 0,
+  wheel: 0,               // accumulated wheel delta (scrollable menus)
 
   init(canvas) {
     window.addEventListener("keydown", (e) => {
@@ -49,6 +50,7 @@ const Input = {
       if (e.button === 0) this.lmb = true;
     });
     window.addEventListener("mouseup", (e) => { if (e.button === 0) this.lmb = false; });
+    canvas.addEventListener("wheel", (e) => { this.wheel += e.deltaY; e.preventDefault(); }, { passive: false });
     document.addEventListener("pointerlockchange", () => {
       this.locked = document.pointerLockElement === canvas;
     });
@@ -79,6 +81,7 @@ const Input = {
   consumeThrow() { const v = this.rmb; this.rmb = false; return v; },
   // one-shot UI click; returns {x,y} once then clears
   takeClick() { if (!this.clicked) return null; this.clicked = false; return { x: this.clickX, y: this.clickY }; },
+  takeWheel() { const w = this.wheel; this.wheel = 0; return w; },
 
   endFrame() { this.pressed.clear(); this.rmb = false; this.clicked = false; },
 };
