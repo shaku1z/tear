@@ -417,6 +417,19 @@
           }
         }
       }
+      // Phase Step: dashing (with i-frames) through a shot deflects it back
+      if (run.mods.phaseStep && player.dashIframe > 0) {
+        for (const p of projectiles) {
+          if (p.dead || p.deflected) continue;
+          if (aabbOverlap(p.x, p.y, p.r, p.r, player.x, player.y, player.hw, player.hh)) {
+            const spd = Math.max(len(p.vx, p.vy), CONFIG.proj.speed) * CONFIG.blade.deflectBoost;
+            p.deflect(player.dashX || player.facing, player.dashY, spd, false);
+            FX.burst(p.x, p.y, player.dashX, player.dashY, 6, CONFIG.colors.deflected);
+            addFloater(p.x, p.y - 16, "phase!", false, CONFIG.colors.deflected);
+            addStyle("deflect"); SFX.deflect();
+          }
+        }
+      }
     } else dashGhostT = 0;
 
     // landing dust + thud when arriving on the ground from a real fall
@@ -497,6 +510,7 @@
           }
           if (run.mods.berserk && player.hp < player.maxHp * 0.5) dmg *= 1.25;
           if (!player.onGround && run.mods.airBonus) dmg *= 1 + run.mods.airBonus;  // Air Superiority
+          if (!player.onGround && run.mods.aerialRave) dmg *= 1 + Math.min(player.airTime * run.mods.aerialRave, 0.5);  // Aerial Rave
           dmg *= e.damageTakenMult();   // armored: reduced grounded, more airborne
           const big = isSlam || empowered || spike || dmg >= CONFIG.hitStop.threshold;
           e.hit(dmg, blade.tipVX, blade.tipVY);
@@ -525,6 +539,13 @@
           addStyle(isSlam ? (empSlam ? "superslam" : "slam") : (empowered ? "updraft" : (isLaunch ? "launch" : "hit")));
           fire(run.mods.onHit, makeEv(cp.px, cp.py, e));
           if (isSlam) fire(run.mods.onSlam, makeEv(e.x, e.y, e));
+          // Crater: a Power Slam erupts in a shockwave that scales with descent
+          if (empSlam && run.mods.crater) {
+            const cr = 130 + descF * 110;
+            dealAoE(e.x, e.y, cr, baseDmg * (0.7 + descF));
+            FX.ring(e.x, e.y, 15, CONFIG.colors.slam); FX.ring(e.x, e.y, 9, CONFIG.colors.slam);
+            addShake(CONFIG.juice.shakeBig); addZoom(CONFIG.juice.zoomBig);
+          }
           // Vampiric Edge: a sliver of lifesteal, capped to once per swing (not per hit)
           if (run.mods.lifesteal > 0 && run.lifestealCd <= 0) {
             player.heal(run.mods.lifesteal); run.lifestealCd = CONFIG.resilience.lifestealCd;
@@ -927,23 +948,70 @@
   }
 
   // codex: every upgrade & unique ability and what it does (scrollable)
-  function renderCodex() {
-    UI.title(ctx, "ABILITIES", W / 2, 80, 38);
-    UI.text(ctx, "Upgrades stack · ★ Unique abilities are one-time · scroll for more", W / 2, 116, 14, "center", 0.55);
-    const list = UPGRADES.slice().sort((a, b) => (a.unique === b.unique) ? 0 : (a.unique ? 1 : -1));
-    const x = W / 2 - 420, top = 150, rowH = 40, visible = 11;
-    const maxOff = Math.max(0, list.length - visible);
-    const off = clamp(Math.round(listScroll / rowH), 0, maxOff);
-    let y = top;
-    for (const u of list.slice(off, off + visible)) {
-      ctx.fillStyle = u.unique ? CONFIG.colors.perfect : "#000";
-      ctx.font = UI.font(18, true); ctx.textAlign = "left";
-      ctx.fillText((u.unique ? "★ " : "") + u.name, x, y);
-      UI.text(ctx, u.desc, x + 300, y, 16, "left", 0.7);
-      y += rowH;
+  // category metadata for the ability cards (color accent + label)
+  const ABIL_CATS = {
+    offense:    { name: "OFFENSE",    color: CONFIG.colors.charger },
+    throw:      { name: "THROW",      color: CONFIG.colors.bomber },
+    parry:      { name: "PARRY",      color: CONFIG.colors.perfect },
+    mobility:   { name: "MOBILITY",   color: CONFIG.colors.ranged },
+    resilience: { name: "RESILIENCE", color: CONFIG.colors.deflected },
+    utility:    { name: "UTILITY",    color: CONFIG.colors.armored },
+  };
+  const ABIL_CAT_ORDER = ["offense", "throw", "parry", "mobility", "resilience", "utility"];
+
+  function drawAbilityCard(x, y, w, h, up) {
+    const cat = ABIL_CATS[up.cat] || ABIL_CATS.utility;
+    const hovered = Input.mouseX >= x && Input.mouseX <= x + w && Input.mouseY >= y && Input.mouseY <= y + h;
+    UI.panel(ctx, x, y, w, h);
+    if (hovered) { ctx.globalAlpha = 0.05; ctx.fillStyle = "#000"; ctx.fillRect(x, y, w, h); ctx.globalAlpha = 1;
+      ctx.lineWidth = 3; ctx.strokeStyle = "#000"; ctx.strokeRect(x, y, w, h); }
+    // category accent strip
+    ctx.fillStyle = cat.color; ctx.fillRect(x, y, w, 6);
+    ctx.textBaseline = "alphabetic";
+    // top row: type tag (left) + category (right)
+    ctx.font = UI.font(11, true);
+    ctx.fillStyle = up.unique ? CONFIG.colors.perfect : "#999"; ctx.textAlign = "left";
+    ctx.fillText(up.unique ? "★ UNIQUE" : "STACKS", x + 12, y + 26);
+    ctx.fillStyle = cat.color; ctx.textAlign = "right";
+    ctx.fillText(cat.name, x + w - 12, y + 26);
+    // name (shrink to fit)
+    ctx.fillStyle = "#000"; ctx.textAlign = "left";
+    let ns = 21; ctx.font = UI.font(ns, true);
+    while (ctx.measureText(up.name).width > w - 24 && ns > 13) { ns--; ctx.font = UI.font(ns, true); }
+    ctx.fillText(up.name, x + 12, y + 54);
+    // tier track (3 pips) — placeholder for the upcoming ability-tier system
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = "#cfcfcf"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(x + 17 + i * 15, y + 72, 4, 0, Math.PI * 2); ctx.stroke();
     }
-    if (maxOff > 0) UI.text(ctx, (off > 0 ? "▲ " : "") + "scroll" + (off < maxOff ? " ▼" : ""), W / 2, H - 110, 13, "center", 0.5);
-    uiButtons.push({ x: W / 2 - 100, y: H - 80, w: 200, h: 50, label: "BACK", action: () => { state = "menu"; } });
+    // description (wrapped)
+    wrapText(up.desc, x + 12, y + 98, w - 24, 17, 12);
+  }
+
+  function renderCodex() {
+    UI.title(ctx, "ABILITIES", W / 2, 64, 36);
+    UI.text(ctx, "★ unique = one-time  ·  others stack  ·  3-pip track = future tiers  ·  scroll for more",
+      W / 2, 96, 14, "center", 0.55);
+    const list = UPGRADES.slice().sort((a, b) => {
+      const ca = ABIL_CAT_ORDER.indexOf(a.cat || "utility"), cb = ABIL_CAT_ORDER.indexOf(b.cat || "utility");
+      if (ca !== cb) return ca - cb;
+      return (a.unique ? 1 : 0) - (b.unique ? 1 : 0);
+    });
+    const cols = 4, mx = 70, gap = 22, cardW = (W - mx * 2 - gap * (cols - 1)) / cols;
+    const ch = 150, gy = 20, stride = ch + gy, top = 122, visRows = 4;
+    const rows = Math.ceil(list.length / cols);
+    const maxOff = Math.max(0, rows - visRows);
+    const off = clamp(Math.round(listScroll / stride), 0, maxOff);
+    for (let r = 0; r < visRows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const idx = (off + r) * cols + c;
+        if (idx >= list.length) continue;
+        const x = mx + c * (cardW + gap), y = top + r * stride;
+        drawAbilityCard(x, y, cardW, ch, list[idx]);
+      }
+    }
+    if (maxOff > 0) UI.text(ctx, (off > 0 ? "▲ " : "") + "scroll" + (off < maxOff ? " ▼" : ""), W / 2, H - 86, 13, "center", 0.5);
+    uiButtons.push({ x: W / 2 - 100, y: H - 66, w: 200, h: 46, label: "BACK", action: () => { state = "menu"; } });
   }
 
   function renderShop() {

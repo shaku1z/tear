@@ -24,36 +24,40 @@ function newMods() {
     flowGuard: false,     // Flow Guard: damage reduction while the trick rank is high
     slamShield: false,    // Aegis: slam kills grant a one-hit absorb pip
     bloodrite: false,     // Bloodrite: skill kills heal a little HP
+    // ---- skill-expression abilities ----
+    phaseStep: false,     // Phase Step: dashing through a shot deflects it
+    crater: false,        // Crater: empowered Power Slams erupt in a scaling shockwave
+    aerialRave: 0,        // Aerial Rave: swing damage grows the longer you stay airborne
   };
 }
 
 const UPGRADES = [
   // ===== stackable upgrades =====
-  { id: "vitality", name: "Vitality", unique: false, desc: "+30 max HP, and heal 30.",
+  { id: "vitality", name: "Vitality", unique: false, cat: "resilience", desc: "+30 max HP, and heal 30.",
     apply: ({ player }) => { player.maxHp += 30; player.heal(30); } },
-  { id: "keen_edge", name: "Keen Edge", unique: false, desc: "+12% swing damage.",
+  { id: "keen_edge", name: "Keen Edge", unique: false, cat: "offense", desc: "+12% swing damage.",
     apply: () => { CONFIG.blade.damageScale *= 1.12; CONFIG.blade.maxDamage = Math.round(CONFIG.blade.maxDamage * 1.06); } },
-  { id: "fleet", name: "Fleet Foot", unique: false, desc: "+8% move speed, higher jump.",
+  { id: "fleet", name: "Fleet Foot", unique: false, cat: "mobility", desc: "+8% move speed, higher jump.",
     apply: () => { CONFIG.player.moveSpeed *= 1.08; CONFIG.player.jumpSpeed *= 1.03; } },
-  { id: "quick_recovery", name: "Quick Recovery", unique: false, desc: "-18% dash cooldown.",
+  { id: "quick_recovery", name: "Quick Recovery", unique: false, cat: "mobility", desc: "-18% dash cooldown.",
     apply: () => { CONFIG.dash.cooldown *= 0.82; } },
-  { id: "long_reach", name: "Long Reach", unique: false, desc: "+ blade reach and length.",
+  { id: "long_reach", name: "Long Reach", unique: false, cat: "utility", desc: "+ blade reach and length.",
     apply: () => { CONFIG.blade.aimRadius += 18; CONFIG.blade.length += 8; CONFIG.blade.maxReach += 18; } },
-  { id: "heavy_swing", name: "Heavy Swing", unique: false, desc: "+25% knockback, stronger launches.",
+  { id: "heavy_swing", name: "Heavy Swing", unique: false, cat: "offense", desc: "+25% knockback, stronger launches.",
     apply: () => { CONFIG.enemy.knockbackTaken *= 1.25; CONFIG.ranged.knockbackTaken *= 1.25; CONFIG.blade.launchPower *= 1.10; } },
-  { id: "deadly_throw", name: "Deadly Throw", unique: false, desc: "+10% thrown-blade damage.",
+  { id: "deadly_throw", name: "Deadly Throw", unique: false, cat: "throw", desc: "+10% thrown-blade damage.",
     apply: () => { CONFIG.blade.throw.damage *= 1.10; CONFIG.blade.throw.damageFromSpeed *= 1.08; } },
-  { id: "vampiric", name: "Vampiric Edge", unique: false, desc: "Swings trickle back a sliver of HP (once per swing).",
+  { id: "vampiric", name: "Vampiric Edge", unique: false, cat: "resilience", desc: "Swings trickle back a sliver of HP (once per swing).",
     apply: ({ mods }) => { mods.lifesteal += CONFIG.resilience.lifestealPerSwing; } },
-  { id: "air_superiority", name: "Air Superiority", unique: false, desc: "+15% damage while airborne.",
+  { id: "air_superiority", name: "Air Superiority", unique: false, cat: "offense", desc: "+15% damage while airborne.",
     apply: ({ mods }) => { mods.airBonus += 0.15; } },
-  { id: "tough_hide", name: "Tough Hide", unique: false, desc: "Take 12% less damage.",
+  { id: "tough_hide", name: "Tough Hide", unique: false, cat: "resilience", desc: "Take 12% less damage.",
     apply: () => { CONFIG.player.dmgTakenMult *= 0.88; } },
-  { id: "burst_dash", name: "Burst Dash", unique: false, desc: "Dash is faster and travels farther.",
+  { id: "burst_dash", name: "Burst Dash", unique: false, cat: "mobility", desc: "Dash is faster and travels farther.",
     apply: () => { CONFIG.dash.speed *= 1.1; CONFIG.dash.duration *= 1.04; } },
-  { id: "bounty", name: "Bounty Hunter", unique: false, desc: "+20% score from kills.",
+  { id: "bounty", name: "Bounty Hunter", unique: false, cat: "utility", desc: "+20% score from kills.",
     apply: () => { CONFIG.run.scoreMult *= 1.2; } },
-  { id: "glass_cannon", name: "Glass Cannon", unique: false, desc: "+30% ALL damage (swing + throw), but you take +25% more.",
+  { id: "glass_cannon", name: "Glass Cannon", unique: false, cat: "offense", desc: "+30% ALL damage (swing + throw), but you take +25% more.",
     apply: () => {
       CONFIG.blade.damageScale *= 1.30; CONFIG.blade.maxDamage = Math.round(CONFIG.blade.maxDamage * 1.20);
       CONFIG.blade.throw.damage *= 1.30; CONFIG.blade.throw.damageFromSpeed *= 1.30;
@@ -62,53 +66,64 @@ const UPGRADES = [
 
   // ===== unique abilities =====
   // ---- resilience: the healing rework's "earned survivability" set ----
-  { id: "bloodrite", name: "Bloodrite", unique: true, rare: true,
+  { id: "bloodrite", name: "Bloodrite", unique: true, rare: true, cat: "resilience",
     desc: "Skill kills (slam, spike, or perfect-parry) restore HP.",
     apply: ({ mods }) => { mods.bloodrite = true; mods.onKill.push((ev) => { if (ev.cause === "skill") ev.player.heal(CONFIG.resilience.bloodriteHeal); }); } },
-  { id: "riposte", name: "Riposte", unique: true,
+  { id: "riposte", name: "Riposte", unique: true, cat: "parry",
     desc: "After a perfect parry, take 60% less damage for 1.2s.",
     apply: ({ mods }) => { mods.parryGuard = true; } },
-  { id: "flow_guard", name: "Flow Guard", unique: true,
+  { id: "flow_guard", name: "Flow Guard", unique: true, cat: "resilience",
     desc: "Take 30% less damage while your trick rank is BRUTAL or higher.",
     apply: ({ mods }) => { mods.flowGuard = true; } },
-  { id: "aegis", name: "Aegis", unique: true,
+  { id: "aegis", name: "Aegis", unique: true, cat: "resilience",
     desc: "Slam kills grant a one-hit shield that fully blocks the next hit (max 2).",
     apply: ({ player, mods }) => { mods.slamShield = true; player.maxShield = CONFIG.resilience.maxShield; } },
 
-  { id: "seismic_slam", name: "Seismic Slam", unique: true, desc: "Slams blast nearby enemies for 22.",
+  // ---- skill-expression abilities ----
+  { id: "phase_step", name: "Phase Step", unique: true, cat: "parry",
+    desc: "Dash through an enemy shot to deflect it — turn defense into offense.",
+    apply: ({ mods }) => { mods.phaseStep = true; } },
+  { id: "crater", name: "Crater", unique: true, cat: "offense",
+    desc: "Power Slams erupt in a shockwave that grows with your descent speed.",
+    apply: ({ mods }) => { mods.crater = true; } },
+  { id: "aerial_rave", name: "Aerial Rave", unique: true, cat: "offense",
+    desc: "The longer you stay airborne, the harder your swings hit (up to +50%).",
+    apply: ({ mods }) => { mods.aerialRave = 0.25; } },
+
+  { id: "seismic_slam", name: "Seismic Slam", unique: true, cat: "offense", desc: "Slams blast nearby enemies for 22.",
     apply: ({ mods }) => { mods.onSlam.push((ev) => { ev.dealAoE(ev.x, ev.y, 130, 22); ev.fx.ring(ev.x, ev.y, 10); }); } },
-  { id: "detonate", name: "Detonate", unique: true, desc: "Kills explode for 18 to nearby foes.",
+  { id: "detonate", name: "Detonate", unique: true, cat: "offense", desc: "Kills explode for 18 to nearby foes.",
     apply: ({ mods }) => { mods.onKill.push((ev) => { ev.dealAoE(ev.x, ev.y, 120, 18); ev.fx.ring(ev.x, ev.y, 8); }); } },
-  { id: "adrenaline", name: "Adrenaline", unique: true, desc: "Kills instantly refresh your dash.",
+  { id: "adrenaline", name: "Adrenaline", unique: true, cat: "mobility", desc: "Kills instantly refresh your dash.",
     apply: ({ mods }) => { mods.onKill.push((ev) => { ev.player.dashCd = 0; }); } },
 
   // (Razor Momentum) per-pierce ramp, capped in the combat loop so it can't snowball
-  { id: "throw_momentum", name: "Razor Momentum", unique: true,
+  { id: "throw_momentum", name: "Razor Momentum", unique: true, cat: "throw",
     desc: "A thrown blade grows faster & stronger with every enemy it pierces.",
     apply: ({ mods }) => { mods.throwRamp = 0.1; } },
-  { id: "throw_giant", name: "Greatblade", unique: true,
+  { id: "throw_giant", name: "Greatblade", unique: true, cat: "throw",
     desc: "The blade becomes huge while thrown (normal size in hand).",
     apply: ({ blade }) => { blade.throwSizeMult = 1.7; } },
-  { id: "parry_pierce", name: "Piercing Parry", unique: true,
+  { id: "parry_pierce", name: "Piercing Parry", unique: true, cat: "parry",
     desc: "Parried projectiles pierce through every enemy.",
     apply: ({ mods }) => { mods.deflectPierce = true; } },
-  { id: "parry_split", name: "Scatter Parry", unique: true,
+  { id: "parry_split", name: "Scatter Parry", unique: true, cat: "parry",
     desc: "Parried projectiles split into 3 that ricochet up to 3 times.",
     apply: ({ mods }) => { mods.deflectSplit = true; } },
 
-  { id: "tempest", name: "Tempest", unique: true,
+  { id: "tempest", name: "Tempest", unique: true, cat: "offense",
     desc: "Rising updrafts also launch all nearby enemies skyward.",
     apply: ({ mods }) => { mods.tempest = true; } },
-  { id: "storm_recall", name: "Storm Recall", unique: true,
+  { id: "storm_recall", name: "Storm Recall", unique: true, cat: "throw",
     desc: "The returning blade tears through enemies for +85% damage.",
     apply: ({ mods }) => { mods.stormRecall = true; } },
-  { id: "phantom_dash", name: "Phantom Dash", unique: true,
+  { id: "phantom_dash", name: "Phantom Dash", unique: true, cat: "mobility",
     desc: "Dashing slices enemies you pass through (great while unarmed).",
     apply: ({ mods }) => { mods.phantomDash = 26; } },
-  { id: "boomerang", name: "Boomerang", unique: true,
+  { id: "boomerang", name: "Boomerang", unique: true, cat: "throw",
     desc: "Recall the thrown blade from any distance.",
     apply: ({ blade }) => { blade.freeRecall = true; } },
-  { id: "berserk", name: "Berserker", unique: true,
+  { id: "berserk", name: "Berserker", unique: true, cat: "offense",
     desc: "+25% damage while below half HP.",
     apply: ({ mods }) => { mods.berserk = true; } },
 ];

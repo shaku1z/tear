@@ -28,6 +28,7 @@ class Player {
     this.flowDR = 1;            // Flow Guard: damage-taken mult, refreshed each frame by the game
     this.shield = 0;            // Aegis: stored one-hit absorb pips
     this.maxShield = 0;         // ...cap (0 until Aegis is owned)
+    this.airTime = 0;           // Aerial Rave: seconds since last grounded
   }
 
   get invulnerable() { return this.iframe > 0 || this.dashIframe > 0; }
@@ -106,6 +107,7 @@ class Player {
     this._collideAxis(platforms, false, prevBottom);
     if (this.onGround) this.coyote = P.coyoteTime;
     else if (wasOnGround) this.coyote = P.coyoteTime;
+    this.airTime = this.onGround ? 0 : this.airTime + dt;
 
     // keep inside the arena horizontally
     this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
