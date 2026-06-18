@@ -444,6 +444,8 @@
 
     // held blade vs enemies (slam / launch + hooks)
     const baseDmg = blade.damageAt();
+    // style -> damage: a higher trick rank makes every swing hit harder (capped)
+    const styleMult = 1 + Math.min((run.mult - 1) * CONFIG.skill.styleDamage, CONFIG.skill.styleDamageMax);
     for (const e of enemies) {
       if (e.dead || e.hitCd > 0) continue;
       if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y, e.radius + 4)) {
@@ -458,17 +460,21 @@
           }
           // breaking a guard with a fast frontal hit staggers the armored enemy
           if (e.cfg.breakSpeed && Math.sign(blade.tipX - e.x) === e.guardSide && blade.tipSpeed >= e.cfg.breakSpeed) e.stun = 0.8;
-          const isSlam = !player.onGround && blade.tipVY > CONFIG.blade.slamMinDownSpeed;
-          const isLaunch = blade.tipVY < -CONFIG.blade.launchMinUpSpeed;
+          const Bl = CONFIG.blade;
+          const isSlam = !player.onGround && blade.tipVY > Bl.slamMinDownSpeed;
+          const isLaunch = blade.tipVY < -Bl.launchMinUpSpeed;
           // spike: slamming an enemy that's still airborne drives it hard into the ground
           const spike = isSlam && !e.onGround;
-          // rising uppercut: upward momentum (jump / up-dash) empowers the launch
-          const riseF = isLaunch ? clamp(Math.max(0, -player.vy) / CONFIG.blade.risingSpeedRef, 0, 1) : 0;
+          // rising UPDRAFT: upward momentum (jump / up-dash) empowers the launch
+          const riseF = isLaunch ? clamp(Math.max(0, -player.vy) / Bl.risingSpeedRef, 0, 1) : 0;
           const empowered = isLaunch && riseF > 0.45;
-          let dmg = baseDmg * (isSlam ? CONFIG.blade.slamMultiplier : 1);
-          // a fast descent (downward dash / big fall) makes slams hit harder
-          if (isSlam) dmg *= 1 + clamp(player.vy / 1700, 0, 1) * 0.5;
-          if (isLaunch) dmg *= 1 + riseF * CONFIG.blade.risingDmgBonus;
+          // committed POWER SLAM: a fast descent empowers the slam (the mirror of the updraft)
+          const descF = isSlam ? clamp(player.vy / Bl.slamPowerSpeed, 0, 1) : 0;
+          const empSlam = isSlam && descF > Bl.slamEmpowerAt;
+          let dmg = baseDmg * (isSlam ? Bl.slamMultiplier : 1);
+          dmg *= styleMult;   // style -> damage
+          if (isSlam) dmg *= 1 + descF * Bl.slamPowerBonus;       // fast descent = harder slam
+          if (isLaunch) dmg *= 1 + riseF * Bl.risingDmgBonus;
           // spike damage scales with how high the enemy is + how hard you struck
           let heightF = 0, strikeF = 0;
           if (spike) {
@@ -476,14 +482,14 @@
             strikeF = clamp(blade.tipSpeed / 4000, 0, 1);
             dmg *= 1 + heightF * 0.6 + strikeF * 0.3;
           }
-          if (run.mods.berserk && player.hp < player.maxHp * 0.5) dmg *= 1.3;
+          if (run.mods.berserk && player.hp < player.maxHp * 0.5) dmg *= 1.25;
           if (!player.onGround && run.mods.airBonus) dmg *= 1 + run.mods.airBonus;  // Air Superiority
           dmg *= e.damageTakenMult();   // armored: reduced grounded, more airborne
           const big = isSlam || empowered || spike || dmg >= CONFIG.hitStop.threshold;
           e.hit(dmg, blade.tipVX, blade.tipVY);
           if (spike) { e.vy = (1000 + heightF * 800 + strikeF * 500) / e.weight; e.spiked = true; }
           else if (isLaunch) e.vy = -CONFIG.blade.launchPower * (1 + riseF * CONFIG.blade.risingLaunchBonus) / e.weight;
-          // Tempest: an empowered uppercut also launches nearby enemies
+          // Tempest: an empowered updraft also launches nearby enemies
           if (empowered && run.mods.tempest) {
             for (const e2 of enemies) {
               if (e2.dead || e2 === e) continue;
@@ -496,14 +502,14 @@
           }
           const cp = segPointDist(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y);
           FX.burst(cp.px, cp.py, blade.tipVX, blade.tipVY, CONFIG.juice.sparkCount, e.color);
-          if (isSlam || empowered) FX.ring(e.x, e.y, 8, CONFIG.colors.slam);
-          const tag = spike ? "▼" : (isSlam ? "!" : (isLaunch ? (empowered ? "⇈" : "↑") : ""));
+          if (isSlam || empowered) FX.ring(e.x, e.y, empSlam ? 13 : 8, CONFIG.colors.slam);
+          const tag = spike ? "▼" : (empSlam ? "⇊" : (isSlam ? "!" : (isLaunch ? (empowered ? "⇈" : "↑") : "")));
           addFloater(e.x, e.y - 26, Math.round(dmg) + tag, big || isLaunch);
           hitStop = big ? CONFIG.hitStop.big : CONFIG.hitStop.small;
           addShake(big || isLaunch ? CONFIG.juice.shakeBig : CONFIG.juice.shakeSmall);
           if (big) addZoom(CONFIG.juice.zoomBig);
-          SFX.hit(big); if (isSlam) SFX.slam(); else if (empowered) SFX.uppercut(); else if (isLaunch) SFX.launch();
-          addStyle(isSlam ? "slam" : (empowered ? "uppercut" : (isLaunch ? "launch" : "hit")));
+          SFX.hit(big); if (isSlam) SFX.slam(); else if (empowered) SFX.updraft(); else if (isLaunch) SFX.launch();
+          addStyle(isSlam ? (empSlam ? "superslam" : "slam") : (empowered ? "updraft" : (isLaunch ? "launch" : "hit")));
           fire(run.mods.onHit, makeEv(cp.px, cp.py, e));
           if (isSlam) fire(run.mods.onSlam, makeEv(e.x, e.y, e));
           if (e.dead) onKill(e);
@@ -523,8 +529,8 @@
           const T = CONFIG.blade.throw;
           if (blade.state === "returning") tdmg *= hiHp ? T.loMult : T.hiMult;
           else tdmg *= hiHp ? T.hiMult : T.loMult;
-          if (blade.state === "returning" && run.mods.stormRecall) tdmg *= 2;   // Storm Recall
-          if (run.mods.berserk && player.hp < player.maxHp * 0.5) tdmg *= 1.3;
+          if (blade.state === "returning" && run.mods.stormRecall) tdmg *= 1.85;   // Storm Recall
+          if (run.mods.berserk && player.hp < player.maxHp * 0.5) tdmg *= 1.25;
           tdmg *= e.damageTakenMult();
           e.hit(tdmg, blade.vx, blade.vy);
           // Razor Momentum: ramps per pierce, but capped so it can't snowball
@@ -843,6 +849,22 @@
     ctx.moveTo(rx - 9, ry); ctx.lineTo(rx + 9, ry);
     ctx.moveTo(rx, ry - 9); ctx.lineTo(rx, ry + 9);
     ctx.stroke();
+
+    // power telegraph: while airborne, a forming POWER SLAM (⇊) or UPDRAFT (⇈)
+    // flags the reticle so you can read the bonus hit before it lands (subtle).
+    if (player && !player.onGround && blade.state === "held") {
+      const Bl = CONFIG.blade;
+      const slamReady = blade.tipVY > Bl.slamMinDownSpeed * 0.7 && player.vy > Bl.slamPowerSpeed * Bl.slamEmpowerAt;
+      const upReady   = blade.tipVY < -Bl.launchMinUpSpeed * 0.7 && -player.vy > Bl.risingSpeedRef * 0.45;
+      if (slamReady || upReady) {
+        ctx.save();
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = slamReady ? CONFIG.colors.slam : CONFIG.colors.perfect;
+        ctx.font = UI.font(22, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(slamReady ? "⇊" : "⇈", rx, ry + (slamReady ? 24 : -24));
+        ctx.restore();
+      }
+    }
   }
 
   // ---- menu screens ----
@@ -936,13 +958,14 @@
     const lines = [
       "Move:  A / D      Jump:  W / Space      Drop through platform:  hold S",
       "Dash:  Shift  (aim 8-way with WASD) — i-frames + cooldown",
-      "Blade: move the mouse — it carries momentum; damage = tip speed",
+      "Blade: move the mouse — clean CUTS beat pokes; commit the swing",
       "Throw / recall: right-click  (recall within the dashed ring)",
       "",
-      "Slam:    hit while airborne, driving the blade DOWN  (bonus dmg)",
-      "Launch:  a fast UP swing pops enemies airborne — juggle them",
-      "Uppercut: launch while rising (jump / up-dash) for big damage ⇈",
-      "Parry:   swing FAST through a shot — a perfect parry homes it back",
+      "Slam:     hit while airborne, driving the blade DOWN  (bonus dmg)",
+      "Power Slam: slam during a fast descent for big damage ⇊",
+      "Launch:   a fast UP swing pops enemies airborne — juggle them",
+      "Updraft:  launch while rising (jump / up-dash) for big damage ⇈",
+      "Parry:    swing FAST through a shot — a perfect parry homes it back",
       "Trick:   chain varied tricks to raise your score multiplier",
       "",
       "Pause: P      Release mouse: Esc",

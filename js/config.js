@@ -60,6 +60,9 @@ const CONFIG = {
     counterParryFactor: 0.55, // perfect-parry threshold multiplier when swinging straight back at the shot
     slamMultiplier: 1.8,  // damage multiplier for a downward airborne slam
     slamMinDownSpeed: 1750, // downward tip speed needed to count as a slam
+    slamPowerSpeed: 1700,   // player descent speed for a full committed "power slam"
+    slamPowerBonus: 0.7,    // up to +70% slam damage from a fast committed descent
+    slamEmpowerAt: 0.5,     // descent fraction above which a slam becomes a POWER SLAM (⇊)
     launchMinUpSpeed: 1250, // upward tip speed needed to pop an enemy airborne
     launchPower: 780,     // upward velocity imparted by a launcher swing
     risingSpeedRef: 850,  // player upward speed for a full rising-uppercut bonus
@@ -81,6 +84,15 @@ const CONFIG = {
       returnSpeed: 3400,  // speed the blade flies back to your hand (snappy)
       maxLife: 2.5,       // safety: embed after this long in flight
     },
+  },
+
+  // ---- skill shaping: rewards clean, committed, stylish swings over flailing ----
+  skill: {
+    pokeFloor: 0.4,       // a pure straight thrust deals 40% of a clean perpendicular cut
+    commitRef: 620,       // hilt speed (px/s) for full "committed arm swing" credit
+    commitFloor: 0.5,     // a tip-flick with a still hand deals 50%
+    styleDamage: 0.06,    // +6% swing damage per trick tier above 1 (NICE..TEARING)
+    styleDamageMax: 0.4,  // hard cap on the style->damage bonus
   },
 
   juice: {
@@ -192,7 +204,7 @@ const CONFIG = {
       { at: 110, mult: 4,   name: "SAVAGE" },
       { at: 175, mult: 5,   name: "TEARING!" },
     ],
-    pts: { hit: 2, throwHit: 4, deflect: 5, launch: 5, slam: 8, uppercut: 10, parry: 12 },
+    pts: { hit: 2, throwHit: 4, deflect: 5, launch: 5, slam: 8, superslam: 11, updraft: 10, parry: 12 },
   },
 
   // ---- difficulties (selectable from the menu) ----

@@ -14,7 +14,7 @@ function newMods() {
     deflectPierce: false, // deflected shots pass through enemies
     deflectSplit: false,  // deflected shots split into 3 bouncing shards
     airBonus: 0,          // +damage fraction while airborne (Air Superiority)
-    tempest: false,       // empowered uppercut launches nearby enemies too
+    tempest: false,       // empowered updraft launches nearby enemies too
     stormRecall: false,   // the returning blade deals heavy damage
     phantomDash: 0,       // dash damages enemies you pass through (dmg amount)
     berserk: false,       // +30% damage while below half HP
@@ -25,8 +25,8 @@ const UPGRADES = [
   // ===== stackable upgrades =====
   { id: "vitality", name: "Vitality", unique: false, desc: "+30 max HP, and heal 30.",
     apply: ({ player }) => { player.maxHp += 30; player.heal(30); } },
-  { id: "keen_edge", name: "Keen Edge", unique: false, desc: "+15% swing damage.",
-    apply: () => { CONFIG.blade.damageScale *= 1.15; CONFIG.blade.maxDamage = Math.round(CONFIG.blade.maxDamage * 1.1); } },
+  { id: "keen_edge", name: "Keen Edge", unique: false, desc: "+12% swing damage.",
+    apply: () => { CONFIG.blade.damageScale *= 1.12; CONFIG.blade.maxDamage = Math.round(CONFIG.blade.maxDamage * 1.06); } },
   { id: "fleet", name: "Fleet Foot", unique: false, desc: "+8% move speed, higher jump.",
     apply: () => { CONFIG.player.moveSpeed *= 1.08; CONFIG.player.jumpSpeed *= 1.03; } },
   { id: "quick_recovery", name: "Quick Recovery", unique: false, desc: "-18% dash cooldown.",
@@ -34,7 +34,7 @@ const UPGRADES = [
   { id: "long_reach", name: "Long Reach", unique: false, desc: "+ blade reach and length.",
     apply: () => { CONFIG.blade.aimRadius += 18; CONFIG.blade.length += 8; CONFIG.blade.maxReach += 18; } },
   { id: "heavy_swing", name: "Heavy Swing", unique: false, desc: "+25% knockback, stronger launches.",
-    apply: () => { CONFIG.enemy.knockbackTaken *= 1.25; CONFIG.ranged.knockbackTaken *= 1.25; CONFIG.blade.launchPower *= 1.12; } },
+    apply: () => { CONFIG.enemy.knockbackTaken *= 1.25; CONFIG.ranged.knockbackTaken *= 1.25; CONFIG.blade.launchPower *= 1.10; } },
   { id: "deadly_throw", name: "Deadly Throw", unique: false, desc: "+10% thrown-blade damage.",
     apply: () => { CONFIG.blade.throw.damage *= 1.10; CONFIG.blade.throw.damageFromSpeed *= 1.08; } },
   { id: "harvest", name: "Harvest", unique: false, desc: "Each kill heals 6 HP.",
@@ -43,18 +43,18 @@ const UPGRADES = [
     apply: ({ mods }) => { mods.onHit.push((ev) => ev.player.heal(1)); } },
   { id: "riposte", name: "Riposte", unique: false, desc: "Perfect parry heals 6 HP.",
     apply: ({ mods }) => { mods.onParry.push((ev) => ev.player.heal(6)); } },
-  { id: "air_superiority", name: "Air Superiority", unique: false, desc: "+20% damage while airborne.",
-    apply: ({ mods }) => { mods.airBonus += 0.2; } },
-  { id: "tough_hide", name: "Tough Hide", unique: false, desc: "Take 15% less damage.",
-    apply: () => { CONFIG.player.dmgTakenMult *= 0.85; } },
+  { id: "air_superiority", name: "Air Superiority", unique: false, desc: "+15% damage while airborne.",
+    apply: ({ mods }) => { mods.airBonus += 0.15; } },
+  { id: "tough_hide", name: "Tough Hide", unique: false, desc: "Take 12% less damage.",
+    apply: () => { CONFIG.player.dmgTakenMult *= 0.88; } },
   { id: "burst_dash", name: "Burst Dash", unique: false, desc: "Dash is faster and travels farther.",
     apply: () => { CONFIG.dash.speed *= 1.1; CONFIG.dash.duration *= 1.04; } },
   { id: "bounty", name: "Bounty Hunter", unique: false, desc: "+20% score from kills.",
     apply: () => { CONFIG.run.scoreMult *= 1.2; } },
-  { id: "glass_cannon", name: "Glass Cannon", unique: false, desc: "+15% swing damage, but -12 max HP.",
+  { id: "glass_cannon", name: "Glass Cannon", unique: false, desc: "+13% swing damage, but -15 max HP.",
     apply: ({ player }) => {
-      CONFIG.blade.damageScale *= 1.15; CONFIG.blade.maxDamage = Math.round(CONFIG.blade.maxDamage * 1.15);
-      player.maxHp = Math.max(20, player.maxHp - 12); player.hp = Math.min(player.hp, player.maxHp);
+      CONFIG.blade.damageScale *= 1.13; CONFIG.blade.maxDamage = Math.round(CONFIG.blade.maxDamage * 1.08);
+      player.maxHp = Math.max(20, player.maxHp - 15); player.hp = Math.min(player.hp, player.maxHp);
     } },
 
   // ===== unique abilities =====
@@ -80,10 +80,10 @@ const UPGRADES = [
     apply: ({ mods }) => { mods.deflectSplit = true; } },
 
   { id: "tempest", name: "Tempest", unique: true,
-    desc: "Rising uppercuts also launch all nearby enemies skyward.",
+    desc: "Rising updrafts also launch all nearby enemies skyward.",
     apply: ({ mods }) => { mods.tempest = true; } },
   { id: "storm_recall", name: "Storm Recall", unique: true,
-    desc: "The returning blade tears through enemies for double damage.",
+    desc: "The returning blade tears through enemies for +85% damage.",
     apply: ({ mods }) => { mods.stormRecall = true; } },
   { id: "phantom_dash", name: "Phantom Dash", unique: true,
     desc: "Dashing slices enemies you pass through (great while unarmed).",
@@ -92,7 +92,7 @@ const UPGRADES = [
     desc: "Recall the thrown blade from any distance.",
     apply: ({ blade }) => { blade.freeRecall = true; } },
   { id: "berserk", name: "Berserker", unique: true,
-    desc: "+30% damage while below half HP.",
+    desc: "+25% damage while below half HP.",
     apply: ({ mods }) => { mods.berserk = true; } },
 ];
 

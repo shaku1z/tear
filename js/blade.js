@@ -269,11 +269,26 @@ class Blade {
 
   get thrown() { return this.state === "flying" || this.state === "returning"; }
 
-  // damage for a held swing (0 if below threshold or not held)
+  // how "clean" the swing is: 1 = a true perpendicular cut, ~0 = a straight poke/thrust.
+  // (the perpendicular component of tip velocity relative to the blade's own axis)
+  sliceQuality() {
+    if (this.tipSpeed < 1) return 0;
+    const perpX = -Math.sin(this.angle), perpY = Math.cos(this.angle);
+    return clamp(Math.abs((this.tipVX * perpX + this.tipVY * perpY) / this.tipSpeed), 0, 1);
+  }
+
+  // damage for a held swing (0 if below threshold or not held).
+  // Skill shaping: a clean CUT beats a POKE, and a committed arm swing (the hilt
+  // actually travelling) beats a wrist-flick of the tip. Style->damage is applied
+  // by the combat loop (it needs the live trick multiplier).
   damageAt() {
-    const B = CONFIG.blade;
+    const B = CONFIG.blade, S = CONFIG.skill;
     if (this.state !== "held" || this.tipSpeed < B.minHitSpeed) return 0;
-    return Math.min((this.tipSpeed - B.minHitSpeed) * B.damageScale, B.maxDamage);
+    let dmg = Math.min((this.tipSpeed - B.minHitSpeed) * B.damageScale, B.maxDamage);
+    dmg *= lerp(S.pokeFloor, 1, this.sliceQuality());
+    const commit = clamp(len(this.vx, this.vy) / S.commitRef, 0, 1);
+    dmg *= lerp(S.commitFloor, 1, commit);
+    return dmg;
   }
 
   // ---- drawing ----

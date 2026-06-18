@@ -108,7 +108,7 @@ const SFX = {
     this._osc(90, 0.4, t, { type: "sawtooth", vol: 0.26, slideTo: 34, attack: 0.001 });
   },
   launch() { const t = this.ctx.currentTime; this._click(t, 0.1); this._osc(320, 0.16, t, { type: "triangle", vol: 0.15, slideTo: 950 }); },
-  uppercut() {
+  updraft() {
     const t = this.ctx.currentTime;
     this._click(t, 0.16);
     this._osc(260, 0.3, t, { type: "sawtooth", vol: 0.24, slideTo: 1200, attack: 0.001 });
