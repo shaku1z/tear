@@ -17,7 +17,13 @@ function newMods() {
     tempest: false,       // empowered updraft launches nearby enemies too
     stormRecall: false,   // the returning blade deals heavy damage
     phantomDash: 0,       // dash damages enemies you pass through (dmg amount)
-    berserk: false,       // +30% damage while below half HP
+    berserk: false,       // +25% damage while below half HP
+    // ---- resilience (healing rework): survivability earned through skill ----
+    lifesteal: 0,         // Vampiric Edge: HP per swing (capped per-swing in the loop)
+    parryGuard: false,    // Riposte: damage-reduction window after a perfect parry
+    flowGuard: false,     // Flow Guard: damage reduction while the trick rank is high
+    slamShield: false,    // Aegis: slam kills grant a one-hit absorb pip
+    bloodrite: false,     // Bloodrite: skill kills heal a little HP
   };
 }
 
@@ -37,12 +43,8 @@ const UPGRADES = [
     apply: () => { CONFIG.enemy.knockbackTaken *= 1.25; CONFIG.ranged.knockbackTaken *= 1.25; CONFIG.blade.launchPower *= 1.10; } },
   { id: "deadly_throw", name: "Deadly Throw", unique: false, desc: "+10% thrown-blade damage.",
     apply: () => { CONFIG.blade.throw.damage *= 1.10; CONFIG.blade.throw.damageFromSpeed *= 1.08; } },
-  { id: "harvest", name: "Harvest", unique: false, desc: "Each kill heals 6 HP.",
-    apply: ({ mods }) => { mods.onKill.push((ev) => ev.player.heal(6)); } },
-  { id: "vampiric", name: "Vampiric Edge", unique: false, desc: "Swing hits heal 1 HP.",
-    apply: ({ mods }) => { mods.onHit.push((ev) => ev.player.heal(1)); } },
-  { id: "riposte", name: "Riposte", unique: false, desc: "Perfect parry heals 6 HP.",
-    apply: ({ mods }) => { mods.onParry.push((ev) => ev.player.heal(6)); } },
+  { id: "vampiric", name: "Vampiric Edge", unique: false, desc: "Swings trickle back a sliver of HP (once per swing).",
+    apply: ({ mods }) => { mods.lifesteal += CONFIG.resilience.lifestealPerSwing; } },
   { id: "air_superiority", name: "Air Superiority", unique: false, desc: "+15% damage while airborne.",
     apply: ({ mods }) => { mods.airBonus += 0.15; } },
   { id: "tough_hide", name: "Tough Hide", unique: false, desc: "Take 12% less damage.",
@@ -51,13 +53,28 @@ const UPGRADES = [
     apply: () => { CONFIG.dash.speed *= 1.1; CONFIG.dash.duration *= 1.04; } },
   { id: "bounty", name: "Bounty Hunter", unique: false, desc: "+20% score from kills.",
     apply: () => { CONFIG.run.scoreMult *= 1.2; } },
-  { id: "glass_cannon", name: "Glass Cannon", unique: false, desc: "+13% swing damage, but -15 max HP.",
-    apply: ({ player }) => {
-      CONFIG.blade.damageScale *= 1.13; CONFIG.blade.maxDamage = Math.round(CONFIG.blade.maxDamage * 1.08);
-      player.maxHp = Math.max(20, player.maxHp - 15); player.hp = Math.min(player.hp, player.maxHp);
+  { id: "glass_cannon", name: "Glass Cannon", unique: false, desc: "+30% ALL damage (swing + throw), but you take +25% more.",
+    apply: () => {
+      CONFIG.blade.damageScale *= 1.30; CONFIG.blade.maxDamage = Math.round(CONFIG.blade.maxDamage * 1.20);
+      CONFIG.blade.throw.damage *= 1.30; CONFIG.blade.throw.damageFromSpeed *= 1.30;
+      CONFIG.player.dmgTakenMult *= 1.25;
     } },
 
   // ===== unique abilities =====
+  // ---- resilience: the healing rework's "earned survivability" set ----
+  { id: "bloodrite", name: "Bloodrite", unique: true, rare: true,
+    desc: "Skill kills (slam, spike, or perfect-parry) restore HP.",
+    apply: ({ mods }) => { mods.bloodrite = true; mods.onKill.push((ev) => { if (ev.cause === "skill") ev.player.heal(CONFIG.resilience.bloodriteHeal); }); } },
+  { id: "riposte", name: "Riposte", unique: true,
+    desc: "After a perfect parry, take 60% less damage for 1.2s.",
+    apply: ({ mods }) => { mods.parryGuard = true; } },
+  { id: "flow_guard", name: "Flow Guard", unique: true,
+    desc: "Take 30% less damage while your trick rank is BRUTAL or higher.",
+    apply: ({ mods }) => { mods.flowGuard = true; } },
+  { id: "aegis", name: "Aegis", unique: true,
+    desc: "Slam kills grant a one-hit shield that fully blocks the next hit (max 2).",
+    apply: ({ player, mods }) => { mods.slamShield = true; player.maxShield = CONFIG.resilience.maxShield; } },
+
   { id: "seismic_slam", name: "Seismic Slam", unique: true, desc: "Slams blast nearby enemies for 22.",
     apply: ({ mods }) => { mods.onSlam.push((ev) => { ev.dealAoE(ev.x, ev.y, 130, 22); ev.fx.ring(ev.x, ev.y, 10); }); } },
   { id: "detonate", name: "Detonate", unique: true, desc: "Kills explode for 18 to nearby foes.",
@@ -101,7 +118,7 @@ const UPGRADES = [
 function rollUpgrades(n, mods) {
   const pool = UPGRADES
     .filter((u) => !(u.unique && mods && mods.owned[u.id]))
-    .map((u) => ({ u, w: u.unique ? 0.4 : 1 }));
+    .map((u) => ({ u, w: u.rare ? 0.18 : (u.unique ? 0.4 : 1) }));
   const out = [];
   while (out.length < n && pool.length) {
     let total = 0; for (const e of pool) total += e.w;

@@ -95,6 +95,18 @@ const CONFIG = {
     styleDamageMax: 0.4,  // hard cap on the style->damage bonus
   },
 
+  // ---- resilience: survivability is EARNED through skill, never a heal button ----
+  resilience: {
+    parryGuardTime: 1.2,    // Riposte: seconds of damage reduction after a perfect parry
+    parryGuardMult: 0.4,    // ...damage taken during that window (-60%)
+    flowGuardTier: 3,       // Flow Guard: trick multiplier (x3 = BRUTAL) needed to be protected
+    flowGuardMult: 0.7,     // ...damage taken while above that rank (-30%)
+    maxShield: 2,           // Aegis: max stored one-hit absorb pips
+    bloodriteHeal: 8,       // Bloodrite: HP restored per SKILL kill (slam/spike/perfect-parry)
+    lifestealPerSwing: 1.5, // Vampiric Edge: HP per swing...
+    lifestealCd: 0.5,       // ...but at most once per this many seconds (capped per-swing, not per-hit)
+  },
+
   juice: {
     trailSamples: 14,     // length of the blade swoosh trail
     trailMinStep: 6,      // min tip travel between samples to draw an arc segment
@@ -184,7 +196,7 @@ const CONFIG = {
     hpScalePerWave: 0.12, // +12% enemy HP per wave
     scorePerKill: 100,    // score per kill (x wave number)
     scoreMult: 1,         // raised by the "Bounty Hunter" upgrade
-    healEachWave: 20,     // HP restored on wave clear (Normal only)
+    healEachWave: 12,     // HP restored on wave clear (Normal only) — modest; sustain is earned
     startDelay: 0.8,      // beat before the first spawn of a wave
     waveClearPause: 0.8,  // delay after the last enemy dies before the draft appears
   },

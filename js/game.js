@@ -91,6 +91,7 @@
   let player, blade, enemies, projectiles, floaters, hitStop, shake;
   let timeScale = 1, slowmo = 0, zoom = 1, flash = 0, bannerT = 0, dashGhostT = 0; // feel/juice
   let wasSwinging = false, wasDashing = false, wasOnGround = true; // audio cadence
+  let wasLocked = false;      // tracks mouse capture so losing it (Esc) pauses the game
   let rankPopT = 0, rankPopText = "";   // style rank-up flash
   let run = null;             // { mode, diff, wave, score, mods, spawnQueue, spawnTimer, waveActive }
   let draftChoices = [];
@@ -116,7 +117,14 @@
     return best;
   }
   function fire(list, ev) { for (const f of list) f(ev); }
-  function makeEv(x, y, enemy) { return { player, enemies, fx: FX, x, y, enemy, dealAoE, addFloater }; }
+  function makeEv(x, y, enemy, cause) { return { player, enemies, fx: FX, x, y, enemy, cause, dealAoE, addFloater }; }
+  // Aegis: feedback when a stored shield pip eats a hit (no HP lost, style kept)
+  function onShieldAbsorb() {
+    SFX.parry();
+    FX.ring(player.x, player.y, 14, CONFIG.colors.armoredShield);
+    addFloater(player.x, player.y - 30, "BLOCK", true, CONFIG.colors.armoredShield);
+    addShake(CONFIG.juice.shakeSmall); hitStop = CONFIG.hitStop.small;
+  }
   // area damage that does NOT re-fire onKill (prevents detonate/slam recursion)
   function dealAoE(cx, cy, radius, dmg) {
     for (const e of enemies) {
@@ -217,7 +225,7 @@
       mode, diff, wave: 0, score: 0, mods: newMods(),
       spawnQueue: [], spawnTimer: 0, waveActive: false, clearTimer: -1,
       runTime: 0, waveTime: 0, waveKills: 0, wavePeak: 1, waveLog: [],
-      combo: 0, comboTimer: 0, mult: 1, rank: "", lastTrick: "",
+      combo: 0, comboTimer: 0, mult: 1, rank: "", lastTrick: "", lifestealCd: 0,
     };
     META.apply({ player, blade, mods: run.mods });
     startNextWave();
@@ -317,7 +325,8 @@
     addShake(CONFIG.juice.shakeBig); SFX.boom();
     dealAoE(e.x, e.y, C.blastRadius, C.blastDmg);
     if (len(player.x - e.x, player.y - e.y) <= C.blastRadius + player.hw) {
-      if (player.takeDamage(C.blastDmg, e.x)) { loseStyle(); SFX.hurt(); }
+      { const r = player.takeDamage(C.blastDmg, e.x);
+        if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb(); }
     }
   }
 
@@ -373,6 +382,10 @@
   let acc = 0, last = performance.now();
 
   function stepPlaying(dt) {
+    // Flow Guard: damage reduction while the trick rank is high (refreshed each step)
+    player.flowDR = (run.mods.flowGuard && run.mult >= CONFIG.resilience.flowGuardTier)
+      ? CONFIG.resilience.flowGuardMult : 1;
+    if (run.lifestealCd > 0) run.lifestealCd -= dt;
     // faster while unarmed (blade thrown)
     player.moveBoost = (blade.state !== "held") ? CONFIG.player.thrownMoveBoost : 1;
     player.update(dt, platforms);
@@ -512,7 +525,14 @@
           addStyle(isSlam ? (empSlam ? "superslam" : "slam") : (empowered ? "updraft" : (isLaunch ? "launch" : "hit")));
           fire(run.mods.onHit, makeEv(cp.px, cp.py, e));
           if (isSlam) fire(run.mods.onSlam, makeEv(e.x, e.y, e));
-          if (e.dead) onKill(e);
+          // Vampiric Edge: a sliver of lifesteal, capped to once per swing (not per hit)
+          if (run.mods.lifesteal > 0 && run.lifestealCd <= 0) {
+            player.heal(run.mods.lifesteal); run.lifestealCd = CONFIG.resilience.lifestealCd;
+          }
+          if (e.dead) {
+            onKill(e, isSlam ? "skill" : "");   // slam/spike kills count as skill kills
+            if (isSlam && run.mods.slamShield) player.shield = Math.min(player.shield + 1, player.maxShield);
+          }
         }
       }
     }
@@ -581,6 +601,7 @@
             addFlash(fullCounter ? CONFIG.juice.flashParry * 1.3 : CONFIG.juice.flashParry);
             triggerSlowmo();
             if (fullCounter) FX.ring(p.x, p.y, 10, CONFIG.colors.perfect);
+            if (run.mods.parryGuard) player.guardT = CONFIG.resilience.parryGuardTime;   // Riposte
             fire(run.mods.onParry, makeEv(p.x, p.y, null));
           }
         }
@@ -599,12 +620,13 @@
             FX.burst(p.x, p.y, p.vx, p.vy, CONFIG.juice.sparkCount, CONFIG.colors.deflected);
             addFloater(e.x, e.y - 26, Math.round(p.deflectDmg).toString(), p.perfect);
             addShake(p.perfect ? CONFIG.juice.shakeBig : CONFIG.juice.shakeSmall);
-            if (e.dead) onKill(e);
+            if (e.dead) onKill(e, p.perfect ? "skill" : "");   // perfect-parry kills are skill kills
             if (p.pierce) p.pierced.add(e); else { p.dead = true; break; }
           }
         }
       } else if (aabbOverlap(p.x, p.y, p.r, p.r, player.x, player.y, player.hw, player.hh)) {
-        if (player.takeDamage(CONFIG.proj.dmg, p.x)) { p.dead = true; loseStyle(); SFX.hurt(); }
+        { const r = player.takeDamage(CONFIG.proj.dmg, p.x);
+          if (r) { p.dead = true; if (r === "hit") { loseStyle(); SFX.hurt(); } else onShieldAbsorb(); } }
       }
     }
 
@@ -612,7 +634,8 @@
     for (const e of enemies) {
       if (e.dead || e.spawnT > 0) continue;
       if (aabbOverlap(player.x, player.y, player.hw, player.hh, e.x, e.y, e.hw + e.contactReach, e.hh)) {
-        if (player.takeDamage(e.contactDmg, e.x)) { loseStyle(); SFX.hurt(); }
+        { const r = player.takeDamage(e.contactDmg, e.x);
+          if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb(); }
       }
     }
 
@@ -635,12 +658,12 @@
     if (player.hp <= 0) { endRun(); return; }
   }
 
-  function onKill(e) {
+  function onKill(e, cause) {
     addKillScore();
     if (e.affixCount) run.score += Math.round(CONFIG.run.scorePerKill * run.wave * run.mult * 0.4 * e.affixCount);
     FX.death(e.x, e.y, CONFIG.juice.deathShards, e.color);
     SFX.death();
-    fire(run.mods.onKill, makeEv(e.x, e.y, e));
+    fire(run.mods.onKill, makeEv(e.x, e.y, e, cause));
   }
 
   // ---- main loop ----
@@ -659,11 +682,16 @@
       if (bannerT > 0) bannerT -= dt;
       if (rankPopT > 0) rankPopT -= dt * 1.2;
 
-      if (Input.pausePressed()) { state = "paused"; document.exitPointerLock(); }
+      // pause on P, Escape, or losing the mouse capture (Esc releases pointer lock)
+      if (Input.locked) wasLocked = true;
+      const lostCapture = wasLocked && !Input.locked;
+      if (Input.pausePressed() || Input.escapePressed() || lostCapture) {
+        state = "paused"; wasLocked = false; document.exitPointerLock();
+      }
       else if (hitStop > 0) { hitStop -= dt; }
       else { acc += dt * timeScale; while (acc >= STEP && state === "playing") { stepPlaying(STEP); acc -= STEP; } }
     } else {
-      acc = 0;
+      acc = 0; wasLocked = false;
     }
 
     render();
@@ -793,6 +821,15 @@
     const ready = 1 - clamp(player.dashCd / CONFIG.dash.cooldown, 0, 1);
     ctx.strokeRect(x, y + 26, 120, 8);
     ctx.fillRect(x, y + 26, 120 * ready, 8);
+
+    // Aegis shield pips (cyan) — only shown once Aegis is owned
+    for (let i = 0; i < player.maxShield; i++) {
+      const sx = x + 132 + i * 16;
+      ctx.strokeStyle = CONFIG.colors.armoredShield; ctx.lineWidth = 2;
+      ctx.strokeRect(sx, y + 26, 12, 8);
+      if (i < player.shield) { ctx.fillStyle = CONFIG.colors.armoredShield; ctx.fillRect(sx, y + 26, 12, 8); }
+    }
+    ctx.strokeStyle = "#000"; ctx.fillStyle = "#000";
 
     // owned abilities/upgrades list (left column)
     let oy = y + 52;

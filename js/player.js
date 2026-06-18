@@ -22,6 +22,12 @@ class Player {
 
     this.moveBoost = 1;         // set by the game (e.g. faster while blade is thrown)
     this.downBufferT = 0;       // brief buffer of "down held" so dash-down is forgiving
+
+    // ---- resilience (earned survivability, set by abilities) ----
+    this.guardT = 0;            // Riposte: damage-reduction window after a perfect parry
+    this.flowDR = 1;            // Flow Guard: damage-taken mult, refreshed each frame by the game
+    this.shield = 0;            // Aegis: stored one-hit absorb pips
+    this.maxShield = 0;         // ...cap (0 until Aegis is owned)
   }
 
   get invulnerable() { return this.iframe > 0 || this.dashIframe > 0; }
@@ -35,6 +41,7 @@ class Player {
     if (this.dashIframe > 0) this.dashIframe -= dt;
     if (this.coyote > 0) this.coyote -= dt;
     if (this.jumpBuf > 0) this.jumpBuf -= dt;
+    if (this.guardT > 0) this.guardT -= dt;
 
     const dirX = (Input.right() ? 1 : 0) - (Input.left() ? 1 : 0);
     if (dirX !== 0) this.facing = dirX;
@@ -134,15 +141,23 @@ class Player {
     }
   }
 
+  // returns: "hit" (HP lost) | "absorbed" (a shield pip ate it) | "" (invulnerable)
   takeDamage(dmg, fromX) {
-    if (this.invulnerable) return false;
-    dmg *= CONFIG.player.dmgTakenMult;
+    if (this.invulnerable) return "";
+    // Aegis: a stored pip absorbs the hit entirely (works even in one-hit mode)
+    if (this.shield > 0) {
+      this.shield--;
+      this.iframe = CONFIG.player.hitIframe * 0.7;
+      return "absorbed";
+    }
+    dmg *= CONFIG.player.dmgTakenMult * this.flowDR;          // Flow Guard
+    if (this.guardT > 0) dmg *= CONFIG.resilience.parryGuardMult;  // Riposte window
     this.hp = this.oneHit ? 0 : Math.max(0, this.hp - dmg);
     this.iframe = CONFIG.player.hitIframe;
     const dir = Math.sign(this.x - fromX) || 1;
     this.vx = dir * 380;
     this.vy = -260;
-    return true;
+    return "hit";
   }
 
   heal(n) { this.hp = Math.min(this.maxHp, this.hp + n); }

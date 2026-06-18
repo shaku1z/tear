@@ -71,6 +71,7 @@ const Input = {
   jumpPressed() { return this.pressed.has("Space") || this.pressed.has("KeyW") || this.pressed.has("ArrowUp"); },
   dashPressed() { return this.pressed.has("ShiftLeft") || this.pressed.has("ShiftRight"); },
   pausePressed() { return this.pressed.has("KeyP"); },
+  escapePressed() { return this.pressed.has("Escape"); },
 
   // menu navigation edges
   menuPrev() { return this.pressed.has("ArrowUp") || this.pressed.has("ArrowLeft") || this.pressed.has("KeyW") || this.pressed.has("KeyA"); },
