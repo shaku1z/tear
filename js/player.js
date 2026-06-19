@@ -46,13 +46,16 @@ class Player {
 
     const dirX = (Input.right() ? 1 : 0) - (Input.left() ? 1 : 0);
     if (dirX !== 0) this.facing = dirX;
-    this.downBufferT = Input.down() ? 0.12 : Math.max(0, this.downBufferT - dt);
+    this.downBufferT = Input.down() ? 0.16 : Math.max(0, this.downBufferT - dt);
     const downHeld = Input.down() || this.downBufferT > 0;
 
     // ---- dash trigger ----
     if (Input.dashPressed() && this.dashCd <= 0 && this.dashTimer <= 0) {
       let ax = (Input.right() ? 1 : 0) - (Input.left() ? 1 : 0);
       let ay = (downHeld ? 1 : 0) - (Input.up() ? 1 : 0);
+      // a down-dash takes priority over horizontal drift: "S + dash" goes (almost) straight
+      // down instead of veering left/right because you happened to be moving
+      if (ay > 0 && ax !== 0) ax *= 0.3;
       if (ax === 0 && ay === 0) ax = this.facing; // default: dash where you face
       const m = len(ax, ay) || 1;
       this.dashX = ax / m; this.dashY = ay / m;

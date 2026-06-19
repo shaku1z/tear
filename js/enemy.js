@@ -47,8 +47,13 @@ class Enemy {
     this.chargePower = 0;  // 0..1 roll: longer wind-up -> farther, harder charge
     this.chargeMult = 1;   // contact-damage multiplier applied during a committed charge
     // platform pathfinding
-    this.canClimb = false; // can hop platform-to-platform to reach a perched player
+    this.canClimb = false; // family is capable of hopping platforms
+    this.climber = false;  // ...and this individual actually does (rolled at spawn)
+    this.climbApt = 0.5;   // aptitude 0..1: better climbers react sooner & hop more fluidly
     this.navDir = 1;       // suggested horizontal direction from climbNav
+    this.perchT = 0;       // how long the player has been perched above & unreached
+    this.climbCommit = 0;  // once it decides to climb, it commits for a stretch (anti-jitter)
+    this.aliveT = 0;       // seconds alive — willingness to climb ramps with this
   }
 
   get radius() { return Math.max(this.hw, this.hh); }
@@ -120,15 +125,28 @@ class Enemy {
   }
 
   // lightweight platform pathfinding: when the player is perched above, steer toward
-  // the nearest reachable one-way platform that steps up toward them and hop onto it.
-  // Re-evaluated every frame, so it climbs level-by-level (no full graph search, but
-  // it stops the player from safely camping above the enemies). Returns true while
-  // it's actively climbing, so callers should follow navDir and hold their attacks.
+  // the nearest reachable one-way platform and hop onto it, level-by-level. NOT every
+  // enemy climbs, and the ones that do don't react instantly — they need the player to
+  // stay perched for a "react delay" that shrinks the longer the enemy has been alive
+  // (rookies stay grounded; lingering enemies get determined) and with its aptitude.
+  // A commitment window stops per-frame jitter, so a player drifting across platforms
+  // doesn't turn the whole arena into a jumping fest. Returns true while it's climbing.
   climbNav(player, platforms, dt) {
     if (this.jumpCd > 0) this.jumpCd -= dt;
     this.navDir = Math.sign(player.x - this.x) || 1;
     const feetY = this.y + this.hh, playerFeet = player.y + player.hh;
-    if (playerFeet > this.y - 50) return false;        // player not meaningfully above -> normal chase
+    const above = playerFeet <= this.y - 60;
+    if (above) this.perchT += dt; else { this.perchT = 0; this.climbCommit = 0; }
+    if (!this.canClimb || !this.climber || !above) return false;
+
+    // willingness ramps with time alive; the perch delay before reacting shrinks with
+    // age + aptitude (so freshly spawned enemies don't all leap the instant you hop up)
+    const will = clamp(this.aliveT / 14, 0, 1);
+    const reactDelay = lerp(2.4, 0.45, will * 0.6 + this.climbApt * 0.4);
+    if (this.climbCommit <= 0 && this.perchT < reactDelay) return false;
+    if (this.climbCommit <= 0) this.climbCommit = 1.6;     // commit a stretch (anti-jitter)
+    this.climbCommit -= dt;
+
     const MAXJUMP = 300, TOL = 130;
     let best = null, bestDist = Infinity;
     for (const p of platforms) {
@@ -144,7 +162,8 @@ class Enemy {
     if (this.x > best.x - TOL && this.x < best.x + best.w + TOL) {
       this.navDir = Math.sign(center - this.x) || this.navDir;
       if (this.onGround && this.jumpCd <= 0) {          // aligned -> hop up (and across) onto it
-        this.vy = -1250; this.onGround = false; this.jumpCd = 0.85;
+        this.vy = -1250; this.onGround = false;
+        this.jumpCd = lerp(1.5, 0.7, this.climbApt);    // clumsy climbers hesitate between hops
         this.vx += Math.sign(center - this.x) * 320;
       }
     } else {
@@ -160,6 +179,7 @@ class Enemy {
   }
 
   tickTimers(dt) {
+    this.aliveT += dt;
     if (this.hitCd > 0) this.hitCd -= dt;
     if (this.flash > 0) this.flash -= dt;
     if (this.stun > 0) this.stun -= dt;

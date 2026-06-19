@@ -249,16 +249,20 @@
 
   function modeWaves(mode) { const m = CONFIG.modes.find((x) => x.id === mode); return (m && m.waves) || 0; }
 
+  // effective wave for content gating — the sandbox unlocks the whole roster at once
+  function contentWave() { return (run && run.mode === "sandbox") ? 99 : run.wave; }
+
   // weighted enemy pick; new types unlock as waves progress
   function pickEnemyType(wave) {
+    const w = (run && run.mode === "sandbox") ? 99 : wave;
     const pool = [["charger", 1]];
-    if (wave >= 2) pool.push(["ranged", 0.6]);
-    if (wave >= 3) pool.push(["flyer", 0.5]);
-    if (wave >= 4) pool.push(["bomber", 0.4]);
-    if (wave >= 5) pool.push(["armored", 0.35]);
+    if (w >= 2) pool.push(["ranged", 0.6]);
+    if (w >= 3) pool.push(["flyer", 0.5]);
+    if (w >= 4) pool.push(["bomber", 0.4]);
+    if (w >= 5) pool.push(["armored", 0.35]);
     let total = 0; for (const p of pool) total += p[1];
     let r = Math.random() * total;
-    for (const [t, w] of pool) { if ((r -= w) <= 0) return t; }
+    for (const [t, w2] of pool) { if ((r -= w2) <= 0) return t; }
     return "charger";
   }
 
@@ -314,10 +318,13 @@
       if (spec.hpScale) { e.hp *= spec.hpScale; e.maxHp *= spec.hpScale; }
       // presets are their own identity; otherwise pick a family variant + roll affixes
       if (spec.preset) applyPreset(e, spec.preset);
-      else { applyVariant(e, spec.variant || rollVariant(e.kind, run.wave)); rollAffixes(e, run.wave); }
+      else { applyVariant(e, spec.variant || rollVariant(e.kind, contentWave())); rollAffixes(e, run.wave); }
       if (spec.type !== "flyer") { const pos = groundSpawn(e.hh); e.x = pos.x; e.y = pos.y; }
-      // ground enemies pathfind across platforms so a perched player can't be camped
-      if (e.kind === "charger" || e.kind === "ranged" || e.kind === "bomber" || e.kind === "armored") e.canClimb = true;
+      // ground enemies can pathfind across platforms — but only ~60% actually climb, with
+      // a varied aptitude, so a perched player is pressured without an instant jump swarm
+      if (e.kind === "charger" || e.kind === "ranged" || e.kind === "bomber" || e.kind === "armored") {
+        e.canClimb = true; e.climber = Math.random() < 0.6; e.climbApt = Math.random();
+      }
     }
     e.hpDisplay = e.hp;
     e.spawnT = 0.35;   // brief materialize so spawns read as spawns (not teleports)

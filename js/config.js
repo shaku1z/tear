@@ -247,5 +247,7 @@ const CONFIG = {
       blurb: "Endless, with a boss every few waves. (Coming soon)" },
     { id: "bossonly", label: "Boss Test",          enabled: true, bossOnly: true,
       blurb: "Fight the boss right away (testing)." },
+    { id: "sandbox",  label: "Enemy Test",          enabled: true, sandbox: true,
+      blurb: "Sandbox: every enemy variant spawns from wave 1 — try the full roster." },
   ],
 };
