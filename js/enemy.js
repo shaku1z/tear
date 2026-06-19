@@ -234,14 +234,16 @@ class Enemy {
 class Charger extends Enemy {
   constructor(x, y) { super(x, y, CONFIG.enemy); this.color = CONFIG.colors.charger; this.kind = "charger"; this.behavior = "bull"; }
 
-  update(dt, platforms, player) {
+  update(dt, platforms, player, projectiles) {
     this.tickTimers(dt);
     if (this.atkCd > 0) this.atkCd -= dt;
     // a wound-up charge hits harder on contact (longer wind-up = more power)
     this.chargeMult = (this.behavior === "bull" && this.atk === "commit") ? (1 + this.chargePower) : 1;
+    // Duelist parry recharge
+    if (this.behavior === "duelist" && this.duelCd > 0) { this.duelCd -= dt; if (this.duelCd <= 0) this.duelReady = true; }
 
     // pathfind up to a perched player (never interrupt an in-progress charge)
-    if (this.canClimb && this.atk !== "commit" && this.climbNav(player, platforms, dt)) {
+    if (this.canClimb && this.atk !== "commit" && this.atk !== "swing" && this.climbNav(player, platforms, dt)) {
       if (this.onGround) this.vx = lerp(this.vx, this.navDir * this.speed * 1.1, clamp(7 * dt, 0, 1));
       this.atk = "idle";
       this.integrate(dt, platforms);
@@ -251,8 +253,10 @@ class Charger extends Enemy {
     const E = CONFIG.enemy;
     const dx = player.x - this.x, dist = Math.abs(dx), dir = Math.sign(dx) || 1;
 
-    if (this.behavior === "brawler") this._brawler(dt, player, dist, dir);
+    if (this.behavior === "brawler" || this.behavior === "duelist") this._brawler(dt, player, dist, dir);
     else if (this.behavior === "stalker") this._stalker(dt, player, dist, dir, E);
+    else if (this.behavior === "executioner") this._executioner(dt, player, dist, dir, projectiles);
+    else if (this.behavior === "gravedigger") this._gravedigger(dt, player, dist, dir, projectiles);
     else this._bull(dt, player, dist, dir, E);
 
     const preVx = this.vx;
@@ -356,13 +360,73 @@ class Charger extends Enemy {
     }
   }
 
+  // Executioner: a long overhead wind-up (huge punish window) then heavy shockwaves both ways
+  _executioner(dt, player, dist, dir, projectiles) {
+    const X = CONFIG.exotic;
+    if (this.atk === "windup") {
+      this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1)); this.atkDir = dir; this.atkT -= dt;
+      if (this.atkT <= 0) {
+        const footY = this.y + this.hh;
+        for (const d of [-1, 1]) { const p = new Projectile(this.x + d * this.hw, footY - X.exShockR, d * X.exShockSpeed, 0); p.shock = true; p.r = X.exShockR; p.dmg = X.exShockDmg; p.life = 1.6; projectiles.push(p); }
+        FX.ring(this.x, footY, 18, CONFIG.colors.slam); FX.burst(this.x, footY, 0, -1, 11, CONFIG.colors.charger);
+        if (typeof SFX !== "undefined" && SFX.ctx && SFX.slam) SFX.slam();
+        this.atk = "recover"; this.atkCd = 1.5;
+      }
+    } else if (this.atk === "recover") {
+      this.vx = lerp(this.vx, 0, clamp(6 * dt, 0, 1)); if (this.atkCd <= 0) this.atk = "idle";
+    } else {
+      this.vx = lerp(this.vx, dir * this.speed, clamp(5 * dt, 0, 1));
+      if (dist < 360 && this.atkCd <= 0 && Math.abs(player.y - this.y) < 130) { this.atk = "windup"; this.atkT = X.exWindup; this.atkMax = X.exWindup; this.atkDir = dir; }
+    }
+  }
+
+  // Gravedigger: a wide swing whose shock starts out at mid-range — so getting INSIDE (point-
+  // blank) is the safe play, and staying at mid-range is where it hits
+  _gravedigger(dt, player, dist, dir, projectiles) {
+    const X = CONFIG.exotic;
+    if (this.atk === "windup") {
+      this.vx = lerp(this.vx, 0, clamp(7 * dt, 0, 1)); this.atkDir = dir; this.atkT -= dt;
+      if (this.atkT <= 0) {
+        const footY = this.y + this.hh, sx = this.x + this.atkDir * X.gravReach;
+        const p = new Projectile(sx, footY - X.gravShockR, this.atkDir * X.gravShockSpeed, 0);
+        p.shock = true; p.r = X.gravShockR; p.dmg = X.gravDmg; p.life = 1.3; projectiles.push(p);
+        FX.burst(sx, footY, 0, -1, 9, CONFIG.colors.charger);
+        this.atk = "swing"; this.atkT = 0.25;
+      }
+    } else if (this.atk === "swing") {
+      this.atkT -= dt; if (this.atkT <= 0) { this.atk = "recover"; this.atkCd = 1.5; }
+    } else if (this.atk === "recover") {
+      this.vx = lerp(this.vx, 0, clamp(5 * dt, 0, 1)); if (this.atkCd <= 0) this.atk = "idle";
+    } else {
+      this.vx = lerp(this.vx, dir * this.speed, clamp(4 * dt, 0, 1));
+      if (dist < 330 && dist > 80 && this.atkCd <= 0 && Math.abs(player.y - this.y) < 120) { this.atk = "windup"; this.atkT = X.gravWindup; this.atkMax = X.gravWindup; this.atkDir = dir; }
+    }
+  }
+
   draw(ctx) {
     const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2;
     const dir = this.atkDir || Math.sign(this.vx) || 1;
 
-    // charge wind-up telegraph: a building dashed arrow — longer/thicker for a
+    // Executioner: an overhead slam warning (ground lines both sides + rising marker)
+    if (this.behavior === "executioner" && this.atk === "windup") {
+      const k = 1 - clamp(this.atkT / (this.atkMax || 1), 0, 1), gy = this.y + this.hh;
+      ctx.strokeStyle = CONFIG.colors.slam; ctx.globalAlpha = 0.3 + 0.55 * k; ctx.lineWidth = 3 + k * 4;
+      ctx.beginPath(); ctx.moveTo(this.x - (50 + 150 * k), gy - 2); ctx.lineTo(this.x + (50 + 150 * k), gy - 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(this.x, y - 8 - 30 * k); ctx.lineTo(this.x, y - 6); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    // Gravedigger: a wide arc telegraph out at mid-range (point-blank is safe)
+    if (this.behavior === "gravedigger" && (this.atk === "windup" || this.atk === "swing")) {
+      const k = this.atk === "swing" ? 1 : 1 - clamp(this.atkT / (this.atkMax || 1), 0, 1);
+      const sx = this.x + this.atkDir * CONFIG.exotic.gravReach, gy = this.y + this.hh;
+      ctx.strokeStyle = CONFIG.colors.slam; ctx.globalAlpha = 0.3 + 0.5 * k; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(sx, gy, 26 + 30 * k, Math.PI, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // bull charge wind-up telegraph: a building dashed arrow — longer/thicker for a
     // higher-power (longer wind-up) charge, so you can read how hard it's coming
-    if (this.atk === "windup" && !this.feint) {
+    if (this.behavior === "bull" && this.atk === "windup" && !this.feint) {
       const k = 1 - clamp(this.atkT / (this.atkMax || 0.55), 0, 1);
       const reach = 40 + (60 + this.chargePower * 130) * k;
       ctx.strokeStyle = this.color; ctx.globalAlpha = 0.35 + 0.45 * k; ctx.lineWidth = 3 + this.chargePower * 2; ctx.setLineDash([7, 5]);
@@ -478,6 +542,18 @@ class Ranged extends Enemy {
       p.r = CS.r; p.dmg = CS.dmg * this.auraDmg; p.charged = true;
       projectiles.push(p);
       return;
+    }
+    if (b === "warlock") {                        // slow shot that curves once toward you
+      const X = CONFIG.exotic, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
+      const p = new Projectile(this.x, this.y, (dx / m) * X.warlockSpeed, (dy / m) * X.warlockSpeed);
+      p.dmg = X.warlockDmg * this.auraDmg; p.curve = true; p.curveT = X.warlockCurveAt; p.r = 11;
+      projectiles.push(p); return;
+    }
+    if (b === "chain") {                          // a shot that roots you in place on hit
+      const X = CONFIG.exotic, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
+      const p = new Projectile(this.x, this.y, (dx / m) * X.chainSpeed, (dy / m) * X.chainSpeed);
+      p.dmg = X.chainDmg * this.auraDmg; p.root = X.chainRoot; p.r = X.chainR;
+      projectiles.push(p); return;
     }
     if (b === "sentinel") { this.fireAt(player, projectiles, C.projSpeed * 1.15); return; }  // single precise shot
     // Rifleman leads your movement; default Ranged just double-taps where you are

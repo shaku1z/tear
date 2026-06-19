@@ -696,6 +696,15 @@
       for (const e of enemies) {
         if (e.dead || blade.pierced.has(e)) continue;
         if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y, e.radius + 4)) {
+          // Duelist parries a thrown blade right back — bait the parry, then throw
+          if (e.behavior === "duelist" && e.duelReady) {
+            e.duelReady = false; e.duelCd = CONFIG.exotic.duelCd; e.flash = 0.12;
+            blade.pierced = new Set(); blade.state = "returning";
+            FX.burst(e.x, e.y, -blade.vx, -blade.vy, 8, CONFIG.colors.armoredShield);
+            addFloater(e.x, e.y - 28, "PARRIED", true, CONFIG.colors.armoredShield);
+            hitStop = CONFIG.hitStop.small; addShake(CONFIG.juice.shakeSmall); SFX.deflect();
+            break;
+          }
           blade.pierced.add(e);
           let tdmg = blade.throwDmg;
           // outgoing throw favors high-HP foes (opener); recall favors low-HP (finisher)
@@ -787,7 +796,25 @@
         }
       } else if (aabbOverlap(p.x, p.y, p.r, p.r, player.x, player.y, player.hw, player.hh)) {
         { const r = player.takeDamage(p.dmg != null ? p.dmg : CONFIG.proj.dmg, p.x);
-          if (r) { p.dead = true; if (r === "hit") { loseStyle(); SFX.hurt(); } else onShieldAbsorb(); } }
+          if (r) {
+            p.dead = true;
+            if (r === "hit") {
+              loseStyle(); SFX.hurt();
+              if (p.root) { player.rootT = p.root; addFloater(player.x, player.y - 34, "ROOTED", true, CONFIG.colors.armoredShield); }
+            } else onShieldAbsorb();
+          } }
+      }
+    }
+
+    // Warlock shots curve once toward the player partway through their flight
+    for (const p of projectiles) {
+      if (p.dead || !p.curve || p.curved) continue;
+      p.curveT -= dt;
+      if (p.curveT <= 0) {
+        const sp = len(p.vx, p.vy) || CONFIG.proj.speed;
+        const dx = player.x - p.x, dy = player.y - p.y, m = len(dx, dy) || 1;
+        p.vx = (dx / m) * sp; p.vy = (dy / m) * sp; p.curved = true;
+        FX.burst(p.x, p.y, p.vx, p.vy, 4, CONFIG.colors.enemyShot);
       }
     }
 

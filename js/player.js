@@ -29,6 +29,7 @@ class Player {
     this.shield = 0;            // Aegis: stored one-hit absorb pips
     this.maxShield = 0;         // ...cap (0 until Aegis is owned)
     this.airTime = 0;           // Aerial Rave: seconds since last grounded
+    this.rootT = 0;             // Chain Caster: snared in place (no move/jump/dash) for a bit
   }
 
   get invulnerable() { return this.iframe > 0 || this.dashIframe > 0; }
@@ -43,14 +44,16 @@ class Player {
     if (this.coyote > 0) this.coyote -= dt;
     if (this.jumpBuf > 0) this.jumpBuf -= dt;
     if (this.guardT > 0) this.guardT -= dt;
+    if (this.rootT > 0) this.rootT -= dt;
+    const rooted = this.rootT > 0;
 
-    const dirX = (Input.right() ? 1 : 0) - (Input.left() ? 1 : 0);
+    const dirX = ((Input.right() ? 1 : 0) - (Input.left() ? 1 : 0)) * (rooted ? 0 : 1);
     if (dirX !== 0) this.facing = dirX;
     this.downBufferT = Input.down() ? 0.16 : Math.max(0, this.downBufferT - dt);
     const downHeld = Input.down() || this.downBufferT > 0;
 
-    // ---- dash trigger ----
-    if (Input.dashPressed() && this.dashCd <= 0 && this.dashTimer <= 0) {
+    // ---- dash trigger (snared = no dash) ----
+    if (!rooted && Input.dashPressed() && this.dashCd <= 0 && this.dashTimer <= 0) {
       let ax = (Input.right() ? 1 : 0) - (Input.left() ? 1 : 0);
       let ay = (downHeld ? 1 : 0) - (Input.up() ? 1 : 0);
       // a down-dash takes priority over horizontal drift: "S + dash" goes (almost) straight
@@ -92,9 +95,9 @@ class Player {
         else this.vx -= Math.sign(this.vx) * f;
       }
 
-      // jump (with coyote + buffer)
-      if (Input.jumpPressed()) this.jumpBuf = P.jumpBuffer;
-      if (this.jumpBuf > 0 && (this.onGround || this.coyote > 0)) {
+      // jump (with coyote + buffer) — snared = grounded
+      if (Input.jumpPressed() && !rooted) this.jumpBuf = P.jumpBuffer;
+      if (this.jumpBuf > 0 && !rooted && (this.onGround || this.coyote > 0)) {
         this.vy = -P.jumpSpeed;
         this.onGround = false;
         this.coyote = 0;

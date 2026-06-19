@@ -19,6 +19,11 @@ class Projectile {
     this.mine = false;        // settles on the floor, arms, then detonates on proximity
     this.armed = false;
     this.armT = 0;
+    this.shock = false;       // armored stomp ground wave (jump it; non-parryable)
+    this.curve = false;       // Warlock: redirects once toward the player mid-flight
+    this.curveT = 0;          // ...countdown to that adjustment
+    this.curved = false;
+    this.root = 0;            // Chain: roots the player for this many seconds on hit
   }
 
   update(dt) {
@@ -72,6 +77,12 @@ class Projectile {
       ctx.lineTo(this.x, this.y - this.r); ctx.lineTo(this.x + this.r, this.y + this.r);
       ctx.closePath(); ctx.fill();
       ctx.globalAlpha = 1; ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.stroke();
+      return;
+    }
+    if (this.root && !this.deflected) {    // chain shot: a hollow link ring
+      ctx.strokeStyle = C.enemyShot; ctx.lineWidth = 3.5;
+      ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(this.x, this.y, this.r * 0.4, 0, Math.PI * 2); ctx.fill();
       return;
     }
     if (this.mine) {                       // floor mine: disk + arming/armed blink

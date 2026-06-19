@@ -192,6 +192,15 @@ const CONFIG = {
   // the fastest, hardest-hitting shot in the game. Parrying it back is hugely rewarding.
   chargedShot: { r: 11, dmg: 30, speed: 1900, windup: 1.4 },
 
+  // exotic variants (Round 4c)
+  exotic: {
+    exWindup: 1.3, exShockDmg: 24, exShockSpeed: 640, exShockR: 19,        // Executioner: long overhead -> heavy shocks both sides
+    gravWindup: 0.9, gravReach: 120, gravDmg: 22, gravShockR: 24, gravShockSpeed: 420,  // Gravedigger: wide swing starting at mid-range (safe point-blank)
+    duelCd: 2.4,                                                            // Duelist: parries a thrown blade, then must recover
+    warlockSpeed: 430, warlockDmg: 12, warlockCurveAt: 0.42,               // Warlock: slow shot that curves once toward you
+    chainSpeed: 560, chainRoot: 1.4, chainDmg: 8, chainR: 12,              // Chain: roots you in place on hit
+  },
+
   // accent palette — player stays black on white; enemies/shots/FX carry the color
   colors: {
     charger: "#e23b3b",        // red
