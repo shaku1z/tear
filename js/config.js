@@ -167,16 +167,26 @@ const CONFIG = {
     blastRadius: 150, blastDmg: 24, mineArm: 1.3, mineTrigger: 66, mineInterval: 2.2 },
   // armored: shielded on the side it faces; takes reduced damage on the ground,
   // normal/extra in the air -> you must launch ("updraft") it to kill efficiently
-  armored: { w: 46, h: 46, hp: 140, speed: 95, contactDmg: 14, knockbackTaken: 3, weight: 2.2, breakSpeed: 1500, groundDR: 0.5, airDR: 1.15 },
+  armored: { w: 46, h: 46, hp: 140, speed: 95, contactDmg: 14, knockbackTaken: 3, weight: 2.2, breakSpeed: 1500, groundDR: 0.5, airDR: 1.15,
+    stompCd: 3.2, stompWindup: 0.55, stompRange: 400, shockSpeed: 560, shockDmg: 16, shockR: 15 },
   // boss: large, multi-phase (very heavy -> barely flinchable)
   boss: { w: 118, h: 118, hp: 1900, speed: 70, contactDmg: 20, knockbackTaken: 0.6, weight: 6, fireBase: 2.0 },
+
+  // support: no real attack — they make every OTHER enemy worse, so they're priority kills
+  support: { w: 32, h: 42, hp: 44, speed: 125, contactDmg: 6, knockbackTaken: 13, weight: 1,
+    range: 240, keepAway: 330, menderRate: 11, drMult: 0.5, speedBuff: 1.45, tetherDR: 0.5 },
+  // wraith: immune to direct blade hits — only your thrown blade or a deflected shot kills it
+  wraith: { w: 36, h: 42, hp: 64, speed: 170, contactDmg: 12, knockbackTaken: 0, weight: 1.4, hoverY: 70 },
+  // mimic: copies your last trick on a delay (the wind-up is your punish window)
+  mimic: { w: 34, h: 48, hp: 74, speed: 150, contactDmg: 12, knockbackTaken: 9, weight: 1, copyDelay: 0.6 },
 
   // elite variants of basic enemies
   elite: { hpMult: 2.2, speedMult: 1.3, dmgMult: 1.5, sizeMult: 1.2, chancePerWave: 0.06, chanceMax: 0.35 },
 
   proj: { r: 9, dmg: 10, speed: 540 },
-  // Marksman's charged shot: big, slow, heavy — telegraphed and very parryable
-  chargedShot: { r: 17, dmg: 22, speed: 320, windup: 1.05 },
+  // Marksman's charged shot: a long telegraphed charge, then the FASTEST bolt in the game
+  // (read the long aim line, then dodge or parry the snap shot)
+  chargedShot: { r: 10, dmg: 20, speed: 1150, windup: 1.3 },
 
   // accent palette — player stays black on white; enemies/shots/FX carry the color
   colors: {
@@ -187,6 +197,12 @@ const CONFIG = {
     armored: "#3a4654",        // slate
     armoredShield: "#15c2c2",  // cyan
     boss: "#b01030",           // crimson
+    priest: "#a64dd6",         // support: damage-reduction aura
+    herald: "#e0902f",         // support: speed buff
+    mender: "#1faf5a",         // support: heals allies
+    anchor: "#1597c2",         // support: shields a tethered ally
+    wraith: "#6a6f88",         // special: blade-immune phantom
+    mimic: "#444a5c",          // special: copies your tricks
     enemyShot: "#e23b3b",      // incoming projectile
     deflected: "#1faf5a",      // your reflected projectile (green)
     perfect: "#13c4d6",        // perfect parry / counter (cyan)

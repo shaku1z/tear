@@ -162,6 +162,7 @@
     let pts = T.pts[kind] || 2;
     if (kind !== run.lastTrick) pts *= T.variety;   // reward varied tricks
     run.lastTrick = kind;
+    if (player) player.lastTrickKind = kind;        // Mimic copies your most recent trick
     run.combo += pts;
     run.comboTimer = T.decay;
     const prevRank = run.rank;
@@ -192,6 +193,17 @@
   function fmtTime(s) {
     const m = Math.floor(s / 60), ss = Math.floor(s % 60);
     return m + ":" + String(ss).padStart(2, "0");
+  }
+  // human-readable name for an enemy (variant + affixes), used by the Enemy Test labels
+  function enemyLabel(e) {
+    let name;
+    if (e.kind === "support") name = { priest: "War Priest", herald: "Herald", mender: "Mender", anchor: "Anchor" }[e.supportType] || "Support";
+    else if (e.kind === "wraith") name = "Wraith";
+    else if (e.kind === "mimic") name = "Mimic";
+    else if (e.kind === "armored") name = e.enraged ? "Armored*" : "Armored";
+    else name = e.variantName || (e.kind.charAt(0).toUpperCase() + e.kind.slice(1));
+    if (e.affixCount) name += " +" + e.affixCount;
+    return name;
   }
   function trickColor(mult) {
     const C = CONFIG.colors;
@@ -260,6 +272,10 @@
     if (w >= 3) pool.push(["flyer", 0.5]);
     if (w >= 4) pool.push(["bomber", 0.4]);
     if (w >= 5) pool.push(["armored", 0.35]);
+    // rarer support + special types arrive later (and all at once in the sandbox)
+    if (w >= 6) { pool.push(["priest", 0.18]); pool.push(["mender", 0.16]); }
+    if (w >= 7) { pool.push(["herald", 0.16]); pool.push(["anchor", 0.14]); pool.push(["wraith", 0.2]); }
+    if (w >= 8) pool.push(["mimic", 0.16]);
     let total = 0; for (const p of pool) total += p[1];
     let r = Math.random() * total;
     for (const [t, w2] of pool) { if ((r -= w2) <= 0) return t; }
@@ -312,6 +328,9 @@
       case "bomber":  e = new Bomber(0, 0); break;
       case "armored": e = new Armored(0, 0); break;
       case "boss":    e = new Boss(W / 2, CONFIG.world.groundY - 140); break;
+      case "priest": case "herald": case "mender": case "anchor": e = new Support(0, 0, spec.type); break;
+      case "wraith":  e = new Wraith(spawnSide(), 220); break;
+      case "mimic":   e = new Mimic(0, 0); break;
       default:        e = new Charger(0, 0);
     }
     if (spec.type !== "boss") {
@@ -319,7 +338,7 @@
       // presets are their own identity; otherwise pick a family variant + roll affixes
       if (spec.preset) applyPreset(e, spec.preset);
       else { applyVariant(e, spec.variant || rollVariant(e.kind, contentWave())); rollAffixes(e, run.wave); }
-      if (spec.type !== "flyer") { const pos = groundSpawn(e.hh); e.x = pos.x; e.y = pos.y; }
+      if (spec.type !== "flyer" && spec.type !== "wraith") { const pos = groundSpawn(e.hh); e.x = pos.x; e.y = pos.y; }
       // ground enemies can pathfind across platforms — but only ~60% actually climb, with
       // a varied aptitude, so a perched player is pressured without an instant jump swarm
       if (e.kind === "charger" || e.kind === "ranged" || e.kind === "bomber" || e.kind === "armored") {
@@ -404,6 +423,46 @@
   const STEP = 1 / 120;
   let acc = 0, last = performance.now();
 
+  // Support family: each frame reset aura flags, then let every support re-apply its
+  // effect to nearby allies (it needs the live enemy list, so it lives here, not in the class)
+  function updateSupports(dt) {
+    for (const e of enemies) { e.auraDR = 1; e.auraSpeed = 1; e.tetherDR = 1; e.beamTarget = null; }
+    const S = CONFIG.support;
+    for (const s of enemies) {
+      if (s.kind !== "support" || s.dead || s.spawnT > 0 || s.stun > 0) continue;
+      const t = s.supportType;
+      if (t === "priest" || t === "herald") {
+        for (const e of enemies) {
+          if (e === s || e.dead || e.kind === "support") continue;
+          if (len(e.x - s.x, e.y - s.y) <= s.range + e.radius) {
+            if (t === "priest") e.auraDR = Math.min(e.auraDR, S.drMult);
+            else e.auraSpeed = Math.max(e.auraSpeed, S.speedBuff);
+          }
+        }
+      } else if (t === "mender") {
+        let best = null, bestHp = Infinity;
+        for (const e of enemies) {
+          if (e === s || e.dead || e.kind === "support" || e.hp >= e.maxHp) continue;
+          if (len(e.x - s.x, e.y - s.y) > s.range * 1.3) continue;
+          if (e.hp < bestHp) { bestHp = e.hp; best = e; }
+        }
+        if (best) { best.hp = Math.min(best.maxHp, best.hp + S.menderRate * dt); s.beamTarget = best; }
+      } else if (t === "anchor") {
+        if (!s.tetheredAlly || s.tetheredAlly.dead || len(s.tetheredAlly.x - s.x, s.tetheredAlly.y - s.y) > s.range * 2.2) {
+          s.tetheredAlly = null;
+          let best = null, bestD = Infinity;
+          for (const e of enemies) {
+            if (e === s || e.dead || e.kind === "support") continue;
+            const d = len(e.x - s.x, e.y - s.y);
+            if (d < bestD) { bestD = d; best = e; }
+          }
+          s.tetheredAlly = best;
+        }
+        if (s.tetheredAlly && !s.tetheredAlly.dead) { s.tetheredAlly.tetherDR = Math.min(s.tetheredAlly.tetherDR, S.tetherDR); s.beamTarget = s.tetheredAlly; }
+      }
+    }
+  }
+
   function stepPlaying(dt) {
     // Flow Guard: damage reduction while the trick rank is high (refreshed each step)
     player.flowDR = (run.mods.flowGuard && run.mult >= CONFIG.resilience.flowGuardTier)
@@ -480,6 +539,7 @@
       if (e.stun > 0) { e.stun -= dt; continue; }        // stunned (hammer lob / guard break): frozen
       e.update(dt, platforms, player, projectiles);
     }
+    updateSupports(dt);   // apply War Priest / Herald / Mender / Anchor effects to allies
     // a spiked enemy slamming into the ground -> impact burst
     for (const e of enemies) {
       if (e.spiked && e.onGround) {
@@ -498,6 +558,11 @@
     for (const e of enemies) {
       if (e.dead || e.hitCd > 0) continue;
       if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y, e.radius + 4)) {
+        // Wraith: the blade phases straight through — only a thrown blade or a deflected shot harms it
+        if (e.immuneToBlade) {
+          if (baseDmg > 0) { e.hitCd = 0.18; FX.burst(e.x, e.y, blade.tipVX, blade.tipVY, 4, e.color); }
+          continue;
+        }
         if (baseDmg > 0) {
           // armored: blocked unless the hit is fast enough / from the flank
           if (e.blocks(blade.tipX, blade.tipSpeed)) {
@@ -623,7 +688,7 @@
 
     // held blade vs projectiles (deflect / perfect parry; mines are defused on contact)
     for (const p of projectiles) {
-      if (p.dead || p.deflected || blade.state !== "held") continue;
+      if (p.dead || p.deflected || p.shock || blade.state !== "held") continue;   // shocks must be jumped, not parried
       if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, p.x, p.y, p.r + 4)) {
         if (p.mine) {
           p.dead = true;
@@ -869,6 +934,20 @@
         ctx.restore();
       } else {
         e.draw(ctx, player);
+      }
+    }
+    // Enemy Test mode: name every enemy so you can learn the roster
+    if (run && run.mode === "sandbox") {
+      ctx.textBaseline = "alphabetic";
+      for (const e of enemies) {
+        if (e.spawnT > 0) continue;
+        const label = enemyLabel(e);
+        const ly = e.y - e.hh - 22;
+        ctx.font = UI.font(12, true); ctx.textAlign = "center";
+        const tw = ctx.measureText(label).width;
+        ctx.globalAlpha = 0.85; ctx.fillStyle = "#fff"; ctx.fillRect(e.x - tw / 2 - 3, ly - 11, tw + 6, 14);
+        ctx.globalAlpha = 1; ctx.fillStyle = e.color || "#000";
+        ctx.fillText(label, e.x, ly);
       }
     }
     for (const p of projectiles) p.draw(ctx);

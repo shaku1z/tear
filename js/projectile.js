@@ -55,12 +55,23 @@ class Projectile {
     this.vy = (dirY / m) * s;
     this.deflected = true;
     this.perfect = !!perfect;
-    this.deflectDmg = perfect ? 48 : 28;
+    // parry damage scales with how dangerous the original shot was — sending a heavy
+    // shot back hurts far more than reflecting a basic pellet
+    const orig = this.dmg != null ? this.dmg : CONFIG.proj.dmg;
+    this.deflectDmg = Math.round(orig * (perfect ? 2.8 : 1.9) + (perfect ? 10 : 8));
     this.life = 6;
   }
 
   draw(ctx) {
     const C = CONFIG.colors;
+    if (this.shock) {                      // armored stomp shockwave: a ground spike you jump
+      ctx.fillStyle = C.slam; ctx.globalAlpha = 0.9;
+      ctx.beginPath(); ctx.moveTo(this.x - this.r, this.y + this.r);
+      ctx.lineTo(this.x, this.y - this.r); ctx.lineTo(this.x + this.r, this.y + this.r);
+      ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1; ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.stroke();
+      return;
+    }
     if (this.mine) {                       // floor mine: disk + arming/armed blink
       ctx.fillStyle = this.deflected ? C.deflected : C.bomber;
       ctx.beginPath(); ctx.arc(this.x, this.y, this.r, Math.PI, 0); ctx.fill();
@@ -76,9 +87,12 @@ class Projectile {
     ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = "#000"; ctx.lineWidth = this.charged ? 2.5 : 1.5; ctx.stroke();
-    if (this.charged && !this.deflected) {   // heavy-shot accent: a pulsing inner core
-      ctx.fillStyle = "#fff";
-      ctx.beginPath(); ctx.arc(this.x, this.y, this.r * 0.4, 0, Math.PI * 2); ctx.fill();
+    if (this.charged && !this.deflected) {   // fast bolt: a motion streak + bright core
+      const m = len(this.vx, this.vy) || 1, tl = 24;
+      ctx.strokeStyle = col; ctx.globalAlpha = 0.5; ctx.lineWidth = this.r * 1.1; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x - (this.vx / m) * tl, this.y - (this.vy / m) * tl); ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(this.x, this.y, this.r * 0.45, 0, Math.PI * 2); ctx.fill();
     }
     if (this.bomb) {                          // fuse spark on top of the lobbed bomb
       ctx.fillStyle = "#000"; ctx.fillRect(this.x - 1.5, this.y - this.r - 5, 3, 5);

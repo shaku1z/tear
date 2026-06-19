@@ -54,10 +54,15 @@ class Enemy {
     this.perchT = 0;       // how long the player has been perched above & unreached
     this.climbCommit = 0;  // once it decides to climb, it commits for a stretch (anti-jitter)
     this.aliveT = 0;       // seconds alive — willingness to climb ramps with this
+    // support auras (re-applied each frame by updateSupports in game.js)
+    this.auraDR = 1;       // War Priest: incoming damage multiplier (<1 = protected)
+    this.auraSpeed = 1;    // Herald: movement-speed multiplier
+    this.tetherDR = 1;     // Anchor: shielded ally damage multiplier
+    this.immuneToBlade = false;  // Wraith: direct blade hits pass through harmlessly
   }
 
   get radius() { return Math.max(this.hw, this.hh); }
-  get speed() { return this.cfg.speed * this.speedMult; }
+  get speed() { return this.cfg.speed * this.speedMult * this.auraSpeed; }
   blocks() { return false; }            // armored overrides
   damageTakenMult() { return 1; }       // armored overrides (ground vs air)
 
@@ -189,6 +194,7 @@ class Enemy {
   hit(dmg, knockX, knockY) {
     this.hitCd = CONFIG.blade.enemyHitIframe;
     this.flash = 0.08;
+    dmg *= this.auraDR * this.tetherDR;          // War Priest / Anchor protection
     if (this.shield > 0) {                       // Warded: shield absorbs first
       this.shield -= dmg;
       if (this.shield < 0) { this.hp += this.shield; this.shield = 0; }
@@ -733,19 +739,44 @@ class Bomber extends Enemy {
 
 // ---- Armored: shielded on the side it faces; needs a fast hit or a flank ----
 class Armored extends Enemy {
-  constructor(x, y) { super(x, y, CONFIG.armored); this.guardSide = 1; this.color = CONFIG.colors.armored; this.kind = "armored"; }
-  update(dt, platforms, player) {
+  constructor(x, y) { super(x, y, CONFIG.armored); this.guardSide = 1; this.color = CONFIG.colors.armored; this.kind = "armored"; this.stompCd = CONFIG.armored.stompCd * 0.6; }
+  update(dt, platforms, player, projectiles) {
     this.tickTimers(dt);
     this.guardSide = Math.sign(player.x - this.x) || 1;
+    if (this.stompCd > 0) this.stompCd -= dt;
+    const C = this.cfg;
     // enraged: chase onto platforms after a perched player
     if (this.enraged && this.canClimb && this.stun <= 0 && this.climbNav(player, platforms, dt)) {
       if (this.onGround) this.vx = lerp(this.vx, this.navDir * this.speed * 1.8, clamp(8 * dt, 0, 1));
       this.integrate(dt, platforms);
       return;
     }
+    // shielded STOMP: a telegraphed ground pound sends shockwaves you must jump over
+    if (!this.enraged && this.stun <= 0) {
+      if (this.atk === "stompwind") {
+        this.vx = lerp(this.vx, 0, clamp(10 * dt, 0, 1)); this.atkT -= dt;
+        if (this.atkT <= 0) { this._stomp(projectiles, C); this.atk = "idle"; this.stompCd = C.stompCd; }
+        this.integrate(dt, platforms); return;
+      }
+      if (this.onGround && this.stompCd <= 0 && Math.abs(player.x - this.x) < C.stompRange && Math.abs(player.y - this.y) < 130) {
+        this.atk = "stompwind"; this.atkT = C.stompWindup; this.atkMax = C.stompWindup;
+        this.integrate(dt, platforms); return;
+      }
+    }
     const sp = this.stun > 0 ? 0 : (this.enraged ? this.speed * 1.8 : this.speed);
     this.vx = lerp(this.vx, this.guardSide * sp, clamp((this.enraged ? 8 : 5) * dt, 0, 1));
     this.integrate(dt, platforms);
+  }
+  _stomp(projectiles, C) {
+    const gy = CONFIG.world.groundY - C.shockR;
+    for (const d of [-1, 1]) {
+      const p = new Projectile(this.x + d * this.hw, gy, d * C.shockSpeed, 0);
+      p.shock = true; p.r = C.shockR; p.dmg = C.shockDmg; p.life = 1.8;
+      projectiles.push(p);
+    }
+    FX.ring(this.x, CONFIG.world.groundY, 14, CONFIG.colors.slam);
+    FX.burst(this.x, CONFIG.world.groundY, 0, -1, 9, CONFIG.colors.armored);
+    if (typeof SFX !== "undefined" && SFX.ctx && SFX.slam) SFX.slam();
   }
   // blocked if the hit lands on the guarded (player-facing) side below break speed.
   // Once enraged (shield broken) it no longer blocks anything.
@@ -758,6 +789,14 @@ class Armored extends Enemy {
   draw(ctx) {
     const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2;
     const vulnerable = !this.onGround;   // launched -> takes full/extra damage
+    // stomp wind-up telegraph: a building warning along the floor on both sides
+    if (this.atk === "stompwind") {
+      const k = 1 - clamp(this.atkT / (this.atkMax || 0.55), 0, 1);
+      const gy = CONFIG.world.groundY;
+      ctx.strokeStyle = CONFIG.colors.slam; ctx.globalAlpha = 0.35 + 0.5 * k; ctx.lineWidth = 3 + k * 3;
+      ctx.beginPath(); ctx.moveTo(this.x - (40 + 160 * k), gy - 4); ctx.lineTo(this.x + (40 + 160 * k), gy - 4); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
     const body = this.enraged ? CONFIG.colors.charger : this.color;   // enraged runs hot
     ctx.fillStyle = this.flash > 0 ? "#fff" : (this.stun > 0 ? "#9aa6b2" : body);
     ctx.fillRect(x, y, w, h);
@@ -821,5 +860,154 @@ class Boss extends Enemy {
     ctx.fillRect(this.x + dir * 18 - 9, this.y - 18, 18, 14);
     for (let i = 0; i < this.phase; i++) ctx.fillRect(x + 12 + i * 16, y + h - 18, 10, 8);
     // local hp bar hidden (a big one is drawn in the HUD)
+  }
+}
+
+// ---- Support family: no real attack, they make every OTHER enemy worse (priority kills) ----
+// War Priest (damage-reduction aura), Herald (speed buff), Mender (heals allies), Anchor
+// (shields a tethered ally). The actual buff/heal/tether is applied by updateSupports() in
+// game.js (it has the enemy list); these classes handle movement + drawing the effect.
+class Support extends Enemy {
+  constructor(x, y, type) {
+    super(x, y, CONFIG.support);
+    this.kind = "support";
+    this.supportType = type;
+    this.range = CONFIG.support.range;
+    this.color = CONFIG.colors[type] || CONFIG.colors.priest;
+    if (type === "anchor") { this.hp *= 0.55; this.maxHp *= 0.55; this.hpDisplay = this.hp; }  // fragile
+    this.beamTarget = null;   // set by updateSupports for mender/anchor draw
+    this.auraPulse = Math.random() * 6;
+  }
+  update(dt, platforms, player) {
+    this.tickTimers(dt);
+    this.auraPulse += dt;
+    // hang back from the player at a protected distance
+    const dx = player.x - this.x, dist = Math.abs(dx), away = (-Math.sign(dx)) || 1;
+    const KEEP = CONFIG.support.keepAway;
+    let move = 0;
+    if (dist < KEEP) move = away;
+    else if (dist > KEEP * 1.7) move = -away;
+    this.vx = lerp(this.vx, move * this.speed, clamp(5 * dt, 0, 1));
+    this.integrate(dt, platforms);
+  }
+  draw(ctx) {
+    const t = this.supportType, x = this.x, y = this.y, hw = this.hw, hh = this.hh;
+    // mender/anchor beam to the ally they're affecting
+    if (this.beamTarget && !this.beamTarget.dead) {
+      ctx.strokeStyle = this.color; ctx.globalAlpha = 0.45 + 0.15 * Math.sin(this.auraPulse * 6);
+      ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(this.beamTarget.x, this.beamTarget.y); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    // aura ring for the field supports
+    if (t === "priest" || t === "herald") {
+      ctx.strokeStyle = this.color; ctx.globalAlpha = 0.22 + 0.12 * Math.sin(this.auraPulse * 3.5);
+      ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, this.range, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    // robed body (tall pentagon)
+    ctx.fillStyle = this.flash > 0 ? "#fff" : this.color;
+    ctx.beginPath();
+    ctx.moveTo(x, y - hh); ctx.lineTo(x + hw, y - hh * 0.25); ctx.lineTo(x + hw * 0.7, y + hh);
+    ctx.lineTo(x - hw * 0.7, y + hh); ctx.lineTo(x - hw, y - hh * 0.25);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 2.5; ctx.stroke();
+    // white emblem per type
+    ctx.fillStyle = "#fff";
+    if (t === "priest" || t === "mender") { ctx.fillRect(x - 2, y - 9, 4, 16); ctx.fillRect(x - 7, y - 4, 14, 4); }  // cross
+    else if (t === "herald") { ctx.beginPath(); ctx.moveTo(x, y - 8); ctx.lineTo(x + 7, y + 6); ctx.lineTo(x - 7, y + 6); ctx.fill(); }  // chevron
+    else { ctx.fillRect(x - 7, y - 1, 14, 4); ctx.fillRect(x - 2, y - 7, 4, 12); }  // anchor bar
+    this.drawHpBar(ctx);
+  }
+}
+
+// ---- Wraith (special): immune to direct blade hits; only a thrown blade or a deflected
+//      shot kills it. Forces you to orchestrate the arena instead of just swinging. ----
+class Wraith extends Enemy {
+  constructor(x, y) {
+    super(x, y, CONFIG.wraith);
+    this.kind = "wraith";
+    this.color = CONFIG.colors.wraith;
+    this.immuneToBlade = true;
+    this.phase = Math.random() * 6;
+  }
+  update(dt, platforms, player) {
+    this.tickTimers(dt);
+    this.phase += dt;
+    const tx = player.x, ty = player.y - CONFIG.wraith.hoverY;
+    const dx = tx - this.x, dy = ty - this.y, d = len(dx, dy) || 1;
+    this.vx = lerp(this.vx, (dx / d) * this.speed, clamp(2.4 * dt, 0, 1));
+    this.vy = lerp(this.vy, (dy / d) * this.speed, clamp(2.4 * dt, 0, 1));
+    this.x += this.vx * dt; this.y += this.vy * dt;
+    this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
+    this.y = clamp(this.y, 50, CONFIG.world.groundY - this.hh);
+    this.onGround = false;
+  }
+  draw(ctx) {
+    const x = this.x, y = this.y, hw = this.hw, hh = this.hh;
+    ctx.globalAlpha = 0.5 + 0.22 * Math.sin(this.phase * 3);
+    ctx.fillStyle = this.flash > 0 ? "#fff" : this.color;
+    ctx.beginPath();
+    ctx.moveTo(x, y - hh); ctx.lineTo(x + hw, y); ctx.lineTo(x + hw * 0.5, y + hh);
+    ctx.lineTo(x, y + hh * 0.55); ctx.lineTo(x - hw * 0.5, y + hh); ctx.lineTo(x - hw, y);
+    ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1; ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = CONFIG.colors.eye; ctx.fillRect(x - 7, y - 4, 4, 6); ctx.fillRect(x + 3, y - 4, 4, 6);
+    this.drawHpBar(ctx);
+  }
+}
+
+// ---- Mimic (special): copies your last trick on a delay; the wind-up is the punish window ----
+class Mimic extends Enemy {
+  constructor(x, y) {
+    super(x, y, CONFIG.mimic);
+    this.kind = "mimic";
+    this.color = CONFIG.colors.mimic;
+    this.atk = "idle"; this.atkT = 0;
+    this.copyT = 2 + Math.random();
+    this.copyKind = "hit";
+  }
+  update(dt, platforms, player, projectiles) {
+    this.tickTimers(dt);
+    const C = this.cfg, dir = Math.sign(player.x - this.x) || 1, dist = Math.abs(player.x - this.x), away = -dir;
+    if (this.atk === "windup") {
+      this.vx = lerp(this.vx, 0, clamp(10 * dt, 0, 1)); this.atkT -= dt;
+      if (this.atkT <= 0) this._strike(player, projectiles, dir);
+    } else if (this.atk === "strike") {
+      this.atkT -= dt; if (this.atkT <= 0) { this.atk = "recover"; this.copyT = 1.7; }
+    } else if (this.atk === "recover") {
+      this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1)); this.copyT -= dt; if (this.copyT <= 0) this.atk = "idle";
+    } else {
+      let move = 0;
+      if (dist > 360) move = dir; else if (dist < 230) move = away;
+      this.vx = lerp(this.vx, move * this.speed, clamp(6 * dt, 0, 1));
+      this.copyT -= dt;
+      if (this.copyT <= 0 && dist < 580) { this.atk = "windup"; this.atkT = C.copyDelay; this.copyKind = player.lastTrickKind || "hit"; }
+    }
+    this.integrate(dt, platforms);
+  }
+  _strike(player, projectiles, dir) {
+    const k = this.copyKind;
+    if (k === "throwHit" || k === "parry" || k === "deflect") {     // copy a ranged action
+      const dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1, sp = CONFIG.proj.speed * 1.1;
+      projectiles.push(new Projectile(this.x, this.y, (dx / m) * sp, (dy / m) * sp));
+      this.atk = "recover"; this.copyT = 1.7;
+    } else {                                                        // copy a melee/slam/updraft -> a committed lunge
+      this.atk = "strike"; this.atkT = 0.25; this.vx = dir * 660;
+      if (k === "slam" || k === "superslam" || k === "updraft" || k === "launch") this.vy = -360;
+    }
+  }
+  draw(ctx) {
+    const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2;
+    if (this.atk === "windup") {   // telegraph: a dashed copy-outline (your tell to punish it)
+      ctx.strokeStyle = this.color; ctx.globalAlpha = 0.55; ctx.setLineDash([5, 4]); ctx.lineWidth = 2;
+      ctx.strokeRect(x - 4, y - 4, w + 8, h + 8); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+    ctx.fillStyle = this.flash > 0 ? "#fff" : this.color;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h);
+    ctx.fillStyle = CONFIG.colors.eye;
+    const dir = Math.sign(this.vx) || 1;
+    ctx.fillRect(this.x + dir * 5 - 4, y + 13, 8, 5);
+    this.drawHpBar(ctx);
   }
 }
