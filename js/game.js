@@ -91,6 +91,7 @@
   let player, blade, enemies, projectiles, floaters, hitStop, shake;
   let timeScale = 1, slowmo = 0, zoom = 1, flash = 0, bannerT = 0, dashGhostT = 0; // feel/juice
   let wasSwinging = false, wasDashing = false, wasOnGround = true; // audio cadence
+  let throwCd = 0;            // brief cooldown between blade throws (not recalls)
   let wasLocked = false;      // tracks mouse capture so losing it (Esc) pauses the game
   let rankPopT = 0, rankPopText = "";   // style rank-up flash
   let run = null;             // { mode, diff, wave, score, mods, spawnQueue, spawnTimer, waveActive }
@@ -204,6 +205,24 @@
     if (e.affixCount) name += " +" + e.affixCount;
     return name;
   }
+  // a small badge over a buffed enemy showing WHICH support effect is on it (and its color)
+  function drawBuffBadge(cx, cy, type) {
+    const col = CONFIG.colors[type] || "#000";
+    ctx.fillStyle = col; ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(cx, cy, 7.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = "#fff"; ctx.fillStyle = "#fff"; ctx.lineWidth = 1.6;
+    if (type === "priest") {            // shield (protect + empower)
+      ctx.beginPath(); ctx.moveTo(cx, cy - 4.5); ctx.lineTo(cx + 3.5, cy - 2); ctx.lineTo(cx + 3.5, cy + 1.5);
+      ctx.lineTo(cx, cy + 4.5); ctx.lineTo(cx - 3.5, cy + 1.5); ctx.lineTo(cx - 3.5, cy - 2); ctx.closePath(); ctx.fill();
+    } else if (type === "herald") {     // double chevron (haste)
+      ctx.beginPath(); ctx.moveTo(cx - 4, cy - 3); ctx.lineTo(cx - 0.5, cy); ctx.lineTo(cx - 4, cy + 3); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx + 0.5, cy - 3); ctx.lineTo(cx + 4, cy); ctx.lineTo(cx + 0.5, cy + 3); ctx.stroke();
+    } else if (type === "mender") {     // plus (heal)
+      ctx.fillRect(cx - 1, cy - 4, 2, 8); ctx.fillRect(cx - 4, cy - 1, 8, 2);
+    } else {                            // anchor: a ring (bound/shielded)
+      ctx.beginPath(); ctx.arc(cx, cy, 3.8, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
   function trickColor(mult) {
     const C = CONFIG.colors;
     if (mult >= 5) return C.perfect;
@@ -245,7 +264,7 @@
     blade.model = weapon.model || "sword";
     enemies = []; projectiles = []; floaters = [];
     hitStop = 0; shake = 0; FX.reset();
-    timeScale = 1; slowmo = 0; zoom = 1; flash = 0; bannerT = 0; dashGhostT = 0;
+    timeScale = 1; slowmo = 0; zoom = 1; flash = 0; bannerT = 0; dashGhostT = 0; throwCd = 0;
     run = {
       mode, diff, wave: 0, score: 0, mods: newMods(),
       spawnQueue: [], spawnTimer: 0, waveActive: false, clearTimer: -1,
@@ -430,7 +449,7 @@
   // Support family: each frame reset aura flags, then let every support re-apply its
   // effect to nearby allies (it needs the live enemy list, so it lives here, not in the class)
   function updateSupports(dt) {
-    for (const e of enemies) { e.auraDR = 1; e.auraDmg = 1; e.auraSpeed = 1; e.auraHaste = 1; e.tetherDR = 1; }
+    for (const e of enemies) { e.auraDR = 1; e.auraDmg = 1; e.auraSpeed = 1; e.auraHaste = 1; e.tetherDR = 1; e.anchored = false; e.buffs = []; }
     const S = CONFIG.support;
     for (const s of enemies) {
       if (s.kind !== "support") continue;
@@ -443,7 +462,7 @@
           if (len(e.x - s.x, e.y - s.y) <= s.range + e.radius) {
             if (t === "priest") { e.auraDR = Math.min(e.auraDR, S.drMult); e.auraDmg = Math.max(e.auraDmg, S.dmgBuff); }   // protect AND empower
             else { e.auraSpeed = Math.max(e.auraSpeed, S.speedBuff); e.auraHaste = Math.max(e.auraHaste, S.hasteBuff); }    // move AND attack faster
-            s.links.push(e);
+            e.buffs.push(t); s.links.push(e);
           }
         }
       } else if (t === "mender") {
@@ -453,19 +472,30 @@
           if (len(e.x - s.x, e.y - s.y) > s.range * 1.3) continue;
           if (e.hp < bestHp) { bestHp = e.hp; best = e; }
         }
-        if (best) { best.hp = Math.min(best.maxHp, best.hp + S.menderRate * dt); s.links = [best]; }
+        if (best) { best.hp = Math.min(best.maxHp, best.hp + S.menderRate * dt); best.buffs.push("mender"); s.links = [best]; }
       } else if (t === "anchor") {
-        if (!s.tetheredAlly || s.tetheredAlly.dead || len(s.tetheredAlly.x - s.x, s.tetheredAlly.y - s.y) > s.range * 2.2) {
-          s.tetheredAlly = null;
-          let best = null, bestD = Infinity;
-          for (const e of enemies) {
-            if (e === s || e.dead || e.kind === "support") continue;
-            const d = len(e.x - s.x, e.y - s.y);
-            if (d < bestD) { bestD = d; best = e; }
-          }
-          s.tetheredAlly = best;
+        // bond ONCE to the strongest ally anywhere; shared fate (ally dies -> Anchor dies,
+        // but not the reverse). The bonded ally gets a shield bubble, regen, and is immovable.
+        if (s.bonded && s.bonded.dead) {
+          s.dead = true;   // the Anchor cannot outlive what it's anchoring
+          FX.ring(s.x, s.y, 16, s.color); FX.burst(s.x, s.y, 0, -1, 8, s.color);
+          continue;
         }
-        if (s.tetheredAlly && !s.tetheredAlly.dead) { s.tetheredAlly.tetherDR = Math.min(s.tetheredAlly.tetherDR, S.tetherDR); s.links = [s.tetheredAlly]; }
+        if (!s.bonded) {
+          let best = null, bestHp = -1;
+          for (const e of enemies) {
+            if (e === s || e.dead || e.kind === "support" || e.kind === "wraith" || e.spawnT > 0) continue;
+            if (e.maxHp > bestHp) { bestHp = e.maxHp; best = e; }
+          }
+          s.bonded = best;
+        }
+        if (s.bonded && !s.bonded.dead) {
+          const a = s.bonded;
+          a.tetherDR = Math.min(a.tetherDR, S.anchorDR);
+          a.hp = Math.min(a.maxHp, a.hp + S.anchorRegen * dt);
+          a.anchored = true; a.buffs.push("anchor");
+          s.links = [a];
+        }
       }
     }
   }
@@ -475,6 +505,7 @@
     player.flowDR = (run.mods.flowGuard && run.mult >= CONFIG.resilience.flowGuardTier)
       ? CONFIG.resilience.flowGuardMult : 1;
     if (run.lifestealCd > 0) run.lifestealCd -= dt;
+    if (throwCd > 0) throwCd -= dt;
     // faster while unarmed (blade thrown)
     player.moveBoost = (blade.state !== "held") ? CONFIG.player.thrownMoveBoost : 1;
     player.update(dt, platforms);
@@ -531,7 +562,7 @@
 
     if (Input.consumeThrow()) {
       if (blade.state === "held") {
-        if (blade.throwBlade()) { FX.burst(blade.x, blade.y, blade.vx, blade.vy, 6); addShake(CONFIG.juice.shakeSmall); SFX.throwBlade(); }
+        if (throwCd <= 0 && blade.throwBlade()) { throwCd = 0.5; FX.burst(blade.x, blade.y, blade.vx, blade.vy, 6); addShake(CONFIG.juice.shakeSmall); SFX.throwBlade(); }
       } else {
         const r = blade.tryRecall(player);
         const hand = blade.handPos(player);
@@ -614,12 +645,14 @@
           dmg *= e.damageTakenMult();   // armored: reduced grounded, more airborne
           const big = isSlam || empowered || spike || dmg >= CONFIG.hitStop.threshold;
           e.hit(dmg, blade.tipVX, blade.tipVY);
-          if (spike) { e.vy = (1000 + heightF * 800 + strikeF * 500) / e.weight; e.spiked = true; }
-          else if (isLaunch) e.vy = -CONFIG.blade.launchPower * (1 + riseF * CONFIG.blade.risingLaunchBonus) / e.weight;
+          if (!e.anchored) {   // an anchored ally can't be spiked or launched (break the Anchor first)
+            if (spike) { e.vy = (1000 + heightF * 800 + strikeF * 500) / e.weight; e.spiked = true; }
+            else if (isLaunch) e.vy = -CONFIG.blade.launchPower * (1 + riseF * CONFIG.blade.risingLaunchBonus) / e.weight;
+          }
           // Tempest: an empowered updraft also launches nearby enemies
           if (empowered && run.mods.tempest) {
             for (const e2 of enemies) {
-              if (e2.dead || e2 === e) continue;
+              if (e2.dead || e2 === e || e2.anchored) continue;
               if (len(e2.x - e.x, e2.y - e.y) < 175) {
                 e2.vy = -CONFIG.blade.launchPower / e2.weight; e2.hit(baseDmg * 0.5, 0, -1);
                 FX.burst(e2.x, e2.y, 0, -1, 4); if (e2.dead) onKill(e2);
@@ -942,6 +975,16 @@
       } else {
         e.draw(ctx, player);
       }
+    }
+    // support effect indicators: outline + badge stack over every buffed enemy, so it's
+    // always obvious which enemies are protected/empowered/hasted/healed/shielded
+    for (const e of enemies) {
+      if (e.spawnT > 0 || !e.buffs || !e.buffs.length) continue;
+      ctx.strokeStyle = CONFIG.colors[e.buffs[0]] || "#000"; ctx.lineWidth = 2; ctx.globalAlpha = 0.75;
+      ctx.strokeRect(e.x - e.hw - 3, e.y - e.hh - 3, e.hw * 2 + 6, e.hh * 2 + 6);
+      ctx.globalAlpha = 1;
+      const n = e.buffs.length, by = e.y - e.hh - (run.mode === "sandbox" ? 40 : 22);
+      e.buffs.forEach((t, i) => drawBuffBadge(e.x - (n - 1) * 9 + i * 18, by, t));
     }
     // Enemy Test mode: name every enemy so you can learn the roster
     if (run && run.mode === "sandbox") {

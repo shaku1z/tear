@@ -60,6 +60,8 @@ class Enemy {
     this.auraSpeed = 1;    // Herald: movement-speed multiplier
     this.auraHaste = 1;    // Herald: attack-cadence multiplier (>1 = faster shots/attacks)
     this.tetherDR = 1;     // Anchor: shielded ally damage multiplier
+    this.anchored = false; // Anchor: bonded ally can't be knocked back / launched
+    this.buffs = [];       // which support types currently affect this enemy (for indicators)
     this.immuneToBlade = false;  // Wraith: direct blade hits pass through harmlessly
   }
 
@@ -205,10 +207,12 @@ class Enemy {
     } else {
       this.hp -= dmg;
     }
-    const kb = dmg * this.cfg.knockbackTaken / this.weight;
-    const m = len(knockX, knockY) || 1;
-    this.vx += (knockX / m) * kb;
-    this.vy += (knockY / m) * kb - 120 / this.weight;
+    if (!this.anchored) {   // an Anchor's bonded ally is immovable until the Anchor dies
+      const kb = dmg * this.cfg.knockbackTaken / this.weight;
+      const m = len(knockX, knockY) || 1;
+      this.vx += (knockX / m) * kb;
+      this.vy += (knockY / m) * kb - 120 / this.weight;
+    }
     if (this.hp <= 0) this.dead = true;
   }
 
@@ -918,18 +922,43 @@ class Support extends Enemy {
       ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, this.range, 0, Math.PI * 2); ctx.stroke();
       ctx.globalAlpha = 1;
     }
-    // robed body (tall pentagon)
-    ctx.fillStyle = this.flash > 0 ? "#fff" : this.color;
-    ctx.beginPath();
-    ctx.moveTo(x, y - hh); ctx.lineTo(x + hw, y - hh * 0.25); ctx.lineTo(x + hw * 0.7, y + hh);
-    ctx.lineTo(x - hw * 0.7, y + hh); ctx.lineTo(x - hw, y - hh * 0.25);
-    ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 2.5; ctx.stroke();
-    // white emblem per type
-    ctx.fillStyle = "#fff";
-    if (t === "priest" || t === "mender") { ctx.fillRect(x - 2, y - 9, 4, 16); ctx.fillRect(x - 7, y - 4, 14, 4); }  // cross
-    else if (t === "herald") { ctx.beginPath(); ctx.moveTo(x, y - 8); ctx.lineTo(x + 7, y + 6); ctx.lineTo(x - 7, y + 6); ctx.fill(); }  // chevron
-    else { ctx.fillRect(x - 7, y - 1, 14, 4); ctx.fillRect(x - 2, y - 7, 4, 12); }  // anchor bar
+    // Anchor: a shield bubble around the bonded ally
+    if (t === "anchor" && this.links && this.links[0] && !this.links[0].dead) {
+      const a = this.links[0], r = a.radius + 12;
+      ctx.strokeStyle = this.color; ctx.globalAlpha = 0.5 + 0.2 * Math.sin(this.auraPulse * 4);
+      ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(a.x, a.y, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 0.1; ctx.fillStyle = this.color; ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    // distinct silhouette per support type so they read apart at a glance
+    const body = this.flash > 0 ? "#fff" : this.color;
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 2.5;
+    if (t === "priest") {
+      // tall robe + a halo ring (authority)
+      ctx.fillStyle = body;
+      ctx.beginPath(); ctx.moveTo(x, y - hh); ctx.lineTo(x + hw, y); ctx.lineTo(x + hw * 0.7, y + hh);
+      ctx.lineTo(x - hw * 0.7, y + hh); ctx.lineTo(x - hw, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y - hh - 4, 7, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = "#fff"; ctx.fillRect(x - 2, y - 7, 4, 14); ctx.fillRect(x - 6, y - 3, 12, 4);   // cross
+    } else if (t === "herald") {
+      // slim body holding a banner on a tall pole
+      ctx.fillStyle = body; ctx.fillRect(x - hw * 0.55, y - hh * 0.6, hw * 1.1, hh * 1.6); ctx.strokeRect(x - hw * 0.55, y - hh * 0.6, hw * 1.1, hh * 1.6);
+      ctx.fillStyle = "#000"; ctx.fillRect(x + hw * 0.55, y - hh, 3, hh * 2);                 // pole
+      ctx.fillStyle = body; ctx.fillRect(x + hw * 0.55 + 3, y - hh, 16, 12); ctx.strokeRect(x + hw * 0.55 + 3, y - hh, 16, 12);   // flag
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.moveTo(x + hw * 0.55 + 6, y - hh + 3); ctx.lineTo(x + hw * 0.55 + 12, y - hh + 6); ctx.lineTo(x + hw * 0.55 + 6, y - hh + 9); ctx.fill();
+    } else if (t === "mender") {
+      // round, hunched body + a big cross
+      ctx.fillStyle = body; ctx.beginPath(); ctx.arc(x, y, hw * 1.05, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#fff"; ctx.fillRect(x - 2.5, y - 10, 5, 20); ctx.fillRect(x - 9, y - 2.5, 18, 5);
+    } else {
+      // anchor: a heavy, blocky body + an anchor emblem (chains)
+      ctx.fillStyle = body; ctx.fillRect(x - hw, y - hh * 0.7, hw * 2, hh * 1.7); ctx.strokeRect(x - hw, y - hh * 0.7, hw * 2, hh * 1.7);
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x, y - 6, 3, 0, Math.PI * 2); ctx.stroke();                    // ring
+      ctx.beginPath(); ctx.moveTo(x, y - 3); ctx.lineTo(x, y + 8); ctx.stroke();               // shaft
+      ctx.beginPath(); ctx.moveTo(x - 7, y + 4); ctx.quadraticCurveTo(x, y + 12, x + 7, y + 4); ctx.stroke();   // flukes
+    }
     this.drawHpBar(ctx);
   }
 }
@@ -1030,21 +1059,41 @@ class Chimera extends Enemy {
     }
   }
   draw(ctx) {
-    const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2;
+    const x = this.x, y = this.y, hw = this.hw, hh = this.hh;
     const cueCol = CONFIG.colors[CHIMERA_MOVE_COLOR[this.curMove] || "chimera"];
+    const active = this.atk === "windup" || this.atk === "strike";
+    // a hunched, asymmetric patchwork beast (clearly NOT the old box) — jagged crest of
+    // mismatched spikes, two mismatched halves, a cluster of eyes. The "many faces."
     if (this.atk === "windup") {   // telegraph in the color of the move it's about to use
       ctx.strokeStyle = cueCol; ctx.globalAlpha = 0.6; ctx.setLineDash([5, 4]); ctx.lineWidth = 2.5;
-      ctx.strokeRect(x - 4, y - 4, w + 8, h + 8); ctx.setLineDash([]); ctx.globalAlpha = 1;
+      ctx.strokeRect(x - hw - 4, y - hh - 4, hw * 2 + 8, hh * 2 + 8); ctx.setLineDash([]); ctx.globalAlpha = 1;
     }
-    const active = this.atk === "windup" || this.atk === "strike";
+    // body: an irregular hexagon
+    ctx.beginPath();
+    ctx.moveTo(x - hw, y - hh * 0.2);
+    ctx.lineTo(x - hw * 0.5, y - hh);
+    ctx.lineTo(x + hw * 0.7, y - hh * 0.8);
+    ctx.lineTo(x + hw, y + hh * 0.1);
+    ctx.lineTo(x + hw * 0.5, y + hh);
+    ctx.lineTo(x - hw * 0.7, y + hh);
+    ctx.closePath();
     ctx.fillStyle = this.flash > 0 ? "#fff" : (active ? cueCol : this.color);
-    ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h);
-    // patchwork seam down the middle (the "many faces")
-    ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(this.x, y + 2); ctx.lineTo(this.x, y + h - 2); ctx.stroke();
+    ctx.fill();
+    // mismatched left half tint (patchwork)
+    ctx.save(); ctx.clip();
+    ctx.globalAlpha = 0.35; ctx.fillStyle = "#000";
+    ctx.fillRect(x - hw, y - hh, hw, hh * 2);
+    ctx.restore(); ctx.globalAlpha = 1;
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 3; ctx.stroke();
+    // jagged crest of mismatched spikes
+    ctx.fillStyle = "#000";
+    for (let i = -1; i <= 2; i++) {
+      const sx = x + i * (hw * 0.5) - 3, sh = 6 + ((i + 1) % 3) * 4;
+      ctx.beginPath(); ctx.moveTo(sx, y - hh * 0.7); ctx.lineTo(sx + 4, y - hh * 0.7 - sh); ctx.lineTo(sx + 8, y - hh * 0.7); ctx.fill();
+    }
+    // a cluster of three eyes (the "many faces")
     ctx.fillStyle = CONFIG.colors.eye;
-    const dir = Math.sign(this.vx) || 1;
-    ctx.fillRect(this.x + dir * 5 - 4, y + 13, 8, 5);
+    ctx.fillRect(x - 8, y - 2, 4, 5); ctx.fillRect(x - 1, y - 5, 4, 5); ctx.fillRect(x + 5, y - 1, 4, 5);
     this.drawHpBar(ctx);
   }
 }

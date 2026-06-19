@@ -154,7 +154,7 @@ const CONFIG = {
     tooClose: 250,        // flee if the player is closer than this
     windup: 0.7,          // telegraph time before firing
     aimInterval: 2.3,     // time between shots while kiting
-    projSpeed: 620,
+    projSpeed: 800,       // shooters fire fast now (deadlier, demands real dodging/parry)
     weight: 1,
   },
 
@@ -177,7 +177,7 @@ const CONFIG = {
     range: 240, keepAway: 330, menderRate: 11,
     drMult: 0.5, dmgBuff: 1.35,        // War Priest: protects AND empowers nearby enemies
     speedBuff: 1.45, hasteBuff: 1.5,   // Herald: faster movement AND faster attacks
-    tetherDR: 0.5 },                   // Anchor: single shielded ally
+    anchorDR: 0.4, anchorRegen: 9 },   // Anchor: shields + regens + immobilizes its bonded ally (shared fate)
   // wraith: immune to direct blade hits — only your thrown blade or a deflected shot kills it
   wraith: { w: 36, h: 42, hp: 64, speed: 170, contactDmg: 12, knockbackTaken: 0, weight: 1.4, hoverY: 70 },
   // chimera: a beast that adopts the attacks of the enemy types in its wave (often several),
@@ -187,10 +187,10 @@ const CONFIG = {
   // elite variants of basic enemies
   elite: { hpMult: 2.2, speedMult: 1.3, dmgMult: 1.5, sizeMult: 1.2, chancePerWave: 0.06, chanceMax: 0.35 },
 
-  proj: { r: 9, dmg: 10, speed: 540 },
-  // Marksman's charged shot: a long telegraphed charge, then the FASTEST bolt in the game
-  // (read the long aim line, then dodge or parry the snap shot)
-  chargedShot: { r: 10, dmg: 20, speed: 1150, windup: 1.3 },
+  proj: { r: 9, dmg: 10, speed: 640 },
+  // Marksman's charged shot: a long telegraphed charge, then a DEADLY long-range snap bolt —
+  // the fastest, hardest-hitting shot in the game. Parrying it back is hugely rewarding.
+  chargedShot: { r: 11, dmg: 30, speed: 1900, windup: 1.4 },
 
   // accent palette — player stays black on white; enemies/shots/FX carry the color
   colors: {
