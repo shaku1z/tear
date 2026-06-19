@@ -43,6 +43,12 @@ class Enemy {
     this.feint = false;    // this windup is a feint (brawler bluffs, then backs off)
     this.enraged = false;  // armored: shield broken -> faster & aggressive
     this.evadeCd = 0;      // stalker: cooldown between dash-reads
+    this.atkMax = 0;       // duration of the current wind-up (for telegraph scaling)
+    this.chargePower = 0;  // 0..1 roll: longer wind-up -> farther, harder charge
+    this.chargeMult = 1;   // contact-damage multiplier applied during a committed charge
+    // platform pathfinding
+    this.canClimb = false; // can hop platform-to-platform to reach a perched player
+    this.navDir = 1;       // suggested horizontal direction from climbNav
   }
 
   get radius() { return Math.max(this.hw, this.hh); }
@@ -113,6 +119,40 @@ class Enemy {
     if (player.y < this.y - 90 && Math.random() < 0.5) { this.vy = -1100; this.onGround = false; this.jumpCd = 1.8; }
   }
 
+  // lightweight platform pathfinding: when the player is perched above, steer toward
+  // the nearest reachable one-way platform that steps up toward them and hop onto it.
+  // Re-evaluated every frame, so it climbs level-by-level (no full graph search, but
+  // it stops the player from safely camping above the enemies). Returns true while
+  // it's actively climbing, so callers should follow navDir and hold their attacks.
+  climbNav(player, platforms, dt) {
+    if (this.jumpCd > 0) this.jumpCd -= dt;
+    this.navDir = Math.sign(player.x - this.x) || 1;
+    const feetY = this.y + this.hh, playerFeet = player.y + player.hh;
+    if (playerFeet > this.y - 50) return false;        // player not meaningfully above -> normal chase
+    const MAXJUMP = 300, TOL = 130;
+    let best = null, bestDist = Infinity;
+    for (const p of platforms) {
+      if (!p.oneway) continue;
+      if (p.y >= feetY - 30) continue;                 // must be above us
+      if (feetY - p.y > MAXJUMP) continue;             // too high to reach in one hop
+      if (p.y < playerFeet - 50) continue;             // don't climb above the player
+      const d = Math.abs((p.x + p.w / 2) - this.x);
+      if (d < bestDist) { bestDist = d; best = p; }
+    }
+    if (!best) return false;                            // nothing reachable -> gather underneath
+    const center = best.x + best.w / 2;
+    if (this.x > best.x - TOL && this.x < best.x + best.w + TOL) {
+      this.navDir = Math.sign(center - this.x) || this.navDir;
+      if (this.onGround && this.jumpCd <= 0) {          // aligned -> hop up (and across) onto it
+        this.vy = -1250; this.onGround = false; this.jumpCd = 0.85;
+        this.vx += Math.sign(center - this.x) * 320;
+      }
+    } else {
+      this.navDir = Math.sign(center - this.x) || 1;    // walk under it first
+    }
+    return true;
+  }
+
   fireAt(player, projectiles, speed) {
     const dx = player.x - this.x, dy = player.y - this.y;
     const m = len(dx, dy) || 1;
@@ -163,6 +203,17 @@ class Charger extends Enemy {
   update(dt, platforms, player) {
     this.tickTimers(dt);
     if (this.atkCd > 0) this.atkCd -= dt;
+    // a wound-up charge hits harder on contact (longer wind-up = more power)
+    this.chargeMult = (this.behavior === "bull" && this.atk === "commit") ? (1 + this.chargePower) : 1;
+
+    // pathfind up to a perched player (never interrupt an in-progress charge)
+    if (this.canClimb && this.atk !== "commit" && this.climbNav(player, platforms, dt)) {
+      if (this.onGround) this.vx = lerp(this.vx, this.navDir * this.speed * 1.1, clamp(7 * dt, 0, 1));
+      this.atk = "idle";
+      this.integrate(dt, platforms);
+      return;
+    }
+
     const E = CONFIG.enemy;
     const dx = player.x - this.x, dist = Math.abs(dx), dir = Math.sign(dx) || 1;
 
@@ -170,7 +221,6 @@ class Charger extends Enemy {
     else if (this.behavior === "stalker") this._stalker(dt, player, dist, dir, E);
     else this._bull(dt, player, dist, dir, E);
 
-    this.maybeJump(player, dt);
     const preVx = this.vx;
     this.integrate(dt, platforms);
 
@@ -191,10 +241,14 @@ class Charger extends Enemy {
         this.vx = lerp(this.vx, 0, clamp(10 * dt, 0, 1));   // plant feet, telegraph
         this.atkDir = dir;                                   // can still adjust before committing
         this.atkT -= dt;
-        if (this.atkT <= 0) { this.atk = "commit"; this.atkT = E.chargeTime; this.vx = this.atkDir * E.chargeSpeed; }
+        if (this.atkT <= 0) {
+          this.atk = "commit";
+          this.atkT = E.chargeTime * (0.7 + this.chargePower);          // longer wind-up -> farther charge
+          this.vx = this.atkDir * E.chargeSpeed * (0.9 + this.chargePower * 0.4);
+        }
         break;
       case "commit":
-        this.vx = this.atkDir * E.chargeSpeed;               // fixed line -> you can sidestep it
+        this.vx = this.atkDir * E.chargeSpeed * (0.9 + this.chargePower * 0.4);  // fixed line -> sidesteppable
         this.atkT -= dt;
         if (this.atkT <= 0) { this.atk = "recover"; this.atkCd = E.chargeCd; }
         break;
@@ -202,10 +256,11 @@ class Charger extends Enemy {
         this.vx = lerp(this.vx, 0, clamp(6 * dt, 0, 1));
         if (this.atkCd <= 0) this.atk = "idle";
         break;
-      default: // idle: stalk forward at a wary pace, then commit
+      default: // idle: stalk forward at a wary pace, then commit to a charge of varied power
         this.vx = lerp(this.vx, dir * this.speed, clamp(6 * dt, 0, 1));
         if (dist < E.chargeRange && this.atkCd <= 0 && Math.abs(player.y - this.y) < 150) {
-          this.atk = "windup"; this.atkT = E.chargeWindup; this.atkDir = dir;
+          this.chargePower = Math.random();
+          this.atk = "windup"; this.atkT = E.chargeWindup * (0.6 + this.chargePower); this.atkMax = this.atkT; this.atkDir = dir;
         }
     }
   }
@@ -271,11 +326,13 @@ class Charger extends Enemy {
     const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2;
     const dir = this.atkDir || Math.sign(this.vx) || 1;
 
-    // charge wind-up telegraph: a building dashed arrow in the committed direction
+    // charge wind-up telegraph: a building dashed arrow — longer/thicker for a
+    // higher-power (longer wind-up) charge, so you can read how hard it's coming
     if (this.atk === "windup" && !this.feint) {
-      const k = 1 - clamp(this.atkT / 0.55, 0, 1);
-      ctx.strokeStyle = this.color; ctx.globalAlpha = 0.35 + 0.45 * k; ctx.lineWidth = 3; ctx.setLineDash([7, 5]);
-      ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + this.atkDir * (40 + 95 * k), this.y); ctx.stroke();
+      const k = 1 - clamp(this.atkT / (this.atkMax || 0.55), 0, 1);
+      const reach = 40 + (60 + this.chargePower * 130) * k;
+      ctx.strokeStyle = this.color; ctx.globalAlpha = 0.35 + 0.45 * k; ctx.lineWidth = 3 + this.chargePower * 2; ctx.setLineDash([7, 5]);
+      ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + this.atkDir * reach, this.y); ctx.stroke();
       ctx.setLineDash([]); ctx.globalAlpha = 1;
     }
 
@@ -329,6 +386,12 @@ class Ranged extends Enemy {
   }
   update(dt, platforms, player, projectiles) {
     this.tickTimers(dt);
+    // reposition up to a perched player (hold fire while climbing)
+    if (this.canClimb && this.state !== "windup" && this.climbNav(player, platforms, dt)) {
+      if (this.onGround) this.vx = lerp(this.vx, this.navDir * this.speed, clamp(6 * dt, 0, 1));
+      this.integrate(dt, platforms);
+      return;
+    }
     const C = this.cfg, b = this.behavior;
     const dx = player.x - this.x, dist = Math.abs(dx), away = (-Math.sign(dx)) || 1;
 
@@ -359,7 +422,6 @@ class Ranged extends Enemy {
         this.aimTimer = C.aimInterval * this.fireRateMult * (b === "sentinel" ? 1.15 : 1);
       }
     }
-    this.maybeJump(player, dt);
     this.integrate(dt, platforms);
   }
 
@@ -581,9 +643,13 @@ class Bomber extends Enemy {
   update(dt, platforms, player) {
     this.tickTimers(dt);
     const C = this.cfg;
+    if (this.canClimb && !this.armed && this.climbNav(player, platforms, dt)) {
+      if (this.onGround) this.vx = lerp(this.vx, this.navDir * this.speed, clamp(7 * dt, 0, 1));
+      this.integrate(dt, platforms);
+      return;
+    }
     const dir = Math.sign(player.x - this.x) || 1;
     this.vx = lerp(this.vx, dir * this.speed, clamp(7 * dt, 0, 1));
-    this.maybeJump(player, dt);
     this.integrate(dt, platforms);
     if (!this.armed && len(player.x - this.x, player.y - this.y) < C.triggerDist) { this.armed = true; this.fuse = C.fuse; }
     if (this.armed) { this.fuse -= dt; if (this.fuse <= 0) this.dead = true; }  // -> game triggers blast
@@ -609,9 +675,14 @@ class Armored extends Enemy {
   update(dt, platforms, player) {
     this.tickTimers(dt);
     this.guardSide = Math.sign(player.x - this.x) || 1;
+    // enraged: chase onto platforms after a perched player
+    if (this.enraged && this.canClimb && this.stun <= 0 && this.climbNav(player, platforms, dt)) {
+      if (this.onGround) this.vx = lerp(this.vx, this.navDir * this.speed * 1.8, clamp(8 * dt, 0, 1));
+      this.integrate(dt, platforms);
+      return;
+    }
     const sp = this.stun > 0 ? 0 : (this.enraged ? this.speed * 1.8 : this.speed);
     this.vx = lerp(this.vx, this.guardSide * sp, clamp((this.enraged ? 8 : 5) * dt, 0, 1));
-    if (this.enraged) this.maybeJump(player, dt);   // angry: will chase onto platforms
     this.integrate(dt, platforms);
   }
   // blocked if the hit lands on the guarded (player-facing) side below break speed.

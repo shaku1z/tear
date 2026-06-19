@@ -62,13 +62,19 @@ class Player {
     }
 
     if (this.dashTimer > 0) {
-      // ---- dashing: fixed-speed burst, no gravity ----
+      // ---- dashing: burst; a DOWNWARD dash builds on your natural fall instead of
+      // capping it (so it feeds Power Slams) — other directions are a fixed burst ----
       this.dashTimer -= dt;
       this.vx = this.dashX * D.speed;
-      this.vy = this.dashY * D.speed;
+      if (this.dashY > 0) {
+        this.vy = Math.max(this.vy + CONFIG.world.gravity * dt, this.dashY * D.speed);
+        if (this.vy > P.maxFall * 1.35) this.vy = P.maxFall * 1.35;
+      } else {
+        this.vy = this.dashY * D.speed;
+      }
       if (this.dashTimer <= 0) {
         this.vx *= D.endSpeedKeep;
-        this.vy *= D.endSpeedKeep;
+        if (this.dashY <= 0) this.vy *= D.endSpeedKeep;   // preserve downward momentum into the slam
       }
     } else {
       // ---- normal movement ----

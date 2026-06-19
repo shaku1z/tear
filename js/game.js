@@ -302,8 +302,8 @@
       if (spec.preset) applyPreset(e, spec.preset);
       else { applyVariant(e, spec.variant || rollVariant(e.kind, run.wave)); rollAffixes(e, run.wave); }
       if (spec.type !== "flyer") { const pos = groundSpawn(e.hh); e.x = pos.x; e.y = pos.y; }
-      // some ground enemies can hop onto platforms
-      if (e.kind === "charger" || e.kind === "ranged" || e.kind === "bomber") e.canJump = Math.random() < 0.4;
+      // ground enemies pathfind across platforms so a perched player can't be camped
+      if (e.kind === "charger" || e.kind === "ranged" || e.kind === "bomber" || e.kind === "armored") e.canClimb = true;
     }
     e.hpDisplay = e.hp;
     e.spawnT = 0.35;   // brief materialize so spawns read as spawns (not teleports)
@@ -662,7 +662,7 @@
     for (const e of enemies) {
       if (e.dead || e.spawnT > 0) continue;
       if (aabbOverlap(player.x, player.y, player.hw, player.hh, e.x, e.y, e.hw + e.contactReach, e.hh)) {
-        { const r = player.takeDamage(e.contactDmg, e.x);
+        { const r = player.takeDamage(e.contactDmg * (e.chargeMult || 1), e.x);
           if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb(); }
       }
     }
