@@ -174,11 +174,15 @@ const CONFIG = {
 
   // support: no real attack — they make every OTHER enemy worse, so they're priority kills
   support: { w: 32, h: 42, hp: 44, speed: 125, contactDmg: 6, knockbackTaken: 13, weight: 1,
-    range: 240, keepAway: 330, menderRate: 11, drMult: 0.5, speedBuff: 1.45, tetherDR: 0.5 },
+    range: 240, keepAway: 330, menderRate: 11,
+    drMult: 0.5, dmgBuff: 1.35,        // War Priest: protects AND empowers nearby enemies
+    speedBuff: 1.45, hasteBuff: 1.5,   // Herald: faster movement AND faster attacks
+    tetherDR: 0.5 },                   // Anchor: single shielded ally
   // wraith: immune to direct blade hits — only your thrown blade or a deflected shot kills it
   wraith: { w: 36, h: 42, hp: 64, speed: 170, contactDmg: 12, knockbackTaken: 0, weight: 1.4, hoverY: 70 },
-  // mimic: copies your last trick on a delay (the wind-up is your punish window)
-  mimic: { w: 34, h: 48, hp: 74, speed: 150, contactDmg: 12, knockbackTaken: 9, weight: 1, copyDelay: 0.6 },
+  // chimera: a beast that adopts the attacks of the enemy types in its wave (often several),
+  // cycling through them — the wind-up tells you which one is coming
+  chimera: { w: 38, h: 48, hp: 84, speed: 150, contactDmg: 12, knockbackTaken: 9, weight: 1, copyDelay: 0.55 },
 
   // elite variants of basic enemies
   elite: { hpMult: 2.2, speedMult: 1.3, dmgMult: 1.5, sizeMult: 1.2, chancePerWave: 0.06, chanceMax: 0.35 },
@@ -202,7 +206,7 @@ const CONFIG = {
     mender: "#1faf5a",         // support: heals allies
     anchor: "#1597c2",         // support: shields a tethered ally
     wraith: "#6a6f88",         // special: blade-immune phantom
-    mimic: "#444a5c",          // special: copies your tricks
+    chimera: "#444a5c",        // special: adopts other enemies' attacks
     enemyShot: "#e23b3b",      // incoming projectile
     deflected: "#1faf5a",      // your reflected projectile (green)
     perfect: "#13c4d6",        // perfect parry / counter (cyan)

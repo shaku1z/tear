@@ -48,6 +48,7 @@ class Projectile {
 
   // reflect along a direction (blade travel, or toward a target for a perfect parry)
   deflect(dirX, dirY, speed, perfect) {
+    const inSpeed = len(this.vx, this.vy) || CONFIG.proj.speed;   // the incoming shot's speed
     const m = len(dirX, dirY) || 1;
     const boost = perfect ? CONFIG.blade.deflectBoost * 1.6 : CONFIG.blade.deflectBoost;
     const s = Math.max(speed, CONFIG.proj.speed) * boost;
@@ -55,10 +56,11 @@ class Projectile {
     this.vy = (dirY / m) * s;
     this.deflected = true;
     this.perfect = !!perfect;
-    // parry damage scales with how dangerous the original shot was — sending a heavy
-    // shot back hurts far more than reflecting a basic pellet
+    // parry damage scales with BOTH the original shot's damage AND its speed — sending a
+    // fast, heavy shot back is the big payoff; a slow pellet barely stings
     const orig = this.dmg != null ? this.dmg : CONFIG.proj.dmg;
-    this.deflectDmg = Math.round(orig * (perfect ? 2.8 : 1.9) + (perfect ? 10 : 8));
+    const speedF = clamp(inSpeed / 600, 0.6, 2.2);
+    this.deflectDmg = Math.round((orig * (perfect ? 2.6 : 1.8) + (perfect ? 10 : 8)) * (0.7 + 0.3 * speedF));
     this.life = 6;
   }
 

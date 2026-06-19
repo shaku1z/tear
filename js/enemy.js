@@ -56,7 +56,9 @@ class Enemy {
     this.aliveT = 0;       // seconds alive — willingness to climb ramps with this
     // support auras (re-applied each frame by updateSupports in game.js)
     this.auraDR = 1;       // War Priest: incoming damage multiplier (<1 = protected)
+    this.auraDmg = 1;      // War Priest: outgoing damage multiplier (>1 = empowered)
     this.auraSpeed = 1;    // Herald: movement-speed multiplier
+    this.auraHaste = 1;    // Herald: attack-cadence multiplier (>1 = faster shots/attacks)
     this.tetherDR = 1;     // Anchor: shielded ally damage multiplier
     this.immuneToBlade = false;  // Wraith: direct blade hits pass through harmlessly
   }
@@ -180,7 +182,9 @@ class Enemy {
   fireAt(player, projectiles, speed) {
     const dx = player.x - this.x, dy = player.y - this.y;
     const m = len(dx, dy) || 1;
-    projectiles.push(new Projectile(this.x, this.y, (dx / m) * speed, (dy / m) * speed));
+    const p = new Projectile(this.x, this.y, (dx / m) * speed, (dy / m) * speed);
+    p.dmg = CONFIG.proj.dmg * this.auraDmg;   // War Priest empowers shots
+    projectiles.push(p);
   }
 
   tickTimers(dt) {
@@ -276,7 +280,7 @@ class Charger extends Enemy {
       case "commit":
         this.vx = this.atkDir * E.chargeSpeed * (0.9 + this.chargePower * 0.4);  // fixed line -> sidesteppable
         this.atkT -= dt;
-        if (this.atkT <= 0) { this.atk = "recover"; this.atkCd = E.chargeCd; }
+        if (this.atkT <= 0) { this.atk = "recover"; this.atkCd = E.chargeCd / this.auraHaste; }   // Herald hastens
         break;
       case "recover":
         this.vx = lerp(this.vx, 0, clamp(6 * dt, 0, 1));
@@ -435,7 +439,7 @@ class Ranged extends Enemy {
       if (this.aimTimer <= 0) {
         this.state = "windup";
         const base = b === "sentinel" ? C.windup * 1.5 : (b === "marksman" ? CONFIG.chargedShot.windup : C.windup);
-        this.windT = base * this.fireRateMult; this.windMax = this.windT;
+        this.windT = base * this.fireRateMult / this.auraHaste; this.windMax = this.windT;   // Herald hastens
       }
     } else {
       // aiming: Rifleman keeps strafing (so it leads you); others plant to fire
@@ -445,7 +449,7 @@ class Ranged extends Enemy {
       if (this.windT <= 0) {
         this._fire(player, projectiles, C);
         this.state = "kite";
-        this.aimTimer = C.aimInterval * this.fireRateMult * (b === "sentinel" ? 1.15 : 1);
+        this.aimTimer = C.aimInterval * this.fireRateMult * (b === "sentinel" ? 1.15 : 1) / this.auraHaste;
       }
     }
     this.integrate(dt, platforms);
@@ -453,19 +457,21 @@ class Ranged extends Enemy {
 
   _fire(player, projectiles, C) {
     const b = this.behavior;
+    const dmg = CONFIG.proj.dmg * this.auraDmg;   // War Priest empowers shots
     if (this.volley > 1) {                       // Volley affix: wide spread
       const base = Math.atan2(player.y - this.y, player.x - this.x);
       for (let i = 0; i < this.volley; i++) {
         const a = base + (i - (this.volley - 1) / 2) * 0.22;
-        projectiles.push(new Projectile(this.x, this.y, Math.cos(a) * C.projSpeed, Math.sin(a) * C.projSpeed));
+        const p = new Projectile(this.x, this.y, Math.cos(a) * C.projSpeed, Math.sin(a) * C.projSpeed);
+        p.dmg = dmg; projectiles.push(p);
       }
       return;
     }
-    if (b === "marksman") {                       // one big, slow, heavy shot (very parryable)
+    if (b === "marksman") {                       // a long charge -> the fastest bolt in the game
       const CS = CONFIG.chargedShot;
       const dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
       const p = new Projectile(this.x, this.y, (dx / m) * CS.speed, (dy / m) * CS.speed);
-      p.r = CS.r; p.dmg = CS.dmg; p.charged = true;
+      p.r = CS.r; p.dmg = CS.dmg * this.auraDmg; p.charged = true;
       projectiles.push(p);
       return;
     }
@@ -477,7 +483,8 @@ class Ranged extends Enemy {
       const tx = player.x + player.vx * lead, ty = player.y + player.vy * lead * 0.5;
       const dx = tx - this.x, dy = ty - this.y, m = len(dx, dy) || 1;
       const a = Math.atan2(dy, dx) + (i - 0.5) * (b === "rifleman" ? 0.0 : 0.07);
-      projectiles.push(new Projectile(this.x, this.y, Math.cos(a) * sp, Math.sin(a) * sp));
+      const p = new Projectile(this.x, this.y, Math.cos(a) * sp, Math.sin(a) * sp);
+      p.dmg = dmg; projectiles.push(p);
     }
   }
 
@@ -704,13 +711,13 @@ class Bomber extends Enemy {
     if (this.bombsLeft > 0) {                       // Juggler: rapid 3-bomb burst
       this.burstT -= dt;
       if (this.burstT <= 0) { this._lobBomb(player, projectiles, (this.bombsLeft - 2) * 60); this.bombsLeft--; this.burstT = 0.18; }
-      if (this.bombsLeft === 0) this.lobTimer = C.lobInterval;
+      if (this.bombsLeft === 0) this.lobTimer = C.lobInterval / this.auraHaste;
       return;
     }
     this.lobTimer -= dt;
     if (this.lobTimer <= 0 && Math.abs(player.x - this.x) < 760) {
       if (this.behavior === "juggle") { this.bombsLeft = 3; this.burstT = 0; }
-      else { this._lobBomb(player, projectiles, 0); this.lobTimer = C.lobInterval; }
+      else { this._lobBomb(player, projectiles, 0); this.lobTimer = C.lobInterval / this.auraHaste; }
     }
   }
 
@@ -721,7 +728,7 @@ class Bomber extends Enemy {
       const m = new Projectile(this.x, this.y, 0, 0);
       m.mine = true; m.gravity = C.bombGravity; m.r = 11; m.armT = C.mineArm;
       projectiles.push(m);
-      this.mineTimer = C.mineInterval;
+      this.mineTimer = C.mineInterval / this.auraHaste;
     }
   }
 
@@ -768,14 +775,14 @@ class Armored extends Enemy {
     this.integrate(dt, platforms);
   }
   _stomp(projectiles, C) {
-    const gy = CONFIG.world.groundY - C.shockR;
+    const footY = this.y + this.hh;   // shock travels along whatever surface it's standing on
     for (const d of [-1, 1]) {
-      const p = new Projectile(this.x + d * this.hw, gy, d * C.shockSpeed, 0);
-      p.shock = true; p.r = C.shockR; p.dmg = C.shockDmg; p.life = 1.8;
+      const p = new Projectile(this.x + d * this.hw, footY - C.shockR, d * C.shockSpeed, 0);
+      p.shock = true; p.r = C.shockR; p.dmg = C.shockDmg; p.life = 1.6;
       projectiles.push(p);
     }
-    FX.ring(this.x, CONFIG.world.groundY, 14, CONFIG.colors.slam);
-    FX.burst(this.x, CONFIG.world.groundY, 0, -1, 9, CONFIG.colors.armored);
+    FX.ring(this.x, footY, 14, CONFIG.colors.slam);
+    FX.burst(this.x, footY, 0, -1, 9, CONFIG.colors.armored);
     if (typeof SFX !== "undefined" && SFX.ctx && SFX.slam) SFX.slam();
   }
   // blocked if the hit lands on the guarded (player-facing) side below break speed.
@@ -792,9 +799,9 @@ class Armored extends Enemy {
     // stomp wind-up telegraph: a building warning along the floor on both sides
     if (this.atk === "stompwind") {
       const k = 1 - clamp(this.atkT / (this.atkMax || 0.55), 0, 1);
-      const gy = CONFIG.world.groundY;
+      const gy = this.y + this.hh;   // telegraph along its current surface (platform or floor)
       ctx.strokeStyle = CONFIG.colors.slam; ctx.globalAlpha = 0.35 + 0.5 * k; ctx.lineWidth = 3 + k * 3;
-      ctx.beginPath(); ctx.moveTo(this.x - (40 + 160 * k), gy - 4); ctx.lineTo(this.x + (40 + 160 * k), gy - 4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(this.x - (40 + 160 * k), gy - 2); ctx.lineTo(this.x + (40 + 160 * k), gy - 2); ctx.stroke();
       ctx.globalAlpha = 1;
     }
     const body = this.enraged ? CONFIG.colors.charger : this.color;   // enraged runs hot
@@ -875,7 +882,7 @@ class Support extends Enemy {
     this.range = CONFIG.support.range;
     this.color = CONFIG.colors[type] || CONFIG.colors.priest;
     if (type === "anchor") { this.hp *= 0.55; this.maxHp *= 0.55; this.hpDisplay = this.hp; }  // fragile
-    this.beamTarget = null;   // set by updateSupports for mender/anchor draw
+    this.links = [];          // allies this support is currently affecting (set by updateSupports)
     this.auraPulse = Math.random() * 6;
   }
   update(dt, platforms, player) {
@@ -892,10 +899,17 @@ class Support extends Enemy {
   }
   draw(ctx) {
     const t = this.supportType, x = this.x, y = this.y, hw = this.hw, hh = this.hh;
-    // mender/anchor beam to the ally they're affecting
-    if (this.beamTarget && !this.beamTarget.dead) {
-      ctx.strokeStyle = this.color; ctx.globalAlpha = 0.45 + 0.15 * Math.sin(this.auraPulse * 6);
-      ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(this.beamTarget.x, this.beamTarget.y); ctx.stroke();
+    // clear connection lines to EVERY ally this support is affecting (so you can see who to break)
+    if (this.links && this.links.length) {
+      const beam = t === "mender" || t === "anchor";
+      ctx.strokeStyle = this.color; ctx.lineWidth = beam ? 3 : 2;
+      for (const a of this.links) {
+        if (a.dead) continue;
+        ctx.globalAlpha = 0.4 + 0.18 * Math.sin(this.auraPulse * 6);
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(a.x, a.y); ctx.stroke();
+        ctx.globalAlpha = 0.8; ctx.fillStyle = this.color;
+        ctx.beginPath(); ctx.arc(a.x, a.y - a.hh - 7, 3, 0, Math.PI * 2); ctx.fill();   // marker over the buffed ally
+      }
       ctx.globalAlpha = 1;
     }
     // aura ring for the field supports
@@ -956,55 +970,78 @@ class Wraith extends Enemy {
   }
 }
 
-// ---- Mimic (special): copies your last trick on a delay; the wind-up is the punish window ----
-class Mimic extends Enemy {
+// ---- Chimera (special): adopts the attacks of the enemy types in its wave (often several)
+//      and cycles through them. The wind-up colors it to the move that's coming. ----
+const CHIMERA_MOVE_COLOR = {
+  charger: "charger", brawler: "charger", stalker: "charger",
+  ranged: "ranged", flyer: "flyer", bomber: "bomber", armored: "armored",
+};
+class Chimera extends Enemy {
   constructor(x, y) {
-    super(x, y, CONFIG.mimic);
-    this.kind = "mimic";
-    this.color = CONFIG.colors.mimic;
+    super(x, y, CONFIG.chimera);
+    this.kind = "chimera";
+    this.color = CONFIG.colors.chimera;
     this.atk = "idle"; this.atkT = 0;
-    this.copyT = 2 + Math.random();
-    this.copyKind = "hit";
+    this.copyT = 1.4 + Math.random();
+    this.moves = ["charger"];   // overwritten at spawn from the wave roster
+    this.curMove = "charger";
   }
   update(dt, platforms, player, projectiles) {
     this.tickTimers(dt);
     const C = this.cfg, dir = Math.sign(player.x - this.x) || 1, dist = Math.abs(player.x - this.x), away = -dir;
     if (this.atk === "windup") {
       this.vx = lerp(this.vx, 0, clamp(10 * dt, 0, 1)); this.atkT -= dt;
-      if (this.atkT <= 0) this._strike(player, projectiles, dir);
+      if (this.atkT <= 0) this._exec(player, projectiles, dir);
     } else if (this.atk === "strike") {
-      this.atkT -= dt; if (this.atkT <= 0) { this.atk = "recover"; this.copyT = 1.7; }
+      this.atkT -= dt; if (this.atkT <= 0) { this.atk = "recover"; this.copyT = 1.3; }
     } else if (this.atk === "recover") {
-      this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1)); this.copyT -= dt; if (this.copyT <= 0) this.atk = "idle";
+      this.vx = lerp(this.vx, 0, clamp(7 * dt, 0, 1)); this.copyT -= dt; if (this.copyT <= 0) this.atk = "idle";
     } else {
       let move = 0;
-      if (dist > 360) move = dir; else if (dist < 230) move = away;
+      if (dist > 380) move = dir; else if (dist < 210) move = away;
       this.vx = lerp(this.vx, move * this.speed, clamp(6 * dt, 0, 1));
       this.copyT -= dt;
-      if (this.copyT <= 0 && dist < 580) { this.atk = "windup"; this.atkT = C.copyDelay; this.copyKind = player.lastTrickKind || "hit"; }
+      if (this.copyT <= 0 && dist < 660) {
+        this.atk = "windup"; this.atkT = C.copyDelay;
+        this.curMove = this.moves[Math.floor(Math.random() * this.moves.length)] || "charger";
+      }
     }
     this.integrate(dt, platforms);
   }
-  _strike(player, projectiles, dir) {
-    const k = this.copyKind;
-    if (k === "throwHit" || k === "parry" || k === "deflect") {     // copy a ranged action
-      const dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1, sp = CONFIG.proj.speed * 1.1;
-      projectiles.push(new Projectile(this.x, this.y, (dx / m) * sp, (dy / m) * sp));
-      this.atk = "recover"; this.copyT = 1.7;
-    } else {                                                        // copy a melee/slam/updraft -> a committed lunge
-      this.atk = "strike"; this.atkT = 0.25; this.vx = dir * 660;
-      if (k === "slam" || k === "superslam" || k === "updraft" || k === "launch") this.vy = -360;
+  _exec(player, projectiles, dir) {
+    const k = this.curMove;
+    if (k === "ranged") {
+      const dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1, sp = CONFIG.ranged.projSpeed;
+      const p = new Projectile(this.x, this.y, (dx / m) * sp, (dy / m) * sp); p.dmg = CONFIG.proj.dmg * this.auraDmg;
+      projectiles.push(p); this.atk = "recover"; this.copyT = 1.3;
+    } else if (k === "bomber") {
+      const B = CONFIG.bomber, vx = clamp((player.x - this.x) * 1.05, -B.bombSpeed, B.bombSpeed);
+      const p = new Projectile(this.x, this.y - this.hh, vx, -B.bombArc);
+      p.gravity = B.bombGravity; p.bomb = true; p.r = 12; p.dmg = B.blastDmg;
+      projectiles.push(p); this.atk = "recover"; this.copyT = 1.3;
+    } else if (k === "armored") {
+      const A = CONFIG.armored, footY = this.y + this.hh;
+      for (const d of [-1, 1]) { const p = new Projectile(this.x + d * this.hw, footY - A.shockR, d * A.shockSpeed, 0); p.shock = true; p.r = A.shockR; p.dmg = A.shockDmg; p.life = 1.5; projectiles.push(p); }
+      FX.ring(this.x, footY, 12, CONFIG.colors.slam); this.atk = "recover"; this.copyT = 1.4;
+    } else if (k === "flyer") {
+      this.atk = "strike"; this.atkT = 0.4; this.vx = dir * 600; this.vy = -540;   // leap-dive
+    } else {  // charger / brawler / stalker -> a committed lunge
+      this.atk = "strike"; this.atkT = 0.32; this.vx = dir * 740;
     }
   }
   draw(ctx) {
     const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2;
-    if (this.atk === "windup") {   // telegraph: a dashed copy-outline (your tell to punish it)
-      ctx.strokeStyle = this.color; ctx.globalAlpha = 0.55; ctx.setLineDash([5, 4]); ctx.lineWidth = 2;
+    const cueCol = CONFIG.colors[CHIMERA_MOVE_COLOR[this.curMove] || "chimera"];
+    if (this.atk === "windup") {   // telegraph in the color of the move it's about to use
+      ctx.strokeStyle = cueCol; ctx.globalAlpha = 0.6; ctx.setLineDash([5, 4]); ctx.lineWidth = 2.5;
       ctx.strokeRect(x - 4, y - 4, w + 8, h + 8); ctx.setLineDash([]); ctx.globalAlpha = 1;
     }
-    ctx.fillStyle = this.flash > 0 ? "#fff" : this.color;
+    const active = this.atk === "windup" || this.atk === "strike";
+    ctx.fillStyle = this.flash > 0 ? "#fff" : (active ? cueCol : this.color);
     ctx.fillRect(x, y, w, h);
     ctx.strokeStyle = "#000"; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h);
+    // patchwork seam down the middle (the "many faces")
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(this.x, y + 2); ctx.lineTo(this.x, y + h - 2); ctx.stroke();
     ctx.fillStyle = CONFIG.colors.eye;
     const dir = Math.sign(this.vx) || 1;
     ctx.fillRect(this.x + dir * 5 - 4, y + 13, 8, 5);

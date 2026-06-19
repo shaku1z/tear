@@ -162,7 +162,6 @@
     let pts = T.pts[kind] || 2;
     if (kind !== run.lastTrick) pts *= T.variety;   // reward varied tricks
     run.lastTrick = kind;
-    if (player) player.lastTrickKind = kind;        // Mimic copies your most recent trick
     run.combo += pts;
     run.comboTimer = T.decay;
     const prevRank = run.rank;
@@ -199,7 +198,7 @@
     let name;
     if (e.kind === "support") name = { priest: "War Priest", herald: "Herald", mender: "Mender", anchor: "Anchor" }[e.supportType] || "Support";
     else if (e.kind === "wraith") name = "Wraith";
-    else if (e.kind === "mimic") name = "Mimic";
+    else if (e.kind === "chimera") name = "Chimera";
     else if (e.kind === "armored") name = e.enraged ? "Armored*" : "Armored";
     else name = e.variantName || (e.kind.charAt(0).toUpperCase() + e.kind.slice(1));
     if (e.affixCount) name += " +" + e.affixCount;
@@ -275,7 +274,7 @@
     // rarer support + special types arrive later (and all at once in the sandbox)
     if (w >= 6) { pool.push(["priest", 0.18]); pool.push(["mender", 0.16]); }
     if (w >= 7) { pool.push(["herald", 0.16]); pool.push(["anchor", 0.14]); pool.push(["wraith", 0.2]); }
-    if (w >= 8) pool.push(["mimic", 0.16]);
+    if (w >= 8) pool.push(["chimera", 0.16]);
     let total = 0; for (const p of pool) total += p[1];
     let r = Math.random() * total;
     for (const [t, w2] of pool) { if ((r -= w2) <= 0) return t; }
@@ -303,6 +302,9 @@
         }
       }
     }
+    // attack kinds present this wave — a Chimera adopts these
+    const attackKinds = ["charger", "ranged", "flyer", "bomber", "armored"];
+    run.waveKinds = Array.from(new Set(run.spawnQueue.map((s) => s.type).filter((t) => attackKinds.includes(t))));
     run.spawnTimer = R.startDelay;
     run.waveActive = true;
     run.waveTime = 0; run.waveKills = 0; run.wavePeak = run.mult;
@@ -330,7 +332,7 @@
       case "boss":    e = new Boss(W / 2, CONFIG.world.groundY - 140); break;
       case "priest": case "herald": case "mender": case "anchor": e = new Support(0, 0, spec.type); break;
       case "wraith":  e = new Wraith(spawnSide(), 220); break;
-      case "mimic":   e = new Mimic(0, 0); break;
+      case "chimera": e = new Chimera(0, 0); break;
       default:        e = new Charger(0, 0);
     }
     if (spec.type !== "boss") {
@@ -344,6 +346,8 @@
       if (e.kind === "charger" || e.kind === "ranged" || e.kind === "bomber" || e.kind === "armored") {
         e.canClimb = true; e.climber = Math.random() < 0.6; e.climbApt = Math.random();
       }
+      // Chimera inherits the attack repertoire of the enemy types present in its wave
+      if (e.kind === "chimera") e.moves = (run.waveKinds && run.waveKinds.length) ? run.waveKinds.slice() : ["charger"];
     }
     e.hpDisplay = e.hp;
     e.spawnT = 0.35;   // brief materialize so spawns read as spawns (not teleports)
@@ -426,17 +430,20 @@
   // Support family: each frame reset aura flags, then let every support re-apply its
   // effect to nearby allies (it needs the live enemy list, so it lives here, not in the class)
   function updateSupports(dt) {
-    for (const e of enemies) { e.auraDR = 1; e.auraSpeed = 1; e.tetherDR = 1; e.beamTarget = null; }
+    for (const e of enemies) { e.auraDR = 1; e.auraDmg = 1; e.auraSpeed = 1; e.auraHaste = 1; e.tetherDR = 1; }
     const S = CONFIG.support;
     for (const s of enemies) {
-      if (s.kind !== "support" || s.dead || s.spawnT > 0 || s.stun > 0) continue;
+      if (s.kind !== "support") continue;
+      s.links = [];
+      if (s.dead || s.spawnT > 0 || s.stun > 0) continue;
       const t = s.supportType;
       if (t === "priest" || t === "herald") {
         for (const e of enemies) {
           if (e === s || e.dead || e.kind === "support") continue;
           if (len(e.x - s.x, e.y - s.y) <= s.range + e.radius) {
-            if (t === "priest") e.auraDR = Math.min(e.auraDR, S.drMult);
-            else e.auraSpeed = Math.max(e.auraSpeed, S.speedBuff);
+            if (t === "priest") { e.auraDR = Math.min(e.auraDR, S.drMult); e.auraDmg = Math.max(e.auraDmg, S.dmgBuff); }   // protect AND empower
+            else { e.auraSpeed = Math.max(e.auraSpeed, S.speedBuff); e.auraHaste = Math.max(e.auraHaste, S.hasteBuff); }    // move AND attack faster
+            s.links.push(e);
           }
         }
       } else if (t === "mender") {
@@ -446,7 +453,7 @@
           if (len(e.x - s.x, e.y - s.y) > s.range * 1.3) continue;
           if (e.hp < bestHp) { bestHp = e.hp; best = e; }
         }
-        if (best) { best.hp = Math.min(best.maxHp, best.hp + S.menderRate * dt); s.beamTarget = best; }
+        if (best) { best.hp = Math.min(best.maxHp, best.hp + S.menderRate * dt); s.links = [best]; }
       } else if (t === "anchor") {
         if (!s.tetheredAlly || s.tetheredAlly.dead || len(s.tetheredAlly.x - s.x, s.tetheredAlly.y - s.y) > s.range * 2.2) {
           s.tetheredAlly = null;
@@ -458,7 +465,7 @@
           }
           s.tetheredAlly = best;
         }
-        if (s.tetheredAlly && !s.tetheredAlly.dead) { s.tetheredAlly.tetherDR = Math.min(s.tetheredAlly.tetherDR, S.tetherDR); s.beamTarget = s.tetheredAlly; }
+        if (s.tetheredAlly && !s.tetheredAlly.dead) { s.tetheredAlly.tetherDR = Math.min(s.tetheredAlly.tetherDR, S.tetherDR); s.links = [s.tetheredAlly]; }
       }
     }
   }
@@ -777,7 +784,7 @@
     for (const e of enemies) {
       if (e.dead || e.spawnT > 0) continue;
       if (aabbOverlap(player.x, player.y, player.hw, player.hh, e.x, e.y, e.hw + e.contactReach, e.hh)) {
-        { const r = player.takeDamage(e.contactDmg * (e.chargeMult || 1), e.x);
+        { const r = player.takeDamage(e.contactDmg * (e.chargeMult || 1) * (e.auraDmg || 1), e.x);
           if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb(); }
       }
     }
