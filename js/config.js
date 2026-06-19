@@ -134,6 +134,13 @@ const CONFIG = {
     knockbackTaken: 9,    // knockback per point of damage received
     weight: 1,            // resists launches/flings (higher = harder to pop airborne)
     respawnDelay: 1.4,
+    // bull-charge (baseline melee): watch -> wind up -> commit a fast lunge; whiff = stun
+    chargeRange: 420,     // distance at which it commits to a charge
+    chargeWindup: 0.55,   // telegraph before the lunge
+    chargeSpeed: 760,     // lunge burst speed
+    chargeTime: 0.5,      // how long the lunge lasts
+    chargeStun: 1.1,      // stun if the lunge slams a wall/platform (the punish window)
+    chargeCd: 1.2,        // recovery before it can charge again
   },
 
   // ranged: keeps its distance, winds up a telegraphed shot, then kites away
@@ -165,6 +172,8 @@ const CONFIG = {
   elite: { hpMult: 2.2, speedMult: 1.3, dmgMult: 1.5, sizeMult: 1.2, chancePerWave: 0.06, chanceMax: 0.35 },
 
   proj: { r: 9, dmg: 10, speed: 540 },
+  // Marksman's charged shot: big, slow, heavy — telegraphed and very parryable
+  chargedShot: { r: 17, dmg: 22, speed: 320, windup: 1.05 },
 
   // accent palette — player stays black on white; enemies/shots/FX carry the color
   colors: {

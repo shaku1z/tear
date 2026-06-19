@@ -12,6 +12,8 @@ class Projectile {
     this.pierced = null;      // set of enemies already hit (when piercing)
     this.bounces = 0;         // ability: ricochets off walls this many times
     this.life = 6;            // seconds before it expires
+    this.dmg = null;          // override damage to the player (null = CONFIG.proj.dmg)
+    this.charged = false;     // Marksman's heavy shot: big, slow, very parryable
   }
 
   update(dt) {
@@ -58,7 +60,11 @@ class Projectile {
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.strokeStyle = "#000"; ctx.lineWidth = this.charged ? 2.5 : 1.5; ctx.stroke();
+    if (this.charged && !this.deflected) {   // heavy-shot accent: a pulsing inner core
+      ctx.fillStyle = "#fff";
+      ctx.beginPath(); ctx.arc(this.x, this.y, this.r * 0.4, 0, Math.PI * 2); ctx.fill();
+    }
     if (this.deflected) {
       // ring to show it's now yours (double ring if a perfect parry)
       ctx.strokeStyle = col;

@@ -298,7 +298,9 @@
     }
     if (spec.type !== "boss") {
       if (spec.hpScale) { e.hp *= spec.hpScale; e.maxHp *= spec.hpScale; }
-      if (spec.preset) applyPreset(e, spec.preset); else rollAffixes(e, run.wave);
+      // presets are their own identity; otherwise pick a family variant + roll affixes
+      if (spec.preset) applyPreset(e, spec.preset);
+      else { applyVariant(e, spec.variant || rollVariant(e.kind, run.wave)); rollAffixes(e, run.wave); }
       if (spec.type !== "flyer") { const pos = groundSpawn(e.hh); e.x = pos.x; e.y = pos.y; }
       // some ground enemies can hop onto platforms
       if (e.kind === "charger" || e.kind === "ranged" || e.kind === "bomber") e.canJump = Math.random() < 0.4;
@@ -484,8 +486,13 @@
             e.hitCd = 0.12; hitStop = CONFIG.hitStop.small; SFX.deflect();
             continue;
           }
-          // breaking a guard with a fast frontal hit staggers the armored enemy
-          if (e.cfg.breakSpeed && Math.sign(blade.tipX - e.x) === e.guardSide && blade.tipSpeed >= e.cfg.breakSpeed) e.stun = 0.8;
+          // breaking a guard with a fast frontal hit staggers the armored enemy and
+          // ENRAGES it: shield gone, faster and aggressive (angry, not crippled)
+          if (e.cfg.breakSpeed && !e.enraged && Math.sign(blade.tipX - e.x) === e.guardSide && blade.tipSpeed >= e.cfg.breakSpeed) {
+            e.stun = 0.8; e.enraged = true;
+            FX.ring(e.x, e.y, 14, CONFIG.colors.armoredShield);
+            addFloater(e.x, e.y - 30, "SHIELD BREAK", true, CONFIG.colors.armoredShield);
+          }
           const Bl = CONFIG.blade;
           const isSlam = !player.onGround && blade.tipVY > Bl.slamMinDownSpeed;
           const isLaunch = blade.tipVY < -Bl.launchMinUpSpeed;
@@ -646,7 +653,7 @@
           }
         }
       } else if (aabbOverlap(p.x, p.y, p.r, p.r, player.x, player.y, player.hw, player.hh)) {
-        { const r = player.takeDamage(CONFIG.proj.dmg, p.x);
+        { const r = player.takeDamage(p.dmg != null ? p.dmg : CONFIG.proj.dmg, p.x);
           if (r) { p.dead = true; if (r === "hit") { loseStyle(); SFX.hurt(); } else onShieldAbsorb(); } }
       }
     }
