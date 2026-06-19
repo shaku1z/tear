@@ -764,8 +764,41 @@ class Bomber extends Enemy {
       return;
     }
     if (this.behavior === "trap") this._trap(dt, player, projectiles, C);
+    else if (this.behavior === "sludge") this._sludge(dt, player, projectiles, C);
+    else if (this.behavior === "geo") this._geo(dt, player, projectiles, C);
     else this._lob(dt, player, projectiles, C);
     this.integrate(dt, platforms);
+  }
+
+  // Sludge: lobs a glob of mud that lands and leaves a slowing puddle
+  _sludge(dt, player, projectiles, C) {
+    this._kite(dt, player, C.standoff);
+    this.lobTimer -= dt;
+    if (this.lobTimer <= 0 && Math.abs(player.x - this.x) < 780) {
+      const X = CONFIG.exotic, vx = clamp(player.x - this.x, -X.sludgeSpeed, X.sludgeSpeed);
+      const p = new Projectile(this.x, this.y - this.hh, vx, -X.sludgeArc);
+      p.gravity = X.sludgeGravity; p.mud = true; p.r = X.sludgeR;
+      projectiles.push(p);
+      this.lobTimer = X.sludgeInterval / this.auraHaste;
+    }
+  }
+
+  // Geomancer: channels, then raises a temporary wall that sections off the arena
+  // (killing it during the channel stops the wall). The game spawns the wall from wallRequest.
+  _geo(dt, player, projectiles, C) {
+    const X = CONFIG.exotic;
+    if (this.atk === "channel") {
+      this.vx = lerp(this.vx, 0, clamp(9 * dt, 0, 1)); this.atkT -= dt;
+      if (this.atkT <= 0) { this.wallRequest = { x: this.geoX }; this.atk = "idle"; this.lobTimer = X.geoInterval; }
+    } else {
+      this._kite(dt, player, C.standoff);
+      this.lobTimer -= dt;
+      if (this.lobTimer <= 0 && Math.abs(player.x - this.x) < X.geoRange && this.onGround) {
+        const dir = Math.sign(player.x - this.x) || 1;
+        this.geoX = clamp(this.x + dir * 160, 60, CONFIG.view.w - 60);
+        this.atk = "channel"; this.atkT = X.geoChannel; this.atkMax = X.geoChannel;
+      }
+    }
   }
 
   // hold a throwing distance from the player
@@ -813,6 +846,17 @@ class Bomber extends Enemy {
   }
 
   draw(ctx) {
+    // Geomancer channel telegraph: a wall rising from the floor at the target spot
+    if (this.behavior === "geo" && this.atk === "channel" && this.geoX != null) {
+      const k = 1 - clamp(this.atkT / (this.atkMax || 1), 0, 1), X = CONFIG.exotic, gy = CONFIG.world.groundY;
+      ctx.fillStyle = CONFIG.colors.sludge; ctx.globalAlpha = 0.3 + 0.4 * k;
+      ctx.fillRect(this.geoX - X.geoWallW / 2, gy - X.geoWallH * k, X.geoWallW, X.geoWallH * k);
+      ctx.globalAlpha = 1;
+      // channel link
+      ctx.strokeStyle = CONFIG.colors.sludge; ctx.globalAlpha = 0.5; ctx.lineWidth = 2; ctx.setLineDash([4, 6]);
+      ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.geoX, gy - X.geoWallH * k * 0.5); ctx.stroke();
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
     ctx.fillStyle = this.flash > 0 ? "#fff" : this.color;
     ctx.beginPath(); ctx.arc(this.x, this.y, this.hw, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = "#000"; ctx.lineWidth = 3; ctx.stroke();
@@ -820,6 +864,8 @@ class Bomber extends Enemy {
     // variant accent
     if (this.behavior === "trap") { ctx.fillStyle = "#fff"; ctx.fillRect(this.x - 6, this.y - 1, 12, 3); }
     else if (this.behavior === "juggle") { ctx.fillStyle = "#fff"; for (let i = 0; i < 3; i++) ctx.fillRect(this.x - 6 + i * 5, this.y - 3, 3, 3); }
+    else if (this.behavior === "sludge") { ctx.fillStyle = CONFIG.colors.sludge; ctx.beginPath(); ctx.arc(this.x, this.y, this.hw * 0.5, 0, Math.PI * 2); ctx.fill(); }
+    else if (this.behavior === "geo") { ctx.fillStyle = "#fff"; ctx.fillRect(this.x - 5, this.y - 4, 10, 8); }
     this.drawHpBar(ctx);
   }
 }

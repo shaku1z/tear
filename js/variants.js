@@ -31,9 +31,11 @@ const VARIANTS = {
     { id: "highdiver",  name: "Swooper",     weight: 0.6, minWave: 5, apply: (e) => { e.behavior = "highdive"; } },
   ],
   bomber: [
-    { id: "lobber",  name: "Bomber",  weight: 1.0,             apply: (e) => { e.behavior = "lob"; } },
-    { id: "juggler", name: "Juggler", weight: 0.7, minWave: 4, apply: (e) => { e.behavior = "juggle"; } },
-    { id: "trapper", name: "Trapper", weight: 0.6, minWave: 3, apply: (e) => { e.behavior = "trap"; } },
+    { id: "lobber",    name: "Bomber",    weight: 1.0,             apply: (e) => { e.behavior = "lob"; } },
+    { id: "juggler",   name: "Juggler",   weight: 0.7, minWave: 4, apply: (e) => { e.behavior = "juggle"; } },
+    { id: "trapper",   name: "Trapper",   weight: 0.6, minWave: 3, apply: (e) => { e.behavior = "trap"; } },
+    { id: "sludge",    name: "Sludge",    weight: 0.5, minWave: 5, apply: (e) => { e.behavior = "sludge"; } },
+    { id: "geomancer", name: "Geomancer", weight: 0.45, minWave: 7, apply: (e) => { e.behavior = "geo"; e.hp *= 1.2; e.maxHp *= 1.2; } },
   ],
   // armored keeps its baseline (turn-to-face + enrage on shield break); an absent
   // list just means "no variant, use the family default".

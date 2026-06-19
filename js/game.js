@@ -92,6 +92,8 @@
   let timeScale = 1, slowmo = 0, zoom = 1, flash = 0, bannerT = 0, dashGhostT = 0; // feel/juice
   let wasSwinging = false, wasDashing = false, wasOnGround = true; // audio cadence
   let throwCd = 0;            // brief cooldown between blade throws (not recalls)
+  let slowZones = [];         // Sludge puddles: { x, y, r, life }
+  let tempWalls = [];         // Geomancer walls (also pushed into `platforms` for collision)
   let wasLocked = false;      // tracks mouse capture so losing it (Esc) pauses the game
   let rankPopT = 0, rankPopText = "";   // style rank-up flash
   let run = null;             // { mode, diff, wave, score, mods, spawnQueue, spawnTimer, waveActive }
@@ -265,6 +267,8 @@
     enemies = []; projectiles = []; floaters = [];
     hitStop = 0; shake = 0; FX.reset();
     timeScale = 1; slowmo = 0; zoom = 1; flash = 0; bannerT = 0; dashGhostT = 0; throwCd = 0;
+    for (let i = platforms.length - 1; i >= 0; i--) if (platforms[i].wall) platforms.splice(i, 1);   // clear old Geomancer walls
+    slowZones = []; tempWalls = [];
     run = {
       mode, diff, wave: 0, score: 0, mods: newMods(),
       spawnQueue: [], spawnTimer: 0, waveActive: false, clearTimer: -1,
@@ -500,12 +504,40 @@
     }
   }
 
+  // Sludge puddles + Geomancer walls: age them out, spawn requested walls, and slow the
+  // player while they're standing in mud.
+  function updateZonesWalls(dt) {
+    for (const z of slowZones) z.life -= dt;
+    slowZones = slowZones.filter((z) => z.life > 0);
+    for (let i = tempWalls.length - 1; i >= 0; i--) {
+      tempWalls[i].life -= dt;
+      if (tempWalls[i].life <= 0) {
+        const idx = platforms.indexOf(tempWalls[i]); if (idx >= 0) platforms.splice(idx, 1);
+        tempWalls.splice(i, 1);
+      }
+    }
+    // a Geomancer that finished channeling raises its wall
+    for (const e of enemies) {
+      if (!e.wallRequest) continue;
+      const X = CONFIG.exotic;
+      const w = { x: e.wallRequest.x - X.geoWallW / 2, y: CONFIG.world.groundY - X.geoWallH, w: X.geoWallW, h: X.geoWallH, wall: true, life: X.geoWallLife, maxLife: X.geoWallLife };
+      platforms.push(w); tempWalls.push(w);
+      FX.ring(e.wallRequest.x, CONFIG.world.groundY, 18, CONFIG.colors.sludge);
+      e.wallRequest = null;
+    }
+    // slow the player in mud
+    let slow = 1; const feet = player.y + player.hh;
+    for (const z of slowZones) if (Math.abs(player.x - z.x) < z.r && feet >= z.y - 12) slow = Math.min(slow, CONFIG.exotic.sludgeSlow);
+    player.slowMult = slow;
+  }
+
   function stepPlaying(dt) {
     // Flow Guard: damage reduction while the trick rank is high (refreshed each step)
     player.flowDR = (run.mods.flowGuard && run.mult >= CONFIG.resilience.flowGuardTier)
       ? CONFIG.resilience.flowGuardMult : 1;
     if (run.lifestealCd > 0) run.lifestealCd -= dt;
     if (throwCd > 0) throwCd -= dt;
+    updateZonesWalls(dt);   // mud puddles + Geomancer walls; sets player.slowMult
     // faster while unarmed (blade thrown)
     player.moveBoost = (blade.state !== "held") ? CONFIG.player.thrownMoveBoost : 1;
     player.update(dt, platforms);
@@ -778,9 +810,9 @@
       }
     }
 
-    // projectiles vs actors (bombs/mines handled separately below)
+    // projectiles vs actors (bombs/mines/mud handled separately below)
     for (const p of projectiles) {
-      if (p.dead || p.bomb || p.mine) continue;
+      if (p.dead || p.bomb || p.mine || p.mud) continue;
       if (p.deflected) {
         for (const e of enemies) {
           if (e.dead) continue;
@@ -829,6 +861,12 @@
           if (hitGround || hitE) { bombExplode(p.x, Math.min(p.y, CONFIG.world.groundY - 2), true); p.dead = true; }
         } else if (hitGround || aabbOverlap(p.x, p.y, p.r, p.r, player.x, player.y, player.hw, player.hh)) {
           bombExplode(p.x, Math.min(p.y, CONFIG.world.groundY - 2), false); p.dead = true;
+        }
+      } else if (p.mud) {
+        if (p.y + p.r >= CONFIG.world.groundY) {   // lands -> slowing puddle
+          const X = CONFIG.exotic;
+          slowZones.push({ x: p.x, y: CONFIG.world.groundY, r: X.sludgeZoneR, life: X.sludgeZoneLife });
+          FX.burst(p.x, CONFIG.world.groundY, 0, -1, 8, CONFIG.colors.sludge); p.dead = true;
         }
       } else if (p.mine) {
         if (p.y + p.r >= CONFIG.world.groundY) { p.y = CONFIG.world.groundY - p.r; p.vx = 0; p.vy = 0; }   // settle
@@ -985,6 +1023,17 @@
     ctx.translate(-cx, -cy);
     ctx.fillStyle = "#000";
     for (const p of platforms) ctx.fillRect(p.x, p.y, p.w, p.h);
+    // Geomancer walls: a colored cap + crumble fade as they age
+    for (const w of tempWalls) {
+      const k = clamp(w.life / w.maxLife, 0, 1);
+      ctx.fillStyle = CONFIG.colors.sludge; ctx.globalAlpha = 0.35 + 0.4 * k;
+      ctx.fillRect(w.x - 2, w.y, w.w + 4, 6); ctx.globalAlpha = 1;
+    }
+    // Sludge puddles on the floor
+    for (const z of slowZones) {
+      ctx.fillStyle = CONFIG.colors.sludge; ctx.globalAlpha = 0.25 + 0.4 * clamp(z.life / 2, 0, 1);
+      ctx.beginPath(); ctx.ellipse(z.x, z.y - 2, z.r, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    }
     for (const e of enemies) {
       if (e.spawnT > 0) {   // materializing: telegraph ring + fade in
         const k = clamp(e.spawnT / 0.35, 0, 1);

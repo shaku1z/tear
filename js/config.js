@@ -199,6 +199,9 @@ const CONFIG = {
     duelCd: 2.4,                                                            // Duelist: parries a thrown blade, then must recover
     warlockSpeed: 430, warlockDmg: 12, warlockCurveAt: 0.42,               // Warlock: slow shot that curves once toward you
     chainSpeed: 560, chainRoot: 1.4, chainDmg: 8, chainR: 12,              // Chain: roots you in place on hit
+    sludgeSpeed: 360, sludgeArc: 480, sludgeGravity: 1150, sludgeR: 12,    // Sludge: lobs mud that...
+    sludgeZoneR: 72, sludgeZoneLife: 5, sludgeSlow: 0.45, sludgeInterval: 2.6,  // ...makes a slowing puddle
+    geoChannel: 1.8, geoWallW: 26, geoWallH: 155, geoWallLife: 9, geoInterval: 5, geoRange: 540,  // Geomancer: raises a temporary wall
   },
 
   // accent palette — player stays black on white; enemies/shots/FX carry the color
@@ -216,6 +219,7 @@ const CONFIG = {
     anchor: "#1597c2",         // support: shields a tethered ally
     wraith: "#6a6f88",         // special: blade-immune phantom
     chimera: "#444a5c",        // special: adopts other enemies' attacks
+    sludge: "#6f7a35",         // hazard: slowing mud puddle
     enemyShot: "#e23b3b",      // incoming projectile
     deflected: "#1faf5a",      // your reflected projectile (green)
     perfect: "#13c4d6",        // perfect parry / counter (cyan)

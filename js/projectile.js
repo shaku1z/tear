@@ -24,6 +24,7 @@ class Projectile {
     this.curveT = 0;          // ...countdown to that adjustment
     this.curved = false;
     this.root = 0;            // Chain: roots the player for this many seconds on hit
+    this.mud = false;         // Sludge: lands and leaves a slowing puddle
   }
 
   update(dt) {
@@ -77,6 +78,11 @@ class Projectile {
       ctx.lineTo(this.x, this.y - this.r); ctx.lineTo(this.x + this.r, this.y + this.r);
       ctx.closePath(); ctx.fill();
       ctx.globalAlpha = 1; ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.stroke();
+      return;
+    }
+    if (this.mud && !this.deflected) {     // sludge glob in flight
+      ctx.fillStyle = C.sludge; ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.stroke();
       return;
     }
     if (this.root && !this.deflected) {    // chain shot: a hollow link ring

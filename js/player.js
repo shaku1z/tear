@@ -30,6 +30,7 @@ class Player {
     this.maxShield = 0;         // ...cap (0 until Aegis is owned)
     this.airTime = 0;           // Aerial Rave: seconds since last grounded
     this.rootT = 0;             // Chain Caster: snared in place (no move/jump/dash) for a bit
+    this.slowMult = 1;          // Sludge: slowed while standing in a mud puddle (set by the game)
   }
 
   get invulnerable() { return this.iframe > 0 || this.dashIframe > 0; }
@@ -83,9 +84,9 @@ class Player {
         if (this.dashY <= 0) this.vy *= D.endSpeedKeep;   // preserve downward momentum into the slam
       }
     } else {
-      // ---- normal movement ----
-      const accel = this.onGround ? P.groundAccel : P.airAccel;
-      const top = P.moveSpeed * this.moveBoost;
+      // ---- normal movement (mud slows your top speed + acceleration) ----
+      const accel = (this.onGround ? P.groundAccel : P.airAccel) * this.slowMult;
+      const top = P.moveSpeed * this.moveBoost * this.slowMult;
       if (dirX !== 0) {
         this.vx += dirX * accel * dt;
         this.vx = clamp(this.vx, -top, top);
