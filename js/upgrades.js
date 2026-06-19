@@ -28,6 +28,10 @@ function newMods() {
     phaseStep: false,     // Phase Step: dashing through a shot deflects it
     crater: false,        // Crater: empowered Power Slams erupt in a scaling shockwave
     aerialRave: 0,        // Aerial Rave: swing damage grows the longer you stay airborne
+    // ---- ability tiers (evolved on boss kills) ----
+    tier: {},             // id -> current tier (1 when acquired, up to 3)
+    stormMult: 1.85,      // Storm Recall multiplier (raised by its tiers)
+    killHeal: 0,          // Bloodrite T3: heal on any kill
   };
 }
 
@@ -68,16 +72,32 @@ const UPGRADES = [
   // ---- resilience: the healing rework's "earned survivability" set ----
   { id: "bloodrite", name: "Bloodrite", unique: true, rare: true, cat: "resilience",
     desc: "Skill kills (slam, spike, or perfect-parry) restore HP.",
-    apply: ({ mods }) => { mods.bloodrite = true; mods.onKill.push((ev) => { if (ev.cause === "skill") ev.player.heal(CONFIG.resilience.bloodriteHeal); }); } },
+    apply: ({ mods }) => { mods.bloodrite = true; mods.onKill.push((ev) => { if (ev.cause === "skill") ev.player.heal(CONFIG.resilience.bloodriteHeal); }); },
+    tiers: [
+      { desc: "Skill kills restore much more HP.", apply: () => { CONFIG.resilience.bloodriteHeal = 14; } },
+      { desc: "Even more — and EVERY kill trickles HP back.", apply: ({ mods }) => { CONFIG.resilience.bloodriteHeal = 20; mods.killHeal = 3; mods.onKill.push((ev) => { if (ev.cause !== "skill") ev.player.heal(mods.killHeal); }); } },
+    ] },
   { id: "riposte", name: "Riposte", unique: true, cat: "parry",
     desc: "After a perfect parry, take 60% less damage for 1.2s.",
-    apply: ({ mods }) => { mods.parryGuard = true; } },
+    apply: ({ mods }) => { mods.parryGuard = true; },
+    tiers: [
+      { desc: "The guard lasts longer and cuts 75% of damage.", apply: () => { CONFIG.resilience.parryGuardTime = 1.8; CONFIG.resilience.parryGuardMult = 0.25; } },
+      { desc: "A perfect parry makes you briefly INVINCIBLE.", apply: () => { CONFIG.resilience.parryGuardTime = 2.2; CONFIG.resilience.parryGuardMult = 0.0; } },
+    ] },
   { id: "flow_guard", name: "Flow Guard", unique: true, cat: "resilience",
     desc: "Take 30% less damage while your trick rank is BRUTAL or higher.",
-    apply: ({ mods }) => { mods.flowGuard = true; } },
+    apply: ({ mods }) => { mods.flowGuard = true; },
+    tiers: [
+      { desc: "45% less damage while BRUTAL+.", apply: () => { CONFIG.resilience.flowGuardMult = 0.55; } },
+      { desc: "Protection starts at STYLISH, and is stronger.", apply: () => { CONFIG.resilience.flowGuardMult = 0.5; CONFIG.resilience.flowGuardTier = 2; } },
+    ] },
   { id: "aegis", name: "Aegis", unique: true, cat: "resilience",
     desc: "Slam kills grant a one-hit shield that fully blocks the next hit (max 2).",
-    apply: ({ player, mods }) => { mods.slamShield = true; player.maxShield = CONFIG.resilience.maxShield; } },
+    apply: ({ player, mods }) => { mods.slamShield = true; player.maxShield = CONFIG.resilience.maxShield; },
+    tiers: [
+      { desc: "Hold up to 3 shields.", apply: ({ player }) => { CONFIG.resilience.maxShield = 3; player.maxShield = 3; } },
+      { desc: "Hold up to 4 shields.", apply: ({ player }) => { CONFIG.resilience.maxShield = 4; player.maxShield = 4; } },
+    ] },
 
   // ---- skill-expression abilities ----
   { id: "phase_step", name: "Phase Step", unique: true, cat: "parry",
@@ -88,7 +108,11 @@ const UPGRADES = [
     apply: ({ mods }) => { mods.crater = true; } },
   { id: "aerial_rave", name: "Aerial Rave", unique: true, cat: "offense",
     desc: "The longer you stay airborne, the harder your swings hit (up to +50%).",
-    apply: ({ mods }) => { mods.aerialRave = 0.25; } },
+    apply: ({ mods }) => { mods.aerialRave = 0.25; },
+    tiers: [
+      { desc: "Ramps faster, up to +70%.", apply: ({ mods }) => { mods.aerialRave = 0.4; CONFIG.skill.aerialRaveCap = 0.7; } },
+      { desc: "Even faster, up to +100% airborne.", apply: ({ mods }) => { mods.aerialRave = 0.55; CONFIG.skill.aerialRaveCap = 1.0; } },
+    ] },
 
   { id: "seismic_slam", name: "Seismic Slam", unique: true, cat: "offense", desc: "Slams blast nearby enemies for 22.",
     apply: ({ mods }) => { mods.onSlam.push((ev) => { ev.dealAoE(ev.x, ev.y, 130, 22); ev.fx.ring(ev.x, ev.y, 10); }); } },
@@ -100,7 +124,11 @@ const UPGRADES = [
   // (Razor Momentum) per-pierce ramp, capped in the combat loop so it can't snowball
   { id: "throw_momentum", name: "Razor Momentum", unique: true, cat: "throw",
     desc: "A thrown blade grows faster & stronger with every enemy it pierces.",
-    apply: ({ mods }) => { mods.throwRamp = 0.1; } },
+    apply: ({ mods }) => { mods.throwRamp = 0.1; },
+    tiers: [
+      { desc: "Ramps harder with every pierce.", apply: ({ mods }) => { mods.throwRamp = 0.16; } },
+      { desc: "A relentless snowball.", apply: ({ mods }) => { mods.throwRamp = 0.22; } },
+    ] },
   { id: "throw_giant", name: "Greatblade", unique: true, cat: "throw",
     desc: "The blade becomes huge while thrown (normal size in hand).",
     apply: ({ blade }) => { blade.throwSizeMult = 1.7; } },
@@ -116,10 +144,18 @@ const UPGRADES = [
     apply: ({ mods }) => { mods.tempest = true; } },
   { id: "storm_recall", name: "Storm Recall", unique: true, cat: "throw",
     desc: "The returning blade tears through enemies for +85% damage.",
-    apply: ({ mods }) => { mods.stormRecall = true; } },
+    apply: ({ mods }) => { mods.stormRecall = true; },
+    tiers: [
+      { desc: "The returning blade hits for +130%.", apply: ({ mods }) => { mods.stormMult = 2.3; } },
+      { desc: "A devastating +180% on the way home.", apply: ({ mods }) => { mods.stormMult = 2.8; } },
+    ] },
   { id: "phantom_dash", name: "Phantom Dash", unique: true, cat: "mobility",
     desc: "Dashing slices enemies you pass through (great while unarmed).",
-    apply: ({ mods }) => { mods.phantomDash = 26; } },
+    apply: ({ mods }) => { mods.phantomDash = 26; },
+    tiers: [
+      { desc: "The phase-slice cuts much deeper.", apply: ({ mods }) => { mods.phantomDash = 42; } },
+      { desc: "A devastating phase-slice.", apply: ({ mods }) => { mods.phantomDash = 60; } },
+    ] },
   { id: "boomerang", name: "Boomerang", unique: true, cat: "throw",
     desc: "Recall the thrown blade from any distance.",
     apply: ({ blade }) => { blade.freeRecall = true; } },
@@ -147,5 +183,33 @@ function rollUpgrades(n, mods) {
 function applyUpgrade(up, ctx) {
   ctx.mods.owned[up.id] = (ctx.mods.owned[up.id] || 0) + 1;
   ctx.mods.ownedList.push(up.id);
+  if (!ctx.mods.tier[up.id]) ctx.mods.tier[up.id] = 1;   // acquired at tier 1
   up.apply(ctx);
+}
+
+// ---- ability tiers (evolved on boss kills) ----
+// owned abilities that define a next tier and haven't maxed out yet
+function availableTierUps(mods) {
+  const out = [];
+  for (const id in mods.owned) {
+    const up = UPGRADES.find((u) => u.id === id);
+    if (!up || !up.tiers) continue;
+    const cur = mods.tier[id] || 1;       // current tier (1..3)
+    if (cur - 1 < up.tiers.length) out.push(up);   // a further tier exists
+  }
+  return out;
+}
+function nextTierDesc(up, mods) {
+  const cur = mods.tier[up.id] || 1;
+  const t = up.tiers && up.tiers[cur - 1];
+  return t ? t.desc : "";
+}
+function tierUp(id, ctx) {
+  const up = UPGRADES.find((u) => u.id === id);
+  if (!up || !up.tiers) return;
+  const cur = ctx.mods.tier[id] || 1;
+  const t = up.tiers[cur - 1];
+  if (!t) return;
+  t.apply(ctx);
+  ctx.mods.tier[id] = cur + 1;
 }

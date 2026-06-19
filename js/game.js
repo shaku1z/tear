@@ -105,6 +105,7 @@
   let rankPopT = 0, rankPopText = "";   // style rank-up flash
   let run = null;             // { mode, diff, wave, score, mods, spawnQueue, spawnTimer, waveActive }
   let draftChoices = [];
+  let tierChoices = [];               // abilities offered to evolve after a campaign boss
   let overInfo = null;        // game-over summary
   let selMode = "endless", selDiff = "normal", selWeapon = "sword";
   let uiButtons = [];
@@ -433,17 +434,32 @@
     if (run.waveActive && run.spawnQueue.length === 0 && enemies.length === 0) {
       run.waveActive = false;
       run.waveLog.push({ wave: run.isBossWave ? "BOSS" : run.wave, time: run.waveTime, kills: run.waveKills, peak: run.wavePeak });
-      if (run.isBossWave) { winRun(); return; }   // victory!
-      if (!player.oneHit) player.heal(R.healEachWave);
-      run.clearTimer = R.waveClearPause;
+      if (run.isBossWave) {
+        if (run.mode === "campaign") {
+          if (!player.oneHit) player.heal(R.healEachWave * 2);   // a boss kill is a milestone, not the end
+          run.bossCleared = true;
+          run.clearTimer = R.waveClearPause * 1.6;
+        } else { winRun(); return; }   // non-campaign boss modes still end in victory
+      } else {
+        if (!player.oneHit) player.heal(R.healEachWave);
+        run.clearTimer = R.waveClearPause;
+      }
     }
     if (run.clearTimer > 0) {
       run.clearTimer -= dt;
       if (run.clearTimer <= 0) {
         run.clearTimer = -1;
-        draftChoices = rollUpgrades(3, run.mods);
-        state = "draft";
-        document.exitPointerLock();   // free the cursor so the draft is clickable
+        document.exitPointerLock();   // free the cursor so the menu is clickable
+        if (run.bossCleared) {
+          run.bossCleared = false;
+          const ups = availableTierUps(run.mods);
+          for (let i = ups.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ups[i], ups[j]] = [ups[j], ups[i]]; }
+          if (ups.length) { tierChoices = ups.slice(0, 3); state = "tierup"; }
+          else { draftChoices = rollUpgrades(3, run.mods); state = "draft"; }   // nothing to evolve -> normal draft
+        } else {
+          draftChoices = rollUpgrades(3, run.mods);
+          state = "draft";
+        }
       }
     }
   }
@@ -710,7 +726,7 @@
           }
           if (run.mods.berserk && player.hp < player.maxHp * 0.5) dmg *= 1.25;
           if (!player.onGround && run.mods.airBonus) dmg *= 1 + run.mods.airBonus;  // Air Superiority
-          if (!player.onGround && run.mods.aerialRave) dmg *= 1 + Math.min(player.airTime * run.mods.aerialRave, 0.5);  // Aerial Rave
+          if (!player.onGround && run.mods.aerialRave) dmg *= 1 + Math.min(player.airTime * run.mods.aerialRave, CONFIG.skill.aerialRaveCap);  // Aerial Rave
           dmg *= e.damageTakenMult();   // armored: reduced grounded, more airborne
           const big = isSlam || empowered || spike || dmg >= CONFIG.hitStop.threshold;
           e.hit(dmg, blade.tipVX, blade.tipVY);
@@ -781,7 +797,7 @@
           const T = CONFIG.blade.throw;
           if (blade.state === "returning") tdmg *= hiHp ? T.loMult : T.hiMult;
           else tdmg *= hiHp ? T.hiMult : T.loMult;
-          if (blade.state === "returning" && run.mods.stormRecall) tdmg *= 1.85;   // Storm Recall
+          if (blade.state === "returning" && run.mods.stormRecall) tdmg *= run.mods.stormMult;   // Storm Recall (tiered)
           if (run.mods.berserk && player.hp < player.maxHp * 0.5) tdmg *= 1.25;
           tdmg *= e.damageTakenMult();
           e.hit(tdmg, blade.vx, blade.vy);
@@ -994,7 +1010,7 @@
     resizeCanvas();
     ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
     ctx.clearRect(0, 0, W, H);
-    const playLike = state === "playing" || state === "draft" || state === "paused" || state === "gameover" || state === "win" || state === "confirmquit";
+    const playLike = state === "playing" || state === "draft" || state === "tierup" || state === "paused" || state === "gameover" || state === "win" || state === "confirmquit";
     // biome background (campaign tints the world; menus stay white)
     ctx.fillStyle = (playLike && run && run.mode === "campaign") ? currentStage.bg : "#fff";
     ctx.fillRect(0, 0, W, H);
@@ -1032,6 +1048,7 @@
     else if (state === "highscores") renderHighscores();
     else if (state === "settings") renderSettings();
     else if (state === "draft") renderDraft();
+    else if (state === "tierup") renderTierUp();
     else if (state === "paused") renderPaused();
     else if (state === "confirmquit") renderConfirmQuit();
     else if (state === "gameover") renderGameover();
@@ -1320,10 +1337,12 @@
     let ns = 21; ctx.font = UI.font(ns, true);
     while (ctx.measureText(up.name).width > w - 24 && ns > 13) { ns--; ctx.font = UI.font(ns, true); }
     ctx.fillText(up.name, x + 12, y + 54);
-    // tier track (3 pips) — placeholder for the upcoming ability-tier system
+    // tier track: filled pips = how many tiers this ability has (evolves on boss kills)
+    const tierMax = 1 + (up.tiers ? up.tiers.length : 0);
     for (let i = 0; i < 3; i++) {
-      ctx.strokeStyle = "#cfcfcf"; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(x + 17 + i * 15, y + 72, 4, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x + 17 + i * 15, y + 72, 4, 0, Math.PI * 2);
+      if (i < tierMax) { ctx.fillStyle = cat.color; ctx.fill(); }
+      else { ctx.strokeStyle = "#cfcfcf"; ctx.lineWidth = 1.5; ctx.stroke(); }
     }
     // description (wrapped)
     wrapText(up.desc, x + 12, y + 98, w - 24, 17, 12);
@@ -1505,6 +1524,47 @@
     startNextWave();
     state = "playing";
     requestLock();          // re-capture automatically (we're inside the pick gesture)
+  }
+
+  // boss-kill reward: evolve one owned ability to its next tier
+  function renderTierUp() {
+    UI.dim(ctx, W, H, 0.85);
+    UI.title(ctx, "THE WAY OPENS", W / 2, 120, 40);
+    UI.text(ctx, "the boss falls — EVOLVE one of your abilities", W / 2, 160, 18, "center", 0.7);
+    const n = tierChoices.length, cw = 300, gap = 30, ch = 320;
+    const total = cw * n + gap * (n - 1), x0 = (W - total) / 2, y0 = 220;
+    tierChoices.forEach((up, i) => {
+      const x = x0 + i * (cw + gap);
+      const mouseOver = Input.mouseX >= x && Input.mouseX <= x + cw && Input.mouseY >= y0 && Input.mouseY <= y0 + ch;
+      const hovered = mouseOver || i === focus;
+      UI.panel(ctx, x, y0, cw, ch);
+      if (hovered) { ctx.lineWidth = 4; ctx.strokeStyle = "#000"; ctx.strokeRect(x, y0, cw, ch); ctx.fillStyle = "#000"; ctx.globalAlpha = 0.06; ctx.fillRect(x, y0, cw, ch); ctx.globalAlpha = 1; }
+      const next = (run.mods.tier[up.id] || 1) + 1;
+      const cat = ABIL_CATS[up.cat] || ABIL_CATS.utility;
+      ctx.fillStyle = cat.color; ctx.fillRect(x, y0, cw, 6);
+      UI.text(ctx, "EVOLVE  →  TIER " + next, x + cw / 2, y0 + 40, 14, "center", 0.6);
+      ctx.fillStyle = "#000"; ctx.font = UI.font(24, true); ctx.textAlign = "center";
+      ctx.fillText(up.name, x + cw / 2, y0 + 96);
+      // tier pips (filled up to current, the next one highlighted)
+      for (let t = 0; t < 3; t++) {
+        const px = x + cw / 2 - 24 + t * 24, py = y0 + 120;
+        ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2);
+        if (t < next - 1) { ctx.fillStyle = cat.color; ctx.fill(); }
+        else if (t === next - 1) { ctx.strokeStyle = cat.color; ctx.lineWidth = 2.5; ctx.stroke(); }
+        else { ctx.strokeStyle = "#ccc"; ctx.lineWidth = 1.5; ctx.stroke(); }
+      }
+      wrapText(nextTierDesc(up, run.mods), x + 24, y0 + 168, cw - 48, 26, 18);
+      uiButtons.push({ x, y: y0, w: cw, h: ch, label: "", _draftIndex: i, _hideBox: true, action: () => chooseTierUp(i) });
+    });
+  }
+
+  function chooseTierUp(i) {
+    const up = tierChoices[i];
+    if (up) tierUp(up.id, { player, blade, mods: run.mods });
+    Input.consumeDelta();
+    startNextWave();
+    state = "playing";
+    requestLock();
   }
 
   function renderPaused() {

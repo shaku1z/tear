@@ -44,6 +44,8 @@ class Enemy {
     this.enraged = false;  // armored: shield broken -> faster & aggressive
     this.evadeCd = 0;      // stalker: cooldown between dash-reads
     this.atkMax = 0;       // duration of the current wind-up (for telegraph scaling)
+    this.weaponA = -0.5;   // animated weapon angle (radians; -up, 0 forward, +down)
+    this.weaponPrevA = -0.5;
     this.chargePower = 0;  // 0..1 roll: longer wind-up -> farther, harder charge
     this.chargeMult = 1;   // contact-damage multiplier applied during a committed charge
     // platform pathfinding
@@ -237,6 +239,7 @@ class Charger extends Enemy {
   update(dt, platforms, player, projectiles) {
     this.tickTimers(dt);
     if (this.atkCd > 0) this.atkCd -= dt;
+    this._animWeapon(dt);
     // a wound-up charge hits harder on contact (longer wind-up = more power)
     this.chargeMult = (this.behavior === "bull" && this.atk === "commit") ? (1 + this.chargePower) : 1;
     // Duelist parry recharge
@@ -403,6 +406,43 @@ class Charger extends Enemy {
     }
   }
 
+  // swing the held weapon toward a target angle per attack state (cock back -> slam through)
+  _animWeapon(dt) {
+    let wt = -0.5, k = 9;                                // idle: held at the ready
+    if (this.atk === "windup") { wt = -1.55; k = 11; }   // cock it back
+    else if (this.atk === "commit" || this.atk === "strike" || this.atk === "swing") { wt = 0.78; k = 26; }  // slam through
+    this.weaponPrevA = this.weaponA;
+    this.weaponA = lerp(this.weaponA, wt, clamp(k * dt, 0, 1));
+  }
+
+  // draw an animated weapon (per variant) with a swoosh trail while it's swinging
+  _drawWeapon(ctx, dir) {
+    let type = null;
+    if (this.behavior === "gravedigger") type = "shovel";
+    else if (this.behavior === "executioner") type = "axe";
+    else if (this.behavior === "duelist") type = "sword";
+    else if (this.contactReach > 14) type = "club";
+    if (!type) return;
+    const hx = this.x + dir * this.hw * 0.5, hy = this.y - 2;
+    const len = type === "shovel" ? 54 : type === "axe" ? 48 : Math.max(28, this.hw + this.contactReach);
+    const a = this.weaponA, tx = hx + dir * Math.cos(a) * len, ty = hy + Math.sin(a) * len;
+    // swoosh wedge between the previous and current angle while swinging fast
+    if (Math.abs(this.weaponA - this.weaponPrevA) > 0.05) {
+      ctx.fillStyle = CONFIG.colors.bladeTrail; ctx.globalAlpha = 0.28;
+      ctx.beginPath(); ctx.moveTo(hx, hy);
+      for (let s = 0; s <= 1; s += 0.2) { const aa = this.weaponPrevA + (a - this.weaponPrevA) * s; ctx.lineTo(hx + dir * Math.cos(aa) * len, hy + Math.sin(aa) * len); }
+      ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+    }
+    ctx.strokeStyle = "#000"; ctx.lineCap = "round"; ctx.lineWidth = type === "club" ? 6 : 5;
+    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke();
+    ctx.save(); ctx.translate(tx, ty); ctx.rotate(Math.atan2(ty - hy, tx - hx)); ctx.fillStyle = "#000";
+    if (type === "axe") { ctx.beginPath(); ctx.moveTo(-4, -2); ctx.lineTo(11, -13); ctx.lineTo(13, 0); ctx.lineTo(11, 13); ctx.lineTo(-4, 2); ctx.closePath(); ctx.fill(); }
+    else if (type === "shovel") { ctx.fillRect(-2, -11, 15, 22); }
+    else if (type === "club") { ctx.beginPath(); ctx.arc(5, 0, 8, 0, Math.PI * 2); ctx.fill(); }
+    else { ctx.fillRect(0, -2.5, 18, 5); }   // sword: extend the blade
+    ctx.restore();
+  }
+
   draw(ctx) {
     const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2;
     const dir = this.atkDir || Math.sign(this.vx) || 1;
@@ -460,14 +500,8 @@ class Charger extends Enemy {
       ctx.fillRect(this.x + dir * (this.hw + ext) - 4, this.y - 3, 8, 9);
     }
 
-    // Armed affix: a weapon extending reach (Brawler's small punch reach draws fists, not this)
-    if (this.contactReach > 14) {
-      ctx.strokeStyle = "#000"; ctx.lineWidth = 5; ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(this.x + dir * this.hw, this.y);
-      ctx.lineTo(this.x + dir * (this.hw + this.contactReach), this.y);
-      ctx.stroke();
-    }
+    // animated weapon (Armed club, Gravedigger shovel, Executioner axe, Duelist sword)
+    this._drawWeapon(ctx, dir);
     this.drawHpBar(ctx);
   }
 }
@@ -1239,8 +1273,19 @@ class Warden extends Enemy {
     this.onCeiling = false;
     this.ceilDropT = 0;
     this.lungeT = CONFIG.warden.lungeCd;
+    this.batonA = -0.6; this.batonPrevA = -0.6; this.batonStrike = 0;
   }
   get phase() { const f = this.hp / this.maxHp; return f > 0.65 ? 1 : (f > 0.30 ? 2 : 3); }
+
+  // animate the baton: raised on a wind-up, slammed through on the strike
+  _animBaton(dt) {
+    let wt = -0.45, k = 9;
+    if (this.batonStrike > 0) { this.batonStrike -= dt; wt = 0.85; k = 30; }
+    else if (this.state === "windup") { wt = this.pendingAtk === "mortar" ? -1.7 : -1.45; k = 8; }
+    else if (this.state === "lunge") { wt = 0.2; k = 14; }
+    this.batonPrevA = this.batonA;
+    this.batonA = lerp(this.batonA, wt, clamp(k * dt, 0, 1));
+  }
 
   _shock(projectiles, dir, footY) {
     const Wc = CONFIG.warden;
@@ -1274,6 +1319,7 @@ class Warden extends Enemy {
 
   update(dt, platforms, player, projectiles) {
     this.tickTimers(dt);
+    this._animBaton(dt);
     const Wc = CONFIG.warden, ph = this.phase;
     this.facing = Math.sign(player.x - this.x) || this.facing;
     if (ph !== this.phaseMarker) { this._enterPhase(ph, platforms); this.phaseMarker = ph; }
@@ -1317,6 +1363,7 @@ class Warden extends Enemy {
         player.vx = (Math.sign(player.x - this.x) || 1) * Wc.bashKnock; player.vy = -300;
       }
     } else { this._shock(projectiles, this.facing, footY); if (this.phase >= 2) this._shock(projectiles, -this.facing, footY); }
+    this.batonStrike = 0.18;   // snap the baton through on the strike
     if (typeof SFX !== "undefined" && SFX.ctx && SFX.slam) SFX.slam();
   }
 
@@ -1348,9 +1395,24 @@ class Warden extends Enemy {
     ctx.fillStyle = this.flash > 0 ? "#fff" : (dim ? "#7a1020" : this.color);
     ctx.fillRect(x, y, w, h);
     ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.strokeRect(x, y, w, h);
-    // baton
-    ctx.strokeStyle = dim ? "#555" : "#000"; ctx.lineWidth = 8; ctx.lineCap = "round";
-    ctx.beginPath(); ctx.moveTo(this.x + this.facing * this.hw * 0.5, this.y); ctx.lineTo(this.x + this.facing * (this.hw + 36), this.y - 12); ctx.stroke();
+    // animated baton (raised on wind-up, slammed through on strike; ignites crimson in P3)
+    {
+      const hx = this.x + this.facing * this.hw * 0.4, hy = this.y - 6, L = 58;
+      const a = this.batonA, tx = hx + this.facing * Math.cos(a) * L, ty = hy + Math.sin(a) * L;
+      if (!dim && Math.abs(this.batonA - this.batonPrevA) > 0.06) {   // swoosh
+        ctx.fillStyle = this.phase >= 3 ? CONFIG.colors.charger : CONFIG.colors.slam; ctx.globalAlpha = 0.3;
+        ctx.beginPath(); ctx.moveTo(hx, hy);
+        for (let s = 0; s <= 1; s += 0.2) { const aa = this.batonPrevA + (a - this.batonPrevA) * s; ctx.lineTo(hx + this.facing * Math.cos(aa) * L, hy + Math.sin(aa) * L); }
+        ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+      }
+      if (this.phase >= 3 && !dim) {   // crimson ignite glow
+        ctx.strokeStyle = CONFIG.colors.charger; ctx.globalAlpha = 0.4; ctx.lineWidth = 16; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke(); ctx.globalAlpha = 1;
+      }
+      ctx.strokeStyle = dim ? "#555" : "#000"; ctx.lineWidth = 9; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke();
+      ctx.fillStyle = dim ? "#555" : "#000"; ctx.beginPath(); ctx.arc(tx, ty, 6, 0, Math.PI * 2); ctx.fill();   // baton tip
+    }
     // eye + phase pips + badge
     ctx.fillStyle = "#fff";
     ctx.fillRect(this.x + this.facing * 18 - 9, this.y - 20, 18, 13);

@@ -93,6 +93,7 @@ const CONFIG = {
     commitFloor: 0.5,     // a tip-flick with a still hand deals 50%
     styleDamage: 0.06,    // +6% swing damage per trick tier above 1 (NICE..TEARING)
     styleDamageMax: 0.4,  // hard cap on the style->damage bonus
+    aerialRaveCap: 0.5,   // Aerial Rave airborne-damage cap (raised by its tiers)
   },
 
   // ---- resilience: survivability is EARNED through skill, never a heal button ----
