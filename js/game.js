@@ -77,14 +77,20 @@
   });
 
   // ---- world geometry ----
-  const platforms = [
-    { x: 0, y: CONFIG.world.groundY, w: W, h: H - CONFIG.world.groundY, floor: true },  // solid floor (full width)
-    { x: 230, y: 650, w: 280, h: 24, oneway: true },
-    { x: 1090, y: 650, w: 280, h: 24, oneway: true },
-    { x: 640, y: 500, w: 320, h: 24, oneway: true },
-    { x: 150, y: 360, w: 250, h: 24, oneway: true },
-    { x: 1200, y: 360, w: 250, h: 24, oneway: true },
-  ];
+  // platforms are rebuilt per stage (campaign biomes); other modes use stage 0's layout
+  let platforms = stagePlatforms(0);
+  let stageIndex = 0;                 // current biome (campaign)
+  let currentStage = stageAt(0);      // its palette/name
+  let stageBannerT = 0;               // "STAGE N — Name" banner timer
+  let stageName = "";
+
+  // swap the biome: new platform layout + palette, and clear any lingering hazards
+  function loadStage(i) {
+    stageIndex = i;
+    currentStage = stageAt(i);
+    platforms = stagePlatforms(i);
+    slowZones = []; tempWalls = [];
+  }
 
   // ---- state ----
   let state = "menu";
@@ -267,8 +273,7 @@
     enemies = []; projectiles = []; floaters = [];
     hitStop = 0; shake = 0; FX.reset();
     timeScale = 1; slowmo = 0; zoom = 1; flash = 0; bannerT = 0; dashGhostT = 0; throwCd = 0;
-    for (let i = platforms.length - 1; i >= 0; i--) if (platforms[i].wall) platforms.splice(i, 1);   // clear old Geomancer walls
-    slowZones = []; tempWalls = [];
+    loadStage(0); stageBannerT = 0;   // fresh biome 0 (campaign re-stages per wave below)
     run = {
       mode, diff, wave: 0, score: 0, mods: newMods(),
       spawnQueue: [], spawnTimer: 0, waveActive: false, clearTimer: -1,
@@ -307,9 +312,20 @@
   function startNextWave() {
     run.wave++;
     const R = CONFIG.run;
-    const m = CONFIG.modes.find((x) => x.id === run.mode);
-    const total = modeWaves(run.mode);
-    run.isBossWave = (m && m.bossOnly) || (total > 0 && run.wave > total);
+    if (run.mode === "campaign") {
+      // 9 waves of enemies then a boss, per stage; biome swaps on each new stage
+      const ns = Math.floor((run.wave - 1) / 10);
+      if (run.wave === 1 || ns !== stageIndex) {
+        loadStage(ns);
+        stageBannerT = 3.0; stageName = stageAt(ns).name;
+      }
+      run.isBossWave = (run.wave % 10 === 0);
+      run.stage = ns;
+    } else {
+      const m = CONFIG.modes.find((x) => x.id === run.mode);
+      const total = modeWaves(run.mode);
+      run.isBossWave = (m && m.bossOnly) || (total > 0 && run.wave > total);
+    }
     run.spawnQueue = [];
     if (run.isBossWave) {
       run.spawnQueue.push({ type: "boss" });
@@ -371,6 +387,9 @@
       }
       // Chimera inherits the attack repertoire of the enemy types present in its wave
       if (e.kind === "chimera") e.moves = (run.waveKinds && run.waveKinds.length) ? run.waveKinds.slice() : ["charger"];
+    } else if (run.mode === "campaign" && stageIndex > 0) {
+      const s = 1 + stageIndex * 0.6;   // each stage's boss is tougher
+      e.hp *= s; e.maxHp *= s;
     }
     e.hpDisplay = e.hp;
     e.spawnT = 0.35;   // brief materialize so spawns read as spawns (not teleports)
@@ -928,6 +947,7 @@
       zoom = lerp(zoom, 1, clamp(9 * dt, 0, 1));
       if (flash > 0) flash = Math.max(0, flash - dt * 3.2);
       if (bannerT > 0) bannerT -= dt;
+      if (stageBannerT > 0) stageBannerT -= dt;
       if (rankPopT > 0) rankPopT -= dt * 1.2;
 
       // pause on P, Escape, or losing the mouse capture (Esc releases pointer lock)
@@ -954,11 +974,12 @@
     resizeCanvas();
     ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = "#fff";
+    const playLike = state === "playing" || state === "draft" || state === "paused" || state === "gameover" || state === "win" || state === "confirmquit";
+    // biome background (campaign tints the world; menus stay white)
+    ctx.fillStyle = (playLike && run && run.mode === "campaign") ? currentStage.bg : "#fff";
     ctx.fillRect(0, 0, W, H);
     uiButtons = [];
 
-    const playLike = state === "playing" || state === "draft" || state === "paused" || state === "gameover" || state === "win" || state === "confirmquit";
     if (playLike) {
       renderWorld();
       if (flash > 0) {
@@ -971,6 +992,7 @@
       }
       drawHUD();
       if (state === "playing" && bannerT > 0) drawBanner();
+      if (state === "playing" && stageBannerT > 0) drawStageBanner();
       if (state === "playing" && rankPopT > 0) {
         ctx.save(); ctx.globalAlpha = clamp(rankPopT, 0, 1);
         ctx.fillStyle = trickColor(run.mult); ctx.textAlign = "center";
@@ -1021,7 +1043,7 @@
     ctx.translate(cx + ox, cy + oy);
     ctx.scale(zoom, zoom);
     ctx.translate(-cx, -cy);
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = (run && run.mode === "campaign") ? currentStage.plat : "#000";
     for (const p of platforms) ctx.fillRect(p.x, p.y, p.w, p.h);
     // Geomancer walls: a colored cap + crumble fade as they age
     for (const w of tempWalls) {
@@ -1157,6 +1179,19 @@
     ctx.save();
     ctx.globalAlpha = clamp(a, 0, 1);
     UI.title(ctx, run.isBossWave ? "BOSS" : "WAVE " + run.wave, W / 2, 150, 60 + (1 - a) * 10);
+    ctx.restore();
+  }
+
+  // campaign stage-transition banner ("STAGE N — Name")
+  function drawStageBanner() {
+    const a = Math.min(stageBannerT, 1) * Math.min((3.0 - stageBannerT) * 2.5, 1);
+    ctx.save(); ctx.globalAlpha = clamp(a, 0, 1); ctx.textAlign = "center";
+    ctx.fillStyle = currentStage.accent || "#000"; ctx.font = UI.font(18, true);
+    ctx.fillText("STAGE " + (stageIndex + 1), W / 2, H / 2 - 70);
+    ctx.fillStyle = "#000"; ctx.font = UI.font(54, true);
+    ctx.fillText(stageName || currentStage.name, W / 2, H / 2 - 22);
+    ctx.globalAlpha = clamp(a, 0, 1) * 0.7; ctx.font = UI.font(18, false);
+    ctx.fillText(currentStage.blurb || "", W / 2, H / 2 + 12);
     ctx.restore();
   }
 

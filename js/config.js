@@ -272,6 +272,8 @@ const CONFIG = {
 
   // ---- modes (endless live; others reserved for later) ----
   modes: [
+    { id: "campaign", label: "Adventure",          enabled: true,
+      blurb: "Journey through biomes — 9 waves then a boss, stage after stage, ever deeper." },
     { id: "endless", label: "Endless",            enabled: true,
       blurb: "Survive escalating waves. Chase your best." },
     { id: "boss",    label: "Waves + Boss",        enabled: true, waves: 8,
