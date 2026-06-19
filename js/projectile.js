@@ -14,9 +14,15 @@ class Projectile {
     this.life = 6;            // seconds before it expires
     this.dmg = null;          // override damage to the player (null = CONFIG.proj.dmg)
     this.charged = false;     // Marksman's heavy shot: big, slow, very parryable
+    this.gravity = 0;         // arcing projectiles (bombs) fall under gravity
+    this.bomb = false;        // explodes (AoE) on impact instead of a direct hit
+    this.mine = false;        // settles on the floor, arms, then detonates on proximity
+    this.armed = false;
+    this.armT = 0;
   }
 
   update(dt) {
+    if (this.gravity) this.vy += this.gravity * dt;   // bombs arc; mines fall to the floor
     this.x += this.vx * dt;
     this.y += this.vy * dt;
     this.life -= dt;
@@ -55,7 +61,16 @@ class Projectile {
 
   draw(ctx) {
     const C = CONFIG.colors;
-    const col = this.deflected ? (this.perfect ? C.perfect : C.deflected) : C.enemyShot;
+    if (this.mine) {                       // floor mine: disk + arming/armed blink
+      ctx.fillStyle = this.deflected ? C.deflected : C.bomber;
+      ctx.beginPath(); ctx.arc(this.x, this.y, this.r, Math.PI, 0); ctx.fill();
+      ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke();
+      const blink = this.armed ? (Math.floor(performance.now() / 140) % 2 === 0) : false;
+      ctx.fillStyle = this.armed ? (blink ? C.charger : "#000") : "#888";
+      ctx.beginPath(); ctx.arc(this.x, this.y - 1, 2.5, 0, Math.PI * 2); ctx.fill();
+      return;
+    }
+    const col = this.deflected ? (this.perfect ? C.perfect : C.deflected) : (this.bomb ? C.bomber : C.enemyShot);
     ctx.fillStyle = col;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
@@ -64,6 +79,9 @@ class Projectile {
     if (this.charged && !this.deflected) {   // heavy-shot accent: a pulsing inner core
       ctx.fillStyle = "#fff";
       ctx.beginPath(); ctx.arc(this.x, this.y, this.r * 0.4, 0, Math.PI * 2); ctx.fill();
+    }
+    if (this.bomb) {                          // fuse spark on top of the lobbed bomb
+      ctx.fillStyle = "#000"; ctx.fillRect(this.x - 1.5, this.y - this.r - 5, 3, 5);
     }
     if (this.deflected) {
       // ring to show it's now yours (double ring if a perfect parry)

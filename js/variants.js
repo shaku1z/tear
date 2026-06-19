@@ -25,8 +25,13 @@ const VARIANTS = {
     { id: "divebomber", name: "Dive Bomber", weight: 0.8, minWave: 3, apply: (e) => { e.behavior = "divebomb"; } },
     { id: "highdiver",  name: "Swooper",     weight: 0.6, minWave: 5, apply: (e) => { e.behavior = "highdive"; } },
   ],
-  // bomber / armored keep their baseline behavior for now (Round 4b reworks hazards);
-  // an empty/absent list just means "no variant, use the family default".
+  bomber: [
+    { id: "lobber",  name: "Bomber",  weight: 1.0,             apply: (e) => { e.behavior = "lob"; } },
+    { id: "juggler", name: "Juggler", weight: 0.7, minWave: 4, apply: (e) => { e.behavior = "juggle"; } },
+    { id: "trapper", name: "Trapper", weight: 0.6, minWave: 3, apply: (e) => { e.behavior = "trap"; } },
+  ],
+  // armored keeps its baseline (turn-to-face + enrage on shield break); an absent
+  // list just means "no variant, use the family default".
 };
 
 // weighted pick among the eligible variants for a kind at this wave

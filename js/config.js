@@ -160,8 +160,11 @@ const CONFIG = {
 
   // flyer: hovers and swoops, ignores gravity/platforms
   flyer: { w: 36, h: 26, hp: 40, speed: 230, contactDmg: 10, knockbackTaken: 14, weight: 0.75, swoopInterval: 3.3, swoopSpeed: 700, hoverY: 150 },
-  // bomber: rushes and detonates on a fuse or on death
-  bomber: { w: 34, h: 34, hp: 36, speed: 180, contactDmg: 0, knockbackTaken: 11, weight: 1, triggerDist: 150, fuse: 0.85, blastRadius: 165, blastDmg: 26 },
+  // bomber: lobs arcing, deflectable bombs from a distance (parry one back to blow it
+  // up in their face). Trapper variant plants mines; Juggler throws 3 in a burst.
+  bomber: { w: 34, h: 34, hp: 36, speed: 165, contactDmg: 8, knockbackTaken: 11, weight: 1,
+    standoff: 340, lobInterval: 2.4, bombSpeed: 540, bombArc: 540, bombGravity: 1150,
+    blastRadius: 150, blastDmg: 24, mineArm: 1.3, mineTrigger: 66, mineInterval: 2.2 },
   // armored: shielded on the side it faces; takes reduced damage on the ground,
   // normal/extra in the air -> you must launch ("updraft") it to kill efficiently
   armored: { w: 46, h: 46, hp: 140, speed: 95, contactDmg: 14, knockbackTaken: 3, weight: 2.2, breakSpeed: 1500, groundDR: 0.5, airDR: 1.15 },

@@ -629,42 +629,84 @@ class Flyer extends Enemy {
   }
 }
 
-// ---- Bomber: rushes and detonates (on fuse or on death) ----
+// ---- Hazard family: Bomber (arcing deflectable bombs), Juggler (3-bomb burst), Trapper (mines) ----
 class Bomber extends Enemy {
   constructor(x, y) {
     super(x, y, CONFIG.bomber);
     this.color = CONFIG.colors.bomber;
     this.kind = "bomber";
-    this.isBomber = true;
-    this.armed = false;
-    this.fuse = 0;
-    this.blasted = false;
+    this.behavior = "lob";
+    this.lobTimer = CONFIG.bomber.lobInterval * (0.5 + Math.random() * 0.7);
+    this.mineTimer = CONFIG.bomber.mineInterval * (0.6 + Math.random() * 0.6);
+    this.bombsLeft = 0;
+    this.burstT = 0;
   }
-  update(dt, platforms, player) {
+
+  update(dt, platforms, player, projectiles) {
     this.tickTimers(dt);
     const C = this.cfg;
-    if (this.canClimb && !this.armed && this.climbNav(player, platforms, dt)) {
+    if (this.canClimb && this.climbNav(player, platforms, dt)) {   // reposition up to a perched player
       if (this.onGround) this.vx = lerp(this.vx, this.navDir * this.speed, clamp(7 * dt, 0, 1));
       this.integrate(dt, platforms);
       return;
     }
-    const dir = Math.sign(player.x - this.x) || 1;
-    this.vx = lerp(this.vx, dir * this.speed, clamp(7 * dt, 0, 1));
+    if (this.behavior === "trap") this._trap(dt, player, projectiles, C);
+    else this._lob(dt, player, projectiles, C);
     this.integrate(dt, platforms);
-    if (!this.armed && len(player.x - this.x, player.y - this.y) < C.triggerDist) { this.armed = true; this.fuse = C.fuse; }
-    if (this.armed) { this.fuse -= dt; if (this.fuse <= 0) this.dead = true; }  // -> game triggers blast
   }
+
+  // hold a throwing distance from the player
+  _kite(dt, player, standoff) {
+    const dx = player.x - this.x, dist = Math.abs(dx), away = (-Math.sign(dx)) || 1;
+    let move = 0;
+    if (dist < standoff * 0.7) move = away;
+    else if (dist > standoff * 1.25) move = -away;
+    this.vx = lerp(this.vx, move * this.speed, clamp(6 * dt, 0, 1));
+  }
+
+  _lobBomb(player, projectiles, spread) {
+    const C = this.cfg;
+    const dx = player.x - this.x;
+    const vx = clamp(dx * 1.05, -C.bombSpeed, C.bombSpeed) + (spread || 0);
+    const p = new Projectile(this.x, this.y - this.hh, vx, -C.bombArc);
+    p.gravity = C.bombGravity; p.bomb = true; p.r = 12; p.dmg = C.blastDmg;
+    projectiles.push(p);
+  }
+
+  _lob(dt, player, projectiles, C) {
+    this._kite(dt, player, C.standoff);
+    if (this.bombsLeft > 0) {                       // Juggler: rapid 3-bomb burst
+      this.burstT -= dt;
+      if (this.burstT <= 0) { this._lobBomb(player, projectiles, (this.bombsLeft - 2) * 60); this.bombsLeft--; this.burstT = 0.18; }
+      if (this.bombsLeft === 0) this.lobTimer = C.lobInterval;
+      return;
+    }
+    this.lobTimer -= dt;
+    if (this.lobTimer <= 0 && Math.abs(player.x - this.x) < 760) {
+      if (this.behavior === "juggle") { this.bombsLeft = 3; this.burstT = 0; }
+      else { this._lobBomb(player, projectiles, 0); this.lobTimer = C.lobInterval; }
+    }
+  }
+
+  _trap(dt, player, projectiles, C) {
+    this._kite(dt, player, C.standoff * 0.65);
+    this.mineTimer -= dt;
+    if (this.mineTimer <= 0 && this.onGround) {
+      const m = new Projectile(this.x, this.y, 0, 0);
+      m.mine = true; m.gravity = C.bombGravity; m.r = 11; m.armT = C.mineArm;
+      projectiles.push(m);
+      this.mineTimer = C.mineInterval;
+    }
+  }
+
   draw(ctx) {
     ctx.fillStyle = this.flash > 0 ? "#fff" : this.color;
     ctx.beginPath(); ctx.arc(this.x, this.y, this.hw, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = "#000"; ctx.lineWidth = 3; ctx.stroke();
-    // fuse spark on top
-    ctx.fillStyle = "#000"; ctx.fillRect(this.x - 2, this.y - this.hh - 8, 4, 8);
-    if (this.armed) {
-      const k = 1 - clamp(this.fuse / this.cfg.fuse, 0, 1);
-      ctx.strokeStyle = this.color; ctx.lineWidth = 2 + k * 3;
-      ctx.beginPath(); ctx.arc(this.x, this.y, this.hw + 6 + k * 10, 0, Math.PI * 2); ctx.stroke();
-    }
+    ctx.fillStyle = "#000"; ctx.fillRect(this.x - 2, this.y - this.hh - 8, 4, 8);   // launcher spout
+    // variant accent
+    if (this.behavior === "trap") { ctx.fillStyle = "#fff"; ctx.fillRect(this.x - 6, this.y - 1, 12, 3); }
+    else if (this.behavior === "juggle") { ctx.fillStyle = "#fff"; for (let i = 0; i < 3; i++) ctx.fillRect(this.x - 6 + i * 5, this.y - 3, 3, 3); }
     this.drawHpBar(ctx);
   }
 }

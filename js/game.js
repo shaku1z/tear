@@ -125,6 +125,20 @@
     addFloater(player.x, player.y - 30, "BLOCK", true, CONFIG.colors.armoredShield);
     addShake(CONFIG.juice.shakeSmall); hitStop = CONFIG.hitStop.small;
   }
+
+  // a lobbed bomb / mine detonates: parried-back bombs hit enemies; otherwise the player
+  function bombExplode(x, y, deflected) {
+    const B = CONFIG.bomber;
+    FX.ring(x, y, 14, CONFIG.colors.bomber); FX.ring(x, y, 8, CONFIG.colors.bomber);
+    FX.burst(x, y, 0, -1, 12, CONFIG.colors.bomber);
+    addShake(CONFIG.juice.shakeBig); SFX.boom();
+    if (deflected) {
+      dealAoE(x, y, B.blastRadius, B.blastDmg * 1.3);   // parried into a crowd = big payoff
+    } else if (len(player.x - x, player.y - y) <= B.blastRadius + player.hw) {
+      const r = player.takeDamage(B.blastDmg, x);
+      if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb();
+    }
+  }
   // area damage that does NOT re-fire onKill (prevents detonate/slam recursion)
   function dealAoE(cx, cy, radius, dmg) {
     for (const e of enemies) {
@@ -600,10 +614,17 @@
       }
     }
 
-    // held blade vs projectiles (deflect / perfect parry)
+    // held blade vs projectiles (deflect / perfect parry; mines are defused on contact)
     for (const p of projectiles) {
       if (p.dead || p.deflected || blade.state !== "held") continue;
       if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, p.x, p.y, p.r + 4)) {
+        if (p.mine) {
+          p.dead = true;
+          FX.burst(p.x, p.y, 0, -1, 6, CONFIG.colors.deflected);
+          addFloater(p.x, p.y - 16, "defused", false, CONFIG.colors.deflected);
+          SFX.deflect(); addStyle("deflect");
+          continue;
+        }
         if (blade.tipSpeed >= CONFIG.blade.deflectMinSpeed) {
           // full counter: swinging straight back at the incoming shot lowers the
           // perfect-parry threshold (dot of swing dir vs the shot's reverse dir)
@@ -636,9 +657,9 @@
       }
     }
 
-    // projectiles vs actors
+    // projectiles vs actors (bombs/mines handled separately below)
     for (const p of projectiles) {
-      if (p.dead) continue;
+      if (p.dead || p.bomb || p.mine) continue;
       if (p.deflected) {
         for (const e of enemies) {
           if (e.dead) continue;
@@ -655,6 +676,28 @@
       } else if (aabbOverlap(p.x, p.y, p.r, p.r, player.x, player.y, player.hw, player.hh)) {
         { const r = player.takeDamage(p.dmg != null ? p.dmg : CONFIG.proj.dmg, p.x);
           if (r) { p.dead = true; if (r === "hit") { loseStyle(); SFX.hurt(); } else onShieldAbsorb(); } }
+      }
+    }
+
+    // bombs (arc + explode on impact) and mines (settle, arm, detonate on proximity)
+    for (const p of projectiles) {
+      if (p.dead) continue;
+      if (p.bomb) {
+        const hitGround = p.y + p.r >= CONFIG.world.groundY;
+        if (p.deflected) {
+          let hitE = false;
+          for (const e of enemies) { if (!e.dead && e.spawnT <= 0 && len(p.x - e.x, p.y - e.y) <= p.r + e.radius) { hitE = true; break; } }
+          if (hitGround || hitE) { bombExplode(p.x, Math.min(p.y, CONFIG.world.groundY - 2), true); p.dead = true; }
+        } else if (hitGround || aabbOverlap(p.x, p.y, p.r, p.r, player.x, player.y, player.hw, player.hh)) {
+          bombExplode(p.x, Math.min(p.y, CONFIG.world.groundY - 2), false); p.dead = true;
+        }
+      } else if (p.mine) {
+        if (p.y + p.r >= CONFIG.world.groundY) { p.y = CONFIG.world.groundY - p.r; p.vx = 0; p.vy = 0; }   // settle
+        if (!p.armed) { p.armT -= dt; if (p.armT <= 0) p.armed = true; }
+        else if (!p.deflected && len(player.x - p.x, player.y - p.y) < p.r + CONFIG.bomber.mineTrigger) {
+          bombExplode(p.x, p.y, false); p.dead = true;
+        }
+        p.life = 6;   // mines persist until triggered or defused
       }
     }
 
