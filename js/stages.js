@@ -10,6 +10,8 @@
 const STAGES = [
   {
     name: "The Grounds", blurb: "Where order is kept.",
+    boss: "warden",
+    lore: "The Warden's badge lies in pieces. Etched inside, worn almost smooth: \"Appointed by the Council of First Light. Directive: none shall reach the Undercroft.\" Below it, scratched by hand: \"I never asked what was down there.\"",
     bg: "#ffffff", plat: "#111111", accent: "#e23b3b",
     layout: [
       { x: 230, y: 650, w: 280, h: 24, oneway: true },

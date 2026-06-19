@@ -1219,3 +1219,150 @@ class Chimera extends Enemy {
     this.drawHpBar(ctx);
   }
 }
+
+// ====================================================================================
+//  BOSS FRAMEWORK — The Warden (Stage 1). HP-gated phases, an attack scheduler, and
+//  arena-effect hooks (floor shockwaves, mortar fire, prohibited zones, platform vaulting,
+//  a fake-death beat, and a ceiling-cling finale). Later bosses follow the same shape.
+// ====================================================================================
+class Warden extends Enemy {
+  constructor(x, y) {
+    super(x, y, CONFIG.boss);
+    this.color = CONFIG.colors.boss;
+    this.kind = "boss"; this.isBoss = true; this.bossName = "THE WARDEN";
+    this.state = "idle"; this.stateT = 0;
+    this.atkT = 1.8; this.pendingAtk = "baton";
+    this.facing = 1;
+    this.zones = [];              // phase-2 prohibited zones [{x}]
+    this.zoneShiftT = 0;
+    this.phaseMarker = 1;
+    this.onCeiling = false;
+    this.ceilDropT = 0;
+    this.lungeT = CONFIG.warden.lungeCd;
+  }
+  get phase() { const f = this.hp / this.maxHp; return f > 0.65 ? 1 : (f > 0.30 ? 2 : 3); }
+
+  _shock(projectiles, dir, footY) {
+    const Wc = CONFIG.warden;
+    const p = new Projectile(this.x + dir * this.hw, footY - Wc.shockR, dir * Wc.shockSpeed, 0);
+    p.shock = true; p.r = Wc.shockR; p.dmg = Wc.shockDmg; p.life = 2.0;
+    projectiles.push(p);
+  }
+  _mortar(player, projectiles) {
+    const Wc = CONFIG.warden, v = Wc.mortarSpeed, g = Wc.mortarGravity;
+    const t = (2 * v) / g, baseVx = (player.x - this.x) / t;   // ballistic so the middle shot lands on you
+    for (let i = -1; i <= 1; i++) {
+      const p = new Projectile(this.x, this.y - this.hh, baseVx + i * 130, -v);
+      p.gravity = g; p.dmg = Wc.mortarDmg; p.r = 11;
+      projectiles.push(p);
+    }
+  }
+
+  _enterPhase(ph, platforms) {
+    const Wc = CONFIG.warden;
+    if (ph === 2) {
+      this.zones = [];
+      for (let i = 0; i < Wc.zoneCount; i++) this.zones.push({ x: 240 + Math.random() * (CONFIG.view.w - 480) });
+      this.zoneShiftT = Wc.zoneShift;
+    } else if (ph === 3) {
+      this.zones = [];
+      this.state = "fakedeath"; this.stateT = 2.2;   // The Fake: slump, then rise
+      const ow = platforms.filter((p) => p.oneway);   // rip a platform out of the arena
+      if (ow.length) { const idx = platforms.indexOf(ow[Math.floor(Math.random() * ow.length)]); if (idx >= 0) platforms.splice(idx, 1); }
+    }
+  }
+
+  update(dt, platforms, player, projectiles) {
+    this.tickTimers(dt);
+    const Wc = CONFIG.warden, ph = this.phase;
+    this.facing = Math.sign(player.x - this.x) || this.facing;
+    if (ph !== this.phaseMarker) { this._enterPhase(ph, platforms); this.phaseMarker = ph; }
+
+    if (this.zones.length) {   // prohibited zones drift to new spots
+      this.zoneShiftT -= dt;
+      if (this.zoneShiftT <= 0) { for (const z of this.zones) z.x = 240 + Math.random() * (CONFIG.view.w - 480); this.zoneShiftT = Wc.zoneShift; }
+    }
+
+    if (this.state === "fakedeath") {
+      this.vx = lerp(this.vx, 0, clamp(4 * dt, 0, 1)); this.integrate(dt, platforms);
+      this.stateT -= dt;
+      if (this.stateT <= 0) { this.onCeiling = true; this.state = "idle"; this.ceilDropT = Wc.ceilDropCd; this.lungeT = Wc.lungeCd; }
+      return;
+    }
+    if (this.onCeiling) { this._ceiling(dt, player, projectiles, Wc); return; }
+
+    // ---- grounded phases (1 & 2) ----
+    const footY = this.y + this.hh, dist = Math.abs(player.x - this.x);
+    const sp = CONFIG.boss.speed * (1 + (ph - 1) * 0.35);
+    if (this.state === "windup") {
+      this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1)); this.stateT -= dt;
+      if (this.stateT <= 0) { this._fire(player, projectiles, footY, Wc); this.state = "idle"; this.atkT = Wc.batonCd / (1 + (ph - 1) * 0.3); }
+    } else {
+      this.vx = lerp(this.vx, this.facing * sp, clamp(3 * dt, 0, 1));
+      this.atkT -= dt;
+      if (this.atkT <= 0) {
+        this.pendingAtk = dist < Wc.bashRange ? "bash" : (Math.random() < 0.5 ? "baton" : "mortar");
+        this.state = "windup"; this.stateT = Wc.batonWindup;
+      }
+      if (ph === 2 && this.onGround && Math.random() < 0.5 * dt) { this.vy = -1150; this.onGround = false; }   // vault to a platform
+    }
+    this.integrate(dt, platforms);
+  }
+
+  _fire(player, projectiles, footY, Wc) {
+    if (this.pendingAtk === "mortar") this._mortar(player, projectiles);
+    else if (this.pendingAtk === "bash") {
+      this._shock(projectiles, this.facing, footY);
+      if (Math.abs(player.x - this.x) < Wc.bashRange + 40 && !player.invulnerable) {
+        player.vx = (Math.sign(player.x - this.x) || 1) * Wc.bashKnock; player.vy = -300;
+      }
+    } else { this._shock(projectiles, this.facing, footY); if (this.phase >= 2) this._shock(projectiles, -this.facing, footY); }
+    if (typeof SFX !== "undefined" && SFX.ctx && SFX.slam) SFX.slam();
+  }
+
+  _ceiling(dt, player, projectiles, Wc) {
+    this.onGround = false;
+    if (this.state === "lunge") {                 // arena-crossing dive at your level
+      this.x += this.vx * dt;
+      if (this.x <= this.hw + 4 || this.x >= CONFIG.view.w - this.hw - 4) { this.state = "idle"; this.lungeT = Wc.lungeCd; }
+      return;
+    }
+    this.lungeT -= dt;
+    if (this.lungeT <= 0) { this.state = "lunge"; this.y = player.y; this.vx = (player.x > this.x ? 1 : -1) * Wc.lungeSpeed; return; }
+    // glide along the ceiling toward the player
+    this.y = lerp(this.y, Wc.ceilingY, clamp(2.5 * dt, 0, 1));
+    this.vx = lerp(this.vx, (player.x - this.x) * 1.1, clamp(1.5 * dt, 0, 1));
+    this.x = clamp(this.x + this.vx * dt, this.hw, CONFIG.view.w - this.hw);
+    this.ceilDropT -= dt;
+    if (this.ceilDropT <= 0) {                    // drop shock pulses to the floor below
+      const gy = CONFIG.world.groundY;
+      for (const d of [-1, 1]) { const p = new Projectile(this.x, gy - Wc.shockR, d * Wc.shockSpeed * 0.8, 0); p.shock = true; p.r = Wc.shockR; p.dmg = Wc.shockDmg; p.life = 1.6; projectiles.push(p); }
+      FX.ring(this.x, gy, 12, CONFIG.colors.slam);
+      this.ceilDropT = Wc.ceilDropCd;
+    }
+  }
+
+  draw(ctx) {
+    const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2;
+    const dim = this.state === "fakedeath";
+    ctx.fillStyle = this.flash > 0 ? "#fff" : (dim ? "#7a1020" : this.color);
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.strokeRect(x, y, w, h);
+    // baton
+    ctx.strokeStyle = dim ? "#555" : "#000"; ctx.lineWidth = 8; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(this.x + this.facing * this.hw * 0.5, this.y); ctx.lineTo(this.x + this.facing * (this.hw + 36), this.y - 12); ctx.stroke();
+    // eye + phase pips + badge
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(this.x + this.facing * 18 - 9, this.y - 20, 18, 13);
+    for (let i = 0; i < this.phase; i++) ctx.fillRect(x + 14 + i * 18, y + h - 20, 12, 9);
+    // wind-up telegraph
+    if (this.state === "windup") {
+      const gy = this.y + this.hh;
+      ctx.strokeStyle = CONFIG.colors.slam; ctx.globalAlpha = 0.65; ctx.lineWidth = 4; ctx.setLineDash([8, 6]);
+      if (this.pendingAtk === "mortar") { ctx.beginPath(); ctx.arc(this.x, this.y - this.hh - 12, 16, 0, Math.PI * 2); ctx.stroke(); }
+      else { ctx.beginPath(); ctx.moveTo(this.x, gy - 2); ctx.lineTo(this.x + this.facing * 210, gy - 2); ctx.stroke(); }
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+    this.drawHpBar && this.drawHpBar(ctx);   // (boss HP also shown in the HUD)
+  }
+}

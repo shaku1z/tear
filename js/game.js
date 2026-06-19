@@ -83,6 +83,7 @@
   let currentStage = stageAt(0);      // its palette/name
   let stageBannerT = 0;               // "STAGE N — Name" banner timer
   let stageName = "";
+  let loreT = 0, loreText = "";       // lore card shown after a boss falls
 
   // swap the biome: new platform layout + palette, and clear any lingering hazards
   function loadStage(i) {
@@ -273,7 +274,7 @@
     enemies = []; projectiles = []; floaters = [];
     hitStop = 0; shake = 0; FX.reset();
     timeScale = 1; slowmo = 0; zoom = 1; flash = 0; bannerT = 0; dashGhostT = 0; throwCd = 0;
-    loadStage(0); stageBannerT = 0;   // fresh biome 0 (campaign re-stages per wave below)
+    loadStage(0); stageBannerT = 0; loreT = 0;   // fresh biome 0 (campaign re-stages per wave below)
     run = {
       mode, diff, wave: 0, score: 0, mods: newMods(),
       spawnQueue: [], spawnTimer: 0, waveActive: false, clearTimer: -1,
@@ -368,7 +369,10 @@
       case "flyer":   e = new Flyer(spawnSide(), 200); break;
       case "bomber":  e = new Bomber(0, 0); break;
       case "armored": e = new Armored(0, 0); break;
-      case "boss":    e = new Boss(W / 2, CONFIG.world.groundY - 140); break;
+      case "boss":    e = (run.mode === "campaign" && stageIndex > 0)
+        ? new Boss(W / 2, CONFIG.world.groundY - 140)            // later stages: placeholder until built
+        : new Warden(W / 2, CONFIG.world.groundY - 140);          // Stage 1 + boss-test modes: The Warden
+        break;
       case "priest": case "herald": case "mender": case "anchor": e = new Support(0, 0, spec.type); break;
       case "wraith":  e = new Wraith(spawnSide(), 220); break;
       case "chimera": e = new Chimera(0, 0); break;
@@ -629,6 +633,20 @@
       e.update(dt, platforms, player, projectiles);
     }
     updateSupports(dt);   // apply War Priest / Herald / Mender / Anchor effects to allies
+
+    // Warden prohibited zones: sustained floor damage you must keep moving to avoid
+    const bossZ = enemies.find((e) => e.isBoss && e.zones && e.zones.length);
+    if (bossZ) {
+      const Wc = CONFIG.warden, half = Wc.zoneW / 2;
+      const onFloor = player.y + player.hh >= CONFIG.world.groundY - 8;
+      player.hazardT -= dt;
+      let inZone = false;
+      for (const z of bossZ.zones) if (onFloor && Math.abs(player.x - z.x) < half) inZone = true;
+      if (inZone && player.hazardT <= 0 && !player.invulnerable) {
+        player.hp = Math.max(0, player.hp - Wc.zoneTick * CONFIG.player.dmgTakenMult * player.flowDR);
+        player.hazardT = Wc.zoneTickCd; SFX.hurt(); loseStyle();
+      }
+    }
     // a spiked enemy slamming into the ground -> impact burst
     for (const e of enemies) {
       if (e.spiked && e.onGround) {
@@ -931,12 +949,14 @@
     FX.death(e.x, e.y, CONFIG.juice.deathShards, e.color);
     SFX.death();
     fire(run.mods.onKill, makeEv(e.x, e.y, e, cause));
+    if (e.isBoss && run.mode === "campaign" && currentStage && currentStage.lore) { loreT = 7; loreText = currentStage.lore; }
   }
 
   // ---- main loop ----
   function frame(now) {
     let dt = (now - last) / 1000; last = now;
     if (dt > 0.1) dt = 0.1;
+    if (loreT > 0) loreT -= dt;
 
     Input.allowLock = (state === "playing");
 
@@ -991,6 +1011,7 @@
         ctx.restore();
       }
       drawHUD();
+      if (loreT > 0) drawLore();
       if (state === "playing" && bannerT > 0) drawBanner();
       if (state === "playing" && stageBannerT > 0) drawStageBanner();
       if (state === "playing" && rankPopT > 0) {
@@ -1055,6 +1076,17 @@
     for (const z of slowZones) {
       ctx.fillStyle = CONFIG.colors.sludge; ctx.globalAlpha = 0.25 + 0.4 * clamp(z.life / 2, 0, 1);
       ctx.beginPath(); ctx.ellipse(z.x, z.y - 2, z.r, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    }
+    // Warden prohibited zones: pulsing red floor bands
+    const bossZd = enemies.find((e) => e.isBoss && e.zones && e.zones.length);
+    if (bossZd) {
+      const Wc = CONFIG.warden, gy = CONFIG.world.groundY, pulse = 0.2 + 0.12 * Math.sin(performance.now() / 160);
+      for (const z of bossZd.zones) {
+        ctx.fillStyle = CONFIG.colors.charger; ctx.globalAlpha = pulse;
+        ctx.fillRect(z.x - Wc.zoneW / 2, gy, Wc.zoneW, H - gy);
+        ctx.globalAlpha = pulse + 0.25; ctx.fillRect(z.x - Wc.zoneW / 2, gy, Wc.zoneW, 4);
+        ctx.globalAlpha = 1;
+      }
     }
     for (const e of enemies) {
       if (e.spawnT > 0) {   // materializing: telegraph ring + fade in
@@ -1179,6 +1211,18 @@
     ctx.save();
     ctx.globalAlpha = clamp(a, 0, 1);
     UI.title(ctx, run.isBossWave ? "BOSS" : "WAVE " + run.wave, W / 2, 150, 60 + (1 - a) * 10);
+    ctx.restore();
+  }
+
+  // a boss-defeat lore caption at the top (non-blocking, fades over ~7s)
+  function drawLore() {
+    const a = Math.min(loreT, 1) * Math.min((7 - loreT) * 2, 1);
+    ctx.save(); ctx.globalAlpha = clamp(a, 0, 1);
+    ctx.fillStyle = "#fff"; ctx.fillRect(W / 2 - 390, 28, 780, 104);
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(W / 2 - 390, 28, 780, 104);
+    ctx.fillStyle = currentStage.accent || "#000"; ctx.font = UI.font(13, true); ctx.textAlign = "center";
+    ctx.fillText((currentStage.name || "STAGE").toUpperCase() + " — CLEARED", W / 2, 50);
+    wrapText(loreText, W / 2 - 360, 72, 720, 18, 13);
     ctx.restore();
   }
 

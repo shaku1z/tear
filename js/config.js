@@ -171,6 +171,14 @@ const CONFIG = {
     stompCd: 3.2, stompWindup: 0.55, stompRange: 400, shockSpeed: 560, shockDmg: 16, shockR: 15 },
   // boss: large, multi-phase (very heavy -> barely flinchable)
   boss: { w: 118, h: 118, hp: 1900, speed: 70, contactDmg: 20, knockbackTaken: 0.6, weight: 6, fireBase: 2.0 },
+  // The Warden (Stage 1 boss): a methodical guard who weaponizes the arena across 3 phases
+  warden: {
+    batonCd: 2.1, batonWindup: 0.5, mortarShots: 3, mortarSpeed: 760, mortarGravity: 900, mortarDmg: 14,
+    bashRange: 150, bashKnock: 620,
+    zoneCount: 3, zoneW: 200, zoneShift: 7, zoneTick: 7, zoneTickCd: 0.4,   // phase-2 prohibited zones
+    shockDmg: 18, shockSpeed: 700, shockR: 18,
+    ceilingY: 150, ceilDropCd: 1.6, lungeCd: 7.5, lungeSpeed: 1500,         // phase-3 ceiling + lunge
+  },
 
   // support: no real attack — they make every OTHER enemy worse, so they're priority kills
   support: { w: 32, h: 42, hp: 44, speed: 125, contactDmg: 6, knockbackTaken: 13, weight: 1,
