@@ -113,6 +113,7 @@
   let listScroll = 0;                   // scroll offset for scrollable screens
   let codexFilter = "all";              // ABILITIES tab: category filter
   let codexSort = "category";           // ...and sort mode (category | name | type)
+  let codexTierView = {};               // id -> which tier (0=base) is being previewed on its card
 
   // ---- helpers ----
   function addShake(m) { const v = m * shakeScale; if (v > shake) shake = v; }
@@ -1369,20 +1370,29 @@
     let ns = 21; ctx.font = UI.font(ns, true);
     while (ctx.measureText(up.name).width > w - 24 && ns > 13) { ns--; ctx.font = UI.font(ns, true); }
     ctx.fillText(up.name, x + 12, y + 54);
-    // tier track: filled pips = how many tiers this ability has (evolves on boss kills)
-    const tierMax = 1 + (up.tiers ? up.tiers.length : 0);
-    for (let i = 0; i < 3; i++) {
-      ctx.beginPath(); ctx.arc(x + 17 + i * 15, y + 72, 4, 0, Math.PI * 2);
-      if (i < tierMax) { ctx.fillStyle = cat.color; ctx.fill(); }
-      else { ctx.strokeStyle = "#cfcfcf"; ctx.lineWidth = 1.5; ctx.stroke(); }
+    // tier track: one pip per tier this ability has; the pip you're viewing is filled.
+    // (clicking the card steps through the tiers — see renderCodex)
+    const tierCount = 1 + (up.tiers ? up.tiers.length : 0);
+    let view = codexTierView[up.id] || 0; if (view >= tierCount) view = 0;
+    for (let i = 0; i < tierCount; i++) {
+      ctx.beginPath(); ctx.arc(x + 17 + i * 16, y + 73, 5, 0, Math.PI * 2);
+      if (i === view) { ctx.fillStyle = cat.color; ctx.fill(); ctx.strokeStyle = "#000"; ctx.lineWidth = 1.2; ctx.stroke(); }
+      else { ctx.strokeStyle = cat.color; ctx.lineWidth = 2; ctx.stroke(); }
     }
-    // description (wrapped)
-    wrapText(up.desc, x + 12, y + 98, w - 24, 17, 12);
+    if (tierCount > 1) {
+      ctx.fillStyle = cat.color; ctx.font = UI.font(11, true); ctx.textAlign = "left";
+      ctx.fillText(view === 0 ? "BASE" : "TIER " + (view + 1), x + 17 + tierCount * 16 + 2, y + 77);
+    }
+    // description for the tier currently being viewed
+    const desc = view === 0 ? up.desc : up.tiers[view - 1].desc;
+    wrapText(desc, x + 12, y + 99, w - 24, 17, 12);
+    // hint that the card cycles
+    if (tierCount > 1) { ctx.fillStyle = "#9a9a9a"; ctx.font = UI.font(10, true); ctx.textAlign = "center"; ctx.fillText("click to step through tiers", x + w / 2, y + h - 8); }
   }
 
   function renderCodex() {
     UI.title(ctx, "ABILITIES", W / 2, 52, 34);
-    UI.text(ctx, "★ unique = one-time  ·  others stack  ·  filled pips = how many tiers it evolves through",
+    UI.text(ctx, "★ unique = one-time  ·  others stack  ·  click a card to step through its tiers (boss-kill evolutions)",
       W / 2, 80, 13, "center", 0.55);
 
     // ---- filter chips (All + each category) + a sort toggle ----
@@ -1415,8 +1425,13 @@
       for (let c = 0; c < cols; c++) {
         const idx = (off + r) * cols + c;
         if (idx >= list.length) continue;
+        const up = list[idx];
         const x = mx + c * (cardW + gap), y = top + r * stride;
-        drawAbilityCard(x, y, cardW, ch, list[idx]);
+        drawAbilityCard(x, y, cardW, ch, up);
+        // clickable: step through this ability's tiers (only if it actually evolves)
+        const tc = 1 + (up.tiers ? up.tiers.length : 0);
+        uiButtons.push({ x, y, w: cardW, h: ch, label: "", _hideBox: true,
+          action: () => { if (tc > 1) codexTierView[up.id] = ((codexTierView[up.id] || 0) + 1) % tc; } });
       }
     }
     if (maxOff > 0) UI.text(ctx, (off > 0 ? "▲ " : "") + "scroll" + (off < maxOff ? " ▼" : ""), W / 2, H - 86, 13, "center", 0.5);
