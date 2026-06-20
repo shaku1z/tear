@@ -111,6 +111,8 @@
   let uiButtons = [];
   let focus = -1, lastUiState = null;   // keyboard focus for menus/draft
   let listScroll = 0;                   // scroll offset for scrollable screens
+  let codexFilter = "all";              // ABILITIES tab: category filter
+  let codexSort = "category";           // ...and sort mode (category | name | type)
 
   // ---- helpers ----
   function addShake(m) { const v = m * shakeScale; if (v > shake) shake = v; }
@@ -135,6 +137,7 @@
     FX.ring(player.x, player.y, 14, CONFIG.colors.armoredShield);
     addFloater(player.x, player.y - 30, "BLOCK", true, CONFIG.colors.armoredShield);
     addShake(CONFIG.juice.shakeSmall); hitStop = CONFIG.hitStop.small;
+    if (run.mods.shieldBurst) { dealAoE(player.x, player.y, 145, 28); FX.ring(player.x, player.y, 18, CONFIG.colors.armoredShield); }   // Aegis T3
   }
 
   // a lobbed bomb / mine detonates: parried-back bombs hit enemies; otherwise the player
@@ -574,13 +577,19 @@
     // Flow Guard: damage reduction while the trick rank is high (refreshed each step)
     player.flowDR = (run.mods.flowGuard && run.mult >= CONFIG.resilience.flowGuardTier)
       ? CONFIG.resilience.flowGuardMult : 1;
+    if (run.mods.flowRegen && run.mult >= 3) player.heal(7 * dt);   // Flow Guard T3: regen while BRUTAL+
     if (run.lifestealCd > 0) run.lifestealCd -= dt;
     if (throwCd > 0) throwCd -= dt;
     updateZonesWalls(dt);   // mud puddles + Geomancer walls; sets player.slowMult
     // faster while unarmed (blade thrown)
     player.moveBoost = (blade.state !== "held") ? CONFIG.player.thrownMoveBoost : 1;
     player.update(dt, platforms);
+    const wasReturning = blade.state === "returning";
     blade.update(dt, player, platforms);
+    if (wasReturning && blade.state === "held" && run.mods.stormBurst) {   // Storm Recall T3: shockwave on catch
+      dealAoE(player.x, player.y, 155, 30); FX.ring(player.x, player.y, 15, CONFIG.colors.perfect);
+      addShake(CONFIG.juice.shakeBig); SFX.slam();
+    }
     if (blade.embeddedNew) { blade.embeddedNew = false; if (blade.throwType === "lob") lobExplode(blade.x, blade.y); }
 
     // audio cadence: dash start + swing whoosh
@@ -604,7 +613,8 @@
             e.hit(run.mods.phantomDash, player.dashX || 1, player.dashY);
             FX.burst(e.x, e.y, player.dashX, player.dashY, 5);
             addFloater(e.x, e.y - 24, Math.round(run.mods.phantomDash).toString(), false);
-            addStyle("hit"); if (e.dead) onKill(e);
+            addStyle("hit");
+            if (e.dead) { onKill(e); if (run.mods.phantomRefund) { player.dashCharges = player.maxDashCharges; player.dashCd = 0; } }   // Phantom Dash T3
           }
         }
       }
@@ -727,6 +737,7 @@
           if (run.mods.berserk && player.hp < player.maxHp * 0.5) dmg *= 1.25;
           if (!player.onGround && run.mods.airBonus) dmg *= 1 + run.mods.airBonus;  // Air Superiority
           if (!player.onGround && run.mods.aerialRave) dmg *= 1 + Math.min(player.airTime * run.mods.aerialRave, CONFIG.skill.aerialRaveCap);  // Aerial Rave
+          if (run.mods.slipstream && player.dashEndT > 0) dmg *= 1.35;   // Slipstream: hit harder just after a dash
           dmg *= e.damageTakenMult();   // armored: reduced grounded, more airborne
           const big = isSlam || empowered || spike || dmg >= CONFIG.hitStop.threshold;
           e.hit(dmg, blade.tipVX, blade.tipVY);
@@ -808,6 +819,13 @@
             const cap = CONFIG.blade.throw.maxSpeed * 1.2;
             blade.vx = clamp(blade.vx * s, -cap, cap); blade.vy = clamp(blade.vy * s, -cap, cap);
           }
+          if (run.mods.razorStun && !e.isBoss) e.stun = Math.max(e.stun, 0.45);   // Razor Momentum T3
+          // Vortex Recall: the returning blade drags pierced enemies toward you
+          if (run.mods.vortexRecall && blade.state === "returning" && !e.anchored) {
+            const dx = player.x - e.x, dy = player.y - e.y, m = len(dx, dy) || 1;
+            e.vx += (dx / m) * 720 / e.weight; e.vy += (dy / m) * 420 / e.weight - 120;
+            FX.burst(e.x, e.y, dx, dy, 4, CONFIG.colors.perfect);
+          }
           FX.burst(e.x, e.y, blade.vx, blade.vy, CONFIG.juice.sparkCount, e.color);
           addFloater(e.x, e.y - 26, Math.round(tdmg).toString(), true);
           hitStop = CONFIG.hitStop.small; addShake(CONFIG.juice.shakeSmall);
@@ -816,6 +834,17 @@
           if (e.dead) onKill(e);
           // hammer lob: stop on the first enemy and detonate
           if (blade.throwType === "lob") { lobExplode(e.x, e.y); blade.forceEmbed(); break; }
+          // Ricochet: the outgoing blade curves to a fresh target after each pierce
+          if (run.mods.ricochet && blade.state === "flying") {
+            let best = null, bd = Infinity;
+            for (const e2 of enemies) { if (e2.dead || blade.pierced.has(e2)) continue; const d = len(e2.x - blade.x, e2.y - blade.y); if (d < bd) { bd = d; best = e2; } }
+            if (best && bd < 700) {
+              const sp = len(blade.vx, blade.vy) || CONFIG.blade.throw.speed;
+              const dx = best.x - blade.x, dy = best.y - blade.y, m = len(dx, dy) || 1;
+              blade.vx = (dx / m) * sp; blade.vy = (dy / m) * sp; blade.angle = Math.atan2(dy, dx);
+              FX.burst(blade.x, blade.y, dx, dy, 3, CONFIG.colors.bladeTrail);
+            }
+          }
         }
       }
     }
@@ -875,7 +904,10 @@
             FX.burst(p.x, p.y, p.vx, p.vy, CONFIG.juice.sparkCount, CONFIG.colors.deflected);
             addFloater(e.x, e.y - 26, Math.round(p.deflectDmg).toString(), p.perfect);
             addShake(p.perfect ? CONFIG.juice.shakeBig : CONFIG.juice.shakeSmall);
-            if (e.dead) onKill(e, p.perfect ? "skill" : "");   // perfect-parry kills are skill kills
+            if (e.dead) {
+              onKill(e, p.perfect ? "skill" : "");   // perfect-parry kills are skill kills
+              if (p.perfect && run.mods.aegisParry) player.shield = Math.min(player.shield + 1, player.maxShield);   // Aegis T2
+            }
             if (p.pierce) p.pierced.add(e); else { p.dead = true; break; }
           }
         }
@@ -1349,16 +1381,33 @@
   }
 
   function renderCodex() {
-    UI.title(ctx, "ABILITIES", W / 2, 64, 36);
-    UI.text(ctx, "★ unique = one-time  ·  others stack  ·  3-pip track = future tiers  ·  scroll for more",
-      W / 2, 96, 14, "center", 0.55);
-    const list = UPGRADES.slice().sort((a, b) => {
+    UI.title(ctx, "ABILITIES", W / 2, 52, 34);
+    UI.text(ctx, "★ unique = one-time  ·  others stack  ·  filled pips = how many tiers it evolves through",
+      W / 2, 80, 13, "center", 0.55);
+
+    // ---- filter chips (All + each category) + a sort toggle ----
+    const chips = [["all", "ALL"]].concat(ABIL_CAT_ORDER.map((c) => [c, (ABIL_CATS[c].name)]));
+    const cw0 = 96, cg = 6, totalC = chips.length * cw0 + (chips.length - 1) * cg;
+    let cx0 = (W - totalC) / 2 - 70;
+    chips.forEach(([id, label]) => {
+      uiButtons.push({ x: cx0, y: 96, w: cw0, h: 28, label, size: 12, sel: codexFilter === id,
+        action: () => { codexFilter = id; listScroll = 0; } });
+      cx0 += cw0 + cg;
+    });
+    uiButtons.push({ x: cx0 + 8, y: 96, w: 150, h: 28, size: 12,
+      label: "SORT: " + codexSort.toUpperCase(),
+      action: () => { codexSort = codexSort === "category" ? "name" : (codexSort === "name" ? "type" : "category"); listScroll = 0; } });
+
+    let list = UPGRADES.filter((u) => codexFilter === "all" || (u.cat || "utility") === codexFilter);
+    list.sort((a, b) => {
+      if (codexSort === "name") return a.name.localeCompare(b.name);
+      if (codexSort === "type") return (a.unique ? 0 : 1) - (b.unique ? 0 : 1) || a.name.localeCompare(b.name);
       const ca = ABIL_CAT_ORDER.indexOf(a.cat || "utility"), cb = ABIL_CAT_ORDER.indexOf(b.cat || "utility");
       if (ca !== cb) return ca - cb;
       return (a.unique ? 1 : 0) - (b.unique ? 1 : 0);
     });
     const cols = 4, mx = 70, gap = 22, cardW = (W - mx * 2 - gap * (cols - 1)) / cols;
-    const ch = 150, gy = 20, stride = ch + gy, top = 122, visRows = 4;
+    const ch = 150, gy = 20, stride = ch + gy, top = 142, visRows = 4;
     const rows = Math.ceil(list.length / cols);
     const maxOff = Math.max(0, rows - visRows);
     const off = clamp(Math.round(listScroll / stride), 0, maxOff);

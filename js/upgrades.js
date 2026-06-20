@@ -28,10 +28,21 @@ function newMods() {
     phaseStep: false,     // Phase Step: dashing through a shot deflects it
     crater: false,        // Crater: empowered Power Slams erupt in a scaling shockwave
     aerialRave: 0,        // Aerial Rave: swing damage grows the longer you stay airborne
+    // ---- reworked throw / dash kit ----
+    ricochet: false,      // Ricochet: thrown blade redirects to a new target after each pierce
+    vortexRecall: false,  // Vortex Recall: the returning blade drags pierced enemies toward you
+    slipstream: false,    // Slipstream: +damage briefly after a dash ends
     // ---- ability tiers (evolved on boss kills) ----
     tier: {},             // id -> current tier (1 when acquired, up to 3)
     stormMult: 1.85,      // Storm Recall multiplier (raised by its tiers)
     killHeal: 0,          // Bloodrite T3: heal on any kill
+    bloodGuard: false,    // Bloodrite T2: skill kills also grant a brief DR window
+    flowRegen: false,     // Flow Guard T3: regenerate HP while the trick rank is high
+    aegisParry: false,    // Aegis T2: perfect-parry kills also grant a shield
+    shieldBurst: false,   // Aegis T3: an absorbed hit erupts in a shockwave
+    razorStun: false,     // Razor Momentum T3: each pierce briefly stuns
+    stormBurst: false,    // Storm Recall T3: catching the returning blade releases a shockwave
+    phantomRefund: false, // Phantom Dash T3: a phantom-dash kill refreshes your dash
   };
 }
 
@@ -43,22 +54,23 @@ const UPGRADES = [
     apply: () => { CONFIG.blade.damageScale *= 1.12; CONFIG.blade.maxDamage = Math.round(CONFIG.blade.maxDamage * 1.06); } },
   { id: "fleet", name: "Fleet Foot", unique: false, cat: "mobility", desc: "+8% move speed, higher jump.",
     apply: () => { CONFIG.player.moveSpeed *= 1.08; CONFIG.player.jumpSpeed *= 1.03; } },
-  { id: "quick_recovery", name: "Quick Recovery", unique: false, cat: "mobility", desc: "-18% dash cooldown.",
-    apply: () => { CONFIG.dash.cooldown *= 0.82; } },
+  { id: "quick_recovery", name: "Quick Recovery", unique: false, cat: "mobility", desc: "-25% dash cooldown.",
+    apply: () => { CONFIG.dash.cooldown *= 0.75; } },
   { id: "long_reach", name: "Long Reach", unique: false, cat: "utility", desc: "+ blade reach and length.",
     apply: () => { CONFIG.blade.aimRadius += 18; CONFIG.blade.length += 8; CONFIG.blade.maxReach += 18; } },
   { id: "heavy_swing", name: "Heavy Swing", unique: false, cat: "offense", desc: "+25% knockback, stronger launches.",
     apply: () => { CONFIG.enemy.knockbackTaken *= 1.25; CONFIG.ranged.knockbackTaken *= 1.25; CONFIG.blade.launchPower *= 1.10; } },
-  { id: "deadly_throw", name: "Deadly Throw", unique: false, cat: "throw", desc: "+10% thrown-blade damage.",
-    apply: () => { CONFIG.blade.throw.damage *= 1.10; CONFIG.blade.throw.damageFromSpeed *= 1.08; } },
+  { id: "deadly_throw", name: "Deadly Throw", unique: false, cat: "throw", desc: "+20% thrown-blade damage, and it flies faster.",
+    apply: () => { CONFIG.blade.throw.damage *= 1.20; CONFIG.blade.throw.damageFromSpeed *= 1.15; CONFIG.blade.throw.speed *= 1.08; } },
   { id: "vampiric", name: "Vampiric Edge", unique: false, cat: "resilience", desc: "Swings trickle back a sliver of HP (once per swing).",
     apply: ({ mods }) => { mods.lifesteal += CONFIG.resilience.lifestealPerSwing; } },
   { id: "air_superiority", name: "Air Superiority", unique: false, cat: "offense", desc: "+15% damage while airborne.",
     apply: ({ mods }) => { mods.airBonus += 0.15; } },
   { id: "tough_hide", name: "Tough Hide", unique: false, cat: "resilience", desc: "Take 12% less damage.",
     apply: () => { CONFIG.player.dmgTakenMult *= 0.88; } },
-  { id: "burst_dash", name: "Burst Dash", unique: false, cat: "mobility", desc: "Dash is faster and travels farther.",
-    apply: () => { CONFIG.dash.speed *= 1.1; CONFIG.dash.duration *= 1.04; } },
+  { id: "air_dash", name: "Air Dash", unique: true, cat: "mobility",
+    desc: "Gain a second dash you can use in mid-air. Charges refill when you land.",
+    apply: ({ player }) => { player.maxDashCharges = Math.max(player.maxDashCharges, 2); player.dashCharges = player.maxDashCharges; } },
   { id: "bounty", name: "Bounty Hunter", unique: false, cat: "utility", desc: "+20% score from kills.",
     apply: () => { CONFIG.run.scoreMult *= 1.2; } },
   { id: "glass_cannon", name: "Glass Cannon", unique: false, cat: "offense", desc: "+30% ALL damage (swing + throw), but you take +25% more.",
@@ -72,31 +84,31 @@ const UPGRADES = [
   // ---- resilience: the healing rework's "earned survivability" set ----
   { id: "bloodrite", name: "Bloodrite", unique: true, rare: true, cat: "resilience",
     desc: "Skill kills (slam, spike, or perfect-parry) restore HP.",
-    apply: ({ mods }) => { mods.bloodrite = true; mods.onKill.push((ev) => { if (ev.cause === "skill") ev.player.heal(CONFIG.resilience.bloodriteHeal); }); },
+    apply: ({ mods }) => { mods.bloodrite = true; mods.onKill.push((ev) => { if (ev.cause === "skill") { ev.player.heal(CONFIG.resilience.bloodriteHeal); if (mods.bloodGuard) ev.player.guardT = 1.0; } else if (mods.killHeal) ev.player.heal(mods.killHeal); }); },
     tiers: [
-      { desc: "Skill kills restore much more HP.", apply: () => { CONFIG.resilience.bloodriteHeal = 14; } },
-      { desc: "Even more — and EVERY kill trickles HP back.", apply: ({ mods }) => { CONFIG.resilience.bloodriteHeal = 20; mods.killHeal = 3; mods.onKill.push((ev) => { if (ev.cause !== "skill") ev.player.heal(mods.killHeal); }); } },
+      { desc: "Heal much more per skill kill, AND a skill kill grants 1s of damage reduction.", apply: ({ mods }) => { CONFIG.resilience.bloodriteHeal = 16; mods.bloodGuard = true; } },
+      { desc: "Heal even more — and EVERY kill now trickles HP back.", apply: ({ mods }) => { CONFIG.resilience.bloodriteHeal = 22; mods.killHeal = 4; } },
     ] },
   { id: "riposte", name: "Riposte", unique: true, cat: "parry",
     desc: "After a perfect parry, take 60% less damage for 1.2s.",
     apply: ({ mods }) => { mods.parryGuard = true; },
     tiers: [
-      { desc: "The guard lasts longer and cuts 75% of damage.", apply: () => { CONFIG.resilience.parryGuardTime = 1.8; CONFIG.resilience.parryGuardMult = 0.25; } },
-      { desc: "A perfect parry makes you briefly INVINCIBLE.", apply: () => { CONFIG.resilience.parryGuardTime = 2.2; CONFIG.resilience.parryGuardMult = 0.0; } },
+      { desc: "The guard lasts longer, cuts 75% of damage, and a perfect parry heals you.", apply: ({ mods }) => { CONFIG.resilience.parryGuardTime = 1.8; CONFIG.resilience.parryGuardMult = 0.25; mods.onParry.push((ev) => ev.player.heal(6)); } },
+      { desc: "A perfect parry makes you briefly INVINCIBLE.", apply: () => { CONFIG.resilience.parryGuardTime = 2.3; CONFIG.resilience.parryGuardMult = 0.0; } },
     ] },
   { id: "flow_guard", name: "Flow Guard", unique: true, cat: "resilience",
     desc: "Take 30% less damage while your trick rank is BRUTAL or higher.",
     apply: ({ mods }) => { mods.flowGuard = true; },
     tiers: [
-      { desc: "45% less damage while BRUTAL+.", apply: () => { CONFIG.resilience.flowGuardMult = 0.55; } },
-      { desc: "Protection starts at STYLISH, and is stronger.", apply: () => { CONFIG.resilience.flowGuardMult = 0.5; CONFIG.resilience.flowGuardTier = 2; } },
+      { desc: "Cut 50% of damage while BRUTAL+.", apply: () => { CONFIG.resilience.flowGuardMult = 0.5; } },
+      { desc: "Protection starts at STYLISH — and you REGENERATE HP while BRUTAL+.", apply: ({ mods }) => { CONFIG.resilience.flowGuardMult = 0.5; CONFIG.resilience.flowGuardTier = 2; mods.flowRegen = true; } },
     ] },
   { id: "aegis", name: "Aegis", unique: true, cat: "resilience",
     desc: "Slam kills grant a one-hit shield that fully blocks the next hit (max 2).",
     apply: ({ player, mods }) => { mods.slamShield = true; player.maxShield = CONFIG.resilience.maxShield; },
     tiers: [
-      { desc: "Hold up to 3 shields.", apply: ({ player }) => { CONFIG.resilience.maxShield = 3; player.maxShield = 3; } },
-      { desc: "Hold up to 4 shields.", apply: ({ player }) => { CONFIG.resilience.maxShield = 4; player.maxShield = 4; } },
+      { desc: "Hold up to 3 shields, and perfect-parry kills grant them too.", apply: ({ player, mods }) => { CONFIG.resilience.maxShield = 3; player.maxShield = 3; mods.aegisParry = true; } },
+      { desc: "Hold up to 4 — and a shield erupts in a shockwave when it breaks.", apply: ({ player, mods }) => { CONFIG.resilience.maxShield = 4; player.maxShield = 4; mods.shieldBurst = true; } },
     ] },
 
   // ---- skill-expression abilities ----
@@ -110,8 +122,8 @@ const UPGRADES = [
     desc: "The longer you stay airborne, the harder your swings hit (up to +50%).",
     apply: ({ mods }) => { mods.aerialRave = 0.25; },
     tiers: [
-      { desc: "Ramps faster, up to +70%.", apply: ({ mods }) => { mods.aerialRave = 0.4; CONFIG.skill.aerialRaveCap = 0.7; } },
-      { desc: "Even faster, up to +100% airborne.", apply: ({ mods }) => { mods.aerialRave = 0.55; CONFIG.skill.aerialRaveCap = 1.0; } },
+      { desc: "Ramps faster, up to +80% airborne.", apply: ({ mods }) => { mods.aerialRave = 0.42; CONFIG.skill.aerialRaveCap = 0.8; } },
+      { desc: "A storm in the air — ramps to +130%.", apply: ({ mods }) => { mods.aerialRave = 0.6; CONFIG.skill.aerialRaveCap = 1.3; } },
     ] },
 
   { id: "seismic_slam", name: "Seismic Slam", unique: true, cat: "offense", desc: "Slams blast nearby enemies for 22.",
@@ -126,8 +138,8 @@ const UPGRADES = [
     desc: "A thrown blade grows faster & stronger with every enemy it pierces.",
     apply: ({ mods }) => { mods.throwRamp = 0.1; },
     tiers: [
-      { desc: "Ramps harder with every pierce.", apply: ({ mods }) => { mods.throwRamp = 0.16; } },
-      { desc: "A relentless snowball.", apply: ({ mods }) => { mods.throwRamp = 0.22; } },
+      { desc: "Ramps harder with every pierce.", apply: ({ mods }) => { mods.throwRamp = 0.18; } },
+      { desc: "A relentless snowball — and each pierce briefly STUNS its target.", apply: ({ mods }) => { mods.throwRamp = 0.26; mods.razorStun = true; } },
     ] },
   { id: "throw_giant", name: "Greatblade", unique: true, cat: "throw",
     desc: "The blade becomes huge while thrown (normal size in hand).",
@@ -146,19 +158,28 @@ const UPGRADES = [
     desc: "The returning blade tears through enemies for +85% damage.",
     apply: ({ mods }) => { mods.stormRecall = true; },
     tiers: [
-      { desc: "The returning blade hits for +130%.", apply: ({ mods }) => { mods.stormMult = 2.3; } },
-      { desc: "A devastating +180% on the way home.", apply: ({ mods }) => { mods.stormMult = 2.8; } },
+      { desc: "The returning blade hits for +140%.", apply: ({ mods }) => { mods.stormMult = 2.4; } },
+      { desc: "+200% on the way home — and catching it releases a shockwave.", apply: ({ mods }) => { mods.stormMult = 3.0; mods.stormBurst = true; } },
     ] },
   { id: "phantom_dash", name: "Phantom Dash", unique: true, cat: "mobility",
     desc: "Dashing slices enemies you pass through (great while unarmed).",
     apply: ({ mods }) => { mods.phantomDash = 26; },
     tiers: [
-      { desc: "The phase-slice cuts much deeper.", apply: ({ mods }) => { mods.phantomDash = 42; } },
-      { desc: "A devastating phase-slice.", apply: ({ mods }) => { mods.phantomDash = 60; } },
+      { desc: "The phase-slice cuts much deeper.", apply: ({ mods }) => { mods.phantomDash = 44; } },
+      { desc: "A killing phase-slice instantly refreshes your dash — chain through a crowd.", apply: ({ mods }) => { mods.phantomDash = 64; mods.phantomRefund = true; } },
     ] },
   { id: "boomerang", name: "Boomerang", unique: true, cat: "throw",
     desc: "Recall the thrown blade from any distance.",
     apply: ({ blade }) => { blade.freeRecall = true; } },
+  { id: "ricochet", name: "Ricochet", unique: true, cat: "throw",
+    desc: "A thrown blade curves to a new target after each enemy it pierces — chain a whole crowd.",
+    apply: ({ mods }) => { mods.ricochet = true; } },
+  { id: "vortex_recall", name: "Vortex Recall", unique: true, cat: "throw",
+    desc: "The returning blade drags every enemy it passes toward you — cluster them, then punish.",
+    apply: ({ mods }) => { mods.vortexRecall = true; } },
+  { id: "slipstream", name: "Slipstream", unique: true, cat: "mobility",
+    desc: "For a moment after a dash, your hits land for +35% — dash in, strike hard.",
+    apply: ({ mods }) => { mods.slipstream = true; } },
   { id: "berserk", name: "Berserker", unique: true, cat: "offense",
     desc: "+25% damage while below half HP.",
     apply: ({ mods }) => { mods.berserk = true; } },

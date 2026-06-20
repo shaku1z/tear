@@ -19,6 +19,10 @@ class Player {
     this.dashCd = 0;            // >0 while on cooldown
     this.dashIframe = 0;
     this.dashX = 0; this.dashY = 0;
+    this.maxDashCharges = 1;    // Air Dash raises this; charges refill on landing
+    this.dashCharges = 1;
+    this.dashEndT = 0;          // Slipstream: brief window after a dash ends
+    this._wasGround = false;
 
     this.moveBoost = 1;         // set by the game (e.g. faster while blade is thrown)
     this.downBufferT = 0;       // brief buffer of "down held" so dash-down is forgiving
@@ -47,6 +51,7 @@ class Player {
     if (this.jumpBuf > 0) this.jumpBuf -= dt;
     if (this.guardT > 0) this.guardT -= dt;
     if (this.rootT > 0) this.rootT -= dt;
+    if (this.dashEndT > 0) this.dashEndT -= dt;
     const rooted = this.rootT > 0;
 
     const dirX = ((Input.right() ? 1 : 0) - (Input.left() ? 1 : 0)) * (rooted ? 0 : 1);
@@ -54,8 +59,8 @@ class Player {
     this.downBufferT = Input.down() ? 0.16 : Math.max(0, this.downBufferT - dt);
     const downHeld = Input.down() || this.downBufferT > 0;
 
-    // ---- dash trigger (snared = no dash) ----
-    if (!rooted && Input.dashPressed() && this.dashCd <= 0 && this.dashTimer <= 0) {
+    // ---- dash trigger (snared = no dash; uses a charge, refilled on landing) ----
+    if (!rooted && Input.dashPressed() && this.dashCd <= 0 && this.dashTimer <= 0 && this.dashCharges > 0) {
       let ax = (Input.right() ? 1 : 0) - (Input.left() ? 1 : 0);
       let ay = (downHeld ? 1 : 0) - (Input.up() ? 1 : 0);
       // a down-dash takes priority over horizontal drift: "S + dash" goes (almost) straight
@@ -65,8 +70,9 @@ class Player {
       const m = len(ax, ay) || 1;
       this.dashX = ax / m; this.dashY = ay / m;
       this.dashTimer = D.duration;
-      this.dashCd = D.cooldown;
       this.dashIframe = D.iframe;
+      this.dashCharges--;
+      this.dashCd = this.dashCharges > 0 ? 0.16 : D.cooldown;   // quick chain between charges; full cd when spent
     }
 
     if (this.dashTimer > 0) {
@@ -83,6 +89,7 @@ class Player {
       if (this.dashTimer <= 0) {
         this.vx *= D.endSpeedKeep;
         if (this.dashY <= 0) this.vy *= D.endSpeedKeep;   // preserve downward momentum into the slam
+        this.dashEndT = 0.6;                              // Slipstream window opens as the dash ends
       }
     } else {
       // ---- normal movement (mud slows your top speed + acceleration) ----
@@ -122,6 +129,8 @@ class Player {
     if (this.onGround) this.coyote = P.coyoteTime;
     else if (wasOnGround) this.coyote = P.coyoteTime;
     this.airTime = this.onGround ? 0 : this.airTime + dt;
+    if (this.onGround && !this._wasGround) this.dashCharges = this.maxDashCharges;   // refill dashes on landing
+    this._wasGround = this.onGround;
 
     // keep inside the arena horizontally
     this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
