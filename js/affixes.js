@@ -49,7 +49,8 @@ function finalizeAffixes(e) {
 
 // frequent & chaotic: up to 3, chance per slot scales with wave
 function rollAffixes(e, wave) {
-  const base = clamp(0.12 + wave * 0.06, 0, 0.85);
+  // wave 1 is deliberately clean (a fair baseline); affixes ramp in from wave 2 on
+  const base = clamp((wave - 1) * 0.06, 0, 0.85);
   const chances = [base, base * 0.55, base * 0.3];
   for (let s = 0; s < 3; s++) {
     if (Math.random() >= chances[s]) continue;

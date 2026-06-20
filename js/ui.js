@@ -1,10 +1,12 @@
 // ------- minimal black-on-white canvas UI primitives -------
 const UI = {
+  ink: "#000",   // foreground colour; the game flips this to light on dark biomes
+
   font(size, bold) { return (bold ? "bold " : "") + size + "px 'Courier New', monospace"; },
 
   text(ctx, str, x, y, size, align, alpha) {
     ctx.globalAlpha = alpha == null ? 1 : alpha;
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = this.ink;
     ctx.font = this.font(size, false);
     ctx.textAlign = align || "left";
     ctx.textBaseline = "alphabetic";
@@ -13,7 +15,7 @@ const UI = {
   },
 
   title(ctx, str, x, y, size) {
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = this.ink;
     ctx.font = this.font(size, true);
     ctx.textAlign = "center";
     ctx.fillText(str, x, y);

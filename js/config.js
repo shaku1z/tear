@@ -275,6 +275,13 @@ const CONFIG = {
     healEachWave: 12,     // HP restored on wave clear (Normal only) — modest; sustain is earned
     startDelay: 0.8,      // beat before the first spawn of a wave
     waveClearPause: 0.8,  // delay after the last enemy dies before the draft appears
+    // ---- campaign curve: gentle within a stage, a clear step UP between stages ----
+    // (endless keeps the flat per-wave ramp above; campaign uses these instead)
+    stageHpStep: 0.30,    // +30% enemy HP per stage entered
+    inStageHp: 0.05,      // +5% enemy HP per wave WITHIN a stage
+    stageDmgStep: 0.12,   // +12% enemy contact damage per stage
+    inStageDmg: 0.02,     // +2% damage per wave within a stage
+    stageCountStep: 1,    // +1 enemy per wave per stage (waves stay small within a stage)
   },
 
   // ---- "Attack Trick" style meter ----
@@ -317,3 +324,7 @@ const CONFIG = {
       blurb: "Sandbox: every enemy variant spawns from wave 1 — try the full roster." },
   ],
 };
+
+// live theme: foreground "ink" colour, flipped on dark biomes so the HUD, player,
+// and text stay readable. The game updates this each frame from the current stage.
+const THEME = { ink: "#000", dark: false };

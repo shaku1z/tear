@@ -201,7 +201,7 @@ class Player {
     ctx.translate(this.x, this.y + this.hh);
     ctx.scale(sx, sy);
     ctx.translate(-this.x, -(this.y + this.hh));
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = (typeof THEME !== "undefined") ? THEME.ink : "#000";
     ctx.fillRect(this.x - this.hw, this.y - this.hh, this.hw * 2, this.hh * 2);
     // colored visor (facing cue)
     ctx.fillStyle = CONFIG.colors.eye;

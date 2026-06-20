@@ -84,6 +84,8 @@
   let stageBannerT = 0;               // "STAGE N — Name" banner timer
   let stageName = "";
   let loreT = 0, loreText = "";       // lore card shown after a boss falls
+  // shown when the whole Adventure is completed (final biome's boss falls)
+  const CAMPAIGN_ENDING = "The Tear closes behind you like a held breath let go. Every guardian, every echo of the ones who came before — all of it was the long way of asking whether you'd still be going somewhere when you arrived. You are. Whatever waits on the other side, you walked the whole length of someone else's ending to reach your own beginning. Go finish it.";
 
   // swap the biome: new platform layout + palette, and clear any lingering hazards
   function loadStage(i) {
@@ -334,6 +336,19 @@
 
   // weighted enemy pick; new types unlock as waves progress
   function pickEnemyType(wave) {
+    // campaign: each biome fields its own curated roster, staggered by the wave WITHIN the stage
+    if (run && run.mode === "campaign") {
+      const st = stageAt(stageIndex);
+      if (st.pool && st.pool.length) {
+        const lw = ((run.wave - 1) % 10) + 1;
+        const elig = st.pool.filter((p) => lw >= (p[2] || 1));
+        const list = elig.length ? elig : st.pool;
+        let total = 0; for (const p of list) total += p[1];
+        let r = Math.random() * total;
+        for (const p of list) { if ((r -= p[1]) <= 0) return p[0]; }
+        return list[0][0];
+      }
+    }
     const w = (run && run.mode === "sandbox") ? 99 : wave;
     const pool = [["charger", 1]];
     if (w >= 2) pool.push(["ranged", 0.6]);
@@ -377,15 +392,26 @@
     if (run.isBossWave) {
       run.spawnQueue.push({ type: "boss" });
     } else {
-      const count = R.firstWaveCount + Math.floor((run.wave - 1) * R.countPerWave);
-      const hpScale = 1 + (run.wave - 1) * R.hpScalePerWave;
+      let count, hpScale, dmgScale = 1;
+      if (run.mode === "campaign") {
+        // gentle within a stage, a clear step up between stages (see CONFIG.run notes)
+        const stage = Math.floor((run.wave - 1) / 10);
+        const lw = ((run.wave - 1) % 10) + 1;
+        count = R.firstWaveCount + Math.floor((lw - 1) * R.countPerWave) + stage * R.stageCountStep;
+        hpScale = (1 + stage * R.stageHpStep) * (1 + (lw - 1) * R.inStageHp);
+        dmgScale = (1 + stage * R.stageDmgStep) * (1 + (lw - 1) * R.inStageDmg);
+      } else {
+        count = R.firstWaveCount + Math.floor((run.wave - 1) * R.countPerWave);
+        hpScale = 1 + (run.wave - 1) * R.hpScalePerWave;
+      }
+      // in campaign, only inject authored sub-types whose base type belongs to this biome
+      const stTypes = (run.mode === "campaign" && stageAt(stageIndex).pool) ? stageAt(stageIndex).pool.map((p) => p[0]) : null;
       for (let i = 0; i < count; i++) {
         if (run.wave >= 4 && Math.random() < 0.15) {       // occasional authored sub-type
-          const p = PRESETS[Math.floor(Math.random() * PRESETS.length)];
-          run.spawnQueue.push({ type: p.type, hpScale, preset: p });
-        } else {
-          run.spawnQueue.push({ type: pickEnemyType(run.wave), hpScale });   // affixes rolled at spawn
+          const cand = stTypes ? PRESETS.filter((p) => stTypes.includes(p.type)) : PRESETS;
+          if (cand.length) { const p = cand[Math.floor(Math.random() * cand.length)]; run.spawnQueue.push({ type: p.type, hpScale, dmgScale, preset: p }); continue; }
         }
+        run.spawnQueue.push({ type: pickEnemyType(run.wave), hpScale, dmgScale });   // affixes rolled at spawn
       }
     }
     // attack kinds present this wave — a Chimera adopts these
@@ -434,6 +460,7 @@
     }
     if (spec.type !== "boss") {
       if (spec.hpScale) { e.hp *= spec.hpScale; e.maxHp *= spec.hpScale; }
+      if (spec.dmgScale && spec.dmgScale !== 1) { e.contactDmg *= spec.dmgScale; e.dmgScale = spec.dmgScale; }
       // presets are their own identity; otherwise pick a family variant + roll affixes
       if (spec.preset) applyPreset(e, spec.preset);
       else { applyVariant(e, spec.variant || rollVariant(e.kind, contentWave())); rollAffixes(e, run.wave); }
@@ -488,6 +515,7 @@
       run.waveActive = false;
       run.waveLog.push({ wave: run.isBossWave ? "BOSS" : run.wave, time: run.waveTime, kills: run.waveKills, peak: run.wavePeak });
       if (run.isBossWave) {
+        if (run.mode === "campaign" && stageIndex >= STAGES.length - 1) { winRun(true); return; }   // final biome cleared -> the ending
         if (run.mode === "campaign" || run.mode === "bossonly") {
           if (!player.oneHit) player.heal(R.healEachWave * 2);   // a boss kill is a milestone, not the end
           if (run.mode === "bossonly") run.bossesBeaten = (run.bossesBeaten || 0) + 1;
@@ -530,10 +558,10 @@
     SFX.gameover();
   }
 
-  function winRun() {
+  function winRun(campaign) {
     const isNew = saveBest(run.mode, run.diff, run.wave, run.score, run.runTime);
     const earned = awardCoins(run.score);
-    overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, win: true, earned, coins: META.coins() };
+    overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, win: true, campaign: !!campaign, earned, coins: META.coins() };
     state = "win";
     document.exitPointerLock();
     SFX.wave();
@@ -1129,6 +1157,11 @@
     ctx.fillRect(0, 0, W, H);
     uiButtons = [];
 
+    // theme: on a dark biome, flip the HUD / player / in-world text to light ink
+    THEME.dark = !!(playLike && run && run.mode === "campaign" && currentStage && currentStage.dark);
+    THEME.ink = THEME.dark ? "#ece9f7" : "#000";
+    UI.ink = THEME.ink;
+
     if (playLike) {
       renderWorld();
       if (flash > 0) {
@@ -1152,6 +1185,8 @@
       }
     }
     if (state === "playing") drawReticle();
+
+    UI.ink = "#000";   // overlays (menus / win / pause) dim to white — always ink them black
 
     if (state === "menu") renderMenu();
     else if (state === "shop") renderShop();
@@ -1252,6 +1287,12 @@
         e.draw(ctx, player);
       }
     }
+    // dark biome: a faint light rim keeps dark-bodied enemies (and the player) readable
+    if (THEME.dark) {
+      ctx.strokeStyle = "rgba(236,233,247,0.45)"; ctx.lineWidth = 1.5;
+      for (const e of enemies) { if (e.spawnT > 0) continue; ctx.strokeRect(e.x - e.hw, e.y - e.hh, e.hw * 2, e.hh * 2); }
+      ctx.strokeRect(player.x - player.hw, player.y - player.hh, player.hw * 2, player.hh * 2);
+    }
     // support effect indicators: outline + badge stack over every buffed enemy, so it's
     // always obvious which enemies are protected/empowered/hasted/healed/shielded
     for (const e of enemies) {
@@ -1295,10 +1336,11 @@
   }
 
   function drawHUD() {
+    const ink = THEME.ink;
     const x = 20, y = 20, bw = 280;
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(x, y, bw, 18);
-    ctx.fillStyle = "#000"; ctx.fillRect(x, y, bw * clamp(player.hp / player.maxHp, 0, 1), 18);
-    if (player.oneHit) { ctx.fillStyle = "#000"; UI.text(ctx, "ONE-HIT", x + bw + 10, y + 15, 13); }
+    ctx.strokeStyle = ink; ctx.lineWidth = 2; ctx.strokeRect(x, y, bw, 18);
+    ctx.fillStyle = ink; ctx.fillRect(x, y, bw * clamp(player.hp / player.maxHp, 0, 1), 18);
+    if (player.oneHit) { ctx.fillStyle = ink; UI.text(ctx, "ONE-HIT", x + bw + 10, y + 15, 13); }
 
     // dash pips
     const ready = 1 - clamp(player.dashCd / CONFIG.dash.cooldown, 0, 1);
@@ -1312,7 +1354,7 @@
       ctx.strokeRect(sx, y + 26, 12, 8);
       if (i < player.shield) { ctx.fillStyle = CONFIG.colors.armoredShield; ctx.fillRect(sx, y + 26, 12, 8); }
     }
-    ctx.strokeStyle = "#000"; ctx.fillStyle = "#000";
+    ctx.strokeStyle = ink; ctx.fillStyle = ink;
 
     // owned abilities/upgrades list (left column)
     let oy = y + 52;
@@ -1336,7 +1378,7 @@
       ctx.fillStyle = tc; ctx.font = UI.font(22, true); ctx.textAlign = "center";
       ctx.fillText("x" + run.mult + (run.rank ? "  " + run.rank : ""), W / 2, 96);
       const bw2 = 220, bx = W / 2 - bw2 / 2, by = 104;
-      ctx.lineWidth = 1.5; ctx.strokeStyle = "#000"; ctx.strokeRect(bx, by, bw2, 6);
+      ctx.lineWidth = 1.5; ctx.strokeStyle = ink; ctx.strokeRect(bx, by, bw2, 6);
       ctx.fillStyle = tc; ctx.fillRect(bx, by, bw2 * clamp(run.comboTimer / CONFIG.trick.decay, 0, 1), 6);
     }
     ctx.textAlign = "left";
@@ -1345,8 +1387,8 @@
     const boss = enemies.find((e) => e.isBoss);
     if (boss) {
       const bbw = 560, bx = (W - bbw) / 2, by = 122;
-      ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(bx, by, bbw, 14);
-      ctx.fillStyle = "#000"; ctx.fillRect(bx, by, bbw * clamp(boss.hp / boss.maxHp, 0, 1), 14);
+      ctx.strokeStyle = ink; ctx.lineWidth = 2; ctx.strokeRect(bx, by, bbw, 14);
+      ctx.fillStyle = ink; ctx.fillRect(bx, by, bbw * clamp(boss.hp / boss.maxHp, 0, 1), 14);
       UI.text(ctx, "BOSS", bx, by - 4, 12, "left", 0.7);
     }
   }
@@ -1379,7 +1421,7 @@
     ctx.save(); ctx.globalAlpha = clamp(a, 0, 1); ctx.textAlign = "center";
     ctx.fillStyle = currentStage.accent || "#000"; ctx.font = UI.font(18, true);
     ctx.fillText(gauntlet ? "BOSS GAUNTLET" : "STAGE " + (stageIndex + 1), W / 2, H / 2 - 70);
-    ctx.fillStyle = "#000"; ctx.font = UI.font(54, true);
+    ctx.fillStyle = THEME.ink; ctx.font = UI.font(54, true);
     ctx.fillText(stageName || currentStage.name, W / 2, H / 2 - 22);
     ctx.globalAlpha = clamp(a, 0, 1) * 0.7; ctx.font = UI.font(18, false);
     ctx.fillText(gauntlet ? "" : (currentStage.blurb || ""), W / 2, H / 2 + 12);
@@ -1800,6 +1842,17 @@
 
   function renderWin() {
     UI.dim(ctx, W, H, 0.92);
+    if (overInfo.campaign) {   // finished the whole Adventure — a proper ending beat
+      UI.title(ctx, "THE TEAR CLOSES", W / 2, 96, 46);
+      wrapText(CAMPAIGN_ENDING, W / 2 - 380, 140, 760, 20, 15, "center");
+      UI.text(ctx, overInfo.score + " pts   ·   " + fmtTime(overInfo.time) + (overInfo.isNew ? "   ·   NEW BEST!" : ""), W / 2, 392, 17, "center", 0.85);
+      UI.text(ctx, "+" + overInfo.earned + " coins  (" + overInfo.coins + " total)", W / 2, 416, 15, "center", 0.65);
+      vmenu([
+        { label: "PLAY AGAIN", action: () => startRun(run.mode, run.diff) },
+        { label: "MAIN MENU", action: () => { state = "menu"; } },
+      ], W / 2, 470, 260, 50, 16);
+      return;
+    }
     UI.title(ctx, "VICTORY", W / 2, 110, 54);
     UI.text(ctx, "boss down!   ·   " + overInfo.score + " pts   ·   " + fmtTime(overInfo.time), W / 2, 152, 20, "center");
     if (overInfo.isNew) UI.title(ctx, "NEW BEST!", W / 2, 184, 22);

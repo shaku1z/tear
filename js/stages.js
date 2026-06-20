@@ -13,6 +13,8 @@ const STAGES = [
     boss: "warden",
     lore: "The Warden's badge lies in pieces. Etched inside, worn almost smooth: \"Appointed by the Council of First Light. Directive: none shall reach the Undercroft.\" Below it, scratched by hand: \"I never asked what was down there.\"",
     bg: "#ffffff", plat: "#111111", accent: "#e23b3b",
+    // disciplined guards: melee front line, a few archers; heavy units only later
+    pool: [["charger", 1.0, 1], ["ranged", 0.5, 2], ["bomber", 0.3, 4], ["armored", 0.3, 5]],
     layout: [
       { x: 230, y: 650, w: 280, h: 24, oneway: true },
       { x: 1090, y: 650, w: 280, h: 24, oneway: true },
@@ -26,6 +28,8 @@ const STAGES = [
     boss: "colossus",
     lore: "In the deepest wall of the Undercroft, beneath the mechanism that is now still, words are carved into the original stone — older than the machine: \"Built to contain the Tide of Crimson. Should the Colossus fall, know this — we tried to stop it before it reached the Fields. We failed then too.\"",
     bg: "#dbe0e6", plat: "#2a2f37", accent: "#15c2c2",
+    // industrial: heavy plating + ordnance, with anchors that pin you down
+    pool: [["armored", 0.8, 1], ["bomber", 0.7, 1], ["charger", 0.6, 1], ["ranged", 0.5, 2], ["anchor", 0.25, 4]],
     layout: [
       { x: 120, y: 600, w: 250, h: 24, oneway: true },
       { x: 1230, y: 600, w: 250, h: 24, oneway: true },
@@ -40,6 +44,8 @@ const STAGES = [
     boss: "aldric",
     lore: "Among Aldric's belongings, tucked inside the wrapping of his broken cleaver's handle: a small painted portrait, almost worn through. Two children, laughing. On the back, in handwriting read so many times the ink is barely there: \"Elan and Mira — before the first Tear opened.\" And, in another hand: \"Aldric. Come home.\" He never did.",
     bg: "#f7e3e3", plat: "#5a1320", accent: "#e23b3b",
+    // old rage: relentless melee + flyers, heralds whipping them into a frenzy
+    pool: [["charger", 1.0, 1], ["flyer", 0.6, 1], ["bomber", 0.3, 2], ["herald", 0.3, 3], ["chimera", 0.35, 5]],
     layout: [
       { x: 180, y: 560, w: 300, h: 24, oneway: true },
       { x: 1120, y: 560, w: 300, h: 24, oneway: true },
@@ -53,6 +59,8 @@ const STAGES = [
     boss: "echo",
     lore: "The Voidspire is quiet for the first time. On the wall behind where The Echo stood, scratched deep over what must have been years: your name. Over and over — hundreds of times. Below them all, fresher, still sharp: \"I remember what it was like to be going somewhere.\" And at the very bottom: \"Go finish it. One of us should.\"",
     bg: "#e7e3f3", plat: "#382c54", accent: "#8b3bd6",
+    // where the rules thin: wraiths, shifting casters, and support that warps the fight
+    pool: [["wraith", 0.7, 1], ["flyer", 0.5, 1], ["ranged", 0.4, 1], ["priest", 0.3, 2], ["chimera", 0.5, 3], ["mender", 0.25, 4]],
     layout: [
       { x: 280, y: 630, w: 220, h: 24, oneway: true },
       { x: 1100, y: 630, w: 220, h: 24, oneway: true },
@@ -64,7 +72,10 @@ const STAGES = [
   },
   {
     name: "The Tear", blurb: "Everything, all at once.",
-    bg: "#fbfbff", plat: "#000000", accent: "#13c4d6",
+    dark: true,   // the void at the end of everything — HUD + player flip to light here
+    bg: "#0e0b1a", plat: "#c9c4e0", accent: "#13c4d6",
+    // everything you have faced, together
+    pool: [["charger", 1.0, 1], ["ranged", 0.6, 1], ["flyer", 0.5, 1], ["bomber", 0.4, 1], ["armored", 0.4, 1], ["wraith", 0.4, 1], ["chimera", 0.4, 1], ["herald", 0.2, 1], ["anchor", 0.2, 1], ["priest", 0.2, 1], ["mender", 0.18, 1]],
     layout: [
       { x: 230, y: 650, w: 280, h: 24, oneway: true },
       { x: 1090, y: 650, w: 280, h: 24, oneway: true },
