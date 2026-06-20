@@ -113,7 +113,16 @@
     { id: "warden", name: "The Warden" },
     { id: "colossus", name: "Iron Colossus" },
     { id: "aldric", name: "Berserker King" },
+    { id: "echo", name: "The Echo" },
   ];
+  // blend two #rrggbb colors (t: 0=a, 1=b) — used for the Echo's white-out
+  function blendCol(a, b, t) {
+    const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+    const r = Math.round(((pa >> 16) & 255) + (((pb >> 16) & 255) - ((pa >> 16) & 255)) * t);
+    const g = Math.round(((pa >> 8) & 255) + (((pb >> 8) & 255) - ((pa >> 8) & 255)) * t);
+    const bl = Math.round((pa & 255) + ((pb & 255) - (pa & 255)) * t);
+    return "#" + ((1 << 24) + (r << 16) + (g << 8) + bl).toString(16).slice(1);
+  }
   function shuffledRoster() {
     const a = BOSS_ROSTER.map((b) => b.id);
     for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
@@ -188,6 +197,7 @@
     let pts = T.pts[kind] || 2;
     if (kind !== run.lastTrick) pts *= T.variety;   // reward varied tricks
     run.lastTrick = kind;
+    if (player) { player.lastTrickKind = kind; player.lastTrickT = run.runTime; }   // The Echo mirrors your last trick
     run.combo += pts;
     run.comboTimer = T.decay;
     const prevRank = run.rank;
@@ -393,6 +403,7 @@
   function makeBoss() {
     const id = (run.mode === "campaign") ? stageAt(stageIndex).boss
       : (run.mode === "bossonly") ? run.curBoss : "warden";
+    if (id === "echo") return new Echo(W / 2, CONFIG.world.groundY - CONFIG.echo.h / 2);
     if (id === "aldric") return new Aldric(W / 2, CONFIG.world.groundY - CONFIG.aldric.h / 2);
     if (id === "colossus") return new Colossus(W / 2, CONFIG.world.groundY - CONFIG.colossus.h / 2);
     if (id === "warden") return new Warden(W / 2, CONFIG.world.groundY - 140);
@@ -720,6 +731,14 @@
       if (aboss.mode === "downed" && run.bossAdds && run.bossAdds.length && run.bossAdds.every((a) => a.dead)) {
         aboss.revive(); addFloater(aboss.x, aboss.y - 90, "FRENZY!", true, CONFIG.colors.charger); addShake(CONFIG.juice.shakeBig);
       }
+      // The Echo: split into a mirroring clone, then it vanishes when the Echo turns invisible
+      if (aboss.spawnClone) {
+        aboss.spawnClone = false; run.echoClones = [];
+        const cl = new Echo(clamp(aboss.x - aboss.facing * 160, 60, W - 60), aboss.y, true);
+        cl.spawnT = 0.3; enemies.push(cl); run.echoClones.push(cl);
+        addFloater(aboss.x, aboss.y - 70, "SPLIT", true, CONFIG.colors.perfect);
+      }
+      if (aboss.mode === "invert" && run.echoClones) { for (const c of run.echoClones) if (!c.dead) { c.dead = true; FX.ghost(c.x, c.y, c.hw, c.hh); } run.echoClones = null; }
     }
     // a spiked enemy slamming into the ground -> impact burst
     for (const e of enemies) {
@@ -1095,7 +1114,9 @@
     ctx.clearRect(0, 0, W, H);
     const playLike = state === "playing" || state === "draft" || state === "tierup" || state === "paused" || state === "gameover" || state === "win" || state === "confirmquit";
     // biome background (campaign tints the world; menus stay white)
-    ctx.fillStyle = (playLike && run && run.mode === "campaign") ? currentStage.bg : "#fff";
+    let bgCol = (playLike && run && run.mode === "campaign") ? currentStage.bg : "#fff";
+    if (playLike && Array.isArray(enemies)) { const ef = enemies.find((e) => e.whiteFlash > 0); if (ef) bgCol = blendCol(bgCol, "#ffffff", ef.whiteFlash); }   // The Echo's white-out
+    ctx.fillStyle = bgCol;
     ctx.fillRect(0, 0, W, H);
     uiButtons = [];
 

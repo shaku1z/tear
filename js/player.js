@@ -36,6 +36,8 @@ class Player {
     this.rootT = 0;             // Chain Caster: snared in place (no move/jump/dash) for a bit
     this.slowMult = 1;          // Sludge: slowed while standing in a mud puddle (set by the game)
     this.hazardT = 0;           // cooldown for sustained hazard-zone damage (Warden zones)
+    this.lastTrickKind = "";    // last trick performed (The Echo mirrors it)
+    this.lastTrickT = 0;        // ...and when (so the Echo can detect a NEW trick)
   }
 
   get invulnerable() { return this.iframe > 0 || this.dashIframe > 0; }

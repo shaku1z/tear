@@ -50,6 +50,8 @@ const STAGES = [
   },
   {
     name: "The Voidspire", blurb: "Where the rules thin out.",
+    boss: "echo",
+    lore: "The Voidspire is quiet for the first time. On the wall behind where The Echo stood, scratched deep over what must have been years: your name. Over and over — hundreds of times. Below them all, fresher, still sharp: \"I remember what it was like to be going somewhere.\" And at the very bottom: \"Go finish it. One of us should.\"",
     bg: "#e7e3f3", plat: "#382c54", accent: "#8b3bd6",
     layout: [
       { x: 280, y: 630, w: 220, h: 24, oneway: true },

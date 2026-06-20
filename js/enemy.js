@@ -1668,3 +1668,104 @@ class Aldric extends Enemy {
     }
   }
 }
+
+// ---- The Echo (Stage 4 boss): your own silhouette — mirrors your last trick -> splits -> goes invisible ----
+class Echo extends Enemy {
+  constructor(x, y, isClone) {
+    super(x, y, CONFIG.echo);
+    this.color = "#000";
+    this.kind = "boss"; this.isBoss = !isClone; this.bossName = "THE ECHO";
+    this.isClone = !!isClone;
+    this.mode = "mirror"; this.state = "idle"; this.stateT = 0; this.facing = 1;
+    this.seenTrickT = 0; this.copyKind = "hit"; this.copyT = -1; this.lastCopied = "";
+    this.phaseMarker = 1; this.spawnClone = false;
+    this.whiteFlash = 0; this.invisT = CONFIG.echo.invisCycle; this.lungeCd = 1.3;
+    this.copyOffset = isClone ? 1.7 : 1;   // the clone mirrors on a longer, offset delay
+    if (isClone) { this.hp *= 0.5; this.maxHp = this.hp; this.hpDisplay = this.hp; }
+  }
+  get phase() { const f = this.hp / this.maxHp; return f > 0.6 ? 1 : (f > 0.25 ? 2 : 3); }
+  _shock(projectiles, dir) {
+    const C = CONFIG.echo, footY = this.y + this.hh;
+    const p = new Projectile(this.x + dir * this.hw, footY - 12, dir * C.shockSpeed, 0);
+    p.shock = true; p.r = 14; p.dmg = C.shockDmg; p.life = 1.6; projectiles.push(p);
+  }
+  _shot(player, projectiles) {
+    const C = CONFIG.echo, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
+    const p = new Projectile(this.x, this.y, (dx / m) * C.projSpeed, (dy / m) * C.projSpeed); p.dmg = C.projDmg; p.r = 10; projectiles.push(p);
+  }
+  _scheduleFrom(player) {   // a new trick from the player queues a copy (faster if you repeat yourself)
+    if (player.lastTrickT > this.seenTrickT) {
+      const repeat = player.lastTrickKind === this.lastCopied;
+      this.seenTrickT = player.lastTrickT; this.copyKind = player.lastTrickKind;
+      this.copyT = CONFIG.echo.copyDelay * this.copyOffset * (repeat ? 0.5 : 1);
+    }
+  }
+  _doCopy(player, projectiles) {
+    const k = this.copyKind, dir = Math.sign(player.x - this.x) || this.facing;
+    this.lastCopied = k;
+    if (k === "throwHit" || k === "parry" || k === "deflect") { this._shot(player, projectiles); this.state = "recover"; this.stateT = 0.4; }
+    else if (k === "slam" || k === "superslam" || k === "spike") { this._shock(projectiles, 1); this._shock(projectiles, -1); this.state = "recover"; this.stateT = 0.5; }
+    else if (k === "updraft" || k === "launch") { this.state = "lunge"; this.stateT = 0.3; this.vx = dir * 560; this.vy = -720; }
+    else { this.state = "lunge"; this.stateT = 0.24; this.vx = dir * 920; }   // hit / default melee dash
+    if (typeof SFX !== "undefined" && SFX.ctx && SFX.hit) SFX.hit(false);
+  }
+  update(dt, platforms, player, projectiles) {
+    this.tickTimers(dt);
+    this.facing = Math.sign(player.x - this.x) || this.facing;
+    if (!this.isClone) {
+      const ph = this.phase;
+      if (ph !== this.phaseMarker) {
+        if (ph === 2) this.spawnClone = true;
+        if (ph === 3) this.mode = "invert";
+        this.phaseMarker = ph;
+      }
+    }
+    if (this.mode === "invert") { this._invert(dt, player, projectiles); return; }
+
+    // ---- mirror mode (phases 1-2) ----
+    this._scheduleFrom(player);
+    if (this.copyT > 0) { this.copyT -= dt; if (this.copyT <= 0) this._doCopy(player, projectiles); }
+    if (this.state === "lunge") { this.stateT -= dt; if (this.stateT <= 0) { this.state = "recover"; this.stateT = 0.3; } }
+    else if (this.state === "recover") { this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1)); this.stateT -= dt; if (this.stateT <= 0) this.state = "idle"; }
+    else { const targetX = player.x - this.facing * (this.isClone ? 260 : 200); this.vx = lerp(this.vx, (targetX - this.x) * 2, clamp(3 * dt, 0, 1)); }
+    this.integrate(dt, platforms);
+  }
+  _invert(dt, player, projectiles) {
+    const C = CONFIG.echo;
+    this.invisT -= dt;
+    if (this.invisT <= 0) {
+      if (this.whiteFlash < 0.5) { this.whiteFlash = 1; this.invisT = C.invisDur; }   // blinding white-out -> nearly invisible
+      else { this.whiteFlash = 0; this.invisT = C.invisCycle; }
+    }
+    if (this.state === "lunge") {
+      this.x += this.vx * dt; this.y += this.vy * dt; this.stateT -= dt;
+      if (this.stateT <= 0) { this.state = "idle"; this.lungeCd = 0.9 + Math.random() * 0.6; }
+    } else {
+      const tx = player.x, ty = player.y - 90;   // drift above/around you, then dive
+      this.vx = lerp(this.vx, (tx - this.x) * 1.6, clamp(2 * dt, 0, 1));
+      this.vy = lerp(this.vy, (ty - this.y) * 1.6, clamp(2 * dt, 0, 1));
+      this.x += this.vx * dt; this.y += this.vy * dt;
+      this.lungeCd -= dt;
+      if (this.lungeCd <= 0 && Math.abs(player.x - this.x) < 820) {
+        this.state = "lunge"; this.stateT = 0.34;
+        const m = len(player.x - this.x, player.y - this.y) || 1;
+        this.vx = (player.x - this.x) / m * C.lungeSpeed; this.vy = (player.y - this.y) / m * C.lungeSpeed;
+      }
+    }
+    this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
+    this.y = clamp(this.y, 50, CONFIG.world.groundY - this.hh);
+    this.onGround = false;
+  }
+  draw(ctx) {
+    const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2;
+    ctx.globalAlpha = 1 - this.whiteFlash * 0.88;   // near-invisible during a white-out
+    // your silhouette + cyan visor + a faint blade
+    ctx.fillStyle = this.flash > 0 ? "#fff" : (this.isClone ? "#3a3a3a" : "#000");
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = CONFIG.colors.eye; ctx.fillRect(this.x + this.facing * 5 - 4, y + 12, 8, 5);
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + this.facing * 22, this.y - 26); ctx.stroke();
+    ctx.globalAlpha = 1;
+    this.drawHpBar(ctx);
+  }
+}

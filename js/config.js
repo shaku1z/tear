@@ -172,6 +172,12 @@ const CONFIG = {
     stompCd: 3.2, stompWindup: 0.55, stompRange: 400, shockSpeed: 560, shockDmg: 16, shockR: 15 },
   // boss: large, multi-phase (very heavy -> barely flinchable)
   boss: { w: 118, h: 118, hp: 1900, speed: 70, contactDmg: 20, knockbackTaken: 0.6, weight: 6, fireBase: 2.0 },
+  // The Echo (Stage 4 boss): your own silhouette — mirrors your tricks -> splits -> turns invisible
+  echo: {
+    w: 32, h: 50, hp: 3000, speed: 280, contactDmg: 18, knockbackTaken: 0.5, weight: 4,
+    copyDelay: 0.55, shockDmg: 16, shockSpeed: 700, projSpeed: 820, projDmg: 14,
+    invisCycle: 10, invisDur: 3.5, lungeSpeed: 1500,
+  },
   // The Berserker King / Aldric (Stage 3 boss): a duel -> a throne of fire -> a fake death & frenzy
   aldric: {
     w: 116, h: 132, hp: 3400, speed: 130, contactDmg: 22, knockbackTaken: 0.3, weight: 7,
