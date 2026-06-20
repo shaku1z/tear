@@ -37,6 +37,8 @@ const STAGES = [
   },
   {
     name: "The Crimson Fields", blurb: "Red and gold, and old rage.",
+    boss: "aldric",
+    lore: "Among Aldric's belongings, tucked inside the wrapping of his broken cleaver's handle: a small painted portrait, almost worn through. Two children, laughing. On the back, in handwriting read so many times the ink is barely there: \"Elan and Mira — before the first Tear opened.\" And, in another hand: \"Aldric. Come home.\" He never did.",
     bg: "#f7e3e3", plat: "#5a1320", accent: "#e23b3b",
     layout: [
       { x: 180, y: 560, w: 300, h: 24, oneway: true },

@@ -370,6 +370,7 @@
   // pick the boss for the current context: the campaign stage's named boss, else the Warden
   function makeBoss() {
     const id = (run.mode === "campaign") ? stageAt(stageIndex).boss : "warden";
+    if (id === "aldric") return new Aldric(W / 2, CONFIG.world.groundY - CONFIG.aldric.h / 2);
     if (id === "colossus") return new Colossus(W / 2, CONFIG.world.groundY - CONFIG.colossus.h / 2);
     if (id === "warden") return new Warden(W / 2, CONFIG.world.groundY - 140);
     return new Boss(W / 2, CONFIG.world.groundY - 140);   // unbuilt stages -> placeholder
@@ -666,17 +667,34 @@
     }
     updateSupports(dt);   // apply War Priest / Herald / Mender / Anchor effects to allies
 
-    // Warden prohibited zones: sustained floor damage you must keep moving to avoid
+    // boss floor hazards: sustained damage you must keep moving to avoid (off-pulse fire is safe)
     const bossZ = enemies.find((e) => e.isBoss && e.zones && e.zones.length);
     if (bossZ) {
       const Wc = CONFIG.warden, half = Wc.zoneW / 2;
       const onFloor = player.y + player.hh >= CONFIG.world.groundY - 8;
       player.hazardT -= dt;
       let inZone = false;
-      for (const z of bossZ.zones) if (onFloor && Math.abs(player.x - z.x) < half) inZone = true;
+      for (const z of bossZ.zones) if (onFloor && z.on !== false && Math.abs(player.x - z.x) < half) inZone = true;
       if (inZone && player.hazardT <= 0 && !player.invulnerable) {
         player.hp = Math.max(0, player.hp - Wc.zoneTick * CONFIG.player.dmgTakenMult * player.flowDR);
         player.hazardT = Wc.zoneTickCd; SFX.hurt(); loseStyle();
+      }
+    }
+    // Aldric scripted logic: the fake-death adds + revive
+    const aboss = enemies.find((e) => e.isBoss);
+    if (aboss) {
+      if (aboss.spawnAdds) {
+        aboss.spawnAdds = false; run.bossAdds = [];
+        for (let i = -1; i <= 1; i += 2) {
+          const add = new Charger(clamp(aboss.x + i * 130, 60, W - 60), CONFIG.world.groundY - 22);
+          add.behavior = "bull"; add.hp *= 2.2; add.maxHp = add.hp; add.hpDisplay = add.hp;
+          add.speedMult *= 1.35; add.contactDmg *= 1.3; add.canClimb = true; add.climber = true; add.climbApt = 0.85; add.spawnT = 0.35;
+          enemies.push(add); run.bossAdds.push(add);
+        }
+        addFloater(aboss.x, aboss.y - 90, "NOT YET", true, CONFIG.colors.charger);
+      }
+      if (aboss.mode === "downed" && run.bossAdds && run.bossAdds.length && run.bossAdds.every((a) => a.dead)) {
+        aboss.revive(); addFloater(aboss.x, aboss.y - 90, "FRENZY!", true, CONFIG.colors.charger); addShake(CONFIG.juice.shakeBig);
       }
     }
     // a spiked enemy slamming into the ground -> impact burst
@@ -1141,9 +1159,10 @@
       const Wc = CONFIG.warden, gy = CONFIG.world.groundY, pulse = 0.2 + 0.12 * Math.sin(performance.now() / 160);
       const zc = bossZd.zoneColor || CONFIG.colors.charger;
       for (const z of bossZd.zones) {
-        ctx.fillStyle = zc; ctx.globalAlpha = pulse;
+        const active = z.on !== false;
+        ctx.fillStyle = zc; ctx.globalAlpha = active ? pulse : pulse * 0.22;   // off-pulse fire shown faint (telegraph)
         ctx.fillRect(z.x - Wc.zoneW / 2, gy, Wc.zoneW, H - gy);
-        ctx.globalAlpha = pulse + 0.25; ctx.fillRect(z.x - Wc.zoneW / 2, gy, Wc.zoneW, 4);
+        ctx.globalAlpha = active ? pulse + 0.25 : 0.12; ctx.fillRect(z.x - Wc.zoneW / 2, gy, Wc.zoneW, 4);
         ctx.globalAlpha = 1;
       }
     }

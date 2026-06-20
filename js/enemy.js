@@ -1546,3 +1546,125 @@ class Colossus extends Enemy {
     }
   }
 }
+
+// ---- The Berserker King / Aldric (Stage 3 boss): a duel -> a throne of fire -> a fake death & frenzy ----
+class Aldric extends Enemy {
+  constructor(x, y) {
+    super(x, y, CONFIG.aldric);
+    this.color = CONFIG.colors.charger;
+    this.kind = "boss"; this.isBoss = true; this.bossName = "THE BERSERKER KING";
+    this.mode = "duel"; this.state = "idle"; this.stateT = 0; this.atkT = 1.6; this.facing = 1;
+    this.zones = []; this.zoneColor = CONFIG.colors.bomber; this.zoneCycleT = 0;   // checkerboard fire
+    this.spawnAdds = false; this.faked = false; this.reviveCap = 0; this.chargeT = 0;
+    this.weaponA = -0.6; this.weaponPrevA = -0.6;
+  }
+  damageTakenMult() { return this.mode === "frenzy" ? CONFIG.aldric.frenzyDmgTaken : (this.mode === "downed" ? CONFIG.aldric.downedDmgTaken : 1); }
+  // during the fake he can't be killed — he always rises into the frenzy
+  hit(dmg, kx, ky) { super.hit(dmg, kx, ky); if (this.mode === "downed" && this.hp <= 0) { this.hp = 1; this.dead = false; } }
+
+  _shock(projectiles, dir, fire) {
+    const C = CONFIG.aldric, footY = this.y + this.hh;
+    const p = new Projectile(this.x + dir * this.hw * 0.7, footY - C.shockR, dir * C.shockSpeed, 0);
+    p.shock = true; p.r = C.shockR; p.dmg = C.shockDmg; p.life = 2.0;
+    projectiles.push(p);
+  }
+  _lightFire() {
+    const C = CONFIG.aldric, colW = CONFIG.view.w / C.fireCols; this.zones = [];
+    for (let i = 0; i < C.fireCols; i++) this.zones.push({ x: (i + 0.5) * colW, on: i % 2 === 0 });
+    this.zoneCycleT = C.fireCycle;
+  }
+
+  update(dt, platforms, player, projectiles) {
+    this.tickTimers(dt);
+    const C = CONFIG.aldric;
+    this.facing = Math.sign(player.x - this.x) || this.facing;
+    this._animWeapon(dt);
+    const f = this.hp / this.maxHp;
+    if (this.mode === "duel" && f < C.fireTier) { this.mode = "fire"; this._lightFire(); }
+    if (this.mode === "fire" && f < C.fakeTier && !this.faked) { this._enterDowned(); }
+    // checkerboard pulse
+    if (this.zones.length) { this.zoneCycleT -= dt; if (this.zoneCycleT <= 0) { for (const z of this.zones) z.on = !z.on; this.zoneCycleT = C.fireCycle; } }
+
+    if (this.mode === "downed") {   // the fake: kneel and regenerate while you fight the adds
+      this.vx = lerp(this.vx, 0, clamp(6 * dt, 0, 1));
+      this.hp = Math.min(this.reviveCap, this.hp + this.maxHp * C.regenRate * dt);
+      this.integrate(dt, platforms);
+      return;
+    }
+
+    const spd = C.speed * (this.mode === "frenzy" ? 1.5 : (this.mode === "fire" ? 1.2 : 1));
+    if (this.mode === "frenzy") { this.chargeT -= dt; if (this.chargeT <= 0 && this.state === "idle") { this.state = "charge"; this.vx = this.facing * C.chargeSpeed; this.chargeT = C.chargeCd; } }
+
+    if (this.state === "charge") {
+      this.x += this.vx * dt;
+      if (this.x <= this.hw + 4 || this.x >= CONFIG.view.w - this.hw - 4) { this.state = "recover"; this.stateT = 0.7; }
+      return;
+    }
+    if (this.state === "windup") {
+      this.vx = lerp(this.vx, 0, clamp(9 * dt, 0, 1)); this.stateT -= dt;
+      if (this.stateT <= 0) this._strike(player, projectiles);
+    } else if (this.state === "lunge") {
+      this.stateT -= dt; if (this.stateT <= 0) { this.state = "recover"; this.stateT = 0.35; }
+    } else if (this.state === "recover") {
+      this.vx = lerp(this.vx, 0, clamp(7 * dt, 0, 1)); this.stateT -= dt; if (this.stateT <= 0) this.state = "idle";
+    } else {
+      this.vx = lerp(this.vx, this.facing * spd, clamp(4 * dt, 0, 1));
+      this.atkT -= dt;
+      if (this.atkT <= 0 && Math.abs(player.x - this.x) < 500) { this.state = "windup"; this.stateT = C.windup; }
+      if (this.onGround && player.y < this.y - 60 && Math.random() < (this.mode === "duel" ? 0.3 : 0.6) * dt) { this.vy = -1120; this.onGround = false; }
+    }
+    this.integrate(dt, platforms);
+  }
+  _strike(player, projectiles) {
+    const C = CONFIG.aldric;
+    this._shock(projectiles, this.facing);
+    this.state = "lunge"; this.stateT = 0.25; this.vx = this.facing * C.lungeSpeed;
+    this.atkT = C.atkCd / (this.mode === "frenzy" ? 1.7 : (this.mode === "fire" ? 1.25 : 1));
+    if (typeof SFX !== "undefined" && SFX.ctx && SFX.slam) SFX.slam();
+  }
+  _enterDowned() { this.mode = "downed"; this.state = "idle"; this.spawnAdds = true; this.reviveCap = this.maxHp * CONFIG.aldric.reviveFrac; this.vx = 0; this.zones = []; }
+  // called by the game when the adds are cleared
+  revive() { this.mode = "frenzy"; this.faked = true; this.state = "idle"; this.atkT = 0.5; this.chargeT = CONFIG.aldric.chargeCd * 0.5; this._lightFire(); }
+  _animWeapon(dt) {
+    let wt = -0.6, k = 9;
+    if (this.state === "windup") { wt = -1.5; k = 11; }
+    else if (this.state === "lunge" || this.state === "charge") { wt = 0.8; k = 28; }
+    this.weaponPrevA = this.weaponA; this.weaponA = lerp(this.weaponA, wt, clamp(k * dt, 0, 1));
+  }
+  draw(ctx) {
+    const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2;
+    const downed = this.mode === "downed", frenzy = this.mode === "frenzy";
+    // regen glow during the fake
+    if (downed) {
+      const pulse = 0.3 + 0.3 * Math.sin(performance.now() / 150);
+      ctx.fillStyle = CONFIG.colors.charger; ctx.globalAlpha = pulse;
+      ctx.beginPath(); ctx.arc(this.x, this.y, this.hw + 14, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    }
+    if (frenzy) {   // burning aura
+      ctx.fillStyle = CONFIG.colors.bomber; ctx.globalAlpha = 0.2 + 0.1 * Math.sin(performance.now() / 90);
+      ctx.fillRect(x - 6, y - 6, w + 12, h + 12); ctx.globalAlpha = 1;
+    }
+    // body — squat when downed
+    const by = downed ? y + h * 0.3 : y, bh = downed ? h * 0.7 : h;
+    ctx.fillStyle = this.flash > 0 ? "#fff" : (downed ? "#7a1320" : this.color);
+    ctx.fillRect(x, by, w, bh);
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.strokeRect(x, by, w, bh);
+    // eye
+    ctx.fillStyle = "#fff"; ctx.fillRect(this.x + this.facing * 16 - 8, by + 14, 16, 11);
+    // cleaver (gone in frenzy — fights barehanded; animated otherwise)
+    if (!frenzy && !downed) {
+      const hx = this.x + this.facing * this.hw * 0.5, hy = this.y - 4, L = 64, a = this.weaponA;
+      const tx = hx + this.facing * Math.cos(a) * L, ty = hy + Math.sin(a) * L;
+      if (Math.abs(this.weaponA - this.weaponPrevA) > 0.05) {   // swoosh
+        ctx.fillStyle = this.mode === "fire" ? CONFIG.colors.bomber : CONFIG.colors.charger; ctx.globalAlpha = 0.3;
+        ctx.beginPath(); ctx.moveTo(hx, hy);
+        for (let s = 0; s <= 1; s += 0.2) { const aa = this.weaponPrevA + (a - this.weaponPrevA) * s; ctx.lineTo(hx + this.facing * Math.cos(aa) * L, hy + Math.sin(aa) * L); }
+        ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+      }
+      ctx.strokeStyle = "#000"; ctx.lineWidth = 7; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke();
+      ctx.save(); ctx.translate(tx, ty); ctx.rotate(Math.atan2(ty - hy, tx - hx)); ctx.fillStyle = "#000";
+      ctx.fillRect(-6, -14, 26, 28); ctx.restore();   // big cleaver head
+    }
+  }
+}

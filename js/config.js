@@ -172,6 +172,14 @@ const CONFIG = {
     stompCd: 3.2, stompWindup: 0.55, stompRange: 400, shockSpeed: 560, shockDmg: 16, shockR: 15 },
   // boss: large, multi-phase (very heavy -> barely flinchable)
   boss: { w: 118, h: 118, hp: 1900, speed: 70, contactDmg: 20, knockbackTaken: 0.6, weight: 6, fireBase: 2.0 },
+  // The Berserker King / Aldric (Stage 3 boss): a duel -> a throne of fire -> a fake death & frenzy
+  aldric: {
+    w: 116, h: 132, hp: 3400, speed: 130, contactDmg: 22, knockbackTaken: 0.3, weight: 7,
+    atkCd: 1.7, windup: 0.45, lungeSpeed: 1150, shockDmg: 18, shockSpeed: 740, shockR: 20,
+    fireTier: 0.65, fakeTier: 0.20, regenRate: 0.05, reviveFrac: 0.5,   // regen 5%/s up to 50% during the fake
+    fireCols: 8, fireCycle: 3.0,                                        // checkerboard of fire, pulses every 3s
+    frenzyDmgTaken: 1.35, downedDmgTaken: 0.3, chargeCd: 13, chargeSpeed: 1550,
+  },
   // The Iron Colossus (Stage 2 boss): a tank with a front shield -> a thrown sweeping arm -> an exposed core
   colossus: {
     w: 152, h: 150, hp: 2900, speed: 58, contactDmg: 24, knockbackTaken: 0, weight: 9,
