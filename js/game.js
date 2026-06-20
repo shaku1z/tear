@@ -107,7 +107,18 @@
   let draftChoices = [];
   let tierChoices = [];               // abilities offered to evolve after a campaign boss
   let overInfo = null;        // game-over summary
-  let selMode = "endless", selDiff = "normal", selWeapon = "sword";
+  let selMode = "endless", selDiff = "normal", selWeapon = "sword", selBoss = "shuffle";
+  // the built bosses — Boss Test cycles through these (with a tier-up after each)
+  const BOSS_ROSTER = [
+    { id: "warden", name: "The Warden" },
+    { id: "colossus", name: "Iron Colossus" },
+    { id: "aldric", name: "Berserker King" },
+  ];
+  function shuffledRoster() {
+    const a = BOSS_ROSTER.map((b) => b.id);
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
   let uiButtons = [];
   let focus = -1, lastUiState = null;   // keyboard focus for menus/draft
   let listScroll = 0;                   // scroll offset for scrollable screens
@@ -286,6 +297,11 @@
       runTime: 0, waveTime: 0, waveKills: 0, wavePeak: 1, waveLog: [],
       combo: 0, comboTimer: 0, mult: 1, rank: "", lastTrick: "", lifestealCd: 0,
     };
+    if (mode === "bossonly") {   // boss gauntlet: chosen boss first, then a shuffled cycle of the rest
+      run.bossOrder = shuffledRoster();
+      if (selBoss !== "shuffle") { run.bossOrder = run.bossOrder.filter((id) => id !== selBoss); run.bossOrder.unshift(selBoss); }
+      run.bossIdx = 0; run.bossesBeaten = 0;
+    }
     META.apply({ player, blade, mods: run.mods });
     startNextWave();
     state = "playing";
@@ -332,6 +348,12 @@
       const total = modeWaves(run.mode);
       run.isBossWave = (m && m.bossOnly) || (total > 0 && run.wave > total);
     }
+    if (run.mode === "bossonly") {   // pick the next boss in the gauntlet (re-shuffle each cycle)
+      if (run.bossIdx >= run.bossOrder.length) { run.bossOrder = shuffledRoster(); run.bossIdx = 0; }
+      run.curBoss = run.bossOrder[run.bossIdx]; run.bossIdx++;
+      loadStage(0);   // rebuild the arena fresh between bosses (restore ripped platforms, clear hazards)
+      stageBannerT = 2.4; stageName = (BOSS_ROSTER.find((b) => b.id === run.curBoss) || {}).name || "BOSS";
+    }
     run.spawnQueue = [];
     if (run.isBossWave) {
       run.spawnQueue.push({ type: "boss" });
@@ -369,7 +391,8 @@
 
   // pick the boss for the current context: the campaign stage's named boss, else the Warden
   function makeBoss() {
-    const id = (run.mode === "campaign") ? stageAt(stageIndex).boss : "warden";
+    const id = (run.mode === "campaign") ? stageAt(stageIndex).boss
+      : (run.mode === "bossonly") ? run.curBoss : "warden";
     if (id === "aldric") return new Aldric(W / 2, CONFIG.world.groundY - CONFIG.aldric.h / 2);
     if (id === "colossus") return new Colossus(W / 2, CONFIG.world.groundY - CONFIG.colossus.h / 2);
     if (id === "warden") return new Warden(W / 2, CONFIG.world.groundY - 140);
@@ -402,9 +425,9 @@
       }
       // Chimera inherits the attack repertoire of the enemy types present in its wave
       if (e.kind === "chimera") e.moves = (run.waveKinds && run.waveKinds.length) ? run.waveKinds.slice() : ["charger"];
-    } else if (run.mode === "campaign" && stageIndex > 0 && !e.bossName) {
-      const s = 1 + stageIndex * 0.6;   // each stage's PLACEHOLDER boss is tougher (named bosses have their own HP)
-      e.hp *= s; e.maxHp *= s;
+    } else {   // boss
+      if (run.mode === "campaign" && stageIndex > 0 && !e.bossName) { const s = 1 + stageIndex * 0.6; e.hp *= s; e.maxHp *= s; }   // placeholder bosses scale by stage
+      else if (run.mode === "bossonly" && run.bossesBeaten) { const s = 1 + run.bossesBeaten * 0.12; e.hp *= s; e.maxHp *= s; }     // gauntlet escalates each round
     }
     e.hpDisplay = e.hp;
     e.spawnT = 0.35;   // brief materialize so spawns read as spawns (not teleports)
@@ -445,11 +468,12 @@
       run.waveActive = false;
       run.waveLog.push({ wave: run.isBossWave ? "BOSS" : run.wave, time: run.waveTime, kills: run.waveKills, peak: run.wavePeak });
       if (run.isBossWave) {
-        if (run.mode === "campaign") {
+        if (run.mode === "campaign" || run.mode === "bossonly") {
           if (!player.oneHit) player.heal(R.healEachWave * 2);   // a boss kill is a milestone, not the end
+          if (run.mode === "bossonly") run.bossesBeaten = (run.bossesBeaten || 0) + 1;
           run.bossCleared = true;
           run.clearTimer = R.waveClearPause * 1.6;
-        } else { winRun(); return; }   // non-campaign boss modes still end in victory
+        } else { winRun(); return; }   // the Waves+Boss mode still ends in victory
       } else {
         if (!player.oneHit) player.heal(R.healEachWave);
         run.clearTimer = R.waveClearPause;
@@ -1307,13 +1331,14 @@
   // campaign stage-transition banner ("STAGE N — Name")
   function drawStageBanner() {
     const a = Math.min(stageBannerT, 1) * Math.min((3.0 - stageBannerT) * 2.5, 1);
+    const gauntlet = run && run.mode === "bossonly";
     ctx.save(); ctx.globalAlpha = clamp(a, 0, 1); ctx.textAlign = "center";
     ctx.fillStyle = currentStage.accent || "#000"; ctx.font = UI.font(18, true);
-    ctx.fillText("STAGE " + (stageIndex + 1), W / 2, H / 2 - 70);
+    ctx.fillText(gauntlet ? "BOSS GAUNTLET" : "STAGE " + (stageIndex + 1), W / 2, H / 2 - 70);
     ctx.fillStyle = "#000"; ctx.font = UI.font(54, true);
     ctx.fillText(stageName || currentStage.name, W / 2, H / 2 - 22);
     ctx.globalAlpha = clamp(a, 0, 1) * 0.7; ctx.font = UI.font(18, false);
-    ctx.fillText(currentStage.blurb || "", W / 2, H / 2 + 12);
+    ctx.fillText(gauntlet ? "" : (currentStage.blurb || ""), W / 2, H / 2 + 12);
     ctx.restore();
   }
 
@@ -1502,12 +1527,21 @@
     col("Weapon", 1120, WEAPONS.map((w) => ({ id: w.id, label: w.name })), () => selWeapon, (v) => selWeapon = v);
 
     const wsel = WEAPONS.find((x) => x.id === selWeapon);
-    if (wsel) UI.text(ctx, wsel.blurb, W / 2, 560, 16, "center", 0.8);
-    const msel = CONFIG.modes.find((x) => x.id === selMode);
-    if (msel) UI.text(ctx, msel.blurb, W / 2, 588, 14, "center", 0.55);
+    if (wsel) UI.text(ctx, wsel.blurb, W / 2, 552, 16, "center", 0.8);
 
-    uiButtons.push({ x: W / 2 - 230, y: 640, w: 200, h: 56, label: "START", action: () => startRun(selMode, selDiff) });
-    uiButtons.push({ x: W / 2 + 30, y: 640, w: 200, h: 56, label: "BACK", action: () => { state = "menu"; } });
+    if (selMode === "bossonly") {
+      // boss gauntlet: pick the first boss (then it shuffles through the rest, tier-up after each)
+      UI.text(ctx, "Boss Test cycles every boss, with a tier-up after each. Start with:", W / 2, 582, 14, "center", 0.6);
+      const opts = [{ id: "shuffle", label: "Shuffle" }].concat(BOSS_ROSTER.map((b) => ({ id: b.id, label: b.name })));
+      const bbw = 178, bbg = 10, totalw = opts.length * bbw + (opts.length - 1) * bbg, bx = (W - totalw) / 2;
+      opts.forEach((o, i) => uiButtons.push({ x: bx + i * (bbw + bbg), y: 596, w: bbw, h: 40, size: 14, label: o.label, sel: selBoss === o.id, action: () => { selBoss = o.id; } }));
+    } else {
+      const msel = CONFIG.modes.find((x) => x.id === selMode);
+      if (msel) UI.text(ctx, msel.blurb, W / 2, 588, 14, "center", 0.55);
+    }
+
+    uiButtons.push({ x: W / 2 - 230, y: 660, w: 200, h: 56, label: "START", action: () => startRun(selMode, selDiff) });
+    uiButtons.push({ x: W / 2 + 30, y: 660, w: 200, h: 56, label: "BACK", action: () => { state = "menu"; } });
   }
 
   function renderHowto() {

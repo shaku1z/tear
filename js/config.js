@@ -306,7 +306,7 @@ const CONFIG = {
     { id: "gauntlet", label: "Endless + Bosses",   enabled: false,
       blurb: "Endless, with a boss every few waves. (Coming soon)" },
     { id: "bossonly", label: "Boss Test",          enabled: true, bossOnly: true,
-      blurb: "Fight the boss right away (testing)." },
+      blurb: "Boss gauntlet — fight every boss in a row, evolving an ability after each." },
     { id: "sandbox",  label: "Enemy Test",          enabled: true, sandbox: true,
       blurb: "Sandbox: every enemy variant spawns from wave 1 — try the full roster." },
   ],
