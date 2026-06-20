@@ -1428,3 +1428,121 @@ class Warden extends Enemy {
     this.drawHpBar && this.drawHpBar(ctx);   // (boss HP also shown in the HUD)
   }
 }
+
+// ---- The Iron Colossus (Stage 2 boss): tank with a front shield -> thrown sweeping arm -> molten core ----
+class Colossus extends Enemy {
+  constructor(x, y) {
+    super(x, y, CONFIG.colossus);
+    this.color = CONFIG.colors.armored;
+    this.kind = "boss"; this.isBoss = true; this.bossName = "THE IRON COLOSSUS";
+    this.state = "idle"; this.stateT = 0; this.atkT = 2.2; this.pendingAtk = "sweep";
+    this.facing = 1; this.exposed = false; this.shielded = true;
+    this.phaseMarker = 1;
+    this.zones = []; this.zoneColor = CONFIG.colors.slam;   // phase-3 hot floor panels (reuses the boss-zone system)
+    this.crossT = 0;
+  }
+  get phase() { const f = this.hp / this.maxHp; return f > 0.6 ? 1 : (f > 0.25 ? 2 : 3); }
+  get guardSide() { return this.facing; }
+  // phase-1 front shield: only an aerial hit (you striking from above) gets through
+  blocks() { return this.shielded && !this.exposed; }
+  damageTakenMult() { return this.phase === 3 ? 1.35 : 1; }   // exposed core = vulnerable
+
+  _shock(projectiles, dir) {
+    const C = this.cfg, footY = this.y + this.hh;
+    const p = new Projectile(this.x + dir * this.hw * 0.7, footY - C.shockR, dir * C.shockSpeed, 0);
+    p.shock = true; p.r = C.shockR; p.dmg = C.shockDmg; p.life = 2.4;
+    projectiles.push(p);
+  }
+  _throwShield(projectiles) {
+    const C = this.cfg;
+    const p = new Projectile(this.hw, C.sweeperY, C.sweeperSpeed, 0);
+    p.shock = true; p.sweeper = true; p.r = 22; p.dmg = C.sweeperDmg; p.bounces = 999; p.life = 60;
+    projectiles.push(p);
+    FX.ring(this.x, this.y, 20, CONFIG.colors.armoredShield);
+  }
+  _crossBurst(projectiles) {
+    const C = this.cfg;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const p = new Projectile(this.x, this.y, dx * C.crossSpeed, dy * C.crossSpeed);
+      p.dmg = C.crossDmg; p.r = 12; projectiles.push(p);
+    }
+    FX.ring(this.x, this.y, 16, CONFIG.colors.boss);
+  }
+  _enterPhase(ph, projectiles) {
+    if (ph === 2) { this.shielded = false; this._throwShield(projectiles); }
+    else if (ph === 3) {
+      const C = this.cfg; this.zones = [];
+      for (let i = 0; i < C.panelCount; i++) this.zones.push({ x: 220 + i * (CONFIG.view.w - 440) / (C.panelCount - 1) });
+      this.crossT = 1.6;
+    }
+  }
+  update(dt, platforms, player, projectiles) {
+    this.tickTimers(dt);
+    const C = this.cfg, ph = this.phase;
+    this.facing = Math.sign(player.x - this.x) || this.facing;
+    this.exposed = player.y < this.y - this.hh * 0.15;   // attacking from above
+    if (ph !== this.phaseMarker) { this._enterPhase(ph, projectiles); this.phaseMarker = ph; }
+    if (ph === 3) { this.crossT -= dt; if (this.crossT <= 0) { this._crossBurst(projectiles); this.crossT = C.crossCd; } }
+
+    if (this.state === "charge") {                    // shoulder charge crosses the arena (no gravity)
+      this.x += this.vx * dt;
+      if (this.x <= this.hw + 4 || this.x >= CONFIG.view.w - this.hw - 4) { this.state = "recover"; this.stateT = 1.0; this.stun = 0.7; }
+      return;
+    }
+    if (this.state === "windup") {
+      this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1)); this.stateT -= dt;
+      if (this.stateT <= 0) this._fire(player, projectiles, C, ph);
+    } else if (this.state === "recover") {
+      this.vx = lerp(this.vx, 0, clamp(6 * dt, 0, 1)); this.stateT -= dt; if (this.stateT <= 0) this.state = "idle";
+    } else {
+      this.vx = lerp(this.vx, this.facing * C.speed * (1 + (ph - 1) * 0.3), clamp(2.5 * dt, 0, 1));
+      this.atkT -= dt;
+      if (this.atkT <= 0) {
+        this.pendingAtk = ["sweep", "stomp", "charge"][Math.floor(Math.random() * 3)];
+        this.state = "windup"; this.stateT = this.pendingAtk === "charge" ? C.chargeWindup : C.windup;
+      }
+      if (ph === 2 && this.onGround && Math.random() < 0.3 * dt) { this.vy = -1000; this.onGround = false; }
+    }
+    this.integrate(dt, platforms);
+  }
+  _fire(player, projectiles, C, ph) {
+    const a = this.pendingAtk;
+    if (a === "stomp") { this._shock(projectiles, 1); this._shock(projectiles, -1); this.state = "idle"; this.atkT = C.atkCd / (1 + (ph - 1) * 0.25); }
+    else if (a === "sweep") { this._shock(projectiles, this.facing); this.state = "idle"; this.atkT = C.atkCd / (1 + (ph - 1) * 0.25); }
+    else { this.state = "charge"; this.y = clamp(player.y, 130, CONFIG.world.groundY - this.hh); this.vx = this.facing * C.chargeSpeed; }
+    if (typeof SFX !== "undefined" && SFX.ctx && SFX.slam) SFX.slam();
+  }
+  draw(ctx) {
+    const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2, ph = this.phase;
+    // body (heavy plating + rivets)
+    ctx.fillStyle = this.flash > 0 ? "#fff" : (this.stun > 0 ? "#9aa6b2" : this.color);
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 5; ctx.strokeRect(x, y, w, h);
+    ctx.fillStyle = "#000";
+    for (let i = 0; i < 4; i++) { ctx.fillRect(x + 8 + i * (w - 24) / 3, y + 8, 5, 5); ctx.fillRect(x + 8 + i * (w - 24) / 3, y + h - 13, 5, 5); }
+    // eye
+    ctx.fillStyle = "#fff"; ctx.fillRect(this.x + this.facing * 26 - 12, this.y - 28, 24, 16);
+    // front shield (phase 1) or exposed molten core (phase 3)
+    if (this.shielded) {
+      const gx = this.x + this.facing * (this.hw + 12);
+      ctx.fillStyle = CONFIG.colors.armoredShield;
+      ctx.fillRect(gx - 6, y - 8, 12, h + 16);
+      ctx.fillRect(gx - this.facing * 10 - 1, y - 8, this.facing * 11, 8);
+      ctx.fillRect(gx - this.facing * 10 - 1, y + h + 1, this.facing * 11, 8);
+    } else if (ph === 3) {
+      const pulse = 0.6 + 0.4 * Math.sin(performance.now() / 120);
+      ctx.fillStyle = CONFIG.colors.boss; ctx.globalAlpha = pulse;
+      ctx.beginPath(); ctx.arc(this.x, this.y + 6, 22, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1; ctx.strokeStyle = CONFIG.colors.slam; ctx.lineWidth = 3; ctx.stroke();
+    }
+    // wind-up telegraph
+    if (this.state === "windup") {
+      const gy = this.y + this.hh, k = 1 - clamp(this.stateT / (this.pendingAtk === "charge" ? this.cfg.chargeWindup : this.cfg.windup), 0, 1);
+      ctx.strokeStyle = CONFIG.colors.slam; ctx.globalAlpha = 0.35 + 0.5 * k; ctx.lineWidth = 4; ctx.setLineDash([8, 6]);
+      if (this.pendingAtk === "charge") { ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + this.facing * (60 + 260 * k), this.y); ctx.stroke(); }
+      else if (this.pendingAtk === "stomp") { ctx.beginPath(); ctx.moveTo(this.x - (60 + 180 * k), gy - 2); ctx.lineTo(this.x + (60 + 180 * k), gy - 2); ctx.stroke(); }
+      else { ctx.beginPath(); ctx.moveTo(this.x, gy - 2); ctx.lineTo(this.x + this.facing * (60 + 200 * k), gy - 2); ctx.stroke(); }
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+  }
+}

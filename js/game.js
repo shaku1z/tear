@@ -367,6 +367,14 @@
     return { x: spawnSide(), y: CONFIG.world.groundY - 80 };
   }
 
+  // pick the boss for the current context: the campaign stage's named boss, else the Warden
+  function makeBoss() {
+    const id = (run.mode === "campaign") ? stageAt(stageIndex).boss : "warden";
+    if (id === "colossus") return new Colossus(W / 2, CONFIG.world.groundY - CONFIG.colossus.h / 2);
+    if (id === "warden") return new Warden(W / 2, CONFIG.world.groundY - 140);
+    return new Boss(W / 2, CONFIG.world.groundY - 140);   // unbuilt stages -> placeholder
+  }
+
   function spawnOne(spec) {
     let e;
     switch (spec.type) {
@@ -374,10 +382,7 @@
       case "flyer":   e = new Flyer(spawnSide(), 200); break;
       case "bomber":  e = new Bomber(0, 0); break;
       case "armored": e = new Armored(0, 0); break;
-      case "boss":    e = (run.mode === "campaign" && stageIndex > 0)
-        ? new Boss(W / 2, CONFIG.world.groundY - 140)            // later stages: placeholder until built
-        : new Warden(W / 2, CONFIG.world.groundY - 140);          // Stage 1 + boss-test modes: The Warden
-        break;
+      case "boss":    e = makeBoss(); break;
       case "priest": case "herald": case "mender": case "anchor": e = new Support(0, 0, spec.type); break;
       case "wraith":  e = new Wraith(spawnSide(), 220); break;
       case "chimera": e = new Chimera(0, 0); break;
@@ -396,8 +401,8 @@
       }
       // Chimera inherits the attack repertoire of the enemy types present in its wave
       if (e.kind === "chimera") e.moves = (run.waveKinds && run.waveKinds.length) ? run.waveKinds.slice() : ["charger"];
-    } else if (run.mode === "campaign" && stageIndex > 0) {
-      const s = 1 + stageIndex * 0.6;   // each stage's boss is tougher
+    } else if (run.mode === "campaign" && stageIndex > 0 && !e.bossName) {
+      const s = 1 + stageIndex * 0.6;   // each stage's PLACEHOLDER boss is tougher (named bosses have their own HP)
       e.hp *= s; e.maxHp *= s;
     }
     e.hpDisplay = e.hp;
@@ -998,7 +1003,10 @@
     FX.death(e.x, e.y, CONFIG.juice.deathShards, e.color);
     SFX.death();
     fire(run.mods.onKill, makeEv(e.x, e.y, e, cause));
-    if (e.isBoss && run.mode === "campaign" && currentStage && currentStage.lore) { loreT = 7; loreText = currentStage.lore; }
+    if (e.isBoss) {
+      for (const p of projectiles) if (p.shock || p.sweeper) p.dead = true;   // clear the boss's lingering hazards
+      if (run.mode === "campaign" && currentStage && currentStage.lore) { loreT = 7; loreText = currentStage.lore; }
+    }
   }
 
   // ---- main loop ----
@@ -1127,12 +1135,13 @@
       ctx.fillStyle = CONFIG.colors.sludge; ctx.globalAlpha = 0.25 + 0.4 * clamp(z.life / 2, 0, 1);
       ctx.beginPath(); ctx.ellipse(z.x, z.y - 2, z.r, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
     }
-    // Warden prohibited zones: pulsing red floor bands
+    // boss floor hazards: Warden prohibited zones (red) / Colossus hot panels (orange)
     const bossZd = enemies.find((e) => e.isBoss && e.zones && e.zones.length);
     if (bossZd) {
       const Wc = CONFIG.warden, gy = CONFIG.world.groundY, pulse = 0.2 + 0.12 * Math.sin(performance.now() / 160);
+      const zc = bossZd.zoneColor || CONFIG.colors.charger;
       for (const z of bossZd.zones) {
-        ctx.fillStyle = CONFIG.colors.charger; ctx.globalAlpha = pulse;
+        ctx.fillStyle = zc; ctx.globalAlpha = pulse;
         ctx.fillRect(z.x - Wc.zoneW / 2, gy, Wc.zoneW, H - gy);
         ctx.globalAlpha = pulse + 0.25; ctx.fillRect(z.x - Wc.zoneW / 2, gy, Wc.zoneW, 4);
         ctx.globalAlpha = 1;

@@ -172,6 +172,14 @@ const CONFIG = {
     stompCd: 3.2, stompWindup: 0.55, stompRange: 400, shockSpeed: 560, shockDmg: 16, shockR: 15 },
   // boss: large, multi-phase (very heavy -> barely flinchable)
   boss: { w: 118, h: 118, hp: 1900, speed: 70, contactDmg: 20, knockbackTaken: 0.6, weight: 6, fireBase: 2.0 },
+  // The Iron Colossus (Stage 2 boss): a tank with a front shield -> a thrown sweeping arm -> an exposed core
+  colossus: {
+    w: 152, h: 150, hp: 2900, speed: 58, contactDmg: 24, knockbackTaken: 0, weight: 9,
+    atkCd: 2.5, windup: 0.6, shockDmg: 20, shockSpeed: 720, shockR: 24,
+    chargeWindup: 0.7, chargeSpeed: 1350,
+    sweeperDmg: 16, sweeperSpeed: 540, sweeperY: 540,
+    panelCount: 4, crossDmg: 14, crossSpeed: 640, crossCd: 2.2,
+  },
   // The Warden (Stage 1 boss): a methodical guard who weaponizes the arena across 3 phases
   warden: {
     batonCd: 2.1, batonWindup: 0.5, mortarShots: 3, mortarSpeed: 760, mortarGravity: 900, mortarDmg: 14,

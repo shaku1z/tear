@@ -42,7 +42,10 @@ class Projectile {
       else if (this.x > W - r) { this.x = W - r; this.vx = -Math.abs(this.vx); hit = true; }
       if (this.y < top + r) { this.y = top + r; this.vy = Math.abs(this.vy); hit = true; }
       else if (this.y > bottom - r) { this.y = bottom - r; this.vy = -Math.abs(this.vy); hit = true; }
-      if (hit) { this.bounces--; this.vx *= 0.85; this.vy *= 0.85; FX.ring(this.x, this.y, 4); }
+      if (hit) {
+        if (this.sweeper) { FX.ring(this.x, this.y, 6, CONFIG.colors.armoredShield); }   // sweeper keeps its speed forever
+        else { this.bounces--; this.vx *= 0.85; this.vy *= 0.85; FX.ring(this.x, this.y, 4); }
+      }
       return;
     }
 
@@ -72,6 +75,13 @@ class Projectile {
 
   draw(ctx) {
     const C = CONFIG.colors;
+    if (this.sweeper) {                    // Colossus's thrown shield arm: a rotating bar of death
+      ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(performance.now() / 200);
+      ctx.fillStyle = C.armoredShield; ctx.fillRect(-44, -9, 88, 18);
+      ctx.strokeStyle = "#000"; ctx.lineWidth = 2.5; ctx.strokeRect(-44, -9, 88, 18);
+      ctx.fillStyle = "#000"; ctx.fillRect(-6, -6, 12, 12);
+      ctx.restore(); return;
+    }
     if (this.shock) {                      // armored stomp shockwave: a ground spike you jump
       ctx.fillStyle = C.slam; ctx.globalAlpha = 0.9;
       ctx.beginPath(); ctx.moveTo(this.x - this.r, this.y + this.r);

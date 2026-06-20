@@ -23,6 +23,8 @@ const STAGES = [
   },
   {
     name: "The Undercroft", blurb: "Gray industry, deep below.",
+    boss: "colossus",
+    lore: "In the deepest wall of the Undercroft, beneath the mechanism that is now still, words are carved into the original stone — older than the machine: \"Built to contain the Tide of Crimson. Should the Colossus fall, know this — we tried to stop it before it reached the Fields. We failed then too.\"",
     bg: "#dbe0e6", plat: "#2a2f37", accent: "#15c2c2",
     layout: [
       { x: 120, y: 600, w: 250, h: 24, oneway: true },
