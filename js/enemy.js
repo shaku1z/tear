@@ -1254,6 +1254,30 @@ class Chimera extends Enemy {
   }
 }
 
+// Shared charge telegraph: paints the lane a boss is about to charge down so the player
+// can read it and prepare. `k` (0..1) is wind-up progress — the lane fills + the arrows
+// march faster as the charge commits. Drawn at the boss's ACTUAL charge height (no more
+// last-instant teleport to the player's level).
+function chargeTelegraph(ctx, x, cy, hh, dir, k, color) {
+  const W = CONFIG.view.w;
+  const x0 = dir > 0 ? x : 0, x1 = dir > 0 ? W : x, ww = x1 - x0;
+  ctx.save();
+  // lane fill
+  ctx.fillStyle = color; ctx.globalAlpha = 0.10 + 0.18 * k;
+  ctx.fillRect(x0, cy - hh, ww, hh * 2);
+  // bright pulsing rails top + bottom
+  ctx.globalAlpha = 0.45 + 0.45 * k;
+  ctx.fillRect(x0, cy - hh - 1, ww, 3); ctx.fillRect(x0, cy + hh - 2, ww, 3);
+  // chevrons marching the way it'll go
+  ctx.globalAlpha = 0.5 + 0.4 * k;
+  const march = (performance.now() / 90 * dir) % 46;
+  for (let ax = x0 - 46 + march; ax < x1; ax += 46) {
+    const px = dir > 0 ? ax : ax;
+    ctx.beginPath(); ctx.moveTo(px, cy - 9); ctx.lineTo(px + dir * 13, cy); ctx.lineTo(px, cy + 9); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+
 // ====================================================================================
 //  BOSS FRAMEWORK — The Warden (Stage 1). HP-gated phases, an attack scheduler, and
 //  arena-effect hooks (floor shockwaves, mortar fire, prohibited zones, platform vaulting,
@@ -1369,13 +1393,32 @@ class Warden extends Enemy {
 
   _ceiling(dt, player, projectiles, Wc) {
     this.onGround = false;
-    if (this.state === "lunge") {                 // arena-crossing dive at your level
-      this.x += this.vx * dt;
-      if (this.x <= this.hw + 4 || this.x >= CONFIG.view.w - this.hw - 4) { this.state = "idle"; this.lungeT = Wc.lungeCd; }
+    if (this.state === "lungewind") {             // hang, lock onto a spot, telegraph the dive
+      this.lungeWT -= dt;
+      this.vx = lerp(this.vx, 0, clamp(6 * dt, 0, 1));
+      this.x = clamp(this.x + this.vx * dt, this.hw, CONFIG.view.w - this.hw);
+      if (this.lungeWT <= 0) {
+        this.state = "lunge";
+        const m = len(this.diveTX - this.x, this.diveTY - this.y) || 1;
+        this.vx = (this.diveTX - this.x) / m * Wc.lungeSpeed;
+        this.vy = (this.diveTY - this.y) / m * Wc.lungeSpeed;
+      }
+      return;
+    }
+    if (this.state === "lunge") {                 // committed diagonal dive toward the locked spot
+      this.x += this.vx * dt; this.y += this.vy * dt;
+      const gy = CONFIG.world.groundY;
+      if (this.x <= this.hw + 4 || this.x >= CONFIG.view.w - this.hw - 4 || this.y >= gy - this.hh) {
+        this.y = Math.min(this.y, gy - this.hh); this.state = "idle"; this.lungeT = Wc.lungeCd;
+      }
       return;
     }
     this.lungeT -= dt;
-    if (this.lungeT <= 0) { this.state = "lunge"; this.y = player.y; this.vx = (player.x > this.x ? 1 : -1) * Wc.lungeSpeed; return; }
+    if (this.lungeT <= 0) {                        // commit: lock the target now, dive after a readable wind-up
+      this.state = "lungewind"; this.lungeWT = Wc.lungeWindup || 0.5;
+      this.diveTX = clamp(player.x, this.hw, CONFIG.view.w - this.hw); this.diveTY = player.y;
+      return;
+    }
     // glide along the ceiling toward the player
     this.y = lerp(this.y, Wc.ceilingY, clamp(2.5 * dt, 0, 1));
     this.vx = lerp(this.vx, (player.x - this.x) * 1.1, clamp(1.5 * dt, 0, 1));
@@ -1424,6 +1467,16 @@ class Warden extends Enemy {
       if (this.pendingAtk === "mortar") { ctx.beginPath(); ctx.arc(this.x, this.y - this.hh - 12, 16, 0, Math.PI * 2); ctx.stroke(); }
       else { ctx.beginPath(); ctx.moveTo(this.x, gy - 2); ctx.lineTo(this.x + this.facing * 210, gy - 2); ctx.stroke(); }
       ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+    // ceiling-dive telegraph: a marked line from the cling to the spot it locked onto
+    if (this.state === "lungewind") {
+      const k = 1 - clamp(this.lungeWT / (CONFIG.warden.lungeWindup || 0.5), 0, 1);
+      ctx.strokeStyle = CONFIG.colors.charger; ctx.globalAlpha = 0.4 + 0.5 * k; ctx.lineWidth = 3 + 3 * k; ctx.setLineDash([10, 8]); ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(this.x, this.y + this.hh); ctx.lineTo(this.diveTX, this.diveTY); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = CONFIG.colors.charger; ctx.globalAlpha = 0.3 + 0.6 * k;   // target reticle
+      ctx.beginPath(); ctx.arc(this.diveTX, this.diveTY, 16 - 8 * k, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
     }
     this.drawHpBar && this.drawHpBar(ctx);   // (boss HP also shown in the HUD)
   }
@@ -1509,7 +1562,7 @@ class Colossus extends Enemy {
     const a = this.pendingAtk;
     if (a === "stomp") { this._shock(projectiles, 1); this._shock(projectiles, -1); this.state = "idle"; this.atkT = C.atkCd / (1 + (ph - 1) * 0.25); }
     else if (a === "sweep") { this._shock(projectiles, this.facing); this.state = "idle"; this.atkT = C.atkCd / (1 + (ph - 1) * 0.25); }
-    else { this.state = "charge"; this.y = clamp(player.y, 130, CONFIG.world.groundY - this.hh); this.vx = this.facing * C.chargeSpeed; }
+    else { this.state = "charge"; this.vx = this.facing * C.chargeSpeed; }   // charges along its own (ground) level — telegraphed during wind-up, no teleport
     if (typeof SFX !== "undefined" && SFX.ctx && SFX.slam) SFX.slam();
   }
   draw(ctx) {
@@ -1538,11 +1591,13 @@ class Colossus extends Enemy {
     // wind-up telegraph
     if (this.state === "windup") {
       const gy = this.y + this.hh, k = 1 - clamp(this.stateT / (this.pendingAtk === "charge" ? this.cfg.chargeWindup : this.cfg.windup), 0, 1);
-      ctx.strokeStyle = CONFIG.colors.slam; ctx.globalAlpha = 0.35 + 0.5 * k; ctx.lineWidth = 4; ctx.setLineDash([8, 6]);
-      if (this.pendingAtk === "charge") { ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + this.facing * (60 + 260 * k), this.y); ctx.stroke(); }
-      else if (this.pendingAtk === "stomp") { ctx.beginPath(); ctx.moveTo(this.x - (60 + 180 * k), gy - 2); ctx.lineTo(this.x + (60 + 180 * k), gy - 2); ctx.stroke(); }
-      else { ctx.beginPath(); ctx.moveTo(this.x, gy - 2); ctx.lineTo(this.x + this.facing * (60 + 200 * k), gy - 2); ctx.stroke(); }
-      ctx.setLineDash([]); ctx.globalAlpha = 1;
+      if (this.pendingAtk === "charge") { chargeTelegraph(ctx, this.x, this.y, this.hh, this.facing, k, CONFIG.colors.slam); }
+      else {
+        ctx.strokeStyle = CONFIG.colors.slam; ctx.globalAlpha = 0.35 + 0.5 * k; ctx.lineWidth = 4; ctx.setLineDash([8, 6]);
+        if (this.pendingAtk === "stomp") { ctx.beginPath(); ctx.moveTo(this.x - (60 + 180 * k), gy - 2); ctx.lineTo(this.x + (60 + 180 * k), gy - 2); ctx.stroke(); }
+        else { ctx.beginPath(); ctx.moveTo(this.x, gy - 2); ctx.lineTo(this.x + this.facing * (60 + 200 * k), gy - 2); ctx.stroke(); }
+        ctx.setLineDash([]); ctx.globalAlpha = 1;
+      }
     }
   }
 }
@@ -1593,8 +1648,14 @@ class Aldric extends Enemy {
     }
 
     const spd = C.speed * (this.mode === "frenzy" ? 1.5 : (this.mode === "fire" ? 1.2 : 1));
-    if (this.mode === "frenzy") { this.chargeT -= dt; if (this.chargeT <= 0 && this.state === "idle") { this.state = "charge"; this.vx = this.facing * C.chargeSpeed; this.chargeT = C.chargeCd; } }
+    if (this.mode === "frenzy") { this.chargeT -= dt; if (this.chargeT <= 0 && this.state === "idle") { this.state = "chargewind"; this.stateT = C.chargeWindup; this.chargeT = C.chargeCd; } }
 
+    if (this.state === "chargewind") {            // plant, roar, telegraph the lane — then explode forward
+      this.vx = lerp(this.vx, 0, clamp(9 * dt, 0, 1)); this.stateT -= dt;
+      if (this.stateT <= 0) { this.state = "charge"; this.vx = this.facing * C.chargeSpeed; }
+      this.integrate(dt, platforms);
+      return;
+    }
     if (this.state === "charge") {
       this.x += this.vx * dt;
       if (this.x <= this.hw + 4 || this.x >= CONFIG.view.w - this.hw - 4) { this.state = "recover"; this.stateT = 0.7; }
@@ -1627,7 +1688,7 @@ class Aldric extends Enemy {
   revive() { this.mode = "frenzy"; this.faked = true; this.state = "idle"; this.atkT = 0.5; this.chargeT = CONFIG.aldric.chargeCd * 0.5; this._lightFire(); }
   _animWeapon(dt) {
     let wt = -0.6, k = 9;
-    if (this.state === "windup") { wt = -1.5; k = 11; }
+    if (this.state === "windup" || this.state === "chargewind") { wt = -1.5; k = 11; }
     else if (this.state === "lunge" || this.state === "charge") { wt = 0.8; k = 28; }
     this.weaponPrevA = this.weaponA; this.weaponA = lerp(this.weaponA, wt, clamp(k * dt, 0, 1));
   }
@@ -1665,6 +1726,11 @@ class Aldric extends Enemy {
       ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke();
       ctx.save(); ctx.translate(tx, ty); ctx.rotate(Math.atan2(ty - hy, tx - hx)); ctx.fillStyle = "#000";
       ctx.fillRect(-6, -14, 26, 28); ctx.restore();   // big cleaver head
+    }
+    // frenzy charge telegraph: the lane he's about to barrel down
+    if (this.state === "chargewind") {
+      const k = 1 - clamp(this.stateT / (CONFIG.aldric.chargeWindup || 0.5), 0, 1);
+      chargeTelegraph(ctx, this.x, this.y, this.hh, this.facing, k, CONFIG.colors.charger);
     }
   }
 }
@@ -1737,19 +1803,26 @@ class Echo extends Enemy {
       if (this.whiteFlash < 0.5) { this.whiteFlash = 1; this.invisT = C.invisDur; }   // blinding white-out -> nearly invisible
       else { this.whiteFlash = 0; this.invisT = C.invisCycle; }
     }
-    if (this.state === "lunge") {
+    if (this.state === "aim") {                  // lock a spot + flash a line, THEN dive (so it never just appears on you)
+      this.aimT -= dt;
+      this.vx = lerp(this.vx, 0, clamp(7 * dt, 0, 1)); this.vy = lerp(this.vy, 0, clamp(7 * dt, 0, 1));
+      this.x += this.vx * dt; this.y += this.vy * dt;
+      if (this.aimT <= 0) {
+        this.state = "lunge"; this.stateT = 0.34;
+        const m = len(this.diveTX - this.x, this.diveTY - this.y) || 1;
+        this.vx = (this.diveTX - this.x) / m * C.lungeSpeed; this.vy = (this.diveTY - this.y) / m * C.lungeSpeed;
+      }
+    } else if (this.state === "lunge") {
       this.x += this.vx * dt; this.y += this.vy * dt; this.stateT -= dt;
       if (this.stateT <= 0) { this.state = "idle"; this.lungeCd = 0.9 + Math.random() * 0.6; }
     } else {
-      const tx = player.x, ty = player.y - 90;   // drift above/around you, then dive
+      const tx = player.x, ty = player.y - 90;   // drift above/around you, then commit a dive
       this.vx = lerp(this.vx, (tx - this.x) * 1.6, clamp(2 * dt, 0, 1));
       this.vy = lerp(this.vy, (ty - this.y) * 1.6, clamp(2 * dt, 0, 1));
       this.x += this.vx * dt; this.y += this.vy * dt;
       this.lungeCd -= dt;
       if (this.lungeCd <= 0 && Math.abs(player.x - this.x) < 820) {
-        this.state = "lunge"; this.stateT = 0.34;
-        const m = len(player.x - this.x, player.y - this.y) || 1;
-        this.vx = (player.x - this.x) / m * C.lungeSpeed; this.vy = (player.y - this.y) / m * C.lungeSpeed;
+        this.state = "aim"; this.aimT = 0.32; this.diveTX = player.x; this.diveTY = player.y;
       }
     }
     this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
@@ -1766,6 +1839,14 @@ class Echo extends Enemy {
     ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.lineCap = "round";
     ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + this.facing * 22, this.y - 26); ctx.stroke();
     ctx.globalAlpha = 1;
+    // dive telegraph — always visible (even mid white-out) so the dive is readable
+    if (this.state === "aim") {
+      const k = 1 - clamp(this.aimT / 0.32, 0, 1);
+      ctx.strokeStyle = CONFIG.colors.eye; ctx.globalAlpha = 0.5 + 0.4 * k; ctx.lineWidth = 2 + 3 * k; ctx.setLineDash([9, 7]); ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.diveTX, this.diveTY); ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath(); ctx.arc(this.diveTX, this.diveTY, 18 - 9 * k, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
     this.drawHpBar(ctx);
   }
 }

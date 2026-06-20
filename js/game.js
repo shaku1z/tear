@@ -123,6 +123,15 @@
     const bl = Math.round((pa & 255) + ((pb & 255) - (pa & 255)) * t);
     return "#" + ((1 << 24) + (r << 16) + (g << 8) + bl).toString(16).slice(1);
   }
+  // diagonal hazard stripes (the classic danger pattern), clipped to a rect and scrolling
+  function hazardStripes(ctx, x, y, w, h, color, alpha) {
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    ctx.strokeStyle = color; ctx.lineWidth = 11; ctx.globalAlpha = alpha;
+    const step = 30, off = (performance.now() / 26) % step;
+    for (let i = -h; i < w + h; i += step) { ctx.beginPath(); ctx.moveTo(x + i + off, y + h); ctx.lineTo(x + i + off + h, y); ctx.stroke(); }
+    ctx.restore();
+  }
   function shuffledRoster() {
     const a = BOSS_ROSTER.map((b) => b.id);
     for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
@@ -1198,16 +1207,30 @@
       ctx.fillStyle = CONFIG.colors.sludge; ctx.globalAlpha = 0.25 + 0.4 * clamp(z.life / 2, 0, 1);
       ctx.beginPath(); ctx.ellipse(z.x, z.y - 2, z.r, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
     }
-    // boss floor hazards: Warden prohibited zones (red) / Colossus hot panels (orange)
+    // boss floor hazards: Warden prohibited zones (red) / Colossus hot panels / Aldric fire.
+    // Made loud on purpose — a bold gradient band, scrolling hazard stripes, and a hot rail
+    // when live; a clear dashed "arming" telegraph when not.
     const bossZd = enemies.find((e) => e.isBoss && e.zones && e.zones.length);
     if (bossZd) {
-      const Wc = CONFIG.warden, gy = CONFIG.world.groundY, pulse = 0.2 + 0.12 * Math.sin(performance.now() / 160);
+      const Wc = CONFIG.warden, gy = CONFIG.world.groundY, bh = H - gy;
       const zc = bossZd.zoneColor || CONFIG.colors.charger;
+      const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 140);
       for (const z of bossZd.zones) {
-        const active = z.on !== false;
-        ctx.fillStyle = zc; ctx.globalAlpha = active ? pulse : pulse * 0.22;   // off-pulse fire shown faint (telegraph)
-        ctx.fillRect(z.x - Wc.zoneW / 2, gy, Wc.zoneW, H - gy);
-        ctx.globalAlpha = active ? pulse + 0.25 : 0.12; ctx.fillRect(z.x - Wc.zoneW / 2, gy, Wc.zoneW, 4);
+        const x0 = z.x - Wc.zoneW / 2, active = z.on !== false;
+        if (active) {
+          const grd = ctx.createLinearGradient(0, gy, 0, H);
+          grd.addColorStop(0, zc); grd.addColorStop(1, zc);
+          ctx.fillStyle = grd; ctx.globalAlpha = 0.42; ctx.fillRect(x0, gy, Wc.zoneW, bh);   // bold band
+          hazardStripes(ctx, x0, gy, Wc.zoneW, bh, "#000", 0.16);                            // danger stripes
+          hazardStripes(ctx, x0, gy, Wc.zoneW, bh, "#fff", 0.10);
+          ctx.fillStyle = zc; ctx.globalAlpha = 0.55 + 0.45 * (pulse);                        // hot top rail
+          ctx.fillRect(x0, gy - 3, Wc.zoneW, 7);
+          ctx.fillStyle = "#fff"; ctx.globalAlpha = 0.4 + 0.5 * pulse; ctx.fillRect(x0, gy - 1, Wc.zoneW, 2);
+        } else {                                                                              // armed, not yet live — telegraph
+          ctx.fillStyle = zc; ctx.globalAlpha = 0.12; ctx.fillRect(x0, gy, Wc.zoneW, bh);
+          ctx.strokeStyle = zc; ctx.globalAlpha = 0.45 + 0.3 * pulse; ctx.lineWidth = 3; ctx.setLineDash([12, 9]);
+          ctx.strokeRect(x0 + 1.5, gy + 1.5, Wc.zoneW - 3, bh - 3); ctx.setLineDash([]);
+        }
         ctx.globalAlpha = 1;
       }
     }

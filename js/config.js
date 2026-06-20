@@ -184,7 +184,7 @@ const CONFIG = {
     atkCd: 1.7, windup: 0.45, lungeSpeed: 1150, shockDmg: 18, shockSpeed: 740, shockR: 20,
     fireTier: 0.65, fakeTier: 0.20, regenRate: 0.05, reviveFrac: 0.5,   // regen 5%/s up to 50% during the fake
     fireCols: 8, fireCycle: 3.0,                                        // checkerboard of fire, pulses every 3s
-    frenzyDmgTaken: 1.35, downedDmgTaken: 0.3, chargeCd: 13, chargeSpeed: 1550,
+    frenzyDmgTaken: 1.35, downedDmgTaken: 0.3, chargeCd: 13, chargeWindup: 0.5, chargeSpeed: 1550,
   },
   // The Iron Colossus (Stage 2 boss): a tank with a front shield -> a thrown sweeping arm -> an exposed core
   colossus: {
@@ -200,7 +200,7 @@ const CONFIG = {
     bashRange: 150, bashKnock: 620,
     zoneCount: 3, zoneW: 200, zoneShift: 7, zoneTick: 7, zoneTickCd: 0.4,   // phase-2 prohibited zones
     shockDmg: 18, shockSpeed: 700, shockR: 18,
-    ceilingY: 150, ceilDropCd: 1.6, lungeCd: 7.5, lungeSpeed: 1500,         // phase-3 ceiling + lunge
+    ceilingY: 150, ceilDropCd: 1.6, lungeCd: 7.5, lungeWindup: 0.55, lungeSpeed: 1500,   // phase-3 ceiling: lock + telegraph, then dive
   },
 
   // support: no real attack — they make every OTHER enemy worse, so they're priority kills
