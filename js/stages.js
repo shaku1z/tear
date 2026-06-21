@@ -73,6 +73,8 @@ const STAGES = [
   {
     name: "The Tear", blurb: "Everything, all at once.",
     dark: true,   // the void at the end of everything — HUD + player flip to light here
+    boss: "source",
+    lore: "There is nothing left to carve the words into — only the quiet where the Tear used to be. You understand it now: the Source was never an enemy, only the wound the world kept reopening, wearing the shape of everyone who ever tried to close it. It wore your shape last. The blade is lighter than it has ever been. Somewhere, far above, something that has not been able to for a very long time begins, tentatively, to heal.",
     bg: "#0e0b1a", plat: "#c9c4e0", accent: "#13c4d6",
     // everything you have faced, together
     pool: [["charger", 1.0, 1], ["ranged", 0.6, 1], ["flyer", 0.5, 1], ["bomber", 0.4, 1], ["armored", 0.4, 1], ["wraith", 0.4, 1], ["chimera", 0.4, 1], ["herald", 0.2, 1], ["anchor", 0.2, 1], ["priest", 0.2, 1], ["mender", 0.18, 1]],

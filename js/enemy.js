@@ -1896,3 +1896,148 @@ class Echo extends Enemy {
     this.drawHpBar(ctx);
   }
 }
+
+// ---- The Source (Stage 5 FINAL boss): cycles every fallen boss's mechanic, collapses
+//      the floor, fakes its death, then erupts into a true form. Reuses the boss-zone
+//      hazard system + the generic fake-death-adds-revive handler in game.js. ----
+class Source extends Enemy {
+  constructor(x, y) {
+    super(x, y, CONFIG.source);
+    this.color = "#8b3bd6"; this.kind = "boss"; this.isBoss = true; this.bossName = "THE SOURCE";
+    this.mode = "cycle"; this.atkT = 2.2; this.castIdx = 0; this.facing = 1;
+    this.zones = []; this.zoneColor = CONFIG.colors.bomber; this.zoneCycleT = 0;
+    this.collapsing = false; this.collapseT = 0; this.faked = false; this.spawnAdds = false; this.reviveCap = 0;
+    this.seenTrickT = 0; this.copyKind = "hit"; this.copyT = -1; this.lastCopied = ""; this.copyOffset = 1;
+    this.downText = "...not yet"; this.reviveText = "TRUE FORM";
+  }
+  damageTakenMult() { return this.mode === "final" ? 1.2 : (this.mode === "downed" ? 0.3 : 1); }
+  hit(dmg, kx, ky) { super.hit(dmg, kx, ky); if (this.mode === "downed" && this.hp <= 0) { this.hp = 1; this.dead = false; } }
+
+  _shot(player, projectiles) {
+    const C = CONFIG.source, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
+    const p = new Projectile(this.x, this.y, (dx / m) * C.shockSpeed, (dy / m) * C.shockSpeed); p.dmg = C.shockDmg; p.r = 11; projectiles.push(p);
+  }
+  _shock(projectiles, dir, footY) {
+    const C = CONFIG.source, fy = (footY || CONFIG.world.groundY) - C.shockR;
+    const p = new Projectile(this.x + dir * this.hw, fy, dir * C.shockSpeed, 0);
+    p.shock = true; p.r = C.shockR; p.dmg = C.shockDmg; p.life = 2.0; projectiles.push(p);
+  }
+  _sweeper(projectiles) {
+    const C = CONFIG.source;
+    const p = new Projectile(this.hw, CONFIG.world.groundY - 24, C.sweeperSpeed, 0);
+    p.shock = true; p.sweeper = true; p.r = 22; p.dmg = C.sweeperDmg; p.bounces = 999; p.life = 60; projectiles.push(p);
+    FX.ring(this.x, this.y, 18, CONFIG.colors.armoredShield);
+  }
+  _cross(projectiles) {
+    const C = CONFIG.source;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]]) {
+      const p = new Projectile(this.x, this.y, dx * C.crossSpeed, dy * C.crossSpeed); p.dmg = C.crossDmg; p.r = 11; projectiles.push(p);
+    }
+    FX.ring(this.x, this.y, 16, this.color);
+  }
+  _lightFire() {
+    const A = CONFIG.aldric, colW = CONFIG.view.w / A.fireCols; this.zones = [];
+    for (let i = 0; i < A.fireCols; i++) this.zones.push({ x: (i + 0.5) * colW, on: i % 2 === 0 });
+    this.zoneCycleT = A.fireCycle;
+  }
+  // Echo-style mirror: copy the player's last trick as a void attack
+  _scheduleFrom(player) {
+    if (player.lastTrickT > this.seenTrickT) {
+      const repeat = player.lastTrickKind === this.lastCopied;
+      this.seenTrickT = player.lastTrickT; this.copyKind = player.lastTrickKind;
+      this.copyT = CONFIG.source.copyDelay * (repeat ? 0.5 : 1);
+    }
+  }
+  _doCopy(player, projectiles) {
+    const k = this.copyKind; this.lastCopied = k;
+    if (k === "slam" || k === "superslam" || k === "spike") { this._shock(projectiles, 1); this._shock(projectiles, -1); }
+    else this._shot(player, projectiles);
+    FX.ring(this.x, this.y, 13, this.color);
+  }
+  _cast(projectiles, count) {
+    const picks = ["warden", "colossus", "aldric"];
+    for (let i = 0; i < count; i++) {
+      const m = picks[(this.castIdx++) % picks.length];
+      if (m === "warden") { this._shock(projectiles, 1); this._shock(projectiles, -1); }
+      else if (m === "colossus") this._sweeper(projectiles);
+      else this._lightFire();
+    }
+    if (this.mode === "final") this._cross(projectiles);
+    FX.ring(this.x, this.y, 20, this.color);
+  }
+  _hover(dt, player) {
+    const tx = player.x, ty = Math.min(player.y - 70, CONFIG.world.groundY - 200);
+    this.vx = lerp(this.vx, (tx - this.x) * 1.3, clamp(2 * dt, 0, 1));
+    this.vy = lerp(this.vy, (ty - this.y) * 1.3, clamp(2 * dt, 0, 1));
+    this.x += this.vx * dt; this.y += this.vy * dt;
+    this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
+    this.y = clamp(this.y, 70, CONFIG.world.groundY - this.hh);
+    this.onGround = false;
+  }
+  _enterDowned() {
+    this.mode = "downed"; this.faked = true; this.spawnAdds = true; this.collapsing = false;
+    this.reviveCap = this.maxHp * CONFIG.source.reviveFrac; this.vx = 0; this.zones = [];
+  }
+  revive() { this.mode = "final"; this.atkT = 0.4; this.color = CONFIG.colors.perfect; this.castIdx = 0; this._lightFire(); }
+
+  update(dt, platforms, player, projectiles) {
+    this.tickTimers(dt);
+    this.facing = Math.sign(player.x - this.x) || this.facing;
+    const C = CONFIG.source, f = this.hp / this.maxHp;
+
+    if (this.mode === "downed") {   // the fake: kneel + regen, passive (game spawns adds; revive() on their death)
+      this.hp = Math.min(this.reviveCap, this.hp + this.maxHp * C.regenRate * dt);
+      this.vx = lerp(this.vx, 0, clamp(4 * dt, 0, 1));
+      this.y = lerp(this.y, CONFIG.world.groundY - this.hh - 10, clamp(2 * dt, 0, 1));
+      return;
+    }
+    if (this.zones.length) { this.zoneCycleT -= dt; if (this.zoneCycleT <= 0) { for (const z of this.zones) z.on = !z.on; this.zoneCycleT = CONFIG.aldric.fireCycle; } }
+    this._scheduleFrom(player);
+    if (this.copyT > 0) { this.copyT -= dt; if (this.copyT <= 0) this._doCopy(player, projectiles); }
+
+    if (this.mode === "cycle") {
+      if (f < C.fakeTier && !this.faked) { this._enterDowned(); return; }
+      if (f < C.floorTier && !this.collapsing) { this.collapsing = true; this.collapseT = 0.5; }
+    }
+    // THE FLOOR FALLS AWAY: rip out the one-way platforms one by one
+    if (this.collapsing) {
+      this.collapseT -= dt;
+      if (this.collapseT <= 0) {
+        this.collapseT = C.collapseCd;
+        const ow = platforms.filter((p) => p.oneway);
+        if (ow.length) { const pl = ow[Math.floor(Math.random() * ow.length)], idx = platforms.indexOf(pl); if (idx >= 0) { platforms.splice(idx, 1); FX.ring(pl.x + pl.w / 2, pl.y, 18, this.color); FX.burst(pl.x + pl.w / 2, pl.y, 0, 1, 8, this.color); } }
+      }
+    }
+
+    this._hover(dt, player);
+    this.atkT -= dt;
+    if (this.atkT <= 0) {
+      this.atkT = C.cycleCd / (this.mode === "final" ? 1.9 : (this.collapsing ? 1.35 : 1));
+      this._cast(projectiles, this.mode === "final" ? 2 : 1);
+    }
+  }
+
+  draw(ctx) {
+    const t = performance.now(), x = this.x, y = this.y, w = this.hw, h = this.hh;
+    const core = this.mode === "final" ? CONFIG.colors.perfect : (this.mode === "downed" ? "#4a4a55" : this.color);
+    ctx.save();
+    ctx.globalAlpha = 0.22 + 0.1 * Math.sin(t / 200); ctx.fillStyle = "#000";
+    ctx.beginPath(); ctx.ellipse(x, y, w * 1.45, h * 1.45, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.translate(x, y);
+    const spin = this.mode === "downed" ? 0 : (this.mode === "final" ? t / 280 : t / 700);
+    ctx.rotate(spin);
+    ctx.fillStyle = this.flash > 0 ? "#fff" : "#191328";
+    ctx.beginPath();
+    const pts = 10;
+    for (let i = 0; i < pts; i++) { const a = i / pts * Math.PI * 2, r = (i % 2 ? w : w * 0.6) * (1 + 0.07 * Math.sin(t / 110 + i)); ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = core; ctx.lineWidth = 3; ctx.stroke();
+    ctx.rotate(-spin);
+    const cr = w * 0.34 * (0.8 + 0.2 * Math.sin(t / 100));
+    ctx.globalAlpha = 0.9; ctx.fillStyle = core; ctx.beginPath(); ctx.arc(0, 0, cr, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.7; ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(0, 0, cr * 0.45, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    this.drawHpBar(ctx);
+  }
+}

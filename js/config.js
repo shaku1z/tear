@@ -191,6 +191,19 @@ const CONFIG = {
     copyDelay: 0.55, shockDmg: 16, shockSpeed: 700, projSpeed: 820, projDmg: 14,
     invisCycle: 10, invisDur: 3.5, lungeSpeed: 1500,
   },
+  // The Source (Stage 5 FINAL boss): a floating rift that cycles every fallen boss's
+  // signature mechanic, collapses the floor, fakes its death, then erupts into a true form
+  source: {
+    w: 116, h: 128, hp: 4200, speed: 125, contactDmg: 22, knockbackTaken: 0.35, weight: 7,
+    floorTier: 0.62, fakeTier: 0.34, reviveFrac: 0.46,
+    cycleCd: 2.5,           // seconds between mechanic casts (phase 1)
+    shockDmg: 18, shockSpeed: 720, shockR: 16,
+    sweeperDmg: 18, sweeperSpeed: 600,
+    crossDmg: 16, crossSpeed: 740,
+    copyDelay: 0.5,
+    collapseCd: 1.3,        // phase 2: rip a platform out this often
+    regenRate: 0.05,        // fake-death HP regen (fraction of max per second)
+  },
   // The Berserker King / Aldric (Stage 3 boss): a duel -> a throne of fire -> a fake death & frenzy
   aldric: {
     w: 116, h: 132, hp: 3400, speed: 130, contactDmg: 22, knockbackTaken: 0.3, weight: 7,

@@ -127,6 +127,7 @@
     { id: "colossus", name: "Iron Colossus" },
     { id: "aldric", name: "Berserker King" },
     { id: "echo", name: "The Echo" },
+    { id: "source", name: "The Source" },
   ];
   // blend two #rrggbb colors (t: 0=a, 1=b) — used for the Echo's white-out
   function blendCol(a, b, t) {
@@ -454,6 +455,7 @@
   function makeBoss() {
     const id = (run.mode === "campaign") ? stageAt(stageIndex).boss
       : (run.mode === "bossonly") ? run.curBoss : "warden";
+    if (id === "source") return new Source(W / 2, CONFIG.world.groundY - 300);
     if (id === "echo") return new Echo(W / 2, CONFIG.world.groundY - CONFIG.echo.h / 2);
     if (id === "aldric") return new Aldric(W / 2, CONFIG.world.groundY - CONFIG.aldric.h / 2);
     if (id === "colossus") return new Colossus(W / 2, CONFIG.world.groundY - CONFIG.colossus.h / 2);
@@ -824,10 +826,11 @@
           add.speedMult *= 1.35; add.contactDmg *= 1.3; add.canClimb = true; add.climber = true; add.climbApt = 0.85; add.spawnT = 0.35;
           enemies.push(add); run.bossAdds.push(add);
         }
-        addFloater(aboss.x, aboss.y - 90, "NOT YET", true, CONFIG.colors.charger);
+        addFloater(aboss.x, aboss.y - 90, aboss.downText || "NOT YET", true, CONFIG.colors.charger);
+        addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry);   // the fake death: a beat that feels like the end
       }
       if (aboss.mode === "downed" && run.bossAdds && run.bossAdds.length && run.bossAdds.every((a) => a.dead)) {
-        aboss.revive(); addFloater(aboss.x, aboss.y - 90, "FRENZY!", true, CONFIG.colors.charger); addShake(CONFIG.juice.shakeBig);
+        aboss.revive(); addFloater(aboss.x, aboss.y - 90, aboss.reviveText || "FRENZY!", true, CONFIG.colors.charger); addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry);
       }
       // The Echo: split into a mirroring clone, then it vanishes when the Echo turns invisible
       if (aboss.spawnClone) {
