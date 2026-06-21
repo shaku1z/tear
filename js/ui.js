@@ -170,6 +170,16 @@ const UI = {
     ctx.fillRect(x, y, w * Math.max(0, Math.min(frac, 1)), h);
   },
 
+  // right-anchored row of `n` small squares, `filled` of them coloured (level meters)
+  pips(ctx, xRight, y, n, filled, color) {
+    const s = 9, g = 5;
+    for (let i = 0; i < n; i++) {
+      const px = xRight - (n - i) * (s + g) + g;
+      if (i < filled) { ctx.fillStyle = color || this.t.color.accent; ctx.fillRect(px, y - s / 2, s, s); }
+      else { ctx.strokeStyle = this.t.color.disabled; ctx.lineWidth = 1.5; ctx.strokeRect(px, y - s / 2, s, s); }
+    }
+  },
+
   // ---- OVERLAY ------------------------------------------------------------
   // dim the frozen world behind an overlay (fades to PAPER, so overlay text is
   // always inked black regardless of the biome underneath)
@@ -183,6 +193,48 @@ const UI = {
   // scroll affordance ("▲ scroll ▼") for long lists
   scrollHint(ctx, x, y, canUp, canDown) {
     this.text(ctx, (canUp ? "▲ " : "") + "scroll" + (canDown ? " ▼" : ""), x, y, this.t.type.caption, "center", this.t.alpha.faint);
+  },
+
+  // ---- MENU AMBIENCE + STRUCTURE -----------------------------------------
+  // a faint, slowly drifting "tear-slash" backdrop drawn behind every menu screen.
+  // Monochrome with occasional accent so it reads as motion, never as clutter.
+  menuBackdrop(ctx, time) {
+    ctx.save();
+    const span = 2400, n = 6;
+    for (let i = 0; i < n; i++) {
+      const drift = (i * (span / n) + time * (16 + i * 5)) % span - 400;
+      const accent = i % 3 === 0;
+      ctx.globalAlpha = accent ? 0.05 : 0.035;
+      ctx.strokeStyle = accent ? this.t.color.accent : this.ink;
+      ctx.lineWidth = accent ? 2 : 1;
+      ctx.beginPath(); ctx.moveTo(drift, -60); ctx.lineTo(drift - 620, 980); ctx.stroke();
+    }
+    // soft edge vignette to focus the eye centre
+    const g = ctx.createRadialGradient(800, 470, 280, 800, 470, 880);
+    g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,0.05)");
+    ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(0, 0, 1600, 900);
+    ctx.restore();
+  },
+
+  // a standard screen header: centred title + an accent underline that sweeps out
+  // on entry + optional muted subtitle. Returns the y to start content below it,
+  // so every sub-screen lines up identically. `anim` 0..1 drives the sweep.
+  header(ctx, title, subtitle, anim) {
+    const a = anim == null ? 1 : anim;
+    this.title(ctx, title, 800, 92, this.t.type.h1);
+    const w = 130 * a;
+    ctx.globalAlpha = a; ctx.fillStyle = this.t.color.accent;
+    ctx.fillRect(800 - w / 2, 108, w, 3); ctx.globalAlpha = 1;
+    if (subtitle) this.text(ctx, subtitle, 800, 134, this.t.type.caption, "center", this.t.alpha.muted);
+    return subtitle ? 188 : 170;
+  },
+
+  // a small accent pointer (focus/hover cue). `a` 0..1 slides + fades it in.
+  caret(ctx, x, y, a, color) {
+    const s = 7, ox = x - (1 - a) * 10;
+    ctx.globalAlpha = 0.45 + a * 0.55; ctx.fillStyle = color || this.t.color.accent;
+    ctx.beginPath(); ctx.moveTo(ox, y - s); ctx.lineTo(ox + s, y); ctx.lineTo(ox, y + s); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1;
   },
 
   cursor(ctx, x, y) {

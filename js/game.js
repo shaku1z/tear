@@ -142,6 +142,9 @@
   let uiButtons = [];
   let focus = -1, lastUiState = null;   // keyboard focus for menus/draft
   let listScroll = 0;                   // scroll offset for scrollable screens
+  let uiT = 0, enterT = 0, lastUiDt = 1 / 60, eIn = 1;   // menu ambient clock, time-since-screen-opened, last frame dt, entrance ease
+  const hoverAnim = {};                 // per-button hover progress (key -> 0..1), for hover juice
+  const ez = (t) => { t = t < 0 ? 0 : t > 1 ? 1 : t; return 1 - (1 - t) * (1 - t); };   // ease-out
   let codexFilter = "all";              // ABILITIES tab: category filter
   let codexSort = "category";           // ...and sort mode (category | name | type)
   let codexTierView = {};               // id -> which tier (0=base) is being previewed on its card
@@ -1136,6 +1139,7 @@
     } else {
       acc = 0; wasLocked = false;
     }
+    uiT += dt; enterT += dt; lastUiDt = dt;   // menu animation clocks
 
     render();
     handleUI();
@@ -1187,23 +1191,35 @@
     if (state === "playing") drawReticle();
 
     UI.ink = "#000";   // overlays (menus / win / pause) dim to white — always ink them black
+    if (state !== lastUiState) enterT = 0;   // restart the entrance animation on every screen change
 
-    if (state === "menu") renderMenu();
-    else if (state === "shop") renderShop();
-    else if (state === "codex") renderCodex();
-    else if (state === "setup") renderSetup();
-    else if (state === "howto") renderHowto();
-    else if (state === "highscores") renderHighscores();
-    else if (state === "settings") renderSettings();
-    else if (state === "draft") renderDraft();
-    else if (state === "tierup") renderTierUp();
-    else if (state === "paused") renderPaused();
-    else if (state === "confirmquit") renderConfirmQuit();
-    else if (state === "gameover") renderGameover();
-    else if (state === "win") renderWin();
-
-    // hover-draw buttons (skip in playing; draft draws its own cards)
-    if (state !== "playing" && state !== "draft") drawButtons();
+    // menu screens: ambient backdrop + a subtle entrance slide that carries the
+    // content AND its buttons together, so everything settles into place as one.
+    const inMenu = state === "menu" || state === "shop" || state === "codex" ||
+      state === "setup" || state === "howto" || state === "highscores" || state === "settings";
+    if (inMenu) {
+      eIn = ez(enterT / 0.24);
+      UI.menuBackdrop(ctx, uiT);
+      ctx.save(); ctx.translate(0, (1 - eIn) * 22);
+      if (state === "menu") renderMenu();
+      else if (state === "shop") renderShop();
+      else if (state === "codex") renderCodex();
+      else if (state === "setup") renderSetup();
+      else if (state === "howto") renderHowto();
+      else if (state === "highscores") renderHighscores();
+      else if (state === "settings") renderSettings();
+      drawButtons();
+      ctx.restore();
+    } else {
+      eIn = 1;
+      if (state === "draft") renderDraft();
+      else if (state === "tierup") renderTierUp();
+      else if (state === "paused") renderPaused();
+      else if (state === "confirmquit") renderConfirmQuit();
+      else if (state === "gameover") renderGameover();
+      else if (state === "win") renderWin();
+      if (state !== "playing" && state !== "draft") drawButtons();
+    }
 
     // mouse cursor in non-playing screens
     if (state !== "playing") UI.cursor(ctx, Input.mouseX, Input.mouseY);
@@ -1447,18 +1463,32 @@
   }
 
   // ---- menu screens ----
+  // shared layout frame so every sub-screen aligns identically
+  const LAY = { fx: W / 2 - 320, rx: W / 2 + 320, backY: H - 96, backW: 220, backH: 52 };
   function vmenu(items, x, top, w, h, gap) {
     items.forEach((it, i) => {
       const b = { x: x - w / 2, y: top + i * (h + gap), w, h, label: it.label, enabled: it.enabled, action: it.action, size: it.size };
       uiButtons.push(b);
     });
   }
+  // one BACK button, same place + style on every sub-screen
+  function addBack() {
+    uiButtons.push({ x: W / 2 - LAY.backW / 2, y: LAY.backY, w: LAY.backW, h: LAY.backH, label: "‹  BACK", action: () => { state = "menu"; } });
+  }
 
   function renderMenu() {
     const t = UI.t;
+    // animated "tear" — a cyan slash sweeps through the wordmark every few seconds
+    const cyc = (uiT % 4.2) / 0.5;                 // 0..1 sweep, then rests
     UI.title(ctx, "T E A R", W / 2, 220, t.type.wordmark);
-    UI.text(ctx, "a momentum-blade survival game", W / 2, 254, t.type.caption, "center", t.alpha.muted);
-    UI.text(ctx, META.coins() + " coins", W / 2, 298, t.type.body, "center", t.alpha.soft);
+    if (cyc < 1) {
+      const sx = W / 2 - 260 + cyc * 520, k = Math.sin(cyc * Math.PI);
+      ctx.save(); ctx.globalAlpha = 0.85 * k; ctx.strokeStyle = t.color.accent; ctx.lineWidth = 4; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(sx - 26, 250); ctx.lineTo(sx + 26, 188); ctx.stroke(); ctx.restore();
+    }
+    UI.text(ctx, "a momentum-blade survival game", W / 2, 256, t.type.caption, "center", t.alpha.muted);
+    UI.divider(ctx, W / 2 - 150, 280, 300, t.alpha.faint);
+    UI.tag(ctx, "◆ " + META.coins() + " COINS", W / 2, 306, t.color.accent, "center", t.type.caption);
     vmenu([
       { label: "PLAY", action: () => { state = "setup"; } },
       { label: "SHOP", action: () => { state = "shop"; } },
@@ -1466,7 +1496,9 @@
       { label: "HOW TO PLAY", action: () => { state = "howto"; } },
       { label: "HIGH SCORES", action: () => { state = "highscores"; } },
       { label: "SETTINGS", action: () => { state = "settings"; } },
-    ], W / 2, 326, t.metric.btnW, t.metric.btnH, t.metric.btnGap);
+    ], W / 2, 342, t.metric.btnW, t.metric.btnH, t.metric.btnGap);
+    UI.text(ctx, "cut clean · keep moving · chase the multiplier", W / 2, H - 40, t.type.micro, "center", t.alpha.faint);
+    return;
   }
 
   // codex: every upgrade & unique ability and what it does (scrollable)
@@ -1516,8 +1548,9 @@
   function renderCodex() {
     const t = UI.t;
     UI.title(ctx, "ABILITIES", W / 2, 52, t.type.h1);
+    ctx.fillStyle = t.color.accent; ctx.globalAlpha = eIn; ctx.fillRect(W / 2 - 65 * eIn, 66, 130 * eIn, 3); ctx.globalAlpha = 1;
     UI.text(ctx, "★ unique = one-time  ·  others stack  ·  click a card to step through its tiers (boss-kill evolutions)",
-      W / 2, 80, t.type.caption, "center", t.alpha.muted);
+      W / 2, 86, t.type.caption, "center", t.alpha.muted);
 
     // ---- filter chips (All + each category) + a sort toggle ----
     const chips = [["all", "ALL"]].concat(ABIL_CAT_ORDER.map((c) => [c, (ABIL_CATS[c].name)]));
@@ -1563,30 +1596,31 @@
   }
 
   function renderShop() {
-    const t = UI.t;
-    UI.title(ctx, "SHOP", W / 2, 90, t.type.h1);
-    UI.text(ctx, META.coins() + " coins", W / 2, 128, t.type.lead, "center");
-    UI.text(ctx, "permanent upgrades, applied at the start of every run", W / 2, 152, t.type.caption, "center", t.alpha.muted);
-    let y = 190;
+    const t = UI.t, fx = LAY.fx, rx = LAY.rx;
+    UI.header(ctx, "SHOP", "permanent upgrades — applied at the start of every run", eIn);
+    UI.tag(ctx, "◆ " + META.coins() + " COINS", W / 2, 162, t.color.accent, "center", t.type.body);
+    let y = 224;
     for (const it of SHOP) {
-      const lv = META.level(it.id), maxed = lv >= it.maxLevel;
-      UI.text(ctx, it.name + "   (" + lv + "/" + it.maxLevel + ")", W / 2 - 380, y + 20, t.type.lead);
-      UI.text(ctx, it.desc, W / 2 - 380, y + 44, t.type.caption, "left", t.alpha.soft);
-      uiButtons.push({ x: W / 2 + 250, y: y + 6, w: 140, h: 44,
+      const lv = META.level(it.id), maxed = lv >= it.maxLevel, bw = 132;
+      UI.text(ctx, it.name, fx, y, t.type.lead);
+      UI.text(ctx, it.desc, fx, y + 24, t.type.caption, "left", t.alpha.soft);
+      UI.pips(ctx, rx - bw - 18, y - 4, it.maxLevel, lv, maxed ? t.color.accent : t.color.accent);
+      uiButtons.push({ x: rx - bw, y: y - 24, w: bw, h: 46,
         label: maxed ? "MAX" : META.cost(it) + "c",
         enabled: !maxed && META.canBuy(it),
         action: () => { if (META.buy(it)) SFX.ui(); } });
+      UI.divider(ctx, fx, y + 44, rx - fx, 0.1);
       y += 72;
     }
-    uiButtons.push({ x: W / 2 - 100, y: H - 90, w: 200, h: 50, label: "BACK", action: () => { state = "menu"; } });
+    addBack();
   }
 
   function renderSetup() {
     const t = UI.t;
-    UI.title(ctx, "SELECT RUN", W / 2, 110, t.type.h1);
-    const top = 175, bw = t.metric.btnW, bh = 50, gap = t.metric.btnGap;
+    UI.header(ctx, "SELECT RUN", null, eIn);
+    const top = 188, bw = t.metric.btnW, bh = 50, gap = t.metric.btnGap;
     const col = (label, x, items, get, set) => {
-      UI.text(ctx, label, x, top, t.type.body, "left", t.alpha.muted);
+      UI.tag(ctx, label.toUpperCase(), x + bw / 2, top, t.color.accent, "center", t.type.caption);
       items.forEach((it, i) => uiButtons.push({
         x, y: top + 18 + i * (bh + gap), w: bw, h: bh, size: 16,
         label: it.label + (it.enabled === false ? " (soon)" : ""),
@@ -1618,7 +1652,8 @@
   }
 
   function renderHowto() {
-    UI.title(ctx, "HOW TO PLAY", W / 2, 110, UI.t.type.h1);
+    const t = UI.t, hx = W / 2 - 470;
+    UI.header(ctx, "HOW TO PLAY", "movement, the blade, and the trick meter", eIn);
     const lines = [
       "Move:  A / D      Jump:  W / Space      Drop through platform:  hold S",
       "Dash:  Shift  (aim 8-way with WASD) — i-frames + cooldown",
@@ -1634,49 +1669,54 @@
       "",
       "Pause: P      Release mouse: Esc",
     ];
-    ctx.textAlign = "left";
-    lines.forEach((l, i) => UI.text(ctx, l, 230, 180 + i * 32, UI.t.type.body));
-    uiButtons.push({ x: W / 2 - 100, y: 600, w: 200, h: 52, label: "BACK", enabled: true, action: () => { state = "menu"; } });
+    lines.forEach((l, i) => { if (l) UI.text(ctx, l, hx, 206 + i * 31, t.type.body, "left", t.alpha.soft); });
+    addBack();
   }
 
   function renderHighscores() {
-    UI.title(ctx, "HIGH SCORES", W / 2, 130, UI.t.type.h1);
-    let y = 230;
+    const t = UI.t, fx = LAY.fx, rx = LAY.rx;
+    UI.header(ctx, "HIGH SCORES", "your best run in every mode", eIn);
+    let y = 210;
     CONFIG.modes.forEach((m) => {
       CONFIG.difficulties.forEach((d) => {
         const b = getBest(m.id, d.id);
-        UI.text(ctx, `${m.label} · ${d.label}`, W / 2 - 360, y, UI.t.type.lead);
-        ctx.textAlign = "right";
-        UI.text(ctx, `wave ${b.wave}   ·   ${b.score} pts   ·   ${fmtTime(b.time || 0)}`, W / 2 + 360, y, UI.t.type.lead);
-        ctx.textAlign = "left";
-        y += 44;
+        UI.text(ctx, m.label + "  ·  " + d.label, fx, y, t.type.label);
+        UI.text(ctx, "wave " + b.wave + "   ·   " + b.score + " pts   ·   " + fmtTime(b.time || 0), rx, y, t.type.label, "right", t.alpha.soft);
+        UI.divider(ctx, fx, y + 11, rx - fx, 0.08);
+        y += 37;
       });
     });
-    uiButtons.push({ x: W / 2 - 100, y: 600, w: 200, h: 52, label: "BACK", enabled: true, action: () => { state = "menu"; } });
+    addBack();
   }
 
   function renderSettings() {
-    UI.title(ctx, "SETTINGS", W / 2, 120, UI.t.type.h1);
-    const row = (label, valStr, y, dec, inc) => {
-      UI.text(ctx, label, W / 2 - 320, y + 22, UI.t.type.lead);
-      UI.text(ctx, valStr, W / 2 + 130, y + 22, UI.t.type.lead, "center");
-      uiButtons.push({ x: W / 2 + 60, y, w: 50, h: 36, label: "-", action: dec });
-      uiButtons.push({ x: W / 2 + 200, y, w: 50, h: 36, label: "+", action: inc });
+    const t = UI.t, fx = W / 2 - 260, rx = W / 2 + 260;
+    UI.header(ctx, "SETTINGS", "tune sound, feel, and feedback", eIn);
+    const bw = 56, lo = rx - 240, hi = rx - bw, valX = (lo + bw + hi) / 2;   // stepper geometry, shared by every row
+    let y = 252;
+    const stepper = (label, valStr, dec, inc) => {
+      UI.text(ctx, label, fx, y + 7, t.type.lead);
+      uiButtons.push({ x: lo, y: y - 16, w: bw, h: 46, label: "−", action: dec });
+      uiButtons.push({ x: hi, y: y - 16, w: bw, h: 46, label: "+", action: inc });
+      UI.text(ctx, valStr, valX, y + 7, t.type.lead, "center");
+      UI.divider(ctx, fx, y + 32, rx - fx, 0.1);
+      y += 78;
     };
-    row("Volume", Math.round(settings.vol * 100) + "%", 200,
+    stepper("Volume", Math.round(settings.vol * 100) + "%",
       () => { settings.vol = clamp(+(settings.vol - 0.1).toFixed(2), 0, 1); applySettings(); saveSettings(); },
       () => { settings.vol = clamp(+(settings.vol + 0.1).toFixed(2), 0, 1); applySettings(); saveSettings(); });
-    // music toggle
-    UI.text(ctx, "Music", W / 2 - 320, 292, UI.t.type.lead);
-    uiButtons.push({ x: W / 2 + 60, y: 270, w: 190, h: 36, label: settings.music ? "ON" : "OFF",
-      action: () => { settings.music = !settings.music; applySettings(); saveSettings(); } });
-    row("Mouse sensitivity", settings.sens.toFixed(2), 340,
+    // Music toggle — control right-anchored at rx so it lines up with the steppers
+    UI.text(ctx, "Music", fx, y + 7, t.type.lead);
+    uiButtons.push({ x: rx - 132, y: y - 16, w: 132, h: 46, label: settings.music ? "ON" : "OFF",
+      sel: settings.music, action: () => { settings.music = !settings.music; applySettings(); saveSettings(); } });
+    UI.divider(ctx, fx, y + 32, rx - fx, 0.1); y += 78;
+    stepper("Mouse sensitivity", settings.sens.toFixed(2),
       () => { settings.sens = clamp(+(settings.sens - 0.1).toFixed(2), 0.2, 3); applySettings(); saveSettings(); },
       () => { settings.sens = clamp(+(settings.sens + 0.1).toFixed(2), 0.2, 3); applySettings(); saveSettings(); });
-    row("Screen shake", Math.round(settings.shake * 100) + "%", 410,
+    stepper("Screen shake", Math.round(settings.shake * 100) + "%",
       () => { settings.shake = clamp(+(settings.shake - 0.25).toFixed(2), 0, 2); applySettings(); saveSettings(); },
       () => { settings.shake = clamp(+(settings.shake + 0.25).toFixed(2), 0, 2); applySettings(); saveSettings(); });
-    uiButtons.push({ x: W / 2 - 100, y: 600, w: 200, h: 52, label: "BACK", enabled: true, action: () => { state = "menu"; } });
+    addBack();
   }
 
   function renderDraft() {
@@ -1849,14 +1889,29 @@
     ], W / 2, 560, 260, t.metric.btnH, t.metric.btnGap);
   }
 
-  // highlight hovered / keyboard-focused / selected, then draw
+  // highlight hovered / keyboard-focused / selected, then draw — with juice:
+  // a hover scale-pop, a staggered entrance slide, and an accent focus caret.
   function drawButtons() {
+    const k = clamp(12 * lastUiDt, 0, 1);
     for (let i = 0; i < uiButtons.length; i++) {
       const b = uiButtons[i];
       if (b._hideBox) continue;
-      const active = UI.pointIn(b, Input.mouseX, Input.mouseY) || b.sel || i === focus;
+      const hovered = UI.pointIn(b, Input.mouseX, Input.mouseY) && b.enabled !== false;
+      const active = hovered || b.sel || i === focus;
+      // persistent hover progress (keyed by label+position so it's stable per frame)
+      const key = b._k || (b._k = (b.label || "") + "@" + Math.round(b.x) + "," + Math.round(b.y));
+      const a = hoverAnim[key] = lerp(hoverAnim[key] || 0, active ? 1 : 0, k);
+      // staggered entrance (only while a menu screen is settling in)
+      const eb = ez((enterT - i * 0.025) / 0.2);
+      ctx.save();
+      ctx.globalAlpha = eb;
+      const cx = b.x + b.w / 2, cy = b.y + b.h / 2, sc = 1 + a * 0.04;
+      ctx.translate(cx, cy + (1 - eb) * 14); ctx.scale(sc, sc); ctx.translate(-cx, -cy);
       if (b.chip) UI.chip(ctx, b, active);
       else UI.button(ctx, b, active);
+      ctx.restore();
+      // accent caret beside the focused/hovered primary buttons (not chips or selectors)
+      if (a > 0.02 && eb > 0.85 && !b.chip && !b.sel) UI.caret(ctx, b.x - 14, cy, a, UI.t.color.accent);
     }
   }
 
