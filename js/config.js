@@ -77,6 +77,7 @@ const CONFIG = {
       maxSpeed: 4600,
       damage: 22,         // base pierce damage (lower than before)
       damageFromSpeed: 0.008, // + per (px/s) of launch speed
+      recallMult: 1,      // Whetstone: bonus damage on the returning (recall) blade
       hiMult: 1.4,        // throw (outgoing) hits enemies ABOVE half HP harder
       loMult: 0.65,       // ...and below-half HP softer (recall is the reverse: a finisher)
       lobRadius: 160,     // hammer "lob" throw: shockwave radius on impact

@@ -537,13 +537,13 @@
       if (run.isBossWave) {
         if (run.mode === "campaign" && stageIndex >= STAGES.length - 1) { winRun(true); return; }   // final biome cleared -> the ending
         if (run.mode === "campaign" || run.mode === "bossonly") {
-          if (!player.oneHit) player.heal(R.healEachWave * 2);   // a boss kill is a milestone, not the end
+          if (!player.oneHit) player.heal(R.healEachWave * 2 + (run.mods.waveHeal || 0));   // a boss kill is a milestone, not the end
           if (run.mode === "bossonly") run.bossesBeaten = (run.bossesBeaten || 0) + 1;
           run.bossCleared = true;
           run.clearTimer = R.waveClearPause * 1.6;
         } else { winRun(); return; }   // the Waves+Boss mode still ends in victory
       } else {
-        if (!player.oneHit) player.heal(R.healEachWave);
+        if (!player.oneHit) player.heal(R.healEachWave + (run.mods.waveHeal || 0));   // + Bulwark
         run.clearTimer = R.waveClearPause;
       }
     }
@@ -718,7 +718,9 @@
     // dash afterimages (+ Phantom Dash ability damage)
     if (player.dashTimer > 0) {
       dashGhostT -= dt;
-      if (dashGhostT <= 0) { FX.ghost(player.x, player.y, player.hw, player.hh); dashGhostT = CONFIG.juice.dashGhostInterval; }
+      if (dashGhostT <= 0) { FX.ghost(player.x, player.y, player.hw, player.hh, run.mods.cinder ? CONFIG.colors.slam : null); dashGhostT = CONFIG.juice.dashGhostInterval; }
+      // Cinder Trail: a streaming wake of fire behind the dash
+      if (run.mods.cinder) { FX.ember(player.x, player.y - player.hh * 0.3); FX.ember(player.x, player.y + player.hh * 0.2); FX.ember(player.x, player.y); }
       if (run.mods.phantomDash) {
         for (const e of enemies) {
           if (e.dead || e.hitCd > 0) continue;
@@ -788,10 +790,12 @@
       if (e.dead || e.spawnT > 0) continue;
       e.slowStatus = (run.mods.cinderSlow && e.burnT > 0) ? 0.65 : 1;   // Cinder T2 slow
       if (e.bleedStacks <= 0 && e.burnT <= 0 && e.markT <= 0) continue;
-      const dealt = e.tickStatus(dt);
-      if (dealt > 0) {
-        e._stFx -= dt;
-        if (e._stFx <= 0) { e._stFx = 0.11; const burning = e.burnT > 0; FX.burst(e.x, e.y + (burning ? -e.hh * 0.4 : e.hh * 0.3), 0, burning ? -1 : 1, 1, burning ? CONFIG.colors.slam : CONFIG.colors.charger); }
+      e.tickStatus(dt);
+      e._stFx -= dt;
+      if (e._stFx <= 0) {
+        e._stFx = 0.05;
+        if (e.burnT > 0) { FX.ember(e.x, e.y); FX.ember(e.x, e.y - e.hh * 0.4); }
+        if (e.bleedStacks > 0) { FX.drip(e.x, e.y + e.hh * 0.35); if (e.bleedStacks > 2) FX.drip(e.x + (Math.random() - 0.5) * e.hw, e.y + e.hh * 0.2); }
       }
       if (e.dead) onKill(e, "skill");   // a bleed/burn kill is a skill kill (you set it up)
     }
@@ -980,6 +984,7 @@
           const T = CONFIG.blade.throw;
           if (blade.state === "returning") tdmg *= hiHp ? T.loMult : T.hiMult;
           else tdmg *= hiHp ? T.hiMult : T.loMult;
+          if (blade.state === "returning") tdmg *= CONFIG.blade.throw.recallMult;   // Whetstone
           if (blade.state === "returning" && run.mods.stormRecall) tdmg *= run.mods.stormMult;   // Storm Recall (tiered)
           if (run.mods.berserk && player.hp < player.maxHp * 0.5) tdmg *= 1.25;
           if (player.tempoT > 0 && run.mods.tempo) tdmg *= 1 + run.mods.tempo * player.tempoStk;   // Tempo
@@ -1069,6 +1074,7 @@
             if (fullCounter) FX.ring(p.x, p.y, 10, CONFIG.colors.perfect);
             if (run.mods.parryGuard) player.guardT = CONFIG.resilience.parryGuardTime;   // Riposte
             fire(run.mods.onParry, makeEv(p.x, p.y, null));
+            if (run.mods.tempoSurge) slowmo = Math.max(slowmo, CONFIG.juice.parrySlowmo * 2.4);   // Tempo T3: deep slow-mo
           }
         }
       }
@@ -1084,6 +1090,7 @@
           if (len(p.x - e.x, p.y - e.y) <= p.r + e.radius) {
             const ddmg = p.deflectDmg * CONFIG.blade.deflectDmgMult;   // Counterforce
             e.hit(ddmg, p.vx, p.vy);
+            if (run.mods.parryStun && !e.isBoss) e.stun = Math.max(e.stun, 0.7);   // Backfire
             FX.burst(p.x, p.y, p.vx, p.vy, CONFIG.juice.sparkCount, CONFIG.colors.deflected);
             addFloater(e.x, e.y - 26, Math.round(ddmg).toString(), p.perfect);
             addShake(p.perfect ? CONFIG.juice.shakeBig : CONFIG.juice.shakeSmall);
@@ -1316,6 +1323,43 @@
     return -1;
   }
 
+  // status visuals on an afflicted enemy: BLEED crimson aura, BURN rising flames,
+  // MARK cyan targeting brackets. Particles (drips/embers) are spawned by the loop.
+  function drawEnemyStatus(e) {
+    const now = performance.now();
+    ctx.save();
+    if (e.bleedStacks > 0) {   // throbbing crimson wound-aura, deeper with more stacks
+      const k = clamp(e.bleedStacks / CONFIG.status.bleedMax, 0, 1);
+      ctx.globalAlpha = 0.16 + 0.10 * k + 0.05 * Math.sin(now / 110);
+      ctx.fillStyle = CONFIG.colors.charger;
+      ctx.beginPath(); ctx.ellipse(e.x, e.y, e.hw + 6, e.hh + 6, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    if (e.burnT > 0) {   // licking flames off the top + an ember underglow
+      ctx.globalAlpha = 0.14 + 0.07 * Math.sin(now / 90);
+      ctx.fillStyle = CONFIG.colors.slam;
+      ctx.beginPath(); ctx.ellipse(e.x, e.y, e.hw + 5, e.hh + 5, 0, 0, Math.PI * 2); ctx.fill();
+      const n = 5, base = e.y - e.hh;
+      for (let i = 0; i < n; i++) {
+        const fx = e.x - e.hw + (i + 0.5) * (e.hw * 2 / n);
+        const fl = Math.sin(now / 70 + i * 1.9) * 0.5 + 0.5;
+        ctx.globalAlpha = 0.55 + 0.35 * fl; ctx.fillStyle = i % 2 ? "#ffce33" : CONFIG.colors.slam;
+        ctx.beginPath(); ctx.moveTo(fx - 5, base); ctx.quadraticCurveTo(fx, base - (12 + fl * 18), fx + 5, base); ctx.closePath(); ctx.fill();
+      }
+    }
+    if (e.markT > 0) {   // pulsing cyan targeting brackets
+      const p = 0.5 + 0.5 * Math.sin(now / 100), m = 5 + p * 4, L = 8;
+      const x0 = e.x - e.hw - m, x1 = e.x + e.hw + m, y0 = e.y - e.hh - m, y1 = e.y + e.hh + m;
+      ctx.globalAlpha = 0.55 + 0.45 * p; ctx.strokeStyle = CONFIG.colors.eye; ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(x0, y0 + L); ctx.lineTo(x0, y0); ctx.lineTo(x0 + L, y0);
+      ctx.moveTo(x1 - L, y0); ctx.lineTo(x1, y0); ctx.lineTo(x1, y0 + L);
+      ctx.moveTo(x1, y1 - L); ctx.lineTo(x1, y1); ctx.lineTo(x1 - L, y1);
+      ctx.moveTo(x0 + L, y1); ctx.lineTo(x0, y1); ctx.lineTo(x0, y1 - L);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1; ctx.restore();
+  }
+
   function renderWorld() {
     ctx.save();
     // camera: zoom-punch + shake, both pivoting on screen center
@@ -1383,6 +1427,8 @@
         e.draw(ctx, player);
       }
     }
+    // status auras / flames / target-brackets, drawn over each afflicted enemy
+    for (const e of enemies) { if (!e.dead && e.spawnT <= 0 && (e.bleedStacks > 0 || e.burnT > 0 || e.markT > 0)) drawEnemyStatus(e); }
     // dark biome: a faint light rim keeps dark-bodied enemies (and the player) readable
     if (THEME.dark) {
       ctx.strokeStyle = "rgba(236,233,247,0.45)"; ctx.lineWidth = 1.5;

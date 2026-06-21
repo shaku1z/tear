@@ -42,9 +42,28 @@ const FX = {
     this.ring(x, y, 4, col);
   },
 
-  // a fading silhouette (dash afterimage)
-  ghost(x, y, hw, hh) {
-    this.list.push({ type: "ghost", x, y, hw, hh, life: 0.22, max: 0.22 });
+  // a fading silhouette (dash afterimage). col tints it (e.g. fire for Cinder Trail)
+  ghost(x, y, hw, hh, col) {
+    this.list.push({ type: "ghost", x, y, hw, hh, col: col || null, life: 0.22, max: 0.22 });
+  },
+
+  // a rising, flickering fire ember (burn / flame dash)
+  ember(x, y, col) {
+    this.list.push({
+      type: "ember", x: x + (Math.random() - 0.5) * 12, y: y + (Math.random() - 0.5) * 8,
+      vx: (Math.random() - 0.5) * 50, vy: -70 - Math.random() * 120,
+      col: col || (Math.random() < 0.5 ? "#ff8a1e" : "#ffd23e"),
+      size: 2.5 + Math.random() * 3.5, life: 0.35 + Math.random() * 0.35, max: 0.7,
+    });
+  },
+
+  // a falling blood drip (bleed)
+  drip(x, y, col) {
+    this.list.push({
+      type: "drip", x: x + (Math.random() - 0.5) * 10, y,
+      vx: (Math.random() - 0.5) * 36, vy: 20 + Math.random() * 70,
+      col: col || "#b81d1d", size: 3 + Math.random() * 3, life: 0.45 + Math.random() * 0.3, max: 0.75,
+    });
   },
 
   update(dt) {
@@ -61,6 +80,12 @@ const FX = {
         p.x += p.vx * dt; p.y += p.vy * dt;
         p.vy += 1500 * dt; p.vx *= 0.92;
         p.rot += p.spin * dt;
+      } else if (p.type === "ember") {
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        p.vy *= 0.97; p.vx *= 0.94;   // buoyant: coast upward, slowing
+      } else if (p.type === "drip") {
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        p.vy += 680 * dt;             // gravity
       }
       // ghosts just fade in place
     }
@@ -97,9 +122,18 @@ const FX = {
         ctx.fill();
         ctx.restore();
       } else if (p.type === "ghost") {
-        ctx.globalAlpha = a * 0.35;
-        ctx.fillStyle = "#000";
+        ctx.globalAlpha = a * (p.col ? 0.5 : 0.35);
+        ctx.fillStyle = p.col || "#000";
         ctx.fillRect(p.x - p.hw, p.y - p.hh, p.hw * 2, p.hh * 2);
+      } else if (p.type === "ember") {
+        ctx.globalAlpha = a * 0.95;
+        ctx.fillStyle = col;
+        const s = p.size * (0.5 + a * 0.5);
+        ctx.fillRect(p.x - s / 2, p.y - s / 2, s, s);
+      } else if (p.type === "drip") {
+        ctx.globalAlpha = a;
+        ctx.fillStyle = col;
+        ctx.fillRect(p.x - 1.5, p.y - p.size, 3, p.size + 1);
       }
     }
     ctx.globalAlpha = 1;

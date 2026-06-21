@@ -65,6 +65,8 @@ function newMods() {
     concussive: 0,        // Concussive Dash: shockwave damage when a dash ends (0 = off)
     concStun: false,      // Concussive T2: the shockwave stuns
     concRefund: false,    // Concussive T3: a dash that catches 2+ enemies refunds itself
+    parryStun: false,     // Backfire (parry stack): reflected shots stun what they strike
+    waveHeal: 0,          // Bulwark (resilience stack): extra HP healed on each wave clear
   };
 }
 
@@ -207,30 +209,30 @@ const UPGRADES = [
     apply: ({ mods }) => { mods.berserk = true; } },
 
   // ===== more stackable upgrades — keep every category at 4+ =====
-  { id: "whetstone", name: "Whetstone", unique: false, cat: "throw", desc: "+14% thrown-blade damage.",
-    apply: () => { CONFIG.blade.throw.damage *= 1.14; CONFIG.blade.throw.damageFromSpeed *= 1.14; } },
-  { id: "gyroblade", name: "Gyroblade", unique: false, cat: "throw", desc: "The thrown blade flies and returns 14% faster.",
-    apply: () => { CONFIG.blade.throw.speed *= 1.14; CONFIG.blade.throw.returnSpeed *= 1.14; } },
+  { id: "whetstone", name: "Whetstone", unique: false, cat: "throw", desc: "The RETURNING blade (recall) cuts +25% harder — make the catch a finisher.",
+    apply: () => { CONFIG.blade.throw.recallMult *= 1.25; } },
+  { id: "gyroblade", name: "Gyroblade", unique: false, cat: "throw", desc: "The thrown blade flies and returns 12% faster.",
+    apply: () => { CONFIG.blade.throw.speed *= 1.12; CONFIG.blade.throw.returnSpeed *= 1.12; } },
   { id: "quickdraw", name: "Quickdraw", unique: false, cat: "throw", desc: "+ recall range, and the blade snaps back faster.",
-    apply: () => { CONFIG.blade.throw.reclaimDistance += 90; CONFIG.blade.throw.returnSpeed *= 1.12; } },
+    apply: () => { CONFIG.blade.throw.reclaimDistance += 80; CONFIG.blade.throw.returnSpeed *= 1.10; } },
   { id: "steady_hand", name: "Steady Hand", unique: false, cat: "parry", desc: "Perfect parries land more easily — a more forgiving window.",
-    apply: () => { CONFIG.blade.perfectSpeed *= 0.92; } },
+    apply: () => { CONFIG.blade.perfectSpeed *= 0.93; } },
   { id: "wide_guard", name: "Wide Guard", unique: false, cat: "parry", desc: "Deflect shots even with slower swings.",
-    apply: () => { CONFIG.blade.deflectMinSpeed *= 0.85; } },
-  { id: "counterforce", name: "Counterforce", unique: false, cat: "parry", desc: "Reflected shots fly faster and hit +30% harder.",
-    apply: () => { CONFIG.blade.deflectBoost *= 1.12; CONFIG.blade.deflectDmgMult *= 1.30; } },
-  { id: "reprisal", name: "Reprisal", unique: false, cat: "parry", desc: "A perfect parry restores a sliver of HP.",
-    apply: ({ mods }) => { mods.onParry.push((ev) => ev.player.heal(4)); } },
-  { id: "tailwind", name: "Tailwind", unique: false, cat: "mobility", desc: "+7% move speed.",
-    apply: () => { CONFIG.player.moveSpeed *= 1.07; } },
-  { id: "kinetic", name: "Kinetic Charge", unique: false, cat: "mobility", desc: "+10% dash distance, and longer dash i-frames.",
-    apply: () => { CONFIG.dash.speed *= 1.10; CONFIG.dash.iframe *= 1.18; } },
-  { id: "bulwark", name: "Bulwark", unique: false, cat: "resilience", desc: "Take 10% less damage.",
-    apply: () => { CONFIG.player.dmgTakenMult *= 0.90; } },
+    apply: () => { CONFIG.blade.deflectMinSpeed *= 0.87; } },
+  { id: "counterforce", name: "Counterforce", unique: false, cat: "parry", desc: "Reflected shots fly faster and hit +18% harder.",
+    apply: () => { CONFIG.blade.deflectBoost *= 1.10; CONFIG.blade.deflectDmgMult *= 1.18; } },
+  { id: "backfire", name: "Backfire", unique: false, cat: "parry", desc: "Your reflected shots STUN the enemies they strike.",
+    apply: ({ mods }) => { mods.parryStun = true; } },
+  { id: "tailwind", name: "Tailwind", unique: false, cat: "mobility", desc: "Higher jump and sharper air control.",
+    apply: () => { CONFIG.player.jumpSpeed *= 1.05; CONFIG.player.airAccel *= 1.16; } },
+  { id: "kinetic", name: "Kinetic Charge", unique: false, cat: "mobility", desc: "+9% dash distance, and longer dash i-frames.",
+    apply: () => { CONFIG.dash.speed *= 1.09; CONFIG.dash.iframe *= 1.16; } },
+  { id: "bulwark", name: "Bulwark", unique: false, cat: "resilience", desc: "Recover an extra 10 HP each time you clear a wave.",
+    apply: ({ mods }) => { mods.waveHeal += 10; } },
   { id: "showtime", name: "Showtime", unique: false, cat: "utility", desc: "Your trick meter lingers — it drains 25% slower.",
     apply: () => { CONFIG.trick.decay *= 1.3; CONFIG.trick.drainRate *= 0.8; } },
-  { id: "fortune", name: "Fortune", unique: false, cat: "utility", desc: "+25% coins earned this run.",
-    apply: () => { CONFIG.run.coinMult *= 1.25; } },
+  { id: "fortune", name: "Fortune", unique: false, cat: "utility", desc: "+18% coins earned this run.",
+    apply: () => { CONFIG.run.coinMult *= 1.18; } },
 
   // ===== more SPECIAL abilities (tiered; keep every combat category at 3+) =====
   // --- OFFENSE ---
@@ -250,8 +252,8 @@ const UPGRADES = [
       if (mods.sunderShatter && e.cfg && e.cfg.breakSpeed && !e.enraged) { e.enraged = true; e.stun = Math.max(e.stun, 0.5); }
     }); },
     tiers: [
-      { desc: "The weakness bites deeper (+45%), and marking an armored foe instantly SHATTERS its guard.", apply: ({ mods }) => { CONFIG.status.markMult = 1.45; mods.sunderShatter = true; } },
-      { desc: "Strike a marked enemy and the mark SPREADS to all nearby — unravel the whole crowd.", apply: ({ mods }) => { CONFIG.status.markMult = 1.55; mods.sunderSpread = true; } },
+      { desc: "The weakness bites deeper (+40%), and marking an armored foe instantly SHATTERS its guard.", apply: ({ mods }) => { CONFIG.status.markMult = 1.40; mods.sunderShatter = true; } },
+      { desc: "Strike a marked enemy and the mark SPREADS to all nearby — unravel the whole crowd.", apply: ({ mods }) => { CONFIG.status.markMult = 1.50; mods.sunderSpread = true; } },
     ] },
   // --- THROW ---
   { id: "impale", name: "Impale", unique: true, cat: "throw",
@@ -263,11 +265,11 @@ const UPGRADES = [
     ] },
   // --- PARRY ---
   { id: "tempo", name: "Tempo", unique: true, cat: "parry",
-    desc: "A perfect parry grants TEMPO: +25% damage and faster movement for 4s.",
-    apply: ({ mods }) => { mods.tempo = 0.25; mods.onParry.push((ev) => { const p = ev.player; p.tempoStk = Math.min(mods.tempoMax, (p.tempoT > 0 ? p.tempoStk : 0) + 1); p.tempoT = 4; p.dashCd = 0; if (mods.tempoSurge) p.heal(6); }); },
+    desc: "A perfect parry grants TEMPO: +25% damage and faster movement for 4s, and refreshes your dash.",
+    apply: ({ mods }) => { mods.tempo = 0.25; mods.onParry.push((ev) => { const p = ev.player; p.tempoStk = Math.min(mods.tempoMax, (p.tempoT > 0 ? p.tempoStk : 0) + 1); p.tempoT = 4; p.dashCd = 0; p.dashCharges = p.maxDashCharges; }); },
     tiers: [
       { desc: "Tempo lasts 6s and STACKS up to 2 — chain parries into a storm of speed and force.", apply: ({ mods }) => { mods.tempo = 0.3; mods.tempoMax = 2; } },
-      { desc: "A perfect parry now also heals you and triggers a deeper slow-mo — bullet-time the room.", apply: ({ mods }) => { mods.tempo = 0.34; mods.tempoSurge = true; } },
+      { desc: "A perfect parry now plunges the room into a deep, lingering slow-mo — bullet-time the kill.", apply: ({ mods }) => { mods.tempo = 0.34; mods.tempoSurge = true; } },
     ] },
   { id: "backlash", name: "Backlash", unique: true, cat: "parry",
     desc: "A perfect parry erupts in a COUNTER-SHOCK — damage + stun to everything around you.",
