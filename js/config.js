@@ -56,6 +56,7 @@ const CONFIG = {
     enemyHitIframe: 0.18, // per-enemy cooldown between blade hits
     deflectMinSpeed: 700, // tip speed needed to deflect a projectile
     deflectBoost: 1.25,   // speed multiplier applied to deflected projectiles
+    deflectDmgMult: 1,    // Counterforce: bonus damage on reflected shots
     perfectSpeed: 2400,   // tip speed for a PERFECT parry (homing ricochet, bonus dmg)
     counterParryFactor: 0.55, // perfect-parry threshold multiplier when swinging straight back at the shot
     slamMultiplier: 1.8,  // damage multiplier for a downward airborne slam
@@ -106,6 +107,17 @@ const CONFIG = {
     bloodriteHeal: 8,       // Bloodrite: HP restored per SKILL kill (slam/spike/perfect-parry)
     lifestealPerSwing: 1.5, // Vampiric Edge: HP per swing...
     lifestealCd: 0.5,       // ...but at most once per this many seconds (capped per-swing, not per-hit)
+  },
+
+  // ---- status effects (applied by Special abilities; ticked on enemies) ----
+  status: {
+    bleedDps: 6,     // damage per second PER bleed stack
+    bleedDur: 3.2,   // bleed duration in seconds (refreshed when re-stacked)
+    bleedMax: 8,     // max bleed stacks on one enemy
+    burnDps: 20,     // burn damage per second
+    burnDur: 2.6,    // burn duration
+    markMult: 1.30,  // a MARKED enemy takes +30% damage from everything
+    markDur: 4.0,    // mark duration
   },
 
   juice: {
@@ -272,6 +284,7 @@ const CONFIG = {
     hpScalePerWave: 0.12, // +12% enemy HP per wave
     scorePerKill: 100,    // score per kill (x wave number)
     scoreMult: 1,         // raised by the "Bounty Hunter" upgrade
+    coinMult: 1,          // raised by the "Fortune" upgrade
     healEachWave: 12,     // HP restored on wave clear (Normal only) — modest; sustain is earned
     startDelay: 0.8,      // beat before the first spawn of a wave
     waveClearPause: 0.8,  // delay after the last enemy dies before the draft appears

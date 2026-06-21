@@ -38,6 +38,8 @@ class Player {
     this.hazardT = 0;           // cooldown for sustained hazard-zone damage (Warden zones)
     this.lastTrickKind = "";    // last trick performed (The Echo mirrors it)
     this.lastTrickT = 0;        // ...and when (so the Echo can detect a NEW trick)
+    this.tempoT = 0;            // Tempo: damage+haste buff window after a perfect parry
+    this.tempoStk = 1;          // ...stacks (Tempo T2)
   }
 
   get invulnerable() { return this.iframe > 0 || this.dashIframe > 0; }
@@ -54,6 +56,7 @@ class Player {
     if (this.guardT > 0) this.guardT -= dt;
     if (this.rootT > 0) this.rootT -= dt;
     if (this.dashEndT > 0) this.dashEndT -= dt;
+    if (this.tempoT > 0) { this.tempoT -= dt; if (this.tempoT <= 0) this.tempoStk = 1; }
     const rooted = this.rootT > 0;
 
     const dirX = ((Input.right() ? 1 : 0) - (Input.left() ? 1 : 0)) * (rooted ? 0 : 1);

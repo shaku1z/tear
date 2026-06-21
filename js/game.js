@@ -43,9 +43,20 @@
   if (typeof SFX !== "undefined") SFX.init();
   META.load();
   function awardCoins(score) {
-    const earned = Math.floor(score * 0.05 * (1 + 0.15 * META.level("greed")));
+    const earned = Math.floor(score * 0.05 * (1 + 0.15 * META.level("greed")) * CONFIG.run.coinMult);   // Fortune raises coinMult
     META.addCoins(earned);
     return earned;
+  }
+  // build a draft, guaranteeing at least 2 Specials are OFFERED per 10-wave stage
+  function buildDraft() {
+    const block = Math.floor((run.wave - 1) / 10);
+    if (run.specialBlock !== block) { run.specialBlock = block; run.specialsOffered = 0; }
+    const lw = ((run.wave - 1) % 10) + 1;            // wave just cleared (1..9 give drafts)
+    const draftsLeft = Math.max(1, 10 - lw);         // drafts remaining this stage, including this one
+    const need = 2 - (run.specialsOffered || 0);
+    const choices = rollUpgrades(3, run.mods, { forceSpecial: need > 0 && draftsLeft <= need });
+    run.specialsOffered = (run.specialsOffered || 0) + choices.filter((u) => u.tiers).length;
+    return choices;
   }
   function saveSettings() { try { localStorage.setItem("tear_settings", JSON.stringify(settings)); } catch (e) {} }
   applySettings();
@@ -321,6 +332,7 @@
       spawnQueue: [], spawnTimer: 0, waveActive: false, clearTimer: -1,
       runTime: 0, waveTime: 0, waveKills: 0, wavePeak: 1, waveLog: [],
       combo: 0, comboTimer: 0, mult: 1, rank: "", lastTrick: "", lifestealCd: 0,
+      specialBlock: -1, specialsOffered: 0,   // draft guarantee: ≥2 Specials offered per stage
     };
     if (mode === "bossonly") {   // boss gauntlet: chosen boss first, then a shuffled cycle of the rest
       run.bossOrder = shuffledRoster();
@@ -545,9 +557,9 @@
           const ups = availableTierUps(run.mods);
           for (let i = ups.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ups[i], ups[j]] = [ups[j], ups[i]]; }
           if (ups.length) { tierChoices = ups.slice(0, 3); state = "tierup"; }
-          else { draftChoices = rollUpgrades(3, run.mods); state = "draft"; }   // nothing to evolve -> normal draft
+          else { draftChoices = buildDraft(); state = "draft"; }   // nothing to evolve -> normal draft
         } else {
-          draftChoices = rollUpgrades(3, run.mods);
+          draftChoices = buildDraft();
           state = "draft";
         }
       }
@@ -668,8 +680,8 @@
     if (run.lifestealCd > 0) run.lifestealCd -= dt;
     if (throwCd > 0) throwCd -= dt;
     updateZonesWalls(dt);   // mud puddles + Geomancer walls; sets player.slowMult
-    // faster while unarmed (blade thrown)
-    player.moveBoost = (blade.state !== "held") ? CONFIG.player.thrownMoveBoost : 1;
+    // faster while unarmed (blade thrown); Tempo adds haste during its window
+    player.moveBoost = ((blade.state !== "held") ? CONFIG.player.thrownMoveBoost : 1) * (player.tempoT > 0 ? 1.18 : 1);
     player.update(dt, platforms);
     const wasReturning = blade.state === "returning";
     blade.update(dt, player, platforms);
@@ -681,6 +693,20 @@
 
     // audio cadence: dash start + swing whoosh
     if (player.dashTimer > 0 && !wasDashing) SFX.dash();
+    // Concussive Dash: a dash that just ENDED slams out a shockwave
+    if (wasDashing && player.dashTimer <= 0 && run.mods.concussive) {
+      const R = 155; let caught = 0;
+      for (const e of enemies) { if (!e.dead && len(e.x - player.x, e.y - player.y) < R) caught++; }
+      dealAoE(player.x, player.y, R - 5, run.mods.concussive);
+      for (const e of enemies) {
+        if (e.dead || len(e.x - player.x, e.y - player.y) >= R) continue;
+        if (run.mods.concStun && !e.isBoss) e.stun = Math.max(e.stun, 0.5);
+        const dx = e.x - player.x, dy = e.y - player.y, m = len(dx, dy) || 1;
+        e.vx += (dx / m) * 520 / e.weight; e.vy += (dy / m) * 300 / e.weight - 110;
+      }
+      if (caught > 0) { FX.ring(player.x, player.y, 13, CONFIG.colors.slam); addShake(CONFIG.juice.shakeSmall); SFX.slam(); }
+      if (run.mods.concRefund && caught >= 2) { player.dashCharges = player.maxDashCharges; player.dashCd = 0; }
+    }
     wasDashing = player.dashTimer > 0;
     // one swish per swing: trigger on crossing into a fast swing, reset when it slows (hysteresis)
     if (blade.state === "held" && blade.tipSpeed > 1500) {
@@ -702,6 +728,16 @@
             addFloater(e.x, e.y - 24, Math.round(run.mods.phantomDash).toString(), false);
             addStyle("hit");
             if (e.dead) { onKill(e); if (run.mods.phantomRefund) { player.dashCharges = player.maxDashCharges; player.dashCd = 0; } }   // Phantom Dash T3
+          }
+        }
+      }
+      // Cinder Trail: dashing ignites enemies you pass through (BURN)
+      if (run.mods.cinder) {
+        for (const e of enemies) {
+          if (e.dead) continue;
+          if (aabbOverlap(player.x, player.y, player.hw + 6, player.hh + 6, e.x, e.y, e.hw, e.hh)) {
+            if (e.burnT <= 0) FX.burst(e.x, e.y, 0, -1, 3, CONFIG.colors.slam);
+            e.applyBurn();
           }
         }
       }
@@ -746,6 +782,19 @@
       e.update(dt, platforms, player, projectiles);
     }
     updateSupports(dt);   // apply War Priest / Herald / Mender / Anchor effects to allies
+
+    // ---- status effects: tick bleed/burn, mark decay, and credit DoT kills ----
+    for (const e of enemies) {
+      if (e.dead || e.spawnT > 0) continue;
+      e.slowStatus = (run.mods.cinderSlow && e.burnT > 0) ? 0.65 : 1;   // Cinder T2 slow
+      if (e.bleedStacks <= 0 && e.burnT <= 0 && e.markT <= 0) continue;
+      const dealt = e.tickStatus(dt);
+      if (dealt > 0) {
+        e._stFx -= dt;
+        if (e._stFx <= 0) { e._stFx = 0.11; const burning = e.burnT > 0; FX.burst(e.x, e.y + (burning ? -e.hh * 0.4 : e.hh * 0.3), 0, burning ? -1 : 1, 1, burning ? CONFIG.colors.slam : CONFIG.colors.charger); }
+      }
+      if (e.dead) onKill(e, "skill");   // a bleed/burn kill is a skill kill (you set it up)
+    }
 
     // boss floor hazards: sustained damage you must keep moving to avoid (off-pulse fire is safe)
     const bossZ = enemies.find((e) => e.isBoss && e.zones && e.zones.length);
@@ -850,6 +899,7 @@
           if (!player.onGround && run.mods.airBonus) dmg *= 1 + run.mods.airBonus;  // Air Superiority
           if (!player.onGround && run.mods.aerialRave) dmg *= 1 + Math.min(player.airTime * run.mods.aerialRave, CONFIG.skill.aerialRaveCap);  // Aerial Rave
           if (run.mods.slipstream && player.dashEndT > 0) dmg *= 1.35;   // Slipstream: hit harder just after a dash
+          if (player.tempoT > 0 && run.mods.tempo) dmg *= 1 + run.mods.tempo * player.tempoStk;   // Tempo: post-parry surge
           dmg *= e.damageTakenMult();   // armored: reduced grounded, more airborne
           const big = isSlam || empowered || spike || dmg >= CONFIG.hitStop.threshold;
           e.hit(dmg, blade.tipVX, blade.tipVY);
@@ -880,6 +930,16 @@
           addStyle(isSlam ? (empSlam ? "superslam" : "slam") : (empowered ? "updraft" : (isLaunch ? "launch" : "hit")));
           fire(run.mods.onHit, makeEv(cp.px, cp.py, e));
           if (isSlam) fire(run.mods.onSlam, makeEv(e.x, e.y, e));
+          // Rupture T2: a Power Slam detonates bleed on every nearby foe
+          if (isSlam && run.mods.bleedDetonate) {
+            for (const e2 of enemies) {
+              if (e2.dead || e2.bleedStacks <= 0 || len(e2.x - e.x, e2.y - e.y) >= 150) continue;
+              const d = e2.detonateBleed();
+              addFloater(e2.x, e2.y - 30, "RUPTURE " + Math.round(d), true, CONFIG.colors.charger);
+              FX.ring(e2.x, e2.y, 9, CONFIG.colors.charger);
+              if (e2.dead) onKill(e2, "skill");
+            }
+          }
           // Crater: a Power Slam erupts in a shockwave that scales with descent
           if (empSlam && run.mods.crater) {
             const cr = 130 + descF * 110;
@@ -922,8 +982,18 @@
           else tdmg *= hiHp ? T.hiMult : T.loMult;
           if (blade.state === "returning" && run.mods.stormRecall) tdmg *= run.mods.stormMult;   // Storm Recall (tiered)
           if (run.mods.berserk && player.hp < player.maxHp * 0.5) tdmg *= 1.25;
+          if (player.tempoT > 0 && run.mods.tempo) tdmg *= 1 + run.mods.tempo * player.tempoStk;   // Tempo
           tdmg *= e.damageTakenMult();
           e.hit(tdmg, blade.vx, blade.vy);
+          // Impale: pin + heavy bleed on the outgoing throw; the recall rips the wound open
+          if (run.mods.impale) {
+            if (blade.state === "flying" && (run.mods.impaleAll || blade.pierced.size === 1)) {
+              e.applyBleed(run.mods.impale); if (!e.isBoss) e.stun = Math.max(e.stun, 1.2); FX.ring(e.x, e.y, 8, CONFIG.colors.charger);
+            }
+            if (blade.state === "returning" && run.mods.impaleRecall && e.bleedStacks > 0) {
+              const d = e.detonateBleed(); addFloater(e.x, e.y - 32, "RUPTURE " + Math.round(d), true, CONFIG.colors.charger); if (e.dead) onKill(e, "skill");
+            }
+          }
           // Razor Momentum: ramps per pierce, but capped so it can't snowball
           if (run.mods.throwRamp) {
             const s = 1 + run.mods.throwRamp;
@@ -1012,9 +1082,10 @@
           if (e.dead) continue;
           if (p.pierce && p.pierced.has(e)) continue;
           if (len(p.x - e.x, p.y - e.y) <= p.r + e.radius) {
-            e.hit(p.deflectDmg, p.vx, p.vy);
+            const ddmg = p.deflectDmg * CONFIG.blade.deflectDmgMult;   // Counterforce
+            e.hit(ddmg, p.vx, p.vy);
             FX.burst(p.x, p.y, p.vx, p.vy, CONFIG.juice.sparkCount, CONFIG.colors.deflected);
-            addFloater(e.x, e.y - 26, Math.round(p.deflectDmg).toString(), p.perfect);
+            addFloater(e.x, e.y - 26, Math.round(ddmg).toString(), p.perfect);
             addShake(p.perfect ? CONFIG.juice.shakeBig : CONFIG.juice.shakeSmall);
             if (e.dead) {
               onKill(e, p.perfect ? "skill" : "");   // perfect-parry kills are skill kills
@@ -1109,6 +1180,9 @@
     FX.death(e.x, e.y, CONFIG.juice.deathShards, e.color);
     SFX.death();
     fire(run.mods.onKill, makeEv(e.x, e.y, e, cause));
+    // Rupture T3 / Cinder T3: a bleeding/burning death erupts, spreading the status
+    if (run.mods.bleedNova && e.bleedStacks > 0) { for (const e2 of enemies) { if (e2 === e || e2.dead) continue; if (len(e2.x - e.x, e2.y - e.y) < 150 && e2.applyBleed) e2.applyBleed(3); } FX.ring(e.x, e.y, 12, CONFIG.colors.charger); }
+    if (run.mods.cinderNova && e.burnT > 0) { for (const e2 of enemies) { if (e2 === e || e2.dead) continue; if (len(e2.x - e.x, e2.y - e.y) < 150 && e2.applyBurn) e2.applyBurn(); } FX.ring(e.x, e.y, 12, CONFIG.colors.slam); }
     if (e.isBoss) {
       for (const p of projectiles) if (p.shock || p.sweeper) p.dead = true;   // clear the boss's lingering hazards
       if (run.mode === "campaign" && currentStage && currentStage.lore) { loreT = 7; loreText = currentStage.lore; }

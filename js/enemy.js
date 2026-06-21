@@ -65,10 +65,40 @@ class Enemy {
     this.anchored = false; // Anchor: bonded ally can't be knocked back / launched
     this.buffs = [];       // which support types currently affect this enemy (for indicators)
     this.immuneToBlade = false;  // Wraith: direct blade hits pass through harmlessly
+    // ---- status effects (from Special abilities) ----
+    this.bleedStacks = 0; this.bleedT = 0;   // BLEED: stacking damage-over-time
+    this.burnT = 0; this.burnDps = 0;         // BURN: flat damage-over-time
+    this.markT = 0;                            // MARK: takes +damage from everything
+    this.slowStatus = 1;                       // Cinder T2: chilled/slowed while burning
+    this._stFx = 0;                            // throttle for status particles
+  }
+
+  // ---- status effects ----
+  applyBleed(stacks) { const S = CONFIG.status; this.bleedStacks = Math.min(S.bleedMax, this.bleedStacks + stacks); this.bleedT = S.bleedDur; }
+  applyBurn() { const S = CONFIG.status; this.burnT = Math.max(this.burnT, S.burnDur); this.burnDps = Math.max(this.burnDps, S.burnDps); }
+  applyMark() { this.markT = Math.max(this.markT, CONFIG.status.markDur); }
+  bleedPool() { return this.bleedStacks * CONFIG.status.bleedDps * Math.max(this.bleedT, 0); }   // remaining bleed if it ran out
+  detonateBleed() { const d = this.bleedPool(); this.bleedStacks = 0; this.bleedT = 0; if (d > 0) this._dot(d); return d; }
+  _dot(dmg) {   // damage with no i-frame / knockback (used by DoTs + detonations)
+    if (this.shield > 0) { this.shield -= dmg; if (this.shield < 0) { this.hp += this.shield; this.shield = 0; } }
+    else this.hp -= dmg;
+    if (this.hp <= 0) this.dead = true;
+  }
+  // returns damage dealt this tick (so the loop can credit DoT kills)
+  tickStatus(dt) {
+    let dealt = 0;
+    if (this.markT > 0) this.markT -= dt;
+    if (this.bleedStacks > 0) {
+      this.bleedT -= dt;
+      if (this.bleedT <= 0) { this.bleedStacks = 0; this.bleedT = 0; }
+      else { const d = this.bleedStacks * CONFIG.status.bleedDps * dt; this._dot(d); dealt += d; }
+    }
+    if (this.burnT > 0) { this.burnT -= dt; const d = this.burnDps * dt; this._dot(d); dealt += d; if (this.burnT <= 0) this.burnDps = 0; }
+    return dealt;
   }
 
   get radius() { return Math.max(this.hw, this.hh); }
-  get speed() { return this.cfg.speed * this.speedMult * this.auraSpeed; }
+  get speed() { return this.cfg.speed * this.speedMult * this.auraSpeed * this.slowStatus; }
   blocks() { return false; }            // armored overrides
   damageTakenMult() { return 1; }       // armored overrides (ground vs air)
 
@@ -203,6 +233,7 @@ class Enemy {
     this.hitCd = CONFIG.blade.enemyHitIframe;
     this.flash = 0.08;
     dmg *= this.auraDR * this.tetherDR;          // War Priest / Anchor protection
+    if (this.markT > 0) dmg *= CONFIG.status.markMult;   // MARK: amplifies every hit
     if (this.shield > 0) {                       // Warded: shield absorbs first
       this.shield -= dmg;
       if (this.shield < 0) { this.hp += this.shield; this.shield = 0; }
@@ -222,8 +253,9 @@ class Enemy {
     if (this._noBar) return;                                  // suppressed (e.g. INDEX previews)
     const fr = clamp(this.hp / this.maxHp, 0, 1);
     const shielded = this.maxShield > 0 && this.shield > 0;
+    const status = this.bleedStacks > 0 || this.burnT > 0 || this.markT > 0;
     const hit = clamp((this.flash || 0) / 0.08, 0, 1);        // 1 right after a hit -> 0
-    if (fr >= 1 && !shielded && hit <= 0) return;             // pristine & unhurt -> no bar (less clutter)
+    if (fr >= 1 && !shielded && hit <= 0 && !status) return;  // pristine & unhurt -> no bar (less clutter)
     const w = Math.max(this.hw * 2, 28), x = this.x - w / 2, y = this.y - this.hh - 15, h = 5, cy = y + h / 2;
     const fl = clamp(this.hpDisplay / this.maxHp, 0, 1), low = fr <= 0.3;
     ctx.save();
@@ -235,6 +267,13 @@ class Enemy {
     if (hit > 0) { ctx.globalAlpha = hit * 0.7; ctx.fillStyle = "#fff"; ctx.fillRect(x, y, w * fr, h); ctx.globalAlpha = 1; }  // hit flash
     ctx.fillStyle = low ? CONFIG.colors.charger : CONFIG.colors.eye; ctx.fillRect(x + w * fr - 1.5, y - 1, 2.5, h + 2);        // bright leading edge
     if (shielded) { ctx.fillStyle = CONFIG.colors.perfect; ctx.fillRect(x, y - 5, w * clamp(this.shield / this.maxShield, 0, 1), 3); }  // warded shield
+    // status pips above the bar (bleed / burn / mark)
+    if (status) {
+      let sx = x; const sy = y - (shielded ? 9 : 5) - 4;
+      if (this.bleedStacks > 0) { ctx.fillStyle = CONFIG.colors.charger; ctx.fillRect(sx, sy, 4, 4); sx += 6; }
+      if (this.burnT > 0) { ctx.fillStyle = CONFIG.colors.slam; ctx.fillRect(sx, sy, 4, 4); sx += 6; }
+      if (this.markT > 0) { ctx.fillStyle = CONFIG.colors.eye; ctx.fillRect(sx, sy, 4, 4); }
+    }
     ctx.restore();
   }
 }
