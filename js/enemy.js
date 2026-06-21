@@ -219,16 +219,23 @@ class Enemy {
   }
 
   drawHpBar(ctx) {
-    const w = this.hw * 2, x = this.x - this.hw, y = this.y - this.hh - 13, h = 6;
-    const fr = clamp(this.hp / this.maxHp, 0, 1), fl = clamp(this.hpDisplay / this.maxHp, 0, 1);
-    ctx.fillStyle = "#000"; ctx.fillRect(x - 2, y - 2, w + 4, h + 4);     // border
-    ctx.fillStyle = "#2a2a2a"; ctx.fillRect(x, y, w, h);                  // track
-    if (fl > fr) { ctx.fillStyle = CONFIG.colors.slam; ctx.fillRect(x + w * fr, y, w * (fl - fr), h); } // recent damage
-    ctx.fillStyle = "#fff"; ctx.fillRect(x, y, w * fr, h);               // current hp
-    if (this.maxShield > 0 && this.shield > 0) {                         // Warded shield
-      ctx.fillStyle = CONFIG.colors.perfect;
-      ctx.fillRect(x, y - 5, w * clamp(this.shield / this.maxShield, 0, 1), 3);
-    }
+    if (this._noBar) return;                                  // suppressed (e.g. INDEX previews)
+    const fr = clamp(this.hp / this.maxHp, 0, 1);
+    const shielded = this.maxShield > 0 && this.shield > 0;
+    const hit = clamp((this.flash || 0) / 0.08, 0, 1);        // 1 right after a hit -> 0
+    if (fr >= 1 && !shielded && hit <= 0) return;             // pristine & unhurt -> no bar (less clutter)
+    const w = Math.max(this.hw * 2, 28), x = this.x - w / 2, y = this.y - this.hh - 15, h = 5, cy = y + h / 2;
+    const fl = clamp(this.hpDisplay / this.maxHp, 0, 1), low = fr <= 0.3;
+    ctx.save();
+    if (hit > 0) { ctx.translate(this.x, cy); ctx.scale(1 + hit * 0.05, 1 + hit * 0.45); ctx.translate(-this.x, -cy); }  // swell on hit
+    ctx.fillStyle = "rgba(0,0,0,0.82)"; ctx.fillRect(x - 1.5, y - 1.5, w + 3, h + 3);   // outline
+    ctx.fillStyle = "#39343f"; ctx.fillRect(x, y, w, h);                                // track
+    if (fl > fr) { ctx.fillStyle = CONFIG.colors.slam; ctx.fillRect(x + w * fr, y, w * (fl - fr), h); }  // lagging damage chip
+    ctx.fillStyle = low ? CONFIG.colors.charger : "#fff"; ctx.fillRect(x, y, w * fr, h);                 // current hp (warns red when low)
+    if (hit > 0) { ctx.globalAlpha = hit * 0.7; ctx.fillStyle = "#fff"; ctx.fillRect(x, y, w * fr, h); ctx.globalAlpha = 1; }  // hit flash
+    ctx.fillStyle = low ? CONFIG.colors.charger : CONFIG.colors.eye; ctx.fillRect(x + w * fr - 1.5, y - 1, 2.5, h + 2);        // bright leading edge
+    if (shielded) { ctx.fillStyle = CONFIG.colors.perfect; ctx.fillRect(x, y - 5, w * clamp(this.shield / this.maxShield, 0, 1), 3); }  // warded shield
+    ctx.restore();
   }
 }
 

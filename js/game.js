@@ -147,6 +147,7 @@
   const ez = (t) => { t = t < 0 ? 0 : t > 1 ? 1 : t; return 1 - (1 - t) * (1 - t); };   // ease-out
   let codexFilter = "all";              // ABILITIES tab: category filter
   let codexSort = "category";           // ...and sort mode (category | name | type)
+  let bestiaryFilter = "all";           // INDEX tab: enemy category filter
   let codexTierView = {};               // id -> which tier (0=base) is being previewed on its card
 
   // ---- helpers ----
@@ -1519,15 +1520,36 @@
   };
   const ABIL_CAT_ORDER = ["offense", "throw", "parry", "mobility", "resilience", "utility"];
 
+  // ability rarity tiers — three clearly-separated classes:
+  //   STACKS  — plain upgrades, pile up each pick
+  //   UNIQUE  — one-time picks, no evolution
+  //   SPECIAL — the prized abilities that EVOLVE a tier with every boss you fell
+  const SPECIAL_COLOR = "#e8a32e";   // amber: the evolving "Special" class
+  function abilType(up) { return up.tiers ? "special" : (up.unique ? "unique" : "stack"); }
+  function abilBadge(up) {
+    if (up.tiers) return { label: "✦ SPECIAL", color: SPECIAL_COLOR };
+    if (up.unique) return { label: "★ UNIQUE", color: UI.t.color.unique };
+    return { label: "STACKS", color: UI.t.color.muted };
+  }
+
   function drawAbilityCard(x, y, w, h, up) {
     const t = UI.t;
     const cat = ABIL_CATS[up.cat] || ABIL_CATS.utility;
     const hovered = Input.mouseX >= x && Input.mouseX <= x + w && Input.mouseY >= y && Input.mouseY <= y + h;
+    const special = !!up.tiers, bd = abilBadge(up);
     UI.card(ctx, x, y, w, h, hovered);
     UI.accentStrip(ctx, x, y, w, cat.color);
+    // SPECIAL abilities are set apart: an amber under-strip that gleams as it scrolls
+    if (special) {
+      ctx.fillStyle = SPECIAL_COLOR; ctx.globalAlpha = 0.9; ctx.fillRect(x, y + 6, w, 3);
+      const gx = x + ((uiT * 80 + (x % 200)) % (w + 60)) - 30;
+      const g = ctx.createLinearGradient(gx - 30, 0, gx + 30, 0);
+      g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(0.5, "rgba(255,255,255,0.85)"); g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = g; ctx.fillRect(x, y + 6, w, 3); ctx.globalAlpha = 1;
+    }
     ctx.textBaseline = "alphabetic";
-    // top row: type tag (left) + category (right)
-    UI.tag(ctx, up.unique ? "★ UNIQUE" : "STACKS", x + 12, y + 26, up.unique ? t.color.unique : t.color.muted, "left", t.type.micro);
+    // top row: rarity class (left) + category (right)
+    UI.tag(ctx, bd.label, x + 12, y + 26, bd.color, "left", t.type.micro);
     UI.tag(ctx, cat.name, x + w - 12, y + 26, cat.color, "right", t.type.micro);
     // name (shrink to fit)
     ctx.fillStyle = UI.ink; ctx.textAlign = "left";
@@ -1555,7 +1577,7 @@
     const t = UI.t;
     UI.title(ctx, "ABILITIES", W / 2, 52, t.type.h1);
     ctx.fillStyle = t.color.accent; ctx.globalAlpha = eIn; ctx.fillRect(W / 2 - 65 * eIn, 66, 130 * eIn, 3); ctx.globalAlpha = 1;
-    UI.text(ctx, "★ unique = one-time  ·  others stack  ·  click a card to step through its tiers (boss-kill evolutions)",
+    UI.text(ctx, "STACKS pile up  ·  ★ UNIQUE are one-time  ·  ✦ SPECIAL evolve a tier with every boss  —  click a card to read its tiers",
       W / 2, 86, t.type.caption, "center", t.alpha.muted);
 
     // ---- filter chips (All + each category) + a sort toggle ----
@@ -1572,12 +1594,13 @@
       action: () => { codexSort = codexSort === "category" ? "name" : (codexSort === "name" ? "type" : "category"); listScroll = 0; } });
 
     let list = UPGRADES.filter((u) => codexFilter === "all" || (u.cat || "utility") === codexFilter);
+    const rank = (u) => (u.tiers ? 0 : (u.unique ? 1 : 2));   // SPECIAL -> UNIQUE -> STACKS
     list.sort((a, b) => {
       if (codexSort === "name") return a.name.localeCompare(b.name);
-      if (codexSort === "type") return (a.unique ? 0 : 1) - (b.unique ? 0 : 1) || a.name.localeCompare(b.name);
+      if (codexSort === "type") return rank(a) - rank(b) || a.name.localeCompare(b.name);
       const ca = ABIL_CAT_ORDER.indexOf(a.cat || "utility"), cb = ABIL_CAT_ORDER.indexOf(b.cat || "utility");
       if (ca !== cb) return ca - cb;
-      return (a.unique ? 1 : 0) - (b.unique ? 1 : 0);
+      return rank(a) - rank(b);
     });
     const cols = 4, mx = 70, gap = 22, cardW = (W - mx * 2 - gap * (cols - 1)) / cols;
     const ch = 150, gy = 20, stride = ch + gy, top = 142, visRows = 4;
@@ -1731,6 +1754,7 @@
     volley: "fires a 3-shot volley", armed: "+30% melee dmg & reach", warded: "gains a 60%-HP shield",
   };
   const AFFIX_COLOR = {}; AFFIXES.forEach((a) => { AFFIX_COLOR[a.id] = a.color; });
+  const BESTIARY_CAT = { Charger: "melee", Shooter: "ranged", Flyer: "air", Bomber: "ranged", Armored: "melee", Priest: "support", Mender: "support", Herald: "support", Anchor: "support", Wraith: "air", Chimera: "melee" };
 
   const BESTIARY = [
     { name: "Charger", role: "MELEE RUSHER", variants: "Brawler · Stalker · Executioner · Gravedigger · Duelist",
@@ -1785,8 +1809,8 @@
   function bestiary() {
     if (!bestiaryCache) {
       const safe = (m) => { try { return m(); } catch (e) { return null; } };
-      const mobs = BESTIARY.map((b) => ({ b, inst: safe(b.make), boss: false }));
-      const bosses = BESTIARY_BOSS.map((b) => ({ b, inst: safe(b.make), boss: true }));
+      const mobs = BESTIARY.map((b) => ({ b, inst: safe(b.make), boss: false, cat: BESTIARY_CAT[b.name] || "melee" }));
+      const bosses = BESTIARY_BOSS.map((b) => ({ b, inst: safe(b.make), boss: true, cat: "boss" }));
       bestiaryCache = { all: mobs.concat(bosses) };
     }
     return bestiaryCache;
@@ -1796,7 +1820,7 @@
     if (!inst) { ctx.fillStyle = "#eee"; ctx.fillRect(bx + 8, by + 8, bw - 16, bh - 16); return; }
     const maxDim = Math.max(inst.hw * 2, inst.hh * 2) + 18;
     const sc = Math.min((bw - 22) / maxDim, (bh - 22) / maxDim);
-    inst.x = 0; inst.y = 0; inst.facing = 1; inst.flash = 0; inst.stun = 0; inst.spawnT = 0;
+    inst.x = 0; inst.y = 0; inst.facing = 1; inst.flash = 0; inst.stun = 0; inst.spawnT = 0; inst._noBar = true;
     ctx.save();
     ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.clip();
     ctx.translate(bx + bw / 2, by + bh / 2); ctx.scale(sc, sc);
@@ -1826,33 +1850,32 @@
     if (line) ctx.fillText(line, x, yy);
     ctx.globalAlpha = 1; return yy;
   }
-  function drawBestiaryEntry(row, fx, rx, y, h) {
-    const t = UI.t, inst = row.inst, b = row.b, ac = row.boss ? t.color.danger : t.color.accent;
-    UI.panel(ctx, fx, y, rx - fx, h);
-    ctx.fillStyle = ac; ctx.fillRect(fx, y, 6, h);
+  function drawBestiaryEntry(row, x, y, w, h) {
+    const t = UI.t, inst = row.inst, b = row.b, ac = row.boss ? t.color.danger : t.color.accent, rx = x + w;
+    UI.panel(ctx, x, y, w, h);
+    ctx.fillStyle = ac; ctx.fillRect(x, y, 6, h);
     // preview
-    const bw = 150, bx = fx + 18, by = y + (h - 150) / 2;
-    ctx.strokeStyle = t.color.disabled; ctx.lineWidth = 1.5; ctx.strokeRect(bx, by, bw, 150);
-    drawCreature(inst, bx, by, bw, 150);
+    const bw = 132, bx = x + 18, by = y + (h - 132) / 2;
+    ctx.strokeStyle = t.color.disabled; ctx.lineWidth = 1.5; ctx.strokeRect(bx, by, bw, 132);
+    drawCreature(inst, bx, by, bw, 132);
     // header line: name + role
-    const ix = bx + bw + 26;
+    const ix = bx + bw + 22;
     ctx.fillStyle = "#000"; ctx.font = UI.font(t.type.lead, true); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
     const nameW = ctx.measureText(b.name).width;
-    ctx.fillText(b.name, ix, y + 38);
-    UI.tag(ctx, b.role, ix + nameW + 16, y + 38, ac, "left", t.type.micro);
+    ctx.fillText(b.name, ix, y + 34);
+    UI.tag(ctx, b.role, ix + nameW + 14, y + 34, ac, "left", t.type.micro);
     // stat chips
     const hp = inst ? Math.round(inst.maxHp) : "—", dmg = inst ? Math.round(inst.contactDmg) : "—", spd = inst ? Math.round(inst.speed || 0) : "—";
-    let sx = statChip(ix, y + 52, "HP", "" + hp);
-    sx = statChip(sx, y + 52, row.boss ? "TOUCH" : "DMG", "" + dmg);
-    if (!row.boss) sx = statChip(sx, y + 52, "SPD", "" + spd);
+    let sx = statChip(ix, y + 46, "HP", "" + hp);
+    sx = statChip(sx, y + 46, row.boss ? "TOUCH" : "DMG", "" + dmg);
+    if (!row.boss) sx = statChip(sx, y + 46, "SPD", "" + spd);
     // description
-    const dW = rx - ix - 30;
-    wrapLeft(b.desc, ix, y + 98, dW, 22, t.type.caption, t.alpha.soft);
+    wrapLeft(b.desc, ix, y + 90, rx - ix - 24, 21, t.type.caption, t.alpha.soft);
     // variants line
-    if (b.variants && b.variants !== "—") UI.tag(ctx, "VARIANTS:   " + b.variants, ix, y + h - 40, t.color.muted, "left", t.type.micro);
+    if (b.variants && b.variants !== "—") UI.tag(ctx, "VARIANTS:  " + b.variants, ix, y + h - 38, t.color.muted, "left", t.type.micro);
     // bottom line: affix chips (mobs) or a phase note (bosses)
     if (row.boss) {
-      UI.tag(ctx, "MULTI-PHASE  —  its attacks escalate as its health falls", ix, y + h - 14, t.color.danger, "left", t.type.micro);
+      UI.tag(ctx, "MULTI-PHASE  —  attacks escalate as its health falls", ix, y + h - 14, t.color.danger, "left", t.type.micro);
     } else if (inst) {
       ctx.font = UI.font(t.type.micro, true); ctx.fillStyle = t.color.muted; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
       ctx.fillText("CAN ROLL:", ix, y + h - 14);
@@ -1861,14 +1884,23 @@
     }
   }
   function renderBestiary() {
-    const fx = W / 2 - 540, rx = W / 2 + 540;
-    UI.header(ctx, "INDEX", "every foe — what they do, their stats, and the affixes they can roll", eIn);
-    const rows = bestiary().all, rh = 188, top = 198, vis = 3;
-    const maxOff = Math.max(0, rows.length - vis);
-    const off = clamp(Math.round(listScroll / rh), 0, maxOff);
-    for (let r = 0; r < vis; r++) { const idx = off + r; if (idx >= rows.length) break; drawBestiaryEntry(rows[idx], fx, rx, top + r * rh, rh - 16); }
-    if (maxOff > 0) UI.scrollHint(ctx, W / 2, top + vis * rh - 10, off > 0, off < maxOff);
-    UI.tag(ctx, "affixes: up to 3 per enemy, each ≈ (wave−1)×6% per slot — chaos scales with the wave", W / 2, top + vis * rh + 12, UI.t.color.muted, "center", UI.t.type.micro);
+    const t = UI.t;
+    UI.header(ctx, "INDEX", "every foe — what it does, its stats, and the affixes it can roll", eIn);
+    // filter chips (like the ABILITIES tab)
+    const cats = [["all", "ALL"], ["melee", "MELEE"], ["ranged", "RANGED"], ["air", "AIR"], ["support", "SUPPORT"], ["boss", "BOSS"]];
+    const cw0 = 120, cg = 8, totalC = cats.length * cw0 + (cats.length - 1) * cg, cx0 = (W - totalC) / 2;
+    cats.forEach(([id, label], i) => uiButtons.push({ x: cx0 + i * (cw0 + cg), y: 150, w: cw0, h: 30, label, size: t.type.micro, chip: true, sel: bestiaryFilter === id, action: () => { bestiaryFilter = id; listScroll = 0; } }));
+    // 2-column grid of the filtered roster
+    const rows = bestiary().all.filter((r) => bestiaryFilter === "all" || r.cat === bestiaryFilter);
+    const cols = 2, mx = 72, gap = 26, cardW = (W - mx * 2 - gap) / cols, cardH = 168, stride = cardH + 18, top = 206, vis = 3;
+    const gridRows = Math.ceil(rows.length / cols), maxOff = Math.max(0, gridRows - vis);
+    const off = clamp(Math.round(listScroll / stride), 0, maxOff);
+    for (let r = 0; r < vis; r++) for (let c = 0; c < cols; c++) {
+      const idx = (off + r) * cols + c; if (idx >= rows.length) continue;
+      drawBestiaryEntry(rows[idx], mx + c * (cardW + gap), top + r * stride, cardW, cardH);
+    }
+    if (maxOff > 0) UI.scrollHint(ctx, W / 2, top + vis * stride - 14, off > 0, off < maxOff);
+    UI.tag(ctx, "affixes: up to 3 per enemy, each ≈ (wave−1)×6% per slot — chaos scales with the wave", W / 2, top + vis * stride + 4, t.color.muted, "center", t.type.micro);
     addBack();
   }
 
@@ -1930,11 +1962,10 @@
     ctx.fillStyle = t.color.accent; ctx.globalAlpha = clamp(ez(enterT / 0.3), 0, 1); ctx.fillRect(W / 2 - 80, 140, 160, 3); ctx.globalAlpha = 1;
     UI.text(ctx, "CHOOSE AN UPGRADE  ·  press 1 / 2 / 3", W / 2, 176, t.type.caption, "center", t.alpha.muted);
     draftChoices.forEach((up, i) => {
-      const cat = ABIL_CATS[up.cat] || ABIL_CATS.utility, owned = run.mods.owned[up.id] || 0;
+      const cat = ABIL_CATS[up.cat] || ABIL_CATS.utility, owned = run.mods.owned[up.id] || 0, bd = abilBadge(up);
       choiceCard(i, draftChoices.length, {
-        accent: cat.color,
-        tag: (up.unique ? "★ UNIQUE  ·  " : "UPGRADE  ·  ") + cat.name,
-        tagColor: up.unique ? t.color.unique : cat.color,
+        accent: up.tiers ? SPECIAL_COLOR : cat.color,
+        tag: bd.label + "  ·  " + cat.name, tagColor: bd.color,
         name: up.name, desc: up.desc, foot: owned ? "owned ×" + owned : null,
         action: () => chooseUpgrade(i),
       });
