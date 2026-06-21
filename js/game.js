@@ -1336,23 +1336,20 @@
   }
 
   function drawHUD() {
-    const ink = THEME.ink;
+    const t = UI.t, ink = THEME.ink;   // UI.ink === THEME.ink during the HUD pass
     const x = 20, y = 20, bw = 280;
-    ctx.strokeStyle = ink; ctx.lineWidth = 2; ctx.strokeRect(x, y, bw, 18);
-    ctx.fillStyle = ink; ctx.fillRect(x, y, bw * clamp(player.hp / player.maxHp, 0, 1), 18);
-    if (player.oneHit) { ctx.fillStyle = ink; UI.text(ctx, "ONE-HIT", x + bw + 10, y + 15, 13); }
+    UI.bar(ctx, x, y, bw, 18, player.hp / player.maxHp);
+    if (player.oneHit) UI.text(ctx, "ONE-HIT", x + bw + 10, y + 15, t.type.caption);
 
-    // dash pips
+    // dash readiness
     const ready = 1 - clamp(player.dashCd / CONFIG.dash.cooldown, 0, 1);
-    ctx.strokeRect(x, y + 26, 120, 8);
-    ctx.fillRect(x, y + 26, 120 * ready, 8);
+    UI.bar(ctx, x, y + 26, 120, 8, ready);
 
     // Aegis shield pips (cyan) — only shown once Aegis is owned
     for (let i = 0; i < player.maxShield; i++) {
       const sx = x + 132 + i * 16;
-      ctx.strokeStyle = CONFIG.colors.armoredShield; ctx.lineWidth = 2;
-      ctx.strokeRect(sx, y + 26, 12, 8);
-      if (i < player.shield) { ctx.fillStyle = CONFIG.colors.armoredShield; ctx.fillRect(sx, y + 26, 12, 8); }
+      if (i < player.shield) UI.bar(ctx, sx, y + 26, 12, 8, 1, CONFIG.colors.armoredShield, CONFIG.colors.armoredShield);
+      else { ctx.strokeStyle = CONFIG.colors.armoredShield; ctx.lineWidth = 2; ctx.strokeRect(sx, y + 26, 12, 8); }
     }
     ctx.strokeStyle = ink; ctx.fillStyle = ink;
 
@@ -1362,24 +1359,22 @@
       const up = UPGRADES.find((u) => u.id === id);
       if (!up) continue;
       const label = (up.unique ? "★ " : "") + up.name + (up.unique ? "" : " x" + run.mods.owned[id]);
-      UI.text(ctx, label, x, oy, 13, "left", 0.85);
+      UI.text(ctx, label, x, oy, t.type.caption, "left", t.alpha.soft);
       oy += 17;
     }
 
     // ---- center stack (kept off the edges so nothing clips) ----
     const remaining = enemies.length + run.spawnQueue.length;
-    UI.title(ctx, run.isBossWave ? "BOSS" : "WAVE " + run.wave, W / 2, 40, 26);
+    UI.title(ctx, run.isBossWave ? "BOSS" : "WAVE " + run.wave, W / 2, 40, t.type.title);
     UI.text(ctx, "SCORE " + run.score + "    enemies left: " + remaining + "    " + fmtTime(run.runTime),
-      W / 2, 64, 15, "center", 0.8);
+      W / 2, 64, t.type.label, "center", t.alpha.soft);
 
     // trick meter (centered, colored by tier)
     if (run.mult > 1) {
       const tc = trickColor(run.mult);
-      ctx.fillStyle = tc; ctx.font = UI.font(22, true); ctx.textAlign = "center";
-      ctx.fillText("x" + run.mult + (run.rank ? "  " + run.rank : ""), W / 2, 96);
+      UI.tag(ctx, "x" + run.mult + (run.rank ? "  " + run.rank : ""), W / 2, 96, tc, "center", t.type.lead);
       const bw2 = 220, bx = W / 2 - bw2 / 2, by = 104;
-      ctx.lineWidth = 1.5; ctx.strokeStyle = ink; ctx.strokeRect(bx, by, bw2, 6);
-      ctx.fillStyle = tc; ctx.fillRect(bx, by, bw2 * clamp(run.comboTimer / CONFIG.trick.decay, 0, 1), 6);
+      UI.bar(ctx, bx, by, bw2, 6, clamp(run.comboTimer / CONFIG.trick.decay, 0, 1), tc);
     }
     ctx.textAlign = "left";
 
@@ -1387,9 +1382,8 @@
     const boss = enemies.find((e) => e.isBoss);
     if (boss) {
       const bbw = 560, bx = (W - bbw) / 2, by = 122;
-      ctx.strokeStyle = ink; ctx.lineWidth = 2; ctx.strokeRect(bx, by, bbw, 14);
-      ctx.fillStyle = ink; ctx.fillRect(bx, by, bbw * clamp(boss.hp / boss.maxHp, 0, 1), 14);
-      UI.text(ctx, "BOSS", bx, by - 4, 12, "left", 0.7);
+      UI.bar(ctx, bx, by, bbw, 14, boss.hp / boss.maxHp);
+      UI.text(ctx, "BOSS", bx, by - 4, t.type.micro, "left", t.alpha.soft);
     }
   }
 
@@ -1406,11 +1400,11 @@
   function drawLore() {
     const a = Math.min(loreT, 1) * Math.min((7 - loreT) * 2, 1);
     ctx.save(); ctx.globalAlpha = clamp(a, 0, 1);
+    // a deliberately fixed-light caption card (black body text), independent of biome ink
     ctx.fillStyle = "#fff"; ctx.fillRect(W / 2 - 390, 28, 780, 104);
     ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(W / 2 - 390, 28, 780, 104);
-    ctx.fillStyle = currentStage.accent || "#000"; ctx.font = UI.font(13, true); ctx.textAlign = "center";
-    ctx.fillText((currentStage.name || "STAGE").toUpperCase() + " — CLEARED", W / 2, 50);
-    wrapText(loreText, W / 2 - 360, 72, 720, 18, 13);
+    UI.tag(ctx, (currentStage.name || "STAGE").toUpperCase() + " — CLEARED", W / 2, 50, currentStage.accent || "#000", "center", UI.t.type.caption);
+    wrapText(loreText, W / 2 - 360, 72, 720, 18, UI.t.type.caption);
     ctx.restore();
   }
 
@@ -1418,13 +1412,10 @@
   function drawStageBanner() {
     const a = Math.min(stageBannerT, 1) * Math.min((3.0 - stageBannerT) * 2.5, 1);
     const gauntlet = run && run.mode === "bossonly";
-    ctx.save(); ctx.globalAlpha = clamp(a, 0, 1); ctx.textAlign = "center";
-    ctx.fillStyle = currentStage.accent || "#000"; ctx.font = UI.font(18, true);
-    ctx.fillText(gauntlet ? "BOSS GAUNTLET" : "STAGE " + (stageIndex + 1), W / 2, H / 2 - 70);
-    ctx.fillStyle = THEME.ink; ctx.font = UI.font(54, true);
-    ctx.fillText(stageName || currentStage.name, W / 2, H / 2 - 22);
-    ctx.globalAlpha = clamp(a, 0, 1) * 0.7; ctx.font = UI.font(18, false);
-    ctx.fillText(gauntlet ? "" : (currentStage.blurb || ""), W / 2, H / 2 + 12);
+    ctx.save(); ctx.globalAlpha = clamp(a, 0, 1);
+    UI.tag(ctx, gauntlet ? "BOSS GAUNTLET" : "STAGE " + (stageIndex + 1), W / 2, H / 2 - 70, currentStage.accent || THEME.ink, "center", UI.t.type.body);
+    UI.title(ctx, stageName || currentStage.name, W / 2, H / 2 - 22, UI.t.type.display);
+    if (!gauntlet) { ctx.globalAlpha = clamp(a, 0, 1) * UI.t.alpha.soft; UI.tag(ctx, currentStage.blurb || "", W / 2, H / 2 + 12, THEME.ink, "center", UI.t.type.body); }
     ctx.restore();
   }
 
@@ -1464,9 +1455,10 @@
   }
 
   function renderMenu() {
-    UI.title(ctx, "T E A R", W / 2, 220, 84);
-    UI.text(ctx, "a momentum-blade survival game", W / 2, 260, 16, "center", 0.6);
-    UI.text(ctx, META.coins() + " coins", W / 2, 300, 18, "center", 0.7);
+    const t = UI.t;
+    UI.title(ctx, "T E A R", W / 2, 220, t.type.wordmark);
+    UI.text(ctx, "a momentum-blade survival game", W / 2, 254, t.type.caption, "center", t.alpha.muted);
+    UI.text(ctx, META.coins() + " coins", W / 2, 298, t.type.body, "center", t.alpha.soft);
     vmenu([
       { label: "PLAY", action: () => { state = "setup"; } },
       { label: "SHOP", action: () => { state = "shop"; } },
@@ -1474,7 +1466,7 @@
       { label: "HOW TO PLAY", action: () => { state = "howto"; } },
       { label: "HIGH SCORES", action: () => { state = "highscores"; } },
       { label: "SETTINGS", action: () => { state = "settings"; } },
-    ], W / 2, 320, 300, 48, 12);
+    ], W / 2, 326, t.metric.btnW, t.metric.btnH, t.metric.btnGap);
   }
 
   // codex: every upgrade & unique ability and what it does (scrollable)
@@ -1490,24 +1482,19 @@
   const ABIL_CAT_ORDER = ["offense", "throw", "parry", "mobility", "resilience", "utility"];
 
   function drawAbilityCard(x, y, w, h, up) {
+    const t = UI.t;
     const cat = ABIL_CATS[up.cat] || ABIL_CATS.utility;
     const hovered = Input.mouseX >= x && Input.mouseX <= x + w && Input.mouseY >= y && Input.mouseY <= y + h;
-    UI.panel(ctx, x, y, w, h);
-    if (hovered) { ctx.globalAlpha = 0.05; ctx.fillStyle = "#000"; ctx.fillRect(x, y, w, h); ctx.globalAlpha = 1;
-      ctx.lineWidth = 3; ctx.strokeStyle = "#000"; ctx.strokeRect(x, y, w, h); }
-    // category accent strip
-    ctx.fillStyle = cat.color; ctx.fillRect(x, y, w, 6);
+    UI.card(ctx, x, y, w, h, hovered);
+    UI.accentStrip(ctx, x, y, w, cat.color);
     ctx.textBaseline = "alphabetic";
     // top row: type tag (left) + category (right)
-    ctx.font = UI.font(11, true);
-    ctx.fillStyle = up.unique ? CONFIG.colors.perfect : "#999"; ctx.textAlign = "left";
-    ctx.fillText(up.unique ? "★ UNIQUE" : "STACKS", x + 12, y + 26);
-    ctx.fillStyle = cat.color; ctx.textAlign = "right";
-    ctx.fillText(cat.name, x + w - 12, y + 26);
+    UI.tag(ctx, up.unique ? "★ UNIQUE" : "STACKS", x + 12, y + 26, up.unique ? t.color.unique : t.color.muted, "left", t.type.micro);
+    UI.tag(ctx, cat.name, x + w - 12, y + 26, cat.color, "right", t.type.micro);
     // name (shrink to fit)
-    ctx.fillStyle = "#000"; ctx.textAlign = "left";
-    let ns = 21; ctx.font = UI.font(ns, true);
-    while (ctx.measureText(up.name).width > w - 24 && ns > 13) { ns--; ctx.font = UI.font(ns, true); }
+    ctx.fillStyle = UI.ink; ctx.textAlign = "left";
+    let ns = t.type.title; ctx.font = UI.font(ns, true);
+    while (ctx.measureText(up.name).width > w - 24 && ns > t.type.caption) { ns--; ctx.font = UI.font(ns, true); }
     ctx.fillText(up.name, x + 12, y + 54);
     // tier track: one pip per tier this ability has; the pip you're viewing is filled.
     // (clicking the card steps through the tiers — see renderCodex)
@@ -1515,35 +1502,33 @@
     let view = codexTierView[up.id] || 0; if (view >= tierCount) view = 0;
     for (let i = 0; i < tierCount; i++) {
       ctx.beginPath(); ctx.arc(x + 17 + i * 16, y + 73, 5, 0, Math.PI * 2);
-      if (i === view) { ctx.fillStyle = cat.color; ctx.fill(); ctx.strokeStyle = "#000"; ctx.lineWidth = 1.2; ctx.stroke(); }
+      if (i === view) { ctx.fillStyle = cat.color; ctx.fill(); ctx.strokeStyle = UI.ink; ctx.lineWidth = 1.2; ctx.stroke(); }
       else { ctx.strokeStyle = cat.color; ctx.lineWidth = 2; ctx.stroke(); }
     }
-    if (tierCount > 1) {
-      ctx.fillStyle = cat.color; ctx.font = UI.font(11, true); ctx.textAlign = "left";
-      ctx.fillText(view === 0 ? "BASE" : "TIER " + (view + 1), x + 17 + tierCount * 16 + 2, y + 77);
-    }
+    if (tierCount > 1) UI.tag(ctx, view === 0 ? "BASE" : "TIER " + (view + 1), x + 17 + tierCount * 16 + 2, y + 77, cat.color, "left", t.type.micro);
     // description for the tier currently being viewed
     const desc = view === 0 ? up.desc : up.tiers[view - 1].desc;
-    wrapText(desc, x + 12, y + 99, w - 24, 17, 12);
+    wrapText(desc, x + 12, y + 99, w - 24, 17, t.type.micro);
     // hint that the card cycles
-    if (tierCount > 1) { ctx.fillStyle = "#9a9a9a"; ctx.font = UI.font(10, true); ctx.textAlign = "center"; ctx.fillText("click to step through tiers", x + w / 2, y + h - 8); }
+    if (tierCount > 1) UI.tag(ctx, "click to step through tiers", x + w / 2, y + h - 8, t.color.muted, "center", t.type.micro);
   }
 
   function renderCodex() {
-    UI.title(ctx, "ABILITIES", W / 2, 52, 34);
+    const t = UI.t;
+    UI.title(ctx, "ABILITIES", W / 2, 52, t.type.h1);
     UI.text(ctx, "★ unique = one-time  ·  others stack  ·  click a card to step through its tiers (boss-kill evolutions)",
-      W / 2, 80, 13, "center", 0.55);
+      W / 2, 80, t.type.caption, "center", t.alpha.muted);
 
     // ---- filter chips (All + each category) + a sort toggle ----
     const chips = [["all", "ALL"]].concat(ABIL_CAT_ORDER.map((c) => [c, (ABIL_CATS[c].name)]));
-    const cw0 = 96, cg = 6, totalC = chips.length * cw0 + (chips.length - 1) * cg;
+    const cw0 = t.metric.chipW, cg = t.space.xs, totalC = chips.length * cw0 + (chips.length - 1) * cg;
     let cx0 = (W - totalC) / 2 - 70;
     chips.forEach(([id, label]) => {
-      uiButtons.push({ x: cx0, y: 96, w: cw0, h: 28, label, size: 12, sel: codexFilter === id,
+      uiButtons.push({ x: cx0, y: 96, w: cw0, h: t.metric.chipH, label, size: t.type.micro, chip: true, sel: codexFilter === id,
         action: () => { codexFilter = id; listScroll = 0; } });
       cx0 += cw0 + cg;
     });
-    uiButtons.push({ x: cx0 + 8, y: 96, w: 150, h: 28, size: 12,
+    uiButtons.push({ x: cx0 + 8, y: 96, w: 150, h: t.metric.chipH, size: t.type.micro, chip: true,
       label: "SORT: " + codexSort.toUpperCase(),
       action: () => { codexSort = codexSort === "category" ? "name" : (codexSort === "name" ? "type" : "category"); listScroll = 0; } });
 
@@ -1573,19 +1558,20 @@
           action: () => { if (tc > 1) codexTierView[up.id] = ((codexTierView[up.id] || 0) + 1) % tc; } });
       }
     }
-    if (maxOff > 0) UI.text(ctx, (off > 0 ? "▲ " : "") + "scroll" + (off < maxOff ? " ▼" : ""), W / 2, H - 86, 13, "center", 0.5);
+    if (maxOff > 0) UI.scrollHint(ctx, W / 2, H - 86, off > 0, off < maxOff);
     uiButtons.push({ x: W / 2 - 100, y: H - 66, w: 200, h: 46, label: "BACK", action: () => { state = "menu"; } });
   }
 
   function renderShop() {
-    UI.title(ctx, "SHOP", W / 2, 90, 40);
-    UI.text(ctx, META.coins() + " coins", W / 2, 128, 22, "center");
-    UI.text(ctx, "permanent upgrades, applied at the start of every run", W / 2, 152, 14, "center", 0.55);
+    const t = UI.t;
+    UI.title(ctx, "SHOP", W / 2, 90, t.type.h1);
+    UI.text(ctx, META.coins() + " coins", W / 2, 128, t.type.lead, "center");
+    UI.text(ctx, "permanent upgrades, applied at the start of every run", W / 2, 152, t.type.caption, "center", t.alpha.muted);
     let y = 190;
     for (const it of SHOP) {
       const lv = META.level(it.id), maxed = lv >= it.maxLevel;
-      UI.text(ctx, it.name + "   (" + lv + "/" + it.maxLevel + ")", W / 2 - 380, y + 20, 20);
-      UI.text(ctx, it.desc, W / 2 - 380, y + 44, 14, "left", 0.6);
+      UI.text(ctx, it.name + "   (" + lv + "/" + it.maxLevel + ")", W / 2 - 380, y + 20, t.type.lead);
+      UI.text(ctx, it.desc, W / 2 - 380, y + 44, t.type.caption, "left", t.alpha.soft);
       uiButtons.push({ x: W / 2 + 250, y: y + 6, w: 140, h: 44,
         label: maxed ? "MAX" : META.cost(it) + "c",
         enabled: !maxed && META.canBuy(it),
@@ -1596,10 +1582,11 @@
   }
 
   function renderSetup() {
-    UI.title(ctx, "SELECT RUN", W / 2, 110, 40);
-    const top = 175, bw = 300, bh = 50, gap = 12;
+    const t = UI.t;
+    UI.title(ctx, "SELECT RUN", W / 2, 110, t.type.h1);
+    const top = 175, bw = t.metric.btnW, bh = 50, gap = t.metric.btnGap;
     const col = (label, x, items, get, set) => {
-      UI.text(ctx, label, x, top, 18, "left", 0.6);
+      UI.text(ctx, label, x, top, t.type.body, "left", t.alpha.muted);
       items.forEach((it, i) => uiButtons.push({
         x, y: top + 18 + i * (bh + gap), w: bw, h: bh, size: 16,
         label: it.label + (it.enabled === false ? " (soon)" : ""),
@@ -1613,17 +1600,17 @@
     col("Weapon", 1120, WEAPONS.map((w) => ({ id: w.id, label: w.name })), () => selWeapon, (v) => selWeapon = v);
 
     const wsel = WEAPONS.find((x) => x.id === selWeapon);
-    if (wsel) UI.text(ctx, wsel.blurb, W / 2, 552, 16, "center", 0.8);
+    if (wsel) UI.text(ctx, wsel.blurb, W / 2, 552, t.type.body, "center", t.alpha.soft);
 
     if (selMode === "bossonly") {
       // boss gauntlet: pick the first boss (then it shuffles through the rest, tier-up after each)
-      UI.text(ctx, "Boss Test cycles every boss, with a tier-up after each. Start with:", W / 2, 582, 14, "center", 0.6);
+      UI.text(ctx, "Boss Test cycles every boss, with a tier-up after each. Start with:", W / 2, 582, t.type.caption, "center", t.alpha.muted);
       const opts = [{ id: "shuffle", label: "Shuffle" }].concat(BOSS_ROSTER.map((b) => ({ id: b.id, label: b.name })));
       const bbw = 178, bbg = 10, totalw = opts.length * bbw + (opts.length - 1) * bbg, bx = (W - totalw) / 2;
       opts.forEach((o, i) => uiButtons.push({ x: bx + i * (bbw + bbg), y: 596, w: bbw, h: 40, size: 14, label: o.label, sel: selBoss === o.id, action: () => { selBoss = o.id; } }));
     } else {
       const msel = CONFIG.modes.find((x) => x.id === selMode);
-      if (msel) UI.text(ctx, msel.blurb, W / 2, 588, 14, "center", 0.55);
+      if (msel) UI.text(ctx, msel.blurb, W / 2, 588, t.type.caption, "center", t.alpha.muted);
     }
 
     uiButtons.push({ x: W / 2 - 230, y: 660, w: 200, h: 56, label: "START", action: () => startRun(selMode, selDiff) });
@@ -1631,7 +1618,7 @@
   }
 
   function renderHowto() {
-    UI.title(ctx, "HOW TO PLAY", W / 2, 110, 40);
+    UI.title(ctx, "HOW TO PLAY", W / 2, 110, UI.t.type.h1);
     const lines = [
       "Move:  A / D      Jump:  W / Space      Drop through platform:  hold S",
       "Dash:  Shift  (aim 8-way with WASD) — i-frames + cooldown",
@@ -1648,19 +1635,19 @@
       "Pause: P      Release mouse: Esc",
     ];
     ctx.textAlign = "left";
-    lines.forEach((l, i) => UI.text(ctx, l, 230, 180 + i * 32, 18));
+    lines.forEach((l, i) => UI.text(ctx, l, 230, 180 + i * 32, UI.t.type.body));
     uiButtons.push({ x: W / 2 - 100, y: 600, w: 200, h: 52, label: "BACK", enabled: true, action: () => { state = "menu"; } });
   }
 
   function renderHighscores() {
-    UI.title(ctx, "HIGH SCORES", W / 2, 130, 40);
+    UI.title(ctx, "HIGH SCORES", W / 2, 130, UI.t.type.h1);
     let y = 230;
     CONFIG.modes.forEach((m) => {
       CONFIG.difficulties.forEach((d) => {
         const b = getBest(m.id, d.id);
-        UI.text(ctx, `${m.label} · ${d.label}`, W / 2 - 360, y, 20);
+        UI.text(ctx, `${m.label} · ${d.label}`, W / 2 - 360, y, UI.t.type.lead);
         ctx.textAlign = "right";
-        UI.text(ctx, `wave ${b.wave}   ·   ${b.score} pts   ·   ${fmtTime(b.time || 0)}`, W / 2 + 360, y, 20);
+        UI.text(ctx, `wave ${b.wave}   ·   ${b.score} pts   ·   ${fmtTime(b.time || 0)}`, W / 2 + 360, y, UI.t.type.lead);
         ctx.textAlign = "left";
         y += 44;
       });
@@ -1669,10 +1656,10 @@
   }
 
   function renderSettings() {
-    UI.title(ctx, "SETTINGS", W / 2, 120, 40);
+    UI.title(ctx, "SETTINGS", W / 2, 120, UI.t.type.h1);
     const row = (label, valStr, y, dec, inc) => {
-      UI.text(ctx, label, W / 2 - 320, y + 22, 22);
-      UI.text(ctx, valStr, W / 2 + 130, y + 22, 22, "center");
+      UI.text(ctx, label, W / 2 - 320, y + 22, UI.t.type.lead);
+      UI.text(ctx, valStr, W / 2 + 130, y + 22, UI.t.type.lead, "center");
       uiButtons.push({ x: W / 2 + 60, y, w: 50, h: 36, label: "-", action: dec });
       uiButtons.push({ x: W / 2 + 200, y, w: 50, h: 36, label: "+", action: inc });
     };
@@ -1680,7 +1667,7 @@
       () => { settings.vol = clamp(+(settings.vol - 0.1).toFixed(2), 0, 1); applySettings(); saveSettings(); },
       () => { settings.vol = clamp(+(settings.vol + 0.1).toFixed(2), 0, 1); applySettings(); saveSettings(); });
     // music toggle
-    UI.text(ctx, "Music", W / 2 - 320, 292, 22);
+    UI.text(ctx, "Music", W / 2 - 320, 292, UI.t.type.lead);
     uiButtons.push({ x: W / 2 + 60, y: 270, w: 190, h: 36, label: settings.music ? "ON" : "OFF",
       action: () => { settings.music = !settings.music; applySettings(); saveSettings(); } });
     row("Mouse sensitivity", settings.sens.toFixed(2), 340,
@@ -1693,25 +1680,22 @@
   }
 
   function renderDraft() {
+    const t = UI.t;
     UI.dim(ctx, W, H, 0.82);
-    UI.title(ctx, "WAVE " + run.wave + " CLEARED", W / 2, 130, 40);
-    UI.text(ctx, "choose an upgrade  —  press 1 / 2 / 3", W / 2, 168, 18, "center", 0.7);
+    UI.title(ctx, "WAVE " + run.wave + " CLEARED", W / 2, 130, t.type.display);
+    UI.text(ctx, "choose an upgrade  —  press 1 / 2 / 3", W / 2, 168, t.type.body, "center", t.alpha.soft);
     const cw = 300, gap = 30, ch = 320, total = cw * 3 + gap * 2;
     const x0 = (W - total) / 2, y0 = 220;
     draftChoices.forEach((up, i) => {
       const x = x0 + i * (cw + gap);
       const mouseOver = Input.mouseX >= x && Input.mouseX <= x + cw && Input.mouseY >= y0 && Input.mouseY <= y0 + ch;
       const hovered = mouseOver || i === focus;
-      UI.panel(ctx, x, y0, cw, ch);
-      if (hovered) { ctx.lineWidth = 4; ctx.strokeStyle = "#000"; ctx.strokeRect(x, y0, cw, ch); ctx.fillStyle = "#000"; ctx.globalAlpha = 0.06; ctx.fillRect(x, y0, cw, ch); ctx.globalAlpha = 1; }
-      ctx.fillStyle = "#000";
-      UI.text(ctx, up.unique ? "★ UNIQUE ABILITY" : "UPGRADE", x + cw / 2, y0 + 40, 14, "center", 0.5);
-      ctx.font = UI.font(24, true); ctx.textAlign = "center";
-      ctx.fillText(up.name, x + cw / 2, y0 + 110);
-      // word-wrapped description
-      wrapText(up.desc, x + 24, y0 + 160, cw - 48, 26, 18);
+      UI.card(ctx, x, y0, cw, ch, hovered);
+      UI.text(ctx, up.unique ? "★ UNIQUE ABILITY" : "UPGRADE", x + cw / 2, y0 + 40, t.type.caption, "center", t.alpha.muted);
+      UI.title(ctx, up.name, x + cw / 2, y0 + 110, t.type.title);
+      wrapText(up.desc, x + 24, y0 + 160, cw - 48, 26, t.type.body);
       const owned = run.mods.owned[up.id] || 0;
-      if (owned) UI.text(ctx, "owned x" + owned, x + cw / 2, y0 + ch - 24, 14, "center", 0.5);
+      if (owned) UI.text(ctx, "owned x" + owned, x + cw / 2, y0 + ch - 24, t.type.caption, "center", t.alpha.muted);
       uiButtons.push({ x, y: y0, w: cw, h: ch, label: "", _draftIndex: i, _hideBox: true,
         action: () => chooseUpgrade(i) });
     });
@@ -1740,32 +1724,31 @@
 
   // boss-kill reward: evolve one owned ability to its next tier
   function renderTierUp() {
+    const t = UI.t;
     UI.dim(ctx, W, H, 0.85);
-    UI.title(ctx, "THE WAY OPENS", W / 2, 120, 40);
-    UI.text(ctx, "the boss falls — EVOLVE one of your abilities", W / 2, 160, 18, "center", 0.7);
+    UI.title(ctx, "THE WAY OPENS", W / 2, 120, t.type.display);
+    UI.text(ctx, "the boss falls — EVOLVE one of your abilities", W / 2, 160, t.type.body, "center", t.alpha.soft);
     const n = tierChoices.length, cw = 300, gap = 30, ch = 320;
     const total = cw * n + gap * (n - 1), x0 = (W - total) / 2, y0 = 220;
     tierChoices.forEach((up, i) => {
       const x = x0 + i * (cw + gap);
       const mouseOver = Input.mouseX >= x && Input.mouseX <= x + cw && Input.mouseY >= y0 && Input.mouseY <= y0 + ch;
       const hovered = mouseOver || i === focus;
-      UI.panel(ctx, x, y0, cw, ch);
-      if (hovered) { ctx.lineWidth = 4; ctx.strokeStyle = "#000"; ctx.strokeRect(x, y0, cw, ch); ctx.fillStyle = "#000"; ctx.globalAlpha = 0.06; ctx.fillRect(x, y0, cw, ch); ctx.globalAlpha = 1; }
+      UI.card(ctx, x, y0, cw, ch, hovered);
       const next = (run.mods.tier[up.id] || 1) + 1;
       const cat = ABIL_CATS[up.cat] || ABIL_CATS.utility;
-      ctx.fillStyle = cat.color; ctx.fillRect(x, y0, cw, 6);
-      UI.text(ctx, "EVOLVE  →  TIER " + next, x + cw / 2, y0 + 40, 14, "center", 0.6);
-      ctx.fillStyle = "#000"; ctx.font = UI.font(24, true); ctx.textAlign = "center";
-      ctx.fillText(up.name, x + cw / 2, y0 + 96);
+      UI.accentStrip(ctx, x, y0, cw, cat.color);
+      UI.text(ctx, "EVOLVE  →  TIER " + next, x + cw / 2, y0 + 40, t.type.caption, "center", t.alpha.muted);
+      UI.title(ctx, up.name, x + cw / 2, y0 + 96, t.type.title);
       // tier pips (filled up to current, the next one highlighted)
-      for (let t = 0; t < 3; t++) {
-        const px = x + cw / 2 - 24 + t * 24, py = y0 + 120;
+      for (let p = 0; p < 3; p++) {
+        const px = x + cw / 2 - 24 + p * 24, py = y0 + 120;
         ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2);
-        if (t < next - 1) { ctx.fillStyle = cat.color; ctx.fill(); }
-        else if (t === next - 1) { ctx.strokeStyle = cat.color; ctx.lineWidth = 2.5; ctx.stroke(); }
-        else { ctx.strokeStyle = "#ccc"; ctx.lineWidth = 1.5; ctx.stroke(); }
+        if (p < next - 1) { ctx.fillStyle = cat.color; ctx.fill(); }
+        else if (p === next - 1) { ctx.strokeStyle = cat.color; ctx.lineWidth = 2.5; ctx.stroke(); }
+        else { ctx.strokeStyle = t.color.disabled; ctx.lineWidth = 1.5; ctx.stroke(); }
       }
-      wrapText(nextTierDesc(up, run.mods), x + 24, y0 + 168, cw - 48, 26, 18);
+      wrapText(nextTierDesc(up, run.mods), x + 24, y0 + 168, cw - 48, 26, t.type.body);
       uiButtons.push({ x, y: y0, w: cw, h: ch, label: "", _draftIndex: i, _hideBox: true, action: () => chooseTierUp(i) });
     });
   }
@@ -1781,12 +1764,12 @@
 
   function renderPaused() {
     UI.dim(ctx, W, H, 0.8);
-    UI.title(ctx, "PAUSED", W / 2, 220, 56);
+    UI.title(ctx, "PAUSED", W / 2, 220, UI.t.type.display);
     vmenu([
       { label: "RESUME", action: () => { state = "playing"; requestLock(); } },
       { label: "RESTART", action: () => startRun(run.mode, run.diff) },
       { label: "MAIN MENU", action: () => { state = "confirmquit"; } },
-    ], W / 2, 300, 280, 54, 16);
+    ], W / 2, 300, 280, UI.t.metric.btnH, UI.t.metric.btnGap);
   }
 
   function quitRun() {
@@ -1798,70 +1781,72 @@
 
   function renderConfirmQuit() {
     UI.dim(ctx, W, H, 0.85);
-    UI.title(ctx, "QUIT RUN?", W / 2, 250, 48);
-    UI.text(ctx, "Your progress (cleared waves & score) is saved to High Scores.", W / 2, 300, 16, "center", 0.7);
+    UI.title(ctx, "QUIT RUN?", W / 2, 250, UI.t.type.display);
+    UI.text(ctx, "Your progress (cleared waves & score) is saved to High Scores.", W / 2, 300, UI.t.type.body, "center", UI.t.alpha.soft);
     uiButtons.push({ x: W / 2 - 230, y: 350, w: 200, h: 56, label: "QUIT", action: quitRun });
     uiButtons.push({ x: W / 2 + 30, y: 350, w: 200, h: 56, label: "CANCEL", action: () => { state = "paused"; } });
   }
 
   function drawResultsTable(startY) {
-    const log = overInfo.log;
+    const t = UI.t, log = overInfo.log;
     const tx = W / 2 - 270, tw = 540;
     let ty = startY;
-    ctx.fillStyle = "#000"; ctx.font = UI.font(14, true);
+    ctx.fillStyle = UI.ink; ctx.font = UI.font(t.type.label, true);
     ctx.textAlign = "left"; ctx.fillText("WAVE", tx, ty);
     ctx.textAlign = "right"; ctx.fillText("TIME", tx + 200, ty); ctx.fillText("KILLS", tx + 330, ty); ctx.fillText("BEST TRICK", tx + tw, ty);
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(tx, ty + 8); ctx.lineTo(tx + tw, ty + 8); ctx.stroke();
+    UI.divider(ctx, tx, ty + 8, tw, t.alpha.full);
     ty += 30;
     const visible = 8, maxOff = Math.max(0, log.length - visible);
     const off = clamp(Math.round(listScroll / 26), 0, maxOff);
     for (const r of log.slice(off, off + visible)) {
-      ctx.textAlign = "left"; UI.text(ctx, (r.died ? "✗ " : "") + r.wave, tx, ty, 16);
+      ctx.textAlign = "left"; UI.text(ctx, (r.died ? "✗ " : "") + r.wave, tx, ty, t.type.body);
       ctx.textAlign = "right";
-      UI.text(ctx, r.time.toFixed(1) + "s", tx + 200, ty, 16);
-      UI.text(ctx, "" + r.kills, tx + 330, ty, 16);
-      UI.text(ctx, "x" + r.peak, tx + tw, ty, 16);
+      UI.text(ctx, r.time.toFixed(1) + "s", tx + 200, ty, t.type.body);
+      UI.text(ctx, "" + r.kills, tx + 330, ty, t.type.body);
+      UI.text(ctx, "x" + r.peak, tx + tw, ty, t.type.body);
       ty += 26;
     }
-    if (maxOff > 0) UI.text(ctx, (off > 0 ? "▲ " : "") + "scroll" + (off < maxOff ? " ▼" : ""), W / 2, ty + 6, 12, "center", 0.5);
+    if (maxOff > 0) UI.scrollHint(ctx, W / 2, ty + 6, off > 0, off < maxOff);
   }
 
   function renderGameover() {
+    const t = UI.t;
     UI.dim(ctx, W, H, 0.9);
-    UI.title(ctx, "DEFEATED", W / 2, 110, 50);
-    UI.text(ctx, "wave " + overInfo.wave + "   ·   " + overInfo.score + " pts   ·   " + fmtTime(overInfo.time), W / 2, 150, 20, "center");
-    if (overInfo.isNew) UI.title(ctx, "NEW BEST!", W / 2, 184, 22);
-    else UI.text(ctx, "best: wave " + overInfo.best.wave + " · " + overInfo.best.score + " pts", W / 2, 184, 15, "center", 0.6);
-    UI.text(ctx, "+" + overInfo.earned + " coins  (" + overInfo.coins + " total)", W / 2, 210, 16, "center", 0.7);
+    UI.title(ctx, "DEFEATED", W / 2, 110, t.type.display);
+    UI.text(ctx, "wave " + overInfo.wave + "   ·   " + overInfo.score + " pts   ·   " + fmtTime(overInfo.time), W / 2, 150, t.type.lead, "center");
+    if (overInfo.isNew) UI.title(ctx, "NEW BEST!", W / 2, 184, t.type.title);
+    else UI.text(ctx, "best: wave " + overInfo.best.wave + " · " + overInfo.best.score + " pts", W / 2, 184, t.type.caption, "center", t.alpha.muted);
+    UI.text(ctx, "+" + overInfo.earned + " coins  (" + overInfo.coins + " total)", W / 2, 210, t.type.body, "center", t.alpha.soft);
     drawResultsTable(250);
     vmenu([
       { label: "RETRY", action: () => startRun(run.mode, run.diff) },
       { label: "MAIN MENU", action: () => { state = "menu"; } },
-    ], W / 2, 560, 260, 50, 16);
+    ], W / 2, 560, 260, t.metric.btnH, t.metric.btnGap);
   }
 
   function renderWin() {
+    const t = UI.t;
     UI.dim(ctx, W, H, 0.92);
     if (overInfo.campaign) {   // finished the whole Adventure — a proper ending beat
-      UI.title(ctx, "THE TEAR CLOSES", W / 2, 96, 46);
-      wrapText(CAMPAIGN_ENDING, W / 2 - 380, 140, 760, 20, 15, "center");
-      UI.text(ctx, overInfo.score + " pts   ·   " + fmtTime(overInfo.time) + (overInfo.isNew ? "   ·   NEW BEST!" : ""), W / 2, 392, 17, "center", 0.85);
-      UI.text(ctx, "+" + overInfo.earned + " coins  (" + overInfo.coins + " total)", W / 2, 416, 15, "center", 0.65);
+      UI.title(ctx, "THE TEAR CLOSES", W / 2, 96, t.type.display);
+      wrapText(CAMPAIGN_ENDING, W / 2 - 380, 140, 760, 20, t.type.body);
+      UI.text(ctx, overInfo.score + " pts   ·   " + fmtTime(overInfo.time) + (overInfo.isNew ? "   ·   NEW BEST!" : ""), W / 2, 392, t.type.body, "center", t.alpha.soft);
+      UI.text(ctx, "+" + overInfo.earned + " coins  (" + overInfo.coins + " total)", W / 2, 416, t.type.caption, "center", t.alpha.muted);
       vmenu([
         { label: "PLAY AGAIN", action: () => startRun(run.mode, run.diff) },
         { label: "MAIN MENU", action: () => { state = "menu"; } },
-      ], W / 2, 470, 260, 50, 16);
+      ], W / 2, 470, 260, t.metric.btnH, t.metric.btnGap);
       return;
     }
-    UI.title(ctx, "VICTORY", W / 2, 110, 54);
-    UI.text(ctx, "boss down!   ·   " + overInfo.score + " pts   ·   " + fmtTime(overInfo.time), W / 2, 152, 20, "center");
-    if (overInfo.isNew) UI.title(ctx, "NEW BEST!", W / 2, 184, 22);
-    UI.text(ctx, "+" + overInfo.earned + " coins  (" + overInfo.coins + " total)", W / 2, 210, 16, "center", 0.7);
+    UI.title(ctx, "VICTORY", W / 2, 110, t.type.display);
+    UI.text(ctx, "boss down!   ·   " + overInfo.score + " pts   ·   " + fmtTime(overInfo.time), W / 2, 152, t.type.lead, "center");
+    if (overInfo.isNew) UI.title(ctx, "NEW BEST!", W / 2, 184, t.type.title);
+    UI.text(ctx, "+" + overInfo.earned + " coins  (" + overInfo.coins + " total)", W / 2, 210, t.type.body, "center", t.alpha.soft);
     drawResultsTable(250);
     vmenu([
       { label: "PLAY AGAIN", action: () => startRun(run.mode, run.diff) },
       { label: "MAIN MENU", action: () => { state = "menu"; } },
-    ], W / 2, 560, 260, 50, 16);
+    ], W / 2, 560, 260, t.metric.btnH, t.metric.btnGap);
   }
 
   // highlight hovered / keyboard-focused / selected, then draw
@@ -1869,8 +1854,9 @@
     for (let i = 0; i < uiButtons.length; i++) {
       const b = uiButtons[i];
       if (b._hideBox) continue;
-      const hovered = UI.pointIn(b, Input.mouseX, Input.mouseY);
-      UI.button(ctx, b, hovered || b.sel || i === focus);
+      const active = UI.pointIn(b, Input.mouseX, Input.mouseY) || b.sel || i === focus;
+      if (b.chip) UI.chip(ctx, b, active);
+      else UI.button(ctx, b, active);
     }
   }
 
