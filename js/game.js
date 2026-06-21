@@ -508,7 +508,11 @@
 
   function updateWave(dt) {
     const R = CONFIG.run;
-    if (run.spawnQueue.length && enemies.length < R.maxConcurrent) {
+    // campaign packs more enemies on-screen the deeper you go (a horde, not a trickle)
+    const cap = run.mode === "campaign"
+      ? Math.min(R.maxConcurrentCap, R.maxConcurrent + Math.floor((run.wave - 1) / 10) * R.concurrentPerStage)
+      : R.maxConcurrent;
+    if (run.spawnQueue.length && enemies.length < cap) {
       if (enemies.length === 0 && run.spawnTimer > 0.3) run.spawnTimer = 0.3; // short beat (not an instant pop) when the screen empties
       run.spawnTimer -= dt;
       if (run.spawnTimer <= 0) { spawnOne(run.spawnQueue.shift()); run.spawnTimer = R.spawnInterval; }
@@ -1196,7 +1200,7 @@
     // menu screens: ambient backdrop + a subtle entrance slide that carries the
     // content AND its buttons together, so everything settles into place as one.
     const inMenu = state === "menu" || state === "shop" || state === "codex" ||
-      state === "setup" || state === "howto" || state === "highscores" || state === "settings";
+      state === "setup" || state === "howto" || state === "highscores" || state === "settings" || state === "bestiary";
     if (inMenu) {
       eIn = ez(enterT / 0.24);
       UI.menuBackdrop(ctx, uiT);
@@ -1208,6 +1212,7 @@
       else if (state === "howto") renderHowto();
       else if (state === "highscores") renderHighscores();
       else if (state === "settings") renderSettings();
+      else if (state === "bestiary") renderBestiary();
       drawButtons();
       ctx.restore();
     } else {
@@ -1493,10 +1498,11 @@
       { label: "PLAY", action: () => { state = "setup"; } },
       { label: "SHOP", action: () => { state = "shop"; } },
       { label: "ABILITIES", action: () => { state = "codex"; } },
+      { label: "INDEX", action: () => { state = "bestiary"; } },
       { label: "HOW TO PLAY", action: () => { state = "howto"; } },
       { label: "HIGH SCORES", action: () => { state = "highscores"; } },
       { label: "SETTINGS", action: () => { state = "settings"; } },
-    ], W / 2, 342, t.metric.btnW, t.metric.btnH, t.metric.btnGap);
+    ], W / 2, 332, t.metric.btnW, t.metric.btnH, 10);
     UI.text(ctx, "cut clean · keep moving · chase the multiplier", W / 2, H - 40, t.type.micro, "center", t.alpha.faint);
     return;
   }
@@ -1719,25 +1725,219 @@
     addBack();
   }
 
+  // ---- INDEX (bestiary): every enemy + boss, what they do, stats, and affixes ----
+  const AFFIX_DESC = {
+    tank: "+80% HP, heavier", swift: "+45% move speed", rapid: "fires 2× as fast",
+    volley: "fires a 3-shot volley", armed: "+30% melee dmg & reach", warded: "gains a 60%-HP shield",
+  };
+  const AFFIX_COLOR = {}; AFFIXES.forEach((a) => { AFFIX_COLOR[a.id] = a.color; });
+
+  const BESTIARY = [
+    { name: "Charger", role: "MELEE RUSHER", variants: "Brawler · Stalker · Executioner · Gravedigger · Duelist",
+      desc: "Closes the gap and commits a telegraphed bull-charge. Bait the lunge into a wall — a whiff leaves it stunned and wide open.",
+      make: () => { const e = new Charger(0, 0); applyVariant(e, VARIANTS.charger[0]); return e; } },
+    { name: "Shooter", role: "KITING RANGED", variants: "Rifleman · Marksman · Warlock · Chain Caster",
+      desc: "Holds its distance, winds up a telegraphed shot, then kites away. Swing FAST through the shot to parry it back at them.",
+      make: () => { const e = new Ranged(0, 0); applyVariant(e, VARIANTS.ranged[0]); return e; } },
+    { name: "Flyer", role: "AERIAL SWOOPER", variants: "Dive Bomber · Swooper",
+      desc: "Hovers out of reach, then dives along an arc. Launch it or meet it with an up-swing to knock it out of the sky.",
+      make: () => { const e = new Flyer(0, 0); applyVariant(e, VARIANTS.flyer[0]); return e; } },
+    { name: "Bomber", role: "ARCING ARTILLERY", variants: "Juggler · Trapper · Sludge · Geomancer",
+      desc: "Lobs deflectable bombs from a standoff. Parry one back to detonate it in their face. Variants plant mines, mud, or walls.",
+      make: () => { const e = new Bomber(0, 0); applyVariant(e, VARIANTS.bomber[0]); return e; } },
+    { name: "Armored", role: "SHIELDED TANK", variants: "—",
+      desc: "Plated on the side it faces; shrugs off ground hits. Launch it airborne to strip the guard, then punish — it enrages on break.",
+      make: () => new Armored(0, 0) },
+    { name: "Priest", role: "SUPPORT · SHIELDS", variants: "—",
+      desc: "Hangs back and shields nearby allies. Cut the link beam, or rush the priest itself, to drop their protection.",
+      make: () => new Support(0, 0, "priest") },
+    { name: "Mender", role: "SUPPORT · HEALS", variants: "—",
+      desc: "Steadily heals the most wounded ally. Kill it first, or your damage just gets undone.",
+      make: () => new Support(0, 0, "mender") },
+    { name: "Herald", role: "SUPPORT · EMPOWERS", variants: "—",
+      desc: "Hastes and empowers the pack around it. The whole wave hits harder and faster while it lives.",
+      make: () => new Support(0, 0, "herald") },
+    { name: "Anchor", role: "SUPPORT · ROOTS", variants: "—",
+      desc: "Fragile, but snares you in place from range. Break its line to you, or kill it fast before the root lands.",
+      make: () => new Support(0, 0, "anchor") },
+    { name: "Wraith", role: "PHASING STALKER", variants: "—",
+      desc: "Fades in and out of reach and is hard to pin down. Strike in the brief window it turns solid.",
+      make: () => new Wraith(0, 0) },
+    { name: "Chimera", role: "ADAPTIVE MIMIC", variants: "—",
+      desc: "Adopts the attacks of whatever enemy types share its wave — it might charge, shoot, or bomb you. No two are alike.",
+      make: () => new Chimera(0, 0) },
+  ];
+  const BESTIARY_BOSS = [
+    { name: "The Warden", role: "STAGE 1 — THE GROUNDS", boss: true,
+      desc: "Keeper of order. Slams shockwaves across the floor, paints prohibited red zones, and in its final phase dives from the ceiling.",
+      make: () => new Warden(0, 0) },
+    { name: "Iron Colossus", role: "STAGE 2 — THE UNDERCROFT", boss: true,
+      desc: "A containment engine. Front-shielded — strike from the air. Hurls a bouncing sweeper, heats floor panels, then charges you down.",
+      make: () => new Colossus(0, 0) },
+    { name: "Berserker King", role: "STAGE 3 — THE CRIMSON FIELDS", boss: true,
+      desc: "Aldric. A pure duel that becomes a throne of fire — then a fake death, a frenzy, and summoned adds. He cannot die during the fall.",
+      make: () => new Aldric(0, 0) },
+    { name: "The Echo", role: "STAGE 4 — THE VOIDSPIRE", boss: true,
+      desc: "You. Mirrors your last trick on a delay; repeat yourself and it anticipates. Splits in two, then vanishes in a blinding white-out.",
+      make: () => new Echo(0, 0) },
+  ];
+  let bestiaryCache = null;
+  function bestiary() {
+    if (!bestiaryCache) {
+      const safe = (m) => { try { return m(); } catch (e) { return null; } };
+      const mobs = BESTIARY.map((b) => ({ b, inst: safe(b.make), boss: false }));
+      const bosses = BESTIARY_BOSS.map((b) => ({ b, inst: safe(b.make), boss: true }));
+      bestiaryCache = { all: mobs.concat(bosses) };
+    }
+    return bestiaryCache;
+  }
+  const PREVIEW_PLAYER = { x: 360, y: 0, hw: 16, hh: 25, facing: 1, invulnerable: false, dashTimer: 0, vx: 0, vy: 0, onGround: true };
+  function drawCreature(inst, bx, by, bw, bh) {
+    if (!inst) { ctx.fillStyle = "#eee"; ctx.fillRect(bx + 8, by + 8, bw - 16, bh - 16); return; }
+    const maxDim = Math.max(inst.hw * 2, inst.hh * 2) + 18;
+    const sc = Math.min((bw - 22) / maxDim, (bh - 22) / maxDim);
+    inst.x = 0; inst.y = 0; inst.facing = 1; inst.flash = 0; inst.stun = 0; inst.spawnT = 0;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.clip();
+    ctx.translate(bx + bw / 2, by + bh / 2); ctx.scale(sc, sc);
+    try { inst.draw(ctx, PREVIEW_PLAYER); } catch (e) { /* fall back to nothing */ }
+    ctx.restore();
+  }
+  function statChip(x, y, label, val) {
+    const t = UI.t, w = 92, h = 26;
+    ctx.strokeStyle = t.color.disabled; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h);
+    UI.tag(ctx, label, x + 9, y + 17, t.color.muted, "left", t.type.micro);
+    ctx.fillStyle = "#000"; ctx.font = UI.font(t.type.caption, true); ctx.textAlign = "right"; ctx.textBaseline = "alphabetic";
+    ctx.fillText(val, x + w - 9, y + 17);
+    return x + w + 8;
+  }
+  function affixChip(x, y, id) {
+    const c = AFFIX_COLOR[id] || "#888", txt = id.toUpperCase();
+    ctx.font = UI.font(UI.t.type.micro, true); const w = ctx.measureText(txt).width + 16;
+    ctx.fillStyle = c; ctx.globalAlpha = 0.16; ctx.fillRect(x, y - 13, w, 18); ctx.globalAlpha = 1;
+    ctx.strokeStyle = c; ctx.lineWidth = 1; ctx.strokeRect(x, y - 13, w, 18);
+    ctx.fillStyle = c; ctx.textAlign = "left"; ctx.fillText(txt, x + 8, y);
+    return x + w + 7;
+  }
+  function wrapLeft(text, x, y, maxW, lh, size, alpha) {
+    ctx.font = UI.font(size, false); ctx.textAlign = "left"; ctx.fillStyle = "#000"; ctx.globalAlpha = alpha == null ? 1 : alpha;
+    const words = text.split(" "); let line = "", yy = y;
+    for (const w of words) { const test = line ? line + " " + w : w; if (ctx.measureText(test).width > maxW && line) { ctx.fillText(line, x, yy); line = w; yy += lh; } else line = test; }
+    if (line) ctx.fillText(line, x, yy);
+    ctx.globalAlpha = 1; return yy;
+  }
+  function drawBestiaryEntry(row, fx, rx, y, h) {
+    const t = UI.t, inst = row.inst, b = row.b, ac = row.boss ? t.color.danger : t.color.accent;
+    UI.panel(ctx, fx, y, rx - fx, h);
+    ctx.fillStyle = ac; ctx.fillRect(fx, y, 6, h);
+    // preview
+    const bw = 150, bx = fx + 18, by = y + (h - 150) / 2;
+    ctx.strokeStyle = t.color.disabled; ctx.lineWidth = 1.5; ctx.strokeRect(bx, by, bw, 150);
+    drawCreature(inst, bx, by, bw, 150);
+    // header line: name + role
+    const ix = bx + bw + 26;
+    ctx.fillStyle = "#000"; ctx.font = UI.font(t.type.lead, true); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    const nameW = ctx.measureText(b.name).width;
+    ctx.fillText(b.name, ix, y + 38);
+    UI.tag(ctx, b.role, ix + nameW + 16, y + 38, ac, "left", t.type.micro);
+    // stat chips
+    const hp = inst ? Math.round(inst.maxHp) : "—", dmg = inst ? Math.round(inst.contactDmg) : "—", spd = inst ? Math.round(inst.speed || 0) : "—";
+    let sx = statChip(ix, y + 52, "HP", "" + hp);
+    sx = statChip(sx, y + 52, row.boss ? "TOUCH" : "DMG", "" + dmg);
+    if (!row.boss) sx = statChip(sx, y + 52, "SPD", "" + spd);
+    // description
+    const dW = rx - ix - 30;
+    wrapLeft(b.desc, ix, y + 98, dW, 22, t.type.caption, t.alpha.soft);
+    // variants line
+    if (b.variants && b.variants !== "—") UI.tag(ctx, "VARIANTS:   " + b.variants, ix, y + h - 40, t.color.muted, "left", t.type.micro);
+    // bottom line: affix chips (mobs) or a phase note (bosses)
+    if (row.boss) {
+      UI.tag(ctx, "MULTI-PHASE  —  its attacks escalate as its health falls", ix, y + h - 14, t.color.danger, "left", t.type.micro);
+    } else if (inst) {
+      ctx.font = UI.font(t.type.micro, true); ctx.fillStyle = t.color.muted; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      ctx.fillText("CAN ROLL:", ix, y + h - 14);
+      let axx = ix + ctx.measureText("CAN ROLL:").width + 12;
+      for (const a of AFFIXES.filter((a) => a.appliesTo(inst))) axx = affixChip(axx, y + h - 14, a.id);
+    }
+  }
+  function renderBestiary() {
+    const fx = W / 2 - 540, rx = W / 2 + 540;
+    UI.header(ctx, "INDEX", "every foe — what they do, their stats, and the affixes they can roll", eIn);
+    const rows = bestiary().all, rh = 188, top = 198, vis = 3;
+    const maxOff = Math.max(0, rows.length - vis);
+    const off = clamp(Math.round(listScroll / rh), 0, maxOff);
+    for (let r = 0; r < vis; r++) { const idx = off + r; if (idx >= rows.length) break; drawBestiaryEntry(rows[idx], fx, rx, top + r * rh, rh - 16); }
+    if (maxOff > 0) UI.scrollHint(ctx, W / 2, top + vis * rh - 10, off > 0, off < maxOff);
+    UI.tag(ctx, "affixes: up to 3 per enemy, each ≈ (wave−1)×6% per slot — chaos scales with the wave", W / 2, top + vis * rh + 12, UI.t.color.muted, "center", UI.t.type.micro);
+    addBack();
+  }
+
+  // a juicy choice card shared by the upgrade draft and the boss tier-up screen.
+  // Deals in from below with a stagger; on hover it lifts, scales, and lights its
+  // category accent. Hitbox stays at rest while the visual animates.
+  function choiceCard(i, n, o) {
+    const t = UI.t, cw = 322, gap = 34, ch = 384;
+    const total = cw * n + gap * (n - 1), x0 = (W - total) / 2, y0 = 248;
+    const x = x0 + i * (cw + gap), ac = o.accent;
+    const hovered = (Input.mouseX >= x && Input.mouseX <= x + cw && Input.mouseY >= y0 && Input.mouseY <= y0 + ch) || i === focus;
+    const a = hoverAnim["cc" + i] = lerp(hoverAnim["cc" + i] || 0, hovered ? 1 : 0, clamp(14 * lastUiDt, 0, 1));
+    const ce = clamp(ez((enterT - i * 0.08) / 0.34), 0, 1);
+    ctx.save();
+    ctx.globalAlpha = ce;
+    ctx.translate(0, (1 - ce) * 46 - a * 12);                       // deal-in from below + hover lift
+    const cx = x + cw / 2, cy = y0 + ch / 2, s = 1 + a * 0.035;
+    ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-cx, -cy);
+    ctx.globalAlpha = ce * (0.1 + a * 0.18); ctx.fillStyle = "#000"; ctx.fillRect(x + 5, y0 + 10, cw, ch);   // shadow
+    ctx.globalAlpha = ce;
+    ctx.fillStyle = "#fff"; ctx.fillRect(x, y0, cw, ch);
+    ctx.globalAlpha = ce * (0.04 + a * 0.08); ctx.fillStyle = ac; ctx.fillRect(x, y0, cw, ch);               // category wash
+    ctx.globalAlpha = ce;
+    ctx.lineWidth = 2 + a * 2.5; ctx.strokeStyle = a > 0.35 ? ac : "#000"; ctx.strokeRect(x, y0, cw, ch);
+    ctx.fillStyle = ac; ctx.fillRect(x, y0, cw, 9);                 // top accent strip
+    // keybind badge
+    ctx.fillStyle = ac; ctx.fillRect(x + cw - 46, y0 + 24, 30, 30);
+    ctx.fillStyle = "#fff"; ctx.font = UI.font(t.type.label, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("" + (i + 1), x + cw - 31, y0 + 40); ctx.textBaseline = "alphabetic";
+    UI.tag(ctx, o.tag, x + 22, y0 + 44, o.tagColor || ac, "left", t.type.micro);
+    // name (shrink to fit)
+    ctx.fillStyle = "#000"; ctx.textAlign = "center";
+    let ns = t.type.title; ctx.font = UI.font(ns, true);
+    while (ctx.measureText(o.name).width > cw - 44 && ns > t.type.body) { ns--; ctx.font = UI.font(ns, true); }
+    ctx.fillText(o.name, cx, y0 + 96);
+    ctx.fillStyle = ac; ctx.fillRect(cx - 28, y0 + 110, 56, 3);     // accent divider
+    let descY = y0 + 154;
+    if (o.pips) {
+      for (let p = 0; p < 3; p++) {
+        const px = cx - 26 + p * 26, py = y0 + 136;
+        ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2);
+        if (p < o.pips.next - 1) { ctx.fillStyle = ac; ctx.fill(); }
+        else if (p === o.pips.next - 1) { ctx.strokeStyle = ac; ctx.lineWidth = 2.5; ctx.stroke(); }
+        else { ctx.strokeStyle = t.color.disabled; ctx.lineWidth = 1.5; ctx.stroke(); }
+      }
+      descY = y0 + 172;
+    }
+    wrapText(o.desc, x + 26, descY, cw - 52, 25, t.type.body);
+    if (o.foot) UI.tag(ctx, o.foot, cx, y0 + ch - 24, t.color.muted, "center", t.type.caption);
+    UI.tag(ctx, a > 0.5 ? "▸  SELECT" : "press  [ " + (i + 1) + " ]", cx, y0 + ch - 46, a > 0.5 ? ac : t.color.muted, "center", t.type.micro);
+    ctx.restore();
+    uiButtons.push({ x, y: y0, w: cw, h: ch, _hideBox: true, action: o.action });
+  }
+
   function renderDraft() {
     const t = UI.t;
-    UI.dim(ctx, W, H, 0.82);
-    UI.title(ctx, "WAVE " + run.wave + " CLEARED", W / 2, 130, t.type.display);
-    UI.text(ctx, "choose an upgrade  —  press 1 / 2 / 3", W / 2, 168, t.type.body, "center", t.alpha.soft);
-    const cw = 300, gap = 30, ch = 320, total = cw * 3 + gap * 2;
-    const x0 = (W - total) / 2, y0 = 220;
+    UI.dim(ctx, W, H, 0.84);
+    UI.title(ctx, "WAVE " + run.wave + " CLEARED", W / 2, 122, t.type.display);
+    ctx.fillStyle = t.color.accent; ctx.globalAlpha = clamp(ez(enterT / 0.3), 0, 1); ctx.fillRect(W / 2 - 80, 140, 160, 3); ctx.globalAlpha = 1;
+    UI.text(ctx, "CHOOSE AN UPGRADE  ·  press 1 / 2 / 3", W / 2, 176, t.type.caption, "center", t.alpha.muted);
     draftChoices.forEach((up, i) => {
-      const x = x0 + i * (cw + gap);
-      const mouseOver = Input.mouseX >= x && Input.mouseX <= x + cw && Input.mouseY >= y0 && Input.mouseY <= y0 + ch;
-      const hovered = mouseOver || i === focus;
-      UI.card(ctx, x, y0, cw, ch, hovered);
-      UI.text(ctx, up.unique ? "★ UNIQUE ABILITY" : "UPGRADE", x + cw / 2, y0 + 40, t.type.caption, "center", t.alpha.muted);
-      UI.title(ctx, up.name, x + cw / 2, y0 + 110, t.type.title);
-      wrapText(up.desc, x + 24, y0 + 160, cw - 48, 26, t.type.body);
-      const owned = run.mods.owned[up.id] || 0;
-      if (owned) UI.text(ctx, "owned x" + owned, x + cw / 2, y0 + ch - 24, t.type.caption, "center", t.alpha.muted);
-      uiButtons.push({ x, y: y0, w: cw, h: ch, label: "", _draftIndex: i, _hideBox: true,
-        action: () => chooseUpgrade(i) });
+      const cat = ABIL_CATS[up.cat] || ABIL_CATS.utility, owned = run.mods.owned[up.id] || 0;
+      choiceCard(i, draftChoices.length, {
+        accent: cat.color,
+        tag: (up.unique ? "★ UNIQUE  ·  " : "UPGRADE  ·  ") + cat.name,
+        tagColor: up.unique ? t.color.unique : cat.color,
+        name: up.name, desc: up.desc, foot: owned ? "owned ×" + owned : null,
+        action: () => chooseUpgrade(i),
+      });
     });
   }
 
@@ -1765,31 +1965,18 @@
   // boss-kill reward: evolve one owned ability to its next tier
   function renderTierUp() {
     const t = UI.t;
-    UI.dim(ctx, W, H, 0.85);
-    UI.title(ctx, "THE WAY OPENS", W / 2, 120, t.type.display);
-    UI.text(ctx, "the boss falls — EVOLVE one of your abilities", W / 2, 160, t.type.body, "center", t.alpha.soft);
-    const n = tierChoices.length, cw = 300, gap = 30, ch = 320;
-    const total = cw * n + gap * (n - 1), x0 = (W - total) / 2, y0 = 220;
+    UI.dim(ctx, W, H, 0.86);
+    UI.title(ctx, "THE WAY OPENS", W / 2, 122, t.type.display);
+    ctx.fillStyle = t.color.accent; ctx.globalAlpha = clamp(ez(enterT / 0.3), 0, 1); ctx.fillRect(W / 2 - 80, 140, 160, 3); ctx.globalAlpha = 1;
+    UI.text(ctx, "THE BOSS FALLS  ·  EVOLVE AN ABILITY", W / 2, 176, t.type.caption, "center", t.alpha.muted);
     tierChoices.forEach((up, i) => {
-      const x = x0 + i * (cw + gap);
-      const mouseOver = Input.mouseX >= x && Input.mouseX <= x + cw && Input.mouseY >= y0 && Input.mouseY <= y0 + ch;
-      const hovered = mouseOver || i === focus;
-      UI.card(ctx, x, y0, cw, ch, hovered);
-      const next = (run.mods.tier[up.id] || 1) + 1;
-      const cat = ABIL_CATS[up.cat] || ABIL_CATS.utility;
-      UI.accentStrip(ctx, x, y0, cw, cat.color);
-      UI.text(ctx, "EVOLVE  →  TIER " + next, x + cw / 2, y0 + 40, t.type.caption, "center", t.alpha.muted);
-      UI.title(ctx, up.name, x + cw / 2, y0 + 96, t.type.title);
-      // tier pips (filled up to current, the next one highlighted)
-      for (let p = 0; p < 3; p++) {
-        const px = x + cw / 2 - 24 + p * 24, py = y0 + 120;
-        ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2);
-        if (p < next - 1) { ctx.fillStyle = cat.color; ctx.fill(); }
-        else if (p === next - 1) { ctx.strokeStyle = cat.color; ctx.lineWidth = 2.5; ctx.stroke(); }
-        else { ctx.strokeStyle = t.color.disabled; ctx.lineWidth = 1.5; ctx.stroke(); }
-      }
-      wrapText(nextTierDesc(up, run.mods), x + 24, y0 + 168, cw - 48, 26, t.type.body);
-      uiButtons.push({ x, y: y0, w: cw, h: ch, label: "", _draftIndex: i, _hideBox: true, action: () => chooseTierUp(i) });
+      const cat = ABIL_CATS[up.cat] || ABIL_CATS.utility, next = (run.mods.tier[up.id] || 1) + 1;
+      choiceCard(i, tierChoices.length, {
+        accent: cat.color,
+        tag: "EVOLVE → TIER " + next + "  ·  " + cat.name, tagColor: cat.color,
+        name: up.name, desc: nextTierDesc(up, run.mods), pips: { next },
+        action: () => chooseTierUp(i),
+      });
     });
   }
 

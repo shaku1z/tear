@@ -130,7 +130,7 @@ const CONFIG = {
   enemy: {
     w: 40, h: 40,
     speed: 150,
-    hp: 78,
+    hp: 86,
     contactDmg: 12,
     knockbackTaken: 9,    // knockback per point of damage received
     weight: 1,            // resists launches/flings (higher = harder to pop airborne)
@@ -148,7 +148,7 @@ const CONFIG = {
   ranged: {
     w: 34, h: 44,
     speed: 175,
-    hp: 54,
+    hp: 60,
     contactDmg: 8,
     knockbackTaken: 12,
     preferredDist: 380,   // distance it likes to sit at
@@ -160,15 +160,15 @@ const CONFIG = {
   },
 
   // flyer: hovers and swoops, ignores gravity/platforms
-  flyer: { w: 36, h: 26, hp: 40, speed: 230, contactDmg: 10, knockbackTaken: 14, weight: 0.75, swoopInterval: 3.3, swoopSpeed: 700, hoverY: 150 },
+  flyer: { w: 36, h: 26, hp: 44, speed: 230, contactDmg: 10, knockbackTaken: 14, weight: 0.75, swoopInterval: 3.3, swoopSpeed: 700, hoverY: 150 },
   // bomber: lobs arcing, deflectable bombs from a distance (parry one back to blow it
   // up in their face). Trapper variant plants mines; Juggler throws 3 in a burst.
-  bomber: { w: 34, h: 34, hp: 36, speed: 165, contactDmg: 8, knockbackTaken: 11, weight: 1,
+  bomber: { w: 34, h: 34, hp: 40, speed: 165, contactDmg: 8, knockbackTaken: 11, weight: 1,
     standoff: 340, lobInterval: 2.4, bombSpeed: 540, bombArc: 540, bombGravity: 1150,
     blastRadius: 150, blastDmg: 24, mineArm: 1.3, mineTrigger: 66, mineInterval: 2.2 },
   // armored: shielded on the side it faces; takes reduced damage on the ground,
   // normal/extra in the air -> you must launch ("updraft") it to kill efficiently
-  armored: { w: 46, h: 46, hp: 140, speed: 95, contactDmg: 14, knockbackTaken: 3, weight: 2.2, breakSpeed: 1500, groundDR: 0.5, airDR: 1.15,
+  armored: { w: 46, h: 46, hp: 154, speed: 95, contactDmg: 14, knockbackTaken: 3, weight: 2.2, breakSpeed: 1500, groundDR: 0.5, airDR: 1.15,
     stompCd: 3.2, stompWindup: 0.55, stompRange: 400, shockSpeed: 560, shockDmg: 16, shockR: 15 },
   // boss: large, multi-phase (very heavy -> barely flinchable)
   boss: { w: 118, h: 118, hp: 1900, speed: 70, contactDmg: 20, knockbackTaken: 0.6, weight: 6, fireBase: 2.0 },
@@ -268,7 +268,7 @@ const CONFIG = {
     maxConcurrent: 6,     // simultaneous live enemies cap (rest queue up)
     spawnInterval: 0.7,   // seconds between spawns within a wave
     firstWaveCount: 3,    // enemies in wave 1
-    countPerWave: 1.0,    // + this many enemies per wave thereafter
+    countPerWave: 1.4,    // + this many enemies per wave thereafter
     hpScalePerWave: 0.12, // +12% enemy HP per wave
     scorePerKill: 100,    // score per kill (x wave number)
     scoreMult: 1,         // raised by the "Bounty Hunter" upgrade
@@ -277,11 +277,13 @@ const CONFIG = {
     waveClearPause: 0.8,  // delay after the last enemy dies before the draft appears
     // ---- campaign curve: gentle within a stage, a clear step UP between stages ----
     // (endless keeps the flat per-wave ramp above; campaign uses these instead)
-    stageHpStep: 0.30,    // +30% enemy HP per stage entered
-    inStageHp: 0.05,      // +5% enemy HP per wave WITHIN a stage
-    stageDmgStep: 0.12,   // +12% enemy contact damage per stage
+    stageHpStep: 0.34,    // +34% enemy HP per stage entered
+    inStageHp: 0.06,      // +6% enemy HP per wave WITHIN a stage
+    stageDmgStep: 0.14,   // +14% enemy contact damage per stage
     inStageDmg: 0.02,     // +2% damage per wave within a stage
-    stageCountStep: 1,    // +1 enemy per wave per stage (waves stay small within a stage)
+    stageCountStep: 2,    // +2 enemies per wave per stage — later stages field real hordes
+    concurrentPerStage: 1, // +1 on-screen enemy cap per stage in campaign (more pressure deeper in)
+    maxConcurrentCap: 10,  // ...but never more than this many at once
   },
 
   // ---- "Attack Trick" style meter ----
