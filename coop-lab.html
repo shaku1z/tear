@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TEAR · Co-op Lab (Phase 0)</title>
+<!--
+  PHASE 0 — proof of connection. Two browsers establish a direct WebRTC
+  DataChannel and exchange heartbeats + real-time positions. This deliberately
+  uses MANUAL (copy-paste) signaling so it needs NO backend and runs on the
+  static site. It proves the genuinely uncertain part: that a peer connection
+  opens, that a DataChannel carries data both ways, and what the latency is.
+
+  NEXT (Phase 0.5): a tiny signaling server replaces the copy-paste with a
+  short room code. Everything below (the RTCPeerConnection + DataChannel +
+  the message protocol) stays — only the handshake transport changes.
+-->
+<style>
+  :root { --ink:#111; --cyan:#13c4d6; --red:#e23b3b; --green:#1faf5a; --muted:#888; --line:#ddd; }
+  * { box-sizing: border-box; }
+  html,body { margin:0; height:100%; background:#f4f4f4; color:var(--ink);
+    font-family:"Courier New", monospace; }
+  body { display:flex; flex-direction:column; align-items:center; padding:24px 16px 60px; }
+  h1 { font-size:22px; letter-spacing:3px; margin:0 0 2px; }
+  .sub { color:var(--muted); font-size:12px; margin-bottom:18px; }
+  .card { width:min(96vw, 860px); border:2px solid var(--ink); background:#fff; padding:18px; margin-bottom:16px; }
+  .card h2 { font-size:14px; letter-spacing:2px; margin:0 0 10px; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; }
+  button { font-family:inherit; font-size:13px; font-weight:bold; padding:10px 16px;
+    background:#fff; color:var(--ink); border:2px solid var(--ink); cursor:pointer; }
+  button:hover:not(:disabled) { background:var(--ink); color:#fff; }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  button.primary { background:var(--ink); color:#fff; }
+  button.primary:hover { background:var(--cyan); border-color:var(--cyan); }
+  textarea { width:100%; height:84px; font-family:inherit; font-size:11px; padding:8px;
+    border:1.5px solid var(--line); resize:vertical; background:#fafafa; }
+  .step { font-size:12px; color:var(--muted); margin:14px 0 6px; }
+  .step b { color:var(--ink); }
+  #status { font-weight:bold; font-size:13px; padding:8px 12px; border:2px solid var(--muted);
+    display:inline-block; margin-bottom:8px; }
+  .hidden { display:none; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  @media (max-width:680px){ .grid{ grid-template-columns:1fr; } }
+  .stat { display:flex; gap:24px; font-size:13px; margin:8px 0; flex-wrap:wrap; }
+  .stat b { color:var(--cyan); font-size:18px; }
+  canvas { border:2px solid var(--ink); background:#fff; display:block; image-rendering:pixelcrisp; }
+  .hint { font-size:11px; color:var(--muted); margin-top:6px; }
+  #log { height:120px; overflow:auto; font-size:11px; background:#0d0d12; color:#cfe; padding:8px; border:2px solid var(--ink); }
+  #log div { white-space:pre-wrap; }
+  a { color:var(--cyan); }
+  .tag { font-size:10px; letter-spacing:1px; color:#fff; background:var(--cyan); padding:2px 6px; }
+</style>
+</head>
+<body>
+  <h1>T E A R &nbsp;·&nbsp; CO-OP LAB <span class="tag">PHASE 0</span></h1>
+  <div class="sub">proof of connection — direct WebRTC, no server. open this on two devices.</div>
+
+  <!-- ROLE PICK -->
+  <div class="card" id="pick">
+    <h2>1 · CHOOSE A ROLE</h2>
+    <div class="row">
+      <button class="primary" id="beHost">HOST A SESSION</button>
+      <button class="primary" id="beJoin">JOIN A SESSION</button>
+    </div>
+    <div class="hint">One person hosts and one joins. You'll trade two text blobs to connect (that's the "signaling" — a real room code replaces this in Phase 0.5).</div>
+  </div>
+
+  <!-- HOST FLOW -->
+  <div class="card hidden" id="hostCard">
+    <h2>HOST</h2>
+    <div class="step"><b>Step 1.</b> Generate your offer and send it to your friend.</div>
+    <button id="genOffer" class="primary">GENERATE OFFER</button>
+    <textarea id="offerOut" readonly placeholder="your offer appears here…"></textarea>
+    <button id="copyOffer" disabled>COPY OFFER</button>
+    <div class="step"><b>Step 2.</b> Paste the answer they send back, then connect.</div>
+    <textarea id="answerIn" placeholder="paste your friend's answer here…"></textarea>
+    <button id="doConnect" class="primary" disabled>CONNECT</button>
+  </div>
+
+  <!-- JOIN FLOW -->
+  <div class="card hidden" id="joinCard">
+    <h2>JOIN</h2>
+    <div class="step"><b>Step 1.</b> Paste the host's offer, then generate your answer.</div>
+    <textarea id="offerIn" placeholder="paste the host's offer here…"></textarea>
+    <button id="genAnswer" class="primary">GENERATE ANSWER</button>
+    <div class="step"><b>Step 2.</b> Send this answer back to the host.</div>
+    <textarea id="answerOut" readonly placeholder="your answer appears here…"></textarea>
+    <button id="copyAnswer" disabled>COPY ANSWER</button>
+  </div>
+
+  <!-- STATUS -->
+  <div class="card" id="statusCard">
+    <h2>CONNECTION</h2>
+    <span id="status">idle</span>
+  </div>
+
+  <!-- LIVE DEMO (after connect) -->
+  <div class="card hidden" id="live">
+    <h2>LIVE LINK — heartbeat + real-time position</h2>
+    <div class="stat">
+      <span>latency <b id="rtt">—</b> ms</span>
+      <span>msgs/s <b id="mps">0</b></span>
+      <span>peer <b id="peerState">waiting…</b></span>
+    </div>
+    <div class="grid">
+      <div>
+        <canvas id="cv" width="380" height="280"></canvas>
+        <div class="hint">Move with <b>WASD / arrows</b> (or click). Cyan = you, dark = your peer — synced live over the channel.</div>
+      </div>
+      <div>
+        <div class="step"><b>Message log</b></div>
+        <div id="log"></div>
+        <div class="row" style="margin-top:8px;">
+          <input id="chat" placeholder="send a test message…" style="flex:1; font-family:inherit; padding:8px; border:1.5px solid var(--line);" />
+          <button id="send">SEND</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const RTC = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+let pc, dc, role = null;
+let pingSeq = 0, rttAvg = null, msgCount = 0, msgWindow = [];
+const me = { x: 190, y: 140 }, peer = { x: 0, y: 0, seen: false };
+const vel = { x: 0, y: 0 };
+const keys = {};
+
+const $ = (id) => document.getElementById(id);
+const enc = (obj) => btoa(JSON.stringify(obj));
+const dec = (str) => JSON.parse(atob(str.trim()));
+
+function setStatus(text, bad) {
+  const el = $("status");
+  el.textContent = text;
+  el.style.borderColor = bad ? "var(--red)" : (text.includes("CONNECTED") ? "var(--green)" : "var(--muted)");
+  el.style.color = bad ? "var(--red)" : (text.includes("CONNECTED") ? "var(--green)" : "var(--ink)");
+}
+function log(line, who) {
+  const d = document.createElement("div");
+  d.textContent = (who ? "[" + who + "] " : "") + line;
+  $("log").appendChild(d); $("log").scrollTop = $("log").scrollHeight;
+}
+
+// non-trickle ICE: bundle all candidates into the SDP so a single copy-paste works
+function iceComplete(pc) {
+  return new Promise((res) => {
+    if (pc.iceGatheringState === "complete") return res();
+    const check = () => { if (pc.iceGatheringState === "complete") { pc.removeEventListener("icegatheringstatechange", check); res(); } };
+    pc.addEventListener("icegatheringstatechange", check);
+    setTimeout(res, 2500); // fallback: some browsers stall on gathering
+  });
+}
+
+function newPC() {
+  pc = new RTCPeerConnection(RTC);
+  pc.oniceconnectionstatechange = () => { if (!isLive()) setStatus("ICE: " + pc.iceConnectionState); };
+  pc.onconnectionstatechange = () => {
+    if (["failed", "disconnected", "closed"].includes(pc.connectionState)) setStatus("connection " + pc.connectionState, true);
+  };
+  return pc;
+}
+function isLive() { return dc && dc.readyState === "open"; }
+
+async function host() {
+  role = "host"; $("pick").classList.add("hidden"); $("hostCard").classList.remove("hidden");
+  newPC();
+  dc = pc.createDataChannel("game", { ordered: true });
+  wireDC();
+}
+function join() {
+  role = "join"; $("pick").classList.add("hidden"); $("joinCard").classList.remove("hidden");
+  newPC();
+  pc.ondatachannel = (e) => { dc = e.channel; wireDC(); };
+}
+
+$("beHost").onclick = host;
+$("beJoin").onclick = join;
+
+$("genOffer").onclick = async () => {
+  setStatus("gathering…");
+  const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
+  await iceComplete(pc);
+  $("offerOut").value = enc(pc.localDescription);
+  $("copyOffer").disabled = false; $("doConnect").disabled = false;
+  setStatus("offer ready — send it, then paste their answer");
+};
+$("genAnswer").onclick = async () => {
+  try {
+    setStatus("gathering…");
+    await pc.setRemoteDescription(dec($("offerIn").value));
+    const ans = await pc.createAnswer(); await pc.setLocalDescription(ans);
+    await iceComplete(pc);
+    $("answerOut").value = enc(pc.localDescription);
+    $("copyAnswer").disabled = false;
+    setStatus("answer ready — send it back to the host");
+  } catch (e) { setStatus("bad offer: " + e.message, true); }
+};
+$("doConnect").onclick = async () => {
+  try { await pc.setRemoteDescription(dec($("answerIn").value)); setStatus("connecting…"); }
+  catch (e) { setStatus("bad answer: " + e.message, true); }
+};
+$("copyOffer").onclick = () => { navigator.clipboard.writeText($("offerOut").value); $("copyOffer").textContent = "COPIED ✓"; };
+$("copyAnswer").onclick = () => { navigator.clipboard.writeText($("answerOut").value); $("copyAnswer").textContent = "COPIED ✓"; };
+
+function wireDC() {
+  dc.onopen = onConnected;
+  dc.onclose = () => setStatus("channel closed", true);
+  dc.onmessage = (ev) => handleMsg(JSON.parse(ev.data));
+}
+
+function onConnected() {
+  setStatus("● CONNECTED");
+  $("live").classList.remove("hidden");
+  $("peerState").textContent = "linked";
+  log("data channel open — link established", "net");
+  // heartbeat: ping every second, measure round-trip
+  setInterval(() => { if (isLive()) send({ t: "ping", id: ++pingSeq, ts: performance.now() }); }, 1000);
+  // position sync at ~30 Hz
+  setInterval(() => { if (isLive() && peer.seen !== "sentonce") send({ t: "pos", x: Math.round(me.x), y: Math.round(me.y) }); }, 33);
+  // msgs/sec readout
+  setInterval(() => {
+    const now = performance.now(); msgWindow = msgWindow.filter((t) => now - t < 1000);
+    $("mps").textContent = msgWindow.length;
+  }, 250);
+  requestAnimationFrame(loop);
+}
+
+function send(obj) { try { dc.send(JSON.stringify(obj)); } catch (e) {} }
+function handleMsg(m) {
+  msgWindow.push(performance.now()); msgCount++;
+  if (m.t === "ping") { send({ t: "pong", id: m.id, ts: m.ts }); }
+  else if (m.t === "pong") {
+    const rtt = performance.now() - m.ts;
+    rttAvg = rttAvg == null ? rtt : rttAvg * 0.7 + rtt * 0.3;
+    $("rtt").textContent = Math.round(rttAvg);
+  }
+  else if (m.t === "pos") { peer.x = m.x; peer.y = m.y; peer.seen = true; }
+  else if (m.t === "chat") { log(m.text, "them"); }
+}
+
+$("send").onclick = () => { const v = $("chat").value.trim(); if (v && isLive()) { send({ t: "chat", text: v }); log(v, "you"); $("chat").value = ""; } };
+$("chat").addEventListener("keydown", (e) => { if (e.key === "Enter") $("send").click(); });
+
+// ---- the live demo: move your square, see your peer's in real time ----
+const cv = $("cv"), cx = cv.getContext("2d");
+window.addEventListener("keydown", (e) => { keys[e.key.toLowerCase()] = true; if (["arrowup","arrowdown","arrowleft","arrowright"].includes(e.key.toLowerCase())) e.preventDefault(); });
+window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
+cv.addEventListener("mousemove", (e) => { const r = cv.getBoundingClientRect(); me.x = e.clientX - r.left; me.y = e.clientY - r.top; });
+
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min((now - last) / 1000, 0.05); last = now;
+  const sp = 230;
+  let dx = (keys["d"] || keys["arrowright"] ? 1 : 0) - (keys["a"] || keys["arrowleft"] ? 1 : 0);
+  let dy = (keys["s"] || keys["arrowdown"] ? 1 : 0) - (keys["w"] || keys["arrowup"] ? 1 : 0);
+  me.x = Math.max(10, Math.min(cv.width - 10, me.x + dx * sp * dt));
+  me.y = Math.max(10, Math.min(cv.height - 10, me.y + dy * sp * dt));
+  cx.clearRect(0, 0, cv.width, cv.height);
+  // peer square (interpolated toward last received)
+  if (peer.seen) {
+    cx.fillStyle = "#222"; cx.fillRect(peer.x - 11, peer.y - 11, 22, 22);
+    cx.fillStyle = "#13c4d6"; cx.fillRect(peer.x - 4, peer.y - 4, 8, 8);
+  }
+  // my square
+  cx.fillStyle = "#13c4d6"; cx.fillRect(me.x - 11, me.y - 11, 22, 22);
+  cx.fillStyle = "#000"; cx.fillRect(me.x - 4, me.y - 4, 8, 8);
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
