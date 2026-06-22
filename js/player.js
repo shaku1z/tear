@@ -84,6 +84,20 @@ class Player {
       // ---- dashing: burst; a DOWNWARD dash builds on your natural fall instead of
       // capping it (so it feeds Power Slams) — other directions are a fixed burst ----
       this.dashTimer -= dt;
+      // ---- CURVE DASH: steer mid-dash — hold W/S (or A/D) to bend the burst that way.
+      // The vector renormalizes, so it's a redirect (cut up to chase, cut down into a slam),
+      // not a slowdown. W/S override the horizontal drift so a clean vertical cut is easy. ----
+      let stx = (Input.right() ? 1 : 0) - (Input.left() ? 1 : 0);
+      let sty = (downHeld ? 1 : 0) - (Input.up() ? 1 : 0);
+      if (sty !== 0 && stx !== 0) stx *= 0.35;     // committing to a vertical cut quiets sideways drift
+      if (!rooted && (stx !== 0 || sty !== 0)) {
+        const sm = len(stx, sty) || 1; stx /= sm; sty /= sm;
+        const k = clamp(D.steer * dt, 0, 1);
+        this.dashX += (stx - this.dashX) * k;
+        this.dashY += (sty - this.dashY) * k;
+        const dm = len(this.dashX, this.dashY) || 1; this.dashX /= dm; this.dashY /= dm;
+        this.facing = this.dashX >= 0 ? 1 : -1;
+      }
       this.vx = this.dashX * D.speed;
       if (this.dashY > 0) {
         this.vy = Math.max(this.vy + CONFIG.world.gravity * dt, this.dashY * D.speed);

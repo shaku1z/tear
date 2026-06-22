@@ -32,6 +32,7 @@ const CONFIG = {
     cooldown: 0.55,       // time before you can dash again
     iframe: 0.15,         // invuln during the dash
     endSpeedKeep: 0.35,   // fraction of dash speed retained when it ends
+    steer: 15,            // mid-dash steering rate: hold W/S/A/D to bend the dash that way
   },
 
   blade: {
