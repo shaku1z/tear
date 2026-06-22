@@ -36,4 +36,18 @@ const SHOP = [
     apply: (lv, ctx) => { const pool = UPGRADES.filter((u) => !u.unique); applyUpgrade(pool[Math.floor(Math.random() * pool.length)], ctx); } },
   { id: "greed", name: "Coin Magnet", desc: "+15% coins earned per level.", baseCost: 150, costMult: 1.6, maxLevel: 5,
     apply: () => {} },   // applied at coin-award time via META.level("greed")
+  { id: "reach", name: "Long Arm", desc: "+ blade reach & length per level.", baseCost: 150, costMult: 1.5, maxLevel: 5,
+    apply: (lv) => { CONFIG.blade.aimRadius += 12 * lv; CONFIG.blade.length += 6 * lv; CONFIG.blade.maxReach += 12 * lv; } },
+  { id: "throwarm", name: "Throwing Arm", desc: "+8% thrown-blade damage per level.", baseCost: 140, costMult: 1.5, maxLevel: 6,
+    apply: (lv) => { CONFIG.blade.throw.damage *= Math.pow(1.08, lv); CONFIG.blade.throw.damageFromSpeed *= Math.pow(1.08, lv); } },
+  { id: "thickskin", name: "Thick Skin", desc: "Take -4% damage per level.", baseCost: 170, costMult: 1.6, maxLevel: 6,
+    apply: (lv) => { CONFIG.player.dmgTakenMult *= Math.pow(0.96, lv); } },
+  { id: "warding", name: "Warding", desc: "Begin each run with a one-hit shield per level.", baseCost: 300, costMult: 1.8, maxLevel: 2,
+    apply: (lv, { player }) => { player.maxShield = Math.max(player.maxShield, lv); player.shield = player.maxShield; } },
+  { id: "aircharge", name: "Aether Step", desc: "Start with an extra mid-air dash charge.", baseCost: 420, maxLevel: 1,
+    apply: (lv, { player }) => { player.maxDashCharges = Math.max(player.maxDashCharges, 1 + lv); player.dashCharges = player.maxDashCharges; } },
+  { id: "lifeline", name: "Lifeline", desc: "Recover +5 HP on each wave clear per level.", baseCost: 200, costMult: 1.5, maxLevel: 4,
+    apply: (lv, { mods }) => { if (mods) mods.waveHeal += 5 * lv; } },
+  { id: "phoenix", name: "Second Wind", desc: "Once per run, revive with 35% HP when you would fall.", baseCost: 650, maxLevel: 1,
+    apply: (lv, { player }) => { player.revives = lv; } },
 ];

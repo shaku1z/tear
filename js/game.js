@@ -157,7 +157,7 @@
   let uiButtons = [];
   let focus = -1, lastUiState = null;   // keyboard focus for menus/draft
   let listScroll = 0;                   // scroll offset for scrollable screens
-  let uiT = 0, enterT = 0, lastUiDt = 1 / 60, eIn = 1;   // menu ambient clock, time-since-screen-opened, last frame dt, entrance ease
+  let uiT = 0, enterT = 0, lastUiDt = 1 / 60, eIn = 1, winT = 0;   // menu ambient clock, time-since-screen-opened, last frame dt, entrance ease, ending cinematic clock
   const hoverAnim = {};                 // per-button hover progress (key -> 0..1), for hover juice
   const ez = (t) => { t = t < 0 ? 0 : t > 1 ? 1 : t; return 1 - (1 - t) * (1 - t); };   // ease-out
   let codexFilter = "all";              // ABILITIES tab: category filter
@@ -342,6 +342,8 @@
       run.bossOrder = shuffledRoster();
       if (selBoss !== "shuffle") { run.bossOrder = run.bossOrder.filter((id) => id !== selBoss); run.bossOrder.unshift(selBoss); }
       run.bossIdx = 0; run.bossesBeaten = 0;
+    } else if (mode === "gauntlet") {   // Endless + Bosses: a shuffled boss cycle punctuating the waves
+      run.bossOrder = shuffledRoster(); run.bossIdx = 0; run.bossesBeaten = 0;
     }
     META.apply({ player, blade, mods: run.mods });
     startNextWave();
@@ -402,17 +404,24 @@
       const m = CONFIG.modes.find((x) => x.id === run.mode);
       const total = modeWaves(run.mode);
       run.isBossWave = (m && m.bossOnly) || (total > 0 && run.wave > total);
+      if (run.mode === "gauntlet") run.isBossWave = (run.wave % 8 === 0);   // a full boss every 8 waves
     }
-    // ---- Endless 2.0: cycle biomes, flag horde windows + mini-boss waves ----
+    // ---- Endless 2.0: cycle biomes, flag horde windows + mini-boss / boss waves ----
     run.horde = false; run.miniBoss = null; run.waveTag = "";
-    if (run.mode === "endless") {
+    const endlessLike = run.mode === "endless" || run.mode === "gauntlet";
+    if (endlessLike) {
       const bi = Math.floor((run.wave - 1) / 5);   // a fresh biome every 5 waves
       if (run.wave === 1 || bi !== run._biomeIdx) {
         run._biomeIdx = bi; loadStage(bi);          // stageAt() cycles the 5 biomes via modulo
         stageBannerT = 2.6; stageName = stageAt(bi).name; run.stage = bi;
       }
-      if (run.wave > 1 && run.wave % 10 === 0) { run.miniBoss = pickMiniBoss(); run.waveTag = "MINI-BOSS  ·  " + (BOSS_ROSTER.find((b) => b.id === run.miniBoss) || {}).name; }
-      else if (run.wave > 3 && run.wave % 5 === 0) { run.horde = true; run.waveTag = "⚠  HORDE"; }
+      if (run.isBossWave) {   // gauntlet: pick the next boss in the cycle (re-shuffle on wrap)
+        if (run.bossIdx >= run.bossOrder.length) { run.bossOrder = shuffledRoster(); run.bossIdx = 0; }
+        run.curBoss = run.bossOrder[run.bossIdx]; run.bossIdx++;
+        run.waveTag = (BOSS_ROSTER.find((b) => b.id === run.curBoss) || {}).name || "";
+      } else if (run.mode === "endless" && run.wave > 1 && run.wave % 10 === 0) {
+        run.miniBoss = pickMiniBoss(); run.waveTag = "MINI-BOSS  ·  " + (BOSS_ROSTER.find((b) => b.id === run.miniBoss) || {}).name;
+      } else if (run.wave > 3 && run.wave % 5 === 0) { run.horde = true; run.waveTag = "⚠  HORDE"; }
     }
     if (run.mode === "bossonly") {   // pick the next boss in the gauntlet (re-shuffle each cycle)
       if (run.bossIdx >= run.bossOrder.length) { run.bossOrder = shuffledRoster(); run.bossIdx = 0; }
@@ -435,7 +444,7 @@
       } else {
         count = R.firstWaveCount + Math.floor((run.wave - 1) * R.countPerWave);
         hpScale = 1 + (run.wave - 1) * R.hpScalePerWave;
-        if (run.mode === "endless") {
+        if (run.mode === "endless" || run.mode === "gauntlet") {
           count += Math.floor(Math.max(0, run.wave - 8) * 0.4);     // density accelerates the deeper you go
           if (run.miniBoss) count = Math.floor(count * 0.5);         // a mini-boss wave fields fewer minions
           if (run.horde) { count = Math.round(count * 1.8); hpScale *= 0.6; dmgScale = 0.9; }   // a wall of weaker bodies
@@ -484,7 +493,7 @@
   }
   // pick the boss for the current context: the campaign stage's named boss, else the Warden
   function makeBoss() {
-    return bossById((run.mode === "campaign") ? stageAt(stageIndex).boss : (run.mode === "bossonly") ? run.curBoss : "warden");
+    return bossById((run.mode === "campaign") ? stageAt(stageIndex).boss : (run.mode === "bossonly" || run.mode === "gauntlet") ? run.curBoss : "warden");
   }
   // Endless mini-bosses: any built campaign boss except the finale (the Source stays special)
   const MINI_BOSSES = ["warden", "colossus", "aldric", "echo"];
@@ -520,7 +529,7 @@
       if (e.kind === "chimera") e.moves = (run.waveKinds && run.waveKinds.length) ? run.waveKinds.slice() : ["charger"];
     } else {   // boss
       if (run.mode === "campaign" && stageIndex > 0 && !e.bossName) { const s = 1 + stageIndex * 0.6; e.hp *= s; e.maxHp *= s; }   // placeholder bosses scale by stage
-      else if (run.mode === "bossonly" && run.bossesBeaten) { const s = 1 + run.bossesBeaten * 0.12; e.hp *= s; e.maxHp *= s; }     // gauntlet escalates each round
+      else if ((run.mode === "bossonly" || run.mode === "gauntlet") && run.bossesBeaten) { const s = 1 + run.bossesBeaten * 0.12; e.hp *= s; e.maxHp *= s; }   // each boss tougher than the last
     }
     e.hpDisplay = e.hp;
     e.spawnT = 0.35;   // brief materialize so spawns read as spawns (not teleports)
@@ -554,7 +563,7 @@
     // pack more enemies on-screen the deeper you go (a horde, not a trickle)
     let cap = R.maxConcurrent;
     if (run.mode === "campaign") cap = Math.min(R.maxConcurrentCap, R.maxConcurrent + Math.floor((run.wave - 1) / 10) * R.concurrentPerStage);
-    else if (run.mode === "endless") cap = Math.min(R.maxConcurrentCap + 3, R.maxConcurrent + Math.floor(run.wave / 7) + (run.horde ? 3 : 0));
+    else if (run.mode === "endless" || run.mode === "gauntlet") cap = Math.min(R.maxConcurrentCap + 3, R.maxConcurrent + Math.floor(run.wave / 7) + (run.horde ? 3 : 0));
     if (run.spawnQueue.length && enemies.length < cap) {
       if (enemies.length === 0 && run.spawnTimer > 0.3) run.spawnTimer = 0.3; // short beat (not an instant pop) when the screen empties
       run.spawnTimer -= dt;
@@ -566,9 +575,9 @@
       run.waveLog.push({ wave: run.isBossWave ? "BOSS" : run.wave, time: run.waveTime, kills: run.waveKills, peak: run.wavePeak });
       if (run.isBossWave) {
         if (run.mode === "campaign" && stageIndex >= STAGES.length - 1) { winRun(true); return; }   // final biome cleared -> the ending
-        if (run.mode === "campaign" || run.mode === "bossonly") {
+        if (run.mode === "campaign" || run.mode === "bossonly" || run.mode === "gauntlet") {
           if (!player.oneHit) player.heal(R.healEachWave * 2 + (run.mods.waveHeal || 0));   // a boss kill is a milestone, not the end
-          if (run.mode === "bossonly") run.bossesBeaten = (run.bossesBeaten || 0) + 1;
+          if (run.mode === "bossonly" || run.mode === "gauntlet") run.bossesBeaten = (run.bossesBeaten || 0) + 1;
           run.bossCleared = true;
           run.clearTimer = R.waveClearPause * 1.6;
         } else { winRun(); return; }   // the Waves+Boss mode still ends in victory
@@ -1209,7 +1218,14 @@
     run.runTime += dt; run.waveTime += dt;
     updateTrick(dt);
 
-    if (player.hp <= 0) { endRun(); return; }
+    if (player.hp <= 0) {
+      if (player.revives > 0 && !player.oneHit) {   // Second Wind (shop): rise once more
+        player.revives--; player.hp = Math.round(player.maxHp * 0.35); player.iframe = 1.6;
+        FX.ring(player.x, player.y, 16, CONFIG.colors.perfect); FX.burst(player.x, player.y, 0, -1, 16, CONFIG.colors.perfect);
+        addFloater(player.x, player.y - 44, "SECOND WIND", true, CONFIG.colors.perfect);
+        addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry); SFX.parry();
+      } else { endRun(); return; }
+    }
   }
 
   function onKill(e, cause) {
@@ -1257,6 +1273,7 @@
       acc = 0; wasLocked = false;
     }
     uiT += dt; enterT += dt; lastUiDt = dt;   // menu animation clocks
+    if (state === "win") winT += dt; else winT = 0;   // ending cinematic clock
 
     render();
     handleUI();
@@ -1779,22 +1796,22 @@
   }
 
   function renderShop() {
-    const t = UI.t, fx = LAY.fx, rx = LAY.rx;
+    const t = UI.t, sfx = W / 2 - 560, srx = W / 2 + 560, gap = 40, colW = (srx - sfx - gap) / 2;
     UI.header(ctx, "SHOP", "permanent upgrades — applied at the start of every run", eIn);
     UI.tag(ctx, "◆ " + META.coins() + " COINS", W / 2, 162, t.color.accent, "center", t.type.body);
-    let y = 224;
-    for (const it of SHOP) {
-      const lv = META.level(it.id), maxed = lv >= it.maxLevel, bw = 132;
-      UI.text(ctx, it.name, fx, y, t.type.lead);
-      UI.text(ctx, it.desc, fx, y + 24, t.type.caption, "left", t.alpha.soft);
-      UI.pips(ctx, rx - bw - 18, y - 4, it.maxLevel, lv, maxed ? t.color.accent : t.color.accent);
-      uiButtons.push({ x: rx - bw, y: y - 24, w: bw, h: 46,
+    const top = 214, rowH = 78, bw = 112;
+    SHOP.forEach((it, i) => {
+      const cx = sfx + (i % 2) * (colW + gap), y = top + Math.floor(i / 2) * rowH, rxc = cx + colW;
+      const lv = META.level(it.id), maxed = lv >= it.maxLevel;
+      UI.text(ctx, it.name, cx, y, t.type.lead);
+      UI.text(ctx, it.desc, cx, y + 22, t.type.caption, "left", t.alpha.soft);
+      UI.pips(ctx, rxc - bw - 14, y - 4, it.maxLevel, lv, t.color.accent);
+      uiButtons.push({ x: rxc - bw, y: y - 24, w: bw, h: 44,
         label: maxed ? "MAX" : META.cost(it) + "c",
         enabled: !maxed && META.canBuy(it),
         action: () => { if (META.buy(it)) SFX.ui(); } });
-      UI.divider(ctx, fx, y + 44, rx - fx, 0.1);
-      y += 72;
-    }
+      UI.divider(ctx, cx, y + 42, colW, 0.08);
+    });
     addBack();
   }
 
@@ -2126,8 +2143,8 @@
     });
   }
 
-  function wrapText(text, x, y, maxW, lh, size) {
-    ctx.font = UI.font(size, false); ctx.textAlign = "center"; ctx.fillStyle = "#000";
+  function wrapText(text, x, y, maxW, lh, size, col) {
+    ctx.font = UI.font(size, false); ctx.textAlign = "center"; ctx.fillStyle = col || "#000";
     const words = text.split(" "); let line = "", yy = y;
     const cx = x + maxW / 2;
     for (const w of words) {
@@ -2236,20 +2253,57 @@
     ], W / 2, 560, 260, t.metric.btnH, t.metric.btnGap);
   }
 
+  // the rift's jagged path down the centre (deterministic), narrowing as it seals
+  function riftPath(e) {
+    ctx.beginPath();
+    for (let y = 70; y <= H - 150; y += 16) {
+      const jag = Math.sin(y * 0.06 + 3) * (10 + (1 - e) * 22) * Math.sin(y * 0.013 + 1);
+      const x = W / 2 + jag * (1 - e * 0.55);
+      if (y === 70) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+  }
+  // the cinematic Adventure ending: the Tear sealing over a quiet void
+  function renderEnding() {
+    const t = UI.t, seal = clamp(winT / 2.4, 0, 1), e = ez(seal), accent = CONFIG.colors.perfect;
+    // void backdrop
+    const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#0a0812"); g.addColorStop(1, "#130f24");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    // drifting motes, released upward
+    for (let i = 0; i < 46; i++) {
+      const sx = (i * 137.5) % W, y0 = (i * 89.3) % H, y = ((y0 - winT * (14 + (i % 6) * 7)) % H + H) % H;
+      ctx.globalAlpha = 0.1 + 0.1 * Math.sin(winT * 1.4 + i); ctx.fillStyle = i % 4 === 0 ? accent : "#6a5a9a";
+      ctx.fillRect(sx, y, 2, 2);
+    }
+    ctx.globalAlpha = 1;
+    // the rift, sealing
+    ctx.save(); ctx.lineCap = "round"; ctx.strokeStyle = accent;
+    for (let p = 0; p < 3; p++) { ctx.globalAlpha = ((1 - e) * 0.55 + 0.12) * (0.5 - p * 0.13); ctx.lineWidth = ((1 - e) * 84 + 4) * (1 - p * 0.26) + 3; riftPath(e); ctx.stroke(); }
+    ctx.globalAlpha = 0.9; ctx.strokeStyle = "#eafaff"; ctx.lineWidth = Math.max(1.5, (1 - e) * 10 + 1.5); riftPath(e); ctx.stroke();
+    ctx.restore();
+    if (seal > 0.8 && seal < 0.95) { ctx.globalAlpha = (1 - Math.abs(seal - 0.875) / 0.075) * 0.45; ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+    // the survivor, watching it close
+    ctx.fillStyle = "#ece9f7"; ctx.fillRect(W / 2 - 9, H - 138, 18, 40);
+    ctx.fillStyle = accent; ctx.fillRect(W / 2 - 4, H - 128, 8, 5);
+    // text on the void
+    UI.ink = "#ece9f7";
+    ctx.globalAlpha = clamp(winT / 0.5, 0, 1); UI.title(ctx, "THE TEAR CLOSES", W / 2, 118, t.type.display); ctx.globalAlpha = 1;
+    ctx.fillStyle = accent; ctx.globalAlpha = clamp(winT - 0.4, 0, 1) * 0.8; ctx.fillRect(W / 2 - 100 * clamp(winT - 0.4, 0, 1), 136, 200 * clamp(winT - 0.4, 0, 1), 2); ctx.globalAlpha = 1;
+    ctx.globalAlpha = clamp((winT - 0.7) / 1.3, 0, 1);
+    wrapText(CAMPAIGN_ENDING, W / 2 - 380, 196, 760, 25, t.type.body, "#cfc9e6");
+    ctx.globalAlpha = 1;
+    UI.text(ctx, overInfo.score + " pts   ·   " + fmtTime(overInfo.time) + (overInfo.isNew ? "   ·   NEW BEST" : ""), W / 2, 446, t.type.caption, "center", clamp((winT - 1) / 1, 0, 1) * 0.75);
+    UI.text(ctx, "+" + overInfo.earned + " coins  (" + overInfo.coins + " total)", W / 2, 468, t.type.caption, "center", clamp((winT - 1) / 1, 0, 1) * 0.5);
+    if (winT > 1.6) vmenu([
+      { label: "DESCEND AGAIN", action: () => startRun(run.mode, run.diff) },
+      { label: "MAIN MENU", action: () => { state = "menu"; } },
+    ], W / 2, 506, 280, t.metric.btnH, t.metric.btnGap);
+    // (UI.ink stays light: the ending's buttons + cursor read on the void)
+  }
+
   function renderWin() {
     const t = UI.t;
+    if (overInfo.campaign) { renderEnding(); return; }   // the cinematic finale
     UI.dim(ctx, W, H, 0.92);
-    if (overInfo.campaign) {   // finished the whole Adventure — a proper ending beat
-      UI.title(ctx, "THE TEAR CLOSES", W / 2, 96, t.type.display);
-      wrapText(CAMPAIGN_ENDING, W / 2 - 380, 140, 760, 20, t.type.body);
-      UI.text(ctx, overInfo.score + " pts   ·   " + fmtTime(overInfo.time) + (overInfo.isNew ? "   ·   NEW BEST!" : ""), W / 2, 392, t.type.body, "center", t.alpha.soft);
-      UI.text(ctx, "+" + overInfo.earned + " coins  (" + overInfo.coins + " total)", W / 2, 416, t.type.caption, "center", t.alpha.muted);
-      vmenu([
-        { label: "PLAY AGAIN", action: () => startRun(run.mode, run.diff) },
-        { label: "MAIN MENU", action: () => { state = "menu"; } },
-      ], W / 2, 470, 260, t.metric.btnH, t.metric.btnGap);
-      return;
-    }
     UI.title(ctx, "VICTORY", W / 2, 110, t.type.display);
     UI.text(ctx, "boss down!   ·   " + overInfo.score + " pts   ·   " + fmtTime(overInfo.time), W / 2, 152, t.type.lead, "center");
     if (overInfo.isNew) UI.title(ctx, "NEW BEST!", W / 2, 184, t.type.title);

@@ -40,6 +40,7 @@ class Player {
     this.lastTrickT = 0;        // ...and when (so the Echo can detect a NEW trick)
     this.tempoT = 0;            // Tempo: damage+haste buff window after a perfect parry
     this.tempoStk = 1;          // ...stacks (Tempo T2)
+    this.revives = 0;           // Second Wind (shop): revives left this run
   }
 
   get invulnerable() { return this.iframe > 0 || this.dashIframe > 0; }
