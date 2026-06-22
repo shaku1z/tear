@@ -342,7 +342,7 @@ const CONFIG = {
     { id: "campaign", label: "Adventure",          enabled: true,
       blurb: "Journey through biomes — 9 waves then a boss, stage after stage, ever deeper." },
     { id: "endless", label: "Endless",            enabled: true,
-      blurb: "Survive escalating waves. Chase your best." },
+      blurb: "Survive forever — biomes cycle, hordes swell, mini-bosses crash in. Chase your best." },
     { id: "boss",    label: "Waves + Boss",        enabled: true, waves: 8,
       blurb: "Clear 8 waves, then face the boss." },
     { id: "gauntlet", label: "Endless + Bosses",   enabled: false,

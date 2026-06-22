@@ -94,7 +94,10 @@
   let currentStage = stageAt(0);      // its palette/name
   let stageBannerT = 0;               // "STAGE N — Name" banner timer
   let stageName = "";
-  let loreT = 0, loreText = "";       // lore card shown after a boss falls
+  let loreT = 0, loreDur = 7, loreText = "", loreTitle = "";   // lore card (boss-clear caption, or the campaign intro)
+  function showLore(text, title, dur) { loreText = text; loreTitle = title || ""; loreDur = dur || 7; loreT = loreDur; }
+  // the campaign's opening — shown as a lore card on the first wave of an Adventure run
+  const CAMPAIGN_INTRO = "Long ago the sky was torn, and through the wound poured everything that should not be. They named it the Tear. Each soul the Council sent to close it was worn, in time, into the shape of the thing they failed to stop — a guardian of the very wound they meant to end. You are the next to descend. Cut clean. Keep moving. Reach the Source before it wears your shape too.";
   // shown when the whole Adventure is completed (final biome's boss falls)
   const CAMPAIGN_ENDING = "The Tear closes behind you like a held breath let go. Every guardian, every echo of the ones who came before — all of it was the long way of asking whether you'd still be going somewhere when you arrived. You are. Whatever waits on the other side, you walked the whole length of someone else's ending to reach your own beginning. Go finish it.";
 
@@ -342,6 +345,7 @@
     }
     META.apply({ player, blade, mods: run.mods });
     startNextWave();
+    if (mode === "campaign") showLore(CAMPAIGN_INTRO, "THE TEAR", 11);   // the opening beat
     state = "playing";
     requestLock();
   }
@@ -399,6 +403,17 @@
       const total = modeWaves(run.mode);
       run.isBossWave = (m && m.bossOnly) || (total > 0 && run.wave > total);
     }
+    // ---- Endless 2.0: cycle biomes, flag horde windows + mini-boss waves ----
+    run.horde = false; run.miniBoss = null; run.waveTag = "";
+    if (run.mode === "endless") {
+      const bi = Math.floor((run.wave - 1) / 5);   // a fresh biome every 5 waves
+      if (run.wave === 1 || bi !== run._biomeIdx) {
+        run._biomeIdx = bi; loadStage(bi);          // stageAt() cycles the 5 biomes via modulo
+        stageBannerT = 2.6; stageName = stageAt(bi).name; run.stage = bi;
+      }
+      if (run.wave > 1 && run.wave % 10 === 0) { run.miniBoss = pickMiniBoss(); run.waveTag = "MINI-BOSS  ·  " + (BOSS_ROSTER.find((b) => b.id === run.miniBoss) || {}).name; }
+      else if (run.wave > 3 && run.wave % 5 === 0) { run.horde = true; run.waveTag = "⚠  HORDE"; }
+    }
     if (run.mode === "bossonly") {   // pick the next boss in the gauntlet (re-shuffle each cycle)
       if (run.bossIdx >= run.bossOrder.length) { run.bossOrder = shuffledRoster(); run.bossIdx = 0; }
       run.curBoss = run.bossOrder[run.bossIdx]; run.bossIdx++;
@@ -420,7 +435,14 @@
       } else {
         count = R.firstWaveCount + Math.floor((run.wave - 1) * R.countPerWave);
         hpScale = 1 + (run.wave - 1) * R.hpScalePerWave;
+        if (run.mode === "endless") {
+          count += Math.floor(Math.max(0, run.wave - 8) * 0.4);     // density accelerates the deeper you go
+          if (run.miniBoss) count = Math.floor(count * 0.5);         // a mini-boss wave fields fewer minions
+          if (run.horde) { count = Math.round(count * 1.8); hpScale *= 0.6; dmgScale = 0.9; }   // a wall of weaker bodies
+        }
       }
+      // a mini-boss leads its wave (Endless)
+      if (run.miniBoss) run.spawnQueue.push({ type: "miniboss", bossId: run.miniBoss });
       // in campaign, only inject authored sub-types whose base type belongs to this biome
       const stTypes = (run.mode === "campaign" && stageAt(stageIndex).pool) ? stageAt(stageIndex).pool.map((p) => p[0]) : null;
       for (let i = 0; i < count; i++) {
@@ -451,17 +473,22 @@
     return { x: spawnSide(), y: CONFIG.world.groundY - 80 };
   }
 
-  // pick the boss for the current context: the campaign stage's named boss, else the Warden
-  function makeBoss() {
-    const id = (run.mode === "campaign") ? stageAt(stageIndex).boss
-      : (run.mode === "bossonly") ? run.curBoss : "warden";
+  // build a boss instance by id (shared by campaign bosses, the gauntlet, and Endless mini-bosses)
+  function bossById(id) {
     if (id === "source") return new Source(W / 2, CONFIG.world.groundY - 300);
     if (id === "echo") return new Echo(W / 2, CONFIG.world.groundY - CONFIG.echo.h / 2);
     if (id === "aldric") return new Aldric(W / 2, CONFIG.world.groundY - CONFIG.aldric.h / 2);
     if (id === "colossus") return new Colossus(W / 2, CONFIG.world.groundY - CONFIG.colossus.h / 2);
     if (id === "warden") return new Warden(W / 2, CONFIG.world.groundY - 140);
-    return new Boss(W / 2, CONFIG.world.groundY - 140);   // unbuilt stages -> placeholder
+    return new Boss(W / 2, CONFIG.world.groundY - 140);   // unbuilt -> placeholder
   }
+  // pick the boss for the current context: the campaign stage's named boss, else the Warden
+  function makeBoss() {
+    return bossById((run.mode === "campaign") ? stageAt(stageIndex).boss : (run.mode === "bossonly") ? run.curBoss : "warden");
+  }
+  // Endless mini-bosses: any built campaign boss except the finale (the Source stays special)
+  const MINI_BOSSES = ["warden", "colossus", "aldric", "echo"];
+  function pickMiniBoss() { return MINI_BOSSES[Math.floor(Math.random() * MINI_BOSSES.length)]; }
 
   function spawnOne(spec) {
     let e;
@@ -471,12 +498,13 @@
       case "bomber":  e = new Bomber(0, 0); break;
       case "armored": e = new Armored(0, 0); break;
       case "boss":    e = makeBoss(); break;
+      case "miniboss": e = bossById(spec.bossId); e.hp *= 0.4; e.maxHp *= 0.4; e.isMiniBoss = true; e.bossName = "◇ " + e.bossName; break;
       case "priest": case "herald": case "mender": case "anchor": e = new Support(0, 0, spec.type); break;
       case "wraith":  e = new Wraith(spawnSide(), 220); break;
       case "chimera": e = new Chimera(0, 0); break;
       default:        e = new Charger(0, 0);
     }
-    if (spec.type !== "boss") {
+    if (spec.type !== "boss" && spec.type !== "miniboss") {
       if (spec.hpScale) { e.hp *= spec.hpScale; e.maxHp *= spec.hpScale; }
       if (spec.dmgScale && spec.dmgScale !== 1) { e.contactDmg *= spec.dmgScale; e.dmgScale = spec.dmgScale; }
       // presets are their own identity; otherwise pick a family variant + roll affixes
@@ -523,10 +551,10 @@
 
   function updateWave(dt) {
     const R = CONFIG.run;
-    // campaign packs more enemies on-screen the deeper you go (a horde, not a trickle)
-    const cap = run.mode === "campaign"
-      ? Math.min(R.maxConcurrentCap, R.maxConcurrent + Math.floor((run.wave - 1) / 10) * R.concurrentPerStage)
-      : R.maxConcurrent;
+    // pack more enemies on-screen the deeper you go (a horde, not a trickle)
+    let cap = R.maxConcurrent;
+    if (run.mode === "campaign") cap = Math.min(R.maxConcurrentCap, R.maxConcurrent + Math.floor((run.wave - 1) / 10) * R.concurrentPerStage);
+    else if (run.mode === "endless") cap = Math.min(R.maxConcurrentCap + 3, R.maxConcurrent + Math.floor(run.wave / 7) + (run.horde ? 3 : 0));
     if (run.spawnQueue.length && enemies.length < cap) {
       if (enemies.length === 0 && run.spawnTimer > 0.3) run.spawnTimer = 0.3; // short beat (not an instant pop) when the screen empties
       run.spawnTimer -= dt;
@@ -1195,7 +1223,7 @@
     if (run.mods.cinderNova && e.burnT > 0) { for (const e2 of enemies) { if (e2 === e || e2.dead) continue; if (len(e2.x - e.x, e2.y - e.y) < 150 && e2.applyBurn) e2.applyBurn(); } FX.ring(e.x, e.y, 12, CONFIG.colors.slam); }
     if (e.isBoss) {
       for (const p of projectiles) if (p.shock || p.sweeper) p.dead = true;   // clear the boss's lingering hazards
-      if (run.mode === "campaign" && currentStage && currentStage.lore) { loreT = 7; loreText = currentStage.lore; }
+      if (run.mode === "campaign" && currentStage && currentStage.lore) showLore(currentStage.lore, "", 8);
     }
   }
 
@@ -1243,15 +1271,16 @@
     ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
     ctx.clearRect(0, 0, W, H);
     const playLike = state === "playing" || state === "draft" || state === "tierup" || state === "paused" || state === "gameover" || state === "win" || state === "confirmquit";
-    // biome background (campaign tints the world; menus stay white)
-    let bgCol = (playLike && run && run.mode === "campaign") ? currentStage.bg : "#fff";
+    // biome background (campaign + endless tint the world; menus stay white)
+    const biomeMode = !!(run && (run.mode === "campaign" || run.mode === "endless"));
+    let bgCol = (playLike && biomeMode) ? currentStage.bg : "#fff";
     if (playLike && Array.isArray(enemies)) { const ef = enemies.find((e) => e.whiteFlash > 0); if (ef) bgCol = blendCol(bgCol, "#ffffff", ef.whiteFlash); }   // The Echo's white-out
     ctx.fillStyle = bgCol;
     ctx.fillRect(0, 0, W, H);
     uiButtons = [];
 
     // theme: on a dark biome, flip the HUD / player / in-world text to light ink
-    THEME.dark = !!(playLike && run && run.mode === "campaign" && currentStage && currentStage.dark);
+    THEME.dark = !!(playLike && biomeMode && currentStage && currentStage.dark);
     THEME.ink = THEME.dark ? "#ece9f7" : "#000";
     UI.ink = THEME.ink;
 
@@ -1372,7 +1401,7 @@
     ctx.translate(cx + ox, cy + oy);
     ctx.scale(zoom, zoom);
     ctx.translate(-cx, -cy);
-    ctx.fillStyle = (run && run.mode === "campaign") ? currentStage.plat : "#000";
+    ctx.fillStyle = (run && (run.mode === "campaign" || run.mode === "endless")) ? currentStage.plat : "#000";
     for (const p of platforms) ctx.fillRect(p.x, p.y, p.w, p.h);
     // Geomancer walls: a colored cap + crumble fade as they age
     for (const w of tempWalls) {
@@ -1538,17 +1567,18 @@
     ctx.save();
     ctx.globalAlpha = clamp(a, 0, 1);
     UI.title(ctx, run.isBossWave ? "BOSS" : "WAVE " + run.wave, W / 2, 150, 60 + (1 - a) * 10);
+    if (run.waveTag) UI.tag(ctx, run.waveTag, W / 2, 186, run.horde ? CONFIG.colors.charger : CONFIG.colors.perfect, "center", UI.t.type.lead);
     ctx.restore();
   }
 
   // a boss-defeat lore caption at the top (non-blocking, fades over ~7s)
   function drawLore() {
-    const a = Math.min(loreT, 1) * Math.min((7 - loreT) * 2, 1);
+    const a = Math.min(loreT, 1) * Math.min((loreDur - loreT) * 2, 1);
     ctx.save(); ctx.globalAlpha = clamp(a, 0, 1);
     // a deliberately fixed-light caption card (black body text), independent of biome ink
     ctx.fillStyle = "#fff"; ctx.fillRect(W / 2 - 390, 28, 780, 104);
     ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(W / 2 - 390, 28, 780, 104);
-    UI.tag(ctx, (currentStage.name || "STAGE").toUpperCase() + " — CLEARED", W / 2, 50, currentStage.accent || "#000", "center", UI.t.type.caption);
+    UI.tag(ctx, loreTitle || ((currentStage.name || "STAGE").toUpperCase() + " — CLEARED"), W / 2, 50, currentStage.accent || "#000", "center", UI.t.type.caption);
     wrapText(loreText, W / 2 - 360, 72, 720, 18, UI.t.type.caption);
     ctx.restore();
   }
@@ -1556,9 +1586,10 @@
   // campaign stage-transition banner ("STAGE N — Name")
   function drawStageBanner() {
     const a = Math.min(stageBannerT, 1) * Math.min((3.0 - stageBannerT) * 2.5, 1);
-    const gauntlet = run && run.mode === "bossonly";
+    const gauntlet = run && run.mode === "bossonly", endless = run && run.mode === "endless";
+    const label = gauntlet ? "BOSS GAUNTLET" : endless ? "ENTERING" : "STAGE " + (stageIndex + 1);
     ctx.save(); ctx.globalAlpha = clamp(a, 0, 1);
-    UI.tag(ctx, gauntlet ? "BOSS GAUNTLET" : "STAGE " + (stageIndex + 1), W / 2, H / 2 - 70, currentStage.accent || THEME.ink, "center", UI.t.type.body);
+    UI.tag(ctx, label, W / 2, H / 2 - 70, currentStage.accent || THEME.ink, "center", UI.t.type.body);
     UI.title(ctx, stageName || currentStage.name, W / 2, H / 2 - 22, UI.t.type.display);
     if (!gauntlet) { ctx.globalAlpha = clamp(a, 0, 1) * UI.t.alpha.soft; UI.tag(ctx, currentStage.blurb || "", W / 2, H / 2 + 12, THEME.ink, "center", UI.t.type.body); }
     ctx.restore();
