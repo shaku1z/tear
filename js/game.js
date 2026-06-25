@@ -44,7 +44,10 @@
   META.load();
   // CrazyGames: pause audio during ads, and once the SDK is ready re-read saved
   // progress from cloud storage (no-ops + plain localStorage off-platform)
-  CG.setHooks(() => { if (typeof SFX !== "undefined") SFX.mute(true); }, () => { if (typeof SFX !== "undefined") SFX.mute(false); });
+  CG.setHooks(
+    () => { if (typeof SFX !== "undefined") SFX.mute(true, "ad"); },     // ad break: silence
+    () => { if (typeof SFX !== "undefined") SFX.mute(false, "ad"); },    // ad over: restore
+    (on) => { if (typeof SFX !== "undefined") SFX.mute(on, "cg"); });    // CrazyGames portal mute toggle
   CG.loadingStart();
   CG.init().then(() => { META.load(); settings = loadSettings(); applySettings(); CG.loadingStop(); });
   function awardCoins(score) {

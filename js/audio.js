@@ -2,6 +2,7 @@
 const SFX = {
   ctx: null, master: null, musicGain: null,
   vol: 0.6, musicVol: 0.5, musicOn: true, muted: false,
+  _muteR: {},   // active mute reasons (e.g. "cg" portal mute, "ad" ad break) — muted if any are set
   _m: { timer: null, step: 0, next: 0 },
 
   init() {
@@ -32,7 +33,15 @@ const SFX = {
   },
   setVol(v) { this.vol = v; if (this.master) this.master.gain.value = this.muted ? 0 : v; },
   setMusic(on) { this.musicOn = on; if (this.musicGain) this.musicGain.gain.value = (this.muted || !on) ? 0 : this.musicVol; },
-  mute(on) { this.muted = !!on; if (this.master) this.master.gain.value = this.muted ? 0 : this.vol; if (this.musicGain) this.musicGain.gain.value = (this.muted || !this.musicOn) ? 0 : this.musicVol; },
+  // mute by reason — any active reason silences everything. Backward compatible:
+  // mute(true)/mute(false) use the "default" reason. CrazyGames passes "cg"/"ad".
+  mute(on, reason) {
+    reason = reason || "default";
+    if (on) this._muteR[reason] = true; else delete this._muteR[reason];
+    this.muted = Object.keys(this._muteR).length > 0;
+    if (this.master) this.master.gain.value = this.muted ? 0 : this.vol;
+    if (this.musicGain) this.musicGain.gain.value = (this.muted || !this.musicOn) ? 0 : this.musicVol;
+  },
 
   // ---- primitives (absolute-time scheduled) ----
   _osc(freq, dur, t, o) {

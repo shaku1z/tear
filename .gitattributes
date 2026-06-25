@@ -1,0 +1,15 @@
+# Files excluded from the CrazyGames submission build.
+# `git archive` honours `export-ignore`, so `npm run pack:cg` (see CRAZYGAMES.md)
+# produces a zip containing only the playable game — none of the items below.
+#
+# coop-lab.html uses external WebRTC/STUN servers, which fails CrazyGames'
+# "no external" checks, so it must NOT ship in the CrazyGames package.
+coop-lab.html      export-ignore
+signaling/         export-ignore
+serve.py           export-ignore
+DEPLOYMENT.md      export-ignore
+CRAZYGAMES.md      export-ignore
+.gitignore         export-ignore
+.gitattributes     export-ignore
+.claude/           export-ignore
+js/DESIGN_SYSTEM.md export-ignore

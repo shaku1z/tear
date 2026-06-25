@@ -10,7 +10,7 @@ const CG = {
   //          so the standalone build (Vercel/itch/local) — where env is "local" — never
   //          shows an ad and behaves exactly as before.
   ready: false, on: false, live: false, env: "disabled", _lastAd: -1e9,
-  _suspend() {}, _resume() {},   // game registers these (pause + mute audio during ads)
+  _suspend() {}, _resume() {}, _mute() {},   // game registers these (pause + mute audio during ads / portal mute)
 
   async init() {
     try {
@@ -21,9 +21,23 @@ const CG = {
         this.live = this.env === "crazygames";
         this.ready = true;
         if (this.live) { const fs = document.getElementById("fs"); if (fs) fs.style.display = "none"; }  // CG provides its own fullscreen
+        this._watchMute();   // honour the portal's mute toggle (settings.muteAudio)
       }
     } catch (e) { this.on = false; this.live = false; }
     return this.on;
+  },
+
+  // CrazyGames lets the player mute a game from the portal UI; the SDK exposes it as
+  // game.settings.muteAudio and fires addSettingsChangeListener on change. We must
+  // honour it with priority over the in-game volume — so route it through SFX.mute.
+  _watchMute() {
+    try {
+      const g = this._game();
+      if (!g || !g.addSettingsChangeListener) return;
+      const apply = () => { try { this._mute(!!g.settings.muteAudio); } catch (e) {} };
+      g.addSettingsChangeListener(apply);
+      apply();   // apply the current setting immediately
+    } catch (e) {}
   },
 
   _game() { return window.CrazyGames.SDK.game; },
@@ -33,7 +47,7 @@ const CG = {
   gameplayStop()  { if (this.on) try { this._game().gameplayStop(); } catch (e) {} },
   happytime()     { if (this.on) try { this._game().happytime(); } catch (e) {} },
 
-  setHooks(suspend, resume) { this._suspend = suspend; this._resume = resume; },
+  setHooks(suspend, resume, mute) { this._suspend = suspend; this._resume = resume; if (mute) this._mute = mute; },
   adsAvailable() { return this.live; },
 
   // a midgame ad at a deliberate break (e.g. a Retry). `onDone` ALWAYS runs (success or error).
