@@ -343,6 +343,7 @@
       runTime: 0, waveTime: 0, waveKills: 0, wavePeak: 1, waveLog: [],
       combo: 0, comboTimer: 0, mult: 1, rank: "", lastTrick: "", lifestealCd: 0,
       specialBlock: -1, specialsOffered: 0,   // draft guarantee: ≥2 Specials offered per stage
+      adRevived: false,   // CrazyGames: the one-time rewarded-ad revive is still available
     };
     if (mode === "bossonly") {   // boss gauntlet: chosen boss first, then a shuffled cycle of the rest
       run.bossOrder = shuffledRoster();
@@ -1234,6 +1235,9 @@
         FX.ring(player.x, player.y, 16, CONFIG.colors.perfect); FX.burst(player.x, player.y, 0, -1, 16, CONFIG.colors.perfect);
         addFloater(player.x, player.y - 44, "SECOND WIND", true, CONFIG.colors.perfect);
         addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry); SFX.parry();
+      } else if (CG.adsAvailable() && !run.adRevived && !player.oneHit) {
+        // CrazyGames: offer a one-time "watch an ad to revive" before the run ends
+        state = "continue"; continueT = 8; document.exitPointerLock();
       } else { endRun(); return; }
     }
   }
@@ -1302,7 +1306,7 @@
     resizeCanvas();
     ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
     ctx.clearRect(0, 0, W, H);
-    const playLike = state === "playing" || state === "draft" || state === "tierup" || state === "paused" || state === "gameover" || state === "win" || state === "confirmquit";
+    const playLike = state === "playing" || state === "draft" || state === "tierup" || state === "paused" || state === "gameover" || state === "win" || state === "confirmquit" || state === "continue";
     // biome background (campaign + endless tint the world; menus stay white)
     const biomeMode = !!(run && (run.mode === "campaign" || run.mode === "endless"));
     let bgCol = (playLike && biomeMode) ? currentStage.bg : "#fff";
@@ -1369,6 +1373,7 @@
       else if (state === "confirmquit") renderConfirmQuit();
       else if (state === "gameover") renderGameover();
       else if (state === "win") renderWin();
+      else if (state === "continue") renderContinue();
       if (state !== "playing" && state !== "draft") drawButtons();
     }
 
@@ -2236,6 +2241,33 @@
     UI.text(ctx, "Your progress (cleared waves & score) is saved to High Scores.", W / 2, 300, UI.t.type.body, "center", UI.t.alpha.soft);
     uiButtons.push({ x: W / 2 - 230, y: 350, w: 200, h: 56, label: "QUIT", action: quitRun });
     uiButtons.push({ x: W / 2 + 30, y: 350, w: 200, h: 56, label: "CANCEL", action: () => { state = "paused"; } });
+  }
+
+  // CrazyGames: the rewarded-ad revive — a one-time "watch an ad to get back up"
+  // offered the first time the player would fall in a run (only when ads are live).
+  function reviveByAd() {
+    continueT = 1e9;   // freeze the expiry while the ad is requested / plays
+    CG.rewarded(
+      () => {   // reward granted: rise with 35% HP, same feel as Second Wind
+        player.hp = Math.round(player.maxHp * 0.35); player.iframe = 1.6; run.adRevived = true;
+        FX.ring(player.x, player.y, 16, CONFIG.colors.perfect); FX.burst(player.x, player.y, 0, -1, 16, CONFIG.colors.perfect);
+        addFloater(player.x, player.y - 44, "REVIVED", true, CONFIG.colors.perfect);
+        addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry); SFX.parry();
+        state = "playing"; requestLock();
+      },
+      (ok) => { if (!ok && state === "continue") continueT = 5; },   // declined / no ad: a moment to decide, then it lapses
+    );
+  }
+
+  function renderContinue() {
+    UI.dim(ctx, W, H, 0.85);
+    UI.title(ctx, "YOU FELL", W / 2, 220, UI.t.type.display);
+    UI.text(ctx, "Watch a short ad to revive with 35% health and keep this run going.",
+      W / 2, 290, UI.t.type.body, "center", UI.t.alpha.soft);
+    UI.text(ctx, "Offer lapses in " + Math.max(0, Math.ceil(continueT > 1e8 ? 0 : continueT)) + "s",
+      W / 2, 322, UI.t.type.caption, "center", UI.t.alpha.muted);
+    uiButtons.push({ x: W / 2 - 250, y: 360, w: 300, h: 60, label: "REVIVE  ▶ WATCH AD", action: reviveByAd });
+    uiButtons.push({ x: W / 2 + 80, y: 360, w: 170, h: 60, label: "GIVE UP", action: () => endRun() });
   }
 
   function drawResultsTable(startY) {
