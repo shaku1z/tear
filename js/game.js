@@ -32,7 +32,7 @@
   let settings = loadSettings();
   function loadSettings() {
     const def = { sens: CONFIG.blade.aimSensitivity, shake: 1, vol: 0.6, music: true };
-    try { return Object.assign(def, JSON.parse(localStorage.getItem("tear_settings") || "{}")); }
+    try { return Object.assign(def, JSON.parse(CG.store.get("tear_settings") || "{}")); }
     catch (e) { return def; }
   }
   function applySettings() {
@@ -42,6 +42,11 @@
   }
   if (typeof SFX !== "undefined") SFX.init();
   META.load();
+  // CrazyGames: pause audio during ads, and once the SDK is ready re-read saved
+  // progress from cloud storage (no-ops + plain localStorage off-platform)
+  CG.setHooks(() => { if (typeof SFX !== "undefined") SFX.mute(true); }, () => { if (typeof SFX !== "undefined") SFX.mute(false); });
+  CG.loadingStart();
+  CG.init().then(() => { META.load(); settings = loadSettings(); applySettings(); CG.loadingStop(); });
   function awardCoins(score) {
     const earned = Math.floor(score * 0.05 * (1 + 0.15 * META.level("greed")) * CONFIG.run.coinMult);   // Fortune raises coinMult
     META.addCoins(earned);
@@ -58,19 +63,19 @@
     run.specialsOffered = (run.specialsOffered || 0) + choices.filter((u) => u.tiers).length;
     return choices;
   }
-  function saveSettings() { try { localStorage.setItem("tear_settings", JSON.stringify(settings)); } catch (e) {} }
+  function saveSettings() { try { CG.store.set("tear_settings", JSON.stringify(settings)); } catch (e) {} }
   applySettings();
 
   // ---- high scores ----
   function bestKey(mode, diff) { return `tear_best_${mode}_${diff}`; }
   function getBest(mode, diff) {
-    try { return Object.assign({ wave: 0, score: 0, time: 0 }, JSON.parse(localStorage.getItem(bestKey(mode, diff)) || "{}")); }
+    try { return Object.assign({ wave: 0, score: 0, time: 0 }, JSON.parse(CG.store.get(bestKey(mode, diff)) || "{}")); }
     catch (e) { return { wave: 0, score: 0, time: 0 }; }
   }
   function saveBest(mode, diff, wave, score, time) {
     const b = getBest(mode, diff);
     if (wave > b.wave || (wave === b.wave && score > b.score)) {
-      try { localStorage.setItem(bestKey(mode, diff), JSON.stringify({ wave, score, time: time || 0 })); } catch (e) {}
+      try { CG.store.set(bestKey(mode, diff), JSON.stringify({ wave, score, time: time || 0 })); } catch (e) {}
       return true;
     }
     return false;
@@ -158,6 +163,7 @@
   let focus = -1, lastUiState = null;   // keyboard focus for menus/draft
   let listScroll = 0;                   // scroll offset for scrollable screens
   let uiT = 0, enterT = 0, lastUiDt = 1 / 60, eIn = 1, winT = 0;   // menu ambient clock, time-since-screen-opened, last frame dt, entrance ease, ending cinematic clock
+  let cgWasPlaying = false, continueT = 0;   // CrazyGames gameplay bracket + the rewarded-revive countdown
   const hoverAnim = {};                 // per-button hover progress (key -> 0..1), for hover juice
   const ez = (t) => { t = t < 0 ? 0 : t > 1 ? 1 : t; return 1 - (1 - t) * (1 - t); };   // ease-out
   let codexFilter = "all";              // ABILITIES tab: category filter
@@ -624,7 +630,11 @@
     state = "win";
     document.exitPointerLock();
     SFX.wave();
+    CG.happytime();   // CrazyGames: victory is a highlight
   }
+
+  // restart after a run ends — a natural break, so show a midgame ad first (no-op off CrazyGames)
+  function retryRun() { CG.midgame(() => startRun(run.mode, run.diff)); }
 
   // ---- combat step (the PLAYING simulation) ----
   const STEP = 1 / 120;
@@ -1238,6 +1248,7 @@
     if (run.mods.bleedNova && e.bleedStacks > 0) { for (const e2 of enemies) { if (e2 === e || e2.dead) continue; if (len(e2.x - e.x, e2.y - e.y) < 150 && e2.applyBleed) e2.applyBleed(3); } FX.ring(e.x, e.y, 12, CONFIG.colors.charger); }
     if (run.mods.cinderNova && e.burnT > 0) { for (const e2 of enemies) { if (e2 === e || e2.dead) continue; if (len(e2.x - e.x, e2.y - e.y) < 150 && e2.applyBurn) e2.applyBurn(); } FX.ring(e.x, e.y, 12, CONFIG.colors.slam); }
     if (e.isBoss) {
+      CG.happytime();   // CrazyGames: a highlight moment
       for (const p of projectiles) if (p.shock || p.sweeper) p.dead = true;   // clear the boss's lingering hazards
       if (run.mode === "campaign" && currentStage && currentStage.lore) showLore(currentStage.lore, "", 8);
     }
@@ -1274,6 +1285,10 @@
     }
     uiT += dt; enterT += dt; lastUiDt = dt;   // menu animation clocks
     if (state === "win") winT += dt; else winT = 0;   // ending cinematic clock
+    // CrazyGames: bracket active gameplay (for ad timing / analytics)
+    const _pl = state === "playing";
+    if (_pl !== cgWasPlaying) { if (_pl) CG.gameplayStart(); else CG.gameplayStop(); cgWasPlaying = _pl; }
+    if (state === "continue" && continueT > 0) { continueT -= dt; if (continueT <= 0) { state = "gameover"; endRun(); } }
 
     render();
     handleUI();
@@ -1916,6 +1931,13 @@
     stepper("Screen shake", Math.round(settings.shake * 100) + "%",
       () => { settings.shake = clamp(+(settings.shake - 0.25).toFixed(2), 0, 2); applySettings(); saveSettings(); },
       () => { settings.shake = clamp(+(settings.shake + 0.25).toFixed(2), 0, 2); applySettings(); saveSettings(); });
+    // Legal — a CrazyGames Basic-launch requirement: an in-game mention of Terms & Privacy.
+    UI.text(ctx, "By playing you agree to CrazyGames' Terms of Service and Privacy Policy.",
+      fx, y + 2, t.type.caption, "left", t.alpha.muted);
+    uiButtons.push({ x: fx, y: y + 18, w: 168, h: 42, label: "Terms of Service",
+      action: () => window.open("https://www.crazygames.com/terms-and-conditions", "_blank", "noopener") });
+    uiButtons.push({ x: fx + 180, y: y + 18, w: 168, h: 42, label: "Privacy Policy",
+      action: () => window.open("https://www.crazygames.com/privacy", "_blank", "noopener") });
     addBack();
   }
 
@@ -2248,7 +2270,7 @@
     UI.text(ctx, "+" + overInfo.earned + " coins  (" + overInfo.coins + " total)", W / 2, 210, t.type.body, "center", t.alpha.soft);
     drawResultsTable(250);
     vmenu([
-      { label: "RETRY", action: () => startRun(run.mode, run.diff) },
+      { label: "RETRY", action: () => retryRun() },
       { label: "MAIN MENU", action: () => { state = "menu"; } },
     ], W / 2, 560, 260, t.metric.btnH, t.metric.btnGap);
   }
@@ -2294,7 +2316,7 @@
     UI.text(ctx, overInfo.score + " pts   ·   " + fmtTime(overInfo.time) + (overInfo.isNew ? "   ·   NEW BEST" : ""), W / 2, 446, t.type.caption, "center", clamp((winT - 1) / 1, 0, 1) * 0.75);
     UI.text(ctx, "+" + overInfo.earned + " coins  (" + overInfo.coins + " total)", W / 2, 468, t.type.caption, "center", clamp((winT - 1) / 1, 0, 1) * 0.5);
     if (winT > 1.6) vmenu([
-      { label: "DESCEND AGAIN", action: () => startRun(run.mode, run.diff) },
+      { label: "DESCEND AGAIN", action: () => retryRun() },
       { label: "MAIN MENU", action: () => { state = "menu"; } },
     ], W / 2, 506, 280, t.metric.btnH, t.metric.btnGap);
     // (UI.ink stays light: the ending's buttons + cursor read on the void)
@@ -2310,7 +2332,7 @@
     UI.text(ctx, "+" + overInfo.earned + " coins  (" + overInfo.coins + " total)", W / 2, 210, t.type.body, "center", t.alpha.soft);
     drawResultsTable(250);
     vmenu([
-      { label: "PLAY AGAIN", action: () => startRun(run.mode, run.diff) },
+      { label: "PLAY AGAIN", action: () => retryRun() },
       { label: "MAIN MENU", action: () => { state = "menu"; } },
     ], W / 2, 560, 260, t.metric.btnH, t.metric.btnGap);
   }

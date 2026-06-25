@@ -2,11 +2,11 @@
 const META = {
   data: { coins: 0, buy: {} },
   load() {
-    try { this.data = Object.assign({ coins: 0, buy: {} }, JSON.parse(localStorage.getItem("tear_meta") || "{}")); }
+    try { this.data = Object.assign({ coins: 0, buy: {} }, JSON.parse(CG.store.get("tear_meta") || "{}")); }
     catch (e) { this.data = { coins: 0, buy: {} }; }
     return this.data;
   },
-  save() { try { localStorage.setItem("tear_meta", JSON.stringify(this.data)); } catch (e) {} },
+  save() { try { CG.store.set("tear_meta", JSON.stringify(this.data)); } catch (e) {} },
   coins() { return this.data.coins; },
   level(id) { return this.data.buy[id] || 0; },
   addCoins(n) { this.data.coins += n; this.save(); },

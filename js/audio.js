@@ -32,6 +32,7 @@ const SFX = {
   },
   setVol(v) { this.vol = v; if (this.master) this.master.gain.value = this.muted ? 0 : v; },
   setMusic(on) { this.musicOn = on; if (this.musicGain) this.musicGain.gain.value = (this.muted || !on) ? 0 : this.musicVol; },
+  mute(on) { this.muted = !!on; if (this.master) this.master.gain.value = this.muted ? 0 : this.vol; if (this.musicGain) this.musicGain.gain.value = (this.muted || !this.musicOn) ? 0 : this.musicVol; },
 
   // ---- primitives (absolute-time scheduled) ----
   _osc(freq, dur, t, o) {
