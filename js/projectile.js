@@ -25,6 +25,8 @@ class Projectile {
     this.curved = false;
     this.root = 0;            // Chain: roots the player for this many seconds on hit
     this.mud = false;         // Sludge: lands and leaves a slowing puddle
+    this.tint = null;         // shot colour, set by the firing enemy (else default enemyShot)
+    this.kind = "dart";       // visual shape: "dart" (oriented bolt) | "orb" (caster)
   }
 
   update(dt) {
@@ -75,69 +77,90 @@ class Projectile {
 
   draw(ctx) {
     const C = CONFIG.colors;
+    const ink = (typeof THEME !== "undefined") ? THEME.ink : "#000";
+    const dark = (typeof THEME !== "undefined") && THEME.dark;
+    const lowG = (typeof GFX !== "undefined") && GFX.low;
     if (this.sweeper) {                    // Colossus's thrown shield arm: a rotating bar of death
       ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(performance.now() / 200);
+      if (!lowG) { ctx.shadowColor = C.armoredShield; ctx.shadowBlur = 12; }
       ctx.fillStyle = C.armoredShield; ctx.fillRect(-44, -9, 88, 18);
-      ctx.strokeStyle = "#000"; ctx.lineWidth = 2.5; ctx.strokeRect(-44, -9, 88, 18);
-      ctx.fillStyle = "#000"; ctx.fillRect(-6, -6, 12, 12);
+      ctx.shadowBlur = 0; ctx.strokeStyle = ink; ctx.lineWidth = 2.5; ctx.strokeRect(-44, -9, 88, 18);
+      ctx.fillStyle = ink; ctx.fillRect(-6, -6, 12, 12);
       ctx.restore(); return;
     }
     if (this.shock) {                      // armored stomp shockwave: a ground spike you jump
-      ctx.fillStyle = C.slam; ctx.globalAlpha = 0.9;
+      ctx.save();
+      if (!lowG) { ctx.shadowColor = C.slam; ctx.shadowBlur = 10; }
+      ctx.fillStyle = C.slam; ctx.globalAlpha = 0.92;
       ctx.beginPath(); ctx.moveTo(this.x - this.r, this.y + this.r);
       ctx.lineTo(this.x, this.y - this.r); ctx.lineTo(this.x + this.r, this.y + this.r);
       ctx.closePath(); ctx.fill();
-      ctx.globalAlpha = 1; ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.shadowBlur = 0; ctx.globalAlpha = 1; ctx.strokeStyle = ink; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.restore(); return;
+    }
+    if (this.mud && !this.deflected) {     // sludge glob in flight: a wobbling blob + drip
+      const wob = Math.sin(performance.now() / 90) * 1.4;
+      ctx.fillStyle = C.sludge; ctx.beginPath(); ctx.ellipse(this.x, this.y, this.r + wob, this.r - wob, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = C.sludge; ctx.beginPath(); ctx.arc(this.x + this.r * 0.5, this.y - this.r * 0.4, this.r * 0.3, 0, Math.PI * 2); ctx.fill();
       return;
     }
-    if (this.mud && !this.deflected) {     // sludge glob in flight
-      ctx.fillStyle = C.sludge; ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.stroke();
-      return;
-    }
-    if (this.root && !this.deflected) {    // chain shot: a hollow link ring
-      ctx.strokeStyle = C.enemyShot; ctx.lineWidth = 3.5;
-      ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2); ctx.stroke();
-      ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(this.x, this.y, this.r * 0.4, 0, Math.PI * 2); ctx.fill();
-      return;
+    if (this.root && !this.deflected) {    // chain shot: two interlocked links, spinning
+      ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(performance.now() / 260);
+      ctx.strokeStyle = this.tint || C.enemyShot; ctx.lineWidth = 3.5;
+      for (const o of [-this.r * 0.5, this.r * 0.5]) { ctx.beginPath(); ctx.ellipse(o, 0, this.r * 0.7, this.r * 0.45, 0, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.restore(); return;
     }
     if (this.mine) {                       // floor mine: disk + arming/armed blink
       ctx.fillStyle = this.deflected ? C.deflected : C.bomber;
       ctx.beginPath(); ctx.arc(this.x, this.y, this.r, Math.PI, 0); ctx.fill();
-      ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke();
+      ctx.strokeStyle = ink; ctx.lineWidth = 2; ctx.stroke();
       const blink = this.armed ? (Math.floor(performance.now() / 140) % 2 === 0) : false;
-      ctx.fillStyle = this.armed ? (blink ? C.charger : "#000") : "#888";
+      ctx.fillStyle = this.armed ? (blink ? C.charger : ink) : "#888";
       ctx.beginPath(); ctx.arc(this.x, this.y - 1, 2.5, 0, Math.PI * 2); ctx.fill();
       return;
     }
-    const col = this.deflected ? (this.perfect ? C.perfect : C.deflected) : (this.bomb ? C.bomber : C.enemyShot);
-    ctx.fillStyle = col;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#000"; ctx.lineWidth = this.charged ? 2.5 : 1.5; ctx.stroke();
-    if (this.charged && !this.deflected) {   // fast bolt: a motion streak + bright core
-      const m = len(this.vx, this.vy) || 1, tl = 24;
-      ctx.strokeStyle = col; ctx.globalAlpha = 0.5; ctx.lineWidth = this.r * 1.1; ctx.lineCap = "round";
-      ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x - (this.vx / m) * tl, this.y - (this.vy / m) * tl); ctx.stroke();
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(this.x, this.y, this.r * 0.45, 0, Math.PI * 2); ctx.fill();
+
+    // --- generic shot: an oriented body with a comet trail, hot core, and soft glow ---
+    const col = this.deflected ? (this.perfect ? C.perfect : C.deflected) : (this.tint || (this.bomb ? C.bomber : C.enemyShot));
+    const m = len(this.vx, this.vy) || 1, ang = Math.atan2(this.vy, this.vx), r = this.r;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    // comet trail (skipped for lobbed bombs + on low GFX); additive on dark biomes so it glows
+    if (!lowG && !this.bomb) {
+      ctx.save();
+      if (dark) ctx.globalCompositeOperation = "lighter";
+      ctx.rotate(ang);
+      const tl = clamp(m / 36, 12, 40) * (this.charged ? 1.7 : 1);
+      ctx.globalAlpha = 0.4; ctx.fillStyle = col;
+      ctx.beginPath(); ctx.moveTo(-tl, 0); ctx.lineTo(0, -r * 0.95); ctx.lineTo(0, r * 0.95); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1; ctx.restore();
     }
-    if (this.bomb) {                          // fuse spark on top of the lobbed bomb
-      ctx.fillStyle = "#000"; ctx.fillRect(this.x - 1.5, this.y - this.r - 5, 3, 5);
+    if (!lowG) { ctx.shadowColor = col; ctx.shadowBlur = dark ? 12 : 7; }
+    ctx.rotate(ang);
+    ctx.fillStyle = col; ctx.strokeStyle = ink; ctx.lineWidth = this.charged ? 2.5 : 1.5;
+    if (this.kind === "orb" || this.bomb) {            // caster orb / bomb: round body
+      const pr = this.bomb ? r : r * (1 + 0.12 * Math.sin(performance.now() / 120));
+      ctx.beginPath(); ctx.arc(0, 0, pr, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; ctx.stroke();
+      if (this.kind === "orb") { ctx.strokeStyle = "#fff"; ctx.globalAlpha = 0.7; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, pr * 0.5, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
+    } else {                                            // streamlined dart, tip forward along travel
+      const rx = r * (this.charged ? 1.8 : 1.5), ry = r * 0.92;
+      ctx.beginPath(); ctx.moveTo(rx, 0);
+      ctx.quadraticCurveTo(0, -ry, -rx * 0.7, -ry * 0.55);
+      ctx.quadraticCurveTo(-rx * 0.9, 0, -rx * 0.7, ry * 0.55);
+      ctx.quadraticCurveTo(0, ry, rx, 0);
+      ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0; ctx.stroke();
     }
-    if (this.deflected) {
-      // ring to show it's now yours (double ring if a perfect parry)
-      ctx.strokeStyle = col;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.r + 5, 0, Math.PI * 2);
-      ctx.stroke();
-      if (this.perfect) {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.r + 9, 0, Math.PI * 2);
-        ctx.stroke();
-      }
+    // hot white core
+    ctx.fillStyle = "#fff"; ctx.globalAlpha = 0.9;
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.4, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.restore();
+
+    if (this.bomb) { ctx.fillStyle = ink; ctx.fillRect(this.x - 1.5, this.y - r - 5, 3, 5); }   // fuse
+    if (this.deflected) {                                // rings: it's yours now (double on a perfect parry)
+      ctx.strokeStyle = col; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(this.x, this.y, r + 5, 0, Math.PI * 2); ctx.stroke();
+      if (this.perfect) { ctx.beginPath(); ctx.arc(this.x, this.y, r + 9, 0, Math.PI * 2); ctx.stroke(); }
     }
   }
 }

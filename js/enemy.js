@@ -218,7 +218,7 @@ class Enemy {
     const m = len(dx, dy) || 1;
     const p = new Projectile(this.x, this.y, (dx / m) * speed, (dy / m) * speed);
     p.dmg = CONFIG.proj.dmg * this.auraDmg;   // War Priest empowers shots
-    projectiles.push(p);
+    p.tint = this.color; projectiles.push(p);
   }
 
   tickTimers(dt) {
@@ -614,7 +614,7 @@ class Ranged extends Enemy {
       for (let i = 0; i < this.volley; i++) {
         const a = base + (i - (this.volley - 1) / 2) * 0.22;
         const p = new Projectile(this.x, this.y, Math.cos(a) * C.projSpeed, Math.sin(a) * C.projSpeed);
-        p.dmg = dmg; projectiles.push(p);
+        p.dmg = dmg; p.tint = this.color; projectiles.push(p);
       }
       return;
     }
@@ -622,20 +622,20 @@ class Ranged extends Enemy {
       const CS = CONFIG.chargedShot;
       const dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
       const p = new Projectile(this.x, this.y, (dx / m) * CS.speed, (dy / m) * CS.speed);
-      p.r = CS.r; p.dmg = CS.dmg * this.auraDmg; p.charged = true;
+      p.r = CS.r; p.dmg = CS.dmg * this.auraDmg; p.charged = true; p.tint = this.color;
       projectiles.push(p);
       return;
     }
     if (b === "warlock") {                        // slow shot that curves once toward you
       const X = CONFIG.exotic, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
       const p = new Projectile(this.x, this.y, (dx / m) * X.warlockSpeed, (dy / m) * X.warlockSpeed);
-      p.dmg = X.warlockDmg * this.auraDmg; p.curve = true; p.curveT = X.warlockCurveAt; p.r = 11;
+      p.dmg = X.warlockDmg * this.auraDmg; p.curve = true; p.curveT = X.warlockCurveAt; p.r = 11; p.tint = this.color; p.kind = "orb";
       projectiles.push(p); return;
     }
     if (b === "chain") {                          // a shot that roots you in place on hit
       const X = CONFIG.exotic, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
       const p = new Projectile(this.x, this.y, (dx / m) * X.chainSpeed, (dy / m) * X.chainSpeed);
-      p.dmg = X.chainDmg * this.auraDmg; p.root = X.chainRoot; p.r = X.chainR;
+      p.dmg = X.chainDmg * this.auraDmg; p.root = X.chainRoot; p.r = X.chainR; p.tint = this.color;
       projectiles.push(p); return;
     }
     if (b === "sentinel") { this.fireAt(player, projectiles, C.projSpeed * 1.15); return; }  // single precise shot
@@ -647,7 +647,7 @@ class Ranged extends Enemy {
       const dx = tx - this.x, dy = ty - this.y, m = len(dx, dy) || 1;
       const a = Math.atan2(dy, dx) + (i - 0.5) * (b === "rifleman" ? 0.0 : 0.07);
       const p = new Projectile(this.x, this.y, Math.cos(a) * sp, Math.sin(a) * sp);
-      p.dmg = dmg; projectiles.push(p);
+      p.dmg = dmg; p.tint = this.color; projectiles.push(p);
     }
   }
 
@@ -1807,7 +1807,7 @@ class Echo extends Enemy {
   }
   _shot(player, projectiles) {
     const C = CONFIG.echo, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
-    const p = new Projectile(this.x, this.y, (dx / m) * C.projSpeed, (dy / m) * C.projSpeed); p.dmg = C.projDmg; p.r = 10; projectiles.push(p);
+    const p = new Projectile(this.x, this.y, (dx / m) * C.projSpeed, (dy / m) * C.projSpeed); p.dmg = C.projDmg; p.r = 10; p.tint = this.color; projectiles.push(p);
   }
   _scheduleFrom(player) {   // a new trick from the player queues a copy (faster if you repeat yourself)
     if (player.lastTrickT > this.seenTrickT) {
@@ -1919,7 +1919,7 @@ class Source extends Enemy {
 
   _shot(player, projectiles) {
     const C = CONFIG.source, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
-    const p = new Projectile(this.x, this.y, (dx / m) * C.shockSpeed, (dy / m) * C.shockSpeed); p.dmg = C.shockDmg; p.r = 11; projectiles.push(p);
+    const p = new Projectile(this.x, this.y, (dx / m) * C.shockSpeed, (dy / m) * C.shockSpeed); p.dmg = C.shockDmg; p.r = 11; p.tint = this.color; projectiles.push(p);
   }
   _shock(projectiles, dir, footY) {
     const C = CONFIG.source, fy = (footY || CONFIG.world.groundY) - C.shockR;
@@ -1935,7 +1935,7 @@ class Source extends Enemy {
   _cross(projectiles) {
     const C = CONFIG.source;
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]]) {
-      const p = new Projectile(this.x, this.y, dx * C.crossSpeed, dy * C.crossSpeed); p.dmg = C.crossDmg; p.r = 11; projectiles.push(p);
+      const p = new Projectile(this.x, this.y, dx * C.crossSpeed, dy * C.crossSpeed); p.dmg = C.crossDmg; p.r = 11; p.tint = this.color; projectiles.push(p);
     }
     FX.ring(this.x, this.y, 16, this.color);
   }

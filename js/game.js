@@ -362,6 +362,7 @@
       run.bossOrder = shuffledRoster();
       if (selBoss !== "shuffle") { run.bossOrder = run.bossOrder.filter((id) => id !== selBoss); run.bossOrder.unshift(selBoss); }
       run.bossIdx = 0; run.bossesBeaten = 0;
+      run.curBoss = run.bossOrder[0]; loadStage(bossBiome(run.curBoss));   // open in the first boss's home biome
     } else if (mode === "gauntlet") {   // Endless + Bosses: a shuffled boss cycle punctuating the waves
       run.bossOrder = shuffledRoster(); run.bossIdx = 0; run.bossesBeaten = 0;
     }
@@ -446,7 +447,7 @@
     if (run.mode === "bossonly") {   // pick the next boss in the gauntlet (re-shuffle each cycle)
       if (run.bossIdx >= run.bossOrder.length) { run.bossOrder = shuffledRoster(); run.bossIdx = 0; }
       run.curBoss = run.bossOrder[run.bossIdx]; run.bossIdx++;
-      loadStage(0);   // rebuild the arena fresh between bosses (restore ripped platforms, clear hazards)
+      loadStage(bossBiome(run.curBoss));   // each boss in its home biome (fresh arena: restore platforms, clear hazards)
       stageBannerT = 2.4; stageName = (BOSS_ROSTER.find((b) => b.id === run.curBoss) || {}).name || "BOSS";
     }
     run.spawnQueue = [];
@@ -511,6 +512,8 @@
     if (id === "warden") return new Warden(W / 2, CONFIG.world.groundY - 140);
     return new Boss(W / 2, CONFIG.world.groundY - 140);   // unbuilt -> placeholder
   }
+  // boss test: each boss fights in its home biome (the stage whose .boss matches it)
+  function bossBiome(id) { const i = STAGES.findIndex((s) => s.boss === id); return i < 0 ? 0 : i; }
   // pick the boss for the current context: the campaign stage's named boss, else the Warden
   function makeBoss() {
     return bossById((run.mode === "campaign") ? stageAt(stageIndex).boss : (run.mode === "bossonly" || run.mode === "gauntlet") ? run.curBoss : "warden");
@@ -1324,7 +1327,7 @@
     ctx.clearRect(0, 0, W, H);
     const playLike = state === "playing" || state === "draft" || state === "tierup" || state === "paused" || state === "gameover" || state === "win" || state === "confirmquit" || state === "continue";
     // biome background (campaign + endless tint the world; menus stay white)
-    const biomeMode = !!(run && (run.mode === "campaign" || run.mode === "endless"));
+    const biomeMode = !!(run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly"));
     let bgCol = (playLike && biomeMode) ? currentStage.bg : "#fff";
     if (playLike && Array.isArray(enemies)) { const ef = enemies.find((e) => e.whiteFlash > 0); if (ef) bgCol = blendCol(bgCol, "#ffffff", ef.whiteFlash); }   // The Echo's white-out
     ctx.fillStyle = bgCol;
@@ -1455,7 +1458,7 @@
     ctx.translate(cx + ox, cy + oy);
     ctx.scale(zoom, zoom);
     ctx.translate(-cx, -cy);
-    const biome = run && (run.mode === "campaign" || run.mode === "endless");
+    const biome = run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly");
     if (biome) Backdrop.draw(ctx, currentStage, performance.now() / 1000, player ? player.x : W / 2);   // sky + parallax + motes
     for (const p of platforms) Backdrop.platform(ctx, p, currentStage, !!p.floor);                       // depth: gradient + edge + shadow
     // Geomancer walls: a colored cap + crumble fade as they age
