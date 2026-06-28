@@ -80,6 +80,7 @@ const Backdrop = {
     const W = this.W, H = this.H, s = style || {};
     const rgb = s.rgb || (c.dark ? "236,235,246" : "20,20,30");
     const dir = s.dir == null ? 1 : s.dir, drift = s.drift == null ? 14 : s.drift, aMul = s.aMul == null ? 1 : s.aMul;
+    if (typeof GFX !== "undefined" && GFX.low) return;   // skip ambient motes on low-end
     ctx.save();
     if (s.glow) { ctx.shadowColor = `rgba(${rgb},0.9)`; ctx.shadowBlur = 8; }
     for (const p of c.parts) {
@@ -272,7 +273,7 @@ const BIOME_ART = {
       const rg = ctx.createRadialGradient(cx, cyc, 20, cx, cyc, 580);
       rg.addColorStop(0, `rgba(19,196,214,${0.16 + 0.12 * pulse})`); rg.addColorStop(0.5, "rgba(19,196,214,0.05)"); rg.addColorStop(1, "rgba(19,196,214,0)");
       ctx.fillStyle = rg; ctx.fillRect(0, 0, B.W, B.H);
-      ctx.save(); ctx.translate(cx, cyc); ctx.shadowColor = "#13c4d6"; ctx.shadowBlur = 38;
+      ctx.save(); ctx.translate(cx, cyc); if (!(typeof GFX !== "undefined" && GFX.low)) { ctx.shadowColor = "#13c4d6"; ctx.shadowBlur = 38; }
       const h = B.H * 0.52, w = 20 + 10 * pulse;
       const grd = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
       grd.addColorStop(0, "rgba(19,196,214,0)"); grd.addColorStop(0.5, `rgba(190,250,255,${0.7 + 0.3 * pulse})`); grd.addColorStop(1, "rgba(19,196,214,0)");

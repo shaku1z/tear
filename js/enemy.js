@@ -521,7 +521,8 @@ class Charger extends Enemy {
     }
 
     ctx.fillStyle = this.flash > 0 ? "#fff" : (this.stun > 0 ? "#d7b3b3" : this.color);
-    ctx.shadowColor = THEME.rim; ctx.shadowBlur = 6;   // separating halo (esp. dark-bodied enemies on dark biomes)
+    const _rim = !(typeof GFX !== "undefined" && GFX.low);
+    if (_rim) { ctx.shadowColor = THEME.rim; ctx.shadowBlur = 6; }   // separating halo (esp. dark-bodied enemies on dark biomes)
     ctx.fillRect(x, y, w, h);
     ctx.shadowBlur = 0;
     ctx.strokeStyle = THEME.ink; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h);
@@ -657,7 +658,7 @@ class Ranged extends Enemy {
     ctx.lineTo(this.x, this.y + r); ctx.lineTo(this.x - r, this.y);
     ctx.closePath();
     ctx.fillStyle = this.flash > 0 ? "#fff" : this.color;
-    ctx.shadowColor = THEME.rim; ctx.shadowBlur = 6; ctx.fill(); ctx.shadowBlur = 0;
+    if (!(typeof GFX !== "undefined" && GFX.low)) { ctx.shadowColor = THEME.rim; ctx.shadowBlur = 6; } ctx.fill(); ctx.shadowBlur = 0;
     ctx.strokeStyle = THEME.ink; ctx.lineWidth = 2.5; ctx.stroke();
 
     // variant accents

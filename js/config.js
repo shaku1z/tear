@@ -365,6 +365,11 @@ function _relLum(hex) {
   const r = parseInt(hex.slice(0, 2), 16) / 255, g = parseInt(hex.slice(2, 4), 16) / 255, b = parseInt(hex.slice(4, 6), 16) / 255;
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;   // 0 (black) .. 1 (white)
 }
+// graphics quality — when low, the costly per-frame effects (rim/blade/rift glow
+// shadowBlur, ambient motes) are skipped so the CrazyGames embed / low-end mobile
+// stays smooth. Resolved from the user's setting (auto/high/low) in applySettings.
+const GFX = { low: false };
+
 const THEME = {
   ink: "#0a0a0a", rim: "rgba(0,0,0,0.35)", paper: "#ffffff", dark: false,
   set(bg) {

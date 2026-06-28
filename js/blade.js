@@ -295,7 +295,7 @@ class Blade {
   _drawBody(ctx) {
     const s = this.state === "held" ? 1 : this.throwSizeMult;
     // ink + a soft separating halo so the blade reads on dark voids as well as paper
-    ctx.shadowColor = THEME.rim; ctx.shadowBlur = 6;
+    if (!(typeof GFX !== "undefined" && GFX.low)) { ctx.shadowColor = THEME.rim; ctx.shadowBlur = 6; }
     ctx.strokeStyle = THEME.ink;
     ctx.fillStyle = THEME.ink;
     ctx.lineCap = "round";

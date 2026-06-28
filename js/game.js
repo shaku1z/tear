@@ -35,13 +35,19 @@
   let shakeScale = 1;
   let settings = loadSettings();
   function loadSettings() {
-    const def = { sens: CONFIG.blade.aimSensitivity, shake: 1, vol: 0.6, music: true };
+    const def = { sens: CONFIG.blade.aimSensitivity, shake: 1, vol: 0.6, music: true, gfx: "auto" };
     try { return Object.assign(def, JSON.parse(CG.store.get("tear_settings") || "{}")); }
     catch (e) { return def; }
+  }
+  // a coarse pointer (touch) or few CPU cores -> treat as low-end for the "auto" default
+  function isLowEnd() {
+    try { return (navigator.hardwareConcurrency || 8) <= 4 || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches); }
+    catch (e) { return false; }
   }
   function applySettings() {
     CONFIG.blade.aimSensitivity = settings.sens;
     shakeScale = settings.shake;
+    GFX.low = settings.gfx === "low" || (settings.gfx === "auto" && isLowEnd());
     if (typeof SFX !== "undefined") { SFX.vol = settings.vol; SFX.musicOn = settings.music; SFX.setVol(settings.vol); SFX.setMusic(settings.music); }
   }
   if (typeof SFX !== "undefined") SFX.init();
@@ -1948,6 +1954,12 @@
     stepper("Screen shake", Math.round(settings.shake * 100) + "%",
       () => { settings.shake = clamp(+(settings.shake - 0.25).toFixed(2), 0, 2); applySettings(); saveSettings(); },
       () => { settings.shake = clamp(+(settings.shake + 0.25).toFixed(2), 0, 2); applySettings(); saveSettings(); });
+    // Graphics quality — cycles Auto / High / Low; Low drops the costly glow + motes
+    UI.text(ctx, "Effects", fx, y + 7, t.type.lead);
+    const gfxLabel = settings.gfx === "auto" ? ("AUTO (" + (GFX.low ? "LOW" : "HIGH") + ")") : (settings.gfx === "low" ? "LOW" : "HIGH");
+    uiButtons.push({ x: rx - 200, y: y - 16, w: 200, h: 46, label: gfxLabel,
+      action: () => { settings.gfx = settings.gfx === "auto" ? "high" : (settings.gfx === "high" ? "low" : "auto"); applySettings(); saveSettings(); } });
+    UI.divider(ctx, fx, y + 32, rx - fx, 0.1); y += 78;
     // Legal — a CrazyGames Basic-launch requirement: an in-game mention of Terms & Privacy.
     UI.text(ctx, "By playing you agree to CrazyGames' Terms of Service and Privacy Policy.",
       fx, y + 2, t.type.caption, "left", t.alpha.muted);
