@@ -586,6 +586,7 @@
     // wave cleared -> wait a beat (let death FX finish) before the draft
     if (run.waveActive && run.spawnQueue.length === 0 && enemies.length === 0) {
       run.waveActive = false;
+      Backdrop.bloom(currentStage.accent, 0.14, 0.8);   // wave cleared: a breath of light
       run.waveLog.push({ wave: run.isBossWave ? "BOSS" : run.wave, time: run.waveTime, kills: run.waveKills, peak: run.wavePeak });
       if (run.isBossWave) {
         if (run.mode === "campaign" && stageIndex >= STAGES.length - 1) { winRun(true); return; }   // final biome cleared -> the ending
@@ -1128,6 +1129,7 @@
           if (perfect) {
             addZoom(fullCounter ? CONFIG.juice.zoomParry * 1.4 : CONFIG.juice.zoomParry);
             addFlash(fullCounter ? CONFIG.juice.flashParry * 1.3 : CONFIG.juice.flashParry);
+            Backdrop.flare(p.x, p.y, pcol, fullCounter ? 460 : 320, fullCounter ? 0.55 : 0.4);   // parry lights the world
             triggerSlowmo();
             if (fullCounter) FX.ring(p.x, p.y, 10, CONFIG.colors.perfect);
             if (run.mods.parryGuard) player.guardT = CONFIG.resilience.parryGuardTime;   // Riposte
@@ -1260,6 +1262,7 @@
     if (run.mods.cinderNova && e.burnT > 0) { for (const e2 of enemies) { if (e2 === e || e2.dead) continue; if (len(e2.x - e.x, e2.y - e.y) < 150 && e2.applyBurn) e2.applyBurn(); } FX.ring(e.x, e.y, 12, CONFIG.colors.slam); }
     if (e.isBoss) {
       CG.happytime();   // CrazyGames: a highlight moment
+      Backdrop.bloom("#ffffff", 0.22, 0.9); Backdrop.flare(e.x, e.y, currentStage.accent || "#ffffff", 520, 1.0);   // a boss falls: the world flares
       for (const p of projectiles) if (p.shock || p.sweeper) p.dead = true;   // clear the boss's lingering hazards
       if (run.mode === "campaign" && currentStage && currentStage.lore) showLore(currentStage.lore, "", 8);
     }

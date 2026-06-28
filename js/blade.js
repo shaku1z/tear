@@ -337,6 +337,9 @@ class Blade {
 
   _drawTrail(ctx) {
     const J = CONFIG.juice, tr = this.trail;
+    // on dark biomes, blend the swoosh additively so it blooms like real light
+    const glow = (typeof THEME !== "undefined") && THEME.dark;
+    if (glow) { ctx.save(); ctx.globalCompositeOperation = "lighter"; }
     ctx.fillStyle = CONFIG.colors.bladeTrail;
     for (let i = 1; i < tr.length; i++) {
       const a = tr[i - 1], b = tr[i];
@@ -355,18 +358,22 @@ class Blade {
       ctx.fill();
     }
     ctx.globalAlpha = 1;
+    if (glow) ctx.restore();
   }
 
   _drawTipGlow(ctx) {
     if (this.state !== "held") return;
     const v = this.glowV;
     if (v <= 0.04) return;
+    const glow = (typeof THEME !== "undefined") && THEME.dark;
+    if (glow) { ctx.save(); ctx.globalCompositeOperation = "lighter"; }
     ctx.globalAlpha = 0.2 + v * 0.5;
     ctx.fillStyle = CONFIG.colors.bladeGlow;
     ctx.beginPath();
     ctx.arc(this.tipX, this.tipY, 4 + v * 13, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
+    if (glow) ctx.restore();
   }
 
   draw(ctx, player) {

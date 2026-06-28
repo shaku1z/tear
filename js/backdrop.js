@@ -8,6 +8,7 @@
 const Backdrop = {
   W: 1600, H: 900,
   _cache: {},                 // stage.name -> baked + spec
+  _fx: [],                    // transient reactive lights (combat -> backdrop)
 
   // --- self-contained colour utils (game.js's blendCol is IIFE-local) ---
   _rgb(hex) { hex = (hex || "#000").replace("#", ""); if (hex.length === 3) hex = hex.split("").map((c) => c + c).join(""); return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)]; },
@@ -117,10 +118,30 @@ const Backdrop = {
     ctx.restore();
   },
 
+  // === reactive lighting: combat events bleed light into the backdrop ===
+  // time-based so undrawn events (arcade modes / paused) simply expire, never pile up.
+  flare(x, y, col, r, life) { this._fx.push({ x, y, col, r, life, end: performance.now() / 1000 + life, screen: false }); if (this._fx.length > 16) this._fx.shift(); },
+  bloom(col, strength, life) { this._fx.push({ col, strength, life, end: performance.now() / 1000 + life, screen: true }); if (this._fx.length > 16) this._fx.shift(); },
+  drawFx(ctx) {
+    if (!this._fx.length) return;
+    const now = performance.now() / 1000;
+    // additive light has little headroom on a bright background -> attenuate hard on light biomes
+    const atten = (typeof THEME !== "undefined" && !THEME.dark) ? 0.3 : 1;
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    for (const f of this._fx) {
+      const k = clamp((f.end - now) / f.life, 0, 1); if (k <= 0) continue;
+      if (f.screen) { ctx.globalAlpha = k * f.strength * atten; ctx.fillStyle = f.col; ctx.fillRect(0, 0, this.W, this.H); }
+      else { ctx.globalAlpha = 1; const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r); g.addColorStop(0, this._rgba(f.col, 0.55 * k * atten)); g.addColorStop(1, this._rgba(f.col, 0)); ctx.fillStyle = g; ctx.fillRect(0, 0, this.W, this.H); }
+    }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; ctx.restore();
+    this._fx = this._fx.filter((f) => f.end > now);
+  },
+
   // === vignette + grain (screen space, after world, before HUD) ===
   post(ctx, stage) {
     const c = this._get(stage);
     ctx.drawImage(c.vign, 0, 0, this.W, this.H);
+    this.drawFx(ctx);   // combat light glows over the vignette
   },
 };
 
