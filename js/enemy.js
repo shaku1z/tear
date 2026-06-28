@@ -479,9 +479,9 @@ class Charger extends Enemy {
       for (let s = 0; s <= 1; s += 0.2) { const aa = this.weaponPrevA + (a - this.weaponPrevA) * s; ctx.lineTo(hx + dir * Math.cos(aa) * len, hy + Math.sin(aa) * len); }
       ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
     }
-    ctx.strokeStyle = "#000"; ctx.lineCap = "round"; ctx.lineWidth = type === "club" ? 6 : 5;
+    ctx.strokeStyle = THEME.ink; ctx.lineCap = "round"; ctx.lineWidth = type === "club" ? 6 : 5;
     ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke();
-    ctx.save(); ctx.translate(tx, ty); ctx.rotate(Math.atan2(ty - hy, tx - hx)); ctx.fillStyle = "#000";
+    ctx.save(); ctx.translate(tx, ty); ctx.rotate(Math.atan2(ty - hy, tx - hx)); ctx.fillStyle = THEME.ink;
     if (type === "axe") { ctx.beginPath(); ctx.moveTo(-4, -2); ctx.lineTo(11, -13); ctx.lineTo(13, 0); ctx.lineTo(11, 13); ctx.lineTo(-4, 2); ctx.closePath(); ctx.fill(); }
     else if (type === "shovel") { ctx.fillRect(-2, -11, 15, 22); }
     else if (type === "club") { ctx.beginPath(); ctx.arc(5, 0, 8, 0, Math.PI * 2); ctx.fill(); }
@@ -521,27 +521,29 @@ class Charger extends Enemy {
     }
 
     ctx.fillStyle = this.flash > 0 ? "#fff" : (this.stun > 0 ? "#d7b3b3" : this.color);
+    ctx.shadowColor = THEME.rim; ctx.shadowBlur = 6;   // separating halo (esp. dark-bodied enemies on dark biomes)
     ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = THEME.ink; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h);
 
     // variant accents
     if (this.behavior === "bull") {                 // horns
-      ctx.fillStyle = "#000";
+      ctx.fillStyle = THEME.ink;
       ctx.fillRect(x + 2, y - 6, 5, 6); ctx.fillRect(x + w - 7, y - 6, 5, 6);
     } else if (this.behavior === "stalker") {        // shoulder spikes
-      ctx.fillStyle = "#000";
+      ctx.fillStyle = THEME.ink;
       ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 6, y + 6); ctx.lineTo(x, y + 10); ctx.fill();
       ctx.beginPath(); ctx.moveTo(x + w, y); ctx.lineTo(x + w + 6, y + 6); ctx.lineTo(x + w, y + 10); ctx.fill();
     }
 
     // eye (x-ed out while stunned)
     ctx.fillStyle = "#fff";
-    if (this.stun > 0) { ctx.fillStyle = "#000"; ctx.font = UI.font(11, true); ctx.textAlign = "center"; ctx.fillText("x x", this.x, y + 16); }
+    if (this.stun > 0) { ctx.fillStyle = THEME.ink; ctx.font = UI.font(11, true); ctx.textAlign = "center"; ctx.fillText("x x", this.x, y + 16); }
     else ctx.fillRect(this.x + dir * 7 - 3, y + 11, 6, 6);
 
     // brawler fists (cock back on windup, extend on the punch)
     if (this.behavior === "brawler") {
-      ctx.fillStyle = "#000";
+      ctx.fillStyle = THEME.ink;
       const ext = this.atk === "commit" ? 12 : (this.atk === "windup" ? -3 : 4);
       ctx.fillRect(this.x + dir * (this.hw + ext) - 4, this.y - 3, 8, 9);
     }
@@ -654,19 +656,20 @@ class Ranged extends Enemy {
     ctx.moveTo(this.x, this.y - r); ctx.lineTo(this.x + r, this.y);
     ctx.lineTo(this.x, this.y + r); ctx.lineTo(this.x - r, this.y);
     ctx.closePath();
-    ctx.fillStyle = this.flash > 0 ? "#fff" : this.color; ctx.fill();
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = this.flash > 0 ? "#fff" : this.color;
+    ctx.shadowColor = THEME.rim; ctx.shadowBlur = 6; ctx.fill(); ctx.shadowBlur = 0;
+    ctx.strokeStyle = THEME.ink; ctx.lineWidth = 2.5; ctx.stroke();
 
     // variant accents
     if (b === "sentinel") { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(this.x, this.y, 4, 0, Math.PI * 2); ctx.fill(); }
-    else if (b === "marksman") { ctx.fillStyle = "#000"; ctx.fillRect(this.x - 2, this.y - r - 4, 4, 6); }
+    else if (b === "marksman") { ctx.fillStyle = THEME.ink; ctx.fillRect(this.x - 2, this.y - r - 4, 4, 6); }
 
     // aim telegraph during wind-up
     if (this.state === "windup" && player) {
       const k = 1 - clamp(this.windT / (this.windMax || this.cfg.windup), 0, 1);
       const dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
       const sentinel = b === "sentinel", marksman = b === "marksman";
-      ctx.strokeStyle = "#000"; ctx.globalAlpha = sentinel ? 0.5 + 0.4 * k : 0.7;
+      ctx.strokeStyle = THEME.ink; ctx.globalAlpha = sentinel ? 0.5 + 0.4 * k : 0.7;
       if (sentinel) ctx.setLineDash([]); else ctx.setLineDash([5, 6]);
       ctx.lineWidth = sentinel ? 1.2 : 1.5;
       ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + (dx / m) * 620, this.y + (dy / m) * 620); ctx.stroke();
@@ -678,7 +681,7 @@ class Ranged extends Enemy {
         ctx.beginPath(); ctx.arc(this.x, this.y, 4 + k * (CONFIG.chargedShot.r - 2), 0, Math.PI * 2); ctx.fill();
         ctx.globalAlpha = 1;
       } else {
-        ctx.lineWidth = 2; ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2; ctx.strokeStyle = THEME.ink;
         ctx.beginPath(); ctx.arc(this.x, this.y, 26 * (1 - k) + 6, 0, Math.PI * 2); ctx.stroke();
       }
     }
@@ -812,10 +815,10 @@ class Flyer extends Enemy {
     ctx.lineTo(this.x - dir * r, this.y + this.hh);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = THEME.ink; ctx.lineWidth = 2; ctx.stroke();
     // variant accent: a downward fang on divers
     if (this.behavior !== "swoop") {
-      ctx.fillStyle = "#000";
+      ctx.fillStyle = THEME.ink;
       ctx.beginPath(); ctx.moveTo(this.x - 4, this.y + this.hh - 2); ctx.lineTo(this.x + 4, this.y + this.hh - 2); ctx.lineTo(this.x, this.y + this.hh + 6); ctx.fill();
     }
     this.drawHpBar(ctx);
@@ -939,8 +942,8 @@ class Bomber extends Enemy {
     }
     ctx.fillStyle = this.flash > 0 ? "#fff" : this.color;
     ctx.beginPath(); ctx.arc(this.x, this.y, this.hw, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 3; ctx.stroke();
-    ctx.fillStyle = "#000"; ctx.fillRect(this.x - 2, this.y - this.hh - 8, 4, 8);   // launcher spout
+    ctx.strokeStyle = THEME.ink; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = THEME.ink; ctx.fillRect(this.x - 2, this.y - this.hh - 8, 4, 8);   // launcher spout
     // variant accent
     if (this.behavior === "trap") { ctx.fillStyle = "#fff"; ctx.fillRect(this.x - 6, this.y - 1, 12, 3); }
     else if (this.behavior === "juggle") { ctx.fillStyle = "#fff"; for (let i = 0; i < 3; i++) ctx.fillRect(this.x - 6 + i * 5, this.y - 3, 3, 3); }
@@ -1013,7 +1016,7 @@ class Armored extends Enemy {
     const body = this.enraged ? CONFIG.colors.charger : this.color;   // enraged runs hot
     ctx.fillStyle = this.flash > 0 ? "#fff" : (this.stun > 0 ? "#9aa6b2" : body);
     ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h);
+    ctx.strokeStyle = THEME.ink; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h);
     // vulnerable (airborne) -> dashed double outline so it reads as "hit me now"
     if (vulnerable && this.stun <= 0) {
       ctx.strokeStyle = CONFIG.colors.slam;
@@ -1021,7 +1024,7 @@ class Armored extends Enemy {
     }
     if (this.enraged) {
       // shield is gone — show angry spikes instead
-      ctx.fillStyle = "#000";
+      ctx.fillStyle = THEME.ink;
       for (let i = 0; i < 3; i++) { const sx = x + 6 + i * (w - 12) / 2; ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx + 5, y - 8); ctx.lineTo(sx + 10, y); ctx.fill(); }
     } else if (this.stun <= 0) {
       // bold cyan shield: a thick offset bar with prongs on the guarded side
@@ -1066,7 +1069,7 @@ class Boss extends Enemy {
     const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2;
     ctx.fillStyle = this.flash > 0 ? "#fff" : this.color;
     ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.strokeRect(x, y, w, h);
+    ctx.strokeStyle = THEME.ink; ctx.lineWidth = 4; ctx.strokeRect(x, y, w, h);
     // eye + phase pips
     ctx.fillStyle = "#fff";
     const dir = Math.sign(this.vx) || 1;
@@ -1135,7 +1138,7 @@ class Support extends Enemy {
 
     // distinct silhouette per support type so they read apart at a glance
     const body = this.flash > 0 ? "#fff" : this.color;
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 2.5;
+    ctx.strokeStyle = THEME.ink; ctx.lineWidth = 2.5;
     if (t === "priest") {
       // tall robe + a halo ring (authority)
       ctx.fillStyle = body;
@@ -1146,7 +1149,7 @@ class Support extends Enemy {
     } else if (t === "herald") {
       // slim body holding a banner on a tall pole
       ctx.fillStyle = body; ctx.fillRect(x - hw * 0.55, y - hh * 0.6, hw * 1.1, hh * 1.6); ctx.strokeRect(x - hw * 0.55, y - hh * 0.6, hw * 1.1, hh * 1.6);
-      ctx.fillStyle = "#000"; ctx.fillRect(x + hw * 0.55, y - hh, 3, hh * 2);                 // pole
+      ctx.fillStyle = THEME.ink; ctx.fillRect(x + hw * 0.55, y - hh, 3, hh * 2);                 // pole
       ctx.fillStyle = body; ctx.fillRect(x + hw * 0.55 + 3, y - hh, 16, 12); ctx.strokeRect(x + hw * 0.55 + 3, y - hh, 16, 12);   // flag
       ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.moveTo(x + hw * 0.55 + 6, y - hh + 3); ctx.lineTo(x + hw * 0.55 + 12, y - hh + 6); ctx.lineTo(x + hw * 0.55 + 6, y - hh + 9); ctx.fill();
     } else if (t === "mender") {
@@ -1195,7 +1198,7 @@ class Wraith extends Enemy {
     ctx.moveTo(x, y - hh); ctx.lineTo(x + hw, y); ctx.lineTo(x + hw * 0.5, y + hh);
     ctx.lineTo(x, y + hh * 0.55); ctx.lineTo(x - hw * 0.5, y + hh); ctx.lineTo(x - hw, y);
     ctx.closePath(); ctx.fill();
-    ctx.globalAlpha = 1; ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.globalAlpha = 1; ctx.strokeStyle = THEME.ink; ctx.lineWidth = 2; ctx.stroke();
     ctx.fillStyle = CONFIG.colors.eye; ctx.fillRect(x - 7, y - 4, 4, 6); ctx.fillRect(x + 3, y - 4, 4, 6);
     this.drawHpBar(ctx);
   }
@@ -1283,12 +1286,12 @@ class Chimera extends Enemy {
     ctx.fill();
     // mismatched left half tint (patchwork)
     ctx.save(); ctx.clip();
-    ctx.globalAlpha = 0.35; ctx.fillStyle = "#000";
+    ctx.globalAlpha = 0.35; ctx.fillStyle = THEME.ink;
     ctx.fillRect(x - hw, y - hh, hw, hh * 2);
     ctx.restore(); ctx.globalAlpha = 1;
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 3; ctx.stroke();
+    ctx.strokeStyle = THEME.ink; ctx.lineWidth = 3; ctx.stroke();
     // jagged crest of mismatched spikes
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = THEME.ink;
     for (let i = -1; i <= 2; i++) {
       const sx = x + i * (hw * 0.5) - 3, sh = 6 + ((i + 1) % 3) * 4;
       ctx.beginPath(); ctx.moveTo(sx, y - hh * 0.7); ctx.lineTo(sx + 4, y - hh * 0.7 - sh); ctx.lineTo(sx + 8, y - hh * 0.7); ctx.fill();
@@ -1483,7 +1486,7 @@ class Warden extends Enemy {
     const dim = this.state === "fakedeath";
     ctx.fillStyle = this.flash > 0 ? "#fff" : (dim ? "#7a1020" : this.color);
     ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.strokeRect(x, y, w, h);
+    ctx.strokeStyle = THEME.ink; ctx.lineWidth = 4; ctx.strokeRect(x, y, w, h);
     // animated baton (raised on wind-up, slammed through on strike; ignites crimson in P3)
     {
       const hx = this.x + this.facing * this.hw * 0.4, hy = this.y - 6, L = 58;
@@ -1498,9 +1501,9 @@ class Warden extends Enemy {
         ctx.strokeStyle = CONFIG.colors.charger; ctx.globalAlpha = 0.4; ctx.lineWidth = 16; ctx.lineCap = "round";
         ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke(); ctx.globalAlpha = 1;
       }
-      ctx.strokeStyle = dim ? "#555" : "#000"; ctx.lineWidth = 9; ctx.lineCap = "round";
+      ctx.strokeStyle = dim ? "#555" : THEME.ink; ctx.lineWidth = 9; ctx.lineCap = "round";
       ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke();
-      ctx.fillStyle = dim ? "#555" : "#000"; ctx.beginPath(); ctx.arc(tx, ty, 6, 0, Math.PI * 2); ctx.fill();   // baton tip
+      ctx.fillStyle = dim ? "#555" : THEME.ink; ctx.beginPath(); ctx.arc(tx, ty, 6, 0, Math.PI * 2); ctx.fill();   // baton tip
     }
     // eye + phase pips + badge
     ctx.fillStyle = "#fff";
@@ -1616,8 +1619,8 @@ class Colossus extends Enemy {
     // body (heavy plating + rivets)
     ctx.fillStyle = this.flash > 0 ? "#fff" : (this.stun > 0 ? "#9aa6b2" : this.color);
     ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 5; ctx.strokeRect(x, y, w, h);
-    ctx.fillStyle = "#000";
+    ctx.strokeStyle = THEME.ink; ctx.lineWidth = 5; ctx.strokeRect(x, y, w, h);
+    ctx.fillStyle = THEME.ink;
     for (let i = 0; i < 4; i++) { ctx.fillRect(x + 8 + i * (w - 24) / 3, y + 8, 5, 5); ctx.fillRect(x + 8 + i * (w - 24) / 3, y + h - 13, 5, 5); }
     // eye
     ctx.fillStyle = "#fff"; ctx.fillRect(this.x + this.facing * 26 - 12, this.y - 28, 24, 16);
@@ -1755,7 +1758,7 @@ class Aldric extends Enemy {
     const by = downed ? y + h * 0.3 : y, bh = downed ? h * 0.7 : h;
     ctx.fillStyle = this.flash > 0 ? "#fff" : (downed ? "#7a1320" : this.color);
     ctx.fillRect(x, by, w, bh);
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.strokeRect(x, by, w, bh);
+    ctx.strokeStyle = THEME.ink; ctx.lineWidth = 4; ctx.strokeRect(x, by, w, bh);
     // eye
     ctx.fillStyle = "#fff"; ctx.fillRect(this.x + this.facing * 16 - 8, by + 14, 16, 11);
     // cleaver (gone in frenzy — fights barehanded; animated otherwise)
@@ -1768,9 +1771,9 @@ class Aldric extends Enemy {
         for (let s = 0; s <= 1; s += 0.2) { const aa = this.weaponPrevA + (a - this.weaponPrevA) * s; ctx.lineTo(hx + this.facing * Math.cos(aa) * L, hy + Math.sin(aa) * L); }
         ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
       }
-      ctx.strokeStyle = "#000"; ctx.lineWidth = 7; ctx.lineCap = "round";
+      ctx.strokeStyle = THEME.ink; ctx.lineWidth = 7; ctx.lineCap = "round";
       ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke();
-      ctx.save(); ctx.translate(tx, ty); ctx.rotate(Math.atan2(ty - hy, tx - hx)); ctx.fillStyle = "#000";
+      ctx.save(); ctx.translate(tx, ty); ctx.rotate(Math.atan2(ty - hy, tx - hx)); ctx.fillStyle = THEME.ink;
       ctx.fillRect(-6, -14, 26, 28); ctx.restore();   // big cleaver head
     }
     // frenzy charge telegraph: the lane he's about to barrel down
@@ -1879,10 +1882,10 @@ class Echo extends Enemy {
     const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2;
     ctx.globalAlpha = 1 - this.whiteFlash * 0.88;   // near-invisible during a white-out
     // your silhouette + cyan visor + a faint blade
-    ctx.fillStyle = this.flash > 0 ? "#fff" : (this.isClone ? "#3a3a3a" : "#000");
+    ctx.fillStyle = this.flash > 0 ? "#fff" : (this.isClone ? "#3a3a3a" : THEME.ink);
     ctx.fillRect(x, y, w, h);
     ctx.fillStyle = CONFIG.colors.eye; ctx.fillRect(this.x + this.facing * 5 - 4, y + 12, 8, 5);
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.lineCap = "round";
+    ctx.strokeStyle = THEME.ink; ctx.lineWidth = 4; ctx.lineCap = "round";
     ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + this.facing * 22, this.y - 26); ctx.stroke();
     ctx.globalAlpha = 1;
     // dive telegraph — always visible (even mid white-out) so the dive is readable
@@ -2021,7 +2024,7 @@ class Source extends Enemy {
     const t = performance.now(), x = this.x, y = this.y, w = this.hw, h = this.hh;
     const core = this.mode === "final" ? CONFIG.colors.perfect : (this.mode === "downed" ? "#4a4a55" : this.color);
     ctx.save();
-    ctx.globalAlpha = 0.22 + 0.1 * Math.sin(t / 200); ctx.fillStyle = "#000";
+    ctx.globalAlpha = 0.22 + 0.1 * Math.sin(t / 200); ctx.fillStyle = THEME.ink;
     ctx.beginPath(); ctx.ellipse(x, y, w * 1.45, h * 1.45, 0, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1;
     ctx.translate(x, y);

@@ -10,8 +10,12 @@
   // drawing still uses the 1280x720 logical coordinate system.
   function resizeCanvas() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-    const cssW = canvas.clientWidth || W;
-    const tw = Math.max(W, Math.round(cssW * dpr));
+    // size the backing store to the ACTUALLY-displayed area. In fullscreen the canvas is
+    // 100%x100% with object-fit:contain, so the visible frame is the 16:9 box that fits
+    // inside it — use that (not the full element) so ultrawides don't over-allocate pixels.
+    const cw = canvas.clientWidth || W, ch = canvas.clientHeight || H;
+    const fitW = Math.min(cw, ch * W / H);
+    const tw = Math.max(W, Math.round(fitW * dpr));
     const th = Math.round(tw * H / W);
     if (canvas.width !== tw || canvas.height !== th) { canvas.width = tw; canvas.height = th; }
   }
@@ -1318,9 +1322,9 @@
     ctx.fillRect(0, 0, W, H);
     uiButtons = [];
 
-    // theme: on a dark biome, flip the HUD / player / in-world text to light ink
-    THEME.dark = !!(playLike && biomeMode && currentStage && currentStage.dark);
-    THEME.ink = THEME.dark ? "#ece9f7" : "#000";
+    // theme: derive ink + rim from the actual background luminance, so models stay
+    // readable on any biome (light, dark void, or an endless tint) — not just a flag.
+    THEME.set((playLike && biomeMode) ? bgCol : "#ffffff");
     UI.ink = THEME.ink;
 
     if (playLike) {

@@ -294,8 +294,10 @@ class Blade {
   // ---- drawing ----
   _drawBody(ctx) {
     const s = this.state === "held" ? 1 : this.throwSizeMult;
-    ctx.strokeStyle = "#000";
-    ctx.fillStyle = "#000";
+    // ink + a soft separating halo so the blade reads on dark voids as well as paper
+    ctx.shadowColor = THEME.rim; ctx.shadowBlur = 6;
+    ctx.strokeStyle = THEME.ink;
+    ctx.fillStyle = THEME.ink;
     ctx.lineCap = "round";
 
     if (this.model === "hammer") {
@@ -305,12 +307,13 @@ class Blade {
       ctx.moveTo(this.x, this.y);
       ctx.lineTo(this.tipX, this.tipY);
       ctx.stroke();
+      ctx.shadowBlur = 0;   // details crisp
       ctx.save();
       ctx.translate(this.tipX, this.tipY);
       ctx.rotate(this.angle);
       const hl = 22 * s, hh = 16 * s;        // head: long across the shaft
       ctx.fillRect(-hl * 0.35, -hh, hl, hh * 2);
-      ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+      ctx.strokeStyle = THEME.dark ? "rgba(10,12,20,0.9)" : "#fff"; ctx.lineWidth = 2;   // edge highlight reads on either polarity
       ctx.strokeRect(-hl * 0.35, -hh, hl, hh * 2);
       ctx.restore();
       return;
@@ -322,6 +325,7 @@ class Blade {
     ctx.moveTo(this.x, this.y);
     ctx.lineTo(this.tipX, this.tipY);
     ctx.stroke();
+    ctx.shadowBlur = 0;   // crossguard crisp
     const gx = Math.cos(this.angle + Math.PI / 2) * 9;
     const gy = Math.sin(this.angle + Math.PI / 2) * 9;
     ctx.lineWidth = 5;
@@ -387,7 +391,7 @@ class Blade {
     const inRange = len(this.x - hand.x, this.y - hand.y) <= T.reclaimDistance;
 
     ctx.setLineDash([6, 6]);
-    ctx.strokeStyle = inRange ? "#000" : "#cfcfcf";
+    ctx.strokeStyle = inRange ? THEME.ink : (THEME.dark ? "rgba(236,235,246,0.45)" : "#cfcfcf");
     ctx.lineWidth = inRange ? 2 : 1.5;
     ctx.beginPath();
     ctx.moveTo(hand.x, hand.y);
@@ -395,7 +399,7 @@ class Blade {
     ctx.stroke();
 
     // reclaim radius around the player
-    ctx.strokeStyle = "#dcdcdc";
+    ctx.strokeStyle = THEME.dark ? "rgba(236,235,246,0.30)" : "#dcdcdc";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.arc(hand.x, hand.y, T.reclaimDistance, 0, Math.PI * 2);
@@ -406,7 +410,7 @@ class Blade {
 
     // little "recall ready" tick on an embedded, in-range blade
     if (this.state === "embedded" && inRange) {
-      ctx.strokeStyle = "#000";
+      ctx.strokeStyle = THEME.ink;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(this.x, this.y, 13, 0, Math.PI * 2);

@@ -355,6 +355,25 @@ const CONFIG = {
   ],
 };
 
-// live theme: foreground "ink" colour, flipped on dark biomes so the HUD, player,
-// and text stay readable. The game updates this each frame from the current stage.
-const THEME = { ink: "#000", dark: false };
+// live theme: foreground "ink" colour + a separating "rim" halo, derived from the
+// CURRENT background's luminance each frame so the HUD, player, blade, and enemies
+// stay readable on ANY backdrop — light biome, dark void, or anything in between.
+// THEME.set(bg) is called once per frame with the colour actually being painted.
+function _relLum(hex) {
+  hex = (hex || "#fff").replace("#", "");
+  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+  const r = parseInt(hex.slice(0, 2), 16) / 255, g = parseInt(hex.slice(2, 4), 16) / 255, b = parseInt(hex.slice(4, 6), 16) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;   // 0 (black) .. 1 (white)
+}
+const THEME = {
+  ink: "#0a0a0a", rim: "rgba(0,0,0,0.35)", paper: "#ffffff", dark: false,
+  set(bg) {
+    const L = _relLum(bg);
+    this.dark = L < 0.5;
+    this.paper = bg;
+    this.ink = this.dark ? "#ecebf6" : "#0a0a0a";              // light ink on dark, near-black on light
+    // a soft halo around models so the silhouette separates from the bg on either polarity:
+    // a luminous glow on dark stages, a drop-shadow on light ones.
+    this.rim = this.dark ? "rgba(150,180,255,0.55)" : "rgba(0,0,0,0.32)";
+  },
+};

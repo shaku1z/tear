@@ -220,7 +220,9 @@ class Player {
     ctx.scale(sx, sy);
     ctx.translate(-this.x, -(this.y + this.hh));
     ctx.fillStyle = (typeof THEME !== "undefined") ? THEME.ink : "#000";
+    if (typeof THEME !== "undefined") { ctx.shadowColor = THEME.rim; ctx.shadowBlur = 7; }   // separating halo on any bg
     ctx.fillRect(this.x - this.hw, this.y - this.hh, this.hw * 2, this.hh * 2);
+    ctx.shadowBlur = 0;
     // colored visor (facing cue)
     ctx.fillStyle = CONFIG.colors.eye;
     const ex = this.x + this.facing * 5;
