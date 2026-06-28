@@ -1329,6 +1329,7 @@
 
     if (playLike) {
       renderWorld();
+      if (biomeMode) Backdrop.post(ctx, currentStage);   // vignette + grain over the world, under the HUD
       if (flash > 0) {
         ctx.save();
         ctx.globalCompositeOperation = "difference";
@@ -1445,8 +1446,9 @@
     ctx.translate(cx + ox, cy + oy);
     ctx.scale(zoom, zoom);
     ctx.translate(-cx, -cy);
-    ctx.fillStyle = (run && (run.mode === "campaign" || run.mode === "endless")) ? currentStage.plat : "#000";
-    for (const p of platforms) ctx.fillRect(p.x, p.y, p.w, p.h);
+    const biome = run && (run.mode === "campaign" || run.mode === "endless");
+    if (biome) Backdrop.draw(ctx, currentStage, performance.now() / 1000, player ? player.x : W / 2);   // sky + parallax + motes
+    for (const p of platforms) Backdrop.platform(ctx, p, currentStage, !!p.floor);                       // depth: gradient + edge + shadow
     // Geomancer walls: a colored cap + crumble fade as they age
     for (const w of tempWalls) {
       const k = clamp(w.life / w.maxLife, 0, 1);
