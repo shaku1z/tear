@@ -346,7 +346,7 @@ const CONFIG = {
       blurb: "Survive forever — biomes cycle, hordes swell, mini-bosses crash in. Chase your best." },
     { id: "boss",    label: "Waves + Boss",        enabled: true, waves: 8,
       blurb: "Clear 8 waves, then face the boss." },
-    { id: "gauntlet", label: "Endless + Bosses",   enabled: true,
+    { id: "gauntlet", label: "Gauntlet",           enabled: true,
       blurb: "Endless, but a full boss storms in every 8 waves — cycling all five, ever tougher." },
     { id: "bossonly", label: "Boss Test",          enabled: true, bossOnly: true,
       blurb: "Boss gauntlet — fight every boss in a row, evolving an ability after each." },

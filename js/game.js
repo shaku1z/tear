@@ -556,7 +556,13 @@
       if (e.kind === "chimera") e.moves = (run.waveKinds && run.waveKinds.length) ? run.waveKinds.slice() : ["charger"];
     } else {   // boss
       if (run.mode === "campaign" && stageIndex > 0 && !e.bossName) { const s = 1 + stageIndex * 0.6; e.hp *= s; e.maxHp *= s; }   // placeholder bosses scale by stage
-      else if ((run.mode === "bossonly" || run.mode === "gauntlet") && run.bossesBeaten) { const s = 1 + run.bossesBeaten * 0.12; e.hp *= s; e.maxHp *= s; }   // each boss tougher than the last
+      else if (run.mode === "bossonly" || run.mode === "gauntlet") {
+        // scale with the WAVE number (not just bosses-beaten) so a deep-run boss is a deep-run
+        // threat — previously a wave-50 boss was barely tougher than the first.
+        const s = 1 + (run.wave || 1) * 0.12 + (run.bossesBeaten || 0) * 0.06;
+        e.hp *= s; e.maxHp *= s;
+        if (typeof e.contactDmg === "number") e.contactDmg *= 1 + (run.wave || 1) * 0.05;   // stays threatening, not just spongy
+      }
     }
     e.hpDisplay = e.hp;
     e.spawnT = 0.35;   // brief materialize so spawns read as spawns (not teleports)
@@ -1331,7 +1337,7 @@
     ctx.clearRect(0, 0, W, H);
     const playLike = state === "playing" || state === "draft" || state === "tierup" || state === "paused" || state === "gameover" || state === "win" || state === "confirmquit" || state === "continue";
     // biome background (campaign + endless tint the world; menus stay white)
-    const biomeMode = !!(run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly"));
+    const biomeMode = !!(run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly" || run.mode === "gauntlet"));
     let bgCol = (playLike && biomeMode) ? currentStage.bg : "#fff";
     if (playLike && Array.isArray(enemies)) { const ef = enemies.find((e) => e.whiteFlash > 0); if (ef) bgCol = blendCol(bgCol, "#ffffff", ef.whiteFlash); }   // The Echo's white-out
     ctx.fillStyle = bgCol;
@@ -1462,7 +1468,7 @@
     ctx.translate(cx + ox, cy + oy);
     ctx.scale(zoom, zoom);
     ctx.translate(-cx, -cy);
-    const biome = run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly");
+    const biome = run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly" || run.mode === "gauntlet");
     if (biome) Backdrop.draw(ctx, currentStage, performance.now() / 1000, player ? player.x : W / 2);   // sky + parallax + motes
     for (const p of platforms) Backdrop.platform(ctx, p, currentStage, !!p.floor);                       // depth: gradient + edge + shadow
     // Geomancer walls: a colored cap + crumble fade as they age
@@ -1648,12 +1654,12 @@
   // campaign stage-transition banner ("STAGE N — Name")
   function drawStageBanner() {
     const a = Math.min(stageBannerT, 1) * Math.min((3.0 - stageBannerT) * 2.5, 1);
-    const gauntlet = run && run.mode === "bossonly", endless = run && run.mode === "endless";
-    const label = gauntlet ? "BOSS GAUNTLET" : endless ? "ENTERING" : "STAGE " + (stageIndex + 1);
+    const bossTest = run && run.mode === "bossonly", endlessLike = run && (run.mode === "endless" || run.mode === "gauntlet");
+    const label = bossTest ? "BOSS TEST" : endlessLike ? "ENTERING" : "STAGE " + (stageIndex + 1);
     ctx.save(); ctx.globalAlpha = clamp(a, 0, 1);
     UI.tag(ctx, label, W / 2, H / 2 - 70, currentStage.accent || THEME.ink, "center", UI.t.type.body);
     UI.title(ctx, stageName || currentStage.name, W / 2, H / 2 - 22, UI.t.type.display);
-    if (!gauntlet) { ctx.globalAlpha = clamp(a, 0, 1) * UI.t.alpha.soft; UI.tag(ctx, currentStage.blurb || "", W / 2, H / 2 + 12, THEME.ink, "center", UI.t.type.body); }
+    if (!bossTest) { ctx.globalAlpha = clamp(a, 0, 1) * UI.t.alpha.soft; UI.tag(ctx, currentStage.blurb || "", W / 2, H / 2 + 12, THEME.ink, "center", UI.t.type.body); }
     ctx.restore();
   }
 
