@@ -168,7 +168,7 @@ class Player {
         // one-way: only land on top, when falling and arriving from above
         if (horizontal) continue;
         // intentionally going down (hold S, or a downward dash) -> pass through, keep momentum
-        if (IN.down() || this.downBufferT > 0 || (this.dashTimer > 0 && (this.dashY > 0 || this.vy > 80))) continue;
+        if ((this.aiInput || Input).down() || this.downBufferT > 0 || (this.dashTimer > 0 && (this.dashY > 0 || this.vy > 80))) continue;
         if (this.vy >= 0 && prevBottom <= p.y + 1.5) {
           this.y = p.y - this.hh; this.vy = 0; this.onGround = true;
         }

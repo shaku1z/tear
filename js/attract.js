@@ -15,6 +15,7 @@ const Attract = {
   reset() {
     this.t = 0; this.biomeList = this._biomes(); this.biomePtr = Math.floor(Math.random() * this.biomeList.length);
     this.biomeT = 0; this.fade = 0; this.dashCd = 0; this.jumpCd = 0; this.aimAng = -1; this.target = null;
+    this.swingT = 0; this.swingDir = 1; this.swingBase = 0;   // deliberate slash rhythm
     this.platforms = [
       { x: 0, y: this.GY, w: this.W, h: this.H - this.GY, floor: true },
       { x: this.W * 0.30, y: this.GY - 175, w: 250, h: 24, oneway: true },
@@ -52,11 +53,12 @@ const Attract = {
     ai.left = ai.right = ai.up = ai.down = false;
     if (tg) {
       const dx = tg.x - p.x, dy = tg.y - p.y, adx = Math.abs(dx);
-      if (adx > 86) { if (dx > 0) ai.right = true; else ai.left = true; }       // close to blade range
-      if (tg.flyer && dy < -70 && p.onGround && this.jumpCd <= 0) { ai._jump = true; this.jumpCd = 1.1; }   // hop to a flyer
-      if (this.dashCd <= 0 && p.dashCharges > 0 && (adx > 340 || (adx > 150 && Math.random() < 0.03))) {
+      if (adx > 52) { if (dx > 0) ai.right = true; else ai.left = true; }       // pursue, don't camp
+      if (tg.flyer && dy < -70 && p.onGround && this.jumpCd <= 0) { ai._jump = true; this.jumpCd = 1.0; }   // hop to a flyer
+      // dash to close a gap, or a periodic flourish dash so the hero keeps moving & blinking around
+      if (this.dashCd <= 0 && p.dashCharges > 0 && (adx > 240 || Math.random() < 0.016)) {
         if (dx > 0) ai.right = true; else ai.left = true; if (tg.flyer && dy < -50) ai.up = true;
-        ai._dash = true; this.dashCd = 0.9 + Math.random() * 0.7;
+        ai._dash = true; this.dashCd = 0.7 + Math.random() * 0.6;
       }
     }
     // dodge a near incoming shot (dash away)
@@ -67,12 +69,22 @@ const Attract = {
       }
     }
 
-    // ---- aim the blade: sweep it briskly through the target (real tip-speed -> real cut + trail) ----
-    if (tg) {
-      const hand = { x: p.x, y: p.y - p.hh * 0.2 };
-      const baseAng = Math.atan2(tg.y - hand.y, tg.x - hand.x);
-      this.aimAng = baseAng + Math.sin(this.t * 15) * 0.95;   // ~14 rad/s peak -> tip well above minHitSpeed
-      const R = CONFIG.blade.aimRadius;
+    // ---- aim the blade: deliberate slashes, not a constant blur ----
+    // Rest the aim on the target; when a foe is within reach, BURST a fast arc across it (that
+    // 0.16s sweep clears minHitSpeed so the cut lands exactly where the blade visibly slashes),
+    // then a brief recover. Reads as approach -> slash -> approach, like a real player.
+    {
+      const hand = { x: p.x, y: p.y - p.hh * 0.2 }, R = CONFIG.blade.aimRadius;
+      const baseAng = tg ? Math.atan2(tg.y - hand.y, tg.x - hand.x) : this.aimAng;
+      const reach = tg ? Math.hypot(tg.x - hand.x, tg.y - hand.y) : 9999;
+      this.swingT -= dt;
+      if (this.swingT <= -0.10 && reach < 150) { this.swingT = 0.16; this.swingDir = Math.random() < 0.5 ? -1 : 1; this.swingBase = baseAng; }
+      if (this.swingT > 0) {
+        const k = 1 - this.swingT / 0.16;                                  // 0 -> 1 across the slash
+        this.aimAng = this.swingBase - this.swingDir * 1.05 + this.swingDir * 2.1 * k;
+      } else {
+        this.aimAng += (baseAng - this.aimAng) * clamp(7 * dt, 0, 1);      // rest: track the target (no cut)
+      }
       b.aimOverride.x = hand.x + Math.cos(this.aimAng) * R;
       b.aimOverride.y = hand.y + Math.sin(this.aimAng) * R;
     }
