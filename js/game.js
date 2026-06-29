@@ -216,9 +216,8 @@
   // a lobbed bomb / mine detonates: parried-back bombs hit enemies; otherwise the player
   function bombExplode(x, y, deflected) {
     const B = CONFIG.bomber;
-    FX.ring(x, y, 14, CONFIG.colors.bomber); FX.ring(x, y, 8, CONFIG.colors.bomber);
-    FX.burst(x, y, 0, -1, 12, CONFIG.colors.bomber);
-    addShake(CONFIG.juice.shakeBig); SFX.boom();
+    FX.explode(x, y, deflected ? CONFIG.colors.perfect : CONFIG.colors.bomber, deflected ? 1.5 : 1.2);
+    addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry * (deflected ? 0.9 : 0.6)); SFX.boom();
     if (deflected) {
       dealAoE(x, y, B.blastRadius, B.blastDmg * 1.3);   // parried into a crowd = big payoff
     } else if (len(player.x - x, player.y - y) <= B.blastRadius + player.hw) {
@@ -578,8 +577,7 @@
   // hammer "lob" throw: a shockwave + stun where the thrown blade lands
   function lobExplode(x, y) {
     const T = CONFIG.blade.throw;
-    FX.ring(x, y, 16, CONFIG.colors.slam); FX.ring(x, y, 8, CONFIG.colors.slam);
-    FX.burst(x, y, 0, -1, 12, CONFIG.colors.slam);
+    FX.explode(x, y, CONFIG.colors.slam, 1.25);
     addShake(CONFIG.juice.shakeBig); addZoom(CONFIG.juice.zoomBig); SFX.boom();
     dealAoE(x, y, T.lobRadius, Math.round(blade.throwDmg * 0.8));
     for (const e of enemies) if (!e.dead && len(e.x - x, e.y - y) <= T.lobRadius + e.radius) e.stun = Math.max(e.stun, T.lobStun);
@@ -587,9 +585,8 @@
 
   function bomberBlast(e) {
     const C = CONFIG.bomber;
-    FX.ring(e.x, e.y, 14, CONFIG.colors.bomber); FX.ring(e.x, e.y, 6, CONFIG.colors.bomber);
-    FX.burst(e.x, e.y, 0, -1, 14, CONFIG.colors.bomber);
-    addShake(CONFIG.juice.shakeBig); SFX.boom();
+    FX.explode(e.x, e.y, CONFIG.colors.bomber, 1.35);
+    addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry * 0.5); SFX.boom();
     dealAoE(e.x, e.y, C.blastRadius, C.blastDmg);
     if (len(player.x - e.x, player.y - e.y) <= C.blastRadius + player.hw) {
       { const r = player.takeDamage(C.blastDmg, e.x);
@@ -1032,7 +1029,7 @@
           if (empSlam && run.mods.crater) {
             const cr = 130 + descF * 110;
             dealAoE(e.x, e.y, cr, baseDmg * (0.7 + descF));
-            FX.ring(e.x, e.y, 15, CONFIG.colors.slam); FX.ring(e.x, e.y, 9, CONFIG.colors.slam);
+            FX.explode(e.x, e.y, CONFIG.colors.slam, 1.0 + descF * 0.8);
             addShake(CONFIG.juice.shakeBig); addZoom(CONFIG.juice.zoomBig);
           }
           // Vampiric Edge: a sliver of lifesteal, capped to once per swing (not per hit)

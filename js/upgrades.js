@@ -151,9 +151,9 @@ const UPGRADES = [
     ] },
 
   { id: "seismic_slam", name: "Seismic Slam", unique: true, cat: "offense", desc: "Slams blast nearby enemies for 22.",
-    apply: ({ mods }) => { mods.onSlam.push((ev) => { ev.dealAoE(ev.x, ev.y, 130, 22); ev.fx.ring(ev.x, ev.y, 10); }); } },
+    apply: ({ mods }) => { mods.onSlam.push((ev) => { ev.dealAoE(ev.x, ev.y, 130, 22); ev.fx.explode(ev.x, ev.y, CONFIG.colors.slam, 0.9); }); } },
   { id: "detonate", name: "Detonate", unique: true, cat: "offense", desc: "Kills explode for 18 to nearby foes.",
-    apply: ({ mods }) => { mods.onKill.push((ev) => { ev.dealAoE(ev.x, ev.y, 120, 18); ev.fx.ring(ev.x, ev.y, 8); }); } },
+    apply: ({ mods }) => { mods.onKill.push((ev) => { ev.dealAoE(ev.x, ev.y, 120, 18); ev.fx.explode(ev.x, ev.y, CONFIG.colors.bomber, 0.7); }); } },
   { id: "adrenaline", name: "Adrenaline", unique: true, cat: "mobility", desc: "Kills instantly refresh your dash.",
     apply: ({ mods }) => { mods.onKill.push((ev) => { ev.player.dashCd = 0; }); } },
 

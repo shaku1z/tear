@@ -27,10 +27,13 @@ class Projectile {
     this.mud = false;         // Sludge: lands and leaves a slowing puddle
     this.tint = null;         // shot colour, set by the firing enemy (else default enemyShot)
     this.kind = "dart";       // visual shape: "dart" (oriented bolt) | "orb" (caster)
+    this.hist = [];           // recent positions -> a real motion trail for EVERY projectile
   }
 
   update(dt) {
     if (this.gravity) this.vy += this.gravity * dt;   // bombs arc; mines fall to the floor
+    this.hist.push({ x: this.x, y: this.y });          // record the path for the motion trail
+    if (this.hist.length > 7) this.hist.shift();
     this.x += this.vx * dt;
     this.y += this.vy * dt;
     this.life -= dt;
@@ -75,11 +78,31 @@ class Projectile {
     this.life = 6;
   }
 
+  // a tapering, fading motion trail through the recent path — every projectile gets it
+  _trail(ctx, col, dark, lowG) {
+    const h = this.hist; if (lowG || h.length < 2) return;
+    ctx.save();
+    if (dark) ctx.globalCompositeOperation = "lighter";
+    ctx.strokeStyle = col; ctx.lineCap = "round";
+    for (let i = 1; i < h.length; i++) {
+      const k = i / h.length;
+      ctx.globalAlpha = k * 0.5;
+      ctx.lineWidth = this.r * 1.7 * k;
+      ctx.beginPath(); ctx.moveTo(h[i - 1].x, h[i - 1].y); ctx.lineTo(h[i].x, h[i].y); ctx.stroke();
+    }
+    ctx.globalAlpha = 1; ctx.restore();
+  }
+
   draw(ctx) {
     const C = CONFIG.colors;
     const ink = (typeof THEME !== "undefined") ? THEME.ink : "#000";
     const dark = (typeof THEME !== "undefined") && THEME.dark;
     const lowG = (typeof GFX !== "undefined") && GFX.low;
+    // universal motion trail (skipped only for the stationary mine once it settles)
+    if (!(this.mine && this.armed)) {
+      const tcol = this.deflected ? (this.perfect ? C.perfect : C.deflected) : (this.tint || (this.shock ? C.slam : this.mud ? C.sludge : this.bomb ? C.bomber : C.enemyShot));
+      this._trail(ctx, tcol, dark, lowG);
+    }
     if (this.sweeper) {                    // Colossus's thrown shield arm: a rotating bar of death
       ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(performance.now() / 200);
       if (!lowG) { ctx.shadowColor = C.armoredShield; ctx.shadowBlur = 12; }
@@ -126,16 +149,6 @@ class Projectile {
     const m = len(this.vx, this.vy) || 1, ang = Math.atan2(this.vy, this.vx), r = this.r;
     ctx.save();
     ctx.translate(this.x, this.y);
-    // comet trail (skipped for lobbed bombs + on low GFX); additive on dark biomes so it glows
-    if (!lowG && !this.bomb) {
-      ctx.save();
-      if (dark) ctx.globalCompositeOperation = "lighter";
-      ctx.rotate(ang);
-      const tl = clamp(m / 36, 12, 40) * (this.charged ? 1.7 : 1);
-      ctx.globalAlpha = 0.4; ctx.fillStyle = col;
-      ctx.beginPath(); ctx.moveTo(-tl, 0); ctx.lineTo(0, -r * 0.95); ctx.lineTo(0, r * 0.95); ctx.closePath(); ctx.fill();
-      ctx.globalAlpha = 1; ctx.restore();
-    }
     if (!lowG) { ctx.shadowColor = col; ctx.shadowBlur = dark ? 12 : 7; }
     ctx.rotate(ang);
     ctx.fillStyle = col; ctx.strokeStyle = ink; ctx.lineWidth = this.charged ? 2.5 : 1.5;
