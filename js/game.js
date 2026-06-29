@@ -2356,13 +2356,47 @@
   }
 
   function renderPaused() {
-    UI.dim(ctx, W, H, 0.8);
-    UI.title(ctx, "PAUSED", W / 2, 220, UI.t.type.display);
+    const t = UI.t;
+    UI.dim(ctx, W, H, 0.84);
+    UI.title(ctx, "PAUSED", W / 2, 132, t.type.display);
+    if (run) UI.text(ctx, (run.isBossWave ? "BOSS" : "WAVE " + run.wave) + "   ·   " + run.score + " pts   ·   " + fmtTime(run.runTime),
+      W / 2, 168, t.type.body, "center", t.alpha.soft);
+
+    // ---- left: run actions ----
     vmenu([
       { label: "RESUME", action: () => { state = "playing"; requestLock(); } },
       { label: "RESTART", action: () => startRun(run.mode, run.diff) },
       { label: "MAIN MENU", action: () => { state = "confirmquit"; } },
-    ], W / 2, 300, 280, UI.t.metric.btnH, UI.t.metric.btnGap);
+    ], W / 2 - 300, 256, 300, t.metric.btnH, t.metric.btnGap);
+
+    // ---- right: inline settings (tune mid-run without leaving) ----
+    const rx = W / 2 + 24, rw = 360; let yy = 248;
+    UI.tag(ctx, "SETTINGS", rx, yy - 12, t.color.accent, "left", t.type.caption);
+    const stepRow = (label, valStr, dec, inc) => {
+      UI.text(ctx, label, rx, yy + 7, t.type.body);
+      uiButtons.push({ x: rx + rw - 150, y: yy - 12, w: 44, h: 38, label: "−", action: dec });
+      uiButtons.push({ x: rx + rw - 44, y: yy - 12, w: 44, h: 38, label: "+", action: inc });
+      UI.text(ctx, valStr, rx + rw - 75, yy + 7, t.type.lead, "center");
+      UI.divider(ctx, rx, yy + 26, rw, 0.1); yy += 54;
+    };
+    const toggleRow = (label, on, lab, w, action, sel) => {
+      UI.text(ctx, label, rx, yy + 7, t.type.body);
+      uiButtons.push({ x: rx + rw - w, y: yy - 12, w, h: 38, label: lab, sel: sel, action });
+      UI.divider(ctx, rx, yy + 26, rw, 0.1); yy += 54;
+    };
+    stepRow("Volume", Math.round(settings.vol * 100) + "%",
+      () => { settings.vol = clamp(+(settings.vol - 0.1).toFixed(2), 0, 1); applySettings(); saveSettings(); },
+      () => { settings.vol = clamp(+(settings.vol + 0.1).toFixed(2), 0, 1); applySettings(); saveSettings(); });
+    toggleRow("Music", settings.music, settings.music ? "ON" : "OFF", 132,
+      () => { settings.music = !settings.music; applySettings(); saveSettings(); }, settings.music);
+    stepRow("Mouse sensitivity", settings.sens.toFixed(2),
+      () => { settings.sens = clamp(+(settings.sens - 0.1).toFixed(2), 0.2, 3); applySettings(); saveSettings(); },
+      () => { settings.sens = clamp(+(settings.sens + 0.1).toFixed(2), 0.2, 3); applySettings(); saveSettings(); });
+    stepRow("Screen shake", Math.round(settings.shake * 100) + "%",
+      () => { settings.shake = clamp(+(settings.shake - 0.25).toFixed(2), 0, 2); applySettings(); saveSettings(); },
+      () => { settings.shake = clamp(+(settings.shake + 0.25).toFixed(2), 0, 2); applySettings(); saveSettings(); });
+    toggleRow("Effects", true, settings.gfx === "auto" ? ("AUTO (" + (GFX.low ? "LOW" : "HIGH") + ")") : (settings.gfx === "low" ? "LOW" : "HIGH"), 170,
+      () => { settings.gfx = settings.gfx === "auto" ? "high" : (settings.gfx === "high" ? "low" : "auto"); applySettings(); saveSettings(); });
   }
 
   function quitRun() {
