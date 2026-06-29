@@ -47,6 +47,7 @@ class Player {
 
   update(dt, platforms) {
     const P = CONFIG.player, D = CONFIG.dash;
+    const IN = this.aiInput || Input;   // attract-mode drives a synthetic controller; real play reads Input
 
     // timers
     if (this.iframe > 0) this.iframe -= dt;
@@ -60,15 +61,15 @@ class Player {
     if (this.tempoT > 0) { this.tempoT -= dt; if (this.tempoT <= 0) this.tempoStk = 1; }
     const rooted = this.rootT > 0;
 
-    const dirX = ((Input.right() ? 1 : 0) - (Input.left() ? 1 : 0)) * (rooted ? 0 : 1);
+    const dirX = ((IN.right() ? 1 : 0) - (IN.left() ? 1 : 0)) * (rooted ? 0 : 1);
     if (dirX !== 0) this.facing = dirX;
-    this.downBufferT = Input.down() ? 0.16 : Math.max(0, this.downBufferT - dt);
-    const downHeld = Input.down() || this.downBufferT > 0;
+    this.downBufferT = IN.down() ? 0.16 : Math.max(0, this.downBufferT - dt);
+    const downHeld = IN.down() || this.downBufferT > 0;
 
     // ---- dash trigger (snared = no dash; uses a charge, refilled on landing) ----
-    if (!rooted && Input.dashPressed() && this.dashCd <= 0 && this.dashTimer <= 0 && this.dashCharges > 0) {
-      let ax = (Input.right() ? 1 : 0) - (Input.left() ? 1 : 0);
-      let ay = (downHeld ? 1 : 0) - (Input.up() ? 1 : 0);
+    if (!rooted && IN.dashPressed() && this.dashCd <= 0 && this.dashTimer <= 0 && this.dashCharges > 0) {
+      let ax = (IN.right() ? 1 : 0) - (IN.left() ? 1 : 0);
+      let ay = (downHeld ? 1 : 0) - (IN.up() ? 1 : 0);
       // a down-dash takes priority over horizontal drift: "S + dash" goes (almost) straight
       // down instead of veering left/right because you happened to be moving
       if (ay > 0 && ax !== 0) ax *= 0.3;
@@ -88,8 +89,8 @@ class Player {
       // ---- CURVE DASH: steer mid-dash — hold W/S (or A/D) to bend the burst that way.
       // The vector renormalizes, so it's a redirect (cut up to chase, cut down into a slam),
       // not a slowdown. W/S override the horizontal drift so a clean vertical cut is easy. ----
-      let stx = (Input.right() ? 1 : 0) - (Input.left() ? 1 : 0);
-      let sty = (downHeld ? 1 : 0) - (Input.up() ? 1 : 0);
+      let stx = (IN.right() ? 1 : 0) - (IN.left() ? 1 : 0);
+      let sty = (downHeld ? 1 : 0) - (IN.up() ? 1 : 0);
       if (sty !== 0 && stx !== 0) stx *= 0.35;     // committing to a vertical cut quiets sideways drift
       if (!rooted && (stx !== 0 || sty !== 0)) {
         const sm = len(stx, sty) || 1; stx /= sm; sty /= sm;
@@ -125,7 +126,7 @@ class Player {
       }
 
       // jump (with coyote + buffer) — snared = grounded
-      if (Input.jumpPressed() && !rooted) this.jumpBuf = P.jumpBuffer;
+      if (IN.jumpPressed() && !rooted) this.jumpBuf = P.jumpBuffer;
       if (this.jumpBuf > 0 && !rooted && (this.onGround || this.coyote > 0)) {
         this.vy = -P.jumpSpeed;
         this.onGround = false;
@@ -167,7 +168,7 @@ class Player {
         // one-way: only land on top, when falling and arriving from above
         if (horizontal) continue;
         // intentionally going down (hold S, or a downward dash) -> pass through, keep momentum
-        if (Input.down() || this.downBufferT > 0 || (this.dashTimer > 0 && (this.dashY > 0 || this.vy > 80))) continue;
+        if (IN.down() || this.downBufferT > 0 || (this.dashTimer > 0 && (this.dashY > 0 || this.vy > 80))) continue;
         if (this.vy >= 0 && prevBottom <= p.y + 1.5) {
           this.y = p.y - this.hh; this.vy = 0; this.onGround = true;
         }

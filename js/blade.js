@@ -58,7 +58,11 @@ class Blade {
   // ---- aim / reticle (runs in every state so the throw direction stays current) ----
   _updateAim(hand, dt) {
     const B = CONFIG.blade;
-    if (Input.locked) {
+    if (this.aimOverride) {
+      // attract-mode AI aims the blade at an absolute world point (else read the mouse)
+      this.aimX = this.aimOverride.x - hand.x;
+      this.aimY = this.aimOverride.y - hand.y;
+    } else if (Input.locked) {
       // captured mouse: relative movement drives a player-anchored reticle
       const d = Input.consumeDelta();
       this.aimX += d.x * B.aimSensitivity;
