@@ -825,19 +825,7 @@
           }
         }
       }
-      // Phase Step: dashing (with i-frames) through a shot deflects it back
-      if (run.mods.phaseStep && player.dashIframe > 0) {
-        for (const p of projectiles) {
-          if (p.dead || p.deflected) continue;
-          if (aabbOverlap(p.x, p.y, p.r, p.r, player.x, player.y, player.hw, player.hh)) {
-            const spd = Math.max(len(p.vx, p.vy), CONFIG.proj.speed) * CONFIG.blade.deflectBoost;
-            p.deflect(player.dashX || player.facing, player.dashY, spd, false);
-            FX.burst(p.x, p.y, player.dashX, player.dashY, 6, CONFIG.colors.deflected);
-            addFloater(p.x, p.y - 16, "phase!", false, CONFIG.colors.deflected);
-            addStyle("deflect"); SFX.deflect();
-          }
-        }
-      }
+      // (Phase Step now resolves at the projectile-vs-player overlap, so it can't miss.)
     } else dashGhostT = 0;
 
     // landing dust + thud when arriving on the ground from a real fall
@@ -1207,14 +1195,26 @@
           }
         }
       } else if (aabbOverlap(p.x, p.y, p.r, p.r, player.x, player.y, player.hw, player.hh)) {
-        { const r = player.takeDamage(p.dmg != null ? p.dmg : CONFIG.proj.dmg, p.x);
+        // Phase Step: dashing THROUGH an enemy shot deflects it back (turn defense into offense).
+        // Handled here, at the confirmed overlap — the old dash-block check used stale positions
+        // and takeDamage returns "" (falsy) while invulnerable, so the shot just slipped through.
+        if (run.mods.phaseStep && player.dashTimer > 0 && !p.shock) {
+          const spd = Math.max(len(p.vx, p.vy), CONFIG.proj.speed) * CONFIG.blade.deflectBoost;
+          p.deflect(player.dashX || player.facing, player.dashY || 0, spd, false);
+          FX.burst(p.x, p.y, player.dashX, player.dashY, 8, CONFIG.colors.deflected);
+          FX.flash(p.x, p.y, 34, CONFIG.colors.deflected);
+          addFloater(p.x, p.y - 16, "PHASE!", true, CONFIG.colors.deflected);
+          addStyle("deflect"); SFX.deflect();
+        } else {
+          const r = player.takeDamage(p.dmg != null ? p.dmg : CONFIG.proj.dmg, p.x);
           if (r) {
             p.dead = true;
             if (r === "hit") {
               loseStyle(); SFX.hurt();
               if (p.root) { player.rootT = p.root; addFloater(player.x, player.y - 34, "ROOTED", true, CONFIG.colors.armoredShield); }
             } else onShieldAbsorb();
-          } }
+          }
+        }
       }
     }
 
