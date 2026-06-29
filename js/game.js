@@ -115,8 +115,9 @@
   let currentStage = stageAt(0);      // its palette/name
   let stageBannerT = 0;               // "STAGE N — Name" banner timer
   let stageName = "";
-  let loreT = 0, loreDur = 7, loreText = "", loreTitle = "";   // lore card (boss-clear caption, or the campaign intro)
+  let loreT = 0, loreDur = 7, loreText = "", loreTitle = "", loreHold = 0;   // lore beat: spawns pause while it plays + a brief breath after
   function showLore(text, title, dur) { loreText = text; loreTitle = title || ""; loreDur = dur || 7; loreT = loreDur; }
+  function loreBusy() { return loreT > 0 || loreHold > 0; }   // true while the lore beat holds the wave back
   // the campaign's opening — shown as a lore card on the first wave of an Adventure run
   const CAMPAIGN_INTRO = "Long ago the sky was torn, and through the wound poured everything that should not be. They named it the Tear. Each soul the Council sent to close it was worn, in time, into the shape of the thing they failed to stop — a guardian of the very wound they meant to end. You are the next to descend. Cut clean. Keep moving. Reach the Source before it wears your shape too.";
   // shown when the whole Adventure is completed (final biome's boss falls)
@@ -600,7 +601,7 @@
     let cap = R.maxConcurrent;
     if (run.mode === "campaign") cap = Math.min(R.maxConcurrentCap, R.maxConcurrent + Math.floor((run.wave - 1) / 10) * R.concurrentPerStage);
     else if (run.mode === "endless" || run.mode === "gauntlet") cap = Math.min(R.maxConcurrentCap + 3, R.maxConcurrent + Math.floor(run.wave / 7) + (run.horde ? 3 : 0));
-    if (run.spawnQueue.length && enemies.length < cap) {
+    if (run.spawnQueue.length && enemies.length < cap && !loreBusy()) {   // lore beat holds the wave back until it ends (+ a breath)
       if (enemies.length === 0 && run.spawnTimer > 0.3) run.spawnTimer = 0.3; // short beat (not an instant pop) when the screen empties
       run.spawnTimer -= dt;
       if (run.spawnTimer <= 0) { spawnOne(run.spawnQueue.shift()); run.spawnTimer = R.spawnInterval; }
@@ -1315,7 +1316,11 @@
   function frame(now) {
     let dt = (now - last) / 1000; last = now;
     if (dt > 0.1) dt = 0.1;
-    if (loreT > 0) loreT -= dt;
+    if (loreT > 0) {
+      if (Input.confirmPressed() || Input.takeClick()) loreT = Math.min(loreT, 0.35);   // skippable (Space / click)
+      loreT -= dt;
+      if (loreT <= 0) { loreT = 0; loreHold = 0.7; }   // a brief breath before the wave begins
+    } else if (loreHold > 0) loreHold -= dt;
 
     Input.allowLock = (state === "playing");
 
@@ -1665,14 +1670,24 @@
 
   // a boss-defeat lore caption at the top (non-blocking, fades over ~7s)
   function drawLore() {
-    const a = Math.min(loreT, 1) * Math.min((loreDur - loreT) * 2, 1);
-    ctx.save(); ctx.globalAlpha = clamp(a, 0, 1);
-    // a deliberately fixed-light caption card (black body text), independent of biome ink
-    ctx.fillStyle = "#fff"; ctx.fillRect(W / 2 - 390, 28, 780, 104);
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(W / 2 - 390, 28, 780, 104);
-    UI.tag(ctx, loreTitle || ((currentStage.name || "STAGE").toUpperCase() + " — CLEARED"), W / 2, 50, currentStage.accent || "#000", "center", UI.t.type.caption);
-    wrapText(loreText, W / 2 - 360, 72, 720, 18, UI.t.type.caption);
+    const fadeIn = clamp(loreDur - loreT, 0, 1), fadeOut = clamp(loreT * 3, 0, 1);
+    const a = clamp(Math.min(fadeIn, fadeOut), 0, 1);
+    const accent = currentStage.accent || "#13c4d6";
+    const title = loreTitle || ((currentStage.name || "STAGE").toUpperCase() + " — CLEARED");
+    const savedInk = UI.ink; UI.ink = "#efedf8";   // lore reads on a dark cinematic dim, biome-independent
+    ctx.save();
+    ctx.globalAlpha = a * 0.84; ctx.fillStyle = "#06070c"; ctx.fillRect(0, 0, W, H);   // dim the world for the beat
+    ctx.globalAlpha = a;
+    UI.title(ctx, title, W / 2, H / 2 - 96, UI.t.type.display);
+    ctx.strokeStyle = accent; ctx.lineWidth = 2;
+    const uw = 130 * fadeIn; ctx.beginPath(); ctx.moveTo(W / 2 - uw, H / 2 - 70); ctx.lineTo(W / 2 + uw, H / 2 - 70); ctx.stroke();
+    // typewriter reveal — the full text once you skip / it fades out
+    const shown = (loreT < 0.5) ? loreText : loreText.slice(0, Math.max(0, Math.floor((loreDur - loreT) * 42)));
+    wrapText(shown, W / 2 - 380, H / 2 - 34, 760, 26, UI.t.type.body, "#e9e7f2");
+    ctx.globalAlpha = a * (0.42 + 0.22 * Math.sin(performance.now() / 380));
+    UI.text(ctx, "Space / click  ·  skip", W / 2, H / 2 + 156, UI.t.type.caption, "center");
     ctx.restore();
+    UI.ink = savedInk;
   }
 
   // campaign stage-transition banner ("STAGE N — Name")
