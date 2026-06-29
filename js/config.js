@@ -349,8 +349,6 @@ const CONFIG = {
       blurb: "Journey through biomes — 9 waves then a boss, stage after stage, ever deeper." },
     { id: "endless", label: "Endless",            enabled: true,
       blurb: "Survive forever — biomes cycle, hordes swell, mini-bosses crash in. Chase your best." },
-    { id: "boss",    label: "Waves + Boss",        enabled: true, waves: 8,
-      blurb: "Clear 8 waves, then face the boss." },
     { id: "gauntlet", label: "Gauntlet",           enabled: true,
       blurb: "Endless, but a full boss storms in every 8 waves — cycling all five, ever tougher." },
     { id: "bossonly", label: "Boss Test",          enabled: true, bossOnly: true,
