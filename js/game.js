@@ -344,6 +344,8 @@
     const weapon = applyWeapon(selWeapon);   // weapon defines base feel; shop/upgrades stack on top
     applySettings();
     const d = CONFIG.difficulties.find((x) => x.id === diff) || CONFIG.difficulties[0];
+    const dm = d.mods || {};
+    CONFIG.player.dmgTakenMult *= (dm.dmg || 1);   // difficulty: harder = every hit lands heavier (uniform)
     player = new Player(W * 0.5, CONFIG.world.groundY - 60);
     player.oneHit = d.oneHit;
     blade = new Blade();
@@ -360,7 +362,8 @@
       combo: 0, comboTimer: 0, mult: 1, rank: "", lastTrick: "", lifestealCd: 0,
       specialBlock: -1, specialsOffered: 0,   // draft guarantee: ≥2 Specials offered per stage
       adRevived: false,   // CrazyGames: the one-time rewarded-ad revive is still available
-      coinMod: 1, scoreMod: 1,   // difficulty-driven economy/score multipliers (set in startRun below)
+      coinMod: dm.coin || 1, scoreMod: dm.score || 1,   // difficulty: risk = reward
+      diffHp: dm.hp || 1, diffCount: dm.count || 1,      // difficulty: enemy toughness + density
     };
     if (mode === "bossonly") {   // boss gauntlet: chosen boss first, then a shuffled cycle of the rest
       run.bossOrder = shuffledRoster();
@@ -475,6 +478,9 @@
           if (run.horde) { count = Math.round(count * 1.8); hpScale *= 0.6; dmgScale = 0.9; }   // a wall of weaker bodies
         }
       }
+      // difficulty: scale enemy toughness + density
+      hpScale *= (run.diffHp || 1);
+      count = Math.max(1, Math.round(count * (run.diffCount || 1)));
       // a mini-boss leads its wave (Endless)
       if (run.miniBoss) run.spawnQueue.push({ type: "miniboss", bossId: run.miniBoss });
       // in campaign, only inject authored sub-types whose base type belongs to this biome
@@ -1883,6 +1889,8 @@
     col("Mode", 180, CONFIG.modes, () => selMode, (v) => selMode = v);
     col("Difficulty", 650, CONFIG.difficulties.map((d) => ({ id: d.id, label: d.label })), () => selDiff, (v) => selDiff = v);
     col("Weapon", 1120, WEAPONS.map((w) => ({ id: w.id, label: w.name })), () => selWeapon, (v) => selWeapon = v);
+    const dsel = CONFIG.difficulties.find((x) => x.id === selDiff);
+    if (dsel && dsel.desc) UI.text(ctx, dsel.desc, 650 + bw / 2, top + 18 + 5 * (bh + gap) + 6, t.type.caption, "center", t.alpha.soft);
 
     const wsel = WEAPONS.find((x) => x.id === selWeapon);
     if (wsel) UI.text(ctx, wsel.blurb, W / 2, 552, t.type.body, "center", t.alpha.soft);
@@ -1927,16 +1935,19 @@
   function renderHighscores() {
     const t = UI.t, fx = LAY.fx, rx = LAY.rx;
     UI.header(ctx, "HIGH SCORES", "your best run in every mode", eIn);
-    let y = 210;
+    let y = 210, any = false;
     CONFIG.modes.forEach((m) => {
       CONFIG.difficulties.forEach((d) => {
         const b = getBest(m.id, d.id);
+        if (!b.wave && !b.score) return;   // only show modes you've actually run (5 difficulties x 6 modes won't fit)
+        any = true;
         UI.text(ctx, m.label + "  ·  " + d.label, fx, y, t.type.label);
         UI.text(ctx, "wave " + b.wave + "   ·   " + b.score + " pts   ·   " + fmtTime(b.time || 0), rx, y, t.type.label, "right", t.alpha.soft);
         UI.divider(ctx, fx, y + 11, rx - fx, 0.08);
-        y += 37;
+        y += 34;
       });
     });
+    if (!any) UI.text(ctx, "No runs recorded yet — go make some history.", W / 2, 360, t.type.body, "center", t.alpha.soft);
     addBack();
   }
 
