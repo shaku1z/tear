@@ -61,7 +61,10 @@
   CG.loadingStart();
   CG.init().then(() => { META.load(); settings = loadSettings(); applySettings(); CG.loadingStop(); });
   function awardCoins(score) {
-    const earned = Math.floor(score * 0.05 * (1 + 0.15 * META.level("greed")) * CONFIG.run.coinMult);   // Fortune raises coinMult
+    // leaner economy: a small fraction of score + a flat per-wave trickle, so a strong run
+    // buys 1-3 upgrades (not the whole shop). run.coinMod lets difficulty scale the reward.
+    const flat = Math.floor((run.wave || 0) * 12);
+    const earned = Math.floor(score * 0.03 * (1 + 0.15 * META.level("greed")) * CONFIG.run.coinMult * (run.coinMod || 1)) + flat;
     META.addCoins(earned);
     return earned;
   }
@@ -238,7 +241,7 @@
 
   // ---- score + "Attack Trick" style meter ----
   function addKillScore() {
-    run.score += Math.round(CONFIG.run.scorePerKill * run.wave * run.mult * CONFIG.run.scoreMult);
+    run.score += Math.round(CONFIG.run.scorePerKill * run.wave * run.mult * CONFIG.run.scoreMult * (run.scoreMod || 1));
     run.waveKills++;
   }
   function addStyle(kind) {
@@ -357,6 +360,7 @@
       combo: 0, comboTimer: 0, mult: 1, rank: "", lastTrick: "", lifestealCd: 0,
       specialBlock: -1, specialsOffered: 0,   // draft guarantee: ≥2 Specials offered per stage
       adRevived: false,   // CrazyGames: the one-time rewarded-ad revive is still available
+      coinMod: 1, scoreMod: 1,   // difficulty-driven economy/score multipliers (set in startRun below)
     };
     if (mode === "bossonly") {   // boss gauntlet: chosen boss first, then a shuffled cycle of the rest
       run.bossOrder = shuffledRoster();

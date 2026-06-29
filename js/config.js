@@ -297,7 +297,7 @@ const CONFIG = {
     firstWaveCount: 3,    // enemies in wave 1
     countPerWave: 1.4,    // + this many enemies per wave thereafter
     hpScalePerWave: 0.12, // +12% enemy HP per wave
-    scorePerKill: 100,    // score per kill (x wave number)
+    scorePerKill: 6,      // score per kill (x wave x combo) — tuned so a strong run reads in the low thousands, not the hundred-thousands
     scoreMult: 1,         // raised by the "Bounty Hunter" upgrade
     coinMult: 1,          // raised by the "Fortune" upgrade
     healEachWave: 12,     // HP restored on wave clear (Normal only) — modest; sustain is earned
