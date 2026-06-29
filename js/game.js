@@ -1314,6 +1314,10 @@
   }
 
   // ---- main loop ----
+  function isMenuState(s) {
+    return s === "menu" || s === "shop" || s === "codex" || s === "setup" ||
+      s === "howto" || s === "highscores" || s === "settings" || s === "bestiary";
+  }
   function frame(now) {
     let dt = (now - last) / 1000; last = now;
     if (dt > 0.1) dt = 0.1;
@@ -1352,7 +1356,7 @@
     const _pl = state === "playing";
     if (_pl !== cgWasPlaying) { if (_pl) CG.gameplayStart(); else CG.gameplayStop(); cgWasPlaying = _pl; }
     if (state === "continue" && continueT > 0) { continueT -= dt; if (continueT <= 0) { state = "gameover"; endRun(); } }
-    if (state === "menu") { if (!Attract.ready) Attract.reset(); Attract.update(dt); } else Attract.ready = false;   // live attract-mode demo
+    if (isMenuState(state)) { if (!Attract.ready) Attract.reset(); Attract.update(dt); } else Attract.ready = false;   // live attract-mode demo runs behind every menu tab
 
     render();
     handleUI();
@@ -1408,13 +1412,19 @@
     UI.ink = "#000";   // overlays (menus / win / pause) dim to white — always ink them black
     if (state !== lastUiState) enterT = 0;   // restart the entrance animation on every screen change
 
-    // menu screens: ambient backdrop + a subtle entrance slide that carries the
-    // content AND its buttons together, so everything settles into place as one.
-    const inMenu = state === "menu" || state === "shop" || state === "codex" ||
-      state === "setup" || state === "howto" || state === "highscores" || state === "settings" || state === "bestiary";
+    // menu screens: the LIVE attract scene backs every tab (not just the main menu), so the
+    // gorgeous moving backdrop flows through the whole menu instead of snapping to flat white.
+    const inMenu = isMenuState(state);
     if (inMenu) {
       eIn = ez(enterT / 0.24);
-      if (state === "menu") Attract.draw(ctx); else UI.menuBackdrop(ctx, uiT);   // main menu = live attract demo
+      Attract.draw(ctx);
+      if (state !== "menu") {
+        // sub-tabs: a frosted wash + soft vignette so the dark-on-light content reads over the scene
+        ctx.fillStyle = UI.t.color.paper; ctx.globalAlpha = 0.72; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+        const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.42, W / 2, H / 2, W * 0.62);
+        vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.12)");
+        ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+      }
       ctx.save(); ctx.translate(0, (1 - eIn) * 22);
       if (state === "menu") renderMenu();
       else if (state === "shop") renderShop();

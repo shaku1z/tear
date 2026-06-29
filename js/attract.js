@@ -8,14 +8,17 @@ const Attract = {
   t: 0, biomeIdx: 0, biomeT: 0, fade: 0,
   hero: null, foes: [], shots: [], target: null, ready: false,
 
+  // cycle only the light/colourful biomes — the dark void (The Tear) reads muddy behind the
+  // dimmed sub-tabs, so it's left out of the attract rotation.
+  _biomes() { const a = []; for (let i = 0; i < STAGES.length; i++) if (!STAGES[i].dark) a.push(i); return a; },
   reset() {
-    this.t = 0; this.biomeIdx = Math.floor(Math.random() * STAGES.length); this.biomeT = 0; this.fade = 0;
+    this.t = 0; this.biomeList = this._biomes(); this.biomePtr = Math.floor(Math.random() * this.biomeList.length); this.biomeT = 0; this.fade = 0;
     this.hero = { x: this.W / 2, vx: 0, facing: 1, swingT: 0, swingDir: 1, scarf: [] };
     this.foes = []; this.shots = []; this.target = null; this.ready = true;
     try { FX.reset(); } catch (e) {}
     for (let i = 0; i < 5; i++) this._spawn();
   },
-  stage() { return STAGES[this.biomeIdx % STAGES.length]; },
+  stage() { return STAGES[this.biomeList[this.biomePtr % this.biomeList.length]]; },
   _spawn() {
     const side = Math.random() < 0.5 ? -1 : 1;
     const types = ["charger", "ranged", "flyer", "bomber", "armored", "wraith"];
@@ -31,7 +34,7 @@ const Attract = {
     if (dt > 0.05) dt = 0.05;
     this.t += dt; this.fade = Math.min(1, this.fade + dt * 0.5);
     this.biomeT += dt;
-    if (this.biomeT > 15) { this.biomeT = 0; this.biomeIdx = (this.biomeIdx + 1) % STAGES.length; }
+    if (this.biomeT > 15) { this.biomeT = 0; this.biomePtr = (this.biomePtr + 1) % this.biomeList.length; }
     const h = this.hero, hy = this._heroY();
 
     // target the nearest living foe; close in and swing
