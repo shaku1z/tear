@@ -181,6 +181,7 @@
   let listScroll = 0;                   // scroll offset for scrollable screens
   let uiT = 0, enterT = 0, lastUiDt = 1 / 60, eIn = 1, winT = 0;   // menu ambient clock, time-since-screen-opened, last frame dt, entrance ease, ending cinematic clock
   let cgWasPlaying = false, continueT = 0;   // CrazyGames gameplay bracket + the rewarded-revive countdown
+  let hudHpLag = 1, hudMultPrev = 1, hudMultPop = 0;   // HUD juice: health damage-chip + combo pop
   const hoverAnim = {};                 // per-button hover progress (key -> 0..1), for hover juice
   const ez = (t) => { t = t < 0 ? 0 : t > 1 ? 1 : t; return 1 - (1 - t) * (1 - t); };   // ease-out
   let codexFilter = "all";              // ABILITIES tab: category filter
@@ -1607,54 +1608,88 @@
   }
 
   function drawHUD() {
-    const t = UI.t, ink = THEME.ink;   // UI.ink === THEME.ink during the HUD pass
-    const x = 20, y = 20, bw = 280;
-    UI.bar(ctx, x, y, bw, 18, player.hp / player.maxHp);
-    if (player.oneHit) UI.text(ctx, "ONE-HIT", x + bw + 10, y + 15, t.type.caption);
+    const t = UI.t, ink = THEME.ink, lowG = (typeof GFX !== "undefined" && GFX.low);
+    const accent = (currentStage && currentStage.accent) || t.color.accent;
+    const hpFrac = clamp(player.hp / player.maxHp, 0, 1);
+    const hpCol = hpFrac > 0.5 ? "#1faf5a" : hpFrac > 0.25 ? "#ef8a17" : "#e23b3b";
+    if (hpFrac < hudHpLag) hudHpLag += (hpFrac - hudHpLag) * 0.07; else hudHpLag = hpFrac;   // damage chip lags down; heals snap
 
-    // dash readiness
-    const ready = 1 - clamp(player.dashCd / CONFIG.dash.cooldown, 0, 1);
-    UI.bar(ctx, x, y + 26, 120, 8, ready);
+    // ===== top-left: HEALTH =====
+    const x = 24, y = 24, bw = 300, bh = 20;
+    const low = hpFrac <= 0.25, pulse = 0.5 + 0.5 * Math.sin(performance.now() / 160);
+    ctx.save();
+    ctx.globalAlpha = 0.16; ctx.fillStyle = ink; ctx.fillRect(x, y, bw, bh); ctx.globalAlpha = 1;   // track
+    ctx.fillStyle = "rgba(226,59,59,0.5)"; ctx.fillRect(x, y, bw * hudHpLag, bh);                   // recent-damage chip
+    if (low && !lowG) { ctx.shadowColor = "#e23b3b"; ctx.shadowBlur = 8 + 8 * pulse; }
+    ctx.fillStyle = hpCol; ctx.fillRect(x, y, bw * hpFrac, bh); ctx.shadowBlur = 0;                 // health
+    ctx.globalAlpha = 0.45; ctx.strokeStyle = THEME.dark ? "#000" : "#fff"; ctx.lineWidth = 1;       // quarter ticks
+    for (let s = 1; s < 4; s++) { const sx = x + bw * s / 4; ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, y + bh); ctx.stroke(); }
+    ctx.globalAlpha = 1; ctx.strokeStyle = ink; ctx.lineWidth = 2; ctx.strokeRect(x, y, bw, bh);
+    ctx.restore();
+    UI.text(ctx, Math.ceil(player.hp) + " / " + player.maxHp, x + bw + 12, y + bh - 4, t.type.label, "left", t.alpha.soft);
+    if (player.oneHit) UI.tag(ctx, "ONE-HIT", x + bw + 12, y + 1, "#e23b3b", "left", t.type.micro);
 
-    // Aegis shield pips (cyan) — only shown once Aegis is owned
+    // dash charges + shield (row below)
+    const ry = y + bh + 12, maxDash = Math.max(1, player.maxDashCharges || 1);
+    const dashN = player.dashCharges != null ? player.dashCharges : (player.dashCd <= 0 ? 1 : 0);
+    const recharge = 1 - clamp(player.dashCd / CONFIG.dash.cooldown, 0, 1);
+    for (let i = 0; i < maxDash; i++) {
+      const px = x + i * 26;
+      ctx.strokeStyle = ink; ctx.lineWidth = 1.5; ctx.strokeRect(px, ry, 22, 7);
+      if (i < dashN) { ctx.fillStyle = accent; ctx.fillRect(px, ry, 22, 7); }
+      else if (i === dashN) { ctx.fillStyle = accent; ctx.globalAlpha = 0.5; ctx.fillRect(px, ry, 22 * recharge, 7); ctx.globalAlpha = 1; }
+    }
+    UI.text(ctx, "DASH", x + maxDash * 26 + 4, ry + 7, t.type.micro, "left", t.alpha.faint);
     for (let i = 0; i < player.maxShield; i++) {
-      const sx = x + 132 + i * 16;
-      if (i < player.shield) UI.bar(ctx, sx, y + 26, 12, 8, 1, CONFIG.colors.armoredShield, CONFIG.colors.armoredShield);
-      else { ctx.strokeStyle = CONFIG.colors.armoredShield; ctx.lineWidth = 2; ctx.strokeRect(sx, y + 26, 12, 8); }
+      const sx = x + 150 + i * 16;
+      if (i < player.shield) { ctx.fillStyle = CONFIG.colors.armoredShield; ctx.fillRect(sx, ry, 12, 7); }
+      else { ctx.strokeStyle = CONFIG.colors.armoredShield; ctx.lineWidth = 2; ctx.strokeRect(sx, ry, 12, 7); }
     }
     ctx.strokeStyle = ink; ctx.fillStyle = ink;
 
-    // owned abilities/upgrades list (left column)
-    let oy = y + 52;
+    // owned abilities (compact)
+    let oy = ry + 26;
     for (const id in run.mods.owned) {
       const up = UPGRADES.find((u) => u.id === id);
       if (!up) continue;
-      const label = (up.unique ? "★ " : "") + up.name + (up.unique ? "" : " x" + run.mods.owned[id]);
-      UI.text(ctx, label, x, oy, t.type.caption, "left", t.alpha.soft);
-      oy += 17;
+      UI.text(ctx, (up.unique ? "★ " : "") + up.name + (up.unique ? "" : " ×" + run.mods.owned[id]), x, oy, t.type.micro, "left", t.alpha.soft);
+      oy += 15;
     }
 
-    // ---- center stack (kept off the edges so nothing clips) ----
+    // ===== top-center: WAVE + stat chips =====
+    UI.title(ctx, run.isBossWave ? "BOSS" : "WAVE " + run.wave, W / 2, 42, t.type.h2);
     const remaining = enemies.length + run.spawnQueue.length;
-    UI.title(ctx, run.isBossWave ? "BOSS" : "WAVE " + run.wave, W / 2, 40, t.type.title);
-    UI.text(ctx, "SCORE " + run.score + "    enemies left: " + remaining + "    " + fmtTime(run.runTime),
-      W / 2, 64, t.type.label, "center", t.alpha.soft);
+    const stat = (label, val, cx) => { UI.text(ctx, val, cx, 66, t.type.label, "center"); UI.text(ctx, label, cx, 80, t.type.micro, "center", t.alpha.faint); };
+    stat("SCORE", "" + run.score, W / 2 - 150); stat("TIME", fmtTime(run.runTime), W / 2); stat("LEFT", "" + remaining, W / 2 + 150);
 
-    // trick meter (centered, colored by tier)
+    // trick multiplier — pops on increase
+    if (run.mult > hudMultPrev) hudMultPop = 1;
+    hudMultPrev = run.mult; hudMultPop = Math.max(0, hudMultPop - 0.06);
     if (run.mult > 1) {
       const tc = trickColor(run.mult);
-      UI.tag(ctx, "x" + run.mult + (run.rank ? "  " + run.rank : ""), W / 2, 96, tc, "center", t.type.lead);
-      const bw2 = 220, bx = W / 2 - bw2 / 2, by = 104;
-      UI.bar(ctx, bx, by, bw2, 6, clamp(run.comboTimer / CONFIG.trick.decay, 0, 1), tc);
+      ctx.save(); ctx.translate(W / 2, 106); ctx.scale(1 + hudMultPop * 0.4, 1 + hudMultPop * 0.4);
+      if (!lowG) { ctx.shadowColor = tc; ctx.shadowBlur = 10; }
+      UI.tag(ctx, "×" + run.mult + (run.rank ? "  " + run.rank : ""), 0, 0, tc, "center", t.type.lead);
+      ctx.restore();
+      const bw2 = 240, bx = W / 2 - bw2 / 2;
+      ctx.globalAlpha = 0.14; ctx.fillStyle = ink; ctx.fillRect(bx, 114, bw2, 5); ctx.globalAlpha = 1;
+      ctx.fillStyle = tc; ctx.fillRect(bx, 114, bw2 * clamp(run.comboTimer / CONFIG.trick.decay, 0, 1), 5);
     }
     ctx.textAlign = "left";
 
-    // boss HP bar (centered, below the stack)
+    // ===== boss HP bar (segmented, glowing) =====
     const boss = enemies.find((e) => e.isBoss);
     if (boss) {
-      const bbw = 560, bx = (W - bbw) / 2, by = 122;
-      UI.bar(ctx, bx, by, bbw, 14, boss.hp / boss.maxHp);
-      UI.text(ctx, "BOSS", bx, by - 4, t.type.micro, "left", t.alpha.soft);
+      const bbw = 620, bx = (W - bbw) / 2, by = 138, bhh = 16, bf = clamp(boss.hp / boss.maxHp, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = 0.2; ctx.fillStyle = ink; ctx.fillRect(bx, by, bbw, bhh); ctx.globalAlpha = 1;
+      if (!lowG) { ctx.shadowColor = CONFIG.colors.boss; ctx.shadowBlur = 8; }
+      ctx.fillStyle = CONFIG.colors.boss; ctx.fillRect(bx, by, bbw * bf, bhh); ctx.shadowBlur = 0;
+      ctx.globalAlpha = 0.4; ctx.strokeStyle = THEME.dark ? "#000" : "#fff"; ctx.lineWidth = 1;
+      for (let s = 1; s < 10; s++) { const sx = bx + bbw * s / 10; ctx.beginPath(); ctx.moveTo(sx, by); ctx.lineTo(sx, by + bhh); ctx.stroke(); }
+      ctx.globalAlpha = 1; ctx.strokeStyle = ink; ctx.lineWidth = 2; ctx.strokeRect(bx, by, bbw, bhh);
+      ctx.restore();
+      UI.tag(ctx, (boss.bossName || "BOSS").toUpperCase(), W / 2, by - 6, CONFIG.colors.boss, "center", t.type.caption);
     }
   }
 
