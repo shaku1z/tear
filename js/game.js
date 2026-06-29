@@ -1352,6 +1352,7 @@
     const _pl = state === "playing";
     if (_pl !== cgWasPlaying) { if (_pl) CG.gameplayStart(); else CG.gameplayStop(); cgWasPlaying = _pl; }
     if (state === "continue" && continueT > 0) { continueT -= dt; if (continueT <= 0) { state = "gameover"; endRun(); } }
+    if (state === "menu") { if (!Attract.ready) Attract.reset(); Attract.update(dt); } else Attract.ready = false;   // live attract-mode demo
 
     render();
     handleUI();
@@ -1413,7 +1414,7 @@
       state === "setup" || state === "howto" || state === "highscores" || state === "settings" || state === "bestiary";
     if (inMenu) {
       eIn = ez(enterT / 0.24);
-      UI.menuBackdrop(ctx, uiT);
+      if (state === "menu") Attract.draw(ctx); else UI.menuBackdrop(ctx, uiT);   // main menu = live attract demo
       ctx.save(); ctx.translate(0, (1 - eIn) * 22);
       if (state === "menu") renderMenu();
       else if (state === "shop") renderShop();
@@ -1800,18 +1801,25 @@
   }
 
   function renderMenu() {
-    const t = UI.t;
-    // animated "tear" — a cyan slash sweeps through the wordmark every few seconds
-    const cyc = (uiT % 4.2) / 0.5;                 // 0..1 sweep, then rests
-    UI.title(ctx, "T E A R", W / 2, 220, t.type.wordmark);
+    const t = UI.t, lx = 96;
+    // left sidebar: darken for legibility over the live attract scene, fading to the gameplay
+    const g = ctx.createLinearGradient(0, 0, 760, 0);
+    g.addColorStop(0, "rgba(6,7,12,0.93)"); g.addColorStop(0.5, "rgba(6,7,12,0.74)"); g.addColorStop(1, "rgba(6,7,12,0)");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 760, H);
+
+    const savedInk = UI.ink; UI.ink = "#f1eff9";   // light content over the dark sidebar
+    UI.text(ctx, "T E A R", lx, 196, t.type.wordmark, "left");
+    const cyc = (uiT % 4.2) / 0.5;                 // animated cyan slash sweeping the wordmark
     if (cyc < 1) {
-      const sx = W / 2 - 260 + cyc * 520, k = Math.sin(cyc * Math.PI);
+      const sx = lx + cyc * 380, k = Math.sin(cyc * Math.PI);
       ctx.save(); ctx.globalAlpha = 0.85 * k; ctx.strokeStyle = t.color.accent; ctx.lineWidth = 4; ctx.lineCap = "round";
-      ctx.beginPath(); ctx.moveTo(sx - 26, 250); ctx.lineTo(sx + 26, 188); ctx.stroke(); ctx.restore();
+      ctx.beginPath(); ctx.moveTo(sx - 26, 206); ctx.lineTo(sx + 26, 144); ctx.stroke(); ctx.restore();
     }
-    UI.text(ctx, "a momentum-blade survival game", W / 2, 256, t.type.caption, "center", t.alpha.muted);
-    UI.divider(ctx, W / 2 - 150, 280, 300, t.alpha.faint);
-    UI.tag(ctx, "◆ " + META.coins() + " COINS", W / 2, 306, t.color.accent, "center", t.type.caption);
+    UI.text(ctx, "a momentum-blade survival game", lx, 230, t.type.caption, "left", t.alpha.muted);
+    UI.tag(ctx, "◆ " + META.coins() + " COINS", lx, 262, t.color.accent, "left", t.type.caption);
+    UI.text(ctx, "cut clean · keep moving · chase the multiplier", lx, H - 46, t.type.micro, "left", t.alpha.faint);
+
+    UI.ink = "#000";   // buttons are drawn (by drawButtons) on the dark sidebar -> white buttons pop
     vmenu([
       { label: "PLAY", action: () => { state = "setup"; } },
       { label: "SHOP", action: () => { state = "shop"; } },
@@ -1820,8 +1828,8 @@
       { label: "HOW TO PLAY", action: () => { state = "howto"; } },
       { label: "HIGH SCORES", action: () => { state = "highscores"; } },
       { label: "SETTINGS", action: () => { state = "settings"; } },
-    ], W / 2, 332, t.metric.btnW, t.metric.btnH, 10);
-    UI.text(ctx, "cut clean · keep moving · chase the multiplier", W / 2, H - 40, t.type.micro, "center", t.alpha.faint);
+    ], lx + t.metric.btnW / 2, 300, t.metric.btnW, t.metric.btnH, 10);
+    void savedInk;   // UI.ink intentionally left "#000" so drawButtons renders white buttons
     return;
   }
 
