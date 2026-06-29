@@ -1,114 +1,167 @@
-// ------- attract mode: a self-contained auto-battle demo for the main menu -------
-// The game "playing itself" behind the menu. It does NOT use the real run/sim (those
-// are coupled to input, platforms, state); it's a lightweight bespoke sim with simple
-// AI, reusing the shared Backdrop + FX so it shows off the real biomes and the new VFX.
-// FX is updated/drawn here (the main loop only ticks FX while actually playing).
+// ------- attract mode: the game playing itself behind the menu -------
+// Uses the REAL Player + Blade (driven by a synthetic controller via player.aiInput /
+// blade.aimOverride from blade.js & player.js), so movement, dashes, jumps, and the blade
+// swing/trail are the genuine article. Enemies are lightweight bespoke actors with proper
+// physics — ground types fall to the floor and never hover; only flyers stay airborne.
+// FX is ticked/drawn here (the main loop only ticks FX while actually playing).
 const Attract = {
   W: 1600, H: 900, GY: CONFIG.world.groundY,
-  t: 0, biomeIdx: 0, biomeT: 0, fade: 0,
-  hero: null, foes: [], shots: [], target: null, ready: false,
+  t: 0, biomeList: [], biomePtr: 0, biomeT: 0, fade: 0,
+  player: null, blade: null, platforms: null, ai: null, foes: [], shots: [],
+  target: null, dashCd: 0, jumpCd: 0, aimAng: -1, ready: false,
 
-  // cycle only the light/colourful biomes — the dark void (The Tear) reads muddy behind the
-  // dimmed sub-tabs, so it's left out of the attract rotation.
   _biomes() { const a = []; for (let i = 0; i < STAGES.length; i++) if (!STAGES[i].dark) a.push(i); return a; },
+
   reset() {
-    this.t = 0; this.biomeList = this._biomes(); this.biomePtr = Math.floor(Math.random() * this.biomeList.length); this.biomeT = 0; this.fade = 0;
-    this.hero = { x: this.W / 2, vx: 0, facing: 1, swingT: 0, swingDir: 1, scarf: [] };
-    this.foes = []; this.shots = []; this.target = null; this.ready = true;
+    this.t = 0; this.biomeList = this._biomes(); this.biomePtr = Math.floor(Math.random() * this.biomeList.length);
+    this.biomeT = 0; this.fade = 0; this.dashCd = 0; this.jumpCd = 0; this.aimAng = -1; this.target = null;
+    this.platforms = [
+      { x: 0, y: this.GY, w: this.W, h: this.H - this.GY, floor: true },
+      { x: this.W * 0.30, y: this.GY - 175, w: 250, h: 24, oneway: true },
+      { x: this.W * 0.60, y: this.GY - 265, w: 240, h: 24, oneway: true },
+    ];
+    this.player = new Player(this.W / 2, this.GY - 60);
+    this.player.maxHp = this.player.hp = 99999;   // the demo hero never falls
+    const ai = this.ai = { left: false, right: false, up: false, down: false, _dash: false, _jump: false };
+    this.player.aiInput = {
+      left: () => ai.left, right: () => ai.right, up: () => ai.up, down: () => ai.down,
+      dashPressed: () => { const v = ai._dash; ai._dash = false; return v; },
+      jumpPressed: () => { const v = ai._jump; ai._jump = false; return v; },
+    };
+    this.blade = new Blade();
+    this.blade.aimOverride = { x: this.W / 2, y: this.GY - 80 };
+    this.foes = []; this.shots = [];
     try { FX.reset(); } catch (e) {}
     for (let i = 0; i < 5; i++) this._spawn();
+    this.ready = true;
   },
   stage() { return STAGES[this.biomeList[this.biomePtr % this.biomeList.length]]; },
-  _spawn() {
-    const side = Math.random() < 0.5 ? -1 : 1;
-    const types = ["charger", "ranged", "flyer", "bomber", "armored", "wraith"];
-    const kind = types[(Math.random() * types.length) | 0];
-    const flyer = kind === "flyer" || kind === "wraith";
-    this.foes.push({ x: this.W / 2 + side * (640 + Math.random() * 280), y: this.GY - 22 - (flyer ? 110 + Math.random() * 140 : 0),
-      kind, color: CONFIG.colors[kind] || "#e23b3b", fireCd: 1.4 + Math.random() * 2.4, dead: false, spawnT: 0.4, flash: 0, hw: 17, hh: 22, flyer });
-  },
-  _heroY() { return this.GY - 30; },
 
   update(dt) {
     if (!this.ready) this.reset();
-    if (dt > 0.05) dt = 0.05;
+    if (dt > 0.04) dt = 0.04;
     this.t += dt; this.fade = Math.min(1, this.fade + dt * 0.5);
     this.biomeT += dt;
     if (this.biomeT > 15) { this.biomeT = 0; this.biomePtr = (this.biomePtr + 1) % this.biomeList.length; }
-    const h = this.hero, hy = this._heroY();
+    this.dashCd -= dt; this.jumpCd -= dt;
+    const p = this.player, b = this.blade, ai = this.ai;
+    if (!this.target || this.target.dead || this.target.spawnT > 0) this.target = this._nearest();
+    const tg = this.target;
 
-    // target the nearest living foe; close in and swing
-    if (!this.target || this.target.dead) { let bd = 1e9; this.target = null; for (const f of this.foes) { if (f.dead || f.spawnT > 0) continue; const d = Math.abs(f.x - h.x); if (d < bd) { bd = d; this.target = f; } } }
-    if (this.target) {
-      const dir = Math.sign(this.target.x - h.x) || 1; h.facing = dir;
-      const dist = Math.abs(this.target.x - h.x);
-      if (dist > 95) h.vx += dir * 2300 * dt;
-      else if (h.swingT <= 0) { h.swingT = 0.26; h.swingDir = dir; }
-    }
-    h.vx *= 0.85; h.x = clamp(h.x + h.vx * dt, 110, this.W - 110);
-    h.scarf.unshift({ x: h.x - h.facing * 8, y: hy - 12 }); if (h.scarf.length > 9) h.scarf.pop();
-
-    // swing -> cut foes within reach in the facing arc
-    if (h.swingT > 0) {
-      h.swingT -= dt;
-      for (const f of this.foes) { if (f.dead || f.spawnT > 0) continue; const dx = f.x - h.x, dy = f.y - hy; if (Math.hypot(dx, dy) < 155 && Math.sign(dx) === h.swingDir) this._kill(f); }
-    }
-
-    for (const f of this.foes) {
-      if (f.spawnT > 0) { f.spawnT -= dt; continue; }
-      f.flash = Math.max(0, f.flash - dt * 4);
-      const dir = Math.sign(h.x - f.x) || 1;
-      if (!f.flyer && f.kind !== "ranged") f.x += dir * 64 * dt;             // melee creep in
-      else if (f.flyer) { f.x += dir * 40 * dt; f.y += Math.sin(this.t * 2 + f.x) * 18 * dt; }
-      f.fireCd -= dt;
-      if (f.fireCd <= 0 && (f.kind === "ranged" || f.kind === "flyer")) { f.fireCd = 2.2 + Math.random() * 2; this._fire(f); }
-      if (f.kind === "bomber" && Math.abs(f.x - h.x) < 130) { this._explode(f.x, f.y); this._kill(f, true); }
-    }
-
-    for (const s of this.shots) {
-      if (s.dead) continue;
-      s.hist.push({ x: s.x, y: s.y }); if (s.hist.length > 7) s.hist.shift();
-      s.x += s.vx * dt; s.y += s.vy * dt;
-      if (!s.deflected && Math.hypot(s.x - h.x, s.y - hy) < 64) {   // auto-parry a close shot
-        s.deflected = true; const m = Math.hypot(s.vx, s.vy) || 1; s.vx = -s.vx / m * 760; s.vy = -260; s.tint = CONFIG.colors.perfect;
-        h.swingT = Math.max(h.swingT, 0.2); FX.burst(s.x, s.y, s.vx, 0, 8, CONFIG.colors.perfect); FX.flash(s.x, s.y, 36, CONFIG.colors.perfect);
+    // ---- drive the real player via the synthetic controller ----
+    ai.left = ai.right = ai.up = ai.down = false;
+    if (tg) {
+      const dx = tg.x - p.x, dy = tg.y - p.y, adx = Math.abs(dx);
+      if (adx > 86) { if (dx > 0) ai.right = true; else ai.left = true; }       // close to blade range
+      if (tg.flyer && dy < -70 && p.onGround && this.jumpCd <= 0) { ai._jump = true; this.jumpCd = 1.1; }   // hop to a flyer
+      if (this.dashCd <= 0 && p.dashCharges > 0 && (adx > 340 || (adx > 150 && Math.random() < 0.03))) {
+        if (dx > 0) ai.right = true; else ai.left = true; if (tg.flyer && dy < -50) ai.up = true;
+        ai._dash = true; this.dashCd = 0.9 + Math.random() * 0.7;
       }
-      if (s.deflected) for (const f of this.foes) { if (f.dead || f.spawnT > 0) continue; if (Math.hypot(f.x - s.x, f.y - s.y) < 28) { this._kill(f); s.dead = true; break; } }
-      if (s.x < -50 || s.x > this.W + 50 || s.y < -50 || s.y > this.H + 50) s.dead = true;
     }
+    // dodge a near incoming shot (dash away)
+    for (const s of this.shots) {
+      if (s.dead || s.deflected) continue;
+      if (Math.hypot(s.x - p.x, s.y - p.y) < 150 && this.dashCd <= 0 && p.dashCharges > 0) {
+        ai.left = s.x > p.x; ai.right = s.x <= p.x; ai._dash = true; this.dashCd = 0.8; break;
+      }
+    }
+
+    // ---- aim the blade: sweep it briskly through the target (real tip-speed -> real cut + trail) ----
+    if (tg) {
+      const hand = { x: p.x, y: p.y - p.hh * 0.2 };
+      const baseAng = Math.atan2(tg.y - hand.y, tg.x - hand.x);
+      this.aimAng = baseAng + Math.sin(this.t * 15) * 0.95;   // ~14 rad/s peak -> tip well above minHitSpeed
+      const R = CONFIG.blade.aimRadius;
+      b.aimOverride.x = hand.x + Math.cos(this.aimAng) * R;
+      b.aimOverride.y = hand.y + Math.sin(this.aimAng) * R;
+    }
+
+    // ---- step the real entities ----
+    p.update(dt, this.platforms);
+    b.update(dt, p, this.platforms);
+    if (tg) p.facing = tg.x >= p.x ? 1 : -1;
+
+    // ---- the real blade cuts foes it sweeps through fast ----
+    for (const f of this.foes) {
+      if (f.dead || f.spawnT > 0) continue;
+      if (b.tipSpeed > CONFIG.blade.minHitSpeed && this._segNear(b.x, b.y, b.tipX, b.tipY, f.x, f.y, f.hw + 12)) this._kill(f);
+    }
+
+    for (const f of this.foes) this._updateFoe(f, dt, p);
+    for (const s of this.shots) this._updateShot(s, dt, p, b);
     this.shots = this.shots.filter((s) => !s.dead);
     this.foes = this.foes.filter((f) => !f.dead);
     while (this.foes.length < 5) this._spawn();
     try { FX.update(dt); } catch (e) {}
   },
 
+  _nearest() { let bd = 1e9, best = null; for (const f of this.foes) { if (f.dead || f.spawnT > 0) continue; const d = Math.hypot(f.x - this.player.x, f.y - this.player.y); if (d < bd) { bd = d; best = f; } } return best; },
+  _segNear(ax, ay, bx, by, px, py, r) { const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1; let tt = ((px - ax) * dx + (py - ay) * dy) / l2; tt = clamp(tt, 0, 1); return Math.hypot(px - (ax + dx * tt), py - (ay + dy * tt)) <= r; },
   _kill(f, silent) { if (f.dead) return; f.dead = true; try { FX.death(f.x, f.y, 12, f.color); if (!silent) FX.burst(f.x, f.y, 0, -1, 6, CONFIG.colors.perfect); } catch (e) {} },
-  _fire(f) { const h = this.hero, dx = h.x - f.x, dy = this._heroY() - f.y, m = Math.hypot(dx, dy) || 1; this.shots.push({ x: f.x, y: f.y, vx: dx / m * 430, vy: dy / m * 430, r: 8, tint: f.color, hist: [], deflected: false, dead: false }); },
+
+  _spawn() {
+    const side = Math.random() < 0.5 ? -1 : 1;
+    const types = ["charger", "ranged", "bomber", "armored", "flyer", "wraith"];
+    const kind = types[(Math.random() * types.length) | 0];
+    const flyer = kind === "flyer" || kind === "wraith";
+    this.foes.push({ x: this.W / 2 + side * (600 + Math.random() * 280), y: flyer ? this.GY - 200 - Math.random() * 150 : this.GY - 22,
+      vx: 0, vy: 0, onGround: false, kind, color: CONFIG.colors[kind] || "#e23b3b", hw: 17, hh: 22, flyer, fireCd: 1.1 + Math.random() * 2, spawnT: 0.4, flash: 0, dead: false });
+  },
+  _updateFoe(f, dt, p) {
+    if (f.spawnT > 0) { f.spawnT -= dt; return; }
+    f.flash = Math.max(0, f.flash - dt * 4);
+    const dir = Math.sign(p.x - f.x) || 1;
+    if (f.flyer) {
+      const ty = p.y - 40 + Math.sin(this.t * 1.6 + f.x) * 32;
+      f.vy += (ty - f.y) * 2.6 * dt; f.vy *= 0.9; f.y += f.vy * dt; f.x += dir * 150 * dt;
+    } else {
+      f.vy += CONFIG.world.gravity * dt; f.y += f.vy * dt;
+      const floorY = this.GY - f.hh;
+      if (f.y >= floorY) { f.y = floorY; f.vy = 0; f.onGround = true; } else f.onGround = false;
+      if (f.onGround) f.x += dir * 135 * dt;
+    }
+    f.x = clamp(f.x, 60, this.W - 60);
+    f.fireCd -= dt;
+    if (f.fireCd <= 0 && (f.kind === "ranged" || f.kind === "flyer")) { f.fireCd = 1.7 + Math.random() * 1.6; this._fire(f, p); }
+    if (f.kind === "bomber" && f.onGround && Math.abs(f.x - p.x) < 120) { this._explode(f.x, f.y); this._kill(f, true); }
+  },
+  _fire(f, p) { const dx = p.x - f.x, dy = p.y - f.y, m = Math.hypot(dx, dy) || 1; this.shots.push({ x: f.x, y: f.y - 6, vx: dx / m * 440, vy: dy / m * 440, r: 8, tint: f.color, hist: [], deflected: false, dead: false }); },
   _explode(x, y) { try { FX.explode(x, y, CONFIG.colors.bomber, 1.3); } catch (e) {} },
+  _updateShot(s, dt, p, b) {
+    s.hist.push({ x: s.x, y: s.y }); if (s.hist.length > 7) s.hist.shift();
+    s.x += s.vx * dt; s.y += s.vy * dt;
+    if (!s.deflected && b.tipSpeed > 850 && this._segNear(b.x, b.y, b.tipX, b.tipY, s.x, s.y, 20)) {
+      s.deflected = true; const m = Math.hypot(s.vx, s.vy) || 1; s.vx = -s.vx / m * 780; s.vy = -260; s.tint = CONFIG.colors.perfect;
+      FX.burst(s.x, s.y, s.vx, 0, 8, CONFIG.colors.perfect); FX.flash(s.x, s.y, 34, CONFIG.colors.perfect);
+    }
+    if (s.deflected) for (const f of this.foes) { if (f.dead || f.spawnT > 0) continue; if (Math.hypot(f.x - s.x, f.y - s.y) < 28) { this._kill(f); s.dead = true; break; } }
+    if (s.x < -50 || s.x > this.W + 50 || s.y < -50 || s.y > this.H + 50) s.dead = true;
+  },
 
   // ---- drawing ----
   draw(ctx) {
     const stage = this.stage();
     THEME.set(stage.bg);
     ctx.fillStyle = stage.bg; ctx.fillRect(0, 0, this.W, this.H);
-    Backdrop.draw(ctx, stage, this.t, this.hero ? this.hero.x : this.W / 2);
-    const floor = { x: 0, y: this.GY, w: this.W, h: this.H - this.GY, floor: true };
-    Backdrop.platform(ctx, floor, stage, true);
+    Backdrop.draw(ctx, stage, this.t, this.player ? this.player.x : this.W / 2);
+    if (this.platforms) for (const pl of this.platforms) Backdrop.platform(ctx, pl, stage, !!pl.floor);
     for (const f of this.foes) this._drawFoe(ctx, f);
     for (const s of this.shots) this._drawShot(ctx, s);
-    this._drawHero(ctx);
+    if (this.player) this.player.draw(ctx);
+    if (this.blade) this.blade.draw(ctx, this.player);
     try { FX.draw(ctx); } catch (e) {}
     Backdrop.post(ctx, stage);
   },
   _drawFoe(ctx, f) {
     const lowG = (typeof GFX !== "undefined" && GFX.low);
-    if (f.spawnT > 0) { ctx.globalAlpha = 1 - f.spawnT / 0.4; }
-    const x = f.x - f.hw, y = f.y - f.hh, w = f.hw * 2, hgt = f.hh * 2;
+    if (f.spawnT > 0) ctx.globalAlpha = 1 - f.spawnT / 0.4;
+    const x = f.x - f.hw, y = f.y - f.hh, w = f.hw * 2, h = f.hh * 2;
     ctx.fillStyle = f.flash > 0 ? "#fff" : f.color;
     if (!lowG) { ctx.shadowColor = THEME.rim; ctx.shadowBlur = 6; }
-    ctx.fillRect(x, y, w, hgt); ctx.shadowBlur = 0;
-    ctx.strokeStyle = THEME.ink; ctx.lineWidth = 2.5; ctx.strokeRect(x, y, w, hgt);
-    ctx.fillStyle = "#fff"; ctx.fillRect(f.x + 4, y + 11, 6, 6);   // eye
+    ctx.fillRect(x, y, w, h); ctx.shadowBlur = 0;
+    ctx.strokeStyle = THEME.ink; ctx.lineWidth = 2.5; ctx.strokeRect(x, y, w, h);
+    ctx.fillStyle = "#fff"; ctx.fillRect(f.x + (f.x < this.player.x ? 4 : -10), y + 11, 6, 6);
     ctx.globalAlpha = 1;
   },
   _drawShot(ctx, s) {
@@ -123,29 +176,6 @@ const Attract = {
     ctx.fillStyle = s.tint; ctx.strokeStyle = THEME.ink; ctx.lineWidth = 1.5;
     const r = s.r; ctx.beginPath(); ctx.moveTo(r * 1.5, 0); ctx.quadraticCurveTo(0, -r * 0.9, -r, -r * 0.5); ctx.quadraticCurveTo(-r * 0.9, 0, -r, r * 0.5); ctx.quadraticCurveTo(0, r * 0.9, r * 1.5, 0); ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0; ctx.stroke();
     ctx.fillStyle = "#fff"; ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.arc(0, 0, r * 0.4, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
-    ctx.restore();
-  },
-  _drawHero(ctx) {
-    const h = this.hero, hy = this._heroY(), lowG = (typeof GFX !== "undefined" && GFX.low);
-    // scarf (red ribbon)
-    ctx.fillStyle = CONFIG.colors.scarf; ctx.beginPath();
-    if (h.scarf.length > 1) { ctx.moveTo(h.x, hy - 8); for (const p of h.scarf) ctx.lineTo(p.x, p.y - 4); for (let i = h.scarf.length - 1; i >= 0; i--) ctx.lineTo(h.scarf[i].x, h.scarf[i].y + 4); ctx.closePath(); ctx.fill(); }
-    // blade swing arc
-    if (h.swingT > 0) {
-      const k = h.swingT / 0.26, sweep = (1 - k) * 2.4 - 1.2, base = h.swingDir > 0 ? -0.2 : Math.PI + 0.2;
-      const a = base + sweep * h.swingDir, r = 150;
-      ctx.save(); if (!lowG) { ctx.shadowColor = CONFIG.colors.bladeTrail; ctx.shadowBlur = 16; }
-      if (THEME.dark) ctx.globalCompositeOperation = "lighter";
-      ctx.strokeStyle = CONFIG.colors.bladeTrail; ctx.globalAlpha = 0.5 + 0.5 * k; ctx.lineWidth = 6;
-      ctx.beginPath(); ctx.arc(h.x, hy, r, a - h.swingDir * 0.9, a, h.swingDir < 0); ctx.stroke();
-      ctx.globalAlpha = 1; ctx.lineWidth = 4; ctx.strokeStyle = THEME.ink;   // the blade itself
-      ctx.beginPath(); ctx.moveTo(h.x, hy); ctx.lineTo(h.x + Math.cos(a) * r, hy + Math.sin(a) * r); ctx.stroke();
-      ctx.restore();
-    }
-    // body + visor
-    ctx.save(); if (!lowG) { ctx.shadowColor = THEME.rim; ctx.shadowBlur = 8; }
-    ctx.fillStyle = THEME.ink; ctx.fillRect(h.x - 16, hy - 25, 32, 50); ctx.shadowBlur = 0;
-    ctx.fillStyle = CONFIG.colors.eye; ctx.fillRect(h.x + h.facing * 5 - 4, hy - 13, 8, 5);
     ctx.restore();
   },
 };
