@@ -1611,44 +1611,65 @@
     const t = UI.t, ink = THEME.ink, lowG = (typeof GFX !== "undefined" && GFX.low);
     const accent = (currentStage && currentStage.accent) || t.color.accent;
     const hpFrac = clamp(player.hp / player.maxHp, 0, 1);
-    const hpCol = hpFrac > 0.5 ? "#1faf5a" : hpFrac > 0.25 ? "#ef8a17" : "#e23b3b";
     if (hpFrac < hudHpLag) hudHpLag += (hpFrac - hudHpLag) * 0.07; else hudHpLag = hpFrac;   // damage chip lags down; heals snap
+    const low = hpFrac <= 0.25, pulse = 0.5 + 0.5 * Math.sin(performance.now() / 150);
 
-    // ===== top-left: HEALTH =====
-    const x = 24, y = 24, bw = 300, bh = 20;
-    const low = hpFrac <= 0.25, pulse = 0.5 + 0.5 * Math.sin(performance.now() / 160);
+    // low-HP danger: a pulsing red vignette around the screen edges
+    if (low) {
+      ctx.save();
+      const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.34, W / 2, H / 2, H * 0.78);
+      g.addColorStop(0, "rgba(226,59,59,0)"); g.addColorStop(1, "rgba(226,59,59," + (0.10 + 0.13 * pulse).toFixed(3) + ")");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
+    }
+
+    // ===== top-left: VITALS cluster (panel-backed so it reads on any biome) =====
+    const x = 28, y = 26, bw = 320, bh = 24;
+    const ry = y + bh + 12, dw = 34, dh = 11, dg = 6, maxDash = Math.max(1, player.maxDashCharges || 1);
+    ctx.save();   // backing panel + accent spine
+    ctx.globalAlpha = 0.32; ctx.fillStyle = "#0b0d14"; ctx.fillRect(x - 14, y - 12, bw + 110, 78);
+    ctx.globalAlpha = 0.5; ctx.strokeStyle = ink; ctx.lineWidth = 1; ctx.strokeRect(x - 14, y - 12, bw + 110, 78);
+    ctx.globalAlpha = 1; ctx.fillStyle = accent; ctx.fillRect(x - 14, y - 12, 4, 78);
+    ctx.restore();
+
+    // --- health: dark charcoal fill, a red "wound" + recent-damage chip, low-HP red pulse ---
+    const charcoal = "#2b313d";
+    const hpFill = low ? "rgb(" + Math.round(150 + 95 * pulse) + "," + Math.round(34 + 22 * pulse) + "," + Math.round(40 + 18 * pulse) + ")" : charcoal;
     ctx.save();
-    ctx.globalAlpha = 0.16; ctx.fillStyle = ink; ctx.fillRect(x, y, bw, bh); ctx.globalAlpha = 1;   // track
-    ctx.fillStyle = "rgba(226,59,59,0.5)"; ctx.fillRect(x, y, bw * hudHpLag, bh);                   // recent-damage chip
-    if (low && !lowG) { ctx.shadowColor = "#e23b3b"; ctx.shadowBlur = 8 + 8 * pulse; }
-    ctx.fillStyle = hpCol; ctx.fillRect(x, y, bw * hpFrac, bh); ctx.shadowBlur = 0;                 // health
-    ctx.globalAlpha = 0.45; ctx.strokeStyle = THEME.dark ? "#000" : "#fff"; ctx.lineWidth = 1;       // quarter ticks
+    ctx.fillStyle = "#3a1119"; ctx.fillRect(x, y, bw, bh);                                  // dark-red wound (missing HP)
+    ctx.fillStyle = "rgba(210,52,58,0.9)"; ctx.fillRect(x, y, bw * hudHpLag, bh);           // recent-damage chip
+    if (low && !lowG) { ctx.shadowColor = "#e23b3b"; ctx.shadowBlur = 10 + 10 * pulse; }
+    ctx.fillStyle = hpFill; ctx.fillRect(x, y, bw * hpFrac, bh); ctx.shadowBlur = 0;        // health
+    ctx.globalAlpha = 0.75; ctx.fillStyle = low ? "#ff9a9a" : accent; ctx.fillRect(x, y, bw * hpFrac, 2);   // accent sheen
+    ctx.globalAlpha = 0.4; ctx.strokeStyle = "#000"; ctx.lineWidth = 1;                      // quarter ticks
     for (let s = 1; s < 4; s++) { const sx = x + bw * s / 4; ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, y + bh); ctx.stroke(); }
     ctx.globalAlpha = 1; ctx.strokeStyle = ink; ctx.lineWidth = 2; ctx.strokeRect(x, y, bw, bh);
+    ctx.font = UI.font(t.type.label, true); ctx.textAlign = "right"; ctx.fillStyle = "#fff";   // fixed white reads on the dark bar
+    ctx.shadowColor = "rgba(0,0,0,0.65)"; ctx.shadowBlur = 3;
+    ctx.fillText(Math.ceil(player.hp) + " / " + player.maxHp, x + bw - 8, y + bh - 6); ctx.shadowBlur = 0;
     ctx.restore();
-    UI.text(ctx, Math.ceil(player.hp) + " / " + player.maxHp, x + bw + 12, y + bh - 4, t.type.label, "left", t.alpha.soft);
-    if (player.oneHit) UI.tag(ctx, "ONE-HIT", x + bw + 12, y + 1, "#e23b3b", "left", t.type.micro);
+    if (player.oneHit) UI.tag(ctx, "ONE-HIT", x + bw + 12, y + 6, "#e23b3b", "left", t.type.micro);
 
-    // dash charges + shield (row below)
-    const ry = y + bh + 12, maxDash = Math.max(1, player.maxDashCharges || 1);
+    // --- dash charges (bigger) + shield ---
     const dashN = player.dashCharges != null ? player.dashCharges : (player.dashCd <= 0 ? 1 : 0);
     const recharge = 1 - clamp(player.dashCd / CONFIG.dash.cooldown, 0, 1);
+    const dashCol = CONFIG.colors.perfect;   // fixed cyan "dash energy" (not biome accent — Grounds' accent is red)
     for (let i = 0; i < maxDash; i++) {
-      const px = x + i * 26;
-      ctx.strokeStyle = ink; ctx.lineWidth = 1.5; ctx.strokeRect(px, ry, 22, 7);
-      if (i < dashN) { ctx.fillStyle = accent; ctx.fillRect(px, ry, 22, 7); }
-      else if (i === dashN) { ctx.fillStyle = accent; ctx.globalAlpha = 0.5; ctx.fillRect(px, ry, 22 * recharge, 7); ctx.globalAlpha = 1; }
+      const px = x + i * (dw + dg);
+      if (i < dashN) { ctx.fillStyle = dashCol; ctx.fillRect(px, ry, dw, dh); }
+      else if (i === dashN) { ctx.fillStyle = dashCol; ctx.globalAlpha = 0.45; ctx.fillRect(px, ry, dw * recharge, dh); ctx.globalAlpha = 1; }
+      ctx.strokeStyle = ink; ctx.lineWidth = 1.5; ctx.strokeRect(px, ry, dw, dh);
     }
-    UI.text(ctx, "DASH", x + maxDash * 26 + 4, ry + 7, t.type.micro, "left", t.alpha.faint);
+    UI.text(ctx, "DASH", x + maxDash * (dw + dg) + 6, ry + dh - 1, t.type.micro, "left", t.alpha.soft);
+    const shx = x + maxDash * (dw + dg) + 62;
     for (let i = 0; i < player.maxShield; i++) {
-      const sx = x + 150 + i * 16;
-      if (i < player.shield) { ctx.fillStyle = CONFIG.colors.armoredShield; ctx.fillRect(sx, ry, 12, 7); }
-      else { ctx.strokeStyle = CONFIG.colors.armoredShield; ctx.lineWidth = 2; ctx.strokeRect(sx, ry, 12, 7); }
+      const sx = shx + i * 20;
+      if (i < player.shield) { ctx.fillStyle = CONFIG.colors.armoredShield; ctx.fillRect(sx, ry, 16, dh); }
+      else { ctx.strokeStyle = CONFIG.colors.armoredShield; ctx.lineWidth = 2; ctx.strokeRect(sx, ry, 16, dh); }
     }
     ctx.strokeStyle = ink; ctx.fillStyle = ink;
 
-    // owned abilities (compact)
-    let oy = ry + 26;
+    // owned abilities (compact, below the vitals panel)
+    let oy = ry + 36;
     for (const id in run.mods.owned) {
       const up = UPGRADES.find((u) => u.id === id);
       if (!up) continue;
