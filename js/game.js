@@ -1128,6 +1128,27 @@
           SFX.deflect(); addStyle("deflect");
           continue;
         }
+        if (p.bomb) {
+          // bomb parry — its OWN mechanic: a real swing DETONATES the bomb on the spot in
+          // your favour (a counter-blast that hits the crowd), rather than reflecting it like
+          // a bolt. A perfect-speed swing makes it bigger, deadlier, and a true parry.
+          if (blade.tipSpeed < CONFIG.blade.deflectMinSpeed) continue;   // a genuine swing is needed to smack it
+          const perfect = blade.tipSpeed >= CONFIG.blade.perfectSpeed;
+          const B = CONFIG.bomber;
+          p.dead = true;
+          dealAoE(p.x, p.y, B.blastRadius * (perfect ? 1.7 : 1.2), Math.round(B.blastDmg * (perfect ? 2.4 : 1.6)));
+          FX.explode(p.x, p.y, perfect ? CONFIG.colors.perfect : CONFIG.colors.bomber, perfect ? 1.95 : 1.5);
+          addFloater(p.x, p.y - 22, perfect ? "DETONATE!" : "SMACK!", perfect, perfect ? CONFIG.colors.perfect : CONFIG.colors.bomber);
+          hitStop = CONFIG.hitStop.big; addShake(CONFIG.juice.shakeBig); addZoom(CONFIG.juice.zoomBig);
+          addFlash(CONFIG.juice.flashParry * (perfect ? 1.3 : 0.8)); SFX.boom();
+          addStyle(perfect ? "parry" : "deflect");
+          if (perfect) {
+            Backdrop.flare(p.x, p.y, CONFIG.colors.perfect, 520, 0.6); triggerSlowmo();
+            fire(run.mods.onParry, makeEv(p.x, p.y, null));
+            if (run.mods.parryGuard) player.guardT = CONFIG.resilience.parryGuardTime;   // Riposte
+          }
+          continue;
+        }
         if (blade.tipSpeed >= CONFIG.blade.deflectMinSpeed) {
           // full counter: swinging straight back at the incoming shot lowers the
           // perfect-parry threshold (dot of swing dir vs the shot's reverse dir)

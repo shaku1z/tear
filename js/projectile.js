@@ -143,6 +143,33 @@ class Projectile {
       ctx.beginPath(); ctx.arc(this.x, this.y - 1, 2.5, 0, Math.PI * 2); ctx.fill();
       return;
     }
+    if (this.bomb && !this.deflected) {    // lobbed bomb: impact-shadow telegraph + danger ring + sputtering fuse
+      const gy = CONFIG.world.groundY, t = performance.now();
+      // ground shadow under the bomb — grows as it falls, telegraphing the danger zone
+      const fall = clamp(1 - (gy - this.y) / 460, 0.25, 1);
+      ctx.save(); ctx.globalAlpha = 0.16; ctx.fillStyle = "#000";
+      ctx.beginPath(); ctx.ellipse(this.x, gy - 3, 24 * fall, 6 * fall, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      // pulsing danger ring
+      const pulse = 0.5 + 0.5 * Math.sin(t / 110);
+      ctx.save(); if (!lowG) { ctx.shadowColor = C.bomber; ctx.shadowBlur = 9; }
+      ctx.strokeStyle = C.bomber; ctx.globalAlpha = 0.32 + 0.28 * pulse; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(this.x, this.y, this.r + 6 + 3 * pulse, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+      // body: dark sphere with a bomber-orange rim + seam
+      ctx.save(); if (!lowG) { ctx.shadowColor = C.bomber; ctx.shadowBlur = dark ? 12 : 7; }
+      ctx.fillStyle = C.bomber; ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0; ctx.strokeStyle = ink; ctx.lineWidth = 2; ctx.stroke();
+      ctx.globalAlpha = 0.45; ctx.lineWidth = 1; ctx.beginPath();
+      ctx.moveTo(this.x - this.r, this.y); ctx.lineTo(this.x + this.r, this.y);
+      ctx.moveTo(this.x, this.y - this.r); ctx.lineTo(this.x, this.y + this.r); ctx.stroke(); ctx.restore();
+      // sputtering fuse spark on top
+      const fy = this.y - this.r - 5, fl = 0.55 + 0.45 * Math.sin(t / 38);
+      ctx.save(); ctx.strokeStyle = ink; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(this.x, this.y - this.r); ctx.lineTo(this.x, fy); ctx.stroke();
+      if (!lowG) { ctx.shadowColor = "#ffd23e"; ctx.shadowBlur = 10; }
+      ctx.globalAlpha = fl; ctx.fillStyle = (Math.floor(t / 60) % 2) ? "#ffd23e" : "#ff8a1e";
+      ctx.beginPath(); ctx.arc(this.x, fy, 2.5 + 1.6 * fl, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      return;
+    }
 
     // --- generic shot: an oriented body with a comet trail, hot core, and soft glow ---
     const col = this.deflected ? (this.perfect ? C.perfect : C.deflected) : (this.tint || (this.bomb ? C.bomber : C.enemyShot));
