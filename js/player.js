@@ -40,7 +40,10 @@ class Player {
     this.lastTrickT = 0;        // ...and when (so the Echo can detect a NEW trick)
     this.tempoT = 0;            // Tempo: damage+haste buff window after a perfect parry
     this.tempoStk = 1;          // ...stacks (Tempo T2)
-    this.revives = 0;           // Second Wind (shop): revives left this run
+    // extra lives — three DISTINCT pools, consumed in this order on a killing blow:
+    this.shopRevives = 0;       // 1) Second Wind (shop upgrade)
+    this.abilityRevives = 0;    // 2) Last Stand (draftable ability)
+    // 3) the CrazyGames rewarded-ad revive (handled by the continue flow)
   }
 
   get invulnerable() { return this.iframe > 0 || this.dashIframe > 0; }

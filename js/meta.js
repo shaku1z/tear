@@ -49,5 +49,5 @@ const SHOP = [
   { id: "lifeline", name: "Lifeline", desc: "Recover +5 HP on each wave clear per level.", baseCost: 270, costMult: 1.5, maxLevel: 4,
     apply: (lv, { mods }) => { if (mods) mods.waveHeal += 5 * lv; } },
   { id: "phoenix", name: "Second Wind", desc: "Once per run, revive with 35% HP when you would fall.", baseCost: 850, maxLevel: 1,
-    apply: (lv, { player }) => { player.revives = lv; } },
+    apply: (lv, { player }) => { player.shopRevives += lv; } },
 ];

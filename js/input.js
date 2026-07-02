@@ -15,7 +15,7 @@ const Input = {
 
   init(canvas) {
     window.addEventListener("keydown", (e) => {
-      if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
+      if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab"].includes(e.code)) e.preventDefault();
       if (!this.held.has(e.code)) this.pressed.add(e.code);
       this.held.add(e.code);
     });

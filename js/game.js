@@ -253,29 +253,88 @@
   // Detection rides the existing trick pipeline (addStyle kinds) plus a little polling;
   // dummies are real enemies kept permanently stunned so launches/juggles/slams all work.
   const TUT = {
-    active: false, idx: 0, doneT: 0, endT: 0, n: {},
+    active: false, idx: 0, doneT: 0, endT: 0, n: {}, ghost: null, gT: 0,
     _prevGround: true, _prevBlade: "held",
     steps: [
       { t: "MOVE", d: "A / D to run. Warm up — move both ways.", ok: () => TUT.n.moveL > 25 && TUT.n.moveR > 25 },
       { t: "JUMP", d: "W or Space to jump (hold S on a ledge to drop through). Jump twice.", ok: () => (TUT.n.jump || 0) >= 2 },
       { t: "DASH", d: "Shift to dash — steer it mid-flight with W / A / S / D. Dash twice.", ok: () => (TUT.n.dash || 0) >= 2 },
-      { t: "CUT", d: "Your blade follows the mouse — SPEED IS DAMAGE. Slash the dummy 3 times, fast.", need: 1, ok: () => (TUT.n.hit || 0) >= 3 },
+      { t: "CUT", d: "Your blade follows the mouse — SPEED IS DAMAGE. Slash the dummy 3 times, fast.", need: 1, ok: () => (TUT.n.strike || 0) >= 3 },
       { t: "LAUNCH", d: "A fast UPWARD swing pops an enemy into the air.", need: 1, ok: () => (TUT.n.launch || 0) >= 1 },
-      { t: "JUGGLE", d: "Launch it — then keep cutting it before it lands. 3 airborne hits.", need: 1, ok: () => (TUT.n.airHit || 0) >= 3 },
-      { t: "SLAM", d: "While airborne, strike DOWN through an enemy — a slam hits harder.", need: 1, ok: () => (TUT.n.slam || 0) >= 1 },
+      { t: "JUGGLE", d: "Launch it — then cut it again before it lands. 2 airborne hits.", need: 1, ok: () => (TUT.n.airHit || 0) >= 2 },
+      { t: "SLAM", d: "While airborne, strike DOWN through an enemy — a slam hits harder.", need: 1, ok: () => (TUT.n.slam || 0) >= 1 || (TUT.n.superslam || 0) >= 1 },
       { t: "POWER SLAM", d: "Dash DOWN to fall fast, then slam mid-fall — a fast descent hits far harder.", need: 1, ok: () => (TUT.n.superslam || 0) >= 1 },
       { t: "UPDRAFT", d: "Launch WHILE RISING (jump or dash up first) for a heavy updraft.", need: 1, ok: () => (TUT.n.updraft || 0) >= 1 },
       { t: "THROW", d: "Right-click to hurl the blade through an enemy, right-click again to recall it. Land a throw, then recall.", need: 1, ok: () => (TUT.n.throwHit || 0) >= 1 && (TUT.n.recall || 0) >= 1 },
       { t: "PARRY", d: "Swing FAST through an incoming shot to send it back — a perfect parry homes it into the shooter.", ranged: true, ok: () => (TUT.n.parry || 0) >= 1 || (TUT.n.deflect || 0) >= 2 },
       { t: "READY", d: "That's the whole blade. Cut clean. Keep moving. The Tear awaits.", final: true, ok: () => false },
     ],
-    start() { this.active = true; this.idx = 0; this.doneT = 0; this.endT = 0; this.n = {}; },
-    stop() { this.active = false; },
+    start() {
+      this.active = true; this.idx = 0; this.doneT = 0; this.endT = 0; this.n = {}; this.gT = 0;
+      // the GHOST demonstrator: a translucent real Player + Blade acting out each lesson
+      const anchor = W * 0.18;
+      const gp = new Player(anchor, CONFIG.world.groundY - 60);
+      const ai = { left: false, right: false, up: false, down: false, _dash: false, _jump: false };
+      gp.aiInput = {
+        left: () => ai.left, right: () => ai.right, up: () => ai.up, down: () => ai.down,
+        dashPressed: () => { const v = ai._dash; ai._dash = false; return v; },
+        jumpPressed: () => { const v = ai._jump; ai._jump = false; return v; },
+      };
+      const gb = new Blade();
+      gb.aimOverride = { x: anchor + 80, y: CONFIG.world.groundY - 80 };
+      this.ghost = { p: gp, b: gb, ai, anchor, tgt: { x: anchor + 185, y: CONFIG.world.groundY - 42 } };
+    },
+    stop() { this.active = false; this.ghost = null; },
     mark(k) { if (this.active) this.n[k] = (this.n[k] || 0) + 1; },
     step() { return this.steps[this.idx]; },
+    // the ghost acts out the current lesson on a short loop
+    _ghostUpdate(dt) {
+      const g = this.ghost; if (!g) return;
+      const L = 2.8; this.gT += dt;
+      if (this.gT >= L) { this.gT = 0; g.p.x = g.anchor; g.p.y = CONFIG.world.groundY - 60; g.p.vx = 0; g.p.vy = 0; g.p.dashCharges = g.p.maxDashCharges; g.p.dashCd = 0; }
+      const gt = this.gT, ai = g.ai, hand = { x: g.p.x, y: g.p.y - g.p.hh * 0.2 };
+      ai.left = ai.right = ai.up = ai.down = false;
+      const baseAng = Math.atan2(g.tgt.y - hand.y, g.tgt.x - hand.x);
+      let ang = baseAng;   // rest: track the practice target
+      const sweep = (from, to, t0, t1) => { if (gt >= t0 && gt < t1) ang = from + (to - from) * ((gt - t0) / (t1 - t0)); };
+      switch (this.step().t) {
+        case "MOVE": if (gt < 1.2) ai.right = true; else ai.left = true; break;
+        case "JUMP": if (gt < 0.06 || (gt > 1.4 && gt < 1.46)) ai._jump = true; break;
+        case "DASH": if (gt < 0.06) { ai.right = true; ai._dash = true; } else if (gt > 1.4 && gt < 1.46) { ai.left = true; ai._dash = true; } break;
+        case "CUT": sweep(baseAng - 1.1, baseAng + 1.1, 0.5, 0.68); sweep(baseAng + 1.1, baseAng - 1.1, 1.3, 1.48); sweep(baseAng - 1.1, baseAng + 1.1, 2.1, 2.28); break;
+        case "LAUNCH": sweep(0.9, -1.7, 0.8, 1.0); break;
+        case "JUGGLE": sweep(0.9, -1.7, 0.4, 0.6); sweep(-0.4, -2.2, 1.1, 1.28); sweep(-2.2, -0.4, 1.8, 1.98); break;
+        case "SLAM": if (gt > 0.3 && gt < 0.36) ai._jump = true; sweep(-0.6, 2.1, 0.75, 0.95); break;
+        case "POWER SLAM": if (gt > 0.2 && gt < 0.26) ai._jump = true; if (gt > 0.55 && gt < 0.61) { ai.down = true; ai._dash = true; } sweep(-0.4, 2.2, 0.7, 0.88); break;
+        case "UPDRAFT": if (gt > 0.3 && gt < 0.36) ai._jump = true; sweep(1.0, -1.9, 0.45, 0.62); break;
+        case "THROW": sweep(baseAng - 0.5, baseAng + 0.5, 0.6, 0.75); sweep(baseAng + 0.5, baseAng - 0.5, 1.6, 1.75); break;
+        case "PARRY": sweep(baseAng + 1.0, baseAng - 1.0, 0.5, 0.62); sweep(baseAng - 1.0, baseAng + 1.0, 1.5, 1.62); break;
+      }
+      const R = CONFIG.blade.aimRadius;
+      g.b.aimOverride.x = hand.x + Math.cos(ang) * R;
+      g.b.aimOverride.y = hand.y + Math.sin(ang) * R;
+      g.p.update(dt, platforms);
+      g.b.update(dt, g.p, platforms);
+    },
+    // translucent render: the ghost + its practice target, clearly not "real"
+    drawGhost(ctx) {
+      const g = this.ghost; if (!g || this.step().final) return;
+      ctx.save(); ctx.globalAlpha = 0.30;
+      // practice target (a phantom dummy the ghost cuts through)
+      ctx.fillStyle = CONFIG.colors.charger;
+      ctx.fillRect(g.tgt.x - 17, g.tgt.y - 22, 34, 44);
+      ctx.strokeStyle = THEME.ink; ctx.lineWidth = 2.5; ctx.strokeRect(g.tgt.x - 17, g.tgt.y - 22, 34, 44);
+      g.p.draw(ctx);
+      g.b.draw(ctx, g.p);
+      ctx.restore();
+      ctx.save(); ctx.globalAlpha = 0.5;
+      UI.tag(ctx, "GHOST", g.p.x, g.p.y - g.p.hh - 14, CONFIG.colors.perfect, "center", UI.t.type.micro);
+      ctx.restore();
+    },
     update(dt) {
       if (!this.active) return;
       const s = this.step();
+      this._ghostUpdate(dt);
       // polling detections
       if (Input.left()) this.n.moveL = (this.n.moveL || 0) + dt * 60;
       if (Input.right()) this.n.moveR = (this.n.moveR || 0) + dt * 60;
@@ -285,14 +344,14 @@
       if (player.dashTimer <= 0) this._dashed = false;
       if (this._prevBlade === "returning" && blade.state === "held") this.mark("recall");
       this._prevBlade = blade.state;
-      // keep the practice dummies stocked + docile (stunned, near-immortal)
+      // keep the practice dummies stocked + harmless (stunned, no contact damage, tanky)
       if (s.need) {
         let dummies = 0;
-        for (const e of enemies) if (e.tutDummy && !e.dead) { dummies++; e.stun = Math.max(e.stun, 1); if (e.hp < e.maxHp * 0.3) e.hp = e.maxHp; }
+        for (const e of enemies) if (e.tutDummy && !e.dead) { dummies++; e.stun = Math.max(e.stun, 1); if (e.hp < e.maxHp * 0.5) e.hp = e.maxHp; }
         if (dummies < s.need) {
-          spawnOne({ type: "charger", hpScale: 6 });
+          spawnOne({ type: "charger", hpScale: 8 });
           const e = enemies[enemies.length - 1];
-          if (e) { e.tutDummy = true; e.affixCount = 0; e.x = clamp(player.x + (player.facing || 1) * 260, 120, W - 120); e.y = CONFIG.world.groundY - e.hh; }
+          if (e) { e.tutDummy = true; e.affixCount = 0; e.contactDmg = 0; e.x = clamp(player.x + (player.facing || 1) * 260, 160, W - 160); e.y = CONFIG.world.groundY - e.hh; }
         }
       }
       if (s.ranged) {   // the parry teacher: one live ranged shooter
@@ -303,7 +362,7 @@
       // completion -> a beat, then the next lesson
       if (this.doneT > 0) {
         this.doneT -= dt;
-        if (this.doneT <= 0) { this.idx = Math.min(this.idx + 1, this.steps.length - 1); this.n.airHit = 0; }
+        if (this.doneT <= 0) { this.idx = Math.min(this.idx + 1, this.steps.length - 1); this.n.airHit = 0; this.n.strike = 0; this.gT = 0; }
       } else if (s.final) {
         this.endT += dt;
         if (this.endT > 5) { this.stop(); state = "menu"; document.exitPointerLock(); }
@@ -313,7 +372,11 @@
 
   // ---- PLAYGROUND: an open arena with everything on tap (keyboard-driven) ----
   const PG_KINDS = ["charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera", "priest"];
+  const PG_ALL_KINDS = ["charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera", "priest", "herald", "mender", "anchor"];
   function stepPlayground() {
+    const pg = run.pg || (run.pg = { god: false, freeze: false, slow: false });
+    if (pg.god && player.hp < player.maxHp) player.hp = player.maxHp;   // god mode: wounds seal instantly
+    if (Input.pressed.has("Tab")) { state = "pgmenu"; document.exitPointerLock(); return; }   // the spawn menu
     for (let i = 0; i < PG_KINDS.length; i++) {
       if (Input.pressed.has("Digit" + (i + 1))) {
         spawnOne({ type: PG_KINDS[i] });
@@ -332,6 +395,43 @@
       if (ups.length) { tierChoices = ups.slice(0, 3); state = "tierup"; document.exitPointerLock(); }
       else addFloater(player.x, player.y - 60, "no ability to evolve — U first", false, "#888");
     }
+  }
+
+  // the GMod-style spawn menu: everything on tap, world frozen behind a dim
+  function renderPgMenu() {
+    const t = UI.t, pg = run.pg;
+    UI.dim(ctx, W, H, 0.86);
+    UI.title(ctx, "SPAWN MENU", W / 2, 96, t.type.h1);
+    UI.text(ctx, "Tab / Esc to resume — the arena is frozen while you build the scene", W / 2, 126, t.type.caption, "center", t.alpha.muted);
+    const fx = W / 2 - 560, colW = 1120;
+    // enemies
+    UI.tag(ctx, "ENEMIES", fx, 168, t.color.accent, "left", t.type.micro);
+    const bw = 176, bh = 44, gap = 12;
+    PG_ALL_KINDS.forEach((k, i) => {
+      const cx = fx + (i % 6) * (bw + gap), cy = 184 + Math.floor(i / 6) * (bh + gap);
+      uiButtons.push({ x: cx, y: cy, w: bw, h: bh, size: 14, label: k.toUpperCase(), action: () => { spawnOne({ type: k }); SFX.ui(); } });
+    });
+    // bosses
+    UI.tag(ctx, "BOSSES", fx, 320, t.color.accent, "left", t.type.micro);
+    BOSS_ROSTER.forEach((b, i) => {
+      uiButtons.push({ x: fx + i * (218 + 12), y: 336, w: 218, h: bh, size: 14, label: b.name.toUpperCase(),
+        action: () => { run.curBoss = b.id; spawnOne({ type: "boss" }); SFX.ui(); } });
+    });
+    // toggles
+    UI.tag(ctx, "TOGGLES", fx, 424, t.color.accent, "left", t.type.micro);
+    const tog = (i, label, sel, action) => uiButtons.push({ x: fx + i * (270 + 12), y: 440, w: 270, h: bh, size: 14, label, sel, action });
+    tog(0, "GOD MODE" + (pg.god ? ": ON" : ""), pg.god, () => { pg.god = !pg.god; });
+    tog(1, "FREEZE ENEMIES" + (pg.freeze ? ": ON" : ""), pg.freeze, () => { pg.freeze = !pg.freeze; });
+    tog(2, "SLOW MOTION" + (pg.slow ? ": ON" : ""), pg.slow, () => { pg.slow = !pg.slow; });
+    tog(3, "ONE-HIT" + (player.oneHit ? ": ON" : ""), player.oneHit, () => { player.oneHit = !player.oneHit; });
+    // actions
+    UI.tag(ctx, "ACTIONS", fx, 528, t.color.accent, "left", t.type.micro);
+    const act = (i, label, action) => uiButtons.push({ x: fx + i * (270 + 12), y: 544, w: 270, h: bh, size: 14, label, action });
+    act(0, "CLEAR ENEMIES", () => { for (const e of enemies) e.dead = true; projectiles.length = 0; SFX.ui(); });
+    act(1, "FULL HEAL", () => { player.hp = player.maxHp; SFX.ui(); });
+    act(2, "PICK AN ABILITY", () => { draftChoices = buildDraft(); state = "draft"; });
+    act(3, "EVOLVE ABILITY", () => { const ups = availableTierUps(run.mods); if (ups.length) { tierChoices = ups.slice(0, 3); state = "tierup"; } });
+    uiButtons.push({ x: W / 2 - 150, y: 632, w: 300, h: 52, label: "RESUME", action: () => { state = "playing"; requestLock(); } });
   }
 
   function addStyle(kind) {
@@ -473,7 +573,7 @@
         { x: W * 0.62, y: 430, w: 260, h: 24, oneway: true },
       ];
       run.wave = 1; run.waveActive = false;
-      if (mode === "playground") { run.bossOrder = shuffledRoster(); run.bossIdx = 0; }
+      if (mode === "playground") { run.bossOrder = shuffledRoster(); run.bossIdx = 0; run.pg = { god: false, freeze: false, slow: false }; }
       if (mode === "tutorial") TUT.start();
     } else startNextWave();
     if (mode === "campaign") showLore(CAMPAIGN_INTRO, "THE TEAR", 11);   // the opening beat
@@ -965,6 +1065,21 @@
     updateWave(dt);
     for (const e of enemies) {
       if (e.spawnT > 0) { e.spawnT -= dt; continue; }   // materializing: hold still
+      if (run.pg && run.pg.freeze) continue;             // playground: enemies as statues
+      if (e.tutDummy) {
+        // tutorial dummy: a physics-only puppet. The plain stun path skips update entirely
+        // (no gravity, hitCd never ticks), which froze launches and swallowed repeat hits —
+        // so dummies tick their timers and integrate, but never think or attack.
+        e.tickTimers(dt);
+        e.stun = 1;
+        e.vy = (e.vy || 0) + CONFIG.world.gravity * dt;
+        e.x += (e.vx || 0) * dt; e.y += e.vy * dt;
+        e.vx = (e.vx || 0) * Math.max(0, 1 - 4 * dt);
+        const fy = CONFIG.world.groundY - e.hh;
+        if (e.y >= fy) { e.y = fy; e.vy = 0; e.vx *= 0.85; }
+        e.x = clamp(e.x, e.hw, W - e.hw);
+        continue;
+      }
       if (e.stun > 0) { e.stun -= dt; continue; }        // stunned (hammer lob / guard break): frozen
       e.update(dt, platforms, player, projectiles);
     }
@@ -1118,6 +1233,7 @@
           if (big) addZoom(CONFIG.juice.zoomBig);
           SFX.hit(big); if (isSlam) SFX.slam(); else if (empowered) SFX.updraft(); else if (isLaunch) SFX.launch();
           addStyle(isSlam ? (empSlam ? "superslam" : "slam") : (empowered ? "updraft" : (isLaunch ? "launch" : "hit")));
+          TUT.mark("strike");   // tutorial: ANY melee strike counts as a cut (whatever it classified as)
           if (e.y < CONFIG.world.groundY - e.hh - 14) TUT.mark("airHit");   // tutorial: a juggled (airborne) cut
           fire(run.mods.onHit, makeEv(cp.px, cp.py, e));
           if (isSlam) fire(run.mods.onSlam, makeEv(e.x, e.y, e));
@@ -1407,13 +1523,20 @@
         player.hp = player.maxHp; player.iframe = 2;
         addFloater(player.x, player.y - 44, "RESET", true, CONFIG.colors.perfect);
         FX.ring(player.x, player.y, 14, CONFIG.colors.perfect);
-      } else if (player.revives > 0 && !player.oneHit) {   // Second Wind (shop): rise once more
-        player.revives--; player.hp = Math.round(player.maxHp * 0.35); player.iframe = 1.6;
+      } else if (player.shopRevives > 0 && !player.oneHit) {
+        // extra life #1 — Second Wind (shop upgrade)
+        player.shopRevives--; player.hp = Math.round(player.maxHp * 0.35); player.iframe = 1.6;
         FX.ring(player.x, player.y, 16, CONFIG.colors.perfect); FX.burst(player.x, player.y, 0, -1, 16, CONFIG.colors.perfect);
         addFloater(player.x, player.y - 44, "SECOND WIND", true, CONFIG.colors.perfect);
         addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry); SFX.parry();
+      } else if (player.abilityRevives > 0 && !player.oneHit) {
+        // extra life #2 — Last Stand (draftable ability): a defiant, hotter rise
+        player.abilityRevives--; player.hp = Math.round(player.maxHp * 0.40); player.iframe = 2.0;
+        FX.explode(player.x, player.y, CONFIG.colors.charger, 1.1);
+        addFloater(player.x, player.y - 44, "LAST STAND", true, CONFIG.colors.charger);
+        addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry); SFX.counter();
       } else if (CG.adsAvailable() && !run.adRevived && !player.oneHit) {
-        // CrazyGames: offer a one-time "watch an ad to revive" before the run ends
+        // extra life #3 — the CrazyGames rewarded-ad revive (the continue flow)
         state = "continue"; continueT = 8; document.exitPointerLock();
       } else { endRun(); return; }
     }
@@ -1458,6 +1581,7 @@
       // feel timers run in real time
       if (slowmo > 0) { slowmo -= dt; timeScale = CONFIG.juice.parrySlowScale; }
       else timeScale = lerp(timeScale, 1, clamp(8 * dt, 0, 1));
+      if (run && run.pg && run.pg.slow) timeScale = Math.min(timeScale, 0.35);   // playground slow-mo toggle
       zoom = lerp(zoom, 1, clamp(9 * dt, 0, 1));
       if (flash > 0) flash = Math.max(0, flash - dt * 3.2);
       if (bannerT > 0) bannerT -= dt;
@@ -1474,6 +1598,8 @@
       else { acc += dt * timeScale; while (acc >= STEP && state === "playing") { stepPlaying(STEP); acc -= STEP; } }
     } else {
       acc = 0; wasLocked = false;
+      // spawn menu: Tab or Esc drops straight back into the action
+      if (state === "pgmenu" && (Input.pressed.has("Tab") || Input.escapePressed())) { state = "playing"; requestLock(); }
     }
     uiT += dt; enterT += dt; lastUiDt = dt;   // menu animation clocks
     if (state === "win") winT += dt; else winT = 0;   // ending cinematic clock
@@ -1590,7 +1716,7 @@
     ctx.setTransform(vs, 0, 0, vs, OVERSCAN.x * vs, OVERSCAN.y * vs);
     const SR = screenRect();
     ctx.clearRect(SR.x, SR.y, SR.w, SR.h);
-    const playLike = state === "playing" || state === "draft" || state === "tierup" || state === "paused" || state === "gameover" || state === "win" || state === "confirmquit" || state === "continue";
+    const playLike = state === "playing" || state === "draft" || state === "tierup" || state === "paused" || state === "gameover" || state === "win" || state === "confirmquit" || state === "continue" || state === "pgmenu";
     // biome background (campaign + endless tint the world; menus stay white)
     const biomeMode = !!(run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly" || run.mode === "gauntlet" || run.mode === "tutorial" || run.mode === "playground"));
     let bgCol = (playLike && biomeMode) ? currentStage.bg : "#fff";
@@ -1665,6 +1791,7 @@
       else if (state === "gameover") renderGameover();
       else if (state === "win") renderWin();
       else if (state === "continue") renderContinue();
+      else if (state === "pgmenu") renderPgMenu();
       if (state !== "playing" && state !== "draft") drawButtons();
     }
 
@@ -1824,6 +1951,7 @@
       }
     }
     for (const p of projectiles) p.draw(ctx);
+    if (run && run.mode === "tutorial" && TUT.active) TUT.drawGhost(ctx);   // the translucent demonstrator
     if (player) player.draw(ctx);
     if (blade) blade.draw(ctx, player);
     FX.draw(ctx);
@@ -1949,39 +2077,59 @@
     }
   }
 
-  // the tutorial's lesson card: frosted, accent-striped, with a ✓ beat on completion
-  function drawTutorialCard() {
-    const t = UI.t, s = TUT.step(), cw = 780, cx = W / 2 - cw / 2, cy = 24, ch = 96;
-    ctx.save();
-    ctx.globalAlpha = 0.82; ctx.fillStyle = t.color.paper; ctx.fillRect(cx, cy, cw, ch);
-    ctx.globalAlpha = 0.5; ctx.strokeStyle = THEME.ink; ctx.lineWidth = 1.5; ctx.strokeRect(cx, cy, cw, ch);
-    ctx.globalAlpha = 1; ctx.fillStyle = t.color.accent; ctx.fillRect(cx, cy, cw, 3);
-    ctx.fillStyle = "#000";
-    UI.tag(ctx, "LESSON " + (TUT.idx + 1) + " / " + TUT.steps.length, cx + 18, cy + 26, t.color.accent, "left", t.type.micro);
-    ctx.font = UI.font(t.type.title, true); ctx.textAlign = "left";
-    ctx.fillText(s.t, cx + 18, cy + 54);
-    ctx.font = UI.font(t.type.caption, false); ctx.fillStyle = "rgba(0,0,0,0.75)";
-    ctx.fillText(s.d, cx + 18, cy + 78);
-    if (TUT.doneT > 0) {   // the ✓ beat
-      ctx.font = UI.font(44, true); ctx.fillStyle = t.color.accent; ctx.textAlign = "right";
-      ctx.fillText("✓", cx + cw - 20, cy + 62);
+  // left-aligned word wrap for the card bodies (wrapText is centre-aligned)
+  function wrapLeft(text, x, y, maxW, lh, size, col) {
+    ctx.font = UI.font(size, false); ctx.textAlign = "left"; ctx.fillStyle = col || "#000";
+    const words = text.split(" "); let line = "", yy = y;
+    for (const w of words) {
+      const test = line ? line + " " + w : w;
+      if (ctx.measureText(test).width > maxW && line) { ctx.fillText(line, x, yy); line = w; yy += lh; }
+      else line = test;
     }
-    if (s.final) { ctx.font = UI.font(t.type.micro, true); ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.textAlign = "right"; ctx.fillText("returning to the menu…", cx + cw - 16, cy + 26); }
+    if (line) ctx.fillText(line, x, yy);
+    return yy;
+  }
+
+  // the tutorial's lesson card — docked TOP-RIGHT (clear of the vitals), with lesson
+  // progress dots, a wrapped body, and a ✓ beat on completion
+  function drawTutorialCard() {
+    const t = UI.t, s = TUT.step(), cw = 700, cx = W - cw - 28, cy = 24, ch = 118;
+    ctx.save();
+    ctx.globalAlpha = 0.86; ctx.fillStyle = t.color.paper; ctx.fillRect(cx, cy, cw, ch);
+    ctx.globalAlpha = 0.45; ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.strokeRect(cx, cy, cw, ch);
+    ctx.globalAlpha = 1; ctx.fillStyle = t.color.accent; ctx.fillRect(cx, cy, 4, ch);   // accent spine
+    UI.tag(ctx, "LESSON " + (TUT.idx + 1) + " / " + TUT.steps.length, cx + 20, cy + 24, t.color.accent, "left", t.type.micro);
+    ctx.fillStyle = "#000"; ctx.font = UI.font(t.type.title, true); ctx.textAlign = "left";
+    ctx.fillText(s.t, cx + 20, cy + 52);
+    wrapLeft(s.d, cx + 20, cy + 76, cw - 110, 19, t.type.caption, "rgba(0,0,0,0.75)");
+    // progress dots along the card's bottom edge
+    for (let i = 0; i < TUT.steps.length; i++) {
+      const dx = cx + 20 + i * 18;
+      ctx.beginPath(); ctx.arc(dx, cy + ch - 13, 4, 0, 6.2832);
+      if (i < TUT.idx) { ctx.fillStyle = t.color.accent; ctx.fill(); }
+      else if (i === TUT.idx) { ctx.fillStyle = "#000"; ctx.fill(); }
+      else { ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.lineWidth = 1.5; ctx.stroke(); }
+    }
+    if (TUT.doneT > 0) {   // the ✓ beat
+      ctx.font = UI.font(46, true); ctx.fillStyle = t.color.accent; ctx.textAlign = "right";
+      ctx.fillText("✓", cx + cw - 22, cy + 66);
+    }
+    if (s.final) { ctx.font = UI.font(t.type.micro, true); ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.textAlign = "right"; ctx.fillText("returning to the menu…", cx + cw - 16, cy + 24); }
     ctx.restore();
     ctx.textAlign = "left";
   }
 
-  // the playground's key legend
+  // the playground's legend — docked TOP-RIGHT (clear of the vitals), two tidy key rows
   function drawPlaygroundHelp() {
-    const t = UI.t, cw = 900, cx = W / 2 - cw / 2, cy = 24, ch = 64;
+    const t = UI.t, cw = 700, cx = W - cw - 28, cy = 24, ch = 92;
     ctx.save();
-    ctx.globalAlpha = 0.78; ctx.fillStyle = t.color.paper; ctx.fillRect(cx, cy, cw, ch);
-    ctx.globalAlpha = 0.5; ctx.strokeStyle = THEME.ink; ctx.lineWidth = 1.5; ctx.strokeRect(cx, cy, cw, ch);
-    ctx.globalAlpha = 1; ctx.fillStyle = t.color.accent; ctx.fillRect(cx, cy, cw, 3);
-    ctx.fillStyle = "#000"; ctx.font = UI.font(t.type.label, true); ctx.textAlign = "center";
-    ctx.fillText("PLAYGROUND", W / 2, cy + 24);
-    ctx.font = UI.font(t.type.caption, false); ctx.fillStyle = "rgba(0,0,0,0.7)";
-    ctx.fillText("1–8 spawn enemies  ·  B boss  ·  K clear  ·  H heal  ·  U pick an ability  ·  G evolve it  ·  P pause", W / 2, cy + 48);
+    ctx.globalAlpha = 0.84; ctx.fillStyle = t.color.paper; ctx.fillRect(cx, cy, cw, ch);
+    ctx.globalAlpha = 0.45; ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.strokeRect(cx, cy, cw, ch);
+    ctx.globalAlpha = 1; ctx.fillStyle = t.color.accent; ctx.fillRect(cx, cy, 4, ch);
+    UI.tag(ctx, "PLAYGROUND", cx + 20, cy + 24, t.color.accent, "left", t.type.micro);
+    ctx.fillStyle = "rgba(0,0,0,0.78)"; ctx.font = UI.font(t.type.caption, false); ctx.textAlign = "left";
+    ctx.fillText("TAB spawn menu   ·   1–8 quick-spawn   ·   B boss   ·   K clear", cx + 20, cy + 50);
+    ctx.fillText("H heal   ·   U pick an ability   ·   G evolve it   ·   P pause", cx + 20, cy + 74);
     ctx.restore();
     ctx.textAlign = "left";
   }

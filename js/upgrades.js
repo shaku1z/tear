@@ -207,6 +207,9 @@ const UPGRADES = [
   { id: "berserk", name: "Berserker", unique: true, cat: "offense",
     desc: "+25% damage while below half HP.",
     apply: ({ mods }) => { mods.berserk = true; } },
+  { id: "last_stand", name: "Last Stand", unique: true, rare: true, cat: "resilience",
+    desc: "Once per run, refuse to fall — rise from a killing blow with 40% HP.",
+    apply: ({ player }) => { player.abilityRevives += 1; } },
 
   // ===== more stackable upgrades — keep every category at 4+ =====
   { id: "whetstone", name: "Whetstone", unique: false, cat: "throw", desc: "The RETURNING blade (recall) cuts +25% harder — make the catch a finisher.",
