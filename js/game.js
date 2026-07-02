@@ -1379,34 +1379,76 @@
   // old scene is snapshotted and then sliced away along a sweeping diagonal seam with a
   // glowing cyan edge — the game's signature slash, instead of a hard palette snap.
   const Wipe = {
-    t: 0, dur: 0.9, snap: null,
+    t: 0, dur: 1.1, snap: null, parts: [],
     begin() {
       try {
         if (!this.snap) this.snap = document.createElement("canvas");
         this.snap.width = canvas.width; this.snap.height = canvas.height;
         this.snap.getContext("2d").drawImage(canvas, 0, 0);   // the frame still holds the OLD biome
-        this.t = this.dur;
+        this.t = this.dur; this.parts.length = 0;
       } catch (e) { this.t = 0; }
     },
     draw(dt) {
-      if (this.t <= 0 || !this.snap) return;
-      this.t -= dt;
-      const e = ez(1 - Math.max(this.t, 0) / this.dur);       // 0 -> 1 sweep
-      const bw = canvas.width, bh = canvas.height, slope = bw * 0.22;
-      const x = -slope + (bw + slope * 2) * e;                 // seam x along the top edge
-      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.beginPath();                                         // old scene survives RIGHT of the seam
-      ctx.moveTo(x, 0); ctx.lineTo(x - slope, bh); ctx.lineTo(bw, bh); ctx.lineTo(bw, 0); ctx.closePath();
-      ctx.clip(); ctx.drawImage(this.snap, 0, 0);
-      ctx.restore();
-      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.lineCap = "round";
+      const active = this.t > 0 && this.snap;
+      if (!active && !this.parts.length) return;
       const glow = !(typeof GFX !== "undefined" && GFX.low);
-      if (glow) { ctx.shadowColor = "#13c4d6"; ctx.shadowBlur = 26; }
-      ctx.strokeStyle = "rgba(19,196,214,0.85)"; ctx.lineWidth = Math.max(6, bw * 0.006);
-      ctx.beginPath(); ctx.moveTo(x, -20); ctx.lineTo(x - slope, bh + 20); ctx.stroke();
-      ctx.strokeStyle = "#eafcff"; ctx.lineWidth = Math.max(2, bw * 0.002); if (glow) ctx.shadowBlur = 14;
-      ctx.beginPath(); ctx.moveTo(x, -20); ctx.lineTo(x - slope, bh + 20); ctx.stroke();
-      ctx.restore();
+      const bw = canvas.width, bh = canvas.height, slope = bw * 0.22;
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+      if (active) {
+        this.t -= dt;
+        const k = 1 - Math.max(this.t, 0) / this.dur;          // raw progress
+        const e = ez(k);                                        // eased sweep
+        const x = -slope + (bw + slope * 2) * e;                // seam x along the top edge
+        // seam geometry: direction + the left-pointing normal (the revealed side)
+        const dlen = Math.hypot(slope, bh), nx = -bh / dlen, ny = -slope / dlen;
+        // 1) dissolve veil: the old biome lingers translucently over the WHOLE frame and
+        //    melts away as the seam sweeps — a blend, not just a hard slice
+        ctx.globalAlpha = Math.pow(1 - k, 1.6) * 0.45;
+        ctx.drawImage(this.snap, 0, 0);
+        ctx.globalAlpha = 1;
+        // 2) the old scene survives hard RIGHT of the seam
+        ctx.save(); ctx.beginPath();
+        ctx.moveTo(x, 0); ctx.lineTo(x - slope, bh); ctx.lineTo(bw, bh); ctx.lineTo(bw, 0); ctx.closePath();
+        ctx.clip(); ctx.drawImage(this.snap, 0, 0); ctx.restore();
+        // 3) luminous afterglow band trailing the seam on the revealed side
+        ctx.save(); ctx.beginPath();
+        ctx.moveTo(x, 0); ctx.lineTo(x - slope, bh); ctx.lineTo(-bw, bh); ctx.lineTo(-bw, 0); ctx.closePath();
+        ctx.clip();
+        const mx = x - slope / 2, my = bh / 2, bandW = bw * 0.09;
+        const bg = ctx.createLinearGradient(mx, my, mx + nx * bandW, my + ny * bandW);
+        bg.addColorStop(0, "rgba(19,196,214,0.30)"); bg.addColorStop(0.5, "rgba(19,196,214,0.08)"); bg.addColorStop(1, "rgba(19,196,214,0)");
+        ctx.fillStyle = bg;
+        if (glow) ctx.globalCompositeOperation = "lighter";
+        ctx.fillRect(0, 0, bw, bh);
+        ctx.restore();
+        // 4) the seam itself: a glowing cyan edge with a white-hot core
+        ctx.lineCap = "round";
+        if (glow) { ctx.shadowColor = "#13c4d6"; ctx.shadowBlur = 26; }
+        ctx.strokeStyle = "rgba(19,196,214,0.85)"; ctx.lineWidth = Math.max(6, bw * 0.006);
+        ctx.beginPath(); ctx.moveTo(x, -20); ctx.lineTo(x - slope, bh + 20); ctx.stroke();
+        ctx.strokeStyle = "#eafcff"; ctx.lineWidth = Math.max(2, bw * 0.002); if (glow) ctx.shadowBlur = 14;
+        ctx.beginPath(); ctx.moveTo(x, -20); ctx.lineTo(x - slope, bh + 20); ctx.stroke();
+        ctx.shadowBlur = 0;
+        // 5) sparks shed off the seam as it cuts
+        if (glow) for (let i = 0; i < 3; i++) {
+          const s = Math.random();
+          this.parts.push({ x: x - slope * s, y: bh * s, vx: nx * (80 + Math.random() * 220) - slope / dlen * 40 * (Math.random() - 0.5),
+            vy: ny * (80 + Math.random() * 220) + bh / dlen * 40 * (Math.random() - 0.5), life: 0.3 + Math.random() * 0.35, max: 0.65, w: 1.5 + Math.random() * 2.5 });
+        }
+        // 6) an opening flash beat, so the cut "hits"
+        if (k < 0.16) { ctx.globalAlpha = (1 - k / 0.16) * 0.22; ctx.fillStyle = "#eafcff"; ctx.fillRect(0, 0, bw, bh); ctx.globalAlpha = 1; }
+      }
+      // spark update + draw (device space; they outlive the sweep briefly)
+      if (glow) { ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round"; }
+      for (const p of this.parts) {
+        p.life -= dt; if (p.life <= 0) continue;
+        p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.94; p.vy *= 0.94;
+        ctx.globalAlpha = clamp(p.life / p.max, 0, 1);
+        ctx.strokeStyle = Math.random() < 0.4 ? "#eafcff" : "#13c4d6"; ctx.lineWidth = p.w;
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 0.03, p.y - p.vy * 0.03); ctx.stroke();
+      }
+      this.parts = this.parts.filter((p) => p.life > 0);
+      ctx.globalAlpha = 1; ctx.restore();
     },
   };
   Attract.onBiomeChange = () => Wipe.begin();   // the menu demo tears between biomes too
