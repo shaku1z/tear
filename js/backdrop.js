@@ -188,8 +188,8 @@ const BIOME_ART = {
     far(B, ctx, stage, c, t, px, gy) {
       B.ridge(ctx, gy, -px * 14, 70, 22, 0.005, 1.0, B._darken(stage.bg, 0.06), 0.5);
       ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = B._darken(stage.bg, 0.13);
-      const off = -px * 26, ch = 150, cw = 26, top = gy - ch;
-      for (let x = 130 - Math.ceil((B.PX + 175) / 175) * 175; x < B.W + B.PX; x += 175) { const cx = x + off; ctx.fillRect(cx, top, cw, ch); ctx.fillRect(cx - 6, top - 10, cw + 12, 12); ctx.fillRect(cx - 6, gy - 8, cw + 12, 8); }
+      const off = (-px * 26) % 175, ch = 150, cw = 26, top = gy - ch;   // wrap by the spacing: an endless colonnade under travel
+      for (let x = 130 - Math.ceil((B.PX + 350) / 175) * 175; x < B.W + B.PX + 175; x += 175) { const cx = x + off; ctx.fillRect(cx, top, cw, ch); ctx.fillRect(cx - 6, top - 10, cw + 12, 12); ctx.fillRect(cx - 6, gy - 8, cw + 12, 8); }
       ctx.restore();
     },
     motes(B, ctx, stage, c, t, px) { B.motes(ctx, c, t, px, { drift: 20, aMul: 0.8 }); },
@@ -205,13 +205,15 @@ const BIOME_ART = {
       ctx.fillStyle = fg; B.fillFull(ctx);
     },
     far(B, ctx, stage, c, t, px, gy) {
-      ctx.save(); const col = B._darken(stage.bg, 0.22), off = -px * 30;
+      ctx.save(); const col = B._darken(stage.bg, 0.22), off = (-px * 30) % 260;   // wrap: endless machinery under travel
       ctx.globalAlpha = 0.55; ctx.fillStyle = col;
-      for (let x = 60 - Math.ceil((B.PX + 260) / 260) * 260; x < B.W + B.PX; x += 260) { const cx = x + off; ctx.fillRect(cx, gy - 220, 70, 220); ctx.fillRect(cx - 30, gy - 150, 150, 18); }
+      for (let x = 60 - Math.ceil((B.PX + 520) / 260) * 260; x < B.W + B.PX + 260; x += 260) { const cx = x + off; ctx.fillRect(cx, gy - 220, 70, 220); ctx.fillRect(cx - 30, gy - 150, 150, 18); }
+      const poff = (-px * 30) % 700;
       ctx.lineWidth = 14; ctx.strokeStyle = col; ctx.beginPath();
-      ctx.moveTo(-20, gy - 90); ctx.lineTo(B.W * 0.4 + off, gy - 90); ctx.lineTo(B.W * 0.4 + off, gy - 210); ctx.stroke();
+      ctx.moveTo(-B.PX - 20, gy - 90); ctx.lineTo(B.W * 0.4 + poff, gy - 90); ctx.lineTo(B.W * 0.4 + poff, gy - 210); ctx.stroke();
       ctx.restore();
-      const gx = B.W * 0.82 - px * 20, gyy = gy - 190, R = 92;
+      const gspan = B.W + B.PX * 2 + 260;
+      const gx = ((B.W * 0.82 - px * 20) % gspan + gspan) % gspan - B.PX - 130, gyy = gy - 190, R = 92;
       ctx.save(); ctx.translate(gx, gyy); ctx.rotate(t * 0.2); ctx.globalAlpha = 0.5;
       ctx.fillStyle = B._darken(stage.bg, 0.28);
       for (let i = 0; i < 10; i++) { ctx.rotate(Math.PI * 2 / 10); ctx.fillRect(-10, R - 14, 20, 26); }
@@ -237,9 +239,9 @@ const BIOME_ART = {
     far(B, ctx, stage, c, t, px, gy) {
       B.ridge(ctx, gy, -px * 16, 130, 46, 0.004, 2.0, "rgba(90,30,38,0.6)", 1);
       B.ridge(ctx, gy, -px * 36, 80, 34, 0.006, 5.0, "rgba(60,18,28,0.7)", 1);
-      ctx.save(); const off = -px * 30;
-      for (let i = 0; i < 5; i++) {
-        const x = 200 + i * 300 + off, ph = i * 1.7, flick = 0.8 + 0.2 * Math.sin(t * 3 + ph);
+      ctx.save(); const off = (-px * 30) % 300;   // wrap: the banner line marches past under travel
+      for (let i = -1; i < 7; i++) {
+        const x = 200 + i * 300 + off, ph = ((i % 5) + 5) % 5 * 1.7, flick = 0.8 + 0.2 * Math.sin(t * 3 + ph);
         ctx.strokeStyle = "rgba(30,12,16,0.7)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x, gy); ctx.lineTo(x, gy - 150); ctx.stroke();
         ctx.fillStyle = `rgba(210,60,44,${0.55 * flick})`; ctx.beginPath();
         ctx.moveTo(x, gy - 150); ctx.lineTo(x + 50 + 8 * Math.sin(t * 2 + ph), gy - 140); ctx.lineTo(x + 44, gy - 118); ctx.lineTo(x + 52, gy - 100); ctx.lineTo(x, gy - 110); ctx.closePath(); ctx.fill();

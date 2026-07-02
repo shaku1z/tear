@@ -17,6 +17,7 @@ const Attract = {
   reset() {
     this.t = 0; this.biomeList = this._biomes(); this.biomePtr = Math.floor(Math.random() * this.biomeList.length);
     this.biomeT = 0; this.fade = 0; this.dashCd = 0; this.jumpCd = 0; this.aimAng = -1; this.target = null;
+    this.scroll = 0;   // the stage TRAVELS: a slow constant camera drift (parallax + platform conveyor)
     this.swingT = 0; this.swingDir = 1; this.swingBase = 0;   // deliberate slash rhythm
     this.platforms = [
       { x: 0, y: this.GY, w: this.W, h: this.H - this.GY, floor: true },
@@ -50,6 +51,14 @@ const Attract = {
       if (this.onBiomeChange) this.onBiomeChange();
     }
     this.dashCd -= dt; this.jumpCd -= dt;
+    // the stage keeps moving: parallax layers travel past and the floating ledges
+    // conveyor along with them (wrapping), so the demo reads as a journey, not a box
+    this.scroll += 1200 * dt;
+    for (let i = 1; i < this.platforms.length; i++) {
+      const pl = this.platforms[i];
+      pl.x -= 60 * dt;
+      if (pl.x + pl.w < -OVERSCAN.x - 40) pl.x = this.W + OVERSCAN.x + 40;
+    }
     const p = this.player, b = this.blade, ai = this.ai;
     if (!this.target || this.target.dead || this.target.spawnT > 0) this.target = this._nearest();
     const tg = this.target;
@@ -161,7 +170,7 @@ const Attract = {
     const stage = this.stage();
     THEME.set(stage.bg);
     ctx.fillStyle = stage.bg; Backdrop.fillFull(ctx);   // include the fullscreen overscan bleed
-    Backdrop.draw(ctx, stage, this.t, this.player ? this.player.x : this.W / 2);
+    Backdrop.draw(ctx, stage, this.t, (this.player ? this.player.x : this.W / 2) + (this.scroll || 0));   // scrolled parallax = travel
     if (this.platforms) for (const pl of this.platforms) Backdrop.platform(ctx, pl, stage, !!pl.floor);
     for (const f of this.foes) this._drawFoe(ctx, f);
     for (const s of this.shots) this._drawShot(ctx, s);
@@ -173,6 +182,21 @@ const Attract = {
   _drawFoe(ctx, f) {
     const lowG = (typeof GFX !== "undefined" && GFX.low);
     if (f.spawnT > 0) ctx.globalAlpha = 1 - f.spawnT / 0.4;
+    if (f.flyer) {
+      // airborne foes read as the game's actual flyer silhouette: a diamond, not a
+      // floating grunt rectangle (wraiths keep their ghostly translucency)
+      const r = f.hw + 4, bob = Math.sin(this.t * 3 + f.x * 0.01) * 2;
+      const y = f.y + bob;
+      if (f.kind === "wraith") ctx.globalAlpha *= 0.8;
+      ctx.beginPath(); ctx.moveTo(f.x, y - r); ctx.lineTo(f.x + r, y); ctx.lineTo(f.x, y + r); ctx.lineTo(f.x - r, y); ctx.closePath();
+      ctx.fillStyle = f.flash > 0 ? "#fff" : f.color;
+      if (!lowG) { ctx.shadowColor = THEME.rim; ctx.shadowBlur = 6; }
+      ctx.fill(); ctx.shadowBlur = 0;
+      ctx.strokeStyle = THEME.ink; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(f.x, y, 3.5, 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = 1;
+      return;
+    }
     const x = f.x - f.hw, y = f.y - f.hh, w = f.hw * 2, h = f.hh * 2;
     ctx.fillStyle = f.flash > 0 ? "#fff" : f.color;
     if (!lowG) { ctx.shadowColor = THEME.rim; ctx.shadowBlur = 6; }
