@@ -100,6 +100,26 @@ const UI = {
   // ---- BUTTON -------------------------------------------------------------
   // b: {x,y,w,h,label,enabled,size,sel} ; active = hovered | focused | selected
   button(ctx, b, active) {
+    if (b.ghost) {
+      // main-menu rail button: translucent over the dark sidebar, a soft light edge,
+      // and a hot accent bar + label slide driven by the smooth hover progress (b._a)
+      const a = b._a == null ? (active ? 1 : 0) : b._a;
+      const on = b.enabled !== false;
+      ctx.fillStyle = "rgba(241,239,249," + (0.05 + a * 0.10).toFixed(3) + ")";
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "rgba(241,239,249," + (on ? 0.28 + a * 0.5 : 0.15).toFixed(3) + ")";
+      ctx.strokeRect(b.x, b.y, b.w, b.h);
+      ctx.globalAlpha = a; ctx.fillStyle = this.t.color.accent;
+      ctx.fillRect(b.x, b.y, 4, b.h);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = on ? "#f1eff9" : "rgba(241,239,249,0.4)";
+      ctx.font = this.font(b.size || this.t.type.lead, true);
+      ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText(b.label, b.x + 18 + a * 8, b.y + b.h / 2 + 1);
+      ctx.textBaseline = "alphabetic";
+      return;
+    }
     const on = b.enabled !== false;
     const fill = on && active;
     const line = on ? this.ink : this.t.color.disabled;

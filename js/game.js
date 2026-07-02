@@ -1922,7 +1922,7 @@
   const LAY = { fx: W / 2 - 320, rx: W / 2 + 320, backY: H - 96, backW: 220, backH: 52 };
   function vmenu(items, x, top, w, h, gap) {
     items.forEach((it, i) => {
-      const b = { x: x - w / 2, y: top + i * (h + gap), w, h, label: it.label, enabled: it.enabled, action: it.action, size: it.size };
+      const b = { x: x - w / 2, y: top + i * (h + gap), w, h, label: it.label, enabled: it.enabled, action: it.action, size: it.size, ghost: it.ghost };
       uiButtons.push(b);
     });
   }
@@ -1951,7 +1951,8 @@
     UI.tag(ctx, "◆ " + META.coins() + " COINS", lx, 262, t.color.accent, "left", t.type.caption);
     UI.text(ctx, "cut clean · keep moving · chase the multiplier", lx, H - 46, t.type.micro, "left", t.alpha.faint);
 
-    UI.ink = "#000";   // buttons are drawn (by drawButtons) on the dark sidebar -> white buttons pop
+    UI.ink = "#000";
+    // ghost rail buttons: translucent over the sidebar with a hot accent bar on hover
     vmenu([
       { label: "PLAY", action: () => { state = "setup"; } },
       { label: "SHOP", action: () => { state = "shop"; } },
@@ -1960,8 +1961,8 @@
       { label: "HOW TO PLAY", action: () => { state = "howto"; } },
       { label: "HIGH SCORES", action: () => { state = "highscores"; } },
       { label: "SETTINGS", action: () => { state = "settings"; } },
-    ], lx + t.metric.btnW / 2, 300, t.metric.btnW, t.metric.btnH, 10);
-    void savedInk;   // UI.ink intentionally left "#000" so drawButtons renders white buttons
+    ].map((o) => (o.ghost = true, o)), lx + t.metric.btnW / 2, 300, t.metric.btnW, t.metric.btnH, 10);
+    void savedInk;   // UI.ink intentionally left "#000" for the sub-screen buttons
     return;
   }
 
@@ -2686,6 +2687,7 @@
       // persistent hover progress (keyed by label+position so it's stable per frame)
       const key = b._k || (b._k = (b.label || "") + "@" + Math.round(b.x) + "," + Math.round(b.y));
       const a = hoverAnim[key] = lerp(hoverAnim[key] || 0, active ? 1 : 0, k);
+      b._a = a;   // smooth hover progress for styles that animate internally (ghost)
       // staggered entrance (only while a menu screen is settling in)
       const eb = ez((enterT - i * 0.025) / 0.2);
       ctx.save();
@@ -2695,8 +2697,9 @@
       if (b.chip) UI.chip(ctx, b, active);
       else UI.button(ctx, b, active);
       ctx.restore();
-      // accent caret beside the focused/hovered primary buttons (not chips or selectors)
-      if (a > 0.02 && eb > 0.85 && !b.chip && !b.sel) UI.caret(ctx, b.x - 14, cy, a, UI.t.color.accent);
+      // accent caret beside the focused/hovered primary buttons (not chips, selectors,
+      // or ghost rail buttons — those carry their own accent bar)
+      if (a > 0.02 && eb > 0.85 && !b.chip && !b.sel && !b.ghost) UI.caret(ctx, b.x - 14, cy, a, UI.t.color.accent);
     }
   }
 
