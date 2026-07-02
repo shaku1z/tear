@@ -139,6 +139,7 @@
   let player, blade, enemies, projectiles, floaters, hitStop, shake;
   let timeScale = 1, slowmo = 0, zoom = 1, flash = 0, bannerT = 0, dashGhostT = 0; // feel/juice
   let wasSwinging = false, wasDashing = false, wasOnGround = true; // audio cadence
+  let landVy = 0;   // peak fall speed while airborne -> scales the landing dust
   let throwCd = 0;            // brief cooldown between blade throws (not recalls)
   let slowZones = [];         // Sludge puddles: { x, y, r, life }
   let tempWalls = [];         // Geomancer walls (also pushed into `platforms` for collision)
@@ -579,6 +580,8 @@
     }
     e.hpDisplay = e.hp;
     e.spawnT = 0.35;   // brief materialize so spawns read as spawns (not teleports)
+    FX.ring(e.x, e.y, 10, e.color);   // arrival pulse in the enemy's own colour
+    if (e.isBoss && !GFX.low) { FX.ring(e.x, e.y, 22, e.color); FX.burst(e.x, e.y, 0, -1, 10, e.color); }
     enemies.push(e);
   }
 
@@ -780,7 +783,12 @@
     if (blade.embeddedNew) { blade.embeddedNew = false; if (blade.throwType === "lob") lobExplode(blade.x, blade.y); }
 
     // audio cadence: dash start + swing whoosh
-    if (player.dashTimer > 0 && !wasDashing) SFX.dash();
+    if (player.dashTimer > 0 && !wasDashing) {
+      SFX.dash();
+      // dash kick-off: a cyan crack + sparks flung opposite the burst
+      FX.burst(player.x, player.y, -player.dashX, -player.dashY, 6, CONFIG.colors.perfect);
+      if (!GFX.low) FX.ring(player.x, player.y, 7, CONFIG.colors.perfect);
+    }
     // Concussive Dash: a dash that just ENDED slams out a shockwave
     if (wasDashing && player.dashTimer <= 0 && run.mods.concussive) {
       const R = 155; let caught = 0;
@@ -834,12 +842,17 @@
       // (Phase Step now resolves at the projectile-vs-player overlap, so it can't miss.)
     } else dashGhostT = 0;
 
-    // landing dust + thud when arriving on the ground from a real fall
+    // landing dust + thud when arriving on the ground from a real fall — a harder
+    // fall kicks a bigger cloud (smoke billows + wider spray)
     if (player.onGround && !wasOnGround && player.vy >= 0) {
       const feet = player.y + player.hh;
-      FX.burst(player.x, feet, 0, -1, 5);
+      const hard = clamp(landVy / CONFIG.player.maxFall, 0, 1);
+      FX.burst(player.x, feet, 0, -1, 5 + Math.round(hard * 6));
+      if (!GFX.low) { FX.smoke(player.x - 12, feet - 2); FX.smoke(player.x + 12, feet - 2); if (hard > 0.6) { FX.smoke(player.x, feet - 4); FX.ring(player.x, feet, 8, THEME.ink); } }
       SFX.land();
     }
+    landVy = player.onGround ? 0 : Math.max(landVy, player.vy);   // remember the fall speed for the landing puff
+    if (!player.onGround && wasOnGround) landVy = 0;
     wasOnGround = player.onGround;
 
     if (Input.consumeThrow()) {
@@ -1314,6 +1327,8 @@
     if (e.isBoss) {
       CG.happytime();   // CrazyGames: a highlight moment
       Backdrop.bloom("#ffffff", 0.22, 0.9); Backdrop.flare(e.x, e.y, currentStage.accent || "#ffffff", 520, 1.0);   // a boss falls: the world flares
+      FX.explode(e.x, e.y, e.color, 2.2); FX.explode(e.x, e.y - 20, currentStage.accent || CONFIG.colors.perfect, 1.4);   // a boss DEATH is an event
+      addShake(CONFIG.juice.shakeBig * 1.5); addZoom(CONFIG.juice.zoomBig); triggerSlowmo();
       for (const p of projectiles) if (p.shock || p.sweeper) p.dead = true;   // clear the boss's lingering hazards
       if (run.mode === "campaign" && currentStage && currentStage.lore) showLore(currentStage.lore, "", 8);
     }

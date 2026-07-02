@@ -203,6 +203,11 @@ class Player {
     const dir = Math.sign(this.x - fromX) || 1;
     this.vx = dir * 380;
     this.vy = -260;
+    // the hit reads on the body: a crimson spray away from the blow + a couple of drips
+    try {
+      FX.burst(this.x, this.y, dir, -0.5, 9, "#e23b3b");
+      if (typeof GFX === "undefined" || !GFX.low) { FX.drip(this.x, this.y + 4); FX.drip(this.x - dir * 6, this.y - 6); }
+    } catch (e) {}
     return "hit";
   }
 
