@@ -45,7 +45,10 @@ const Attract = {
     if (dt > 0.04) dt = 0.04;
     this.t += dt; this.fade = Math.min(1, this.fade + dt * 0.5);
     this.biomeT += dt;
-    if (this.biomeT > 15) { this.biomeT = 0; this.biomePtr = (this.biomePtr + 1) % this.biomeList.length; }
+    if (this.biomeT > 30) {   // linger in each biome, then TEAR into the next (game.js hooks the wipe)
+      this.biomeT = 0; this.biomePtr = (this.biomePtr + 1) % this.biomeList.length;
+      if (this.onBiomeChange) this.onBiomeChange();
+    }
     this.dashCd -= dt; this.jumpCd -= dt;
     const p = this.player, b = this.blade, ai = this.ai;
     if (!this.target || this.target.dead || this.target.spawnT > 0) this.target = this._nearest();

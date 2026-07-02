@@ -427,6 +427,7 @@
       // 9 waves of enemies then a boss, per stage; biome swaps on each new stage
       const ns = Math.floor((run.wave - 1) / 10);
       if (run.wave === 1 || ns !== stageIndex) {
+        if (run.wave > 1) Wipe.begin();   // tear-wipe into the new biome (not on the opening stage)
         loadStage(ns);
         stageBannerT = 3.0; stageName = stageAt(ns).name;
       }
@@ -444,6 +445,7 @@
     if (endlessLike) {
       const bi = Math.floor((run.wave - 1) / 5);   // a fresh biome every 5 waves
       if (run.wave === 1 || bi !== run._biomeIdx) {
+        if (run.wave > 1) Wipe.begin();             // tear-wipe between biomes
         run._biomeIdx = bi; loadStage(bi);          // stageAt() cycles the 5 biomes via modulo
         stageBannerT = 2.6; stageName = stageAt(bi).name; run.stage = bi;
       }
@@ -458,6 +460,7 @@
     if (run.mode === "bossonly") {   // pick the next boss in the gauntlet (re-shuffle each cycle)
       if (run.bossIdx >= run.bossOrder.length) { run.bossOrder = shuffledRoster(); run.bossIdx = 0; }
       run.curBoss = run.bossOrder[run.bossIdx]; run.bossIdx++;
+      if (run.wave > 1) Wipe.begin();      // tear-wipe into the next boss's home biome
       loadStage(bossBiome(run.curBoss));   // each boss in its home biome (fresh arena: restore platforms, clear hazards)
       stageBannerT = 2.4; stageName = (BOSS_ROSTER.find((b) => b.id === run.curBoss) || {}).name || "BOSS";
     }
@@ -1371,6 +1374,43 @@
   // must reach the true screen edges (backdrops, dims, vignettes), never for layout.
   function screenRect() { return { x: -OVERSCAN.x, y: -OVERSCAN.y, w: W + OVERSCAN.x * 2, h: H + OVERSCAN.y * 2 }; }
 
+  // ---- biome transition: the TEAR WIPE ----
+  // On a biome change (attract cycle, campaign stage-up, endless/gauntlet rotation) the
+  // old scene is snapshotted and then sliced away along a sweeping diagonal seam with a
+  // glowing cyan edge — the game's signature slash, instead of a hard palette snap.
+  const Wipe = {
+    t: 0, dur: 0.9, snap: null,
+    begin() {
+      try {
+        if (!this.snap) this.snap = document.createElement("canvas");
+        this.snap.width = canvas.width; this.snap.height = canvas.height;
+        this.snap.getContext("2d").drawImage(canvas, 0, 0);   // the frame still holds the OLD biome
+        this.t = this.dur;
+      } catch (e) { this.t = 0; }
+    },
+    draw(dt) {
+      if (this.t <= 0 || !this.snap) return;
+      this.t -= dt;
+      const e = ez(1 - Math.max(this.t, 0) / this.dur);       // 0 -> 1 sweep
+      const bw = canvas.width, bh = canvas.height, slope = bw * 0.22;
+      const x = -slope + (bw + slope * 2) * e;                 // seam x along the top edge
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.beginPath();                                         // old scene survives RIGHT of the seam
+      ctx.moveTo(x, 0); ctx.lineTo(x - slope, bh); ctx.lineTo(bw, bh); ctx.lineTo(bw, 0); ctx.closePath();
+      ctx.clip(); ctx.drawImage(this.snap, 0, 0);
+      ctx.restore();
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.lineCap = "round";
+      const glow = !(typeof GFX !== "undefined" && GFX.low);
+      if (glow) { ctx.shadowColor = "#13c4d6"; ctx.shadowBlur = 26; }
+      ctx.strokeStyle = "rgba(19,196,214,0.85)"; ctx.lineWidth = Math.max(6, bw * 0.006);
+      ctx.beginPath(); ctx.moveTo(x, -20); ctx.lineTo(x - slope, bh + 20); ctx.stroke();
+      ctx.strokeStyle = "#eafcff"; ctx.lineWidth = Math.max(2, bw * 0.002); if (glow) ctx.shadowBlur = 14;
+      ctx.beginPath(); ctx.moveTo(x, -20); ctx.lineTo(x - slope, bh + 20); ctx.stroke();
+      ctx.restore();
+    },
+  };
+  Attract.onBiomeChange = () => Wipe.begin();   // the menu demo tears between biomes too
+
   // ---- rendering ----
   function render() {
     // map the logical space onto the (hi-dpi) backing store; on non-16:9 fullscreen the
@@ -1457,6 +1497,9 @@
       else if (state === "continue") renderContinue();
       if (state !== "playing" && state !== "draft") drawButtons();
     }
+
+    // biome tear-wipe rides over EVERYTHING for its beat (device space)
+    Wipe.draw(lastUiDt);
 
     // mouse cursor in non-playing screens
     if (state !== "playing") UI.cursor(ctx, Input.mouseX, Input.mouseY);
