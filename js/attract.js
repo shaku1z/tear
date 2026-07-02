@@ -132,25 +132,77 @@ const Attract = {
     const kind = types[(Math.random() * types.length) | 0];
     const flyer = kind === "flyer" || kind === "wraith";
     this.foes.push({ x: this.W / 2 + side * (600 + Math.random() * 280), y: flyer ? this.GY - 200 - Math.random() * 150 : this.GY - 22,
-      vx: 0, vy: 0, onGround: false, kind, color: CONFIG.colors[kind] || "#e23b3b", hw: 17, hh: 22, flyer, fireCd: 1.1 + Math.random() * 2, spawnT: 0.4, flash: 0, dead: false });
+      vx: 0, vy: 0, onGround: false, kind, color: CONFIG.colors[kind] || "#e23b3b", hw: 17, hh: 22, flyer,
+      fireCd: 1.1 + Math.random() * 2, spawnT: 0.4, flash: 0, dead: false,
+      // per-kind behaviour state (walk/windup/charge, orbit/swoop, kite band, blink)
+      st: "walk", stT: Math.random(), ph: Math.random() * 6.2832,
+      orbA: Math.random() * 6.2832, orbW: (0.6 + Math.random() * 0.5) * (Math.random() < 0.5 ? -1 : 1),
+      orbR: 220 + Math.random() * 120, band: 380 + Math.random() * 180, chVx: 0, swVx: 0, swVy: 0 });
   },
+  // per-kind AI so foes read like their in-game selves, not homing puppets:
+  // chargers strut -> windup -> burst PAST the hero; armored trudge and pause; ranged
+  // KITE a firing band; bombers rush and blink as they arm; flyers orbit then swoop;
+  // wraiths drift and blink-teleport. Grounded foes keep a little spacing.
   _updateFoe(f, dt, p) {
     if (f.spawnT > 0) { f.spawnT -= dt; return; }
     f.flash = Math.max(0, f.flash - dt * 4);
-    const dir = Math.sign(p.x - f.x) || 1;
+    const dx = p.x - f.x, dir = Math.sign(dx) || 1, adx = Math.abs(dx);
+    f.stT -= dt;
     if (f.flyer) {
-      const ty = p.y - 40 + Math.sin(this.t * 1.6 + f.x) * 32;
-      f.vy += (ty - f.y) * 2.6 * dt; f.vy *= 0.9; f.y += f.vy * dt; f.x += dir * 150 * dt;
+      if (f.kind === "wraith") {
+        f.x += (Math.sin(this.t * 0.7 + f.ph) * 40 + dir * 30) * dt;
+        f.y += Math.cos(this.t * 0.9 + f.ph) * 26 * dt;
+        if (f.stT <= 0) {   // ghostly BLINK across the field
+          f.stT = 2.5 + Math.random() * 2.5;
+          const nx = clamp(f.x + (Math.random() * 2 - 1) * 320, 80, this.W - 80);
+          try { FX.ghost(f.x, f.y, f.hw, f.hh, f.color); FX.burst(nx, f.y, 0, -1, 5, f.color); } catch (e) {}
+          f.x = nx;
+        }
+      } else if (f.st === "swoop") {
+        f.x += f.swVx * dt; f.y += f.swVy * dt; f.swVy += 900 * dt;   // dive arc, then break off
+        if (f.stT <= 0 || f.y > p.y - 10) { f.st = "orbit"; f.stT = 2 + Math.random() * 2.5; }
+      } else {
+        f.orbA += dt * f.orbW;
+        const tx = p.x + Math.cos(f.orbA) * f.orbR, ty = p.y - 170 + Math.sin(f.orbA * 1.7) * 46;
+        f.x += (tx - f.x) * clamp(2.2 * dt, 0, 1); f.y += (ty - f.y) * clamp(2.2 * dt, 0, 1);
+        if (f.stT <= 0 && adx < 340) {   // commit to a swoop
+          f.st = "swoop"; f.stT = 0.8;
+          const m = Math.hypot(p.x - f.x, p.y - f.y) || 1;
+          f.swVx = (p.x - f.x) / m * 520; f.swVy = (p.y - f.y) / m * 380;
+        }
+      }
+      f.y = Math.min(f.y, this.GY - 60);   // airborne stays airborne
     } else {
       f.vy += CONFIG.world.gravity * dt; f.y += f.vy * dt;
       const floorY = this.GY - f.hh;
       if (f.y >= floorY) { f.y = floorY; f.vy = 0; f.onGround = true; } else f.onGround = false;
-      if (f.onGround) f.x += dir * 135 * dt;
+      if (f.onGround) {
+        if (f.kind === "charger") {
+          if (f.st === "windup") { f.x += Math.sin(this.t * 60) * 1.2; if (f.stT <= 0) { f.st = "charge"; f.stT = 0.5; f.chVx = dir * 640; } }
+          else if (f.st === "charge") { f.x += f.chVx * dt; if (f.stT <= 0) { f.st = "walk"; f.stT = 0.9 + Math.random(); } }
+          else { f.x += dir * 95 * dt; if (f.stT <= 0 && adx < 520 && adx > 130) { f.st = "windup"; f.stT = 0.35; } }
+        } else if (f.kind === "armored") {
+          if (f.st === "pause") { if (f.stT <= 0) { f.st = "walk"; f.stT = 1.6 + Math.random(); } }
+          else { f.x += dir * 55 * dt; if (f.stT <= 0) { f.st = "pause"; f.stT = 0.7; } }
+        } else if (f.kind === "ranged") {
+          if (adx < f.band - 40) f.x -= dir * 120 * dt;        // too close: back off
+          else if (adx > f.band + 60) f.x += dir * 110 * dt;   // too far: close in
+          else f.x += Math.sin(this.t * 1.3 + f.ph) * 46 * dt; // in the band: strafe
+        } else {   // bomber: rush, blinking as it arms
+          f.x += dir * 170 * dt;
+          if (adx < 260) f.flash = 0.5 + 0.5 * Math.sin(this.t * 18);
+        }
+      }
+      for (const o of this.foes) {   // spacing: don't stack into one blob
+        if (o === f || o.dead || o.flyer || o.spawnT > 0) continue;
+        const d = f.x - o.x;
+        if (Math.abs(d) < 46) f.x += Math.sign(d || 1) * 60 * dt;
+      }
     }
     f.x = clamp(f.x, 60, this.W - 60);
     f.fireCd -= dt;
     if (f.fireCd <= 0 && (f.kind === "ranged" || f.kind === "flyer")) { f.fireCd = 1.7 + Math.random() * 1.6; this._fire(f, p); }
-    if (f.kind === "bomber" && f.onGround && Math.abs(f.x - p.x) < 120) { this._explode(f.x, f.y); this._kill(f, true); }
+    if (f.kind === "bomber" && f.onGround && adx < 120) { this._explode(f.x, f.y); this._kill(f, true); }
   },
   _fire(f, p) { const dx = p.x - f.x, dy = p.y - f.y, m = Math.hypot(dx, dy) || 1; this.shots.push({ x: f.x, y: f.y - 6, vx: dx / m * 440, vy: dy / m * 440, r: 8, tint: f.color, hist: [], deflected: false, dead: false }); },
   _explode(x, y) { try { FX.explode(x, y, CONFIG.colors.bomber, 1.3); } catch (e) {} },
