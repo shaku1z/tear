@@ -373,6 +373,13 @@ function _relLum(hex) {
 // stays smooth. Resolved from the user's setting (auto/high/low) in applySettings.
 const GFX = { low: false };
 
+// fullscreen overscan (logical px of scene BLEED per side). The gameplay arena is a
+// fixed 1600x900 for every player; on displays that aren't 16:9 the backing store fills
+// the whole screen and the SCENE (sky, backdrop, floor, dims) extends into the extra
+// space — true fullscreen with no letterbox bars and no distortion. game.js computes
+// this in resizeCanvas; the renderers + input read it. 0/0 in windowed and on 16:9.
+const OVERSCAN = { x: 0, y: 0 };
+
 const THEME = {
   ink: "#0a0a0a", rim: "rgba(0,0,0,0.35)", paper: "#ffffff", dark: false,
   set(bg) {

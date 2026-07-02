@@ -1,4 +1,4 @@
-﻿// ------- main: state machine, menus, waves, draft, combat sim -------
+// ------- main: state machine, menus, waves, draft, combat sim -------
 (function () {
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
@@ -7,17 +7,20 @@
   Input.init(canvas);
 
   // render at device resolution (sharp on hi-dpi / upscaled displays), while all
-  // drawing still uses the 1280x720 logical coordinate system.
+  // drawing still uses the fixed logical coordinate system.
+  //
+  // TRUE FULLSCREEN: the backing store always fills the WHOLE element (the whole screen
+  // in fullscreen). The 1600x900 arena is scaled to fit, and the leftover area on
+  // non-16:9 displays becomes OVERSCAN — the scene (sky, backdrop, floor, dims) bleeds
+  // into it, so there are no letterbox bars. Gameplay space stays identical everywhere.
   function resizeCanvas() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-    // size the backing store to the ACTUALLY-displayed area. In fullscreen the canvas is
-    // 100%x100% with object-fit:contain, so the visible frame is the 16:9 box that fits
-    // inside it — use that (not the full element) so ultrawides don't over-allocate pixels.
     const cw = canvas.clientWidth || W, ch = canvas.clientHeight || H;
-    const fitW = Math.min(cw, ch * W / H);
-    const tw = Math.max(W, Math.round(fitW * dpr));
-    const th = Math.round(tw * H / W);
-    if (canvas.width !== tw || canvas.height !== th) { canvas.width = tw; canvas.height = th; }
+    const bw = Math.max(2, Math.round(cw * dpr)), bh = Math.max(2, Math.round(ch * dpr));
+    if (canvas.width !== bw || canvas.height !== bh) { canvas.width = bw; canvas.height = bh; }
+    const s = Math.min(bw / W, bh / H);
+    OVERSCAN.x = Math.max(0, (bw / s - W) / 2);
+    OVERSCAN.y = Math.max(0, (bh / s - H) / 2);
   }
   window.addEventListener("resize", resizeCanvas);
   document.addEventListener("fullscreenchange", resizeCanvas);
@@ -1364,19 +1367,26 @@
     requestAnimationFrame(frame);
   }
 
+  // full-screen rect INCLUDING the fullscreen overscan bleed — use for any fill that
+  // must reach the true screen edges (backdrops, dims, vignettes), never for layout.
+  function screenRect() { return { x: -OVERSCAN.x, y: -OVERSCAN.y, w: W + OVERSCAN.x * 2, h: H + OVERSCAN.y * 2 }; }
+
   // ---- rendering ----
   function render() {
-    // map the 1280x720 logical space onto the (hi-dpi) backing store
+    // map the logical space onto the (hi-dpi) backing store; on non-16:9 fullscreen the
+    // arena is centered and the scene bleeds into the OVERSCAN so nothing letterboxes
     resizeCanvas();
-    ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
-    ctx.clearRect(0, 0, W, H);
+    const vs = canvas.width / (W + OVERSCAN.x * 2);
+    ctx.setTransform(vs, 0, 0, vs, OVERSCAN.x * vs, OVERSCAN.y * vs);
+    const SR = screenRect();
+    ctx.clearRect(SR.x, SR.y, SR.w, SR.h);
     const playLike = state === "playing" || state === "draft" || state === "tierup" || state === "paused" || state === "gameover" || state === "win" || state === "confirmquit" || state === "continue";
     // biome background (campaign + endless tint the world; menus stay white)
     const biomeMode = !!(run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly" || run.mode === "gauntlet"));
     let bgCol = (playLike && biomeMode) ? currentStage.bg : "#fff";
     if (playLike && Array.isArray(enemies)) { const ef = enemies.find((e) => e.whiteFlash > 0); if (ef) bgCol = blendCol(bgCol, "#ffffff", ef.whiteFlash); }   // The Echo's white-out
     ctx.fillStyle = bgCol;
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillRect(SR.x, SR.y, SR.w, SR.h);
     uiButtons = [];
 
     // theme: derive ink + rim from the actual background luminance, so models stay
@@ -1392,7 +1402,7 @@
         ctx.globalCompositeOperation = "difference";
         ctx.globalAlpha = clamp(flash, 0, 1);
         ctx.fillStyle = "#fff";
-        ctx.fillRect(0, 0, W, H);
+        ctx.fillRect(SR.x, SR.y, SR.w, SR.h);
         ctx.restore();
       }
       drawHUD();
@@ -1420,10 +1430,10 @@
       Attract.draw(ctx);
       if (state !== "menu") {
         // sub-tabs: a frosted wash + soft vignette so the dark-on-light content reads over the scene
-        ctx.fillStyle = UI.t.color.paper; ctx.globalAlpha = 0.72; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+        ctx.fillStyle = UI.t.color.paper; ctx.globalAlpha = 0.72; ctx.fillRect(SR.x, SR.y, SR.w, SR.h); ctx.globalAlpha = 1;
         const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.42, W / 2, H / 2, W * 0.62);
         vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.12)");
-        ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = vg; ctx.fillRect(SR.x, SR.y, SR.w, SR.h);
       }
       ctx.save(); ctx.translate(0, (1 - eIn) * 22);
       if (state === "menu") renderMenu();
@@ -1628,9 +1638,10 @@
     // low-HP danger: a pulsing red vignette around the screen edges
     if (low) {
       ctx.save();
+      const sr = screenRect();
       const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.34, W / 2, H / 2, H * 0.78);
       g.addColorStop(0, "rgba(226,59,59,0)"); g.addColorStop(1, "rgba(226,59,59," + (0.10 + 0.13 * pulse).toFixed(3) + ")");
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
+      ctx.fillStyle = g; ctx.fillRect(sr.x, sr.y, sr.w, sr.h); ctx.restore();
     }
 
     // ===== top-left: VITALS cluster (panel-backed so it reads on any biome) =====
@@ -1743,7 +1754,8 @@
     const title = loreTitle || ((currentStage.name || "STAGE").toUpperCase() + " — CLEARED");
     const savedInk = UI.ink; UI.ink = "#efedf8";   // lore reads on a dark cinematic dim, biome-independent
     ctx.save();
-    ctx.globalAlpha = a * 0.84; ctx.fillStyle = "#06070c"; ctx.fillRect(0, 0, W, H);   // dim the world for the beat
+    const sr = screenRect();
+    ctx.globalAlpha = a * 0.84; ctx.fillStyle = "#06070c"; ctx.fillRect(sr.x, sr.y, sr.w, sr.h);   // dim the world for the beat
     ctx.globalAlpha = a;
     UI.title(ctx, title, W / 2, H / 2 - 96, UI.t.type.display);
     ctx.strokeStyle = accent; ctx.lineWidth = 2;
@@ -1813,9 +1825,10 @@
   function renderMenu() {
     const t = UI.t, lx = 96;
     // left sidebar: darken for legibility over the live attract scene, fading to the gameplay
+    const sr = screenRect();
     const g = ctx.createLinearGradient(0, 0, 760, 0);
     g.addColorStop(0, "rgba(6,7,12,0.93)"); g.addColorStop(0.5, "rgba(6,7,12,0.74)"); g.addColorStop(1, "rgba(6,7,12,0)");
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 760, H);
+    ctx.fillStyle = g; ctx.fillRect(sr.x, sr.y, 760 - sr.x, sr.h);
 
     const savedInk = UI.ink; UI.ink = "#f1eff9";   // light content over the dark sidebar
     UI.text(ctx, "T E A R", lx, 196, t.type.wordmark, "left");
@@ -2509,8 +2522,9 @@
   function renderEnding() {
     const t = UI.t, seal = clamp(winT / 2.4, 0, 1), e = ez(seal), accent = CONFIG.colors.perfect;
     // void backdrop
+    const sr = screenRect();
     const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#0a0812"); g.addColorStop(1, "#130f24");
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = g; ctx.fillRect(sr.x, sr.y, sr.w, sr.h);
     // drifting motes, released upward
     for (let i = 0; i < 46; i++) {
       const sx = (i * 137.5) % W, y0 = (i * 89.3) % H, y = ((y0 - winT * (14 + (i % 6) * 7)) % H + H) % H;
@@ -2523,7 +2537,7 @@
     for (let p = 0; p < 3; p++) { ctx.globalAlpha = ((1 - e) * 0.55 + 0.12) * (0.5 - p * 0.13); ctx.lineWidth = ((1 - e) * 84 + 4) * (1 - p * 0.26) + 3; riftPath(e); ctx.stroke(); }
     ctx.globalAlpha = 0.9; ctx.strokeStyle = "#eafaff"; ctx.lineWidth = Math.max(1.5, (1 - e) * 10 + 1.5); riftPath(e); ctx.stroke();
     ctx.restore();
-    if (seal > 0.8 && seal < 0.95) { ctx.globalAlpha = (1 - Math.abs(seal - 0.875) / 0.075) * 0.45; ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+    if (seal > 0.8 && seal < 0.95) { ctx.globalAlpha = (1 - Math.abs(seal - 0.875) / 0.075) * 0.45; ctx.fillStyle = "#fff"; ctx.fillRect(sr.x, sr.y, sr.w, sr.h); ctx.globalAlpha = 1; }
     // the survivor, watching it close
     ctx.fillStyle = "#ece9f7"; ctx.fillRect(W / 2 - 9, H - 138, 18, 40);
     ctx.fillStyle = accent; ctx.fillRect(W / 2 - 4, H - 128, 8, 5);

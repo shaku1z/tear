@@ -5,7 +5,9 @@
 // physics — ground types fall to the floor and never hover; only flyers stay airborne.
 // FX is ticked/drawn here (the main loop only ticks FX while actually playing).
 const Attract = {
-  W: 1600, H: 900, GY: CONFIG.world.groundY,
+  get W() { return CONFIG.view.w; },
+  get H() { return CONFIG.view.h; },
+  get GY() { return CONFIG.world.groundY; },
   t: 0, biomeList: [], biomePtr: 0, biomeT: 0, fade: 0,
   player: null, blade: null, platforms: null, ai: null, foes: [], shots: [],
   target: null, dashCd: 0, jumpCd: 0, aimAng: -1, ready: false,
@@ -155,7 +157,7 @@ const Attract = {
   draw(ctx) {
     const stage = this.stage();
     THEME.set(stage.bg);
-    ctx.fillStyle = stage.bg; ctx.fillRect(0, 0, this.W, this.H);
+    ctx.fillStyle = stage.bg; Backdrop.fillFull(ctx);   // include the fullscreen overscan bleed
     Backdrop.draw(ctx, stage, this.t, this.player ? this.player.x : this.W / 2);
     if (this.platforms) for (const pl of this.platforms) Backdrop.platform(ctx, pl, stage, !!pl.floor);
     for (const f of this.foes) this._drawFoe(ctx, f);

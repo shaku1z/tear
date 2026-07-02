@@ -87,8 +87,9 @@ const UI = {
   // Returns the y just below the header so callers can flow content under it.
   screenHeader(ctx, title, subtitle, y, big) {
     const ty = y == null ? 70 : y;
-    this.title(ctx, title, 800, ty, big ? this.t.type.h1 : this.t.type.h2);
-    if (subtitle) this.text(ctx, subtitle, 800, ty + 28, this.t.type.caption, "center", this.t.alpha.muted);
+    const cx = CONFIG.view.w / 2;
+    this.title(ctx, title, cx, ty, big ? this.t.type.h1 : this.t.type.h2);
+    if (subtitle) this.text(ctx, subtitle, cx, ty + 28, this.t.type.caption, "center", this.t.alpha.muted);
     return ty + (subtitle ? 52 : 36);
   },
 
@@ -184,9 +185,11 @@ const UI = {
   // dim the frozen world behind an overlay (fades to PAPER, so overlay text is
   // always inked black regardless of the biome underneath)
   dim(ctx, w, h, a) {
+    const ox = (typeof OVERSCAN !== "undefined") ? OVERSCAN.x : 0;
+    const oy = (typeof OVERSCAN !== "undefined") ? OVERSCAN.y : 0;
     ctx.globalAlpha = a == null ? 0.78 : a;
     ctx.fillStyle = this.t.color.paper;
-    ctx.fillRect(0, 0, w, h);
+    ctx.fillRect(-ox, -oy, w + ox * 2, h + oy * 2);   // reach the true screen edges in fullscreen
     ctx.globalAlpha = 1;
   },
 
@@ -200,19 +203,22 @@ const UI = {
   // Monochrome with occasional accent so it reads as motion, never as clutter.
   menuBackdrop(ctx, time) {
     ctx.save();
-    const span = 2400, n = 6;
+    const vw = CONFIG.view.w, vh = CONFIG.view.h;
+    const ox = (typeof OVERSCAN !== "undefined") ? OVERSCAN.x : 0;
+    const oy = (typeof OVERSCAN !== "undefined") ? OVERSCAN.y : 0;
+    const span = Math.round((vw + ox * 2) * 1.5), n = 6;
     for (let i = 0; i < n; i++) {
-      const drift = (i * (span / n) + time * (16 + i * 5)) % span - 400;
+      const drift = (i * (span / n) + time * (16 + i * 5)) % span - 400 - ox;
       const accent = i % 3 === 0;
       ctx.globalAlpha = accent ? 0.05 : 0.035;
       ctx.strokeStyle = accent ? this.t.color.accent : this.ink;
       ctx.lineWidth = accent ? 2 : 1;
-      ctx.beginPath(); ctx.moveTo(drift, -60); ctx.lineTo(drift - 620, 980); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(drift, -oy - 60); ctx.lineTo(drift - 620, vh + oy + 80); ctx.stroke();
     }
     // soft edge vignette to focus the eye centre
-    const g = ctx.createRadialGradient(800, 470, 280, 800, 470, 880);
+    const g = ctx.createRadialGradient(vw / 2, vh * 0.52, vh * 0.31, vw / 2, vh * 0.52, vw * 0.55);
     g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,0.05)");
-    ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(0, 0, 1600, 900);
+    ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(-ox, -oy, vw + ox * 2, vh + oy * 2);
     ctx.restore();
   },
 
@@ -220,12 +226,13 @@ const UI = {
   // on entry + optional muted subtitle. Returns the y to start content below it,
   // so every sub-screen lines up identically. `anim` 0..1 drives the sweep.
   header(ctx, title, subtitle, anim) {
+    const cx = CONFIG.view.w / 2;
     const a = anim == null ? 1 : anim;
-    this.title(ctx, title, 800, 92, this.t.type.h1);
+    this.title(ctx, title, cx, 92, this.t.type.h1);
     const w = 130 * a;
     ctx.globalAlpha = a; ctx.fillStyle = this.t.color.accent;
-    ctx.fillRect(800 - w / 2, 108, w, 3); ctx.globalAlpha = 1;
-    if (subtitle) this.text(ctx, subtitle, 800, 134, this.t.type.caption, "center", this.t.alpha.muted);
+    ctx.fillRect(cx - w / 2, 108, w, 3); ctx.globalAlpha = 1;
+    if (subtitle) this.text(ctx, subtitle, cx, 134, this.t.type.caption, "center", this.t.alpha.muted);
     return subtitle ? 188 : 170;
   },
 

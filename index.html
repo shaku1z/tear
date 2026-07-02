@@ -25,6 +25,10 @@
       display: block;
       width: 100%;
       height: auto;
+      /* pin the windowed box to 16:9 explicitly — the backing store now follows the
+         element (fullscreen overscan), so the intrinsic attribute ratio must not drive
+         the element size or the two would feed back into each other */
+      aspect-ratio: 16 / 9;
       background: #ffffff;
       border: 2px solid #000;
       cursor: none;
@@ -65,17 +69,20 @@
       pointer-events: none;
       user-select: none;
     }
-    /* fullscreen: center + letterbox the canvas. object-fit:contain keeps the 16:9
-       frame undistorted on ANY display (16:10 laptops, ultrawides) — no stretch. */
+    /* fullscreen: the canvas fills the WHOLE screen. The game sizes its backing store
+       to the true element aspect and bleeds the scene into any non-16:9 leftover
+       (OVERSCAN), so there are no letterbox bars and no stretch on any display.
+       The dark canvas background is only a first-frame failsafe — the previous white
+       one was exactly what painted the "white bars" through object-fit letterboxing. */
     #wrap:fullscreen {
       width: 100%;
       height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #0a0b10;        /* letterbox bars: deep void, reads intentional */
+      background: #0a0b10;
     }
-    #wrap:fullscreen canvas { width: 100%; height: 100%; object-fit: contain; border: none; }
+    #wrap:fullscreen canvas { width: 100%; height: 100%; border: none; background: #0a0b10; }
     /* the page's own fullscreen button + controls hint don't belong over the fullscreen canvas */
     #wrap:fullscreen #fs,
     #wrap:fullscreen #hint { display: none; }
@@ -91,25 +98,25 @@
 
   <!-- load order matters: these are plain scripts sharing global scope -->
   <!-- ?v cache-bust: bump if the browser ever serves stale JS (server is no-cache too) -->
-  <script src="js/config.js?v=85"></script>
-  <script src="js/stages.js?v=85"></script>
-  <script src="js/utils.js?v=85"></script>
-  <script src="js/ui.js?v=85"></script>
-  <script src="js/audio.js?v=85"></script>
-  <script src="js/input.js?v=85"></script>
-  <script src="js/particles.js?v=85"></script>
-  <script src="js/backdrop.js?v=85"></script>
-  <script src="js/attract.js?v=85"></script>
-  <script src="js/crazy.js?v=85"></script>
-  <script src="js/upgrades.js?v=85"></script>
-  <script src="js/meta.js?v=85"></script>
-  <script src="js/weapons.js?v=85"></script>
-  <script src="js/affixes.js?v=85"></script>
-  <script src="js/variants.js?v=85"></script>
-  <script src="js/blade.js?v=85"></script>
-  <script src="js/player.js?v=85"></script>
-  <script src="js/projectile.js?v=85"></script>
-  <script src="js/enemy.js?v=85"></script>
-  <script src="js/game.js?v=85"></script>
+  <script src="js/config.js?v=86"></script>
+  <script src="js/stages.js?v=86"></script>
+  <script src="js/utils.js?v=86"></script>
+  <script src="js/ui.js?v=86"></script>
+  <script src="js/audio.js?v=86"></script>
+  <script src="js/input.js?v=86"></script>
+  <script src="js/particles.js?v=86"></script>
+  <script src="js/backdrop.js?v=86"></script>
+  <script src="js/attract.js?v=86"></script>
+  <script src="js/crazy.js?v=86"></script>
+  <script src="js/upgrades.js?v=86"></script>
+  <script src="js/meta.js?v=86"></script>
+  <script src="js/weapons.js?v=86"></script>
+  <script src="js/affixes.js?v=86"></script>
+  <script src="js/variants.js?v=86"></script>
+  <script src="js/blade.js?v=86"></script>
+  <script src="js/player.js?v=86"></script>
+  <script src="js/projectile.js?v=86"></script>
+  <script src="js/enemy.js?v=86"></script>
+  <script src="js/game.js?v=86"></script>
 </body>
 </html>

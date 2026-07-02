@@ -21,15 +21,24 @@ const Input = {
     });
     window.addEventListener("keyup", (e) => { this.held.delete(e.code); });
 
+    // element px -> logical px. The element spans the arena PLUS the fullscreen
+    // overscan bleed, so subtract the overscan offset after scaling.
+    const toLogical = (e, r) => {
+      const ox = (typeof OVERSCAN !== "undefined") ? OVERSCAN.x : 0;
+      const oy = (typeof OVERSCAN !== "undefined") ? OVERSCAN.y : 0;
+      return {
+        x: (e.clientX - r.left) / r.width * (CONFIG.view.w + ox * 2) - ox,
+        y: (e.clientY - r.top) / r.height * (CONFIG.view.h + oy * 2) - oy,
+      };
+    };
     const updateMouse = (e) => {
       if (this.locked) {
         // pointer-lock: accumulate raw movement, mapped to the reticle by the blade
         this.dx += e.movementX;
         this.dy += e.movementY;
       } else {
-        const r = canvas.getBoundingClientRect();
-        this.mouseX = (e.clientX - r.left) / r.width * CONFIG.view.w;
-        this.mouseY = (e.clientY - r.top) / r.height * CONFIG.view.h;
+        const p = toLogical(e, canvas.getBoundingClientRect());
+        this.mouseX = p.x; this.mouseY = p.y;
       }
     };
     canvas.addEventListener("mousemove", updateMouse);
@@ -37,9 +46,8 @@ const Input = {
 
     // left-click: capture the mouse while playing; otherwise it's a UI click
     canvas.addEventListener("click", (e) => {
-      const r = canvas.getBoundingClientRect();
-      this.clickX = (e.clientX - r.left) / r.width * CONFIG.view.w;
-      this.clickY = (e.clientY - r.top) / r.height * CONFIG.view.h;
+      const p = toLogical(e, canvas.getBoundingClientRect());
+      this.clickX = p.x; this.clickY = p.y;
       this.clicked = true;
       if (this.allowLock && !this.locked && canvas.requestPointerLock) canvas.requestPointerLock();
     });

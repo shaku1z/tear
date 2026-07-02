@@ -92,7 +92,13 @@ const STAGES = [
 // temporary Geomancer walls never pollute the source layout)
 function stagePlatforms(i) {
   const s = STAGES[((i % STAGES.length) + STAGES.length) % STAGES.length];
-  const floor = { x: 0, y: CONFIG.world.groundY, w: CONFIG.view.w, h: CONFIG.view.h - CONFIG.world.groundY, floor: true };
-  return [floor, ...s.layout.map((p) => ({ ...p }))];
+  const DW = CONFIG.view.designW || 1600, DH = CONFIG.view.designH || 900;
+  const vw = CONFIG.view.w, vh = CONFIG.view.h;
+  // Floor spans the full dynamic viewport
+  const floor = { x: 0, y: CONFIG.world.groundY, w: vw, h: vh - CONFIG.world.groundY, floor: true };
+  // Platforms are authored for 1600×900 — center them in the dynamic viewport
+  const ox = (vw - DW) / 2;
+  const oy = (vh - DH) / 2;
+  return [floor, ...s.layout.map((p) => ({ ...p, x: p.x + ox, y: p.y + oy }))];
 }
 function stageAt(i) { return STAGES[((i % STAGES.length) + STAGES.length) % STAGES.length]; }
