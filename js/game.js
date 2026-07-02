@@ -249,7 +249,93 @@
     run.score += Math.round(CONFIG.run.scorePerKill * run.wave * run.mult * CONFIG.run.scoreMult * (run.scoreMod || 1));
     run.waveKills++;
   }
+  // ---- TUTORIAL: a guided tour of the whole kit ----
+  // Detection rides the existing trick pipeline (addStyle kinds) plus a little polling;
+  // dummies are real enemies kept permanently stunned so launches/juggles/slams all work.
+  const TUT = {
+    active: false, idx: 0, doneT: 0, endT: 0, n: {},
+    _prevGround: true, _prevBlade: "held",
+    steps: [
+      { t: "MOVE", d: "A / D to run. Warm up — move both ways.", ok: () => TUT.n.moveL > 25 && TUT.n.moveR > 25 },
+      { t: "JUMP", d: "W or Space to jump (hold S on a ledge to drop through). Jump twice.", ok: () => (TUT.n.jump || 0) >= 2 },
+      { t: "DASH", d: "Shift to dash — steer it mid-flight with W / A / S / D. Dash twice.", ok: () => (TUT.n.dash || 0) >= 2 },
+      { t: "CUT", d: "Your blade follows the mouse — SPEED IS DAMAGE. Slash the dummy 3 times, fast.", need: 1, ok: () => (TUT.n.hit || 0) >= 3 },
+      { t: "LAUNCH", d: "A fast UPWARD swing pops an enemy into the air.", need: 1, ok: () => (TUT.n.launch || 0) >= 1 },
+      { t: "JUGGLE", d: "Launch it — then keep cutting it before it lands. 3 airborne hits.", need: 1, ok: () => (TUT.n.airHit || 0) >= 3 },
+      { t: "SLAM", d: "While airborne, strike DOWN through an enemy — a slam hits harder.", need: 1, ok: () => (TUT.n.slam || 0) >= 1 },
+      { t: "POWER SLAM", d: "Dash DOWN to fall fast, then slam mid-fall — a fast descent hits far harder.", need: 1, ok: () => (TUT.n.superslam || 0) >= 1 },
+      { t: "UPDRAFT", d: "Launch WHILE RISING (jump or dash up first) for a heavy updraft.", need: 1, ok: () => (TUT.n.updraft || 0) >= 1 },
+      { t: "THROW", d: "Right-click to hurl the blade through an enemy, right-click again to recall it. Land a throw, then recall.", need: 1, ok: () => (TUT.n.throwHit || 0) >= 1 && (TUT.n.recall || 0) >= 1 },
+      { t: "PARRY", d: "Swing FAST through an incoming shot to send it back — a perfect parry homes it into the shooter.", ranged: true, ok: () => (TUT.n.parry || 0) >= 1 || (TUT.n.deflect || 0) >= 2 },
+      { t: "READY", d: "That's the whole blade. Cut clean. Keep moving. The Tear awaits.", final: true, ok: () => false },
+    ],
+    start() { this.active = true; this.idx = 0; this.doneT = 0; this.endT = 0; this.n = {}; },
+    stop() { this.active = false; },
+    mark(k) { if (this.active) this.n[k] = (this.n[k] || 0) + 1; },
+    step() { return this.steps[this.idx]; },
+    update(dt) {
+      if (!this.active) return;
+      const s = this.step();
+      // polling detections
+      if (Input.left()) this.n.moveL = (this.n.moveL || 0) + dt * 60;
+      if (Input.right()) this.n.moveR = (this.n.moveR || 0) + dt * 60;
+      if (this._prevGround && !player.onGround && player.vy < -200) this.mark("jump");
+      this._prevGround = player.onGround;
+      if (player.dashTimer > 0 && !this._dashed) { this.mark("dash"); this._dashed = true; }
+      if (player.dashTimer <= 0) this._dashed = false;
+      if (this._prevBlade === "returning" && blade.state === "held") this.mark("recall");
+      this._prevBlade = blade.state;
+      // keep the practice dummies stocked + docile (stunned, near-immortal)
+      if (s.need) {
+        let dummies = 0;
+        for (const e of enemies) if (e.tutDummy && !e.dead) { dummies++; e.stun = Math.max(e.stun, 1); if (e.hp < e.maxHp * 0.3) e.hp = e.maxHp; }
+        if (dummies < s.need) {
+          spawnOne({ type: "charger", hpScale: 6 });
+          const e = enemies[enemies.length - 1];
+          if (e) { e.tutDummy = true; e.affixCount = 0; e.x = clamp(player.x + (player.facing || 1) * 260, 120, W - 120); e.y = CONFIG.world.groundY - e.hh; }
+        }
+      }
+      if (s.ranged) {   // the parry teacher: one live ranged shooter
+        let shooter = 0;
+        for (const e of enemies) if (e.kind === "ranged" && !e.dead) shooter++;
+        if (!shooter) spawnOne({ type: "ranged", hpScale: 2 });
+      }
+      // completion -> a beat, then the next lesson
+      if (this.doneT > 0) {
+        this.doneT -= dt;
+        if (this.doneT <= 0) { this.idx = Math.min(this.idx + 1, this.steps.length - 1); this.n.airHit = 0; }
+      } else if (s.final) {
+        this.endT += dt;
+        if (this.endT > 5) { this.stop(); state = "menu"; document.exitPointerLock(); }
+      } else if (s.ok()) { this.doneT = 1.1; SFX.rankup(); }
+    },
+  };
+
+  // ---- PLAYGROUND: an open arena with everything on tap (keyboard-driven) ----
+  const PG_KINDS = ["charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera", "priest"];
+  function stepPlayground() {
+    for (let i = 0; i < PG_KINDS.length; i++) {
+      if (Input.pressed.has("Digit" + (i + 1))) {
+        spawnOne({ type: PG_KINDS[i] });
+        addFloater(player.x, player.y - 60, PG_KINDS[i].toUpperCase(), false, CONFIG.colors[PG_KINDS[i]] || "#000");
+      }
+    }
+    if (Input.pressed.has("KeyB")) {   // next boss in the cycle
+      run.curBoss = run.bossOrder[run.bossIdx % run.bossOrder.length]; run.bossIdx++;
+      spawnOne({ type: "boss" });
+    }
+    if (Input.pressed.has("KeyK")) { for (const e of enemies) { e.dead = true; } projectiles.length = 0; addFloater(player.x, player.y - 60, "CLEARED", true, CONFIG.colors.perfect); }
+    if (Input.pressed.has("KeyH")) { player.hp = player.maxHp; addFloater(player.x, player.y - 60, "HEALED", true, "#1faf5a"); }
+    if (Input.pressed.has("KeyU")) { draftChoices = buildDraft(); state = "draft"; document.exitPointerLock(); }
+    if (Input.pressed.has("KeyG")) {
+      const ups = availableTierUps(run.mods);
+      if (ups.length) { tierChoices = ups.slice(0, 3); state = "tierup"; document.exitPointerLock(); }
+      else addFloater(player.x, player.y - 60, "no ability to evolve — U first", false, "#888");
+    }
+  }
+
   function addStyle(kind) {
+    TUT.mark(kind);   // the tutorial listens to the trick pipeline
     const T = CONFIG.trick;
     let pts = T.pts[kind] || 2;
     if (kind !== run.lastTrick) pts *= T.variety;   // reward varied tricks
@@ -379,7 +465,17 @@
       run.bossOrder = shuffledRoster(); run.bossIdx = 0; run.bossesBeaten = 0;
     }
     META.apply({ player, blade, mods: run.mods });
-    startNextWave();
+    if (mode === "tutorial" || mode === "playground") {
+      // training space: no waves — an open arena (floor + two practice ledges)
+      platforms = [
+        { x: 0, y: CONFIG.world.groundY, w: W, h: H - CONFIG.world.groundY, floor: true },
+        { x: W * 0.28, y: 560, w: 300, h: 24, oneway: true },
+        { x: W * 0.62, y: 430, w: 260, h: 24, oneway: true },
+      ];
+      run.wave = 1; run.waveActive = false;
+      if (mode === "playground") { run.bossOrder = shuffledRoster(); run.bossIdx = 0; }
+      if (mode === "tutorial") TUT.start();
+    } else startNextWave();
     if (mode === "campaign") showLore(CAMPAIGN_INTRO, "THE TEAR", 11);   // the opening beat
     state = "playing";
     requestLock();
@@ -534,7 +630,7 @@
   function bossBiome(id) { const i = STAGES.findIndex((s) => s.boss === id); return i < 0 ? 0 : i; }
   // pick the boss for the current context: the campaign stage's named boss, else the Warden
   function makeBoss() {
-    return bossById((run.mode === "campaign") ? stageAt(stageIndex).boss : (run.mode === "bossonly" || run.mode === "gauntlet") ? run.curBoss : "warden");
+    return bossById((run.mode === "campaign") ? stageAt(stageIndex).boss : (run.mode === "bossonly" || run.mode === "gauntlet" || run.mode === "playground") ? run.curBoss : "warden");
   }
   // Endless mini-bosses: any built campaign boss except the finale (the Source stays special)
   const MINI_BOSSES = ["warden", "colossus", "aldric", "echo"];
@@ -1022,6 +1118,7 @@
           if (big) addZoom(CONFIG.juice.zoomBig);
           SFX.hit(big); if (isSlam) SFX.slam(); else if (empowered) SFX.updraft(); else if (isLaunch) SFX.launch();
           addStyle(isSlam ? (empSlam ? "superslam" : "slam") : (empowered ? "updraft" : (isLaunch ? "launch" : "hit")));
+          if (e.y < CONFIG.world.groundY - e.hh - 14) TUT.mark("airHit");   // tutorial: a juggled (airborne) cut
           fire(run.mods.onHit, makeEv(cp.px, cp.py, e));
           if (isSlam) fire(run.mods.onSlam, makeEv(e.x, e.y, e));
           // Rupture T2: a Power Slam detonates bleed on every nearby foe
@@ -1301,9 +1398,16 @@
 
     run.runTime += dt; run.waveTime += dt;
     updateTrick(dt);
+    if (run.mode === "tutorial") TUT.update(dt);
+    else if (run.mode === "playground") stepPlayground();
 
     if (player.hp <= 0) {
-      if (player.revives > 0 && !player.oneHit) {   // Second Wind (shop): rise once more
+      if (run.mode === "tutorial" || run.mode === "playground") {
+        // training never ends — reset on the spot and keep practising
+        player.hp = player.maxHp; player.iframe = 2;
+        addFloater(player.x, player.y - 44, "RESET", true, CONFIG.colors.perfect);
+        FX.ring(player.x, player.y, 14, CONFIG.colors.perfect);
+      } else if (player.revives > 0 && !player.oneHit) {   // Second Wind (shop): rise once more
         player.revives--; player.hp = Math.round(player.maxHp * 0.35); player.iframe = 1.6;
         FX.ring(player.x, player.y, 16, CONFIG.colors.perfect); FX.burst(player.x, player.y, 0, -1, 16, CONFIG.colors.perfect);
         addFloater(player.x, player.y - 44, "SECOND WIND", true, CONFIG.colors.perfect);
@@ -1383,7 +1487,7 @@
     // the intensified BOSS arrangement while a boss wave is live (reverts on its death)
     if (typeof SFX !== "undefined" && SFX.setMusicTheme) {
       if (isMenuState(state)) SFX.setMusicTheme(Attract.ready ? Attract.stage().name : "menu", false);
-      else if (run && currentStage && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly" || run.mode === "gauntlet"))
+      else if (run && currentStage && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly" || run.mode === "gauntlet" || run.mode === "tutorial" || run.mode === "playground"))
         SFX.setMusicTheme(currentStage.name, !!(run.isBossWave && state !== "gameover" && state !== "win"));
       else SFX.setMusicTheme("menu", false);
     }
@@ -1488,7 +1592,7 @@
     ctx.clearRect(SR.x, SR.y, SR.w, SR.h);
     const playLike = state === "playing" || state === "draft" || state === "tierup" || state === "paused" || state === "gameover" || state === "win" || state === "confirmquit" || state === "continue";
     // biome background (campaign + endless tint the world; menus stay white)
-    const biomeMode = !!(run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly" || run.mode === "gauntlet"));
+    const biomeMode = !!(run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly" || run.mode === "gauntlet" || run.mode === "tutorial" || run.mode === "playground"));
     let bgCol = (playLike && biomeMode) ? currentStage.bg : "#fff";
     if (playLike && Array.isArray(enemies)) { const ef = enemies.find((e) => e.whiteFlash > 0); if (ef) bgCol = blendCol(bgCol, "#ffffff", ef.whiteFlash); }   // The Echo's white-out
     ctx.fillStyle = bgCol;
@@ -1628,7 +1732,7 @@
     ctx.translate(cx + ox, cy + oy);
     ctx.scale(zoom, zoom);
     ctx.translate(-cx, -cy);
-    const biome = run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly" || run.mode === "gauntlet");
+    const biome = run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly" || run.mode === "gauntlet" || run.mode === "tutorial" || run.mode === "playground");
     if (biome) Backdrop.draw(ctx, currentStage, performance.now() / 1000, player ? player.x : W / 2);   // sky + parallax + motes
     for (const p of platforms) Backdrop.platform(ctx, p, currentStage, !!p.floor);                       // depth: gradient + edge + shadow
     // Geomancer walls: a colored cap + crumble fade as they age
@@ -1753,30 +1857,26 @@
       ctx.fillStyle = g; ctx.fillRect(sr.x, sr.y, sr.w, sr.h); ctx.restore();
     }
 
-    // ===== top-left: VITALS cluster (panel-backed so it reads on any biome) =====
-    const x = 28, y = 26, bw = 320, bh = 24;
+    // ===== top-left: VITALS (no backing slab — crisp elements that read on any biome) =====
+    const x = 28, y = 26, bw = 320, bh = 22;
     const ry = y + bh + 12, dw = 34, dh = 11, dg = 6, maxDash = Math.max(1, player.maxDashCharges || 1);
-    ctx.save();   // backing panel + accent spine
-    ctx.globalAlpha = 0.32; ctx.fillStyle = "#0b0d14"; ctx.fillRect(x - 14, y - 12, bw + 110, 78);
-    ctx.globalAlpha = 0.5; ctx.strokeStyle = ink; ctx.lineWidth = 1; ctx.strokeRect(x - 14, y - 12, bw + 110, 78);
-    ctx.globalAlpha = 1; ctx.fillStyle = accent; ctx.fillRect(x - 14, y - 12, 4, 78);
-    ctx.restore();
 
-    // --- health: dark charcoal fill, a red "wound" + recent-damage chip, low-HP red pulse ---
-    const charcoal = "#2b313d";
+    // --- health: a LIGHT track so the missing chunk is obvious against the dark fill,
+    // a red chip over what was just lost, an accent sheen, and a low-HP red pulse ---
+    const charcoal = "#262c37";
     const hpFill = low ? "rgb(" + Math.round(150 + 95 * pulse) + "," + Math.round(34 + 22 * pulse) + "," + Math.round(40 + 18 * pulse) + ")" : charcoal;
     ctx.save();
-    ctx.fillStyle = "#3a1119"; ctx.fillRect(x, y, bw, bh);                                  // dark-red wound (missing HP)
-    ctx.fillStyle = "rgba(210,52,58,0.9)"; ctx.fillRect(x, y, bw * hudHpLag, bh);           // recent-damage chip
+    ctx.globalAlpha = 0.22; ctx.fillStyle = ink; ctx.fillRect(x, y, bw, bh); ctx.globalAlpha = 1;   // empty track (light on dark biomes, grey on light)
+    if (hudHpLag > hpFrac) { ctx.fillStyle = "rgba(226,59,59,0.9)"; ctx.fillRect(x + bw * hpFrac, y, bw * (hudHpLag - hpFrac), bh); }   // the chunk just lost
     if (low && !lowG) { ctx.shadowColor = "#e23b3b"; ctx.shadowBlur = 10 + 10 * pulse; }
-    ctx.fillStyle = hpFill; ctx.fillRect(x, y, bw * hpFrac, bh); ctx.shadowBlur = 0;        // health
-    ctx.globalAlpha = 0.75; ctx.fillStyle = low ? "#ff9a9a" : accent; ctx.fillRect(x, y, bw * hpFrac, 2);   // accent sheen
-    ctx.globalAlpha = 0.4; ctx.strokeStyle = "#000"; ctx.lineWidth = 1;                      // quarter ticks
+    ctx.fillStyle = hpFill; ctx.fillRect(x, y, bw * hpFrac, bh); ctx.shadowBlur = 0;                 // health
+    ctx.globalAlpha = 0.85; ctx.fillStyle = low ? "#ff9a9a" : accent; ctx.fillRect(x, y, bw * hpFrac, 2);   // accent sheen
+    ctx.globalAlpha = 0.35; ctx.strokeStyle = THEME.dark ? "#000" : "#fff"; ctx.lineWidth = 1;        // quarter ticks
     for (let s = 1; s < 4; s++) { const sx = x + bw * s / 4; ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, y + bh); ctx.stroke(); }
     ctx.globalAlpha = 1; ctx.strokeStyle = ink; ctx.lineWidth = 2; ctx.strokeRect(x, y, bw, bh);
     ctx.font = UI.font(t.type.label, true); ctx.textAlign = "right"; ctx.fillStyle = "#fff";   // fixed white reads on the dark bar
     ctx.shadowColor = "rgba(0,0,0,0.65)"; ctx.shadowBlur = 3;
-    ctx.fillText(Math.ceil(player.hp) + " / " + player.maxHp, x + bw - 8, y + bh - 6); ctx.shadowBlur = 0;
+    ctx.fillText(Math.ceil(player.hp) + " / " + player.maxHp, x + bw - 8, y + bh - 5); ctx.shadowBlur = 0;
     ctx.restore();
     if (player.oneHit) UI.tag(ctx, "ONE-HIT", x + bw + 12, y + 6, "#e23b3b", "left", t.type.micro);
 
@@ -1808,11 +1908,15 @@
       oy += 15;
     }
 
-    // ===== top-center: WAVE + stat chips =====
-    UI.title(ctx, run.isBossWave ? "BOSS" : "WAVE " + run.wave, W / 2, 42, t.type.h2);
-    const remaining = enemies.length + run.spawnQueue.length;
-    const stat = (label, val, cx) => { UI.text(ctx, val, cx, 66, t.type.label, "center"); UI.text(ctx, label, cx, 80, t.type.micro, "center", t.alpha.faint); };
-    stat("SCORE", "" + run.score, W / 2 - 150); stat("TIME", fmtTime(run.runTime), W / 2); stat("LEFT", "" + remaining, W / 2 + 150);
+    // ===== top-center: WAVE + stat chips (training modes show their own card) =====
+    if (run.mode === "tutorial") drawTutorialCard();
+    else if (run.mode === "playground") drawPlaygroundHelp();
+    else {
+      UI.title(ctx, run.isBossWave ? "BOSS" : "WAVE " + run.wave, W / 2, 42, t.type.h2);
+      const remaining = enemies.length + run.spawnQueue.length;
+      const stat = (label, val, cx) => { UI.text(ctx, val, cx, 66, t.type.label, "center"); UI.text(ctx, label, cx, 80, t.type.micro, "center", t.alpha.faint); };
+      stat("SCORE", "" + run.score, W / 2 - 150); stat("TIME", fmtTime(run.runTime), W / 2); stat("LEFT", "" + remaining, W / 2 + 150);
+    }
 
     // trick multiplier — pops on increase
     if (run.mult > hudMultPrev) hudMultPop = 1;
@@ -1843,6 +1947,43 @@
       ctx.restore();
       UI.tag(ctx, (boss.bossName || "BOSS").toUpperCase(), W / 2, by - 6, CONFIG.colors.boss, "center", t.type.caption);
     }
+  }
+
+  // the tutorial's lesson card: frosted, accent-striped, with a ✓ beat on completion
+  function drawTutorialCard() {
+    const t = UI.t, s = TUT.step(), cw = 780, cx = W / 2 - cw / 2, cy = 24, ch = 96;
+    ctx.save();
+    ctx.globalAlpha = 0.82; ctx.fillStyle = t.color.paper; ctx.fillRect(cx, cy, cw, ch);
+    ctx.globalAlpha = 0.5; ctx.strokeStyle = THEME.ink; ctx.lineWidth = 1.5; ctx.strokeRect(cx, cy, cw, ch);
+    ctx.globalAlpha = 1; ctx.fillStyle = t.color.accent; ctx.fillRect(cx, cy, cw, 3);
+    ctx.fillStyle = "#000";
+    UI.tag(ctx, "LESSON " + (TUT.idx + 1) + " / " + TUT.steps.length, cx + 18, cy + 26, t.color.accent, "left", t.type.micro);
+    ctx.font = UI.font(t.type.title, true); ctx.textAlign = "left";
+    ctx.fillText(s.t, cx + 18, cy + 54);
+    ctx.font = UI.font(t.type.caption, false); ctx.fillStyle = "rgba(0,0,0,0.75)";
+    ctx.fillText(s.d, cx + 18, cy + 78);
+    if (TUT.doneT > 0) {   // the ✓ beat
+      ctx.font = UI.font(44, true); ctx.fillStyle = t.color.accent; ctx.textAlign = "right";
+      ctx.fillText("✓", cx + cw - 20, cy + 62);
+    }
+    if (s.final) { ctx.font = UI.font(t.type.micro, true); ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.textAlign = "right"; ctx.fillText("returning to the menu…", cx + cw - 16, cy + 26); }
+    ctx.restore();
+    ctx.textAlign = "left";
+  }
+
+  // the playground's key legend
+  function drawPlaygroundHelp() {
+    const t = UI.t, cw = 900, cx = W / 2 - cw / 2, cy = 24, ch = 64;
+    ctx.save();
+    ctx.globalAlpha = 0.78; ctx.fillStyle = t.color.paper; ctx.fillRect(cx, cy, cw, ch);
+    ctx.globalAlpha = 0.5; ctx.strokeStyle = THEME.ink; ctx.lineWidth = 1.5; ctx.strokeRect(cx, cy, cw, ch);
+    ctx.globalAlpha = 1; ctx.fillStyle = t.color.accent; ctx.fillRect(cx, cy, cw, 3);
+    ctx.fillStyle = "#000"; ctx.font = UI.font(t.type.label, true); ctx.textAlign = "center";
+    ctx.fillText("PLAYGROUND", W / 2, cy + 24);
+    ctx.font = UI.font(t.type.caption, false); ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillText("1–8 spawn enemies  ·  B boss  ·  K clear  ·  H heal  ·  U pick an ability  ·  G evolve it  ·  P pause", W / 2, cy + 48);
+    ctx.restore();
+    ctx.textAlign = "left";
   }
 
   function drawBanner() {
@@ -2116,7 +2257,9 @@
         sel: get() === it.id,
       }));
     };
-    col("Mode", 180, CONFIG.modes, () => selMode, (v) => selMode = v);
+    // dev/test modes (Boss Test, Enemy Test) never ship to the CrazyGames build —
+    // they only appear locally and on the standalone (Vercel) site
+    col("Mode", 180, CONFIG.modes.filter((m) => !m.debug || !CG.live), () => selMode, (v) => selMode = v);
     col("Difficulty", 650, CONFIG.difficulties.map((d) => ({ id: d.id, label: d.label })), () => selDiff, (v) => selDiff = v);
     col("Weapon", 1120, WEAPONS.map((w) => ({ id: w.id, label: w.name })), () => selWeapon, (v) => selWeapon = v);
     const dsel = CONFIG.difficulties.find((x) => x.id === selDiff);
@@ -2697,9 +2840,7 @@
       if (b.chip) UI.chip(ctx, b, active);
       else UI.button(ctx, b, active);
       ctx.restore();
-      // accent caret beside the focused/hovered primary buttons (not chips, selectors,
-      // or ghost rail buttons — those carry their own accent bar)
-      if (a > 0.02 && eb > 0.85 && !b.chip && !b.sel && !b.ghost) UI.caret(ctx, b.x - 14, cy, a, UI.t.color.accent);
+      // (no external caret — every button style now carries its own accent bar)
     }
   }
 

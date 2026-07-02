@@ -120,17 +120,28 @@ const UI = {
       ctx.textBaseline = "alphabetic";
       return;
     }
+    // default buttons share the menu's ghost language, adapted to light content zones:
+    // a frosted body + ink hairline; hover/focus warms the wash and slides in a cyan
+    // accent bar (b._a = smooth hover progress); a SELECTED button stays solid ink.
     const on = b.enabled !== false;
-    const fill = on && active;
-    const line = on ? this.ink : this.t.color.disabled;
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = line;
-    ctx.fillStyle = fill ? this.ink : this.t.color.paper;
-    ctx.beginPath();
-    ctx.rect(b.x, b.y, b.w, b.h);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = fill ? this.t.color.paper : line;
+    const a = on ? (b._a == null ? (active ? 1 : 0) : b._a) : 0;
+    const selected = on && !!b.sel;
+    if (selected) {
+      ctx.fillStyle = this.ink; ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.lineWidth = 2; ctx.strokeStyle = this.ink; ctx.strokeRect(b.x, b.y, b.w, b.h);
+      ctx.fillStyle = this.t.color.paper;
+    } else {
+      ctx.globalAlpha = on ? 0.62 : 0.35; ctx.fillStyle = this.t.color.paper;
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+      if (a > 0.01) { ctx.globalAlpha = 0.08 * a; ctx.fillStyle = this.ink; ctx.fillRect(b.x, b.y, b.w, b.h); }
+      ctx.globalAlpha = on ? 0.55 + 0.45 * a : 1;
+      ctx.lineWidth = 1.5 + a * 0.8;
+      ctx.strokeStyle = on ? this.ink : this.t.color.disabled;
+      ctx.strokeRect(b.x, b.y, b.w, b.h);
+      ctx.globalAlpha = 1;
+      if (a > 0.01) { ctx.globalAlpha = a; ctx.fillStyle = this.t.color.accent; ctx.fillRect(b.x, b.y, 3, b.h); ctx.globalAlpha = 1; }
+      ctx.fillStyle = on ? this.ink : this.t.color.disabled;
+    }
     ctx.font = this.font(b.size || this.t.type.lead, true);
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
