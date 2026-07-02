@@ -2071,45 +2071,61 @@
     addBack();
   }
 
-  function renderSettings() {
-    const t = UI.t, fx = W / 2 - 260, rx = W / 2 + 260;
-    UI.header(ctx, "SETTINGS", "tune sound, feel, and feedback", eIn);
-    const bw = 56, lo = rx - 240, hi = rx - bw, valX = (lo + bw + hi) / 2;   // stepper geometry, shared by every row
-    let y = 252;
-    const stepper = (label, valStr, dec, inc) => {
-      UI.text(ctx, label, fx, y + 7, t.type.lead);
-      uiButtons.push({ x: lo, y: y - 16, w: bw, h: 46, label: "−", action: dec });
-      uiButtons.push({ x: hi, y: y - 16, w: bw, h: 46, label: "+", action: inc });
-      UI.text(ctx, valStr, valX, y + 7, t.type.lead, "center");
-      UI.divider(ctx, fx, y + 32, rx - fx, 0.1);
-      y += 78;
+  // one aligned grid for every settings row, shared by the Settings tab and the pause
+  // panel. The control block is a FIXED width right-anchored at rx (no more ragged
+  // columns): steppers put the value dead-centre between the − / + buttons, and
+  // toggles/cycles span the whole block. Returns the y below the last row.
+  function drawSettingsRows(fx, rx, y0, compact) {
+    const t = UI.t;
+    const rowH = compact ? 54 : 64, btnW = compact ? 44 : 54, btnH = compact ? 38 : 46;
+    const block = compact ? 196 : 252, lo = rx - block, labelSize = compact ? t.type.body : t.type.lead;
+    let y = y0;
+    const section = (name) => { if (compact) return; UI.tag(ctx, name, fx, y + 6, t.color.accent, "left", t.type.micro); y += 28; };
+    const row = (label, drawControl) => {
+      const cy = y + rowH / 2;
+      UI.text(ctx, label, fx, cy + 6, labelSize);
+      drawControl(cy);
+      UI.divider(ctx, fx, y + rowH, rx - fx, 0.08);
+      y += rowH + (compact ? 4 : 8);
     };
+    const stepper = (label, valStr, dec, inc) => row(label, (cy) => {
+      uiButtons.push({ x: lo, y: cy - btnH / 2, w: btnW, h: btnH, label: "−", action: dec });
+      uiButtons.push({ x: rx - btnW, y: cy - btnH / 2, w: btnW, h: btnH, label: "+", action: inc });
+      UI.text(ctx, valStr, (lo + rx) / 2, cy + 6, compact ? t.type.body : t.type.lead, "center");
+    });
+    const wide = (label, lab, sel, action) => row(label, (cy) => {
+      uiButtons.push({ x: lo, y: cy - btnH / 2, w: block, h: btnH, size: compact ? 14 : 16, label: lab, sel, action });
+    });
+    const save = () => { applySettings(); saveSettings(); };
+    section("AUDIO");
     stepper("Volume", Math.round(settings.vol * 100) + "%",
-      () => { settings.vol = clamp(+(settings.vol - 0.1).toFixed(2), 0, 1); applySettings(); saveSettings(); },
-      () => { settings.vol = clamp(+(settings.vol + 0.1).toFixed(2), 0, 1); applySettings(); saveSettings(); });
-    // Music toggle — control right-anchored at rx so it lines up with the steppers
-    UI.text(ctx, "Music", fx, y + 7, t.type.lead);
-    uiButtons.push({ x: rx - 132, y: y - 16, w: 132, h: 46, label: settings.music ? "ON" : "OFF",
-      sel: settings.music, action: () => { settings.music = !settings.music; applySettings(); saveSettings(); } });
-    UI.divider(ctx, fx, y + 32, rx - fx, 0.1); y += 78;
+      () => { settings.vol = clamp(+(settings.vol - 0.1).toFixed(2), 0, 1); save(); },
+      () => { settings.vol = clamp(+(settings.vol + 0.1).toFixed(2), 0, 1); save(); });
+    wide("Music", settings.music ? "ON" : "OFF", settings.music,
+      () => { settings.music = !settings.music; save(); });
+    section("FEEL");
     stepper("Mouse sensitivity", settings.sens.toFixed(2),
-      () => { settings.sens = clamp(+(settings.sens - 0.1).toFixed(2), 0.2, 3); applySettings(); saveSettings(); },
-      () => { settings.sens = clamp(+(settings.sens + 0.1).toFixed(2), 0.2, 3); applySettings(); saveSettings(); });
+      () => { settings.sens = clamp(+(settings.sens - 0.1).toFixed(2), 0.2, 3); save(); },
+      () => { settings.sens = clamp(+(settings.sens + 0.1).toFixed(2), 0.2, 3); save(); });
     stepper("Screen shake", Math.round(settings.shake * 100) + "%",
-      () => { settings.shake = clamp(+(settings.shake - 0.25).toFixed(2), 0, 2); applySettings(); saveSettings(); },
-      () => { settings.shake = clamp(+(settings.shake + 0.25).toFixed(2), 0, 2); applySettings(); saveSettings(); });
-    // Graphics quality — cycles Auto / High / Low; Low drops the costly glow + motes
-    UI.text(ctx, "Effects", fx, y + 7, t.type.lead);
-    const gfxLabel = settings.gfx === "auto" ? ("AUTO (" + (GFX.low ? "LOW" : "HIGH") + ")") : (settings.gfx === "low" ? "LOW" : "HIGH");
-    uiButtons.push({ x: rx - 200, y: y - 16, w: 200, h: 46, label: gfxLabel,
-      action: () => { settings.gfx = settings.gfx === "auto" ? "high" : (settings.gfx === "high" ? "low" : "auto"); applySettings(); saveSettings(); } });
-    UI.divider(ctx, fx, y + 32, rx - fx, 0.1); y += 78;
+      () => { settings.shake = clamp(+(settings.shake - 0.25).toFixed(2), 0, 2); save(); },
+      () => { settings.shake = clamp(+(settings.shake + 0.25).toFixed(2), 0, 2); save(); });
+    section("VIDEO");
+    wide("Effects", settings.gfx === "auto" ? ("AUTO (" + (GFX.low ? "LOW" : "HIGH") + ")") : (settings.gfx === "low" ? "LOW" : "HIGH"), false,
+      () => { settings.gfx = settings.gfx === "auto" ? "high" : (settings.gfx === "high" ? "low" : "auto"); save(); });
+    return y;
+  }
+
+  function renderSettings() {
+    const t = UI.t, fx = W / 2 - 280, rx = W / 2 + 280;
+    UI.header(ctx, "SETTINGS", "tune sound, feel, and feedback", eIn);
+    const yEnd = drawSettingsRows(fx, rx, 208, false);
     // Legal — a CrazyGames Basic-launch requirement: an in-game mention of Terms & Privacy.
     UI.text(ctx, "By playing you agree to CrazyGames' Terms of Service and Privacy Policy.",
-      fx, y + 2, t.type.caption, "left", t.alpha.muted);
-    uiButtons.push({ x: fx, y: y + 18, w: 168, h: 42, label: "Terms of Service",
+      fx, yEnd + 24, t.type.caption, "left", t.alpha.muted);
+    uiButtons.push({ x: fx, y: yEnd + 38, w: 190, h: 36, size: 13, label: "Terms of Service",
       action: () => window.open("https://www.crazygames.com/terms-and-conditions", "_blank", "noopener") });
-    uiButtons.push({ x: fx + 180, y: y + 18, w: 168, h: 42, label: "Privacy Policy",
+    uiButtons.push({ x: fx + 204, y: yEnd + 38, w: 190, h: 36, size: 13, label: "Privacy Policy",
       action: () => window.open("https://www.crazygames.com/privacy", "_blank", "noopener") });
     addBack();
   }
@@ -2400,34 +2416,11 @@
       { label: "MAIN MENU", action: () => { state = "confirmquit"; } },
     ], W / 2 - 300, 256, 300, t.metric.btnH, t.metric.btnGap);
 
-    // ---- right: inline settings (tune mid-run without leaving) ----
-    const rx = W / 2 + 24, rw = 360; let yy = 248;
-    UI.tag(ctx, "SETTINGS", rx, yy - 12, t.color.accent, "left", t.type.caption);
-    const stepRow = (label, valStr, dec, inc) => {
-      UI.text(ctx, label, rx, yy + 7, t.type.body);
-      uiButtons.push({ x: rx + rw - 150, y: yy - 12, w: 44, h: 38, label: "−", action: dec });
-      uiButtons.push({ x: rx + rw - 44, y: yy - 12, w: 44, h: 38, label: "+", action: inc });
-      UI.text(ctx, valStr, rx + rw - 75, yy + 7, t.type.lead, "center");
-      UI.divider(ctx, rx, yy + 26, rw, 0.1); yy += 54;
-    };
-    const toggleRow = (label, on, lab, w, action, sel) => {
-      UI.text(ctx, label, rx, yy + 7, t.type.body);
-      uiButtons.push({ x: rx + rw - w, y: yy - 12, w, h: 38, label: lab, sel: sel, action });
-      UI.divider(ctx, rx, yy + 26, rw, 0.1); yy += 54;
-    };
-    stepRow("Volume", Math.round(settings.vol * 100) + "%",
-      () => { settings.vol = clamp(+(settings.vol - 0.1).toFixed(2), 0, 1); applySettings(); saveSettings(); },
-      () => { settings.vol = clamp(+(settings.vol + 0.1).toFixed(2), 0, 1); applySettings(); saveSettings(); });
-    toggleRow("Music", settings.music, settings.music ? "ON" : "OFF", 132,
-      () => { settings.music = !settings.music; applySettings(); saveSettings(); }, settings.music);
-    stepRow("Mouse sensitivity", settings.sens.toFixed(2),
-      () => { settings.sens = clamp(+(settings.sens - 0.1).toFixed(2), 0.2, 3); applySettings(); saveSettings(); },
-      () => { settings.sens = clamp(+(settings.sens + 0.1).toFixed(2), 0.2, 3); applySettings(); saveSettings(); });
-    stepRow("Screen shake", Math.round(settings.shake * 100) + "%",
-      () => { settings.shake = clamp(+(settings.shake - 0.25).toFixed(2), 0, 2); applySettings(); saveSettings(); },
-      () => { settings.shake = clamp(+(settings.shake + 0.25).toFixed(2), 0, 2); applySettings(); saveSettings(); });
-    toggleRow("Effects", true, settings.gfx === "auto" ? ("AUTO (" + (GFX.low ? "LOW" : "HIGH") + ")") : (settings.gfx === "low" ? "LOW" : "HIGH"), 170,
-      () => { settings.gfx = settings.gfx === "auto" ? "high" : (settings.gfx === "high" ? "low" : "auto"); applySettings(); saveSettings(); });
+    // ---- right: inline settings (tune mid-run without leaving) — same grid as the
+    // Settings tab, compact ----
+    const sx = W / 2 + 24, sw = 368;
+    UI.tag(ctx, "SETTINGS", sx, 240, t.color.accent, "left", t.type.caption);
+    drawSettingsRows(sx, sx + sw, 252, true);
   }
 
   function quitRun() {
