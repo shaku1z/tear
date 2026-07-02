@@ -175,6 +175,49 @@ const SFX = {
   },
 
   // ---- layered music: lookahead-scheduled kick / hat / bass / lead ----
+  // Every biome has its OWN theme (tempo, root, scale, drum pattern, voices), and each
+  // theme has an intensified BOSS arrangement of the same identity: +10 BPM, a driving
+  // double-time kick, hats on every off-beat, a rest-less low end with octave stabs,
+  // and an insistent lead. Switches land on bar boundaries so they stay musical.
+  themes: (() => {
+    const K = (...idx) => { const a = new Array(16).fill(0); for (const i of idx) a[i] = 1; return a; };
+    return {
+      // the wandering Am figure — menus fall back here
+      menu: { bpm: 118, root: 110, kick: K(0, 4, 8, 12), hat: K(1, 3, 5, 7, 9, 11, 13, 15), hatFreq: 8000,
+        bass: [0, 0, 7, 0, 5, 5, 3, 5, 0, 0, 7, 0, 8, 8, 7, 5], bassType: "triangle", bassVol: 0.16,
+        lead: [12, -1, -1, -1, 15, -1, -1, 12, -1, -1, 19, -1, 17, -1, 15, -1], leadType: "sine", leadVol: 0.06 },
+      // dawn discipline: bright C-major bells over a steady patrol pulse
+      "The Grounds": { bpm: 112, root: 130.81, kick: K(0, 4, 8, 12), hat: K(3, 7, 11, 15), hatFreq: 9000,
+        bass: [0, 0, 4, 0, 5, 5, 7, 5, 0, 0, 4, 0, 2, 2, 5, 7], bassType: "triangle", bassVol: 0.15,
+        lead: [12, -1, -1, 16, -1, -1, 19, -1, -1, -1, 16, -1, 12, -1, -1, -1], leadType: "sine", leadVol: 0.055 },
+      // deep industry: a slow phrygian grind, metallic ticks, sparse square blips
+      "The Undercroft": { bpm: 100, root: 98, kick: K(0, 6, 8, 14), hat: K(2, 5, 10, 13), hatFreq: 10500,
+        bass: [0, -1, 1, 0, -1, 3, -1, 0, 0, -1, 1, 0, 7, -1, 5, 3], bassType: "sawtooth", bassVol: 0.12,
+        lead: [-1, -1, 12, -1, -1, -1, -1, -1, -1, 13, -1, -1, -1, -1, 12, -1], leadType: "square", leadVol: 0.035 },
+      // war march: a driving A-minor pulse with a horn-like call
+      "The Crimson Fields": { bpm: 126, root: 110, kick: K(0, 4, 8, 10, 12), hat: K(2, 6, 10, 14), hatFreq: 7500,
+        bass: [0, 0, 7, 7, 0, 0, 8, 8, 0, 0, 7, 7, 10, 10, 8, 7], bassType: "triangle", bassVol: 0.17,
+        lead: [12, -1, 15, -1, 12, -1, 10, -1, 12, -1, 15, 17, 15, -1, 12, -1], leadType: "sawtooth", leadVol: 0.04 },
+      // dream logic: a dorian arpeggio that never quite lands
+      "The Voidspire": { bpm: 108, root: 146.83, kick: K(0, 8), hat: K(1, 5, 9, 13), hatFreq: 8600,
+        bass: [0, -1, -1, 0, -1, -1, 5, -1, 3, -1, -1, 3, -1, -1, 7, -1], bassType: "triangle", bassVol: 0.14,
+        lead: [12, 16, 19, 22, 24, 22, 19, 16, 12, 15, 19, 21, 24, 21, 19, 15], leadType: "sine", leadVol: 0.045 },
+      // the void: an almost-still low drone; a single far bell
+      "The Tear": { bpm: 88, root: 82.41, kick: K(0, 8), hat: K(7, 15), hatFreq: 11000,
+        bass: [0, -1, -1, 0, -1, -1, 0, -1, -2, -1, -1, -2, -1, -1, 0, -1], bassType: "triangle", bassVol: 0.18,
+        lead: [-1, -1, -1, -1, 12, -1, -1, -1, -1, -1, -1, -1, 19, -1, -1, -1], leadType: "sine", leadVol: 0.05 },
+    };
+  })(),
+  _themeName: "menu", _boss: false, _pending: null,
+  _activeTheme() { return this.themes[this._themeName] || this.themes.menu; },
+  // request a theme; the change lands on the next bar so it stays musical
+  setMusicTheme(name, boss) {
+    const key = this.themes[name] ? name : "menu";
+    if (key === this._themeName && !!boss === this._boss && !this._pending) return;
+    if (this._pending && this._pending.key === key && this._pending.boss === !!boss) return;
+    if (key === this._themeName && !!boss === this._boss) { this._pending = null; return; }
+    this._pending = { key, boss: !!boss };
+  },
   _startMusic() {
     this._m.step = 0;
     this._m.next = this.ctx.currentTime + 0.15;
@@ -182,27 +225,40 @@ const SFX = {
   },
   _schedule() {
     if (!this.ctx) return;
-    const step = 0.25;                       // eighth notes (~120 BPM)
     while (this._m.next < this.ctx.currentTime + 0.13) {
-      this._beat(this._m.step % 16, this._m.next);
-      this._m.step++; this._m.next += step;
+      const s = this._m.step % 16;
+      if (s === 0 && this._pending) { this._themeName = this._pending.key; this._boss = this._pending.boss; this._pending = null; }
+      this._beat(s, this._m.next);
+      const th = this._activeTheme();
+      this._m.step++;
+      this._m.next += 30 / (th.bpm + (this._boss ? 10 : 0));   // eighth-note duration
     }
   },
   _beat(i, t) {
-    const G = this.musicGain, root = 110;     // A
-    const semis = (n) => root * Math.pow(2, n / 12);
-    if (i % 4 === 0) this._kick(t);
-    if (i % 2 === 1) this._hat(t, i % 4 === 3 ? 0.05 : 0.03);
-    const bass = [0, 0, 7, 0, 5, 5, 3, 5, 0, 0, 7, 0, 8, 8, 7, 5][i];
-    this._osc(semis(bass) / 2, 0.26, t, { type: "triangle", vol: 0.16, dest: G });
-    const lead = [12, -1, -1, -1, 15, -1, -1, 12, -1, -1, 19, -1, 17, -1, 15, -1][i];
-    if (lead >= 0) this._osc(semis(lead), 0.42, t, { type: "sine", vol: 0.06, attack: 0.02, dest: G });
+    const th = this._activeTheme(), G = this.musicGain, boss = this._boss;
+    const semis = (n) => th.root * Math.pow(2, n / 12);
+    // drums: the boss arrangement drives double-time
+    if (th.kick[i]) this._kick(t, 0.22);
+    else if (boss && i % 4 === 2) this._kick(t, 0.13);
+    if (th.hat[i] || (boss && i % 2 === 1)) this._hat(t, (i % 4 === 3 ? 0.05 : 0.03) * (boss ? 1.3 : 1), th.hatFreq);
+    // bass (rest = exactly -1; other negatives are real notes below the root):
+    // bosses fill the rests and stab the octave
+    let b = th.bass[i];
+    if (b === -1 && boss) { const alt = th.bass[(i + 8) % 16]; b = alt === -1 ? 0 : alt; }
+    if (b !== -1) {
+      this._osc(semis(b) / 2, 0.26, t, { type: th.bassType, vol: th.bassVol * (boss ? 1.25 : 1), dest: G });
+      if (boss && i % 4 === 2) this._osc(semis(b + 12) / 2, 0.13, t, { type: th.bassType, vol: th.bassVol * 0.5, dest: G });
+    }
+    // lead: bosses echo into the gaps
+    let l = th.lead[i];
+    if (l < 0 && boss && i % 2 === 0) { const prev = th.lead[(i + 14) % 16]; if (prev >= 0) l = prev; }
+    if (l >= 0) this._osc(semis(l), 0.42, t, { type: th.leadType, vol: th.leadVol * (boss ? 1.35 : 1), attack: 0.02, dest: G });
   },
-  _kick(t) {
+  _kick(t, v) {
     const o = this.ctx.createOscillator(), g = this.ctx.createGain();
     o.type = "sine"; o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
-    g.gain.setValueAtTime(0.22, t); g.gain.exponentialRampToValueAtTime(0.0006, t + 0.16);
+    g.gain.setValueAtTime(v == null ? 0.22 : v, t); g.gain.exponentialRampToValueAtTime(0.0006, t + 0.16);
     o.connect(g).connect(this.musicGain); o.start(t); o.stop(t + 0.18);
   },
-  _hat(t, v) { this._noise(0.04, t, { type: "highpass", freq: 8000, q: 0.6, vol: v, dest: this.musicGain }); },
+  _hat(t, v, freq) { this._noise(0.04, t, { type: "highpass", freq: freq || 8000, q: 0.6, vol: v, dest: this.musicGain }); },
 };

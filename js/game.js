@@ -1379,6 +1379,15 @@
     if (state === "continue" && continueT > 0) { continueT -= dt; if (continueT <= 0) { state = "gameover"; endRun(); } }
     if (isMenuState(state)) { if (!Attract.ready) Attract.reset(); Attract.update(dt); } else Attract.ready = false;   // live attract-mode demo runs behind every menu tab
 
+    // biome music: menus follow the attract biome; runs follow the current stage, with
+    // the intensified BOSS arrangement while a boss wave is live (reverts on its death)
+    if (typeof SFX !== "undefined" && SFX.setMusicTheme) {
+      if (isMenuState(state)) SFX.setMusicTheme(Attract.ready ? Attract.stage().name : "menu", false);
+      else if (run && currentStage && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly" || run.mode === "gauntlet"))
+        SFX.setMusicTheme(currentStage.name, !!(run.isBossWave && state !== "gameover" && state !== "win"));
+      else SFX.setMusicTheme("menu", false);
+    }
+
     render();
     handleUI();
     Input.endFrame();
