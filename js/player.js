@@ -210,6 +210,7 @@ class Player {
     try {
       FX.burst(this.x, this.y, dir, -0.5, 9, "#e23b3b");
       if (typeof GFX === "undefined" || !GFX.low) { FX.drip(this.x, this.y + 4); FX.drip(this.x - dir * 6, this.y - 6); }
+      Input.buzz(45);   // taking a hit lands in the hand hardest of all
     } catch (e) {}
     return "hit";
   }

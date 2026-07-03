@@ -384,6 +384,15 @@ const GFX = { low: false };
 // this in resizeCanvas; the renderers + input read it. 0/0 in windowed and on 16:9.
 const OVERSCAN = { x: 0, y: 0 };
 
+// mobile hardware safe-area insets (notches, dynamic islands, rounded corners), in
+// LOGICAL px per side — measured from CSS env(safe-area-inset-*) by resizeCanvas.
+// HUD anchors and touch controls stay inside these.
+const SAFE = { l: 0, r: 0, t: 0, b: 0 };
+
+// touch tuning: thumb-on-glass has more friction than a mouse on a mat, so touch aim
+// deltas get a boost — max blade momentum from shorter, sharper flicks.
+CONFIG.touch = { aimBoost: 1.5 };
+
 const THEME = {
   ink: "#0a0a0a", rim: "rgba(0,0,0,0.35)", paper: "#ffffff", dark: false,
   set(bg) {

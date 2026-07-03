@@ -21,6 +21,16 @@
     const s = Math.min(bw / W, bh / H);
     OVERSCAN.x = Math.max(0, (bw / s - W) / 2);
     OVERSCAN.y = Math.max(0, (bh / s - H) / 2);
+    // hardware safe-area (notches / dynamic islands) -> logical px, so HUD anchors and
+    // touch controls never hide under the phone's own furniture
+    const probe = document.getElementById("safeprobe");
+    if (probe) {
+      const cs = getComputedStyle(probe), toLog = dpr / s;
+      SAFE.t = (parseFloat(cs.paddingTop) || 0) * toLog;
+      SAFE.r = (parseFloat(cs.paddingRight) || 0) * toLog;
+      SAFE.b = (parseFloat(cs.paddingBottom) || 0) * toLog;
+      SAFE.l = (parseFloat(cs.paddingLeft) || 0) * toLog;
+    }
   }
   window.addEventListener("resize", resizeCanvas);
   document.addEventListener("fullscreenchange", resizeCanvas);
@@ -38,7 +48,7 @@
   let shakeScale = 1;
   let settings = loadSettings();
   function loadSettings() {
-    const def = { sens: CONFIG.blade.aimSensitivity, shake: 1, vol: 0.6, music: true, gfx: "auto" };
+    const def = { sens: CONFIG.blade.aimSensitivity, shake: 1, vol: 0.6, music: true, gfx: "auto", controls: "auto" };
     try { return Object.assign(def, JSON.parse(CG.store.get("tear_settings") || "{}")); }
     catch (e) { return def; }
   }
@@ -51,6 +61,7 @@
     CONFIG.blade.aimSensitivity = settings.sens;
     shakeScale = settings.shake;
     GFX.low = settings.gfx === "low" || (settings.gfx === "auto" && isLowEnd());
+    Input.forceMode = settings.controls || "auto";   // 2-in-1s can force TOUCH or DESKTOP
     if (typeof SFX !== "undefined") { SFX.vol = settings.vol; SFX.musicOn = settings.music; SFX.setVol(settings.vol); SFX.setMusic(settings.music); }
   }
   if (typeof SFX !== "undefined") SFX.init();
@@ -194,7 +205,8 @@
   let codexTierView = {};               // id -> which tier (0=base) is being previewed on its card
 
   // ---- helpers ----
-  function addShake(m) { const v = m * shakeScale; if (v > shake) shake = v; }
+  // screen shake is also the game's haptic driver: big impacts buzz harder (mobile)
+  function addShake(m) { const v = m * shakeScale; if (v > shake) shake = v; Input.buzz(m >= CONFIG.juice.shakeBig ? 26 : 12); }
   function addZoom(p) { if (1 + p > zoom) zoom = 1 + p; }
   function addFlash(f) { if (f > flash) flash = f; }
   function triggerSlowmo() { slowmo = CONFIG.juice.parrySlowmo; }
@@ -1732,6 +1744,7 @@
       Backdrop.bloom("#ffffff", 0.22, 0.9); Backdrop.flare(e.x, e.y, currentStage.accent || "#ffffff", 520, 1.0);   // a boss falls: the world flares
       FX.explode(e.x, e.y, e.color, 2.2); FX.explode(e.x, e.y - 20, currentStage.accent || CONFIG.colors.perfect, 1.4);   // a boss DEATH is an event
       addShake(CONFIG.juice.shakeBig * 1.5); addZoom(CONFIG.juice.zoomBig); triggerSlowmo();
+      Input.buzz([30, 40, 60]);   // a boss falls: a triple thump in the hand
       for (const p of projectiles) if (p.shock || p.sweeper) p.dead = true;   // clear the boss's lingering hazards
       if (run.mode === "campaign" && currentStage && currentStage.lore) showLore(currentStage.lore, "", 8);
     }
@@ -1921,7 +1934,7 @@
         ctx.restore();
       }
       drawHUD();
-      if (Input.touchOn && state === "playing") drawTouchControls();
+      if (Input.touchActive() && state === "playing") drawTouchControls();
       if (loreT > 0) drawLore();
       if (state === "playing" && bannerT > 0) drawBanner();
       if (state === "playing" && stageBannerT > 0) drawStageBanner();
@@ -1980,7 +1993,7 @@
     Wipe.draw(lastUiDt);
 
     // mobile in portrait: nudge toward landscape (the arena is wide)
-    if (Input.touchOn && canvas.clientHeight > canvas.clientWidth) {
+    if (Input.touchActive() && canvas.clientHeight > canvas.clientWidth) {
       const sr2 = screenRect();
       ctx.save(); ctx.globalAlpha = 0.85; ctx.fillStyle = "#06070c";
       ctx.fillRect(sr2.x, H / 2 - 62, sr2.w, 124);
@@ -1997,8 +2010,9 @@
     // reset keyboard focus + scroll when the screen changes
     if (state !== lastUiState) { lastUiState = state; focus = firstEnabledButton(); listScroll = 0; }
 
-    if (lockHint) lockHint.style.display = (state === "playing" && !Input.locked) ? "block" : "none";
-    if (hintEl) hintEl.style.display = (state === "playing") ? "block" : "none";
+    // the DOM hints describe mouse+keyboard — they have no business on a touch screen
+    if (lockHint) lockHint.style.display = (state === "playing" && !Input.locked && !Input.touchActive()) ? "block" : "none";
+    if (hintEl) hintEl.style.display = (state === "playing" && !Input.touchActive()) ? "block" : "none";
   }
 
   function firstEnabledButton() {
@@ -2179,7 +2193,7 @@
     }
 
     // ===== top-left: VITALS (no backing slab — crisp elements that read on any biome) =====
-    const x = 28, y = 26, bw = 320, bh = 22;
+    const x = 28 + SAFE.l, y = 26 + SAFE.t, bw = 320, bh = 22;   // inside the hardware safe area
     const ry = y + bh + 12, dw = 34, dh = 11, dg = 6, maxDash = Math.max(1, player.maxDashCharges || 1);
 
     // --- health: a LIGHT track so the missing chunk is obvious against the dark fill,
@@ -2298,7 +2312,7 @@
   }
 
   function drawTutorialCard() {
-    const t = UI.t, s = TUT.step(), cw = 700, cx = W - cw - 28, cy = 24, ch = 138;
+    const t = UI.t, s = TUT.step(), cw = 700, cx = W - cw - 28 - SAFE.r, cy = 24 + SAFE.t, ch = 138;
     ctx.save();
     ctx.globalAlpha = 0.88; ctx.fillStyle = t.color.paper; ctx.fillRect(cx, cy, cw, ch);
     ctx.globalAlpha = 0.45; ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.strokeRect(cx, cy, cw, ch);
@@ -2338,7 +2352,7 @@
 
   // the playground's legend — docked TOP-RIGHT (clear of the vitals), two tidy key rows
   function drawPlaygroundHelp() {
-    const t = UI.t, cw = 700, cx = W - cw - 28, cy = 24, ch = 92;
+    const t = UI.t, cw = 700, cx = W - cw - 28 - SAFE.r, cy = 24 + SAFE.t, ch = 92;
     ctx.save();
     ctx.globalAlpha = 0.84; ctx.fillStyle = t.color.paper; ctx.fillRect(cx, cy, cw, ch);
     ctx.globalAlpha = 0.45; ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.strokeRect(cx, cy, cw, ch);
@@ -2355,12 +2369,19 @@
   function drawTouchControls() {
     const L = Input.touchLayout(), ink = THEME.ink;
     ctx.save();
-    // floating joystick: rests bottom-left, follows the thumb while held
-    const j = Input.joy, jx = j.active ? j.ax : 200, jy = j.active ? j.ay : H - 190;
+    // floating joystick: rests bottom-left, ANCHORS wherever the thumb lands — the ring
+    // marks the anchor (your neutral), the crosshair dot its exact centre, the nub your
+    // thumb, so you always feel where "stop" is
+    const j = Input.joy, jx = j.active ? j.ax : 200 + SAFE.l, jy = j.active ? j.ay : H - 190 - SAFE.b;
     const m = Math.hypot(j.dx, j.dy) || 1, cap = Math.min(m, 70);
-    ctx.globalAlpha = j.active ? 0.34 : 0.16;
+    ctx.globalAlpha = j.active ? 0.38 : 0.16;
     ctx.strokeStyle = ink; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(jx, jy, 92, 0, 6.2832); ctx.stroke();
+    if (j.active) {   // anchor crosshair + deadzone ring
+      ctx.globalAlpha = 0.30;
+      ctx.beginPath(); ctx.arc(jx, jy, 26, 0, 6.2832); ctx.stroke();
+      ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(jx, jy, 4, 0, 6.2832); ctx.fill();
+    }
     ctx.globalAlpha = j.active ? 0.5 : 0.22; ctx.fillStyle = ink;
     ctx.beginPath(); ctx.arc(jx + (j.active ? j.dx / m * cap : 0), jy + (j.active ? j.dy / m * cap : 0), 42, 0, 6.2832); ctx.fill();
     // action buttons
@@ -2721,16 +2742,16 @@
   // toggles/cycles span the whole block. Returns the y below the last row.
   function drawSettingsRows(fx, rx, y0, compact) {
     const t = UI.t;
-    const rowH = compact ? 54 : 64, btnW = compact ? 44 : 54, btnH = compact ? 38 : 46;
+    const rowH = compact ? 50 : 58, btnW = compact ? 44 : 54, btnH = compact ? 36 : 44;
     const block = compact ? 196 : 252, lo = rx - block, labelSize = compact ? t.type.body : t.type.lead;
     let y = y0;
-    const section = (name) => { if (compact) return; UI.tag(ctx, name, fx, y + 6, t.color.accent, "left", t.type.micro); y += 28; };
+    const section = (name) => { if (compact) return; UI.tag(ctx, name, fx, y + 6, t.color.accent, "left", t.type.micro); y += 26; };
     const row = (label, drawControl) => {
       const cy = y + rowH / 2;
       UI.text(ctx, label, fx, cy + 6, labelSize);
       drawControl(cy);
       UI.divider(ctx, fx, y + rowH, rx - fx, 0.08);
-      y += rowH + (compact ? 4 : 8);
+      y += rowH + (compact ? 4 : 6);
     };
     const stepper = (label, valStr, dec, inc) => row(label, (cy) => {
       uiButtons.push({ x: lo, y: cy - btnH / 2, w: btnW, h: btnH, label: "−", action: dec });
@@ -2757,13 +2778,17 @@
     section("VIDEO");
     wide("Effects", settings.gfx === "auto" ? ("AUTO (" + (GFX.low ? "LOW" : "HIGH") + ")") : (settings.gfx === "low" ? "LOW" : "HIGH"), false,
       () => { settings.gfx = settings.gfx === "auto" ? "high" : (settings.gfx === "high" ? "low" : "auto"); save(); });
+    section("INPUT");
+    // touch vs desktop — AUTO detects; 2-in-1 laptops and tablets can force either
+    wide("Controls", settings.controls === "auto" ? ("AUTO (" + (Input.touchActive() ? "TOUCH" : "DESKTOP") + ")") : settings.controls.toUpperCase(), false,
+      () => { settings.controls = settings.controls === "auto" ? "touch" : (settings.controls === "touch" ? "desktop" : "auto"); save(); });
     return y;
   }
 
   function renderSettings() {
     const t = UI.t, fx = W / 2 - 280, rx = W / 2 + 280;
     UI.header(ctx, "SETTINGS", "tune sound, feel, and feedback", eIn);
-    const yEnd = drawSettingsRows(fx, rx, 208, false);
+    const yEnd = drawSettingsRows(fx, rx, 190, false);
     // Legal — a CrazyGames Basic-launch requirement: an in-game mention of Terms & Privacy.
     UI.text(ctx, "By playing you agree to CrazyGames' Terms of Service and Privacy Policy.",
       fx, yEnd + 24, t.type.caption, "left", t.alpha.muted);
@@ -2999,9 +3024,11 @@
     }
     wrapText(o.desc, x + 26, descY, cw - 52, M.descLH, M.descSize);
     if (o.foot) UI.tag(ctx, o.foot, cx, y0 + M.footY, t.color.muted, "center", t.type.caption);
-    UI.tag(ctx, a > 0.5 ? "▸  SELECT" : (M.badge ? "press  [ " + (i + 1) + " ]" : ""), cx, y0 + M.selY, a > 0.5 ? ac : t.color.muted, "center", t.type.micro);
+    const touch = Input.touchActive();
+    const selLabel = touch ? (i === focus ? "TAP AGAIN TO CONFIRM  ✓" : "TAP TO READ") : (a > 0.5 ? "▸  SELECT" : (M.badge ? "press  [ " + (i + 1) + " ]" : ""));
+    UI.tag(ctx, selLabel, cx, y0 + M.selY, (a > 0.5 || (touch && i === focus)) ? ac : t.color.muted, "center", t.type.micro);
     ctx.restore();
-    uiButtons.push({ x, y: y0, w: cw, h: ch, _hideBox: true, action: o.action });
+    uiButtons.push({ x, y: y0, w: cw, h: ch, _hideBox: true, confirm: true, action: o.action });
   }
 
   function renderDraft() {
@@ -3291,7 +3318,14 @@
     if (Input.confirmPressed()) { const b = uiButtons[focus]; if (b && b.enabled !== false) { SFX.ui(); b.action(); return; } }
 
     const c = Input.takeClick();
-    if (c) for (const b of uiButtons) { if (b.enabled !== false && UI.pointIn(b, c.x, c.y)) { SFX.ui(); b.action(); break; } }
+    if (c) for (let i = 0; i < uiButtons.length; i++) {
+      const b = uiButtons[i];
+      if (b.enabled === false || !UI.pointIn(b, c.x, c.y)) continue;
+      // touch two-step: cards marked `confirm` need a second tap (there is no hover on
+      // glass — the first tap highlights the card so it can actually be read)
+      if (b.confirm && Input.touchActive() && focus !== i) { focus = i; SFX.ui(); break; }
+      SFX.ui(); b.action(); break;
+    }
   }
 
   requestAnimationFrame(frame);
