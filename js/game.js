@@ -252,89 +252,160 @@
   // ---- TUTORIAL: a guided tour of the whole kit ----
   // Detection rides the existing trick pipeline (addStyle kinds) plus a little polling;
   // dummies are real enemies kept permanently stunned so launches/juggles/slams all work.
+  // The GHOST is fully KINEMATIC: hand-authored keyframe choreography per lesson — no
+  // physics, no input simulation, so it can never drift, misfire, or break.
   const TUT = {
-    active: false, idx: 0, doneT: 0, endT: 0, n: {}, ghost: null, gT: 0,
+    active: false, idx: 0, doneT: 0, endT: 0, n: {}, gT: 0, anchor: 0,
     _prevGround: true, _prevBlade: "held",
     steps: [
-      { t: "MOVE", d: "A / D to run. Warm up — move both ways.", ok: () => TUT.n.moveL > 25 && TUT.n.moveR > 25 },
-      { t: "JUMP", d: "W or Space to jump (hold S on a ledge to drop through). Jump twice.", ok: () => (TUT.n.jump || 0) >= 2 },
-      { t: "DASH", d: "Shift to dash — steer it mid-flight with W / A / S / D. Dash twice.", ok: () => (TUT.n.dash || 0) >= 2 },
-      { t: "CUT", d: "Your blade follows the mouse — SPEED IS DAMAGE. Slash the dummy 3 times, fast.", need: 1, ok: () => (TUT.n.strike || 0) >= 3 },
-      { t: "LAUNCH", d: "A fast UPWARD swing pops an enemy into the air.", need: 1, ok: () => (TUT.n.launch || 0) >= 1 },
-      { t: "JUGGLE", d: "Launch it — then cut it again before it lands. 2 airborne hits.", need: 1, ok: () => (TUT.n.airHit || 0) >= 2 },
-      { t: "SLAM", d: "While airborne, strike DOWN through an enemy — a slam hits harder.", need: 1, ok: () => (TUT.n.slam || 0) >= 1 || (TUT.n.superslam || 0) >= 1 },
-      { t: "POWER SLAM", d: "Dash DOWN to fall fast, then slam mid-fall — a fast descent hits far harder.", need: 1, ok: () => (TUT.n.superslam || 0) >= 1 },
-      { t: "UPDRAFT", d: "Launch WHILE RISING (jump or dash up first) for a heavy updraft.", need: 1, ok: () => (TUT.n.updraft || 0) >= 1 },
-      { t: "THROW", d: "Right-click to hurl the blade through an enemy, right-click again to recall it. Land a throw, then recall.", need: 1, ok: () => (TUT.n.throwHit || 0) >= 1 && (TUT.n.recall || 0) >= 1 },
-      { t: "PARRY", d: "Swing FAST through an incoming shot to send it back — a perfect parry homes it into the shooter.", ranged: true, ok: () => (TUT.n.parry || 0) >= 1 || (TUT.n.deflect || 0) >= 2 },
+      { t: "MOVE", d: "Run with A and D. Warm up — move both ways.", keys: ["A", "D"],
+        prog: () => [(TUT.n.moveL > 25 ? 1 : 0) + (TUT.n.moveR > 25 ? 1 : 0), 2], ok: () => TUT.n.moveL > 25 && TUT.n.moveR > 25 },
+      { t: "JUMP", d: "W or Space to jump. Hold S on a ledge to drop through it.", keys: ["W", "SPACE"],
+        prog: () => [Math.min(TUT.n.jump || 0, 2), 2], ok: () => (TUT.n.jump || 0) >= 2 },
+      { t: "DASH", d: "Shift to dash — steer it mid-flight with W / A / S / D.", keys: ["SHIFT"],
+        prog: () => [Math.min(TUT.n.dash || 0, 2), 2], ok: () => (TUT.n.dash || 0) >= 2 },
+      { t: "CUT", d: "The blade follows your mouse — SPEED IS DAMAGE. Slash the dummy, fast.", keys: ["MOUSE"], need: 1,
+        prog: () => [Math.min(TUT.n.strike || 0, 3), 3], ok: () => (TUT.n.strike || 0) >= 3 },
+      { t: "LAUNCH", d: "A fast UPWARD swing pops an enemy into the air.", keys: ["MOUSE ↑"], need: 1,
+        prog: () => [Math.min(TUT.n.launch || 0, 1), 1], ok: () => (TUT.n.launch || 0) >= 1 },
+      { t: "JUGGLE", d: "Launch it — then cut it again before it lands.", keys: ["MOUSE ↑", "MOUSE"], need: 1,
+        prog: () => [Math.min(TUT.n.airHit || 0, 2), 2], ok: () => (TUT.n.airHit || 0) >= 2 },
+      { t: "SLAM", d: "While airborne, strike DOWN through an enemy — a slam hits harder.", keys: ["W", "MOUSE ↓"], need: 1,
+        prog: () => [((TUT.n.slam || 0) + (TUT.n.superslam || 0)) >= 1 ? 1 : 0, 1], ok: () => (TUT.n.slam || 0) >= 1 || (TUT.n.superslam || 0) >= 1 },
+      { t: "POWER SLAM", d: "Dash DOWN to fall fast, then slam mid-fall — a fast descent hits far harder.", keys: ["S + SHIFT", "MOUSE ↓"], need: 1,
+        prog: () => [Math.min(TUT.n.superslam || 0, 1), 1], ok: () => (TUT.n.superslam || 0) >= 1 },
+      { t: "UPDRAFT", d: "Launch WHILE RISING — jump first, then swing up hard.", keys: ["W", "MOUSE ↑"], need: 1,
+        prog: () => [Math.min(TUT.n.updraft || 0, 1), 1], ok: () => (TUT.n.updraft || 0) >= 1 },
+      { t: "THROW", d: "Right-click to hurl the blade through an enemy — right-click again to recall it.", keys: ["RMB"], need: 1,
+        prog: () => [((TUT.n.throwHit || 0) >= 1 ? 1 : 0) + ((TUT.n.recall || 0) >= 1 ? 1 : 0), 2], ok: () => (TUT.n.throwHit || 0) >= 1 && (TUT.n.recall || 0) >= 1 },
+      { t: "PARRY", d: "Swing FAST through an incoming shot to send it back. Perfect timing homes it.", keys: ["MOUSE"], ranged: true,
+        prog: () => [(TUT.n.parry || 0) >= 1 ? 2 : Math.min(TUT.n.deflect || 0, 2), 2], ok: () => (TUT.n.parry || 0) >= 1 || (TUT.n.deflect || 0) >= 2 },
       { t: "READY", d: "That's the whole blade. Cut clean. Keep moving. The Tear awaits.", final: true, ok: () => false },
     ],
-    start() {
-      this.active = true; this.idx = 0; this.doneT = 0; this.endT = 0; this.n = {}; this.gT = 0;
-      // the GHOST demonstrator: a translucent real Player + Blade acting out each lesson
-      const anchor = W * 0.18;
-      const gp = new Player(anchor, CONFIG.world.groundY - 60);
-      const ai = { left: false, right: false, up: false, down: false, _dash: false, _jump: false };
-      gp.aiInput = {
-        left: () => ai.left, right: () => ai.right, up: () => ai.up, down: () => ai.down,
-        dashPressed: () => { const v = ai._dash; ai._dash = false; return v; },
-        jumpPressed: () => { const v = ai._jump; ai._jump = false; return v; },
-      };
-      const gb = new Blade();
-      gb.aimOverride = { x: anchor + 80, y: CONFIG.world.groundY - 80 };
-      this.ghost = { p: gp, b: gb, ai, anchor, tgt: { x: anchor + 185, y: CONFIG.world.groundY - 42 } };
-    },
-    stop() { this.active = false; this.ghost = null; },
+    start() { this.active = true; this.idx = 0; this.doneT = 0; this.endT = 0; this.n = {}; this.gT = 0; this.anchor = W * 0.20; },
+    stop() { this.active = false; },
     mark(k) { if (this.active) this.n[k] = (this.n[k] || 0) + 1; },
     step() { return this.steps[this.idx]; },
-    // the ghost acts out the current lesson on a short loop
-    _ghostUpdate(dt) {
-      const g = this.ghost; if (!g) return;
-      const L = 2.8; this.gT += dt;
-      if (this.gT >= L) { this.gT = 0; g.p.x = g.anchor; g.p.y = CONFIG.world.groundY - 60; g.p.vx = 0; g.p.vy = 0; g.p.dashCharges = g.p.maxDashCharges; g.p.dashCd = 0; }
-      const gt = this.gT, ai = g.ai, hand = { x: g.p.x, y: g.p.y - g.p.hh * 0.2 };
-      ai.left = ai.right = ai.up = ai.down = false;
-      const baseAng = Math.atan2(g.tgt.y - hand.y, g.tgt.x - hand.x);
-      let ang = baseAng;   // rest: track the practice target
-      const sweep = (from, to, t0, t1) => { if (gt >= t0 && gt < t1) ang = from + (to - from) * ((gt - t0) / (t1 - t0)); };
-      switch (this.step().t) {
-        case "MOVE": if (gt < 1.2) ai.right = true; else ai.left = true; break;
-        case "JUMP": if (gt < 0.06 || (gt > 1.4 && gt < 1.46)) ai._jump = true; break;
-        case "DASH": if (gt < 0.06) { ai.right = true; ai._dash = true; } else if (gt > 1.4 && gt < 1.46) { ai.left = true; ai._dash = true; } break;
-        case "CUT": sweep(baseAng - 1.1, baseAng + 1.1, 0.5, 0.68); sweep(baseAng + 1.1, baseAng - 1.1, 1.3, 1.48); sweep(baseAng - 1.1, baseAng + 1.1, 2.1, 2.28); break;
-        case "LAUNCH": sweep(0.9, -1.7, 0.8, 1.0); break;
-        case "JUGGLE": sweep(0.9, -1.7, 0.4, 0.6); sweep(-0.4, -2.2, 1.1, 1.28); sweep(-2.2, -0.4, 1.8, 1.98); break;
-        case "SLAM": if (gt > 0.3 && gt < 0.36) ai._jump = true; sweep(-0.6, 2.1, 0.75, 0.95); break;
-        case "POWER SLAM": if (gt > 0.2 && gt < 0.26) ai._jump = true; if (gt > 0.55 && gt < 0.61) { ai.down = true; ai._dash = true; } sweep(-0.4, 2.2, 0.7, 0.88); break;
-        case "UPDRAFT": if (gt > 0.3 && gt < 0.36) ai._jump = true; sweep(1.0, -1.9, 0.45, 0.62); break;
-        case "THROW": sweep(baseAng - 0.5, baseAng + 0.5, 0.6, 0.75); sweep(baseAng + 0.5, baseAng - 0.5, 1.6, 1.75); break;
-        case "PARRY": sweep(baseAng + 1.0, baseAng - 1.0, 0.5, 0.62); sweep(baseAng - 1.0, baseAng + 1.0, 1.5, 1.62); break;
-      }
-      const R = CONFIG.blade.aimRadius;
-      g.b.aimOverride.x = hand.x + Math.cos(ang) * R;
-      g.b.aimOverride.y = hand.y + Math.sin(ang) * R;
-      g.p.update(dt, platforms);
-      g.b.update(dt, g.p, platforms);
+
+    // ---- the kinematic ghost: keyframe choreography, rendered directly ----
+    // path/tgt keyframes: [t, x, y] (px relative to the anchor / target base; y NEGATIVE = up)
+    // swings: [t0, t1, a0, a1] blade-angle sweeps (radians; 0 = right, -PI/2 = up)
+    scripts: {
+      "MOVE": { L: 3.0, path: [[0, 0, 0], [1.4, 170, 0], [2.9, 0, 0]] },
+      "JUMP": { L: 3.0, path: [[0, 0, 0], [0.5, 0, 0], [0.85, 0, -130], [1.2, 0, 0], [1.7, 0, 0], [2.05, 0, -130], [2.4, 0, 0]] },
+      "DASH": { L: 3.0, path: [[0, 0, 0], [0.5, 0, 0], [0.72, 230, 0], [1.7, 230, 0], [1.92, 0, 0]], dashes: [[0.5, 0.72], [1.7, 1.92]] },
+      "CUT": { L: 3.0, path: [[0, 0, 0]], swings: [[0.5, 0.68, -0.9, 0.7], [1.3, 1.48, 0.7, -0.9], [2.1, 2.28, -0.9, 0.7]], hits: [0.6, 1.4, 2.2] },
+      "LAUNCH": { L: 3.2, path: [[0, 0, 0]], swings: [[0.8, 1.0, 0.8, -1.9]], hits: [0.92],
+        tgt: [[0, 0, 0], [0.9, 0, 0], [1.3, 0, -170], [1.8, 0, -50], [2.2, 0, 0]] },
+      "JUGGLE": { L: 3.4, path: [[0, 0, 0]], swings: [[0.5, 0.7, 0.8, -1.9], [1.25, 1.42, -0.5, -2.1], [1.95, 2.12, -2.1, -0.5]], hits: [0.62, 1.33, 2.03],
+        tgt: [[0, 0, 0], [0.6, 0, 0], [1.0, 0, -160], [1.35, 0, -110], [1.7, 0, -170], [2.05, 0, -120], [2.6, 0, 0]] },
+      "SLAM": { L: 3.2, path: [[0, 0, 0], [0.5, 0, 0], [0.85, 40, -140], [1.15, 80, -30], [1.4, 80, 0], [2.2, 0, 0]], swings: [[0.95, 1.15, -0.6, 2.2]], hits: [1.08],
+        tgt: [[0, 80, 0]] },
+      "POWER SLAM": { L: 3.4, path: [[0, 0, 0], [0.45, 0, 0], [0.75, 30, -170], [0.95, 60, -170], [1.15, 85, -20], [1.35, 85, 0], [2.3, 0, 0]], dashes: [[0.95, 1.15]], swings: [[1.05, 1.25, -0.5, 2.3]], hits: [1.18],
+        tgt: [[0, 85, 0]] },
+      "UPDRAFT": { L: 3.0, path: [[0, 0, 0], [0.45, 0, 0], [0.8, 20, -150], [1.2, 30, -20], [1.45, 30, 0], [2.2, 0, 0]], swings: [[0.62, 0.82, 1.0, -2.0]], hits: [0.74],
+        tgt: [[0, 60, 0], [0.7, 60, 0], [1.1, 60, -190], [1.6, 60, -60], [2.0, 60, 0]] },
+      "THROW": { L: 3.4, path: [[0, 0, 0]], throwW: [0.6, 1.9], hits: [1.1] },
+      "PARRY": { L: 3.0, path: [[0, 0, 0]], swings: [[0.78, 0.94, 0.9, -1.2]], shot: { t0: 0.3, tHit: 0.86, t1: 1.6 } },
     },
-    // translucent render: the ghost + its practice target, clearly not "real"
+    _interp(frames, t) {
+      if (!frames || !frames.length) return { x: 0, y: 0 };
+      if (t <= frames[0][0]) return { x: frames[0][1], y: frames[0][2] };
+      for (let i = 1; i < frames.length; i++) {
+        if (t < frames[i][0]) {
+          const a = frames[i - 1], b = frames[i];
+          let k = (t - a[0]) / (b[0] - a[0]); k = k * k * (3 - 2 * k);   // smoothstep
+          return { x: a[1] + (b[1] - a[1]) * k, y: a[2] + (b[2] - a[2]) * k };
+        }
+      }
+      const l = frames[frames.length - 1]; return { x: l[1], y: l[2] };
+    },
+    // draw the choreographed ghost + its phantom target (called from renderWorld)
     drawGhost(ctx) {
-      const g = this.ghost; if (!g || this.step().final) return;
-      ctx.save(); ctx.globalAlpha = 0.30;
-      // practice target (a phantom dummy the ghost cuts through)
-      ctx.fillStyle = CONFIG.colors.charger;
-      ctx.fillRect(g.tgt.x - 17, g.tgt.y - 22, 34, 44);
-      ctx.strokeStyle = THEME.ink; ctx.lineWidth = 2.5; ctx.strokeRect(g.tgt.x - 17, g.tgt.y - 22, 34, 44);
-      g.p.draw(ctx);
-      g.b.draw(ctx, g.p);
-      ctx.restore();
-      ctx.save(); ctx.globalAlpha = 0.5;
-      UI.tag(ctx, "GHOST", g.p.x, g.p.y - g.p.hh - 14, CONFIG.colors.perfect, "center", UI.t.type.micro);
+      if (this.step().final) return;
+      const sc = this.scripts[this.step().t]; if (!sc) return;
+      const gt = this.gT % sc.L, gy = CONFIG.world.groundY;
+      const pos = this._interp(sc.path, gt);
+      const gx = this.anchor + pos.x, gyy = gy - 25 + pos.y;   // body centre (25 = half height)
+      const tgtBase = sc.tgt ? this._interp(sc.tgt, gt) : { x: 0, y: 0 };
+      const ty = gy - 22 + tgtBase.y;   // the target holds x = anchor+185; scripts animate its height
+      const cyan = CONFIG.colors.perfect;
+      ctx.save();
+      // phantom target (skip for pure-movement lessons)
+      const showTgt = !["MOVE", "JUMP", "DASH", "PARRY"].includes(this.step().t);
+      const hitNow = (sc.hits || []).some((h) => gt >= h && gt < h + 0.12);
+      if (showTgt) {
+        ctx.globalAlpha = hitNow ? 0.55 : 0.26;
+        ctx.fillStyle = hitNow ? "#fff" : CONFIG.colors.charger;
+        ctx.fillRect(this.anchor + 185 - 17, ty - 22, 34, 44);
+        ctx.strokeStyle = THEME.ink; ctx.lineWidth = 2; ctx.strokeRect(this.anchor + 185 - 17, ty - 22, 34, 44);
+        if (hitNow) { ctx.strokeStyle = cyan; ctx.beginPath(); ctx.arc(this.anchor + 185, ty, 26, 0, 6.283); ctx.stroke(); }
+      }
+      // dash afterimages
+      if (sc.dashes) for (const dW of sc.dashes) {
+        if (gt >= dW[0] && gt < dW[1] + 0.15) {
+          const k = clamp((gt - dW[0]) / (dW[1] - dW[0]), 0, 1);
+          for (let i = 1; i <= 3; i++) {
+            const p2 = this._interp(sc.path, Math.max(0, gt - i * 0.05));
+            ctx.globalAlpha = 0.12 * (4 - i) * (1 - k * 0.5);
+            ctx.fillStyle = THEME.ink;
+            ctx.fillRect(this.anchor + p2.x - 14, gy - 25 + p2.y - 22, 28, 44);
+          }
+        }
+      }
+      // the ghost body
+      ctx.globalAlpha = 0.34;
+      ctx.fillStyle = THEME.ink;
+      ctx.fillRect(gx - 14, gyy - 22, 28, 44);
+      ctx.fillStyle = cyan;
+      const face = (sc.path.length > 1 && this._interp(sc.path, gt + 0.05).x < pos.x) ? -1 : 1;
+      ctx.fillRect(gx + face * 4 - 3, gyy - 11, 7, 5);
+      // the blade: swinging (with a cyan arc), thrown (flying to the target and back), or at rest
+      const hand = { x: gx, y: gyy - 4 };
+      let ang = 0.25, swinging = false;
+      if (sc.swings) for (const sw of sc.swings) {
+        if (gt >= sw[0] && gt < sw[1]) {
+          const k = (gt - sw[0]) / (sw[1] - sw[0]);
+          ang = sw[2] + (sw[3] - sw[2]) * k; swinging = true;
+          ctx.globalAlpha = 0.30; ctx.strokeStyle = cyan; ctx.lineWidth = 7; ctx.lineCap = "round";
+          ctx.beginPath(); ctx.arc(hand.x, hand.y, 66, sw[2], ang, sw[3] < sw[2]); ctx.stroke();
+        }
+      }
+      if (sc.throwW && gt >= sc.throwW[0] && gt < sc.throwW[1]) {
+        // blade flight: out to the target, hang, and return
+        const k = (gt - sc.throwW[0]) / (sc.throwW[1] - sc.throwW[0]);
+        const out = k < 0.4 ? k / 0.4 : (k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4);
+        const bx = hand.x + (this.anchor + 185 - hand.x) * out, by = hand.y + (ty - hand.y) * out;
+        ctx.save(); ctx.translate(bx, by); ctx.rotate(gt * 14);
+        ctx.globalAlpha = 0.4; ctx.strokeStyle = THEME.ink; ctx.lineWidth = 5; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(-16, 0); ctx.lineTo(16, 0); ctx.stroke(); ctx.restore();
+      } else {
+        ctx.globalAlpha = 0.34; ctx.strokeStyle = THEME.ink; ctx.lineWidth = 5; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(hand.x, hand.y);
+        ctx.lineTo(hand.x + Math.cos(ang) * 58, hand.y + Math.sin(ang) * 58); ctx.stroke();
+        if (swinging) { ctx.globalAlpha = 0.5; ctx.fillStyle = cyan; ctx.beginPath(); ctx.arc(hand.x + Math.cos(ang) * 58, hand.y + Math.sin(ang) * 58, 4, 0, 6.283); ctx.fill(); }
+      }
+      // the parry lesson's scripted shot: flies in red, meets the sweep, returns cyan
+      if (sc.shot) {
+        const s2 = sc.shot;
+        if (gt >= s2.t0 && gt < s2.t1) {
+          let sx2, sa;
+          if (gt < s2.tHit) { const k = (gt - s2.t0) / (s2.tHit - s2.t0); sx2 = gx + 320 - 260 * k; sa = CONFIG.colors.enemyShot; }
+          else { const k = (gt - s2.tHit) / (s2.t1 - s2.tHit); sx2 = gx + 60 + 340 * k; sa = cyan; }
+          ctx.globalAlpha = 0.55; ctx.fillStyle = sa;
+          ctx.beginPath(); ctx.arc(sx2, hand.y - 6, 7, 0, 6.283); ctx.fill();
+          ctx.globalAlpha = 0.25; ctx.fillRect(sx2 + (gt < s2.tHit ? 8 : -26), hand.y - 8, 20, 4);
+        }
+      }
+      ctx.globalAlpha = 0.55;
+      UI.tag(ctx, "GHOST", gx, gyy - 40, cyan, "center", UI.t.type.micro);
       ctx.restore();
     },
     update(dt) {
       if (!this.active) return;
       const s = this.step();
-      this._ghostUpdate(dt);
+      this.gT += dt;
+      if (Input.pressed.has("KeyN") && !s.final && this.doneT <= 0) { this.doneT = 0.4; SFX.ui(); }   // skip the lesson
       // polling detections
       if (Input.left()) this.n.moveL = (this.n.moveL || 0) + dt * 60;
       if (Input.right()) this.n.moveR = (this.n.moveR || 0) + dt * 60;
@@ -370,68 +441,141 @@
     },
   };
 
-  // ---- PLAYGROUND: an open arena with everything on tap (keyboard-driven) ----
+  // ---- PLAYGROUND: an open arena with everything on tap ----
   const PG_KINDS = ["charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera", "priest"];
   const PG_ALL_KINDS = ["charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera", "priest", "herald", "mender", "anchor"];
+  // spawn with the playground's HP / count modifiers applied
+  function pgSpawn(kind) {
+    const pg = run.pg;
+    for (let i = 0; i < (pg.count || 1); i++) spawnOne({ type: kind, hpScale: pg.hpMul || 1 });
+  }
+  function pgSpawnDummy() {
+    spawnOne({ type: "charger", hpScale: 10 });
+    const e = enemies[enemies.length - 1];
+    if (e) { e.tutDummy = true; e.affixCount = 0; e.contactDmg = 0; e.x = clamp(player.x + (player.facing || 1) * 280, 160, W - 160); e.y = CONFIG.world.groundY - e.hh; }
+  }
   function stepPlayground() {
-    const pg = run.pg || (run.pg = { god: false, freeze: false, slow: false });
+    const pg = run.pg || (run.pg = { god: false, freeze: false, slow: false, hpMul: 1, count: 1 });
     if (pg.god && player.hp < player.maxHp) player.hp = player.maxHp;   // god mode: wounds seal instantly
-    if (Input.pressed.has("Tab")) { state = "pgmenu"; document.exitPointerLock(); return; }   // the spawn menu
+    for (const e of enemies) if (e.tutDummy && !e.dead) { e.stun = Math.max(e.stun, 1); if (e.hp < e.maxHp * 0.5) e.hp = e.maxHp; }   // target dummies stay up
+    if (Input.pressed.has("Tab") || Input.pressed.has("KeyE")) { state = "pgmenu"; document.exitPointerLock(); return; }
     for (let i = 0; i < PG_KINDS.length; i++) {
       if (Input.pressed.has("Digit" + (i + 1))) {
-        spawnOne({ type: PG_KINDS[i] });
+        pgSpawn(PG_KINDS[i]);
         addFloater(player.x, player.y - 60, PG_KINDS[i].toUpperCase(), false, CONFIG.colors[PG_KINDS[i]] || "#000");
       }
     }
+    if (Input.pressed.has("KeyT")) { pgSpawnDummy(); addFloater(player.x, player.y - 60, "DUMMY", false, "#888"); }
     if (Input.pressed.has("KeyB")) {   // next boss in the cycle
       run.curBoss = run.bossOrder[run.bossIdx % run.bossOrder.length]; run.bossIdx++;
       spawnOne({ type: "boss" });
     }
     if (Input.pressed.has("KeyK")) { for (const e of enemies) { e.dead = true; } projectiles.length = 0; addFloater(player.x, player.y - 60, "CLEARED", true, CONFIG.colors.perfect); }
     if (Input.pressed.has("KeyH")) { player.hp = player.maxHp; addFloater(player.x, player.y - 60, "HEALED", true, "#1faf5a"); }
-    if (Input.pressed.has("KeyU")) { draftChoices = buildDraft(); state = "draft"; document.exitPointerLock(); }
-    if (Input.pressed.has("KeyG")) {
-      const ups = availableTierUps(run.mods);
-      if (ups.length) { tierChoices = ups.slice(0, 3); state = "tierup"; document.exitPointerLock(); }
-      else addFloater(player.x, player.y - 60, "no ability to evolve — U first", false, "#888");
-    }
+    if (Input.pressed.has("KeyU")) { state = "pglab"; listScroll = 0; document.exitPointerLock(); }
   }
 
-  // the GMod-style spawn menu: everything on tap, world frozen behind a dim
+  // the GMod-style build menu: a two-column board — everything on tap, arena frozen behind
   function renderPgMenu() {
-    const t = UI.t, pg = run.pg;
-    UI.dim(ctx, W, H, 0.86);
-    UI.title(ctx, "SPAWN MENU", W / 2, 96, t.type.h1);
-    UI.text(ctx, "Tab / Esc to resume — the arena is frozen while you build the scene", W / 2, 126, t.type.caption, "center", t.alpha.muted);
-    const fx = W / 2 - 560, colW = 1120;
-    // enemies
-    UI.tag(ctx, "ENEMIES", fx, 168, t.color.accent, "left", t.type.micro);
-    const bw = 176, bh = 44, gap = 12;
+    const t = UI.t, pg = run.pg, bh = 42, gap = 10;
+    UI.dim(ctx, W, H, 0.88);
+    UI.header(ctx, "PLAYGROUND", "build the scene — Tab / Esc resumes", eIn);
+    const lx = W / 2 - 620, rx = W / 2 + 20, colW = 600;
+    // ---- left: ENEMIES (kind-coloured), the target dummy, spawn modifiers ----
+    UI.tag(ctx, "SPAWN ENEMIES", lx, 196, t.color.accent, "left", t.type.micro);
     PG_ALL_KINDS.forEach((k, i) => {
-      const cx = fx + (i % 6) * (bw + gap), cy = 184 + Math.floor(i / 6) * (bh + gap);
-      uiButtons.push({ x: cx, y: cy, w: bw, h: bh, size: 14, label: k.toUpperCase(), action: () => { spawnOne({ type: k }); SFX.ui(); } });
+      const cx = lx + (i % 3) * (196 + gap), cy = 208 + Math.floor(i / 3) * (bh + gap);
+      uiButtons.push({ x: cx, y: cy, w: 196, h: bh, size: 13, label: k.toUpperCase(), accent: CONFIG.colors[k] || "#888",
+        action: () => { pgSpawn(k); SFX.ui(); } });
     });
-    // bosses
-    UI.tag(ctx, "BOSSES", fx, 320, t.color.accent, "left", t.type.micro);
+    uiButtons.push({ x: lx, y: 208 + 4 * (bh + gap), w: 402, h: bh, size: 13, label: "TARGET DUMMY  (passive)", accent: "#888",
+      action: () => { pgSpawnDummy(); SFX.ui(); } });
+    const my = 208 + 5 * (bh + gap) + 26;
+    UI.tag(ctx, "SPAWN MODIFIERS", lx, my - 10, t.color.accent, "left", t.type.micro);
+    UI.text(ctx, "HP", lx, my + 28, t.type.label);
+    [1, 3, 10].forEach((m, i) => uiButtons.push({ x: lx + 44 + i * 92, y: my + 4, w: 84, h: 38, size: 13, label: "×" + m, sel: (pg.hpMul || 1) === m, action: () => { pg.hpMul = m; } }));
+    UI.text(ctx, "COUNT", lx + 340, my + 28, t.type.label);
+    [1, 5].forEach((m, i) => uiButtons.push({ x: lx + 424 + i * 92, y: my + 4, w: 84, h: 38, size: 13, label: "×" + m, sel: (pg.count || 1) === m, action: () => { pg.count = m; } }));
+    // ---- right: BOSSES, ARENA, WEAPONS ----
+    UI.tag(ctx, "SUMMON A BOSS", rx, 196, t.color.accent, "left", t.type.micro);
     BOSS_ROSTER.forEach((b, i) => {
-      uiButtons.push({ x: fx + i * (218 + 12), y: 336, w: 218, h: bh, size: 14, label: b.name.toUpperCase(),
+      uiButtons.push({ x: rx + (i % 2) * (295 + gap), y: 208 + Math.floor(i / 2) * (bh + gap), w: 295, h: bh, size: 13, label: b.name.toUpperCase(), accent: CONFIG.colors.boss,
         action: () => { run.curBoss = b.id; spawnOne({ type: "boss" }); SFX.ui(); } });
     });
-    // toggles
-    UI.tag(ctx, "TOGGLES", fx, 424, t.color.accent, "left", t.type.micro);
-    const tog = (i, label, sel, action) => uiButtons.push({ x: fx + i * (270 + 12), y: 440, w: 270, h: bh, size: 14, label, sel, action });
-    tog(0, "GOD MODE" + (pg.god ? ": ON" : ""), pg.god, () => { pg.god = !pg.god; });
-    tog(1, "FREEZE ENEMIES" + (pg.freeze ? ": ON" : ""), pg.freeze, () => { pg.freeze = !pg.freeze; });
-    tog(2, "SLOW MOTION" + (pg.slow ? ": ON" : ""), pg.slow, () => { pg.slow = !pg.slow; });
-    tog(3, "ONE-HIT" + (player.oneHit ? ": ON" : ""), player.oneHit, () => { player.oneHit = !player.oneHit; });
-    // actions
-    UI.tag(ctx, "ACTIONS", fx, 528, t.color.accent, "left", t.type.micro);
-    const act = (i, label, action) => uiButtons.push({ x: fx + i * (270 + 12), y: 544, w: 270, h: bh, size: 14, label, action });
-    act(0, "CLEAR ENEMIES", () => { for (const e of enemies) e.dead = true; projectiles.length = 0; SFX.ui(); });
-    act(1, "FULL HEAL", () => { player.hp = player.maxHp; SFX.ui(); });
-    act(2, "PICK AN ABILITY", () => { draftChoices = buildDraft(); state = "draft"; });
-    act(3, "EVOLVE ABILITY", () => { const ups = availableTierUps(run.mods); if (ups.length) { tierChoices = ups.slice(0, 3); state = "tierup"; } });
-    uiButtons.push({ x: W / 2 - 150, y: 632, w: 300, h: 52, label: "RESUME", action: () => { state = "playing"; requestLock(); } });
+    const ay = 208 + 3 * (bh + gap) + 26;
+    UI.tag(ctx, "ARENA", rx, ay - 10, t.color.accent, "left", t.type.micro);
+    uiButtons.push({ x: rx, y: ay + 4, w: colW, h: bh, size: 13, label: "NEXT BIOME  ›  now: " + currentStage.name.toUpperCase(), accent: currentStage.accent,
+      action: () => { Wipe.begin(); loadStage((stageIndex + 1) % STAGES.length); SFX.ui(); } });
+    const wy = ay + bh + 30;
+    UI.tag(ctx, "WEAPON  (restarts the arena)", rx, wy - 10, t.color.accent, "left", t.type.micro);
+    WEAPONS.forEach((w, i) => {
+      uiButtons.push({ x: rx + i * ((colW - gap * (WEAPONS.length - 1)) / WEAPONS.length + gap), y: wy + 4, w: (colW - gap * (WEAPONS.length - 1)) / WEAPONS.length, h: bh, size: 13,
+        label: w.name.toUpperCase(), sel: selWeapon === w.id, action: () => { selWeapon = w.id; startRun("playground", run.diff); } });
+    });
+    // ---- bottom band: toggles + actions ----
+    const ty = 640;
+    UI.tag(ctx, "MODIFIERS", W / 2 - 620, ty - 10, t.color.accent, "left", t.type.micro);
+    const tog = (i, label, sel, action) => uiButtons.push({ x: W / 2 - 620 + i * (300 + 12), y: ty + 4, w: 300, h: bh, size: 13, label, sel, action });
+    tog(0, "GOD MODE", pg.god, () => { pg.god = !pg.god; });
+    tog(1, "FREEZE ENEMIES", pg.freeze, () => { pg.freeze = !pg.freeze; });
+    tog(2, "SLOW MOTION", pg.slow, () => { pg.slow = !pg.slow; });
+    tog(3, "ONE-HIT MODE", player.oneHit, () => { player.oneHit = !player.oneHit; });
+    const ayy = ty + bh + 18;
+    const act = (i, label, action, accent) => uiButtons.push({ x: W / 2 - 620 + i * (300 + 12), y: ayy, w: 300, h: bh, size: 13, label, action, accent });
+    act(0, "ABILITY LAB  ›", () => { state = "pglab"; listScroll = 0; }, t.color.accent);
+    act(1, "CLEAR ENEMIES", () => { for (const e of enemies) e.dead = true; projectiles.length = 0; SFX.ui(); });
+    act(2, "FULL HEAL", () => { player.hp = player.maxHp; SFX.ui(); });
+    act(3, "RESET ARENA", () => { startRun("playground", run.diff); });
+    uiButtons.push({ x: W / 2 - 160, y: ayy + bh + 16, w: 320, h: 50, label: "RESUME", action: () => { state = "playing"; requestLock(); } });
+  }
+
+  // the ABILITY LAB: every ability in the game on one page — take anything, evolve anything
+  let pgLabFilter = "all";
+  function renderPgLab() {
+    const t = UI.t;
+    UI.dim(ctx, W, H, 0.9);
+    UI.header(ctx, "ABILITY LAB", "take anything · evolve anything · no waves, just you", eIn);
+    // category filter chips
+    const cats = ["all", "offense", "parry", "throw", "mobility", "resilience", "utility"];
+    const cw = 148, cgap = 8, cx0 = W / 2 - (cats.length * (cw + cgap) - cgap) / 2;
+    cats.forEach((c, i) => uiButtons.push({ x: cx0 + i * (cw + cgap), y: 168, w: cw, h: 34, chip: true, size: 11,
+      label: c.toUpperCase(), sel: pgLabFilter === c, action: () => { pgLabFilter = c; listScroll = 0; } }));
+    // the catalogue (2 columns, scrollable)
+    const list = UPGRADES.filter((u) => pgLabFilter === "all" || u.cat === pgLabFilter);
+    const colWd = 588, rowH = 92, top = 232, fx = W / 2 - colWd - 12, viewH = H - top - 118;
+    const rows = Math.ceil(list.length / 2);
+    const maxScroll = Math.max(0, rows * rowH - viewH);
+    listScroll = clamp(listScroll, 0, maxScroll);
+    ctx.save(); ctx.beginPath(); ctx.rect(0, top - 10, W, viewH + 20); ctx.clip();
+    list.forEach((u, i) => {
+      const col = i % 2, row = Math.floor(i / 2);
+      const x = fx + col * (colWd + 24), y = top + row * rowH - listScroll;
+      if (y < top - rowH || y > top + viewH) return;
+      const cat = ABIL_CATS[u.cat] || ABIL_CATS.utility;
+      const ownedN = run.mods.owned[u.id] || 0;
+      const tier = run.mods.tier[u.id] || 0;
+      const maxT = u.tiers ? u.tiers.length + 1 : 1;
+      UI.card(ctx, x, y, colWd, rowH - 12, UI.pointIn({ x, y, w: colWd, h: rowH - 12 }, Input.mouseX, Input.mouseY));
+      UI.accentStrip(ctx, x, y, colWd, cat.color);
+      UI.text(ctx, u.name + (u.tiers ? "  ★" : ""), x + 16, y + 30, t.type.lead);
+      UI.text(ctx, u.desc, x + 16, y + 52, t.type.micro, "left", t.alpha.soft);
+      if (ownedN) UI.tag(ctx, u.tiers ? ("TIER " + tier + " / " + maxT) : (u.unique ? "OWNED" : "OWNED ×" + ownedN), x + 16, y + 71, cat.color, "left", t.type.micro);
+      // the action: TAKE / EVOLVE / +1 / MAX
+      let label = "TAKE", enabled = true;
+      if (ownedN && u.tiers) { if (tier < maxT) label = "EVOLVE"; else { label = "MAX"; enabled = false; } }
+      else if (ownedN && u.unique) { label = "OWNED"; enabled = false; }
+      else if (ownedN) label = "+1";
+      uiButtons.push({ x: x + colWd - 118, y: y + 20, w: 102, h: 40, size: 13, label, enabled,
+        action: () => {
+          const ctx2 = { player, blade, mods: run.mods };
+          if (ownedN && u.tiers && tier < maxT) tierUp(u.id, ctx2); else applyUpgrade(u, ctx2);
+          SFX.rankup();
+        } });
+    });
+    ctx.restore();
+    if (maxScroll > 0) UI.scrollHint(ctx, W / 2, top + viewH + 24, listScroll > 0, listScroll < maxScroll);
+    uiButtons.push({ x: W / 2 - 320, y: H - 78, w: 300, h: 50, label: "‹  BUILD MENU", action: () => { state = "pgmenu"; } });
+    uiButtons.push({ x: W / 2 + 20, y: H - 78, w: 300, h: 50, label: "RESUME", action: () => { state = "playing"; requestLock(); } });
   }
 
   function addStyle(kind) {
@@ -1600,6 +1744,7 @@
       acc = 0; wasLocked = false;
       // spawn menu: Tab or Esc drops straight back into the action
       if (state === "pgmenu" && (Input.pressed.has("Tab") || Input.escapePressed())) { state = "playing"; requestLock(); }
+      else if (state === "pglab" && (Input.pressed.has("Tab") || Input.escapePressed())) { state = "pgmenu"; }
     }
     uiT += dt; enterT += dt; lastUiDt = dt;   // menu animation clocks
     if (state === "win") winT += dt; else winT = 0;   // ending cinematic clock
@@ -1716,7 +1861,7 @@
     ctx.setTransform(vs, 0, 0, vs, OVERSCAN.x * vs, OVERSCAN.y * vs);
     const SR = screenRect();
     ctx.clearRect(SR.x, SR.y, SR.w, SR.h);
-    const playLike = state === "playing" || state === "draft" || state === "tierup" || state === "paused" || state === "gameover" || state === "win" || state === "confirmquit" || state === "continue" || state === "pgmenu";
+    const playLike = state === "playing" || state === "draft" || state === "tierup" || state === "paused" || state === "gameover" || state === "win" || state === "confirmquit" || state === "continue" || state === "pgmenu" || state === "pglab";
     // biome background (campaign + endless tint the world; menus stay white)
     const biomeMode = !!(run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly" || run.mode === "gauntlet" || run.mode === "tutorial" || run.mode === "playground"));
     let bgCol = (playLike && biomeMode) ? currentStage.bg : "#fff";
@@ -1792,6 +1937,7 @@
       else if (state === "win") renderWin();
       else if (state === "continue") renderContinue();
       else if (state === "pgmenu") renderPgMenu();
+      else if (state === "pglab") renderPgLab();
       if (state !== "playing" && state !== "draft") drawButtons();
     }
 
@@ -2092,17 +2238,39 @@
 
   // the tutorial's lesson card — docked TOP-RIGHT (clear of the vitals), with lesson
   // progress dots, a wrapped body, and a ✓ beat on completion
+  // little keyboard key-cap chip; returns the x just after it
+  function drawKeyCap(x, y, label) {
+    ctx.font = UI.font(11, true);
+    const w = Math.max(30, ctx.measureText(label).width + 16);
+    ctx.fillStyle = "rgba(0,0,0,0.07)"; ctx.fillRect(x, y, w, 22);
+    ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, 22);
+    ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fillRect(x + 2, y + 19, w - 4, 2);   // key "depth"
+    ctx.fillStyle = "#000"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(label, x + w / 2, y + 11); ctx.textBaseline = "alphabetic";
+    return x + w + 8;
+  }
+
   function drawTutorialCard() {
-    const t = UI.t, s = TUT.step(), cw = 700, cx = W - cw - 28, cy = 24, ch = 118;
+    const t = UI.t, s = TUT.step(), cw = 700, cx = W - cw - 28, cy = 24, ch = 138;
     ctx.save();
-    ctx.globalAlpha = 0.86; ctx.fillStyle = t.color.paper; ctx.fillRect(cx, cy, cw, ch);
+    ctx.globalAlpha = 0.88; ctx.fillStyle = t.color.paper; ctx.fillRect(cx, cy, cw, ch);
     ctx.globalAlpha = 0.45; ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.strokeRect(cx, cy, cw, ch);
     ctx.globalAlpha = 1; ctx.fillStyle = t.color.accent; ctx.fillRect(cx, cy, 4, ch);   // accent spine
     UI.tag(ctx, "LESSON " + (TUT.idx + 1) + " / " + TUT.steps.length, cx + 20, cy + 24, t.color.accent, "left", t.type.micro);
     ctx.fillStyle = "#000"; ctx.font = UI.font(t.type.title, true); ctx.textAlign = "left";
     ctx.fillText(s.t, cx + 20, cy + 52);
-    wrapLeft(s.d, cx + 20, cy + 76, cw - 110, 19, t.type.caption, "rgba(0,0,0,0.75)");
-    // progress dots along the card's bottom edge
+    wrapLeft(s.d, cx + 20, cy + 74, cw - 150, 19, t.type.caption, "rgba(0,0,0,0.75)");
+    // the objective, LIVE: a big counter + a thin fill bar (right side)
+    if (s.prog && !s.final) {
+      const [cur, goal] = s.prog();
+      ctx.font = UI.font(26, true); ctx.textAlign = "right"; ctx.fillStyle = cur >= goal ? t.color.accent : "#000";
+      ctx.fillText(cur + " / " + goal, cx + cw - 22, cy + 52);
+      ctx.globalAlpha = 0.15; ctx.fillStyle = "#000"; ctx.fillRect(cx + cw - 122, cy + 62, 100, 5);
+      ctx.globalAlpha = 1; ctx.fillStyle = t.color.accent; ctx.fillRect(cx + cw - 122, cy + 62, 100 * clamp(cur / goal, 0, 1), 5);
+    }
+    // key-cap chips for this lesson's inputs
+    if (s.keys) { let kx = cx + 20; ctx.save(); for (const k of s.keys) kx = drawKeyCap(kx, cy + 84, k); ctx.restore(); }
+    // progress dots + skip hint along the bottom edge
     for (let i = 0; i < TUT.steps.length; i++) {
       const dx = cx + 20 + i * 18;
       ctx.beginPath(); ctx.arc(dx, cy + ch - 13, 4, 0, 6.2832);
@@ -2110,9 +2278,11 @@
       else if (i === TUT.idx) { ctx.fillStyle = "#000"; ctx.fill(); }
       else { ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.lineWidth = 1.5; ctx.stroke(); }
     }
-    if (TUT.doneT > 0) {   // the ✓ beat
-      ctx.font = UI.font(46, true); ctx.fillStyle = t.color.accent; ctx.textAlign = "right";
-      ctx.fillText("✓", cx + cw - 22, cy + 66);
+    if (!s.final) { ctx.font = UI.font(t.type.micro, true); ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.textAlign = "right"; ctx.fillText("N — skip lesson", cx + cw - 18, cy + ch - 10); }
+    if (TUT.doneT > 0) {   // the ✓ beat pops
+      const k = 1 + (1 - Math.abs(TUT.doneT - 0.9) / 0.9) * 0.4;
+      ctx.font = UI.font(Math.round(40 * k), true); ctx.fillStyle = t.color.accent; ctx.textAlign = "right";
+      ctx.fillText("✓", cx + cw - 22, cy + 108);
     }
     if (s.final) { ctx.font = UI.font(t.type.micro, true); ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.textAlign = "right"; ctx.fillText("returning to the menu…", cx + cw - 16, cy + 24); }
     ctx.restore();
@@ -2128,8 +2298,8 @@
     ctx.globalAlpha = 1; ctx.fillStyle = t.color.accent; ctx.fillRect(cx, cy, 4, ch);
     UI.tag(ctx, "PLAYGROUND", cx + 20, cy + 24, t.color.accent, "left", t.type.micro);
     ctx.fillStyle = "rgba(0,0,0,0.78)"; ctx.font = UI.font(t.type.caption, false); ctx.textAlign = "left";
-    ctx.fillText("TAB spawn menu   ·   1–8 quick-spawn   ·   B boss   ·   K clear", cx + 20, cy + 50);
-    ctx.fillText("H heal   ·   U pick an ability   ·   G evolve it   ·   P pause", cx + 20, cy + 74);
+    ctx.fillText("TAB / E — build menu   ·   1–8 quick-spawn   ·   T dummy   ·   B boss", cx + 20, cy + 50);
+    ctx.fillText("K clear   ·   H heal   ·   U ability lab   ·   P pause", cx + 20, cy + 74);
     ctx.restore();
     ctx.textAlign = "left";
   }
@@ -2771,7 +2941,8 @@
     const up = draftChoices[i];
     if (up) applyUpgrade(up, { player, blade, mods: run.mods });
     Input.consumeDelta();   // flush any movement built up while the cursor was free
-    startNextWave();
+    // training modes have NO waves — picking an ability must never start one
+    if (run.mode !== "tutorial" && run.mode !== "playground") startNextWave();
     state = "playing";
     requestLock();          // re-capture automatically (we're inside the pick gesture)
   }
@@ -2798,7 +2969,7 @@
     const up = tierChoices[i];
     if (up) tierUp(up.id, { player, blade, mods: run.mods });
     Input.consumeDelta();
-    startNextWave();
+    if (run.mode !== "tutorial" && run.mode !== "playground") startNextWave();
     state = "playing";
     requestLock();
   }

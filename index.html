@@ -7,30 +7,27 @@
   <!-- CrazyGames SDK (v3). Harmless off-platform: the wrapper in crazy.js is env-gated. -->
   <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
   <style>
+    /* EDGE-TO-EDGE: the game IS the page. The canvas fills the whole viewport in every
+       context (windowed, fullscreen, the CrazyGames iframe) and the OVERSCAN system
+       bleeds the scene into any non-16:9 leftover — so there is never a border, a bar,
+       or a page background peeking through. */
     html, body {
       margin: 0;
       height: 100%;
-      background: #f4f4f4;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      background: #0a0b10;
       font-family: "Courier New", monospace;
       overflow: hidden;
     }
     #wrap {
       position: relative;
-      width: min(96vw, 170vh);
+      width: 100vw;
+      height: 100vh;
     }
     canvas {
       display: block;
       width: 100%;
-      height: auto;
-      /* pin the windowed box to 16:9 explicitly — the backing store now follows the
-         element (fullscreen overscan), so the intrinsic attribute ratio must not drive
-         the element size or the two would feed back into each other */
-      aspect-ratio: 16 / 9;
-      background: #ffffff;
-      border: 2px solid #000;
+      height: 100%;
+      background: #0a0b10;   /* first-frame failsafe only — the game paints every pixel */
       cursor: none;
       image-rendering: auto;
     }
@@ -69,21 +66,7 @@
       pointer-events: none;
       user-select: none;
     }
-    /* fullscreen: the canvas fills the WHOLE screen. The game sizes its backing store
-       to the true element aspect and bleeds the scene into any non-16:9 leftover
-       (OVERSCAN), so there are no letterbox bars and no stretch on any display.
-       The dark canvas background is only a first-frame failsafe — the previous white
-       one was exactly what painted the "white bars" through object-fit letterboxing. */
-    #wrap:fullscreen {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #0a0b10;
-    }
-    #wrap:fullscreen canvas { width: 100%; height: 100%; border: none; background: #0a0b10; }
-    /* the page's own fullscreen button + controls hint don't belong over the fullscreen canvas */
+    /* fullscreen: layout is already edge-to-edge; just drop the page's own chrome */
     #wrap:fullscreen #fs,
     #wrap:fullscreen #hint { display: none; }
   </style>
@@ -98,25 +81,25 @@
 
   <!-- load order matters: these are plain scripts sharing global scope -->
   <!-- ?v cache-bust: bump if the browser ever serves stale JS (server is no-cache too) -->
-  <script src="js/config.js?v=96"></script>
-  <script src="js/stages.js?v=96"></script>
-  <script src="js/utils.js?v=96"></script>
-  <script src="js/ui.js?v=96"></script>
-  <script src="js/audio.js?v=96"></script>
-  <script src="js/input.js?v=96"></script>
-  <script src="js/particles.js?v=96"></script>
-  <script src="js/backdrop.js?v=96"></script>
-  <script src="js/attract.js?v=96"></script>
-  <script src="js/crazy.js?v=96"></script>
-  <script src="js/upgrades.js?v=96"></script>
-  <script src="js/meta.js?v=96"></script>
-  <script src="js/weapons.js?v=96"></script>
-  <script src="js/affixes.js?v=96"></script>
-  <script src="js/variants.js?v=96"></script>
-  <script src="js/blade.js?v=96"></script>
-  <script src="js/player.js?v=96"></script>
-  <script src="js/projectile.js?v=96"></script>
-  <script src="js/enemy.js?v=96"></script>
-  <script src="js/game.js?v=96"></script>
+  <script src="js/config.js?v=97"></script>
+  <script src="js/stages.js?v=97"></script>
+  <script src="js/utils.js?v=97"></script>
+  <script src="js/ui.js?v=97"></script>
+  <script src="js/audio.js?v=97"></script>
+  <script src="js/input.js?v=97"></script>
+  <script src="js/particles.js?v=97"></script>
+  <script src="js/backdrop.js?v=97"></script>
+  <script src="js/attract.js?v=97"></script>
+  <script src="js/crazy.js?v=97"></script>
+  <script src="js/upgrades.js?v=97"></script>
+  <script src="js/meta.js?v=97"></script>
+  <script src="js/weapons.js?v=97"></script>
+  <script src="js/affixes.js?v=97"></script>
+  <script src="js/variants.js?v=97"></script>
+  <script src="js/blade.js?v=97"></script>
+  <script src="js/player.js?v=97"></script>
+  <script src="js/projectile.js?v=97"></script>
+  <script src="js/enemy.js?v=97"></script>
+  <script src="js/game.js?v=97"></script>
 </body>
 </html>

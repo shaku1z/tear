@@ -139,7 +139,8 @@ const UI = {
       ctx.strokeStyle = on ? this.ink : this.t.color.disabled;
       ctx.strokeRect(b.x, b.y, b.w, b.h);
       ctx.globalAlpha = 1;
-      if (a > 0.01) { ctx.globalAlpha = a; ctx.fillStyle = this.t.color.accent; ctx.fillRect(b.x, b.y, 3, b.h); ctx.globalAlpha = 1; }
+      if (b.accent) { ctx.fillStyle = b.accent; ctx.fillRect(b.x, b.y, 4, b.h); }   // identity bar (e.g. enemy kind colour)
+      if (a > 0.01) { ctx.globalAlpha = a; ctx.fillStyle = this.t.color.accent; ctx.fillRect(b.x, b.y, b.accent ? 4 : 3, b.h); ctx.globalAlpha = 1; }
       ctx.fillStyle = on ? this.ink : this.t.color.disabled;
     }
     ctx.font = this.font(b.size || this.t.type.lead, true);
