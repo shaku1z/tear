@@ -586,6 +586,7 @@
 
   // the ABILITY LAB: every ability in the game on one page — take anything, evolve anything
   let pgLabFilter = "all";
+  let achFilter = "all";   // Achievements menu category filter
   function renderPgLab() {
     const t = UI.t;
     UI.dim(ctx, W, H, 0.9);
@@ -1817,7 +1818,8 @@
   // ---- main loop ----
   function isMenuState(s) {
     return s === "menu" || s === "shop" || s === "codex" || s === "setup" ||
-      s === "howto" || s === "highscores" || s === "settings" || s === "bestiary";
+      s === "howto" || s === "highscores" || s === "settings" || s === "bestiary" ||
+      s === "achievements";
   }
   function frame(now) {
     let dt = (now - last) / 1000; last = now;
@@ -2037,6 +2039,7 @@
       else if (state === "highscores") renderHighscores();
       else if (state === "settings") renderSettings();
       else if (state === "bestiary") renderBestiary();
+      else if (state === "achievements") renderAchievements();
       drawButtons();
       ctx.restore();
     } else {
@@ -2620,11 +2623,12 @@
       { label: "PLAY", action: () => { state = "setup"; } },
       { label: "SHOP", action: () => { state = "shop"; } },
       { label: "ABILITIES", action: () => { state = "codex"; } },
+      { label: "ACHIEVEMENTS", action: () => { state = "achievements"; listScroll = 0; } },
       { label: "INDEX", action: () => { state = "bestiary"; } },
       { label: "HOW TO PLAY", action: () => { state = "howto"; } },
       { label: "HIGH SCORES", action: () => { state = "highscores"; } },
       { label: "SETTINGS", action: () => { state = "settings"; } },
-    ].map((o) => (o.ghost = true, o)), lx + t.metric.btnW / 2, 300, t.metric.btnW, t.metric.btnH, 10);
+    ].map((o) => (o.ghost = true, o)), lx + t.metric.btnW / 2, 286, t.metric.btnW, t.metric.btnH, 8);
     void savedInk;   // UI.ink intentionally left "#000" for the sub-screen buttons
     return;
   }
@@ -2843,6 +2847,93 @@
       });
     });
     if (!any) UI.text(ctx, "No runs recorded yet — go make some history.", W / 2, 360, t.type.body, "center", t.alpha.soft);
+    addBack();
+  }
+
+  // the ACHIEVEMENTS menu: a shard summary, category filters, and a scrollable grid of
+  // rarity-graded cards with live progress bars.
+  function renderAchievements() {
+    const t = UI.t;
+    UI.header(ctx, "ACHIEVEMENTS", "master the blade · earn shards", eIn);
+
+    // ---- summary strip: shards, completion count, overall bar ----
+    const total = ACH.list.length, done = PROFILE.unlockedCount();
+    const sfx2 = W / 2 - 560, sw = 1120, sy = 150;
+    ctx.save();
+    ctx.globalAlpha = 0.06; ctx.fillStyle = UI.ink; ctx.fillRect(sfx2, sy, sw, 46); ctx.globalAlpha = 1;   // light wash, fits the paper theme
+    ctx.fillStyle = t.color.accent; ctx.fillRect(sfx2, sy, 4, 46);
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillStyle = "#0f9fb0"; ctx.font = UI.font(22, true);   // deeper cyan reads on light
+    ctx.fillText("◆ " + PROFILE.shards(), sfx2 + 22, sy + 24);
+    ctx.fillStyle = UI.ink; ctx.font = UI.font(12, true);
+    ctx.fillText("SHARDS", sfx2 + 22 + ctx.measureText("◆ " + PROFILE.shards()).width + 46, sy + 24);
+    // completion bar (right side)
+    const barW = 360, barX = sfx2 + sw - barW - 150, barY = sy + 20;
+    ctx.textAlign = "right"; ctx.fillStyle = UI.ink; ctx.font = UI.font(13, true);
+    ctx.fillText(done + " / " + total, sfx2 + sw - 22, sy + 24);
+    ctx.globalAlpha = 0.16; ctx.fillStyle = UI.ink; ctx.fillRect(barX, barY, barW, 6); ctx.globalAlpha = 1;
+    ctx.fillStyle = t.color.accent; ctx.fillRect(barX, barY, barW * (done / total), 6);
+    ctx.restore();
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+
+    // ---- category filter chips (each shows unlocked / total) ----
+    const cats = ["all"].concat(Object.keys(ACH.CATS));
+    const chipW = 152, cgap = 8, cx0 = W / 2 - (cats.length * (chipW + cgap) - cgap) / 2;
+    cats.forEach((c, i) => {
+      const inC = c === "all" ? ACH.list : ACH.list.filter((a) => a.cat === c);
+      const u = inC.filter((a) => PROFILE.unlocked(a.id)).length;
+      const label = (c === "all" ? "ALL" : ACH.CATS[c].name.toUpperCase()) + "  " + u + "/" + inC.length;
+      uiButtons.push({ x: cx0 + i * (chipW + cgap), y: 214, w: chipW, h: 34, chip: true, size: 10,
+        label, sel: achFilter === c, action: () => { achFilter = c; listScroll = 0; } });
+    });
+
+    // ---- the grid (2 columns, scrollable) ----
+    const list = achFilter === "all" ? ACH.list : ACH.list.filter((a) => a.cat === achFilter);
+    const colWd = 552, rowH = 124, top = 268, fx = W / 2 - colWd - 12, viewH = H - top - 96;
+    const rows = Math.ceil(list.length / 2);
+    const maxScroll = Math.max(0, rows * rowH - viewH);
+    listScroll = clamp(listScroll, 0, maxScroll);
+    ctx.save(); ctx.beginPath(); ctx.rect(0, top - 10, W, viewH + 18); ctx.clip();
+    list.forEach((a, i) => {
+      const col = i % 2, row = Math.floor(i / 2);
+      const x = fx + col * (colWd + 24), y = top + row * rowH - listScroll;
+      if (y < top - rowH || y > top + viewH) return;
+      const ch = rowH - 14, cat = ACH.CATS[a.cat] || {}, rar = ACH.RARITY[a.rarity] || ACH.RARITY.common;
+      const unlocked = PROFILE.unlocked(a.id), prog = ACH.progress(a);
+      // card body; unlocked cards get a faint rarity wash + full colour, locked stay muted
+      UI.card(ctx, x, y, colWd, ch, false);
+      if (unlocked) { ctx.globalAlpha = 0.07; ctx.fillStyle = rar.color; ctx.fillRect(x, y, colWd, ch); ctx.globalAlpha = 1; }
+      UI.accentStrip(ctx, x, y, colWd, unlocked ? rar.color : "rgba(150,150,160,0.4)");
+      // badge box (left): category glyph, tinted by rarity when earned, locked otherwise
+      const bx = x + 16, by = y + 22, bs = 58;
+      ctx.globalAlpha = unlocked ? 0.18 : 0.06; ctx.fillStyle = unlocked ? rar.color : UI.ink; ctx.fillRect(bx, by, bs, bs); ctx.globalAlpha = 1;
+      ctx.strokeStyle = unlocked ? rar.color : "rgba(150,150,160,0.35)"; ctx.lineWidth = 1.5; ctx.strokeRect(bx, by, bs, bs);
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillStyle = unlocked ? rar.color : "rgba(140,142,156,0.5)"; ctx.font = UI.font(28, true);
+      ctx.fillText(cat.icon || "★", bx + bs / 2, by + bs / 2 + 1);   // category glyph; greyed while locked
+      ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+      // name + rarity tag + description — DARK text on the light card; locked reads muted
+      const tx = bx + bs + 16;
+      ctx.fillStyle = unlocked ? UI.ink : "rgba(90,92,108,0.7)"; ctx.font = UI.font(t.type.lead, true);
+      ctx.fillText(a.name, tx, y + 34);
+      UI.tag(ctx, rar.name, tx, y + 52, unlocked ? rar.color : "rgba(120,124,140,0.85)", "left", t.type.micro);
+      ctx.fillStyle = unlocked ? "rgba(40,42,54,0.82)" : "rgba(110,112,126,0.6)"; ctx.font = UI.font(t.type.micro, false);
+      ctx.fillText(a.desc.length > 52 ? a.desc.slice(0, 51) + "…" : a.desc, tx, y + 70);
+      // progress bar + count (or "UNLOCKED")
+      const pbX = tx, pbY = y + 86, pbW = colWd - (tx - x) - 96;
+      ctx.globalAlpha = 0.16; ctx.fillStyle = UI.ink; ctx.fillRect(pbX, pbY, pbW, 5); ctx.globalAlpha = 1;
+      ctx.fillStyle = unlocked ? rar.color : t.color.accent; ctx.fillRect(pbX, pbY, pbW * prog, 5);
+      ctx.fillStyle = unlocked ? rar.color : "rgba(90,92,108,0.9)"; ctx.font = UI.font(10, true); ctx.textAlign = "left";
+      ctx.fillText(unlocked ? "UNLOCKED" : ACH.progressText(a), pbX, pbY + 16);
+      // shard reward (right)
+      ctx.textAlign = "right";
+      ctx.fillStyle = unlocked ? "#13c4d6" : "rgba(120,150,160,0.5)"; ctx.font = UI.font(t.type.lead, true);
+      ctx.fillText("◆ " + ACH.shardsFor(a), x + colWd - 16, y + 44);
+      if (unlocked) { ctx.fillStyle = rar.color; ctx.font = UI.font(11, true); ctx.fillText("EARNED", x + colWd - 16, y + 64); }
+      ctx.textAlign = "left";
+    });
+    ctx.restore();
+    if (maxScroll > 0) UI.scrollHint(ctx, W / 2, top + viewH + 22, listScroll > 0, listScroll < maxScroll);
     addBack();
   }
 
