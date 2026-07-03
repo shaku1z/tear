@@ -203,6 +203,7 @@ class Player {
     if (this.guardT > 0) dmg *= CONFIG.resilience.parryGuardMult;  // Riposte window
     this.hp = this.oneHit ? 0 : Math.max(0, this.hp - dmg);
     this.iframe = CONFIG.player.hitIframe;
+    this.tookHit = true;   // consumed by the game for no-hit achievement tracking
     const dir = Math.sign(this.x - fromX) || 1;
     this.vx = dir * 380;
     this.vy = -260;

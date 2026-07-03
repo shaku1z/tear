@@ -66,6 +66,7 @@
   }
   if (typeof SFX !== "undefined") SFX.init();
   META.load();
+  PROFILE.load();   // shards + achievements + lifetime stats (mirrored to CG cloud)
   // CrazyGames: pause audio during ads, and once the SDK is ready re-read saved
   // progress from cloud storage (no-ops + plain localStorage off-platform)
   CG.setHooks(
@@ -73,13 +74,14 @@
     () => { if (typeof SFX !== "undefined") SFX.mute(false, "ad"); },    // ad over: restore
     (on) => { if (typeof SFX !== "undefined") SFX.mute(on, "cg"); });    // CrazyGames portal mute toggle
   CG.loadingStart();
-  CG.init().then(() => { META.load(); settings = loadSettings(); applySettings(); CG.loadingStop(); });
+  CG.init().then(() => { META.load(); PROFILE.load(); settings = loadSettings(); applySettings(); CG.loadingStop(); });
   function awardCoins(score) {
     // leaner economy: a small fraction of score + a flat per-wave trickle, so a strong run
     // buys 1-3 upgrades (not the whole shop). run.coinMod lets difficulty scale the reward.
     const flat = Math.floor((run.wave || 0) * 12);
     const earned = Math.floor(score * 0.03 * (1 + 0.15 * META.level("greed")) * CONFIG.run.coinMult * (run.coinMod || 1)) + flat;
     META.addCoins(earned);
+    if (achTracks()) { PROFILE.addStat("coinsEarned", earned); }
     return earned;
   }
   // build a draft, guaranteeing at least 2 Specials are OFFERED per 10-wave stage
@@ -143,6 +145,11 @@
     currentStage = stageAt(i);
     platforms = stagePlatforms(i);
     slowZones = []; tempWalls = [];
+    // achievements: count distinct biomes fought in (across the whole profile)
+    if (run && achTracks() && currentStage && currentStage.name && !currentStage.dark) {
+      const seen = PROFILE.data.stats._biomes || (PROFILE.data.stats._biomes = {});
+      if (!seen[currentStage.name]) { seen[currentStage.name] = 1; PROFILE.maxStat("biomesSeen", Object.keys(seen).length); achCheck(); }
+    }
   }
 
   // ---- state ----
@@ -159,6 +166,7 @@
   let run = null;             // { mode, diff, wave, score, mods, spawnQueue, spawnTimer, waveActive }
   let draftChoices = [];
   let tierChoices = [];               // abilities offered to evolve after a campaign boss
+  let achToast = null, achToastT = 0;   // the "achievement unlocked" banner (pulled from ACH.pending)
   let overInfo = null;        // game-over summary
   let selMode = "endless", selDiff = "normal", selWeapon = "sword", selBoss = "shuffle";
   // the built bosses — Boss Test cycles through these (with a tier-up after each)
@@ -448,7 +456,7 @@
         if (this.doneT <= 0) { this.idx = Math.min(this.idx + 1, this.steps.length - 1); this.n.airHit = 0; this.n.strike = 0; this.gT = 0; }
       } else if (s.final) {
         this.endT += dt;
-        if (this.endT > 5) { this.stop(); state = "menu"; document.exitPointerLock(); }
+        if (this.endT > 5) { this.stop(); state = "menu"; document.exitPointerLock(); PROFILE.addStat("tutorialDone", 1); achCheck(); }
       } else if (s.ok()) { this.doneT = 1.1; SFX.rankup(); }
     },
   };
@@ -640,7 +648,22 @@
       rankPopT = 1; rankPopText = run.rank; SFX.rankup();
     }
     if (run.mult > run.wavePeak) run.wavePeak = run.mult;
+    // achievements: the blade's craft (skip training sandboxes)
+    if (achTracks()) {
+      if (kind === "parry") { PROFILE.addStat("parries", 1); PROFILE.addStat("deflects", 1); }
+      else if (kind === "deflect") PROFILE.addStat("deflects", 1);
+      else if (kind === "superslam") PROFILE.addStat("superslams", 1);
+      else if (kind === "updraft") PROFILE.addStat("updrafts", 1);
+      else if (kind === "throwHit") PROFILE.addStat("throwHits", 1);
+      // reached the top style tier this run?
+      const topName = T.tiers.length ? T.tiers[T.tiers.length - 1].name : "";
+      if (topName && run.rank === topName) PROFILE.maxStat("topRank", 1);
+      achCheck();
+    }
   }
+  // achievements track everywhere EXCEPT the training sandboxes (trivially farmable)
+  function achTracks() { return run && run.mode !== "tutorial" && run.mode !== "playground"; }
+  function achCheck() { try { ACH.check(); PROFILE.save(); } catch (e) {} }
   function loseStyle() {
     run.combo *= (1 - CONFIG.trick.hitLoss);
     run.comboTimer = CONFIG.trick.decay * 0.5;
@@ -746,7 +769,10 @@
       adRevived: false,   // CrazyGames: the one-time rewarded-ad revive is still available
       coinMod: dm.coin || 1, scoreMod: dm.score || 1,   // difficulty: risk = reward
       diffHp: dm.hp || 1, diffCount: dm.count || 1,      // difficulty: enemy toughness + density
+      _dmgThisWave: false, _dmgThisRun: false, _dmgThisStage: false,   // no-hit achievement flags
     };
+    // "played every mode" counts the five always-visible modes (not the debug sandboxes)
+    if (mode !== "bossonly" && mode !== "sandbox") { PROFILE.markMode(mode); achCheck(); }
     if (mode === "bossonly") {   // boss gauntlet: chosen boss first, then a shuffled cycle of the rest
       run.bossOrder = shuffledRoster();
       if (selBoss !== "shuffle") { run.bossOrder = run.bossOrder.filter((id) => id !== selBoss); run.bossOrder.unshift(selBoss); }
@@ -1005,11 +1031,27 @@
       run.waveActive = false;
       Backdrop.bloom(currentStage.accent, 0.14, 0.8);   // wave cleared: a breath of light
       run.waveLog.push({ wave: run.isBossWave ? "BOSS" : run.wave, time: run.waveTime, kills: run.waveKills, peak: run.wavePeak });
+      if (achTracks()) {   // progression + no-hit feats, tallied per cleared wave
+        PROFILE.maxStat("bestWave", run.wave);
+        PROFILE.maxStat("longestRun", Math.floor(run.runTime));
+        if (player.oneHit) PROFILE.maxStat("oneHitWave", run.wave);
+        if (!run._dmgThisWave) PROFILE.addStat("noHitWaves", 1);
+        let ownedN = 0; for (const k in run.mods.owned) if (run.mods.owned[k]) ownedN++;
+        PROFILE.maxStat("abilitiesInRun", ownedN);
+        achCheck();
+      }
+      run._dmgThisWave = false;
       if (run.isBossWave) {
         if (run.mode === "campaign" && stageIndex >= STAGES.length - 1) { winRun(true); return; }   // final biome cleared -> the ending
         if (run.mode === "campaign" || run.mode === "bossonly" || run.mode === "gauntlet") {
           if (!player.oneHit) player.heal(R.healEachWave * 2 + (run.mods.waveHeal || 0));   // a boss kill is a milestone, not the end
           if (run.mode === "bossonly" || run.mode === "gauntlet") run.bossesBeaten = (run.bossesBeaten || 0) + 1;
+          if (run.mode === "campaign" && achTracks()) {   // a full stage (10 waves + boss) is done
+            PROFILE.addStat("stageClears", 1);
+            if (!run._dmgThisStage) PROFILE.addStat("noHitStages", 1);
+            run._dmgThisStage = false;
+            achCheck();
+          }
           run.bossCleared = true;
           run.clearTimer = R.waveClearPause * 1.6;
         } else { winRun(); return; }   // the Waves+Boss mode still ends in victory
@@ -1043,6 +1085,7 @@
     const best = getBest(run.mode, run.diff);
     const isNew = saveBest(run.mode, run.diff, run.wave, run.score, run.runTime);
     const earned = awardCoins(run.score);
+    if (achTracks()) { PROFILE.addStat("runs", 1); PROFILE.maxStat("longestRun", Math.floor(run.runTime)); achCheck(); }
     overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, earned, coins: META.coins() };
     state = "gameover";
     document.exitPointerLock();
@@ -1052,6 +1095,7 @@
   function winRun(campaign) {
     const isNew = saveBest(run.mode, run.diff, run.wave, run.score, run.runTime);
     const earned = awardCoins(run.score);
+    if (achTracks()) { PROFILE.addStat("runs", 1); if (campaign) PROFILE.addStat("campaignClears", 1); achCheck(); }
     overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, win: true, campaign: !!campaign, earned, coins: META.coins() };
     state = "win";
     document.exitPointerLock();
@@ -1422,7 +1466,13 @@
           SFX.hit(big); if (isSlam) SFX.slam(); else if (empowered) SFX.updraft(); else if (isLaunch) SFX.launch();
           addStyle(isSlam ? (empSlam ? "superslam" : "slam") : (empowered ? "updraft" : (isLaunch ? "launch" : "hit")));
           TUT.mark("strike");   // tutorial: ANY melee strike counts as a cut (whatever it classified as)
-          if (e.y < CONFIG.world.groundY - e.hh - 14) TUT.mark("airHit");   // tutorial: a juggled (airborne) cut
+          const airborne = e.y < CONFIG.world.groundY - e.hh - 14;
+          if (airborne) TUT.mark("airHit");   // tutorial: a juggled (airborne) cut
+          if (achTracks()) {   // skill feats measured at the strike
+            if (airborne) PROFILE.addStat("airHits", 1);
+            if (blade.tipSpeed > CONFIG.blade.minHitSpeed * 2.1) PROFILE.maxStat("maxMomentum", 1);
+            achCheck();
+          }
           fire(run.mods.onHit, makeEv(cp.px, cp.py, e));
           if (isSlam) fire(run.mods.onSlam, makeEv(e.x, e.y, e));
           // Rupture T2: a Power Slam detonates bleed on every nearby foe
@@ -1702,6 +1752,7 @@
 
     run.runTime += dt; run.waveTime += dt;
     updateTrick(dt);
+    if (player.tookHit) { player.tookHit = false; run._dmgThisWave = true; run._dmgThisRun = true; run._dmgThisStage = true; }   // no-hit tracking
     if (run.mode === "tutorial") TUT.update(dt);
     else if (run.mode === "playground") stepPlayground();
 
@@ -1717,12 +1768,14 @@
         FX.ring(player.x, player.y, 16, CONFIG.colors.perfect); FX.burst(player.x, player.y, 0, -1, 16, CONFIG.colors.perfect);
         addFloater(player.x, player.y - 44, "SECOND WIND", true, CONFIG.colors.perfect);
         addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry); SFX.parry();
+        if (achTracks()) { PROFILE.addStat("revivesUsed", 1); achCheck(); }
       } else if (player.abilityRevives > 0 && !player.oneHit) {
         // extra life #2 — Last Stand (draftable ability): a defiant, hotter rise
         player.abilityRevives--; player.hp = Math.round(player.maxHp * 0.40); player.iframe = 2.0;
         FX.explode(player.x, player.y, CONFIG.colors.charger, 1.1);
         addFloater(player.x, player.y - 44, "LAST STAND", true, CONFIG.colors.charger);
         addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry); SFX.counter();
+        if (achTracks()) { PROFILE.addStat("revivesUsed", 1); achCheck(); }
       } else if (CG.adsAvailable() && !run.adRevived && !player.oneHit) {
         // extra life #3 — the CrazyGames rewarded-ad revive (the continue flow)
         state = "continue"; continueT = 8; document.exitPointerLock();
@@ -1733,6 +1786,17 @@
   function onKill(e, cause) {
     addKillScore();
     if (e.affixCount) run.score += Math.round(CONFIG.run.scorePerKill * run.wave * run.mult * 0.4 * e.affixCount);
+    if (achTracks()) {   // lifetime kill feats
+      PROFILE.addStat("kills", 1);
+      PROFILE.maxStat("killsOneWave", run.waveKills);
+      if (e.kind === "bomber") PROFILE.addStat("bomberKills", 1);
+      if (e.isBoss && !e.isMiniBoss) {
+        PROFILE.addStat("bossKills", 1);
+        if (!run._dmgThisWave) PROFILE.addStat("bossNoHit", 1);
+        if (run.mode === "bossonly") { run._bossOnlyKills = (run._bossOnlyKills || 0) + 1; if (run._bossOnlyKills >= BOSS_ROSTER.length) PROFILE.maxStat("gauntletFull", 1); }
+      }
+      achCheck();
+    }
     FX.death(e.x, e.y, CONFIG.juice.deathShards, e.color);
     SFX.death();
     fire(run.mods.onKill, makeEv(e.x, e.y, e, cause));
@@ -1991,6 +2055,9 @@
 
     // biome tear-wipe rides over EVERYTHING for its beat (device space)
     Wipe.draw(lastUiDt);
+
+    // achievement unlock toast rides above the world + menus (but under the wipe flash)
+    drawAchToast(lastUiDt);
 
     // mobile in portrait: nudge toward landscape (the arena is wide)
     if (Input.touchActive() && canvas.clientHeight > canvas.clientWidth) {
@@ -2365,6 +2432,49 @@
     ctx.textAlign = "left";
   }
 
+  // ---- achievement unlock toast: slides down top-centre, holds, slides out ----
+  // Pulls one at a time from ACH.pending so a burst of unlocks queues cleanly.
+  function drawAchToast(dt) {
+    if (!achToast && ACH.pending.length) { achToast = ACH.pending.shift(); achToastT = 0; PROFILE.data.seen[achToast.id] = true; PROFILE.save(); }
+    if (!achToast) return;
+    achToastT += dt;
+    const HOLD = 3.6, IN = 0.4, OUT = 0.4;
+    if (achToastT >= HOLD) { achToast = null; return; }
+    const t = UI.t, a = achToast, rar = ACH.RARITY[a.rarity] || ACH.RARITY.common, cat = ACH.CATS[a.cat] || {};
+    // vertical slide: in, hold, out
+    let slide = 1;
+    if (achToastT < IN) slide = ez(achToastT / IN);
+    else if (achToastT > HOLD - OUT) slide = ez((HOLD - achToastT) / OUT);
+    const cw = 470, ch = 92, cx = W / 2 - cw / 2, cy = -ch + (30 + SAFE.t + ch) * slide;
+    ctx.save();
+    ctx.globalAlpha = clamp(slide, 0, 1);
+    // card
+    ctx.fillStyle = "#0e1017"; ctx.fillRect(cx, cy, cw, ch);
+    ctx.globalAlpha = clamp(slide, 0, 1) * 0.9;
+    ctx.strokeStyle = rar.color; ctx.lineWidth = 2; ctx.strokeRect(cx, cy, cw, ch);
+    ctx.fillStyle = rar.color; ctx.fillRect(cx, cy, cw, 3);
+    // rarity glow badge (category icon)
+    ctx.globalAlpha = clamp(slide, 0, 1);
+    ctx.fillStyle = rar.color; ctx.globalAlpha *= 0.18; ctx.fillRect(cx + 14, cy + 20, 52, 52);
+    ctx.globalAlpha = clamp(slide, 0, 1);
+    ctx.fillStyle = rar.color; ctx.font = UI.font(30, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(cat.icon || "★", cx + 40, cy + 47); ctx.textBaseline = "alphabetic";
+    // text
+    ctx.textAlign = "left";
+    ctx.fillStyle = rar.color; ctx.font = UI.font(11, true);
+    ctx.fillText("ACHIEVEMENT UNLOCKED  ·  " + rar.name, cx + 84, cy + 30);
+    ctx.fillStyle = "#f1eff9"; ctx.font = UI.font(20, true);
+    ctx.fillText(a.name, cx + 84, cy + 56);
+    ctx.fillStyle = "#c9ccd6"; ctx.font = UI.font(12, false);
+    ctx.fillText(a.desc, cx + 84, cy + 76);
+    // shard reward chip (right)
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#13c4d6"; ctx.font = UI.font(20, true);
+    ctx.fillText("◆ +" + ACH.shardsFor(a), cx + cw - 16, cy + 52);
+    ctx.restore();
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  }
+
   // ---- mobile: the on-screen touch controls (drawn only once a real touch happens) ----
   function drawTouchControls() {
     const L = Input.touchLayout(), ink = THEME.ink;
@@ -2649,7 +2759,7 @@
       uiButtons.push({ x: rxc - bw, y: y - 24, w: bw, h: 44,
         label: maxed ? "MAX" : META.cost(it) + "c",
         enabled: !maxed && META.canBuy(it),
-        action: () => { if (META.buy(it)) SFX.ui(); } });
+        action: () => { if (META.buy(it)) { SFX.ui(); PROFILE.addStat("shopBuys", 1); achCheck(); } } });
       UI.divider(ctx, cx, y + 42, colW, 0.08);
     });
     addBack();
