@@ -74,7 +74,12 @@
     () => { if (typeof SFX !== "undefined") SFX.mute(false, "ad"); },    // ad over: restore
     (on) => { if (typeof SFX !== "undefined") SFX.mute(on, "cg"); });    // CrazyGames portal mute toggle
   CG.loadingStart();
-  CG.init().then(() => { META.load(); PROFILE.load(); settings = loadSettings(); applySettings(); CG.loadingStop(); });
+  CG.init().then(() => {
+    META.load(); PROFILE.load(); settings = loadSettings(); applySettings(); CG.loadingStop();
+    // accounts + synced progress: picks CrazyGames / Firebase / Local by environment.
+    // A guest logging in (or a returning account) merges cloud progress non-destructively.
+    Cloud.init().then(() => Cloud.onChange(() => { try { ACH.check(); } catch (e) {} }));
+  });
   function awardCoins(score) {
     // leaner economy: a small fraction of score + a flat per-wave trickle, so a strong run
     // buys 1-3 upgrades (not the whole shop). run.coinMod lets difficulty scale the reward.
@@ -2943,10 +2948,10 @@
   // toggles/cycles span the whole block. Returns the y below the last row.
   function drawSettingsRows(fx, rx, y0, compact) {
     const t = UI.t;
-    const rowH = compact ? 50 : 58, btnW = compact ? 44 : 54, btnH = compact ? 36 : 44;
+    const rowH = compact ? 50 : 52, btnW = compact ? 44 : 54, btnH = compact ? 36 : 42;
     const block = compact ? 196 : 252, lo = rx - block, labelSize = compact ? t.type.body : t.type.lead;
     let y = y0;
-    const section = (name) => { if (compact) return; UI.tag(ctx, name, fx, y + 6, t.color.accent, "left", t.type.micro); y += 26; };
+    const section = (name) => { if (compact) return; UI.tag(ctx, name, fx, y + 6, t.color.accent, "left", t.type.micro); y += 22; };
     const row = (label, drawControl) => {
       const cy = y + rowH / 2;
       UI.text(ctx, label, fx, cy + 6, labelSize);
@@ -2983,19 +2988,30 @@
     // touch vs desktop — AUTO detects; 2-in-1 laptops and tablets can force either
     wide("Controls", settings.controls === "auto" ? ("AUTO (" + (Input.touchActive() ? "TOUCH" : "DESKTOP") + ")") : settings.controls.toUpperCase(), false,
       () => { settings.controls = settings.controls === "auto" ? "touch" : (settings.controls === "touch" ? "desktop" : "auto"); save(); });
+    // ---- ACCOUNT (full tab only): sign in to sync progress; provider decides the wording ----
+    if (!compact && typeof Cloud !== "undefined") {
+      section("ACCOUNT");
+      const signedIn = Cloud.loggedIn(), canIn = Cloud.canSignIn();
+      const btnLabel = signedIn ? (Cloud.provider === FirebaseProvider ? "SIGN OUT" : "SYNCED") : (canIn ? Cloud.signInLabel().toUpperCase() : "GUEST · LOCAL");
+      // the row label doubles as the status line
+      const statusLabel = signedIn ? Cloud.displayName() : "Guest";
+      wide(statusLabel, btnLabel, signedIn && Cloud.provider !== FirebaseProvider, () => {
+        if (canIn) Cloud.signIn(); else if (signedIn && Cloud.provider === FirebaseProvider) Cloud.signOut();
+      });
+    }
     return y;
   }
 
   function renderSettings() {
     const t = UI.t, fx = W / 2 - 280, rx = W / 2 + 280;
     UI.header(ctx, "SETTINGS", "tune sound, feel, and feedback", eIn);
-    const yEnd = drawSettingsRows(fx, rx, 190, false);
+    const yEnd = drawSettingsRows(fx, rx, 182, false);
     // Legal — a CrazyGames Basic-launch requirement: an in-game mention of Terms & Privacy.
     UI.text(ctx, "By playing you agree to CrazyGames' Terms of Service and Privacy Policy.",
-      fx, yEnd + 24, t.type.caption, "left", t.alpha.muted);
-    uiButtons.push({ x: fx, y: yEnd + 38, w: 190, h: 36, size: 13, label: "Terms of Service",
+      fx, yEnd + 20, t.type.caption, "left", t.alpha.muted);
+    uiButtons.push({ x: fx, y: yEnd + 32, w: 190, h: 34, size: 12, label: "Terms of Service",
       action: () => window.open("https://www.crazygames.com/terms-and-conditions", "_blank", "noopener") });
-    uiButtons.push({ x: fx + 204, y: yEnd + 38, w: 190, h: 36, size: 13, label: "Privacy Policy",
+    uiButtons.push({ x: fx + 204, y: yEnd + 32, w: 190, h: 34, size: 12, label: "Privacy Policy",
       action: () => window.open("https://www.crazygames.com/privacy", "_blank", "noopener") });
     addBack();
   }

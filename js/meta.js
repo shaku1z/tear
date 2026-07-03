@@ -21,6 +21,12 @@ const META = {
   },
   // apply all purchased passives at the start of a run; ctx = { player, blade, mods }
   apply(ctx) { for (const it of SHOP) { const lv = this.level(it.id); if (lv > 0) it.apply(lv, ctx); } },
+  // non-destructive merge of a remote wallet (cloud sync): keep the higher coins + levels
+  merge(r) {
+    if (!r) return;
+    this.data.coins = Math.max(this.data.coins || 0, r.coins || 0);
+    if (r.buy) for (const k in r.buy) this.data.buy[k] = Math.max(this.data.buy[k] || 0, r.buy[k] || 0);
+  },
 };
 
 const SHOP = [
