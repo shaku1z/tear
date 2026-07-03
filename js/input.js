@@ -13,6 +13,24 @@ const Input = {
   clickX: 0, clickY: 0,
   wheel: 0,               // accumulated wheel delta (scrollable menus)
 
+  // ---- touch (mobile): floating joystick + aim-drag + action buttons ----
+  touchOn: false,         // a real touch has happened -> draw the touch controls
+  touchAim: false,        // a finger is steering the blade (delta mode, like pointer-lock)
+  uiMode: false,          // set by the game each frame: menus/overlays (taps + drag-scroll)
+  tJump: false, tDash: false, tPause: false,   // touch-button edges (cleared each frame)
+  joy: { active: false, id: -1, ax: 0, ay: 0, dx: 0, dy: 0 },
+  _aimId: -1, _aimLX: 0, _aimLY: 0, _scrollId: -1, _scrollLY: 0,
+  // on-screen control layout (logical px) — the game draws these, input hit-tests them
+  touchLayout() {
+    const vw = CONFIG.view.w, vh = CONFIG.view.h;
+    return {
+      jump: { x: vw - 150, y: vh - 150, r: 82, label: "JUMP" },
+      dash: { x: vw - 330, y: vh - 118, r: 64, label: "DASH" },
+      throwB: { x: vw - 150, y: vh - 338, r: 58, label: "THROW" },
+      pause: { x: vw - 54, y: 52, r: 34, label: "▮▮" },
+    };
+  },
+
   init(canvas) {
     window.addEventListener("keydown", (e) => {
       if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab"].includes(e.code)) e.preventDefault();
@@ -59,6 +77,61 @@ const Input = {
     });
     window.addEventListener("mouseup", (e) => { if (e.button === 0) this.lmb = false; });
     canvas.addEventListener("wheel", (e) => { this.wheel += e.deltaY; e.preventDefault(); }, { passive: false });
+
+    // ---- touch: left zone = floating joystick, right zone = blade aim (drag deltas),
+    // on-screen buttons = jump/dash/throw/pause, menus = taps + vertical drag-scroll ----
+    const hitZone = (p) => {
+      const L = this.touchLayout();
+      for (const k in L) { const z = L[k]; if (Math.hypot(p.x - z.x, p.y - z.y) <= z.r * 1.3) return k; }
+      return null;
+    };
+    const btnTouches = {};   // touch id -> zone key (fingers on buttons never aim)
+    canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault(); this.touchOn = true;
+      const r = canvas.getBoundingClientRect();
+      for (const t of e.changedTouches) {
+        const p = toLogical(t, r);
+        if (this.uiMode) {   // menus: track for drag-scroll (taps still land via the click event)
+          if (this._scrollId === -1) { this._scrollId = t.identifier; this._scrollLY = t.clientY; }
+          continue;
+        }
+        const z = hitZone(p);
+        if (z) {
+          btnTouches[t.identifier] = z;
+          if (z === "jump") this.tJump = true;
+          else if (z === "dash") this.tDash = true;
+          else if (z === "throwB") this.rmb = true;
+          else if (z === "pause") this.tPause = true;
+        } else if (p.x < CONFIG.view.w * 0.42 && this.joy.id === -1) {
+          this.joy = { active: true, id: t.identifier, ax: p.x, ay: p.y, dx: 0, dy: 0 };
+        } else if (this._aimId === -1) {
+          this._aimId = t.identifier; this._aimLX = t.clientX; this._aimLY = t.clientY; this.touchAim = true;
+        }
+      }
+    }, { passive: false });
+    canvas.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      const r = canvas.getBoundingClientRect();
+      for (const t of e.changedTouches) {
+        if (t.identifier === this._scrollId) { this.wheel += (this._scrollLY - t.clientY) * 2.2; this._scrollLY = t.clientY; }
+        else if (t.identifier === this.joy.id) { const p = toLogical(t, r); this.joy.dx = p.x - this.joy.ax; this.joy.dy = p.y - this.joy.ay; }
+        else if (t.identifier === this._aimId) {
+          this.dx += (t.clientX - this._aimLX) * 2.3;   // thumb-drag steers the blade like a captured mouse
+          this.dy += (t.clientY - this._aimLY) * 2.3;
+          this._aimLX = t.clientX; this._aimLY = t.clientY;
+        }
+      }
+    }, { passive: false });
+    const touchEnd = (e) => {
+      for (const t of e.changedTouches) {
+        if (t.identifier === this.joy.id) this.joy = { active: false, id: -1, ax: 0, ay: 0, dx: 0, dy: 0 };
+        if (t.identifier === this._aimId) { this._aimId = -1; this.touchAim = false; }
+        if (t.identifier === this._scrollId) this._scrollId = -1;
+        delete btnTouches[t.identifier];
+      }
+    };
+    canvas.addEventListener("touchend", touchEnd);
+    canvas.addEventListener("touchcancel", touchEnd);
     document.addEventListener("pointerlockchange", () => {
       this.locked = document.pointerLockElement === canvas;
     });
@@ -70,15 +143,15 @@ const Input = {
   // read + clear accumulated locked-pointer movement
   consumeDelta() { const d = { x: this.dx, y: this.dy }; this.dx = 0; this.dy = 0; return d; },
 
-  // logical directional helpers
-  left()  { return this.held.has("KeyA") || this.held.has("ArrowLeft"); },
-  right() { return this.held.has("KeyD") || this.held.has("ArrowRight"); },
-  up()    { return this.held.has("KeyW") || this.held.has("ArrowUp"); },
-  down()  { return this.held.has("KeyS") || this.held.has("ArrowDown"); },
+  // logical directional helpers (keyboard OR the touch joystick)
+  left()  { return this.held.has("KeyA") || this.held.has("ArrowLeft") || (this.joy.active && this.joy.dx < -26); },
+  right() { return this.held.has("KeyD") || this.held.has("ArrowRight") || (this.joy.active && this.joy.dx > 26); },
+  up()    { return this.held.has("KeyW") || this.held.has("ArrowUp") || (this.joy.active && this.joy.dy < -42); },
+  down()  { return this.held.has("KeyS") || this.held.has("ArrowDown") || (this.joy.active && this.joy.dy > 42); },
 
-  jumpPressed() { return this.pressed.has("Space") || this.pressed.has("KeyW") || this.pressed.has("ArrowUp"); },
-  dashPressed() { return this.pressed.has("ShiftLeft") || this.pressed.has("ShiftRight"); },
-  pausePressed() { return this.pressed.has("KeyP"); },
+  jumpPressed() { if (this.tJump) { this.tJump = false; return true; } return this.pressed.has("Space") || this.pressed.has("KeyW") || this.pressed.has("ArrowUp"); },
+  dashPressed() { if (this.tDash) { this.tDash = false; return true; } return this.pressed.has("ShiftLeft") || this.pressed.has("ShiftRight"); },
+  pausePressed() { if (this.tPause) { this.tPause = false; return true; } return this.pressed.has("KeyP"); },
   escapePressed() { return this.pressed.has("Escape"); },
 
   // menu navigation edges
@@ -92,5 +165,5 @@ const Input = {
   takeClick() { if (!this.clicked) return null; this.clicked = false; return { x: this.clickX, y: this.clickY }; },
   takeWheel() { const w = this.wheel; this.wheel = 0; return w; },
 
-  endFrame() { this.pressed.clear(); this.rmb = false; this.clicked = false; },
+  endFrame() { this.pressed.clear(); this.rmb = false; this.clicked = false; this.tJump = false; this.tDash = false; this.tPause = false; },
 };

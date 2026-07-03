@@ -62,7 +62,7 @@ class Blade {
       // attract-mode AI aims the blade at an absolute world point (else read the mouse)
       this.aimX = this.aimOverride.x - hand.x;
       this.aimY = this.aimOverride.y - hand.y;
-    } else if (Input.locked) {
+    } else if (Input.locked || Input.touchAim) {
       // captured mouse: relative movement drives a player-anchored reticle
       const d = Input.consumeDelta();
       this.aimX += d.x * B.aimSensitivity;

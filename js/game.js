@@ -444,6 +444,36 @@
   // ---- PLAYGROUND: an open arena with everything on tap ----
   const PG_KINDS = ["charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera", "priest"];
   const PG_ALL_KINDS = ["charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera", "priest", "herald", "mender", "anchor"];
+  // the open training arena (floor + two practice ledges) — the playground's "home" stage
+  function trainingPlatforms() {
+    return [
+      { x: 0, y: CONFIG.world.groundY, w: W, h: H - CONFIG.world.groundY, floor: true },
+      { x: W * 0.28, y: 560, w: 300, h: 24, oneway: true },
+      { x: W * 0.62, y: 430, w: 260, h: 24, oneway: true },
+    ];
+  }
+  // live difficulty swap: renormalize damage-taken and re-point every difficulty mod,
+  // so the playground exercises the exact same tiers the real modes use
+  function pgSetDiff(id) {
+    const d = CONFIG.difficulties.find((x) => x.id === id) || CONFIG.difficulties[1];
+    const dm = d.mods || {};
+    CONFIG.player.dmgTakenMult *= (dm.dmg || 1) / (run.diffDmg || 1);
+    run.diffDmg = dm.dmg || 1;
+    run.diff = d.id; run.diffHp = dm.hp || 1; run.diffCount = dm.count || 1;
+    run.coinMod = dm.coin || 1; run.scoreMod = dm.score || 1;
+    player.oneHit = !!d.oneHit;
+    addFloater(player.x, player.y - 60, d.label.toUpperCase(), true, CONFIG.colors.perfect);
+  }
+  // arena rotation INCLUDING the training stage: TRAINING -> the five biomes -> TRAINING
+  function pgNextArena() {
+    Wipe.begin();
+    const cur = run.pgArena == null ? -1 : run.pgArena;
+    const next = cur >= STAGES.length - 1 ? -1 : cur + 1;
+    run.pgArena = next;
+    if (next === -1) { loadStage(0); platforms = trainingPlatforms(); }
+    else loadStage(next);
+  }
+  function pgArenaName() { return (run.pgArena == null || run.pgArena === -1) ? "TRAINING GROUNDS" : currentStage.name.toUpperCase(); }
   // spawn with the playground's HP / count modifiers applied
   function pgSpawn(kind) {
     const pg = run.pg;
@@ -496,6 +526,11 @@
     [1, 3, 10].forEach((m, i) => uiButtons.push({ x: lx + 44 + i * 92, y: my + 4, w: 84, h: 38, size: 13, label: "×" + m, sel: (pg.hpMul || 1) === m, action: () => { pg.hpMul = m; } }));
     UI.text(ctx, "COUNT", lx + 340, my + 28, t.type.label);
     [1, 5].forEach((m, i) => uiButtons.push({ x: lx + 424 + i * 92, y: my + 4, w: 84, h: 38, size: 13, label: "×" + m, sel: (pg.count || 1) === m, action: () => { pg.count = m; } }));
+    // difficulty — the SAME tiers the real modes use, swapped live
+    const dy = my + 66;
+    UI.tag(ctx, "DIFFICULTY", lx, dy - 10, t.color.accent, "left", t.type.micro);
+    CONFIG.difficulties.forEach((d, i) => uiButtons.push({ x: lx + i * (116 + 5), y: dy + 4, w: 116, h: 38, size: 11,
+      label: d.label.toUpperCase(), sel: run.diff === d.id, action: () => { pgSetDiff(d.id); } }));
     // ---- right: BOSSES, ARENA, WEAPONS ----
     UI.tag(ctx, "SUMMON A BOSS", rx, 196, t.color.accent, "left", t.type.micro);
     BOSS_ROSTER.forEach((b, i) => {
@@ -504,8 +539,8 @@
     });
     const ay = 208 + 3 * (bh + gap) + 26;
     UI.tag(ctx, "ARENA", rx, ay - 10, t.color.accent, "left", t.type.micro);
-    uiButtons.push({ x: rx, y: ay + 4, w: colW, h: bh, size: 13, label: "NEXT BIOME  ›  now: " + currentStage.name.toUpperCase(), accent: currentStage.accent,
-      action: () => { Wipe.begin(); loadStage((stageIndex + 1) % STAGES.length); SFX.ui(); } });
+    uiButtons.push({ x: rx, y: ay + 4, w: colW, h: bh, size: 13, label: "NEXT ARENA  ›  now: " + pgArenaName(), accent: (run.pgArena === -1 || run.pgArena == null) ? t.color.accent : currentStage.accent,
+      action: () => { pgNextArena(); SFX.ui(); } });
     const wy = ay + bh + 30;
     UI.tag(ctx, "WEAPON  (restarts the arena)", rx, wy - 10, t.color.accent, "left", t.type.micro);
     WEAPONS.forEach((w, i) => {
@@ -525,7 +560,7 @@
     act(0, "ABILITY LAB  ›", () => { state = "pglab"; listScroll = 0; }, t.color.accent);
     act(1, "CLEAR ENEMIES", () => { for (const e of enemies) e.dead = true; projectiles.length = 0; SFX.ui(); });
     act(2, "FULL HEAL", () => { player.hp = player.maxHp; SFX.ui(); });
-    act(3, "RESET ARENA", () => { startRun("playground", run.diff); });
+    act(3, "RESET PLAYGROUND", () => { startRun("playground", selDiff); });   // full factory reset: build, toggles, arena, difficulty
     uiButtons.push({ x: W / 2 - 160, y: ayy + bh + 16, w: 320, h: 50, label: "RESUME", action: () => { state = "playing"; requestLock(); } });
   }
 
@@ -711,13 +746,10 @@
     META.apply({ player, blade, mods: run.mods });
     if (mode === "tutorial" || mode === "playground") {
       // training space: no waves — an open arena (floor + two practice ledges)
-      platforms = [
-        { x: 0, y: CONFIG.world.groundY, w: W, h: H - CONFIG.world.groundY, floor: true },
-        { x: W * 0.28, y: 560, w: 300, h: 24, oneway: true },
-        { x: W * 0.62, y: 430, w: 260, h: 24, oneway: true },
-      ];
+      platforms = trainingPlatforms();
       run.wave = 1; run.waveActive = false;
-      if (mode === "playground") { run.bossOrder = shuffledRoster(); run.bossIdx = 0; run.pg = { god: false, freeze: false, slow: false }; }
+      run.diffDmg = dm.dmg || 1;   // so the playground can live-swap difficulty (renormalizes damage taken)
+      if (mode === "playground") { run.bossOrder = shuffledRoster(); run.bossIdx = 0; run.pg = { god: false, freeze: false, slow: false, hpMul: 1, count: 1 }; run.pgArena = -1; }
       if (mode === "tutorial") TUT.start();
     } else startNextWave();
     if (mode === "campaign") showLore(CAMPAIGN_INTRO, "THE TEAR", 11);   // the opening beat
@@ -982,8 +1014,8 @@
         if (run.bossCleared) {
           run.bossCleared = false;
           const ups = availableTierUps(run.mods);
-          for (let i = ups.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ups[i], ups[j]] = [ups[j], ups[i]]; }
-          if (ups.length) { tierChoices = ups.slice(0, 3); state = "tierup"; }
+          ups.sort((a, b) => (a.cat < b.cat ? -1 : 1));            // group by category so the grid reads organized
+          if (ups.length) { tierChoices = ups; state = "tierup"; listScroll = 0; }   // EVERY evolvable ability is offered
           else { draftChoices = buildDraft(); state = "draft"; }   // nothing to evolve -> normal draft
         } else {
           draftChoices = buildDraft();
@@ -1754,6 +1786,8 @@
     if (state === "continue" && continueT > 0) { continueT -= dt; if (continueT <= 0) { state = "gameover"; endRun(); } }
     if (isMenuState(state)) { if (!Attract.ready) Attract.reset(); Attract.update(dt); } else Attract.ready = false;   // live attract-mode demo runs behind every menu tab
 
+    Input.uiMode = (state !== "playing");   // touch: menus take taps + drag-scroll, play takes joystick + aim
+
     // biome music: menus follow the attract biome; runs follow the current stage, with
     // the intensified BOSS arrangement while a boss wave is live (reverts on its death)
     if (typeof SFX !== "undefined" && SFX.setMusicTheme) {
@@ -1887,6 +1921,7 @@
         ctx.restore();
       }
       drawHUD();
+      if (Input.touchOn && state === "playing") drawTouchControls();
       if (loreT > 0) drawLore();
       if (state === "playing" && bannerT > 0) drawBanner();
       if (state === "playing" && stageBannerT > 0) drawStageBanner();
@@ -1943,6 +1978,18 @@
 
     // biome tear-wipe rides over EVERYTHING for its beat (device space)
     Wipe.draw(lastUiDt);
+
+    // mobile in portrait: nudge toward landscape (the arena is wide)
+    if (Input.touchOn && canvas.clientHeight > canvas.clientWidth) {
+      const sr2 = screenRect();
+      ctx.save(); ctx.globalAlpha = 0.85; ctx.fillStyle = "#06070c";
+      ctx.fillRect(sr2.x, H / 2 - 62, sr2.w, 124);
+      ctx.globalAlpha = 1; ctx.fillStyle = "#f1eff9"; ctx.font = UI.font(30, true); ctx.textAlign = "center";
+      ctx.fillText("ROTATE YOUR DEVICE", W / 2, H / 2 - 8);
+      ctx.font = UI.font(16, false); ctx.globalAlpha = 0.7;
+      ctx.fillText("Tear plays in landscape", W / 2, H / 2 + 26);
+      ctx.restore(); ctx.textAlign = "left";
+    }
 
     // mouse cursor in non-playing screens
     if (state !== "playing") UI.cursor(ctx, Input.mouseX, Input.mouseY);
@@ -2302,6 +2349,32 @@
     ctx.fillText("K clear   ·   H heal   ·   U ability lab   ·   P pause", cx + 20, cy + 74);
     ctx.restore();
     ctx.textAlign = "left";
+  }
+
+  // ---- mobile: the on-screen touch controls (drawn only once a real touch happens) ----
+  function drawTouchControls() {
+    const L = Input.touchLayout(), ink = THEME.ink;
+    ctx.save();
+    // floating joystick: rests bottom-left, follows the thumb while held
+    const j = Input.joy, jx = j.active ? j.ax : 200, jy = j.active ? j.ay : H - 190;
+    const m = Math.hypot(j.dx, j.dy) || 1, cap = Math.min(m, 70);
+    ctx.globalAlpha = j.active ? 0.34 : 0.16;
+    ctx.strokeStyle = ink; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(jx, jy, 92, 0, 6.2832); ctx.stroke();
+    ctx.globalAlpha = j.active ? 0.5 : 0.22; ctx.fillStyle = ink;
+    ctx.beginPath(); ctx.arc(jx + (j.active ? j.dx / m * cap : 0), jy + (j.active ? j.dy / m * cap : 0), 42, 0, 6.2832); ctx.fill();
+    // action buttons
+    const btn = (z, big) => {
+      ctx.globalAlpha = 0.16; ctx.fillStyle = ink;
+      ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = 0.4; ctx.strokeStyle = ink; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, 6.2832); ctx.stroke();
+      ctx.globalAlpha = 0.62; ctx.fillStyle = ink;
+      ctx.font = UI.font(big ? 16 : 13, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(z.label, z.x, z.y + 1); ctx.textBaseline = "alphabetic";
+    };
+    btn(L.jump, true); btn(L.dash); btn(L.throwB); btn(L.pause);
+    ctx.restore(); ctx.globalAlpha = 1;
   }
 
   function drawBanner() {
@@ -2860,13 +2933,35 @@
   // a juicy choice card shared by the upgrade draft and the boss tier-up screen.
   // Deals in from below with a stagger; on hover it lifts, scales, and lights its
   // category accent. Hitbox stays at rest while the visual animates.
+  // a selectable choice card. n <= 3 = the classic big single-row deal; n >= 4 switches
+  // to a compact GRID (rows of 4, last row centred, scrollable past 2 rows) so a tier-up
+  // with MANY owned abilities stays organized instead of being cut to 3.
   function choiceCard(i, n, o) {
-    const t = UI.t, cw = 322, gap = 34, ch = 384;
-    const total = cw * n + gap * (n - 1), x0 = (W - total) / 2, y0 = 248;
-    const x = x0 + i * (cw + gap), ac = o.accent;
+    const t = UI.t, grid = n > 3;
+    const cw = grid ? 300 : 322, ch = grid ? 262 : 384, gap = grid ? 24 : 34;
+    let x, y0;
+    if (grid) {
+      const perRow = 4, row = Math.floor(i / perRow), col = i % perRow;
+      const inRow = Math.min(perRow, n - row * perRow);                       // centre the last row
+      const rx0 = (W - (cw * inRow + gap * (inRow - 1))) / 2;
+      const rows = Math.ceil(n / perRow);
+      const scroll = rows > 2 ? listScroll : 0;
+      x = rx0 + col * (cw + gap);
+      y0 = 196 + row * (ch + 26) - scroll;
+      if (y0 + ch < 170 || y0 > H - 40) { uiButtons.push({ x, y: y0, w: cw, h: ch, _hideBox: true, enabled: false, action: o.action }); return; }
+    } else {
+      const total = cw * n + gap * (n - 1);
+      x = (W - total) / 2 + i * (cw + gap);
+      y0 = 248;
+    }
+    const ac = o.accent;
+    // compact-mode interior metrics
+    const M = grid
+      ? { strip: 7, tagY: 34, nameY: 66, divY: 80, pipY: 102, descY0: 128, descYP: 142, descLH: 21, descSize: t.type.label, selY: ch - 30, footY: ch - 14, badge: 0 }
+      : { strip: 9, tagY: 44, nameY: 96, divY: 110, pipY: 136, descY0: 154, descYP: 172, descLH: 25, descSize: t.type.body, selY: ch - 46, footY: ch - 24, badge: 30 };
     const hovered = (Input.mouseX >= x && Input.mouseX <= x + cw && Input.mouseY >= y0 && Input.mouseY <= y0 + ch) || i === focus;
     const a = hoverAnim["cc" + i] = lerp(hoverAnim["cc" + i] || 0, hovered ? 1 : 0, clamp(14 * lastUiDt, 0, 1));
-    const ce = clamp(ez((enterT - i * 0.08) / 0.34), 0, 1);
+    const ce = clamp(ez((enterT - i * 0.06) / 0.34), 0, 1);
     ctx.save();
     ctx.globalAlpha = ce;
     ctx.translate(0, (1 - ce) * 46 - a * 12);                       // deal-in from below + hover lift
@@ -2878,32 +2973,33 @@
     ctx.globalAlpha = ce * (0.04 + a * 0.08); ctx.fillStyle = ac; ctx.fillRect(x, y0, cw, ch);               // category wash
     ctx.globalAlpha = ce;
     ctx.lineWidth = 2 + a * 2.5; ctx.strokeStyle = a > 0.35 ? ac : "#000"; ctx.strokeRect(x, y0, cw, ch);
-    ctx.fillStyle = ac; ctx.fillRect(x, y0, cw, 9);                 // top accent strip
-    // keybind badge
-    ctx.fillStyle = ac; ctx.fillRect(x + cw - 46, y0 + 24, 30, 30);
-    ctx.fillStyle = "#fff"; ctx.font = UI.font(t.type.label, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText("" + (i + 1), x + cw - 31, y0 + 40); ctx.textBaseline = "alphabetic";
-    UI.tag(ctx, o.tag, x + 22, y0 + 44, o.tagColor || ac, "left", t.type.micro);
+    ctx.fillStyle = ac; ctx.fillRect(x, y0, cw, M.strip);           // top accent strip
+    if (M.badge) {   // keybind badge (the classic 3-card deal only — 1/2/3 work there)
+      ctx.fillStyle = ac; ctx.fillRect(x + cw - 46, y0 + 24, M.badge, M.badge);
+      ctx.fillStyle = "#fff"; ctx.font = UI.font(t.type.label, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("" + (i + 1), x + cw - 31, y0 + 40); ctx.textBaseline = "alphabetic";
+    }
+    UI.tag(ctx, o.tag, x + 22, y0 + M.tagY, o.tagColor || ac, "left", t.type.micro);
     // name (shrink to fit)
     ctx.fillStyle = "#000"; ctx.textAlign = "center";
-    let ns = t.type.title; ctx.font = UI.font(ns, true);
-    while (ctx.measureText(o.name).width > cw - 44 && ns > t.type.body) { ns--; ctx.font = UI.font(ns, true); }
-    ctx.fillText(o.name, cx, y0 + 96);
-    ctx.fillStyle = ac; ctx.fillRect(cx - 28, y0 + 110, 56, 3);     // accent divider
-    let descY = y0 + 154;
+    let ns = grid ? t.type.lead : t.type.title; ctx.font = UI.font(ns, true);
+    while (ctx.measureText(o.name).width > cw - 44 && ns > t.type.label) { ns--; ctx.font = UI.font(ns, true); }
+    ctx.fillText(o.name, cx, y0 + M.nameY);
+    ctx.fillStyle = ac; ctx.fillRect(cx - 28, y0 + M.divY, 56, 3);  // accent divider
+    let descY = y0 + M.descY0;
     if (o.pips) {
       for (let p = 0; p < 3; p++) {
-        const px = cx - 26 + p * 26, py = y0 + 136;
+        const px = cx - 26 + p * 26, py = y0 + M.pipY;
         ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2);
         if (p < o.pips.next - 1) { ctx.fillStyle = ac; ctx.fill(); }
         else if (p === o.pips.next - 1) { ctx.strokeStyle = ac; ctx.lineWidth = 2.5; ctx.stroke(); }
         else { ctx.strokeStyle = t.color.disabled; ctx.lineWidth = 1.5; ctx.stroke(); }
       }
-      descY = y0 + 172;
+      descY = y0 + M.descYP;
     }
-    wrapText(o.desc, x + 26, descY, cw - 52, 25, t.type.body);
-    if (o.foot) UI.tag(ctx, o.foot, cx, y0 + ch - 24, t.color.muted, "center", t.type.caption);
-    UI.tag(ctx, a > 0.5 ? "▸  SELECT" : "press  [ " + (i + 1) + " ]", cx, y0 + ch - 46, a > 0.5 ? ac : t.color.muted, "center", t.type.micro);
+    wrapText(o.desc, x + 26, descY, cw - 52, M.descLH, M.descSize);
+    if (o.foot) UI.tag(ctx, o.foot, cx, y0 + M.footY, t.color.muted, "center", t.type.caption);
+    UI.tag(ctx, a > 0.5 ? "▸  SELECT" : (M.badge ? "press  [ " + (i + 1) + " ]" : ""), cx, y0 + M.selY, a > 0.5 ? ac : t.color.muted, "center", t.type.micro);
     ctx.restore();
     uiButtons.push({ x, y: y0, w: cw, h: ch, _hideBox: true, action: o.action });
   }
@@ -2953,7 +3049,7 @@
     UI.dim(ctx, W, H, 0.86);
     UI.title(ctx, "THE WAY OPENS", W / 2, 122, t.type.display);
     ctx.fillStyle = t.color.accent; ctx.globalAlpha = clamp(ez(enterT / 0.3), 0, 1); ctx.fillRect(W / 2 - 80, 140, 160, 3); ctx.globalAlpha = 1;
-    UI.text(ctx, "THE BOSS FALLS  ·  EVOLVE AN ABILITY", W / 2, 176, t.type.caption, "center", t.alpha.muted);
+    UI.text(ctx, "THE BOSS FALLS  ·  EVOLVE ANY ABILITY YOU OWN", W / 2, 176, t.type.caption, "center", t.alpha.muted);
     tierChoices.forEach((up, i) => {
       const cat = ABIL_CATS[up.cat] || ABIL_CATS.utility, next = (run.mods.tier[up.id] || 1) + 1;
       choiceCard(i, tierChoices.length, {
@@ -2963,6 +3059,12 @@
         action: () => chooseTierUp(i),
       });
     });
+    // past two grid rows, the deck scrolls
+    if (tierChoices.length > 8) {
+      const rows = Math.ceil(tierChoices.length / 4), maxS = Math.max(0, rows * 288 - 576);
+      listScroll = clamp(listScroll, 0, maxS);
+      UI.scrollHint(ctx, W / 2, H - 26, listScroll > 0, listScroll < maxS);
+    }
   }
 
   function chooseTierUp(i) {
