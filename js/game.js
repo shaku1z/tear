@@ -173,6 +173,8 @@
   let tierChoices = [];               // abilities offered to evolve after a campaign boss
   let achToast = null, achToastT = 0;   // the "achievement unlocked" banner (pulled from ACH.pending)
   let lastGhost = null;                 // the just-finished run's replay packet (for "watch your run")
+  let arsenalScroll = 0;                // scroll offset for the pause/defeat "Your Arsenal" panel
+  let settingsReturn = "menu";          // where the Settings BACK button returns to (menu, or paused mid-run)
   let replayCtx = null;                 // active replay: { data, stage, platforms, from, loading }
   let overInfo = null;        // game-over summary
   let selMode = "endless", selDiff = "normal", selWeapon = "sword", selBoss = "shuffle";
@@ -780,7 +782,9 @@
       coinMod: (dm.coin || 1) * REMOTE.coinMult, scoreMod: (dm.score || 1) * REMOTE.scoreMult,
       diffHp: (dm.hp || 1) * REMOTE.enemyHpMult, diffCount: (dm.count || 1) * REMOTE.enemyDensityMult,
       _dmgThisWave: false, _dmgThisRun: false, _dmgThisStage: false,   // no-hit achievement flags
+      _achSnap: Object.keys(PROFILE.data.ach),   // achievements already owned at run start (to show "earned this run")
     };
+    arsenalScroll = 0;
     // "played every mode" counts the five always-visible modes (not the debug sandboxes)
     if (mode !== "bossonly" && mode !== "sandbox") { PROFILE.markMode(mode); achCheck(); }
     if (achTracks()) GHOST.startRec();   // record the hero's path for replay (real modes only)
@@ -2037,7 +2041,7 @@
     if (state === "playing") drawReticle();
 
     UI.ink = "#000";   // overlays (menus / win / pause) dim to white — always ink them black
-    if (state !== lastUiState) enterT = 0;   // restart the entrance animation on every screen change
+    if (state !== lastUiState) { enterT = 0; if ((state === "gameover" || state === "win" || state === "paused") && lastUiState !== "settings") arsenalScroll = 0; }   // restart entrance anim + reset arsenal scroll (but not when bouncing back from settings)
 
     // menu screens: the LIVE attract scene backs every tab (not just the main menu), so the
     // gorgeous moving backdrop flows through the whole menu instead of snapping to flat white.
@@ -2472,32 +2476,33 @@
     let slide = 1;
     if (achToastT < IN) slide = ez(achToastT / IN);
     else if (achToastT > HOLD - OUT) slide = ez((HOLD - achToastT) / OUT);
-    const cw = 470, ch = 92, cx = W / 2 - cw / 2, cy = -ch + (30 + SAFE.t + ch) * slide;
+    // compact card docked TOP-RIGHT (never covers the wave/score HUD); slides in from
+    // the right edge, holds, slides out.
+    const cw = 336, ch = 72, restX = W - cw - 22 - SAFE.r, cy = 20 + SAFE.t;
+    const cx = restX + (cw + 44) * (1 - slide);
     ctx.save();
     ctx.globalAlpha = clamp(slide, 0, 1);
-    // card
     ctx.fillStyle = "#0e1017"; ctx.fillRect(cx, cy, cw, ch);
     ctx.globalAlpha = clamp(slide, 0, 1) * 0.9;
     ctx.strokeStyle = rar.color; ctx.lineWidth = 2; ctx.strokeRect(cx, cy, cw, ch);
-    ctx.fillStyle = rar.color; ctx.fillRect(cx, cy, cw, 3);
-    // rarity glow badge (category icon)
+    ctx.fillStyle = rar.color; ctx.fillRect(cx, cy, cw, 3);           // rarity strip
+    ctx.fillStyle = rar.color; ctx.fillRect(cx, cy, 4, ch);           // rarity spine
+    // badge (category glyph)
+    ctx.globalAlpha = clamp(slide, 0, 1) * 0.18; ctx.fillStyle = rar.color; ctx.fillRect(cx + 14, cy + 15, 44, 44);
     ctx.globalAlpha = clamp(slide, 0, 1);
-    ctx.fillStyle = rar.color; ctx.globalAlpha *= 0.18; ctx.fillRect(cx + 14, cy + 20, 52, 52);
-    ctx.globalAlpha = clamp(slide, 0, 1);
-    ctx.fillStyle = rar.color; ctx.font = UI.font(30, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(cat.icon || "★", cx + 40, cy + 47); ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = rar.color; ctx.font = UI.font(22, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(cat.icon || "★", cx + 36, cy + 38); ctx.textBaseline = "alphabetic";
     // text
     ctx.textAlign = "left";
-    ctx.fillStyle = rar.color; ctx.font = UI.font(11, true);
-    ctx.fillText("ACHIEVEMENT UNLOCKED  ·  " + rar.name, cx + 84, cy + 30);
-    ctx.fillStyle = "#f1eff9"; ctx.font = UI.font(20, true);
-    ctx.fillText(a.name, cx + 84, cy + 56);
-    ctx.fillStyle = "#c9ccd6"; ctx.font = UI.font(12, false);
-    ctx.fillText(a.desc, cx + 84, cy + 76);
-    // shard reward chip (right)
-    ctx.textAlign = "right";
-    ctx.fillStyle = "#13c4d6"; ctx.font = UI.font(20, true);
-    ctx.fillText("◆ +" + ACH.shardsFor(a), cx + cw - 16, cy + 52);
+    ctx.fillStyle = rar.color; ctx.font = UI.font(9, true);
+    ctx.fillText("UNLOCKED  ·  " + rar.name, cx + 70, cy + 22);
+    ctx.fillStyle = "#f1eff9"; ctx.font = UI.font(15, true);
+    ctx.fillText(a.name.length > 22 ? a.name.slice(0, 21) + "…" : a.name, cx + 70, cy + 42);
+    ctx.fillStyle = "#9fa3b4"; ctx.font = UI.font(10, false);
+    ctx.fillText(a.desc.length > 34 ? a.desc.slice(0, 33) + "…" : a.desc, cx + 70, cy + 59);
+    // shard chip (top-right)
+    ctx.textAlign = "right"; ctx.fillStyle = "#13c4d6"; ctx.font = UI.font(14, true);
+    ctx.fillText("◆ +" + ACH.shardsFor(a), cx + cw - 12, cy + 22);
     ctx.restore();
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
   }
@@ -3183,7 +3188,10 @@
       action: () => window.open("https://www.crazygames.com/terms-and-conditions", "_blank", "noopener") });
     uiButtons.push({ x: fx + 204, y: yEnd + 32, w: 190, h: 34, size: 12, label: "Privacy Policy",
       action: () => window.open("https://www.crazygames.com/privacy", "_blank", "noopener") });
-    addBack();
+    // BACK returns to the menu, or to the pause screen when opened mid-run
+    uiButtons.push({ x: W / 2 - LAY.backW / 2, y: LAY.backY, w: LAY.backW, h: LAY.backH,
+      label: settingsReturn === "paused" ? "‹  BACK TO PAUSE" : "‹  BACK",
+      action: () => { const r = settingsReturn; settingsReturn = "menu"; state = r; } });
   }
 
   // ---- INDEX (bestiary): every enemy + boss, what they do, stats, and affixes ----
@@ -3490,25 +3498,102 @@
     requestLock();
   }
 
+  // ---- shared panels for the pause + defeat screens ----
+  // the abilities the player is holding THIS run, specials first then by category
+  function ownedAbilities() {
+    const list = [];
+    for (const u of UPGRADES) if ((run.mods.owned[u.id] || 0) > 0) list.push(u);
+    list.sort((a, b) => ((b.tiers ? 1 : 0) - (a.tiers ? 1 : 0)) || (ABIL_CAT_ORDER.indexOf(a.cat) - ABIL_CAT_ORDER.indexOf(b.cat)));
+    return list;
+  }
+  function drawArsenalCard(x, y, w, h, u) {
+    const t = UI.t, cat = ABIL_CATS[u.cat] || ABIL_CATS.utility, special = !!u.tiers;
+    const tier = run.mods.tier[u.id] || 1, count = run.mods.owned[u.id] || 1;
+    UI.card(ctx, x, y, w, h, false);
+    UI.accentStrip(ctx, x, y, w, special ? SPECIAL_COLOR : cat.color);
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = UI.ink; ctx.font = UI.font(t.type.lead, true);
+    ctx.fillText(u.name.length > 26 ? u.name.slice(0, 25) + "…" : u.name, x + 14, y + 26);
+    const tag = special ? ("TIER " + tier + " / " + (u.tiers.length + 1)) : (u.unique ? "UNIQUE" : "×" + count);
+    UI.tag(ctx, tag, x + w - 14, y + 24, special ? SPECIAL_COLOR : cat.color, "right", t.type.micro);
+    const desc = (special && tier > 1) ? u.tiers[tier - 2].desc : u.desc;
+    wrapText(desc, x + 14, y + 44, w - 28, 15, t.type.micro, "rgba(40,42,54,0.85)");
+  }
+  // scrollable "Your Arsenal" — every ability the player holds, with its live description
+  function drawArsenalPanel(px, py, pw, ph) {
+    const t = UI.t;
+    UI.tag(ctx, "YOUR ARSENAL", px, py - 10, t.color.accent, "left", t.type.micro);
+    const list = ownedAbilities();
+    if (!list.length) { UI.text(ctx, "No abilities yet — they drop between waves.", px + pw / 2, py + 46, t.type.caption, "center", t.alpha.muted); return; }
+    const cardH = 64, gap = 8, rowH = cardH + gap;
+    const maxScroll = Math.max(0, list.length * rowH - ph);
+    arsenalScroll = clamp(arsenalScroll + Input.takeWheel(), 0, maxScroll);
+    ctx.save(); ctx.beginPath(); ctx.rect(px, py - 4, pw, ph + 8); ctx.clip();
+    list.forEach((u, i) => {
+      const y = py + i * rowH - arsenalScroll;
+      if (y + cardH < py - 4 || y > py + ph) return;
+      drawArsenalCard(px, y, pw, cardH, u);
+    });
+    ctx.restore();
+    if (maxScroll > 0) UI.scrollHint(ctx, px + pw / 2, py + ph + 16, arsenalScroll > 0, arsenalScroll < maxScroll);
+  }
+  // a labelled progress row (used for both dailies and achievements)
+  function drawProgressRow(px, y, pw, label, cur, goal, done, rightTxt, barCol, labelCol) {
+    const t = UI.t;
+    ctx.textAlign = "left"; ctx.fillStyle = labelCol || UI.ink; ctx.font = UI.font(t.type.caption, !!done);
+    ctx.fillText(label.length > 40 ? label.slice(0, 39) + "…" : label, px, y + 12);
+    const bw = pw - 66;
+    ctx.globalAlpha = 0.15; ctx.fillStyle = UI.ink; ctx.fillRect(px, y + 20, bw, 4); ctx.globalAlpha = 1;
+    ctx.fillStyle = barCol; ctx.fillRect(px, y + 20, bw * clamp(goal ? cur / goal : (done ? 1 : 0), 0, 1), 4);
+    ctx.textAlign = "right"; ctx.fillStyle = barCol; ctx.font = UI.font(10, true);
+    ctx.fillText(rightTxt, px + pw, y + 14); ctx.textAlign = "left";
+  }
+  // "This Run" — daily challenge progress + achievements earned this run / closest to it
+  function drawRunProgressPanel(px, py, pw, ph) {
+    const t = UI.t;
+    let y = py;
+    UI.tag(ctx, "DAILY CHALLENGES", px, y - 10, t.color.accent, "left", t.type.micro);
+    DAILY.today().forEach((ch) => {
+      const done = DAILY.isDone(ch), prog = DAILY.progress(ch);
+      drawProgressRow(px, y, pw, ch.txt(ch.goal), prog, ch.goal, done, done ? "✓ +" + ch.shards : prog + " / " + ch.goal,
+        done ? "#2f9e6b" : t.color.accent, done ? "#2f9e6b" : UI.ink);
+      y += 38;
+    });
+    y += 16;
+    UI.tag(ctx, "ACHIEVEMENTS", px, y - 10, t.color.accent, "left", t.type.micro);
+    // earned this run (diff against the run-start snapshot), then the closest still-locked
+    const snap = (run && run._achSnap) || [];
+    const earned = Object.keys(PROFILE.data.ach).filter((id) => snap.indexOf(id) === -1).map((id) => ACH.byId(id)).filter(Boolean);
+    const locked = ACH.list.filter((a) => !PROFILE.unlocked(a.id)).sort((a, b) => ACH.progress(b) - ACH.progress(a));
+    const rows = earned.map((a) => [a, true]).concat(locked.map((a) => [a, false])).slice(0, 5);
+    rows.forEach(([a, isEarned]) => {
+      const rar = ACH.RARITY[a.rarity] || ACH.RARITY.common;
+      drawProgressRow(px, y, pw, (isEarned ? "✓ " : "") + a.name, ACH.progress(a), 1, isEarned,
+        isEarned ? "◆ +" + ACH.shardsFor(a) : ACH.progressText(a), isEarned ? rar.color : "#0f9fb0", isEarned ? rar.color : UI.ink);
+      y += 38;
+    });
+    if (!rows.length) UI.text(ctx, "Keep fighting to make progress.", px + pw / 2, y + 20, t.type.caption, "center", t.alpha.muted);
+  }
+
   function renderPaused() {
     const t = UI.t;
-    UI.dim(ctx, W, H, 0.84);
-    UI.title(ctx, "PAUSED", W / 2, 132, t.type.display);
+    UI.dim(ctx, W, H, 0.86);
+    UI.title(ctx, "PAUSED", W / 2, 78, t.type.display);
     if (run) UI.text(ctx, (run.isBossWave ? "BOSS" : "WAVE " + run.wave) + "   ·   " + run.score + " pts   ·   " + fmtTime(run.runTime),
-      W / 2, 168, t.type.body, "center", t.alpha.soft);
+      W / 2, 110, t.type.body, "center", t.alpha.soft);
 
-    // ---- left: run actions ----
+    // ---- left column: run actions ----
     vmenu([
       { label: "RESUME", action: () => { state = "playing"; requestLock(); } },
       { label: "RESTART", action: () => startRun(run.mode, run.diff) },
+      { label: "SETTINGS", action: () => { settingsReturn = "paused"; state = "settings"; } },
       { label: "MAIN MENU", action: () => { state = "confirmquit"; } },
-    ], W / 2 - 300, 256, 300, t.metric.btnH, t.metric.btnGap);
+    ], 220, 210, 280, t.metric.btnH, t.metric.btnGap);
 
-    // ---- right: inline settings (tune mid-run without leaving) — same grid as the
-    // Settings tab, compact ----
-    const sx = W / 2 + 24, sw = 368;
-    UI.tag(ctx, "SETTINGS", sx, 240, t.color.accent, "left", t.type.caption);
-    drawSettingsRows(sx, sx + sw, 252, true);
+    // ---- middle column: the player's arsenal (scrollable) ----
+    drawArsenalPanel(400, 210, 640, 600);
+    // ---- right column: this run's daily + achievement progress ----
+    drawRunProgressPanel(1090, 210, 430, 600);
   }
 
   function quitRun() {
@@ -3578,18 +3663,28 @@
   function renderGameover() {
     const t = UI.t;
     UI.dim(ctx, W, H, 0.9);
-    UI.title(ctx, "DEFEATED", W / 2, 110, t.type.display);
-    UI.text(ctx, "wave " + overInfo.wave + "   ·   " + overInfo.score + " pts   ·   " + fmtTime(overInfo.time), W / 2, 150, t.type.lead, "center");
-    if (overInfo.isNew) UI.title(ctx, "NEW BEST!", W / 2, 184, t.type.title);
-    else UI.text(ctx, "best: wave " + overInfo.best.wave + " · " + overInfo.best.score + " pts", W / 2, 184, t.type.caption, "center", t.alpha.muted);
-    UI.text(ctx, "+" + overInfo.earned + " coins  (" + overInfo.coins + " total)", W / 2, 210, t.type.body, "center", t.alpha.soft);
-    drawResultsTable(250);
+    UI.title(ctx, "DEFEATED", W / 2, 74, t.type.display);
+    UI.text(ctx, "wave " + overInfo.wave + "   ·   " + overInfo.score + " pts   ·   " + fmtTime(overInfo.time), W / 2, 106, t.type.lead, "center");
+    if (overInfo.isNew) UI.tag(ctx, "★ NEW BEST", W / 2, 130, t.color.accent, "center", t.type.caption);
+    else UI.text(ctx, "best: wave " + overInfo.best.wave + " · " + overInfo.best.score + " pts", W / 2, 130, t.type.caption, "center", t.alpha.muted);
+
+    // ---- left column: coins + actions ----
+    UI.tag(ctx, "REWARDS", 80, 200, t.color.accent, "left", t.type.micro);
+    ctx.textAlign = "left"; ctx.fillStyle = "#0f9fb0"; ctx.font = UI.font(t.type.h2, true);
+    ctx.fillText("+" + overInfo.earned, 80, 236);
+    ctx.fillStyle = UI.ink; ctx.font = UI.font(t.type.caption, false); ctx.globalAlpha = 0.7;
+    ctx.fillText("coins  ·  " + overInfo.coins + " total", 80, 258); ctx.globalAlpha = 1;
     const overMenu = [
       { label: "RETRY", action: () => retryRun() },
       { label: "MAIN MENU", action: () => { state = "menu"; } },
     ];
     if (lastGhost) overMenu.splice(1, 0, { label: "▶  WATCH REPLAY", action: () => enterReplay(lastGhost, "gameover") });
-    vmenu(overMenu, W / 2, 548, 260, t.metric.btnH, t.metric.btnGap);
+    vmenu(overMenu, 220, 320, 280, t.metric.btnH, t.metric.btnGap);
+
+    // ---- middle column: the run's arsenal (scrollable) ----
+    drawArsenalPanel(400, 210, 640, 600);
+    // ---- right column: this run's daily + achievement progress ----
+    drawRunProgressPanel(1090, 210, 430, 600);
   }
 
   // the rift's jagged path down the centre (deterministic), narrowing as it seals
