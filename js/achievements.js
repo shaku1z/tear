@@ -81,7 +81,64 @@ const ACH = {
       S("veteran", "mastery", "uncommon", "Veteran", "Finish 25 runs.", "runs", 25),
       S("well_rounded", "mastery", "rare", "Well-Rounded", "Play every game mode.", "modesPlayed", 5),
       S("student", "mastery", "common", "Apprentice", "Complete the tutorial.", "tutorialDone", 1),
+
+      // ---- THE BOSS PANTHEON: fell each named boss ----
+      S("boss_warden", "boss", "uncommon", "Jailbreak", "Defeat The Warden.", "killWarden", 1),
+      S("boss_colossus", "boss", "rare", "Scrap Metal", "Defeat The Iron Colossus.", "killColossus", 1),
+      S("boss_aldric", "boss", "rare", "Regicide", "Defeat The Berserker King, Aldric.", "killAldric", 1),
+      S("boss_echo", "boss", "epic", "Shattered Mirror", "Defeat The Echo.", "killEcho", 1),
+      S("boss_source", "boss", "legendary", "The Wound Closes", "Defeat The Source.", "killSource", 1),
+
+      // ---- ENDLESS MILESTONES (Endless mode only) ----
+      S("endless_25", "survival", "uncommon", "Endless: Initiation", "Reach Wave 25 in Endless.", "bestWaveEndless", 25),
+      S("endless_50", "survival", "rare", "Endless: Midway", "Reach Wave 50 in Endless.", "bestWaveEndless", 50),
+      S("endless_75", "survival", "epic", "Endless: Deep Dive", "Reach Wave 75 in Endless.", "bestWaveEndless", 75),
+      S("endless_100", "survival", "legendary", "Beyond", "Reach Wave 100 in Endless.", "bestWaveEndless", 100),
+
+      // ---- DIFFICULTY MASTERY ----
+      S("adv_hard", "progress", "rare", "Hardened", "Clear Adventure on Hard difficulty.", "clearAdvHard", 1),
+      S("adv_extreme", "progress", "epic", "Masochist", "Clear Adventure on Extreme difficulty.", "clearAdvExtreme", 1),
+      S("adv_all", "progress", "legendary", "Omnipotent", "Clear Adventure on all 5 difficulties.", "clearAdvAll", 5),
+      S("endless_50_hard", "survival", "epic", "Endurance", "Reach Wave 50 in Endless on Hard.", "wave50Hard", 1),
+      S("endless_100_extreme", "survival", "legendary", "Beyond Human", "Reach Wave 100 in Endless on Extreme.", "wave100Extreme", 1),
+      S("adv_flawless", "survival", "legendary", "Flawless Victory", "Clear the whole Adventure campaign without taking a single hit.", "clearAdvNoHit", 1),
+
+      // ---- COMBAT POLISH ----
+      S("overkill", "combat", "uncommon", "Overkill", "Deal over 3,000 damage in a single strike.", "maxDamageHit", 3000),
+      S("collateral", "skill", "uncommon", "Collateral Damage", "Defeat an enemy by throwing the blade through another enemy.", "throwPierceKills", 1),
+      S("surgeon", "combat", "rare", "Surgeon", "Stack 20 Bleed on a single enemy.", "maxBleedStacks", 20),
+      S("inferno", "combat", "rare", "Inferno", "Have 10 enemies burning at once.", "maxConcurrentBurn", 10),
+      S("floor_is_lava", "skill", "epic", "Air Superiority", "Stay airborne for 15 straight seconds.", "maxAirTime", 15),
+      S("gravity_defied", "skill", "rare", "Gravity Defied", "Chain 3 Updraft launches without landing.", "consecutiveUpdrafts", 3),
+      S("friendly_fire", "combat", "rare", "Friendly Fire", "Have a Bomber blast kill 3 other enemies.", "bomberBetrayal", 3),
+
+      // ---- MASTERY & META ----
+      S("weapon_master", "mastery", "rare", "Armory", "Win a run with each weapon.", "distinctWeaponsWon", 2),
+      S("arsenal", "mastery", "legendary", "Arsenal", "Max out every item in the meta shop.", "shopMaxed", 13),
+      S("speedrunner", "mastery", "epic", "Speedrunner", "Clear the Adventure campaign in under 15 minutes.", "speedrunUnder15", 1),
+      S("close_call", "survival", "rare", "By a Thread", "Defeat a boss while at 10% HP or lower.", "bossKillsLowHP", 1),
     ];
+
+    // ---- CATEGORY MASTERY: unlock every OTHER achievement in a category ----
+    const CAT_MASTERY = [
+      { id: "master_combat", cat: "combat", name: "Warmaster", desc: "Complete all other Combat achievements." },
+      { id: "master_skill", cat: "skill", name: "Virtuoso", desc: "Complete all other Skill achievements." },
+      { id: "master_progress", cat: "progress", name: "The Journey", desc: "Complete all other Progression achievements." },
+      { id: "master_boss", cat: "boss", name: "Godslayer", desc: "Complete all other Boss achievements." },
+      { id: "master_survival", cat: "survival", name: "Indomitable", desc: "Complete all other Survival achievements." },
+      { id: "master_mastery", cat: "mastery", name: "The Apex", desc: "Complete all other Mastery achievements." },
+    ];
+    for (const m of CAT_MASTERY) {
+      const ach = S(m.id, m.cat, "epic", m.name, m.desc);
+      ach.check = () => this.list.filter((a) => a.cat === m.cat && a.id !== m.id && !a.master).every((a) => PROFILE.unlocked(a.id));
+      ach.master = true;   // excluded from other masters' checks so they don't wait on each other
+      this.list.push(ach);
+    }
+    // ---- THE PLATINUM: unlock literally everything else ----
+    const platinum = S("completionist", "mastery", "legendary", "The Momentum Blade", "Unlock every other achievement in Tear.");
+    platinum.check = () => this.list.filter((a) => a.id !== "completionist").every((a) => PROFILE.unlocked(a.id));
+    platinum.master = true;
+    this.list.push(platinum);
   },
 
   byId(id) { return this.list.find((a) => a.id === id); },

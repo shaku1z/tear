@@ -67,6 +67,8 @@
   if (typeof SFX !== "undefined") SFX.init();
   META.load();
   PROFILE.load();   // shards + achievements + lifetime stats (mirrored to CG cloud)
+  // back-credit stats derivable from existing saves so old players aren't cheated
+  try { PROFILE.maxStat("shopMaxed", SHOP.filter((s) => META.level(s.id) >= s.maxLevel).length); ACH.check(); PROFILE.save(); } catch (e) {}
   // CrazyGames: pause audio during ads, and once the SDK is ready re-read saved
   // progress from cloud storage (no-ops + plain localStorage off-platform)
   CG.setHooks(
@@ -262,15 +264,17 @@
   }
   // area damage that does NOT re-fire onKill (prevents detonate/slam recursion)
   function dealAoE(cx, cy, radius, dmg) {
+    let kills = 0;
     for (const e of enemies) {
       if (e.dead) continue;
       if (len(e.x - cx, e.y - cy) <= radius + e.radius) {
         e.hit(dmg, e.x - cx, e.y - cy);
         FX.burst(e.x, e.y, e.x - cx, e.y - cy, 5, e.color);
         addFloater(e.x, e.y - 24, Math.round(dmg).toString(), false);
-        if (e.dead) { addKillScore(); FX.death(e.x, e.y, CONFIG.juice.deathShards, e.color); }
+        if (e.dead) { addKillScore(); FX.death(e.x, e.y, CONFIG.juice.deathShards, e.color); kills++; }
       }
     }
+    return kills;   // used by achievement hooks (bomber betrayal)
   }
 
   // ---- score + "Attack Trick" style meter ----
@@ -783,6 +787,7 @@
       diffHp: (dm.hp || 1) * REMOTE.enemyHpMult, diffCount: (dm.count || 1) * REMOTE.enemyDensityMult,
       _dmgThisWave: false, _dmgThisRun: false, _dmgThisStage: false,   // no-hit achievement flags
       _achSnap: Object.keys(PROFILE.data.ach),   // achievements already owned at run start (to show "earned this run")
+      weaponId: selWeapon,   // for the "win with each weapon" achievement
     };
     arsenalScroll = 0;
     // "played every mode" counts the five always-visible modes (not the debug sandboxes)
@@ -959,7 +964,8 @@
   function bossBiome(id) { const i = STAGES.findIndex((s) => s.boss === id); return i < 0 ? 0 : i; }
   // pick the boss for the current context: the campaign stage's named boss, else the Warden
   function makeBoss() {
-    return bossById((run.mode === "campaign") ? stageAt(stageIndex).boss : (run.mode === "bossonly" || run.mode === "gauntlet" || run.mode === "playground") ? run.curBoss : "warden");
+    const id = (run.mode === "campaign") ? stageAt(stageIndex).boss : (run.mode === "bossonly" || run.mode === "gauntlet" || run.mode === "playground") ? run.curBoss : "warden";
+    const e = bossById(id); e.bossId = id; return e;
   }
   // Endless mini-bosses: any built campaign boss except the finale (the Source stays special)
   const MINI_BOSSES = ["warden", "colossus", "aldric", "echo"];
@@ -1023,7 +1029,8 @@
     const C = CONFIG.bomber;
     FX.explode(e.x, e.y, CONFIG.colors.bomber, 1.35);
     addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry * 0.5); SFX.boom();
-    dealAoE(e.x, e.y, C.blastRadius, C.blastDmg);
+    const k = dealAoE(e.x, e.y, C.blastRadius, C.blastDmg);
+    if (achTracks() && k > 0) { PROFILE.maxStat("bomberBetrayal", k); achCheck(); }   // Friendly Fire (a bomber kills 3 others)
     if (len(player.x - e.x, player.y - e.y) <= C.blastRadius + player.hw) {
       { const r = player.takeDamage(C.blastDmg, e.x);
         if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb(); }
@@ -1054,6 +1061,11 @@
         if (!run._dmgThisWave) { PROFILE.addStat("noHitWaves", 1); DAILY.bump("nohit", 1); }
         let ownedN = 0; for (const k in run.mods.owned) if (run.mods.owned[k]) ownedN++;
         PROFILE.maxStat("abilitiesInRun", ownedN);
+        if (run.mode === "endless") {   // Endless-only milestones (isolated from Gauntlet/Adventure)
+          PROFILE.maxStat("bestWaveEndless", run.wave);
+          if (run.diff === "hard" && run.wave >= 50) PROFILE.maxStat("wave50Hard", 1);
+          if (run.diff === "extreme" && run.wave >= 100) PROFILE.maxStat("wave100Extreme", 1);
+        }
         achCheck();
       }
       run._dmgThisWave = false;
@@ -1115,7 +1127,17 @@
   function winRun(campaign) {
     const isNew = saveBest(run.mode, run.diff, run.wave, run.score, run.runTime);
     const earned = awardCoins(run.score);
-    if (achTracks()) { PROFILE.addStat("runs", 1); if (campaign) PROFILE.addStat("campaignClears", 1); DAILY.bump("runs", 1); achCheck();
+    if (achTracks()) { PROFILE.addStat("runs", 1); if (campaign) PROFILE.addStat("campaignClears", 1); DAILY.bump("runs", 1);
+      // win a run with each weapon (Armory) — a set keyed by weapon id
+      const ww = PROFILE.data.weaponsWon || (PROFILE.data.weaponsWon = {}); ww[run.weaponId || "sword"] = 1; PROFILE.maxStat("distinctWeaponsWon", Object.keys(ww).length);
+      if (campaign) {   // Adventure difficulty mastery
+        if (run.diff === "hard") PROFILE.maxStat("clearAdvHard", 1);
+        if (run.diff === "extreme") PROFILE.maxStat("clearAdvExtreme", 1);
+        if (!run._dmgThisRun) PROFILE.maxStat("clearAdvNoHit", 1);          // Flawless Victory
+        if (run.runTime < 900) PROFILE.maxStat("speedrunUnder15", 1);       // Speedrunner
+        const dc = PROFILE.data.advDiffs || (PROFILE.data.advDiffs = {}); dc[run.diff] = 1; PROFILE.maxStat("clearAdvAll", Object.keys(dc).length);
+      }
+      achCheck();
       Cloud.submitScore(run.mode, run.diff, { score: run.score, wave: run.wave, time: run.runTime }); Cloud.push();   // global leaderboard + cloud save
       Cloud.logEvent("run_end", { mode: run.mode, diff: run.diff, wave: run.wave, score: run.score, time: Math.round(run.runTime), peak: run.wavePeak, won: true, campaign: !!campaign });
       lastGhost = GHOST.stopRec({ mode: run.mode, diff: run.diff, score: run.score, wave: run.wave, name: Cloud.displayName(), stage: stageIndex });
@@ -1495,6 +1517,8 @@
           if (achTracks()) {   // skill feats measured at the strike
             if (airborne) { PROFILE.addStat("airHits", 1); DAILY.bump("air", 1); }
             if (blade.tipSpeed > CONFIG.blade.minHitSpeed * 2.1) PROFILE.maxStat("maxMomentum", 1);
+            PROFILE.maxStat("maxDamageHit", Math.round(dmg));   // Overkill (3,000 in one strike)
+            if (empowered && !isSlam) { run._updraftChain = (run._updraftChain || 0) + 1; PROFILE.maxStat("consecutiveUpdrafts", run._updraftChain); }   // Gravity Defied
             achCheck();
           }
           fire(run.mods.onHit, makeEv(cp.px, cp.py, e));
@@ -1582,8 +1606,12 @@
           addFloater(e.x, e.y - 26, Math.round(tdmg).toString(), true);
           hitStop = CONFIG.hitStop.small; addShake(CONFIG.juice.shakeSmall);
           addStyle("throwHit");
+          PROFILE.maxStat("maxDamageHit", Math.round(tdmg));   // Overkill can also come from a big throw
           fire(run.mods.onHit, makeEv(e.x, e.y, e));
-          if (e.dead) onKill(e);
+          if (e.dead) {
+            if (achTracks() && blade.pierced.size >= 2) { PROFILE.maxStat("throwPierceKills", 1); achCheck(); }   // Collateral Damage (killed through another enemy)
+            onKill(e);
+          }
           // hammer lob: stop on the first enemy and detonate
           if (blade.throwType === "lob") { lobExplode(e.x, e.y); blade.forceEmbed(); break; }
           // Ricochet: the outgoing blade curves to a fresh target after each pierce
@@ -1778,6 +1806,18 @@
     updateTrick(dt);
     if (player.tookHit) { player.tookHit = false; run._dmgThisWave = true; run._dmgThisRun = true; run._dmgThisStage = true; }   // no-hit tracking
     GHOST.sample(dt, player, blade);   // record the hero's path (no-op unless recording)
+    // ---- per-frame achievement tracking (air time, status effects) ----
+    if (player.onGround) { run._airT = 0; run._updraftChain = 0; }
+    else run._airT = (run._airT || 0) + dt;
+    if (achTracks()) {
+      PROFILE.maxStat("maxAirTime", Math.floor(run._airT || 0));   // Air Superiority (15s aloft)
+      let maxBleed = 0, burning = 0;
+      for (const en of enemies) { if (en.dead) continue; if (en.bleedStacks > maxBleed) maxBleed = en.bleedStacks; if (en.burnT > 0) burning++; }
+      PROFILE.maxStat("maxBleedStacks", maxBleed);        // Surgeon (20 bleed)
+      PROFILE.maxStat("maxConcurrentBurn", burning);      // Inferno (10 burning)
+      run._achTick = (run._achTick || 0) + dt;
+      if (run._achTick >= 0.5) { run._achTick = 0; achCheck(); }   // pop mid-combat unlocks within ~0.5s
+    }
     if (run.mode === "tutorial") TUT.update(dt);
     else if (run.mode === "playground") stepPlayground();
 
@@ -1820,6 +1860,8 @@
         PROFILE.addStat("bossKills", 1); DAILY.bump("boss", 1);
         if (!run._dmgThisWave) PROFILE.addStat("bossNoHit", 1);
         if (run.mode === "bossonly") { run._bossOnlyKills = (run._bossOnlyKills || 0) + 1; if (run._bossOnlyKills >= BOSS_ROSTER.length) PROFILE.maxStat("gauntletFull", 1); }
+        if (e.bossId) PROFILE.maxStat("kill" + e.bossId.charAt(0).toUpperCase() + e.bossId.slice(1), 1);   // pantheon: killWarden / killColossus / …
+        if (player.hp > 0 && player.hp <= player.maxHp * 0.1) PROFILE.maxStat("bossKillsLowHP", 1);         // By a Thread
       }
       achCheck();
     }
@@ -2793,7 +2835,7 @@
       uiButtons.push({ x: rxc - bw, y: y - 24, w: bw, h: 44,
         label: maxed ? "MAX" : META.cost(it) + "c",
         enabled: !maxed && META.canBuy(it),
-        action: () => { if (META.buy(it)) { SFX.ui(); PROFILE.addStat("shopBuys", 1); achCheck(); } } });
+        action: () => { if (META.buy(it)) { SFX.ui(); PROFILE.addStat("shopBuys", 1); PROFILE.maxStat("shopMaxed", SHOP.filter((s) => META.level(s.id) >= s.maxLevel).length); achCheck(); } } });
       UI.divider(ctx, cx, y + 42, colW, 0.08);
     });
     addBack();
@@ -3575,6 +3617,37 @@
     if (!rows.length) UI.text(ctx, "Keep fighting to make progress.", px + pw / 2, y + 20, t.type.caption, "center", t.alpha.muted);
   }
 
+  // the per-wave run log (defeat screen's middle column) — scrollable
+  function drawWaveLogPanel(px, py, pw, ph) {
+    const t = UI.t, log = (overInfo && overInfo.log) || [];
+    UI.tag(ctx, "RUN LOG", px, py - 10, t.color.accent, "left", t.type.micro);
+    ctx.textAlign = "left"; ctx.fillStyle = UI.ink; ctx.font = UI.font(t.type.label, true); ctx.globalAlpha = 0.7;
+    ctx.fillText("WAVE", px + 4, py + 12);
+    ctx.textAlign = "right";
+    ctx.fillText("TIME", px + pw - 250, py + 12); ctx.fillText("KILLS", px + pw - 120, py + 12); ctx.fillText("PEAK", px + pw - 4, py + 12);
+    ctx.globalAlpha = 1; ctx.textAlign = "left";
+    UI.divider(ctx, px, py + 20, pw, 0.4);
+    if (!log.length) { UI.text(ctx, "No waves cleared.", px + pw / 2, py + 60, t.type.caption, "center", t.alpha.muted); return; }
+    const rowH = 32, top = py + 40, viewH = ph - 44;
+    const maxScroll = Math.max(0, log.length * rowH - viewH);
+    arsenalScroll = clamp(arsenalScroll + Input.takeWheel(), 0, maxScroll);
+    ctx.save(); ctx.beginPath(); ctx.rect(px, top - 8, pw, viewH + 16); ctx.clip();
+    log.forEach((r, i) => {
+      const y = top + i * rowH - arsenalScroll;
+      if (y < top - rowH || y > top + viewH) return;
+      ctx.textAlign = "left"; ctx.fillStyle = r.died ? CONFIG.colors.charger : UI.ink; ctx.font = UI.font(t.type.body, true);
+      ctx.fillText((r.died ? "✗ " : "") + r.wave, px + 4, y);
+      ctx.textAlign = "right"; ctx.fillStyle = UI.ink; ctx.font = UI.font(t.type.body, false);
+      ctx.fillText((r.time || 0).toFixed(1) + "s", px + pw - 250, y);
+      ctx.fillText("" + (r.kills || 0), px + pw - 120, y);
+      ctx.fillStyle = trickColor(r.peak || 1); ctx.font = UI.font(t.type.body, true);
+      ctx.fillText("×" + (r.peak || 1), px + pw - 4, y);
+      UI.divider(ctx, px, y + 9, pw, 0.06);
+    });
+    ctx.restore(); ctx.textAlign = "left";
+    if (maxScroll > 0) UI.scrollHint(ctx, px + pw / 2, top + viewH + 16, arsenalScroll > 0, arsenalScroll < maxScroll);
+  }
+
   function renderPaused() {
     const t = UI.t;
     UI.dim(ctx, W, H, 0.86);
@@ -3681,8 +3754,8 @@
     if (lastGhost) overMenu.splice(1, 0, { label: "▶  WATCH REPLAY", action: () => enterReplay(lastGhost, "gameover") });
     vmenu(overMenu, 220, 320, 280, t.metric.btnH, t.metric.btnGap);
 
-    // ---- middle column: the run's arsenal (scrollable) ----
-    drawArsenalPanel(400, 210, 640, 600);
+    // ---- middle column: the per-wave run log (scrollable) ----
+    drawWaveLogPanel(400, 210, 640, 600);
     // ---- right column: this run's daily + achievement progress ----
     drawRunProgressPanel(1090, 210, 430, 600);
   }
