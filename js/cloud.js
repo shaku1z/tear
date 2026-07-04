@@ -75,6 +75,12 @@ const Cloud = {
     if (!this.provider || !this.provider.topScores) return null;
     try { return await this.provider.topScores(this, mode, diff, n); } catch (e) { return null; }
   },
+
+  // ---- telemetry: fire-and-forget balancing events (drop-off waves, momentum, deaths) ----
+  logEvent(name, data) {
+    if (!this.provider || !this.provider.logEvent) return;
+    try { this.provider.logEvent(this, name, data || {}); } catch (e) {}
+  },
 };
 
 // ---- LocalProvider: no account, offline. The always-safe baseline. ----
@@ -195,5 +201,10 @@ const FirebaseProvider = {
       const snap = await this._race(this.db.collection("leaderboards").doc(mode + "_" + diff).collection("scores").orderBy("score", "desc").limit(n || 25).get(), 9000);
       return snap.docs.map((d) => d.data());
     } catch (e) { return null; }
+  },
+  // telemetry: an append-only event doc (developer reads these in the console for balancing)
+  logEvent(C, name, data) {
+    if (!this.db) return;
+    try { this.db.collection("telemetry").add(Object.assign({ event: name, uid: this.uid || null, ts: Date.now() }, data)); } catch (e) {}
   },
 };
