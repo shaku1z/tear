@@ -172,6 +172,8 @@
   let draftChoices = [];
   let tierChoices = [];               // abilities offered to evolve after a campaign boss
   let achToast = null, achToastT = 0;   // the "achievement unlocked" banner (pulled from ACH.pending)
+  let lastGhost = null;                 // the just-finished run's replay packet (for "watch your run")
+  let replayCtx = null;                 // active replay: { data, stage, platforms, from, loading }
   let overInfo = null;        // game-over summary
   let selMode = "endless", selDiff = "normal", selWeapon = "sword", selBoss = "shuffle";
   // the built bosses — Boss Test cycles through these (with a tier-up after each)
@@ -592,7 +594,7 @@
   // the ABILITY LAB: every ability in the game on one page — take anything, evolve anything
   let pgLabFilter = "all";
   let achFilter = "all";   // Achievements menu category filter
-  let lbMode = "", lbDiff = "normal", lbKey = "", lbData = null, lbLoading = false;   // Leaderboards tab
+  let lbMode = "", lbDiff = "normal", lbKey = "", lbData = null, lbLoading = false, lbGhostMsg = "";   // Leaderboards tab
   function renderPgLab() {
     const t = UI.t;
     UI.dim(ctx, W, H, 0.9);
@@ -781,6 +783,7 @@
     };
     // "played every mode" counts the five always-visible modes (not the debug sandboxes)
     if (mode !== "bossonly" && mode !== "sandbox") { PROFILE.markMode(mode); achCheck(); }
+    if (achTracks()) GHOST.startRec();   // record the hero's path for replay (real modes only)
     if (mode === "bossonly") {   // boss gauntlet: chosen boss first, then a shuffled cycle of the rest
       run.bossOrder = shuffledRoster();
       if (selBoss !== "shuffle") { run.bossOrder = run.bossOrder.filter((id) => id !== selBoss); run.bossOrder.unshift(selBoss); }
@@ -1096,7 +1099,9 @@
     const earned = awardCoins(run.score);
     if (achTracks()) { PROFILE.addStat("runs", 1); PROFILE.maxStat("longestRun", Math.floor(run.runTime)); DAILY.bump("runs", 1); achCheck();
       Cloud.submitScore(run.mode, run.diff, { score: run.score, wave: run.wave, time: run.runTime }); Cloud.push();   // global leaderboard + cloud save
-      Cloud.logEvent("run_end", { mode: run.mode, diff: run.diff, wave: run.wave, score: run.score, time: Math.round(run.runTime), peak: run.wavePeak, died: true }); }   // balancing telemetry: where players drop off
+      Cloud.logEvent("run_end", { mode: run.mode, diff: run.diff, wave: run.wave, score: run.score, time: Math.round(run.runTime), peak: run.wavePeak, died: true });   // balancing telemetry: where players drop off
+      lastGhost = GHOST.stopRec({ mode: run.mode, diff: run.diff, score: run.score, wave: run.wave, name: Cloud.displayName(), stage: stageIndex });
+      if (lastGhost) { GHOST.saveLocal(lastGhost); Cloud.submitGhost(run.mode, run.diff, lastGhost); } }
     overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, earned, coins: META.coins() };
     state = "gameover";
     document.exitPointerLock();
@@ -1108,7 +1113,9 @@
     const earned = awardCoins(run.score);
     if (achTracks()) { PROFILE.addStat("runs", 1); if (campaign) PROFILE.addStat("campaignClears", 1); DAILY.bump("runs", 1); achCheck();
       Cloud.submitScore(run.mode, run.diff, { score: run.score, wave: run.wave, time: run.runTime }); Cloud.push();   // global leaderboard + cloud save
-      Cloud.logEvent("run_end", { mode: run.mode, diff: run.diff, wave: run.wave, score: run.score, time: Math.round(run.runTime), peak: run.wavePeak, won: true, campaign: !!campaign }); }
+      Cloud.logEvent("run_end", { mode: run.mode, diff: run.diff, wave: run.wave, score: run.score, time: Math.round(run.runTime), peak: run.wavePeak, won: true, campaign: !!campaign });
+      lastGhost = GHOST.stopRec({ mode: run.mode, diff: run.diff, score: run.score, wave: run.wave, name: Cloud.displayName(), stage: stageIndex });
+      if (lastGhost) { GHOST.saveLocal(lastGhost); Cloud.submitGhost(run.mode, run.diff, lastGhost); } }
     overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, win: true, campaign: !!campaign, earned, coins: META.coins() };
     state = "win";
     document.exitPointerLock();
@@ -1766,6 +1773,7 @@
     run.runTime += dt; run.waveTime += dt;
     updateTrick(dt);
     if (player.tookHit) { player.tookHit = false; run._dmgThisWave = true; run._dmgThisRun = true; run._dmgThisStage = true; }   // no-hit tracking
+    GHOST.sample(dt, player, blade);   // record the hero's path (no-op unless recording)
     if (run.mode === "tutorial") TUT.update(dt);
     else if (run.mode === "playground") stepPlayground();
 
@@ -1869,6 +1877,7 @@
       // spawn menu: Tab or Esc drops straight back into the action
       if (state === "pgmenu" && (Input.pressed.has("Tab") || Input.escapePressed())) { state = "playing"; requestLock(); }
       else if (state === "pglab" && (Input.pressed.has("Tab") || Input.escapePressed())) { state = "pgmenu"; }
+      else if (state === "replay" && Input.escapePressed()) exitReplay();
     }
     uiT += dt; enterT += dt; lastUiDt = dt;   // menu animation clocks
     if (state === "win") winT += dt; else winT = 0;   // ending cinematic clock
@@ -2067,6 +2076,7 @@
       else if (state === "continue") renderContinue();
       else if (state === "pgmenu") renderPgMenu();
       else if (state === "pglab") renderPgLab();
+      else if (state === "replay") renderReplay();
       if (state !== "playing" && state !== "draft") drawButtons();
     }
 
@@ -3021,6 +3031,9 @@
     } else if (!lbData || !lbData.length) {
       midMsg("No runs recorded on this board yet — set the first.");
     } else {
+      // watch the #1 run's ghost (loads on demand)
+      uiButtons.push({ x: listX + listW - 250, y: top - 42, w: 250, h: 30, size: 11, label: lbGhostMsg || "▶  WATCH THE #1 RUN",
+        action: () => { lbGhostMsg = "loading replay…"; Cloud.loadGhost(lbMode, lbDiff).then((g) => { lbGhostMsg = ""; if (!enterReplay(g, "leaderboards")) lbGhostMsg = "no replay yet"; }); } });
       const myId = Cloud.user ? Cloud.user.id : null;
       let y = top + 34;
       lbData.slice(0, 12).forEach((r, i) => {
@@ -3042,6 +3055,61 @@
       ctx.textAlign = "left";
     }
     addBack();
+  }
+
+  // ---- GHOST REPLAY: watch a recorded run play back as a translucent hero ----
+  function enterReplay(data, from) {
+    if (!data || !GHOST.begin(data)) return false;
+    const si = ((data.stage || 0) % STAGES.length + STAGES.length) % STAGES.length;
+    replayCtx = { data, from: from || "menu", stage: si, platforms: stagePlatforms(si) };
+    state = "replay"; document.exitPointerLock();
+    return true;
+  }
+  function exitReplay() { GHOST.end(); const f = replayCtx ? replayCtx.from : "menu"; replayCtx = null; state = f; }
+
+  function renderReplay() {
+    if (!replayCtx) { state = "menu"; return; }
+    const t = UI.t, d = replayCtx.data, stage = stageAt(replayCtx.stage);
+    GHOST.update(lastUiDt);
+    const pose = GHOST.pose();
+    // ---- the scene: biome backdrop + platforms (same look as gameplay, no enemies) ----
+    THEME.set(stage.bg); UI.ink = THEME.ink;
+    const sr = screenRect();
+    ctx.fillStyle = stage.bg; ctx.fillRect(sr.x, sr.y, sr.w, sr.h);
+    Backdrop.draw(ctx, stage, uiT, pose ? pose.x : W / 2);
+    for (const p of replayCtx.platforms) Backdrop.platform(ctx, p, stage, !!p.floor);
+    // ---- the recorded route as a faint trail ----
+    ctx.save(); ctx.strokeStyle = THEME.rim; ctx.globalAlpha = 0.22; ctx.lineWidth = 2; ctx.beginPath();
+    for (let i = 0; i < d.px.length; i += 2) { const x = d.px[i], y = d.py[i]; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+    ctx.stroke(); ctx.restore();
+    // ---- the ghost hero + blade ----
+    if (pose) {
+      const cyan = CONFIG.colors.perfect;
+      ctx.save(); ctx.globalAlpha = 0.42;
+      ctx.fillStyle = THEME.ink; ctx.fillRect(pose.x - 13, pose.y - 24, 26, 48);
+      ctx.fillStyle = cyan; ctx.fillRect(pose.x + pose.face * 4 - 3, pose.y - 12, 7, 6);
+      ctx.globalAlpha = 0.5; ctx.strokeStyle = cyan; ctx.lineWidth = 4; ctx.lineCap = "round";
+      if (!GFX.low) { ctx.shadowColor = cyan; ctx.shadowBlur = 12; }
+      ctx.beginPath(); ctx.moveTo(pose.x, pose.y - 6); ctx.lineTo(pose.bx, pose.by); ctx.stroke();
+      ctx.shadowBlur = 0; ctx.restore();
+      UI.tag(ctx, "GHOST", pose.x, pose.y - 40, cyan, "center", t.type.micro);
+    }
+    Backdrop.post(ctx, stage);
+    // ---- overlay: title bar + progress scrubber ----
+    const mode = (CONFIG.modes.find((m) => m.id === d.mode) || {}).label || d.mode;
+    ctx.save();
+    ctx.globalAlpha = 0.82; ctx.fillStyle = "#0e1017"; ctx.fillRect(sr.x, sr.y, sr.w, 62 + SAFE.t); ctx.globalAlpha = 1;
+    ctx.fillStyle = CONFIG.colors.perfect; ctx.fillRect(sr.x, sr.y, sr.w, 3);
+    ctx.textAlign = "left"; ctx.fillStyle = "#f1eff9"; ctx.font = UI.font(t.type.lead, true);
+    ctx.fillText("▶ REPLAY", 40 + SAFE.l, 40 + SAFE.t);
+    ctx.fillStyle = "#c9ccd6"; ctx.font = UI.font(t.type.body, false);
+    ctx.fillText((d.name || "Player") + "   ·   " + mode + "   ·   wave " + (d.wave || 0) + "   ·   " + (d.score || 0) + " pts", 200 + SAFE.l, 40 + SAFE.t);
+    // scrubber
+    const bx = 40 + SAFE.l, bw = W - 80 - SAFE.l - SAFE.r, by = 54 + SAFE.t;
+    ctx.globalAlpha = 0.25; ctx.fillStyle = "#f1eff9"; ctx.fillRect(bx, by, bw, 3); ctx.globalAlpha = 1;
+    ctx.fillStyle = CONFIG.colors.perfect; ctx.fillRect(bx, by, bw * GHOST.progress(), 3);
+    ctx.restore(); ctx.textAlign = "left";
+    uiButtons.push({ x: W / 2 - 110, y: H - 70 - SAFE.b, w: 220, h: 50, label: "‹  BACK", action: exitReplay });
   }
 
   // one aligned grid for every settings row, shared by the Settings tab and the pause
@@ -3516,10 +3584,12 @@
     else UI.text(ctx, "best: wave " + overInfo.best.wave + " · " + overInfo.best.score + " pts", W / 2, 184, t.type.caption, "center", t.alpha.muted);
     UI.text(ctx, "+" + overInfo.earned + " coins  (" + overInfo.coins + " total)", W / 2, 210, t.type.body, "center", t.alpha.soft);
     drawResultsTable(250);
-    vmenu([
+    const overMenu = [
       { label: "RETRY", action: () => retryRun() },
       { label: "MAIN MENU", action: () => { state = "menu"; } },
-    ], W / 2, 560, 260, t.metric.btnH, t.metric.btnGap);
+    ];
+    if (lastGhost) overMenu.splice(1, 0, { label: "▶  WATCH REPLAY", action: () => enterReplay(lastGhost, "gameover") });
+    vmenu(overMenu, W / 2, 548, 260, t.metric.btnH, t.metric.btnGap);
   }
 
   // the rift's jagged path down the centre (deterministic), narrowing as it seals

@@ -81,6 +81,16 @@ const Cloud = {
     if (!this.provider || !this.provider.logEvent) return;
     try { this.provider.logEvent(this, name, data || {}); } catch (e) {}
   },
+
+  // ---- ghost runs: the global top run's replay packet, one per board ----
+  async submitGhost(mode, diff, data) {
+    if (!this.provider || !this.provider.submitGhost) return false;
+    try { return await this.provider.submitGhost(this, mode, diff, data); } catch (e) { return false; }
+  },
+  async loadGhost(mode, diff) {
+    if (!this.provider || !this.provider.loadGhost) return null;
+    try { return await this.provider.loadGhost(this, mode, diff); } catch (e) { return null; }
+  },
 };
 
 // ---- LocalProvider: no account, offline. The always-safe baseline. ----
@@ -221,5 +231,21 @@ const FirebaseProvider = {
   logEvent(C, name, data) {
     if (!this.db) return;
     try { this.db.collection("telemetry").add(Object.assign({ event: name, uid: this.uid || null, ts: Date.now() }, data)); } catch (e) {}
+  },
+  // ghosts: one doc per board holding the current GLOBAL top run's replay packet
+  async submitGhost(C, mode, diff, data) {
+    if (!this.db || !this.uid) return false;
+    const ref = this.db.collection("ghosts").doc(mode + "_" + diff);
+    try {
+      const cur = await this._race(ref.get(), 9000);
+      if (cur.exists && (cur.data().score || 0) >= (data.score || 0)) return false;   // keep only the best run's ghost
+      await this._race(ref.set(data), 9000);
+      return true;
+    } catch (e) { return false; }
+  },
+  async loadGhost(C, mode, diff) {
+    if (!this.db) return null;
+    try { const doc = await this._race(this.db.collection("ghosts").doc(mode + "_" + diff).get(), 9000); return doc.exists ? doc.data() : null; }
+    catch (e) { return null; }
   },
 };
