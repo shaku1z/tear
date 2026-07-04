@@ -657,10 +657,10 @@
     if (run.mult > run.wavePeak) run.wavePeak = run.mult;
     // achievements: the blade's craft (skip training sandboxes)
     if (achTracks()) {
-      if (kind === "parry") { PROFILE.addStat("parries", 1); PROFILE.addStat("deflects", 1); }
-      else if (kind === "deflect") PROFILE.addStat("deflects", 1);
-      else if (kind === "superslam") PROFILE.addStat("superslams", 1);
-      else if (kind === "updraft") PROFILE.addStat("updrafts", 1);
+      if (kind === "parry") { PROFILE.addStat("parries", 1); PROFILE.addStat("deflects", 1); DAILY.bump("parries", 1); DAILY.bump("deflect", 1); }
+      else if (kind === "deflect") { PROFILE.addStat("deflects", 1); DAILY.bump("deflect", 1); }
+      else if (kind === "superslam") { PROFILE.addStat("superslams", 1); DAILY.bump("superslam", 1); }
+      else if (kind === "updraft") { PROFILE.addStat("updrafts", 1); DAILY.bump("updraft", 1); }
       else if (kind === "throwHit") PROFILE.addStat("throwHits", 1);
       // reached the top style tier this run?
       const topName = T.tiers.length ? T.tiers[T.tiers.length - 1].name : "";
@@ -1041,8 +1041,9 @@
       if (achTracks()) {   // progression + no-hit feats, tallied per cleared wave
         PROFILE.maxStat("bestWave", run.wave);
         PROFILE.maxStat("longestRun", Math.floor(run.runTime));
+        DAILY.bump("wave", run.wave, "max");
         if (player.oneHit) PROFILE.maxStat("oneHitWave", run.wave);
-        if (!run._dmgThisWave) PROFILE.addStat("noHitWaves", 1);
+        if (!run._dmgThisWave) { PROFILE.addStat("noHitWaves", 1); DAILY.bump("nohit", 1); }
         let ownedN = 0; for (const k in run.mods.owned) if (run.mods.owned[k]) ownedN++;
         PROFILE.maxStat("abilitiesInRun", ownedN);
         achCheck();
@@ -1092,7 +1093,7 @@
     const best = getBest(run.mode, run.diff);
     const isNew = saveBest(run.mode, run.diff, run.wave, run.score, run.runTime);
     const earned = awardCoins(run.score);
-    if (achTracks()) { PROFILE.addStat("runs", 1); PROFILE.maxStat("longestRun", Math.floor(run.runTime)); achCheck();
+    if (achTracks()) { PROFILE.addStat("runs", 1); PROFILE.maxStat("longestRun", Math.floor(run.runTime)); DAILY.bump("runs", 1); achCheck();
       Cloud.submitScore(run.mode, run.diff, { score: run.score, wave: run.wave, time: run.runTime }); Cloud.push(); }   // global leaderboard + cloud save
     overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, earned, coins: META.coins() };
     state = "gameover";
@@ -1103,7 +1104,7 @@
   function winRun(campaign) {
     const isNew = saveBest(run.mode, run.diff, run.wave, run.score, run.runTime);
     const earned = awardCoins(run.score);
-    if (achTracks()) { PROFILE.addStat("runs", 1); if (campaign) PROFILE.addStat("campaignClears", 1); achCheck();
+    if (achTracks()) { PROFILE.addStat("runs", 1); if (campaign) PROFILE.addStat("campaignClears", 1); DAILY.bump("runs", 1); achCheck();
       Cloud.submitScore(run.mode, run.diff, { score: run.score, wave: run.wave, time: run.runTime }); Cloud.push(); }   // global leaderboard + cloud save
     overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, win: true, campaign: !!campaign, earned, coins: META.coins() };
     state = "win";
@@ -1478,7 +1479,7 @@
           const airborne = e.y < CONFIG.world.groundY - e.hh - 14;
           if (airborne) TUT.mark("airHit");   // tutorial: a juggled (airborne) cut
           if (achTracks()) {   // skill feats measured at the strike
-            if (airborne) PROFILE.addStat("airHits", 1);
+            if (airborne) { PROFILE.addStat("airHits", 1); DAILY.bump("air", 1); }
             if (blade.tipSpeed > CONFIG.blade.minHitSpeed * 2.1) PROFILE.maxStat("maxMomentum", 1);
             achCheck();
           }
@@ -1798,9 +1799,10 @@
     if (achTracks()) {   // lifetime kill feats
       PROFILE.addStat("kills", 1);
       PROFILE.maxStat("killsOneWave", run.waveKills);
+      DAILY.bump("kills", 1);
       if (e.kind === "bomber") PROFILE.addStat("bomberKills", 1);
       if (e.isBoss && !e.isMiniBoss) {
-        PROFILE.addStat("bossKills", 1);
+        PROFILE.addStat("bossKills", 1); DAILY.bump("boss", 1);
         if (!run._dmgThisWave) PROFILE.addStat("bossNoHit", 1);
         if (run.mode === "bossonly") { run._bossOnlyKills = (run._bossOnlyKills || 0) + 1; if (run._bossOnlyKills >= BOSS_ROSTER.length) PROFILE.maxStat("gauntletFull", 1); }
       }
@@ -2866,9 +2868,36 @@
     const t = UI.t;
     UI.header(ctx, "ACHIEVEMENTS", "master the blade · earn shards", eIn);
 
+    // ---- DAILY CHALLENGES: three date-seeded bounties, resetting at local midnight ----
+    const dsx = W / 2 - 560, dsw = 1120;
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    UI.tag(ctx, "DAILY CHALLENGES", dsx, 150, t.color.accent, "left", t.type.micro);
+    ctx.fillStyle = UI.ink; ctx.globalAlpha = 0.55; ctx.font = UI.font(t.type.micro, true); ctx.textAlign = "right";
+    ctx.fillText("RESETS IN " + DAILY.resetsInText(), dsx + dsw, 150); ctx.globalAlpha = 1; ctx.textAlign = "left";
+    const daily = DAILY.today(), dcw = (dsw - 2 * 16) / 3;
+    daily.forEach((ch, i) => {
+      const x = dsx + i * (dcw + 16), y = 162, h = 86, doneC = DAILY.isDone(ch), prog = DAILY.progress(ch);
+      UI.card(ctx, x, y, dcw, h, false);
+      if (doneC) { ctx.globalAlpha = 0.08; ctx.fillStyle = "#2f9e6b"; ctx.fillRect(x, y, dcw, h); ctx.globalAlpha = 1; }
+      UI.accentStrip(ctx, x, y, dcw, doneC ? "#2f9e6b" : t.color.accent);
+      ctx.fillStyle = UI.ink; ctx.font = UI.font(t.type.body, true); ctx.textAlign = "left";
+      ctx.fillText(ch.txt(ch.goal), x + 16, y + 30);
+      // progress bar
+      const pbW = dcw - 130;
+      ctx.globalAlpha = 0.16; ctx.fillStyle = UI.ink; ctx.fillRect(x + 16, y + 46, pbW, 6); ctx.globalAlpha = 1;
+      ctx.fillStyle = doneC ? "#2f9e6b" : t.color.accent; ctx.fillRect(x + 16, y + 46, pbW * (prog / ch.goal), 6);
+      ctx.fillStyle = UI.ink; ctx.globalAlpha = 0.7; ctx.font = UI.font(11, true);
+      ctx.fillText(prog + " / " + ch.goal, x + 16, y + 70); ctx.globalAlpha = 1;
+      // reward / done marker (right)
+      ctx.textAlign = "right";
+      if (doneC) { ctx.fillStyle = "#2f9e6b"; ctx.font = UI.font(t.type.lead, true); ctx.fillText("✓ DONE", x + dcw - 16, y + 34); }
+      else { ctx.fillStyle = "#0f9fb0"; ctx.font = UI.font(t.type.lead, true); ctx.fillText("◆ +" + ch.shards, x + dcw - 16, y + 34); }
+      ctx.textAlign = "left";
+    });
+
     // ---- summary strip: shards, completion count, overall bar ----
     const total = ACH.list.length, done = PROFILE.unlockedCount();
-    const sfx2 = W / 2 - 560, sw = 1120, sy = 150;
+    const sfx2 = W / 2 - 560, sw = 1120, sy = 268;
     ctx.save();
     ctx.globalAlpha = 0.06; ctx.fillStyle = UI.ink; ctx.fillRect(sfx2, sy, sw, 46); ctx.globalAlpha = 1;   // light wash, fits the paper theme
     ctx.fillStyle = t.color.accent; ctx.fillRect(sfx2, sy, 4, 46);
@@ -2893,13 +2922,13 @@
       const inC = c === "all" ? ACH.list : ACH.list.filter((a) => a.cat === c);
       const u = inC.filter((a) => PROFILE.unlocked(a.id)).length;
       const label = (c === "all" ? "ALL" : ACH.CATS[c].name.toUpperCase()) + "  " + u + "/" + inC.length;
-      uiButtons.push({ x: cx0 + i * (chipW + cgap), y: 214, w: chipW, h: 34, chip: true, size: 10,
+      uiButtons.push({ x: cx0 + i * (chipW + cgap), y: 328, w: chipW, h: 34, chip: true, size: 10,
         label, sel: achFilter === c, action: () => { achFilter = c; listScroll = 0; } });
     });
 
     // ---- the grid (2 columns, scrollable) ----
     const list = achFilter === "all" ? ACH.list : ACH.list.filter((a) => a.cat === achFilter);
-    const colWd = 552, rowH = 124, top = 268, fx = W / 2 - colWd - 12, viewH = H - top - 96;
+    const colWd = 552, rowH = 124, top = 382, fx = W / 2 - colWd - 12, viewH = H - top - 92;
     const rows = Math.ceil(list.length / 2);
     const maxScroll = Math.max(0, rows * rowH - viewH);
     listScroll = clamp(listScroll, 0, maxScroll);
