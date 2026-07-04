@@ -393,6 +393,12 @@ const SAFE = { l: 0, r: 0, t: 0, b: 0 };
 // deltas get a boost — max blade momentum from shorter, sharper flicks.
 CONFIG.touch = { aimBoost: 1.5 };
 
+// live balance knobs, overridable via Firebase Remote Config (standalone build) WITHOUT
+// a redeploy. All default to 1.0 (no change); applied to per-run values at run start, so
+// tweaking them can never destabilize the config-restore system. Set matching numeric
+// parameters in the Firebase console (Remote Config) to tune the live game.
+const REMOTE = { coinMult: 1, enemyHpMult: 1, enemyDensityMult: 1, scoreMult: 1 };
+
 const THEME = {
   ink: "#0a0a0a", rim: "rgba(0,0,0,0.35)", paper: "#ffffff", dark: false,
   set(bg) {

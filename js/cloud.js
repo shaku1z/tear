@@ -134,6 +134,7 @@ const FirebaseProvider = {
       await load(`https://www.gstatic.com/firebasejs/${V}/firebase-app-compat.js`);
       await load(`https://www.gstatic.com/firebasejs/${V}/firebase-auth-compat.js`);
       await load(`https://www.gstatic.com/firebasejs/${V}/firebase-firestore-compat.js`);
+      try { await load(`https://www.gstatic.com/firebasejs/${V}/firebase-remote-config-compat.js`); } catch (e) {}   // optional live tuning
       return !!(window.firebase && window.firebase.auth);
     } catch (e) { return false; }
   },
@@ -148,6 +149,7 @@ const FirebaseProvider = {
       // some proxies / embedded webviews (incl. the CrazyGames iframe); this falls back
       // to long-polling automatically so reads/writes still work everywhere.
       try { this.db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) {}
+      this._initRemoteConfig();   // live balance knobs (non-blocking; defaults to no change)
       this.auth.onAuthStateChanged(async (u) => {
         if (!u) return;
         this.uid = u.uid;
@@ -156,6 +158,19 @@ const FirebaseProvider = {
         await Cloud.sync();
       });
       if (!this.auth.currentUser) await this.auth.signInAnonymously();   // guest identity so progress has a home
+    } catch (e) {}
+  },
+  // Firebase Remote Config -> the REMOTE balance knobs. Non-blocking; on any failure the
+  // in-app defaults (all 1.0) stand, so the game is never affected by RC being absent.
+  _initRemoteConfig() {
+    try {
+      if (!window.firebase || !window.firebase.remoteConfig) return;
+      const rc = window.firebase.remoteConfig();
+      rc.settings = { minimumFetchIntervalMillis: 3600000, fetchTimeoutMillis: 8000 };   // refresh at most hourly
+      rc.defaultConfig = { coinMult: 1, enemyHpMult: 1, enemyDensityMult: 1, scoreMult: 1 };
+      rc.fetchAndActivate().then(() => {
+        for (const k of Object.keys(REMOTE)) { const v = rc.getValue(k).asNumber(); if (isFinite(v) && v > 0) REMOTE[k] = v; }
+      }).catch(() => {});
     } catch (e) {}
   },
   async signIn(C) {

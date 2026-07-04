@@ -774,8 +774,9 @@
       combo: 0, comboTimer: 0, mult: 1, rank: "", lastTrick: "", lifestealCd: 0,
       specialBlock: -1, specialsOffered: 0,   // draft guarantee: ≥2 Specials offered per stage
       adRevived: false,   // CrazyGames: the one-time rewarded-ad revive is still available
-      coinMod: dm.coin || 1, scoreMod: dm.score || 1,   // difficulty: risk = reward
-      diffHp: dm.hp || 1, diffCount: dm.count || 1,      // difficulty: enemy toughness + density
+      // difficulty mods, scaled by the live Remote Config knobs (all 1.0 unless tuned)
+      coinMod: (dm.coin || 1) * REMOTE.coinMult, scoreMod: (dm.score || 1) * REMOTE.scoreMult,
+      diffHp: (dm.hp || 1) * REMOTE.enemyHpMult, diffCount: (dm.count || 1) * REMOTE.enemyDensityMult,
       _dmgThisWave: false, _dmgThisRun: false, _dmgThisStage: false,   // no-hit achievement flags
     };
     // "played every mode" counts the five always-visible modes (not the debug sandboxes)
