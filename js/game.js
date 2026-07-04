@@ -592,6 +592,7 @@
   // the ABILITY LAB: every ability in the game on one page — take anything, evolve anything
   let pgLabFilter = "all";
   let achFilter = "all";   // Achievements menu category filter
+  let lbMode = "", lbDiff = "normal", lbKey = "", lbData = null, lbLoading = false;   // Leaderboards tab
   function renderPgLab() {
     const t = UI.t;
     UI.dim(ctx, W, H, 0.9);
@@ -1091,7 +1092,8 @@
     const best = getBest(run.mode, run.diff);
     const isNew = saveBest(run.mode, run.diff, run.wave, run.score, run.runTime);
     const earned = awardCoins(run.score);
-    if (achTracks()) { PROFILE.addStat("runs", 1); PROFILE.maxStat("longestRun", Math.floor(run.runTime)); achCheck(); }
+    if (achTracks()) { PROFILE.addStat("runs", 1); PROFILE.maxStat("longestRun", Math.floor(run.runTime)); achCheck();
+      Cloud.submitScore(run.mode, run.diff, { score: run.score, wave: run.wave, time: run.runTime }); Cloud.push(); }   // global leaderboard + cloud save
     overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, earned, coins: META.coins() };
     state = "gameover";
     document.exitPointerLock();
@@ -1101,7 +1103,8 @@
   function winRun(campaign) {
     const isNew = saveBest(run.mode, run.diff, run.wave, run.score, run.runTime);
     const earned = awardCoins(run.score);
-    if (achTracks()) { PROFILE.addStat("runs", 1); if (campaign) PROFILE.addStat("campaignClears", 1); achCheck(); }
+    if (achTracks()) { PROFILE.addStat("runs", 1); if (campaign) PROFILE.addStat("campaignClears", 1); achCheck();
+      Cloud.submitScore(run.mode, run.diff, { score: run.score, wave: run.wave, time: run.runTime }); Cloud.push(); }   // global leaderboard + cloud save
     overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, win: true, campaign: !!campaign, earned, coins: META.coins() };
     state = "win";
     document.exitPointerLock();
@@ -1824,7 +1827,7 @@
   function isMenuState(s) {
     return s === "menu" || s === "shop" || s === "codex" || s === "setup" ||
       s === "howto" || s === "highscores" || s === "settings" || s === "bestiary" ||
-      s === "achievements";
+      s === "achievements" || s === "leaderboards";
   }
   function frame(now) {
     let dt = (now - last) / 1000; last = now;
@@ -2045,6 +2048,7 @@
       else if (state === "settings") renderSettings();
       else if (state === "bestiary") renderBestiary();
       else if (state === "achievements") renderAchievements();
+      else if (state === "leaderboards") renderLeaderboards();
       drawButtons();
       ctx.restore();
     } else {
@@ -2629,11 +2633,12 @@
       { label: "SHOP", action: () => { state = "shop"; } },
       { label: "ABILITIES", action: () => { state = "codex"; } },
       { label: "ACHIEVEMENTS", action: () => { state = "achievements"; listScroll = 0; } },
+      { label: "LEADERBOARDS", action: () => { state = "leaderboards"; listScroll = 0; } },
       { label: "INDEX", action: () => { state = "bestiary"; } },
       { label: "HOW TO PLAY", action: () => { state = "howto"; } },
       { label: "HIGH SCORES", action: () => { state = "highscores"; } },
       { label: "SETTINGS", action: () => { state = "settings"; } },
-    ].map((o) => (o.ghost = true, o)), lx + t.metric.btnW / 2, 286, t.metric.btnW, t.metric.btnH, 8);
+    ].map((o) => (o.ghost = true, o)), lx + t.metric.btnW / 2, 276, t.metric.btnW, t.metric.btnH, 6);
     void savedInk;   // UI.ink intentionally left "#000" for the sub-screen buttons
     return;
   }
@@ -2939,6 +2944,71 @@
     });
     ctx.restore();
     if (maxScroll > 0) UI.scrollHint(ctx, W / 2, top + viewH + 22, listScroll > 0, listScroll < maxScroll);
+    addBack();
+  }
+
+  // the LEADERBOARDS tab: pick a mode + difficulty, see the world's best runs (or a prompt
+  // to sign in / your local bests when there's no cloud). Scores are fetched async + cached.
+  function renderLeaderboards() {
+    const t = UI.t;
+    const cloud = Cloud.hasLeaderboards();
+    UI.header(ctx, "LEADERBOARDS", cloud ? "the world's finest runs" : "compete globally with an account", eIn);
+    // the competitive modes only (no training / debug)
+    const modes = CONFIG.modes.filter((m) => !m.training && !m.debug);
+    if (!lbMode || !modes.some((m) => m.id === lbMode)) lbMode = modes[0].id;
+    // mode chips
+    const mw = 190, mgap = 8, mx0 = W / 2 - (modes.length * (mw + mgap) - mgap) / 2;
+    modes.forEach((m, i) => uiButtons.push({ x: mx0 + i * (mw + mgap), y: 168, w: mw, h: 34, chip: true, size: 11,
+      label: m.label.toUpperCase(), sel: lbMode === m.id, action: () => { lbMode = m.id; } }));
+    // difficulty chips
+    const diffs = CONFIG.difficulties, dw = 132, dgap = 8, dx0 = W / 2 - (diffs.length * (dw + dgap) - dgap) / 2;
+    diffs.forEach((d, i) => uiButtons.push({ x: dx0 + i * (dw + dgap), y: 210, w: dw, h: 32, chip: true, size: 10,
+      label: d.label.toUpperCase(), sel: lbDiff === d.id, action: () => { lbDiff = d.id; } }));
+
+    // fetch when the board changes (cached in lbData for the current key)
+    const key = lbMode + "_" + lbDiff;
+    if (cloud && key !== lbKey) {
+      lbKey = key; lbData = null; lbLoading = true;
+      Cloud.topScores(lbMode, lbDiff, 25).then((rows) => { if (lbKey === key) { lbData = rows || []; lbLoading = false; } });
+    }
+
+    const listX = W / 2 - 460, listW = 920, top = 272;
+    // header row
+    ctx.save(); ctx.textAlign = "left"; ctx.fillStyle = UI.ink; ctx.font = UI.font(t.type.micro, true); ctx.globalAlpha = 0.6;
+    ctx.fillText("#", listX + 14, top); ctx.fillText("PLAYER", listX + 70, top);
+    ctx.textAlign = "right"; ctx.fillText("WAVE", listX + listW - 320, top); ctx.fillText("TIME", listX + listW - 180, top); ctx.fillText("SCORE", listX + listW - 20, top);
+    ctx.restore(); ctx.textAlign = "left";
+    UI.divider(ctx, listX, top + 8, listW, 0.12);
+
+    const midMsg = (msg) => UI.text(ctx, msg, W / 2, top + 150, t.type.body, "center", t.alpha.soft);
+    if (!cloud) {
+      midMsg("Global leaderboards need an account.");
+      UI.text(ctx, "Open Settings ▸ Account to sign in. Your personal bests live in HIGH SCORES.", W / 2, top + 178, t.type.caption, "center", t.alpha.muted);
+    } else if (lbLoading && !lbData) {
+      midMsg("Loading the ranks…");
+    } else if (!lbData || !lbData.length) {
+      midMsg("No runs recorded on this board yet — set the first.");
+    } else {
+      const myId = Cloud.user ? Cloud.user.id : null;
+      let y = top + 34;
+      lbData.slice(0, 12).forEach((r, i) => {
+        const mine = myId && r.uid === myId, rank = i + 1;
+        if (mine) { ctx.save(); ctx.globalAlpha = 0.1; ctx.fillStyle = t.color.accent; ctx.fillRect(listX, y - 20, listW, 30); ctx.restore(); }
+        // rank medal colour for the top 3
+        const medal = rank === 1 ? "#e0a326" : rank === 2 ? "#c9ccd6" : rank === 3 ? "#cd7f32" : null;
+        ctx.textAlign = "left"; ctx.font = UI.font(t.type.label, true);
+        ctx.fillStyle = medal || UI.ink; ctx.fillText(rank, listX + 14, y);
+        ctx.fillStyle = mine ? t.color.accent : UI.ink; ctx.font = UI.font(t.type.label, mine);
+        ctx.fillText((r.name || "Player").slice(0, 22) + (mine ? "  (you)" : ""), listX + 70, y);
+        ctx.textAlign = "right"; ctx.fillStyle = UI.ink; ctx.font = UI.font(t.type.label, false);
+        ctx.fillText("" + (r.wave || 0), listX + listW - 320, y);
+        ctx.fillText(fmtTime(r.time || 0), listX + listW - 180, y);
+        ctx.font = UI.font(t.type.label, true); ctx.fillText("" + (r.score || 0), listX + listW - 20, y);
+        UI.divider(ctx, listX, y + 8, listW, 0.06);
+        y += 34;
+      });
+      ctx.textAlign = "left";
+    }
     addBack();
   }
 

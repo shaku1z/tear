@@ -63,6 +63,18 @@ const Cloud = {
     if (!this.provider || !this.provider.save) return;
     try { await this.provider.save(this, { profile: PROFILE.data, meta: META.data }); } catch (e) {}
   },
+
+  // ---- leaderboards (delegates to the provider; null => the UI shows local bests) ----
+  hasLeaderboards() { return !!(this.provider && this.provider.submitScore); },
+  async submitScore(mode, diff, entry) {
+    if (!this.provider || !this.provider.submitScore) return false;
+    entry.name = this.displayName();
+    try { return await this.provider.submitScore(this, mode, diff, entry); } catch (e) { return false; }
+  },
+  async topScores(mode, diff, n) {
+    if (!this.provider || !this.provider.topScores) return null;
+    try { return await this.provider.topScores(this, mode, diff, n); } catch (e) { return null; }
+  },
 };
 
 // ---- LocalProvider: no account, offline. The always-safe baseline. ----
@@ -126,6 +138,10 @@ const FirebaseProvider = {
       this.app = window.firebase.initializeApp(window.FIREBASE_CONFIG);
       this.auth = window.firebase.auth();
       this.db = window.firebase.firestore();
+      // auto-detect long-polling: Firestore's default WebChannel streaming is blocked by
+      // some proxies / embedded webviews (incl. the CrazyGames iframe); this falls back
+      // to long-polling automatically so reads/writes still work everywhere.
+      try { this.db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) {}
       this.auth.onAuthStateChanged(async (u) => {
         if (!u) return;
         this.uid = u.uid;
@@ -159,5 +175,25 @@ const FirebaseProvider = {
   async save(C, payload) {
     if (!this.db || !this.uid) return;
     try { await this.db.collection("users").doc(this.uid).set(payload, { merge: true }); } catch (e) {}
+  },
+  // resolve a promise or bail after ms (Firestore can hang if the DB/rules aren't ready)
+  _race(p, ms) { return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms || 9000))]); },
+  // leaderboards: one doc per player per board (mode_diff), keyed by uid, keep the best
+  async submitScore(C, mode, diff, entry) {
+    if (!this.db || !this.uid) return false;
+    const ref = this.db.collection("leaderboards").doc(mode + "_" + diff).collection("scores").doc(this.uid);
+    try {
+      const cur = await this._race(ref.get(), 9000);
+      if (cur.exists && (cur.data().score || 0) >= entry.score) return false;   // only improve
+      await this._race(ref.set({ name: entry.name || "Player", score: entry.score | 0, wave: entry.wave | 0, time: Math.round(entry.time || 0), uid: this.uid, ts: Date.now() }), 9000);
+      return true;
+    } catch (e) { return false; }
+  },
+  async topScores(C, mode, diff, n) {
+    if (!this.db) return null;
+    try {
+      const snap = await this._race(this.db.collection("leaderboards").doc(mode + "_" + diff).collection("scores").orderBy("score", "desc").limit(n || 25).get(), 9000);
+      return snap.docs.map((d) => d.data());
+    } catch (e) { return null; }
   },
 };
