@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // each player owns their cloud save
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    // public leaderboards; you may only write/delete your own entry, score must be numeric
+    match /leaderboards/{board}/scores/{uid} {
+      allow read: if true;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+                            && request.resource.data.score is number;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+    // append-only balancing telemetry (developer reads in the console only)
+    match /telemetry/{doc} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if false;
+    }
+    // one replay ghost per board (public read, authed write)
+    match /ghosts/{board} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}

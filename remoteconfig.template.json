@@ -1,0 +1,29 @@
+{
+  "conditions": [],
+  "parameters": {
+    "coinMult": {
+      "defaultValue": { "value": "1" },
+      "description": "Economy: multiplies coins earned per run. 1 = default. Raise to make the shop faster to buy out, lower to tighten the economy.",
+      "valueType": "NUMBER"
+    },
+    "scoreMult": {
+      "defaultValue": { "value": "1" },
+      "description": "Multiplies score earned per run (affects leaderboards). 1 = default.",
+      "valueType": "NUMBER"
+    },
+    "enemyHpMult": {
+      "defaultValue": { "value": "1" },
+      "description": "Difficulty: multiplies enemy HP. 1 = default. >1 = tankier enemies, <1 = squishier.",
+      "valueType": "NUMBER"
+    },
+    "enemyDensityMult": {
+      "defaultValue": { "value": "1" },
+      "description": "Difficulty: multiplies enemy spawn count / density. 1 = default. >1 = bigger hordes.",
+      "valueType": "NUMBER"
+    }
+  },
+  "parameterGroups": {},
+  "version": {
+    "description": "Tear live balance knobs (coin/score/enemyHp/enemyDensity multipliers)"
+  }
+}
