@@ -5,11 +5,11 @@
 // Rarity sets the Shard payout; the Achievements menu (Phase 2) reads these too.
 const ACH = {
   RARITY: {
-    common:    { name: "COMMON",    color: "#8a93a6", shards: 5 },
-    uncommon:  { name: "UNCOMMON",  color: "#2f9e6b", shards: 12 },
-    rare:      { name: "RARE",      color: "#2f7bd6", shards: 25 },
-    epic:      { name: "EPIC",      color: "#9b53d6", shards: 50 },
-    legendary: { name: "LEGENDARY", color: "#e0a326", shards: 100 },
+    common:    { name: "COMMON",    color: "#8a93a6", shards: 5, coins: 100 },
+    uncommon:  { name: "UNCOMMON",  color: "#2f9e6b", shards: 12, coins: 300 },
+    rare:      { name: "RARE",      color: "#2f7bd6", shards: 25, coins: 700 },
+    epic:      { name: "EPIC",      color: "#9b53d6", shards: 50, coins: 1500 },
+    legendary: { name: "LEGENDARY", color: "#e0a326", shards: 100, coins: 4000 },
   },
   CATS: {
     combat:   { name: "Combat",      color: "#e23b3b", icon: "⚔" },
@@ -143,6 +143,7 @@ const ACH = {
 
   byId(id) { return this.list.find((a) => a.id === id); },
   shardsFor(a) { return a.shards != null ? a.shards : (this.RARITY[a.rarity] || {}).shards || 5; },
+  coinsFor(a) { return a.coins != null ? a.coins : (this.RARITY[a.rarity] || {}).coins || 0; },
   totalShards() { let s = 0; for (const a of this.list) s += this.shardsFor(a); return s; },
 
   // 0..1 progress toward an achievement (for the menu's bars)
@@ -167,6 +168,7 @@ const ACH = {
       const met = a.check ? a.check(PROFILE) : PROFILE.stat(a.stat) >= (a.goal || 1);
       if (met) {
         a.shards = this.shardsFor(a);
+        a.coins = this.coinsFor(a);
         if (PROFILE.unlock(a)) { this.pending.push(a); try { SFX.rankup(); } catch (e) {} }
       }
     }

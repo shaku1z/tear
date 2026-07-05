@@ -14,6 +14,7 @@ const PROFILE = {
       seen: {},              // id -> true once its unlock toast has been shown
       modes: {},             // mode id -> true (which modes have been played)
       created: Date.now(),
+      achCoinsRetrofit: false,
     };
   },
   load() {
@@ -21,9 +22,32 @@ const PROFILE = {
     catch (e) { this.data = this._fresh(); }
     // defensive: nested objects may be missing on an old/partial save
     for (const k of ["ach", "stats", "seen", "modes"]) if (!this.data[k] || typeof this.data[k] !== "object") this.data[k] = {};
+    
+    // Retrofit coins for already unlocked achievements
+    if (typeof ACH !== "undefined" && typeof META !== "undefined" && META.data && !this.data.achCoinsRetrofit) {
+      this.retrofitCoins();
+    }
+    
     return this.data;
   },
   save() { try { CG.store.set(this.KEY, JSON.stringify(this.data)); } catch (e) {} },
+  
+  retrofitCoins() {
+    let total = 0;
+    for (const id in this.data.ach) {
+      const a = ACH.byId(id);
+      if (a) {
+        total += ACH.coinsFor(a);
+      }
+    }
+    if (total > 0) {
+      META.addCoins(total);
+      this.addStat("coinsEarned", total);
+      console.log(`[PROFILE] Retrofitted ${total} coins for existing achievements.`);
+    }
+    this.data.achCoinsRetrofit = true;
+    this.save();
+  },
 
   // ---- shards (achievement currency) ----
   shards() { return this.data.shards || 0; },
@@ -43,6 +67,13 @@ const PROFILE = {
     if (this.data.ach[a.id]) return false;
     this.data.ach[a.id] = Date.now();
     this.data.shards = (this.data.shards || 0) + (a.shards || 0);
+    
+    // Grant coins:
+    if (a.coins && typeof META !== "undefined") {
+      META.addCoins(a.coins);
+      this.addStat("coinsEarned", a.coins);
+    }
+    
     this.save();
     return true;
   },
