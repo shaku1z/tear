@@ -1,23 +1,22 @@
 // ------- Firebase configuration (standalone / Vercel build ONLY) -------
-// PASTE YOUR OWN KEYS to switch the standalone build from local-only saves to real
-// accounts + Firestore-synced progress + cloud leaderboards. Get these from the
-// Firebase console: Project settings -> General -> "Your apps" -> SDK setup & config.
+// This game loads plain <script> files sharing one global scope — NOT ES modules — so
+// this file must NOT use `import` / `initializeApp` here. It only needs to expose the
+// config object on window.FIREBASE_CONFIG; js/cloud.js loads the Firebase SDK on demand
+// and initializes it (Auth + Firestore) from these values.
 //
-// Leave it as null (below) and the game stays fully playable offline (LocalProvider),
-// so nothing breaks before you configure it.
+// Getting these keys: Firebase console -> Project settings -> General -> "Your apps"
+// -> SDK setup & config. (The web API key here is not a secret — access is controlled
+// by Firebase Auth + Firestore security rules.)
 //
-// NOTE: this file is intentionally NOT bundled into the CrazyGames upload — on
-// CrazyGames the game uses "Log in with CrazyGames" only. Even if present, Firebase
-// is never selected on the CG build (Cloud.init picks CrazyProvider there).
-//
-// Example once filled in:
-//   window.FIREBASE_CONFIG = {
-//     apiKey: "AIza...",
-//     authDomain: "your-project.firebaseapp.com",
-//     projectId: "your-project",
-//     storageBucket: "your-project.appspot.com",
-//     messagingSenderId: "1234567890",
-//     appId: "1:1234567890:web:abcdef",
-//   };
+// NOTE: this file is intentionally NOT active on the CrazyGames upload — Cloud.init
+// always picks "Log in with CrazyGames" there, never Firebase.
 
-window.FIREBASE_CONFIG = null;
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyC2icGmNx0fwTWHWs1KwFVGWl125qp-FBE",
+  authDomain: "tear-682cf.firebaseapp.com",
+  projectId: "tear-682cf",
+  storageBucket: "tear-682cf.firebasestorage.app",
+  messagingSenderId: "545513135103",
+  appId: "1:545513135103:web:bb60bdbd129a7e53f0e5ca",
+  measurementId: "G-V83ZJV3HQ1",
+};
