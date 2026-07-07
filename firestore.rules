@@ -3,7 +3,12 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // each player owns their cloud save
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if request.auth != null && request.auth.uid == uid
+        && (!('username' in request.resource.data) ||
+            (request.resource.data.username.size() >= 3 &&
+             request.resource.data.username.size() <= 16 &&
+             request.resource.data.username.matches('^[a-zA-Z0-9 _-]+$') &&
+             (resource == null || !('usernameSetAt' in resource.data) || request.time > resource.data.usernameSetAt + duration.value(7, 'd'))));
     }
     // public leaderboards; you may only write/delete your own entry, score must be numeric
     match /leaderboards/{board}/scores/{uid} {

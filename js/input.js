@@ -37,14 +37,19 @@ const Input = {
       pause: { x: vw - 54 - sr, y: 52 + st, r: 34, label: "▮▮" },
     };
   },
+  textEntryMode: false,
 
   init(canvas) {
     window.addEventListener("keydown", (e) => {
+      if (this.textEntryMode) return;
       if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab"].includes(e.code)) e.preventDefault();
       if (!this.held.has(e.code)) this.pressed.add(e.code);
       this.held.add(e.code);
     });
-    window.addEventListener("keyup", (e) => { this.held.delete(e.code); });
+    window.addEventListener("keyup", (e) => { 
+      if (this.textEntryMode) return;
+      this.held.delete(e.code); 
+    });
 
     // element px -> logical px. The element spans the arena PLUS the fullscreen
     // overscan bleed, so subtract the overscan offset after scaling.

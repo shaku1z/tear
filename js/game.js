@@ -80,7 +80,15 @@
     META.load(); PROFILE.load(); settings = loadSettings(); applySettings(); CG.loadingStop();
     // accounts + synced progress: picks CrazyGames / Firebase / Local by environment.
     // A guest logging in (or a returning account) merges cloud progress non-destructively.
-    Cloud.init().then(() => Cloud.onChange(() => { try { ACH.check(); } catch (e) {} }));
+    Cloud.init().then(() => Cloud.onChange((u, st) => { 
+      try { ACH.check(); } catch (e) {} 
+      // First-run automatic prompt
+      if (st === "signedin" && Cloud.provider === FirebaseProvider && u && !u.guest && !u.customUsername) {
+        if (typeof beginRenameFlow === "function" && state !== "rename" && !renameContext) {
+          beginRenameFlow(true);
+        }
+      }
+    }));
   });
   function awardCoins(score) {
     // leaner economy: a small fraction of score + a flat per-wave trickle, so a strong run
@@ -157,6 +165,7 @@
       const seen = PROFILE.data.stats._biomes || (PROFILE.data.stats._biomes = {});
       if (!seen[currentStage.name]) { seen[currentStage.name] = 1; PROFILE.maxStat("biomesSeen", Object.keys(seen).length); achCheck(); }
     }
+    if (run && typeof AT !== "undefined") AT.stageReset();   // fresh per-stage restriction flags
   }
 
   // ---- state ----
@@ -679,6 +688,68 @@
   // achievements track everywhere EXCEPT the training sandboxes (trivially farmable)
   function achTracks() { return run && run.mode !== "tutorial" && run.mode !== "playground"; }
   function achCheck() { try { ACH.check(); PROFILE.save(); } catch (e) {} }
+
+  // ---- AT: the "cult-classic" exotic achievement tracker ----
+  // Bespoke state machines for combos, self-imposed restrictions, boss-humiliation, and
+  // status/deflect feats. All gated to real modes; entities set a few flags this reads.
+  const AT = {
+    on() { return run && run.mode !== "tutorial" && run.mode !== "playground"; },
+    // per-stage restriction flags (reset each biome/stage)
+    stageReset() { if (run) run.biomeState = { swung: false, thrown: false, jumped: false }; },
+    swung() { if (run && run.biomeState) run.biomeState.swung = true; },
+    thrown() { if (run && run.biomeState) run.biomeState.thrown = true; },
+    jumped() { if (run && run.biomeState) run.biomeState.jumped = true; },
+    // boss damage-source tracking (Set on the entity) for the humiliation feats
+    bossHit(e, src) { if (e && e.isBoss) { (e.dmgSrc || (e.dmgSrc = new Set())).add(src); e._lastSrc = src; } },
+    bossKill(e) {
+      if (!this.on() || !e || !e.bossId) return;
+      const s = e.dmgSrc || new Set(), only = (k) => s.has(k) && ![...s].some((x) => x !== k);
+      if (e.bossId === "warden" && only("deflect")) PROFILE.maxStat("wardenDeflectOnly", 1);   // Stop Hitting Yourself
+      if (e.bossId === "colossus" && s.size > 0 && !s.has("melee")) PROFILE.maxStat("colossusThrowOnly", 1);   // David and Goliath
+      if (e.bossId === "echo" && e._lastSrc === "deflect") PROFILE.maxStat("echoReflectKill", 1);   // I Am Rubber
+      if (e.bossId === "source" && run._bossFightT != null && run.runTime - run._bossFightT < 60) PROFILE.maxStat("sourceSpeedrun", 1);   // Pulling the Plug
+    },
+    // a stage (10-wave biome) was cleared: evaluate the self-imposed restrictions
+    stageDone() {
+      if (!this.on() || !run.biomeState) return;
+      const b = run.biomeState;
+      if (!b.thrown) PROFILE.maxStat("stageNoThrow", 1);        // No Takebacks
+      if (!b.swung) PROFILE.maxStat("stageThrowOnly", 1);       // Butterfingers (cleared without a single melee swing)
+      if (!b.jumped) PROFILE.maxStat("stageNoJump", 1);         // Heavy Boots
+      if (META.level("thickskin") === 0 && META.level("warding") === 0 && META.level("sharp") > 0) PROFILE.maxStat("stageGlassCannon", 1);   // Glass Cannon
+      achCheck();
+    },
+    // called from onKill for airborne combos + transition kills
+    onKill(e) {
+      if (!this.on()) return;
+      if (!player.onGround) { run._airKills = (run._airKills || 0) + 1; PROFILE.maxStat("airComboKills", run._airKills); }
+      if (run.clearTimer > 0) PROFILE.maxStat("transitionKills", 1);   // Stylishly Late
+    },
+    // perfect parry with the "static" streak (no move / dash / damage between)
+    parry() { if (this.on()) { run._staticParry = (run._staticParry || 0) + 1; PROFILE.maxStat("staticParryStreak", run._staticParry); } },
+    breakStreak() { if (run) run._staticParry = 0; },
+    // a projectile dodged through with i-frames (Matador) — distinct per run
+    dashDodge(p) { if (this.on() && p && !p._dodged) { p._dodged = true; run._projDashes = (run._projDashes || 0) + 1; PROFILE.maxStat("projectileDashes", run._projDashes); } },
+    revived() { if (run) run._revivedT = true; },
+    hordeCleared(sec) { if (this.on() && sec < 15) PROFILE.maxStat("fastHordeClear", 1); },
+    // per-frame: air-time, status combos, off-screen launches, revive-to-full, streak resets
+    tick(dt) {
+      if (!this.on()) return;
+      if (player.onGround) { run._airKills = 0; }
+      // Static parry streak breaks on any deliberate move / dash
+      if (Input.left() || Input.right() || player.dashTimer > 0) this.breakStreak();
+      // Taste the Rainbow: bleed + burn + mark on one enemy at once
+      let rainbow = false, launched = false;
+      for (const en of enemies) {
+        if (en.dead) continue;
+        if (en._updraftT > 0) { en._updraftT -= dt; if (en.y < -40) launched = true; }   // Space Program
+        if (en.bleedStacks > 0 && en.burnT > 0 && en.markT > 0) rainbow = true;
+      }
+      if (rainbow) PROFILE.maxStat("tripleStatus", 1);
+      if (launched) PROFILE.maxStat("launchOffScreen", 1);
+      if (run._revivedT && player.hp >= player.maxHp) PROFILE.maxStat("reviveToFull", 1);   // From the Ashes
+    },
+  };
   function loseStyle() {
     run.combo *= (1 - CONFIG.trick.hitLoss);
     run.comboTimer = CONFIG.trick.decay * 0.5;
@@ -788,7 +859,11 @@
       _dmgThisWave: false, _dmgThisRun: false, _dmgThisStage: false,   // no-hit achievement flags
       _achSnap: Object.keys(PROFILE.data.ach),   // achievements already owned at run start (to show "earned this run")
       weaponId: selWeapon,   // for the "win with each weapon" achievement
+      biomeState: { swung: false, thrown: false, jumped: false },   // per-stage restriction feats
+      _staticParry: 0, _airKills: 0, _projDashes: 0, _aldricSlams: 0, _revivedT: false, _bossFightT: null,
     };
+    // Exodia (The Forbidden Technique): Long Arm + Throwing Arm + Aether Step + Lifeline all owned
+    if (achTracks() && META.level("reach") > 0 && META.level("throwarm") > 0 && META.level("aircharge") > 0 && META.level("lifeline") > 0) PROFILE.maxStat("exodiaBuild", 1);
     arsenalScroll = 0;
     // "played every mode" counts the five always-visible modes (not the debug sandboxes)
     if (mode !== "bossonly" && mode !== "sandbox") { PROFILE.markMode(mode); achCheck(); }
@@ -978,7 +1053,7 @@
       case "flyer":   e = new Flyer(spawnSide(), 200); break;
       case "bomber":  e = new Bomber(0, 0); break;
       case "armored": e = new Armored(0, 0); break;
-      case "boss":    e = makeBoss(); break;
+      case "boss":    e = makeBoss(); run._bossFightT = run.runTime; if (typeof Clipper !== 'undefined') Clipper.start(); break;   // clock the boss fight (Source speedrun)
       case "miniboss": e = bossById(spec.bossId); e.hp *= 0.4; e.maxHp *= 0.4; e.isMiniBoss = true; e.bossName = "◇ " + e.bossName; break;
       case "priest": case "herald": case "mender": case "anchor": e = new Support(0, 0, spec.type); break;
       case "wraith":  e = new Wraith(spawnSide(), 220); break;
@@ -1065,6 +1140,7 @@
           PROFILE.maxStat("bestWaveEndless", run.wave);
           if (run.diff === "hard" && run.wave >= 50) PROFILE.maxStat("wave50Hard", 1);
           if (run.diff === "extreme" && run.wave >= 100) PROFILE.maxStat("wave100Extreme", 1);
+          if (run.horde) AT.hordeCleared(run.waveTime);   // Horde Breaker (a horde window cleared fast)
         }
         achCheck();
       }
@@ -1078,6 +1154,7 @@
             PROFILE.addStat("stageClears", 1);
             if (!run._dmgThisStage) PROFILE.addStat("noHitStages", 1);
             run._dmgThisStage = false;
+            AT.stageDone();   // No Takebacks / Butterfingers / Heavy Boots / Glass Cannon
             achCheck();
           }
           run.bossCleared = true;
@@ -1108,6 +1185,7 @@
   }
 
   function endRun() {
+    if (typeof Clipper !== 'undefined') Clipper.stop();
     // log the in-progress wave the player died on
     if (run.waveActive) run.waveLog.push({ wave: run.wave, time: run.waveTime, kills: run.waveKills, peak: run.wavePeak, died: true });
     const best = getBest(run.mode, run.diff);
@@ -1125,6 +1203,7 @@
   }
 
   function winRun(campaign) {
+    if (typeof Clipper !== 'undefined') Clipper.stop();
     const isNew = saveBest(run.mode, run.diff, run.wave, run.score, run.runTime);
     const earned = awardCoins(run.score);
     if (achTracks()) { PROFILE.addStat("runs", 1); if (campaign) PROFILE.addStat("campaignClears", 1); DAILY.bump("runs", 1);
@@ -1375,7 +1454,10 @@
         if (e.burnT > 0) { FX.ember(e.x, e.y); FX.ember(e.x, e.y - e.hh * 0.4); }
         if (e.bleedStacks > 0) { FX.drip(e.x, e.y + e.hh * 0.35); if (e.bleedStacks > 2) FX.drip(e.x + (Math.random() - 0.5) * e.hw, e.y + e.hh * 0.2); }
       }
-      if (e.dead) onKill(e, "skill");   // a bleed/burn kill is a skill kill (you set it up)
+      if (e.dead) {
+        if (achTracks() && e.kind === "armored" && !e.enraged) PROFILE.maxStat("armorBypassKills", 1);   // Surgical Extraction (status-killed, armor never broken)
+        onKill(e, "skill");   // a bleed/burn kill is a skill kill (you set it up)
+      }
     }
 
     // boss floor hazards: sustained damage you must keep moving to avoid (off-pulse fire is safe)
@@ -1519,6 +1601,11 @@
             if (blade.tipSpeed > CONFIG.blade.minHitSpeed * 2.1) PROFILE.maxStat("maxMomentum", 1);
             PROFILE.maxStat("maxDamageHit", Math.round(dmg));   // Overkill (3,000 in one strike)
             if (empowered && !isSlam) { run._updraftChain = (run._updraftChain || 0) + 1; PROFILE.maxStat("consecutiveUpdrafts", run._updraftChain); }   // Gravity Defied
+            AT.swung(); AT.bossHit(e, "melee");
+            if (isLaunch && e.kind === "armored") e._updrafted = true;                          // The Setup: armored launched...
+            if (spike && e.kind === "armored" && e._updrafted) PROFILE.maxStat("spikeArmored", 1);  // ...then spiked down
+            if (isLaunch && (empowered || isLaunch)) e._updraftT = 1.5;                          // Space Program: mark any launched enemy
+            if (e.bossId === "aldric" && empSlam) { run._aldricSlams = (run._aldricSlams || 0) + 1; PROFILE.maxStat("aldricSlams", run._aldricSlams); }   // Silence, King
             achCheck();
           }
           fire(run.mods.onHit, makeEv(cp.px, cp.py, e));
@@ -1606,7 +1693,11 @@
           addFloater(e.x, e.y - 26, Math.round(tdmg).toString(), true);
           hitStop = CONFIG.hitStop.small; addShake(CONFIG.juice.shakeSmall);
           addStyle("throwHit");
-          PROFILE.maxStat("maxDamageHit", Math.round(tdmg));   // Overkill can also come from a big throw
+          if (achTracks()) {
+            PROFILE.maxStat("maxDamageHit", Math.round(tdmg));         // Overkill can also come from a big throw
+            AT.thrown(); AT.bossHit(e, "throw");
+            PROFILE.maxStat("bladeBounces", blade.pierced.size);      // Pinball Wizard (4 enemies in one throw)
+          }
           fire(run.mods.onHit, makeEv(e.x, e.y, e));
           if (e.dead) {
             if (achTracks() && blade.pierced.size >= 2) { PROFILE.maxStat("throwPierceKills", 1); achCheck(); }   // Collateral Damage (killed through another enemy)
@@ -1655,6 +1746,7 @@
           addFlash(CONFIG.juice.flashParry * (perfect ? 1.3 : 0.8)); SFX.boom();
           addStyle(perfect ? "parry" : "deflect");
           if (perfect) {
+            AT.parry();   // Immovable Object streak
             Backdrop.flare(p.x, p.y, CONFIG.colors.perfect, 520, 0.6); triggerSlowmo();
             fire(run.mods.onParry, makeEv(p.x, p.y, null));
             if (run.mods.parryGuard) player.guardT = CONFIG.resilience.parryGuardTime;   // Riposte
@@ -1682,6 +1774,7 @@
           if (fullCounter) SFX.counter(); else if (perfect) SFX.parry(); else SFX.deflect();
           addStyle(perfect ? "parry" : "deflect");
           if (perfect) {
+            AT.parry();   // Immovable Object streak
             addZoom(fullCounter ? CONFIG.juice.zoomParry * 1.4 : CONFIG.juice.zoomParry);
             addFlash(fullCounter ? CONFIG.juice.flashParry * 1.3 : CONFIG.juice.flashParry);
             Backdrop.flare(p.x, p.y, pcol, fullCounter ? 460 : 320, fullCounter ? 0.55 : 0.4);   // parry lights the world
@@ -1705,6 +1798,7 @@
           if (len(p.x - e.x, p.y - e.y) <= p.r + e.radius) {
             const ddmg = p.deflectDmg * CONFIG.blade.deflectDmgMult;   // Counterforce
             e.hit(ddmg, p.vx, p.vy);
+            if (achTracks()) AT.bossHit(e, "deflect");   // boss-humiliation source tracking
             if (run.mods.parryStun && !e.isBoss) e.stun = Math.max(e.stun, 0.7);   // Backfire
             FX.burst(p.x, p.y, p.vx, p.vy, CONFIG.juice.sparkCount, CONFIG.colors.deflected);
             addFloater(e.x, e.y - 26, Math.round(ddmg).toString(), p.perfect);
@@ -1735,7 +1829,7 @@
               loseStyle(); SFX.hurt();
               if (p.root) { player.rootT = p.root; addFloater(player.x, player.y - 34, "ROOTED", true, CONFIG.colors.armoredShield); }
             } else onShieldAbsorb();
-          }
+          } else if (player.dashTimer > 0) AT.dashDodge(p);   // Matador: i-frame dashed clean through a shot
         }
       }
     }
@@ -1833,14 +1927,14 @@
         FX.ring(player.x, player.y, 16, CONFIG.colors.perfect); FX.burst(player.x, player.y, 0, -1, 16, CONFIG.colors.perfect);
         addFloater(player.x, player.y - 44, "SECOND WIND", true, CONFIG.colors.perfect);
         addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry); SFX.parry();
-        if (achTracks()) { PROFILE.addStat("revivesUsed", 1); achCheck(); }
+        if (achTracks()) { PROFILE.addStat("revivesUsed", 1); AT.revived(); achCheck(); }
       } else if (player.abilityRevives > 0 && !player.oneHit) {
         // extra life #2 — Last Stand (draftable ability): a defiant, hotter rise
         player.abilityRevives--; player.hp = Math.round(player.maxHp * 0.40); player.iframe = 2.0;
         FX.explode(player.x, player.y, CONFIG.colors.charger, 1.1);
         addFloater(player.x, player.y - 44, "LAST STAND", true, CONFIG.colors.charger);
         addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry); SFX.counter();
-        if (achTracks()) { PROFILE.addStat("revivesUsed", 1); achCheck(); }
+        if (achTracks()) { PROFILE.addStat("revivesUsed", 1); AT.revived(); achCheck(); }
       } else if (CG.adsAvailable() && !run.adRevived && !player.oneHit) {
         // extra life #3 — the CrazyGames rewarded-ad revive (the continue flow)
         state = "continue"; continueT = 8; document.exitPointerLock();
@@ -1862,7 +1956,9 @@
         if (run.mode === "bossonly") { run._bossOnlyKills = (run._bossOnlyKills || 0) + 1; if (run._bossOnlyKills >= BOSS_ROSTER.length) PROFILE.maxStat("gauntletFull", 1); }
         if (e.bossId) PROFILE.maxStat("kill" + e.bossId.charAt(0).toUpperCase() + e.bossId.slice(1), 1);   // pantheon: killWarden / killColossus / …
         if (player.hp > 0 && player.hp <= player.maxHp * 0.1) PROFILE.maxStat("bossKillsLowHP", 1);         // By a Thread
+        AT.bossKill(e);   // Stop Hitting Yourself / David and Goliath / I Am Rubber / Pulling the Plug
       }
+      AT.onKill(e);   // air-combo + transition kills
       achCheck();
     }
     FX.death(e.x, e.y, CONFIG.juice.deathShards, e.color);
@@ -1886,7 +1982,7 @@
   function isMenuState(s) {
     return s === "menu" || s === "shop" || s === "codex" || s === "setup" ||
       s === "howto" || s === "highscores" || s === "settings" || s === "bestiary" ||
-      s === "achievements" || s === "leaderboards";
+      s === "achievements" || s === "leaderboards" || s === "rename";
   }
   function frame(now) {
     let dt = (now - last) / 1000; last = now;
@@ -2109,6 +2205,7 @@
       else if (state === "bestiary") renderBestiary();
       else if (state === "achievements") renderAchievements();
       else if (state === "leaderboards") renderLeaderboards();
+      else if (state === "rename") renderRename();
       drawButtons();
       ctx.restore();
     } else {
@@ -3215,8 +3312,112 @@
       wide(statusLabel, btnLabel, signedIn && Cloud.provider !== FirebaseProvider, () => {
         if (canIn) Cloud.signIn(); else if (signedIn && Cloud.provider === FirebaseProvider) Cloud.signOut();
       });
+      if (signedIn && Cloud.provider === FirebaseProvider) {
+        wide("Display Name", "EDIT NAME", false, () => beginRenameFlow(false));
+      }
     }
     return y;
+  }
+
+  let renameContext = null;
+  function beginRenameFlow(isFirstRun) {
+    if (typeof Cloud === "undefined" || !Cloud.loggedIn() || Cloud.provider !== FirebaseProvider) return;
+    document.exitPointerLock();
+    Input.textEntryMode = true;
+    const input = document.getElementById("nameInput");
+    input.value = (Cloud.user && Cloud.user.customUsername) ? Cloud.user.customUsername : "";
+    input.style.display = "block";
+    
+    // Scale and position input over the canvas
+    const rect = canvas.getBoundingClientRect();
+    const scale = rect.width / (W + OVERSCAN.x * 2);
+    const boxW = 320, boxH = 48;
+    const boxX = W / 2 - boxW / 2 + OVERSCAN.x;
+    const boxY = H / 2 - 20 + OVERSCAN.y;
+    
+    input.style.left = (rect.left + boxX * scale) + "px";
+    input.style.top = (rect.top + boxY * scale) + "px";
+    input.style.width = (boxW * scale) + "px";
+    input.style.height = (boxH * scale) + "px";
+    input.style.fontSize = (24 * scale) + "px";
+    
+    setTimeout(() => { input.focus(); }, 50);
+    
+    renameContext = { error: "", isFirstRun };
+    const prevState = state;
+    state = "rename";
+    renameContext.prevState = prevState === "rename" ? "settings" : prevState;
+    
+    input.onkeydown = (e) => {
+      if (e.key === "Enter") submitRename();
+      if (e.key === "Escape") cancelRename();
+    };
+  }
+
+  function submitRename() {
+    const input = document.getElementById("nameInput");
+    const name = input.value.trim();
+    if (name.length < 3 || name.length > 16) {
+      renameContext.error = "Must be 3-16 characters";
+      return;
+    }
+    if (!/^[a-zA-Z0-9 _-]+$/.test(name)) {
+      renameContext.error = "Letters, numbers, spaces, _, - only";
+      return;
+    }
+    // Hardcoded profanity pass (basic example for V1)
+    const badwords = ["fuck", "shit", "bitch", "nigg", "asshole", "cunt", "faggot", "dick"];
+    const lowerName = name.toLowerCase();
+    if (badwords.some(w => lowerName.includes(w))) {
+      renameContext.error = "Name contains restricted words";
+      return;
+    }
+    // Cooldown check
+    if (Cloud.user && Cloud.user.usernameSetAt && (Date.now() - Cloud.user.usernameSetAt < 7 * 24 * 60 * 60 * 1000)) {
+      renameContext.error = "You can only change your name once every 7 days.";
+      return;
+    }
+    
+    // Valid!
+    Cloud.setCustomUsername(name);
+    closeRename();
+  }
+
+  function cancelRename() {
+    closeRename();
+  }
+
+  function closeRename() {
+    const input = document.getElementById("nameInput");
+    input.style.display = "none";
+    input.blur();
+    input.onkeydown = null;
+    Input.textEntryMode = false;
+    state = renameContext.prevState || "settings";
+    renameContext = null;
+  }
+
+  function renderRename() {
+    // dim the background
+    ctx.fillStyle = "rgba(10, 11, 16, 0.85)";
+    ctx.fillRect(-OVERSCAN.x, -OVERSCAN.y, W + OVERSCAN.x * 2, H + OVERSCAN.y * 2);
+    
+    const cx = W / 2, cy = H / 2;
+    UI.header(ctx, "CHOOSE A NAME", "how you appear on leaderboards & replays", 1);
+    
+    // draw the input backing box
+    ctx.fillStyle = "#000";
+    ctx.strokeStyle = UI.t.color.paper;
+    ctx.lineWidth = 2;
+    ctx.fillRect(cx - 160, cy - 20, 320, 48);
+    ctx.strokeRect(cx - 160, cy - 20, 320, 48);
+    
+    if (renameContext && renameContext.error) {
+      UI.text(ctx, renameContext.error, cx, cy + 46, UI.t.type.caption, "center", "#f44");
+    }
+    
+    uiButtons.push({ x: cx - 160, y: cy + 70, w: 150, h: 42, label: renameContext && renameContext.isFirstRun ? "SKIP" : "CANCEL", action: cancelRename });
+    uiButtons.push({ x: cx + 10, y: cy + 70, w: 150, h: 42, label: "CONFIRM", sel: true, action: submitRename });
   }
 
   function renderSettings() {

@@ -30,10 +30,14 @@ const Cloud = {
 
   onChange(fn) { this._listeners.push(fn); },
   _emit() { for (const f of this._listeners) { try { f(this.user, this.status); } catch (e) {} } },
-  _set(user, status) { this.user = user; this.status = status; this._emit(); },
+  _set(user, status, silent) { this.user = user; this.status = status; if (!silent) this._emit(); },
 
   loggedIn() { return this.status === "signedin"; },
-  displayName() { return this.user ? this.user.name : "Guest"; },
+  displayName() { 
+    if (this.provider === CrazyProvider) return this.user ? this.user.name : "Guest";
+    if (this.user && this.user.customUsername) return this.user.customUsername;
+    return "Player"; 
+  },
   canSignIn() { return this.provider && !!this.provider.signIn && this.status !== "signedin"; },
   // label for the account button — provider decides the wording (CG vs Google)
   signInLabel() { return (this.provider && this.provider.signInLabel) || "Sign In"; },
@@ -59,21 +63,39 @@ const Cloud = {
   async signOut() { if (this.provider && this.provider.signOut) { try { await this.provider.signOut(this); } catch (e) {} } },
 
   // merge remote <-> local, then persist both ways so progress follows the account
+  async setCustomUsername(name) {
+    if (!this.user || !this.provider) return;
+    this.user.customUsername = name;
+    this.user.usernameSetAt = Date.now();
+    this._emit();
+    await this.push();
+  },
+
   async sync() {
     if (!this.provider || !this.provider.load) return;
     try {
       const remote = await this.provider.load(this);
       if (remote) {
+        if (remote.username && this.user) {
+          this.user.customUsername = remote.username;
+          this.user.usernameSetAt = remote.usernameSetAt || 0;
+        }
         if (remote.profile) PROFILE.merge(remote.profile);
         if (remote.meta && META.merge) META.merge(remote.meta);
         PROFILE.save(); if (META.save) META.save();
       }
+      this._emit();
       await this.push();
     } catch (e) {}
   },
   async push() {
     if (!this.provider || !this.provider.save) return;
-    try { await this.provider.save(this, { profile: PROFILE.data, meta: META.data }); } catch (e) {}
+    const payload = { profile: PROFILE.data, meta: META.data };
+    if (this.user && this.user.customUsername) {
+      payload.username = this.user.customUsername;
+      payload.usernameSetAt = this.user.usernameSetAt || 0;
+    }
+    try { await this.provider.save(this, payload); } catch (e) {}
   },
 
   // ---- leaderboards (delegates to the provider; null => the UI shows local bests) ----
@@ -184,7 +206,16 @@ const FirebaseProvider = {
         if (!u) return;
         this.uid = u.uid;
         const guest = u.isAnonymous;
-        C._set({ id: u.uid, name: u.displayName || (guest ? "Guest" : "Player"), avatar: u.photoURL, guest }, guest ? "guest" : "signedin");
+        let existingName = (C.user && C.user.id === u.uid) ? C.user.customUsername : undefined;
+        let existingSetAt = (C.user && C.user.id === u.uid) ? C.user.usernameSetAt : undefined;
+        C._set({ 
+            id: u.uid, 
+            name: u.displayName || (guest ? "Guest" : "Player"), 
+            avatar: u.photoURL, 
+            guest,
+            customUsername: existingName,
+            usernameSetAt: existingSetAt
+        }, guest ? "guest" : "signedin", true);
         await Cloud.sync();
       });
     } catch (e) {}
@@ -228,7 +259,16 @@ const FirebaseProvider = {
       }
       else res = await this.auth.signInWithPopup(provider);
       const u = res.user; this.uid = u.uid;
-      C._set({ id: u.uid, name: u.displayName || "Player", avatar: u.photoURL, guest: false }, "signedin");
+      let existingName = (C.user && C.user.id === u.uid) ? C.user.customUsername : undefined;
+      let existingSetAt = (C.user && C.user.id === u.uid) ? C.user.usernameSetAt : undefined;
+      C._set({ 
+          id: u.uid, 
+          name: u.displayName || "Player", 
+          avatar: u.photoURL, 
+          guest: false,
+          customUsername: existingName,
+          usernameSetAt: existingSetAt
+      }, "signedin", true);
       return true;
     } catch (e) { 
       console.error('[signIn] failed:', e.code, e.message);

@@ -86,12 +86,29 @@
     /* fullscreen: layout is already edge-to-edge; just drop the page's own chrome */
     #wrap:fullscreen #fs,
     #wrap:fullscreen #hint { display: none; }
+
+    #nameInput {
+      position: absolute;
+      display: none;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-family: inherit; /* will match game's font */
+      font-weight: bold;
+      text-transform: uppercase;
+      text-align: center;
+      padding: 0;
+      margin: 0;
+      /* the JS logic will set top/left/width/height/font-size to match the canvas panel exactly */
+    }
   </style>
 </head>
 <body>
   <div id="safeprobe"></div>
   <div id="wrap">
     <canvas id="game" width="1280" height="720"></canvas>
+    <input type="text" id="nameInput" maxlength="16" autocomplete="off" spellcheck="false" />
     <button id="fs">⛶ fullscreen</button>
     <div id="lockhint">click to capture mouse</div>
     <div id="hint">A/D move &nbsp;·&nbsp; W/Space jump &nbsp;·&nbsp; hold S drop through &nbsp;·&nbsp; Shift dash &nbsp;·&nbsp; mouse = blade &nbsp;·&nbsp; right-click throw / recall &nbsp;·&nbsp; P pause</div>
