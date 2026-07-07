@@ -41,8 +41,20 @@ const Cloud = {
   // USER-INITIATED ONLY (a button press) — never call this automatically
   async signIn() {
     if (!this.provider || !this.provider.signIn) return false;
-    try { const ok = await this.provider.signIn(this); if (ok) await this.sync(); return ok; }
-    catch (e) { return false; }
+    try { 
+      const ok = await this.provider.signIn(this); 
+      if (ok && ok.status === 'needsRetry') {
+        this.authRetryPrompt = true;
+        return ok;
+      }
+      this.authRetryPrompt = false;
+      if (ok === true) await this.sync(); 
+      return ok; 
+    }
+    catch (e) { 
+      console.error('[Cloud.signIn] error:', e);
+      return false; 
+    }
   },
   async signOut() { if (this.provider && this.provider.signOut) { try { await this.provider.signOut(this); } catch (e) {} } },
 
@@ -190,12 +202,31 @@ const FirebaseProvider = {
       // if currently anonymous, LINK so the guest's progress carries into the Google account
       const cur = this.auth.currentUser;
       let res;
-      if (cur && cur.isAnonymous) { try { res = await cur.linkWithPopup(provider); } catch (e) { res = await this.auth.signInWithPopup(provider); } }
+      if (cur && cur.isAnonymous) { 
+        if (this._retryMerge) {
+          this._retryMerge = false;
+          res = await this.auth.signInWithPopup(provider);
+        } else {
+          try { 
+            res = await cur.linkWithPopup(provider); 
+          } catch (e) { 
+            console.error('[signIn] linkWithPopup failed:', e.code, e.message);
+            if (e.code === 'auth/credential-already-in-use') {
+              this._retryMerge = true;
+              return { status: 'needsRetry', code: e.code };
+            }
+            return false; 
+          }
+        }
+      }
       else res = await this.auth.signInWithPopup(provider);
       const u = res.user; this.uid = u.uid;
       C._set({ id: u.uid, name: u.displayName || "Player", avatar: u.photoURL, guest: false }, "signedin");
       return true;
-    } catch (e) { return false; }
+    } catch (e) { 
+      console.error('[signIn] failed:', e.code, e.message);
+      return false; 
+    }
   },
   async signOut() { try { if (this.auth) await this.auth.signOut(); } catch (e) {} },
   async load() {

@@ -3209,7 +3209,7 @@
     if (!compact && typeof Cloud !== "undefined") {
       section("ACCOUNT");
       const signedIn = Cloud.loggedIn(), canIn = Cloud.canSignIn();
-      const btnLabel = signedIn ? (Cloud.provider === FirebaseProvider ? "SIGN OUT" : "SYNCED") : (canIn ? Cloud.signInLabel().toUpperCase() : "GUEST · LOCAL");
+      const btnLabel = signedIn ? (Cloud.provider === FirebaseProvider ? "SIGN OUT" : "SYNCED") : (canIn ? (Cloud.authRetryPrompt ? "RETRY SIGN IN" : Cloud.signInLabel().toUpperCase()) : "GUEST · LOCAL");
       // the row label doubles as the status line
       const statusLabel = signedIn ? Cloud.displayName() : "Guest";
       wide(statusLabel, btnLabel, signedIn && Cloud.provider !== FirebaseProvider, () => {
