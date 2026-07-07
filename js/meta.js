@@ -1,22 +1,33 @@
 // ------- meta-progression: persistent coins + shop (localStorage) -------
 const META = {
-  data: { coins: 0, buy: {} },
+  data: { lifetimeEarned: 0, lifetimeSpent: 0, buy: {} },
   load() {
-    try { this.data = Object.assign({ coins: 0, buy: {} }, JSON.parse(CG.store.get("tear_meta") || "{}")); }
-    catch (e) { this.data = { coins: 0, buy: {} }; }
+    let raw = {};
+    try { raw = JSON.parse(CG.store.get("tear_meta") || "{}"); } catch (e) {}
+    
+    // ONE-TIME MIGRATION: Convert legacy 'coins' to ledger format
+    if ('coins' in raw && !('lifetimeEarned' in raw)) {
+      raw.lifetimeEarned = raw.coins || 0;
+      raw.lifetimeSpent = 0;
+      delete raw.coins;
+      try { CG.store.set("tear_meta", JSON.stringify(raw)); } catch (e) {}
+    }
+    
+    this.data = Object.assign({ lifetimeEarned: 0, lifetimeSpent: 0, buy: {} }, raw);
     return this.data;
   },
   save() { try { CG.store.set("tear_meta", JSON.stringify(this.data)); } catch (e) {} },
-  coins() { return this.data.coins; },
+  coins() { return Math.max(0, (this.data.lifetimeEarned || 0) - (this.data.lifetimeSpent || 0)); },
   level(id) { return this.data.buy[id] || 0; },
-  addCoins(n) { this.data.coins += n; this.save(); },
+  addCoins(n) { this.data.lifetimeEarned = (this.data.lifetimeEarned || 0) + n; this.save(); },
   cost(item) { return Math.round(item.baseCost * Math.pow(item.costMult || 1.5, this.level(item.id))); },
-  canBuy(item) { return this.level(item.id) < item.maxLevel && this.data.coins >= this.cost(item); },
+  canBuy(item) { return this.level(item.id) < item.maxLevel && this.coins() >= this.cost(item); },
   buy(item) {
     if (!this.canBuy(item)) return false;
-    this.data.coins -= this.cost(item);
+    this.data.lifetimeSpent = (this.data.lifetimeSpent || 0) + this.cost(item);
     this.data.buy[item.id] = this.level(item.id) + 1;
     this.save();
+    if (typeof Cloud !== "undefined" && Cloud.loggedIn()) Cloud.push();
     return true;
   },
   // apply all purchased passives at the start of a run; ctx = { player, blade, mods }
@@ -24,7 +35,16 @@ const META = {
   // non-destructive merge of a remote wallet (cloud sync): keep the higher coins + levels
   merge(r) {
     if (!r) return;
-    this.data.coins = Math.max(this.data.coins || 0, r.coins || 0);
+    
+    // Remote migration inline (if cloud still has legacy 'coins' and no ledger)
+    if (r.coins !== undefined && r.lifetimeEarned === undefined) {
+      r.lifetimeEarned = r.coins;
+      r.lifetimeSpent = 0;
+      delete r.coins;
+    }
+    
+    this.data.lifetimeEarned = Math.max(this.data.lifetimeEarned || 0, r.lifetimeEarned || 0);
+    this.data.lifetimeSpent = Math.max(this.data.lifetimeSpent || 0, r.lifetimeSpent || 0);
     if (r.buy) for (const k in r.buy) this.data.buy[k] = Math.max(this.data.buy[k] || 0, r.buy[k] || 0);
   },
 };
