@@ -172,14 +172,21 @@ const FirebaseProvider = {
       // to long-polling automatically so reads/writes still work everywhere.
       try { this.db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) {}
       this._initRemoteConfig();   // live balance knobs (non-blocking; defaults to no change)
+      let firstLoad = true;
       this.auth.onAuthStateChanged(async (u) => {
+        if (firstLoad) {
+          firstLoad = false;
+          if (!u) {
+            await this.auth.signInAnonymously();
+            return;
+          }
+        }
         if (!u) return;
         this.uid = u.uid;
         const guest = u.isAnonymous;
         C._set({ id: u.uid, name: u.displayName || (guest ? "Guest" : "Player"), avatar: u.photoURL, guest }, guest ? "guest" : "signedin");
         await Cloud.sync();
       });
-      if (!this.auth.currentUser) await this.auth.signInAnonymously();   // guest identity so progress has a home
     } catch (e) {}
   },
   // Firebase Remote Config -> the REMOTE balance knobs. Non-blocking; on any failure the
