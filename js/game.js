@@ -80,13 +80,17 @@
     META.load(); PROFILE.load(); settings = loadSettings(); applySettings(); CG.loadingStop();
     // accounts + synced progress: picks CrazyGames / Firebase / Local by environment.
     // A guest logging in (or a returning account) merges cloud progress non-destructively.
-    Cloud.init().then(() => Cloud.onChange((u, st) => { 
-      try { ACH.check(); } catch (e) {} 
-      // First-run automatic prompt
-      if (st === "signedin" && Cloud.provider === FirebaseProvider && u && !u.guest && !u.customUsername) {
-        if (typeof beginRenameFlow === "function" && state !== "rename" && !renameContext) {
-          beginRenameFlow(true);
-        }
+    Cloud.init().then(() => Cloud.onChange((u, st) => {
+      try { ACH.check(); } catch (e) {}
+      // First-run name prompt: a real signed-in account with no display name yet. The
+      // username lives in PROFILE (loaded from local storage + merged on sync), so this
+      // reads true only when the account genuinely has no name — never a refresh loop.
+      // Auto-prompt at most ONCE per session; SKIP is respected until the next launch.
+      if (st === "signedin" && Cloud.provider === FirebaseProvider && u && !u.guest &&
+          !PROFILE.username() && !renamePrompted && state !== "rename" && !renameContext &&
+          typeof beginRenameFlow === "function") {
+        renamePrompted = true;
+        beginRenameFlow(true);
       }
     }));
   });
@@ -3589,47 +3593,49 @@
     // touch vs desktop — AUTO detects; 2-in-1 laptops and tablets can force either
     wide("Controls", settings.controls === "auto" ? ("AUTO (" + (Input.touchActive() ? "TOUCH" : "DESKTOP") + ")") : settings.controls.toUpperCase(), false,
       () => { settings.controls = settings.controls === "auto" ? "touch" : (settings.controls === "touch" ? "desktop" : "auto"); save(); });
-    // ---- ACCOUNT (full tab only): sign in to sync progress; provider decides the wording ----
+    // ---- ACCOUNT (full tab only): a proper card — status, display name, sign in/out ----
     if (!compact && typeof Cloud !== "undefined") {
       section("ACCOUNT");
-      const signedIn = Cloud.loggedIn(), canIn = Cloud.canSignIn();
-      const btnLabel = signedIn ? (Cloud.provider === FirebaseProvider ? "SIGN OUT" : "SYNCED") : (canIn ? (Cloud.authRetryPrompt ? "RETRY SIGN IN" : Cloud.signInLabel().toUpperCase()) : "GUEST · LOCAL");
-      // the row label doubles as the status line
-      const statusLabel = signedIn ? Cloud.displayName() : "Guest";
-      wide(statusLabel, btnLabel, signedIn && Cloud.provider !== FirebaseProvider, () => {
-        if (canIn) Cloud.signIn(); else if (signedIn && Cloud.provider === FirebaseProvider) Cloud.signOut();
-      });
-      if (signedIn && Cloud.provider === FirebaseProvider) {
-        wide("Display Name", "EDIT NAME", false, () => beginRenameFlow(false));
+      const signedIn = Cloud.loggedIn(), fb = Cloud.provider === FirebaseProvider, canIn = Cloud.canSignIn();
+      const cardY = y, cardH = signedIn ? 92 : 62, cardW = rx - fx;
+      ctx.save();
+      ctx.globalAlpha = 0.05; ctx.fillStyle = UI.ink; ctx.fillRect(fx, cardY, cardW, cardH); ctx.globalAlpha = 1;
+      ctx.fillStyle = signedIn ? "#2f9e6b" : t.color.muted; ctx.fillRect(fx, cardY, 4, cardH);   // green spine when synced
+      ctx.beginPath(); ctx.arc(fx + 26, cardY + 27, 6, 0, 6.2832); ctx.fillStyle = signedIn ? "#2f9e6b" : "#8a93a6"; ctx.fill();
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      ctx.fillStyle = UI.ink; ctx.font = UI.font(t.type.lead, true);
+      ctx.fillText(signedIn ? Cloud.displayName() : "Guest", fx + 46, cardY + 32);
+      ctx.globalAlpha = 0.6; ctx.font = UI.font(t.type.micro, false);
+      ctx.fillText(signedIn ? "Signed in · progress synced to the cloud"
+        : (canIn ? "Playing locally — sign in to sync progress & compete" : "Progress saved on this device"), fx + 46, cardY + 52);
+      ctx.globalAlpha = 1; ctx.restore();
+      const bw2 = 230, bx2 = rx - bw2 - 12;
+      if (signedIn) {
+        const locked = !Cloud.canRename();
+        uiButtons.push({ x: bx2, y: cardY + 10, w: bw2, h: 34, size: 12,
+          label: locked ? "NAME LOCKED · " + Cloud.renameCooldownDays() + "d" : (Cloud.hasCustomName() ? "CHANGE NAME" : "SET DISPLAY NAME"),
+          enabled: !locked, action: () => beginRenameFlow(false) });
+        if (fb) uiButtons.push({ x: bx2, y: cardY + 50, w: bw2, h: 34, size: 12, label: "SIGN OUT", action: () => Cloud.signOut() });
+      } else if (canIn) {
+        uiButtons.push({ x: bx2, y: cardY + 13, w: bw2, h: 36, size: 13,
+          label: (Cloud.authRetryPrompt ? "RETRY · " : "") + Cloud.signInLabel().toUpperCase(), action: () => Cloud.signIn() });
       }
+      y += cardH + 6;
     }
     return y;
   }
 
-  let renameContext = null;
+  let renameContext = null, renamePrompted = false;
   function beginRenameFlow(isFirstRun) {
-    if (typeof Cloud === "undefined" || !Cloud.loggedIn() || Cloud.provider !== FirebaseProvider) return;
+    if (typeof Cloud === "undefined" || !Cloud.loggedIn()) return;
     document.exitPointerLock();
     Input.textEntryMode = true;
     const input = document.getElementById("nameInput");
-    input.value = (Cloud.user && Cloud.user.customUsername) ? Cloud.user.customUsername : "";
+    input.value = PROFILE.username() || "";
     input.style.display = "block";
-    
-    // Scale and position input over the canvas
-    const rect = canvas.getBoundingClientRect();
-    const scale = rect.width / (W + OVERSCAN.x * 2);
-    const boxW = 320, boxH = 48;
-    const boxX = W / 2 - boxW / 2 + OVERSCAN.x;
-    const boxY = H / 2 - 20 + OVERSCAN.y;
-    
-    input.style.left = (rect.left + boxX * scale) + "px";
-    input.style.top = (rect.top + boxY * scale) + "px";
-    input.style.width = (boxW * scale) + "px";
-    input.style.height = (boxH * scale) + "px";
-    input.style.fontSize = (24 * scale) + "px";
-    
+    input.style.color = "#eafcff";
+    positionNameInput();
     setTimeout(() => { input.focus(); }, 50);
-    
     renameContext = { error: "", isFirstRun };
     const prevState = state;
     state = "rename";
@@ -3659,12 +3665,12 @@
       renameContext.error = "Name contains restricted words";
       return;
     }
-    // Cooldown check
-    if (Cloud.user && Cloud.user.usernameSetAt && (Date.now() - Cloud.user.usernameSetAt < 7 * 24 * 60 * 60 * 1000)) {
+    // Cooldown check (7 days between changes) — first-ever set is always allowed
+    if (PROFILE.usernameSetAt() && !Cloud.canRename()) {
       renameContext.error = "You can only change your name once every 7 days.";
       return;
     }
-    
+
     // Valid!
     Cloud.setCustomUsername(name);
     closeRename();
@@ -3684,27 +3690,52 @@
     renameContext = null;
   }
 
+  // the name-entry box geometry (shared by the DOM <input> overlay + the drawn frame)
+  const NAMEBOX = { w: 380, h: 56, get x() { return W / 2 - this.w / 2; }, get y() { return H / 2 - 8; } };
+  function positionNameInput() {
+    const input = document.getElementById("nameInput"); if (!input) return;
+    const rect = canvas.getBoundingClientRect();
+    const scale = rect.width / (W + OVERSCAN.x * 2);
+    input.style.left = (rect.left + (NAMEBOX.x + OVERSCAN.x) * scale) + "px";
+    input.style.top = (rect.top + (NAMEBOX.y + OVERSCAN.y) * scale) + "px";
+    input.style.width = (NAMEBOX.w * scale) + "px";
+    input.style.height = (NAMEBOX.h * scale) + "px";
+    input.style.fontSize = (26 * scale) + "px";
+  }
+
   function renderRename() {
-    // dim the background
-    ctx.fillStyle = "rgba(10, 11, 16, 0.85)";
-    ctx.fillRect(-OVERSCAN.x, -OVERSCAN.y, W + OVERSCAN.x * 2, H + OVERSCAN.y * 2);
-    
-    const cx = W / 2, cy = H / 2;
-    UI.header(ctx, "CHOOSE A NAME", "how you appear on leaderboards & replays", 1);
-    
-    // draw the input backing box
-    ctx.fillStyle = "#000";
-    ctx.strokeStyle = UI.t.color.paper;
-    ctx.lineWidth = 2;
-    ctx.fillRect(cx - 160, cy - 20, 320, 48);
-    ctx.strokeRect(cx - 160, cy - 20, 320, 48);
-    
-    if (renameContext && renameContext.error) {
-      UI.text(ctx, renameContext.error, cx, cy + 46, UI.t.type.caption, "center", "#f44");
-    }
-    
-    uiButtons.push({ x: cx - 160, y: cy + 70, w: 150, h: 42, label: renameContext && renameContext.isFirstRun ? "SKIP" : "CANCEL", action: cancelRename });
-    uiButtons.push({ x: cx + 10, y: cy + 70, w: 150, h: 42, label: "CONFIRM", sel: true, action: submitRename });
+    const t = UI.t, cx = W / 2, cy = H / 2, sr = screenRect();
+    positionNameInput();   // keep the DOM input glued to the box across resize / fullscreen
+    // full dim
+    ctx.fillStyle = "rgba(8,9,14,0.9)"; ctx.fillRect(sr.x, sr.y, sr.w, sr.h);
+    // modal card
+    const cw = 560, ch = 320, cardX = cx - cw / 2, cardY = cy - ch / 2 - 10;
+    ctx.fillStyle = "#0e1017"; ctx.fillRect(cardX, cardY, cw, ch);
+    ctx.strokeStyle = t.color.accent; ctx.lineWidth = 2; ctx.globalAlpha = 0.9; ctx.strokeRect(cardX, cardY, cw, ch); ctx.globalAlpha = 1;
+    ctx.fillStyle = t.color.accent; ctx.fillRect(cardX, cardY, cw, 4);   // accent header strip
+    // title + subtitle
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "#f1eff9"; ctx.font = UI.font(t.type.h2, true);
+    ctx.fillText(renameContext && renameContext.isFirstRun ? "CHOOSE YOUR NAME" : "CHANGE NAME", cx, cardY + 56);
+    ctx.fillStyle = "#9fa3b4"; ctx.font = UI.font(t.type.caption, false);
+    ctx.fillText("how you appear on leaderboards & replays", cx, cardY + 82);
+    // input frame (the DOM <input> sits exactly on top)
+    const err = renameContext && renameContext.error;
+    ctx.fillStyle = "#05060a"; ctx.fillRect(NAMEBOX.x, NAMEBOX.y, NAMEBOX.w, NAMEBOX.h);
+    ctx.strokeStyle = err ? "#e2503b" : t.color.accent; ctx.lineWidth = 2; ctx.strokeRect(NAMEBOX.x, NAMEBOX.y, NAMEBOX.w, NAMEBOX.h);
+    // live char counter + rule/error line under the box
+    const len = ((document.getElementById("nameInput") || {}).value || "").trim().length;
+    ctx.textAlign = "right"; ctx.font = UI.font(11, true);
+    ctx.fillStyle = (len > 16 || (len > 0 && len < 3)) ? "#e2503b" : "#6a6f80";
+    ctx.fillText(len + " / 16", NAMEBOX.x + NAMEBOX.w, NAMEBOX.y + NAMEBOX.h + 20);
+    ctx.textAlign = "left";
+    if (err) { ctx.fillStyle = "#e2503b"; ctx.font = UI.font(t.type.caption, true); ctx.fillText(err, NAMEBOX.x, NAMEBOX.y + NAMEBOX.h + 20); }
+    else { ctx.fillStyle = "#6a6f80"; ctx.font = UI.font(11, false); ctx.fillText("3–16 chars · letters, numbers, spaces, _ -", NAMEBOX.x, NAMEBOX.y + NAMEBOX.h + 20); }
+    ctx.textAlign = "left";
+    // buttons (INFO: rename screen renders its own dark buttons, so light ink)
+    UI.ink = "#f1eff9";
+    uiButtons.push({ x: cx - 170, y: cardY + ch - 66, w: 160, h: 46, size: 14, label: renameContext && renameContext.isFirstRun ? "SKIP FOR NOW" : "CANCEL", action: cancelRename });
+    uiButtons.push({ x: cx + 10, y: cardY + ch - 66, w: 160, h: 46, size: 14, label: "CONFIRM", sel: true, action: submitRename });
   }
 
   function renderSettings() {

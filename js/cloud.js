@@ -33,10 +33,24 @@ const Cloud = {
   _set(user, status, silent) { this.user = user; this.status = status; if (!silent) this._emit(); },
 
   loggedIn() { return this.status === "signedin"; },
-  displayName() { 
+  // the name shown on leaderboards/replays. A custom username (stored in PROFILE, synced +
+  // known instantly on boot) always wins; else the CG account name; else a generic label.
+  displayName() {
+    const custom = (typeof PROFILE !== "undefined") ? PROFILE.username() : "";
+    if (custom) return custom;
     if (this.provider === CrazyProvider) return this.user ? this.user.name : "Guest";
-    if (this.user && this.user.customUsername) return this.user.customUsername;
-    return "Player"; 
+    return this.status === "signedin" ? "Player" : "Guest";
+  },
+  hasCustomName() { return (typeof PROFILE !== "undefined") && !!PROFILE.username(); },
+  // may this account set/change a display name? (an actual account, and not inside the 7-day cooldown)
+  canRename() {
+    if (this.status !== "signedin") return false;
+    const at = (typeof PROFILE !== "undefined") ? PROFILE.usernameSetAt() : 0;
+    return !at || (Date.now() - at >= 7 * 24 * 60 * 60 * 1000);
+  },
+  renameCooldownDays() {
+    const at = (typeof PROFILE !== "undefined") ? PROFILE.usernameSetAt() : 0;
+    return at ? Math.ceil((7 * 24 * 60 * 60 * 1000 - (Date.now() - at)) / (24 * 60 * 60 * 1000)) : 0;
   },
   canSignIn() { return this.provider && !!this.provider.signIn && this.status !== "signedin"; },
   // label for the account button — provider decides the wording (CG vs Google)
@@ -62,24 +76,20 @@ const Cloud = {
   },
   async signOut() { if (this.provider && this.provider.signOut) { try { await this.provider.signOut(this); } catch (e) {} } },
 
-  // merge remote <-> local, then persist both ways so progress follows the account
+  // set the custom display name — stored in PROFILE (so it merges + syncs like everything
+  // else and survives refresh from local storage) and pushed to the cloud.
   async setCustomUsername(name) {
-    if (!this.user || !this.provider) return;
-    this.user.customUsername = name;
-    this.user.usernameSetAt = Date.now();
+    if (typeof PROFILE !== "undefined") { PROFILE.setUsername(name); }
     this._emit();
     await this.push();
   },
 
+  // merge remote <-> local, then persist both ways so progress follows the account
   async sync() {
     if (!this.provider || !this.provider.load) return;
     try {
       const remote = await this.provider.load(this);
       if (remote) {
-        if (remote.username && this.user) {
-          this.user.customUsername = remote.username;
-          this.user.usernameSetAt = remote.usernameSetAt || 0;
-        }
         if (remote.profile) PROFILE.merge(remote.profile);
         if (remote.meta && META.merge) META.merge(remote.meta);
         PROFILE.save(); if (META.save) META.save();
@@ -90,12 +100,8 @@ const Cloud = {
   },
   async push() {
     if (!this.provider || !this.provider.save) return;
-    const payload = { profile: PROFILE.data, meta: META.data };
-    if (this.user && this.user.customUsername) {
-      payload.username = this.user.customUsername;
-      payload.usernameSetAt = this.user.usernameSetAt || 0;
-    }
-    try { await this.provider.save(this, payload); } catch (e) {}
+    // username now lives inside PROFILE.data, so it rides the profile blob — nothing extra
+    try { await this.provider.save(this, { profile: PROFILE.data, meta: META.data }); } catch (e) {}
   },
 
   // ---- the SHARED layer (leaderboards / replays / telemetry) rides the Replay Passport
@@ -207,17 +213,8 @@ const FirebaseProvider = {
         if (!u) return;
         this.uid = u.uid;
         const guest = u.isAnonymous;
-        let existingName = (C.user && C.user.id === u.uid) ? C.user.customUsername : undefined;
-        let existingSetAt = (C.user && C.user.id === u.uid) ? C.user.usernameSetAt : undefined;
-        C._set({ 
-            id: u.uid, 
-            name: u.displayName || (guest ? "Guest" : "Player"), 
-            avatar: u.photoURL, 
-            guest,
-            customUsername: existingName,
-            usernameSetAt: existingSetAt
-        }, guest ? "guest" : "signedin", true);
-        await Cloud.sync();
+        C._set({ id: u.uid, name: u.displayName || (guest ? "Guest" : "Player"), avatar: u.photoURL, guest }, guest ? "guest" : "signedin", true);
+        await Cloud.sync();   // pulls the profile (incl. the custom username) back from the cloud
       });
     } catch (e) {}
   },
@@ -260,16 +257,7 @@ const FirebaseProvider = {
       }
       else res = await this.auth.signInWithPopup(provider);
       const u = res.user; this.uid = u.uid;
-      let existingName = (C.user && C.user.id === u.uid) ? C.user.customUsername : undefined;
-      let existingSetAt = (C.user && C.user.id === u.uid) ? C.user.usernameSetAt : undefined;
-      C._set({ 
-          id: u.uid, 
-          name: u.displayName || "Player", 
-          avatar: u.photoURL, 
-          guest: false,
-          customUsername: existingName,
-          usernameSetAt: existingSetAt
-      }, "signedin", true);
+      C._set({ id: u.uid, name: u.displayName || "Player", avatar: u.photoURL, guest: false }, "signedin", true);
       return true;
     } catch (e) { 
       console.error('[signIn] failed:', e.code, e.message);

@@ -49,6 +49,12 @@ const PROFILE = {
     this.save();
   },
 
+  // ---- display name (lives IN the profile so it syncs with everything else and is known
+  // instantly on boot from local storage — no fragile separate Firestore field/rule) ----
+  username() { return this.data.username || ""; },
+  usernameSetAt() { return this.data.usernameSetAt || 0; },
+  setUsername(name) { this.data.username = name; this.data.usernameSetAt = Date.now(); this.save(); },
+
   // ---- shards (achievement currency) ----
   shards() { return this.data.shards || 0; },
   addShards(n) { this.data.shards = (this.data.shards || 0) + n; this.save(); },
@@ -89,6 +95,8 @@ const PROFILE = {
       else this.data.stats[k] = Math.max(this.data.stats[k] || 0, r.stats[k] || 0);
     }
     if (r.ach) for (const id in r.ach) { if (!this.data.ach[id] || r.ach[id] < this.data.ach[id]) this.data.ach[id] = r.ach[id]; }
+    // username: keep whichever was set most recently (so a rename on another device wins)
+    if (r.username && (r.usernameSetAt || 0) > (this.data.usernameSetAt || 0)) { this.data.username = r.username; this.data.usernameSetAt = r.usernameSetAt || 0; }
     if (r.modes) for (const m in r.modes) this.data.modes[m] = true;
     if (r.seen) for (const s in r.seen) this.data.seen[s] = true;
     // achievement set-trackers: union weapons won + Adventure difficulties cleared
