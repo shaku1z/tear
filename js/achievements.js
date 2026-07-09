@@ -117,6 +117,37 @@ const ACH = {
       S("arsenal", "mastery", "legendary", "Arsenal", "Max out every item in the meta shop.", "shopMaxed", 13),
       S("speedrunner", "mastery", "epic", "Speedrunner", "Clear the Adventure campaign in under 15 minutes.", "speedrunUnder15", 1),
       S("close_call", "survival", "rare", "By a Thread", "Defeat a boss while at 10% HP or lower.", "bossKillsLowHP", 1),
+
+      // ---- BOSS DISRESPECT: humiliation tactics ----
+      S("warden_deflect", "boss", "epic", "Stop Hitting Yourself", "Defeat The Warden using ONLY their deflected projectiles.", "wardenDeflectOnly", 1),
+      S("colossus_throw", "boss", "rare", "David and Goliath", "Defeat The Iron Colossus without a single melee swing (throws only).", "colossusThrowOnly", 1),
+      S("aldric_interrupt", "boss", "epic", "Silence, King", "Interrupt Aldric with a Power Slam 3 times in one fight.", "aldricSlams", 3),
+      S("echo_parry", "boss", "legendary", "I Am Rubber", "Land the killing blow on The Echo with a deflected projectile.", "echoReflectKill", 1),
+      S("source_speed", "boss", "epic", "Pulling the Plug", "Defeat The Source in under 60 seconds.", "sourceSpeedrun", 1),
+
+      // ---- THE SADIST: physics & sandbox shenanigans ----
+      S("space_program", "skill", "rare", "Space Program", "Launch an enemy clean off the top of the screen.", "launchOffScreen", 1),
+      S("pinball", "skill", "epic", "Pinball Wizard", "Hit 4 different enemies with a single thrown blade.", "bladeBounces", 4),
+      S("rainbow_pain", "combat", "epic", "Taste the Rainbow", "Have Bleed, Burn and Mark on one enemy at once.", "tripleStatus", 1),
+      S("surgical", "combat", "rare", "Surgical Extraction", "Kill an Armored enemy with status effects — armor never broken.", "armorBypassKills", 1),
+      S("air_assassination", "skill", "epic", "Death from Above", "Kill 3 enemies in one airborne combo without landing.", "airComboKills", 3),
+
+      // ---- THE MASOCHIST: self-imposed restrictions ----
+      S("no_takebacks", "mastery", "epic", "No Takebacks", "Clear an Adventure stage without ever throwing your blade.", "stageNoThrow", 1),
+      S("butterfingers", "mastery", "epic", "Butterfingers", "Clear an Adventure stage without a single melee swing.", "stageThrowOnly", 1),
+      S("glass_cannon", "mastery", "rare", "Glass Cannon", "Clear a stage with damage upgrades but no Thick Skin or Warding.", "stageGlassCannon", 1),
+      S("deflector_shield", "skill", "epic", "Immovable Object", "Perfect-parry 10 in a row without moving, dashing or being hit.", "staticParryStreak", 10),
+      S("heavy_boots", "mastery", "epic", "Heavy Boots", "Clear a 10-wave stage without jumping once.", "stageNoJump", 1),
+
+      // ---- ANOMALIES & ECONOMY ----
+      S("the_setup", "skill", "rare", "The Setup", "Updraft an Armored enemy, then spike it into the ground.", "spikeArmored", 1),
+      S("return_to_sender", "combat", "uncommon", "Return to Sender", "Kill a Bomber with its own deflected bomb.", "bombDeflectKills", 1),
+      S("chain_reaction", "combat", "rare", "Chain Reaction", "Kill 5 enemies with a single deflected bomb.", "bombMultikill", 5),
+      S("matador", "skill", "rare", "Matador", "I-frame dash through 15 projectiles in one run.", "projectileDashes", 15),
+      S("cinematic_kill", "combat", "uncommon", "Stylishly Late", "Land a kill during the stage-clear transition.", "transitionKills", 1),
+      S("phoenix_full", "survival", "epic", "From the Ashes", "Revive from a killing blow, then heal back to full HP.", "reviveToFull", 1),
+      S("horde_breaker", "combat", "rare", "Horde Breaker", "Clear an Endless horde wave in under 15 seconds.", "fastHordeClear", 1),
+      S("exodia", "mastery", "legendary", "The Forbidden Technique", "Own Long Arm, Throwing Arm, Aether Step and Lifeline at once.", "exodiaBuild", 1),
     ];
 
     // ---- CATEGORY MASTERY: unlock every OTHER achievement in a category ----

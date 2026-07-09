@@ -265,7 +265,12 @@
     FX.explode(x, y, deflected ? CONFIG.colors.perfect : CONFIG.colors.bomber, deflected ? 1.5 : 1.2);
     addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry * (deflected ? 0.9 : 0.6)); SFX.boom();
     if (deflected) {
-      dealAoE(x, y, B.blastRadius, B.blastDmg * 1.3);   // parried into a crowd = big payoff
+      const bombers = enemies.filter((e) => !e.dead && e.isBomber && len(e.x - x, e.y - y) <= B.blastRadius + e.radius);   // bombers caught in the blast
+      const kills = dealAoE(x, y, B.blastRadius, B.blastDmg * 1.3);   // parried into a crowd = big payoff
+      if (achTracks()) {
+        if (kills >= 5) PROFILE.maxStat("bombMultikill", kills);                                   // Chain Reaction (5 in one deflected bomb)
+        if (bombers.some((e) => e.dead)) { PROFILE.maxStat("bombDeflectKills", 1); achCheck(); }   // Return to Sender (killed a bomber with its own bomb)
+      }
     } else if (len(player.x - x, player.y - y) <= B.blastRadius + player.hw) {
       const r = player.takeDamage(B.blastDmg, x);
       if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb();
@@ -1898,9 +1903,11 @@
 
     run.runTime += dt; run.waveTime += dt;
     updateTrick(dt);
-    if (player.tookHit) { player.tookHit = false; run._dmgThisWave = true; run._dmgThisRun = true; run._dmgThisStage = true; }   // no-hit tracking
+    if (player.tookHit) { player.tookHit = false; run._dmgThisWave = true; run._dmgThisRun = true; run._dmgThisStage = true; AT.breakStreak(); }   // no-hit tracking (a hit also breaks the static-parry streak)
     GHOST.sample(dt, player, blade);   // record the hero's path (no-op unless recording)
     // ---- per-frame achievement tracking (air time, status effects) ----
+    if (run._prevGround && !player.onGround && player.vy < -100) AT.jumped();   // Heavy Boots: a real jump happened
+    run._prevGround = player.onGround;
     if (player.onGround) { run._airT = 0; run._updraftChain = 0; }
     else run._airT = (run._airT || 0) + dt;
     if (achTracks()) {
@@ -1909,6 +1916,7 @@
       for (const en of enemies) { if (en.dead) continue; if (en.bleedStacks > maxBleed) maxBleed = en.bleedStacks; if (en.burnT > 0) burning++; }
       PROFILE.maxStat("maxBleedStacks", maxBleed);        // Surgeon (20 bleed)
       PROFILE.maxStat("maxConcurrentBurn", burning);      // Inferno (10 burning)
+      AT.tick(dt);                                        // exotic per-frame trackers
       run._achTick = (run._achTick || 0) + dt;
       if (run._achTick >= 0.5) { run._achTick = 0; achCheck(); }   // pop mid-combat unlocks within ~0.5s
     }
@@ -1987,6 +1995,13 @@
   function frame(now) {
     let dt = (now - last) / 1000; last = now;
     if (dt > 0.1) dt = 0.1;
+
+    // Manual Clipper Hooks
+    if (typeof Clipper !== "undefined") {
+      if (Input.pressed.has("BracketLeft")) Clipper.start();
+      if (Input.pressed.has("BracketRight")) Clipper.stop();
+    }
+
     if (loreT > 0) {
       if (Input.confirmPressed() || Input.takeClick()) loreT = Math.min(loreT, 0.35);   // skippable (Space / click)
       loreT -= dt;
@@ -2639,9 +2654,9 @@
     ctx.fillText(a.name.length > 22 ? a.name.slice(0, 21) + "…" : a.name, cx + 70, cy + 42);
     ctx.fillStyle = "#9fa3b4"; ctx.font = UI.font(10, false);
     ctx.fillText(a.desc.length > 34 ? a.desc.slice(0, 33) + "…" : a.desc, cx + 70, cy + 59);
-    // shard chip (top-right)
-    ctx.textAlign = "right"; ctx.fillStyle = "#13c4d6"; ctx.font = UI.font(14, true);
-    ctx.fillText("◆ +" + ACH.shardsFor(a), cx + cw - 12, cy + 22);
+    // shard & coin chips (top-right)
+    ctx.textAlign = "right"; ctx.fillStyle = "#13c4d6"; ctx.font = UI.font(13, true);
+    ctx.fillText("◆ +" + ACH.shardsFor(a) + "  +" + ACH.coinsFor(a) + "c", cx + cw - 12, cy + 22);
     ctx.restore();
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
   }
@@ -3121,11 +3136,18 @@
       ctx.fillStyle = unlocked ? rar.color : t.color.accent; ctx.fillRect(pbX, pbY, pbW * prog, 5);
       ctx.fillStyle = unlocked ? rar.color : "rgba(90,92,108,0.9)"; ctx.font = UI.font(10, true); ctx.textAlign = "left";
       ctx.fillText(unlocked ? "UNLOCKED" : ACH.progressText(a), pbX, pbY + 16);
-      // shard reward (right)
+      // rewards (right)
       ctx.textAlign = "right";
-      ctx.fillStyle = unlocked ? "#13c4d6" : "rgba(120,150,160,0.5)"; ctx.font = UI.font(t.type.lead, true);
-      ctx.fillText("◆ " + ACH.shardsFor(a), x + colWd - 16, y + 44);
-      if (unlocked) { ctx.fillStyle = rar.color; ctx.font = UI.font(11, true); ctx.fillText("EARNED", x + colWd - 16, y + 64); }
+      ctx.font = UI.font(11, true);
+      ctx.fillStyle = unlocked ? "#13c4d6" : "rgba(120,150,160,0.5)";
+      ctx.fillText("◆ " + ACH.shardsFor(a) + " SHARDS", x + colWd - 16, y + 34);
+      ctx.fillStyle = unlocked ? t.color.accent : "rgba(220,120,120,0.4)";
+      ctx.fillText("◆ " + ACH.coinsFor(a) + " COINS", x + colWd - 16, y + 50);
+      if (unlocked) {
+        ctx.fillStyle = rar.color;
+        ctx.font = UI.font(10, true);
+        ctx.fillText("EARNED", x + colWd - 16, y + 66);
+      }
       ctx.textAlign = "left";
     });
     ctx.restore();
@@ -3812,7 +3834,7 @@
     rows.forEach(([a, isEarned]) => {
       const rar = ACH.RARITY[a.rarity] || ACH.RARITY.common;
       drawProgressRow(px, y, pw, (isEarned ? "✓ " : "") + a.name, ACH.progress(a), 1, isEarned,
-        isEarned ? "◆ +" + ACH.shardsFor(a) : ACH.progressText(a), isEarned ? rar.color : "#0f9fb0", isEarned ? rar.color : UI.ink);
+        isEarned ? "◆ +" + ACH.shardsFor(a) + "  +" + ACH.coinsFor(a) + "c" : ACH.progressText(a), isEarned ? rar.color : "#0f9fb0", isEarned ? rar.color : UI.ink);
       y += 38;
     });
     if (!rows.length) UI.text(ctx, "Keep fighting to make progress.", px + pw / 2, y + 20, t.type.caption, "center", t.alpha.muted);
