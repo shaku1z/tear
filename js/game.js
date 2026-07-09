@@ -166,6 +166,7 @@
       if (!seen[currentStage.name]) { seen[currentStage.name] = 1; PROFILE.maxStat("biomesSeen", Object.keys(seen).length); achCheck(); }
     }
     if (run && typeof AT !== "undefined") AT.stageReset();   // fresh per-stage restriction flags
+    GHOST.stage(i);   // ghost 2.0: replays show the right biome at the right time
   }
 
   // ---- state ----
@@ -184,6 +185,7 @@
   let tierChoices = [];               // abilities offered to evolve after a campaign boss
   let achToast = null, achToastT = 0;   // the "achievement unlocked" banner (pulled from ACH.pending)
   let lastGhost = null;                 // the just-finished run's replay packet (for "watch your run")
+  let lastVaultId = null;               // that run's Vault entry id (for publish-from-defeat later)
   let arsenalScroll = 0;                // scroll offset for the pause/defeat "Your Arsenal" panel
   let settingsReturn = "menu";          // where the Settings BACK button returns to (menu, or paused mid-run)
   let replayCtx = null;                 // active replay: { data, stage, platforms, from, loading }
@@ -664,6 +666,11 @@
 
   function addStyle(kind) {
     TUT.mark(kind);   // the tutorial listens to the trick pipeline
+    // ghost 2.0: the big beats land in the event track (+ the run's thumbnail)
+    if (GHOST.recording() && (kind === "parry" || kind === "superslam" || kind === "updraft" || kind === "slam")) {
+      GHOST.event(kind, player ? player.x : 0, player ? player.y : 0);
+      GHOST.snapshot(canvas, kind === "superslam" ? 3 : kind === "parry" ? 2 : 1);
+    }
     const T = CONFIG.trick;
     let pts = T.pts[kind] || 2;
     if (kind !== run.lastTrick) pts *= T.variety;   // reward varied tricks
@@ -976,6 +983,8 @@
       stageBannerT = 2.4; stageName = (BOSS_ROSTER.find((b) => b.id === run.curBoss) || {}).name || "BOSS";
     }
     run.spawnQueue = [];
+    GHOST.wave(run.wave, run.isBossWave ? "boss" : "start");   // ghost 2.0: chapter marker
+    if (run.wave === 2) GHOST.snapshot(canvas, 0);             // baseline thumbnail so every run has one
     if (run.isBossWave) {
       run.spawnQueue.push({ type: "boss" });
     } else {
@@ -1093,6 +1102,8 @@
     e.spawnT = 0.35;   // brief materialize so spawns read as spawns (not teleports)
     FX.ring(e.x, e.y, 10, e.color);   // arrival pulse in the enemy's own colour
     if (e.isBoss && !GFX.low) { FX.ring(e.x, e.y, 22, e.color); FX.burst(e.x, e.y, 0, -1, 10, e.color); }
+    // ghost 2.0: log the spawn (kind + variant + boss identity) so replays can rebuild it
+    GHOST.spawn(e, e.isBoss ? "boss" : spec.type, { vn: e.variantName || "", b: e.bossId || spec.bossId || "" });
     enemies.push(e);
   }
 
@@ -1133,6 +1144,7 @@
       run.waveActive = false;
       Backdrop.bloom(currentStage.accent, 0.14, 0.8);   // wave cleared: a breath of light
       run.waveLog.push({ wave: run.isBossWave ? "BOSS" : run.wave, time: run.waveTime, kills: run.waveKills, peak: run.wavePeak });
+      GHOST.wave(run.wave, "clear");   // ghost 2.0
       if (achTracks()) {   // progression + no-hit feats, tallied per cleared wave
         PROFILE.maxStat("bestWave", run.wave);
         PROFILE.maxStat("longestRun", Math.floor(run.runTime));
@@ -1189,6 +1201,26 @@
     }
   }
 
+  // package the run's recording: compose the summary card, drop it in the Vault (every
+  // run, win or loss), keep lastGhost for the WATCH REPLAY button, feed the legacy
+  // per-board best (superseded once publishing lands).
+  function finishRecording(won) {
+    const kills = run.waveLog.reduce((s, r) => s + (r.kills || 0), 0);
+    const peak = run.waveLog.reduce((m, r) => Math.max(m, r.peak || 1), 1);
+    const summary = {
+      mode: run.mode, diff: run.diff, wave: run.wave, score: run.score, time: Math.round(run.runTime),
+      won: !!won, kills, peak, name: Cloud.displayName(), stage: stageIndex, weapon: run.weaponId,
+      loadout: ownedAbilities().map((u) => ({ id: u.id, tier: run.mods.tier[u.id] || 1, n: run.mods.owned[u.id] || 1 })),
+    };
+    lastGhost = GHOST.stopRec(summary);
+    if (lastGhost) {
+      summary.thumb = lastGhost.thumb || null;
+      lastVaultId = VAULT.add(lastGhost, summary);
+      GHOST.saveLocal(lastGhost); Cloud.submitGhost(run.mode, run.diff, lastGhost);
+    }
+    return lastGhost;
+  }
+
   function endRun() {
     if (typeof Clipper !== 'undefined') Clipper.stop();
     // log the in-progress wave the player died on
@@ -1199,8 +1231,7 @@
     if (achTracks()) { PROFILE.addStat("runs", 1); PROFILE.maxStat("longestRun", Math.floor(run.runTime)); DAILY.bump("runs", 1); achCheck();
       Cloud.submitScore(run.mode, run.diff, { score: run.score, wave: run.wave, time: run.runTime }); Cloud.push();   // global leaderboard + cloud save
       Cloud.logEvent("run_end", { mode: run.mode, diff: run.diff, wave: run.wave, score: run.score, time: Math.round(run.runTime), peak: run.wavePeak, died: true });   // balancing telemetry: where players drop off
-      lastGhost = GHOST.stopRec({ mode: run.mode, diff: run.diff, score: run.score, wave: run.wave, name: Cloud.displayName(), stage: stageIndex });
-      if (lastGhost) { GHOST.saveLocal(lastGhost); Cloud.submitGhost(run.mode, run.diff, lastGhost); } }
+      finishRecording(false); }
     overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, earned, coins: META.coins() };
     state = "gameover";
     document.exitPointerLock();
@@ -1224,8 +1255,7 @@
       achCheck();
       Cloud.submitScore(run.mode, run.diff, { score: run.score, wave: run.wave, time: run.runTime }); Cloud.push();   // global leaderboard + cloud save
       Cloud.logEvent("run_end", { mode: run.mode, diff: run.diff, wave: run.wave, score: run.score, time: Math.round(run.runTime), peak: run.wavePeak, won: true, campaign: !!campaign });
-      lastGhost = GHOST.stopRec({ mode: run.mode, diff: run.diff, score: run.score, wave: run.wave, name: Cloud.displayName(), stage: stageIndex });
-      if (lastGhost) { GHOST.saveLocal(lastGhost); Cloud.submitGhost(run.mode, run.diff, lastGhost); } }
+      finishRecording(true); }
     overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, win: true, campaign: !!campaign, earned, coins: META.coins() };
     state = "win";
     document.exitPointerLock();
@@ -1894,6 +1924,7 @@
     // bombers that died (fuse or kill) detonate
     for (const e of enemies) if (e.dead && e.isBomber && !e.blasted) { e.blasted = true; bomberBlast(e); }
 
+    if (GHOST.recording()) for (const e of enemies) if (e.dead && e._gid) GHOST.death(e);   // ghost 2.0: log every departure
     enemies = enemies.filter((e) => !e.dead);
     projectiles = projectiles.filter((p) => !p.dead);
     for (const p of projectiles) p.update(dt);
@@ -1904,7 +1935,7 @@
     run.runTime += dt; run.waveTime += dt;
     updateTrick(dt);
     if (player.tookHit) { player.tookHit = false; run._dmgThisWave = true; run._dmgThisRun = true; run._dmgThisStage = true; AT.breakStreak(); }   // no-hit tracking (a hit also breaks the static-parry streak)
-    GHOST.sample(dt, player, blade);   // record the hero's path (no-op unless recording)
+    GHOST.sample(dt, player, blade, enemies);   // record the hero + enemy positions (no-op unless recording)
     // ---- per-frame achievement tracking (air time, status effects) ----
     if (run._prevGround && !player.onGround && player.vy < -100) AT.jumped();   // Heavy Boots: a real jump happened
     run._prevGround = player.onGround;
@@ -1935,14 +1966,14 @@
         FX.ring(player.x, player.y, 16, CONFIG.colors.perfect); FX.burst(player.x, player.y, 0, -1, 16, CONFIG.colors.perfect);
         addFloater(player.x, player.y - 44, "SECOND WIND", true, CONFIG.colors.perfect);
         addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry); SFX.parry();
-        if (achTracks()) { PROFILE.addStat("revivesUsed", 1); AT.revived(); achCheck(); }
+        if (achTracks()) { PROFILE.addStat("revivesUsed", 1); AT.revived(); GHOST.event("revive", player.x, player.y); achCheck(); }
       } else if (player.abilityRevives > 0 && !player.oneHit) {
         // extra life #2 — Last Stand (draftable ability): a defiant, hotter rise
         player.abilityRevives--; player.hp = Math.round(player.maxHp * 0.40); player.iframe = 2.0;
         FX.explode(player.x, player.y, CONFIG.colors.charger, 1.1);
         addFloater(player.x, player.y - 44, "LAST STAND", true, CONFIG.colors.charger);
         addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry); SFX.counter();
-        if (achTracks()) { PROFILE.addStat("revivesUsed", 1); AT.revived(); achCheck(); }
+        if (achTracks()) { PROFILE.addStat("revivesUsed", 1); AT.revived(); GHOST.event("revive", player.x, player.y); achCheck(); }
       } else if (CG.adsAvailable() && !run.adRevived && !player.oneHit) {
         // extra life #3 — the CrazyGames rewarded-ad revive (the continue flow)
         state = "continue"; continueT = 8; document.exitPointerLock();
@@ -1965,6 +1996,7 @@
         if (e.bossId) PROFILE.maxStat("kill" + e.bossId.charAt(0).toUpperCase() + e.bossId.slice(1), 1);   // pantheon: killWarden / killColossus / …
         if (player.hp > 0 && player.hp <= player.maxHp * 0.1) PROFILE.maxStat("bossKillsLowHP", 1);         // By a Thread
         AT.bossKill(e);   // Stop Hitting Yourself / David and Goliath / I Am Rubber / Pulling the Plug
+        GHOST.event("bossKill", e.x, e.y); GHOST.snapshot(canvas, 4);   // the run's headline moment
       }
       AT.onKill(e);   // air-combo + transition kills
       achCheck();
@@ -3223,59 +3255,185 @@
     addBack();
   }
 
-  // ---- GHOST REPLAY: watch a recorded run play back as a translucent hero ----
+  // ---- GHOST REPLAY 2.0: reconstruct the run — right biome, real enemies, real transport ----
   function enterReplay(data, from) {
     if (!data || !GHOST.begin(data)) return false;
-    const si = ((data.stage || 0) % STAGES.length + STAGES.length) % STAGES.length;
-    replayCtx = { data, from: from || "menu", stage: si, platforms: stagePlatforms(si) };
+    replayCtx = { data, from: from || "menu", stage: -1, platforms: [], puppets: {}, info: false };
     state = "replay"; document.exitPointerLock();
     return true;
   }
   function exitReplay() { GHOST.end(); const f = replayCtx ? replayCtx.from : "menu"; replayCtx = null; state = f; }
 
+  // a draw-only stand-in built from the recorded spawn info: the real entity class
+  // (bestiary-style) so it looks pixel-identical, but its update() is never called.
+  function puppetFor(sp) {
+    try {
+      let e;
+      if (sp.k === "boss") { e = bossById(sp.b || "warden"); }
+      else {
+        switch (sp.k) {
+          case "ranged": e = new Ranged(0, 0); break;
+          case "flyer": e = new Flyer(0, 200); break;
+          case "bomber": e = new Bomber(0, 0); break;
+          case "armored": e = new Armored(0, 0); break;
+          case "priest": case "herald": case "mender": case "anchor": e = new Support(0, 0, sp.k); break;
+          case "wraith": e = new Wraith(0, 220); break;
+          case "chimera": e = new Chimera(0, 0); break;
+          default: e = new Charger(0, 0);
+        }
+        if (sp.vn && VARIANTS[e.kind]) { const v = VARIANTS[e.kind].find((x) => x.name === sp.vn); if (v) try { applyVariant(e, v); } catch (er) {} }
+      }
+      e.spawnT = 0; e.hpDisplay = e.hp;
+      return e;
+    } catch (e) { return null; }
+  }
+
   function renderReplay() {
     if (!replayCtx) { state = "menu"; return; }
-    const t = UI.t, d = replayCtx.data, stage = stageAt(replayCtx.stage);
+    const t = UI.t, d = replayCtx.data, cyan = CONFIG.colors.perfect;
     GHOST.update(lastUiDt);
+    // biome AT TIME t (fixes the frozen-backdrop bug) — rebuild platforms on change
+    const si = ((GHOST.stageAt() || 0) % STAGES.length + STAGES.length) % STAGES.length;
+    if (si !== replayCtx.stage) { replayCtx.stage = si; replayCtx.platforms = stagePlatforms(si); }
+    const stage = stageAt(si);
     const pose = GHOST.pose();
-    // ---- the scene: biome backdrop + platforms (same look as gameplay, no enemies) ----
     THEME.set(stage.bg); UI.ink = THEME.ink;
     const sr = screenRect();
     ctx.fillStyle = stage.bg; ctx.fillRect(sr.x, sr.y, sr.w, sr.h);
     Backdrop.draw(ctx, stage, uiT, pose ? pose.x : W / 2);
     for (const p of replayCtx.platforms) Backdrop.platform(ctx, p, stage, !!p.floor);
-    // ---- the recorded route as a faint trail ----
-    ctx.save(); ctx.strokeStyle = THEME.rim; ctx.globalAlpha = 0.22; ctx.lineWidth = 2; ctx.beginPath();
-    for (let i = 0; i < d.px.length; i += 2) { const x = d.px[i], y = d.py[i]; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
-    ctx.stroke(); ctx.restore();
+    // ---- recorded FX beats: deaths burst, parries ring (skipped silently on seek) ----
+    const crossed = GHOST.crossed();
+    for (const ev of crossed.events) {
+      if (ev.k === "parry") { FX.ring(ev.x, ev.y, 10, cyan); }
+      else if (ev.k === "superslam" || ev.k === "slam") { FX.ring(ev.x, ev.y, 12, CONFIG.colors.slam); }
+      else if (ev.k === "bossKill") { FX.explode(ev.x, ev.y, cyan, 1.6); }
+      else if (ev.k === "revive") { FX.ring(ev.x, ev.y, 16, cyan); }
+    }
+    for (const de of crossed.deaths) {
+      const sp = GHOST.spawnInfo(de.id), pu = sp && replayCtx.puppets[de.id];
+      if (pu) FX.death(pu.x, pu.y, 8, pu.color);
+      delete replayCtx.puppets[de.id];
+    }
+    FX.update(lastUiDt);
+    // ---- enemy puppets at time t ----
+    const foes = GHOST.enemiesAt();
+    ctx.save(); ctx.globalAlpha = 0.9;
+    for (const f of foes) {
+      let pu = replayCtx.puppets[f.id];
+      if (pu === undefined) { const sp = GHOST.spawnInfo(f.id); pu = replayCtx.puppets[f.id] = sp ? puppetFor(sp) : null; }
+      if (!pu) continue;
+      pu.x = f.x; pu.y = f.y;
+      try { pu.draw(ctx, pose || player); }
+      catch (e) { ctx.fillStyle = pu.color || "#888"; ctx.fillRect(f.x - 14, f.y - 18, 28, 36); }
+    }
+    ctx.restore();
+    FX.draw(ctx);
     // ---- the ghost hero + blade ----
     if (pose) {
-      const cyan = CONFIG.colors.perfect;
-      ctx.save(); ctx.globalAlpha = 0.42;
+      ctx.save(); ctx.globalAlpha = 0.55;
       ctx.fillStyle = THEME.ink; ctx.fillRect(pose.x - 13, pose.y - 24, 26, 48);
       ctx.fillStyle = cyan; ctx.fillRect(pose.x + pose.face * 4 - 3, pose.y - 12, 7, 6);
-      ctx.globalAlpha = 0.5; ctx.strokeStyle = cyan; ctx.lineWidth = 4; ctx.lineCap = "round";
+      ctx.globalAlpha = 0.6; ctx.strokeStyle = cyan; ctx.lineWidth = 4; ctx.lineCap = "round";
       if (!GFX.low) { ctx.shadowColor = cyan; ctx.shadowBlur = 12; }
       ctx.beginPath(); ctx.moveTo(pose.x, pose.y - 6); ctx.lineTo(pose.bx, pose.by); ctx.stroke();
       ctx.shadowBlur = 0; ctx.restore();
-      UI.tag(ctx, "GHOST", pose.x, pose.y - 40, cyan, "center", t.type.micro);
     }
     Backdrop.post(ctx, stage);
-    // ---- overlay: title bar + progress scrubber ----
+
+    // ---- top bar: identity + live wave ----
     const mode = (CONFIG.modes.find((m) => m.id === d.mode) || {}).label || d.mode;
     ctx.save();
-    ctx.globalAlpha = 0.82; ctx.fillStyle = "#0e1017"; ctx.fillRect(sr.x, sr.y, sr.w, 62 + SAFE.t); ctx.globalAlpha = 1;
-    ctx.fillStyle = CONFIG.colors.perfect; ctx.fillRect(sr.x, sr.y, sr.w, 3);
+    ctx.globalAlpha = 0.85; ctx.fillStyle = "#0e1017"; ctx.fillRect(sr.x, sr.y, sr.w, 54 + SAFE.t); ctx.globalAlpha = 1;
+    ctx.fillStyle = cyan; ctx.fillRect(sr.x, sr.y, sr.w, 3);
     ctx.textAlign = "left"; ctx.fillStyle = "#f1eff9"; ctx.font = UI.font(t.type.lead, true);
-    ctx.fillText("▶ REPLAY", 40 + SAFE.l, 40 + SAFE.t);
+    ctx.fillText("▶ REPLAY", 40 + SAFE.l, 36 + SAFE.t);
     ctx.fillStyle = "#c9ccd6"; ctx.font = UI.font(t.type.body, false);
-    ctx.fillText((d.name || "Player") + "   ·   " + mode + "   ·   wave " + (d.wave || 0) + "   ·   " + (d.score || 0) + " pts", 200 + SAFE.l, 40 + SAFE.t);
-    // scrubber
-    const bx = 40 + SAFE.l, bw = W - 80 - SAFE.l - SAFE.r, by = 54 + SAFE.t;
-    ctx.globalAlpha = 0.25; ctx.fillStyle = "#f1eff9"; ctx.fillRect(bx, by, bw, 3); ctx.globalAlpha = 1;
-    ctx.fillStyle = CONFIG.colors.perfect; ctx.fillRect(bx, by, bw * GHOST.progress(), 3);
+    ctx.fillText((d.name || "Player") + "   ·   " + mode + "   ·   wave " + (d.wave || 0) + "   ·   " + (d.score || 0) + " pts" + (d.won ? "   ·   ★ VICTORY" : ""), 200 + SAFE.l, 36 + SAFE.t);
+    ctx.textAlign = "right"; ctx.fillStyle = cyan; ctx.font = UI.font(t.type.label, true);
+    ctx.fillText("WAVE " + GHOST.waveAt(), W - 36 - SAFE.r, 36 + SAFE.t);
+    ctx.restore();
+
+    // ---- transport bar (bottom): scrub + chapters + controls ----
+    const p = GHOST.play, dur = GHOST.duration();
+    const barY = H - 96 - SAFE.b, bx = 220 + SAFE.l, bw = W - 440 - SAFE.l - SAFE.r;
+    ctx.save();
+    ctx.globalAlpha = 0.85; ctx.fillStyle = "#0e1017"; ctx.fillRect(sr.x, barY - 18, sr.w, H - (barY - 18) + Math.max(0, -sr.y)); ctx.globalAlpha = 1;
+    // scrubber (click to seek — consumed here, before handleUI)
+    ctx.globalAlpha = 0.25; ctx.fillStyle = "#f1eff9"; ctx.fillRect(bx, barY, bw, 5); ctx.globalAlpha = 1;
+    ctx.fillStyle = cyan; ctx.fillRect(bx, barY, bw * GHOST.progress(), 5);
+    for (const ch of GHOST.chapters()) {   // chapter ticks (boss = crimson)
+      const cx = bx + bw * (ch.t / Math.max(dur, 0.001));
+      ctx.fillStyle = ch.boss ? CONFIG.colors.charger : "#f1eff9"; ctx.globalAlpha = ch.boss ? 0.95 : 0.55;
+      ctx.fillRect(cx - 1, barY - 4, 2, 13);
+    }
+    ctx.globalAlpha = 1;
+    // playhead knob
+    const kx = bx + bw * GHOST.progress();
+    ctx.fillStyle = "#f1eff9"; ctx.beginPath(); ctx.arc(kx, barY + 2.5, 7, 0, 6.2832); ctx.fill();
+    // time readout
+    ctx.textAlign = "right"; ctx.fillStyle = "#c9ccd6"; ctx.font = UI.font(12, true);
+    ctx.fillText(fmtTime(p ? p.t : 0) + " / " + fmtTime(dur), bx + bw, barY - 10);
     ctx.restore(); ctx.textAlign = "left";
-    uiButtons.push({ x: W / 2 - 110, y: H - 70 - SAFE.b, w: 220, h: 50, label: "‹  BACK", action: exitReplay });
+    if (Input.clicked && Input.clickY > barY - 22 && Input.clickY < barY + 26 && Input.clickX >= bx - 10 && Input.clickX <= bx + bw + 10) {
+      const c = Input.takeClick();
+      GHOST.seek(((c.x - bx) / bw) * dur);
+    }
+    // control buttons
+    const cy2 = H - 66 - SAFE.b, bh2 = 44;
+    const btn = (x, w, label, action) => uiButtons.push({ x, y: cy2, w, h: bh2, size: 13, label, action });
+    btn(220 + SAFE.l, 64, "|◀", () => GHOST.jumpChapter(-1));
+    btn(292 + SAFE.l, 96, p && p.playing ? "❚❚" : "▶", () => GHOST.toggle());
+    btn(396 + SAFE.l, 64, "▶|", () => GHOST.jumpChapter(1));
+    btn(468 + SAFE.l, 76, (p ? p.speed : 1) + "×", () => GHOST.cycleSpeed());
+    btn(552 + SAFE.l, 84, "↺", () => { GHOST.seek(0); if (p) p.playing = true; });
+    btn(W - 420 - SAFE.r, 90, replayCtx.info ? "HIDE" : "INFO", () => { replayCtx.info = !replayCtx.info; });
+    uiButtons.push({ x: W - 320 - SAFE.r, y: cy2, w: 200, h: bh2, size: 13, label: "‹  BACK", action: exitReplay });
+    // keyboard transport
+    if (Input.pressed.has("Space")) GHOST.toggle();
+    if (Input.pressed.has("ArrowLeft")) GHOST.seek((p ? p.t : 0) - 5);
+    if (Input.pressed.has("ArrowRight")) GHOST.seek((p ? p.t : 0) + 5);
+
+    // ---- INFO overlay: run summary + build ----
+    if (replayCtx.info) drawReplayInfo(d);
+  }
+
+  // the INFO panel: summary numbers + the recorded final loadout
+  function drawReplayInfo(d) {
+    const t = UI.t, px = W - 470 - SAFE.r, py = 74 + SAFE.t, pw = 440, ph = 560;
+    ctx.save();
+    ctx.globalAlpha = 0.92; ctx.fillStyle = "#0e1017"; ctx.fillRect(px, py, pw, ph);
+    ctx.globalAlpha = 0.8; ctx.strokeStyle = CONFIG.colors.perfect; ctx.lineWidth = 1.5; ctx.strokeRect(px, py, pw, ph);
+    ctx.globalAlpha = 1; ctx.fillStyle = CONFIG.colors.perfect; ctx.fillRect(px, py, 4, ph);
+    ctx.textAlign = "left"; ctx.fillStyle = "#f1eff9"; ctx.font = UI.font(t.type.lead, true);
+    ctx.fillText("RUN SUMMARY", px + 20, py + 32);
+    const row = (label, val, y) => {
+      ctx.fillStyle = "#9fa3b4"; ctx.font = UI.font(12, false); ctx.textAlign = "left"; ctx.fillText(label, px + 20, y);
+      ctx.fillStyle = "#f1eff9"; ctx.font = UI.font(13, true); ctx.textAlign = "right"; ctx.fillText("" + val, px + pw - 20, y);
+    };
+    let y = py + 60;
+    row("PLAYER", d.name || "Player", y); y += 26;
+    row("RESULT", d.won ? "VICTORY" : "wave " + (d.wave || 0), y); y += 26;
+    row("SCORE", d.score || 0, y); y += 26;
+    row("KILLS", d.kills != null ? d.kills : "—", y); y += 26;
+    row("PEAK MULTIPLIER", "×" + (d.peak || 1), y); y += 26;
+    row("TIME", fmtTime(d.time || GHOST.duration()), y); y += 34;
+    ctx.textAlign = "left"; ctx.fillStyle = CONFIG.colors.perfect; ctx.font = UI.font(t.type.micro, true);
+    ctx.fillText("FINAL LOADOUT", px + 20, y); y += 14;
+    const kit = d.loadout || [];
+    if (!kit.length) { ctx.fillStyle = "#9fa3b4"; ctx.font = UI.font(12, false); ctx.fillText("(not recorded)", px + 20, y + 18); }
+    for (const it of kit.slice(0, 12)) {
+      const u = UPGRADES.find((x) => x.id === it.id); if (!u) continue;
+      const cat = ABIL_CATS[u.cat] || ABIL_CATS.utility;
+      ctx.fillStyle = u.tiers ? SPECIAL_COLOR : cat.color; ctx.fillRect(px + 20, y + 8, 4, 22);
+      ctx.fillStyle = "#f1eff9"; ctx.font = UI.font(13, true); ctx.textAlign = "left";
+      ctx.fillText(u.name, px + 34, y + 24);
+      ctx.fillStyle = "#9fa3b4"; ctx.font = UI.font(11, false); ctx.textAlign = "right";
+      ctx.fillText(u.tiers ? "TIER " + (it.tier || 1) : (u.unique ? "UNIQUE" : "×" + (it.n || 1)), px + pw - 20, y + 24);
+      y += 34;
+      if (y > py + ph - 30) break;
+    }
+    ctx.restore(); ctx.textAlign = "left";
   }
 
   // one aligned grid for every settings row, shared by the Settings tab and the pause
@@ -3722,7 +3880,7 @@
 
   function chooseUpgrade(i) {
     const up = draftChoices[i];
-    if (up) applyUpgrade(up, { player, blade, mods: run.mods });
+    if (up) { applyUpgrade(up, { player, blade, mods: run.mods }); GHOST.loadoutPick(up.id, run.mods.tier[up.id] || 1, run.wave); GHOST.event("pickup", player.x, player.y); }
     Input.consumeDelta();   // flush any movement built up while the cursor was free
     // training modes have NO waves — picking an ability must never start one
     if (run.mode !== "tutorial" && run.mode !== "playground") startNextWave();
@@ -3756,7 +3914,7 @@
 
   function chooseTierUp(i) {
     const up = tierChoices[i];
-    if (up) tierUp(up.id, { player, blade, mods: run.mods });
+    if (up) { tierUp(up.id, { player, blade, mods: run.mods }); GHOST.loadoutPick(up.id, run.mods.tier[up.id] || 1, run.wave); GHOST.event("tierup", player.x, player.y); }
     Input.consumeDelta();
     if (run.mode !== "tutorial" && run.mode !== "playground") startNextWave();
     state = "playing";
