@@ -617,6 +617,8 @@
   let pgLabFilter = "all";
   let achFilter = "all";   // Achievements menu category filter
   let lbMode = "", lbDiff = "normal", lbKey = "", lbData = null, lbLoading = false, lbGhostMsg = "";   // Leaderboards tab
+  let replayTab = "vault", replayFeedData = null, replayFeedLoading = false, replayMsg = "";   // REPLAYS tab
+  const replayThumbs = {};   // dataURL -> Image cache for vault/feed thumbnails
   function renderPgLab() {
     const t = UI.t;
     UI.dim(ctx, W, H, 0.9);
@@ -1216,8 +1218,15 @@
     if (lastGhost) {
       summary.thumb = lastGhost.thumb || null;
       lastVaultId = VAULT.add(lastGhost, summary);
-      GHOST.saveLocal(lastGhost); Cloud.submitGhost(run.mode, run.diff, lastGhost);
     }
+    // shared layer: submit the score; an improved personal best auto-publishes its replay
+    // and links it to the leaderboard row (self-replacing doc — no cleanup ever needed)
+    const mode = run.mode, diff = run.diff, sc = run.score, wv = run.wave, tm = run.runTime, g = lastGhost, vid = lastVaultId;
+    Cloud.submitScore(mode, diff, { score: sc, wave: wv, time: tm }).then((ok) => {
+      if (ok && g) Cloud.publishReplay(g, null, "lb_" + mode + "_" + diff).then((sid) => {
+        if (sid) { Cloud.linkReplay(mode, diff, sid); if (vid) VAULT.setShareId(vid, sid); }
+      });
+    });
     return lastGhost;
   }
 
@@ -1229,7 +1238,7 @@
     const isNew = saveBest(run.mode, run.diff, run.wave, run.score, run.runTime);
     const earned = awardCoins(run.score);
     if (achTracks()) { PROFILE.addStat("runs", 1); PROFILE.maxStat("longestRun", Math.floor(run.runTime)); DAILY.bump("runs", 1); achCheck();
-      Cloud.submitScore(run.mode, run.diff, { score: run.score, wave: run.wave, time: run.runTime }); Cloud.push();   // global leaderboard + cloud save
+      Cloud.push();   // cloud save (finishRecording handles the score + replay link)
       Cloud.logEvent("run_end", { mode: run.mode, diff: run.diff, wave: run.wave, score: run.score, time: Math.round(run.runTime), peak: run.wavePeak, died: true });   // balancing telemetry: where players drop off
       finishRecording(false); }
     overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, earned, coins: META.coins() };
@@ -1253,7 +1262,7 @@
         const dc = PROFILE.data.advDiffs || (PROFILE.data.advDiffs = {}); dc[run.diff] = 1; PROFILE.maxStat("clearAdvAll", Object.keys(dc).length);
       }
       achCheck();
-      Cloud.submitScore(run.mode, run.diff, { score: run.score, wave: run.wave, time: run.runTime }); Cloud.push();   // global leaderboard + cloud save
+      Cloud.push();   // cloud save (finishRecording handles the score + replay link)
       Cloud.logEvent("run_end", { mode: run.mode, diff: run.diff, wave: run.wave, score: run.score, time: Math.round(run.runTime), peak: run.wavePeak, won: true, campaign: !!campaign });
       finishRecording(true); }
     overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, win: true, campaign: !!campaign, earned, coins: META.coins() };
@@ -2022,7 +2031,7 @@
   function isMenuState(s) {
     return s === "menu" || s === "shop" || s === "codex" || s === "setup" ||
       s === "howto" || s === "highscores" || s === "settings" || s === "bestiary" ||
-      s === "achievements" || s === "leaderboards" || s === "rename";
+      s === "achievements" || s === "leaderboards" || s === "rename" || s === "replays";
   }
   function frame(now) {
     let dt = (now - last) / 1000; last = now;
@@ -2253,6 +2262,7 @@
       else if (state === "achievements") renderAchievements();
       else if (state === "leaderboards") renderLeaderboards();
       else if (state === "rename") renderRename();
+      else if (state === "replays") renderReplays();
       drawButtons();
       ctx.restore();
     } else {
@@ -2840,11 +2850,12 @@
       { label: "ABILITIES", action: () => { state = "codex"; } },
       { label: "ACHIEVEMENTS", action: () => { state = "achievements"; listScroll = 0; } },
       { label: "LEADERBOARDS", action: () => { state = "leaderboards"; listScroll = 0; } },
+      { label: "REPLAYS", action: () => { state = "replays"; listScroll = 0; replayFeedData = null; } },
       { label: "INDEX", action: () => { state = "bestiary"; } },
       { label: "HOW TO PLAY", action: () => { state = "howto"; } },
       { label: "HIGH SCORES", action: () => { state = "highscores"; } },
       { label: "SETTINGS", action: () => { state = "settings"; } },
-    ].map((o) => (o.ghost = true, o)), lx + t.metric.btnW / 2, 276, t.metric.btnW, t.metric.btnH, 6);
+    ].map((o) => (o.ghost = true, o)), lx + t.metric.btnW / 2, 266, t.metric.btnW, t.metric.btnH, 5);
     void savedInk;   // UI.ink intentionally left "#000" for the sub-screen buttons
     return;
   }
@@ -3229,9 +3240,11 @@
     } else if (!lbData || !lbData.length) {
       midMsg("No runs recorded on this board yet — set the first.");
     } else {
-      // watch the #1 run's ghost (loads on demand)
-      uiButtons.push({ x: listX + listW - 250, y: top - 42, w: 250, h: 30, size: 11, label: lbGhostMsg || "▶  WATCH THE #1 RUN",
-        action: () => { lbGhostMsg = "loading replay…"; Cloud.loadGhost(lbMode, lbDiff).then((g) => { lbGhostMsg = ""; if (!enterReplay(g, "leaderboards")) lbGhostMsg = "no replay yet"; }); } });
+      // legacy #1-ghost button only when no row carries its own linked replay yet
+      if (!lbData.some((r) => r.replayId)) {
+        uiButtons.push({ x: listX + listW - 250, y: top - 42, w: 250, h: 30, size: 11, label: lbGhostMsg || "▶  WATCH THE #1 RUN",
+          action: () => { lbGhostMsg = "loading replay…"; Cloud.loadGhost(lbMode, lbDiff).then((g) => { lbGhostMsg = ""; if (!enterReplay(g, "leaderboards")) lbGhostMsg = "no replay yet"; }); } });
+      } else if (lbGhostMsg) UI.text(ctx, lbGhostMsg, listX + listW - 130, top - 24, t.type.micro, "center", t.alpha.muted);
       const myId = Cloud.user ? Cloud.user.id : null;
       let y = top + 34;
       lbData.slice(0, 12).forEach((r, i) => {
@@ -3243,6 +3256,12 @@
         ctx.fillStyle = medal || UI.ink; ctx.fillText(rank, listX + 14, y);
         ctx.fillStyle = mine ? t.color.accent : UI.ink; ctx.font = UI.font(t.type.label, mine);
         ctx.fillText((r.name || "Player").slice(0, 22) + (mine ? "  (you)" : ""), listX + 70, y);
+        // every ranked run with a linked replay is WATCHABLE right from its row
+        if (r.replayId) {
+          const rid = r.replayId;
+          uiButtons.push({ x: listX + listW - 470, y: y - 18, w: 54, h: 26, size: 11, label: "▶",
+            action: () => { lbGhostMsg = "loading replay…"; Cloud.loadReplay(rid).then((rec) => { lbGhostMsg = ""; if (!enterReplay(rec, "leaderboards")) lbGhostMsg = "couldn't load that replay"; }); } });
+        }
         ctx.textAlign = "right"; ctx.fillStyle = UI.ink; ctx.font = UI.font(t.type.label, false);
         ctx.fillText("" + (r.wave || 0), listX + listW - 320, y);
         ctx.fillText(fmtTime(r.time || 0), listX + listW - 180, y);
@@ -3251,6 +3270,94 @@
         y += 34;
       });
       ctx.textAlign = "left";
+    }
+    addBack();
+  }
+
+  // ---- the REPLAYS tab: your local Vault + the global published feed ----
+  function renderReplays() {
+    const t = UI.t;
+    UI.header(ctx, "REPLAYS", "every run is recorded — pin the keepers, share the best", eIn);
+    // section chips
+    const tabs = [["vault", "MY VAULT"], ["feed", "GLOBAL FEED"]];
+    tabs.forEach(([id, label], i) => uiButtons.push({ x: W / 2 - 250 + i * 260, y: 162, w: 240, h: 36, chip: true, size: 11,
+      label, sel: replayTab === id, action: () => { replayTab = id; listScroll = 0; replayMsg = ""; } }));
+    if (replayMsg) UI.text(ctx, replayMsg, W / 2, 224, t.type.caption, "center", t.alpha.muted);
+
+    const listX = W / 2 - 560, listW = 1120, top = 244, rowH = 96, viewH = H - top - 110;
+    const drawThumb = (x, y, data) => {   // 128x72 thumbnail (or a blank slate)
+      ctx.save(); ctx.fillStyle = "#0e1017"; ctx.globalAlpha = 0.15; ctx.fillRect(x, y, 128, 72); ctx.globalAlpha = 1;
+      if (data) {
+        let img = replayThumbs[data];
+        if (!img) { img = replayThumbs[data] = new Image(); img.src = data; }
+        if (img.complete && img.naturalWidth) ctx.drawImage(img, x, y, 128, 72);
+      }
+      ctx.strokeStyle = UI.ink; ctx.globalAlpha = 0.35; ctx.lineWidth = 1; ctx.strokeRect(x, y, 128, 72); ctx.restore();
+    };
+    const rowCard = (y, sum, thumb) => {
+      UI.card(ctx, listX, y, listW, rowH - 12, false);
+      drawThumb(listX + 12, y + 6, thumb);
+      const modeLabel = (CONFIG.modes.find((m) => m.id === sum.mode) || {}).label || sum.mode || "?";
+      ctx.textAlign = "left"; ctx.fillStyle = UI.ink; ctx.font = UI.font(t.type.lead, true);
+      ctx.fillText((sum.name || "You") + "   —   " + modeLabel + " · " + (sum.diff || ""), listX + 156, y + 30);
+      ctx.font = UI.font(t.type.caption, false); ctx.globalAlpha = 0.75;
+      ctx.fillText("wave " + (sum.wave || 0) + "   ·   " + (sum.score || 0) + " pts" + (sum.won ? "   ·   ★ victory" : ""), listX + 156, y + 54);
+      ctx.globalAlpha = 1;
+    };
+
+    if (replayTab === "vault") {
+      const idx = VAULT.index();
+      if (!idx.length) { UI.text(ctx, "No runs recorded yet — every real run lands here automatically.", W / 2, top + 120, t.type.body, "center", t.alpha.soft); addBack(); return; }
+      const maxScroll = Math.max(0, idx.length * rowH - viewH);
+      listScroll = clamp(listScroll, 0, maxScroll);
+      ctx.save(); ctx.beginPath(); ctx.rect(0, top - 8, W, viewH + 16); ctx.clip();
+      idx.forEach((e, i) => {
+        const y = top + i * rowH - listScroll;
+        if (y + rowH < top - 8 || y > top + viewH) return;
+        rowCard(y, e.sum || {}, e.sum && e.sum.thumb);
+        // date + pin state
+        ctx.textAlign = "left"; ctx.fillStyle = UI.ink; ctx.globalAlpha = 0.5; ctx.font = UI.font(11, false);
+        ctx.fillText(new Date(e.ts).toLocaleDateString() + (e.shareId ? "   ·   PUBLISHED" : ""), listX + 156, y + 72); ctx.globalAlpha = 1;
+        // actions
+        const b = (x, w, label, sel, action) => uiButtons.push({ x, y: y + 20, w, h: 40, size: 12, label, sel, action });
+        b(listX + listW - 392, 110, "▶  WATCH", false, () => { const rec = VAULT.get(e.id); if (rec) enterReplay(rec, "replays"); else replayMsg = "couldn't load that recording"; });
+        b(listX + listW - 274, 78, e.pin ? "★" : "PIN", e.pin, () => { if (!VAULT.pin(e.id, !e.pin)) replayMsg = "pin limit reached (10)"; });
+        b(listX + listW - 188, 96, e.shareId ? "SHARED" : "SHARE", !!e.shareId, () => {
+          if (e.shareId || !Cloud.hasLeaderboards()) { replayMsg = e.shareId ? "already on the global feed" : "sharing needs the online layer"; return; }
+          replayMsg = "publishing…";
+          const rec = VAULT.get(e.id);
+          Cloud.publishReplay(rec, null).then((sid) => { if (sid) { VAULT.setShareId(e.id, sid); replayMsg = "published to the global feed ✓"; } else replayMsg = "publish failed — try again"; });
+        });
+        b(listX + listW - 84, 64, "✕", false, () => { VAULT.remove(e.id); });
+      });
+      ctx.restore();
+      if (maxScroll > 0) UI.scrollHint(ctx, W / 2, top + viewH + 20, listScroll > 0, listScroll < maxScroll);
+    } else {
+      // ---- the global feed ----
+      if (!Cloud.hasLeaderboards()) { UI.text(ctx, "The global feed needs the online layer.", W / 2, top + 120, t.type.body, "center", t.alpha.soft); addBack(); return; }
+      if (replayFeedData === null && !replayFeedLoading) {
+        replayFeedLoading = true;
+        Cloud.replayFeed(20).then((rows) => { replayFeedData = rows || []; replayFeedLoading = false; });
+      }
+      if (replayFeedLoading && !replayFeedData) UI.text(ctx, "Loading the feed…", W / 2, top + 120, t.type.body, "center", t.alpha.soft);
+      else if (!replayFeedData || !replayFeedData.length) UI.text(ctx, "Nothing published yet — be the first.", W / 2, top + 120, t.type.body, "center", t.alpha.soft);
+      else {
+        const rows = replayFeedData;
+        const maxScroll = Math.max(0, rows.length * rowH - viewH);
+        listScroll = clamp(listScroll, 0, maxScroll);
+        ctx.save(); ctx.beginPath(); ctx.rect(0, top - 8, W, viewH + 16); ctx.clip();
+        rows.forEach((r, i) => {
+          const y = top + i * rowH - listScroll;
+          if (y + rowH < top - 8 || y > top + viewH) return;
+          rowCard(y, r, r.thumb);
+          ctx.textAlign = "left"; ctx.fillStyle = UI.ink; ctx.globalAlpha = 0.5; ctx.font = UI.font(11, false);
+          ctx.fillText(new Date(r.createdAt || 0).toLocaleDateString() + (r.lb ? "   ·   LEADERBOARD RUN" : ""), listX + 156, y + 72); ctx.globalAlpha = 1;
+          uiButtons.push({ x: listX + listW - 140, y: y + 20, w: 120, h: 40, size: 12, label: "▶  WATCH",
+            action: () => { replayMsg = "loading replay…"; Cloud.loadReplay(r.shareId).then((rec) => { replayMsg = ""; if (!enterReplay(rec, "replays")) replayMsg = "couldn't load that replay"; }); } });
+        });
+        ctx.restore();
+        if (maxScroll > 0) UI.scrollHint(ctx, W / 2, top + viewH + 20, listScroll > 0, listScroll < maxScroll);
+      }
     }
     addBack();
   }
