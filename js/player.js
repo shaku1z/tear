@@ -17,7 +17,7 @@ class Player {
 
     this.dashTimer = 0;         // >0 while dashing
     this.dashCd = 0;            // >0 while on cooldown
-    this.dashIframe = 0;
+    // (dash invuln folded into the single `iframe` timer — see update()/invulnerable)
     this.dashX = 0; this.dashY = 0;
     this.maxDashCharges = 1;    // Air Dash raises this; charges refill on landing
     this.dashCharges = 1;
@@ -46,7 +46,9 @@ class Player {
     // 3) the CrazyGames rewarded-ad revive (handled by the continue flow)
   }
 
-  get invulnerable() { return this.iframe > 0 || this.dashIframe > 0; }
+  // single source of truth for i-frames: dash, hit, shield-absorb, revives, and Backlash
+  // all write the one `iframe` timer (via Math.max, so none can shorten another).
+  get invulnerable() { return this.iframe > 0; }
 
   update(dt, platforms) {
     const P = CONFIG.player, D = CONFIG.dash;
@@ -55,7 +57,6 @@ class Player {
     // timers
     if (this.iframe > 0) this.iframe -= dt;
     if (this.dashCd > 0) this.dashCd -= dt;
-    if (this.dashIframe > 0) this.dashIframe -= dt;
     if (this.coyote > 0) this.coyote -= dt;
     if (this.jumpBuf > 0) this.jumpBuf -= dt;
     if (this.guardT > 0) this.guardT -= dt;
@@ -80,7 +81,7 @@ class Player {
       const m = len(ax, ay) || 1;
       this.dashX = ax / m; this.dashY = ay / m;
       this.dashTimer = D.duration;
-      this.dashIframe = D.iframe;
+      this.iframe = Math.max(this.iframe, D.iframe);   // dash i-frames, into the shared timer (never shortens a longer active window)
       this.dashCharges--;
       this.dashCd = this.dashCharges > 0 ? 0.16 : D.cooldown;   // quick chain between charges; full cd when spent
     }
@@ -219,8 +220,9 @@ class Player {
   heal(n) { this.hp = Math.min(this.maxHp, this.hp + n); }
 
   draw(ctx) {
-    // blink while invulnerable
-    if (this.iframe > 0 && Math.floor(this.iframe * 20) % 2 === 0) return;
+    // blink while invulnerable — but NOT during an active dash (the dash's own visual
+    // reads state there; blinking is reserved for the post-hit vulnerability tell)
+    if (this.iframe > 0 && this.dashTimer <= 0 && Math.floor(this.iframe * 20) % 2 === 0) return;
 
     // body with subtle squash/stretch from vertical speed
     const v = clamp(this.vy / 2200, -1, 1);
