@@ -1485,7 +1485,7 @@
         e.x = clamp(e.x, e.hw, W - e.hw);
         continue;
       }
-      if (e.stun > 0) { e.stun -= dt; continue; }        // stunned (hammer lob / guard break): frozen
+      if (e.stun > 0) { e.tickTimers(dt); continue; }    // stunned: frozen AI, but timers still tick (tickTimers decrements stun + hitCd — otherwise a stunned enemy freezes its hit-iframe and swallows follow-up combo hits)
       e.update(dt, platforms, player, projectiles);
     }
     updateSupports(dt);   // apply War Priest / Herald / Mender / Anchor effects to allies
