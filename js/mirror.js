@@ -209,13 +209,16 @@ const Mirror = {
     const baseAng = aimAtPlayer ? Math.atan2(player.y - hand.y, player.x - hand.x) : (this.facing > 0 ? 0 : Math.PI);
     const reach = Math.hypot(player.x - hand.x, player.y - hand.y);
     this._swingT -= dt;
-    if (wantSwing && this._swingT <= -0.12 && reach < 165) {
+    // wield the momentum blade EXACTLY like the attract hero: a deliberate slash whenever the
+    // target is in reach (committed states extend the range via wantSwing). Never swing mid-bait,
+    // mid-dodge (aimAtPlayer is false there), or while the blade is thrown.
+    const canSwing = aimAtPlayer && this._state !== "bait" && this._state !== "throw";
+    if (canSwing && this._swingT <= -0.10 && reach < (wantSwing ? 180 : 155)) {
       this._swingT = 0.16; this._swingDir = Math.random() < 0.5 ? -1 : 1; this._swingBase = baseAng;
     }
     if (this._swingT > 0) {
       const k = 1 - this._swingT / 0.16;
-      const wobble = (1 - this.sync) * 0.5 * Math.sin(k * 9);   // low sync => the arc wanders off target
-      this._aimAng = this._swingBase - this._swingDir * 1.05 + this._swingDir * 2.1 * k + wobble;
+      this._aimAng = this._swingBase - this._swingDir * 1.05 + this._swingDir * 2.1 * k;   // clean slash arc (attract's exact shape)
     } else {
       this._aimAng += (baseAng - this._aimAng) * clamp(7 * dt, 0, 1);
     }
