@@ -88,5 +88,21 @@ so the two blades don't cross-contaminate.
 
 Firewalled out of scope (per doc): all networking / rollback / determinism.
 
-## Status
-Planning complete. Building F1 → onward.
+## Status — SHIPPED (F1–F8 complete, pushed to main)
+
+| Sub-phase | Commit | What shipped |
+|---|---|---|
+| F1 | `3797d6c` | Additive `takeHit()` shims on Enemy + Player |
+| F2 | `01485cd` | Mirror skeleton + isolated two-way collision loop; blade `lmbOverride` |
+| F3+F4 | `7279fb2` | Adaptive AI: read-model + decision states (approach/space/strike/bait/punish/dodge), sync-gated reactions |
+| F7 | `01071ee` | Fightable integration — summon in Playground with **M** |
+| F5 | `30f9718` | Ghost-echo — replays your own recorded motion back at you |
+| F6 | `0fba79a` | Sync escalation + torn-double chromatic visual + blade-clash sync-fracture |
+| F8 | `a836fa0` | Build-awareness — reads `run.mods` (air / parry) and biases behavior |
+
+Every sub-phase verified in-page (headless sims + direct-call checks): two-way collision, approach→band→strike,
+echo capture+replay, sync drift/clash/nudge, torn draw, mod-flag derivation + guard-window refusal. Live in-game
+visual not auto-captured (the Input layer ignores synthetic events) — **to see it: Playground → press M**.
+
+Deferred (optional future): a dedicated non-Playground "home" for the Mirror (Echo's true form / a new boss),
+richer decision v2 (stamina/commitment reads), and audio. Networking/rollback stay firewalled out per the doc.
