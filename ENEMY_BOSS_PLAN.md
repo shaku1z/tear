@@ -49,9 +49,9 @@ Validate its two load-bearing assumptions **early** (Phase F1–F2), before inve
 Keep multiplayer's networking/rollback/determinism blocker firewalled out, per the doc.
 
 ## Status
-- **A, B, C, E — DONE** (shipped + pushed, isolated commits `b24387b`, `49c5555`, `7f94080`, `597c68b`, cache `v=119`). Each verified in-page.
-- **D** — not started (lower-urgency hygiene; some are design calls).
-- **F** — not started (separate multi-week track).
+- **A, B, C, E — DONE** (shipped + pushed, isolated commits `b24387b`, `49c5555`, `7f94080`, `597c68b`). Each verified in-page.
+- **D — DONE** (`9ffd735`, cache `v=120`): #4 Chimera idle-beat restored, #5 Geomancer channel-hold. **#7 assessed as NOT a bug** (intended multiplicative variant identity — compounds cleanly with wave scaling, not the dead-cap anti-pattern) and left as-is, same call as Burn's `Math.max`.
+- **F** — not started (separate multi-week track). Recommended next if continuing.
 
 ## Recommended order
 A → B → C (three independent quick, verifiable fixes, one commit each) → **E** (owner confirmed: real gap, fixed) → D (hygiene) → F as its own track. Nothing here touches saved data.
