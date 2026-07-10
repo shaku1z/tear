@@ -347,7 +347,7 @@ class Blade {
     // on dark biomes, blend the swoosh additively so it blooms like real light
     const glow = (typeof THEME !== "undefined") && THEME.dark;
     if (glow) { ctx.save(); ctx.globalCompositeOperation = "lighter"; }
-    ctx.fillStyle = CONFIG.colors.bladeTrail;
+    ctx.fillStyle = this.trailColor || CONFIG.colors.bladeTrail;   // per-blade override (the Mirror wields a violet blade)
     for (let i = 1; i < tr.length; i++) {
       const a = tr[i - 1], b = tr[i];
       // fade each band smoothly by how fast the tip was moving (no hard cutoff -> no blink)
@@ -375,7 +375,7 @@ class Blade {
     const glow = (typeof THEME !== "undefined") && THEME.dark;
     if (glow) { ctx.save(); ctx.globalCompositeOperation = "lighter"; }
     ctx.globalAlpha = 0.2 + v * 0.5;
-    ctx.fillStyle = CONFIG.colors.bladeGlow;
+    ctx.fillStyle = this.glowColor || CONFIG.colors.bladeGlow;   // per-blade override
     ctx.beginPath();
     ctx.arc(this.tipX, this.tipY, 4 + v * 13, 0, Math.PI * 2);
     ctx.fill();

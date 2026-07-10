@@ -106,3 +106,23 @@ visual not auto-captured (the Input layer ignores synthetic events) — **to see
 
 Deferred (optional future): a dedicated non-Playground "home" for the Mirror (Echo's true form / a new boss),
 richer decision v2 (stamina/commitment reads), and audio. Networking/rollback stay firewalled out per the doc.
+
+## F9 — Full-kit swordplay + robustness (v2)
+
+Follow-up pass so the Mirror unmistakably *wields the actual momentum blade like the attract hero* and is
+bulletproof to summon in the Playground.
+
+- **Wields the blade like attract.** It now keeps the blade LIVE — bursting a real slash arc whenever you're
+  within reach (~140px), not only when a state explicitly commits — so the sword reads as a constant threat,
+  exactly like the attract demo's deliberate slashing (still never swings while baiting/dodging/mid-throw).
+- **Its own blade identity.** Additive per-blade `trailColor`/`glowColor` on `Blade`; the Mirror wields a
+  **violet** blade so its swoosh/tip-glow read as the Mirror's, distinct from your cyan.
+- **Full momentum-blade kit — it THROWS.** New `throw` intent: at mid-range it hurls its real blade at you
+  (`Blade.throwBlade`), the thrown blade damages on contact (collision case 3), and it **auto-recalls**
+  (`freeRecall = true` + a recall timer guarantee it's never left weaponless). While the blade is out it
+  kites — the complete "fights like you" moveset (held + thrown + echo).
+- **Robustness / definitely-playable.** `startRun` force-deactivates any summoned Mirror so it can never leak
+  into a real campaign/endless run; the actor's `moveBoost`/`slowMult` default to 1 (constructor) so its
+  physics are self-sufficient without the per-frame fields `game.js` only sets on the real player.
+
+Summon unchanged: **Playground → M**.

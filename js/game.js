@@ -853,6 +853,7 @@
 
   // ---- run / wave management ----
   function startRun(mode, diff) {
+    if (typeof Mirror !== "undefined") Mirror.active = false;   // a summoned Mirror never leaks into a new run
     restoreConfig();
     const weapon = applyWeapon(selWeapon);   // weapon defines base feel; shop/upgrades stack on top
     applySettings();

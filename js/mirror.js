@@ -38,6 +38,8 @@ const Mirror = {
     const b = this.blade = new Blade();
     b.aimOverride = { x: x, y: y - 80 };
     b.lmbOverride = false;    // the Mirror controls its own tether, never the human's mouse
+    b.trailColor = "#b06cff"; b.glowColor = "#c98cff";   // its slashes read as the Mirror's, not yours
+    b.freeRecall = true;      // always recalls a thrown blade (no weaponless softlock)
     this.hp = this.maxHp = hp || 900;
     this.hitCd = 0; this._dashCd = 0; this._swingT = 0; this._aimAng = -Math.PI / 2; this.facing = 1;
     this.sync = 0.35;   // 0 = crude, telegraphed torn double; 1 = a perfect reflection (F6 escalates)
@@ -49,6 +51,7 @@ const Mirror = {
     this.echoBuf = []; this._echoClip = []; this._echoPtr = 0; this._echoCd = 3;
     this._prevDist = 300; this._pDashPrev2 = 0; this._pGroundPrev = true; this._justEchoed = false;
     this._clashCd = 0; this._syncBump = 0; this._justClashed = false;
+    this._throwCd = 4.5; this._recallT = 0; this._wantThrow = false; this._threwHit = false;   // full-kit: thrown blade
     // build-awareness (F8): read the player's equipped mods and bias behavior (ramped by sync)
     this.mods = mods || {};
     this.airBias = (this.mods.airBonus || this.mods.aerialRave) ? 1 : 0;                              // they favor the air -> contest it harder
@@ -93,6 +96,8 @@ const Mirror = {
     // but only if the Mirror is synced enough to READ it (low sync = eats the hit)
     const incoming = playerBlade.tipSpeed > B.minHitSpeed * 1.3 && dist < 135 && !player.invulnerable;
     if (incoming && Math.random() < this.sync * dt * 22) { this._state = "dodge"; this._stateT = 0.3; this._decideT = 0.18; return; }
+    // while the blade is thrown, kite and wait for it to return before ANY melee intent
+    if (this.blade.state !== "held") { this._state = "throw"; return; }
     // let an in-progress ECHO run its clip to completion before re-deciding
     if (this._state === "echo") { if (this._echoPtr < this._echoClip.length) return; this._state = "space"; }
     // periodically THROW YOUR OWN RHYTHM BACK: replay a mirrored snippet of your recent motion.
@@ -101,6 +106,13 @@ const Mirror = {
     if (this._echoCd <= 0 && this.echoBuf.length >= 40 && dist < 460) {
       this._echoClip = this.echoBuf.slice(-96); this._echoPtr = 0; this._state = "echo";
       this._echoCd = lerp(6.5, 2.5, this.sync) + Math.random() * 1.5; this._justEchoed = true;
+      return;
+    }
+    // full-kit ranged option: hurl the momentum blade at you, then recall it (like a real player)
+    this._throwCd -= dt;
+    if (this._throwCd <= 0 && this.blade.state === "held" && this.sync > 0.4 && dist > 160 && dist < 480) {
+      this._state = "throw"; this._stateT = 0.7; this._wantThrow = true; this._threwHit = false;
+      this._throwCd = lerp(7.5, 4, this.sync) + Math.random() * 2;
       return;
     }
     this._decideT -= dt;
@@ -173,6 +185,17 @@ const Mirror = {
         }
         break;
       }
+      case "throw":                                   // blade is out / being thrown: kite at range, keep aim true
+        if (adx < 220) { if (away > 0) ai.right = true; else ai.left = true; }
+        else if (adx > 340) { if (dx > 0) ai.right = true; else ai.left = true; }
+        if (this._dashCd <= 0 && a.dashCharges > 0 && this.read.aggression > 0.4 && adx < 170) { if (away > 0) ai.right = true; else ai.left = true; ai._dash = true; this._dashCd = 0.6; }
+        break;
+    }
+    // WIELD THE BLADE LIKE ATTRACT: keep it live with a slash whenever the player is in reach,
+    // not only when a state explicitly commits (but never while baiting / dodging / blade thrown)
+    if (!wantSwing && this._state !== "bait" && this._state !== "dodge" && this._state !== "throw") {
+      const reach = Math.hypot(player.x - a.x, player.y - (a.y - a.hh * 0.2));
+      if (reach < 140) wantSwing = true;
     }
     // contest an airborne player: hop to meet them — harder if they run an air build
     const airThresh = 0.5 - this.airBias * 0.28 * this.sync;
@@ -219,6 +242,13 @@ const Mirror = {
     this.actor.facing = this.facing;
     this.actor.x = clamp(this.actor.x, 40, CONFIG.view.w - 40);   // keep it in the arena
     this.blade.update(dt, this.actor, platforms);
+    // full-kit throw: launch once the blade's aim is current this frame, then auto-recall
+    // (freeRecall guarantees it always comes back — the Mirror is never left weaponless)
+    if (this._wantThrow && this.blade.state === "held") { this._wantThrow = false; this.blade.throwBlade(); this._recallT = 0.85; }
+    if (this.blade.state !== "held") {
+      this._recallT -= dt;
+      if (this._recallT <= 0 || this.blade.state === "embedded") this.blade.tryRecall(this.actor);
+    }
   },
 
   // ---- the ONE isolated collision function ----
@@ -255,6 +285,11 @@ const Mirror = {
         this.segNear(mb.x, mb.y, mb.tipX, mb.tipY, player.x, player.y, player.hw + 10)) {
       const dmg = mb.damageAt();
       if (dmg > 0) { player.takeHit(dmg, mb.tipVX, mb.tipVY, a); this._syncBump += 0.05; }   // landing a read tightens sync
+    }
+    // (3) the Mirror's THROWN blade vs the player — one hit per throw (full-kit ranged)
+    if ((mb.state === "flying" || mb.state === "returning") && !this._threwHit && !player.invulnerable &&
+        this.segNear(mb.x, mb.y, mb.tipX, mb.tipY, player.x, player.y, player.hw + 12)) {
+      player.takeHit(mb.throwDmg || 20, mb.vx, mb.vy, a); this._threwHit = true; this._syncBump += 0.05;
     }
   },
 
