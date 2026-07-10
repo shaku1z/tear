@@ -45,6 +45,9 @@ const Mirror = {
     this.read = { dist: 300, airborne: 0, aggression: 0, dashHeat: 0, closing: 0, pBladeSpeed: 0 };
     this._state = "approach"; this._stateT = 0; this._decideT = 0;
     this._pDashPrev = 0; this._pPrevX = x; this._jumpCd = 0;
+    // ghost-echo: a rolling capture of the player's recent motion, replayed back mirrored
+    this.echoBuf = []; this._echoClip = []; this._echoPtr = 0; this._echoCd = 3;
+    this._prevDist = 300; this._pDashPrev2 = 0; this._pGroundPrev = true; this._justEchoed = false;
     this.active = true;
     return this;
   },
@@ -65,6 +68,18 @@ const Mirror = {
     R.pBladeSpeed = playerBlade.tipSpeed;
   },
 
+  // ---- ghost-echo: record the player's recent motion as a compact per-frame stream ----
+  _recordEcho(dt, player, playerBlade) {
+    const a = this.actor, dist = Math.abs(player.x - a.x);
+    const closed = this._prevDist - dist; this._prevDist = dist;
+    const adv = Math.abs(closed) < 0.4 ? 0 : Math.sign(closed);        // +1 = the player closed on us
+    const dash = (player.dashTimer > 0 && this._pDashPrev2 <= 0) ? 1 : 0; this._pDashPrev2 = player.dashTimer;
+    const jump = (!player.onGround && this._pGroundPrev) ? 1 : 0; this._pGroundPrev = player.onGround;
+    const swing = playerBlade.tipSpeed > CONFIG.blade.minHitSpeed ? 1 : 0;
+    this.echoBuf.push({ adv, dash, jump, swing });
+    if (this.echoBuf.length > 130) this.echoBuf.shift();               // ~2s at 60fps
+  },
+
   // ---- decide: pick a combat intent from the read + geometry + sync ----
   _decide(dt, player, playerBlade) {
     const R = this.read, a = this.actor, B = CONFIG.blade;
@@ -73,6 +88,16 @@ const Mirror = {
     // but only if the Mirror is synced enough to READ it (low sync = eats the hit)
     const incoming = playerBlade.tipSpeed > B.minHitSpeed * 1.3 && dist < 135 && !player.invulnerable;
     if (incoming && Math.random() < this.sync * dt * 22) { this._state = "dodge"; this._stateT = 0.3; this._decideT = 0.18; return; }
+    // let an in-progress ECHO run its clip to completion before re-deciding
+    if (this._state === "echo") { if (this._echoPtr < this._echoClip.length) return; this._state = "space"; }
+    // periodically THROW YOUR OWN RHYTHM BACK: replay a mirrored snippet of your recent motion.
+    // higher sync => it echoes more often (it has learned you better).
+    this._echoCd -= dt;
+    if (this._echoCd <= 0 && this.echoBuf.length >= 40 && dist < 460) {
+      this._echoClip = this.echoBuf.slice(-96); this._echoPtr = 0; this._state = "echo";
+      this._echoCd = lerp(6.5, 2.5, this.sync) + Math.random() * 1.5; this._justEchoed = true;
+      return;
+    }
     this._decideT -= dt;
     if (this._decideT > 0) return;
     this._decideT = lerp(0.42, 0.12, this.sync);   // sharper reactions as sync climbs
@@ -127,6 +152,17 @@ const Mirror = {
         if (this._dashCd <= 0 && a.dashCharges > 0) { ai._dash = true; this._dashCd = 0.5; }
         aimAtPlayer = false;
         break;
+      case "echo": {                                  // replay a mirrored snippet of the player's own motion
+        const s = this._echoClip[this._echoPtr++];
+        if (s) {
+          if (s.adv > 0) { if (dx > 0) ai.right = true; else ai.left = true; }        // echo your approach, aimed at you
+          else if (s.adv < 0) { if (away > 0) ai.right = true; else ai.left = true; } // echo your retreat
+          if (s.dash && this._dashCd <= 0 && a.dashCharges > 0) { if (dx > 0) ai.right = true; else ai.left = true; ai._dash = true; this._dashCd = 0.4; }
+          if (s.jump && a.onGround && this._jumpCd <= 0) { ai._jump = true; this._jumpCd = 0.5; }
+          wantSwing = !!s.swing;
+        }
+        break;
+      }
     }
     // contest an airborne player: hop to meet them
     if (this.read.airborne > 0.5 && player.y < a.y - 70 && a.onGround && this._jumpCd <= 0) { ai._jump = true; this._jumpCd = 0.9; }
@@ -155,6 +191,7 @@ const Mirror = {
 
   _think(dt, player, playerBlade) {
     this._updateRead(dt, player, playerBlade);
+    this._recordEcho(dt, player, playerBlade);
     this._decide(dt, player, playerBlade);
     this._act(dt, player);
   },
@@ -214,6 +251,9 @@ const Mirror = {
     // sync meter: a thin bar under the HP that fills as the reflection converges on you
     ctx.fillStyle = "rgba(255,255,255,0.25)"; ctx.fillRect(x, y + h + 1.5, w, 2);
     ctx.fillStyle = "#fff"; ctx.fillRect(x, y + h + 1.5, w * clamp(this.sync, 0, 1), 2);
-    if (typeof UI !== "undefined") { ctx.fillStyle = this.color; ctx.font = UI.font(9, true); ctx.textAlign = "center"; ctx.fillText("THE MIRROR", a.x, y - 5); }
+    if (typeof UI !== "undefined") {
+      ctx.fillStyle = this.color; ctx.font = UI.font(9, true); ctx.textAlign = "center";
+      ctx.fillText(this._state === "echo" ? "◆ ECHO" : "THE MIRROR", a.x, y - 5);
+    }
   },
 };
