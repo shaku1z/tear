@@ -17,10 +17,16 @@ Verified against the live `js/` and `tear-crazygames/js/` builds (main `?v=115`,
 | C | #1 sibling | `js/game.js:1479` (`e.stun = 1`), `game.js:1585` (`e.stun = 0.8`) | **Low** | 8 of 10 stun writes use `Math.max(e.stun, X)`; these two raw-assign and can *shorten* a longer active stun. Context-dependent (enemy state transitions), low blast radius, but inconsistent. |
 | D | status fragmentation | `js/player.js` `iframe` + `dashIframe` | **Low/design** | Two separate invuln timers OR-ed in the `invulnerable` getter. Works, but fragile — every new i-frame source has to remember which field to read/write. |
 
-### Data-format divergence (real, currently contained)
+### Data-format divergence — CORRECTED: not a live hazard
 
-- **Shape #5:** `js/meta.js` is a ledger (`lifetimeEarned`/`lifetimeSpent`); `tear-crazygames/js/meta.js` is still flat `coins`. `profile.js` also differs between builds.
-- **Why it hasn't bitten:** CG (`v=112`) predates cloud meta-sync, so the only meta data in Firestore was written by the main build (ledger). It becomes a live hazard the moment the CG build starts syncing meta to the shared `users/{uid}` doc.
+Original read: `tear-crazygames/js/meta.js` (flat `coins`) diverges from `js/meta.js` (ledger), and the CG build's cloud sync would clobber the ledger. A synthetic round-trip **did** prove that corruption between the two schemas (CG shows 0, overwrites ledger, main loses CG earnings).
+
+**But there is no live second build.** Verified via git:
+- The CrazyGames deploy is the **root** build (`index.html` + `js/`), which carries the CG SDK and is env-gated through `crazy.js`. It already runs the **ledger** `meta.js`, the full replay engine (`ghost.js`), and cloud sync — all tracked.
+- `tear-crazygames/` is an **abandoned duplicate** from an earlier separate-build approach: only **2 of 27** files are tracked at HEAD (`index.html`, `upgrades.js`); the other 25 (incl. `meta.js`) are untracked on disk and stale (its `meta.js` still had the pre-ledger flat model). `git archive HEAD` (the deploy method) therefore ships a broken, unserved `tear-crazygames/` subdir — it cannot be the live build.
+- Net: the shared cloud doc is only ever written by the ledger root build. **No live cross-build corruption path exists.** The hazard is real only against dead code.
+
+Residual (housekeeping, not a bug): the stale `tear-crazygames/` tree is confusing and half-tracked. Recommend deleting it (or the 2 tracked files) — but that's a repo-hygiene call for the owner, not part of the fix.
 
 ### Doc claims that are STALE (already fixed — do not re-do)
 
@@ -38,9 +44,11 @@ Fundamentally sound and, honestly, better than the doc implies:
 - **Status framework** (`bleed`/`burn`/`mark` via `tickStatus` returning damage for kill-crediting) is the right shape. `stun` and `slowStatus` sit *outside* it — and that's fine: one is a state flag, the other a speed multiplier, neither is a DoT.
 - **Balance opinion worth raising (not a bug):** `maxDamage` is a hard clamp, so past a certain swing speed extra tip-speed is wasted. Combined with the commit/slice multipliers stacking multiplicatively, the effective skill ceiling is lower than the inputs suggest. Worth a deliberate look during any combat-tuning phase — but it's a design call, not a defect.
 
-### Q3 — CG replay backport storage assumption is FALSE / risky
+### Q3 — CORRECTED: no "backport" exists; residual is a live Vault-size question
 
-The doc assumed CG local storage "has headroom" for the full GHOST v2 + Vault payload. Checked against real code:
+The doc framed Q3 as "backport the full replay engine to a separate CG build." That premise is void — the root build **is** the CG build and already ships GHOST v2 + the Vault. Nothing to backport.
+
+The real residual question applies to the live root build on the CrazyGames platform: does the Vault (up to 22 recordings) fit CrazyGames' `SDK.data` / localStorage quota? Checked against real code:
 - `CG.store` on-platform writes go to `window.CrazyGames.SDK.data.setItem`, **mirrored** to `localStorage` (`crazy.js:76-83`). SDK.data is per-key limited (~1MB) and CrazyGames recommends keeping total data small; localStorage is the usual ~5MB per origin.
 - The Vault keeps up to **22 recordings** (`MAX_UNPINNED 12 + MAX_PINNED 10`, `ghost.js:195`), each a full multi-track blob (px capped at 9000 samples ≈ 15 min, `ghost.js:37`).
 - The code already **silently drops saves on overflow** (`ghost.js:207` "storage full -> skip silently", `_saveIndex` swallows). So on CG this would fail invisibly: players lose recordings with no signal.
@@ -66,16 +74,14 @@ Principle: isolated low-risk fixes first; anything touching the **shape of saved
 ### Phase 2 — Player status consolidation (design debt, still no saved-data change)
 - Optionally unify `iframe`/`dashIframe` behind a single source of truth (the doc's "timers dict" idea, but scoped to only the timed buffs — leave `flowDR`/`berserk`/`shield` computed, as the doc itself concedes). Runtime-only state, not persisted, so lower stakes. Do only if we're touching this area anyway.
 
-### Phase 3 — CG build data-format alignment (SAVED-DATA SHAPE — max scrutiny, isolated)
-- Port the ledger model (or a read-compatible migration) into `tear-crazygames/js/meta.js` **before** CG ever syncs meta.
-- Prove migration on the Phase-0 fixtures: synthetic flat-coins save → ledger, and a real save round-trip. Own commit, own review.
-- Companion: reconcile `profile.js` divergence between builds.
+### Phase 3 — VOID (was: CG data-format alignment)
+Premised on a live second build. There isn't one — the root build is the CG deploy and already runs the ledger. No change needed. (Synthetic proof of the fix retained in scratchpad for the record; the aligned edit was reverted.)
 
-### Phase 4 — CG replay strategy (depends on Q3 measurement)
-- Measure real recording size first. Then choose playback-only vs capped Vault. Do **not** backport the full engine blind.
+### Phase 4 — Vault storage headroom on the live build (measurement, optional)
+Not a backport. Measure a real max-length recording's serialized size against CrazyGames' data quota; if the 22-recording Vault can exceed it, lower `MAX_UNPINNED` or add a size budget. Low urgency — the code already fails safe (silently skips a save on overflow), so the risk is "a heavy user silently stops banking new replays," not corruption.
 
-### Phase 5 — Two-build drift (structural, ongoing)
-- Establish canonical source + a sync step so `js/` and `tear-crazygames/js/` stop diverging. Largest scope; do last, after the data shapes agree.
+### Phase 5 — VOID (was: two-build drift)
+There is one env-gated build, not two. The `tear-crazygames/` tree is abandoned cruft. Recommended housekeeping (owner's call): delete `tear-crazygames/` (or its 2 tracked files) so `git archive HEAD` stops shipping a broken subdir and nobody mistakes it for a maintained build.
 
 ---
 
