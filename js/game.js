@@ -1095,14 +1095,21 @@
       // Chimera inherits the attack repertoire of the enemy types present in its wave
       if (e.kind === "chimera") e.moves = (run.waveKinds && run.waveKinds.length) ? run.waveKinds.slice() : ["charger"];
     } else {   // boss
-      if (run.mode === "campaign" && stageIndex > 0 && !e.bossName) { const s = 1 + stageIndex * 0.6; e.hp *= s; e.maxHp *= s; }   // placeholder bosses scale by stage
+      // mode-specific structural scaling (campaign stage depth / gauntlet wave depth) FIRST,
+      // then the shared difficulty-tier multiplier so bosses answer to Easy/Normal/Hard/Extreme
+      // like everything else — previously named campaign bosses ignored difficulty entirely.
+      // Only HP is scaled here: difficulty DAMAGE is applied globally through player.dmgTakenMult
+      // (see startRun), so scaling boss contactDmg by difficulty too would double-apply it.
+      let s = 1;
+      if (run.mode === "campaign" && stageIndex > 0 && !e.bossName) { s = 1 + stageIndex * 0.6; }   // placeholder bosses scale by stage
       else if (run.mode === "bossonly" || run.mode === "gauntlet") {
         // scale with the WAVE number (not just bosses-beaten) so a deep-run boss is a deep-run
         // threat — previously a wave-50 boss was barely tougher than the first.
-        const s = 1 + (run.wave || 1) * 0.12 + (run.bossesBeaten || 0) * 0.06;
-        e.hp *= s; e.maxHp *= s;
+        s = 1 + (run.wave || 1) * 0.12 + (run.bossesBeaten || 0) * 0.06;
         if (typeof e.contactDmg === "number") e.contactDmg *= 1 + (run.wave || 1) * 0.05;   // stays threatening, not just spongy
       }
+      s *= (run.diffHp || 1);   // difficulty-tier + Remote Config HP knob (matches the trash path at hpScale *= run.diffHp)
+      e.hp *= s; e.maxHp *= s;
     }
     e.hpDisplay = e.hp;
     e.spawnT = 0.35;   // brief materialize so spawns read as spawns (not teleports)
