@@ -48,6 +48,7 @@ const Mirror = {
     // ghost-echo: a rolling capture of the player's recent motion, replayed back mirrored
     this.echoBuf = []; this._echoClip = []; this._echoPtr = 0; this._echoCd = 3;
     this._prevDist = 300; this._pDashPrev2 = 0; this._pGroundPrev = true; this._justEchoed = false;
+    this._clashCd = 0; this._syncBump = 0; this._justClashed = false;
     this.active = true;
     return this;
   },
@@ -199,6 +200,10 @@ const Mirror = {
   update(dt, player, playerBlade, platforms) {
     if (!this.active) return;
     if (this.hitCd > 0) this.hitCd -= dt;
+    if (this._clashCd > 0) this._clashCd -= dt;
+    // sync is the phase curve: it drifts UP over the duel (the reflection converges on you) and
+    // is nudged by the exchange — landing reads tightens it, a clash fractures it (see updateCombat)
+    this.sync = clamp(this.sync + dt * 0.02 + this._syncBump, 0.15, 1); this._syncBump = 0;
     this._think(dt, player, playerBlade);
     this.actor.update(dt, platforms);
     this.actor.facing = this.facing;
@@ -210,12 +215,25 @@ const Mirror = {
   updateCombat(dt, player, playerBlade) {
     if (!this.active) return;
     const a = this.actor, mb = this.blade, B = CONFIG.blade;
+    // (0) BLADE CLASH: two momentum blades meeting tip-to-tip at speed. Throws both back and
+    // FRACTURES sync — the player's own blade fractures the reflection (the phase-curve lever).
+    if (this._clashCd <= 0 && playerBlade.state === "held" && mb.state === "held" &&
+        playerBlade.tipSpeed > B.minHitSpeed * 1.05 && mb.tipSpeed > B.minHitSpeed * 0.7 &&
+        Math.hypot(playerBlade.tipX - mb.tipX, playerBlade.tipY - mb.tipY) < 36) {
+      this._clashCd = 0.3; this.hitCd = Math.max(this.hitCd, 0.18); this._justClashed = true;
+      this.sync = clamp(this.sync - 0.2, 0.15, 1);
+      const mx = (playerBlade.tipX + mb.tipX) / 2, my = (playerBlade.tipY + mb.tipY) / 2, s = Math.sign(a.x - player.x) || 1;
+      a.vx += s * 300; a.vy -= 150;                                        // Mirror knocked back
+      player.vx += -s * 240; player.vy -= 110; player.iframe = Math.max(player.iframe, 0.12);   // player knocked back + brief safety
+      try { FX.flash(mx, my, 40, "#e9f6ff"); FX.ring(mx, my, 16, this.color); FX.burst(mx, my, 0, -1, 14, "#4bd6ff"); } catch (e) {}
+      return;   // a clash consumes this frame's exchange
+    }
     // (1) the real player's held blade cuts the Mirror
     if (this.hitCd <= 0 && playerBlade.state === "held" && playerBlade.tipSpeed > B.minHitSpeed &&
         this.segNear(playerBlade.x, playerBlade.y, playerBlade.tipX, playerBlade.tipY, a.x, a.y, a.hw + 14)) {
       const dmg = playerBlade.damageAt();
       if (dmg > 0) {
-        this.hp -= dmg; this.hitCd = B.enemyHitIframe;
+        this.hp -= dmg; this.hitCd = B.enemyHitIframe; this._syncBump -= 0.02;   // getting cut disrupts its read
         const m = Math.hypot(playerBlade.tipVX, playerBlade.tipVY) || 1;
         a.vx += (playerBlade.tipVX / m) * 220; a.vy += (playerBlade.tipVY / m) * 120 - 110;
         try { FX.burst(a.x, a.y, Math.sign(playerBlade.tipVX) || 1, -0.5, 8, this.color); } catch (e) {}
@@ -226,7 +244,7 @@ const Mirror = {
     if (mb.state === "held" && mb.tipSpeed > B.minHitSpeed && !player.invulnerable &&
         this.segNear(mb.x, mb.y, mb.tipX, mb.tipY, player.x, player.y, player.hw + 10)) {
       const dmg = mb.damageAt();
-      if (dmg > 0) player.takeHit(dmg, mb.tipVX, mb.tipVY, a);
+      if (dmg > 0) { player.takeHit(dmg, mb.tipVX, mb.tipVY, a); this._syncBump += 0.05; }   // landing a read tightens sync
     }
   },
 
@@ -237,6 +255,19 @@ const Mirror = {
 
   draw(ctx) {
     if (!this.active) return;
+    const a = this.actor;
+    // torn-double: chromatic ghost copies of the body that CONVERGE on the real silhouette as
+    // sync rises — a desynced reflection at low sync, a clean double of you at high sync.
+    if (!(typeof GFX !== "undefined" && GFX.low)) {
+      const split = (1 - this.sync) * 11 + 1;
+      const now = (typeof performance !== "undefined" ? performance.now() : Date.now());
+      const j = Math.sin(now * 0.018) * split * 0.35;
+      const bx = a.x - a.hw, by = a.y - a.hh, bw = a.hw * 2, bh = a.hh * 2;
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.14 + 0.34 * (1 - this.sync);
+      ctx.fillStyle = "#4bd6ff"; ctx.fillRect(bx - split + j, by - j * 0.4, bw, bh);   // cyan tear
+      ctx.fillStyle = "#ff4b93"; ctx.fillRect(bx + split - j, by + j * 0.4, bw, bh);   // magenta tear
+      ctx.restore();
+    }
     this.actor.draw(ctx);
     this.blade.draw(ctx, this.actor);
     this._drawBar(ctx);

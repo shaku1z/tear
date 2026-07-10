@@ -1400,6 +1400,11 @@
       Mirror.update(dt, player, blade, platforms);
       Mirror.updateCombat(dt, player, blade);
     }
+    if (typeof Mirror !== "undefined" && Mirror._justClashed) {
+      Mirror._justClashed = false;
+      addFloater(player.x, player.y - 66, "SYNC FRACTURED", true, "#4bd6ff");
+      addShake(CONFIG.juice.shake || 6); try { if (SFX.parry) SFX.parry(); else if (SFX.hit) SFX.hit(true); } catch (e) {}
+    }
     if (typeof Mirror !== "undefined" && Mirror._justDefeated) {
       Mirror._justDefeated = false;
       addFloater(player.x, player.y - 70, "REFLECTION SHATTERED", true, Mirror.color);
