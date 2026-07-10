@@ -193,11 +193,27 @@ const Mirror = {
     }
   },
 
-  _defeat() { this.active = false; },   // F7 wires in rewards/victory juice
+  _defeat() {
+    this.active = false; this._justDefeated = true;
+    try { FX.death(this.actor.x, this.actor.y, 22, this.color); FX.burst(this.actor.x, this.actor.y, 0, -1, 18, this.color); } catch (e) {}
+  },
 
   draw(ctx) {
     if (!this.active) return;
     this.actor.draw(ctx);
     this.blade.draw(ctx, this.actor);
+    this._drawBar(ctx);
+  },
+
+  _drawBar(ctx) {
+    const a = this.actor, w = 66, x = a.x - w / 2, y = a.y - a.hh - 24, h = 5;
+    const fr = clamp(this.hp / this.maxHp, 0, 1);
+    ctx.fillStyle = "rgba(0,0,0,0.82)"; ctx.fillRect(x - 1.5, y - 1.5, w + 3, h + 3);
+    ctx.fillStyle = "#39343f"; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = this.color; ctx.fillRect(x, y, w * fr, h);
+    // sync meter: a thin bar under the HP that fills as the reflection converges on you
+    ctx.fillStyle = "rgba(255,255,255,0.25)"; ctx.fillRect(x, y + h + 1.5, w, 2);
+    ctx.fillStyle = "#fff"; ctx.fillRect(x, y + h + 1.5, w * clamp(this.sync, 0, 1), 2);
+    if (typeof UI !== "undefined") { ctx.fillStyle = this.color; ctx.font = UI.font(9, true); ctx.textAlign = "center"; ctx.fillText("THE MIRROR", a.x, y - 5); }
   },
 };

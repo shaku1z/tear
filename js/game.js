@@ -556,6 +556,10 @@
     if (Input.pressed.has("KeyK")) { for (const e of enemies) { e.dead = true; } projectiles.length = 0; addFloater(player.x, player.y - 60, "CLEARED", true, CONFIG.colors.perfect); }
     if (Input.pressed.has("KeyH")) { player.hp = player.maxHp; addFloater(player.x, player.y - 60, "HEALED", true, "#1faf5a"); }
     if (Input.pressed.has("KeyU")) { state = "pglab"; listScroll = 0; document.exitPointerLock(); }
+    if (Input.pressed.has("KeyM")) {   // summon / dismiss THE MIRROR — a live duel vs an AI reflection
+      if (Mirror.active) { Mirror.active = false; addFloater(player.x, player.y - 60, "MIRROR GONE", false, Mirror.color); }
+      else { Mirror.spawn(player.x + (player.facing >= 0 ? 360 : -360), player.y - 40, 900); addFloater(player.x, player.y - 60, "THE MIRROR", true, Mirror.color); }
+    }
   }
 
   // the GMod-style build menu: a two-column board — everything on tap, arena frozen behind
@@ -1389,6 +1393,18 @@
       addShake(CONFIG.juice.shakeBig); SFX.slam();
     }
     if (blade.embeddedNew) { blade.embeddedNew = false; if (blade.throwType === "lob") lobExplode(blade.x, blade.y); }
+
+    // THE MIRROR (Phase F): a live AI duel actor, updated + collided through its own
+    // isolated path so nothing in the enemy/boss loop has to know it exists.
+    if (typeof Mirror !== "undefined" && Mirror.active) {
+      Mirror.update(dt, player, blade, platforms);
+      Mirror.updateCombat(dt, player, blade);
+    }
+    if (typeof Mirror !== "undefined" && Mirror._justDefeated) {
+      Mirror._justDefeated = false;
+      addFloater(player.x, player.y - 70, "REFLECTION SHATTERED", true, Mirror.color);
+      addShake(CONFIG.juice.shakeBig); try { SFX.slam(); } catch (e) {}
+    }
 
     // audio cadence: dash start + swing whoosh
     if (player.dashTimer > 0 && !wasDashing) {
@@ -2465,6 +2481,7 @@
     }
     for (const p of projectiles) p.draw(ctx);
     if (run && run.mode === "tutorial" && TUT.active) TUT.drawGhost(ctx);   // the translucent demonstrator
+    if (typeof Mirror !== "undefined" && Mirror.active) Mirror.draw(ctx);
     if (player) player.draw(ctx);
     if (blade) blade.draw(ctx, player);
     FX.draw(ctx);
