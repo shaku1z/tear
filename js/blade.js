@@ -42,9 +42,11 @@ class Blade {
 
   forceEmbed() { this.state = "embedded"; this.vx = 0; this.vy = 0; }
 
-  // effective blade length (longer while thrown if the ability is owned)
+  // effective blade length (longer while thrown if the ability is owned).
+  // lengthBonus is a per-instance additive override — the Mirror boss wields a much longer,
+  // phase-growing blade without touching the global config or the player's blade.
   get curLength() {
-    return CONFIG.blade.length * (this.state === "held" ? 1 : this.throwSizeMult);
+    return (CONFIG.blade.length + (this.lengthBonus || 0)) * (this.state === "held" ? 1 : this.throwSizeMult);
   }
 
   // hand anchor follows the player
@@ -401,24 +403,27 @@ class Blade {
     }
 
     // ---- thrown: show the recall range + a tether that darkens when in range ----
+    // hideThrowUI (the Mirror boss) skips the player-facing recall HUD — it just flies as a weapon
     const T = CONFIG.blade.throw;
     const inRange = len(this.x - hand.x, this.y - hand.y) <= T.reclaimDistance;
 
-    ctx.setLineDash([6, 6]);
-    ctx.strokeStyle = inRange ? THEME.ink : (THEME.dark ? "rgba(236,235,246,0.45)" : "#cfcfcf");
-    ctx.lineWidth = inRange ? 2 : 1.5;
-    ctx.beginPath();
-    ctx.moveTo(hand.x, hand.y);
-    ctx.lineTo(this.x, this.y);
-    ctx.stroke();
+    if (!this.hideThrowUI) {
+      ctx.setLineDash([6, 6]);
+      ctx.strokeStyle = inRange ? THEME.ink : (THEME.dark ? "rgba(236,235,246,0.45)" : "#cfcfcf");
+      ctx.lineWidth = inRange ? 2 : 1.5;
+      ctx.beginPath();
+      ctx.moveTo(hand.x, hand.y);
+      ctx.lineTo(this.x, this.y);
+      ctx.stroke();
 
-    // reclaim radius around the player
-    ctx.strokeStyle = THEME.dark ? "rgba(236,235,246,0.30)" : "#dcdcdc";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(hand.x, hand.y, T.reclaimDistance, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
+      // reclaim radius around the player
+      ctx.strokeStyle = THEME.dark ? "rgba(236,235,246,0.30)" : "#dcdcdc";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(hand.x, hand.y, T.reclaimDistance, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
 
     this._drawBody(ctx);
 

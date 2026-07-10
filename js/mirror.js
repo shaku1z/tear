@@ -40,6 +40,8 @@ const Mirror = {
     b.lmbOverride = false;    // the Mirror controls its own tether, never the human's mouse
     b.trailColor = "#b06cff"; b.glowColor = "#c98cff";   // its slashes read as the Mirror's, not yours
     b.freeRecall = true;      // always recalls a thrown blade (no weaponless softlock)
+    b.lengthBonus = 95;       // boss-scale reach (~doubles a normal blade; GROWS on release, see _updatePhase)
+    b.hideThrowUI = true;     // no player-facing recall HUD on the boss's thrown blade
     this.hp = this.maxHp = hp || 900;
     this.hitCd = 0; this._dashCd = 0; this._swingT = 0; this._aimAng = -Math.PI / 2; this.facing = 1;
     this.sync = 0.35;   // 0 = crude, telegraphed torn double; 1 = a perfect reflection (F6 escalates)
@@ -52,6 +54,8 @@ const Mirror = {
     this._prevDist = 300; this._pDashPrev2 = 0; this._pGroundPrev = true; this._justEchoed = false;
     this._clashCd = 0; this._syncBump = 0; this._justClashed = false;
     this._throwCd = 4.5; this._recallT = 0; this._wantThrow = false; this._threwHit = false;   // full-kit: thrown blade
+    this._hitFlash = 0; this._stagger = 0;                          // reacts to your hits like a real enemy
+    this._phase = 0; this._getsugaCd = 2.5; this.crescents = []; this._justReleased = "";   // release phases + crescent slashes
     // build-awareness (F8): read the player's equipped mods and bias behavior (ramped by sync)
     this.mods = mods || {};
     this.airBias = (this.mods.airBonus || this.mods.aerialRave) ? 1 : 0;                              // they favor the air -> contest it harder
@@ -138,7 +142,7 @@ const Mirror = {
     const dx = player.x - a.x, adx = Math.abs(dx), dir = Math.sign(dx) || 1, away = -dir;
     this.facing = dir;
     this._dashCd -= dt; this._jumpCd -= dt; if (this._stateT > 0) this._stateT -= dt;
-    const band = 118;   // preferred striking distance
+    const band = 118 + (this.blade.lengthBonus || 0) * 0.55;   // a long blade fights from farther out
     let wantSwing = false, aimAtPlayer = true;
 
     switch (this._state) {
@@ -213,12 +217,14 @@ const Mirror = {
     // target is in reach (committed states extend the range via wantSwing). Never swing mid-bait,
     // mid-dodge (aimAtPlayer is false there), or while the blade is thrown.
     const canSwing = aimAtPlayer && this._state !== "bait" && this._state !== "throw";
-    if (canSwing && this._swingT <= -0.10 && reach < (wantSwing ? 180 : 155)) {
-      this._swingT = 0.16; this._swingDir = Math.random() < 0.5 ? -1 : 1; this._swingBase = baseAng;
+    const rr = 150 + (this.blade.lengthBonus || 0) * 0.9;   // the long blade reaches much farther
+    // slower, more DELIBERATE cadence (a long pause between big committed slashes) — a boss, not a blur
+    if (canSwing && this._swingT <= -0.30 && reach < (wantSwing ? rr + 40 : rr)) {
+      this._swingT = 0.22; this._swingDir = Math.random() < 0.5 ? -1 : 1; this._swingBase = baseAng;
     }
     if (this._swingT > 0) {
-      const k = 1 - this._swingT / 0.16;
-      this._aimAng = this._swingBase - this._swingDir * 1.05 + this._swingDir * 2.1 * k;   // clean slash arc (attract's exact shape)
+      const k = 1 - this._swingT / 0.22;
+      this._aimAng = this._swingBase - this._swingDir * 1.15 + this._swingDir * 2.3 * k;   // a big, sweeping slash arc
     } else {
       this._aimAng += (baseAng - this._aimAng) * clamp(7 * dt, 0, 1);
     }
@@ -229,6 +235,11 @@ const Mirror = {
   _think(dt, player, playerBlade) {
     this._updateRead(dt, player, playerBlade);
     this._recordEcho(dt, player, playerBlade);
+    if (this._stagger > 0) {   // reeling from a hit: no inputs — let the knockback carry it, blade just trails
+      this.ai.left = this.ai.right = this.ai.up = this.ai.down = false;
+      this._aim(dt, player, false, true);
+      return;
+    }
     this._decide(dt, player, playerBlade);
     this._act(dt, player);
   },
@@ -237,9 +248,13 @@ const Mirror = {
     if (!this.active) return;
     if (this.hitCd > 0) this.hitCd -= dt;
     if (this._clashCd > 0) this._clashCd -= dt;
+    if (this._hitFlash > 0) this._hitFlash -= dt;
+    if (this._stagger > 0) this._stagger -= dt;
     // sync is the phase curve: it drifts UP over the duel (the reflection converges on you) and
     // is nudged by the exchange — landing reads tightens it, a clash fractures it (see updateCombat)
     this.sync = clamp(this.sync + dt * 0.02 + this._syncBump, 0.15, 1); this._syncBump = 0;
+    this._updatePhase();          // release/unseal escalation (blade grows, crescents unlock)
+    this._getsugaCd -= dt;
     this._think(dt, player, playerBlade);
     this.actor.update(dt, platforms);
     this.actor.facing = this.facing;
@@ -252,6 +267,12 @@ const Mirror = {
       this._recallT -= dt;
       if (this._recallT <= 0 || this.blade.state === "embedded") this.blade.tryRecall(this.actor);
     }
+    // released phases unleash CRESCENT energy slashes (a Getsuga-style tear ripped through the air)
+    if (this._phase >= 1 && this._getsugaCd <= 0 && this._stagger <= 0 && this.blade.state === "held" && Math.abs(player.x - this.actor.x) < 760) {
+      this._fireGetsuga(player);
+      this._getsugaCd = (this._phase >= 2 ? 1.5 : 2.3) + Math.random() * 0.8;
+    }
+    this._updateCrescents(dt, player);
   },
 
   // ---- the ONE isolated collision function ----
@@ -271,15 +292,19 @@ const Mirror = {
       try { FX.flash(mx, my, 40, "#e9f6ff"); FX.ring(mx, my, 16, this.color); FX.burst(mx, my, 0, -1, 14, "#4bd6ff"); } catch (e) {}
       return;   // a clash consumes this frame's exchange
     }
-    // (1) the real player's held blade cuts the Mirror
+    // (1) the real player's held blade cuts the Mirror — it REACTS like a real enemy: knockback
+    // scales with swing speed, an upward swing launches it airborne, and it flashes + briefly
+    // staggers so hits land with weight.
     if (this.hitCd <= 0 && playerBlade.state === "held" && playerBlade.tipSpeed > B.minHitSpeed &&
-        this.segNear(playerBlade.x, playerBlade.y, playerBlade.tipX, playerBlade.tipY, a.x, a.y, a.hw + 14)) {
+        this.segNear(playerBlade.x, playerBlade.y, playerBlade.tipX, playerBlade.tipY, a.x, a.y, a.hw + 16)) {
       const dmg = playerBlade.damageAt();
       if (dmg > 0) {
-        this.hp -= dmg; this.hitCd = B.enemyHitIframe; this._syncBump -= 0.02;   // getting cut disrupts its read
+        this.hp -= dmg; this.hitCd = B.enemyHitIframe; this._syncBump -= 0.02;
+        this._hitFlash = 0.12; this._stagger = Math.max(this._stagger, 0.11);
         const m = Math.hypot(playerBlade.tipVX, playerBlade.tipVY) || 1;
-        a.vx += (playerBlade.tipVX / m) * 220; a.vy += (playerBlade.tipVY / m) * 120 - 110;
-        try { FX.burst(a.x, a.y, Math.sign(playerBlade.tipVX) || 1, -0.5, 8, this.color); } catch (e) {}
+        const kb = 300 + Math.min(playerBlade.tipSpeed * 0.16, 1000);   // harder swings hurl it much farther
+        a.vx += (playerBlade.tipVX / m) * kb; a.vy += (playerBlade.tipVY / m) * kb - 170;   // upward bias -> uppercuts send it flying
+        try { FX.burst(a.x, a.y, Math.sign(playerBlade.tipVX) || 1, -0.5, 10, this.color); FX.ring(a.x, a.y, 9, "#fff"); } catch (e) {}
         if (this.hp <= 0) this._defeat();
       }
     }
@@ -294,11 +319,70 @@ const Mirror = {
         this.segNear(mb.x, mb.y, mb.tipX, mb.tipY, player.x, player.y, player.hw + 12)) {
       player.takeHit(mb.throwDmg || 20, mb.vx, mb.vy, a); this._threwHit = true; this._syncBump += 0.05;
     }
+    // (4) crescent energy slashes vs the player
+    if (this.crescents.length) for (const c of this.crescents) {
+      if (!c.hit && !player.invulnerable && Math.hypot(c.x - player.x, c.y - player.y) < c.r * 0.7 + player.hw) {
+        player.takeHit(15 + this._phase * 6, c.vx, c.vy, a); c.hit = true;
+        try { FX.burst(c.x, c.y, Math.sign(c.vx) || 1, 0, 8, "#b06cff"); } catch (e) {}
+      }
+    }
   },
 
   _defeat() {
     this.active = false; this._justDefeated = true;
     try { FX.death(this.actor.x, this.actor.y, 22, this.color); FX.burst(this.actor.x, this.actor.y, 0, -1, 18, this.color); } catch (e) {}
+  },
+
+  // ---- release phases: as you break its HP the reflection UNSEALS — the blade grows longer and
+  // it starts flinging crescent energy slashes. A bankai-style escalation across three forms. ----
+  _updatePhase() {
+    const fr = this.hp / this.maxHp;
+    const ph = fr > 0.62 ? 0 : (fr > 0.30 ? 1 : 2);
+    if (ph > this._phase) {
+      this._phase = ph;
+      this.blade.lengthBonus = [95, 165, 240][ph];   // the blade GROWS with each release
+      this._hitFlash = 0.22; this._getsugaCd = 0.5; this._stagger = 0;
+      this.sync = Math.max(this.sync, 0.5 + ph * 0.2);
+      this._justReleased = ph === 1 ? "THE MIRROR UNSEALS" : "FINAL REFLECTION";
+      const a = this.actor;
+      try { FX.flash(a.x, a.y - a.hh, 72, "#c98cff"); FX.ring(a.x, a.y, 34, this.color); FX.ring(a.x, a.y, 20, "#e9d5ff"); FX.burst(a.x, a.y, 0, -1, 26, "#b06cff"); } catch (e) {}
+    }
+  },
+
+  // a crescent energy slash flung along a big committed cut toward the player (final form fans three)
+  _fireGetsuga(player) {
+    const a = this.actor, ph = this._phase;
+    const ang = Math.atan2(player.y - (a.y - a.hh * 0.4), player.x - a.x);
+    this._swingT = 0.24; this._swingDir = Math.sin(ang) < 0 ? 1 : -1; this._swingBase = ang;   // a visible overhead slash
+    const sp = 560 + ph * 90, n = ph >= 2 ? 3 : 1, spread = 0.17;
+    for (let i = 0; i < n; i++) {
+      const av = ang + (i - (n - 1) / 2) * spread;
+      this.crescents.push({ x: a.x + Math.cos(ang) * 46, y: a.y - a.hh * 0.4, vx: Math.cos(av) * sp, vy: Math.sin(av) * sp, ang: av, life: 1.5, r: 34 + ph * 10, hit: false });
+    }
+    try { FX.burst(a.x + Math.cos(ang) * 60, a.y - a.hh * 0.4 + Math.sin(ang) * 60, Math.cos(ang), Math.sin(ang), 10, "#b06cff"); } catch (e) {}
+  },
+
+  _updateCrescents(dt, player) {
+    if (!this.crescents.length) return;
+    for (const c of this.crescents) { c.x += c.vx * dt; c.y += c.vy * dt; c.life -= dt; }
+    this.crescents = this.crescents.filter((c) => c.life > 0 && c.x > -80 && c.x < CONFIG.view.w + 80 && c.y < CONFIG.view.h + 80);
+  },
+
+  _drawCrescents(ctx) {
+    if (!this.crescents.length) return;
+    const glow = !(typeof GFX !== "undefined" && GFX.low);
+    for (const c of this.crescents) {
+      const al = clamp(c.life / 1.5, 0, 1);
+      ctx.save();
+      ctx.translate(c.x, c.y); ctx.rotate(c.ang);
+      if (glow) ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = 0.55 + 0.4 * al; ctx.strokeStyle = "#b06cff"; ctx.lineWidth = 6 + c.r * 0.16; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.arc(-c.r * 0.35, 0, c.r, -1.15, 1.15); ctx.stroke();   // forward-bulging crescent, edge leading
+      ctx.globalAlpha = 0.5 * al; ctx.strokeStyle = "#efe3ff"; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(-c.r * 0.35, 0, c.r, -1.0, 1.0); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
   },
 
   draw(ctx) {
@@ -316,8 +400,19 @@ const Mirror = {
       ctx.fillStyle = "#ff4b93"; ctx.fillRect(bx + split - j, by + j * 0.4, bw, bh);   // magenta tear
       ctx.restore();
     }
+    if (this._phase > 0 && !(typeof GFX !== "undefined" && GFX.low)) {   // release aura, growing per form
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.10 + 0.05 * this._phase;
+      const rad = 40 + this._phase * 16, g = ctx.createRadialGradient(a.x, a.y, 4, a.x, a.y, rad);
+      g.addColorStop(0, "#b06cff"); g.addColorStop(1, "rgba(176,108,255,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(a.x, a.y, rad, 0, 6.2832); ctx.fill(); ctx.restore();
+    }
     this.actor.draw(ctx);
+    if (this._hitFlash > 0) {   // enemy-style white hit flash so your blows read with impact
+      ctx.save(); ctx.globalAlpha = clamp(this._hitFlash / 0.12, 0, 1) * 0.85;
+      ctx.fillStyle = "#fff"; ctx.fillRect(a.x - a.hw, a.y - a.hh, a.hw * 2, a.hh * 2); ctx.restore();
+    }
     this.blade.draw(ctx, this.actor);
+    this._drawCrescents(ctx);
     this._drawBar(ctx);
   },
 
@@ -332,7 +427,7 @@ const Mirror = {
     ctx.fillStyle = "#fff"; ctx.fillRect(x, y + h + 1.5, w * clamp(this.sync, 0, 1), 2);
     if (typeof UI !== "undefined") {
       ctx.fillStyle = this.color; ctx.font = UI.font(9, true); ctx.textAlign = "center";
-      ctx.fillText(this._state === "echo" ? "◆ ECHO" : "THE MIRROR", a.x, y - 5);
+      ctx.fillText(this._state === "echo" ? "◆ ECHO" : ["THE MIRROR", "THE MIRROR ⟶ UNSEALED", "⟶ FINAL REFLECTION"][this._phase], a.x, y - 5);
     }
   },
 };
