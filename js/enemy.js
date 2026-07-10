@@ -851,7 +851,7 @@ class Bomber extends Enemy {
   update(dt, platforms, player, projectiles) {
     this.tickTimers(dt);
     const C = this.cfg;
-    if (this.canClimb && this.climbNav(player, platforms, dt)) {   // reposition up to a perched player
+    if (this.canClimb && this.atk !== "channel" && this.climbNav(player, platforms, dt)) {   // reposition up to a perched player — but never abandon a Geomancer wall-channel mid-cast (its timer would pause and the half-wall linger, then teleport-resume); matches Charger/Ranged holding position during a committed attack
       if (this.onGround) this.vx = lerp(this.vx, this.navDir * this.speed, clamp(7 * dt, 0, 1));
       this.integrate(dt, platforms);
       return;
@@ -1239,7 +1239,10 @@ class Chimera extends Enemy {
     } else if (this.atk === "strike") {
       this.atkT -= dt; if (this.atkT <= 0) { this.atk = "recover"; this.copyT = 1.3; }
     } else if (this.atk === "recover") {
-      this.vx = lerp(this.vx, 0, clamp(7 * dt, 0, 1)); this.copyT -= dt; if (this.copyT <= 0) this.atk = "idle";
+      // recover drains copyT to ~0; RESET it on the handoff to idle, or the idle block below
+      // sees copyT<=0 on the very next frame and re-attacks instantly — skipping the intended
+      // wander/reposition beat (without this the Chimera just plants and attacks ~every 1.85s).
+      this.vx = lerp(this.vx, 0, clamp(7 * dt, 0, 1)); this.copyT -= dt; if (this.copyT <= 0) { this.atk = "idle"; this.copyT = 0.9 + Math.random() * 0.6; }   // idle reposition window (tunable)
     } else {
       let move = 0;
       if (dist > 380) move = dir; else if (dist < 210) move = away;
