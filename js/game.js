@@ -1583,6 +1583,7 @@
           // ENRAGES it: shield gone, faster and aggressive (angry, not crippled)
           if (e.cfg.breakSpeed && !e.enraged && Math.sign(blade.tipX - e.x) === e.guardSide && blade.tipSpeed >= e.cfg.breakSpeed) {
             e.stun = Math.max(e.stun, 0.8); e.enraged = true;   // don't clip a longer stun (lob/impale)
+            e.atk = "idle"; e.atkT = 0;   // clear any in-flight stomp charge: its cleanup block is gated on !enraged, so without this the telegraph freezes on screen forever (softlock)
             FX.ring(e.x, e.y, 14, CONFIG.colors.armoredShield);
             addFloater(e.x, e.y - 30, "SHIELD BREAK", true, CONFIG.colors.armoredShield);
           }
