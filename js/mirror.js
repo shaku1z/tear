@@ -26,7 +26,7 @@ const Mirror = {
     return Math.hypot(px - (ax + dx * t), py - (ay + dy * t)) <= r;
   },
 
-  spawn(x, y, hp) {
+  spawn(x, y, hp, mods) {
     const a = this.actor = new Player(x, y);
     a.maxHp = a.hp = 99999;   // actor HP is irrelevant — the Mirror's death is this.hp
     const ai = this.ai = { left: false, right: false, up: false, down: false, _dash: false, _jump: false };
@@ -49,6 +49,10 @@ const Mirror = {
     this.echoBuf = []; this._echoClip = []; this._echoPtr = 0; this._echoCd = 3;
     this._prevDist = 300; this._pDashPrev2 = 0; this._pGroundPrev = true; this._justEchoed = false;
     this._clashCd = 0; this._syncBump = 0; this._justClashed = false;
+    // build-awareness (F8): read the player's equipped mods and bias behavior (ramped by sync)
+    this.mods = mods || {};
+    this.airBias = (this.mods.airBonus || this.mods.aerialRave) ? 1 : 0;                              // they favor the air -> contest it harder
+    this.parryWary = (this.mods.parryGuard || this.mods.backlash || this.mods.backlashSurge || this.mods.parryStun) ? 1 : 0;  // they punish parries -> don't swing into a guard
     this.active = true;
     return this;
   },
@@ -135,6 +139,11 @@ const Mirror = {
         else if (adx < band - 40) { if (dx > 0) ai.left = true; else ai.right = true; }
         break;
       case "strike":                                  // close the last gap and cut
+        // build-aware: vs a parry/Backlash build, don't swing into an ACTIVE guard window
+        if (this.parryWary && player.guardT > 0 && Math.random() < this.sync) {
+          if (adx < band) { if (away > 0) ai.right = true; else ai.left = true; }   // hold spacing, wait it out
+          break;
+        }
         if (adx > band) { if (dx > 0) ai.right = true; else ai.left = true; }
         wantSwing = true;
         break;
@@ -165,8 +174,9 @@ const Mirror = {
         break;
       }
     }
-    // contest an airborne player: hop to meet them
-    if (this.read.airborne > 0.5 && player.y < a.y - 70 && a.onGround && this._jumpCd <= 0) { ai._jump = true; this._jumpCd = 0.9; }
+    // contest an airborne player: hop to meet them — harder if they run an air build
+    const airThresh = 0.5 - this.airBias * 0.28 * this.sync;
+    if (this.read.airborne > airThresh && player.y < a.y - 60 && a.onGround && this._jumpCd <= 0) { ai._jump = true; this._jumpCd = this.airBias ? 0.6 : 0.9; }
 
     this._aim(dt, player, wantSwing, aimAtPlayer);
   },

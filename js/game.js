@@ -558,7 +558,7 @@
     if (Input.pressed.has("KeyU")) { state = "pglab"; listScroll = 0; document.exitPointerLock(); }
     if (Input.pressed.has("KeyM")) {   // summon / dismiss THE MIRROR — a live duel vs an AI reflection
       if (Mirror.active) { Mirror.active = false; addFloater(player.x, player.y - 60, "MIRROR GONE", false, Mirror.color); }
-      else { Mirror.spawn(player.x + (player.facing >= 0 ? 360 : -360), player.y - 40, 900); addFloater(player.x, player.y - 60, "THE MIRROR", true, Mirror.color); }
+      else { Mirror.spawn(player.x + (player.facing >= 0 ? 360 : -360), player.y - 40, 900, run.mods); addFloater(player.x, player.y - 60, "THE MIRROR", true, Mirror.color); }
     }
   }
 
