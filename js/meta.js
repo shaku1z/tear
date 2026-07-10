@@ -71,7 +71,9 @@ const SHOP = [
   { id: "warding", name: "Warding", desc: "Begin each run with a one-hit shield per level.", baseCost: 400, costMult: 1.8, maxLevel: 2,
     apply: (lv, { player }) => { player.maxShield = Math.max(player.maxShield, lv); player.shield = player.maxShield; } },
   { id: "aircharge", name: "Aether Step", desc: "Start with an extra mid-air dash charge.", baseCost: 560, maxLevel: 1,
-    apply: (lv, { player }) => { player.maxDashCharges = Math.max(player.maxDashCharges, 1 + lv); player.dashCharges = player.maxDashCharges; } },
+    // additive so it STACKS with the Air Dash ability instead of both flat-capping at 2.
+    // Safe as +=: META.apply runs once per run on a fresh player (base 1).
+    apply: (lv, { player }) => { player.maxDashCharges += lv; player.dashCharges = player.maxDashCharges; } },
   { id: "lifeline", name: "Lifeline", desc: "Recover +5 HP on each wave clear per level.", baseCost: 270, costMult: 1.5, maxLevel: 4,
     apply: (lv, { mods }) => { if (mods) mods.waveHeal += 5 * lv; } },
   { id: "phoenix", name: "Second Wind", desc: "Once per run, revive with 35% HP when you would fall.", baseCost: 850, maxLevel: 1,

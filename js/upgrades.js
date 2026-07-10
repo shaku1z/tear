@@ -94,7 +94,9 @@ const UPGRADES = [
     apply: () => { CONFIG.player.dmgTakenMult *= 0.88; } },
   { id: "air_dash", name: "Air Dash", unique: true, cat: "mobility",
     desc: "Gain a second dash you can use in mid-air. Charges refill when you land.",
-    apply: ({ player }) => { player.maxDashCharges = Math.max(player.maxDashCharges, 2); player.dashCharges = player.maxDashCharges; } },
+    // additive so it STACKS with Aether Step (meta shop) instead of both flat-capping at 2.
+    // Safe as +=: unique (picked once per run) and applied to a fresh player (base 1).
+    apply: ({ player }) => { player.maxDashCharges += 1; player.dashCharges = player.maxDashCharges; } },
   { id: "bounty", name: "Bounty Hunter", unique: false, cat: "utility", desc: "+20% score from kills.",
     apply: () => { CONFIG.run.scoreMult *= 1.2; } },
   { id: "glass_cannon", name: "Glass Cannon", unique: false, cat: "offense", desc: "+30% ALL damage (swing + throw), but you take +25% more.",
@@ -108,7 +110,7 @@ const UPGRADES = [
   // ---- resilience: the healing rework's "earned survivability" set ----
   { id: "bloodrite", name: "Bloodrite", unique: true, rare: true, cat: "resilience",
     desc: "Skill kills (slam, spike, perfect-parry) restore HP.",
-    apply: ({ mods }) => { mods.bloodrite = true; mods.onKill.push((ev) => { if (ev.cause === "skill") { ev.player.heal(CONFIG.resilience.bloodriteHeal); if (mods.bloodGuard) ev.player.guardT = 1.0; } else if (mods.killHeal) ev.player.heal(mods.killHeal); }); },
+    apply: ({ mods }) => { mods.bloodrite = true; mods.onKill.push((ev) => { if (ev.cause === "skill") { ev.player.heal(CONFIG.resilience.bloodriteHeal); if (mods.bloodGuard) ev.player.guardT = Math.max(ev.player.guardT, 1.0); } else if (mods.killHeal) ev.player.heal(mods.killHeal); }); },
     tiers: [
       { desc: "Skill kills (slam, spike, perfect-parry) restore much more HP and grant 1s of invincibility.", apply: ({ mods }) => { CONFIG.resilience.bloodriteHeal = 16; mods.bloodGuard = true; } },
       { desc: "Skill kills (slam, spike, perfect-parry) restore massive HP and grant 1s of invincibility. Plus, EVERY normal kill now trickles HP back.", apply: ({ mods }) => { CONFIG.resilience.bloodriteHeal = 22; mods.killHeal = 4; } },

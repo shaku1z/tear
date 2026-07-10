@@ -1582,7 +1582,7 @@
           // breaking a guard with a fast frontal hit staggers the armored enemy and
           // ENRAGES it: shield gone, faster and aggressive (angry, not crippled)
           if (e.cfg.breakSpeed && !e.enraged && Math.sign(blade.tipX - e.x) === e.guardSide && blade.tipSpeed >= e.cfg.breakSpeed) {
-            e.stun = 0.8; e.enraged = true;
+            e.stun = Math.max(e.stun, 0.8); e.enraged = true;   // don't clip a longer stun (lob/impale)
             FX.ring(e.x, e.y, 14, CONFIG.colors.armoredShield);
             addFloater(e.x, e.y - 30, "SHIELD BREAK", true, CONFIG.colors.armoredShield);
           }
