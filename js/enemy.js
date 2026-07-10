@@ -258,6 +258,10 @@ class Enemy {
     }
   }
 
+  // additive shim: a uniform damage entrypoint for a symmetric actor-vs-actor collision loop
+  // (see Mirror). One-line alias into the existing hit() — no existing call site changes.
+  takeHit(dmg, kx, ky, src) { this.hit(dmg, kx, ky); return this.dead ? "dead" : "hit"; }
+
   drawHpBar(ctx) {
     if (this._noBar) return;                                  // suppressed (e.g. INDEX previews)
     const fr = clamp(this.hp / this.maxHp, 0, 1);

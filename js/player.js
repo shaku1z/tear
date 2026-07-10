@@ -217,6 +217,10 @@ class Player {
     return "hit";
   }
 
+  // additive shim mirroring Enemy.takeHit so one symmetric collision loop can damage the
+  // player the same way it damages an enemy — a thin translation into existing takeDamage().
+  takeHit(dmg, kx, ky, src) { return this.takeDamage(dmg, src ? src.x : (this.x - (kx || 0))); }
+
   heal(n) { this.hp = Math.min(this.maxHp, this.hp + n); }
 
   draw(ctx) {
