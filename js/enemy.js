@@ -82,8 +82,14 @@ class Enemy {
   _dot(dmg) {   // damage with no i-frame / knockback (used by DoTs + detonations)
     if (this.shield > 0) { this.shield -= dmg; if (this.shield < 0) { this.hp += this.shield; this.shield = 0; } }
     else this.hp -= dmg;
-    if (this.hp <= 0) this.dead = true;
+    if (this.hp <= 0) {
+      if (this._deathLocked()) { this.hp = 1; }   // scripted-invulnerable boss phase (fake-death): DoTs can't kill either
+      else { this.dead = true; if (this.isBoss && typeof Clipper !== 'undefined') Clipper.stop(); }
+    }
   }
+  // bosses override: true while in a scripted fake-death/kneel phase where NO damage path
+  // (blade hit OR DoT) may be lethal — the fight must reach the scripted revival.
+  _deathLocked() { return false; }
   // returns damage dealt this tick (so the loop can credit DoT kills)
   tickStatus(dt) {
     let dealt = 0;
@@ -246,7 +252,10 @@ class Enemy {
       this.vx += (knockX / m) * kb;
       this.vy += (knockY / m) * kb - 120 / this.weight;
     }
-    if (this.hp <= 0) this.dead = true;
+    if (this.hp <= 0) {
+      if (this._deathLocked()) { this.hp = 1; }   // scripted-invulnerable boss phase: a blade hit can't kill here either
+      else { this.dead = true; if (this.isBoss && typeof Clipper !== 'undefined') Clipper.stop(); }
+    }
   }
 
   drawHpBar(ctx) {
@@ -1391,6 +1400,7 @@ class Warden extends Enemy {
     }
   }
 
+  _deathLocked() { return this.state === "fakedeath"; }   // P3 fake-death: don't let a hit/DoT skip the ceiling phase
   update(dt, platforms, player, projectiles) {
     this.tickTimers(dt);
     this._animBaton(dt);
@@ -1664,8 +1674,8 @@ class Aldric extends Enemy {
     this.weaponA = -0.6; this.weaponPrevA = -0.6;
   }
   damageTakenMult() { return this.mode === "frenzy" ? CONFIG.aldric.frenzyDmgTaken : (this.mode === "downed" ? CONFIG.aldric.downedDmgTaken : 1); }
-  // during the fake he can't be killed — he always rises into the frenzy
-  hit(dmg, kx, ky) { super.hit(dmg, kx, ky); if (this.mode === "downed" && this.hp <= 0) { this.hp = 1; this.dead = false; } }
+  // during the fake he can't be killed (hit OR DoT) — he always rises into the frenzy
+  _deathLocked() { return this.mode === "downed"; }
 
   _shock(projectiles, dir, fire) {
     const C = CONFIG.aldric, footY = this.y + this.hh;
@@ -1915,7 +1925,7 @@ class Source extends Enemy {
     this.downText = "...not yet"; this.reviveText = "TRUE FORM";
   }
   damageTakenMult() { return this.mode === "final" ? 1.2 : (this.mode === "downed" ? 0.3 : 1); }
-  hit(dmg, kx, ky) { super.hit(dmg, kx, ky); if (this.mode === "downed" && this.hp <= 0) { this.hp = 1; this.dead = false; } }
+  _deathLocked() { return this.mode === "downed"; }   // fake-death kneel: neither hit nor DoT may kill before revival
 
   _shot(player, projectiles) {
     const C = CONFIG.source, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
