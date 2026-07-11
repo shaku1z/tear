@@ -307,6 +307,7 @@ const Mirror = {
           this.blade.throwBlade(); this._recallT = 0.9; this._threwHit = false;
           this._fsPending = this.phase >= 3;
           this.mv = null; this._state = "throw";
+          try { if (typeof SFX !== "undefined") SFX.throwBlade(); } catch (e) {}
         }
       }
     }
@@ -321,7 +322,7 @@ const Mirror = {
       const av = ang + (i - (n - 1) / 2) * spread;
       this.crescents.push({ x: a.x + Math.cos(ang) * 50, y: a.y - a.hh * 0.4, vx: Math.cos(av) * sp, vy: Math.sin(av) * sp, ang: av, life: 1.5, r: 30 + ph * 8, hit: false, refl: false });
     }
-    try { FX.burst(a.x + Math.cos(ang) * 60, a.y - a.hh * 0.4 + Math.sin(ang) * 60, Math.cos(ang), Math.sin(ang), 10, this.color); } catch (e) {}
+    try { if (typeof SFX !== "undefined") { SFX.swing(3200); SFX.throwBlade(); } FX.burst(a.x + Math.cos(ang) * 60, a.y - a.hh * 0.4 + Math.sin(ang) * 60, Math.cos(ang), Math.sin(ang), 10, this.color); } catch (e) {}
   },
 
   _flashStep(player) {   // vanish and reappear at the embedded blade, catching it mid-strike
@@ -332,7 +333,7 @@ const Mirror = {
     b.tryRecall(a);
     this._fsPending = false;
     this.facing = Math.sign(player.x - a.x) || 1;
-    this._swingT = 0.22; this._swingDir = this.facing; this._swingBase = Math.atan2(player.y - a.y, player.x - a.x);   // arrival strike
+    this._startStrike(this.facing);   // arrival strike
   },
 
   // =====================================================================
@@ -424,22 +425,33 @@ const Mirror = {
     this._aim(dt, player, wantSwing);
   },
 
-  // ---- blade carriage: SLASH on commit, otherwise rest the blade VERTICAL (up when sealed,
-  // dragged point-down once torn) — a stance, not a random flail ----
+  // pick a PRECISE strike — mostly vertical (overhead chop / rising cut), sometimes a flat cut.
+  // atan2(dy, dx*F) auto-mirrors across facing. Momentum: it whips (smoothstep) + leans in.
+  _startStrike(F) {
+    const r = Math.random();
+    if (r < 0.44) { this._swingFrom = Math.atan2(-1.0, 0.12 * F); this._swingTo = Math.atan2(0.85, 0.85 * F); this._swingKind = "chop"; }        // overhead DOWN
+    else if (r < 0.76) { this._swingFrom = Math.atan2(0.9, 0.7 * F); this._swingTo = Math.atan2(-1.0, 0.35 * F); this._swingKind = "rise"; }      // rising UP
+    else { this._swingFrom = Math.atan2(-0.15, -0.95 * F); this._swingTo = Math.atan2(0.15, 0.95 * F); this._swingKind = "cut"; }                  // flat CUT across
+    this._swingT = 0.18;
+    try { if (typeof SFX !== "undefined") SFX.swing(2500); } catch (e) {}
+  },
+
+  // ---- blade carriage: a crisp committed STRIKE on demand, otherwise rest the blade VERTICAL
+  // (held high when sealed, dragged low once torn) — a stance + planned cuts, never a flail ----
   _aim(dt, player, wantSwing) {
     const a = this.actor, hand = { x: a.x, y: a.y - a.hh * 0.2 }, R = CONFIG.blade.aimRadius;
     const reach = Math.hypot(player.x - hand.x, player.y - hand.y);
-    const rr = 155 + (this.blade.lengthBonus || 0) * 0.9;
+    const rr = 150 + (this.blade.lengthBonus || 0) * 0.9;
     this._swingT -= dt;
-    if (wantSwing && this._swingT <= -0.30 && reach < rr) {
-      this._swingT = 0.22; this._swingDir = Math.random() < 0.5 ? -1 : 1;
-      this._swingBase = Math.atan2(player.y - hand.y, player.x - hand.x);
-    }
+    if (wantSwing && this._swingT <= -0.34 && reach < rr) this._startStrike(Math.sign(player.x - a.x) || this.facing);
     if (this._swingT > 0) {
-      const k = 1 - this._swingT / 0.22;
-      this._aimAng = this._swingBase - this._swingDir * 1.15 + this._swingDir * 2.3 * k;
+      const k = 1 - this._swingT / 0.18, e = k * k * (3 - 2 * k);   // smoothstep = a WHIP: slow cock, fast cut
+      this._aimAng = lerpAngle(this._swingFrom, this._swingTo, e);
+      if (k > 0.25 && k < 0.8 && a.onGround && !this.mv) {           // momentum: step into the cut so it carries weight
+        const dir = Math.sign(player.x - a.x) || this.facing; a.vx = lerp(a.vx, dir * 300, clamp(9 * dt, 0, 1));
+      }
     } else {
-      const rest = this.phase >= 2 ? Math.PI / 2 : -Math.PI / 2;   // torn = dragged low; sealed = held high
+      const rest = this.phase >= 2 ? Math.PI / 2 : -Math.PI / 2;
       this._aimAng = lerpAngle(this._aimAng, rest, clamp(6 * dt, 0, 1));
     }
     this.blade.aimOverride.x = hand.x + Math.cos(this._aimAng) * R;
@@ -492,7 +504,7 @@ const Mirror = {
       if (dmg > 0) {
         const mv = this.mv;
         if (mv && mv.ph === "exec") {
-          if (mv.id === "rend") { player.takeHit(dmg, mb.tipVX, mb.tipVY, a); player.vy = -720; this.juice({ txt: "LAUNCHED", x: player.x, y: player.y - 46, color: this.color, hitstop: CONFIG.hitStop.small, shake: 6 }); this._syncBump += 0.05; if (this.phase >= 2) { this._answer = "juggle"; this._answerT = 0.28; } return; }
+          if (mv.id === "rend") { player.takeHit(dmg, mb.tipVX, mb.tipVY, a); player.vy = -720; this.juice({ txt: "LAUNCHED", x: player.x, y: player.y - 46, color: this.color, hitstop: CONFIG.hitStop.small, shake: 6 }); this._syncBump += 0.05; try { if (typeof SFX !== "undefined") SFX.updraft(); } catch (e) {} if (this.phase >= 2) { this._answer = "juggle"; this._answerT = 0.28; } return; }
           if (mv.id === "slam") { player.takeHit(dmg * 1.4, 0, 1, a); player.vy = Math.max(player.vy, 520); this._syncBump += 0.05; return; }
           if (mv.id === "juggle") { player.takeHit(dmg, mb.tipVX, mb.tipVY, a); player.vy = Math.min(player.vy, -380); this._syncBump += 0.05; return; }
         }

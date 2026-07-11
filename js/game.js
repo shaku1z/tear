@@ -3051,10 +3051,12 @@
     // dev/test modes (Boss Test, Enemy Test) never ship to the CrazyGames build —
     // they only appear locally and on the standalone (Vercel) site
     col("Mode", 180, CONFIG.modes.filter((m) => !m.debug || !CG.live), () => selMode, (v) => selMode = v);
-    col("Difficulty", 650, CONFIG.difficulties.map((d) => ({ id: d.id, label: d.label })), () => selDiff, (v) => selDiff = v);
+    // difficulty is meaningless in Training/Playground (Playground sets it from its own build menu)
+    const showDiff = selMode !== "tutorial" && selMode !== "playground";
+    if (showDiff) col("Difficulty", 650, CONFIG.difficulties.map((d) => ({ id: d.id, label: d.label })), () => selDiff, (v) => selDiff = v);
     col("Weapon", 1120, WEAPONS.map((w) => ({ id: w.id, label: w.name })), () => selWeapon, (v) => selWeapon = v);
     const dsel = CONFIG.difficulties.find((x) => x.id === selDiff);
-    if (dsel && dsel.desc) UI.text(ctx, dsel.desc, 650 + bw / 2, top + 18 + 5 * (bh + gap) + 6, t.type.caption, "center", t.alpha.soft);
+    if (showDiff && dsel && dsel.desc) UI.text(ctx, dsel.desc, 650 + bw / 2, top + 18 + 5 * (bh + gap) + 6, t.type.caption, "center", t.alpha.soft);
 
     const wsel = WEAPONS.find((x) => x.id === selWeapon);
     if (wsel) UI.text(ctx, wsel.blurb, W / 2, 552, t.type.body, "center", t.alpha.soft);
