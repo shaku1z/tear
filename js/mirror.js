@@ -57,7 +57,7 @@ const Mirror = {
     this.read = { dist: 300, airborne: 0, aggression: 0, dashHeat: 0, closing: 0, pBladeSpeed: 0 };
     this._state = "approach"; this._stateT = 0; this._decideT = 0;
     this._swingT = 0; this._swingDir = 1; this._swingBase = 0; this._aimAng = -Math.PI / 2;
-    this._dashCd = 0; this._jumpCd = 0; this._clashCd = 0; this._syncBump = 0;
+    this._dashCd = 0; this._jumpCd = 0; this._clashCd = 0; this._syncBump = 0; this.lock = null;
     this._pDashPrev = 0; this._pPrevX = host.x; this._pDashPrev2 = 0; this._pGroundPrev = true; this._prevDist = 300;
     this.echoBuf = []; this._echoClip = []; this._echoPtr = 0; this._echoCd = 6;
     this.mv = null; this._moveCd = 2.2;     // committed-move director
@@ -88,9 +88,21 @@ const Mirror = {
     this._recordEcho(dt, player);
     this._watchTricks(player);
 
-    // brain: reeling > committed move > neutral
+    // brain: lock > reeling > committed move > neutral
     const ai = this.ai;
     ai.left = ai.right = ai.up = ai.down = false;
+    if (this.lock) {                                         // saber lock: lean into the bind, blade crossed
+      const L = this.lock, hand = { x: this.actor.x, y: this.actor.y - this.actor.hh * 0.2 };
+      this.actor.vx = lerp(this.actor.vx, (L.x - this.actor.x) * 2.6, clamp(9 * dt, 0, 1));
+      this.actor.vy = lerp(this.actor.vy, 0, clamp(9 * dt, 0, 1));
+      this._aimAng = Math.atan2(L.y - hand.y, L.x - hand.x);
+      this.blade.aimOverride.x = hand.x + Math.cos(this._aimAng) * CONFIG.blade.aimRadius;
+      this.blade.aimOverride.y = hand.y + Math.sin(this._aimAng) * CONFIG.blade.aimRadius;
+      this.facing = Math.sign(player.x - this.actor.x) || this.facing;
+      this.actor.update(dt, platforms); this.actor.facing = this.facing; this.blade.update(dt, this.actor, platforms);
+      this._updateCrescents(dt); this._updateWaves(dt);
+      return;
+    }
     if (this._stagger > 0) {
       this._aim(dt, player, false);                          // knocked silly: blade just trails
     } else if (this.mv) {
@@ -473,6 +485,61 @@ const Mirror = {
   },
 
   // =====================================================================
+  //  THE SABER LOCK — a Star Wars blade bind: cross, spark, struggle, break
+  // =====================================================================
+  _enterLock(x, y, player) {
+    this.lock = { t: 0.72, x, y, press: 0.5, sparkT: 0 };
+    this.host.hitCd = Math.max(this.host.hitCd, 0.72);   // no chip trades while bound
+    this._clashCd = 0.5; player.iframe = Math.max(player.iframe, 0.18);
+    this.juice({ shake: 7, flash: 0.16 });
+    try { if (typeof SFX !== "undefined") { SFX.parry(); SFX.hit(true); } FX.flash(x, y, 48, "#ffffff"); FX.ring(x, y, 16, this.color); } catch (e) {}
+  },
+  _tickLock(dt, player, playerBlade) {
+    const L = this.lock;
+    L.t -= dt;
+    if (playerBlade.state === "held") { L.x = (this.blade.tipX + playerBlade.tipX) / 2; L.y = (this.blade.tipY + playerBlade.tipY) / 2; }
+    // PRESS: a fast player blade pushes toward YOU winning; letting up lets the reflection win
+    const pressing = (playerBlade.state === "held" && playerBlade.tipSpeed > CONFIG.blade.minHitSpeed * 0.45) ? 1 : -0.75;
+    L.press = clamp(L.press + pressing * dt * 0.85, 0, 1);
+    player.vx = lerp(player.vx, (L.x - player.x) * 2.2, clamp(5 * dt, 0, 1));   // held in the bind
+    player.iframe = Math.max(player.iframe, 0.1);
+    L.sparkT -= dt;
+    if (L.sparkT <= 0) {   // pour sparks + rumble
+      L.sparkT = 0.024;
+      try { FX.burst(L.x + (Math.random() * 2 - 1) * 7, L.y + (Math.random() * 2 - 1) * 7, (Math.random() * 2 - 1), (Math.random() * 2 - 1) - 0.3, 3, Math.random() < 0.5 ? "#ffffff" : this.color); } catch (e) {}
+      this.juice({ shake: 2 });
+      if (Math.random() < 0.22) { try { if (typeof SFX !== "undefined") SFX.deflect(); } catch (e) {} }
+    }
+    if (L.t <= 0) this._breakLock(player);
+  },
+  _breakLock(player) {
+    const L = this.lock, a = this.actor, s = Math.sign(player.x - a.x) || 1, won = L.press > 0.6;
+    if (won) {   // you OVERPOWER the reflection: it's flung back + staggered — a punish window
+      a.vx += -s * 820; a.vy -= 260; this._stagger = 0.55; this.sync = clamp(this.sync - 0.24, 0.15, 1);
+      this.juice({ txt: "GUARD BROKEN", x: L.x, y: L.y - 24, big: true, color: "#4bd6ff", shake: 11, hitstop: CONFIG.hitStop.big, slowmo: 0.4, zoom: CONFIG.juice.zoomBig });
+      try { if (typeof SFX !== "undefined") SFX.counter(); } catch (e) {}
+    } else {     // the reflection overpowers YOU: shoved back + chipped (drop the bind's i-frames so it lands)
+      player.iframe = 0; player.vx += s * 720; player.vy -= 220; player.takeHit(9 + this.phase * 4, s, -0.4, a); this._syncBump += 0.06;
+      this.juice({ txt: "OVERPOWERED", x: L.x, y: L.y - 24, big: true, color: this.color, shake: 9, hitstop: CONFIG.hitStop.big });
+      try { if (typeof SFX !== "undefined") { SFX.slam(); SFX.hurt(); } } catch (e) {}
+    }
+    try { FX.flash(L.x, L.y, 68, "#ffffff"); FX.ring(L.x, L.y, 30, this.color); FX.ring(L.x, L.y, 16, "#ffffff"); FX.burst(L.x, L.y, 0, 0, 26, "#ffffff"); FX.burst(L.x, L.y, 0, -1, 14, this.color); } catch (e) {}
+    this.lock = null;
+  },
+  _drawLock(ctx) {
+    const L = this.lock; if (!L) return;
+    const glow = !(typeof GFX !== "undefined" && GFX.low), pulse = 0.6 + 0.4 * Math.sin(performance.now() / 28);
+    ctx.save();
+    if (glow) ctx.globalCompositeOperation = "lighter";
+    const rad = 15 + 9 * pulse, g = ctx.createRadialGradient(L.x, L.y, 1, L.x, L.y, rad * 2.3);
+    g.addColorStop(0, "#ffffff"); g.addColorStop(0.4, this.color); g.addColorStop(1, "rgba(176,108,255,0)");
+    ctx.globalAlpha = 0.92; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(L.x, L.y, rad * 2.3, 0, 6.2832); ctx.fill();
+    ctx.globalAlpha = 0.85; ctx.lineWidth = 3.5; ctx.strokeStyle = L.press > 0.6 ? "#4bd6ff" : this.color;   // strain gauge
+    ctx.beginPath(); ctx.arc(L.x, L.y, 22, -Math.PI / 2, -Math.PI / 2 + 6.2832 * L.press); ctx.stroke();
+    ctx.restore(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+  },
+
+  // =====================================================================
   //  THE ISOLATED COMBAT EXCHANGE (game.js calls this once per step)
   //  The host takes the player's blade through the NORMAL enemy loop — this
   //  handles only what that loop can't: the boss's own weapon vs the player,
@@ -483,17 +550,14 @@ const Mirror = {
     const a = this.actor, mb = this.blade, B = CONFIG.blade;
     this.pb = playerBlade;   // perception cache
 
-    // (0) BLADE CLASH — tip-to-tip at speed: both thrown back, sync FRACTURES
+    // (0) THE SABER LOCK — a Star Wars blade duel. Two momentum blades meet tip-to-tip at
+    // speed and BIND: they cross, sparks pour, the ground trembles, and a press-struggle
+    // decides who's thrown back. Keep your blade fast to overpower it; let up and it breaks YOU.
+    if (this.lock) { this._tickLock(dt, player, playerBlade); return; }
     if (this._clashCd <= 0 && playerBlade.state === "held" && mb.state === "held" &&
-        playerBlade.tipSpeed > B.minHitSpeed * 1.05 && mb.tipSpeed > B.minHitSpeed * 0.7 &&
-        Math.hypot(playerBlade.tipX - mb.tipX, playerBlade.tipY - mb.tipY) < 40) {
-      this._clashCd = 0.3; this.host.hitCd = Math.max(this.host.hitCd, 0.2);
-      this.sync = clamp(this.sync - 0.2, 0.15, 1);
-      const mx = (playerBlade.tipX + mb.tipX) / 2, my = (playerBlade.tipY + mb.tipY) / 2, s = Math.sign(a.x - player.x) || 1;
-      a.vx += s * 320; a.vy -= 160;
-      player.vx += -s * 240; player.vy -= 110; player.iframe = Math.max(player.iframe, 0.12);
-      this.juice({ shake: 6, txt: "SYNC FRACTURED", x: mx, y: my - 20, big: true, color: "#4bd6ff" });
-      try { FX.flash(mx, my, 42, "#e9f6ff"); FX.ring(mx, my, 18, this.color); FX.burst(mx, my, 0, -1, 14, "#4bd6ff"); } catch (e) {}
+        playerBlade.tipSpeed > B.minHitSpeed * 1.05 && mb.tipSpeed > B.minHitSpeed * 0.65 &&
+        Math.hypot(playerBlade.tipX - mb.tipX, playerBlade.tipY - mb.tipY) < 42) {
+      this._enterLock((playerBlade.tipX + mb.tipX) / 2, (playerBlade.tipY + mb.tipY) / 2, player);
       return;
     }
 
@@ -609,6 +673,7 @@ const Mirror = {
     this._drawGlint(ctx);
     this._drawCrescents(ctx);
     this._drawWaves(ctx);
+    this._drawLock(ctx);
 
     // slim sync strip + echo cue (the big HP bar is the boss bar up top)
     const bw = 52, bx = a.x - bw / 2, by = a.y - a.hh - 14;
