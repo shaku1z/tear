@@ -339,12 +339,11 @@ const Mirror = {
   _fireCrescents(player) {
     const a = this.actor, ph = this.phase;
     const ang = Math.atan2(player.y - (a.y - a.hh * 0.4), player.x - a.x);
-    const sp = 560 + ph * 80, n = ph >= 3 ? 3 : 1, spread = 0.17;
-    for (let i = 0; i < n; i++) {
-      const av = ang + (i - (n - 1) / 2) * spread;
-      this.crescents.push({ x: a.x + Math.cos(ang) * 50, y: a.y - a.hh * 0.4, vx: Math.cos(av) * sp, vy: Math.sin(av) * sp, ang: av, life: 1.5, r: 30 + ph * 8, hit: false, refl: false });
-    }
-    try { if (typeof SFX !== "undefined") { SFX.swing(3200); SFX.throwBlade(); } FX.burst(a.x + Math.cos(ang) * 60, a.y - a.hh * 0.4 + Math.sin(ang) * 60, Math.cos(ang), Math.sin(ang), 10, this.color); } catch (e) {}
+    const sp = 580 + ph * 80, n = ph >= 3 ? 3 : 1, spread = 0.16;
+    const ox = a.x + Math.cos(ang) * 52, oy = a.y - a.hh * 0.4 + Math.sin(ang) * 20;
+    for (let i = 0; i < n; i++) this._pushCrescent(ox, oy, ang + (i - (n - 1) / 2) * spread, sp, 42 + ph * 10);   // bigger, glowing
+    this.juice({ shake: 4 });
+    try { if (typeof SFX !== "undefined") SFX.crescent(); FX.flash(ox, oy, 36, "#ffffff"); FX.ring(ox, oy, 16, this.color); FX.burst(ox, oy, Math.cos(ang), Math.sin(ang), 12, this.color); } catch (e) {}
   },
 
   _flashStep(player) {   // vanish and reappear at the embedded blade, catching it mid-strike
@@ -485,7 +484,11 @@ const Mirror = {
   // =====================================================================
   _updateCrescents(dt) {
     if (!this.crescents.length) return;
-    for (const c of this.crescents) { c.x += c.vx * dt; c.y += c.vy * dt; c.life -= dt; }
+    for (const c of this.crescents) {
+      c.x += c.vx * dt; c.y += c.vy * dt; c.life -= dt;
+      if (!c.trail) c.trail = [];
+      c.trail.push({ x: c.x, y: c.y }); if (c.trail.length > 6) c.trail.shift();
+    }
     this.crescents = this.crescents.filter((c) => c.life > 0 && c.x > -80 && c.x < CONFIG.view.w + 80 && c.y > -80 && c.y < CONFIG.view.h + 80);
   },
   _updateWaves(dt) {
@@ -498,42 +501,44 @@ const Mirror = {
   //  THE SABER LOCK — a Star Wars blade bind: cross, spark, struggle, break
   // =====================================================================
   _enterLock(x, y, player) {
-    this.lock = { t: 0.72, x, y, press: 0.5, sparkT: 0 };
-    this.host.hitCd = Math.max(this.host.hitCd, 0.72);   // no chip trades while bound
-    this._clashCd = 0.5; player.iframe = Math.max(player.iframe, 0.18);
-    this.juice({ shake: 7, flash: 0.16 });
-    try { if (typeof SFX !== "undefined") { SFX.parry(); SFX.hit(true); } FX.flash(x, y, 48, "#ffffff"); FX.ring(x, y, 16, this.color); } catch (e) {}
+    // SHORT + snappy so it never kills momentum: a quick bind you resolve in a heartbeat
+    this.lock = { t: 0.4, x, y, press: 0.5, sparkT: 0 };
+    this.host.hitCd = Math.max(this.host.hitCd, 0.42);   // no chip trades while bound
+    this._clashCd = 0.4; player.iframe = Math.max(player.iframe, 0.1);
+    this.juice({ shake: 5, flash: 0.12 });
+    try { if (typeof SFX !== "undefined") SFX.saberLock(); FX.flash(x, y, 44, "#ffffff"); FX.ring(x, y, 15, this.color); } catch (e) {}
   },
   _tickLock(dt, player, playerBlade) {
     const L = this.lock;
     L.t -= dt;
     if (playerBlade.state === "held") { L.x = (this.blade.tipX + playerBlade.tipX) / 2; L.y = (this.blade.tipY + playerBlade.tipY) / 2; }
-    // PRESS: a fast player blade pushes toward YOU winning; letting up lets the reflection win
-    const pressing = (playerBlade.state === "held" && playerBlade.tipSpeed > CONFIG.blade.minHitSpeed * 0.45) ? 1 : -0.75;
-    L.press = clamp(L.press + pressing * dt * 0.85, 0, 1);
-    player.vx = lerp(player.vx, (L.x - player.x) * 2.2, clamp(5 * dt, 0, 1));   // held in the bind
-    player.iframe = Math.max(player.iframe, 0.1);
+    // PRESS: a fast player blade pushes toward YOU winning; letting up lets the reflection win.
+    // Fast build so the short bind still resolves decisively.
+    const pressing = (playerBlade.state === "held" && playerBlade.tipSpeed > CONFIG.blade.minHitSpeed * 0.45) ? 1 : -0.95;
+    L.press = clamp(L.press + pressing * dt * 1.6, 0, 1);
+    player.vx = lerp(player.vx, (L.x - player.x) * 1.5, clamp(6 * dt, 0, 1));   // eased hold, not a freeze
+    player.iframe = Math.max(player.iframe, 0.08);
     L.sparkT -= dt;
-    if (L.sparkT <= 0) {   // pour sparks + rumble
-      L.sparkT = 0.024;
-      try { FX.burst(L.x + (Math.random() * 2 - 1) * 7, L.y + (Math.random() * 2 - 1) * 7, (Math.random() * 2 - 1), (Math.random() * 2 - 1) - 0.3, 3, Math.random() < 0.5 ? "#ffffff" : this.color); } catch (e) {}
+    if (L.sparkT <= 0) {   // pour sparks + a metallic sizzle
+      L.sparkT = 0.03;
+      try { FX.burst(L.x + (Math.random() * 2 - 1) * 7, L.y + (Math.random() * 2 - 1) * 7, (Math.random() * 2 - 1), (Math.random() * 2 - 1) - 0.3, 3, Math.random() < 0.5 ? "#ffffff" : this.color); if (typeof SFX !== "undefined") SFX.saberSizzle(); } catch (e) {}
       this.juice({ shake: 2 });
-      if (Math.random() < 0.22) { try { if (typeof SFX !== "undefined") SFX.deflect(); } catch (e) {} }
     }
     if (L.t <= 0) this._breakLock(player);
   },
   _breakLock(player) {
     const L = this.lock, a = this.actor, s = Math.sign(player.x - a.x) || 1, won = L.press > 0.6;
-    if (won) {   // you OVERPOWER the reflection: it's flung back + staggered — a punish window
-      a.vx += -s * 820; a.vy -= 260; this._stagger = 0.55; this.sync = clamp(this.sync - 0.24, 0.15, 1);
-      this.juice({ txt: "GUARD BROKEN", x: L.x, y: L.y - 24, big: true, color: "#4bd6ff", shake: 11, hitstop: CONFIG.hitStop.big, slowmo: 0.4, zoom: CONFIG.juice.zoomBig });
-      try { if (typeof SFX !== "undefined") SFX.counter(); } catch (e) {}
-    } else {     // the reflection overpowers YOU: shoved back + chipped (drop the bind's i-frames so it lands)
-      player.iframe = 0; player.vx += s * 720; player.vy -= 220; player.takeHit(9 + this.phase * 4, s, -0.4, a); this._syncBump += 0.06;
-      this.juice({ txt: "OVERPOWERED", x: L.x, y: L.y - 24, big: true, color: this.color, shake: 9, hitstop: CONFIG.hitStop.big });
-      try { if (typeof SFX !== "undefined") { SFX.slam(); SFX.hurt(); } } catch (e) {}
+    // NO slow-mo (it killed momentum) — a crisp shove + a tiny hitstop only
+    if (won) {   // you OVERPOWER the reflection: flung back + staggered = a punish window
+      a.vx += -s * 900; a.vy -= 240; this._stagger = 0.5; this.sync = clamp(this.sync - 0.22, 0.15, 1);
+      this.juice({ txt: "GUARD BROKEN", x: L.x, y: L.y - 24, big: true, quiet: true, color: "#4bd6ff", shake: 9, hitstop: CONFIG.hitStop.small });
+      try { if (typeof SFX !== "undefined") SFX.saberBreak(true); } catch (e) {}
+    } else {     // the reflection overpowers YOU: shoved back + chipped (drop bind i-frames so it lands)
+      player.iframe = 0; player.vx += s * 760; player.vy -= 200; player.takeHit(9 + this.phase * 4, s, -0.4, a); this._syncBump += 0.06;
+      this.juice({ txt: "OVERPOWERED", x: L.x, y: L.y - 24, big: true, quiet: true, color: this.color, shake: 8, hitstop: CONFIG.hitStop.small });
+      try { if (typeof SFX !== "undefined") { SFX.saberBreak(false); SFX.hurt(); } } catch (e) {}
     }
-    try { FX.flash(L.x, L.y, 68, "#ffffff"); FX.ring(L.x, L.y, 30, this.color); FX.ring(L.x, L.y, 16, "#ffffff"); FX.burst(L.x, L.y, 0, 0, 26, "#ffffff"); FX.burst(L.x, L.y, 0, -1, 14, this.color); } catch (e) {}
+    try { FX.flash(L.x, L.y, 62, "#ffffff"); FX.ring(L.x, L.y, 28, this.color); FX.ring(L.x, L.y, 15, "#ffffff"); FX.burst(L.x, L.y, 0, 0, 24, "#ffffff"); FX.burst(L.x, L.y, 0, -1, 12, this.color); } catch (e) {}
     this.lock = null;
   },
   _drawLock(ctx) {
@@ -569,9 +574,9 @@ const Mirror = {
     rf.fireCd -= dt;
     if (rf.fireCd <= 0) {
       rf.fireCd = lerp(2.1, 1.2, this.sync) + Math.random() * 0.5;
-      const ang = Math.atan2(player.y - rf.y, player.x - rf.x), sp = 520;
-      this.crescents.push({ x: rf.x, y: rf.y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, ang, life: 1.6, r: 26, hit: false, refl: false });
-      try { if (typeof SFX !== "undefined") SFX.throwBlade(); FX.burst(rf.x, rf.y, Math.cos(ang), Math.sin(ang), 6, this.color); } catch (e) {}
+      const ang = Math.atan2(player.y - rf.y, player.x - rf.x), sp = 540;
+      this._pushCrescent(rf.x, rf.y, ang, sp, 36);
+      try { if (typeof SFX !== "undefined") SFX.crescent(); FX.flash(rf.x, rf.y, 24, "#ffffff"); FX.burst(rf.x, rf.y, Math.cos(ang), Math.sin(ang), 8, this.color); } catch (e) {}
     }
   },
   _dissolveReflection() {
@@ -692,9 +697,10 @@ const Mirror = {
         try { FX.flash(c.x, c.y, 30, "#4bd6ff"); } catch (e) {}
         continue;
       }
-      if (!c.hit && !c.refl && !player.invulnerable && Math.hypot(c.x - player.x, c.y - player.y) < c.r * 0.7 + player.hw) {
-        player.takeHit(14 + this.phase * 5, c.vx, c.vy, a); c.hit = true;
-        try { FX.burst(c.x, c.y, Math.sign(c.vx) || 1, 0, 8, this.color); } catch (e) {}
+      if (!c.hit && !c.refl && !player.invulnerable && Math.hypot(c.x - player.x, c.y - player.y) < c.r * 0.6 + player.hw) {
+        player.takeHit(14 + this.phase * 5, c.vx, c.vy, a); c.hit = true; c.life = Math.min(c.life, 0.1);
+        this.juice({ shake: 4 });
+        try { if (typeof SFX !== "undefined") SFX.hit(true); FX.flash(c.x, c.y, 30, "#ffffff"); FX.ring(c.x, c.y, 14, "#ffffff"); FX.burst(c.x, c.y, Math.sign(c.vx) || 1, -0.3, 16, this.color); } catch (e) {}
       }
       if (c.refl && !c.hit && Math.hypot(c.x - this.host.x, c.y - this.host.y) < c.r * 0.7 + this.host.hw) {
         c.hit = true; this.host.hit(26, c.vx, c.vy);
@@ -824,18 +830,37 @@ const Mirror = {
   _drawCrescents(ctx) {
     if (!this.crescents.length) return;
     const glow = !(typeof GFX !== "undefined" && GFX.low);
+    ctx.save();
+    if (glow) ctx.globalCompositeOperation = "lighter";
     for (const c of this.crescents) {
-      const al = clamp(c.life / 1.5, 0, 1), col = c.refl ? "#4bd6ff" : this.color;
-      ctx.save();
-      ctx.translate(c.x, c.y); ctx.rotate(c.ang);
-      if (glow) ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = 0.55 + 0.4 * al; ctx.strokeStyle = col; ctx.lineWidth = 6 + c.r * 0.16; ctx.lineCap = "round";
-      ctx.beginPath(); ctx.arc(-c.r * 0.35, 0, c.r, -1.15, 1.15); ctx.stroke();
-      ctx.globalAlpha = 0.5 * al; ctx.strokeStyle = "#efe3ff"; ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.arc(-c.r * 0.35, 0, c.r, -1.0, 1.0); ctx.stroke();
+      const al = clamp(c.life / 1.6, 0, 1), col = c.refl ? "#4bd6ff" : this.color;
+      // fading motes trailing behind the rip
+      if (c.trail) for (let i = 0; i < c.trail.length; i++) {
+        const p = c.trail[i], f = (i + 1) / c.trail.length;
+        ctx.globalAlpha = f * 0.32 * al; ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(p.x, p.y, c.r * 0.5 * f, 0, 6.2832); ctx.fill();
+      }
+      ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.ang);
+      // outer bloom
+      const g = ctx.createRadialGradient(0, 0, 1, 0, 0, c.r * 1.5);
+      g.addColorStop(0, "rgba(255,255,255,0.9)"); g.addColorStop(0.4, col); g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.globalAlpha = 0.42 * al; ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, c.r * 1.5, 0, 6.2832); ctx.fill();
+      // the FILLED crescent (a moon of energy): convex front edge, concave-carved back
+      ctx.globalAlpha = 0.92 * al; ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(-c.r * 0.25, 0, c.r, -1.3, 1.3, false);
+      ctx.arc(-c.r * 1.0, 0, c.r * 0.92, 1.12, -1.12, true);
+      ctx.closePath(); ctx.fill();
+      // white-hot leading edge
+      ctx.globalAlpha = al; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 3.5; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.arc(-c.r * 0.25, 0, c.r, -1.22, 1.22); ctx.stroke();
       ctx.restore();
     }
-    ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+    ctx.restore(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+  },
+  _pushCrescent(x, y, ang, sp, r) {
+    this.crescents.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, ang, life: 1.6, r, hit: false, refl: false, trail: [] });
   },
 
   _drawWaves(ctx) {

@@ -163,6 +163,29 @@ const SFX = {
     const t = this.ctx.currentTime;
     [523, 659, 784].forEach((f, i) => this._osc(f, 0.16, t + i * 0.05, { type: "triangle", vol: 0.13 }));
   },
+  // ---- THE ECHO boss ----
+  saberLock() {   // blades bind: a short bright metallic ring (no low thud, so momentum stays)
+    if (!this.ctx) return; const t = this.ctx.currentTime;
+    this._osc(2200, 0.1, t, { type: "sawtooth", vol: 0.1, slideTo: 1650, attack: 0.004 });
+    this._osc(3300, 0.09, t, { type: "sine", vol: 0.06, slideTo: 2500 });
+    this._noise(0.07, t, { type: "bandpass", freq: 4200, q: 3, vol: 0.05 });
+  },
+  saberSizzle() {   // the strain, while bound
+    if (!this.ctx) return;
+    this._noise(0.045, this.ctx.currentTime, { type: "bandpass", freq: 3400 + Math.random() * 1600, q: 4, vol: 0.04 });
+  },
+  saberBreak(win) {   // release: a bright rising clang (win) or a duller shove (lose)
+    if (!this.ctx) return; const t = this.ctx.currentTime;
+    this._click(t, 0.12);
+    this._osc(win ? 1500 : 1000, 0.16, t, { type: "square", vol: 0.15, slideTo: win ? 3400 : 700, attack: 0.001 });
+    this._osc(2700, 0.12, t + 0.02, { type: "sawtooth", vol: 0.09, slideTo: 1200 });
+  },
+  crescent() {   // a tear ripped through the air
+    if (!this.ctx) return; const t = this.ctx.currentTime;
+    this._noise(0.24, t, { type: "bandpass", freq: 950, q: 0.5, vol: 0.15 });
+    this._osc(700, 0.26, t, { type: "sawtooth", vol: 0.12, slideTo: 150, attack: 0.002 });
+    this._osc(1500, 0.1, t, { type: "sine", vol: 0.07, slideTo: 520 });
+  },
   wave() {
     const t = this.ctx.currentTime;
     this._osc(440, 0.14, t, { type: "triangle", vol: 0.15, slideTo: 660 });

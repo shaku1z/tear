@@ -1412,7 +1412,7 @@
         if (q.slowmo) slowmo = Math.max(slowmo, q.slowmo);
         if (q.zoom) addZoom(q.zoom);
         if (q.txt) addFloater(q.x != null ? q.x : player.x, q.y != null ? q.y : player.y - 70, q.txt, !!q.big, q.color || Mirror.color);
-        if (q.big || q.shake >= 9) { try { SFX.slam(); } catch (e) {} }
+        if ((q.big || q.shake >= 9) && !q.quiet) { try { SFX.slam(); } catch (e) {} }
       }
     }
 
