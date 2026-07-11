@@ -140,12 +140,17 @@ const Mirror = {
     this.mv = null; this._moveCd = 1.1;
     this.blade.lengthBonus = ph === 2 ? 65 : 100;            // the blade GROWS with each tear
     this.sync = Math.max(this.sync, ph === 2 ? 0.55 : 0.75);
+    // the reflection SHIFTS colour as it unseals: violet -> hot magenta -> pale spectre
+    this.color = ph === 2 ? "#c94bff" : "#e6d3ff";
+    this.blade.trailColor = this.color; this.blade.glowColor = ph === 3 ? "#ffffff" : this.color;
     const a = this.actor, h = this.host;
-    if (ph === 2) { h.spawnClone = true; this.juice({ shake: 9, flash: 0.25, txt: "THE REFLECTION TEARS", x: h.x, y: h.y - 84, big: true }); }
-    if (ph === 3) { h.mode = "invert"; this._wtT = 2.2; this.juice({ shake: 12, flash: 0.35, txt: "FINAL REFLECTION", x: h.x, y: h.y - 84, big: true }); }
+    if (ph === 2) { h.spawnClone = true; this.juice({ txt: "THE REFLECTION TEARS", x: h.x, y: h.y - 84, big: true }); }
+    if (ph === 3) { h.mode = "invert"; this._wtT = 2.2; this.juice({ txt: "FINAL REFLECTION", x: h.x, y: h.y - 84, big: true }); }
+    // the release BEAT: a deep slow-mo punch so each unseal lands like an event
+    this.juice({ shake: ph === 3 ? 13 : 10, flash: ph === 3 ? 0.4 : 0.28, slowmo: 0.55, zoom: CONFIG.juice.zoomBig, hitstop: CONFIG.hitStop.big });
     try {
-      FX.flash(a.x, a.y - a.hh, 80, "#c98cff"); FX.ring(a.x, a.y, 40, this.color);
-      FX.ring(a.x, a.y, 24, "#e9d5ff"); FX.burst(a.x, a.y, 0, -1, 30, this.color);
+      FX.flash(a.x, a.y - a.hh, 90, "#f0e0ff"); FX.ring(a.x, a.y, 48, this.color); FX.ring(a.x, a.y, 28, "#ffffff");
+      FX.burst(a.x, a.y, 0, -1, 34, this.color); FX.explode(a.x, a.y, this.color, 1.25);
     } catch (e) {}
   },
 
@@ -275,8 +280,8 @@ const Mirror = {
           mv.ph = "rec"; mv.t = 0.45;
           const gy = CONFIG.world.groundY;
           this.waves.push({ x: a.x + 26, y: gy, vx: 620, life: 0.85 }, { x: a.x - 26, y: gy, vx: -620, life: 0.85 });
-          this.juice({ shake: 10 });
-          try { FX.explode(a.x, gy - 6, this.color, 1.1); FX.ring(a.x, gy - 4, 26, "#e9d5ff"); FX.burst(a.x, gy - 8, 0, -1, 16, this.color); } catch (e) {}
+          this.juice({ shake: 13, hitstop: CONFIG.hitStop.big, zoom: CONFIG.juice.zoomBig });   // the PLUNGE lands like a hammer
+          try { FX.explode(a.x, gy - 6, this.color, 1.25); FX.ring(a.x, gy - 4, 30, "#ffffff"); FX.ring(a.x, gy - 4, 18, this.color); FX.burst(a.x, gy - 8, 0, -1, 20, this.color); } catch (e) {}
         }
       } else { a.vx = lerp(a.vx, 0, clamp(8 * dt, 0, 1)); if (mv.t <= 0) this.mv = null; }
     }
@@ -487,7 +492,7 @@ const Mirror = {
       if (dmg > 0) {
         const mv = this.mv;
         if (mv && mv.ph === "exec") {
-          if (mv.id === "rend") { player.takeHit(dmg, mb.tipVX, mb.tipVY, a); player.vy = -720; this.juice({ txt: "LAUNCHED", x: player.x, y: player.y - 46, color: this.color }); this._syncBump += 0.05; if (this.phase >= 2) { this._answer = "juggle"; this._answerT = 0.28; } return; }
+          if (mv.id === "rend") { player.takeHit(dmg, mb.tipVX, mb.tipVY, a); player.vy = -720; this.juice({ txt: "LAUNCHED", x: player.x, y: player.y - 46, color: this.color, hitstop: CONFIG.hitStop.small, shake: 6 }); this._syncBump += 0.05; if (this.phase >= 2) { this._answer = "juggle"; this._answerT = 0.28; } return; }
           if (mv.id === "slam") { player.takeHit(dmg * 1.4, 0, 1, a); player.vy = Math.max(player.vy, 520); this._syncBump += 0.05; return; }
           if (mv.id === "juggle") { player.takeHit(dmg, mb.tipVX, mb.tipVY, a); player.vy = Math.min(player.vy, -380); this._syncBump += 0.05; return; }
         }
@@ -535,6 +540,8 @@ const Mirror = {
     if (!this.active || !this.host || !this.actor) return;
     const a = this.actor, ph = this.phase, lowG = (typeof GFX !== "undefined" && GFX.low);
 
+    this._drawTelegraph(ctx);   // ground danger-zone for the slam (behind everything)
+
     // afterimages (flash-steps + dashes)
     for (const g of this.imgs) {
       ctx.save(); ctx.globalAlpha = clamp(g.t / 0.4, 0, 1) * 0.3; ctx.fillStyle = this.color;
@@ -567,6 +574,11 @@ const Mirror = {
     if (!lowG) { ctx.shadowColor = this.color; ctx.shadowBlur = 10; }
     ctx.fillRect(-a.hw, -a.hh, a.hw * 2, a.hh * 2);
     ctx.shadowBlur = 0;
+    if (!lowG) {                                          // spectral rim-light down the leading edge
+      ctx.fillStyle = this.color; ctx.globalAlpha = (0.65 + 0.25 * Math.sin(performance.now() / 220)) * (1 - this.white * 0.88);
+      ctx.fillRect(this.facing > 0 ? a.hw - 2.5 : -a.hw, -a.hh, 2.5, a.hh * 2);
+      ctx.globalAlpha = 1 - this.white * 0.88;
+    }
     if (ph >= 2) {                                        // torn: violet crack veins glow across the body
       ctx.strokeStyle = this.color; ctx.lineWidth = 1.6; ctx.globalAlpha = (0.5 + 0.5 * Math.sin(performance.now() / 300)) * (1 - this.white * 0.88);
       ctx.beginPath();
@@ -594,6 +606,20 @@ const Mirror = {
       ctx.fillStyle = this.color; ctx.font = UI.font(9, true); ctx.textAlign = "center";
       ctx.fillText("◆ ECHO", a.x, by - 4);
     }
+  },
+
+  _drawTelegraph(ctx) {   // slam danger-zone: a column + a ground ring where the plunge will land
+    const mv = this.mv;
+    if (!mv || mv.id !== "slam" || (mv.ph !== "tele" && mv.ph !== "hang" && mv.ph !== "exec")) return;
+    const gy = CONFIG.world.groundY, a = this.actor, pulse = 0.5 + 0.5 * Math.sin(performance.now() / 70);
+    ctx.save();
+    ctx.globalAlpha = 0.12 + 0.16 * pulse; ctx.fillStyle = this.color;
+    ctx.fillRect(a.x - 22, a.y, 44, Math.max(0, gy - a.y));
+    ctx.globalAlpha = 0.45 + 0.4 * pulse; ctx.strokeStyle = "#fff"; ctx.lineWidth = 3; ctx.setLineDash([11, 8]);
+    ctx.beginPath(); ctx.ellipse(a.x, gy - 2, 48, 12, 0, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]);
+    ctx.globalAlpha = 0.55 + 0.4 * pulse; ctx.strokeStyle = this.color; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.ellipse(a.x, gy - 2, 30, 8, 0, 0, 6.2832); ctx.stroke();
+    ctx.restore(); ctx.globalAlpha = 1;
   },
 
   _drawGlint(ctx) {   // a bright edge along the blade during a move telegraph — the universal "big one coming" read
