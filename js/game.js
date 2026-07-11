@@ -556,9 +556,10 @@
     if (Input.pressed.has("KeyK")) { for (const e of enemies) { e.dead = true; } projectiles.length = 0; addFloater(player.x, player.y - 60, "CLEARED", true, CONFIG.colors.perfect); }
     if (Input.pressed.has("KeyH")) { player.hp = player.maxHp; addFloater(player.x, player.y - 60, "HEALED", true, "#1faf5a"); }
     if (Input.pressed.has("KeyU")) { state = "pglab"; listScroll = 0; document.exitPointerLock(); }
-    if (Input.pressed.has("KeyM")) {   // summon / dismiss THE MIRROR — a live duel vs an AI reflection
-      if (Mirror.active) { Mirror.active = false; addFloater(player.x, player.y - 60, "MIRROR GONE", false, Mirror.color); }
-      else { Mirror.spawn(player.x + (player.facing >= 0 ? 360 : -360), player.y - 40, 900, run.mods); addFloater(player.x, player.y - 60, "THE MIRROR", true, Mirror.color); }
+    if (Input.pressed.has("KeyM")) {   // summon / dismiss THE ECHO — the full Mirror-driven boss duel
+      const mh = enemies.find((e) => e.isMirrorBoss && !e.dead);
+      if (mh) { mh.dead = true; if (typeof Mirror !== "undefined") Mirror.active = false; addFloater(player.x, player.y - 60, "ECHO DISMISSED", false, "#b06cff"); }
+      else { run.curBoss = "echo"; spawnOne({ type: "boss" }); addFloater(player.x, player.y - 60, "THE ECHO", true, "#b06cff"); }
     }
   }
 
@@ -853,7 +854,7 @@
 
   // ---- run / wave management ----
   function startRun(mode, diff) {
-    if (typeof Mirror !== "undefined") Mirror.active = false;   // a summoned Mirror never leaks into a new run
+    if (typeof Mirror !== "undefined") { Mirror.active = false; Mirror.host = null; }   // a summoned Echo never leaks into a new run
     restoreConfig();
     const weapon = applyWeapon(selWeapon);   // weapon defines base feel; shop/upgrades stack on top
     applySettings();
@@ -1054,7 +1055,7 @@
   // build a boss instance by id (shared by campaign bosses, the gauntlet, and Endless mini-bosses)
   function bossById(id) {
     if (id === "source") return new Source(W / 2, CONFIG.world.groundY - 300);
-    if (id === "echo") return new Echo(W / 2, CONFIG.world.groundY - CONFIG.echo.h / 2);
+    if (id === "echo") return new MirrorHost(W / 2, CONFIG.world.groundY - CONFIG.echo.h / 2, run ? run.mods : null);   // THE ECHO reborn: Mirror-driven duelist (goes _live only when actually fought; old Echo class = its phase-2 clone)
     if (id === "aldric") return new Aldric(W / 2, CONFIG.world.groundY - CONFIG.aldric.h / 2);
     if (id === "colossus") return new Colossus(W / 2, CONFIG.world.groundY - CONFIG.colossus.h / 2);
     if (id === "warden") return new Warden(W / 2, CONFIG.world.groundY - 140);
@@ -1078,8 +1079,8 @@
       case "flyer":   e = new Flyer(spawnSide(), 200); break;
       case "bomber":  e = new Bomber(0, 0); break;
       case "armored": e = new Armored(0, 0); break;
-      case "boss":    e = makeBoss(); run._bossFightT = run.runTime; if (typeof Clipper !== 'undefined') Clipper.start(); break;   // clock the boss fight (Source speedrun)
-      case "miniboss": e = bossById(spec.bossId); e.hp *= 0.4; e.maxHp *= 0.4; e.isMiniBoss = true; e.bossName = "◇ " + e.bossName; break;
+      case "boss":    e = makeBoss(); if (e.isMirrorBoss) e._live = true; run._bossFightT = run.runTime; if (typeof Clipper !== 'undefined') Clipper.start(); break;   // clock the boss fight (Source speedrun)
+      case "miniboss": e = bossById(spec.bossId); if (e.isMirrorBoss) e._live = true; e.hp *= 0.4; e.maxHp *= 0.4; e.isMiniBoss = true; e.bossName = "◇ " + e.bossName; break;
       case "priest": case "herald": case "mender": case "anchor": e = new Support(0, 0, spec.type); break;
       case "wraith":  e = new Wraith(spawnSide(), 220); break;
       case "chimera": e = new Chimera(0, 0); break;
@@ -1395,26 +1396,21 @@
     }
     if (blade.embeddedNew) { blade.embeddedNew = false; if (blade.throwType === "lob") lobExplode(blade.x, blade.y); }
 
-    // THE MIRROR (Phase F): a live AI duel actor, updated + collided through its own
-    // isolated path so nothing in the enemy/boss loop has to know it exists.
+    // THE ECHO (Mirror-driven boss): the host enemy runs its brain inside the normal enemy
+    // loop; this handles only its own weapon-vs-player exchange + consumes its juice queue.
     if (typeof Mirror !== "undefined" && Mirror.active) {
-      Mirror.update(dt, player, blade, platforms);
       Mirror.updateCombat(dt, player, blade);
-    }
-    if (typeof Mirror !== "undefined" && Mirror._justClashed) {
-      Mirror._justClashed = false;
-      addFloater(player.x, player.y - 66, "SYNC FRACTURED", true, "#4bd6ff");
-      addShake(CONFIG.juice.shake || 6); try { if (SFX.parry) SFX.parry(); else if (SFX.hit) SFX.hit(true); } catch (e) {}
-    }
-    if (typeof Mirror !== "undefined" && Mirror._justReleased) {   // release/unseal escalation banner
-      const rt = Mirror._justReleased; Mirror._justReleased = "";
-      addFloater(player.x, player.y - 78, rt, true, Mirror.color);
-      addShake(CONFIG.juice.shakeBig); try { SFX.slam(); } catch (e) {}
-    }
-    if (typeof Mirror !== "undefined" && Mirror._justDefeated) {
-      Mirror._justDefeated = false;
-      addFloater(player.x, player.y - 70, "REFLECTION SHATTERED", true, Mirror.color);
-      addShake(CONFIG.juice.shakeBig); try { SFX.slam(); } catch (e) {}
+      if (Mirror.host && Mirror.host.dead) {
+        Mirror.active = false;
+        addFloater(player.x, player.y - 70, "REFLECTION SHATTERED", true, Mirror.color);
+      }
+      while (Mirror.fxq.length) {
+        const q = Mirror.fxq.shift();
+        if (q.shake) addShake(q.shake);
+        if (q.flash) addFlash(q.flash);
+        if (q.txt) addFloater(q.x != null ? q.x : player.x, q.y != null ? q.y : player.y - 70, q.txt, !!q.big, q.color || Mirror.color);
+        if (q.big || q.shake >= 9) { try { SFX.slam(); } catch (e) {} }
+      }
     }
 
     // audio cadence: dash start + swing whoosh
@@ -2492,7 +2488,6 @@
     }
     for (const p of projectiles) p.draw(ctx);
     if (run && run.mode === "tutorial" && TUT.active) TUT.drawGhost(ctx);   // the translucent demonstrator
-    if (typeof Mirror !== "undefined" && Mirror.active) Mirror.draw(ctx);
     if (player) player.draw(ctx);
     if (blade) blade.draw(ctx, player);
     FX.draw(ctx);

@@ -1,34 +1,45 @@
-// ------- THE MIRROR: a real second momentum-blade fighter (Phase F) -------
-// Additive, not atomic. The Mirror owns its OWN Player + Blade (driven through the same
-// aiInput/aimOverride seams attract mode uses), and lives OUTSIDE enemies[] and the player
-// singleton. A single isolated collision function (updateCombat) handles the only two
-// interactions that matter — the real player's blade vs the Mirror, and the Mirror's blade
-// vs the real player — reusing the existing _segNear/tipSpeed math in both directions.
-//
-// Nothing in the existing player/blade/enemy/game code has to know the Mirror exists; the
-// main loop opts in by calling Mirror.update / updateCombat / draw only while a duel runs.
+// ------- THE ECHO (reborn): a real momentum-blade boss that reads, mirrors, and answers you -------
+// One boss, two layers:
+//   MirrorHost (bottom of file) — a REAL Enemy in enemies[]: it carries the boss HP bar, takes
+//     blade hits / statuses / knockback through every existing combat system, scales with
+//     difficulty, and dies through the normal boss-death flow. The body.
+//   Mirror (this object) — the brain: a real Player (aiInput) + real Blade (aimOverride) with a
+//     full boss moveset (rising rend, power slam, juggles, blade throw + flash-step, crescent
+//     rends), trick-mirroring taken from the classic Echo, ghost-echo replay, sync escalation,
+//     and phase-driven looks (sealed silhouette -> torn cracks -> white-out final).
+// Isolation contract: nothing in the enemy/boss loops knows this exists beyond the host being a
+// normal enemy; game.js consumes Mirror.fxq for shake/floaters and calls Mirror.updateCombat.
 const Mirror = {
   active: false,
-  actor: null,        // a real Player instance, AI-driven (its own hp is unused; see this.hp)
-  blade: null,        // a real Blade instance, AI-aimed
-  hp: 0, maxHp: 0,    // the Mirror's OWN health (the duel's boss bar)
-  hitCd: 0,           // i-frame so the player's blade can't multi-hit one contact
+  host: null,          // the MirrorHost enemy (HP source of truth, boss bar, statuses)
+  actor: null,         // a real Player instance, AI-driven (movement physics)
+  blade: null,         // a real Blade instance, AI-aimed
   facing: 1,
-  color: "#b06cff",   // the "tear" violet (F6 replaces this with the torn-double render)
-  ai: null,           // synthetic controller flags the aiInput closure reads
-  _swingT: 0, _swingDir: 1, _swingBase: 0, _aimAng: -Math.PI / 2,
-  _dashCd: 0,
+  color: "#b06cff",    // the tear-violet identity
+  ai: null,
+  fxq: [],             // juice queue for game.js: {shake, flash, txt, x, y, big, color}
 
-  // closest-point segment test (hilt->tip vs a point), copied from the proven attract.js use
+  // ---- tiny helpers ----
   segNear(ax, ay, bx, by, px, py, r) {
     const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1;
     const t = clamp(((px - ax) * dx + (py - ay) * dy) / l2, 0, 1);
     return Math.hypot(px - (ax + dx * t), py - (ay + dy * t)) <= r;
   },
+  _dirAng(a) { return this.facing > 0 ? a : Math.PI - a; },   // mirror an angle across facing
+  juice(q) { this.fxq.push(q); },
 
-  spawn(x, y, hp, mods) {
-    const a = this.actor = new Player(x, y);
-    a.maxHp = a.hp = 99999;   // actor HP is irrelevant — the Mirror's death is this.hp
+  get phase() {   // 1 sealed -> 2 torn -> 3 final (same thresholds as the classic Echo)
+    if (!this.host) return 1;
+    const f = this.host.hp / this.host.maxHp;
+    return f > 0.6 ? 1 : (f > 0.25 ? 2 : 3);
+  },
+
+  // ---- attach the brain to a freshly spawned host ----
+  attach(host, mods) {
+    this.host = host;
+    const a = this.actor = new Player(host.x, host.y);
+    a.maxHp = a.hp = 99999;                 // the actor never "dies" — the host's HP is the fight
+    a.maxDashCharges = 2; a.dashCharges = 2;
     const ai = this.ai = { left: false, right: false, up: false, down: false, _dash: false, _jump: false };
     a.aiInput = {
       left: () => ai.left, right: () => ai.right, up: () => ai.up, down: () => ai.down,
@@ -36,35 +47,124 @@ const Mirror = {
       jumpPressed: () => { const v = ai._jump; ai._jump = false; return v; },
     };
     const b = this.blade = new Blade();
-    b.aimOverride = { x: x, y: y - 80 };
-    b.lmbOverride = false;    // the Mirror controls its own tether, never the human's mouse
-    b.trailColor = "#b06cff"; b.glowColor = "#c98cff";   // its slashes read as the Mirror's, not yours
-    b.freeRecall = true;      // always recalls a thrown blade (no weaponless softlock)
-    b.lengthBonus = 95;       // boss-scale reach (~doubles a normal blade; GROWS on release, see _updatePhase)
-    b.hideThrowUI = true;     // no player-facing recall HUD on the boss's thrown blade
-    this.hp = this.maxHp = hp || 900;
-    this.hitCd = 0; this._dashCd = 0; this._swingT = 0; this._aimAng = -Math.PI / 2; this.facing = 1;
-    this.sync = 0.35;   // 0 = crude, telegraphed torn double; 1 = a perfect reflection (F6 escalates)
-    // a rolling model of how THIS player fights, updated every frame
+    b.aimOverride = { x: host.x, y: host.y - 120 };
+    b.lmbOverride = false;
+    b.trailColor = "#b06cff"; b.glowColor = "#c98cff";
+    b.freeRecall = true; b.hideThrowUI = true;
+    b.lengthBonus = 30;                     // ~5 Long-Arms as the SEALED baseline (grows per phase)
+
+    this.sync = 0.35;
     this.read = { dist: 300, airborne: 0, aggression: 0, dashHeat: 0, closing: 0, pBladeSpeed: 0 };
     this._state = "approach"; this._stateT = 0; this._decideT = 0;
-    this._pDashPrev = 0; this._pPrevX = x; this._jumpCd = 0;
-    // ghost-echo: a rolling capture of the player's recent motion, replayed back mirrored
-    this.echoBuf = []; this._echoClip = []; this._echoPtr = 0; this._echoCd = 3;
-    this._prevDist = 300; this._pDashPrev2 = 0; this._pGroundPrev = true; this._justEchoed = false;
-    this._clashCd = 0; this._syncBump = 0; this._justClashed = false;
-    this._throwCd = 4.5; this._recallT = 0; this._wantThrow = false; this._threwHit = false;   // full-kit: thrown blade
-    this._hitFlash = 0; this._stagger = 0;                          // reacts to your hits like a real enemy
-    this._phase = 0; this._getsugaCd = 2.5; this.crescents = []; this._justReleased = "";   // release phases + crescent slashes
-    // build-awareness (F8): read the player's equipped mods and bias behavior (ramped by sync)
+    this._swingT = 0; this._swingDir = 1; this._swingBase = 0; this._aimAng = -Math.PI / 2;
+    this._dashCd = 0; this._jumpCd = 0; this._clashCd = 0; this._syncBump = 0;
+    this._pDashPrev = 0; this._pPrevX = host.x; this._pDashPrev2 = 0; this._pGroundPrev = true; this._prevDist = 300;
+    this.echoBuf = []; this._echoClip = []; this._echoPtr = 0; this._echoCd = 6;
+    this.mv = null; this._moveCd = 2.2;     // committed-move director
+    this.crescents = []; this.waves = []; this.imgs = [];
+    this._recallT = 0; this._fsPending = false; this._threwHit = false;
+    this.seenTrickT = 0; this._answer = ""; this._answerT = 0; this._lastAnswered = "";
+    this._phaseMark = 1; this.white = 0; this._wtT = 5.5; this._sparkT = 0; this._stagger = 0;
     this.mods = mods || {};
-    this.airBias = (this.mods.airBonus || this.mods.aerialRave) ? 1 : 0;                              // they favor the air -> contest it harder
-    this.parryWary = (this.mods.parryGuard || this.mods.backlash || this.mods.backlashSurge || this.mods.parryStun) ? 1 : 0;  // they punish parries -> don't swing into a guard
+    this.airBias = (this.mods.airBonus || this.mods.aerialRave) ? 1 : 0;
+    this.parryWary = (this.mods.parryGuard || this.mods.backlash || this.mods.backlashSurge || this.mods.parryStun) ? 1 : 0;
     this.active = true;
     return this;
   },
 
-  // ---- behavioral read: a rolling model of how THIS player fights this duel ----
+  // =====================================================================
+  //  PER-FRAME BRAIN (called by MirrorHost.update — the enemy loop drives it)
+  // =====================================================================
+  hostStep(dt, platforms, player) {
+    if (!this.active || !this.host) return;
+    if (this._clashCd > 0) this._clashCd -= dt;
+    if (this._stagger > 0) this._stagger -= dt;
+    this.sync = clamp(this.sync + dt * 0.016 + this._syncBump, 0.15, 1); this._syncBump = 0;
+    this._updatePhase();
+    this._whiteout(dt);
+
+    // perception + echo capture always run
+    this._updateRead(dt, player, this.pb || { tipSpeed: 0 });
+    this._recordEcho(dt, player);
+    this._watchTricks(player);
+
+    // brain: reeling > committed move > neutral
+    const ai = this.ai;
+    ai.left = ai.right = ai.up = ai.down = false;
+    if (this._stagger > 0) {
+      this._aim(dt, player, false);                          // knocked silly: blade just trails
+    } else if (this.mv) {
+      this._runMove(dt, player);
+    } else {
+      this._moveCd -= dt;
+      this._answerT -= dt;
+      if (this._answerT > 0 && this._answer && this._moveCd < 1.2) { /* answer pending, let it fire below */ }
+      if (this._answer && this._answerT <= 0) { const m = this._answer; this._answer = ""; this._startMove(m, player); }
+      else if (this._moveCd <= 0) { const pick = this._pickMove(player); if (pick) this._startMove(pick, player); }
+      if (!this.mv) { this._decide(dt, player); this._act(dt, player); }
+    }
+
+    // step the real body + blade
+    this.actor.update(dt, platforms);
+    this.actor.facing = this.facing;
+    this.actor.x = clamp(this.actor.x, 40, CONFIG.view.w - 40);
+    this.blade.update(dt, this.actor, platforms);
+
+    // thrown-blade lifecycle (+ P3 flash-step to the embedded blade)
+    if (this.blade.state !== "held") {
+      this._recallT -= dt;
+      if (this._fsPending && this.blade.state === "embedded") this._flashStep(player);
+      else if (this._recallT <= 0 || this.blade.state === "embedded") this.blade.tryRecall(this.actor);
+    }
+
+    // dash afterimages (P2+) + P2 drag sparks
+    if (this.phase >= 2) {
+      if (this.actor.dashTimer > 0) this.imgs.push({ x: this.actor.x, y: this.actor.y, f: this.facing, t: 0.28 });
+      this._sparkT -= dt;
+      if (this._sparkT <= 0 && this.actor.onGround && !this.mv && this.blade.state === "held" && this.blade.tipY > CONFIG.world.groundY - 16) {
+        this._sparkT = 0.09;
+        try { FX.burst(this.blade.tipX, CONFIG.world.groundY - 2, -this.facing, -0.3, 2, "#c98cff"); } catch (e) {}
+      }
+    }
+    for (const g of this.imgs) g.t -= dt;
+    this.imgs = this.imgs.filter((g) => g.t > 0);
+    this._updateCrescents(dt);
+    this._updateWaves(dt);
+  },
+
+  // ---- phase escalation: the release beats ----
+  _updatePhase() {
+    const ph = this.phase;
+    if (ph <= this._phaseMark) return;
+    this._phaseMark = ph;
+    this.mv = null; this._moveCd = 1.1;
+    this.blade.lengthBonus = ph === 2 ? 65 : 100;            // the blade GROWS with each tear
+    this.sync = Math.max(this.sync, ph === 2 ? 0.55 : 0.75);
+    const a = this.actor, h = this.host;
+    if (ph === 2) { h.spawnClone = true; this.juice({ shake: 9, flash: 0.25, txt: "THE REFLECTION TEARS", x: h.x, y: h.y - 84, big: true }); }
+    if (ph === 3) { h.mode = "invert"; this._wtT = 2.2; this.juice({ shake: 12, flash: 0.35, txt: "FINAL REFLECTION", x: h.x, y: h.y - 84, big: true }); }
+    try {
+      FX.flash(a.x, a.y - a.hh, 80, "#c98cff"); FX.ring(a.x, a.y, 40, this.color);
+      FX.ring(a.x, a.y, 24, "#e9d5ff"); FX.burst(a.x, a.y, 0, -1, 30, this.color);
+    } catch (e) {}
+  },
+
+  // ---- P3 white-out cycle: a blinding flash, then you track it by its blade ----
+  _whiteout(dt) {
+    if (this.phase < 3) { this.white = Math.max(0, this.white - dt * 2); return; }
+    this._wtT -= dt;
+    if (this._wtT <= 0) {
+      if (this.white < 0.5) {   // flash on
+        this.white = 1; this._wtT = 3.2;
+        this.juice({ flash: 0.5 });
+        try { FX.flash(this.actor.x, this.actor.y, 90, "#ffffff"); } catch (e) {}
+      } else { this.white = 0; this._wtT = 6.5; }
+    }
+  },
+
+  // =====================================================================
+  //  PERCEPTION
+  // =====================================================================
   _updateRead(dt, player, playerBlade) {
     const R = this.read, a = this.actor, B = CONFIG.blade;
     const dist = Math.abs(player.x - a.x), kSlow = clamp(2.2 * dt, 0, 1), kFast = clamp(6 * dt, 0, 1);
@@ -72,312 +172,452 @@ const Mirror = {
     R.airborne += ((player.onGround ? 0 : 1) - R.airborne) * kSlow;
     const pvx = (player.x - this._pPrevX) / (dt || 0.016); this._pPrevX = player.x;
     R.closing += ((Math.sign(a.x - player.x) === Math.sign(pvx) && Math.abs(pvx) > 60 ? 1 : 0) - R.closing) * kFast;
-    const swinging = (playerBlade.tipSpeed > B.minHitSpeed * 1.1 && dist < 180) ? 1 : 0;   // fast blade, close = aiming at us
+    const swinging = (playerBlade.tipSpeed > B.minHitSpeed * 1.1 && dist < 200) ? 1 : 0;
     R.aggression += (swinging - R.aggression) * clamp(1.8 * dt, 0, 1);
-    if (player.dashTimer > 0 && this._pDashPrev <= 0) R.dashHeat = Math.min(1, R.dashHeat + 0.34);   // dash-happiness
+    if (player.dashTimer > 0 && this._pDashPrev <= 0) R.dashHeat = Math.min(1, R.dashHeat + 0.34);
     this._pDashPrev = player.dashTimer;
     R.dashHeat *= Math.exp(-0.5 * dt);
     R.pBladeSpeed = playerBlade.tipSpeed;
   },
 
-  // ---- ghost-echo: record the player's recent motion as a compact per-frame stream ----
-  _recordEcho(dt, player, playerBlade) {
+  _recordEcho(dt, player) {
     const a = this.actor, dist = Math.abs(player.x - a.x);
     const closed = this._prevDist - dist; this._prevDist = dist;
-    const adv = Math.abs(closed) < 0.4 ? 0 : Math.sign(closed);        // +1 = the player closed on us
+    const adv = Math.abs(closed) < 0.4 ? 0 : Math.sign(closed);
     const dash = (player.dashTimer > 0 && this._pDashPrev2 <= 0) ? 1 : 0; this._pDashPrev2 = player.dashTimer;
     const jump = (!player.onGround && this._pGroundPrev) ? 1 : 0; this._pGroundPrev = player.onGround;
-    const swing = playerBlade.tipSpeed > CONFIG.blade.minHitSpeed ? 1 : 0;
+    const swing = this.read.pBladeSpeed > CONFIG.blade.minHitSpeed ? 1 : 0;
     this.echoBuf.push({ adv, dash, jump, swing });
-    if (this.echoBuf.length > 130) this.echoBuf.shift();               // ~2s at 60fps
+    if (this.echoBuf.length > 130) this.echoBuf.shift();
   },
 
-  // ---- decide: pick a combat intent from the read + geometry + sync ----
-  _decide(dt, player, playerBlade) {
+  // ---- THE ECHO's soul: watch your tricks and ANSWER in kind (faster if you repeat) ----
+  _watchTricks(player) {
+    if (player.lastTrickT == null || player.lastTrickT <= this.seenTrickT) return;
+    const k = player.lastTrickKind, repeat = k === this._lastAnswered;
+    this.seenTrickT = player.lastTrickT; this._lastAnswered = k;
+    const map = { slam: "slam", superslam: "slam", spike: "slam", updraft: "rend", launch: "rend", parry: "getsuga", deflect: "getsuga", throwHit: "throw" };
+    this._answer = map[k] || "lunge";
+    this._answerT = 0.62 * (repeat ? 0.45 : 1) * lerp(1.25, 0.7, this.sync);
+  },
+
+  // =====================================================================
+  //  COMMITTED MOVES — the boss moveset (telegraph -> execute -> recover)
+  // =====================================================================
+  _pickMove(player) {
+    const a = this.actor, ph = this.phase, adx = Math.abs(player.x - a.x);
+    const deck = [];
+    if (player.onGround && adx < 280) deck.push("rend", "rend");
+    if (adx > 240 && adx < 540 && this.blade.state === "held") deck.push("throw");
+    if (ph >= 2 && adx < 460) deck.push("slam", "slam");
+    if (ph >= 2 && adx > 240 && adx < 720) deck.push("getsuga");
+    if (ph >= 3) deck.push("getsuga", "slam");
+    if (!player.onGround && player.y < a.y - 40 && adx < 240) deck.push("juggle", "juggle");
+    if (!deck.length) return null;
+    return deck[Math.floor(Math.random() * deck.length)];
+  },
+
+  _startMove(id, player) {
+    if (id === "lunge") { this._state = "punish"; this._stateT = 0.45; this._decideT = 0.5; this._moveCd = lerp(3.4, 1.7, this.sync); return; }
+    if (id === "throw" && this.blade.state !== "held") return;
+    if (id === "juggle" && (player.onGround || player.y > this.actor.y)) id = "rend";
+    const tele = { rend: 0.34, slam: 0.38, getsuga: 0.3, throw: 0.24, juggle: 0.05 }[id] || 0.3;
+    this.mv = { id, ph: "tele", t: tele, hitDone: false };
+    this._moveCd = lerp(3.4, 1.7, this.sync) + Math.random() * 0.8;
+    this._swingT = 0;
+  },
+
+  _runMove(dt, player) {
+    const mv = this.mv, a = this.actor, ai = this.ai, dx = player.x - a.x, dir = Math.sign(dx) || this.facing;
+    mv.t -= dt;
+    this.facing = mv.id === "getsuga" || mv.ph === "tele" ? dir : this.facing;
+    const setAim = (ang) => {
+      const hand = { x: a.x, y: a.y - a.hh * 0.2 }, R = CONFIG.blade.aimRadius;
+      this._aimAng = ang;
+      this.blade.aimOverride.x = hand.x + Math.cos(ang) * R;
+      this.blade.aimOverride.y = hand.y + Math.sin(ang) * R;
+    };
+
+    if (mv.id === "rend") {   // ---- RISING REND: a leaping uppercut that LAUNCHES you ----
+      if (mv.ph === "tele") {
+        a.vx = lerp(a.vx, 0, clamp(10 * dt, 0, 1));
+        setAim(this._dirAng(2.35));                          // blade cocked low behind — the wind-up read
+        if (mv.t <= 0) { mv.ph = "exec"; mv.t = 0.42; mv.k = 0; a.vy = -660; a.vx = dir * 420; try { FX.ring(a.x, a.y + a.hh, 14, this.color); } catch (e) {} }
+      } else if (mv.ph === "exec") {
+        mv.k = Math.min(1, mv.k + dt / 0.34);
+        setAim(this._dirAng(lerp(1.1, -1.9, mv.k)));         // the blade RISES through you
+        if (mv.t <= 0) { mv.ph = "rec"; mv.t = 0.36; }
+      } else { a.vx = lerp(a.vx, 0, clamp(8 * dt, 0, 1)); if (mv.t <= 0) this.mv = null; }
+    }
+
+    else if (mv.id === "juggle") {   // ---- JUGGLE: hop after an airborne player and bat them ----
+      if (mv.ph === "tele") { if (mv.t <= 0) { mv.ph = "exec"; mv.t = 0.5; mv.k = 0; a.vy = -700; a.vx = clamp(dx * 2.6, -520, 520); } }
+      else if (mv.ph === "exec") {
+        mv.k = Math.min(1, mv.k + dt / 0.3);
+        setAim(this._dirAng(lerp(-1.7, 0.6, mv.k)));         // an overhead air-swat
+        if (mv.t <= 0) { mv.ph = "rec"; mv.t = 0.3; }
+      } else if (mv.t <= 0) this.mv = null;
+    }
+
+    else if (mv.id === "slam") {   // ---- POWER SLAM: leap -> hang -> plunge -> shockwaves ----
+      if (mv.ph === "tele") {      // leap up toward a point above the player
+        if (mv.k == null) { mv.k = 1; a.vy = -780; a.vx = clamp(dx * 1.9, -640, 640); }
+        setAim(-Math.PI / 2);
+        if (mv.t <= 0) { mv.ph = "hang"; mv.t = 0.24; }
+      } else if (mv.ph === "hang") {                          // the held beat at the apex — your dodge window
+        a.vy = 0; a.vx = lerp(a.vx, 0, clamp(9 * dt, 0, 1));
+        setAim(Math.PI / 2);                                  // blade snaps point-DOWN
+        if (mv.t <= 0) { mv.ph = "exec"; mv.t = 1.0; try { FX.ring(a.x, a.y, 18, "#e9d5ff"); } catch (e) {} }
+      } else if (mv.ph === "exec") {                          // the plunge
+        a.vy = 1350; a.vx = lerp(a.vx, 0, clamp(6 * dt, 0, 1));
+        setAim(Math.PI / 2);
+        if (a.onGround || mv.t <= 0) {
+          mv.ph = "rec"; mv.t = 0.45;
+          const gy = CONFIG.world.groundY;
+          this.waves.push({ x: a.x + 26, y: gy, vx: 620, life: 0.85 }, { x: a.x - 26, y: gy, vx: -620, life: 0.85 });
+          this.juice({ shake: 10 });
+          try { FX.explode(a.x, gy - 6, this.color, 1.1); FX.ring(a.x, gy - 4, 26, "#e9d5ff"); FX.burst(a.x, gy - 8, 0, -1, 16, this.color); } catch (e) {}
+        }
+      } else { a.vx = lerp(a.vx, 0, clamp(8 * dt, 0, 1)); if (mv.t <= 0) this.mv = null; }
+    }
+
+    else if (mv.id === "getsuga") {   // ---- CRESCENT REND: overhead chop rips a tear-wave loose ----
+      if (mv.ph === "tele") {
+        a.vx = lerp(a.vx, 0, clamp(10 * dt, 0, 1));
+        setAim(-Math.PI / 2);                                 // raised high — the read
+        if (mv.t <= 0) { mv.ph = "exec"; mv.t = 0.22; mv.k = 0; }
+      } else if (mv.ph === "exec") {
+        mv.k = Math.min(1, mv.k + dt / 0.22);
+        setAim(this._dirAng(lerp(-1.55, 0.75, mv.k)));        // the chop
+        if (!mv.hitDone && mv.k > 0.45) { mv.hitDone = true; this._fireCrescents(player); a.vx -= dir * 130; }
+        if (mv.t <= 0) { mv.ph = "rec"; mv.t = 0.38; }
+      } else { a.vx = lerp(a.vx, 0, clamp(8 * dt, 0, 1)); if (mv.t <= 0) this.mv = null; }
+    }
+
+    else if (mv.id === "throw") {   // ---- BLADE THROW (P3: flash-step to the embedded blade) ----
+      if (mv.ph === "tele") {
+        const ang = Math.atan2(player.y - (a.y - a.hh * 0.2), player.x - a.x);
+        setAim(ang);
+        if (mv.t <= 0) {
+          this.blade.throwBlade(); this._recallT = 0.9; this._threwHit = false;
+          this._fsPending = this.phase >= 3;
+          this.mv = null; this._state = "throw";
+        }
+      }
+    }
+    else this.mv = null;
+  },
+
+  _fireCrescents(player) {
+    const a = this.actor, ph = this.phase;
+    const ang = Math.atan2(player.y - (a.y - a.hh * 0.4), player.x - a.x);
+    const sp = 560 + ph * 80, n = ph >= 3 ? 3 : 1, spread = 0.17;
+    for (let i = 0; i < n; i++) {
+      const av = ang + (i - (n - 1) / 2) * spread;
+      this.crescents.push({ x: a.x + Math.cos(ang) * 50, y: a.y - a.hh * 0.4, vx: Math.cos(av) * sp, vy: Math.sin(av) * sp, ang: av, life: 1.5, r: 30 + ph * 8, hit: false, refl: false });
+    }
+    try { FX.burst(a.x + Math.cos(ang) * 60, a.y - a.hh * 0.4 + Math.sin(ang) * 60, Math.cos(ang), Math.sin(ang), 10, this.color); } catch (e) {}
+  },
+
+  _flashStep(player) {   // vanish and reappear at the embedded blade, catching it mid-strike
+    const a = this.actor, b = this.blade;
+    this.imgs.push({ x: a.x, y: a.y, f: this.facing, t: 0.4 }, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - 20, f: this.facing, t: 0.3 });
+    try { FX.ghost(a.x, a.y, a.hw, a.hh, this.color); FX.burst(b.x, b.y, 0, -1, 8, "#e9d5ff"); } catch (e) {}
+    a.x = clamp(b.x, 40, CONFIG.view.w - 40); a.y = Math.min(b.y, CONFIG.world.groundY - a.hh); a.vx = 0; a.vy = 0;
+    b.tryRecall(a);
+    this._fsPending = false;
+    this.facing = Math.sign(player.x - a.x) || 1;
+    this._swingT = 0.22; this._swingDir = this.facing; this._swingBase = Math.atan2(player.y - a.y, player.x - a.x);   // arrival strike
+  },
+
+  // =====================================================================
+  //  NEUTRAL GAME (between committed moves)
+  // =====================================================================
+  _decide(dt, player) {
     const R = this.read, a = this.actor, B = CONFIG.blade;
     const dist = Math.abs(player.x - a.x);
-    // an incoming fast blade nearby is an emergency that can interrupt the reaction cadence,
-    // but only if the Mirror is synced enough to READ it (low sync = eats the hit)
-    const incoming = playerBlade.tipSpeed > B.minHitSpeed * 1.3 && dist < 135 && !player.invulnerable;
+    const incoming = R.pBladeSpeed > B.minHitSpeed * 1.3 && dist < 150 && !player.invulnerable;
     if (incoming && Math.random() < this.sync * dt * 22) { this._state = "dodge"; this._stateT = 0.3; this._decideT = 0.18; return; }
-    // while the blade is thrown, kite and wait for it to return before ANY melee intent
     if (this.blade.state !== "held") { this._state = "throw"; return; }
-    // let an in-progress ECHO run its clip to completion before re-deciding
     if (this._state === "echo") { if (this._echoPtr < this._echoClip.length) return; this._state = "space"; }
-    // periodically THROW YOUR OWN RHYTHM BACK: replay a mirrored snippet of your recent motion.
-    // higher sync => it echoes more often (it has learned you better).
     this._echoCd -= dt;
     if (this._echoCd <= 0 && this.echoBuf.length >= 40 && dist < 460) {
       this._echoClip = this.echoBuf.slice(-96); this._echoPtr = 0; this._state = "echo";
-      this._echoCd = lerp(6.5, 2.5, this.sync) + Math.random() * 1.5; this._justEchoed = true;
-      return;
-    }
-    // full-kit ranged option: hurl the momentum blade at you, then recall it (like a real player)
-    this._throwCd -= dt;
-    if (this._throwCd <= 0 && this.blade.state === "held" && this.sync > 0.4 && dist > 160 && dist < 480) {
-      this._state = "throw"; this._stateT = 0.7; this._wantThrow = true; this._threwHit = false;
-      this._throwCd = lerp(7.5, 4, this.sync) + Math.random() * 2;
+      this._echoCd = lerp(9, 5, this.sync) + Math.random() * 2;
       return;
     }
     this._decideT -= dt;
     if (this._decideT > 0) return;
-    this._decideT = lerp(0.42, 0.12, this.sync);   // sharper reactions as sync climbs
-
-    if (dist > 300) this._state = "approach";
-    else if (dist < 150) {
-      // in reach: bait a defensive/aggressive player into a whiff, else just strike
-      if (R.aggression > 0.45 && Math.random() < 0.6) { this._state = "bait"; this._stateT = 0.4 + Math.random() * 0.3; }
-      else { this._state = "strike"; this._stateT = 0.18; }
+    this._decideT = lerp(0.42, 0.12, this.sync);
+    if (dist > 320) this._state = "approach";
+    else if (dist < 170) {
+      if (R.aggression > 0.45 && Math.random() < 0.55) { this._state = "bait"; this._stateT = 0.4 + Math.random() * 0.3; }
+      else { this._state = "strike"; this._stateT = 0.2; }
     } else {
-      // mid: punish a fresh whiff (their blade WAS fast, now slow) or hold a striking band
       if (R.pBladeSpeed < B.minHitSpeed * 0.6 && R.aggression > 0.3) { this._state = "punish"; this._stateT = 0.45; }
       else this._state = "space";
     }
   },
 
-  // ---- act: translate the intent into movement (aiInput) + blade aim ----
   _act(dt, player) {
     const a = this.actor, ai = this.ai;
-    ai.left = ai.right = ai.up = ai.down = false;
     const dx = player.x - a.x, adx = Math.abs(dx), dir = Math.sign(dx) || 1, away = -dir;
     this.facing = dir;
     this._dashCd -= dt; this._jumpCd -= dt; if (this._stateT > 0) this._stateT -= dt;
-    const band = 118 + (this.blade.lengthBonus || 0) * 0.55;   // a long blade fights from farther out
-    let wantSwing = false, aimAtPlayer = true;
+    const band = 120 + (this.blade.lengthBonus || 0) * 0.6;
+    let wantSwing = false;
 
     switch (this._state) {
       case "approach":
         if (dx > 0) ai.right = true; else ai.left = true;
-        if (this._dashCd <= 0 && a.dashCharges > 0 && adx > 300) { ai._dash = true; this._dashCd = 0.8; }
+        if (this._dashCd <= 0 && a.dashCharges > 0 && adx > 320) { ai._dash = true; this._dashCd = 0.8; }
         break;
-      case "space":                                   // hold the striking band
+      case "space":
         if (adx > band + 40) { if (dx > 0) ai.right = true; else ai.left = true; }
         else if (adx < band - 40) { if (dx > 0) ai.left = true; else ai.right = true; }
         break;
-      case "strike":                                  // close the last gap and cut
-        // build-aware: vs a parry/Backlash build, don't swing into an ACTIVE guard window
+      case "strike":
         if (this.parryWary && player.guardT > 0 && Math.random() < this.sync) {
-          if (adx < band) { if (away > 0) ai.right = true; else ai.left = true; }   // hold spacing, wait it out
+          if (adx < band) { if (away > 0) ai.right = true; else ai.left = true; }
           break;
         }
         if (adx > band) { if (dx > 0) ai.right = true; else ai.left = true; }
         wantSwing = true;
         break;
-      case "bait":                                    // feint in, then pull out to punish an over-commit
+      case "bait":
         if (this._stateT > 0.2) { if (dx > 0) ai.right = true; else ai.left = true; }
         else { if (away > 0) ai.right = true; else ai.left = true;
                if (this._dashCd <= 0 && a.dashCharges > 0) { ai._dash = true; this._dashCd = 0.7; } }
         break;
-      case "punish":                                  // dash onto the whiff and slash
+      case "punish":
         if (dx > 0) ai.right = true; else ai.left = true;
         if (this._dashCd <= 0 && a.dashCharges > 0 && adx > 90) { ai._dash = true; this._dashCd = 0.6; }
-        wantSwing = adx < 160;
+        wantSwing = adx < band + 50;
         break;
-      case "dodge":                                   // dash clear of the incoming blade
+      case "dodge":
         if (away > 0) ai.right = true; else ai.left = true;
         if (this._dashCd <= 0 && a.dashCharges > 0) { ai._dash = true; this._dashCd = 0.5; }
-        aimAtPlayer = false;
         break;
-      case "echo": {                                  // replay a mirrored snippet of the player's own motion
+      case "echo": {
         const s = this._echoClip[this._echoPtr++];
         if (s) {
-          if (s.adv > 0) { if (dx > 0) ai.right = true; else ai.left = true; }        // echo your approach, aimed at you
-          else if (s.adv < 0) { if (away > 0) ai.right = true; else ai.left = true; } // echo your retreat
+          if (s.adv > 0) { if (dx > 0) ai.right = true; else ai.left = true; }
+          else if (s.adv < 0) { if (away > 0) ai.right = true; else ai.left = true; }
           if (s.dash && this._dashCd <= 0 && a.dashCharges > 0) { if (dx > 0) ai.right = true; else ai.left = true; ai._dash = true; this._dashCd = 0.4; }
           if (s.jump && a.onGround && this._jumpCd <= 0) { ai._jump = true; this._jumpCd = 0.5; }
           wantSwing = !!s.swing;
         }
         break;
       }
-      case "throw":                                   // blade is out / being thrown: kite at range, keep aim true
-        if (adx < 220) { if (away > 0) ai.right = true; else ai.left = true; }
-        else if (adx > 340) { if (dx > 0) ai.right = true; else ai.left = true; }
-        if (this._dashCd <= 0 && a.dashCharges > 0 && this.read.aggression > 0.4 && adx < 170) { if (away > 0) ai.right = true; else ai.left = true; ai._dash = true; this._dashCd = 0.6; }
+      case "throw":   // blade is out: kite until it comes home
+        if (adx < 240) { if (away > 0) ai.right = true; else ai.left = true; }
+        else if (adx > 380) { if (dx > 0) ai.right = true; else ai.left = true; }
         break;
     }
-    // WIELD THE BLADE LIKE ATTRACT: keep it live with a slash whenever the player is in reach,
-    // not only when a state explicitly commits (but never while baiting / dodging / blade thrown)
-    if (!wantSwing && this._state !== "bait" && this._state !== "dodge" && this._state !== "throw") {
-      const reach = Math.hypot(player.x - a.x, player.y - (a.y - a.hh * 0.2));
-      if (reach < 140) wantSwing = true;
-    }
-    // contest an airborne player: hop to meet them — harder if they run an air build
     const airThresh = 0.5 - this.airBias * 0.28 * this.sync;
-    if (this.read.airborne > airThresh && player.y < a.y - 60 && a.onGround && this._jumpCd <= 0) { ai._jump = true; this._jumpCd = this.airBias ? 0.6 : 0.9; }
-
-    this._aim(dt, player, wantSwing, aimAtPlayer);
+    if (this.read.airborne > airThresh && player.y < a.y - 60 && a.onGround && this._jumpCd <= 0) { ai._jump = true; this._jumpCd = 0.9; }
+    this._aim(dt, player, wantSwing);
   },
 
-  _aim(dt, player, wantSwing, aimAtPlayer) {
+  // ---- blade carriage: SLASH on commit, otherwise rest the blade VERTICAL (up when sealed,
+  // dragged point-down once torn) — a stance, not a random flail ----
+  _aim(dt, player, wantSwing) {
     const a = this.actor, hand = { x: a.x, y: a.y - a.hh * 0.2 }, R = CONFIG.blade.aimRadius;
-    const baseAng = aimAtPlayer ? Math.atan2(player.y - hand.y, player.x - hand.x) : (this.facing > 0 ? 0 : Math.PI);
     const reach = Math.hypot(player.x - hand.x, player.y - hand.y);
+    const rr = 155 + (this.blade.lengthBonus || 0) * 0.9;
     this._swingT -= dt;
-    // wield the momentum blade EXACTLY like the attract hero: a deliberate slash whenever the
-    // target is in reach (committed states extend the range via wantSwing). Never swing mid-bait,
-    // mid-dodge (aimAtPlayer is false there), or while the blade is thrown.
-    const canSwing = aimAtPlayer && this._state !== "bait" && this._state !== "throw";
-    const rr = 150 + (this.blade.lengthBonus || 0) * 0.9;   // the long blade reaches much farther
-    // slower, more DELIBERATE cadence (a long pause between big committed slashes) — a boss, not a blur
-    if (canSwing && this._swingT <= -0.30 && reach < (wantSwing ? rr + 40 : rr)) {
-      this._swingT = 0.22; this._swingDir = Math.random() < 0.5 ? -1 : 1; this._swingBase = baseAng;
+    if (wantSwing && this._swingT <= -0.30 && reach < rr) {
+      this._swingT = 0.22; this._swingDir = Math.random() < 0.5 ? -1 : 1;
+      this._swingBase = Math.atan2(player.y - hand.y, player.x - hand.x);
     }
     if (this._swingT > 0) {
       const k = 1 - this._swingT / 0.22;
-      this._aimAng = this._swingBase - this._swingDir * 1.15 + this._swingDir * 2.3 * k;   // a big, sweeping slash arc
+      this._aimAng = this._swingBase - this._swingDir * 1.15 + this._swingDir * 2.3 * k;
     } else {
-      this._aimAng += (baseAng - this._aimAng) * clamp(7 * dt, 0, 1);
+      const rest = this.phase >= 2 ? Math.PI / 2 : -Math.PI / 2;   // torn = dragged low; sealed = held high
+      this._aimAng = lerpAngle(this._aimAng, rest, clamp(6 * dt, 0, 1));
     }
     this.blade.aimOverride.x = hand.x + Math.cos(this._aimAng) * R;
     this.blade.aimOverride.y = hand.y + Math.sin(this._aimAng) * R;
   },
 
-  _think(dt, player, playerBlade) {
-    this._updateRead(dt, player, playerBlade);
-    this._recordEcho(dt, player, playerBlade);
-    if (this._stagger > 0) {   // reeling from a hit: no inputs — let the knockback carry it, blade just trails
-      this.ai.left = this.ai.right = this.ai.up = this.ai.down = false;
-      this._aim(dt, player, false, true);
-      return;
-    }
-    this._decide(dt, player, playerBlade);
-    this._act(dt, player);
+  // =====================================================================
+  //  PROJECTILE-LIKE HAZARDS the boss owns (crescents + ground waves)
+  // =====================================================================
+  _updateCrescents(dt) {
+    if (!this.crescents.length) return;
+    for (const c of this.crescents) { c.x += c.vx * dt; c.y += c.vy * dt; c.life -= dt; }
+    this.crescents = this.crescents.filter((c) => c.life > 0 && c.x > -80 && c.x < CONFIG.view.w + 80 && c.y > -80 && c.y < CONFIG.view.h + 80);
+  },
+  _updateWaves(dt) {
+    if (!this.waves.length) return;
+    for (const w of this.waves) { w.x += w.vx * dt; w.life -= dt; }
+    this.waves = this.waves.filter((w) => w.life > 0 && w.x > -40 && w.x < CONFIG.view.w + 40);
   },
 
-  update(dt, player, playerBlade, platforms) {
-    if (!this.active) return;
-    if (this.hitCd > 0) this.hitCd -= dt;
-    if (this._clashCd > 0) this._clashCd -= dt;
-    if (this._hitFlash > 0) this._hitFlash -= dt;
-    if (this._stagger > 0) this._stagger -= dt;
-    // sync is the phase curve: it drifts UP over the duel (the reflection converges on you) and
-    // is nudged by the exchange — landing reads tightens it, a clash fractures it (see updateCombat)
-    this.sync = clamp(this.sync + dt * 0.02 + this._syncBump, 0.15, 1); this._syncBump = 0;
-    this._updatePhase();          // release/unseal escalation (blade grows, crescents unlock)
-    this._getsugaCd -= dt;
-    this._think(dt, player, playerBlade);
-    this.actor.update(dt, platforms);
-    this.actor.facing = this.facing;
-    this.actor.x = clamp(this.actor.x, 40, CONFIG.view.w - 40);   // keep it in the arena
-    this.blade.update(dt, this.actor, platforms);
-    // full-kit throw: launch once the blade's aim is current this frame, then auto-recall
-    // (freeRecall guarantees it always comes back — the Mirror is never left weaponless)
-    if (this._wantThrow && this.blade.state === "held") { this._wantThrow = false; this.blade.throwBlade(); this._recallT = 0.85; }
-    if (this.blade.state !== "held") {
-      this._recallT -= dt;
-      if (this._recallT <= 0 || this.blade.state === "embedded") this.blade.tryRecall(this.actor);
-    }
-    // released phases unleash CRESCENT energy slashes (a Getsuga-style tear ripped through the air)
-    if (this._phase >= 1 && this._getsugaCd <= 0 && this._stagger <= 0 && this.blade.state === "held" && Math.abs(player.x - this.actor.x) < 760) {
-      this._fireGetsuga(player);
-      this._getsugaCd = (this._phase >= 2 ? 1.5 : 2.3) + Math.random() * 0.8;
-    }
-    this._updateCrescents(dt, player);
-  },
-
-  // ---- the ONE isolated collision function ----
+  // =====================================================================
+  //  THE ISOLATED COMBAT EXCHANGE (game.js calls this once per step)
+  //  The host takes the player's blade through the NORMAL enemy loop — this
+  //  handles only what that loop can't: the boss's own weapon vs the player,
+  //  the blade CLASH, crescent deflects, and hazard contact.
+  // =====================================================================
   updateCombat(dt, player, playerBlade) {
-    if (!this.active) return;
+    if (!this.active || !this.host || this.host.dead) return;
     const a = this.actor, mb = this.blade, B = CONFIG.blade;
-    // (0) BLADE CLASH: two momentum blades meeting tip-to-tip at speed. Throws both back and
-    // FRACTURES sync — the player's own blade fractures the reflection (the phase-curve lever).
+    this.pb = playerBlade;   // perception cache
+
+    // (0) BLADE CLASH — tip-to-tip at speed: both thrown back, sync FRACTURES
     if (this._clashCd <= 0 && playerBlade.state === "held" && mb.state === "held" &&
         playerBlade.tipSpeed > B.minHitSpeed * 1.05 && mb.tipSpeed > B.minHitSpeed * 0.7 &&
-        Math.hypot(playerBlade.tipX - mb.tipX, playerBlade.tipY - mb.tipY) < 36) {
-      this._clashCd = 0.3; this.hitCd = Math.max(this.hitCd, 0.18); this._justClashed = true;
+        Math.hypot(playerBlade.tipX - mb.tipX, playerBlade.tipY - mb.tipY) < 40) {
+      this._clashCd = 0.3; this.host.hitCd = Math.max(this.host.hitCd, 0.2);
       this.sync = clamp(this.sync - 0.2, 0.15, 1);
       const mx = (playerBlade.tipX + mb.tipX) / 2, my = (playerBlade.tipY + mb.tipY) / 2, s = Math.sign(a.x - player.x) || 1;
-      a.vx += s * 300; a.vy -= 150;                                        // Mirror knocked back
-      player.vx += -s * 240; player.vy -= 110; player.iframe = Math.max(player.iframe, 0.12);   // player knocked back + brief safety
-      try { FX.flash(mx, my, 40, "#e9f6ff"); FX.ring(mx, my, 16, this.color); FX.burst(mx, my, 0, -1, 14, "#4bd6ff"); } catch (e) {}
-      return;   // a clash consumes this frame's exchange
+      a.vx += s * 320; a.vy -= 160;
+      player.vx += -s * 240; player.vy -= 110; player.iframe = Math.max(player.iframe, 0.12);
+      this.juice({ shake: 6, txt: "SYNC FRACTURED", x: mx, y: my - 20, big: true, color: "#4bd6ff" });
+      try { FX.flash(mx, my, 42, "#e9f6ff"); FX.ring(mx, my, 18, this.color); FX.burst(mx, my, 0, -1, 14, "#4bd6ff"); } catch (e) {}
+      return;
     }
-    // (1) the real player's held blade cuts the Mirror — it REACTS like a real enemy: knockback
-    // scales with swing speed, an upward swing launches it airborne, and it flashes + briefly
-    // staggers so hits land with weight.
-    if (this.hitCd <= 0 && playerBlade.state === "held" && playerBlade.tipSpeed > B.minHitSpeed &&
-        this.segNear(playerBlade.x, playerBlade.y, playerBlade.tipX, playerBlade.tipY, a.x, a.y, a.hw + 16)) {
-      const dmg = playerBlade.damageAt();
-      if (dmg > 0) {
-        this.hp -= dmg; this.hitCd = B.enemyHitIframe; this._syncBump -= 0.02;
-        this._hitFlash = 0.12; this._stagger = Math.max(this._stagger, 0.11);
-        const m = Math.hypot(playerBlade.tipVX, playerBlade.tipVY) || 1;
-        const kb = 300 + Math.min(playerBlade.tipSpeed * 0.16, 1000);   // harder swings hurl it much farther
-        a.vx += (playerBlade.tipVX / m) * kb; a.vy += (playerBlade.tipVY / m) * kb - 170;   // upward bias -> uppercuts send it flying
-        try { FX.burst(a.x, a.y, Math.sign(playerBlade.tipVX) || 1, -0.5, 10, this.color); FX.ring(a.x, a.y, 9, "#fff"); } catch (e) {}
-        if (this.hp <= 0) this._defeat();
-      }
-    }
-    // (2) the Mirror's blade cuts the real player (player.invulnerable + takeHit handle i-frames)
+
+    // (1) the boss's HELD blade vs the player — with per-move flavor (launch / spike / juggle)
     if (mb.state === "held" && mb.tipSpeed > B.minHitSpeed && !player.invulnerable &&
         this.segNear(mb.x, mb.y, mb.tipX, mb.tipY, player.x, player.y, player.hw + 10)) {
-      const dmg = mb.damageAt();
-      if (dmg > 0) { player.takeHit(dmg, mb.tipVX, mb.tipVY, a); this._syncBump += 0.05; }   // landing a read tightens sync
+      let dmg = mb.damageAt();
+      if (dmg > 0) {
+        const mv = this.mv;
+        if (mv && mv.ph === "exec") {
+          if (mv.id === "rend") { player.takeHit(dmg, mb.tipVX, mb.tipVY, a); player.vy = -720; this.juice({ txt: "LAUNCHED", x: player.x, y: player.y - 46, color: this.color }); this._syncBump += 0.05; if (this.phase >= 2) { this._answer = "juggle"; this._answerT = 0.28; } return; }
+          if (mv.id === "slam") { player.takeHit(dmg * 1.4, 0, 1, a); player.vy = Math.max(player.vy, 520); this._syncBump += 0.05; return; }
+          if (mv.id === "juggle") { player.takeHit(dmg, mb.tipVX, mb.tipVY, a); player.vy = Math.min(player.vy, -380); this._syncBump += 0.05; return; }
+        }
+        player.takeHit(dmg, mb.tipVX, mb.tipVY, a); this._syncBump += 0.05;
+      }
     }
-    // (3) the Mirror's THROWN blade vs the player — one hit per throw (full-kit ranged)
+
+    // (2) the boss's THROWN blade vs the player — one hit per throw
     if ((mb.state === "flying" || mb.state === "returning") && !this._threwHit && !player.invulnerable &&
         this.segNear(mb.x, mb.y, mb.tipX, mb.tipY, player.x, player.y, player.hw + 12)) {
       player.takeHit(mb.throwDmg || 20, mb.vx, mb.vy, a); this._threwHit = true; this._syncBump += 0.05;
     }
-    // (4) crescent energy slashes vs the player
-    if (this.crescents.length) for (const c of this.crescents) {
-      if (!c.hit && !player.invulnerable && Math.hypot(c.x - player.x, c.y - player.y) < c.r * 0.7 + player.hw) {
-        player.takeHit(15 + this._phase * 6, c.vx, c.vy, a); c.hit = true;
-        try { FX.burst(c.x, c.y, Math.sign(c.vx) || 1, 0, 8, "#b06cff"); } catch (e) {}
+
+    // (3) crescents: hit the player — or get DEFLECTED back by a fast swing (then they hurt the boss)
+    for (const c of this.crescents) {
+      if (!c.refl && playerBlade.state === "held" && playerBlade.tipSpeed > B.minHitSpeed &&
+          this.segNear(playerBlade.x, playerBlade.y, playerBlade.tipX, playerBlade.tipY, c.x, c.y, c.r * 0.8)) {
+        c.refl = true; c.vx *= -1.15; c.vy = -Math.abs(c.vy) * 0.6 - 60; c.ang = Math.atan2(c.vy, c.vx); c.life = Math.max(c.life, 0.9);
+        this.juice({ txt: "REFLECTED", x: c.x, y: c.y - 18, color: "#4bd6ff" });
+        try { FX.flash(c.x, c.y, 30, "#4bd6ff"); } catch (e) {}
+        continue;
+      }
+      if (!c.hit && !c.refl && !player.invulnerable && Math.hypot(c.x - player.x, c.y - player.y) < c.r * 0.7 + player.hw) {
+        player.takeHit(14 + this.phase * 5, c.vx, c.vy, a); c.hit = true;
+        try { FX.burst(c.x, c.y, Math.sign(c.vx) || 1, 0, 8, this.color); } catch (e) {}
+      }
+      if (c.refl && !c.hit && Math.hypot(c.x - this.host.x, c.y - this.host.y) < c.r * 0.7 + this.host.hw) {
+        c.hit = true; this.host.hit(26, c.vx, c.vy);
+        try { FX.burst(c.x, c.y, Math.sign(c.vx) || 1, -0.4, 10, "#4bd6ff"); } catch (e) {}
+      }
+    }
+
+    // (4) ground shockwaves vs the player (jump them)
+    for (const w of this.waves) {
+      if (!w.hit && !player.invulnerable && Math.abs(w.x - player.x) < 26 && player.y + player.hh > CONFIG.world.groundY - 44) {
+        w.hit = true; player.takeHit(12 + this.phase * 4, w.vx, -0.4, a); player.vy = Math.min(player.vy, -380);
       }
     }
   },
 
-  _defeat() {
-    this.active = false; this._justDefeated = true;
-    try { FX.death(this.actor.x, this.actor.y, 22, this.color); FX.burst(this.actor.x, this.actor.y, 0, -1, 18, this.color); } catch (e) {}
-  },
+  // =====================================================================
+  //  RENDER — the whole boss look lives here (host.draw delegates)
+  // =====================================================================
+  draw(ctx) {
+    if (!this.active || !this.host || !this.actor) return;
+    const a = this.actor, ph = this.phase, lowG = (typeof GFX !== "undefined" && GFX.low);
 
-  // ---- release phases: as you break its HP the reflection UNSEALS — the blade grows longer and
-  // it starts flinging crescent energy slashes. A bankai-style escalation across three forms. ----
-  _updatePhase() {
-    const fr = this.hp / this.maxHp;
-    const ph = fr > 0.62 ? 0 : (fr > 0.30 ? 1 : 2);
-    if (ph > this._phase) {
-      this._phase = ph;
-      this.blade.lengthBonus = [95, 165, 240][ph];   // the blade GROWS with each release
-      this._hitFlash = 0.22; this._getsugaCd = 0.5; this._stagger = 0;
-      this.sync = Math.max(this.sync, 0.5 + ph * 0.2);
-      this._justReleased = ph === 1 ? "THE MIRROR UNSEALS" : "FINAL REFLECTION";
-      const a = this.actor;
-      try { FX.flash(a.x, a.y - a.hh, 72, "#c98cff"); FX.ring(a.x, a.y, 34, this.color); FX.ring(a.x, a.y, 20, "#e9d5ff"); FX.burst(a.x, a.y, 0, -1, 26, "#b06cff"); } catch (e) {}
+    // afterimages (flash-steps + dashes)
+    for (const g of this.imgs) {
+      ctx.save(); ctx.globalAlpha = clamp(g.t / 0.4, 0, 1) * 0.3; ctx.fillStyle = this.color;
+      ctx.fillRect(g.x - a.hw, g.y - a.hh, a.hw * 2, a.hh * 2); ctx.restore();
+    }
+    // release aura
+    if (ph > 1 && !lowG) {
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.10 + 0.06 * ph;
+      const rad = 42 + ph * 15, g = ctx.createRadialGradient(a.x, a.y, 4, a.x, a.y, rad);
+      g.addColorStop(0, this.color); g.addColorStop(1, "rgba(176,108,255,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(a.x, a.y, rad, 0, 6.2832); ctx.fill(); ctx.restore();
+    }
+    // torn chromatic doubling — converges as sync rises
+    if (!lowG) {
+      const split = (1 - this.sync) * 9 + 1;
+      const now = (typeof performance !== "undefined" ? performance.now() : Date.now());
+      const j = Math.sin(now * 0.018) * split * 0.35;
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = (0.10 + 0.3 * (1 - this.sync)) * (1 - this.white);
+      ctx.fillStyle = "#4bd6ff"; ctx.fillRect(a.x - a.hw - split + j, a.y - a.hh - j * 0.4, a.hw * 2, a.hh * 2);
+      ctx.fillStyle = "#ff4b93"; ctx.fillRect(a.x - a.hw + split - j, a.y - a.hh + j * 0.4, a.hw * 2, a.hh * 2);
+      ctx.restore();
+    }
+
+    // ---- the body: YOUR silhouette (ink + cyan visor), leaning into its motion ----
+    ctx.save();
+    ctx.translate(a.x, a.y);
+    ctx.rotate(clamp(a.vx / 2400, -1, 1) * 0.14);
+    ctx.globalAlpha = 1 - this.white * 0.88;              // P3 white-out: the body fades...
+    ctx.fillStyle = this.host.flash > 0 ? "#fff" : ((typeof THEME !== "undefined") ? THEME.ink : "#101018");
+    if (!lowG) { ctx.shadowColor = this.color; ctx.shadowBlur = 10; }
+    ctx.fillRect(-a.hw, -a.hh, a.hw * 2, a.hh * 2);
+    ctx.shadowBlur = 0;
+    if (ph >= 2) {                                        // torn: violet crack veins glow across the body
+      ctx.strokeStyle = this.color; ctx.lineWidth = 1.6; ctx.globalAlpha = (0.5 + 0.5 * Math.sin(performance.now() / 300)) * (1 - this.white * 0.88);
+      ctx.beginPath();
+      ctx.moveTo(-a.hw * 0.5, -a.hh); ctx.lineTo(-a.hw * 0.1, -a.hh * 0.3); ctx.lineTo(-a.hw * 0.6, a.hh * 0.4);
+      ctx.moveTo(a.hw * 0.6, -a.hh * 0.6); ctx.lineTo(a.hw * 0.15, 0); ctx.lineTo(a.hw * 0.55, a.hh);
+      if (ph >= 3) { ctx.moveTo(0, -a.hh); ctx.lineTo(a.hw * 0.2, -a.hh * 0.1); ctx.lineTo(-a.hw * 0.2, a.hh * 0.7); }
+      ctx.stroke();
+    }
+    ctx.restore();
+    // the visor eye stays at FULL alpha — even mid white-out you can track its gaze
+    ctx.fillStyle = CONFIG.colors.eye;
+    ctx.fillRect(a.x + this.facing * 5 - 4, a.y - a.hh + 12, 8, 5);
+
+    // ---- the blade (always fully visible — in P3 it IS how you track the boss) ----
+    this.blade.draw(ctx, a);
+    this._drawGlint(ctx);
+    this._drawCrescents(ctx);
+    this._drawWaves(ctx);
+
+    // slim sync strip + echo cue (the big HP bar is the boss bar up top)
+    const bw = 52, bx = a.x - bw / 2, by = a.y - a.hh - 14;
+    ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(bx - 1, by - 1, bw + 2, 4);
+    ctx.fillStyle = "#fff"; ctx.fillRect(bx, by, bw * clamp(this.sync, 0, 1), 2);
+    if (this._state === "echo" && typeof UI !== "undefined") {
+      ctx.fillStyle = this.color; ctx.font = UI.font(9, true); ctx.textAlign = "center";
+      ctx.fillText("◆ ECHO", a.x, by - 4);
     }
   },
 
-  // a crescent energy slash flung along a big committed cut toward the player (final form fans three)
-  _fireGetsuga(player) {
-    const a = this.actor, ph = this._phase;
-    const ang = Math.atan2(player.y - (a.y - a.hh * 0.4), player.x - a.x);
-    this._swingT = 0.24; this._swingDir = Math.sin(ang) < 0 ? 1 : -1; this._swingBase = ang;   // a visible overhead slash
-    const sp = 560 + ph * 90, n = ph >= 2 ? 3 : 1, spread = 0.17;
-    for (let i = 0; i < n; i++) {
-      const av = ang + (i - (n - 1) / 2) * spread;
-      this.crescents.push({ x: a.x + Math.cos(ang) * 46, y: a.y - a.hh * 0.4, vx: Math.cos(av) * sp, vy: Math.sin(av) * sp, ang: av, life: 1.5, r: 34 + ph * 10, hit: false });
-    }
-    try { FX.burst(a.x + Math.cos(ang) * 60, a.y - a.hh * 0.4 + Math.sin(ang) * 60, Math.cos(ang), Math.sin(ang), 10, "#b06cff"); } catch (e) {}
-  },
-
-  _updateCrescents(dt, player) {
-    if (!this.crescents.length) return;
-    for (const c of this.crescents) { c.x += c.vx * dt; c.y += c.vy * dt; c.life -= dt; }
-    this.crescents = this.crescents.filter((c) => c.life > 0 && c.x > -80 && c.x < CONFIG.view.w + 80 && c.y < CONFIG.view.h + 80);
+  _drawGlint(ctx) {   // a bright edge along the blade during a move telegraph — the universal "big one coming" read
+    const mv = this.mv;
+    if (!mv || mv.ph !== "tele" && mv.ph !== "hang") return;
+    const b = this.blade, pulse = 0.55 + 0.45 * Math.sin(performance.now() / 55);
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = 0.7 * pulse; ctx.strokeStyle = "#f0e6ff"; ctx.lineWidth = 3; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.tipX, b.tipY); ctx.stroke();
+    ctx.globalAlpha = pulse; ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(b.tipX, b.tipY, 3.5 + 2 * pulse, 0, 6.2832); ctx.fill();
+    ctx.restore();
   },
 
   _drawCrescents(ctx) {
     if (!this.crescents.length) return;
     const glow = !(typeof GFX !== "undefined" && GFX.low);
     for (const c of this.crescents) {
-      const al = clamp(c.life / 1.5, 0, 1);
+      const al = clamp(c.life / 1.5, 0, 1), col = c.refl ? "#4bd6ff" : this.color;
       ctx.save();
       ctx.translate(c.x, c.y); ctx.rotate(c.ang);
       if (glow) ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = 0.55 + 0.4 * al; ctx.strokeStyle = "#b06cff"; ctx.lineWidth = 6 + c.r * 0.16; ctx.lineCap = "round";
-      ctx.beginPath(); ctx.arc(-c.r * 0.35, 0, c.r, -1.15, 1.15); ctx.stroke();   // forward-bulging crescent, edge leading
+      ctx.globalAlpha = 0.55 + 0.4 * al; ctx.strokeStyle = col; ctx.lineWidth = 6 + c.r * 0.16; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.arc(-c.r * 0.35, 0, c.r, -1.15, 1.15); ctx.stroke();
       ctx.globalAlpha = 0.5 * al; ctx.strokeStyle = "#efe3ff"; ctx.lineWidth = 2.5;
       ctx.beginPath(); ctx.arc(-c.r * 0.35, 0, c.r, -1.0, 1.0); ctx.stroke();
       ctx.restore();
@@ -385,49 +625,65 @@ const Mirror = {
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
   },
 
-  draw(ctx) {
-    if (!this.active) return;
-    const a = this.actor;
-    // torn-double: chromatic ghost copies of the body that CONVERGE on the real silhouette as
-    // sync rises — a desynced reflection at low sync, a clean double of you at high sync.
-    if (!(typeof GFX !== "undefined" && GFX.low)) {
-      const split = (1 - this.sync) * 11 + 1;
-      const now = (typeof performance !== "undefined" ? performance.now() : Date.now());
-      const j = Math.sin(now * 0.018) * split * 0.35;
-      const bx = a.x - a.hw, by = a.y - a.hh, bw = a.hw * 2, bh = a.hh * 2;
-      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.14 + 0.34 * (1 - this.sync);
-      ctx.fillStyle = "#4bd6ff"; ctx.fillRect(bx - split + j, by - j * 0.4, bw, bh);   // cyan tear
-      ctx.fillStyle = "#ff4b93"; ctx.fillRect(bx + split - j, by + j * 0.4, bw, bh);   // magenta tear
+  _drawWaves(ctx) {
+    if (!this.waves.length) return;
+    const glow = !(typeof GFX !== "undefined" && GFX.low);
+    for (const w of this.waves) {
+      const k = 1 - w.life / 0.85, al = clamp(w.life / 0.85, 0, 1);
+      ctx.save();
+      if (glow) ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = 0.75 * al; ctx.strokeStyle = this.color; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(w.x, w.y, 12 + k * 12, Math.PI, 0); ctx.stroke();
+      ctx.globalAlpha = 0.5 * al; ctx.strokeStyle = "#efe3ff"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(w.x, w.y, 7 + k * 9, Math.PI, 0); ctx.stroke();
       ctx.restore();
     }
-    if (this._phase > 0 && !(typeof GFX !== "undefined" && GFX.low)) {   // release aura, growing per form
-      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.10 + 0.05 * this._phase;
-      const rad = 40 + this._phase * 16, g = ctx.createRadialGradient(a.x, a.y, 4, a.x, a.y, rad);
-      g.addColorStop(0, "#b06cff"); g.addColorStop(1, "rgba(176,108,255,0)");
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(a.x, a.y, rad, 0, 6.2832); ctx.fill(); ctx.restore();
-    }
-    this.actor.draw(ctx);
-    if (this._hitFlash > 0) {   // enemy-style white hit flash so your blows read with impact
-      ctx.save(); ctx.globalAlpha = clamp(this._hitFlash / 0.12, 0, 1) * 0.85;
-      ctx.fillStyle = "#fff"; ctx.fillRect(a.x - a.hw, a.y - a.hh, a.hw * 2, a.hh * 2); ctx.restore();
-    }
-    this.blade.draw(ctx, this.actor);
-    this._drawCrescents(ctx);
-    this._drawBar(ctx);
-  },
-
-  _drawBar(ctx) {
-    const a = this.actor, w = 66, x = a.x - w / 2, y = a.y - a.hh - 24, h = 5;
-    const fr = clamp(this.hp / this.maxHp, 0, 1);
-    ctx.fillStyle = "rgba(0,0,0,0.82)"; ctx.fillRect(x - 1.5, y - 1.5, w + 3, h + 3);
-    ctx.fillStyle = "#39343f"; ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = this.color; ctx.fillRect(x, y, w * fr, h);
-    // sync meter: a thin bar under the HP that fills as the reflection converges on you
-    ctx.fillStyle = "rgba(255,255,255,0.25)"; ctx.fillRect(x, y + h + 1.5, w, 2);
-    ctx.fillStyle = "#fff"; ctx.fillRect(x, y + h + 1.5, w * clamp(this.sync, 0, 1), 2);
-    if (typeof UI !== "undefined") {
-      ctx.fillStyle = this.color; ctx.font = UI.font(9, true); ctx.textAlign = "center";
-      ctx.fillText(this._state === "echo" ? "◆ ECHO" : ["THE MIRROR", "THE MIRROR ⟶ UNSEALED", "⟶ FINAL REFLECTION"][this._phase], a.x, y - 5);
-    }
+    ctx.globalAlpha = 1;
   },
 };
+
+// ------- the HOST: a real Enemy so every existing boss system just works -------
+// Blade hits, statuses, knockback, the segmented boss HP bar, difficulty scaling, kill credit,
+// and the boss-death cinematic all flow through the normal enemy path. Its update() drives the
+// Mirror brain and mirrors the actor's position; knockback is forwarded into the actor.
+class MirrorHost extends Enemy {
+  constructor(x, y, mods) {
+    // heavier presence than the old Echo, and knockback tuned so hits FEEL like they land
+    super(x, y, Object.assign({}, CONFIG.echo, { knockbackTaken: 5.5, weight: 1.35 }));
+    this.kind = "boss"; this.isBoss = true; this.isMirrorBoss = true;
+    this.bossName = "THE ECHO"; this.color = "#b06cff";
+    this.spawnClone = false; this.mode = "mirror";
+    this._mods = mods || null;
+    this._live = false;   // set true by the game when actually fought (bestiary previews stay inert)
+  }
+  update(dt, platforms, player, projectiles) {
+    this.tickTimers(dt);
+    if (typeof Mirror === "undefined" || !this._live) return;
+    if (Mirror.host !== this) Mirror.attach(this, this._mods);
+    Mirror.hostStep(dt, platforms, player);
+    // the host IS the body: hitbox, contact damage, and the boss bar track the actor
+    this.x = Mirror.actor.x; this.y = Mirror.actor.y;
+    this.facing = Mirror.facing; this.onGround = Mirror.actor.onGround;
+    this.vx = 0; this.vy = 0;   // impulses were forwarded to the actor in hit()
+  }
+  hit(dmg, kx, ky) {
+    const pvx = this.vx, pvy = this.vy;
+    super.hit(dmg, kx, ky);   // damage, statuses, flash, kill-credit — the real pipeline
+    if (typeof Mirror !== "undefined" && Mirror.host === this && Mirror.actor) {
+      Mirror.actor.vx += (this.vx - pvx); Mirror.actor.vy += (this.vy - pvy);   // knockback lands on the BODY
+      Mirror._stagger = Math.max(Mirror._stagger || 0, 0.1);                    // it visibly reels
+      Mirror._syncBump -= 0.02;
+    }
+    this.vx = pvx; this.vy = pvy;
+  }
+  draw(ctx) {
+    if (typeof Mirror !== "undefined" && Mirror.host === this && Mirror.active) { Mirror.draw(ctx); return; }
+    // inert fallback (bestiary / previews): the sealed silhouette
+    const x = this.x - this.hw, y = this.y - this.hh;
+    ctx.fillStyle = (typeof THEME !== "undefined") ? THEME.ink : "#101018";
+    ctx.fillRect(x, y, this.hw * 2, this.hh * 2);
+    ctx.fillStyle = CONFIG.colors.eye; ctx.fillRect(this.x + this.facing * 5 - 4, y + 12, 8, 5);
+    ctx.strokeStyle = "#b06cff"; ctx.lineWidth = 3; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x, this.y - this.hh - 26); ctx.stroke();
+  }
+}
