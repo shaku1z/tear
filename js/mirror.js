@@ -58,7 +58,7 @@ const Mirror = {
     this._state = "approach"; this._stateT = 0; this._decideT = 0;
     this._swingT = 0; this._swingDir = 1; this._swingBase = 0; this._aimAng = -Math.PI / 2;
     this._dashCd = 0; this._jumpCd = 0; this._clashCd = 0; this._syncBump = 0; this.lock = null;
-    this.reflection = null; this._air = null;   // P2 mirror-phantom + P3 aerial director
+    this._air = null;   // P3 aerial director state
     this._pDashPrev = 0; this._pPrevX = host.x; this._pDashPrev2 = 0; this._pGroundPrev = true; this._prevDist = 300;
     this.echoBuf = []; this._echoClip = []; this._echoPtr = 0; this._echoCd = 6;
     this.mv = null; this._moveCd = 2.2;     // committed-move director
@@ -124,8 +124,6 @@ const Mirror = {
       if (!this.mv) { this._decide(dt, player); this._act(dt, player); }
     }
 
-    this._updateReflection(dt, player);   // P2 mirror-phantom pincer
-
     // step the real body + blade
     this.actor.update(dt, platforms);
     this.actor.facing = this.facing;
@@ -166,8 +164,8 @@ const Mirror = {
     this.color = ph === 2 ? "#c94bff" : "#e6d3ff";
     this.blade.trailColor = this.color; this.blade.glowColor = ph === 3 ? "#ffffff" : this.color;
     const a = this.actor, h = this.host;
-    if (ph === 2) { this._spawnReflection(); this.juice({ txt: "THE REFLECTION SPLITS", x: h.x, y: h.y - 84, big: true }); }
-    if (ph === 3) { this._dissolveReflection(); this._air = null; this._wtT = 2.2; this.juice({ txt: "FINAL REFLECTION", x: h.x, y: h.y - 84, big: true }); }
+    if (ph === 2) { h.spawnClone = true; this.juice({ txt: "THE REFLECTION SPLITS", x: h.x, y: h.y - 84, big: true }); }   // game spawns a real ReflectionEnemy
+    if (ph === 3) { this._air = null; this._wtT = 2.2; this.juice({ txt: "FINAL REFLECTION", x: h.x, y: h.y - 84, big: true }); }   // the reflection self-dissolves at P3
     // the release BEAT: a deep slow-mo punch so each unseal lands like an event
     this.juice({ shake: ph === 3 ? 13 : 10, flash: ph === 3 ? 0.4 : 0.28, slowmo: 0.55, zoom: CONFIG.juice.zoomBig, hitstop: CONFIG.hitStop.big });
     try {
@@ -555,50 +553,6 @@ const Mirror = {
   },
 
   // =====================================================================
-  //  THE REFLECTION (P2 phantom) — a bladeless mirror-image of YOU that
-  //  shadows your position across the arena and rains crescents: a pincer.
-  //  Cut it down to dispel it early; it dissolves back in when P3 begins.
-  // =====================================================================
-  _spawnReflection() {
-    const a = this.actor;
-    this.reflection = { x: clamp(CONFIG.view.w - a.x, 60, CONFIG.view.w - 60), y: a.y, hp: 130, hitCd: 0, fireCd: 1.3, flash: 0, dead: false };
-    try { FX.ghost(a.x, a.y, a.hw, a.hh, this.color); FX.burst(this.reflection.x, this.reflection.y, 0, -1, 16, this.color); } catch (e) {}
-  },
-  _updateReflection(dt, player) {
-    const rf = this.reflection; if (!rf || rf.dead) return;
-    if (this.phase >= 3) { this._dissolveReflection(); return; }
-    if (rf.hitCd > 0) rf.hitCd -= dt; if (rf.flash > 0) rf.flash -= dt;
-    // MIRROR the player across the arena centre (a true reflection), easing in
-    const tx = clamp(CONFIG.view.w - player.x, 60, CONFIG.view.w - 60), ty = clamp(player.y - 24, 90, CONFIG.world.groundY - 30);
-    rf.x += (tx - rf.x) * clamp(3 * dt, 0, 1); rf.y += (ty - rf.y) * clamp(3 * dt, 0, 1);
-    rf.fireCd -= dt;
-    if (rf.fireCd <= 0) {
-      rf.fireCd = lerp(2.1, 1.2, this.sync) + Math.random() * 0.5;
-      const ang = Math.atan2(player.y - rf.y, player.x - rf.x), sp = 540;
-      this._pushCrescent(rf.x, rf.y, ang, sp, 36);
-      try { if (typeof SFX !== "undefined") SFX.crescent(); FX.flash(rf.x, rf.y, 24, "#ffffff"); FX.burst(rf.x, rf.y, Math.cos(ang), Math.sin(ang), 8, this.color); } catch (e) {}
-    }
-  },
-  _dissolveReflection() {
-    const rf = this.reflection; if (!rf) return;
-    try { FX.death(rf.x, rf.y, 16, this.color); FX.burst(rf.x, rf.y, 0, -1, 14, "#e9d5ff"); if (typeof SFX !== "undefined") SFX.recall(); } catch (e) {}
-    this.reflection = null;
-  },
-  _drawReflection(ctx) {
-    const rf = this.reflection; if (!rf || rf.dead) return;
-    const a = this.actor, lowG = (typeof GFX !== "undefined" && GFX.low), face = rf.x < a.x ? 1 : -1;
-    ctx.save();
-    ctx.globalAlpha = rf.flash > 0 ? 0.95 : 0.5;
-    if (!lowG) { ctx.globalCompositeOperation = "lighter"; ctx.shadowColor = this.color; ctx.shadowBlur = 12; }
-    ctx.fillStyle = rf.flash > 0 ? "#fff" : this.color;
-    ctx.fillRect(rf.x - a.hw, rf.y - a.hh, a.hw * 2, a.hh * 2);
-    ctx.shadowBlur = 0; ctx.globalCompositeOperation = "source-over";
-    ctx.globalAlpha = 0.85; ctx.fillStyle = CONFIG.colors.eye;
-    ctx.fillRect(rf.x + face * 5 - 4, rf.y - a.hh + 12, 8, 5);
-    ctx.restore(); ctx.globalAlpha = 1;
-  },
-
-  // =====================================================================
   //  P3 AERIAL DIRECTOR — the final form plays from DISTANCE and rains
   //  sword-first air-strike DIVES + crescents; you track it by its blade.
   // =====================================================================
@@ -614,14 +568,17 @@ const Mirror = {
     if (!this._air) this._air = { st: "hover", t: 1.1 };
     const A = this._air; A.t -= dt; a.onGround = false;
     this.facing = Math.sign(player.x - a.x) || this.facing;
-    if (A.st === "hover") {                              // weave at height, keeping distance
-      const side = Math.sin(performance.now() / 850) * 300;
-      const tx = clamp(player.x + side, 80, CONFIG.view.w - 80), ty = clamp(player.y - 215, 80, gy - 130);
-      a.x += (tx - a.x) * clamp(2.4 * dt, 0, 1); a.y += (ty - a.y) * clamp(2.4 * dt, 0, 1); a.vx = 0; a.vy = 0;
+    if (A.st === "hover") {                              // KEEP FAR: hover high on a side at a big standoff
+      if (A.side == null) A.side = (player.x < CONFIG.view.w / 2) ? 1 : -1;
+      const weave = Math.sin(performance.now() / 780) * 130;
+      const tx = clamp(player.x + A.side * (410 + weave), 90, CONFIG.view.w - 90), ty = clamp(player.y - 285, 70, gy - 150);
+      a.x += (tx - a.x) * clamp(2.1 * dt, 0, 1); a.y += (ty - a.y) * clamp(2.1 * dt, 0, 1); a.vx = 0; a.vy = 0;
       this._pointBladeAt(player, clamp(5 * dt, 0, 1));
       if (A.t <= 0) {
-        if (Math.random() < 0.68) { A.st = "aim"; A.t = 0.4; A.tx = player.x; A.ty = player.y; this.juice({ shake: 3 }); try { if (typeof SFX !== "undefined") SFX.charge && SFX.charge(); } catch (e) {} }
-        else { this._fireCrescents(player); A.t = 0.85 + Math.random() * 0.5; }
+        const r = Math.random();
+        if (r < 0.46) { A.st = "aim"; A.t = 0.4; A.tx = player.x; A.ty = player.y; A.side = -A.side; this.juice({ shake: 3 }); }
+        else if (r < 0.74 && this.blade.state === "held") { A.st = "throwaim"; A.t = 0.3; A.tx = player.x; A.ty = player.y; }
+        else { this._fireCrescents(player); A.t = 0.8 + Math.random() * 0.5; }
       }
     } else if (A.st === "aim") {                        // lock the dive line (telegraph)
       a.vx = 0; a.vy = 0;
@@ -631,6 +588,15 @@ const Mirror = {
         const m = Math.hypot(A.tx - a.x, A.ty - a.y) || 1; A.dvx = (A.tx - a.x) / m * 1650; A.dvy = (A.ty - a.y) / m * 1650;
         try { if (typeof SFX !== "undefined") SFX.swing(3400); } catch (e) {}
       }
+    } else if (A.st === "throwaim") {                   // wind up a blade THROW from the air (like you)
+      a.vx = lerp(a.vx, 0, clamp(6 * dt, 0, 1)); a.vy = lerp(a.vy, 0, clamp(6 * dt, 0, 1));
+      this._pointBladeAt({ x: A.tx, y: A.ty }, clamp(10 * dt, 0, 1));
+      if (A.t <= 0) { this.blade.throwBlade(); A._rt = 1.0; this._threwHit = false; A.st = "throw"; this.juice({ shake: 3 }); try { if (typeof SFX !== "undefined") SFX.throwBlade(); } catch (e) {} }
+    } else if (A.st === "throw") {                      // blade is out — hold height, recall when home
+      const ty = clamp(player.y - 285, 70, gy - 150);
+      a.vx = lerp(a.vx, 0, clamp(4 * dt, 0, 1)); a.y += (ty - a.y) * clamp(1.8 * dt, 0, 1); a.x += a.vx * dt;
+      if (this.blade.state === "held") { A.st = "hover"; A.t = 0.7 + Math.random() * 0.4; }
+      else { A._rt -= dt; if (A._rt <= 0 || this.blade.state === "embedded") this.blade.tryRecall(this.actor); }
     } else {                                            // DIVE — sword-first plunge
       a.x += A.dvx * dt; a.y += A.dvy * dt;
       this.imgs.push({ x: a.x, y: a.y, f: this.facing, t: 0.26 });
@@ -714,14 +680,6 @@ const Mirror = {
         w.hit = true; player.takeHit(12 + this.phase * 4, w.vx, -0.4, a); player.vy = Math.min(player.vy, -380);
       }
     }
-    // (5) your blade cuts the P2 reflection phantom -> dispels it early
-    const rf = this.reflection;
-    if (rf && !rf.dead && rf.hitCd <= 0 && playerBlade.state === "held" && playerBlade.tipSpeed > B.minHitSpeed &&
-        this.segNear(playerBlade.x, playerBlade.y, playerBlade.tipX, playerBlade.tipY, rf.x, rf.y, a.hw + 8)) {
-      rf.hp -= playerBlade.damageAt(); rf.hitCd = B.enemyHitIframe; rf.flash = 0.1;
-      try { FX.burst(rf.x, rf.y, 0, -0.5, 6, this.color); } catch (e) {}
-      if (rf.hp <= 0) { this.juice({ txt: "REFLECTION CUT", x: rf.x, y: rf.y - 20, color: "#4bd6ff" }); this._dissolveReflection(); }
-    }
   },
 
   // =====================================================================
@@ -732,7 +690,6 @@ const Mirror = {
     const a = this.actor, ph = this.phase, lowG = (typeof GFX !== "undefined" && GFX.low);
 
     this._drawTelegraph(ctx);   // ground danger-zone for the slam (behind everything)
-    this._drawReflection(ctx);  // the P2 mirror-phantom (its own spot across the arena)
 
     // afterimages (flash-steps + dashes)
     for (const g of this.imgs) {
@@ -923,5 +880,80 @@ class MirrorHost extends Enemy {
     ctx.fillStyle = CONFIG.colors.eye; ctx.fillRect(this.x + this.facing * 5 - 4, y + 12, 8, 5);
     ctx.strokeStyle = "#b06cff"; ctx.lineWidth = 3; ctx.lineCap = "round";
     ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x, this.y - this.hh - 26); ctx.stroke();
+  }
+}
+
+// ------- THE REFLECTION — a real Enemy (so it reacts to your hits like anything else) -------
+// Spawned in phase 2 via the boss's spawnClone hook. A bright mirror-image of YOU that flees to
+// a CORNER and unleashes fully-fleshed crescent patterns (fan / barrage / sweep). Because it
+// extends Enemy, blade hits knock it around + flash it through the normal pipeline; a spring pulls
+// it back to its corner so knockback reads. It self-dissolves when the boss reaches its final phase.
+class ReflectionEnemy extends Enemy {
+  constructor(x, y) {
+    super(x, y, Object.assign({}, CONFIG.echo, { hp: 200, w: 30, h: 46, knockbackTaken: 6, weight: 1.0, contactDmg: 14 }));
+    this.kind = "reflection"; this.isBoss = false; this.bossName = null;
+    this.color = "#c96bff";                       // bright + glowing (was barely visible before)
+    this._corner = this._pickCorner(); this._st = "fly";
+    this._patCd = 1.4; this._pat = null; this._patN = 0; this._patT = 0; this._bob = Math.random() * 6.28;
+  }
+  _pickCorner() {
+    const m = 150, gy = CONFIG.world.groundY, cs = [
+      { x: m, y: 140 }, { x: CONFIG.view.w - m, y: 140 },
+      { x: m, y: gy - 280 }, { x: CONFIG.view.w - m, y: gy - 280 },
+    ];
+    return cs[Math.floor(Math.random() * cs.length)];
+  }
+  update(dt, platforms, player, projectiles) {
+    this.tickTimers(dt);
+    if (typeof Mirror === "undefined" || !Mirror.active || (Mirror.host && Mirror.host.dead) || Mirror.phase >= 3) {
+      this.dead = true; try { FX.death(this.x, this.y, 18, this.color); FX.burst(this.x, this.y, 0, -1, 14, "#e9d5ff"); if (typeof SFX !== "undefined") SFX.recall(); } catch (e) {}
+      return;
+    }
+    this.facing = Math.sign(player.x - this.x) || this.facing;
+    this._bob += dt * 3;
+    // spring toward the corner + integrate, so a hit visibly SHOVES it and it recovers
+    const c = this._corner;
+    this.vx += (c.x - this.x) * 6 * dt; this.vy += (c.y + Math.sin(this._bob) * 10 - this.y) * 6 * dt;
+    this.vx *= Math.exp(-3.2 * dt); this.vy *= Math.exp(-3.2 * dt);
+    this.x += this.vx * dt; this.y += this.vy * dt;
+    this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
+    // patterns
+    if (this._pat) { this._runPattern(dt, player); }
+    else { this._patCd -= dt; if (this._patCd <= 0 && Math.abs(this.x - c.x) < 120) { this._pat = ["fan", "barrage", "sweep"][Math.floor(Math.random() * 3)]; this._patN = 0; this._patT = 0; this._patCd = 2.6 + Math.random() * 1.2; if (Math.random() < 0.4) this._corner = this._pickCorner(); } }
+  }
+  _shoot(ang, sp, r) {
+    if (typeof Mirror !== "undefined" && Mirror.crescents) Mirror._pushCrescent(this.x, this.y, ang, sp, r);
+    try { if (typeof SFX !== "undefined") SFX.crescent(); FX.flash(this.x, this.y, 22, this.color); FX.burst(this.x, this.y, Math.cos(ang), Math.sin(ang), 5, this.color); } catch (e) {}
+  }
+  _runPattern(dt, player) {
+    this._patT -= dt; if (this._patT > 0) return;
+    const toP = Math.atan2(player.y - this.y, player.x - this.x);
+    if (this._pat === "fan") {                    // a wide 5-crescent spread at once
+      for (let i = 0; i < 5; i++) this._shoot(toP + (i - 2) * 0.22, 520, 34);
+      this.flash = 0.1; this._pat = null;
+    } else if (this._pat === "barrage") {         // rapid aimed shots
+      this._shoot(toP + (Math.random() * 2 - 1) * 0.09, 640, 30); this._patN++; this._patT = 0.14;
+      if (this._patN >= 6) this._pat = null;
+    } else {                                      // sweep an arc across the arena
+      this._shoot(toP - 0.7 + this._patN * 0.16, 540, 32); this._patN++; this._patT = 0.08;
+      if (this._patN >= 10) this._pat = null;
+    }
+  }
+  draw(ctx) {
+    const lowG = (typeof GFX !== "undefined" && GFX.low), x = this.x, y = this.y, r = this.hw + 6;
+    if (!lowG) {   // strong outer glow so it's unmistakably visible
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.38 + (this._pat ? 0.15 : 0);
+      const g = ctx.createRadialGradient(x, y, 2, x, y, r * 2.3);
+      g.addColorStop(0, this.color); g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 2.3, 0, 6.2832); ctx.fill(); ctx.restore();
+    }
+    ctx.save();   // a bright diamond mirror-image + white outline + visor
+    ctx.fillStyle = this.flash > 0 ? "#ffffff" : this.color;
+    if (!lowG) { ctx.shadowColor = this.color; ctx.shadowBlur = 14; }
+    ctx.beginPath(); ctx.moveTo(x, y - this.hh); ctx.lineTo(x + this.hw, y); ctx.lineTo(x, y + this.hh); ctx.lineTo(x - this.hw, y); ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.globalAlpha = 0.85; ctx.stroke();
+    ctx.globalAlpha = 1; ctx.fillStyle = CONFIG.colors.eye; ctx.fillRect(x + this.facing * 4 - 4, y - 6, 8, 5);
+    ctx.restore();
+    this.drawHpBar(ctx);
   }
 }

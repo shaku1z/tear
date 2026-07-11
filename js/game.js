@@ -1572,11 +1572,11 @@
         aboss.revive(); addFloater(aboss.x, aboss.y - 90, aboss.reviveText || "FRENZY!", true, CONFIG.colors.charger); addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry);
       }
       // The Echo: split into a mirroring clone, then it vanishes when the Echo turns invisible
-      if (aboss.spawnClone) {
-        aboss.spawnClone = false; run.echoClones = [];
-        const cl = new Echo(clamp(aboss.x - aboss.facing * 160, 60, W - 60), aboss.y, true);
-        cl.spawnT = 0.3; enemies.push(cl); run.echoClones.push(cl);
-        addFloater(aboss.x, aboss.y - 70, "SPLIT", true, CONFIG.colors.perfect);
+      if (aboss.spawnClone) {   // THE ECHO (reborn): split a real, corner-perching ReflectionEnemy
+        aboss.spawnClone = false;
+        const cl = new ReflectionEnemy(clamp(aboss.x - aboss.facing * 220, 100, W - 100), CONFIG.world.groundY - 300);
+        cl.spawnT = 0.3; enemies.push(cl);
+        addFloater(aboss.x, aboss.y - 70, "SPLIT", true, cl.color);
       }
       if (aboss.mode === "invert" && run.echoClones) { for (const c of run.echoClones) if (!c.dead) { c.dead = true; FX.ghost(c.x, c.y, c.hw, c.hh); } run.echoClones = null; }
     }
