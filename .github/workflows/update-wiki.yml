@@ -1,0 +1,59 @@
+name: Update Wiki
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'js/config.js'
+      - 'js/variants.js'
+      - 'js/affixes.js'
+
+jobs:
+  update-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Game Repository
+        uses: actions/checkout@v4
+        with:
+          path: tear
+
+      - name: Checkout Wiki Repository
+        uses: actions/checkout@v4
+        with:
+          repository: shaku1z/tear-wiki
+          path: tear-wiki
+          token: ${{ secrets.WIKI_DEPLOY_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Extraction Scripts
+        run: |
+          node tear-wiki/scripts/extract-enemies.mjs
+          node tear-wiki/scripts/extract-bosses.mjs
+          node tear-wiki/scripts/extract-stages.mjs
+          node tear-wiki/scripts/extract-upgrades.mjs
+        working-directory: tear
+        
+      - name: Commit and Push Changes
+        run: |
+          cd ../tear-wiki
+          
+          # Check if there are any changes
+          if [[ -z $(git status -s) ]]; then
+            echo "No changes to commit in wiki."
+            exit 0
+          fi
+          
+          # Configure Git
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # Commit and Push
+          git add .
+          git commit -m "Auto-update wiki data from game commit ${{ github.sha }}"
+          git push
+        working-directory: tear
