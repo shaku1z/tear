@@ -1,0 +1,62 @@
+---
+title: "The Warden"
+description: "A methodical guard who weaponizes the arena across 3 phases. — Stage 1 boss."
+gameVersion: v0.1
+---
+
+import StatBlock from '../../../components/StatBlock.astro';
+import BiomeBadge from '../../../components/BiomeBadge.astro';
+
+<BiomeBadge stages={["The Grounds"]} />
+
+> *A methodical guard who weaponizes the arena across 3 phases.*
+
+**Stage 1 Boss.** Found at the end of [The Grounds](/stages/the-grounds).
+Defeating The Warden grants an **Ability Tier-Up**.
+
+<StatBlock
+  name="The Warden"
+  color="#e23b3b"
+  stats={{
+    'Baton Cooldown': '2.1s',
+    'Baton Telegraph': '0.5s',
+    'Mortar Shots': '3 per burst',
+    'Mortar Speed': '760 px/s',
+    'Mortar Damage': '14',
+    'Bash Knockback': '620 px/s',
+    'Phase 2 Zones': '3 × 200 px wide',
+    'Phase 3 Lunge Speed': '1500 px/s',
+  }}
+/>
+
+## Phases
+
+3 phases total. Phase transitions are triggered by HP thresholds.
+
+### Phase 1 — The Patrol
+
+Standard combat. Baton strikes with a 2.1s cooldown and 0.5s telegraph. Fires 3-round mortar bursts (760 px/s, 14 dmg). Bashes with knockback (620 px/s) at melee range.
+
+:::tip[Strategy]
+The mortar arc is predictable. Parry the first shot of a burst to get ahead of the rhythm.
+:::
+
+### Phase 2 — Prohibited Zones
+
+3 danger zones (each 200 px wide) appear on the arena. Each zone shifts 7 times and ticks damage every 0.4s if you stand in it. Zone placement forces you to keep moving.
+
+:::tip[Strategy]
+Treat the zones like hot coals — glance at the floor, not the Warden, to track them.
+:::
+
+### Phase 3 — Ceiling Lock
+
+The ceiling drops to y=150 px, severely limiting jump height. The Warden gains a lunging ceiling-dive (1500 px/s, 7.5s cooldown, 0.55s telegraph). Dodge perpendicular to the dive axis.
+
+:::tip[Strategy]
+The ceiling drop makes updrafts difficult. Switch to ground-based slams and throws.
+:::
+
+## Lore
+
+> The Warden's badge lies in pieces. Etched inside, worn almost smooth: "Appointed by the Council of First Light. Directive: none shall reach the Undercroft." Below it, scratched by hand: "I never asked what was down there."

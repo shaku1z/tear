@@ -1,0 +1,31 @@
+---
+title: Campaign Stages
+description: All five stages in the Tear campaign, their biomes, enemy pools, and bosses.
+gameVersion: v0.1
+---
+
+import BiomeBadge from '../../../components/BiomeBadge.astro';
+
+The **Adventure** campaign unfolds across five distinct biomes, each with 9 waves of enemies followed by a boss encounter.
+Enemy difficulty scales across stages: each new stage adds **+34% enemy HP**, **+14% enemy damage**, and **+2 more enemies per wave**.
+
+## Stage Overview
+
+| # | Stage | Blurb | Boss |
+|---|---|---|---|
+| 1 | [The Grounds](/stages/the-grounds) | *Where order is kept.* | [The Warden](/bosses/warden) |
+| 2 | [The Undercroft](/stages/the-undercroft) | *Gray industry, deep below.* | [The Iron Colossus](/bosses/colossus) |
+| 3 | [The Crimson Fields](/stages/the-crimson-fields) | *Red and gold, and old rage.* | [Aldric (Berserker King)](/bosses/aldric) |
+| 4 | [The Voidspire](/stages/the-voidspire) | *Where the rules thin out.* | [The Echo](/bosses/echo) |
+| 5 | [The Tear](/stages/the-tear) | *Everything, all at once.* | [The Source](/bosses/source) |
+
+## Wave Scaling (Campaign)
+
+| Modifier | Per Stage | Per Wave Within Stage |
+|---|---|---|
+| Enemy HP | +34% | +6% |
+| Enemy Damage | +14% | +2% |
+| Enemy Count | +2 per wave | — |
+| Concurrent Cap | +1 | — |
+
+The concurrent cap never exceeds 10 enemies on screen at once.

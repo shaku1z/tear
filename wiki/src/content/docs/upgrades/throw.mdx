@@ -1,0 +1,58 @@
+---
+title: "Throw Abilities"
+description: "All unique throw abilities in Tear, with tier progressions."
+gameVersion: v0.1
+---
+
+import UpgradeCard from '../../../components/UpgradeCard.astro';
+
+Throw abilities transform the thrown blade into a multi-target weapon.
+
+<UpgradeCard
+  name="Razor Momentum"
+  cat="throw"
+  unique desc={"A thrown blade grows faster and stronger per enemy it pierces (+10%/pierce)."}
+  tiers={[{ level: 2, desc: "+18% per pierce." }, { level: 3, desc: "+26% per pierce. Each pierce briefly STUNS the target." }]}
+/>
+
+<UpgradeCard
+  name="Greatblade"
+  cat="throw"
+  desc={"The blade becomes huge while thrown (1.7× size)."}
+  
+/>
+
+<UpgradeCard
+  name="Boomerang"
+  cat="throw"
+  desc={"Recall the thrown blade from any distance."}
+  
+/>
+
+<UpgradeCard
+  name="Ricochet"
+  cat="throw"
+  desc={"A thrown blade curves to a new target after each pierce."}
+  
+/>
+
+<UpgradeCard
+  name="Storm Recall"
+  cat="throw"
+  unique desc={"Recalling the blade tears through enemies for +85% damage."}
+  tiers={[{ level: 2, desc: "+140% damage on recall." }, { level: 3, desc: "+200% damage on recall. Catching the blade releases a shockwave." }]}
+/>
+
+<UpgradeCard
+  name="Vortex Recall"
+  cat="throw"
+  desc={"The returning blade drags every enemy it passes toward you."}
+  
+/>
+
+<UpgradeCard
+  name="Impale"
+  cat="throw"
+  unique desc={"A thrown blade PINS the first enemy hit in place, applying 3 BLEED stacks."}
+  tiers={[{ level: 2, desc: "Pins EVERY pierced enemy with 4 BLEED stacks." }, { level: 3, desc: "Pins every enemy with 5 BLEED. Returning blade DETONATES the bleed." }]}
+/>

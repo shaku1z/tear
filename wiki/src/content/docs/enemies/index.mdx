@@ -1,0 +1,42 @@
+---
+title: Enemy System
+description: How Tear's enemy system works — families, variants, affixes, elites, and threat priority.
+gameVersion: v0.1
+---
+
+## How Enemies Work
+
+Tear's enemy roster is built from **three stacking layers**:
+
+1. **Family** — defines the enemy's core verb (Charger rushes, Ranged kites, Flyer swoops).
+2. **Variant** — reshapes the verb into a distinct threat, gated by wave number.
+3. **Affix** — stat/behaviour mutations rolled randomly per enemy; 0–3 per instance.
+
+On top of these, **Elite** versions can appear (see [Affixes & Elites](/enemies/affixes)).
+
+## Enemy Families
+
+| Family | HP | Speed | Contact Dmg | Knockback Taken | Weight |
+|---|---|---|---|---|---|
+| [Charger](/enemies/charger) | 86 | 150 | 12 | 9 | 1 |
+| [Ranged](/enemies/ranged) | 60 | 175 | 8 | 12 | 1 |
+| [Flyer](/enemies/flyer) | 44 | 230 | 10 | 14 | 0.75 |
+| [Bomber](/enemies/bomber) | 40 | 165 | 8 | 11 | 1 |
+| [Armored](/enemies/armored) | 154 | 95 | 14 | 3 | 2.2 |
+| [Support](/enemies/support) | 44 | 125 | 6 | 13 | 1 |
+| [Wraith](/enemies/wraith) | 64 | 170 | 12 | 0 | 1.4 |
+| [Chimera](/enemies/chimera) | 84 | 150 | 12 | 9 | 1 |
+
+## Priority Order
+
+In general, prioritize targets this way:
+1. **Support enemies** (War Priest, Herald, Mender, Anchor) — they multiply every other threat.
+2. **Wraiths** — immune to direct hits, require a throw or deflect to kill.
+3. **High-damage variants** — Marksmen, Executioners, Anchor targets.
+4. **Standard enemies** — Chargers and Ranged enemies last.
+
+## Enemy HP Scaling
+
+In **Endless** mode: +12% HP per wave.
+In **Adventure**: +6% per wave within a stage, +34% between stages.
+All values are also modified by the selected [difficulty](/modes/index).

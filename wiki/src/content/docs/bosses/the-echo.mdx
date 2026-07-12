@@ -1,0 +1,63 @@
+---
+title: "The Echo"
+description: "Your own silhouette — mirrors your tricks, then splits, then turns invisible. — Stage 4 boss."
+gameVersion: v0.1
+---
+
+import StatBlock from '../../../components/StatBlock.astro';
+import BiomeBadge from '../../../components/BiomeBadge.astro';
+
+<BiomeBadge stages={["The Voidspire"]} />
+
+> *Your own silhouette — mirrors your tricks, then splits, then turns invisible.*
+
+**Stage 4 Boss.** Found at the end of [The Voidspire](/stages/the-echo).
+Defeating The Echo grants an **Ability Tier-Up**.
+
+<StatBlock
+  name="The Echo"
+  color="#8b3bd6"
+  stats={{
+    'HP': '3000',
+    'Speed': '280 px/s',
+    'Contact Damage': '18',
+    'Weight': '4',
+    'Copy Delay': '0.55s',
+    'Shock Damage': '16',
+    'Projectile Damage': '14',
+    'Invis Cycle': '10s visible / 3.5s invisible',
+    'Lunge Speed': '1500 px/s',
+  }}
+/>
+
+## Phases
+
+3 phases total. Phase transitions are triggered by HP thresholds.
+
+### Phase 1 — The Mirror
+
+The Echo copies your last trick with a 0.55s delay. It uses your own style against you — a slam will be followed by a mirrored slam. Fires projectiles (14 dmg, 820 px/s) and a shockwave (16 dmg).
+
+:::tip[Strategy]
+Switch tricks constantly. The Echo can't copy a trick it hasn't seen from you yet.
+:::
+
+### Phase 2 — Split
+
+At ~50% HP, The Echo splits into two copies. Only one is real — the other mirrors your hits for zero damage. The real Echo is slightly brighter.
+
+:::tip[Strategy]
+Throw your blade at both. The real one reacts differently when hit — it staggers. The fake does not.
+:::
+
+### Phase 3 — Invisible
+
+Cycles between visible (10s) and invisible (3.5s). During invisibility it still attacks — watch for shockwave particles to locate it. Lunge speed increases to 1500 px/s.
+
+:::tip[Strategy]
+During invisibility, keep moving and listen for audio cues. The shockwave particles give its position away.
+:::
+
+## Lore
+
+> The Voidspire is quiet for the first time. On the wall behind where The Echo stood, scratched deep over what must have been years: your name. Over and over — hundreds of times. Below them all, fresher, still sharp: "I remember what it was like to be going somewhere." And at the very bottom: "Go finish it. One of us should."

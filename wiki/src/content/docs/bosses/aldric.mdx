@@ -1,0 +1,66 @@
+---
+title: "Aldric, Berserker King"
+description: "A duel that becomes a throne of fire, then a fake death, then a frenzy. — Stage 3 boss."
+gameVersion: v0.1
+---
+
+import StatBlock from '../../../components/StatBlock.astro';
+import BiomeBadge from '../../../components/BiomeBadge.astro';
+
+<BiomeBadge stages={["The Crimson Fields"]} />
+
+> *A duel that becomes a throne of fire, then a fake death, then a frenzy.*
+
+**Stage 3 Boss.** Found at the end of [The Crimson Fields](/stages/the-crimson-fields).
+Defeating Aldric, Berserker King grants an **Ability Tier-Up**.
+
+<StatBlock
+  name="Aldric, Berserker King"
+  color="#e23b3b"
+  stats={{
+    'HP': '3400',
+    'Speed': '130 px/s',
+    'Contact Damage': '22',
+    'Weight': '7',
+    'Attack Cooldown': '1.7s',
+    'Lunge Speed': '1150 px/s',
+    'Shock Damage': '18',
+    'Fire Columns': '8',
+    'Fire Cycle': '3s',
+    'Regen Rate (Fake Death)': '5%/s to 50%',
+    'Frenzy Damage Taken': '+35%',
+    'Frenzy Charge Speed': '1550 px/s',
+  }}
+/>
+
+## Phases
+
+3 phases total. Phase transitions are triggered by HP thresholds.
+
+### Phase 1 — The Duel
+
+Aldric lunges (1150 px/s, 0.45s windup, 1.7s AtkCD) and fires shockwaves (18 dmg, 740 px/s, 20 px radius). Standard duel — read the windup, punish the recovery.
+
+:::tip[Strategy]
+Aldric's lunge is his most dangerous attack. The windup is obvious — dash perpendicular, not back.
+:::
+
+### Phase 2 — Fire Throne (≤65% HP)
+
+A checkerboard of fire pillars erupts on the arena, pulsing every 3s (8 columns). You must pick safe tiles and attack from them. Aldric becomes much more aggressive.
+
+:::tip[Strategy]
+The fire pattern is fixed per pulse — memorize the safe columns quickly.
+:::
+
+### Phase 3 — Fake Death & Frenzy (≤20% HP)
+
+Aldric collapses — but regenerates at 5% max HP per second back to 50% HP. Once revived, he enters a frenzy: +35% damage taken BY you, but HE takes 30% less damage. Plus a massive charge (1550 px/s, 13s CD).
+
+:::tip[Strategy]
+The fake death is a trap. Don't let up — keep attacking the "downed" Aldric with throws.
+:::
+
+## Lore
+
+> Among Aldric's belongings, tucked inside the wrapping of his broken cleaver's handle: a small painted portrait, almost worn through. Two children, laughing. On the back, in handwriting read so many times the ink is barely there: "Elan and Mira — before the first Tear opened." And, in another hand: "Aldric. Come home." He never did.

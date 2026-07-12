@@ -1,0 +1,57 @@
+---
+// BiomeBadge.astro
+// A coloured pill badge naming the stage(s) where an enemy / upgrade appears.
+// Usage: <BiomeBadge stages={['The Grounds', 'The Undercroft']} />
+
+interface Props {
+  stages: string[];
+}
+const { stages } = Astro.props;
+
+const STAGE_COLORS: Record<string, string> = {
+  'The Grounds':        '#e23b3b',
+  'The Undercroft':     '#15c2c2',
+  'The Crimson Fields': '#e23b3b',
+  'The Voidspire':      '#8b3bd6',
+  'The Tear':           '#13c4d6',
+  'All Stages':         '#9590b8',
+  'Endless':            '#e0a326',
+  'Gauntlet':           '#ef8a17',
+};
+---
+
+<div class="biome-badges">
+  {stages.map(s => (
+    <span
+      class="biome-badge"
+      style={`--badge-color: ${STAGE_COLORS[s] ?? '#9590b8'}`}
+    >
+      {s}
+    </span>
+  ))}
+</div>
+
+<style>
+  .biome-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0.5rem 0 1rem;
+  }
+  .biome-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 0;
+    font-family: var(--sl-font-mono);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--badge-color);
+    background: transparent;
+    border: 2px solid var(--badge-color);
+    box-shadow: 2px 2px 0px var(--badge-color);
+    text-shadow: 0 0 6px color-mix(in srgb, var(--badge-color) 40%, transparent);
+  }
+</style>

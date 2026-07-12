@@ -1,0 +1,41 @@
+---
+title: "Armored"
+description: "Shielded front-liner. Takes reduced damage on the ground — must be launched to kill efficiently."
+gameVersion: v0.1
+---
+
+import StatBlock from '../../../components/StatBlock.astro';
+import BiomeBadge from '../../../components/BiomeBadge.astro';
+
+<BiomeBadge stages={["The Grounds", "The Undercroft", "The Tear"]} />
+
+> Shielded front-liner. Takes reduced damage on the ground — must be launched to kill efficiently.
+
+<StatBlock
+  name="Armored"
+  color="#3a4654"
+  stats={{
+    'HP': 154,
+    'Speed': '95 px/s',
+    'Contact Damage': 14,
+    'Knockback Taken': 3,
+    'Weight': 2.2,
+    'Size': '46×46 px',
+    'Ground Damage Reduction': '50%',
+    'Air Damage Mult': '×1.15',
+    'Shield Break Speed': '1500 px/s',
+    'Stomp Cooldown': '3.2s',
+    'Stomp Range': '400 px',
+    'Shock Damage': '16',
+    'Weight': '2.2 (hard to pop)',
+  }}
+/>
+
+*(No named variants — uses the base family only.)*
+
+## Tips
+
+- An Armored enemy takes 50% less damage while grounded. Launch it into the air first.
+- Once airborne, it takes +15% damage instead. Keep juggling to maximize damage.
+- A blade tip hitting at ≥1500 px/s shatters the shield — after that it's vulnerable even grounded.
+- The Sunder ability (Mark) + Sunder T2 instantly shatters the shield when applied.

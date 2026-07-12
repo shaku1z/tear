@@ -1,0 +1,73 @@
+---
+title: "The Source"
+description: "A floating rift that cycles every fallen boss's signature mechanic, collapses the floor, fakes its death, then erupts into a true form. — Stage 5 boss."
+gameVersion: v0.1
+---
+
+import StatBlock from '../../../components/StatBlock.astro';
+import BiomeBadge from '../../../components/BiomeBadge.astro';
+
+<BiomeBadge stages={["The Tear"]} />
+
+> *A floating rift that cycles every fallen boss's signature mechanic, collapses the floor, fakes its death, then erupts into a true form.*
+
+**Stage 5 Boss.** Found at the end of [The Tear](/stages/the-source).
+Defeating The Source grants an **Ability Tier-Up**.
+
+<StatBlock
+  name="The Source"
+  color="#13c4d6"
+  stats={{
+    'HP': '4200',
+    'Speed': '125 px/s',
+    'Contact Damage': '22',
+    'Weight': '7',
+    'Mechanic Cycle CD': '2.5s',
+    'Floor Collapse CD': '1.3s (Phase 2)',
+    'Fake Death Threshold': '34% HP',
+    'Regen Rate': '5%/s to 46%',
+    'Shock Damage': '18',
+    'Sweeper Damage': '18',
+    'Cross Damage': '16',
+  }}
+/>
+
+## Phases
+
+4 phases total. Phase transitions are triggered by HP thresholds.
+
+### Phase 1 — The Cycle
+
+Cycles through mechanics from all four previous bosses every 2.5s — shockwaves, sweepers, cross-fire, copy attacks. Each mechanic is familiar but the pacing is relentless.
+
+:::tip[Strategy]
+You've seen all of these before. Treat each cycle cast as a test of everything you've learned.
+:::
+
+### Phase 2 — Floor Collapse (≤62% HP)
+
+Tears platforms out of the arena, one every 1.3s. Eventually only the floor remains. No safe platforms to land on — you must stay mobile.
+
+:::tip[Strategy]
+The floor stays. Aerial Rave users thrive here — stay airborne as long as possible.
+:::
+
+### Phase 3 — Fake Death & Regen (≤34% HP)
+
+Collapses and regenerates at 5%/s back to 46% HP. Same as Aldric's fake. Keep the pressure up with throws — don't stop attacking.
+
+:::tip[Strategy]
+You know this trick — you've seen Aldric do it. Slam it while it regenerates.
+:::
+
+### Phase 4 — True Form (after regen)
+
+Returns at 46% HP with all mechanics active simultaneously. Full aggression. The final test.
+
+:::tip[Strategy]
+Use every ability you have. This is what the whole run was building toward.
+:::
+
+## Lore
+
+> There is nothing left to carve the words into — only the quiet where the Tear used to be. You understand it now: the Source was never an enemy, only the wound the world kept reopening, wearing the shape of everyone who ever tried to close it. It wore your shape last. The blade is lighter than it has ever been. Somewhere, far above, something that has not been able to for a very long time begins, tentatively, to heal.

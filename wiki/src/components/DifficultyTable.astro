@@ -1,0 +1,105 @@
+---
+// DifficultyTable.astro
+// Renders the 5 difficulty modes with their stat multiplier table.
+// Data sourced directly from CONFIG.difficulties in the game source.
+
+const DIFFICULTIES = [
+  { id: 'easy',    label: 'Easy',    desc: 'Gentler enemies, lighter hits.',     oneHit: false, mods: { hp: 0.80, dmg: 0.65, count: 0.85, coin: 0.80, score: 0.70 } },
+  { id: 'normal',  label: 'Normal',  desc: 'The intended balance.',               oneHit: false, mods: { hp: 1.00, dmg: 1.00, count: 1.00, coin: 1.00, score: 1.00 } },
+  { id: 'hard',    label: 'Hard',    desc: 'Tougher, hungrier, more of them.',    oneHit: false, mods: { hp: 1.30, dmg: 1.35, count: 1.15, coin: 1.30, score: 1.40 } },
+  { id: 'extreme', label: 'Extreme', desc: 'Brutal — but fair. Big rewards.',     oneHit: false, mods: { hp: 1.70, dmg: 1.80, count: 1.30, coin: 1.70, score: 2.00 } },
+  { id: 'onehit',  label: 'One-Hit', desc: 'One touch and you fall. Max reward.', oneHit: true,  mods: { hp: 0.90, dmg: 1.00, count: 1.00, coin: 1.80, score: 2.20 } },
+];
+
+function fmt(v: number) { return v === 1.00 ? '—' : (v > 1 ? `+${Math.round((v-1)*100)}%` : `${Math.round((v-1)*100)}%`); }
+function color(v: number) {
+  if (v === 1) return '';
+  return v > 1 ? 'positive' : 'negative';
+}
+---
+
+<div class="diff-table-wrap">
+  <table class="diff-table">
+    <thead>
+      <tr>
+        <th>Difficulty</th>
+        <th>Enemy HP</th>
+        <th>Damage Taken</th>
+        <th>Enemy Count</th>
+        <th>Coin Earn</th>
+        <th>Score Earn</th>
+        <th>Note</th>
+      </tr>
+    </thead>
+    <tbody>
+      {DIFFICULTIES.map(d => (
+        <tr class:list={['diff-row', `diff-row--${d.id}`]}>
+          <td class="diff-label">
+            <span class={`diff-badge diff-badge--${d.id}`}>{d.label}</span>
+            <span class="diff-desc">{d.desc}</span>
+          </td>
+          <td class:list={['diff-val', color(d.mods.hp)]}>{fmt(d.mods.hp)}</td>
+          <td class:list={['diff-val', color(d.mods.dmg)]}>{fmt(d.mods.dmg)}</td>
+          <td class:list={['diff-val', color(d.mods.count)]}>{fmt(d.mods.count)}</td>
+          <td class:list={['diff-val', color(d.mods.coin)]}>{fmt(d.mods.coin)}</td>
+          <td class:list={['diff-val', color(d.mods.score)]}>{fmt(d.mods.score)}</td>
+          <td class="diff-note">{d.oneHit ? '⚠ One touch = instant death' : ''}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .diff-table-wrap { overflow-x: auto; margin: 1.25rem 0; }
+
+  .diff-table {
+    min-width: 640px;
+    border-collapse: collapse;
+    width: 100%;
+  }
+  .diff-table th {
+    font-family: var(--sl-font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--sl-color-gray-3);
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    text-align: left;
+    white-space: nowrap;
+  }
+  .diff-table td { padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+  .diff-table tr:last-child td { border-bottom: none; }
+
+  /* Difficulty badges */
+  .diff-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-family: var(--sl-font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-right: 6px;
+  }
+  .diff-badge--easy    { background: rgba(31,175,90,0.12);  color: #1faf5a; border: 1px solid rgba(31,175,90,0.3); }
+  .diff-badge--normal  { background: rgba(19,196,214,0.10); color: #13c4d6; border: 1px solid rgba(19,196,214,0.3); }
+  .diff-badge--hard    { background: rgba(239,138,23,0.12); color: #ef8a17; border: 1px solid rgba(239,138,23,0.3); }
+  .diff-badge--extreme { background: rgba(226,59,59,0.12);  color: #e23b3b; border: 1px solid rgba(226,59,59,0.3); }
+  .diff-badge--onehit  { background: rgba(139,59,214,0.12); color: #8b3bd6; border: 1px solid rgba(139,59,214,0.3); }
+
+  .diff-desc { font-size: 0.76rem; opacity: 0.55; }
+
+  .diff-val {
+    font-family: var(--sl-font-mono);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-align: center;
+  }
+  .diff-val.positive { color: #1faf5a; }
+  .diff-val.negative { color: #e23b3b; }
+
+  .diff-note { font-size: 0.76rem; opacity: 0.6; white-space: nowrap; }
+</style>

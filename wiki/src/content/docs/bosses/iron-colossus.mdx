@@ -1,0 +1,64 @@
+---
+title: "The Iron Colossus"
+description: "A massive tank with a front shield, a sweeping thrown arm, and an exposed core. — Stage 2 boss."
+gameVersion: v0.1
+---
+
+import StatBlock from '../../../components/StatBlock.astro';
+import BiomeBadge from '../../../components/BiomeBadge.astro';
+
+<BiomeBadge stages={["The Undercroft"]} />
+
+> *A massive tank with a front shield, a sweeping thrown arm, and an exposed core.*
+
+**Stage 2 Boss.** Found at the end of [The Undercroft](/stages/the-undercroft).
+Defeating The Iron Colossus grants an **Ability Tier-Up**.
+
+<StatBlock
+  name="The Iron Colossus"
+  color="#15c2c2"
+  stats={{
+    'HP': '2900',
+    'Speed': '58 px/s',
+    'Contact Damage': '24',
+    'Weight': '9',
+    'Shock Damage': '20',
+    'Shock Speed': '720 px/s',
+    'Sweeper Damage': '16',
+    'Cross Damage': '14',
+    'Cross Cooldown': '2.2s',
+    'Panel Count': '4',
+  }}
+/>
+
+## Phases
+
+3 phases total. Phase transitions are triggered by HP thresholds.
+
+### Phase 1 — Shield Wall
+
+The Colossus faces you and moves slowly. Its front shield absorbs direct hits. Attack from behind or launch it into the air to bypass the shield. Fires a 4-panel cross (14 dmg, 640 px/s, 2.2s CD).
+
+:::tip[Strategy]
+Use a launch to pop it airborne — once in the air its shield is useless.
+:::
+
+### Phase 2 — Sweeping Arm
+
+Detaches an arm and hurls it as a sweeper (16 dmg, 540 px/s, sweeps at y=540). After the sweep, the arm is embedded in the arena. Throw your blade at it before it returns.
+
+:::tip[Strategy]
+The sweeper hugs the ground at y=540. Jump over it.
+:::
+
+### Phase 3 — Exposed Core
+
+Shield broken, moves faster and hits harder. Shockwave on charge whiff. Cross-fire pattern becomes more aggressive. Full damage from all angles.
+
+:::tip[Strategy]
+This is your damage window. Use your best abilities — the Colossus is finally fully exposed.
+:::
+
+## Lore
+
+> In the deepest wall of the Undercroft, beneath the mechanism that is now still, words are carved into the original stone — older than the machine: "Built to contain the Tide of Crimson. Should the Colossus fall, know this — we tried to stop it before it reached the Fields. We failed then too."

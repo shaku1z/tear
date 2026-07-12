@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <!-- Tear wiki logo: stylized blade silhouette -->
+  <rect width="48" height="48" rx="8" fill="#0a0814"/>
+  <!-- Blade body -->
+  <path d="M24 6 L28 20 L26 22 L24 42 L22 22 L20 20 Z" fill="#13c4d6" opacity="0.9"/>
+  <!-- Guard crosspiece -->
+  <rect x="16" y="20" width="16" height="3" rx="1.5" fill="#13c4d6" opacity="0.6"/>
+  <!-- Glow effect -->
+  <path d="M24 6 L28 20 L26 22 L24 42 L22 22 L20 20 Z" fill="none" stroke="#13c4d6" stroke-width="0.5" opacity="0.4"/>
+</svg>

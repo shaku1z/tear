@@ -1,0 +1,39 @@
+---
+title: Upgrades & Abilities Overview
+description: How the draft system, upgrade categories, tiers, and draft weighting work in Tear.
+gameVersion: v0.1
+---
+
+import UpgradeCard from '../../../components/UpgradeCard.astro';
+
+## The Draft System
+
+After each wave you are presented with **3 upgrade choices** randomly drawn from the pool.
+The draft has three upgrade types with different rarity weights:
+
+| Type | Weight | Description |
+|---|---|---|
+| **Stackable Upgrades** | 1.0 | Common numeric boosts. Can be picked multiple times. |
+| **Unique Abilities** | 0.6 | Qualitative mechanics. Each can only be owned once per run. |
+| **Special Abilities** | 0.28 | Tiered mechanics (the best abilities). Deliberately rare. |
+| **Rare Special** | 0.16 | The rarest — Bloodrite, Last Stand. |
+
+A **per-stage guarantee** ensures at least one Special ability appears in the draft every stage.
+
+## Ability Tiers
+
+Special abilities (those with tiers) start at **Tier 1** when first acquired.
+Each time you **defeat a boss**, you earn an **Ability Tier-Up** — choose one of your owned tiered abilities to evolve to its next tier (max Tier 3).
+
+Tiers are permanent for the rest of the run and dramatically change how an ability plays.
+
+## Categories
+
+| Category | Focus |
+|---|---|
+| [Offense](/upgrades/offense) | Raw damage, area explosions, airborne power |
+| [Resilience](/upgrades/resilience) | HP, shields, damage reduction, life-on-kill |
+| [Mobility](/upgrades/mobility) | Dash power, speed, positioning |
+| [Parry](/upgrades/parry) | Parry rewards, counter-attacks, projectile manipulation |
+| [Throw](/upgrades/throw) | Thrown blade power, recall, chaining |
+| Utility | Score, coins, trick meter — see [Stackable Upgrades](/upgrades/stackable) |

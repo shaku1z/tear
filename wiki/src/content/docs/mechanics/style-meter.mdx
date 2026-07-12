@@ -1,0 +1,116 @@
+---
+title: Style Meter
+description: How the style meter works in Tear — tiers, decay, variety bonus, hit penalty, and all trick types.
+gameVersion: v0.1
+---
+
+import TrickMeter from '../../../components/TrickMeter.astro';
+
+The **style meter** is the soul of Tear's combat feedback system. It rewards creative, varied play and punishes passive or repetitive patterns. Your style tier at any given moment influences your damage, your damage reduction, your coin earnings, and your score.
+
+---
+
+<TrickMeter />
+
+---
+
+## Tiers
+
+| Tier | Name | Damage Bonus | Flow Guard? |
+|------|------|-------------|------------|
+| 1 | **NICE** | +0% | No |
+| 2 | **STYLISH** | +6% | No |
+| 3 | **BRUTAL** | +12% | Yes (−30% dmg taken) |
+| 4 | **SAVAGE** | +18% | Yes |
+| 5 | **TEARING!** | +24% | Yes |
+
+The damage bonus is additive with other multipliers (slam, commitment, etc.) and is applied at the moment the hit lands.
+
+---
+
+## Building the Meter
+
+Each **trick** adds points to the meter. Tricks are categorised by type:
+
+| Trick Type | How to Perform |
+|------------|---------------|
+| **Hit** | Land a melee blow with the blade |
+| **Slam** | Downward tip strike ≥1 750 px/s |
+| **Power Slam** | Slam while descending ≥1 700 px/s |
+| **Launch** | Upward tip strike ≥1 250 px/s that pops an enemy |
+| **Throw** | Successfully hit an enemy with a thrown blade |
+| **Deflect** | Redirect a projectile at ≥700 px/s tip speed |
+| **Perfect Parry** | Redirect a projectile at ≥2 400 px/s tip speed |
+| **Recall Hit** | Hit an enemy with the returning recalled blade |
+| **Juggle** | Hit an airborne enemy (that you launched) |
+| **Aerial Hit** | Strike while airborne |
+
+---
+
+## Variety Bonus
+
+Performing the **same trick type twice in a row** gives normal style points. Switching to a **different trick type** awards **×1.5** style points for that trick.
+
+This mechanic is what makes trick *chaining* so powerful:
+
+```
+Hit → Slam (×1.5) → Launch (×1.5) → Throw (×1.5) → Deflect (×1.5) ...
+```
+
+Stringing all 10 different trick types together would apply the variety bonus to every single action after the first. The style meter fills rapidly under these conditions.
+
+:::tip
+**Do not spam the same action.** A player who only swings (Hits) will plateau at low tiers despite high kill rates. A player who varies between slams, launches, throws, deflects, and recalls can maintain TEARING! without hitting anything especially fast.
+:::
+
+---
+
+## Meter Decay
+
+The style meter is not permanent. It decays on two conditions:
+
+| Condition | Effect |
+|-----------|--------|
+| **Idle (no tricks)** | Decay begins after **2.6 s** of inactivity |
+| **Drain rate** | **26 pts/s** once decay starts |
+| **Taking a hit** | Instant loss of **50% of current meter** |
+
+The 2.6 s grace window (`decayDelay`) means you have time between waves, during cutscenes, and in brief pauses without losing progress. But a 3-second gap in action will start bleeding your tier.
+
+:::caution
+A single hit at TEARING! drops you to roughly BRUTAL. Two hits in quick succession can take you all the way back to NICE. This is why evasion and parrying are mechanically tied to damage output, not just survivability.
+:::
+
+---
+
+## Hit Penalty Details
+
+The hit penalty is **50% of your current meter value** — not a flat amount. So the higher your tier, the more you have to lose in absolute terms, but you're also higher above the zero baseline.
+
+Example: At TEARING! (assume meter is 80% full), one hit drops you to 40% — likely BRUTAL or SAVAGE. From there, a second hit drops you to 20%, which could be NICE or STYLISH depending on your tier thresholds.
+
+---
+
+## Flow Guard
+
+At style tier **3 (BRUTAL)** or higher, you passively receive **30% less damage** from all sources. This reward is significant and makes high-style play genuinely safer:
+
+- A 20-damage enemy attack becomes 14 damage.
+- A 5-damage tick becomes 3.5 damage.
+- This stacks with other damage reduction sources (Riposte parry guard, etc.).
+
+---
+
+## Practical Tips
+
+:::tip
+**The variety bonus is worth more than raw hit count.** One slam after three hits gives ×1.5 style for that slam. Prioritise switching trick types as often as the combat situation allows.
+:::
+
+:::tip
+**Use airborne enemies.** Launching an enemy sets up Juggle hits, which count as a different trick type from the original Hit. A Launch → Juggle → Juggle → Slam sequence chains four different trick types in rapid succession.
+:::
+
+:::tip
+**Deflects are free style.** If there are projectiles in the air, hitting them with the blade builds style without spending any cooldowns or resources. Against Ranged and Bomber enemies, half your trick chain can be deflects.
+:::

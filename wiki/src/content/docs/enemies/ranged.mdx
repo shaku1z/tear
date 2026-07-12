@@ -1,0 +1,46 @@
+---
+title: "Ranged"
+description: "Keeps distance, kites away when you close, fires telegraphed shots."
+gameVersion: v0.1
+---
+
+import StatBlock from '../../../components/StatBlock.astro';
+import BiomeBadge from '../../../components/BiomeBadge.astro';
+
+<BiomeBadge stages={["The Grounds", "The Undercroft", "The Voidspire", "The Tear"]} />
+
+> Keeps distance, kites away when you close, fires telegraphed shots.
+
+<StatBlock
+  name="Ranged"
+  color="#2f6df0"
+  stats={{
+    'HP': 60,
+    'Speed': '175 px/s',
+    'Contact Damage': 8,
+    'Knockback Taken': 12,
+    'Weight': 1,
+    'Size': '34×44 px',
+    'Preferred Distance': '380 px',
+    'Flee Threshold': '250 px',
+    'Shot Windup': '0.7s',
+    'Fire Interval': '2.3s',
+    'Projectile Speed': '800 px/s',
+  }}
+/>
+
+## Variants
+
+| Name | Available | Description |
+|---|---|---|
+| **Sentinel** | Wave 1+ | Base Weight: 1. Evolved variant. |
+| **Rifleman** | Wave 3+ | Base Weight: 0.8. Evolved variant. |
+| **Marksman** | Wave 5+ | Base Weight: 0.6. Evolved variant. |
+| **Warlock** | Wave 6+ | Base Weight: 0.55. Evolved variant. |
+| **Chain Caster** | Wave 7+ | Base Weight: 0.5. Evolved variant. |
+
+## Tips
+
+- Parrying a Marksman's charged shot back deals massive damage and rewards style points.
+- Chain bolts are easy to parry — watch for the distinctive blue projectile.
+- Warlock shots curve once. Dodge after the curve commits, not before.

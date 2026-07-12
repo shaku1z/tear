@@ -1,0 +1,44 @@
+---
+title: "Mobility Abilities"
+description: "All unique mobility abilities in Tear, with tier progressions."
+gameVersion: v0.1
+---
+
+import UpgradeCard from '../../../components/UpgradeCard.astro';
+
+Mobility abilities make your dash a weapon, not just an escape tool.
+
+<UpgradeCard
+  name="Phantom Dash"
+  cat="mobility"
+  unique desc={"Dashing directly through enemies unleashes a damaging phase-slice (26 dmg)."}
+  tiers={[{ level: 2, desc: "Heavier phase-slice (44 dmg)." }, { level: 3, desc: "Devastating phase-slice (64 dmg). If the slice kills, dash REFUNDS instantly." }]}
+/>
+
+<UpgradeCard
+  name="Slipstream"
+  cat="mobility"
+  desc={"For a moment after a dash, hits land for +35%."}
+  
+/>
+
+<UpgradeCard
+  name="Adrenaline"
+  cat="mobility"
+  desc={"Kills instantly refresh your dash."}
+  
+/>
+
+<UpgradeCard
+  name="Cinder Trail"
+  cat="mobility"
+  unique desc={"Dashing ignites enemies passed through (BURN: 20 dps, 2.6s)."}
+  tiers={[{ level: 2, desc: "Hotter burn (30 dps, 3.4s) that also SLOWS." }, { level: 3, desc: "Massive slowing burn. Dying burned enemies ERUPT, igniting nearby foes." }]}
+/>
+
+<UpgradeCard
+  name="Concussive Dash"
+  cat="mobility"
+  unique desc={"Ending a dash erupts a shockwave (24 dmg + knockback)."}
+  tiers={[{ level: 2, desc: "Heavier shockwave (42 dmg) + STUNS." }, { level: 3, desc: "Massive stunning shockwave (60 dmg). Hitting 2+ enemies instantly REFUNDS the dash." }]}
+/>

@@ -1,0 +1,39 @@
+---
+title: "Wraith"
+description: "Phantom immune to direct blade hits. Only a thrown blade or a deflected shot can harm it."
+gameVersion: v0.1
+---
+
+import StatBlock from '../../../components/StatBlock.astro';
+import BiomeBadge from '../../../components/BiomeBadge.astro';
+
+<BiomeBadge stages={["The Voidspire", "The Tear"]} />
+
+> Phantom immune to direct blade hits. Only a thrown blade or a deflected shot can harm it.
+
+<StatBlock
+  name="Wraith"
+  color="#6a6f88"
+  stats={{
+    'HP': 64,
+    'Speed': '170 px/s',
+    'Contact Damage': 12,
+    'Knockback Taken': 0,
+    'Weight': 1.4,
+    'Size': '36×42 px',
+    'Hover Height': '70 px',
+    'Knockback Taken': '0 (immune)',
+    'Direct Blade Hits': 'No damage',
+    'Thrown Blade': 'Full damage',
+    'Deflected Shot': 'Full damage',
+  }}
+/>
+
+*(No named variants — uses the base family only.)*
+
+## Tips
+
+- Throw your blade at a Wraith — it's the only way to deal direct damage.
+- Deflecting a projectile through a Wraith also damages it.
+- A Wraith with a Mender behind it is extremely dangerous — prioritize the Mender first, then throw.
+- Wraiths hover at 70 px. They can still be hit by ground-level shockwaves from Crater or Backlash.

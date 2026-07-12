@@ -1,0 +1,133 @@
+backend:
+  name: git-gateway
+  branch: main
+
+# Media / assets stored in the repo
+media_folder: "public/uploads"
+public_folder: "/uploads"
+
+# Site URL for the CMS preview
+site_url: https://tear-wiki.vercel.app
+
+collections:
+
+  # ---- Mechanics ----
+  - name: "mechanics"
+    label: "Mechanics Pages"
+    folder: "src/content/docs/mechanics"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { name: title,       label: Title,       widget: string }
+      - { name: description, label: Description,  widget: string }
+      - { name: gameVersion, label: Game Version, widget: string, default: "v0.1" }
+      - { name: body,        label: Content,      widget: markdown }
+
+  # ---- Enemies ----
+  - name: "enemies"
+    label: "Enemy Pages"
+    folder: "src/content/docs/enemies"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { name: title,       label: Title,       widget: string }
+      - { name: description, label: Description,  widget: string }
+      - { name: gameVersion, label: Game Version, widget: string, default: "v0.1" }
+      - { name: body,        label: Content,      widget: markdown }
+
+  # ---- Bosses ----
+  - name: "bosses"
+    label: "Boss Pages"
+    folder: "src/content/docs/bosses"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { name: title,       label: Title,       widget: string }
+      - { name: description, label: Description,  widget: string }
+      - { name: gameVersion, label: Game Version, widget: string, default: "v0.1" }
+      - { name: body,        label: Content,      widget: markdown }
+
+  # ---- Stages ----
+  - name: "stages"
+    label: "Stage Pages"
+    folder: "src/content/docs/stages"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { name: title,       label: Title,       widget: string }
+      - { name: description, label: Description,  widget: string }
+      - { name: gameVersion, label: Game Version, widget: string, default: "v0.1" }
+      - { name: body,        label: Content,      widget: markdown }
+
+  # ---- Upgrades ----
+  - name: "upgrades"
+    label: "Upgrade Pages"
+    folder: "src/content/docs/upgrades"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { name: title,       label: Title,       widget: string }
+      - { name: description, label: Description,  widget: string }
+      - { name: gameVersion, label: Game Version, widget: string, default: "v0.1" }
+      - { name: body,        label: Content,      widget: markdown }
+
+  # ---- Getting Started ----
+  - name: "getting-started"
+    label: "Getting Started Pages"
+    folder: "src/content/docs/getting-started"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { name: title,       label: Title,       widget: string }
+      - { name: description, label: Description,  widget: string }
+      - { name: gameVersion, label: Game Version, widget: string, default: "v0.1" }
+      - { name: body,        label: Content,      widget: markdown }
+
+  # ---- Progression ----
+  - name: "progression"
+    label: "Progression Pages"
+    folder: "src/content/docs/progression"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { name: title,       label: Title,       widget: string }
+      - { name: description, label: Description,  widget: string }
+      - { name: gameVersion, label: Game Version, widget: string, default: "v0.1" }
+      - { name: body,        label: Content,      widget: markdown }
+
+  # ---- Reference ----
+  - name: "reference"
+    label: "Reference Pages"
+    folder: "src/content/docs/reference"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { name: title,       label: Title,       widget: string }
+      - { name: description, label: Description,  widget: string }
+      - { name: gameVersion, label: Game Version, widget: string, default: "v0.1" }
+      - { name: body,        label: Content,      widget: markdown }
+
+  # ---- Modes ----
+  - name: "modes"
+    label: "Game Mode Pages"
+    folder: "src/content/docs/modes"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { name: title,       label: Title,       widget: string }
+      - { name: description, label: Description,  widget: string }
+      - { name: gameVersion, label: Game Version, widget: string, default: "v0.1" }
+      - { name: body,        label: Content,      widget: markdown }
+
+  # ---- Changelog ----
+  - name: "changelog"
+    label: "Changelog"
+    folder: "src/content/docs/reference"
+    create: false
+    files:
+      - name: "changelog"
+        label: "Changelog"
+        file: "src/content/docs/reference/changelog.md"
+        fields:
+          - { name: title,   label: Title,   widget: string }
+          - { name: body,    label: Content, widget: markdown }

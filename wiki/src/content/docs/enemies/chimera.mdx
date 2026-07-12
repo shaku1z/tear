@@ -1,0 +1,37 @@
+---
+title: "Chimera"
+description: "Adopts attack patterns from other enemy types in its wave, cycling through them. The wind-up telegraphs what's coming."
+gameVersion: v0.1
+---
+
+import StatBlock from '../../../components/StatBlock.astro';
+import BiomeBadge from '../../../components/BiomeBadge.astro';
+
+<BiomeBadge stages={["The Crimson Fields", "The Voidspire", "The Tear"]} />
+
+> Adopts attack patterns from other enemy types in its wave, cycling through them. The wind-up telegraphs what's coming.
+
+<StatBlock
+  name="Chimera"
+  color="#444a5c"
+  stats={{
+    'HP': 84,
+    'Speed': '150 px/s',
+    'Contact Damage': 12,
+    'Knockback Taken': 9,
+    'Weight': 1,
+    'Size': '38×48 px',
+    'Copy Delay': '0.55s',
+    'HP': '84',
+    'Speed': '150 px/s',
+    'Knockback Taken': '9',
+  }}
+/>
+
+*(No named variants — uses the base family only.)*
+
+## Tips
+
+- The wind-up animation matches the enemy type it's copying — read it like you'd read that original enemy.
+- In late stages, a Chimera may copy a Marksman shot — treat it with the same respect.
+- Chimeras are good style-farming targets since they cycle through several trick opportunities.

@@ -1,0 +1,177 @@
+---
+// UpgradeCard.astro
+// Renders an upgrade card with category badge, description, and expandable tiers.
+// Usage: <UpgradeCard id="storm_recall" name="Storm Recall" cat="throw" unique desc="..." tiers={[...]} />
+
+interface Tier {
+  level: number;   // 2 or 3
+  desc: string;
+}
+
+interface Props {
+  name: string;
+  cat: 'offense' | 'resilience' | 'mobility' | 'parry' | 'throw' | 'utility';
+  unique?: boolean;
+  rare?: boolean;
+  desc: string;
+  tiers?: Tier[];
+  stackNote?: string;  // e.g. "Can be stacked. Each stack: +12% swing damage"
+}
+
+const { name, cat, unique = false, rare = false, desc, tiers = [], stackNote } = Astro.props;
+
+const catLabels: Record<string, string> = {
+  offense: 'Offense', resilience: 'Resilience', mobility: 'Mobility',
+  parry: 'Parry', throw: 'Throw', utility: 'Utility',
+};
+---
+
+<div class:list={['upgrade-card', `upgrade-card--${cat}`, rare && 'upgrade-card--rare']}>
+  <div class="upgrade-card__header">
+    <div class="upgrade-card__title-row">
+      <span class="upgrade-card__name">{name}</span>
+      <div class="upgrade-card__badges">
+        <span class:list={['tear-badge', `tear-badge--${cat}`]}>{catLabels[cat]}</span>
+        {unique && <span class="tear-badge tear-badge--unique">Unique</span>}
+        {rare && <span class="tear-badge tear-badge--rare">Rare</span>}
+      </div>
+    </div>
+    {!unique && stackNote && (
+      <p class="upgrade-card__stack-note">{stackNote}</p>
+    )}
+  </div>
+
+  <div class="upgrade-card__body">
+    <div class="upgrade-tier">
+      <span class="tier-label">Tier 1</span>
+      <p class="tier-desc">{desc}</p>
+    </div>
+
+    {tiers.map(t => (
+      <details class="upgrade-tier upgrade-tier--evolved">
+        <summary class="tier-label">Tier {t.level} <span class="tier-evolved-tag">Evolved</span></summary>
+        <p class="tier-desc">{t.desc}</p>
+      </details>
+    ))}
+  </div>
+</div>
+
+<style>
+  .upgrade-card {
+    border-radius: 0;
+    margin: 1.5rem 0;
+    overflow: hidden;
+    border: 1px solid var(--sl-color-hairline-light);
+    background: var(--sl-color-bg);
+    transition: background 0.15s, border-color 0.15s;
+    position: relative;
+  }
+  
+  /* The UI.accentStrip equivalent */
+  .upgrade-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--sl-color-gray-4);
+  }
+  .upgrade-card--offense::before { background: var(--tear-red); }
+  .upgrade-card--resilience::before { background: var(--tear-green); }
+  .upgrade-card--mobility::before { background: var(--tear-cyan); }
+  .upgrade-card--parry::before { background: var(--tear-cyan); }
+  .upgrade-card--throw::before { background: var(--tear-orange); }
+  .upgrade-card--utility::before { background: var(--tear-purple); }
+
+  .upgrade-card:hover { 
+    border-color: var(--sl-color-gray-4); 
+    background: rgba(255,255,255,0.02);
+  }
+
+  /* Rare glow */
+  .upgrade-card--rare {
+    border-color: rgba(224, 163, 38, 0.4);
+  }
+  .upgrade-card--rare::before { background: var(--tear-gold); }
+
+  .upgrade-card__header {
+    padding: 14px 14px 10px;
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--sl-color-hairline-light);
+  }
+  .upgrade-card__title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .upgrade-card__name {
+    font-family: var(--sl-font-mono);
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 0.04em;
+    color: var(--sl-color-gray-1); /* full */
+    text-transform: uppercase;
+  }
+  .upgrade-card__badges {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+  .upgrade-card__stack-note {
+    font-size: 0.75rem;
+    margin: 5px 0 0;
+    color: var(--sl-color-gray-3); /* muted */
+    font-family: var(--sl-font-mono);
+  }
+
+  /* Tier rows */
+  .upgrade-card__body {
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .tier-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--sl-font-mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--sl-color-gray-3); /* muted */
+    cursor: pointer;
+    user-select: none;
+  }
+  .tier-evolved-tag {
+    background: var(--sl-color-gray-6);
+    color: var(--tear-cyan);
+    border: 1px solid rgba(19,196,214,0.3);
+    border-radius: 0;
+    padding: 2px 6px;
+    font-size: 0.65rem;
+    letter-spacing: 0.05em;
+  }
+  .tier-desc {
+    margin: 6px 0 0 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--sl-color-gray-2); /* soft */
+  }
+
+  .upgrade-tier--evolved {
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--sl-color-hairline-light);
+    border-radius: 0;
+    border-left: 3px solid rgba(19,196,214,0.4);
+  }
+  .upgrade-tier--evolved[open] {
+    border-left: 3px solid var(--tear-cyan);
+    background: rgba(19,196,214,0.04);
+  }
+  .upgrade-tier--evolved[open] > .tier-label { color: var(--tear-cyan); }
+</style>

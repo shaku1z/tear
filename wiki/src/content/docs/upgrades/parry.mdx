@@ -1,0 +1,51 @@
+---
+title: "Parry Abilities"
+description: "All unique parry abilities in Tear, with tier progressions."
+gameVersion: v0.1
+---
+
+import UpgradeCard from '../../../components/UpgradeCard.astro';
+
+Parry abilities turn defense into offense. Master perfect parries to unlock their full potential.
+
+<UpgradeCard
+  name="Phase Step"
+  cat="parry"
+  desc={"Dash through an enemy shot to deflect it."}
+  
+/>
+
+<UpgradeCard
+  name="Backfire"
+  cat="parry"
+  desc={"Your reflected shots STUN the enemies they strike."}
+  
+/>
+
+<UpgradeCard
+  name="Piercing Parry"
+  cat="parry"
+  desc={"Parried projectiles pierce through every enemy."}
+  
+/>
+
+<UpgradeCard
+  name="Scatter Parry"
+  cat="parry"
+  desc={"Parried projectiles split into 3 that ricochet up to 3 times."}
+  
+/>
+
+<UpgradeCard
+  name="Tempo"
+  cat="parry"
+  unique desc={"Perfect parries grant TEMPO (+25% dmg, faster speed, refreshes dash) for 4s."}
+  tiers={[{ level: 2, desc: "+30% dmg for 6s. Stacks up to 2 times." }, { level: 3, desc: "Plunges room into slow-mo. +34% dmg per stack (max 2)." }]}
+/>
+
+<UpgradeCard
+  name="Backlash"
+  cat="parry"
+  unique desc={"Perfect parry erupts a COUNTER-SHOCK (26 dmg, 175 px, stuns nearby enemies)."}
+  tiers={[{ level: 2, desc: "Larger shock (44 dmg) + MARKS enemies." }, { level: 3, desc: "Massive shock (70 dmg, 250 px) + marks + brief INVINCIBILITY." }]}
+/>

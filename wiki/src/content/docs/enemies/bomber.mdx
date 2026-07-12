@@ -1,0 +1,48 @@
+---
+title: "Bomber"
+description: "Lobs arcing bombs from a distance. Bombs can be parried back."
+gameVersion: v0.1
+---
+
+import StatBlock from '../../../components/StatBlock.astro';
+import BiomeBadge from '../../../components/BiomeBadge.astro';
+
+<BiomeBadge stages={["The Grounds", "The Undercroft", "The Crimson Fields", "The Tear"]} />
+
+> Lobs arcing bombs from a distance. Bombs can be parried back.
+
+<StatBlock
+  name="Bomber"
+  color="#ef8a17"
+  stats={{
+    'HP': 40,
+    'Speed': '165 px/s',
+    'Contact Damage': 8,
+    'Knockback Taken': 11,
+    'Weight': 1,
+    'Size': '34×34 px',
+    'Standoff Distance': '340 px',
+    'Lob Interval': '2.4s',
+    'Bomb Speed': '540 px/s',
+    'Blast Radius': '150 px',
+    'Blast Damage': '24',
+    'Mine Arm Time': '1.3s',
+    'Mine Trigger Radius': '66 px',
+  }}
+/>
+
+## Variants
+
+| Name | Available | Description |
+|---|---|---|
+| **Bomber** | Wave 1+ | Base Weight: 1. Evolved variant. |
+| **Juggler** | Wave 4+ | Base Weight: 0.7. Evolved variant. |
+| **Trapper** | Wave 3+ | Base Weight: 0.6. Evolved variant. |
+| **Sludge** | Wave 5+ | Base Weight: 0.5. Evolved variant. |
+| **Geomancer** | Wave 7+ | Base Weight: 0.45. Evolved variant. |
+
+## Tips
+
+- Parrying a Bomber's bomb back deals 24 blast damage in a 150 px radius — far more than hitting the Bomber directly.
+- Sludge puddles slow you by 45%. Use dash to escape them.
+- Geomancer walls expire after 9 seconds. Use them for cover against Ranged enemies.

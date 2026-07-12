@@ -1,0 +1,72 @@
+---
+title: "Offense Abilities"
+description: "All unique offense abilities in Tear, with tier progressions."
+gameVersion: v0.1
+---
+
+import UpgradeCard from '../../../components/UpgradeCard.astro';
+
+Offense abilities deal raw damage, create explosions, and reward aggressive airborne play.
+
+<UpgradeCard
+  name="Air Dash"
+  cat="offense"
+  desc={"Gain a second dash in mid-air. Charges refill on landing."}
+  
+/>
+
+<UpgradeCard
+  name="Crater"
+  cat="offense"
+  desc={"Power Slams erupt in a shockwave that grows with descent speed."}
+  
+/>
+
+<UpgradeCard
+  name="Aerial Rave"
+  cat="offense"
+  unique desc={"Staying airborne ramps up swing damage over time (up to +50%)."}
+  tiers={[{ level: 2, desc: "Ramps much faster (up to +80%)." }, { level: 3, desc: "Ramps incredibly fast (up to +130%)." }]}
+/>
+
+<UpgradeCard
+  name="Seismic Slam"
+  cat="offense"
+  desc={"Slams blast nearby enemies for 22 damage."}
+  
+/>
+
+<UpgradeCard
+  name="Detonate"
+  cat="offense"
+  desc={"Kills explode for 18 to nearby foes."}
+  
+/>
+
+<UpgradeCard
+  name="Tempest"
+  cat="offense"
+  desc={"Rising updrafts also launch all nearby enemies skyward."}
+  
+/>
+
+<UpgradeCard
+  name="Berserker"
+  cat="offense"
+  desc={"+25% damage while below half HP."}
+  
+/>
+
+<UpgradeCard
+  name="Rupture"
+  cat="offense"
+  unique desc={"Cuts inflict BLEED — a stacking wound (6 dmg/s per stack, max 8)."}
+  tiers={[{ level: 2, desc: "2 stacks per cut. Power Slams DETONATE nearby bleed." }, { level: 3, desc: "3 stacks per cut. Slams detonate. Dying bleeding enemies splash stacks nearby." }]}
+/>
+
+<UpgradeCard
+  name="Sunder"
+  cat="offense"
+  unique desc={"Hits MARK enemies: +30% damage taken from all sources for 4s."}
+  tiers={[{ level: 2, desc: "+40% damage. Marking armored foes instantly SHATTERS their guard." }, { level: 3, desc: "+50% damage. Marks shatter guards. Hitting a marked foe SPREADS the mark nearby." }]}
+/>

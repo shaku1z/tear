@@ -1,0 +1,42 @@
+---
+title: "Flyer"
+description: "Hovers above the ground, swoops down to strike, ignores platforms."
+gameVersion: v0.1
+---
+
+import StatBlock from '../../../components/StatBlock.astro';
+import BiomeBadge from '../../../components/BiomeBadge.astro';
+
+<BiomeBadge stages={["The Crimson Fields", "The Voidspire", "The Tear"]} />
+
+> Hovers above the ground, swoops down to strike, ignores platforms.
+
+<StatBlock
+  name="Flyer"
+  color="#8b3bd6"
+  stats={{
+    'HP': 44,
+    'Speed': '230 px/s',
+    'Contact Damage': 10,
+    'Knockback Taken': 14,
+    'Weight': 0.75,
+    'Size': '36×26 px',
+    'Hover Height': '150 px',
+    'Swoop Interval': '3.3s',
+    'Swoop Speed': '700 px/s',
+  }}
+/>
+
+## Variants
+
+| Name | Available | Description |
+|---|---|---|
+| **Flyer** | Wave 1+ | Base Weight: 1. Evolved variant. |
+| **Dive Bomber** | Wave 3+ | Base Weight: 0.8. Evolved variant. |
+| **Swooper** | Wave 5+ | Base Weight: 0.6. Evolved variant. |
+
+## Tips
+
+- Flyers have low weight (0.75) — a rising uppercut easily launches them for an aerial juggle.
+- Use updrafts to pull all Flyers down to the ground level simultaneously.
+- Flyers are vulnerable immediately after completing a swoop — punish the landing.

@@ -1,0 +1,109 @@
+---
+title: Modes & Difficulties
+description: All game modes in Tear explained — Adventure, Endless, Gauntlet, Playground, Tutorial, Boss Test, Enemy Test — plus the difficulty modifier system.
+gameVersion: v0.1
+---
+
+import DifficultyTable from '../../../components/DifficultyTable.astro';
+
+Tear offers seven distinct modes catering to first-time players, veteran campaigners, competitive score-chasers, boss specialists, and those who just want to experiment freely.
+
+---
+
+## Mode Overview
+
+| Mode | Type | Summary |
+|------|------|---------|
+| **Adventure** | Campaign | 5 stages, 9 waves + boss each. The primary single-player campaign. |
+| **Endless** | Score-chase | Infinite waves, escalating HP, competitive leaderboard mode. |
+| **Gauntlet** | Endurance | Infinite waves with a full boss every 8 waves. |
+| **Playground** | Sandbox | Open arena — spawn anything, grab any ability. No stakes. |
+| **Tutorial** | Guided | Step-by-step skill drills covering all core mechanics. |
+| **Boss Test** | Practice | Fight any boss directly for practice runs. |
+| **Enemy Test** | Practice | Spawn isolated enemy types to study patterns. |
+
+---
+
+## Adventure
+
+The campaign. Five biomes, each containing **9 combat waves + 1 boss wave**. Between each wave you visit the upgrade shop. Defeating a boss grants an **Ability Tier-Up** and opens the next stage.
+
+See [Adventure](/modes/adventure) for scaling details and campaign completion rewards.
+
+---
+
+## Endless
+
+Waves continue indefinitely with HP scaling **+12% per wave**. Biomes cycle as you progress. The **score formula** (6 pts/kill × wave × style multiplier) makes this the mode for competitive play. Personal bests are tracked and displayed in the mode select.
+
+See [Endless](/modes/endless) for enemy scaling math and score strategy.
+
+---
+
+## Gauntlet
+
+Like Endless, but a **full boss storms in every 8 waves**. All five bosses cycle in order, each iteration tougher than the last. Excellent for practicing boss patterns in quick succession while also maintaining combat fundamentals between appearances.
+
+See [Gauntlet](/modes/gauntlet) for the boss rotation sequence.
+
+---
+
+## Playground
+
+A consequence-free sandbox. Open the ability menu and equip any upgrade at any tier. Use the enemy spawn panel to place any enemy type in any quantity. Useful for testing upgrade interactions, practicing specific enemies, or experimenting with builds before committing in a live run.
+
+See [Playground & Tutorial](/modes/playground) for details.
+
+---
+
+## Tutorial
+
+A series of guided combat drills:
+1. Basic swing
+2. Slam introduction
+3. Power Slam timing
+4. Launch (Updraft)
+5. Juggling an airborne enemy
+6. Throw and recall
+7. Deflect
+8. Perfect parry
+
+Completing all drills unlocks the Tutorial Complete record in your profile.
+
+---
+
+## Boss Test
+
+Select any of the five campaign bosses and fight them directly. HP, damage, and patterns are identical to the campaign encounter. Your HP and upgrades reset to a neutral state (base kit). Useful for memorising boss tells and practicing phase transitions.
+
+---
+
+## Enemy Test
+
+Spawn any enemy type, configure their affix, and fight them in isolation. Useful for learning specific enemy patterns without the noise of a full wave. Does not award style or score — purely informational.
+
+---
+
+## Difficulty Modifiers
+
+All modes support a difficulty selector that modifies several run parameters:
+
+<DifficultyTable />
+
+The five difficulty tiers are:
+
+| Tier | Enemy HP | Damage Taken | Enemy Count | Coin Earn | Score Earn |
+|------|----------|-------------|-------------|-----------|-----------|
+| **Gentle** | ×0.6 | ×0.6 | −1 per wave | ×0.7 | ×0.7 |
+| **Normal** | ×1.0 | ×1.0 | baseline | ×1.0 | ×1.0 |
+| **Harsh** | ×1.3 | ×1.2 | +1 per wave | ×1.2 | ×1.3 |
+| **Brutal** | ×1.6 | ×1.4 | +2 per wave | ×1.4 | ×1.7 |
+| **One-Hit** | ×2.0 | — | +2 per wave | ×1.8 | ×2.5 |
+
+### One-Hit Mode
+
+**One-Hit** is a special difficulty where **a single instance of damage instantly ends the run** — no HP bar, no i-frames preventing death. Enemies still have scaled HP and deal scaled damage, but for the player the threshold is zero. Surviving wave 5 in One-Hit mode is the **Iron Will** achievement.
+
+:::caution
+One-Hit mode does not grant i-frames after hits. The standard 0.9 s post-hit invulnerability does not apply because the first hit is lethal. Every action must be intentional.
+:::

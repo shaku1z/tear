@@ -1,0 +1,44 @@
+---
+title: "Resilience Abilities"
+description: "All unique resilience abilities in Tear, with tier progressions."
+gameVersion: v0.1
+---
+
+import UpgradeCard from '../../../components/UpgradeCard.astro';
+
+Resilience abilities earn survivability through skill — no passive regen buttons.
+
+<UpgradeCard
+  name="Bloodrite"
+  cat="resilience"
+  rare unique desc={"Skill kills (slam, spike, perfect-parry) restore HP."}
+  tiers={[{ level: 2, desc: "Much more HP restored. Skill kills grant 1s invincibility." }, { level: 3, desc: "Massive HP restored + invincibility. Every normal kill trickles HP back." }]}
+/>
+
+<UpgradeCard
+  name="Flow Guard"
+  cat="resilience"
+  unique desc={"Take 30% less damage while trick rank is BRUTAL (×3) or higher."}
+  tiers={[{ level: 2, desc: "50% less damage at BRUTAL." }, { level: 3, desc: "50% less at STYLISH (×2). At BRUTAL: also rapidly REGENERATE HP." }]}
+/>
+
+<UpgradeCard
+  name="Aegis"
+  cat="resilience"
+  unique desc={"Slam kills grant a shield that blocks the next hit (max 2)."}
+  tiers={[{ level: 2, desc: "Slam AND perfect-parry kills grant shields (max 3)." }, { level: 3, desc: "Max 4 shields. An absorbed hit erupts a damaging shockwave." }]}
+/>
+
+<UpgradeCard
+  name="Riposte"
+  cat="resilience"
+  unique desc={"After a perfect parry, take 60% less damage for 1.2s."}
+  tiers={[{ level: 2, desc: "Restore HP + 75% less damage for 1.8s." }, { level: 3, desc: "Restore HP + complete INVINCIBILITY for 2.3s." }]}
+/>
+
+<UpgradeCard
+  name="Last Stand"
+  cat="resilience"
+  rare desc={"Once per run, refuse to fall — rise from a killing blow with 40% HP."}
+  
+/>

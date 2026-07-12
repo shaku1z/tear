@@ -1,0 +1,185 @@
+---
+// TrickMeter.astro
+// Visual display of the 6 style-trick tiers with thresholds and score multipliers.
+// Data sourced directly from CONFIG.trick.tiers in the game source.
+// Usage: <TrickMeter />  (no props needed — all data is from the game source)
+
+const TIERS = [
+  { at: 0,   mult: 1,   name: '—',         cls: '',           desc: 'No style rank. Standard score.' },
+  { at: 14,  mult: 1.5, name: 'NICE',       cls: 'nice',       desc: 'Good variety and momentum. Score multiplier kicks in.' },
+  { at: 34,  mult: 2,   name: 'STYLISH',    cls: 'stylish',    desc: 'Committed swings and diverse tricks. Double score.' },
+  { at: 64,  mult: 3,   name: 'BRUTAL',     cls: 'brutal',     desc: 'Sustained aggression. Flow Guard activates here.' },
+  { at: 110, mult: 4,   name: 'SAVAGE',     cls: 'savage',     desc: 'Relentless, diverse, punishing. 4× score.' },
+  { at: 175, mult: 5,   name: 'TEARING!',   cls: 'tearing',    desc: 'Peak style. 5× score. Highest swing damage bonus.' },
+];
+
+const POINTS: Record<string, number> = {
+  Hit: 2, 'Throw Hit': 4, Deflect: 5, Launch: 5,
+  Slam: 8, 'Super Slam': 11, Updraft: 10, Parry: 12,
+};
+---
+
+<div class="trick-meter">
+  <h3 class="trick-meter__heading">Style Tier Ladder</h3>
+  <div class="trick-tiers">
+    {TIERS.map((t, i) => (
+      <div class:list={['trick-tier', `trick-tier--${t.cls || 'base'}`]}>
+        <div class="trick-tier__header">
+          <span class:list={['trick-tier__name', `tier--${t.cls}`]}>
+            {t.name || 'Base'}
+          </span>
+          <span class="trick-tier__threshold">{t.at > 0 ? `≥ ${t.at} pts` : 'Start'}</span>
+          <span class="trick-tier__mult">×{t.mult}</span>
+        </div>
+        <p class="trick-tier__desc">{t.desc}</p>
+        {i < TIERS.length - 1 && (
+          <div
+            class="trick-tier__bar"
+            style={`width:${Math.min(100, (t.at / 175) * 100).toFixed(1)}%`}
+          ></div>
+        )}
+      </div>
+    ))}
+  </div>
+
+  <div class="trick-points">
+    <h4 class="trick-points__heading">Points Per Action</h4>
+    <div class="trick-points__grid">
+      {Object.entries(POINTS).map(([action, pts]) => (
+        <div class="trick-point-row">
+          <span class="trick-point-action">{action}</span>
+          <span class="trick-point-pts">+{pts}</span>
+        </div>
+      ))}
+    </div>
+    <p class="trick-points__note">
+      Variety bonus: ×1.5 when your trick differs from the last one.
+      Taking a hit costs 50% of your current meter.
+      Meter drains after 2.6s of inactivity at 26 pts/s.
+    </p>
+  </div>
+</div>
+<style>
+  .trick-meter {
+    border: 2px solid var(--sl-color-hairline-light);
+    border-radius: 0;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    background: var(--sl-color-bg);
+    box-shadow: 4px 4px 0px var(--sl-color-gray-5);
+  }
+  .trick-meter__heading {
+    font-family: var(--sl-font-mono) !important;
+    font-size: 0.9rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--sl-color-white) !important;
+    margin: 0 0 16px !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+
+  .trick-tiers { display: flex; flex-direction: column; gap: 4px; }
+
+  .trick-tier {
+    padding: 12px 16px;
+    border-radius: 0;
+    border: 2px solid var(--sl-color-hairline-light);
+    position: relative;
+    overflow: hidden;
+  }
+  .trick-tier--base { background: rgba(255,255,255,0.02); }
+  .trick-tier--nice { background: rgba(240,208,96,0.04); border-left: 3px solid #f0d060; }
+  .trick-tier--stylish { background: rgba(239,138,23,0.05); border-left: 3px solid var(--tear-orange, #ef8a17); }
+  .trick-tier--brutal { background: rgba(226,59,59,0.05); border-left: 3px solid var(--tear-red, #e23b3b); }
+  .trick-tier--savage { background: rgba(192,48,255,0.05); border-left: 3px solid #c030ff; }
+  .trick-tier--tearing { background: rgba(19,196,214,0.06); border-left: 3px solid var(--tear-cyan, #13c4d6); }
+
+  .trick-tier__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 3px;
+  }
+  .trick-tier__name {
+    font-family: var(--sl-font-mono);
+    font-weight: 700;
+    font-size: 0.95rem;
+    font-style: italic; /* Match in-game style meter */
+    letter-spacing: 0.1em;
+    min-width: 90px;
+  }
+  .trick-tier__threshold {
+    font-size: 0.72rem;
+    font-family: var(--sl-font-mono);
+    color: var(--sl-color-gray-3); /* muted */
+    flex: 1;
+  }
+  .trick-tier__mult {
+    font-family: var(--sl-font-mono);
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--sl-color-gray-1); /* full */
+  }
+  .trick-tier__desc {
+    font-size: 0.8rem;
+    color: var(--sl-color-gray-2); /* soft */
+    margin: 0;
+    line-height: 1.45;
+    font-family: var(--sl-font-mono);
+  }
+  .trick-tier__bar {
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 3px;
+    background: currentColor;
+    opacity: 0.25;
+  }
+
+  /* Tier colours (shared with global CSS) */
+  .tier--nice    { color: #f0d060; }
+  .tier--stylish { color: var(--tear-orange, #ef8a17); }
+  .tier--brutal  { color: var(--tear-red, #e23b3b); }
+  .tier--savage  { color: #c030ff; }
+  .tier--tearing { color: var(--tear-cyan, #13c4d6); }
+
+  /* Points table */
+  .trick-points { margin-top: 16px; }
+  .trick-points__heading {
+    font-family: var(--sl-font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--sl-color-gray-3); /* muted */
+    margin: 0 0 8px;
+  }
+  .trick-points__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 4px;
+  }
+  .trick-point-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 0;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--sl-color-hairline-light);
+    font-size: 0.8rem;
+    font-family: var(--sl-font-mono);
+  }
+  .trick-point-action { color: var(--sl-color-gray-2); }
+  .trick-point-pts {
+    font-weight: 700;
+    color: var(--tear-cyan, #13c4d6);
+  }
+  .trick-points__note {
+    font-size: 0.75rem;
+    color: var(--sl-color-gray-3); /* muted */
+    margin: 12px 0 0;
+    line-height: 1.5;
+    font-family: var(--sl-font-mono);
+  }
+</style>

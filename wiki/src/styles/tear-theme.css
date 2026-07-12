@@ -1,0 +1,245 @@
+/* =============================================================
+   T E A R  Wiki — Custom Theme
+   Pulls directly from the game's CONFIG.colors and design system
+   ============================================================= */
+
+/* ---- Dark-mode overrides (Tear's void aesthetic) ----------- */
+:root[data-theme='dark'],
+:root {
+  /* Semantic colours derived from game palette */
+  --tear-red:    #e23b3b;
+  --tear-cyan:   #13c4d6;
+  --tear-purple: #8b3bd6;
+  --tear-orange: #ef8a17;
+  --tear-green:  #1faf5a;
+  --tear-gold:   #e0a326;
+  --tear-slate:  #3a4654;
+
+  /* Starlight accent tokens → Tear cyan */
+  --sl-color-accent-low:    rgba(19, 196, 214, 0.15);
+  --sl-color-accent:        #13c4d6;
+  --sl-color-accent-high:   #72eeff;
+
+  /* Backgrounds — The Tear void */
+  --sl-color-bg:            #0a0b10;
+  --sl-color-bg-nav:        #0a0b10;
+  --sl-color-bg-sidebar:    #0a0b10;
+  --sl-color-bg-inline-code:rgba(255,255,255,0.08);
+
+  /* Text — Pure white with alpha hierarchy from DESIGN_SYSTEM.md */
+  --sl-color-text:          rgba(255, 255, 255, 0.7); /* soft */
+  --sl-color-text-accent:   #13c4d6;
+  --sl-color-gray-1:        rgba(255, 255, 255, 1.0); /* full */
+  --sl-color-gray-2:        rgba(255, 255, 255, 0.7); /* soft */
+  --sl-color-gray-3:        rgba(255, 255, 255, 0.55); /* muted */
+  --sl-color-gray-4:        rgba(255, 255, 255, 0.4); /* faint */
+  --sl-color-gray-5:        rgba(255, 255, 255, 0.25); /* ghost */
+  --sl-color-gray-6:        rgba(255, 255, 255, 0.1); 
+  --sl-color-black:         #0a0b10;
+  --sl-color-white:         #ffffff;
+
+  /* Hairlines */
+  --sl-color-hairline-light: rgba(255,255,255,0.15);
+  --sl-color-hairline-shade: rgba(255,255,255,0.15);
+}
+
+/* Light mode — The Grounds (white / crimson) */
+:root[data-theme='light'] {
+  --sl-color-accent-low:    rgba(192, 32, 42, 0.15);
+  --sl-color-accent:        #c0202a;
+  --sl-color-accent-high:   #8b0010;
+  --sl-color-bg:            #ffffff;
+  --sl-color-bg-nav:        #ffffff;
+  --sl-color-bg-sidebar:    #ffffff;
+  --sl-color-text:          rgba(0, 0, 0, 0.7);
+  --sl-color-text-accent:   #c0202a;
+  
+  --sl-color-gray-1:        rgba(0, 0, 0, 1.0);
+  --sl-color-gray-2:        rgba(0, 0, 0, 0.7);
+  --sl-color-gray-3:        rgba(0, 0, 0, 0.55);
+  --sl-color-gray-4:        rgba(0, 0, 0, 0.4);
+  --sl-color-gray-5:        rgba(0, 0, 0, 0.25);
+  --sl-color-gray-6:        rgba(0, 0, 0, 0.1);
+  --sl-color-black:         #ffffff;
+  --sl-color-white:         #000000;
+  
+  --sl-color-hairline-light: rgba(0,0,0,0.15);
+  --sl-color-hairline-shade: rgba(0,0,0,0.15);
+}
+
+/* ---- Typography -------------------------------------------- */
+:root {
+  --sl-font-mono:    'JetBrains Mono', 'Courier New', monospace;
+  --sl-font:         'Inter', 'Space Grotesk', system-ui, sans-serif;
+  --sl-text-h1:      2.5rem;
+  --sl-text-h2:      2rem;
+  --sl-text-h3:      1.5rem;
+  --sl-text-body:    1.05rem;
+  --sl-text-code:    0.9rem;
+  --sl-line-height:  1.7;
+}
+
+/* Global resets for the stark aesthetic */
+* {
+  border-radius: 0 !important; /* NO rounded corners */
+}
+
+/* Brutalist Panels and Borders */
+.sl-container {
+  max-width: 900px; /* Constrain width for better readability */
+}
+
+.content-panel {
+  border: 2px solid var(--sl-color-hairline-light);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  background: var(--sl-color-bg);
+  box-shadow: 4px 4px 0px var(--sl-color-accent);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--sl-font-mono);
+  letter-spacing: -0.02em;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+/* Sharp code blocks */
+.expressive-code {
+  border: 2px solid var(--sl-color-gray-5);
+  box-shadow: 4px 4px 0px var(--sl-color-gray-6);
+  margin: 1.5rem 0;
+}
+
+body {
+  text-shadow: none;
+}
+
+/* ---- Site title / logo ------------------------------------ */
+.site-title {
+  font-family: var(--sl-font-mono);
+  font-size: 1.1rem;
+  letter-spacing: 0.25em;
+  font-weight: 700;
+  color: var(--tear-cyan) !important;
+  text-transform: uppercase;
+}
+:root[data-theme='light'] .site-title {
+  color: var(--sl-color-accent) !important;
+}
+
+/* ---- Navigation bar --------------------------------------- */
+header.header {
+  border-bottom: 1px solid var(--sl-color-hairline-light) !important;
+  backdrop-filter: none !important;
+  background: var(--sl-color-bg) !important;
+}
+
+/* ---- Sidebar --------------------------------------------- */
+.sidebar-content {
+  border-right: 1px solid var(--sl-color-hairline-light) !important;
+}
+
+/* Sidebar group labels — emoji + spaced caps */
+.group-label span {
+  font-family: var(--sl-font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sl-color-gray-3);
+}
+
+/* Active sidebar link gets left-border highlight */
+a[aria-current='page'] {
+  border-left: 2px solid var(--sl-color-accent);
+  background: var(--sl-color-accent-low);
+  color: var(--sl-color-accent) !important;
+}
+
+a:hover {
+  color: var(--sl-color-white);
+}
+
+/* ---- Content area ---------------------------------------- */
+.content-panel {
+  max-width: 860px;
+}
+
+/* Headings — monospace feel like the in-game UI */
+h1, h2, h3, h4, h5 {
+  font-family: var(--sl-font-mono);
+  letter-spacing: 0.03em;
+  font-weight: 700;
+}
+
+h1 { color: var(--sl-color-white); }
+h2 { 
+  color: var(--sl-color-white);
+  border-bottom: 1px solid var(--sl-color-hairline-light);
+  padding-bottom: 0.35em;
+  text-transform: uppercase;
+}
+h3 { color: var(--sl-color-gray-1); text-transform: uppercase; }
+
+/* ---- Callouts / asides ------------------------------------ */
+/* Override Starlight's default aside colours to match game UI */
+.starlight-aside {
+  border: 1px solid var(--sl-color-hairline-light) !important;
+  border-left: 4px solid var(--sl-color-asides-text-accent) !important;
+  background: rgba(255,255,255,0.02) !important;
+}
+.starlight-aside--note { --sl-color-asides-text-accent: var(--tear-cyan); }
+.starlight-aside--caution { --sl-color-asides-text-accent: var(--tear-orange); }
+.starlight-aside--danger { --sl-color-asides-text-accent: var(--tear-red); }
+.starlight-aside--tip { --sl-color-asides-text-accent: var(--tear-green); }
+
+/* ---- Tables ----------------------------------------------- */
+table {
+  font-size: 0.9rem;
+  border-collapse: collapse;
+  width: 100%;
+}
+thead {
+  background: var(--sl-color-gray-6);
+  border-bottom: 1px solid var(--sl-color-hairline-light);
+}
+th {
+  font-family: var(--sl-font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sl-color-accent);
+  padding: 0.6rem 0.8rem;
+  text-align: left;
+}
+td {
+  padding: 0.5rem 0.8rem;
+  border-bottom: 1px solid var(--sl-color-hairline-light);
+  color: var(--sl-color-text);
+}
+tr:hover td {
+  background: var(--sl-color-gray-6);
+  color: var(--sl-color-white);
+}
+
+/* ---- Code blocks ------------------------------------------ */
+pre {
+  border: 1px solid var(--sl-color-hairline-light);
+  border-radius: 0 !important;
+}
+
+/* ---- Search bar ------------------------------------------ */
+site-search kbd {
+  border-color: var(--sl-color-hairline-light);
+  background: var(--sl-color-gray-6);
+  border-radius: 0;
+}
+
+/* ---- "Edit this page" / "Last updated" footer ------------ */
+.meta { font-size: 0.8rem; opacity: 0.55; }
+
+/* ---- Scrollbar ------------------------------------------- */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--sl-color-bg); }
+::-webkit-scrollbar-thumb { background: var(--sl-color-hairline-light); }
+::-webkit-scrollbar-thumb:hover { background: var(--sl-color-gray-4); }

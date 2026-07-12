@@ -1,0 +1,54 @@
+---
+title: "The Tear"
+description: "Everything, all at once. — Stage 5 of the Tear campaign."
+gameVersion: v0.1
+---
+
+import StatBlock from '../../../components/StatBlock.astro';
+import BiomeBadge from '../../../components/BiomeBadge.astro';
+
+<BiomeBadge stages={["The Tear"]} />
+
+> *Everything, all at once.*
+
+**Stage 5 of 5.** 9 waves, then [**The Source**](/bosses/source).
+
+:::caution[Dark Biome]
+The HUD and player silhouette flip to light colours here — the only stage where the arena itself is dark.
+:::
+
+## Environment
+
+| Property | Value |
+|---|---|
+| Background | `#0e0b1a` |
+| Platform Colour | `#c9c4e0` |
+| Accent | `#13c4d6` |
+| Platform Count | 5 one-way platforms |
+
+## Enemy Pool
+
+| Enemy Type | Spawn Chance | Available From |
+|---|---|---|
+| Charger | 100% | Wave 1+ |
+| Ranged | 60% | Wave 1+ |
+| Flyer | 50% | Wave 1+ |
+| Bomber | 40% | Wave 1+ |
+| Armored | 40% | Wave 1+ |
+| Wraith | 40% | Wave 1+ |
+| Chimera | 40% | Wave 1+ |
+| Herald | 20% | Wave 1+ |
+| Anchor | 20% | Wave 1+ |
+| Priest | 20% | Wave 1+ |
+| Mender | 18% | Wave 1+ |
+
+Enemy HP and damage increase by **+6%** and **+2%** per wave within this stage.
+
+## Boss
+
+When the 9th wave is cleared, [**The Source**](/bosses/source) enters the arena.
+Defeating it unlocks an **Ability Tier-Up** — evolve one of your owned tiered abilities to its next level.
+
+## Lore
+
+> There is nothing left to carve the words into — only the quiet where the Tear used to be. You understand it now: the Source was never an enemy, only the wound the world kept reopening, wearing the shape of everyone who ever tried to close it. It wore your shape last. The blade is lighter than it has ever been. Somewhere, far above, something that has not been able to for a very long time begins, tentatively, to heal.
