@@ -2104,10 +2104,13 @@
       if (stageBannerT > 0) stageBannerT -= dt;
       if (rankPopT > 0) rankPopT -= dt * 1.2;
 
-      // pause on P, Escape, or losing the mouse capture (Esc releases pointer lock)
+      // pause on P, Escape, or losing the mouse capture (Esc releases pointer lock).
+      // Touch devices in PORTRAIT also auto-pause: the run must never continue
+      // unseen behind the rotate gate.
       if (Input.locked) wasLocked = true;
       const lostCapture = wasLocked && !Input.locked;
-      if (Input.pausePressed() || Input.escapePressed() || lostCapture) {
+      const portraitGate = Input.touchActive() && canvas.clientHeight > canvas.clientWidth;
+      if (Input.pausePressed() || Input.escapePressed() || lostCapture || portraitGate) {
         state = "paused"; wasLocked = false; document.exitPointerLock();
       }
       else if (hitStop > 0) { hitStop -= dt; }
@@ -2277,7 +2280,11 @@
     if (state === "playing") drawReticle();
 
     UI.ink = "#000";   // overlays (menus / win / pause) dim to white — always ink them black
-    if (state !== lastUiState) { enterT = 0; if ((state === "gameover" || state === "win" || state === "paused") && lastUiState !== "settings") arsenalScroll = 0; }   // restart entrance anim + reset arsenal scroll (but not when bouncing back from settings)
+    if (state !== lastUiState) {
+      enterT = 0;   // restart entrance anim
+      if ((state === "gameover" || state === "win" || state === "paused") && lastUiState !== "settings") arsenalScroll = 0;   // (but not when bouncing back from settings)
+      if (state === "draft" || state === "tierup") listScroll = 0;   // stale menu scroll must never cull the choice cards (grid mode culls by listScroll)
+    }
 
     // menu screens: the LIVE attract scene backs every tab (not just the main menu), so the
     // gorgeous moving backdrop flows through the whole menu instead of snapping to flat white.
@@ -2331,20 +2338,14 @@
     // achievement unlock toast rides above the world + menus (but under the wipe flash)
     drawAchToast(lastUiDt);
 
-    // mobile in portrait: nudge toward landscape (the arena is wide)
-    if (Input.touchActive() && canvas.clientHeight > canvas.clientWidth) {
-      const sr2 = screenRect();
-      ctx.save(); ctx.globalAlpha = 0.85; ctx.fillStyle = "#06070c";
-      ctx.fillRect(sr2.x, H / 2 - 62, sr2.w, 124);
-      ctx.globalAlpha = 1; ctx.fillStyle = "#f1eff9"; ctx.font = UI.font(30, true); ctx.textAlign = "center";
-      ctx.fillText("ROTATE YOUR DEVICE", W / 2, H / 2 - 8);
-      ctx.font = UI.font(16, false); ctx.globalAlpha = 0.7;
-      ctx.fillText("Tear plays in landscape", W / 2, H / 2 + 26);
-      ctx.restore(); ctx.textAlign = "left";
-    }
-
     // mouse cursor in non-playing screens
     if (state !== "playing") UI.cursor(ctx, Input.mouseX, Input.mouseY);
+
+    // mobile in portrait: a REAL gate — covers everything (gameplay already
+    // auto-paused in the frame loop), asks for landscape with an animated glyph
+    if (Input.touchActive() && canvas.clientHeight > canvas.clientWidth) {
+      UI.rotateGate(ctx, screenRect(), uiT);
+    }
 
     // reset keyboard focus + scroll when the screen changes
     if (state !== lastUiState) { lastUiState = state; focus = firstEnabledButton(); listScroll = 0; }
