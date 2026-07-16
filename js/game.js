@@ -3047,7 +3047,7 @@
       if (ca !== cb) return ca - cb;
       return rank(a) - rank(b);
     });
-    const cols = 4, mx = 70, gap = 22, cardW = (W - mx * 2 - gap * (cols - 1)) / cols;
+    const cols = 4, mx = 210, gap = 20, cardW = (W - mx * 2 - gap * (cols - 1)) / cols;   // inside the sheet
     const ch = 150, gy = 20, stride = ch + gy, top = 244, visRows = 3;
     const rows = Math.ceil(list.length / cols);
     const maxOff = Math.max(0, rows - visRows);
@@ -3083,7 +3083,11 @@
     if (Math.abs(shopCoinShow - real) < 0.6) shopCoinShow = real;
     ctx.save(); ctx.textAlign = "right"; ctx.textBaseline = "alphabetic";
     ctx.fillStyle = gold; ctx.font = UI.font(t.type.h1, true);
-    ctx.fillText("◆ " + Math.round(shopCoinShow).toLocaleString(), 1380, 108);
+    const balTxt = Math.round(shopCoinShow).toLocaleString();
+    const balW = ctx.measureText(balTxt).width;
+    ctx.fillText(balTxt, 1380, 108);
+    ctx.font = UI.font(t.type.title, true);   // the diamond stays a MARK, not a monolith
+    ctx.fillText("◆", 1380 - balW - 14, 108);
     ctx.restore();
     UI.tag(ctx, "COINS", 1380, 130, t.color.muted, "right", t.type.micro);
     // the ledger line: what you own + what the blade has earned you, lifetime
@@ -3114,7 +3118,15 @@
           const tx = colX[ci] + 66;
           UI.text(ctx, it.name, tx, y + 24, t.type.body);
           UI.tag(ctx, "LV " + lv + "/" + it.maxLevel, tx + ctx.measureText(it.name).width + 14, y + 24, lv ? gold : t.color.muted, "left", t.type.micro);
-          UI.text(ctx, lv && it.now ? "now  " + it.now(lv) + "   ·   " + it.desc : it.desc, tx, y + 45, t.type.micro, "left", t.alpha.soft);
+          // desc clips with an ellipsis before the pips/price zone
+          let dTxt = lv && it.now ? "now  " + it.now(lv) + "   ·   " + it.desc : it.desc;
+          const dMax = colX[ci] + colW2 - 240 - tx;
+          ctx.font = UI.font(t.type.micro, false);
+          if (ctx.measureText(dTxt).width > dMax) {
+            while (dTxt.length > 4 && ctx.measureText(dTxt + "…").width > dMax) dTxt = dTxt.slice(0, -1);
+            dTxt += "…";
+          }
+          UI.text(ctx, dTxt, tx, y + 45, t.type.micro, "left", t.alpha.soft);
           // pips + the price button (gold when affordable / ghost when not / ink MAX)
           UI.pips(ctx, colX[ci] + colW2 - 118, y + 31, it.maxLevel, lv, gold);
           uiButtons.push({ x: colX[ci] + colW2 - 104, y: y + 11, w: 94, h: 40, size: 13,
@@ -3200,15 +3212,26 @@
     const foot = (x, w, txt) => {
       if (!txt) return;
       UI.divider(ctx, x, blurbY - 16, w, 0.10);
-      // 2-line wrap into the column width
+      // strict 2-line wrap into the column width; a too-long blurb ellipsizes
+      // instead of spilling into the stakes strip below
       ctx.font = UI.font(t.type.caption, false);
-      const words = txt.split(" "); let line = "", ly = blurbY;
-      for (const wd of words) {
-        const test = line ? line + " " + wd : wd;
-        if (ctx.measureText(test).width > w - 8 && line) { UI.text(ctx, line, x, ly, t.type.caption, "left", t.alpha.soft); line = wd; ly += 20; if (ly > blurbY + 40) break; }
-        else line = test;
+      const words = txt.split(" "), lines = [];
+      let line = "";
+      for (let wi = 0; wi < words.length; wi++) {
+        const test = line ? line + " " + words[wi] : words[wi];
+        if (ctx.measureText(test).width > w - 8 && line) {
+          lines.push(line); line = words[wi];
+          if (lines.length === 2) {   // out of room — ellipsize what's left onto line 2
+            let last = lines[1] + "…";
+            while (ctx.measureText(last).width > w - 8 && lines[1].includes(" ")) {
+              lines[1] = lines[1].slice(0, lines[1].lastIndexOf(" ")); last = lines[1] + "…";
+            }
+            lines[1] = last; line = ""; break;
+          }
+        } else line = test;
       }
-      if (line && ly <= blurbY + 40) UI.text(ctx, line, x, ly, t.type.caption, "left", t.alpha.soft);
+      if (line && lines.length < 2) lines.push(line);
+      lines.forEach((l, i) => UI.text(ctx, l, x, blurbY + i * 20, t.type.caption, "left", t.alpha.soft));
     };
     foot(mx, mw, msel && msel.blurb);
     foot(dx, dw, showDiff && dsel ? dsel.desc : "");
@@ -3238,8 +3261,13 @@
     }
 
     // ---- hero START + the standard BACK ----
-    uiButtons.push({ ghost: true, hero: true, x: W / 2 - 200, y: 726, w: 400, h: 62, glyph: "▶", size: 26,
-      label: "START", sub: ((msel ? msel.label : "") + " · " + (showDiff && dsel ? dsel.label + " · " : "") + (wsel ? wsel.name : "")).toUpperCase(),
+    // width hugs the content (hero text is left-aligned; a too-wide button
+    // reads as a lopsided slab)
+    const startSub = ((msel ? msel.label : "") + " · " + (showDiff && dsel ? dsel.label + " · " : "") + (wsel ? wsel.name : "")).toUpperCase();
+    ctx.font = UI.font(t.type.caption, true);
+    const startW = Math.max(300, Math.round(ctx.measureText(startSub).width) + 100);
+    uiButtons.push({ ghost: true, hero: true, x: W / 2 - startW / 2, y: 726, w: startW, h: 62, glyph: "▶", size: 26,
+      label: "START", sub: startSub,
       action: () => startRun(selMode, selDiff) });
     addBack();
   }
@@ -3336,8 +3364,8 @@
     ctx.globalAlpha = 1; ctx.restore();
     // currency badges + achievements chip
     const achN = PROFILE.unlockedCount(), achTotal = (typeof ACH !== "undefined" && ACH.list) ? ACH.list.length : 0;
-    UI.badge(ctx, "◆ " + META.coins().toLocaleString(), fx + 106, cardY + 90, HUE_GOLD, "left");
-    UI.badge(ctx, "⬡ " + PROFILE.shards(), fx + 106 + 120, cardY + 90, HUE_VIOLET, "left");
+    const coinW = UI.badge(ctx, "◆ " + META.coins().toLocaleString(), fx + 106, cardY + 90, HUE_GOLD, "left");
+    UI.badge(ctx, "⬡ " + PROFILE.shards(), fx + 106 + coinW + 10, cardY + 90, HUE_VIOLET, "left");
     uiButtons.push({ x: rx - 420, y: cardY + 30, w: 130, h: 40, size: 12, chip: true, label: "★ " + achN + (achTotal ? " / " + achTotal : ""),
       action: () => { state = "achievements"; listScroll = 0; } });
     // SHOWCASE: your three rarest earned feats as rarity seals on the passport
@@ -4309,33 +4337,33 @@
     } else if (!row.boss && inst && inst.kind && PROFILE.stat("kill_" + inst.kind)) {
       UI.badge(ctx, "FELLED ×" + PROFILE.stat("kill_" + inst.kind), x + w - 14, y + h - 14, ac, "right");
     }
-    // preview
-    const bw = 132, bx = x + 18, by = y + (h - 132) / 2;
-    ctx.strokeStyle = t.color.disabled; ctx.lineWidth = 1.5; ctx.strokeRect(bx, by, bw, 132);
-    drawCreature(inst, bx, by, bw, 132);
+    // preview (sized for the 150-tall card)
+    const bw = 116, bx = x + 16, by = y + (h - 116) / 2;
+    ctx.strokeStyle = t.color.disabled; ctx.lineWidth = 1.5; ctx.strokeRect(bx, by, bw, 116);
+    drawCreature(inst, bx, by, bw, 116);
     // header line: name + role
-    const ix = bx + bw + 22;
+    const ix = bx + bw + 20;
     ctx.fillStyle = "#000"; ctx.font = UI.font(t.type.lead, true); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
     const nameW = ctx.measureText(b.name).width;
-    ctx.fillText(b.name, ix, y + 34);
-    UI.tag(ctx, b.role, ix + nameW + 14, y + 34, ac, "left", t.type.micro);
+    ctx.fillText(b.name, ix, y + 30);
+    UI.tag(ctx, b.role, ix + nameW + 14, y + 30, ac, "left", t.type.micro);
     // stat chips
     const hp = inst ? Math.round(inst.maxHp) : "—", dmg = inst ? Math.round(inst.contactDmg) : "—", spd = inst ? Math.round(inst.speed || 0) : "—";
-    let sx = statChip(ix, y + 46, "HP", "" + hp);
-    sx = statChip(sx, y + 46, row.boss ? "TOUCH" : "DMG", "" + dmg);
-    if (!row.boss) sx = statChip(sx, y + 46, "SPD", "" + spd);
-    // description
-    wrapLeft(b.desc, ix, y + 90, rx - ix - 24, 21, t.type.caption, t.alpha.soft);
+    let sx = statChip(ix, y + 40, "HP", "" + hp);
+    sx = statChip(sx, y + 40, row.boss ? "TOUCH" : "DMG", "" + dmg);
+    if (!row.boss) sx = statChip(sx, y + 40, "SPD", "" + spd);
+    // description (micro; even a 3-line wrap clears the VARIANTS row below)
+    wrapLeft(b.desc, ix, y + 78, rx - ix - 24, 17, t.type.micro, t.alpha.soft);
     // variants line
-    if (b.variants && b.variants !== "—") UI.tag(ctx, "VARIANTS:  " + b.variants, ix, y + h - 38, t.color.muted, "left", t.type.micro);
+    if (b.variants && b.variants !== "—") UI.tag(ctx, "VARIANTS:  " + b.variants, ix, y + h - 30, t.color.muted, "left", t.type.micro);
     // bottom line: affix chips (mobs) or a phase note (bosses)
     if (row.boss) {
-      UI.tag(ctx, "MULTI-PHASE  —  attacks escalate as its health falls", ix, y + h - 14, t.color.danger, "left", t.type.micro);
+      UI.tag(ctx, "MULTI-PHASE  —  attacks escalate as its health falls", ix, y + h - 12, t.color.danger, "left", t.type.micro);
     } else if (inst) {
       ctx.font = UI.font(t.type.micro, true); ctx.fillStyle = t.color.muted; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-      ctx.fillText("CAN ROLL:", ix, y + h - 14);
+      ctx.fillText("CAN ROLL:", ix, y + h - 12);
       let axx = ix + ctx.measureText("CAN ROLL:").width + 12;
-      for (const a of AFFIXES.filter((a) => a.appliesTo(inst))) axx = affixChip(axx, y + h - 14, a.id);
+      for (const a of AFFIXES.filter((a) => a.appliesTo(inst))) axx = affixChip(axx, y + h - 12, a.id);
     }
   }
   // BESTIARY tab (CODEX): the full enemy index, unchanged draw routine
@@ -4347,7 +4375,7 @@
     cats.forEach(([id, label], i) => uiButtons.push({ x: cx0 + i * (cw0 + cg), y: 200, w: cw0, h: 30, label, size: t.type.micro, chip: true, sel: bestiaryFilter === id, action: () => { bestiaryFilter = id; listScroll = 0; } }));
     // 2-column grid of the filtered roster
     const rows = bestiary().all.filter((r) => bestiaryFilter === "all" || r.cat === bestiaryFilter);
-    const cols = 2, mx = 72, gap = 26, cardW = (W - mx * 2 - gap) / cols, cardH = 168, stride = cardH + 18, top = 244, vis = 3;
+    const cols = 2, mx = 210, gap = 24, cardW = (W - mx * 2 - gap) / cols, cardH = 150, stride = cardH + 16, top = 244, vis = 3;   // inside the sheet, clear of BACK
     const gridRows = Math.ceil(rows.length / cols), maxOff = Math.max(0, gridRows - vis);
     const off = clamp(Math.round(listScroll / stride), 0, maxOff);
     for (let r = 0; r < vis; r++) for (let c = 0; c < cols; c++) {
@@ -4806,7 +4834,11 @@
       const eb = ez((enterT - i * 0.025) / 0.2);
       ctx.save();
       ctx.globalAlpha = eb;
-      const cx = b.x + b.w / 2, cy = b.y + b.h / 2, sc = 1 + a * 0.04;
+      // list-style rows (glyph/sub/pips trimmings) DON'T scale on hover — a 4%
+      // zoom reads as misalignment inside a stacked column; their hover cue is
+      // the accent bar + label slide. Plain buttons keep the little pop.
+      const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+      const sc = (b.glyph || b.sub || b.pips) ? 1 : 1 + a * 0.04;
       ctx.translate(cx, cy + (1 - eb) * 14); ctx.scale(sc, sc); ctx.translate(-cx, -cy);
       if (b.chip) UI.chip(ctx, b, active);
       else UI.button(ctx, b, active);

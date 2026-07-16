@@ -335,11 +335,11 @@ const UI = {
   // caller registers as a button and passes for placement). Centred in a zone.
   emptyState(ctx, glyph, line, cx, cy) {
     ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-    ctx.globalAlpha = 0.10; ctx.fillStyle = this.ink; ctx.font = this.font(84, true);
+    ctx.globalAlpha = 0.09; ctx.fillStyle = this.ink; ctx.font = this.font(56, true);
     ctx.fillText(glyph, cx, cy);
     ctx.globalAlpha = 1;
-    this.text(ctx, line, cx, cy + 42, this.t.type.body, "center", this.t.alpha.soft);
-    return cy + 66;   // y for an optional CTA button under the line
+    this.text(ctx, line, cx, cy + 36, this.t.type.body, "center", this.t.alpha.soft);
+    return cy + 60;   // y for an optional CTA button under the line
   },
 
   // ---- SURFACES -----------------------------------------------------------
