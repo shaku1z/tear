@@ -289,6 +289,21 @@ const UI = {
     return w;
   },
 
+  // a BADGE: small filled pill with paper text ("✦ SPECIAL", "FELLED ×214").
+  // align "left"|"right"|"center" anchors it; returns the pill width.
+  badge(ctx, text, x, y, color, align, size) {
+    ctx.font = this.font(size || this.t.type.micro, true);
+    const w = ctx.measureText(text).width + 14, h = (size || this.t.type.micro) + 8;
+    const bx = align === "right" ? x - w : align === "center" ? x - w / 2 : x;
+    ctx.fillStyle = color || this.t.color.accent;
+    ctx.fillRect(bx, y - h + 4, w, h);
+    ctx.fillStyle = this.t.color.paper;
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    ctx.fillText(text, bx + w / 2, y);
+    ctx.textAlign = "left";
+    return w;
+  },
+
   // a section label + hairline that RESERVES its vertical space (returns the y
   // content should start at) — so labels can never collide with what follows.
   sectionLabel(ctx, label, x, y, w, hue) {

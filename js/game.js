@@ -2036,6 +2036,7 @@
     if (e.affixCount) run.score += Math.round(CONFIG.run.scorePerKill * run.wave * run.mult * 0.4 * e.affixCount);
     if (achTracks()) {   // lifetime kill feats
       PROFILE.addStat("kills", 1);
+      if (e.kind) PROFILE.addStat("kill_" + e.kind, 1);   // per-kind tally — the bestiary shows "felled ×N"
       PROFILE.maxStat("killsOneWave", run.waveKills);
       DAILY.bump("kills", 1);
       if (e.kind === "bomber") PROFILE.addStat("bomberKills", 1);
@@ -2974,8 +2975,9 @@
       ctx.fillStyle = g; ctx.fillRect(x, y + 6, w, 3); ctx.globalAlpha = 1;
     }
     ctx.textBaseline = "alphabetic";
-    // top row: rarity class (left) + category (right)
-    UI.tag(ctx, bd.label, x + 12, y + 26, bd.color, "left", t.type.micro);
+    // top row: rarity class (left, a filled badge for the prized ones) + category (right)
+    if (up.tiers || up.unique) UI.badge(ctx, bd.label, x + 12, y + 28, bd.color, "left");
+    else UI.tag(ctx, bd.label, x + 12, y + 26, bd.color, "left", t.type.micro);
     UI.tag(ctx, cat.name, x + w - 12, y + 26, cat.color, "right", t.type.micro);
     // name (shrink to fit)
     ctx.fillStyle = UI.ink; ctx.textAlign = "left";
@@ -3242,27 +3244,64 @@
     addBack();
   }
 
-  // GUIDE tab (CODEX): the keybind + trick-meter reference, verbatim from the old
-  // HOW TO PLAY screen — this is the only place these rules exist as static text.
+  // GUIDE tab (CODEX): the FIELD MANUAL — key-cap control chart on the left,
+  // and the trick meter's LIVE point values + multiplier ladder on the right
+  // (read straight from CONFIG.trick, so this page can never drift from tuning).
   function codexTabGuide() {
-    const t = UI.t, hx = W / 2 - 470;
+    const t = UI.t, lx2 = 250, lw2 = 480, rx2 = 830, rw2 = 520;
     UI.text(ctx, "movement, the blade, and the trick meter", W / 2, 186, t.type.caption, "center", t.alpha.muted);
-    const lines = [
-      "Move:  A / D      Jump:  W / Space      Drop through platform:  hold S",
-      "Dash:  Shift  (aim 8-way with WASD) — i-frames + cooldown",
-      "Blade: move the mouse — clean CUTS beat pokes; commit the swing",
-      "Throw / recall: right-click  (recall within the dashed ring)",
-      "",
-      "Slam:     hit while airborne, driving the blade DOWN  (bonus dmg)",
-      "Power Slam: slam during a fast descent for big damage ⇊",
-      "Launch:   a fast UP swing pops enemies airborne — juggle them",
-      "Updraft:  launch while rising (jump / up-dash) for big damage ⇈",
-      "Parry:    swing FAST through a shot — a perfect parry homes it back",
-      "Trick:   chain varied tricks to raise your score multiplier",
-      "",
-      "Pause: P      Release mouse: Esc",
-    ];
-    lines.forEach((l, i) => { if (l) UI.text(ctx, l, hx, 228 + i * 31, t.type.body, "left", t.alpha.soft); });
+
+    // ---- CONTROLS (key-cap chart) ----
+    let y = UI.sectionLabel(ctx, "CONTROLS", lx2, 226, lw2) + 22;
+    const row = (caps, what) => {
+      let cx2 = lx2;
+      caps.forEach((k) => { cx2 += UI.keycap(ctx, k, cx2, y) + 8; });
+      UI.text(ctx, what, lx2 + 172, y, t.type.label, "left", t.alpha.soft);
+      y += 44;
+    };
+    row(["A", "D"], "move");
+    row(["W", "SPACE"], "jump");
+    row(["S"], "hold — drop through platforms");
+    row(["SHIFT"], "dash · aim 8-way with WASD · i-frames");
+    row(["MOUSE"], "the blade — clean CUTS beat pokes");
+    row(["RMB"], "throw / recall inside the dashed ring");
+    row(["P"], "pause");
+    row(["ESC"], "release the mouse");
+
+    // ---- THE TRICK METER (live values from CONFIG.trick) ----
+    let ty = UI.sectionLabel(ctx, "THE TRICK METER", rx2, 226, rw2) + 22;
+    const pts = CONFIG.trick.pts;
+    const tricks = [
+      ["/", "CUT", pts.hit, "any clean blade hit"],
+      ["➹", "THROW HIT", pts.throwHit, "the thrown blade connects"],
+      ["↩", "DEFLECT", pts.deflect, "bat a shot away"],
+      ["↑", "LAUNCH", pts.launch, "fast UP swing pops them airborne"],
+      ["⇂", "SLAM", pts.slam, "airborne hit driving DOWN"],
+      ["⇈", "UPDRAFT", pts.updraft, "launch while rising"],
+      ["⇊", "POWER SLAM", pts.superslam, "slam during a fast descent"],
+      ["✦", "PARRY", pts.parry, "swing FAST through a shot — it homes back"],
+    ].sort((a, b) => a[2] - b[2]);
+    tricks.forEach(([g, name, p, how]) => {
+      UI.tag(ctx, g, rx2, ty, t.color.accent, "left", t.type.label);
+      UI.text(ctx, name, rx2 + 30, ty, t.type.label);
+      ctx.font = UI.font(t.type.micro, false);
+      UI.text(ctx, how, rx2 + 176, ty, t.type.micro, "left", t.alpha.muted);
+      UI.tag(ctx, "+" + p, rx2 + rw2, ty, p >= 10 ? HUE_GOLD : t.color.accent, "right", t.type.label);
+      ty += 31;
+    });
+
+    // the multiplier ladder: gauge thresholds -> rank names (variety feeds it)
+    ty = UI.sectionLabel(ctx, "THE LADDER", rx2, ty + 16, rw2) + 20;
+    const tiers = CONFIG.trick.tiers.filter((x) => x.name);
+    const maxAt = tiers[tiers.length - 1].at;
+    tiers.forEach((tier) => {
+      ctx.globalAlpha = 0.16; ctx.fillStyle = UI.ink; ctx.fillRect(rx2, ty - 10, 220, 8); ctx.globalAlpha = 1;
+      ctx.fillStyle = t.color.accent; ctx.fillRect(rx2, ty - 10, 220 * (tier.at / maxAt), 8);
+      UI.text(ctx, tier.name, rx2 + 236, ty, t.type.label);
+      UI.tag(ctx, "×" + tier.mult, rx2 + rw2, ty, tier.mult >= 4 ? HUE_GOLD : t.color.muted, "right", t.type.label);
+      ty += 27;
+    });
+    UI.text(ctx, "vary your tricks — a different trick than the last scores ×" + CONFIG.trick.variety, rx2, ty + 10, t.type.micro, "left", t.alpha.muted);
   }
 
   // ---- THE PROFILE: who you are — identity + sign-in, personal bests, lifetime stats.
@@ -4184,9 +4223,17 @@
     ctx.globalAlpha = 1; return yy;
   }
   function drawBestiaryEntry(row, x, y, w, h) {
-    const t = UI.t, inst = row.inst, b = row.b, ac = row.boss ? t.color.danger : t.color.accent, rx = x + w;
+    const t = UI.t, inst = row.inst, b = row.b, rx = x + w;
+    // spine + accents wear the enemy's OWN kind colour (bosses stay danger-red)
+    const ac = (inst && CONFIG.colors[inst.kind]) || (row.boss ? t.color.danger : t.color.accent);
     UI.panel(ctx, x, y, w, h);
-    ctx.fillStyle = ac; ctx.fillRect(x, y, 6, h);
+    UI.spine(ctx, x, y, h, ac, 6);
+    // your history with this foe: boss pantheon FELLED seal / per-kind tally
+    if (row.boss && inst && inst.bossId && PROFILE.stat("kill" + inst.bossId.charAt(0).toUpperCase() + inst.bossId.slice(1))) {
+      UI.badge(ctx, "☠ FELLED", x + w - 14, y + h - 14, "#2f9e6b", "right");
+    } else if (!row.boss && inst && inst.kind && PROFILE.stat("kill_" + inst.kind)) {
+      UI.badge(ctx, "FELLED ×" + PROFILE.stat("kill_" + inst.kind), x + w - 14, y + h - 14, ac, "right");
+    }
     // preview
     const bw = 132, bx = x + 18, by = y + (h - 132) / 2;
     ctx.strokeStyle = t.color.disabled; ctx.lineWidth = 1.5; ctx.strokeRect(bx, by, bw, 132);
