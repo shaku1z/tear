@@ -3454,6 +3454,9 @@
   }
 
   // ---- the REPLAYS tab (inside the Leaderboards hub): local Vault + global feed ----
+  // NOTE: future social/feed work (reactions, view counts, broadcast, filtering the
+  // published feed) belongs HERE, under the Leaderboards hub — not a new rail button.
+  // The menu is capped at six rails on purpose; grow the hubs, not the rail.
   function lbTabReplays() {
     const t = UI.t;
     UI.text(ctx, "every run is recorded — pin the keepers, share the best", W / 2, 202, t.type.caption, "center", t.alpha.muted);
