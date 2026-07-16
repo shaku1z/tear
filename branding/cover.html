@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Tear — cover maker</title>
+<style>
+  html,body{margin:0;background:#222;color:#ccc;font-family:'Courier New',monospace}
+  #stage{display:flex;flex-wrap:wrap;gap:18px;padding:18px}
+  figure{margin:0}
+  canvas{display:block;background:#000;box-shadow:0 6px 30px rgba(0,0,0,.6);max-width:46vw;height:auto}
+  figcaption{font-size:12px;padding:6px 2px;color:#9a9a9a}
+  #log{padding:0 18px 18px;font-size:12px;color:#7fd}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="log"></div>
+<script>
+// ---- Tear palette (mirrors js/config.js colors) ----
+const C = {
+  cyan:"#13c4d6", scarf:"#d8324a", charger:"#e23b3b", ranged:"#2f6df0",
+  flyer:"#8b3bd6", bomber:"#ef8a17", paperInk:"#f4f2ea"
+};
+const FONT = (px,bold)=> (bold?"bold ":"")+px+"px 'Courier New', monospace";
+
+// deterministic RNG so every render is identical
+function rng(seed){ let s=seed>>>0; return ()=>{ s=(s*1664525+1013904223)>>>0; return s/4294967296; }; }
+
+// ---------- building blocks ----------
+function background(ctx,w,h,foc){
+  // deep cinematic gradient (the game's "void" dark biome, dialed moody)
+  const g=ctx.createLinearGradient(0,0,w*0.4,h);
+  g.addColorStop(0,"#0c0e15"); g.addColorStop(0.55,"#0a0b11"); g.addColorStop(1,"#05060a");
+  ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+  // radial cyan glow behind the action focus
+  const rg=ctx.createRadialGradient(foc.x,foc.y,10,foc.x,foc.y,Math.max(w,h)*0.6);
+  rg.addColorStop(0,"rgba(19,196,214,0.22)"); rg.addColorStop(0.4,"rgba(19,196,214,0.08)"); rg.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=rg; ctx.fillRect(0,0,w,h);
+  // faint drifting diagonal hatch (from UI.menuBackdrop)
+  ctx.save();
+  const span=Math.max(w,h)*1.6, n=7;
+  for(let i=0;i<n;i++){
+    const x=(i*(span/n))%span - span*0.15, accent=i%3===0;
+    ctx.globalAlpha=accent?0.07:0.045;
+    ctx.strokeStyle=accent?C.cyan:"#aeb6c8"; ctx.lineWidth=accent?2:1;
+    ctx.beginPath(); ctx.moveTo(x+span*0.18,-40); ctx.lineTo(x-span*0.34,h+40); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function vignette(ctx,w,h){
+  const g=ctx.createRadialGradient(w/2,h*0.46,Math.min(w,h)*0.25,w/2,h*0.5,Math.max(w,h)*0.72);
+  g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(1,"rgba(0,0,0,0.55)");
+  ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+  // subtle film grain
+  const r=rng(99); ctx.globalAlpha=0.04;
+  for(let i=0;i<w*h/900;i++){ const x=r()*w,y=r()*h,s=r()*1.5; ctx.fillStyle=r()>0.5?"#fff":"#000"; ctx.fillRect(x,y,s,s); }
+  ctx.globalAlpha=1;
+}
+
+// the signature "tear" — a sweeping cyan slash arc with a white-hot core
+function slash(ctx, x1,y1, x2,y2, thick){
+  const mx=(x1+x2)/2, my=(y1+y2)/2;
+  const nx=-(y2-y1), ny=(x2-x1), nl=Math.hypot(nx,ny);
+  const bow=Math.min(thick*5, 120);
+  const cx=mx+nx/nl*bow, cy=my+ny/nl*bow;   // bow the slash outward
+  const layers=[ [thick*2.4,"rgba(19,196,214,0.16)"],[thick*1.4,"rgba(19,196,214,0.38)"],[thick,"rgba(120,240,250,0.9)"],[thick*0.4,"#ffffff"] ];
+  ctx.save(); ctx.lineCap="round";
+  ctx.shadowColor=C.cyan;
+  for(const [lw,col] of layers){
+    ctx.shadowBlur=lw*1.6; ctx.strokeStyle=col; ctx.lineWidth=lw;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.quadraticCurveTo(cx,cy,x2,y2); ctx.stroke();
+  }
+  // a couple of trailing wisps
+  ctx.shadowBlur=0; ctx.globalAlpha=0.5; ctx.strokeStyle="rgba(19,196,214,0.5)"; ctx.lineWidth=thick*0.25;
+  for(let k=1;k<=2;k++){ const o=k*thick*0.9;
+    ctx.beginPath(); ctx.moveTo(x1,y1+o); ctx.quadraticCurveTo(cx,cy+o,x2,y2+o); ctx.stroke(); }
+  ctx.restore();
+  return {cx,cy};
+}
+
+// spark burst at the cut point
+function sparks(ctx,x,y,n,scale,seed){
+  const r=rng(seed); ctx.save(); ctx.shadowColor=C.cyan; ctx.shadowBlur=10;
+  for(let i=0;i<n;i++){
+    const a=r()*Math.PI*2, len=(8+r()*34)*scale, w=(1+r()*2.2)*scale;
+    ctx.strokeStyle=r()>0.4?"#bfffff":C.cyan; ctx.lineWidth=w; ctx.globalAlpha=0.5+r()*0.5;
+    ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+Math.cos(a)*len, y+Math.sin(a)*len); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// the player: dark body, cyan visor, flowing red scarf, leaning into a dash
+function player(ctx,x,y,s,dir){
+  ctx.save(); ctx.translate(x,y); ctx.scale(dir,1); ctx.rotate(-0.18);
+  // dash streak behind
+  ctx.save(); ctx.globalAlpha=0.5; ctx.shadowColor=C.cyan; ctx.shadowBlur=20*s;
+  const sg=ctx.createLinearGradient(-260*s,0,0,0); sg.addColorStop(0,"rgba(19,196,214,0)"); sg.addColorStop(1,"rgba(19,196,214,0.55)");
+  ctx.fillStyle=sg; ctx.fillRect(-260*s,-10*s,260*s,20*s); ctx.restore();
+  // scarf — tapering red ribbon trailing back
+  ctx.fillStyle=C.scarf; ctx.beginPath();
+  ctx.moveTo(-6*s,-14*s);
+  ctx.quadraticCurveTo(-90*s,-40*s,-150*s,-6*s);
+  ctx.quadraticCurveTo(-95*s,-12*s,-70*s,4*s);
+  ctx.quadraticCurveTo(-120*s,18*s,-150*s,40*s);
+  ctx.quadraticCurveTo(-70*s,20*s,-4*s,8*s);
+  ctx.closePath(); ctx.fill();
+  // body (rounded dark block) with a faint cyan rim light
+  ctx.shadowColor=C.cyan; ctx.shadowBlur=18*s; ctx.fillStyle="#0d0f16";
+  const bw=30*s,bh=44*s; roundRect(ctx,-bw/2,-bh/2,bw,bh,7*s); ctx.fill();
+  ctx.shadowBlur=0; ctx.lineWidth=2*s; ctx.strokeStyle="rgba(19,196,214,0.5)"; roundRect(ctx,-bw/2,-bh/2,bw,bh,7*s); ctx.stroke();
+  // visor
+  ctx.shadowColor=C.cyan; ctx.shadowBlur=12*s; ctx.fillStyle=C.cyan; ctx.fillRect(0,-bh/2+12*s,10*s,6*s);
+  ctx.restore();
+}
+
+// a geometric enemy, mid-shatter into shards along the cut
+function enemy(ctx,x,y,s,color,shape,seed){
+  const r=rng(seed);
+  ctx.save(); ctx.translate(x,y);
+  ctx.shadowColor=color; ctx.shadowBlur=14*s; ctx.fillStyle=color; ctx.strokeStyle="rgba(0,0,0,0.35)"; ctx.lineWidth=2*s;
+  const sz=26*s;
+  // two halves offset by the cut
+  for(const side of [-1,1]){
+    ctx.save(); ctx.translate(side*5*s, side*4*s);
+    ctx.beginPath();
+    if(shape==="square"){ ctx.rect(-sz/2,-sz/2,sz,sz); }
+    else if(shape==="tri"){ ctx.moveTo(0,-sz/2); ctx.lineTo(sz/2,sz/2); ctx.lineTo(-sz/2,sz/2); ctx.closePath(); }
+    else { ctx.moveTo(0,-sz/2); ctx.lineTo(sz/2,0); ctx.lineTo(0,sz/2); ctx.lineTo(-sz/2,0); ctx.closePath(); }
+    // clip to a half so it reads as cut
+    ctx.save(); ctx.beginPath(); if(side<0) ctx.rect(-sz,-sz,sz*2,sz); else ctx.rect(-sz,0,sz*2,sz); ctx.clip();
+    if(shape==="square"){ ctx.beginPath(); ctx.rect(-sz/2,-sz/2,sz,sz); }
+    else if(shape==="tri"){ ctx.beginPath(); ctx.moveTo(0,-sz/2); ctx.lineTo(sz/2,sz/2); ctx.lineTo(-sz/2,sz/2); ctx.closePath(); }
+    else { ctx.beginPath(); ctx.moveTo(0,-sz/2); ctx.lineTo(sz/2,0); ctx.lineTo(0,sz/2); ctx.lineTo(-sz/2,0); ctx.closePath(); }
+    ctx.fill(); ctx.stroke(); ctx.restore();
+    ctx.restore();
+  }
+  // flung shards
+  ctx.shadowBlur=0;
+  for(let i=0;i<6;i++){ const a=r()*Math.PI*2, d=(sz*0.6+r()*sz*1.4); const px=Math.cos(a)*d, py=Math.sin(a)*d, ss=(2+r()*4)*s;
+    ctx.fillStyle=color; ctx.globalAlpha=0.5+r()*0.5; ctx.beginPath(); ctx.rect(px,py,ss,ss); ctx.fill(); }
+  ctx.restore();
+}
+
+function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+// the wordmark — bold monospace "TEAR" with letter spacing + a cyan slash through it
+function wordmark(ctx,cx,cy,size){
+  const letters=["T","E","A","R"], gap=size*0.74;
+  const totalW=gap*(letters.length-1);
+  ctx.save(); ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.font=FONT(size,true);
+  // soft dark plate for legibility
+  // letters
+  ctx.fillStyle="#f4f2ea"; ctx.shadowColor="rgba(0,0,0,0.6)"; ctx.shadowBlur=size*0.12; ctx.shadowOffsetY=size*0.04;
+  letters.forEach((ch,i)=>{ ctx.fillText(ch, cx-totalW/2+i*gap, cy); });
+  ctx.shadowBlur=0; ctx.shadowOffsetY=0;
+  // the signature cyan slash sweeping through the wordmark
+  const x1=cx-totalW/2-size*0.55, y1=cy+size*0.42, x2=cx+totalW/2+size*0.55, y2=cy-size*0.40;
+  slash(ctx, x1,y1, x2,y2, Math.max(3,size*0.05));
+  // re-stroke letter edges with a faint cyan rim so the slash feels in-front mid, letters legible
+  ctx.restore();
+  return {x1,y1,x2,y2};
+}
+
+function tagline(ctx,cx,y,size){
+  ctx.save(); ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.font=FONT(size,true);
+  ctx.fillStyle="rgba(220,224,232,0.82)";
+  // letter-spaced
+  const txt="MOMENTUM · BLADE · SURVIVAL"; const ls=size*0.28;
+  let total=0; for(const ch of txt) total+=ctx.measureText(ch).width+ls; total-=ls;
+  let x=cx-total/2;
+  for(const ch of txt){ const cw=ctx.measureText(ch).width; ctx.fillText(ch,x+cw/2,y); x+=cw+ls; }
+  ctx.restore();
+}
+
+// ---------- the three layouts ----------
+function render(canvas, layout){
+  const w=canvas.width, h=canvas.height, ctx=canvas.getContext("2d");
+  ctx.clearRect(0,0,w,h);
+
+  if(layout==="landscape"){
+    const foc={x:w*0.62,y:h*0.54};
+    background(ctx,w,h,foc);
+    // big sweeping slash across the lower-middle, leading from the player into the enemies
+    slash(ctx, w*0.16,h*0.84, w*0.90,h*0.38, 16);
+    sparks(ctx, w*0.74,h*0.46, 48, 1.9, 7);
+    enemy(ctx, w*0.82,h*0.42, 2.0, C.charger,"square",11);
+    enemy(ctx, w*0.91,h*0.58, 1.6, C.ranged,"tri",12);
+    enemy(ctx, w*0.73,h*0.66, 1.4, C.flyer,"diamond",13);
+    player(ctx, w*0.30,h*0.66, 2.7, 1);
+    wordmark(ctx, w*0.5, h*0.27, h*0.165);
+    tagline(ctx, w*0.5, h*0.405, h*0.032);
+    vignette(ctx,w,h);
+  }
+  else if(layout==="portrait"){
+    const foc={x:w*0.52,y:h*0.64};
+    background(ctx,w,h,foc);
+    slash(ctx, w*0.08,h*0.86, w*0.94,h*0.50, 13);
+    sparks(ctx, w*0.62,h*0.60, 36, 1.5, 21);
+    enemy(ctx, w*0.74,h*0.55, 1.5, C.charger,"square",31);
+    enemy(ctx, w*0.82,h*0.70, 1.2, C.ranged,"tri",32);
+    enemy(ctx, w*0.30,h*0.78, 1.1, C.flyer,"diamond",33);
+    player(ctx, w*0.36,h*0.66, 2.2, 1);
+    wordmark(ctx, w*0.5, h*0.24, w*0.205);
+    tagline(ctx, w*0.5, h*0.335, w*0.034);
+    vignette(ctx,w,h);
+  }
+  else { // square — wordmark hero up top, action band kept BELOW so the text stays clear
+    const foc={x:w*0.54,y:h*0.72};
+    background(ctx,w,h,foc);
+    // action slash sweeps the lower third only — well clear of the wordmark + tagline
+    slash(ctx, w*0.05,h*0.87, w*0.95,h*0.61, 12);
+    sparks(ctx, w*0.64,h*0.69, 34, 1.4, 41);
+    enemy(ctx, w*0.82,h*0.61, 1.3, C.charger,"square",51);
+    enemy(ctx, w*0.87,h*0.78, 1.15, C.ranged,"tri",52);
+    enemy(ctx, w*0.28,h*0.86, 1.0, C.flyer,"diamond",53);
+    player(ctx, w*0.25,h*0.75, 1.9, 1);
+    wordmark(ctx, w*0.5, h*0.39, w*0.205);
+    tagline(ctx, w*0.5, h*0.52, w*0.033);
+    vignette(ctx,w,h);
+  }
+}
+
+// ---------- build, show, and save ----------
+const COVERS=[
+  {name:"cover_landscape_1920x1080.png", w:1920, h:1080, layout:"landscape"},
+  {name:"cover_portrait_800x1200.png",   w:800,  h:1200, layout:"portrait"},
+  {name:"cover_square_800x800.png",      w:800,  h:800,  layout:"square"},
+];
+const made=[];
+for(const c of COVERS){
+  const cv=document.createElement("canvas"); cv.width=c.w; cv.height=c.h;
+  render(cv,c.layout);
+  const fig=document.createElement("figure");
+  fig.innerHTML=`<figcaption>${c.name} — ${c.w}×${c.h}</figcaption>`;
+  fig.prepend(cv); document.getElementById("stage").appendChild(fig);
+  made.push({c,cv});
+}
+window.__covers=made;
+// expose a saver invoked from the test harness
+window.saveAll=async function(){
+  const out=[];
+  for(const {c,cv} of window.__covers){
+    const dataURL=cv.toDataURL("image/png");
+    const r=await fetch("/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:c.name,dataURL})});
+    out.push(await r.json());
+  }
+  document.getElementById("log").textContent=JSON.stringify(out);
+  return out;
+};
+// auto-save on load (dev tool) — runs during page load so it isn't lost to harness resets
+window.addEventListener("load", () => { window.saveAll().catch(e => { document.getElementById("log").textContent = "save error: " + e; }); });
+</script>
+</body>
+</html>
