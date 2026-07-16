@@ -93,8 +93,27 @@ const UI = {
     return ty + (subtitle ? 52 : 36);
   },
 
-  pointIn(b, x, y) {
-    return x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
+  pointIn(b, x, y, pad) {
+    const p = pad || 0;
+    return x >= b.x - p && x <= b.x + b.w + p && y >= b.y - p && y <= b.y + b.h + p;
+  },
+
+  // ---- DENSITY (responsive profile) ----------------------------------------
+  // "touch" bumps the type scale + interactive metrics so menus stay readable
+  // and tappable on small screens; "desktop" restores the design defaults.
+  // Token-driven screens inherit automatically; layouts keep their geometry.
+  _baseTokens: null,
+  setDensity(mode) {
+    if (!this._baseTokens) this._baseTokens = { type: Object.assign({}, this.t.type), metric: Object.assign({}, this.t.metric) };
+    const b = this._baseTokens;
+    if (mode === "touch") {
+      const bump = { micro: 3, caption: 3, label: 3, body: 3, lead: 3, title: 2, h2: 2, h1: 2 };
+      for (const k in b.type) this.t.type[k] = b.type[k] + (bump[k] || 0);
+      Object.assign(this.t.metric, { btnH: 60, btnW: 320, chipH: 38, chipW: 116 });
+    } else {
+      Object.assign(this.t.type, b.type);
+      Object.assign(this.t.metric, b.metric);
+    }
   },
 
   // ---- BUTTON -------------------------------------------------------------

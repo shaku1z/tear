@@ -13,6 +13,7 @@
   // in fullscreen). The 1600x900 arena is scaled to fit, and the leftover area on
   // non-16:9 displays becomes OVERSCAN — the scene (sky, backdrop, floor, dims) bleeds
   // into it, so there are no letterbox bars. Gameplay space stays identical everywhere.
+  let CSS_PER_LOG = 1;   // CSS px per logical px — how physically small the UI renders
   function resizeCanvas() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
     const cw = canvas.clientWidth || W, ch = canvas.clientHeight || H;
@@ -21,6 +22,7 @@
     const s = Math.min(bw / W, bh / H);
     OVERSCAN.x = Math.max(0, (bw / s - W) / 2);
     OVERSCAN.y = Math.max(0, (bh / s - H) / 2);
+    CSS_PER_LOG = s / dpr;
     // hardware safe-area (notches / dynamic islands) -> logical px, so HUD anchors and
     // touch controls never hide under the phone's own furniture
     const probe = document.getElementById("safeprobe");
@@ -229,6 +231,8 @@
   let focus = -1, lastUiState = null;   // keyboard focus for menus/draft
   let listScroll = 0;                   // scroll offset for scrollable screens
   let uiT = 0, enterT = 0, lastUiDt = 1 / 60, eIn = 1, winT = 0;   // menu ambient clock, time-since-screen-opened, last frame dt, entrance ease, ending cinematic clock
+  let uiZoom = 1;   // overlay zoom for small touch screens (draft/pause/gameover readability)
+  let uiDensity = "desktop";   // current UI density profile (touch = bigger type + targets)
   let cgWasPlaying = false, continueT = 0;   // CrazyGames gameplay bracket + the rewarded-revive countdown
   let hudHpLag = 1, hudMultPrev = 1, hudMultPop = 0;   // HUD juice: health damage-chip + combo pop
   const hoverAnim = {};                 // per-button hover progress (key -> 0..1), for hover juice
@@ -2132,6 +2136,11 @@
 
     Input.uiMode = (state !== "playing");   // touch: menus take taps + drag-scroll, play takes joystick + aim
 
+    // UI density: small touch screens get bigger type + fatter targets everywhere
+    // the design system's tokens reach (menus can't zoom — see the render transform)
+    const wantDensity = (Input.touchActive() && CSS_PER_LOG < 0.6) ? "touch" : "desktop";
+    if (wantDensity !== uiDensity) { uiDensity = wantDensity; UI.setDensity(wantDensity); }
+
     // biome music: menus follow the attract biome; runs follow the current stage, with
     // the intensified BOSS arrangement while a boss wave is live (reverts on its death)
     if (typeof SFX !== "undefined" && SFX.setMusicTheme) {
@@ -2237,6 +2246,20 @@
     resizeCanvas();
     const vs = canvas.width / (W + OVERSCAN.x * 2);
     ctx.setTransform(vs, 0, 0, vs, OVERSCAN.x * vs, OVERSCAN.y * vs);
+    // OVERLAY ZOOM (small touch screens): draft / tier-up / pause / gameover are
+    // centered layouts, so on a phone we zoom the whole frame around the view
+    // center to make their cards readable. Menus can't zoom (they span the full
+    // 900 design height); they get the touch density profile instead.
+    const zoomable = state === "draft" || state === "tierup" || state === "paused" ||
+      state === "confirmquit" || state === "gameover" || state === "win" || state === "continue";
+    const zTarget = (zoomable && Input.touchActive() && CSS_PER_LOG < 0.55)
+      ? clamp(0.55 / CSS_PER_LOG, 1, 1.45) : 1;
+    uiZoom += (zTarget - uiZoom) * clamp(10 * lastUiDt, 0, 1);
+    if (Math.abs(uiZoom - zTarget) < 0.004) uiZoom = zTarget;
+    if (uiZoom > 1.001) {
+      ctx.translate(W / 2, H / 2); ctx.scale(uiZoom, uiZoom); ctx.translate(-W / 2, -H / 2);
+    }
+    Input.uiZoom = uiZoom;   // input maps taps through the same zoom (inverse)
     const SR = screenRect();
     ctx.clearRect(SR.x, SR.y, SR.w, SR.h);
     const playLike = state === "playing" || state === "draft" || state === "tierup" || state === "paused" || state === "gameover" || state === "win" || state === "confirmquit" || state === "continue" || state === "pgmenu" || state === "pglab";
@@ -4856,7 +4879,8 @@
     uiButtons.forEach((b, i) => { if (b.enabled !== false) enabled.push(i); });
     if (!enabled.length) { Input.takeClick(); return; }
 
-    // mouse hover moves focus
+    // mouse hover moves focus; touch gets a hit-slop so fat thumbs land
+    const hitPad = Input.touchActive() ? 10 : 0;
     for (const i of enabled) if (UI.pointIn(uiButtons[i], Input.mouseX, Input.mouseY)) focus = i;
 
     let pos = enabled.indexOf(focus);
@@ -4876,7 +4900,7 @@
     const c = Input.takeClick();
     if (c) for (let i = 0; i < uiButtons.length; i++) {
       const b = uiButtons[i];
-      if (b.enabled === false || !UI.pointIn(b, c.x, c.y)) continue;
+      if (b.enabled === false || !UI.pointIn(b, c.x, c.y, hitPad)) continue;
       // touch two-step: cards marked `confirm` need a second tap (there is no hover on
       // glass — the first tap highlights the card so it can actually be read)
       if (b.confirm && Input.touchActive() && focus !== i) { focus = i; SFX.ui(); break; }
