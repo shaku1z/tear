@@ -342,13 +342,65 @@ const UI = {
     ctx.strokeRect(x, y, w, h);
   },
 
-  // an interactive card: panel + hover emphasis (inner wash + thicker border)
-  card(ctx, x, y, w, h, hovered) {
-    this.panel(ctx, x, y, w, h);
+  // an interactive card: panel + hover emphasis (inner wash + thicker border).
+  // opts: { dashed } = an "unfilled socket" (greyed paper + dashed hairline, for
+  // locked content); { edge } = coloured identity border (e.g. rarity);
+  // { shimmer } = 0..1 phase for a slow highlight sweep along the top edge.
+  card(ctx, x, y, w, h, hovered, opts) {
+    if (opts && opts.dashed) {
+      ctx.globalAlpha = 0.45; ctx.fillStyle = this.t.color.paper; ctx.fillRect(x, y, w, h);
+      ctx.globalAlpha = 0.04; ctx.fillStyle = this.ink; ctx.fillRect(x, y, w, h); ctx.globalAlpha = 1;
+      ctx.setLineDash([5, 4]); ctx.strokeStyle = "rgba(90,92,108,0.5)"; ctx.lineWidth = 1.5;
+      ctx.strokeRect(x, y, w, h); ctx.setLineDash([]);
+    } else {
+      this.panel(ctx, x, y, w, h);
+      if (opts && opts.edge) { ctx.lineWidth = 2; ctx.strokeStyle = opts.edge; ctx.strokeRect(x, y, w, h); }
+    }
+    if (opts && opts.shimmer != null) {   // a bright segment sweeping the top edge
+      const sw = w * 0.22, sx = x + (w + sw) * opts.shimmer - sw;
+      const g = ctx.createLinearGradient(sx, 0, sx + sw, 0);
+      g.addColorStop(0, "rgba(255,240,190,0)"); g.addColorStop(0.5, "rgba(255,240,190,0.9)"); g.addColorStop(1, "rgba(255,240,190,0)");
+      ctx.save(); ctx.beginPath(); ctx.rect(x, y - 1, w, 4); ctx.clip();
+      ctx.fillStyle = g; ctx.fillRect(x, y - 1, w, 4); ctx.restore();
+    }
     if (hovered) {
       ctx.globalAlpha = 0.05; ctx.fillStyle = this.ink; ctx.fillRect(x, y, w, h); ctx.globalAlpha = 1;
       ctx.lineWidth = 3; ctx.strokeStyle = this.ink; ctx.strokeRect(x, y, w, h);
     }
+  },
+
+  // a SEAL: filled diamond badge with a glyph (rarity/category marks). muted =
+  // the locked look (outline + grey glyph).
+  seal(ctx, cx, cy, r, color, glyph, muted) {
+    ctx.save();
+    ctx.translate(cx, cy); ctx.rotate(Math.PI / 4);
+    if (muted) { ctx.strokeStyle = "rgba(140,142,156,0.5)"; ctx.lineWidth = 1.5; ctx.strokeRect(-r, -r, r * 2, r * 2); }
+    else { ctx.fillStyle = color; ctx.fillRect(-r, -r, r * 2, r * 2); }
+    ctx.restore();
+    ctx.fillStyle = muted ? "rgba(140,142,156,0.55)" : this.t.color.paper;
+    ctx.font = this.font(Math.round(r * 0.95), true);
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(glyph, cx, cy + 1);
+    ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+  },
+
+  // a vertical identity bar down a card's left edge (rarity ribbon, mode spine)
+  spine(ctx, x, y, h, color, w) {
+    ctx.fillStyle = color; ctx.fillRect(x, y, w || 4, h);
+  },
+
+  // a rotated ink stamp ("✓ DONE") — the ledger's approval mark
+  stamp(ctx, text, x, y, color) {
+    ctx.save();
+    ctx.translate(x, y); ctx.rotate(-0.10);
+    ctx.font = this.font(this.t.type.body, true);
+    const w = ctx.measureText(text).width + 20;
+    ctx.globalAlpha = 0.9; ctx.strokeStyle = color; ctx.lineWidth = 2;
+    ctx.strokeRect(-w / 2, -15, w, 30);
+    ctx.fillStyle = color; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(text, 0, 1);
+    ctx.restore();
+    ctx.globalAlpha = 1; ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
   },
 
   // a coloured accent strip along the top of a surface (card category cue)
