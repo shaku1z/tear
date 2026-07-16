@@ -2874,15 +2874,9 @@
 
     UI.ink = "#f1eff9";   // light content over the dark sidebar
 
-    // ---- WORDMARK with a chromatic echo (cyan/magenta split drifting behind the glyphs) ----
+    // ---- WORDMARK: the plain "T E A R" look, just re-anchored to the shared rail axis ----
     const wmY = 150;
-    ctx.save();
-    ctx.font = UI.font(t.type.wordmark, true); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-    const drift = Math.sin(uiT * 0.8) * 3;
-    ctx.globalAlpha = 0.32; ctx.fillStyle = "#39f0ff"; ctx.fillText("T E A R", railX - 3 - drift, wmY);
-    ctx.fillStyle = "#ff4d8d"; ctx.fillText("T E A R", railX + 3 + drift, wmY);
-    ctx.globalAlpha = 1; ctx.fillStyle = "#f1eff9"; ctx.fillText("T E A R", railX, wmY);
-    ctx.restore();
+    UI.text(ctx, "T E A R", railX, wmY, t.type.wordmark, "left");
     const cyc = (uiT % 4.2) / 0.5;                 // animated cyan slash sweeping the wordmark
     if (cyc < 1) {
       const sx = railX + cyc * 380, k = Math.sin(cyc * Math.PI);
