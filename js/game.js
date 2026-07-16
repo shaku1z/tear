@@ -3066,22 +3066,63 @@
     if (maxOff > 0) UI.scrollHint(ctx, W / 2, top + visRows * stride + 2, off > 0, off < maxOff);
   }
 
+  // THE ARMORY LEDGER — the shop as four titled sections of glyph cards, a giant
+  // gold balance, and a running ledger line. Buy feedback: the shown balance
+  // ticks toward the real one; the bought card flashes gold.
+  const SHOP_CATS = [["vit", "VITALITY"], ["blade", "BLADE"], ["tempo", "TEMPO"], ["fortune", "FORTUNE"]];
+  let shopCoinShow = null, shopFlash = null;
   function renderShop() {
-    const t = UI.t, sfx = W / 2 - 560, srx = W / 2 + 560, gap = 40, colW = (srx - sfx - gap) / 2;
-    UI.header(ctx, "SHOP", "permanent upgrades — applied at the start of every run", eIn, SCREEN_HUES.shop);
-    UI.tag(ctx, "◆ " + META.coins() + " COINS", W / 2, 162, t.color.accent, "center", t.type.body);
-    const top = 214, rowH = 78, bw = 112;
-    SHOP.forEach((it, i) => {
-      const cx = sfx + (i % 2) * (colW + gap), y = top + Math.floor(i / 2) * rowH, rxc = cx + colW;
-      const lv = META.level(it.id), maxed = lv >= it.maxLevel;
-      UI.text(ctx, it.name, cx, y, t.type.lead);
-      UI.text(ctx, it.desc, cx, y + 22, t.type.caption, "left", t.alpha.soft);
-      UI.pips(ctx, rxc - bw - 14, y - 4, it.maxLevel, lv, t.color.accent);
-      uiButtons.push({ x: rxc - bw, y: y - 24, w: bw, h: 44,
-        label: maxed ? "MAX" : META.cost(it) + "c",
-        enabled: !maxed && META.canBuy(it),
-        action: () => { if (META.buy(it)) { SFX.ui(); PROFILE.addStat("shopBuys", 1); PROFILE.maxStat("shopMaxed", SHOP.filter((s) => META.level(s.id) >= s.maxLevel).length); achCheck(); } } });
-      UI.divider(ctx, cx, y + 42, colW, 0.08);
+    const t = UI.t, gold = SCREEN_HUES.shop;
+    UI.header(ctx, "SHOP", "permanent upgrades — applied at the start of every run", eIn, gold);
+
+    // giant editorial balance (ticks toward the truth after a purchase)
+    const real = META.coins();
+    shopCoinShow = shopCoinShow == null ? real : shopCoinShow + (real - shopCoinShow) * 0.18;
+    if (Math.abs(shopCoinShow - real) < 0.6) shopCoinShow = real;
+    ctx.save(); ctx.textAlign = "right"; ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = gold; ctx.font = UI.font(t.type.h1, true);
+    ctx.fillText("◆ " + Math.round(shopCoinShow).toLocaleString(), 1380, 108);
+    ctx.restore();
+    UI.tag(ctx, "COINS", 1380, 130, t.color.muted, "right", t.type.micro);
+    // the ledger line: what you own + what the blade has earned you, lifetime
+    const owned = SHOP.reduce((n, s) => n + META.level(s.id), 0);
+    const cap = SHOP.reduce((n, s) => n + s.maxLevel, 0);
+    UI.tag(ctx, owned + " / " + cap + " LEVELS OWNED   ·   LIFETIME EARNED ◆ " + (META.data.lifetimeEarned || 0).toLocaleString(), 240, 130, t.color.muted, "left", t.type.micro);
+
+    // four sections in two columns; rows are glyph cards with a 3-state price button
+    const colX = [240, 830], colW2 = 550, rowH2 = 74, cardH = 62;
+    const colFill = [[], []];
+    SHOP_CATS.forEach(([cat], ci) => colFill[ci < 2 ? 0 : 1].push([cat, SHOP_CATS.find((c) => c[0] === cat)[1]]));
+    colFill.forEach((sections, ci) => {
+      let y = 176;
+      sections.forEach(([cat, label]) => {
+        y = UI.sectionLabel(ctx, label, colX[ci], y, colW2, gold) + 6;
+        SHOP.filter((s) => s.cat === cat).forEach((it) => {
+          const lv = META.level(it.id), maxed = lv >= it.maxLevel, afford = META.canBuy(it);
+          UI.card(ctx, colX[ci], y, colW2, cardH, false);
+          if (shopFlash && shopFlash.id === it.id && uiT - shopFlash.t < 0.45) {   // gold buy-flash
+            ctx.globalAlpha = 0.30 * (1 - (uiT - shopFlash.t) / 0.45); ctx.fillStyle = gold;
+            ctx.fillRect(colX[ci], y, colW2, cardH); ctx.globalAlpha = 1;
+          }
+          // glyph box, warmed once you own a level
+          ctx.globalAlpha = lv ? 0.16 : 0.06; ctx.fillStyle = lv ? gold : UI.ink;
+          ctx.fillRect(colX[ci] + 10, y + 9, 44, 44); ctx.globalAlpha = 1;
+          UI.tag(ctx, it.glyph || "◆", colX[ci] + 32, y + 40, lv ? gold : t.color.muted, "center", 22);
+          // name + level + desc / owned effect
+          const tx = colX[ci] + 66;
+          UI.text(ctx, it.name, tx, y + 24, t.type.body);
+          UI.tag(ctx, "LV " + lv + "/" + it.maxLevel, tx + ctx.measureText(it.name).width + 14, y + 24, lv ? gold : t.color.muted, "left", t.type.micro);
+          UI.text(ctx, lv && it.now ? "now  " + it.now(lv) + "   ·   " + it.desc : it.desc, tx, y + 45, t.type.micro, "left", t.alpha.soft);
+          // pips + the price button (gold when affordable / ghost when not / ink MAX)
+          UI.pips(ctx, colX[ci] + colW2 - 118, y + 31, it.maxLevel, lv, gold);
+          uiButtons.push({ x: colX[ci] + colW2 - 104, y: y + 11, w: 94, h: 40, size: 13,
+            label: maxed ? "MAX" : META.cost(it).toLocaleString() + "c",
+            sel: maxed, enabled: !maxed && afford, accent: !maxed && afford ? gold : undefined,
+            action: () => { if (META.buy(it)) { SFX.ui(); shopFlash = { id: it.id, t: uiT }; PROFILE.addStat("shopBuys", 1); PROFILE.maxStat("shopMaxed", SHOP.filter((s) => META.level(s.id) >= s.maxLevel).length); achCheck(); } } });
+          y += rowH2;
+        });
+        y += 12;
+      });
     });
     addBack();
   }
