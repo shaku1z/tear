@@ -233,9 +233,10 @@
   let hudHpLag = 1, hudMultPrev = 1, hudMultPop = 0;   // HUD juice: health damage-chip + combo pop
   const hoverAnim = {};                 // per-button hover progress (key -> 0..1), for hover juice
   const ez = (t) => { t = t < 0 ? 0 : t > 1 ? 1 : t; return 1 - (1 - t) * (1 - t); };   // ease-out
+  let codexTab = "abilities";           // CODEX hub: which view is open (abilities | bestiary | guide)
   let codexFilter = "all";              // ABILITIES tab: category filter
   let codexSort = "category";           // ...and sort mode (category | name | type)
-  let bestiaryFilter = "all";           // INDEX tab: enemy category filter
+  let bestiaryFilter = "all";           // BESTIARY tab: enemy category filter
   let codexTierView = {};               // id -> which tier (0=base) is being previewed on its card
 
   // ---- helpers ----
@@ -2068,7 +2069,7 @@
   // ---- main loop ----
   function isMenuState(s) {
     return s === "menu" || s === "shop" || s === "codex" || s === "setup" ||
-      s === "howto" || s === "highscores" || s === "settings" || s === "bestiary" ||
+      s === "highscores" || s === "settings" ||
       s === "achievements" || s === "leaderboards" || s === "rename" || s === "replays";
   }
   function frame(now) {
@@ -2293,10 +2294,8 @@
       else if (state === "shop") renderShop();
       else if (state === "codex") renderCodex();
       else if (state === "setup") renderSetup();
-      else if (state === "howto") renderHowto();
       else if (state === "highscores") renderHighscores();
       else if (state === "settings") renderSettings();
-      else if (state === "bestiary") renderBestiary();
       else if (state === "achievements") renderAchievements();
       else if (state === "leaderboards") renderLeaderboards();
       else if (state === "rename") renderRename();
@@ -2885,12 +2884,10 @@
     vmenu([
       { label: "PLAY", action: () => { state = "setup"; } },
       { label: "SHOP", action: () => { state = "shop"; } },
-      { label: "ABILITIES", action: () => { state = "codex"; } },
       { label: "ACHIEVEMENTS", action: () => { state = "achievements"; listScroll = 0; } },
       { label: "LEADERBOARDS", action: () => { state = "leaderboards"; listScroll = 0; } },
       { label: "REPLAYS", action: () => { state = "replays"; listScroll = 0; replayFeedData = null; } },
-      { label: "INDEX", action: () => { state = "bestiary"; } },
-      { label: "HOW TO PLAY", action: () => { state = "howto"; } },
+      { label: "CODEX", action: () => { state = "codex"; codexTab = "abilities"; listScroll = 0; } },
       { label: "HIGH SCORES", action: () => { state = "highscores"; } },
       { label: "SETTINGS", action: () => { state = "settings"; } },
     ].map((o) => (o.ghost = true, o)), lx + t.metric.btnW / 2, 266, t.metric.btnW, t.metric.btnH, 5);
@@ -2963,23 +2960,40 @@
     if (tierCount > 1) UI.tag(ctx, "click to step through tiers", x + w / 2, y + h - 8, t.color.muted, "center", t.type.micro);
   }
 
+  // ---- THE CODEX: one reference hub — ABILITIES / BESTIARY / GUIDE as tabs ----
+  // (was three separate menu screens; the draw routines below are unchanged, just
+  // re-homed under a shared UI.tabs strip. addBack() exits the whole hub.)
+  const CODEX_TABS = [["abilities", "ABILITIES"], ["bestiary", "BESTIARY"], ["guide", "GUIDE"]];
   function renderCodex() {
     const t = UI.t;
-    UI.title(ctx, "ABILITIES", W / 2, 52, t.type.h1);
-    ctx.fillStyle = t.color.accent; ctx.globalAlpha = eIn; ctx.fillRect(W / 2 - 65 * eIn, 66, 130 * eIn, 3); ctx.globalAlpha = 1;
+    UI.title(ctx, "CODEX", W / 2, 92, t.type.h1);
+    ctx.fillStyle = t.color.accent; ctx.globalAlpha = eIn; ctx.fillRect(W / 2 - 65 * eIn, 108, 130 * eIn, 3); ctx.globalAlpha = 1;
+    UI.tabs(ctx, "codex", CODEX_TABS.map((x) => x[1]), Math.max(0, CODEX_TABS.findIndex((x) => x[0] === codexTab)), 124, (b) => {
+      const i = b._tab;
+      b.action = () => { if (CODEX_TABS[i][0] !== codexTab) { codexTab = CODEX_TABS[i][0]; listScroll = 0; } };
+      uiButtons.push(b);
+    });
+    if (codexTab === "bestiary") codexTabBestiary();
+    else if (codexTab === "guide") codexTabGuide();
+    else codexTabAbilities();
+    addBack();
+  }
+
+  function codexTabAbilities() {
+    const t = UI.t;
     UI.text(ctx, "STACKS pile up  ·  ★ UNIQUE are one-time  ·  ✦ SPECIAL evolve a tier with every boss  —  click a card to read its tiers",
-      W / 2, 86, t.type.caption, "center", t.alpha.muted);
+      W / 2, 186, t.type.caption, "center", t.alpha.muted);
 
     // ---- filter chips (All + each category) + a sort toggle ----
     const chips = [["all", "ALL"]].concat(ABIL_CAT_ORDER.map((c) => [c, (ABIL_CATS[c].name)]));
     const cw0 = t.metric.chipW, cg = t.space.xs, totalC = chips.length * cw0 + (chips.length - 1) * cg;
     let cx0 = (W - totalC) / 2 - 70;
     chips.forEach(([id, label]) => {
-      uiButtons.push({ x: cx0, y: 96, w: cw0, h: t.metric.chipH, label, size: t.type.micro, chip: true, sel: codexFilter === id,
+      uiButtons.push({ x: cx0, y: 200, w: cw0, h: t.metric.chipH, label, size: t.type.micro, chip: true, sel: codexFilter === id,
         action: () => { codexFilter = id; listScroll = 0; } });
       cx0 += cw0 + cg;
     });
-    uiButtons.push({ x: cx0 + 8, y: 96, w: 150, h: t.metric.chipH, size: t.type.micro, chip: true,
+    uiButtons.push({ x: cx0 + 8, y: 200, w: 150, h: t.metric.chipH, size: t.type.micro, chip: true,
       label: "SORT: " + codexSort.toUpperCase(),
       action: () => { codexSort = codexSort === "category" ? "name" : (codexSort === "name" ? "type" : "category"); listScroll = 0; } });
 
@@ -2993,7 +3007,7 @@
       return rank(a) - rank(b);
     });
     const cols = 4, mx = 70, gap = 22, cardW = (W - mx * 2 - gap * (cols - 1)) / cols;
-    const ch = 150, gy = 20, stride = ch + gy, top = 142, visRows = 4;
+    const ch = 150, gy = 20, stride = ch + gy, top = 244, visRows = 3;
     const rows = Math.ceil(list.length / cols);
     const maxOff = Math.max(0, rows - visRows);
     const off = clamp(Math.round(listScroll / stride), 0, maxOff);
@@ -3010,8 +3024,7 @@
           action: () => { if (tc > 1) codexTierView[up.id] = ((codexTierView[up.id] || 0) + 1) % tc; } });
       }
     }
-    if (maxOff > 0) UI.scrollHint(ctx, W / 2, H - 86, off > 0, off < maxOff);
-    uiButtons.push({ x: W / 2 - 100, y: H - 66, w: 200, h: 46, label: "BACK", action: () => { state = "menu"; } });
+    if (maxOff > 0) UI.scrollHint(ctx, W / 2, top + visRows * stride + 2, off > 0, off < maxOff);
   }
 
   function renderShop() {
@@ -3076,9 +3089,11 @@
     uiButtons.push({ x: W / 2 + 30, y: 660, w: 200, h: 56, label: "BACK", action: () => { state = "menu"; } });
   }
 
-  function renderHowto() {
+  // GUIDE tab (CODEX): the keybind + trick-meter reference, verbatim from the old
+  // HOW TO PLAY screen — this is the only place these rules exist as static text.
+  function codexTabGuide() {
     const t = UI.t, hx = W / 2 - 470;
-    UI.header(ctx, "HOW TO PLAY", "movement, the blade, and the trick meter", eIn);
+    UI.text(ctx, "movement, the blade, and the trick meter", W / 2, 186, t.type.caption, "center", t.alpha.muted);
     const lines = [
       "Move:  A / D      Jump:  W / Space      Drop through platform:  hold S",
       "Dash:  Shift  (aim 8-way with WASD) — i-frames + cooldown",
@@ -3094,8 +3109,7 @@
       "",
       "Pause: P      Release mouse: Esc",
     ];
-    lines.forEach((l, i) => { if (l) UI.text(ctx, l, hx, 206 + i * 31, t.type.body, "left", t.alpha.soft); });
-    addBack();
+    lines.forEach((l, i) => { if (l) UI.text(ctx, l, hx, 228 + i * 31, t.type.body, "left", t.alpha.soft); });
   }
 
   function renderHighscores() {
@@ -3926,16 +3940,16 @@
       for (const a of AFFIXES.filter((a) => a.appliesTo(inst))) axx = affixChip(axx, y + h - 14, a.id);
     }
   }
-  function renderBestiary() {
+  // BESTIARY tab (CODEX): the full enemy index, unchanged draw routine
+  function codexTabBestiary() {
     const t = UI.t;
-    UI.header(ctx, "INDEX", "every foe — what it does, its stats, and the affixes it can roll", eIn);
-    // filter chips (like the ABILITIES tab)
+    UI.text(ctx, "every foe — what it does, its stats, and the affixes it can roll", W / 2, 186, t.type.caption, "center", t.alpha.muted);
     const cats = [["all", "ALL"], ["melee", "MELEE"], ["ranged", "RANGED"], ["air", "AIR"], ["support", "SUPPORT"], ["boss", "BOSS"]];
     const cw0 = 120, cg = 8, totalC = cats.length * cw0 + (cats.length - 1) * cg, cx0 = (W - totalC) / 2;
-    cats.forEach(([id, label], i) => uiButtons.push({ x: cx0 + i * (cw0 + cg), y: 150, w: cw0, h: 30, label, size: t.type.micro, chip: true, sel: bestiaryFilter === id, action: () => { bestiaryFilter = id; listScroll = 0; } }));
+    cats.forEach(([id, label], i) => uiButtons.push({ x: cx0 + i * (cw0 + cg), y: 200, w: cw0, h: 30, label, size: t.type.micro, chip: true, sel: bestiaryFilter === id, action: () => { bestiaryFilter = id; listScroll = 0; } }));
     // 2-column grid of the filtered roster
     const rows = bestiary().all.filter((r) => bestiaryFilter === "all" || r.cat === bestiaryFilter);
-    const cols = 2, mx = 72, gap = 26, cardW = (W - mx * 2 - gap) / cols, cardH = 168, stride = cardH + 18, top = 206, vis = 3;
+    const cols = 2, mx = 72, gap = 26, cardW = (W - mx * 2 - gap) / cols, cardH = 168, stride = cardH + 18, top = 244, vis = 3;
     const gridRows = Math.ceil(rows.length / cols), maxOff = Math.max(0, gridRows - vis);
     const off = clamp(Math.round(listScroll / stride), 0, maxOff);
     for (let r = 0; r < vis; r++) for (let c = 0; c < cols; c++) {
@@ -3944,7 +3958,6 @@
     }
     if (maxOff > 0) UI.scrollHint(ctx, W / 2, top + vis * stride - 14, off > 0, off < maxOff);
     UI.tag(ctx, "affixes: up to 3 per enemy, each ≈ (wave−1)×6% per slot — chaos scales with the wave", W / 2, top + vis * stride + 4, t.color.muted, "center", t.type.micro);
-    addBack();
   }
 
   // a juicy choice card shared by the upgrade draft and the boss tier-up screen.

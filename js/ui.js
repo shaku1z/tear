@@ -163,6 +163,37 @@ const UI = {
     ctx.textBaseline = "alphabetic";
   },
 
+  // ---- TABS (segmented view-switcher for hub screens) ----------------------
+  // Deliberately NOT a chip: chips FILTER content, tabs SWITCH whole views.
+  // A centred strip of labels over one hairline, with a sliding accent underline
+  // marking the active view. `push` receives one hitbox per tab (b._tab = index).
+  _tabAnim: {},
+  tabs(ctx, id, labels, active, y, push) {
+    const t = this.t, cx = CONFIG.view.w / 2, h = 34;
+    ctx.font = this.font(t.type.label, true);
+    let segW = 150;
+    for (const l of labels) segW = Math.max(segW, ctx.measureText(l).width + 48);
+    const total = segW * labels.length, x0 = cx - total / 2;
+    this.divider(ctx, x0, y + h, total, 0.18);
+    // sliding accent underline eases toward the active segment
+    const prev = this._tabAnim[id] == null ? active : this._tabAnim[id];
+    const cur = this._tabAnim[id] = prev + (active - prev) * 0.25;
+    ctx.fillStyle = t.color.accent;
+    ctx.fillRect(x0 + cur * segW + segW * 0.18, y + h - 3, segW * 0.64, 3);
+    labels.forEach((label, i) => {
+      const on = i === active;
+      ctx.fillStyle = this.ink;
+      ctx.globalAlpha = on ? 1 : t.alpha.muted;
+      ctx.font = this.font(t.type.label, true);
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(label, x0 + i * segW + segW / 2, y + h / 2);
+      ctx.globalAlpha = 1;
+      if (push) push({ x: x0 + i * segW, y, w: segW, h, label: "", _hideBox: true, _tab: i });
+    });
+    ctx.textBaseline = "alphabetic";
+    return y + h + 10;
+  },
+
   // ---- SURFACES -----------------------------------------------------------
   // a plain bordered panel
   panel(ctx, x, y, w, h) {
