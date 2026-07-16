@@ -62,7 +62,7 @@ const Mirror = {
     this._pDashPrev = 0; this._pPrevX = host.x; this._pDashPrev2 = 0; this._pGroundPrev = true; this._prevDist = 300;
     this.echoBuf = []; this._echoClip = []; this._echoPtr = 0; this._echoCd = 6;
     this.mv = null; this._moveCd = 2.2;     // committed-move director
-    this.crescents = []; this.waves = []; this.imgs = [];
+    this.waves = []; this.imgs = [];   // crescents are real projectiles now (see _crescent)
     this._recallT = 0; this._fsPending = false; this._threwHit = false;
     this.seenTrickT = 0; this._answer = ""; this._answerT = 0; this._lastAnswered = "";
     this._phaseMark = 1; this.white = 0; this._wtT = 5.5; this._sparkT = 0; this._stagger = 0;
@@ -76,8 +76,9 @@ const Mirror = {
   // =====================================================================
   //  PER-FRAME BRAIN (called by MirrorHost.update — the enemy loop drives it)
   // =====================================================================
-  hostStep(dt, platforms, player) {
+  hostStep(dt, platforms, player, projectiles) {
     if (!this.active || !this.host) return;
+    this._proj = projectiles;   // crescents are real projectiles pushed into the game's array
     if (this._clashCd > 0) this._clashCd -= dt;
     if (this._stagger > 0) this._stagger -= dt;
     this.sync = clamp(this.sync + dt * 0.016 + this._syncBump, 0.15, 1); this._syncBump = 0;
@@ -101,7 +102,7 @@ const Mirror = {
       this.blade.aimOverride.y = hand.y + Math.sin(this._aimAng) * CONFIG.blade.aimRadius;
       this.facing = Math.sign(player.x - this.actor.x) || this.facing;
       this.actor.update(dt, platforms); this.actor.facing = this.facing; this.blade.update(dt, this.actor, platforms);
-      this._updateCrescents(dt); this._updateWaves(dt);
+      this._updateWaves(dt);
       return;
     }
     if (this._stagger > 0) {
@@ -110,7 +111,7 @@ const Mirror = {
       this._aerialBrain(dt, player);
       this.actor.facing = this.facing;
       this.blade.update(dt, this.actor, platforms);
-      this._updateCrescents(dt); this._updateWaves(dt);
+      this._updateWaves(dt);
       for (const g of this.imgs) g.t -= dt; this.imgs = this.imgs.filter((g) => g.t > 0);
       return;                                                // the aerial director fully owns the body
     } else if (this.mv) {
@@ -148,7 +149,6 @@ const Mirror = {
     }
     for (const g of this.imgs) g.t -= dt;
     this.imgs = this.imgs.filter((g) => g.t > 0);
-    this._updateCrescents(dt);
     this._updateWaves(dt);
   },
 
@@ -334,14 +334,22 @@ const Mirror = {
     else this.mv = null;
   },
 
+  // fire a crescent as a REAL projectile (parryable / deflectable through the game's own system)
+  _crescent(x, y, ang, sp, dmg, r) {
+    if (!this._proj || typeof Projectile === "undefined") return;
+    const p = new Projectile(x, y, Math.cos(ang) * sp, Math.sin(ang) * sp);
+    p.crescent = true; p.kind = "crescent"; p.tint = "#b06cff"; p.dmg = dmg; p.r = r; p.life = 2.4; p.deflectDmg = 34;
+    this._proj.push(p);
+  },
+  // QUALITY over quantity: one big, FAST crescent (a tight fan only in the final form)
   _fireCrescents(player) {
     const a = this.actor, ph = this.phase;
     const ang = Math.atan2(player.y - (a.y - a.hh * 0.4), player.x - a.x);
-    const sp = 580 + ph * 80, n = ph >= 3 ? 3 : 1, spread = 0.16;
+    const sp = 760 + ph * 90, n = ph >= 3 ? 3 : 1, spread = 0.13;
     const ox = a.x + Math.cos(ang) * 52, oy = a.y - a.hh * 0.4 + Math.sin(ang) * 20;
-    for (let i = 0; i < n; i++) this._pushCrescent(ox, oy, ang + (i - (n - 1) / 2) * spread, sp, 42 + ph * 10);   // bigger, glowing
-    this.juice({ shake: 4 });
-    try { if (typeof SFX !== "undefined") SFX.crescent(); FX.flash(ox, oy, 36, "#ffffff"); FX.ring(ox, oy, 16, this.color); FX.burst(ox, oy, Math.cos(ang), Math.sin(ang), 12, this.color); } catch (e) {}
+    for (let i = 0; i < n; i++) this._crescent(ox, oy, ang + (i - (n - 1) / 2) * spread, sp, 16 + ph * 5, 26 + ph * 3);
+    this.juice({ shake: 5 });
+    try { if (typeof SFX !== "undefined") SFX.crescent(); FX.flash(ox, oy, 34, "#c98cff"); FX.burst(ox, oy, Math.cos(ang), Math.sin(ang), 12, this.color); } catch (e) {}
   },
 
   _flashStep(player) {   // vanish and reappear at the embedded blade, catching it mid-strike
@@ -480,15 +488,6 @@ const Mirror = {
   // =====================================================================
   //  PROJECTILE-LIKE HAZARDS the boss owns (crescents + ground waves)
   // =====================================================================
-  _updateCrescents(dt) {
-    if (!this.crescents.length) return;
-    for (const c of this.crescents) {
-      c.x += c.vx * dt; c.y += c.vy * dt; c.life -= dt;
-      if (!c.trail) c.trail = [];
-      c.trail.push({ x: c.x, y: c.y }); if (c.trail.length > 6) c.trail.shift();
-    }
-    this.crescents = this.crescents.filter((c) => c.life > 0 && c.x > -80 && c.x < CONFIG.view.w + 80 && c.y > -80 && c.y < CONFIG.view.h + 80);
-  },
   _updateWaves(dt) {
     if (!this.waves.length) return;
     for (const w of this.waves) { w.x += w.vx * dt; w.life -= dt; }
@@ -576,8 +575,9 @@ const Mirror = {
       this._pointBladeAt(player, clamp(5 * dt, 0, 1));
       if (A.t <= 0) {
         const r = Math.random();
-        if (r < 0.46) { A.st = "aim"; A.t = 0.4; A.tx = player.x; A.ty = player.y; A.side = -A.side; this.juice({ shake: 3 }); }
-        else if (r < 0.74 && this.blade.state === "held") { A.st = "throwaim"; A.t = 0.3; A.tx = player.x; A.ty = player.y; }
+        if (r < 0.4) { A.st = "aim"; A.t = 0.4; A.tx = player.x; A.ty = player.y; A.side = -A.side; this.juice({ shake: 3 }); }
+        else if (r < 0.6 && this.blade.state === "held") { A.st = "throwaim"; A.t = 0.3; A.tx = player.x; A.ty = player.y; }
+        else if (r < 0.8 && this.blade.state === "held") { A.st = "corner"; A.raise = 0; A.cx = (player.x < CONFIG.view.w / 2) ? CONFIG.view.w - 190 : 190; this.juice({ shake: 4 }); }   // the corner OVERHEAD SLAM
         else { this._fireCrescents(player); A.t = 0.8 + Math.random() * 0.5; }
       }
     } else if (A.st === "aim") {                        // lock the dive line (telegraph)
@@ -597,6 +597,21 @@ const Mirror = {
       a.vx = lerp(a.vx, 0, clamp(4 * dt, 0, 1)); a.y += (ty - a.y) * clamp(1.8 * dt, 0, 1); a.x += a.vx * dt;
       if (this.blade.state === "held") { A.st = "hover"; A.t = 0.7 + Math.random() * 0.4; }
       else { A._rt -= dt; if (A._rt <= 0 || this.blade.state === "embedded") this.blade.tryRecall(this.actor); }
+    } else if (A.st === "corner") {                     // rise to a TOP corner, blade straight UP, and GROW it huge
+      const tx = A.cx, ty = 130;
+      a.x += (tx - a.x) * clamp(2.8 * dt, 0, 1); a.y += (ty - a.y) * clamp(2.8 * dt, 0, 1); a.vx = 0; a.vy = 0;
+      this._pointBladeAt({ x: a.x, y: a.y - 400 }, clamp(11 * dt, 0, 1));         // sword points to the sky
+      A.raise = Math.min(1, (A.raise || 0) + dt / 0.85);
+      this.blade.lengthBonus = 100 + A.raise * 230;                              // it GROWS enormously
+      if (A.raise >= 1 && Math.abs(a.x - tx) < 46 && Math.abs(a.y - ty) < 46) {
+        A.st = "cornerslam"; A.tx = player.x; this.juice({ shake: 6, flash: 0.22 });
+        try { if (typeof SFX !== "undefined") SFX.swing(3600); FX.flash(this.blade.tipX, this.blade.tipY, 42, "#c98cff"); } catch (e) {}
+      }
+    } else if (A.st === "cornerslam") {                 // SLAM straight down, sword facing DOWN -> a HUGE purple rend
+      a.vy = 1600; a.vx = lerp(a.vx, (A.tx - a.x) * 1.4, clamp(4 * dt, 0, 1)); a.x += a.vx * dt; a.y += a.vy * dt;
+      this._pointBladeAt({ x: a.x, y: a.y + 400 }, 1);                            // sword points down through the slam
+      this.imgs.push({ x: a.x, y: a.y, f: this.facing, t: 0.32 });
+      if (a.y >= gy - a.hh) { a.y = gy - a.hh; this._bigSlash(a.x); this.blade.lengthBonus = 100; A.st = "hover"; A.t = 1.3; }
     } else {                                            // DIVE — sword-first plunge
       a.x += A.dvx * dt; a.y += A.dvy * dt;
       this.imgs.push({ x: a.x, y: a.y, f: this.facing, t: 0.26 });
@@ -609,6 +624,14 @@ const Mirror = {
       }
     }
     a.x = clamp(a.x, 40, CONFIG.view.w - 40);
+  },
+  _bigSlash(x) {   // the corner-slam payoff: a HUGE purple rend — twin sweeping crescents + wide shockwaves
+    const gy = CONFIG.world.groundY;
+    this.waves.push({ x: x + 34, y: gy, vx: 900, life: 1.15, big: true }, { x: x - 34, y: gy, vx: -900, life: 1.15, big: true });
+    this._crescent(x, gy - 34, 0.06, 720, 22, 58);
+    this._crescent(x, gy - 34, Math.PI - 0.06, 720, 22, 58);
+    this.juice({ shake: 16, hitstop: CONFIG.hitStop.big, zoom: CONFIG.juice.zoomBig, txt: "TEAR", x, y: gy - 130, big: true });
+    try { if (typeof SFX !== "undefined") { SFX.boom(); SFX.slam(); } FX.explode(x, gy - 8, this.color, 1.9); FX.ring(x, gy - 4, 48, "#ffffff"); FX.ring(x, gy - 4, 28, this.color); FX.burst(x, gy - 10, 0, -1, 34, this.color); } catch (e) {}
   },
 
   // =====================================================================
@@ -654,30 +677,13 @@ const Mirror = {
       player.takeHit(mb.throwDmg || 20, mb.vx, mb.vy, a); this._threwHit = true; this._syncBump += 0.05;
     }
 
-    // (3) crescents: hit the player — or get DEFLECTED back by a fast swing (then they hurt the boss)
-    for (const c of this.crescents) {
-      if (!c.refl && playerBlade.state === "held" && playerBlade.tipSpeed > B.minHitSpeed &&
-          this.segNear(playerBlade.x, playerBlade.y, playerBlade.tipX, playerBlade.tipY, c.x, c.y, c.r * 0.8)) {
-        c.refl = true; c.vx *= -1.15; c.vy = -Math.abs(c.vy) * 0.6 - 60; c.ang = Math.atan2(c.vy, c.vx); c.life = Math.max(c.life, 0.9);
-        this.juice({ txt: "REFLECTED", x: c.x, y: c.y - 18, color: "#4bd6ff" });
-        try { FX.flash(c.x, c.y, 30, "#4bd6ff"); } catch (e) {}
-        continue;
-      }
-      if (!c.hit && !c.refl && !player.invulnerable && Math.hypot(c.x - player.x, c.y - player.y) < c.r * 0.6 + player.hw) {
-        player.takeHit(14 + this.phase * 5, c.vx, c.vy, a); c.hit = true; c.life = Math.min(c.life, 0.1);
-        this.juice({ shake: 4 });
-        try { if (typeof SFX !== "undefined") SFX.hit(true); FX.flash(c.x, c.y, 30, "#ffffff"); FX.ring(c.x, c.y, 14, "#ffffff"); FX.burst(c.x, c.y, Math.sign(c.vx) || 1, -0.3, 16, this.color); } catch (e) {}
-      }
-      if (c.refl && !c.hit && Math.hypot(c.x - this.host.x, c.y - this.host.y) < c.r * 0.7 + this.host.hw) {
-        c.hit = true; this.host.hit(26, c.vx, c.vy);
-        try { FX.burst(c.x, c.y, Math.sign(c.vx) || 1, -0.4, 10, "#4bd6ff"); } catch (e) {}
-      }
-    }
+    // (crescents are real projectiles now — the game's own loop handles their damage,
+    //  parry, and deflect-back; nothing to do here)
 
-    // (4) ground shockwaves vs the player (jump them)
+    // (3) ground shockwaves vs the player (jump them) — the corner-slam rend hits wider + harder
     for (const w of this.waves) {
-      if (!w.hit && !player.invulnerable && Math.abs(w.x - player.x) < 26 && player.y + player.hh > CONFIG.world.groundY - 44) {
-        w.hit = true; player.takeHit(12 + this.phase * 4, w.vx, -0.4, a); player.vy = Math.min(player.vy, -380);
+      if (!w.hit && !player.invulnerable && Math.abs(w.x - player.x) < (w.big ? 40 : 26) && player.y + player.hh > CONFIG.world.groundY - 44) {
+        w.hit = true; player.takeHit((w.big ? 22 : 12) + this.phase * 4, w.vx, -0.4, a); player.vy = Math.min(player.vy, -420);
       }
     }
   },
@@ -744,18 +750,9 @@ const Mirror = {
     // ---- the blade (always fully visible — in P3 it IS how you track the boss) ----
     this.blade.draw(ctx, a);
     this._drawGlint(ctx);
-    this._drawCrescents(ctx);
     this._drawWaves(ctx);
     this._drawLock(ctx);
-
-    // slim sync strip + echo cue (the big HP bar is the boss bar up top)
-    const bw = 52, bx = a.x - bw / 2, by = a.y - a.hh - 14;
-    ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(bx - 1, by - 1, bw + 2, 4);
-    ctx.fillStyle = "#fff"; ctx.fillRect(bx, by, bw * clamp(this.sync, 0, 1), 2);
-    if (this._state === "echo" && typeof UI !== "undefined") {
-      ctx.fillStyle = this.color; ctx.font = UI.font(9, true); ctx.textAlign = "center";
-      ctx.fillText("◆ ECHO", a.x, by - 4);
-    }
+    // NO bar above the model — the boss uses only the top segmented HP bar (like every boss)
   },
 
   _drawTelegraph(ctx) {   // slam danger-zone: a column + a ground ring where the plunge will land
@@ -784,53 +781,17 @@ const Mirror = {
     ctx.restore();
   },
 
-  _drawCrescents(ctx) {
-    if (!this.crescents.length) return;
-    const glow = !(typeof GFX !== "undefined" && GFX.low);
-    ctx.save();
-    if (glow) ctx.globalCompositeOperation = "lighter";
-    for (const c of this.crescents) {
-      const al = clamp(c.life / 1.6, 0, 1), col = c.refl ? "#4bd6ff" : this.color;
-      // fading motes trailing behind the rip
-      if (c.trail) for (let i = 0; i < c.trail.length; i++) {
-        const p = c.trail[i], f = (i + 1) / c.trail.length;
-        ctx.globalAlpha = f * 0.32 * al; ctx.fillStyle = col;
-        ctx.beginPath(); ctx.arc(p.x, p.y, c.r * 0.5 * f, 0, 6.2832); ctx.fill();
-      }
-      ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.ang);
-      // outer bloom
-      const g = ctx.createRadialGradient(0, 0, 1, 0, 0, c.r * 1.5);
-      g.addColorStop(0, "rgba(255,255,255,0.9)"); g.addColorStop(0.4, col); g.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.globalAlpha = 0.42 * al; ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(0, 0, c.r * 1.5, 0, 6.2832); ctx.fill();
-      // the FILLED crescent (a moon of energy): convex front edge, concave-carved back
-      ctx.globalAlpha = 0.92 * al; ctx.fillStyle = col;
-      ctx.beginPath();
-      ctx.arc(-c.r * 0.25, 0, c.r, -1.3, 1.3, false);
-      ctx.arc(-c.r * 1.0, 0, c.r * 0.92, 1.12, -1.12, true);
-      ctx.closePath(); ctx.fill();
-      // white-hot leading edge
-      ctx.globalAlpha = al; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 3.5; ctx.lineCap = "round";
-      ctx.beginPath(); ctx.arc(-c.r * 0.25, 0, c.r, -1.22, 1.22); ctx.stroke();
-      ctx.restore();
-    }
-    ctx.restore(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
-  },
-  _pushCrescent(x, y, ang, sp, r) {
-    this.crescents.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, ang, life: 1.6, r, hit: false, refl: false, trail: [] });
-  },
-
   _drawWaves(ctx) {
     if (!this.waves.length) return;
     const glow = !(typeof GFX !== "undefined" && GFX.low);
     for (const w of this.waves) {
-      const k = 1 - w.life / 0.85, al = clamp(w.life / 0.85, 0, 1);
+      const life = w.big ? 1.15 : 0.85, k = 1 - w.life / life, al = clamp(w.life / life, 0, 1), s = w.big ? 1.9 : 1;
       ctx.save();
       if (glow) ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = 0.75 * al; ctx.strokeStyle = this.color; ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.arc(w.x, w.y, 12 + k * 12, Math.PI, 0); ctx.stroke();
-      ctx.globalAlpha = 0.5 * al; ctx.strokeStyle = "#efe3ff"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(w.x, w.y, 7 + k * 9, Math.PI, 0); ctx.stroke();
+      ctx.globalAlpha = 0.75 * al; ctx.strokeStyle = this.color; ctx.lineWidth = 4 * s;
+      ctx.beginPath(); ctx.arc(w.x, w.y, (12 + k * 12) * s, Math.PI, 0); ctx.stroke();
+      ctx.globalAlpha = 0.5 * al; ctx.strokeStyle = "#efe3ff"; ctx.lineWidth = 2 * s;
+      ctx.beginPath(); ctx.arc(w.x, w.y, (7 + k * 9) * s, Math.PI, 0); ctx.stroke();
       ctx.restore();
     }
     ctx.globalAlpha = 1;
@@ -855,7 +816,7 @@ class MirrorHost extends Enemy {
     this.tickTimers(dt);
     if (typeof Mirror === "undefined" || !this._live) return;
     if (Mirror.host !== this) Mirror.attach(this, this._mods);
-    Mirror.hostStep(dt, platforms, player);
+    Mirror.hostStep(dt, platforms, player, projectiles);
     // the host IS the body: hitbox, contact damage, and the boss bar track the actor
     this.x = Mirror.actor.x; this.y = Mirror.actor.y;
     this.facing = Mirror.facing; this.onGround = Mirror.actor.onGround;
@@ -905,6 +866,7 @@ class ReflectionEnemy extends Enemy {
   }
   update(dt, platforms, player, projectiles) {
     this.tickTimers(dt);
+    this._proj = projectiles;   // its crescents are real projectiles too (parryable)
     if (typeof Mirror === "undefined" || !Mirror.active || (Mirror.host && Mirror.host.dead) || Mirror.phase >= 3) {
       this.dead = true; try { FX.death(this.x, this.y, 18, this.color); FX.burst(this.x, this.y, 0, -1, 14, "#e9d5ff"); if (typeof SFX !== "undefined") SFX.recall(); } catch (e) {}
       return;
@@ -921,22 +883,26 @@ class ReflectionEnemy extends Enemy {
     if (this._pat) { this._runPattern(dt, player); }
     else { this._patCd -= dt; if (this._patCd <= 0 && Math.abs(this.x - c.x) < 120) { this._pat = ["fan", "barrage", "sweep"][Math.floor(Math.random() * 3)]; this._patN = 0; this._patT = 0; this._patCd = 2.6 + Math.random() * 1.2; if (Math.random() < 0.4) this._corner = this._pickCorner(); } }
   }
-  _shoot(ang, sp, r) {
-    if (typeof Mirror !== "undefined" && Mirror.crescents) Mirror._pushCrescent(this.x, this.y, ang, sp, r);
-    try { if (typeof SFX !== "undefined") SFX.crescent(); FX.flash(this.x, this.y, 22, this.color); FX.burst(this.x, this.y, Math.cos(ang), Math.sin(ang), 5, this.color); } catch (e) {}
+  _shoot(ang, sp, dmg, r) {
+    if (this._proj && typeof Projectile !== "undefined") {
+      const p = new Projectile(this.x, this.y, Math.cos(ang) * sp, Math.sin(ang) * sp);
+      p.crescent = true; p.kind = "crescent"; p.tint = this.color; p.dmg = dmg; p.r = r; p.life = 2.8; p.deflectDmg = 30;
+      this._proj.push(p);
+    }
+    try { if (typeof SFX !== "undefined") SFX.crescent(); FX.flash(this.x, this.y, 24, "#c98cff"); FX.burst(this.x, this.y, Math.cos(ang), Math.sin(ang), 6, this.color); } catch (e) {}
   }
-  _runPattern(dt, player) {
+  _runPattern(dt, player) {   // QUALITY over quantity — few, big, FAST crescents
     this._patT -= dt; if (this._patT > 0) return;
     const toP = Math.atan2(player.y - this.y, player.x - this.x);
-    if (this._pat === "fan") {                    // a wide 5-crescent spread at once
-      for (let i = 0; i < 5; i++) this._shoot(toP + (i - 2) * 0.22, 520, 34);
-      this.flash = 0.1; this._pat = null;
-    } else if (this._pat === "barrage") {         // rapid aimed shots
-      this._shoot(toP + (Math.random() * 2 - 1) * 0.09, 640, 30); this._patN++; this._patT = 0.14;
-      if (this._patN >= 6) this._pat = null;
-    } else {                                      // sweep an arc across the arena
-      this._shoot(toP - 0.7 + this._patN * 0.16, 540, 32); this._patN++; this._patT = 0.08;
-      if (this._patN >= 10) this._pat = null;
+    if (this._pat === "fan") {                    // a clean 3-wide spread
+      for (let i = 0; i < 3; i++) this._shoot(toP + (i - 1) * 0.26, 660, 15, 30);
+      this.flash = 0.12; this._pat = null;
+    } else if (this._pat === "barrage") {         // a few heavy aimed shots
+      this._shoot(toP + (Math.random() * 2 - 1) * 0.06, 780, 16, 28); this._patN++; this._patT = 0.26;
+      if (this._patN >= 3) this._pat = null;
+    } else {                                      // a short scything sweep
+      this._shoot(toP - 0.42 + this._patN * 0.21, 680, 15, 28); this._patN++; this._patT = 0.16;
+      if (this._patN >= 5) this._pat = null;
     }
   }
   draw(ctx) {

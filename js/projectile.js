@@ -171,6 +171,24 @@ class Projectile {
       return;
     }
 
+    if (this.crescent) {   // THE ECHO's tear-slash: a crisp PURPLE crescent (a real, parryable projectile)
+      const col = this.deflected ? (this.perfect ? C.perfect : C.deflected) : (this.tint || "#b06cff");
+      const ang2 = Math.atan2(this.vy, this.vx), R = this.r * 1.7;
+      ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(ang2);
+      if (!lowG) { ctx.shadowColor = col; ctx.shadowBlur = 7; }
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(-R * 0.25, 0, R, -1.25, 1.25, false);
+      ctx.arc(-R * 0.95, 0, R * 0.9, 1.08, -1.08, true);
+      ctx.closePath(); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = ink; ctx.lineWidth = 2; ctx.stroke();                     // ink edge = a clear SHAPE, not a blob
+      ctx.globalAlpha = 0.7; ctx.strokeStyle = "#efe3ff"; ctx.lineWidth = 1.5;     // thin bright edge, no white wash
+      ctx.beginPath(); ctx.arc(-R * 0.25, 0, R, -1.12, 1.12); ctx.stroke(); ctx.globalAlpha = 1;
+      if (this.deflected) { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, R * 0.5, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.restore(); return;
+    }
+
     // --- generic shot: an oriented body with a comet trail, hot core, and soft glow ---
     const col = this.deflected ? (this.perfect ? C.perfect : C.deflected) : (this.tint || (this.bomb ? C.bomber : C.enemyShot));
     const m = len(this.vx, this.vy) || 1, ang = Math.atan2(this.vy, this.vx), r = this.r;

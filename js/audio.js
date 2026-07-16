@@ -164,21 +164,22 @@ const SFX = {
     [523, 659, 784].forEach((f, i) => this._osc(f, 0.16, t + i * 0.05, { type: "triangle", vol: 0.13 }));
   },
   // ---- THE ECHO boss ----
-  saberLock() {   // blades bind: a short bright metallic ring (no low thud, so momentum stays)
+  saberLock() {   // a metallic CLANG — a hard transient + inharmonic bell partials, fast decay
     if (!this.ctx) return; const t = this.ctx.currentTime;
-    this._osc(2200, 0.1, t, { type: "sawtooth", vol: 0.1, slideTo: 1650, attack: 0.004 });
-    this._osc(3300, 0.09, t, { type: "sine", vol: 0.06, slideTo: 2500 });
-    this._noise(0.07, t, { type: "bandpass", freq: 4200, q: 3, vol: 0.05 });
+    this._click(t, 0.2);
+    [1, 2.76, 5.18, 8.4].forEach((mult, i) => this._osc(1050 * mult, 0.14 - i * 0.02, t, { type: "square", vol: 0.07 - i * 0.014, attack: 0.0004 }));
+    this._noise(0.05, t, { type: "bandpass", freq: 5400, q: 7, vol: 0.06 });
   },
-  saberSizzle() {   // the strain, while bound
+  saberSizzle() {   // the strain, while bound — a bright metallic scrape
     if (!this.ctx) return;
-    this._noise(0.045, this.ctx.currentTime, { type: "bandpass", freq: 3400 + Math.random() * 1600, q: 4, vol: 0.04 });
+    this._noise(0.04, this.ctx.currentTime, { type: "bandpass", freq: 4200 + Math.random() * 2200, q: 8, vol: 0.035 });
   },
-  saberBreak(win) {   // release: a bright rising clang (win) or a duller shove (lose)
+  saberBreak(win) {   // the release CLANG — a hard transient + an inharmonic ring, brighter on a win
     if (!this.ctx) return; const t = this.ctx.currentTime;
-    this._click(t, 0.12);
-    this._osc(win ? 1500 : 1000, 0.16, t, { type: "square", vol: 0.15, slideTo: win ? 3400 : 700, attack: 0.001 });
-    this._osc(2700, 0.12, t + 0.02, { type: "sawtooth", vol: 0.09, slideTo: 1200 });
+    this._click(t, 0.22);
+    const base = win ? 1300 : 900;
+    [1, 2.76, 5.18].forEach((mult, i) => this._osc(base * mult, 0.18 - i * 0.03, t, { type: "square", vol: 0.09 - i * 0.02, attack: 0.0004 }));
+    this._noise(0.06, t, { type: "bandpass", freq: win ? 6000 : 4000, q: 6, vol: 0.07 });
   },
   crescent() {   // a tear ripped through the air
     if (!this.ctx) return; const t = this.ctx.currentTime;
