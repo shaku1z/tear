@@ -3314,28 +3314,43 @@
     UI.title(ctx, "PROFILE", W / 2, 92, t.type.h1);
     ctx.fillStyle = SCREEN_HUES.profile; ctx.globalAlpha = eIn; ctx.fillRect(W / 2 - 65 * eIn, 108, 130 * eIn, 3); ctx.globalAlpha = 1;
 
-    // ---- identity card: status, name, rename, sign in/out, currencies ----
+    // ---- THE PASSPORT: avatar, name, sync status, currencies, showcase seals ----
     const signedIn = typeof Cloud !== "undefined" && Cloud.loggedIn();
     const fb = typeof Cloud !== "undefined" && Cloud.provider === FirebaseProvider;
     const canIn = typeof Cloud !== "undefined" && Cloud.canSignIn();
-    const cardY = 132, cardH = 96, cardW = rx - fx;
+    const cardY = 130, cardH = 100, cardW = rx - fx;
     ctx.save();
     ctx.globalAlpha = 0.05; ctx.fillStyle = UI.ink; ctx.fillRect(fx, cardY, cardW, cardH); ctx.globalAlpha = 1;
-    ctx.fillStyle = signedIn ? "#2f9e6b" : t.color.muted; ctx.fillRect(fx, cardY, 4, cardH);   // green spine when synced
-    ctx.beginPath(); ctx.arc(fx + 28, cardY + 34, 6, 0, 6.2832); ctx.fillStyle = signedIn ? "#2f9e6b" : "#8a93a6"; ctx.fill();
+    UI.spine(ctx, fx, cardY, cardH, signedIn ? SCREEN_HUES.profile : t.color.muted);
+    UI.avatar(ctx, fx + 16, cardY + 14, 72);
+    // sync dot pinned to the portrait corner
+    ctx.beginPath(); ctx.arc(fx + 84, cardY + 22, 6, 0, 6.2832);
+    ctx.fillStyle = signedIn ? SCREEN_HUES.profile : "#8a93a6"; ctx.fill();
+    ctx.strokeStyle = UI.ink; ctx.lineWidth = 1.5; ctx.stroke();
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
     ctx.fillStyle = UI.ink; ctx.font = UI.font(t.type.h2, true);
-    ctx.fillText((PROFILE.username() || (signedIn ? Cloud.displayName() : "GUEST")).toUpperCase(), fx + 48, cardY + 44);
+    ctx.fillText((PROFILE.username() || (signedIn ? Cloud.displayName() : "GUEST")).toUpperCase(), fx + 106, cardY + 42);
     ctx.globalAlpha = 0.6; ctx.font = UI.font(t.type.caption, false);
     ctx.fillText(signedIn ? "Signed in — progress synced to the cloud"
-      : (canIn ? "Playing as a guest — sign in to keep your progress everywhere" : "Progress saved on this device"), fx + 48, cardY + 70);
+      : (canIn ? "Playing as a guest — sign in to keep your progress everywhere" : "Progress saved on this device"), fx + 106, cardY + 66);
     ctx.globalAlpha = 1; ctx.restore();
-    // currencies + achievements summary, centre-right of the card
+    // currency badges + achievements chip
     const achN = PROFILE.unlockedCount(), achTotal = (typeof ACH !== "undefined" && ACH.list) ? ACH.list.length : 0;
-    UI.tag(ctx, "◆ " + META.coins() + " COINS", rx - 560, cardY + 34, t.color.accent, "left", t.type.caption);
-    UI.tag(ctx, "⬡ " + PROFILE.shards() + " SHARDS", rx - 560, cardY + 58, "#b06cff", "left", t.type.caption);
-    uiButtons.push({ x: rx - 400, y: cardY + 28, w: 130, h: 40, size: 12, chip: true, label: "★ " + achN + (achTotal ? " / " + achTotal : ""),
+    UI.badge(ctx, "◆ " + META.coins().toLocaleString(), fx + 106, cardY + 90, HUE_GOLD, "left");
+    UI.badge(ctx, "⬡ " + PROFILE.shards(), fx + 106 + 120, cardY + 90, HUE_VIOLET, "left");
+    uiButtons.push({ x: rx - 420, y: cardY + 30, w: 130, h: 40, size: 12, chip: true, label: "★ " + achN + (achTotal ? " / " + achTotal : ""),
       action: () => { state = "achievements"; listScroll = 0; } });
+    // SHOWCASE: your three rarest earned feats as rarity seals on the passport
+    if (typeof ACH !== "undefined" && ACH.list) {
+      const RANK = { legendary: 0, epic: 1, rare: 2, uncommon: 3, common: 4 };
+      const rare3 = ACH.list.filter((a) => PROFILE.unlocked(a.id))
+        .sort((a, b) => (RANK[a.rarity] ?? 5) - (RANK[b.rarity] ?? 5)).slice(0, 3);
+      // drawn small, in a row left of the achievements chip
+      rare3.forEach((a, i) => {
+        const rr = ACH.RARITY[a.rarity] || ACH.RARITY.common, cc = ACH.CATS[a.cat] || {};
+        UI.seal(ctx, rx - 560 + i * 46, cardY + 50, 16, rr.color, cc.icon || "★", false);
+      });
+    }
     // account actions, far right
     const bw2 = 230, bx2 = rx - bw2 - 14;
     if (signedIn) {
@@ -3360,42 +3375,88 @@
     addBack();
   }
 
-  // BESTS tab: your best run per mode x difficulty (interim flat list — P4 of the
-  // menu plan upgrades this to the Leaderboards table language)
+  // BESTS tab: your finest run in display type, then every record in the
+  // leaderboard table language (column headers, hairline rows)
   function profileTabBests() {
-    const t = UI.t, fx = LAY.fx, rx = LAY.rx;
-    let y = 330, any = false;
-    CONFIG.modes.forEach((m) => {
-      CONFIG.difficulties.forEach((d) => {
-        const b = getBest(m.id, d.id);
-        if (!b.wave && !b.score) return;   // only show modes you've actually run
-        any = true;
-        UI.text(ctx, m.label + "  ·  " + d.label, fx, y, t.type.label);
-        UI.text(ctx, "wave " + b.wave + "   ·   " + b.score + " pts   ·   " + fmtTime(b.time || 0), rx, y, t.type.label, "right", t.alpha.soft);
-        UI.divider(ctx, fx, y + 11, rx - fx, 0.08);
-        y += 34;
-      });
+    const t = UI.t, fx = W / 2 - 460, rx = W / 2 + 460;
+    // collect every record you actually hold
+    const recs = [];
+    CONFIG.modes.forEach((m) => CONFIG.difficulties.forEach((d) => {
+      const b = getBest(m.id, d.id);
+      if (b.wave || b.score) recs.push({ m, d, b });
+    }));
+    if (!recs.length) {
+      const cy = UI.emptyState(ctx, "◆", "No runs recorded yet — go make some history.", W / 2, 440);
+      uiButtons.push({ x: W / 2 - 130, y: cy, w: 260, h: 46, size: 14, label: "PLAY A RUN", action: () => { state = "setup"; } });
+      return;
+    }
+    // YOUR FINEST — the single best run you own, in display type
+    recs.sort((a, b2) => (b2.b.wave - a.b.wave) || (b2.b.score - a.b.score));
+    const top = recs[0];
+    ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = UI.ink; ctx.font = UI.font(t.type.h2, true);
+    ctx.fillText("WAVE " + top.b.wave + "  ·  " + top.b.score.toLocaleString() + " PTS", W / 2, 348);
+    ctx.restore();
+    UI.tag(ctx, "YOUR FINEST — " + (top.m.label + " · " + top.d.label).toUpperCase() + " · " + fmtTime(top.b.time || 0), W / 2, 372, SCREEN_HUES.profile, "center", t.type.micro);
+    // the ledger of every record
+    const thY = 412;
+    ctx.save(); ctx.textAlign = "left"; ctx.fillStyle = UI.ink; ctx.font = UI.font(t.type.micro, true); ctx.globalAlpha = 0.6;
+    ctx.fillText("MODE", fx, thY);
+    ctx.textAlign = "right"; ctx.fillText("WAVE", rx - 320, thY); ctx.fillText("TIME", rx - 180, thY); ctx.fillText("SCORE", rx - 20, thY);
+    ctx.restore(); ctx.textAlign = "left";
+    UI.divider(ctx, fx, thY + 8, rx - fx, 0.12);
+    let y = thY + 34;
+    recs.slice(0, 10).forEach(({ m, d, b }) => {
+      UI.text(ctx, m.label, fx, y, t.type.label);
+      ctx.font = UI.font(t.type.label, false);
+      UI.tag(ctx, d.label.toUpperCase(), fx + 150 + 14, y, (DIFF_HEAT[d.id] === null ? t.color.danger : DIFF_HEAT[d.id]) || t.color.accent, "left", t.type.micro);
+      UI.text(ctx, "" + b.wave, rx - 320, y, t.type.label, "right");
+      UI.text(ctx, fmtTime(b.time || 0), rx - 180, y, t.type.label, "right", t.alpha.soft);
+      UI.text(ctx, b.score.toLocaleString(), rx - 20, y, t.type.label, "right");
+      UI.divider(ctx, fx, y + 11, rx - fx, 0.06);
+      y += 34;
     });
-    if (!any) UI.text(ctx, "No runs recorded yet — go make some history.", W / 2, 420, t.type.body, "center", t.alpha.soft);
   }
 
-  // STATS tab: a curated grid of lifetime counters — a life in numbers
+  // STATS tab: a life in numbers — domain-coloured tiles that count up on entry,
+  // plus THE JOURNEY: biomes reached + the boss pantheon
   function profileTabStats() {
     const t = UI.t;
-    const tiles = [
-      ["kills", "ENEMIES FELLED"], ["bossKills", "BOSSES FELLED"], ["parries", "PERFECT PARRIES"], ["deflects", "DEFLECTS"],
-      ["superslams", "POWER SLAMS"], ["updrafts", "UPDRAFTS"], ["runs", "RUNS"], ["bestWave", "BEST WAVE"],
-      ["longestRun", "LONGEST RUN", (v) => fmtTime(v)], ["maxDamageHit", "BIGGEST HIT", (v) => Math.round(v)], ["coinsEarned", "COINS EARNED"], ["noHitWaves", "NO-HIT WAVES"],
+    const RED = t.color.danger, CYN = "#13c4d6";
+    const tiles = [   // [statKey, label, glyph, domainColor, fmt?]
+      ["kills", "ENEMIES FELLED", "⚔", RED], ["bossKills", "BOSSES FELLED", "☠", RED], ["parries", "PERFECT PARRIES", "✦", CYN], ["deflects", "DEFLECTS", "↩", CYN],
+      ["superslams", "POWER SLAMS", "⇊", RED], ["updrafts", "UPDRAFTS", "⇈", CYN], ["runs", "RUNS", "▶", HUE_GREEN], ["bestWave", "BEST WAVE", "▲", HUE_GREEN],
+      ["longestRun", "LONGEST RUN", "◔", HUE_GREEN, (v) => fmtTime(v)], ["maxDamageHit", "BIGGEST HIT", "✸", RED, (v) => "" + Math.round(v)],
+      ["coinsEarned", "COINS EARNED", "◆", HUE_GOLD], ["noHitWaves", "NO-HIT WAVES", "⬡", HUE_GOLD],
     ];
-    const cols = 4, mx = W / 2 - 560, gap = 18, tw = (1120 - gap * (cols - 1)) / cols, th = 104;
-    tiles.forEach(([key, label, fmt], i) => {
-      const x = mx + (i % cols) * (tw + gap), y = 316 + Math.floor(i / cols) * (th + gap);
-      const raw = PROFILE.stat(key), val = fmt ? fmt(raw) : raw;
+    const cols = 4, mx = W / 2 - 560, gap = 18, tw = (1120 - gap * (cols - 1)) / cols, th = 96;
+    const k = ez(clamp(enterT / 0.5, 0, 1));   // entry count-up
+    tiles.forEach(([key, label, glyph, hue, fmt], i) => {
+      const x = mx + (i % cols) * (tw + gap), y = 312 + Math.floor(i / cols) * (th + gap);
+      const raw = PROFILE.stat(key);
+      const shown = fmt ? fmt(raw) : Math.round(raw * k).toLocaleString();
       UI.card(ctx, x, y, tw, th, false);
-      ctx.fillStyle = t.color.accent; ctx.fillRect(x, y, tw, 4);
+      ctx.fillStyle = hue; ctx.fillRect(x, y, tw, 4);
+      UI.tag(ctx, glyph, x + 20, y + 40, hue, "left", 20);
       ctx.fillStyle = UI.ink; ctx.font = UI.font(t.type.h2, true); ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-      ctx.fillText("" + val, x + tw / 2, y + 56);
-      UI.tag(ctx, label, x + tw / 2, y + 84, t.color.muted, "center", t.type.micro);
+      ctx.fillText("" + shown, x + tw / 2 + 8, y + 50);
+      UI.tag(ctx, label, x + tw / 2, y + 78, t.color.muted, "center", t.type.micro);
+    });
+    // ---- THE JOURNEY: biomes reached (in cycle order) + the boss pantheon ----
+    const jy = 312 + 3 * (th + gap) + 8;
+    UI.sectionLabel(ctx, "THE JOURNEY", mx, jy, 1120, SCREEN_HUES.profile);
+    const seen = PROFILE.stat("biomesSeen");
+    let bx = mx;
+    STAGES.forEach((s, i) => {
+      const lit = i < seen;
+      UI.tag(ctx, (lit ? "◆ " : "◇ ") + s.name.toUpperCase(), bx, jy + 34, lit ? SCREEN_HUES.profile : t.color.muted, "left", t.type.micro);
+      bx += ctx.measureText((lit ? "◆ " : "◇ ") + s.name.toUpperCase()).width + 26;
+    });
+    let px = mx;
+    BOSS_ROSTER.forEach((b) => {
+      const lit = !!PROFILE.stat("kill" + b.id.charAt(0).toUpperCase() + b.id.slice(1));
+      UI.tag(ctx, (lit ? "☠ " : "◇ ") + b.name.toUpperCase(), px, jy + 58, lit ? t.color.danger : t.color.muted, "left", t.type.micro);
+      px += ctx.measureText((lit ? "☠ " : "◇ ") + b.name.toUpperCase()).width + 26;
     });
   }
 
@@ -3949,7 +4010,9 @@
     const rowH = compact ? 50 : 52, btnW = compact ? 44 : 54, btnH = compact ? 36 : 42;
     const block = compact ? 196 : 252, lo = rx - block, labelSize = compact ? t.type.body : t.type.lead;
     let y = y0;
-    const section = (name) => { if (compact) return; UI.tag(ctx, name, fx, y + 6, t.color.accent, "left", t.type.micro); y += 22; };
+    // full mode: a real section label + hairline that RESERVES its space (no more
+    // labels colliding with row dividers); compact (pause) skips sections entirely
+    const section = (name) => { if (compact) return; y = UI.sectionLabel(ctx, name, fx, y + 16, rx - fx) + 2; };
     const row = (label, drawControl) => {
       const cy = y + rowH / 2;
       UI.text(ctx, label, fx, cy + 6, labelSize);
@@ -3965,12 +4028,18 @@
     const wide = (label, lab, sel, action) => row(label, (cy) => {
       uiButtons.push({ x: lo, y: cy - btnH / 2, w: block, h: btnH, size: compact ? 14 : 16, label: lab, sel, action });
     });
+    // boolean rows use the real switch (track + sliding knob)
+    const toggle = (label, on, action) => row(label, (cy) => {
+      const box = { x: lo, y: cy - btnH / 2, w: block, h: btnH };
+      uiButtons.push(Object.assign({ label: "", _hideBox: true, action }, box));
+      UI.toggle(ctx, box, on);
+    });
     const save = () => { applySettings(); saveSettings(); };
     section("AUDIO");
     stepper("Volume", Math.round(settings.vol * 100) + "%",
       () => { settings.vol = clamp(+(settings.vol - 0.1).toFixed(2), 0, 1); save(); },
       () => { settings.vol = clamp(+(settings.vol + 0.1).toFixed(2), 0, 1); save(); });
-    wide("Music", settings.music ? "ON" : "OFF", settings.music,
+    toggle("Music", settings.music,
       () => { settings.music = !settings.music; save(); });
     section("FEEL");
     stepper("Mouse sensitivity", settings.sens.toFixed(2),
@@ -4107,12 +4176,18 @@
     const t = UI.t, fx = W / 2 - 280, rx = W / 2 + 280;
     UI.header(ctx, "SETTINGS", "tune sound, feel, and feedback", eIn, SCREEN_HUES.settings);
     const yEnd = drawSettingsRows(fx, rx, 182, false);
-    // Legal — a CrazyGames Basic-launch requirement: an in-game mention of Terms & Privacy.
+    // device line + a door to the full control chart (Codex ▸ Guide)
+    UI.tag(ctx, (Input.touchActive() ? "TOUCH" : "DESKTOP") + " · EFFECTS " + (settings.gfx === "auto" ? "AUTO (" + (GFX.low ? "LOW" : "HIGH") + ")" : settings.gfx.toUpperCase()),
+      fx, yEnd + 24, t.color.muted, "left", t.type.micro);
+    uiButtons.push({ x: rx - 210, y: yEnd + 4, w: 210, h: 34, size: 12, label: "VIEW CONTROLS ▸",
+      action: () => { state = "codex"; codexTab = "guide"; listScroll = 0; } });
+    // Legal — a CrazyGames Basic-launch requirement: an in-game mention of Terms &
+    // Privacy. Quiet micro links, not fat buttons.
     UI.text(ctx, "By playing you agree to CrazyGames' Terms of Service and Privacy Policy.",
-      fx, yEnd + 20, t.type.caption, "left", t.alpha.muted);
-    uiButtons.push({ x: fx, y: yEnd + 32, w: 190, h: 34, size: 12, label: "Terms of Service",
+      fx, yEnd + 56, t.type.micro, "left", t.alpha.muted);
+    uiButtons.push({ x: fx, y: yEnd + 66, w: 150, h: 26, size: 10, label: "TERMS OF SERVICE",
       action: () => window.open("https://www.crazygames.com/terms-and-conditions", "_blank", "noopener") });
-    uiButtons.push({ x: fx + 204, y: yEnd + 32, w: 190, h: 34, size: 12, label: "Privacy Policy",
+    uiButtons.push({ x: fx + 162, y: yEnd + 66, w: 150, h: 26, size: 10, label: "PRIVACY POLICY",
       action: () => window.open("https://www.crazygames.com/privacy", "_blank", "noopener") });
     // BACK returns to the menu, or to the pause screen when opened mid-run
     uiButtons.push({ x: W / 2 - LAY.backW / 2, y: LAY.backY, w: LAY.backW, h: LAY.backH,

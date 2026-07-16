@@ -304,6 +304,23 @@ const UI = {
     return w;
   },
 
+  // the player AVATAR: a framed portrait of the fighter — ink silhouette with
+  // its blade mid-slash. Procedural; scales with s (box side).
+  avatar(ctx, x, y, s) {
+    ctx.save();
+    ctx.globalAlpha = 0.9; ctx.fillStyle = this.t.color.paper; ctx.fillRect(x, y, s, s);
+    ctx.globalAlpha = 1; ctx.strokeStyle = this.ink; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, s, s);
+    const px = x + s * 0.34, py = y + s * 0.30, pw = s * 0.26, ph = s * 0.44;
+    ctx.fillStyle = this.ink; ctx.fillRect(px, py, pw, ph);                 // the fighter
+    ctx.fillStyle = this.t.color.accent; ctx.fillRect(px + pw * 0.55, py + ph * 0.26, pw * 0.24, ph * 0.13);   // the eye
+    ctx.strokeStyle = this.ink; ctx.lineWidth = Math.max(2, s * 0.05); ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(px + pw + s * 0.05, py + ph * 0.55);        // the blade, mid-slash
+    ctx.lineTo(x + s * 0.88, y + s * 0.14); ctx.stroke();
+    ctx.strokeStyle = this.t.color.accent; ctx.lineWidth = 2; ctx.globalAlpha = 0.7;
+    ctx.beginPath(); ctx.moveTo(px + pw + s * 0.02, py + ph * 0.62); ctx.lineTo(x + s * 0.82, y + s * 0.22); ctx.stroke();
+    ctx.restore();
+  },
+
   // a section label + hairline that RESERVES its vertical space (returns the y
   // content should start at) — so labels can never collide with what follows.
   sectionLabel(ctx, label, x, y, w, hue) {
