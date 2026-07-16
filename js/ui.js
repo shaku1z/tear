@@ -171,9 +171,11 @@ const UI = {
       ctx.fillStyle = on ? this.ink : this.t.color.disabled;
     }
     // optional trimmings (parity with the ghost style): b.glyph = left icon
-    // slot, b.sub = caption subline; with either, text lays out left-aligned.
+    // slot, b.sub = caption subline, b.pips = {n, filled, color} right-aligned
+    // level/heat meter; with any, text lays out left-aligned.
     const cy2 = b.y + b.h / 2;
     ctx.textBaseline = "middle";
+    if (b.pips) this.pips(ctx, b.x + b.w - 14, cy2, b.pips.n, b.pips.filled, selected ? this.t.color.paper : b.pips.color);
     if (b.glyph || b.sub) {
       let lx2 = b.x + 16;
       if (b.glyph) {

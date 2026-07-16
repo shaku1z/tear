@@ -3086,46 +3086,119 @@
     addBack();
   }
 
+  // THE WAR TABLE — mode/difficulty/weapon as three framed columns, each with a
+  // fixed blurb slot at its own foot (so descriptions can never collide), plus a
+  // stakes footer: your best for the selected board + today's bounties.
+  const MODE_TRIM = {
+    campaign:   { glyph: "▲", sub: "stage after stage, ever deeper" },
+    endless:    { glyph: "∞", sub: "biomes cycle — chase your best" },
+    gauntlet:   { glyph: "☠", sub: "a full boss every 8 waves" },
+    playground: { glyph: "✦", sub: "open arena — test everything" },
+    tutorial:   { glyph: "➔", sub: "learn the blade" },
+  };
+  const DIFF_HEAT = { easy: HUE_GREEN, normal: "#13c4d6", hard: HUE_GOLD, extreme: null, onehit: HUE_VIOLET };  // null = danger red
   function renderSetup() {
     const t = UI.t;
     UI.header(ctx, "SELECT RUN", null, eIn);
-    const top = 188, bw = t.metric.btnW, bh = 50, gap = t.metric.btnGap;
-    const col = (label, x, items, get, set) => {
-      UI.tag(ctx, label.toUpperCase(), x + bw / 2, top, t.color.accent, "center", t.type.caption);
-      items.forEach((it, i) => uiButtons.push({
-        x, y: top + 18 + i * (bh + gap), w: bw, h: bh, size: 16,
-        label: it.label + (it.enabled === false ? " (soon)" : ""),
-        enabled: it.enabled !== false,
-        action: () => { if (it.enabled !== false) set(it.id); },
-        sel: get() === it.id,
-      }));
-    };
-    // dev/test modes (Boss Test, Enemy Test) never ship to the CrazyGames build —
-    // they only appear locally and on the standalone (Vercel) site
-    col("Mode", 180, CONFIG.modes.filter((m) => !m.debug || !CG.live), () => selMode, (v) => selMode = v);
-    // difficulty is meaningless in Training/Playground (Playground sets it from its own build menu)
-    const showDiff = selMode !== "tutorial" && selMode !== "playground";
-    if (showDiff) col("Difficulty", 650, CONFIG.difficulties.map((d) => ({ id: d.id, label: d.label })), () => selDiff, (v) => selDiff = v);
-    col("Weapon", 1120, WEAPONS.map((w) => ({ id: w.id, label: w.name })), () => selWeapon, (v) => selWeapon = v);
-    const dsel = CONFIG.difficulties.find((x) => x.id === selDiff);
-    if (showDiff && dsel && dsel.desc) UI.text(ctx, dsel.desc, 650 + bw / 2, top + 18 + 5 * (bh + gap) + 6, t.type.caption, "center", t.alpha.soft);
+    const top = 150, colY = 168, bh = 58, gap = 8;
+    const mx = 240, mw = 380, dx = 640, dw = 360, wx = 1020, ww = 340;
 
-    const wsel = WEAPONS.find((x) => x.id === selWeapon);
-    if (wsel) UI.text(ctx, wsel.blurb, W / 2, 552, t.type.body, "center", t.alpha.soft);
-
-    if (selMode === "bossonly") {
-      // boss gauntlet: pick the first boss (then it shuffles through the rest, tier-up after each)
-      UI.text(ctx, "Boss Test cycles every boss, with a tier-up after each. Start with:", W / 2, 582, t.type.caption, "center", t.alpha.muted);
-      const opts = [{ id: "shuffle", label: "Shuffle" }].concat(BOSS_ROSTER.map((b) => ({ id: b.id, label: b.name })));
-      const bbw = 178, bbg = 10, totalw = opts.length * bbw + (opts.length - 1) * bbg, bx = (W - totalw) / 2;
-      opts.forEach((o, i) => uiButtons.push({ x: bx + i * (bbw + bbg), y: 596, w: bbw, h: 40, size: 14, label: o.label, sel: selBoss === o.id, action: () => { selBoss = o.id; } }));
-    } else {
-      const msel = CONFIG.modes.find((x) => x.id === selMode);
-      if (msel) UI.text(ctx, msel.blurb, W / 2, 588, t.type.caption, "center", t.alpha.muted);
+    // ---- MODE column (slightly tighter rows so the DEV section clears the blurb slot) ----
+    UI.sectionLabel(ctx, "MODE", mx, top, mw);
+    const pubModes = CONFIG.modes.filter((m) => !m.debug);
+    pubModes.forEach((m, i) => {
+      const trim = MODE_TRIM[m.id] || {};
+      uiButtons.push({ x: mx, y: colY + i * 60, w: mw, h: 54, size: 17,
+        label: m.label.toUpperCase(), glyph: trim.glyph, sub: trim.sub,
+        sel: selMode === m.id, action: () => { selMode = m.id; } });
+    });
+    // dev/test modes: a de-emphasised hairline section, local + Vercel only (never CG)
+    if (!CG.live) {
+      const devY = colY + pubModes.length * 60 + 12;
+      UI.sectionLabel(ctx, "DEV", mx, devY, mw, t.color.muted);
+      CONFIG.modes.filter((m) => m.debug).forEach((m, i) => {
+        uiButtons.push({ x: mx, y: devY + 12 + i * 40, w: mw, h: 34, size: 12,
+          label: m.label.toUpperCase(), sel: selMode === m.id, action: () => { selMode = m.id; } });
+      });
     }
 
-    uiButtons.push({ x: W / 2 - 230, y: 660, w: 200, h: 56, label: "START", action: () => startRun(selMode, selDiff) });
-    uiButtons.push({ x: W / 2 + 30, y: 660, w: 200, h: 56, label: "BACK", action: () => { state = "menu"; } });
+    // ---- DIFFICULTY column: the risk ladder ----
+    UI.sectionLabel(ctx, "DIFFICULTY", dx, top, dw);
+    const showDiff = selMode !== "tutorial" && selMode !== "playground";
+    if (showDiff) {
+      CONFIG.difficulties.forEach((d, i) => {
+        const heat = DIFF_HEAT[d.id] === null ? t.color.danger : (DIFF_HEAT[d.id] || t.color.accent);
+        uiButtons.push({ x: dx, y: colY + i * (bh + gap), w: dw, h: bh, size: 17,
+          label: d.label.toUpperCase(),
+          sub: "×" + d.mods.score.toFixed(1) + " score  ·  ×" + d.mods.coin.toFixed(1) + " coins",
+          pips: { n: 5, filled: i + 1, color: heat },
+          sel: selDiff === d.id, action: () => { selDiff = d.id; } });
+      });
+    } else {
+      UI.text(ctx, "set by the mode —", dx + dw / 2, colY + 120, t.type.caption, "center", t.alpha.muted);
+      UI.text(ctx, "training runs tune themselves", dx + dw / 2, colY + 144, t.type.caption, "center", t.alpha.muted);
+    }
+
+    // ---- WEAPON column ----
+    UI.sectionLabel(ctx, "WEAPON", wx, top, ww);
+    const WPN_TRIM = { sword: { glyph: "⚔", sub: "balanced · pierce throw" }, hammer: { glyph: "⚒", sub: "+70% dmg · −reach · lob throw" } };
+    WEAPONS.forEach((wpn, i) => {
+      const trim = WPN_TRIM[wpn.id] || {};
+      uiButtons.push({ x: wx, y: colY + i * (96 + 10), w: ww, h: 96, size: 19,
+        label: wpn.name.toUpperCase(), glyph: trim.glyph, sub: trim.sub,
+        sel: selWeapon === wpn.id, action: () => { selWeapon = wpn.id; } });
+    });
+
+    // ---- fixed blurb slots at each column's foot (collision-proof by reservation) ----
+    const blurbY = 588;
+    const msel = CONFIG.modes.find((x) => x.id === selMode);
+    const dsel = CONFIG.difficulties.find((x) => x.id === selDiff);
+    const wsel = WEAPONS.find((x) => x.id === selWeapon);
+    const foot = (x, w, txt) => {
+      if (!txt) return;
+      UI.divider(ctx, x, blurbY - 16, w, 0.10);
+      // 2-line wrap into the column width
+      ctx.font = UI.font(t.type.caption, false);
+      const words = txt.split(" "); let line = "", ly = blurbY;
+      for (const wd of words) {
+        const test = line ? line + " " + wd : wd;
+        if (ctx.measureText(test).width > w - 8 && line) { UI.text(ctx, line, x, ly, t.type.caption, "left", t.alpha.soft); line = wd; ly += 20; if (ly > blurbY + 40) break; }
+        else line = test;
+      }
+      if (line && ly <= blurbY + 40) UI.text(ctx, line, x, ly, t.type.caption, "left", t.alpha.soft);
+    };
+    foot(mx, mw, msel && msel.blurb);
+    foot(dx, dw, showDiff && dsel ? dsel.desc : "");
+    foot(wx, ww, wsel && wsel.blurb);
+
+    // ---- stakes strip: your best on this exact board + today's bounties ----
+    const sy = 668;
+    UI.divider(ctx, mx, sy - 12, 1120, 0.14);
+    const best = getBest(selMode, selDiff);
+    UI.tag(ctx, "YOUR BEST", mx, sy + 6, t.color.accent, "left", t.type.micro);
+    UI.text(ctx, (best.wave || best.score)
+      ? "wave " + best.wave + "   ·   " + best.score + " pts   ·   " + fmtTime(best.time || 0)
+      : "no record on this board yet — set one.", mx, sy + 30, t.type.label, "left", t.alpha.soft);
+    if (selMode === "bossonly") {
+      // dev boss picker takes the bounty slot (Boss Test never ships to CG)
+      const opts = [{ id: "shuffle", label: "SHUFFLE" }].concat(BOSS_ROSTER.map((b) => ({ id: b.id, label: b.name.toUpperCase() })));
+      const bbw = 120, bbg = 8, bx0 = mx + 1120 - opts.length * (bbw + bbg) + bbg;
+      opts.forEach((o, i) => uiButtons.push({ x: bx0 + i * (bbw + bbg), y: sy - 2, w: bbw, h: 34, chip: true, size: 10,
+        label: o.label, sel: selBoss === o.id, action: () => { selBoss = o.id; } }));
+    } else if (typeof DAILY !== "undefined") {
+      UI.tag(ctx, "TODAY'S BOUNTIES", mx + 470, sy + 6, HUE_GOLD, "left", t.type.micro);
+      DAILY.today().forEach((ch, i) => {
+        const bx0 = mx + 470 + i * 224, done = DAILY.isDone(ch), prog = DAILY.progress(ch);
+        UI.text(ctx, ch.txt(ch.goal), bx0, sy + 30, t.type.micro, "left", done ? t.alpha.faint : t.alpha.soft);
+        UI.tag(ctx, done ? "✓ DONE" : prog + "/" + ch.goal + " · +" + ch.shards + "⬡", bx0, sy + 48, done ? HUE_GREEN : t.color.muted, "left", t.type.micro);
+      });
+    }
+
+    // ---- hero START + the standard BACK ----
+    uiButtons.push({ ghost: true, hero: true, x: W / 2 - 200, y: 726, w: 400, h: 62, glyph: "▶", size: 26,
+      label: "START", sub: ((msel ? msel.label : "") + " · " + (showDiff && dsel ? dsel.label + " · " : "") + (wsel ? wsel.name : "")).toUpperCase(),
+      action: () => startRun(selMode, selDiff) });
+    addBack();
   }
 
   // GUIDE tab (CODEX): the keybind + trick-meter reference, verbatim from the old
