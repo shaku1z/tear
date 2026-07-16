@@ -170,10 +170,34 @@ const UI = {
       if (a > 0.01) { ctx.globalAlpha = a; ctx.fillStyle = this.t.color.accent; ctx.fillRect(b.x, b.y, b.accent ? 4 : 3, b.h); ctx.globalAlpha = 1; }
       ctx.fillStyle = on ? this.ink : this.t.color.disabled;
     }
+    // optional trimmings (parity with the ghost style): b.glyph = left icon
+    // slot, b.sub = caption subline; with either, text lays out left-aligned.
+    const cy2 = b.y + b.h / 2;
+    ctx.textBaseline = "middle";
+    if (b.glyph || b.sub) {
+      let lx2 = b.x + 16;
+      if (b.glyph) {
+        ctx.globalAlpha = selected ? 1 : 0.55 + 0.45 * a;
+        ctx.fillStyle = selected ? this.t.color.paper : (b.accent || this.t.color.accent);
+        ctx.font = this.font(17, true); ctx.textAlign = "left";
+        ctx.fillText(b.glyph, lx2, cy2 + 1);
+        ctx.globalAlpha = 1; lx2 += 30;
+      }
+      ctx.fillStyle = selected ? this.t.color.paper : (on ? this.ink : this.t.color.disabled);
+      ctx.font = this.font(b.size || this.t.type.lead, true); ctx.textAlign = "left";
+      ctx.fillText(b.label, lx2, (b.sub ? cy2 - 9 : cy2) + 1);
+      if (b.sub) {
+        ctx.globalAlpha = selected ? 0.75 : 0.55;
+        ctx.font = this.font(this.t.type.micro, false);
+        ctx.fillText(b.sub, lx2, cy2 + 12);
+        ctx.globalAlpha = 1;
+      }
+      ctx.textBaseline = "alphabetic";
+      return;
+    }
     ctx.font = this.font(b.size || this.t.type.lead, true);
     ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + 1);
+    ctx.fillText(b.label, b.x + b.w / 2, cy2 + 1);
     ctx.textBaseline = "alphabetic";
   },
 
@@ -188,6 +212,32 @@ const UI = {
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + 1);
     ctx.textBaseline = "alphabetic";
+  },
+
+  // ---- TOGGLE (boolean switch: track + sliding knob) -----------------------
+  // b: {x,y,w,h} = the clickable row (registered by the caller as a normal
+  // uiButton); `on` = current value. The switch renders right-aligned in the row.
+  _togAnim: {},
+  toggle(ctx, b, on) {
+    const key = (b._k || (b.x + "," + b.y));
+    const prev = this._togAnim[key] == null ? (on ? 1 : 0) : this._togAnim[key];
+    const a = this._togAnim[key] = prev + ((on ? 1 : 0) - prev) * 0.25;
+    const trW = 58, trH = 26, tx = b.x + b.w - trW - 10, ty = b.y + (b.h - trH) / 2;
+    // track
+    ctx.globalAlpha = 0.25 + a * 0.75;
+    ctx.fillStyle = on ? this.t.color.accent : "#9a9aa4";
+    ctx.fillRect(tx, ty, trW, trH);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = this.ink; ctx.lineWidth = 1.5; ctx.strokeRect(tx, ty, trW, trH);
+    // knob slides
+    const kx = tx + 3 + a * (trW - trH);
+    ctx.fillStyle = this.t.color.paper; ctx.fillRect(kx, ty + 3, trH - 6, trH - 6);
+    ctx.strokeStyle = this.ink; ctx.strokeRect(kx, ty + 3, trH - 6, trH - 6);
+    // state word to the left of the track
+    ctx.font = this.font(this.t.type.micro, true); ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    ctx.fillStyle = this.ink; ctx.globalAlpha = on ? 0.85 : 0.4;
+    ctx.fillText(on ? "ON" : "OFF", tx - 10, ty + trH / 2 + 1);
+    ctx.globalAlpha = 1; ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
   },
 
   // ---- TABS (segmented view-switcher for hub screens) ----------------------
@@ -221,7 +271,66 @@ const UI = {
     return y + h + 10;
   },
 
+  // ---- LEDGER KIT (small editorial pieces shared by the sub-screens) --------
+  // a bordered key-cap chip ("W", "SHIFT", "RMB") for control listings.
+  // Returns the width consumed so callers can lay a row of caps.
+  keycap(ctx, key, x, y) {
+    ctx.font = this.font(this.t.type.micro, true);
+    const w = Math.max(26, ctx.measureText(key).width + 14), h = 22;
+    ctx.globalAlpha = 0.9; ctx.fillStyle = this.t.color.paper; ctx.fillRect(x, y - h + 5, w, h);
+    ctx.globalAlpha = 1; ctx.strokeStyle = this.ink; ctx.lineWidth = 1.5;
+    ctx.strokeRect(x, y - h + 5, w, h);
+    ctx.fillStyle = this.ink; ctx.fillRect(x, y + 3, w, 2);           // key-cap "depth" lip
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    ctx.fillText(key, x + w / 2, y);
+    ctx.textAlign = "left";
+    return w;
+  },
+
+  // a section label + hairline that RESERVES its vertical space (returns the y
+  // content should start at) — so labels can never collide with what follows.
+  sectionLabel(ctx, label, x, y, w, hue) {
+    this.tag(ctx, label.toUpperCase(), x, y, hue || this.t.color.accent, "left", this.t.type.micro);
+    ctx.font = this.font(this.t.type.micro, true);
+    const lw = ctx.measureText(label.toUpperCase()).width;
+    this.divider(ctx, x + lw + 12, y - 4, w - lw - 12, 0.14);
+    return y + 18;
+  },
+
+  // a designed empty state: big ghost glyph + one-liner (+ optional CTA the
+  // caller registers as a button and passes for placement). Centred in a zone.
+  emptyState(ctx, glyph, line, cx, cy) {
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    ctx.globalAlpha = 0.10; ctx.fillStyle = this.ink; ctx.font = this.font(84, true);
+    ctx.fillText(glyph, cx, cy);
+    ctx.globalAlpha = 1;
+    this.text(ctx, line, cx, cy + 42, this.t.type.body, "center", this.t.alpha.soft);
+    return cy + 66;   // y for an optional CTA button under the line
+  },
+
   // ---- SURFACES -----------------------------------------------------------
+  // THE SHEET: the content surface every sub-screen sits on — a calm paper zone
+  // over the live attract scene (soft shadow, wash, hairline frame, and a
+  // signature-hue top edge that gives each screen its identity).
+  // Standard geometry: UI.sheetRect() so every screen wraps identically.
+  sheetRect() {
+    const vw = CONFIG.view.w, vh = CONFIG.view.h;
+    return { x: vw / 2 - 620, y: 44, w: 1240, h: vh - 80 };
+  },
+  sheet(ctx, x, y, w, h, hue) {
+    ctx.save();
+    ctx.globalAlpha = 0.10; ctx.fillStyle = "#0a0b10";               // soft drop shadow
+    ctx.fillRect(x + 6, y + 8, w, h);
+    ctx.globalAlpha = 0.62; ctx.fillStyle = this.t.color.paper;      // the paper surface
+    ctx.fillRect(x, y, w, h);
+    ctx.globalAlpha = 0.22; ctx.strokeStyle = this.ink; ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);                  // hairline frame
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = hue || this.t.color.accent;                      // signature top edge
+    ctx.fillRect(x, y, w, 3);
+    ctx.restore();
+  },
+
   // a plain bordered panel
   panel(ctx, x, y, w, h) {
     ctx.fillStyle = this.t.color.paper;
@@ -315,12 +424,13 @@ const UI = {
   // a standard screen header: centred title + an accent underline that sweeps out
   // on entry + optional muted subtitle. Returns the y to start content below it,
   // so every sub-screen lines up identically. `anim` 0..1 drives the sweep.
-  header(ctx, title, subtitle, anim) {
+  // `hue` = the screen's signature colour (defaults to accent cyan).
+  header(ctx, title, subtitle, anim, hue) {
     const cx = CONFIG.view.w / 2;
     const a = anim == null ? 1 : anim;
     this.title(ctx, title, cx, 92, this.t.type.h1);
     const w = 130 * a;
-    ctx.globalAlpha = a; ctx.fillStyle = this.t.color.accent;
+    ctx.globalAlpha = a; ctx.fillStyle = hue || this.t.color.accent;
     ctx.fillRect(cx - w / 2, 108, w, 3); ctx.globalAlpha = 1;
     if (subtitle) this.text(ctx, subtitle, cx, 134, this.t.type.caption, "center", this.t.alpha.muted);
     return subtitle ? 188 : 170;

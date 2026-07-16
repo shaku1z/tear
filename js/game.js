@@ -2285,11 +2285,17 @@
       eIn = ez(enterT / 0.24);
       Attract.draw(ctx);
       if (state !== "menu") {
-        // sub-tabs: a frosted wash + soft vignette so the dark-on-light content reads over the scene
-        ctx.fillStyle = UI.t.color.paper; ctx.globalAlpha = 0.72; ctx.fillRect(SR.x, SR.y, SR.w, SR.h); ctx.globalAlpha = 1;
+        // sub-tabs: a lighter frosted wash (the duel reads at the edges) + vignette,
+        // then THE SHEET — the calm paper surface all content sits on, wearing the
+        // screen's signature hue on its top edge.
+        ctx.fillStyle = UI.t.color.paper; ctx.globalAlpha = 0.58; ctx.fillRect(SR.x, SR.y, SR.w, SR.h); ctx.globalAlpha = 1;
         const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.42, W / 2, H / 2, W * 0.62);
-        vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.12)");
+        vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.14)");
         ctx.fillStyle = vg; ctx.fillRect(SR.x, SR.y, SR.w, SR.h);
+        if (state !== "rename") {
+          const sh = UI.sheetRect();
+          UI.sheet(ctx, sh.x, sh.y, sh.w, sh.h, SCREEN_HUES[state]);
+        }
       }
       ctx.save(); ctx.translate(0, (1 - eIn) * 22);
       if (state === "menu") renderMenu();
@@ -2849,6 +2855,12 @@
   // ---- menu screens ----
   // shared layout frame so every sub-screen aligns identically
   const LAY = { fx: W / 2 - 320, rx: W / 2 + 320, backY: H - 96, backW: 220, backH: 52 };
+  // each sub-screen's signature hue — worn on its sheet's top edge + header underline
+  const HUE_GOLD = "#e0a326", HUE_GREEN = "#2f9e6b", HUE_VIOLET = "#b06cff", HUE_INK = "#3a3d4d";
+  const SCREEN_HUES = {
+    shop: HUE_GOLD, achievements: "#13c4d6", leaderboards: HUE_GOLD,
+    profile: HUE_GREEN, setup: undefined, codex: HUE_INK, settings: HUE_INK,
+  };
   function vmenu(items, x, top, w, h, gap) {
     items.forEach((it, i) => {
       const b = { x: x - w / 2, y: top + i * (h + gap), w, h, label: it.label, enabled: it.enabled, action: it.action, size: it.size, ghost: it.ghost };
@@ -2994,7 +3006,7 @@
   function renderCodex() {
     const t = UI.t;
     UI.title(ctx, "CODEX", W / 2, 92, t.type.h1);
-    ctx.fillStyle = t.color.accent; ctx.globalAlpha = eIn; ctx.fillRect(W / 2 - 65 * eIn, 108, 130 * eIn, 3); ctx.globalAlpha = 1;
+    ctx.fillStyle = SCREEN_HUES.codex; ctx.globalAlpha = eIn; ctx.fillRect(W / 2 - 65 * eIn, 108, 130 * eIn, 3); ctx.globalAlpha = 1;
     UI.tabs(ctx, "codex", CODEX_TABS.map((x) => x[1]), Math.max(0, CODEX_TABS.findIndex((x) => x[0] === codexTab)), 124, (b) => {
       const i = b._tab;
       b.action = () => { if (CODEX_TABS[i][0] !== codexTab) { codexTab = CODEX_TABS[i][0]; listScroll = 0; } };
@@ -3056,7 +3068,7 @@
 
   function renderShop() {
     const t = UI.t, sfx = W / 2 - 560, srx = W / 2 + 560, gap = 40, colW = (srx - sfx - gap) / 2;
-    UI.header(ctx, "SHOP", "permanent upgrades — applied at the start of every run", eIn);
+    UI.header(ctx, "SHOP", "permanent upgrades — applied at the start of every run", eIn, SCREEN_HUES.shop);
     UI.tag(ctx, "◆ " + META.coins() + " COINS", W / 2, 162, t.color.accent, "center", t.type.body);
     const top = 214, rowH = 78, bw = 112;
     SHOP.forEach((it, i) => {
@@ -3147,7 +3159,7 @@
   function renderProfile() {
     const t = UI.t, fx = W / 2 - 560, rx = W / 2 + 560;
     UI.title(ctx, "PROFILE", W / 2, 92, t.type.h1);
-    ctx.fillStyle = t.color.accent; ctx.globalAlpha = eIn; ctx.fillRect(W / 2 - 65 * eIn, 108, 130 * eIn, 3); ctx.globalAlpha = 1;
+    ctx.fillStyle = SCREEN_HUES.profile; ctx.globalAlpha = eIn; ctx.fillRect(W / 2 - 65 * eIn, 108, 130 * eIn, 3); ctx.globalAlpha = 1;
 
     // ---- identity card: status, name, rename, sign in/out, currencies ----
     const signedIn = typeof Cloud !== "undefined" && Cloud.loggedIn();
@@ -3363,7 +3375,7 @@
   function renderLeaderboards() {
     const t = UI.t;
     UI.title(ctx, "LEADERBOARDS", W / 2, 92, t.type.h1);
-    ctx.fillStyle = t.color.accent; ctx.globalAlpha = eIn; ctx.fillRect(W / 2 - 65 * eIn, 108, 130 * eIn, 3); ctx.globalAlpha = 1;
+    ctx.fillStyle = SCREEN_HUES.leaderboards; ctx.globalAlpha = eIn; ctx.fillRect(W / 2 - 65 * eIn, 108, 130 * eIn, 3); ctx.globalAlpha = 1;
     UI.tabs(ctx, "lb", LB_TABS.map((x) => x[1]), Math.max(0, LB_TABS.findIndex((x) => x[0] === lbTab)), 124, (b) => {
       const i = b._tab;
       b.action = () => { if (LB_TABS[i][0] !== lbTab) { lbTab = LB_TABS[i][0]; listScroll = 0; replayMsg = ""; } };
@@ -3883,7 +3895,7 @@
 
   function renderSettings() {
     const t = UI.t, fx = W / 2 - 280, rx = W / 2 + 280;
-    UI.header(ctx, "SETTINGS", "tune sound, feel, and feedback", eIn);
+    UI.header(ctx, "SETTINGS", "tune sound, feel, and feedback", eIn, SCREEN_HUES.settings);
     const yEnd = drawSettingsRows(fx, rx, 182, false);
     // Legal — a CrazyGames Basic-launch requirement: an in-game mention of Terms & Privacy.
     UI.text(ctx, "By playing you agree to CrazyGames' Terms of Service and Privacy Policy.",
