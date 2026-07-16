@@ -234,6 +234,7 @@
   const hoverAnim = {};                 // per-button hover progress (key -> 0..1), for hover juice
   const ez = (t) => { t = t < 0 ? 0 : t > 1 ? 1 : t; return 1 - (1 - t) * (1 - t); };   // ease-out
   let codexTab = "abilities";           // CODEX hub: which view is open (abilities | bestiary | guide)
+  let profileTab = "bests";             // PROFILE hub: which view is open (bests | stats)
   let codexFilter = "all";              // ABILITIES tab: category filter
   let codexSort = "category";           // ...and sort mode (category | name | type)
   let bestiaryFilter = "all";           // BESTIARY tab: enemy category filter
@@ -2069,7 +2070,7 @@
   // ---- main loop ----
   function isMenuState(s) {
     return s === "menu" || s === "shop" || s === "codex" || s === "setup" ||
-      s === "highscores" || s === "settings" ||
+      s === "profile" || s === "settings" ||
       s === "achievements" || s === "leaderboards" || s === "rename" || s === "replays";
   }
   function frame(now) {
@@ -2294,7 +2295,7 @@
       else if (state === "shop") renderShop();
       else if (state === "codex") renderCodex();
       else if (state === "setup") renderSetup();
-      else if (state === "highscores") renderHighscores();
+      else if (state === "profile") renderProfile();
       else if (state === "settings") renderSettings();
       else if (state === "achievements") renderAchievements();
       else if (state === "leaderboards") renderLeaderboards();
@@ -2876,8 +2877,13 @@
       ctx.beginPath(); ctx.moveTo(sx - 26, 206); ctx.lineTo(sx + 26, 144); ctx.stroke(); ctx.restore();
     }
     UI.text(ctx, "a momentum-blade survival game", lx, 230, t.type.caption, "left", t.alpha.muted);
-    UI.tag(ctx, "◆ " + META.coins() + " COINS", lx, 262, t.color.accent, "left", t.type.caption);
     UI.text(ctx, "cut clean · keep moving · chase the multiplier", lx, H - 46, t.type.micro, "left", t.alpha.faint);
+
+    // the PLAYER CHIP: identity + currencies, and the door to THE PROFILE (no rail
+    // button — your name IS the button). Styled as a ghost row; P4 upgrades it to a card.
+    uiButtons.push({ x: lx, y: 246, w: t.metric.btnW, h: 42, size: 13, ghost: true,
+      label: (PROFILE.username() || "GUEST").toUpperCase() + "  ·  ◆ " + META.coins() + "  ⬡ " + PROFILE.shards(),
+      action: () => { state = "profile"; profileTab = "bests"; listScroll = 0; } });
 
     UI.ink = "#000";
     // ghost rail buttons: translucent over the sidebar with a hot accent bar on hover
@@ -2888,9 +2894,8 @@
       { label: "LEADERBOARDS", action: () => { state = "leaderboards"; listScroll = 0; } },
       { label: "REPLAYS", action: () => { state = "replays"; listScroll = 0; replayFeedData = null; } },
       { label: "CODEX", action: () => { state = "codex"; codexTab = "abilities"; listScroll = 0; } },
-      { label: "HIGH SCORES", action: () => { state = "highscores"; } },
       { label: "SETTINGS", action: () => { state = "settings"; } },
-    ].map((o) => (o.ghost = true, o)), lx + t.metric.btnW / 2, 266, t.metric.btnW, t.metric.btnH, 5);
+    ].map((o) => (o.ghost = true, o)), lx + t.metric.btnW / 2, 306, t.metric.btnW, t.metric.btnH, 5);
     void savedInk;   // UI.ink intentionally left "#000" for the sub-screen buttons
     return;
   }
@@ -3112,14 +3117,70 @@
     lines.forEach((l, i) => { if (l) UI.text(ctx, l, hx, 228 + i * 31, t.type.body, "left", t.alpha.soft); });
   }
 
-  function renderHighscores() {
+  // ---- THE PROFILE: who you are — identity + sign-in, personal bests, lifetime stats.
+  // Entered from the player chip on the main menu (Option A: no rail button). The
+  // account card here REPLACES the old Settings ACCOUNT section; future identity
+  // features (avatars, replay passport surface) belong in this hub.
+  const PROFILE_TABS = [["bests", "BESTS"], ["stats", "STATS"]];
+  function renderProfile() {
+    const t = UI.t, fx = W / 2 - 560, rx = W / 2 + 560;
+    UI.title(ctx, "PROFILE", W / 2, 92, t.type.h1);
+    ctx.fillStyle = t.color.accent; ctx.globalAlpha = eIn; ctx.fillRect(W / 2 - 65 * eIn, 108, 130 * eIn, 3); ctx.globalAlpha = 1;
+
+    // ---- identity card: status, name, rename, sign in/out, currencies ----
+    const signedIn = typeof Cloud !== "undefined" && Cloud.loggedIn();
+    const fb = typeof Cloud !== "undefined" && Cloud.provider === FirebaseProvider;
+    const canIn = typeof Cloud !== "undefined" && Cloud.canSignIn();
+    const cardY = 132, cardH = 96, cardW = rx - fx;
+    ctx.save();
+    ctx.globalAlpha = 0.05; ctx.fillStyle = UI.ink; ctx.fillRect(fx, cardY, cardW, cardH); ctx.globalAlpha = 1;
+    ctx.fillStyle = signedIn ? "#2f9e6b" : t.color.muted; ctx.fillRect(fx, cardY, 4, cardH);   // green spine when synced
+    ctx.beginPath(); ctx.arc(fx + 28, cardY + 34, 6, 0, 6.2832); ctx.fillStyle = signedIn ? "#2f9e6b" : "#8a93a6"; ctx.fill();
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = UI.ink; ctx.font = UI.font(t.type.h2, true);
+    ctx.fillText((PROFILE.username() || (signedIn ? Cloud.displayName() : "GUEST")).toUpperCase(), fx + 48, cardY + 44);
+    ctx.globalAlpha = 0.6; ctx.font = UI.font(t.type.caption, false);
+    ctx.fillText(signedIn ? "Signed in — progress synced to the cloud"
+      : (canIn ? "Playing as a guest — sign in to keep your progress everywhere" : "Progress saved on this device"), fx + 48, cardY + 70);
+    ctx.globalAlpha = 1; ctx.restore();
+    // currencies + achievements summary, centre-right of the card
+    const achN = PROFILE.unlockedCount(), achTotal = (typeof ACH !== "undefined" && ACH.list) ? ACH.list.length : 0;
+    UI.tag(ctx, "◆ " + META.coins() + " COINS", rx - 560, cardY + 34, t.color.accent, "left", t.type.caption);
+    UI.tag(ctx, "⬡ " + PROFILE.shards() + " SHARDS", rx - 560, cardY + 58, "#b06cff", "left", t.type.caption);
+    uiButtons.push({ x: rx - 400, y: cardY + 28, w: 130, h: 40, size: 12, chip: true, label: "★ " + achN + (achTotal ? " / " + achTotal : ""),
+      action: () => { state = "achievements"; listScroll = 0; } });
+    // account actions, far right
+    const bw2 = 230, bx2 = rx - bw2 - 14;
+    if (signedIn) {
+      const locked = !Cloud.canRename();
+      uiButtons.push({ x: bx2, y: cardY + 10, w: bw2, h: 34, size: 12,
+        label: locked ? "NAME LOCKED · " + Cloud.renameCooldownDays() + "d" : (Cloud.hasCustomName() ? "CHANGE NAME" : "SET DISPLAY NAME"),
+        enabled: !locked, action: () => beginRenameFlow(false) });
+      if (fb) uiButtons.push({ x: bx2, y: cardY + 52, w: bw2, h: 34, size: 12, label: "SIGN OUT", action: () => Cloud.signOut() });
+    } else if (canIn) {
+      uiButtons.push({ x: bx2, y: cardY + 28, w: bw2, h: 40, size: 13,
+        label: (Cloud.authRetryPrompt ? "RETRY · " : "") + Cloud.signInLabel().toUpperCase(), action: () => Cloud.signIn() });
+    }
+
+    UI.tabs(ctx, "profile", PROFILE_TABS.map((x) => x[1]), Math.max(0, PROFILE_TABS.findIndex((x) => x[0] === profileTab)), 252, (b) => {
+      const i = b._tab;
+      b.action = () => { if (PROFILE_TABS[i][0] !== profileTab) { profileTab = PROFILE_TABS[i][0]; listScroll = 0; } };
+      uiButtons.push(b);
+    });
+    if (profileTab === "stats") profileTabStats();
+    else profileTabBests();
+    addBack();
+  }
+
+  // BESTS tab: your best run per mode x difficulty (interim flat list — P4 of the
+  // menu plan upgrades this to the Leaderboards table language)
+  function profileTabBests() {
     const t = UI.t, fx = LAY.fx, rx = LAY.rx;
-    UI.header(ctx, "HIGH SCORES", "your best run in every mode", eIn);
-    let y = 210, any = false;
+    let y = 330, any = false;
     CONFIG.modes.forEach((m) => {
       CONFIG.difficulties.forEach((d) => {
         const b = getBest(m.id, d.id);
-        if (!b.wave && !b.score) return;   // only show modes you've actually run (5 difficulties x 6 modes won't fit)
+        if (!b.wave && !b.score) return;   // only show modes you've actually run
         any = true;
         UI.text(ctx, m.label + "  ·  " + d.label, fx, y, t.type.label);
         UI.text(ctx, "wave " + b.wave + "   ·   " + b.score + " pts   ·   " + fmtTime(b.time || 0), rx, y, t.type.label, "right", t.alpha.soft);
@@ -3127,8 +3188,27 @@
         y += 34;
       });
     });
-    if (!any) UI.text(ctx, "No runs recorded yet — go make some history.", W / 2, 360, t.type.body, "center", t.alpha.soft);
-    addBack();
+    if (!any) UI.text(ctx, "No runs recorded yet — go make some history.", W / 2, 420, t.type.body, "center", t.alpha.soft);
+  }
+
+  // STATS tab: a curated grid of lifetime counters — a life in numbers
+  function profileTabStats() {
+    const t = UI.t;
+    const tiles = [
+      ["kills", "ENEMIES FELLED"], ["bossKills", "BOSSES FELLED"], ["parries", "PERFECT PARRIES"], ["deflects", "DEFLECTS"],
+      ["superslams", "POWER SLAMS"], ["updrafts", "UPDRAFTS"], ["runs", "RUNS"], ["bestWave", "BEST WAVE"],
+      ["longestRun", "LONGEST RUN", (v) => fmtTime(v)], ["maxDamageHit", "BIGGEST HIT", (v) => Math.round(v)], ["coinsEarned", "COINS EARNED"], ["noHitWaves", "NO-HIT WAVES"],
+    ];
+    const cols = 4, mx = W / 2 - 560, gap = 18, tw = (1120 - gap * (cols - 1)) / cols, th = 104;
+    tiles.forEach(([key, label, fmt], i) => {
+      const x = mx + (i % cols) * (tw + gap), y = 316 + Math.floor(i / cols) * (th + gap);
+      const raw = PROFILE.stat(key), val = fmt ? fmt(raw) : raw;
+      UI.card(ctx, x, y, tw, th, false);
+      ctx.fillStyle = t.color.accent; ctx.fillRect(x, y, tw, 4);
+      ctx.fillStyle = UI.ink; ctx.font = UI.font(t.type.h2, true); ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      ctx.fillText("" + val, x + tw / 2, y + 56);
+      UI.tag(ctx, label, x + tw / 2, y + 84, t.color.muted, "center", t.type.micro);
+    });
   }
 
   // the ACHIEVEMENTS menu: a shard summary, category filters, and a scrollable grid of
@@ -3643,35 +3723,7 @@
     // touch vs desktop — AUTO detects; 2-in-1 laptops and tablets can force either
     wide("Controls", settings.controls === "auto" ? ("AUTO (" + (Input.touchActive() ? "TOUCH" : "DESKTOP") + ")") : settings.controls.toUpperCase(), false,
       () => { settings.controls = settings.controls === "auto" ? "touch" : (settings.controls === "touch" ? "desktop" : "auto"); save(); });
-    // ---- ACCOUNT (full tab only): a proper card — status, display name, sign in/out ----
-    if (!compact && typeof Cloud !== "undefined") {
-      section("ACCOUNT");
-      const signedIn = Cloud.loggedIn(), fb = Cloud.provider === FirebaseProvider, canIn = Cloud.canSignIn();
-      const cardY = y, cardH = signedIn ? 92 : 62, cardW = rx - fx;
-      ctx.save();
-      ctx.globalAlpha = 0.05; ctx.fillStyle = UI.ink; ctx.fillRect(fx, cardY, cardW, cardH); ctx.globalAlpha = 1;
-      ctx.fillStyle = signedIn ? "#2f9e6b" : t.color.muted; ctx.fillRect(fx, cardY, 4, cardH);   // green spine when synced
-      ctx.beginPath(); ctx.arc(fx + 26, cardY + 27, 6, 0, 6.2832); ctx.fillStyle = signedIn ? "#2f9e6b" : "#8a93a6"; ctx.fill();
-      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-      ctx.fillStyle = UI.ink; ctx.font = UI.font(t.type.lead, true);
-      ctx.fillText(signedIn ? Cloud.displayName() : "Guest", fx + 46, cardY + 32);
-      ctx.globalAlpha = 0.6; ctx.font = UI.font(t.type.micro, false);
-      ctx.fillText(signedIn ? "Signed in · progress synced to the cloud"
-        : (canIn ? "Playing locally — sign in to sync progress & compete" : "Progress saved on this device"), fx + 46, cardY + 52);
-      ctx.globalAlpha = 1; ctx.restore();
-      const bw2 = 230, bx2 = rx - bw2 - 12;
-      if (signedIn) {
-        const locked = !Cloud.canRename();
-        uiButtons.push({ x: bx2, y: cardY + 10, w: bw2, h: 34, size: 12,
-          label: locked ? "NAME LOCKED · " + Cloud.renameCooldownDays() + "d" : (Cloud.hasCustomName() ? "CHANGE NAME" : "SET DISPLAY NAME"),
-          enabled: !locked, action: () => beginRenameFlow(false) });
-        if (fb) uiButtons.push({ x: bx2, y: cardY + 50, w: bw2, h: 34, size: 12, label: "SIGN OUT", action: () => Cloud.signOut() });
-      } else if (canIn) {
-        uiButtons.push({ x: bx2, y: cardY + 13, w: bw2, h: 36, size: 13,
-          label: (Cloud.authRetryPrompt ? "RETRY · " : "") + Cloud.signInLabel().toUpperCase(), action: () => Cloud.signIn() });
-      }
-      y += cardH + 6;
-    }
+    // (the ACCOUNT card moved to THE PROFILE hub — identity lives there now)
     return y;
   }
 
@@ -3689,7 +3741,7 @@
     renameContext = { error: "", isFirstRun };
     const prevState = state;
     state = "rename";
-    renameContext.prevState = prevState === "rename" ? "settings" : prevState;
+    renameContext.prevState = prevState === "rename" ? "profile" : prevState;   // identity lives in THE PROFILE now
     
     input.onkeydown = (e) => {
       if (e.key === "Enter") submitRename();
