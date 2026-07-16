@@ -2861,41 +2861,70 @@
   }
 
   function renderMenu() {
-    const t = UI.t, lx = 96;
-    // left sidebar: darken for legibility over the live attract scene, fading to the gameplay
-    const sr = screenRect();
-    const g = ctx.createLinearGradient(0, 0, 760, 0);
-    g.addColorStop(0, "rgba(6,7,12,0.93)"); g.addColorStop(0.5, "rgba(6,7,12,0.74)"); g.addColorStop(1, "rgba(6,7,12,0)");
-    ctx.fillStyle = g; ctx.fillRect(sr.x, sr.y, 760 - sr.x, sr.h);
+    const t = UI.t;
+    // ONE RAIL AXIS: the wordmark, taglines, player card, hero, and every rail button
+    // all share this left edge + width, so nothing sits "slightly off" from anything else.
+    const railX = 100, MW = 320;
 
-    const savedInk = UI.ink; UI.ink = "#f1eff9";   // light content over the dark sidebar
-    UI.text(ctx, "T E A R", lx, 196, t.type.wordmark, "left");
+    // left sidebar: softened (was 0.93/0.74) so the live attract duel reads through more
+    const sr = screenRect();
+    const g = ctx.createLinearGradient(0, 0, 800, 0);
+    g.addColorStop(0, "rgba(6,7,12,0.90)"); g.addColorStop(0.56, "rgba(6,7,12,0.60)"); g.addColorStop(1, "rgba(6,7,12,0)");
+    ctx.fillStyle = g; ctx.fillRect(sr.x, sr.y, 800 - sr.x, sr.h);
+
+    UI.ink = "#f1eff9";   // light content over the dark sidebar
+
+    // ---- WORDMARK with a chromatic echo (cyan/magenta split drifting behind the glyphs) ----
+    const wmY = 150;
+    ctx.save();
+    ctx.font = UI.font(t.type.wordmark, true); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    const drift = Math.sin(uiT * 0.8) * 3;
+    ctx.globalAlpha = 0.32; ctx.fillStyle = "#39f0ff"; ctx.fillText("T E A R", railX - 3 - drift, wmY);
+    ctx.fillStyle = "#ff4d8d"; ctx.fillText("T E A R", railX + 3 + drift, wmY);
+    ctx.globalAlpha = 1; ctx.fillStyle = "#f1eff9"; ctx.fillText("T E A R", railX, wmY);
+    ctx.restore();
     const cyc = (uiT % 4.2) / 0.5;                 // animated cyan slash sweeping the wordmark
     if (cyc < 1) {
-      const sx = lx + cyc * 380, k = Math.sin(cyc * Math.PI);
+      const sx = railX + cyc * 380, k = Math.sin(cyc * Math.PI);
       ctx.save(); ctx.globalAlpha = 0.85 * k; ctx.strokeStyle = t.color.accent; ctx.lineWidth = 4; ctx.lineCap = "round";
-      ctx.beginPath(); ctx.moveTo(sx - 26, 206); ctx.lineTo(sx + 26, 144); ctx.stroke(); ctx.restore();
+      ctx.beginPath(); ctx.moveTo(sx - 26, wmY + 10); ctx.lineTo(sx + 26, wmY - 52); ctx.stroke(); ctx.restore();
     }
-    UI.text(ctx, "a momentum-blade survival game", lx, 230, t.type.caption, "left", t.alpha.muted);
-    UI.text(ctx, "cut clean · keep moving · chase the multiplier", lx, H - 46, t.type.micro, "left", t.alpha.faint);
+    UI.text(ctx, "a momentum-blade survival game", railX, wmY + 34, t.type.caption, "left", t.alpha.muted);
 
-    // the PLAYER CHIP: identity + currencies, and the door to THE PROFILE (no rail
-    // button — your name IS the button). Styled as a ghost row; P4 upgrades it to a card.
-    uiButtons.push({ x: lx, y: 246, w: t.metric.btnW, h: 42, size: 13, ghost: true,
-      label: (PROFILE.username() || "GUEST").toUpperCase() + "  ·  ◆ " + META.coins() + "  ⬡ " + PROFILE.shards(),
+    // ---- NOW SHOWING: name the live attract biome playing behind the menu ----
+    const biome = (typeof Attract !== "undefined" && Attract.stage) ? Attract.stage().name : "";
+    if (biome) UI.tag(ctx, "◈ NOW SHOWING — " + biome.toUpperCase(), railX, wmY + 62, t.color.accent, "left", t.type.micro);
+
+    UI.text(ctx, "cut clean · keep moving · chase the multiplier", railX, H - 46, t.type.micro, "left", t.alpha.faint);
+
+    // ---- PLAYER CARD: identity + currencies; the door to THE PROFILE (no rail button) ----
+    const signedIn = typeof Cloud !== "undefined" && Cloud.loggedIn();
+    uiButtons.push({ ghost: true, x: railX, y: 240, w: MW, h: 58, size: t.type.title,
+      dot: signedIn ? "#2f9e6b" : "#8a93a6",
+      label: (PROFILE.username() || "GUEST").toUpperCase(),
+      sub: "◆ " + META.coins() + "    ⬡ " + PROFILE.shards() + "    ★ " + PROFILE.unlockedCount(),
       action: () => { state = "profile"; profileTab = "bests"; listScroll = 0; } });
 
-    UI.ink = "#000";
-    // ghost rail buttons: translucent over the sidebar with a hot accent bar on hover
-    vmenu([
-      { label: "PLAY", action: () => { state = "setup"; } },
-      { label: "SHOP", action: () => { state = "shop"; } },
-      { label: "ACHIEVEMENTS", action: () => { state = "achievements"; listScroll = 0; } },
-      { label: "LEADERBOARDS", action: () => { state = "leaderboards"; lbTab = "global"; listScroll = 0; replayFeedData = null; } },
-      { label: "CODEX", action: () => { state = "codex"; codexTab = "abilities"; listScroll = 0; } },
-      { label: "SETTINGS", action: () => { state = "settings"; } },
-    ].map((o) => (o.ghost = true, o)), lx + t.metric.btnW / 2, 306, t.metric.btnW, t.metric.btnH, 5);
-    void savedInk;   // UI.ink intentionally left "#000" for the sub-screen buttons
+    // ---- HERO PLAY: accent-filled, ~2x tall, with the last mode/difficulty as a subline ----
+    const modeLabel = ((CONFIG.modes.find((m) => m.id === selMode) || {}).label || "Endless");
+    const diffLabel = ((CONFIG.difficulties.find((d) => d.id === selDiff) || {}).label || "Normal");
+    uiButtons.push({ ghost: true, hero: true, x: railX, y: 318, w: MW, h: 86, glyph: "▶",
+      label: "PLAY", sub: (modeLabel + " · " + diffLabel).toUpperCase(),
+      action: () => { state = "setup"; } });
+
+    // ---- the rail: five glyphed ghost buttons, all snapped to the shared axis ----
+    const rail = [
+      ["◆", "SHOP", () => { state = "shop"; }],
+      ["★", "ACHIEVEMENTS", () => { state = "achievements"; listScroll = 0; }],
+      ["☰", "LEADERBOARDS", () => { state = "leaderboards"; lbTab = "global"; listScroll = 0; replayFeedData = null; }],
+      ["▤", "CODEX", () => { state = "codex"; codexTab = "abilities"; listScroll = 0; }],
+      ["⚙", "SETTINGS", () => { state = "settings"; }],
+    ];
+    const ry = 426, rh = 52, rgap = 9;
+    rail.forEach(([glyph, label, action], i) =>
+      uiButtons.push({ ghost: true, glyph, label, action, x: railX, y: ry + i * (rh + rgap), w: MW, h: rh }));
+
+    UI.ink = "#000";   // restore the default for sub-screens drawn after this frame
     return;
   }
 

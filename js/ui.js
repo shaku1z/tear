@@ -102,9 +102,26 @@ const UI = {
   button(ctx, b, active) {
     if (b.ghost) {
       // main-menu rail button: translucent over the dark sidebar, a soft light edge,
-      // and a hot accent bar + label slide driven by the smooth hover progress (b._a)
+      // and a hot accent bar + label slide driven by the smooth hover progress (b._a).
+      // Optional trimmings: b.glyph (left icon), b.dot (status pip), b.sub (subline),
+      // b.hero (accent-filled call-to-action).
       const a = b._a == null ? (active ? 1 : 0) : b._a;
-      const on = b.enabled !== false;
+      const on = b.enabled !== false, cy = b.y + b.h / 2;
+      if (b.hero) {
+        // HERO: the primary call-to-action — solid accent body, dark ink label that
+        // brightens + slides on hover, a top sheen line, and an optional subline.
+        ctx.fillStyle = this.t.color.accent;
+        ctx.globalAlpha = on ? 0.88 + 0.12 * a : 0.5; ctx.fillRect(b.x, b.y, b.w, b.h); ctx.globalAlpha = 1;
+        ctx.globalAlpha = 0.22 + 0.35 * a; ctx.fillStyle = "#ffffff"; ctx.fillRect(b.x, b.y, b.w, 2); ctx.globalAlpha = 1;
+        ctx.fillStyle = "#08131a"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        if (b.glyph) { ctx.font = this.font(30, true); ctx.fillText(b.glyph, b.x + 22, cy + 1); }
+        const hx = b.x + (b.glyph ? 70 : 24) + a * 6;
+        ctx.font = this.font(b.size || 34, true);
+        ctx.fillText(b.label, hx, cy - (b.sub ? 12 : 0) + 1);
+        if (b.sub) { ctx.globalAlpha = 0.72; ctx.font = this.font(this.t.type.caption, true); ctx.fillText(b.sub, hx, cy + 16); ctx.globalAlpha = 1; }
+        ctx.textBaseline = "alphabetic";
+        return;
+      }
       ctx.fillStyle = "rgba(241,239,249," + (0.05 + a * 0.10).toFixed(3) + ")";
       ctx.fillRect(b.x, b.y, b.w, b.h);
       ctx.lineWidth = 1.5;
@@ -113,10 +130,20 @@ const UI = {
       ctx.globalAlpha = a; ctx.fillStyle = this.t.color.accent;
       ctx.fillRect(b.x, b.y, 4, b.h);
       ctx.globalAlpha = 1;
+      ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      let labelX = b.x + 18 + a * 8;
+      if (b.dot) {                                   // status pip (player card sync state)
+        ctx.beginPath(); ctx.arc(b.x + 22, cy, 5, 0, 6.2832); ctx.fillStyle = b.dot; ctx.fill();
+        labelX = b.x + 42 + a * 8;
+      } else if (b.glyph) {                          // left glyph slot, warms on hover
+        ctx.globalAlpha = on ? 0.5 + 0.5 * a : 0.3; ctx.fillStyle = this.t.color.accent;
+        ctx.font = this.font(18, true); ctx.fillText(b.glyph, b.x + 16 + a * 8, cy + 1); ctx.globalAlpha = 1;
+        labelX = b.x + 50 + a * 8;
+      }
       ctx.fillStyle = on ? "#f1eff9" : "rgba(241,239,249,0.4)";
       ctx.font = this.font(b.size || this.t.type.lead, true);
-      ctx.textAlign = "left"; ctx.textBaseline = "middle";
-      ctx.fillText(b.label, b.x + 18 + a * 8, b.y + b.h / 2 + 1);
+      ctx.fillText(b.label, labelX, (b.sub ? cy - 10 : cy) + 1);
+      if (b.sub) { ctx.globalAlpha = 0.6; ctx.font = this.font(this.t.type.caption, false); ctx.fillText(b.sub, labelX, cy + 12); ctx.globalAlpha = 1; }
       ctx.textBaseline = "alphabetic";
       return;
     }
