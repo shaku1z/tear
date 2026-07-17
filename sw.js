@@ -45,16 +45,25 @@ self.addEventListener("fetch", (e) => {
   // same-origin GETs only; everything else (CG SDK, Firebase, analytics) passes through
   if (e.request.method !== "GET" || url.origin !== self.location.origin) return;
   e.respondWith(
+    // Network-first for navigation (HTML) so the SW cache version can update
+    e.request.mode === "navigate" ? 
+      fetch(e.request).then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+        return res;
+      }).catch(() => caches.match(e.request).then(hit => hit || caches.match("/index.html")))
+    :
+    // Cache-first for all other static assets (JS, CSS, images, etc.)
     caches.match(e.request).then((hit) => {
       if (hit) return hit;
       return fetch(e.request).then((res) => {
-        // opportunistically cache same-origin static hits (images, html) for offline
+        // opportunistically cache same-origin static hits for offline
         if (res.ok && (res.type === "basic" || res.type === "default")) {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
         }
         return res;
-      }).catch(() => (e.request.mode === "navigate" ? caches.match("/index.html") : undefined));
+      }).catch(() => undefined);
     })
   );
 });
