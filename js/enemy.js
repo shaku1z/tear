@@ -2405,16 +2405,18 @@ class Source extends Enemy {
   constructor(x, y) {
     super(x, y, CONFIG.source);
     this.color = "#8b3bd6"; this.kind = "boss"; this.isBoss = true; this.bossName = "THE SOURCE";
-    this.epithet = "THE TEAR ITSELF"; this.phaseMarks = [0.62, 0.34]; this.phaseTag = "THE CYCLE";
+    this.epithet = "THE TEAR ITSELF"; this.phaseMarks = [CONFIG.source.voidTier, CONFIG.source.fakeTier]; this.phaseTag = "THE CYCLE";
     this.mode = "cycle"; this.atkT = 2.2; this.castIdx = 0; this.facing = 1;
     this.zones = []; this.zoneColor = CONFIG.colors.bomber; this.zoneCycleT = 0;
     this.collapsing = false; this.collapseT = 0; this.phaseMarker = 1; this.requestVoid = false; this.freezeVoid = false;
+    this.thawVoid = false; this.voidDelayT = -1; this.downT = -1;   // phase-2 shatter countdown + the kneel clock
     this.seenTrickT = 0; this.copyKind = "hit"; this.copyT = -1; this.lastCopied = ""; this.copyOffset = 1;
     this.echoCaption = ""; this.captionT = 0; this.bladeCaught = false;
     this.beamState = "idle"; this.beamT = 0; this.beamCd = CONFIG.source.beamCd; this.beamX = CONFIG.view.w + 100;
   }
-  get phase() { const f = this.hp / this.maxHp; return f > 0.62 ? 1 : (f > 0.34 ? 2 : 3); }
-  damageTakenMult() { return this.mode === "void" ? 1.2 : 1; }
+  get phase() { const f = this.hp / this.maxHp, C = CONFIG.source; return f > C.voidTier ? 1 : (f > C.fakeTier ? 2 : 3); }
+  damageTakenMult() { return this.mode === "downed" ? 0.3 : (this.mode === "void" ? 1.2 : 1); }
+  _deathLocked() { return this.mode === "downed"; }   // the kneel cannot be a kill
 
   _shot(player, projectiles, tint) {
     const C = CONFIG.source, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
@@ -2491,14 +2493,26 @@ class Source extends Enemy {
     this.onGround = false;
   }
   _enterPhase(ph) {
+    const C = CONFIG.source;
     if (ph === 2) {
-      this.mode = "collapse"; this.collapsing = true; this.collapseT = 0.05; this.phaseTag = "WORLD UNMAKES";
+      // THE VOID RUN begins at the halfway mark: the whole floor shatters fast,
+      // then the platform stream replaces the world — the fight's centerpiece.
+      this.mode = "collapse"; this.collapsing = true; this.collapseT = 0.05;
+      this.voidDelayT = C.voidDelay; this.phaseTag = "WORLD UNMAKES";
       bossPhaseBeat(this, "THE WORLD UNMAKES", this.color);
     } else if (ph === 3) {
-      this.mode = "void"; this.collapsing = false; this.requestVoid = true; this.phaseTag = "TRUE FORM";
-      this.color = CONFIG.colors.perfect; this.castIdx = 0; this.atkT = 0.35; this.beamCd = CONFIG.source.beamCd * 0.55;
-      bossPhaseBeat(this, "TRUE FORM", CONFIG.colors.perfect);
+      // THE KNEEL, on the void: the conveyor freezes mid-air while it gathers
+      // itself — then TRUE FORM thaws the stream, faster.
+      this.mode = "downed"; this.downT = C.kneelDur; this.freezeVoid = true;
+      this.beamState = "idle"; this.phaseTag = "IT REMEMBERS";
+      bossPhaseBeat(this, "IT REMEMBERS EVERY BLADE", this.color);
     }
+  }
+  revive() {
+    const C = CONFIG.source;
+    this.mode = "void"; this.downT = -1; this.thawVoid = true; this.phaseTag = "TRUE FORM";
+    this.color = CONFIG.colors.perfect; this.castIdx = 0; this.atkT = 0.35; this.beamCd = C.beamCd * 0.55;
+    bossPhaseBeat(this, "TRUE FORM", CONFIG.colors.perfect);
   }
   tryCatchBlade(blade, player) {
     if (this.mode !== "void" || this.bladeCaught || !blade || blade.state !== "flying" || blade.hostile) return false;
@@ -2518,6 +2532,28 @@ class Source extends Enemy {
     if (this.captionT > 0) this.captionT -= dt;
     while (this.phaseMarker < ph) { this.phaseMarker++; this._enterPhase(this.phaseMarker); }
     if (this.introT > 0) { this.vx = lerp(this.vx, 0, clamp(5 * dt, 0, 1)); this.vy = lerp(this.vy, 0, clamp(5 * dt, 0, 1)); return; }
+
+    // THE KNEEL: it gathers itself over the frozen stream — no attacks, then TRUE FORM
+    if (this.mode === "downed") {
+      this.downT -= dt;
+      this.vx = lerp(this.vx, (CONFIG.view.w / 2 - this.x) * 1.1, clamp(2 * dt, 0, 1));
+      this.vy = lerp(this.vy, (250 - this.y) * 1.1, clamp(2 * dt, 0, 1));
+      this.x += this.vx * dt; this.y += this.vy * dt;
+      if (this.downT <= 0) this.revive();
+      return;
+    }
+    // phase-2 entry: the WHOLE floor shatters in ~a second, then the stream begins
+    if (this.voidDelayT > 0) {
+      if (!this._shatterStarted) {
+        this._shatterStarted = true;
+        for (const p of platforms) if (p.oneway && !(p.crackT > 0)) { p.crackT = C.crackWarn * (0.35 + Math.random() * 0.55); p.crackMax = p.crackT; }
+      }
+      this.voidDelayT -= dt;
+      if (this.voidDelayT <= 0) {
+        this.mode = "void"; this.collapsing = false; this.requestVoid = true; this.phaseTag = "THE VOID RUN";
+        BOSSFX.juice({ banner: "THE VOID RUN", color: this.color, shake: 9, flash: 0.4, zoom: 0.06 });
+      }
+    }
 
     if (this.zones.length) { this.zoneCycleT -= dt; if (this.zoneCycleT <= 0) { for (const z of this.zones) if (z.kind === "fire") z.on = !z.on; this.zoneCycleT = CONFIG.aldric.fireCycle; } }
     this._scheduleFrom(player);

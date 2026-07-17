@@ -550,6 +550,8 @@
     if (vs.rescueCd > 0) vs.rescueCd -= dt;
     const C = CONFIG.source;
     if (vs.active && !vs.frozen) {
+      // the run tightens: speed ramps toward the cap over the phase
+      vs.speed = Math.min(C.scrollSpeedMax || 260, vs.speed + (C.scrollRamp || 4) * dt);
       const standing = platforms.find((p) => p.void && Math.abs(player.y + player.hh - p.y) < 4 &&
         player.x + player.hw > p.x && player.x - player.hw < p.x + p.w);
       const dx = -vs.speed * dt;
@@ -1698,6 +1700,9 @@
         if (r === "hit") { SFX.hurt(); loseStyle(); } else if (r === "absorbed") onShieldAbsorb();
       }
     }
+    // THE VOID RUN: drive the conveyor (this call was missing — the entire
+    // platform-stream system existed but never moved)
+    updateVoidScroll(dt);
     // Aldric scripted logic: the fake-death adds + revive
     const aboss = enemies.find((e) => e.isBoss);
     if (aboss) {
@@ -1707,6 +1712,10 @@
       }
       if (aboss.requestVoid) { aboss.requestVoid = false; startVoidScroll(aboss); }
       if (aboss.freezeVoid && run.voidScroll) { aboss.freezeVoid = false; run.voidScroll.active = false; run.voidScroll.frozen = true; }
+      if (aboss.thawVoid && run.voidScroll) {   // TRUE FORM: the conveyor resumes, faster
+        aboss.thawVoid = false; run.voidScroll.frozen = false; run.voidScroll.active = true;
+        run.voidScroll.speed *= (CONFIG.source.thawSpeedMult || 1.35);
+      }
       if (aboss.spawnAdds) {
         aboss.spawnAdds = false; run.bossAdds = [];
         for (let i = -1; i <= 1; i += 2) {

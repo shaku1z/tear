@@ -199,14 +199,18 @@ const CONFIG = {
   // signature mechanic, collapses the floor, fakes its death, then erupts into a true form
   source: {
     w: 116, h: 128, hp: 4200, speed: 125, contactDmg: 22, knockbackTaken: 0.35, weight: 7,
-    floorTier: 0.62, fakeTier: 0.34, reviveFrac: 0.46,
+    // the VOID RUN is the fight's centerpiece: it begins at voidTier and runs to
+    // the death; the kneel (fake death) happens ON the frozen conveyor
+    voidTier: 0.55, fakeTier: 0.28, kneelDur: 3.6, thawSpeedMult: 1.35,
+    voidDelay: 1.25,   // phase-2 entry: the whole floor shatters over this window, then the stream begins
     cycleCd: 2.5,           // seconds between mechanic casts (phase 1)
     shockDmg: 18, shockSpeed: 720, shockR: 16,
     sweeperDmg: 18, sweeperSpeed: 600,
     crossDmg: 16, crossSpeed: 740,
     copyDelay: 0.5,
     collapseCd: 1.3, crackWarn: 0.8,
-    scrollSpeed: 220, voidFallDmg: 18, voidSlowMult: 0.58, voidSlowDur: 0.7,
+    scrollSpeed: 170, scrollRamp: 4, scrollSpeedMax: 260,   // the run tightens as it goes
+    voidFallDmg: 18, voidSlowMult: 0.58, voidSlowDur: 0.7,
     voidGapMin: 105, voidGapMax: 185, voidPlatformMin: 180, voidPlatformMax: 290,
     voidWispCd: 4.8, beamCd: 8.5, beamWarn: 0.9, beamSweep: 1.15, beamW: 52, beamDmg: 20,
     stolenBladeSpeed: 1750, stolenBladeDmg: 18,
