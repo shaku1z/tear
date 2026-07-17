@@ -1629,6 +1629,7 @@ class Warden extends Enemy {
       if (this.beatPh === "wind" && this.stateT <= 0) {
         this.beatPh = "open"; this.stateT = Wc.parryWin;
         this.batonStrike = Wc.parryWin + 0.05; this.beatParried = false;
+        try { SFX.swing(2200); } catch (e) {}   // the beat's whoosh
       } else if (this.beatPh === "open" && this.stateT <= 0) {
         if (!this.beatParried && Math.abs(player.x - this.x) < Wc.stringRange * 0.72 &&
             Math.abs(player.y - this.y) < 95 && !player.invulnerable) {
@@ -1877,6 +1878,7 @@ class Colossus extends Enemy {
     p.shock = true; p.quake = true; p.r = C.shockR * (C.quakeRMult || 1.25); p.dmg = C.shockDmg; p.life = 2.8;
     p.owner = this; p.tint = CONFIG.colors.armoredShield;
     projectiles.push(p);
+    FX.shockwave(p.x, footY, 8, CONFIG.colors.armoredShield, 130, 4);   // the ground jolts at the epicentre
   }
   _throwShield(projectiles) {
     const C = this.cfg;
@@ -2253,6 +2255,7 @@ class Aldric extends Enemy {
       projectiles.push(p);
     }
     FX.ring(this.x + this.facing * 28, this.y - 20, 10, CONFIG.colors.bomber);
+    try { SFX.crescent(); } catch (e) {}   // the cleaver tears the air
   }
   _enterDowned() {
     const C = CONFIG.aldric;

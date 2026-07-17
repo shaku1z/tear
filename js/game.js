@@ -2713,6 +2713,49 @@
     ctx.translate(-cx, -cy);
     const biome = run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly" || run.mode === "gauntlet" || run.mode === "tutorial" || run.mode === "playground");
     if (biome) Backdrop.draw(ctx, currentStage, performance.now() / 1000, player ? player.x : W / 2);   // sky + parallax + motes
+    // ARENA DRESSING: each boss stages its own ground (drawn behind platforms)
+    {
+      const dboss = enemies.find((e) => e.isBoss && !e.isMiniBoss);
+      if (dboss && !GFX.low) {
+        const now2 = performance.now(), gy2 = CONFIG.world.groundY;
+        ctx.save();
+        if (dboss.bossId === "warden") {
+          // the Yard: cell-block banners hanging into frame + painted yard lines
+          ctx.globalAlpha = 0.14; ctx.fillStyle = dboss.color;
+          for (const bx2 of [180, 800, 1420]) {
+            const sway = Math.sin(now2 / 1400 + bx2) * 8;
+            ctx.beginPath(); ctx.moveTo(bx2 - 26, 0); ctx.lineTo(bx2 + 26, 0);
+            ctx.lineTo(bx2 + 18 + sway, 190); ctx.lineTo(bx2 - 18 + sway, 190); ctx.closePath(); ctx.fill();
+          }
+          ctx.globalAlpha = 0.10; ctx.strokeStyle = THEME.ink; ctx.lineWidth = 3; ctx.setLineDash([26, 22]);
+          ctx.beginPath(); ctx.moveTo(120, gy2 + 26); ctx.lineTo(W - 120, gy2 + 26); ctx.stroke(); ctx.setLineDash([]);
+        } else if (dboss.bossId === "colossus") {
+          // the Foundry: a warm forge glow low on the horizon + hanging chains
+          const g2 = ctx.createLinearGradient(0, gy2 - 220, 0, gy2);
+          g2.addColorStop(0, "rgba(232,134,46,0)"); g2.addColorStop(1, "rgba(232,134,46,0.10)");
+          ctx.fillStyle = g2; ctx.fillRect(0, gy2 - 220, W, 220);
+          ctx.globalAlpha = 0.16; ctx.strokeStyle = THEME.ink; ctx.lineWidth = 4;
+          for (const cx3 of [260, 640, 1000, 1360]) {
+            const sway = Math.sin(now2 / 1700 + cx3) * 10;
+            ctx.beginPath(); ctx.moveTo(cx3, 0); ctx.quadraticCurveTo(cx3 + sway, 110, cx3 + sway, 205 + (cx3 % 3) * 24); ctx.stroke();
+          }
+        } else if (dboss.bossId === "aldric") {
+          // the Dueling Ground: the burnt throne on the horizon + drifting embers
+          const tx2 = W / 2;
+          ctx.globalAlpha = 0.12; ctx.fillStyle = THEME.ink;
+          ctx.fillRect(tx2 - 60, gy2 - 150, 120, 150);
+          ctx.fillRect(tx2 - 84, gy2 - 96, 24, 96); ctx.fillRect(tx2 + 60, gy2 - 96, 24, 96);
+          ctx.beginPath(); ctx.moveTo(tx2 - 40, gy2 - 150); ctx.lineTo(tx2 - 18, gy2 - 196); ctx.lineTo(tx2, gy2 - 154);
+          ctx.lineTo(tx2 + 18, gy2 - 196); ctx.lineTo(tx2 + 40, gy2 - 150); ctx.closePath(); ctx.fill();
+          ctx.globalAlpha = 0.35; ctx.fillStyle = CONFIG.colors.bomber;
+          for (let i = 0; i < 7; i++) {
+            const ex2 = (i * 257 + now2 / 40) % W, ey2 = gy2 - 60 - ((now2 / 16 + i * 131) % 420);
+            ctx.fillRect(ex2, ey2, 3, 3);
+          }
+        }
+        ctx.restore(); ctx.globalAlpha = 1;
+      }
+    }
     for (const p of platforms) Backdrop.platform(ctx, p, currentStage, !!p.floor);                       // depth: gradient + edge + shadow
     // cracking platforms telegraph the give-way: jagged fractures + a quickening pulse
     for (const p of platforms) {
