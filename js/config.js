@@ -227,11 +227,13 @@ const CONFIG = {
     angerDamageMult: 1.25, seamLife: 2.6, crownfireCd: 7.2, crownfireWindup: 0.85,
     emberDmg: 14, emberSpeed: 560,
     pounceAfter: 1.0,   // NO SHELTER: hover above him this long and the pounce comes, every time
+    arcDmg: 16, arcSpeed: 620, arcRise: 210, arcGravity: 480,   // CLEAVER ARCS: fire crescents — parry food (rally)
   },
   // The Iron Colossus (Stage 2 boss): a tank with a front shield -> a thrown sweeping arm -> an exposed core
   colossus: {
     w: 152, h: 150, hp: 2900, speed: 58, contactDmg: 24, knockbackTaken: 0, weight: 9,
     atkCd: 2.5, windup: 0.6, shockDmg: 20, shockSpeed: 720, shockR: 24,
+    quakeSpeedMult: 0.78, quakeRMult: 1.25,   // his waves are QUAKES: taller, slower, his alone
     chargeWindup: 0.7, chargeSpeed: 1350,
     sweeperDmg: 16, sweeperSpeed: 540, sweeperY: 540,
     panelCount: 4, panelStep: 0.72, crossDmg: 14, crossSpeed: 640, crossCd: 2.2,
@@ -244,9 +246,11 @@ const CONFIG = {
   // The Warden (Stage 1 boss): a methodical guard who weaponizes the arena across 3 phases
   warden: {
     batonCd: 2.1, batonWindup: 0.5, mortarShots: 3, mortarSpeed: 760, mortarGravity: 900, mortarDmg: 14,
-    bashRange: 150, bashKnock: 620,
+    bashKnock: 620,   // the string finisher's shove
+    // BATON STRINGS (his kit is MELEE now — no ground waves): each beat opens a
+    // deflect window first, then lands; the P2 finisher beat is unparryable (peril)
+    stringRange: 270, stringDmg: 16, stringWind: 0.30, parryWin: 0.16,
     zoneCount: 3, zoneW: 200, zoneShift: 7, zoneTick: 7, zoneTickCd: 0.4,   // phase-2 prohibited zones
-    shockDmg: 18, shockSpeed: 700, shockR: 18,
     ceilingY: 150, ceilDropCd: 1.6, lungeCd: 7.5, lungeWindup: 0.55, lungeSpeed: 1500,   // phase-3 ceiling: lock + telegraph, then dive
     guardParry: 0.24, guardPerfect: 0.36, guardDecay: 0.08, guardDecayDelay: 1.8,
     guardBreakDur: 2.5, guardBreakMult: 1.65,

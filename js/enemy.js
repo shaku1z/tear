@@ -1489,6 +1489,7 @@ class Warden extends Enemy {
     this.searchlights = []; this.cages = []; this.trails = []; this.lockdownT = 0; this.lockdownCd = 0;
     this.mortarTargets = []; this.trailDropT = 0; this._playerRef = null;
     this.volleyCd = 0; this.volleyTargetY = 0;   // NO SHELTER: the skyward volley answers perch-campers
+    this.stringIdx = 0; this.stringN = 2; this.beatPh = "wind"; this.beatHeavy = false; this.beatParried = false;   // baton strings
   }
   get phase() { const f = this.hp / this.maxHp; return f > 0.65 ? 1 : (f > 0.30 ? 2 : 3); }
   damageTakenMult() { return this.guardBrokenT > 0 ? CONFIG.warden.guardBreakMult : 1; }
@@ -1508,7 +1509,8 @@ class Warden extends Enemy {
     return { x1: hx, y1: hy, x2: hx + this.facing * Math.cos(this.batonA) * L, y2: hy + Math.sin(this.batonA) * L };
   }
   parryBaton(perfect) {
-    if (this.dying || this.batonParryCd > 0 || this.batonStrike <= 0 || this.pendingAtk === "heavy") return false;
+    if (this.dying || this.batonParryCd > 0 || this.batonStrike <= 0 || this.beatHeavy) return false;
+    this.beatParried = true;   // the string beat that was deflected does not land
     const Wc = CONFIG.warden;
     this.batonParryCd = 0.22; this.batonStrike = 0; this.guardDelayT = Wc.guardDecayDelay;
     this.guardMeter = Math.min(1, this.guardMeter + (perfect ? Wc.guardPerfect : Wc.guardParry));
@@ -1533,22 +1535,18 @@ class Warden extends Enemy {
     this._syncZones();
   }
 
-  // animate the baton: raised on a wind-up, slammed through on the strike
+  // animate the baton: raised on a wind-up, slammed through on the strike.
+  // String beats alternate the raise height so the rhythm READS (high-low-high).
   _animBaton(dt) {
     let wt = -0.45, k = 9;
     if (this.batonStrike > 0) { this.batonStrike -= dt; wt = 0.85; k = 30; }
+    else if (this.state === "string" && this.beatPh === "wind") { wt = this.stringIdx % 2 ? -1.05 : -1.65; k = 10; }
     else if (this.state === "windup") { wt = this.pendingAtk === "mortar" ? -1.7 : -1.45; k = 8; }
     else if (this.state === "lunge") { wt = 0.2; k = 14; }
     this.batonPrevA = this.batonA;
     this.batonA = lerp(this.batonA, wt, clamp(k * dt, 0, 1));
   }
 
-  _shock(projectiles, dir, footY) {
-    const Wc = CONFIG.warden;
-    const p = new Projectile(this.x + dir * this.hw, footY - Wc.shockR, dir * Wc.shockSpeed, 0);
-    p.shock = true; p.r = Wc.shockR; p.dmg = Wc.shockDmg; p.life = 2.0;
-    projectiles.push(p);
-  }
   _mortar(player, projectiles, landY) {
     const Wc = CONFIG.warden, v = Wc.mortarSpeed, g = Wc.mortarGravity;
     const t = (2 * v) / g;
@@ -1622,7 +1620,33 @@ class Warden extends Enemy {
     // ---- grounded phases (1 & 2) ----
     const footY = this.y + this.hh, dist = Math.abs(player.x - this.x);
     const sp = CONFIG.boss.speed * (1 + (ph - 1) * 0.35);
-    if (this.state === "windup") {
+    if (this.state === "string") {
+      // BATON STRINGS — the posture duel. Each beat: a wind (glint), then an
+      // OPEN deflect window (batonStrike), then the swing lands unless it was
+      // parried inside the window. P2's finisher beat is unparryable (peril).
+      this.vx = lerp(this.vx, this.facing * sp * 1.35, clamp(4 * dt, 0, 1));
+      this.stateT -= dt;
+      if (this.beatPh === "wind" && this.stateT <= 0) {
+        this.beatPh = "open"; this.stateT = Wc.parryWin;
+        this.batonStrike = Wc.parryWin + 0.05; this.beatParried = false;
+      } else if (this.beatPh === "open" && this.stateT <= 0) {
+        if (!this.beatParried && Math.abs(player.x - this.x) < Wc.stringRange * 0.72 &&
+            Math.abs(player.y - this.y) < 95 && !player.invulnerable) {
+          player.takeDamage(Wc.stringDmg * (this.beatHeavy ? 1.5 : 1), this.x, this);
+          FX.burst(player.x, player.y, this.facing, -0.3, 7, this.color);
+          if (this.beatHeavy) { player.vx = this.facing * Wc.bashKnock * 0.85; player.vy = -280; }
+        }
+        this.stringIdx++;
+        if (this.stringIdx >= this.stringN) {
+          this.state = "idle"; this.beatHeavy = false;
+          this.atkT = Wc.batonCd / (1 + (ph - 1) * 0.3);
+        } else {
+          this.beatPh = "wind"; this.stateT = Wc.stringWind * (0.8 + Math.random() * 0.45);   // the rhythm varies — read it
+          this.beatHeavy = this.stringIdx === this.stringN - 1 && ph >= 2;
+          if (this.beatHeavy) perilPing(this);
+        }
+      }
+    } else if (this.state === "windup") {
       this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1)); this.stateT -= dt;
       if (this.stateT <= 0) { this._fire(player, projectiles, footY, Wc); this.state = "idle"; this.atkT = Wc.batonCd / (1 + (ph - 1) * 0.3); }
     } else {
@@ -1640,10 +1664,15 @@ class Warden extends Enemy {
         BOSSFX.juice({ banner: "SKYWARD VOLLEY", color: this.color, shake: 6, quiet: true });
       }
       else if (this.atkT <= 0) {
-        this.pendingAtk = ph >= 2 && Math.random() < 0.34 ? "heavy" : (dist < Wc.bashRange ? "bash" : (Math.random() < 0.5 ? "baton" : "mortar"));
-        this.state = "windup"; this.stateT = Wc.batonWindup;
-        if (this.pendingAtk === "mortar") this.mortarTargets = [-1, 0, 1].map((i) => clamp(player.x + i * 180, 60, CONFIG.view.w - 60));
-        if (this.pendingAtk === "heavy") perilPing(this);
+        // his kit is MELEE + ARTILLERY now: in reach he opens a string; out of
+        // reach the mortars arc in (no more shared ground waves)
+        if (dist < Wc.stringRange) {
+          this.state = "string"; this.stringIdx = 0; this.stringN = ph >= 2 ? 3 : 2;
+          this.beatPh = "wind"; this.stateT = Wc.stringWind; this.beatHeavy = false; this.beatParried = false;
+        } else {
+          this.pendingAtk = "mortar"; this.state = "windup"; this.stateT = Wc.batonWindup;
+          this.mortarTargets = [-1, 0, 1].map((i) => clamp(player.x + i * 180, 60, CONFIG.view.w - 60));
+        }
       }
       // vault: random footwork in P2 — but a camping player makes it TARGETED
       // (he lands on the perch, baton first)
@@ -1655,21 +1684,11 @@ class Warden extends Enemy {
     this.integrate(dt, platforms);
   }
 
+  // artillery only — his melee lives in the string state now (no ground waves)
   _fire(player, projectiles, footY, Wc) {
     if (this.pendingAtk === "volley") this._mortar(player, projectiles, this.volleyTargetY);
-    else if (this.pendingAtk === "mortar") this._mortar(player, projectiles);
-    else if (this.pendingAtk === "heavy") {
-      this._shock(projectiles, this.facing, footY); this._shock(projectiles, -this.facing, footY);
-      const p = new Projectile(this.x, this.y - 18, this.facing * Wc.shockSpeed * 0.8, 0);
-      p.dmg = Wc.shockDmg; p.r = 17; p.tint = this.color; p.owner = this; projectiles.push(p);
-    }
-    else if (this.pendingAtk === "bash") {
-      this._shock(projectiles, this.facing, footY);
-      if (Math.abs(player.x - this.x) < Wc.bashRange + 40 && !player.invulnerable) {
-        player.vx = (Math.sign(player.x - this.x) || 1) * Wc.bashKnock; player.vy = -300;
-      }
-    } else { this._shock(projectiles, this.facing, footY); if (this.phase >= 2) this._shock(projectiles, -this.facing, footY); }
-    this.batonStrike = 0.18;   // snap the baton through on the strike
+    else this._mortar(player, projectiles);
+    this.batonStrike = 0.18;   // the launch gesture still snaps the baton (parry it for posture)
     if (typeof SFX !== "undefined" && SFX.ctx && SFX.slam) SFX.slam();
   }
 
@@ -1783,6 +1802,13 @@ class Warden extends Enemy {
       ctx.setLineDash([]); ctx.globalAlpha = 1;
       const bs = this.batonSegment(); weaponGlint(ctx, bs.x2, bs.y2, this.pendingAtk === "heavy" ? CONFIG.colors.charger : CONFIG.colors.slam, wk);
     }
+    // string beats: the baton glints through every wind — crimson when the
+    // finisher (unparryable) is coming, gold when the beat can be deflected
+    if (this.state === "string" && this.beatPh === "wind") {
+      const sk = 1 - clamp(this.stateT / (CONFIG.warden.stringWind || 0.3), 0, 1);
+      const bs2 = this.batonSegment();
+      weaponGlint(ctx, bs2.x2, bs2.y2, this.beatHeavy ? CONFIG.colors.charger : "#e0a326", sk);
+    }
     // ceiling-dive telegraph: a marked line from the cling to the spot it locked onto
     if (this.state === "lungewind") {
       const k = 1 - clamp(this.lungeWT / (CONFIG.warden.lungeWindup || 0.5), 0, 1);
@@ -1807,6 +1833,7 @@ class Colossus extends Enemy {
     this.color = CONFIG.colors.armored;
     this.kind = "boss"; this.isBoss = true; this.bossName = "IRON COLOSSUS";
     this.epithet = "THE CONTAINMENT ENGINE"; this.phaseMarks = [0.60, 0.25]; this.phaseTag = "SEALED";
+    this.blockStyle = "plate";   // blocked hits CLANG off fortress plating (not an Armored reskin)
     this.state = "idle"; this.stateT = 0; this.atkT = 2.2; this.pendingAtk = "sweep";
     this.facing = 1; this.exposed = false; this.shielded = true;
     this.phaseMarker = 1;
@@ -1843,10 +1870,12 @@ class Colossus extends Enemy {
   }
 
   _shock(projectiles, dir) {
+    // QUAKES — the earthquake is HIS language alone now: taller, slower tremor
+    // columns (see the quake draw in projectile.js), nothing like the old ripples
     const C = this.cfg, footY = this.y + this.hh;
-    const p = new Projectile(this.x + dir * this.hw * 0.7, footY - C.shockR, dir * C.shockSpeed, 0);
-    p.shock = true; p.r = C.shockR; p.dmg = C.shockDmg; p.life = 2.4;
-    p.owner = this;   // rally needs to know the wound came from Aldric
+    const p = new Projectile(this.x + dir * this.hw * 0.7, footY - C.shockR, dir * C.shockSpeed * (C.quakeSpeedMult || 0.78), 0);
+    p.shock = true; p.quake = true; p.r = C.shockR * (C.quakeRMult || 1.25); p.dmg = C.shockDmg; p.life = 2.8;
+    p.owner = this; p.tint = CONFIG.colors.armoredShield;
     projectiles.push(p);
   }
   _throwShield(projectiles) {
@@ -2014,7 +2043,9 @@ class Colossus extends Enemy {
     // front shield (phase 1) or exposed molten core (phase 3)
     if (this.shielded) {
       const gx = this.x + this.facing * (this.hw + 12);
-      ctx.fillStyle = CONFIG.colors.armoredShield;
+      // PLATE CLANG: the struck plating flashes white for a beat
+      if (this._plateFlashT > 0) { this._plateFlashT -= 1 / 60; ctx.fillStyle = "#fff"; }
+      else ctx.fillStyle = CONFIG.colors.armoredShield;
       ctx.fillRect(gx - 6, y - 8, 12, h + 16);
       ctx.fillRect(gx - this.facing * 10 - 1, y - 8, this.facing * 11, 8);
       ctx.fillRect(gx - this.facing * 10 - 1, y + h + 1, this.facing * 11, 8);
@@ -2198,12 +2229,30 @@ class Aldric extends Enemy {
   }
   _strike(player, projectiles) {
     const C = CONFIG.aldric;
-    this._shock(projectiles, this.facing, this.mode !== "duel");
+    // his kit is the CLEAVER now, not ground waves: in reach the lunge IS the
+    // strike; out of reach he hurls burning CLEAVER ARCS (crescents — parry
+    // food, i.e. rally fuel)
+    if (Math.abs(this._playerRef ? this._playerRef.x - this.x : 999) > 235) {
+      this._arc(projectiles, this.mode === "frenzy" ? 2 : 1);
+    }
     this.state = "lunge"; this.stateT = 0.25; this.vx = this.facing * C.lungeSpeed;
     if (this.mode === "fire" && this.chainLeft <= 0) this.chainLeft = 1;
     if (this.mode === "frenzy" && this.chainLeft <= 0) this.chainLeft = this.anger ? 2 : 1;
     this.atkT = C.atkCd / (this.mode === "frenzy" ? 1.7 : (this.mode === "fire" ? 1.25 : 1));
     if (typeof SFX !== "undefined" && SFX.ctx && SFX.slam) SFX.slam();
+  }
+  // a burning crescent thrown along the lunge line — arcs with gravity, fully
+  // parryable/deflectable through the game's own projectile loop
+  _arc(projectiles, n) {
+    const C = CONFIG.aldric;
+    for (let i = 0; i < n; i++) {
+      const p = new Projectile(this.x + this.facing * 34, this.y - 24 - i * 16,
+        this.facing * C.arcSpeed * (1 - i * 0.12), -C.arcRise - i * 70);
+      p.crescent = true; p.kind = "crescent"; p.tint = CONFIG.colors.bomber;
+      p.dmg = C.arcDmg; p.r = 24; p.gravity = C.arcGravity; p.deflectDmg = 30; p.owner = this;
+      projectiles.push(p);
+    }
+    FX.ring(this.x + this.facing * 28, this.y - 20, 10, CONFIG.colors.bomber);
   }
   _enterDowned() {
     const C = CONFIG.aldric;
@@ -2506,7 +2555,8 @@ class Source extends Enemy {
     for (let i = 0; i < count; i++) {
       const m = picks[(this.castIdx++) % picks.length];
       if (m === "warden") {
-        this._shock(projectiles, 1, null, CONFIG.colors.boss); this._shock(projectiles, -1, null, CONFIG.colors.boss);
+        // quotes the NEW kit: the baton string's rhythm as a three-count burst
+        this._burstN = 3; this._burstT = 0;
         this.echoCaption = "ECHO OF THE WARDEN…";
       } else if (m === "colossus") {
         this._sweeper(projectiles, CONFIG.colors.armoredShield); this.echoCaption = "ECHO OF THE COLOSSUS…";
@@ -2594,6 +2644,11 @@ class Source extends Enemy {
     if (this.zones.length) { this.zoneCycleT -= dt; if (this.zoneCycleT <= 0) { for (const z of this.zones) if (z.kind === "fire") z.on = !z.on; this.zoneCycleT = CONFIG.aldric.fireCycle; } }
     this._scheduleFrom(player);
     if (this.copyT > 0) { this.copyT -= dt; if (this.copyT <= 0) this._doCopy(player, projectiles); }
+    // the Warden-echo burst: three shots on the baton string's beat
+    if (this._burstN > 0) {
+      this._burstT -= dt;
+      if (this._burstT <= 0) { this._shot(player, projectiles, CONFIG.colors.boss); this._burstN--; this._burstT = 0.18; }
+    }
 
     // (platform crack ticking/splicing is GENERIC now — game.js runs it; this
     // boss only SETS crackT on its victims)

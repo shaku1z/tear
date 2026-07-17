@@ -1832,11 +1832,21 @@
               continue;
             }
           }
-          // armored: blocked unless the hit is fast enough / from the flank
+          // armored: blocked unless the hit is fast enough / from the flank.
+          // The Colossus's plating gets its own voice: a deep CLANG, bolt
+          // sparks, and a plate-flash — fortress armor, not an Armored reskin.
           if (e.blocks(blade.tipX, blade.tipSpeed)) {
             const cp = segPointDist(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y);
-            FX.burst(cp.px, cp.py, e.x - blade.tipX, e.y - blade.tipY, 5, CONFIG.colors.armoredShield);
-            addFloater(e.x, e.y - 26, "block", false, CONFIG.colors.armoredShield);
+            if (e.blockStyle === "plate") {
+              FX.burst(cp.px, cp.py, e.x - blade.tipX, e.y - blade.tipY, 10, "#c9ccd6");
+              FX.flash(cp.px, cp.py, 30, "#c9ccd6");
+              addFloater(cp.px, cp.py - 18, "CLANG", false, CONFIG.colors.armoredShield);
+              e._plateFlashT = 0.18;   // the struck side flashes (boss draw reads this)
+              Input.buzz(10);
+            } else {
+              FX.burst(cp.px, cp.py, e.x - blade.tipX, e.y - blade.tipY, 5, CONFIG.colors.armoredShield);
+              addFloater(e.x, e.y - 26, "block", false, CONFIG.colors.armoredShield);
+            }
             e.hitCd = 0.12; hitStop = CONFIG.hitStop.small; SFX.deflect();
             continue;
           }

@@ -166,6 +166,23 @@ class Projectile {
     }
     if (this.shock) {                      // armored stomp shockwave: a ground spike you jump
       const col = this.tint || C.slam;
+      if (this.quake) {                    // IRON COLOSSUS: a TREMOR COLUMN — tall, jagged, debris at the crown
+        const hgt = this.r * 3.0, wob = Math.sin(performance.now() / 38 + this.x * 0.03) * 3;
+        ctx.save();
+        if (!lowG) { ctx.shadowColor = col; ctx.shadowBlur = 12; }
+        ctx.fillStyle = col; ctx.globalAlpha = 0.88;
+        ctx.beginPath();
+        ctx.moveTo(this.x - this.r, this.y + this.r);
+        ctx.lineTo(this.x - this.r * 0.45 + wob, this.y + this.r - hgt * 0.55);
+        ctx.lineTo(this.x + wob, this.y + this.r - hgt);
+        ctx.lineTo(this.x + this.r * 0.45 + wob, this.y + this.r - hgt * 0.5);
+        ctx.lineTo(this.x + this.r, this.y + this.r);
+        ctx.closePath(); ctx.fill();
+        ctx.shadowBlur = 0; ctx.globalAlpha = 1; ctx.strokeStyle = ink; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = ink; ctx.globalAlpha = 0.7;   // debris chips shaken loose at the crown
+        for (let i = 0; i < 3; i++) ctx.fillRect(this.x + wob + (i - 1) * 9, this.y + this.r - hgt - 7 - (i % 2) * 7, 4, 4);
+        ctx.globalAlpha = 1; ctx.restore(); return;
+      }
       ctx.save();
       if (!lowG) { ctx.shadowColor = col; ctx.shadowBlur = 10; }
       ctx.fillStyle = col; ctx.globalAlpha = 0.92;
