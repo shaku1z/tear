@@ -391,7 +391,13 @@ const SAFE = { l: 0, r: 0, t: 0, b: 0 };
 
 // touch tuning: thumb-on-glass has more friction than a mouse on a mat, so touch aim
 // deltas get a boost — max blade momentum from shorter, sharper flicks.
-CONFIG.touch = { aimBoost: 1.5 };
+// touch feel knobs (Tuning these is a one-liner — see the mobile overhaul plan)
+CONFIG.touch = {
+  aimBoost: 1.5,     // drag-aim: thumb px -> reticle px multiplier (×1.6 base)
+  stickRadius: 130,  // stick-aim: thumb px (client) for full deflection
+  stickDead: 10,     // stick-aim: deadzone in thumb px
+  joyFollow: 96,     // joystick: re-anchor once the thumb passes this (logical px)
+};
 
 // live balance knobs, overridable via Firebase Remote Config (standalone build) WITHOUT
 // a redeploy. All default to 1.0 (no change); applied to per-run values at run start, so

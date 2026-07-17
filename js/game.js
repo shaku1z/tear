@@ -50,7 +50,7 @@
   let shakeScale = 1;
   let settings = loadSettings();
   function loadSettings() {
-    const def = { sens: CONFIG.blade.aimSensitivity, shake: 1, vol: 0.6, music: true, gfx: "auto", controls: "auto" };
+    const def = { sens: CONFIG.blade.aimSensitivity, shake: 1, vol: 0.6, music: true, gfx: "auto", controls: "auto", touchAim: "stick" };
     try { return Object.assign(def, JSON.parse(CG.store.get("tear_settings") || "{}")); }
     catch (e) { return def; }
   }
@@ -64,6 +64,7 @@
     shakeScale = settings.shake;
     GFX.low = settings.gfx === "low" || (settings.gfx === "auto" && isLowEnd());
     Input.forceMode = settings.controls || "auto";   // 2-in-1s can force TOUCH or DESKTOP
+    Input.touchAimMode = settings.touchAim || "stick";   // radial stick vs mouse-like drag
     if (typeof SFX !== "undefined") { SFX.vol = settings.vol; SFX.musicOn = settings.music; SFX.setVol(settings.vol); SFX.setMusic(settings.music); }
   }
   if (typeof SFX !== "undefined") SFX.init();
@@ -702,6 +703,9 @@
       rankPopT = 1; rankPopText = run.rank; SFX.rankup();
     }
     if (run.mult > run.wavePeak) run.wavePeak = run.mult;
+    // haptics: the sharpest beats reach the thumbs (no-op off-touch/unsupported)
+    if (kind === "parry") Input.buzz(24);
+    else if (kind === "superslam") Input.buzz([14, 20, 14]);
     // achievements: the blade's craft (skip training sandboxes)
     if (achTracks()) {
       if (kind === "parry") { PROFILE.addStat("parries", 1); PROFILE.addStat("deflects", 1); DAILY.bump("parries", 1); DAILY.bump("deflect", 1); }
@@ -2791,19 +2795,48 @@
     }
     ctx.globalAlpha = j.active ? 0.5 : 0.22; ctx.fillStyle = ink;
     ctx.beginPath(); ctx.arc(jx + (j.active ? j.dx / m * cap : 0), jy + (j.active ? j.dy / m * cap : 0), 42, 0, 6.2832); ctx.fill();
-    // action buttons
-    const btn = (z, big) => {
-      ctx.globalAlpha = 0.16; ctx.fillStyle = ink;
-      ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, 6.2832); ctx.fill();
-      ctx.globalAlpha = 0.4; ctx.strokeStyle = ink; ctx.lineWidth = 3;
+    // aim stick (radial mode): show the anchor ring + deflection nub while aiming,
+    // so the thumb always knows where neutral is
+    if (Input.touchAim && Input.stickAim) {
+      const ax2 = W - 300 - SAFE.r, ay2 = H - 260 - SAFE.b;   // indicator sits in the aim zone, out of the thumb's way
+      ctx.globalAlpha = 0.20; ctx.strokeStyle = ink; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(ax2, ay2, 64, 0, 6.2832); ctx.stroke();
+      ctx.globalAlpha = 0.5; ctx.fillStyle = ink;
+      ctx.beginPath(); ctx.arc(ax2 + Input.stickAim.x * 52, ay2 + Input.stickAim.y * 52, 22, 0, 6.2832); ctx.fill();
+    }
+    // action buttons: fill warms + ring pops while a finger holds them
+    const btn = (z, key, big) => {
+      const heldB = !!Input.btnHeld[key];
+      ctx.globalAlpha = heldB ? 0.34 : 0.16; ctx.fillStyle = heldB ? UI.t.color.accent : ink;
+      ctx.beginPath(); ctx.arc(z.x, z.y, z.r * (heldB ? 0.94 : 1), 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = heldB ? 0.8 : 0.4; ctx.strokeStyle = heldB ? UI.t.color.accent : ink; ctx.lineWidth = heldB ? 4 : 3;
       ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, 6.2832); ctx.stroke();
       ctx.globalAlpha = 0.62; ctx.fillStyle = ink;
       ctx.font = UI.font(big ? 16 : 13, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(z.label, z.x, z.y + 1); ctx.textBaseline = "alphabetic";
     };
-    btn(L.jump, true); btn(L.dash); btn(L.throwB); btn(L.pause);
+    btn(L.jump, "jump", true); btn(L.dash, "dash"); btn(L.throwB, "throwB"); btn(L.pause, "pause");
+
+    // first-run onboarding: label the zones for ~7s, once, then remember forever
+    if (!PROFILE.stat("touchOnboarded")) {
+      touchTeachT += lastUiDt;
+      const oa = touchTeachT < 6 ? 1 : clamp(7 - touchTeachT, 0, 1);
+      if (touchTeachT >= 7) PROFILE.addStat("touchOnboarded", 1);
+      if (oa > 0) {
+        ctx.globalAlpha = oa * 0.85;
+        ctx.fillStyle = ink; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+        ctx.font = UI.font(20, true);
+        ctx.fillText("◉ MOVE", W * 0.20, H - 320 - SAFE.b);
+        ctx.fillText("DRAG TO AIM & SWING ↷", W * 0.68, H - 340 - SAFE.b);
+        ctx.font = UI.font(13, false); ctx.globalAlpha = oa * 0.6;
+        ctx.fillText("left thumb — anywhere on the left", W * 0.20, H - 294 - SAFE.b);
+        ctx.fillText("fast flicks = fast cuts · second finger = throw", W * 0.68, H - 314 - SAFE.b);
+        ctx.textAlign = "left";
+      }
+    }
     ctx.restore(); ctx.globalAlpha = 1;
   }
+  let touchTeachT = 0;   // onboarding label clock (counts only while controls draw)
 
   function drawBanner() {
     const t = bannerT / CONFIG.juice.bannerTime;          // 1 -> 0
@@ -4107,6 +4140,9 @@
     // touch vs desktop — AUTO detects; 2-in-1 laptops and tablets can force either
     wide("Controls", settings.controls === "auto" ? ("AUTO (" + (Input.touchActive() ? "TOUCH" : "DESKTOP") + ")") : settings.controls.toUpperCase(), false,
       () => { settings.controls = settings.controls === "auto" ? "touch" : (settings.controls === "touch" ? "desktop" : "auto"); save(); });
+    // how the right thumb drives the blade: radial stick (flicks = fast cuts) or mouse-like drag
+    if (Input.touchActive()) wide("Touch aim", (settings.touchAim || "stick") === "stick" ? "STICK (RADIAL)" : "DRAG (RELATIVE)", false,
+      () => { settings.touchAim = (settings.touchAim || "stick") === "stick" ? "drag" : "stick"; save(); });
     // (the ACCOUNT card moved to THE PROFILE hub — identity lives there now)
     return y;
   }

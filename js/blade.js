@@ -64,8 +64,14 @@ class Blade {
       // attract-mode AI aims the blade at an absolute world point (else read the mouse)
       this.aimX = this.aimOverride.x - hand.x;
       this.aimY = this.aimOverride.y - hand.y;
+    } else if (Input.touchAim && Input.stickAim) {
+      // radial touch stick: the reticle sits where the stick points; the spring
+      // chasing it supplies the whip, so flicking the stick IS a fast cut
+      this.aimX = Input.stickAim.x * B.aimRadius;
+      this.aimY = Input.stickAim.y * B.aimRadius;
     } else if (Input.locked || Input.touchAim) {
-      // captured mouse: relative movement drives a player-anchored reticle
+      // captured mouse (or drag-mode touch): relative movement drives a
+      // player-anchored reticle
       const d = Input.consumeDelta();
       this.aimX += d.x * B.aimSensitivity;
       this.aimY += d.y * B.aimSensitivity;

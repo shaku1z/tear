@@ -17,11 +17,14 @@ const Input = {
   touchOn: false,         // a real touch has happened (device capability)
   forceMode: "auto",      // settings: "auto" | "touch" | "desktop" (2-in-1s can force either)
   touchActive() { return this.forceMode === "touch" || (this.forceMode !== "desktop" && this.touchOn); },
-  touchAim: false,        // a finger is steering the blade (delta mode, like pointer-lock)
+  touchAim: false,        // a finger is steering the blade
+  touchAimMode: "stick",  // "stick" (radial virtual stick) | "drag" (relative, mouse-like)
+  stickAim: null,         // stick mode: {x,y} deflection vector, each -1..1 (null = inactive)
   uiMode: false,          // set by the game each frame: menus/overlays (taps + drag-scroll)
   tJump: false, tDash: false, tPause: false,   // touch-button edges (cleared each frame)
+  btnHeld: {},            // zone key -> true while a finger holds that on-screen button
   joy: { active: false, id: -1, ax: 0, ay: 0, dx: 0, dy: 0 },
-  _aimId: -1, _aimLX: 0, _aimLY: 0, _scrollId: -1, _scrollLY: 0,
+  _aimId: -1, _aimLX: 0, _aimLY: 0, _aimAX: 0, _aimAY: 0, _scrollId: -1, _scrollLY: 0,
   // haptic tap — the tactile arm of the juice system (no-op where unsupported, e.g. iOS)
   buzz(p) { if (this.touchActive() && navigator.vibrate) { try { navigator.vibrate(p); } catch (e) {} } },
   // on-screen control layout (logical px, inside the hardware safe area).
@@ -122,6 +125,8 @@ const Input = {
         const z = hitZone(p);
         if (z) {
           btnTouches[t.identifier] = z;
+          this.btnHeld[z] = true;
+          this.buzz(8);   // tactile press
           if (z === "jump") this.tJump = true;
           else if (z === "dash") this.tDash = true;
           else if (z === "throwB") this.rmb = true;
@@ -129,7 +134,10 @@ const Input = {
         } else if (p.x < CONFIG.view.w * 0.42 && this.joy.id === -1) {
           this.joy = { active: true, id: t.identifier, ax: p.x, ay: p.y, dx: 0, dy: 0 };
         } else if (this._aimId === -1) {
-          this._aimId = t.identifier; this._aimLX = t.clientX; this._aimLY = t.clientY; this.touchAim = true;
+          this._aimId = t.identifier; this._aimLX = t.clientX; this._aimLY = t.clientY;
+          this._aimAX = t.clientX; this._aimAY = t.clientY;   // stick anchor
+          this.touchAim = true;
+          if (this.touchAimMode === "stick") this.stickAim = { x: 0, y: 0 };
         } else {
           // a SECOND finger in the aim zone = THROW, so the right thumb never has to stop
           // sweeping (the throw inherits the blade's live momentum)
@@ -150,11 +158,40 @@ const Input = {
           this.wheel += dyy; this._scrollV = dyy;   // remember velocity for flick momentum
           this._scrollLY = t.clientY;
         }
-        else if (t.identifier === this.joy.id) { const p = toLogical(t, r); this.joy.dx = p.x - this.joy.ax; this.joy.dy = p.y - this.joy.ay; }
+        else if (t.identifier === this.joy.id) {
+          const p = toLogical(t, r);
+          this.joy.dx = p.x - this.joy.ax; this.joy.dy = p.y - this.joy.ay;
+          // DYNAMIC follow: past the max radius the anchor chases the thumb, so
+          // the neutral point is always one small motion away (no thumb drift)
+          const fm = (CONFIG.touch && CONFIG.touch.joyFollow) || 96;
+          const jm = Math.hypot(this.joy.dx, this.joy.dy);
+          if (jm > fm) {
+            const k = (jm - fm) / jm;
+            this.joy.ax += this.joy.dx * k; this.joy.ay += this.joy.dy * k;
+            this.joy.dx = p.x - this.joy.ax; this.joy.dy = p.y - this.joy.ay;
+          }
+        }
         else if (t.identifier === this._aimId) {
-          this.dx += (t.clientX - this._aimLX) * boost;   // thumb-drag steers the blade like a captured mouse
-          this.dy += (t.clientY - this._aimLY) * boost;
-          this._aimLX = t.clientX; this._aimLY = t.clientY;
+          if (this.touchAimMode === "stick") {
+            // RADIAL STICK: the blade reticle sits where the stick points — flicks
+            // teleport the aim across the arc, and the blade spring supplies the whip
+            const sr2 = (CONFIG.touch && CONFIG.touch.stickRadius) || 130;
+            const dead = (CONFIG.touch && CONFIG.touch.stickDead) || 10;
+            let vx = t.clientX - this._aimAX, vy = t.clientY - this._aimAY;
+            const m = Math.hypot(vx, vy);
+            if (m > sr2 * 1.3) {   // follow past full deflection, like the joystick
+              const k = (m - sr2 * 1.3) / m;
+              this._aimAX += vx * k; this._aimAY += vy * k;
+              vx = t.clientX - this._aimAX; vy = t.clientY - this._aimAY;
+            }
+            const m2 = Math.hypot(vx, vy);
+            const eff = m2 <= dead ? 0 : Math.min((m2 - dead) / (sr2 - dead), 1);
+            this.stickAim = m2 > 0.001 ? { x: (vx / m2) * eff, y: (vy / m2) * eff } : { x: 0, y: 0 };
+          } else {
+            this.dx += (t.clientX - this._aimLX) * boost;   // thumb-drag steers the blade like a captured mouse
+            this.dy += (t.clientY - this._aimLY) * boost;
+            this._aimLX = t.clientX; this._aimLY = t.clientY;
+          }
         }
       }
     }, { passive: false });
@@ -168,7 +205,8 @@ const Input = {
         }
         delete tapTrack[t.identifier];
         if (t.identifier === this.joy.id) this.joy = { active: false, id: -1, ax: 0, ay: 0, dx: 0, dy: 0 };
-        if (t.identifier === this._aimId) { this._aimId = -1; this.touchAim = false; }
+        if (t.identifier === this._aimId) { this._aimId = -1; this.touchAim = false; this.stickAim = null; }
+        if (btnTouches[t.identifier]) delete this.btnHeld[btnTouches[t.identifier]];
         if (t.identifier === this._scrollId) {
           this._scrollId = -1;
           // flick momentum: carry the last drag velocity into the wheel channel
