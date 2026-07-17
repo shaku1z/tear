@@ -185,7 +185,7 @@ const CONFIG = {
   armored: { w: 46, h: 46, hp: 154, speed: 95, contactDmg: 14, knockbackTaken: 3, weight: 2.2, breakSpeed: 1500, groundDR: 0.5, airDR: 1.15,
     stompCd: 3.2, stompWindup: 0.55, stompRange: 400, shockSpeed: 560, shockDmg: 16, shockR: 15 },
   // boss: large, multi-phase (very heavy -> barely flinchable)
-  boss: { w: 118, h: 118, hp: 1900, speed: 70, contactDmg: 20, knockbackTaken: 0.6, weight: 6, fireBase: 2.0 },
+  boss: { w: 118, h: 118, hp: 2500, speed: 70, contactDmg: 20, knockbackTaken: 0.6, weight: 6, fireBase: 2.0 },
   // shared boss ceremony timing. Individual fights supply the poses and attack grammar;
   // the theater layer owns only the real-time pacing.
   bossTheater: { introDur: 1.4, introScale: 0.25, deathDur: 0.9 },
@@ -198,7 +198,7 @@ const CONFIG = {
   // The Source (Stage 5 FINAL boss): a floating rift that cycles every fallen boss's
   // signature mechanic, collapses the floor, fakes its death, then erupts into a true form
   source: {
-    w: 116, h: 128, hp: 4200, speed: 125, contactDmg: 22, knockbackTaken: 0.35, weight: 7,
+    w: 116, h: 128, hp: 5400, speed: 125, contactDmg: 22, knockbackTaken: 0.35, weight: 7,
     // the VOID RUN is the fight's centerpiece: it begins at voidTier and runs to
     // the death; the kneel (fake death) happens ON the frozen conveyor
     voidTier: 0.55, fakeTier: 0.28, kneelDur: 3.6, thawSpeedMult: 1.35,
@@ -217,7 +217,7 @@ const CONFIG = {
   },
   // The Berserker King / Aldric (Stage 3 boss): a duel -> a throne of fire -> a fake death & frenzy
   aldric: {
-    w: 116, h: 132, hp: 3400, speed: 130, contactDmg: 22, knockbackTaken: 0.3, weight: 7,
+    w: 116, h: 132, hp: 4300, speed: 130, contactDmg: 22, knockbackTaken: 0.3, weight: 7,
     atkCd: 1.7, windup: 0.45, lungeSpeed: 1150, shockDmg: 18, shockSpeed: 740, shockR: 20,
     fireTier: 0.65, fakeTier: 0.20, regenRate: 0.05, reviveFrac: 0.5,   // regen 5%/s up to 50% during the fake
     fireCols: 8, fireCycle: 3.0,                                        // checkerboard of fire, pulses every 3s
@@ -231,7 +231,7 @@ const CONFIG = {
   },
   // The Iron Colossus (Stage 2 boss): a tank with a front shield -> a thrown sweeping arm -> an exposed core
   colossus: {
-    w: 152, h: 150, hp: 2900, speed: 58, contactDmg: 24, knockbackTaken: 0, weight: 9,
+    w: 152, h: 150, hp: 3700, speed: 58, contactDmg: 24, knockbackTaken: 0, weight: 9,
     atkCd: 2.5, windup: 0.6, shockDmg: 20, shockSpeed: 720, shockR: 24,
     quakeSpeedMult: 0.78, quakeRMult: 1.25,   // his waves are QUAKES: taller, slower, his alone
     chargeWindup: 0.7, chargeSpeed: 1350,

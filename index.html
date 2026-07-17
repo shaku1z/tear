@@ -125,34 +125,34 @@
 
   <!-- load order matters: these are plain scripts sharing global scope -->
   <!-- ?v cache-bust: bump if the browser ever serves stale JS (server is no-cache too) -->
-  <script src="js/config.js?v=159"></script>
-  <script src="js/stages.js?v=159"></script>
-  <script src="js/utils.js?v=159"></script>
-  <script src="js/ui.js?v=159"></script>
-  <script src="js/audio.js?v=159"></script>
-  <script src="js/input.js?v=159"></script>
-  <script src="js/gamepad.js?v=159"></script>
-  <script src="js/particles.js?v=159"></script>
-  <script src="js/backdrop.js?v=159"></script>
-  <script src="js/attract.js?v=159"></script>
-  <script src="js/crazy.js?v=159"></script>
-  <script src="js/firebase-config.js?v=159"></script>
-  <script src="js/profile.js?v=159"></script>
-  <script src="js/achievements.js?v=159"></script>
-  <script src="js/challenges.js?v=159"></script>
-  <script src="js/upgrades.js?v=159"></script>
-  <script src="js/meta.js?v=159"></script>
-  <script src="js/weapons.js?v=159"></script>
-  <script src="js/affixes.js?v=159"></script>
-  <script src="js/variants.js?v=159"></script>
-  <script src="js/blade.js?v=159"></script>
-  <script src="js/player.js?v=159"></script>
-  <script src="js/projectile.js?v=159"></script>
-  <script src="js/enemy.js?v=159"></script>
-  <script src="js/ghost.js?v=159"></script>
-  <script src="js/cloud.js?v=159"></script>
-  <script src="js/mirror.js?v=159"></script>
-  <script src="js/game.js?v=159"></script>
+  <script src="js/config.js?v=160"></script>
+  <script src="js/stages.js?v=160"></script>
+  <script src="js/utils.js?v=160"></script>
+  <script src="js/ui.js?v=160"></script>
+  <script src="js/audio.js?v=160"></script>
+  <script src="js/input.js?v=160"></script>
+  <script src="js/gamepad.js?v=160"></script>
+  <script src="js/particles.js?v=160"></script>
+  <script src="js/backdrop.js?v=160"></script>
+  <script src="js/attract.js?v=160"></script>
+  <script src="js/crazy.js?v=160"></script>
+  <script src="js/firebase-config.js?v=160"></script>
+  <script src="js/profile.js?v=160"></script>
+  <script src="js/achievements.js?v=160"></script>
+  <script src="js/challenges.js?v=160"></script>
+  <script src="js/upgrades.js?v=160"></script>
+  <script src="js/meta.js?v=160"></script>
+  <script src="js/weapons.js?v=160"></script>
+  <script src="js/affixes.js?v=160"></script>
+  <script src="js/variants.js?v=160"></script>
+  <script src="js/blade.js?v=160"></script>
+  <script src="js/player.js?v=160"></script>
+  <script src="js/projectile.js?v=160"></script>
+  <script src="js/enemy.js?v=160"></script>
+  <script src="js/ghost.js?v=160"></script>
+  <script src="js/cloud.js?v=160"></script>
+  <script src="js/mirror.js?v=160"></script>
+  <script src="js/game.js?v=160"></script>
   <!-- PWA service worker: STANDALONE ONLY — never inside the CrazyGames iframe
        (their SDK/iframe owns that build) and never on localhost (dev server is
        no-cache; a cache-first SW would serve stale JS mid-edit). The ?v rides
@@ -162,7 +162,7 @@
       var standalone = window.self === window.top && !/^(localhost|127\.)/.test(location.hostname);
       if (standalone && "serviceWorker" in navigator) {
         addEventListener("load", function () {
-          navigator.serviceWorker.register("sw.js?v=159").catch(function () {});
+          navigator.serviceWorker.register("sw.js?v=160").catch(function () {});
         });
       }
     })();

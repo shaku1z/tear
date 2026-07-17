@@ -2746,26 +2746,78 @@
     // when live; a clear dashed "arming" telegraph when not.
     const bossZd = enemies.find((e) => e.isBoss && e.zones && e.zones.length);
     if (bossZd) {
+      // ZONE IDENTITY: every hazard kind wears its own skin — the shared "the
+      // ground changes colour" band is gone. One damage contract, six looks.
       const Wc = CONFIG.warden, gy = CONFIG.world.groundY, bh = H - gy;
       const zc = bossZd.zoneColor || CONFIG.colors.charger;
-      const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 140);
+      const now = performance.now(), pulse = 0.5 + 0.5 * Math.sin(now / 140);
       for (const z of bossZd.zones) {
-        const x0 = z.x - Wc.zoneW / 2, active = z.on !== false;
-        if (active) {
-          const grd = ctx.createLinearGradient(0, gy, 0, H);
-          grd.addColorStop(0, zc); grd.addColorStop(1, zc);
-          ctx.fillStyle = grd; ctx.globalAlpha = 0.42; ctx.fillRect(x0, gy, Wc.zoneW, bh);   // bold band
-          hazardStripes(ctx, x0, gy, Wc.zoneW, bh, "#000", 0.16);                            // danger stripes
-          hazardStripes(ctx, x0, gy, Wc.zoneW, bh, "#fff", 0.10);
-          ctx.fillStyle = zc; ctx.globalAlpha = 0.55 + 0.45 * (pulse);                        // hot top rail
-          ctx.fillRect(x0, gy - 3, Wc.zoneW, 7);
-          ctx.fillStyle = "#fff"; ctx.globalAlpha = 0.4 + 0.5 * pulse; ctx.fillRect(x0, gy - 1, Wc.zoneW, 2);
-        } else {                                                                              // armed, not yet live — telegraph
-          ctx.fillStyle = zc; ctx.globalAlpha = 0.12; ctx.fillRect(x0, gy, Wc.zoneW, bh);
-          ctx.strokeStyle = zc; ctx.globalAlpha = 0.45 + 0.3 * pulse; ctx.lineWidth = 3; ctx.setLineDash([12, 9]);
-          ctx.strokeRect(x0 + 1.5, gy + 1.5, Wc.zoneW - 3, bh - 3); ctx.setLineDash([]);
+        const zw = z.w || Wc.zoneW, x0 = z.x - zw / 2, active = z.on !== false;
+        ctx.save();
+        if (z.kind === "searchlight") {
+          // a prison-yard LIGHT CONE from above: apex high, pool at the ground, dust motes
+          const apex = 60;
+          ctx.globalAlpha = active ? 0.16 : 0.07; ctx.fillStyle = "#f4ecc9";
+          ctx.beginPath(); ctx.moveTo(z.x - 14, apex); ctx.lineTo(z.x + 14, apex);
+          ctx.lineTo(x0 + zw, gy); ctx.lineTo(x0, gy); ctx.closePath(); ctx.fill();
+          ctx.globalAlpha = active ? 0.5 + 0.35 * pulse : 0.18; ctx.strokeStyle = active ? zc : "#f4ecc9"; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.ellipse(z.x, gy, zw * 0.5, 8, 0, 0, Math.PI * 2); ctx.stroke();
+          ctx.fillStyle = "#f4ecc9"; ctx.globalAlpha = 0.35;   // dust in the beam
+          for (let i = 0; i < 5; i++) { const my = apex + ((now / 22 + i * 173) % (gy - apex)); ctx.fillRect(z.x + Math.sin(i * 2.7 + now / 900) * zw * 0.3 * (my / gy), my, 2, 2); }
+        } else if (z.kind === "cage") {
+          // LOCKDOWN: jail bars of light, full height — not a band
+          const bars = 5;
+          for (let i = 0; i < bars; i++) {
+            const bx2 = x0 + (i + 0.5) * (zw / bars);
+            ctx.globalAlpha = 0.55 + 0.35 * Math.sin(now / 160 + i);
+            ctx.fillStyle = zc; ctx.fillRect(bx2 - 3, 40, 6, H - 40);
+            ctx.globalAlpha = 0.9; ctx.fillStyle = "#fff"; ctx.fillRect(bx2 - 1, 40, 2, H - 40);
+          }
+        } else if (z.kind === "panel") {
+          // FOUNDRY GRATE: slatted plate that heats dull -> orange -> white before igniting
+          const heat = z.on ? 1 : (z.arming ? 0.45 + 0.25 * pulse : 0.12);
+          const col = z.on ? "#fff" : (z.arming ? "#e8862e" : "#6a6f78");
+          ctx.globalAlpha = 0.25 + heat * 0.45; ctx.fillStyle = z.on ? CONFIG.colors.slam : col;
+          ctx.fillRect(x0, gy, zw, 30);
+          ctx.globalAlpha = 0.85; ctx.strokeStyle = col; ctx.lineWidth = 2;
+          for (let i = 0; i <= 6; i++) { const sx2 = x0 + i * (zw / 6); ctx.beginPath(); ctx.moveTo(sx2, gy); ctx.lineTo(sx2, gy + 30); ctx.stroke(); }
+          ctx.strokeRect(x0, gy, zw, 30);
+          if (z.on || z.arming) {   // heat shimmer rising off the grate
+            ctx.globalAlpha = 0.30 * heat; ctx.strokeStyle = z.on ? "#fff" : "#e8862e"; ctx.lineWidth = 1.5;
+            for (let i = 0; i < 4; i++) {
+              const sx2 = x0 + (i + 0.5) * (zw / 4), off = (now / 7 + i * 40) % 110;
+              ctx.beginPath(); ctx.moveTo(sx2 + Math.sin(now / 90 + i) * 5, gy - off);
+              ctx.quadraticCurveTo(sx2 + 7, gy - off - 16, sx2, gy - off - 30); ctx.stroke();
+            }
+          }
+        } else if (z.kind === "fire" || z.kind === "seam" || z.kind === "trail") {
+          // THRONE FIRE / burning residue: real flame tongues + embers, char when cold
+          const fc = CONFIG.colors.bomber, hot = active;
+          if (hot) {
+            for (let i = 0; i < Math.max(2, Math.floor(zw / 46)); i++) {
+              const fx2 = x0 + (i + 0.5) * (zw / Math.max(2, Math.floor(zw / 46)));
+              const fh = 34 + Math.sin(now / 95 + i * 2.4 + z.x) * 12 + (z.kind === "fire" ? 18 : 0);
+              ctx.globalAlpha = 0.75; ctx.fillStyle = fc;
+              ctx.beginPath(); ctx.moveTo(fx2 - 12, gy); ctx.quadraticCurveTo(fx2 - 4, gy - fh * 0.55, fx2 + Math.sin(now / 70 + i) * 5, gy - fh);
+              ctx.quadraticCurveTo(fx2 + 6, gy - fh * 0.5, fx2 + 12, gy); ctx.closePath(); ctx.fill();
+              ctx.globalAlpha = 0.85; ctx.fillStyle = "#ffd66e";
+              ctx.beginPath(); ctx.moveTo(fx2 - 5, gy); ctx.quadraticCurveTo(fx2, gy - fh * 0.45, fx2 + Math.sin(now / 60 + i * 3) * 3, gy - fh * 0.62);
+              ctx.quadraticCurveTo(fx2 + 3, gy - fh * 0.3, fx2 + 5, gy); ctx.closePath(); ctx.fill();
+              const ey = gy - ((now / 9 + i * 67) % 90);   // rising ember
+              ctx.globalAlpha = 0.7; ctx.fillStyle = "#ffd66e"; ctx.fillRect(fx2 + Math.sin(now / 120 + i) * 9, ey, 3, 3);
+            }
+            ctx.globalAlpha = 0.5; ctx.fillStyle = fc; ctx.fillRect(x0, gy - 2, zw, 4);
+          } else {
+            // cold: charred ground + a smolder line (the arena remembers)
+            ctx.globalAlpha = 0.5; ctx.fillStyle = "#1c1a1e"; ctx.fillRect(x0, gy, zw, 12);
+            ctx.globalAlpha = 0.25 + 0.2 * pulse; ctx.fillStyle = fc; ctx.fillRect(x0, gy - 1, zw, 2);
+          }
+        } else {
+          // fallback: the classic banded hazard
+          ctx.fillStyle = zc; ctx.globalAlpha = active ? 0.42 : 0.12; ctx.fillRect(x0, gy, zw, bh);
+          if (active) { hazardStripes(ctx, x0, gy, zw, bh, "#000", 0.16); hazardStripes(ctx, x0, gy, zw, bh, "#fff", 0.10); }
         }
-        ctx.globalAlpha = 1;
+        ctx.restore(); ctx.globalAlpha = 1;
       }
     }
     for (const e of enemies) {
