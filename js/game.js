@@ -172,7 +172,7 @@
     currentStage = stageAt(i);
     platforms = stagePlatforms(i);
     slowZones = []; tempWalls = [];
-    if (run) { run.voidScroll = null; run.bossAdds = null; }
+    if (run) { run.voidScroll = null; run.bossAdds = null; run._preBossPlatforms = null; run._brokenPlats = null; }
     if (blade && blade.stolenBy) { blade.stolenBy = null; blade.hostile = false; blade.state = "returning"; }
     // achievements: count distinct biomes fought in (across the whole profile)
     if (run && achTracks() && currentStage && currentStage.name && !currentStage.dark) {
@@ -520,6 +520,20 @@
       { x: W * 0.28, y: 560, w: 300, h: 24, oneway: true },
       { x: W * 0.62, y: 430, w: 260, h: 24, oneway: true },
     ];
+  }
+
+  // ---- NO SHELTER: per-boss arenas ------------------------------------------
+  // Each boss owns its ground. Swapped in when the boss spawns, restored when it
+  // falls (or the stage changes). Authored in 1600x900 like stage layouts.
+  function bossArena(bossId) {
+    const vw = W, vh = H, gy = CONFIG.world.groundY;
+    const floor = { x: 0, y: gy, w: vw, h: vh - gy, floor: true };
+    const ox = (vw - 1600) / 2, oy = (vh - 900) / 2;
+    const P = (x, y, w) => ({ x: x + ox, y: y + oy, w, h: 22, oneway: true });
+    if (bossId === "warden")   return [floor, P(150, 430, 240), P(1210, 430, 240), P(680, 555, 240)];   // the Yard: spread, high — perch time is exposure time
+    if (bossId === "colossus") return [floor, P(430, 400, 740), P(110, 645, 210), P(1280, 645, 210)];   // the Foundry: one high gantry + two low blocks
+    if (bossId === "aldric")   return [floor];                                                          // the Dueling Ground: bare — the pure duel
+    return null;   // source/echo fight over the stage layout (then the void takes it)
   }
 
   // ---- THE SOURCE: runtime arena mutation for the final void run ------------
@@ -1200,6 +1214,9 @@
         e.introT = CONFIG.bossTheater.introDur;
         bossBeat = null; bannerT = 0; stageBannerT = 0;
         run.bossAdds = null;
+        // NO SHELTER: the boss brings its own arena (restored when it falls)
+        { const ar = bossArena(e.bossId);
+          if (ar) { run._preBossPlatforms = platforms; run._brokenPlats = null; platforms = ar; } }
         break;
       case "miniboss": e = bossById(spec.bossId); if (e.isMirrorBoss) e._live = true; e.hp *= 0.4; e.maxHp *= 0.4; e.isMiniBoss = true; e.bossName = "◇ " + e.bossName; break;
       case "priest": case "herald": case "mender": case "anchor": e = new Support(0, 0, spec.type); break;
@@ -1700,6 +1717,31 @@
         if (r === "hit") { SFX.hurt(); loseStyle(); } else if (r === "absorbed") onShieldAbsorb();
       }
     }
+    // GENERIC platform cracking: any boss can set p.crackT (+ optional
+    // p.respawnIn to give the platform back later). Warning shimmer draws in
+    // the world pass; here the timer runs out and the ground gives way.
+    for (let i = platforms.length - 1; i >= 0; i--) {
+      const p = platforms[i];
+      if (!(p.crackT > 0)) continue;
+      p.crackT -= dt;
+      if (p.crackT <= 0 && p.oneway) {
+        const spec = { x: p.x, y: p.y, w: p.w, h: p.h, oneway: true };
+        platforms.splice(i, 1);
+        FX.ring(spec.x + spec.w / 2, spec.y, 18, p.crackColor || THEME.ink);
+        FX.burst(spec.x + spec.w / 2, spec.y, 0, 1, 8, p.crackColor || THEME.ink);
+        if (p.respawnIn > 0) (run._brokenPlats = run._brokenPlats || []).push({ spec, t: p.respawnIn });
+      }
+    }
+    if (run._brokenPlats) for (let i = run._brokenPlats.length - 1; i >= 0; i--) {
+      const b = run._brokenPlats[i];
+      b.t -= dt;
+      if (b.t <= 0) {
+        platforms.push({ ...b.spec });
+        FX.ring(b.spec.x + b.spec.w / 2, b.spec.y, 12, "#c9ccd6");
+        run._brokenPlats.splice(i, 1);
+      }
+    }
+
     // THE VOID RUN: drive the conveyor (this call was missing — the entire
     // platform-stream system existed but never moved)
     updateVoidScroll(dt);
@@ -1709,6 +1751,18 @@
       if (aboss.witnessEarned) {
         aboss.witnessEarned = false;
         if (achTracks() && typeof ACH !== "undefined" && ACH.unlock) ACH.unlock("witness");
+      }
+      // NO SHELTER: track platform camping — perched above the boss, the clock
+      // runs; on the ground it drains. Bosses read campT/campPlat to answer.
+      {
+        const perch = player.onGround ? platforms.find((p) => p.oneway && !p.floor &&
+          Math.abs(player.y + player.hh - p.y) < 6 && player.x + player.hw > p.x && player.x - player.hw < p.x + p.w) : null;
+        if (perch && player.y < aboss.y - aboss.hh * 0.4) {
+          aboss.campT = (aboss.campT || 0) + dt; aboss.campPlat = perch;
+        } else {
+          aboss.campT = Math.max(0, (aboss.campT || 0) - dt * 1.6);
+          if (aboss.campT <= 0) aboss.campPlat = null;
+        }
       }
       if (aboss.requestVoid) { aboss.requestVoid = false; startVoidScroll(aboss); }
       if (aboss.freezeVoid && run.voidScroll) { aboss.freezeVoid = false; run.voidScroll.active = false; run.voidScroll.frozen = true; }
@@ -2251,6 +2305,8 @@
     if (run.mods.bleedNova && e.bleedStacks > 0) { for (const e2 of enemies) { if (e2 === e || e2.dead) continue; if (len(e2.x - e.x, e2.y - e.y) < 150 && e2.applyBleed) e2.applyBleed(3); } FX.ring(e.x, e.y, 12, CONFIG.colors.charger); }
     if (run.mods.cinderNova && e.burnT > 0) { for (const e2 of enemies) { if (e2 === e || e2.dead) continue; if (len(e2.x - e.x, e2.y - e.y) < 150 && e2.applyBurn) e2.applyBurn(); } FX.ring(e.x, e.y, 12, CONFIG.colors.slam); }
     if (e.isBoss) {
+      // NO SHELTER: give the stage its ground back (the Source keeps its frozen void — it never swapped)
+      if (run._preBossPlatforms) { platforms = run._preBossPlatforms; run._preBossPlatforms = null; run._brokenPlats = null; }
       CG.happytime();   // CrazyGames: a highlight moment
       Backdrop.bloom("#ffffff", 0.22, 0.9); Backdrop.flare(e.x, e.y, currentStage.accent || "#ffffff", 520, 1.0);   // a boss falls: the world flares
       FX.explode(e.x, e.y, e.color, 2.2); FX.explode(e.x, e.y - 20, currentStage.accent || CONFIG.colors.perfect, 1.4);   // a boss DEATH is an event
@@ -2648,6 +2704,22 @@
     const biome = run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly" || run.mode === "gauntlet" || run.mode === "tutorial" || run.mode === "playground");
     if (biome) Backdrop.draw(ctx, currentStage, performance.now() / 1000, player ? player.x : W / 2);   // sky + parallax + motes
     for (const p of platforms) Backdrop.platform(ctx, p, currentStage, !!p.floor);                       // depth: gradient + edge + shadow
+    // cracking platforms telegraph the give-way: jagged fractures + a quickening pulse
+    for (const p of platforms) {
+      if (!(p.crackT > 0)) continue;
+      const k = 1 - clamp(p.crackT / (p.crackMax || 0.8), 0, 1);
+      ctx.save();
+      ctx.globalAlpha = (0.35 + 0.5 * k) * (0.65 + 0.35 * Math.sin(performance.now() / (60 - k * 25)));
+      ctx.strokeStyle = p.crackColor || CONFIG.colors.charger; ctx.lineWidth = 2;
+      ctx.beginPath();
+      const n = 3 + Math.floor(k * 3);
+      for (let ci = 0; ci < n; ci++) {
+        const cx2 = p.x + p.w * (0.12 + 0.76 * ((ci * 0.37 + 0.13) % 1));
+        ctx.moveTo(cx2, p.y); ctx.lineTo(cx2 + (ci % 2 ? 9 : -9), p.y + (p.h || 22) * 0.7);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
     // Geomancer walls: a colored cap + crumble fade as they age
     for (const w of tempWalls) {
       const k = clamp(w.life / w.maxLife, 0, 1);

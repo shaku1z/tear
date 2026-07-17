@@ -59,7 +59,8 @@ class Projectile {
 
     // Optional falling-hazard impact. Bombs/mines keep their legacy game-owned handling
     // unless their creator explicitly opts into groundImpact.
-    if (this.gravity && this.groundImpact && !this._groundImpactDone && this.y + this.r >= CONFIG.world.groundY) {
+    if (this.gravity && this.groundImpact && !this._groundImpactDone && this.vy > 0 &&
+        this.y + this.r >= (this.landingY != null ? this.landingY : CONFIG.world.groundY)) {
       this.y = CONFIG.world.groundY - this.r;
       this.vx = 0; this.vy = 0; this.landingT = 0;
       this._groundImpactDone = true;

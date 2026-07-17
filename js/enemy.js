@@ -1488,6 +1488,7 @@ class Warden extends Enemy {
     this.guardMeter = 0; this.guardDelayT = 0; this.guardBrokenT = 0; this.batonParryCd = 0;
     this.searchlights = []; this.cages = []; this.trails = []; this.lockdownT = 0; this.lockdownCd = 0;
     this.mortarTargets = []; this.trailDropT = 0; this._playerRef = null;
+    this.volleyCd = 0; this.volleyTargetY = 0;   // NO SHELTER: the skyward volley answers perch-campers
   }
   get phase() { const f = this.hp / this.maxHp; return f > 0.65 ? 1 : (f > 0.30 ? 2 : 3); }
   damageTakenMult() { return this.guardBrokenT > 0 ? CONFIG.warden.guardBreakMult : 1; }
@@ -1548,14 +1549,15 @@ class Warden extends Enemy {
     p.shock = true; p.r = Wc.shockR; p.dmg = Wc.shockDmg; p.life = 2.0;
     projectiles.push(p);
   }
-  _mortar(player, projectiles) {
+  _mortar(player, projectiles, landY) {
     const Wc = CONFIG.warden, v = Wc.mortarSpeed, g = Wc.mortarGravity;
     const t = (2 * v) / g;
     const targets = this.mortarTargets.length ? this.mortarTargets : [-1, 0, 1].map((i) => clamp(player.x + i * 180, 60, CONFIG.view.w - 60));
     for (const tx of targets) {
       const p = new Projectile(this.x, this.y - this.hh, (tx - this.x) / t, -v);
       p.gravity = g; p.dmg = Wc.mortarDmg; p.r = 11; p.owner = this; p.tint = this.color;
-      p.landingX = tx; p.landingY = CONFIG.world.groundY; p.landingT = t; p.groundImpact = true; p.bossAttack = "mortar";
+      p.landingX = tx; p.landingY = landY != null ? landY : CONFIG.world.groundY;   // volleys burst at PLATFORM height
+      p.landingT = t; p.groundImpact = true; p.bossAttack = "mortar";
       projectiles.push(p);
     }
     this.mortarTargets = [];
@@ -1626,19 +1628,36 @@ class Warden extends Enemy {
     } else {
       this.vx = lerp(this.vx, this.facing * sp, clamp(3 * dt, 0, 1));
       this.atkT -= dt;
-      if (this.atkT <= 0) {
+      this.volleyCd -= dt;
+      // NO SHELTER: camp a perch too long and the volley comes for it — three
+      // shells onto YOUR platform, reticles first
+      if (this.campT > Wc.campAfter && this.volleyCd <= 0 && this.campPlat) {
+        const pl = this.campPlat;
+        this.pendingAtk = "volley"; this.state = "windup"; this.stateT = Wc.batonWindup * 1.25;
+        this.mortarTargets = [-1, 0, 1].map((i) => clamp(pl.x + pl.w / 2 + i * Math.min(95, pl.w / 3), pl.x + 16, pl.x + pl.w - 16));
+        this.volleyTargetY = pl.y;
+        this.volleyCd = Wc.volleyCd; this.campT = 1.2;
+        BOSSFX.juice({ banner: "SKYWARD VOLLEY", color: this.color, shake: 6, quiet: true });
+      }
+      else if (this.atkT <= 0) {
         this.pendingAtk = ph >= 2 && Math.random() < 0.34 ? "heavy" : (dist < Wc.bashRange ? "bash" : (Math.random() < 0.5 ? "baton" : "mortar"));
         this.state = "windup"; this.stateT = Wc.batonWindup;
         if (this.pendingAtk === "mortar") this.mortarTargets = [-1, 0, 1].map((i) => clamp(player.x + i * 180, 60, CONFIG.view.w - 60));
         if (this.pendingAtk === "heavy") perilPing(this);
       }
-      if (ph === 2 && this.onGround && Math.random() < 0.5 * dt) { this.vy = -1150; this.onGround = false; }   // vault to a platform
+      // vault: random footwork in P2 — but a camping player makes it TARGETED
+      // (he lands on the perch, baton first)
+      if (ph === 2 && this.onGround && Math.random() < (this.campT > 2 ? 1.2 : 0.5) * dt) {
+        this.vy = -1150; this.onGround = false;
+        if (this.campT > 2 && this.campPlat) this.vx = (this.campPlat.x + this.campPlat.w / 2 - this.x) * 1.1;
+      }
     }
     this.integrate(dt, platforms);
   }
 
   _fire(player, projectiles, footY, Wc) {
-    if (this.pendingAtk === "mortar") this._mortar(player, projectiles);
+    if (this.pendingAtk === "volley") this._mortar(player, projectiles, this.volleyTargetY);
+    else if (this.pendingAtk === "mortar") this._mortar(player, projectiles);
     else if (this.pendingAtk === "heavy") {
       this._shock(projectiles, this.facing, footY); this._shock(projectiles, -this.facing, footY);
       const p = new Projectile(this.x, this.y - 18, this.facing * Wc.shockSpeed * 0.8, 0);
@@ -1756,7 +1775,8 @@ class Warden extends Enemy {
       ctx.strokeStyle = CONFIG.colors.slam; ctx.globalAlpha = 0.65; ctx.lineWidth = 4; ctx.setLineDash([8, 6]);
       if (this.pendingAtk === "mortar") {
         ctx.beginPath(); ctx.arc(this.x, this.y - this.hh - 12, 16, 0, Math.PI * 2); ctx.stroke();
-        for (const tx of this.mortarTargets) dangerReticle(ctx, tx, CONFIG.world.groundY - 3, 28, wk, this.color);
+        { const ry = this.pendingAtk === "volley" ? this.volleyTargetY - 3 : CONFIG.world.groundY - 3;
+          for (const tx of this.mortarTargets) dangerReticle(ctx, tx, ry, 28, wk, this.color); }
       }
       else if (this.pendingAtk === "heavy") dangerLane(ctx, this.x, gy - 76, CONFIG.view.w, 82, this.facing, CONFIG.colors.charger, wk);
       else { ctx.beginPath(); ctx.moveTo(this.x, gy - 2); ctx.lineTo(this.x + this.facing * 210, gy - 2); ctx.stroke(); }
@@ -1938,6 +1958,17 @@ class Colossus extends Enemy {
       this.vx = lerp(this.vx, 0, clamp(6 * dt, 0, 1)); this.stateT -= dt; if (this.stateT <= 0) this.state = "idle";
     } else {
       this.vx = lerp(this.vx, this.facing * C.speed * (1 + (ph - 1) * 0.3), clamp(2.5 * dt, 0, 1));
+      // NO SHELTER — PILLAR QUAKE: camp the gantry and the fortress slams its
+      // support out from under you (crack warning, then the perch gives way for a while)
+      this.pillarCd = (this.pillarCd || 0) - dt;
+      if (this.campT > C.campAfter && this.pillarCd <= 0 && this.campPlat && !(this.campPlat.crackT > 0)) {
+        const pl = this.campPlat;
+        pl.crackT = C.pillarWarn; pl.crackMax = C.pillarWarn;
+        pl.crackColor = CONFIG.colors.armoredShield; pl.respawnIn = C.platRespawn;
+        this.pillarCd = C.pillarCd; this.campT = 1.2;
+        BOSSFX.juice({ banner: "PILLAR QUAKE", color: CONFIG.colors.armoredShield, shake: 10, flash: 0.25, hitstop: 0.05 });
+        FX.shockwave(this.x, this.y + this.hh, 10, CONFIG.colors.armoredShield, 260, 5);
+      }
       this.atkT -= dt;
       if (this.atkT <= 0) {
         const patterns = ph === 1 ? ["stomp", "sweep", "charge"] : (ph === 2 ? ["charge", "stomp", "sweep", "charge"] : ["charge", "stomp", "sweep"]);
@@ -2156,7 +2187,12 @@ class Aldric extends Enemy {
       this.vx = lerp(this.vx, duelDir * spd, clamp(4 * dt, 0, 1));
       this.atkT -= dt;
       if (this.atkT <= 0 && Math.abs(player.x - this.x) < 500) { this.state = "windup"; this.stateT = C.windup; }
-      if (this.onGround && player.y < this.y - 60 && Math.random() < (this.mode === "duel" ? 0.3 : 0.6) * dt) { this.vy = -1120; this.onGround = false; }
+      // NO SHELTER: hover above the king and the pounce COMES — deterministic,
+      // not a dice roll (tracks time-spent-above, leaps at the player)
+      this.aboveT = (player.y < this.y - 60) ? (this.aboveT || 0) + dt : 0;
+      if (this.onGround && this.aboveT > (C.pounceAfter || 1)) {
+        this.vy = -1120; this.vx = (player.x - this.x) * 1.1; this.onGround = false; this.aboveT = 0;
+      }
     }
     this.integrate(dt, platforms);
   }
@@ -2546,7 +2582,7 @@ class Source extends Enemy {
     if (this.voidDelayT > 0) {
       if (!this._shatterStarted) {
         this._shatterStarted = true;
-        for (const p of platforms) if (p.oneway && !(p.crackT > 0)) { p.crackT = C.crackWarn * (0.35 + Math.random() * 0.55); p.crackMax = p.crackT; }
+        for (const p of platforms) if (p.oneway && !(p.crackT > 0)) { p.crackT = C.crackWarn * (0.35 + Math.random() * 0.55); p.crackMax = p.crackT; p.crackColor = this.color; }
       }
       this.voidDelayT -= dt;
       if (this.voidDelayT <= 0) {
@@ -2559,21 +2595,14 @@ class Source extends Enemy {
     this._scheduleFrom(player);
     if (this.copyT > 0) { this.copyT -= dt; if (this.copyT <= 0) this._doCopy(player, projectiles); }
 
-    // Phase II: every platform gets a real crack warning before it breaks.
-    for (let i = platforms.length - 1; i >= 0; i--) {
-      const p = platforms[i];
-      if (!(p.crackT > 0)) continue;
-      p.crackT -= dt;
-      if (p.crackT <= 0 && p.oneway) {
-        platforms.splice(i, 1); FX.ring(p.x + p.w / 2, p.y, 18, this.color); FX.burst(p.x + p.w / 2, p.y, 0, 1, 8, this.color);
-      }
-    }
+    // (platform crack ticking/splicing is GENERIC now — game.js runs it; this
+    // boss only SETS crackT on its victims)
     if (this.collapsing) {
       this.collapseT -= dt;
       if (this.collapseT <= 0) {
         this.collapseT = C.collapseCd;
         const ow = platforms.filter((p) => p.oneway && !(p.crackT > 0));
-        if (ow.length) { const pl = ow[Math.floor(Math.random() * ow.length)]; pl.crackT = C.crackWarn; pl.crackMax = C.crackWarn; }
+        if (ow.length) { const pl = ow[Math.floor(Math.random() * ow.length)]; pl.crackT = C.crackWarn; pl.crackMax = C.crackWarn; pl.crackColor = this.color; }
       }
     }
 

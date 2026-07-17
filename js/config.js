@@ -226,6 +226,7 @@ const CONFIG = {
     kneelDur: 6.0, witnessReviveFrac: 0.32, angerReviveFrac: 0.55, angerRegenMult: 2.4,
     angerDamageMult: 1.25, seamLife: 2.6, crownfireCd: 7.2, crownfireWindup: 0.85,
     emberDmg: 14, emberSpeed: 560,
+    pounceAfter: 1.0,   // NO SHELTER: hover above him this long and the pounce comes, every time
   },
   // The Iron Colossus (Stage 2 boss): a tank with a front shield -> a thrown sweeping arm -> an exposed core
   colossus: {
@@ -238,6 +239,7 @@ const CONFIG = {
     staggerDur: 1.1, coreOpenDur: 2.5, coreOpenMult: 1.65,
     shieldCrossings: 3, shieldEmbedDur: 2.2,
     debrisDmg: 16, debrisGravity: 1750, meltdownCd: 8.5, meltdownWindup: 0.9,
+    campAfter: 4.0, pillarCd: 7.0, pillarWarn: 0.7, platRespawn: 6.0,   // NO SHELTER: the fortress breaks the perch you camp
   },
   // The Warden (Stage 1 boss): a methodical guard who weaponizes the arena across 3 phases
   warden: {
@@ -250,6 +252,7 @@ const CONFIG = {
     guardBreakDur: 2.5, guardBreakMult: 1.65,
     lockdownDur: 5.0, lockdownCd: 10.0, cageW: 125,
     debrisDmg: 15, debrisGravity: 1650, trailLife: 2.5,
+    campAfter: 4.0, volleyCd: 6.0,   // NO SHELTER: perch too long and the skyward volley answers
   },
 
   // support: no real attack — they make every OTHER enemy worse, so they're priority kills
