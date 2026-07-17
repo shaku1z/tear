@@ -28,9 +28,27 @@ class Projectile {
     this.tint = null;         // shot colour, set by the firing enemy (else default enemyShot)
     this.kind = "dart";       // visual shape: "dart" (oriented bolt) | "orb" (caster)
     this.hist = [];           // recent positions -> a real motion trail for EVERY projectile
+    // Optional boss-pattern metadata. Neutral defaults preserve every legacy projectile.
+    this.owner = null;
+    this.landingX = null; this.landingY = null; this.landingT = null;
+    this.maxCrossings = 0; this.crossings = 0;
+    this.embeddedLife = 0;
+    this.groundImpact = false;
+    this.embedded = false;    // inert sweeper lodged in an arena wall
+    this.harmless = false;    // collision consumers can ignore an embedded prop
+    this._embedNotified = false;
+    this._groundImpactDone = false;
   }
 
   update(dt) {
+    if (this.embedded) {
+      this.vx = 0; this.vy = 0;
+      this.embeddedLife -= dt;
+      if (this.embeddedLife <= 0) this.dead = true;
+      return;
+    }
+
+    if (this.landingT != null) this.landingT = Math.max(0, this.landingT - dt);
     if (this.gravity) this.vy += this.gravity * dt;   // bombs arc; mines fall to the floor
     this.hist.push({ x: this.x, y: this.y });          // record the path for the motion trail
     if (this.hist.length > 7) this.hist.shift();
@@ -39,7 +57,18 @@ class Projectile {
     this.life -= dt;
     if (this.life <= 0) this.dead = true;
 
-    if (this.bounces > 0) {
+    // Optional falling-hazard impact. Bombs/mines keep their legacy game-owned handling
+    // unless their creator explicitly opts into groundImpact.
+    if (this.gravity && this.groundImpact && !this._groundImpactDone && this.y + this.r >= CONFIG.world.groundY) {
+      this.y = CONFIG.world.groundY - this.r;
+      this.vx = 0; this.vy = 0; this.landingT = 0;
+      this._groundImpactDone = true;
+      if (this.owner && typeof this.owner.onProjectileGroundImpact === "function") this.owner.onProjectileGroundImpact(this);
+      this.dead = true;
+      return;
+    }
+
+    if (this.bounces > 0 || (this.sweeper && this.maxCrossings > 0)) {
       // ricochet off the play-area edges
       const r = this.r, W = CONFIG.view.w, top = 0, bottom = CONFIG.world.groundY;
       let hit = false;
@@ -48,7 +77,22 @@ class Projectile {
       if (this.y < top + r) { this.y = top + r; this.vy = Math.abs(this.vy); hit = true; }
       else if (this.y > bottom - r) { this.y = bottom - r; this.vy = -Math.abs(this.vy); hit = true; }
       if (hit) {
-        if (this.sweeper) { FX.ring(this.x, this.y, 6, CONFIG.colors.armoredShield); }   // sweeper keeps its speed forever
+        if (this.sweeper) {
+          FX.ring(this.x, this.y, 6, this.tint || CONFIG.colors.armoredShield);
+          if (this.maxCrossings > 0) {
+            this.crossings++;
+            if (this.crossings >= this.maxCrossings) {
+              this.crossings = this.maxCrossings;
+              this.vx = 0; this.vy = 0;
+              this.embedded = true; this.harmless = true;
+              this.hist.length = 0;
+              if (!this._embedNotified) {
+                this._embedNotified = true;
+                if (this.owner && typeof this.owner.onShieldEmbedded === "function") this.owner.onShieldEmbedded(this);
+              }
+            }
+          }
+        }   // maxCrossings=0 preserves the legacy infinite sweeper
         else { this.bounces--; this.vx *= 0.85; this.vy *= 0.85; FX.ring(this.x, this.y, 4); }
       }
       return;
@@ -99,22 +143,31 @@ class Projectile {
     const dark = (typeof THEME !== "undefined") && THEME.dark;
     const lowG = (typeof GFX !== "undefined") && GFX.low;
     // universal motion trail (skipped only for the stationary mine once it settles)
-    if (!(this.mine && this.armed)) {
+    if (!(this.mine && this.armed) && !this.embedded) {
       const tcol = this.deflected ? (this.perfect ? C.perfect : C.deflected) : (this.tint || (this.shock ? C.slam : this.mud ? C.sludge : this.bomb ? C.bomber : C.enemyShot));
       this._trail(ctx, tcol, dark, lowG);
     }
     if (this.sweeper) {                    // Colossus's thrown shield arm: a rotating bar of death
-      ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(performance.now() / 200);
-      if (!lowG) { ctx.shadowColor = C.armoredShield; ctx.shadowBlur = 12; }
-      ctx.fillStyle = C.armoredShield; ctx.fillRect(-44, -9, 88, 18);
-      ctx.shadowBlur = 0; ctx.strokeStyle = ink; ctx.lineWidth = 2.5; ctx.strokeRect(-44, -9, 88, 18);
+      const col = this.tint || C.armoredShield;
+      ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.embedded ? 0 : performance.now() / 200);
+      ctx.globalAlpha = this.embedded ? 0.62 : 1;
+      if (!lowG && !this.embedded) { ctx.shadowColor = col; ctx.shadowBlur = 12; }
+      ctx.fillStyle = col; ctx.fillRect(-44, -9, 88, 18);
+      ctx.shadowBlur = 0; ctx.strokeStyle = ink; ctx.lineWidth = this.embedded ? 2 : 2.5;
+      if (this.embedded) ctx.setLineDash([6, 4]);
+      ctx.strokeRect(-44, -9, 88, 18); ctx.setLineDash([]);
       ctx.fillStyle = ink; ctx.fillRect(-6, -6, 12, 12);
+      if (this.embedded) {                  // fixed wall-prongs read as an inert lodged prop
+        ctx.globalAlpha = 0.75; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(-44, -14); ctx.lineTo(-44, 14); ctx.moveTo(44, -14); ctx.lineTo(44, 14); ctx.stroke();
+      }
       ctx.restore(); return;
     }
     if (this.shock) {                      // armored stomp shockwave: a ground spike you jump
+      const col = this.tint || C.slam;
       ctx.save();
-      if (!lowG) { ctx.shadowColor = C.slam; ctx.shadowBlur = 10; }
-      ctx.fillStyle = C.slam; ctx.globalAlpha = 0.92;
+      if (!lowG) { ctx.shadowColor = col; ctx.shadowBlur = 10; }
+      ctx.fillStyle = col; ctx.globalAlpha = 0.92;
       ctx.beginPath(); ctx.moveTo(this.x - this.r, this.y + this.r);
       ctx.lineTo(this.x, this.y - this.r); ctx.lineTo(this.x + this.r, this.y + this.r);
       ctx.closePath(); ctx.fill();

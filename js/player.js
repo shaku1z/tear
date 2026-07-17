@@ -35,6 +35,10 @@ class Player {
     this.airTime = 0;           // Aerial Rave: seconds since last grounded
     this.rootT = 0;             // Chain Caster: snared in place (no move/jump/dash) for a bit
     this.slowMult = 1;          // Sludge: slowed while standing in a mud puddle (set by the game)
+    this.voidSlowT = 0;         // Source void rescue: brief movement penalty after the geyser saves you
+    this.rallyT = 0;            // Aldric Act I: seconds left to win recoverable health back
+    this.rallyPool = 0;         // orange-chip health still available during the rally window
+    this.rallySource = null;    // fight-scoped owner; never persists beyond this Player instance
     this.hazardT = 0;           // cooldown for sustained hazard-zone damage (Warden zones)
     this.lastTrickKind = "";    // last trick performed (The Echo mirrors it)
     this.lastTrickT = 0;        // ...and when (so the Echo can detect a NEW trick)
@@ -61,6 +65,11 @@ class Player {
     if (this.jumpBuf > 0) this.jumpBuf -= dt;
     if (this.guardT > 0) this.guardT -= dt;
     if (this.rootT > 0) this.rootT -= dt;
+    if (this.voidSlowT > 0) this.voidSlowT = Math.max(0, this.voidSlowT - dt);
+    if (this.rallyT > 0) {
+      this.rallyT = Math.max(0, this.rallyT - dt);
+      if (this.rallyT <= 0 || this.rallyPool <= 0 || !this.rallySource || this.rallySource.dead) this._clearRally();
+    } else if (this.rallyPool > 0 || this.rallySource) this._clearRally();
     if (this.dashEndT > 0) this.dashEndT -= dt;
     if (this.tempoT > 0) { this.tempoT -= dt; if (this.tempoT <= 0) this.tempoStk = 1; }
     const rooted = this.rootT > 0;
@@ -118,8 +127,10 @@ class Player {
       }
     } else {
       // ---- normal movement (mud slows your top speed + acceleration) ----
-      const accel = (this.onGround ? P.groundAccel : P.airAccel) * this.slowMult;
-      const top = P.moveSpeed * this.moveBoost * this.slowMult;
+      const voidSlow = this.voidSlowT > 0 ? ((CONFIG.source && CONFIG.source.voidSlowMult) || 0.65) : 1;
+      const moveSlow = this.slowMult * voidSlow;
+      const accel = (this.onGround ? P.groundAccel : P.airAccel) * moveSlow;
+      const top = P.moveSpeed * this.moveBoost * moveSlow;
       if (dirX !== 0) {
         this.vx += dirX * accel * dt;
         this.vx = clamp(this.vx, -top, top);
@@ -192,7 +203,7 @@ class Player {
   }
 
   // returns: "hit" (HP lost) | "absorbed" (a shield pip ate it) | "" (invulnerable)
-  takeDamage(dmg, fromX) {
+  takeDamage(dmg, fromX, source) {
     if (this.invulnerable) return "";
     // Aegis: a stored pip absorbs the hit entirely (works even in one-hit mode)
     if (this.shield > 0) {
@@ -202,7 +213,16 @@ class Player {
     }
     dmg *= CONFIG.player.dmgTakenMult * this.flowDR;          // Flow Guard
     if (this.guardT > 0) dmg *= CONFIG.resilience.parryGuardMult;  // Riposte window
+    const hpBefore = this.hp;
     this.hp = this.oneHit ? 0 : Math.max(0, this.hp - dmg);
+    const actualLost = Math.max(0, hpBefore - this.hp);
+    // Projectiles may pass their owning boss while contact damage passes the boss itself.
+    // Accept both shapes so every existing two-argument caller remains valid.
+    const rallyOwner = source && (source.owner || source.source || source);
+    const fromAldric = rallyOwner && rallyOwner.mode === "duel" &&
+      (rallyOwner.bossId === "aldric" || rallyOwner.bossName === "THE BERSERKER KING" ||
+       (rallyOwner.constructor && rallyOwner.constructor.name === "Aldric"));
+    if (actualLost > 0 && fromAldric) this.beginRally(actualLost, rallyOwner);
     this.iframe = CONFIG.player.hitIframe;
     this.tookHit = true;   // consumed by the game for no-hit achievement tracking
     const dir = Math.sign(this.x - fromX) || 1;
@@ -217,9 +237,50 @@ class Player {
     return "hit";
   }
 
+  // Aldric's Bloodborne-style rally: a fresh wound exposes only a configured fraction
+  // as recoverable orange-chip health. Repeated duel hits may add to the same live pool,
+  // but it can never exceed the player's currently missing HP.
+  beginRally(actualLost, source) {
+    if (!(actualLost > 0) || !source) return 0;
+    const A = CONFIG.aldric || {};
+    const frac = Math.max(0, A.recoverableFrac == null ? 0.6 : A.recoverableFrac);
+    const recoverable = actualLost * frac;
+    if (!(recoverable > 0)) { this._clearRally(); return 0; }
+    const carry = this.rallyT > 0 && this.rallySource === source ? this.rallyPool : 0;
+    this.rallyPool = Math.min(Math.max(0, this.maxHp - this.hp), carry + recoverable);
+    this.rallyT = Math.max(0, A.rallyWindow == null ? 1.5 : A.rallyWindow);
+    this.rallySource = this.rallyT > 0 && this.rallyPool > 0 ? source : null;
+    if (!this.rallySource) this._clearRally();
+    return this.rallyPool;
+  }
+
+  // Called by the fight's player-damage hooks after Aldric takes a direct counter-hit.
+  // Returns the actual HP restored so callers can drive feedback without guessing.
+  claimRally(damageDealt) {
+    if (this.rallyT <= 0 || this.rallyPool <= 0 || !this.rallySource || this.rallySource.dead || !(damageDealt > 0)) {
+      if (this.rallyT <= 0 || this.rallyPool <= 0 || !this.rallySource || this.rallySource.dead) this._clearRally();
+      return 0;
+    }
+    const A = CONFIG.aldric || {};
+    const perDamage = Math.max(0, A.rallyHealPerDamage == null ? 0.5 : A.rallyHealPerDamage);
+    const healed = Math.min(this.rallyPool, Math.max(0, this.maxHp - this.hp), damageDealt * perDamage);
+    if (healed > 0) {
+      this.hp += healed;
+      this.rallyPool = Math.max(0, this.rallyPool - healed);
+    }
+    if (this.rallyPool <= 0.001 || this.hp >= this.maxHp) this._clearRally();
+    return healed;
+  }
+
+  _clearRally() {
+    this.rallyT = 0;
+    this.rallyPool = 0;
+    this.rallySource = null;
+  }
+
   // additive shim mirroring Enemy.takeHit so one symmetric collision loop can damage the
   // player the same way it damages an enemy — a thin translation into existing takeDamage().
-  takeHit(dmg, kx, ky, src) { return this.takeDamage(dmg, src ? src.x : (this.x - (kx || 0))); }
+  takeHit(dmg, kx, ky, src) { return this.takeDamage(dmg, src ? src.x : (this.x - (kx || 0)), src); }
 
   heal(n) { this.hp = Math.min(this.maxHp, this.hp + n); }
 

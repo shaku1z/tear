@@ -36,18 +36,51 @@ const UI = {
     metric: {
       btnH: 48, btnW: 300, btnGap: 12, btnRound: 0,
       panelPad: 14, chipH: 28, chipW: 96, barH: 14, cardRound: 0,
+      // boss theater: shared HUD + cinematic proportions. Ratios remain tokens so
+      // callers can resize the surfaces without rebuilding their internal layout.
+      bossHudH: 16, bossSegments: 10, bossNotchH: 6, bossBorderW: 2, bossGlow: 8,
+      bossGuardH: 6, bossGuardGap: 10, bossGuardScale: 0.60,
+      bossShimmerW: 112, bossCrackJut: 10,
+      bossIntroBarH: 96, bossIntroAccentHalfW: 150, bossIntroAccentH: 3,
+      bossIntroTitleBottom: 34, bossIntroAccentBottom: 22, bossIntroEpithetBottom: 2,
+      bossVignetteFocusY: 0.46, bossVignetteInner: 0.18, bossVignetteOuter: 0.72,
+      bossPhaseBannerW: 760, bossPhaseBannerH: 72, bossPhaseBannerY: 0.24,
+      bossPhaseAccentH: 3,
+      rallyInset: 2,
     },
     // opacity roles for de-emphasised text
-    alpha: { full: 1, soft: 0.7, muted: 0.55, faint: 0.4, ghost: 0.25 },
+    alpha: {
+      full: 1, soft: 0.7, muted: 0.55, faint: 0.4, ghost: 0.25,
+      bossTrack: 0.20, bossGuardTrack: 0.16, bossNotch: 0.90, bossFlash: 0.85,
+      cinemaBar: 0.88, cinemaVignette: 0.30, cinemaSubtitle: 0.75,
+      bossPhasePanel: 0.82,
+      rallyBase: 0.72, rallyPulse: 0.18,
+    },
     // colour ROLES (semantic). `ink`/`paper` are the fg/bg pair; the rest pull
     // from the game palette so the system and the game never drift apart.
     color: {
       paper: "#fff",
       muted: "#9a9a9a",     // de-emphasised text / hairlines
       disabled: "#bbb",     // disabled controls
+      cinema: "#06070c",    // fixed dark field for cinematic boss chrome
+      cinemaInk: "#f1eff9", // title ink on the cinematic field
+      cinemaMuted: "#c9ccd6",
+      guard: "#e0a326",     // posture / guard-break meter
+      get rally() { return CONFIG.colors.bomber; },
       get accent() { return CONFIG.colors.perfect; },
       get danger() { return CONFIG.colors.charger; },
       get unique() { return CONFIG.colors.perfect; },
+    },
+    motion: {
+      bossPhaseFlash: 0.7,
+      bossShimmerCycle: 2.4,
+      bossGuardPulse: 14,
+      bossIntroIn: 0.25,
+      bossIntroOutAt: 0.82,
+      bossIntroOutSpan: 0.18,
+      bossIntroAccentDelay: 0.15,
+      bossIntroAccentGrow: 0.5,
+      rallyPulse: 9,
     },
   },
 
@@ -504,6 +537,199 @@ const UI = {
     ctx.strokeRect(x, y, w, h);
     ctx.fillStyle = fill || this.ink;
     ctx.fillRect(x, y, w * Math.max(0, Math.min(frac, 1)), h);
+  },
+
+  // Recoverable-health segment for Aldric's rally window. Call after the base
+  // health fill so the orange wound sits between current and recoverable HP.
+  // `hpFrac` and `rallyFrac` are independently expressed against max health.
+  rallyOverlay(ctx, opts) {
+    const o = opts || {}, t = this.t, m = t.metric, a = t.alpha;
+    const x = Number(o.x) || 0, y = Number(o.y) || 0;
+    const w = Math.max(0, Number(o.w) || 0), h = Math.max(0, Number(o.h) || 0);
+    const hp = Math.max(0, Math.min(Number(o.hpFrac) || 0, 1));
+    const end = Math.max(hp, Math.min(hp + Math.max(0, Number(o.rallyFrac) || 0), 1));
+    const segmentW = w * (end - hp);
+    if (segmentW <= 0 || h <= 0) return 0;
+
+    const now = Number.isFinite(Number(o.time)) ? Number(o.time) : 0;
+    const wave = 0.5 + 0.5 * Math.sin(now * t.motion.rallyPulse);
+    const inset = Math.min(m.rallyInset, h / 2);
+    ctx.save();
+    ctx.globalAlpha = a.rallyBase + a.rallyPulse * wave;
+    ctx.fillStyle = o.color || t.color.rally;
+    ctx.fillRect(x + w * hp, y + inset, segmentW, h - inset * 2);
+    ctx.restore();
+    return segmentW;
+  },
+
+  // ---- BOSS THEATER -------------------------------------------------------
+  // The complete boss health surface: segmented HP, phase thresholds, a quiet
+  // moving sheen, the phase-turn crack, and an optional posture/guard meter.
+  bossHud(ctx, opts) {
+    const o = opts || {}, t = this.t, m = t.metric, a = t.alpha;
+    const x = Number(o.x) || 0, y = Number(o.y) || 0;
+    const w = Math.max(0, Number(o.w) || 0), h = Math.max(1, Number(o.h) || m.bossHudH);
+    const frac = Math.max(0, Math.min(Number(o.frac) || 0, 1));
+    const fill = o.fill || t.color.danger, fillW = w * frac;
+    const now = Number.isFinite(Number(o.time)) ? Number(o.time) : 0;
+    const low = !!o.lowGraphics;
+
+    ctx.save();
+    // Track + identity fill.
+    ctx.globalAlpha = a.bossTrack; ctx.fillStyle = this.ink; ctx.fillRect(x, y, w, h);
+    ctx.globalAlpha = a.full;
+    if (!low) { ctx.shadowColor = fill; ctx.shadowBlur = m.bossGlow; }
+    ctx.fillStyle = fill; ctx.fillRect(x, y, fillW, h); ctx.shadowBlur = 0;
+
+    // A restrained light sweep keeps the bar alive without competing with combat.
+    if (!low && fillW > 0 && m.bossShimmerW > 0) {
+      const cycle = t.motion.bossShimmerCycle;
+      const phase = cycle > 0 ? ((now % cycle) + cycle) % cycle / cycle : 0;
+      const sw = Math.min(m.bossShimmerW, Math.max(fillW, 1));
+      const sx = x - sw + (fillW + sw * 2) * phase;
+      const sheen = ctx.createLinearGradient(sx, 0, sx + sw, 0);
+      sheen.addColorStop(0, "transparent");
+      sheen.addColorStop(0.5, t.color.paper);
+      sheen.addColorStop(1, "transparent");
+      ctx.save(); ctx.beginPath(); ctx.rect(x, y, fillW, h); ctx.clip();
+      ctx.globalAlpha = a.ghost; ctx.fillStyle = sheen; ctx.fillRect(sx, y, sw, h);
+      ctx.restore();
+    }
+
+    // Phase change: a brief white strike through the remaining health edge.
+    const flash = Math.max(0, Number(o.phaseFlash) || 0);
+    const flashK = Math.min(flash / t.motion.bossPhaseFlash, 1);
+    if (flashK > 0) {
+      ctx.globalAlpha = flashK * a.bossFlash; ctx.fillStyle = t.color.paper;
+      ctx.fillRect(x, y, fillW, h);
+      const j = m.bossCrackJut;
+      const crackX = Math.max(x + j, Math.min(x + w - j, x + fillW));
+      ctx.globalAlpha = flashK; ctx.strokeStyle = t.color.paper; ctx.lineWidth = m.bossBorderW;
+      ctx.beginPath();
+      ctx.moveTo(crackX - j * 0.20, y - m.bossBorderW);
+      ctx.lineTo(crackX + j * 0.35, y + h * 0.34);
+      ctx.lineTo(crackX - j * 0.25, y + h * 0.64);
+      ctx.lineTo(crackX + j * 0.20, y + h + m.bossBorderW);
+      ctx.stroke();
+    }
+
+    // Segments and future phase thresholds remain readable over every boss colour.
+    ctx.globalAlpha = a.faint; ctx.strokeStyle = this.ink; ctx.lineWidth = 1;
+    for (let i = 1; i < m.bossSegments; i++) {
+      const sx = x + w * i / m.bossSegments;
+      ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, y + h); ctx.stroke();
+    }
+    const marks = Array.isArray(o.phaseMarks) ? o.phaseMarks : [];
+    ctx.globalAlpha = a.bossNotch; ctx.lineWidth = m.bossBorderW;
+    for (const mark of marks) {
+      const f = Number(mark);
+      if (!Number.isFinite(f) || f <= 0 || f >= 1) continue;
+      const mx = x + w * f;
+      ctx.beginPath(); ctx.moveTo(mx, y + h); ctx.lineTo(mx, y + h + m.bossNotchH); ctx.stroke();
+    }
+    ctx.globalAlpha = a.full; ctx.strokeStyle = this.ink; ctx.lineWidth = m.bossBorderW;
+    ctx.strokeRect(x, y, w, h);
+
+    // Guard may be a plain 0..1 number or {frac,color}; the object form leaves
+    // room for a future boss-specific posture colour without another API.
+    let guard = null, guardColor = t.color.guard;
+    if (typeof o.guard === "number") guard = o.guard;
+    else if (o.guard && typeof o.guard === "object") {
+      guard = Number(o.guard.frac);
+      guardColor = o.guard.color || guardColor;
+    }
+    let bottom = y + h + m.bossNotchH;
+    if (Number.isFinite(guard)) {
+      const gf = Math.max(0, Math.min(guard, 1));
+      const gw = w * m.bossGuardScale, gx = x + (w - gw) / 2, gy = y + h + m.bossGuardGap;
+      ctx.globalAlpha = a.bossGuardTrack; ctx.fillStyle = this.ink; ctx.fillRect(gx, gy, gw, m.bossGuardH);
+      ctx.globalAlpha = a.full; ctx.fillStyle = guardColor; ctx.fillRect(gx, gy, gw * gf, m.bossGuardH);
+      if (guard >= 1) {
+        const pulse = 0.5 + 0.5 * Math.sin(now * t.motion.bossGuardPulse);
+        ctx.globalAlpha = a.faint + a.faint * pulse;
+        ctx.fillRect(gx, gy, gw, m.bossGuardH);
+      }
+      ctx.globalAlpha = a.faint; ctx.strokeStyle = this.ink; ctx.lineWidth = 1;
+      ctx.strokeRect(gx, gy, gw, m.bossGuardH);
+      bottom = gy + m.bossGuardH;
+    }
+    ctx.restore();
+    return bottom;
+  },
+
+  // Arrival ceremony: overscan-safe letterbox, radial vignette, name, identity
+  // stroke, and lore epithet. `t` is elapsed real time, not simulation time.
+  bossIntro(ctx, opts) {
+    const o = opts || {}, t = this.t, m = t.metric, a = t.alpha, motion = t.motion;
+    const fallbackW = (typeof CONFIG !== "undefined" && CONFIG.view) ? CONFIG.view.w : 1600;
+    const fallbackH = (typeof CONFIG !== "undefined" && CONFIG.view) ? CONFIG.view.h : 900;
+    const sr = o.screen || { x: 0, y: 0, w: fallbackW, h: fallbackH };
+    const vw = fallbackW, vh = fallbackH, cx = vw / 2;
+    const elapsed = Math.max(0, Number(o.t) || 0), dur = Math.max(Number(o.dur) || 1.4, 0.001);
+    const clamp01 = (n) => Math.max(0, Math.min(n, 1));
+    const easeOut = (n) => { const k = clamp01(n); return 1 - (1 - k) * (1 - k); };
+    const k = clamp01(elapsed / dur);
+    const aIn = easeOut(elapsed / motion.bossIntroIn);
+    const aOut = 1 - easeOut((k - motion.bossIntroOutAt) / motion.bossIntroOutSpan);
+    const alpha = aIn * aOut;
+    const barH = m.bossIntroBarH * aIn;
+    const color = o.color || t.color.danger;
+
+    ctx.save();
+    // Vignette first, bars second: the bars retain a clean cinematic black.
+    const inner = Math.min(vw, vh) * m.bossVignetteInner;
+    const outer = Math.max(vw, vh) * m.bossVignetteOuter;
+    const vignette = ctx.createRadialGradient(cx, vh * m.bossVignetteFocusY, inner,
+      cx, vh * m.bossVignetteFocusY, outer);
+    vignette.addColorStop(0, "transparent"); vignette.addColorStop(1, t.color.cinema);
+    ctx.globalAlpha = a.cinemaVignette * alpha; ctx.fillStyle = vignette;
+    ctx.fillRect(sr.x, sr.y, sr.w, sr.h);
+
+    ctx.globalAlpha = a.cinemaBar * aOut; ctx.fillStyle = t.color.cinema;
+    ctx.fillRect(sr.x, sr.y, sr.w, Math.max(0, barH - sr.y));
+    const bottomY = vh - barH, screenBottom = sr.y + sr.h;
+    ctx.fillRect(sr.x, bottomY, sr.w, Math.max(0, screenBottom - bottomY));
+
+    // Card typography is intentionally fixed light-on-cinema, independent of biome ink.
+    ctx.globalAlpha = alpha; ctx.fillStyle = t.color.cinemaInk;
+    ctx.font = this.font(t.type.display, true); ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    ctx.fillText(o.bossName || "BOSS", cx, vh - m.bossIntroTitleBottom);
+    const accentK = easeOut((elapsed - motion.bossIntroAccentDelay) / motion.bossIntroAccentGrow);
+    const accentW = m.bossIntroAccentHalfW * accentK;
+    ctx.fillStyle = color;
+    ctx.fillRect(cx - accentW, vh - m.bossIntroAccentBottom, accentW * 2, m.bossIntroAccentH);
+    if (o.epithet) {
+      ctx.globalAlpha = alpha * a.cinemaSubtitle; ctx.fillStyle = t.color.cinemaMuted;
+      ctx.font = this.font(t.type.body, true);
+      ctx.fillText(o.epithet, cx, vh - m.bossIntroEpithetBottom);
+    }
+    ctx.restore();
+    return alpha;
+  },
+
+  // Screen-space phase title. The caller owns its clock and supplies a 0..1 alpha;
+  // this component owns every visual detail so phase beats stay consistent.
+  bossPhaseBanner(ctx, opts) {
+    const o = opts || {}, text = o.text || "";
+    if (!text) return;
+    const t = this.t, m = t.metric;
+    const a = o.alpha == null ? 1 : Math.max(0, Math.min(Number(o.alpha) || 0, 1));
+    const vw = (typeof CONFIG !== "undefined" && CONFIG.view) ? CONFIG.view.w : 1600;
+    const vh = (typeof CONFIG !== "undefined" && CONFIG.view) ? CONFIG.view.h : 900;
+    const w = Math.min(m.bossPhaseBannerW, vw - t.space.xl * 2);
+    const h = m.bossPhaseBannerH, x = (vw - w) / 2, y = vh * m.bossPhaseBannerY - h / 2;
+    const color = o.color || t.color.danger;
+
+    ctx.save();
+    ctx.globalAlpha = a * t.alpha.bossPhasePanel; ctx.fillStyle = t.color.cinema;
+    ctx.fillRect(x, y, w, h);
+    ctx.globalAlpha = a; ctx.fillStyle = color;
+    ctx.fillRect(x, y, w, m.bossPhaseAccentH);
+    ctx.fillRect(x, y + h - m.bossPhaseAccentH, w, m.bossPhaseAccentH);
+    ctx.fillStyle = t.color.cinemaInk; ctx.font = this.font(t.type.h2, true);
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(text, vw / 2, y + h / 2);
+    ctx.restore();
   },
 
   // right-anchored row of `n` small squares, `filled` of them coloured (level meters)

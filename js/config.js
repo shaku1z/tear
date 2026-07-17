@@ -186,6 +186,9 @@ const CONFIG = {
     stompCd: 3.2, stompWindup: 0.55, stompRange: 400, shockSpeed: 560, shockDmg: 16, shockR: 15 },
   // boss: large, multi-phase (very heavy -> barely flinchable)
   boss: { w: 118, h: 118, hp: 1900, speed: 70, contactDmg: 20, knockbackTaken: 0.6, weight: 6, fireBase: 2.0 },
+  // shared boss ceremony timing. Individual fights supply the poses and attack grammar;
+  // the theater layer owns only the real-time pacing.
+  bossTheater: { introDur: 1.4, introScale: 0.25, deathDur: 0.9 },
   // The Echo (Stage 4 boss): your own silhouette — mirrors your tricks -> splits -> turns invisible
   echo: {
     w: 32, h: 50, hp: 3000, speed: 280, contactDmg: 18, knockbackTaken: 0.5, weight: 4,
@@ -202,8 +205,11 @@ const CONFIG = {
     sweeperDmg: 18, sweeperSpeed: 600,
     crossDmg: 16, crossSpeed: 740,
     copyDelay: 0.5,
-    collapseCd: 1.3,        // phase 2: rip a platform out this often
-    regenRate: 0.05,        // fake-death HP regen (fraction of max per second)
+    collapseCd: 1.3, crackWarn: 0.8,
+    scrollSpeed: 220, voidFallDmg: 18, voidSlowMult: 0.58, voidSlowDur: 0.7,
+    voidGapMin: 105, voidGapMax: 185, voidPlatformMin: 180, voidPlatformMax: 290,
+    voidWispCd: 4.8, beamCd: 8.5, beamWarn: 0.9, beamSweep: 1.15, beamW: 52, beamDmg: 20,
+    stolenBladeSpeed: 1750, stolenBladeDmg: 18,
   },
   // The Berserker King / Aldric (Stage 3 boss): a duel -> a throne of fire -> a fake death & frenzy
   aldric: {
@@ -211,7 +217,11 @@ const CONFIG = {
     atkCd: 1.7, windup: 0.45, lungeSpeed: 1150, shockDmg: 18, shockSpeed: 740, shockR: 20,
     fireTier: 0.65, fakeTier: 0.20, regenRate: 0.05, reviveFrac: 0.5,   // regen 5%/s up to 50% during the fake
     fireCols: 8, fireCycle: 3.0,                                        // checkerboard of fire, pulses every 3s
-    frenzyDmgTaken: 1.35, downedDmgTaken: 0.3, chargeCd: 13, chargeWindup: 0.5, chargeSpeed: 1550,
+    frenzyDmgTaken: 1.35, downedDmgTaken: 0.3, chargeCd: 9.5, chargeWindup: 0.5, chargeSpeed: 1550,
+    rallyWindow: 1.5, recoverableFrac: 0.65, rallyHealPerDamage: 0.55,
+    kneelDur: 6.0, witnessReviveFrac: 0.32, angerReviveFrac: 0.55, angerRegenMult: 2.4,
+    angerDamageMult: 1.25, seamLife: 2.6, crownfireCd: 7.2, crownfireWindup: 0.85,
+    emberDmg: 14, emberSpeed: 560,
   },
   // The Iron Colossus (Stage 2 boss): a tank with a front shield -> a thrown sweeping arm -> an exposed core
   colossus: {
@@ -219,7 +229,11 @@ const CONFIG = {
     atkCd: 2.5, windup: 0.6, shockDmg: 20, shockSpeed: 720, shockR: 24,
     chargeWindup: 0.7, chargeSpeed: 1350,
     sweeperDmg: 16, sweeperSpeed: 540, sweeperY: 540,
-    panelCount: 4, crossDmg: 14, crossSpeed: 640, crossCd: 2.2,
+    panelCount: 4, panelStep: 0.72, crossDmg: 14, crossSpeed: 640, crossCd: 2.2,
+    ventDur: 2.2, ventW: 150, ventLift: 2600,
+    staggerDur: 1.1, coreOpenDur: 2.5, coreOpenMult: 1.65,
+    shieldCrossings: 3, shieldEmbedDur: 2.2,
+    debrisDmg: 16, debrisGravity: 1750, meltdownCd: 8.5, meltdownWindup: 0.9,
   },
   // The Warden (Stage 1 boss): a methodical guard who weaponizes the arena across 3 phases
   warden: {
@@ -228,6 +242,10 @@ const CONFIG = {
     zoneCount: 3, zoneW: 200, zoneShift: 7, zoneTick: 7, zoneTickCd: 0.4,   // phase-2 prohibited zones
     shockDmg: 18, shockSpeed: 700, shockR: 18,
     ceilingY: 150, ceilDropCd: 1.6, lungeCd: 7.5, lungeWindup: 0.55, lungeSpeed: 1500,   // phase-3 ceiling: lock + telegraph, then dive
+    guardParry: 0.24, guardPerfect: 0.36, guardDecay: 0.08, guardDecayDelay: 1.8,
+    guardBreakDur: 2.5, guardBreakMult: 1.65,
+    lockdownDur: 5.0, lockdownCd: 10.0, cageW: 125,
+    debrisDmg: 15, debrisGravity: 1650, trailLife: 2.5,
   },
 
   // support: no real attack — they make every OTHER enemy worse, so they're priority kills

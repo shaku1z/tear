@@ -25,10 +25,13 @@ const ACH = {
     return { id, cat, rarity, name, desc, stat, goal };
   },
 
-  list: [],   // filled by _build() below
+  _all: [],   // canonical list; includes locked hidden achievements for mastery logic
+  get list() {
+    return this._all.filter((a) => !a.hidden || PROFILE.unlocked(a.id));
+  },
   _build() {
     const S = this._s.bind(this);
-    this.list = [
+    this._all = [
       // ---- COMBAT: raw kills ----
       S("first_blood", "combat", "common", "First Blood", "Defeat your first enemy.", "kills", 1),
       S("centurion", "combat", "uncommon", "Centurion", "Defeat 100 enemies.", "kills", 100),
@@ -88,6 +91,10 @@ const ACH = {
       S("boss_aldric", "boss", "rare", "Regicide", "Defeat The Berserker King, Aldric.", "killAldric", 1),
       S("boss_echo", "boss", "epic", "Shattered Mirror", "Defeat The Echo.", "killEcho", 1),
       S("boss_source", "boss", "legendary", "The Wound Closes", "Defeat The Source.", "killSource", 1),
+      // Directly unlocked by Aldric's kneel choice. It intentionally has no stat/check,
+      // so the achievement timestamp is the only Witness-specific persisted state.
+      { id: "witness", cat: "boss", rarity: "epic", name: "Witness",
+        desc: "Stand witness through Aldric's kneel without striking him.", hidden: true, manual: true },
 
       // ---- ENDLESS MILESTONES (Endless mode only) ----
       S("endless_25", "survival", "uncommon", "Endless: Initiation", "Reach Wave 25 in Endless.", "bestWaveEndless", 25),
@@ -161,18 +168,18 @@ const ACH = {
     ];
     for (const m of CAT_MASTERY) {
       const ach = S(m.id, m.cat, "epic", m.name, m.desc);
-      ach.check = () => this.list.filter((a) => a.cat === m.cat && a.id !== m.id && !a.master).every((a) => PROFILE.unlocked(a.id));
+      ach.check = () => this._all.filter((a) => a.cat === m.cat && a.id !== m.id && !a.master).every((a) => PROFILE.unlocked(a.id));
       ach.master = true;   // excluded from other masters' checks so they don't wait on each other
-      this.list.push(ach);
+      this._all.push(ach);
     }
     // ---- THE PLATINUM: unlock literally everything else ----
     const platinum = S("completionist", "mastery", "legendary", "The Momentum Blade", "Unlock every other achievement in Tear.");
-    platinum.check = () => this.list.filter((a) => a.id !== "completionist").every((a) => PROFILE.unlocked(a.id));
+    platinum.check = () => this._all.filter((a) => a.id !== "completionist").every((a) => PROFILE.unlocked(a.id));
     platinum.master = true;
-    this.list.push(platinum);
+    this._all.push(platinum);
   },
 
-  byId(id) { return this.list.find((a) => a.id === id); },
+  byId(id) { return this._all.find((a) => a.id === id); },
   shardsFor(a) { return a.shards != null ? a.shards : (this.RARITY[a.rarity] || {}).shards || 5; },
   coinsFor(a) { return a.coins != null ? a.coins : (this.RARITY[a.rarity] || {}).coins || 0; },
   totalShards() { let s = 0; for (const a of this.list) s += this.shardsFor(a); return s; },
@@ -180,6 +187,7 @@ const ACH = {
   // 0..1 progress toward an achievement (for the menu's bars)
   progress(a) {
     if (PROFILE.unlocked(a.id)) return 1;
+    if (a.manual) return 0;
     if (a.check) return a.check(PROFILE) ? 1 : 0;
     const cur = PROFILE.stat(a.stat), goal = a.goal || 1;
     return clamp(cur / goal, 0, 1);
@@ -194,8 +202,9 @@ const ACH = {
 
   // evaluate every locked achievement; unlock + reward + queue toasts for newly-met ones
   check() {
-    for (const a of this.list) {
+    for (const a of this._all) {
       if (PROFILE.unlocked(a.id)) continue;
+      if (a.manual) continue;   // scripted/choice achievements unlock only at their authored event
       const met = a.check ? a.check(PROFILE) : PROFILE.stat(a.stat) >= (a.goal || 1);
       if (met) {
         a.shards = this.shardsFor(a);
@@ -203,6 +212,19 @@ const ACH = {
         if (PROFILE.unlock(a)) { this.pending.push(a); try { SFX.rankup(); } catch (e) {} }
       }
     }
+  },
+
+  // Scripted achievements use the same reward/toast path as check(), without needing a
+  // throwaway PROFILE stat. This keeps direct choice unlocks safe and idempotent.
+  unlock(id) {
+    const a = this.byId(id);
+    if (!a || PROFILE.unlocked(id)) return false;
+    a.shards = this.shardsFor(a);
+    a.coins = this.coinsFor(a);
+    if (!PROFILE.unlock(a)) return false;
+    this.pending.push(a);
+    try { SFX.rankup(); } catch (e) {}
+    return true;
   },
 };
 ACH._build();

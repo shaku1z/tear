@@ -38,6 +38,8 @@ class Blade {
     this.throwType = "pierce";    // set by the equipped weapon ("pierce" | "lob")
     this.embeddedNew = false;     // set the frame a flying blade embeds (for lob shockwave)
     this.model = "sword";         // visual: "sword" | "hammer"
+    this.hostile = false;          // Source capture: the flying blade can temporarily turn against its owner
+    this.stolenBy = null;          // actor currently controlling that hostile flight
   }
 
   forceEmbed() { this.state = "embedded"; this.vx = 0; this.vy = 0; }
@@ -189,6 +191,7 @@ class Blade {
       if (dd < 26) {
         // reattach to the hand -> back to a normal held blade
         this.state = "held";
+        this.hostile = false; this.stolenBy = null;
         this.x = hand.x; this.y = hand.y;
         this.vx = 0; this.vy = 0;
         this._recomputeTip(dt);
@@ -266,6 +269,7 @@ class Blade {
     this.throwBaseDmg = this.throwDmg;   // ramp (Razor Momentum) is capped relative to this
     this.pierced = new Set();
     this.flyTime = 0;
+    this.hostile = false; this.stolenBy = null;
     this.state = "flying";
     return true;
   }
@@ -274,8 +278,9 @@ class Blade {
   tryRecall(player) {
     if (this.state === "held" || this.state === "returning") return "busy";
     const hand = this.handPos(player);
-    if (this.freeRecall || len(this.x - hand.x, this.y - hand.y) <= CONFIG.blade.throw.reclaimDistance) {
+    if (this.hostile || this.stolenBy || this.freeRecall || len(this.x - hand.x, this.y - hand.y) <= CONFIG.blade.throw.reclaimDistance) {
       this.pierced = new Set();   // can pierce again on the way home
+      this.hostile = false; this.stolenBy = null;
       this.state = "returning";
       return "recalled";
     }

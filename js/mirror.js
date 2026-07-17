@@ -641,7 +641,10 @@ const Mirror = {
   //  the blade CLASH, crescent deflects, and hazard contact.
   // =====================================================================
   updateCombat(dt, player, playerBlade) {
-    if (!this.active || !this.host || this.host.dead) return;
+    // The shared boss-death theater retains the host for a short kill-cam. That pose is
+    // visual-only: the Echo's isolated weapon loop must not keep hurting the player while
+    // the normal enemy loop is advancing Enemy.updateDeath().
+    if (!this.active || !this.host || this.host.dead || this.host.dying) return;
     const a = this.actor, mb = this.blade, B = CONFIG.blade;
     this.pb = playerBlade;   // perception cache
 
@@ -659,7 +662,7 @@ const Mirror = {
     // (1) the boss's HELD blade vs the player — with per-move flavor (launch / spike / juggle)
     if (mb.state === "held" && mb.tipSpeed > B.minHitSpeed && !player.invulnerable &&
         this.segNear(mb.x, mb.y, mb.tipX, mb.tipY, player.x, player.y, player.hw + 10)) {
-      let dmg = mb.damageAt();
+      let dmg = mb.damageAt() * 0.65;   // the Echo's blade bites, but doesn't shred (balance tune)
       if (dmg > 0) {
         const mv = this.mv;
         if (mv && mv.ph === "exec") {
@@ -808,6 +811,7 @@ class MirrorHost extends Enemy {
     super(x, y, Object.assign({}, CONFIG.echo, { knockbackTaken: 5.5, weight: 1.35 }));
     this.kind = "boss"; this.isBoss = true; this.isMirrorBoss = true;
     this.bossName = "THE ECHO"; this.color = "#b06cff";
+    this.epithet = "YOUR REFLECTION"; this.phaseMarks = [0.60, 0.25]; this.phaseTag = "SEALED";
     this.spawnClone = false; this.mode = "mirror";
     this._mods = mods || null;
     this._live = false;   // set true by the game when actually fought (bestiary previews stay inert)
@@ -824,13 +828,14 @@ class MirrorHost extends Enemy {
   }
   hit(dmg, kx, ky) {
     const pvx = this.vx, pvy = this.vy;
-    super.hit(dmg, kx, ky);   // damage, statuses, flash, kill-credit — the real pipeline
+    const dealt = super.hit(dmg, kx, ky);   // damage, statuses, flash, kill-credit — the real pipeline
     if (typeof Mirror !== "undefined" && Mirror.host === this && Mirror.actor) {
       Mirror.actor.vx += (this.vx - pvx); Mirror.actor.vy += (this.vy - pvy);   // knockback lands on the BODY
       Mirror._stagger = Math.max(Mirror._stagger || 0, 0.1);                    // it visibly reels
       Mirror._syncBump -= 0.02;
     }
     this.vx = pvx; this.vy = pvy;
+    return dealt;   // preserve Enemy.hit()'s damage contract for shared boss feedback hooks
   }
   draw(ctx) {
     if (typeof Mirror !== "undefined" && Mirror.host === this && Mirror.active) { Mirror.draw(ctx); return; }

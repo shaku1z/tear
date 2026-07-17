@@ -172,6 +172,8 @@
     currentStage = stageAt(i);
     platforms = stagePlatforms(i);
     slowZones = []; tempWalls = [];
+    if (run) { run.voidScroll = null; run.bossAdds = null; }
+    if (blade && blade.stolenBy) { blade.stolenBy = null; blade.hostile = false; blade.state = "returning"; }
     // achievements: count distinct biomes fought in (across the whole profile)
     if (run && achTracks() && currentStage && currentStage.name && !currentStage.dark) {
       const seen = PROFILE.data.stats._biomes || (PROFILE.data.stats._biomes = {});
@@ -239,6 +241,8 @@
   let uiT = 0, enterT = 0, lastUiDt = 1 / 60, eIn = 1, winT = 0;   // menu ambient clock, time-since-screen-opened, last frame dt, entrance ease, ending cinematic clock
   let uiZoom = 1;   // overlay zoom for small touch screens (draft/pause/gameover readability)
   let uiDensity = "desktop";   // current UI density profile (touch = bigger type + targets)
+  let bossIntro = null;   // BOSS THEATER arrival ceremony: { boss, t, dur, delay } while the name card runs
+  let bossBeat = null;    // screen-space phase title: { text, color, t, dur }
   let cgWasPlaying = false, continueT = 0;   // CrazyGames gameplay bracket + the rewarded-revive countdown
   let hudHpLag = 1, hudMultPrev = 1, hudMultPop = 0;   // HUD juice: health damage-chip + combo pop
   const hoverAnim = {};                 // per-button hover progress (key -> 0..1), for hover juice
@@ -516,6 +520,93 @@
       { x: W * 0.28, y: 560, w: 300, h: 24, oneway: true },
       { x: W * 0.62, y: 430, w: 260, h: 24, oneway: true },
     ];
+  }
+
+  // ---- THE SOURCE: runtime arena mutation for the final void run ------------
+  function voidPlatform(x, y, w, type) {
+    return { x, y, w, h: 22, oneway: true, void: true, voidType: type || "plain", touchT: -1, fireOn: false };
+  }
+  function startVoidScroll(owner) {
+    if (run.voidScroll && (run.voidScroll.active || run.voidScroll.frozen)) return;
+    const C = CONFIG.source, types = ["plain", "crumble", "plain", "fire", "cage", "plain"];
+    const firstY = clamp(player.y + player.hh, 470, 690), first = voidPlatform(player.x - 150, firstY, 300, "plain");
+    platforms = [first];
+    let x = first.x + first.w + C.voidGapMin, y = firstY, seq = 0;
+    while (x < W + 420) {
+      y = clamp(y + (Math.random() - 0.5) * 170, 400, 700);
+      const w = C.voidPlatformMin + Math.random() * (C.voidPlatformMax - C.voidPlatformMin);
+      platforms.push(voidPlatform(x, y, w, types[seq++ % types.length]));
+      x += w + C.voidGapMin + Math.random() * (C.voidGapMax - C.voidGapMin);
+    }
+    run.voidScroll = { active: true, frozen: false, owner, speed: C.scrollSpeed, wispT: 1.8, rescueCd: 0, seq };
+    player.x = clamp(player.x, first.x + player.hw, first.x + first.w - player.hw);
+    player.y = first.y - player.hh; player.vy = -180; player.onGround = true; player.iframe = Math.max(player.iframe, 0.9);
+    projectiles = projectiles.filter((p) => p.owner !== owner);
+    FX.explode(W / 2, CONFIG.world.groundY, owner.color, 2.2);
+  }
+  function updateVoidScroll(dt) {
+    const vs = run && run.voidScroll;
+    if (!vs) return;
+    if (vs.rescueCd > 0) vs.rescueCd -= dt;
+    const C = CONFIG.source;
+    if (vs.active && !vs.frozen) {
+      const standing = platforms.find((p) => p.void && Math.abs(player.y + player.hh - p.y) < 4 &&
+        player.x + player.hw > p.x && player.x - player.hw < p.x + p.w);
+      const dx = -vs.speed * dt;
+      for (const p of platforms) if (p.void) p.x += dx;
+      if (standing) player.x += dx;
+
+      const recycle = [];
+      for (const p of platforms) {
+        if (!p.void) continue;
+        const on = standing === p;
+        if (p.voidType === "crumble" && on && p.touchT < 0) p.touchT = 0.8;
+        if (p.touchT >= 0) { p.touchT -= dt; if (p.touchT <= 0) recycle.push(p); }
+        p.fireOn = p.voidType === "fire" && Math.sin(run.runTime * 3.1 + p.x * 0.006) > 0.12;
+        if (on && p.fireOn && player.hazardT <= 0) {
+          const r = player.takeDamage(12, p.x + p.w / 2, vs.owner); player.hazardT = 0.48;
+          if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb();
+        }
+        if (p.voidType === "cage") {
+          const bx = p.x + p.w + 18;
+          if (Math.abs(player.x - bx) < 22 + player.hw && player.y + player.hh > p.y - 170 && player.y - player.hh < p.y && player.hazardT <= 0) {
+            const r = player.takeDamage(14, bx, vs.owner); player.hazardT = 0.48;
+            if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb();
+          }
+        }
+        if (p.x + p.w < -90) recycle.push(p);
+      }
+      for (const p of [...new Set(recycle)]) {
+        const right = platforms.reduce((m, q) => q === p || !q.void ? m : Math.max(m, q.x + q.w), W);
+        const prev = platforms.reduce((best, q) => (!q.void || q === p || q.x + q.w !== right) ? best : q, null);
+        const gap = C.voidGapMin + Math.random() * (C.voidGapMax - C.voidGapMin);
+        p.x = right + gap; p.y = clamp((prev ? prev.y : 560) + (Math.random() - 0.5) * 170, 400, 700);
+        p.w = C.voidPlatformMin + Math.random() * (C.voidPlatformMax - C.voidPlatformMin);
+        p.voidType = ["plain", "crumble", "fire", "plain", "cage", "plain"][vs.seq++ % 6];
+        p.touchT = -1; p.fireOn = false;
+      }
+      vs.wispT -= dt;
+      if (vs.wispT <= 0) {
+        vs.wispT = C.voidWispCd;
+        const liveWisps = enemies.filter((e) => e.isVoidWisp && !e.dead).length;
+        if (liveWisps < 2) { const w = new VoidWisp(W + 60, 300 + Math.random() * 260); w.spawnT = 0.25; enemies.push(w); }
+      }
+    }
+
+    // The bite is deliberately nonfatal, including One-Hit mode: it costs health and
+    // position, then throws the player straight back into play.
+    if (player.y > H + 70 && vs.rescueCd <= 0) {
+      const r = player.takeDamage(C.voidFallDmg, player.x, vs.owner);
+      if (player.hp <= 0) player.hp = 1;
+      const safe = platforms.filter((p) => p.void).sort((a, b) => Math.abs((a.x + a.w / 2) - W * 0.45) - Math.abs((b.x + b.w / 2) - W * 0.45))[0];
+      if (safe) { player.x = clamp(safe.x + safe.w / 2, player.hw, W - player.hw); player.y = safe.y - 190; }
+      else { player.x = W / 2; player.y = 420; }
+      player.vy = -1350; player.iframe = Math.max(player.iframe, 1.0); player.voidSlowT = C.voidSlowDur;
+      player.dashCharges = player.maxDashCharges; vs.rescueCd = 0.8;
+      FX.shockwave(player.x, player.y + 150, 12, CONFIG.colors.perfect, 210, 5); FX.burst(player.x, player.y + 120, 0, -1, 16, CONFIG.colors.perfect);
+      addFloater(player.x, player.y - 28, "THE VOID BITES  -" + C.voidFallDmg, true, CONFIG.colors.perfect);
+      if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb();
+    }
   }
   // live difficulty swap: renormalize damage-taken and re-point every difficulty mod,
   // so the playground exercises the exact same tiers the real modes use
@@ -871,6 +962,9 @@
   // ---- run / wave management ----
   function startRun(mode, diff) {
     if (typeof Mirror !== "undefined") { Mirror.active = false; Mirror.host = null; }   // a summoned Echo never leaks into a new run
+    bossIntro = null;   // no arrival ceremony leaks across runs
+    bossBeat = null;
+    if (typeof BOSSFX !== "undefined") BOSSFX.q.length = 0;
     restoreConfig();
     const weapon = applyWeapon(selWeapon);   // weapon defines base feel; shop/upgrades stack on top
     applySettings();
@@ -1095,7 +1189,16 @@
       case "flyer":   e = new Flyer(spawnSide(), 200); break;
       case "bomber":  e = new Bomber(0, 0); break;
       case "armored": e = new Armored(0, 0); break;
-      case "boss":    e = makeBoss(); if (e.isMirrorBoss) e._live = true; run._bossFightT = run.runTime; if (typeof Clipper !== 'undefined') Clipper.start(); break;   // clock the boss fight (Source speedrun)
+      case "boss":
+        e = makeBoss(); if (e.isMirrorBoss) e._live = true;
+        run._bossFightT = run.runTime; if (typeof Clipper !== 'undefined') Clipper.start();   // clock the boss fight (Source speedrun)
+        // BOSS THEATER: the arrival ceremony — brief slow-time, letterbox name card,
+        // HP bar sweep; the boss's own draw can gesture off e.introT
+        bossIntro = { boss: e, t: 0, dur: CONFIG.bossTheater.introDur, delay: (typeof Wipe !== "undefined" && Wipe.t > 0) ? Wipe.t : 0 };
+        e.introT = CONFIG.bossTheater.introDur;
+        bossBeat = null; bannerT = 0; stageBannerT = 0;
+        run.bossAdds = null;
+        break;
       case "miniboss": e = bossById(spec.bossId); if (e.isMirrorBoss) e._live = true; e.hp *= 0.4; e.maxHp *= 0.4; e.isMiniBoss = true; e.bossName = "◇ " + e.bossName; break;
       case "priest": case "herald": case "mender": case "anchor": e = new Support(0, 0, spec.type); break;
       case "wraith":  e = new Wraith(spawnSide(), 220); break;
@@ -1432,6 +1535,20 @@
       }
     }
 
+    // BOSS THEATER: drain the shared boss juice queue (every boss, always —
+    // same grammar as the Echo's fxq above)
+    if (typeof BOSSFX !== "undefined") while (BOSSFX.q.length) {
+      const q = BOSSFX.q.shift();
+      if (q.shake) addShake(q.shake);
+      if (q.flash) addFlash(q.flash);
+      if (q.hitstop) hitStop = Math.max(hitStop, q.hitstop);
+      if (q.slowmo) slowmo = Math.max(slowmo, q.slowmo);
+      if (q.zoom) addZoom(q.zoom);
+      if (q.banner) bossBeat = { text: q.banner, color: q.color || CONFIG.colors.boss, t: 1.15, dur: 1.15 };
+      if (q.txt) addFloater(q.x != null ? q.x : player.x, q.y != null ? q.y : player.y - 70, q.txt, !!q.big, q.color || CONFIG.colors.boss);
+      if ((q.big || q.shake >= 9) && !q.quiet) { try { SFX.slam(); } catch (e) {} }
+    }
+
     // audio cadence: dash start + swing whoosh
     if (player.dashTimer > 0 && !wasDashing) {
       SFX.dash();
@@ -1518,6 +1635,11 @@
 
     updateWave(dt);
     for (const e of enemies) {
+      if (e.dying) {
+        e.tickTimers(dt);
+        if (e.updateDeath(dt)) onKill(e, e._deathCause || "");
+        continue;
+      }
       if (e.spawnT > 0) { e.spawnT -= dt; continue; }   // materializing: hold still
       if (run.pg && run.pg.freeze) continue;             // playground: enemies as statues
       if (e.tutDummy) {
@@ -1541,7 +1663,7 @@
 
     // ---- status effects: tick bleed/burn, mark decay, and credit DoT kills ----
     for (const e of enemies) {
-      if (e.dead || e.spawnT > 0) continue;
+      if (e.dead || e.dying || e.spawnT > 0) continue;
       e.slowStatus = (run.mods.cinderSlow && e.burnT > 0) ? 0.65 : 1;   // Cinder T2 slow
       if (e.bleedStacks <= 0 && e.burnT <= 0 && e.markT <= 0) continue;
       e.tickStatus(dt);
@@ -1560,19 +1682,31 @@
     // boss floor hazards: sustained damage you must keep moving to avoid (off-pulse fire is safe)
     const bossZ = enemies.find((e) => e.isBoss && e.zones && e.zones.length);
     if (bossZ) {
-      const Wc = CONFIG.warden, half = Wc.zoneW / 2;
       const onFloor = player.y + player.hh >= CONFIG.world.groundY - 8;
       player.hazardT -= dt;
       let inZone = false;
-      for (const z of bossZ.zones) if (onFloor && z.on !== false && Math.abs(player.x - z.x) < half) inZone = true;
+      let zoneDmg = CONFIG.warden.zoneTick, zoneCd = CONFIG.warden.zoneTickCd;
+      for (const z of bossZ.zones) {
+        const half = (z.w || CONFIG.warden.zoneW) / 2;
+        if ((z.fullHeight || onFloor) && z.on !== false && Math.abs(player.x - z.x) < half) {
+          inZone = true; zoneDmg = z.dmg == null ? zoneDmg : z.dmg; zoneCd = z.tickCd || zoneCd; break;
+        }
+      }
       if (inZone && player.hazardT <= 0 && !player.invulnerable) {
-        player.hp = Math.max(0, player.hp - Wc.zoneTick * CONFIG.player.dmgTakenMult * player.flowDR);
-        player.hazardT = Wc.zoneTickCd; SFX.hurt(); loseStyle();
+        const r = player.takeDamage(zoneDmg, bossZ.x, bossZ);
+        player.hazardT = zoneCd;
+        if (r === "hit") { SFX.hurt(); loseStyle(); } else if (r === "absorbed") onShieldAbsorb();
       }
     }
     // Aldric scripted logic: the fake-death adds + revive
     const aboss = enemies.find((e) => e.isBoss);
     if (aboss) {
+      if (aboss.witnessEarned) {
+        aboss.witnessEarned = false;
+        if (achTracks() && typeof ACH !== "undefined" && ACH.unlock) ACH.unlock("witness");
+      }
+      if (aboss.requestVoid) { aboss.requestVoid = false; startVoidScroll(aboss); }
+      if (aboss.freezeVoid && run.voidScroll) { aboss.freezeVoid = false; run.voidScroll.active = false; run.voidScroll.frozen = true; }
       if (aboss.spawnAdds) {
         aboss.spawnAdds = false; run.bossAdds = [];
         for (let i = -1; i <= 1; i += 2) {
@@ -1612,7 +1746,7 @@
     // style -> damage: a higher trick rank makes every swing hit harder (capped)
     const styleMult = 1 + Math.min((run.mult - 1) * CONFIG.skill.styleDamage, CONFIG.skill.styleDamageMax);
     for (const e of enemies) {
-      if (e.dead || e.hitCd > 0) continue;
+      if (e.dead || e.dying || e.introT > 0 || e.hitCd > 0) continue;
       if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y, e.radius + 4)) {
         // Wraith: the blade phases straight through — only a thrown blade or a deflected shot harms it
         if (e.immuneToBlade) {
@@ -1620,6 +1754,21 @@
           continue;
         }
         if (baseDmg > 0) {
+          // THE FIRST EXAM: a fast swing that meets the Warden's STRIKING baton
+          // deflects it — posture damage. Fills his guard meter; full = GUARD BROKEN.
+          if (e.parryBaton && e.batonStrike > 0) {
+            const bs = e.batonSegment();
+            const near = segPointDist(blade.x, blade.y, blade.tipX, blade.tipY, bs.x2, bs.y2).dist < 46 ||
+                         segPointDist(blade.x, blade.y, blade.tipX, blade.tipY, (bs.x1 + bs.x2) / 2, (bs.y1 + bs.y2) / 2).dist < 40;
+            if (near && e.parryBaton(blade.tipSpeed >= CONFIG.blade.minHitSpeed * 2.2)) {
+              FX.burst(bs.x2, bs.y2, 0, -1, 12, "#e0a326"); FX.flash(bs.x2, bs.y2, 34, "#e0a326");
+              addFloater(bs.x2, bs.y2 - 16, "PARRIED", true, "#e0a326");
+              addStyle("parry"); SFX.deflect();
+              hitStop = Math.max(hitStop, CONFIG.hitStop.small);
+              e.hitCd = 0.14;   // the deflect IS this exchange — no body damage on the same swing
+              continue;
+            }
+          }
           // armored: blocked unless the hit is fast enough / from the flank
           if (e.blocks(blade.tipX, blade.tipSpeed)) {
             const cp = segPointDist(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y);
@@ -1666,6 +1815,11 @@
           dmg *= e.damageTakenMult();   // armored: reduced grounded, more airborne
           const big = isSlam || empowered || spike || dmg >= CONFIG.hitStop.threshold;
           e.hit(dmg, blade.tipVX, blade.tipVY);
+          // Aldric's duel: answering his wound inside the rally window wins blood back
+          if (player.rallySource === e) {
+            const healed = player.claimRally(dmg);
+            if (healed > 0) { addFloater(player.x, player.y - 44, "+" + Math.round(healed), false, "#e8a32e"); FX.burst(player.x, player.y - 10, 0, -1, 5, "#e8a32e"); }
+          }
           if (!e.anchored) {   // an anchored ally can't be spiked or launched (break the Anchor first)
             if (spike) { e.vy = (1000 + heightF * 800 + strikeF * 500) / e.weight; e.spiked = true; }
             else if (isLaunch) e.vy = -CONFIG.blade.launchPower * (1 + riseF * CONFIG.blade.risingLaunchBonus) / e.weight;
@@ -1740,7 +1894,7 @@
     // thrown blade pierce
     if (blade.thrown) {
       for (const e of enemies) {
-        if (e.dead || blade.pierced.has(e)) continue;
+        if (e.dead || e.dying || e.introT > 0 || blade.pierced.has(e)) continue;
         if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y, e.radius + 4)) {
           // Duelist parries a thrown blade right back — bait the parry, then throw
           if (e.behavior === "duelist" && e.duelReady) {
@@ -1764,6 +1918,11 @@
           if (player.tempoT > 0 && run.mods.tempo) tdmg *= 1 + run.mods.tempo * player.tempoStk;   // Tempo
           tdmg *= e.damageTakenMult();
           e.hit(tdmg, blade.vx, blade.vy);
+          // Aldric's duel: a thrown answer counts for the rally too
+          if (player.rallySource === e) {
+            const healed = player.claimRally(tdmg);
+            if (healed > 0) { addFloater(player.x, player.y - 44, "+" + Math.round(healed), false, "#e8a32e"); FX.burst(player.x, player.y - 10, 0, -1, 5, "#e8a32e"); }
+          }
           // Impale: pin + heavy bleed on the outgoing throw; the recall rips the wound open
           if (run.mods.impale) {
             if (blade.state === "flying" && (run.mods.impaleAll || blade.pierced.size === 1)) {
@@ -1891,7 +2050,7 @@
       if (p.dead || p.bomb || p.mine || p.mud) continue;
       if (p.deflected) {
         for (const e of enemies) {
-          if (e.dead) continue;
+          if (e.dead || e.dying) continue;
           if (p.pierce && p.pierced.has(e)) continue;
           if (len(p.x - e.x, p.y - e.y) <= p.r + e.radius) {
             const ddmg = p.deflectDmg * CONFIG.blade.deflectDmgMult;   // Counterforce
@@ -1920,7 +2079,7 @@
           addFloater(p.x, p.y - 16, "PHASE!", true, CONFIG.colors.deflected);
           addStyle("deflect"); SFX.deflect();
         } else {
-          const r = player.takeDamage(p.dmg != null ? p.dmg : CONFIG.proj.dmg, p.x);
+          const r = player.takeDamage(p.dmg != null ? p.dmg : CONFIG.proj.dmg, p.x, p.owner);
           if (r) {
             p.dead = true;
             if (r === "hit") {
@@ -1974,11 +2133,21 @@
 
     // enemy contact damage
     for (const e of enemies) {
-      if (e.dead || e.spawnT > 0) continue;
+      if (e.dead || e.dying || e.spawnT > 0 || e.introT > 0) continue;
       if (aabbOverlap(player.x, player.y, player.hw, player.hh, e.x, e.y, e.hw + e.contactReach, e.hh)) {
-        { const r = player.takeDamage(e.contactDmg * (e.chargeMult || 1) * (e.auraDmg || 1), e.x);
+        { const r = player.takeDamage(e.contactDmg * (e.chargeMult || 1) * (e.auraDmg || 1), e.x, e);
           if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb(); }
       }
+    }
+
+    // THE SOURCE's rule-break: your own stolen blade hunts you until it connects
+    // once (or you recall it) — then it snaps back to being yours
+    if (blade && blade.hostile && !player.invulnerable &&
+        segPointDist(blade.x, blade.y, blade.tipX, blade.tipY, player.x, player.y).dist < player.hw + 12) {
+      const r = player.takeDamage((CONFIG.source && CONFIG.source.stolenBladeDmg) || 18, blade.x, blade.stolenBy);
+      if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb();
+      blade.hostile = false; blade.stolenBy = null; blade.state = "returning";
+      FX.burst(player.x, player.y, blade.vx, blade.vy, 8, CONFIG.colors.perfect);
     }
 
     // failsafe: an enemy that somehow ends up off the bottom dies instantly (never an unkillable straggler)
@@ -2045,6 +2214,7 @@
   }
 
   function onKill(e, cause) {
+    if (e.noScore) { FX.death(e.x, e.y, 8, e.color); return; }
     addKillScore();
     if (e.affixCount) run.score += Math.round(CONFIG.run.scorePerKill * run.wave * run.mult * 0.4 * e.affixCount);
     if (achTracks()) {   // lifetime kill feats
@@ -2077,7 +2247,10 @@
       FX.explode(e.x, e.y, e.color, 2.2); FX.explode(e.x, e.y - 20, currentStage.accent || CONFIG.colors.perfect, 1.4);   // a boss DEATH is an event
       addShake(CONFIG.juice.shakeBig * 1.5); addZoom(CONFIG.juice.zoomBig); triggerSlowmo();
       Input.buzz([30, 40, 60]);   // a boss falls: a triple thump in the hand
-      for (const p of projectiles) if (p.shock || p.sweeper) p.dead = true;   // clear the boss's lingering hazards
+      for (const p of projectiles) if (p.owner === e || p.shock || p.sweeper) p.dead = true;   // clear the boss's lingering hazards
+      e.zones = [];
+      if (e.freezeVoid && run.voidScroll) { run.voidScroll.active = false; run.voidScroll.frozen = true; }
+      if (blade && blade.stolenBy === e) { blade.hostile = false; blade.stolenBy = null; blade.state = "returning"; }
       if (run.mode === "campaign" && currentStage && currentStage.lore) showLore(currentStage.lore, "", 8);
     }
   }
@@ -2115,6 +2288,15 @@
       if (slowmo > 0) { slowmo -= dt; timeScale = CONFIG.juice.parrySlowScale; }
       else timeScale = lerp(timeScale, 1, clamp(8 * dt, 0, 1));
       if (run && run.pg && run.pg.slow) timeScale = Math.min(timeScale, 0.35);   // playground slow-mo toggle
+      // BOSS THEATER: the arrival ceremony holds time at a crawl while the card runs
+      if (bossIntro) {
+        if (bossIntro.delay > 0) bossIntro.delay = Math.max(0, bossIntro.delay - dt);
+        else bossIntro.t += dt;
+        if (bossIntro.boss) bossIntro.boss.introT = Math.max(0, bossIntro.dur - bossIntro.t);
+        if (bossIntro.t >= bossIntro.dur || !bossIntro.boss || bossIntro.boss.dead || bossIntro.boss.dying) bossIntro = null;
+        else if (bossIntro.delay <= 0) timeScale = Math.min(timeScale, CONFIG.bossTheater.introScale);
+      }
+      if (bossBeat) { bossBeat.t -= dt; if (bossBeat.t <= 0) bossBeat = null; }
       zoom = lerp(zoom, 1, clamp(9 * dt, 0, 1));
       if (flash > 0) flash = Math.max(0, flash - dt * 3.2);
       if (bannerT > 0) bannerT -= dt;
@@ -2301,6 +2483,11 @@
         ctx.restore();
       }
       drawHUD();
+      if (bossBeat && state === "playing" && !bossIntro) {
+        const p = clamp(bossBeat.t / bossBeat.dur, 0, 1), fade = Math.min(1, (1 - p) * 6, p * 5);
+        UI.bossPhaseBanner(ctx, { text: bossBeat.text, color: bossBeat.color, alpha: fade });
+      }
+      if (bossIntro && bossIntro.delay <= 0 && state === "playing") drawBossIntro();   // the arrival ceremony rides over the HUD
       if (Input.touchActive() && state === "playing" && !(typeof PAD !== "undefined" && PAD.active)) drawTouchControls();   // a live controller hides the thumb controls
       if (loreT > 0) drawLore();
       if (state === "playing" && bannerT > 0) drawBanner();
@@ -2651,19 +2838,23 @@
     }
     ctx.textAlign = "left";
 
-    // ===== boss HP bar (segmented, glowing) =====
+    // ===== boss HP bar (segmented, glowing) — BOSS THEATER edition =====
     const boss = enemies.find((e) => e.isBoss);
     if (boss) {
-      const bbw = 620, bx = (W - bbw) / 2, by = 138, bhh = 16, bf = clamp(boss.hp / boss.maxHp, 0, 1);
-      ctx.save();
-      ctx.globalAlpha = 0.2; ctx.fillStyle = ink; ctx.fillRect(bx, by, bbw, bhh); ctx.globalAlpha = 1;
-      if (!lowG) { ctx.shadowColor = CONFIG.colors.boss; ctx.shadowBlur = 8; }
-      ctx.fillStyle = CONFIG.colors.boss; ctx.fillRect(bx, by, bbw * bf, bhh); ctx.shadowBlur = 0;
-      ctx.globalAlpha = 0.4; ctx.strokeStyle = THEME.dark ? "#000" : "#fff"; ctx.lineWidth = 1;
-      for (let s = 1; s < 10; s++) { const sx = bx + bbw * s / 10; ctx.beginPath(); ctx.moveTo(sx, by); ctx.lineTo(sx, by + bhh); ctx.stroke(); }
-      ctx.globalAlpha = 1; ctx.strokeStyle = ink; ctx.lineWidth = 2; ctx.strokeRect(bx, by, bbw, bhh);
-      ctx.restore();
-      UI.tag(ctx, (boss.bossName || "BOSS").toUpperCase(), W / 2, by - 6, CONFIG.colors.boss, "center", t.type.caption);
+      const bbw = 620, bx = (W - bbw) / 2, by = 138, bhh = t.metric.bossHudH;
+      let bf = clamp(boss.hp / boss.maxHp, 0, 1);
+      // arrival ceremony: the bar SWEEPS to full while the name card runs
+      if (bossIntro && bossIntro.boss === boss && bossIntro.delay <= 0) bf *= ez(clamp(bossIntro.t / (bossIntro.dur * 0.7), 0, 1));
+      UI.bossHud(ctx, { x: bx, y: by, w: bbw, h: bhh, frac: bf, fill: boss.color || CONFIG.colors.boss,
+        phaseMarks: boss.phaseMarks, phaseFlash: boss._phaseFlashT || 0,
+        guard: boss.guardMeter == null ? null : boss.guardMeter, time: uiT, lowGraphics: lowG });
+      if (boss._phaseFlashT > 0) boss._phaseFlashT = Math.max(0, boss._phaseFlashT - lastUiDt);
+      // name — epithet · phase tag
+      UI.tag(ctx, (boss.bossName || "BOSS").toUpperCase(), W / 2, by - 6, boss.color || CONFIG.colors.boss, "center", t.type.caption);
+      if (boss.epithet || boss.phaseTag) {
+        UI.tag(ctx, (boss.epithet || "") + (boss.phaseTag ? "   ·   " + boss.phaseTag : ""),
+          W / 2, by - 24, t.color.muted, "center", t.type.micro);
+      }
     }
   }
 
@@ -2862,6 +3053,14 @@
     UI.title(ctx, run.isBossWave ? "BOSS" : "WAVE " + run.wave, W / 2, 150, 60 + (1 - a) * 10);
     if (run.waveTag) UI.tag(ctx, run.waveTag, W / 2, 186, run.horde ? CONFIG.colors.charger : CONFIG.colors.perfect, "center", UI.t.type.lead);
     ctx.restore();
+  }
+
+  // BOSS THEATER: the arrival name card — letterbox bars + the boss's name and
+  // epithet in the lore language, while time crawls (see the frame-loop clamp)
+  function drawBossIntro() {
+    const b = bossIntro.boss;
+    UI.bossIntro(ctx, { screen: screenRect(), bossName: b.bossName || "BOSS", epithet: b.epithet || "",
+      color: b.color || CONFIG.colors.boss, t: bossIntro.t, dur: bossIntro.dur });
   }
 
   // a boss-defeat lore caption at the top (non-blocking, fades over ~7s)
