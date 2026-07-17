@@ -2092,6 +2092,10 @@
     let dt = (now - last) / 1000; last = now;
     if (dt > 0.1) dt = 0.1;
 
+    // controller: translate the pad into the shared Input channels BEFORE the
+    // sim + UI read them (menus get dpad nav + A/B, gameplay gets move/aim/actions)
+    if (typeof PAD !== "undefined") PAD.poll(dt, state !== "playing");
+
     // Manual Clipper Hooks
     if (typeof Clipper !== "undefined") {
       if (Input.pressed.has("BracketLeft")) Clipper.start();
@@ -2297,7 +2301,7 @@
         ctx.restore();
       }
       drawHUD();
-      if (Input.touchActive() && state === "playing") drawTouchControls();
+      if (Input.touchActive() && state === "playing" && !(typeof PAD !== "undefined" && PAD.active)) drawTouchControls();   // a live controller hides the thumb controls
       if (loreT > 0) drawLore();
       if (state === "playing" && bannerT > 0) drawBanner();
       if (state === "playing" && stageBannerT > 0) drawStageBanner();
@@ -2372,6 +2376,13 @@
 
     // mouse cursor in non-playing screens
     if (state !== "playing") UI.cursor(ctx, Input.mouseX, Input.mouseY);
+
+    // controller connect/disconnect toast (top center, fades on its own clock)
+    if (typeof PAD !== "undefined" && PAD.toastT > 0 && PAD.toastText) {
+      ctx.save(); ctx.globalAlpha = clamp(PAD.toastT / 0.6, 0, 1);
+      UI.badge(ctx, "◎ " + PAD.toastText, W / 2, 34 + SAFE.t, UI.t.color.accent, "center", 13);
+      ctx.restore(); ctx.globalAlpha = 1;
+    }
 
     // mobile in portrait: a REAL gate — covers everything (gameplay already
     // auto-paused in the frame loop), asks for landscape with an animated glyph
@@ -3357,6 +3368,11 @@
     row(["RMB"], "throw / recall inside the dashed ring");
     row(["P"], "pause");
     row(["ESC"], "release the mouse");
+    // controller (plug-and-play — Gamepad API)
+    UI.divider(ctx, lx2, y - 22, lw2, 0.10);
+    UI.tag(ctx, "CONTROLLER", lx2, y + 2, t.color.muted, "left", t.type.micro);
+    UI.text(ctx, "left stick move · right stick swings the blade", lx2 + 130, y + 2, t.type.micro, "left", t.alpha.soft);
+    UI.text(ctx, "A jump · B dash · X throw · ▸ pause", lx2 + 130, y + 22, t.type.micro, "left", t.alpha.soft);
 
     // ---- THE TRICK METER (live values from CONFIG.trick) ----
     let ty = UI.sectionLabel(ctx, "THE TRICK METER", rx2, 226, rw2) + 22;
@@ -4937,6 +4953,13 @@
       if (Input.pressed.has("Digit1")) return chooseUpgrade(0);
       if (Input.pressed.has("Digit2")) return chooseUpgrade(1);
       if (Input.pressed.has("Digit3")) return chooseUpgrade(2);
+    }
+
+    // controller B = back out (route to whichever button says BACK on this screen)
+    if (Input.padBack) {
+      Input.padBack = false;
+      const back = uiButtons.find((b) => b.label && b.label.indexOf("BACK") >= 0 && b.enabled !== false);
+      if (back) { SFX.ui(); back.action(); return; }
     }
 
     if (Input.confirmPressed()) { const b = uiButtons[focus]; if (b && b.enabled !== false) { SFX.ui(); b.action(); return; } }
