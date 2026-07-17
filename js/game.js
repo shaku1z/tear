@@ -40,6 +40,11 @@
 
   function requestLock() { if (canvas.requestPointerLock) { try { canvas.requestPointerLock(); } catch (e) {} } }
 
+  // PWA install moment (standalone site only — the browser fires this when the
+  // app is installable; we stash it and offer a quiet row in SETTINGS)
+  let installPrompt = null;
+  window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installPrompt = e; });
+
   // pristine copy of all tunables, so per-run upgrades never leak across runs
   const BASE = JSON.parse(JSON.stringify(CONFIG));
   function restoreConfig() {
@@ -4269,6 +4274,9 @@
       fx, yEnd + 24, t.color.muted, "left", t.type.micro);
     uiButtons.push({ x: rx - 210, y: yEnd + 4, w: 210, h: 34, size: 12, label: "VIEW CONTROLS ▸",
       action: () => { state = "codex"; codexTab = "guide"; listScroll = 0; } });
+    // PWA: the install moment (only when the browser says the app is installable)
+    if (installPrompt) uiButtons.push({ x: rx - 210, y: yEnd + 46, w: 210, h: 34, size: 12, label: "⤓ INSTALL THE APP",
+      action: () => { const p = installPrompt; installPrompt = null; try { p.prompt(); } catch (e) {} } });
     // Legal — a CrazyGames Basic-launch requirement: an in-game mention of Terms &
     // Privacy. Quiet micro links, not fat buttons.
     UI.text(ctx, "By playing you agree to CrazyGames' Terms of Service and Privacy Policy.",
