@@ -1843,6 +1843,7 @@ class Colossus extends Enemy {
     this.ventT = 0; this.ventX = this.x; this.coreOpenT = 0; this.shieldEmbedT = 0;
     this.panelIdx = -1; this.panelStepT = 0; this.meltdownCd = CONFIG.colossus.meltdownCd;
     this.attackIdx = 0; this._playerRef = null;
+    this.chargeStop = false; this.smashTX = 0; this.grabCd = 0;   // bruiser kit
   }
   get phase() { const f = this.hp / this.maxHp; return f > 0.6 ? 1 : (f > 0.25 ? 2 : 3); }
   get guardSide() { return this.facing; }
@@ -1977,9 +1978,48 @@ class Colossus extends Enemy {
       return;
     }
 
-    if (this.state === "charge") {                    // shoulder charge crosses the arena (no gravity)
+    if (this.state === "charge") {                    // shoulder charge (no gravity)
       this.x += this.vx * dt;
+      // SMART CHARGE: most charges STOP SHORT with a shoulder-check shock once
+      // they blow past the player — only a charge baited into a WALL self-staggers
+      if (this.chargeStop && Math.sign(player.x - this.x) !== Math.sign(this.vx)) {
+        this.vx = 0; this._shock(projectiles, this.facing);
+        FX.shockwave(this.x, this.y + this.hh, 10, CONFIG.colors.armoredShield, 200, 5);
+        this.state = "recover"; this.stateT = 0.5; this.atkT = this.cfg.atkCd;
+        return;
+      }
       if (this.x <= this.hw + 4 || this.x >= CONFIG.view.w - this.hw - 4) { this.x = clamp(this.x, this.hw + 4, CONFIG.view.w - this.hw - 4); this._stagger(projectiles); }
+      return;
+    }
+    if (this.state === "smashwind") {                 // OVERHEAD SMASH: rise, track the player's x, then plunge
+      this.stateT -= dt;
+      this.x = lerp(this.x, clamp(this.smashTX, this.hw, CONFIG.view.w - this.hw), clamp(3 * dt, 0, 1));
+      this.y = lerp(this.y, CONFIG.world.groundY - this.hh - 170, clamp(5 * dt, 0, 1)); this.onGround = false;
+      if (this.stateT <= 0) { this.state = "smash"; this.vy = 2600; }
+      return;
+    }
+    if (this.state === "smash") {
+      this.y += this.vy * dt; this.vy += 2600 * dt;
+      if (this.y >= CONFIG.world.groundY - this.hh) {
+        this.y = CONFIG.world.groundY - this.hh; this.onGround = true;
+        this._shock(projectiles, 1); this._shock(projectiles, -1);
+        if (Math.abs(player.x - this.x) < this.cfg.smashRange && player.y > this.y - 40 && !player.invulnerable) player.takeDamage(this.cfg.smashDmg, this.x, this);
+        FX.shockwave(this.x, this.y + this.hh, 16, CONFIG.colors.slam, 300, 7);
+        BOSSFX.juice({ shake: 13, flash: 0.4, slowmo: 0.4, zoom: 0.07, hitstop: 0.06 });
+        this.state = "recover"; this.stateT = 0.7; this.atkT = this.cfg.atkCd;
+      }
+      return;
+    }
+    if (this.state === "grab") {                      // SEISMIC BACKHAND — the point-blank punish
+      this.stateT -= dt;
+      if (this.stateT <= 0) {
+        if (Math.abs(player.x - this.x) < this.cfg.grabRange + player.hw && Math.abs(player.y - this.y) < this.hh && !player.invulnerable) {
+          player.takeDamage(this.cfg.grabDmg, this.x, this);
+          player.vx = (Math.sign(player.x - this.x) || 1) * this.cfg.grabKnock; player.vy = -360;
+        }
+        FX.burst(this.x + this.facing * this.hw, this.y, this.facing, -0.2, 10, CONFIG.colors.armoredShield);
+        this.state = "recover"; this.stateT = 0.45; this.atkT = this.cfg.atkCd;
+      }
       return;
     }
     if (this.state === "windup") {
@@ -2000,13 +2040,24 @@ class Colossus extends Enemy {
         BOSSFX.juice({ banner: "PILLAR QUAKE", color: CONFIG.colors.armoredShield, shake: 10, flash: 0.25, hitstop: 0.05 });
         FX.shockwave(this.x, this.y + this.hh, 10, CONFIG.colors.armoredShield, 260, 5);
       }
-      this.atkT -= dt;
-      if (this.atkT <= 0) {
-        const patterns = ph === 1 ? ["stomp", "sweep", "charge"] : (ph === 2 ? ["charge", "stomp", "sweep", "charge"] : ["charge", "stomp", "sweep"]);
-        this.pendingAtk = patterns[this.attackIdx++ % patterns.length];
-        this.state = "windup"; this.stateT = this.pendingAtk === "charge" ? C.chargeWindup : C.windup;
+      // SEISMIC BACKHAND: crowd the fortress and it swats you (reactive, off the rotation)
+      if (this.state === "idle" && Math.abs(player.x - this.x) < C.grabRange && Math.abs(player.y - this.y) < this.hh && this.grabCd <= 0) {
+        this.pendingAtk = "grab"; this.state = "grabwind"; this.stateT = C.grabWindup; this.grabCd = 3.0; perilPing(this);
       }
-      if (ph === 2 && this.onGround && Math.random() < 0.3 * dt) { this.vy = -1000; this.onGround = false; }
+      this.grabCd = (this.grabCd || 0) - dt;
+      this.atkT -= dt;
+      if (this.atkT <= 0 && this.state === "idle") {
+        // a bruiser's rhythm — charge is now just 1 option, not the whole fight;
+        // P2 adds the saw, P3 the smash + meltdown
+        const patterns = ph === 1 ? ["stomp", "smash", "sweep", "stomp", "charge"]
+          : (ph === 2 ? ["stomp", "sweep", "smash", "charge", "stomp", "sweep"]
+          : ["smash", "stomp", "charge", "sweep", "smash"]);
+        this.pendingAtk = patterns[this.attackIdx++ % patterns.length];
+        if (this.pendingAtk === "smash") { this.state = "smashwind"; this.stateT = C.smashWindup; this.smashTX = player.x; perilPing(this); }
+        else { this.state = "windup"; this.stateT = this.pendingAtk === "charge" ? C.chargeWindup : C.windup; }
+        if (this.pendingAtk === "charge") this.chargeStop = Math.random() < C.chargeStopShort;   // most charges halt short
+      }
+      if (this.pendingAtk === "grab" && this.state === "grabwind") { this.stateT -= dt; if (this.stateT <= 0) { this.state = "grab"; this.stateT = 0.12; } }
     }
     this.integrate(dt, platforms);
   }
@@ -2068,6 +2119,19 @@ class Colossus extends Enemy {
         ctx.setLineDash([]); ctx.globalAlpha = 1;
       }
       weaponGlint(ctx, this.x + this.facing * (this.hw + 12), this.y - 4, CONFIG.colors.armoredShield, k);
+    }
+    // OVERHEAD SMASH telegraph: the kill-column follows the raised fist
+    if (this.state === "smashwind") {
+      const k = 1 - clamp(this.stateT / this.cfg.smashWindup, 0, 1);
+      dangerColumn(ctx, this.x, this.cfg.smashRange * 1.4, this.y + this.hh, CONFIG.world.groundY, CONFIG.colors.slam, k);
+      weaponGlint(ctx, this.x, this.y - this.hh - 10, CONFIG.colors.slam, k);
+      drawPeril(ctx, this);
+    }
+    // SEISMIC BACKHAND telegraph: a short arc sweeping to the strike side
+    if (this.state === "grabwind") {
+      const k = 1 - clamp(this.stateT / this.cfg.grabWindup, 0, 1);
+      ctx.save(); ctx.strokeStyle = CONFIG.colors.armoredShield; ctx.globalAlpha = 0.4 + 0.5 * k; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(this.x, this.y, this.cfg.grabRange, this.facing > 0 ? -0.8 : Math.PI - 0.8, this.facing > 0 ? 0.8 : Math.PI + 0.8); ctx.stroke(); ctx.restore();
     }
     if (this.state === "meltdown") {
       const k = 1 - clamp(this.stateT / this.cfg.meltdownWindup, 0, 1);

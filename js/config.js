@@ -249,6 +249,10 @@ const CONFIG = {
     shieldCrossings: 3, shieldEmbedDur: 2.2,
     debrisDmg: 16, debrisGravity: 1750, meltdownCd: 8.5, meltdownWindup: 0.9,
     campAfter: 4.0, pillarCd: 7.0, pillarWarn: 0.7, platRespawn: 6.0,   // NO SHELTER: the fortress breaks the perch you camp
+    // the BRUISER kit — heavy, telegraphed, punishable
+    chargeStopShort: 0.55,   // fraction of charges that halt short with a shoulder-check (no free self-stagger)
+    smashWindup: 0.7, smashDmg: 24, smashRange: 200,   // OVERHEAD SMASH: raise a fist, then a vertical kill-column at the player's x
+    grabRange: 130, grabWindup: 0.28, grabDmg: 20, grabKnock: 900,   // SEISMIC BACKHAND: punish point-blank camping
   },
   // The Warden (Stage 1 boss): a methodical guard who weaponizes the arena across 3 phases
   warden: {
