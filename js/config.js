@@ -228,8 +228,17 @@ const CONFIG = {
     riftCollapseCd: 8.0, collapseWindup: 0.7, collapseDmg: 18, collapseSpeed: 900,   // RIFT COLLAPSE: teleport above, drop a converging shard ring
     scrollSpeed: 170, scrollRamp: 4, scrollSpeedMax: 260,   // the run tightens as it goes
     voidFallDmg: 18, voidSlowMult: 0.58, voidSlowDur: 0.7,
-    voidGapMin: 105, voidGapMax: 185, voidPlatformMin: 180, voidPlatformMax: 290,
-    voidWispCd: 4.8, beamCd: 8.5, beamWarn: 0.9, beamSweep: 1.15, beamW: 52, beamDmg: 20,
+    // TWO-STOREY VOID: whole paired chunks, authored lane bands, and stable
+    // hazard clocks. Route geometry is consumed by VoidGen and the live stream.
+    voidChunkWidthMin: 580, voidChunkWidthMax: 720,
+    voidPlatformWidthMin: 170, voidPlatformWidthMax: 238,
+    voidLowerMin: 550, voidLowerMax: 700, voidUpperMin: 350, voidUpperMax: 510,
+    voidLaneClearance: 76, voidTransferMin: 145, voidTransferMax: 165,
+    voidSpawnBehind: 360, voidSpawnAhead: 680, voidRecycleMargin: 150,
+    voidCrumbleStand: 0.8, voidFirePeriod: 3.0, voidFireArm: 0.65, voidFireHot: 1.05,
+    voidCageH: 170, voidCageHalfW: 22, voidTransferGrace: 0.55,
+    voidWispCd: 4.8, voidWispDmg: 10, voidWispTell: 0.42, voidWispPassSpeed: 620, voidWispPassTime: 1.35,
+    beamCd: 8.5, beamWarn: 0.9, beamSweep: 1.15, beamW: 52, beamDmg: 20,
     stolenBladeSpeed: 1750, stolenBladeDmg: 18,
   },
   // The Berserker King / Aldric (Stage 3 boss): a duel -> a throne of fire -> a fake death & frenzy

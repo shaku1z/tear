@@ -544,105 +544,225 @@
   }
 
   // ---- THE SOURCE: runtime arena mutation for the final void run ------------
-  function nextVoidMetaSeed() {
-    let s = (run && run.voidRngState) >>> 0;
-    if (!s) s = 1;
-    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
-    if (run) run.voidRngState = s;
-    return s;
+  function voidGenOptions(startX) {
+    const C = CONFIG.source;
+    return {
+      startX,
+      chunkWidthMin: C.voidChunkWidthMin, chunkWidthMax: C.voidChunkWidthMax,
+      platformWidthMin: C.voidPlatformWidthMin, platformWidthMax: C.voidPlatformWidthMax,
+      lowerBandMin: C.voidLowerMin, lowerBandMax: C.voidLowerMax,
+      upperBandMin: C.voidUpperMin, upperBandMax: C.voidUpperMax,
+      laneClearance: C.voidLaneClearance,
+      transferDeltaMin: C.voidTransferMin, transferDeltaMax: C.voidTransferMax,
+      scrollSpeedMin: C.scrollSpeed, scrollSpeedMax: C.scrollSpeedMax * (C.thawSpeedMult || 1.35),
+      firePeriod: C.voidFirePeriod, fireArmTime: C.voidFireArm, fireHotTime: C.voidFireHot,
+      cageHeight: C.voidCageH, cageHalfWidth: C.voidCageHalfW,
+      playerHalfWidth: CONFIG.player.w / 2, playerHalfHeight: CONFIG.player.h / 2,
+      physics: {
+        jumpSpeed: CONFIG.player.jumpSpeed, gravity: CONFIG.world.gravity,
+        moveSpeed: CONFIG.player.moveSpeed, dashSpeed: CONFIG.dash.speed, dashDuration: CONFIG.dash.duration,
+      },
+    };
   }
-  function voidPlatform(x, y, w, type) {
-    const seq = run ? run._platformSeq++ : 0, seed = nextVoidMetaSeed();
-    return { x, y, w, h: 22, oneway: true, void: true, voidType: type || "plain", touchT: -1, fireOn: false,
-      platformId: `void:${run ? run.voidSeed : 0}:${seq}`, voidId: seq, hazardSeed: seed };
+  function shiftVoidChunk(chunk, dx) {
+    chunk.x += dx;
+    if (chunk.transferWindow) { chunk.transferWindow.x0 += dx; chunk.transferWindow.x1 += dx; }
+    for (const p of chunk.platforms) {
+      p.x += dx;
+      if (p.cageX != null) p.cageX += dx;
+      if (p.cageRect) p.cageRect.x += dx;
+    }
+  }
+  function liveVoidChunk(canonical, offsetX) {
+    // VoidGen retains canonical chunks for validation. Collision/rendering gets
+    // a clone so conveyor motion can never corrupt the reproducible route graph.
+    return VoidGen.materialize(canonical, offsetX, "active");
+  }
+  function appendVoidChunk(vs) {
+    const result = VoidGen.next(vs.gen);
+    vs.gen = result.state;
+    const chunk = liveVoidChunk(result.chunk, vs.scrollOffset);
+    vs.chunks.push(chunk);
+    for (const p of chunk.platforms) platforms.push(p);
+    return chunk;
+  }
+  function supportingVoidPlatform(who) {
+    if (!who) return null;
+    const feet = who.y + who.hh;
+    let best = null, bestDy = 8;
+    for (const p of platforms) {
+      if (!p.void || !p.oneway || p.materializationState === "gone") continue;
+      if (who.x + who.hw <= p.x || who.x - who.hw >= p.x + p.w) continue;
+      const dy = Math.abs(feet - p.y);
+      if (dy < bestDy) { best = p; bestDy = dy; }
+    }
+    return best;
+  }
+  function syncVoidPlayerSupport() {
+    const vs = run && run.voidScroll;
+    if (!vs) { player.supportPlatform = null; player.voidLane = null; player.voidMajorWindow = false; return null; }
+    const standing = supportingVoidPlatform(player);
+    const chunk = vs.chunks.find((c) => player.x >= c.x && player.x <= c.x + c.width);
+    player.voidMajorWindow = !!(chunk && chunk.majorAttackWindow);
+    player.supportPlatform = standing;
+    if (standing) {
+      if (vs.playerLane && standing.voidLane !== vs.playerLane) player.voidTransferT = Math.max(player.voidTransferT || 0, CONFIG.source.voidTransferGrace);
+      vs.playerLane = standing.voidLane; player.voidLane = standing.voidLane;
+    } else {
+      player.voidLane = vs.playerLane;
+      if (voidConnectionWindow(vs, player.x)) player.voidTransferT = Math.max(player.voidTransferT || 0, CONFIG.source.voidTransferGrace * 0.45);
+    }
+    return standing;
+  }
+  function voidConnectionWindow(vs, x) {
+    return !!(vs && vs.chunks.some((c) => c.transferWindow && x >= c.transferWindow.x0 && x <= c.transferWindow.x1));
+  }
+  function removeLiveVoidPlatform(p) {
+    const i = platforms.indexOf(p);
+    if (i >= 0) platforms.splice(i, 1);
+    // A support-bound shock dies in the same simulation step as its surface.
+    // Projectile/player collision runs before Projectile.update(), so leaving
+    // this to the projectile's next self-check creates one invisible damage tick.
+    if (p && p.platformId != null) {
+      for (const shot of projectiles) {
+        if (shot.surfacePlatformId === p.platformId) shot.dead = true;
+      }
+    }
+  }
+  function moveSurfaceProjectiles(dx) {
+    for (const shot of projectiles) {
+      if (shot.family !== "groundShock" || !shot.surfacePlatformId) continue;
+      const surface = platforms.find((p) => p.platformId === shot.surfacePlatformId);
+      if (!surface) { shot.dead = true; continue; }
+      shot.x += dx;
+      shot.surfaceLeft = surface.x; shot.surfaceRight = surface.x + surface.w; shot.surfaceY = surface.y;
+      shot.y = surface.y - shot.r;
+    }
   }
   function startVoidScroll(owner) {
     if (run.voidScroll && (run.voidScroll.active || run.voidScroll.frozen)) return;
-    const C = CONFIG.source, types = ["plain", "crumble", "plain", "fire", "cage", "plain"];
-    const firstY = clamp(player.y + player.hh, 470, 690), first = voidPlatform(player.x - 150, firstY, 300, "plain");
-    platforms = [first];
-    let x = first.x + first.w + C.voidGapMin, y = firstY, seq = 0;
-    while (x < W + 420) {
-      y = clamp(y + (Math.random() - 0.5) * 170, 400, 700);
-      const w = C.voidPlatformMin + Math.random() * (C.voidPlatformMax - C.voidPlatformMin);
-      platforms.push(voidPlatform(x, y, w, types[seq++ % types.length]));
-      x += w + C.voidGapMin + Math.random() * (C.voidGapMax - C.voidGapMin);
+    const C = CONFIG.source, options = voidGenOptions(-C.voidSpawnBehind);
+    platforms = [];
+    const vs = run.voidScroll = {
+      active: true, frozen: false, owner, speed: C.scrollSpeed, speedCap: C.scrollSpeedMax, wispT: 1.8, rescueCd: 0,
+      arriveT: C.descentArrival, options, gen: VoidGen.create(run.voidSeed, options),
+      chunks: [], scrollOffset: 0, playerLane: null, arrivalQueue: [], arrivalFxT: 0,
+    };
+    while (vs.gen.nextX + vs.scrollOffset < W + C.voidSpawnAhead) appendVoidChunk(vs);
+    const first = VoidGen.selectRescue(platforms, W * 0.45, run.runTime, options);
+    if (first) {
+      player.x = clamp(first.x + first.w / 2, first.x + player.hw, first.x + first.w - player.hw);
+      player.y = first.y - player.hh; player.voidLane = first.voidLane; vs.playerLane = first.voidLane;
+    } else {
+      player.x = W * 0.45; player.y = C.voidLowerMin - player.hh;
+      player.voidLane = "lower"; vs.playerLane = "lower";
     }
-    run.voidScroll = { active: true, frozen: false, owner, speed: C.scrollSpeed, wispT: 1.8, rescueCd: 0, seq, arriveT: C.descentArrival };
-    player.x = clamp(player.x, first.x + player.hw, first.x + first.w - player.hw);
-    player.y = first.y - player.hh; player.vy = -180; player.onGround = true; player.iframe = Math.max(player.iframe, 1.1);
-    player.voidSlowT = 0;
+    player.vy = -180; player.onGround = true; player.iframe = Math.max(player.iframe, 1.1);
+    player.voidSlowT = 0; player.voidTransferT = C.voidTransferGrace;
     projectiles = projectiles.filter((p) => p.owner !== owner);
     // THE ARRIVAL: the stream materializes with a rift bloom, not a hard cut
     FX.explode(W / 2, CONFIG.world.groundY, owner.color, 2.4);
-    for (const p of platforms) if (p.void) FX.ring(p.x + p.w / 2, p.y, 10, owner.color);
+    vs.arrivalQueue = platforms.slice().sort((a, b) => Math.abs((a.x + a.w / 2) - W / 2) - Math.abs((b.x + b.w / 2) - W / 2));
     addFlash(0.55); addShake(9);
     run.voidDescent = null;   // the descent is complete
+  }
+  function updateVoidPlatformHazards(vs, dt) {
+    const C = CONFIG.source, standing = syncVoidPlayerSupport();
+    const dangerous = !(vs.owner.dead || vs.owner.dying);
+    for (const p of platforms.slice()) {
+      if (!p.void) continue;
+      const on = standing === p;
+      if (p.voidType === "crumble" && on && p.touchT < 0) { p.touchT = C.voidCrumbleStand; p.materializationState = "cracking"; }
+      if (p.touchT >= 0) {
+        p.touchT -= dt;
+        if (p.touchT <= 0) {
+          p.touchT = 0; p.materializationState = "gone"; removeLiveVoidPlatform(p);
+          FX.ring(p.x + p.w / 2, p.y, 12, vs.owner.color); FX.burst(p.x + p.w / 2, p.y, 0, 1, 7, vs.owner.color);
+          continue;
+        }
+      }
+      p.fireState = VoidGen.hazardState(p, run.runTime, vs.options);
+      p.fireOn = p.fireState === "hot";
+      if (dangerous && on && p.fireOn && player.hazardT <= 0) {
+        const r = player.takeDamage(12, p.x + p.w / 2, vs.owner); player.hazardT = 0.48;
+        if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb();
+      }
+      if (dangerous && p.voidType === "cage") {
+        const cr = VoidGen.cageGeometry(p, vs.options);
+        if (aabbOverlap(player.x, player.y, player.hw, player.hh, cr.x + cr.w / 2, cr.y + cr.h / 2, cr.w / 2, cr.h / 2) && player.hazardT <= 0) {
+          const r = player.takeDamage(14, cr.centerX, vs.owner); player.hazardT = 0.48;
+          if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb();
+        }
+      }
+    }
   }
   function updateVoidScroll(dt) {
     const vs = run && run.voidScroll;
     if (!vs) return;
     if (vs.rescueCd > 0) vs.rescueCd -= dt;
+    if (player.voidTransferT > 0) player.voidTransferT = Math.max(0, player.voidTransferT - dt);
     const C = CONFIG.source;
+    if (vs.arrivalQueue.length) {
+      vs.arrivalFxT -= dt;
+      if (vs.arrivalFxT <= 0) {
+        vs.arrivalFxT = 0.055;
+        const p = vs.arrivalQueue.shift();
+        if (p && p.materializationState !== "gone") FX.ring(p.x + p.w / 2, p.y, 10, vs.owner.color);
+      }
+    }
     // THE ARRIVAL grace: the stream materializes and eases into motion (scroll
     // ramps from 0 over arriveT — the platforms don't lurch on the first frame)
     if (vs.arriveT > 0) { vs.arriveT -= dt; if (vs.arriveT < 0) vs.arriveT = 0; }
     const arriveK = vs.arriveT > 0 ? 1 - clamp(vs.arriveT / C.descentArrival, 0, 1) : 1;
     if (vs.active && !vs.frozen) {
       // the run tightens: speed ramps toward the cap over the phase
-      vs.speed = Math.min(C.scrollSpeedMax || 260, vs.speed + (C.scrollRamp || 4) * dt);
-      const standing = platforms.find((p) => p.void && Math.abs(player.y + player.hh - p.y) < 4 &&
-        player.x + player.hw > p.x && player.x - player.hw < p.x + p.w);
+      vs.speed = Math.min(vs.speedCap || C.scrollSpeedMax || 260, vs.speed + (C.scrollRamp || 4) * dt);
+      const standingBefore = supportingVoidPlatform(player);
       const dx = -vs.speed * arriveK * dt;   // eased in over the arrival grace
-      for (const p of platforms) if (p.void) p.x += dx;
-      if (standing) player.x += dx;
+      vs.scrollOffset += dx;
+      for (const chunk of vs.chunks) shiftVoidChunk(chunk, dx);
+      if (standingBefore) player.x += dx;
+      moveSurfaceProjectiles(dx);
 
-      const recycle = [];
-      for (const p of platforms) {
-        if (!p.void) continue;
-        const on = standing === p;
-        if (p.voidType === "crumble" && on && p.touchT < 0) p.touchT = 0.8;
-        if (p.touchT >= 0) { p.touchT -= dt; if (p.touchT <= 0) recycle.push(p); }
-        p.fireOn = p.voidType === "fire" && Math.sin(run.runTime * 3.1 + p.x * 0.006) > 0.12;
-        if (on && p.fireOn && player.hazardT <= 0) {
-          const r = player.takeDamage(12, p.x + p.w / 2, vs.owner); player.hazardT = 0.48;
-          if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb();
-        }
-        if (p.voidType === "cage") {
-          const bx = p.x + p.w + 18;
-          if (Math.abs(player.x - bx) < 22 + player.hw && player.y + player.hh > p.y - 170 && player.y - player.hh < p.y && player.hazardT <= 0) {
-            const r = player.takeDamage(14, bx, vs.owner); player.hazardT = 0.48;
-            if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb();
-          }
-        }
-        if (p.x + p.w < -90) recycle.push(p);
+      // Retire and append whole paired chunks; a broken crumble remains part of
+      // its authored chunk until both lanes leave the camera together.
+      for (let i = vs.chunks.length - 1; i >= 0; i--) {
+        const chunk = vs.chunks[i];
+        if (chunk.x + chunk.width >= -C.voidRecycleMargin) continue;
+        for (const p of chunk.platforms) removeLiveVoidPlatform(p);
+        vs.chunks.splice(i, 1);
       }
-      for (const p of [...new Set(recycle)]) {
-        const right = platforms.reduce((m, q) => q === p || !q.void ? m : Math.max(m, q.x + q.w), W);
-        const prev = platforms.reduce((best, q) => (!q.void || q === p || q.x + q.w !== right) ? best : q, null);
-        const gap = C.voidGapMin + Math.random() * (C.voidGapMax - C.voidGapMin);
-        p.x = right + gap; p.y = clamp((prev ? prev.y : 560) + (Math.random() - 0.5) * 170, 400, 700);
-        p.w = C.voidPlatformMin + Math.random() * (C.voidPlatformMax - C.voidPlatformMin);
-        p.voidType = ["plain", "crumble", "fire", "plain", "cage", "plain"][vs.seq++ % 6];
-        p.touchT = -1; p.fireOn = false;
-      }
+      while (vs.gen.nextX + vs.scrollOffset < W + C.voidSpawnAhead) appendVoidChunk(vs);
+
+      syncVoidPlayerSupport();
       vs.wispT -= dt;
       if (vs.wispT <= 0) {
         vs.wispT = C.voidWispCd;
         const liveWisps = enemies.filter((e) => e.isVoidWisp && !e.dead).length;
-        if (liveWisps < 2) { const w = new VoidWisp(W + 60, 300 + Math.random() * 260); w.spawnT = 0.25; enemies.push(w); }
+        if (liveWisps < 2) {
+          const pressure = vs.chunks.find((c) => c.x + c.width > W * 0.68) || vs.chunks[vs.chunks.length - 1];
+          const lane = (pressure && (pressure.wispLane || pressure.pressureLane)) || (vs.playerLane === "upper" ? "lower" : "upper");
+          const landing = pressure && pressure.lanes[lane] && pressure.lanes[lane][0];
+          const w = new VoidWisp(W + 60, landing ? landing.y - 80 : (lane === "upper" ? 330 : 535));
+          w.voidLane = lane; w.spawnT = 0.25; enemies.push(w);
+        }
       }
     }
+    updateVoidPlatformHazards(vs, dt);
 
     // The bite is deliberately nonfatal, including One-Hit mode: it costs health and
     // position, then throws the player straight back into play.
     if (player.y > H + 70 && vs.rescueCd <= 0) {
       const r = player.takeDamage(C.voidFallDmg, player.x, vs.owner);
       if (player.hp <= 0) player.hp = 1;
-      const safe = platforms.filter((p) => p.void).sort((a, b) => Math.abs((a.x + a.w / 2) - W * 0.45) - Math.abs((b.x + b.w / 2) - W * 0.45))[0];
-      if (safe) { player.x = clamp(safe.x + safe.w / 2, player.hw, W - player.hw); player.y = safe.y - 190; }
+      const safe = VoidGen.selectRescue(platforms, W * 0.45, run.runTime, vs.options);
+      if (safe) {
+        player.x = clamp(safe.x + safe.w / 2, player.hw, W - player.hw); player.y = safe.y - 190;
+        player.voidLane = safe.voidLane; vs.playerLane = safe.voidLane;
+      }
       else { player.x = W / 2; player.y = 420; }
       player.vy = -1350; player.iframe = Math.max(player.iframe, 1.0); player.voidSlowT = C.voidSlowDur;
+      player.voidTransferT = Math.max(player.voidTransferT, C.voidTransferGrace);
       player.dashCharges = player.maxDashCharges; vs.rescueCd = 0.8;
       FX.shockwave(player.x, player.y + 150, 12, CONFIG.colors.perfect, 210, 5); FX.burst(player.x, player.y + 120, 0, -1, 16, CONFIG.colors.perfect);
       addFloater(player.x, player.y - 28, "THE VOID BITES  -" + C.voidFallDmg, true, CONFIG.colors.perfect);
@@ -1042,7 +1162,7 @@
       weaponId: selWeapon,   // for the "win with each weapon" achievement
       biomeState: { swung: false, thrown: false, jumped: false },   // per-stage restriction feats
       _staticParry: 0, _airKills: 0, _projDashes: 0, _aldricSlams: 0, _revivedT: false, _bossFightT: null,
-      runSeed, voidSeed: voidSeed || 1, voidRngState: voidSeed || 1, _platformSeq: 0,
+      runSeed, voidSeed: voidSeed || 1,
     };
     // Exodia (The Forbidden Technique): Long Arm + Throwing Arm + Aether Step + Lifeline all owned
     if (achTracks() && META.level("reach") > 0 && META.level("throwarm") > 0 && META.level("aircharge") > 0 && META.level("lifeline") > 0) PROFILE.maxStat("exodiaBuild", 1);
@@ -1554,10 +1674,13 @@
     if (run.mods.flowRegen && run.mult >= 3) player.heal(7 * dt);   // Flow Guard T3: regen while BRUTAL+
     if (run.lifestealCd > 0) run.lifestealCd -= dt;
     if (throwCd > 0) throwCd -= dt;
+    if (player.hazardT > 0) player.hazardT = Math.max(0, player.hazardT - dt);
     updateZonesWalls(dt);   // mud puddles + Geomancer walls; sets player.slowMult
     // faster while unarmed (blade thrown); Tempo adds haste during its window
     player.moveBoost = ((blade.state !== "held") ? CONFIG.player.thrownMoveBoost : 1) * (player.tempoT > 0 ? 1.18 : 1);
     player.update(dt, platforms);
+    if (run.voidScroll) syncVoidPlayerSupport();
+    else { player.supportPlatform = null; player.voidLane = null; player.voidMajorWindow = false; }
     const wasReturning = blade.state === "returning";
     blade.update(dt, player, platforms);
     if (wasReturning && blade.state === "held" && run.mods.stormBurst) {   // Storm Recall T3: shockwave on catch
@@ -1734,7 +1857,6 @@
     const bossZ = enemies.find((e) => e.isBoss && e.zones && e.zones.length);
     if (bossZ) {
       const onFloor = player.y + player.hh >= CONFIG.world.groundY - 8;
-      player.hazardT -= dt;
       let inZone = false;
       let zoneDmg = CONFIG.warden.zoneTick, zoneCd = CONFIG.warden.zoneTickCd;
       for (const z of bossZ.zones) {
@@ -1811,7 +1933,9 @@
       if (aboss.freezeVoid && run.voidScroll) { aboss.freezeVoid = false; run.voidScroll.active = false; run.voidScroll.frozen = true; }
       if (aboss.thawVoid && run.voidScroll) {   // TRUE FORM: the conveyor resumes, faster
         aboss.thawVoid = false; run.voidScroll.frozen = false; run.voidScroll.active = true;
-        run.voidScroll.speed *= (CONFIG.source.thawSpeedMult || 1.35);
+        const thawMult = CONFIG.source.thawSpeedMult || 1.35;
+        run.voidScroll.speedCap = CONFIG.source.scrollSpeedMax * thawMult;
+        run.voidScroll.speed = Math.min(run.voidScroll.speed * thawMult, run.voidScroll.speedCap);
       }
       if (aboss.spawnAdds) {
         aboss.spawnAdds = false; run.bossAdds = [];
@@ -2811,6 +2935,22 @@
       ctx.fillStyle = ctx.strokeStyle; ctx.fillText(p.platformId, p.x + p.w / 2, p.y - 4);
       if (p.voidLane && p.chunkId != null) ctx.fillText(`${p.voidLane} · chunk ${p.chunkId}`, p.x + p.w / 2, p.y + p.h + 15);
     }
+    if (run && run.voidScroll && run.voidScroll.chunks) {
+      const byId = new Map(platforms.filter((p) => p.void).map((p) => [p.platformId, p]));
+      ctx.lineWidth = 2; ctx.setLineDash([6, 5]);
+      for (const chunk of run.voidScroll.chunks) {
+        if (chunk.transferWindow) {
+          ctx.fillStyle = "rgba(255,243,107,0.08)";
+          ctx.fillRect(chunk.transferWindow.x0, CONFIG.source.voidUpperMin - 34,
+            chunk.transferWindow.x1 - chunk.transferWindow.x0, CONFIG.source.voidLowerMax - CONFIG.source.voidUpperMin + 68);
+        }
+        for (const edge of chunk.connections || []) {
+          const a = byId.get(edge.from), b = byId.get(edge.to); if (!a || !b) continue;
+          ctx.strokeStyle = "#fff36b"; ctx.beginPath(); ctx.moveTo(a.x + a.w / 2, a.y); ctx.lineTo(b.x + b.w / 2, b.y); ctx.stroke();
+        }
+      }
+      ctx.setLineDash([]);
+    }
     for (const p of projectiles) {
       if (!p.family || p.family === "ordinaryProjectile") continue;
       ctx.strokeStyle = p.family === "sweeper" ? "#d45ee8" : "#ff944d"; ctx.globalAlpha = 0.9;
@@ -2913,6 +3053,19 @@
         }
         ctx.restore(); ctx.globalAlpha = 1;
       }
+    }
+    // Transfer filaments resolve connection IDs back to the exact live surfaces;
+    // they disappear with a crumbled endpoint and never imply a phantom route.
+    if (voidActive && run.voidScroll.chunks) {
+      const byId = new Map(platforms.filter((p) => p.void).map((p) => [p.platformId, p]));
+      ctx.save(); ctx.strokeStyle = "#9b70ff"; ctx.globalAlpha = GFX.low ? 0.26 : 0.38; ctx.lineWidth = 3;
+      if (!GFX.low) ctx.setLineDash([10, 12]);
+      for (const chunk of run.voidScroll.chunks) for (const edge of chunk.connections || []) {
+        const a = byId.get(edge.from), b = byId.get(edge.to); if (!a || !b) continue;
+        const ax = a.x + a.w / 2, ay = a.y, bx = b.x + b.w / 2, by = b.y;
+        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.bezierCurveTo(ax + (bx - ax) * 0.32, ay, bx - (bx - ax) * 0.32, by, bx, by); ctx.stroke();
+      }
+      ctx.setLineDash([]); ctx.restore();
     }
     for (const p of platforms) Backdrop.platform(ctx, p, currentStage, !!p.floor, backdropView);         // depth: gradient + edge + shadow
     // cracking platforms telegraph the give-way: jagged fractures + a quickening pulse

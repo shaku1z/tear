@@ -38,6 +38,7 @@ class Projectile {
     // Optional boss-pattern metadata. Neutral defaults preserve every legacy projectile.
     this.owner = null;
     this.landingX = null; this.landingY = null; this.landingT = null;
+    this.surfacePlatformId = null; this.surfaceLeft = null; this.surfaceRight = null; this.surfaceY = null;
     this.maxCrossings = 0; this.crossings = 0;
     this.embeddedLife = 0;
     this.groundImpact = false;
@@ -80,6 +81,15 @@ class Projectile {
     this.y += this.vy * dt;
     this.life -= dt;
     if (this.life <= 0) this.dead = true;
+
+    // A copied ground shock belongs to the surface that authored it. On the
+    // two-storey Void route it cannot float across a gap or threaten the other
+    // lane after its supporting platform ends.
+    if (this.family === "groundShock" && this.surfacePlatformId) {
+      this.y = this.surfaceY - this.r;
+      if (this.x + this.r < this.surfaceLeft || this.x - this.r > this.surfaceRight) this.dead = true;
+      if (this.dead) return;
+    }
 
     // Optional falling-hazard impact. Bombs/mines keep their legacy game-owned handling
     // unless their creator explicitly opts into groundImpact.

@@ -2590,24 +2590,54 @@ class Echo extends Enemy {
   }
 }
 
-// Void-run utility add: a launchable air target, deliberately harmless and worth no
-// score. Its body is a moving foothold for the juggle system rather than another gun.
+// Void-run utility add: a launchable air target and a restrained lane-pressure
+// pass. It remains a juggle foothold, but the thin captured-line tell prevents an
+// upper route from becoming permanent shelter.
 class VoidWisp extends Enemy {
   constructor(x, y) {
-    super(x, y, { w: 38, h: 38, hp: 85, speed: 105, contactDmg: 0, knockbackTaken: 14, weight: 0.65 });
+    super(x, y, { w: 38, h: 38, hp: 85, speed: 105, contactDmg: CONFIG.source.voidWispDmg, knockbackTaken: 14, weight: 0.65 });
     this.kind = "wisp"; this.color = CONFIG.colors.perfect; this.noScore = true; this.isVoidWisp = true;
-    this.baseY = y; this.life = 9;
+    this.baseY = y; this.life = 9; this.voidLane = "upper";
+    this.passState = "hover"; this.passCd = 0.9; this.passT = 0; this.passY = y; this.passContactSpent = true;
   }
+  contactDamageEnabled() { return this.passState === "pass" && !this.passContactSpent; }
+  onContactDamage() { if (this.passState === "pass") this.passContactSpent = true; }
   update(dt, platforms, player) {
     this.tickTimers(dt); this.life -= dt;
-    this.vx = lerp(this.vx, -CONFIG.source.scrollSpeed * 0.42, clamp(1.6 * dt, 0, 1));
-    this.vy += CONFIG.world.gravity * 0.22 * dt;
-    this.vy = lerp(this.vy, (this.baseY + Math.sin(this.aliveT * 2.2) * 55 - this.y) * 2.1, clamp(1.3 * dt, 0, 1));
-    this.x += this.vx * dt; this.y += this.vy * dt;
+    const C = CONFIG.source;
+    if (this.passState === "tell") {
+      this.passT -= dt;
+      this.vx = lerp(this.vx, 0, clamp(9 * dt, 0, 1));
+      this.vy = lerp(this.vy, (this.passY - this.y) * 2.5, clamp(4 * dt, 0, 1));
+      this.x += this.vx * dt; this.y += this.vy * dt;
+      if (this.passT <= 0) {
+        this.passState = "pass"; this.passT = C.voidWispPassTime; this.passContactSpent = false;
+        this.vx = -C.voidWispPassSpeed; this.vy = (this.passY - this.y) / Math.max(0.25, C.voidWispPassTime * 0.45);
+      }
+    } else if (this.passState === "pass") {
+      this.passT -= dt; this.x += this.vx * dt; this.y += this.vy * dt;
+      this.vy = lerp(this.vy, (this.passY - this.y) * 4.2, clamp(5 * dt, 0, 1));
+      if (this.passT <= 0) { this.passState = "hover"; this.passCd = 1.4; this.passContactSpent = true; this.baseY = this.y; }
+    } else {
+      this.passCd -= dt;
+      this.vx = lerp(this.vx, -C.scrollSpeed * 0.42, clamp(1.6 * dt, 0, 1));
+      this.vy += CONFIG.world.gravity * 0.22 * dt;
+      this.vy = lerp(this.vy, (this.baseY + Math.sin(this.aliveT * 2.2) * 55 - this.y) * 2.1, clamp(1.3 * dt, 0, 1));
+      this.x += this.vx * dt; this.y += this.vy * dt;
+      if (this.passCd <= 0 && player && player.voidLane === this.voidLane && player.voidTransferT <= 0) {
+        this.passState = "tell"; this.passT = C.voidWispTell; this.passY = player.y; this.passContactSpent = true;
+      }
+    }
     if (this.x < -80 || this.life <= 0) this.dead = true;
   }
   draw(ctx) {
     const p = 0.65 + 0.35 * Math.sin(performance.now() / 120 + this.x * 0.01);
+    if (this.passState === "tell") {
+      const k = 1 - clamp(this.passT / CONFIG.source.voidWispTell, 0, 1);
+      ctx.save(); ctx.strokeStyle = this.color; ctx.globalAlpha = 0.4 + 0.45 * k; ctx.lineWidth = 2.5; ctx.setLineDash([10, 8]);
+      ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(-40, this.passY); ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath(); ctx.arc(this.x, this.y, this.hw * (1.4 - k * 0.35), 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+    }
     ctx.save(); ctx.globalAlpha = 0.18; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.hw * 1.7, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = p; ctx.strokeStyle = this.color; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(this.x, this.y, this.hw * 0.7, 0, Math.PI * 2); ctx.stroke();
     ctx.globalAlpha = 0.8; ctx.fillStyle = "#fff"; ctx.fillRect(this.x - 4, this.y - 4, 8, 8); ctx.restore();
@@ -2643,6 +2673,7 @@ class Source extends Enemy {
     this.breachCommitX = x; this.breachCommitY = y;
     this.breachDestX = x; this.breachDestY = y;
     this.breachStartX = x; this.breachStartY = y;
+    this.breachLane = null;
     this.breachContactSpent = false; this.breachRepelGraceT = 0;
     this.breachRecoilVX = 0; this.breachRecoilVY = 0;
     this.breachNudgeVX = 0; this.breachNudgeVY = 0; this.breachRipple = 0;
@@ -2655,7 +2686,9 @@ class Source extends Enemy {
     return C.breachIntervalMin + Math.random() * (C.breachIntervalMax - C.breachIntervalMin);
   }
   _softBreachBlocked(player) {
-    return this.mode !== "cycle" || this.collapsing || this.voidDelayT > 0 ||
+    const locomotionMode = this.mode === "cycle" || this.mode === "void";
+    const voidTransfer = this.mode === "void" && (!player || !player.voidLane || !player.supportPlatform || player.voidTransferT > 0);
+    return !locomotionMode || voidTransfer || this.collapsing || this.voidDelayT > 0 ||
       this.beamState !== "idle" || this.dashState !== "idle" || this.collapseState !== "idle" ||
       this.introT > 0 || this.dead || this.dying || this.breachRepelGraceT > 0 ||
       !!(player && player.voidSlowT > 0);   // a rescue/forced connector is never a breach window
@@ -2665,6 +2698,7 @@ class Source extends Enemy {
       this.breachState = "follow"; this.breachT = 0; this.breachContactSpent = true;
       this.breachRecoilVX = 0; this.breachRecoilVY = 0;
     }
+    this.breachLane = null;
     this.breachCd = Math.max(this.breachCd, extraCd || 0);
   }
   _startSoftBreach(player) {
@@ -2675,6 +2709,7 @@ class Source extends Enemy {
     this.breachSpeed = C.breachSpeedMin + Math.random() * (C.breachSpeedMax - C.breachSpeedMin);
     this.breachDX = dx; this.breachDY = dy;
     this.breachCommitX = player.x; this.breachCommitY = player.y;
+    this.breachLane = this.mode === "void" ? player.voidLane : null;
     this.breachDestX = player.x + dx * beyond; this.breachDestY = player.y + dy * beyond;
     this.breachStartX = this.x; this.breachStartY = this.y;
     this.breachState = "tell";
@@ -2687,6 +2722,7 @@ class Source extends Enemy {
   _finishSoftBreach() {
     this.breachState = "follow"; this.breachT = 0; this.breachContactSpent = true;
     this.breachRecoilVX = 0; this.breachRecoilVY = 0;
+    this.breachLane = null;
     this.breachCd = this._rollBreachCd();
     this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
     this.y = clamp(this.y, 70, CONFIG.world.groundY - this.hh);
@@ -2748,7 +2784,8 @@ class Source extends Enemy {
     const nx = (hit.tipVX || 0) / m, ny = (hit.tipVY || 0) / m;
     // Authored attacks retain authority: a body hit may deal damage, but cannot
     // cancel the high-threat dash/collapse, a beam, the kneel, or the Void Run.
-    const immune = this.mode !== "cycle" || this.collapsing || this.voidDelayT > 0 ||
+    const locomotionMode = this.mode === "cycle" || this.mode === "void";
+    const immune = !locomotionMode || this.collapsing || this.voidDelayT > 0 ||
       this.beamState !== "idle" || this.dashState !== "idle" || this.collapseState !== "idle" ||
       this.introT > 0 || this.dead || this.dying;
     if (immune) return { handled: true, immune: true };
@@ -2760,6 +2797,7 @@ class Source extends Enemy {
       this.breachT = C.breachSteerLockMin + Math.random() * (C.breachSteerLockMax - C.breachSteerLockMin);
       this.breachMaxT = this.breachT;
       this.breachDX = nx; this.breachDY = ny;
+      this.breachLane = this.mode === "void" && hit.player ? hit.player.voidLane : null;
       this.breachRecoilVX = nx * force; this.breachRecoilVY = ny * force;
       this.breachContactSpent = true; this.breachRepelGraceT = C.breachRepelGrace; this.breachRipple = 1;
       FX.burst(this.x, this.y, nx, ny, 10, this.color); FX.ring(this.x, this.y, 16, CONFIG.colors.perfect);
@@ -2792,10 +2830,15 @@ class Source extends Enemy {
     const p = new Projectile(this.x, this.y, (dx / m) * C.shockSpeed + drift, (dy / m) * C.shockSpeed);
     p.dmg = C.shockDmg; p.r = 11; p.tint = tint || this.color; p.owner = this; projectiles.push(p);
   }
-  _shock(projectiles, dir, footY, tint) {
-    const C = CONFIG.source, fy = (footY || CONFIG.world.groundY) - C.shockR;
-    const p = new Projectile(this.x + dir * this.hw, fy, dir * C.shockSpeed, 0);
+  _shock(projectiles, dir, footY, tint, surface) {
+    const C = CONFIG.source, surfaceY = surface ? surface.y : (footY || CONFIG.world.groundY);
+    const fy = surfaceY - C.shockR;
+    const sx = surface ? clamp(this.x + dir * this.hw, surface.x + C.shockR, surface.x + surface.w - C.shockR) : this.x + dir * this.hw;
+    const p = new Projectile(sx, fy, dir * C.shockSpeed, 0);
     p.setFamily("groundShock"); p.r = C.shockR; p.dmg = C.shockDmg; p.life = 2.0; p.owner = this; p.tint = tint || CONFIG.colors.boss; projectiles.push(p);
+    if (surface) {
+      p.surfacePlatformId = surface.platformId; p.surfaceLeft = surface.x; p.surfaceRight = surface.x + surface.w; p.surfaceY = surface.y;
+    }
   }
   _sweeper(projectiles, tint) {
     const C = CONFIG.source;
@@ -2812,6 +2855,7 @@ class Source extends Enemy {
     FX.ring(this.x, this.y, 16, this.color);
   }
   _lightFire() {
+    if (this.mode !== "cycle" || this.collapsing || this.voidDelayT > 0) return;
     const A = CONFIG.aldric, colW = CONFIG.view.w / A.fireCols; this.zones = [];
     for (let i = 0; i < A.fireCols; i++) this.zones.push({ kind: "fire", x: (i + 0.5) * colW, w: colW, on: i % 2 === 0,
       dmg: CONFIG.warden.zoneTick, tickCd: CONFIG.warden.zoneTickCd });
@@ -2825,13 +2869,21 @@ class Source extends Enemy {
       this.copyT = CONFIG.source.copyDelay * (repeat ? 0.5 : 1);
     }
   }
-  _doCopy(player, projectiles) {
-    const k = this.copyKind; this.lastCopied = k;
-    if (k === "slam" || k === "superslam" || k === "spike") { this._shock(projectiles, 1, null, this.color); this._shock(projectiles, -1, null, this.color); }
-    else this._shot(player, projectiles, this.color);
+  _doCopy(player, projectiles, platforms) {
+    const k = this.copyKind, groundCopy = k === "slam" || k === "superslam" || k === "spike";
+    if (groundCopy) {
+      let support = player.supportPlatform || null;
+      if (!support && this.mode === "void" && platforms) support = platforms.find((p) => p.void && p.oneway &&
+        Math.abs(player.y + player.hh - p.y) < 8 && player.x + player.hw > p.x && player.x - player.hw < p.x + p.w) || null;
+      if (this.mode === "void" && !support) { this.copyT = 0.12; return false; }
+      this.lastCopied = k;
+      this._shock(projectiles, 1, support ? support.y : null, this.color, support);
+      this._shock(projectiles, -1, support ? support.y : null, this.color, support);
+    } else { this.lastCopied = k; this._shot(player, projectiles, this.color); }
     const label = ({ superslam: "SLAM", throwHit: "THROW", updraft: "UPDRAFT", launch: "LAUNCH" })[k] || (k || "CUT").toUpperCase();
     this.echoCaption = "IT LEARNED YOUR " + label; this.captionT = 1.4;
     FX.ring(this.x, this.y, 13, this.color);
+    return true;
   }
   _cast(projectiles, count) {
     const picks = ["warden", "colossus", "aldric"];
@@ -2992,11 +3044,12 @@ class Source extends Enemy {
 
     if (this.zones.length) { this.zoneCycleT -= dt; if (this.zoneCycleT <= 0) { for (const z of this.zones) if (z.kind === "fire") z.on = !z.on; this.zoneCycleT = CONFIG.aldric.fireCycle; } }
     this._scheduleFrom(player);
+    const voidTransferBusy = this.mode === "void" && (player.voidTransferT > 0 || !player.supportPlatform);
     // A learned move may queue during a crossover, but it cannot fire over the
     // captured locomotion. Its timer resumes once follow steering returns.
-    if (this.copyT > 0 && this.breachState === "follow") { this.copyT -= dt; if (this.copyT <= 0) this._doCopy(player, projectiles); }
+    if (this.copyT > 0 && this.breachState === "follow" && !voidTransferBusy) { this.copyT -= dt; if (this.copyT <= 0) this._doCopy(player, projectiles, platforms); }
     // the Warden-echo burst: three shots on the baton string's beat
-    if (this._burstN > 0 && this.breachState === "follow") {
+    if (this._burstN > 0 && this.breachState === "follow" && !voidTransferBusy) {
       this._burstT -= dt;
       if (this._burstT <= 0) { this._shot(player, projectiles, CONFIG.colors.boss); this._burstN--; this._burstT = 0.18; }
     }
@@ -3015,7 +3068,7 @@ class Source extends Enemy {
     if (this.mode === "void") {
       if (this.beamState === "idle") {
         this.beamCd -= dt;
-        if (this.beamCd <= 0) { this.beamState = "tell"; this.beamT = C.beamWarn; this.beamX = CONFIG.view.w - 70; perilPing(this); }
+        if (this.beamCd <= 0 && !voidTransferBusy && player.voidMajorWindow) { this.beamState = "tell"; this.beamT = C.beamWarn; this.beamX = CONFIG.view.w - 70; perilPing(this); }
       } else if (this.beamState === "tell") {
         this.beamT -= dt;
         if (this.beamT <= 0) { this.beamState = "sweep"; this.beamT = C.beamSweep; }
@@ -3029,7 +3082,25 @@ class Source extends Enemy {
     }
 
     // A soft crossover/recoil owns movement and suppresses the copied cast bag.
-    if (this.breachState !== "follow") { this._tickSoftBreach(dt); return; }
+    // Revalidate the captured Void lane every tick: a route transfer, rescue, or
+    // disappearing support that starts after commitment is still protected.
+    if (this.breachState !== "follow") {
+      const voidRouteLost = this.mode === "void" && (!player || !player.supportPlatform ||
+        player.voidTransferT > 0 || player.voidSlowT > 0 ||
+        (this.breachLane && player.voidLane !== this.breachLane));
+      if (voidRouteLost) {
+        if (this.breachState === "recoil" && player && player.voidLane === this.breachLane &&
+            !player.voidSlowT) {
+          // A successful repel remains earned, but does not move the Source
+          // through a forced connector while the player is unsupported.
+          this.vx = 0; this.vy = 0;
+        } else {
+          this._cancelSoftBreach(this._rollBreachCd());
+        }
+        return;
+      }
+      this._tickSoftBreach(dt); return;
+    }
 
     // physical moves run their own state machines (they suppress the hover/cast)
     if (this.dashState !== "idle") { this._tickDash(dt, player, projectiles); return; }
@@ -3046,7 +3117,7 @@ class Source extends Enemy {
 
     this._hover(dt, player);
     this.atkT -= dt;
-    if (this.atkT <= 0) {
+    if (this.atkT <= 0 && !voidTransferBusy) {
       this.atkT = C.cycleCd / (this.mode === "void" ? 1.9 : (this.collapsing ? 1.35 : 1));
       // MOVE BAG: weave the physical moves between ranged casts so the rift isn't
       // a pure projectile turret. Dash/collapse fire when off cooldown; otherwise

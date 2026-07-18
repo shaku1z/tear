@@ -36,6 +36,8 @@ class Player {
     this.rootT = 0;             // Chain Caster: snared in place (no move/jump/dash) for a bit
     this.slowMult = 1;          // Sludge: slowed while standing in a mud puddle (set by the game)
     this.voidSlowT = 0;         // Source void rescue: brief movement penalty after the geyser saves you
+    this.voidLane = null; this.voidTransferT = 0; this.voidMajorWindow = false;
+    this.supportPlatform = null; // live Void surface contract for lane-aware boss attacks
     this.rallyT = 0;            // Aldric Act I: seconds left to win recoverable health back
     this.rallyPool = 0;         // orange-chip health still available during the rally window
     this.rallySource = null;    // fight-scoped owner; never persists beyond this Player instance
