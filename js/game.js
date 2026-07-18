@@ -2607,8 +2607,8 @@
     UI.ink = THEME.ink;
 
     if (playLike) {
-      renderWorld();
-      if (biomeMode) Backdrop.post(ctx, currentStage);   // vignette + grain over the world, under the HUD
+      const worldCamera = renderWorld();
+      if (biomeMode) Backdrop.post(ctx, currentStage, worldCamera);   // vignette + grain over the world, under the HUD
       if (flash > 0) {
         ctx.save();
         ctx.globalCompositeOperation = "difference";
@@ -2769,13 +2769,36 @@
     ctx.globalAlpha = 1; ctx.restore();
   }
 
-  function drawPantheonDebug(view) {
+  function drawPantheonDebug(view, paintView) {
     if (!PANTHEON_DEBUG) return;
     ctx.save();
-    ctx.setLineDash([10, 7]); ctx.lineWidth = 2; ctx.strokeStyle = "#ff4fd8"; ctx.globalAlpha = 0.9;
-    if (view) ctx.strokeRect(view.left, view.top, view.right - view.left, view.bottom - view.top);
+    // Actual camera bounds (cyan) and the larger painted backdrop bounds
+    // (magenta). The painted edge normally lives outside the physical canvas, so
+    // the inset map makes both rectangles inspectable without changing the camera.
+    if (paintView) {
+      ctx.setLineDash([10, 7]); ctx.lineWidth = 2; ctx.strokeStyle = "#ff4fd8"; ctx.globalAlpha = 0.9;
+      ctx.strokeRect(paintView.left, paintView.top, paintView.right - paintView.left, paintView.bottom - paintView.top);
+    }
+    if (view) {
+      ctx.setLineDash([]); ctx.lineWidth = 3; ctx.strokeStyle = "#31e6ff"; ctx.globalAlpha = 0.95;
+      ctx.strokeRect(view.left, view.top, view.right - view.left, view.bottom - view.top);
+    }
     ctx.setLineDash([]); ctx.textAlign = "center"; ctx.textBaseline = "bottom";
     ctx.font = "bold 11px 'Courier New', monospace";
+    if (view && paintView) {
+      const mapX = view.left + 24, mapY = view.top + 24, mapW = 190, mapH = 104;
+      const pw = paintView.right - paintView.left, ph = paintView.bottom - paintView.top;
+      const ix = mapX + (view.left - paintView.left) / pw * mapW;
+      const iy = mapY + (view.top - paintView.top) / ph * mapH;
+      const iw = (view.right - view.left) / pw * mapW, ih = (view.bottom - view.top) / ph * mapH;
+      ctx.globalAlpha = 0.72; ctx.fillStyle = "#080914"; ctx.fillRect(mapX - 8, mapY - 8, mapW + 16, mapH + 30);
+      ctx.globalAlpha = 0.95; ctx.strokeStyle = "#ff4fd8"; ctx.setLineDash([5, 4]); ctx.lineWidth = 2;
+      ctx.strokeRect(mapX, mapY, mapW, mapH);
+      ctx.setLineDash([]); ctx.strokeStyle = "#31e6ff"; ctx.strokeRect(ix, iy, iw, ih);
+      ctx.fillStyle = "#ff4fd8"; ctx.textBaseline = "top"; ctx.fillText("PAINT", mapX + 24, mapY + mapH + 7);
+      ctx.fillStyle = "#31e6ff"; ctx.fillText("VISIBLE", mapX + mapW - 38, mapY + mapH + 7);
+      ctx.textBaseline = "bottom";
+    }
     for (const p of platforms) {
       if (!p.platformId) continue;
       ctx.strokeStyle = p.void ? "#13c4d6" : "#e8a32e"; ctx.globalAlpha = 0.85;
@@ -2817,16 +2840,29 @@
     // punch + this frame's shake) so biome art paints every visible world pixel.
     // The small world-space bleed absorbs blur kernels and sub-pixel rounding.
     const srWorld = screenRect(), cameraScale = Math.max(0.01, zoom), backdropBleed = 56;
-    const backdropView = {
-      left: cx + (srWorld.x - cx - ox) / cameraScale - backdropBleed,
-      top: cy + (srWorld.y - cy - oy) / cameraScale - backdropBleed,
-      right: cx + (srWorld.x + srWorld.w - cx - ox) / cameraScale + backdropBleed,
-      bottom: cy + (srWorld.y + srWorld.h - cy - oy) / cameraScale + backdropBleed,
+    const cameraView = {
+      left: cx + (srWorld.x - cx - ox) / cameraScale,
+      top: cy + (srWorld.y - cy - oy) / cameraScale,
+      right: cx + (srWorld.x + srWorld.w - cx - ox) / cameraScale,
+      bottom: cy + (srWorld.y + srWorld.h - cy - oy) / cameraScale,
     };
+    const backdropView = {
+      left: cameraView.left - backdropBleed,
+      top: cameraView.top - backdropBleed,
+      right: cameraView.right + backdropBleed,
+      bottom: cameraView.bottom + backdropBleed,
+    };
+    const backdropCamera = { cx, cy, ox, oy, scale: cameraScale };
     ctx.translate(cx + ox, cy + oy);
     ctx.scale(zoom, zoom);
     ctx.translate(-cx, -cy);
     const biome = run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly" || run.mode === "gauntlet" || run.mode === "tutorial" || run.mode === "playground");
+    // In debug boots, any camera-visible pixel missed by Backdrop.draw remains
+    // screaming magenta. Production pays no fill or branch beyond this false gate.
+    if (PANTHEON_DEBUG && biome) {
+      ctx.fillStyle = "#ff00a8";
+      ctx.fillRect(cameraView.left, cameraView.top, cameraView.right - cameraView.left, cameraView.bottom - cameraView.top);
+    }
     if (biome) Backdrop.draw(ctx, currentStage, performance.now() / 1000, player ? player.x : W / 2, backdropView);   // sky + parallax + motes
     // ARENA DRESSING: each boss stages its own ground (drawn behind platforms).
     // Suppressed over the void — there is no ground to dress.
@@ -2873,7 +2909,7 @@
         ctx.restore(); ctx.globalAlpha = 1;
       }
     }
-    for (const p of platforms) Backdrop.platform(ctx, p, currentStage, !!p.floor);                       // depth: gradient + edge + shadow
+    for (const p of platforms) Backdrop.platform(ctx, p, currentStage, !!p.floor, backdropView);         // depth: gradient + edge + shadow
     // cracking platforms telegraph the give-way: jagged fractures + a quickening pulse
     for (const p of platforms) {
       if (!(p.crackT > 0)) continue;
@@ -3035,7 +3071,7 @@
     if (player) player.draw(ctx);
     if (blade) blade.draw(ctx, player);
     FX.draw(ctx);
-    drawPantheonDebug(backdropView);
+    drawPantheonDebug(cameraView, backdropView);
     ctx.textAlign = "center";
     for (const f of floaters) {
       ctx.globalAlpha = clamp(f.life / 0.8, 0, 1);
@@ -3048,6 +3084,7 @@
     }
     ctx.globalAlpha = 1;
     ctx.restore();
+    return backdropCamera;
   }
 
   function drawHUD() {
