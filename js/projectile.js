@@ -41,6 +41,9 @@ class Projectile {
     this.landingX = null; this.landingY = null; this.landingT = null;
     this.surfacePlatformId = null; this.surfaceLeft = null; this.surfaceRight = null; this.surfaceY = null;
     this.maxCrossings = 0; this.crossings = 0;
+    this.sweeperState = null; this.state = null;
+    this.passesRemaining = 0; this.integrity = 0; this.maxIntegrity = 0; this.maxLife = 0;
+    this.hitLatch = false; this.hitLatchT = 0; this.onCountered = null; this.spinDir = 1;
     this.embeddedLife = 0;
     this.groundImpact = false;
     this.embedded = false;    // inert sweeper lodged in an arena wall
@@ -55,10 +58,11 @@ class Projectile {
       this.shock = true; this.sweeper = false;
       this.counterplay = "jump"; this.unparryable = true;
     } else if (this.family === "sweeper") {
-      // P7 unlocks the sweeper's specialized bat/return contract. Until then it
-      // deliberately preserves the shipped non-parryable behavior.
-      this.shock = true; this.sweeper = true;
-      this.counterplay = "sweeperLocked"; this.unparryable = true;
+      this.shock = false; this.sweeper = true;
+      this.counterplay = "bat/return"; this.unparryable = false;
+      // Safe defaults are intentionally finite: a missing creator field can never
+      // resurrect the old 60-second infinite bounce.
+      this.configureSweeper({ passes: 2, integrity: 4, maxLife: 5, embeddedLife: 0.8 });
     } else {
       this.shock = false; this.sweeper = false;
       this.counterplay = "deflect"; this.unparryable = false;
@@ -66,11 +70,86 @@ class Projectile {
     return this;
   }
 
+  _setSweeperState(state) {
+    this.sweeperState = state; this.state = state;
+    this.embedded = state === "embedded";
+    this.harmless = state !== "hostile";
+    this.spinDir = state === "returned" ? -1 : (state === "batted" ? -0.65 : 1);
+  }
+
+  configureSweeper(opts) {
+    opts = opts || {};
+    this.maxLife = Math.max(0.1, opts.maxLife == null ? 5 : opts.maxLife);
+    this.life = this.maxLife;
+    this.passesRemaining = Math.max(1, opts.passes == null ? 2 : opts.passes | 0);
+    this.maxCrossings = this.passesRemaining; this.crossings = 0;
+    this.integrity = Math.max(1, opts.integrity == null ? this.passesRemaining + 2 : opts.integrity | 0);
+    this.maxIntegrity = this.integrity;
+    this.embeddedLife = Math.max(0.1, opts.embeddedLife == null ? 0.8 : opts.embeddedLife);
+    this.hitLatch = false; this.hitLatchT = 0; this.deflected = false; this.perfect = false;
+    this.bounces = 0; this._embedNotified = false; this._setSweeperState("hostile");
+    return this;
+  }
+
+  sweeperClang() {
+    if (!this.sweeper || this.sweeperState !== "hostile" || this.hitLatch) return false;
+    this.hitLatch = true; this.hitLatchT = 0.12; this.vx *= 0.62; this.vy *= 0.62;
+    if (typeof SFX !== "undefined" && SFX.sweeperClang) SFX.sweeperClang(this.sweeperStyle, false);
+    return true;
+  }
+
+  counterSweeper(kind, dirX, dirY, speed) {
+    if (!this.sweeper || this.sweeperState !== "hostile" || this.hitLatch) return false;
+    const perfect = kind === "perfect", thrown = kind === "thrown";
+    this.hitLatch = true; this.hitLatchT = 0.14;
+    // A perfect return preserves the counter-object long enough to reach its
+    // owner. Batting/Phase Step shear one tooth; a thrown blade shears two.
+    this.integrity = Math.max(0, this.integrity - (perfect ? 0 : (thrown ? 2 : 1)));
+    if (this.integrity <= 0) { this.shatterSweeper("counter"); return true; }
+    let dx = dirX || 0, dy = dirY || 0;
+    if (perfect && this.owner && !this.owner.dead && !this.owner.dying) { dx = this.owner.x - this.x; dy = this.owner.y - this.y; }
+    const m = len(dx, dy) || 1, base = Math.max(len(this.vx, this.vy), speed || 0, CONFIG.proj.speed);
+    const mult = perfect ? 1.18 : (thrown ? 0.92 : 1.02);
+    this.vx = dx / m * base * mult; this.vy = dy / m * base * mult;
+    this.deflected = true; this.perfect = perfect;
+    this.counterplay = perfect ? "owner return" : (thrown ? "blade redirect" : kind === "phaseStep" ? "phase reflect" : "batted");
+    this._setSweeperState(perfect ? "returned" : "batted");
+    this.hist.length = 0;
+    if (typeof SFX !== "undefined" && SFX.sweeperBat) SFX.sweeperBat(perfect, this.sweeperStyle);
+    return true;
+  }
+
+  _embedSweeper() {
+    this.vx = 0; this.vy = 0; this.passesRemaining = 0; this.crossings = this.maxCrossings;
+    this._setSweeperState("embedded"); this.hist.length = 0;
+    if (typeof SFX !== "undefined" && SFX.sweeperBounce) SFX.sweeperBounce(this.sweeperStyle, true);
+    if (!this._embedNotified) {
+      this._embedNotified = true;
+      if (this.owner && typeof this.owner.onShieldEmbedded === "function") this.owner.onShieldEmbedded(this);
+    }
+  }
+
+  shatterSweeper(reason) {
+    if (this.dead) return;
+    this.dead = true; this.harmless = true; this.hitLatch = true;
+    if (typeof FX !== "undefined") { FX.ring(this.x, this.y, 8, this.sweeperStyle === "shard" ? "#6ef2ff" : "#ff8a32"); FX.burst(this.x, this.y, 0, -1, 9, this.sweeperStyle === "shard" ? "#d65cff" : "#ff8a32"); }
+    if (typeof SFX !== "undefined" && SFX.sweeperClang) SFX.sweeperClang(this.sweeperStyle, true);
+    this.shatterReason = reason || "";
+  }
+
   update(dt) {
+    if (this.sweeper) {
+      if (this.owner && (this.owner.dead || this.owner.dying)) { this.dead = true; this.harmless = true; return; }
+      if (this.hitLatchT > 0) { this.hitLatchT = Math.max(0, this.hitLatchT - dt); if (this.hitLatchT <= 0) this.hitLatch = false; }
+      if (this.sweeperState === "returned" && this.owner && !this.owner.dead && !this.owner.dying) {
+        const dx = this.owner.x - this.x, dy = this.owner.y - this.y, m = len(dx, dy) || 1, sp = Math.max(CONFIG.proj.speed, len(this.vx, this.vy));
+        const steer = clamp(3.5 * dt, 0, 1); this.vx = lerp(this.vx, dx / m * sp, steer); this.vy = lerp(this.vy, dy / m * sp, steer);
+      }
+    }
     if (this.embedded) {
       this.vx = 0; this.vy = 0;
-      this.embeddedLife -= dt;
-      if (this.embeddedLife <= 0) this.dead = true;
+      this.embeddedLife -= dt; this.life -= dt;
+      if (this.embeddedLife <= 0 || this.life <= 0) this.dead = true;
       return;
     }
 
@@ -81,7 +160,7 @@ class Projectile {
     this.x += this.vx * dt;
     this.y += this.vy * dt;
     this.life -= dt;
-    if (this.life <= 0) this.dead = true;
+    if (this.life <= 0) { this.dead = true; if (this.sweeper) this.harmless = true; return; }
 
     // A copied ground shock belongs to the surface that authored it. On the
     // two-storey Void route it cannot float across a gap or threaten the other
@@ -104,7 +183,7 @@ class Projectile {
       return;
     }
 
-    if (this.bounces > 0 || (this.sweeper && this.maxCrossings > 0)) {
+    if (this.bounces > 0 || this.sweeper) {
       // ricochet off the play-area edges
       const r = this.r, W = CONFIG.view.w, top = 0, bottom = CONFIG.world.groundY;
       let hit = false;
@@ -114,21 +193,13 @@ class Projectile {
       else if (this.y > bottom - r) { this.y = bottom - r; this.vy = -Math.abs(this.vy); hit = true; }
       if (hit) {
         if (this.sweeper) {
-          FX.ring(this.x, this.y, 6, this.tint || CONFIG.colors.armoredShield);
-          if (this.maxCrossings > 0) {
-            this.crossings++;
-            if (this.crossings >= this.maxCrossings) {
-              this.crossings = this.maxCrossings;
-              this.vx = 0; this.vy = 0;
-              this.embedded = true; this.harmless = true;
-              this.hist.length = 0;
-              if (!this._embedNotified) {
-                this._embedNotified = true;
-                if (this.owner && typeof this.owner.onShieldEmbedded === "function") this.owner.onShieldEmbedded(this);
-              }
-            }
-          }
-        }   // maxCrossings=0 preserves the legacy infinite sweeper
+          const col = this.sweeperStyle === "shard" ? "#6ef2ff" : "#ff8a32";
+          FX.ring(this.x, this.y, 6, col);
+          this.crossings++; this.passesRemaining = Math.max(0, this.passesRemaining - 1);
+          this.integrity = Math.max(1, this.integrity - 1);   // a tooth/spoke visibly dies at every contact
+          if (this.passesRemaining <= 0) this._embedSweeper();
+          else if (typeof SFX !== "undefined" && SFX.sweeperBounce) SFX.sweeperBounce(this.sweeperStyle, false);
+        }
         else { this.bounces--; this.vx *= 0.85; this.vy *= 0.85; FX.ring(this.x, this.y, 4); }
       }
       return;
@@ -184,50 +255,54 @@ class Projectile {
       this._trail(ctx, tcol, dark, lowG);
     }
     if (this.sweeper) {
-      const col = this.tint || C.armoredShield;
-      const rr = 30, t2 = performance.now();
+      const rr = 30, t2 = performance.now(), state = this.sweeperState || "hostile";
+      const ratio = clamp(this.integrity / Math.max(1, this.maxIntegrity), 0, 1), returned = state === "returned", batted = state === "batted";
       ctx.save(); ctx.translate(this.x, this.y);
       if (this.sweeperStyle === "shard") {
-        // THE SOURCE's echo: a VOID SHARD RING — angular shards orbiting a dark core
-        ctx.rotate(this.embedded ? 0 : t2 / 260);
-        ctx.globalAlpha = this.embedded ? 0.6 : 1;
-        if (!lowG && !this.embedded) { ctx.shadowColor = col; ctx.shadowBlur = 14; }
-        const n = 6;
+        // THE SOURCE: asymmetric cyan/magenta/white shards around a distorted stolen shell.
+        const shell = "#6ef2ff", palette = ["#6ef2ff", "#d65cff", "#ffffff"];
+        ctx.rotate(this.embedded ? 0.18 : t2 / 250 * this.spinDir);
+        ctx.globalAlpha = this.embedded ? 0.52 : 1;
+        if (!lowG && !this.embedded) { ctx.shadowColor = returned ? "#fff" : shell; ctx.shadowBlur = 15; }
+        const n = Math.max(1, Math.min(6, this.integrity + 1));
         for (let i = 0; i < n; i++) {
-          const a = i / n * Math.PI * 2, px = Math.cos(a) * rr, py = Math.sin(a) * rr;
+          const a = (i * 1.73 + i * i * 0.11) % (Math.PI * 2), orbit = rr * (0.82 + (i % 3) * 0.12), px = Math.cos(a) * orbit, py = Math.sin(a) * orbit * 0.82;
           ctx.save(); ctx.translate(px, py); ctx.rotate(a + Math.PI / 4);
-          ctx.fillStyle = col; ctx.beginPath();
-          ctx.moveTo(-9, 0); ctx.lineTo(0, -6); ctx.lineTo(11, 0); ctx.lineTo(0, 6); ctx.closePath(); ctx.fill();
-          ctx.shadowBlur = 0; ctx.strokeStyle = ink; ctx.lineWidth = 1.5; ctx.stroke();
-          ctx.restore();
+          ctx.fillStyle = palette[i % palette.length]; ctx.beginPath();
+          ctx.moveTo(-8 - (i % 2) * 4, 0); ctx.lineTo(0, -5 - (i % 3)); ctx.lineTo(12 + (i % 2) * 3, 0); ctx.lineTo(0, 5); ctx.closePath(); ctx.fill();
+          ctx.shadowBlur = 0; ctx.strokeStyle = ink; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore();
         }
-        ctx.shadowBlur = 0; ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.fill();
-        ctx.globalAlpha = 0.9; ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke();
+        ctx.shadowBlur = 0; ctx.strokeStyle = returned ? "#fff" : shell; ctx.lineWidth = returned ? 4 : 2; ctx.setLineDash(batted ? [6, 5] : []);
+        ctx.beginPath(); ctx.ellipse(0, 0, rr + 5 + Math.sin(t2 / 80) * 3, rr * 0.72, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = returned ? "#fff" : "#171021"; ctx.beginPath();
+        if (returned) { ctx.moveTo(0, -9); ctx.lineTo(9, 0); ctx.lineTo(0, 9); ctx.lineTo(-9, 0); ctx.closePath(); }
+        else ctx.arc(0, 0, 7, 0, Math.PI * 2);
+        ctx.fill();
+        if (returned) { ctx.strokeStyle = "#6ef2ff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(12, 0); ctx.moveTo(0, -12); ctx.lineTo(0, 12); ctx.stroke(); }
         ctx.restore(); return;
       }
-      // THE IRON COLOSSUS: an industrial SAW BLADE — toothed steel disc + hub,
-      // grinding sparks off the leading edge; embedded = bitten into the wall
-      ctx.rotate(this.embedded ? 0.3 : t2 / 90);
+      // THE IRON COLOSSUS: steel, furnace orange, mechanical teeth, piston hub.
+      const steel = "#69717b", furnace = "#ff8a32";
+      ctx.rotate(this.embedded ? 0.3 : t2 / 90 * this.spinDir);
       ctx.globalAlpha = this.embedded ? 0.66 : 1;
-      if (!lowG && !this.embedded) { ctx.shadowColor = col; ctx.shadowBlur = 10; }
-      const teeth = 12;
-      ctx.fillStyle = col; ctx.strokeStyle = ink; ctx.lineWidth = 2;
+      if (!lowG && !this.embedded) { ctx.shadowColor = returned ? "#fff" : furnace; ctx.shadowBlur = 10; }
+      const teeth = Math.max(2, Math.round(12 * ratio));
+      ctx.fillStyle = steel; ctx.strokeStyle = returned ? "#fff" : (batted ? furnace : ink); ctx.lineWidth = returned ? 4 : 2;
       ctx.beginPath();
       for (let i = 0; i < teeth; i++) {
-        const a0 = (i / teeth) * Math.PI * 2, a1 = ((i + 0.5) / teeth) * Math.PI * 2;
-        ctx.lineTo(Math.cos(a0) * rr, Math.sin(a0) * rr);            // tooth tip
-        ctx.lineTo(Math.cos(a1) * rr * 0.78, Math.sin(a1) * rr * 0.78); // valley
+        const a0 = (i / 12) * Math.PI * 2, a1 = ((i + 0.5) / 12) * Math.PI * 2;
+        ctx.lineTo(Math.cos(a0) * rr, Math.sin(a0) * rr);
+        ctx.lineTo(Math.cos(a1) * rr * 0.78, Math.sin(a1) * rr * 0.78);
       }
       ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0; ctx.stroke();
-      // hub + bolt holes
-      ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
-      if (!this.embedded) {   // spin-blur arc + grind sparks off the rim
-        ctx.globalAlpha = 0.4; ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(0, 0, rr - 3, 0, Math.PI * 1.2); ctx.stroke();
+      ctx.fillStyle = ink; ctx.fillRect(-12, -7, 24, 14); ctx.fillStyle = returned ? "#fff" : furnace; ctx.fillRect(-6, -5, 12, 10);
+      if (returned) { ctx.strokeStyle = C.perfect; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(10, 0); ctx.moveTo(0, -10); ctx.lineTo(0, 10); ctx.stroke(); }
+      if (!this.embedded) {
+        ctx.globalAlpha = 0.4; ctx.strokeStyle = returned ? C.perfect : furnace; ctx.lineWidth = 2; ctx.setLineDash(batted ? [7, 5] : []);
+        ctx.beginPath(); ctx.arc(0, 0, rr - 3, 0, Math.PI * 1.2); ctx.stroke(); ctx.setLineDash([]);
         if (!lowG) { ctx.globalAlpha = 0.8; ctx.fillStyle = "#ffd66e";
-          for (let s = 0; s < 3; s++) { const sa = t2 / 40 + s * 2.1, sr2 = rr + 3 + (s * 5); ctx.fillRect(Math.cos(sa) * sr2, Math.sin(sa) * sr2, 3, 3); } }
-      } else {   // lodged prongs read it as bitten into the wall
+          for (let s = 0; s < 3; s++) { const sa = t2 / 40 + s * 2.1, sr2 = rr + 3 + s * 5; ctx.fillRect(Math.cos(sa) * sr2, Math.sin(sa) * sr2, 3, 3); } }
+      } else {
         ctx.globalAlpha = 0.7; ctx.strokeStyle = ink; ctx.lineWidth = 3; ctx.setLineDash([5, 4]);
         ctx.beginPath(); ctx.arc(0, 0, rr + 4, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
       }

@@ -186,6 +186,25 @@ const SFX = {
     if (!this.ctx) return; const t = this.ctx.currentTime;
     this._click(t, 0.18); this._noise(0.18, t, { type: "lowpass", freq: 360, vol: 0.15 });
   },
+  sweeperClang(sourceStyle, finalHit) {
+    if (!this.ctx) return; const t = this.ctx.currentTime, source = sourceStyle === "shard";
+    this._click(t, finalHit ? 0.18 : 0.10);
+    this._osc(source ? 920 : 360, finalHit ? 0.18 : 0.11, t, { type: source ? "triangle" : "square", vol: finalHit ? 0.10 : 0.055,
+      slideTo: source ? (finalHit ? 340 : 610) : (finalHit ? 95 : 220), attack: 0.001 });
+  },
+  sweeperBat(perfect, sourceStyle) {
+    if (!this.ctx) return; const t = this.ctx.currentTime, source = sourceStyle === "shard";
+    this._click(t, perfect ? 0.20 : 0.12);
+    this._osc(source ? 760 : 520, 0.16, t, { type: source ? "sine" : "square", vol: perfect ? 0.11 : 0.07,
+      slideTo: perfect ? (source ? 1480 : 980) : (source ? 420 : 260), attack: 0.001 });
+  },
+  sweeperBounce(sourceStyle, embedded) {
+    if (!this.ctx) return; const t = this.ctx.currentTime, source = sourceStyle === "shard";
+    this._click(t, embedded ? 0.15 : 0.065);
+    // Source tails fall in reverse pitch; Colossus contacts stay low and mechanical.
+    this._osc(source ? 1120 : 230, embedded ? 0.19 : 0.10, t, { type: source ? "sine" : "square", vol: embedded ? 0.085 : 0.04,
+      slideTo: source ? 430 : (embedded ? 82 : 160), attack: 0.001 });
+  },
   throwBlade() {
     const t = this.ctx.currentTime;
     this._noise(0.2, t, { type: "bandpass", freq: 1100, q: 0.6, vol: 0.16 });

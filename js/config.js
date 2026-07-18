@@ -218,7 +218,7 @@ const CONFIG = {
     descentLiftV: -520,       // the void-updraft that catches the player during beat 1
     cycleCd: 2.5,           // seconds between mechanic casts (phase 1)
     shockDmg: 18, shockSpeed: 720, shockR: 16,
-    sweeperDmg: 18, sweeperSpeed: 600,
+    sweeperDmg: 18, sweeperSpeed: 600, sweeperCrossings: 2, sweeperIntegrity: 4, sweeperMaxLife: 5.0, sweeperEmbedDur: 0.8,
     crossDmg: 16, crossSpeed: 740,
     copyDelay: 0.5,
     platformCollapseCd: 1.3, crackWarn: 0.8,
@@ -272,7 +272,7 @@ const CONFIG = {
     atkCd: 2.5, windup: 0.6, shockDmg: 20, shockSpeed: 720, shockR: 24,
     quakeSpeedMult: 0.78, quakeRMult: 1.25,   // his waves are QUAKES: taller, slower, his alone
     chargeWindup: 0.7, chargeSpeed: 1350,
-    sweeperDmg: 16, sweeperSpeed: 540, sweeperY: 540,
+    sweeperDmg: 16, sweeperSpeed: 540, sweeperY: 540, sweeperIntegrity: 5, sweeperMaxLife: 6.5,
     panelCount: 4, panelStep: 0.72, crossDmg: 14, crossSpeed: 640, crossCd: 2.2,
     ventDur: 2.2, ventW: 150, ventLift: 2600,
     staggerDur: 1.1, coreOpenDur: 2.5, coreOpenMult: 1.65,

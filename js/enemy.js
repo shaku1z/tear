@@ -2007,6 +2007,7 @@ class Colossus extends Enemy {
     this.zones = []; this.zoneColor = CONFIG.colors.slam;   // phase-3 hot floor panels (reuses the boss-zone system)
     this.crossT = 0;
     this.ventT = 0; this.ventX = this.x; this.coreOpenT = 0; this.shieldEmbedT = 0;
+    this.sweeperPosture = 0; this.shieldArmRuptured = false;
     this.panelIdx = -1; this.panelStepT = 0; this.meltdownCd = CONFIG.colossus.meltdownCd;
     this.attackIdx = 0; this._playerRef = null;
     this.chargeStop = false; this.smashTX = 0; this.grabCd = 0;   // bruiser kit
@@ -2049,11 +2050,16 @@ class Colossus extends Enemy {
   }
   _throwShield(projectiles) {
     const C = this.cfg;
+    const active = projectiles.find((shot) => shot && !shot.dead && shot.family === "sweeper" && shot.owner === this);
+    if (active) return active;   // one counter-object per owner: no overlapping cheap lanes
     const p = new Projectile(this.x + this.facing * (this.hw + 12), this.y, this.facing * C.sweeperSpeed, 0);
-    p.setFamily("sweeper"); p.sweeperStyle = "saw"; p.r = 22; p.dmg = C.sweeperDmg; p.bounces = 999; p.life = 60;
-    p.owner = this; p.tint = CONFIG.colors.armoredShield; p.maxCrossings = C.shieldCrossings; p.embeddedLife = C.shieldEmbedDur;
+    p.sweeperStyle = "saw"; p.setFamily("sweeper").configureSweeper({ passes: C.shieldCrossings, integrity: C.sweeperIntegrity,
+      maxLife: C.sweeperMaxLife, embeddedLife: C.shieldEmbedDur });
+    p.r = 22; p.dmg = C.sweeperDmg; p.owner = this; p.tint = "#ff8a32";
+    p.onCountered = (shot) => this.onSweeperReturned(shot);
     projectiles.push(p);
     FX.ring(this.x, this.y, 20, CONFIG.colors.armoredShield);
+    return p;
   }
   _crossBurst(projectiles) {
     const C = this.cfg;
@@ -2096,6 +2102,17 @@ class Colossus extends Enemy {
   onShieldEmbedded() {
     this.shieldEmbedT = this.cfg.shieldEmbedDur; this.stun = Math.max(this.stun, this.cfg.shieldEmbedDur * 0.55);
     BOSSFX.juice({ banner: "BREACH THE FORTRESS", color: CONFIG.colors.armoredShield, shake: 7, zoom: 0.04, quiet: true });
+  }
+  onSweeperReturned(p) {
+    const perfect = !!(p && p.perfect);
+    this.sweeperPosture = clamp(this.sweeperPosture + (perfect ? 0.75 : 0.45), 0, 1);
+    this.shieldArmRuptured = true;
+    this.state = "recover"; this.stateT = perfect ? 1.05 : 0.68;
+    this.stun = Math.max(this.stun, this.stateT);
+    if (perfect) this.coreOpenT = Math.max(this.coreOpenT, 1.8);
+    BOSSFX.juice({ banner: perfect ? "CORE EXPOSED" : "SHIELD ARM RUPTURED", color: perfect ? CONFIG.colors.perfect : "#ff8a32",
+      shake: perfect ? 13 : 8, flash: perfect ? 0.42 : 0.18, slowmo: perfect ? 0.42 : 0, zoom: perfect ? 0.09 : 0.045, hitstop: perfect ? 0.09 : 0.045 });
+    FX.shockwave(this.x, this.y, 12, perfect ? CONFIG.colors.perfect : "#ff8a32", perfect ? 260 : 180, 6);
   }
   onProjectileGroundImpact(p) {
     const impactY = p.landingY != null ? p.landingY : CONFIG.world.groundY;
@@ -2274,6 +2291,14 @@ class Colossus extends Enemy {
       ctx.fillStyle = this.coreOpenT > 0 ? CONFIG.colors.armoredShield : CONFIG.colors.boss; ctx.globalAlpha = pulse;
       ctx.beginPath(); ctx.arc(this.x, this.y + 6, 22, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1; ctx.strokeStyle = CONFIG.colors.slam; ctx.lineWidth = 3; ctx.stroke();
+    }
+    if (!this.shielded && this.shieldArmRuptured) {
+      // The returned saw leaves the front actuator visibly broken; posture damage
+      // reads on the body even while a perfect return exposes the molten core.
+      const ax = this.x + this.facing * (this.hw + 7), ay = this.y + 3;
+      ctx.strokeStyle = "#ff8a32"; ctx.lineWidth = 5; ctx.lineCap = "square";
+      ctx.beginPath(); ctx.moveTo(ax, ay - 30); ctx.lineTo(ax - this.facing * 15, ay - 8); ctx.lineTo(ax + this.facing * 5, ay + 8); ctx.lineTo(ax - this.facing * 12, ay + 31); ctx.stroke();
+      ctx.fillStyle = THEME.ink; ctx.fillRect(ax - 6, ay - 7, 12, 14);
     }
     // wind-up telegraph
     if (this.state === "windup") {
@@ -3064,10 +3089,27 @@ class Source extends Enemy {
   }
   _sweeper(projectiles, tint) {
     const C = CONFIG.source;
+    const active = projectiles.find((shot) => shot && !shot.dead && shot.family === "sweeper" && shot.owner === this);
+    if (active) return active;
     const p = new Projectile(this.x, Math.min(CONFIG.world.groundY - 24, this.y + 90), -C.sweeperSpeed, 0);
-    p.setFamily("sweeper"); p.sweeperStyle = "shard"; p.r = 22; p.dmg = C.sweeperDmg; p.bounces = 999; p.life = 60;
-    p.owner = this; p.tint = tint || this.color; p.maxCrossings = 2; p.embeddedLife = 0.6; projectiles.push(p);
+    p.sweeperStyle = "shard"; p.setFamily("sweeper").configureSweeper({ passes: C.sweeperCrossings, integrity: C.sweeperIntegrity,
+      maxLife: C.sweeperMaxLife, embeddedLife: C.sweeperEmbedDur });
+    p.r = 22; p.dmg = C.sweeperDmg; p.owner = this; p.tint = "#6ef2ff";
+    p.onCountered = (shot) => this.onSweeperReturned(shot); projectiles.push(p);
     FX.ring(this.x, this.y, 18, this.color);
+    return p;
+  }
+  onSweeperReturned(p) {
+    const perfect = !!(p && p.perfect);
+    // A returned memory does not become generic damage: it breaks the copied
+    // sequence itself and buys a readable gap before the next stolen move.
+    this.copyT = -1; this._burstN = 0;
+    this.atkT = Math.max(this.atkT, CONFIG.source.cycleCd * (perfect ? 1.6 : 1.25));
+    this.stun = Math.max(this.stun, perfect ? 0.55 : 0.32); this.breachRipple = 1;
+    this.echoCaption = perfect ? "MEMORY COLLAPSED" : "MEMORY FRACTURES"; this.captionT = perfect ? 1.7 : 1.2;
+    FX.ring(this.x, this.y, perfect ? 30 : 20, "#6ef2ff"); FX.burst(this.x, this.y, 0, -1, perfect ? 15 : 9, "#d65cff");
+    BOSSFX.juice({ banner: perfect ? "MEMORY COLLAPSED" : "MEMORY FRACTURED", color: perfect ? "#ffffff" : "#6ef2ff",
+      shake: perfect ? 11 : 6, flash: perfect ? 0.36 : 0.14, slowmo: perfect ? 0.38 : 0, zoom: perfect ? 0.08 : 0.035, hitstop: perfect ? 0.08 : 0.035, quiet: !perfect });
   }
   _cross(projectiles) {
     const C = CONFIG.source;

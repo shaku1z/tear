@@ -2250,6 +2250,20 @@
 
     // thrown blade pierce
     if (blade.thrown) {
+      // The thrown blade is a lower-reward emergency answer to a sweeper. It
+      // cuts integrity and immediately recalls, so it cannot also pierce the room.
+      for (const p of projectiles) {
+        if (p.dead || p.family !== "sweeper" || p.sweeperState !== "hostile" || p.hitLatch) continue;
+        if (!segCircle(blade.x, blade.y, blade.tipX, blade.tipY, p.x, p.y, p.r + 7)) continue;
+        const redirected = p.counterSweeper("thrown", blade.vx, blade.vy, len(blade.vx, blade.vy));
+        if (redirected) {
+          blade.pierced = new Set(); blade.state = "returning";
+          FX.burst(p.x, p.y, blade.vx, blade.vy, p.dead ? 10 : 6, p.sweeperStyle === "shard" ? "#6ef2ff" : "#ff8a32");
+          addFloater(p.x, p.y - 22, p.dead ? "DEFUSED" : "REDIRECT", true, CONFIG.colors.deflected);
+          addStyle("deflect"); hitStop = CONFIG.hitStop.small; addShake(CONFIG.juice.shakeSmall);
+          break;
+        }
+      }
       for (const e of enemies) {
         if (e.dead || e.dying || e.introT > 0 || blade.pierced.has(e)) continue;
         if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y, e.radius + 4)) {
@@ -2336,8 +2350,41 @@
 
     // held blade vs projectiles (deflect / perfect parry; mines are defused on contact)
     for (const p of projectiles) {
-      if (p.dead || p.deflected || p.unparryable || blade.state !== "held") continue;   // capability contract decides what the blade may counter
+      if (p.dead || blade.state !== "held") continue;
       if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, p.x, p.y, p.r + 4)) {
+        if (p.family === "sweeper") {
+          if (p.sweeperState !== "hostile" || p.hitLatch) continue;
+          const psp = len(p.vx, p.vy) || 1, ssp = blade.tipSpeed || 1;
+          const counter = clamp((blade.tipVX / ssp) * (-p.vx / psp) + (blade.tipVY / ssp) * (-p.vy / psp), 0, 1);
+          // A slow tap or a cut travelling with the saw only clangs it locally.
+          // The player must commit to a fast, opposing cut for the real answer.
+          if (blade.tipSpeed < CONFIG.blade.deflectMinSpeed || counter < 0.2) {
+            if (p.sweeperClang()) {
+              FX.burst(p.x, p.y, -p.vx, -p.vy, 4, p.sweeperStyle === "shard" ? "#6ef2ff" : "#ff8a32");
+              addFloater(p.x, p.y - 18, "CLANG", false, "#b9c0c8");
+              hitStop = CONFIG.hitStop.small * 0.55; addShake(CONFIG.juice.shakeSmall * 0.55);
+            }
+            continue;
+          }
+          const effPerfect = CONFIG.blade.perfectSpeed * lerp(1, CONFIG.blade.counterParryFactor, counter);
+          const perfect = blade.tipSpeed >= effPerfect && counter > 0.7;
+          if (p.counterSweeper(perfect ? "perfect" : "bat", blade.tipVX, blade.tipVY, blade.tipSpeed)) {
+            const pcol = perfect ? CONFIG.colors.perfect : (p.sweeperStyle === "shard" ? "#6ef2ff" : "#ff8a32");
+            FX.burst(p.x, p.y, blade.tipVX, blade.tipVY, perfect ? 14 : 8, pcol);
+            FX.ring(p.x, p.y, perfect ? 12 : 7, pcol);
+            addFloater(p.x, p.y - 22, perfect ? "RETURN!" : "BAT!", perfect, pcol);
+            hitStop = perfect ? CONFIG.hitStop.big : CONFIG.hitStop.small;
+            addShake(perfect ? CONFIG.juice.shakeBig : CONFIG.juice.shakeSmall); addStyle(perfect ? "parry" : "deflect");
+            if (perfect) {
+              AT.parry(); addZoom(CONFIG.juice.zoomParry * 1.35); addFlash(CONFIG.juice.flashParry * 1.25);
+              Backdrop.flare(p.x, p.y, pcol, 480, 0.55); triggerSlowmo();
+              if (run.mods.parryGuard) player.guardT = CONFIG.resilience.parryGuardTime;
+              fire(run.mods.onParry, makeEv(p.x, p.y, null));
+            }
+          }
+          continue;
+        }
+        if (p.deflected || p.unparryable) continue;   // capability contract decides what the blade may counter
         if (p.mine) {
           p.dead = true;
           FX.burst(p.x, p.y, 0, -1, 6, CONFIG.colors.deflected);
@@ -2405,6 +2452,29 @@
     // projectiles vs actors (bombs/mines/mud handled separately below)
     for (const p of projectiles) {
       if (p.dead || p.bomb || p.mine || p.mud) continue;
+      if (p.family === "sweeper") {
+        if (p.sweeperState === "returned" && p.owner && !p.owner.dead && !p.owner.dying &&
+            len(p.x - p.owner.x, p.y - p.owner.y) <= p.r + p.owner.radius) {
+          if (typeof p.onCountered === "function") p.onCountered(p);
+          p.shatterSweeper("ownerReturn");
+        } else if (p.sweeperState === "hostile" &&
+            aabbOverlap(p.x, p.y, p.r, p.r, player.x, player.y, player.hw, player.hh)) {
+          if (run.mods.phaseStep && player.dashTimer > 0) {
+            const spd = Math.max(len(p.vx, p.vy), CONFIG.proj.speed) * CONFIG.blade.deflectBoost;
+            p.counterSweeper("phaseStep", player.dashX || player.facing, player.dashY || 0, spd);
+            FX.burst(p.x, p.y, player.dashX || player.facing, player.dashY || 0, 9, CONFIG.colors.deflected);
+            FX.flash(p.x, p.y, 38, CONFIG.colors.deflected); addFloater(p.x, p.y - 18, "PHASE!", true, CONFIG.colors.deflected);
+            addStyle("deflect");
+          } else {
+            const r = player.takeDamage(p.dmg != null ? p.dmg : CONFIG.proj.dmg, p.x, p.owner);
+            if (r) {
+              p.shatterSweeper("playerHit");
+              if (r === "hit") { loseStyle(); SFX.hurt(); } else onShieldAbsorb();
+            } else if (player.dashTimer > 0) AT.dashDodge(p);
+          }
+        }
+        continue;   // batted/returned/embedded sweepers are harmless counter-objects, never generic shots
+      }
       if (p.deflected) {
         for (const e of enemies) {
           if (e.dead || e.dying) continue;
