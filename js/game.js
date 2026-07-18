@@ -59,7 +59,9 @@
   let settings = loadSettings();
   function loadSettings() {
     const def = { sens: CONFIG.blade.aimSensitivity, shake: 1, flash: 1, reducedMotion: false, highContrast: false,
-      vol: 0.6, music: true, gfx: "auto", controls: "auto", touchAim: "stick", cinematics: "full", padPreset: "default" };
+      vol: 0.6, music: true, gfx: "auto", controls: "auto", touchAim: "stick", cinematics: "full", padPreset: "default",
+      padDeadL: 0.22, padDeadR: 0.22, padAimSens: 1, tetherMode: "hold", dashDoubleTap: false,
+      vibration: "medium", glyphStyle: "auto", autoPauseDisconnect: true };
     try { return Object.assign(def, JSON.parse(CG.store.get("tear_settings") || "{}")); }
     catch (e) { return def; }
   }
@@ -80,6 +82,14 @@
     // controller preset (sanitized by setPreset; unknown/missing -> "default"); write
     // the canonical value back so a bad stored string is corrected on save.
     if (typeof PAD !== "undefined") settings.padPreset = PAD.setPreset(settings.padPreset);
+    // controller tunables flow onto CONFIG.pad, which gamepad.js reads (it can't see `settings`)
+    CONFIG.pad.deadL = clamp(settings.padDeadL == null ? 0.22 : settings.padDeadL, 0.10, 0.40);
+    CONFIG.pad.deadR = clamp(settings.padDeadR == null ? 0.22 : settings.padDeadR, 0.08, 0.40);
+    CONFIG.pad.aimSens = clamp(settings.padAimSens == null ? 1 : settings.padAimSens, 0.5, 2);
+    CONFIG.pad.tetherMode = settings.tetherMode === "toggle" ? "toggle" : "hold";
+    CONFIG.pad.doubleTapDash = !!settings.dashDoubleTap;
+    CONFIG.pad.vibration = ["off", "low", "medium", "high"].indexOf(settings.vibration) >= 0 ? settings.vibration : "medium";
+    CONFIG.pad.glyphStyle = ["auto", "playstation", "xbox", "generic"].indexOf(settings.glyphStyle) >= 0 ? settings.glyphStyle : "auto";
     if (typeof SFX !== "undefined") { SFX.vol = settings.vol; SFX.musicOn = settings.music; SFX.setVol(settings.vol); SFX.setMusic(settings.music); }
   }
   if (typeof SFX !== "undefined") SFX.init();
@@ -415,6 +425,7 @@
   let arsenalScroll = 0;                // scroll offset for the pause/defeat "Your Arsenal" panel
   let settingsReturn = "menu";          // where the Settings BACK button returns to (menu, or paused mid-run)
   let settingsTab = "general";          // Settings hub: active tab (remembered across opens; contextual opens set it)
+  let _settingsMax = 0;                 // last measured max scroll of the active settings tab
   let replayCtx = null;                 // active replay: { data, stage, platforms, from, loading }
   let overInfo = null;        // game-over summary
   let selMode = "endless", selDiff = "normal", selWeapon = "sword", selBoss = "shuffle";
@@ -455,6 +466,7 @@
   let uiZoom = 1;   // overlay zoom for small touch screens (draft/pause/gameover readability)
   let uiDensity = "desktop";   // current UI density profile (touch = bigger type + targets)
   let _lastInputMode = "";     // last Input.mode written to <body data-imode> (cursor ownership)
+  let _padWasConnected = false; // edge-detect controller unplug for auto-pause
   let bossIntro = null;   // BOSS THEATER arrival ceremony: { boss, t, dur, delay } while the name card runs
   let bossBeat = null;    // screen-space phase title: { text, color, t, dur }
   const CINEMA = new Cinematics.Director();   // one exclusive presentation channel for gameplay cinematics
@@ -471,7 +483,14 @@
 
   // ---- helpers ----
   // screen shake is also the game's haptic driver: big impacts buzz harder (mobile)
-  function addShake(m) { const v = m * shakeScale; if (v > shake) shake = v; Input.buzz(m >= CONFIG.juice.shakeBig ? 26 : 12); }
+  function addShake(m) {
+    const v = m * shakeScale; if (v > shake) shake = v;
+    Input.buzz(m >= CONFIG.juice.shakeBig ? 26 : 12);
+    // controller rumble rides the same juice hook, scaled by shake magnitude and
+    // gated by the Vibration setting (no-op when off / unsupported)
+    const big = CONFIG.juice.shakeBig || 20;
+    if (typeof PAD !== "undefined") PAD.rumble(clamp(m / big, 0.25, 1), m >= big ? 180 : 90);
+  }
   function addZoom(p) { const z = p * A11Y.motionScale; if (1 + z > zoom) zoom = 1 + z; }
   function addFlash(f) { const v = f * A11Y.flashScale; if (v > flash) flash = v; }
   function triggerSlowmo() { slowmo = CONFIG.juice.parrySlowmo; }
@@ -3230,7 +3249,15 @@
 
     // controller: translate the pad into the shared Input channels BEFORE the
     // sim + UI read them (menus get dpad nav + A/B, gameplay gets move/aim/actions)
-    if (typeof PAD !== "undefined") PAD.poll(dt, state !== "playing");
+    if (typeof PAD !== "undefined") {
+      PAD.poll(dt, state !== "playing");
+      // auto-pause if the active controller drops mid-run (don't let the player die
+      // while reconnecting). Toggle in Settings ▸ General.
+      if (_padWasConnected && !PAD.connected && state === "playing" && settings.autoPauseDisconnect !== false) {
+        state = "paused"; try { document.exitPointerLock(); } catch (e) {}
+      }
+      _padWasConnected = PAD.connected;
+    }
     Input.updateUI();   // build the per-frame UI action snapshot after the pad has written its edges
     // cursor ownership: mouse mode shows the pointer in menus; every other mode hides it
     if (Input.mode !== _lastInputMode) { _lastInputMode = Input.mode; try { document.body.dataset.imode = Input.mode; } catch (e) {} }
@@ -5886,6 +5913,30 @@
         settings.padPreset = PAD.setPreset(PAD_PRESET_ORDER[ni]); save();
       });
       K.note(meta.line + "     " + meta.map);
+      K.wide("Tether behavior", settings.tetherMode === "toggle" ? "TOGGLE" : "HOLD", false,
+        () => { settings.tetherMode = settings.tetherMode === "toggle" ? "hold" : "toggle"; save(); });
+      K.toggle("Directional double-tap dash", !!settings.dashDoubleTap,
+        () => { settings.dashDoubleTap = !settings.dashDoubleTap; save(); });
+      const dl = settings.padDeadL == null ? 0.22 : settings.padDeadL, dr = settings.padDeadR == null ? 0.22 : settings.padDeadR;
+      K.stepper("Left-stick deadzone", Math.round(dl * 100) + "%",
+        () => { settings.padDeadL = clamp(+(dl - 0.02).toFixed(2), 0.10, 0.40); save(); },
+        () => { settings.padDeadL = clamp(+(dl + 0.02).toFixed(2), 0.10, 0.40); save(); });
+      K.stepper("Right-stick deadzone", Math.round(dr * 100) + "%",
+        () => { settings.padDeadR = clamp(+(dr - 0.02).toFixed(2), 0.08, 0.40); save(); },
+        () => { settings.padDeadR = clamp(+(dr + 0.02).toFixed(2), 0.08, 0.40); save(); });
+      const asv = settings.padAimSens == null ? 1 : settings.padAimSens;
+      K.stepper("Controller aim sensitivity", Math.round(asv * 100) + "%",
+        () => { settings.padAimSens = clamp(+(asv - 0.1).toFixed(2), 0.5, 2); save(); },
+        () => { settings.padAimSens = clamp(+(asv + 0.1).toFixed(2), 0.5, 2); save(); });
+      K.wide("Vibration", (settings.vibration || "medium").toUpperCase(), false, () => {
+        const order = ["off", "low", "medium", "high"], i = order.indexOf(settings.vibration || "medium");
+        settings.vibration = order[(i + 1) % order.length]; save();
+        if (typeof PAD !== "undefined") PAD.rumble(0.8, 160);   // preview the new strength
+      });
+      K.wide("Controller glyphs", (settings.glyphStyle || "auto").toUpperCase(), false, () => {
+        const order = ["auto", "playstation", "xbox", "generic"], i = order.indexOf(settings.glyphStyle || "auto");
+        settings.glyphStyle = order[(i + 1) % order.length]; save();
+      });
       K.stepper("Blade / mouse sensitivity", settings.sens.toFixed(2),
         () => { settings.sens = clamp(+(settings.sens - 0.1).toFixed(2), 0.2, 3); save(); },
         () => { settings.sens = clamp(+(settings.sens + 0.1).toFixed(2), 0.2, 3); save(); });
@@ -5900,6 +5951,8 @@
     } else if (tab === "accessibility") {
       return drawAccessibilityRows(fx, rx, y0);
     } else {   // general
+      K.toggle("Auto-pause on controller disconnect", settings.autoPauseDisconnect !== false,
+        () => { settings.autoPauseDisconnect = settings.autoPauseDisconnect === false; save(); });
       K.note((Input.touchActive() ? "TOUCH" : "DESKTOP") + " device   ·   EFFECTS " + (settings.gfx === "auto" ? "AUTO (" + (GFX.low ? "LOW" : "HIGH") + ")" : settings.gfx.toUpperCase()));
       const yv = K.end();
       if (installPrompt) uiButtons.push({ x: fx, y: yv + 6, w: 210, h: 34, size: 12, label: "⤓ INSTALL THE APP",
@@ -5918,12 +5971,17 @@
   function renderSettings() {
     const t = UI.t;
     UI.header(ctx, "SETTINGS", "tune controls, sound, feel, and feedback", eIn, SCREEN_HUES.settings);
-    settingsTab = padTabStep(SETTINGS_TABS, settingsTab);   // L1/R1 switch tabs
+    settingsTab = padTabStep(SETTINGS_TABS, settingsTab, () => { listScroll = 0; _settingsMax = 0; });   // L1/R1 switch tabs
     UI.tabs(ctx, "settings", SETTINGS_TABS.map((x) => x[1]), Math.max(0, SETTINGS_TABS.findIndex((x) => x[0] === settingsTab)), 150, (b) => {
-      const i = b._tab; b.action = () => { settingsTab = SETTINGS_TABS[i][0]; }; uiButtons.push(b);
+      const i = b._tab; b.action = () => { if (SETTINGS_TABS[i][0] !== settingsTab) { settingsTab = SETTINGS_TABS[i][0]; listScroll = 0; _settingsMax = 0; } }; uiButtons.push(b);
     });
-    const cx = W / 2, fx = cx - 320, rx = cx + 320;
-    drawSettingsTabContent(settingsTab, fx, rx, 224);
+    const cx = W / 2, fx = cx - 320, rx = cx + 320, top = 224, bottom = LAY.backY - 16, viewH = bottom - top;
+    listScroll = clamp(listScroll, 0, _settingsMax);   // honour last frame's measured max (handleUI clamps to a global ceiling)
+    ctx.save(); ctx.beginPath(); ctx.rect(fx - 44, top - 8, (rx - fx) + 88, viewH + 16); ctx.clip();
+    const contentEnd = drawSettingsTabContent(settingsTab, fx, rx, top - listScroll);
+    ctx.restore();
+    _settingsMax = Math.max(0, (contentEnd + listScroll) - top - viewH);
+    if (_settingsMax > 0) UI.scrollHint(ctx, W / 2, bottom + 6, listScroll > 0, listScroll < _settingsMax);
     // BACK returns to the menu, or to the pause screen when opened mid-run
     uiButtons.push({ x: W / 2 - LAY.backW / 2, y: LAY.backY, w: LAY.backW, h: LAY.backH,
       label: settingsReturn === "paused" ? "‹  BACK TO PAUSE" : "‹  BACK",

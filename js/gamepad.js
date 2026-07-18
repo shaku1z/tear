@@ -13,6 +13,15 @@ CONFIG.pad = {
   menuScrollDead: 0.25,   // right-stick deadzone before it scrolls a panel
   menuScrollMaxSpeed: 950,// px/sec at full right-stick deflection (curved response)
   activityBias: 0.12,     // stick must exceed dead+this to claim UI ownership (drift can't steal it)
+  // user-tunable (written by applySettings from the settings object):
+  deadL: 0.22,            // left-stick (movement) deadzone
+  deadR: 0.22,            // right-stick (blade) deadzone
+  aimSens: 1.0,           // controller blade-aim sensitivity multiplier
+  tetherMode: "hold",     // "hold" | "toggle"
+  doubleTapDash: false,   // directional double-tap dash (off by default — accessibility)
+  doubleTapWindow: 0.25,  // seconds between the two taps
+  vibration: "medium",    // "off" | "low" | "medium" | "high"
+  glyphStyle: "auto",     // "auto" | "playstation" | "xbox" | "generic"
 };
 
 // Controller presets (standard Gamepad API indices): 0 Cross/A · 1 Circle/B ·
@@ -39,6 +48,8 @@ const PAD = {
   _held: new Set(),   // synthetic key codes we injected into Input.held
   preset: "default",  // active controller preset (key into PAD_PRESETS)
   _resync: false,     // snapshot physical buttons without firing edges (post preset-switch)
+  _tetherLatched: false, _tetherWas: false,   // toggle-mode tether state
+  _dtDir: 0, _dtLastDir: 0, _dtT: 999,        // directional double-tap-dash tracking
 
   init() {
     window.addEventListener("gamepadconnected", (e) => {
@@ -49,7 +60,7 @@ const PAD = {
       if (e.gamepad.index === this.index) {
         this.connected = false; this.index = -1; this.active = false;
         this.toastT = 2.4; this.toastText = "CONTROLLER DISCONNECTED";
-        this._release(); Input.padTether = false;   // never leave the tether stuck on after unplug
+        this._release(); Input.padTether = false; this._tetherLatched = false;   // never leave the tether stuck on after unplug
         Input.padScrollX = 0; Input.padScrollY = 0;
       }
     });
@@ -67,9 +78,67 @@ const PAD = {
   setPreset(name) {
     this.preset = PAD_PRESETS[name] ? name : "default";
     this._release();
-    Input.padTether = false;
+    Input.padTether = false; this._tetherLatched = false; this._dtDir = 0;
     this._resync = true;
     return this.preset;
+  },
+
+  // directional double-tap dash (opt-in). A tap is a rising edge from neutral;
+  // the second same-direction tap within the window fires a dash (steered by the
+  // held direction). Left/Right only — Up is Jump; Down needs an airborne check.
+  _detectDoubleTapDash(gp, ax, dt) {
+    const dpL = this._down(gp, 14), dpR = this._down(gp, 15);
+    let dir = 0;
+    if (dpL) dir = -1; else if (dpR) dir = 1;
+    else if (ax <= -0.65) dir = -1; else if (ax >= 0.65) dir = 1;
+    const nearNeutral = !dpL && !dpR && Math.abs(ax) < 0.25;
+    this._dtT += dt;
+    if (this._dtT > CONFIG.pad.doubleTapWindow) this._dtDir = 0;
+    if (dir !== 0 && this._dtLastDir === 0) {   // rising edge from neutral
+      if (dir === this._dtDir && this._dtT <= CONFIG.pad.doubleTapWindow) { Input.tDash = true; this._dtDir = 0; }
+      else { this._dtDir = dir; this._dtT = 0; }
+    }
+    if (dir !== 0) this._dtLastDir = dir; else if (nearNeutral) this._dtLastDir = 0;
+  },
+
+  // rumble via the Gamepad haptics API (no-op where unsupported / when off).
+  rumble(strength, ms) {
+    if (CONFIG.pad.vibration === "off" || !this.connected) return;
+    const scale = ({ low: 0.4, medium: 0.7, high: 1 })[CONFIG.pad.vibration] || 0.7;
+    const gp = (navigator.getGamepads ? navigator.getGamepads()[this.index] : null);
+    const act = gp && (gp.vibrationActuator || (gp.hapticActuators && gp.hapticActuators[0]));
+    if (!act) return;
+    const mag = Math.max(0, Math.min((strength || 0.5) * scale, 1));
+    try {
+      if (act.playEffect) act.playEffect("dual-rumble", { duration: ms || 120, strongMagnitude: mag, weakMagnitude: mag * 0.7 });
+      else if (act.pulse) act.pulse(mag, ms || 120);
+    } catch (e) {}
+  },
+
+  // resolved glyph for a Gamepad-API button index, honouring the glyph-style setting.
+  _glyphStyle() {
+    const s = CONFIG.pad.glyphStyle;
+    if (s && s !== "auto") return s;
+    const gp = (navigator.getGamepads ? navigator.getGamepads()[this.index] : null);
+    const id = ((gp && gp.id) || "").toLowerCase();
+    if (/dualsense|dualshock|playstation|sony|054c/.test(id)) return "playstation";   // 054c = Sony vendor id
+    return "xbox";   // best neutral fallback for web audiences
+  },
+  glyph(index) {
+    const style = this._glyphStyle();
+    const PS = { 0: "✕", 1: "◯", 2: "▢", 3: "△", 4: "L1", 5: "R1", 6: "L2", 7: "R2", 9: "Options" };
+    const XB = { 0: "A", 1: "B", 2: "X", 3: "Y", 4: "LB", 5: "RB", 6: "LT", 7: "RT", 9: "Menu" };
+    const GN = { 0: "South", 1: "East", 2: "West", 3: "North", 4: "LB", 5: "RB", 6: "LT", 7: "RT", 9: "Start" };
+    const map = style === "playstation" ? PS : style === "generic" ? GN : XB;
+    return map[index] || ("#" + index);
+  },
+  // primary glyph for a preset action (prefers a shoulder so the right thumb stays
+  // on the blade). Used by dynamic control prompts.
+  bindingLabel(action) {
+    const P = PAD_PRESETS[this.preset] || PAD_PRESETS.default;
+    const arr = P[action]; if (!arr || !arr.length) return "";
+    const shoulder = arr.find((i) => i >= 4 && i <= 7);
+    return this.glyph(shoulder != null ? shoulder : arr[0]);
   },
 
   _setHeld(code, on) {
@@ -160,15 +229,16 @@ const PAD = {
       if (this._edge(gp, 6)) Input._uiPageUp = true;             // L2 = page up
       if (this._edge(gp, 7)) Input._uiPageDown = true;           // R2 = page down
       this._edge(gp, 9); this._edge(gp, 2);                      // keep prev[] fresh for shared buttons
-      this._release(); Input.padTether = false;   // no movement or tether while in menus
+      this._release(); Input.padTether = false; this._tetherLatched = false;   // no movement or tether while in menus
       return;
     }
 
     // ---- gameplay ----
     Input.padScrollX = 0; Input.padScrollY = 0;   // scroll intent is menu-only
-    // movement: left stick beyond the deadzone (or dpad) becomes held keys
-    this._setHeld("KeyA", ax < -dead || this._down(gp, 14));
-    this._setHeld("KeyD", ax > dead || this._down(gp, 15));
+    const deadL = CONFIG.pad.deadL, deadR = CONFIG.pad.deadR;
+    // movement: left stick beyond the (tunable) left deadzone, or dpad, -> held keys
+    this._setHeld("KeyA", ax < -deadL || this._down(gp, 14));
+    this._setHeld("KeyD", ax > deadL || this._down(gp, 15));
     this._setHeld("KeyW", ay < -0.5 || this._down(gp, 12));     // up (dash aim / climbs)
     this._setHeld("KeyS", ay > 0.55 || this._down(gp, 13));     // hold to drop through platforms
 
@@ -177,15 +247,24 @@ const PAD = {
     const P = PAD_PRESETS[this.preset] || PAD_PRESETS.default;
     if (this._edgeAny(gp, P.jump)) Input.tJump = true;
     if (this._edgeAny(gp, P.dash)) Input.tDash = true;
-    if (this._edgeAny(gp, P.throw)) Input.rmb = true;
+    if (this._edgeAny(gp, P.throw)) { Input.rmb = true; this._tetherLatched = false; }   // throwing releases a toggled tether
     if (this._edge(gp, 9)) Input.tPause = true;                                  // Start (universal pause)
-    // held tether-tighten: written every frame from the preset's tether button(s),
-    // on its own channel so a real mouse hold is never overwritten.
-    Input.padTether = this._downAny(gp, P.tether);
+    // optional directional double-tap dash (off by default) — never replaces the bound button
+    if (CONFIG.pad.doubleTapDash) this._detectDoubleTapDash(gp, ax, dt);
+    // tether-tighten: HOLD (held button) or TOGGLE (edge flips a latch). Its own channel,
+    // so a real mouse hold is never overwritten.
+    const tDown = this._downAny(gp, P.tether);
+    if (CONFIG.pad.tetherMode === "toggle") {
+      if (tDown && !this._tetherWas) this._tetherLatched = !this._tetherLatched;
+      Input.padTether = this._tetherLatched;
+    } else {
+      Input.padTether = tDown; this._tetherLatched = false;
+    }
+    this._tetherWas = tDown;
 
-    // right stick = radial blade aim, sharing the touch STICK channel
-    if (rMag > dead) {
-      const eff = Math.min((rMag - dead) / (1 - dead), 1);
+    // right stick = radial blade aim, sharing the touch STICK channel (tunable deadzone + sensitivity)
+    if (rMag > deadR) {
+      const eff = Math.min((rMag - deadR) / (1 - deadR) * CONFIG.pad.aimSens, 1);
       Input.stickAim = { x: (rx / rMag) * eff, y: (ry / rMag) * eff };
       Input.touchAim = true; this._stickWas = true;
     } else if (this._stickWas) {
