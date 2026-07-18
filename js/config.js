@@ -448,9 +448,9 @@ const CONFIG = {
   difficulties: [
     { id: "easy",    label: "Easy",    desc: "Gentler enemies, lighter hits.",      mods: { hp: 0.80, dmg: 0.65, count: 0.85, coin: 0.80, score: 0.70 } },
     { id: "normal",  label: "Normal",  desc: "The intended balance.",                mods: { hp: 1.00, dmg: 1.00, count: 1.00, coin: 1.00, score: 1.00 } },
-    { id: "hard",    label: "Hard",    desc: "Tougher, hungrier, more of them.",     mods: { hp: 1.30, dmg: 1.35, count: 1.15, coin: 1.30, score: 1.40 } },
-    { id: "extreme", label: "Extreme", desc: "Brutal — but fair. Big rewards.",      mods: { hp: 1.70, dmg: 1.80, count: 1.30, coin: 1.70, score: 2.00 } },
-    { id: "onehit",  label: "One-Hit", desc: "One touch and you fall. Max reward.",  oneHit: true, mods: { hp: 0.90, dmg: 1.00, count: 1.00, coin: 1.80, score: 2.20 } },
+    { id: "hard",    label: "Hard",    desc: "Tougher, hungrier, more of them.",     mods: { hp: 1.30, dmg: 1.35, count: 1.15, coin: 1.10, score: 1.40 } },
+    { id: "extreme", label: "Extreme", desc: "Brutal — but fair. Big rewards.",      mods: { hp: 1.70, dmg: 1.80, count: 1.30, coin: 1.15, score: 2.00 } },
+    { id: "onehit",  label: "One-Hit", desc: "One touch and you fall. Rewards surge after wave 8.", oneHit: true, mods: { hp: 0.90, dmg: 1.00, count: 1.00, coin: 0.70, score: 2.20 } },
   ],
 
   // ---- modes (endless live; others reserved for later) ----

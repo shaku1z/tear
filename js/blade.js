@@ -35,6 +35,8 @@ class Blade {
     this.flyTime = 0;
     this.throwSizeMult = 1;       // blade length multiplier while thrown (ability)
     this.freeRecall = false;      // ability: recall from any distance
+    this.recallWindow = 0;        // shop: seconds of return travel added to recall reach
+    this.throwCooldownMult = 1;   // shop: faster release recovery between throws
     this.throwType = "pierce";    // set by the equipped weapon ("pierce" | "lob")
     this.embeddedNew = false;     // set the frame a flying blade embeds (for lob shockwave)
     this.model = "sword";         // visual: "sword" | "hammer"
@@ -278,7 +280,8 @@ class Blade {
   tryRecall(player) {
     if (this.state === "held" || this.state === "returning") return "busy";
     const hand = this.handPos(player);
-    if (this.hostile || this.stolenBy || this.freeRecall || len(this.x - hand.x, this.y - hand.y) <= CONFIG.blade.throw.reclaimDistance) {
+    const earlyReach = CONFIG.blade.throw.reclaimDistance + CONFIG.blade.throw.returnSpeed * this.recallWindow;
+    if (this.hostile || this.stolenBy || this.freeRecall || len(this.x - hand.x, this.y - hand.y) <= earlyReach) {
       this.pierced = new Set();   // can pierce again on the way home
       this.hostile = false; this.stolenBy = null;
       this.state = "returning";

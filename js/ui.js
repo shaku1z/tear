@@ -122,6 +122,53 @@ const UI = {
     ctx.fillText(str, x, y);
   },
 
+  // centred card title that steps down through the type scale until it fits.
+  fitTitle(ctx, str, x, y, maxW, startSize, minSize) {
+    let size = startSize || this.t.type.title;
+    const floor = minSize || this.t.type.label;
+    ctx.font = this.font(size, true);
+    while (ctx.measureText(str).width > maxW && size > floor) { size--; ctx.font = this.font(size, true); }
+    this.title(ctx, str, x, y, size);
+  },
+
+  wrappedText(ctx, str, x, y, maxW, lineH, size, align, alpha) {
+    ctx.save();
+    ctx.globalAlpha *= alpha == null ? this.t.alpha.full : alpha;
+    ctx.fillStyle = this.ink;
+    ctx.font = this.font(size || this.t.type.body, false);
+    ctx.textAlign = align || "center"; ctx.textBaseline = "alphabetic";
+    const words = String(str || "").split(" "), lines = [];
+    let line = "";
+    for (const word of words) {
+      const test = line ? line + " " + word : word;
+      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = word; }
+      else line = test;
+    }
+    if (line) lines.push(line);
+    for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], x, y + i * lineH);
+    ctx.restore();
+    return y + Math.max(0, lines.length - 1) * lineH;
+  },
+
+  keyBadge(ctx, x, y, size, label, color) {
+    ctx.fillStyle = color || this.t.color.accent;
+    ctx.fillRect(x, y, size, size);
+    ctx.fillStyle = this.t.color.paper;
+    ctx.font = this.font(this.t.type.label, true);
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(String(label), x + size / 2, y + size / 2 + 1);
+    ctx.textBaseline = "alphabetic";
+  },
+
+  tierPips(ctx, cx, y, count, next, color) {
+    const gap = 26, start = cx - ((count - 1) * gap) / 2;
+    for (let i = 0; i < count; i++) {
+      ctx.beginPath(); ctx.arc(start + i * gap, y, 6, 0, Math.PI * 2);
+      if (i < next - 1) { ctx.fillStyle = color; ctx.fill(); }
+      else { ctx.strokeStyle = i === next - 1 ? color : this.t.color.disabled; ctx.lineWidth = i === next - 1 ? 2.5 : 1.5; ctx.stroke(); }
+    }
+  },
+
   // a coloured caption/tag (category labels, status words). align defaults left.
   tag(ctx, str, x, y, color, align, size) {
     ctx.fillStyle = color || this.t.color.muted;

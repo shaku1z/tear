@@ -5,11 +5,11 @@
 // Rarity sets the Shard payout; the Achievements menu (Phase 2) reads these too.
 const ACH = {
   RARITY: {
-    common:    { name: "COMMON",    color: "#8a93a6", shards: 5, coins: 100 },
-    uncommon:  { name: "UNCOMMON",  color: "#2f9e6b", shards: 12, coins: 300 },
-    rare:      { name: "RARE",      color: "#2f7bd6", shards: 25, coins: 700 },
-    epic:      { name: "EPIC",      color: "#9b53d6", shards: 50, coins: 1500 },
-    legendary: { name: "LEGENDARY", color: "#e0a326", shards: 100, coins: 4000 },
+    common:    { name: "COMMON",    color: "#8a93a6", shards: 5, coins: 75 },
+    uncommon:  { name: "UNCOMMON",  color: "#2f9e6b", shards: 12, coins: 200 },
+    rare:      { name: "RARE",      color: "#2f7bd6", shards: 25, coins: 450 },
+    epic:      { name: "EPIC",      color: "#9b53d6", shards: 50, coins: 900 },
+    legendary: { name: "LEGENDARY", color: "#e0a326", shards: 100, coins: 2000 },
   },
   CATS: {
     combat:   { name: "Combat",      color: "#e23b3b", icon: "⚔" },
@@ -121,7 +121,10 @@ const ACH = {
 
       // ---- MASTERY & META ----
       S("weapon_master", "mastery", "rare", "Armory", "Win a run with each weapon.", "distinctWeaponsWon", 2),
-      S("arsenal", "mastery", "legendary", "Arsenal", "Max out every item in the meta shop.", "shopMaxed", 13),
+      Object.assign(S("arsenal", "mastery", "legendary", "Arsenal", "Max out every item in the meta shop."), {
+        current: () => typeof SHOP === "undefined" ? 0 : SHOP.filter((s) => META.level(s.id) >= s.maxLevel).length,
+        goal: () => typeof SHOP === "undefined" ? 1 : SHOP.length,
+      }),
       S("speedrunner", "mastery", "epic", "Speedrunner", "Clear the Adventure campaign in under 15 minutes.", "speedrunUnder15", 1),
       S("close_call", "survival", "rare", "By a Thread", "Defeat a boss while at 10% HP or lower.", "bossKillsLowHP", 1),
 
@@ -189,13 +192,15 @@ const ACH = {
     if (PROFILE.unlocked(a.id)) return 1;
     if (a.manual) return 0;
     if (a.check) return a.check(PROFILE) ? 1 : 0;
-    const cur = PROFILE.stat(a.stat), goal = a.goal || 1;
+    const cur = a.current ? a.current(PROFILE) : PROFILE.stat(a.stat);
+    const goal = (typeof a.goal === "function" ? a.goal(PROFILE) : a.goal) || 1;
     return clamp(cur / goal, 0, 1);
   },
   progressText(a) {
     if (a.check || !a.goal) return PROFILE.unlocked(a.id) ? "Complete" : "Locked";
-    const cur = Math.min(PROFILE.stat(a.stat), a.goal);
-    return cur + " / " + a.goal;
+    const goal = (typeof a.goal === "function" ? a.goal(PROFILE) : a.goal) || 1;
+    const cur = Math.min(a.current ? a.current(PROFILE) : PROFILE.stat(a.stat), goal);
+    return cur + " / " + goal;
   },
 
   pending: [],   // freshly unlocked -> the HUD/menu toast queue
@@ -205,7 +210,9 @@ const ACH = {
     for (const a of this._all) {
       if (PROFILE.unlocked(a.id)) continue;
       if (a.manual) continue;   // scripted/choice achievements unlock only at their authored event
-      const met = a.check ? a.check(PROFILE) : PROFILE.stat(a.stat) >= (a.goal || 1);
+      const goal = (typeof a.goal === "function" ? a.goal(PROFILE) : a.goal) || 1;
+      const current = a.current ? a.current(PROFILE) : PROFILE.stat(a.stat);
+      const met = a.check ? a.check(PROFILE) : current >= goal;
       if (met) {
         a.shards = this.shardsFor(a);
         a.coins = this.coinsFor(a);

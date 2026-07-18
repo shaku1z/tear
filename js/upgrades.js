@@ -67,6 +67,9 @@ function newMods() {
     concRefund: false,    // Concussive T3: a dash that catches 2+ enemies refunds itself
     parryStun: false,     // Backfire (parry unique): reflected shots stun what they strike
     waveHeal: 0,          // Bulwark (resilience stack): extra HP healed on each wave clear
+    reservePick: false,   // shop: reserve an unchosen card for the next normal draft
+    draftRerolls: 0,      // shop: limited rerolls shared across the whole run
+    expandedDraft: false, // shop: normal drafts contain four cards
   };
 }
 
@@ -97,8 +100,14 @@ const UPGRADES = [
     // additive so it STACKS with Aether Step (meta shop) instead of both flat-capping at 2.
     // Safe as +=: unique (picked once per run) and applied to a fresh player (base 1).
     apply: ({ player }) => { player.maxDashCharges += 1; player.dashCharges = player.maxDashCharges; } },
-  { id: "bounty", name: "Bounty Hunter", unique: false, cat: "utility", desc: "+20% score from kills.",
-    apply: () => { CONFIG.run.scoreMult *= 1.2; } },
+  { id: "afterimage", name: "Afterimage", unique: true, cat: "mobility",
+    desc: "After a dash ends, gain +25% movement speed for 1 second.",
+    apply: ({ player }) => { player.afterimageDuration = 1; player.afterimageSpeedMult = 1.25; } },
+  { id: "hard_turn", name: "Hard Turn", unique: false, cat: "mobility",
+    desc: "+10% steering authority during the final third of a dash.",
+    apply: ({ player }) => { player.hardTurnStacks += 1; } },
+  { id: "bounty", name: "Bounty Hunter", unique: false, cat: "utility", desc: "+15% score from kills.",
+    apply: () => { CONFIG.run.scoreMult *= 1.15; } },
   { id: "glass_cannon", name: "Glass Cannon", unique: false, cat: "offense", desc: "+30% ALL damage (swing + throw), but you take +25% more.",
     apply: () => {
       CONFIG.blade.damageScale *= 1.30; CONFIG.blade.maxDamage = Math.round(CONFIG.blade.maxDamage * 1.20);
@@ -236,8 +245,8 @@ const UPGRADES = [
     apply: ({ mods }) => { mods.waveHeal += 10; } },
   { id: "showtime", name: "Showtime", unique: false, cat: "utility", desc: "Your trick meter lingers — it drains 25% slower.",
     apply: () => { CONFIG.trick.decay *= 1.3; CONFIG.trick.drainRate *= 0.8; } },
-  { id: "fortune", name: "Fortune", unique: false, cat: "utility", desc: "+18% coins earned this run.",
-    apply: () => { CONFIG.run.coinMult *= 1.18; } },
+  { id: "fortune", name: "Fortune", unique: false, maxStacks: 5, cat: "utility", desc: "+12% final coins. Milestone bonuses unlock at stacks 3 and 5.",
+    apply: () => {} },
 
   // ===== more SPECIAL abilities (tiered; keep every combat category at 3+) =====
   // --- OFFENSE ---
@@ -321,8 +330,11 @@ function upWeight(u) {
 function rollUpgrades(n, mods, opts) {
   opts = opts || {};
   const owned = (mods && mods.owned) || {};
+  const excluded = new Set(opts.excludeIds || []);
   const pool = UPGRADES
+    .filter((u) => !excluded.has(u.id))
     .filter((u) => !(u.unique && owned[u.id]))
+    .filter((u) => !(u.maxStacks && (owned[u.id] || 0) >= u.maxStacks))
     .map((u) => ({ u, w: upWeight(u) }));
   const out = [];
   while (out.length < n && pool.length) {
@@ -333,7 +345,7 @@ function rollUpgrades(n, mods, opts) {
   }
   // per-stage guarantee: if asked to force a Special and none rolled, swap one in
   if (opts.forceSpecial && !out.some((u) => u.tiers)) {
-    const specials = UPGRADES.filter((u) => u.tiers && !owned[u.id] && !out.includes(u));
+    const specials = UPGRADES.filter((u) => u.tiers && !owned[u.id] && !excluded.has(u.id) && !out.includes(u));
     if (specials.length) {
       let ri = out.findIndex((u) => !u.tiers && !u.unique);   // replace a stack if possible
       if (ri < 0) ri = out.findIndex((u) => !u.tiers);

@@ -22,6 +22,11 @@ class Player {
     this.maxDashCharges = 1;    // Air Dash raises this; charges refill on landing
     this.dashCharges = 1;
     this.dashEndT = 0;          // Slipstream: brief window after a dash ends
+    this.dashMomentumMult = 1;  // Momentum Transfer: horizontal carry after dash
+    this.hardTurnStacks = 0;    // Hard Turn: extra steering in the dash's final third
+    this.afterimageDuration = 0;
+    this.afterimageSpeedMult = 1;
+    this.afterimageT = 0;
     this._wasGround = false;
 
     this.moveBoost = 1;         // set by the game (e.g. faster while blade is thrown)
@@ -42,6 +47,11 @@ class Player {
     this.rallyPool = 0;         // orange-chip health still available during the rally window
     this.rallySource = null;    // fight-scoped owner; never persists beyond this Player instance
     this.hazardT = 0;           // cooldown for sustained hazard-zone damage (Warden zones)
+    this.airborneDmgMult = 1;   // Aerial Bracing
+    this.hazardDmgMult = 1;     // Hazard Boots (applied only by tagged hazard callers)
+    this.secondBreathDuration = 0;
+    this.secondBreathT = 0;
+    this.secondBreathUsed = false;
     this.lastTrickKind = "";    // last trick performed (The Echo mirrors it)
     this.lastTrickT = 0;        // ...and when (so the Echo can detect a NEW trick)
     this.tempoT = 0;            // Tempo: damage+haste buff window after a perfect parry
@@ -73,6 +83,11 @@ class Player {
       if (this.rallyT <= 0 || this.rallyPool <= 0 || !this.rallySource || this.rallySource.dead) this._clearRally();
     } else if (this.rallyPool > 0 || this.rallySource) this._clearRally();
     if (this.dashEndT > 0) this.dashEndT -= dt;
+    if (this.afterimageT > 0) this.afterimageT = Math.max(0, this.afterimageT - dt);
+    if (this.secondBreathT > 0 && !this.oneHit && this.hp > 0) {
+      this.secondBreathT = Math.max(0, this.secondBreathT - dt);
+      this.heal(this.maxHp * 0.0125 * dt);
+    }
     if (this.tempoT > 0) { this.tempoT -= dt; if (this.tempoT <= 0) this.tempoStk = 1; }
     const rooted = this.rootT > 0;
 
@@ -109,7 +124,9 @@ class Player {
       if (sty !== 0 && stx !== 0) stx *= 0.35;     // committing to a vertical cut quiets sideways drift
       if (!rooted && (stx !== 0 || sty !== 0)) {
         const sm = len(stx, sty) || 1; stx /= sm; sty /= sm;
-        const k = clamp(D.steer * dt, 0, 1);
+        const finalThird = this.dashTimer <= D.duration / 3;
+        const steerMult = finalThird ? 1 + this.hardTurnStacks * 0.10 : 1;
+        const k = clamp(D.steer * steerMult * dt, 0, 1);
         this.dashX += (stx - this.dashX) * k;
         this.dashY += (sty - this.dashY) * k;
         const dm = len(this.dashX, this.dashY) || 1; this.dashX /= dm; this.dashY /= dm;
@@ -123,9 +140,10 @@ class Player {
         this.vy = this.dashY * D.speed;
       }
       if (this.dashTimer <= 0) {
-        this.vx *= D.endSpeedKeep;
+        this.vx *= D.endSpeedKeep * this.dashMomentumMult;
         if (this.dashY <= 0) this.vy *= D.endSpeedKeep;   // preserve downward momentum into the slam
         this.dashEndT = 0.6;                              // Slipstream window opens as the dash ends
+        if (this.afterimageDuration > 0) this.afterimageT = this.afterimageDuration;
       }
     } else {
       // ---- normal movement (mud slows your top speed + acceleration) ----
@@ -214,10 +232,16 @@ class Player {
       return "absorbed";
     }
     dmg *= CONFIG.player.dmgTakenMult * this.flowDR;          // Flow Guard
+    if (!this.onGround) dmg *= this.airborneDmgMult;          // Aerial Bracing
     if (this.guardT > 0) dmg *= CONFIG.resilience.parryGuardMult;  // Riposte window
     const hpBefore = this.hp;
     this.hp = this.oneHit ? 0 : Math.max(0, this.hp - dmg);
     const actualLost = Math.max(0, hpBefore - this.hp);
+    if (!this.oneHit && this.hp > 0 && this.hp < this.maxHp * 0.30 &&
+        this.secondBreathDuration > 0 && !this.secondBreathUsed) {
+      this.secondBreathUsed = true;
+      this.secondBreathT = this.secondBreathDuration;
+    }
     // Projectiles may pass their owning boss while contact damage passes the boss itself.
     // Accept both shapes so every existing two-argument caller remains valid.
     const rallyOwner = source && (source.owner || source.source || source);
@@ -278,6 +302,11 @@ class Player {
     this.rallyT = 0;
     this.rallyPool = 0;
     this.rallySource = null;
+  }
+
+  resetStagePassives() {
+    this.secondBreathT = 0;
+    this.secondBreathUsed = false;
   }
 
   // additive shim mirroring Enemy.takeHit so one symmetric collision loop can damage the

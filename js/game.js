@@ -110,22 +110,52 @@
     }));
   });
   function awardCoins(score) {
-    // leaner economy: a small fraction of score + a flat per-wave trickle, so a strong run
-    // buys 1-3 upgrades (not the whole shop). run.coinMod lets difficulty scale the reward.
-    const flat = Math.floor((run.wave || 0) * 12);
-    const earned = Math.floor(score * 0.03 * (1 + 0.15 * META.level("greed")) * CONFIG.run.coinMult * (run.coinMod || 1)) + flat;
+    let difficultyCoins = run.coinMod || 1;
+    if (run.diff === "onehit") {
+      const p = clamp(((run.wave || 0) - 8) / 12, 0, 1);
+      const easeOut = 1 - (1 - p) * (1 - p);
+      difficultyCoins = (0.70 + 2.35 * easeOut) * REMOTE.coinMult;
+    }
+    const scoreCoins = Math.floor(score * 0.02 * (1 + 0.08 * META.level("greed")) * difficultyCoins);
+    const depthCoins = Math.floor((run.wave || 0) * 10);
+    const fortune = Math.min(5, (run.mods.owned && run.mods.owned.fortune) || 0);
+    const fortuneMult = 1 + 0.12 * fortune + (fortune >= 3 ? 0.25 : 0) + (fortune >= 5 ? 0.35 : 0);
+    const earned = Math.floor((scoreCoins + depthCoins) * fortuneMult);
     META.addCoins(earned);
     if (achTracks()) { PROFILE.addStat("coinsEarned", earned); }
     return earned;
   }
+  function economyTelemetry(earned) {
+    return {
+      earned, wallet: META.coins(), coinMagnet: META.level("greed"),
+      fortune: (run.mods.owned && run.mods.owned.fortune) || 0,
+      bounty: (run.mods.owned && run.mods.owned.bounty) || 0,
+      shopRanks: SHOP.reduce((n, item) => n + META.level(item.id), 0),
+    };
+  }
   // build a draft, guaranteeing at least 2 Specials are OFFERED per 10-wave stage
-  function buildDraft() {
+  function buildDraft(opts) {
+    opts = opts || {};
     const block = Math.floor((run.wave - 1) / 10);
     if (run.specialBlock !== block) { run.specialBlock = block; run.specialsOffered = 0; }
     const lw = ((run.wave - 1) % 10) + 1;            // wave just cleared (1..9 give drafts)
     const draftsLeft = Math.max(1, 10 - lw);         // drafts remaining this stage, including this one
     const need = 2 - (run.specialsOffered || 0);
-    const choices = rollUpgrades(3, run.mods, { forceSpecial: need > 0 && draftsLeft <= need });
+    const count = run.mods.expandedDraft ? 4 : 3;
+    const choices = rollUpgrades(count, run.mods, {
+      forceSpecial: need > 0 && draftsLeft <= need,
+      excludeIds: opts.excludeIds || [],
+    });
+    if (run.reservedUpgrade) {
+      const reserved = run.reservedUpgrade;
+      run.reservedUpgrade = null;
+      if (!choices.some((u) => u.id === reserved.id)) {
+        let ri = choices.length - 1;
+        const nonSpecial = choices.map((u, i) => ({ u, i })).filter((e) => !e.u.tiers);
+        if (nonSpecial.length) ri = nonSpecial[nonSpecial.length - 1].i;
+        choices[ri] = reserved;
+      }
+    }
     run.specialsOffered = (run.specialsOffered || 0) + choices.filter((u) => u.tiers).length;
     return choices;
   }
@@ -333,6 +363,7 @@
       if (!seen[currentStage.name]) { seen[currentStage.name] = 1; PROFILE.maxStat("biomesSeen", Object.keys(seen).length); achCheck(); }
     }
     if (run && typeof AT !== "undefined") AT.stageReset();   // fresh per-stage restriction flags
+    if (player && player.resetStagePassives) player.resetStagePassives();
     GHOST.stage(i);   // ghost 2.0: replays show the right biome at the right time
   }
 
@@ -350,6 +381,7 @@
   let rankPopT = 0, rankPopText = "";   // style rank-up flash
   let run = null;             // { mode, diff, wave, score, mods, spawnQueue, spawnTimer, waveActive }
   let draftChoices = [];
+  let reserveChoices = [];
   let tierChoices = [];               // abilities offered to evolve after a campaign boss
   let achToast = null, achToastT = 0;   // the "achievement unlocked" banner (pulled from ACH.pending)
   let lastGhost = null;                 // the just-finished run's replay packet (for "watch your run")
@@ -1131,13 +1163,13 @@
       p.fireState = VoidGen.hazardState(p, run.runTime, vs.options);
       p.fireOn = p.fireState === "hot";
       if (dangerous && on && p.fireOn && player.hazardT <= 0) {
-        const r = player.takeDamage(12, p.x + p.w / 2, vs.owner); player.hazardT = 0.48;
+        const r = player.takeDamage(12 * player.hazardDmgMult, p.x + p.w / 2, vs.owner); player.hazardT = 0.48;
         if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb();
       }
       if (dangerous && p.voidType === "cage") {
         const cr = VoidGen.cageGeometry(p, vs.options);
         if (aabbOverlap(player.x, player.y, player.hw, player.hh, cr.x + cr.w / 2, cr.y + cr.h / 2, cr.w / 2, cr.h / 2) && player.hazardT <= 0) {
-          const r = player.takeDamage(14, cr.centerX, vs.owner); player.hazardT = 0.48;
+          const r = player.takeDamage(14 * player.hazardDmgMult, cr.centerX, vs.owner); player.hazardT = 0.48;
           if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb();
         }
       }
@@ -1201,7 +1233,7 @@
     // The bite is deliberately nonfatal, including One-Hit mode: it costs health and
     // position, then throws the player straight back into play.
     if (player.y > H + 70 && vs.rescueCd <= 0) {
-      const r = player.takeDamage(C.voidFallDmg, player.x, vs.owner);
+      const r = player.takeDamage(C.voidFallDmg * player.hazardDmgMult, player.x, vs.owner);
       if (player.hp <= 0) player.hp = 1;
       const safe = VoidGen.selectRescue(platforms, W * 0.45, run.runTime, vs.options);
       if (safe) {
@@ -2002,7 +2034,7 @@
     const earned = awardCoins(run.score);
     if (achTracks()) { PROFILE.addStat("runs", 1); PROFILE.maxStat("longestRun", Math.floor(run.runTime)); DAILY.bump("runs", 1); achCheck();
       Cloud.push();   // cloud save (finishRecording handles the score + replay link)
-      Cloud.logEvent("run_end", { mode: run.mode, diff: run.diff, wave: run.wave, score: run.score, time: Math.round(run.runTime), peak: run.wavePeak, died: true });   // balancing telemetry: where players drop off
+      Cloud.logEvent("run_end", Object.assign({ mode: run.mode, diff: run.diff, wave: run.wave, score: run.score, time: Math.round(run.runTime), peak: run.wavePeak, died: true }, economyTelemetry(earned)));   // balancing + economy telemetry
       finishRecording(false); }
     overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, earned, coins: META.coins() };
     state = "gameover";
@@ -2028,7 +2060,7 @@
         const dc = PROFILE.data.advDiffs || (PROFILE.data.advDiffs = {}); dc[run.diff] = 1; PROFILE.maxStat("clearAdvAll", Object.keys(dc).length);
       }
       achCheck();
-      Cloud.logEvent("run_end", { mode: run.mode, diff: run.diff, wave: run.wave, score: run.score, time: Math.round(run.runTime), peak: run.wavePeak, won: true, campaign: !!campaign });
+      Cloud.logEvent("run_end", Object.assign({ mode: run.mode, diff: run.diff, wave: run.wave, score: run.score, time: Math.round(run.runTime), peak: run.wavePeak, won: true, campaign: !!campaign }, economyTelemetry(earned)));
       finishRecording(true); }
     const prepared = run._victoryPrepared = { isNew, earned, coins: META.coins() };
     if (campaign && persistFinale) PROFILE.setPendingFinale({
@@ -2179,7 +2211,8 @@
     if (player.hazardT > 0) player.hazardT = Math.max(0, player.hazardT - dt);
     updateZonesWalls(dt);   // mud puddles + Geomancer walls; sets player.slowMult
     // faster while unarmed (blade thrown); Tempo adds haste during its window
-    player.moveBoost = ((blade.state !== "held") ? CONFIG.player.thrownMoveBoost : 1) * (player.tempoT > 0 ? 1.18 : 1);
+    player.moveBoost = ((blade.state !== "held") ? CONFIG.player.thrownMoveBoost : 1) *
+      (player.tempoT > 0 ? 1.18 : 1) * (player.afterimageT > 0 ? player.afterimageSpeedMult : 1);
     player.update(dt, platforms);
     if (run.voidScroll) syncVoidPlayerSupport();
     else { player.supportPlatform = null; player.voidLane = null; player.voidMajorWindow = false; }
@@ -2299,7 +2332,7 @@
 
     if (Input.consumeThrow()) {
       if (blade.state === "held") {
-        if (throwCd <= 0 && blade.throwBlade()) { throwCd = 0.5; FX.burst(blade.x, blade.y, blade.vx, blade.vy, 6); addShake(CONFIG.juice.shakeSmall); SFX.throwBlade(); }
+        if (throwCd <= 0 && blade.throwBlade()) { throwCd = 0.5 * blade.throwCooldownMult; FX.burst(blade.x, blade.y, blade.vx, blade.vy, 6); addShake(CONFIG.juice.shakeSmall); SFX.throwBlade(); }
       } else {
         const r = blade.tryRecall(player);
         const hand = blade.handPos(player);
@@ -2373,7 +2406,7 @@
         }
       }
       if (inZone && player.hazardT <= 0 && !player.invulnerable) {
-        const r = player.takeDamage(zoneDmg, bossZ.x, bossZ);
+        const r = player.takeDamage(zoneDmg * player.hazardDmgMult, bossZ.x, bossZ);
         player.hazardT = zoneCd;
         if (r === "hit") { SFX.hurt(); loseStyle(); } else if (r === "absorbed") onShieldAbsorb();
       }
@@ -3362,8 +3395,9 @@
     UI.ink = "#000";   // overlays (menus / win / pause) dim to white — always ink them black
     if (state !== lastUiState) {
       enterT = 0;   // restart entrance anim
+      if (state === "shop" && lastUiState !== "shop") listScroll = 0;
       if ((state === "gameover" || state === "win" || state === "paused") && lastUiState !== "settings") arsenalScroll = 0;   // (but not when bouncing back from settings)
-      if (state === "draft" || state === "tierup") listScroll = 0;   // stale menu scroll must never cull the choice cards (grid mode culls by listScroll)
+      if (state === "draft" || state === "reserve" || state === "tierup") listScroll = 0;   // stale menu scroll must never cull choice cards
     }
 
     // menu screens: the LIVE attract scene backs every tab (not just the main menu), so the
@@ -3400,6 +3434,7 @@
     } else {
       eIn = 1;
       if (state === "draft") renderDraft();
+      else if (state === "reserve") renderReserve();
       else if (state === "tierup") renderTierUp();
       else if (state === "paused") renderPaused();
       else if (state === "confirmquit") renderConfirmQuit();
@@ -3409,7 +3444,7 @@
       else if (state === "pgmenu") renderPgMenu();
       else if (state === "pglab") renderPgLab();
       else if (state === "replay") renderReplay();
-      if (state !== "playing" && state !== "draft") drawButtons();
+      if (state !== "playing") drawButtons();
     }
 
     // biome tear-wipe rides over EVERYTHING for its beat (device space)
@@ -4551,16 +4586,23 @@
     const cap = SHOP.reduce((n, s) => n + s.maxLevel, 0);
     UI.tag(ctx, owned + " / " + cap + " LEVELS OWNED   ·   LIFETIME EARNED ◆ " + (META.data.lifetimeEarned || 0).toLocaleString(), 240, 130, t.color.muted, "left", t.type.micro);
 
-    // four sections in two columns; rows are glyph cards with a 3-state price button
+    // four sections in two scrollable columns; the enlarged catalogue keeps the
+    // established ledger-card look instead of shrinking the type or hit targets.
     const colX = [240, 830], colW2 = 550, rowH2 = 74, cardH = 62;
+    const viewTop = 158, viewBottom = H - 104, viewH = viewBottom - viewTop;
     const colFill = [[], []];
     SHOP_CATS.forEach(([cat], ci) => colFill[ci < 2 ? 0 : 1].push([cat, SHOP_CATS.find((c) => c[0] === cat)[1]]));
+    const columnHeight = (sections) => sections.reduce((h, [cat]) => h + 36 + SHOP.filter((s) => s.cat === cat).length * rowH2, 0);
+    const maxShopScroll = Math.max(0, Math.max(...colFill.map(columnHeight)) - viewH);
+    listScroll = clamp(listScroll, 0, maxShopScroll);
+    ctx.save(); ctx.beginPath(); ctx.rect(210, viewTop, W - 420, viewH); ctx.clip();
     colFill.forEach((sections, ci) => {
-      let y = 176;
+      let y = 176 - listScroll;
       sections.forEach(([cat, label]) => {
         y = UI.sectionLabel(ctx, label, colX[ci], y, colW2, gold) + 6;
         SHOP.filter((s) => s.cat === cat).forEach((it) => {
           const lv = META.level(it.id), maxed = lv >= it.maxLevel, afford = META.canBuy(it);
+          const visible = y >= viewTop && y + cardH <= viewBottom;
           UI.card(ctx, colX[ci], y, colW2, cardH, false);
           if (shopFlash && shopFlash.id === it.id && uiT - shopFlash.t < 0.45) {   // gold buy-flash
             ctx.globalAlpha = 0.30 * (1 - (uiT - shopFlash.t) / 0.45); ctx.fillStyle = gold;
@@ -4586,14 +4628,17 @@
           // pips + the price button (gold when affordable / ghost when not / ink MAX)
           UI.pips(ctx, colX[ci] + colW2 - 118, y + 31, it.maxLevel, lv, gold);
           uiButtons.push({ x: colX[ci] + colW2 - 104, y: y + 11, w: 94, h: 40, size: 13,
+            _hideBox: !visible,
             label: maxed ? "MAX" : META.cost(it).toLocaleString() + "c",
-            sel: maxed, enabled: !maxed && afford, accent: !maxed && afford ? gold : undefined,
+            sel: maxed, enabled: visible && !maxed && afford, accent: !maxed && afford ? gold : undefined,
             action: () => { if (META.buy(it)) { SFX.ui(); shopFlash = { id: it.id, t: uiT }; PROFILE.addStat("shopBuys", 1); PROFILE.maxStat("shopMaxed", SHOP.filter((s) => META.level(s.id) >= s.maxLevel).length); achCheck(); } } });
           y += rowH2;
         });
         y += 12;
       });
     });
+    ctx.restore();
+    if (maxShopScroll > 0) UI.scrollHint(ctx, W / 2, viewBottom + 8, listScroll > 0, listScroll < maxShopScroll);
     addBack();
   }
 
@@ -4641,7 +4686,7 @@
         const heat = DIFF_HEAT[d.id] === null ? t.color.danger : (DIFF_HEAT[d.id] || t.color.accent);
         uiButtons.push({ x: dx, y: colY + i * (bh + gap), w: dw, h: bh, size: 17,
           label: d.label.toUpperCase(),
-          sub: "×" + d.mods.score.toFixed(1) + " score  ·  ×" + d.mods.coin.toFixed(1) + " coins",
+          sub: "×" + d.mods.score.toFixed(1) + " score  ·  " + (d.id === "onehit" ? "×0.7→3.1 coins after wave 8" : "×" + d.mods.coin.toFixed(2).replace(/0$/, "") + " coins"),
           pips: { n: 5, filled: i + 1, color: heat },
           sel: selDiff === d.id, action: () => { selDiff = d.id; } });
       });
@@ -5886,12 +5931,13 @@
   // a juicy choice card shared by the upgrade draft and the boss tier-up screen.
   // Deals in from below with a stagger; on hover it lifts, scales, and lights its
   // category accent. Hitbox stays at rest while the visual animates.
-  // a selectable choice card. n <= 3 = the classic big single-row deal; n >= 4 switches
+  // a selectable choice card. Normal drafts stay a large single row (including the
+  // Expanded Draft fourth card); large tier-up pools switch to the compact grid.
   // to a compact GRID (rows of 4, last row centred, scrollable past 2 rows) so a tier-up
   // with MANY owned abilities stays organized instead of being cut to 3.
   function choiceCard(i, n, o) {
-    const t = UI.t, grid = n > 3;
-    const cw = grid ? 300 : 322, ch = grid ? 262 : 384, gap = grid ? 24 : 34;
+    const t = UI.t, grid = n > 3 && !o.normalRow;
+    const cw = grid ? 300 : (n > 3 ? 300 : 322), ch = grid ? 262 : 384, gap = grid ? 24 : (n > 3 ? 24 : 34);
     let x, y0;
     if (grid) {
       const perRow = 4, row = Math.floor(i / perRow), col = i % perRow;
@@ -5920,37 +5966,21 @@
     ctx.translate(0, (1 - ce) * 46 - a * 12);                       // deal-in from below + hover lift
     const cx = x + cw / 2, cy = y0 + ch / 2, s = 1 + a * 0.035;
     ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-cx, -cy);
-    ctx.globalAlpha = ce * (0.1 + a * 0.18); ctx.fillStyle = "#000"; ctx.fillRect(x + 5, y0 + 10, cw, ch);   // shadow
-    ctx.globalAlpha = ce;
-    ctx.fillStyle = "#fff"; ctx.fillRect(x, y0, cw, ch);
-    ctx.globalAlpha = ce * (0.04 + a * 0.08); ctx.fillStyle = ac; ctx.fillRect(x, y0, cw, ch);               // category wash
-    ctx.globalAlpha = ce;
-    ctx.lineWidth = 2 + a * 2.5; ctx.strokeStyle = a > 0.35 ? ac : "#000"; ctx.strokeRect(x, y0, cw, ch);
-    ctx.fillStyle = ac; ctx.fillRect(x, y0, cw, M.strip);           // top accent strip
-    if (M.badge) {   // keybind badge (the classic 3-card deal only — 1/2/3 work there)
-      ctx.fillStyle = ac; ctx.fillRect(x + cw - 46, y0 + 24, M.badge, M.badge);
-      ctx.fillStyle = "#fff"; ctx.font = UI.font(t.type.label, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText("" + (i + 1), x + cw - 31, y0 + 40); ctx.textBaseline = "alphabetic";
+    UI.card(ctx, x, y0, cw, ch, a > 0.35, { accent: ac });
+    ctx.globalAlpha = ce;   // UI.card owns an internal hover wash; restore the deal-in fade for card contents
+    UI.accentStrip(ctx, x, y0, cw, ac, M.strip);
+    if (M.badge) {   // keybind badge for every large normal-draft card (1–4)
+      UI.keyBadge(ctx, x + cw - 46, y0 + 24, M.badge, i + 1, ac);
     }
     UI.tag(ctx, o.tag, x + 22, y0 + M.tagY, o.tagColor || ac, "left", t.type.micro);
-    // name (shrink to fit)
-    ctx.fillStyle = "#000"; ctx.textAlign = "center";
-    let ns = grid ? t.type.lead : t.type.title; ctx.font = UI.font(ns, true);
-    while (ctx.measureText(o.name).width > cw - 44 && ns > t.type.label) { ns--; ctx.font = UI.font(ns, true); }
-    ctx.fillText(o.name, cx, y0 + M.nameY);
-    ctx.fillStyle = ac; ctx.fillRect(cx - 28, y0 + M.divY, 56, 3);  // accent divider
+    UI.fitTitle(ctx, o.name, cx, y0 + M.nameY, cw - 44, grid ? t.type.lead : t.type.title, t.type.label);
+    UI.accentStrip(ctx, cx - 28, y0 + M.divY, 56, ac, 3);
     let descY = y0 + M.descY0;
     if (o.pips) {
-      for (let p = 0; p < 3; p++) {
-        const px = cx - 26 + p * 26, py = y0 + M.pipY;
-        ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2);
-        if (p < o.pips.next - 1) { ctx.fillStyle = ac; ctx.fill(); }
-        else if (p === o.pips.next - 1) { ctx.strokeStyle = ac; ctx.lineWidth = 2.5; ctx.stroke(); }
-        else { ctx.strokeStyle = t.color.disabled; ctx.lineWidth = 1.5; ctx.stroke(); }
-      }
+      UI.tierPips(ctx, cx, y0 + M.pipY, 3, o.pips.next, ac);
       descY = y0 + M.descYP;
     }
-    wrapText(o.desc, x + 26, descY, cw - 52, M.descLH, M.descSize);
+    UI.wrappedText(ctx, o.desc, cx, descY, cw - 52, M.descLH, M.descSize, "center");
     if (o.foot) UI.tag(ctx, o.foot, cx, y0 + M.footY, t.color.muted, "center", t.type.caption);
     const touch = Input.touchActive();
     const selLabel = touch ? (i === focus ? "TAP AGAIN TO CONFIRM  ✓" : "TAP TO READ") : (a > 0.5 ? "▸  SELECT" : (M.badge ? "press  [ " + (i + 1) + " ]" : ""));
@@ -5963,17 +5993,40 @@
     const t = UI.t;
     UI.dim(ctx, W, H, 0.84);
     UI.title(ctx, "WAVE " + run.wave + " CLEARED", W / 2, 122, t.type.display);
-    ctx.fillStyle = t.color.accent; ctx.globalAlpha = clamp(ez(enterT / 0.3), 0, 1); ctx.fillRect(W / 2 - 80, 140, 160, 3); ctx.globalAlpha = 1;
-    UI.text(ctx, "CHOOSE AN UPGRADE  ·  press 1 / 2 / 3", W / 2, 176, t.type.caption, "center", t.alpha.muted);
+    UI.accentStrip(ctx, W / 2 - 80, 140, 160, t.color.accent, 3);
+    UI.text(ctx, "CHOOSE AN UPGRADE  ·  press 1 / 2 / 3" + (draftChoices.length > 3 ? " / 4" : ""), W / 2, 176, t.type.caption, "center", t.alpha.muted);
     draftChoices.forEach((up, i) => {
       const cat = ABIL_CATS[up.cat] || ABIL_CATS.utility, owned = run.mods.owned[up.id] || 0, bd = abilBadge(up);
       choiceCard(i, draftChoices.length, {
         accent: up.tiers ? SPECIAL_COLOR : cat.color,
         tag: bd.label + "  ·  " + cat.name, tagColor: bd.color,
-        name: up.name, desc: up.desc, foot: owned ? "owned ×" + owned : null,
+        name: up.name, desc: draftDescription(up, owned), foot: owned ? "owned ×" + owned : null,
+        normalRow: true,
         action: () => chooseUpgrade(i),
       });
     });
+    const charges = run.mods.draftRerolls || 0;
+    uiButtons.push({ x: W / 2 - 150, y: 680, w: 300, h: UI.t.metric.btnH,
+      label: "⟳  REROLL · " + charges + "  [R]", enabled: charges > 0, action: rerollDraft });
+  }
+
+  function draftDescription(up, owned) {
+    if (up.id !== "fortune") return up.desc;
+    const next = Math.min(5, owned + 1);
+    const mult = 1 + 0.12 * next + (next >= 3 ? 0.25 : 0) + (next >= 5 ? 0.35 : 0);
+    if (next < 3) return "+12% final coins. PROSPERITY unlocks at 3 stacks (×1.61).";
+    if (next === 3) return "+12% final coins and unlock PROSPERITY: ×" + mult.toFixed(2) + " total coins.";
+    if (next < 5) return "+12% final coins. JACKPOT unlocks at 5 stacks (×2.20).";
+    return "+12% final coins and unlock JACKPOT: ×" + mult.toFixed(2) + " total coins.";
+  }
+
+  function rerollDraft() {
+    if (state !== "draft" || !run.mods.draftRerolls) return;
+    run.mods.draftRerolls--;
+    run.specialsOffered = Math.max(0, (run.specialsOffered || 0) - draftChoices.filter((u) => u.tiers).length);
+    const discarded = draftChoices.map((u) => u.id);
+    draftChoices = buildDraft({ excludeIds: discarded });
+    enterT = 0; focus = 0;
   }
 
   function wrapText(text, x, y, maxW, lh, size, col) {
@@ -5992,10 +6045,43 @@
     const up = draftChoices[i];
     if (up) { applyUpgrade(up, { player, blade, mods: run.mods }); GHOST.loadoutPick(up.id, run.mods.tier[up.id] || 1, run.wave); GHOST.event("pickup", player.x, player.y); }
     Input.consumeDelta();   // flush any movement built up while the cursor was free
+    if (up && run.mods.reservePick && run.mode !== "tutorial" && run.mode !== "playground") {
+      reserveChoices = draftChoices.filter((_, idx) => idx !== i);
+      if (reserveChoices.length) { state = "reserve"; focus = 0; return; }
+    }
+    finishDraft();
+  }
+
+  function finishDraft() {
     // training modes have NO waves — picking an ability must never start one
     if (run.mode !== "tutorial" && run.mode !== "playground") startNextWave();
     state = "playing";
     requestLock();          // re-capture automatically (we're inside the pick gesture)
+  }
+
+  function renderReserve() {
+    const t = UI.t;
+    UI.dim(ctx, W, H, 0.88);
+    UI.title(ctx, "RESERVE A CARD", W / 2, 122, t.type.display);
+    UI.accentStrip(ctx, W / 2 - 80, 140, 160, t.color.accent, 3);
+    UI.text(ctx, "THIS CARD REPLACES ONE OFFER IN YOUR NEXT NORMAL DRAFT", W / 2, 176, t.type.caption, "center", t.alpha.muted);
+    reserveChoices.forEach((up, i) => {
+      const cat = ABIL_CATS[up.cat] || ABIL_CATS.utility, owned = run.mods.owned[up.id] || 0, bd = abilBadge(up);
+      choiceCard(i, reserveChoices.length, {
+        accent: up.tiers ? SPECIAL_COLOR : cat.color,
+        tag: "RESERVE · " + bd.label + " · " + cat.name, tagColor: bd.color,
+        name: up.name, desc: draftDescription(up, owned), normalRow: true,
+        action: () => chooseReserve(i),
+      });
+    });
+    uiButtons.push({ x: W / 2 - 110, y: 680, w: 220, h: UI.t.metric.btnH, label: "SKIP RESERVE", action: () => chooseReserve(-1) });
+  }
+
+  function chooseReserve(i) {
+    run.reservedUpgrade = i >= 0 ? reserveChoices[i] : null;
+    reserveChoices = [];
+    Input.consumeDelta();
+    finishDraft();
   }
 
   // boss-kill reward: evolve one owned ability to its next tier
@@ -6332,6 +6418,12 @@
       if (Input.pressed.has("Digit1")) return chooseUpgrade(0);
       if (Input.pressed.has("Digit2")) return chooseUpgrade(1);
       if (Input.pressed.has("Digit3")) return chooseUpgrade(2);
+      if (Input.pressed.has("Digit4")) return chooseUpgrade(3);
+      if (Input.pressed.has("KeyR")) return rerollDraft();
+    } else if (state === "reserve") {
+      if (Input.pressed.has("Digit1")) return chooseReserve(0);
+      if (Input.pressed.has("Digit2")) return chooseReserve(1);
+      if (Input.pressed.has("Digit3")) return chooseReserve(2);
     }
 
     // controller B = back out (route to whichever button says BACK on this screen)
@@ -6356,6 +6448,13 @@
 
   if (PANTHEON_DEBUG) window.__PANTHEON_TEST = Object.freeze({
     startMode(mode) { startRun(mode || "endless", "normal"); },
+    openDraft(opts) {
+      opts = Object.assign({ expanded: true, rerolls: 2, reserve: true }, opts || {});
+      startRun("endless", "normal");
+      run.wave = Math.max(1, run.wave); run.waveActive = false; run.spawnQueue.length = 0; enemies = [];
+      run.mods.expandedDraft = !!opts.expanded; run.mods.draftRerolls = Math.max(0, opts.rerolls | 0); run.mods.reservePick = !!opts.reserve;
+      draftChoices = buildDraft(); state = "draft"; document.exitPointerLock();
+    },
     setOptions(opts) { Object.assign(settings, opts || {}); applySettings(); },
     startFinale() {
       startRun("campaign", "normal"); if (CINEMA.active) CINEMA.cancel("debug-final-cut");
