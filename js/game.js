@@ -205,7 +205,12 @@
   let lastCinemaPlayerMode = null;
   function loreBusy() { return !!(run && run.mode === "campaign" && run.chapterState !== "WAVE_LIVE"); }
   // the campaign's opening — shown as a lore card on the first wave of an Adventure run
-  const CAMPAIGN_INTRO = "Long ago the sky was torn, and through the wound poured everything that should not be. They named it the Tear. Each soul the Council sent to close it was worn, in time, into the shape of the thing they failed to stop — a guardian of the very wound they meant to end. You are the next to descend. Cut clean. Keep moving. Reach the Source before it wears your shape too.";
+  // the opening framing — three short beats rather than one long paragraph (Plan 003)
+  const CAMPAIGN_INTRO = [
+    { label: "BEFORE THE DESCENT", text: "The sky was torn, and through the wound poured everything that should not be. They named it the Tear." },
+    { label: "BEFORE THE DESCENT", text: "Each soul the Council sent to close it was worn, in time, into the shape of the thing they failed to stop." },
+    { label: "BEFORE THE DESCENT", text: "You are the next to descend. Cut clean. Keep moving. Reach the Source before it wears your shape too." },
+  ];
   // shown when the whole Adventure is completed (final biome's boss falls)
   const CAMPAIGN_ENDING = "The Tear closes behind you like a held breath let go. Every guardian, every echo of the ones who came before — all of it was the long way of asking whether you'd still be going somewhere when you arrived. You are. Whatever waits on the other side, you walked the whole length of someone else's ending to reach your own beginning. Go finish it.";
 
@@ -215,24 +220,27 @@
     const pages = [];
     if (index === 0 && !run._prologueShown) {
       run._prologueShown = true;
-      pages.push({ label: "BEFORE THE DESCENT", text: CAMPAIGN_INTRO });
+      // the prologue is three short framings, not one paragraph (Plan 003)
+      pages.push(...CAMPAIGN_INTRO);
     }
     if (priorOutro) pages.push(priorOutro);
     pages.push(...chapter.pages);
     const brief = settings.cinematics === "brief";
+    // living-biome art direction: which side the text lives on + ink-wash tone
+    const art = stage.chapterArt || { composition: "left", wash: stage.dark ? "dark" : "light" };
     const flow = chapterFlow = { stage, chapter, pages, state: "LORE_ENTER", page: 0, brief };
     run.chapterState = "LORE_ENTER"; stageBannerT = 0; bossBeat = null;
     const pageBeats = pages.map((page, pageIndex) => ({
       // Full lore pages WAIT for the reader; Brief pages auto-advance after a short hold.
       id: "page-" + pageIndex, view: "page", completion: brief ? "confirm-or-timeout" : "confirm",
-      duration: brief ? 1.35 : 2.35, reveal: { mode: "phrase", duration: UI.t.motion.chapterTextReveal * (brief ? 0.52 : 1) },
+      duration: brief ? 1.35 : 2.35, reveal: { mode: "phrase", duration: UI.t.motion.loreReveal },
       playerMode: "locked", number: chapter.number, symbol: chapter.symbol,
       label: page.label, title: chapter.title, text: page.text, color: stage.accent, pageIndex, pageCount: pages.length,
-      transition: chapter.transition,
+      transition: chapter.transition, composition: art.composition, wash: art.wash,
       onEnter() { flow.state = "LORE_READ"; flow.page = pageIndex; run.chapterState = "LORE_READ"; try { SFX.dialogueTone("chapter"); } catch (e) {} },
     }));
     CINEMA.start({
-      id: "chapter-" + index, kind: "chapter", color: stage.accent, blocksCombat: true, hideHud: true,
+      id: "chapter-" + index, kind: "chapter", color: stage.accent, blocksCombat: true, hideHud: true, brief,
       hint: "TAP TO REVEAL  ·  HOLD TO SKIP CHAPTER", skipHint: "SKIPPING — BIOME REVEAL PRESERVED",
       onStart() { projectiles.length = 0; try { SFX.setMusicDuck(CONFIG.presentation.dialogueDuck, 0.18); } catch (e) {} },   // protection is held by the derived cinematic lock, not iframe
       onSkip(c, director) { director.skipTo("reveal"); },
@@ -248,14 +256,18 @@
       beats: [
         { id: "enter", duration: UI.t.motion.chapterIn, playerMode: "locked", onEnter() { flow.state = "LORE_ENTER"; run.chapterState = "LORE_ENTER"; } },
         ...pageBeats,
-        { id: "exit", view: "page", exit: true, duration: UI.t.motion.chapterExit, playerMode: "locked",
+        { id: "exit", view: "page", exit: true, duration: UI.t.motion.loreExit, playerMode: "locked",
           number: chapter.number, symbol: chapter.symbol, label: pages[pages.length - 1].label, title: chapter.title,
           text: pages[pages.length - 1].text, color: stage.accent, pageIndex: pages.length - 1, pageCount: pages.length,
-          transition: chapter.transition,
+          transition: chapter.transition, composition: art.composition, wash: art.wash,
           onEnter() { flow.state = "LORE_EXIT"; run.chapterState = "LORE_EXIT"; } },
-        { id: "reveal", view: "reveal", duration: brief ? 0.78 : 1.15, playerMode: "locked", number: chapter.number, name: stage.name, line: chapter.intro, color: stage.accent,
+        { id: "reveal", view: "reveal", duration: brief ? UI.t.motion.biomeRevealBrief : UI.t.motion.biomeRevealFull,
+          playerMode: "locked", number: chapter.number, name: stage.name, line: chapter.intro, color: stage.accent,
+          composition: art.composition, wash: art.wash,
           onEnter() { flow.state = "BIOME_REVEAL"; run.chapterState = "BIOME_REVEAL"; try { SFX.setMusicDuck(CONFIG.presentation.biomeRevealDuck, 0.32); } catch (e) {} } },
-        { id: "ready", view: "ready", duration: brief ? 0.46 : 0.72, playerMode: "locked", number: chapter.number, name: stage.name, line: stage.blurb, color: stage.accent,
+        { id: "ready", view: "ready", duration: brief ? UI.t.motion.readyBrief : UI.t.motion.readyFull,
+          playerMode: "locked", number: chapter.number, name: stage.name, line: stage.blurb, color: stage.accent,
+          composition: art.composition, wash: art.wash,
           onEnter() { flow.state = "READY"; run.chapterState = "READY"; } },
       ],
     }, flow);

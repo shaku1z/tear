@@ -5,7 +5,8 @@
 // registration URL (sw.js?v=N — the same ?v the game's scripts use), so the
 // existing cache-bust workflow (bump ?v in index.html) rolls the SW cache too.
 // Shell = cache-first (instant offline boot); cross-origin (CG SDK, Firebase,
-// fonts) = network passthrough, never cached here.
+// remote fonts) = network passthrough, never cached here. The chapter fonts are
+// now self-hosted (same-origin) and are precached with the shell.
 const VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
 const CACHE = "tear-blade-" + VERSION;
 
@@ -22,7 +23,12 @@ const SHELL = [
   "attract", "crazy", "firebase-config", "profile", "achievements", "challenges",
   "upgrades", "meta", "weapons", "affixes", "variants", "blade", "player",
   "projectile", "enemy", "ghost", "cloud", "mirror", "game",
-].map((m) => "/js/" + m + ".js?v=" + VERSION));
+].map((m) => "/js/" + m + ".js?v=" + VERSION)).concat([
+  // self-hosted chapter fonts (same-origin) — precache so the first offline boot has them
+  "/fonts/BarlowCondensed-SemiBold.woff2?v=" + VERSION,
+  "/fonts/IBMPlexMono-Regular.woff2?v=" + VERSION,
+  "/fonts/IBMPlexMono-Medium.woff2?v=" + VERSION,
+]);
 
 self.addEventListener("install", (e) => {
   e.waitUntil(

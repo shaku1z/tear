@@ -32,6 +32,27 @@ const UI = {
     },
     // spacing scale (px) — vertical rhythm + paddings
     space: { xs: 6, sm: 10, md: 16, lg: 24, xl: 40 },
+    // Chapter typography roles (Pantheon VI). Bundled families with deterministic
+    // Courier/Arial fallbacks; never hardcode these strings at call sites.
+    font: {
+      display: "'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif",  // condensed display titles
+      body: "'IBM Plex Mono', 'Courier New', monospace",                     // readable mono lore
+      displayWeight: 600, bodyWeight: 400, bodyMediumWeight: 500,
+    },
+    // letter-spacing roles (px, applied by manual tracking since canvas has no
+    // letter-spacing before recent specs) and line-height roles (multipliers).
+    track: { label: 3.2, title: 0.5, body: 0.2 },
+    lineH: { title: 1.02, body: 1.5 },
+    // Living-biome chapter layout (authored at 1600×900, scaled by the caller).
+    chapter: {
+      safeMargin: 48, safeVW: 0.06,          // max(48, 6vw)
+      bodyColW: 580, cpl: [45, 68],          // body column + target chars/line
+      washDim: 0.26,                          // world loses ~26% (not 72%) — biome stays legible
+      washSpan: 0.52,                         // fraction of width the ink-wash covers on its side
+      washDark: "rgba(6,7,12,0.82)", washLight: "rgba(248,247,244,0.90)",
+      labelGap: 34, titleGap: 30, loreGap: 42, progressGap: 22, promptGap: 30,
+      fragStagger: 0.05, fragStaggerCap: 0.18,
+    },
     // component metrics
     metric: {
       btnH: 48, btnW: 300, btnGap: 12, btnRound: 0,
@@ -48,9 +69,7 @@ const UI = {
       bossPhaseAccentH: 3,
       cinemaBarH: 74, cinemaDialogueW: 780, cinemaDialogueH: 104,
       cinemaDialogueBottom: 96, cinemaDialoguePad: 18, cinemaProgressH: 3,
-      chapterW: 1080, chapterH: 520, chapterPad: 46, chapterTearAt: 0.36,
-      chapterNumeralY: 128, chapterBodyW: 560, chapterLineH: 28, chapterProgressGap: 18,
-      biomeRevealRuleW: 260, cinematicPromptBottom: 54,
+      cinematicPromptBottom: 54,
       finalRewardW: 760, finalRewardH: 390, finalRewardSigilR: 54,
       finalRewardRuleW: 310, finalRewardPromptBottom: 34, finalFractureW: 680, finalFractureH: 12,
       rallyInset: 2,
@@ -64,7 +83,6 @@ const UI = {
       cinemaBar: 0.88, cinemaVignette: 0.30, cinemaSubtitle: 0.75,
       bossPhasePanel: 0.82,
       cinemaPanel: 0.90, cinemaHint: 0.58,
-      chapterWorldDim: 0.72, chapterPanel: 0.94, chapterGhost: 0.16,
       finalRewardDim: 0.78, finalRewardPanel: 0.96, finalRewardGhost: 0.18,
       rallyBase: 0.72, rallyPulse: 0.18,
     },
@@ -93,13 +111,55 @@ const UI = {
       bossIntroAccentDelay: 0.15,
       bossIntroAccentGrow: 0.5,
       cinemaFrameIn: 0.45, cinemaDialogueIn: 0.22,
-      chapterIn: 0.22, chapterTextReveal: 1.35, chapterExit: 0.32, biomeRevealIn: 0.42,
+      chapterIn: 0.22,
+      // Living-biome chapter timings (Pantheon VI P3)
+      chapterPageCross: 0.26, loreReveal: 0.32, loreExit: 0.36,
+      biomeRevealFull: 1.6, biomeRevealBrief: 1.0, readyFull: 0.9, readyBrief: 0.65,
       finalRewardIn: 0.34,
       rallyPulse: 9,
     },
   },
 
   font(size, bold) { return (bold ? "bold " : "") + size + "px 'Courier New', monospace"; },
+
+  // ---- CHAPTER TYPE ROLES (Pantheon VI) -----------------------------------
+  // Never hardcode the family strings at a call site; go through these.
+  displayFont(size, weight) { return (weight || this.t.font.displayWeight) + " " + size + "px " + this.t.font.display; },
+  bodyFont(size, weight) { return (weight || this.t.font.bodyWeight) + " " + size + "px " + this.t.font.body; },
+
+  // draw a single line with manual per-glyph tracking (canvas letter-spacing is
+  // not yet universal). Returns the advanced x. Honors the current textAlign for
+  // "left"/"right"/"center" by pre-measuring the tracked width.
+  trackedText(ctx, str, x, y, track, align) {
+    const s = String(str); if (!s) return x;
+    let total = 0; for (let i = 0; i < s.length; i++) total += ctx.measureText(s[i]).width + (i < s.length - 1 ? track : 0);
+    let cx = align === "center" ? x - total / 2 : align === "right" ? x - total : x;
+    const savedAlign = ctx.textAlign; ctx.textAlign = "left";
+    for (let i = 0; i < s.length; i++) { ctx.fillText(s[i], cx, y); cx += ctx.measureText(s[i]).width + track; }
+    ctx.textAlign = savedAlign; return cx;
+  },
+
+  // A directional ink-wash: an opaque-toward-the-edge → transparent gradient on
+  // one side of the screen, replacing the old full-screen dim. `side` is where
+  // the text lives (and where the wash is densest).
+  chapterWash(ctx, side, washKind, amount) {
+    const t = this.t, vw = CONFIG.view.w, vh = CONFIG.view.h, k = Math.max(0, Math.min(amount, 1));
+    const dense = washKind === "light" ? t.chapter.washLight : t.chapter.washDark;
+    const span = vw * t.chapter.washSpan;
+    ctx.save();
+    // a whole-screen breath of dim first (only ~26%, biome stays legible)
+    ctx.globalAlpha = k * t.chapter.washDim; ctx.fillStyle = washKind === "light" ? "#f8f7f4" : "#06070c";
+    ctx.fillRect(0, 0, vw, vh); ctx.globalAlpha = k;
+    const g = side === "right"
+      ? ctx.createLinearGradient(vw, 0, vw - span, 0)
+      : ctx.createLinearGradient(0, 0, span, 0);
+    g.addColorStop(0, dense);
+    g.addColorStop(1, washKind === "light" ? "rgba(248,247,244,0)" : "rgba(6,7,12,0)");
+    ctx.fillStyle = g;
+    if (side === "right") ctx.fillRect(vw - span, 0, span, vh); else ctx.fillRect(0, 0, span, vh);
+    ctx.restore();
+    return washKind === "light" ? "#12131a" : "#f1eff9";   // the ink color that reads on this wash
+  },
 
   // ---- TEXT ---------------------------------------------------------------
   // body / inline copy. size defaults to the `body` token.
@@ -860,57 +920,121 @@ const UI = {
     this.ink = savedInk; ctx.restore();
   },
 
-  // Fractured Codex: one token-owned campaign page. The biome remains visible
-  // beneath the field; numeral, Tear, copy, progress and prompt are one component.
-  chapterCard(ctx, opts) {
-    const o = opts || {}, t = this.t, m = t.metric, a = t.alpha;
-    const vw = CONFIG.view.w, vh = CONFIG.view.h, k0 = Math.max(0, Math.min(Number(o.amount) || 0, 1));
-    const k = 1 - (1 - k0) * (1 - k0), w = Math.min(m.chapterW, vw - t.space.xl * 2), h = Math.min(m.chapterH, vh - t.space.xl * 2);
-    const x = (vw - w) / 2, y = (vh - h) / 2 + (1 - k) * t.space.lg, tearX = x + w * m.chapterTearAt;
-    const color = o.color || t.color.accent, savedInk = this.ink;
-    ctx.save(); ctx.globalAlpha = k * a.chapterWorldDim; ctx.fillStyle = t.color.cinema; ctx.fillRect(0, 0, vw, vh);
-    ctx.globalAlpha = k * a.chapterPanel; ctx.fillStyle = t.color.cinema; ctx.fillRect(x, y, w, h);
-    ctx.globalAlpha = k; ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h);
-    this.ink = t.color.cinemaInk;
-    ctx.globalAlpha = k * a.chapterGhost; ctx.fillStyle = color; ctx.font = this.font(176, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(o.number || "", x + w * 0.18, y + h * 0.43);
-    ctx.globalAlpha = k; ctx.font = this.font(t.type.display, true); ctx.fillStyle = color; ctx.fillText(o.symbol || "◇", x + w * 0.18, y + m.chapterNumeralY);
-    // The vertical Tear is intentionally irregular but its placement, weight and
-    // amplitude remain token-derived and stable at every aspect ratio.
-    const tearFlip = o.transition === "mirror" ? -1 : 1;
-    ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(tearX, y + t.space.lg);
-    for (let i = 1; i <= 8; i++) { const yy = y + t.space.lg + (h - t.space.lg * 2) * i / 8; ctx.lineTo(tearX + tearFlip * (i % 2 ? t.space.xs : -t.space.xs), yy); }
-    ctx.stroke();
-    const tx = tearX + m.chapterPad, maxW = Math.min(m.chapterBodyW, x + w - m.chapterPad - tx);
-    this.tag(ctx, o.label || "FRACTURED CODEX", tx, y + m.chapterPad, color, "left", t.type.caption);
-    ctx.fillStyle = t.color.cinemaInk; ctx.font = this.font(t.type.h2, true); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-    ctx.fillText(o.title || "", tx, y + m.chapterPad + t.space.xl);
-    const full = String(o.text || ""), reveal = Math.max(0, Math.min(Number(o.reveal) || 0, 1));
-    const shown = full.slice(0, Math.ceil(full.length * reveal)), words = shown.split(/\s+/);
-    ctx.font = this.font(t.type.lead, false); let line = "", yy = y + m.chapterPad + t.space.xl + t.type.h2 + t.space.lg;
-    for (const word of words) {
-      const next = line ? line + " " + word : word;
-      if (line && ctx.measureText(next).width > maxW) { ctx.fillText(line, tx, yy); line = word; yy += m.chapterLineH; }
-      else line = next;
-    }
-    if (line) ctx.fillText(line, tx, yy);
-    const pages = Math.max(1, o.pageCount || 1), page = Math.max(0, o.pageIndex || 0);
-    for (let i = 0; i < pages; i++) { ctx.globalAlpha = i === page ? k : k * a.ghost; ctx.fillStyle = i === page ? color : t.color.cinemaMuted; ctx.fillRect(tx + i * m.chapterProgressGap, y + h - m.chapterPad, i === page ? 12 : 6, 3); }
-    this.cinematicPrompt(ctx, { text: o.hint, x: x + w - m.chapterPad, y: y + h - m.chapterPad + 3, align: "right", amount: k, color });
-    this.ink = savedInk; ctx.restore();
+  // ---- LIVING BIOME CHAPTER (Pantheon VI) ---------------------------------
+  // The world writes the chapter. No modal: a directional ink-wash on one side
+  // makes negative space for a tracked label, a condensed display title, and a
+  // readable mono lore column. Every component shares this one layout so the
+  // header, lore, progress and prompt stay aligned, and the biome reveal is the
+  // same composition breathing open.
+  _chapterLayout(o) {
+    const t = this.t, vw = CONFIG.view.w, vh = CONFIG.view.h;
+    const scale = clamp(vh / 900, 0.78, 1.4);
+    const SM = Math.max(t.chapter.safeMargin, vw * t.chapter.safeVW);
+    const colW = Math.min(t.chapter.bodyColW * scale, vw - SM * 2);
+    const side = o && o.composition === "right" ? "right" : "left";
+    const x = side === "right" ? vw - SM - colW : SM;         // left edge of the text column
+    const anchorX = side === "right" ? x + colW : x;          // the text's alignment edge
+    return { scale, SM, colW, side, x, anchorX, vw, vh,
+      align: side === "right" ? "right" : "left",
+      labelSize: Math.round(15 * scale), titleSize: Math.round(60 * scale), loreSize: Math.round(19 * scale),
+      topY: vh * 0.30, loreY: vh * 0.52 };
   },
 
-  biomeReveal(ctx, opts) {
-    const o = opts || {}, t = this.t, m = t.metric, a = t.alpha, vw = CONFIG.view.w, vh = CONFIG.view.h;
-    const k0 = Math.max(0, Math.min(Number(o.amount) || 0, 1)), k = 1 - (1 - k0) * (1 - k0), color = o.color || t.color.accent;
-    const savedInk = this.ink; ctx.save(); ctx.globalAlpha = k * 0.28; ctx.fillStyle = t.color.cinema; ctx.fillRect(0, 0, vw, vh);
-    this.ink = t.color.cinemaInk; ctx.globalAlpha = k;
-    this.tag(ctx, "CHAPTER " + (o.number || ""), vw / 2, vh / 2 - 92, color, "center", t.type.caption);
-    this.title(ctx, o.name || "", vw / 2, vh / 2 - 26, t.type.display);
-    ctx.fillStyle = color; ctx.fillRect(vw / 2 - m.biomeRevealRuleW / 2, vh / 2 - 6, m.biomeRevealRuleW * k, 3);
-    this.text(ctx, o.line || "", vw / 2, vh / 2 + 42, t.type.lead, "center", k * a.soft);
-    if (o.ready) this.tag(ctx, "READY", vw / 2, vh / 2 + 102, color, "center", t.type.title);
-    this.ink = savedInk; ctx.restore();
+  _bladeMark(ctx, x, y, scale, color, dir) {
+    ctx.save(); ctx.globalAlpha = 1; ctx.strokeStyle = color; ctx.lineWidth = 2 * scale; ctx.lineCap = "round";
+    const len = 30 * scale;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + dir * len, y - len * 0.36); ctx.stroke();       // the blade
+    ctx.beginPath(); ctx.moveTo(x + dir * 7 * scale, y - 4 * scale); ctx.lineTo(x + dir * 7 * scale, y + 6 * scale); ctx.stroke(); // guard
+    ctx.restore();
+  },
+
+  // chapter label + condensed display title over the ink-wash. `morphTo`/`morphK`
+  // crossfade the title into the biome name in place (used by biomeReveal).
+  chapterHeader(ctx, o) {
+    o = o || {}; const t = this.t, L = this._chapterLayout(o);
+    const k = clamp(Number(o.amount) == null ? 1 : o.amount, 0, 1), color = o.color || t.color.accent;
+    const ink = this.chapterWash(ctx, L.side, o.wash || "dark", k);
+    ctx.save(); ctx.globalAlpha = k; ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = color; ctx.font = this.bodyFont(L.labelSize, t.font.bodyMediumWeight);
+    this.trackedText(ctx, o.label || "", L.anchorX, L.topY, t.track.label, L.align);
+    const titleY = L.topY + t.chapter.titleGap + L.titleSize * 0.5;
+    ctx.font = this.displayFont(L.titleSize); ctx.textAlign = L.align;
+    const mk = clamp(Number(o.morphK) || 0, 0, 1);
+    if (o.morphTo && mk > 0) {
+      ctx.globalAlpha = k * (1 - mk); ctx.fillStyle = ink; ctx.fillText(o.title || "", L.anchorX, titleY);
+      ctx.globalAlpha = k * mk; ctx.fillText(o.morphTo, L.anchorX, titleY); ctx.globalAlpha = k;
+    } else { ctx.fillStyle = ink; ctx.fillText(o.title || "", L.anchorX, titleY); }
+    const ruleW = (o.ruleW == null ? Math.min(L.colW * 0.42, 240 * L.scale) : o.ruleW);
+    ctx.fillStyle = color; ctx.fillRect(L.side === "right" ? L.anchorX - ruleW : L.anchorX, titleY + t.space.sm, ruleW, 2 * L.scale);
+    ctx.restore();
+  },
+
+  // one lore fragment as a mono column with phrase/line reveal (never per-char).
+  loreFragment(ctx, o) {
+    o = o || {}; const t = this.t, L = this._chapterLayout(o);
+    const k = clamp(Number(o.amount) == null ? 1 : o.amount, 0, 1), reveal = clamp(Number(o.reveal) || 0, 0, 1);
+    const ink = (o.wash === "light") ? "#12131a" : "#f1eff9";
+    ctx.save(); ctx.globalAlpha = k; ctx.fillStyle = ink;
+    ctx.font = this.bodyFont(L.loreSize); ctx.textAlign = L.align; ctx.textBaseline = "alphabetic";
+    const words = String(o.text || "").split(/\s+/).filter(Boolean);
+    const shown = words.slice(0, Math.ceil(words.length * reveal));
+    const lineH = L.loreSize * t.lineH.body; let line = "", yy = L.loreY;
+    const advance = (s) => ctx.measureText(s).width + t.track.body * s.length;
+    for (const w of shown) {
+      const next = line ? line + " " + w : w;
+      if (line && advance(next) > L.colW) { this.trackedText(ctx, line, L.anchorX, yy, t.track.body, L.align); yy += lineH; line = w; }
+      else line = next;
+    }
+    if (line) this.trackedText(ctx, line, L.anchorX, yy, t.track.body, L.align);
+    ctx.restore();
+  },
+
+  // small fracture ticks: a discreet "which page" marker, never an animated bar.
+  chapterProgress(ctx, o) {
+    o = o || {}; const t = this.t, L = this._chapterLayout(o);
+    const k = clamp(Number(o.amount) == null ? 1 : o.amount, 0, 1), color = o.color || t.color.accent;
+    const count = Math.max(1, o.count || 1), idx = clamp(o.index || 0, 0, count - 1);
+    const y = L.loreY - t.chapter.progressGap * L.scale, gap = 14 * L.scale, tickH = 2 * L.scale;
+    ctx.save(); ctx.textBaseline = "alphabetic";
+    for (let i = 0; i < count; i++) {
+      const w = (i === idx ? 16 : 7) * L.scale;
+      const cx = L.side === "right" ? L.anchorX - (count - 1 - i) * gap - w : L.anchorX + i * gap;
+      ctx.globalAlpha = k * (i === idx ? 1 : t.alpha.faint); ctx.fillStyle = color;
+      ctx.fillRect(cx, y, w, tickH);
+    }
+    ctx.restore();
+  },
+
+  chapterPrompt(ctx, o) {
+    o = o || {}; if (!o.text) return; const t = this.t, L = this._chapterLayout(o);
+    const k = clamp(Number(o.amount) == null ? 1 : o.amount, 0, 1), color = o.color || t.color.accent;
+    ctx.save(); ctx.globalAlpha = k * t.alpha.cinemaHint; ctx.fillStyle = color;
+    ctx.font = this.bodyFont(Math.round(12 * L.scale), t.font.bodyMediumWeight); ctx.textBaseline = "alphabetic";
+    const y = L.vh - Math.max(t.chapter.safeMargin, L.vh * 0.06);
+    this.trackedText(ctx, o.text, L.anchorX, y, t.track.body, L.align);
+    ctx.restore();
+  },
+
+  // The biome reveal is the same composition breathing open: the wash retreats as
+  // the world reaches full color, the title morphs to the biome name, the rule
+  // contracts into the name underline, and READY is a small blade mark.
+  biomeReveal(ctx, o) {
+    o = o || {}; const t = this.t, L = this._chapterLayout(o);
+    const k = clamp(Number(o.amount) || 0, 0, 1), color = o.color || t.color.accent;
+    const washK = (1 - k) * 0.9 + (o.ready ? 0 : 0.06);      // wash fades out as color returns
+    const ink = this.chapterWash(ctx, L.side, o.wash || "dark", washK);
+    ctx.save(); ctx.textBaseline = "alphabetic";
+    ctx.globalAlpha = 1; ctx.fillStyle = color; ctx.font = this.bodyFont(L.labelSize, t.font.bodyMediumWeight);
+    this.trackedText(ctx, "CHAPTER " + (o.number || ""), L.anchorX, L.topY, t.track.label, L.align);
+    const titleY = L.topY + t.chapter.titleGap + L.titleSize * 0.5;
+    ctx.fillStyle = ink; ctx.font = this.displayFont(L.titleSize); ctx.textAlign = L.align;
+    ctx.fillText(o.name || "", L.anchorX, titleY);
+    const ruleW = Math.min(L.colW * 0.42, 240 * L.scale) * (1 - 0.42 * k);
+    ctx.fillStyle = color; ctx.fillRect(L.side === "right" ? L.anchorX - ruleW : L.anchorX, titleY + t.space.sm, ruleW, 2 * L.scale);
+    if (o.line) { ctx.globalAlpha = 0.82 * (1 - k * 0.4); ctx.fillStyle = ink; ctx.font = this.bodyFont(Math.round(15 * L.scale));
+      this.trackedText(ctx, o.line, L.anchorX, titleY + t.chapter.loreGap, t.track.body, L.align); ctx.globalAlpha = 1; }
+    if (o.ready) this._bladeMark(ctx, L.anchorX, titleY + t.chapter.loreGap * 1.9, L.scale, color, L.side === "right" ? -1 : 1);
+    ctx.restore();
   },
 
   cinematicPrompt(ctx, opts) {

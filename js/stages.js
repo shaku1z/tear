@@ -17,6 +17,8 @@ const STAGES = [
         { label: "THE KEEPER", text: "One Warden remained after the orders stopped coming. Duty outlived everyone who might have released him." },
       ],
       bossOutro: { label: "BROKEN BADGE", text: "Inside the badge: ‘Directive: none shall reach the Undercroft.’ Beneath it, scratched by hand: ‘I never asked what was down there.’" } },
+    // living-biome chapter: text lives in the empty left sky over a pale ink-wash
+    chapterArt: { composition: "left", wash: "light" },
     bg: "#ffffff", plat: "#111111", accent: "#e23b3b",
     // disciplined guards: melee front line, a few archers; heavy units only later
     pool: [["charger", 1.0, 1], ["ranged", 0.5, 2], ["bomber", 0.3, 4], ["armored", 0.3, 5]],
@@ -37,6 +39,8 @@ const STAGES = [
         { label: "THE CONTAINMENT", text: "The Colossus was not built to conquer. It was built to stand between the Crimson Tide and everything above." },
       ],
       bossOutro: { label: "ORIGINAL STONE", text: "Older than the machine: ‘Should the Colossus fall, know this—we tried to stop the Tide before it reached the Fields.’" } },
+    // industrial annotation reads in from the right
+    chapterArt: { composition: "right", wash: "light" },
     bg: "#dbe0e6", plat: "#2a2f37", accent: "#15c2c2",
     // industrial: heavy plating + ordnance, with anchors that pin you down
     pool: [["armored", 0.8, 1], ["bomber", 0.7, 1], ["charger", 0.6, 1], ["ranged", 0.5, 2], ["anchor", 0.25, 4]],
@@ -58,6 +62,7 @@ const STAGES = [
         { label: "THE CROWN", text: "Aldric calls it a throne. The ruins call it a grave. Neither word has persuaded him to leave." },
       ],
       bossOutro: { label: "PAINTED PORTRAIT", text: "Two children, laughing. On the back: ‘Elan and Mira—before the first Tear.’ In another hand: ‘Aldric. Come home.’" } },
+    chapterArt: { composition: "left", wash: "light" },
     bg: "#f7e3e3", plat: "#5a1320", accent: "#e23b3b",
     // old rage: relentless melee + flyers, heralds whipping them into a frenzy
     pool: [["charger", 1.0, 1], ["flyer", 0.6, 1], ["bomber", 0.3, 2], ["herald", 0.3, 3], ["chimera", 0.35, 5]],
@@ -78,6 +83,8 @@ const STAGES = [
         { label: "THE REFLECTION", text: "Something in the Spire has practiced your shape for years. It remembers a journey you have only just begun." },
       ],
       bossOutro: { label: "HUNDREDS OF NAMES", text: "Your name, cut into the wall again and again. At the bottom: ‘Go finish it. One of us should.’" } },
+    // the reflection speaks from the right, mirrored
+    chapterArt: { composition: "right", wash: "light" },
     bg: "#e7e3f3", plat: "#382c54", accent: "#8b3bd6",
     // where the rules thin: wraiths, shifting casters, and support that warps the fight
     pool: [["wraith", 0.7, 1], ["flyer", 0.5, 1], ["ranged", 0.4, 1], ["priest", 0.3, 2], ["chimera", 0.5, 3], ["mender", 0.25, 4]],
@@ -100,6 +107,8 @@ const STAGES = [
         { label: "THE SOURCE", text: "It has worn every guardian sent to close it. Now it waits to learn whether your blade is another memory or an ending." },
       ],
       bossOutro: { label: "THE QUIET", text: "The Source was never an enemy. It was the wound the world kept reopening, wearing the shape of everyone who tried to close it." } },
+    // the wound is near-black negative space; text is exposed by the dark wash
+    chapterArt: { composition: "left", wash: "dark" },
     bg: "#0e0b1a", plat: "#c9c4e0", accent: "#13c4d6",
     // everything you have faced, together
     pool: [["charger", 1.0, 1], ["ranged", 0.6, 1], ["flyer", 0.5, 1], ["bomber", 0.4, 1], ["armored", 0.4, 1], ["wraith", 0.4, 1], ["chimera", 0.4, 1], ["herald", 0.2, 1], ["anchor", 0.2, 1], ["priest", 0.2, 1], ["mender", 0.18, 1]],

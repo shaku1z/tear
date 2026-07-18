@@ -184,15 +184,24 @@ const Cinematics = (() => {
       if (!this.active || !ui) return;
       const b = this.beat;
       if (this.script.kind === "chapter") {
-        const hint = this.skipping ? (this.script.skipHint || "SKIPPING CHAPTER") : (this.script.hint || "TAP TO REVEAL  ·  HOLD TO SKIP");
-        if (b && b.view === "page") ui.chapterCard(ctx, { number: b.number, symbol: b.symbol, label: b.label,
-          title: b.title, text: b.text, color: b.color || this.script.color,
-          amount: b.exit ? 1 - this.progress : Math.min(1, this.elapsed / 0.22),
-          reveal: b.exit ? 1 : this.revealProgress, pageIndex: b.pageIndex, pageCount: b.pageCount,
-          transition: b.transition, hint });
-        else if (b && (b.view === "reveal" || b.view === "ready")) ui.biomeReveal(ctx, { number: b.number, name: b.name,
-          line: b.line, color: b.color || this.script.color,
-          amount: b.view === "ready" ? 1 : Math.min(1, this.elapsed / (ui.t.motion.biomeRevealIn || 0.42)), ready: b.view === "ready" });
+        const S = this.script, mo = ui.t.motion;
+        const hint = this.skipping ? (S.skipHint || "SKIPPING CHAPTER") : (S.hint || "TAP TO REVEAL  ·  HOLD TO SKIP");
+        if (b && b.view === "page") {
+          // enter fades the whole composition in; the EXIT beat holds the header
+          // and chapter label while only the lore fragment softens away.
+          const inK = b.exit ? 1 : Math.min(1, this.elapsed / (mo.chapterPageCross || 0.26));
+          const loreK = b.exit ? Math.max(0, 1 - this.progress) : inK;
+          const art = { color: b.color || S.color, composition: b.composition, wash: b.wash };
+          ui.chapterHeader(ctx, Object.assign({ label: b.label, title: b.title, amount: inK }, art));
+          ui.chapterProgress(ctx, Object.assign({ index: b.pageIndex, count: b.pageCount, amount: inK }, art));
+          ui.loreFragment(ctx, Object.assign({ text: b.text, reveal: b.exit ? 1 : this.revealProgress, amount: loreK }, art));
+          if (!b.exit) ui.chapterPrompt(ctx, Object.assign({ text: hint, amount: inK }, art));
+        } else if (b && (b.view === "reveal" || b.view === "ready")) {
+          const revDur = this.brief ? (mo.biomeRevealBrief || 1.0) : (mo.biomeRevealFull || 1.6);
+          ui.biomeReveal(ctx, { number: b.number, name: b.name, line: b.line, color: b.color || S.color,
+            composition: b.composition, wash: b.wash,
+            amount: b.view === "ready" ? 1 : Math.min(1, this.elapsed / revDur), ready: b.view === "ready" });
+        }
         return;
       }
       if (this.script.kind === "finale") {
@@ -200,10 +209,12 @@ const Cinematics = (() => {
           color: this.script.color, reducedMotion: !!reducedMotion });
         if (b && (b.id === "silence" || b.id === "wound")) ui.finaleFracture(ctx, {
           amount: b.id === "silence" ? this.progress * 0.35 : 0.35 + this.progress * 0.65, color: this.script.color });
-        if (b && b.view === "epilogue") ui.chapterCard(ctx, { number: "V", symbol: "◉", label: b.label,
-          title: b.title, text: b.text, color: b.color || this.script.color,
-          amount: Math.min(1, this.elapsed / 0.22), reveal: this.revealProgress,
-          pageIndex: 0, pageCount: 1, transition: "void", hint: b.hint || this.script.hint });
+        if (b && b.view === "epilogue") {
+          const inK = Math.min(1, this.elapsed / 0.26), art = { color: b.color || this.script.color, composition: "left", wash: "dark" };
+          ui.chapterHeader(ctx, Object.assign({ label: b.label, title: b.title, amount: inK }, art));
+          ui.loreFragment(ctx, Object.assign({ text: b.text, reveal: this.revealProgress, amount: inK }, art));
+          ui.chapterPrompt(ctx, Object.assign({ text: b.hint || this.script.hint, amount: inK }, art));
+        }
         else if (b && b.view === "reward") ui.finalReward(ctx, { label: b.label, title: b.title, sigil: b.sigil,
           reward: b.reward, detail: b.detail, color: b.color || this.script.color,
           amount: Math.min(1, this.elapsed / ui.t.motion.finalRewardIn), hint: b.hint || this.script.hint });
