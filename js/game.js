@@ -59,7 +59,7 @@
   let settings = loadSettings();
   function loadSettings() {
     const def = { sens: CONFIG.blade.aimSensitivity, shake: 1, flash: 1, reducedMotion: false, highContrast: false,
-      vol: 0.6, music: true, gfx: "auto", controls: "auto", touchAim: "stick", cinematics: "full" };
+      vol: 0.6, music: true, gfx: "auto", controls: "auto", touchAim: "stick", cinematics: "full", padPreset: "default" };
     try { return Object.assign(def, JSON.parse(CG.store.get("tear_settings") || "{}")); }
     catch (e) { return def; }
   }
@@ -77,6 +77,9 @@
     GFX.low = settings.gfx === "low" || (settings.gfx === "auto" && isLowEnd());
     Input.forceMode = settings.controls || "auto";   // 2-in-1s can force TOUCH or DESKTOP
     Input.touchAimMode = settings.touchAim || "stick";   // radial stick vs mouse-like drag
+    // controller preset (sanitized by setPreset; unknown/missing -> "default"); write
+    // the canonical value back so a bad stored string is corrected on save.
+    if (typeof PAD !== "undefined") settings.padPreset = PAD.setPreset(settings.padPreset);
     if (typeof SFX !== "undefined") { SFX.vol = settings.vol; SFX.musicOn = settings.music; SFX.setVol(settings.vol); SFX.setMusic(settings.music); }
   }
   if (typeof SFX !== "undefined") SFX.init();

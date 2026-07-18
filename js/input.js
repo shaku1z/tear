@@ -9,6 +9,8 @@ const Input = {
   allowLock: false,       // only request pointer lock while actually playing
   rmb: false,             // right mouse button edge (throw / recall)
   lmb: false,             // left mouse button held (draw tether in close)
+  padTether: false,       // controller tether-tighten held (separate channel so the pad
+                          // never clobbers a real mouse hold — see tetherHeld getter)
   clicked: false,         // left-click edge (for menu/UI)
   clickX: 0, clickY: 0,
   wheel: 0,               // accumulated wheel delta (scrollable menus)
@@ -222,8 +224,9 @@ const Input = {
       this.locked = document.pointerLockElement === canvas;
     });
 
-    // lose focus -> drop held keys so the player doesn't run forever
-    window.addEventListener("blur", () => { this.held.clear(); });
+    // lose focus -> drop held keys so the player doesn't run forever, and release
+    // any controller-held tether so the blade doesn't stay tightened after refocus
+    window.addEventListener("blur", () => { this.held.clear(); this.padTether = false; });
   },
 
   // read + clear accumulated locked-pointer movement
@@ -250,6 +253,9 @@ const Input = {
   menuRight() { return this.pressed.has("ArrowRight") || this.pressed.has("KeyD"); },
   menuPrev() { return this.menuUp() || this.menuLeft(); },
   menuNext() { return this.menuDown() || this.menuRight(); },
+  // unified tether hold: mouse OR controller. Consumers read this, not lmb, so the
+  // two input sources coexist without one clearing the other.
+  get tetherHeld() { return this.lmb || this.padTether; },
   confirmPressed() { return this.pressed.has("Enter") || this.pressed.has("NumpadEnter") || this.pressed.has("Space"); },
   // one-shot: the loop may run several fixed substeps per frame, so this edge must
   // be consumed on first read or a single click would throw AND recall in one frame.

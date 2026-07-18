@@ -87,7 +87,7 @@ class Blade {
     // hold left-click to ease the tether in close (exponential approach) for finer control.
     // lmbOverride lets an AI-driven second blade (the Mirror) control its own tether instead
     // of reading the human's mouse button (additive: undefined -> reads Input.lmb as before).
-    const lmb = this.lmbOverride != null ? this.lmbOverride : Input.lmb;
+    const lmb = this.lmbOverride != null ? this.lmbOverride : Input.tetherHeld;
     const target = lmb ? B.minTether : 1;
     this.tetherFactor = lerp(this.tetherFactor, target, clamp(9 * (dt || 0.016), 0, 1));
     const R = B.aimRadius * this.tetherFactor;
