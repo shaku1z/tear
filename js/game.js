@@ -609,6 +609,8 @@
             const color = p.crackColor || arenaMaterialColor(p);
             FX.ring(p.x + p.w / 2, p.y, 18, color);
             FX.burst(p.x + p.w / 2, p.y, 0, 1, 8, color);
+            const owner = enemies && enemies.find((e) => !e.dead && e.presentationId === p.arenaBoss);
+            if (owner && typeof BOSSFX !== "undefined") BOSSFX.event(owner, "platformBreak", { color, quiet: true });
           }
         }
         continue;
@@ -636,6 +638,8 @@
       const color = arenaMaterialColor(p);
       FX.ring(p.x + p.w / 2, p.y, 12, color);
       if (!GFX.low) FX.burst(p.x + p.w / 2, p.y, 0, -1, 5, color);
+      const owner = enemies && enemies.find((e) => !e.dead && e.presentationId === p.arenaBoss);
+      if (owner && typeof BOSSFX !== "undefined") BOSSFX.event(owner, "platformRebuild", { color, quiet: true });
     }
   }
 
@@ -702,7 +706,10 @@
     player.voidMajorWindow = !!(chunk && chunk.majorAttackWindow);
     player.supportPlatform = standing;
     if (standing) {
-      if (vs.playerLane && standing.voidLane !== vs.playerLane) player.voidTransferT = Math.max(player.voidTransferT || 0, CONFIG.source.voidTransferGrace);
+      if (vs.playerLane && standing.voidLane !== vs.playerLane) {
+        player.voidTransferT = Math.max(player.voidTransferT || 0, CONFIG.source.voidTransferGrace);
+        if (typeof SFX !== "undefined" && SFX.voidTransfer) SFX.voidTransfer();
+      }
       vs.playerLane = standing.voidLane; player.voidLane = standing.voidLane;
     } else {
       player.voidLane = vs.playerLane;
@@ -1807,8 +1814,7 @@
 
     // BOSS THEATER: drain the shared boss juice queue (every boss, always —
     // same grammar as the Echo's fxq above)
-    if (typeof BOSSFX !== "undefined") while (BOSSFX.q.length) {
-      const q = BOSSFX.q.shift();
+    if (typeof BOSSFX !== "undefined") for (const q of BOSSFX.drain()) {
       if (q.shake) addShake(q.shake);
       if (q.flash) addFlash(q.flash);
       if (q.hitstop) hitStop = Math.max(hitStop, q.hitstop);
@@ -1816,7 +1822,7 @@
       if (q.zoom) addZoom(q.zoom);
       if (q.banner) bossBeat = { text: q.banner, color: q.color || CONFIG.colors.boss, t: 1.15, dur: 1.15 };
       if (q.txt) addFloater(q.x != null ? q.x : player.x, q.y != null ? q.y : player.y - 70, q.txt, !!q.big, q.color || CONFIG.colors.boss);
-      if ((q.big || q.shake >= 9) && !q.quiet) { try { SFX.slam(); } catch (e) {} }
+      if (q.cue && typeof SFX[q.cue] === "function") { try { SFX[q.cue](); } catch (e) {} }
     }
 
     // audio cadence: dash start + swing whoosh
@@ -2175,7 +2181,7 @@
           // Aldric's duel: answering his wound inside the rally window wins blood back
           if (player.rallySource === e) {
             const healed = player.claimRally(dmg);
-            if (healed > 0) { addFloater(player.x, player.y - 44, "+" + Math.round(healed), false, "#e8a32e"); FX.burst(player.x, player.y - 10, 0, -1, 5, "#e8a32e"); }
+            if (healed > 0) { addFloater(player.x, player.y - 44, "+" + Math.round(healed), false, "#e8a32e"); FX.ribbon(e.x, e.y - 12, player.x, player.y - 10, "#e8a32e"); }
           }
           if (!e.anchored && !impulseHandled) {   // an anchored ally can't be spiked or launched (break the Anchor first)
             if (spike) { e.vy = (1000 + heightF * 800 + strikeF * 500) / e.weight; e.spiked = true; }
@@ -2292,7 +2298,7 @@
           // Aldric's duel: a thrown answer counts for the rally too
           if (player.rallySource === e) {
             const healed = player.claimRally(tdmg);
-            if (healed > 0) { addFloater(player.x, player.y - 44, "+" + Math.round(healed), false, "#e8a32e"); FX.burst(player.x, player.y - 10, 0, -1, 5, "#e8a32e"); }
+            if (healed > 0) { addFloater(player.x, player.y - 44, "+" + Math.round(healed), false, "#e8a32e"); FX.ribbon(e.x, e.y - 12, player.x, player.y - 10, "#e8a32e"); }
           }
           // Impale: pin + heavy bleed on the outgoing throw; the recall rips the wound open
           if (run.mods.impale) {

@@ -46,6 +46,7 @@ class Projectile {
     this.hitLatch = false; this.hitLatchT = 0; this.onCountered = null; this.spinDir = 1;
     this.embeddedLife = 0;
     this.groundImpact = false;
+    this.whistleStage = -1; this.sourceStolen = null;
     this.embedded = false;    // inert sweeper lodged in an arena wall
     this.harmless = false;    // collision consumers can ignore an embedded prop
     this._embedNotified = false;
@@ -155,6 +156,10 @@ class Projectile {
 
     if (this.landingT != null) this.landingT = Math.max(0, this.landingT - dt);
     if (this.gravity) this.vy += this.gravity * dt;   // bombs arc; mines fall to the floor
+    if (this.bossAttack === "mortar") {
+      if (this.whistleStage === 0) { this.whistleStage = 1; if (typeof SFX !== "undefined" && SFX.wardenMortarWhistle) SFX.wardenMortarWhistle(false); }
+      else if (this.whistleStage === 1 && this.vy > 120) { this.whistleStage = 2; if (typeof SFX !== "undefined" && SFX.wardenMortarWhistle) SFX.wardenMortarWhistle(true); }
+    }
     this.hist.push({ x: this.x, y: this.y });          // record the path for the motion trail
     if (this.hist.length > 7) this.hist.shift();
     this.x += this.vx * dt;
@@ -460,6 +465,16 @@ class Projectile {
     ctx.fillStyle = "#fff"; ctx.globalAlpha = 0.9;
     ctx.beginPath(); ctx.arc(0, 0, r * 0.4, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
     ctx.restore();
+
+    if (this.sourceStolen && !this.deflected) {
+      // Preserve the borrowed silhouette underneath an unmistakable Source shell:
+      // asymmetric brackets, a sheared ellipse, and reverse-moving ticks.
+      const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 70 + this.x * 0.03);
+      ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(-ang * 0.35);
+      ctx.strokeStyle = this.sourceStolen === "aldric" ? "#ff4d8d" : "#6ef2ff"; ctx.lineWidth = 2; ctx.globalAlpha = 0.5 + pulse * 0.3;
+      ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.ellipse(0, 0, r * (1.7 + pulse * 0.25), r * 1.05, 0.25, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = "#ffffff"; ctx.globalAlpha = 0.8; ctx.fillRect(-r * 1.5, -2, 4, 4); ctx.fillStyle = "#d65cff"; ctx.fillRect(r * 1.2, -r * 0.7, 3, 7); ctx.restore();
+    }
 
     if (this.bomb) { ctx.fillStyle = ink; ctx.fillRect(this.x - 1.5, this.y - r - 5, 3, 5); }   // fuse
     if (this.deflected) {                                // rings: it's yours now (double on a perfect parry)

@@ -23,6 +23,10 @@ const FX = {
     this.list.push({ type: "ring", x, y, r: r0 || 6, col: col || "#000", life: 0.32, max: 0.32 });
   },
 
+  ribbon(x0, y0, x1, y1, col) {
+    this.list.push({ type: "ribbon", x: x0, y: y0, x1, y1, col: col || "#ff8a1e", life: 0.34, max: 0.34 });
+  },
+
   // a spinning shard (used for enemy death shatter)
   shard(x, y, col) {
     const a = Math.random() * Math.PI * 2;
@@ -135,6 +139,11 @@ const FX = {
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.stroke();
+      } else if (p.type === "ribbon") {
+        ctx.strokeStyle = col; ctx.lineWidth = 3 + a * 4; ctx.lineCap = "round";
+        const mx = (p.x + p.x1) * 0.5, my = Math.min(p.y, p.y1) - 55 * (1 - a * 0.35);
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.quadraticCurveTo(mx, my, p.x1, p.y1); ctx.stroke();
+        ctx.globalAlpha = a * 0.72; ctx.strokeStyle = "#fff1c2"; ctx.lineWidth = 1.5; ctx.stroke();
       } else if (p.type === "shard") {
         ctx.save();
         ctx.translate(p.x, p.y);

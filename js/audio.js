@@ -4,6 +4,7 @@ const SFX = {
   vol: 0.6, musicVol: 0.5, musicOn: true, muted: false,
   _muteR: {},   // active mute reasons (e.g. "cg" portal mute, "ad" ad break) — muted if any are set
   _m: { timer: null, step: 0, next: 0 },
+  _noiseCache: {}, _voiceN: 0, _voiceMax: 24,
 
   init() {
     const start = () => this.resume();
@@ -27,6 +28,7 @@ const SFX = {
       this.musicGain = this.ctx.createGain();
       this.musicGain.gain.value = (this.muted || !this.musicOn) ? 0 : this.musicVol;
       this.musicGain.connect(this.master);
+      for (const d of [0.03, 0.05, 0.07, 0.1, 0.12, 0.16, 0.18, 0.22, 0.3, 0.36]) this._noiseBuffer(d);
       this._startMusic();
     }
     if (this.ctx.state === "suspended") this.ctx.resume();
@@ -44,9 +46,24 @@ const SFX = {
   },
 
   // ---- primitives (absolute-time scheduled) ----
+  _noiseBuffer(dur) {
+    const n = Math.max(1, Math.floor(this.ctx.sampleRate * dur)), key = String(n);
+    if (this._noiseCache[key]) return this._noiseCache[key];
+    const buf = this.ctx.createBuffer(1, n, this.ctx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    this._noiseCache[key] = buf; return buf;
+  },
+  _takeVoice(node) {
+    if (this._voiceN >= this._voiceMax) return false;
+    this._voiceN++;
+    const done = () => { this._voiceN = Math.max(0, this._voiceN - 1); };
+    if (node.addEventListener) node.addEventListener("ended", done, { once: true }); else node.onended = done;
+    return true;
+  },
   _osc(freq, dur, t, o) {
     o = o || {};
     const osc = this.ctx.createOscillator();
+    if (!this._takeVoice(osc)) return;
     osc.type = o.type || "sine";
     osc.frequency.setValueAtTime(freq, t);
     if (o.slideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(1, o.slideTo), t + dur);
@@ -60,11 +77,9 @@ const SFX = {
   },
   _noise(dur, t, o) {
     o = o || {};
-    const n = Math.max(1, Math.floor(this.ctx.sampleRate * dur));
-    const buf = this.ctx.createBuffer(1, n, this.ctx.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const buf = this._noiseBuffer(dur);
     const src = this.ctx.createBufferSource(); src.buffer = buf;
+    if (!this._takeVoice(src)) return;
     const f = this.ctx.createBiquadFilter();
     f.type = o.type || "highpass"; f.frequency.value = o.freq || 4000; f.Q.value = o.q || 0.8;
     const g = this.ctx.createGain();
@@ -82,11 +97,9 @@ const SFX = {
     if (!this.ctx) return;
     const v = clamp((speed - 1100) / 2600, 0, 1); if (v <= 0) return;
     const t = this.ctx.currentTime, dur = 0.19;
-    const n = Math.floor(this.ctx.sampleRate * dur);
-    const buf = this.ctx.createBuffer(1, n, this.ctx.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const buf = this._noiseBuffer(dur);
     const src = this.ctx.createBufferSource(); src.buffer = buf;
+    if (!this._takeVoice(src)) return;
     const f = this.ctx.createBiquadFilter();
     f.type = "bandpass"; f.Q.value = 1.1;
     f.frequency.setValueAtTime(2600 + v * 1400, t);
@@ -205,6 +218,27 @@ const SFX = {
     this._osc(source ? 1120 : 230, embedded ? 0.19 : 0.10, t, { type: source ? "sine" : "square", vol: embedded ? 0.085 : 0.04,
       slideTo: source ? 430 : (embedded ? 82 : 160), attack: 0.001 });
   },
+  // Semantic boss vocabulary. These cues are intentionally material-specific;
+  // BOSSFX coalesces same-frame requests and plays at most one of them.
+  wardenClash() { if (!this.ctx) return; const t = this.ctx.currentTime; this._click(t, 0.16); this._osc(1480, 0.11, t, { type: "square", vol: 0.08, slideTo: 930 }); },
+  wardenLockdown() { if (!this.ctx) return; const t = this.ctx.currentTime; [440, 660].forEach((f, i) => this._osc(f, 0.1, t + i * 0.055, { type: "square", vol: 0.045, slideTo: f * 0.92 })); },
+  wardenMortarLaunch() { if (!this.ctx) return; const t = this.ctx.currentTime; this._noise(0.08, t, { type: "bandpass", freq: 760, q: 1.8, vol: 0.08 }); this._osc(190, 0.14, t, { type: "square", vol: 0.07, slideTo: 330 }); },
+  wardenMortarWhistle(descending) { if (!this.ctx) return; const t = this.ctx.currentTime; this._osc(descending ? 1350 : 520, 0.16, t, { type: "sine", vol: 0.035, slideTo: descending ? 2100 : 1180, attack: 0.012 }); },
+  colossusServo() { if (!this.ctx) return; const t = this.ctx.currentTime; this._osc(105, 0.18, t, { type: "sawtooth", vol: 0.07, slideTo: 72, attack: 0.02 }); this._noise(0.09, t, { type: "lowpass", freq: 300, vol: 0.045 }); },
+  colossusPlate() { if (!this.ctx) return; const t = this.ctx.currentTime; this._click(t, 0.13); this._osc(275, 0.18, t, { type: "square", vol: 0.08, slideTo: 118 }); },
+  colossusStagger() { if (!this.ctx) return; const t = this.ctx.currentTime; this._noise(0.24, t, { type: "lowpass", freq: 260, vol: 0.17 }); [180, 132, 91].forEach((f, i) => this._osc(f, 0.19, t + i * 0.045, { type: "square", vol: 0.07, slideTo: f * 0.54 })); },
+  sawBounce() { this.sweeperBounce("saw", false); },
+  sweeperCounter() { if (!this.ctx) return; const t = this.ctx.currentTime; this._click(t, 0.19); this._osc(420, 0.16, t, { type: "square", vol: 0.09, slideTo: 1120 }); },
+  aldricCleaver() { if (!this.ctx) return; const t = this.ctx.currentTime; this._noise(0.15, t, { type: "bandpass", freq: 820, q: 0.75, vol: 0.1 }); this._osc(165, 0.15, t, { type: "triangle", vol: 0.05, slideTo: 88 }); },
+  sourceFracture() { if (!this.ctx) return; const t = this.ctx.currentTime; this._osc(1180, 0.14, t, { type: "triangle", vol: 0.065, slideTo: 310 }); this._osc(390, 0.12, t + 0.02, { type: "sine", vol: 0.04, slideTo: 920 }); },
+  voidTransfer() { if (!this.ctx) return; const t = this.ctx.currentTime; this._osc(360, 0.18, t, { type: "sine", vol: 0.045, slideTo: 980, attack: 0.018 }); },
+  echoResonance() { if (!this.ctx) return; const t = this.ctx.currentTime; [660, 990, 1320].forEach((f, i) => this._osc(f, 0.16, t + i * 0.018, { type: "sine", vol: 0.026, slideTo: f * 1.06, attack: 0.015 })); },
+  platformRebuild() { if (!this.ctx) return; const t = this.ctx.currentTime; this._osc(240, 0.14, t, { type: "triangle", vol: 0.035, slideTo: 410, attack: 0.02 }); },
+  bossDeathWarden() { this.wardenGuardBreak(); },
+  bossDeathColossus() { this.colossusStagger(); },
+  bossDeathAldric() { if (!this.ctx) return; const t = this.ctx.currentTime; this._osc(210, 0.34, t, { type: "triangle", vol: 0.11, slideTo: 52 }); },
+  bossDeathEcho() { if (!this.ctx) return; const t = this.ctx.currentTime; this._osc(1320, 0.32, t, { type: "sine", vol: 0.08, slideTo: 110 }); },
+  bossDeathSource() { if (!this.ctx) return; const t = this.ctx.currentTime; [980, 620, 330].forEach((f, i) => this._osc(f, 0.34, t + i * 0.035, { type: "triangle", vol: 0.065, slideTo: 72 })); },
   throwBlade() {
     const t = this.ctx.currentTime;
     this._noise(0.2, t, { type: "bandpass", freq: 1100, q: 0.6, vol: 0.16 });

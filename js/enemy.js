@@ -107,8 +107,7 @@ class Enemy {
     if (this.isBoss && !this.isMiniBoss) {
       this.hp = 0; this.dying = true; this.deathT = this.deathDur;
       this._deathCause = cause || ""; this.contactDmg = 0; this.vx = 0; this.vy = 0;
-      if (typeof BOSSFX !== "undefined") BOSSFX.juice({ shake: 13, flash: 0.65, slowmo: 0.9,
-        zoom: 0.10, hitstop: 0.11, quiet: true });
+      if (typeof bossFeedback === "function") bossFeedback(this, "death");
       if (this.onDeathStart) this.onDeathStart();
     } else {
       this.dead = true;
@@ -1390,17 +1389,79 @@ function chargeTelegraph(ctx, x, cy, hh, dir, k, color) {
 //  BOSSFX mirrors the Echo's fxq (drained generically in game.js): any boss can push
 //  {shake, flash, hitstop, slowmo, zoom, txt, x, y, big, color, quiet} beats.
 // ====================================================================================
+const BOSS_PRESENTATION = {
+  warden: {
+    windup: { shake: 1.5, cue: "wardenLockdown", priority: 2 }, launch: { shake: 3, cue: "wardenMortarLaunch", priority: 3 },
+    contact: { shake: 6, hitstop: 0.035, cue: "wardenClash", priority: 5 }, counter: { shake: 5, flash: 0.15, hitstop: 0.045, cue: "wardenClash", priority: 6 },
+    stagger: { shake: 9, flash: 0.32, hitstop: 0.07, cue: "wardenGuardBreak", priority: 8 },
+    phaseTransition: { shake: 8, flash: 0.34, slowmo: 0.42, zoom: 0.04, cue: "wardenLockdown", priority: 9 },
+    platformBreak: { shake: 3, cue: "wardenLockdown", priority: 2 }, platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
+    death: { shake: 10, flash: 0.42, slowmo: 0.7, zoom: 0.055, hitstop: 0.09, cue: "bossDeathWarden", priority: 10 },
+  },
+  colossus: {
+    windup: { shake: 2, cue: "colossusServo", priority: 2 }, launch: { shake: 4, cue: "colossusServo", priority: 3 },
+    contact: { shake: 9, hitstop: 0.055, cue: "colossusPlate", priority: 6 }, counter: { shake: 7, hitstop: 0.05, cue: "sweeperCounter", priority: 7 },
+    stagger: { shake: 11, flash: 0.22, slowmo: 0.35, zoom: 0.055, hitstop: 0.075, cue: "colossusStagger", priority: 8 },
+    phaseTransition: { shake: 10, flash: 0.3, slowmo: 0.4, zoom: 0.05, cue: "colossusServo", priority: 9 },
+    platformBreak: { shake: 6, cue: "colossusPlate", priority: 4 }, platformRebuild: { shake: 2, cue: "platformRebuild", priority: 1 },
+    death: { shake: 12, flash: 0.38, slowmo: 0.75, zoom: 0.065, hitstop: 0.1, cue: "bossDeathColossus", priority: 10 },
+  },
+  aldric: {
+    windup: { shake: 1, cue: "aldricCleaver", priority: 2 }, launch: { shake: 3, cue: "aldricCleaver", priority: 3 },
+    contact: { shake: 7, hitstop: 0.045, cue: "aldricCleaver", priority: 6 }, counter: { shake: 5, hitstop: 0.04, cue: "aldricCleaver", priority: 6 },
+    stagger: { shake: 8, flash: 0.18, slowmo: 0.3, cue: "aldricCleaver", priority: 8 },
+    phaseTransition: { shake: 8, flash: 0.3, slowmo: 0.4, zoom: 0.045, cue: "aldricIgnite", priority: 9 },
+    platformBreak: { shake: 4, cue: "aldricCleaver", priority: 3 }, platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
+    death: { shake: 10, flash: 0.36, slowmo: 0.72, zoom: 0.05, hitstop: 0.09, cue: "bossDeathAldric", priority: 10 },
+  },
+  echo: {
+    windup: { shake: 0, cue: "echoResonance", priority: 2 }, launch: { shake: 2, cue: "echoResonance", priority: 3 },
+    contact: { shake: 4, hitstop: 0.035, cue: "echoResonance", priority: 5 }, counter: { shake: 3, flash: 0.1, cue: "echoResonance", priority: 6 },
+    stagger: { shake: 5, flash: 0.16, slowmo: 0.3, cue: "echoResonance", priority: 8 },
+    phaseTransition: { shake: 4, flash: 0.24, slowmo: 0.38, zoom: 0.03, cue: "echoResonance", priority: 9 },
+    platformBreak: { shake: 1, cue: "echoResonance", priority: 2 }, platformRebuild: { shake: 0, cue: "echoResonance", priority: 1 },
+    death: { shake: 7, flash: 0.5, slowmo: 0.75, zoom: 0.035, hitstop: 0.08, cue: "bossDeathEcho", priority: 10 },
+  },
+  source: {
+    windup: { shake: 0, cue: "sourceCross", priority: 2 }, launch: { shake: 3, cue: "sourceCross", priority: 3 },
+    contact: { shake: 6, hitstop: 0.04, cue: "sourceFracture", priority: 6 }, counter: { shake: 5, flash: 0.12, hitstop: 0.045, cue: "sourceRepel", priority: 7 },
+    stagger: { shake: 7, flash: 0.2, slowmo: 0.34, cue: "sourceFracture", priority: 8 },
+    phaseTransition: { shake: 7, flash: 0.32, slowmo: 0.42, zoom: 0.045, cue: "sourceCross", priority: 9 },
+    platformBreak: { shake: 2, cue: "sourceFracture", priority: 3 }, platformRebuild: { shake: 0, cue: "voidTransfer", priority: 1 },
+    death: { shake: 9, flash: 0.5, slowmo: 0.85, zoom: 0.07, hitstop: 0.1, cue: "bossDeathSource", priority: 10 },
+  },
+};
 const BOSSFX = {
   q: [],
-  juice(ev) { this.q.push(ev); },
+  juice(ev) { this.q.push(Object.assign({ priority: Math.max(1, (ev && ev.shake) || 0) }, ev || {})); },
+  event(boss, name, overrides) {
+    const id = boss && (boss.presentationId || boss.bossId) || "source";
+    const profile = BOSS_PRESENTATION[id] || BOSS_PRESENTATION.source;
+    this.q.push(Object.assign({ bossId: id, event: name, priority: 1 }, profile[name] || {}, overrides || {}));
+  },
+  drain() {
+    if (!this.q.length) return [];
+    const requests = this.q.splice(0), out = { priority: -1, quiet: true }, numeric = ["shake", "flash", "hitstop", "slowmo", "zoom"];
+    let cuePriority = -1, textPriority = -1;
+    for (const ev of requests) {
+      for (const key of numeric) if ((ev[key] || 0) > (out[key] || 0)) out[key] = ev[key];
+      const pr = ev.priority == null ? 1 : ev.priority;
+      if (ev.cue && pr >= cuePriority) { out.cue = ev.cue; cuePriority = pr; }
+      if ((ev.banner || ev.txt) && pr >= textPriority) {
+        out.banner = ev.banner; out.txt = ev.txt; out.x = ev.x; out.y = ev.y; out.big = ev.big; out.color = ev.color; textPriority = pr;
+      }
+      out.priority = Math.max(out.priority, pr); out.quiet = out.quiet && !!ev.quiet;
+    }
+    return [out];   // camera, flash, hit-stop and sound are one coalesced request per simulation frame
+  },
 };
+function bossFeedback(boss, name, overrides) { BOSSFX.event(boss, name, overrides); }
 
 // a PHASE TURN, made ceremonial: slow-mo + flash + shake + a named banner + rings.
 // Also arms the HP bar's crack-flash (game.js reads boss._phaseFlashT).
 function bossPhaseBeat(boss, title, color) {
   const c = color || boss.color;
-  BOSSFX.juice({ shake: 10, flash: 0.45, slowmo: 0.5, zoom: 0.055, hitstop: 0.09,
-    banner: title, color: c });
+  bossFeedback(boss, "phaseTransition", { banner: title, color: c });
   try { FX.ring(boss.x, boss.y, 26, c); FX.shockwave(boss.x, boss.y, 12, c, 260, 5); } catch (e) {}
   boss._phaseFlashT = 0.7;
 }
@@ -1599,6 +1660,7 @@ class Warden extends Enemy {
     super(x, y, CONFIG.boss);
     this.color = CONFIG.colors.boss;
     this.kind = "boss"; this.isBoss = true; this.bossName = "THE WARDEN";
+    this.presentationId = "warden";
     this.epithet = "KEEPER OF THE GROUNDS"; this.phaseMarks = [0.65, 0.30]; this.phaseTag = "ON DUTY";
     this.state = "idle"; this.stateT = 0;
     this.atkT = 1.8; this.pendingAtk = "baton";
@@ -1616,12 +1678,14 @@ class Warden extends Enemy {
     this.mortarTargets = []; this.trailDropT = 0; this._playerRef = null;
     this.volleyCd = 0; this.volleyTargetY = 0;   // NO SHELTER: the skyward volley answers perch-campers
     this.stringIdx = 0; this.stringN = 2; this.beatPh = "wind"; this.beatHeavy = false; this.beatParried = false;   // baton strings
+    this.mortarKickT = 0;
   }
   get phase() { const f = this.hp / this.maxHp; return f > 0.65 ? 1 : (f > 0.30 ? 2 : 3); }
   damageTakenMult() { return this.guardBrokenT > 0 ? CONFIG.warden.guardBreakMult : 1; }
   tickTimers(dt) {
     super.tickTimers(dt);
     if (this.batonParryCd > 0) this.batonParryCd -= dt;
+    if (this.mortarKickT > 0) this.mortarKickT = Math.max(0, this.mortarKickT - dt);
     if (this.guardBrokenT > 0) {
       this.guardBrokenT -= dt;
       this.guardMeter = 1;
@@ -1640,12 +1704,13 @@ class Warden extends Enemy {
     this.batonParryCd = 0.22; this.batonStrike = 0; this.guardDelayT = Wc.guardDecayDelay;
     this.batonPrevA = this.batonA; this.batonA -= perfect ? 0.30 : 0.20; this.batonAV = -11;
     this.guardMeter = Math.min(1, this.guardMeter + (perfect ? Wc.guardPerfect : Wc.guardParry));
+    bossFeedback(this, "counter", { color: perfect ? CONFIG.colors.perfect : "#e0a326" });
     if (typeof SFX !== "undefined" && SFX.wardenLockClang) SFX.wardenLockClang();
     if (this.guardMeter >= 1) {
       this.guardBrokenT = Wc.guardBreakDur; this.stun = Math.max(this.stun, Wc.guardBreakDur);
       this.state = "idle"; this.vx = 0;
-      BOSSFX.juice({ banner: "GUARD BROKEN", color: "#e0a326", shake: 11, flash: 0.5, slowmo: 0.55, zoom: 0.07, hitstop: 0.08 });
-      FX.ring(this.x, this.y, 18, "#e0a326"); FX.burst(this.x, this.y, 0, -1, 14, "#e0a326");
+      bossFeedback(this, "stagger", { banner: "GUARD BROKEN", color: CONFIG.colors.charger });
+      FX.ring(this.x, this.y, 18, "#e0a326"); FX.burst(this.x, this.y, 0, -1, 14, CONFIG.colors.charger);
       if (typeof SFX !== "undefined" && SFX.wardenGuardBreak) SFX.wardenGuardBreak();
     }
     return true;
@@ -1659,7 +1724,7 @@ class Warden extends Enemy {
       { kind: "cage", x: Wc.cageW / 2, w: Wc.cageW, fullHeight: true, dmg: Wc.zoneTick, tickCd: Wc.zoneTickCd, on: true },
       { kind: "cage", x: CONFIG.view.w - Wc.cageW / 2, w: Wc.cageW, fullHeight: true, dmg: Wc.zoneTick, tickCd: Wc.zoneTickCd, on: true },
     ];
-    BOSSFX.juice({ banner: "LOCKDOWN", color: this.color, shake: 7, flash: 0.25, quiet: true });
+    bossFeedback(this, "windup", { banner: "LOCKDOWN", color: this.color, quiet: true });
     this._syncZones();
   }
 
@@ -1685,6 +1750,7 @@ class Warden extends Enemy {
       p.gravity = g; p.dmg = Wc.mortarDmg; p.r = 11; p.owner = this; p.tint = this.color;
       p.landingX = tx; p.landingY = landY != null ? landY : CONFIG.world.groundY;   // volleys burst at PLATFORM height
       p.landingT = t; p.groundImpact = true; p.bossAttack = "mortar";
+      p.whistleStage = 0;
       projectiles.push(p);
     }
     this.mortarTargets = [];
@@ -1812,7 +1878,7 @@ class Warden extends Enemy {
         this.mortarTargets = [-1, 0, 1].map((i) => clamp(pl.x + pl.w / 2 + i * Math.min(95, pl.w / 3), pl.x + 16, pl.x + pl.w - 16));
         this.volleyTargetY = pl.y;
         this.volleyCd = Wc.volleyCd; this.campT = 1.2;
-        BOSSFX.juice({ banner: "SKYWARD VOLLEY", color: this.color, shake: 6, quiet: true });
+        bossFeedback(this, "windup", { banner: "SKYWARD VOLLEY", color: this.color, quiet: true });
       }
       else if (this.atkT <= 0) {
         // his kit is MELEE + ARTILLERY now: in reach he opens a string; at mid
@@ -1845,13 +1911,15 @@ class Warden extends Enemy {
     if (this.pendingAtk === "volley") this._mortar(player, projectiles, this.volleyTargetY);
     else this._mortar(player, projectiles);
     this.batonStrike = 0.18;   // the launch gesture still snaps the baton (parry it for posture)
-    if (typeof SFX !== "undefined" && SFX.ctx && SFX.slam) SFX.slam();
+    this.mortarKickT = 0.2; this.batonAV += this.facing * 7;
+    bossFeedback(this, "launch", { color: this.color });
   }
 
   onProjectileGroundImpact(p) {
     const col = p.bossAttack === "mortar" ? this.color : CONFIG.colors.charger;
     const impactY = p.landingY != null ? p.landingY : CONFIG.world.groundY;
     FX.explode(p.x, impactY, col, p.bossAttack === "mortar" ? 0.8 : 0.55);
+    bossFeedback(this, "contact", { color: col });
     const pl = this._playerRef;
     if (pl && Math.abs(pl.x - p.x) < 62 + pl.hw && Math.abs(pl.y + pl.hh - impactY) < 95) pl.takeDamage(p.dmg || CONFIG.warden.debrisDmg, p.x, this);
   }
@@ -1932,6 +2000,7 @@ class Warden extends Enemy {
     const introP = this.introT > 0 ? clamp(1 - this.introT / ((CONFIG.bossTheater && CONFIG.bossTheater.introDur) || 1.4), 0, 1) : -1;
     let staffA = this.dying ? lerp(this.batonA, 1.5, this.deathP) : this.batonA;
     if (introP >= 0) staffA = introP < 0.62 ? lerp(-0.45, -1.55, introP / 0.62) : lerp(-1.55, 0.82, (introP - 0.62) / 0.38);
+    if (this.mortarKickT > 0) staffA -= Math.sin(this.mortarKickT / 0.2 * Math.PI) * 0.22;   // artillery recoil kicks the base into his planted stance
     const staffPose = this.weaponGeometry(staffA, introP >= 0 ? staffA : this.batonPrevA);
     if (!dim && Math.abs(this.batonA - this.batonPrevA) > 0.045 && !(typeof GFX !== "undefined" && GFX.low)) {
       const sweep = staffPose.sweptAttackHull.segments[2]; ctx.strokeStyle = this.phase >= 3 ? CONFIG.colors.charger : CONFIG.colors.slam;
@@ -1948,6 +2017,16 @@ class Warden extends Enemy {
     ctx.fillStyle = "#fff";
     ctx.fillRect(this.x + this.facing * 18 - 9, this.y - 20, 18, 13);
     for (let i = 0; i < this.phase; i++) ctx.fillRect(x + 14 + i * 18, y + h - 20, 12, 9);
+    // Guard wear is physical: gold custody bands disappear and crimson fractures
+    // cross the breastplate as posture approaches a break.
+    const guardBands = 4, intact = Math.max(0, guardBands - Math.floor(this.guardMeter * guardBands + 0.001));
+    ctx.fillStyle = "#e0a326";
+    for (let i = 0; i < intact; i++) ctx.fillRect(x + 8 + i * 11, y + 7, 7, 5);
+    if (this.guardMeter > 0.2) {
+      ctx.strokeStyle = this.guardBrokenT > 0 ? CONFIG.colors.charger : "#e0a326"; ctx.lineWidth = this.guardBrokenT > 0 ? 3 : 2;
+      ctx.beginPath(); ctx.moveTo(this.x - 18, y + 8); ctx.lineTo(this.x - 4, this.y - 4); ctx.lineTo(this.x - 13, this.y + 13);
+      if (this.guardMeter > 0.65) { ctx.moveTo(this.x + 16, y + 13); ctx.lineTo(this.x + 3, this.y + 4); ctx.lineTo(this.x + 12, this.y + 24); } ctx.stroke();
+    }
     // wind-up telegraph
     if (this.state === "windup") {
       const gy = this.y + this.hh;
@@ -1999,6 +2078,7 @@ class Colossus extends Enemy {
     super(x, y, CONFIG.colossus);
     this.color = CONFIG.colors.armored;
     this.kind = "boss"; this.isBoss = true; this.bossName = "IRON COLOSSUS";
+    this.presentationId = "colossus";
     this.epithet = "THE CONTAINMENT ENGINE"; this.phaseMarks = [0.60, 0.25]; this.phaseTag = "SEALED";
     this.blockStyle = "plate";   // blocked hits CLANG off fortress plating (not an Armored reskin)
     this.state = "idle"; this.stateT = 0; this.atkT = 2.2; this.pendingAtk = "sweep";
@@ -2011,6 +2091,7 @@ class Colossus extends Enemy {
     this.panelIdx = -1; this.panelStepT = 0; this.meltdownCd = CONFIG.colossus.meltdownCd;
     this.attackIdx = 0; this._playerRef = null;
     this.chargeStop = false; this.smashTX = 0; this.grabCd = 0;   // bruiser kit
+    this.plateKickT = 0; this.servoCompression = 0;
   }
   get phase() { const f = this.hp / this.maxHp; return f > 0.6 ? 1 : (f > 0.25 ? 2 : 3); }
   get guardSide() { return this.facing; }
@@ -2023,6 +2104,7 @@ class Colossus extends Enemy {
     if (this.ventT > 0) this.ventT -= dt;
     if (this.coreOpenT > 0) this.coreOpenT -= dt;
     if (this.shieldEmbedT > 0) this.shieldEmbedT -= dt;
+    if (this.plateKickT > 0) this.plateKickT = Math.max(0, this.plateKickT - dt);
     if (this._playerRef) this._applyVent(dt, this._playerRef);
   }
   _startVent() {
@@ -2096,12 +2178,12 @@ class Colossus extends Enemy {
     const C = this.cfg;
     this.state = "recover"; this.stateT = C.staggerDur; this.stun = C.staggerDur;
     this.coreOpenT = C.coreOpenDur; this._startVent(); this._debris(projectiles);
-    BOSSFX.juice({ banner: "STAGGERED", color: CONFIG.colors.armoredShield, shake: 12, flash: 0.4, slowmo: 0.45, zoom: 0.08, hitstop: 0.08 });
+    this.plateKickT = 0.5; bossFeedback(this, "stagger", { banner: "STAGGERED", color: CONFIG.colors.armoredShield });
     FX.shockwave(this.x, this.y + this.hh, 14, CONFIG.colors.armoredShield, 230, 6);
   }
   onShieldEmbedded() {
     this.shieldEmbedT = this.cfg.shieldEmbedDur; this.stun = Math.max(this.stun, this.cfg.shieldEmbedDur * 0.55);
-    BOSSFX.juice({ banner: "BREACH THE FORTRESS", color: CONFIG.colors.armoredShield, shake: 7, zoom: 0.04, quiet: true });
+    bossFeedback(this, "counter", { banner: "BREACH THE FORTRESS", color: CONFIG.colors.armoredShield, zoom: 0.04, quiet: true });
   }
   onSweeperReturned(p) {
     const perfect = !!(p && p.perfect);
@@ -2110,8 +2192,9 @@ class Colossus extends Enemy {
     this.state = "recover"; this.stateT = perfect ? 1.05 : 0.68;
     this.stun = Math.max(this.stun, this.stateT);
     if (perfect) this.coreOpenT = Math.max(this.coreOpenT, 1.8);
-    BOSSFX.juice({ banner: perfect ? "CORE EXPOSED" : "SHIELD ARM RUPTURED", color: perfect ? CONFIG.colors.perfect : "#ff8a32",
-      shake: perfect ? 13 : 8, flash: perfect ? 0.42 : 0.18, slowmo: perfect ? 0.42 : 0, zoom: perfect ? 0.09 : 0.045, hitstop: perfect ? 0.09 : 0.045 });
+    this.plateKickT = perfect ? 0.48 : 0.3;
+    bossFeedback(this, "counter", { banner: perfect ? "CORE EXPOSED" : "SHIELD ARM RUPTURED", color: perfect ? CONFIG.colors.perfect : "#ff8a32",
+      priority: perfect ? 9 : 7, slowmo: perfect ? 0.42 : 0, zoom: perfect ? 0.09 : 0.045 });
     FX.shockwave(this.x, this.y, 12, perfect ? CONFIG.colors.perfect : "#ff8a32", perfect ? 260 : 180, 6);
   }
   onProjectileGroundImpact(p) {
@@ -2156,7 +2239,7 @@ class Colossus extends Enemy {
         this._shock(projectiles, 1); this._shock(projectiles, -1);
         for (const z of this.zones) { z.on = true; z.arming = false; }
         FX.explode(this.x, this.y + this.hh, CONFIG.colors.slam, 1.6);
-        BOSSFX.juice({ banner: "MELTDOWN SLAM", color: CONFIG.colors.slam, shake: 14, flash: 0.55, slowmo: 0.45, zoom: 0.09 });
+        this.plateKickT = 0.5; bossFeedback(this, "contact", { banner: "MELTDOWN SLAM", color: CONFIG.colors.slam, priority: 9, shake: 14, flash: 0.4, slowmo: 0.4, zoom: 0.08 });
         this.state = "recover"; this.stateT = 0.9;
       }
       return;
@@ -2189,7 +2272,7 @@ class Colossus extends Enemy {
         this._shock(projectiles, 1); this._shock(projectiles, -1);
         if (Math.abs(player.x - this.x) < this.cfg.smashRange && player.y > this.y - 40 && !player.invulnerable) player.takeDamage(this.cfg.smashDmg, this.x, this);
         FX.shockwave(this.x, this.y + this.hh, 16, CONFIG.colors.slam, 300, 7);
-        BOSSFX.juice({ shake: 13, flash: 0.4, slowmo: 0.4, zoom: 0.07, hitstop: 0.06 });
+        this.plateKickT = 0.45; bossFeedback(this, "contact", { shake: 12, slowmo: 0.36, zoom: 0.06 });
         this.state = "recover"; this.stateT = 0.7; this.atkT = this.cfg.atkCd;
       }
       return;
@@ -2221,7 +2304,7 @@ class Colossus extends Enemy {
         const pl = this.campPlat;
         pl.arenaFractureRequest = { color: CONFIG.colors.armoredShield, reason: "pillarQuake" };
         this.pillarCd = C.pillarCd; this.campT = 1.2;
-        BOSSFX.juice({ banner: "PILLAR QUAKE", color: CONFIG.colors.armoredShield, shake: 10, flash: 0.25, hitstop: 0.05 });
+        bossFeedback(this, "platformBreak", { banner: "PILLAR QUAKE", color: CONFIG.colors.armoredShield, priority: 7 });
         FX.shockwave(this.x, this.y + this.hh, 10, CONFIG.colors.armoredShield, 260, 5);
       }
       // SEISMIC BACKHAND: crowd the fortress and it swats you (reactive, off the rotation)
@@ -2273,6 +2356,18 @@ class Colossus extends Enemy {
     ctx.fillStyle = this.flash > 0 ? "#fff" : (this.stun > 0 ? "#9aa6b2" : this.color);
     ctx.fillRect(x, y, w, h);
     ctx.strokeStyle = THEME.ink; ctx.lineWidth = 5; ctx.strokeRect(x, y, w, h);
+    // Separate armor, piston and core layers sell mass without constant camera shake.
+    const wind = this.state === "windup" || this.state === "smashwind" || this.state === "meltdown";
+    const compress = wind ? 7 + 5 * Math.sin(clamp(this.stateT || 0, 0, 1) * Math.PI) : 0;
+    const plateOut = (this.coreOpenT > 0 ? 11 : 0) + (this.plateKickT > 0 ? Math.sin(this.plateKickT / 0.5 * Math.PI) * 16 : 0);
+    ctx.strokeStyle = "#40474f"; ctx.lineWidth = 7;
+    for (const side of [-1, 1]) {
+      const sx = this.x + side * (this.hw * 0.58 + plateOut), py = y + 24 + compress;
+      ctx.beginPath(); ctx.moveTo(this.x + side * 12, this.y - 18); ctx.lineTo(sx, py); ctx.lineTo(sx, y + h - 20 - compress); ctx.stroke();
+      ctx.fillStyle = side === this.facing ? CONFIG.colors.armoredShield : "#59616a";
+      ctx.fillRect(sx - 15, y + 12 - plateOut * 0.18, 30, h - 24);
+      ctx.strokeStyle = THEME.ink; ctx.lineWidth = 3; ctx.strokeRect(sx - 15, y + 12 - plateOut * 0.18, 30, h - 24);
+    }
     ctx.fillStyle = THEME.ink;
     for (let i = 0; i < 4; i++) { ctx.fillRect(x + 8 + i * (w - 24) / 3, y + 8, 5, 5); ctx.fillRect(x + 8 + i * (w - 24) / 3, y + h - 13, 5, 5); }
     // eye
@@ -2419,6 +2514,7 @@ class Aldric extends Enemy {
     super(x, y, CONFIG.aldric);
     this.color = CONFIG.colors.charger;
     this.kind = "boss"; this.isBoss = true; this.bossName = "ALDRIC";
+    this.presentationId = "aldric";
     this.epithet = "THE BERSERKER KING"; this.phaseMarks = [0.65, 0.20]; this.phaseTag = "THE DUEL";
     this.mode = "duel"; this.state = "idle"; this.stateT = 0; this.atkT = 1.6; this.facing = 1;
     this.zones = []; this.zoneColor = CONFIG.colors.bomber; this.zoneCycleT = 0;
@@ -2451,7 +2547,7 @@ class Aldric extends Enemy {
       this.kneelStruck = true; this.anger = true;
       this.reviveCap = this.maxHp * CONFIG.aldric.angerReviveFrac;
       this.kneelT = Math.min(this.kneelT, 2.2);
-      BOSSFX.juice({ banner: "THE KING REMEMBERS", color: CONFIG.colors.charger, shake: 8, flash: 0.25, quiet: true });
+      bossFeedback(this, "counter", { banner: "THE KING REMEMBERS", color: CONFIG.colors.charger, quiet: true });
     }
     return super.hit(dmg, knockX, knockY);
   }
@@ -2519,7 +2615,7 @@ class Aldric extends Enemy {
           p.gravity = 520; p.dmg = C.emberDmg; p.r = 10; p.tint = CONFIG.colors.bomber; p.kind = "orb"; p.crownfire = true; p.owner = this; projectiles.push(p);
         }
         FX.explode(this.x, this.y + this.hh, CONFIG.colors.bomber, 1.35);
-        BOSSFX.juice({ banner: "CROWNFIRE", color: CONFIG.colors.bomber, shake: 12, flash: 0.4, slowmo: 0.4, zoom: 0.07 });
+        bossFeedback(this, "contact", { banner: "CROWNFIRE", color: "#fff7d6", priority: 9, shake: 11, flash: 0.38, slowmo: 0.38, zoom: 0.065, cue: "aldricIgnite" });
         this.state = "recover"; this.stateT = 0.45;
       }
       return;
@@ -2545,7 +2641,7 @@ class Aldric extends Enemy {
         if (Math.abs(player.x - this.x) < C.overheadRange && !player.invulnerable) player.takeDamage(C.overheadDmg, this.x, this);
         this.seams.push({ kind: "seam", x: this.x, w: 110, life: C.seamLife, maxLife: C.seamLife, dir: this.facing, on: true, dmg: CONFIG.warden.zoneTick, tickCd: CONFIG.warden.zoneTickCd });
         FX.explode(this.x, this.y + this.hh, CONFIG.colors.bomber, 1.3); FX.shockwave(this.x, this.y + this.hh, 12, CONFIG.colors.bomber, 240, 6);
-        BOSSFX.juice({ banner: "OVERHEAD", color: CONFIG.colors.bomber, shake: 12, flash: 0.4, slowmo: 0.4, zoom: 0.06, hitstop: 0.05 });
+        bossFeedback(this, "contact", { banner: "OVERHEAD", color: CONFIG.colors.bomber, priority: 8, shake: 10, slowmo: 0.35, zoom: 0.05 });
         this.weaponImpactT = 0.24; this.weaponBuriedT = C.overheadRecover;
         this.state = "recover"; this.stateT = C.overheadRecover;
         if (typeof SFX !== "undefined" && SFX.aldricCleaverBury) SFX.aldricCleaverBury();
@@ -2675,6 +2771,13 @@ class Aldric extends Enemy {
       ctx.fillStyle = CONFIG.colors.bomber; ctx.globalAlpha = 0.2 + 0.1 * Math.sin(performance.now() / 90);
       ctx.fillRect(x - 6, y - 6, w + 12, h + 12); ctx.globalAlpha = 1;
     }
+    // A royal scarf/cape has its own restrained secondary motion: it lags the
+    // king's velocity and snaps forward only on committed attacks.
+    const capeLead = clamp(-this.vx * 0.035, -52, 52), capeLift = (this.state === "lunge" || this.state === "charge") ? -22 : 0;
+    ctx.fillStyle = this.mode === "duel" ? "#74202b" : CONFIG.colors.bomber; ctx.globalAlpha = downed ? 0.35 : 0.82;
+    ctx.beginPath(); ctx.moveTo(this.x - this.facing * this.hw * 0.55, y + 16);
+    ctx.lineTo(this.x - this.facing * (this.hw + 34) + capeLead, y + h * 0.55 + capeLift + Math.sin(performance.now() / 140) * 5);
+    ctx.lineTo(this.x - this.facing * (this.hw + 18) + capeLead * 0.6, y + h - 5); ctx.lineTo(this.x - this.facing * this.hw * 0.45, y + h - 18); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
     // body — squat when downed
     const by = downed ? y + h * 0.3 : y, bh = downed ? h * 0.7 : h;
     ctx.fillStyle = this.flash > 0 ? "#fff" : (downed ? "#7a1320" : this.color);
@@ -2694,6 +2797,12 @@ class Aldric extends Enemy {
       ctx.globalAlpha = 0.25; ctx.lineWidth = 30; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(sweep.a.x, sweep.a.y); ctx.lineTo(sweep.b.x, sweep.b.y); ctx.stroke(); ctx.globalAlpha = 1;
     }
     drawGreatCleaver(ctx, cleaverPose, this, downed);
+    if (!downed && this.mode !== "duel" && (this.state === "lunge" || this.state === "charge" || this.state === "overhead") && !(typeof GFX !== "undefined" && GFX.low)) {
+      const edge = cleaverPose.cuttingEdge;
+      ctx.strokeStyle = CONFIG.colors.bomber; ctx.globalAlpha = 0.48; ctx.lineWidth = 13; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(edge.a.x, edge.a.y); ctx.lineTo(edge.b.x, edge.b.y); ctx.stroke();
+      ctx.strokeStyle = "#fff7d6"; ctx.globalAlpha = 0.72; ctx.lineWidth = 3; ctx.stroke(); ctx.globalAlpha = 1;
+    }
     // frenzy charge telegraph: the lane he's about to barrel down
     if (this.state === "chargewind") {
       const k = 1 - clamp(this.stateT / (CONFIG.aldric.chargeWindup || 0.5), 0, 1);
@@ -2726,12 +2835,14 @@ class Echo extends Enemy {
     super(x, y, CONFIG.echo);
     this.color = "#000";
     this.kind = "boss"; this.isBoss = !isClone; this.bossName = "THE ECHO";
+    this.presentationId = "echo";
     this.isClone = !!isClone;
     this.mode = "mirror"; this.state = "idle"; this.stateT = 0; this.facing = 1;
     this.seenTrickT = 0; this.copyKind = "hit"; this.copyT = -1; this.lastCopied = "";
     this.phaseMarker = 1; this.spawnClone = false;
     this.whiteFlash = 0; this.invisT = CONFIG.echo.invisCycle; this.lungeCd = 1.3;
     this.copyOffset = isClone ? 1.7 : 1;   // the clone mirrors on a longer, offset delay
+    this.harmonyLockT = 0; this.edgeTrail = [];
     if (isClone) { this.hp *= 0.5; this.maxHp = this.hp; this.hpDisplay = this.hp; }
   }
   get phase() { const f = this.hp / this.maxHp; return f > 0.6 ? 1 : (f > 0.25 ? 2 : 3); }
@@ -2749,6 +2860,11 @@ class Echo extends Enemy {
       const repeat = player.lastTrickKind === this.lastCopied;
       this.seenTrickT = player.lastTrickT; this.copyKind = player.lastTrickKind;
       this.copyT = CONFIG.echo.copyDelay * this.copyOffset * (repeat ? 0.5 : 1);
+      if (repeat && !this.isClone) {
+        this.harmonyLockT = 0.75;
+        FX.ring(CONFIG.view.w / 2, CONFIG.world.groundY - 4, 18, CONFIG.colors.eye);
+        bossFeedback(this, "windup", { quiet: true, priority: 4 });
+      }
     }
   }
   _doCopy(player, projectiles) {
@@ -2758,10 +2874,13 @@ class Echo extends Enemy {
     else if (k === "slam" || k === "superslam" || k === "spike") { this._shock(projectiles, 1); this._shock(projectiles, -1); this.state = "recover"; this.stateT = 0.5; }
     else if (k === "updraft" || k === "launch") { this.state = "lunge"; this.stateT = 0.3; this.vx = dir * 560; this.vy = -720; }
     else { this.state = "lunge"; this.stateT = 0.24; this.vx = dir * 920; }   // hit / default melee dash
-    if (typeof SFX !== "undefined" && SFX.ctx && SFX.hit) SFX.hit(false);
+    if (!this.isClone) bossFeedback(this, "launch", { quiet: true });
   }
   update(dt, platforms, player, projectiles) {
     this.tickTimers(dt);
+    if (this.harmonyLockT > 0) this.harmonyLockT = Math.max(0, this.harmonyLockT - dt);
+    this.edgeTrail.push({ x: this.x, y: this.y, t: 0.2 }); if (this.edgeTrail.length > 5) this.edgeTrail.shift();
+    for (const g of this.edgeTrail) g.t -= dt; this.edgeTrail = this.edgeTrail.filter((g) => g.t > 0);
     this.facing = Math.sign(player.x - this.x) || this.facing;
     if (!this.isClone) {
       const ph = this.phase;
@@ -2769,6 +2888,7 @@ class Echo extends Enemy {
         if (ph === 2) this.spawnClone = true;
         if (ph === 3) this.mode = "invert";
         this.phaseMarker = ph;
+        bossFeedback(this, "phaseTransition", { banner: ph === 2 ? "A SECOND VOICE" : "HARMONY INVERTED", color: CONFIG.colors.eye });
       }
     }
     if (this.mode === "invert") { this._invert(dt, player, projectiles); return; }
@@ -2816,6 +2936,13 @@ class Echo extends Enemy {
   }
   draw(ctx) {
     const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2;
+    // Cleaner mirrored trails: phase-specific outlines, not a cloud of particles.
+    for (let i = 0; i < this.edgeTrail.length; i++) {
+      const g = this.edgeTrail[i], a = g.t / 0.2;
+      ctx.globalAlpha = a * (this.phase === 1 ? 0.08 : this.phase === 2 ? 0.13 : 0.2);
+      ctx.strokeStyle = this.phase === 3 ? CONFIG.colors.perfect : CONFIG.colors.eye; ctx.lineWidth = this.phase;
+      ctx.strokeRect(g.x - this.hw, g.y - this.hh, w, h);
+    }
     ctx.globalAlpha = 1 - this.whiteFlash * 0.88;   // near-invisible during a white-out
     // your silhouette + cyan visor + a faint blade
     ctx.fillStyle = this.flash > 0 ? "#fff" : (this.isClone ? "#3a3a3a" : THEME.ink);
@@ -2823,6 +2950,9 @@ class Echo extends Enemy {
     ctx.fillStyle = CONFIG.colors.eye; ctx.fillRect(this.x + this.facing * 5 - 4, y + 12, 8, 5);
     ctx.strokeStyle = THEME.ink; ctx.lineWidth = 4; ctx.lineCap = "round";
     ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + this.facing * 22, this.y - 26); ctx.stroke();
+    ctx.strokeStyle = this.phase === 1 ? CONFIG.colors.eye : (this.phase === 2 ? "#b06cff" : CONFIG.colors.perfect);
+    ctx.lineWidth = this.harmonyLockT > 0 ? 4 : 2; ctx.setLineDash(this.phase === 2 ? [7, 5] : (this.phase === 3 ? [3, 4] : []));
+    ctx.strokeRect(x - this.phase * 3, y - this.phase * 3, w + this.phase * 6, h + this.phase * 6); ctx.setLineDash([]);
     ctx.globalAlpha = 1;
     // dive telegraph — always visible (even mid white-out) so the dive is readable
     if (this.state === "aim") {
@@ -2898,6 +3028,7 @@ class Source extends Enemy {
   constructor(x, y) {
     super(x, y, CONFIG.source);
     this.color = "#8b3bd6"; this.kind = "boss"; this.isBoss = true; this.bossName = "THE SOURCE";
+    this.presentationId = "source";
     this.epithet = "THE TEAR ITSELF"; this.phaseMarks = [CONFIG.source.voidTier, CONFIG.source.fakeTier]; this.phaseTag = "THE CYCLE";
     this.mode = "cycle"; this.atkT = 2.2; this.castIdx = 0; this.facing = 1;
     this.zones = []; this.fireZones = []; this.zoneColor = CONFIG.colors.bomber; this.zoneCycleT = 0;
@@ -2964,7 +3095,7 @@ class Source extends Enemy {
     this.breachMaxT = this.breachT;
     this.breachContactSpent = false; this.vx = 0; this.vy = 0;
     FX.ring(this.x, this.y, 12, this.color);
-    if (typeof SFX !== "undefined" && SFX.sourceCross) SFX.sourceCross();
+    bossFeedback(this, "windup", { quiet: true });
   }
   _finishSoftBreach() {
     this.breachState = "follow"; this.breachT = 0; this.breachContactSpent = true;
@@ -3048,7 +3179,7 @@ class Source extends Enemy {
       this.breachRecoilVX = nx * force; this.breachRecoilVY = ny * force;
       this.breachContactSpent = true; this.breachRepelGraceT = C.breachRepelGrace; this.breachRipple = 1;
       FX.burst(this.x, this.y, nx, ny, 10, this.color); FX.ring(this.x, this.y, 16, CONFIG.colors.perfect);
-      if (typeof SFX !== "undefined" && SFX.sourceRepel) SFX.sourceRepel();
+      bossFeedback(this, "counter", { color: CONFIG.colors.perfect, quiet: true });
       return { handled: true, repelled: true, force };
     }
 
@@ -3071,11 +3202,11 @@ class Source extends Enemy {
   }
   _deathLocked() { return this.mode === "downed"; }   // the kneel cannot be a kill
 
-  _shot(player, projectiles, tint) {
+  _shot(player, projectiles, tint, motif) {
     const C = CONFIG.source, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
     const drift = this.mode === "void" ? -C.scrollSpeed * 0.32 : 0;
     const p = new Projectile(this.x, this.y, (dx / m) * C.shockSpeed + drift, (dy / m) * C.shockSpeed);
-    p.dmg = C.shockDmg; p.r = 11; p.tint = tint || this.color; p.owner = this; projectiles.push(p);
+    p.dmg = C.shockDmg; p.r = 11; p.tint = tint || this.color; p.owner = this; p.sourceStolen = motif || "echo"; projectiles.push(p);
   }
   _shock(projectiles, dir, footY, tint, surface) {
     const C = CONFIG.source, surfaceY = surface ? surface.y : (footY || CONFIG.world.groundY);
@@ -3108,13 +3239,13 @@ class Source extends Enemy {
     this.stun = Math.max(this.stun, perfect ? 0.55 : 0.32); this.breachRipple = 1;
     this.echoCaption = perfect ? "MEMORY COLLAPSED" : "MEMORY FRACTURES"; this.captionT = perfect ? 1.7 : 1.2;
     FX.ring(this.x, this.y, perfect ? 30 : 20, "#6ef2ff"); FX.burst(this.x, this.y, 0, -1, perfect ? 15 : 9, "#d65cff");
-    BOSSFX.juice({ banner: perfect ? "MEMORY COLLAPSED" : "MEMORY FRACTURED", color: perfect ? "#ffffff" : "#6ef2ff",
-      shake: perfect ? 11 : 6, flash: perfect ? 0.36 : 0.14, slowmo: perfect ? 0.38 : 0, zoom: perfect ? 0.08 : 0.035, hitstop: perfect ? 0.08 : 0.035, quiet: !perfect });
+    bossFeedback(this, perfect ? "stagger" : "counter", { banner: perfect ? "MEMORY COLLAPSED" : "MEMORY FRACTURED", color: perfect ? "#ffffff" : "#6ef2ff",
+      priority: perfect ? 9 : 7, slowmo: perfect ? 0.38 : 0, zoom: perfect ? 0.08 : 0.035, quiet: !perfect });
   }
-  _cross(projectiles) {
+  _cross(projectiles, motif) {
     const C = CONFIG.source;
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]]) {
-      const p = new Projectile(this.x, this.y, dx * C.crossSpeed, dy * C.crossSpeed); p.dmg = C.crossDmg; p.r = 11; p.tint = this.color; p.owner = this; projectiles.push(p);
+      const p = new Projectile(this.x, this.y, dx * C.crossSpeed, dy * C.crossSpeed); p.dmg = C.crossDmg; p.r = 11; p.tint = this.color; p.owner = this; p.sourceStolen = motif || "source"; projectiles.push(p);
     }
     FX.ring(this.x, this.y, 16, this.color);
   }
@@ -3152,20 +3283,20 @@ class Source extends Enemy {
       const m = picks[(this.castIdx++) % picks.length];
       if (m === "warden") {
         // quotes the NEW kit: the baton string's rhythm as a three-count burst
-        this._burstN = 3; this._burstT = 0;
+        this._burstN = 3; this._burstT = 0; this._burstMotif = "warden";
         this.echoCaption = "ECHO OF THE WARDEN…";
       } else if (m === "colossus") {
         this._sweeper(projectiles, CONFIG.colors.armoredShield); this.echoCaption = "ECHO OF THE COLOSSUS…";
       } else {
         // over the void there's no ground for the fire checkerboard — the Aldric
         // echo becomes a downward shard fan instead
-        if (this.mode === "void") this._cross(projectiles);
+        if (this.mode === "void") this._cross(projectiles, "aldric");
         else this._lightFire();
         this.echoCaption = "ECHO OF ALDRIC…";
       }
       this.captionT = 1.25;
     }
-    if (this.mode === "void") this._cross(projectiles);
+    if (this.mode === "void") this._cross(projectiles, "source");
     FX.ring(this.x, this.y, 20, this.color);
   }
   // RIFT DASH — a telegraphed flash-charge along a line locked to the player.
@@ -3186,7 +3317,7 @@ class Source extends Enemy {
       if (this.dashT <= 0) {
         this.dashState = "dash"; this.dashT = 0.34;
         this.dashDX = this.dashTX * C.dashSpeed; this.dashDY = this.dashTY * C.dashSpeed;
-        BOSSFX.juice({ shake: 7, flash: 0.25, quiet: true });
+        bossFeedback(this, "launch", { quiet: true });
       }
     } else if (this.dashState === "dash") {
       this.dashT -= dt;
@@ -3222,7 +3353,7 @@ class Source extends Enemy {
         const p = new Projectile(this.x + Math.cos(a) * 150, this.y + Math.sin(a) * 90, -Math.cos(a) * C.collapseSpeed, -Math.sin(a) * C.collapseSpeed * 0.6 + 260);
         p.dmg = C.collapseDmg; p.r = 11; p.tint = this.color; p.owner = this; projectiles.push(p);
       }
-      BOSSFX.juice({ shake: 8, flash: 0.3, zoom: 0.04 });
+      bossFeedback(this, "launch", { shake: 6, flash: 0.18, zoom: 0.035 });
     }
   }
   _hover(dt, player) {
@@ -3266,7 +3397,7 @@ class Source extends Enemy {
     const dx = player.x - blade.x, dy = player.y - blade.y, m = len(dx, dy) || 1;
     blade.vx = dx / m * CONFIG.source.stolenBladeSpeed; blade.vy = dy / m * CONFIG.source.stolenBladeSpeed;
     this.echoCaption = "IT TOOK YOUR BLADE"; this.captionT = 1.8;
-    BOSSFX.juice({ banner: "IT TOOK YOUR BLADE", color: CONFIG.colors.perfect, shake: 9, flash: 0.35, slowmo: 0.35, zoom: 0.06 });
+    bossFeedback(this, "counter", { banner: "IT TOOK YOUR BLADE", color: CONFIG.colors.perfect, priority: 8, slowmo: 0.35, zoom: 0.06 });
     return true;
   }
   onDeathStart() { this.freezeVoid = true; this.beamState = "idle"; clearThroneFire(this, true); }
@@ -3299,7 +3430,7 @@ class Source extends Enemy {
       this.voidDelayT -= dt;
       if (this.voidDelayT <= 0) {
         this.mode = "void"; this.collapsing = false; this.requestVoid = true; this.phaseTag = "THE VOID RUN";
-        BOSSFX.juice({ banner: "THE VOID RUN", color: this.color, shake: 9, flash: 0.4, zoom: 0.06 });
+        bossFeedback(this, "phaseTransition", { banner: "THE VOID RUN", color: this.color, zoom: 0.06 });
       }
     }
 
@@ -3312,7 +3443,7 @@ class Source extends Enemy {
     // the Warden-echo burst: three shots on the baton string's beat
     if (this._burstN > 0 && this.breachState === "follow" && !voidTransferBusy) {
       this._burstT -= dt;
-      if (this._burstT <= 0) { this._shot(player, projectiles, CONFIG.colors.boss); this._burstN--; this._burstT = 0.18; }
+      if (this._burstT <= 0) { this._shot(player, projectiles, CONFIG.colors.boss, this._burstMotif || "warden"); this._burstN--; this._burstT = 0.18; }
     }
 
     // (platform crack ticking/splicing is GENERIC now — game.js runs it; this
@@ -3407,11 +3538,15 @@ class Source extends Enemy {
     }
     // Three counter-rotating shard rings make every stolen cast feel housed in a
     // single impossible body rather than a generic caster silhouette.
+    const motion = clamp(len(this.vx || 0, this.vy || 0) / 1400, 0, 0.28);
+    const attackContract = this.dashState === "wind" || this.collapseState === "wind" || this.beamState === "tell" ? 0.18 : 0;
     ctx.save(); ctx.rotate(breachA);
-    ctx.transform(1 - breachTellK * 0.22, breachRecoilK * 0.18, -breachRecoilK * 0.08, 1 + breachTellK * 0.10, -breachRecoilK * 12, 0);
+    ctx.transform(1 + motion - breachTellK * 0.22, breachRecoilK * 0.18, -breachRecoilK * 0.08, 1 - motion * 0.42 + breachTellK * 0.10, -breachRecoilK * 12, 0);
     ctx.rotate(-breachA);
     for (let ring = 0; ring < 3; ring++) {
-      const rr = w * (0.58 + ring * 0.34) * introP, spin = t / (620 - ring * 120) * (ring % 2 ? -1 : 1);
+      const rr = w * (0.58 + ring * 0.34) * introP * (1 - attackContract),
+        desync = this.stun > 0 ? Math.sin(t / (43 + ring * 19)) * (0.22 + ring * 0.08) : 0,
+        spin = t / (620 - ring * 120) * (ring % 2 ? -1 : 1) + desync;
       ctx.save(); ctx.rotate(spin); ctx.strokeStyle = ring === 1 ? core : THEME.ink; ctx.lineWidth = 2 + ring;
       ctx.globalAlpha = 0.55 + ring * 0.12;
       const n = 7 + ring * 3;
