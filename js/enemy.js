@@ -90,6 +90,7 @@ class Enemy {
     const context = { type: "status", aerial: false };
     if (this.blocksDamage(context)) return 0;
     dmg *= this.damageTakenMult(context);
+    dmg = this.limitIncomingDamage(dmg, context);
     const before = this.hp;
     if (this.shield > 0) { this.shield -= dmg; if (this.shield < 0) { this.hp += this.shield; this.shield = 0; } }
     else this.hp -= dmg;
@@ -139,6 +140,7 @@ class Enemy {
   blocks() { return false; }            // armored overrides
   blocksDamage() { return false; }      // bosses may gate non-melee damage too
   damageTakenMult() { return 1; }       // armored overrides (ground vs air)
+  limitIncomingDamage(dmg) { return dmg; }   // authored bosses may protect a phase boundary
   // Optional authored contact gate. Most actors always deal body contact; stateful
   // bosses can close the gate without mutating their difficulty-scaled contactDmg.
   contactDamageEnabled() { return true; }
@@ -279,6 +281,7 @@ class Enemy {
     const before = this.hp;
     dmg *= this.auraDR * this.tetherDR;          // War Priest / Anchor protection
     if (this.markT > 0) dmg *= CONFIG.status.markMult;   // MARK: amplifies every hit
+    dmg = this.limitIncomingDamage(dmg, { type: "hit" });
     if (this.shield > 0) {                       // Warded: shield absorbs first
       this.shield -= dmg;
       if (this.shield < 0) { this.hp += this.shield; this.shield = 0; }
@@ -3056,6 +3059,7 @@ class Source extends Enemy {
   constructor(x, y) {
     super(x, y, CONFIG.source);
     this.color = "#8b3bd6"; this.kind = "boss"; this.isBoss = true; this.bossName = "THE SOURCE";
+    this._noBar = true;   // the final boss speaks through the authored HUD, never a second head bar
     this.presentationId = "source";
     this.epithet = "THE TEAR ITSELF"; this.phaseMarks = [CONFIG.source.voidTier, CONFIG.source.fakeTier]; this.phaseTag = "THE CYCLE";
     this.mode = "cycle"; this.atkT = 2.2; this.castIdx = 0; this.facing = 1;
@@ -3083,9 +3087,35 @@ class Source extends Enemy {
     this.breachContactSpent = false; this.breachRepelGraceT = 0;
     this.breachRecoilVX = 0; this.breachRecoilVY = 0;
     this.breachNudgeVX = 0; this.breachNudgeVY = 0; this.breachRipple = 0;
+    // PREDATORY ORBIT: ordinary locomotion changes side, height and reach instead
+    // of converging on one forever-safe point just above the player's blade.
+    this.predatorDecisionT = 0; this.predatorEngageT = 0;
+    this.predatorSide = Math.random() < 0.5 ? -1 : 1;
+    this.predatorDist = CONFIG.source.predatorStalkMin;
+    this.predatorY = CONFIG.source.predatorYMin;
+    this.formScale = 1; this.voidFormAwake = false;
   }
   get phase() { const f = this.hp / this.maxHp, C = CONFIG.source; return f > C.voidTier ? 1 : (f > C.fakeTier ? 2 : 3); }
-  damageTakenMult() { return this.mode === "downed" ? 0.3 : (this.mode === "void" ? 1.2 : 1); }
+  damageTakenMult() { return this.mode === "downed" ? 0.3 : (this.mode === "void" ? CONFIG.source.voidDamageTaken : 1); }
+  _voidDmg(dmg) { return this.mode === "void" ? dmg * CONFIG.source.voidDamageMult : dmg; }
+  _awakenVoidForm() {
+    if (this.voidFormAwake) return;
+    this.voidFormAwake = true;
+    this.weight = this.cfg.weight * CONFIG.source.voidWeightMult;
+    this.phaseTag = "THE VOID RUN";
+  }
+  // Preserve the authored phase turns against a single late-run burst without
+  // deleting the player's damage: part of the overflow crosses the line, capped
+  // far above the next phase gate so every form still gets to act.
+  limitIncomingDamage(dmg) {
+    const C = CONFIG.source, gate = this.phase === 1 ? C.voidTier : (this.phase === 2 ? C.fakeTier : 0);
+    const gateHp = this.maxHp * gate;
+    if (gate > 0 && this.mode !== "downed" && this.hp > gateHp && this.hp - dmg < gateHp) {
+      const toGate = this.hp - gateHp, overflow = Math.max(0, dmg - toGate);
+      dmg = toGate + Math.min(overflow * C.phaseOverflowCarry, this.maxHp * C.phaseOverflowCap);
+    }
+    return dmg;
+  }
 
   _rollBreachCd() {
     const C = CONFIG.source;
@@ -3122,6 +3152,7 @@ class Source extends Enemy {
     this.breachT = C.breachTellMin + Math.random() * (C.breachTellMax - C.breachTellMin);
     this.breachMaxT = this.breachT;
     this.breachContactSpent = false; this.vx = 0; this.vy = 0;
+    this.predatorEngageT = 0;
     FX.ring(this.x, this.y, 12, this.color);
     bossFeedback(this, "windup", { quiet: true });
   }
@@ -3180,7 +3211,7 @@ class Source extends Enemy {
     if (this.breachState === "drift") return !this.breachContactSpent;
     return true;
   }
-  contactDamageAmount() { return this.breachState === "drift" ? CONFIG.source.breachDmg : this.contactDmg; }
+  contactDamageAmount() { return this._voidDmg(this.breachState === "drift" ? CONFIG.source.breachDmg : this.contactDmg); }
   onContactDamage() { if (this.breachState === "drift") this.breachContactSpent = true; }
 
   onBladeImpulse(hit) {
@@ -3234,14 +3265,14 @@ class Source extends Enemy {
     const C = CONFIG.source, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
     const drift = this.mode === "void" ? -C.scrollSpeed * 0.32 : 0;
     const p = new Projectile(this.x, this.y, (dx / m) * C.shockSpeed + drift, (dy / m) * C.shockSpeed);
-    p.dmg = C.shockDmg; p.r = 11; p.tint = tint || this.color; p.owner = this; p.sourceStolen = motif || "echo"; projectiles.push(p);
+    p.dmg = this._voidDmg(C.shockDmg); p.r = 11; p.tint = tint || this.color; p.owner = this; p.sourceStolen = motif || "echo"; projectiles.push(p);
   }
   _shock(projectiles, dir, footY, tint, surface) {
     const C = CONFIG.source, surfaceY = surface ? surface.y : (footY || CONFIG.world.groundY);
     const fy = surfaceY - C.shockR;
     const sx = surface ? clamp(this.x + dir * this.hw, surface.x + C.shockR, surface.x + surface.w - C.shockR) : this.x + dir * this.hw;
     const p = new Projectile(sx, fy, dir * C.shockSpeed, 0);
-    p.setFamily("groundShock"); p.r = C.shockR; p.dmg = C.shockDmg; p.life = 2.0; p.owner = this; p.tint = tint || CONFIG.colors.boss; projectiles.push(p);
+    p.setFamily("groundShock"); p.r = C.shockR; p.dmg = this._voidDmg(C.shockDmg); p.life = 2.0; p.owner = this; p.tint = tint || CONFIG.colors.boss; projectiles.push(p);
     if (surface) {
       p.surfacePlatformId = surface.platformId; p.surfaceLeft = surface.x; p.surfaceRight = surface.x + surface.w; p.surfaceY = surface.y;
     }
@@ -3253,7 +3284,7 @@ class Source extends Enemy {
     const p = new Projectile(this.x, Math.min(CONFIG.world.groundY - 24, this.y + 90), -C.sweeperSpeed, 0);
     p.sweeperStyle = "shard"; p.setFamily("sweeper").configureSweeper({ passes: C.sweeperCrossings, integrity: C.sweeperIntegrity,
       maxLife: C.sweeperMaxLife, embeddedLife: C.sweeperEmbedDur });
-    p.r = 22; p.dmg = C.sweeperDmg; p.owner = this; p.tint = "#6ef2ff";
+    p.r = 22; p.dmg = this._voidDmg(C.sweeperDmg); p.owner = this; p.tint = "#6ef2ff";
     p.onCountered = (shot) => this.onSweeperReturned(shot); projectiles.push(p);
     FX.ring(this.x, this.y, 18, this.color);
     return p;
@@ -3273,7 +3304,7 @@ class Source extends Enemy {
   _cross(projectiles, motif) {
     const C = CONFIG.source;
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]]) {
-      const p = new Projectile(this.x, this.y, dx * C.crossSpeed, dy * C.crossSpeed); p.dmg = C.crossDmg; p.r = 11; p.tint = this.color; p.owner = this; p.sourceStolen = motif || "source"; projectiles.push(p);
+      const p = new Projectile(this.x, this.y, dx * C.crossSpeed, dy * C.crossSpeed); p.dmg = this._voidDmg(C.crossDmg); p.r = 11; p.tint = this.color; p.owner = this; p.sourceStolen = motif || "source"; projectiles.push(p);
     }
     FX.ring(this.x, this.y, 16, this.color);
   }
@@ -3353,7 +3384,7 @@ class Source extends Enemy {
       this.dashGhosts.push({ x: this.x, y: this.y, t: 0.24 });
       this.x += this.dashDX * dt; this.y += this.dashDY * dt;
       const contact = len(player.x - this.x, player.y - this.y) < this.hw + player.hw + 8;
-      if (contact && !player.invulnerable) { player.takeDamage(C.dashDmg, this.x, this); FX.burst(player.x, player.y, this.dashTX, this.dashTY, 8, this.color); }
+      if (contact && !player.invulnerable) { player.takeDamage(this._voidDmg(C.dashDmg), this.x, this); FX.burst(player.x, player.y, this.dashTX, this.dashTY, 8, this.color); }
       const off = this.x < -60 || this.x > CONFIG.view.w + 60 || this.y < 40 || this.y > CONFIG.world.groundY + 40;
       if (this.dashT <= 0 || off) {
         this.dashState = "idle"; this.dashCd = C.dashCd;
@@ -3379,16 +3410,30 @@ class Source extends Enemy {
       for (let i = 0; i < 10; i++) {
         const a = i / 10 * Math.PI * 2 - Math.PI / 2;
         const p = new Projectile(this.x + Math.cos(a) * 150, this.y + Math.sin(a) * 90, -Math.cos(a) * C.collapseSpeed, -Math.sin(a) * C.collapseSpeed * 0.6 + 260);
-        p.dmg = C.collapseDmg; p.r = 11; p.tint = this.color; p.owner = this; projectiles.push(p);
+        p.dmg = this._voidDmg(C.collapseDmg); p.r = 11; p.tint = this.color; p.owner = this; projectiles.push(p);
       }
       bossFeedback(this, "launch", { shake: 6, flash: 0.18, zoom: 0.035 });
     }
   }
   _hover(dt, player) {
-    const tx = this.mode === "void" ? CONFIG.view.w * 0.82 : player.x;
-    const ty = this.mode === "void" ? clamp(player.y - 90, 120, CONFIG.world.groundY - 230) : Math.min(player.y - 70, CONFIG.world.groundY - 200);
-    this.vx = lerp(this.vx, (tx - this.x) * 1.3, clamp(2 * dt, 0, 1));
-    this.vy = lerp(this.vy, (ty - this.y) * 1.3, clamp(2 * dt, 0, 1));
+    const C = CONFIG.source;
+    this.predatorDecisionT -= dt; this.predatorEngageT += dt;
+    if (this.predatorDecisionT <= 0) {
+      this.predatorDecisionT = C.predatorDecisionMin + Math.random() * (C.predatorDecisionMax - C.predatorDecisionMin);
+      // Ordinary steering owns one side of the duel. Only the telegraphed breach
+      // is allowed to cross the player; after that pass, the new physical side
+      // naturally becomes the next orbit side.
+      this.predatorSide = Math.sign(this.x - player.x) || this.predatorSide;
+      const close = this.predatorEngageT > C.predatorForceBreach * 0.55 || Math.random() < 0.56;
+      this.predatorDist = close
+        ? C.predatorCloseMin + Math.random() * (C.predatorCloseMax - C.predatorCloseMin)
+        : C.predatorStalkMin + Math.random() * (C.predatorStalkMax - C.predatorStalkMin);
+      this.predatorY = C.predatorYMin + Math.random() * (C.predatorYMax - C.predatorYMin);
+    }
+    const tx = this.mode === "void" ? CONFIG.view.w * 0.80 : player.x + this.predatorSide * this.predatorDist;
+    const ty = this.mode === "void" ? clamp(player.y + this.predatorY, 120, CONFIG.world.groundY - 230) : clamp(player.y + this.predatorY, 90, CONFIG.world.groundY - 150);
+    this.vx = lerp(this.vx, (tx - this.x) * 1.65, clamp(2.8 * dt, 0, 1));
+    this.vy = lerp(this.vy, (ty - this.y) * 1.55, clamp(2.6 * dt, 0, 1));
     this.x += this.vx * dt; this.y += this.vy * dt;
     this._applyBreachNudge(dt);
     this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
@@ -3457,7 +3502,7 @@ class Source extends Enemy {
       }
       this.voidDelayT -= dt;
       if (this.voidDelayT <= 0) {
-        this.mode = "void"; this.collapsing = false; this.requestVoid = true; this.phaseTag = "THE VOID RUN";
+        this.mode = "void"; this.collapsing = false; this.requestVoid = true; this._awakenVoidForm();
         bossFeedback(this, "phaseTransition", { banner: "THE VOID RUN", color: this.color, zoom: 0.06 });
       }
     }
@@ -3496,7 +3541,7 @@ class Source extends Enemy {
         this.beamT -= dt;
         const k = 1 - clamp(this.beamT / C.beamSweep, 0, 1);
         this.beamX = lerp(CONFIG.view.w + C.beamW, -C.beamW, k);
-        if (Math.abs(player.x - this.beamX) < C.beamW / 2 + player.hw) player.takeDamage(C.beamDmg, this.beamX, this);
+        if (Math.abs(player.x - this.beamX) < C.beamW / 2 + player.hw) player.takeDamage(this._voidDmg(C.beamDmg), this.beamX, this);
         if (this.beamT <= 0) { this.beamState = "idle"; this.beamCd = C.beamCd; }
       }
     }
@@ -3532,6 +3577,7 @@ class Source extends Enemy {
     const breachRange = len(player.x - this.x, player.y - this.y);
     if (!this._softBreachBlocked(player) && breachRange <= C.breachStartRange) {
       this.breachCd -= dt;
+      if (this.predatorEngageT >= C.predatorForceBreach) this.breachCd = 0;
       if (this.breachCd <= 0) { this._startSoftBreach(player); this._tickSoftBreach(dt); return; }
     }
 
@@ -3557,7 +3603,9 @@ class Source extends Enemy {
     const breachRecoilK = this.breachState === "recoil" ? clamp(this.breachT / (this.breachMaxT || 1), 0, 1) : 0;
     const breachA = Math.atan2(this.breachDY, this.breachDX);
     ctx.save();
-    ctx.translate(x, y); ctx.scale(deathScale, deathScale);
+    const targetScale = this.phase >= 2 || this.mode === "void" || this.mode === "downed" ? CONFIG.source.voidFormScale : 1;
+    this.formScale = lerp(this.formScale, targetScale, 0.075);
+    ctx.translate(x, y); ctx.scale(deathScale * this.formScale, deathScale * this.formScale);
     // Void wake: particles stream left as if the arena itself is being pulled in.
     for (let i = 0; i < 18; i++) {
       const a = i / 18 * Math.PI * 2 + t / (850 + i * 17), rr = w * (1.3 + (i % 4) * 0.22) * introP * (1 - breachTellK * 0.24);
@@ -3652,6 +3700,6 @@ class Source extends Enemy {
     }
     if (this.captionT > 0) UI.tag(ctx, this.echoCaption, this.x, this.y - this.hh - 48, core, "center", UI.t.type.caption);
     drawPeril(ctx, this);
-    this.drawHpBar(ctx);
+    // Source intentionally has no local health bar: the top boss HUD is the only authority.
   }
 }

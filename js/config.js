@@ -207,10 +207,12 @@ const CONFIG = {
   // The Source (Stage 5 FINAL boss): a floating rift that cycles every fallen boss's
   // signature mechanic, collapses the floor, fakes its death, then erupts into a true form
   source: {
-    w: 116, h: 128, hp: 5400, speed: 125, contactDmg: 22, knockbackTaken: 0.35, weight: 7,
+    w: 116, h: 128, hp: 6400, speed: 125, contactDmg: 22, knockbackTaken: 0.35, weight: 7,
     // the VOID RUN is the fight's centerpiece: it begins at voidTier and runs to
     // the death; the kneel (fake death) happens ON the frozen conveyor
-    voidTier: 0.55, fakeTier: 0.28, kneelDur: 3.6, thawSpeedMult: 1.35,
+    voidTier: 0.58, fakeTier: 0.28, kneelDur: 3.6, thawSpeedMult: 1.35,
+    voidDamageTaken: 0.92, voidFormScale: 1.28, voidDamageMult: 1.12, voidWeightMult: 1.35,
+    phaseOverflowCarry: 0.45, phaseOverflowCap: 0.04,
     voidDelay: 1.25,   // phase-2 entry: the whole floor shatters over this window, then the stream begins
     // THE VOID DESCENT — the cinematic that opens the void run
     voidCamZoom: 0.80,        // camera pulls this far OUT during the void (wider frame = plan your route)
@@ -224,14 +226,18 @@ const CONFIG = {
     platformCollapseCd: 1.3, crackWarn: 0.8,
     // SOFT BREACH: ordinary pursuit occasionally commits through the player's
     // captured position. This is blade-repelled locomotion, not RIFT DASH.
-    breachIntervalMin: 3.2, breachIntervalMax: 5.0, breachStartRange: 420,
-    breachTellMin: 0.30, breachTellMax: 0.38,
-    breachPassMin: 160, breachPassMax: 220,
-    breachSpeedMin: 520, breachSpeedMax: 640, breachMaxDur: 1.25, breachDmg: 14,
+    breachIntervalMin: 2.4, breachIntervalMax: 3.7, breachStartRange: 740,
+    breachTellMin: 0.34, breachTellMax: 0.44,
+    breachPassMin: 190, breachPassMax: 280,
+    breachSpeedMin: 570, breachSpeedMax: 700, breachMaxDur: 1.25, breachDmg: 14,
     breachRepelMinSpeed: 1500, breachRepelVMin: 760, breachRepelVMax: 1180,
     breachSteerLockMin: 0.28, breachSteerLockMax: 0.40,
     breachRepelGrace: 0.65, breachRecoilDrag: 7.5,
     breachWeakNudge: 150, breachWeakNudgeCap: 220,
+    predatorDecisionMin: 0.72, predatorDecisionMax: 1.18,
+    predatorCloseMin: 118, predatorCloseMax: 158,
+    predatorStalkMin: 170, predatorStalkMax: 218,
+    predatorYMin: -82, predatorYMax: 58, predatorForceBreach: 1.8,
     // the rift LEARNS TO LUNGE — physical moves woven between the ranged casts
     dashCd: 5.5, dashWindup: 0.55, dashSpeed: 2050, dashDmg: 22,   // RIFT DASH: a telegraphed flash-charge along a locked line
     riftCollapseCd: 8.0, collapseWindup: 0.7, collapseDmg: 18, collapseSpeed: 900,   // RIFT COLLAPSE: teleport above, drop a converging shard ring
