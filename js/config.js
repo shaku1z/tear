@@ -186,6 +186,15 @@ const CONFIG = {
     stompCd: 3.2, stompWindup: 0.55, stompRange: 400, shockSpeed: 560, shockDmg: 16, shockR: 15 },
   // boss: large, multi-phase (very heavy -> barely flinchable)
   boss: { w: 118, h: 118, hp: 2500, speed: 70, contactDmg: 20, knockbackTaken: 0.6, weight: 6, fireBase: 2.0 },
+
+  // LIVING ARENAS: elevated boss terrain is temporary movement opportunity,
+  // never permanent shelter. Collision is removed while broken/reforming and
+  // returns only after the player clears the authored footprint.
+  bossArena: {
+    standBeforeWarn: 1.6, crackWarn: 0.75, brokenDuration: 4.5, reformWarn: 0.6,
+    stressDrainDelay: 0.22, stressDrainRate: 2.4, reformClearMargin: 18,
+    minElevatedActive: 1,
+  },
   // shared boss ceremony timing. Individual fights supply the poses and attack grammar;
   // the theater layer owns only the real-time pacing.
   bossTheater: { introDur: 1.4, introScale: 0.25, deathDur: 0.9 },
@@ -268,7 +277,7 @@ const CONFIG = {
     staggerDur: 1.1, coreOpenDur: 2.5, coreOpenMult: 1.65,
     shieldCrossings: 3, shieldEmbedDur: 2.2,
     debrisDmg: 16, debrisGravity: 1750, meltdownCd: 8.5, meltdownWindup: 0.9,
-    campAfter: 4.0, pillarCd: 7.0, pillarWarn: 0.7, platRespawn: 6.0,   // NO SHELTER: the fortress breaks the perch you camp
+    campAfter: 1.15, pillarCd: 7.0,   // NO SHELTER: the fortress accelerates a perch's shared fracture cycle
     // the BRUISER kit — heavy, telegraphed, punishable
     chargeStopShort: 0.55,   // fraction of charges that halt short with a shoulder-check (no free self-stagger)
     smashWindup: 0.7, smashDmg: 24, smashRange: 200,   // OVERHEAD SMASH: raise a fist, then a vertical kill-column at the player's x
@@ -288,7 +297,7 @@ const CONFIG = {
     guardBreakDur: 2.5, guardBreakMult: 1.65,
     lockdownDur: 5.0, lockdownCd: 10.0, cageW: 125,
     debrisDmg: 15, debrisGravity: 1650, trailLife: 2.5,
-    campAfter: 4.0, volleyCd: 6.0,   // NO SHELTER: perch too long and the skyward volley answers
+    campAfter: 1.15, volleyCd: 6.0,   // NO SHELTER: volley lands before passive platform decay completes
   },
 
   // support: no real attack — they make every OTHER enemy worse, so they're priority kills

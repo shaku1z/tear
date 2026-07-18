@@ -535,12 +535,108 @@
     const floor = { x: 0, y: gy, w: vw, h: vh - gy, floor: true,
       platformId: `arena:${bossId}:floor`, arenaBoss: bossId, arenaPlatId: `${bossId}:floor`, arenaMaterial: `${material}Floor` };
     const ox = (vw - 1600) / 2, oy = (vh - 900) / 2;
-    const P = (x, y, w, index) => ({ x: x + ox, y: y + oy, w, h: 22, oneway: true,
-      platformId: `arena:${bossId}:${index}`, arenaBoss: bossId, arenaPlatId: `${bossId}:${index}`, arenaMaterial: material });
+    const P = (x, y, w, index) => {
+      const p = { x: x + ox, y: y + oy, w, h: 22, oneway: true,
+        platformId: `arena:${bossId}:${index}`, arenaBoss: bossId, arenaPlatId: `${bossId}:${index}`,
+        arenaMaterial: material, material, arenaState: "stable", stress: 0, stressDelay: 0,
+        crackWarn: 0, respawnIn: 0, respawnWarn: CONFIG.bossArena.reformWarn };
+      p.baseSpec = { x: p.x, y: p.y, w: p.w, h: p.h, oneway: true,
+        platformId: p.platformId, arenaBoss: bossId, arenaPlatId: p.arenaPlatId,
+        arenaMaterial: material, material };
+      return p;
+    };
     if (bossId === "warden")   return [floor, P(150, 430, 240, 0), P(1210, 430, 240, 1), P(680, 555, 240, 2)];   // the Yard: spread, high — perch time is exposure time
-    if (bossId === "colossus") return [floor, P(430, 400, 740, 0), P(110, 645, 210, 1), P(1280, 645, 210, 2)];   // the Foundry: one high gantry + two low blocks
-    if (bossId === "aldric")   return [floor];                                                          // the Dueling Ground: bare — the pure duel
+    if (bossId === "colossus") return [floor, P(430, 400, 230, 0), P(685, 400, 230, 1), P(940, 400, 230, 2), P(110, 645, 210, 3), P(1280, 645, 210, 4)];   // the Foundry: sectional gantry + low access blocks
+    if (bossId === "aldric")   return [floor, P(250, 610, 260, 0), P(690, 500, 220, 1), P(1090, 610, 260, 2)];   // Royal Ruins: movement without a permanent throne
     return null;   // source/echo fight over the stage layout (then the void takes it)
+  }
+
+  function standingArenaPlatform(who) {
+    if (!who || !who.onGround) return null;
+    const feet = who.y + who.hh;
+    return platforms.find((p) => p.arenaPlatId && !p.floor && p.oneway &&
+      Math.abs(feet - p.y) < 8 && who.x + who.hw > p.x && who.x - who.hw < p.x + p.w) || null;
+  }
+  function activeArenaRouteCount() {
+    return platforms.filter((p) => p.arenaPlatId && !p.floor && p.oneway).length;
+  }
+  function arenaMaterialColor(p) {
+    if (p.arenaMaterial === "aldricStone") return "#caa85c";
+    if (p.arenaMaterial === "colossusGantry") return CONFIG.colors.armoredShield;
+    return CONFIG.colors.boss;
+  }
+  function startArenaWarning(p, request) {
+    const A = CONFIG.bossArena;
+    if (!p || !p.arenaPlatId || p.floor || !["stable", "stressed"].includes(p.arenaState) ||
+        activeArenaRouteCount() <= A.minElevatedActive) return false;
+    p.arenaState = "warning"; p.crackWarn = A.crackWarn;
+    p.crackColor = (request && request.color) || arenaMaterialColor(p);
+    p.fractureReason = (request && request.reason) || "standing";
+    return true;
+  }
+  function playerClearOfArenaPlatform(p) {
+    const m = CONFIG.bossArena.reformClearMargin;
+    return !player || !aabbOverlap(player.x, player.y, player.hw, player.hh,
+      p.x + p.w / 2, p.y + p.h / 2, p.w / 2 + m, p.h / 2 + m);
+  }
+  function updateBossArenaPlatforms(dt) {
+    if (!run) return;
+    const A = CONFIG.bossArena, standing = standingArenaPlatform(player);
+    run._arenaBroken = run._arenaBroken || [];
+
+    for (let i = platforms.length - 1; i >= 0; i--) {
+      const p = platforms[i];
+      if (!p.arenaPlatId || p.floor) continue;
+
+      if (p.arenaFractureRequest) {
+        const request = p.arenaFractureRequest; p.arenaFractureRequest = null;
+        if (startArenaWarning(p, request)) continue;   // preserve the complete warning interval
+      }
+
+      if (p.arenaState === "warning") {
+        p.crackWarn = Math.max(0, p.crackWarn - dt);
+        if (p.crackWarn <= 0) {
+          // Resolve simultaneous warnings one by one. The last elevated route is
+          // retained even if another impact requested its collapse this frame.
+          if (activeArenaRouteCount() <= A.minElevatedActive) {
+            p.arenaState = "stressed"; p.stress = A.standBeforeWarn * 0.65;
+            p.stressDelay = A.stressDrainDelay;
+          } else {
+            platforms.splice(i, 1);
+            p.arenaState = "broken"; p.stress = 0; p.stressDelay = 0;
+            p.respawnWarn = A.reformWarn; p.respawnIn = A.brokenDuration + A.reformWarn;
+            run._arenaBroken.push(p);
+            const color = p.crackColor || arenaMaterialColor(p);
+            FX.ring(p.x + p.w / 2, p.y, 18, color);
+            FX.burst(p.x + p.w / 2, p.y, 0, 1, 8, color);
+          }
+        }
+        continue;
+      }
+
+      if (standing === p) {
+        p.stress = Math.min(A.standBeforeWarn, p.stress + dt);
+        p.stressDelay = A.stressDrainDelay;
+      } else if (p.stressDelay > 0) p.stressDelay = Math.max(0, p.stressDelay - dt);
+      else p.stress = Math.max(0, p.stress - A.stressDrainRate * dt);
+      p.arenaState = p.stress > 0 ? "stressed" : "stable";
+      if (p.stress >= A.standBeforeWarn) startArenaWarning(p, null);
+    }
+
+    for (let i = run._arenaBroken.length - 1; i >= 0; i--) {
+      const p = run._arenaBroken[i];
+      p.respawnIn = Math.max(0, p.respawnIn - dt);
+      if (p.respawnIn <= p.respawnWarn) p.arenaState = "reforming";
+      if (p.respawnIn > 0 || !playerClearOfArenaPlatform(p)) continue;
+      Object.assign(p, p.baseSpec);
+      p.arenaState = "stable"; p.stress = 0; p.stressDelay = 0;
+      p.crackWarn = 0; p.respawnIn = 0; p.respawnWarn = A.reformWarn;
+      p.crackColor = null; p.fractureReason = null; p.arenaFractureRequest = null;
+      platforms.push(p); run._arenaBroken.splice(i, 1);
+      const color = arenaMaterialColor(p);
+      FX.ring(p.x + p.w / 2, p.y, 12, color);
+      if (!GFX.low) FX.burst(p.x + p.w / 2, p.y, 0, -1, 5, color);
+    }
   }
 
   // ---- THE SOURCE: runtime arena mutation for the final void run ------------
@@ -1368,7 +1464,7 @@
         run.bossAdds = null;
         // NO SHELTER: the boss brings its own arena (restored when it falls)
         { const ar = bossArena(e.bossId);
-          if (ar) { run._preBossPlatforms = platforms; run._brokenPlats = null; platforms = ar; } }
+          if (ar) { run._preBossPlatforms = platforms; run._brokenPlats = null; run._arenaBroken = []; platforms = ar; } }
         break;
       case "miniboss": e = bossById(spec.bossId); if (e.isMirrorBoss) e._live = true; e.hp *= 0.4; e.maxHp *= 0.4; e.isMiniBoss = true; e.bossName = "◇ " + e.bossName; break;
       case "priest": case "herald": case "mender": case "anchor": e = new Support(0, 0, spec.type); break;
@@ -1871,11 +1967,15 @@
         if (r === "hit") { SFX.hurt(); loseStyle(); } else if (r === "absorbed") onShieldAbsorb();
       }
     }
-    // GENERIC platform cracking: any boss can set p.crackT (+ optional
+    // LIVING ARENAS own stable platform identity across break/reform cycles.
+    // Generic cracks remain for non-arena scripted destruction (notably Source).
+    updateBossArenaPlatforms(dt);
+    // GENERIC platform cracking: non-arena bosses can set p.crackT (+ optional
     // p.respawnIn to give the platform back later). Warning shimmer draws in
     // the world pass; here the timer runs out and the ground gives way.
     for (let i = platforms.length - 1; i >= 0; i--) {
       const p = platforms[i];
+      if (p.arenaPlatId) continue;
       if (!(p.crackT > 0)) continue;
       p.crackT -= dt;
       if (p.crackT <= 0 && p.oneway) {
@@ -2501,7 +2601,7 @@
     if (run.mods.cinderNova && e.burnT > 0) { for (const e2 of enemies) { if (e2 === e || e2.dead) continue; if (len(e2.x - e.x, e2.y - e.y) < 150 && e2.applyBurn) e2.applyBurn(); } FX.ring(e.x, e.y, 12, CONFIG.colors.slam); }
     if (e.isBoss) {
       // NO SHELTER: give the stage its ground back (the Source keeps its frozen void — it never swapped)
-      if (run._preBossPlatforms) { platforms = run._preBossPlatforms; run._preBossPlatforms = null; run._brokenPlats = null; }
+      if (run._preBossPlatforms) { platforms = run._preBossPlatforms; run._preBossPlatforms = null; run._brokenPlats = null; run._arenaBroken = null; }
       worldZoomTarget = 1; run.voidDescent = null;   // the void releases the camera when the Source falls
       CG.happytime();   // CrazyGames: a highlight moment
       Backdrop.bloom("#ffffff", 0.22, 0.9); Backdrop.flare(e.x, e.y, currentStage.accent || "#ffffff", 520, 1.0);   // a boss falls: the world flares
@@ -2932,8 +3032,13 @@
       if (!p.platformId) continue;
       ctx.strokeStyle = p.void ? "#13c4d6" : "#e8a32e"; ctx.globalAlpha = 0.85;
       ctx.strokeRect(p.x, p.y, p.w, p.h);
-      ctx.fillStyle = ctx.strokeStyle; ctx.fillText(p.platformId, p.x + p.w / 2, p.y - 4);
+      ctx.fillStyle = ctx.strokeStyle; ctx.fillText(p.platformId + (p.arenaState ? `:${p.arenaState}` : ""), p.x + p.w / 2, p.y - 4);
       if (p.voidLane && p.chunkId != null) ctx.fillText(`${p.voidLane} · chunk ${p.chunkId}`, p.x + p.w / 2, p.y + p.h + 15);
+    }
+    if (run && run._arenaBroken) for (const p of run._arenaBroken) {
+      ctx.strokeStyle = p.arenaState === "reforming" ? "#55ff9a" : "#ff6b6b"; ctx.globalAlpha = 0.85;
+      ctx.setLineDash([7, 5]); ctx.strokeRect(p.x, p.y, p.w, p.h); ctx.setLineDash([]);
+      ctx.fillStyle = ctx.strokeStyle; ctx.fillText(`${p.platformId}:${p.arenaState}`, p.x + p.w / 2, p.y - 4);
     }
     if (run && run.voidScroll && run.voidScroll.chunks) {
       const byId = new Map(platforms.filter((p) => p.void).map((p) => [p.platformId, p]));
@@ -3067,9 +3172,13 @@
       }
       ctx.setLineDash([]); ctx.restore();
     }
+    // Broken arena platforms leave diegetic fragments / reform silhouettes even
+    // while they are absent from collision.
+    if (run && run._arenaBroken) for (const p of run._arenaBroken) Backdrop.platform(ctx, p, currentStage, false, backdropView);
     for (const p of platforms) Backdrop.platform(ctx, p, currentStage, !!p.floor, backdropView);         // depth: gradient + edge + shadow
     // cracking platforms telegraph the give-way: jagged fractures + a quickening pulse
     for (const p of platforms) {
+      if (p.arenaPlatId) continue;   // material-specific arena warnings draw in Backdrop.platform
       if (!(p.crackT > 0)) continue;
       const k = 1 - clamp(p.crackT / (p.crackMax || 0.8), 0, 1);
       ctx.save();

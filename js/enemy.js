@@ -1579,8 +1579,10 @@ class Warden extends Enemy {
       this.phaseTag = "NOTHING LEFT"; this.searchlights = []; this.cages = []; this.trails = []; this._syncZones();
       this.state = "fakedeath"; this.stateT = 2.2;   // The Fake: slump, then rise
       bossPhaseBeat(this, "NOTHING LEFT TO GUARD", CONFIG.colors.charger);
-      const ow = platforms.filter((p) => p.oneway);   // rip a platform out of the arena
-      if (ow.length) { const idx = platforms.indexOf(ow[Math.floor(Math.random() * ow.length)]); if (idx >= 0) platforms.splice(idx, 1); }
+      // Phase violence enters the same readable fracture lifecycle as standing.
+      // Miniboss arenas have no metadata, so this safely becomes a no-op.
+      const ow = platforms.filter((p) => p.arenaPlatId && !p.floor && p.arenaState !== "warning");
+      if (ow.length) ow[Math.floor(Math.random() * ow.length)].arenaFractureRequest = { color: CONFIG.colors.charger, reason: "wardenPhase" };
     }
   }
 
@@ -1719,9 +1721,10 @@ class Warden extends Enemy {
 
   onProjectileGroundImpact(p) {
     const col = p.bossAttack === "mortar" ? this.color : CONFIG.colors.charger;
-    FX.explode(p.x, CONFIG.world.groundY, col, p.bossAttack === "mortar" ? 0.8 : 0.55);
+    const impactY = p.landingY != null ? p.landingY : CONFIG.world.groundY;
+    FX.explode(p.x, impactY, col, p.bossAttack === "mortar" ? 0.8 : 0.55);
     const pl = this._playerRef;
-    if (pl && Math.abs(pl.x - p.x) < 62 + pl.hw && pl.y + pl.hh > CONFIG.world.groundY - 95) pl.takeDamage(p.dmg || CONFIG.warden.debrisDmg, p.x, this);
+    if (pl && Math.abs(pl.x - p.x) < 62 + pl.hw && Math.abs(pl.y + pl.hh - impactY) < 95) pl.takeDamage(p.dmg || CONFIG.warden.debrisDmg, p.x, this);
   }
 
   _ceiling(dt, player, projectiles, Wc) {
@@ -1817,7 +1820,7 @@ class Warden extends Enemy {
       const gy = this.y + this.hh;
       const wk = 1 - clamp(this.stateT / (CONFIG.warden.batonWindup || 0.5), 0, 1);
       ctx.strokeStyle = CONFIG.colors.slam; ctx.globalAlpha = 0.65; ctx.lineWidth = 4; ctx.setLineDash([8, 6]);
-      if (this.pendingAtk === "mortar") {
+      if (this.pendingAtk === "mortar" || this.pendingAtk === "volley") {
         ctx.beginPath(); ctx.arc(this.x, this.y - this.hh - 12, 16, 0, Math.PI * 2); ctx.stroke();
         { const ry = this.pendingAtk === "volley" ? this.volleyTargetY - 3 : CONFIG.world.groundY - 3;
           for (const tx of this.mortarTargets) dangerReticle(ctx, tx, ry, 28, wk, this.color); }
@@ -1962,9 +1965,10 @@ class Colossus extends Enemy {
     BOSSFX.juice({ banner: "BREACH THE FORTRESS", color: CONFIG.colors.armoredShield, shake: 7, zoom: 0.04, quiet: true });
   }
   onProjectileGroundImpact(p) {
-    FX.explode(p.x, CONFIG.world.groundY, CONFIG.colors.armoredShield, 0.55);
+    const impactY = p.landingY != null ? p.landingY : CONFIG.world.groundY;
+    FX.explode(p.x, impactY, CONFIG.colors.armoredShield, 0.55);
     const pl = this._playerRef;
-    if (pl && Math.abs(pl.x - p.x) < 64 + pl.hw && pl.y + pl.hh > CONFIG.world.groundY - 100) pl.takeDamage(p.dmg || this.cfg.debrisDmg, p.x, this);
+    if (pl && Math.abs(pl.x - p.x) < 64 + pl.hw && Math.abs(pl.y + pl.hh - impactY) < 100) pl.takeDamage(p.dmg || this.cfg.debrisDmg, p.x, this);
   }
   update(dt, platforms, player, projectiles) {
     this.tickTimers(dt);
@@ -2062,10 +2066,10 @@ class Colossus extends Enemy {
       // NO SHELTER — PILLAR QUAKE: camp the gantry and the fortress slams its
       // support out from under you (crack warning, then the perch gives way for a while)
       this.pillarCd = (this.pillarCd || 0) - dt;
-      if (this.campT > C.campAfter && this.pillarCd <= 0 && this.campPlat && !(this.campPlat.crackT > 0)) {
+      if (this.campT > C.campAfter && this.pillarCd <= 0 && this.campPlat &&
+          this.campPlat.arenaPlatId && (this.campPlat.arenaState === "stable" || this.campPlat.arenaState === "stressed")) {
         const pl = this.campPlat;
-        pl.crackT = C.pillarWarn; pl.crackMax = C.pillarWarn;
-        pl.crackColor = CONFIG.colors.armoredShield; pl.respawnIn = C.platRespawn;
+        pl.arenaFractureRequest = { color: CONFIG.colors.armoredShield, reason: "pillarQuake" };
         this.pillarCd = C.pillarCd; this.campT = 1.2;
         BOSSFX.juice({ banner: "PILLAR QUAKE", color: CONFIG.colors.armoredShield, shake: 10, flash: 0.25, hitstop: 0.05 });
         FX.shockwave(this.x, this.y + this.hh, 10, CONFIG.colors.armoredShield, 260, 5);

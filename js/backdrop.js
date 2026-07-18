@@ -191,9 +191,124 @@ const Backdrop = {
     ctx.restore();
   },
 
+  // Living boss terrain. The same arenaState that controls collision also owns
+  // every warning, fragment, and reform silhouette drawn here.
+  arenaPlatform(ctx, p, stage) {
+    const A = CONFIG.bossArena, state = p.arenaState || "stable";
+    const mat = p.arenaMaterial || p.material || "arena";
+    const stressK = clamp((p.stress || 0) / A.standBeforeWarn, 0, 1);
+    const warnK = state === "warning" ? 1 - clamp((p.crackWarn || 0) / A.crackWarn, 0, 1) : 0;
+    const totalDown = A.brokenDuration + A.reformWarn;
+    ctx.save();
+
+    if (state === "broken") {
+      const fallK = clamp((totalDown - (p.respawnIn || 0)) / 0.72, 0, 1);
+      ctx.globalAlpha = 1 - fallK;
+      for (let i = 0; i < 6; i++) {
+        const sw = p.w / 6 + 1, inward = (2.5 - i) * fallK * 8;
+        ctx.fillStyle = mat === "aldricStone" ? (i % 2 ? "#5c5656" : "#736a63") :
+          (mat === "colossusGantry" ? (i % 2 ? "#60483a" : "#806042") : (i % 2 ? "#3d4854" : "#566270"));
+        ctx.save(); ctx.translate(inward, fallK * (28 + (i % 3) * 18)); ctx.rotate((i - 2.5) * fallK * 0.09);
+        ctx.fillRect(p.x + i * p.w / 6, p.y, sw, p.h); ctx.restore();
+      }
+      if (mat === "wardenSteel") {
+        ctx.fillStyle = "#d0ad48"; ctx.globalAlpha = 1 - fallK;
+        for (const x of [p.x + 10, p.x + p.w - 26]) {
+          ctx.save(); ctx.translate(x, p.y + fallK * 74); ctx.rotate(fallK * 0.8); ctx.fillRect(0, 0, 16, 7); ctx.restore();
+        }
+      } else if (mat === "colossusGantry" && !GFX.low) {
+        ctx.fillStyle = "#d7d2c8";
+        for (let i = 0; i < 3; i++) {
+          ctx.globalAlpha = (1 - fallK) * (0.22 + i * 0.1);
+          ctx.beginPath(); ctx.ellipse(p.x + p.w * (0.25 + i * 0.24), p.y - 8 - i * 12 - fallK * 24, 8 + i * 3, 5 + i * 2, 0, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+      ctx.restore(); return;
+    }
+
+    if (state === "reforming") {
+      const k = 1 - clamp((p.respawnIn || 0) / (p.respawnWarn || A.reformWarn), 0, 1);
+      const col = mat === "aldricStone" ? "#d8b85e" : (mat === "colossusGantry" ? "#ef8f3a" : "#e4c85d");
+      ctx.globalAlpha = 0.22 + k * 0.66; ctx.strokeStyle = col; ctx.lineWidth = 2.5;
+      ctx.setLineDash([10 - k * 5, 7]); ctx.strokeRect(p.x, p.y, p.w, p.h); ctx.setLineDash([]);
+      // Material-specific reconstruction language stays readable in low effects.
+      if (mat === "wardenSteel") {
+        const scanX = p.x + p.w * k;
+        ctx.globalAlpha = 0.35 + k * 0.45; ctx.fillStyle = col; ctx.fillRect(scanX - 3, p.y - 46, 6, 48 + p.h);
+      } else if (mat === "colossusGantry") {
+        ctx.globalAlpha = 0.42 + k * 0.4; ctx.fillStyle = "#5c4436";
+        for (const x of [p.x + 28, p.x + p.w - 46]) ctx.fillRect(x, p.y + p.h, 18, 68 * k);
+      } else {
+        ctx.globalAlpha = 0.28 + k * 0.5;
+        for (let i = 0; i < 5; i++) {
+          const sw = p.w / 5 - 3, y = p.y + (1 - k) * (28 + (i % 2) * 20);
+          ctx.strokeRect(p.x + i * p.w / 5 + 1, y, sw, p.h);
+        }
+      }
+      ctx.restore(); return;
+    }
+
+    ctx.fillStyle = "rgba(0,0,0,0.18)"; ctx.fillRect(p.x + 5, p.y + p.h, p.w, 8);
+    if (mat === "wardenSteel") {
+      const g = ctx.createLinearGradient(0, p.y, 0, p.y + p.h);
+      g.addColorStop(0, "#637181"); g.addColorStop(1, "#303a45");
+      ctx.fillStyle = g; ctx.fillRect(p.x, p.y, p.w, p.h);
+      ctx.fillStyle = "#d0ad48";
+      ctx.fillRect(p.x + 9, p.y - 3, 18, 7); ctx.fillRect(p.x + p.w - 27, p.y - 3, 18, 7);
+      ctx.strokeStyle = "#aeb9c4"; ctx.globalAlpha = 0.56; ctx.lineWidth = 1;
+      for (let x = p.x + 38; x < p.x + p.w - 26; x += 22) { ctx.beginPath(); ctx.moveTo(x, p.y + 3); ctx.lineTo(x, p.y + p.h - 3); ctx.stroke(); }
+    } else if (mat === "colossusGantry") {
+      const g = ctx.createLinearGradient(0, p.y, 0, p.y + p.h);
+      g.addColorStop(0, "#8a694d"); g.addColorStop(1, "#49372f");
+      ctx.fillStyle = g; ctx.fillRect(p.x, p.y, p.w, p.h);
+      ctx.fillStyle = "#e78936"; ctx.fillRect(p.x, p.y, p.w, 3);
+      ctx.fillStyle = "#c9b39a";
+      for (let x = p.x + 16; x < p.x + p.w; x += 34) {
+        const lift = state === "warning" ? Math.sin(x * 0.11) * 2 - warnK * 5 : 0;
+        ctx.beginPath(); ctx.arc(x, p.y + 8 + lift, 2.4, 0, Math.PI * 2); ctx.fill();
+      }
+    } else {
+      const heat = clamp(stressK + warnK * 0.55, 0, 1);
+      const g = ctx.createLinearGradient(0, p.y, 0, p.y + p.h);
+      g.addColorStop(0, heat > 0.55 ? "#574a46" : "#81766c"); g.addColorStop(1, "#4b4647");
+      ctx.fillStyle = g; ctx.fillRect(p.x, p.y, p.w, p.h);
+      ctx.fillStyle = "#c9a950"; ctx.fillRect(p.x, p.y, p.w, 3);
+      if (!GFX.low) {
+        ctx.globalAlpha = 0.34; ctx.strokeStyle = "#d4bd7a"; ctx.lineWidth = 1;
+        for (let x = p.x + 24; x < p.x + p.w - 18; x += 58) ctx.strokeRect(x, p.y + 7, 27, 8);
+      }
+    }
+
+    if (stressK > 0) {
+      ctx.globalAlpha = 0.12 + stressK * 0.28; ctx.fillStyle = mat === "aldricStone" ? "#8b3028" : "#14181d";
+      ctx.fillRect(p.x, p.y, p.w, p.h);
+    }
+    if (state === "warning") {
+      const pulse = 0.62 + 0.38 * Math.sin(performance.now() / Math.max(28, 76 - warnK * 42));
+      ctx.globalAlpha = (0.52 + warnK * 0.4) * pulse;
+      ctx.strokeStyle = mat === "aldricStone" ? "#f0c85a" : (mat === "colossusGantry" ? "#ff8a2c" : "#e5c34f");
+      ctx.lineWidth = 2.4 + warnK * 1.8; ctx.beginPath();
+      const teeth = mat === "aldricStone" ? 5 : 7;
+      for (let i = 0; i < teeth; i++) {
+        const x = p.x + p.w * (0.1 + i * 0.8 / Math.max(1, teeth - 1));
+        const lean = i % 2 ? 12 : -12;
+        ctx.moveTo(x, p.y); ctx.lineTo(x + lean, p.y + p.h * (0.55 + (i % 3) * 0.18));
+      }
+      // Aldric's fractures form a broken crown; the others read as lifted locks/rivets.
+      if (mat === "aldricStone") {
+        const cx = p.x + p.w / 2;
+        ctx.moveTo(cx - 34, p.y); ctx.lineTo(cx - 18, p.y - 13 - warnK * 8);
+        ctx.lineTo(cx, p.y); ctx.lineTo(cx + 18, p.y - 13 - warnK * 8); ctx.lineTo(cx + 34, p.y);
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1; ctx.restore();
+  },
+
   // === a platform with depth (replaces the old flat rect) ===
   platform(ctx, p, stage, isFloor, view) {
     if (p.void) { this.voidPlatform(ctx, p, stage); return; }
+    if (p.arenaPlatId && !isFloor) { this.arenaPlatform(ctx, p, stage); return; }
     const c = this._get(stage), plat = stage.plat;
     if (isFloor) {
       // Collision remains authored to the arena, but its ground art must reach the
