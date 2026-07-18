@@ -920,6 +920,54 @@ const UI = {
     this.ink = savedInk; ctx.restore();
   },
 
+  // Boss transformation declaration (Pantheon VI P4): a spoken line anchored to a
+  // corner of the frame instead of the universal bottom card, so each ritual's
+  // world choreography owns the center. No full opaque panel — a soft local scrim
+  // holds contrast. Same reading affordances (chevron / hold ring / AUTO) as the
+  // dialogue card. `anchor`: lower-left | lower-right | upper-left | depth-center.
+  bossDeclaration(ctx, o) {
+    o = o || {}; const t = this.t, vw = CONFIG.view.w, vh = CONFIG.view.h;
+    const k = clamp(Number(o.amount) == null ? 1 : o.amount, 0, 1), color = o.color || t.color.accent;
+    const scale = clamp(vh / 900, 0.8, 1.4), SM = Math.max(t.chapter.safeMargin, vw * t.chapter.safeVW);
+    const anchor = vw < 720 ? "lower-center" : (o.anchor || "lower-left");   // narrow screens fall back to a lower third
+    const blockW = Math.min((o.maxWidth || 620) * scale, vw - SM * 2);
+    const speakerSize = Math.round(13 * scale), lineSize = Math.round(30 * scale), lineH = lineSize * 1.14;
+    ctx.save(); ctx.font = this.displayFont(lineSize); ctx.textBaseline = "alphabetic";
+    const allWords = String(o.line || "").split(/\s+/).filter(Boolean);
+    const reveal = o.reveal == null ? 1 : clamp(o.reveal, 0, 1);
+    const words = allWords.slice(0, Math.max(1, Math.ceil(allWords.length * reveal)));
+    const lines = []; let line = "";
+    for (const wd of words) { const next = line ? line + " " + wd : wd; if (line && ctx.measureText(next).width > blockW) { lines.push(line); line = wd; } else line = next; }
+    if (line) lines.push(line);
+    const blockH = speakerSize + t.space.md + lines.length * lineH;
+    let x, y, align;
+    if (anchor === "lower-right") { x = vw - SM - blockW; align = "right"; y = vh - SM - blockH; }
+    else if (anchor === "upper-left") { x = SM; align = "left"; y = SM * 1.4; }
+    else if (anchor === "depth-center") { x = (vw - blockW) / 2; align = "left"; y = vh * 0.28; }
+    else if (anchor === "lower-center") { x = (vw - blockW) / 2; align = "left"; y = vh - SM - blockH - vh * 0.06; }
+    else { x = SM; align = "left"; y = vh - SM - blockH; }   // lower-left (default)
+    const anchorX = align === "right" ? x + blockW : x;
+    ctx.globalAlpha = k;
+    const g = ctx.createLinearGradient(0, y - t.space.lg, 0, y + blockH + t.space.lg);
+    g.addColorStop(0, "rgba(6,7,12,0)"); g.addColorStop(0.5, "rgba(6,7,12,0.52)"); g.addColorStop(1, "rgba(6,7,12,0)");
+    ctx.fillStyle = g; ctx.fillRect(x - t.space.md, y - t.space.lg, blockW + t.space.lg, blockH + t.space.xl);
+    ctx.fillStyle = color; ctx.fillRect(align === "right" ? anchorX - Math.min(blockW, 46 * scale) : anchorX, y - 3 * scale, Math.min(blockW, 46 * scale), 2 * scale);
+    ctx.fillStyle = color; ctx.font = this.bodyFont(speakerSize, t.font.bodyMediumWeight);
+    this.trackedText(ctx, o.speaker || "", anchorX, y + speakerSize, t.track.label, align);
+    ctx.fillStyle = "#f1eff9"; ctx.font = this.displayFont(lineSize); ctx.textAlign = align;
+    let yy = y + speakerSize + t.space.md + lineSize;
+    for (const ln of lines) { ctx.fillText(ln, anchorX, yy); yy += lineH; }
+    const cx = align === "right" ? anchorX - 10 : anchorX + 10, cy = yy - lineH + t.space.sm;
+    const hold = clamp(Number(o.holdRing) || 0, 0, 1);
+    if (hold > 0.01) { ctx.globalAlpha = k; ctx.strokeStyle = color; ctx.lineWidth = 2.5 * scale;
+      ctx.beginPath(); ctx.arc(cx, cy, 9 * scale, -Math.PI / 2, -Math.PI / 2 + hold * Math.PI * 2); ctx.stroke(); }
+    else if (o.canAdvance) { const pulse = 0.55 + 0.45 * Math.sin((typeof CLOCK !== "undefined" ? CLOCK.sim : 0) * 6);
+      ctx.globalAlpha = k * pulse; ctx.fillStyle = color; ctx.textAlign = align; ctx.font = this.displayFont(Math.round(22 * scale));
+      ctx.fillText("›", anchorX, yy + t.space.xs); }
+    if (o.auto) { ctx.globalAlpha = k * t.alpha.soft; this.tag(ctx, "AUTO", anchorX, y - t.space.sm, color, align, t.type.micro); }
+    ctx.restore();
+  },
+
   // ---- LIVING BIOME CHAPTER (Pantheon VI) ---------------------------------
   // The world writes the chapter. No modal: a directional ink-wash on one side
   // makes negative space for a tracked label, a condensed display title, and a

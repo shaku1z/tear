@@ -1079,8 +1079,21 @@
       }
     };
     owner.cinematicRequest = null;
+    // Ritual timing: the physical acts (anticipation / reveal / resolve) run on
+    // their OWN clocks, separate from the declaration's reading clock. Per-pose so
+    // Aldric's crown gets a longer fall and the Source a deeper depth move.
+    const RT = ({
+      aldricCrownfall: { anticipation: 0.34, reveal: 0.78, resolve: 0.86 },
+      aldricFeral: { anticipation: 0.34, reveal: 0.78, resolve: 0.86 },
+      wardenRule: { anticipation: 0.34, reveal: 0.66, resolve: 0.60 },
+      wardenBreak: { anticipation: 0.34, reveal: 0.66, resolve: 0.60 },
+      colossusContainment: { anticipation: 0.30, reveal: 0.72, resolve: 0.62 },
+      colossusCore: { anticipation: 0.30, reveal: 0.72, resolve: 0.62 },
+      echoMirror: { anticipation: 0.28, reveal: 0.66, resolve: 0.55 },
+      sourceTrue: { anticipation: 0.36, reveal: 0.90, resolve: 0.72 },
+    })[cue.pose || "transform"] || { anticipation: 0.30, reveal: 0.62, resolve: 0.52 };
     CINEMA.start({
-      id: cue.id, color: cue.color || owner.color, blocksCombat: true, hideHud: true, brief,
+      id: cue.id, kind: "ritual", color: cue.color || owner.color, blocksCombat: true, hideHud: true, brief,
       hint: brief ? "BRIEF SCENE  ·  HOLD TO SKIP" : "TAP TO ADVANCE  ·  HOLD TO SKIP",
       skipHint: "SKIPPING — TRANSFORMATION REMAINS SAFE",
       onStart(c) {
@@ -1106,17 +1119,27 @@
         try { SFX.setMusicDuck(1, 0.25); } catch (e) {}
       },
       beats: [
-        { id: "frame", duration: 0.24, completion: "timed", playerMode: "locked",
-          onUpdate(c, d) { c.owner.cinematicT = clamp(d.elapsed / 0.24, 0, 1) * 0.2; } },
-        // the spoken beat: reveals at a human rate, holds fully-visible, and only
-        // then auto-resumes combat (never sub-second); a tap advances once readable
+        // ACT 1 — ANTICIPATION: world motion only, no reading yet.
+        { id: "anticipation", duration: RT.anticipation, completion: "timed", playerMode: "locked",
+          onUpdate(c, d) { c.owner.cinematicT = clamp(d.elapsed / RT.anticipation, 0, 1) * 0.22; } },
+        // ACT 2 — REVEAL/POSE: the physical transformation plays on its own clock
+        // and reaches the key pose. The crown LANDS here — before the line — so
+        // reading never races choreography.
+        { id: "reveal", duration: RT.reveal, completion: "timed", playerMode: "locked",
+          onUpdate(c, d) { const k = clamp(d.elapsed / RT.reveal, 0, 1), ke = k * k * (3 - 2 * k);
+            c.owner.cinematicT = 0.22 + ke * 0.6; settleCrown(c, k); } },
+        // ACT 3 — DECLARATION HOLD: the pose idles subtly while the line reveals at
+        // a human rate; a tap advances once readable, else it auto-resumes.
         { id: "declaration", completion: "confirm-or-timeout", playerMode: "locked",
-          speaker: cue.speaker || owner.bossName, line: cue.line,
+          speaker: cue.speaker || owner.bossName, line: cue.line, anchor: cue.anchor, maxWidth: cue.maxWidth,
           onEnter() { try { SFX.dialogueTone(owner.bossId || "chapter"); } catch (e) {} },
-          onUpdate(c, d) { c.owner.cinematicT = 0.2 + d.revealProgress * 0.42; settleCrown(c, d.revealProgress * 0.48); } },
-        { id: "resolve", duration: 0.46, completion: "timed", playerMode: "locked",
-          onUpdate(c, d) { const k = clamp(d.elapsed / 0.46, 0, 1); c.owner.cinematicT = 0.62 + k * 0.38; settleCrown(c, 0.48 + k * 0.52); } },
-        { id: "grace", duration: 0.35, completion: "timed", skipScale: 1, playerMode: "locked" },
+          onUpdate(c) { c.owner.cinematicT = 0.82 + Math.sin(CLOCK.sim * 3) * 0.012; settleCrown(c, 1); } },
+        // ACT 4 — RESOLVE: finish the transformation in world space.
+        { id: "resolve", duration: RT.resolve, completion: "timed", playerMode: "locked",
+          onUpdate(c, d) { const k = clamp(d.elapsed / RT.resolve, 0, 1); c.owner.cinematicT = 0.84 + k * 0.16; } },
+        // RE-ENTRY grace: control returns; the first attack tell fires from
+        // onComplete, never inside the lock.
+        { id: "grace", duration: 0.45, completion: "timed", skipScale: 1, playerMode: "locked" },
       ],
     }, context);
     return true;

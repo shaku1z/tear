@@ -1475,7 +1475,17 @@ function bossPhaseBeat(boss, title, color) {
 function bossTransformation(boss, spec) {
   if (!boss || !spec) return;
   if (boss.isMiniBoss) { bossPhaseBeat(boss, spec.title || spec.line || "PHASE SHIFT", spec.color); return; }
-  boss.cinematicRequest = Object.assign({ color: boss.color, speaker: boss.bossName, duration: 0.88 }, spec);
+  // where the spoken line anchors, so world choreography owns the frame center
+  // (Pantheon VI P4). Colossus is a non-conversational upper-left warning; the
+  // Source speaks from depth-center; the rest sit in a lower corner.
+  const anchorByPose = {
+    wardenRule: "lower-left", wardenBreak: "lower-left",
+    colossusContainment: "upper-left", colossusCore: "upper-left",
+    aldricCrownfall: "lower-right", aldricFeral: "lower-right",
+    echoMirror: "lower-right", sourceTrue: "depth-center",
+  };
+  const anchor = anchorByPose[spec.pose || "transform"] || "lower-left";
+  boss.cinematicRequest = Object.assign({ color: boss.color, speaker: boss.bossName, duration: 0.88, anchor }, spec);
   boss.cinematicPose = spec.pose || "transform"; boss.cinematicColor = spec.color || boss.color; boss._phaseFlashT = 0.7;
 }
 

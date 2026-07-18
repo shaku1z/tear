@@ -224,16 +224,20 @@ const Cinematics = (() => {
       }
       ui.cinematicFrame(ctx, { screen, amount: Math.min(1, this.totalElapsed / 0.45),
         color: this.script.color, reducedMotion: !!reducedMotion });
-      if (b && b.line) ui.dialogueCard(ctx, { speaker: b.speaker, line: b.line, color: b.color || this.script.color,
-        amount: Math.min(1, this.elapsed / 0.22),
-        reveal: reducedMotion ? 1 : this.revealProgress,
-        // chrome cues (no countdown bar): a continue chevron only once readable,
-        // a hold ring only while a newly armed skip-hold is charging, AUTO near a timeout
-        canAdvance: this.revealProgress >= 1 && this.fullyVisibleElapsed >= (P().minFullyVisible || 1.1) * 0.5,
-        holdRing: this._latch.armed ? Math.min(1, this._latch.holdT / (P().skipHold || 0.8)) : 0,
-        auto: this.autoImminent,
-        hint: this.skipping ? (this.script.skipHint || "SKIPPING — GAMEPLAY OUTCOME PRESERVED") :
-          (this.script.hint || "TAP TO ADVANCE  ·  HOLD TO SKIP") });
+      if (b && b.line) {
+        // shared reading affordances (no countdown bar): a continue chevron once
+        // readable, a hold ring while a newly armed skip charges, AUTO near a timeout.
+        const shared = { speaker: b.speaker, line: b.line, color: b.color || this.script.color,
+          amount: Math.min(1, this.elapsed / 0.22), reveal: reducedMotion ? 1 : this.revealProgress,
+          canAdvance: this.revealProgress >= 1 && this.fullyVisibleElapsed >= (P().minFullyVisible || 1.1) * 0.5,
+          holdRing: this._latch.armed ? Math.min(1, this._latch.holdT / (P().skipHold || 0.8)) : 0,
+          auto: this.autoImminent };
+        // Boss transformation rituals anchor the line to a corner so world
+        // choreography owns the center; other scripts keep the dialogue card.
+        if (this.script.kind === "ritual") ui.bossDeclaration(ctx, Object.assign({ anchor: b.anchor, maxWidth: b.maxWidth }, shared));
+        else ui.dialogueCard(ctx, Object.assign({ hint: this.skipping ? (this.script.skipHint || "SKIPPING — GAMEPLAY OUTCOME PRESERVED") :
+          (this.script.hint || "TAP TO ADVANCE  ·  HOLD TO SKIP") }, shared));
+      }
     }
     complete() {
       if (!this.script) return;
