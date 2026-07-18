@@ -10,6 +10,9 @@ CONFIG.pad = {
   dead: 0.22,             // radial deadzone, both sticks
   menuRepeat: 0.24,       // seconds between held-direction menu steps
   triggerThreshold: 0.35, // L2/R2 count as "pressed" at this analog value (many pads never latch .pressed)
+  menuScrollDead: 0.25,   // right-stick deadzone before it scrolls a panel
+  menuScrollMaxSpeed: 950,// px/sec at full right-stick deflection (curved response)
+  activityBias: 0.12,     // stick must exceed dead+this to claim UI ownership (drift can't steal it)
 };
 
 // Controller presets (standard Gamepad API indices): 0 Cross/A · 1 Circle/B ·
@@ -47,6 +50,7 @@ const PAD = {
         this.connected = false; this.index = -1; this.active = false;
         this.toastT = 2.4; this.toastText = "CONTROLLER DISCONNECTED";
         this._release(); Input.padTether = false;   // never leave the tether stuck on after unplug
+        Input.padScrollX = 0; Input.padScrollY = 0;
       }
     });
   },
@@ -112,6 +116,11 @@ const PAD = {
     this._activeT = Math.max(0, this._activeT - dt);
     this.active = this._activeT > 0;
 
+    // claim UI ownership on MEANINGFUL activity only — a firmer threshold than the
+    // deadzone so resting-stick drift can never steal the cursor from mouse/touch.
+    const actThresh = dead + CONFIG.pad.activityBias;
+    if (anyBtn || lMag > actThresh || rMag > actThresh) Input.setMode("gamepad");
+
     if (uiMode) {
       // ---- menus: dpad / left stick step focus in ALL FOUR directions, A confirms,
       // B backs out. Left/Right were previously dropped; now emitted with dominant-
@@ -135,13 +144,28 @@ const PAD = {
       } else if (!navKey) this._navT = 0;
       if (this._edge(gp, 0)) Input.pressed.add("Enter");         // A = confirm
       if (this._edge(gp, 1)) Input.padBack = true;               // B = back (game routes to BACK)
-      // keep prev[] fresh for buttons we also use in gameplay
-      this._edge(gp, 9); this._edge(gp, 2); this._edge(gp, 5); this._edge(gp, 7); this._edge(gp, 4); this._edge(gp, 6);
+      // right stick = scroll intent for the active panel (px/frame, curved), axis-locked
+      // to whichever direction dominates once past the scroll deadzone.
+      const sDead = CONFIG.pad.menuScrollDead, sMax = CONFIG.pad.menuScrollMaxSpeed;
+      let sx = 0, sy = 0;
+      if (rMag > sDead) {
+        const nx = Math.abs(rx), ny = Math.abs(ry);
+        if (ny >= nx) { const n = Math.min((ny - sDead) / (1 - sDead), 1); sy = Math.sign(ry) * n * n * sMax * dt; }
+        else { const n = Math.min((nx - sDead) / (1 - sDead), 1); sx = Math.sign(rx) * n * n * sMax * dt; }
+      }
+      Input.padScrollX = sx; Input.padScrollY = sy;
+      // shoulders switch tabs, triggers page — fed to the unified UI action channel
+      if (this._edge(gp, 4)) Input._uiTabPrev = true;            // L1 = previous tab
+      if (this._edge(gp, 5)) Input._uiTabNext = true;            // R1 = next tab
+      if (this._edge(gp, 6)) Input._uiPageUp = true;             // L2 = page up
+      if (this._edge(gp, 7)) Input._uiPageDown = true;           // R2 = page down
+      this._edge(gp, 9); this._edge(gp, 2);                      // keep prev[] fresh for shared buttons
       this._release(); Input.padTether = false;   // no movement or tether while in menus
       return;
     }
 
     // ---- gameplay ----
+    Input.padScrollX = 0; Input.padScrollY = 0;   // scroll intent is menu-only
     // movement: left stick beyond the deadzone (or dpad) becomes held keys
     this._setHeld("KeyA", ax < -dead || this._down(gp, 14));
     this._setHeld("KeyD", ax > dead || this._down(gp, 15));

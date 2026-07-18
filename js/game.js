@@ -453,6 +453,7 @@
   let uiT = 0, enterT = 0, lastUiDt = 1 / 60, eIn = 1, winT = 0;   // menu ambient clock, time-since-screen-opened, last frame dt, entrance ease, ending cinematic clock
   let uiZoom = 1;   // overlay zoom for small touch screens (draft/pause/gameover readability)
   let uiDensity = "desktop";   // current UI density profile (touch = bigger type + targets)
+  let _lastInputMode = "";     // last Input.mode written to <body data-imode> (cursor ownership)
   let bossIntro = null;   // BOSS THEATER arrival ceremony: { boss, t, dur, delay } while the name card runs
   let bossBeat = null;    // screen-space phase title: { text, color, t, dur }
   const CINEMA = new Cinematics.Director();   // one exclusive presentation channel for gameplay cinematics
@@ -3229,6 +3230,9 @@
     // controller: translate the pad into the shared Input channels BEFORE the
     // sim + UI read them (menus get dpad nav + A/B, gameplay gets move/aim/actions)
     if (typeof PAD !== "undefined") PAD.poll(dt, state !== "playing");
+    Input.updateUI();   // build the per-frame UI action snapshot after the pad has written its edges
+    // cursor ownership: mouse mode shows the pointer in menus; every other mode hides it
+    if (Input.mode !== _lastInputMode) { _lastInputMode = Input.mode; try { document.body.dataset.imode = Input.mode; } catch (e) {} }
 
     // Manual Clipper Hooks
     if (typeof Clipper !== "undefined") {

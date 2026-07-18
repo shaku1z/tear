@@ -15,6 +15,49 @@ const Input = {
   clickX: 0, clickY: 0,
   wheel: 0,               // accumulated wheel delta (scrollable menus)
 
+  // ---- input modality (the one coherent UI-input layer) ----
+  // Which device currently OWNS the UI. Menus read this to decide cursor visibility,
+  // focus-halo strength, and hover behaviour instead of each screen guessing.
+  mode: "mouse",          // "mouse" | "keyboard" | "gamepad" | "touch"
+  modeChangedAt: 0,
+  lastPointerX: 0, lastPointerY: 0,
+  clickSource: "mouse",   // tags the active Input.clicked so a synthesized touch tap is never read as a mouse click
+  padScrollX: 0, padScrollY: 0,   // controller right-stick scroll intent (px/frame), written by gamepad.js
+  // one-frame UI edge flags the gamepad injects (consumed by updateUI):
+  _uiTabPrev: false, _uiTabNext: false, _uiPageUp: false, _uiPageDown: false, _uiContext1: false, _uiContext2: false,
+  setMode(m) {
+    if (this.mode === m) return;
+    this.mode = m;
+    this.modeChangedAt = (typeof performance !== "undefined") ? performance.now() : 0;
+  },
+  // explicit per-frame UI action snapshot. Screens read Input.ui.* instead of
+  // re-deriving arrows / confirm / tabs / scroll. Populated by updateUI() each frame.
+  ui: { up: false, down: false, left: false, right: false, confirm: false, back: false,
+        tabPrev: false, tabNext: false, pageUp: false, pageDown: false, scrollX: 0, scrollY: 0, context1: false, context2: false },
+  updateUI() {
+    const u = this.ui;
+    u.up = this.menuUp(); u.down = this.menuDown(); u.left = this.menuLeft(); u.right = this.menuRight();
+    u.confirm = this.confirmPressed(); u.back = this.escapePressed() || !!this.padBack;
+    // Q/E and PageUp/PageDown are keyboard analogues of L1/R1 and L2/R2
+    u.tabPrev = this._uiTabPrev || this.pressed.has("KeyQ");
+    u.tabNext = this._uiTabNext || this.pressed.has("KeyE");
+    u.pageUp = this._uiPageUp || this.pressed.has("PageUp");
+    u.pageDown = this._uiPageDown || this.pressed.has("PageDown");
+    u.context1 = this._uiContext1; u.context2 = this._uiContext2;
+    u.scrollX = this.padScrollX; u.scrollY = this.padScrollY;
+    this._uiTabPrev = this._uiTabNext = this._uiPageUp = this._uiPageDown = this._uiContext1 = this._uiContext2 = false;
+  },
+  // unified scroll intake: mouse wheel + touch drag/flick (via takeWheel) + controller
+  // right stick, tagged by source. Consumes the wheel; the pad channel is level-based.
+  takeUIScroll() {
+    const wheel = this.takeWheel();
+    const y = wheel + this.padScrollY, x = this.padScrollX;
+    let source = null;
+    if (Math.abs(wheel) > 0.01) source = (this.mode === "touch") ? "touch" : "mouse";
+    else if (Math.abs(this.padScrollY) > 0.01 || Math.abs(x) > 0.01) source = "gamepad";
+    return { x, y, source };
+  },
+
   // ---- touch (mobile): floating joystick + aim-drag + action buttons ----
   touchOn: false,         // a real touch has happened (device capability)
   forceMode: "auto",      // settings: "auto" | "touch" | "desktop" (2-in-1s can force either)
@@ -50,6 +93,7 @@ const Input = {
       if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab"].includes(e.code)) e.preventDefault();
       if (!this.held.has(e.code)) this.pressed.add(e.code);
       this.held.add(e.code);
+      this.setMode("keyboard");   // a real key press (gamepad-injected arrows never come through here)
     });
     window.addEventListener("keyup", (e) => { 
       if (this.textEntryMode) return;
@@ -80,6 +124,10 @@ const Input = {
       } else {
         const p = toLogical(e, canvas.getBoundingClientRect());
         this.mouseX = p.x; this.mouseY = p.y;
+        // only a MEANINGFUL move (past a few px) claims mouse ownership — sensor noise,
+        // stale coords, and mouseenter alone must not steal the UI from a controller.
+        if (Math.hypot(e.clientX - this.lastPointerX, e.clientY - this.lastPointerY) > 5) this.setMode("mouse");
+        this.lastPointerX = e.clientX; this.lastPointerY = e.clientY;
       }
     };
     canvas.addEventListener("mousemove", updateMouse);
@@ -89,7 +137,8 @@ const Input = {
     canvas.addEventListener("click", (e) => {
       const p = toLogical(e, canvas.getBoundingClientRect());
       this.clickX = p.x; this.clickY = p.y;
-      this.clicked = true;
+      this.clicked = true; this.clickSource = "mouse";
+      this.setMode("mouse");
       if (this.allowLock && !this.locked && canvas.requestPointerLock) canvas.requestPointerLock();
     });
     // right-click = throw / recall the blade (no context menu)
@@ -97,9 +146,10 @@ const Input = {
     canvas.addEventListener("mousedown", (e) => {
       if (e.button === 2) this.rmb = true;
       if (e.button === 0) this.lmb = true;
+      this.setMode("mouse");
     });
     window.addEventListener("mouseup", (e) => { if (e.button === 0) this.lmb = false; });
-    canvas.addEventListener("wheel", (e) => { this.wheel += e.deltaY; e.preventDefault(); }, { passive: false });
+    canvas.addEventListener("wheel", (e) => { this.wheel += e.deltaY; this.setMode("mouse"); e.preventDefault(); }, { passive: false });
 
     // ---- touch: left zone = floating joystick, right zone = blade aim (drag deltas),
     // on-screen buttons = jump/dash/throw/pause, menus = taps + vertical drag-scroll.
@@ -114,7 +164,7 @@ const Input = {
     const btnTouches = {};   // touch id -> zone key (fingers on buttons never aim)
     const tapTrack = {};     // touch id -> { x, y, cx, cy, t, moved } for tap->click synthesis
     canvas.addEventListener("touchstart", (e) => {
-      e.preventDefault(); this.touchOn = true;
+      e.preventDefault(); this.touchOn = true; this.setMode("touch");
       const r = canvas.getBoundingClientRect();
       for (const t of e.changedTouches) {
         const p = toLogical(t, r);
@@ -203,7 +253,7 @@ const Input = {
         const tk = tapTrack[t.identifier];
         if (tk && !tk.moved && performance.now() - tk.t < 450 && !btnTouches[t.identifier]) {
           // a clean tap -> a synthesized UI click (preventDefault suppressed the native one)
-          this.clickX = tk.x; this.clickY = tk.y; this.clicked = true;
+          this.clickX = tk.x; this.clickY = tk.y; this.clicked = true; this.clickSource = "touch";
         }
         delete tapTrack[t.identifier];
         if (t.identifier === this.joy.id) this.joy = { active: false, id: -1, ax: 0, ay: 0, dx: 0, dy: 0 };

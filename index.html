@@ -15,23 +15,23 @@
   <meta name="apple-mobile-web-app-title" content="TEAR" />
   <!-- Chapter typography: self-hosted (latin subset) so cinematics never make a
        runtime web-font request. Courier/Arial fall back while these load. -->
-  <link rel="preload" href="fonts/BarlowCondensed-SemiBold.woff2?v=192" as="font" type="font/woff2" crossorigin />
-  <link rel="preload" href="fonts/IBMPlexMono-Regular.woff2?v=192" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="fonts/BarlowCondensed-SemiBold.woff2?v=193" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="fonts/IBMPlexMono-Regular.woff2?v=193" as="font" type="font/woff2" crossorigin />
   <!-- CrazyGames SDK (v3). Harmless off-platform: the wrapper in crazy.js is env-gated. -->
   <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
   <style>
     /* Bundled chapter fonts — see fonts/OFL.txt (SIL Open Font License 1.1) */
     @font-face {
       font-family: 'Barlow Condensed'; font-style: normal; font-weight: 600; font-display: swap;
-      src: url(fonts/BarlowCondensed-SemiBold.woff2?v=192) format('woff2');
+      src: url(fonts/BarlowCondensed-SemiBold.woff2?v=193) format('woff2');
     }
     @font-face {
       font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400; font-display: swap;
-      src: url(fonts/IBMPlexMono-Regular.woff2?v=192) format('woff2');
+      src: url(fonts/IBMPlexMono-Regular.woff2?v=193) format('woff2');
     }
     @font-face {
       font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 500; font-display: swap;
-      src: url(fonts/IBMPlexMono-Medium.woff2?v=192) format('woff2');
+      src: url(fonts/IBMPlexMono-Medium.woff2?v=193) format('woff2');
     }
     /* EDGE-TO-EDGE: the game IS the page. The canvas fills the whole viewport in every
        context (windowed, fullscreen, the CrazyGames iframe) and the OVERSCAN system
@@ -74,6 +74,10 @@
       image-rendering: auto;
       touch-action: none;    /* mobile: the game owns every gesture (no scroll/zoom) */
     }
+    /* input-modality cursor ownership: the pointer is visible only when the mouse
+       owns the UI (data-imode set each frame from Input.mode). Keyboard, gamepad,
+       and touch keep it hidden. Pointer-lock still hides it during play regardless. */
+    body[data-imode="mouse"] canvas { cursor: default; }
     #hint {
       position: absolute;
       left: 12px;
@@ -142,36 +146,36 @@
 
   <!-- load order matters: these are plain scripts sharing global scope -->
   <!-- ?v cache-bust: bump if the browser ever serves stale JS (server is no-cache too) -->
-  <script src="js/config.js?v=192"></script>
-  <script src="js/stages.js?v=192"></script>
-  <script src="js/utils.js?v=192"></script>
-  <script src="js/voidgen.js?v=192"></script>
-  <script src="js/ui.js?v=192"></script>
-  <script src="js/cinematics.js?v=192"></script>
-  <script src="js/audio.js?v=192"></script>
-  <script src="js/input.js?v=192"></script>
-  <script src="js/gamepad.js?v=192"></script>
-  <script src="js/particles.js?v=192"></script>
-  <script src="js/backdrop.js?v=192"></script>
-  <script src="js/attract.js?v=192"></script>
-  <script src="js/crazy.js?v=192"></script>
-  <script src="js/firebase-config.js?v=192"></script>
-  <script src="js/profile.js?v=192"></script>
-  <script src="js/achievements.js?v=192"></script>
-  <script src="js/challenges.js?v=192"></script>
-  <script src="js/upgrades.js?v=192"></script>
-  <script src="js/meta.js?v=192"></script>
-  <script src="js/weapons.js?v=192"></script>
-  <script src="js/affixes.js?v=192"></script>
-  <script src="js/variants.js?v=192"></script>
-  <script src="js/blade.js?v=192"></script>
-  <script src="js/player.js?v=192"></script>
-  <script src="js/projectile.js?v=192"></script>
-  <script src="js/enemy.js?v=192"></script>
-  <script src="js/ghost.js?v=192"></script>
-  <script src="js/cloud.js?v=192"></script>
-  <script src="js/mirror.js?v=192"></script>
-  <script src="js/game.js?v=192"></script>
+  <script src="js/config.js?v=193"></script>
+  <script src="js/stages.js?v=193"></script>
+  <script src="js/utils.js?v=193"></script>
+  <script src="js/voidgen.js?v=193"></script>
+  <script src="js/ui.js?v=193"></script>
+  <script src="js/cinematics.js?v=193"></script>
+  <script src="js/audio.js?v=193"></script>
+  <script src="js/input.js?v=193"></script>
+  <script src="js/gamepad.js?v=193"></script>
+  <script src="js/particles.js?v=193"></script>
+  <script src="js/backdrop.js?v=193"></script>
+  <script src="js/attract.js?v=193"></script>
+  <script src="js/crazy.js?v=193"></script>
+  <script src="js/firebase-config.js?v=193"></script>
+  <script src="js/profile.js?v=193"></script>
+  <script src="js/achievements.js?v=193"></script>
+  <script src="js/challenges.js?v=193"></script>
+  <script src="js/upgrades.js?v=193"></script>
+  <script src="js/meta.js?v=193"></script>
+  <script src="js/weapons.js?v=193"></script>
+  <script src="js/affixes.js?v=193"></script>
+  <script src="js/variants.js?v=193"></script>
+  <script src="js/blade.js?v=193"></script>
+  <script src="js/player.js?v=193"></script>
+  <script src="js/projectile.js?v=193"></script>
+  <script src="js/enemy.js?v=193"></script>
+  <script src="js/ghost.js?v=193"></script>
+  <script src="js/cloud.js?v=193"></script>
+  <script src="js/mirror.js?v=193"></script>
+  <script src="js/game.js?v=193"></script>
   <!-- Warm the chapter fonts so canvas draws use them the moment they resolve.
        Failure is harmless: font-display swap keeps Courier/Arial until then. -->
   <script>
@@ -194,7 +198,7 @@
       var standalone = window.self === window.top && !/^(localhost|127\.)/.test(location.hostname);
       if (standalone && "serviceWorker" in navigator) {
         addEventListener("load", function () {
-          navigator.serviceWorker.register("sw.js?v=192").catch(function () {});
+          navigator.serviceWorker.register("sw.js?v=193").catch(function () {});
         });
       }
     })();
