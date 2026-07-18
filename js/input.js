@@ -240,9 +240,16 @@ const Input = {
   pausePressed() { if (this.tPause) { this.tPause = false; return true; } return this.pressed.has("KeyP"); },
   escapePressed() { return this.pressed.has("Escape"); },
 
-  // menu navigation edges
-  menuPrev() { return this.pressed.has("ArrowUp") || this.pressed.has("ArrowLeft") || this.pressed.has("KeyW") || this.pressed.has("KeyA"); },
-  menuNext() { return this.pressed.has("ArrowDown") || this.pressed.has("ArrowRight") || this.pressed.has("KeyS") || this.pressed.has("KeyD"); },
+  // menu navigation edges. The four directional helpers are the primitives; screens
+  // wanting true 2D grids read them directly, while linear menus keep using the
+  // Prev/Next wrappers (which collapse Up+Left -> Prev, Down+Right -> Next exactly
+  // as before, so existing screens are unchanged).
+  menuUp()    { return this.pressed.has("ArrowUp") || this.pressed.has("KeyW"); },
+  menuDown()  { return this.pressed.has("ArrowDown") || this.pressed.has("KeyS"); },
+  menuLeft()  { return this.pressed.has("ArrowLeft") || this.pressed.has("KeyA"); },
+  menuRight() { return this.pressed.has("ArrowRight") || this.pressed.has("KeyD"); },
+  menuPrev() { return this.menuUp() || this.menuLeft(); },
+  menuNext() { return this.menuDown() || this.menuRight(); },
   confirmPressed() { return this.pressed.has("Enter") || this.pressed.has("NumpadEnter") || this.pressed.has("Space"); },
   // one-shot: the loop may run several fixed substeps per frame, so this edge must
   // be consumed on first read or a single click would throw AND recall in one frame.

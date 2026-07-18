@@ -73,13 +73,26 @@ const PAD = {
     this.active = this._activeT > 0;
 
     if (uiMode) {
-      // ---- menus: dpad / left stick step focus, A confirms, B backs out ----
+      // ---- menus: dpad / left stick step focus in ALL FOUR directions, A confirms,
+      // B backs out. Left/Right were previously dropped; now emitted with dominant-
+      // axis resolution so a diagonal never fires two nav events in one repeat.
       this._navT -= dt;
-      const dirY = (this._down(gp, 12) ? -1 : 0) + (this._down(gp, 13) ? 1 : 0) + (Math.abs(ay) > 0.5 ? Math.sign(ay) : 0);
-      if (dirY !== 0 && this._navT <= 0) {
-        Input.pressed.add(dirY < 0 ? "ArrowUp" : "ArrowDown");   // menuPrev/menuNext read these
+      const menuDead = 0.5;   // firmer than gameplay so stick drift never navigates
+      const dx = (this._down(gp, 14) ? -1 : 0) + (this._down(gp, 15) ? 1 : 0) + (Math.abs(ax) > menuDead ? Math.sign(ax) : 0);
+      const dy = (this._down(gp, 12) ? -1 : 0) + (this._down(gp, 13) ? 1 : 0) + (Math.abs(ay) > menuDead ? Math.sign(ay) : 0);
+      let navKey = null;
+      if (dx !== 0 || dy !== 0) {
+        // dominant axis: the analog stick compares magnitudes; a d-pad diagonal (no
+        // strong analog) falls back to vertical, the safer default for lists.
+        const horiz = Math.abs(ax) > Math.abs(ay) && Math.abs(ax) > menuDead;
+        if (dy !== 0 && !horiz) navKey = dy < 0 ? "ArrowUp" : "ArrowDown";
+        else if (dx !== 0) navKey = dx < 0 ? "ArrowLeft" : "ArrowRight";
+        else navKey = dy < 0 ? "ArrowUp" : "ArrowDown";
+      }
+      if (navKey && this._navT <= 0) {
+        Input.pressed.add(navKey);   // menuUp/Down/Left/Right (and the Prev/Next wrappers) read these
         this._navT = CONFIG.pad.menuRepeat;
-      } else if (dirY === 0) this._navT = 0;
+      } else if (!navKey) this._navT = 0;
       if (this._edge(gp, 0)) Input.pressed.add("Enter");         // A = confirm
       if (this._edge(gp, 1)) Input.padBack = true;               // B = back (game routes to BACK)
       // keep prev[] fresh for buttons we also use in gameplay
