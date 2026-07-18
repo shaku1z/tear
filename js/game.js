@@ -414,6 +414,7 @@
   let lastVaultId = null;               // that run's Vault entry id (for publish-from-defeat later)
   let arsenalScroll = 0;                // scroll offset for the pause/defeat "Your Arsenal" panel
   let settingsReturn = "menu";          // where the Settings BACK button returns to (menu, or paused mid-run)
+  let settingsTab = "general";          // Settings hub: active tab (remembered across opens; contextual opens set it)
   let replayCtx = null;                 // active replay: { data, stage, platforms, from, loading }
   let overInfo = null;        // game-over summary
   let selMode = "endless", selDiff = "normal", selWeapon = "sword", selBoss = "shuffle";
@@ -5828,27 +5829,101 @@
     uiButtons.push({ x: cx + 10, y: cardY + ch - 66, w: 160, h: 46, size: 14, label: "CONFIRM", sel: true, action: submitRename });
   }
 
+  // controller preset metadata (names, tags, one-line pitch, compact mapping) — the
+  // display face of PAD_PRESETS. Order matches the Settings selector cycle.
+  const PAD_PRESET_ORDER = ["default", "standard", "tear", "classic", "split"];
+  const PAD_PRESET_META = {
+    default:  { name: "DEFAULT",  tag: "CURRENT",     line: "Familiar, flexible, unchanged.",           map: "L1 Tether · R1/L2 Throw · R2 Dash" },
+    standard: { name: "STANDARD", tag: "RECOMMENDED", line: "Balanced shoulders, familiar backups.",     map: "L1 Jump · L2 Dash · R1 Throw · R2 Tether" },
+    tear:     { name: "TEAR",     tag: "EXPERT",      line: "Pure twin-stick. No face-button actions.",  map: "L1 Jump · L2 Dash · R1 Throw · R2 Tether" },
+    classic:  { name: "CLASSIC",  tag: "FAMILIAR",    line: "Traditional action-platformer feel.",       map: "Cross Jump · Circle Dash · L2 Tether" },
+    split:    { name: "SPLIT",    tag: "ERGONOMIC",   line: "Blade utility moves to the left hand.",     map: "L1 Throw · L2 Tether · R1 Jump · R2 Dash" },
+  };
+  const SETTINGS_TABS = [["general", "GENERAL"], ["controls", "CONTROLS"], ["audio", "AUDIO"], ["video", "VIDEO"], ["accessibility", "ACCESS"]];
+
+  // a fresh row kit anchored to one centred column (label at fx, controls right-anchored
+  // at rx). Mirrors drawSettingsRows' full-mode metrics so every tab reads identically.
+  function settingsRowKit(fx, rx, y0) {
+    const t = UI.t, rowH = 52, btnW = 54, btnH = 42, block = 252, lo = rx - block;
+    let y = y0;
+    const row = (label, drawControl) => {
+      const cy = y + rowH / 2; UI.text(ctx, label, fx, cy + 6, t.type.lead); drawControl(cy);
+      UI.divider(ctx, fx, y + rowH, rx - fx, 0.08); y += rowH + 6;
+    };
+    return {
+      section: (name) => { y = UI.sectionLabel(ctx, name, fx, y + 16, rx - fx) + 2; },
+      stepper: (label, valStr, dec, inc) => row(label, (cy) => {
+        uiButtons.push({ x: lo, y: cy - btnH / 2, w: btnW, h: btnH, label: "−", action: dec });
+        uiButtons.push({ x: rx - btnW, y: cy - btnH / 2, w: btnW, h: btnH, label: "+", action: inc });
+        UI.text(ctx, valStr, (lo + rx) / 2, cy + 6, t.type.lead, "center");
+      }),
+      wide: (label, lab, sel, action) => row(label, (cy) => {
+        uiButtons.push({ x: lo, y: cy - btnH / 2, w: block, h: btnH, size: 16, label: lab, sel, action });
+      }),
+      toggle: (label, on, action) => row(label, (cy) => {
+        const box = { x: lo, y: cy - btnH / 2, w: block, h: btnH };
+        uiButtons.push(Object.assign({ label: "", _hideBox: true, action }, box)); UI.toggle(ctx, box, on);
+      }),
+      note: (txt) => { UI.text(ctx, txt, fx, y + 12, t.type.micro, "left", t.alpha.muted); y += 22; },
+      end: () => y,
+    };
+  }
+
+  function drawSettingsTabContent(tab, fx, rx, y0) {
+    const t = UI.t, K = settingsRowKit(fx, rx, y0), save = () => { applySettings(); saveSettings(); };
+    if (tab === "audio") {
+      K.stepper("Volume", Math.round(settings.vol * 100) + "%",
+        () => { settings.vol = clamp(+(settings.vol - 0.1).toFixed(2), 0, 1); save(); },
+        () => { settings.vol = clamp(+(settings.vol + 0.1).toFixed(2), 0, 1); save(); });
+      K.toggle("Music", settings.music, () => { settings.music = !settings.music; save(); });
+    } else if (tab === "video") {
+      K.wide("Effects", settings.gfx === "auto" ? ("AUTO (" + (GFX.low ? "LOW" : "HIGH") + ")") : (settings.gfx === "low" ? "LOW" : "HIGH"), false,
+        () => { settings.gfx = settings.gfx === "auto" ? "high" : (settings.gfx === "high" ? "low" : "auto"); save(); });
+    } else if (tab === "controls") {
+      const meta = PAD_PRESET_META[settings.padPreset] || PAD_PRESET_META.default;
+      K.wide("Controller preset", meta.name + (meta.tag ? "   " + meta.tag : ""), false, () => {
+        const i = PAD_PRESET_ORDER.indexOf(settings.padPreset), ni = (i + 1) % PAD_PRESET_ORDER.length;
+        settings.padPreset = PAD.setPreset(PAD_PRESET_ORDER[ni]); save();
+      });
+      K.note(meta.line + "     " + meta.map);
+      K.stepper("Blade / mouse sensitivity", settings.sens.toFixed(2),
+        () => { settings.sens = clamp(+(settings.sens - 0.1).toFixed(2), 0.2, 3); save(); },
+        () => { settings.sens = clamp(+(settings.sens + 0.1).toFixed(2), 0.2, 3); save(); });
+      K.wide("Control mode", settings.controls === "auto" ? ("AUTO (" + (Input.touchActive() ? "TOUCH" : "DESKTOP") + ")") : settings.controls.toUpperCase(), false,
+        () => { settings.controls = settings.controls === "auto" ? "touch" : (settings.controls === "touch" ? "desktop" : "auto"); save(); });
+      if (Input.touchActive()) K.wide("Touch aim", (settings.touchAim || "stick") === "stick" ? "STICK (RADIAL)" : "DRAG (RELATIVE)", false,
+        () => { settings.touchAim = (settings.touchAim || "stick") === "stick" ? "drag" : "stick"; save(); });
+      const yv = K.end();
+      uiButtons.push({ x: rx - 210, y: yv + 6, w: 210, h: 34, size: 12, label: "VIEW FULL CONTROLS ▸",
+        action: () => { state = "codex"; codexTab = "guide"; listScroll = 0; } });
+      return yv + 48;
+    } else if (tab === "accessibility") {
+      return drawAccessibilityRows(fx, rx, y0);
+    } else {   // general
+      K.note((Input.touchActive() ? "TOUCH" : "DESKTOP") + " device   ·   EFFECTS " + (settings.gfx === "auto" ? "AUTO (" + (GFX.low ? "LOW" : "HIGH") + ")" : settings.gfx.toUpperCase()));
+      const yv = K.end();
+      if (installPrompt) uiButtons.push({ x: fx, y: yv + 6, w: 210, h: 34, size: 12, label: "⤓ INSTALL THE APP",
+        action: () => { const p = installPrompt; installPrompt = null; try { p.prompt(); } catch (e) {} } });
+      UI.text(ctx, "By playing you agree to CrazyGames' Terms of Service and Privacy Policy.",
+        fx, yv + 58, t.type.micro, "left", t.alpha.muted);
+      uiButtons.push({ x: fx, y: yv + 68, w: 150, h: 26, size: 10, label: "TERMS OF SERVICE",
+        action: () => window.open("https://www.crazygames.com/terms-and-conditions", "_blank", "noopener") });
+      uiButtons.push({ x: fx + 162, y: yv + 68, w: 150, h: 26, size: 10, label: "PRIVACY POLICY",
+        action: () => window.open("https://www.crazygames.com/privacy", "_blank", "noopener") });
+      return yv + 96;
+    }
+    return K.end();
+  }
+
   function renderSettings() {
-    const t = UI.t, m = t.metric, sh = UI.sheetRect(), fx = sh.x + m.settingsContentInset, rx = sh.x + sh.w - m.settingsContentInset;
-    const colW = (rx - fx - m.settingsColumnGap) / 2, leftRx = fx + colW, rightFx = leftRx + m.settingsColumnGap;
-    UI.header(ctx, "SETTINGS", "tune sound, feel, and feedback", eIn, SCREEN_HUES.settings);
-    const yEnd = Math.max(drawSettingsRows(fx, leftRx, m.settingsTop, false), drawAccessibilityRows(rightFx, rx, m.settingsTop));
-    // device line + a door to the full control chart (Codex ▸ Guide)
-    UI.tag(ctx, (Input.touchActive() ? "TOUCH" : "DESKTOP") + " · EFFECTS " + (settings.gfx === "auto" ? "AUTO (" + (GFX.low ? "LOW" : "HIGH") + ")" : settings.gfx.toUpperCase()),
-      fx, yEnd + 24, t.color.muted, "left", t.type.micro);
-    uiButtons.push({ x: rx - 210, y: yEnd + 4, w: 210, h: 34, size: 12, label: "VIEW CONTROLS ▸",
-      action: () => { state = "codex"; codexTab = "guide"; listScroll = 0; } });
-    // PWA: the install moment (only when the browser says the app is installable)
-    if (installPrompt) uiButtons.push({ x: rx - 210, y: yEnd + 46, w: 210, h: 34, size: 12, label: "⤓ INSTALL THE APP",
-      action: () => { const p = installPrompt; installPrompt = null; try { p.prompt(); } catch (e) {} } });
-    // Legal — a CrazyGames Basic-launch requirement: an in-game mention of Terms &
-    // Privacy. Quiet micro links, not fat buttons.
-    UI.text(ctx, "By playing you agree to CrazyGames' Terms of Service and Privacy Policy.",
-      fx, yEnd + 56, t.type.micro, "left", t.alpha.muted);
-    uiButtons.push({ x: fx, y: yEnd + 66, w: 150, h: 26, size: 10, label: "TERMS OF SERVICE",
-      action: () => window.open("https://www.crazygames.com/terms-and-conditions", "_blank", "noopener") });
-    uiButtons.push({ x: fx + 162, y: yEnd + 66, w: 150, h: 26, size: 10, label: "PRIVACY POLICY",
-      action: () => window.open("https://www.crazygames.com/privacy", "_blank", "noopener") });
+    const t = UI.t;
+    UI.header(ctx, "SETTINGS", "tune controls, sound, feel, and feedback", eIn, SCREEN_HUES.settings);
+    settingsTab = padTabStep(SETTINGS_TABS, settingsTab);   // L1/R1 switch tabs
+    UI.tabs(ctx, "settings", SETTINGS_TABS.map((x) => x[1]), Math.max(0, SETTINGS_TABS.findIndex((x) => x[0] === settingsTab)), 150, (b) => {
+      const i = b._tab; b.action = () => { settingsTab = SETTINGS_TABS[i][0]; }; uiButtons.push(b);
+    });
+    const cx = W / 2, fx = cx - 320, rx = cx + 320;
+    drawSettingsTabContent(settingsTab, fx, rx, 224);
     // BACK returns to the menu, or to the pause screen when opened mid-run
     uiButtons.push({ x: W / 2 - LAY.backW / 2, y: LAY.backY, w: LAY.backW, h: LAY.backH,
       label: settingsReturn === "paused" ? "‹  BACK TO PAUSE" : "‹  BACK",
@@ -6582,7 +6657,7 @@
     advance() { if (CINEMA.active && CINEMA.beat) CINEMA._advance(); },   // debug: step one beat
     pause() { if (state === "playing") state = "paused"; },
     resume() { if (state === "paused") state = "playing"; },
-    openSettings() { state = "settings"; settingsReturn = "menu"; },
+    openSettings(tab) { state = "settings"; settingsReturn = "menu"; if (tab) settingsTab = tab; },
     auditEffects() {
       const priorLow = GFX.low, result = {};
       FX.reset(); FX.setViewRect({ left: 0, top: 0, right: W, bottom: H }); GFX.low = false;
