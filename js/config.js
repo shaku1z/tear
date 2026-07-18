@@ -235,6 +235,7 @@ const CONFIG = {
     emberDmg: 14, emberSpeed: 560,
     pounceAfter: 1.0,   // NO SHELTER: hover above him this long and the pounce comes, every time
     arcDmg: 16, arcSpeed: 620, arcRise: 210, arcGravity: 480,   // CLEAVER ARCS: fire crescents — parry food (rally)
+    overheadCd: 6.5, overheadWindup: 0.6, overheadDmg: 26, overheadRange: 150,   // OVERHEAD CLEAVER: a committed high-to-low slam + lingering fire seam
   },
   // The Iron Colossus (Stage 2 boss): a tank with a front shield -> a thrown sweeping arm -> an exposed core
   colossus: {
@@ -261,6 +262,7 @@ const CONFIG = {
     // BATON STRINGS (his kit is MELEE now — no ground waves): each beat opens a
     // deflect window first, then lands; the P2 finisher beat is unparryable (peril)
     stringRange: 270, stringDmg: 16, stringWind: 0.30, parryWin: 0.16,
+    lungeRange: 620, lungeWind: 0.42, lungeSpeed: 1350, lungeDmg: 18,   // SHIELD-BATON LUNGE: a mid-range gap-closer at a kiting player
     zoneCount: 3, zoneW: 200, zoneShift: 7, zoneTick: 7, zoneTickCd: 0.4,   // phase-2 prohibited zones
     ceilingY: 150, ceilDropCd: 1.6, lungeCd: 7.5, lungeWindup: 0.55, lungeSpeed: 1500,   // phase-3 ceiling: lock + telegraph, then dive
     guardParry: 0.24, guardPerfect: 0.36, guardDecay: 0.08, guardDecayDelay: 1.8,

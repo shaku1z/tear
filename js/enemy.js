@@ -1620,6 +1620,22 @@ class Warden extends Enemy {
     // ---- grounded phases (1 & 2) ----
     const footY = this.y + this.hh, dist = Math.abs(player.x - this.x);
     const sp = CONFIG.boss.speed * (1 + (ph - 1) * 0.35);
+    if (this.state === "batonlunge") {
+      // SHIELD-BATON LUNGE — plant, then hop-strike forward to close on a kiter,
+      // flowing straight into a string on arrival
+      if (this.beatPh === "wind") {
+        this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1)); this.stateT -= dt;
+        if (this.stateT <= 0) { this.beatPh = "go"; this.vx = this.facing * Wc.lungeSpeed; this.vy = -420; this.onGround = false; this.batonStrike = 0.4; }
+      } else {
+        this.x += this.vx * dt; this.vx = lerp(this.vx, this.facing * Wc.lungeSpeed * 0.4, clamp(3 * dt, 0, 1));
+        if (Math.abs(player.x - this.x) < this.hw + player.hw + 20 && Math.abs(player.y - this.y) < 90 && !player.invulnerable) player.takeDamage(Wc.lungeDmg, this.x, this);
+        if (this.onGround || this.x <= this.hw + 4 || this.x >= CONFIG.view.w - this.hw - 4) {
+          this.x = clamp(this.x, this.hw + 4, CONFIG.view.w - this.hw - 4);
+          this.state = "string"; this.stringIdx = 0; this.stringN = ph >= 2 ? 3 : 2; this.beatPh = "wind"; this.stateT = Wc.stringWind; this.beatHeavy = false; this.beatParried = false;
+        }
+      }
+      this.integrate(dt, platforms); return;
+    }
     if (this.state === "string") {
       // BATON STRINGS — the posture duel. Each beat: a wind (glint), then an
       // OPEN deflect window (batonStrike), then the swing lands unless it was
@@ -1665,11 +1681,14 @@ class Warden extends Enemy {
         BOSSFX.juice({ banner: "SKYWARD VOLLEY", color: this.color, shake: 6, quiet: true });
       }
       else if (this.atkT <= 0) {
-        // his kit is MELEE + ARTILLERY now: in reach he opens a string; out of
-        // reach the mortars arc in (no more shared ground waves)
+        // his kit is MELEE + ARTILLERY now: in reach he opens a string; at mid
+        // range he LUNGES to close on a kiter; far out the mortars arc in
         if (dist < Wc.stringRange) {
           this.state = "string"; this.stringIdx = 0; this.stringN = ph >= 2 ? 3 : 2;
           this.beatPh = "wind"; this.stateT = Wc.stringWind; this.beatHeavy = false; this.beatParried = false;
+        } else if (dist < Wc.lungeRange && Math.random() < 0.55) {
+          this.state = "batonlunge"; this.beatPh = "wind"; this.stateT = Wc.lungeWind;
+          this.facing = Math.sign(player.x - this.x) || this.facing;
         } else {
           this.pendingAtk = "mortar"; this.state = "windup"; this.stateT = Wc.batonWindup;
           this.mortarTargets = [-1, 0, 1].map((i) => clamp(player.x + i * 180, 60, CONFIG.view.w - 60));
@@ -1809,6 +1828,12 @@ class Warden extends Enemy {
       const sk = 1 - clamp(this.stateT / (CONFIG.warden.stringWind || 0.3), 0, 1);
       const bs2 = this.batonSegment();
       weaponGlint(ctx, bs2.x2, bs2.y2, this.beatHeavy ? CONFIG.colors.charger : "#e0a326", sk);
+    }
+    // SHIELD-BATON LUNGE telegraph: the lane he's about to hop-strike down
+    if (this.state === "batonlunge" && this.beatPh === "wind") {
+      const lk = 1 - clamp(this.stateT / (CONFIG.warden.lungeWind || 0.42), 0, 1);
+      dangerLane(ctx, this.x, this.y - this.hh, CONFIG.view.w, this.hh * 2, this.facing, this.color, lk * 0.7);
+      weaponGlint(ctx, this.x + this.facing * (this.hw + 12), this.y - 8, "#e0a326", lk);
     }
     // ceiling-dive telegraph: a marked line from the cling to the spot it locked onto
     if (this.state === "lungewind") {
@@ -2164,6 +2189,7 @@ class Aldric extends Enemy {
     this.fireZones = []; this.seams = []; this.kneelT = 0; this.kneelStruck = false; this.anger = false;
     this.crown = null; this.crownfireCd = CONFIG.aldric.crownfireCd; this.chainLeft = 0; this.ghostT = 0; this.seamDropT = 0;
     this._playerRef = null; this.witnessEarned = false;
+    this.overheadCd = CONFIG.aldric.overheadCd; this.overTX = 0;   // OVERHEAD CLEAVER
   }
   damageTakenMult() { return this.mode === "frenzy" ? CONFIG.aldric.frenzyDmgTaken : (this.mode === "downed" ? CONFIG.aldric.downedDmgTaken : 1); }
   // during the fake he can't be killed (hit OR DoT) — he always rises into the frenzy
@@ -2259,6 +2285,25 @@ class Aldric extends Enemy {
       this.integrate(dt, platforms);
       return;
     }
+    if (this.state === "overheadwind") {          // OVERHEAD CLEAVER: rise, track the player, then plunge
+      this.stateT -= dt;
+      this.x = lerp(this.x, clamp(this.overTX, this.hw, CONFIG.view.w - this.hw), clamp(4 * dt, 0, 1));
+      this.y = lerp(this.y, CONFIG.world.groundY - this.hh - 150, clamp(6 * dt, 0, 1)); this.onGround = false;
+      if (this.stateT <= 0) { this.state = "overhead"; this.vy = 2500; }
+      return;
+    }
+    if (this.state === "overhead") {
+      this.y += this.vy * dt; this.vy += 2500 * dt;
+      if (this.y >= CONFIG.world.groundY - this.hh) {
+        this.y = CONFIG.world.groundY - this.hh; this.onGround = true;
+        if (Math.abs(player.x - this.x) < C.overheadRange && !player.invulnerable) player.takeDamage(C.overheadDmg, this.x, this);
+        this.seams.push({ kind: "seam", x: this.x, w: 110, life: C.seamLife, on: true, dmg: CONFIG.warden.zoneTick, tickCd: CONFIG.warden.zoneTickCd });
+        FX.explode(this.x, this.y + this.hh, CONFIG.colors.bomber, 1.3); FX.shockwave(this.x, this.y + this.hh, 12, CONFIG.colors.bomber, 240, 6);
+        BOSSFX.juice({ banner: "OVERHEAD", color: CONFIG.colors.bomber, shake: 12, flash: 0.4, slowmo: 0.4, zoom: 0.06, hitstop: 0.05 });
+        this.state = "recover"; this.stateT = 0.55;
+      }
+      return;
+    }
     if (this.state === "charge") {
       this.x += this.vx * dt;
       this.seamDropT -= dt;
@@ -2282,8 +2327,16 @@ class Aldric extends Enemy {
       const dist = Math.abs(player.x - this.x);
       const duelDir = this.mode === "duel" && dist < 190 ? -this.facing : this.facing;
       this.vx = lerp(this.vx, duelDir * spd, clamp(4 * dt, 0, 1));
-      this.atkT -= dt;
-      if (this.atkT <= 0 && Math.abs(player.x - this.x) < 500) { this.state = "windup"; this.stateT = C.windup; }
+      this.overheadCd = (this.overheadCd || 0) - dt;
+      // OVERHEAD CLEAVER — a committed vertical slam (fire/frenzy), his kingliest
+      // blow; complements the horizontal lunges + arcs
+      if (this.mode !== "duel" && this.overheadCd <= 0 && dist < 420 && this.onGround) {
+        this.state = "overheadwind"; this.stateT = C.overheadWindup; this.overTX = player.x;
+        this.overheadCd = C.overheadCd; perilPing(this);
+      } else {
+        this.atkT -= dt;
+        if (this.atkT <= 0 && Math.abs(player.x - this.x) < 500) { this.state = "windup"; this.stateT = C.windup; }
+      }
       // NO SHELTER: hover above the king and the pounce COMES — deterministic,
       // not a dice roll (tracks time-spent-above, leaps at the player)
       this.aboveT = (player.y < this.y - 60) ? (this.aboveT || 0) + dt : 0;
@@ -2338,7 +2391,9 @@ class Aldric extends Enemy {
   }
   _animWeapon(dt) {
     let wt = -0.6, k = 9;
-    if (this.state === "windup" || this.state === "chargewind") { wt = -1.5; k = 11; }
+    if (this.state === "overheadwind") { wt = -2.1; k = 12; }   // cleaver raised straight overhead
+    else if (this.state === "overhead") { wt = 1.4; k = 34; }   // driven down on the plunge
+    else if (this.state === "windup" || this.state === "chargewind") { wt = -1.5; k = 11; }
     else if (this.state === "lunge" || this.state === "charge") { wt = 0.8; k = 28; }
     this.weaponPrevA = this.weaponA; this.weaponA = lerp(this.weaponA, wt, clamp(k * dt, 0, 1));
   }
@@ -2397,6 +2452,11 @@ class Aldric extends Enemy {
     if (this.state === "crownfire") {
       const k = 1 - clamp(this.stateT / CONFIG.aldric.crownfireWindup, 0, 1);
       dangerColumn(ctx, CONFIG.view.w / 2, 160, 30, CONFIG.world.groundY, CONFIG.colors.bomber, k);
+    }
+    if (this.state === "overheadwind") {   // OVERHEAD CLEAVER: the kill-column tracks the raised blade
+      const k = 1 - clamp(this.stateT / CONFIG.aldric.overheadWindup, 0, 1);
+      dangerColumn(ctx, this.x, CONFIG.aldric.overheadRange * 1.5, this.y + this.hh, CONFIG.world.groundY, CONFIG.colors.bomber, k);
+      weaponGlint(ctx, this.x, this.y - this.hh - 12, CONFIG.colors.bomber, k); drawPeril(ctx, this);
     }
     if (this.mode === "downed") UI.tag(ctx, "STRIKE — OR STAND WITNESS.", this.x, this.y - this.hh - 38,
       this.kneelStruck ? CONFIG.colors.charger : CONFIG.colors.bomber, "center", UI.t.type.caption);
