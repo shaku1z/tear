@@ -1,18 +1,43 @@
 // ------- lightweight FX: sparks + shockwave rings + shards (color-aware) -------
 const FX = {
   list: [],
+  view: null,
+  _criticalCursor: 0,
 
-  reset() { this.list.length = 0; },
+  reset() { this.list.length = 0; this.view = null; this._criticalCursor = 0; },
+  setViewRect(view) {
+    if (!view) { this.view = null; return; }
+    if (!this.view) this.view = { left: 0, top: 0, right: 0, bottom: 0 };
+    this.view.left = view.left; this.view.top = view.top; this.view.right = view.right; this.view.bottom = view.bottom;
+  },
+  _visible(p, extra) {
+    if (!this.view || !p) return true;
+    const m = (extra || 0) + (p.r || p.size || 0), x0 = Math.min(p.x, p.x1 == null ? p.x : p.x1), x1 = Math.max(p.x, p.x1 == null ? p.x : p.x1);
+    const y0 = Math.min(p.y, p.y1 == null ? p.y : p.y1), y1 = Math.max(p.y, p.y1 == null ? p.y : p.y1);
+    return x1 + m >= this.view.left && x0 - m <= this.view.right && y1 + m >= this.view.top && y0 - m <= this.view.bottom;
+  },
+  _emit(p, critical) {
+    const E = CONFIG.effects || { highBudget: 320, lowBudget: 110, cullMargin: 180 }, budget = (typeof GFX !== "undefined" && GFX.low) ? E.lowBudget : E.highBudget;
+    if (!this._visible(p, E.cullMargin)) return false;
+    p.critical = !!critical;
+    if (this.list.length >= budget) {
+      if (!critical) return false;
+      let replace = -1; for (let i = 0; i < this.list.length; i++) if (!this.list[i].critical) { replace = i; break; }
+      if (replace < 0) replace = this._criticalCursor++ % this.list.length;
+      this.list[replace] = p; return true;
+    }
+    this.list.push(p); return true;
+  },
 
   spark(x, y, dirX, dirY, col) {
     const a = Math.atan2(dirY, dirX) + (Math.random() - 0.5) * 1.3;
     const sp = 220 + Math.random() * 460;
-    this.list.push({
+    this._emit({
       type: "spark", x, y,
       vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
       col: col || "#000",
       life: 0.22 + Math.random() * 0.12, max: 0.34,
-    });
+    }, false);
   },
 
   burst(x, y, dirX, dirY, n, col) {
@@ -20,24 +45,24 @@ const FX = {
   },
 
   ring(x, y, r0, col) {
-    this.list.push({ type: "ring", x, y, r: r0 || 6, col: col || "#000", life: 0.32, max: 0.32 });
+    this._emit({ type: "ring", x, y, r: r0 || 6, col: col || "#000", life: 0.32, max: 0.32 }, false);
   },
 
   ribbon(x0, y0, x1, y1, col) {
-    this.list.push({ type: "ribbon", x: x0, y: y0, x1, y1, col: col || "#ff8a1e", life: 0.34, max: 0.34 });
+    this._emit({ type: "ribbon", x: x0, y: y0, x1, y1, col: col || "#ff8a1e", life: 0.34, max: 0.34 }, true);
   },
 
   // a spinning shard (used for enemy death shatter)
   shard(x, y, col) {
     const a = Math.random() * Math.PI * 2;
     const sp = 160 + Math.random() * 460;
-    this.list.push({
+    this._emit({
       type: "shard", x, y,
       vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 120,
       rot: Math.random() * Math.PI, spin: (Math.random() - 0.5) * 18,
       size: 5 + Math.random() * 7, col: col || "#000",
       life: 0.4 + Math.random() * 0.25, max: 0.65,
-    });
+    }, false);
   },
 
   death(x, y, n, col) {
@@ -47,12 +72,12 @@ const FX = {
   },
 
   // ---- explosion kit: a bright flash, expanding shockwave rings, smoke ----
-  flash(x, y, r, col) { this.list.push({ type: "flash", x, y, r: r || 50, col: col || "#fff", life: 0.18, max: 0.18 }); },
+  flash(x, y, r, col) { this._emit({ type: "flash", x, y, r: r || 50, col: col || "#fff", life: 0.18, max: 0.18 }, true); },
   shockwave(x, y, r0, col, maxR, thick) {
-    const life = 0.42; this.list.push({ type: "shock", x, y, r: r0 || 10, vr: ((maxR || 160) - (r0 || 10)) / life, col: col || "#fff", thick: thick || 6, life, max: life });
+    const life = 0.42; this._emit({ type: "shock", x, y, r: r0 || 10, vr: ((maxR || 160) - (r0 || 10)) / life, col: col || "#fff", thick: thick || 6, life, max: life }, true);
   },
   smoke(x, y, col) {
-    this.list.push({ type: "smoke", x: x + (Math.random() - 0.5) * 16, y, vx: (Math.random() - 0.5) * 40, vy: -30 - Math.random() * 55, size: 9 + Math.random() * 13, col: col || "#33323a", life: 0.5 + Math.random() * 0.45, max: 0.95 });
+    this._emit({ type: "smoke", x: x + (Math.random() - 0.5) * 16, y, vx: (Math.random() - 0.5) * 40, vy: -30 - Math.random() * 55, size: 9 + Math.random() * 13, col: col || "#33323a", life: 0.5 + Math.random() * 0.45, max: 0.95 }, false);
   },
   // a full explosion: flash core + double shockwave + sparks + shards + embers + smoke.
   explode(x, y, col, scale) {
@@ -68,61 +93,63 @@ const FX = {
 
   // a fading silhouette (dash afterimage). col tints it (e.g. fire for Cinder Trail)
   ghost(x, y, hw, hh, col) {
-    this.list.push({ type: "ghost", x, y, hw, hh, col: col || null, life: 0.22, max: 0.22 });
+    this._emit({ type: "ghost", x, y, hw, hh, col: col || null, life: 0.22, max: 0.22 }, false);
   },
 
   // a rising, flickering fire ember (burn / flame dash)
   ember(x, y, col) {
-    this.list.push({
+    this._emit({
       type: "ember", x: x + (Math.random() - 0.5) * 12, y: y + (Math.random() - 0.5) * 8,
       vx: (Math.random() - 0.5) * 50, vy: -70 - Math.random() * 120,
       col: col || (Math.random() < 0.5 ? "#ff8a1e" : "#ffd23e"),
       size: 2.5 + Math.random() * 3.5, life: 0.35 + Math.random() * 0.35, max: 0.7,
-    });
+    }, false);
   },
 
   // a falling blood drip (bleed)
   drip(x, y, col) {
-    this.list.push({
+    this._emit({
       type: "drip", x: x + (Math.random() - 0.5) * 10, y,
       vx: (Math.random() - 0.5) * 36, vy: 20 + Math.random() * 70,
       col: col || "#b81d1d", size: 3 + Math.random() * 3, life: 0.45 + Math.random() * 0.3, max: 0.75,
-    });
+    }, false);
   },
 
   update(dt) {
+    const motion = (typeof A11Y !== "undefined" && A11Y.reducedMotion) ? 0.25 : 1;
     for (const p of this.list) {
       p.life -= dt;
       if (p.type === "spark") {
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
+        p.x += p.vx * dt * motion;
+        p.y += p.vy * dt * motion;
         p.vy += 1300 * dt;   // gravity on sparks
         p.vx *= 0.9;
       } else if (p.type === "ring") {
-        p.r += 820 * dt;
+        p.r += 820 * dt * motion;
       } else if (p.type === "shard") {
-        p.x += p.vx * dt; p.y += p.vy * dt;
+        p.x += p.vx * dt * motion; p.y += p.vy * dt * motion;
         p.vy += 1500 * dt; p.vx *= 0.92;
-        p.rot += p.spin * dt;
+        p.rot += p.spin * dt * motion;
       } else if (p.type === "ember") {
-        p.x += p.vx * dt; p.y += p.vy * dt;
+        p.x += p.vx * dt * motion; p.y += p.vy * dt * motion;
         p.vy *= 0.97; p.vx *= 0.94;   // buoyant: coast upward, slowing
       } else if (p.type === "drip") {
-        p.x += p.vx * dt; p.y += p.vy * dt;
+        p.x += p.vx * dt * motion; p.y += p.vy * dt * motion;
         p.vy += 680 * dt;             // gravity
       } else if (p.type === "shock") {
-        p.r += p.vr * dt;
+        p.r += p.vr * dt * motion;
       } else if (p.type === "smoke") {
-        p.x += p.vx * dt; p.y += p.vy * dt;
-        p.vy *= 0.96; p.vx *= 0.95; p.size += 26 * dt;   // rise + billow
+        p.x += p.vx * dt * motion; p.y += p.vy * dt * motion;
+        p.vy *= 0.96; p.vx *= 0.95; p.size += 26 * dt * motion;   // rise + billow
       }
       // flash + ghosts just fade in place
     }
-    this.list = this.list.filter((p) => p.life > 0);
+    let write = 0; for (let i = 0; i < this.list.length; i++) if (this.list[i].life > 0) this.list[write++] = this.list[i]; this.list.length = write;
   },
 
   draw(ctx) {
     for (const p of this.list) {
+      if (!this._visible(p, 24)) continue;
       const a = clamp(p.life / p.max, 0, 1);
       ctx.globalAlpha = a;
       const col = p.col || "#000";

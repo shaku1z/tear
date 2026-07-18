@@ -540,7 +540,7 @@ const Mirror = {
   },
   _drawLock(ctx) {
     const L = this.lock; if (!L) return;
-    const glow = !(typeof GFX !== "undefined" && GFX.low), pulse = 0.6 + 0.4 * Math.sin(performance.now() / 28);
+    const glow = !(typeof GFX !== "undefined" && GFX.low), pulse = 0.6 + 0.4 * Math.sin(CLOCK.sim * 1000 / 28);
     ctx.save();
     if (glow) ctx.globalCompositeOperation = "lighter";
     const rad = 15 + 9 * pulse, g = ctx.createRadialGradient(L.x, L.y, 1, L.x, L.y, rad * 2.3);
@@ -569,7 +569,7 @@ const Mirror = {
     this.facing = Math.sign(player.x - a.x) || this.facing;
     if (A.st === "hover") {                              // KEEP FAR: hover high on a side at a big standoff
       if (A.side == null) A.side = (player.x < CONFIG.view.w / 2) ? 1 : -1;
-      const weave = Math.sin(performance.now() / 780) * 130;
+      const weave = Math.sin(CLOCK.sim * 1000 / 780) * 130;
       const tx = clamp(player.x + A.side * (410 + weave), 90, CONFIG.view.w - 90), ty = clamp(player.y - 285, 70, gy - 150);
       a.x += (tx - a.x) * clamp(2.1 * dt, 0, 1); a.y += (ty - a.y) * clamp(2.1 * dt, 0, 1); a.vx = 0; a.vy = 0;
       this._pointBladeAt(player, clamp(5 * dt, 0, 1));
@@ -715,7 +715,7 @@ const Mirror = {
     // torn chromatic doubling — converges as sync rises
     if (!lowG) {
       const split = (1 - this.sync) * 9 + 1;
-      const now = (typeof performance !== "undefined" ? performance.now() : Date.now());
+      const now = CLOCK.sim * 1000;
       const j = Math.sin(now * 0.018) * split * 0.35;
       ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = (0.10 + 0.3 * (1 - this.sync)) * (1 - this.white);
       ctx.fillStyle = "#4bd6ff"; ctx.fillRect(a.x - a.hw - split + j, a.y - a.hh - j * 0.4, a.hw * 2, a.hh * 2);
@@ -733,12 +733,12 @@ const Mirror = {
     ctx.fillRect(-a.hw, -a.hh, a.hw * 2, a.hh * 2);
     ctx.shadowBlur = 0;
     if (!lowG) {                                          // spectral rim-light down the leading edge
-      ctx.fillStyle = this.color; ctx.globalAlpha = (0.65 + 0.25 * Math.sin(performance.now() / 220)) * (1 - this.white * 0.88);
+      ctx.fillStyle = this.color; ctx.globalAlpha = (0.65 + 0.25 * Math.sin(CLOCK.sim * 1000 / 220)) * (1 - this.white * 0.88);
       ctx.fillRect(this.facing > 0 ? a.hw - 2.5 : -a.hw, -a.hh, 2.5, a.hh * 2);
       ctx.globalAlpha = 1 - this.white * 0.88;
     }
     if (ph >= 2) {                                        // torn: violet crack veins glow across the body
-      ctx.strokeStyle = this.color; ctx.lineWidth = 1.6; ctx.globalAlpha = (0.5 + 0.5 * Math.sin(performance.now() / 300)) * (1 - this.white * 0.88);
+      ctx.strokeStyle = this.color; ctx.lineWidth = 1.6; ctx.globalAlpha = (0.5 + 0.5 * Math.sin(CLOCK.sim * 1000 / 300)) * (1 - this.white * 0.88);
       ctx.beginPath();
       ctx.moveTo(-a.hw * 0.5, -a.hh); ctx.lineTo(-a.hw * 0.1, -a.hh * 0.3); ctx.lineTo(-a.hw * 0.6, a.hh * 0.4);
       ctx.moveTo(a.hw * 0.6, -a.hh * 0.6); ctx.lineTo(a.hw * 0.15, 0); ctx.lineTo(a.hw * 0.55, a.hh);
@@ -761,7 +761,7 @@ const Mirror = {
   _drawTelegraph(ctx) {   // slam danger-zone: a column + a ground ring where the plunge will land
     const mv = this.mv;
     if (!mv || mv.id !== "slam" || (mv.ph !== "tele" && mv.ph !== "hang" && mv.ph !== "exec")) return;
-    const gy = CONFIG.world.groundY, a = this.actor, pulse = 0.5 + 0.5 * Math.sin(performance.now() / 70);
+    const gy = CONFIG.world.groundY, a = this.actor, pulse = 0.5 + 0.5 * Math.sin(CLOCK.sim * 1000 / 70);
     ctx.save();
     ctx.globalAlpha = 0.12 + 0.16 * pulse; ctx.fillStyle = this.color;
     ctx.fillRect(a.x - 22, a.y, 44, Math.max(0, gy - a.y));
@@ -775,7 +775,7 @@ const Mirror = {
   _drawGlint(ctx) {   // a bright edge along the blade during a move telegraph — the universal "big one coming" read
     const mv = this.mv;
     if (!mv || mv.ph !== "tele" && mv.ph !== "hang") return;
-    const b = this.blade, pulse = 0.55 + 0.45 * Math.sin(performance.now() / 55);
+    const b = this.blade, pulse = 0.55 + 0.45 * Math.sin(CLOCK.sim * 1000 / 55);
     ctx.save(); ctx.globalCompositeOperation = "lighter";
     ctx.globalAlpha = 0.7 * pulse; ctx.strokeStyle = "#f0e6ff"; ctx.lineWidth = 3; ctx.lineCap = "round";
     ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.tipX, b.tipY); ctx.stroke();

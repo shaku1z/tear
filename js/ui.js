@@ -47,6 +47,8 @@ const UI = {
       bossPhaseBannerW: 760, bossPhaseBannerH: 72, bossPhaseBannerY: 0.24,
       bossPhaseAccentH: 3,
       rallyInset: 2,
+      settingsTop: 182, settingsContentInset: 40, settingsColumnGap: 40,
+      settingsRowH: 58, settingsControlW: 252, settingsControlH: 42, settingsStepperW: 54,
     },
     // opacity roles for de-emphasised text
     alpha: {
@@ -142,7 +144,8 @@ const UI = {
     if (mode === "touch") {
       const bump = { micro: 3, caption: 3, label: 3, body: 3, lead: 3, title: 2, h2: 2, h1: 2 };
       for (const k in b.type) this.t.type[k] = b.type[k] + (bump[k] || 0);
-      Object.assign(this.t.metric, { btnH: 60, btnW: 320, chipH: 38, chipW: 116 });
+      Object.assign(this.t.metric, { btnH: 60, btnW: 320, chipH: 38, chipW: 116,
+        settingsRowH: 66, settingsControlW: 272, settingsControlH: 54, settingsStepperW: 60 });
     } else {
       Object.assign(this.t.type, b.type);
       Object.assign(this.t.metric, b.metric);

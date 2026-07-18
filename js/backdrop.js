@@ -22,6 +22,7 @@ const Backdrop = {
   },
   _cache: {},                 // stage.name -> baked + spec
   _fx: [],                    // transient reactive lights (combat -> backdrop)
+  resetFx() { this._fx.length = 0; },
 
   // --- self-contained colour utils (game.js's blendCol is IIFE-local) ---
   _rgb(hex) { hex = (hex || "#000").replace("#", ""); if (hex.length === 3) hex = hex.split("").map((c) => c + c).join(""); return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)]; },
@@ -127,7 +128,7 @@ const Backdrop = {
   // arming, cages, or transfer nodes.
   voidPlatform(ctx, p, stage) {
     const lower = p.voidLane === "lower", laneCol = lower ? "#31e6ff" : "#a66dff";
-    const now = performance.now(), low = typeof GFX !== "undefined" && GFX.low;
+    const now = CLOCK.sim * 1000, low = typeof GFX !== "undefined" && GFX.low;
     const forming = p.materializationState === "forming", alpha = forming ? 0.55 : 1;
     ctx.save(); ctx.globalAlpha = alpha;
 
@@ -163,8 +164,10 @@ const Backdrop = {
     } else if (p.voidType === "fire") {
       if (p.fireState === "arming") {
         const pulse = 0.55 + 0.45 * Math.sin(now / 85);
-        ctx.globalAlpha = alpha * (0.62 + pulse * 0.28); ctx.strokeStyle = "#ffad35"; ctx.lineWidth = 5;
+        const high = typeof A11Y !== "undefined" && A11Y.highContrast;
+        ctx.globalAlpha = alpha * (0.62 + pulse * 0.28); ctx.strokeStyle = high ? (THEME.dark ? "#fff36b" : "#4b00d1") : "#ffad35"; ctx.lineWidth = high ? 7 : 5;
         ctx.beginPath(); ctx.moveTo(p.x, p.y - 3); ctx.lineTo(p.x + p.w, p.y - 3); ctx.stroke();
+        if (high) for (let x = p.x + 18; x < p.x + p.w - 8; x += 34) { ctx.beginPath(); ctx.moveTo(x - 7, p.y - 18); ctx.lineTo(x, p.y - 9); ctx.lineTo(x + 7, p.y - 18); ctx.stroke(); }
         ctx.globalAlpha = alpha;
       } else if (p.fireState === "hot") {
         const tongues = low ? 5 : 9;
@@ -284,10 +287,11 @@ const Backdrop = {
       ctx.fillRect(p.x, p.y, p.w, p.h);
     }
     if (state === "warning") {
-      const pulse = 0.62 + 0.38 * Math.sin(performance.now() / Math.max(28, 76 - warnK * 42));
+      const high = typeof A11Y !== "undefined" && A11Y.highContrast;
+      const pulse = 0.62 + 0.38 * Math.sin(CLOCK.sim * 1000 / Math.max(28, 76 - warnK * 42));
       ctx.globalAlpha = (0.52 + warnK * 0.4) * pulse;
-      ctx.strokeStyle = mat === "aldricStone" ? "#f0c85a" : (mat === "colossusGantry" ? "#ff8a2c" : "#e5c34f");
-      ctx.lineWidth = 2.4 + warnK * 1.8; ctx.beginPath();
+      ctx.strokeStyle = high ? (THEME.dark ? "#fff36b" : "#4b00d1") : (mat === "aldricStone" ? "#f0c85a" : (mat === "colossusGantry" ? "#ff8a2c" : "#e5c34f"));
+      ctx.lineWidth = (high ? 4.2 : 2.4) + warnK * 1.8; ctx.beginPath();
       const teeth = mat === "aldricStone" ? 5 : 7;
       for (let i = 0; i < teeth; i++) {
         const x = p.x + p.w * (0.1 + i * 0.8 / Math.max(1, teeth - 1));
@@ -301,6 +305,7 @@ const Backdrop = {
         ctx.lineTo(cx, p.y); ctx.lineTo(cx + 18, p.y - 13 - warnK * 8); ctx.lineTo(cx + 34, p.y);
       }
       ctx.stroke();
+      if (high) { ctx.globalAlpha = 0.9; ctx.setLineDash([10, 7]); ctx.strokeRect(p.x, p.y - 4, p.w, p.h + 4); ctx.setLineDash([]); }
     }
     ctx.globalAlpha = 1; ctx.restore();
   },
@@ -341,17 +346,19 @@ const Backdrop = {
 
   // === reactive lighting: combat events bleed light into the backdrop ===
   // time-based so undrawn events (arcade modes / paused) simply expire, never pile up.
-  flare(x, y, col, r, life) { this._fx.push({ x, y, col, r, life, end: performance.now() / 1000 + life, screen: false }); if (this._fx.length > 16) this._fx.shift(); },
+  flare(x, y, col, r, life) { this._fx.push({ x, y, col, r, life, end: CLOCK.sim + life, screen: false }); if (this._fx.length > 16) this._fx.shift(); },
+  // A bloom is screen chrome rather than world geometry, so it deliberately
+  // keeps UI wall time while local flares freeze with hit-stop simulation time.
   bloom(col, strength, life) { this._fx.push({ col, strength, life, end: performance.now() / 1000 + life, screen: true }); if (this._fx.length > 16) this._fx.shift(); },
   drawFx(ctx, camera) {
     if (!this._fx.length) return;
-    const now = performance.now() / 1000;
+    const simNow = CLOCK.sim, uiNow = performance.now() / 1000;
     // additive light has little headroom on a bright background -> attenuate hard on light biomes
     const atten = (typeof THEME !== "undefined" && !THEME.dark) ? 0.3 : 1;
     ctx.save(); ctx.globalCompositeOperation = "lighter";
     for (const f of this._fx) {
-      const k = clamp((f.end - now) / f.life, 0, 1); if (k <= 0) continue;
-      if (f.screen) { ctx.globalAlpha = k * f.strength * atten; ctx.fillStyle = f.col; this.fillFull(ctx); }
+      const k = clamp((f.end - (f.screen ? uiNow : simNow)) / f.life, 0, 1); if (k <= 0) continue;
+      if (f.screen) { ctx.globalAlpha = k * f.strength * atten * ((typeof A11Y !== "undefined" && A11Y.flashScale != null) ? A11Y.flashScale : 1); ctx.fillStyle = f.col; this.fillFull(ctx); }
       else {
         // Local flares are recorded in world coordinates but composited after the
         // world, in screen space. Map their centre and radius through the exact
@@ -369,7 +376,9 @@ const Backdrop = {
       }
     }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; ctx.restore();
-    this._fx = this._fx.filter((f) => f.end > now);
+    let write = 0; for (let i = 0; i < this._fx.length; i++) {
+      const f = this._fx[i]; if (f.end > (f.screen ? uiNow : simNow)) this._fx[write++] = f;
+    } this._fx.length = write;
   },
 
   // === vignette + grain (screen space, after world, before HUD) ===

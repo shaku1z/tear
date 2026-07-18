@@ -1376,7 +1376,7 @@ function chargeTelegraph(ctx, x, cy, hh, dir, k, color) {
   ctx.fillRect(x0, cy - hh - 1, ww, 3); ctx.fillRect(x0, cy + hh - 2, ww, 3);
   // chevrons marching the way it'll go
   ctx.globalAlpha = 0.5 + 0.4 * k;
-  const march = (performance.now() / 90 * dir) % 46;
+  const march = (CLOCK.sim * 1000 / 90 * dir) % 46;
   for (let ax = x0 - 46 + march; ax < x1; ax += 46) {
     const px = dir > 0 ? ax : ax;
     ctx.beginPath(); ctx.moveTo(px, cy - 9); ctx.lineTo(px + dir * 13, cy); ctx.lineTo(px, cy + 9); ctx.closePath(); ctx.fill();
@@ -1467,12 +1467,21 @@ function bossPhaseBeat(boss, title, color) {
 }
 
 // a danger LANE — horizontal commitment for charges / sweeping beams.
+function telegraphInk(color) {
+  if (typeof A11Y === "undefined" || !A11Y.highContrast) return color;
+  return (typeof THEME !== "undefined" && THEME.dark) ? "#fff36b" : "#4b00d1";
+}
 function dangerLane(ctx, x, y, w, h, dir, color, k) {
   ctx.save();
+  const high = typeof A11Y !== "undefined" && A11Y.highContrast; color = telegraphInk(color);
   const sx = dir >= 0 ? x : x - w;
-  ctx.fillStyle = color; ctx.globalAlpha = 0.07 + 0.13 * k; ctx.fillRect(sx, y, w, h);
-  ctx.strokeStyle = color; ctx.lineWidth = 2 + 2 * k; ctx.globalAlpha = 0.45 + 0.45 * k;
+  ctx.fillStyle = color; ctx.globalAlpha = (high ? 0.14 : 0.07) + (high ? 0.18 : 0.13) * k; ctx.fillRect(sx, y, w, h);
+  ctx.strokeStyle = color; ctx.lineWidth = (high ? 4 : 2) + 2 * k; ctx.globalAlpha = 0.45 + 0.45 * k;
   ctx.setLineDash([12, 9]); ctx.strokeRect(sx, y, w, h); ctx.setLineDash([]);
+  if (high) {
+    ctx.globalAlpha = 0.72; ctx.lineWidth = 3;
+    for (let px = sx + 24; px < sx + w; px += 44) { ctx.beginPath(); ctx.moveTo(px - dir * 12, y + h * 0.25); ctx.lineTo(px + dir * 9, y + h * 0.5); ctx.lineTo(px - dir * 12, y + h * 0.75); ctx.stroke(); }
+  }
   ctx.restore();
 }
 
@@ -1489,43 +1498,48 @@ function weaponGlint(ctx, x, y, color, k) {
 // a danger COLUMN — the vertical strike/landing zone — with a pulsing ground ring
 function dangerColumn(ctx, x, w, yTop, yGround, color, k) {
   ctx.save();
-  ctx.fillStyle = color; ctx.globalAlpha = 0.08 + 0.10 * k;
+  const high = typeof A11Y !== "undefined" && A11Y.highContrast; color = telegraphInk(color);
+  ctx.fillStyle = color; ctx.globalAlpha = (high ? 0.15 : 0.08) + 0.10 * k;
   ctx.fillRect(x - w / 2, yTop, w, yGround - yTop);
-  const pr = (performance.now() / 500) % 1;
+  const pr = (CLOCK.sim / 0.5) % 1;
   ctx.globalAlpha = (0.5 + 0.4 * k) * (1 - pr);
-  ctx.strokeStyle = color; ctx.lineWidth = 3;
+  ctx.strokeStyle = color; ctx.lineWidth = high ? 5 : 3;
   ctx.beginPath(); ctx.ellipse(x, yGround, (w * 0.55) * (0.4 + pr * 0.6), 9, 0, 0, Math.PI * 2); ctx.stroke();
+  if (high) { ctx.globalAlpha = 0.8; ctx.setLineDash([9, 7]); ctx.strokeRect(x - w / 2, yTop, w, yGround - yTop); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(x - 14, yGround - 25); ctx.lineTo(x, yGround - 8); ctx.lineTo(x + 14, yGround - 25); ctx.stroke(); }
   ctx.restore();
 }
 
 // a landing RETICLE (mortars, falling debris): rotating quarter-arcs closing in as k -> 1
 function dangerReticle(ctx, x, y, r, k, color) {
   ctx.save();
-  ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.globalAlpha = 0.5 + 0.5 * k;
-  const rot = performance.now() / 400, rr = r * (1.4 - 0.4 * k);
+  const high = typeof A11Y !== "undefined" && A11Y.highContrast; color = telegraphInk(color);
+  ctx.strokeStyle = color; ctx.lineWidth = high ? 4.5 : 2.5; ctx.globalAlpha = 0.5 + 0.5 * k;
+  const rot = CLOCK.sim / 0.4, rr = r * (1.4 - 0.4 * k);
   for (let i = 0; i < 4; i++) {
     ctx.beginPath(); ctx.arc(x, y, rr, rot + i * Math.PI / 2, rot + i * Math.PI / 2 + 0.7); ctx.stroke();
   }
   ctx.beginPath(); ctx.moveTo(x - 6, y); ctx.lineTo(x + 6, y); ctx.moveTo(x, y - 6); ctx.lineTo(x, y + 6); ctx.stroke();
+  if (high) { ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.strokeRect(-9, -9, 18, 18); ctx.restore(); }
   ctx.restore();
 }
 
 // the PERIL FLASH — the "this one cannot be parried" tell (crimson diamond + sting).
 // Call perilPing(boss) at the wind-up; the boss's draw calls drawPeril each frame.
 function perilPing(boss) {
-  boss._perilUntil = performance.now() + 600;   // timestamp-based: no tick wiring needed
+  boss._perilUntil = CLOCK.sim + 0.6;
   try { SFX.rankup(); } catch (e) {}
   BOSSFX.juice({ txt: "⚠", x: boss.x, y: boss.y - boss.hh - 30, color: "#e23b3b", quiet: true });
 }
 function drawPeril(ctx, boss) {
-  const left = (boss._perilUntil || 0) - performance.now();
+  const left = (boss._perilUntil || 0) - CLOCK.sim;
   if (left <= 0) return;
-  const k = left / 600, s = 13 + (1 - k) * 8;
+  const k = left / 0.6, s = 13 + (1 - k) * 8, high = typeof A11Y !== "undefined" && A11Y.highContrast;
   ctx.save();
   ctx.translate(boss.x, boss.y - boss.hh - 34); ctx.rotate(Math.PI / 4);
-  ctx.globalAlpha = 0.85 * k; ctx.fillStyle = "#e23b3b";
+  ctx.globalAlpha = 0.85 * k; ctx.fillStyle = high ? "#fff36b" : "#e23b3b";
   ctx.fillRect(-s / 2, -s / 2, s, s);
-  ctx.globalAlpha = k; ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+  ctx.globalAlpha = k; ctx.strokeStyle = high ? "#000" : "#fff"; ctx.lineWidth = high ? 4 : 2;
   ctx.strokeRect(-s / 2, -s / 2, s, s);
   ctx.restore();
 }
@@ -1542,6 +1556,23 @@ function weaponBasis(x, y, a, facing) {
 }
 function weaponPoint(b, along, side) { return { x: b.x + b.ux * along + b.px * side, y: b.y + b.uy * along + b.py * side }; }
 function weaponSegment(a, b) { return { a, b, x1: a.x, y1: a.y, x2: b.x, y2: b.y }; }
+function freezeWeaponTemplate(points) { return Object.freeze(points.map((p) => Object.freeze(p))); }
+// Static local-space silhouettes are cached once. Poses still transform into
+// fresh world points because collision/debug consumers own those snapshots.
+const WARDSTAFF_HEAD_LOCAL = freezeWeaponTemplate([
+  [CONFIG.warden.staffFront - 8, -18], [CONFIG.warden.staffFront + CONFIG.warden.staffHead, -18],
+  [CONFIG.warden.staffFront + CONFIG.warden.staffHead - 8, -6], [CONFIG.warden.staffFront + CONFIG.warden.staffHead + 3, -2],
+  [CONFIG.warden.staffFront + CONFIG.warden.staffHead + 3, 7], [CONFIG.warden.staffFront + 7, 5],
+  [CONFIG.warden.staffFront + CONFIG.warden.staffHead - 6, 18], [CONFIG.warden.staffFront - 8, 18],
+]);
+const CLEAVER_HEAD_LOCAL = freezeWeaponTemplate([
+  [CONFIG.aldric.cleaverShaft - 7, -14], [CONFIG.aldric.cleaverShaft + CONFIG.aldric.cleaverBlade * 0.54, -CONFIG.aldric.cleaverHalfW],
+  [CONFIG.aldric.cleaverShaft + CONFIG.aldric.cleaverBlade, -CONFIG.aldric.cleaverHalfW * 0.82],
+  [CONFIG.aldric.cleaverShaft + CONFIG.aldric.cleaverBlade * 0.78, -10], [CONFIG.aldric.cleaverShaft + CONFIG.aldric.cleaverBlade + 2, -2],
+  [CONFIG.aldric.cleaverShaft + CONFIG.aldric.cleaverBlade * 0.78, 8],
+  [CONFIG.aldric.cleaverShaft + CONFIG.aldric.cleaverBlade, CONFIG.aldric.cleaverHalfW * 0.82],
+  [CONFIG.aldric.cleaverShaft + CONFIG.aldric.cleaverBlade * 0.42, CONFIG.aldric.cleaverHalfW], [CONFIG.aldric.cleaverShaft - 7, 15],
+]);
 function springWeapon(actor, angleKey, velocityKey, target, dt, stiffness, damping) {
   const a = actor[angleKey], v = actor[velocityKey] || 0;
   const nv = (v + (target - a) * stiffness * dt) * Math.exp(-damping * dt);
@@ -1553,8 +1584,7 @@ function wardstaffPose(actor, angle, prevAngle) {
     const b = weaponBasis(origin.x, origin.y, a, actor.facing), front = C.staffFront, head = C.staffHead;
     const shaftA = weaponPoint(b, -C.staffRear, 0), shaftB = weaponPoint(b, front, 0);
     const gripA = weaponPoint(b, -13, 0), gripB = weaponPoint(b, 18, 0);
-    const headPolygon = [[front - 8, -18], [front + head, -18], [front + head - 8, -6], [front + head + 3, -2],
-      [front + head + 3, 7], [front + 7, 5], [front + head - 6, 18], [front - 8, 18]].map((p) => weaponPoint(b, p[0], p[1]));
+    const headPolygon = WARDSTAFF_HEAD_LOCAL.map((p) => weaponPoint(b, p[0], p[1]));
     const cuttingEdge = weaponSegment(headPolygon[1], headPolygon[6]);
     return { shaftA, shaftB, gripA, gripB, headPolygon, cuttingEdge, tip: weaponPoint(b, front + head + 3, 2),
       counterweight: weaponPoint(b, -C.staffRear, 0), guardRing: weaponPoint(b, 31, 0) };
@@ -1574,9 +1604,7 @@ function greatCleaverPose(actor, angle, prevAngle, originOverride) {
     const shaftA = weaponPoint(b, -C.cleaverRear, 0), shaftB = weaponPoint(b, shaft + 5, 0);
     const gripA = weaponPoint(b, -15, 0), gripB = weaponPoint(b, 20, 0);
     // The double inward step at the nose is the broken-crown notch.
-    const headPolygon = [[shaft - 7, -14], [shaft + blade * 0.54, -hw], [shaft + blade, -hw * 0.82],
-      [shaft + blade * 0.78, -10], [shaft + blade + 2, -2], [shaft + blade * 0.78, 8],
-      [shaft + blade, hw * 0.82], [shaft + blade * 0.42, hw], [shaft - 7, 15]].map((p) => weaponPoint(b, p[0], p[1]));
+    const headPolygon = CLEAVER_HEAD_LOCAL.map((p) => weaponPoint(b, p[0], p[1]));
     const cuttingEdge = weaponSegment(headPolygon[2], headPolygon[6]);
     return { shaftA, shaftB, gripA, gripB, headPolygon, cuttingEdge,
       tip: weaponPoint(b, shaft + blade + 2, -2), guardRing: weaponPoint(b, shaft - 10, 0) };
@@ -2347,7 +2375,7 @@ class Colossus extends Enemy {
       ctx.fillRect(this.ventX - this.cfg.ventW / 2, top, this.cfg.ventW, CONFIG.world.groundY - top);
       ctx.strokeStyle = CONFIG.colors.armoredShield; ctx.lineWidth = 3; ctx.globalAlpha = 0.35 + 0.4 * vk;
       for (let i = -2; i <= 2; i++) {
-        const sx = this.ventX + i * this.cfg.ventW * 0.16, off = (performance.now() / 5 + i * 31) % 90;
+        const sx = this.ventX + i * this.cfg.ventW * 0.16, off = (CLOCK.sim * 1000 / 5 + i * 31) % 90;
         ctx.beginPath(); ctx.moveTo(sx, CONFIG.world.groundY - off); ctx.lineTo(sx, CONFIG.world.groundY - off - 48); ctx.stroke();
       }
       ctx.globalAlpha = 1;
@@ -2382,7 +2410,7 @@ class Colossus extends Enemy {
       ctx.fillRect(gx - this.facing * 10 - 1, y - 8, this.facing * 11, 8);
       ctx.fillRect(gx - this.facing * 10 - 1, y + h + 1, this.facing * 11, 8);
     } else if (ph === 3 || this.coreOpenT > 0) {
-      const pulse = 0.6 + 0.4 * Math.sin(performance.now() / 120);
+      const pulse = 0.6 + 0.4 * Math.sin(CLOCK.sim * 1000 / 120);
       ctx.fillStyle = this.coreOpenT > 0 ? CONFIG.colors.armoredShield : CONFIG.colors.boss; ctx.globalAlpha = pulse;
       ctx.beginPath(); ctx.arc(this.x, this.y + 6, 22, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1; ctx.strokeStyle = CONFIG.colors.slam; ctx.lineWidth = 3; ctx.stroke();
@@ -2763,12 +2791,12 @@ class Aldric extends Enemy {
     }
     // regen glow during the fake
     if (downed) {
-      const pulse = 0.3 + 0.3 * Math.sin(performance.now() / 150);
+      const pulse = 0.3 + 0.3 * Math.sin(CLOCK.sim * 1000 / 150);
       ctx.fillStyle = CONFIG.colors.charger; ctx.globalAlpha = pulse;
       ctx.beginPath(); ctx.arc(this.x, this.y, this.hw + 14, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
     }
     if (frenzy) {   // burning aura
-      ctx.fillStyle = CONFIG.colors.bomber; ctx.globalAlpha = 0.2 + 0.1 * Math.sin(performance.now() / 90);
+      ctx.fillStyle = CONFIG.colors.bomber; ctx.globalAlpha = 0.2 + 0.1 * Math.sin(CLOCK.sim * 1000 / 90);
       ctx.fillRect(x - 6, y - 6, w + 12, h + 12); ctx.globalAlpha = 1;
     }
     // A royal scarf/cape has its own restrained secondary motion: it lags the
@@ -2776,7 +2804,7 @@ class Aldric extends Enemy {
     const capeLead = clamp(-this.vx * 0.035, -52, 52), capeLift = (this.state === "lunge" || this.state === "charge") ? -22 : 0;
     ctx.fillStyle = this.mode === "duel" ? "#74202b" : CONFIG.colors.bomber; ctx.globalAlpha = downed ? 0.35 : 0.82;
     ctx.beginPath(); ctx.moveTo(this.x - this.facing * this.hw * 0.55, y + 16);
-    ctx.lineTo(this.x - this.facing * (this.hw + 34) + capeLead, y + h * 0.55 + capeLift + Math.sin(performance.now() / 140) * 5);
+    ctx.lineTo(this.x - this.facing * (this.hw + 34) + capeLead, y + h * 0.55 + capeLift + Math.sin(CLOCK.sim * 1000 / 140) * 5);
     ctx.lineTo(this.x - this.facing * (this.hw + 18) + capeLead * 0.6, y + h - 5); ctx.lineTo(this.x - this.facing * this.hw * 0.45, y + h - 18); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
     // body — squat when downed
     const by = downed ? y + h * 0.3 : y, bh = downed ? h * 0.7 : h;
@@ -3007,7 +3035,7 @@ class VoidWisp extends Enemy {
     if (this.x < -80 || this.life <= 0) this.dead = true;
   }
   draw(ctx) {
-    const p = 0.65 + 0.35 * Math.sin(performance.now() / 120 + this.x * 0.01);
+    const p = 0.65 + 0.35 * Math.sin(CLOCK.sim * 1000 / 120 + this.x * 0.01);
     if (this.passState === "tell") {
       const k = 1 - clamp(this.passT / CONFIG.source.voidWispTell, 0, 1);
       ctx.save(); ctx.strokeStyle = this.color; ctx.globalAlpha = 0.4 + 0.45 * k; ctx.lineWidth = 2.5; ctx.setLineDash([10, 8]);
@@ -3521,7 +3549,7 @@ class Source extends Enemy {
   }
 
   draw(ctx) {
-    const t = performance.now(), x = this.x, y = this.y, w = this.hw, h = this.hh;
+    const t = CLOCK.sim * 1000, x = this.x, y = this.y, w = this.hw, h = this.hh;
     const core = this.mode === "void" ? CONFIG.colors.perfect : this.color;
     const introP = this.introT > 0 ? clamp(1 - this.introT / ((CONFIG.bossTheater && CONFIG.bossTheater.introDur) || 1.4), 0, 1) : 1;
     const deathScale = this.dying ? Math.max(0.04, 1 - this.deathP * 0.92) : 1;

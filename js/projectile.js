@@ -27,7 +27,7 @@ class Projectile {
     this.mud = false;         // Sludge: lands and leaves a slowing puddle
     this.tint = null;         // shot colour, set by the firing enemy (else default enemyShot)
     this.kind = "dart";       // visual shape: "dart" (oriented bolt) | "orb" (caster)
-    this.hist = [];           // recent positions -> a real motion trail for EVERY projectile
+    this.hist = new Array(7); this.histHead = 0; this.histCount = 0;   // allocation-free fixed trail ring
     // Capability metadata. Legacy booleans remain as render/physics shims until
     // their dedicated phases migrate them, while collision code can reason about
     // an explicit family and counter contract now.
@@ -78,6 +78,15 @@ class Projectile {
     this.spinDir = state === "returned" ? -1 : (state === "batted" ? -0.65 : 1);
   }
 
+  clearTrail() { this.histHead = 0; this.histCount = 0; }
+  pushTrail(x, y) {
+    let p = this.hist[this.histHead];
+    if (p) { p.x = x; p.y = y; } else this.hist[this.histHead] = { x, y };
+    this.histHead = (this.histHead + 1) % this.hist.length;
+    this.histCount = Math.min(this.hist.length, this.histCount + 1);
+  }
+  trailPoint(i) { return this.hist[(this.histHead - this.histCount + i + this.hist.length) % this.hist.length]; }
+
   configureSweeper(opts) {
     opts = opts || {};
     this.maxLife = Math.max(0.1, opts.maxLife == null ? 5 : opts.maxLife);
@@ -115,14 +124,14 @@ class Projectile {
     this.deflected = true; this.perfect = perfect;
     this.counterplay = perfect ? "owner return" : (thrown ? "blade redirect" : kind === "phaseStep" ? "phase reflect" : "batted");
     this._setSweeperState(perfect ? "returned" : "batted");
-    this.hist.length = 0;
+    this.clearTrail();
     if (typeof SFX !== "undefined" && SFX.sweeperBat) SFX.sweeperBat(perfect, this.sweeperStyle);
     return true;
   }
 
   _embedSweeper() {
     this.vx = 0; this.vy = 0; this.passesRemaining = 0; this.crossings = this.maxCrossings;
-    this._setSweeperState("embedded"); this.hist.length = 0;
+    this._setSweeperState("embedded"); this.clearTrail();
     if (typeof SFX !== "undefined" && SFX.sweeperBounce) SFX.sweeperBounce(this.sweeperStyle, true);
     if (!this._embedNotified) {
       this._embedNotified = true;
@@ -160,8 +169,7 @@ class Projectile {
       if (this.whistleStage === 0) { this.whistleStage = 1; if (typeof SFX !== "undefined" && SFX.wardenMortarWhistle) SFX.wardenMortarWhistle(false); }
       else if (this.whistleStage === 1 && this.vy > 120) { this.whistleStage = 2; if (typeof SFX !== "undefined" && SFX.wardenMortarWhistle) SFX.wardenMortarWhistle(true); }
     }
-    this.hist.push({ x: this.x, y: this.y });          // record the path for the motion trail
-    if (this.hist.length > 7) this.hist.shift();
+    this.pushTrail(this.x, this.y);
     this.x += this.vx * dt;
     this.y += this.vy * dt;
     this.life -= dt;
@@ -236,15 +244,15 @@ class Projectile {
 
   // a tapering, fading motion trail through the recent path — every projectile gets it
   _trail(ctx, col, dark, lowG) {
-    const h = this.hist; if (lowG || h.length < 2) return;
+    const n = this.histCount; if (lowG || n < 2) return;
     ctx.save();
     if (dark) ctx.globalCompositeOperation = "lighter";
     ctx.strokeStyle = col; ctx.lineCap = "round";
-    for (let i = 1; i < h.length; i++) {
-      const k = i / h.length;
+    for (let i = 1; i < n; i++) {
+      const k = i / n, a = this.trailPoint(i - 1), b = this.trailPoint(i);
       ctx.globalAlpha = k * 0.5;
       ctx.lineWidth = this.r * 1.7 * k;
-      ctx.beginPath(); ctx.moveTo(h[i - 1].x, h[i - 1].y); ctx.lineTo(h[i].x, h[i].y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
     }
     ctx.globalAlpha = 1; ctx.restore();
   }
@@ -260,7 +268,7 @@ class Projectile {
       this._trail(ctx, tcol, dark, lowG);
     }
     if (this.sweeper) {
-      const rr = 30, t2 = performance.now(), state = this.sweeperState || "hostile";
+      const rr = 30, t2 = CLOCK.sim * 1000, state = this.sweeperState || "hostile";
       const ratio = clamp(this.integrity / Math.max(1, this.maxIntegrity), 0, 1), returned = state === "returned", batted = state === "batted";
       ctx.save(); ctx.translate(this.x, this.y);
       if (this.sweeperStyle === "shard") {
@@ -316,7 +324,7 @@ class Projectile {
     if (this.crownfire) {
       // CROWNFIRE is not an ordinary orange shot. Ground waves wear a broad royal-
       // gold crown with a white-hot cutting core; embers carry the same crown mark.
-      const gold = "#f6b817", white = "#fff7d6", t2 = performance.now();
+      const gold = "#f6b817", white = "#fff7d6", t2 = CLOCK.sim * 1000;
       ctx.save(); ctx.translate(this.x, this.y);
       if (!lowG) { ctx.shadowColor = gold; ctx.shadowBlur = this.shock ? 18 : 11; }
       if (this.shock) {
@@ -348,7 +356,7 @@ class Projectile {
     if (this.shock) {                      // armored stomp shockwave: a ground spike you jump
       const col = this.tint || C.slam;
       if (this.quake) {                    // IRON COLOSSUS: a TREMOR COLUMN — tall, jagged, debris at the crown
-        const hgt = this.r * 3.0, wob = Math.sin(performance.now() / 38 + this.x * 0.03) * 3;
+        const hgt = this.r * 3.0, wob = Math.sin(CLOCK.sim * 1000 / 38 + this.x * 0.03) * 3;
         ctx.save();
         if (!lowG) { ctx.shadowColor = col; ctx.shadowBlur = 12; }
         ctx.fillStyle = col; ctx.globalAlpha = 0.88;
@@ -374,14 +382,14 @@ class Projectile {
       ctx.restore(); return;
     }
     if (this.mud && !this.deflected) {     // sludge glob in flight: a wobbling blob + drip
-      const wob = Math.sin(performance.now() / 90) * 1.4;
+      const wob = Math.sin(CLOCK.sim * 1000 / 90) * 1.4;
       ctx.fillStyle = C.sludge; ctx.beginPath(); ctx.ellipse(this.x, this.y, this.r + wob, this.r - wob, 0, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = ink; ctx.lineWidth = 1.5; ctx.stroke();
       ctx.fillStyle = C.sludge; ctx.beginPath(); ctx.arc(this.x + this.r * 0.5, this.y - this.r * 0.4, this.r * 0.3, 0, Math.PI * 2); ctx.fill();
       return;
     }
     if (this.root && !this.deflected) {    // chain shot: two interlocked links, spinning
-      ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(performance.now() / 260);
+      ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(CLOCK.sim * 1000 / 260);
       ctx.strokeStyle = this.tint || C.enemyShot; ctx.lineWidth = 3.5;
       for (const o of [-this.r * 0.5, this.r * 0.5]) { ctx.beginPath(); ctx.ellipse(o, 0, this.r * 0.7, this.r * 0.45, 0, 0, Math.PI * 2); ctx.stroke(); }
       ctx.restore(); return;
@@ -390,13 +398,13 @@ class Projectile {
       ctx.fillStyle = this.deflected ? C.deflected : C.bomber;
       ctx.beginPath(); ctx.arc(this.x, this.y, this.r, Math.PI, 0); ctx.fill();
       ctx.strokeStyle = ink; ctx.lineWidth = 2; ctx.stroke();
-      const blink = this.armed ? (Math.floor(performance.now() / 140) % 2 === 0) : false;
+      const blink = this.armed ? (Math.floor(CLOCK.sim * 1000 / 140) % 2 === 0) : false;
       ctx.fillStyle = this.armed ? (blink ? C.charger : ink) : "#888";
       ctx.beginPath(); ctx.arc(this.x, this.y - 1, 2.5, 0, Math.PI * 2); ctx.fill();
       return;
     }
     if (this.bomb && !this.deflected) {    // lobbed bomb: impact-shadow telegraph + danger ring + sputtering fuse
-      const gy = CONFIG.world.groundY, t = performance.now();
+      const gy = CONFIG.world.groundY, t = CLOCK.sim * 1000;
       // ground shadow under the bomb — grows as it falls, telegraphing the danger zone
       const fall = clamp(1 - (gy - this.y) / 460, 0.25, 1);
       ctx.save(); ctx.globalAlpha = 0.16; ctx.fillStyle = "#000";
@@ -450,7 +458,7 @@ class Projectile {
     ctx.rotate(ang);
     ctx.fillStyle = col; ctx.strokeStyle = ink; ctx.lineWidth = this.charged ? 2.5 : 1.5;
     if (this.kind === "orb" || this.bomb) {            // caster orb / bomb: round body
-      const pr = this.bomb ? r : r * (1 + 0.12 * Math.sin(performance.now() / 120));
+      const pr = this.bomb ? r : r * (1 + 0.12 * Math.sin(CLOCK.sim * 1000 / 120));
       ctx.beginPath(); ctx.arc(0, 0, pr, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; ctx.stroke();
       if (this.kind === "orb") { ctx.strokeStyle = "#fff"; ctx.globalAlpha = 0.7; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, pr * 0.5, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
     } else {                                            // streamlined dart, tip forward along travel
@@ -469,7 +477,7 @@ class Projectile {
     if (this.sourceStolen && !this.deflected) {
       // Preserve the borrowed silhouette underneath an unmistakable Source shell:
       // asymmetric brackets, a sheared ellipse, and reverse-moving ticks.
-      const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 70 + this.x * 0.03);
+      const pulse = 0.5 + 0.5 * Math.sin(CLOCK.sim * 1000 / 70 + this.x * 0.03);
       ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(-ang * 0.35);
       ctx.strokeStyle = this.sourceStolen === "aldric" ? "#ff4d8d" : "#6ef2ff"; ctx.lineWidth = 2; ctx.globalAlpha = 0.5 + pulse * 0.3;
       ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.ellipse(0, 0, r * (1.7 + pulse * 0.25), r * 1.05, 0.25, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);

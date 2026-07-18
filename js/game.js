@@ -58,7 +58,8 @@
   let shakeScale = 1;
   let settings = loadSettings();
   function loadSettings() {
-    const def = { sens: CONFIG.blade.aimSensitivity, shake: 1, vol: 0.6, music: true, gfx: "auto", controls: "auto", touchAim: "stick" };
+    const def = { sens: CONFIG.blade.aimSensitivity, shake: 1, flash: 1, reducedMotion: false, highContrast: false,
+      vol: 0.6, music: true, gfx: "auto", controls: "auto", touchAim: "stick" };
     try { return Object.assign(def, JSON.parse(CG.store.get("tear_settings") || "{}")); }
     catch (e) { return def; }
   }
@@ -69,7 +70,10 @@
   }
   function applySettings() {
     CONFIG.blade.aimSensitivity = settings.sens;
-    shakeScale = settings.shake;
+    A11Y.flashScale = clamp(settings.flash == null ? 1 : settings.flash, 0, 1);
+    A11Y.reducedMotion = !!settings.reducedMotion; A11Y.motionScale = A11Y.reducedMotion ? 0.18 : 1;
+    A11Y.highContrast = !!settings.highContrast;
+    shakeScale = settings.shake * A11Y.motionScale;
     GFX.low = settings.gfx === "low" || (settings.gfx === "auto" && isLowEnd());
     Input.forceMode = settings.controls || "auto";   // 2-in-1s can force TOUCH or DESKTOP
     Input.touchAimMode = settings.touchAim || "stick";   // radial stick vs mouse-like drag
@@ -230,7 +234,7 @@
     ctx.save();
     ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
     ctx.strokeStyle = color; ctx.lineWidth = 11; ctx.globalAlpha = alpha;
-    const step = 30, off = (performance.now() / 26) % step;
+    const step = 30, off = (CLOCK.sim * 1000 / 26) % step;
     for (let i = -h; i < w + h; i += step) { ctx.beginPath(); ctx.moveTo(x + i + off, y + h); ctx.lineTo(x + i + off + h, y); ctx.stroke(); }
     ctx.restore();
   }
@@ -261,8 +265,8 @@
   // ---- helpers ----
   // screen shake is also the game's haptic driver: big impacts buzz harder (mobile)
   function addShake(m) { const v = m * shakeScale; if (v > shake) shake = v; Input.buzz(m >= CONFIG.juice.shakeBig ? 26 : 12); }
-  function addZoom(p) { if (1 + p > zoom) zoom = 1 + p; }
-  function addFlash(f) { if (f > flash) flash = f; }
+  function addZoom(p) { const z = p * A11Y.motionScale; if (1 + z > zoom) zoom = 1 + z; }
+  function addFlash(f) { const v = f * A11Y.flashScale; if (v > flash) flash = v; }
   function triggerSlowmo() { slowmo = CONFIG.juice.parrySlowmo; }
   function addFloater(x, y, text, big, col) { floaters.push({ x, y, text, life: 0.8, big, col: col || "#000" }); }
   // a varied point in the left or right side band (not the exact same corner each time)
@@ -749,7 +753,7 @@
     const vs = run.voidScroll = {
       active: true, frozen: false, owner, speed: C.scrollSpeed, speedCap: C.scrollSpeedMax, wispT: 1.8, rescueCd: 0,
       arriveT: C.descentArrival, options, gen: VoidGen.create(run.voidSeed, options),
-      chunks: [], scrollOffset: 0, playerLane: null, arrivalQueue: [], arrivalFxT: 0,
+      chunks: [], scrollOffset: 0, playerLane: null, arrivalQueue: [], arrivalIndex: 0, arrivalFxT: 0,
     };
     while (vs.gen.nextX + vs.scrollOffset < W + C.voidSpawnAhead) appendVoidChunk(vs);
     const first = VoidGen.selectRescue(platforms, W * 0.45, run.runTime, options);
@@ -805,12 +809,13 @@
     if (vs.rescueCd > 0) vs.rescueCd -= dt;
     if (player.voidTransferT > 0) player.voidTransferT = Math.max(0, player.voidTransferT - dt);
     const C = CONFIG.source;
-    if (vs.arrivalQueue.length) {
+    if (vs.arrivalIndex < vs.arrivalQueue.length) {
       vs.arrivalFxT -= dt;
       if (vs.arrivalFxT <= 0) {
-        vs.arrivalFxT = 0.055;
-        const p = vs.arrivalQueue.shift();
+        vs.arrivalFxT = (CONFIG.effects && CONFIG.effects.voidArrivalFxStep) || 0.07;
+        const p = vs.arrivalQueue[vs.arrivalIndex++];
         if (p && p.materializationState !== "gone") FX.ring(p.x + p.w / 2, p.y, 10, vs.owner.color);
+        if (vs.arrivalIndex >= vs.arrivalQueue.length) { vs.arrivalQueue.length = 0; vs.arrivalIndex = 0; }
       }
     }
     // THE ARRIVAL grace: the stream materializes and eases into motion (scroll
@@ -1241,7 +1246,7 @@
     blade.throwType = weapon.throwType;
     blade.model = weapon.model || "sword";
     enemies = []; projectiles = []; floaters = [];
-    hitStop = 0; shake = 0; FX.reset();
+    hitStop = 0; shake = 0; FX.reset(); Backdrop.resetFx(); CLOCK.sim = 0;
     timeScale = 1; slowmo = 0; zoom = 1; flash = 0; bannerT = 0; dashGhostT = 0; throwCd = 0;
     worldZoom = 1; worldZoomTarget = 1;
     loadStage(0); stageBannerT = 0; loreT = 0;   // fresh biome 0 (campaign re-stages per wave below)
@@ -1771,6 +1776,7 @@
   }
 
   function stepPlaying(dt) {
+    CLOCK.sim += dt;
     // Flow Guard: damage reduction while the trick rank is high (refreshed each step)
     player.flowDR = (run.mods.flowGuard && run.mult >= CONFIG.resilience.flowGuardTier)
       ? CONFIG.resilience.flowGuardMult : 1;
@@ -2861,7 +2867,7 @@
             vy: ny * (80 + Math.random() * 220) + bh / dlen * 40 * (Math.random() - 0.5), life: 0.3 + Math.random() * 0.35, max: 0.65, w: 1.5 + Math.random() * 2.5 });
         }
         // 6) an opening flash beat, so the cut "hits"
-        if (k < 0.16) { ctx.globalAlpha = (1 - k / 0.16) * 0.22; ctx.fillStyle = "#eafcff"; ctx.fillRect(0, 0, bw, bh); ctx.globalAlpha = 1; }
+        if (k < 0.16) { ctx.globalAlpha = (1 - k / 0.16) * 0.22 * A11Y.flashScale; ctx.fillStyle = "#eafcff"; ctx.fillRect(0, 0, bw, bh); ctx.globalAlpha = 1; }
       }
       // spark update + draw (device space; they outlive the sweep briefly)
       if (glow) { ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round"; }
@@ -2905,7 +2911,7 @@
     // biome background (campaign + endless tint the world; menus stay white)
     const biomeMode = !!(run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly" || run.mode === "gauntlet" || run.mode === "tutorial" || run.mode === "playground"));
     let bgCol = (playLike && biomeMode) ? currentStage.bg : "#fff";
-    if (playLike && Array.isArray(enemies)) { const ef = enemies.find((e) => e.whiteFlash > 0); if (ef) bgCol = blendCol(bgCol, "#ffffff", ef.whiteFlash); }   // The Echo's white-out
+    if (playLike && Array.isArray(enemies)) { const ef = enemies.find((e) => e.whiteFlash > 0); if (ef) bgCol = blendCol(bgCol, "#ffffff", ef.whiteFlash * A11Y.flashScale); }   // The Echo's white-out
     ctx.fillStyle = bgCol;
     ctx.fillRect(SR.x, SR.y, SR.w, SR.h);
     uiButtons = [];
@@ -3044,7 +3050,7 @@
   // status visuals on an afflicted enemy: BLEED crimson aura, BURN rising flames,
   // MARK cyan targeting brackets. Particles (drips/embers) are spawned by the loop.
   function drawEnemyStatus(e) {
-    const now = performance.now();
+    const now = CLOCK.sim * 1000;
     ctx.save();
     if (e.bleedStacks > 0) {   // throbbing crimson wound-aura, deeper with more stacks
       const k = clamp(e.bleedStacks / CONFIG.status.bleedMax, 0, 1);
@@ -3183,6 +3189,7 @@
       bottom: cameraView.bottom + backdropBleed,
     };
     const backdropCamera = { cx, cy, ox, oy, scale: cameraScale };
+    FX.setViewRect(cameraView);
     ctx.translate(cx + ox, cy + oy);
     ctx.scale(zoom, zoom);
     ctx.translate(-cx, -cy);
@@ -3193,14 +3200,15 @@
       ctx.fillStyle = "#ff00a8";
       ctx.fillRect(cameraView.left, cameraView.top, cameraView.right - cameraView.left, cameraView.bottom - cameraView.top);
     }
-    if (biome) Backdrop.draw(ctx, currentStage, performance.now() / 1000, player ? player.x : W / 2, backdropView);   // sky + parallax + motes
+    const backdropT = CLOCK.sim * (A11Y.reducedMotion ? 0.25 : 1);
+    if (biome) Backdrop.draw(ctx, currentStage, backdropT, player ? player.x : W / 2, backdropView);   // sky + parallax + motes
     // ARENA DRESSING: each boss stages its own ground (drawn behind platforms).
     // Suppressed over the void — there is no ground to dress.
     const voidActive = run && run.voidScroll && (run.voidScroll.active || run.voidScroll.frozen);
     {
       const dboss = enemies.find((e) => e.isBoss && !e.isMiniBoss);
       if (dboss && !GFX.low && !voidActive) {
-        const now2 = performance.now(), gy2 = CONFIG.world.groundY;
+        const now2 = CLOCK.sim * 1000, gy2 = CONFIG.world.groundY;
         ctx.save();
         if (dboss.bossId === "warden") {
           // the Yard: cell-block banners hanging into frame + painted yard lines
@@ -3262,8 +3270,8 @@
       if (!(p.crackT > 0)) continue;
       const k = 1 - clamp(p.crackT / (p.crackMax || 0.8), 0, 1);
       ctx.save();
-      ctx.globalAlpha = (0.35 + 0.5 * k) * (0.65 + 0.35 * Math.sin(performance.now() / (60 - k * 25)));
-      ctx.strokeStyle = p.crackColor || CONFIG.colors.charger; ctx.lineWidth = 2;
+      ctx.globalAlpha = (0.35 + 0.5 * k) * (0.65 + 0.35 * Math.sin(CLOCK.sim * 1000 / (60 - k * 25)));
+      ctx.strokeStyle = A11Y.highContrast ? (THEME.dark ? "#fff36b" : "#4b00d1") : (p.crackColor || CONFIG.colors.charger); ctx.lineWidth = A11Y.highContrast ? 4 : 2;
       ctx.beginPath();
       const n = 3 + Math.floor(k * 3);
       for (let ci = 0; ci < n; ci++) {
@@ -3293,7 +3301,7 @@
       // ground changes colour" band is gone. One damage contract, six looks.
       const Wc = CONFIG.warden, gy = CONFIG.world.groundY, bh = H - gy;
       const zc = bossZd.zoneColor || CONFIG.colors.charger;
-      const now = performance.now(), pulse = 0.5 + 0.5 * Math.sin(now / 140);
+      const now = CLOCK.sim * 1000, pulse = 0.5 + 0.5 * Math.sin(now / 140);
       for (const z of bossZd.zones) {
         const zw = z.w || Wc.zoneW, x0 = z.x - zw / 2, active = z.on !== false;
         ctx.save();
@@ -3389,6 +3397,17 @@
           // fallback: the classic banded hazard
           ctx.fillStyle = zc; ctx.globalAlpha = active ? 0.42 : 0.12; ctx.fillRect(x0, gy, zw, bh);
           if (active) { hazardStripes(ctx, x0, gy, zw, bh, "#000", 0.16); hazardStripes(ctx, x0, gy, zw, bh, "#fff", 0.10); }
+        }
+        // Every arming state also has a shape channel: a dashed frame and
+        // repeated chevrons. High contrast changes ink/weight, never timing.
+        const warning = !!(z.arming || z.warn || z.nextOn || z.warnK > 0);
+        if (warning && A11Y.highContrast) {
+          const tell = THEME.dark ? "#fff36b" : "#4b00d1", top = gy - (z.kind === "fire" ? 72 : 48);
+          ctx.globalAlpha = 0.94; ctx.strokeStyle = tell; ctx.lineWidth = 4; ctx.setLineDash([12, 7]);
+          ctx.strokeRect(x0 + 2, top, Math.max(0, zw - 4), gy - top); ctx.setLineDash([]);
+          for (let hx = x0 + 22; hx < x0 + zw - 8; hx += 38) {
+            ctx.beginPath(); ctx.moveTo(hx - 8, gy - 20); ctx.lineTo(hx, gy - 10); ctx.lineTo(hx + 8, gy - 20); ctx.stroke();
+          }
         }
         ctx.restore(); ctx.globalAlpha = 1;
       }
@@ -3564,7 +3583,7 @@
       // arrival ceremony: the bar SWEEPS to full while the name card runs
       if (bossIntro && bossIntro.boss === boss && bossIntro.delay <= 0) bf *= ez(clamp(bossIntro.t / (bossIntro.dur * 0.7), 0, 1));
       UI.bossHud(ctx, { x: bx, y: by, w: bbw, h: bhh, frac: bf, fill: boss.color || CONFIG.colors.boss,
-        phaseMarks: boss.phaseMarks, phaseFlash: boss._phaseFlashT || 0,
+        phaseMarks: boss.phaseMarks, phaseFlash: (boss._phaseFlashT || 0) * A11Y.flashScale,
         guard: boss.guardMeter == null ? null : boss.guardMeter, time: uiT, lowGraphics: lowG });
       if (boss._phaseFlashT > 0) boss._phaseFlashT = Math.max(0, boss._phaseFlashT - lastUiDt);
       // name — epithet · phase tag
@@ -5085,6 +5104,30 @@
     return y;
   }
 
+  function drawAccessibilityRows(fx, rx, y0) {
+    const t = UI.t, m = t.metric, rowH = m.settingsRowH, btnW = m.settingsStepperW;
+    const btnH = m.settingsControlH, block = m.settingsControlW, lo = rx - block;
+    let y = UI.sectionLabel(ctx, "ACCESSIBILITY", fx, y0 + t.space.md, rx - fx);
+    const row = (label, drawControl) => {
+      const cy = y + rowH / 2; UI.text(ctx, label, fx, cy + t.space.xs, t.type.lead); drawControl(cy);
+      UI.divider(ctx, fx, y + rowH, rx - fx); y += rowH;
+    };
+    const save = () => { applySettings(); saveSettings(); };
+    row("Flash intensity", (cy) => {
+      uiButtons.push({ x: lo, y: cy - btnH / 2, w: btnW, h: btnH, label: "−", action: () => { settings.flash = clamp(+((settings.flash == null ? 1 : settings.flash) - 0.25).toFixed(2), 0, 1); save(); } });
+      uiButtons.push({ x: rx - btnW, y: cy - btnH / 2, w: btnW, h: btnH, label: "+", action: () => { settings.flash = clamp(+((settings.flash == null ? 1 : settings.flash) + 0.25).toFixed(2), 0, 1); save(); } });
+      UI.text(ctx, Math.round((settings.flash == null ? 1 : settings.flash) * 100) + "%", (lo + rx) / 2, cy + t.space.xs, t.type.lead, "center");
+    });
+    const toggle = (label, on, action) => row(label, (cy) => {
+      const box = { x: lo, y: cy - btnH / 2, w: block, h: btnH };
+      uiButtons.push(Object.assign({ label: "", _hideBox: true, action }, box)); UI.toggle(ctx, box, on);
+    });
+    toggle("Reduced camera motion", !!settings.reducedMotion, () => { settings.reducedMotion = !settings.reducedMotion; save(); });
+    toggle("High-contrast tells", !!settings.highContrast, () => { settings.highContrast = !settings.highContrast; save(); });
+    UI.tag(ctx, "COMBAT TIMING IS UNCHANGED", fx, y + t.space.md, t.color.muted, "left", t.type.micro);
+    return y + t.space.lg + t.space.sm;
+  }
+
   let renameContext = null, renamePrompted = false;
   function beginRenameFlow(isFirstRun) {
     if (typeof Cloud === "undefined" || !Cloud.loggedIn()) return;
@@ -5199,9 +5242,10 @@
   }
 
   function renderSettings() {
-    const t = UI.t, fx = W / 2 - 280, rx = W / 2 + 280;
+    const t = UI.t, m = t.metric, sh = UI.sheetRect(), fx = sh.x + m.settingsContentInset, rx = sh.x + sh.w - m.settingsContentInset;
+    const colW = (rx - fx - m.settingsColumnGap) / 2, leftRx = fx + colW, rightFx = leftRx + m.settingsColumnGap;
     UI.header(ctx, "SETTINGS", "tune sound, feel, and feedback", eIn, SCREEN_HUES.settings);
-    const yEnd = drawSettingsRows(fx, rx, 182, false);
+    const yEnd = Math.max(drawSettingsRows(fx, leftRx, m.settingsTop, false), drawAccessibilityRows(rightFx, rx, m.settingsTop));
     // device line + a door to the full control chart (Codex ▸ Guide)
     UI.tag(ctx, (Input.touchActive() ? "TOUCH" : "DESKTOP") + " · EFFECTS " + (settings.gfx === "auto" ? "AUTO (" + (GFX.low ? "LOW" : "HIGH") + ")" : settings.gfx.toUpperCase()),
       fx, yEnd + 24, t.color.muted, "left", t.type.micro);
