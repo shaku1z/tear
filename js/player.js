@@ -11,6 +11,8 @@ class Player {
     this.maxHp = CONFIG.player.hp;
     this.oneHit = false;        // Hard difficulty: any hit kills
     this.iframe = 0;
+    this.cinematicProtected = false;   // held while a blocking scene runs (a lock, not a timer)
+    this.cinematicGraceT = 0;          // post-scene visible safety window
 
     this.coyote = 0;
     this.jumpBuf = 0;
@@ -64,7 +66,18 @@ class Player {
 
   // single source of truth for i-frames: dash, hit, shield-absorb, revives, and Backlash
   // all write the one `iframe` timer (via Math.max, so none can shorten another).
-  get invulnerable() { return this.iframe > 0; }
+  // CINEMATIC SAFETY is a SEPARATE channel — never the hit iframe — so a scene can
+  // never leak immunity or blink the player invisible (Pantheon VI P2):
+  //   cinematicProtected — a lock (not a timer) held while a blocking scene runs
+  //   cinematicGraceT    — a short visible safety window after the scene ends
+  get invulnerable() { return this.iframe > 0 || this.cinematicProtected || this.cinematicGraceT > 0; }
+  // count down the safety/hit timers WITHOUT running physics — used while a
+  // blocking cinematic freezes the world, so a pre-scene hit iframe still expires
+  // (and stops blinking) and the grace window drains on schedule.
+  updateSafetyTimers(dt) {
+    if (this.iframe > 0) this.iframe = Math.max(0, this.iframe - dt);
+    if (this.cinematicGraceT > 0) this.cinematicGraceT = Math.max(0, this.cinematicGraceT - dt);
+  }
 
   update(dt, platforms) {
     const P = CONFIG.player, D = CONFIG.dash;
@@ -72,6 +85,7 @@ class Player {
 
     // timers
     if (this.iframe > 0) this.iframe -= dt;
+    if (this.cinematicGraceT > 0) this.cinematicGraceT = Math.max(0, this.cinematicGraceT - dt);
     if (this.dashCd > 0) this.dashCd -= dt;
     if (this.coyote > 0) this.coyote -= dt;
     if (this.jumpBuf > 0) this.jumpBuf -= dt;
@@ -319,6 +333,16 @@ class Player {
     // blink while invulnerable — but NOT during an active dash (the dash's own visual
     // reads state there; blinking is reserved for the post-hit vulnerability tell)
     if (this.iframe > 0 && this.dashTimer <= 0 && Math.floor(this.iframe * 20) % 2 === 0) return;
+
+    // cinematic grace: a subtle floor ring instead of blinking the player out
+    if (this.cinematicGraceT > 0) {
+      const gk = clamp(this.cinematicGraceT / 0.7, 0, 1);
+      ctx.save(); ctx.globalAlpha = 0.28 * gk;
+      ctx.strokeStyle = (typeof CONFIG !== "undefined" && CONFIG.colors) ? CONFIG.colors.perfect : "#13c4d6";
+      ctx.lineWidth = 2; ctx.beginPath();
+      ctx.ellipse(this.x, this.y + this.hh, this.hw + 8, 6, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
 
     // body with subtle squash/stretch from vertical speed
     const v = clamp(this.vy / 2200, -1, 1);

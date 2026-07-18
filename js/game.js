@@ -197,6 +197,12 @@
   let stageName = "";
   let chapterFlow = null;
   let finale = null;
+  // Cinematic safety lock (Pantheon VI P2): protection is a derived lock, not a timer.
+  // cinemaProtectActive mirrors "a blocking scene was live last frame" so the falling
+  // edge can grant the post-scene grace exactly once; lastCinemaPlayerMode lengthens
+  // that grace after a landing beat (the player is mid-fall onto a platform).
+  let cinemaProtectActive = false;
+  let lastCinemaPlayerMode = null;
   function loreBusy() { return !!(run && run.mode === "campaign" && run.chapterState !== "WAVE_LIVE"); }
   // the campaign's opening — shown as a lore card on the first wave of an Adventure run
   const CAMPAIGN_INTRO = "Long ago the sky was torn, and through the wound poured everything that should not be. They named it the Tear. Each soul the Council sent to close it was worn, in time, into the shape of the thing they failed to stop — a guardian of the very wound they meant to end. You are the next to descend. Cut clean. Keep moving. Reach the Source before it wears your shape too.";
@@ -228,14 +234,17 @@
     CINEMA.start({
       id: "chapter-" + index, kind: "chapter", color: stage.accent, blocksCombat: true, hideHud: true,
       hint: "TAP TO REVEAL  ·  HOLD TO SKIP CHAPTER", skipHint: "SKIPPING — BIOME REVEAL PRESERVED",
-      onStart() { player.iframe = Math.max(player.iframe, pages.length * 2.6 + 2); projectiles.length = 0; try { SFX.setMusicDuck(CONFIG.presentation.dialogueDuck, 0.18); } catch (e) {} },
+      onStart() { projectiles.length = 0; try { SFX.setMusicDuck(CONFIG.presentation.dialogueDuck, 0.18); } catch (e) {} },   // protection is held by the derived cinematic lock, not iframe
       onSkip(c, director) { director.skipTo("reveal"); },
       onComplete() {
         flow.state = "WAVE_LIVE"; run.chapterState = "WAVE_LIVE"; chapterFlow = null; stageBannerT = 0;
-        player.iframe = Math.max(player.iframe, 0.45);
-        try { SFX.setMusicDuck(1, 0.7); } catch (e) {}
+        if (run.wavePendingActivation) activatePreparedWave();   // NOW the wave goes live — horn + banner + spawns
+        try { SFX.setMusicDuck(1, 0.7); } catch (e) {}   // release grace comes from the lock's falling edge
       },
-      onCancel() { if (run) run.chapterState = "WAVE_LIVE"; chapterFlow = null; try { SFX.setMusicDuck(1, 0.25); } catch (e) {} },
+      onCancel() {
+        if (run) { run.chapterState = "WAVE_LIVE"; if (run.wavePendingActivation) activatePreparedWave(); }
+        chapterFlow = null; try { SFX.setMusicDuck(1, 0.25); } catch (e) {}
+      },
       beats: [
         { id: "enter", duration: UI.t.motion.chapterIn, playerMode: "locked", onEnter() { flow.state = "LORE_ENTER"; run.chapterState = "LORE_ENTER"; } },
         ...pageBeats,
@@ -296,7 +305,7 @@
     if (run.voidScroll) { run.voidScroll.active = false; run.voidScroll.frozen = true; }
     run.waveActive = false; run.spawnQueue.length = 0; run.chapterState = "WAVE_LIVE";
     worldZoom = CONFIG.finale.worldZoom; worldZoomTarget = CONFIG.finale.worldZoom;
-    player.iframe = 999; player.vx = 0; player.vy = 0; player.onGround = false;
+    player.vx = 0; player.vy = 0; player.onGround = false;   // finale safety is the derived cinematic lock (blocksCombat)
     blade.hostile = false; blade.stolenBy = null; blade.state = "held"; blade.finalFree = true;
     blade.restoredTrail = true;
     const hand = blade.handPos(player); blade.x = hand.x; blade.y = hand.y; blade.vx = 0; blade.vy = 0;
@@ -984,7 +993,7 @@
       onStart() {
         bossBeat = null; owner.breachState = "follow"; owner.breachContactSpent = true;
         projectiles = projectiles.filter((p) => p.owner !== owner);
-        player.iframe = Math.max(player.iframe, C.voidDelay + 1); worldZoomTarget = 1;
+        worldZoomTarget = 1;   // safety is the cinematic lock; no iframe pin
         try { SFX.setMusicDuck(CONFIG.presentation.dialogueDuck, 0.18); SFX.setVoidDescent(0, 0.05); } catch (e) {}
       },
       onSkip(c, director) { unmakeArena(c); director.skipTo("release"); },
@@ -994,7 +1003,7 @@
           vs.forming = false; vs.frozen = false; vs.active = true;
           for (const p of platforms) if (p.void) p.materializationState = "active";
         }
-        owner.beginVoidRun(); player.iframe = Math.max(player.iframe, 0.45);
+        owner.beginVoidRun();
         player.voidTransferT = Math.max(player.voidTransferT || 0, C.voidTransferGrace);
         worldZoomTarget = C.voidCamZoom; run.voidDescent = null;
         try { SFX.setVoidDescent(0, 0.9); SFX.setMusicDuck(1, 0.75); } catch (e) {}
@@ -1065,14 +1074,12 @@
       onStart(c) {
         bossBeat = null; c.owner.cinematicT = 0; c.owner.vx = 0; c.owner.vy = 0;
         projectiles = projectiles.filter((p) => p.owner !== c.owner && !p.bossAttack);
-        player.iframe = Math.max(player.iframe, 2.2);   // (Plan 002 replaces this with cinematicProtected)
-        prepareCrown(c);
+        prepareCrown(c);   // safety is held by player.cinematicProtected (derived from the active lock)
         try { SFX.setMusicDuck(CONFIG.presentation.dialogueDuck, 0.18); } catch (e) {}
         if (cue.sfx && typeof SFX[cue.sfx] === "function") { try { SFX[cue.sfx](); } catch (e) {} }
       },
       onComplete(c) {
         settleCrown(c, 1); c.owner.cinematicPose = null; c.owner.cinematicColor = null; c.owner.cinematicT = 0;
-        player.iframe = Math.max(player.iframe, 0.45);
         if (cue.after === "throwShield" && typeof c.owner._throwShield === "function") c.owner._throwShield(projectiles);
         if (cue.firstVertical && typeof c.owner._chooseVerticalTarget === "function") {
           const target = c.owner._chooseVerticalTarget(player, platforms);
@@ -1104,6 +1111,7 @@
   }
   function stepCinematicPlaying(dt) {
     const mode = CINEMA.playerMode;
+    lastCinemaPlayerMode = mode;   // remembered so the release grace can be longer after a landing
     if (mode === "locked") {
       player.vx *= Math.exp(-10 * dt); player.vy = 0;
     } else if (mode === "float") {
@@ -1141,7 +1149,7 @@
         if (finale && !finale.landed) { finale.landed = true; FX.burst(player.x, landing.y, 0, -1, GFX.low ? 5 : 10, currentStage.accent); SFX.land(); }
       }
     }
-    player.iframe = Math.max(player.iframe, 0.2);
+    player.updateSafetyTimers(dt);   // drain any residual hit-iframe/grace; protection itself is the derived lock
     if (blade) blade.update(dt, player, platforms);
     if (mode === "finalBlade" && finale && finale.phase === "cut" && finale.severed < finale.anchors.length && blade) {
       const a = finale.anchors[finale.severed];
@@ -1807,7 +1815,22 @@
     // attack kinds present this wave — a Chimera adopts these
     const attackKinds = ["charger", "ranged", "flyer", "bomber", "armored"];
     run.waveKinds = Array.from(new Set(run.spawnQueue.map((s) => s.type).filter((t) => attackKinds.includes(t))));
-    run.spawnTimer = R.startDelay;
+    // The spawn queue is PREPARED above; ACTIVATION (spawn timer, wave SFX, banner,
+    // waveActive) is a separate step. A campaign chapter defers activation to its
+    // onComplete so the wave horn/banner never fire over the reading card.
+    if (run.mode === "campaign" && chapterFlow) {
+      run.wavePendingActivation = true; run.waveActive = false;
+    } else {
+      activatePreparedWave();
+    }
+  }
+  // Flip the prepared wave live: only here do spawning, wave/rank timers, the banner,
+  // and the wave SFX begin. Called immediately for non-chapter waves, or from a
+  // campaign chapter's onComplete once the reading is over.
+  function activatePreparedWave() {
+    if (!run) return;
+    run.wavePendingActivation = false;
+    run.spawnTimer = CONFIG.run.startDelay;
     run.waveActive = true;
     run.waveTime = 0; run.waveKills = 0; run.wavePeak = run.mult;
     bannerT = CONFIG.juice.bannerTime;
@@ -2207,7 +2230,19 @@
 
   function stepPlaying(dt) {
     CLOCK.sim += dt;
-    if (CINEMA.active && CINEMA.blocksCombat) { stepCinematicPlaying(dt); return; }
+    // CINEMATIC SAFETY LOCK (Pantheon VI P2): protection is derived from the
+    // director each frame — inherently released once on EVERY terminal path
+    // (complete/skip/cancel/replace/restart/quit/death) because the scene simply
+    // stops being active. On the falling edge we grant the short visible grace.
+    const blocking = CINEMA.active && CINEMA.blocksCombat;
+    if (blocking) { player.cinematicProtected = true; cinemaProtectActive = true; stepCinematicPlaying(dt); return; }
+    if (cinemaProtectActive) {
+      player.cinematicProtected = false;
+      player.cinematicGraceT = Math.max(player.cinematicGraceT,
+        (lastCinemaPlayerMode === "landing" || lastCinemaPlayerMode === "finalLanding") ? 0.70 : 0.45);
+      lastCinemaPlayerMode = null; cinemaProtectActive = false;
+      Input.takeClick(); Input.tJump = false;   // flush the closing tap so it can't also jump/dash/throw
+    }
     // Flow Guard: damage reduction while the trick rank is high (refreshed each step)
     player.flowDR = (run.mods.flowGuard && run.mult >= CONFIG.resilience.flowGuardTier)
       ? CONFIG.resilience.flowGuardMult : 1;
