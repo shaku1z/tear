@@ -187,6 +187,7 @@
   let state = "menu";
   let player, blade, enemies, projectiles, floaters, hitStop, shake;
   let timeScale = 1, slowmo = 0, zoom = 1, flash = 0, bannerT = 0, dashGhostT = 0; // feel/juice
+  let worldZoom = 1, worldZoomTarget = 1;   // sustained camera framing (the void run pulls this OUT)
   let wasSwinging = false, wasDashing = false, wasOnGround = true; // audio cadence
   let landVy = 0;   // peak fall speed while airborne -> scales the landing dust
   let throwCd = 0;            // brief cooldown between blade throws (not recalls)
@@ -552,23 +553,32 @@
       platforms.push(voidPlatform(x, y, w, types[seq++ % types.length]));
       x += w + C.voidGapMin + Math.random() * (C.voidGapMax - C.voidGapMin);
     }
-    run.voidScroll = { active: true, frozen: false, owner, speed: C.scrollSpeed, wispT: 1.8, rescueCd: 0, seq };
+    run.voidScroll = { active: true, frozen: false, owner, speed: C.scrollSpeed, wispT: 1.8, rescueCd: 0, seq, arriveT: C.descentArrival };
     player.x = clamp(player.x, first.x + player.hw, first.x + first.w - player.hw);
-    player.y = first.y - player.hh; player.vy = -180; player.onGround = true; player.iframe = Math.max(player.iframe, 0.9);
+    player.y = first.y - player.hh; player.vy = -180; player.onGround = true; player.iframe = Math.max(player.iframe, 1.1);
+    player.voidSlowT = 0;
     projectiles = projectiles.filter((p) => p.owner !== owner);
-    FX.explode(W / 2, CONFIG.world.groundY, owner.color, 2.2);
+    // THE ARRIVAL: the stream materializes with a rift bloom, not a hard cut
+    FX.explode(W / 2, CONFIG.world.groundY, owner.color, 2.4);
+    for (const p of platforms) if (p.void) FX.ring(p.x + p.w / 2, p.y, 10, owner.color);
+    addFlash(0.55); addShake(9);
+    run.voidDescent = null;   // the descent is complete
   }
   function updateVoidScroll(dt) {
     const vs = run && run.voidScroll;
     if (!vs) return;
     if (vs.rescueCd > 0) vs.rescueCd -= dt;
     const C = CONFIG.source;
+    // THE ARRIVAL grace: the stream materializes and eases into motion (scroll
+    // ramps from 0 over arriveT — the platforms don't lurch on the first frame)
+    if (vs.arriveT > 0) { vs.arriveT -= dt; if (vs.arriveT < 0) vs.arriveT = 0; }
+    const arriveK = vs.arriveT > 0 ? 1 - clamp(vs.arriveT / C.descentArrival, 0, 1) : 1;
     if (vs.active && !vs.frozen) {
       // the run tightens: speed ramps toward the cap over the phase
       vs.speed = Math.min(C.scrollSpeedMax || 260, vs.speed + (C.scrollRamp || 4) * dt);
       const standing = platforms.find((p) => p.void && Math.abs(player.y + player.hh - p.y) < 4 &&
         player.x + player.hw > p.x && player.x - player.hw < p.x + p.w);
-      const dx = -vs.speed * dt;
+      const dx = -vs.speed * arriveK * dt;   // eased in over the arrival grace
       for (const p of platforms) if (p.void) p.x += dx;
       if (standing) player.x += dx;
 
@@ -995,6 +1005,7 @@
     enemies = []; projectiles = []; floaters = [];
     hitStop = 0; shake = 0; FX.reset();
     timeScale = 1; slowmo = 0; zoom = 1; flash = 0; bannerT = 0; dashGhostT = 0; throwCd = 0;
+    worldZoom = 1; worldZoomTarget = 1;
     loadStage(0); stageBannerT = 0; loreT = 0;   // fresh biome 0 (campaign re-stages per wave below)
     run = {
       mode, diff, wave: 0, score: 0, mods: newMods(),
@@ -1764,6 +1775,17 @@
           if (aboss.campT <= 0) aboss.campPlat = null;
         }
       }
+      // THE VOID DESCENT: while the floor is shattering (collapse), pull the
+      // camera out and catch the player in a rising void-updraft — the ground
+      // falls away beneath them, they float, THEN the stream arrives.
+      if (aboss.mode === "collapse" && aboss.voidDelayT > 0) {
+        worldZoomTarget = CONFIG.source.voidCamZoom;
+        if (!run.voidDescent) { run.voidDescent = { t: 0 }; addFlash(0.5); }
+        run.voidDescent.t += dt;
+        // gentle lift so they read as caught by the rift, not falling through
+        if (player.vy > CONFIG.source.descentLiftV) player.vy = lerp(player.vy, CONFIG.source.descentLiftV, clamp(4 * dt, 0, 1));
+        player.iframe = Math.max(player.iframe, 0.2);
+      }
       if (aboss.requestVoid) { aboss.requestVoid = false; startVoidScroll(aboss); }
       if (aboss.freezeVoid && run.voidScroll) { aboss.freezeVoid = false; run.voidScroll.active = false; run.voidScroll.frozen = true; }
       if (aboss.thawVoid && run.voidScroll) {   // TRUE FORM: the conveyor resumes, faster
@@ -2317,6 +2339,7 @@
     if (e.isBoss) {
       // NO SHELTER: give the stage its ground back (the Source keeps its frozen void — it never swapped)
       if (run._preBossPlatforms) { platforms = run._preBossPlatforms; run._preBossPlatforms = null; run._brokenPlats = null; }
+      worldZoomTarget = 1; run.voidDescent = null;   // the void releases the camera when the Source falls
       CG.happytime();   // CrazyGames: a highlight moment
       Backdrop.bloom("#ffffff", 0.22, 0.9); Backdrop.flare(e.x, e.y, currentStage.accent || "#ffffff", 520, 1.0);   // a boss falls: the world flares
       FX.explode(e.x, e.y, e.color, 2.2); FX.explode(e.x, e.y - 20, currentStage.accent || CONFIG.colors.perfect, 1.4);   // a boss DEATH is an event
@@ -2372,7 +2395,10 @@
         else if (bossIntro.delay <= 0) timeScale = Math.min(timeScale, CONFIG.bossTheater.introScale);
       }
       if (bossBeat) { bossBeat.t -= dt; if (bossBeat.t <= 0) bossBeat = null; }
-      zoom = lerp(zoom, 1, clamp(9 * dt, 0, 1));
+      // the punch-in zoom always decays toward the world zoom (1, or the pulled-out
+      // void framing) — so slam-punches still read but the void stays wide
+      worldZoom = lerp(worldZoom, worldZoomTarget, clamp(3 * dt, 0, 1));
+      zoom = lerp(zoom, worldZoom, clamp(9 * dt, 0, 1));
       if (flash > 0) flash = Math.max(0, flash - dt * 3.2);
       if (bannerT > 0) bannerT -= dt;
       if (stageBannerT > 0) stageBannerT -= dt;
@@ -2563,6 +2589,13 @@
         UI.bossPhaseBanner(ctx, { text: bossBeat.text, color: bossBeat.color, alpha: fade });
       }
       if (bossIntro && bossIntro.delay <= 0 && state === "playing") drawBossIntro();   // the arrival ceremony rides over the HUD
+      if (run && run.voidDescent && state === "playing") {   // THE VOID DESCENT: cinematic letterbox as the floor falls away
+        const sr3 = screenRect(), bh3 = clamp(run.voidDescent.t / CONFIG.source.descentLift, 0, 1) * 74;
+        ctx.save(); ctx.globalAlpha = 0.9; ctx.fillStyle = "#06070c";
+        ctx.fillRect(sr3.x, sr3.y, sr3.w, bh3 + Math.max(0, -sr3.y));
+        ctx.fillRect(sr3.x, H - bh3, sr3.w, sr3.h - (H - bh3 - sr3.y));
+        ctx.restore(); ctx.globalAlpha = 1;
+      }
       if (Input.touchActive() && state === "playing" && !(typeof PAD !== "undefined" && PAD.active)) drawTouchControls();   // a live controller hides the thumb controls
       if (loreT > 0) drawLore();
       if (state === "playing" && bannerT > 0) drawBanner();
@@ -2713,10 +2746,12 @@
     ctx.translate(-cx, -cy);
     const biome = run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly" || run.mode === "gauntlet" || run.mode === "tutorial" || run.mode === "playground");
     if (biome) Backdrop.draw(ctx, currentStage, performance.now() / 1000, player ? player.x : W / 2);   // sky + parallax + motes
-    // ARENA DRESSING: each boss stages its own ground (drawn behind platforms)
+    // ARENA DRESSING: each boss stages its own ground (drawn behind platforms).
+    // Suppressed over the void — there is no ground to dress.
+    const voidActive = run && run.voidScroll && (run.voidScroll.active || run.voidScroll.frozen);
     {
       const dboss = enemies.find((e) => e.isBoss && !e.isMiniBoss);
-      if (dboss && !GFX.low) {
+      if (dboss && !GFX.low && !voidActive) {
         const now2 = performance.now(), gy2 = CONFIG.world.groundY;
         ctx.save();
         if (dboss.bossId === "warden") {
@@ -2788,7 +2823,7 @@
     // Made loud on purpose — a bold gradient band, scrolling hazard stripes, and a hot rail
     // when live; a clear dashed "arming" telegraph when not.
     const bossZd = enemies.find((e) => e.isBoss && e.zones && e.zones.length);
-    if (bossZd) {
+    if (bossZd && !voidActive) {   // ground hazards never draw over the void
       // ZONE IDENTITY: every hazard kind wears its own skin — the shared "the
       // ground changes colour" band is gone. One damage contract, six looks.
       const Wc = CONFIG.warden, gy = CONFIG.world.groundY, bh = H - gy;

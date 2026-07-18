@@ -1883,7 +1883,7 @@ class Colossus extends Enemy {
   _throwShield(projectiles) {
     const C = this.cfg;
     const p = new Projectile(this.x + this.facing * (this.hw + 12), this.y, this.facing * C.sweeperSpeed, 0);
-    p.shock = true; p.sweeper = true; p.r = 22; p.dmg = C.sweeperDmg; p.bounces = 999; p.life = 60;
+    p.shock = true; p.sweeper = true; p.sweeperStyle = "saw"; p.r = 22; p.dmg = C.sweeperDmg; p.bounces = 999; p.life = 60;
     p.owner = this; p.tint = CONFIG.colors.armoredShield; p.maxCrossings = C.shieldCrossings; p.embeddedLife = C.shieldEmbedDur;
     projectiles.push(p);
     FX.ring(this.x, this.y, 20, CONFIG.colors.armoredShield);
@@ -2501,6 +2501,10 @@ class Source extends Enemy {
     this.seenTrickT = 0; this.copyKind = "hit"; this.copyT = -1; this.lastCopied = ""; this.copyOffset = 1;
     this.echoCaption = ""; this.captionT = 0; this.bladeCaught = false;
     this.beamState = "idle"; this.beamT = 0; this.beamCd = CONFIG.source.beamCd; this.beamX = CONFIG.view.w + 100;
+    // physical kit: a flash-charge and a converging shard drop
+    this.dashState = "idle"; this.dashT = 0; this.dashCd = CONFIG.source.dashCd; this.dashTX = 0; this.dashTY = 0; this.dashDX = 0; this.dashDY = 0; this.dashGhosts = [];
+    this.collapseState = "idle"; this.collapseWT = 0; this.collapseCd = CONFIG.source.collapseCd;
+    this._burstN = 0; this._burstT = 0;
   }
   get phase() { const f = this.hp / this.maxHp, C = CONFIG.source; return f > C.voidTier ? 1 : (f > C.fakeTier ? 2 : 3); }
   damageTakenMult() { return this.mode === "downed" ? 0.3 : (this.mode === "void" ? 1.2 : 1); }
@@ -2520,9 +2524,9 @@ class Source extends Enemy {
   _sweeper(projectiles, tint) {
     const C = CONFIG.source;
     const p = new Projectile(this.x, Math.min(CONFIG.world.groundY - 24, this.y + 90), -C.sweeperSpeed, 0);
-    p.shock = true; p.sweeper = true; p.r = 22; p.dmg = C.sweeperDmg; p.bounces = 999; p.life = 60;
-    p.owner = this; p.tint = tint || CONFIG.colors.armoredShield; p.maxCrossings = 2; p.embeddedLife = 0.6; projectiles.push(p);
-    FX.ring(this.x, this.y, 18, CONFIG.colors.armoredShield);
+    p.shock = true; p.sweeper = true; p.sweeperStyle = "shard"; p.r = 22; p.dmg = C.sweeperDmg; p.bounces = 999; p.life = 60;
+    p.owner = this; p.tint = tint || this.color; p.maxCrossings = 2; p.embeddedLife = 0.6; projectiles.push(p);
+    FX.ring(this.x, this.y, 18, this.color);
   }
   _cross(projectiles) {
     const C = CONFIG.source;
@@ -2564,12 +2568,73 @@ class Source extends Enemy {
       } else if (m === "colossus") {
         this._sweeper(projectiles, CONFIG.colors.armoredShield); this.echoCaption = "ECHO OF THE COLOSSUS…";
       } else {
-        this._lightFire(); this.echoCaption = "ECHO OF ALDRIC…";
+        // over the void there's no ground for the fire checkerboard — the Aldric
+        // echo becomes a downward shard fan instead
+        if (this.mode === "void") this._cross(projectiles);
+        else this._lightFire();
+        this.echoCaption = "ECHO OF ALDRIC…";
       }
       this.captionT = 1.25;
     }
     if (this.mode === "void") this._cross(projectiles);
     FX.ring(this.x, this.y, 20, this.color);
+  }
+  // RIFT DASH — a telegraphed flash-charge along a line locked to the player.
+  // A chromatic blink (afterimages), not a slow slide. In the void it charges
+  // along the horizontal lane so it shares the arena with the conveyor.
+  _startDash(player) {
+    const C = CONFIG.source;
+    this.dashState = "wind"; this.dashT = C.dashWindup;
+    if (this.mode === "void") { this.dashTX = -1; this.dashTY = 0; }   // sweep leftward across the lane
+    else { const dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1; this.dashTX = dx / m; this.dashTY = dy / m; }
+    perilPing(this);
+    this.echoCaption = "IT LUNGES"; this.captionT = 1.0;
+  }
+  _tickDash(dt, player, projectiles) {
+    const C = CONFIG.source;
+    if (this.dashState === "wind") {
+      this.dashT -= dt; this.vx = lerp(this.vx, 0, clamp(6 * dt, 0, 1)); this.vy = lerp(this.vy, 0, clamp(6 * dt, 0, 1));
+      if (this.dashT <= 0) {
+        this.dashState = "dash"; this.dashT = 0.34;
+        this.dashDX = this.dashTX * C.dashSpeed; this.dashDY = this.dashTY * C.dashSpeed;
+        BOSSFX.juice({ shake: 7, flash: 0.25, quiet: true });
+      }
+    } else if (this.dashState === "dash") {
+      this.dashT -= dt;
+      // chromatic afterimages trail the blink
+      this.dashGhosts.push({ x: this.x, y: this.y, t: 0.24 });
+      this.x += this.dashDX * dt; this.y += this.dashDY * dt;
+      const contact = len(player.x - this.x, player.y - this.y) < this.hw + player.hw + 8;
+      if (contact && !player.invulnerable) { player.takeDamage(C.dashDmg, this.x, this); FX.burst(player.x, player.y, this.dashTX, this.dashTY, 8, this.color); }
+      const off = this.x < -60 || this.x > CONFIG.view.w + 60 || this.y < 40 || this.y > CONFIG.world.groundY + 40;
+      if (this.dashT <= 0 || off) {
+        this.dashState = "idle"; this.dashCd = C.dashCd;
+        this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw); this.y = clamp(this.y, 80, CONFIG.world.groundY - this.hh);
+      }
+    }
+    for (const g of this.dashGhosts) g.t -= dt;
+    this.dashGhosts = this.dashGhosts.filter((g) => g.t > 0);
+  }
+  // RIFT COLLAPSE — teleport above the player, then drop a converging ring of shards
+  _startCollapse(player, projectiles) {
+    const C = CONFIG.source;
+    this.collapseState = "wind"; this.collapseWT = C.collapseWindup;
+    this.x = clamp(player.x, this.hw, CONFIG.view.w - this.hw); this.y = clamp(player.y - 230, 90, 360);
+    FX.ring(this.x, this.y, 22, this.color); this.echoCaption = "RIFT COLLAPSE"; this.captionT = 1.1;
+  }
+  _tickCollapse(dt, player, projectiles) {
+    const C = CONFIG.source;
+    if (this.collapseState !== "wind") return;
+    this.collapseWT -= dt;
+    if (this.collapseWT <= 0) {
+      this.collapseState = "idle"; this.collapseCd = C.collapseCd;
+      for (let i = 0; i < 10; i++) {
+        const a = i / 10 * Math.PI * 2 - Math.PI / 2;
+        const p = new Projectile(this.x + Math.cos(a) * 150, this.y + Math.sin(a) * 90, -Math.cos(a) * C.collapseSpeed, -Math.sin(a) * C.collapseSpeed * 0.6 + 260);
+        p.dmg = C.collapseDmg; p.r = 11; p.tint = this.color; p.owner = this; projectiles.push(p);
+      }
+      BOSSFX.juice({ shake: 8, flash: 0.3, zoom: 0.04 });
+    }
   }
   _hover(dt, player) {
     const tx = this.mode === "void" ? CONFIG.view.w * 0.82 : player.x;
@@ -2588,6 +2653,7 @@ class Source extends Enemy {
       // then the platform stream replaces the world — the fight's centerpiece.
       this.mode = "collapse"; this.collapsing = true; this.collapseT = 0.05;
       this.voidDelayT = C.voidDelay; this.phaseTag = "WORLD UNMAKES";
+      this.zones = []; this.zoneCycleT = 0;   // no ground fire once the floor is going
       bossPhaseBeat(this, "THE WORLD UNMAKES", this.color);
     } else if (ph === 3) {
       // THE KNEEL, on the void: the conveyor freezes mid-air while it gathers
@@ -2680,11 +2746,21 @@ class Source extends Enemy {
       }
     }
 
+    // physical moves run their own state machines (they suppress the hover/cast)
+    if (this.dashState !== "idle") { this._tickDash(dt, player, projectiles); return; }
+    if (this.collapseState !== "idle") { this._tickCollapse(dt, player, projectiles); this._hover(dt, player); return; }
+    this.dashCd -= dt; this.collapseCd -= dt;
+
     this._hover(dt, player);
     this.atkT -= dt;
     if (this.atkT <= 0) {
       this.atkT = C.cycleCd / (this.mode === "void" ? 1.9 : (this.collapsing ? 1.35 : 1));
-      this._cast(projectiles, this.mode === "void" ? 2 : 1);
+      // MOVE BAG: weave the physical moves between ranged casts so the rift isn't
+      // a pure projectile turret. Dash/collapse fire when off cooldown; otherwise
+      // it casts (roughly halving the pure-projectile ratio).
+      if (this.dashCd <= 0 && (this.mode === "void" || Math.random() < 0.7)) this._startDash(player);
+      else if (this.collapseCd <= 0 && Math.random() < 0.6) this._startCollapse(player, projectiles);
+      else this._cast(projectiles, this.mode === "void" ? 2 : 1);
     }
   }
 
@@ -2719,6 +2795,26 @@ class Source extends Enemy {
     ctx.globalAlpha = 0.95; ctx.fillStyle = core; ctx.beginPath(); ctx.arc(0, 0, cr, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = this.dying ? this.deathP : 0.78; ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(0, 0, cr * (this.dying ? 1.8 : 0.46), 0, Math.PI * 2); ctx.fill();
     ctx.restore();
+    // RIFT DASH: chromatic afterimages of the blink, then a lane telegraph on wind
+    for (const g of this.dashGhosts) {
+      const gk = g.t / 0.24; ctx.save(); ctx.globalAlpha = gk * 0.4;
+      ctx.fillStyle = gk > 0.5 ? "#39f0ff" : "#ff4d8d";
+      ctx.fillRect(g.x - w + (gk - 0.5) * 8, g.y - h, w * 2, h * 2); ctx.restore();
+    }
+    if (this.dashState === "wind") {
+      const dk = 1 - clamp(this.dashT / CONFIG.source.dashWindup, 0, 1);
+      const ang = Math.atan2(this.dashTY, this.dashTX);
+      ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(ang);
+      ctx.globalAlpha = 0.2 + 0.35 * dk; ctx.fillStyle = core;
+      ctx.fillRect(0, -18, CONFIG.view.w * 1.4, 36);
+      ctx.globalAlpha = 0.6 + 0.4 * dk; ctx.fillRect(0, -2, CONFIG.view.w * 1.4, 4);
+      ctx.restore();
+    }
+    if (this.collapseState === "wind") {
+      const ck = 1 - clamp(this.collapseWT / CONFIG.source.collapseWindup, 0, 1);
+      for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2 - Math.PI / 2;
+        dangerReticle(ctx, this.x + Math.cos(a) * 150 * (1 - ck * 0.3), this.y + Math.sin(a) * 90 * (1 - ck * 0.3), 14, ck, core); }
+    }
     if (this.beamState === "tell") {
       const k = 1 - clamp(this.beamT / CONFIG.source.beamWarn, 0, 1);
       dangerColumn(ctx, this.beamX, CONFIG.source.beamW, 10, CONFIG.world.groundY, CONFIG.colors.perfect, k);

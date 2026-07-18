@@ -203,12 +203,19 @@ const CONFIG = {
     // the death; the kneel (fake death) happens ON the frozen conveyor
     voidTier: 0.55, fakeTier: 0.28, kneelDur: 3.6, thawSpeedMult: 1.35,
     voidDelay: 1.25,   // phase-2 entry: the whole floor shatters over this window, then the stream begins
+    // THE VOID DESCENT — the cinematic that opens the void run
+    voidCamZoom: 0.80,        // camera pulls this far OUT during the void (wider frame = plan your route)
+    descentLift: 0.75, descentDissolve: 0.65, descentArrival: 0.85,   // the three beats' durations
+    descentLiftV: -520,       // the void-updraft that catches the player during beat 1
     cycleCd: 2.5,           // seconds between mechanic casts (phase 1)
     shockDmg: 18, shockSpeed: 720, shockR: 16,
     sweeperDmg: 18, sweeperSpeed: 600,
     crossDmg: 16, crossSpeed: 740,
     copyDelay: 0.5,
     collapseCd: 1.3, crackWarn: 0.8,
+    // the rift LEARNS TO LUNGE — physical moves woven between the ranged casts
+    dashCd: 5.5, dashWindup: 0.55, dashSpeed: 2050, dashDmg: 22,   // RIFT DASH: a telegraphed flash-charge along a locked line
+    collapseCd: 8.0, collapseWindup: 0.7, collapseDmg: 18, collapseSpeed: 900,   // RIFT COLLAPSE: teleport above, drop a converging shard ring
     scrollSpeed: 170, scrollRamp: 4, scrollSpeedMax: 260,   // the run tightens as it goes
     voidFallDmg: 18, voidSlowMult: 0.58, voidSlowDur: 0.7,
     voidGapMin: 105, voidGapMax: 185, voidPlatformMin: 180, voidPlatformMax: 290,

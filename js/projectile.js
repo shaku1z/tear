@@ -148,19 +148,53 @@ class Projectile {
       const tcol = this.deflected ? (this.perfect ? C.perfect : C.deflected) : (this.tint || (this.shock ? C.slam : this.mud ? C.sludge : this.bomb ? C.bomber : C.enemyShot));
       this._trail(ctx, tcol, dark, lowG);
     }
-    if (this.sweeper) {                    // Colossus's thrown shield arm: a rotating bar of death
+    if (this.sweeper) {
       const col = this.tint || C.armoredShield;
-      ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.embedded ? 0 : performance.now() / 200);
-      ctx.globalAlpha = this.embedded ? 0.62 : 1;
-      if (!lowG && !this.embedded) { ctx.shadowColor = col; ctx.shadowBlur = 12; }
-      ctx.fillStyle = col; ctx.fillRect(-44, -9, 88, 18);
-      ctx.shadowBlur = 0; ctx.strokeStyle = ink; ctx.lineWidth = this.embedded ? 2 : 2.5;
-      if (this.embedded) ctx.setLineDash([6, 4]);
-      ctx.strokeRect(-44, -9, 88, 18); ctx.setLineDash([]);
-      ctx.fillStyle = ink; ctx.fillRect(-6, -6, 12, 12);
-      if (this.embedded) {                  // fixed wall-prongs read as an inert lodged prop
-        ctx.globalAlpha = 0.75; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.moveTo(-44, -14); ctx.lineTo(-44, 14); ctx.moveTo(44, -14); ctx.lineTo(44, 14); ctx.stroke();
+      const rr = 30, t2 = performance.now();
+      ctx.save(); ctx.translate(this.x, this.y);
+      if (this.sweeperStyle === "shard") {
+        // THE SOURCE's echo: a VOID SHARD RING — angular shards orbiting a dark core
+        ctx.rotate(this.embedded ? 0 : t2 / 260);
+        ctx.globalAlpha = this.embedded ? 0.6 : 1;
+        if (!lowG && !this.embedded) { ctx.shadowColor = col; ctx.shadowBlur = 14; }
+        const n = 6;
+        for (let i = 0; i < n; i++) {
+          const a = i / n * Math.PI * 2, px = Math.cos(a) * rr, py = Math.sin(a) * rr;
+          ctx.save(); ctx.translate(px, py); ctx.rotate(a + Math.PI / 4);
+          ctx.fillStyle = col; ctx.beginPath();
+          ctx.moveTo(-9, 0); ctx.lineTo(0, -6); ctx.lineTo(11, 0); ctx.lineTo(0, 6); ctx.closePath(); ctx.fill();
+          ctx.shadowBlur = 0; ctx.strokeStyle = ink; ctx.lineWidth = 1.5; ctx.stroke();
+          ctx.restore();
+        }
+        ctx.shadowBlur = 0; ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 0.9; ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke();
+        ctx.restore(); return;
+      }
+      // THE IRON COLOSSUS: an industrial SAW BLADE — toothed steel disc + hub,
+      // grinding sparks off the leading edge; embedded = bitten into the wall
+      ctx.rotate(this.embedded ? 0.3 : t2 / 90);
+      ctx.globalAlpha = this.embedded ? 0.66 : 1;
+      if (!lowG && !this.embedded) { ctx.shadowColor = col; ctx.shadowBlur = 10; }
+      const teeth = 12;
+      ctx.fillStyle = col; ctx.strokeStyle = ink; ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < teeth; i++) {
+        const a0 = (i / teeth) * Math.PI * 2, a1 = ((i + 0.5) / teeth) * Math.PI * 2;
+        ctx.lineTo(Math.cos(a0) * rr, Math.sin(a0) * rr);            // tooth tip
+        ctx.lineTo(Math.cos(a1) * rr * 0.78, Math.sin(a1) * rr * 0.78); // valley
+      }
+      ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0; ctx.stroke();
+      // hub + bolt holes
+      ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+      if (!this.embedded) {   // spin-blur arc + grind sparks off the rim
+        ctx.globalAlpha = 0.4; ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 0, rr - 3, 0, Math.PI * 1.2); ctx.stroke();
+        if (!lowG) { ctx.globalAlpha = 0.8; ctx.fillStyle = "#ffd66e";
+          for (let s = 0; s < 3; s++) { const sa = t2 / 40 + s * 2.1, sr2 = rr + 3 + (s * 5); ctx.fillRect(Math.cos(sa) * sr2, Math.sin(sa) * sr2, 3, 3); } }
+      } else {   // lodged prongs read it as bitten into the wall
+        ctx.globalAlpha = 0.7; ctx.strokeStyle = ink; ctx.lineWidth = 3; ctx.setLineDash([5, 4]);
+        ctx.beginPath(); ctx.arc(0, 0, rr + 4, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
       }
       ctx.restore(); return;
     }
