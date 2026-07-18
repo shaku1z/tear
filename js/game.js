@@ -2741,11 +2741,21 @@
     const cx = W / 2, cy = H / 2;
     let ox = 0, oy = 0;
     if (shake > 0 && state === "playing") { ox = (Math.random() * 2 - 1) * shake; oy = (Math.random() * 2 - 1) * shake; }
+    // Invert the exact camera transform (sustained Source pull-out + transient
+    // punch + this frame's shake) so biome art paints every visible world pixel.
+    // The small world-space bleed absorbs blur kernels and sub-pixel rounding.
+    const srWorld = screenRect(), cameraScale = Math.max(0.01, zoom), backdropBleed = 56;
+    const backdropView = {
+      left: cx + (srWorld.x - cx - ox) / cameraScale - backdropBleed,
+      top: cy + (srWorld.y - cy - oy) / cameraScale - backdropBleed,
+      right: cx + (srWorld.x + srWorld.w - cx - ox) / cameraScale + backdropBleed,
+      bottom: cy + (srWorld.y + srWorld.h - cy - oy) / cameraScale + backdropBleed,
+    };
     ctx.translate(cx + ox, cy + oy);
     ctx.scale(zoom, zoom);
     ctx.translate(-cx, -cy);
     const biome = run && (run.mode === "campaign" || run.mode === "endless" || run.mode === "bossonly" || run.mode === "gauntlet" || run.mode === "tutorial" || run.mode === "playground");
-    if (biome) Backdrop.draw(ctx, currentStage, performance.now() / 1000, player ? player.x : W / 2);   // sky + parallax + motes
+    if (biome) Backdrop.draw(ctx, currentStage, performance.now() / 1000, player ? player.x : W / 2, backdropView);   // sky + parallax + motes
     // ARENA DRESSING: each boss stages its own ground (drawn behind platforms).
     // Suppressed over the void — there is no ground to dress.
     const voidActive = run && run.voidScroll && (run.voidScroll.active || run.voidScroll.frozen);
