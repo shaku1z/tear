@@ -444,6 +444,14 @@ const UI = {
       ctx.globalAlpha = 1;
       if (push) push({ x: x0 + i * segW, y, w: segW, h, label: "", _hideBox: true, _tab: i });
     });
+    // controller affordance: L1 ‹ … › R1 flanks the strip while a pad owns the UI
+    if (typeof Input !== "undefined" && Input.mode === "gamepad") {
+      ctx.globalAlpha = t.alpha.muted; ctx.fillStyle = t.color.accent;
+      ctx.font = this.font(t.type.micro, true); ctx.textBaseline = "middle";
+      ctx.textAlign = "right"; ctx.fillText("L1 ‹", x0 - 12, y + h / 2);
+      ctx.textAlign = "left"; ctx.fillText("› R1", x0 + total + 12, y + h / 2);
+      ctx.globalAlpha = 1;
+    }
     ctx.textBaseline = "alphabetic";
     return y + h + 10;
   },

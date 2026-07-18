@@ -4585,6 +4585,7 @@
   const CODEX_TABS = [["abilities", "ABILITIES"], ["bestiary", "BESTIARY"], ["guide", "GUIDE"]];
   function renderCodex() {
     const t = UI.t;
+    codexTab = padTabStep(CODEX_TABS, codexTab, () => { listScroll = 0; });   // L1/R1 switch tabs
     UI.title(ctx, "CODEX", W / 2, 92, t.type.h1);
     ctx.fillStyle = SCREEN_HUES.codex; ctx.globalAlpha = eIn; ctx.fillRect(W / 2 - 65 * eIn, 108, 130 * eIn, 3); ctx.globalAlpha = 1;
     UI.tabs(ctx, "codex", CODEX_TABS.map((x) => x[1]), Math.max(0, CODEX_TABS.findIndex((x) => x[0] === codexTab)), 124, (b) => {
@@ -4932,6 +4933,7 @@
   const PROFILE_TABS = [["bests", "BESTS"], ["replays", "REPLAYS"], ["stats", "STATS"]];
   function renderProfile() {
     const t = UI.t, fx = W / 2 - 560, rx = W / 2 + 560;
+    profileTab = padTabStep(PROFILE_TABS, profileTab, () => { listScroll = 0; replayMsg = ""; });   // L1/R1 switch tabs
     UI.title(ctx, "PROFILE", W / 2, 92, t.type.h1);
     ctx.fillStyle = SCREEN_HUES.profile; ctx.globalAlpha = eIn; ctx.fillRect(W / 2 - 65 * eIn, 108, 130 * eIn, 3); ctx.globalAlpha = 1;
 
@@ -5219,6 +5221,7 @@
   const LB_TABS = [["global", "GLOBAL"], ["feed", "FEED"]];
   function renderLeaderboards() {
     const t = UI.t;
+    lbTab = padTabStep(LB_TABS, lbTab, () => { listScroll = 0; replayMsg = ""; });   // L1/R1 switch tabs
     UI.title(ctx, "LEADERBOARDS", W / 2, 92, t.type.h1);
     ctx.fillStyle = SCREEN_HUES.leaderboards; ctx.globalAlpha = eIn; ctx.fillRect(W / 2 - 65 * eIn, 108, 130 * eIn, 3); ctx.globalAlpha = 1;
     UI.tabs(ctx, "lb", LB_TABS.map((x) => x[1]), Math.max(0, LB_TABS.findIndex((x) => x[0] === lbTab)), 124, (b) => {
@@ -6233,7 +6236,7 @@
     if (!list.length) { UI.text(ctx, "No abilities yet — they drop between waves.", px + pw / 2, py + 46, t.type.caption, "center", t.alpha.muted); return; }
     const cardH = 64, gap = 8, rowH = cardH + gap;
     const maxScroll = Math.max(0, list.length * rowH - ph);
-    arsenalScroll = clamp(arsenalScroll + Input.takeWheel(), 0, maxScroll);
+    arsenalScroll = clamp(arsenalScroll + uiScrollDelta(), 0, maxScroll);
     ctx.save(); ctx.beginPath(); ctx.rect(px, py - 4, pw, ph + 8); ctx.clip();
     list.forEach((u, i) => {
       const y = py + i * rowH - arsenalScroll;
@@ -6294,7 +6297,7 @@
     if (!log.length) { UI.text(ctx, "No waves cleared.", px + pw / 2, py + 60, t.type.caption, "center", t.alpha.muted); return; }
     const rowH = 32, top = py + 40, viewH = ph - 44;
     const maxScroll = Math.max(0, log.length * rowH - viewH);
-    arsenalScroll = clamp(arsenalScroll + Input.takeWheel(), 0, maxScroll);
+    arsenalScroll = clamp(arsenalScroll + uiScrollDelta(), 0, maxScroll);
     ctx.save(); ctx.beginPath(); ctx.rect(px, top - 8, pw, viewH + 16); ctx.clip();
     log.forEach((r, i) => {
       const y = top + i * rowH - arsenalScroll;
@@ -6483,10 +6486,33 @@
     }
   }
 
+  // one frame of scroll input for a panel: mouse wheel + touch drag/flick + controller
+  // right stick, plus L2/R2 paging. Consumes the wheel, so call once per active region.
+  function uiScrollDelta(pageSize) {
+    const s = Input.takeUIScroll();
+    let d = s.y;
+    const pg = pageSize || 620;
+    if (Input.ui.pageDown) d += pg;
+    if (Input.ui.pageUp) d -= pg;
+    return d;
+  }
+  // L1/R1 tab stepping for a hub whose tabs are [[key,label,...],...]. No wrap; a nav
+  // sound on change. Returns the (possibly new) key; runs onChange only when it moves.
+  function padTabStep(TABS, curKey, onChange) {
+    const step = (Input.ui.tabNext ? 1 : 0) - (Input.ui.tabPrev ? 1 : 0);
+    if (!step) return curKey;
+    const i = Math.max(0, TABS.findIndex((x) => x[0] === curKey));
+    const ni = i + step;
+    if (ni < 0 || ni >= TABS.length) return curKey;   // boundary: no wraparound
+    try { SFX.ui(); } catch (e) {}
+    if (onChange) onChange(TABS[ni][0]);
+    return TABS[ni][0];
+  }
+
   // unified menu/draft input: mouse hover + click, arrow/WASD nav, Enter/Space, 1/2/3
   function handleUI() {
     if (state === "playing") return;
-    listScroll = clamp(listScroll + Input.takeWheel(), 0, 6000);
+    listScroll = clamp(listScroll + uiScrollDelta(), 0, 6000);
     const enabled = [];
     uiButtons.forEach((b, i) => { if (b.enabled !== false) enabled.push(i); });
     if (!enabled.length) { Input.takeClick(); return; }
