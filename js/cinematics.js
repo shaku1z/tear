@@ -78,7 +78,8 @@ const Cinematics = (() => {
         color: this.script.color, reducedMotion: !!reducedMotion });
       if (b && b.line) ui.dialogueCard(ctx, { speaker: b.speaker, line: b.line, color: b.color || this.script.color,
         amount: Math.min(1, this.elapsed / 0.22), progress: this.progress,
-        hint: this.skipping ? "SKIPPING — THE DESCENT REMAINS PHYSICAL" : "TAP TO ADVANCE  ·  HOLD TO SKIP" });
+        hint: this.skipping ? (this.script.skipHint || "SKIPPING — GAMEPLAY OUTCOME PRESERVED") :
+          (this.script.hint || "TAP TO ADVANCE  ·  HOLD TO SKIP") });
     }
     complete() {
       if (!this.script) return;

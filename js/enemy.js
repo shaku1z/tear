@@ -1469,6 +1469,56 @@ function bossPhaseBeat(boss, title, color) {
   boss._phaseFlashT = 0.7;
 }
 
+// Major pantheon transformations enter the single cinematic channel owned by
+// game.js. Minibosses keep the compact phase banner so endless waves are never
+// interrupted by full campaign theater.
+function bossTransformation(boss, spec) {
+  if (!boss || !spec) return;
+  if (boss.isMiniBoss) { bossPhaseBeat(boss, spec.title || spec.line || "PHASE SHIFT", spec.color); return; }
+  boss.cinematicRequest = Object.assign({ color: boss.color, speaker: boss.bossName, duration: 0.88 }, spec);
+  boss.cinematicPose = spec.pose || "transform"; boss.cinematicColor = spec.color || boss.color; boss._phaseFlashT = 0.7;
+}
+
+// In-world transformation staging. Screen chrome and dialogue remain UI.*
+// territory; these shapes belong to the actors and therefore participate in the
+// camera like every other world effect.
+function drawBossTransformationWorld(ctx, boss) {
+  if (!boss || !boss.cinematicPose) return;
+  const p = clamp(boss.cinematicT || 0, 0, 1), reduced = typeof A11Y !== "undefined" && A11Y.reducedMotion;
+  const pulse = reduced ? 0.62 : 0.5 + 0.5 * Math.sin(CLOCK.sim * 18);
+  const col = boss.cinematicColor || (boss.cinematicRequest && boss.cinematicRequest.color) || boss.color;
+  ctx.save(); ctx.strokeStyle = telegraphInk(col); ctx.fillStyle = col; ctx.lineCap = "round";
+  if (boss.cinematicPose === "wardenRule" || boss.cinematicPose === "wardenBreak") {
+    ctx.globalAlpha = 0.20 + pulse * 0.18; ctx.lineWidth = 5;
+    for (let i = -2; i <= 2; i++) { const x = boss.x + i * 42; ctx.beginPath(); ctx.moveTo(x, boss.y - boss.hh - 90); ctx.lineTo(x + (boss.cinematicPose === "wardenBreak" ? i * 7 * p : 0), boss.y + boss.hh + 35); ctx.stroke(); }
+    ctx.globalAlpha = 0.82; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(boss.x - boss.facing * 42, boss.y + 8);
+    ctx.lineTo(boss.x + boss.facing * (150 + p * 52), boss.y - 44); ctx.stroke();
+    weaponGlint(ctx, boss.x + boss.facing * (150 + p * 52), boss.y - 44, col, pulse);
+  } else if (boss.cinematicPose === "colossusContainment" || boss.cinematicPose === "colossusCore") {
+    ctx.translate(boss.x, boss.y); ctx.lineWidth = 4;
+    for (let i = 0; i < 4; i++) {
+      if (i < Math.floor(p * 4) && boss.cinematicPose === "colossusCore") continue;
+      const r = boss.hw + 22 + i * 19; ctx.globalAlpha = 0.22 + i * 0.09;
+      ctx.strokeRect(-r, -r * 0.78, r * 2, r * 1.56);
+    }
+    ctx.globalAlpha = 0.45 + pulse * 0.35; ctx.fillStyle = boss.cinematicPose === "colossusCore" ? CONFIG.colors.slam : CONFIG.colors.armoredShield;
+    ctx.beginPath(); ctx.arc(0, -4, 15 + pulse * 8, 0, Math.PI * 2); ctx.fill();
+  } else if (boss.cinematicPose === "aldricCrownfall" || boss.cinematicPose === "aldricFeral") {
+    ctx.globalAlpha = 0.28 + pulse * 0.22; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.arc(boss.x, boss.y - 16, boss.hw + 22 + p * 28, -Math.PI * 0.9, Math.PI * 0.1); ctx.stroke();
+    if (boss.cinematicPose === "aldricFeral") weaponGlint(ctx, boss.x + boss.facing * 112, boss.y - 78, CONFIG.colors.bomber, pulse);
+  } else if (boss.cinematicPose === "echoMirror") {
+    const mx = CONFIG.view.w - boss.x; ctx.globalAlpha = 0.34 + pulse * 0.22; ctx.lineWidth = 3; ctx.setLineDash([12, 9]);
+    ctx.beginPath(); ctx.moveTo(CONFIG.view.w / 2, 35); ctx.lineTo(CONFIG.view.w / 2, CONFIG.world.groundY); ctx.stroke(); ctx.setLineDash([]);
+    ctx.globalAlpha = 0.22 + p * 0.25; ctx.strokeRect(mx - boss.hw, boss.y - boss.hh, boss.hw * 2, boss.hh * 2);
+    ctx.beginPath(); ctx.moveTo(boss.x, boss.y); ctx.lineTo(mx, boss.y); ctx.stroke();
+  } else if (boss.cinematicPose === "sourceTrue") {
+    ctx.translate(boss.x, boss.y); ctx.globalAlpha = 0.24 + pulse * 0.22; ctx.lineWidth = 4;
+    for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.ellipse(0, 0, boss.hw * (1.2 + i * 0.5 + p * 0.25), boss.hh * (0.7 + i * 0.22), i * 0.25 + CLOCK.sim * (i % 2 ? -0.4 : 0.4), 0, Math.PI * 2); ctx.stroke(); }
+  }
+  ctx.restore();
+}
+
 // a danger LANE — horizontal commitment for charges / sweeping beams.
 function telegraphInk(color) {
   if (typeof A11Y === "undefined" || !A11Y.highContrast) return color;
@@ -1796,11 +1846,13 @@ class Warden extends Enemy {
       for (let i = 0; i < Wc.zoneCount; i++) this.searchlights.push({ kind: "searchlight", x: 260 + i * (CONFIG.view.w - 520) / Math.max(1, Wc.zoneCount - 1),
         w: Wc.zoneW * 0.72, phase: i * 2.1, fullHeight: true, dmg: Wc.zoneTick, tickCd: Wc.zoneTickCd, on: true });
       this._startLockdown();
-      bossPhaseBeat(this, "THE WARDEN UNCHAINS", this.color);
+      bossTransformation(this, { id: "warden-unchained", title: "THE WARDEN UNCHAINS", pose: "wardenRule",
+        line: "THE RULES ARE ALL THAT REMAIN.", color: this.color, sfx: "wardenLockdown" });
     } else if (ph === 3) {
       this.phaseTag = "NOTHING LEFT"; this.searchlights = []; this.cages = []; this.trails = []; this._syncZones();
       this.state = "fakedeath"; this.stateT = 2.2;   // The Fake: slump, then rise
-      bossPhaseBeat(this, "NOTHING LEFT TO GUARD", CONFIG.colors.charger);
+      bossTransformation(this, { id: "warden-nothing-left", title: "NOTHING LEFT TO GUARD", pose: "wardenBreak",
+        line: "THERE IS NOTHING LEFT TO GUARD.", color: CONFIG.colors.charger, sfx: "wardenLockdown", brief: true });
       // Phase violence enters the same readable fracture lifecycle as standing.
       // Miniboss arenas have no metadata, so this safely becomes a no-op.
       const ow = platforms.filter((p) => p.arenaPlatId && !p.floor && p.arenaState !== "warning");
@@ -1816,6 +1868,7 @@ class Warden extends Enemy {
     this._playerRef = player;
     this.facing = Math.sign(player.x - this.x) || this.facing;
     if (ph !== this.phaseMarker) { this._enterPhase(ph, platforms); this.phaseMarker = ph; }
+    if (this.cinematicRequest) return;
 
     // Searchlights sweep instead of teleporting. Lockdown bars and burning dive seams
     // share the generic zone contract consumed by game.js.
@@ -2188,15 +2241,17 @@ class Colossus extends Enemy {
   }
   _enterPhase(ph, projectiles) {
     if (ph === 2) {
-      this.shielded = false; this.phaseTag = "BREACHED"; this._throwShield(projectiles); this.crossT = 0.8;
-      bossPhaseBeat(this, "THE SHIELD FALLS", CONFIG.colors.armoredShield);
+      this.shielded = false; this.phaseTag = "BREACHED"; this.crossT = 0.8;
+      bossTransformation(this, { id: "colossus-breach", title: "THE SHIELD FALLS", pose: "colossusContainment",
+        speaker: "FOUNDRY WARNING", line: "OUTER CONTAINMENT FAILED.", color: CONFIG.colors.armoredShield, sfx: "colossusServo", after: "throwShield" });
     }
     else if (ph === 3) {
       const C = this.cfg; this.zones = [];
       for (let i = 0; i < C.panelCount; i++) this.zones.push({ kind: "panel", x: 220 + i * (CONFIG.view.w - 440) / (C.panelCount - 1), w: CONFIG.warden.zoneW, on: false, arming: i === 0,
         dmg: CONFIG.warden.zoneTick, tickCd: CONFIG.warden.zoneTickCd });
       this.panelIdx = -1; this.panelStepT = 0.35; this.meltdownCd = C.meltdownCd * 0.65; this.phaseTag = "MELTDOWN";
-      bossPhaseBeat(this, "THE CORE IGNITES", CONFIG.colors.slam);
+      bossTransformation(this, { id: "colossus-meltdown", title: "THE CORE IGNITES", pose: "colossusCore",
+        speaker: "FOUNDRY WARNING", line: "CORE CONTAINMENT: LOST.", color: CONFIG.colors.slam, sfx: "colossusServo" });
     }
   }
 
@@ -2245,6 +2300,7 @@ class Colossus extends Enemy {
     this.facing = Math.sign(player.x - this.x) || this.facing;
     this.exposed = player.y < this.y - this.hh * 0.15;   // attacking from above
     if (ph !== this.phaseMarker) { this._enterPhase(ph, projectiles); this.phaseMarker = ph; }
+    if (this.cinematicRequest) return;
     if (this.introT > 0) {
       const ip = 1 - this.introT / ((CONFIG.bossTheater && CONFIG.bossTheater.introDur) || 1.4);
       if (ip > 0.64 && !this._introBeat) { this._introBeat = true; this._shock(projectiles, 1); this._shock(projectiles, -1); }
@@ -2730,15 +2786,22 @@ class Aldric extends Enemy {
       bossPhaseBeat(this, "THE THRONE BURNS", CONFIG.colors.bomber);
     }
     if (this.mode === "fire" && f < C.fakeTier && !this.faked) { this._enterDowned(); }
+    if (this.cinematicRequest) return;
     tickThroneFire(this, dt);
     for (const z of this.seams) z.life -= dt;
     this.seams = this.seams.filter((z) => z.life > 0); this._syncZones();
     if (this.crown) {
-      this.crown.vy += CONFIG.world.gravity * dt; this.crown.x += this.crown.vx * dt; this.crown.y += this.crown.vy * dt; this.crown.rot += this.crown.vx * dt * 0.018;
-      const floor = CONFIG.world.groundY - 8;
-      if (this.crown.y > floor) {
-        this.crown.y = floor; this.crown.vy *= -0.25; this.crown.vx *= 0.86;
-        if (Math.abs(this.crown.vy) < 55) { this.crown.vy = 0; this.crown.vx *= 0.72; this.crown.state = "fallen"; }
+      const rest = this.crown.restPlatform;
+      if (this.crown.state === "fallen" && rest && platforms.includes(rest)) {
+        this.crown.y = rest.y - 10; this.crown.vx = 0; this.crown.vy = 0;
+      } else {
+        if (this.crown.state === "fallen" && rest && !platforms.includes(rest)) { this.crown.state = "airborne"; this.crown.restPlatform = null; }
+        this.crown.vy += CONFIG.world.gravity * dt; this.crown.x += this.crown.vx * dt; this.crown.y += this.crown.vy * dt; this.crown.rot += this.crown.vx * dt * 0.018;
+        const floor = CONFIG.world.groundY - 8;
+        if (this.crown.y > floor) {
+          this.crown.y = floor; this.crown.vy *= -0.25; this.crown.vx *= 0.86;
+          if (Math.abs(this.crown.vy) < 55) { this.crown.vy = 0; this.crown.vx *= 0.72; this.crown.state = "fallen"; }
+        }
       }
     }
 
@@ -2904,7 +2967,8 @@ class Aldric extends Enemy {
     this.crownWorn = false;
     this.crown = { x: crownPose.x, y: crownPose.y, vx: this.facing * 330, vy: -420, rot: crownPose.rot, state: "airborne", heat: this.crownHeat };
     this.phaseTag = "THE KNEEL";
-    bossPhaseBeat(this, "STRIKE — OR STAND WITNESS", CONFIG.colors.charger);
+    bossTransformation(this, { id: "aldric-crownfall", title: "THE CROWN FALLS", pose: "aldricCrownfall",
+      line: "A THRONE IS ONLY WOOD.", color: CONFIG.colors.bomber, sfx: "aldricIgnite", crownFall: true });
   }
   revive(witnessed) {
     this.mode = "frenzy"; this.faked = true; this.state = "idle"; this.atkT = 0.35; this.phaseTag = witnessed ? "WITNESSED" : "FRENZY";
@@ -2912,7 +2976,11 @@ class Aldric extends Enemy {
     this.chargeT = CONFIG.aldric.chargeCd * 0.45; this.crownfireCd = CONFIG.aldric.crownfireCd * 0.55;
     if (witnessed) { this.witnessEarned = true; this.hp = Math.min(this.hp, this.maxHp * CONFIG.aldric.witnessReviveFrac); }
     else { this.anger = true; this.hp = Math.max(this.hp, this.maxHp * CONFIG.aldric.angerReviveFrac); this.contactDmg *= CONFIG.aldric.angerDamageMult; }
-    this._lightFire(true); bossPhaseBeat(this, witnessed ? "THE LAST CROWN RISES" : "THE BEAST AWAKES", CONFIG.colors.bomber);
+    this._lightFire(true);
+    bossTransformation(this, { id: witnessed ? "aldric-witnessed" : "aldric-angered",
+      title: witnessed ? "THE LAST CROWN RISES" : "THE BEAST AWAKES", pose: "aldricFeral",
+      line: witnessed ? "A KING NEEDS NO THRONE." : "YOU CHOSE THE BEAST.", color: CONFIG.colors.bomber,
+      sfx: "aldricIgnite", brief: true, firstVertical: true });
   }
   _animWeapon(dt) {
     let wt = -0.6, k = 9;
@@ -3075,9 +3143,13 @@ class Echo extends Enemy {
         if (ph === 2) this.spawnClone = true;
         if (ph === 3) this.mode = "invert";
         this.phaseMarker = ph;
-        bossFeedback(this, "phaseTransition", { banner: ph === 2 ? "A SECOND VOICE" : "HARMONY INVERTED", color: CONFIG.colors.eye });
+        bossTransformation(this, { id: ph === 2 ? "echo-second-voice" : "echo-inverted",
+          title: ph === 2 ? "A SECOND VOICE" : "HARMONY INVERTED", pose: "echoMirror",
+          line: ph === 2 ? "I REMEMBER WHEN THAT MOVE WAS MINE." : "NOW REMEMBER IT BACKWARDS.",
+          color: CONFIG.colors.eye, sfx: "echoResonance", brief: ph === 3 });
       }
     }
+    if (this.cinematicRequest) return;
     if (this.mode === "invert") { this._invert(dt, player, projectiles); return; }
 
     // ---- mirror mode (phases 1-2) ----
@@ -3780,7 +3852,8 @@ class Source extends Enemy {
     this.mode = "void"; this.downT = -1; this.thawVoid = true; this.phaseTag = "TRUE FORM";
     this.depthPlane = "rear"; this.depthState = "rearIdle"; this.depthCd = C.depthFirstDelay * 0.55;
     this.color = CONFIG.colors.perfect; this.castIdx = 0; this.atkT = 0.35; this.beamCd = C.beamCd * 0.55;
-    bossPhaseBeat(this, "TRUE FORM", CONFIG.colors.perfect);
+    bossTransformation(this, { id: "source-true-form", title: "TRUE FORM", pose: "sourceTrue",
+      line: "EVERY BLADE RETURNS TO ME.", color: CONFIG.colors.perfect, sfx: "sourceCross" });
   }
   tryCatchBlade(blade, player) {
     if (this.mode !== "void" || this.bladeCaught || !blade || blade.state !== "flying" || blade.hostile) return false;

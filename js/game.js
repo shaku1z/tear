@@ -843,6 +843,70 @@
       ],
     }, context);
   }
+  function startBossTransformation(owner, cue) {
+    if (!owner || !cue || CINEMA.active) return false;
+    const seenKey = "tear.cinematic." + cue.id;
+    let seen = false; try { seen = localStorage.getItem(seenKey) === "1"; } catch (e) {}
+    const brief = !!(cue.brief || seen), scale = brief ? 0.62 : 1;
+    const context = { owner, cue, crownStart: null, crownTarget: null, crownPlatform: null };
+    const prepareCrown = (c) => {
+      const crown = c.owner.crown; if (!c.cue.crownFall || !crown || c.crownStart) return;
+      const below = platforms.filter((p) => (p.oneway || p.floor) && crown.x >= p.x && crown.x <= p.x + p.w && p.y >= crown.y)
+        .sort((a, b) => a.y - b.y)[0];
+      c.crownStart = { x: crown.x, y: crown.y, rot: crown.rot || 0 };
+      c.crownPlatform = below || null;
+      c.crownTarget = { x: below ? clamp(crown.x + owner.facing * 42, below.x + 18, below.x + below.w - 18) : crown.x + owner.facing * 42,
+        y: below ? below.y - 10 : CONFIG.world.groundY - 10 };
+      crown.vx = 0; crown.vy = 0; crown.state = "airborne";
+    };
+    const settleCrown = (c, k) => {
+      if (!c.crownStart || !c.owner.crown) return;
+      const crown = c.owner.crown, reduced = A11Y.reducedMotion;
+      const smooth = reduced ? (k >= 0.82 ? 1 : 0) : k * k * (3 - 2 * k);
+      crown.x = lerp(c.crownStart.x, c.crownTarget.x, smooth);
+      crown.y = lerp(c.crownStart.y, c.crownTarget.y, smooth) - (reduced ? 0 : Math.sin(k * Math.PI) * 62);
+      crown.rot = c.crownStart.rot + owner.facing * smooth * 2.25;
+      if (k >= 1) {
+        crown.state = "fallen"; crown.vx = 0; crown.vy = 0; crown.restPlatform = c.crownPlatform;
+        if (c.crownPlatform && c.crownPlatform.arenaPlatId) c.crownPlatform.arenaFractureRequest = { reason: "crownfall", color: CONFIG.colors.bomber };
+      }
+    };
+    owner.cinematicRequest = null;
+    CINEMA.start({
+      id: cue.id, color: cue.color || owner.color, blocksCombat: true, hideHud: true,
+      hint: brief ? "BRIEF SCENE  ·  HOLD TO SKIP" : "TAP TO ADVANCE  ·  HOLD TO SKIP",
+      skipHint: "SKIPPING — TRANSFORMATION REMAINS SAFE",
+      onStart(c) {
+        bossBeat = null; c.owner.cinematicT = 0; c.owner.vx = 0; c.owner.vy = 0;
+        projectiles = projectiles.filter((p) => p.owner !== c.owner && !p.bossAttack);
+        player.iframe = Math.max(player.iframe, (cue.duration || 0.88) * scale + 1.35);
+        prepareCrown(c);
+        if (cue.sfx && typeof SFX[cue.sfx] === "function") { try { SFX[cue.sfx](); } catch (e) {} }
+      },
+      onComplete(c) {
+        settleCrown(c, 1); c.owner.cinematicPose = null; c.owner.cinematicColor = null; c.owner.cinematicT = 0;
+        player.iframe = Math.max(player.iframe, 0.45);
+        if (cue.after === "throwShield" && typeof c.owner._throwShield === "function") c.owner._throwShield(projectiles);
+        if (cue.firstVertical && typeof c.owner._chooseVerticalTarget === "function") {
+          const target = c.owner._chooseVerticalTarget(player, platforms);
+          if (target) c.owner._startVertical("vault", target, player);
+          else { c.owner.verticalCd = 0; c.owner.verticalTrackT = CONFIG.aldric.verticalResponse; }
+        }
+        try { localStorage.setItem(seenKey, "1"); } catch (e) {}
+      },
+      beats: [
+        { id: "frame", duration: 0.24 * scale, playerMode: "locked",
+          onUpdate(c, d) { c.owner.cinematicT = d.progress * 0.2; } },
+        { id: "declaration", duration: (cue.duration || 0.88) * scale, minDuration: 0.24 * scale,
+          advanceable: true, playerMode: "locked", speaker: cue.speaker || owner.bossName, line: cue.line,
+          onUpdate(c, d) { c.owner.cinematicT = 0.2 + d.progress * 0.42; settleCrown(c, d.progress * 0.48); } },
+        { id: "resolve", duration: 0.46 * scale, playerMode: "locked",
+          onUpdate(c, d) { c.owner.cinematicT = 0.62 + d.progress * 0.38; settleCrown(c, 0.48 + d.progress * 0.52); } },
+        { id: "grace", duration: 0.35, skipScale: 1, playerMode: "locked" },
+      ],
+    }, context);
+    return true;
+  }
   function stepCinematicPlaying(dt) {
     const mode = CINEMA.playerMode;
     if (mode === "locked") {
@@ -2015,6 +2079,7 @@
     }
 
     updateWave(dt);
+    let transformationStarted = false;
     for (const e of enemies) {
       if (e.dying) {
         e.tickTimers(dt);
@@ -2039,7 +2104,12 @@
       }
       if (e.stun > 0) { e.tickTimers(dt); continue; }    // stunned: frozen AI, but timers still tick (tickTimers decrements stun + hitCd — otherwise a stunned enemy freezes its hit-iframe and swallows follow-up combo hits)
       e.update(dt, platforms, player, projectiles);
+      if (e.cinematicRequest && !CINEMA.active) {
+        transformationStarted = startBossTransformation(e, e.cinematicRequest);
+        if (transformationStarted) break;
+      }
     }
+    if (transformationStarted || (CINEMA.active && CINEMA.blocksCombat)) return;
     updateSupports(dt);   // apply War Priest / Herald / Mender / Anchor effects to allies
 
     // ---- status effects: tick bleed/burn, mark decay, and credit DoT kills ----
@@ -3525,6 +3595,7 @@
         e.draw(ctx, player);
       }
     }
+    for (const e of enemies) if (!e.dead && e.cinematicPose && typeof drawBossTransformationWorld === "function") drawBossTransformationWorld(ctx, e);
     // status auras / flames / target-brackets, drawn over each afflicted enemy
     for (const e of enemies) { if (!e.dead && e.depthPlane !== "rear" && e.spawnT <= 0 && (e.bleedStacks > 0 || e.burnT > 0 || e.markT > 0)) drawEnemyStatus(e); }
     // dark biome: a faint light rim keeps dark-bodied enemies (and the player) readable
