@@ -138,6 +138,17 @@ const SFX = {
     this._osc(1300, 0.2, t + 0.04, { type: "sine", vol: 0.1, slideTo: 2200 });
   },
   deflect() { const t = this.ctx.currentTime; this._click(t, 0.1); this._osc(1100, 0.06, t, { type: "square", vol: 0.11, slideTo: 1600 }); },
+  sourceCross() {   // restrained rising void pressure: readable, below RIFT DASH's peril cue
+    if (!this.ctx) return; const t = this.ctx.currentTime;
+    this._osc(240, 0.34, t, { type: "triangle", vol: 0.045, slideTo: 760, attack: 0.025 });
+    this._osc(370, 0.26, t + 0.04, { type: "sine", vol: 0.025, slideTo: 980, attack: 0.02 });
+  },
+  sourceRepel() {   // local membrane snap; intentionally no boom or global flash
+    if (!this.ctx) return; const t = this.ctx.currentTime;
+    this._click(t, 0.11);
+    this._osc(1250, 0.12, t, { type: "square", vol: 0.08, slideTo: 480, attack: 0.001 });
+    this._osc(520, 0.16, t + 0.015, { type: "triangle", vol: 0.06, slideTo: 1040 });
+  },
   throwBlade() {
     const t = this.ctx.currentTime;
     this._noise(0.2, t, { type: "bandpass", freq: 1100, q: 0.6, vol: 0.16 });

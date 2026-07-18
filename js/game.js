@@ -2263,8 +2263,13 @@
     // enemy contact damage
     for (const e of enemies) {
       if (e.dead || e.dying || e.spawnT > 0 || e.introT > 0) continue;
+      if (typeof e.contactDamageEnabled === "function" && !e.contactDamageEnabled(player)) continue;
       if (aabbOverlap(player.x, player.y, player.hw, player.hh, e.x, e.y, e.hw + e.contactReach, e.hh)) {
-        { const r = player.takeDamage(e.contactDmg * (e.chargeMult || 1) * (e.auraDmg || 1), e.x, e);
+        { const contactDmg = typeof e.contactDamageAmount === "function" ? e.contactDamageAmount(player) : e.contactDmg;
+          const r = player.takeDamage(contactDmg * (e.chargeMult || 1) * (e.auraDmg || 1), e.x, e);
+          // The callback observes the attempt as well as the outcome. A dash/iframe
+          // that safely phases a one-shot crossover must not let it hit again later.
+          if (typeof e.onContactDamage === "function") e.onContactDamage(r, player);
           if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb(); }
       }
     }

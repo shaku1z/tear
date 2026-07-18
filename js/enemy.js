@@ -140,6 +140,11 @@ class Enemy {
   blocks() { return false; }            // armored overrides
   blocksDamage() { return false; }      // bosses may gate non-melee damage too
   damageTakenMult() { return 1; }       // armored overrides (ground vs air)
+  // Optional authored contact gate. Most actors always deal body contact; stateful
+  // bosses can close the gate without mutating their difficulty-scaled contactDmg.
+  contactDamageEnabled() { return true; }
+  contactDamageAmount() { return this.contactDmg; }
+  onContactDamage() {}
 
   // turn this into a tougher elite variant
   makeElite() {
@@ -2629,9 +2634,156 @@ class Source extends Enemy {
     this.dashState = "idle"; this.dashT = 0; this.dashCd = CONFIG.source.dashCd; this.dashTX = 0; this.dashTY = 0; this.dashDX = 0; this.dashDY = 0; this.dashGhosts = [];
     this.collapseState = "idle"; this.collapseWT = 0; this.riftCollapseCd = CONFIG.source.riftCollapseCd;
     this._burstN = 0; this._burstT = 0;
+    // SOFT BREACH locomotion is deliberately separate from RIFT DASH. Its line
+    // is captured once, and recoil owns movement long enough for a blade counter
+    // to create real space instead of being erased by the normal hover steering.
+    this.breachState = "follow"; this.breachCd = this._rollBreachCd();
+    this.breachT = 0; this.breachMaxT = 0; this.breachSpeed = 0;
+    this.breachDX = 1; this.breachDY = 0;
+    this.breachCommitX = x; this.breachCommitY = y;
+    this.breachDestX = x; this.breachDestY = y;
+    this.breachStartX = x; this.breachStartY = y;
+    this.breachContactSpent = false; this.breachRepelGraceT = 0;
+    this.breachRecoilVX = 0; this.breachRecoilVY = 0;
+    this.breachNudgeVX = 0; this.breachNudgeVY = 0; this.breachRipple = 0;
   }
   get phase() { const f = this.hp / this.maxHp, C = CONFIG.source; return f > C.voidTier ? 1 : (f > C.fakeTier ? 2 : 3); }
   damageTakenMult() { return this.mode === "downed" ? 0.3 : (this.mode === "void" ? 1.2 : 1); }
+
+  _rollBreachCd() {
+    const C = CONFIG.source;
+    return C.breachIntervalMin + Math.random() * (C.breachIntervalMax - C.breachIntervalMin);
+  }
+  _softBreachBlocked(player) {
+    return this.mode !== "cycle" || this.collapsing || this.voidDelayT > 0 ||
+      this.beamState !== "idle" || this.dashState !== "idle" || this.collapseState !== "idle" ||
+      this.introT > 0 || this.dead || this.dying || this.breachRepelGraceT > 0 ||
+      !!(player && player.voidSlowT > 0);   // a rescue/forced connector is never a breach window
+  }
+  _cancelSoftBreach(extraCd) {
+    if (this.breachState !== "follow") {
+      this.breachState = "follow"; this.breachT = 0; this.breachContactSpent = true;
+      this.breachRecoilVX = 0; this.breachRecoilVY = 0;
+    }
+    this.breachCd = Math.max(this.breachCd, extraCd || 0);
+  }
+  _startSoftBreach(player) {
+    const C = CONFIG.source;
+    let dx = player.x - this.x, dy = player.y - this.y, d = len(dx, dy) || 1;
+    dx /= d; dy /= d;
+    const beyond = C.breachPassMin + Math.random() * (C.breachPassMax - C.breachPassMin);
+    this.breachSpeed = C.breachSpeedMin + Math.random() * (C.breachSpeedMax - C.breachSpeedMin);
+    this.breachDX = dx; this.breachDY = dy;
+    this.breachCommitX = player.x; this.breachCommitY = player.y;
+    this.breachDestX = player.x + dx * beyond; this.breachDestY = player.y + dy * beyond;
+    this.breachStartX = this.x; this.breachStartY = this.y;
+    this.breachState = "tell";
+    this.breachT = C.breachTellMin + Math.random() * (C.breachTellMax - C.breachTellMin);
+    this.breachMaxT = this.breachT;
+    this.breachContactSpent = false; this.vx = 0; this.vy = 0;
+    FX.ring(this.x, this.y, 12, this.color);
+    if (typeof SFX !== "undefined" && SFX.sourceCross) SFX.sourceCross();
+  }
+  _finishSoftBreach() {
+    this.breachState = "follow"; this.breachT = 0; this.breachContactSpent = true;
+    this.breachRecoilVX = 0; this.breachRecoilVY = 0;
+    this.breachCd = this._rollBreachCd();
+    this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
+    this.y = clamp(this.y, 70, CONFIG.world.groundY - this.hh);
+  }
+  _applyBreachNudge(dt) {
+    if (Math.abs(this.breachNudgeVX) + Math.abs(this.breachNudgeVY) < 0.1) {
+      this.breachNudgeVX = 0; this.breachNudgeVY = 0; return;
+    }
+    this.x += this.breachNudgeVX * dt; this.y += this.breachNudgeVY * dt;
+    const damp = Math.exp(-16 * dt);
+    this.breachNudgeVX *= damp; this.breachNudgeVY *= damp;
+  }
+  _tickSoftBreach(dt) {
+    const C = CONFIG.source;
+    if (this.breachState === "tell") {
+      this.breachT -= dt;
+      this.vx = lerp(this.vx, 0, clamp(10 * dt, 0, 1)); this.vy = lerp(this.vy, 0, clamp(10 * dt, 0, 1));
+      this._applyBreachNudge(dt);
+      if (this.breachT <= 0) {
+        const travel = len(this.breachDestX - this.x, this.breachDestY - this.y);
+        this.breachState = "drift";
+        this.breachT = Math.min(C.breachMaxDur, travel / this.breachSpeed + 1 / 60);
+        this.breachMaxT = this.breachT;
+      }
+      return;
+    }
+    if (this.breachState === "drift") {
+      this.breachT -= dt;
+      this.vx = this.breachDX * this.breachSpeed; this.vy = this.breachDY * this.breachSpeed;
+      this.x += this.vx * dt; this.y += this.vy * dt; this._applyBreachNudge(dt);
+      const remain = (this.breachDestX - this.x) * this.breachDX + (this.breachDestY - this.y) * this.breachDY;
+      if (remain <= 0 || this.breachT <= 0) this._finishSoftBreach();
+      return;
+    }
+    if (this.breachState === "recoil") {
+      this.breachT -= dt;
+      this.x += this.breachRecoilVX * dt; this.y += this.breachRecoilVY * dt; this._applyBreachNudge(dt);
+      const damp = Math.exp(-C.breachRecoilDrag * dt);
+      this.breachRecoilVX *= damp; this.breachRecoilVY *= damp;
+      this.vx = this.breachRecoilVX; this.vy = this.breachRecoilVY;
+      this.x = clamp(this.x, -this.hw, CONFIG.view.w + this.hw);
+      this.y = clamp(this.y, 50, CONFIG.world.groundY - this.hh);
+      if (this.breachT <= 0) this._finishSoftBreach();
+    }
+  }
+
+  contactDamageEnabled() {
+    if (this.breachState === "tell" || this.breachState === "recoil") return false;
+    if (this.breachState === "drift") return !this.breachContactSpent;
+    return true;
+  }
+  contactDamageAmount() { return this.breachState === "drift" ? CONFIG.source.breachDmg : this.contactDmg; }
+  onContactDamage() { if (this.breachState === "drift") this.breachContactSpent = true; }
+
+  onBladeImpulse(hit) {
+    if (!hit || !hit.held) return { handled: false };
+    const C = CONFIG.source, speed = hit.tipSpeed || len(hit.tipVX || 0, hit.tipVY || 0);
+    const m = len(hit.tipVX || 0, hit.tipVY || 0) || 1;
+    const nx = (hit.tipVX || 0) / m, ny = (hit.tipVY || 0) / m;
+    // Authored attacks retain authority: a body hit may deal damage, but cannot
+    // cancel the high-threat dash/collapse, a beam, the kneel, or the Void Run.
+    const immune = this.mode !== "cycle" || this.collapsing || this.voidDelayT > 0 ||
+      this.beamState !== "idle" || this.dashState !== "idle" || this.collapseState !== "idle" ||
+      this.introT > 0 || this.dead || this.dying;
+    if (immune) return { handled: true, immune: true };
+
+    if (speed >= C.breachRepelMinSpeed && this.breachRepelGraceT <= 0 && this.breachState !== "recoil") {
+      const k = clamp((speed - C.breachRepelMinSpeed) / 2600, 0, 1);
+      const force = lerp(C.breachRepelVMin, C.breachRepelVMax, k);
+      this.breachState = "recoil";
+      this.breachT = C.breachSteerLockMin + Math.random() * (C.breachSteerLockMax - C.breachSteerLockMin);
+      this.breachMaxT = this.breachT;
+      this.breachDX = nx; this.breachDY = ny;
+      this.breachRecoilVX = nx * force; this.breachRecoilVY = ny * force;
+      this.breachContactSpent = true; this.breachRepelGraceT = C.breachRepelGrace; this.breachRipple = 1;
+      FX.burst(this.x, this.y, nx, ny, 10, this.color); FX.ring(this.x, this.y, 16, CONFIG.colors.perfect);
+      if (typeof SFX !== "undefined" && SFX.sourceRepel) SFX.sourceRepel();
+      return { handled: true, repelled: true, force };
+    }
+
+    // Weak or grace-window cuts only add a capped physical nudge. They never
+    // reset a tell/recoil timer, so rapid taps cannot hold the boss indefinitely.
+    let weakNX = nx, weakNY = ny;
+    if (this.breachState === "tell" || this.breachState === "drift") {
+      // Keep the authored crossover line through the captured player point. A
+      // weak graze may advance/retard it, but only a committed cut can knock it
+      // off that line and cancel the breach outright.
+      const along = nx * this.breachDX + ny * this.breachDY;
+      weakNX = this.breachDX * along; weakNY = this.breachDY * along;
+    }
+    this.breachNudgeVX += weakNX * C.breachWeakNudge; this.breachNudgeVY += weakNY * C.breachWeakNudge;
+    const nm = len(this.breachNudgeVX, this.breachNudgeVY);
+    if (nm > C.breachWeakNudgeCap) {
+      this.breachNudgeVX *= C.breachWeakNudgeCap / nm; this.breachNudgeVY *= C.breachWeakNudgeCap / nm;
+    }
+    return { handled: true, nudged: true };
+  }
   _deathLocked() { return this.mode === "downed"; }   // the kneel cannot be a kill
 
   _shot(player, projectiles, tint) {
@@ -2766,12 +2918,14 @@ class Source extends Enemy {
     this.vx = lerp(this.vx, (tx - this.x) * 1.3, clamp(2 * dt, 0, 1));
     this.vy = lerp(this.vy, (ty - this.y) * 1.3, clamp(2 * dt, 0, 1));
     this.x += this.vx * dt; this.y += this.vy * dt;
+    this._applyBreachNudge(dt);
     this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
     this.y = clamp(this.y, 70, CONFIG.world.groundY - this.hh);
     this.onGround = false;
   }
   _enterPhase(ph) {
     const C = CONFIG.source;
+    this._cancelSoftBreach(C.breachIntervalMin);
     if (ph === 2) {
       // THE VOID RUN begins at the halfway mark: the whole floor shatters fast,
       // then the platform stream replaces the world — the fight's centerpiece.
@@ -2808,6 +2962,8 @@ class Source extends Enemy {
     this.tickTimers(dt);
     this.facing = Math.sign(player.x - this.x) || this.facing;
     const C = CONFIG.source, ph = this.phase;
+    if (this.breachRepelGraceT > 0) this.breachRepelGraceT = Math.max(0, this.breachRepelGraceT - dt);
+    if (this.breachRipple > 0) this.breachRipple = Math.max(0, this.breachRipple - dt * 3.2);
     if (this.captionT > 0) this.captionT -= dt;
     while (this.phaseMarker < ph) { this.phaseMarker++; this._enterPhase(this.phaseMarker); }
     if (this.introT > 0) { this.vx = lerp(this.vx, 0, clamp(5 * dt, 0, 1)); this.vy = lerp(this.vy, 0, clamp(5 * dt, 0, 1)); return; }
@@ -2836,9 +2992,11 @@ class Source extends Enemy {
 
     if (this.zones.length) { this.zoneCycleT -= dt; if (this.zoneCycleT <= 0) { for (const z of this.zones) if (z.kind === "fire") z.on = !z.on; this.zoneCycleT = CONFIG.aldric.fireCycle; } }
     this._scheduleFrom(player);
-    if (this.copyT > 0) { this.copyT -= dt; if (this.copyT <= 0) this._doCopy(player, projectiles); }
+    // A learned move may queue during a crossover, but it cannot fire over the
+    // captured locomotion. Its timer resumes once follow steering returns.
+    if (this.copyT > 0 && this.breachState === "follow") { this.copyT -= dt; if (this.copyT <= 0) this._doCopy(player, projectiles); }
     // the Warden-echo burst: three shots on the baton string's beat
-    if (this._burstN > 0) {
+    if (this._burstN > 0 && this.breachState === "follow") {
       this._burstT -= dt;
       if (this._burstT <= 0) { this._shot(player, projectiles, CONFIG.colors.boss); this._burstN--; this._burstT = 0.18; }
     }
@@ -2870,10 +3028,21 @@ class Source extends Enemy {
       }
     }
 
+    // A soft crossover/recoil owns movement and suppresses the copied cast bag.
+    if (this.breachState !== "follow") { this._tickSoftBreach(dt); return; }
+
     // physical moves run their own state machines (they suppress the hover/cast)
     if (this.dashState !== "idle") { this._tickDash(dt, player, projectiles); return; }
     if (this.collapseState !== "idle") { this._tickCollapse(dt, player, projectiles); this._hover(dt, player); return; }
     this.dashCd -= dt; this.riftCollapseCd -= dt;
+
+    // Cooldown is sampled once per completed cycle. If the player is too far
+    // away, the ready breach waits instead of rerolling or timing out off-screen.
+    const breachRange = len(player.x - this.x, player.y - this.y);
+    if (!this._softBreachBlocked(player) && breachRange <= C.breachStartRange) {
+      this.breachCd -= dt;
+      if (this.breachCd <= 0) { this._startSoftBreach(player); this._tickSoftBreach(dt); return; }
+    }
 
     this._hover(dt, player);
     this.atkT -= dt;
@@ -2893,16 +3062,22 @@ class Source extends Enemy {
     const core = this.mode === "void" ? CONFIG.colors.perfect : this.color;
     const introP = this.introT > 0 ? clamp(1 - this.introT / ((CONFIG.bossTheater && CONFIG.bossTheater.introDur) || 1.4), 0, 1) : 1;
     const deathScale = this.dying ? Math.max(0.04, 1 - this.deathP * 0.92) : 1;
+    const breachTellK = this.breachState === "tell" ? 1 - clamp(this.breachT / (this.breachMaxT || 1), 0, 1) : 0;
+    const breachRecoilK = this.breachState === "recoil" ? clamp(this.breachT / (this.breachMaxT || 1), 0, 1) : 0;
+    const breachA = Math.atan2(this.breachDY, this.breachDX);
     ctx.save();
     ctx.translate(x, y); ctx.scale(deathScale, deathScale);
     // Void wake: particles stream left as if the arena itself is being pulled in.
     for (let i = 0; i < 18; i++) {
-      const a = i / 18 * Math.PI * 2 + t / (850 + i * 17), rr = w * (1.3 + (i % 4) * 0.22) * introP;
+      const a = i / 18 * Math.PI * 2 + t / (850 + i * 17), rr = w * (1.3 + (i % 4) * 0.22) * introP * (1 - breachTellK * 0.24);
       ctx.globalAlpha = 0.15 + (i % 3) * 0.06; ctx.fillStyle = i % 3 ? core : THEME.ink;
       ctx.fillRect(Math.cos(a) * rr - (this.mode === "void" ? 22 : 0), Math.sin(a) * rr, 8 + (i % 4) * 3, 3);
     }
     // Three counter-rotating shard rings make every stolen cast feel housed in a
     // single impossible body rather than a generic caster silhouette.
+    ctx.save(); ctx.rotate(breachA);
+    ctx.transform(1 - breachTellK * 0.22, breachRecoilK * 0.18, -breachRecoilK * 0.08, 1 + breachTellK * 0.10, -breachRecoilK * 12, 0);
+    ctx.rotate(-breachA);
     for (let ring = 0; ring < 3; ring++) {
       const rr = w * (0.58 + ring * 0.34) * introP, spin = t / (620 - ring * 120) * (ring % 2 ? -1 : 1);
       ctx.save(); ctx.rotate(spin); ctx.strokeStyle = ring === 1 ? core : THEME.ink; ctx.lineWidth = 2 + ring;
@@ -2915,10 +3090,43 @@ class Source extends Enemy {
       }
       ctx.restore();
     }
-    const cr = w * 0.36 * (0.82 + 0.18 * Math.sin(t / 100));
-    ctx.globalAlpha = 0.95; ctx.fillStyle = core; ctx.beginPath(); ctx.arc(0, 0, cr, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = this.dying ? this.deathP : 0.78; ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(0, 0, cr * (this.dying ? 1.8 : 0.46), 0, Math.PI * 2); ctx.fill();
     ctx.restore();
+    const cr = w * 0.36 * (0.82 + 0.18 * Math.sin(t / 100));
+    const coreLean = breachTellK * 18 - breachRecoilK * 10;
+    const coreX = this.breachDX * coreLean, coreY = this.breachDY * coreLean;
+    ctx.globalAlpha = 0.95; ctx.fillStyle = core; ctx.beginPath(); ctx.arc(coreX, coreY, cr, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = this.dying ? this.deathP : 0.78; ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(coreX, coreY, cr * (this.dying ? 1.8 : 0.46), 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    // SOFT BREACH: the thin captured line and two anchors communicate where the
+    // Source committed. They never chase a player who changes direction mid-tell.
+    if (this.breachState === "tell") {
+      const k = breachTellK, pulse = 0.55 + 0.45 * Math.sin(k * Math.PI * 5);
+      ctx.save(); ctx.strokeStyle = core; ctx.lineCap = "round";
+      ctx.globalAlpha = 0.22 + 0.35 * k; ctx.lineWidth = 2.2; ctx.setLineDash([12, 10]);
+      ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.breachDestX, this.breachDestY); ctx.stroke();
+      ctx.setLineDash([]); ctx.globalAlpha = 0.45 + 0.35 * k;
+      ctx.beginPath(); ctx.arc(this.breachCommitX, this.breachCommitY, 10 + 13 * k, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 0.5 + 0.4 * pulse; ctx.lineWidth = 3;
+      const tx = this.breachDestX, ty = this.breachDestY, nx = -this.breachDY, ny = this.breachDX;
+      ctx.beginPath(); ctx.moveTo(tx - nx * 18, ty - ny * 18); ctx.lineTo(tx + nx * 18, ty + ny * 18); ctx.stroke();
+      ctx.restore();
+    } else if (this.breachState === "drift") {
+      ctx.save(); ctx.globalAlpha = 0.24; ctx.strokeStyle = core; ctx.lineWidth = 10; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(this.breachStartX, this.breachStartY); ctx.lineTo(this.x, this.y); ctx.stroke();
+      ctx.globalAlpha = 0.7; ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(this.x - this.breachDX * 46, this.y - this.breachDY * 46); ctx.lineTo(this.x, this.y); ctx.stroke();
+      ctx.restore();
+    }
+    if (this.breachRipple > 0) {
+      const k = 1 - this.breachRipple;
+      ctx.save(); ctx.translate(this.x - this.breachDX * 18, this.y - this.breachDY * 18); ctx.rotate(breachA);
+      ctx.globalAlpha = this.breachRipple * 0.7; ctx.strokeStyle = CONFIG.colors.perfect; ctx.lineWidth = 3;
+      for (let i = 0; i < 3; i++) {
+        const rr = 24 + i * 18 + k * 42;
+        ctx.beginPath(); ctx.ellipse(-i * 8, 0, 8 + k * 7, rr, 0, -Math.PI * 0.48, Math.PI * 0.48); ctx.stroke();
+      }
+      ctx.restore();
+    }
     // RIFT DASH: chromatic afterimages of the blink, then a lane telegraph on wind
     for (const g of this.dashGhosts) {
       const gk = g.t / 0.24; ctx.save(); ctx.globalAlpha = gk * 0.4;

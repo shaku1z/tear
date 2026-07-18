@@ -213,6 +213,16 @@ const CONFIG = {
     crossDmg: 16, crossSpeed: 740,
     copyDelay: 0.5,
     platformCollapseCd: 1.3, crackWarn: 0.8,
+    // SOFT BREACH: ordinary pursuit occasionally commits through the player's
+    // captured position. This is blade-repelled locomotion, not RIFT DASH.
+    breachIntervalMin: 3.2, breachIntervalMax: 5.0, breachStartRange: 420,
+    breachTellMin: 0.30, breachTellMax: 0.38,
+    breachPassMin: 160, breachPassMax: 220,
+    breachSpeedMin: 520, breachSpeedMax: 640, breachMaxDur: 1.25, breachDmg: 14,
+    breachRepelMinSpeed: 1500, breachRepelVMin: 760, breachRepelVMax: 1180,
+    breachSteerLockMin: 0.28, breachSteerLockMax: 0.40,
+    breachRepelGrace: 0.65, breachRecoilDrag: 7.5,
+    breachWeakNudge: 150, breachWeakNudgeCap: 220,
     // the rift LEARNS TO LUNGE — physical moves woven between the ranged casts
     dashCd: 5.5, dashWindup: 0.55, dashSpeed: 2050, dashDmg: 22,   // RIFT DASH: a telegraphed flash-charge along a locked line
     riftCollapseCd: 8.0, collapseWindup: 0.7, collapseDmg: 18, collapseSpeed: 900,   // RIFT COLLAPSE: teleport above, drop a converging shard ring
