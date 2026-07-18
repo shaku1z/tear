@@ -255,7 +255,7 @@ const CONFIG = {
     w: 116, h: 132, hp: 4300, speed: 130, contactDmg: 22, knockbackTaken: 0.3, weight: 7,
     atkCd: 1.7, windup: 0.45, lungeSpeed: 1150, shockDmg: 18, shockSpeed: 740, shockR: 20,
     fireTier: 0.65, fakeTier: 0.20, regenRate: 0.05, reviveFrac: 0.5,   // regen 5%/s up to 50% during the fake
-    fireCols: 8, fireCycle: 3.0,                                        // checkerboard of fire, pulses every 3s
+    fireCols: 8, fireCycle: 3.0, fireWarn: 0.8,                         // 2.2s stable + 0.8s authored lane warning
     frenzyDmgTaken: 1.35, downedDmgTaken: 0.3, chargeCd: 9.5, chargeWindup: 0.5, chargeSpeed: 1550,
     rallyWindow: 1.5, recoverableFrac: 0.65, rallyHealPerDamage: 0.55,
     kneelDur: 6.0, witnessReviveFrac: 0.32, angerReviveFrac: 0.55, angerRegenMult: 2.4,

@@ -35,6 +35,7 @@ class Projectile {
     this.counterplay = "deflect";
     this.unparryable = false;
     this.sweeper = false;
+    this.crownfire = false;   // Aldric's royal fire: white core + broad gold shock language
     // Optional boss-pattern metadata. Neutral defaults preserve every legacy projectile.
     this.owner = null;
     this.landingX = null; this.landingY = null; this.landingT = null;
@@ -229,6 +230,38 @@ class Projectile {
       } else {   // lodged prongs read it as bitten into the wall
         ctx.globalAlpha = 0.7; ctx.strokeStyle = ink; ctx.lineWidth = 3; ctx.setLineDash([5, 4]);
         ctx.beginPath(); ctx.arc(0, 0, rr + 4, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      }
+      ctx.restore(); return;
+    }
+    if (this.crownfire) {
+      // CROWNFIRE is not an ordinary orange shot. Ground waves wear a broad royal-
+      // gold crown with a white-hot cutting core; embers carry the same crown mark.
+      const gold = "#f6b817", white = "#fff7d6", t2 = performance.now();
+      ctx.save(); ctx.translate(this.x, this.y);
+      if (!lowG) { ctx.shadowColor = gold; ctx.shadowBlur = this.shock ? 18 : 11; }
+      if (this.shock) {
+        const rr = this.r * 1.75, flick = 0.88 + 0.12 * Math.sin(t2 / 55 + this.x * 0.02);
+        ctx.fillStyle = gold; ctx.globalAlpha = 0.88;
+        ctx.beginPath(); ctx.moveTo(-rr, this.r);
+        ctx.lineTo(-this.r * 0.65, -this.r * 0.2);
+        ctx.lineTo(-this.r * 0.18, -this.r * 1.45 * flick);
+        ctx.lineTo(this.r * 0.12, -this.r * 0.35);
+        ctx.lineTo(this.r * 0.72, -this.r * 0.95 * flick);
+        ctx.lineTo(rr, this.r); ctx.closePath(); ctx.fill();
+        ctx.shadowBlur = 0; ctx.fillStyle = white; ctx.globalAlpha = 0.96;
+        ctx.beginPath(); ctx.moveTo(-this.r * 0.88, this.r * 0.7);
+        ctx.lineTo(0, -this.r * 0.82); ctx.lineTo(this.r * 0.88, this.r * 0.7); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = ink; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.8; ctx.stroke();
+      } else {
+        ctx.rotate(t2 / 260);
+        ctx.fillStyle = gold; ctx.globalAlpha = 0.92; ctx.beginPath();
+        for (let i = 0; i < 12; i++) {
+          const a = i / 12 * Math.PI * 2, rr = i % 2 ? this.r * 0.92 : this.r * 1.45;
+          ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+        }
+        ctx.closePath(); ctx.fill();
+        ctx.shadowBlur = 0; ctx.fillStyle = white; ctx.beginPath(); ctx.arc(0, 0, this.r * 0.58, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = ink; ctx.lineWidth = 1.5; ctx.stroke();
       }
       ctx.restore(); return;
     }

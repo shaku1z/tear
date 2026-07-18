@@ -3253,28 +3253,58 @@
               ctx.quadraticCurveTo(sx2 + 7, gy - off - 16, sx2, gy - off - 30); ctx.stroke();
             }
           }
-        } else if (z.kind === "fire" || z.kind === "seam" || z.kind === "trail") {
-          // THRONE FIRE / burning residue: real flame tongues + embers, char when cold
-          const fc = CONFIG.colors.bomber, hot = active;
-          if (hot) {
-            for (let i = 0; i < Math.max(2, Math.floor(zw / 46)); i++) {
-              const fx2 = x0 + (i + 0.5) * (zw / Math.max(2, Math.floor(zw / 46)));
-              const fh = 34 + Math.sin(now / 95 + i * 2.4 + z.x) * 12 + (z.kind === "fire" ? 18 : 0);
-              ctx.globalAlpha = 0.75; ctx.fillStyle = fc;
-              ctx.beginPath(); ctx.moveTo(fx2 - 12, gy); ctx.quadraticCurveTo(fx2 - 4, gy - fh * 0.55, fx2 + Math.sin(now / 70 + i) * 5, gy - fh);
-              ctx.quadraticCurveTo(fx2 + 6, gy - fh * 0.5, fx2 + 12, gy); ctx.closePath(); ctx.fill();
-              ctx.globalAlpha = 0.85; ctx.fillStyle = "#ffd66e";
-              ctx.beginPath(); ctx.moveTo(fx2 - 5, gy); ctx.quadraticCurveTo(fx2, gy - fh * 0.45, fx2 + Math.sin(now / 60 + i * 3) * 3, gy - fh * 0.62);
-              ctx.quadraticCurveTo(fx2 + 3, gy - fh * 0.3, fx2 + 5, gy); ctx.closePath(); ctx.fill();
-              const ey = gy - ((now / 9 + i * 67) % 90);   // rising ember
-              ctx.globalAlpha = 0.7; ctx.fillStyle = "#ffd66e"; ctx.fillRect(fx2 + Math.sin(now / 120 + i) * 9, ey, 3, 3);
+        } else if (z.kind === "fire") {
+          // THRONE FIRE: tall lane flame when live; during the final 0.8s the
+          // upcoming lane owns an amber rail, rising shimmer, then a white commit.
+          const fc = CONFIG.colors.bomber, warning = !!z.warn, wk = clamp(z.warnK || 0, 0, 1);
+          ctx.globalAlpha = 0.48; ctx.fillStyle = "#1c1514"; ctx.fillRect(x0, gy, zw, 12);
+          if (active) {
+            const count = GFX.low ? 2 : Math.max(3, Math.floor(zw / 34));
+            for (let i = 0; i < count; i++) {
+              const fx2 = x0 + (i + 0.5) * zw / count, fh = 48 + Math.sin(now / 85 + i * 2.4 + z.x) * 14;
+              ctx.globalAlpha = 0.78; ctx.fillStyle = fc;
+              ctx.beginPath(); ctx.moveTo(fx2 - 12, gy); ctx.quadraticCurveTo(fx2 - 5, gy - fh * 0.5, fx2 + Math.sin(now / 68 + i) * 5, gy - fh);
+              ctx.quadraticCurveTo(fx2 + 7, gy - fh * 0.45, fx2 + 12, gy); ctx.closePath(); ctx.fill();
             }
-            ctx.globalAlpha = 0.5; ctx.fillStyle = fc; ctx.fillRect(x0, gy - 2, zw, 4);
-          } else {
-            // cold: charred ground + a smolder line (the arena remembers)
-            ctx.globalAlpha = 0.5; ctx.fillStyle = "#1c1a1e"; ctx.fillRect(x0, gy, zw, 12);
-            ctx.globalAlpha = 0.25 + 0.2 * pulse; ctx.fillStyle = fc; ctx.fillRect(x0, gy - 1, zw, 2);
+            // Stable lane boundaries make the safe/hot column legible while moving.
+            ctx.globalAlpha = 0.72; ctx.strokeStyle = "#ffd66e"; ctx.lineWidth = 3;
+            for (const bx of [x0 + 2, x0 + zw - 2]) { ctx.beginPath(); ctx.moveTo(bx, gy); ctx.lineTo(bx, gy - 62); ctx.stroke(); }
           }
+          if (warning) {
+            const nearCommit = wk > 0.78;
+            ctx.globalAlpha = 0.65 + wk * 0.3; ctx.fillStyle = nearCommit ? "#fff7d6" : "#e5a62d";
+            ctx.fillRect(x0 + 3, gy - 5, zw - 6, nearCommit ? 6 : 4);   // low-effects keeps the essential rail
+            ctx.globalAlpha = 0.2 + wk * 0.28; ctx.fillStyle = "#e5a62d";
+            ctx.fillRect(x0 + 5, gy - 10 - wk * 12, zw - 10, 8 + wk * 12);   // heat shimmer block
+            if (!GFX.low) for (let i = 0; i < 4; i++) {
+              const ex2 = x0 + (i + 0.5) * zw / 4, ey2 = gy - 10 - ((now / 7 + i * 31) % (30 + wk * 50));
+              ctx.globalAlpha = 0.4 + wk * 0.4; ctx.fillStyle = nearCommit ? "#fff" : "#ffd66e"; ctx.fillRect(ex2, ey2, 3, 3);
+            }
+          } else {
+            ctx.globalAlpha = active ? 0.78 : 0.25 + 0.18 * pulse; ctx.fillStyle = active ? "#fff0bc" : fc;
+            ctx.fillRect(x0 + 2, gy - (active ? 4 : 2), zw - 4, active ? 4 : 2);
+          }
+        } else if (z.kind === "seam") {
+          // CLEAVER SEAM: a low, directional fissure. It never impersonates the
+          // vertical floor columns and visibly exhausts its authored lifetime.
+          const lifeK = clamp(z.life / (z.maxLife || CONFIG.aldric.seamLife), 0, 1), dir = z.dir || 1;
+          ctx.globalAlpha = 0.24 + lifeK * 0.68; ctx.strokeStyle = CONFIG.colors.bomber; ctx.lineWidth = 5;
+          ctx.beginPath(); ctx.moveTo(x0, gy - 2);
+          for (let i = 1; i <= 6; i++) ctx.lineTo(x0 + zw * i / 6, gy - 2 - ((i % 2) ? 5 * lifeK : 0));
+          ctx.stroke();
+          ctx.globalAlpha = 0.65 * lifeK; ctx.fillStyle = "#ffd66e";
+          for (let i = 1; i < 5; i++) {
+            const sx2 = x0 + zw * i / 5, tip = sx2 + dir * 8;
+            ctx.beginPath(); ctx.moveTo(sx2 - dir * 5, gy - 10); ctx.lineTo(tip, gy - 5); ctx.lineTo(sx2 - dir * 5, gy); ctx.closePath(); ctx.fill();
+          }
+          if (!GFX.low) { const ex2 = x0 + ((now / 5 + z.x) % zw); ctx.globalAlpha = 0.6 * lifeK; ctx.fillRect(ex2, gy - 18 - 12 * pulse, 3, 3); }
+        } else if (z.kind === "trail") {
+          // WARDEN TRAIL: a custody strip with marching barred light, not flame.
+          const lifeK = clamp(z.life / (z.maxLife || CONFIG.warden.trailLife || 1), 0, 1);
+          ctx.globalAlpha = 0.16 + lifeK * 0.25; ctx.fillStyle = zc; ctx.fillRect(x0, gy - 8, zw, 16);
+          ctx.globalAlpha = 0.65 * lifeK; ctx.strokeStyle = "#f4ecc9"; ctx.lineWidth = 2;
+          for (let i = 0; i < 5; i++) { const bx2 = x0 + ((i * 29 + now / 18) % Math.max(1, zw)); ctx.beginPath(); ctx.moveTo(bx2, gy - 10); ctx.lineTo(bx2 + 8, gy + 8); ctx.stroke(); }
+          ctx.globalAlpha = 0.8 * lifeK; ctx.fillStyle = zc; ctx.fillRect(x0, gy - 2, zw, 4);
         } else {
           // fallback: the classic banded hazard
           ctx.fillStyle = zc; ctx.globalAlpha = active ? 0.42 : 0.12; ctx.fillRect(x0, gy, zw, bh);

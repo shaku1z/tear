@@ -149,6 +149,16 @@ const SFX = {
     this._osc(1250, 0.12, t, { type: "square", vol: 0.08, slideTo: 480, attack: 0.001 });
     this._osc(520, 0.16, t + 0.015, { type: "triangle", vol: 0.06, slideTo: 1040 });
   },
+  aldricFireWarn(step) {   // restrained three-count: the floor is the primary tell
+    if (!this.ctx) return; const t = this.ctx.currentTime, i = clamp(step | 0, 0, 2);
+    this._click(t, 0.035 + i * 0.012);
+    this._osc(330 + i * 105, 0.09, t, { type: "triangle", vol: 0.035 + i * 0.008, slideTo: 420 + i * 135, attack: 0.004 });
+  },
+  aldricIgnite() {   // dry ignition crack + a brief royal-gold body, never a global boom
+    if (!this.ctx) return; const t = this.ctx.currentTime;
+    this._noise(0.075, t, { type: "bandpass", freq: 2200, q: 0.8, vol: 0.075 });
+    this._osc(170, 0.13, t, { type: "sawtooth", vol: 0.055, slideTo: 95, attack: 0.002 });
+  },
   throwBlade() {
     const t = this.ctx.currentTime;
     this._noise(0.2, t, { type: "bandpass", freq: 1100, q: 0.6, vol: 0.16 });

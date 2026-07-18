@@ -1746,7 +1746,7 @@ class Warden extends Enemy {
       this.trailDropT -= dt;
       if (this.trailDropT <= 0) {
         this.trailDropT = 0.11;
-        this.trails.push({ kind: "trail", x: this.x, w: 82, life: Wc.trailLife, dmg: Wc.zoneTick, tickCd: Wc.zoneTickCd, on: true });
+        this.trails.push({ kind: "trail", x: this.x, w: 82, life: Wc.trailLife, maxLife: Wc.trailLife, dmg: Wc.zoneTick, tickCd: Wc.zoneTickCd, on: true });
         FX.ember(this.x, this.y, CONFIG.colors.charger);
       }
       const gy = CONFIG.world.groundY;
@@ -2184,6 +2184,77 @@ class Colossus extends Enemy {
   }
 }
 
+// THRONE FIRE is a single deterministic sequencer shared by Aldric and the Source's
+// copied ground cycle. Pattern A (even columns) is always the documented opener:
+// 2.2s stable -> 0.8s warning for B -> atomic B commit, then the inverse.
+function syncThroneFire(owner) {
+  const seams = Array.isArray(owner.seams) ? owner.seams : [];
+  owner.zones = (owner.fireZones || []).concat(seams);
+}
+function applyThroneFire(owner) {
+  const warning = owner.fireState === "warning";
+  const warnDur = Math.max(0.001, CONFIG.aldric.fireWarn);
+  const warnK = warning ? clamp(1 - owner.fireClock / warnDur, 0, 1) : 0;
+  for (const z of owner.fireZones || []) {
+    z.on = z.patternIndex === owner.firePattern;
+    z.nextOn = z.patternIndex === (owner.firePattern ^ 1);
+    z.warn = warning && z.nextOn;
+    z.warnK = z.warn ? warnK : 0;
+  }
+  owner.zoneCycleT = owner.fireClock;   // legacy/debug clock now mirrors the explicit state
+  syncThroneFire(owner);
+}
+function playThroneFireWarning(owner) {
+  if (owner.fireState !== "warning") return;
+  const k = clamp(1 - owner.fireClock / Math.max(0.001, CONFIG.aldric.fireWarn), 0, 1);
+  const thresholds = [0, 0.42, 0.78];
+  while (owner.fireWarnStep < 2 && k + 1e-6 >= thresholds[owner.fireWarnStep + 1]) {
+    owner.fireWarnStep++;
+    if (typeof SFX !== "undefined" && SFX.aldricFireWarn) SFX.aldricFireWarn(owner.fireWarnStep);
+  }
+}
+function startThroneFire(owner, preservePattern) {
+  const C = CONFIG.aldric, colW = CONFIG.view.w / C.fireCols;
+  if (!preservePattern || !Number.isInteger(owner.firePattern)) owner.firePattern = 0;
+  owner.firePattern &= 1;
+  owner.fireState = "stable";
+  owner.fireClock = Math.max(0.001, C.fireCycle - C.fireWarn);
+  owner.fireWarnStep = -1;
+  owner.fireZones = [];
+  for (let i = 0; i < C.fireCols; i++) owner.fireZones.push({
+    kind: "fire", x: (i + 0.5) * colW, w: colW, patternIndex: i & 1,
+    on: false, nextOn: false, warn: false, warnK: 0,
+    dmg: CONFIG.warden.zoneTick, tickCd: CONFIG.warden.zoneTickCd,
+  });
+  applyThroneFire(owner);
+}
+function clearThroneFire(owner, preservePattern) {
+  owner.fireZones = [];
+  owner.fireState = "idle"; owner.fireClock = 0; owner.zoneCycleT = 0; owner.fireWarnStep = -1;
+  if (!preservePattern) owner.firePattern = 0;
+  syncThroneFire(owner);
+}
+function tickThroneFire(owner, dt) {
+  if (!owner.fireZones || !owner.fireZones.length || owner.fireState === "idle") return;
+  const C = CONFIG.aldric, stableDur = Math.max(0.001, C.fireCycle - C.fireWarn), warnDur = Math.max(0.001, C.fireWarn);
+  let remaining = Math.max(0, dt), guard = 0;
+  while (remaining > 0 && guard++ < 8) {
+    const slice = Math.min(remaining, Math.max(0, owner.fireClock));
+    owner.fireClock -= slice; remaining -= slice;
+    if (owner.fireState === "warning") playThroneFireWarning(owner);
+    if (owner.fireClock > 1e-8) break;
+    if (owner.fireState === "stable") {
+      owner.fireState = "warning"; owner.fireClock = warnDur; owner.fireWarnStep = -1;
+      playThroneFireWarning(owner);
+    } else {
+      owner.firePattern ^= 1; owner.fireState = "stable"; owner.fireClock = stableDur; owner.fireWarnStep = -1;
+      if (typeof SFX !== "undefined" && SFX.aldricIgnite) SFX.aldricIgnite();
+    }
+    applyThroneFire(owner);
+  }
+  applyThroneFire(owner);
+}
+
 // ---- The Berserker King / Aldric (Stage 3 boss): a duel -> a throne of fire -> a fake death & frenzy ----
 class Aldric extends Enemy {
   constructor(x, y) {
@@ -2192,10 +2263,11 @@ class Aldric extends Enemy {
     this.kind = "boss"; this.isBoss = true; this.bossName = "ALDRIC";
     this.epithet = "THE BERSERKER KING"; this.phaseMarks = [0.65, 0.20]; this.phaseTag = "THE DUEL";
     this.mode = "duel"; this.state = "idle"; this.stateT = 0; this.atkT = 1.6; this.facing = 1;
-    this.zones = []; this.zoneColor = CONFIG.colors.bomber; this.zoneCycleT = 0;   // checkerboard fire
+    this.zones = []; this.zoneColor = CONFIG.colors.bomber; this.zoneCycleT = 0;
     this.spawnAdds = false; this.faked = false; this.reviveCap = 0; this.chargeT = 0;
     this.weaponA = -0.6; this.weaponPrevA = -0.6;
-    this.fireZones = []; this.seams = []; this.kneelT = 0; this.kneelStruck = false; this.anger = false;
+    this.fireZones = []; this.seams = []; this.firePattern = 0; this.fireState = "idle"; this.fireClock = 0; this.fireWarnStep = -1;
+    this.kneelT = 0; this.kneelStruck = false; this.anger = false;
     this.crown = null; this.crownfireCd = CONFIG.aldric.crownfireCd; this.chainLeft = 0; this.ghostT = 0; this.seamDropT = 0;
     this._playerRef = null; this.witnessEarned = false;
     this.overheadCd = CONFIG.aldric.overheadCd; this.overTX = 0;   // OVERHEAD CLEAVER
@@ -2217,17 +2289,12 @@ class Aldric extends Enemy {
     const C = CONFIG.aldric, footY = this.y + this.hh;
     const p = new Projectile(this.x + dir * this.hw * 0.7, footY - C.shockR, dir * C.shockSpeed, 0);
     p.setFamily("groundShock"); p.r = C.shockR; p.dmg = C.shockDmg; p.life = 2.0; p.owner = this;
-    p.tint = fire ? CONFIG.colors.bomber : CONFIG.colors.charger;
+    p.tint = fire ? CONFIG.colors.bomber : CONFIG.colors.charger; p.crownfire = !!fire;
     projectiles.push(p);
   }
-  _lightFire() {
-    const C = CONFIG.aldric, colW = CONFIG.view.w / C.fireCols; this.fireZones = [];
-    for (let i = 0; i < C.fireCols; i++) this.fireZones.push({ kind: "fire", x: (i + 0.5) * colW, w: colW, on: i % 2 === 0,
-      dmg: CONFIG.warden.zoneTick, tickCd: CONFIG.warden.zoneTickCd });
-    this.zoneCycleT = C.fireCycle;
-    this._syncZones();
-  }
+  _lightFire(preservePattern) { startThroneFire(this, !!preservePattern); }
   _syncZones() { this.zones = this.fireZones.concat(this.seams); }
+  onDeathStart() { clearThroneFire(this, true); this.seams = []; this._syncZones(); }
 
   update(dt, platforms, player, projectiles) {
     this.tickTimers(dt);
@@ -2241,8 +2308,7 @@ class Aldric extends Enemy {
       bossPhaseBeat(this, "THE THRONE BURNS", CONFIG.colors.bomber);
     }
     if (this.mode === "fire" && f < C.fakeTier && !this.faked) { this._enterDowned(); }
-    // checkerboard pulse
-    if (this.fireZones.length) { this.zoneCycleT -= dt; if (this.zoneCycleT <= 0) { for (const z of this.fireZones) z.on = !z.on; this.zoneCycleT = C.fireCycle; } }
+    tickThroneFire(this, dt);
     for (const z of this.seams) z.life -= dt;
     this.seams = this.seams.filter((z) => z.life > 0); this._syncZones();
     if (this.crown) {
@@ -2279,7 +2345,7 @@ class Aldric extends Enemy {
         this.x = CONFIG.view.w / 2; this.y = gy; this._shock(projectiles, 1, true); this._shock(projectiles, -1, true);
         for (let i = 0; i < 7; i++) {
           const a = Math.PI + i / 6 * Math.PI, p = new Projectile(this.x, this.y - 35, Math.cos(a) * C.emberSpeed, Math.sin(a) * C.emberSpeed - 120);
-          p.gravity = 520; p.dmg = C.emberDmg; p.r = 10; p.tint = CONFIG.colors.bomber; p.kind = "orb"; p.owner = this; projectiles.push(p);
+          p.gravity = 520; p.dmg = C.emberDmg; p.r = 10; p.tint = CONFIG.colors.bomber; p.kind = "orb"; p.crownfire = true; p.owner = this; projectiles.push(p);
         }
         FX.explode(this.x, this.y + this.hh, CONFIG.colors.bomber, 1.35);
         BOSSFX.juice({ banner: "CROWNFIRE", color: CONFIG.colors.bomber, shake: 12, flash: 0.4, slowmo: 0.4, zoom: 0.07 });
@@ -2306,7 +2372,7 @@ class Aldric extends Enemy {
       if (this.y >= CONFIG.world.groundY - this.hh) {
         this.y = CONFIG.world.groundY - this.hh; this.onGround = true;
         if (Math.abs(player.x - this.x) < C.overheadRange && !player.invulnerable) player.takeDamage(C.overheadDmg, this.x, this);
-        this.seams.push({ kind: "seam", x: this.x, w: 110, life: C.seamLife, on: true, dmg: CONFIG.warden.zoneTick, tickCd: CONFIG.warden.zoneTickCd });
+        this.seams.push({ kind: "seam", x: this.x, w: 110, life: C.seamLife, maxLife: C.seamLife, dir: this.facing, on: true, dmg: CONFIG.warden.zoneTick, tickCd: CONFIG.warden.zoneTickCd });
         FX.explode(this.x, this.y + this.hh, CONFIG.colors.bomber, 1.3); FX.shockwave(this.x, this.y + this.hh, 12, CONFIG.colors.bomber, 240, 6);
         BOSSFX.juice({ banner: "OVERHEAD", color: CONFIG.colors.bomber, shake: 12, flash: 0.4, slowmo: 0.4, zoom: 0.06, hitstop: 0.05 });
         this.state = "recover"; this.stateT = 0.55;
@@ -2316,7 +2382,7 @@ class Aldric extends Enemy {
     if (this.state === "charge") {
       this.x += this.vx * dt;
       this.seamDropT -= dt;
-      if (this.seamDropT <= 0) { this.seamDropT = 0.12; this.seams.push({ kind: "seam", x: this.x, w: 76, life: C.seamLife, on: true, dmg: CONFIG.warden.zoneTick, tickCd: CONFIG.warden.zoneTickCd }); }
+      if (this.seamDropT <= 0) { this.seamDropT = 0.12; this.seams.push({ kind: "seam", x: this.x, w: 76, life: C.seamLife, maxLife: C.seamLife, dir: Math.sign(this.vx) || this.facing, on: true, dmg: CONFIG.warden.zoneTick, tickCd: CONFIG.warden.zoneTickCd }); }
       if (Math.random() < 16 * dt) FX.ember(this.x, CONFIG.world.groundY - 5, CONFIG.colors.bomber);
       if (this.x <= this.hw + 4 || this.x >= CONFIG.view.w - this.hw - 4) { this.state = "recover"; this.stateT = 0.7; }
       return;
@@ -2386,7 +2452,7 @@ class Aldric extends Enemy {
   _enterDowned() {
     const C = CONFIG.aldric;
     this.mode = "downed"; this.state = "idle"; this.spawnAdds = false; this.kneelT = C.kneelDur; this.kneelStruck = false; this.anger = false;
-    this.reviveCap = this.maxHp * C.witnessReviveFrac; this.vx = 0; this.fireZones = []; this.seams = []; this._syncZones();
+    this.reviveCap = this.maxHp * C.witnessReviveFrac; this.vx = 0; this.seams = []; clearThroneFire(this, true); this._syncZones();
     this.crown = { x: this.x + this.facing * 18, y: this.y - this.hh - 18, vx: this.facing * 330, vy: -420, rot: 0 };
     this.phaseTag = "THE KNEEL";
     bossPhaseBeat(this, "STRIKE — OR STAND WITNESS", CONFIG.colors.charger);
@@ -2396,7 +2462,7 @@ class Aldric extends Enemy {
     this.chargeT = CONFIG.aldric.chargeCd * 0.45; this.crownfireCd = CONFIG.aldric.crownfireCd * 0.55;
     if (witnessed) { this.witnessEarned = true; this.hp = Math.min(this.hp, this.maxHp * CONFIG.aldric.witnessReviveFrac); }
     else { this.anger = true; this.hp = Math.max(this.hp, this.maxHp * CONFIG.aldric.angerReviveFrac); this.contactDmg *= CONFIG.aldric.angerDamageMult; }
-    this._lightFire(); bossPhaseBeat(this, witnessed ? "THE LAST CROWN RISES" : "THE BEAST AWAKES", CONFIG.colors.bomber);
+    this._lightFire(true); bossPhaseBeat(this, witnessed ? "THE LAST CROWN RISES" : "THE BEAST AWAKES", CONFIG.colors.bomber);
   }
   _animWeapon(dt) {
     let wt = -0.6, k = 9;
@@ -2658,7 +2724,8 @@ class Source extends Enemy {
     this.color = "#8b3bd6"; this.kind = "boss"; this.isBoss = true; this.bossName = "THE SOURCE";
     this.epithet = "THE TEAR ITSELF"; this.phaseMarks = [CONFIG.source.voidTier, CONFIG.source.fakeTier]; this.phaseTag = "THE CYCLE";
     this.mode = "cycle"; this.atkT = 2.2; this.castIdx = 0; this.facing = 1;
-    this.zones = []; this.zoneColor = CONFIG.colors.bomber; this.zoneCycleT = 0;
+    this.zones = []; this.fireZones = []; this.zoneColor = CONFIG.colors.bomber; this.zoneCycleT = 0;
+    this.firePattern = 0; this.fireState = "idle"; this.fireClock = 0; this.fireWarnStep = -1;
     this.collapsing = false; this.collapseT = 0; this.phaseMarker = 1; this.requestVoid = false; this.freezeVoid = false;
     this.thawVoid = false; this.voidDelayT = -1; this.downT = -1;   // phase-2 shatter countdown + the kneel clock
     this.seenTrickT = 0; this.copyKind = "hit"; this.copyT = -1; this.lastCopied = ""; this.copyOffset = 1;
@@ -2860,10 +2927,7 @@ class Source extends Enemy {
   }
   _lightFire() {
     if (this.mode !== "cycle" || this.collapsing || this.voidDelayT > 0) return;
-    const A = CONFIG.aldric, colW = CONFIG.view.w / A.fireCols; this.zones = [];
-    for (let i = 0; i < A.fireCols; i++) this.zones.push({ kind: "fire", x: (i + 0.5) * colW, w: colW, on: i % 2 === 0,
-      dmg: CONFIG.warden.zoneTick, tickCd: CONFIG.warden.zoneTickCd });
-    this.zoneCycleT = A.fireCycle;
+    if (!this.fireZones.length) startThroneFire(this, false);
   }
   // Echo-style mirror: copy the player's last trick as a void attack
   _scheduleFrom(player) {
@@ -2987,7 +3051,7 @@ class Source extends Enemy {
       // then the platform stream replaces the world — the fight's centerpiece.
       this.mode = "collapse"; this.collapsing = true; this.collapseT = 0.05;
       this.voidDelayT = C.voidDelay; this.phaseTag = "WORLD UNMAKES";
-      this.zones = []; this.zoneCycleT = 0;   // no ground fire once the floor is going
+      clearThroneFire(this, true);   // no ground fire once the floor is going
       bossPhaseBeat(this, "THE WORLD UNMAKES", this.color);
     } else if (ph === 3) {
       // THE KNEEL, on the void: the conveyor freezes mid-air while it gathers
@@ -3012,7 +3076,7 @@ class Source extends Enemy {
     BOSSFX.juice({ banner: "IT TOOK YOUR BLADE", color: CONFIG.colors.perfect, shake: 9, flash: 0.35, slowmo: 0.35, zoom: 0.06 });
     return true;
   }
-  onDeathStart() { this.freezeVoid = true; this.beamState = "idle"; this.zones = []; }
+  onDeathStart() { this.freezeVoid = true; this.beamState = "idle"; clearThroneFire(this, true); }
 
   update(dt, platforms, player, projectiles) {
     this.tickTimers(dt);
@@ -3046,7 +3110,7 @@ class Source extends Enemy {
       }
     }
 
-    if (this.zones.length) { this.zoneCycleT -= dt; if (this.zoneCycleT <= 0) { for (const z of this.zones) if (z.kind === "fire") z.on = !z.on; this.zoneCycleT = CONFIG.aldric.fireCycle; } }
+    tickThroneFire(this, dt);
     this._scheduleFrom(player);
     const voidTransferBusy = this.mode === "void" && (player.voidTransferT > 0 || !player.supportPlatform);
     // A learned move may queue during a crossover, but it cannot fire over the
