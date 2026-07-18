@@ -51,6 +51,8 @@ const UI = {
       chapterW: 1080, chapterH: 520, chapterPad: 46, chapterTearAt: 0.36,
       chapterNumeralY: 128, chapterBodyW: 560, chapterLineH: 28, chapterProgressGap: 18,
       biomeRevealRuleW: 260, cinematicPromptBottom: 54,
+      finalRewardW: 760, finalRewardH: 390, finalRewardSigilR: 54,
+      finalRewardRuleW: 310, finalRewardPromptBottom: 34, finalFractureW: 680, finalFractureH: 12,
       rallyInset: 2,
       settingsTop: 182, settingsContentInset: 40, settingsColumnGap: 40,
       settingsRowH: 58, settingsControlW: 252, settingsControlH: 42, settingsStepperW: 54,
@@ -63,6 +65,7 @@ const UI = {
       bossPhasePanel: 0.82,
       cinemaPanel: 0.90, cinemaHint: 0.58,
       chapterWorldDim: 0.72, chapterPanel: 0.94, chapterGhost: 0.16,
+      finalRewardDim: 0.78, finalRewardPanel: 0.96, finalRewardGhost: 0.18,
       rallyBase: 0.72, rallyPulse: 0.18,
     },
     // colour ROLES (semantic). `ink`/`paper` are the fg/bg pair; the rest pull
@@ -91,6 +94,7 @@ const UI = {
       bossIntroAccentGrow: 0.5,
       cinemaFrameIn: 0.45, cinemaDialogueIn: 0.22,
       chapterIn: 0.22, chapterTextReveal: 1.35, chapterExit: 0.32, biomeRevealIn: 0.42,
+      finalRewardIn: 0.34,
       rallyPulse: 9,
     },
   },
@@ -856,6 +860,45 @@ const UI = {
     ctx.font = this.font(t.type.micro, true); ctx.textBaseline = "middle"; ctx.textAlign = o.align || "center";
     const x = o.x == null ? CONFIG.view.w / 2 : o.x, y = o.y == null ? CONFIG.view.h - t.metric.cinematicPromptBottom : o.y;
     ctx.fillText(o.text, x, y); ctx.restore();
+  },
+
+  // The reward is deliberately its own celebration, after the world and lore
+  // have resolved. Callers provide copy and values; this component owns all
+  // screen-space geometry, type, color and hierarchy.
+  finalReward(ctx, opts) {
+    const o = opts || {}, t = this.t, m = t.metric, a = t.alpha, vw = CONFIG.view.w, vh = CONFIG.view.h;
+    const k0 = Math.max(0, Math.min(Number(o.amount) || 0, 1)), k = 1 - (1 - k0) * (1 - k0);
+    const w = Math.min(m.finalRewardW, vw - t.space.xl * 2), h = Math.min(m.finalRewardH, vh - t.space.xl * 2);
+    const x = (vw - w) / 2, y = (vh - h) / 2 + (1 - k) * t.space.lg, color = o.color || t.color.accent;
+    const savedInk = this.ink; ctx.save();
+    ctx.globalAlpha = k * a.finalRewardDim; ctx.fillStyle = t.color.cinema; ctx.fillRect(0, 0, vw, vh);
+    ctx.globalAlpha = k * a.finalRewardPanel; ctx.fillStyle = t.color.cinema; ctx.fillRect(x, y, w, h);
+    ctx.globalAlpha = k; ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h);
+    this.ink = t.color.cinemaInk;
+    ctx.globalAlpha = k * a.finalRewardGhost; ctx.strokeStyle = color; ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.arc(vw / 2, y + 94, m.finalRewardSigilR, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = k; this.title(ctx, o.sigil || "◇", vw / 2, y + 108, t.type.display);
+    this.tag(ctx, o.label || "ADVENTURE COMPLETE", vw / 2, y + 160, color, "center", t.type.caption);
+    this.title(ctx, o.title || "THE WORLD REMEMBERS", vw / 2, y + 210, t.type.h2);
+    ctx.fillStyle = color; ctx.fillRect(vw / 2 - m.finalRewardRuleW / 2, y + 230, m.finalRewardRuleW, 3);
+    this.text(ctx, o.reward || "RESTORED BLADE TRAIL", vw / 2, y + 278, t.type.lead, "center", k * a.soft);
+    if (o.detail) this.text(ctx, o.detail, vw / 2, y + 312, t.type.caption, "center", k * a.cinemaHint);
+    this.cinematicPrompt(ctx, { text: o.hint, x: vw / 2, y: y + h - m.finalRewardPromptBottom,
+      align: "center", amount: k, color });
+    this.ink = savedInk; ctx.restore();
+  },
+
+  finaleFracture(ctx, opts) {
+    const o = opts || {}, t = this.t, m = t.metric, vw = CONFIG.view.w;
+    const k = Math.max(0, Math.min(Number(o.amount) || 0, 1)), w = Math.min(m.finalFractureW, vw - t.space.xl * 2);
+    const x = (vw - w) / 2, y = t.space.lg + 18, color = o.color || t.color.accent;
+    ctx.save(); ctx.globalAlpha = (1 - k) * t.alpha.soft; ctx.fillStyle = t.color.cinemaMuted; ctx.fillRect(x, y, w, m.finalFractureH);
+    ctx.globalAlpha = 0.9 * (1 - k * 0.7); ctx.fillStyle = color;
+    for (let i = 0; i < 9; i++) {
+      const sw = w / 9 - t.space.xs, dx = (i - 4) * k * t.space.lg, dy = (i % 2 ? -1 : 1) * k * t.space.md;
+      ctx.save(); ctx.translate(dx, dy); ctx.rotate((i - 4) * k * 0.018); ctx.fillRect(x + i * w / 9, y, sw, m.finalFractureH); ctx.restore();
+    }
+    ctx.restore();
   },
 
   // right-anchored row of `n` small squares, `filled` of them coloured (level meters)

@@ -35,6 +35,14 @@ const SFX = {
   },
   setVol(v) { this.vol = v; if (this.master) this.master.gain.value = this.muted ? 0 : v; },
   setMusic(on) { this.musicOn = on; if (this.musicGain) this.musicGain.gain.value = (this.muted || !on) ? 0 : this.musicVol; },
+  setMusicDuck(mult, seconds) {
+    if (!this.musicGain || !this.ctx) return;
+    const target = (this.muted || !this.musicOn) ? 0 : this.musicVol * clamp(mult == null ? 1 : mult, 0, 1);
+    const now = this.ctx.currentTime, dur = Math.max(0.01, seconds || 0.18);
+    this.musicGain.gain.cancelScheduledValues(now);
+    this.musicGain.gain.setValueAtTime(Math.max(0.0001, this.musicGain.gain.value), now);
+    this.musicGain.gain.linearRampToValueAtTime(target, now + dur);
+  },
   // mute by reason — any active reason silences everything. Backward compatible:
   // mute(true)/mute(false) use the "default" reason. CrazyGames passes "cg"/"ad".
   mute(on, reason) {
@@ -231,6 +239,23 @@ const SFX = {
   sweeperCounter() { if (!this.ctx) return; const t = this.ctx.currentTime; this._click(t, 0.19); this._osc(420, 0.16, t, { type: "square", vol: 0.09, slideTo: 1120 }); },
   aldricCleaver() { if (!this.ctx) return; const t = this.ctx.currentTime; this._noise(0.15, t, { type: "bandpass", freq: 820, q: 0.75, vol: 0.1 }); this._osc(165, 0.15, t, { type: "triangle", vol: 0.05, slideTo: 88 }); },
   sourceFracture() { if (!this.ctx) return; const t = this.ctx.currentTime; this._osc(1180, 0.14, t, { type: "triangle", vol: 0.065, slideTo: 310 }); this._osc(390, 0.12, t + 0.02, { type: "sine", vol: 0.04, slideTo: 920 }); },
+  finalSilence() {
+    if (!this.ctx) return; this.setMusicDuck(0.03, 0.16);
+    const t = this.ctx.currentTime; this._osc(74, 0.42, t, { type: "sine", vol: 0.055, slideTo: 48, attack: 0.025 });
+  },
+  finalRelic(step) {
+    if (!this.ctx) return; const t = this.ctx.currentTime, i = clamp(step | 0, 0, 3);
+    this._osc(520 + i * 145, 0.24, t, { type: "sine", vol: 0.055, slideTo: 760 + i * 180, attack: 0.018 });
+  },
+  finalCut(step) {
+    if (!this.ctx) return; const t = this.ctx.currentTime, i = clamp(step | 0, 0, 2);
+    this._click(t, 0.15 + i * 0.035); this._noise(0.18, t, { type: "bandpass", freq: 1450 + i * 420, q: 0.7, vol: 0.10 });
+    this._osc(310 + i * 170, 0.32, t, { type: "triangle", vol: 0.09, slideTo: 920 + i * 330, attack: 0.002 });
+  },
+  finalRestore() {
+    if (!this.ctx) return; this.setMusicDuck(1, 1.8); const t = this.ctx.currentTime;
+    [392, 523.25, 659.25, 783.99].forEach((f, i) => this._osc(f, 0.7, t + i * 0.11, { type: "sine", vol: 0.055, attack: 0.035 }));
+  },
   voidTransfer() { if (!this.ctx) return; const t = this.ctx.currentTime; this._osc(360, 0.18, t, { type: "sine", vol: 0.045, slideTo: 980, attack: 0.018 }); },
   echoResonance() { if (!this.ctx) return; const t = this.ctx.currentTime; [660, 990, 1320].forEach((f, i) => this._osc(f, 0.16, t + i * 0.018, { type: "sine", vol: 0.026, slideTo: f * 1.06, attack: 0.015 })); },
   platformRebuild() { if (!this.ctx) return; const t = this.ctx.currentTime; this._osc(240, 0.14, t, { type: "triangle", vol: 0.035, slideTo: 410, attack: 0.02 }); },

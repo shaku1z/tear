@@ -66,6 +66,12 @@ const PROFILE = {
   markMode(id) { if (!this.data.modes[id]) { this.data.modes[id] = true; this.addStat("modesPlayed", 1); } },
   modesPlayed() { return Object.keys(this.data.modes).length; },
 
+  // A campaign clear is written before its interactive epilogue. If the tab is
+  // closed mid-scene, the menu can resume the Final Cut or claim these results.
+  pendingFinale() { return this.data.pendingFinale || null; },
+  setPendingFinale(payload) { this.data.pendingFinale = Object.assign({ savedAt: Date.now() }, payload || {}); this.save(); },
+  clearPendingFinale() { delete this.data.pendingFinale; this.save(); },
+
   // ---- achievements ----
   unlocked(id) { return !!this.data.ach[id]; },
   // record an unlock + grant its shards; returns true if it was newly unlocked
@@ -99,6 +105,8 @@ const PROFILE = {
     if (r.username && (r.usernameSetAt || 0) > (this.data.usernameSetAt || 0)) { this.data.username = r.username; this.data.usernameSetAt = r.usernameSetAt || 0; }
     if (r.modes) for (const m in r.modes) this.data.modes[m] = true;
     if (r.seen) for (const s in r.seen) this.data.seen[s] = true;
+    if (r.rewards) this.data.rewards = Object.assign(this.data.rewards || {}, r.rewards);
+    if (r.pendingFinale && (!this.data.pendingFinale || (r.pendingFinale.savedAt || 0) > (this.data.pendingFinale.savedAt || 0))) this.data.pendingFinale = r.pendingFinale;
     // achievement set-trackers: union weapons won + Adventure difficulties cleared
     if (r.weaponsWon) { this.data.weaponsWon = this.data.weaponsWon || {}; for (const k in r.weaponsWon) this.data.weaponsWon[k] = 1; }
     if (r.advDiffs) { this.data.advDiffs = this.data.advDiffs || {}; for (const k in r.advDiffs) this.data.advDiffs[k] = 1; }

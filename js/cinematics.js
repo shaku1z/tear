@@ -93,6 +93,22 @@ const Cinematics = (() => {
           amount: b.view === "ready" ? 1 : Math.min(1, this.elapsed / (ui.t.motion.biomeRevealIn || 0.42)), ready: b.view === "ready" });
         return;
       }
+      if (this.script.kind === "finale") {
+        ui.cinematicFrame(ctx, { screen, amount: Math.min(1, this.totalElapsed / 0.45),
+          color: this.script.color, reducedMotion: !!reducedMotion });
+        if (b && (b.id === "silence" || b.id === "wound")) ui.finaleFracture(ctx, {
+          amount: b.id === "silence" ? this.progress * 0.35 : 0.35 + this.progress * 0.65, color: this.script.color });
+        if (b && b.view === "epilogue") ui.chapterCard(ctx, { number: "V", symbol: "◉", label: b.label,
+          title: b.title, text: b.text, color: b.color || this.script.color,
+          amount: Math.min(1, this.elapsed / 0.22), reveal: this.revealProgress,
+          pageIndex: 0, pageCount: 1, transition: "void", hint: b.hint || this.script.hint });
+        else if (b && b.view === "reward") ui.finalReward(ctx, { label: b.label, title: b.title, sigil: b.sigil,
+          reward: b.reward, detail: b.detail, color: b.color || this.script.color,
+          amount: Math.min(1, this.elapsed / ui.t.motion.finalRewardIn), hint: b.hint || this.script.hint });
+        else if (b && b.hint) ui.cinematicPrompt(ctx, { text: b.hint, amount: Math.min(1, this.elapsed / 0.22),
+          color: b.color || this.script.color });
+        return;
+      }
       ui.cinematicFrame(ctx, { screen, amount: Math.min(1, this.totalElapsed / 0.45),
         color: this.script.color, reducedMotion: !!reducedMotion });
       if (b && b.line) ui.dialogueCard(ctx, { speaker: b.speaker, line: b.line, color: b.color || this.script.color,

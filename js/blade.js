@@ -361,6 +361,7 @@ class Blade {
     const glow = (typeof THEME !== "undefined") && THEME.dark;
     if (glow) { ctx.save(); ctx.globalCompositeOperation = "lighter"; }
     ctx.fillStyle = this.trailColor || CONFIG.colors.bladeTrail;   // per-blade override (the Mirror wields a violet blade)
+    const restored = ["#13c4d6", "#e0a326", "#b06cff", "#2f9e6b", "#eafcff"];
     for (let i = 1; i < tr.length; i++) {
       const a = tr[i - 1], b = tr[i];
       // fade each band smoothly by how fast the tip was moving (no hard cutoff -> no blink)
@@ -368,6 +369,7 @@ class Blade {
       const speedA = clamp((seg - 1) / 22, 0, 1);
       const al = (i / tr.length) * (J.trailAlpha + 0.3) * speedA;
       if (al <= 0.002) continue;
+      if (this.restoredTrail) ctx.fillStyle = restored[i % restored.length];
       ctx.globalAlpha = al;
       ctx.beginPath();
       ctx.moveTo(a.hx, a.hy);
@@ -402,12 +404,14 @@ class Blade {
 
     if (this.state === "held") {
       // faint tether from hand to hilt
-      ctx.strokeStyle = "#cfcfcf";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(hand.x, hand.y);
-      ctx.lineTo(this.x, this.y);
-      ctx.stroke();
+      if (!this.finalFree) {
+        ctx.strokeStyle = "#cfcfcf";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(hand.x, hand.y);
+        ctx.lineTo(this.x, this.y);
+        ctx.stroke();
+      }
       this._drawTipGlow(ctx);
       this._drawBody(ctx);
       return;

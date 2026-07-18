@@ -166,6 +166,7 @@
   let stageBannerT = 0;               // "STAGE N — Name" banner timer
   let stageName = "";
   let chapterFlow = null;
+  let finale = null;
   function loreBusy() { return !!(run && run.mode === "campaign" && run.chapterState !== "WAVE_LIVE"); }
   // the campaign's opening — shown as a lore card on the first wave of an Adventure run
   const CAMPAIGN_INTRO = "Long ago the sky was torn, and through the wound poured everything that should not be. They named it the Tear. Each soul the Council sent to close it was worn, in time, into the shape of the thing they failed to stop — a guardian of the very wound they meant to end. You are the next to descend. Cut clean. Keep moving. Reach the Source before it wears your shape too.";
@@ -215,6 +216,101 @@
           onEnter() { flow.state = "READY"; run.chapterState = "READY"; } },
       ],
     }, flow);
+  }
+
+  function finaleAnchors(x, y) {
+    const cx = clamp(x, 270, W - 270), cy = clamp(y, 280, H - 310), r = CONFIG.finale.anchorRadius;
+    return [
+      { x: cx - 168, y: cy - 72, r, depth: 0.62, cut: false },
+      { x: cx + 174, y: cy + 34, r, depth: 0.82, cut: false },
+      { x: cx + 8, y: cy - 174, r, depth: 1.0, cut: false },
+    ];
+  }
+
+  function severFinaleAnchor(auto) {
+    if (!finale || finale.severed >= finale.anchors.length) return false;
+    const a = finale.anchors[finale.severed]; a.cut = true; a.auto = !!auto;
+    finale.severed++; finale.cutFlash = 1; finale.restoredColor = finale.severed >= 1;
+    finale.restoredGravity = finale.severed >= 2; finale.tearClosed = finale.severed >= 3;
+    FX.ring(a.x, a.y, 18, CONFIG.colors.perfect);
+    FX.burst(a.x, a.y, blade.tipVX || 0, blade.tipVY || -1, GFX.low ? 7 : 14, CONFIG.colors.perfect);
+    addFlash(0.10 + finale.severed * 0.035); addShake((A11Y.reducedMotion ? 0.2 : 1) * (3 + finale.severed * 2));
+    try { SFX.finalCut(finale.severed - 1); } catch (e) {}
+    Input.buzz(finale.severed === 3 ? [24, 34, 62] : [18, 24, 34]);
+    return true;
+  }
+
+  function beginFinaleRestoration() {
+    if (!finale || finale.restoring) return;
+    while (finale.severed < finale.anchors.length) severFinaleAnchor(true);
+    finale.restoring = true; finale.phase = "restoration"; finale.restore = 0;
+    stageIndex = 0; currentStage = stageAt(0); platforms = stagePlatforms(0);
+    slowZones = []; tempWalls = []; projectiles = []; enemies = [];
+    if (run.voidScroll) { run.voidScroll.active = false; run.voidScroll.frozen = true; }
+    run.voidDescent = null; worldZoomTarget = 1;
+    player.x = clamp(player.x, player.hw + 20, W - player.hw - 20);
+    player.y = Math.min(player.y, 220); player.vx = 0; player.vy = 35; player.onGround = false;
+    try { SFX.finalRestore(); } catch (e) {}
+  }
+
+  function startAdventureFinale(death, recovered) {
+    if (!run) return;
+    if (run.mode !== "campaign") { winRun(false); return; }
+    const prepared = recovered ? run._victoryPrepared : prepareVictoryRecord(true, true);
+    const origin = death || run.finalBossDeath || { x: W / 2, y: H * 0.42 };
+    enemies = []; projectiles = []; slowZones = []; tempWalls = []; bossIntro = null; bossBeat = null;
+    if (run.voidScroll) { run.voidScroll.active = false; run.voidScroll.frozen = true; }
+    run.waveActive = false; run.spawnQueue.length = 0; run.chapterState = "WAVE_LIVE";
+    worldZoom = CONFIG.finale.worldZoom; worldZoomTarget = CONFIG.finale.worldZoom;
+    player.iframe = 999; player.vx = 0; player.vy = 0; player.onGround = false;
+    blade.hostile = false; blade.stolenBy = null; blade.state = "held"; blade.finalFree = true;
+    blade.restoredTrail = true;
+    const hand = blade.handPos(player); blade.x = hand.x; blade.y = hand.y; blade.vx = 0; blade.vy = 0;
+    finale = { origin: { x: origin.x, y: origin.y }, anchors: finaleAnchors(player.x, player.y), severed: 0,
+      phase: "silence", relicK: 0, relicSounds: 0, restore: 0, landed: false, cutFlash: 0, prepared };
+    CINEMA.start({
+      id: "adventure-final-cut", kind: "finale", color: CONFIG.colors.perfect,
+      blocksCombat: true, hideHud: true, hint: "MOVE THE BLADE  ·  CUT THE TEAR ANCHORS  ·  HOLD CONFIRM TO ASSIST",
+      skipHint: "RESTORING THE WORLD",
+      onStart() { try { SFX.finalSilence(); } catch (e) {} },
+      onSkip(c, director) { while (c.severed < c.anchors.length) severFinaleAnchor(true); director.skipTo("restoration"); },
+      onComplete() {
+        if (blade) blade.finalFree = false;
+        finale = null; winRun(true);
+      },
+      onCancel() { if (blade) blade.finalFree = false; },
+      beats: [
+        { id: "silence", duration: CONFIG.finale.silence, playerMode: "locked", hint: "SILENCE",
+          onEnter(c) { c.phase = "silence"; } },
+        { id: "wound", duration: CONFIG.finale.wound, playerMode: "locked", hint: "THE WOUND REMAINS",
+          onEnter(c) { c.phase = "wound"; } },
+        { id: "relics", duration: CONFIG.finale.relics, playerMode: "finalBlade", hint: "THE PANTHEON RETURNS TO THE BLADE",
+          onEnter(c) { c.phase = "relics"; },
+          onUpdate(c, d) {
+            c.relicK = d.progress;
+            const count = Math.min(4, Math.floor(d.progress * 4.2));
+            while (c.relicSounds < count) { try { SFX.finalRelic(c.relicSounds); } catch (e) {} c.relicSounds++; }
+          } },
+        { id: "cut", playerMode: "finalBlade", minDuration: 0.45, hint: "SWING THROUGH EACH ANCHOR  ·  HOLD CONFIRM OR WAIT FOR ASSIST",
+          onEnter(c) { c.phase = "cut"; c.cutStarted = true; },
+          onUpdate(c, d) {
+            if (d.elapsed >= CONFIG.finale.cutAutoAt + c.severed * CONFIG.finale.cutAutoStep) severFinaleAnchor(true);
+          },
+          waitUntil(c) { return c.severed >= c.anchors.length; } },
+        { id: "restoration", playerMode: "finalLanding", minDuration: CONFIG.finale.restorationMin,
+          hint: "THE WORLD REMEMBERS", onEnter(c) { beginFinaleRestoration(); },
+          onUpdate(c, d) { c.restore = clamp(d.elapsed / CONFIG.finale.restorationMin, 0, 1); },
+          waitUntil(c, d) { return c.landed && d.elapsed >= CONFIG.finale.restorationMin; } },
+        { id: "epilogue", view: "epilogue", duration: 6.5, minDuration: 0.3, advanceable: true,
+          revealDuration: CONFIG.finale.epilogueReveal, playerMode: "locked", label: "AFTER THE DESCENT",
+          title: "THE FIRST MORNING", text: CAMPAIGN_ENDING, hint: "TAP TO REVEAL  ·  TAP AGAIN TO CONTINUE" },
+        { id: "reward", view: "reward", duration: CONFIG.finale.rewardHold, minDuration: 0.45, advanceable: true,
+          playerMode: "locked", label: "ADVENTURE COMPLETE", title: "THE WORLD REMEMBERS", sigil: "◇",
+          reward: "RESTORED BLADE TRAIL · CAMPAIGN EMBLEM",
+          detail: (prepared && prepared.isNew ? "NEW BEST  ·  " : "") + run.score + " PTS  ·  " + fmtTime(run.runTime),
+          hint: "TAP TO REVEAL RESULTS" },
+      ],
+    }, finale);
   }
 
   // swap the biome: new platform layout + palette, and clear any lingering hazards
@@ -972,9 +1068,32 @@
         if (prevBottom <= p.y + 2 && player.y + player.hh >= p.y) { landing = p; break; }
       }
       if (landing) { player.y = landing.y - player.hh; player.vy = 0; player.onGround = true; }
+    } else if (mode === "finalBlade") {
+      player.onGround = false; player.vx = 0; player.vy = 0;
+    } else if (mode === "finalLanding") {
+      const prevBottom = player.y + player.hh;
+      player.vx *= Math.exp(-7 * dt); player.x = clamp(player.x + player.vx * dt, player.hw, W - player.hw);
+      player.vy = Math.min(CONFIG.player.maxFall, player.vy + CONFIG.world.gravity * dt);
+      player.y += player.vy * dt; player.onGround = false;
+      let landing = null;
+      for (const p of platforms) {
+        if (!(p.floor || p.oneway)) continue;
+        if (player.x + player.hw <= p.x || player.x - player.hw >= p.x + p.w) continue;
+        if (prevBottom <= p.y + 2 && player.y + player.hh >= p.y) { landing = p; break; }
+      }
+      if (landing) {
+        player.y = landing.y - player.hh; player.vy = 0; player.onGround = true;
+        if (finale && !finale.landed) { finale.landed = true; FX.burst(player.x, landing.y, 0, -1, GFX.low ? 5 : 10, currentStage.accent); SFX.land(); }
+      }
     }
     player.iframe = Math.max(player.iframe, 0.2);
     if (blade) blade.update(dt, player, platforms);
+    if (mode === "finalBlade" && finale && finale.phase === "cut" && finale.severed < finale.anchors.length && blade) {
+      const a = finale.anchors[finale.severed];
+      const cut = segPointDist(blade.prevTipX, blade.prevTipY, blade.tipX, blade.tipY, a.x, a.y).dist <= a.r;
+      if (cut && blade.tipSpeed >= CONFIG.finale.cutSpeed) severFinaleAnchor(false);
+    }
+    if (finale) finale.cutFlash = Math.max(0, finale.cutFlash - dt * 2.5);
     if (run.voidScroll) syncVoidPlayerSupport();
   }
   function updateVoidPlatformHazards(vs, dt) {
@@ -1451,6 +1570,7 @@
     blade = new Blade();
     blade.throwType = weapon.throwType;
     blade.model = weapon.model || "sword";
+    blade.restoredTrail = !!(PROFILE.data.rewards && PROFILE.data.rewards.restoredBladeTrail);
     enemies = []; projectiles = []; floaters = [];
     hitStop = 0; shake = 0; FX.reset(); Backdrop.resetFx(); CLOCK.sim = 0;
     timeScale = 1; slowmo = 0; zoom = 1; flash = 0; bannerT = 0; dashGhostT = 0; throwCd = 0;
@@ -1788,7 +1908,7 @@
       }
       run._dmgThisWave = false;
       if (run.isBossWave) {
-        if (run.mode === "campaign" && stageIndex >= STAGES.length - 1) { winRun(true); return; }   // final biome cleared -> the ending
+        if (run.mode === "campaign" && stageIndex >= STAGES.length - 1) { startAdventureFinale(run.finalBossDeath); return; }   // final biome cleared -> the playable ending
         if (run.mode === "campaign" || run.mode === "bossonly" || run.mode === "gauntlet") {
           if (!player.oneHit) player.heal(R.healEachWave * 2 + (run.mods.waveHeal || 0));   // a boss kill is a milestone, not the end
           if (run.mode === "bossonly" || run.mode === "gauntlet") run.bossesBeaten = (run.bossesBeaten || 0) + 1;
@@ -1870,7 +1990,8 @@
     SFX.gameover();
   }
 
-  function winRun(campaign) {
+  function prepareVictoryRecord(campaign, persistFinale) {
+    if (run._victoryPrepared) return run._victoryPrepared;
     if (typeof Clipper !== 'undefined') Clipper.stop();
     const isNew = saveBest(run.mode, run.diff, run.wave, run.score, run.runTime);
     const earned = awardCoins(run.score);
@@ -1878,6 +1999,8 @@
       // win a run with each weapon (Armory) — a set keyed by weapon id
       const ww = PROFILE.data.weaponsWon || (PROFILE.data.weaponsWon = {}); ww[run.weaponId || "sword"] = 1; PROFILE.maxStat("distinctWeaponsWon", Object.keys(ww).length);
       if (campaign) {   // Adventure difficulty mastery
+        const rewards = PROFILE.data.rewards || (PROFILE.data.rewards = {});
+        rewards.restoredBladeTrail = true; rewards.campaignEmblem = true;
         if (run.diff === "hard") PROFILE.maxStat("clearAdvHard", 1);
         if (run.diff === "extreme") PROFILE.maxStat("clearAdvExtreme", 1);
         if (!run._dmgThisRun) PROFILE.maxStat("clearAdvNoHit", 1);          // Flawless Victory
@@ -1885,14 +2008,55 @@
         const dc = PROFILE.data.advDiffs || (PROFILE.data.advDiffs = {}); dc[run.diff] = 1; PROFILE.maxStat("clearAdvAll", Object.keys(dc).length);
       }
       achCheck();
-      Cloud.push();   // cloud save (finishRecording handles the score + replay link)
       Cloud.logEvent("run_end", { mode: run.mode, diff: run.diff, wave: run.wave, score: run.score, time: Math.round(run.runTime), peak: run.wavePeak, won: true, campaign: !!campaign });
       finishRecording(true); }
-    overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, win: true, campaign: !!campaign, earned, coins: META.coins() };
+    const prepared = run._victoryPrepared = { isNew, earned, coins: META.coins() };
+    if (campaign && persistFinale) PROFILE.setPendingFinale({
+      mode: run.mode, diff: run.diff, weapon: run.weaponId, wave: run.wave, score: run.score, time: run.runTime,
+      log: run.waveLog.slice(), best: getBest(run.mode, run.diff), isNew, earned, coins: META.coins(),
+    });
+    else PROFILE.save();
+    if (achTracks()) Cloud.push();   // includes the pre-finale completion marker
+    return prepared;
+  }
+
+  function winRun(campaign) {
+    const prepared = prepareVictoryRecord(campaign, false);
+    overInfo = { wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(), best: getBest(run.mode, run.diff),
+      isNew: prepared.isNew, win: true, campaign: !!campaign, earned: prepared.earned, coins: prepared.coins, diff: run.diff };
+    if (campaign) { PROFILE.clearPendingFinale(); if (achTracks()) Cloud.push(); }
     state = "win";
     document.exitPointerLock();
     SFX.wave();
     CG.happytime();   // CrazyGames: victory is a highlight
+  }
+
+  function claimSavedFinale() {
+    const p = PROFILE.pendingFinale(); if (!p) return;
+    selWeapon = p.weapon || selWeapon; startRun("campaign", p.diff || "normal");
+    if (CINEMA.active) CINEMA.cancel("claim-final-cut");
+    run.wave = p.wave || STAGES.length * 10; run.score = p.score || 0; run.runTime = p.time || 0;
+    run.waveLog = p.log || []; run.spawnQueue.length = 0; run.waveActive = false;
+    run._victoryPrepared = { isNew: !!p.isNew, earned: p.earned || 0, coins: p.coins || META.coins() };
+    stageIndex = 0; currentStage = stageAt(0); platforms = stagePlatforms(0); enemies = []; projectiles = [];
+    player.x = W / 2; player.y = CONFIG.world.groundY - player.hh; player.vx = 0; player.vy = 0; player.onGround = true;
+    if (GHOST.recording()) GHOST.stopRec({ claimedFinale: true });
+    overInfo = { wave: p.wave, score: p.score, time: p.time, log: p.log || [], best: p.best,
+      isNew: !!p.isNew, win: true, campaign: true, earned: p.earned || 0, coins: p.coins || META.coins(), diff: p.diff || "normal" };
+    PROFILE.clearPendingFinale(); if (achTracks()) Cloud.push();
+    state = "win"; winT = 0; SFX.wave(); CG.happytime();
+  }
+
+  function resumeSavedFinale() {
+    const p = PROFILE.pendingFinale(); if (!p) return;
+    selWeapon = p.weapon || selWeapon; startRun("campaign", p.diff || "normal");
+    if (CINEMA.active) CINEMA.cancel("resume-final-cut");
+    run.wave = p.wave || STAGES.length * 10; run.score = p.score || 0; run.runTime = p.time || 0;
+    run.waveLog = p.log || []; run.spawnQueue.length = 0; run.waveActive = false;
+    run._victoryPrepared = { isNew: !!p.isNew, earned: p.earned || 0, coins: p.coins || META.coins() };
+    stageIndex = STAGES.length - 1; currentStage = stageAt(stageIndex); platforms = stagePlatforms(stageIndex);
+    enemies = []; projectiles = []; if (GHOST.recording()) GHOST.stopRec({ resumedFinale: true });
+    startAdventureFinale({ x: W / 2, y: H * 0.38 }, true);
   }
 
   // restart after a run ends — a natural break, so show a midgame ad first (no-op off CrazyGames)
@@ -2901,6 +3065,9 @@
     if (run.mods.bleedNova && e.bleedStacks > 0) { for (const e2 of enemies) { if (e2 === e || e2.dead) continue; if (len(e2.x - e.x, e2.y - e.y) < 150 && e2.applyBleed) e2.applyBleed(3); } FX.ring(e.x, e.y, 12, CONFIG.colors.charger); }
     if (run.mods.cinderNova && e.burnT > 0) { for (const e2 of enemies) { if (e2 === e || e2.dead) continue; if (len(e2.x - e.x, e2.y - e.y) < 150 && e2.applyBurn) e2.applyBurn(); } FX.ring(e.x, e.y, 12, CONFIG.colors.slam); }
     if (e.isBoss) {
+      if (run.mode === "campaign" && e.bossId === "source" && stageIndex >= STAGES.length - 1) {
+        run.finalBossDeath = { x: e.x, y: e.y, color: e.color };
+      }
       // NO SHELTER: give the stage its ground back (the Source keeps its frozen void — it never swapped)
       if (run._preBossPlatforms) { platforms = run._preBossPlatforms; run._preBossPlatforms = null; run._brokenPlats = null; run._arenaBroken = null; }
       worldZoomTarget = 1; run.voidDescent = null;   // the void releases the camera when the Source falls
@@ -2942,7 +3109,8 @@
       // Do not treat LMB as a hold: it may already be down from blade control
       // when a phase starts. Keyboard/controller confirm is an intentional skip.
       const gp = typeof PAD !== "undefined" && PAD.connected && navigator.getGamepads ? navigator.getGamepads()[PAD.index] : null;
-      const hold = Input.held.has("Space") || Input.held.has("Enter") || Input.held.has("NumpadEnter") || !!(gp && gp.buttons[0] && gp.buttons[0].pressed);
+      const hold = Input.held.has("Space") || Input.held.has("Enter") || Input.held.has("NumpadEnter") ||
+        !!Input.btnHeld.jump || !!(gp && gp.buttons[0] && gp.buttons[0].pressed);
       CINEMA.update(dt, { pressed: Input.confirmPressed() || Input.tJump || clicked, hold });
     }
 
@@ -2998,7 +3166,7 @@
     if (state === "continue" && continueT > 0) { continueT -= dt; if (continueT <= 0) { state = "gameover"; endRun(); } }
     if (isMenuState(state)) { if (!Attract.ready) Attract.reset(); Attract.update(dt); } else Attract.ready = false;   // live attract-mode demo runs behind every menu tab
 
-    Input.uiMode = (state !== "playing") || CINEMA.active;   // cinematics take intentional taps, never combat aim
+    Input.uiMode = (state !== "playing") || (CINEMA.active && CINEMA.playerMode !== "finalBlade");   // the Final Cut deliberately returns blade aim
 
     // UI density: small touch screens get bigger type + fatter targets everywhere
     // the design system's tokens reach (menus can't zoom — see the render transform)
@@ -3158,7 +3326,7 @@
       }
       if (bossIntro && bossIntro.delay <= 0 && state === "playing") drawBossIntro();   // the arrival ceremony rides over the HUD
       if (CINEMA.active) CINEMA.draw(ctx, UI, screenRect(), A11Y.reducedMotion);
-      if (Input.touchActive() && state === "playing" && !CINEMA.active && !(typeof PAD !== "undefined" && PAD.active)) drawTouchControls();   // a live controller hides the thumb controls
+      if (Input.touchActive() && state === "playing" && (!CINEMA.active || CINEMA.playerMode === "finalBlade") && !(typeof PAD !== "undefined" && PAD.active)) drawTouchControls();   // the finale keeps blade/touch control live
       if (state === "playing" && bannerT > 0 && !CINEMA.active) drawBanner();
       if (state === "playing" && stageBannerT > 0 && !CINEMA.active) drawStageBanner();
       if (state === "playing" && rankPopT > 0) {
@@ -3169,7 +3337,7 @@
         ctx.restore();
       }
     }
-    if (state === "playing" && (!CINEMA.active || CINEMA.playerMode === "landing")) drawReticle();
+    if (state === "playing" && (!CINEMA.active || CINEMA.playerMode === "landing" || CINEMA.playerMode === "finalBlade")) drawReticle();
 
     UI.ink = "#000";   // overlays (menus / win / pause) dim to white — always ink them black
     if (state !== lastUiState) {
@@ -3378,6 +3546,72 @@
     ctx.restore();
   }
 
+  function drawFinaleWorld(layer) {
+    if (!finale) return;
+    const t = CLOCK.sim, cyan = CONFIG.colors.perfect, phase = finale.phase;
+    ctx.save();
+    if (layer === "rear") {
+      // The dead Source recedes as a broken depth-body instead of vanishing on
+      // the same 2D plane as ordinary enemies.
+      const woundK = phase === "silence" ? 0.18 : 1;
+      ctx.globalAlpha = 0.16 + 0.18 * woundK; ctx.fillStyle = finale.restoredColor ? "#7257a8" : "#17111f";
+      const count = GFX.low ? 8 : CONFIG.finale.fragmentCap;
+      for (let i = 0; i < count; i++) {
+        const a = i * 2.399, drift = (phase === "wound" || phase === "relics" || phase === "cut") ? t * (9 + i % 4) : t * 2;
+        const rr = 34 + (i % 5) * 23 + drift, px = finale.origin.x + Math.cos(a) * rr, py = finale.origin.y + Math.sin(a) * rr * 0.58 - drift * 0.24;
+        ctx.save(); ctx.translate(px, py); ctx.rotate(a + t * 0.08 * (i % 2 ? 1 : -1));
+        ctx.fillRect(-12 - (i % 3) * 4, -8, 24 + (i % 3) * 8, 16 + (i % 2) * 8); ctx.restore();
+      }
+      if (finale.restoredColor && !finale.restoring) {
+        const bands = STAGES.map((s) => s.accent);
+        for (let i = 0; i < bands.length; i++) {
+          ctx.globalAlpha = (0.035 + finale.cutFlash * 0.022) * (GFX.low ? 0.7 : 1); ctx.fillStyle = bands[i];
+          ctx.fillRect(i * W / bands.length, 70, W / bands.length + 1, H - 140);
+        }
+      }
+      const tearAlpha = finale.tearClosed ? Math.max(0, 1 - finale.restore * 2) : 1;
+      if (tearAlpha > 0) {
+        ctx.globalAlpha = tearAlpha * 0.55; ctx.strokeStyle = cyan; ctx.lineWidth = GFX.low ? 4 : 7;
+        if (!GFX.low) { ctx.shadowColor = cyan; ctx.shadowBlur = 22; }
+        ctx.beginPath(); ctx.moveTo(W / 2, 58);
+        for (let i = 1; i <= 10; i++) ctx.lineTo(W / 2 + (i % 2 ? 18 : -13) * tearAlpha, 58 + i * 70);
+        ctx.stroke(); ctx.shadowBlur = 0;
+      }
+      // Restoration passes all five biomes behind the landing as restrained,
+      // occluded silhouettes rather than five full additional canvases.
+      if (finale.restoredGravity || finale.restoring) {
+        const accents = STAGES.map((s) => s.accent), k = finale.restoring ? finale.restore : 0.18;
+        for (let i = 0; i < accents.length; i++) {
+          const x = ((i * 360 + k * 260) % (W + 420)) - 210;
+          ctx.globalAlpha = (0.06 + 0.08 * Math.sin(Math.PI * k)) * (GFX.low ? 0.65 : 1); ctx.fillStyle = accents[i];
+          ctx.beginPath(); ctx.moveTo(x - 170, CONFIG.world.groundY); ctx.lineTo(x - 90, 560 - (i % 2) * 65);
+          ctx.lineTo(x + 10, 620 - (i % 3) * 55); ctx.lineTo(x + 150, 520 + (i % 2) * 55); ctx.lineTo(x + 210, CONFIG.world.groundY); ctx.closePath(); ctx.fill();
+        }
+      }
+    }
+    for (let i = 0; i < finale.anchors.length; i++) {
+      const a = finale.anchors[i], rear = a.depth < 0.75;
+      if ((layer === "rear") !== rear || a.cut) continue;
+      const active = i === finale.severed && phase === "cut", pulse = 0.5 + 0.5 * Math.sin(t * 7 + i);
+      ctx.globalAlpha = active ? 0.68 + pulse * 0.28 : 0.18;
+      ctx.strokeStyle = A11Y.highContrast && active ? "#fff36b" : cyan;
+      ctx.lineWidth = active ? (A11Y.highContrast ? 7 : 4) : 2;
+      ctx.beginPath(); ctx.arc(a.x, a.y, a.r * a.depth * (1 + pulse * 0.06), 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(a.x - a.r * 0.55, a.y + a.r * 0.64); ctx.lineTo(a.x - 5, a.y - a.r * 0.72);
+      ctx.lineTo(a.x + 8, a.y + 4); ctx.lineTo(a.x + a.r * 0.55, a.y - a.r * 0.62); ctx.stroke();
+    }
+    if (layer === "front" && finale.relicK > 0 && finale.relicK < 1.05 && blade) {
+      const relicColors = [CONFIG.colors.boss, CONFIG.colors.armoredShield, CONFIG.colors.bomber, "#b06cff"];
+      for (let i = 0; i < 4; i++) {
+        const start = i * 0.18, k = clamp((finale.relicK - start) / 0.34, 0, 1), e = 1 - (1 - k) * (1 - k);
+        const sx = i % 2 ? W + 70 : -70, sy = 170 + i * 145, x = lerp(sx, blade.x, e), y = lerp(sy, blade.y, e);
+        ctx.globalAlpha = 0.22 + 0.78 * (1 - k * 0.35); ctx.fillStyle = relicColors[i];
+        ctx.beginPath(); ctx.arc(x, y, 7 + 6 * (1 - k), 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
   function renderWorld() {
     ctx.save();
     // camera: zoom-punch + shake, both pivoting on screen center
@@ -3464,6 +3698,7 @@
     // DEPTH PLANE: rear actors render after the biome but before every route
     // surface, producing real occlusion instead of a foreground sprite trick.
     for (const e of enemies) if (!e.dead && typeof e.drawRear === "function") e.drawRear(ctx);
+    drawFinaleWorld("rear");
     // Broken arena platforms leave diegetic fragments / reform silhouettes even
     // while they are absent from collision.
     if (run && run._arenaBroken) for (const p of run._arenaBroken) Backdrop.platform(ctx, p, currentStage, false, backdropView);
@@ -3485,6 +3720,7 @@
       ctx.stroke();
       ctx.restore();
     }
+    drawFinaleWorld("front");
     // Geomancer walls: a colored cap + crumble fade as they age
     for (const w of tempWalls) {
       const k = clamp(w.life / w.maxLife, 0, 1);
@@ -4099,7 +4335,7 @@
     const signedIn = typeof Cloud !== "undefined" && Cloud.loggedIn();
     uiButtons.push({ ghost: true, x: railX, y: 240, w: MW, h: 58, size: t.type.title,
       dot: signedIn ? "#2f9e6b" : "#8a93a6",
-      label: (PROFILE.username() || "GUEST").toUpperCase(),
+      label: ((PROFILE.data.rewards && PROFILE.data.rewards.campaignEmblem ? "◇ " : "") + (PROFILE.username() || "GUEST")).toUpperCase(),
       sub: "◆ " + META.coins() + "    ⬡ " + PROFILE.shards() + "    ★ " + PROFILE.unlockedCount(),
       action: () => { state = "profile"; profileTab = "bests"; listScroll = 0; } });
 
@@ -4121,6 +4357,14 @@
     const ry = 426, rh = 52, rgap = 9;
     rail.forEach(([glyph, label, action], i) =>
       uiButtons.push({ ghost: true, glyph, label, action, x: railX, y: ry + i * (rh + rgap), w: MW, h: rh }));
+
+    const pendingFinale = PROFILE.pendingFinale();
+    if (pendingFinale) {
+      UI.tag(ctx, "◇ SAVED ADVENTURE CLEAR", railX + MW + 34, H - 146, t.color.accent, "left", t.type.micro);
+      UI.text(ctx, "The Final Cut was interrupted.", railX + MW + 34, H - 118, t.type.caption, "left", t.alpha.soft);
+      uiButtons.push({ x: railX + MW + 34, y: H - 102, w: 196, h: 44, size: t.type.caption, label: "RESUME FINAL CUT", action: resumeSavedFinale });
+      uiButtons.push({ x: railX + MW + 242, y: H - 102, w: 174, h: 44, size: t.type.caption, label: "CLAIM RESULTS", action: claimSavedFinale });
+    }
 
     UI.ink = "#000";   // restore the default for sub-screens drawn after this frame
     return;
@@ -5981,52 +6225,17 @@
     drawRunProgressPanel(1090, 210, 430, 600);
   }
 
-  // the rift's jagged path down the centre (deterministic), narrowing as it seals
-  function riftPath(e) {
-    ctx.beginPath();
-    for (let y = 70; y <= H - 150; y += 16) {
-      const jag = Math.sin(y * 0.06 + 3) * (10 + (1 - e) * 22) * Math.sin(y * 0.013 + 1);
-      const x = W / 2 + jag * (1 - e * 0.55);
-      if (y === 70) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-  }
-  // the cinematic Adventure ending: the Tear sealing over a quiet void
+  // Results are a separate celebration after the playable ending; the epilogue
+  // never competes with score, rewards, buttons or the old sealing animation.
   function renderEnding() {
-    const t = UI.t, seal = clamp(winT / 2.4, 0, 1), e = ez(seal), accent = CONFIG.colors.perfect;
-    // void backdrop
-    const sr = screenRect();
-    const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#0a0812"); g.addColorStop(1, "#130f24");
-    ctx.fillStyle = g; ctx.fillRect(sr.x, sr.y, sr.w, sr.h);
-    // drifting motes, released upward
-    for (let i = 0; i < 46; i++) {
-      const sx = (i * 137.5) % W, y0 = (i * 89.3) % H, y = ((y0 - winT * (14 + (i % 6) * 7)) % H + H) % H;
-      ctx.globalAlpha = 0.1 + 0.1 * Math.sin(winT * 1.4 + i); ctx.fillStyle = i % 4 === 0 ? accent : "#6a5a9a";
-      ctx.fillRect(sx, y, 2, 2);
-    }
-    ctx.globalAlpha = 1;
-    // the rift, sealing
-    ctx.save(); ctx.lineCap = "round"; ctx.strokeStyle = accent;
-    for (let p = 0; p < 3; p++) { ctx.globalAlpha = ((1 - e) * 0.55 + 0.12) * (0.5 - p * 0.13); ctx.lineWidth = ((1 - e) * 84 + 4) * (1 - p * 0.26) + 3; riftPath(e); ctx.stroke(); }
-    ctx.globalAlpha = 0.9; ctx.strokeStyle = "#eafaff"; ctx.lineWidth = Math.max(1.5, (1 - e) * 10 + 1.5); riftPath(e); ctx.stroke();
-    ctx.restore();
-    if (seal > 0.8 && seal < 0.95) { ctx.globalAlpha = (1 - Math.abs(seal - 0.875) / 0.075) * 0.45; ctx.fillStyle = "#fff"; ctx.fillRect(sr.x, sr.y, sr.w, sr.h); ctx.globalAlpha = 1; }
-    // the survivor, watching it close
-    ctx.fillStyle = "#ece9f7"; ctx.fillRect(W / 2 - 9, H - 138, 18, 40);
-    ctx.fillStyle = accent; ctx.fillRect(W / 2 - 4, H - 128, 8, 5);
-    // text on the void
-    UI.ink = "#ece9f7";
-    ctx.globalAlpha = clamp(winT / 0.5, 0, 1); UI.title(ctx, "THE TEAR CLOSES", W / 2, 118, t.type.display); ctx.globalAlpha = 1;
-    ctx.fillStyle = accent; ctx.globalAlpha = clamp(winT - 0.4, 0, 1) * 0.8; ctx.fillRect(W / 2 - 100 * clamp(winT - 0.4, 0, 1), 136, 200 * clamp(winT - 0.4, 0, 1), 2); ctx.globalAlpha = 1;
-    ctx.globalAlpha = clamp((winT - 0.7) / 1.3, 0, 1);
-    wrapText(CAMPAIGN_ENDING, W / 2 - 380, 196, 760, 25, t.type.body, "#cfc9e6");
-    ctx.globalAlpha = 1;
-    UI.text(ctx, overInfo.score + " pts   ·   " + fmtTime(overInfo.time) + (overInfo.isNew ? "   ·   NEW BEST" : ""), W / 2, 446, t.type.caption, "center", clamp((winT - 1) / 1, 0, 1) * 0.75);
-    UI.text(ctx, "+" + overInfo.earned + " coins  (" + overInfo.coins + " total)", W / 2, 468, t.type.caption, "center", clamp((winT - 1) / 1, 0, 1) * 0.5);
-    if (winT > 1.6) vmenu([
-      { label: "DESCEND AGAIN", action: () => retryRun() },
+    UI.finalReward(ctx, { amount: clamp(winT / UI.t.motion.finalRewardIn, 0, 1), label: "ADVENTURE COMPLETE",
+      title: "THE WORLD, RESTORED", sigil: "◇", color: CONFIG.colors.perfect,
+      reward: overInfo.score + " PTS  ·  " + fmtTime(overInfo.time) + (overInfo.isNew ? "  ·  NEW BEST" : ""),
+      detail: "+" + overInfo.earned + " COINS  ·  " + overInfo.coins + " TOTAL" });
+    if (winT > 0.8) vmenu([
+      { label: "DESCEND AGAIN", action: () => startRun("campaign", overInfo.diff || "normal") },
       { label: "MAIN MENU", action: () => { state = "menu"; } },
-    ], W / 2, 506, 280, t.metric.btnH, t.metric.btnGap);
-    // (UI.ink stays light: the ending's buttons + cursor read on the void)
+    ], W / 2, H / 2 + 155, 280, UI.t.metric.btnH, UI.t.metric.btnGap);
   }
 
   function renderWin() {
@@ -6117,6 +6326,22 @@
       SFX.ui(); b.action(); break;
     }
   }
+
+  if (PANTHEON_DEBUG) window.__PANTHEON_TEST = Object.freeze({
+    startFinale() {
+      startRun("campaign", "normal"); if (CINEMA.active) CINEMA.cancel("debug-final-cut");
+      run.wave = STAGES.length * 10; run.score = 12345; run.runTime = 612; run.spawnQueue.length = 0; run.waveActive = false;
+      run._victoryPrepared = { isNew: true, earned: 321, coins: META.coins() };
+      stageIndex = STAGES.length - 1; currentStage = stageAt(stageIndex); platforms = stagePlatforms(stageIndex);
+      enemies = []; projectiles = []; if (GHOST.recording()) GHOST.stopRec({ debugFinale: true });
+      startAdventureFinale({ x: W / 2, y: H * 0.40 }, true);
+    },
+    cut() { return severFinaleAnchor(false); },
+    skip() { CINEMA.requestSkip(); },
+    advance() { CINEMA.update(0.4, { pressed: true }); },
+    state() { return { game: state, cinema: CINEMA.id, beat: CINEMA.beatId, active: CINEMA.active,
+      finale: finale && { phase: finale.phase, severed: finale.severed, landed: finale.landed, restoring: !!finale.restoring } }; },
+  });
 
   requestAnimationFrame(frame);
 })();

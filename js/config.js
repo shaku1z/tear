@@ -198,6 +198,13 @@ const CONFIG = {
   // shared boss ceremony timing. Individual fights supply the poses and attack grammar;
   // the theater layer owns only the real-time pacing.
   bossTheater: { introDur: 1.4, introScale: 0.25, deathDur: 0.9 },
+  // THE FINAL CUT: a no-fail blade epilogue. These timings are presentation
+  // knobs only; completion is persisted before the first beat begins.
+  finale: {
+    silence: 0.55, wound: 1.45, relics: 2.0, cutAutoAt: 13.0, cutAutoStep: 1.15,
+    anchorRadius: 58, cutSpeed: 900, restorationMin: 2.4, epilogueReveal: 2.8,
+    rewardHold: 2.4, worldZoom: 0.84, fragmentCap: 18,
+  },
   // The Echo (Stage 4 boss): your own silhouette — mirrors your tricks -> splits -> turns invisible
   echo: {
     w: 32, h: 50, hp: 3000, speed: 280, contactDmg: 18, knockbackTaken: 0.5, weight: 4,
