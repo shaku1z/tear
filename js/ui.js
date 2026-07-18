@@ -48,6 +48,9 @@ const UI = {
       bossPhaseAccentH: 3,
       cinemaBarH: 74, cinemaDialogueW: 780, cinemaDialogueH: 104,
       cinemaDialogueBottom: 96, cinemaDialoguePad: 18, cinemaProgressH: 3,
+      chapterW: 1080, chapterH: 520, chapterPad: 46, chapterTearAt: 0.36,
+      chapterNumeralY: 128, chapterBodyW: 560, chapterLineH: 28, chapterProgressGap: 18,
+      biomeRevealRuleW: 260, cinematicPromptBottom: 54,
       rallyInset: 2,
       settingsTop: 182, settingsContentInset: 40, settingsColumnGap: 40,
       settingsRowH: 58, settingsControlW: 252, settingsControlH: 42, settingsStepperW: 54,
@@ -59,6 +62,7 @@ const UI = {
       cinemaBar: 0.88, cinemaVignette: 0.30, cinemaSubtitle: 0.75,
       bossPhasePanel: 0.82,
       cinemaPanel: 0.90, cinemaHint: 0.58,
+      chapterWorldDim: 0.72, chapterPanel: 0.94, chapterGhost: 0.16,
       rallyBase: 0.72, rallyPulse: 0.18,
     },
     // colour ROLES (semantic). `ink`/`paper` are the fg/bg pair; the rest pull
@@ -86,6 +90,7 @@ const UI = {
       bossIntroAccentDelay: 0.15,
       bossIntroAccentGrow: 0.5,
       cinemaFrameIn: 0.45, cinemaDialogueIn: 0.22,
+      chapterIn: 0.22, chapterTextReveal: 1.35, chapterExit: 0.32, biomeRevealIn: 0.42,
       rallyPulse: 9,
     },
   },
@@ -789,6 +794,68 @@ const UI = {
     ctx.fillStyle = color; ctx.globalAlpha = k * a.soft; ctx.fillRect(x, y + h - m.cinemaProgressH, w * progress, m.cinemaProgressH);
     if (o.hint) this.text(ctx, o.hint, x + w, y - t.space.sm, t.type.micro, "right", k * a.cinemaHint);
     this.ink = savedInk; ctx.restore();
+  },
+
+  // Fractured Codex: one token-owned campaign page. The biome remains visible
+  // beneath the field; numeral, Tear, copy, progress and prompt are one component.
+  chapterCard(ctx, opts) {
+    const o = opts || {}, t = this.t, m = t.metric, a = t.alpha;
+    const vw = CONFIG.view.w, vh = CONFIG.view.h, k0 = Math.max(0, Math.min(Number(o.amount) || 0, 1));
+    const k = 1 - (1 - k0) * (1 - k0), w = Math.min(m.chapterW, vw - t.space.xl * 2), h = Math.min(m.chapterH, vh - t.space.xl * 2);
+    const x = (vw - w) / 2, y = (vh - h) / 2 + (1 - k) * t.space.lg, tearX = x + w * m.chapterTearAt;
+    const color = o.color || t.color.accent, savedInk = this.ink;
+    ctx.save(); ctx.globalAlpha = k * a.chapterWorldDim; ctx.fillStyle = t.color.cinema; ctx.fillRect(0, 0, vw, vh);
+    ctx.globalAlpha = k * a.chapterPanel; ctx.fillStyle = t.color.cinema; ctx.fillRect(x, y, w, h);
+    ctx.globalAlpha = k; ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h);
+    this.ink = t.color.cinemaInk;
+    ctx.globalAlpha = k * a.chapterGhost; ctx.fillStyle = color; ctx.font = this.font(176, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(o.number || "", x + w * 0.18, y + h * 0.43);
+    ctx.globalAlpha = k; ctx.font = this.font(t.type.display, true); ctx.fillStyle = color; ctx.fillText(o.symbol || "◇", x + w * 0.18, y + m.chapterNumeralY);
+    // The vertical Tear is intentionally irregular but its placement, weight and
+    // amplitude remain token-derived and stable at every aspect ratio.
+    const tearFlip = o.transition === "mirror" ? -1 : 1;
+    ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(tearX, y + t.space.lg);
+    for (let i = 1; i <= 8; i++) { const yy = y + t.space.lg + (h - t.space.lg * 2) * i / 8; ctx.lineTo(tearX + tearFlip * (i % 2 ? t.space.xs : -t.space.xs), yy); }
+    ctx.stroke();
+    const tx = tearX + m.chapterPad, maxW = Math.min(m.chapterBodyW, x + w - m.chapterPad - tx);
+    this.tag(ctx, o.label || "FRACTURED CODEX", tx, y + m.chapterPad, color, "left", t.type.caption);
+    ctx.fillStyle = t.color.cinemaInk; ctx.font = this.font(t.type.h2, true); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillText(o.title || "", tx, y + m.chapterPad + t.space.xl);
+    const full = String(o.text || ""), reveal = Math.max(0, Math.min(Number(o.reveal) || 0, 1));
+    const shown = full.slice(0, Math.ceil(full.length * reveal)), words = shown.split(/\s+/);
+    ctx.font = this.font(t.type.lead, false); let line = "", yy = y + m.chapterPad + t.space.xl + t.type.h2 + t.space.lg;
+    for (const word of words) {
+      const next = line ? line + " " + word : word;
+      if (line && ctx.measureText(next).width > maxW) { ctx.fillText(line, tx, yy); line = word; yy += m.chapterLineH; }
+      else line = next;
+    }
+    if (line) ctx.fillText(line, tx, yy);
+    const pages = Math.max(1, o.pageCount || 1), page = Math.max(0, o.pageIndex || 0);
+    for (let i = 0; i < pages; i++) { ctx.globalAlpha = i === page ? k : k * a.ghost; ctx.fillStyle = i === page ? color : t.color.cinemaMuted; ctx.fillRect(tx + i * m.chapterProgressGap, y + h - m.chapterPad, i === page ? 12 : 6, 3); }
+    this.cinematicPrompt(ctx, { text: o.hint, x: x + w - m.chapterPad, y: y + h - m.chapterPad + 3, align: "right", amount: k, color });
+    this.ink = savedInk; ctx.restore();
+  },
+
+  biomeReveal(ctx, opts) {
+    const o = opts || {}, t = this.t, m = t.metric, a = t.alpha, vw = CONFIG.view.w, vh = CONFIG.view.h;
+    const k0 = Math.max(0, Math.min(Number(o.amount) || 0, 1)), k = 1 - (1 - k0) * (1 - k0), color = o.color || t.color.accent;
+    const savedInk = this.ink; ctx.save(); ctx.globalAlpha = k * 0.28; ctx.fillStyle = t.color.cinema; ctx.fillRect(0, 0, vw, vh);
+    this.ink = t.color.cinemaInk; ctx.globalAlpha = k;
+    this.tag(ctx, "CHAPTER " + (o.number || ""), vw / 2, vh / 2 - 92, color, "center", t.type.caption);
+    this.title(ctx, o.name || "", vw / 2, vh / 2 - 26, t.type.display);
+    ctx.fillStyle = color; ctx.fillRect(vw / 2 - m.biomeRevealRuleW / 2, vh / 2 - 6, m.biomeRevealRuleW * k, 3);
+    this.text(ctx, o.line || "", vw / 2, vh / 2 + 42, t.type.lead, "center", k * a.soft);
+    if (o.ready) this.tag(ctx, "READY", vw / 2, vh / 2 + 102, color, "center", t.type.title);
+    this.ink = savedInk; ctx.restore();
+  },
+
+  cinematicPrompt(ctx, opts) {
+    const o = opts || {}, t = this.t, k = o.amount == null ? 1 : o.amount;
+    if (!o.text) return;
+    ctx.save(); ctx.fillStyle = o.color || t.color.cinemaMuted; ctx.globalAlpha = k * t.alpha.cinemaHint;
+    ctx.font = this.font(t.type.micro, true); ctx.textBaseline = "middle"; ctx.textAlign = o.align || "center";
+    const x = o.x == null ? CONFIG.view.w / 2 : o.x, y = o.y == null ? CONFIG.view.h - t.metric.cinematicPromptBottom : o.y;
+    ctx.fillText(o.text, x, y); ctx.restore();
   },
 
   // right-anchored row of `n` small squares, `filled` of them coloured (level meters)

@@ -165,13 +165,57 @@
   let currentStage = stageAt(0);      // its palette/name
   let stageBannerT = 0;               // "STAGE N — Name" banner timer
   let stageName = "";
-  let loreT = 0, loreDur = 7, loreText = "", loreTitle = "", loreHold = 0;   // lore beat: spawns pause while it plays + a brief breath after
-  function showLore(text, title, dur) { loreText = text; loreTitle = title || ""; loreDur = dur || 7; loreT = loreDur; }
-  function loreBusy() { return loreT > 0 || loreHold > 0; }   // true while the lore beat holds the wave back
+  let chapterFlow = null;
+  function loreBusy() { return !!(run && run.mode === "campaign" && run.chapterState !== "WAVE_LIVE"); }
   // the campaign's opening — shown as a lore card on the first wave of an Adventure run
   const CAMPAIGN_INTRO = "Long ago the sky was torn, and through the wound poured everything that should not be. They named it the Tear. Each soul the Council sent to close it was worn, in time, into the shape of the thing they failed to stop — a guardian of the very wound they meant to end. You are the next to descend. Cut clean. Keep moving. Reach the Source before it wears your shape too.";
   // shown when the whole Adventure is completed (final biome's boss falls)
   const CAMPAIGN_ENDING = "The Tear closes behind you like a held breath let go. Every guardian, every echo of the ones who came before — all of it was the long way of asking whether you'd still be going somewhere when you arrived. You are. Whatever waits on the other side, you walked the whole length of someone else's ending to reach your own beginning. Go finish it.";
+
+  function beginCampaignChapter(index, priorOutro) {
+    const stage = stageAt(index), chapter = stage && stage.chapter;
+    if (!run || run.mode !== "campaign" || !chapter) { if (run) run.chapterState = "WAVE_LIVE"; return; }
+    const pages = [];
+    if (index === 0 && !run._prologueShown) {
+      run._prologueShown = true;
+      pages.push({ label: "BEFORE THE DESCENT", text: CAMPAIGN_INTRO });
+    }
+    if (priorOutro) pages.push(priorOutro);
+    pages.push(...chapter.pages);
+    const flow = chapterFlow = { stage, chapter, pages, state: "LORE_ENTER", page: 0 };
+    run.chapterState = "LORE_ENTER"; stageBannerT = 0; bossBeat = null;
+    const pageBeats = pages.map((page, pageIndex) => ({
+      id: "page-" + pageIndex, view: "page", duration: 2.35, minDuration: 0.16, advanceable: true,
+      revealDuration: UI.t.motion.chapterTextReveal, playerMode: "locked", number: chapter.number, symbol: chapter.symbol,
+      label: page.label, title: chapter.title, text: page.text, color: stage.accent, pageIndex, pageCount: pages.length,
+      transition: chapter.transition,
+      onEnter() { flow.state = "LORE_READ"; flow.page = pageIndex; run.chapterState = "LORE_READ"; },
+    }));
+    CINEMA.start({
+      id: "chapter-" + index, kind: "chapter", color: stage.accent, blocksCombat: true, hideHud: true,
+      hint: "TAP TO REVEAL  ·  HOLD TO SKIP CHAPTER", skipHint: "SKIPPING — BIOME REVEAL PRESERVED",
+      onStart() { player.iframe = Math.max(player.iframe, pages.length * 2.6 + 2); projectiles.length = 0; },
+      onSkip(c, director) { director.skipTo("reveal"); },
+      onComplete() {
+        flow.state = "WAVE_LIVE"; run.chapterState = "WAVE_LIVE"; chapterFlow = null; stageBannerT = 0;
+        player.iframe = Math.max(player.iframe, 0.45);
+      },
+      onCancel() { if (run) run.chapterState = "WAVE_LIVE"; chapterFlow = null; },
+      beats: [
+        { id: "enter", duration: UI.t.motion.chapterIn, playerMode: "locked", onEnter() { flow.state = "LORE_ENTER"; run.chapterState = "LORE_ENTER"; } },
+        ...pageBeats,
+        { id: "exit", view: "page", exit: true, duration: UI.t.motion.chapterExit, playerMode: "locked",
+          number: chapter.number, symbol: chapter.symbol, label: pages[pages.length - 1].label, title: chapter.title,
+          text: pages[pages.length - 1].text, color: stage.accent, pageIndex: pages.length - 1, pageCount: pages.length,
+          transition: chapter.transition,
+          onEnter() { flow.state = "LORE_EXIT"; run.chapterState = "LORE_EXIT"; } },
+        { id: "reveal", view: "reveal", duration: 1.15, playerMode: "locked", number: chapter.number, name: stage.name, line: chapter.intro, color: stage.accent,
+          onEnter() { flow.state = "BIOME_REVEAL"; run.chapterState = "BIOME_REVEAL"; } },
+        { id: "ready", view: "ready", duration: 0.72, playerMode: "locked", number: chapter.number, name: stage.name, line: stage.blurb, color: stage.accent,
+          onEnter() { flow.state = "READY"; run.chapterState = "READY"; } },
+      ],
+    }, flow);
+  }
 
   // swap the biome: new platform layout + palette, and clear any lingering hazards
   function loadStage(i) {
@@ -1411,7 +1455,7 @@
     hitStop = 0; shake = 0; FX.reset(); Backdrop.resetFx(); CLOCK.sim = 0;
     timeScale = 1; slowmo = 0; zoom = 1; flash = 0; bannerT = 0; dashGhostT = 0; throwCd = 0;
     worldZoom = 1; worldZoomTarget = 1;
-    loadStage(0); stageBannerT = 0; loreT = 0;   // fresh biome 0 (campaign re-stages per wave below)
+    loadStage(0); stageBannerT = 0; chapterFlow = null;   // fresh biome 0 (campaign re-stages per wave below)
     // Stable per-run identity for procedural sub-systems. P3 consumes the Void
     // stream state; creating it here makes layouts reproducible without changing
     // any existing combat RNG in this foundational phase.
@@ -1433,6 +1477,7 @@
       biomeState: { swung: false, thrown: false, jumped: false },   // per-stage restriction feats
       _staticParry: 0, _airKills: 0, _projDashes: 0, _aldricSlams: 0, _revivedT: false, _bossFightT: null,
       runSeed, voidSeed: voidSeed || 1,
+      chapterState: mode === "campaign" ? "LORE_ENTER" : "WAVE_LIVE", pendingBossOutro: null, _prologueShown: false,
     };
     // Exodia (The Forbidden Technique): Long Arm + Throwing Arm + Aether Step + Lifeline all owned
     if (achTracks() && META.level("reach") > 0 && META.level("throwarm") > 0 && META.level("aircharge") > 0 && META.level("lifeline") > 0) PROFILE.maxStat("exodiaBuild", 1);
@@ -1457,7 +1502,6 @@
       if (mode === "playground") { run.bossOrder = shuffledRoster(); run.bossIdx = 0; run.pg = { god: false, freeze: false, slow: false, hpMul: 1, count: 1 }; run.pgArena = -1; }
       if (mode === "tutorial") TUT.start();
     } else startNextWave();
-    if (mode === "campaign") showLore(CAMPAIGN_INTRO, "THE TEAR", 11);   // the opening beat
     state = "playing";
     requestLock();
   }
@@ -1506,8 +1550,10 @@
       const ns = Math.floor((run.wave - 1) / 10);
       if (run.wave === 1 || ns !== stageIndex) {
         if (run.wave > 1) Wipe.begin();   // tear-wipe into the new biome (not on the opening stage)
+        const priorOutro = run.pendingBossOutro; run.pendingBossOutro = null;
         loadStage(ns);
-        stageBannerT = 3.0; stageName = stageAt(ns).name;
+        stageBannerT = 0; stageName = stageAt(ns).name;
+        beginCampaignChapter(ns, priorOutro);
       }
       run.isBossWave = (run.wave % 10 === 0);
       run.stage = ns;
@@ -2867,7 +2913,7 @@
       e.zones = [];
       if (e.freezeVoid && run.voidScroll) { run.voidScroll.active = false; run.voidScroll.frozen = true; }
       if (blade && blade.stolenBy === e) { blade.hostile = false; blade.stolenBy = null; blade.state = "returning"; }
-      if (run.mode === "campaign" && currentStage && currentStage.lore) showLore(currentStage.lore, "", 8);
+      if (run.mode === "campaign" && currentStage && currentStage.chapter) run.pendingBossOutro = currentStage.chapter.bossOutro || null;
     }
   }
 
@@ -2899,12 +2945,6 @@
       const hold = Input.held.has("Space") || Input.held.has("Enter") || Input.held.has("NumpadEnter") || !!(gp && gp.buttons[0] && gp.buttons[0].pressed);
       CINEMA.update(dt, { pressed: Input.confirmPressed() || Input.tJump || clicked, hold });
     }
-
-    if (loreT > 0) {
-      if (Input.confirmPressed() || Input.takeClick()) loreT = Math.min(loreT, 0.35);   // skippable (Space / click)
-      loreT -= dt;
-      if (loreT <= 0) { loreT = 0; loreHold = 0.7; }   // a brief breath before the wave begins
-    } else if (loreHold > 0) loreHold -= dt;
 
     Input.allowLock = (state === "playing");
 
@@ -3119,9 +3159,8 @@
       if (bossIntro && bossIntro.delay <= 0 && state === "playing") drawBossIntro();   // the arrival ceremony rides over the HUD
       if (CINEMA.active) CINEMA.draw(ctx, UI, screenRect(), A11Y.reducedMotion);
       if (Input.touchActive() && state === "playing" && !CINEMA.active && !(typeof PAD !== "undefined" && PAD.active)) drawTouchControls();   // a live controller hides the thumb controls
-      if (loreT > 0) drawLore();
-      if (state === "playing" && bannerT > 0) drawBanner();
-      if (state === "playing" && stageBannerT > 0) drawStageBanner();
+      if (state === "playing" && bannerT > 0 && !CINEMA.active) drawBanner();
+      if (state === "playing" && stageBannerT > 0 && !CINEMA.active) drawStageBanner();
       if (state === "playing" && rankPopT > 0) {
         ctx.save(); ctx.globalAlpha = clamp(rankPopT, 0, 1);
         ctx.fillStyle = trickColor(run.mult); ctx.textAlign = "center";
@@ -3964,29 +4003,6 @@
     const b = bossIntro.boss;
     UI.bossIntro(ctx, { screen: screenRect(), bossName: b.bossName || "BOSS", epithet: b.epithet || "",
       color: b.color || CONFIG.colors.boss, t: bossIntro.t, dur: bossIntro.dur });
-  }
-
-  // a boss-defeat lore caption at the top (non-blocking, fades over ~7s)
-  function drawLore() {
-    const fadeIn = clamp(loreDur - loreT, 0, 1), fadeOut = clamp(loreT * 3, 0, 1);
-    const a = clamp(Math.min(fadeIn, fadeOut), 0, 1);
-    const accent = currentStage.accent || "#13c4d6";
-    const title = loreTitle || ((currentStage.name || "STAGE").toUpperCase() + " — CLEARED");
-    const savedInk = UI.ink; UI.ink = "#efedf8";   // lore reads on a dark cinematic dim, biome-independent
-    ctx.save();
-    const sr = screenRect();
-    ctx.globalAlpha = a * 0.84; ctx.fillStyle = "#06070c"; ctx.fillRect(sr.x, sr.y, sr.w, sr.h);   // dim the world for the beat
-    ctx.globalAlpha = a;
-    UI.title(ctx, title, W / 2, H / 2 - 96, UI.t.type.display);
-    ctx.strokeStyle = accent; ctx.lineWidth = 2;
-    const uw = 130 * fadeIn; ctx.beginPath(); ctx.moveTo(W / 2 - uw, H / 2 - 70); ctx.lineTo(W / 2 + uw, H / 2 - 70); ctx.stroke();
-    // typewriter reveal — the full text once you skip / it fades out
-    const shown = (loreT < 0.5) ? loreText : loreText.slice(0, Math.max(0, Math.floor((loreDur - loreT) * 42)));
-    wrapText(shown, W / 2 - 380, H / 2 - 34, 760, 26, UI.t.type.body, "#e9e7f2");
-    ctx.globalAlpha = a * (0.42 + 0.22 * Math.sin(performance.now() / 380));
-    UI.text(ctx, "Space / click  ·  skip", W / 2, H / 2 + 156, UI.t.type.caption, "center");
-    ctx.restore();
-    UI.ink = savedInk;
   }
 
   // campaign stage-transition banner ("STAGE N — Name")

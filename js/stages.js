@@ -11,7 +11,12 @@ const STAGES = [
   {
     name: "The Grounds", blurb: "Where order is kept.",
     boss: "warden",
-    lore: "The Warden's badge lies in pieces. Etched inside, worn almost smooth: \"Appointed by the Council of First Light. Directive: none shall reach the Undercroft.\" Below it, scratched by hand: \"I never asked what was down there.\"",
+    chapter: { number: "I", title: "THE FIRST DESCENT", symbol: "⌑", intro: "ORDER ENDS AT THE EDGE.", transition: "ash",
+      pages: [
+        { label: "THE COMMISSION", text: "The Council built the Grounds around a single command: nothing below was ever to reach the light." },
+        { label: "THE KEEPER", text: "One Warden remained after the orders stopped coming. Duty outlived everyone who might have released him." },
+      ],
+      bossOutro: { label: "BROKEN BADGE", text: "Inside the badge: ‘Directive: none shall reach the Undercroft.’ Beneath it, scratched by hand: ‘I never asked what was down there.’" } },
     bg: "#ffffff", plat: "#111111", accent: "#e23b3b",
     // disciplined guards: melee front line, a few archers; heavy units only later
     pool: [["charger", 1.0, 1], ["ranged", 0.5, 2], ["bomber", 0.3, 4], ["armored", 0.3, 5]],
@@ -26,7 +31,12 @@ const STAGES = [
   {
     name: "The Undercroft", blurb: "Gray industry, deep below.",
     boss: "colossus",
-    lore: "In the deepest wall of the Undercroft, beneath the mechanism that is now still, words are carved into the original stone — older than the machine: \"Built to contain the Tide of Crimson. Should the Colossus fall, know this — we tried to stop it before it reached the Fields. We failed then too.\"",
+    chapter: { number: "II", title: "THE MACHINE BELOW", symbol: "▦", intro: "THE FOUNDRY STILL EXPECTS A SHIFT.", transition: "steel",
+      pages: [
+        { label: "THE UNDERCROFT", text: "Industry continued beneath the abandoned city. No workers remained, but every machine remembered its quota." },
+        { label: "THE CONTAINMENT", text: "The Colossus was not built to conquer. It was built to stand between the Crimson Tide and everything above." },
+      ],
+      bossOutro: { label: "ORIGINAL STONE", text: "Older than the machine: ‘Should the Colossus fall, know this—we tried to stop the Tide before it reached the Fields.’" } },
     bg: "#dbe0e6", plat: "#2a2f37", accent: "#15c2c2",
     // industrial: heavy plating + ordnance, with anchors that pin you down
     pool: [["armored", 0.8, 1], ["bomber", 0.7, 1], ["charger", 0.6, 1], ["ranged", 0.5, 2], ["anchor", 0.25, 4]],
@@ -42,7 +52,12 @@ const STAGES = [
   {
     name: "The Crimson Fields", blurb: "Red and gold, and old rage.",
     boss: "aldric",
-    lore: "Among Aldric's belongings, tucked inside the wrapping of his broken cleaver's handle: a small painted portrait, almost worn through. Two children, laughing. On the back, in handwriting read so many times the ink is barely there: \"Elan and Mira — before the first Tear opened.\" And, in another hand: \"Aldric. Come home.\" He never did.",
+    chapter: { number: "III", title: "THE KING WITHOUT HOME", symbol: "♜", intro: "THE FIELDS REMEMBER EVERY FIRE.", transition: "ember",
+      pages: [
+        { label: "THE CRIMSON FIELDS", text: "A kingdom burned so long that flame became weather. Its last king still patrols the borders of a country that is gone." },
+        { label: "THE CROWN", text: "Aldric calls it a throne. The ruins call it a grave. Neither word has persuaded him to leave." },
+      ],
+      bossOutro: { label: "PAINTED PORTRAIT", text: "Two children, laughing. On the back: ‘Elan and Mira—before the first Tear.’ In another hand: ‘Aldric. Come home.’" } },
     bg: "#f7e3e3", plat: "#5a1320", accent: "#e23b3b",
     // old rage: relentless melee + flyers, heralds whipping them into a frenzy
     pool: [["charger", 1.0, 1], ["flyer", 0.6, 1], ["bomber", 0.3, 2], ["herald", 0.3, 3], ["chimera", 0.35, 5]],
@@ -57,7 +72,12 @@ const STAGES = [
   {
     name: "The Voidspire", blurb: "Where the rules thin out.",
     boss: "echo",
-    lore: "The Voidspire is quiet for the first time. On the wall behind where The Echo stood, scratched deep over what must have been years: your name. Over and over — hundreds of times. Below them all, fresher, still sharp: \"I remember what it was like to be going somewhere.\" And at the very bottom: \"Go finish it. One of us should.\"",
+    chapter: { number: "IV", title: "THE NAME IN THE WALL", symbol: "◇", intro: "THE RULES THIN. THE MEMORY DOES NOT.", transition: "mirror",
+      pages: [
+        { label: "THE VOIDSPIRE", text: "Here distance repeats itself and every motion leaves behind a version that believes it moved first." },
+        { label: "THE REFLECTION", text: "Something in the Spire has practiced your shape for years. It remembers a journey you have only just begun." },
+      ],
+      bossOutro: { label: "HUNDREDS OF NAMES", text: "Your name, cut into the wall again and again. At the bottom: ‘Go finish it. One of us should.’" } },
     bg: "#e7e3f3", plat: "#382c54", accent: "#8b3bd6",
     // where the rules thin: wraiths, shifting casters, and support that warps the fight
     pool: [["wraith", 0.7, 1], ["flyer", 0.5, 1], ["ranged", 0.4, 1], ["priest", 0.3, 2], ["chimera", 0.5, 3], ["mender", 0.25, 4]],
@@ -74,7 +94,12 @@ const STAGES = [
     name: "The Tear", blurb: "Everything, all at once.",
     dark: true,   // the void at the end of everything — HUD + player flip to light here
     boss: "source",
-    lore: "There is nothing left to carve the words into — only the quiet where the Tear used to be. You understand it now: the Source was never an enemy, only the wound the world kept reopening, wearing the shape of everyone who ever tried to close it. It wore your shape last. The blade is lighter than it has ever been. Somewhere, far above, something that has not been able to for a very long time begins, tentatively, to heal.",
+    chapter: { number: "V", title: "THE WOUND THAT WATCHES", symbol: "◉", intro: "THE ABYSS LOOKS BACK.", transition: "void",
+      pages: [
+        { label: "THE TEAR", text: "There is no fortress at the bottom of the world—only the wound every fortress was built to misunderstand." },
+        { label: "THE SOURCE", text: "It has worn every guardian sent to close it. Now it waits to learn whether your blade is another memory or an ending." },
+      ],
+      bossOutro: { label: "THE QUIET", text: "The Source was never an enemy. It was the wound the world kept reopening, wearing the shape of everyone who tried to close it." } },
     bg: "#0e0b1a", plat: "#c9c4e0", accent: "#13c4d6",
     // everything you have faced, together
     pool: [["charger", 1.0, 1], ["ranged", 0.6, 1], ["flyer", 0.5, 1], ["bomber", 0.4, 1], ["armored", 0.4, 1], ["wraith", 0.4, 1], ["chimera", 0.4, 1], ["herald", 0.2, 1], ["anchor", 0.2, 1], ["priest", 0.2, 1], ["mender", 0.18, 1]],

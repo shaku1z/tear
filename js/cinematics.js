@@ -8,7 +8,7 @@ const Cinematics = (() => {
     constructor() { this.reset(); }
     reset() {
       this.script = null; this.context = null; this.index = -1; this.elapsed = 0;
-      this.holdT = 0; this.totalElapsed = 0; this.skipping = false; this.finished = false;
+      this.holdT = 0; this.totalElapsed = 0; this.skipping = false; this.finished = false; this.forceReveal = false;
     }
     get active() { return !!this.script; }
     get id() { return this.script && this.script.id; }
@@ -20,6 +20,10 @@ const Cinematics = (() => {
     get progress() {
       const b = this.beat, d = b && Number(b.duration);
       return b && Number.isFinite(d) && d > 0 ? Math.max(0, Math.min(this.elapsed / this._duration(b), 1)) : 0;
+    }
+    get revealProgress() {
+      const b = this.beat, d = b && Number(b.revealDuration);
+      return this.forceReveal || !d ? 1 : Math.max(0, Math.min(this.elapsed / d, 1));
     }
     start(script, context) {
       if (!script || !Array.isArray(script.beats) || !script.beats.length) throw new Error("Cinematics.start requires beats");
@@ -34,7 +38,7 @@ const Cinematics = (() => {
       return this.skipping ? d * (beat.skipScale == null ? 0.35 : beat.skipScale) : d;
     }
     _enter() {
-      this.elapsed = 0;
+      this.elapsed = 0; this.forceReveal = false;
       if (this.beat && this.beat.onEnter) this.beat.onEnter(this.context, this);
     }
     _advance() {
@@ -64,7 +68,10 @@ const Cinematics = (() => {
       const beat = this.beat; if (!beat) return;
       this.elapsed += dt;
       if (beat.onUpdate) beat.onUpdate(this.context, this, dt);
-      if (c.pressed && beat.advanceable && this.elapsed >= (beat.minDuration || 0.18)) { this._advance(); return; }
+      if (c.pressed && beat.advanceable && this.elapsed >= (beat.minDuration || 0.18)) {
+        if (beat.revealDuration && !this.forceReveal && this.revealProgress < 1) { this.forceReveal = true; return; }
+        this._advance(); return;
+      }
       if (beat.waitUntil) {
         if (this.elapsed >= (beat.minDuration || 0) && beat.waitUntil(this.context, this)) this._advance();
         return;
@@ -74,6 +81,18 @@ const Cinematics = (() => {
     draw(ctx, ui, screen, reducedMotion) {
       if (!this.active || !ui) return;
       const b = this.beat;
+      if (this.script.kind === "chapter") {
+        const hint = this.skipping ? (this.script.skipHint || "SKIPPING CHAPTER") : (this.script.hint || "TAP TO REVEAL  ·  HOLD TO SKIP");
+        if (b && b.view === "page") ui.chapterCard(ctx, { number: b.number, symbol: b.symbol, label: b.label,
+          title: b.title, text: b.text, color: b.color || this.script.color,
+          amount: b.exit ? 1 - this.progress : Math.min(1, this.elapsed / 0.22),
+          reveal: b.exit ? 1 : this.revealProgress, pageIndex: b.pageIndex, pageCount: b.pageCount,
+          transition: b.transition, hint });
+        else if (b && (b.view === "reveal" || b.view === "ready")) ui.biomeReveal(ctx, { number: b.number, name: b.name,
+          line: b.line, color: b.color || this.script.color,
+          amount: b.view === "ready" ? 1 : Math.min(1, this.elapsed / (ui.t.motion.biomeRevealIn || 0.42)), ready: b.view === "ready" });
+        return;
+      }
       ui.cinematicFrame(ctx, { screen, amount: Math.min(1, this.totalElapsed / 0.45),
         color: this.script.color, reducedMotion: !!reducedMotion });
       if (b && b.line) ui.dialogueCard(ctx, { speaker: b.speaker, line: b.line, color: b.color || this.script.color,
