@@ -1708,6 +1708,7 @@ class Warden extends Enemy {
     this.searchlights = []; this.cages = []; this.trails = []; this.lockdownT = 0; this.lockdownCd = 0;
     this.mortarTargets = []; this.trailDropT = 0; this._playerRef = null;
     this.volleyCd = 0; this.volleyTargetY = 0;   // NO SHELTER: the skyward volley answers perch-campers
+    this.vaultCd = 0;
     this.stringIdx = 0; this.stringN = 2; this.beatPh = "wind"; this.beatHeavy = false; this.beatParried = false;   // baton strings
     this.mortarKickT = 0;
   }
@@ -1901,6 +1902,7 @@ class Warden extends Enemy {
       this.vx = lerp(this.vx, this.facing * sp, clamp(3 * dt, 0, 1));
       this.atkT -= dt;
       this.volleyCd -= dt;
+      this.vaultCd -= dt;
       // NO SHELTER: camp a perch too long and the volley comes for it — three
       // shells onto YOUR platform, reticles first
       if (this.campT > Wc.campAfter && this.volleyCd <= 0 && this.campPlat) {
@@ -1927,11 +1929,13 @@ class Warden extends Enemy {
           this.mortarTargets = [-1, 0, 1].map((i) => clamp(player.x + i * 180, 60, CONFIG.view.w - 60));
         }
       }
-      // vault: random footwork in P2 — but a camping player makes it TARGETED
-      // (he lands on the perch, baton first)
-      if (ph === 2 && this.onGround && Math.random() < (this.campT > 2 ? 1.2 : 0.5) * dt) {
+      // Every grounded phase can vault; committed perch use makes it targeted,
+      // while sparse footwork jumps keep the Warden from becoming floor-bound.
+      const targetVault = this.campT > Wc.vaultPerchAfter && this.campPlat;
+      if (ph <= 2 && this.onGround && this.vaultCd <= 0 && (targetVault || Math.random() < 0.36 * dt)) {
         this.vy = -1150; this.onGround = false;
-        if (this.campT > 2 && this.campPlat) this.vx = (this.campPlat.x + this.campPlat.w / 2 - this.x) * 1.1;
+        if (targetVault) this.vx = (this.campPlat.x + this.campPlat.w / 2 - this.x) * 1.1;
+        this.vaultCd = Wc.vaultCd;
       }
     }
     this.integrate(dt, platforms);
@@ -2540,6 +2544,21 @@ function tickThroneFire(owner, dt) {
 }
 
 // ---- The Berserker King / Aldric (Stage 3 boss): a duel -> a throne of fire -> a fake death & frenzy ----
+function drawAldricCrown(ctx, pose, heat) {
+  if (!pose) return;
+  const hot = clamp(heat || 0, 0, 1), ink = typeof THEME !== "undefined" ? THEME.ink : "#17131c";
+  ctx.save(); ctx.translate(pose.x, pose.y); ctx.rotate(pose.rot || 0);
+  ctx.fillStyle = hot > 0.72 ? "#fff0a8" : "#caa85c"; ctx.strokeStyle = ink; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(-17, 9); ctx.lineTo(-14, -9); ctx.lineTo(-5, 1); ctx.lineTo(0, -14);
+  ctx.lineTo(6, 1); ctx.lineTo(15, -9); ctx.lineTo(18, 9); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = hot > 0.45 ? CONFIG.colors.bomber : "#74202b";
+  for (const x of [-11, 0, 11]) { ctx.beginPath(); ctx.arc(x, 5, 2.8, 0, Math.PI * 2); ctx.fill(); }
+  // The same broken seam grows while worn and remains on the airborne/fallen prop.
+  ctx.globalAlpha = 0.55 + hot * 0.4; ctx.strokeStyle = hot > 0.65 ? "#fff" : CONFIG.colors.bomber; ctx.lineWidth = 1.8;
+  ctx.beginPath(); ctx.moveTo(-3, -10); ctx.lineTo(2, -3); ctx.lineTo(-1, 3); ctx.lineTo(5, 8); ctx.stroke();
+  ctx.restore();
+}
+
 class Aldric extends Enemy {
   constructor(x, y) {
     super(x, y, CONFIG.aldric);
@@ -2554,9 +2573,13 @@ class Aldric extends Enemy {
     this.weaponHitSpent = false; this.weaponEmberT = 0; this.weaponImpactT = 0; this.weaponBuriedT = 0; this.weaponReclaimT = 0;
     this.fireZones = []; this.seams = []; this.firePattern = 0; this.fireState = "idle"; this.fireClock = 0; this.fireWarnStep = -1;
     this.kneelT = 0; this.kneelStruck = false; this.anger = false;
-    this.crown = null; this.crownfireCd = CONFIG.aldric.crownfireCd; this.chainLeft = 0; this.ghostT = 0; this.seamDropT = 0;
+    this.crownWorn = true; this.crown = null; this.crownHeat = 0;
+    this.crownfireCd = CONFIG.aldric.crownfireCd; this.chainLeft = 0; this.ghostT = 0; this.seamDropT = 0;
     this._playerRef = null; this.witnessEarned = false;
     this.overheadCd = CONFIG.aldric.overheadCd; this.overTX = 0;   // OVERHEAD CLEAVER
+    this.verticalCd = CONFIG.aldric.verticalCdDuel * 0.55; this.verticalTrackT = 0; this.verticalIndex = 0;
+    this.verticalTarget = null; this.verticalTargetX = x; this.verticalTargetY = y;
+    this.verticalStartX = x; this.verticalStartY = y; this.verticalMaxT = 0; this.verticalHitSpent = false;
   }
   damageTakenMult() { return this.mode === "frenzy" ? CONFIG.aldric.frenzyDmgTaken : (this.mode === "downed" ? CONFIG.aldric.downedDmgTaken : 1); }
   _buriedWeaponOrigin() { return { x: this.x + this.facing * 88, y: CONFIG.world.groundY - 44 }; }
@@ -2570,7 +2593,7 @@ class Aldric extends Enemy {
     }
     return greatCleaverPose(this, a, pa, o);
   }
-  contactDamageEnabled() { return this.state !== "lunge" && this.state !== "overhead"; }
+  contactDamageEnabled() { return !["lunge", "overhead", "royalvault", "ascend", "thronefall"].includes(this.state); }
   // during the fake he can't be killed (hit OR DoT) — he always rises into the frenzy
   _deathLocked() { return this.mode === "downed"; }
   hit(dmg, knockX, knockY) {
@@ -2594,6 +2617,106 @@ class Aldric extends Enemy {
   _syncZones() { this.zones = this.fireZones.concat(this.seams); }
   onDeathStart() { clearThroneFire(this, true); this.seams = []; this._syncZones(); }
 
+  _wornCrownPose() {
+    const recoil = (this.state === "windup" || this.state === "chargewind" || this.state === "ascendwind") ? -this.facing * 7 : 0;
+    const rise = ["royalvault", "ascend", "thronewind", "thronefall"].includes(this.state) ? -5 : 0;
+    return { x: this.x + recoil, y: this.y - this.hh - 8 + rise, rot: clamp(this.vx / 1700, -0.16, 0.16) + this.weaponAV * 0.004 };
+  }
+  _verticalCooldown() {
+    const C = CONFIG.aldric;
+    const base = this.mode === "frenzy" ? C.verticalCdFrenzy : (this.mode === "fire" ? C.verticalCdFire : C.verticalCdDuel);
+    return base * (this.crownWorn ? 1 : 0.76);
+  }
+  _chooseVerticalTarget(player, platforms) {
+    const feet = this.y + this.hh, playerFeet = player.y + player.hh;
+    const playerPlat = player.supportPlatform || (platforms || []).find((p) => p.oneway && Math.abs(playerFeet - p.y) < 9 &&
+      player.x + player.hw > p.x && player.x - player.hw < p.x + p.w);
+    let best = null, score = Infinity;
+    for (const p of platforms || []) {
+      if (!p.oneway || p.floor || p.materializationState === "gone" || p.arenaState === "warning" || p.arenaState === "reforming") continue;
+      if (p.y >= feet - 24 || feet - p.y > 330) continue;
+      const center = p.x + p.w / 2, occupied = p === playerPlat ? -420 : 0;
+      const stress = (p.stress || 0) * 120, height = Math.abs(p.y - (player.y + player.hh));
+      const s = Math.abs(center - player.x) * 0.65 + Math.abs(center - this.x) * 0.28 + height + stress + occupied;
+      if (s < score) { score = s; best = p; }
+    }
+    return best;
+  }
+  _startVertical(kind, target, player) {
+    const C = CONFIG.aldric;
+    this.verticalTarget = target; this.verticalStartX = this.x; this.verticalStartY = this.y;
+    this.verticalTargetX = clamp(player.x, target.x + this.hw + 10, target.x + target.w - this.hw - 10);
+    this.verticalTargetY = target.y - this.hh; this.verticalHitSpent = false; this.vx = 0; this.vy = 0; this.onGround = false;
+    const feral = this.crownWorn ? 1 : 0.78;
+    if (kind === "vault") { this.state = "vaultwind"; this.stateT = C.vaultWindup * feral; this.echoCaption = "ROYAL VAULT"; }
+    else if (kind === "ascend") { this.state = "ascendwind"; this.stateT = C.ascendWindup * feral; this.echoCaption = "CLEAVER ASCENSION"; }
+    else { this.state = "thronewind"; this.stateT = C.thronefallWindup * feral; this.echoCaption = "THRONEFALL"; }
+    this.verticalMaxT = this.stateT; this.verticalCd = this._verticalCooldown(); this.verticalTrackT = 0;
+    perilPing(this); bossFeedback(this, "windup", { banner: this.echoCaption, color: CONFIG.colors.bomber, quiet: true });
+  }
+  _landVertical(kind, player) {
+    const C = CONFIG.aldric, p = this.verticalTarget;
+    this.x = clamp(this.verticalTargetX, p.x + this.hw, p.x + p.w - this.hw); this.y = p.y - this.hh;
+    this.vx = 0; this.vy = 0; this.onGround = true;
+    const hard = kind === "thronefall", range = hard ? C.thronefallRange : C.vaultRange;
+    const dmg = (hard ? C.thronefallDmg : C.vaultDmg) * (this.crownWorn ? 1 : 1.12);
+    if (Math.abs(player.x - this.x) < range + player.hw && Math.abs((player.y + player.hh) - p.y) < 130 && !player.invulnerable) player.takeDamage(dmg, this.x, this);
+    if (p.arenaPlatId) {
+      p.stress = Math.min(CONFIG.bossArena.standBeforeWarn, (p.stress || 0) + (hard ? CONFIG.bossArena.standBeforeWarn : C.vaultStress));
+      p.stressDelay = CONFIG.bossArena.stressDrainDelay;
+      if (hard) p.arenaFractureRequest = { reason: "thronefall", color: CONFIG.colors.bomber };
+    }
+    FX.shockwave(this.x, p.y, 12, CONFIG.colors.bomber, hard ? 300 : 205, hard ? 7 : 5);
+    FX.burst(this.x, p.y, 0, -1, hard ? 14 : 8, CONFIG.colors.bomber);
+    bossFeedback(this, "contact", { banner: hard ? "THRONEFALL" : "ROYAL IMPACT", color: CONFIG.colors.bomber, quiet: true, shake: hard ? 10 : 6 });
+    this.weaponImpactT = hard ? 0.25 : 0.14; this.state = "recover";
+    this.stateT = (hard ? C.thronefallRecover : C.vaultRecover) * (this.crownWorn ? 1 : 0.74);
+  }
+  _tickVertical(dt, platforms, player) {
+    const C = CONFIG.aldric, p = this.verticalTarget;
+    if (!p) { this.state = "idle"; this.verticalCd = 0.5; return true; }
+    if (this.state === "vaultwind" || this.state === "ascendwind" || this.state === "thronewind") {
+      this.stateT -= dt;
+      const k = 1 - clamp(this.stateT / (this.verticalMaxT || 1), 0, 1);
+      if (this.state === "thronewind") {
+        this.x = lerp(this.verticalStartX, this.verticalTargetX, k);
+        this.y = lerp(this.verticalStartY, this.verticalTargetY - C.thronefallRise, k * k * (3 - 2 * k));
+      }
+      if (this.stateT <= 0) {
+        if (this.state === "vaultwind") { this.state = "royalvault"; this.stateT = C.vaultFlight * (this.crownWorn ? 1 : 0.82); }
+        else if (this.state === "ascendwind") { this.state = "ascend"; this.stateT = C.ascendFlight * (this.crownWorn ? 1 : 0.82); }
+        else { this.state = "thronefall"; this.stateT = 1.2; this.vy = C.thronefallSpeed * (this.crownWorn ? 1 : 1.15); }
+        this.verticalMaxT = this.stateT; bossFeedback(this, "launch", { quiet: true, color: CONFIG.colors.bomber });
+      }
+      return true;
+    }
+    if (this.state === "royalvault" || this.state === "ascend") {
+      this.stateT -= dt;
+      const k = 1 - clamp(this.stateT / (this.verticalMaxT || 1), 0, 1), smooth = k * k * (3 - 2 * k);
+      const adjust = clamp(player.x - this.verticalTargetX, -C.vaultAdjust, C.vaultAdjust) * dt;
+      this.verticalTargetX = clamp(this.verticalTargetX + adjust, p.x + this.hw + 8, p.x + p.w - this.hw - 8);
+      this.x = lerp(this.verticalStartX, this.verticalTargetX, smooth);
+      this.y = lerp(this.verticalStartY, this.verticalTargetY, smooth) - (this.state === "royalvault" ? Math.sin(k * Math.PI) * C.vaultArc : Math.sin(k * Math.PI) * 34);
+      if (this.state === "ascend" && !this.verticalHitSpent && Math.abs(player.x - this.x) < C.ascendHalfW + player.hw && player.y < this.verticalStartY && player.y > this.verticalTargetY - 100) {
+        this.verticalHitSpent = true; if (!player.invulnerable) player.takeDamage(C.ascendDmg, this.x, this);
+      }
+      if (this.stateT <= 0) {
+        if (this.state === "ascend") {
+          this.x = clamp(this.verticalTargetX, p.x + this.hw, p.x + p.w - this.hw); this.y = p.y - this.hh; this.vx = 0; this.vy = 0; this.onGround = true;
+          p.stress = Math.min(CONFIG.bossArena.standBeforeWarn, (p.stress || 0) + C.vaultStress * 0.45); p.stressDelay = CONFIG.bossArena.stressDrainDelay;
+          this.state = "recover"; this.stateT = C.ascendRecover; bossFeedback(this, "contact", { quiet: true, color: CONFIG.colors.bomber });
+        } else this._landVertical("vault", player);
+      }
+      return true;
+    }
+    if (this.state === "thronefall") {
+      this.stateT -= dt; this.y += this.vy * dt; this.vy += 1700 * dt;
+      if (this.y + this.hh >= p.y || this.stateT <= 0) this._landVertical("thronefall", player);
+      return true;
+    }
+    return false;
+  }
+
   update(dt, platforms, player, projectiles) {
     this.tickTimers(dt);
     const C = CONFIG.aldric;
@@ -2601,6 +2724,7 @@ class Aldric extends Enemy {
     this.facing = Math.sign(player.x - this.x) || this.facing;
     this._animWeapon(dt);
     const f = this.hp / this.maxHp;
+    this.crownHeat = clamp((C.fireTier - f) / Math.max(0.01, C.fireTier - C.fakeTier), 0, 1);
     if (this.mode === "duel" && f < C.fireTier) {
       this.mode = "fire"; this.phaseTag = "THRONE BURNS"; this._lightFire();
       bossPhaseBeat(this, "THE THRONE BURNS", CONFIG.colors.bomber);
@@ -2612,7 +2736,10 @@ class Aldric extends Enemy {
     if (this.crown) {
       this.crown.vy += CONFIG.world.gravity * dt; this.crown.x += this.crown.vx * dt; this.crown.y += this.crown.vy * dt; this.crown.rot += this.crown.vx * dt * 0.018;
       const floor = CONFIG.world.groundY - 8;
-      if (this.crown.y > floor) { this.crown.y = floor; this.crown.vy *= -0.25; this.crown.vx *= 0.86; }
+      if (this.crown.y > floor) {
+        this.crown.y = floor; this.crown.vy *= -0.25; this.crown.vx *= 0.86;
+        if (Math.abs(this.crown.vy) < 55) { this.crown.vy = 0; this.crown.vx *= 0.72; this.crown.state = "fallen"; }
+      }
     }
 
     if (this.introT > 0) { this.vx = 0; this.integrate(dt, platforms); return; }
@@ -2626,6 +2753,11 @@ class Aldric extends Enemy {
       if (this.kneelT <= 0) this.revive(!this.kneelStruck);
       return;
     }
+
+    if (["vaultwind", "royalvault", "ascendwind", "ascend", "thronewind", "thronefall"].includes(this.state)) {
+      this._tickVertical(dt, platforms, player); return;
+    }
+    this.verticalCd -= dt;
 
     const spd = C.speed * (this.mode === "frenzy" ? 1.5 : (this.mode === "fire" ? 1.2 : 1));
     if (this.mode === "frenzy") {
@@ -2709,9 +2841,17 @@ class Aldric extends Enemy {
       const duelDir = this.mode === "duel" && dist < 190 ? -this.facing : this.facing;
       this.vx = lerp(this.vx, duelDir * spd, clamp(4 * dt, 0, 1));
       this.overheadCd = (this.overheadCd || 0) - dt;
+      const elevated = player.y + player.hh < this.y - 54 || !!this.campPlat;
+      this.verticalTrackT = elevated ? this.verticalTrackT + dt : Math.max(0, this.verticalTrackT - dt * 1.8);
+      const target = this.onGround && this.verticalCd <= 0 && this.verticalTrackT >= C.verticalResponse ? this._chooseVerticalTarget(player, platforms) : null;
       // OVERHEAD CLEAVER — a committed vertical slam (fire/frenzy), his kingliest
       // blow; complements the horizontal lunges + arcs
-      if (this.mode !== "duel" && this.overheadCd <= 0 && dist < 420 && this.onGround) {
+      if (target) {
+        const direct = Math.abs(player.x - this.x) < C.ascendHalfW * 1.55;
+        let kind = direct ? "ascend" : "vault";
+        if (this.mode !== "duel" && !direct && this.verticalIndex % 3 === 2) kind = "thronefall";
+        this.verticalIndex++; this._startVertical(kind, target, player); return;
+      } else if (this.mode !== "duel" && this.overheadCd <= 0 && dist < 420 && this.onGround) {
         this.state = "overheadwind"; this.stateT = C.overheadWindup; this.overTX = player.x;
         this.overheadCd = C.overheadCd; perilPing(this);
       } else {
@@ -2757,10 +2897,12 @@ class Aldric extends Enemy {
   }
   _enterDowned() {
     const C = CONFIG.aldric;
+    const crownPose = this._wornCrownPose();
     this.mode = "downed"; this.state = "idle"; this.spawnAdds = false; this.kneelT = C.kneelDur; this.kneelStruck = false; this.anger = false;
     this.weaponReclaimT = 0; this.weaponBuriedT = 0; this.weaponAV = 0;
     this.reviveCap = this.maxHp * C.witnessReviveFrac; this.vx = 0; this.seams = []; clearThroneFire(this, true); this._syncZones();
-    this.crown = { x: this.x + this.facing * 18, y: this.y - this.hh - 18, vx: this.facing * 330, vy: -420, rot: 0 };
+    this.crownWorn = false;
+    this.crown = { x: crownPose.x, y: crownPose.y, vx: this.facing * 330, vy: -420, rot: crownPose.rot, state: "airborne", heat: this.crownHeat };
     this.phaseTag = "THE KNEEL";
     bossPhaseBeat(this, "STRIKE — OR STAND WITNESS", CONFIG.colors.charger);
   }
@@ -2774,10 +2916,12 @@ class Aldric extends Enemy {
   }
   _animWeapon(dt) {
     let wt = -0.6, k = 9;
-    if (this.state === "overheadwind") { wt = -2.1; k = 12; }   // cleaver raised straight overhead
-    else if (this.state === "overhead") { wt = 1.4; k = 34; }   // driven down on the plunge
-    else if (this.state === "windup" || this.state === "chargewind") { wt = -1.5; k = 11; }
-    else if (this.state === "lunge" || this.state === "charge") { wt = 0.8; k = 28; }
+    if (this.state === "overheadwind" || this.state === "thronewind") { wt = -2.1; k = 12; }   // cleaver raised straight overhead
+    else if (this.state === "overhead" || this.state === "thronefall") { wt = 1.4; k = 34; }   // driven down on the plunge
+    else if (this.state === "windup" || this.state === "chargewind" || this.state === "ascendwind") { wt = -1.5; k = 11; }
+    else if (this.state === "lunge" || this.state === "charge" || this.state === "ascend") { wt = 0.8; k = 28; }
+    else if (this.state === "vaultwind") { wt = -0.2; k = 15; }
+    else if (this.state === "royalvault") { wt = 0.25; k = 20; }
     else if (this.state === "recover" && this.weaponBuriedT > 0) { wt = 1.28; k = 18; }
     if (this.weaponImpactT > 0) { this.weaponImpactT = Math.max(0, this.weaponImpactT - dt); wt += Math.sin(this.weaponImpactT * 95) * this.weaponImpactT * 0.32; }
     if (this.weaponBuriedT > 0) this.weaponBuriedT = Math.max(0, this.weaponBuriedT - dt);
@@ -2816,6 +2960,7 @@ class Aldric extends Enemy {
     ctx.strokeStyle = THEME.ink; ctx.lineWidth = 4; ctx.strokeRect(x, by, w, bh);
     // eye
     ctx.fillStyle = "#fff"; ctx.fillRect(this.x + this.facing * 16 - 8, by + 14, 16, 11);
+    if (this.crownWorn) drawAldricCrown(ctx, this._wornCrownPose(), this.crownHeat);
     // Royal Great-Cleaver: buried for the kneel, visibly reclaimed, never discarded in frenzy.
     const shoulderLead = (this.state === "windup" || this.state === "overheadwind" || this.state === "chargewind") ? -this.facing * 9 : 0;
     ctx.strokeStyle = downed ? "#6f3b40" : "#d0a35a"; ctx.lineWidth = 6; ctx.beginPath();
@@ -2849,11 +2994,21 @@ class Aldric extends Enemy {
       dangerColumn(ctx, this.x, CONFIG.aldric.overheadRange * 2, this.y + this.hh, CONFIG.world.groundY, CONFIG.colors.bomber, k);
       weaponGlint(ctx, cleaverPose.tip.x, cleaverPose.tip.y, CONFIG.colors.bomber, k); drawPeril(ctx, this);
     }
+    if (["vaultwind", "ascendwind", "thronewind"].includes(this.state) && this.verticalTarget) {
+      const k = 1 - clamp(this.stateT / (this.verticalMaxT || 1), 0, 1), tx = this.verticalTargetX, ty = this.verticalTarget.y;
+      dangerReticle(ctx, tx, ty, this.state === "thronewind" ? 34 : 23, k, CONFIG.colors.bomber);
+      if (this.state === "ascendwind") dangerColumn(ctx, tx, CONFIG.aldric.ascendHalfW * 2, ty - 18, this.y + this.hh, CONFIG.colors.bomber, k);
+      else {
+        ctx.save(); ctx.strokeStyle = telegraphInk(CONFIG.colors.bomber); ctx.globalAlpha = 0.34 + k * 0.45; ctx.lineWidth = 2.5; ctx.setLineDash([12, 9]);
+        ctx.beginPath(); ctx.moveTo(this.verticalStartX, this.verticalStartY);
+        ctx.quadraticCurveTo(lerp(this.verticalStartX, tx, 0.5), Math.min(this.verticalStartY, ty) - (this.state === "thronewind" ? CONFIG.aldric.thronefallRise : CONFIG.aldric.vaultArc), tx, ty); ctx.stroke(); ctx.restore();
+      }
+      weaponGlint(ctx, cleaverPose.tip.x, cleaverPose.tip.y, CONFIG.colors.bomber, k); drawPeril(ctx, this);
+    }
     if (this.mode === "downed") UI.tag(ctx, "STRIKE — OR STAND WITNESS.", this.x, this.y - this.hh - 38,
       this.kneelStruck ? CONFIG.colors.charger : CONFIG.colors.bomber, "center", UI.t.type.caption);
     if (this.crown) {
-      ctx.save(); ctx.translate(this.crown.x, this.crown.y); ctx.rotate(this.crown.rot); ctx.strokeStyle = CONFIG.colors.bomber; ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.moveTo(-13, 7); ctx.lineTo(-9, -8); ctx.lineTo(0, 1); ctx.lineTo(9, -8); ctx.lineTo(13, 7); ctx.closePath(); ctx.stroke(); ctx.restore();
+      drawAldricCrown(ctx, this.crown, this.crown.heat);
     }
     drawPeril(ctx, this);
     ctx.restore();
@@ -2872,6 +3027,7 @@ class Echo extends Enemy {
     this.seenTrickT = 0; this.copyKind = "hit"; this.copyT = -1; this.lastCopied = "";
     this.phaseMarker = 1; this.spawnClone = false;
     this.whiteFlash = 0; this.invisT = CONFIG.echo.invisCycle; this.lungeCd = 1.3;
+    this.echoJumpCd = 0;
     this.copyOffset = isClone ? 1.7 : 1;   // the clone mirrors on a longer, offset delay
     this.harmonyLockT = 0; this.edgeTrail = [];
     if (isClone) { this.hp *= 0.5; this.maxHp = this.hp; this.hpDisplay = this.hp; }
@@ -2930,6 +3086,16 @@ class Echo extends Enemy {
     if (this.state === "lunge") { this.stateT -= dt; if (this.stateT <= 0) { this.state = "recover"; this.stateT = 0.3; } }
     else if (this.state === "recover") { this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1)); this.stateT -= dt; if (this.stateT <= 0) this.state = "idle"; }
     else { const targetX = player.x - this.facing * (this.isClone ? 260 : 200); this.vx = lerp(this.vx, (targetX - this.x) * 2, clamp(3 * dt, 0, 1)); }
+    this.echoJumpCd -= dt;
+    if (this.onGround && this.echoJumpCd <= 0 && player.y + player.hh < this.y - 55) {
+      const feet = this.y + this.hh;
+      const target = (platforms || []).filter((p) => p.oneway && p.y < feet - 24 && feet - p.y <= 320)
+        .sort((a, b) => Math.abs((a.x + a.w / 2) - player.x) - Math.abs((b.x + b.w / 2) - player.x))[0];
+      if (target) {
+        this.vy = -CONFIG.echo.jumpV; this.vx += clamp((target.x + target.w / 2 - this.x) * 1.45, -620, 620);
+        this.onGround = false; this.echoJumpCd = CONFIG.echo.jumpCd;
+      }
+    }
     this.integrate(dt, platforms);
   }
   _invert(dt, player, projectiles) {

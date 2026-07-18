@@ -202,7 +202,7 @@ const CONFIG = {
   echo: {
     w: 32, h: 50, hp: 3000, speed: 280, contactDmg: 18, knockbackTaken: 0.5, weight: 4,
     copyDelay: 0.55, shockDmg: 16, shockSpeed: 700, projSpeed: 820, projDmg: 14,
-    invisCycle: 10, invisDur: 3.5, lungeSpeed: 1500,
+    invisCycle: 10, invisDur: 3.5, lungeSpeed: 1500, jumpCd: 1.15, jumpV: 1250,
   },
   // The Source (Stage 5 FINAL boss): a floating rift that cycles every fallen boss's
   // signature mechanic, collapses the floor, fakes its death, then erupts into a true form
@@ -282,6 +282,13 @@ const CONFIG = {
     emberDmg: 14, emberSpeed: 560,
     cleaverRear: 44, cleaverShaft: 78, cleaverBlade: 56, cleaverHalfW: 32, overheadRecover: 0.72,
     pounceAfter: 1.0,   // NO SHELTER: hover above him this long and the pounce comes, every time
+    // VERTICAL HUNTER: authored platform pursuit, never the generic random climb.
+    verticalResponse: 0.82, verticalCdDuel: 4.6, verticalCdFire: 3.35, verticalCdFrenzy: 2.45,
+    vaultWindup: 0.42, vaultFlight: 0.68, vaultArc: 175, vaultAdjust: 105,
+    vaultDmg: 18, vaultRange: 145, vaultStress: 0.72, vaultRecover: 0.46,
+    ascendWindup: 0.38, ascendFlight: 0.54, ascendDmg: 19, ascendHalfW: 72, ascendRecover: 0.38,
+    thronefallWindup: 0.68, thronefallRise: 255, thronefallSpeed: 2050,
+    thronefallDmg: 28, thronefallRange: 175, thronefallRecover: 0.82,
     arcDmg: 16, arcSpeed: 620, arcRise: 210, arcGravity: 480,   // CLEAVER ARCS: fire crescents — parry food (rally)
     overheadCd: 6.5, overheadWindup: 0.6, overheadDmg: 26, overheadRange: 150,   // OVERHEAD CLEAVER: a committed high-to-low slam + lingering fire seam
   },
@@ -318,7 +325,7 @@ const CONFIG = {
     guardBreakDur: 2.5, guardBreakMult: 1.65,
     lockdownDur: 5.0, lockdownCd: 10.0, cageW: 125,
     debrisDmg: 15, debrisGravity: 1650, trailLife: 2.5,
-    campAfter: 1.15, volleyCd: 6.0,   // NO SHELTER: volley lands before passive platform decay completes
+    campAfter: 1.15, volleyCd: 6.0, vaultCd: 2.4, vaultPerchAfter: 0.78,   // targeted vaulting remains active before the ceiling form
   },
 
   // support: no real attack — they make every OTHER enemy worse, so they're priority kills
