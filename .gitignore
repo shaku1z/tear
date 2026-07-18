@@ -23,3 +23,9 @@ Thumbs.db
 
 # CrazyGames submission package (regenerate with `git archive`, see CRAZYGAMES.md)
 tear-crazygames.zip
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
