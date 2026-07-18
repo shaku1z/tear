@@ -3094,9 +3094,25 @@ class Source extends Enemy {
     this.predatorDist = CONFIG.source.predatorStalkMin;
     this.predatorY = CONFIG.source.predatorYMin;
     this.formScale = 1; this.voidFormAwake = false;
+    // The Void Run is not a flat sprite swap. The Source withdraws behind the
+    // route, manifests an attack on the play plane, then breaches forward into
+    // a guaranteed damage window.
+    this.depthPlane = "foreground"; this.depthState = "idle";
+    this.depthT = 0; this.depthMaxT = 0; this.depthCd = CONFIG.source.depthFirstDelay;
+    this.depthKind = "hand"; this.depthAttackIndex = 0;
+    this.depthTargetX = x; this.depthTargetY = y;
+    this.rearX = x; this.rearY = 210;
+    // A fall can feed the Source only through this authored, severable tether.
+    this.siphon = null; this.siphonFalls = 0; this.siphonHealed = 0;
   }
-  get phase() { const f = this.hp / this.maxHp, C = CONFIG.source; return f > C.voidTier ? 1 : (f > C.fakeTier ? 2 : 3); }
+  get phase() {
+    const f = this.hp / this.maxHp, C = CONFIG.source;
+    const fromHp = f > C.voidTier ? 1 : (f > C.fakeTier ? 2 : 3);
+    return Math.max(this.phaseMarker || 1, fromHp);   // siphon healing never reopens a completed phase
+  }
   damageTakenMult() { return this.mode === "downed" ? 0.3 : (this.mode === "void" ? CONFIG.source.voidDamageTaken : 1); }
+  blocksDamage() { return this.depthPlane === "rear"; }
+  blocks() { return this.depthPlane === "rear"; }
   _voidDmg(dmg) { return this.mode === "void" ? dmg * CONFIG.source.voidDamageMult : dmg; }
   _awakenVoidForm() {
     if (this.voidFormAwake) return;
@@ -3107,6 +3123,8 @@ class Source extends Enemy {
   beginVoidRun() {
     this.mode = "void"; this.collapsing = false; this.voidDelayT = -1;
     this.requestVoid = false; this.requestVoidCinematic = false; this._awakenVoidForm();
+    this.depthPlane = "rear"; this.depthState = "rearIdle"; this.depthCd = CONFIG.source.depthFirstDelay;
+    this._cancelSoftBreach(CONFIG.source.breachIntervalMin);
     bossFeedback(this, "phaseTransition", { banner: "THE VOID RUN", color: this.color, zoom: 0.06 });
   }
   // Preserve the authored phase turns against a single late-run burst without
@@ -3120,6 +3138,132 @@ class Source extends Enemy {
       dmg = toGate + Math.min(overflow * C.phaseOverflowCarry, this.maxHp * C.phaseOverflowCap);
     }
     return dmg;
+  }
+
+  _rollDepthCd() {
+    const C = CONFIG.source, trueForm = this.phaseMarker >= 3;
+    const lo = C.depthCycleMin * (trueForm ? 0.74 : 1), hi = C.depthCycleMax * (trueForm ? 0.78 : 1);
+    return lo + Math.random() * (hi - lo);
+  }
+  _depthSurface(player, platforms) {
+    if (player && player.supportPlatform) return player.supportPlatform;
+    let best = null, score = Infinity;
+    for (const p of platforms || []) {
+      if (!p.oneway || p.materializationState === "gone") continue;
+      const inside = player.x >= p.x - 24 && player.x <= p.x + p.w + 24;
+      const s = Math.abs((p.x + p.w / 2) - player.x) + Math.abs(p.y - (player.y + player.hh)) * (inside ? 0.25 : 1.5);
+      if (s < score) { score = s; best = p; }
+    }
+    return best;
+  }
+  _startDepthAttack(player, platforms) {
+    const C = CONFIG.source, surface = this._depthSurface(player, platforms);
+    this.depthKind = ["hand", "spear", "maw"][this.depthAttackIndex++ % 3];
+    this.depthTargetX = clamp(player.x, 70, CONFIG.view.w - 70);
+    this.depthTargetY = surface ? surface.y : clamp(player.y + player.hh, 170, CONFIG.world.groundY);
+    if (this.depthKind === "maw") this.depthTargetX = clamp(this.depthTargetX + (this.depthTargetX < CONFIG.view.w / 2 ? 78 : -78), C.depthMawW / 2, CONFIG.view.w - C.depthMawW / 2);
+    this.depthState = "rearTell"; this.depthT = C.depthTell; this.depthMaxT = this.depthT;
+    this.echoCaption = this.depthKind === "hand" ? "ABYSSAL HAND" : (this.depthKind === "spear" ? "PARALLAX SPEAR" : "HORIZON MAW");
+    this.captionT = C.depthTell + 0.35; perilPing(this); bossFeedback(this, "windup", { quiet: true });
+  }
+  _manifestDepth() {
+    const C = CONFIG.source;
+    this.depthPlane = "breach"; this.depthState = "exposed"; this.depthT = C.depthExpose; this.depthMaxT = this.depthT;
+    this.x = clamp(this.depthTargetX, this.hw + 18, CONFIG.view.w - this.hw - 18);
+    this.y = clamp(this.depthTargetY - 150, 105, CONFIG.world.groundY - this.hh - 20);
+    this.vx = 0; this.vy = 0; this.breachRipple = 1;
+    bossFeedback(this, "counter", { quiet: true, color: CONFIG.colors.perfect });
+  }
+  _strikeDepth(player, projectiles) {
+    const C = CONFIG.source;
+    if (this.depthKind === "spear") {
+      let dx = this.depthTargetX - this.rearX, dy = this.depthTargetY - this.rearY, m = len(dx, dy) || 1;
+      const p = new Projectile(this.rearX, this.rearY, dx / m * C.depthSpearSpeed, dy / m * C.depthSpearSpeed);
+      p.r = C.depthSpearR; p.dmg = this._voidDmg(C.depthSpearDmg); p.tint = CONFIG.colors.perfect; p.owner = this;
+      p.sourceStolen = "depth"; p.depthManifestation = true; projectiles.push(p);
+    } else {
+      const half = (this.depthKind === "hand" ? C.depthHandW : C.depthMawW) / 2;
+      const vertical = this.depthKind === "hand" ? 180 : 105;
+      if (Math.abs(player.x - this.depthTargetX) <= half + player.hw && Math.abs((player.y + player.hh) - this.depthTargetY) <= vertical) {
+        player.takeDamage(this._voidDmg(this.depthKind === "hand" ? C.depthHandDmg : C.depthMawDmg), this.depthTargetX, this);
+      }
+    }
+    FX.shockwave(this.depthTargetX, this.depthTargetY, 16, CONFIG.colors.perfect, this.depthKind === "maw" ? 330 : 220, 5);
+    bossFeedback(this, "contact", { quiet: true, color: CONFIG.colors.perfect });
+  }
+  _tickDepth(dt, platforms, player, projectiles) {
+    if (this.mode !== "void") return false;
+    this.rearX = lerp(this.rearX, clamp(CONFIG.view.w * 0.72 + (player.x - CONFIG.view.w / 2) * 0.14, 260, CONFIG.view.w - 190), clamp(1.8 * dt, 0, 1));
+    this.rearY = lerp(this.rearY, 205 + Math.sin(CLOCK.sim * 0.72) * 28, clamp(1.6 * dt, 0, 1));
+    if (this.depthState === "rearIdle") {
+      this.depthPlane = "rear"; this.x = this.rearX; this.y = this.rearY; this.vx = 0; this.vy = 0;
+      this.depthCd -= dt;
+      if (this.depthCd <= 0 && player.supportPlatform && player.voidTransferT <= 0) this._startDepthAttack(player, platforms);
+      return true;
+    }
+    if (this.depthState === "rearTell") {
+      this.depthPlane = "rear"; this.x = this.rearX; this.y = this.rearY; this.depthT -= dt;
+      if (this.depthT <= 0) {
+        this.depthState = "rearStrike"; this.depthT = CONFIG.source.depthStrike; this.depthMaxT = this.depthT;
+        this._strikeDepth(player, projectiles);
+      }
+      return true;
+    }
+    if (this.depthState === "rearStrike") {
+      this.depthPlane = "rear"; this.x = this.rearX; this.y = this.rearY; this.depthT -= dt;
+      if (this.depthT <= 0) this._manifestDepth();
+      return true;
+    }
+    if (this.depthState === "exposed") {
+      this.depthPlane = "breach"; this.depthT -= dt;
+      this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1)); this.vy = lerp(this.vy, 0, clamp(8 * dt, 0, 1));
+      if (this.depthT <= 0) {
+        this.depthPlane = "rear"; this.depthState = "rearIdle"; this.depthCd = this._rollDepthCd();
+        this.rearX = this.x; this.rearY = this.y;
+      }
+      return true;
+    }
+    this.depthState = "rearIdle"; this.depthPlane = "rear"; this.depthCd = this._rollDepthCd();
+    return true;
+  }
+
+  _healCeiling() {
+    const C = CONFIG.source;
+    if (this.phaseMarker >= 3) return this.maxHp * C.fakeTier;
+    if (this.phaseMarker >= 2) return this.maxHp * C.voidTier;
+    return this.maxHp;
+  }
+  _receiveSiphonHeal(amount) {
+    const C = CONFIG.source, encounterLeft = Math.max(0, this.maxHp * C.siphonTotalCap - this.siphonHealed);
+    const room = Math.max(0, this._healCeiling() - this.hp), actual = Math.min(amount, encounterLeft, room);
+    if (actual > 0) { this.hp += actual; this.hpDisplay = Math.max(this.hpDisplay, this.hp); this.siphonHealed += actual; }
+    return actual;
+  }
+  startVoidSiphon(player) {
+    if (this.dead || this.dying || this.mode !== "void") return 0;
+    const C = CONFIG.source, diminish = [C.siphonDiminish1, C.siphonDiminish2, C.siphonDiminish3, C.siphonDiminish4][Math.min(this.siphonFalls, 3)];
+    this.siphonFalls++;
+    const immediate = this._receiveSiphonHeal(this.maxHp * C.siphonImmediateFrac * diminish);
+    const channel = Math.min(this.maxHp * C.siphonChannelFrac * diminish, Math.max(0, this.maxHp * C.siphonTotalCap - this.siphonHealed));
+    this.siphon = { t: C.siphonDuration, maxT: C.siphonDuration, amount: channel, healed: 0, x: player.x, y: player.y };
+    this.echoCaption = "THE ABYSS FEEDS"; this.captionT = 1.2;
+    bossFeedback(this, "windup", { banner: "SEVER THE TETHER", color: CONFIG.colors.perfect, priority: 7 });
+    return immediate;
+  }
+  _tickSiphon(dt, player) {
+    if (!this.siphon) return;
+    const s = this.siphon; s.x = player.x; s.y = player.y - 8; s.t -= dt;
+    const want = Math.min(s.amount, s.healed + s.amount * dt / s.maxT);
+    const healed = this._receiveSiphonHeal(Math.max(0, want - s.healed)); s.healed += healed;
+    if (s.t <= 0 || s.healed >= s.amount - 0.01 || this.dead || this.dying) this.siphon = null;
+  }
+  trySeverSiphon(blade) {
+    if (!this.siphon || !blade || blade.tipSpeed < CONFIG.source.siphonCutSpeed) return false;
+    const ex = this.depthPlane === "rear" ? this.rearX : this.x, ey = this.depthPlane === "rear" ? this.rearY : this.y;
+    if (segSegmentDist(blade.x, blade.y, blade.tipX, blade.tipY, this.siphon.x, this.siphon.y, ex, ey) > CONFIG.source.siphonCutRadius) return false;
+    this.siphon = null; this.echoCaption = "HUNGER SEVERED"; this.captionT = 1.1; this.breachRipple = 1;
+    bossFeedback(this, "counter", { banner: "SIPHON SEVERED", color: CONFIG.colors.perfect, priority: 8 });
+    return true;
   }
 
   _rollBreachCd() {
@@ -3212,6 +3356,7 @@ class Source extends Enemy {
   }
 
   contactDamageEnabled() {
+    if (this.depthPlane === "rear" || this.depthState === "exposed") return false;
     if (this.breachState === "tell" || this.breachState === "recoil") return false;
     if (this.breachState === "drift") return !this.breachContactSpent;
     return true;
@@ -3459,6 +3604,7 @@ class Source extends Enemy {
       // THE KNEEL, on the void: the conveyor freezes mid-air while it gathers
       // itself — then TRUE FORM thaws the stream, faster.
       this.mode = "downed"; this.downT = C.kneelDur; this.freezeVoid = true;
+      this.depthPlane = "foreground"; this.depthState = "idle";
       this.beamState = "idle"; this.phaseTag = "IT REMEMBERS";
       bossPhaseBeat(this, "IT REMEMBERS EVERY BLADE", this.color);
     }
@@ -3466,6 +3612,7 @@ class Source extends Enemy {
   revive() {
     const C = CONFIG.source;
     this.mode = "void"; this.downT = -1; this.thawVoid = true; this.phaseTag = "TRUE FORM";
+    this.depthPlane = "rear"; this.depthState = "rearIdle"; this.depthCd = C.depthFirstDelay * 0.55;
     this.color = CONFIG.colors.perfect; this.castIdx = 0; this.atkT = 0.35; this.beamCd = C.beamCd * 0.55;
     bossPhaseBeat(this, "TRUE FORM", CONFIG.colors.perfect);
   }
@@ -3478,7 +3625,7 @@ class Source extends Enemy {
     bossFeedback(this, "counter", { banner: "IT TOOK YOUR BLADE", color: CONFIG.colors.perfect, priority: 8, slowmo: 0.35, zoom: 0.06 });
     return true;
   }
-  onDeathStart() { this.freezeVoid = true; this.beamState = "idle"; clearThroneFire(this, true); }
+  onDeathStart() { this.freezeVoid = true; this.beamState = "idle"; this.depthPlane = "foreground"; this.depthState = "idle"; this.siphon = null; clearThroneFire(this, true); }
 
   update(dt, platforms, player, projectiles) {
     this.tickTimers(dt);
@@ -3488,6 +3635,7 @@ class Source extends Enemy {
     if (this.breachRipple > 0) this.breachRipple = Math.max(0, this.breachRipple - dt * 3.2);
     if (this.captionT > 0) this.captionT -= dt;
     while (this.phaseMarker < ph) { this.phaseMarker++; this._enterPhase(this.phaseMarker); }
+    this._tickSiphon(dt, player);
     if (this.introT > 0) { this.vx = lerp(this.vx, 0, clamp(5 * dt, 0, 1)); this.vy = lerp(this.vy, 0, clamp(5 * dt, 0, 1)); return; }
 
     // The cinematic director owns the collapse clock, player safety and exact
@@ -3506,6 +3654,9 @@ class Source extends Enemy {
       if (this.downT <= 0) this.revive();
       return;
     }
+    // Rear-plane combat owns the Void Run's cadence. Its foreground breach is
+    // the reward window; legacy casts cannot overlap a depth tell or obscure it.
+    if (this._tickDepth(dt, platforms, player, projectiles)) return;
     tickThroneFire(this, dt);
     this._scheduleFrom(player);
     const voidTransferBusy = this.mode === "void" && (player.voidTransferT > 0 || !player.supportPlatform);
@@ -3593,7 +3744,79 @@ class Source extends Enemy {
     }
   }
 
+  // Dedicated rear pass: game.js calls this before platforms, so the colossal
+  // body is genuinely occluded by the route instead of merely tinted darker.
+  drawRear(ctx) {
+    if (this.depthPlane !== "rear" || this.dead) return;
+    const C = CONFIG.source, t = CLOCK.sim * 1000, core = this.phaseMarker >= 3 ? CONFIG.colors.perfect : this.color;
+    const pulse = 0.5 + 0.5 * Math.sin(t / 190), strike = this.depthState === "rearStrike" ? 1 : 0;
+    ctx.save(); ctx.translate(this.rearX, this.rearY); ctx.scale(C.depthRearScale, C.depthRearScale);
+    ctx.globalAlpha = C.depthRearAlpha + strike * 0.16;
+    const halo = ctx.createRadialGradient(0, 0, 8, 0, 0, this.hw * 1.75);
+    halo.addColorStop(0, "rgba(255,255,255,0.42)"); halo.addColorStop(0.18, core); halo.addColorStop(1, "rgba(20,8,42,0)");
+    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(0, 0, this.hw * 1.75, 0, Math.PI * 2); ctx.fill();
+    // A split horizon silhouette suggests shoulders and hands in a plane whose
+    // scale cannot fit through the foreground breach.
+    ctx.fillStyle = THEME.ink; ctx.globalAlpha = 0.24 + pulse * 0.09;
+    ctx.beginPath(); ctx.moveTo(-this.hw * 2.2, this.hh * 0.8); ctx.quadraticCurveTo(-this.hw * 1.2, -this.hh * 1.0, 0, -this.hh * 0.62);
+    ctx.quadraticCurveTo(this.hw * 1.2, -this.hh * 1.0, this.hw * 2.2, this.hh * 0.8); ctx.lineTo(0, this.hh * 1.28); ctx.closePath(); ctx.fill();
+    for (let ring = 0; ring < 4; ring++) {
+      ctx.save(); ctx.rotate(t / (1050 - ring * 130) * (ring % 2 ? -1 : 1));
+      ctx.globalAlpha = 0.24 + ring * 0.07; ctx.strokeStyle = ring === 2 ? "#fff" : core; ctx.lineWidth = 1.4 + ring * 0.7;
+      ctx.setLineDash([12 + ring * 3, 10 + ring * 2]); ctx.beginPath();
+      ctx.ellipse(0, 0, this.hw * (0.7 + ring * 0.31), this.hh * (0.48 + ring * 0.18), 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+    }
+    ctx.setLineDash([]); ctx.globalAlpha = 0.72; ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.ellipse(0, 0, this.hw * (0.22 + pulse * 0.025), this.hh * 0.10, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.9; ctx.fillStyle = core; ctx.beginPath(); ctx.arc(0, 0, 6 + pulse * 4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  _drawDepthTelegraph(ctx) {
+    if (this.depthState !== "rearTell" && this.depthState !== "rearStrike") return;
+    const C = CONFIG.source, core = CONFIG.colors.perfect;
+    const tell = this.depthState === "rearTell" ? 1 - clamp(this.depthT / (this.depthMaxT || 1), 0, 1) : 1;
+    const live = this.depthState === "rearStrike", pulse = 0.55 + 0.45 * Math.sin(CLOCK.sim * 24);
+    ctx.save();
+    if (this.depthKind === "spear") {
+      ctx.strokeStyle = telegraphInk(core); ctx.lineCap = "round"; ctx.setLineDash(live ? [] : [16, 12]);
+      ctx.globalAlpha = live ? 0.9 : 0.28 + tell * 0.5; ctx.lineWidth = live ? 10 : 2 + tell * 3;
+      ctx.beginPath(); ctx.moveTo(this.rearX, this.rearY); ctx.lineTo(this.depthTargetX, this.depthTargetY); ctx.stroke(); ctx.setLineDash([]);
+      dangerReticle(ctx, this.depthTargetX, this.depthTargetY, 18 + tell * 14, tell, core);
+    } else {
+      const width = this.depthKind === "hand" ? C.depthHandW : C.depthMawW;
+      dangerColumn(ctx, this.depthTargetX, width, Math.max(0, this.depthTargetY - (this.depthKind === "hand" ? 260 : 120)), this.depthTargetY + 8, core, tell);
+      if (live) {
+        ctx.globalAlpha = 0.66 + pulse * 0.22; ctx.fillStyle = core;
+        if (this.depthKind === "hand") {
+          ctx.fillRect(this.depthTargetX - width * 0.28, this.depthTargetY - 210, width * 0.56, 210);
+          for (let i = -2; i <= 2; i++) ctx.fillRect(this.depthTargetX + i * width * 0.11 - 6, this.depthTargetY - 245 - Math.abs(i) * 10, 12, 55);
+        } else {
+          ctx.beginPath(); ctx.ellipse(this.depthTargetX, this.depthTargetY, width / 2, 38 + pulse * 12, 0, Math.PI, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#fff"; ctx.globalAlpha = 0.78;
+          for (let i = -4; i <= 4; i++) { const tx = this.depthTargetX + i * width / 10; ctx.beginPath(); ctx.moveTo(tx - 8, this.depthTargetY - 4); ctx.lineTo(tx, this.depthTargetY - 30 - (i % 2) * 8); ctx.lineTo(tx + 8, this.depthTargetY - 4); ctx.fill(); }
+        }
+      }
+    }
+    ctx.restore();
+  }
+  _drawSiphon(ctx) {
+    if (!this.siphon) return;
+    const s = this.siphon, ex = this.depthPlane === "rear" ? this.rearX : this.x, ey = this.depthPlane === "rear" ? this.rearY : this.y;
+    const k = clamp(s.t / s.maxT, 0, 1), pulse = 0.5 + 0.5 * Math.sin(CLOCK.sim * 34);
+    ctx.save(); ctx.lineCap = "round"; ctx.strokeStyle = telegraphInk(CONFIG.colors.perfect);
+    ctx.globalAlpha = 0.28 + pulse * 0.2; ctx.lineWidth = 13; ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.globalAlpha = 0.82; ctx.lineWidth = 2.5; ctx.setLineDash([10, 8]); ctx.lineDashOffset = -CLOCK.sim * 90;
+    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
+    dangerReticle(ctx, lerp(s.x, ex, 0.5), lerp(s.y, ey, 0.5), 13 + (1 - k) * 8, pulse, CONFIG.colors.perfect);
+    ctx.restore();
+  }
+
   draw(ctx) {
+    if (this.depthPlane === "rear") {
+      this._drawDepthTelegraph(ctx); this._drawSiphon(ctx);
+      if (this.captionT > 0) UI.tag(ctx, this.echoCaption, this.rearX, this.rearY - this.hh * CONFIG.source.depthRearScale - 24, CONFIG.colors.perfect, "center", UI.t.type.caption);
+      drawPeril(ctx, this); return;
+    }
     const t = CLOCK.sim * 1000, x = this.x, y = this.y, w = this.hw, h = this.hh;
     const core = this.mode === "void" ? CONFIG.colors.perfect : this.color;
     const introP = this.introT > 0 ? clamp(1 - this.introT / ((CONFIG.bossTheater && CONFIG.bossTheater.introDur) || 1.4), 0, 1) : 1;
@@ -3697,6 +3920,7 @@ class Source extends Enemy {
       ctx.fillRect(this.beamX - CONFIG.source.beamW / 2, 0, CONFIG.source.beamW, CONFIG.view.h);
       ctx.globalAlpha = 0.85; ctx.fillStyle = "#fff"; ctx.fillRect(this.beamX - 5, 0, 10, CONFIG.view.h); ctx.restore();
     }
+    this._drawDepthTelegraph(ctx); this._drawSiphon(ctx);
     if (this.captionT > 0) UI.tag(ctx, this.echoCaption, this.x, this.y - this.hh - 48, core, "center", UI.t.type.caption);
     drawPeril(ctx, this);
     // Source intentionally has no local health bar: the top boss HUD is the only authority.

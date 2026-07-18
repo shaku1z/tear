@@ -213,6 +213,18 @@ const CONFIG = {
     voidTier: 0.58, fakeTier: 0.28, kneelDur: 3.6, thawSpeedMult: 1.35,
     voidDamageTaken: 0.92, voidFormScale: 1.28, voidDamageMult: 1.12, voidWeightMult: 1.35,
     phaseOverflowCarry: 0.45, phaseOverflowCap: 0.04,
+    // DEPTH COMBAT: the Source withdraws behind the route, attacks through
+    // foreground manifestations, then breaches back into a punish window.
+    depthRearScale: 2.15, depthRearAlpha: 0.44,
+    depthFirstDelay: 1.35, depthCycleMin: 1.35, depthCycleMax: 2.05,
+    depthTell: 0.74, depthStrike: 0.34, depthExpose: 1.55,
+    depthHandW: 154, depthHandDmg: 20, depthMawW: 330, depthMawDmg: 22,
+    depthSpearSpeed: 980, depthSpearDmg: 18, depthSpearR: 15,
+    // Falling feeds the abyss, but only through a visible, blade-severable
+    // channel. Repeats diminish and the encounter-wide heal has a hard ceiling.
+    siphonImmediateFrac: 0.01, siphonChannelFrac: 0.025, siphonDuration: 1.05,
+    siphonTotalCap: 0.12, siphonCutSpeed: 1250, siphonCutRadius: 14,
+    siphonDiminish1: 1.0, siphonDiminish2: 0.7, siphonDiminish3: 0.45, siphonDiminish4: 0.25,
     voidDelay: 4.8,   // complete authored descent window; the cinematic director owns its beats
     // THE VOID DESCENT — the cinematic that opens the void run
     voidCamZoom: 0.80,        // camera pulls this far OUT during the void (wider frame = plan your route)

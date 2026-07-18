@@ -26,6 +26,24 @@ function segCircle(ax, ay, bx, by, cx, cy, r) {
   return segPointDist(ax, ay, bx, by, cx, cy).dist <= r;
 }
 
+// minimum distance between two segments. The early intersection test keeps
+// fast blade sweeps from tunnelling through thin authored counters (tethers).
+function segSegmentDist(ax, ay, bx, by, cx, cy, dx, dy) {
+  const rx = bx - ax, ry = by - ay, sx = dx - cx, sy = dy - cy;
+  const denom = rx * sy - ry * sx;
+  if (Math.abs(denom) > 1e-8) {
+    const qx = cx - ax, qy = cy - ay;
+    const t = (qx * sy - qy * sx) / denom, u = (qx * ry - qy * rx) / denom;
+    if (t >= 0 && t <= 1 && u >= 0 && u <= 1) return 0;
+  }
+  return Math.min(
+    segPointDist(ax, ay, bx, by, cx, cy).dist,
+    segPointDist(ax, ay, bx, by, dx, dy).dist,
+    segPointDist(cx, cy, dx, dy, ax, ay).dist,
+    segPointDist(cx, cy, dx, dy, bx, by).dist
+  );
+}
+
 // axis-aligned overlap of two rects (center-based, half extents)
 function aabbOverlap(ax, ay, ahw, ahh, bx, by, bhw, bhh) {
   // strict: merely *touching* an edge (e.g. standing exactly on a floor) is not

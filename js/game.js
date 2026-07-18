@@ -968,8 +968,10 @@
       player.vy = -1350; player.iframe = Math.max(player.iframe, 1.0); player.voidSlowT = C.voidSlowDur;
       player.voidTransferT = Math.max(player.voidTransferT, C.voidTransferGrace);
       player.dashCharges = player.maxDashCharges; vs.rescueCd = 0.8;
+      const fed = vs.owner && typeof vs.owner.startVoidSiphon === "function" ? vs.owner.startVoidSiphon(player) : 0;
       FX.shockwave(player.x, player.y + 150, 12, CONFIG.colors.perfect, 210, 5); FX.burst(player.x, player.y + 120, 0, -1, 16, CONFIG.colors.perfect);
       addFloater(player.x, player.y - 28, "THE VOID BITES  -" + C.voidFallDmg, true, CONFIG.colors.perfect);
+      if (fed > 0) addFloater(vs.owner.x, vs.owner.y - 56, "+" + Math.round(fed) + "  FEED", true, CONFIG.colors.perfect);
       if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb();
     }
   }
@@ -2175,6 +2177,14 @@
     const baseDmg = blade.damageAt();
     // style -> damage: a higher trick rank makes every swing hit harder (capped)
     const styleMult = 1 + Math.min((run.mult - 1) * CONFIG.skill.styleDamage, CONFIG.skill.styleDamageMax);
+    // The fall siphon is world geometry, not the Source's rear-plane hurtbox.
+    // Test the visible tether itself so a committed held or thrown cut can sever it.
+    for (const e of enemies) if (!e.dead && typeof e.trySeverSiphon === "function" && e.trySeverSiphon(blade)) {
+      const mx = (blade.x + blade.tipX) / 2, my = (blade.y + blade.tipY) / 2;
+      FX.burst(mx, my, blade.tipVX, blade.tipVY, 13, CONFIG.colors.perfect); FX.ring(mx, my, 16, CONFIG.colors.perfect);
+      addFloater(mx, my - 22, "SIPHON SEVERED", true, CONFIG.colors.perfect); addStyle("parry"); SFX.deflect();
+      hitStop = Math.max(hitStop, CONFIG.hitStop.small); addShake(CONFIG.juice.shakeBig);
+    }
     for (const e of enemies) {
       if (e.dead || e.dying || e.introT > 0 || e.hitCd > 0) continue;
       const liveWeapon = e.parryBaton && e.batonStrike > 0 ? e.batonSegment() : null;
@@ -2367,6 +2377,7 @@
       for (const e of enemies) {
         if (e.dead || e.dying || e.introT > 0 || blade.pierced.has(e)) continue;
         if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y, e.radius + 4)) {
+          if (e.blocksDamage({ type: "throw" })) continue;
           // Duelist parries a thrown blade right back — bait the parry, then throw
           if (e.behavior === "duelist" && e.duelReady) {
             e.duelReady = false; e.duelCd = CONFIG.exotic.duelCd; e.flash = 0.12;
@@ -3341,6 +3352,9 @@
     }
     // The braid's route graph is intentionally invisible in release. Transfer
     // windows remain simulation metadata and are inspectable in Pantheon debug.
+    // DEPTH PLANE: rear actors render after the biome but before every route
+    // surface, producing real occlusion instead of a foreground sprite trick.
+    for (const e of enemies) if (!e.dead && typeof e.drawRear === "function") e.drawRear(ctx);
     // Broken arena platforms leave diegetic fragments / reform silhouettes even
     // while they are absent from collision.
     if (run && run._arenaBroken) for (const p of run._arenaBroken) Backdrop.platform(ctx, p, currentStage, false, backdropView);
@@ -3512,17 +3526,17 @@
       }
     }
     // status auras / flames / target-brackets, drawn over each afflicted enemy
-    for (const e of enemies) { if (!e.dead && e.spawnT <= 0 && (e.bleedStacks > 0 || e.burnT > 0 || e.markT > 0)) drawEnemyStatus(e); }
+    for (const e of enemies) { if (!e.dead && e.depthPlane !== "rear" && e.spawnT <= 0 && (e.bleedStacks > 0 || e.burnT > 0 || e.markT > 0)) drawEnemyStatus(e); }
     // dark biome: a faint light rim keeps dark-bodied enemies (and the player) readable
     if (THEME.dark) {
       ctx.strokeStyle = "rgba(236,233,247,0.45)"; ctx.lineWidth = 1.5;
-      for (const e of enemies) { if (e.spawnT > 0) continue; ctx.strokeRect(e.x - e.hw, e.y - e.hh, e.hw * 2, e.hh * 2); }
+      for (const e of enemies) { if (e.spawnT > 0 || e.depthPlane === "rear") continue; ctx.strokeRect(e.x - e.hw, e.y - e.hh, e.hw * 2, e.hh * 2); }
       ctx.strokeRect(player.x - player.hw, player.y - player.hh, player.hw * 2, player.hh * 2);
     }
     // support effect indicators: outline + badge stack over every buffed enemy, so it's
     // always obvious which enemies are protected/empowered/hasted/healed/shielded
     for (const e of enemies) {
-      if (e.spawnT > 0 || !e.buffs || !e.buffs.length) continue;
+      if (e.spawnT > 0 || e.depthPlane === "rear" || !e.buffs || !e.buffs.length) continue;
       ctx.strokeStyle = CONFIG.colors[e.buffs[0]] || "#000"; ctx.lineWidth = 2; ctx.globalAlpha = 0.75;
       ctx.strokeRect(e.x - e.hw - 3, e.y - e.hh - 3, e.hw * 2 + 6, e.hh * 2 + 6);
       ctx.globalAlpha = 1;
