@@ -159,6 +159,33 @@ const SFX = {
     this._noise(0.075, t, { type: "bandpass", freq: 2200, q: 0.8, vol: 0.075 });
     this._osc(170, 0.13, t, { type: "sawtooth", vol: 0.055, slideTo: 95, attack: 0.002 });
   },
+  wardenStaffScrape() {
+    if (!this.ctx) return; const t = this.ctx.currentTime;
+    this._noise(0.11, t, { type: "bandpass", freq: 1450, q: 5, vol: 0.055 });
+    this._osc(290, 0.12, t, { type: "square", vol: 0.035, slideTo: 210, attack: 0.003 });
+  },
+  wardenStaffWhoosh() {
+    if (!this.ctx) return; const t = this.ctx.currentTime;
+    this._noise(0.12, t, { type: "bandpass", freq: 1900, q: 0.9, vol: 0.075 });
+  },
+  wardenLockClang() {
+    if (!this.ctx) return; const t = this.ctx.currentTime;
+    this._click(t, 0.16); [720, 1170, 1810].forEach((f, i) => this._osc(f, 0.13 - i * 0.02, t, { type: "square", vol: 0.055 - i * 0.012, attack: 0.0005 }));
+  },
+  wardenGuardBreak() {
+    if (!this.ctx) return; const t = this.ctx.currentTime;
+    this._click(t, 0.24); this._noise(0.16, t, { type: "lowpass", freq: 520, vol: 0.17 });
+    this._osc(150, 0.22, t, { type: "sawtooth", vol: 0.12, slideTo: 58, attack: 0.001 });
+  },
+  aldricCleaverWhoosh() {
+    if (!this.ctx) return; const t = this.ctx.currentTime;
+    this._noise(0.17, t, { type: "bandpass", freq: 930, q: 0.65, vol: 0.12 });
+    this._osc(180, 0.16, t, { type: "triangle", vol: 0.055, slideTo: 95, attack: 0.002 });
+  },
+  aldricCleaverBury() {
+    if (!this.ctx) return; const t = this.ctx.currentTime;
+    this._click(t, 0.18); this._noise(0.18, t, { type: "lowpass", freq: 360, vol: 0.15 });
+  },
   throwBlade() {
     const t = this.ctx.currentTime;
     this._noise(0.2, t, { type: "bandpass", freq: 1100, q: 0.6, vol: 0.16 });

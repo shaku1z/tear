@@ -2077,7 +2077,9 @@
     const styleMult = 1 + Math.min((run.mult - 1) * CONFIG.skill.styleDamage, CONFIG.skill.styleDamageMax);
     for (const e of enemies) {
       if (e.dead || e.dying || e.introT > 0 || e.hitCd > 0) continue;
-      if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y, e.radius + 4)) {
+      const liveWeapon = e.parryBaton && e.batonStrike > 0 ? e.batonSegment() : null;
+      const weaponContact = liveWeapon && weaponCapsuleIntersectsSegment(liveWeapon, blade.x, blade.y, blade.tipX, blade.tipY);
+      if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y, e.radius + 4) || weaponContact) {
         // Wraith: the blade phases straight through — only a thrown blade or a deflected shot harms it
         if (e.immuneToBlade) {
           if (baseDmg > 0) { e.hitCd = 0.18; FX.burst(e.x, e.y, blade.tipVX, blade.tipVY, 4, e.color); }
@@ -2087,9 +2089,8 @@
           // THE FIRST EXAM: a fast swing that meets the Warden's STRIKING baton
           // deflects it — posture damage. Fills his guard meter; full = GUARD BROKEN.
           if (e.parryBaton && e.batonStrike > 0) {
-            const bs = e.batonSegment();
-            const near = segPointDist(blade.x, blade.y, blade.tipX, blade.tipY, bs.x2, bs.y2).dist < 46 ||
-                         segPointDist(blade.x, blade.y, blade.tipX, blade.tipY, (bs.x1 + bs.x2) / 2, (bs.y1 + bs.y2) / 2).dist < 40;
+            const bs = liveWeapon || e.batonSegment();
+            const near = !!weaponContact;
             if (near && e.parryBaton(blade.tipSpeed >= CONFIG.blade.minHitSpeed * 2.2)) {
               FX.burst(bs.x2, bs.y2, 0, -1, 12, "#e0a326"); FX.flash(bs.x2, bs.y2, 34, "#e0a326");
               addFloater(bs.x2, bs.y2 - 16, "PARRIED", true, "#e0a326");
@@ -2097,6 +2098,9 @@
               hitStop = Math.max(hitStop, CONFIG.hitStop.small);
               e.hitCd = 0.14;   // the deflect IS this exchange — no body damage on the same swing
               continue;
+            }
+            if (near) {   // an unparryable finisher still meets the visible staff, never the boss body behind it
+              FX.burst(bs.x2, bs.y2, 0, -1, 7, CONFIG.colors.charger); SFX.deflect(); e.hitCd = 0.10; continue;
             }
           }
           // armored: blocked unless the hit is fast enough / from the flank.

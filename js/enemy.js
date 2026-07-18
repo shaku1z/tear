@@ -1474,6 +1474,126 @@ function drawPeril(ctx, boss) {
 //  arena-effect hooks (floor shockwaves, mortar fire, prohibited zones, platform vaulting,
 //  a fake-death beat, and a ceiling-cling finale). Later bosses follow the same shape.
 // ====================================================================================
+// Authoritative boss-weapon poses. Drawing, attack damage, debug hulls, and the
+// Warden's blade clash all consume these exact points instead of parallel lengths.
+function weaponBasis(x, y, a, facing) {
+  return { x, y, ux: facing * Math.cos(a), uy: Math.sin(a), px: -Math.sin(a) * facing, py: Math.cos(a) };
+}
+function weaponPoint(b, along, side) { return { x: b.x + b.ux * along + b.px * side, y: b.y + b.uy * along + b.py * side }; }
+function weaponSegment(a, b) { return { a, b, x1: a.x, y1: a.y, x2: b.x, y2: b.y }; }
+function springWeapon(actor, angleKey, velocityKey, target, dt, stiffness, damping) {
+  const a = actor[angleKey], v = actor[velocityKey] || 0;
+  const nv = (v + (target - a) * stiffness * dt) * Math.exp(-damping * dt);
+  actor[velocityKey] = nv; actor[angleKey] = a + nv * dt;
+}
+function wardstaffPose(actor, angle, prevAngle) {
+  const C = CONFIG.warden, origin = { x: actor.x + actor.facing * actor.hw * 0.08, y: actor.y - 7 };
+  const build = (a) => {
+    const b = weaponBasis(origin.x, origin.y, a, actor.facing), front = C.staffFront, head = C.staffHead;
+    const shaftA = weaponPoint(b, -C.staffRear, 0), shaftB = weaponPoint(b, front, 0);
+    const gripA = weaponPoint(b, -13, 0), gripB = weaponPoint(b, 18, 0);
+    const headPolygon = [[front - 8, -18], [front + head, -18], [front + head - 8, -6], [front + head + 3, -2],
+      [front + head + 3, 7], [front + 7, 5], [front + head - 6, 18], [front - 8, 18]].map((p) => weaponPoint(b, p[0], p[1]));
+    const cuttingEdge = weaponSegment(headPolygon[1], headPolygon[6]);
+    return { shaftA, shaftB, gripA, gripB, headPolygon, cuttingEdge, tip: weaponPoint(b, front + head + 3, 2),
+      counterweight: weaponPoint(b, -C.staffRear, 0), guardRing: weaponPoint(b, 31, 0) };
+  };
+  const cur = build(angle), prev = build(prevAngle == null ? angle : prevAngle);
+  const swept = [cur.cuttingEdge, prev.cuttingEdge, weaponSegment(prev.tip, cur.tip), weaponSegment(cur.shaftA, cur.shaftB)];
+  return { gripA: cur.gripA, gripB: cur.gripB, shaftA: cur.shaftA, shaftB: cur.shaftB,
+    headPolygon: cur.headPolygon, cuttingEdge: cur.cuttingEdge, tip: cur.tip,
+    counterweight: cur.counterweight, guardRing: cur.guardRing,
+    sweptAttackHull: { segments: swept, radius: 10 },
+    parryCapsule: Object.assign(weaponSegment(cur.gripB, cur.tip), { radius: C.staffParryR }) };
+}
+function greatCleaverPose(actor, angle, prevAngle, originOverride) {
+  const C = CONFIG.aldric, hand = originOverride || { x: actor.x + actor.facing * actor.hw * 0.08, y: actor.y - 2 };
+  const build = (a) => {
+    const b = weaponBasis(hand.x, hand.y, a, actor.facing), shaft = C.cleaverShaft, blade = C.cleaverBlade, hw = C.cleaverHalfW;
+    const shaftA = weaponPoint(b, -C.cleaverRear, 0), shaftB = weaponPoint(b, shaft + 5, 0);
+    const gripA = weaponPoint(b, -15, 0), gripB = weaponPoint(b, 20, 0);
+    // The double inward step at the nose is the broken-crown notch.
+    const headPolygon = [[shaft - 7, -14], [shaft + blade * 0.54, -hw], [shaft + blade, -hw * 0.82],
+      [shaft + blade * 0.78, -10], [shaft + blade + 2, -2], [shaft + blade * 0.78, 8],
+      [shaft + blade, hw * 0.82], [shaft + blade * 0.42, hw], [shaft - 7, 15]].map((p) => weaponPoint(b, p[0], p[1]));
+    const cuttingEdge = weaponSegment(headPolygon[2], headPolygon[6]);
+    return { shaftA, shaftB, gripA, gripB, headPolygon, cuttingEdge,
+      tip: weaponPoint(b, shaft + blade + 2, -2), guardRing: weaponPoint(b, shaft - 10, 0) };
+  };
+  const cur = build(angle), prev = build(prevAngle == null ? angle : prevAngle);
+  return { gripA: cur.gripA, gripB: cur.gripB, shaftA: cur.shaftA, shaftB: cur.shaftB,
+    headPolygon: cur.headPolygon, cuttingEdge: cur.cuttingEdge, tip: cur.tip, guardRing: cur.guardRing,
+    sweptAttackHull: { segments: [cur.cuttingEdge, prev.cuttingEdge, weaponSegment(prev.tip, cur.tip), weaponSegment(cur.shaftA, cur.shaftB)], radius: 12 },
+    parryCapsule: Object.assign(weaponSegment(cur.gripB, cur.tip), { radius: 13 }) };
+}
+function weaponHullHitsTarget(pose, target, pad) {
+  if (!pose || !pose.sweptAttackHull || !target) return false;
+  const targetR = Math.min(target.hw || 0, target.hh || 0) + (pad || 0) + pose.sweptAttackHull.radius;
+  return pose.sweptAttackHull.segments.some((s) => segPointDist(s.a.x, s.a.y, s.b.x, s.b.y, target.x, target.y).dist <= targetR);
+}
+function weaponCapsuleIntersectsSegment(cap, ax, ay, bx, by) {
+  if (!cap) return false;
+  const orient = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+  const A = { x: ax, y: ay }, B = { x: bx, y: by }, C = cap.a, D = cap.b;
+  const boxOverlap = Math.max(Math.min(A.x, B.x), Math.min(C.x, D.x)) <= Math.min(Math.max(A.x, B.x), Math.max(C.x, D.x)) + 1e-6 &&
+    Math.max(Math.min(A.y, B.y), Math.min(C.y, D.y)) <= Math.min(Math.max(A.y, B.y), Math.max(C.y, D.y)) + 1e-6;
+  const crosses = boxOverlap && orient(A, B, C) * orient(A, B, D) <= 0 && orient(C, D, A) * orient(C, D, B) <= 0;
+  if (crosses) return true;
+  const d = Math.min(segPointDist(ax, ay, bx, by, C.x, C.y).dist, segPointDist(ax, ay, bx, by, D.x, D.y).dist,
+    segPointDist(C.x, C.y, D.x, D.y, ax, ay).dist, segPointDist(C.x, C.y, D.x, D.y, bx, by).dist);
+  return d <= (cap.radius || 0);
+}
+function weaponDebugGeometry(pose) { return pose && pose.sweptAttackHull ? pose.sweptAttackHull.segments.map((s) => ({ a: s.a, b: s.b, radius: pose.sweptAttackHull.radius })) : []; }
+
+function traceWeaponPolygon(ctx, points) {
+  if (!points || !points.length) return;
+  ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+  ctx.closePath();
+}
+function drawWardstaff(ctx, pose, actor, dim) {
+  const ph = actor.phase, low = typeof GFX !== "undefined" && GFX.low;
+  const steel = dim ? "#555" : "#303842", control = ph === 1 ? "#bfeef2" : (ph === 2 ? "#d7a83e" : "#d94b56");
+  ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round";
+  if (!low && !dim && ph >= 3) { ctx.strokeStyle = CONFIG.colors.charger; ctx.globalAlpha = 0.28; ctx.lineWidth = 20;
+    ctx.beginPath(); ctx.moveTo(pose.shaftA.x, pose.shaftA.y); ctx.lineTo(pose.tip.x, pose.tip.y); ctx.stroke(); ctx.globalAlpha = 1; }
+  ctx.strokeStyle = steel; ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(pose.shaftA.x, pose.shaftA.y); ctx.lineTo(pose.shaftB.x, pose.shaftB.y); ctx.stroke();
+  ctx.strokeStyle = dim ? "#777" : control; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(pose.shaftA.x, pose.shaftA.y); ctx.lineTo(pose.shaftB.x, pose.shaftB.y); ctx.stroke();
+  traceWeaponPolygon(ctx, pose.headPolygon); ctx.fillStyle = dim ? "#555" : (ph === 1 ? "#657482" : ph === 2 ? "#b88a2f" : "#51232a"); ctx.fill();
+  ctx.strokeStyle = control; ctx.lineWidth = 4; ctx.stroke();
+  ctx.fillStyle = steel; ctx.beginPath(); ctx.arc(pose.counterweight.x, pose.counterweight.y, 10, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = control; ctx.lineWidth = 3; ctx.stroke();
+  ctx.strokeStyle = control; ctx.lineWidth = ph >= 2 ? 5 : 3; ctx.beginPath(); ctx.arc(pose.guardRing.x, pose.guardRing.y, ph >= 2 ? 12 : 9, 0, Math.PI * 2); ctx.stroke();
+  // Two separated hands make the staff's leverage readable in every pose.
+  for (const hand of [pose.gripA, pose.gripB]) { ctx.fillStyle = dim ? "#555" : actor.color; ctx.beginPath(); ctx.arc(hand.x, hand.y, 8, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = THEME.ink; ctx.lineWidth = 2; ctx.stroke(); }
+  if (ph >= 3 && !dim) {   // failing custody bands and crimson stress fractures
+    ctx.strokeStyle = "#ff9a8d"; ctx.lineWidth = 2;
+    for (const t of [0.36, 0.58, 0.78]) { const x = lerp(pose.shaftA.x, pose.shaftB.x, t), y = lerp(pose.shaftA.y, pose.shaftB.y, t);
+      ctx.beginPath(); ctx.moveTo(x - 5, y - 6); ctx.lineTo(x + 5, y + 6); ctx.stroke(); }
+  }
+  ctx.restore();
+}
+function drawGreatCleaver(ctx, pose, actor, downed) {
+  const low = typeof GFX !== "undefined" && GFX.low, angry = !!actor.anger, witnessed = !!actor.witnessEarned;
+  const steel = downed ? "#2c292b" : (witnessed ? "#434951" : "#292b30");
+  const gold = witnessed ? "#9c8a59" : "#b58a32", heat = angry ? "#fff0b0" : (actor.mode === "duel" ? "#842535" : "#ed4b32");
+  ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round";
+  if (!low && !downed && actor.mode !== "duel") { ctx.strokeStyle = heat; ctx.globalAlpha = 0.24; ctx.lineWidth = 22;
+    ctx.beginPath(); ctx.moveTo(pose.guardRing.x, pose.guardRing.y); ctx.lineTo(pose.tip.x, pose.tip.y); ctx.stroke(); ctx.globalAlpha = 1; }
+  ctx.strokeStyle = "#211f22"; ctx.lineWidth = 13; ctx.beginPath(); ctx.moveTo(pose.shaftA.x, pose.shaftA.y); ctx.lineTo(pose.shaftB.x, pose.shaftB.y); ctx.stroke();
+  ctx.strokeStyle = gold; ctx.lineWidth = 4; ctx.stroke();
+  traceWeaponPolygon(ctx, pose.headPolygon); ctx.fillStyle = steel; ctx.fill(); ctx.strokeStyle = gold; ctx.lineWidth = 3; ctx.stroke();
+  ctx.strokeStyle = heat; ctx.lineWidth = angry ? 5 : 3; ctx.beginPath();
+  ctx.moveTo(pose.cuttingEdge.a.x, pose.cuttingEdge.a.y); ctx.lineTo(pose.cuttingEdge.b.x, pose.cuttingEdge.b.y); ctx.stroke();
+  // Internal heat and the broken-crown notch remain readable without bloom.
+  ctx.globalAlpha = downed ? 0.35 : 0.8; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(pose.guardRing.x, pose.guardRing.y); ctx.lineTo(pose.tip.x, pose.tip.y); ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.strokeStyle = gold; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(pose.guardRing.x, pose.guardRing.y, 11, 0, Math.PI * 2); ctx.stroke();
+  if (!downed) for (const hand of [pose.gripA, pose.gripB]) { ctx.fillStyle = actor.color; ctx.beginPath(); ctx.arc(hand.x, hand.y, 8, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = THEME.ink; ctx.lineWidth = 2; ctx.stroke(); }
+  if (angry && !downed) { ctx.strokeStyle = "#ff6a42"; ctx.lineWidth = 2;
+    for (let i = 1; i < pose.headPolygon.length - 1; i += 2) { const p = pose.headPolygon[i]; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(lerp(p.x, pose.guardRing.x, 0.3), lerp(p.y, pose.guardRing.y, 0.3)); ctx.stroke(); } }
+  ctx.restore();
+}
+
 class Warden extends Enemy {
   constructor(x, y) {
     super(x, y, CONFIG.boss);
@@ -1489,7 +1609,8 @@ class Warden extends Enemy {
     this.onCeiling = false;
     this.ceilDropT = 0;
     this.lungeT = CONFIG.warden.lungeCd;
-    this.batonA = -0.6; this.batonPrevA = -0.6; this.batonStrike = 0;
+    this.batonA = -0.6; this.batonPrevA = -0.6; this.batonAV = 0; this.batonStrike = 0;
+    this.weaponHitSpent = false;
     this.guardMeter = 0; this.guardDelayT = 0; this.guardBrokenT = 0; this.batonParryCd = 0;
     this.searchlights = []; this.cages = []; this.trails = []; this.lockdownT = 0; this.lockdownCd = 0;
     this.mortarTargets = []; this.trailDropT = 0; this._playerRef = null;
@@ -1509,21 +1630,23 @@ class Warden extends Enemy {
     else if (this.guardMeter > 0) this.guardMeter = Math.max(0, this.guardMeter - CONFIG.warden.guardDecay * dt);
   }
 
-  batonSegment() {
-    const hx = this.x + this.facing * this.hw * 0.4, hy = this.y - 6, L = 58;
-    return { x1: hx, y1: hy, x2: hx + this.facing * Math.cos(this.batonA) * L, y2: hy + Math.sin(this.batonA) * L };
-  }
+  weaponGeometry(angle, prevAngle) { return wardstaffPose(this, angle == null ? this.batonA : angle, prevAngle == null ? this.batonPrevA : prevAngle); }
+  batonSegment() { return this.weaponGeometry().parryCapsule; }
+  contactDamageEnabled() { return this.state !== "string" && this.state !== "batonlunge" && this.state !== "lunge"; }
   parryBaton(perfect) {
     if (this.dying || this.batonParryCd > 0 || this.batonStrike <= 0 || this.beatHeavy) return false;
     this.beatParried = true;   // the string beat that was deflected does not land
     const Wc = CONFIG.warden;
     this.batonParryCd = 0.22; this.batonStrike = 0; this.guardDelayT = Wc.guardDecayDelay;
+    this.batonPrevA = this.batonA; this.batonA -= perfect ? 0.30 : 0.20; this.batonAV = -11;
     this.guardMeter = Math.min(1, this.guardMeter + (perfect ? Wc.guardPerfect : Wc.guardParry));
+    if (typeof SFX !== "undefined" && SFX.wardenLockClang) SFX.wardenLockClang();
     if (this.guardMeter >= 1) {
       this.guardBrokenT = Wc.guardBreakDur; this.stun = Math.max(this.stun, Wc.guardBreakDur);
       this.state = "idle"; this.vx = 0;
       BOSSFX.juice({ banner: "GUARD BROKEN", color: "#e0a326", shake: 11, flash: 0.5, slowmo: 0.55, zoom: 0.07, hitstop: 0.08 });
       FX.ring(this.x, this.y, 18, "#e0a326"); FX.burst(this.x, this.y, 0, -1, 14, "#e0a326");
+      if (typeof SFX !== "undefined" && SFX.wardenGuardBreak) SFX.wardenGuardBreak();
     }
     return true;
   }
@@ -1549,7 +1672,8 @@ class Warden extends Enemy {
     else if (this.state === "windup") { wt = this.pendingAtk === "mortar" ? -1.7 : -1.45; k = 8; }
     else if (this.state === "lunge") { wt = 0.2; k = 14; }
     this.batonPrevA = this.batonA;
-    this.batonA = lerp(this.batonA, wt, clamp(k * dt, 0, 1));
+    springWeapon(this, "batonA", "batonAV", wt, dt, 210 + k * 3, 21);
+    this.debugGeometry = weaponDebugGeometry(this.weaponGeometry());
   }
 
   _mortar(player, projectiles, landY) {
@@ -1632,10 +1756,13 @@ class Warden extends Enemy {
       // flowing straight into a string on arrival
       if (this.beatPh === "wind") {
         this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1)); this.stateT -= dt;
-        if (this.stateT <= 0) { this.beatPh = "go"; this.vx = this.facing * Wc.lungeSpeed; this.vy = -420; this.onGround = false; this.batonStrike = 0.4; }
+        if (this.stateT <= 0) { this.beatPh = "go"; this.vx = this.facing * Wc.lungeSpeed; this.vy = -420; this.onGround = false; this.batonStrike = 0.4; this.weaponHitSpent = false;
+          if (typeof SFX !== "undefined" && SFX.wardenStaffWhoosh) SFX.wardenStaffWhoosh(); }
       } else {
         this.x += this.vx * dt; this.vx = lerp(this.vx, this.facing * Wc.lungeSpeed * 0.4, clamp(3 * dt, 0, 1));
-        if (Math.abs(player.x - this.x) < this.hw + player.hw + 20 && Math.abs(player.y - this.y) < 90 && !player.invulnerable) player.takeDamage(Wc.lungeDmg, this.x, this);
+        if (!this.weaponHitSpent && weaponHullHitsTarget(this.weaponGeometry(), player, 4)) {
+          this.weaponHitSpent = true; if (!player.invulnerable) player.takeDamage(Wc.lungeDmg, this.x, this);
+        }
         if (this.onGround || this.x <= this.hw + 4 || this.x >= CONFIG.view.w - this.hw - 4) {
           this.x = clamp(this.x, this.hw + 4, CONFIG.view.w - this.hw - 4);
           this.state = "string"; this.stringIdx = 0; this.stringN = ph >= 2 ? 3 : 2; this.beatPh = "wind"; this.stateT = Wc.stringWind; this.beatHeavy = false; this.beatParried = false;
@@ -1652,10 +1779,9 @@ class Warden extends Enemy {
       if (this.beatPh === "wind" && this.stateT <= 0) {
         this.beatPh = "open"; this.stateT = Wc.parryWin;
         this.batonStrike = Wc.parryWin + 0.05; this.beatParried = false;
-        try { SFX.swing(2200); } catch (e) {}   // the beat's whoosh
+        if (typeof SFX !== "undefined" && SFX.wardenStaffWhoosh) SFX.wardenStaffWhoosh();
       } else if (this.beatPh === "open" && this.stateT <= 0) {
-        if (!this.beatParried && Math.abs(player.x - this.x) < Wc.stringRange * 0.72 &&
-            Math.abs(player.y - this.y) < 95 && !player.invulnerable) {
+        if (!this.beatParried && weaponHullHitsTarget(this.weaponGeometry(), player, 3) && !player.invulnerable) {
           player.takeDamage(Wc.stringDmg * (this.beatHeavy ? 1.5 : 1), this.x, this);
           FX.burst(player.x, player.y, this.facing, -0.3, 7, this.color);
           if (this.beatHeavy) { player.vx = this.facing * Wc.bashKnock * 0.85; player.vy = -280; }
@@ -1667,6 +1793,7 @@ class Warden extends Enemy {
         } else {
           this.beatPh = "wind"; this.stateT = Wc.stringWind * (0.8 + Math.random() * 0.45);   // the rhythm varies — read it
           this.beatHeavy = this.stringIdx === this.stringN - 1 && ph >= 2;
+          if (typeof SFX !== "undefined" && SFX.wardenStaffScrape) SFX.wardenStaffScrape();
           if (this.beatHeavy) perilPing(this);
         }
       }
@@ -1693,9 +1820,11 @@ class Warden extends Enemy {
         if (dist < Wc.stringRange) {
           this.state = "string"; this.stringIdx = 0; this.stringN = ph >= 2 ? 3 : 2;
           this.beatPh = "wind"; this.stateT = Wc.stringWind; this.beatHeavy = false; this.beatParried = false;
+          if (typeof SFX !== "undefined" && SFX.wardenStaffScrape) SFX.wardenStaffScrape();
         } else if (dist < Wc.lungeRange && Math.random() < 0.55) {
           this.state = "batonlunge"; this.beatPh = "wind"; this.stateT = Wc.lungeWind;
           this.facing = Math.sign(player.x - this.x) || this.facing;
+          if (typeof SFX !== "undefined" && SFX.wardenStaffScrape) SFX.wardenStaffScrape();
         } else {
           this.pendingAtk = "mortar"; this.state = "windup"; this.stateT = Wc.batonWindup;
           this.mortarTargets = [-1, 0, 1].map((i) => clamp(player.x + i * 180, 60, CONFIG.view.w - 60));
@@ -1735,14 +1864,19 @@ class Warden extends Enemy {
       this.x = clamp(this.x + this.vx * dt, this.hw, CONFIG.view.w - this.hw);
       if (this.lungeWT <= 0) {
         this.state = "lunge";
+        this.weaponHitSpent = false;
         const m = len(this.diveTX - this.x, this.diveTY - this.y) || 1;
         this.vx = (this.diveTX - this.x) / m * Wc.lungeSpeed;
         this.vy = (this.diveTY - this.y) / m * Wc.lungeSpeed;
+        if (typeof SFX !== "undefined" && SFX.wardenStaffWhoosh) SFX.wardenStaffWhoosh();
       }
       return;
     }
     if (this.state === "lunge") {                 // committed diagonal dive toward the locked spot
       this.x += this.vx * dt; this.y += this.vy * dt;
+      if (!this.weaponHitSpent && weaponHullHitsTarget(this.weaponGeometry(), player, 5)) {
+        this.weaponHitSpent = true; if (!player.invulnerable) player.takeDamage(Wc.lungeDmg, this.x, this);
+      }
       this.trailDropT -= dt;
       if (this.trailDropT <= 0) {
         this.trailDropT = 0.11;
@@ -1790,26 +1924,25 @@ class Warden extends Enemy {
     ctx.fillStyle = this.flash > 0 ? "#fff" : (dim ? "#7a1020" : this.color);
     ctx.fillRect(x, y, w, h);
     ctx.strokeStyle = THEME.ink; ctx.lineWidth = 4; ctx.strokeRect(x, y, w, h);
-    // animated baton (raised on wind-up, slammed through on strike; ignites crimson in P3)
-    {
-      const hx = this.x + this.facing * this.hw * 0.4, hy = this.y - 6, L = 58;
-      const introP = this.introT > 0 ? clamp(1 - this.introT / ((CONFIG.bossTheater && CONFIG.bossTheater.introDur) || 1.4), 0, 1) : -1;
-      let a = this.dying ? lerp(this.batonA, 1.5, this.deathP) : this.batonA;
-      if (introP >= 0) a = introP < 0.62 ? lerp(-0.45, -1.55, introP / 0.62) : lerp(-1.55, 0.82, (introP - 0.62) / 0.38);
-      const tx = hx + this.facing * Math.cos(a) * L, ty = hy + Math.sin(a) * L;
-      if (!dim && Math.abs(this.batonA - this.batonPrevA) > 0.06) {   // swoosh
-        ctx.fillStyle = this.phase >= 3 ? CONFIG.colors.charger : CONFIG.colors.slam; ctx.globalAlpha = 0.3;
-        ctx.beginPath(); ctx.moveTo(hx, hy);
-        for (let s = 0; s <= 1; s += 0.2) { const aa = this.batonPrevA + (a - this.batonPrevA) * s; ctx.lineTo(hx + this.facing * Math.cos(aa) * L, hy + Math.sin(aa) * L); }
-        ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
-      }
-      if (this.phase >= 3 && !dim) {   // crimson ignite glow
-        ctx.strokeStyle = CONFIG.colors.charger; ctx.globalAlpha = 0.4; ctx.lineWidth = 16; ctx.lineCap = "round";
-        ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke(); ctx.globalAlpha = 1;
-      }
-      ctx.strokeStyle = dim ? "#555" : THEME.ink; ctx.lineWidth = 9; ctx.lineCap = "round";
-      ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke();
-      ctx.fillStyle = dim ? "#555" : THEME.ink; ctx.beginPath(); ctx.arc(tx, ty, 6, 0, Math.PI * 2); ctx.fill();   // baton tip
+    // Planted feet and an opposite-body anticipation lean sell the staff's mass.
+    const anticipating = (this.state === "string" && this.beatPh === "wind") || this.state === "windup" || (this.state === "batonlunge" && this.beatPh === "wind");
+    ctx.fillStyle = dim ? "#4c4c4c" : THEME.ink;
+    ctx.fillRect(this.x - this.hw * 0.72 - (anticipating ? this.facing * 7 : 0), this.y + this.hh - 9, this.hw * 0.62, 11);
+    ctx.fillRect(this.x + this.hw * 0.10 - (anticipating ? this.facing * 7 : 0), this.y + this.hh - 9, this.hw * 0.62, 11);
+    const introP = this.introT > 0 ? clamp(1 - this.introT / ((CONFIG.bossTheater && CONFIG.bossTheater.introDur) || 1.4), 0, 1) : -1;
+    let staffA = this.dying ? lerp(this.batonA, 1.5, this.deathP) : this.batonA;
+    if (introP >= 0) staffA = introP < 0.62 ? lerp(-0.45, -1.55, introP / 0.62) : lerp(-1.55, 0.82, (introP - 0.62) / 0.38);
+    const staffPose = this.weaponGeometry(staffA, introP >= 0 ? staffA : this.batonPrevA);
+    if (!dim && Math.abs(this.batonA - this.batonPrevA) > 0.045 && !(typeof GFX !== "undefined" && GFX.low)) {
+      const sweep = staffPose.sweptAttackHull.segments[2]; ctx.strokeStyle = this.phase >= 3 ? CONFIG.colors.charger : CONFIG.colors.slam;
+      ctx.globalAlpha = 0.28; ctx.lineWidth = 24; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(sweep.a.x, sweep.a.y); ctx.lineTo(sweep.b.x, sweep.b.y); ctx.stroke(); ctx.globalAlpha = 1;
+    }
+    drawWardstaff(ctx, staffPose, this, dim);
+    if (this.onCeiling || this.state === "lungewind" || (this.state === "lunge" && this.phase >= 3)) {
+      // The phase-three dive hangs from the wardstaff's deployed custody hook.
+      ctx.strokeStyle = this.phase >= 3 ? CONFIG.colors.charger : "#9ca7ad"; ctx.lineWidth = 3; ctx.globalAlpha = 0.8;
+      ctx.beginPath(); ctx.moveTo(staffPose.tip.x, staffPose.tip.y); ctx.lineTo(this.x - this.facing * 34, 18); ctx.stroke();
+      ctx.beginPath(); ctx.arc(this.x - this.facing * 34, 18, 8, 0.2, Math.PI * 1.75); ctx.stroke(); ctx.globalAlpha = 1;
     }
     // eye + phase pips + badge
     ctx.fillStyle = "#fff";
@@ -1841,7 +1974,7 @@ class Warden extends Enemy {
     if (this.state === "batonlunge" && this.beatPh === "wind") {
       const lk = 1 - clamp(this.stateT / (CONFIG.warden.lungeWind || 0.42), 0, 1);
       dangerLane(ctx, this.x, this.y - this.hh, CONFIG.view.w, this.hh * 2, this.facing, this.color, lk * 0.7);
-      weaponGlint(ctx, this.x + this.facing * (this.hw + 12), this.y - 8, "#e0a326", lk);
+      const lungePose = this.weaponGeometry(); weaponGlint(ctx, lungePose.tip.x, lungePose.tip.y, "#e0a326", lk);
     }
     // ceiling-dive telegraph: a marked line from the cling to the spot it locked onto
     if (this.state === "lungewind") {
@@ -2265,7 +2398,8 @@ class Aldric extends Enemy {
     this.mode = "duel"; this.state = "idle"; this.stateT = 0; this.atkT = 1.6; this.facing = 1;
     this.zones = []; this.zoneColor = CONFIG.colors.bomber; this.zoneCycleT = 0;
     this.spawnAdds = false; this.faked = false; this.reviveCap = 0; this.chargeT = 0;
-    this.weaponA = -0.6; this.weaponPrevA = -0.6;
+    this.weaponA = -0.6; this.weaponPrevA = -0.6; this.weaponAV = 0;
+    this.weaponHitSpent = false; this.weaponEmberT = 0; this.weaponImpactT = 0; this.weaponBuriedT = 0; this.weaponReclaimT = 0;
     this.fireZones = []; this.seams = []; this.firePattern = 0; this.fireState = "idle"; this.fireClock = 0; this.fireWarnStep = -1;
     this.kneelT = 0; this.kneelStruck = false; this.anger = false;
     this.crown = null; this.crownfireCd = CONFIG.aldric.crownfireCd; this.chainLeft = 0; this.ghostT = 0; this.seamDropT = 0;
@@ -2273,6 +2407,18 @@ class Aldric extends Enemy {
     this.overheadCd = CONFIG.aldric.overheadCd; this.overTX = 0;   // OVERHEAD CLEAVER
   }
   damageTakenMult() { return this.mode === "frenzy" ? CONFIG.aldric.frenzyDmgTaken : (this.mode === "downed" ? CONFIG.aldric.downedDmgTaken : 1); }
+  _buriedWeaponOrigin() { return { x: this.x + this.facing * 88, y: CONFIG.world.groundY - 44 }; }
+  weaponGeometry(angle, prevAngle, origin) {
+    let a = angle == null ? this.weaponA : angle, pa = prevAngle == null ? this.weaponPrevA : prevAngle, o = origin;
+    if (!o && this.mode === "downed") { o = this._buriedWeaponOrigin(); a = -1.36; pa = a; }
+    else if (!o && this.weaponReclaimT > 0) {
+      const k = clamp(1 - this.weaponReclaimT / 0.55, 0, 1), buried = this._buriedWeaponOrigin();
+      const hand = { x: this.x + this.facing * this.hw * 0.08, y: this.y - 2 };
+      o = { x: lerp(buried.x, hand.x, k), y: lerp(buried.y, hand.y, k) }; a = lerp(-1.36, a, k); pa = a;
+    }
+    return greatCleaverPose(this, a, pa, o);
+  }
+  contactDamageEnabled() { return this.state !== "lunge" && this.state !== "overhead"; }
   // during the fake he can't be killed (hit OR DoT) — he always rises into the frenzy
   _deathLocked() { return this.mode === "downed"; }
   hit(dmg, knockX, knockY) {
@@ -2375,7 +2521,9 @@ class Aldric extends Enemy {
         this.seams.push({ kind: "seam", x: this.x, w: 110, life: C.seamLife, maxLife: C.seamLife, dir: this.facing, on: true, dmg: CONFIG.warden.zoneTick, tickCd: CONFIG.warden.zoneTickCd });
         FX.explode(this.x, this.y + this.hh, CONFIG.colors.bomber, 1.3); FX.shockwave(this.x, this.y + this.hh, 12, CONFIG.colors.bomber, 240, 6);
         BOSSFX.juice({ banner: "OVERHEAD", color: CONFIG.colors.bomber, shake: 12, flash: 0.4, slowmo: 0.4, zoom: 0.06, hitstop: 0.05 });
-        this.state = "recover"; this.stateT = 0.55;
+        this.weaponImpactT = 0.24; this.weaponBuriedT = C.overheadRecover;
+        this.state = "recover"; this.stateT = C.overheadRecover;
+        if (typeof SFX !== "undefined" && SFX.aldricCleaverBury) SFX.aldricCleaverBury();
       }
       return;
     }
@@ -2391,6 +2539,12 @@ class Aldric extends Enemy {
       this.vx = lerp(this.vx, 0, clamp(9 * dt, 0, 1)); this.stateT -= dt;
       if (this.stateT <= 0) this._strike(player, projectiles);
     } else if (this.state === "lunge") {
+      const bladePose = this.weaponGeometry();
+      if (!this.weaponHitSpent && weaponHullHitsTarget(bladePose, player, 4)) {
+        this.weaponHitSpent = true; if (!player.invulnerable) player.takeDamage(C.shockDmg, this.x, this);
+      }
+      this.weaponEmberT -= dt;
+      if (this.mode !== "duel" && this.weaponEmberT <= 0) { this.weaponEmberT = 0.045; FX.ember(bladePose.tip.x, bladePose.tip.y, CONFIG.colors.bomber); }
       this.stateT -= dt; if (this.stateT <= 0) { this.state = "recover"; this.stateT = 0.35; }
     } else if (this.state === "recover") {
       this.vx = lerp(this.vx, 0, clamp(7 * dt, 0, 1)); this.stateT -= dt;
@@ -2429,11 +2583,11 @@ class Aldric extends Enemy {
     if (Math.abs(this._playerRef ? this._playerRef.x - this.x : 999) > 235) {
       this._arc(projectiles, this.mode === "frenzy" ? 2 : 1);
     }
-    this.state = "lunge"; this.stateT = 0.25; this.vx = this.facing * C.lungeSpeed;
+    this.state = "lunge"; this.stateT = 0.25; this.vx = this.facing * C.lungeSpeed; this.weaponHitSpent = false;
     if (this.mode === "fire" && this.chainLeft <= 0) this.chainLeft = 1;
     if (this.mode === "frenzy" && this.chainLeft <= 0) this.chainLeft = this.anger ? 2 : 1;
     this.atkT = C.atkCd / (this.mode === "frenzy" ? 1.7 : (this.mode === "fire" ? 1.25 : 1));
-    if (typeof SFX !== "undefined" && SFX.ctx && SFX.slam) SFX.slam();
+    if (typeof SFX !== "undefined" && SFX.aldricCleaverWhoosh) SFX.aldricCleaverWhoosh();
   }
   // a burning crescent thrown along the lunge line — arcs with gravity, fully
   // parryable/deflectable through the game's own projectile loop
@@ -2452,6 +2606,7 @@ class Aldric extends Enemy {
   _enterDowned() {
     const C = CONFIG.aldric;
     this.mode = "downed"; this.state = "idle"; this.spawnAdds = false; this.kneelT = C.kneelDur; this.kneelStruck = false; this.anger = false;
+    this.weaponReclaimT = 0; this.weaponBuriedT = 0; this.weaponAV = 0;
     this.reviveCap = this.maxHp * C.witnessReviveFrac; this.vx = 0; this.seams = []; clearThroneFire(this, true); this._syncZones();
     this.crown = { x: this.x + this.facing * 18, y: this.y - this.hh - 18, vx: this.facing * 330, vy: -420, rot: 0 };
     this.phaseTag = "THE KNEEL";
@@ -2459,6 +2614,7 @@ class Aldric extends Enemy {
   }
   revive(witnessed) {
     this.mode = "frenzy"; this.faked = true; this.state = "idle"; this.atkT = 0.35; this.phaseTag = witnessed ? "WITNESSED" : "FRENZY";
+    this.weaponReclaimT = 0.55; this.weaponAV = 0;
     this.chargeT = CONFIG.aldric.chargeCd * 0.45; this.crownfireCd = CONFIG.aldric.crownfireCd * 0.55;
     if (witnessed) { this.witnessEarned = true; this.hp = Math.min(this.hp, this.maxHp * CONFIG.aldric.witnessReviveFrac); }
     else { this.anger = true; this.hp = Math.max(this.hp, this.maxHp * CONFIG.aldric.angerReviveFrac); this.contactDmg *= CONFIG.aldric.angerDamageMult; }
@@ -2470,11 +2626,16 @@ class Aldric extends Enemy {
     else if (this.state === "overhead") { wt = 1.4; k = 34; }   // driven down on the plunge
     else if (this.state === "windup" || this.state === "chargewind") { wt = -1.5; k = 11; }
     else if (this.state === "lunge" || this.state === "charge") { wt = 0.8; k = 28; }
-    this.weaponPrevA = this.weaponA; this.weaponA = lerp(this.weaponA, wt, clamp(k * dt, 0, 1));
+    else if (this.state === "recover" && this.weaponBuriedT > 0) { wt = 1.28; k = 18; }
+    if (this.weaponImpactT > 0) { this.weaponImpactT = Math.max(0, this.weaponImpactT - dt); wt += Math.sin(this.weaponImpactT * 95) * this.weaponImpactT * 0.32; }
+    if (this.weaponBuriedT > 0) this.weaponBuriedT = Math.max(0, this.weaponBuriedT - dt);
+    if (this.weaponReclaimT > 0) this.weaponReclaimT = Math.max(0, this.weaponReclaimT - dt);
+    this.weaponPrevA = this.weaponA; springWeapon(this, "weaponA", "weaponAV", wt, dt, 190 + k * 4, 18);
+    this.debugGeometry = weaponDebugGeometry(this.weaponGeometry());
   }
   draw(ctx) {
     const x = this.x - this.hw, y = this.y - this.hh, w = this.hw * 2, h = this.hh * 2;
-    const downed = this.mode === "downed" || this.dying, frenzy = this.mode === "frenzy";
+    const downed = this.mode === "downed", frenzy = this.mode === "frenzy";
     ctx.save();
     if (this.dying) {
       ctx.translate(this.x, this.y + this.hh); ctx.scale(1, 1 - this.deathP * 0.38); ctx.translate(-this.x, -(this.y + this.hh));
@@ -2496,33 +2657,23 @@ class Aldric extends Enemy {
     ctx.strokeStyle = THEME.ink; ctx.lineWidth = 4; ctx.strokeRect(x, by, w, bh);
     // eye
     ctx.fillStyle = "#fff"; ctx.fillRect(this.x + this.facing * 16 - 8, by + 14, 16, 11);
-    // cleaver (gone in frenzy — fights barehanded; animated otherwise)
-    if (!frenzy && !downed) {
-      const hx = this.x + this.facing * this.hw * 0.5, hy = this.y - 4, L = 64, a = this.weaponA;
-      const introP = this.introT > 0 ? clamp(1 - this.introT / ((CONFIG.bossTheater && CONFIG.bossTheater.introDur) || 1.4), 0, 1) : -1;
-      const poseA = introP >= 0 ? lerp(-0.6, -1.75, Math.sin(introP * Math.PI)) : a;
-      const tx = hx + this.facing * Math.cos(poseA) * L, ty = hy + Math.sin(poseA) * L;
-      if (Math.abs(this.weaponA - this.weaponPrevA) > 0.05) {   // swoosh
-        ctx.fillStyle = this.mode === "fire" ? CONFIG.colors.bomber : CONFIG.colors.charger; ctx.globalAlpha = 0.3;
-        ctx.beginPath(); ctx.moveTo(hx, hy);
-        for (let s = 0; s <= 1; s += 0.2) { const aa = this.weaponPrevA + (a - this.weaponPrevA) * s; ctx.lineTo(hx + this.facing * Math.cos(aa) * L, hy + Math.sin(aa) * L); }
-        ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
-      }
-      ctx.strokeStyle = THEME.ink; ctx.lineWidth = 7; ctx.lineCap = "round";
-      ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke();
-      ctx.save(); ctx.translate(tx, ty); ctx.rotate(Math.atan2(ty - hy, tx - hx)); ctx.fillStyle = THEME.ink;
-      ctx.fillRect(-6, -14, 26, 28); ctx.restore();   // big cleaver head
+    // Royal Great-Cleaver: buried for the kneel, visibly reclaimed, never discarded in frenzy.
+    const shoulderLead = (this.state === "windup" || this.state === "overheadwind" || this.state === "chargewind") ? -this.facing * 9 : 0;
+    ctx.strokeStyle = downed ? "#6f3b40" : "#d0a35a"; ctx.lineWidth = 6; ctx.beginPath();
+    ctx.moveTo(this.x - this.hw * 0.5 + shoulderLead, by + 28); ctx.lineTo(this.x + this.hw * 0.5 + shoulderLead, by + 28); ctx.stroke();
+    const introP = this.introT > 0 ? clamp(1 - this.introT / ((CONFIG.bossTheater && CONFIG.bossTheater.introDur) || 1.4), 0, 1) : -1;
+    const poseA = introP >= 0 ? lerp(-0.6, -1.75, Math.sin(introP * Math.PI)) : this.weaponA;
+    const cleaverPose = this.weaponGeometry(poseA, introP >= 0 ? poseA : this.weaponPrevA);
+    if (!downed && Math.abs(this.weaponA - this.weaponPrevA) > 0.04 && !(typeof GFX !== "undefined" && GFX.low)) {
+      const sweep = cleaverPose.sweptAttackHull.segments[2]; ctx.strokeStyle = this.anger ? "#fff0b0" : CONFIG.colors.bomber;
+      ctx.globalAlpha = 0.25; ctx.lineWidth = 30; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(sweep.a.x, sweep.a.y); ctx.lineTo(sweep.b.x, sweep.b.y); ctx.stroke(); ctx.globalAlpha = 1;
     }
-    if (downed) {   // the cleaver remains buried beside the kneeling king
-      ctx.save(); ctx.translate(this.x + this.facing * 72, CONFIG.world.groundY - 18); ctx.rotate(this.facing * 0.32);
-      ctx.strokeStyle = THEME.ink; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(0, 18); ctx.lineTo(0, -50); ctx.stroke();
-      ctx.fillStyle = THEME.ink; ctx.fillRect(-13, -64, 26, 28); ctx.restore();
-    }
+    drawGreatCleaver(ctx, cleaverPose, this, downed);
     // frenzy charge telegraph: the lane he's about to barrel down
     if (this.state === "chargewind") {
       const k = 1 - clamp(this.stateT / (CONFIG.aldric.chargeWindup || 0.5), 0, 1);
       chargeTelegraph(ctx, this.x, this.y, this.hh, this.facing, k, CONFIG.colors.charger);
-      weaponGlint(ctx, this.x + this.facing * (this.hw + 26), this.y - 10, CONFIG.colors.charger, k);
+      weaponGlint(ctx, cleaverPose.tip.x, cleaverPose.tip.y, CONFIG.colors.charger, k);
     }
     if (this.state === "crownfire") {
       const k = 1 - clamp(this.stateT / CONFIG.aldric.crownfireWindup, 0, 1);
@@ -2530,8 +2681,8 @@ class Aldric extends Enemy {
     }
     if (this.state === "overheadwind") {   // OVERHEAD CLEAVER: the kill-column tracks the raised blade
       const k = 1 - clamp(this.stateT / CONFIG.aldric.overheadWindup, 0, 1);
-      dangerColumn(ctx, this.x, CONFIG.aldric.overheadRange * 1.5, this.y + this.hh, CONFIG.world.groundY, CONFIG.colors.bomber, k);
-      weaponGlint(ctx, this.x, this.y - this.hh - 12, CONFIG.colors.bomber, k); drawPeril(ctx, this);
+      dangerColumn(ctx, this.x, CONFIG.aldric.overheadRange * 2, this.y + this.hh, CONFIG.world.groundY, CONFIG.colors.bomber, k);
+      weaponGlint(ctx, cleaverPose.tip.x, cleaverPose.tip.y, CONFIG.colors.bomber, k); drawPeril(ctx, this);
     }
     if (this.mode === "downed") UI.tag(ctx, "STRIKE — OR STAND WITNESS.", this.x, this.y - this.hh - 38,
       this.kneelStruck ? CONFIG.colors.charger : CONFIG.colors.bomber, "center", UI.t.type.caption);

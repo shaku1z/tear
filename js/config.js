@@ -261,6 +261,7 @@ const CONFIG = {
     kneelDur: 6.0, witnessReviveFrac: 0.32, angerReviveFrac: 0.55, angerRegenMult: 2.4,
     angerDamageMult: 1.25, seamLife: 2.6, crownfireCd: 7.2, crownfireWindup: 0.85,
     emberDmg: 14, emberSpeed: 560,
+    cleaverRear: 44, cleaverShaft: 78, cleaverBlade: 56, cleaverHalfW: 32, overheadRecover: 0.72,
     pounceAfter: 1.0,   // NO SHELTER: hover above him this long and the pounce comes, every time
     arcDmg: 16, arcSpeed: 620, arcRise: 210, arcGravity: 480,   // CLEAVER ARCS: fire crescents — parry food (rally)
     overheadCd: 6.5, overheadWindup: 0.6, overheadDmg: 26, overheadRange: 150,   // OVERHEAD CLEAVER: a committed high-to-low slam + lingering fire seam
@@ -286,6 +287,7 @@ const CONFIG = {
   // The Warden (Stage 1 boss): a methodical guard who weaponizes the arena across 3 phases
   warden: {
     batonCd: 2.1, batonWindup: 0.5, mortarShots: 3, mortarSpeed: 760, mortarGravity: 900, mortarDmg: 14,
+    staffRear: 36, staffFront: 104, staffHead: 24, staffParryR: 14,   // 167px counterweight-to-fork silhouette
     bashKnock: 620,   // the string finisher's shove
     // BATON STRINGS (his kit is MELEE now — no ground waves): each beat opens a
     // deflect window first, then lands; the P2 finisher beat is unparryable (peril)
