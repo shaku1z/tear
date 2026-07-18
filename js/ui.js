@@ -46,6 +46,8 @@ const UI = {
       bossVignetteFocusY: 0.46, bossVignetteInner: 0.18, bossVignetteOuter: 0.72,
       bossPhaseBannerW: 760, bossPhaseBannerH: 72, bossPhaseBannerY: 0.24,
       bossPhaseAccentH: 3,
+      cinemaBarH: 74, cinemaDialogueW: 780, cinemaDialogueH: 104,
+      cinemaDialogueBottom: 96, cinemaDialoguePad: 18, cinemaProgressH: 3,
       rallyInset: 2,
       settingsTop: 182, settingsContentInset: 40, settingsColumnGap: 40,
       settingsRowH: 58, settingsControlW: 252, settingsControlH: 42, settingsStepperW: 54,
@@ -56,6 +58,7 @@ const UI = {
       bossTrack: 0.20, bossGuardTrack: 0.16, bossNotch: 0.90, bossFlash: 0.85,
       cinemaBar: 0.88, cinemaVignette: 0.30, cinemaSubtitle: 0.75,
       bossPhasePanel: 0.82,
+      cinemaPanel: 0.90, cinemaHint: 0.58,
       rallyBase: 0.72, rallyPulse: 0.18,
     },
     // colour ROLES (semantic). `ink`/`paper` are the fg/bg pair; the rest pull
@@ -82,6 +85,7 @@ const UI = {
       bossIntroOutSpan: 0.18,
       bossIntroAccentDelay: 0.15,
       bossIntroAccentGrow: 0.5,
+      cinemaFrameIn: 0.45, cinemaDialogueIn: 0.22,
       rallyPulse: 9,
     },
   },
@@ -733,6 +737,58 @@ const UI = {
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(text, vw / 2, y + h / 2);
     ctx.restore();
+  },
+
+  // Shared cinematic chrome. Game code supplies only state; the design system
+  // owns bars, vignette, accent seam and every screen-space measurement.
+  cinematicFrame(ctx, opts) {
+    const o = opts || {}, t = this.t, m = t.metric, a = t.alpha;
+    const fallbackW = (typeof CONFIG !== "undefined" && CONFIG.view) ? CONFIG.view.w : 1600;
+    const fallbackH = (typeof CONFIG !== "undefined" && CONFIG.view) ? CONFIG.view.h : 900;
+    const sr = o.screen || { x: 0, y: 0, w: fallbackW, h: fallbackH };
+    const k = Math.max(0, Math.min(Number(o.amount) || 0, 1));
+    const reduced = !!o.reducedMotion, barH = m.cinemaBarH * (reduced ? 1 : (1 - (1 - k) * (1 - k)));
+    const color = o.color || t.color.accent;
+    ctx.save();
+    const vg = ctx.createRadialGradient(fallbackW / 2, fallbackH * 0.48, fallbackH * 0.20,
+      fallbackW / 2, fallbackH * 0.48, fallbackW * 0.68);
+    vg.addColorStop(0, "transparent"); vg.addColorStop(1, t.color.cinema);
+    ctx.globalAlpha = a.cinemaVignette * k; ctx.fillStyle = vg; ctx.fillRect(sr.x, sr.y, sr.w, sr.h);
+    ctx.globalAlpha = a.cinemaBar * k; ctx.fillStyle = t.color.cinema;
+    ctx.fillRect(sr.x, sr.y, sr.w, Math.max(0, barH - sr.y));
+    ctx.fillRect(sr.x, fallbackH - barH, sr.w, Math.max(0, sr.y + sr.h - (fallbackH - barH)));
+    ctx.globalAlpha = k * a.soft; ctx.fillStyle = color;
+    ctx.fillRect(sr.x, barH - m.bossPhaseAccentH, sr.w, m.bossPhaseAccentH);
+    ctx.restore();
+  },
+
+  // Dialogue card for authored boss speech. Lines are intentionally concise;
+  // wrapping lives here so no cinematic caller reaches into the canvas API.
+  dialogueCard(ctx, opts) {
+    const o = opts || {}, t = this.t, m = t.metric, a = t.alpha;
+    const vw = (typeof CONFIG !== "undefined" && CONFIG.view) ? CONFIG.view.w : 1600;
+    const vh = (typeof CONFIG !== "undefined" && CONFIG.view) ? CONFIG.view.h : 900;
+    const k0 = Math.max(0, Math.min(Number(o.amount) || 0, 1));
+    const k = 1 - (1 - k0) * (1 - k0), w = Math.min(m.cinemaDialogueW, vw - t.space.xl * 2);
+    const h = m.cinemaDialogueH, x = (vw - w) / 2, y = vh - m.cinemaDialogueBottom - h + (1 - k) * t.space.lg;
+    const color = o.color || t.color.accent, savedInk = this.ink;
+    ctx.save(); ctx.globalAlpha = k * a.cinemaPanel; ctx.fillStyle = t.color.cinema; ctx.fillRect(x, y, w, h);
+    ctx.globalAlpha = k; ctx.fillStyle = color; ctx.fillRect(x, y, m.bossPhaseAccentH, h);
+    this.ink = t.color.cinemaInk;
+    this.tag(ctx, o.speaker || "", x + m.cinemaDialoguePad, y + t.space.lg, color, "left", t.type.caption);
+    const words = String(o.line || "").split(/\s+/), maxW = w - m.cinemaDialoguePad * 2;
+    ctx.font = this.font(t.type.lead, true); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    let line = "", yy = y + t.space.lg + t.type.lead + t.space.sm;
+    for (const word of words) {
+      const next = line ? line + " " + word : word;
+      if (line && ctx.measureText(next).width > maxW) { ctx.fillText(line, x + m.cinemaDialoguePad, yy); line = word; yy += t.type.lead + t.space.xs; }
+      else line = next;
+    }
+    if (line) ctx.fillText(line, x + m.cinemaDialoguePad, yy);
+    const progress = Math.max(0, Math.min(Number(o.progress) || 0, 1));
+    ctx.fillStyle = color; ctx.globalAlpha = k * a.soft; ctx.fillRect(x, y + h - m.cinemaProgressH, w * progress, m.cinemaProgressH);
+    if (o.hint) this.text(ctx, o.hint, x + w, y - t.space.sm, t.type.micro, "right", k * a.cinemaHint);
+    this.ink = savedInk; ctx.restore();
   },
 
   // right-anchored row of `n` small squares, `filled` of them coloured (level meters)

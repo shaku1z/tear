@@ -18,7 +18,7 @@ const SHELL = [
   "/branding/icons/icon-512.png",
   "/branding/icons/icon-maskable-512.png",
 ].concat([
-  "config", "stages", "utils", "voidgen", "ui", "audio", "input", "gamepad", "particles", "backdrop",
+  "config", "stages", "utils", "voidgen", "ui", "cinematics", "audio", "input", "gamepad", "particles", "backdrop",
   "attract", "crazy", "firebase-config", "profile", "achievements", "challenges",
   "upgrades", "meta", "weapons", "affixes", "variants", "blade", "player",
   "projectile", "enemy", "ghost", "cloud", "mirror", "game",

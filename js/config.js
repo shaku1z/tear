@@ -213,11 +213,12 @@ const CONFIG = {
     voidTier: 0.58, fakeTier: 0.28, kneelDur: 3.6, thawSpeedMult: 1.35,
     voidDamageTaken: 0.92, voidFormScale: 1.28, voidDamageMult: 1.12, voidWeightMult: 1.35,
     phaseOverflowCarry: 0.45, phaseOverflowCap: 0.04,
-    voidDelay: 1.25,   // phase-2 entry: the whole floor shatters over this window, then the stream begins
+    voidDelay: 4.8,   // complete authored descent window; the cinematic director owns its beats
     // THE VOID DESCENT — the cinematic that opens the void run
     voidCamZoom: 0.80,        // camera pulls this far OUT during the void (wider frame = plan your route)
-    descentLift: 0.75, descentDissolve: 0.65, descentArrival: 0.85,   // the three beats' durations
-    descentLiftV: -520,       // the void-updraft that catches the player during beat 1
+    descentChallenge: 0.65, descentDeclaration: 0.95,
+    descentDissolve: 0.80, descentLift: 0.72, descentReveal: 0.82, descentArrival: 0.85,
+    descentLiftV: -310, descentIngressBelow: 190,
     cycleCd: 2.5,           // seconds between mechanic casts (phase 1)
     shockDmg: 18, shockSpeed: 720, shockR: 16,
     sweeperDmg: 18, sweeperSpeed: 600, sweeperCrossings: 2, sweeperIntegrity: 4, sweeperMaxLife: 5.0, sweeperEmbedDur: 0.8,

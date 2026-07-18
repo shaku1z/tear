@@ -175,6 +175,7 @@
 
   // swap the biome: new platform layout + palette, and clear any lingering hazards
   function loadStage(i) {
+    if (CINEMA.active) CINEMA.cancel("stage-change");
     stageIndex = i;
     currentStage = stageAt(i);
     platforms = stagePlatforms(i);
@@ -251,6 +252,7 @@
   let uiDensity = "desktop";   // current UI density profile (touch = bigger type + targets)
   let bossIntro = null;   // BOSS THEATER arrival ceremony: { boss, t, dur, delay } while the name card runs
   let bossBeat = null;    // screen-space phase title: { text, color, t, dur }
+  const CINEMA = new Cinematics.Director();   // one exclusive presentation channel for gameplay cinematics
   let cgWasPlaying = false, continueT = 0;   // CrazyGames gameplay bracket + the rewarded-revive countdown
   let hudHpLag = 1, hudMultPrev = 1, hudMultPop = 0;   // HUD juice: health damage-chip + combo pop
   const hoverAnim = {};                 // per-button hover progress (key -> 0..1), for hover juice
@@ -661,6 +663,7 @@
       scrollSpeedMin: C.scrollSpeed, scrollSpeedMax: C.scrollSpeedMax * (C.thawSpeedMult || 1.35),
       firePeriod: C.voidFirePeriod, fireArmTime: C.voidFireArm, fireHotTime: C.voidFireHot,
       cageHeight: C.voidCageH, cageHalfWidth: C.voidCageHalfW,
+      viewportWidth: W,
       playerHalfWidth: CONFIG.player.w / 2, playerHalfHeight: CONFIG.player.h / 2,
       physics: {
         jumpSpeed: CONFIG.player.jumpSpeed, gravity: CONFIG.world.gravity,
@@ -677,15 +680,15 @@
       if (p.cageRect) p.cageRect.x += dx;
     }
   }
-  function liveVoidChunk(canonical, offsetX) {
+  function liveVoidChunk(canonical, offsetX, materializationState) {
     // VoidGen retains canonical chunks for validation. Collision/rendering gets
     // a clone so conveyor motion can never corrupt the reproducible route graph.
-    return VoidGen.materialize(canonical, offsetX, "active");
+    return VoidGen.materialize(canonical, offsetX, materializationState || "active");
   }
   function appendVoidChunk(vs) {
     const result = VoidGen.next(vs.gen);
     vs.gen = result.state;
-    const chunk = liveVoidChunk(result.chunk, vs.scrollOffset);
+    const chunk = liveVoidChunk(result.chunk, vs.scrollOffset, vs.forming ? "forming" : "active");
     vs.chunks.push(chunk);
     for (const p of chunk.platforms) platforms.push(p);
     return chunk;
@@ -746,32 +749,125 @@
       shot.y = surface.y - shot.r;
     }
   }
-  function startVoidScroll(owner) {
+  function startVoidScroll(owner, opts) {
     if (run.voidScroll && (run.voidScroll.active || run.voidScroll.frozen)) return;
-    const C = CONFIG.source, options = voidGenOptions(-C.voidSpawnBehind);
+    const C = CONFIG.source, cinematic = !!(opts && opts.cinematic), options = voidGenOptions(-C.voidSpawnBehind);
     platforms = [];
     const vs = run.voidScroll = {
-      active: true, frozen: false, owner, speed: C.scrollSpeed, speedCap: C.scrollSpeedMax, wispT: 1.8, rescueCd: 0,
+      active: !cinematic, frozen: cinematic, forming: cinematic, owner, speed: C.scrollSpeed, speedCap: C.scrollSpeedMax, wispT: 1.8, rescueCd: 0,
       arriveT: C.descentArrival, options, gen: VoidGen.create(run.voidSeed, options),
       chunks: [], scrollOffset: 0, playerLane: null, arrivalQueue: [], arrivalIndex: 0, arrivalFxT: 0,
     };
     while (vs.gen.nextX + vs.scrollOffset < W + C.voidSpawnAhead) appendVoidChunk(vs);
-    const first = VoidGen.selectRescue(platforms, W * 0.45, run.runTime, options);
-    if (first) {
-      player.x = clamp(first.x + first.w / 2, first.x + player.hw, first.x + first.w - player.hw);
-      player.y = first.y - player.hh; player.voidLane = first.voidLane; vs.playerLane = first.voidLane;
-    } else {
-      player.x = W * 0.45; player.y = C.voidLowerMin - player.hh;
-      player.voidLane = "lower"; vs.playerLane = "lower";
-    }
-    player.vy = -180; player.onGround = true; player.iframe = Math.max(player.iframe, 1.1);
+    // The guaranteed ingress is built under the player's projected body. No
+    // coordinate assignment is permitted here: the player reaches it by falling.
+    const anchorX = player.x + player.vx * 0.18;
+    const anchorY = player.y + player.hh + C.descentIngressBelow;
+    const ingress = VoidGen.ingress(run.voidSeed, anchorX, anchorY, options);
+    vs.chunks.unshift(ingress); platforms.push(ingress.platforms[0]); vs.ingress = ingress.platforms[0];
+    player.onGround = false; player.iframe = Math.max(player.iframe, 1.1);
     player.voidSlowT = 0; player.voidTransferT = C.voidTransferGrace;
     projectiles = projectiles.filter((p) => p.owner !== owner);
     // THE ARRIVAL: the stream materializes with a rift bloom, not a hard cut
     FX.explode(W / 2, CONFIG.world.groundY, owner.color, 2.4);
     vs.arrivalQueue = platforms.slice().sort((a, b) => Math.abs((a.x + a.w / 2) - W / 2) - Math.abs((b.x + b.w / 2) - W / 2));
     addFlash(0.55); addShake(9);
-    run.voidDescent = null;   // the descent is complete
+    return vs;
+  }
+  function startVoidDescent(owner) {
+    if (!owner || CINEMA.active) return;
+    const C = CONFIG.source;
+    const context = run.voidDescent = { owner, unmade: false, floorReleased: false, stream: null };
+    const unmakeArena = (c) => {
+      if (c.unmade) return; c.unmade = true;
+      let i = 0;
+      for (const p of platforms) if (p.oneway && !p.floor) {
+        p.crackT = C.crackWarn * (0.38 + (i++ % 5) * 0.11); p.crackMax = p.crackT; p.crackColor = owner.color;
+      }
+      projectiles = projectiles.filter((p) => p.owner !== owner);
+      FX.explode(owner.x, owner.y, owner.color, 1.35); addFlash(0.24); addShake(5);
+    };
+    const releaseFloor = (c) => {
+      unmakeArena(c); if (c.floorReleased) return; c.floorReleased = true;
+      platforms = platforms.filter((p) => !p.floor);
+      player.onGround = false; player.vy = Math.min(player.vy, -80);
+      FX.shockwave(player.x, CONFIG.world.groundY, 15, owner.color, 420, 7);
+    };
+    const ensureStream = (c) => {
+      if (c.stream) return c.stream;
+      releaseFloor(c); c.stream = startVoidScroll(owner, { cinematic: true });
+      if (c.stream && c.stream.ingress) FX.ring(c.stream.ingress.x + c.stream.ingress.w / 2, c.stream.ingress.y, 18, owner.color);
+      return c.stream;
+    };
+    CINEMA.start({
+      id: "voidDescent", color: owner.color, blocksCombat: true, hideHud: true,
+      onStart() {
+        bossBeat = null; owner.breachState = "follow"; owner.breachContactSpent = true;
+        projectiles = projectiles.filter((p) => p.owner !== owner);
+        player.iframe = Math.max(player.iframe, C.voidDelay + 1); worldZoomTarget = 1;
+      },
+      onSkip(c, director) { unmakeArena(c); director.skipTo("release"); },
+      onComplete(c) {
+        const vs = ensureStream(c);
+        if (vs) {
+          vs.forming = false; vs.frozen = false; vs.active = true;
+          for (const p of platforms) if (p.void) p.materializationState = "active";
+        }
+        owner.beginVoidRun(); player.iframe = Math.max(player.iframe, 0.45);
+        player.voidTransferT = Math.max(player.voidTransferT || 0, C.voidTransferGrace);
+        worldZoomTarget = C.voidCamZoom; run.voidDescent = null;
+      },
+      beats: [
+        { id: "challenge", duration: C.descentChallenge, minDuration: 0.28, advanceable: true, playerMode: "locked",
+          speaker: "THE SOURCE", line: "YOU MISTOOK THE FLOOR FOR MERCY." },
+        { id: "declaration", duration: C.descentDeclaration, minDuration: 0.32, advanceable: true, playerMode: "locked",
+          speaker: "THE SOURCE", line: "THERE IS NO BELOW." },
+        { id: "unmake", duration: C.descentDissolve, playerMode: "locked",
+          onEnter(c) { unmakeArena(c); },
+          onUpdate(c, director) { worldZoomTarget = lerp(1, C.voidCamZoom, director.progress * 0.45); } },
+        { id: "release", duration: C.descentLift, skipScale: 1, playerMode: "float",
+          onEnter(c) { releaseFloor(c); },
+          onUpdate(c, director) { worldZoomTarget = lerp(0.92, C.voidCamZoom, director.progress); } },
+        { id: "reveal", duration: C.descentReveal, playerMode: "float",
+          onEnter(c) { ensureStream(c); addFlash(0.36); addShake(7); },
+          onUpdate(c, director) {
+            const vs = c.stream; if (!vs) return;
+            if (director.progress > 0.32) for (const p of platforms) if (p.void) p.materializationState = "active";
+          } },
+        { id: "land", playerMode: "landing", minDuration: 0.18,
+          onEnter(c) {
+            const vs = ensureStream(c); if (vs) for (const p of platforms) if (p.void) p.materializationState = "active";
+            player.vy = Math.max(player.vy, 90); player.onGround = false;
+          },
+          waitUntil() { return !!supportingVoidPlatform(player); } },
+      ],
+    }, context);
+  }
+  function stepCinematicPlaying(dt) {
+    const mode = CINEMA.playerMode;
+    if (mode === "locked") {
+      player.vx *= Math.exp(-10 * dt); player.vy = 0;
+    } else if (mode === "float") {
+      player.onGround = false; player.vx *= Math.exp(-5 * dt);
+      player.vy = lerp(player.vy, CONFIG.source.descentLiftV, clamp(3.5 * dt, 0, 1));
+      player.x = clamp(player.x + player.vx * dt, player.hw, W - player.hw);
+      player.y = Math.max(player.hh + 50, player.y + player.vy * dt);
+    } else if (mode === "landing") {
+      const prevBottom = player.y + player.hh;
+      player.vx *= Math.exp(-7 * dt); player.x = clamp(player.x + player.vx * dt, player.hw, W - player.hw);
+      player.vy = Math.min(CONFIG.player.maxFall, player.vy + CONFIG.world.gravity * dt);
+      player.y += player.vy * dt; player.onGround = false;
+      let landing = null;
+      for (const p of platforms) {
+        if (!p.void || !p.oneway || p.materializationState === "gone") continue;
+        if (player.x + player.hw <= p.x || player.x - player.hw >= p.x + p.w) continue;
+        if (prevBottom <= p.y + 2 && player.y + player.hh >= p.y) { landing = p; break; }
+      }
+      if (landing) { player.y = landing.y - player.hh; player.vy = 0; player.onGround = true; }
+    }
+    player.iframe = Math.max(player.iframe, 0.2);
+    if (blade) blade.update(dt, player, platforms);
+    if (run.voidScroll) syncVoidPlayerSupport();
   }
   function updateVoidPlatformHazards(vs, dt) {
     const C = CONFIG.source, standing = syncVoidPlayerSupport();
@@ -1777,6 +1873,7 @@
 
   function stepPlaying(dt) {
     CLOCK.sim += dt;
+    if (CINEMA.active && CINEMA.blocksCombat) { stepCinematicPlaying(dt); return; }
     // Flow Guard: damage reduction while the trick rank is high (refreshed each step)
     player.flowDR = (run.mods.flowGuard && run.mult >= CONFIG.resilience.flowGuardTier)
       ? CONFIG.resilience.flowGuardMult : 1;
@@ -2030,18 +2127,9 @@
           if (aboss.campT <= 0) aboss.campPlat = null;
         }
       }
-      // THE VOID DESCENT: while the floor is shattering (collapse), pull the
-      // camera out and catch the player in a rising void-updraft — the ground
-      // falls away beneath them, they float, THEN the stream arrives.
-      if (aboss.mode === "collapse" && aboss.voidDelayT > 0) {
-        worldZoomTarget = CONFIG.source.voidCamZoom;
-        if (!run.voidDescent) { run.voidDescent = { t: 0 }; addFlash(0.5); }
-        run.voidDescent.t += dt;
-        // gentle lift so they read as caught by the rift, not falling through
-        if (player.vy > CONFIG.source.descentLiftV) player.vy = lerp(player.vy, CONFIG.source.descentLiftV, clamp(4 * dt, 0, 1));
-        player.iframe = Math.max(player.iframe, 0.2);
-      }
-      if (aboss.requestVoid) { aboss.requestVoid = false; startVoidScroll(aboss); }
+      // THE VOID DESCENT is serialized on wall time; simulation enters its
+      // protected physical-player step on the next fixed tick.
+      if (aboss.requestVoidCinematic) { aboss.requestVoidCinematic = false; startVoidDescent(aboss); }
       if (aboss.freezeVoid && run.voidScroll) { aboss.freezeVoid = false; run.voidScroll.active = false; run.voidScroll.frozen = true; }
       if (aboss.thawVoid && run.voidScroll) {   // TRUE FORM: the conveyor resumes, faster
         aboss.thawVoid = false; run.voidScroll.frozen = false; run.voidScroll.active = true;
@@ -2722,6 +2810,15 @@
       if (Input.pressed.has("BracketRight")) Clipper.stop();
     }
 
+    if (state === "playing" && CINEMA.active) {
+      const clicked = !!Input.takeClick();
+      // Do not treat LMB as a hold: it may already be down from blade control
+      // when a phase starts. Keyboard/controller confirm is an intentional skip.
+      const gp = typeof PAD !== "undefined" && PAD.connected && navigator.getGamepads ? navigator.getGamepads()[PAD.index] : null;
+      const hold = Input.held.has("Space") || Input.held.has("Enter") || Input.held.has("NumpadEnter") || !!(gp && gp.buttons[0] && gp.buttons[0].pressed);
+      CINEMA.update(dt, { pressed: Input.confirmPressed() || Input.tJump || clicked, hold });
+    }
+
     if (loreT > 0) {
       if (Input.confirmPressed() || Input.takeClick()) loreT = Math.min(loreT, 0.35);   // skippable (Space / click)
       loreT -= dt;
@@ -2734,6 +2831,7 @@
       // feel timers run in real time
       if (slowmo > 0) { slowmo -= dt; timeScale = CONFIG.juice.parrySlowScale; }
       else timeScale = lerp(timeScale, 1, clamp(8 * dt, 0, 1));
+      if (CINEMA.active) timeScale = 1;
       if (run && run.pg && run.pg.slow) timeScale = Math.min(timeScale, 0.35);   // playground slow-mo toggle
       // BOSS THEATER: the arrival ceremony holds time at a crawl while the card runs
       if (bossIntro) {
@@ -2779,7 +2877,7 @@
     if (state === "continue" && continueT > 0) { continueT -= dt; if (continueT <= 0) { state = "gameover"; endRun(); } }
     if (isMenuState(state)) { if (!Attract.ready) Attract.reset(); Attract.update(dt); } else Attract.ready = false;   // live attract-mode demo runs behind every menu tab
 
-    Input.uiMode = (state !== "playing");   // touch: menus take taps + drag-scroll, play takes joystick + aim
+    Input.uiMode = (state !== "playing") || CINEMA.active;   // cinematics take intentional taps, never combat aim
 
     // UI density: small touch screens get bigger type + fatter targets everywhere
     // the design system's tokens reach (menus can't zoom — see the render transform)
@@ -2932,20 +3030,14 @@
         ctx.fillRect(SR.x, SR.y, SR.w, SR.h);
         ctx.restore();
       }
-      drawHUD();
-      if (bossBeat && state === "playing" && !bossIntro) {
+      if (!CINEMA.hideHud) drawHUD();
+      if (bossBeat && state === "playing" && !bossIntro && !CINEMA.active) {
         const p = clamp(bossBeat.t / bossBeat.dur, 0, 1), fade = Math.min(1, (1 - p) * 6, p * 5);
         UI.bossPhaseBanner(ctx, { text: bossBeat.text, color: bossBeat.color, alpha: fade });
       }
       if (bossIntro && bossIntro.delay <= 0 && state === "playing") drawBossIntro();   // the arrival ceremony rides over the HUD
-      if (run && run.voidDescent && state === "playing") {   // THE VOID DESCENT: cinematic letterbox as the floor falls away
-        const sr3 = screenRect(), bh3 = clamp(run.voidDescent.t / CONFIG.source.descentLift, 0, 1) * 74;
-        ctx.save(); ctx.globalAlpha = 0.9; ctx.fillStyle = "#06070c";
-        ctx.fillRect(sr3.x, sr3.y, sr3.w, bh3 + Math.max(0, -sr3.y));
-        ctx.fillRect(sr3.x, H - bh3, sr3.w, sr3.h - (H - bh3 - sr3.y));
-        ctx.restore(); ctx.globalAlpha = 1;
-      }
-      if (Input.touchActive() && state === "playing" && !(typeof PAD !== "undefined" && PAD.active)) drawTouchControls();   // a live controller hides the thumb controls
+      if (CINEMA.active) CINEMA.draw(ctx, UI, screenRect(), A11Y.reducedMotion);
+      if (Input.touchActive() && state === "playing" && !CINEMA.active && !(typeof PAD !== "undefined" && PAD.active)) drawTouchControls();   // a live controller hides the thumb controls
       if (loreT > 0) drawLore();
       if (state === "playing" && bannerT > 0) drawBanner();
       if (state === "playing" && stageBannerT > 0) drawStageBanner();
@@ -2957,7 +3049,7 @@
         ctx.restore();
       }
     }
-    if (state === "playing") drawReticle();
+    if (state === "playing" && (!CINEMA.active || CINEMA.playerMode === "landing")) drawReticle();
 
     UI.ink = "#000";   // overlays (menus / win / pause) dim to white — always ink them black
     if (state !== lastUiState) {

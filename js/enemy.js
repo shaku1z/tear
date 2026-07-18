@@ -3065,7 +3065,7 @@ class Source extends Enemy {
     this.mode = "cycle"; this.atkT = 2.2; this.castIdx = 0; this.facing = 1;
     this.zones = []; this.fireZones = []; this.zoneColor = CONFIG.colors.bomber; this.zoneCycleT = 0;
     this.firePattern = 0; this.fireState = "idle"; this.fireClock = 0; this.fireWarnStep = -1;
-    this.collapsing = false; this.collapseT = 0; this.phaseMarker = 1; this.requestVoid = false; this.freezeVoid = false;
+    this.collapsing = false; this.collapseT = 0; this.phaseMarker = 1; this.requestVoid = false; this.requestVoidCinematic = false; this.freezeVoid = false;
     this.thawVoid = false; this.voidDelayT = -1; this.downT = -1;   // phase-2 shatter countdown + the kneel clock
     this.seenTrickT = 0; this.copyKind = "hit"; this.copyT = -1; this.lastCopied = ""; this.copyOffset = 1;
     this.echoCaption = ""; this.captionT = 0; this.bladeCaught = false;
@@ -3103,6 +3103,11 @@ class Source extends Enemy {
     this.voidFormAwake = true;
     this.weight = this.cfg.weight * CONFIG.source.voidWeightMult;
     this.phaseTag = "THE VOID RUN";
+  }
+  beginVoidRun() {
+    this.mode = "void"; this.collapsing = false; this.voidDelayT = -1;
+    this.requestVoid = false; this.requestVoidCinematic = false; this._awakenVoidForm();
+    bossFeedback(this, "phaseTransition", { banner: "THE VOID RUN", color: this.color, zoom: 0.06 });
   }
   // Preserve the authored phase turns against a single late-run burst without
   // deleting the player's damage: part of the overflow crosses the line, capped
@@ -3447,7 +3452,7 @@ class Source extends Enemy {
       // THE VOID RUN begins at the halfway mark: the whole floor shatters fast,
       // then the platform stream replaces the world — the fight's centerpiece.
       this.mode = "collapse"; this.collapsing = true; this.collapseT = 0.05;
-      this.voidDelayT = C.voidDelay; this.phaseTag = "WORLD UNMAKES";
+      this.voidDelayT = C.voidDelay; this.requestVoidCinematic = true; this.phaseTag = "WORLD UNMAKES";
       clearThroneFire(this, true);   // no ground fire once the floor is going
       bossPhaseBeat(this, "THE WORLD UNMAKES", this.color);
     } else if (ph === 3) {
@@ -3485,6 +3490,13 @@ class Source extends Enemy {
     while (this.phaseMarker < ph) { this.phaseMarker++; this._enterPhase(this.phaseMarker); }
     if (this.introT > 0) { this.vx = lerp(this.vx, 0, clamp(5 * dt, 0, 1)); this.vy = lerp(this.vy, 0, clamp(5 * dt, 0, 1)); return; }
 
+    // The cinematic director owns the collapse clock, player safety and exact
+    // hand-off. Source simulation is held here so it cannot cast through speech.
+    if (this.mode === "collapse") {
+      this.vx = lerp(this.vx, 0, clamp(5 * dt, 0, 1)); this.vy = lerp(this.vy, 0, clamp(5 * dt, 0, 1));
+      return;
+    }
+
     // THE KNEEL: it gathers itself over the frozen stream — no attacks, then TRUE FORM
     if (this.mode === "downed") {
       this.downT -= dt;
@@ -3494,19 +3506,6 @@ class Source extends Enemy {
       if (this.downT <= 0) this.revive();
       return;
     }
-    // phase-2 entry: the WHOLE floor shatters in ~a second, then the stream begins
-    if (this.voidDelayT > 0) {
-      if (!this._shatterStarted) {
-        this._shatterStarted = true;
-        for (const p of platforms) if (p.oneway && !(p.crackT > 0)) { p.crackT = C.crackWarn * (0.35 + Math.random() * 0.55); p.crackMax = p.crackT; p.crackColor = this.color; }
-      }
-      this.voidDelayT -= dt;
-      if (this.voidDelayT <= 0) {
-        this.mode = "void"; this.collapsing = false; this.requestVoid = true; this._awakenVoidForm();
-        bossFeedback(this, "phaseTransition", { banner: "THE VOID RUN", color: this.color, zoom: 0.06 });
-      }
-    }
-
     tickThroneFire(this, dt);
     this._scheduleFrom(player);
     const voidTransferBusy = this.mode === "void" && (player.voidTransferT > 0 || !player.supportPlatform);

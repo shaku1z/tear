@@ -759,6 +759,33 @@ const VoidGen = (() => {
     return { state, chunks, platforms: chunks.flatMap((c) => c.platforms) };
   }
 
+  // A cinematic ingress is generated from the player's projected position,
+  // never by relocating the player. It is deliberately a normal-looking plain
+  // ruin, carried by the same conveyor and collision code as every later shard.
+  function ingress(seed, anchorX, anchorY, overrides) {
+    const o = normaliseOptions(overrides), s = mix32(seed32(seed) ^ 0x71f3a95b);
+    const viewportW = Math.max(o.platformWidthMax, finite(o.viewportWidth, 1600));
+    const w = clamp(Math.max(320, o.playerHalfWidth * 8), 300, Math.min(390, viewportW - o.edgeInset * 2));
+    const x = clamp(finite(anchorX, viewportW * 0.45) - w * 0.5, o.edgeInset, viewportW - o.edgeInset - w);
+    const y = clamp(finite(anchorY, o.lowerBandMin), o.lowerBandMin, o.lowerBandMax);
+    const id = `void:${seed32(seed).toString(16).padStart(8, "0")}:ingress`;
+    const platform = {
+      id, platformId: id, voidId: "ingress", chunkId: -1, x, y, w, h: o.platformHeight,
+      oneway: true, void: true, voidLane: "lower", voidType: "plain", voidRole: "ingress",
+      hazardSeed: s, hazardPhaseOffset: s / 4294967296 * o.firePeriod,
+      hazardPhase: s / 4294967296 * o.firePeriod, materializationState: "forming",
+      material: "voidShard", arenaMaterial: "voidShard", touchT: -1,
+      fireOn: false, fireState: "cold", transferNode: false, connectionIds: [], cinematicIngress: true,
+    };
+    return {
+      id: `${id}:chunk`, chunkId: -1, seed: s, x, width: w, motif: "ingress",
+      pressureLane: "lower", wispLane: null, majorAttackWindow: false, hasTransfer: false,
+      transferWindow: null, transferWindowLocal: null, connectors: [], connections: [],
+      platforms: [platform], lanes: { lower: [platform], upper: [] },
+      threat: { lower: 0, upper: 0 }, rescuePlatformId: id, cinematicIngress: true,
+    };
+  }
+
   return Object.freeze({
     defaults: DEFAULTS,
     motifs: MOTIFS,
@@ -770,6 +797,7 @@ const VoidGen = (() => {
     selectRescue,
     cageGeometry,
     materialize,
+    ingress,
   });
 })();
 
