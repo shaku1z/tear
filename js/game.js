@@ -59,7 +59,7 @@
   let settings = loadSettings();
   function loadSettings() {
     const def = { sens: CONFIG.blade.aimSensitivity, shake: 1, flash: 1, reducedMotion: false, highContrast: false,
-      vol: 0.6, music: true, gfx: "auto", controls: "auto", touchAim: "stick" };
+      vol: 0.6, music: true, gfx: "auto", controls: "auto", touchAim: "stick", cinematics: "full" };
     try { return Object.assign(def, JSON.parse(CG.store.get("tear_settings") || "{}")); }
     catch (e) { return def; }
   }
@@ -183,25 +183,27 @@
     }
     if (priorOutro) pages.push(priorOutro);
     pages.push(...chapter.pages);
-    const flow = chapterFlow = { stage, chapter, pages, state: "LORE_ENTER", page: 0 };
+    const brief = settings.cinematics === "brief";
+    const flow = chapterFlow = { stage, chapter, pages, state: "LORE_ENTER", page: 0, brief };
     run.chapterState = "LORE_ENTER"; stageBannerT = 0; bossBeat = null;
     const pageBeats = pages.map((page, pageIndex) => ({
-      id: "page-" + pageIndex, view: "page", duration: 2.35, minDuration: 0.16, advanceable: true,
-      revealDuration: UI.t.motion.chapterTextReveal, playerMode: "locked", number: chapter.number, symbol: chapter.symbol,
+      id: "page-" + pageIndex, view: "page", duration: brief ? 1.35 : 2.35, minDuration: 0.16, advanceable: true,
+      revealDuration: UI.t.motion.chapterTextReveal * (brief ? 0.52 : 1), playerMode: "locked", number: chapter.number, symbol: chapter.symbol,
       label: page.label, title: chapter.title, text: page.text, color: stage.accent, pageIndex, pageCount: pages.length,
       transition: chapter.transition,
-      onEnter() { flow.state = "LORE_READ"; flow.page = pageIndex; run.chapterState = "LORE_READ"; },
+      onEnter() { flow.state = "LORE_READ"; flow.page = pageIndex; run.chapterState = "LORE_READ"; try { SFX.dialogueTone("chapter"); } catch (e) {} },
     }));
     CINEMA.start({
       id: "chapter-" + index, kind: "chapter", color: stage.accent, blocksCombat: true, hideHud: true,
       hint: "TAP TO REVEAL  ·  HOLD TO SKIP CHAPTER", skipHint: "SKIPPING — BIOME REVEAL PRESERVED",
-      onStart() { player.iframe = Math.max(player.iframe, pages.length * 2.6 + 2); projectiles.length = 0; },
+      onStart() { player.iframe = Math.max(player.iframe, pages.length * 2.6 + 2); projectiles.length = 0; try { SFX.setMusicDuck(CONFIG.presentation.dialogueDuck, 0.18); } catch (e) {} },
       onSkip(c, director) { director.skipTo("reveal"); },
       onComplete() {
         flow.state = "WAVE_LIVE"; run.chapterState = "WAVE_LIVE"; chapterFlow = null; stageBannerT = 0;
         player.iframe = Math.max(player.iframe, 0.45);
+        try { SFX.setMusicDuck(1, 0.7); } catch (e) {}
       },
-      onCancel() { if (run) run.chapterState = "WAVE_LIVE"; chapterFlow = null; },
+      onCancel() { if (run) run.chapterState = "WAVE_LIVE"; chapterFlow = null; try { SFX.setMusicDuck(1, 0.25); } catch (e) {} },
       beats: [
         { id: "enter", duration: UI.t.motion.chapterIn, playerMode: "locked", onEnter() { flow.state = "LORE_ENTER"; run.chapterState = "LORE_ENTER"; } },
         ...pageBeats,
@@ -210,9 +212,9 @@
           text: pages[pages.length - 1].text, color: stage.accent, pageIndex: pages.length - 1, pageCount: pages.length,
           transition: chapter.transition,
           onEnter() { flow.state = "LORE_EXIT"; run.chapterState = "LORE_EXIT"; } },
-        { id: "reveal", view: "reveal", duration: 1.15, playerMode: "locked", number: chapter.number, name: stage.name, line: chapter.intro, color: stage.accent,
-          onEnter() { flow.state = "BIOME_REVEAL"; run.chapterState = "BIOME_REVEAL"; } },
-        { id: "ready", view: "ready", duration: 0.72, playerMode: "locked", number: chapter.number, name: stage.name, line: stage.blurb, color: stage.accent,
+        { id: "reveal", view: "reveal", duration: brief ? 0.78 : 1.15, playerMode: "locked", number: chapter.number, name: stage.name, line: chapter.intro, color: stage.accent,
+          onEnter() { flow.state = "BIOME_REVEAL"; run.chapterState = "BIOME_REVEAL"; try { SFX.setMusicDuck(CONFIG.presentation.biomeRevealDuck, 0.32); } catch (e) {} } },
+        { id: "ready", view: "ready", duration: brief ? 0.46 : 0.72, playerMode: "locked", number: chapter.number, name: stage.name, line: stage.blurb, color: stage.accent,
           onEnter() { flow.state = "READY"; run.chapterState = "READY"; } },
       ],
     }, flow);
@@ -278,7 +280,10 @@
         if (blade) blade.finalFree = false;
         finale = null; winRun(true);
       },
-      onCancel() { if (blade) blade.finalFree = false; },
+      onCancel() {
+        if (blade) blade.finalFree = false;
+        try { SFX.setVoidDescent(0, 0.2); SFX.setMusicDuck(1, 0.25); } catch (e) {}
+      },
       beats: [
         { id: "silence", duration: CONFIG.finale.silence, playerMode: "locked", hint: "SILENCE",
           onEnter(c) { c.phase = "silence"; } },
@@ -932,6 +937,7 @@
       platforms = platforms.filter((p) => !p.floor);
       player.onGround = false; player.vy = Math.min(player.vy, -80);
       FX.shockwave(player.x, CONFIG.world.groundY, 15, owner.color, 420, 7);
+      if (!c.groundTearSound) { c.groundTearSound = true; try { SFX.voidGroundTear(); } catch (e) {} }
     };
     const ensureStream = (c) => {
       if (c.stream) return c.stream;
@@ -945,6 +951,7 @@
         bossBeat = null; owner.breachState = "follow"; owner.breachContactSpent = true;
         projectiles = projectiles.filter((p) => p.owner !== owner);
         player.iframe = Math.max(player.iframe, C.voidDelay + 1); worldZoomTarget = 1;
+        try { SFX.setMusicDuck(CONFIG.presentation.dialogueDuck, 0.18); SFX.setVoidDescent(0, 0.05); } catch (e) {}
       },
       onSkip(c, director) { unmakeArena(c); director.skipTo("release"); },
       onComplete(c) {
@@ -956,20 +963,22 @@
         owner.beginVoidRun(); player.iframe = Math.max(player.iframe, 0.45);
         player.voidTransferT = Math.max(player.voidTransferT || 0, C.voidTransferGrace);
         worldZoomTarget = C.voidCamZoom; run.voidDescent = null;
+        try { SFX.setVoidDescent(0, 0.9); SFX.setMusicDuck(1, 0.75); } catch (e) {}
       },
+      onCancel() { try { SFX.setVoidDescent(0, 0.2); SFX.setMusicDuck(1, 0.25); } catch (e) {} },
       beats: [
         { id: "challenge", duration: C.descentChallenge, minDuration: 0.28, advanceable: true, playerMode: "locked",
-          speaker: "THE SOURCE", line: "YOU MISTOOK THE FLOOR FOR MERCY." },
+          speaker: "THE SOURCE", line: "YOU MISTOOK THE FLOOR FOR MERCY.", onEnter() { try { SFX.dialogueTone("source"); } catch (e) {} } },
         { id: "declaration", duration: C.descentDeclaration, minDuration: 0.32, advanceable: true, playerMode: "locked",
-          speaker: "THE SOURCE", line: "THERE IS NO BELOW." },
+          speaker: "THE SOURCE", line: "THERE IS NO BELOW.", onEnter() { try { SFX.dialogueTone("source"); } catch (e) {} } },
         { id: "unmake", duration: C.descentDissolve, playerMode: "locked",
-          onEnter(c) { unmakeArena(c); },
+          onEnter(c) { unmakeArena(c); try { SFX.setVoidDescent(CONFIG.presentation.voidUnmakeMix, 0.3); } catch (e) {} },
           onUpdate(c, director) { worldZoomTarget = lerp(1, C.voidCamZoom, director.progress * 0.45); } },
         { id: "release", duration: C.descentLift, skipScale: 1, playerMode: "float",
-          onEnter(c) { releaseFloor(c); },
+          onEnter(c) { releaseFloor(c); try { SFX.setVoidDescent(CONFIG.presentation.voidReleaseMix, 0.45); } catch (e) {} },
           onUpdate(c, director) { worldZoomTarget = lerp(0.92, C.voidCamZoom, director.progress); } },
         { id: "reveal", duration: C.descentReveal, playerMode: "float",
-          onEnter(c) { ensureStream(c); addFlash(0.36); addShake(7); },
+          onEnter(c) { ensureStream(c); addFlash(0.36); addShake(7); try { SFX.setVoidDescent(CONFIG.presentation.voidRevealMix, 0.55); } catch (e) {} },
           onUpdate(c, director) {
             const vs = c.stream; if (!vs) return;
             if (director.progress > 0.32) for (const p of platforms) if (p.void) p.materializationState = "active";
@@ -987,7 +996,7 @@
     if (!owner || !cue || CINEMA.active) return false;
     const seenKey = "tear.cinematic." + cue.id;
     let seen = false; try { seen = localStorage.getItem(seenKey) === "1"; } catch (e) {}
-    const brief = !!(cue.brief || seen), scale = brief ? 0.62 : 1;
+    const brief = !!(cue.brief || seen || settings.cinematics === "brief"), scale = brief ? 0.62 : 1;
     const context = { owner, cue, crownStart: null, crownTarget: null, crownPlatform: null };
     const prepareCrown = (c) => {
       const crown = c.owner.crown; if (!c.cue.crownFall || !crown || c.crownStart) return;
@@ -1009,6 +1018,7 @@
       if (k >= 1) {
         crown.state = "fallen"; crown.vx = 0; crown.vy = 0; crown.restPlatform = c.crownPlatform;
         if (c.crownPlatform && c.crownPlatform.arenaPlatId) c.crownPlatform.arenaFractureRequest = { reason: "crownfall", color: CONFIG.colors.bomber };
+        if (!c.crownSound) { c.crownSound = true; try { SFX.aldricCrownFall(); } catch (e) {} }
       }
     };
     owner.cinematicRequest = null;
@@ -1021,6 +1031,7 @@
         projectiles = projectiles.filter((p) => p.owner !== c.owner && !p.bossAttack);
         player.iframe = Math.max(player.iframe, (cue.duration || 0.88) * scale + 1.35);
         prepareCrown(c);
+        try { SFX.setMusicDuck(CONFIG.presentation.dialogueDuck, 0.18); } catch (e) {}
         if (cue.sfx && typeof SFX[cue.sfx] === "function") { try { SFX[cue.sfx](); } catch (e) {} }
       },
       onComplete(c) {
@@ -1033,12 +1044,18 @@
           else { c.owner.verticalCd = 0; c.owner.verticalTrackT = CONFIG.aldric.verticalResponse; }
         }
         try { localStorage.setItem(seenKey, "1"); } catch (e) {}
+        try { SFX.setMusicDuck(1, 0.55); } catch (e) {}
+      },
+      onCancel(c) {
+        if (c && c.owner) { c.owner.cinematicPose = null; c.owner.cinematicColor = null; c.owner.cinematicT = 0; }
+        try { SFX.setMusicDuck(1, 0.25); } catch (e) {}
       },
       beats: [
         { id: "frame", duration: 0.24 * scale, playerMode: "locked",
           onUpdate(c, d) { c.owner.cinematicT = d.progress * 0.2; } },
         { id: "declaration", duration: (cue.duration || 0.88) * scale, minDuration: 0.24 * scale,
           advanceable: true, playerMode: "locked", speaker: cue.speaker || owner.bossName, line: cue.line,
+          onEnter() { try { SFX.dialogueTone(owner.bossId || "chapter"); } catch (e) {} },
           onUpdate(c, d) { c.owner.cinematicT = 0.2 + d.progress * 0.42; settleCrown(c, d.progress * 0.48); } },
         { id: "resolve", duration: 0.46 * scale, playerMode: "locked",
           onUpdate(c, d) { c.owner.cinematicT = 0.62 + d.progress * 0.38; settleCrown(c, 0.48 + d.progress * 0.52); } },
@@ -1555,6 +1572,8 @@
 
   // ---- run / wave management ----
   function startRun(mode, diff) {
+    if (CINEMA.active) CINEMA.cancel("new-run");
+    finale = null;
     if (typeof Mirror !== "undefined") { Mirror.active = false; Mirror.host = null; }   // a summoned Echo never leaks into a new run
     bossIntro = null;   // no arrival ceremony leaks across runs
     bossBeat = null;
@@ -1562,6 +1581,7 @@
     restoreConfig();
     const weapon = applyWeapon(selWeapon);   // weapon defines base feel; shop/upgrades stack on top
     applySettings();
+    try { SFX.setVoidDescent(0, 0.05); SFX.setMusicDuck(1, 0.12); } catch (e) {}
     const d = CONFIG.difficulties.find((x) => x.id === diff) || CONFIG.difficulties[0];
     const dm = d.mods || {};
     CONFIG.player.dmgTakenMult *= (dm.dmg || 1);   // difficulty: harder = every hit lands heavier (uniform)
@@ -3548,7 +3568,7 @@
 
   function drawFinaleWorld(layer) {
     if (!finale) return;
-    const t = CLOCK.sim, cyan = CONFIG.colors.perfect, phase = finale.phase;
+    const t = CLOCK.sim, cyan = CONFIG.colors.perfect, phase = finale.phase, motion = A11Y.reducedMotion ? 0.08 : 1;
     ctx.save();
     if (layer === "rear") {
       // The dead Source recedes as a broken depth-body instead of vanishing on
@@ -3557,9 +3577,9 @@
       ctx.globalAlpha = 0.16 + 0.18 * woundK; ctx.fillStyle = finale.restoredColor ? "#7257a8" : "#17111f";
       const count = GFX.low ? 8 : CONFIG.finale.fragmentCap;
       for (let i = 0; i < count; i++) {
-        const a = i * 2.399, drift = (phase === "wound" || phase === "relics" || phase === "cut") ? t * (9 + i % 4) : t * 2;
+        const a = i * 2.399, drift = ((phase === "wound" || phase === "relics" || phase === "cut") ? t * (9 + i % 4) : t * 2) * motion;
         const rr = 34 + (i % 5) * 23 + drift, px = finale.origin.x + Math.cos(a) * rr, py = finale.origin.y + Math.sin(a) * rr * 0.58 - drift * 0.24;
-        ctx.save(); ctx.translate(px, py); ctx.rotate(a + t * 0.08 * (i % 2 ? 1 : -1));
+        ctx.save(); ctx.translate(px, py); ctx.rotate(a + t * 0.08 * motion * (i % 2 ? 1 : -1));
         ctx.fillRect(-12 - (i % 3) * 4, -8, 24 + (i % 3) * 8, 16 + (i % 2) * 8); ctx.restore();
       }
       if (finale.restoredColor && !finale.restoring) {
@@ -3592,7 +3612,7 @@
     for (let i = 0; i < finale.anchors.length; i++) {
       const a = finale.anchors[i], rear = a.depth < 0.75;
       if ((layer === "rear") !== rear || a.cut) continue;
-      const active = i === finale.severed && phase === "cut", pulse = 0.5 + 0.5 * Math.sin(t * 7 + i);
+      const active = i === finale.severed && phase === "cut", pulse = A11Y.reducedMotion ? 0.5 : 0.5 + 0.5 * Math.sin(t * 7 + i);
       ctx.globalAlpha = active ? 0.68 + pulse * 0.28 : 0.18;
       ctx.strokeStyle = A11Y.highContrast && active ? "#fff36b" : cyan;
       ctx.lineWidth = active ? (A11Y.highContrast ? 7 : 4) : 2;
@@ -3604,7 +3624,8 @@
       const relicColors = [CONFIG.colors.boss, CONFIG.colors.armoredShield, CONFIG.colors.bomber, "#b06cff"];
       for (let i = 0; i < 4; i++) {
         const start = i * 0.18, k = clamp((finale.relicK - start) / 0.34, 0, 1), e = 1 - (1 - k) * (1 - k);
-        const sx = i % 2 ? W + 70 : -70, sy = 170 + i * 145, x = lerp(sx, blade.x, e), y = lerp(sy, blade.y, e);
+        const sx = A11Y.reducedMotion ? blade.x : (i % 2 ? W + 70 : -70), sy = A11Y.reducedMotion ? blade.y : 170 + i * 145;
+        const x = lerp(sx, blade.x, e), y = lerp(sy, blade.y, e);
         ctx.globalAlpha = 0.22 + 0.78 * (1 - k * 0.35); ctx.fillStyle = relicColors[i];
         ctx.beginPath(); ctx.arc(x, y, 7 + 6 * (1 - k), 0, Math.PI * 2); ctx.fill();
       }
@@ -5544,6 +5565,11 @@
       uiButtons.push({ x: rx - btnW, y: cy - btnH / 2, w: btnW, h: btnH, label: "+", action: () => { settings.flash = clamp(+((settings.flash == null ? 1 : settings.flash) + 0.25).toFixed(2), 0, 1); save(); } });
       UI.text(ctx, Math.round((settings.flash == null ? 1 : settings.flash) * 100) + "%", (lo + rx) / 2, cy + t.space.xs, t.type.lead, "center");
     });
+    row("Cinematic pacing", (cy) => {
+      uiButtons.push({ x: lo, y: cy - btnH / 2, w: block, h: btnH, size: t.type.caption,
+        label: (settings.cinematics || "full").toUpperCase(),
+        action: () => { settings.cinematics = settings.cinematics === "brief" ? "full" : "brief"; save(); } });
+    });
     const toggle = (label, on, action) => row(label, (cy) => {
       const box = { x: lo, y: cy - btnH / 2, w: block, h: btnH };
       uiButtons.push(Object.assign({ label: "", _hideBox: true, action }, box)); UI.toggle(ctx, box, on);
@@ -6138,6 +6164,7 @@
     // save progress from the last fully-cleared wave, then bail to the menu
     const completed = run.waveLog.length;
     if (completed > 0) { saveBest(run.mode, run.diff, completed, run.score, run.runTime); awardCoins(run.score); }
+    if (CINEMA.active) CINEMA.cancel("quit-run"); finale = null;
     state = "menu";
   }
 
@@ -6328,6 +6355,8 @@
   }
 
   if (PANTHEON_DEBUG) window.__PANTHEON_TEST = Object.freeze({
+    startMode(mode) { startRun(mode || "endless", "normal"); },
+    setOptions(opts) { Object.assign(settings, opts || {}); applySettings(); },
     startFinale() {
       startRun("campaign", "normal"); if (CINEMA.active) CINEMA.cancel("debug-final-cut");
       run.wave = STAGES.length * 10; run.score = 12345; run.runTime = 612; run.spawnQueue.length = 0; run.waveActive = false;
@@ -6339,7 +6368,28 @@
     cut() { return severFinaleAnchor(false); },
     skip() { CINEMA.requestSkip(); },
     advance() { CINEMA.update(0.4, { pressed: true }); },
+    pause() { if (state === "playing") state = "paused"; },
+    resume() { if (state === "paused") state = "playing"; },
+    openSettings() { state = "settings"; settingsReturn = "menu"; },
+    auditEffects() {
+      const priorLow = GFX.low, result = {};
+      FX.reset(); FX.setViewRect({ left: 0, top: 0, right: W, bottom: H }); GFX.low = false;
+      for (let i = 0; i < 1000; i++) FX.spark(W * 0.5, H * 0.5, 1, 0, "#fff"); result.high = FX.list.length;
+      FX.reset(); GFX.low = true; FX.setViewRect({ left: 0, top: 0, right: W, bottom: H });
+      for (let i = 0; i < 1000; i++) FX.spark(W * 0.5, H * 0.5, 1, 0, "#fff"); result.low = FX.list.length;
+      const before = FX.list.length;
+      for (let i = 0; i < 50; i++) FX.spark(W * 4, H * 4, 1, 0, "#fff");
+      result.offscreenAdded = FX.list.length - before; FX.reset(); GFX.low = priorLow; return result;
+    },
     state() { return { game: state, cinema: CINEMA.id, beat: CINEMA.beatId, active: CINEMA.active,
+      cinemaElapsed: CINEMA.elapsed, touch: Input.touchActive(),
+      pad: typeof PAD === "undefined" ? null : { connected: PAD.connected, active: PAD.active,
+        movingRight: Input.held.has("KeyD"), aiming: !!Input.stickAim },
+      audio: { ready: !!SFX.ctx, running: !!(SFX.ctx && SFX.ctx.state === "running"), filter: !!SFX.musicFilter,
+        duck: SFX._musicDuck, voidMix: SFX._voidMix },
+      mode: run && run.mode, chapterBrief: chapterFlow && chapterFlow.brief,
+      reducedMotion: A11Y.reducedMotion, highContrast: A11Y.highContrast, lowEffects: GFX.low,
+      playerHp: player && player.hp, enemyCount: enemies && enemies.length,
       finale: finale && { phase: finale.phase, severed: finale.severed, landed: finale.landed, restoring: !!finale.restoring } }; },
   });
 

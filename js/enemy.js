@@ -3403,6 +3403,7 @@ class Source extends Enemy {
     this.depthState = "rearTell"; this.depthT = C.depthTell; this.depthMaxT = this.depthT;
     this.echoCaption = this.depthKind === "hand" ? "ABYSSAL HAND" : (this.depthKind === "spear" ? "PARALLAX SPEAR" : "HORIZON MAW");
     this.captionT = C.depthTell + 0.35; perilPing(this); bossFeedback(this, "windup", { quiet: true });
+    try { SFX.sourceDepthPrepare(this.depthKind); } catch (e) {}
   }
   _manifestDepth() {
     const C = CONFIG.source;
@@ -3414,6 +3415,7 @@ class Source extends Enemy {
   }
   _strikeDepth(player, projectiles) {
     const C = CONFIG.source;
+    try { SFX.sourceDepthSnap(this.depthKind); } catch (e) {}
     if (this.depthKind === "spear") {
       let dx = this.depthTargetX - this.rearX, dy = this.depthTargetY - this.rearY, m = len(dx, dy) || 1;
       const p = new Projectile(this.rearX, this.rearY, dx / m * C.depthSpearSpeed, dy / m * C.depthSpearSpeed);

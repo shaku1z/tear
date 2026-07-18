@@ -1,7 +1,8 @@
 // ------- synthesized audio: crisp SFX + layered music (Web Audio, no files) -------
 const SFX = {
-  ctx: null, master: null, musicGain: null,
+  ctx: null, master: null, musicGain: null, musicFilter: null,
   vol: 0.6, musicVol: 0.5, musicOn: true, muted: false,
+  _musicDuck: 1, _voidMix: 0,
   _muteR: {},   // active mute reasons (e.g. "cg" portal mute, "ad" ad break) — muted if any are set
   _m: { timer: null, step: 0, next: 0 },
   _noiseCache: {}, _voiceN: 0, _voiceMax: 24,
@@ -26,22 +27,35 @@ const SFX = {
       air.type = "highshelf"; air.frequency.value = 3800; air.gain.value = 5;
       this.master.connect(comp); comp.connect(air); air.connect(this.ctx.destination);
       this.musicGain = this.ctx.createGain();
-      this.musicGain.gain.value = (this.muted || !this.musicOn) ? 0 : this.musicVol;
-      this.musicGain.connect(this.master);
+      this.musicGain.gain.value = this._musicTarget();
+      this.musicFilter = this.ctx.createBiquadFilter(); this.musicFilter.type = "lowpass";
+      this.musicFilter.frequency.value = 16000; this.musicFilter.Q.value = 0.35;
+      this.musicGain.connect(this.musicFilter).connect(this.master);
       for (const d of [0.03, 0.05, 0.07, 0.1, 0.12, 0.16, 0.18, 0.22, 0.3, 0.36]) this._noiseBuffer(d);
       this._startMusic();
     }
     if (this.ctx.state === "suspended") this.ctx.resume();
   },
   setVol(v) { this.vol = v; if (this.master) this.master.gain.value = this.muted ? 0 : v; },
-  setMusic(on) { this.musicOn = on; if (this.musicGain) this.musicGain.gain.value = (this.muted || !on) ? 0 : this.musicVol; },
+  _musicTarget() { return (this.muted || !this.musicOn) ? 0 : this.musicVol * this._musicDuck; },
+  setMusic(on) { this.musicOn = on; if (this.musicGain) this.musicGain.gain.value = this._musicTarget(); },
   setMusicDuck(mult, seconds) {
+    this._musicDuck = clamp(mult == null ? 1 : mult, 0, 1);
     if (!this.musicGain || !this.ctx) return;
-    const target = (this.muted || !this.musicOn) ? 0 : this.musicVol * clamp(mult == null ? 1 : mult, 0, 1);
+    const target = this._musicTarget();
     const now = this.ctx.currentTime, dur = Math.max(0.01, seconds || 0.18);
     this.musicGain.gain.cancelScheduledValues(now);
     this.musicGain.gain.setValueAtTime(Math.max(0.0001, this.musicGain.gain.value), now);
     this.musicGain.gain.linearRampToValueAtTime(target, now + dur);
+  },
+  setVoidDescent(amount, seconds) {
+    this._voidMix = clamp(amount || 0, 0, 1);
+    if (!this.musicFilter || !this.ctx) return;
+    const now = this.ctx.currentTime, dur = Math.max(0.01, seconds || 0.22);
+    const target = 16000 * Math.pow(850 / 16000, this._voidMix);
+    this.musicFilter.frequency.cancelScheduledValues(now);
+    this.musicFilter.frequency.setValueAtTime(Math.max(850, this.musicFilter.frequency.value), now);
+    this.musicFilter.frequency.exponentialRampToValueAtTime(target, now + dur);
   },
   // mute by reason — any active reason silences everything. Backward compatible:
   // mute(true)/mute(false) use the "default" reason. CrazyGames passes "cg"/"ad".
@@ -50,7 +64,7 @@ const SFX = {
     if (on) this._muteR[reason] = true; else delete this._muteR[reason];
     this.muted = Object.keys(this._muteR).length > 0;
     if (this.master) this.master.gain.value = this.muted ? 0 : this.vol;
-    if (this.musicGain) this.musicGain.gain.value = (this.muted || !this.musicOn) ? 0 : this.musicVol;
+    if (this.musicGain) this.musicGain.gain.value = this._musicTarget();
   },
 
   // ---- primitives (absolute-time scheduled) ----
@@ -239,6 +253,32 @@ const SFX = {
   sweeperCounter() { if (!this.ctx) return; const t = this.ctx.currentTime; this._click(t, 0.19); this._osc(420, 0.16, t, { type: "square", vol: 0.09, slideTo: 1120 }); },
   aldricCleaver() { if (!this.ctx) return; const t = this.ctx.currentTime; this._noise(0.15, t, { type: "bandpass", freq: 820, q: 0.75, vol: 0.1 }); this._osc(165, 0.15, t, { type: "triangle", vol: 0.05, slideTo: 88 }); },
   sourceFracture() { if (!this.ctx) return; const t = this.ctx.currentTime; this._osc(1180, 0.14, t, { type: "triangle", vol: 0.065, slideTo: 310 }); this._osc(390, 0.12, t + 0.02, { type: "sine", vol: 0.04, slideTo: 920 }); },
+  dialogueTone(identity) {
+    if (!this.ctx) return; const t = this.ctx.currentTime;
+    const voices = {
+      warden: [185, "square", 0.035], colossus: [78, "sawtooth", 0.05], aldric: [246, "triangle", 0.05],
+      echo: [660, "sine", 0.04], source: [92, "triangle", 0.05], chapter: [392, "sine", 0.025],
+    }, v = voices[String(identity || "").toLowerCase()] || voices.chapter;
+    this._osc(v[0], 0.18, t, { type: v[1], vol: v[2], slideTo: v[0] * 1.18, attack: 0.018 });
+    if (String(identity).toLowerCase() === "source") this._osc(139, 0.22, t + 0.025, { type: "sine", vol: 0.025, slideTo: 73, attack: 0.025 });
+  },
+  voidGroundTear() {
+    if (!this.ctx) return; const t = this.ctx.currentTime;
+    this._noise(0.42, t, { type: "lowpass", freq: 260, vol: 0.17 });
+    this._osc(96, 0.48, t, { type: "sawtooth", vol: 0.11, slideTo: 31, attack: 0.012 });
+  },
+  sourceDepthPrepare(kind) {
+    if (!this.ctx) return; const t = this.ctx.currentTime, f = kind === "spear" ? 430 : (kind === "maw" ? 82 : 126);
+    this._osc(f, 0.34, t, { type: "sine", vol: 0.026, slideTo: f * 0.72, attack: 0.06 });
+  },
+  sourceDepthSnap(kind) {
+    if (!this.ctx) return; const t = this.ctx.currentTime, f = kind === "spear" ? 1260 : (kind === "maw" ? 190 : 420);
+    this._click(t, 0.12); this._osc(f, 0.15, t, { type: "square", vol: 0.075, slideTo: Math.max(70, f * 0.42), attack: 0.001 });
+  },
+  aldricCrownFall() {
+    if (!this.ctx) return; const t = this.ctx.currentTime; this._click(t, 0.18);
+    [540, 810, 1295].forEach((f, i) => this._osc(f, 0.34 - i * 0.045, t, { type: "square", vol: 0.065 - i * 0.012, slideTo: f * 0.72, attack: 0.0008 }));
+  },
   finalSilence() {
     if (!this.ctx) return; this.setMusicDuck(0.03, 0.16);
     const t = this.ctx.currentTime; this._osc(74, 0.42, t, { type: "sine", vol: 0.055, slideTo: 48, attack: 0.025 });
@@ -385,12 +425,12 @@ const SFX = {
     }
   },
   _beat(i, t) {
-    const th = this._activeTheme(), G = this.musicGain, boss = this._boss;
+    const th = this._activeTheme(), G = this.musicGain, boss = this._boss, voidMix = this._voidMix || 0;
     const semis = (n) => th.root * Math.pow(2, n / 12);
     // drums: the boss arrangement drives double-time
-    if (th.kick[i]) this._kick(t, 0.22);
-    else if (boss && i % 4 === 2) this._kick(t, 0.13);
-    if (th.hat[i] || (boss && i % 2 === 1)) this._hat(t, (i % 4 === 3 ? 0.05 : 0.03) * (boss ? 1.3 : 1), th.hatFreq);
+    if (th.kick[i]) this._kick(t, 0.22 * (1 - voidMix * 0.9));
+    else if (boss && i % 4 === 2) this._kick(t, 0.13 * (1 - voidMix * 0.9));
+    if ((th.hat[i] || (boss && i % 2 === 1)) && voidMix < 0.92) this._hat(t, (i % 4 === 3 ? 0.05 : 0.03) * (boss ? 1.3 : 1) * (1 - voidMix), th.hatFreq);
     // bass (rest = exactly -1; other negatives are real notes below the root):
     // bosses fill the rests and stab the octave
     let b = th.bass[i];

@@ -785,7 +785,8 @@ const UI = {
     ctx.globalAlpha = k; ctx.fillStyle = color; ctx.fillRect(x, y, m.bossPhaseAccentH, h);
     this.ink = t.color.cinemaInk;
     this.tag(ctx, o.speaker || "", x + m.cinemaDialoguePad, y + t.space.lg, color, "left", t.type.caption);
-    const words = String(o.line || "").split(/\s+/), maxW = w - m.cinemaDialoguePad * 2;
+    const allWords = String(o.line || "").split(/\s+/), reveal = o.reveal == null ? 1 : Math.max(0, Math.min(Number(o.reveal) || 0, 1));
+    const words = allWords.slice(0, Math.max(1, Math.ceil(allWords.length * reveal))), maxW = w - m.cinemaDialoguePad * 2;
     ctx.font = this.font(t.type.lead, true); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
     let line = "", yy = y + t.space.lg + t.type.lead + t.space.sm;
     for (const word of words) {

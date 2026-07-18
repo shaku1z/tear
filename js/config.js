@@ -205,6 +205,11 @@ const CONFIG = {
     anchorRadius: 58, cutSpeed: 900, restorationMin: 2.4, epilogueReveal: 2.8,
     rewardHold: 2.4, worldZoom: 0.84, fragmentCap: 18,
   },
+  presentation: {
+    dialogueDuck: 0.45, biomeRevealDuck: 0.72,
+    voidUnmakeMix: 0.45, voidReleaseMix: 1.0, voidRevealMix: 0.72,
+    dialogueReveal: 0.48,
+  },
   // The Echo (Stage 4 boss): your own silhouette — mirrors your tricks -> splits -> turns invisible
   echo: {
     w: 32, h: 50, hp: 3000, speed: 280, contactDmg: 18, knockbackTaken: 0.5, weight: 4,

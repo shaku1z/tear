@@ -356,6 +356,7 @@ class Blade {
   }
 
   _drawTrail(ctx) {
+    if (typeof GFX !== "undefined" && GFX.low) return;
     const J = CONFIG.juice, tr = this.trail;
     // on dark biomes, blend the swoosh additively so it blooms like real light
     const glow = (typeof THEME !== "undefined") && THEME.dark;
