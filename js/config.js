@@ -208,7 +208,19 @@ const CONFIG = {
   presentation: {
     dialogueDuck: 0.45, biomeRevealDuck: 0.72,
     voidUnmakeMix: 0.45, voidReleaseMix: 1.0, voidRevealMix: 0.72,
-    dialogueReveal: 0.48,
+    dialogueReveal: 0.48,   // legacy fallback only (reveal is now char-rate driven)
+    // ---- READING CONTRACT (Pantheon VI P1) ----
+    // reading-aware timing: a boss line reveals at a human rate, then must stay
+    // fully visible before it can time out; lore pages never auto-expire.
+    revealCharsPerSec: 30,       // boss dialogue character reveal rate
+    revealCommaPause: 0.12, revealStopPause: 0.22, revealNewlinePause: 0.16,   // natural pauses
+    minFullyVisible: 1.10,       // a line must be fully readable this long before advancing
+    bossAutoBase: 2.8, bossAutoPerWord: 0.3125, bossAutoMin: 4.0, bossAutoMax: 7.0,   // Full-mode fallback = clamp(base+words/3.2, 4..7)
+    briefHoldMin: 2.2, briefHoldMax: 3.2, briefHoldPerWord: 0.14,   // Brief holds a fully-shown line this long
+    // input latch: a new scene cannot inherit a gameplay-held control
+    armAfterRelease: 0.18,       // every confirm source must be released this long before input arms
+    skipHold: 0.80,              // a NEW hold (begun after arming) of this length skips
+    autoGlyphLead: 1.0,          // show the AUTO glyph only in a confirm-or-timeout beat's final second
   },
   // The Echo (Stage 4 boss): your own silhouette — mirrors your tricks -> splits -> turns invisible
   echo: {

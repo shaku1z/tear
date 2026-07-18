@@ -842,8 +842,20 @@ const UI = {
       else line = next;
     }
     if (line) ctx.fillText(line, x + m.cinemaDialoguePad, yy);
-    const progress = Math.max(0, Math.min(Number(o.progress) || 0, 1));
-    ctx.fillStyle = color; ctx.globalAlpha = k * a.soft; ctx.fillRect(x, y + h - m.cinemaProgressH, w * progress, m.cinemaProgressH);
+    // No countdown bar (it made every line read as disappearing). Instead: a small
+    // continue chevron once the line is readable, a hold ring while a skip charges,
+    // and an AUTO glyph only as a timed boss beat approaches its fallback.
+    const cx = x + w - m.cinemaDialoguePad, cy = y + h - t.space.md;
+    const hold = Math.max(0, Math.min(Number(o.holdRing) || 0, 1));
+    if (hold > 0.01) {
+      ctx.globalAlpha = k; ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(cx - 6, cy - 4, 9, -Math.PI / 2, -Math.PI / 2 + hold * Math.PI * 2); ctx.stroke();
+    } else if (o.canAdvance) {
+      const pulse = 0.55 + 0.45 * Math.sin((typeof CLOCK !== "undefined" ? CLOCK.sim : 0) * 6);
+      ctx.globalAlpha = k * pulse; ctx.fillStyle = color; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+      ctx.font = this.font(t.type.body, true); ctx.fillText("›", cx, cy - 4);
+    }
+    if (o.auto) { ctx.globalAlpha = k * a.soft; this.tag(ctx, "AUTO", x + m.cinemaDialoguePad, y + h - t.space.sm, color, "left", t.type.micro); }
     if (o.hint) this.text(ctx, o.hint, x + w, y - t.space.sm, t.type.micro, "right", k * a.cinemaHint);
     this.ink = savedInk; ctx.restore();
   },

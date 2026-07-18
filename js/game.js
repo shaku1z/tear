@@ -217,8 +217,10 @@
     const flow = chapterFlow = { stage, chapter, pages, state: "LORE_ENTER", page: 0, brief };
     run.chapterState = "LORE_ENTER"; stageBannerT = 0; bossBeat = null;
     const pageBeats = pages.map((page, pageIndex) => ({
-      id: "page-" + pageIndex, view: "page", duration: brief ? 1.35 : 2.35, minDuration: 0.16, advanceable: true,
-      revealDuration: UI.t.motion.chapterTextReveal * (brief ? 0.52 : 1), playerMode: "locked", number: chapter.number, symbol: chapter.symbol,
+      // Full lore pages WAIT for the reader; Brief pages auto-advance after a short hold.
+      id: "page-" + pageIndex, view: "page", completion: brief ? "confirm-or-timeout" : "confirm",
+      duration: brief ? 1.35 : 2.35, reveal: { mode: "phrase", duration: UI.t.motion.chapterTextReveal * (brief ? 0.52 : 1) },
+      playerMode: "locked", number: chapter.number, symbol: chapter.symbol,
       label: page.label, title: chapter.title, text: page.text, color: stage.accent, pageIndex, pageCount: pages.length,
       transition: chapter.transition,
       onEnter() { flow.state = "LORE_READ"; flow.page = pageIndex; run.chapterState = "LORE_READ"; try { SFX.dialogueTone("chapter"); } catch (e) {} },
@@ -336,10 +338,10 @@
           hint: "THE WORLD REMEMBERS", onEnter(c) { beginFinaleRestoration(); },
           onUpdate(c, d) { c.restore = clamp(d.elapsed / CONFIG.finale.restorationMin, 0, 1); },
           waitUntil(c, d) { return c.landed && d.elapsed >= CONFIG.finale.restorationMin; } },
-        { id: "epilogue", view: "epilogue", duration: 6.5, minDuration: 0.3, advanceable: true,
-          revealDuration: CONFIG.finale.epilogueReveal, playerMode: "locked", label: "AFTER THE DESCENT",
+        { id: "epilogue", view: "epilogue", completion: "confirm", playerMode: "locked",
+          reveal: { mode: "phrase", duration: CONFIG.finale.epilogueReveal }, label: "AFTER THE DESCENT",
           title: "THE FIRST MORNING", text: CAMPAIGN_ENDING, hint: "TAP TO REVEAL  ·  TAP AGAIN TO CONTINUE" },
-        { id: "reward", view: "reward", duration: CONFIG.finale.rewardHold, minDuration: 0.45, advanceable: true,
+        { id: "reward", view: "reward", completion: "confirm", duration: CONFIG.finale.rewardHold, minDuration: 0.45,
           playerMode: "locked", label: "ADVENTURE COMPLETE", title: "THE WORLD REMEMBERS", sigil: "◇",
           reward: "RESTORED BLADE TRAIL · CAMPAIGN EMBLEM",
           detail: (prepared && prepared.isNew ? "NEW BEST  ·  " : "") + run.score + " PTS  ·  " + fmtTime(run.runTime),
@@ -999,9 +1001,9 @@
       },
       onCancel() { try { SFX.setVoidDescent(0, 0.2); SFX.setMusicDuck(1, 0.25); } catch (e) {} },
       beats: [
-        { id: "challenge", duration: C.descentChallenge, minDuration: 0.28, advanceable: true, playerMode: "locked",
+        { id: "challenge", completion: "confirm-or-timeout", playerMode: "locked",
           speaker: "THE SOURCE", line: "YOU MISTOOK THE FLOOR FOR MERCY.", onEnter() { try { SFX.dialogueTone("source"); } catch (e) {} } },
-        { id: "declaration", duration: C.descentDeclaration, minDuration: 0.32, advanceable: true, playerMode: "locked",
+        { id: "declaration", completion: "confirm-or-timeout", playerMode: "locked",
           speaker: "THE SOURCE", line: "THERE IS NO BELOW.", onEnter() { try { SFX.dialogueTone("source"); } catch (e) {} } },
         { id: "unmake", duration: C.descentDissolve, playerMode: "locked",
           onEnter(c) { unmakeArena(c); try { SFX.setVoidDescent(CONFIG.presentation.voidUnmakeMix, 0.3); } catch (e) {} },
@@ -1028,7 +1030,9 @@
     if (!owner || !cue || CINEMA.active) return false;
     const seenKey = "tear.cinematic." + cue.id;
     let seen = false; try { seen = localStorage.getItem(seenKey) === "1"; } catch (e) {}
-    const brief = !!(cue.brief || seen || settings.cinematics === "brief"), scale = brief ? 0.62 : 1;
+    // "seen" no longer compresses timing — it only lets the skip prompt read sooner.
+    // Full vs Brief is the player's explicit choice; neither multiplies choreography.
+    const brief = !!(cue.brief || settings.cinematics === "brief");
     const context = { owner, cue, crownStart: null, crownTarget: null, crownPlatform: null };
     const prepareCrown = (c) => {
       const crown = c.owner.crown; if (!c.cue.crownFall || !crown || c.crownStart) return;
@@ -1055,13 +1059,13 @@
     };
     owner.cinematicRequest = null;
     CINEMA.start({
-      id: cue.id, color: cue.color || owner.color, blocksCombat: true, hideHud: true,
+      id: cue.id, color: cue.color || owner.color, blocksCombat: true, hideHud: true, brief,
       hint: brief ? "BRIEF SCENE  ·  HOLD TO SKIP" : "TAP TO ADVANCE  ·  HOLD TO SKIP",
       skipHint: "SKIPPING — TRANSFORMATION REMAINS SAFE",
       onStart(c) {
         bossBeat = null; c.owner.cinematicT = 0; c.owner.vx = 0; c.owner.vy = 0;
         projectiles = projectiles.filter((p) => p.owner !== c.owner && !p.bossAttack);
-        player.iframe = Math.max(player.iframe, (cue.duration || 0.88) * scale + 1.35);
+        player.iframe = Math.max(player.iframe, 2.2);   // (Plan 002 replaces this with cinematicProtected)
         prepareCrown(c);
         try { SFX.setMusicDuck(CONFIG.presentation.dialogueDuck, 0.18); } catch (e) {}
         if (cue.sfx && typeof SFX[cue.sfx] === "function") { try { SFX[cue.sfx](); } catch (e) {} }
@@ -1083,15 +1087,17 @@
         try { SFX.setMusicDuck(1, 0.25); } catch (e) {}
       },
       beats: [
-        { id: "frame", duration: 0.24 * scale, playerMode: "locked",
-          onUpdate(c, d) { c.owner.cinematicT = d.progress * 0.2; } },
-        { id: "declaration", duration: (cue.duration || 0.88) * scale, minDuration: 0.24 * scale,
-          advanceable: true, playerMode: "locked", speaker: cue.speaker || owner.bossName, line: cue.line,
+        { id: "frame", duration: 0.24, completion: "timed", playerMode: "locked",
+          onUpdate(c, d) { c.owner.cinematicT = clamp(d.elapsed / 0.24, 0, 1) * 0.2; } },
+        // the spoken beat: reveals at a human rate, holds fully-visible, and only
+        // then auto-resumes combat (never sub-second); a tap advances once readable
+        { id: "declaration", completion: "confirm-or-timeout", playerMode: "locked",
+          speaker: cue.speaker || owner.bossName, line: cue.line,
           onEnter() { try { SFX.dialogueTone(owner.bossId || "chapter"); } catch (e) {} },
-          onUpdate(c, d) { c.owner.cinematicT = 0.2 + d.progress * 0.42; settleCrown(c, d.progress * 0.48); } },
-        { id: "resolve", duration: 0.46 * scale, playerMode: "locked",
-          onUpdate(c, d) { c.owner.cinematicT = 0.62 + d.progress * 0.38; settleCrown(c, 0.48 + d.progress * 0.52); } },
-        { id: "grace", duration: 0.35, skipScale: 1, playerMode: "locked" },
+          onUpdate(c, d) { c.owner.cinematicT = 0.2 + d.revealProgress * 0.42; settleCrown(c, d.revealProgress * 0.48); } },
+        { id: "resolve", duration: 0.46, completion: "timed", playerMode: "locked",
+          onUpdate(c, d) { const k = clamp(d.elapsed / 0.46, 0, 1); c.owner.cinematicT = 0.62 + k * 0.38; settleCrown(c, 0.48 + k * 0.52); } },
+        { id: "grace", duration: 0.35, completion: "timed", skipScale: 1, playerMode: "locked" },
       ],
     }, context);
     return true;
@@ -3159,12 +3165,16 @@
 
     if (state === "playing" && CINEMA.active) {
       const clicked = !!Input.takeClick();
-      // Do not treat LMB as a hold: it may already be down from blade control
-      // when a phase starts. Keyboard/controller confirm is an intentional skip.
+      // Feed the director RAW per-source held state (not a merged skip boolean).
+      // Its input latch ignores whatever was already down when the scene began and
+      // arms only after release, so a gameplay-held jump can no longer skip a scene.
       const gp = typeof PAD !== "undefined" && PAD.connected && navigator.getGamepads ? navigator.getGamepads()[PAD.index] : null;
-      const hold = Input.held.has("Space") || Input.held.has("Enter") || Input.held.has("NumpadEnter") ||
-        !!Input.btnHeld.jump || !!(gp && gp.buttons[0] && gp.buttons[0].pressed);
-      CINEMA.update(dt, { pressed: Input.confirmPressed() || Input.tJump || clicked, hold });
+      CINEMA.update(dt, {
+        key: Input.held.has("Space") || Input.held.has("Enter") || Input.held.has("NumpadEnter"),
+        touch: !!Input.btnHeld.jump,
+        pad: !!(gp && gp.buttons[0] && gp.buttons[0].pressed),
+        click: clicked || Input.tJump,   // a tap edge (touch-jump press or UI tap) reveals/advances; blade LMB never drives cinema
+      });
     }
 
     Input.allowLock = (state === "playing");
@@ -5610,7 +5620,7 @@
       uiButtons.push({ x: rx - btnW, y: cy - btnH / 2, w: btnW, h: btnH, label: "+", action: () => { settings.flash = clamp(+((settings.flash == null ? 1 : settings.flash) + 0.25).toFixed(2), 0, 1); save(); } });
       UI.text(ctx, Math.round((settings.flash == null ? 1 : settings.flash) * 100) + "%", (lo + rx) / 2, cy + t.space.xs, t.type.lead, "center");
     });
-    row("Cinematic pacing", (cy) => {
+    row("Story scenes", (cy) => {
       uiButtons.push({ x: lo, y: cy - btnH / 2, w: block, h: btnH, size: t.type.caption,
         label: (settings.cinematics || "full").toUpperCase(),
         action: () => { settings.cinematics = settings.cinematics === "brief" ? "full" : "brief"; save(); } });
@@ -6466,7 +6476,7 @@
     },
     cut() { return severFinaleAnchor(false); },
     skip() { CINEMA.requestSkip(); },
-    advance() { CINEMA.update(0.4, { pressed: true }); },
+    advance() { if (CINEMA.active && CINEMA.beat) CINEMA._advance(); },   // debug: step one beat
     pause() { if (state === "playing") state = "paused"; },
     resume() { if (state === "paused") state = "playing"; },
     openSettings() { state = "settings"; settingsReturn = "menu"; },
