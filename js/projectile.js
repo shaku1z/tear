@@ -28,6 +28,13 @@ class Projectile {
     this.tint = null;         // shot colour, set by the firing enemy (else default enemyShot)
     this.kind = "dart";       // visual shape: "dart" (oriented bolt) | "orb" (caster)
     this.hist = [];           // recent positions -> a real motion trail for EVERY projectile
+    // Capability metadata. Legacy booleans remain as render/physics shims until
+    // their dedicated phases migrate them, while collision code can reason about
+    // an explicit family and counter contract now.
+    this.family = "ordinaryProjectile";
+    this.counterplay = "deflect";
+    this.unparryable = false;
+    this.sweeper = false;
     // Optional boss-pattern metadata. Neutral defaults preserve every legacy projectile.
     this.owner = null;
     this.landingX = null; this.landingY = null; this.landingT = null;
@@ -38,6 +45,23 @@ class Projectile {
     this.harmless = false;    // collision consumers can ignore an embedded prop
     this._embedNotified = false;
     this._groundImpactDone = false;
+  }
+
+  setFamily(family) {
+    this.family = family || "ordinaryProjectile";
+    if (this.family === "groundShock") {
+      this.shock = true; this.sweeper = false;
+      this.counterplay = "jump"; this.unparryable = true;
+    } else if (this.family === "sweeper") {
+      // P7 unlocks the sweeper's specialized bat/return contract. Until then it
+      // deliberately preserves the shipped non-parryable behavior.
+      this.shock = true; this.sweeper = true;
+      this.counterplay = "sweeperLocked"; this.unparryable = true;
+    } else {
+      this.shock = false; this.sweeper = false;
+      this.counterplay = "deflect"; this.unparryable = false;
+    }
+    return this;
   }
 
   update(dt) {

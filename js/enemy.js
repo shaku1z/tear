@@ -465,7 +465,7 @@ class Charger extends Enemy {
       this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1)); this.atkDir = dir; this.atkT -= dt;
       if (this.atkT <= 0) {
         const footY = this.y + this.hh;
-        for (const d of [-1, 1]) { const p = new Projectile(this.x + d * this.hw, footY - X.exShockR, d * X.exShockSpeed, 0); p.shock = true; p.r = X.exShockR; p.dmg = X.exShockDmg; p.life = 1.6; projectiles.push(p); }
+        for (const d of [-1, 1]) { const p = new Projectile(this.x + d * this.hw, footY - X.exShockR, d * X.exShockSpeed, 0); p.setFamily("groundShock"); p.r = X.exShockR; p.dmg = X.exShockDmg; p.life = 1.6; projectiles.push(p); }
         FX.ring(this.x, footY, 18, CONFIG.colors.slam); FX.burst(this.x, footY, 0, -1, 11, CONFIG.colors.charger);
         if (typeof SFX !== "undefined" && SFX.ctx && SFX.slam) SFX.slam();
         this.atk = "recover"; this.atkCd = 1.5;
@@ -487,7 +487,7 @@ class Charger extends Enemy {
       if (this.atkT <= 0) {
         const footY = this.y + this.hh, sx = this.x + this.atkDir * X.gravReach;
         const p = new Projectile(sx, footY - X.gravShockR, this.atkDir * X.gravShockSpeed, 0);
-        p.shock = true; p.r = X.gravShockR; p.dmg = X.gravDmg; p.life = 1.3; projectiles.push(p);
+        p.setFamily("groundShock"); p.r = X.gravShockR; p.dmg = X.gravDmg; p.life = 1.3; projectiles.push(p);
         FX.burst(sx, footY, 0, -1, 9, CONFIG.colors.charger);
         this.atk = "swing"; this.atkT = 0.25;
       }
@@ -1037,7 +1037,7 @@ class Armored extends Enemy {
     const footY = this.y + this.hh;   // shock travels along whatever surface it's standing on
     for (const d of [-1, 1]) {
       const p = new Projectile(this.x + d * this.hw, footY - C.shockR, d * C.shockSpeed, 0);
-      p.shock = true; p.r = C.shockR; p.dmg = C.shockDmg; p.life = 1.6;
+      p.setFamily("groundShock"); p.r = C.shockR; p.dmg = C.shockDmg; p.life = 1.6;
       projectiles.push(p);
     }
     FX.ring(this.x, footY, 14, CONFIG.colors.slam);
@@ -1308,7 +1308,7 @@ class Chimera extends Enemy {
       projectiles.push(p); this.atk = "recover"; this.copyT = 1.3;
     } else if (k === "armored") {
       const A = CONFIG.armored, footY = this.y + this.hh;
-      for (const d of [-1, 1]) { const p = new Projectile(this.x + d * this.hw, footY - A.shockR, d * A.shockSpeed, 0); p.shock = true; p.r = A.shockR; p.dmg = A.shockDmg; p.life = 1.5; projectiles.push(p); }
+      for (const d of [-1, 1]) { const p = new Projectile(this.x + d * this.hw, footY - A.shockR, d * A.shockSpeed, 0); p.setFamily("groundShock"); p.r = A.shockR; p.dmg = A.shockDmg; p.life = 1.5; projectiles.push(p); }
       FX.ring(this.x, footY, 12, CONFIG.colors.slam); this.atk = "recover"; this.copyT = 1.4;
     } else if (k === "flyer") {
       this.atk = "strike"; this.atkT = 0.4; this.vx = dir * 600; this.vy = -540;   // leap-dive
@@ -1901,7 +1901,7 @@ class Colossus extends Enemy {
     // columns (see the quake draw in projectile.js), nothing like the old ripples
     const C = this.cfg, footY = this.y + this.hh;
     const p = new Projectile(this.x + dir * this.hw * 0.7, footY - C.shockR, dir * C.shockSpeed * (C.quakeSpeedMult || 0.78), 0);
-    p.shock = true; p.quake = true; p.r = C.shockR * (C.quakeRMult || 1.25); p.dmg = C.shockDmg; p.life = 2.8;
+    p.setFamily("groundShock"); p.quake = true; p.r = C.shockR * (C.quakeRMult || 1.25); p.dmg = C.shockDmg; p.life = 2.8;
     p.owner = this; p.tint = CONFIG.colors.armoredShield;
     projectiles.push(p);
     FX.shockwave(p.x, footY, 8, CONFIG.colors.armoredShield, 130, 4);   // the ground jolts at the epicentre
@@ -1909,7 +1909,7 @@ class Colossus extends Enemy {
   _throwShield(projectiles) {
     const C = this.cfg;
     const p = new Projectile(this.x + this.facing * (this.hw + 12), this.y, this.facing * C.sweeperSpeed, 0);
-    p.shock = true; p.sweeper = true; p.sweeperStyle = "saw"; p.r = 22; p.dmg = C.sweeperDmg; p.bounces = 999; p.life = 60;
+    p.setFamily("sweeper"); p.sweeperStyle = "saw"; p.r = 22; p.dmg = C.sweeperDmg; p.bounces = 999; p.life = 60;
     p.owner = this; p.tint = CONFIG.colors.armoredShield; p.maxCrossings = C.shieldCrossings; p.embeddedLife = C.shieldEmbedDur;
     projectiles.push(p);
     FX.ring(this.x, this.y, 20, CONFIG.colors.armoredShield);
@@ -2207,7 +2207,7 @@ class Aldric extends Enemy {
   _shock(projectiles, dir, fire) {
     const C = CONFIG.aldric, footY = this.y + this.hh;
     const p = new Projectile(this.x + dir * this.hw * 0.7, footY - C.shockR, dir * C.shockSpeed, 0);
-    p.shock = true; p.r = C.shockR; p.dmg = C.shockDmg; p.life = 2.0; p.owner = this;
+    p.setFamily("groundShock"); p.r = C.shockR; p.dmg = C.shockDmg; p.life = 2.0; p.owner = this;
     p.tint = fire ? CONFIG.colors.bomber : CONFIG.colors.charger;
     projectiles.push(p);
   }
@@ -2487,7 +2487,7 @@ class Echo extends Enemy {
   _shock(projectiles, dir) {
     const C = CONFIG.echo, footY = this.y + this.hh;
     const p = new Projectile(this.x + dir * this.hw, footY - 12, dir * C.shockSpeed, 0);
-    p.shock = true; p.r = 14; p.dmg = C.shockDmg; p.life = 1.6; projectiles.push(p);
+    p.setFamily("groundShock"); p.r = 14; p.dmg = C.shockDmg; p.life = 1.6; projectiles.push(p);
   }
   _shot(player, projectiles) {
     const C = CONFIG.echo, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
@@ -2627,7 +2627,7 @@ class Source extends Enemy {
     this.beamState = "idle"; this.beamT = 0; this.beamCd = CONFIG.source.beamCd; this.beamX = CONFIG.view.w + 100;
     // physical kit: a flash-charge and a converging shard drop
     this.dashState = "idle"; this.dashT = 0; this.dashCd = CONFIG.source.dashCd; this.dashTX = 0; this.dashTY = 0; this.dashDX = 0; this.dashDY = 0; this.dashGhosts = [];
-    this.collapseState = "idle"; this.collapseWT = 0; this.collapseCd = CONFIG.source.collapseCd;
+    this.collapseState = "idle"; this.collapseWT = 0; this.riftCollapseCd = CONFIG.source.riftCollapseCd;
     this._burstN = 0; this._burstT = 0;
   }
   get phase() { const f = this.hp / this.maxHp, C = CONFIG.source; return f > C.voidTier ? 1 : (f > C.fakeTier ? 2 : 3); }
@@ -2643,12 +2643,12 @@ class Source extends Enemy {
   _shock(projectiles, dir, footY, tint) {
     const C = CONFIG.source, fy = (footY || CONFIG.world.groundY) - C.shockR;
     const p = new Projectile(this.x + dir * this.hw, fy, dir * C.shockSpeed, 0);
-    p.shock = true; p.r = C.shockR; p.dmg = C.shockDmg; p.life = 2.0; p.owner = this; p.tint = tint || CONFIG.colors.boss; projectiles.push(p);
+    p.setFamily("groundShock"); p.r = C.shockR; p.dmg = C.shockDmg; p.life = 2.0; p.owner = this; p.tint = tint || CONFIG.colors.boss; projectiles.push(p);
   }
   _sweeper(projectiles, tint) {
     const C = CONFIG.source;
     const p = new Projectile(this.x, Math.min(CONFIG.world.groundY - 24, this.y + 90), -C.sweeperSpeed, 0);
-    p.shock = true; p.sweeper = true; p.sweeperStyle = "shard"; p.r = 22; p.dmg = C.sweeperDmg; p.bounces = 999; p.life = 60;
+    p.setFamily("sweeper"); p.sweeperStyle = "shard"; p.r = 22; p.dmg = C.sweeperDmg; p.bounces = 999; p.life = 60;
     p.owner = this; p.tint = tint || this.color; p.maxCrossings = 2; p.embeddedLife = 0.6; projectiles.push(p);
     FX.ring(this.x, this.y, 18, this.color);
   }
@@ -2751,7 +2751,7 @@ class Source extends Enemy {
     if (this.collapseState !== "wind") return;
     this.collapseWT -= dt;
     if (this.collapseWT <= 0) {
-      this.collapseState = "idle"; this.collapseCd = C.collapseCd;
+      this.collapseState = "idle"; this.riftCollapseCd = C.riftCollapseCd;
       for (let i = 0; i < 10; i++) {
         const a = i / 10 * Math.PI * 2 - Math.PI / 2;
         const p = new Projectile(this.x + Math.cos(a) * 150, this.y + Math.sin(a) * 90, -Math.cos(a) * C.collapseSpeed, -Math.sin(a) * C.collapseSpeed * 0.6 + 260);
@@ -2848,7 +2848,7 @@ class Source extends Enemy {
     if (this.collapsing) {
       this.collapseT -= dt;
       if (this.collapseT <= 0) {
-        this.collapseT = C.collapseCd;
+        this.collapseT = C.platformCollapseCd;
         const ow = platforms.filter((p) => p.oneway && !(p.crackT > 0));
         if (ow.length) { const pl = ow[Math.floor(Math.random() * ow.length)]; pl.crackT = C.crackWarn; pl.crackMax = C.crackWarn; pl.crackColor = this.color; }
       }
@@ -2873,7 +2873,7 @@ class Source extends Enemy {
     // physical moves run their own state machines (they suppress the hover/cast)
     if (this.dashState !== "idle") { this._tickDash(dt, player, projectiles); return; }
     if (this.collapseState !== "idle") { this._tickCollapse(dt, player, projectiles); this._hover(dt, player); return; }
-    this.dashCd -= dt; this.collapseCd -= dt;
+    this.dashCd -= dt; this.riftCollapseCd -= dt;
 
     this._hover(dt, player);
     this.atkT -= dt;
@@ -2883,7 +2883,7 @@ class Source extends Enemy {
       // a pure projectile turret. Dash/collapse fire when off cooldown; otherwise
       // it casts (roughly halving the pure-projectile ratio).
       if (this.dashCd <= 0 && (this.mode === "void" || Math.random() < 0.7)) this._startDash(player);
-      else if (this.collapseCd <= 0 && Math.random() < 0.6) this._startCollapse(player, projectiles);
+      else if (this.riftCollapseCd <= 0 && Math.random() < 0.6) this._startCollapse(player, projectiles);
       else this._cast(projectiles, this.mode === "void" ? 2 : 1);
     }
   }

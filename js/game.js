@@ -3,6 +3,9 @@
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
   const W = CONFIG.view.w, H = CONFIG.view.h;
+  // Developer-only world diagnostics. This is deliberately URL-gated rather
+  // than exposed as release UI: append ?bossdebug=1 in a local Boss Test boot.
+  const PANTHEON_DEBUG = new URLSearchParams(window.location.search).get("bossdebug") === "1";
 
   Input.init(canvas);
 
@@ -528,18 +531,30 @@
   // falls (or the stage changes). Authored in 1600x900 like stage layouts.
   function bossArena(bossId) {
     const vw = W, vh = H, gy = CONFIG.world.groundY;
-    const floor = { x: 0, y: gy, w: vw, h: vh - gy, floor: true };
+    const material = ({ warden: "wardenSteel", colossus: "colossusGantry", aldric: "aldricStone" })[bossId] || "arena";
+    const floor = { x: 0, y: gy, w: vw, h: vh - gy, floor: true,
+      platformId: `arena:${bossId}:floor`, arenaBoss: bossId, arenaPlatId: `${bossId}:floor`, arenaMaterial: `${material}Floor` };
     const ox = (vw - 1600) / 2, oy = (vh - 900) / 2;
-    const P = (x, y, w) => ({ x: x + ox, y: y + oy, w, h: 22, oneway: true });
-    if (bossId === "warden")   return [floor, P(150, 430, 240), P(1210, 430, 240), P(680, 555, 240)];   // the Yard: spread, high — perch time is exposure time
-    if (bossId === "colossus") return [floor, P(430, 400, 740), P(110, 645, 210), P(1280, 645, 210)];   // the Foundry: one high gantry + two low blocks
+    const P = (x, y, w, index) => ({ x: x + ox, y: y + oy, w, h: 22, oneway: true,
+      platformId: `arena:${bossId}:${index}`, arenaBoss: bossId, arenaPlatId: `${bossId}:${index}`, arenaMaterial: material });
+    if (bossId === "warden")   return [floor, P(150, 430, 240, 0), P(1210, 430, 240, 1), P(680, 555, 240, 2)];   // the Yard: spread, high — perch time is exposure time
+    if (bossId === "colossus") return [floor, P(430, 400, 740, 0), P(110, 645, 210, 1), P(1280, 645, 210, 2)];   // the Foundry: one high gantry + two low blocks
     if (bossId === "aldric")   return [floor];                                                          // the Dueling Ground: bare — the pure duel
     return null;   // source/echo fight over the stage layout (then the void takes it)
   }
 
   // ---- THE SOURCE: runtime arena mutation for the final void run ------------
+  function nextVoidMetaSeed() {
+    let s = (run && run.voidRngState) >>> 0;
+    if (!s) s = 1;
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+    if (run) run.voidRngState = s;
+    return s;
+  }
   function voidPlatform(x, y, w, type) {
-    return { x, y, w, h: 22, oneway: true, void: true, voidType: type || "plain", touchT: -1, fireOn: false };
+    const seq = run ? run._platformSeq++ : 0, seed = nextVoidMetaSeed();
+    return { x, y, w, h: 22, oneway: true, void: true, voidType: type || "plain", touchT: -1, fireOn: false,
+      platformId: `void:${run ? run.voidSeed : 0}:${seq}`, voidId: seq, hazardSeed: seed };
   }
   function startVoidScroll(owner) {
     if (run.voidScroll && (run.voidScroll.active || run.voidScroll.frozen)) return;
@@ -1007,6 +1022,11 @@
     timeScale = 1; slowmo = 0; zoom = 1; flash = 0; bannerT = 0; dashGhostT = 0; throwCd = 0;
     worldZoom = 1; worldZoomTarget = 1;
     loadStage(0); stageBannerT = 0; loreT = 0;   // fresh biome 0 (campaign re-stages per wave below)
+    // Stable per-run identity for procedural sub-systems. P3 consumes the Void
+    // stream state; creating it here makes layouts reproducible without changing
+    // any existing combat RNG in this foundational phase.
+    const runSeed = ((Date.now() ^ Math.floor(performance.now() * 1000)) >>> 0) || 1;
+    const voidSeed = (Math.imul(runSeed ^ 0x7f4a7c15, 1664525) + 1013904223) >>> 0;
     run = {
       mode, diff, wave: 0, score: 0, mods: newMods(),
       spawnQueue: [], spawnTimer: 0, waveActive: false, clearTimer: -1,
@@ -1022,6 +1042,7 @@
       weaponId: selWeapon,   // for the "win with each weapon" achievement
       biomeState: { swung: false, thrown: false, jumped: false },   // per-stage restriction feats
       _staticParry: 0, _airKills: 0, _projDashes: 0, _aldricSlams: 0, _revivedT: false, _bossFightT: null,
+      runSeed, voidSeed: voidSeed || 1, voidRngState: voidSeed || 1, _platformSeq: 0,
     };
     // Exodia (The Forbidden Technique): Long Arm + Throwing Arm + Aether Step + Lifeline all owned
     if (achTracks() && META.level("reach") > 0 && META.level("throwarm") > 0 && META.level("aircharge") > 0 && META.level("lifeline") > 0) PROFILE.maxStat("exodiaBuild", 1);
@@ -1909,13 +1930,26 @@
           if (player.tempoT > 0 && run.mods.tempo) dmg *= 1 + run.mods.tempo * player.tempoStk;   // Tempo: post-parry surge
           dmg *= e.damageTakenMult();   // armored: reduced grounded, more airborne
           const big = isSlam || empowered || spike || dmg >= CONFIG.hitStop.threshold;
-          e.hit(dmg, blade.tipVX, blade.tipVY);
+          const dealt = e.hit(dmg, blade.tipVX, blade.tipVY);
+          // Optional actor-specific physical response. Damage remains owned by
+          // Enemy.hit(); this hook only lets authored actors consume the launch /
+          // spike impulse using the same measured held-blade motion.
+          let impulseHandled = false;
+          if (typeof e.onBladeImpulse === "function") {
+            const response = e.onBladeImpulse({
+              damage: dmg, dealt, held: true, player, blade,
+              tipSpeed: blade.tipSpeed, tipVX: blade.tipVX, tipVY: blade.tipVY,
+              isSlam, isLaunch, spike, empowered, empSlam, heightF, strikeF,
+              strikeType: spike ? "spike" : (empSlam ? "superslam" : (isSlam ? "slam" : (empowered ? "updraft" : (isLaunch ? "launch" : "hit")))),
+            });
+            impulseHandled = response === true || !!(response && response.handled);
+          }
           // Aldric's duel: answering his wound inside the rally window wins blood back
           if (player.rallySource === e) {
             const healed = player.claimRally(dmg);
             if (healed > 0) { addFloater(player.x, player.y - 44, "+" + Math.round(healed), false, "#e8a32e"); FX.burst(player.x, player.y - 10, 0, -1, 5, "#e8a32e"); }
           }
-          if (!e.anchored) {   // an anchored ally can't be spiked or launched (break the Anchor first)
+          if (!e.anchored && !impulseHandled) {   // an anchored ally can't be spiked or launched (break the Anchor first)
             if (spike) { e.vy = (1000 + heightF * 800 + strikeF * 500) / e.weight; e.spiked = true; }
             else if (isLaunch) e.vy = -CONFIG.blade.launchPower * (1 + riseF * CONFIG.blade.risingLaunchBonus) / e.weight;
           }
@@ -2074,7 +2108,7 @@
 
     // held blade vs projectiles (deflect / perfect parry; mines are defused on contact)
     for (const p of projectiles) {
-      if (p.dead || p.deflected || p.shock || blade.state !== "held") continue;   // shocks must be jumped, not parried
+      if (p.dead || p.deflected || p.unparryable || blade.state !== "held") continue;   // capability contract decides what the blade may counter
       if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, p.x, p.y, p.r + 4)) {
         if (p.mine) {
           p.dead = true;
@@ -2166,7 +2200,7 @@
         // Phase Step: dashing THROUGH an enemy shot deflects it back (turn defense into offense).
         // Handled here, at the confirmed overlap — the old dash-block check used stale positions
         // and takeDamage returns "" (falsy) while invulnerable, so the shot just slipped through.
-        if (run.mods.phaseStep && player.dashTimer > 0 && !p.shock) {
+        if (run.mods.phaseStep && player.dashTimer > 0 && !p.unparryable) {
           const spd = Math.max(len(p.vx, p.vy), CONFIG.proj.speed) * CONFIG.blade.deflectBoost;
           p.deflect(player.dashX || player.facing, player.dashY || 0, spd, false);
           FX.burst(p.x, p.y, player.dashX, player.dashY, 8, CONFIG.colors.deflected);
@@ -2735,6 +2769,44 @@
     ctx.globalAlpha = 1; ctx.restore();
   }
 
+  function drawPantheonDebug(view) {
+    if (!PANTHEON_DEBUG) return;
+    ctx.save();
+    ctx.setLineDash([10, 7]); ctx.lineWidth = 2; ctx.strokeStyle = "#ff4fd8"; ctx.globalAlpha = 0.9;
+    if (view) ctx.strokeRect(view.left, view.top, view.right - view.left, view.bottom - view.top);
+    ctx.setLineDash([]); ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    ctx.font = "bold 11px 'Courier New', monospace";
+    for (const p of platforms) {
+      if (!p.platformId) continue;
+      ctx.strokeStyle = p.void ? "#13c4d6" : "#e8a32e"; ctx.globalAlpha = 0.85;
+      ctx.strokeRect(p.x, p.y, p.w, p.h);
+      ctx.fillStyle = ctx.strokeStyle; ctx.fillText(p.platformId, p.x + p.w / 2, p.y - 4);
+      if (p.voidLane && p.chunkId != null) ctx.fillText(`${p.voidLane} · chunk ${p.chunkId}`, p.x + p.w / 2, p.y + p.h + 15);
+    }
+    for (const p of projectiles) {
+      if (!p.family || p.family === "ordinaryProjectile") continue;
+      ctx.strokeStyle = p.family === "sweeper" ? "#d45ee8" : "#ff944d"; ctx.globalAlpha = 0.9;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r + 7, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = ctx.strokeStyle; ctx.fillText(`${p.family}:${p.counterplay}${p.sweeperState ? `:${p.sweeperState}` : ""}`, p.x, p.y - p.r - 10);
+    }
+    for (const e of enemies) {
+      if (Array.isArray(e.debugGeometry)) {
+        ctx.strokeStyle = "#55ff9a"; ctx.globalAlpha = 0.9;
+        for (const g of e.debugGeometry) {
+          if (!g || !g.a || !g.b) continue;
+          ctx.lineWidth = Math.max(1, (g.radius || 0) * 2); ctx.beginPath(); ctx.moveTo(g.a.x, g.a.y); ctx.lineTo(g.b.x, g.b.y); ctx.stroke();
+        }
+      }
+      if (!e.zones) continue;
+      ctx.lineWidth = 2;
+      for (const z of e.zones) if (z.nextOn || z.warnK > 0) {
+        const zw = z.w || CONFIG.warden.zoneW;
+        ctx.strokeStyle = "#fff36b"; ctx.globalAlpha = 0.95; ctx.strokeRect(z.x - zw / 2, CONFIG.world.groundY - 44, zw, 44);
+      }
+    }
+    ctx.restore();
+  }
+
   function renderWorld() {
     ctx.save();
     // camera: zoom-punch + shake, both pivoting on screen center
@@ -2963,6 +3035,7 @@
     if (player) player.draw(ctx);
     if (blade) blade.draw(ctx, player);
     FX.draw(ctx);
+    drawPantheonDebug(backdropView);
     ctx.textAlign = "center";
     for (const f of floaters) {
       ctx.globalAlpha = clamp(f.life / 0.8, 0, 1);

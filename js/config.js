@@ -212,10 +212,10 @@ const CONFIG = {
     sweeperDmg: 18, sweeperSpeed: 600,
     crossDmg: 16, crossSpeed: 740,
     copyDelay: 0.5,
-    collapseCd: 1.3, crackWarn: 0.8,
+    platformCollapseCd: 1.3, crackWarn: 0.8,
     // the rift LEARNS TO LUNGE — physical moves woven between the ranged casts
     dashCd: 5.5, dashWindup: 0.55, dashSpeed: 2050, dashDmg: 22,   // RIFT DASH: a telegraphed flash-charge along a locked line
-    collapseCd: 8.0, collapseWindup: 0.7, collapseDmg: 18, collapseSpeed: 900,   // RIFT COLLAPSE: teleport above, drop a converging shard ring
+    riftCollapseCd: 8.0, collapseWindup: 0.7, collapseDmg: 18, collapseSpeed: 900,   // RIFT COLLAPSE: teleport above, drop a converging shard ring
     scrollSpeed: 170, scrollRamp: 4, scrollSpeedMax: 260,   // the run tightens as it goes
     voidFallDmg: 18, voidSlowMult: 0.58, voidSlowDur: 0.7,
     voidGapMin: 105, voidGapMax: 185, voidPlatformMin: 180, voidPlatformMax: 290,
