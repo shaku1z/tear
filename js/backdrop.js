@@ -123,33 +123,36 @@ const Backdrop = {
     ctx.globalAlpha = 1; ctx.restore();
   },
 
-  // Dedicated two-storey Void surface. Hazard silhouettes are geometry-first:
-  // low-effects mode drops shard trails and shimmer, never rails, cracks, fire
-  // arming, cages, or transfer nodes.
+  // Native Void ruin: the collision body stays a reliable rectangle, while the
+  // art reads as a torn piece of the biome rather than a lane-coded game tile.
   voidPlatform(ctx, p, stage) {
-    const lower = p.voidLane === "lower", laneCol = lower ? "#31e6ff" : "#a66dff";
     const now = CLOCK.sim * 1000, low = typeof GFX !== "undefined" && GFX.low;
     const forming = p.materializationState === "forming", alpha = forming ? 0.55 : 1;
+    const seed = p.hazardSeed >>> 0, chipL = 5 + seed % 11, chipR = 7 + (seed >>> 5) % 13;
+    const mineral = stage && stage.plat ? stage.plat : "#c9c4e0";
+    const accent = stage && stage.accent ? stage.accent : "#13c4d6";
     ctx.save(); ctx.globalAlpha = alpha;
 
     if (!low) {
-      ctx.fillStyle = this._rgba(laneCol, 0.10);
-      const trail = 24 + (p.hazardSeed % 4) * 7;
-      ctx.beginPath(); ctx.moveTo(p.x, p.y + 4); ctx.lineTo(p.x - trail, p.y + 12); ctx.lineTo(p.x, p.y + p.h - 2); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = "rgba(0,0,0,0.28)"; ctx.fillRect(p.x + 5, p.y + p.h, p.w, 8);
+      ctx.fillStyle = this._rgba(accent, forming ? 0.20 : 0.10);
+      ctx.beginPath(); ctx.ellipse(p.x + p.w * 0.5, p.y + p.h + 9, p.w * 0.48, 13, 0, 0, Math.PI * 2); ctx.fill();
+      for (let i = 0; i < 3; i++) {
+        const sx = p.x + ((seed >>> (i * 6)) % 97) / 97 * p.w;
+        ctx.globalAlpha = alpha * (0.22 - i * 0.04); ctx.fillStyle = mineral;
+        ctx.beginPath(); ctx.moveTo(sx, p.y + p.h + 3); ctx.lineTo(sx + 5, p.y + p.h + 13 + i * 5); ctx.lineTo(sx + 10, p.y + p.h + 2); ctx.fill();
+      }
+      ctx.globalAlpha = alpha;
     }
 
     const body = ctx.createLinearGradient(0, p.y, 0, p.y + p.h);
-    body.addColorStop(0, "rgba(29,31,55,0.96)"); body.addColorStop(1, "rgba(7,8,20,0.98)");
-    ctx.fillStyle = body; ctx.fillRect(p.x, p.y, p.w, p.h);
-    ctx.fillStyle = this._rgba(laneCol, 0.16); ctx.fillRect(p.x + 8, p.y + 6, Math.max(0, p.w - 16), p.h - 8);
-
-    let rail = laneCol;
-    if (p.voidType === "fire") rail = p.fireState === "hot" ? "#fff4c7" : (p.fireState === "arming" ? "#ffad35" : "#81552b");
-    else if (p.voidType === "crumble") rail = "#d8d0ff";
-    else if (p.voidType === "cage") rail = "#ee6dff";
-    ctx.strokeStyle = rail; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(p.x, p.y + 1); ctx.lineTo(p.x + p.w, p.y + 1); ctx.stroke();
-    ctx.strokeStyle = this._rgba(laneCol, 0.72); ctx.lineWidth = 2; ctx.strokeRect(p.x, p.y, p.w, p.h);
+    body.addColorStop(0, this._lighten(mineral, 0.08)); body.addColorStop(0.18, mineral); body.addColorStop(1, this._darken(mineral, 0.58));
+    ctx.fillStyle = body; ctx.beginPath();
+    ctx.moveTo(p.x + chipL, p.y); ctx.lineTo(p.x + p.w - chipR, p.y); ctx.lineTo(p.x + p.w, p.y + 5);
+    ctx.lineTo(p.x + p.w - 5, p.y + p.h - 2); ctx.lineTo(p.x + p.w * 0.72, p.y + p.h + 7 + (seed % 7));
+    ctx.lineTo(p.x + p.w * 0.48, p.y + p.h - 1); ctx.lineTo(p.x + p.w * 0.27, p.y + p.h + 6 + ((seed >>> 4) % 8));
+    ctx.lineTo(p.x + 3, p.y + p.h - 2); ctx.lineTo(p.x, p.y + 5); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = this._lighten(mineral, 0.32); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(p.x + chipL, p.y + 1); ctx.lineTo(p.x + p.w - chipR, p.y + 1); ctx.stroke();
 
     if (p.voidType === "crumble") {
       const k = p.touchT < 0 ? 0 : 1 - clamp(p.touchT / CONFIG.source.voidCrumbleStand, 0, 1);
@@ -181,15 +184,10 @@ const Backdrop = {
       }
     } else if (p.voidType === "cage" && typeof VoidGen !== "undefined") {
       const r = VoidGen.cageGeometry(p);
-      ctx.globalAlpha = alpha * 0.20; ctx.fillStyle = "#e769ff"; ctx.fillRect(r.x, r.y, r.w, r.h);
-      ctx.globalAlpha = alpha * 0.9; ctx.strokeStyle = "#f3a2ff"; ctx.lineWidth = 3; ctx.strokeRect(r.x, r.y, r.w, r.h);
-      ctx.lineWidth = 2;
-      for (let y = r.y + 16; y < r.y + r.h; y += 24) { ctx.beginPath(); ctx.moveTo(r.x, y); ctx.lineTo(r.x + r.w, y); ctx.stroke(); }
+      ctx.globalAlpha = alpha * 0.26; ctx.fillStyle = accent;
+      ctx.beginPath(); ctx.moveTo(r.centerX, r.y); ctx.lineTo(r.x + r.w, r.y + r.h * 0.45); ctx.lineTo(r.centerX, r.y + r.h); ctx.lineTo(r.x, r.y + r.h * 0.55); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = alpha * 0.7; ctx.strokeStyle = this._lighten(accent, 0.35); ctx.lineWidth = 2; ctx.stroke();
       ctx.globalAlpha = alpha;
-    }
-
-    if (p.transferNode) {
-      ctx.strokeStyle = "#fff"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(p.x + p.w / 2, p.y - 2, 7, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.restore();
   },

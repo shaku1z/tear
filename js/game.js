@@ -3247,19 +3247,8 @@
         ctx.restore(); ctx.globalAlpha = 1;
       }
     }
-    // Transfer filaments resolve connection IDs back to the exact live surfaces;
-    // they disappear with a crumbled endpoint and never imply a phantom route.
-    if (voidActive && run.voidScroll.chunks) {
-      const byId = new Map(platforms.filter((p) => p.void).map((p) => [p.platformId, p]));
-      ctx.save(); ctx.strokeStyle = "#9b70ff"; ctx.globalAlpha = GFX.low ? 0.26 : 0.38; ctx.lineWidth = 3;
-      if (!GFX.low) ctx.setLineDash([10, 12]);
-      for (const chunk of run.voidScroll.chunks) for (const edge of chunk.connections || []) {
-        const a = byId.get(edge.from), b = byId.get(edge.to); if (!a || !b) continue;
-        const ax = a.x + a.w / 2, ay = a.y, bx = b.x + b.w / 2, by = b.y;
-        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.bezierCurveTo(ax + (bx - ax) * 0.32, ay, bx - (bx - ax) * 0.32, by, bx, by); ctx.stroke();
-      }
-      ctx.setLineDash([]); ctx.restore();
-    }
+    // The braid's route graph is intentionally invisible in release. Transfer
+    // windows remain simulation metadata and are inspectable in Pantheon debug.
     // Broken arena platforms leave diegetic fragments / reform silhouettes even
     // while they are absent from collision.
     if (run && run._arenaBroken) for (const p of run._arenaBroken) Backdrop.platform(ctx, p, currentStage, false, backdropView);

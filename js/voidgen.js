@@ -1,4 +1,4 @@
-// ------- paired-lane generator for The Source's Void Run --------------------
+// ------- braided-strata generator for The Source's Void Run ----------------
 //
 // VoidGen deliberately owns no game state and never calls Math.random(). A run
 // seed plus the returned generator state completely determines every chunk, so a
@@ -9,8 +9,10 @@ const VoidGen = (() => {
   "use strict";
 
   const LANES = Object.freeze(["lower", "upper"]);
-  const CONNECTOR_MOTIFS = Object.freeze(["staircase", "dropRoute", "convergence"]);
-  const ROUTE_MOTIFS = Object.freeze(["fork", "riskReward", "cageBypass", "staggeredFire", "wispBridge"]);
+  // These names describe invisible reachability relationships, not scenery.
+  // The release renderer never paints ladders, nodes or connector filaments.
+  const CONNECTOR_MOTIFS = Object.freeze(["braidRise", "braidDrop", "eclipse"]);
+  const ROUTE_MOTIFS = Object.freeze(["fork", "riskReward", "fractureBypass", "staggeredFire", "wispBridge"]);
   const MOTIFS = Object.freeze([...ROUTE_MOTIFS, ...CONNECTOR_MOTIFS]);
 
   const DEFAULTS = Object.freeze({
@@ -18,8 +20,8 @@ const VoidGen = (() => {
     chunkWidthMin: 580,
     chunkWidthMax: 720,
     platformHeight: 22,
-    platformWidthMin: 170,
-    platformWidthMax: 238,
+    platformWidthMin: 150,
+    platformWidthMax: 285,
     edgeInset: 24,
     laneClearance: 76,
     lowerBandMin: 550,
@@ -123,7 +125,7 @@ const VoidGen = (() => {
     const options = normaliseOptions(overrides);
     const value = seed32(seed);
     return {
-      version: 1,
+      version: 2,
       seed: value,
       rngState: mix32(value ^ 0x4f1bbcdc),
       nextChunkId: 0,
@@ -157,7 +159,7 @@ const VoidGen = (() => {
   function chooseLaneY(state, motif, rng, options) {
     let lower = clamp(state.lastExitY.lower + randomRange(rng, -24, 24),
       Math.max(options.lowerBandMin, 580), Math.min(options.lowerBandMax, 680));
-    const tightTransfer = motif === "staircase" || motif === "dropRoute" || motif === "convergence" || motif === "cageBypass";
+    const tightTransfer = motif === "braidRise" || motif === "braidDrop" || motif === "eclipse" || motif === "fractureBypass";
     let upper;
     if (tightTransfer) {
       const delta = randomRange(rng, options.transferDeltaMin, options.transferDeltaMax);
@@ -171,10 +173,12 @@ const VoidGen = (() => {
     if (lower - upper < minSurfaceDelta) upper = lower - minSurfaceDelta;
     upper = clamp(upper, options.upperBandMin, options.upperBandMax);
     lower = clamp(lower, Math.max(options.lowerBandMin, upper + minSurfaceDelta), options.lowerBandMax);
-    const sharedStep = randomRange(rng, -15, 15);
+    // Each stratum gets its own vertical cadence. The bands remain physically
+    // legible, but no shared step makes the upper route look copied from below.
+    const lowerStep = randomRange(rng, -22, 22), upperStep = randomRange(rng, -22, 22);
     return {
-      lower: [lower, clamp(lower + sharedStep, options.lowerBandMin, options.lowerBandMax)],
-      upper: [upper, clamp(upper + sharedStep, options.upperBandMin, options.upperBandMax)],
+      lower: [lower, clamp(lower + lowerStep, options.lowerBandMin, options.lowerBandMax)],
+      upper: [upper, clamp(upper + upperStep, options.upperBandMin, options.upperBandMax)],
     };
   }
 
@@ -207,8 +211,14 @@ const VoidGen = (() => {
       const base = compact ? o.platformWidthMax : (roomy ? o.platformWidthMin : (o.platformWidthMin + o.platformWidthMax) * 0.5);
       const w0 = fitWidth(base + randomRange(rng, -12, 12), 2);
       const w1 = fitWidth(base + randomRange(rng, -12, 12), 2);
-      raw[lane].push({ rx: edge, y: ys[lane][0], w: w0, type: types[0], role: "entry" });
-      raw[lane].push({ rx: width - edge - w1, y: ys[lane][1], w: w1, type: types[1], role: "exit" });
+      // Alternate which stratum leads. A guaranteed 66px+ phase difference
+      // prevents paired entries/exits from resolving into two aligned rows.
+      const leadLower = (chunkId & 1) === 0;
+      const leads = lane === (leadLower ? "lower" : "upper");
+      const near = randomRange(rng, 0, 24), far = randomRange(rng, 90, 125);
+      const entryShift = leads ? near : far, exitInset = leads ? far : near;
+      raw[lane].push({ rx: edge + entryShift, y: ys[lane][0], w: w0, type: types[0], role: "entry" });
+      raw[lane].push({ rx: width - edge - exitInset - w1, y: ys[lane][1], w: w1, type: types[1], role: "exit" });
     }
 
     function addBridge(lane, type) {
@@ -218,7 +228,9 @@ const VoidGen = (() => {
 
     function addSingle(lane, type) {
       const w = clamp(width * 0.54 + randomRange(rng, -18, 18), 290, Math.min(390, width - edge * 2));
-      raw[lane].push({ rx: (width - w) * 0.5, y: (ys[lane][0] + ys[lane][1]) * 0.5, w, type, role: "bridge" });
+      const leadLower = (chunkId & 1) === 0, dir = lane === (leadLower ? "lower" : "upper") ? -1 : 1;
+      raw[lane].push({ rx: clamp((width - w) * 0.5 + dir * 78, edge, width - edge - w),
+        y: (ys[lane][0] + ys[lane][1]) * 0.5, w, type, role: "bridge" });
     }
 
     // Exactly one sparse paired chunk in every four keeps the zoomed-out stream
@@ -227,33 +239,31 @@ const VoidGen = (() => {
     // pressure without turning the sole landing into a trap.
     if (sparse) {
       addSingle("lower", "plain"); addSingle("upper", "plain");
-      if (motif === "staircase" || motif === "convergence") {
-        pendingConnectors.push(["lower", 0, "upper", 0, motif === "staircase" ? "stairUp" : "convergeUp"],
-          ["upper", 0, "lower", 0, motif === "staircase" ? "stairDown" : "convergeDown"]);
-      } else if (motif === "dropRoute") {
+      if (motif === "braidRise" || motif === "eclipse") {
+        pendingConnectors.push(["lower", 0, "upper", 0, motif === "braidRise" ? "rise" : "eclipseUp"],
+          ["upper", 0, "lower", 0, motif === "braidRise" ? "fall" : "eclipseDown"]);
+      } else if (motif === "braidDrop") {
         pendingConnectors.push(["upper", 0, "lower", 0, "drop"]);
-      } else if (motif === "cageBypass") {
-        // A sparse bypass remains an open transfer window; the lane pressure is
-        // supplied by the Source rather than an unavoidable bar on the only tile.
+      } else if (motif === "fractureBypass") {
         if (pressureLane === "lower") pendingConnectors.push(["lower", 0, "upper", 0, "bypassUp"]);
         else pendingConnectors.push(["upper", 0, "lower", 0, "bypassDown"]);
       }
     } else if (motif === "fork") {
       addPair("lower", pressureLane === "lower" ? ["crumble", "plain"] : ["plain", "plain"]);
       addPair("upper", pressureLane === "upper" ? ["crumble", "plain"] : ["plain", "plain"]);
-    } else if (motif === "staircase") {
+    } else if (motif === "braidRise") {
       addPair("lower", ["plain", "plain"]); addPair("upper", ["plain", "plain"]);
-      pendingConnectors.push(["lower", 0, "upper", 1, "stairUp"], ["upper", 0, "lower", 1, "stairDown"]);
-    } else if (motif === "dropRoute") {
+      pendingConnectors.push(["lower", 0, "upper", 1, "rise"], ["upper", 0, "lower", 1, "fall"]);
+    } else if (motif === "braidDrop") {
       addPair("lower", ["plain", "plain"]); addPair("upper", ["plain", "plain"]);
       pendingConnectors.push(["upper", 0, "lower", 1, "drop"]);
     } else if (motif === "riskReward") {
       const safe = pressureLane === "lower" ? "upper" : "lower";
       addPair(pressureLane, ["fire", "plain"], "compact");
       addPair(safe, ["plain", "plain"], "roomy");
-    } else if (motif === "cageBypass") {
+    } else if (motif === "fractureBypass") {
       const safe = pressureLane === "lower" ? "upper" : "lower";
-      addPair(pressureLane, ["cage", "plain"]); addPair(safe, ["plain", "plain"]);
+      addPair(pressureLane, ["crumble", "plain"]); addPair(safe, ["plain", "plain"]);
       if (pressureLane === "lower") {
         pendingConnectors.push(["lower", 0, "upper", 0, "bypassUp"], ["upper", 1, "lower", 1, "bypassDown"]);
       } else {
@@ -267,9 +277,9 @@ const VoidGen = (() => {
       }
     } else if (motif === "wispBridge") {
       addPair("lower", ["crumble", "plain"], "roomy"); addPair("upper", ["plain", "plain"], "compact");
-    } else { // convergence
+    } else { // eclipse
       addPair("lower", ["plain", "plain"]); addPair("upper", ["plain", "plain"]);
-      pendingConnectors.push(["lower", 0, "upper", 1, "convergeUp"], ["upper", 0, "lower", 1, "convergeDown"]);
+      pendingConnectors.push(["lower", 0, "upper", 1, "eclipseUp"], ["upper", 0, "lower", 1, "eclipseDown"]);
     }
 
     const platforms = [];
@@ -335,7 +345,7 @@ const VoidGen = (() => {
     for (const p of platforms) threat[p.voidLane] += threatForType(p.voidType);
     threat[pressureLane] += 0.45; // lane-aware Source pressure keeps plain routes from becoming shelter
     if (motif === "wispBridge") threat.upper += 1.6;
-    if (motif === "convergence") { threat.lower += 0.7; threat.upper += 0.7; }
+    if (motif === "eclipse") { threat.lower += 0.7; threat.upper += 0.7; }
 
     return {
       id: `void:${seedHex}:chunk:${chunkId}`,
@@ -346,7 +356,7 @@ const VoidGen = (() => {
       motif,
       pressureLane,
       wispLane: motif === "wispBridge" ? "upper" : null,
-      majorAttackWindow: motif === "convergence",
+      majorAttackWindow: motif === "eclipse",
       hasTransfer: connectors.length > 0,
       transferWindow: transferXs.length ? { x0: Math.min(...transferXs) - 72, x1: Math.max(...transferXs) + 72 } : null,
       transferWindowLocal: transferXs.length ? { x0: Math.min(...transferXs) - x - 72, x1: Math.max(...transferXs) - x + 72 } : null,
@@ -602,6 +612,11 @@ const VoidGen = (() => {
         if (!lanePlatforms.length) errors.push(`chunk ${chunk.chunkId}: empty ${lane} lane`);
         for (let i = 1; i < lanePlatforms.length; i++) if (lanePlatforms[i].x <= lanePlatforms[i - 1].x) errors.push(`chunk ${chunk.chunkId}: unordered ${lane} lane`);
       }
+      const lower = (chunk.lanes && chunk.lanes.lower) || [], upper = (chunk.lanes && chunk.lanes.upper) || [];
+      for (let i = 0; i < Math.min(lower.length, upper.length); i++) {
+        const lc = lower[i].x + lower[i].w * 0.5, uc = upper[i].x + upper[i].w * 0.5;
+        if (Math.abs(lc - uc) < 48) errors.push(`chunk ${chunk.chunkId}: mirrored strata ${i}`);
+      }
       if (!chunk.platforms.some((p) => p.voidType === "plain" && p.x + p.w >= chunk.x + chunk.width * 0.5)) errors.push(`chunk ${chunk.chunkId}: no stable forward landing`);
     }
     for (const p of platforms) {
@@ -682,7 +697,7 @@ const VoidGen = (() => {
   }
 
   function next(state, appendX) {
-    if (!state || state.version !== 1 || !state.options) throw new Error("VoidGen.next requires a state from VoidGen.create");
+    if (!state || state.version !== 2 || !state.options) throw new Error("VoidGen.next requires a state from VoidGen.create");
     // A scrolling integration may pass the current right edge. Route identity,
     // RNG, ids, and hazards remain unchanged; only the screen-space placement is
     // rebased, so no mutable global scroll offset leaks into generation.
@@ -693,7 +708,10 @@ const VoidGen = (() => {
     const rng = { value: state.rngState >>> 0 };
     const connectorDue = state.nextChunkId >= state.nextConnectorAt;
     let chunk = null, motif = "";
-    for (let attempt = 0; attempt < 12; attempt++) {
+    // Braided placement deliberately rejects mirrored silhouettes in addition
+    // to unreachable geometry. Keep a generous finite retry budget so an
+    // unlucky RNG run never turns a valid seed into a runtime failure.
+    for (let attempt = 0; attempt < 48; attempt++) {
       motif = chooseMotif(state, rng, connectorDue);
       const sparse = ((state.nextChunkId + state.densityOffset) & 3) === 0;
       if (sparse && motif === "staggeredFire") motif = "riskReward";

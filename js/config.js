@@ -246,7 +246,7 @@ const CONFIG = {
     // TWO-STOREY VOID: whole paired chunks, authored lane bands, and stable
     // hazard clocks. Route geometry is consumed by VoidGen and the live stream.
     voidChunkWidthMin: 580, voidChunkWidthMax: 720,
-    voidPlatformWidthMin: 170, voidPlatformWidthMax: 238,
+    voidPlatformWidthMin: 150, voidPlatformWidthMax: 285,
     voidLowerMin: 550, voidLowerMax: 700, voidUpperMin: 350, voidUpperMax: 510,
     voidLaneClearance: 76, voidTransferMin: 145, voidTransferMax: 165,
     voidSpawnBehind: 360, voidSpawnAhead: 680, voidRecycleMargin: 150,
