@@ -3535,7 +3535,11 @@ class Source extends Enemy {
     this.breachDX = dx; this.breachDY = dy;
     this.breachCommitX = player.x; this.breachCommitY = player.y;
     this.breachLane = this.mode === "void" ? player.voidLane : null;
-    this.breachDestX = player.x + dx * beyond; this.breachDestY = player.y + dy * beyond;
+    // the breach passes THROUGH the player and beyond — but the Source must never
+    // leave the arena, so the destination is clamped on-screen (a breach toward a
+    // near wall simply stops at it instead of flying off the map and dying)
+    this.breachDestX = clamp(player.x + dx * beyond, this.hw, CONFIG.view.w - this.hw);
+    this.breachDestY = clamp(player.y + dy * beyond, 60, CONFIG.world.groundY - this.hh);
     this.breachStartX = this.x; this.breachStartY = this.y;
     this.breachState = "tell";
     this.breachT = C.breachTellMin + Math.random() * (C.breachTellMax - C.breachTellMin);
@@ -3579,6 +3583,7 @@ class Source extends Enemy {
       this.breachT -= dt;
       this.vx = this.breachDX * this.breachSpeed; this.vy = this.breachDY * this.breachSpeed;
       this.x += this.vx * dt; this.y += this.vy * dt; this._applyBreachNudge(dt);
+      this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw); this.y = clamp(this.y, 60, CONFIG.world.groundY - this.hh);
       const remain = (this.breachDestX - this.x) * this.breachDX + (this.breachDestY - this.y) * this.breachDY;
       if (remain <= 0 || this.breachT <= 0) this._finishSoftBreach();
       return;
@@ -3589,7 +3594,7 @@ class Source extends Enemy {
       const damp = Math.exp(-C.breachRecoilDrag * dt);
       this.breachRecoilVX *= damp; this.breachRecoilVY *= damp;
       this.vx = this.breachRecoilVX; this.vy = this.breachRecoilVY;
-      this.x = clamp(this.x, -this.hw, CONFIG.view.w + this.hw);
+      this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);   // recoil stays fully on-screen — the Source never leaves the arena
       this.y = clamp(this.y, 50, CONFIG.world.groundY - this.hh);
       if (this.breachT <= 0) this._finishSoftBreach();
     }
@@ -3775,11 +3780,10 @@ class Source extends Enemy {
       this.x += this.dashDX * dt; this.y += this.dashDY * dt;
       const contact = len(player.x - this.x, player.y - this.y) < this.hw + player.hw + 8;
       if (contact && !player.invulnerable) { player.takeDamage(this._voidDmg(C.dashDmg), this.x, this); FX.burst(player.x, player.y, this.dashTX, this.dashTY, 8, this.color); }
-      const off = this.x < -60 || this.x > CONFIG.view.w + 60 || this.y < 40 || this.y > CONFIG.world.groundY + 40;
-      if (this.dashT <= 0 || off) {
-        this.dashState = "idle"; this.dashCd = C.dashCd;
-        this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw); this.y = clamp(this.y, 80, CONFIG.world.groundY - this.hh);
-      }
+      // the charge stops AT the arena edge — it flashes across, never off the map
+      const hitEdge = this.x <= this.hw || this.x >= CONFIG.view.w - this.hw || this.y <= 80 || this.y >= CONFIG.world.groundY - this.hh;
+      this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw); this.y = clamp(this.y, 80, CONFIG.world.groundY - this.hh);
+      if (this.dashT <= 0 || hitEdge) { this.dashState = "idle"; this.dashCd = C.dashCd; }
     }
     for (const g of this.dashGhosts) g.t -= dt;
     this.dashGhosts = this.dashGhosts.filter((g) => g.t > 0);
