@@ -9534,6 +9534,9 @@ var TearScore = (() => {
       globalContext = context2;
     }
   }
+  function start() {
+    return globalContext.resume();
+  }
   if (theWindow && !theWindow.TONE_SILENCE_LOGGING) {
     let prefix = "v";
     if (version === "dev") {
@@ -18905,8 +18908,8 @@ var TearScore = (() => {
   var ToneTearScoreRuntime = class extends AbstractTearScoreRuntime {
     _transport = new ToneTransport();
     _masterBus;
-    // Test oscillator for Phase 1
     _testOsc;
+    _testOscStarted = false;
     get transport() {
       return this._transport;
     }
@@ -18928,7 +18931,11 @@ var TearScore = (() => {
       this._testOsc = new Oscillator(440, "sine").connect(this._masterBus);
     }
     async onStart() {
-      this._testOsc?.start();
+      await start();
+      if (!this._testOscStarted) {
+        this._testOsc?.start();
+        this._testOscStarted = true;
+      }
       this._transport.start();
     }
     onPause() {
@@ -18936,7 +18943,8 @@ var TearScore = (() => {
       if (this._masterBus) this._masterBus.gain.value = 0;
     }
     async onResume() {
-      if (this._masterBus && !this.isMuted) this._masterBus.gain.value = 1;
+      await start();
+      if (this._masterBus && !this.isMuted) this._masterBus.gain.rampTo(0.7, 0.05);
       this._transport.start();
     }
     onStop() {
@@ -21538,8 +21546,8 @@ var TearScore = (() => {
         this.composer.load(targetBlueprint);
         this.runtime.transport.setTempo(targetBlueprint.global.tempo);
         this.currentBlueprintId = targetBlueprintId;
-        if (this.runtime.state === "running" || ctx.screen === "playing" || ctx.screen === "menu" || ctx.screen === "ending") {
-          this.runtime.start();
+        if (this.runtime.state === "running") {
+          this.runtime.transport.start();
         }
       }
       if (this.runtime.state === "running") {
