@@ -276,6 +276,9 @@ class Enemy {
 
   hit(dmg, knockX, knockY) {
     if (this.dead || this.dying) return 0;
+    // Overrun foundation (Weapons WA1): stamp the first player-owned damage so a
+    // fast follow-up kill can be recognised as a Clean Elimination on death.
+    if (this.firstPlayerDamageAt == null && typeof CLOCK !== "undefined") this.firstPlayerDamageAt = CLOCK.sim;
     this.hitCd = CONFIG.blade.enemyHitIframe;
     this.flash = 0.08;
     const before = this.hp;

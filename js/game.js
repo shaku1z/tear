@@ -505,7 +505,18 @@
     return best;
   }
   function fire(list, ev) { for (const f of list) f(ev); }
-  function makeEv(x, y, enemy, cause) { return { player, enemies, fx: FX, x, y, enemy, cause, dealAoE, addFloater }; }
+  function makeEv(x, y, enemy, cause, extra) {
+    const ev = { player, enemies, fx: FX, x, y, enemy, cause, dealAoE, addFloater };
+    if (extra) Object.assign(ev, extra);
+    return ev;
+  }
+  // dispatch an optional weapon-contract hook (no-op when the equipped weapon
+  // doesn't define it). ctx carries whatever the call site knows (blade, enemy, ...).
+  function weaponHook(name, ctx) {
+    const w = run && run.weapon;
+    if (w && typeof w[name] === "function") { try { return w[name](ctx || {}); } catch (e) {} }
+    return undefined;
+  }
   // Aegis: feedback when a stored shield pip eats a hit (no HP lost, style kept)
   function onShieldAbsorb() {
     SFX.parry();
@@ -1692,7 +1703,9 @@
     CONFIG.player.dmgTakenMult *= (dm.dmg || 1);   // difficulty: harder = every hit lands heavier (uniform)
     player = new Player(W * 0.5, CONFIG.world.groundY - 60);
     player.oneHit = d.oneHit;
+    run.weapon = weapon;            // the equipped weapon object (contract hooks + metadata)
     blade = new Blade();
+    blade.weapon = weapon;          // the blade delegates weapon-specific behaviour to this
     blade.throwType = weapon.throwType;
     blade.model = weapon.model || "sword";
     blade.restoredTrail = !!(PROFILE.data.rewards && PROFILE.data.rewards.restoredBladeTrail);

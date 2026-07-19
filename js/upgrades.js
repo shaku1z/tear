@@ -8,6 +8,10 @@
 function newMods() {
   return {
     onHit: [], onKill: [], onParry: [], onSlam: [],
+    // normalized combat-event hooks (Weapons WA1) — abilities subscribe here; weapons
+    // and the combat loop emit. Kept as arrays so `fire()` works uniformly.
+    onThrowLaunch: [], onThrowResolve: [], onReturnHit: [], onWeaponCatch: [],
+    onEnemyFirstDamaged: [], onReflectedHit: [],
     owned: {}, ownedList: [],
     // unique-ability flags, read by the combat loop:
     throwRamp: 0,         // per-pierce damage/speed ramp on a thrown blade
