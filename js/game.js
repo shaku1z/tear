@@ -6656,8 +6656,38 @@
 
     let pos = enabled.indexOf(focus);
     if (pos < 0) { pos = 0; focus = enabled[0]; }
-    if (Input.menuPrev()) { pos = (pos - 1 + enabled.length) % enabled.length; focus = enabled[pos]; }
-    if (Input.menuNext()) { pos = (pos + 1) % enabled.length; focus = enabled[pos]; }
+    // spatial focus: pick the nearest enabled control in the pressed direction using
+    // button geometry, so true 2D grids (drafts, tier-up, card grids) navigate by
+    // row+column. Falls back to the linear wrap when there is no neighbour that way
+    // — which preserves every existing single-column / single-row menu unchanged.
+    const spatialFocus = (dir) => {
+      const cur = uiButtons[focus]; if (!cur) return null;
+      const cx = cur.x + cur.w / 2, cy = cur.y + cur.h / 2;
+      let best = null, bestScore = Infinity;
+      for (const i of enabled) {
+        if (i === focus) continue;
+        const b = uiButtons[i], dx = (b.x + b.w / 2) - cx, dy = (b.y + b.h / 2) - cy;
+        let ok = false, primary = 0, secondary = 0;
+        if (dir === "left") { ok = dx < -4; primary = -dx; secondary = Math.abs(dy); }
+        else if (dir === "right") { ok = dx > 4; primary = dx; secondary = Math.abs(dy); }
+        else if (dir === "up") { ok = dy < -4; primary = -dy; secondary = Math.abs(dx); }
+        else { ok = dy > 4; primary = dy; secondary = Math.abs(dx); }   // down
+        if (!ok) continue;
+        const score = primary + secondary * 2.2;   // prefer aligned + close
+        if (score < bestScore) { bestScore = score; best = i; }
+      }
+      return best;
+    };
+    let moved = false;
+    const tryDir = (cond, dir) => { if (moved || !cond) return; const n = spatialFocus(dir); if (n != null) { focus = n; moved = true; } };
+    tryDir(Input.menuLeft(), "left");
+    tryDir(Input.menuRight(), "right");
+    tryDir(Input.menuUp(), "up");
+    tryDir(Input.menuDown(), "down");
+    if (!moved) {   // linear wrap fallback (edges of a grid, or a plain list)
+      if (Input.menuPrev()) { pos = (pos - 1 + enabled.length) % enabled.length; focus = enabled[pos]; }
+      else if (Input.menuNext()) { pos = (pos + 1) % enabled.length; focus = enabled[pos]; }
+    }
 
     // draft quick-select
     if (state === "draft") {
