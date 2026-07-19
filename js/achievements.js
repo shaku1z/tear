@@ -120,7 +120,7 @@ const ACH = {
       S("friendly_fire", "combat", "rare", "Friendly Fire", "Have a Bomber blast kill 3 other enemies.", "bomberBetrayal", 3),
 
       // ---- MASTERY & META ----
-      S("weapon_master", "mastery", "rare", "Armory", "Win a run with each weapon.", "distinctWeaponsWon", 2),
+      S("weapon_master", "mastery", "rare", "Armory", "Win a run with each weapon.", "distinctWeaponsWon", 5),
       Object.assign(S("arsenal", "mastery", "legendary", "Arsenal", "Max out every item in the meta shop."), {
         current: () => typeof SHOP === "undefined" ? 0 : SHOP.filter((s) => META.level(s.id) >= s.maxLevel).length,
         goal: () => typeof SHOP === "undefined" ? 1 : SHOP.length,

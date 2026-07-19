@@ -510,11 +510,97 @@
     if (extra) Object.assign(ev, extra);
     return ev;
   }
+  function runDamageMult() {
+    return run && run.mods && run.mods.overrunStacks ? 1 + run.mods.overrunStacks * CONFIG.overrun.damagePerStack : 1;
+  }
+  function logWeaponEvent(type, data) {
+    if (!run || !run.weaponLog) return;
+    run.weaponLog.push(Object.assign({ t: CLOCK.sim, type, weaponId: run.weaponId }, data || {}));
+    if (run.weaponLog.length > 240) run.weaponLog.shift();
+  }
+  function noteFirstPlayerDamage(enemy, wasUnset) {
+    if (!wasUnset || enemy.firstPlayerDamageAt == null) return;
+    fire(run.mods.onEnemyFirstDamaged, makeEv(enemy.x, enemy.y, enemy, "firstDamage", { type: "enemyFirstDamaged", at: enemy.firstPlayerDamageAt }));
+  }
+  function applySever(enemy, tier) {
+    if (!enemy || enemy.dead || !enemy.applySever) return;
+    enemy.applySever(tier);
+    FX.ring(enemy.x, enemy.y, 9, "#b06cff");
+    addFloater(enemy.x, enemy.y - enemy.hh - 14, "SEVER", false, "#b06cff");
+  }
+  function addOverrunStack(mods) {
+    const tier = clamp(mods.overrun || 1, 1, 3), max = CONFIG.overrun.maxStacks[tier - 1];
+    mods.overrunStacks = Math.min(max, mods.overrunStacks + 1);
+    mods.overrunHoldT = CONFIG.overrun.hold; mods.overrunDecayT = CONFIG.overrun.decayStep;
+    if (tier >= 3 && mods.overrunStacks >= max) mods.redlineT = CONFIG.overrun.redline;
+    addFloater(player.x, player.y - 58, mods.redlineT > 0 ? "REDLINE" : "OVERRUN ×" + mods.overrunStacks, true, CONFIG.colors.charger);
+  }
+  function updateWeaponAbilities(dt) {
+    const mods = run.mods;
+    if (mods.redlineT > 0) mods.redlineT = Math.max(0, mods.redlineT - dt);
+    if (mods.overrunStacks > 0 && mods.redlineT <= 0) {
+      if (mods.overrunHoldT > 0) mods.overrunHoldT -= dt;
+      else {
+        mods.overrunDecayT -= dt;
+        if (mods.overrunDecayT <= 0) { mods.overrunStacks--; mods.overrunDecayT = CONFIG.overrun.decayStep; }
+      }
+    }
+    if (mods.stormEchoes && mods.stormEchoes.length) {
+      for (const echo of mods.stormEchoes) {
+        echo.t -= dt; echo.arcT -= dt;
+        if (echo.arcT <= 0 && echo.t > 0) {
+          echo.arcT += CONFIG.stormbank.echoInterval;
+          const target = enemies.filter((e) => !e.dead && len(e.x - echo.x, e.y - echo.y) <= CONFIG.stormbank.radius)
+            .sort((a, b) => len(a.x - echo.x, a.y - echo.y) - len(b.x - echo.x, b.y - echo.y))[0];
+          if (target) { target.hit(CONFIG.stormbank.chainDamage * 0.45, target.x - echo.x, target.y - echo.y); FX.ribbon(echo.x, echo.y, target.x, target.y, CONFIG.colors.perfect); if (target.dead) onKill(target, "skill"); }
+        }
+      }
+      mods.stormEchoes = mods.stormEchoes.filter((echo) => echo.t > 0);
+    }
+  }
+  function dischargeStormbank(mods, ev) {
+    if (!mods.stormbank || !mods.stormCharges || !ev.primaryTarget) return;
+    const tier = clamp(mods.stormbank, 1, 3), i = tier - 1, charges = mods.stormCharges;
+    mods.stormCharges = 0;
+    const bonus = Math.min(CONFIG.stormbank.maxPrimary[i], charges * CONFIG.stormbank.primaryPerCharge[i]);
+    const primaryBonus = ev.damageDealt * bonus;
+    ev.primaryTarget.hit(primaryBonus, ev.primaryTarget.x - ev.x, ev.primaryTarget.y - ev.y);
+    const maxTargets = Math.min(CONFIG.stormbank.maxTargets[i], Math.ceil(charges / 2));
+    const targets = enemies.filter((e) => e !== ev.primaryTarget && !e.dead && len(e.x - ev.x, e.y - ev.y) <= CONFIG.stormbank.radius)
+      .sort((a, b) => len(a.x - ev.x, a.y - ev.y) - len(b.x - ev.x, b.y - ev.y)).slice(0, maxTargets);
+    for (const e of targets) {
+      e.hit(CONFIG.stormbank.chainDamage * (0.7 + charges * 0.06), e.x - ev.x, e.y - ev.y);
+      if (tier >= 2 && !e.isBoss) e.stun = Math.max(e.stun, CONFIG.stormbank.stun);
+      FX.ribbon(ev.x, ev.y, e.x, e.y, CONFIG.colors.perfect);
+      if (e.dead) onKill(e, "skill");
+    }
+    FX.ring(ev.x, ev.y, 18, CONFIG.colors.perfect); addFloater(ev.x, ev.y - 32, "STORMBANK ×" + charges, true, CONFIG.colors.perfect);
+    if (tier >= 3) mods.stormEchoes.push({ x: ev.x, y: ev.y, t: CONFIG.stormbank.echoDuration, arcT: CONFIG.stormbank.echoInterval });
+  }
+  function emitThrowResolve(enemy, damage) {
+    if (blade.throwResolved) return;
+    blade.throwResolved = true;
+    const ev = makeEv(blade.x, blade.y, enemy, "throw", {
+      type: "throwResolve", throwId: blade.throwId, weaponId: blade.weapon && blade.weapon.id,
+      primaryTarget: enemy, targetsHit: [enemy], damageDealt: damage,
+      dischargeStormbank: (mods) => dischargeStormbank(mods, ev),
+    });
+    fire(run.mods.onThrowResolve, ev);
+  }
+  function collapseAt(x, y) {
+    if (!run.mods.collapse) return;
+    for (const e of enemies) {
+      if (e.dead || e.anchored || len(e.x - x, e.y - y) > 190 + e.radius) continue;
+      const dx = x - e.x, dy = y - e.y, m = len(dx, dy) || 1, resist = e.isBoss ? 0.12 : 1 / e.weight;
+      e.vx += dx / m * 640 * resist; e.vy += dy / m * 420 * resist;
+    }
+    FX.ring(x, y, 14, CONFIG.colors.perfect);
+  }
   // dispatch an optional weapon-contract hook (no-op when the equipped weapon
   // doesn't define it). ctx carries whatever the call site knows (blade, enemy, ...).
   function weaponHook(name, ctx) {
     const w = typeof blade !== "undefined" && blade && blade.weapon;
-    if (w && typeof w[name] === "function") { try { return w[name](ctx || {}); } catch (e) {} }
+    if (w && typeof w[name] === "function") return w[name](ctx || {});
     return undefined;
   }
   // Aegis: feedback when a stored shield pip eats a hit (no HP lost, style kept)
@@ -527,7 +613,7 @@
   }
 
   // a lobbed bomb / mine detonates: parried-back bombs hit enemies; otherwise the player
-  function bombExplode(x, y, deflected) {
+  function bombExplode(x, y, deflected, source) {
     const B = CONFIG.bomber;
     FX.explode(x, y, deflected ? CONFIG.colors.perfect : CONFIG.colors.bomber, deflected ? 1.5 : 1.2);
     addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry * (deflected ? 0.9 : 0.6)); SFX.boom();
@@ -539,17 +625,21 @@
         if (bombers.some((e) => e.dead)) { PROFILE.maxStat("bombDeflectKills", 1); achCheck(); }   // Return to Sender (killed a bomber with its own bomb)
       }
     } else if (len(player.x - x, player.y - y) <= B.blastRadius + player.hw) {
-      const r = player.takeDamage(B.blastDmg, x);
+      const r = player.takeDamage(B.blastDmg, x, source);
       if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb();
     }
   }
   // area damage that does NOT re-fire onKill (prevents detonate/slam recursion)
-  function dealAoE(cx, cy, radius, dmg) {
+  function dealAoE(cx, cy, radius, dmg, options) {
+    const playerOwned = !options || options.playerOwned !== false;
+    if (playerOwned) dmg *= runDamageMult();
     let kills = 0;
     for (const e of enemies) {
       if (e.dead) continue;
       if (len(e.x - cx, e.y - cy) <= radius + e.radius) {
-        e.hit(dmg, e.x - cx, e.y - cy);
+        const firstDamage = e.firstPlayerDamageAt == null;
+        e.hit(dmg, e.x - cx, e.y - cy, { playerOwned });
+        if (playerOwned) noteFirstPlayerDamage(e, firstDamage);
         FX.burst(e.x, e.y, e.x - cx, e.y - cy, 5, e.color);
         addFloater(e.x, e.y - 24, Math.round(dmg).toString(), false);
         if (e.dead) { addKillScore(); FX.death(e.x, e.y, CONFIG.juice.deathShards, e.color); kills++; }
@@ -1677,6 +1767,7 @@
     for (const off of [-0.34, 0.34]) {
       const a = baseAng + off;
       const q = new Projectile(p.x, p.y, Math.cos(a) * spd, Math.sin(a) * spd);
+      q.owner = p.owner; q.sourceEnemy = p.sourceEnemy || p.owner;
       q.deflect(Math.cos(a), Math.sin(a), spd, p.perfect);
       q.vx = Math.cos(a) * spd; q.vy = Math.sin(a) * spd;
       q.deflectDmg = p.deflectDmg;
@@ -1705,7 +1796,6 @@
     player.oneHit = d.oneHit;
     blade = new Blade();
     blade.weapon = weapon;          // the blade delegates weapon-specific behaviour to this
-    blade.throwType = weapon.throwType;
     blade.model = weapon.model || "sword";
     blade.restoredTrail = !!(PROFILE.data.rewards && PROFILE.data.rewards.restoredBladeTrail);
     enemies = []; projectiles = []; floaters = [];
@@ -1731,11 +1821,15 @@
       _dmgThisWave: false, _dmgThisRun: false, _dmgThisStage: false,   // no-hit achievement flags
       _achSnap: Object.keys(PROFILE.data.ach),   // achievements already owned at run start (to show "earned this run")
       weaponId: selWeapon,   // for the "win with each weapon" achievement
+      weaponStats: { heldHits: 0, trueCuts: 0, throws: 0, throwHits: 0, perfectParries: 0, breakTriggers: 0, distanceMoved: 0 },
+      weaponLog: [],
       biomeState: { swung: false, thrown: false, jumped: false },   // per-stage restriction feats
       _staticParry: 0, _airKills: 0, _projDashes: 0, _aldricSlams: 0, _revivedT: false, _bossFightT: null,
       runSeed, voidSeed: voidSeed || 1,
       chapterState: mode === "campaign" ? "LORE_ENTER" : "WAVE_LIVE", pendingBossOutro: null, _prologueShown: false,
     };
+    run.mods.weaponId = run.weaponId;
+    window.TEAR_WEAPON_DEBUG = () => ({ weapon: run.weaponId, stats: Object.assign({}, run.weaponStats), events: run.weaponLog.slice() });
     // Exodia (The Forbidden Technique): Long Arm + Throwing Arm + Aether Step + Lifeline all owned
     if (achTracks() && META.level("reach") > 0 && META.level("throwarm") > 0 && META.level("aircharge") > 0 && META.level("lifeline") > 0) PROFILE.maxStat("exodiaBuild", 1);
     arsenalScroll = 0;
@@ -2004,23 +2098,39 @@
     enemies.push(e);
   }
 
-  // hammer "lob" throw: a shockwave + stun where the thrown blade lands
+  // Hammer Meteor: commitment-scaled radial interruption and Break on first impact.
   function lobExplode(x, y) {
-    const T = CONFIG.blade.throw;
+    const T = CONFIG.weapons.hammer;
+    const impactSpeed = len(blade.impactVX == null ? blade.vx : blade.impactVX, blade.impactVY == null ? blade.vy : blade.impactVY);
+    const downward = Math.max(0, blade.impactVY == null ? blade.vy : blade.impactVY);
+    const commitment = clamp(impactSpeed / CONFIG.blade.throw.maxSpeed + downward / 5000, 0.55, 1.35);
     FX.explode(x, y, CONFIG.colors.slam, 1.25);
     addShake(CONFIG.juice.shakeBig); addZoom(CONFIG.juice.zoomBig); SFX.boom();
-    dealAoE(x, y, T.lobRadius, Math.round(blade.throwDmg * 0.8));
-    for (const e of enemies) if (!e.dead && len(e.x - x, e.y - y) <= T.lobRadius + e.radius) e.stun = Math.max(e.stun, T.lobStun);
+    dealAoE(x, y, T.meteorRadius * commitment, Math.round(blade.throwDmg * 0.72 * commitment));
+    for (const e of enemies) {
+      if (e.dead || len(e.x - x, e.y - y) > T.meteorRadius * commitment + e.radius) continue;
+      e.stun = Math.max(e.stun, e.isBoss ? 0.24 : T.meteorStun);
+      if (e.applyBreak) e.applyBreak(T.meteorBreak * commitment);
+      if (!e.anchored) { const dx = e.x - x, dy = e.y - y, m = len(dx, dy) || 1; e.vx += dx / m * 780 / e.weight; e.vy += dy / m * 430 / e.weight - 150; }
+    }
+    if (run.mods.redirect) {
+      const cluster = enemies.filter((e) => !e.dead && len(e.x - x, e.y - y) > T.meteorRadius * 0.6)
+        .sort((a, b) => len(a.x - x, a.y - y) - len(b.x - x, b.y - y))[0];
+      if (cluster) {
+        dealAoE(cluster.x, cluster.y, T.meteorRadius * 0.55, Math.round(blade.throwDmg * 0.38));
+        FX.ribbon(x, y, cluster.x, cluster.y, CONFIG.colors.slam);
+      }
+    }
   }
 
   function bomberBlast(e) {
     const C = CONFIG.bomber;
     FX.explode(e.x, e.y, CONFIG.colors.bomber, 1.35);
     addShake(CONFIG.juice.shakeBig); addFlash(CONFIG.juice.flashParry * 0.5); SFX.boom();
-    const k = dealAoE(e.x, e.y, C.blastRadius, C.blastDmg);
+    const k = dealAoE(e.x, e.y, C.blastRadius, C.blastDmg, { playerOwned: false });
     if (achTracks() && k > 0) { PROFILE.maxStat("bomberBetrayal", k); achCheck(); }   // Friendly Fire (a bomber kills 3 others)
     if (len(player.x - e.x, player.y - e.y) <= C.blastRadius + player.hw) {
-      { const r = player.takeDamage(C.blastDmg, e.x);
+      { const r = player.takeDamage(C.blastDmg, e.x, e);
         if (r === "hit") { loseStyle(); SFX.hurt(); } else if (r === "absorbed") onShieldAbsorb(); }
     }
   }
@@ -2320,21 +2430,63 @@
     if (run.mods.flowRegen && run.mult >= 3) player.heal(7 * dt);   // Flow Guard T3: regen while BRUTAL+
     if (run.lifestealCd > 0) run.lifestealCd -= dt;
     if (throwCd > 0) throwCd -= dt;
+    updateWeaponAbilities(dt);
     if (player.hazardT > 0) player.hazardT = Math.max(0, player.hazardT - dt);
     updateZonesWalls(dt);   // mud puddles + Geomancer walls; sets player.slowMult
     // faster while unarmed (blade thrown); Tempo adds haste during its window
-    player.moveBoost = ((blade.state !== "held") ? CONFIG.player.thrownMoveBoost : 1) *
+    const overrunMove = run.mods.overrun >= 2 ? 1 + run.mods.overrunStacks * CONFIG.overrun.movePerStack : 1;
+    const orbitMove = blade.weapon && blade.weapon.id === "ringblade" ? 1 + blade.orbit * CONFIG.weapons.ringblade.orbitMove : 1;
+    player.moveBoost = ((blade.state !== "held") ? CONFIG.player.thrownMoveBoost : 1) * overrunMove * orbitMove *
       (player.tempoT > 0 ? 1.18 : 1) * (player.afterimageT > 0 ? player.afterimageSpeedMult : 1);
     player.update(dt, platforms);
+    run.weaponStats.distanceMoved += len(player.vx, player.vy) * dt;
     if (run.voidScroll) syncVoidPlayerSupport();
     else { player.supportPlatform = null; player.voidLane = null; player.voidMajorWindow = false; }
-    const wasReturning = blade.state === "returning";
+    const wasBladeState = blade.state;
+    const wasReturning = wasBladeState === "returning";
     blade.update(dt, player, platforms);
-    if (wasReturning && blade.state === "held" && run.mods.stormBurst) {   // Storm Recall T3: shockwave on catch
+    if (wasBladeState === "reeling" && blade.state === "returning") {
+      const burst = blade.throwDmg * 0.55 * blade.channel("secondaryPower") * (run.mods.secondPass || 1);
+      dealAoE(blade.x, blade.y, 105, burst); FX.ring(blade.x, blade.y, 12, CONFIG.colors.perfect);
+    }
+    if (blade.state === "yanking" && blade.anchorTarget && !blade.anchorTarget.dead) {
+      const dragged = blade.anchorTarget;
+      for (const other of enemies) {
+        if (other === dragged || other.dead || (blade.chainCollided && blade.chainCollided.has(other))) continue;
+        if (len(other.x - dragged.x, other.y - dragged.y) > other.radius + dragged.radius) continue;
+        if (blade.chainCollided) blade.chainCollided.add(other);
+        const dmg = CONFIG.weapons.chainblade.collisionDamage * blade.channel("secondaryPower") * (run.mods.secondPass || 1) * runDamageMult();
+        other.hit(dmg, dragged.vx, dragged.vy); dragged.hit(dmg * 0.35, -dragged.vx, -dragged.vy);
+        FX.burst(other.x, other.y, dragged.vx, dragged.vy, 7, CONFIG.colors.perfect);
+        addFloater(other.x, other.y - 30, "COLLISION " + Math.round(dmg), true, CONFIG.colors.perfect);
+        if (other.dead) onKill(other, "skill");
+        if (run.mods.redirect) {
+          const next = enemies.filter((e) => e !== dragged && e !== other && !e.dead).sort((a, b) => len(a.x - dragged.x, a.y - dragged.y) - len(b.x - dragged.x, b.y - dragged.y))[0];
+          if (next) { const dx = next.x - dragged.x, dy = next.y - dragged.y, m = len(dx, dy) || 1; dragged.vx = dx / m * CONFIG.weapons.chainblade.yankSpeed; dragged.vy = dy / m * CONFIG.weapons.chainblade.yankSpeed; }
+        }
+      }
+    }
+    if (blade.caughtNew) {
+      blade.caughtNew = false;
+      fire(run.mods.onWeaponCatch, makeEv(player.x, player.y, null, "catch", { type: "weaponCatch", throwId: blade.throwId, weaponId: run.weaponId }));
+    }
+    if (wasReturning && blade.state === "held" && run.mods.stormBurst) {   // Second Pass T3: shockwave on catch
       dealAoE(player.x, player.y, 155, 30); FX.ring(player.x, player.y, 15, CONFIG.colors.perfect);
       addShake(CONFIG.juice.shakeBig); SFX.slam();
     }
-    if (blade.embeddedNew) { blade.embeddedNew = false; if (blade.throwType === "lob") lobExplode(blade.x, blade.y); }
+    if (blade.embeddedNew) {
+      blade.embeddedNew = false;
+      const impact = weaponHook("onWorldImpact", { blade, player, platforms, x: blade.x, y: blade.y });
+      if (impact && impact.mechanic === "meteor") { lobExplode(blade.x, blade.y); emitThrowResolve(null, blade.throwDmg); }
+      else if (impact && impact.mechanic === "anchorTerrain") {
+        if (run.mods.redirect && !blade.redirectSpent) {
+          blade.redirectSpent = true; blade.state = "flying"; blade.flyTime = 0;
+          const target = nearestEnemy(blade.x, blade.y);
+          const dx = target ? target.x - blade.x : -(blade.impactVX || 1), dy = target ? target.y - blade.y : -(blade.impactVY || 0), m = len(dx, dy) || 1;
+          blade.vx = dx / m * CONFIG.blade.throw.speed * blade.channel("throwSpeed"); blade.vy = dy / m * CONFIG.blade.throw.speed * blade.channel("throwSpeed");
+        } else blade.anchorTerrain = true;
+      }
+    }
 
     // THE ECHO (Mirror-driven boss): the host enemy runs its brain inside the normal enemy
     // loop; this handles only its own weapon-vs-player exchange + consumes its juice queue.
@@ -2372,6 +2524,7 @@
     // audio cadence: dash start + swing whoosh
     if (player.dashTimer > 0 && !wasDashing) {
       SFX.dash();
+      fire(run.mods.onDashStart, makeEv(player.x, player.y, null, "dash", { type: "dashStart", dx: player.dashX, dy: player.dashY }));
       // dash kick-off: a cyan crack + sparks flung opposite the burst
       FX.burst(player.x, player.y, -player.dashX, -player.dashY, 6, CONFIG.colors.perfect);
       if (!GFX.low) FX.ring(player.x, player.y, 7, CONFIG.colors.perfect);
@@ -2400,6 +2553,12 @@
 
     // dash afterimages (+ Phantom Dash ability damage)
     if (player.dashTimer > 0) {
+      if (!run._dashContacts) run._dashContacts = new Set();
+      for (const e of enemies) {
+        if (e.dead || run._dashContacts.has(e) || !aabbOverlap(player.x, player.y, player.hw, player.hh, e.x, e.y, e.hw, e.hh)) continue;
+        run._dashContacts.add(e);
+        fire(run.mods.onDashContact, makeEv(e.x, e.y, e, "dash", { type: "dashContact", dx: player.dashX, dy: player.dashY }));
+      }
       dashGhostT -= dt;
       if (dashGhostT <= 0) { FX.ghost(player.x, player.y, player.hw, player.hh, run.mods.cinder ? CONFIG.colors.slam : null); dashGhostT = CONFIG.juice.dashGhostInterval; }
       // Cinder Trail: a streaming wake of fire behind the dash
@@ -2427,7 +2586,7 @@
         }
       }
       // (Phase Step now resolves at the projectile-vs-player overlap, so it can't miss.)
-    } else dashGhostT = 0;
+    } else { dashGhostT = 0; if (run._dashContacts) run._dashContacts.clear(); }
 
     // landing dust + thud when arriving on the ground from a real fall — a harder
     // fall kicks a bigger cloud (smoke billows + wider spray)
@@ -2444,11 +2603,20 @@
 
     if (Input.consumeThrow()) {
       if (blade.state === "held") {
-        if (throwCd <= 0 && blade.throwBlade()) { throwCd = 0.5 * blade.throwCooldownMult; FX.burst(blade.x, blade.y, blade.vx, blade.vy, 6); addShake(CONFIG.juice.shakeSmall); SFX.throwBlade(); }
+        if (throwCd <= 0 && blade.throwBlade()) {
+          run.weaponStats.throws++;
+          logWeaponEvent("throwLaunch", { throwId: blade.throwId });
+          throwCd = 0.5 * blade.throwCooldownMult; FX.burst(blade.x, blade.y, blade.vx, blade.vy, 6); addShake(CONFIG.juice.shakeSmall); SFX.throwBlade();
+          fire(run.mods.onThrowLaunch, makeEv(blade.x, blade.y, null, "throw", { type: "throwLaunch", throwId: blade.throwId, weaponId: run.weaponId }));
+        }
       } else {
         const r = blade.tryRecall(player);
         const hand = blade.handPos(player);
-        if (r === "recalled") { FX.ring(blade.x, blade.y, 8); addShake(CONFIG.juice.shakeSmall); SFX.recall(); }
+        if (r === "recalled") {
+          FX.ring(blade.x, blade.y, 8); addShake(CONFIG.juice.shakeSmall); SFX.recall();
+          collapseAt(blade.x, blade.y);
+          fire(run.mods.onThrowSecondary, makeEv(blade.x, blade.y, null, "secondary", { type: "throwSecondary", throwId: blade.throwId, weaponId: run.weaponId }));
+        }
         else if (r === "toofar") addFloater(hand.x, hand.y - 40, "too far", false);
       }
     }
@@ -2696,6 +2864,9 @@
           const descF = isSlam ? clamp(player.vy / Bl.slamPowerSpeed, 0, 1) : 0;
           const empSlam = isSlam && descF > Bl.slamEmpowerAt;
           let dmg = baseDmg * (isSlam ? Bl.slamMultiplier : 1);
+          const quality = blade.hitQuality(e);
+          let weaponEffect = weaponHook("onHeldHit", { blade, player, enemy: e, quality, damage: dmg, isSlam, isLaunch, empowered: empSlam });
+          if (weaponEffect && weaponEffect.repeatScale != null) dmg *= weaponEffect.repeatScale;
           dmg *= styleMult;   // style -> damage
           if (isSlam) dmg *= 1 + descF * Bl.slamPowerBonus;       // fast descent = harder slam
           if (isLaunch) dmg *= 1 + riseF * Bl.risingDmgBonus;
@@ -2711,9 +2882,33 @@
           if (!player.onGround && run.mods.aerialRave) dmg *= 1 + Math.min(player.airTime * run.mods.aerialRave, CONFIG.skill.aerialRaveCap);  // Aerial Rave
           if (run.mods.slipstream && player.dashEndT > 0) dmg *= 1.35;   // Slipstream: hit harder just after a dash
           if (player.tempoT > 0 && run.mods.tempo) dmg *= 1 + run.mods.tempo * player.tempoStk;   // Tempo: post-parry surge
+          dmg *= runDamageMult();
           dmg *= e.damageTakenMult();   // armored: reduced grounded, more airborne
           const big = isSlam || empowered || spike || dmg >= CONFIG.hitStop.threshold;
+          const firstDamage = e.firstPlayerDamageAt == null;
           const dealt = e.hit(dmg, blade.tipVX, blade.tipVY);
+          noteFirstPlayerDamage(e, firstDamage);
+          blade.recordHit(e); run.weaponStats.heldHits++;
+          logWeaponEvent("heldHit", { damage: dmg, quality, mechanic: weaponEffect && weaponEffect.mechanic });
+          if (weaponEffect) {
+            if (weaponEffect.hitIframe != null) e.hitCd = Math.min(e.hitCd, weaponEffect.hitIframe);
+            if (weaponEffect.mechanic === "trueCut") {
+              e.applySeam(weaponEffect.seam, blade.throwId);
+              run.weaponStats.trueCuts++; FX.ribbon(blade.x, blade.y, blade.tipX, blade.tipY, CONFIG.colors.perfect);
+              addFloater(e.x, e.y - 42, "TRUE CUT", true, CONFIG.colors.perfect);
+            } else if (weaponEffect.mechanic === "break" && e.applyBreak) {
+              if (e.applyBreak(weaponEffect.breakPower)) { weaponEffect.broke = true; run.weaponStats.breakTriggers++; addFloater(e.x, e.y - 42, "BREAK", true, CONFIG.colors.armoredShield); FX.ring(e.x, e.y, 15, CONFIG.colors.armoredShield); }
+            } else if (weaponEffect.mechanic === "drive" && !e.anchored) {
+              const ax = Math.cos(blade.angle), ay = Math.sin(blade.angle), resist = e.isBoss ? 0.22 : 1 / e.weight;
+              e.vx += ax * weaponEffect.force * resist; e.vy += ay * weaponEffect.force * resist; e.driveT = CONFIG.weapons.spear.wallPinDuration;
+              if (!e.isBoss && (e.x < e.hw + 24 || e.x > W - e.hw - 24)) e.stun = Math.max(e.stun, CONFIG.weapons.spear.wallPinDuration);
+              addFloater(e.x, e.y - 40, "DRIVE", false, CONFIG.colors.perfect);
+            } else if (weaponEffect.mechanic === "drag" && !e.anchored) {
+              const m = len(blade.tipVX, blade.tipVY) || 1, resist = e.isBoss ? 0.16 : 1 / e.weight;
+              e.vx += blade.tipVX / m * weaponEffect.force * resist; e.vy += blade.tipVY / m * weaponEffect.force * resist; e.boundT = 0.25;
+              addFloater(e.x, e.y - 40, "DRAG", false, CONFIG.colors.perfect);
+            }
+          }
           // Optional actor-specific physical response. Damage remains owned by
           // Enemy.hit(); this hook only lets authored actors consume the launch /
           // spike impulse using the same measured held-blade motion.
@@ -2756,7 +2951,8 @@
           addShake(big || isLaunch ? CONFIG.juice.shakeBig : CONFIG.juice.shakeSmall);
           if (big) addZoom(CONFIG.juice.zoomBig);
           SFX.hit(big); if (isSlam) SFX.slam(); else if (empowered) SFX.updraft(); else if (isLaunch) SFX.launch();
-          addStyle(isSlam ? (empSlam ? "superslam" : "slam") : (empowered ? "updraft" : (isLaunch ? "launch" : "hit")));
+          const weaponStyle = weaponEffect && (weaponEffect.mechanic === "break" && !weaponEffect.broke ? null : ({ trueCut: "trueCut", break: "break", drive: "drive", drag: "drag" }[weaponEffect.mechanic]));
+          addStyle(isSlam ? (empSlam ? "superslam" : "slam") : (empowered ? "updraft" : (isLaunch ? "launch" : (weaponStyle || "hit"))));
           TUT.mark("strike");   // tutorial: ANY melee strike counts as a cut (whatever it classified as)
           const airborne = e.y < CONFIG.world.groundY - e.hh - 14;
           if (airborne) TUT.mark("airHit");   // tutorial: a juggled (airborne) cut
@@ -2773,6 +2969,7 @@
             achCheck();
           }
           fire(run.mods.onHit, makeEv(cp.px, cp.py, e));
+          fire(run.mods.onSwingHit, makeEv(cp.px, cp.py, e, "swing", { type: "swingHit", damageDealt: dealt, quality, mechanic: weaponEffect && weaponEffect.mechanic }));
           if (isSlam) fire(run.mods.onSlam, makeEv(e.x, e.y, e));
           // Rupture T2: a Power Slam detonates bleed on every nearby foe
           if (isSlam && run.mods.bleedDetonate) {
@@ -2803,8 +3000,8 @@
       }
     }
 
-    // thrown blade pierce
-    if (blade.thrown) {
+    // weapon-owned thrown collision; all five throws resolve through the same event boundary
+    if (blade.thrown && ["flying", "returning", "circuiting", "yanking"].includes(blade.state)) {
       // The thrown blade is a lower-reward emergency answer to a sweeper. It
       // cuts integrity and immediately recalls, so it cannot also pierce the room.
       for (const p of projectiles) {
@@ -2820,7 +3017,7 @@
         }
       }
       for (const e of enemies) {
-        if (e.dead || e.dying || e.introT > 0 || blade.pierced.has(e)) continue;
+        if (e.dead || e.dying || e.introT > 0 || !blade.canHitThrownEnemy(e)) continue;
         if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y, e.radius + 4)) {
           if (e.blocksDamage({ type: "throw" })) continue;
           // Duelist parries a thrown blade right back — bait the parry, then throw
@@ -2833,6 +3030,8 @@
             break;
           }
           blade.pierced.add(e);
+          const secondary = blade.state === "returning" || blade.state === "yanking" || blade.secondaryActive;
+          const throwEffect = weaponHook("onThrowHit", { blade, player, enemy: e, secondary, throwId: blade.throwId });
           let tdmg = blade.throwDmg;
           // outgoing throw favors high-HP foes (opener); recall favors low-HP (finisher)
           const hiHp = e.hp > e.maxHp * 0.5;
@@ -2840,17 +3039,35 @@
           if (blade.state === "returning") tdmg *= hiHp ? T.loMult : T.hiMult;
           else tdmg *= hiHp ? T.hiMult : T.loMult;
           if (blade.state === "returning") tdmg *= CONFIG.blade.throw.recallMult;   // Whetstone
-          if (blade.state === "returning" && run.mods.stormRecall) tdmg *= run.mods.stormMult;   // Storm Recall (tiered)
+          if (secondary) tdmg *= blade.channel("secondaryPower");
+          if (secondary && run.mods.secondPass) tdmg *= run.mods.secondPass;
+          if (throwEffect && throwEffect.damageMult != null) tdmg *= throwEffect.damageMult;
           if (run.mods.berserk && player.hp < player.maxHp * 0.5) tdmg *= 1.25;
           if (player.tempoT > 0 && run.mods.tempo) tdmg *= 1 + run.mods.tempo * player.tempoStk;   // Tempo
+          tdmg *= runDamageMult();
           tdmg *= e.damageTakenMult();
+          const firstDamage = e.firstPlayerDamageAt == null;
           e.hit(tdmg, blade.vx, blade.vy);
+          noteFirstPlayerDamage(e, firstDamage);
+          blade.recordHit(e); run.weaponStats.throwHits++;
+          logWeaponEvent("throwHit", { throwId: blade.throwId, damage: tdmg, secondary, mechanic: throwEffect && throwEffect.mechanic });
+          if (throwEffect) {
+            if (throwEffect.mechanic === "seam") e.applySeam(throwEffect.seam, blade.throwId);
+            else if (throwEffect.mechanic === "crosscut") {
+              if (throwEffect.consumeSeam) { e.seamT = 0; e.seamThrowId = 0; }
+              FX.ribbon(blade.throwOrigin ? blade.throwOrigin.x : blade.x, blade.throwOrigin ? blade.throwOrigin.y : blade.y, e.x, e.y, CONFIG.colors.perfect);
+              addFloater(e.x, e.y - 44, "CROSSCUT", true, CONFIG.colors.perfect);
+            } else if (throwEffect.mechanic === "circuit") {
+              blade.circuitEnergy -= CONFIG.weapons.ringblade.enemyCost;
+            }
+          }
+          emitThrowResolve(e, tdmg);
           // Aldric's duel: a thrown answer counts for the rally too
           if (player.rallySource === e) {
             const healed = player.claimRally(tdmg);
             if (healed > 0) { addFloater(player.x, player.y - 44, "+" + Math.round(healed), false, "#e8a32e"); FX.ribbon(e.x, e.y - 12, player.x, player.y - 10, "#e8a32e"); }
           }
-          // Impale: pin + heavy bleed on the outgoing throw; the recall rips the wound open
+          // Capture: control + bleed on direct hits; its secondary action ruptures the wound
           if (run.mods.impale) {
             if (blade.state === "flying" && (run.mods.impaleAll || blade.pierced.size === 1)) {
               e.applyBleed(run.mods.impale); if (!e.isBoss) e.stun = Math.max(e.stun, 1.2); FX.ring(e.x, e.y, 8, CONFIG.colors.charger);
@@ -2859,7 +3076,14 @@
               const d = e.detonateBleed(); addFloater(e.x, e.y - 32, "RUPTURE " + Math.round(d), true, CONFIG.colors.charger); if (e.dead) onKill(e, "skill");
             }
           }
-          // Razor Momentum: ramps per pierce, but capped so it can't snowball
+          // Capture is a universal direct-hit control verb with weapon-owned expression.
+          if (run.mods.capture && !secondary) {
+            const control = 0.45 + run.mods.capture * 0.25;
+            if (!e.isBoss) e.stun = Math.max(e.stun, control);
+            else e.applyBreak && e.applyBreak(18 * run.mods.capture);
+            e.boundT = Math.max(e.boundT || 0, control);
+          }
+          // Overdrive: ramps per successful interaction, capped so it cannot snowball
           if (run.mods.throwRamp) {
             const s = 1 + run.mods.throwRamp;
             blade.throwDmg = Math.min(blade.throwDmg * s, blade.throwBaseDmg * 2);
@@ -2867,7 +3091,7 @@
             blade.vx = clamp(blade.vx * s, -cap, cap); blade.vy = clamp(blade.vy * s, -cap, cap);
           }
           if (run.mods.razorStun && !e.isBoss) e.stun = Math.max(e.stun, 0.45);   // Razor Momentum T3
-          // Vortex Recall: the returning blade drags pierced enemies toward you
+          // Collapse: the secondary path gathers enemies
           if (run.mods.vortexRecall && blade.state === "returning" && !e.anchored) {
             const dx = player.x - e.x, dy = player.y - e.y, m = len(dx, dy) || 1;
             e.vx += (dx / m) * 720 / e.weight; e.vy += (dy / m) * 420 / e.weight - 120;
@@ -2876,21 +3100,26 @@
           FX.burst(e.x, e.y, blade.vx, blade.vy, CONFIG.juice.sparkCount, e.color);
           addFloater(e.x, e.y - 26, Math.round(tdmg).toString(), true);
           hitStop = CONFIG.hitStop.small; addShake(CONFIG.juice.shakeSmall);
-          addStyle("throwHit");
+          addStyle(throwEffect && throwEffect.mechanic === "crosscut" ? "crosscut" : (throwEffect && throwEffect.mechanic === "circuit" ? "circuit" : "throwHit"));
           if (achTracks()) {
             PROFILE.maxStat("maxDamageHit", Math.round(tdmg));         // Overkill can also come from a big throw
             AT.thrown(); AT.bossHit(e, "throw");
             PROFILE.maxStat("bladeBounces", blade.pierced.size);      // Pinball Wizard (4 enemies in one throw)
           }
           fire(run.mods.onHit, makeEv(e.x, e.y, e));
+          if (secondary) fire(run.mods.onReturnHit, makeEv(e.x, e.y, e, "secondary", { type: "returnHit", throwId: blade.throwId, weaponId: run.weaponId, damageDealt: tdmg }));
           if (e.dead) {
             if (achTracks() && blade.pierced.size >= 2) { PROFILE.maxStat("throwPierceKills", 1); achCheck(); }   // Collateral Damage (killed through another enemy)
             onKill(e);
           }
-          // hammer lob: stop on the first enemy and detonate
-          if (blade.throwType === "lob") { lobExplode(e.x, e.y); blade.forceEmbed(); break; }
-          // Ricochet: the outgoing blade curves to a fresh target after each pierce
-          if (run.mods.ricochet && blade.state === "flying") {
+          if (throwEffect && throwEffect.stop) {
+            if (throwEffect.mechanic === "meteor") { lobExplode(e.x, e.y); blade.forceEmbed(); }
+            else if (throwEffect.mechanic === "anchor") { blade.anchorTarget = e; blade.forceEmbed(); }
+            else if (throwEffect.mechanic === "bind") { blade.anchorTarget = e; blade.state = "latched"; blade.linkT = CONFIG.weapons.chainblade.bindDuration * blade.channel("controlDuration"); e.boundT = blade.linkT; }
+            break;
+          }
+          // Redirect: the outgoing route corrects toward a fresh target
+          if ((run.mods.redirect || (throwEffect && throwEffect.redirect)) && (blade.state === "flying" || blade.state === "circuiting")) {
             let best = null, bd = Infinity;
             for (const e2 of enemies) { if (e2.dead || blade.pierced.has(e2)) continue; const d = len(e2.x - blade.x, e2.y - blade.y); if (d < bd) { bd = d; best = e2; } }
             if (best && bd < 700) {
@@ -2898,6 +3127,7 @@
               const dx = best.x - blade.x, dy = best.y - blade.y, m = len(dx, dy) || 1;
               blade.vx = (dx / m) * sp; blade.vy = (dy / m) * sp; blade.angle = Math.atan2(dy, dx);
               FX.burst(blade.x, blade.y, dx, dy, 3, CONFIG.colors.bladeTrail);
+              if (blade.state === "circuiting") blade.circuitEnergy += run.mods.redirect ? 0.45 : 0.12;
             }
           }
         }
@@ -2935,7 +3165,8 @@
               AT.parry(); addZoom(CONFIG.juice.zoomParry * 1.35); addFlash(CONFIG.juice.flashParry * 1.25);
               Backdrop.flare(p.x, p.y, pcol, 480, 0.55); triggerSlowmo();
               if (run.mods.parryGuard) player.guardT = CONFIG.resilience.parryGuardTime;
-              fire(run.mods.onParry, makeEv(p.x, p.y, null));
+              run.weaponStats.perfectParries++; logWeaponEvent("perfectParry", { source: (p.sourceEnemy || p.owner) && (p.sourceEnemy || p.owner).kind });
+              { const parryEv = makeEv(p.x, p.y, null, "parry", { type: "perfectParry", sourceEnemy: p.sourceEnemy || p.owner, projectile: p, applySever }); fire(run.mods.onParry, parryEv); fire(run.mods.onPerfectParry, parryEv); }
             }
           }
           continue;
@@ -2965,7 +3196,8 @@
           if (perfect) {
             AT.parry();   // Immovable Object streak
             Backdrop.flare(p.x, p.y, CONFIG.colors.perfect, 520, 0.6); triggerSlowmo();
-            fire(run.mods.onParry, makeEv(p.x, p.y, null));
+            run.weaponStats.perfectParries++; logWeaponEvent("perfectParry", { source: (p.sourceEnemy || p.owner) && (p.sourceEnemy || p.owner).kind });
+            { const parryEv = makeEv(p.x, p.y, null, "parry", { type: "perfectParry", sourceEnemy: p.sourceEnemy || p.owner, projectile: p, applySever }); fire(run.mods.onParry, parryEv); fire(run.mods.onPerfectParry, parryEv); }
             if (run.mods.parryGuard) player.guardT = CONFIG.resilience.parryGuardTime;   // Riposte
           }
           continue;
@@ -2998,7 +3230,8 @@
             triggerSlowmo();
             if (fullCounter) FX.ring(p.x, p.y, 10, CONFIG.colors.perfect);
             if (run.mods.parryGuard) player.guardT = CONFIG.resilience.parryGuardTime;   // Riposte
-            fire(run.mods.onParry, makeEv(p.x, p.y, null));
+            run.weaponStats.perfectParries++; logWeaponEvent("perfectParry", { source: (p.sourceEnemy || p.owner) && (p.sourceEnemy || p.owner).kind });
+            { const parryEv = makeEv(p.x, p.y, null, "parry", { type: "perfectParry", sourceEnemy: p.sourceEnemy || p.owner, projectile: p, applySever }); fire(run.mods.onParry, parryEv); fire(run.mods.onPerfectParry, parryEv); }
             if (run.mods.tempoSurge) slowmo = Math.max(slowmo, CONFIG.juice.parrySlowmo * 2.4);   // Tempo T3: deep slow-mo
           }
         }
@@ -3036,8 +3269,11 @@
           if (e.dead || e.dying) continue;
           if (p.pierce && p.pierced.has(e)) continue;
           if (len(p.x - e.x, p.y - e.y) <= p.r + e.radius) {
-            const ddmg = p.deflectDmg * CONFIG.blade.deflectDmgMult;   // Counterforce
+            const ddmg = p.deflectDmg * CONFIG.blade.deflectDmgMult * runDamageMult();   // Counterforce + Overrun
+            const firstDamage = e.firstPlayerDamageAt == null;
             e.hit(ddmg, p.vx, p.vy);
+            noteFirstPlayerDamage(e, firstDamage);
+            fire(run.mods.onReflectedHit, makeEv(e.x, e.y, e, "reflected", { projectile: p, sourceEnemy: p.sourceEnemy || p.owner, applySever }));
             if (achTracks()) AT.bossHit(e, "deflect");   // boss-humiliation source tracking
             if (run.mods.parryStun && !e.isBoss) e.stun = Math.max(e.stun, 0.7);   // Backfire
             FX.burst(p.x, p.y, p.vx, p.vy, CONFIG.juice.sparkCount, CONFIG.colors.deflected);
@@ -3094,9 +3330,9 @@
         if (p.deflected) {
           let hitE = false;
           for (const e of enemies) { if (!e.dead && e.spawnT <= 0 && len(p.x - e.x, p.y - e.y) <= p.r + e.radius) { hitE = true; break; } }
-          if (hitGround || hitE) { bombExplode(p.x, Math.min(p.y, CONFIG.world.groundY - 2), true); p.dead = true; }
+          if (hitGround || hitE) { bombExplode(p.x, Math.min(p.y, CONFIG.world.groundY - 2), true, p.sourceEnemy || p.owner); p.dead = true; }
         } else if (hitGround || aabbOverlap(p.x, p.y, p.r, p.r, player.x, player.y, player.hw, player.hh)) {
-          bombExplode(p.x, Math.min(p.y, CONFIG.world.groundY - 2), false); p.dead = true;
+          bombExplode(p.x, Math.min(p.y, CONFIG.world.groundY - 2), false, p.sourceEnemy || p.owner); p.dead = true;
         }
       } else if (p.mud) {
         if (p.y + p.r >= CONFIG.world.groundY) {   // lands -> slowing puddle
@@ -3108,7 +3344,7 @@
         if (p.y + p.r >= CONFIG.world.groundY) { p.y = CONFIG.world.groundY - p.r; p.vx = 0; p.vy = 0; }   // settle
         if (!p.armed) { p.armT -= dt; if (p.armT <= 0) p.armed = true; }
         else if (!p.deflected && len(player.x - p.x, player.y - p.y) < p.r + CONFIG.bomber.mineTrigger) {
-          bombExplode(p.x, p.y, false); p.dead = true;
+          bombExplode(p.x, p.y, false, p.sourceEnemy || p.owner); p.dead = true;
         }
         p.life = 6;   // mines persist until triggered or defused
       }
@@ -3203,6 +3439,7 @@
 
   function onKill(e, cause) {
     if (e.noScore) { FX.death(e.x, e.y, 8, e.color); return; }
+    const cleanElimination = e.firstPlayerDamageAt != null && CLOCK.sim - e.firstPlayerDamageAt <= CONFIG.overrun.cleanWindow;
     addKillScore();
     if (e.affixCount) run.score += Math.round(CONFIG.run.scorePerKill * run.wave * run.mult * 0.4 * e.affixCount);
     if (achTracks()) {   // lifetime kill feats
@@ -3225,7 +3462,19 @@
     }
     FX.death(e.x, e.y, CONFIG.juice.deathShards, e.color);
     SFX.death();
-    fire(run.mods.onKill, makeEv(e.x, e.y, e, cause));
+    const deathEv = makeEv(e.x, e.y, e, cause, { cleanElimination, addOverrunStack });
+    fire(run.mods.onKill, deathEv);
+    fire(run.mods.onEnemyDeath, deathEv);
+    if (cause === "skill") fire(run.mods.onSkillKill, deathEv);
+    if (run.mods.sever >= 3 && e.severT > 0 && !run.mods.severPulseLock) {
+      run.mods.severPulseLock = true;
+      for (const other of enemies) {
+        if (other === e || other.dead || len(other.x - e.x, other.y - e.y) > CONFIG.sever.pulseRadius) continue;
+        applySever(other, other.severT > 0 ? Math.max(1, other.severTier) : 1);
+      }
+      FX.ring(e.x, e.y, 18, "#b06cff");
+      run.mods.severPulseLock = false;
+    }
     // Rupture T3 / Cinder T3: a bleeding/burning death erupts, spreading the status
     if (run.mods.bleedNova && e.bleedStacks > 0) { for (const e2 of enemies) { if (e2 === e || e2.dead) continue; if (len(e2.x - e.x, e2.y - e.y) < 150 && e2.applyBleed) e2.applyBleed(3); } FX.ring(e.x, e.y, 12, CONFIG.colors.charger); }
     if (run.mods.cinderNova && e.burnT > 0) { for (const e2 of enemies) { if (e2 === e || e2.dead) continue; if (len(e2.x - e.x, e2.y - e.y) < 150 && e2.applyBurn) e2.applyBurn(); } FX.ring(e.x, e.y, 12, CONFIG.colors.slam); }
@@ -4287,7 +4536,7 @@
 
   // the playground's legend — docked TOP-RIGHT (clear of the vitals), two tidy key rows
   function drawPlaygroundHelp() {
-    const t = UI.t, cw = 700, cx = W - cw - 28 - SAFE.r, cy = 24 + SAFE.t, ch = 92;
+    const t = UI.t, cw = 700, cx = W - cw - 28 - SAFE.r, cy = 24 + SAFE.t, ch = 116;
     ctx.save();
     ctx.globalAlpha = 0.84; ctx.fillStyle = t.color.paper; ctx.fillRect(cx, cy, cw, ch);
     ctx.globalAlpha = 0.45; ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.strokeRect(cx, cy, cw, ch);
@@ -4296,6 +4545,9 @@
     ctx.fillStyle = "rgba(0,0,0,0.78)"; ctx.font = UI.font(t.type.caption, false); ctx.textAlign = "left";
     ctx.fillText("TAB / E — build menu   ·   1–8 quick-spawn   ·   T dummy   ·   B boss", cx + 20, cy + 50);
     ctx.fillText("K clear   ·   H heal   ·   U ability lab   ·   P pause", cx + 20, cy + 74);
+    const s = run.weaponStats;
+    ctx.fillText(run.weaponId.toUpperCase() + "  ·  held " + s.heldHits + "  ·  throws " + s.throws + "/" + s.throwHits + "  ·  parries " + s.perfectParries + "  ·  breaks " + s.breakTriggers,
+      cx + 20, cy + 98);
     ctx.restore();
     ctx.textAlign = "left";
   }
@@ -4825,11 +5077,14 @@
 
     // ---- WEAPON column ----
     UI.sectionLabel(ctx, "WEAPON", wx, top, ww);
-    const WPN_TRIM = { sword: { glyph: "⚔", sub: "balanced · pierce throw" }, hammer: { glyph: "⚒", sub: "+70% dmg · −reach · lob throw" } };
+    const WPN_TRIM = {
+      sword: { glyph: "⚔" }, hammer: { glyph: "⚒" }, spear: { glyph: "↟" },
+      chainblade: { glyph: "⌁" }, ringblade: { glyph: "◉" },
+    };
     WEAPONS.forEach((wpn, i) => {
       const trim = WPN_TRIM[wpn.id] || {};
-      uiButtons.push({ x: wx, y: colY + i * (96 + 10), w: ww, h: 96, size: 19,
-        label: wpn.name.toUpperCase(), glyph: trim.glyph, sub: trim.sub,
+      uiButtons.push({ x: wx, y: colY + i * 78, w: ww, h: 70, size: 16,
+        label: wpn.name.toUpperCase(), glyph: trim.glyph, sub: wpn.tags.join(" · ") + "  —  " + wpn.throwIdentity,
         sel: selWeapon === wpn.id, action: () => { selWeapon = wpn.id; } });
     });
 
@@ -4865,6 +5120,11 @@
     foot(mx, mw, msel && msel.blurb);
     foot(dx, dw, showDiff && dsel ? dsel.desc : "");
     foot(wx, ww, wsel && wsel.blurb);
+    if (wsel) {
+      const r = wsel.ratings;
+      UI.text(ctx, "H " + r.handling + "  ·  I " + r.impact + "  ·  R " + r.reach + "  ·  D " + r.difficulty + "     WEAK: " + wsel.weaknesses.join(" / "),
+        wx, blurbY + 45, t.type.micro, "left", t.alpha.muted);
+    }
 
     // ---- stakes strip: your best on this exact board + today's bounties ----
     const sy = 668;

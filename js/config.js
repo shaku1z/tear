@@ -24,6 +24,7 @@ const CONFIG = {
     hp: 100,
     hitIframe: 0.9,       // invuln window after taking a hit
     dmgTakenMult: 1,      // scaled down by the "Tough Hide" upgrade
+    knockbackMult: 1,     // weapon chassis: how far enemy hits displace the player
   },
 
   dash: {
@@ -87,6 +88,52 @@ const CONFIG = {
       returnSpeed: 3400,  // speed the blade flies back to your hand (snappy)
       maxLife: 2.5,       // safety: embed after this long in flight
     },
+  },
+
+  // ---- five weapon identities (exclusive mechanics live here, not in the draft pool) ----
+  weapons: {
+    sword: {
+      trueCutThreshold: 0.82, trueCutMult: 1.24, trueCutHitIframe: 0.13,
+      seamDuration: 2.4, crosscutMult: 1.75,
+    },
+    hammer: {
+      weakFloor: 0.28, commitmentRef: 760, fullCommitMult: 1.32,
+      breakPerDamage: 1.15, breakThreshold: 82, bossBreakThreshold: 190,
+      meteorGravity: 1850, meteorRadius: 170, meteorStun: 0.85,
+      meteorBreak: 75, recallTargetCap: 2,
+    },
+    spear: {
+      axialFloor: 0.22, maxReachBonus: 0.22, driveForce: 820,
+      wallPinDuration: 0.55, reelSpeed: 1220, linkDuration: 3.2,
+      heavyWeight: 2.2,
+    },
+    chainblade: {
+      tensionFloor: 0.18, fullTensionAt: 0.72, dragForce: 720,
+      bindDuration: 2.8, yankSpeed: 1450, collisionDamage: 24,
+      bossTug: 0.22,
+    },
+    ringblade: {
+      orbitBuild: 1.15, orbitDecay: 0.78, orbitReverseLoss: 0.48,
+      orbitDamage: 0.42, orbitMove: 0.03, repeatWindow: 0.34,
+      repeatFloor: 0.38, circuitEnergy: 4.2, bounceCost: 0.68,
+      enemyCost: 0.48, steer: 2.3,
+    },
+  },
+
+  // New accepted Specials. Tier-specific caps/multipliers are resolved by the
+  // ability event handlers, while these values remain the single tuning source.
+  stormbank: {
+    maxCharges: [5, 8, 10], primaryPerCharge: [0.08, 0.06, 0.065],
+    maxPrimary: [0.40, 0.48, 0.65], maxTargets: [3, 5, 6],
+    radius: 260, chainDamage: 22, stun: 0.4, echoDuration: 2, echoInterval: 0.5,
+  },
+  overrun: {
+    cleanWindow: 1.25, maxStacks: [4, 6, 6], damagePerStack: 0.05,
+    movePerStack: 0.03, hold: 4.0, decayStep: 1.0, redline: 4.0,
+  },
+  sever: {
+    normalMult: [0.70, 0.55, 0.40], bossMult: [0.85, 0.75, 0.65],
+    normalDuration: 4.0, bossDuration: 3.0, pulseRadius: 155,
   },
 
   // ---- skill shaping: rewards clean, committed, stylish swings over flailing ----
@@ -451,7 +498,7 @@ const CONFIG = {
       { at: 110, mult: 4,   name: "SAVAGE" },
       { at: 175, mult: 5,   name: "TEARING!" },
     ],
-    pts: { hit: 2, throwHit: 4, deflect: 5, launch: 5, slam: 8, superslam: 11, updraft: 10, parry: 12 },
+    pts: { hit: 2, trueCut: 6, break: 8, drive: 5, drag: 5, throwHit: 4, crosscut: 8, circuit: 5, deflect: 5, launch: 5, slam: 8, superslam: 11, updraft: 10, parry: 12 },
   },
 
   // ---- difficulties (selectable from the menu) ----

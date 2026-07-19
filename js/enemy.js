@@ -77,12 +77,40 @@ class Enemy {
     this.markT = 0;                            // MARK: takes +damage from everything
     this.slowStatus = 1;                       // Cinder T2: chilled/slowed while burning
     this._stFx = 0;                            // throttle for status particles
+    // Weapon/ability state. These fields are intentionally generic enemy state;
+    // abilities and weapons communicate through events rather than bespoke subclasses.
+    this.firstPlayerDamageAt = null;
+    this.seamT = 0; this.seamThrowId = 0;
+    this.breakPressure = 0; this.breakT = 0;
+    this.driveT = 0; this.boundT = 0;
+    this.severT = 0; this.severMult = 1; this.severTier = 0;
+    this.phaseDamageMult = 1;
   }
 
   // ---- status effects ----
-  applyBleed(stacks) { const S = CONFIG.status; this.bleedStacks = Math.min(S.bleedMax, this.bleedStacks + stacks); this.bleedT = S.bleedDur; }
-  applyBurn() { const S = CONFIG.status; this.burnT = Math.max(this.burnT, S.burnDur); this.burnDps = Math.max(this.burnDps, S.burnDps); }
+  applyBleed(stacks) { const S = CONFIG.status; if (this.firstPlayerDamageAt == null && typeof CLOCK !== "undefined") this.firstPlayerDamageAt = CLOCK.sim; this.bleedStacks = Math.min(S.bleedMax, this.bleedStacks + stacks); this.bleedT = S.bleedDur; }
+  applyBurn() { const S = CONFIG.status; if (this.firstPlayerDamageAt == null && typeof CLOCK !== "undefined") this.firstPlayerDamageAt = CLOCK.sim; this.burnT = Math.max(this.burnT, S.burnDur); this.burnDps = Math.max(this.burnDps, S.burnDps); }
   applyMark() { this.markT = Math.max(this.markT, CONFIG.status.markDur); }
+  applySeam(duration, throwId) { this.seamT = Math.max(this.seamT, duration || 0); this.seamThrowId = throwId || 0; }
+  applyBreak(amount) {
+    if (!(amount > 0)) return false;
+    const threshold = this.isBoss ? CONFIG.weapons.hammer.bossBreakThreshold : CONFIG.weapons.hammer.breakThreshold;
+    this.breakPressure += amount; this.breakT = 2.4;
+    if (this.breakPressure < threshold) return false;
+    this.breakPressure = 0;
+    this.stun = Math.max(this.stun, this.isBoss ? 0.42 : 1.0);
+    if (this.shield > 0) this.shield = Math.max(0, this.shield - threshold);
+    if (this.cfg && this.cfg.breakSpeed && !this.enraged) this.enraged = true;
+    return true;
+  }
+  applySever(tier) {
+    tier = clamp(tier || 1, 1, 3);
+    const S = CONFIG.sever;
+    this.severTier = Math.max(this.severTier || 0, tier);
+    this.severMult = (this.isBoss ? S.bossMult : S.normalMult)[this.severTier - 1];
+    this.severT = Math.max(this.severT, this.isBoss ? S.bossDuration : S.normalDuration);
+  }
+  outgoingDamageMult() { return (this.severMult || 1) * (this.phaseDamageMult || 1); }
   bleedPool() { return this.bleedStacks * CONFIG.status.bleedDps * Math.max(this.bleedT, 0); }   // remaining bleed if it ran out
   detonateBleed() { const d = this.bleedPool(); this.bleedStacks = 0; this.bleedT = 0; return d > 0 ? this._dot(d) : 0; }
   _dot(dmg) {   // damage with no i-frame / knockback (used by DoTs + detonations)
@@ -262,23 +290,31 @@ class Enemy {
     const dx = player.x - this.x, dy = player.y - this.y;
     const m = len(dx, dy) || 1;
     const p = new Projectile(this.x, this.y, (dx / m) * speed, (dy / m) * speed);
+    p.owner = this; p.sourceEnemy = this;
     p.dmg = CONFIG.proj.dmg * this.auraDmg;   // War Priest empowers shots
     p.tint = this.color; projectiles.push(p);
   }
+
+  ownProjectile(p) { p.owner = this; p.sourceEnemy = this; return p; }
 
   tickTimers(dt) {
     this.aliveT += dt;
     if (this.hitCd > 0) this.hitCd -= dt;
     if (this.flash > 0) this.flash -= dt;
     if (this.stun > 0) this.stun -= dt;
+    if (this.seamT > 0) { this.seamT -= dt; if (this.seamT <= 0) { this.seamT = 0; this.seamThrowId = 0; } }
+    if (this.breakT > 0) this.breakT -= dt; else this.breakPressure = Math.max(0, this.breakPressure - 30 * dt);
+    if (this.driveT > 0) this.driveT -= dt;
+    if (this.boundT > 0) this.boundT -= dt;
+    if (this.severT > 0) { this.severT -= dt; if (this.severT <= 0) { this.severT = 0; this.severMult = 1; this.severTier = 0; } }
     if (this.hpDisplay > this.hp) this.hpDisplay += (this.hp - this.hpDisplay) * clamp(7 * dt, 0, 1);
   }
 
-  hit(dmg, knockX, knockY) {
+  hit(dmg, knockX, knockY, context) {
     if (this.dead || this.dying) return 0;
     // Overrun foundation (Weapons WA1): stamp the first player-owned damage so a
     // fast follow-up kill can be recognised as a Clean Elimination on death.
-    if (this.firstPlayerDamageAt == null && typeof CLOCK !== "undefined") this.firstPlayerDamageAt = CLOCK.sim;
+    if ((!context || context.playerOwned !== false) && this.firstPlayerDamageAt == null && typeof CLOCK !== "undefined") this.firstPlayerDamageAt = CLOCK.sim;
     this.hitCd = CONFIG.blade.enemyHitIframe;
     this.flash = 0.08;
     const before = this.hp;
@@ -312,7 +348,7 @@ class Enemy {
     if (this._noBar) return;                                  // suppressed (e.g. INDEX previews)
     const fr = clamp(this.hp / this.maxHp, 0, 1);
     const shielded = this.maxShield > 0 && this.shield > 0;
-    const status = this.bleedStacks > 0 || this.burnT > 0 || this.markT > 0;
+    const status = this.bleedStacks > 0 || this.burnT > 0 || this.markT > 0 || this.seamT > 0 || this.severT > 0 || this.breakPressure > 0;
     const hit = clamp((this.flash || 0) / 0.08, 0, 1);        // 1 right after a hit -> 0
     if (fr >= 1 && !shielded && hit <= 0 && !status) return;  // pristine & unhurt -> no bar (less clutter)
     const w = Math.max(this.hw * 2, 28), x = this.x - w / 2, y = this.y - this.hh - 15, h = 5, cy = y + h / 2;
@@ -332,6 +368,9 @@ class Enemy {
       if (this.bleedStacks > 0) { ctx.fillStyle = CONFIG.colors.charger; ctx.fillRect(sx, sy, 4, 4); sx += 6; }
       if (this.burnT > 0) { ctx.fillStyle = CONFIG.colors.slam; ctx.fillRect(sx, sy, 4, 4); sx += 6; }
       if (this.markT > 0) { ctx.fillStyle = CONFIG.colors.eye; ctx.fillRect(sx, sy, 4, 4); }
+      if (this.seamT > 0) { sx += 6; ctx.fillStyle = CONFIG.colors.perfect; ctx.fillRect(sx, sy, 2, 6); }
+      if (this.severT > 0) { sx += 6; ctx.fillStyle = "#b06cff"; ctx.fillRect(sx, sy, 4, 4); }
+      if (this.breakPressure > 0) { sx += 6; ctx.fillStyle = CONFIG.colors.armoredShield; ctx.fillRect(sx, sy, 5, 3); }
     }
     ctx.restore();
   }
@@ -475,7 +514,7 @@ class Charger extends Enemy {
       this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1)); this.atkDir = dir; this.atkT -= dt;
       if (this.atkT <= 0) {
         const footY = this.y + this.hh;
-        for (const d of [-1, 1]) { const p = new Projectile(this.x + d * this.hw, footY - X.exShockR, d * X.exShockSpeed, 0); p.setFamily("groundShock"); p.r = X.exShockR; p.dmg = X.exShockDmg; p.life = 1.6; projectiles.push(p); }
+        for (const d of [-1, 1]) { const p = this.ownProjectile(new Projectile(this.x + d * this.hw, footY - X.exShockR, d * X.exShockSpeed, 0)); p.setFamily("groundShock"); p.r = X.exShockR; p.dmg = X.exShockDmg; p.life = 1.6; projectiles.push(p); }
         FX.ring(this.x, footY, 18, CONFIG.colors.slam); FX.burst(this.x, footY, 0, -1, 11, CONFIG.colors.charger);
         if (typeof SFX !== "undefined" && SFX.ctx && SFX.slam) SFX.slam();
         this.atk = "recover"; this.atkCd = 1.5;
@@ -497,7 +536,7 @@ class Charger extends Enemy {
       if (this.atkT <= 0) {
         const footY = this.y + this.hh, sx = this.x + this.atkDir * X.gravReach;
         const p = new Projectile(sx, footY - X.gravShockR, this.atkDir * X.gravShockSpeed, 0);
-        p.setFamily("groundShock"); p.r = X.gravShockR; p.dmg = X.gravDmg; p.life = 1.3; projectiles.push(p);
+        this.ownProjectile(p); p.setFamily("groundShock"); p.r = X.gravShockR; p.dmg = X.gravDmg; p.life = 1.3; projectiles.push(p);
         FX.burst(sx, footY, 0, -1, 9, CONFIG.colors.charger);
         this.atk = "swing"; this.atkT = 0.25;
       }
@@ -673,7 +712,7 @@ class Ranged extends Enemy {
       for (let i = 0; i < this.volley; i++) {
         const a = base + (i - (this.volley - 1) / 2) * 0.22;
         const p = new Projectile(this.x, this.y, Math.cos(a) * C.projSpeed, Math.sin(a) * C.projSpeed);
-        p.dmg = dmg; p.tint = this.color; projectiles.push(p);
+        this.ownProjectile(p); p.dmg = dmg; p.tint = this.color; projectiles.push(p);
       }
       return;
     }
@@ -681,20 +720,20 @@ class Ranged extends Enemy {
       const CS = CONFIG.chargedShot;
       const dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
       const p = new Projectile(this.x, this.y, (dx / m) * CS.speed, (dy / m) * CS.speed);
-      p.r = CS.r; p.dmg = CS.dmg * this.auraDmg; p.charged = true; p.tint = this.color;
+      this.ownProjectile(p); p.r = CS.r; p.dmg = CS.dmg * this.auraDmg; p.charged = true; p.tint = this.color;
       projectiles.push(p);
       return;
     }
     if (b === "warlock") {                        // slow shot that curves once toward you
       const X = CONFIG.exotic, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
       const p = new Projectile(this.x, this.y, (dx / m) * X.warlockSpeed, (dy / m) * X.warlockSpeed);
-      p.dmg = X.warlockDmg * this.auraDmg; p.curve = true; p.curveT = X.warlockCurveAt; p.r = 11; p.tint = this.color; p.kind = "orb";
+      this.ownProjectile(p); p.dmg = X.warlockDmg * this.auraDmg; p.curve = true; p.curveT = X.warlockCurveAt; p.r = 11; p.tint = this.color; p.kind = "orb";
       projectiles.push(p); return;
     }
     if (b === "chain") {                          // a shot that roots you in place on hit
       const X = CONFIG.exotic, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
       const p = new Projectile(this.x, this.y, (dx / m) * X.chainSpeed, (dy / m) * X.chainSpeed);
-      p.dmg = X.chainDmg * this.auraDmg; p.root = X.chainRoot; p.r = X.chainR; p.tint = this.color;
+      this.ownProjectile(p); p.dmg = X.chainDmg * this.auraDmg; p.root = X.chainRoot; p.r = X.chainR; p.tint = this.color;
       projectiles.push(p); return;
     }
     if (b === "sentinel") { this.fireAt(player, projectiles, C.projSpeed * 1.15); return; }  // single precise shot
@@ -706,7 +745,7 @@ class Ranged extends Enemy {
       const dx = tx - this.x, dy = ty - this.y, m = len(dx, dy) || 1;
       const a = Math.atan2(dy, dx) + (i - 0.5) * (b === "rifleman" ? 0.0 : 0.07);
       const p = new Projectile(this.x, this.y, Math.cos(a) * sp, Math.sin(a) * sp);
-      p.dmg = dmg; p.tint = this.color; projectiles.push(p);
+      this.ownProjectile(p); p.dmg = dmg; p.tint = this.color; projectiles.push(p);
     }
   }
 
@@ -920,7 +959,7 @@ class Bomber extends Enemy {
     if (this.lobTimer <= 0 && Math.abs(player.x - this.x) < 780) {
       const X = CONFIG.exotic, vx = clamp(player.x - this.x, -X.sludgeSpeed, X.sludgeSpeed);
       const p = new Projectile(this.x, this.y - this.hh, vx, -X.sludgeArc);
-      p.gravity = X.sludgeGravity; p.mud = true; p.r = X.sludgeR;
+      this.ownProjectile(p); p.gravity = X.sludgeGravity; p.mud = true; p.r = X.sludgeR;
       projectiles.push(p);
       this.lobTimer = X.sludgeInterval / this.auraHaste;
     }
@@ -958,7 +997,7 @@ class Bomber extends Enemy {
     const dx = player.x - this.x;
     const vx = clamp(dx * 1.05, -C.bombSpeed, C.bombSpeed) + (spread || 0);
     const p = new Projectile(this.x, this.y - this.hh, vx, -C.bombArc);
-    p.gravity = C.bombGravity; p.bomb = true; p.r = 12; p.dmg = C.blastDmg;
+    this.ownProjectile(p); p.gravity = C.bombGravity; p.bomb = true; p.r = 12; p.dmg = C.blastDmg;
     projectiles.push(p);
   }
 
@@ -982,7 +1021,7 @@ class Bomber extends Enemy {
     this.mineTimer -= dt;
     if (this.mineTimer <= 0 && this.onGround) {
       const m = new Projectile(this.x, this.y, 0, 0);
-      m.mine = true; m.gravity = C.bombGravity; m.r = 11; m.armT = C.mineArm;
+      this.ownProjectile(m); m.mine = true; m.gravity = C.bombGravity; m.r = 11; m.armT = C.mineArm;
       projectiles.push(m);
       this.mineTimer = C.mineInterval / this.auraHaste;
     }
@@ -1047,7 +1086,7 @@ class Armored extends Enemy {
     const footY = this.y + this.hh;   // shock travels along whatever surface it's standing on
     for (const d of [-1, 1]) {
       const p = new Projectile(this.x + d * this.hw, footY - C.shockR, d * C.shockSpeed, 0);
-      p.setFamily("groundShock"); p.r = C.shockR; p.dmg = C.shockDmg; p.life = 1.6;
+      this.ownProjectile(p); p.setFamily("groundShock"); p.r = C.shockR; p.dmg = C.shockDmg; p.life = 1.6;
       projectiles.push(p);
     }
     FX.ring(this.x, footY, 14, CONFIG.colors.slam);
@@ -1121,7 +1160,7 @@ class Boss extends Enemy {
       const base = Math.atan2(player.y - this.y, player.x - this.x);
       for (let i = 0; i < shots; i++) {
         const a = base + (i - (shots - 1) / 2) * 0.24;
-        projectiles.push(new Projectile(this.x, this.y, Math.cos(a) * CONFIG.proj.speed, Math.sin(a) * CONFIG.proj.speed));
+        projectiles.push(this.ownProjectile(new Projectile(this.x, this.y, Math.cos(a) * CONFIG.proj.speed, Math.sin(a) * CONFIG.proj.speed)));
       }
     }
   }
@@ -1309,16 +1348,16 @@ class Chimera extends Enemy {
     const k = this.curMove;
     if (k === "ranged") {
       const dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1, sp = CONFIG.ranged.projSpeed;
-      const p = new Projectile(this.x, this.y, (dx / m) * sp, (dy / m) * sp); p.dmg = CONFIG.proj.dmg * this.auraDmg;
+      const p = this.ownProjectile(new Projectile(this.x, this.y, (dx / m) * sp, (dy / m) * sp)); p.dmg = CONFIG.proj.dmg * this.auraDmg;
       projectiles.push(p); this.atk = "recover"; this.copyT = 1.3;
     } else if (k === "bomber") {
       const B = CONFIG.bomber, vx = clamp((player.x - this.x) * 1.05, -B.bombSpeed, B.bombSpeed);
       const p = new Projectile(this.x, this.y - this.hh, vx, -B.bombArc);
-      p.gravity = B.bombGravity; p.bomb = true; p.r = 12; p.dmg = B.blastDmg;
+      this.ownProjectile(p); p.gravity = B.bombGravity; p.bomb = true; p.r = 12; p.dmg = B.blastDmg;
       projectiles.push(p); this.atk = "recover"; this.copyT = 1.3;
     } else if (k === "armored") {
       const A = CONFIG.armored, footY = this.y + this.hh;
-      for (const d of [-1, 1]) { const p = new Projectile(this.x + d * this.hw, footY - A.shockR, d * A.shockSpeed, 0); p.setFamily("groundShock"); p.r = A.shockR; p.dmg = A.shockDmg; p.life = 1.5; projectiles.push(p); }
+      for (const d of [-1, 1]) { const p = this.ownProjectile(new Projectile(this.x + d * this.hw, footY - A.shockR, d * A.shockSpeed, 0)); p.setFamily("groundShock"); p.r = A.shockR; p.dmg = A.shockDmg; p.life = 1.5; projectiles.push(p); }
       FX.ring(this.x, footY, 12, CONFIG.colors.slam); this.atk = "recover"; this.copyT = 1.4;
     } else if (k === "flyer") {
       this.atk = "strike"; this.atkT = 0.4; this.vx = dir * 600; this.vy = -540;   // leap-dive
@@ -3117,11 +3156,11 @@ class Echo extends Enemy {
   _shock(projectiles, dir) {
     const C = CONFIG.echo, footY = this.y + this.hh;
     const p = new Projectile(this.x + dir * this.hw, footY - 12, dir * C.shockSpeed, 0);
-    p.setFamily("groundShock"); p.r = 14; p.dmg = C.shockDmg; p.life = 1.6; projectiles.push(p);
+    this.ownProjectile(p); p.setFamily("groundShock"); p.r = 14; p.dmg = C.shockDmg; p.life = 1.6; projectiles.push(p);
   }
   _shot(player, projectiles) {
     const C = CONFIG.echo, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
-    const p = new Projectile(this.x, this.y, (dx / m) * C.projSpeed, (dy / m) * C.projSpeed); p.dmg = C.projDmg; p.r = 10; p.tint = this.color; projectiles.push(p);
+    const p = this.ownProjectile(new Projectile(this.x, this.y, (dx / m) * C.projSpeed, (dy / m) * C.projSpeed)); p.dmg = C.projDmg; p.r = 10; p.tint = this.color; projectiles.push(p);
   }
   _scheduleFrom(player) {   // a new trick from the player queues a copy (faster if you repeat yourself)
     if (player.lastTrickT > this.seenTrickT) {

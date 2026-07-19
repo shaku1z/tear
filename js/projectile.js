@@ -38,6 +38,7 @@ class Projectile {
     this.crownfire = false;   // Aldric's royal fire: white core + broad gold shock language
     // Optional boss-pattern metadata. Neutral defaults preserve every legacy projectile.
     this.owner = null;
+    this.sourceEnemy = null;   // immutable attack source used by Sever after reflection
     this.landingX = null; this.landingY = null; this.landingT = null;
     this.surfacePlatformId = null; this.surfaceLeft = null; this.surfaceRight = null; this.surfaceY = null;
     this.maxCrossings = 0; this.crossings = 0;

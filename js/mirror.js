@@ -47,6 +47,11 @@ const Mirror = {
       jumpPressed: () => { const v = ai._jump; ai._jump = false; return v; },
     };
     const b = this.blade = new Blade();
+    // Echo mirrors the equipped silhouette and the already-active global handling
+    // tune, but deliberately keeps the shared straight throw. Full Anchor/Bind/Circuit
+    // states would let boss AI create impossible control loops against the player.
+    const reflectedWeapon = typeof getWeapon === "function" ? getWeapon((mods && mods.weaponId) || "sword") : null;
+    if (reflectedWeapon) { b.model = reflectedWeapon.model || "sword"; b.mirroredWeaponId = reflectedWeapon.id; }
     b.aimOverride = { x: host.x, y: host.y - 120 };
     b.lmbOverride = false;
     b.trailColor = "#b06cff"; b.glowColor = "#c98cff";

@@ -239,6 +239,8 @@ class Player {
   // returns: "hit" (HP lost) | "absorbed" (a shield pip ate it) | "" (invulnerable)
   takeDamage(dmg, fromX, source) {
     if (this.invulnerable) return "";
+    const damageSource = source && (source.sourceEnemy || source.owner || source.source || source);
+    if (damageSource && typeof damageSource.outgoingDamageMult === "function") dmg *= damageSource.outgoingDamageMult();
     // Aegis: a stored pip absorbs the hit entirely (works even in one-hit mode)
     if (this.shield > 0) {
       this.shield--;
@@ -258,7 +260,7 @@ class Player {
     }
     // Projectiles may pass their owning boss while contact damage passes the boss itself.
     // Accept both shapes so every existing two-argument caller remains valid.
-    const rallyOwner = source && (source.owner || source.source || source);
+    const rallyOwner = damageSource;
     const fromAldric = rallyOwner && rallyOwner.mode === "duel" &&
       (rallyOwner.bossId === "aldric" || rallyOwner.bossName === "THE BERSERKER KING" ||
        (rallyOwner.constructor && rallyOwner.constructor.name === "Aldric"));
@@ -266,8 +268,9 @@ class Player {
     this.iframe = CONFIG.player.hitIframe;
     this.tookHit = true;   // consumed by the game for no-hit achievement tracking
     const dir = Math.sign(this.x - fromX) || 1;
-    this.vx = dir * 380;
-    this.vy = -260;
+    const knockback = CONFIG.player.knockbackMult == null ? 1 : CONFIG.player.knockbackMult;
+    this.vx = dir * 380 * knockback;
+    this.vy = -260 * knockback;
     // the hit reads on the body: a crimson spray away from the blow + a couple of drips
     try {
       FX.burst(this.x, this.y, dir, -0.5, 9, "#e23b3b");

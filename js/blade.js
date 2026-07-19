@@ -37,9 +37,26 @@ class Blade {
     this.freeRecall = false;      // ability: recall from any distance
     this.recallWindow = 0;        // shop: seconds of return travel added to recall reach
     this.throwCooldownMult = 1;   // shop: faster release recovery between throws
-    this.throwType = "pierce";    // set by the equipped weapon ("pierce" | "lob")
     this.embeddedNew = false;     // set the frame a flying blade embeds (for lob shockwave)
-    this.model = "sword";         // visual: "sword" | "hammer"
+    this.caughtNew = false;       // set when a return completes (normalized catch event)
+    this.model = "sword";         // visual: sword | hammer | spear | chainblade | ringblade
+    this.weapon = null;
+    this.channelMods = { throwPower: 1, throwSpeed: 1, remoteRange: 1, secondaryPower: 1, returnSpeed: 1, controlDuration: 1 };
+    this.throwId = 0;
+    this.throwOrigin = null;
+    this.throwResolved = false;
+    this.secondaryActive = false;
+    this.anchorTarget = null;
+    this.anchorTerrain = false;
+    this.linkT = 0;
+    this.circuitEnergy = 0;
+    this.circuitOrbit = 0;
+    this.orbit = 0;
+    this.orbitDir = 0;
+    this._orbitAngle = null;
+    this.tension = 0;
+    this._repeatHits = new Map();
+    this._lastHand = null;
     this.hostile = false;          // Source capture: the flying blade can temporarily turn against its owner
     this.stolenBy = null;          // actor currently controlling that hostile flight
   }
@@ -120,10 +137,41 @@ class Blade {
 
   update(dt, player, platforms) {
     const hand = this.handPos(player);
+    this._lastHand = hand;
     this._updateAim(hand, dt);
 
-    if (this.state === "held") this._updateHeld(dt, hand);
+    if (this.state === "held") {
+      this._updateHeld(dt, hand);
+      this._updateWeaponMeters(dt, hand);
+      if (this.weapon && this.weapon.onHeldUpdate) this.weapon.onHeldUpdate({ blade: this, dt, player, platforms, hand });
+    }
     else this._updateThrown(dt, player, platforms);
+  }
+
+  channel(name) {
+    const channels = this.weapon && this.weapon.channels;
+    const base = channels && channels[name] != null ? channels[name] : 1;
+    return base * (this.channelMods[name] == null ? 1 : this.channelMods[name]);
+  }
+
+  _updateWeaponMeters(dt, hand) {
+    const reach = Math.max(1, CONFIG.blade.maxReach * 1.25);
+    this.tension = clamp(len(this.x - hand.x, this.y - hand.y) / reach, 0, 1);
+    if (!this.weapon || this.weapon.id !== "ringblade") { this.orbit = Math.max(0, this.orbit - dt); this._orbitAngle = null; return; }
+    const W = CONFIG.weapons.ringblade;
+    const a = Math.atan2(this.y - hand.y, this.x - hand.x);
+    if (this._orbitAngle != null) {
+      let da = a - this._orbitAngle;
+      while (da > Math.PI) da -= Math.PI * 2;
+      while (da < -Math.PI) da += Math.PI * 2;
+      const dir = Math.sign(da);
+      if (dir && this.orbitDir && dir !== this.orbitDir) this.orbit *= W.orbitReverseLoss;
+      if (dir) this.orbitDir = dir;
+      const angularSpeed = Math.abs(da) / Math.max(dt, 0.001);
+      if (angularSpeed > 1.4 && this.tipSpeed > CONFIG.blade.minHitSpeed * 0.55) this.orbit = clamp(this.orbit + angularSpeed * W.orbitBuild * dt * 0.16, 0, 1);
+      else this.orbit = Math.max(0, this.orbit - W.orbitDecay * dt);
+    }
+    this._orbitAngle = a;
   }
 
   _updateHeld(dt, hand) {
@@ -184,24 +232,43 @@ class Blade {
   }
 
   _updateThrown(dt, player, platforms) {
+    if (this.weapon && this.weapon.updateThrown) {
+      this.weapon.updateThrown({ blade: this, dt, player, platforms });
+      return;
+    }
+    this._updateStandardThrown(dt, player, platforms, false);
+  }
+
+  _updateStandardThrown(dt, player, platforms, retrace) {
     const B = CONFIG.blade, T = B.throw;
 
     if (this.state === "returning") {
       const hand = this.handPos(player);
-      let dx = hand.x - this.x, dy = hand.y - this.y;
+      let target = hand;
+      if ((this.retraceReturn || retrace) && this.throwOrigin && !this.retraceDone) target = this.throwOrigin;
+      let dx = target.x - this.x, dy = target.y - this.y;
       const dd = len(dx, dy);
-      if (dd < 26) {
+      if (target !== hand && dd < 30) {
+        this.retraceDone = true;
+        dx = hand.x - this.x; dy = hand.y - this.y;
+      }
+      const homeD = len(hand.x - this.x, hand.y - this.y);
+      if ((target === hand || this.retraceDone) && homeD < 26) {
         // reattach to the hand -> back to a normal held blade
         this.state = "held";
         this.hostile = false; this.stolenBy = null;
         this.x = hand.x; this.y = hand.y;
         this.vx = 0; this.vy = 0;
+        this.anchorTarget = null; this.anchorTerrain = false; this.secondaryActive = false;
+        this.caughtNew = true;
+        if (this.weapon && this.weapon.onCatch) this.weapon.onCatch({ blade: this, player });
         this._recomputeTip(dt);
         return;
       }
+      const travelD = len(dx, dy) || 1;
       this.angle = Math.atan2(dy, dx);
-      this.vx = (dx / dd) * T.returnSpeed;
-      this.vy = (dy / dd) * T.returnSpeed;
+      this.vx = (dx / travelD) * T.returnSpeed * this.channel("returnSpeed");
+      this.vy = (dy / travelD) * T.returnSpeed * this.channel("returnSpeed");
       this.x += this.vx * dt;
       this.y += this.vy * dt;
       this._recomputeTip(dt);
@@ -213,14 +280,162 @@ class Blade {
       this._recomputeTip(dt);
       this._pushTrail();
       if (this.flyTime >= T.maxLife || this._embedIfHit(platforms)) {
+        this.impactVX = this.vx; this.impactVY = this.vy;
         this.state = "embedded";
         this.vx = 0; this.vy = 0;
         this.embeddedNew = true;   // game triggers the lob shockwave on this edge
       }
-    } else { // embedded
+    } else { // embedded / a weapon-owned stationary state
       this.vx = 0; this.vy = 0;
       this._recomputeTip(dt);
     }
+  }
+
+  _launchStraight() {}
+
+  _launchBallistic(gravity) { this.throwGravity = gravity || 0; }
+
+  _updateBallisticThrown(dt, player, platforms) {
+    if (this.state === "flying") {
+      this.vy += (this.throwGravity || CONFIG.weapons.hammer.meteorGravity) * dt;
+      this.angle = Math.atan2(this.vy, this.vx);
+    }
+    this._updateStandardThrown(dt, player, platforms, false);
+  }
+
+  _updateSpearThrown(dt, player, platforms) {
+    if (this.state === "reeling") {
+      this.linkT -= dt;
+      const target = this.anchorTarget;
+      if (target && (target.dead || target.dying)) { this.anchorTarget = null; this.state = "returning"; }
+      else {
+        const W = CONFIG.weapons.spear;
+        const tx = target ? target.x : this.x, ty = target ? target.y : this.y;
+        const dx = tx - player.x, dy = ty - player.y, d = len(dx, dy) || 1;
+        const heavy = target && (target.isBoss || target.weight >= W.heavyWeight || target.anchored);
+        if (target && !heavy) {
+          const ex = player.x - target.x, ey = player.y - target.y, em = len(ex, ey) || 1;
+          target.vx += ex / em * W.reelSpeed * dt * 3.2; target.vy += ey / em * W.reelSpeed * dt * 3.2;
+          this.x = target.x; this.y = target.y;
+          if (em < 58) this.state = "returning";
+        } else {
+          player.vx = lerp(player.vx, dx / d * W.reelSpeed, clamp(7 * dt, 0, 1));
+          player.vy = lerp(player.vy, dy / d * W.reelSpeed, clamp(7 * dt, 0, 1));
+          if (d < 54) this.state = "returning";
+        }
+        if (this.linkT <= 0) this.state = "returning";
+        this._recomputeTip(dt); this._pushTrail();
+        return;
+      }
+    }
+    this._updateStandardThrown(dt, player, platforms, false);
+  }
+
+  _launchChain() {
+    this.linkT = CONFIG.weapons.chainblade.bindDuration * this.channel("controlDuration");
+  }
+
+  _updateChainThrown(dt, player, platforms) {
+    const hand = this.handPos(player), W = CONFIG.weapons.chainblade;
+    if (this.state === "latched") {
+      this.linkT -= dt;
+      if (!this.anchorTarget || this.anchorTarget.dead || this.anchorTarget.dying || this.linkT <= 0) {
+        this.anchorTarget = null; this.state = "returning";
+      } else {
+        this.x = this.anchorTarget.x; this.y = this.anchorTarget.y;
+        this.angle = Math.atan2(this.y - hand.y, this.x - hand.x);
+        this._recomputeTip(dt); return;
+      }
+    }
+    if (this.state === "yanking") {
+      const e = this.anchorTarget;
+      if (!e || e.dead || e.dying) { this.anchorTarget = null; this.state = "returning"; }
+      else {
+        const dx = player.x - e.x, dy = player.y - e.y, d = len(dx, dy) || 1;
+        const resist = e.isBoss ? W.bossTug : (e.weight > 2 ? 0.48 : 1);
+        e.vx += dx / d * W.yankSpeed * resist * dt * 4; e.vy += dy / d * W.yankSpeed * resist * dt * 4;
+        if (e.isBoss) { player.vx += -dx / d * W.yankSpeed * 0.18 * dt; player.vy += -dy / d * W.yankSpeed * 0.12 * dt; }
+        this.x = e.x; this.y = e.y; this.angle = Math.atan2(dy, dx);
+        this._recomputeTip(dt);
+        if (d < 68 || this.linkT <= 0) { this.state = "returning"; this.anchorTarget = null; }
+        return;
+      }
+    }
+    if (this.state === "flying") {
+      this.linkT -= dt;
+      const d = len(this.x - hand.x, this.y - hand.y);
+      if (d > CONFIG.blade.throw.reclaimDistance * this.channel("remoteRange") || this.linkT <= 0 || this.flyTime + dt >= CONFIG.blade.throw.maxLife) this.state = "returning";
+    }
+    this._updateStandardThrown(dt, player, [], false); // Chainblade never embeds in terrain.
+  }
+
+  _launchCircuit() {
+    this.state = "circuiting";
+    this.circuitOrbit = this.orbit;
+    this.circuitEnergy = CONFIG.weapons.ringblade.circuitEnergy * this.channel("controlDuration") * (0.75 + this.orbit * 0.5);
+    this.orbit = 0;
+  }
+
+  _updateCircuit(dt, player, platforms) {
+    if (this.state === "circuiting") {
+      const W = CONFIG.weapons.ringblade;
+      this.flyTime += dt; this.circuitEnergy -= dt;
+      this.circuitBounceCd = Math.max(0, (this.circuitBounceCd || 0) - dt);
+      const desired = Math.atan2(this.aimY, this.aimX); // remote stick/mouse direction, not a homing line back to the player
+      const current = Math.atan2(this.vy, this.vx);
+      const next = lerpAngle(current, desired, clamp(W.steer * this.channel("remoteRange") * dt, 0, 0.18));
+      const sp = Math.max(CONFIG.blade.throw.speed, len(this.vx, this.vy));
+      this.vx = Math.cos(next) * sp; this.vy = Math.sin(next) * sp;
+      this.x += this.vx * dt; this.y += this.vy * dt; this.angle = next;
+      if (this.circuitBounceCd <= 0 && this._circuitBounce(platforms)) { this.circuitEnergy -= W.bounceCost; this.circuitBounceCd = 0.08; }
+      if (this.circuitEnergy <= 0 || this.flyTime >= CONFIG.blade.throw.maxLife * this.channel("controlDuration") * 1.8) this.state = "returning";
+      this._recomputeTip(dt); this._pushTrail(); return;
+    }
+    this._updateStandardThrown(dt, player, platforms, false);
+  }
+
+  _circuitBounce(platforms) {
+    const V = CONFIG.view, r = Math.max(14, this.curLength * 0.28); let hit = false;
+    if (this.x < r) { this.x = r; this.vx = Math.abs(this.vx); hit = true; }
+    else if (this.x > V.w - r) { this.x = V.w - r; this.vx = -Math.abs(this.vx); hit = true; }
+    if (this.y < r) { this.y = r; this.vy = Math.abs(this.vy); hit = true; }
+    else if (this.y > CONFIG.world.groundY - r) { this.y = CONFIG.world.groundY - r; this.vy = -Math.abs(this.vy); hit = true; }
+    for (const p of platforms || []) {
+      if (p.oneway || p.floor) continue;
+      if (this.x + r < p.x || this.x - r > p.x + p.w || this.y + r < p.y || this.y - r > p.y + p.h) continue;
+      const dl = Math.abs((this.x + r) - p.x), dr = Math.abs((p.x + p.w) - (this.x - r));
+      const dt = Math.abs((this.y + r) - p.y), db = Math.abs((p.y + p.h) - (this.y - r));
+      if (Math.min(dl, dr) < Math.min(dt, db)) this.vx *= -1; else this.vy *= -1;
+      hit = true; break;
+    }
+    if (hit) { this.angle = Math.atan2(this.vy, this.vx); this.vx *= 0.94; this.vy *= 0.94; }
+    return hit;
+  }
+
+  _beginReturn(player, opts) {
+    const hand = this.handPos(player);
+    const earlyReach = CONFIG.blade.throw.reclaimDistance * this.channel("remoteRange") + CONFIG.blade.throw.returnSpeed * this.recallWindow;
+    if (!(this.hostile || this.stolenBy || this.freeRecall || len(this.x - hand.x, this.y - hand.y) <= earlyReach)) return "toofar";
+    this.pierced = new Set(); this.hostile = false; this.stolenBy = null;
+    this.secondaryActive = true; this.retraceReturn = !!(opts && opts.retrace); this.retraceDone = false;
+    this.state = "returning";
+    return "recalled";
+  }
+
+  _beginSpearReel(player) {
+    if (this.state === "flying") return "busy";
+    if (this.state !== "embedded" && this.state !== "reeling") return this._beginReturn(player);
+    this.secondaryActive = true; this.state = "reeling"; return "recalled";
+  }
+
+  _beginYank(player) {
+    if (this.state === "latched" && this.anchorTarget) { this.secondaryActive = true; this.pierced = new Set(); this.chainCollided = new Set(); this.state = "yanking"; return "recalled"; }
+    return this._beginReturn(player);
+  }
+
+  _beginCircuitReturn(player) {
+    if (this.state === "circuiting") { this.secondaryActive = true; this.orbit = this.circuitOrbit * 0.45; this.state = "returning"; this.vx *= -1; this.vy *= -1; return "recalled"; }
+    return this._beginReturn(player);
   }
 
   // back the blade out of any wall it has driven its tip into, or off-screen; returns
@@ -264,33 +479,40 @@ class Blade {
     if (am < 1) { dirX = Math.cos(this.angle); dirY = Math.sin(this.angle); }
     else { dirX /= am; dirY /= am; }
     this.angle = Math.atan2(dirY, dirX);   // blade points the way it's thrown
-    const sp = clamp(T.speed + this.tipSpeed * T.speedFromSwing, T.speed, T.maxSpeed);
+    const channelSpeed = this.channel("throwSpeed");
+    const sp = clamp((T.speed + this.tipSpeed * T.speedFromSwing) * channelSpeed, T.speed * channelSpeed, T.maxSpeed * channelSpeed);
     this.vx = dirX * sp;
     this.vy = dirY * sp;
-    this.throwDmg = T.damage + sp * T.damageFromSpeed;
-    this.throwBaseDmg = this.throwDmg;   // ramp (Razor Momentum) is capped relative to this
+    this.throwDmg = (T.damage + sp * T.damageFromSpeed) * this.channel("throwPower");
+    this.throwBaseDmg = this.throwDmg;   // Overdrive ramp is capped relative to this
     this.pierced = new Set();
     this.flyTime = 0;
+    this.throwId++;
+    this.throwOrigin = { x: this.x, y: this.y };
+    this.throwResolved = false;
+    this.secondaryActive = false;
+    this.anchorTarget = null; this.anchorTerrain = false;
+    this.retraceReturn = false; this.retraceDone = false;
+    this.redirectSpent = false;
+    this.impactVX = null; this.impactVY = null;
+    this._repeatHits.clear();
     this.hostile = false; this.stolenBy = null;
     this.state = "flying";
+    if (this.weapon && this.weapon.onThrowLaunch) this.weapon.onThrowLaunch({ blade: this });
     return true;
   }
 
   // recall if within tether range; returns "recalled" | "toofar"
   tryRecall(player) {
     if (this.state === "held" || this.state === "returning") return "busy";
-    const hand = this.handPos(player);
-    const earlyReach = CONFIG.blade.throw.reclaimDistance + CONFIG.blade.throw.returnSpeed * this.recallWindow;
-    if (this.hostile || this.stolenBy || this.freeRecall || len(this.x - hand.x, this.y - hand.y) <= earlyReach) {
-      this.pierced = new Set();   // can pierce again on the way home
-      this.hostile = false; this.stolenBy = null;
-      this.state = "returning";
-      return "recalled";
+    if (this.weapon && this.weapon.onSecondaryThrowAction) {
+      const result = this.weapon.onSecondaryThrowAction({ blade: this, player });
+      if (result) return result;
     }
-    return "toofar";
+    return this._beginReturn(player);
   }
 
-  get thrown() { return this.state === "flying" || this.state === "returning"; }
+  get thrown() { return ["flying", "returning", "embedded", "reeling", "latched", "yanking", "circuiting"].includes(this.state); }
 
   // how "clean" the swing is: 1 = a true perpendicular cut, ~0 = a straight poke/thrust.
   // (the perpendicular component of tip velocity relative to the blade's own axis)
@@ -298,6 +520,38 @@ class Blade {
     if (this.tipSpeed < 1) return 0;
     const perpX = -Math.sin(this.angle), perpY = Math.cos(this.angle);
     return clamp(Math.abs((this.tipVX * perpX + this.tipVY * perpY) / this.tipSpeed), 0, 1);
+  }
+
+  axialQuality() {
+    if (this.tipSpeed < 1) return 0;
+    const ax = Math.cos(this.angle), ay = Math.sin(this.angle);
+    return clamp(Math.abs((this.tipVX * ax + this.tipVY * ay) / this.tipSpeed), 0, 1);
+  }
+
+  hitQuality(enemy) {
+    if (this.weapon && this.weapon.qualityMetric) return clamp(this.weapon.qualityMetric({ blade: this, enemy }), 0, 1);
+    return this.sliceQuality();
+  }
+
+  repeatScale(enemy) {
+    if (!enemy) return 1;
+    const W = CONFIG.weapons.ringblade, now = typeof CLOCK !== "undefined" ? CLOCK.sim : 0;
+    const prev = this._repeatHits.get(enemy);
+    if (prev == null || now - prev >= W.repeatWindow) return 1;
+    return lerp(W.repeatFloor, 0.8, this.orbit);
+  }
+
+  recordHit(enemy) {
+    if (enemy) this._repeatHits.set(enemy, typeof CLOCK !== "undefined" ? CLOCK.sim : 0);
+  }
+
+  canHitThrownEnemy(enemy) {
+    if (this.weapon && this.weapon.id === "hammer" && this.state === "returning" && this.pierced.size >= CONFIG.weapons.hammer.recallTargetCap) return false;
+    if (this.weapon && this.weapon.id === "ringblade") {
+      const now = typeof CLOCK !== "undefined" ? CLOCK.sim : 0, prev = this._repeatHits.get(enemy);
+      return prev == null || now - prev >= CONFIG.weapons.ringblade.repeatWindow * 0.62;
+    }
+    return !this.pierced.has(enemy);
   }
 
   // damage for a held swing (0 if below threshold or not held).
@@ -308,9 +562,11 @@ class Blade {
     const B = CONFIG.blade, S = CONFIG.skill;
     if (this.state !== "held" || this.tipSpeed < B.minHitSpeed) return 0;
     let dmg = Math.min((this.tipSpeed - B.minHitSpeed) * B.damageScale, B.maxDamage);
-    dmg *= lerp(S.pokeFloor, 1, this.sliceQuality());
+    const quality = this.hitQuality();
+    dmg *= lerp(S.pokeFloor, 1, quality);
     const commit = clamp(len(this.vx, this.vy) / S.commitRef, 0, 1);
     dmg *= lerp(S.commitFloor, 1, commit);
+    if (this.weapon && this.weapon.damageProfile) dmg *= this.weapon.damageProfile({ blade: this, quality, baseDamage: dmg });
     return dmg;
   }
 
@@ -339,6 +595,42 @@ class Blade {
       ctx.strokeStyle = THEME.dark ? "rgba(10,12,20,0.9)" : "#fff"; ctx.lineWidth = 2;   // edge highlight reads on either polarity
       ctx.strokeRect(-hl * 0.35, -hh, hl, hh * 2);
       ctx.restore();
+      return;
+    }
+
+    if (this.model === "spear") {
+      ctx.lineWidth = 5 * s;
+      ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.tipX, this.tipY); ctx.stroke();
+      ctx.save(); ctx.translate(this.tipX, this.tipY); ctx.rotate(this.angle);
+      ctx.beginPath(); ctx.moveTo(8 * s, 0); ctx.lineTo(-13 * s, -9 * s); ctx.lineTo(-9 * s, 0); ctx.lineTo(-13 * s, 9 * s); ctx.closePath(); ctx.fill();
+      ctx.restore(); return;
+    }
+
+    if (this.model === "chainblade") {
+      const hand = this._lastHand || { x: this.x, y: this.y };
+      ctx.lineWidth = 3; ctx.strokeStyle = this.tension > 0.7 ? CONFIG.colors.perfect : THEME.ink;
+      ctx.beginPath(); ctx.moveTo(hand.x, hand.y);
+      const segments = 7;
+      for (let i = 1; i <= segments; i++) {
+        const t = i / segments, sag = Math.sin(t * Math.PI) * (1 - this.tension) * 28;
+        ctx.lineTo(lerp(hand.x, this.tipX, t), lerp(hand.y, this.tipY, t) + sag);
+      }
+      ctx.stroke();
+      ctx.save(); ctx.translate(this.tipX, this.tipY); ctx.rotate(this.angle);
+      ctx.beginPath(); ctx.moveTo(13 * s, 0); ctx.lineTo(-7 * s, -11 * s); ctx.lineTo(-3 * s, 0); ctx.lineTo(-7 * s, 11 * s); ctx.closePath(); ctx.fill();
+      ctx.restore(); return;
+    }
+
+    if (this.model === "ringblade") {
+      const r = 20 * s;
+      ctx.lineWidth = 7 * s; ctx.strokeStyle = THEME.ink;
+      ctx.beginPath(); ctx.arc(this.tipX, this.tipY, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.lineWidth = 2; ctx.strokeStyle = CONFIG.colors.bladeGlow;
+      const spin = (typeof CLOCK !== "undefined" ? CLOCK.sim : 0) * (5 + this.orbit * 9);
+      for (let i = 0; i < 3; i++) {
+        const a = spin + i * Math.PI * 2 / 3;
+        ctx.beginPath(); ctx.arc(this.tipX, this.tipY, r + 3, a, a + 0.55); ctx.stroke();
+      }
       return;
     }
 
