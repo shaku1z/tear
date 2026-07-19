@@ -45,6 +45,7 @@ class Blade {
     this.throwId = 0;
     this.throwOrigin = null;
     this.throwResolved = false;
+    this.impactResolved = false;   // terminal first-impact effects are one-shot per throw route
     this.secondaryActive = false;
     this.anchorTarget = null;
     this.anchorTerrain = false;
@@ -61,7 +62,17 @@ class Blade {
     this.stolenBy = null;          // actor currently controlling that hostile flight
   }
 
-  forceEmbed() { this.state = "embedded"; this.vx = 0; this.vy = 0; }
+  forceEmbed() {
+    if (this.impactVX == null) this.impactVX = this.vx;
+    if (this.impactVY == null) this.impactVY = this.vy;
+    this.state = "embedded"; this.vx = 0; this.vy = 0;
+  }
+
+  claimImpact() {
+    if (this.impactResolved) return false;
+    this.impactResolved = true;
+    return true;
+  }
 
   // effective blade length (longer while thrown if the ability is owned).
   // lengthBonus is a per-instance additive override — the Mirror boss wields a much longer,
@@ -253,7 +264,8 @@ class Blade {
         dx = hand.x - this.x; dy = hand.y - this.y;
       }
       const homeD = len(hand.x - this.x, hand.y - this.y);
-      if ((target === hand || this.retraceDone) && homeD < 26) {
+      const returnSpeed = T.returnSpeed * this.channel("returnSpeed");
+      if ((target === hand || this.retraceDone) && homeD <= Math.max(26, returnSpeed * dt)) {
         // reattach to the hand -> back to a normal held blade
         this.state = "held";
         this.hostile = false; this.stolenBy = null;
@@ -267,8 +279,8 @@ class Blade {
       }
       const travelD = len(dx, dy) || 1;
       this.angle = Math.atan2(dy, dx);
-      this.vx = (dx / travelD) * T.returnSpeed * this.channel("returnSpeed");
-      this.vy = (dy / travelD) * T.returnSpeed * this.channel("returnSpeed");
+      this.vx = (dx / travelD) * returnSpeed;
+      this.vy = (dy / travelD) * returnSpeed;
       this.x += this.vx * dt;
       this.y += this.vy * dt;
       this._recomputeTip(dt);
@@ -373,6 +385,13 @@ class Blade {
     this.state = "circuiting";
     this.circuitOrbit = this.orbit;
     this.circuitEnergy = CONFIG.weapons.ringblade.circuitEnergy * this.channel("controlDuration") * (0.75 + this.orbit * 0.5);
+    const releaseSpeed = len(this.releaseVX || 0, this.releaseVY || 0);
+    if (releaseSpeed >= CONFIG.blade.minHitSpeed * 0.35) {
+      const throwSpeed = len(this.vx, this.vy);
+      this.vx = this.releaseVX / releaseSpeed * throwSpeed;
+      this.vy = this.releaseVY / releaseSpeed * throwSpeed;
+      this.angle = Math.atan2(this.vy, this.vx);
+    }
     this.orbit = 0;
   }
 
@@ -413,6 +432,7 @@ class Blade {
   }
 
   _beginReturn(player, opts) {
+    if (this.state === "held" || this.state === "returning" || this.secondaryActive) return "busy";
     const hand = this.handPos(player);
     const earlyReach = CONFIG.blade.throw.reclaimDistance * this.channel("remoteRange") + CONFIG.blade.throw.returnSpeed * this.recallWindow;
     if (!(this.hostile || this.stolenBy || this.freeRecall || len(this.x - hand.x, this.y - hand.y) <= earlyReach)) return "toofar";
@@ -423,17 +443,19 @@ class Blade {
   }
 
   _beginSpearReel(player) {
-    if (this.state === "flying") return "busy";
-    if (this.state !== "embedded" && this.state !== "reeling") return this._beginReturn(player);
-    this.secondaryActive = true; this.state = "reeling"; return "recalled";
+    if (this.state === "flying" || this.state === "reeling" || this.secondaryActive) return "busy";
+    if (this.state !== "embedded") return this._beginReturn(player);
+    this.secondaryActive = true; this.pierced = new Set(); this.state = "reeling"; return "recalled";
   }
 
   _beginYank(player) {
+    if (this.state === "yanking" || this.secondaryActive) return "busy";
     if (this.state === "latched" && this.anchorTarget) { this.secondaryActive = true; this.pierced = new Set(); this.chainCollided = new Set(); this.state = "yanking"; return "recalled"; }
     return this._beginReturn(player);
   }
 
   _beginCircuitReturn(player) {
+    if (this.state === "returning" || this.secondaryActive) return "busy";
     if (this.state === "circuiting") { this.secondaryActive = true; this.orbit = this.circuitOrbit * 0.45; this.state = "returning"; this.vx *= -1; this.vy *= -1; return "recalled"; }
     return this._beginReturn(player);
   }
@@ -472,6 +494,7 @@ class Blade {
   throwBlade() {
     if (this.state !== "held") return false;
     const T = CONFIG.blade.throw;
+    this.releaseVX = this.vx; this.releaseVY = this.vy;
     // throw toward the reticle (where you're aiming) — far more accurate than the
     // momentum-led blade angle while you're moving/jumping/dashing.
     let dirX = this.aimX, dirY = this.aimY;
@@ -490,6 +513,7 @@ class Blade {
     this.throwId++;
     this.throwOrigin = { x: this.x, y: this.y };
     this.throwResolved = false;
+    this.impactResolved = false;
     this.secondaryActive = false;
     this.anchorTarget = null; this.anchorTerrain = false;
     this.retraceReturn = false; this.retraceDone = false;
@@ -504,7 +528,7 @@ class Blade {
 
   // recall if within tether range; returns "recalled" | "toofar"
   tryRecall(player) {
-    if (this.state === "held" || this.state === "returning") return "busy";
+    if (this.state === "held" || this.state === "returning" || this.secondaryActive) return "busy";
     if (this.weapon && this.weapon.onSecondaryThrowAction) {
       const result = this.weapon.onSecondaryThrowAction({ blade: this, player });
       if (result) return result;
@@ -538,7 +562,12 @@ class Blade {
     const W = CONFIG.weapons.ringblade, now = typeof CLOCK !== "undefined" ? CLOCK.sim : 0;
     const prev = this._repeatHits.get(enemy);
     if (prev == null || now - prev >= W.repeatWindow) return 1;
-    return lerp(W.repeatFloor, 0.8, this.orbit);
+    const momentum = this.state === "held" ? this.orbit : this.circuitOrbit;
+    return lerp(W.repeatFloor, 0.8, momentum);
+  }
+
+  thrownCollisionPad() {
+    return this.weapon && this.weapon.throwCollisionPad != null ? this.weapon.throwCollisionPad : 4;
   }
 
   recordHit(enemy) {

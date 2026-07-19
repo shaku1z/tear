@@ -1829,7 +1829,22 @@
       chapterState: mode === "campaign" ? "LORE_ENTER" : "WAVE_LIVE", pendingBossOutro: null, _prologueShown: false,
     };
     run.mods.weaponId = run.weaponId;
-    window.TEAR_WEAPON_DEBUG = () => ({ weapon: run.weaponId, stats: Object.assign({}, run.weaponStats), events: run.weaponLog.slice() });
+    window.TEAR_WEAPON_DEBUG = () => ({
+      weapon: run.weaponId,
+      stats: Object.assign({}, run.weaponStats),
+      events: run.weaponLog.slice(),
+      player: { x: player.x, y: player.y, vx: player.vx, vy: player.vy },
+      blade: {
+        state: blade.state, throwId: blade.throwId, x: blade.x, y: blade.y,
+        vx: blade.vx, vy: blade.vy, flyTime: blade.flyTime,
+        secondaryActive: blade.secondaryActive, impactResolved: blade.impactResolved,
+        pierced: blade.pierced.size,
+      },
+      enemies: enemies.filter((enemy) => !enemy.dead).slice(0, 24).map((enemy) => ({
+        x: enemy.x, y: enemy.y, hp: enemy.hp, stun: enemy.stun,
+        boss: !!enemy.isBoss, bound: enemy.boundT || 0,
+      })),
+    });
     // Exodia (The Forbidden Technique): Long Arm + Throwing Arm + Aether Step + Lifeline all owned
     if (achTracks() && META.level("reach") > 0 && META.level("throwarm") > 0 && META.level("aircharge") > 0 && META.level("lifeline") > 0) PROFILE.maxStat("exodiaBuild", 1);
     arsenalScroll = 0;
@@ -2103,7 +2118,8 @@
     const T = CONFIG.weapons.hammer;
     const impactSpeed = len(blade.impactVX == null ? blade.vx : blade.impactVX, blade.impactVY == null ? blade.vy : blade.impactVY);
     const downward = Math.max(0, blade.impactVY == null ? blade.vy : blade.impactVY);
-    const commitment = clamp(impactSpeed / CONFIG.blade.throw.maxSpeed + downward / 5000, 0.55, 1.35);
+    const distance = blade.throwOrigin ? len(x - blade.throwOrigin.x, y - blade.throwOrigin.y) : 0;
+    const commitment = clamp(impactSpeed / CONFIG.blade.throw.maxSpeed + downward / 5000 + clamp(distance / 720, 0, 1) * 0.24, 0.55, 1.35);
     FX.explode(x, y, CONFIG.colors.slam, 1.25);
     addShake(CONFIG.juice.shakeBig); addZoom(CONFIG.juice.zoomBig); SFX.boom();
     dealAoE(x, y, T.meteorRadius * commitment, Math.round(blade.throwDmg * 0.72 * commitment));
@@ -2477,14 +2493,14 @@
     if (blade.embeddedNew) {
       blade.embeddedNew = false;
       const impact = weaponHook("onWorldImpact", { blade, player, platforms, x: blade.x, y: blade.y });
-      if (impact && impact.mechanic === "meteor") { lobExplode(blade.x, blade.y); emitThrowResolve(null, blade.throwDmg); }
+      if (impact && impact.mechanic === "meteor" && blade.claimImpact()) { lobExplode(blade.x, blade.y); emitThrowResolve(null, blade.throwDmg); }
       else if (impact && impact.mechanic === "anchorTerrain") {
         if (run.mods.redirect && !blade.redirectSpent) {
           blade.redirectSpent = true; blade.state = "flying"; blade.flyTime = 0;
           const target = nearestEnemy(blade.x, blade.y);
           const dx = target ? target.x - blade.x : -(blade.impactVX || 1), dy = target ? target.y - blade.y : -(blade.impactVY || 0), m = len(dx, dy) || 1;
           blade.vx = dx / m * CONFIG.blade.throw.speed * blade.channel("throwSpeed"); blade.vy = dy / m * CONFIG.blade.throw.speed * blade.channel("throwSpeed");
-        } else blade.anchorTerrain = true;
+        } else if (blade.claimImpact()) blade.anchorTerrain = true;
       }
     }
 
@@ -3018,7 +3034,7 @@
       }
       for (const e of enemies) {
         if (e.dead || e.dying || e.introT > 0 || !blade.canHitThrownEnemy(e)) continue;
-        if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y, e.radius + 4)) {
+        if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y, e.radius + blade.thrownCollisionPad())) {
           if (e.blocksDamage({ type: "throw" })) continue;
           // Duelist parries a thrown blade right back — bait the parry, then throw
           if (e.behavior === "duelist" && e.duelReady) {
@@ -3113,9 +3129,10 @@
             onKill(e);
           }
           if (throwEffect && throwEffect.stop) {
-            if (throwEffect.mechanic === "meteor") { lobExplode(e.x, e.y); blade.forceEmbed(); }
+            if (!blade.claimImpact()) { blade.state = "returning"; break; }
+            if (throwEffect.mechanic === "meteor") { blade.forceEmbed(); lobExplode(e.x, e.y); }
             else if (throwEffect.mechanic === "anchor") { blade.anchorTarget = e; blade.forceEmbed(); }
-            else if (throwEffect.mechanic === "bind") { blade.anchorTarget = e; blade.state = "latched"; blade.linkT = CONFIG.weapons.chainblade.bindDuration * blade.channel("controlDuration"); e.boundT = blade.linkT; }
+            else if (throwEffect.mechanic === "bind") { blade.anchorTarget = e; blade.state = "latched"; blade.vx = 0; blade.vy = 0; blade.linkT = CONFIG.weapons.chainblade.bindDuration * blade.channel("controlDuration"); e.boundT = blade.linkT; }
             break;
           }
           // Redirect: the outgoing route corrects toward a fresh target

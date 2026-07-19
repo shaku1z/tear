@@ -42,6 +42,16 @@ const path = require("node:path");
   await page.waitForTimeout(500);
   if (process.env.TEAR_SCREENSHOT) await page.screenshot({ path: process.env.TEAR_SCREENSHOT });
   const weaponIds = ["sword", "hammer", "spear", "chainblade", "ringblade"];
+  async function pulseThrowUntilLaunched(expectedThrows) {
+    let snapshot = null;
+    for (let attempt = 0; attempt < 60; attempt++) {
+      await page.mouse.click(800, 450, { button: "right" });
+      await page.waitForTimeout(80);
+      snapshot = await page.evaluate(() => window.TEAR_WEAPON_DEBUG && window.TEAR_WEAPON_DEBUG());
+      if (snapshot && snapshot.stats.throws >= expectedThrows) return snapshot;
+    }
+    return snapshot;
+  }
   for (let i = 0; i < weaponIds.length; i++) {
     if (i > 0) {
       await page.reload({ waitUntil: "domcontentloaded" });
@@ -55,11 +65,9 @@ const path = require("node:path");
     await page.waitForTimeout(500);
     const debug = await page.evaluate(() => window.TEAR_WEAPON_DEBUG && window.TEAR_WEAPON_DEBUG());
     assert.equal(debug && debug.weapon, weaponIds[i], `${weaponIds[i]} run starts cleanly`);
-    await page.evaluate(() => { Input.rmb = true; });
-    await page.waitForTimeout(220);
-    const thrown = await page.evaluate(() => window.TEAR_WEAPON_DEBUG && window.TEAR_WEAPON_DEBUG());
-    assert.ok(thrown.stats.throws >= 1, `${weaponIds[i]} throw launches through shared input`);
-    await page.evaluate(() => { Input.rmb = true; });
+    const thrown = await pulseThrowUntilLaunched(1);
+    assert.ok(thrown.stats.throws >= 1, `${weaponIds[i]} throw launches through shared input (${JSON.stringify(thrown.blade)})`);
+    await page.mouse.click(800, 450, { button: "right" });
     await page.waitForTimeout(180);
     console.log(`${weaponIds[i]} start passed`);
   }

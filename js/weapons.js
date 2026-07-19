@@ -19,6 +19,7 @@ const WEAPONS = [
     blurb: "Responsive precision · True Edge · Crosscut recall",
     tags: ["Precision", "Parry", "Recall"], weaknesses: ["Low burst", "Weak armor", "No wide control"],
     throwIdentity: "Crosscut", ratings: { handling: 5, impact: 3, reach: 3, difficulty: 2 },
+    throwCollisionPad: 4,
     channels: weaponChannels(),
     applyPhysics() {
       const B = CONFIG.blade;
@@ -52,6 +53,7 @@ const WEAPONS = [
     blurb: "Committed impact · Break · Meteor shockwave",
     tags: ["Break", "Slam", "Crowd"], weaknesses: ["Slow", "Short control", "Hard parries"],
     throwIdentity: "Meteor", ratings: { handling: 1, impact: 5, reach: 2, difficulty: 3 },
+    throwCollisionPad: 13,
     channels: weaponChannels({ throwPower: 1.35, throwSpeed: 0.82, secondaryPower: 1.18, returnSpeed: 0.78 }),
     applyPhysics() {
       const B = CONFIG.blade;
@@ -71,7 +73,7 @@ const WEAPONS = [
     onHeldHit(ctx) { return { mechanic: "break", breakPower: ctx.damage * CONFIG.weapons.hammer.breakPerDamage * ctx.quality }; },
     onThrowLaunch(ctx) { ctx.blade._launchBallistic(CONFIG.weapons.hammer.meteorGravity); },
     updateThrown(ctx) { ctx.blade._updateBallisticThrown(ctx.dt, ctx.player, ctx.platforms); },
-    onThrowHit() { return { mechanic: "meteor", stop: true }; },
+    onThrowHit(ctx) { return ctx.secondary ? { mechanic: "hammerReturn" } : { mechanic: "meteor", stop: true }; },
     onWorldImpact() { return { mechanic: "meteor" }; },
     onSecondaryThrowAction(ctx) { return ctx.blade._beginReturn(ctx.player); },
   },
@@ -82,6 +84,7 @@ const WEAPONS = [
     blurb: "Axial thrusts · Drive · Anchor Cast traversal",
     tags: ["Reach", "Mobility", "Single Target"], weaknesses: ["Narrow", "Weak sweeps", "Weak slam"],
     throwIdentity: "Anchor Cast", ratings: { handling: 4, impact: 3, reach: 5, difficulty: 4 },
+    throwCollisionPad: 3,
     channels: weaponChannels({ throwSpeed: 1.18, remoteRange: 1.15, returnSpeed: 1.08, controlDuration: 1.1 }),
     applyPhysics() {
       const B = CONFIG.blade;
@@ -104,7 +107,7 @@ const WEAPONS = [
     onHeldHit(ctx) { return ctx.quality >= 0.66 ? { mechanic: "drive", force: CONFIG.weapons.spear.driveForce * ctx.quality } : null; },
     onThrowLaunch(ctx) { ctx.blade._launchStraight(); ctx.blade.linkT = CONFIG.weapons.spear.linkDuration * ctx.blade.channel("controlDuration"); },
     updateThrown(ctx) { ctx.blade._updateSpearThrown(ctx.dt, ctx.player, ctx.platforms); },
-    onThrowHit() { return { mechanic: "anchor", stop: true }; },
+    onThrowHit(ctx) { return ctx.secondary ? { mechanic: "anchorReturn" } : { mechanic: "anchor", stop: true }; },
     onWorldImpact() { return { mechanic: "anchorTerrain" }; },
     onSecondaryThrowAction(ctx) { return ctx.blade._beginSpearReel(ctx.player); },
   },
@@ -115,6 +118,7 @@ const WEAPONS = [
     blurb: "Flexible reach · Tension and Drag · Bind / Yank",
     tags: ["Control", "Pull", "Expert"], weaknesses: ["Delayed", "Needs space", "Low boss damage"],
     throwIdentity: "Bind / Yank", ratings: { handling: 2, impact: 3, reach: 5, difficulty: 5 },
+    throwCollisionPad: 7,
     channels: weaponChannels({ remoteRange: 1.2, controlDuration: 1.2, secondaryPower: 1.15 }),
     applyPhysics() {
       const B = CONFIG.blade;
@@ -131,7 +135,7 @@ const WEAPONS = [
     onHeldHit(ctx) { return ctx.quality >= CONFIG.weapons.chainblade.fullTensionAt ? { mechanic: "drag", force: CONFIG.weapons.chainblade.dragForce * ctx.quality } : null; },
     onThrowLaunch(ctx) { ctx.blade._launchChain(); },
     updateThrown(ctx) { ctx.blade._updateChainThrown(ctx.dt, ctx.player, ctx.platforms); },
-    onThrowHit() { return { mechanic: "bind", stop: true }; },
+    onThrowHit(ctx) { return ctx.secondary ? { mechanic: "yank" } : { mechanic: "bind", stop: true }; },
     onSecondaryThrowAction(ctx) { return ctx.blade._beginYank(ctx.player); },
   },
   {
@@ -141,6 +145,7 @@ const WEAPONS = [
     blurb: "Continuous Orbit · fast multi-hit · Circuit ricochet",
     tags: ["Speed", "Throw", "Flow"], weaknesses: ["Low impact", "Weak armor", "Orbit upkeep"],
     throwIdentity: "Circuit", ratings: { handling: 5, impact: 2, reach: 3, difficulty: 4 },
+    throwCollisionPad: 8,
     channels: weaponChannels({ throwSpeed: 1.12, remoteRange: 1.25, returnSpeed: 1.15, controlDuration: 1.3 }),
     applyPhysics() {
       const B = CONFIG.blade;
@@ -159,7 +164,13 @@ const WEAPONS = [
     onHeldHit(ctx) { return { mechanic: "orbit", repeatScale: ctx.blade.repeatScale(ctx.enemy) }; },
     onThrowLaunch(ctx) { ctx.blade._launchCircuit(); },
     updateThrown(ctx) { ctx.blade._updateCircuit(ctx.dt, ctx.player, ctx.platforms); },
-    onThrowHit(ctx) { return { mechanic: "circuit", damageMult: 0.82 + ctx.blade.circuitOrbit * 0.38, redirect: true }; },
+    onThrowHit(ctx) {
+      return {
+        mechanic: "circuit",
+        damageMult: (0.82 + ctx.blade.circuitOrbit * 0.38) * ctx.blade.repeatScale(ctx.enemy),
+        redirect: !ctx.secondary,
+      };
+    },
     onSecondaryThrowAction(ctx) { return ctx.blade._beginCircuitReturn(ctx.player); },
   },
 ];

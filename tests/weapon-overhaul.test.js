@@ -33,12 +33,13 @@ vm.runInContext(`
     Blade,
     Player,
     Enemy,
+    CLOCK,
     newMods,
     UPGRADES,
   };
 `, context);
 
-const { CONFIG, WEAPONS, getWeapon, Blade, Player, Enemy, newMods, UPGRADES } = context.__test;
+const { CONFIG, WEAPONS, getWeapon, Blade, Player, Enemy, CLOCK, newMods, UPGRADES } = context.__test;
 
 assert.equal(WEAPONS.map((weapon) => weapon.id).join(","), "sword,hammer,spear,chainblade,ringblade");
 assert.equal(new Set(WEAPONS.map((weapon) => weapon.throwIdentity)).size, 5);
@@ -50,6 +51,7 @@ for (const weapon of WEAPONS) {
   assert.equal(typeof weapon.updateThrown, "function", `${weapon.id} thrown update`);
   assert.equal(typeof weapon.onThrowHit, "function", `${weapon.id} throw hit`);
   assert.equal(typeof weapon.onSecondaryThrowAction, "function", `${weapon.id} secondary action`);
+  assert.ok(weapon.throwCollisionPad > 0, `${weapon.id} has an explicit thrown collision body`);
   assert.equal(weapon.tags.length, 3);
   assert.ok(weapon.weaknesses.length >= 3);
 }
@@ -80,6 +82,17 @@ assert.ok(CONFIG.blade.maxReach < baseline.blade.maxReach, "Hammer has shorter p
 assert.ok(CONFIG.player.knockbackMult < 1, "Hammer chassis resists knockback");
 hammer.throwBlade();
 assert.equal(hammer.throwGravity, CONFIG.weapons.hammer.meteorGravity);
+const hammerOutgoing = hammer.weapon.onThrowHit({ blade: hammer, enemy: {}, secondary: false });
+const hammerReturning = hammer.weapon.onThrowHit({ blade: hammer, enemy: {}, secondary: true });
+assert.equal(hammerOutgoing.mechanic, "meteor");
+assert.equal(hammerOutgoing.stop, true);
+assert.notEqual(hammerReturning.stop, true, "Hammer return cannot re-trigger Meteor embedding");
+assert.equal(hammer.claimImpact(), true);
+assert.equal(hammer.claimImpact(), false, "Meteor is one-shot for a throw route");
+assert.ok(hammer.thrownCollisionPad() > sword.thrownCollisionPad(), "Hammer has the wider return body");
+hammer.state = "returning";
+hammer.pierced = new Set([{}, {}]);
+assert.equal(hammer.canHitThrownEnemy({}), false, "Hammer return obeys its target cap");
 
 const spear = makeBlade("spear");
 assert.ok(CONFIG.blade.length > baseline.blade.length, "Spear is longest");
@@ -91,12 +104,116 @@ assert.ok(spear.axialQuality() < 0.01);
 const chain = makeBlade("chainblade");
 chain.throwBlade();
 assert.ok(chain.linkT > 0);
+const chainOutgoing = chain.weapon.onThrowHit({ blade: chain, enemy: {}, secondary: false });
+const chainReturning = chain.weapon.onThrowHit({ blade: chain, enemy: {}, secondary: true });
+assert.equal(chainOutgoing.stop, true);
+assert.notEqual(chainReturning.stop, true, "Yank cannot immediately re-bind its target");
 
 const ring = makeBlade("ringblade");
 ring.orbit = 1;
+ring.vx = 0; ring.vy = 1000;
 ring.throwBlade();
 assert.equal(ring.state, "circuiting");
 assert.ok(ring.circuitEnergy > CONFIG.weapons.ringblade.circuitEnergy);
+assert.ok(Math.abs(ring.vy) > Math.abs(ring.vx), "Circuit inherits the held weapon's release tangent");
+
+const spearThrowEffect = spear.weapon.onThrowHit({ blade: spear, enemy: {}, secondary: false });
+const spearReturnEffect = spear.weapon.onThrowHit({ blade: spear, enemy: {}, secondary: true });
+assert.equal(spearThrowEffect.stop, true);
+assert.notEqual(spearReturnEffect.stop, true, "Spear return cannot re-anchor on contact");
+
+function playerWithHandAt(x, y) {
+  return {
+    x: x - CONFIG.blade.handOffsetX,
+    y: y - CONFIG.blade.handOffsetY,
+    vx: 0, vy: 0,
+  };
+}
+
+function finishLifecycle(blade, player, updateTarget) {
+  const dt = 1 / 120;
+  for (let i = 0; i < 900 && blade.state !== "held"; i++) {
+    if (updateTarget) updateTarget(dt);
+    player.x += player.vx * dt; player.y += player.vy * dt;
+    blade.update(dt, player, []);
+  }
+  assert.equal(blade.state, "held", `${blade.weapon.id} secondary route terminates in a catch`);
+}
+
+function assertRecallIsIdempotent(blade, player) {
+  assert.equal(blade.tryRecall(player), "recalled", `${blade.weapon.id} accepts its secondary action`);
+  for (let i = 0; i < 20; i++) assert.equal(blade.tryRecall(player), "busy", `${blade.weapon.id} ignores secondary spam`);
+}
+
+for (const id of ["sword", "hammer"]) {
+  const blade = makeBlade(id);
+  const player = playerWithHandAt(400, 400);
+  blade.state = "embedded"; blade.x = 650; blade.y = 400;
+  if (id === "sword") blade.throwOrigin = { x: 520, y: 400 };
+  assertRecallIsIdempotent(blade, player);
+  finishLifecycle(blade, player);
+}
+
+{
+  const blade = makeBlade("spear");
+  const player = playerWithHandAt(400, 400);
+  blade.state = "embedded"; blade.x = 650; blade.y = 400;
+  blade.anchorTerrain = true; blade.linkT = CONFIG.weapons.spear.linkDuration;
+  assertRecallIsIdempotent(blade, player);
+  assert.equal(blade.state, "reeling");
+  finishLifecycle(blade, player);
+}
+
+{
+  const blade = makeBlade("chainblade");
+  const player = playerWithHandAt(400, 400);
+  const target = { x: 590, y: 400, vx: 0, vy: 0, dead: false, dying: false, isBoss: false, weight: 1, anchored: false };
+  blade.state = "latched"; blade.x = target.x; blade.y = target.y;
+  blade.anchorTarget = target; blade.linkT = CONFIG.weapons.chainblade.bindDuration;
+  assertRecallIsIdempotent(blade, player);
+  assert.equal(blade.state, "yanking");
+  finishLifecycle(blade, player, (dt) => {
+    target.x += target.vx * dt; target.y += target.vy * dt;
+    target.vx *= Math.exp(-3 * dt); target.vy *= Math.exp(-3 * dt);
+  });
+}
+
+{
+  const blade = makeBlade("chainblade");
+  const player = playerWithHandAt(400, 400);
+  blade.state = "flying"; blade.x = 900; blade.y = 400; blade.flyTime = 0.2; blade.linkT = 1;
+  blade.update(1 / 120, player, []);
+  assert.equal(blade.state, "returning", "A missed Bind automatically returns at maximum extension");
+  finishLifecycle(blade, player);
+}
+
+{
+  const blade = makeBlade("ringblade");
+  const player = playerWithHandAt(400, 400);
+  blade.state = "circuiting"; blade.x = 650; blade.y = 400;
+  blade.circuitOrbit = 1; blade.circuitEnergy = 2;
+  assertRecallIsIdempotent(blade, player);
+  finishLifecycle(blade, player);
+}
+
+{
+  const blade = makeBlade("ringblade");
+  const player = playerWithHandAt(400, 400);
+  blade.state = "circuiting"; blade.x = 650; blade.y = 400;
+  blade.vx = 800; blade.vy = 0; blade.circuitEnergy = 0.001;
+  blade.update(1 / 120, player, []);
+  assert.equal(blade.state, "returning", "Circuit automatically returns when energy expires");
+  finishLifecycle(blade, player);
+}
+
+{
+  const blade = makeBlade("ringblade");
+  const target = {};
+  blade.circuitOrbit = 0;
+  CLOCK.sim = 10; blade.recordHit(target); CLOCK.sim += 0.05;
+  const repeated = blade.weapon.onThrowHit({ blade, enemy: target, secondary: false });
+  assert.ok(repeated.damageMult < 0.82, "Circuit applies same-target diminishing damage");
+}
 
 restoreConfig();
 const enemy = new Enemy(100, 100, { w: 30, h: 30, hp: 200, speed: 1, contactDmg: 10, knockbackTaken: 1 });
