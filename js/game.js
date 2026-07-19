@@ -513,7 +513,7 @@
   // dispatch an optional weapon-contract hook (no-op when the equipped weapon
   // doesn't define it). ctx carries whatever the call site knows (blade, enemy, ...).
   function weaponHook(name, ctx) {
-    const w = run && run.weapon;
+    const w = typeof blade !== "undefined" && blade && blade.weapon;
     if (w && typeof w[name] === "function") { try { return w[name](ctx || {}); } catch (e) {} }
     return undefined;
   }
@@ -1730,7 +1730,7 @@
       diffHp: (dm.hp || 1) * REMOTE.enemyHpMult, diffCount: (dm.count || 1) * REMOTE.enemyDensityMult,
       _dmgThisWave: false, _dmgThisRun: false, _dmgThisStage: false,   // no-hit achievement flags
       _achSnap: Object.keys(PROFILE.data.ach),   // achievements already owned at run start (to show "earned this run")
-      weapon, weaponId: selWeapon,   // for the "win with each weapon" achievement
+      weaponId: selWeapon,   // for the "win with each weapon" achievement
       biomeState: { swung: false, thrown: false, jumped: false },   // per-stage restriction feats
       _staticParry: 0, _airKills: 0, _projDashes: 0, _aldricSlams: 0, _revivedT: false, _bossFightT: null,
       runSeed, voidSeed: voidSeed || 1,
