@@ -1,13 +1,13 @@
 // ------- CrazyGames SDK wrapper -------
 // Env-gated: every method is a safe no-op unless the game is actually running on
 // CrazyGames (SDK.environment === "crazygames" | "local"). So the standalone build
-// (Vercel / itch / local) behaves exactly as before — nothing here ever runs there.
+// (Cloudflare standalone / itch / local) behaves exactly as before — nothing here ever runs there.
 // Docs: https://docs.crazygames.com/sdk/intro/  (v3)
 const CG = {
   // `on`   — SDK initialised (env "crazygames" OR "local"); enables harmless lifecycle
   //          signals + cloud-save plumbing. Safe everywhere.
   // `live` — actually embedded on CrazyGames (env "crazygames"). The ONLY gate for ADS,
-  //          so the standalone build (Vercel/itch/local) — where env is "local" — never
+  //          so the standalone build (Cloudflare/itch/local) — where env is "local" — never
   //          shows an ad and behaves exactly as before.
   ready: false, on: false, live: false, env: "disabled", _lastAd: -1e9,
   _suspend() {}, _resume() {}, _mute() {},   // game registers these (pause + mute audio during ads / portal mute)

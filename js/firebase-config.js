@@ -1,4 +1,4 @@
-// ------- Firebase configuration (standalone / Vercel build ONLY) -------
+// ------- Firebase configuration (standalone / Cloudflare build ONLY) -------
 // This game loads plain <script> files sharing one global scope — NOT ES modules — so
 // this file must NOT use `import` / `initializeApp` here. It only needs to expose the
 // config object on window.FIREBASE_CONFIG; js/cloud.js loads the Firebase SDK on demand

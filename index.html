@@ -2,36 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/png" href="branding/favicon.png" />
+  <link rel="icon" type="image/png" href="/branding/favicon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>TEAR: BLADE</title>
   <!-- PWA: installable on the standalone site (tearblade.com); inert on CrazyGames -->
-  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#0a0b10" />
-  <link rel="apple-touch-icon" href="branding/icons/apple-touch-icon.png" />
+  <link rel="apple-touch-icon" href="/branding/icons/apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="TEAR" />
   <!-- Chapter typography: self-hosted (latin subset) so cinematics never make a
        runtime web-font request. Courier/Arial fall back while these load. -->
-  <link rel="preload" href="fonts/BarlowCondensed-SemiBold.woff2?v=199" as="font" type="font/woff2" crossorigin />
-  <link rel="preload" href="fonts/IBMPlexMono-Regular.woff2?v=199" as="font" type="font/woff2" crossorigin />
-  <!-- CrazyGames SDK (v3). Harmless off-platform: the wrapper in crazy.js is env-gated. -->
-  <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+  <link rel="preload" href="/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/IBMPlexMono-Regular.woff2" as="font" type="font/woff2" crossorigin />
+  <!-- TEAR_PLATFORM_SDK -->
   <style>
     /* Bundled chapter fonts — see fonts/OFL.txt (SIL Open Font License 1.1) */
     @font-face {
       font-family: 'Barlow Condensed'; font-style: normal; font-weight: 600; font-display: swap;
-      src: url(fonts/BarlowCondensed-SemiBold.woff2?v=199) format('woff2');
+      src: url(/fonts/BarlowCondensed-SemiBold.woff2) format('woff2');
     }
     @font-face {
       font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400; font-display: swap;
-      src: url(fonts/IBMPlexMono-Regular.woff2?v=199) format('woff2');
+      src: url(/fonts/IBMPlexMono-Regular.woff2) format('woff2');
     }
     @font-face {
       font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 500; font-display: swap;
-      src: url(fonts/IBMPlexMono-Medium.woff2?v=199) format('woff2');
+      src: url(/fonts/IBMPlexMono-Medium.woff2) format('woff2');
     }
     /* EDGE-TO-EDGE: the game IS the page. The canvas fills the whole viewport in every
        context (windowed, fullscreen, the CrazyGames iframe) and the OVERSCAN system
@@ -144,38 +143,7 @@
     <div id="hint">A/D move &nbsp;·&nbsp; W/Space jump &nbsp;·&nbsp; hold S drop through &nbsp;·&nbsp; Shift dash &nbsp;·&nbsp; mouse = blade &nbsp;·&nbsp; right-click throw / recall &nbsp;·&nbsp; P pause</div>
   </div>
 
-  <!-- load order matters: these are plain scripts sharing global scope -->
-  <!-- ?v cache-bust: bump if the browser ever serves stale JS (server is no-cache too) -->
-  <script src="js/config.js?v=199"></script>
-  <script src="js/stages.js?v=199"></script>
-  <script src="js/utils.js?v=199"></script>
-  <script src="js/voidgen.js?v=199"></script>
-  <script src="js/ui.js?v=199"></script>
-  <script src="js/cinematics.js?v=199"></script>
-  <script src="js/audio.js?v=199"></script>
-  <script src="js/input.js?v=199"></script>
-  <script src="js/gamepad.js?v=199"></script>
-  <script src="js/particles.js?v=199"></script>
-  <script src="js/backdrop.js?v=199"></script>
-  <script src="js/attract.js?v=199"></script>
-  <script src="js/crazy.js?v=199"></script>
-  <script src="js/firebase-config.js?v=199"></script>
-  <script src="js/profile.js?v=199"></script>
-  <script src="js/achievements.js?v=199"></script>
-  <script src="js/challenges.js?v=199"></script>
-  <script src="js/upgrades.js?v=199"></script>
-  <script src="js/meta.js?v=199"></script>
-  <script src="js/weapons.js?v=199"></script>
-  <script src="js/affixes.js?v=199"></script>
-  <script src="js/variants.js?v=199"></script>
-  <script src="js/blade.js?v=199"></script>
-  <script src="js/player.js?v=199"></script>
-  <script src="js/projectile.js?v=199"></script>
-  <script src="js/enemy.js?v=199"></script>
-  <script src="js/ghost.js?v=199"></script>
-  <script src="js/cloud.js?v=199"></script>
-  <script src="js/mirror.js?v=199"></script>
-  <script src="js/game.js?v=199"></script>
+  <!-- TEAR_ENTRYPOINT -->
   <!-- Warm the chapter fonts so canvas draws use them the moment they resolve.
        Failure is harmless: font-display swap keeps Courier/Arial until then. -->
   <script>
@@ -187,20 +155,6 @@
         document.fonts.load("500 20px 'IBM Plex Mono'");
         document.fonts.ready.then(function () { window.__chapterFontsReady = true; }).catch(function () {});
       } catch (e) {}
-    })();
-  </script>
-  <!-- PWA service worker: STANDALONE ONLY — never inside the CrazyGames iframe
-       (their SDK/iframe owns that build) and never on localhost (dev server is
-       no-cache; a cache-first SW would serve stale JS mid-edit). The ?v rides
-       the same cache-bust as the scripts, so bumping v rolls the SW cache. -->
-  <script>
-    (function () {
-      var standalone = window.self === window.top && !/^(localhost|127\.)/.test(location.hostname);
-      if (standalone && "serviceWorker" in navigator) {
-        addEventListener("load", function () {
-          navigator.serviceWorker.register("sw.js?v=199").catch(function () {});
-        });
-      }
     })();
   </script>
 </body>

@@ -1,0 +1,40 @@
+{
+  "name": "tear",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.15.0",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "vite --mode standalone",
+    "dev:crazygames": "vite --mode crazygames",
+    "build": "pnpm build:standalone && pnpm build:crazygames",
+    "build:standalone": "vite build --mode standalone",
+    "build:crazygames": "vite build --mode crazygames",
+    "preview": "vite preview --mode standalone",
+    "typecheck": "tsc -b",
+    "lint": "eslint src tests/**/*.ts vite.config.ts vitest.config.ts",
+    "test": "vitest run",
+    "test:weapons": "node tests/weapon-overhaul.test.js",
+    "test:browser": "node tests/browser-smoke.js",
+    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm test:weapons && pnpm build && pnpm test:browser",
+    "deploy": "pnpm check && wrangler deploy"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.61.1",
+    "@vite-pwa/assets-generator": "1.0.2",
+    "@types/node": "24.10.1",
+    "@vitest/coverage-v8": "4.1.10",
+    "eslint": "10.7.0",
+    "globals": "17.7.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.64.0",
+    "vite": "8.1.5",
+    "vite-plugin-pwa": "1.3.0",
+    "vitest": "4.1.10",
+    "workbox-window": "7.4.1",
+    "wrangler": "4.112.0"
+  }
+}

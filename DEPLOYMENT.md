@@ -1,72 +1,67 @@
 # Deployment
 
-**Tear** is a static HTML5/JS game (no build step). It's hosted on **Vercel**, connected to a
-**GitHub** repository so that every push to `main` automatically triggers a new production deploy.
+Tear's canonical standalone host is **Cloudflare Workers Static Assets**. The checked-in source tree is never deployed directly: Vite generates a content-hashed standalone artifact in `dist/standalone`, and Wrangler uploads only that directory.
 
-```
-edit files  →  git add  →  git commit  →  git push  →  Vercel auto-builds & deploys
-```
+## Prerequisites
 
----
+- Node.js 24 or newer
+- pnpm 11.15.0 through Corepack
+- A Cloudflare account authenticated with `pnpm wrangler login`, or CI credentials configured outside the repository
 
-## Pushing future updates (the everyday flow)
+Install exactly the locked dependency graph:
 
-After you change any game files, run these three commands from the project folder
-(`C:\Users\realm\Desktop\game\Tear`):
-
-```bash
-git add -A
-git commit -m "Describe what you changed"
-git push
+```powershell
+pnpm install --frozen-lockfile
 ```
 
-That's it. Vercel sees the push to `main` and redeploys automatically — your
-`.vercel.app` link updates in ~30 seconds. You can watch the build at
-https://vercel.com/dashboard.
+## Validate locally
 
-> Tip: bump the `?v=N` query in `index.html`'s `<script>` tags when you change JS,
-> so players' browsers always fetch the latest code instead of a cached copy.
+The complete release gate type-checks, lints, tests, builds both targets, and runs the generated standalone artifact in Chrome:
 
----
-
-## One-time setup (already done, for reference)
-
-1. **Local git repo**
-   ```bash
-   git init -b main
-   git add -A
-   git commit -m "Initial commit"
-   ```
-
-2. **GitHub repository** — create an empty repo (no README/.gitignore) at
-   https://github.com/new, then link and push:
-   ```bash
-   git remote add origin https://github.com/<your-username>/tear.git
-   git push -u origin main
-   ```
-
-3. **Vercel project** — import the GitHub repo so pushes auto-deploy:
-   - Go to https://vercel.com/new
-   - Select the `tear` GitHub repo and click **Import**, then **Deploy**.
-   - Framework Preset: **Other**. Build Command: *(leave empty)*. Output Directory: *(leave empty / `.`)*.
-   - Vercel serves `index.html` from the repo root as a static site.
-
-   (CLI alternative: `npx vercel` to deploy once, then `npx vercel git connect`
-   to wire up auto-deploys, or `npx vercel --prod` for a production deploy.)
-
----
-
-## Useful commands
-
-```bash
-git status                 # what's changed
-git log --oneline -10      # recent commits
-git push                   # publish committed changes (triggers Vercel)
-npx vercel --prod          # manual production deploy (rarely needed once Git is connected)
+```powershell
+pnpm check
 ```
 
-## Notes
+For normal local development:
 
-- `serve.py` is only for **local** testing (`python serve.py` → http://localhost:8123).
-  Vercel does not use it; it serves the static files directly.
-- `.vercel/` and `node_modules/` are git-ignored and must not be committed.
+```powershell
+pnpm dev
+pnpm dev:crazygames
+```
+
+The dev server does not install a service worker. The CrazyGames dev target injects the SDK wrapper; its platform adapter remains capability-gated outside the portal.
+
+## Preview the standalone artifact
+
+```powershell
+pnpm build:standalone
+pnpm preview
+```
+
+The standalone artifact contains generated hashed JavaScript, fonts/icons, the web manifest, Cloudflare `_headers`, and the generated Workbox service worker. Cache keys derive from content; there is no manual version number to bump.
+
+Validate Wrangler's upload without changing Cloudflare state:
+
+```powershell
+pnpm exec wrangler deploy --dry-run
+```
+
+The dry run must report `dist/standalone` as the assets directory. Source, tests, plans, repository metadata and the CrazyGames build must not appear in its upload.
+
+## Deploy
+
+```powershell
+pnpm deploy
+```
+
+`pnpm deploy` runs the complete release gate before `wrangler deploy`. The Worker name, current compatibility date, observability and the generated-assets boundary live in `wrangler.jsonc`.
+
+Production CI should run `pnpm install --frozen-lockfile` followed by `pnpm deploy`. Cloudflare API tokens belong in the CI secret store, never in this repository or Wrangler variables.
+
+## Rollback
+
+Cloudflare retains deployment versions. Roll back through the Cloudflare dashboard or the current Wrangler versions/deployments commands after confirming the desired version. A source rollback should still be made as a normal Git revert so the repository remains the canonical release history.
+
+## Standalone data services
+
+Firebase remains a standalone platform adapter for identity, leaderboards and shared replays. Its public web configuration is bundled only as non-secret client configuration; authorization continues to be enforced through Firebase Auth and Firestore rules. Cloudflare hosts the generated game files and does not replace those game services in this redesign.

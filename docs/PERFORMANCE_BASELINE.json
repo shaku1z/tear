@@ -1,0 +1,19 @@
+{
+  "capturedAt": "2026-07-19",
+  "baselineCommit": "ee5e93141d67cc02505b2227b3be0b10d1819e1c",
+  "source": {
+    "javascriptLines": 20128,
+    "largestFiles": {
+      "js/game.js": 6835,
+      "js/enemy.js": 4094,
+      "js/ui.js": 1162
+    }
+  },
+  "buildCompatibilitySlice": {
+    "standaloneMainBytes": 670670,
+    "standaloneMainGzipBytes": 210980,
+    "crazyGamesMainBytes": 668230,
+    "crazyGamesMainGzipBytes": 209910,
+    "notes": "The compatibility slice intentionally preserves one ordered legacy bundle. Code splitting begins as subsystems become ES modules. Browser-frame and memory profiles are added after deterministic diagnostics land."
+  }
+}

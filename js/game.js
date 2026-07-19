@@ -5083,7 +5083,7 @@
         label: m.label.toUpperCase(), glyph: trim.glyph, sub: trim.sub,
         sel: selMode === m.id, action: () => { selMode = m.id; } });
     });
-    // dev/test modes: a de-emphasised hairline section, local + Vercel only (never CG)
+    // dev/test modes: a de-emphasised hairline section, local + standalone only (never CG)
     if (!CG.live) {
       const devY = colY + pubModes.length * 60 + 12;
       UI.sectionLabel(ctx, "DEV", mx, devY, mw, t.color.muted);

@@ -1,11 +1,11 @@
-const { chromium } = require("playwright");
+const { chromium } = require("@playwright/test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 
 (async () => {
-  const root = path.resolve(__dirname, "..");
+  const root = path.resolve(__dirname, "..", "dist", "standalone");
   const server = http.createServer((request, response) => {
     const pathname = new URL(request.url, "http://127.0.0.1").pathname;
     const rel = pathname === "/" ? "index.html" : pathname.slice(1);
@@ -15,9 +15,10 @@ const path = require("node:path");
     fs.createReadStream(file).pipe(response);
   });
   await new Promise((resolve) => server.listen(8123, "127.0.0.1", resolve));
+  const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
   const browser = await chromium.launch({
     headless: true,
-    executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}),
   });
   const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
   await page.route("**/*", (route) => {
@@ -27,11 +28,11 @@ const path = require("node:path");
   });
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.stack || error.message));
-  await page.goto("http://127.0.0.1:8123/index.html", { waitUntil: "domcontentloaded", timeout: 30000 });
-  await page.waitForFunction(() => typeof WEAPONS !== "undefined" && typeof Blade !== "undefined" && typeof UPGRADES !== "undefined");
+  await page.goto("http://127.0.0.1:8123/index.html?test=1", { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.waitForFunction(() => window.__TEAR_BUILD__ && window.__TEAR_CATALOG_DEBUG__);
   const snapshot = await page.evaluate(() => ({
-    weapons: WEAPONS.map((weapon) => ({ id: weapon.id, throwIdentity: weapon.throwIdentity, ratings: weapon.ratings })),
-    abilities: UPGRADES.filter((upgrade) => ["stormbank", "overrun", "sever"].includes(upgrade.id)).map((upgrade) => upgrade.name),
+    weapons: window.__TEAR_CATALOG_DEBUG__.weapons,
+    abilities: window.__TEAR_CATALOG_DEBUG__.abilities,
     canvas: { width: document.querySelector("canvas").width, height: document.querySelector("canvas").height },
   }));
   assert.equal(snapshot.weapons.map((weapon) => weapon.id).join(","), "sword,hammer,spear,chainblade,ringblade");
@@ -55,7 +56,7 @@ const path = require("node:path");
   for (let i = 0; i < weaponIds.length; i++) {
     if (i > 0) {
       await page.reload({ waitUntil: "domcontentloaded" });
-      await page.waitForFunction(() => typeof WEAPONS !== "undefined");
+      await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__);
       await page.mouse.click(260, 360);
       await page.waitForTimeout(450);
     }

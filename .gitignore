@@ -1,8 +1,13 @@
 # dependencies
 node_modules/
-
-# vercel
-.vercel/
+node_modules.pre-architecture/
+node_modules.partial-install/
+dist/
+playwright-report/
+test-results/
+coverage/
+*.tsbuildinfo
+.wrangler/
 
 # logs
 *.log

@@ -1,42 +1,47 @@
 # CrazyGames submission
 
-Tear integrates the CrazyGames HTML5 SDK v3 (`js/crazy.js`). Everything is
-**env-gated**: ads and cloud save only activate when the game is actually
-embedded on CrazyGames (`SDK.environment === "crazygames"`), so the standalone
-Vercel/itch build behaves exactly as before.
+Tear integrates the CrazyGames HTML5 SDK v3 through its platform adapter. Portal capabilities activate only when the SDK reports the CrazyGames environment; the standalone Cloudflare build does not load the SDK.
 
-## Building the submission package
+## Build the submission
 
-`git archive` respects `export-ignore` in `.gitattributes`, so it bundles only
-the playable game — **`coop-lab.html` and the signaling server are excluded**
-(they use external WebRTC/STUN and would fail CrazyGames' "no external" checks):
+Generate the portal target from the same source tree as standalone:
 
-```sh
-git archive --format=zip -o tear-crazygames.zip HEAD
+```powershell
+pnpm build:crazygames
+Compress-Archive -Path dist/crazygames/* -DestinationPath tear-crazygames.zip -Force
 ```
 
-Upload `tear-crazygames.zip` in the CrazyGames developer portal. The entry
-point is `index.html`. The package is a few hundred KB of vanilla JS — well
-under the 50 MB initial-download limit. The only external request is the
-CrazyGames SDK itself (required and allowed).
+Upload `tear-crazygames.zip` in the CrazyGames developer portal. Its entry point is `index.html`. The build contains no service worker or standalone PWA registration, and the CrazyGames SDK is injected only into this target.
 
-To verify the package excludes the right files:
+Inspect the archive before uploading:
 
-```sh
-unzip -l tear-crazygames.zip   # should NOT list coop-lab.html / signaling/ / serve.py
+```powershell
+tar -tf tear-crazygames.zip
 ```
+
+The archive must contain generated game assets only. It must not contain `src`, legacy source files, tests, plans, Firebase configuration files, Wrangler configuration, `coop-lab.html`, or repository metadata.
+
+## Release validation
+
+Run `pnpm check` before packaging. In the CrazyGames preview environment, additionally verify:
+
+- loading start/stop notifications
+- gameplay start/stop notifications
+- portal mute changes and ad mute reasons
+- rewarded-continue success, decline and unavailable paths
+- data-module settings/profile persistence
+- touch, mouse/keyboard and controller flows
+- fullscreen/focus/visibility behavior
+- no service-worker registration or standalone Firebase login path
 
 ## Submission form answers
 
 **Does your game save progress?**
-→ **Yes, using the Data Module from the CrazyGames SDK.**
-Meta progress, settings, and high scores route through `CG.store`, which uses
-`SDK.data` (the Data Module) on-platform and localStorage as a fallback.
 
-**Game options**
+Yes, using the Data Module from the CrazyGames SDK. Meta progress, settings and high scores route through the platform storage adapter, with local storage used only outside the portal.
 
 | Option | Select? | Why |
-|---|---|---|
-| The game supports mobile devices | **No** | Mouse + keyboard only; no touch controls yet. |
-| The game is an online multiplayer game | **No** | Multiplayer (coop-lab) is excluded from this build; the submitted game is single-player. |
-| The game supports CrazyGames muting audio through SDK | **Yes** | `crazy.js` subscribes via `addSettingsChangeListener` and applies `settings.muteAudio` with priority over the in-game volume (`SFX.mute(on, "cg")`). |
+|---|---:|---|
+| The game supports mobile devices | **Yes** | Tear includes touch controls, viewport-safe rendering and touch aiming. Validate the current portal device matrix before each submission. |
+| The game is an online multiplayer game | **No** | The released game is single-player; `coop-lab.html` is not part of generated output. |
+| The game supports CrazyGames muting audio through SDK | **Yes** | Portal muting is a temporary audio mute reason and does not overwrite the player's Master/Music/SFX/Interface settings. |
