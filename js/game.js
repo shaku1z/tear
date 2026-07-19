@@ -3362,6 +3362,25 @@
       else SFX.setMusicTheme("menu", false);
     }
 
+    // TearScore: feed game state so the engine can react to biome/combat changes
+    if (typeof AUDIO_FLAGS !== 'undefined' && AUDIO_FLAGS.tearScoreEnabled && window.TearScore) {
+      window.TearScore.updateContext({
+        screen: state === 'playing' ? (CINEMA.active ? 'lore' : 'playing') : state,
+        biome: currentStage ? currentStage.name : 'menu',
+        wave: run ? run.wave : 0,
+        waveActive: !!(run && run.waveActive),
+        liveEnemies: typeof enemies !== 'undefined' && enemies ? enemies.length : 0,
+        queuedEnemies: run ? run.spawnQueue.length : 0,
+        projectileCount: typeof projectiles !== 'undefined' && projectiles ? projectiles.length : 0,
+        boss: { active: !!(run && run.isBossWave) },
+        player: typeof player !== 'undefined' && player ? {
+          healthRatio: Math.max(0, player.hp) / player.maxHp,
+          comboGauge: Math.max(0, player.comboTimer) / player.comboMaxT,
+          comboMultiplier: player.comboMult,
+          comboRank: player.comboRank,
+        } : undefined,
+      });
+    }
     render();
     handleUI();
     Input.endFrame();

@@ -1,4 +1,9 @@
 // ------- synthesized audio: crisp SFX + layered music (Web Audio, no files) -------
+// TearScore integration flags — set tearScoreEnabled:false to fall back to legacy music
+const AUDIO_FLAGS = {
+  tearScoreEnabled: true,
+  legacyMusicFallback: true,  // play legacy music if TearScore fails to load
+};
 const SFX = {
   ctx: null, master: null, musicGain: null, musicFilter: null,
   vol: 0.6, musicVol: 0.5, musicOn: true, muted: false,
@@ -32,7 +37,18 @@ const SFX = {
       this.musicFilter.frequency.value = 16000; this.musicFilter.Q.value = 0.35;
       this.musicGain.connect(this.musicFilter).connect(this.master);
       for (const d of [0.03, 0.05, 0.07, 0.1, 0.12, 0.16, 0.18, 0.22, 0.3, 0.36]) this._noiseBuffer(d);
-      this._startMusic();
+      if (AUDIO_FLAGS.tearScoreEnabled && window.TearScore) {
+        window.TearScore.initialize({
+          audioContext: this.ctx,
+          outputNode: this.master,
+          quality: 'balanced',
+        }).catch((e) => {
+          console.warn('[TearScore] init failed, falling back to legacy music', e);
+          if (AUDIO_FLAGS.legacyMusicFallback) this._startMusic();
+        });
+      } else {
+        this._startMusic();
+      }
     }
     if (this.ctx.state === "suspended") this.ctx.resume();
   },
