@@ -1703,7 +1703,6 @@
     CONFIG.player.dmgTakenMult *= (dm.dmg || 1);   // difficulty: harder = every hit lands heavier (uniform)
     player = new Player(W * 0.5, CONFIG.world.groundY - 60);
     player.oneHit = d.oneHit;
-    run.weapon = weapon;            // the equipped weapon object (contract hooks + metadata)
     blade = new Blade();
     blade.weapon = weapon;          // the blade delegates weapon-specific behaviour to this
     blade.throwType = weapon.throwType;
@@ -1731,7 +1730,7 @@
       diffHp: (dm.hp || 1) * REMOTE.enemyHpMult, diffCount: (dm.count || 1) * REMOTE.enemyDensityMult,
       _dmgThisWave: false, _dmgThisRun: false, _dmgThisStage: false,   // no-hit achievement flags
       _achSnap: Object.keys(PROFILE.data.ach),   // achievements already owned at run start (to show "earned this run")
-      weaponId: selWeapon,   // for the "win with each weapon" achievement
+      weapon, weaponId: selWeapon,   // for the "win with each weapon" achievement
       biomeState: { swung: false, thrown: false, jumped: false },   // per-stage restriction feats
       _staticParry: 0, _airKills: 0, _projDashes: 0, _aldricSlams: 0, _revivedT: false, _bossFightT: null,
       runSeed, voidSeed: voidSeed || 1,
