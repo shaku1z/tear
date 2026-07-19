@@ -24,6 +24,7 @@ var TearScore = (() => {
     api: () => api,
     initialize: () => initialize,
     setMuteReason: () => setMuteReason,
+    start: () => start2,
     updateContext: () => updateContext
   });
 
@@ -33,6 +34,10 @@ var TearScore = (() => {
     _logger;
     // Semantic mute tracker
     _muteReasons = /* @__PURE__ */ new Set();
+    // Single-flight promises
+    _initializePromise = null;
+    _startPromise = null;
+    _resumePromise = null;
     get state() {
       return this._state;
     }
@@ -43,27 +48,39 @@ var TearScore = (() => {
     get isMuted() {
       return this._muteReasons.size > 0;
     }
-    async initialize(options) {
+    initialize(options) {
+      if (this._state === "ready" || this._state === "running" || this._state === "paused" || this._state === "stopped") {
+        return Promise.resolve();
+      }
+      if (this._initializePromise) return this._initializePromise;
       if (this._state !== "uninitialized" && this._state !== "error") {
-        throw new Error(`Cannot initialize TearScore in state: ${this._state}`);
+        return Promise.reject(new Error(`Cannot initialize TearScore in state: ${this._state}`));
       }
       this._logger = options.logger;
       this.setState("initializing");
-      try {
-        await this.onInitialize(options);
+      this._initializePromise = this.onInitialize(options).then(() => {
         this.setState("ready");
-      } catch (err) {
+      }).catch((err) => {
         this.setState("error");
         this._logger?.error("[TearScore] Initialization failed", err);
         throw err;
-      }
+      }).finally(() => {
+        this._initializePromise = null;
+      });
+      return this._initializePromise;
     }
-    async start() {
+    start() {
+      if (this._state === "running") return Promise.resolve();
+      if (this._startPromise) return this._startPromise;
       if (this._state !== "ready" && this._state !== "stopped") {
-        throw new Error(`Cannot start TearScore from state: ${this._state}`);
+        return Promise.reject(new Error(`Cannot start TearScore from state: ${this._state}`));
       }
-      await this.onStart();
-      this.setState("running");
+      this._startPromise = this.onStart().then(() => {
+        this.setState("running");
+      }).finally(() => {
+        this._startPromise = null;
+      });
+      return this._startPromise;
     }
     pause(reason) {
       if (this._state === "running") {
@@ -74,14 +91,21 @@ var TearScore = (() => {
         }
       }
     }
-    async resume(reason) {
+    resume(reason) {
+      if (this._state === "running") return Promise.resolve();
+      if (this._resumePromise) return this._resumePromise;
       if (this._state === "paused") {
-        await this.onResume();
-        this.setState("running");
-        if (reason) {
-          this._logger?.info(`[TearScore] Resumed: ${reason}`);
-        }
+        this._resumePromise = this.onResume().then(() => {
+          this.setState("running");
+          if (reason) {
+            this._logger?.info(`[TearScore] Resumed: ${reason}`);
+          }
+        }).finally(() => {
+          this._resumePromise = null;
+        });
+        return this._resumePromise;
       }
+      return Promise.resolve();
     }
     stop() {
       if (this._state === "running" || this._state === "paused") {
@@ -1059,7 +1083,7 @@ var TearScore = (() => {
   var createAudioBufferSourceNodeRendererFactory = (connectAudioParam2, createNativeAudioBufferSourceNode2, getNativeAudioNode2, renderAutomation2, renderInputsOfAudioNode2) => {
     return () => {
       const renderedNativeAudioBufferSourceNodes = /* @__PURE__ */ new WeakMap();
-      let start2 = null;
+      let start3 = null;
       let stop = null;
       const createAudioBufferSourceNode = async (proxy, nativeOfflineAudioContext) => {
         let nativeAudioBufferSourceNode = getNativeAudioNode2(proxy);
@@ -1077,8 +1101,8 @@ var TearScore = (() => {
             playbackRate: nativeAudioBufferSourceNode.playbackRate.value
           };
           nativeAudioBufferSourceNode = createNativeAudioBufferSourceNode2(nativeOfflineAudioContext, options);
-          if (start2 !== null) {
-            nativeAudioBufferSourceNode.start(...start2);
+          if (start3 !== null) {
+            nativeAudioBufferSourceNode.start(...start3);
           }
           if (stop !== null) {
             nativeAudioBufferSourceNode.stop(stop);
@@ -1095,7 +1119,7 @@ var TearScore = (() => {
       };
       return {
         set start(value) {
-          start2 = value;
+          start3 = value;
         },
         set stop(value) {
           stop = value;
@@ -3043,7 +3067,7 @@ var TearScore = (() => {
   var createConstantSourceNodeRendererFactory = (connectAudioParam2, createNativeConstantSourceNode2, getNativeAudioNode2, renderAutomation2, renderInputsOfAudioNode2) => {
     return () => {
       const renderedNativeConstantSourceNodes = /* @__PURE__ */ new WeakMap();
-      let start2 = null;
+      let start3 = null;
       let stop = null;
       const createConstantSourceNode = async (proxy, nativeOfflineAudioContext) => {
         let nativeConstantSourceNode = getNativeAudioNode2(proxy);
@@ -3056,8 +3080,8 @@ var TearScore = (() => {
             offset: nativeConstantSourceNode.offset.value
           };
           nativeConstantSourceNode = createNativeConstantSourceNode2(nativeOfflineAudioContext, options);
-          if (start2 !== null) {
-            nativeConstantSourceNode.start(start2);
+          if (start3 !== null) {
+            nativeConstantSourceNode.start(start3);
           }
           if (stop !== null) {
             nativeConstantSourceNode.stop(stop);
@@ -3074,7 +3098,7 @@ var TearScore = (() => {
       };
       return {
         set start(value) {
-          start2 = value;
+          start3 = value;
         },
         set stop(value) {
           stop = value;
@@ -4514,13 +4538,13 @@ var TearScore = (() => {
 
   // ../../node_modules/.pnpm/standardized-audio-context@25.3.77/node_modules/standardized-audio-context/build/es2019/helpers/wrap-audio-buffer-source-node-start-method-consecutive-calls.js
   var wrapAudioBufferSourceNodeStartMethodConsecutiveCalls = (nativeAudioBufferSourceNode) => {
-    nativeAudioBufferSourceNode.start = /* @__PURE__ */ ((start2) => {
+    nativeAudioBufferSourceNode.start = /* @__PURE__ */ ((start3) => {
       let isScheduled = false;
       return (when = 0, offset = 0, duration) => {
         if (isScheduled) {
           throw createInvalidStateError();
         }
-        start2.call(nativeAudioBufferSourceNode, when, offset, duration);
+        start3.call(nativeAudioBufferSourceNode, when, offset, duration);
         isScheduled = true;
       };
     })(nativeAudioBufferSourceNode.start);
@@ -4528,12 +4552,12 @@ var TearScore = (() => {
 
   // ../../node_modules/.pnpm/standardized-audio-context@25.3.77/node_modules/standardized-audio-context/build/es2019/helpers/wrap-audio-scheduled-source-node-start-method-negative-parameters.js
   var wrapAudioScheduledSourceNodeStartMethodNegativeParameters = (nativeAudioScheduledSourceNode) => {
-    nativeAudioScheduledSourceNode.start = /* @__PURE__ */ ((start2) => {
+    nativeAudioScheduledSourceNode.start = /* @__PURE__ */ ((start3) => {
       return (when = 0, offset = 0, duration) => {
         if (typeof duration === "number" && duration < 0 || offset < 0 || when < 0) {
           throw new RangeError("The parameters can't be negative.");
         }
-        start2.call(nativeAudioScheduledSourceNode, when, offset, duration);
+        start3.call(nativeAudioScheduledSourceNode, when, offset, duration);
       };
     })(nativeAudioScheduledSourceNode.start);
   };
@@ -6589,7 +6613,7 @@ var TearScore = (() => {
     return () => {
       const renderedNativeOscillatorNodes = /* @__PURE__ */ new WeakMap();
       let periodicWave = null;
-      let start2 = null;
+      let start3 = null;
       let stop = null;
       const createOscillatorNode = async (proxy, nativeOfflineAudioContext) => {
         let nativeOscillatorNode = getNativeAudioNode2(proxy);
@@ -6605,8 +6629,8 @@ var TearScore = (() => {
             type: nativeOscillatorNode.type
           };
           nativeOscillatorNode = createNativeOscillatorNode2(nativeOfflineAudioContext, options);
-          if (start2 !== null) {
-            nativeOscillatorNode.start(start2);
+          if (start3 !== null) {
+            nativeOscillatorNode.start(start3);
           }
           if (stop !== null) {
             nativeOscillatorNode.stop(stop);
@@ -6628,7 +6652,7 @@ var TearScore = (() => {
           periodicWave = value;
         },
         set start(value) {
-          start2 = value;
+          start3 = value;
         },
         set stop(value) {
           stop = value;
@@ -7529,14 +7553,14 @@ var TearScore = (() => {
 
   // ../../node_modules/.pnpm/standardized-audio-context@25.3.77/node_modules/standardized-audio-context/build/es2019/helpers/wrap-audio-buffer-source-node-start-method-offset-clamping.js
   var wrapAudioBufferSourceNodeStartMethodOffsetClamping = (nativeAudioBufferSourceNode) => {
-    nativeAudioBufferSourceNode.start = /* @__PURE__ */ ((start2) => {
+    nativeAudioBufferSourceNode.start = /* @__PURE__ */ ((start3) => {
       return (when = 0, offset = 0, duration) => {
         const buffer = nativeAudioBufferSourceNode.buffer;
         const clampedOffset = buffer === null ? offset : Math.min(buffer.duration, offset);
         if (buffer !== null && clampedOffset > buffer.duration - 0.5 / nativeAudioBufferSourceNode.context.sampleRate) {
-          start2.call(nativeAudioBufferSourceNode, when, 0, 0);
+          start3.call(nativeAudioBufferSourceNode, when, 0, 0);
         } else {
-          start2.call(nativeAudioBufferSourceNode, when, clampedOffset, duration);
+          start3.call(nativeAudioBufferSourceNode, when, clampedOffset, duration);
         }
       };
     })(nativeAudioBufferSourceNode.start);
@@ -9299,9 +9323,9 @@ var TearScore = (() => {
      * @param start The time to start the slice
      * @param end The end time to slice. If none is given will default to the end of the buffer
      */
-    slice(start2, end = this.duration) {
+    slice(start3, end = this.duration) {
       assert(this.loaded, "Buffer is not loaded");
-      const startSamples = Math.floor(start2 * this.sampleRate);
+      const startSamples = Math.floor(start3 * this.sampleRate);
       const endSamples = Math.floor(end * this.sampleRate);
       assert(startSamples < endSamples, "The start time must be less than the end time");
       const length = endSamples - startSamples;
@@ -15193,9 +15217,9 @@ var TearScore = (() => {
     set spread(spread) {
       this._spread = spread;
       if (this._oscillators.length > 1) {
-        const start2 = -spread / 2;
+        const start3 = -spread / 2;
         const step = spread / (this._oscillators.length - 1);
-        this._forEach((osc, i) => osc.detune.value = start2 + step * i);
+        this._forEach((osc, i) => osc.detune.value = start3 + step * i);
       }
     }
     /**
@@ -18831,6 +18855,9 @@ var TearScore = (() => {
   var Transport = getContext().transport;
   var Destination = getContext().destination;
   var Master = getContext().destination;
+  function getDestination() {
+    return getContext().destination;
+  }
   var Listener = getContext().listener;
   var Draw = getContext().draw;
   var context = getContext();
@@ -18897,6 +18924,12 @@ var TearScore = (() => {
       const timeStr = `@${boundary}`;
       return Transport.scheduleOnce(this.wrapCallback(callback), timeStr);
     }
+    scheduleRepeat(interval2, callback) {
+      return Transport.scheduleRepeat(this.wrapCallback(callback), interval2);
+    }
+    clear(handle) {
+      Transport.clear(handle);
+    }
     setTempo(bpm, options) {
       if (options?.rampTime) {
         Transport.bpm.rampTo(bpm, options.rampTime);
@@ -18908,10 +18941,11 @@ var TearScore = (() => {
   var ToneTearScoreRuntime = class extends AbstractTearScoreRuntime {
     _transport = new ToneTransport();
     _masterBus;
-    _testOsc;
-    _testOscStarted = false;
     get transport() {
       return this._transport;
+    }
+    get masterBus() {
+      return this._masterBus;
     }
     get telemetry() {
       return {
@@ -18923,36 +18957,40 @@ var TearScore = (() => {
       };
     }
     async onInitialize(options) {
-      setContext(options.audioContext);
-      this._masterBus = new Gain(0.7);
+      if (options.audioContext.state !== "running") {
+        throw new Error(
+          `TearScore requires a running shared AudioContext during initialization; received state=${options.audioContext.state}`
+        );
+      }
+      const toneCtx = new Context(options.audioContext);
+      setContext(toneCtx);
+      await start();
+      this._masterBus = new Gain(1);
       const limiter = new Limiter(-0.1);
       this._masterBus.connect(limiter);
       limiter.connect(options.outputNode);
-      this._testOsc = new Oscillator(440, "sine").connect(this._masterBus);
     }
     async onStart() {
-      await start();
-      if (!this._testOscStarted) {
-        this._testOsc?.start();
-        this._testOscStarted = true;
+      if (Transport.state !== "started") {
+        this._transport.start();
       }
-      this._transport.start();
     }
     onPause() {
       this._transport.pause();
       if (this._masterBus) this._masterBus.gain.value = 0;
     }
     async onResume() {
-      await start();
-      if (this._masterBus && !this.isMuted) this._masterBus.gain.rampTo(0.7, 0.05);
-      this._transport.start();
+      if (this._masterBus && !this.isMuted) {
+        this._masterBus.gain.rampTo(1, 0.05);
+      }
+      if (Transport.state !== "started") {
+        this._transport.start();
+      }
     }
     onStop() {
       this._transport.stop();
-      this._testOsc?.stop();
     }
     async onDispose() {
-      this._testOsc?.dispose();
       this._masterBus?.disconnect();
       this._masterBus?.dispose();
     }
@@ -18985,49 +19023,56 @@ var TearScore = (() => {
       this.synth.dispose();
     }
   };
-  function createTearKick() {
+  function createTearKick(destination) {
     const synth = new MembraneSynth({
       pitchDecay: 0.05,
       octaves: 10,
       oscillator: { type: "sine" },
       envelope: { attack: 1e-3, decay: 0.4, sustain: 0.01, release: 1.4 }
     });
-    const dist = new Distortion(0.2).toDestination();
+    const dist = new Distortion(0.2).connect(destination);
     synth.connect(dist);
     return new ToneVoice(synth);
   }
-  function createTearHat() {
+  function createTearHat(destination) {
     const synth = new MetalSynth({
       envelope: { attack: 1e-3, decay: 0.1, release: 0.01 },
       harmonicity: 5.1,
       modulationIndex: 32,
       resonance: 4e3,
       octaves: 1.5
-    }).toDestination();
+    }).connect(destination);
     return new ToneVoice(synth);
   }
-  function createTearSub() {
+  function createTearSub(destination) {
     const synth = new MonoSynth({
       oscillator: { type: "triangle" },
       envelope: { attack: 0.1, decay: 0.3, sustain: 0.5, release: 0.8 },
       filter: { type: "lowpass", frequency: 200 }
-    }).toDestination();
+    }).connect(destination);
     return new ToneVoice(synth);
   }
   var ToneDSPRack = class {
     voices = /* @__PURE__ */ new Map();
-    constructor(quality = "balanced") {
+    drumBus;
+    bassBus;
+    harmonyBus;
+    constructor(quality = "balanced", masterBus) {
       const polyphonyCap = quality === "low" ? 3 : quality === "balanced" ? 6 : 12;
-      this.voices.set("kick", createTearKick());
-      this.voices.set("hat", createTearHat());
-      this.voices.set("sub", createTearSub());
-      this.voices.set("pluck", createTearPluck(polyphonyCap));
+      const dest = masterBus || getDestination();
+      this.drumBus = new Gain(1).connect(dest);
+      this.bassBus = new Gain(1).connect(dest);
+      this.harmonyBus = new Gain(1).connect(dest);
+      this.voices.set("kick", createTearKick(this.drumBus));
+      this.voices.set("hat", createTearHat(this.drumBus));
+      this.voices.set("sub", createTearSub(this.bassBus));
+      this.voices.set("pluck", createTearPluck(this.harmonyBus, polyphonyCap));
     }
     getVoice(instrumentId) {
       return this.voices.get(instrumentId) || null;
     }
   };
-  function createTearPluck(cap = 8) {
+  function createTearPluck(destination, cap = 8) {
     const synth = new PolySynth(Synth, {
       oscillator: { type: "square" },
       envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.2 }
@@ -19035,9 +19080,9 @@ var TearScore = (() => {
     synth.maxPolyphony = cap;
     const filter = new Filter(1500, "lowpass");
     synth.connect(filter);
-    const delay = new FeedbackDelay("8n", 0.4).toDestination();
+    const delay = new FeedbackDelay("8n", 0.4).connect(destination);
     filter.connect(delay);
-    filter.toDestination();
+    filter.connect(destination);
     return new ToneVoice(synth);
   }
 
@@ -21483,28 +21528,56 @@ var TearScore = (() => {
     runtime = null;
     director = new Director();
     composer = null;
-    initialized = false;
+    initializePromise = null;
+    startPromise = null;
+    composerScheduleId;
     currentBlueprintId = null;
-    async initialize(options) {
-      if (this.initialized) return;
-      const logger = {
-        info: console.log,
-        warn: console.warn,
-        error: console.error
-      };
-      this.runtime = new ToneTearScoreRuntime();
-      await this.runtime.initialize({
-        audioContext: options.audioContext,
-        outputNode: options.outputNode,
-        logger
+    initialize(options) {
+      if (this.runtime?.state === "ready" || this.runtime?.state === "running") return Promise.resolve();
+      if (this.initializePromise) return this.initializePromise;
+      this.initializePromise = (async () => {
+        const logger = {
+          info: console.log,
+          warn: console.warn,
+          error: console.error
+        };
+        this.runtime = new ToneTearScoreRuntime();
+        await this.runtime.initialize({
+          audioContext: options.audioContext,
+          outputNode: options.outputNode,
+          logger
+        });
+        const dspRack = new ToneDSPRack(options.quality || "balanced", this.runtime.masterBus);
+        this.composer = new TearScoreComposer(this.runtime, this.director, dspRack);
+        logger.info("TearScore initialized successfully.");
+      })().catch((err) => {
+        this.initializePromise = null;
+        throw err;
       });
-      const dspRack = new ToneDSPRack(options.quality || "balanced");
-      this.composer = new TearScoreComposer(this.runtime, this.director, dspRack);
-      this.initialized = true;
-      logger.info("TearScore initialized successfully.");
+      return this.initializePromise;
+    }
+    start() {
+      if (!this.runtime || this.runtime.state === "running") return Promise.resolve();
+      if (this.startPromise) return this.startPromise;
+      this.startPromise = (async () => {
+        if (this.initializePromise) await this.initializePromise;
+        if (!this.runtime) throw new Error("Runtime not initialized");
+        if (this.composerScheduleId == null) {
+          this.composerScheduleId = this.runtime.transport.scheduleRepeat("1m", () => {
+            if (this.runtime?.state === "running" && this.composer) {
+              const currentBar = this.runtime.transport.position.time.bars;
+              this.composer.tick(currentBar);
+            }
+          });
+        }
+        await this.runtime.start();
+      })().finally(() => {
+        this.startPromise = null;
+      });
+      return this.startPromise;
     }
     updateContext(ctx) {
-      if (!this.initialized || !this.composer || !this.runtime) return;
+      if (!this.composer || !this.runtime) return;
       this.director.updateContext(ctx);
       let targetBlueprint = groundsBlueprint;
       let targetBlueprintId = "grounds";
@@ -21550,23 +21623,13 @@ var TearScore = (() => {
           this.runtime.transport.start();
         }
       }
-      if (this.runtime.state === "running") {
-        const currentBar = this.runtime.transport.position.time.bars;
-        this.composer.tick(currentBar);
-      }
-      if (ctx.screen === "playing" || ctx.screen === "menu" || ctx.screen === "ending") {
-        if (this.runtime.state !== "running") {
-          this.runtime.start();
-        }
-      } else {
-        this.runtime.pause("not-playing");
-      }
     }
     setMuteReason(reason, muted) {
     }
   };
   var api = new TearScoreAPI();
   var initialize = api.initialize.bind(api);
+  var start2 = api.start.bind(api);
   var updateContext = api.updateContext.bind(api);
   var setMuteReason = api.setMuteReason.bind(api);
   return __toCommonJS(index_exports);

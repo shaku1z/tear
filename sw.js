@@ -18,6 +18,8 @@ const SHELL = [
   "/branding/icons/icon-192.png",
   "/branding/icons/icon-512.png",
   "/branding/icons/icon-maskable-512.png",
+  "/vendor/tear-score.iife.js",
+  "/vendor/tear-score.manifest.json",
 ].concat([
   "config", "stages", "utils", "voidgen", "ui", "cinematics", "audio", "input", "gamepad", "particles", "backdrop",
   "attract", "crazy", "firebase-config", "profile", "achievements", "challenges",
