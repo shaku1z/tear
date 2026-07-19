@@ -17,10 +17,25 @@ const SFX = {
     window.addEventListener("pointerdown", start);
     window.addEventListener("keydown", start);
   },
+  _booting: false,
+  _bootTearScore() {
+    if (this._booting) return;
+    this._booting = true;
+    window.TearScore.initialize({
+      audioContext: this.ctx,
+      outputNode: this.musicGain,
+      quality: 'balanced',
+    }).then(() => {
+      return window.TearScore.start();
+    }).catch((e) => {
+      console.warn('[TearScore] init failed, falling back to legacy music', e);
+      if (AUDIO_FLAGS.legacyMusicFallback) this._startMusic();
+    });
+  },
   resume() {
     if (!this.ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return;
+      if (!AC) return Promise.resolve();
       this.ctx = new AC();
       // master chain: gain -> compressor -> high-shelf "air" -> out  (punchy + crisp)
       this.master = this.ctx.createGain();
@@ -37,20 +52,27 @@ const SFX = {
       this.musicFilter.frequency.value = 16000; this.musicFilter.Q.value = 0.35;
       this.musicGain.connect(this.musicFilter).connect(this.master);
       for (const d of [0.03, 0.05, 0.07, 0.1, 0.12, 0.16, 0.18, 0.22, 0.3, 0.36]) this._noiseBuffer(d);
+    }
+    
+    // We must ensure the context is running before initializing TearScore
+    if (this.ctx.state === "suspended") {
+      return this.ctx.resume().then(() => {
+        if (AUDIO_FLAGS.tearScoreEnabled && window.TearScore) {
+          this._bootTearScore();
+        } else if (!this._booting) {
+          this._booting = true;
+          this._startMusic();
+        }
+      });
+    } else {
       if (AUDIO_FLAGS.tearScoreEnabled && window.TearScore) {
-        window.TearScore.initialize({
-          audioContext: this.ctx,
-          outputNode: this.master,
-          quality: 'balanced',
-        }).catch((e) => {
-          console.warn('[TearScore] init failed, falling back to legacy music', e);
-          if (AUDIO_FLAGS.legacyMusicFallback) this._startMusic();
-        });
-      } else {
+        this._bootTearScore();
+      } else if (!this._booting) {
+        this._booting = true;
         this._startMusic();
       }
+      return Promise.resolve();
     }
-    if (this.ctx.state === "suspended") this.ctx.resume();
   },
   setVol(v) { this.vol = v; if (this.master) this.master.gain.value = this.muted ? 0 : v; },
   _musicTarget() { return (this.muted || !this.musicOn) ? 0 : this.musicVol * this._musicDuck; },
