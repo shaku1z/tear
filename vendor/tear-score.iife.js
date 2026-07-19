@@ -42,7 +42,9 @@ var TearScore = (() => {
       return this._state;
     }
     setState(newState) {
-      this._logger?.info(`[TearScore] State transition: ${this._state} -> ${newState}`);
+      this._logger?.info(
+        `[TearScore] State transition: ${this._state} -> ${newState}`
+      );
       this._state = newState;
     }
     get isMuted() {
@@ -54,7 +56,9 @@ var TearScore = (() => {
       }
       if (this._initializePromise) return this._initializePromise;
       if (this._state !== "uninitialized" && this._state !== "error") {
-        return Promise.reject(new Error(`Cannot initialize TearScore in state: ${this._state}`));
+        return Promise.reject(
+          new Error(`Cannot initialize TearScore in state: ${this._state}`)
+        );
       }
       this._logger = options.logger;
       this.setState("initializing");
@@ -73,7 +77,9 @@ var TearScore = (() => {
       if (this._state === "running") return Promise.resolve();
       if (this._startPromise) return this._startPromise;
       if (this._state !== "ready" && this._state !== "stopped") {
-        return Promise.reject(new Error(`Cannot start TearScore from state: ${this._state}`));
+        return Promise.reject(
+          new Error(`Cannot start TearScore from state: ${this._state}`)
+        );
       }
       this._startPromise = this.onStart().then(() => {
         this.setState("running");
@@ -19089,7 +19095,12 @@ var TearScore = (() => {
   // ../director/dist/index.mjs
   var Director = class {
     lastContext = null;
-    currentDimensions = { intensity: 0, tension: 0, momentum: 0, danger: 0 };
+    currentDimensions = {
+      intensity: 0,
+      tension: 0,
+      momentum: 0,
+      danger: 0
+    };
     currentTier = 1;
     updateContext(ctx) {
       this.lastContext = ctx;
@@ -20953,9 +20964,18 @@ var TearScore = (() => {
           const velocity = pattern.velocity ?? 1;
           const durationNotation = `${pattern.duration}*16n`;
           events.push({
-            time: { bars: targetBar, beats: targetBeat, sixteenths: sixteenthsOffset },
+            time: {
+              bars: targetBar,
+              beats: targetBeat,
+              sixteenths: sixteenthsOffset
+            },
             callback: (time) => {
-              voice.triggerAttackRelease(pitchToPlay, durationNotation, time, velocity);
+              voice.triggerAttackRelease(
+                pitchToPlay,
+                durationNotation,
+                time,
+                velocity
+              );
             }
           });
         }
@@ -21051,22 +21071,20 @@ var TearScore = (() => {
       }
     },
     instruments: {
-      "kick": { family: "kick" },
-      "hat": { family: "hat" },
-      "sub": { family: "bass" },
-      "pluck": { family: "pluck" }
+      kick: { family: "kick" },
+      hat: { family: "hat" },
+      sub: { family: "bass" },
+      pluck: { family: "pluck" }
     },
     phrases: {
       "ambient-1": {
         lengthInSixteenths: 16,
         tracks: {
-          "sub": {
+          sub: {
             instrument: "sub",
-            patterns: [
-              { time: 0, duration: 16, degree: 1, octaveOffset: 0 }
-            ]
+            patterns: [{ time: 0, duration: 16, degree: 1, octaveOffset: 0 }]
           },
-          "pluck": {
+          pluck: {
             instrument: "pluck",
             patterns: [
               { time: 4, duration: 4, degree: 1, octaveOffset: 2 },
@@ -21078,13 +21096,11 @@ var TearScore = (() => {
       "ambient-2": {
         lengthInSixteenths: 16,
         tracks: {
-          "sub": {
+          sub: {
             instrument: "sub",
-            patterns: [
-              { time: 0, duration: 16, degree: 1, octaveOffset: 0 }
-            ]
+            patterns: [{ time: 0, duration: 16, degree: 1, octaveOffset: 0 }]
           },
-          "pluck": {
+          pluck: {
             instrument: "pluck",
             patterns: [
               { time: 4, duration: 2, degree: 1, octaveOffset: 2 },
@@ -21099,14 +21115,14 @@ var TearScore = (() => {
       "beat-1": {
         lengthInSixteenths: 16,
         tracks: {
-          "kick": {
+          kick: {
             instrument: "kick",
             patterns: [
               { time: 0, duration: 4 },
               { time: 8, duration: 4 }
             ]
           },
-          "hat": {
+          hat: {
             instrument: "hat",
             patterns: [
               { time: 2, duration: 2 },
@@ -21115,14 +21131,14 @@ var TearScore = (() => {
               { time: 14, duration: 2 }
             ]
           },
-          "sub": {
+          sub: {
             instrument: "sub",
             patterns: [
               { time: 0, duration: 4, degree: 1, octaveOffset: 0 },
               { time: 7, duration: 4, degree: 1, octaveOffset: 0 }
             ]
           },
-          "pluck": {
+          pluck: {
             instrument: "pluck",
             patterns: [
               { time: 4, duration: 2, degree: 1, octaveOffset: 2 },
@@ -21136,7 +21152,7 @@ var TearScore = (() => {
       "beat-2": {
         lengthInSixteenths: 16,
         tracks: {
-          "kick": {
+          kick: {
             instrument: "kick",
             patterns: [
               { time: 0, duration: 4 },
@@ -21144,7 +21160,7 @@ var TearScore = (() => {
               { time: 8, duration: 4 }
             ]
           },
-          "hat": {
+          hat: {
             instrument: "hat",
             patterns: [
               { time: 0, duration: 2, velocity: 0.5 },
@@ -21157,14 +21173,14 @@ var TearScore = (() => {
               { time: 14, duration: 2 }
             ]
           },
-          "sub": {
+          sub: {
             instrument: "sub",
             patterns: [
               { time: 0, duration: 4, degree: 1, octaveOffset: 0 },
               { time: 7, duration: 4, degree: 1, octaveOffset: 0 }
             ]
           },
-          "pluck": {
+          pluck: {
             instrument: "pluck",
             patterns: [
               { time: 4, duration: 2, degree: 1, octaveOffset: 2 },
@@ -21175,10 +21191,10 @@ var TearScore = (() => {
           }
         }
       },
-      "climax": {
+      climax: {
         lengthInSixteenths: 16,
         tracks: {
-          "kick": {
+          kick: {
             instrument: "kick",
             patterns: [
               { time: 0, duration: 4 },
@@ -21187,7 +21203,7 @@ var TearScore = (() => {
               { time: 14, duration: 2 }
             ]
           },
-          "hat": {
+          hat: {
             instrument: "hat",
             patterns: [
               { time: 0, duration: 1 },
@@ -21208,7 +21224,7 @@ var TearScore = (() => {
               { time: 15, duration: 1 }
             ]
           },
-          "sub": {
+          sub: {
             instrument: "sub",
             patterns: [
               { time: 0, duration: 4, degree: 1, octaveOffset: 0 },
@@ -21216,7 +21232,7 @@ var TearScore = (() => {
               { time: 14, duration: 2, degree: 3, octaveOffset: 0 }
             ]
           },
-          "pluck": {
+          pluck: {
             instrument: "pluck",
             patterns: [
               { time: 4, duration: 2, degree: 1, octaveOffset: 2 },
@@ -21256,17 +21272,15 @@ var TearScore = (() => {
       }
     },
     instruments: {
-      "pad": { family: "pad" }
+      pad: { family: "pad" }
     },
     phrases: {
-      "intro": {
+      intro: {
         lengthInSixteenths: 16,
         tracks: {
-          "pad": {
+          pad: {
             instrument: "pad",
-            patterns: [
-              { time: 0, duration: 16, degree: 1, octaveOffset: 0 }
-            ]
+            patterns: [{ time: 0, duration: 16, degree: 1, octaveOffset: 0 }]
           }
         }
       }
@@ -21298,21 +21312,21 @@ var TearScore = (() => {
       }
     },
     instruments: {
-      "sub": { family: "bass" },
-      "percussion": { family: "percussion" }
+      sub: { family: "bass" },
+      percussion: { family: "percussion" }
     },
     phrases: {
-      "ambient": {
+      ambient: {
         lengthInSixteenths: 16,
         tracks: {
-          "sub": {
+          sub: {
             instrument: "sub",
             patterns: [
               { time: 0, duration: 8, degree: 1, octaveOffset: 0 },
               { time: 8, duration: 8, degree: 2, octaveOffset: 0 }
             ]
           },
-          "percussion": {
+          percussion: {
             instrument: "percussion",
             patterns: [
               { time: 4, duration: 1 },
@@ -21349,14 +21363,14 @@ var TearScore = (() => {
       }
     },
     instruments: {
-      "kick": { family: "kick" },
-      "lead": { family: "lead" }
+      kick: { family: "kick" },
+      lead: { family: "lead" }
     },
     phrases: {
-      "main": {
+      main: {
         lengthInSixteenths: 16,
         tracks: {
-          "kick": {
+          kick: {
             instrument: "kick",
             patterns: [
               { time: 0, duration: 4 },
@@ -21365,7 +21379,7 @@ var TearScore = (() => {
               { time: 12, duration: 4 }
             ]
           },
-          "lead": {
+          lead: {
             instrument: "lead",
             patterns: [
               { time: 0, duration: 2, degree: 1, octaveOffset: 1 },
@@ -21403,13 +21417,13 @@ var TearScore = (() => {
       }
     },
     instruments: {
-      "texture": { family: "texture" }
+      texture: { family: "texture" }
     },
     phrases: {
-      "ambient": {
+      ambient: {
         lengthInSixteenths: 16,
         tracks: {
-          "texture": {
+          texture: {
             instrument: "texture",
             patterns: [
               { time: 0, duration: 16, degree: 1, octaveOffset: 0 },
@@ -21447,20 +21461,18 @@ var TearScore = (() => {
       }
     },
     instruments: {
-      "pad": { family: "pad" },
-      "pluck": { family: "pluck" }
+      pad: { family: "pad" },
+      pluck: { family: "pluck" }
     },
     phrases: {
-      "main": {
+      main: {
         lengthInSixteenths: 16,
         tracks: {
-          "pad": {
+          pad: {
             instrument: "pad",
-            patterns: [
-              { time: 0, duration: 16, degree: 1, octaveOffset: 0 }
-            ]
+            patterns: [{ time: 0, duration: 16, degree: 1, octaveOffset: 0 }]
           },
-          "pluck": {
+          pluck: {
             instrument: "pluck",
             patterns: [
               { time: 0, duration: 4, degree: 1, octaveOffset: 1 },
@@ -21497,17 +21509,15 @@ var TearScore = (() => {
       }
     },
     instruments: {
-      "pad": { family: "pad" }
+      pad: { family: "pad" }
     },
     phrases: {
-      "outro": {
+      outro: {
         lengthInSixteenths: 16,
         tracks: {
-          "pad": {
+          pad: {
             instrument: "pad",
-            patterns: [
-              { time: 0, duration: 16, degree: 1, octaveOffset: 0 }
-            ]
+            patterns: [{ time: 0, duration: 16, degree: 1, octaveOffset: 0 }]
           }
         }
       }
@@ -21533,7 +21543,8 @@ var TearScore = (() => {
     composerScheduleId;
     currentBlueprintId = null;
     initialize(options) {
-      if (this.runtime?.state === "ready" || this.runtime?.state === "running") return Promise.resolve();
+      if (this.runtime?.state === "ready" || this.runtime?.state === "running")
+        return Promise.resolve();
       if (this.initializePromise) return this.initializePromise;
       this.initializePromise = (async () => {
         const logger = {
@@ -21547,8 +21558,15 @@ var TearScore = (() => {
           outputNode: options.outputNode,
           logger
         });
-        const dspRack = new ToneDSPRack(options.quality || "balanced", this.runtime.masterBus);
-        this.composer = new TearScoreComposer(this.runtime, this.director, dspRack);
+        const dspRack = new ToneDSPRack(
+          options.quality || "balanced",
+          this.runtime.masterBus
+        );
+        this.composer = new TearScoreComposer(
+          this.runtime,
+          this.director,
+          dspRack
+        );
         logger.info("TearScore initialized successfully.");
       })().catch((err) => {
         this.initializePromise = null;
@@ -21557,18 +21575,22 @@ var TearScore = (() => {
       return this.initializePromise;
     }
     start() {
-      if (!this.runtime || this.runtime.state === "running") return Promise.resolve();
+      if (!this.runtime || this.runtime.state === "running")
+        return Promise.resolve();
       if (this.startPromise) return this.startPromise;
       this.startPromise = (async () => {
         if (this.initializePromise) await this.initializePromise;
         if (!this.runtime) throw new Error("Runtime not initialized");
         if (this.composerScheduleId == null) {
-          this.composerScheduleId = this.runtime.transport.scheduleRepeat("1m", () => {
-            if (this.runtime?.state === "running" && this.composer) {
-              const currentBar = this.runtime.transport.position.time.bars;
-              this.composer.tick(currentBar);
+          this.composerScheduleId = this.runtime.transport.scheduleRepeat(
+            "1m",
+            () => {
+              if (this.runtime?.state === "running" && this.composer) {
+                const currentBar = this.runtime.transport.position.time.bars;
+                this.composer.tick(currentBar);
+              }
             }
-          });
+          );
         }
         await this.runtime.start();
       })().finally(() => {
