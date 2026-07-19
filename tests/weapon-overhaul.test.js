@@ -40,6 +40,7 @@ vm.runInContext(`
 `, context);
 
 const { CONFIG, WEAPONS, getWeapon, Blade, Player, Enemy, CLOCK, newMods, UPGRADES } = context.__test;
+const TEST_INPUT = context.Input;
 
 assert.equal(WEAPONS.map((weapon) => weapon.id).join(","), "sword,hammer,spear,chainblade,ringblade");
 assert.equal(new Set(WEAPONS.map((weapon) => weapon.throwIdentity)).size, 5);
@@ -130,6 +131,24 @@ function playerWithHandAt(x, y) {
   };
 }
 
+function placeTipAt(blade, x, y, player) {
+  blade._placeTipAt(x, y, blade.handPos(player));
+  blade.tipX = x; blade.tipY = y;
+}
+
+function handlingResponse(id) {
+  const blade = makeBlade(id);
+  const player = playerWithHandAt(400, 400);
+  blade.x = 400; blade.y = 400; blade.vx = 0; blade.vy = 0; blade.angle = 0;
+  blade.tipX = 400 + CONFIG.blade.length; blade.tipY = 400;
+  TEST_INPUT.locked = false; TEST_INPUT.mouseX = 400 + CONFIG.blade.aimRadius; TEST_INPUT.mouseY = 400;
+  for (let frame = 1; frame <= 120; frame++) {
+    blade.update(1 / 120, player, []);
+    if (blade.x >= 400 + CONFIG.blade.aimRadius * 0.55) return frame / 120;
+  }
+  return Infinity;
+}
+
 function finishLifecycle(blade, player, updateTarget) {
   const dt = 1 / 120;
   for (let i = 0; i < 900 && blade.state !== "held"; i++) {
@@ -145,6 +164,106 @@ function assertRecallIsIdempotent(blade, player) {
   for (let i = 0; i < 20; i++) assert.equal(blade.tryRecall(player), "busy", `${blade.weapon.id} ignores secondary spam`);
 }
 
+{
+  const blade = makeBlade("sword");
+  const player = playerWithHandAt(400, 400);
+  const range = blade.recallRange();
+  blade.state = "embedded"; blade.x = 400 + range - 1; blade.y = 400;
+  assert.equal(blade.tryRecall(player), "recalled", "Sword recalls just inside its effective range");
+  const outside = makeBlade("sword");
+  outside.state = "embedded"; outside.x = 400 + outside.recallRange() + 1; outside.y = 400;
+  assert.equal(outside.tryRecall(player), "toofar", "Sword rejects recall just outside its effective range");
+  const oldRange = outside.recallRange();
+  outside.channelMods.remoteRange *= 1.2;
+  assert.ok(outside.recallRange() > oldRange, "Recall-range upgrades expand the real boundary");
+  outside.freeRecall = true;
+  assert.equal(outside.recallRange(), Infinity, "Remote Link removes Sword/Hammer reclaim distance");
+}
+
+{
+  const blade = makeBlade("spear");
+  const player = playerWithHandAt(400, 400);
+  blade.state = "embedded"; blade.anchorTerrain = true; blade.linkT = 2;
+  placeTipAt(blade, 400 + blade.linkRange() + 1, 400, player);
+  assert.equal(blade.tryRecall(player), "toofar", "Spear cannot reel an Anchor outside its link range");
+  blade.freeRecall = true;
+  assert.equal(blade.tryRecall(player), "recalled", "Remote Link makes Spear Anchor distance unbounded");
+}
+
+{
+  const blade = makeBlade("spear");
+  const player = playerWithHandAt(400, 400);
+  blade.state = "embedded"; blade.anchorTerrain = true; blade.linkT = 0.001;
+  placeTipAt(blade, 620, 400, player);
+  blade.update(1 / 120, player, []);
+  assert.equal(blade.state, "returning", "Expired Spear links automatically return");
+  assert.equal(blade.linkBrokenNew, "timeout", "Expired Spear links report why control ended");
+}
+
+{
+  const blade = makeBlade("chainblade");
+  const player = playerWithHandAt(400, 400);
+  const target = { x: 400 + blade.linkRange() + 1, y: 400, vx: 0, vy: 0, dead: false, dying: false, isBoss: false, weight: 1, anchored: false };
+  blade.state = "latched"; blade.anchorTarget = target; blade.linkT = 2;
+  placeTipAt(blade, target.x, target.y, player);
+  assert.equal(blade.tryRecall(player), "toofar", "Chainblade cannot Yank beyond its latch range");
+  blade.freeRecall = true;
+  assert.equal(blade.tryRecall(player), "toofar", "Remote Link does not make Chainblade range infinite");
+  blade.channelMods.remoteRange *= 1.65;
+  assert.equal(blade.tryRecall(player), "recalled", "Remote Link expands Chainblade Bind/Yank range");
+}
+
+{
+  const blade = makeBlade("chainblade");
+  const player = playerWithHandAt(400, 400);
+  const target = { x: 400 + blade.linkRange() + 4, y: 400, vx: 0, vy: 0, dead: false, dying: false, isBoss: false, weight: 1, anchored: false };
+  blade.state = "latched"; blade.anchorTarget = target; blade.linkT = 2;
+  placeTipAt(blade, target.x, target.y, player);
+  blade.update(1 / 120, player, []);
+  assert.equal(blade.state, "returning", "An overstretched Chainblade latch breaks and returns");
+  assert.equal(blade.linkBrokenNew, "range", "Chainblade reports a range break");
+}
+
+{
+  const base = makeBlade("ringblade");
+  base.orbit = 0.5; base.throwBlade();
+  const baseEnergy = base.circuitEnergy;
+  const extended = makeBlade("ringblade");
+  extended.channelMods.remoteRange *= 1.2; extended.orbit = 0.5; extended.throwBlade();
+  assert.equal(extended.actionRange(), Infinity, "Circuit is governed by energy rather than a fake spatial recall range");
+  assert.ok(extended.circuitEnergy > baseEnergy, "Recall-range upgrades extend Circuit duration");
+}
+
+assert.ok(handlingResponse("spear") <= 0.13, "Spear responds quickly enough for precise thrust correction");
+assert.ok(handlingResponse("chainblade") <= 0.17, "Chainblade keeps weight without feeling input-lagged");
+assert.ok(handlingResponse("ringblade") <= 0.12, "Ringblade remains the most immediately responsive specialist");
+
+{
+  const blade = makeBlade("spear");
+  const player = playerWithHandAt(400, 400);
+  blade.throwBlade();
+  assert.equal(blade.tryRecall(player), "queued", "Spear buffers secondary input during Anchor flight");
+  assert.equal(blade.tryRecall(player), "busy", "Spear buffers only one secondary input");
+  blade.state = "embedded"; blade.anchorTerrain = true; blade.linkT = 2;
+  placeTipAt(blade, 620, 400, player);
+  blade.update(1 / 120, player, []);
+  assert.equal(blade.state, "reeling", "Buffered Spear input starts as soon as the Anchor forms");
+  assert.equal(blade.secondaryStartedNew, true, "Buffered Spear activation emits one secondary event");
+}
+
+{
+  const blade = makeBlade("chainblade");
+  const player = playerWithHandAt(400, 400);
+  blade.throwBlade();
+  assert.equal(blade.tryRecall(player), "queued", "Chainblade buffers Yank input while Bind is extending");
+  const target = { x: 620, y: 400, vx: 0, vy: 0, stun: 0, dead: false, dying: false, isBoss: false, weight: 1, anchored: false };
+  blade.state = "latched"; blade.anchorTarget = target; blade.linkT = 2;
+  placeTipAt(blade, target.x, target.y, player);
+  blade.update(1 / 120, player, []);
+  assert.equal(blade.state, "yanking", "Buffered Chainblade input starts as soon as Bind lands");
+  assert.equal(blade.secondaryStartedNew, true, "Buffered Chainblade activation emits one secondary event");
+}
+
 for (const id of ["sword", "hammer"]) {
   const blade = makeBlade(id);
   const player = playerWithHandAt(400, 400);
@@ -157,7 +276,7 @@ for (const id of ["sword", "hammer"]) {
 {
   const blade = makeBlade("spear");
   const player = playerWithHandAt(400, 400);
-  blade.state = "embedded"; blade.x = 650; blade.y = 400;
+  blade.state = "embedded"; placeTipAt(blade, 650, 400, player);
   blade.anchorTerrain = true; blade.linkT = CONFIG.weapons.spear.linkDuration;
   assertRecallIsIdempotent(blade, player);
   assert.equal(blade.state, "reeling");
@@ -167,8 +286,8 @@ for (const id of ["sword", "hammer"]) {
 {
   const blade = makeBlade("chainblade");
   const player = playerWithHandAt(400, 400);
-  const target = { x: 590, y: 400, vx: 0, vy: 0, dead: false, dying: false, isBoss: false, weight: 1, anchored: false };
-  blade.state = "latched"; blade.x = target.x; blade.y = target.y;
+  const target = { x: 590, y: 400, vx: 0, vy: 0, stun: 0, dead: false, dying: false, isBoss: false, weight: 1, anchored: false };
+  blade.state = "latched"; placeTipAt(blade, target.x, target.y, player);
   blade.anchorTarget = target; blade.linkT = CONFIG.weapons.chainblade.bindDuration;
   assertRecallIsIdempotent(blade, player);
   assert.equal(blade.state, "yanking");
@@ -176,15 +295,46 @@ for (const id of ["sword", "hammer"]) {
     target.x += target.vx * dt; target.y += target.vy * dt;
     target.vx *= Math.exp(-3 * dt); target.vy *= Math.exp(-3 * dt);
   });
+  assert.ok(target.stun > 0, "A successful light-target Yank has readable arrival control");
 }
 
 {
   const blade = makeBlade("chainblade");
   const player = playerWithHandAt(400, 400);
-  blade.state = "flying"; blade.x = 900; blade.y = 400; blade.flyTime = 0.2; blade.linkT = 1;
+  blade.state = "flying"; blade.flyTime = 0.2; blade.linkT = 1;
+  placeTipAt(blade, 400 + blade.linkRange() + 8, 400, player);
   blade.update(1 / 120, player, []);
   assert.equal(blade.state, "returning", "A missed Bind automatically returns at maximum extension");
   finishLifecycle(blade, player);
+}
+
+{
+  const blade = makeBlade("chainblade");
+  const player = playerWithHandAt(400, 400);
+  placeTipAt(blade, 620, 400, player);
+  const segment = blade.heldCollisionSegment(player);
+  assert.equal(segment.x1, 400, "Chainblade held collision begins at the visible hand tether");
+  assert.equal(segment.x2, blade.tipX, "Chainblade held collision reaches the visible head");
+}
+
+{
+  const blade = makeBlade("ringblade");
+  const player = playerWithHandAt(400, 400);
+  blade.x = 520; blade.y = 400;
+  const held = blade.heldCollisionSegment(player), thrown = blade.thrownCollisionSegment();
+  assert.equal(held.x1, held.x2, "Ringblade held collision is centered on the visible ring");
+  assert.equal(thrown.x1, thrown.x2, "Ringblade throw has no invisible shaft collision");
+  assert.ok(blade.thrownCollisionPad() >= 30, "Ringblade collision includes its visible radius");
+}
+
+{
+  const blade = makeBlade("ringblade");
+  const player = playerWithHandAt(400, 400);
+  blade.state = "circuiting"; blade.x = 800; blade.y = 400;
+  blade.vx = 1200; blade.vy = 0; blade.aimX = 0; blade.aimY = -100;
+  blade.circuitEnergy = 10; blade.circuitEnergyMax = 10; blade.circuitMaxLife = 10;
+  for (let i = 0; i < 30; i++) blade._updateCircuit(1 / 120, player, []);
+  assert.ok(Math.atan2(blade.vy, blade.vx) < -0.7, "Circuit steering can make a meaningful correction before crossing the arena");
 }
 
 {

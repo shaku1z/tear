@@ -103,20 +103,20 @@ const CONFIG = {
       meteorBreak: 75, recallTargetCap: 2,
     },
     spear: {
-      axialFloor: 0.22, maxReachBonus: 0.22, driveForce: 820,
-      wallPinDuration: 0.55, reelSpeed: 1220, linkDuration: 3.2,
+      axialFloor: 0.34, maxReachBonus: 0.24, driveForce: 880, driveThreshold: 0.58,
+      wallPinDuration: 0.55, reelSpeed: 1380, linkDuration: 4.2,
       heavyWeight: 2.2,
     },
     chainblade: {
-      tensionFloor: 0.18, fullTensionAt: 0.72, dragForce: 720,
-      bindDuration: 2.8, yankSpeed: 1450, collisionDamage: 24,
-      bossTug: 0.22,
+      tensionFloor: 0.30, fullTensionAt: 0.65, dragForce: 780,
+      bindDuration: 3.1, yankSpeed: 1650, collisionDamage: 28,
+      yankMinDuration: 0.8, arrivalStun: 0.38, yankBreak: 28, bossTug: 0.24,
     },
     ringblade: {
-      orbitBuild: 1.15, orbitDecay: 0.78, orbitReverseLoss: 0.48,
+      orbitBuild: 1.35, orbitDecay: 0.62, orbitReverseLoss: 0.62,
       orbitDamage: 0.42, orbitMove: 0.03, repeatWindow: 0.34,
-      repeatFloor: 0.38, circuitEnergy: 4.2, bounceCost: 0.68,
-      enemyCost: 0.48, steer: 2.3,
+      repeatFloor: 0.46, circuitEnergy: 3.9, bounceCost: 0.52,
+      enemyCost: 0.40, steer: 4.25, tangentMin: 0.22, tangentMax: 0.82,
     },
   },
 

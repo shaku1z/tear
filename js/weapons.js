@@ -84,14 +84,13 @@ const WEAPONS = [
     blurb: "Axial thrusts · Drive · Anchor Cast traversal",
     tags: ["Reach", "Mobility", "Single Target"], weaknesses: ["Narrow", "Weak sweeps", "Weak slam"],
     throwIdentity: "Anchor Cast", ratings: { handling: 4, impact: 3, reach: 5, difficulty: 4 },
-    throwCollisionPad: 3,
-    channels: weaponChannels({ throwSpeed: 1.18, remoteRange: 1.15, returnSpeed: 1.08, controlDuration: 1.1 }),
+    throwCollisionPad: 7,
+    channels: weaponChannels({ throwSpeed: 1.18, remoteRange: 1.35, returnSpeed: 1.12, controlDuration: 1.1 }),
     applyPhysics() {
       const B = CONFIG.blade;
-      B.length += 38; B.aimRadius += 24; B.maxReach += 30;
-      B.springStiffness *= 1.06; B.gravity *= 0.82; B.angleSmooth *= 1.08;
+      B.length += 36; B.aimRadius += 20; B.maxReach += 28;
+      B.springStiffness *= 1.12; B.damping *= 1.04; B.gravity *= 0.72; B.angleSmooth *= 1.12;
       B.slamMultiplier *= 0.58; B.launchPower *= 1.12;
-      B.throw.speed *= 1.18;
     },
     applyPlayerChassis() {
       CONFIG.player.moveSpeed *= 1.03; CONFIG.player.airAccel *= 1.08;
@@ -104,7 +103,7 @@ const WEAPONS = [
       const reach = hand ? clamp(len(ctx.blade.tipX - hand.x, ctx.blade.tipY - hand.y) / (CONFIG.blade.maxReach + CONFIG.blade.length), 0, 1) : 0;
       return lerp(W.axialFloor, 1, ctx.quality) * (1 + reach * W.maxReachBonus);
     },
-    onHeldHit(ctx) { return ctx.quality >= 0.66 ? { mechanic: "drive", force: CONFIG.weapons.spear.driveForce * ctx.quality } : null; },
+    onHeldHit(ctx) { return ctx.quality >= CONFIG.weapons.spear.driveThreshold ? { mechanic: "drive", force: CONFIG.weapons.spear.driveForce * ctx.quality } : null; },
     onThrowLaunch(ctx) { ctx.blade._launchStraight(); ctx.blade.linkT = CONFIG.weapons.spear.linkDuration * ctx.blade.channel("controlDuration"); },
     updateThrown(ctx) { ctx.blade._updateSpearThrown(ctx.dt, ctx.player, ctx.platforms); },
     onThrowHit(ctx) { return ctx.secondary ? { mechanic: "anchorReturn" } : { mechanic: "anchor", stop: true }; },
@@ -118,13 +117,13 @@ const WEAPONS = [
     blurb: "Flexible reach · Tension and Drag · Bind / Yank",
     tags: ["Control", "Pull", "Expert"], weaknesses: ["Delayed", "Needs space", "Low boss damage"],
     throwIdentity: "Bind / Yank", ratings: { handling: 2, impact: 3, reach: 5, difficulty: 5 },
-    throwCollisionPad: 7,
-    channels: weaponChannels({ remoteRange: 1.2, controlDuration: 1.2, secondaryPower: 1.15 }),
+    throwCollisionPad: 9,
+    channels: weaponChannels({ remoteRange: 1.35, controlDuration: 1.2, secondaryPower: 1.15 }),
     applyPhysics() {
       const B = CONFIG.blade;
-      B.length -= 22; B.aimRadius += 20; B.maxReach += 42;
-      B.springStiffness *= 0.46; B.damping *= 0.68; B.gravity *= 1.12;
-      B.angleSmooth *= 0.58; B.maxSpeed *= 1.08; B.perfectSpeed *= 1.18;
+      B.length -= 20; B.aimRadius += 18; B.maxReach += 40;
+      B.springStiffness *= 0.64; B.damping *= 0.82; B.gravity *= 1.04;
+      B.angleSmooth *= 0.76; B.maxSpeed *= 1.06; B.perfectSpeed *= 1.12;
     },
     applyPlayerChassis() {
       CONFIG.player.moveSpeed *= 0.98; CONFIG.player.airAccel *= 0.96;
@@ -145,15 +144,15 @@ const WEAPONS = [
     blurb: "Continuous Orbit · fast multi-hit · Circuit ricochet",
     tags: ["Speed", "Throw", "Flow"], weaknesses: ["Low impact", "Weak armor", "Orbit upkeep"],
     throwIdentity: "Circuit", ratings: { handling: 5, impact: 2, reach: 3, difficulty: 4 },
-    throwCollisionPad: 8,
-    channels: weaponChannels({ throwSpeed: 1.12, remoteRange: 1.25, returnSpeed: 1.15, controlDuration: 1.3 }),
+    throwCollisionPad: 12,
+    channels: weaponChannels({ throwSpeed: 1.08, remoteRange: 1.25, returnSpeed: 1.20, controlDuration: 1.2 }),
     applyPhysics() {
       const B = CONFIG.blade;
-      B.length -= 16; B.springStiffness *= 1.18; B.damping *= 1.06;
-      B.gravity *= 0.62; B.angleSmooth *= 1.22; B.minHitSpeed *= 0.82;
+      B.length -= 16; B.springStiffness *= 1.22; B.damping *= 1.10;
+      B.gravity *= 0.55; B.angleSmooth *= 1.28; B.minHitSpeed *= 0.82;
       B.damageScale *= 0.7; B.maxDamage = Math.round(B.maxDamage * 0.68);
       B.enemyHitIframe *= 0.62; B.slamMultiplier *= 0.55; B.launchPower *= 0.65;
-      B.deflectMinSpeed *= 0.92; B.throw.speed *= 1.12;
+      B.deflectMinSpeed *= 0.92;
     },
     applyPlayerChassis() {
       CONFIG.player.moveSpeed *= 1.05; CONFIG.player.airAccel *= 1.1;

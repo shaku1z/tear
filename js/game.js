@@ -596,6 +596,11 @@
     }
     FX.ring(x, y, 14, CONFIG.colors.perfect);
   }
+  function activateThrowSecondary() {
+    FX.ring(blade.x, blade.y, 8); addShake(CONFIG.juice.shakeSmall); SFX.recall();
+    collapseAt(blade.x, blade.y);
+    fire(run.mods.onThrowSecondary, makeEv(blade.x, blade.y, null, "secondary", { type: "throwSecondary", throwId: blade.throwId, weaponId: run.weaponId }));
+  }
   // dispatch an optional weapon-contract hook (no-op when the equipped weapon
   // doesn't define it). ctx carries whatever the call site knows (blade, enemy, ...).
   function weaponHook(name, ctx) {
@@ -1838,7 +1843,10 @@
         state: blade.state, throwId: blade.throwId, x: blade.x, y: blade.y,
         vx: blade.vx, vy: blade.vy, flyTime: blade.flyTime,
         secondaryActive: blade.secondaryActive, impactResolved: blade.impactResolved,
-        pierced: blade.pierced.size,
+        pierced: blade.pierced.size, tension: blade.tension, orbit: blade.orbit,
+        linkTime: blade.linkT, circuitEnergy: blade.circuitEnergy,
+        actionRange: Number.isFinite(blade.actionRange()) ? blade.actionRange() : null,
+        actionDistance: blade.actionDistance(player),
       },
       enemies: enemies.filter((enemy) => !enemy.dead).slice(0, 24).map((enemy) => ({
         x: enemy.x, y: enemy.y, hp: enemy.hp, stun: enemy.stun,
@@ -2461,7 +2469,18 @@
     const wasBladeState = blade.state;
     const wasReturning = wasBladeState === "returning";
     blade.update(dt, player, platforms);
-    if (wasBladeState === "reeling" && blade.state === "returning") {
+    if (blade.secondaryStartedNew) {
+      blade.secondaryStartedNew = false;
+      activateThrowSecondary();
+    }
+    const linkBreakReason = blade.linkBrokenNew;
+    if (linkBreakReason) {
+      const reason = linkBreakReason;
+      blade.linkBrokenNew = false;
+      FX.ring(blade.tipX, blade.tipY, 8, CONFIG.colors.bladeTrail);
+      addFloater(blade.tipX, blade.tipY - 22, reason === "range" ? "LINK RANGE" : "LINK LOST", false, CONFIG.colors.bladeTrail);
+    }
+    if (wasBladeState === "reeling" && blade.state === "returning" && !linkBreakReason) {
       const burst = blade.throwDmg * 0.55 * blade.channel("secondaryPower") * (run.mods.secondPass || 1);
       dealAoE(blade.x, blade.y, 105, burst); FX.ring(blade.x, blade.y, 12, CONFIG.colors.perfect);
     }
@@ -2628,11 +2647,8 @@
       } else {
         const r = blade.tryRecall(player);
         const hand = blade.handPos(player);
-        if (r === "recalled") {
-          FX.ring(blade.x, blade.y, 8); addShake(CONFIG.juice.shakeSmall); SFX.recall();
-          collapseAt(blade.x, blade.y);
-          fire(run.mods.onThrowSecondary, makeEv(blade.x, blade.y, null, "secondary", { type: "throwSecondary", throwId: blade.throwId, weaponId: run.weaponId }));
-        }
+        if (r === "recalled") activateThrowSecondary();
+        else if (r === "queued") addFloater(hand.x, hand.y - 40, "LINK QUEUED", false, CONFIG.colors.bladeTrail);
         else if (r === "toofar") addFloater(hand.x, hand.y - 40, "too far", false);
       }
     }
@@ -2804,6 +2820,7 @@
 
     // held blade vs enemies (slam / launch + hooks)
     const baseDmg = blade.damageAt();
+    const heldCollision = blade.heldCollisionSegment(player);
     // style -> damage: a higher trick rank makes every swing hit harder (capped)
     const styleMult = 1 + Math.min((run.mult - 1) * CONFIG.skill.styleDamage, CONFIG.skill.styleDamageMax);
     // The fall siphon is world geometry, not the Source's rear-plane hurtbox.
@@ -2817,8 +2834,8 @@
     for (const e of enemies) {
       if (e.dead || e.dying || e.introT > 0 || e.hitCd > 0) continue;
       const liveWeapon = e.parryBaton && e.batonStrike > 0 ? e.batonSegment() : null;
-      const weaponContact = liveWeapon && weaponCapsuleIntersectsSegment(liveWeapon, blade.x, blade.y, blade.tipX, blade.tipY);
-      if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y, e.radius + 4) || weaponContact) {
+      const weaponContact = liveWeapon && weaponCapsuleIntersectsSegment(liveWeapon, heldCollision.x1, heldCollision.y1, heldCollision.x2, heldCollision.y2);
+      if (segCircle(heldCollision.x1, heldCollision.y1, heldCollision.x2, heldCollision.y2, e.x, e.y, e.radius + heldCollision.pad) || weaponContact) {
         // Wraith: the blade phases straight through — only a thrown blade or a deflected shot harms it
         if (e.immuneToBlade) {
           if (baseDmg > 0) { e.hitCd = 0.18; FX.burst(e.x, e.y, blade.tipVX, blade.tipVY, 4, e.color); }
@@ -3018,11 +3035,12 @@
 
     // weapon-owned thrown collision; all five throws resolve through the same event boundary
     if (blade.thrown && ["flying", "returning", "circuiting", "yanking"].includes(blade.state)) {
+      const thrownCollision = blade.thrownCollisionSegment();
       // The thrown blade is a lower-reward emergency answer to a sweeper. It
       // cuts integrity and immediately recalls, so it cannot also pierce the room.
       for (const p of projectiles) {
         if (p.dead || p.family !== "sweeper" || p.sweeperState !== "hostile" || p.hitLatch) continue;
-        if (!segCircle(blade.x, blade.y, blade.tipX, blade.tipY, p.x, p.y, p.r + 7)) continue;
+        if (!segCircle(thrownCollision.x1, thrownCollision.y1, thrownCollision.x2, thrownCollision.y2, p.x, p.y, p.r + blade.thrownCollisionPad() + 3)) continue;
         const redirected = p.counterSweeper("thrown", blade.vx, blade.vy, len(blade.vx, blade.vy));
         if (redirected) {
           blade.pierced = new Set(); blade.state = "returning";
@@ -3034,7 +3052,7 @@
       }
       for (const e of enemies) {
         if (e.dead || e.dying || e.introT > 0 || !blade.canHitThrownEnemy(e)) continue;
-        if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, e.x, e.y, e.radius + blade.thrownCollisionPad())) {
+        if (segCircle(thrownCollision.x1, thrownCollision.y1, thrownCollision.x2, thrownCollision.y2, e.x, e.y, e.radius + blade.thrownCollisionPad())) {
           if (e.blocksDamage({ type: "throw" })) continue;
           // Duelist parries a thrown blade right back — bait the parry, then throw
           if (e.behavior === "duelist" && e.duelReady) {
@@ -3154,7 +3172,7 @@
     // held blade vs projectiles (deflect / perfect parry; mines are defused on contact)
     for (const p of projectiles) {
       if (p.dead || blade.state !== "held") continue;
-      if (segCircle(blade.x, blade.y, blade.tipX, blade.tipY, p.x, p.y, p.r + 4)) {
+      if (segCircle(heldCollision.x1, heldCollision.y1, heldCollision.x2, heldCollision.y2, p.x, p.y, p.r + heldCollision.pad)) {
         if (p.family === "sweeper") {
           if (p.sweeperState !== "hostile" || p.hitLatch) continue;
           const psp = len(p.vx, p.vy) || 1, ssp = blade.tipSpeed || 1;
