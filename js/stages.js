@@ -10,6 +10,7 @@
 const STAGES = [
   {
     name: "The Grounds", blurb: "Where order is kept.",
+    musicId: "grounds",
     boss: "warden",
     chapter: { number: "I", title: "THE FIRST DESCENT", symbol: "⌑", intro: "ORDER ENDS AT THE EDGE.", transition: "ash",
       pages: [
@@ -32,6 +33,7 @@ const STAGES = [
   },
   {
     name: "The Undercroft", blurb: "Gray industry, deep below.",
+    musicId: "undercroft",
     boss: "colossus",
     chapter: { number: "II", title: "THE MACHINE BELOW", symbol: "▦", intro: "THE FOUNDRY STILL EXPECTS A SHIFT.", transition: "steel",
       pages: [
@@ -55,6 +57,7 @@ const STAGES = [
   },
   {
     name: "The Crimson Fields", blurb: "Red and gold, and old rage.",
+    musicId: "crimson-fields",
     boss: "aldric",
     chapter: { number: "III", title: "THE KING WITHOUT HOME", symbol: "♜", intro: "THE FIELDS REMEMBER EVERY FIRE.", transition: "ember",
       pages: [
@@ -76,6 +79,7 @@ const STAGES = [
   },
   {
     name: "The Voidspire", blurb: "Where the rules thin out.",
+    musicId: "voidspire",
     boss: "echo",
     chapter: { number: "IV", title: "THE NAME IN THE WALL", symbol: "◇", intro: "THE RULES THIN. THE MEMORY DOES NOT.", transition: "mirror",
       pages: [
@@ -99,6 +103,7 @@ const STAGES = [
   },
   {
     name: "The Tear", blurb: "Everything, all at once.",
+    musicId: "tear",
     dark: true,   // the void at the end of everything — HUD + player flip to light here
     boss: "source",
     chapter: { number: "V", title: "THE WOUND THAT WATCHES", symbol: "◉", intro: "THE ABYSS LOOKS BACK.", transition: "void",
