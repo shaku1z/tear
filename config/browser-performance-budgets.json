@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "referenceProfile": {
+    "target": "standalone production build",
+    "browser": "bundled Playwright Chromium or installed stable Chrome",
+    "viewport": { "width": 1600, "height": 900 },
+    "headless": true,
+    "deviceClass": "desktop CI runner",
+    "sampleCapacity": 600
+  },
+  "activeGameplay": {
+    "mode": "playground",
+    "durationMs": 12000,
+    "enemySpawnCommands": 8,
+    "minimumSamples": 500,
+    "simulationP95Ms": 4,
+    "renderP95Ms": 14,
+    "frameP95Ms": 16.67,
+    "newLongTasksMax": 0
+  },
+  "constrainedGameplay": {
+    "mode": "playground",
+    "cpuThrottleRate": 4,
+    "durationMs": 8000,
+    "enemySpawnCommands": 8,
+    "minimumSamples": 300,
+    "simulationP95Ms": 8,
+    "renderP95Ms": 14,
+    "frameP95Ms": 20,
+    "newLongTasksMax": 0
+  },
+  "runCycles": {
+    "count": 5,
+    "maxHeapGrowthBytes": 16777216,
+    "activeDurationMs": 1600,
+    "enemySpawnCommands": 8,
+    "resetGauges": {
+      "enemies": 0,
+      "projectiles": 0,
+      "effects": 16
+    },
+    "peakGauges": {
+      "enemies": 16,
+      "projectiles": 128,
+      "effects": 320
+    }
+  }
+}

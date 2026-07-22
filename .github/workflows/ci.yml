@@ -27,10 +27,14 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm check
+      - run: xvfb-run -a pnpm check
+        env:
+          TEAR_HEADED_VISIBILITY: "1"
       - uses: actions/upload-artifact@v4
         with:
           name: tear-release-targets
-          path: dist
+          path: |
+            dist
+            artifacts/tear-crazygames.zip
           if-no-files-found: error
           retention-days: 14

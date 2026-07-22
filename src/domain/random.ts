@@ -2,6 +2,10 @@ export interface RandomSnapshot {
   readonly state: number;
 }
 
+export interface RandomSource {
+  next(): number;
+}
+
 function hashSeed(seed: number | string): number {
   if (typeof seed === "number") return seed >>> 0;
   let hash = 0x811c9dc5;
@@ -13,7 +17,7 @@ function hashSeed(seed: number | string): number {
 }
 
 /** A small deterministic PRNG for gameplay decisions. Never use for security. */
-export class SeededRandom {
+export class SeededRandom implements RandomSource {
   readonly #initialSeed: number;
   #state: number;
 

@@ -1,0 +1,15 @@
+{
+  "engineRepository": "shaku1z/tear-score",
+  "engineCommit": "766b910d07264fd81154be29a3d809c63de5c310",
+  "version": "0.1.0-alpha.1",
+  "builtAt": "2026-07-19T13:45:03.775Z",
+  "bundleSha256": "fe1147cc4eb19719be9d9511c141345bf31affa34641022f4963bc52433ccbb8",
+  "toneVersion": "14.9.17",
+  "artifact": "tear-score.esm.js",
+  "artifactFormat": "esm",
+  "toneArtifact": "tone-host-14.9.17.esm.js",
+  "toneSha256": "15a9fb8e393c132f1c06ba1d71def8b8f3eeb83c288023b346af6321bcf26e26",
+  "compatibilityPatches": [
+    "composer-reset-before-rack-dispose"
+  ]
+}

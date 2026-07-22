@@ -1,0 +1,19 @@
+{
+  "engineRepository": "shaku1z/tear-score",
+  "engineCommit": "766b910d07264fd81154be29a3d809c63de5c310",
+  "engineVersion": "0.1.0-alpha.1",
+  "scoreVersion": "built-in-scores@0.1.0-alpha.1",
+  "artifact": "tear-score.esm.js",
+  "artifactSha256": "fe1147cc4eb19719be9d9511c141345bf31affa34641022f4963bc52433ccbb8",
+  "toneArtifact": "tone-host-14.9.17.esm.js",
+  "toneVersion": "14.9.17",
+  "toneSha256": "15a9fb8e393c132f1c06ba1d71def8b8f3eeb83c288023b346af6321bcf26e26",
+  "sourceStateAtVendoring": "dirty-worktree",
+  "note": "Runtime binaries are pinned by SHA-256. The sibling source worktree contained uncommitted implementation work, so the binary hash—not the commit alone—is authoritative.",
+  "artifactFormat": "esm",
+  "toneFormat": "host-context-esm",
+  "globalRuntimeDependencies": [],
+  "compatibilityPatches": [
+    "composer-reset-before-rack-dispose"
+  ]
+}

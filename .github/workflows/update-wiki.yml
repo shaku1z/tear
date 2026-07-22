@@ -4,7 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'js/**'
+      - 'src/**'
+      - 'public/**'
+      - 'docs/**'
+      - 'index.html'
+      - 'package.json'
+      - 'vite.config.ts'
   workflow_dispatch:
 
 permissions:

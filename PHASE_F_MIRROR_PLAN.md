@@ -1,5 +1,7 @@
 # Phase F — THE MIRROR: a living reflection that learns and echoes you
 
+> Historical implementation record: paths in this document refer to the pre-redesign `js/` tree. The maintained mirror implementation now lives under `src/gameplay/entities/`; use the current architecture documents for new work.
+
 _The AI Boss Actor, realized. Additive-not-atomic (per `tear-ai-boss-actor-v1.md`), built on the
 two proven seams (`player.aiInput`, `blade.aimOverride`) and the reusable `_segNear` collision.
 Same discipline as A–E: each sub-phase is verified in-page and committed in isolation._

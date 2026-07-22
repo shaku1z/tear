@@ -43,10 +43,10 @@ The standalone artifact contains generated hashed JavaScript, fonts/icons, the w
 Validate Wrangler's upload without changing Cloudflare state:
 
 ```powershell
-pnpm exec wrangler deploy --dry-run
+pnpm check:cloudflare
 ```
 
-The dry run must report `dist/standalone` as the assets directory. Source, tests, plans, repository metadata and the CrazyGames build must not appear in its upload.
+This same dry run is part of `pnpm check`. It must report `dist/standalone` as the assets directory. Source, tests, plans, repository metadata and the CrazyGames build must not appear in its upload.
 
 ## Deploy
 

@@ -26,5 +26,5 @@ Thumbs.db
 .env.local
 .env.*.local
 
-# CrazyGames submission package (regenerate with `git archive`, see CRAZYGAMES.md)
+# CrazyGames submission package (regenerate with `pnpm package:crazygames`)
 tear-crazygames.zip

@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/png" href="/branding/favicon.png" />
+  <link rel="icon" type="image/png" href="/branding/icons/icon-192.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>TEAR: BLADE</title>
-  <!-- PWA: installable on the standalone site (tearblade.com); inert on CrazyGames -->
+  <!-- TEAR_STANDALONE_PWA_START -->
+  <!-- PWA: installable on the standalone site (tearblade.com) -->
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#0a0b10" />
   <link rel="apple-touch-icon" href="/branding/icons/apple-touch-icon.png" />
@@ -13,6 +14,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="TEAR" />
+  <!-- TEAR_STANDALONE_PWA_END -->
   <!-- Chapter typography: self-hosted (latin subset) so cinematics never make a
        runtime web-font request. Courier/Arial fall back while these load. -->
   <link rel="preload" href="/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin />
@@ -144,18 +146,5 @@
   </div>
 
   <!-- TEAR_ENTRYPOINT -->
-  <!-- Warm the chapter fonts so canvas draws use them the moment they resolve.
-       Failure is harmless: font-display swap keeps Courier/Arial until then. -->
-  <script>
-    (function () {
-      if (!document.fonts || !document.fonts.load) return;
-      try {
-        document.fonts.load("600 40px 'Barlow Condensed'");
-        document.fonts.load("400 20px 'IBM Plex Mono'");
-        document.fonts.load("500 20px 'IBM Plex Mono'");
-        document.fonts.ready.then(function () { window.__chapterFontsReady = true; }).catch(function () {});
-      } catch (e) {}
-    })();
-  </script>
 </body>
 </html>

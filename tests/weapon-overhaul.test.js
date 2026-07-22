@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const ts = require("typescript");
 const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
@@ -20,11 +21,43 @@ const context = vm.createContext({
   GFX: { low: true },
 });
 
-for (const file of ["config.js", "utils.js", "weapons.js", "blade.js", "player.js", "upgrades.js", "enemy.js"]) {
-  vm.runInContext(fs.readFileSync(path.join(root, "js", file), "utf8"), context, { filename: file });
+const sources = [
+  "src/config/game-config.ts",
+  "src/domain/geometry.ts",
+  "src/gameplay/weapons.ts",
+  "src/gameplay/entities/blade-core.ts",
+  "src/gameplay/entities/blade.ts",
+  "src/gameplay/entities/player.ts",
+  "src/gameplay/upgrades.ts",
+  "src/gameplay/entities/enemy-types/enemy-base.ts",
+];
+for (const file of sources) {
+  let source = fs.readFileSync(path.join(root, file), "utf8");
+  if (file.endsWith(".ts")) {
+    source = ts.transpileModule(source, {
+      compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+      fileName: file,
+    }).outputText;
+  }
+  source = source
+    .replace(/^import\s+[^;]+;\s*$/gm, "")
+    .replace(/^export\s+\{[^}]+\};?\s*$/gm, "")
+    .replace(/^export\s+(?=(?:const|let|var|function|class)\b)/gm, "");
+  vm.runInContext(source, context, { filename: file });
 }
 
 vm.runInContext(`
+  globalThis.Blade = createBlade({ CLOCK, CONFIG, GFX, Input, THEME, clamp, len, lerp, lerpAngle });
+  globalThis.Player = createPlayer({ CONFIG, FX: { burst() {}, shock() {} }, GFX, Input, THEME, aabbOverlap, clamp, len });
+  globalThis.Enemy = createEnemyBase({
+    A11Y: {}, CLOCK, CONFIG, Clipper: undefined,
+    FX: { burst() {}, shock() {}, sparks() {}, ring() {}, smoke() {}, list: [] },
+    GAME_RANDOM: { next: () => 0.5 }, GFX, Projectile: undefined,
+    SFX: new Proxy({}, { get: () => () => undefined }), THEME,
+    UI: new Proxy({}, { get: () => () => undefined }),
+    aabbOverlap, clamp, cosmeticRandom: () => 0.5, len, lerp,
+    segPointDist, segSegmentDist,
+  }, { bossFeedback() {} });
   globalThis.__test = {
     CONFIG,
     WEAPONS,

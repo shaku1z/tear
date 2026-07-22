@@ -1,5 +1,7 @@
 # Tear — Architecture / Code-Quality / Combat Audit + Phased Plan
 
+> Historical record: this audit predates the Vite/TypeScript architectural redesign. Its `js/` and query-version paths describe the audited baseline, not the current source layout or release process. See `ARCHITECTURE_REDESIGN.md` and `DEPLOYMENT.md` for current guidance.
+
 _Audit only. No code changed. Nothing ships without an explicit go-ahead on the actual diff._
 
 Verified against the live `js/` and `tear-crazygames/js/` builds (main `?v=115`, CG `?v=112`).
