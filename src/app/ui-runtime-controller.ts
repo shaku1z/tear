@@ -66,7 +66,7 @@ export function handleUiRuntimeFrame(ports: UiRuntimePorts): void {
   const decision = coordinateUiFrame({
     screen: ports.screen(), buttons: ports.buttons(), focus: ports.focus(), scroll: ports.scroll(),
     scrollY: wheel.y, pageUp: input.ui.pageUp, pageDown: input.ui.pageDown,
-    pointer: { x: input.mouseX, y: input.mouseY }, pointerActive: input.mode === "mouse", touch,
+    pointer: { x: input.mouseX, y: input.mouseY }, touch,
     directions: { left: input.menuLeft(), right: input.menuRight(), up: input.menuUp(), down: input.menuDown() },
     previous: input.menuPrev(), next: input.menuNext(), pressed: input.pressed,
     padBack: input.padBack, confirm: input.confirmPressed(),

@@ -59,9 +59,11 @@ export function buildAbilityCards(
     });
 }
 
-export function buildResultLog(log: readonly ResultLogSource[]): readonly ResultLogView[] {
+export function buildResultLog(log: readonly ResultLogSource[],
+  peakColor?: (peak: number) => string): readonly ResultLogView[] {
   return log.map((entry) => Object.freeze({ wave: String(entry.wave), time: (entry.time ?? 0).toFixed(1) + "s",
-    kills: entry.kills ?? 0, peak: "\u00d7" + String(entry.peak ?? 1), died: entry.died === true }));
+    kills: entry.kills ?? 0, peak: "\u00d7" + String(entry.peak ?? 1), died: entry.died === true,
+    ...(peakColor === undefined ? {} : { peakColor: peakColor(entry.peak ?? 1) }) }));
 }
 
 export function buildTierCards(upgrades: readonly UpgradePresentationSource[], state: UpgradePresentationState,
@@ -75,12 +77,19 @@ export function buildTierCards(upgrades: readonly UpgradePresentationSource[], s
 }
 
 export interface ProgressSource { readonly label: string; readonly current: number; readonly goal: number;
-  readonly done: boolean; readonly reward?: string; readonly detail?: string }
+  readonly done: boolean; readonly reward?: string; readonly detail?: string;
+  readonly kind?: "daily" | "achievement"; readonly barColor?: string; readonly labelColor?: string }
 export function buildRunProgressRows(dailies: readonly ProgressSource[], earned: readonly ProgressSource[],
   locked: readonly ProgressSource[]): readonly ProgressView[] {
-  return [...dailies, ...earned, ...locked].slice(0, dailies.length + 5).map((row) => Object.freeze({
-    label: row.label, current: row.current, goal: row.goal, done: row.done,
-    ...(row.detail === undefined ? {} : { detail: row.detail }) }));
+  const tagged = [
+    ...dailies.map((row) => ({ ...row, kind: row.kind ?? "daily" as const })),
+    ...[...earned, ...locked].map((row) => ({ ...row, kind: row.kind ?? "achievement" as const })),
+  ];
+  return tagged.slice(0, dailies.length + 5).map((row) => Object.freeze({
+    label: row.label, current: row.current, goal: row.goal, done: row.done, kind: row.kind,
+    ...(row.detail === undefined ? {} : { detail: row.detail }),
+    ...(row.barColor === undefined ? {} : { barColor: row.barColor }),
+    ...(row.labelColor === undefined ? {} : { labelColor: row.labelColor }) }));
 }
 
 export interface AchievementProgressSource { readonly id: string; readonly name: string }
@@ -93,16 +102,23 @@ export function buildRunProgressSnapshot(input: {
   readonly progressText: (achievement: AchievementProgressSource) => string;
   readonly shardsFor: (achievement: AchievementProgressSource) => number;
   readonly coinsFor: (achievement: AchievementProgressSource) => number;
+  readonly rarityColor?: (achievement: AchievementProgressSource) => string;
 }): readonly ProgressView[] {
   const earned = input.achievementIds.filter((id) => !input.runAchievementIds.includes(id))
     .flatMap((id) => { const achievement = input.byId(id); return achievement === undefined ? [] : [achievement]; });
   const locked = input.achievements.filter((achievement) => !input.unlocked(achievement.id))
     .sort((left, right) => input.progress(right) - input.progress(left));
+  // source drawRunProgressPanel colors: earned rows take the rarity color, locked rows
+  // keep the teal bar over ink labels; daily rows flip to green once done.
   const project = (achievement: AchievementProgressSource, isEarned: boolean): ProgressSource => ({
     label: (isEarned ? "✓ " : "") + achievement.name, current: input.progress(achievement), goal: 1, done: isEarned,
     detail: isEarned ? `◆ +${String(input.shardsFor(achievement))}  +${String(input.coinsFor(achievement))}c` : input.progressText(achievement),
+    barColor: isEarned ? input.rarityColor?.(achievement) ?? "#0f9fb0" : "#0f9fb0",
+    ...(isEarned && input.rarityColor !== undefined ? { labelColor: input.rarityColor(achievement) } : {}),
   });
-  return buildRunProgressRows(input.dailies, earned.map((entry) => project(entry, true)), locked.map((entry) => project(entry, false)));
+  const dailies = input.dailies.map((row) => ({ ...row,
+    ...(row.barColor === undefined && row.done ? { barColor: "#2f9e6b", labelColor: "#2f9e6b" } : {}) }));
+  return buildRunProgressRows(dailies, earned.map((entry) => project(entry, true)), locked.map((entry) => project(entry, false)));
 }
 
 export function buildPausedSnapshot(input: { readonly summary?: string; readonly abilities: readonly CardView[];

@@ -230,7 +230,6 @@ export function createLivePresentationFrameHost<Screen extends string,
       chooseReserve: services.chooseReserve, rerollDraft: services.rerollDraft }),
     buttonLayer: () => ({ context, buttons: state.controls(), focus: state.focus(),
       pointerX: services.input.mouseX, pointerY: services.input.mouseY, deltaSeconds: state.deltaSeconds(),
-      pointerActive: services.input.mode === "mouse",
       enterSeconds: state.enterSeconds(), hoverAnimation: services.hoverAnimation, ui,
       entranceEase: services.ease }),
   });

@@ -18,7 +18,6 @@ export interface ButtonLayerOptions {
   readonly focus: number;
   readonly pointerX: number;
   readonly pointerY: number;
-  readonly pointerActive: boolean;
   readonly deltaSeconds: number;
   readonly enterSeconds: number;
   readonly hoverAnimation: Record<string, number>;
@@ -35,7 +34,7 @@ export function renderButtonLayer(options: ButtonLayerOptions): void {
   for (let index = 0; index < buttons.length; index += 1) {
     const button = buttons[index];
     if (button === undefined || button._hideBox) continue;
-    const hovered = options.pointerActive && ui.pointIn(button, options.pointerX, options.pointerY) && button.enabled !== false;
+    const hovered = ui.pointIn(button, options.pointerX, options.pointerY) && button.enabled !== false;
     const active = hovered || Boolean(button.sel) || index === options.focus;
     const key = button._k ?? `${button.label}@${String(Math.round(button.x))},${String(Math.round(button.y))}`;
     button._k = key;

@@ -17,7 +17,7 @@ const buttons = [
 function frame(overrides: Partial<UiFrameInput> = {}): UiFrameInput {
   return {
     screen: "menu", buttons, focus: 0, scroll: 0, scrollY: 0, pageUp: false, pageDown: false,
-    pointer: { x: -100, y: -100 }, pointerActive: true, touch: false,
+    pointer: { x: -100, y: -100 }, touch: false,
     directions: { left: false, right: false, up: false, down: false },
     previous: false, next: false, pressed: new Set(), padBack: false, confirm: false,
     ...overrides,
@@ -54,11 +54,11 @@ describe("semantic UI action coordinator", () => {
     expect(coordinateUiFrame(frame({ focus: 1, confirm: true })).action).toEqual({ type: "activate-button", index: 1, source: "confirm" });
   });
 
-  it("does not let a stale mouse position steal focus from keyboard or controller", () => {
+  it("lets pointer hover move focus in every input modality (source handleUI contract)", () => {
     const decision = coordinateUiFrame(frame({
-      focus: 1, pointer: { x: 10, y: 10 }, pointerActive: false,
+      focus: 1, pointer: { x: 10, y: 10 },
     }));
-    expect(decision.focus).toBe(1);
+    expect(decision.focus).toBe(0);
   });
 
   it("keeps touch-confirm cards two-step while mouse and the second touch activate", () => {

@@ -71,6 +71,7 @@ export interface ScreenControl {
 
 export interface ScreenUiPort {
   readonly ink: string;
+  font(size: number, bold?: boolean): string;
   readonly t: {
     readonly type: Record<string, number> & { readonly wordmark: number; readonly display: number; readonly h1: number; readonly h2: number; readonly title: number; readonly lead: number; readonly body: number; readonly label: number; readonly caption: number; readonly micro: number };
     readonly font: Readonly<{ readonly brand: string; readonly display: string; readonly body: string; readonly displayWeight: number; readonly bodyWeight: number; readonly bodyMediumWeight: number }>;
@@ -140,7 +141,12 @@ export interface CardView extends ChoiceView {
 }
 export interface StatView { readonly label: string; readonly value: string; readonly detail?: string; readonly glyph?: string; readonly accent?: string }
 export interface ReplayView { readonly id: string; readonly title: string; readonly detail: string; readonly available?: boolean; readonly badge?: string; readonly timestamp?: string; readonly thumbnailId?: string; readonly pinned?: boolean; readonly shared?: boolean; readonly local?: boolean; readonly rank?: number }
-export interface ProgressView { readonly label: string; readonly current: number; readonly goal: number; readonly detail?: string; readonly done?: boolean }
+export interface ProgressView {
+  readonly label: string; readonly current: number; readonly goal: number; readonly detail?: string; readonly done?: boolean;
+  /** Section heading the row belongs to on the pause/defeat progress panel (source drawRunProgressPanel). */
+  readonly kind?: "daily" | "achievement";
+  readonly barColor?: string; readonly labelColor?: string;
+}
 export interface DailyChallengeView extends ProgressView { readonly reward: string }
 
 export interface MenuScreenView {
@@ -238,7 +244,7 @@ export interface PausedScreenView {
 }
 export interface ConfirmQuitScreenView { readonly id: "confirmquit" }
 export interface ContinueScreenView { readonly id: "continue"; readonly seconds: number; readonly requesting: boolean }
-export interface ResultLogView { readonly wave: string; readonly time: string; readonly kills: number; readonly peak: string; readonly died?: boolean }
+export interface ResultLogView { readonly wave: string; readonly time: string; readonly kills: number; readonly peak: string; readonly peakColor?: string; readonly died?: boolean }
 export interface GameoverScreenView {
   readonly id: "gameover"; readonly summary: string; readonly isNew: boolean; readonly best?: string;
   readonly earned: number; readonly coins: number; readonly replayAvailable: boolean;

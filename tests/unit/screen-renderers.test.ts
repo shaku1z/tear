@@ -31,6 +31,7 @@ class TestUi implements ScreenUiPort {
   dim(): void { return; }
   wrappedText(): void { return; }
   accentStrip(): void { return; }
+  font(size: number, bold?: boolean): string { return `${bold ? "bold " : ""}${String(size)}px monospace`; }
   fitTitle(): void { return; }
   keyBadge(): void { return; }
   tierPips(): void { return; }

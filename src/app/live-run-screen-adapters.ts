@@ -42,6 +42,7 @@ export interface RunScreenServices {
   readonly abilityBadge: (choice: RewardChoice) => Readonly<{ label: string; color: string }>;
   readonly formatTime: (seconds: number) => string;
   readonly clamp: (value: number, minimum: number, maximum: number) => number;
+  readonly trickColor: (multiplier: number) => string;
   readonly saveBest: (mode: string, difficulty: string, wave: number, score: number, seconds: number) => void;
   readonly awardCoins: (score: number) => void;
   readonly cinema: Readonly<{ active: boolean; cancel(reason: string): void }>;
@@ -94,9 +95,11 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
         (source) => d.ACH.progress(source)),
       progressText: (achievement) => withAchievement(achievement, "", (source) => d.ACH.progressText(source)),
       shardsFor: (achievement) => withAchievement(achievement, 0, (source) => d.ACH.shardsFor(source)),
-      coinsFor: (achievement) => withAchievement(achievement, 0, (source) => d.ACH.coinsFor(source)) });
+      coinsFor: (achievement) => withAchievement(achievement, 0, (source) => d.ACH.coinsFor(source)),
+      rarityColor: (achievement) => withAchievement(achievement, d.ACH.RARITY.common.color,
+        (source) => (d.ACH.RARITY[source.rarity] ?? d.ACH.RARITY.common).color) });
   };
-  const resultLog = () => buildResultLog(state.outcome().log);
+  const resultLog = () => buildResultLog(state.outcome().log, services.trickColor);
 
   return Object.freeze({
     renderDraft(): void {

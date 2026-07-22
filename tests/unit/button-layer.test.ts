@@ -16,7 +16,7 @@ describe("canvas button presentation layer", () => {
       chip: chipRenderer, button: buttonRenderer,
     };
     const hoverAnimation: Record<string, number> = {};
-    renderButtonLayer({ context, buttons, focus: 1, pointerX: 20, pointerY: 20, pointerActive: true, deltaSeconds: 1 / 60,
+    renderButtonLayer({ context, buttons, focus: 1, pointerX: 20, pointerY: 20, deltaSeconds: 1 / 60,
       enterSeconds: 1, hoverAnimation, ui, entranceEase: () => 1 });
     expect(buttonRenderer).toHaveBeenCalledWith(context, buttons[0], true);
     expect(chipRenderer).toHaveBeenCalledWith(context, buttons[1], true);
@@ -25,13 +25,13 @@ describe("canvas button presentation layer", () => {
     expect(hoverAnimation["BUTTON@0,0"]).toBe(buttons[0]?._a);
   });
 
-  it("ignores stale pointer hover when another input modality owns the UI", () => {
+  it("hovers from pointer geometry in every input modality (source drawButtons contract)", () => {
     const context = { globalAlpha: 1, save: vi.fn(), restore: vi.fn(), translate: vi.fn(), scale: vi.fn() } as unknown as CanvasRenderingContext2D;
     const button = { x: 0, y: 0, w: 100, h: 40, label: "BUTTON" };
     const draw = vi.fn();
     renderButtonLayer({ context, buttons: [button], focus: -1, pointerX: 20, pointerY: 20,
-      pointerActive: false, deltaSeconds: 1 / 60, enterSeconds: 1, hoverAnimation: {},
+      deltaSeconds: 1 / 60, enterSeconds: 1, hoverAnimation: {},
       ui: { pointIn: () => true, chip: vi.fn(), button: draw }, entranceEase: () => 1 });
-    expect(draw).toHaveBeenCalledWith(context, button, false);
+    expect(draw).toHaveBeenCalledWith(context, button, true);
   });
 });

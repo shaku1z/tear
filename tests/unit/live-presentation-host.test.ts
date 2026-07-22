@@ -35,7 +35,7 @@ describe("live presentation host", () => {
       uiPorts: () => ({ screen: () => "playing", buttons: () => buttons, focus: () => 0, setFocus: vi.fn(),
         scroll: () => 0, setScroll: vi.fn(), input, playInterfaceSound: vi.fn(), chooseUpgrade: vi.fn(),
         chooseReserve: vi.fn(), rerollDraft: vi.fn() }),
-      buttonLayer: () => ({ context, buttons, focus: 0, pointerX: 0, pointerY: 0, pointerActive: true, deltaSeconds: 1 / 60,
+      buttonLayer: () => ({ context, buttons, focus: 0, pointerX: 0, pointerY: 0, deltaSeconds: 1 / 60,
         enterSeconds: 1, hoverAnimation: {}, ui: { pointIn: () => false, chip: vi.fn(), button: vi.fn() },
         entranceEase: (value) => value }),
     });

@@ -4,23 +4,136 @@ import type {
 } from "./contracts";
 import { verticalMenu } from "./screen-primitives";
 
+const clampValue = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
+
 export function createPauseResultRenderers(context: ScreenRenderContext) {
   const { ui, width, height } = context;
 
+  // source drawResultsTable (win screen's centred table)
   function resultLog(rows: readonly ResultLogView[], x: number, y: number, panelWidth: number): void {
     const { canvas } = context;
-    ui.tag(canvas, "WAVE", x, y, undefined, "left", ui.t.type.label);
-    ui.tag(canvas, "TIME", x + 200, y, undefined, "right", ui.t.type.label);
-    ui.tag(canvas, "KILLS", x + 330, y, undefined, "right", ui.t.type.label);
-    ui.tag(canvas, "BEST TRICK", x + panelWidth, y, undefined, "right", ui.t.type.label);
+    canvas.fillStyle = ui.ink; canvas.font = ui.font(ui.t.type.label, true);
+    canvas.textAlign = "left"; canvas.fillText("WAVE", x, y);
+    canvas.textAlign = "right";
+    canvas.fillText("TIME", x + 200, y); canvas.fillText("KILLS", x + 330, y); canvas.fillText("BEST TRICK", x + panelWidth, y);
     ui.divider(canvas, x, y + 8, panelWidth, ui.t.alpha.full);
-    rows.slice(Math.max(0, Math.round(context.scroll / 26)), Math.max(0, Math.round(context.scroll / 26)) + 8).forEach((row, index) => {
-      const rowY = y + 38 + index * 26;
-      ui.text(canvas, `${row.died ? "✗ " : ""}${row.wave}`, x, rowY, ui.t.type.body);
-      ui.text(canvas, row.time, x + 200, rowY, ui.t.type.body, "right");
-      ui.text(canvas, String(row.kills), x + 330, rowY, ui.t.type.body, "right");
-      ui.text(canvas, row.peak, x + panelWidth, rowY, ui.t.type.body, "right");
+    const visible = 8, maxOffset = Math.max(0, rows.length - visible);
+    const offset = clampValue(Math.round(context.scroll / 26), 0, maxOffset);
+    let rowY = y + 30;
+    for (const row of rows.slice(offset, offset + visible)) {
+      canvas.textAlign = "left"; ui.text(canvas, `${row.died ? "✗ " : ""}${row.wave}`, x, rowY, ui.t.type.body);
+      canvas.textAlign = "right";
+      ui.text(canvas, row.time, x + 200, rowY, ui.t.type.body);
+      ui.text(canvas, String(row.kills), x + 330, rowY, ui.t.type.body);
+      ui.text(canvas, row.peak, x + panelWidth, rowY, ui.t.type.body);
+      rowY += 26;
+    }
+    canvas.textAlign = "left";
+    if (maxOffset > 0) ui.scrollHint(canvas, width / 2, rowY + 6, offset > 0, offset < maxOffset);
+  }
+
+  // source drawWaveLogPanel (defeat screen's middle column) — scrollable
+  function waveLogPanel(rows: readonly ResultLogView[], px: number, py: number, pw: number, ph: number): void {
+    const { canvas } = context;
+    ui.tag(canvas, "RUN LOG", px, py - 10, ui.t.color.accent, "left", ui.t.type.micro);
+    canvas.textAlign = "left"; canvas.fillStyle = ui.ink; canvas.font = ui.font(ui.t.type.label, true); canvas.globalAlpha = 0.7;
+    canvas.fillText("WAVE", px + 4, py + 12);
+    canvas.textAlign = "right";
+    canvas.fillText("TIME", px + pw - 250, py + 12); canvas.fillText("KILLS", px + pw - 120, py + 12); canvas.fillText("PEAK", px + pw - 4, py + 12);
+    canvas.globalAlpha = 1; canvas.textAlign = "left";
+    ui.divider(canvas, px, py + 20, pw, 0.4);
+    if (rows.length === 0) { ui.text(canvas, "No waves cleared.", px + pw / 2, py + 60, ui.t.type.caption, "center", ui.t.alpha.muted); return; }
+    const rowH = 32, top = py + 40, viewH = ph - 44;
+    const maxScroll = Math.max(0, rows.length * rowH - viewH);
+    const scroll = clampValue(context.scroll, 0, maxScroll);
+    canvas.save(); canvas.beginPath(); canvas.rect(px, top - 8, pw, viewH + 16); canvas.clip();
+    rows.forEach((row, index) => {
+      const y = top + index * rowH - scroll;
+      if (y < top - rowH || y > top + viewH) return;
+      canvas.textAlign = "left"; canvas.fillStyle = row.died ? ui.t.color.danger : ui.ink; canvas.font = ui.font(ui.t.type.body, true);
+      canvas.fillText((row.died ? "✗ " : "") + row.wave, px + 4, y);
+      canvas.textAlign = "right"; canvas.fillStyle = ui.ink; canvas.font = ui.font(ui.t.type.body, false);
+      canvas.fillText(row.time, px + pw - 250, y);
+      canvas.fillText(String(row.kills), px + pw - 120, y);
+      canvas.fillStyle = row.peakColor ?? ui.ink; canvas.font = ui.font(ui.t.type.body, true);
+      canvas.fillText(row.peak, px + pw - 4, y);
+      ui.divider(canvas, px, y + 9, pw, 0.06);
     });
+    canvas.restore(); canvas.textAlign = "left";
+    if (maxScroll > 0) ui.scrollHint(canvas, px + pw / 2, top + viewH + 16, scroll > 0, scroll < maxScroll);
+  }
+
+  // source drawArsenalCard + drawArsenalPanel (pause screen's middle column) — scrollable
+  function arsenalCard(x: number, y: number, w: number, h: number, ability: PausedScreenView["abilities"][number]): void {
+    const { canvas } = context;
+    ui.card(canvas, x, y, w, h, false);
+    ui.accentStrip(canvas, x, y, w, ability.accent);
+    canvas.textAlign = "left"; canvas.textBaseline = "alphabetic";
+    canvas.fillStyle = ui.ink; canvas.font = ui.font(ui.t.type.lead, true);
+    const name = ability.label.length > 26 ? ability.label.slice(0, 25) + "…" : ability.label;
+    canvas.fillText(name, x + 14, y + 26);
+    if (ability.footer) ui.tag(canvas, ability.footer, x + w - 14, y + 24, ability.accent, "right", ui.t.type.micro);
+    wrapText(ability.description ?? "", x + 14, y + 44, w - 28, 15, ui.t.type.micro, "rgba(40,42,54,0.85)");
+  }
+
+  function wrapText(text: string, x: number, y: number, maxW: number, lineHeight: number, size: number, color: string): void {
+    const { canvas } = context;
+    canvas.font = ui.font(size, false); canvas.textAlign = "center"; canvas.fillStyle = color;
+    const words = text.split(" "); let line = "", yy = y;
+    const cx = x + maxW / 2;
+    for (const word of words) {
+      const test = line ? line + " " + word : word;
+      if (canvas.measureText(test).width > maxW && line) { canvas.fillText(line, cx, yy); line = word; yy += lineHeight; }
+      else line = test;
+    }
+    if (line) canvas.fillText(line, cx, yy);
+  }
+
+  function arsenalPanel(abilities: PausedScreenView["abilities"], px: number, py: number, pw: number, ph: number): void {
+    const { canvas } = context;
+    ui.tag(canvas, "YOUR ARSENAL", px, py - 10, ui.t.color.accent, "left", ui.t.type.micro);
+    if (abilities.length === 0) {
+      ui.text(canvas, "No abilities yet — they drop between waves.", px + pw / 2, py + 46, ui.t.type.caption, "center", ui.t.alpha.muted);
+      return;
+    }
+    const cardH = 64, gap = 8, rowH = cardH + gap;
+    const maxScroll = Math.max(0, abilities.length * rowH - ph);
+    const scroll = clampValue(context.scroll, 0, maxScroll);
+    canvas.save(); canvas.beginPath(); canvas.rect(px, py - 4, pw, ph + 8); canvas.clip();
+    abilities.forEach((ability, index) => {
+      const y = py + index * rowH - scroll;
+      if (y + cardH < py - 4 || y > py + ph) return;
+      arsenalCard(px, y, pw, cardH, ability);
+    });
+    canvas.restore();
+    if (maxScroll > 0) ui.scrollHint(canvas, px + pw / 2, py + ph + 16, scroll > 0, scroll < maxScroll);
+  }
+
+  // source drawProgressRow + drawRunProgressPanel (pause/defeat right column)
+  function progressRow(px: number, y: number, pw: number, row: PausedScreenView["progress"][number]): void {
+    const { canvas } = context;
+    const barColor = row.barColor ?? ui.t.color.accent;
+    canvas.textAlign = "left"; canvas.fillStyle = row.labelColor ?? ui.ink; canvas.font = ui.font(ui.t.type.caption, row.done === true);
+    canvas.fillText(row.label.length > 40 ? row.label.slice(0, 39) + "…" : row.label, px, y + 12);
+    const bw = pw - 66;
+    canvas.globalAlpha = 0.15; canvas.fillStyle = ui.ink; canvas.fillRect(px, y + 20, bw, 4); canvas.globalAlpha = 1;
+    canvas.fillStyle = barColor;
+    canvas.fillRect(px, y + 20, bw * clampValue(row.goal ? row.current / row.goal : (row.done ? 1 : 0), 0, 1), 4);
+    canvas.textAlign = "right"; canvas.fillStyle = barColor; canvas.font = ui.font(10, true);
+    canvas.fillText(row.detail ?? "", px + pw, y + 14); canvas.textAlign = "left";
+  }
+
+  function runProgressPanel(rows: PausedScreenView["progress"], px: number, py: number, pw: number): void {
+    const { canvas } = context;
+    let y = py;
+    ui.tag(canvas, "DAILY CHALLENGES", px, y - 10, ui.t.color.accent, "left", ui.t.type.micro);
+    const dailies = rows.filter((row) => row.kind !== "achievement");
+    const achievements = rows.filter((row) => row.kind === "achievement");
+    for (const row of dailies) { progressRow(px, y, pw, row); y += 38; }
+    y += 16;
+    ui.tag(canvas, "ACHIEVEMENTS", px, y - 10, ui.t.color.accent, "left", ui.t.type.micro);
+    for (const row of achievements) { progressRow(px, y, pw, row); y += 38; }
+    if (achievements.length === 0) ui.text(canvas, "Keep fighting to make progress.", px + pw / 2, y + 20, ui.t.type.caption, "center", ui.t.alpha.muted);
   }
 
   function paused(view: PausedScreenView): void {
@@ -34,21 +147,10 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       { label: "SETTINGS", action: { type: "navigate", to: "settings" } },
       { label: "MAIN MENU", action: { type: "navigate", to: "confirmquit" } },
     ], 220, 210);
-    ui.sectionLabel(canvas, "ARSENAL", 400, 190, 640);
-    if (view.abilities.length === 0) {
-      ui.text(canvas, "No abilities yet — upgrades appear between waves.", 720, 286, ui.t.type.caption, "center", ui.t.alpha.muted);
-      ui.tag(canvas, "SURVIVE THE WAVE · CHOOSE YOUR BUILD", 720, 318, ui.t.color.accent, "center", ui.t.type.micro);
-    }
-    view.abilities.slice(0, 7).forEach((ability, index) => {
-      const y = 218 + index * 76;
-      ui.card(canvas, 400, y, 640, 64, false);
-      if (ability.accent) ui.accentStrip(canvas, 400, y, 640, ability.accent, 4);
-      ui.displayText(canvas, ability.label, 420, y + 26, ui.t.type.lead);
-      if (ability.description) ui.text(canvas, ability.description, 420, y + 48, ui.t.type.micro, "left", ui.t.alpha.soft);
-      ui.tag(canvas, ability.footer ?? (ability.tier ? `TIER ${String(ability.tier)}` : (ability.owned ? `×${String(ability.owned)}` : "")), 1020, y + 26, ability.accent, "right", ui.t.type.micro);
-    });
-    ui.sectionLabel(canvas, "RUN PROGRESS", 1090, 190, 430);
-    progressRows(view.progress, 1100, 234, 400);
+    // ---- middle column: the player's arsenal (scrollable) ----
+    arsenalPanel(view.abilities, 400, 210, 640, 600);
+    // ---- right column: this run's daily + achievement progress ----
+    runProgressPanel(view.progress, 1090, 210, 430);
   }
 
   function confirmquit(): void {
@@ -78,25 +180,18 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     if (view.isNew) ui.tag(canvas, "★ NEW BEST", width / 2, 130, ui.t.color.accent, "center", ui.t.type.caption);
     else if (view.best) ui.text(canvas, view.best, width / 2, 130, ui.t.type.caption, "center", ui.t.alpha.muted);
     ui.tag(canvas, "REWARDS", 80, 200, ui.t.color.accent, "left", ui.t.type.micro);
-    ui.displayText(canvas, `+${String(view.earned)}`, 80, 236, ui.t.type.h2);
-    ui.text(canvas, `coins  ·  ${String(view.coins)} total`, 80, 258, ui.t.type.caption, "left", ui.t.alpha.soft);
+    canvas.textAlign = "left"; canvas.fillStyle = "#0f9fb0"; canvas.font = ui.font(ui.t.type.h2, true);
+    canvas.fillText(`+${String(view.earned)}`, 80, 236);
+    canvas.fillStyle = ui.ink; canvas.font = ui.font(ui.t.type.caption, false); canvas.globalAlpha = 0.7;
+    canvas.fillText(`coins  ·  ${String(view.coins)} total`, 80, 258); canvas.globalAlpha = 1;
     const actions: { label: string; action: ScreenAction }[] = [{ label: "RETRY", action: { type: "results.retry" } }];
     if (view.replayAvailable) actions.push({ label: "▶  WATCH REPLAY", action: { type: "results.watchReplay" } });
     actions.push({ label: "MAIN MENU", action: { type: "navigate", to: "menu" } });
     verticalMenu(context, actions, 220, 320);
-    resultLog(view.log, 430, 230, 540);
-    ui.sectionLabel(canvas, "RUN PROGRESS", 1090, 190, 430);
-    progressRows(view.progress, 1100, 234, 400);
-  }
-
-  function progressRows(rows: readonly { readonly label: string; readonly current: number; readonly goal: number; readonly detail?: string; readonly done?: boolean }[], x: number, startY: number, barWidth: number): void {
-    const { canvas } = context;
-    rows.slice(0, 7).forEach((progress, index) => {
-      const y = startY + index * 72;
-      ui.text(canvas, progress.label, x, y, ui.t.type.label);
-      ui.bar(canvas, x, y + 12, barWidth, 7, progress.goal > 0 ? progress.current / progress.goal : 0, progress.done ? ui.t.color.accent : undefined);
-      if (progress.detail) ui.tag(canvas, progress.detail, x + barWidth, y, ui.t.color.muted, "right", ui.t.type.micro);
-    });
+    // ---- middle column: the per-wave run log (scrollable) ----
+    waveLogPanel(view.log, 400, 210, 640, 600);
+    // ---- right column: this run's daily + achievement progress ----
+    runProgressPanel(view.progress, 1090, 210, 430);
   }
 
   function win(view: WinScreenView): void {

@@ -45,15 +45,17 @@ export function createLivePlaygroundPresentation(options: LivePlaygroundPresenta
       const run = options.run(), pg = run.pg, colors = options.colors();
       options.renderMenu({ id: "pgmenu", title: "PLAYGROUND", subtitle: "build the scene — Tab / Esc resumes", sections: [
         { label: "SPAWN ENEMIES", choices: [...options.kinds.map((kind) => ({ id: `spawn:${kind}`, label: kind.toUpperCase(), accent: colors[kind] ?? "#888" })),
-          { id: "dummy", label: "TARGET DUMMY (passive)", accent: "#888" }] },
+          { id: "dummy", label: "TARGET DUMMY  (passive)", accent: "#888" }] },
         { label: "SPAWN MODIFIERS", choices: [
           ...[1, 3, 10].map((value) => ({ id: `hp:${String(value)}`, label: `HP ×${String(value)}`, selected: (pg.hpMultiplier ?? 1) === value })),
-          ...[1, 5].map((value) => ({ id: `count:${String(value)}`, label: `COUNT ×${String(value)}`, selected: (pg.count ?? 1) === value })),
-          ...options.difficulties().map((difficulty) => ({ id: `difficulty:${difficulty.id}`, label: difficulty.label.toUpperCase(), selected: run.diff === difficulty.id }))] },
+          ...[1, 5].map((value) => ({ id: `count:${String(value)}`, label: `COUNT ×${String(value)}`, selected: (pg.count ?? 1) === value }))] },
+        { label: "DIFFICULTY", choices: options.difficulties().map((difficulty) =>
+          ({ id: `difficulty:${difficulty.id}`, label: difficulty.label.toUpperCase(), selected: run.diff === difficulty.id })) },
         { label: "SUMMON A BOSS", choices: options.bosses.map((boss) => ({ id: `boss:${boss.id}`, label: boss.name.toUpperCase(), accent: colors.boss ?? options.uiAccent() })) },
-        { label: "ARENA & WEAPON", choices: [{ id: "arena", label: `NEXT ARENA › now: ${options.arenaName()}`,
-          accent: run.pgArena === -1 || run.pgArena == null ? options.uiAccent() : options.stageAccent() },
-          ...options.weapons().map((weapon) => ({ id: `weapon:${weapon.id}`, label: weapon.name.toUpperCase(), selected: options.selectedWeapon() === weapon.id }))] },
+        { label: "ARENA", choices: [{ id: "arena", label: `NEXT ARENA  ›  now: ${options.arenaName()}`,
+          accent: run.pgArena === -1 || run.pgArena == null ? options.uiAccent() : options.stageAccent() }] },
+        { label: "WEAPON  (restarts the arena)", choices:
+          options.weapons().map((weapon) => ({ id: `weapon:${weapon.id}`, label: weapon.name.toUpperCase(), selected: options.selectedWeapon() === weapon.id })) },
         { label: "MODIFIERS", choices: [{ id: "toggle:god", label: "GOD MODE", selected: Boolean(pg.god) },
           { id: "toggle:freeze", label: "FREEZE ENEMIES", selected: Boolean(pg.freeze) }, { id: "toggle:slow", label: "SLOW MOTION", selected: Boolean(pg.slow) },
           { id: "toggle:onehit", label: "ONE-HIT MODE", selected: options.oneHit() }] },

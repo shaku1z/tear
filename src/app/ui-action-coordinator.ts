@@ -21,7 +21,6 @@ export interface UiFrameInput {
   readonly pageUp: boolean;
   readonly pageDown: boolean;
   readonly pointer: UiPoint;
-  readonly pointerActive: boolean;
   readonly touch: boolean;
   readonly directions: Readonly<Record<NavigationDirection, boolean>>;
   readonly previous: boolean;
@@ -108,11 +107,10 @@ export function coordinateUiFrame(input: UiFrameInput): UiFrameDecision {
   }
 
   let focus = input.focus;
-  if (input.pointerActive) {
-    for (const index of enabled) {
-      const button = input.buttons[index];
-      if (button !== undefined && pointInUiRect(button, input.pointer)) focus = index;
-    }
+  // pointer hover moves focus in every input mode (source handleUI contract)
+  for (const index of enabled) {
+    const button = input.buttons[index];
+    if (button !== undefined && pointInUiRect(button, input.pointer)) focus = index;
   }
 
   let position = enabled.indexOf(focus);
