@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "tear",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["serve.py"],
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "8123"],
       "port": 8123
     }
   ]

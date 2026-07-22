@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tear Feature Wiring"
+  short_description: "Author typed Tear features through canonical ports"
+  default_prompt: "Use $tear-feature-wiring to implement this Tear feature through the correct typed modules and evidence."

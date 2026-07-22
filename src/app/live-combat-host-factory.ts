@@ -54,7 +54,8 @@ export interface LiveCombatHostFactoryOptions<State> {
  * music/frame bridge, and browser-frame coordinator as one bounded host.
  */
 export function createLiveCombatHost<State>(options: LiveCombatHostFactoryOptions<State>): LiveCombatHostRuntimeApi<State> {
-  const simulation = new FixedStepScheduler({ ticksPerSecond: 60, maxCatchUpSteps: 6 });
+  // Source combat sim: fixed 1/120s steps behind a 0.1s frame clamp (game.js STEP/acc).
+  const simulation = new FixedStepScheduler({ ticksPerSecond: 120, maxCatchUpSteps: 12 });
   const authoritativeInput = new AuthoritativeInputState();
   const combatEntityRuntime = new CombatEntityRuntime(options.combatEntities);
   const killRuntime = new LiveKillRuntime(options.kill);

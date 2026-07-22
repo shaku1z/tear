@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tear Combat Scenarios"
+  short_description: "Build deterministic Tear gameplay regressions"
+  default_prompt: "Use $tear-combat-scenarios to turn this Tear gameplay bug into a deterministic permanent regression test."

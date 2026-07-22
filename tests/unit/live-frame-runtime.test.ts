@@ -15,7 +15,7 @@ describe("live frame runtime", () => {
       bannerTime: 0.75, stageBannerSeconds: 0.75, rankPopTime: 0.7 });
   });
 
-  it("records semantic aim before authoritative replay execution", () => {
+  it("records semantic aim passively while the raw device input drives the live step", () => {
     const order: string[] = []; const gauge = vi.fn();
     const simulation = { tick: 0, advance: (_ms: number, step: (seconds: number, tick: number) => void) => {
       step(1 / 60, 4); return { tick: 4, steps: 1, droppedMilliseconds: 0 };
@@ -24,9 +24,11 @@ describe("live frame runtime", () => {
       recording: () => true, aimRadius: 2,
       sampleAim: () => { order.push("sample"); return { x: 0, y: 1 }; },
       pushAim: (turn, magnitude) => { order.push(`aim:${String(turn)}:${String(magnitude)}`); },
-      drainActions: () => { order.push("drain"); return []; }, authoritativeStep: () => order.push("step"),
-      clearOverrides: vi.fn(), step: vi.fn(), gauge });
-    expect(order).toEqual(["sample", "aim:250000:500", "drain", "step"]); expect(gauge).toHaveBeenCalledTimes(3);
+      drainActions: () => { order.push("drain"); return []; },
+      authoritativeStep: () => order.push("authoritative"),
+      clearOverrides: () => order.push("clear"), step: () => order.push("step"), gauge });
+    expect(order).toEqual(["sample", "aim:250000:500", "drain", "clear", "step"]);
+    expect(gauge).toHaveBeenCalledTimes(3);
   });
 
   it("selects menu, boss and fallback music themes without platform globals", () => {

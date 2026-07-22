@@ -56,12 +56,16 @@ export function advanceFixedSimulation(input: FixedSimulationInput): number {
   if (input.hitStop > 0) return input.hitStop - input.dt;
   const advance = input.simulation.advance(input.dt * input.timeScale * 1000, (seconds, tick) => {
     if (input.state() !== "playing") return;
+    // Recording is passive (source contract: GHOST observes the sim, never drives it).
+    // The raw device input always runs the live step; the sealed envelopes exist only
+    // for the replay file, so live feel is identical whether or not a ghost is taping.
     if (input.recording()) {
       const aim = input.sampleAim(), angle = Math.atan2(aim.y, aim.x), normalized = angle < 0 ? angle + Math.PI * 2 : angle;
       const magnitude = Math.round(Math.max(0, Math.min(1, Math.hypot(aim.x, aim.y) / input.aimRadius)) * AIM_MAGNITUDE_SCALE);
       input.pushAim(Math.round(normalized / (Math.PI * 2) * 1_000_000) % 1_000_000, magnitude);
-      input.authoritativeStep(tick, seconds, input.drainActions(tick));
-    } else { input.clearOverrides(); input.step(seconds); }
+      input.drainActions(tick);
+    }
+    input.clearOverrides(); input.step(seconds);
   });
   input.gauge("simulationTick", advance.tick); input.gauge("simulationSteps", advance.steps);
   input.gauge("simulationDroppedMs", advance.droppedMilliseconds); return input.hitStop;

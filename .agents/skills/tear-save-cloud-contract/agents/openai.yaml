@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tear Save Cloud Contract"
+  short_description: "Protect Tear persistence and cloud invariants"
+  default_prompt: "Use $tear-save-cloud-contract to change Tear persistence safely across envelopes and platform adapters."

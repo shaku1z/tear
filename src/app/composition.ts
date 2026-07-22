@@ -125,7 +125,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     defaults: {
       rulesetVersion: "tear-rules-2026.07",
       build: { version: "0.1.0", revision: import.meta.env.MODE, target },
-      ticksPerSecond: 60,
+      ticksPerSecond: 120,
       tearScore: () => SFX.musicReplayMetadata(),
     },
   });

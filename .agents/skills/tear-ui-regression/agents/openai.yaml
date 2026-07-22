@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tear UI Regression"
+  short_description: "Validate Tear screens, input, and visual craft"
+  default_prompt: "Use $tear-ui-regression to validate this Tear UI change across states, inputs, viewports, and visual quality."
