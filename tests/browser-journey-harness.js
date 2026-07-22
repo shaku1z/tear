@@ -44,6 +44,10 @@ async function withJourney(options, run) {
     }
     async function waitScreen(screen) {
       await page.waitForFunction((expected) => window.__PANTHEON_TEST.state().game === expected, screen, { timeout: 10000 });
+      // A cold screen's state can become active before its lazy renderer chunk has
+      // registered the canvas buttons. Wait for that static import to settle so
+      // the next pointer action exercises the rendered screen, not a timing race.
+      await page.waitForLoadState("networkidle", { timeout: 10000 });
       await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     }
     async function clickAndWait(x, y, screen) {
