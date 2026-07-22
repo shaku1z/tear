@@ -127,6 +127,7 @@ export interface UiRuntime {
   font(size: number, bold?: boolean): string;
   displayFont(size: number, weight?: number): string;
   bodyFont(size: number, weight?: number): string;
+  wordmark(context: CanvasRenderingContext2D, x: number, y: number, time: number, reducedMotion?: boolean): void;
   trackedText(context: CanvasRenderingContext2D, text: string, x: number, y: number, tracking: number, align?: Align): number;
   chapterWash(context: CanvasRenderingContext2D, side: string, washKind: string | undefined, amount: number): string;
   text(context: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: Align, alpha?: number): void;

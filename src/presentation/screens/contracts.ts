@@ -65,7 +65,7 @@ export interface ScreenControl {
   readonly x: number; readonly y: number; readonly w: number; readonly h: number;
   readonly label: string; readonly action: ScreenAction;
   readonly enabled?: boolean | undefined; readonly selected?: boolean | undefined; readonly ghost?: boolean | undefined;
-  readonly hero?: boolean | undefined; readonly glyph?: string | undefined; readonly sub?: string | undefined; readonly accent?: string | undefined;
+  readonly hero?: boolean | undefined; readonly glyph?: string | undefined; readonly dot?: string | undefined; readonly sub?: string | undefined; readonly accent?: string | undefined;
   readonly confirm?: boolean | undefined; readonly hiddenBox?: boolean | undefined; readonly size?: number | undefined;
 }
 
@@ -73,12 +73,13 @@ export interface ScreenUiPort {
   readonly ink: string;
   readonly t: {
     readonly type: Record<string, number> & { readonly wordmark: number; readonly display: number; readonly h1: number; readonly h2: number; readonly title: number; readonly lead: number; readonly body: number; readonly label: number; readonly caption: number; readonly micro: number };
-    readonly font: Readonly<{ readonly display: string; readonly body: string; readonly displayWeight: number; readonly bodyWeight: number; readonly bodyMediumWeight: number }>;
+    readonly font: Readonly<{ readonly brand: string; readonly display: string; readonly body: string; readonly displayWeight: number; readonly bodyWeight: number; readonly bodyMediumWeight: number }>;
     readonly alpha: Record<string, number> & { readonly full: number; readonly soft: number; readonly muted: number; readonly faint: number };
     readonly color: Record<string, string> & { readonly accent: string; readonly muted: string; readonly danger: string };
     readonly metric: Record<string, number> & { readonly btnH: number; readonly btnGap: number };
   };
   text(context: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: CanvasTextAlign, alpha?: number): void;
+  wordmark(context: CanvasRenderingContext2D, x: number, y: number, time: number, reducedMotion?: boolean): void;
   displayText(context: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: CanvasTextAlign, alpha?: number): void;
   title(context: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number): void;
   tag(context: CanvasRenderingContext2D, text: string, x: number, y: number, color?: string, align?: CanvasTextAlign, size?: number): void;

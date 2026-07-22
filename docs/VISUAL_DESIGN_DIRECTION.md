@@ -2,7 +2,7 @@
 
 ## Outcome
 
-Tear's interface is a kinetic field manual laid over a living combat diorama. It should feel authored for the game rather than borrowed from a generic web dashboard: condensed, decisive, editorial, and built from the same slash, momentum, hierarchy, and restraint as the combat.
+Tear's interface is a kinetic field manual laid over a living combat diorama. Its established identity is a spare Courier-led game interface: wide, deliberate, slightly literary, and confident enough to leave the world visible. It should feel authored for the game rather than borrowed from a generic web dashboard, storefront, or esports overlay.
 
 The interface must remain immediately usable on a 16:9 browser canvas, an ultrawide standalone window, a 4:3 embed, and a small landscape touch device. The world may bleed into unused aspect-ratio space; functional composition may not. No platform build receives a separate visual implementation.
 
@@ -14,22 +14,24 @@ The interface must remain immediately usable on a 16:9 browser canvas, an ultraw
 4. **Information has rank.** Display type carries names and decisions; mono type carries descriptions, values, metadata, and telemetry. Size alone is not hierarchy.
 5. **Density is composed, not shrunk.** Long catalogues flow, clip, scroll, truncate, or re-group. Text and hit targets never become microscopic to make content fit.
 6. **Motion communicates state.** Entry sweeps, hover travel, purchase flashes, selection changes, and progression reveals show cause and focus. Reduced-motion mode preserves the state change without travel.
+7. **Recognition outranks novelty.** The spaced TEAR lockup, Courier interface voice, open attract scene, cyan primary action, and simple left menu rail are identity assets. Architectural work may make them safer and more reusable; it may not replace them merely to look newer.
+8. **Restraint is the premium treatment.** Empty world space is stagecraft, not a vacancy to fill with a dashboard. New panels must answer a real player question that is not already answered by the focused action or its subline.
 
 ## Type system
 
-- **Barlow Condensed SemiBold:** wordmark, screen titles, action labels, tabs, section labels, badges, card names, outcome statements, and short emphatic values.
-- **IBM Plex Mono Regular:** descriptions, lore, hints, timestamps, scores, settings notes, and supporting copy.
-- **IBM Plex Mono Medium:** compact data requiring stronger contrast where Barlow would imply an action.
-- Courier New and Arial Narrow remain fallbacks only. A renderer must not select either directly.
+- **Courier New:** the TEAR wordmark and the complete ordinary game interface—screen titles, actions, tabs, sections, card names, values, descriptions, settings, HUD, and results. Nimbus Mono PS and Liberation Mono are metric-compatible platform fallbacks.
+- **Barlow Condensed SemiBold:** explicit cinematic and chapter display moments where scale, compression, and theatrical authority are required. It is not the default menu or card font.
+- **IBM Plex Mono Regular/Medium:** explicit cinematic lore, dialogue, and long-form narrative telemetry. It is not a silent replacement for core UI copy.
+- The wordmark is the plain spaced `T E A R`. A single blade slash crosses it briefly once per ambient cycle, then disappears. There is no permanent slash, stacked slash, condensed substitute, or logo container.
 - One-line content near controls must be measured and ellipsized. Narrative content wraps within an explicit column width.
 
 ## Responsive composition
 
 The authored safe composition remains 1600×900. `screenRectangle` is the true physical viewport expressed in logical coordinates and includes aspect-ratio overscan.
 
-- World layers, ambient scenery, full-screen clears, dims, washes, vignettes, transitions, and the menu's dark rail field paint through `screenRectangle` or the shared overscan contract.
+- World layers, ambient scenery, full-screen clears, dims, washes, vignettes, transitions, and the menu's dark wash paint through `screenRectangle` or the shared overscan contract.
 - Titles, buttons, cards, HUD telemetry, and pointer targets remain inside the authored safe composition.
-- Ultrawide windows reveal more world but never reveal an unpainted strip or shift the interaction rail.
+- Wider browser shapes—including the reported 2048×1024 laptop capture—reveal more world but never reveal an unpainted strip, draw a false safe-area boundary, or shift the interaction rail.
 - 4:3 windows reveal vertical bleed without cropping the safe composition.
 - Touch portrait is an explicit orientation gate; touch landscape uses the same composition with a density increase and safe-area insets.
 - DOM overlays use the bundled body family and stay subordinate to canvas UI.
@@ -47,11 +49,20 @@ The authored safe composition remains 1600×900. `screenRectangle` is the true p
 
 ### Main menu
 
-- The left rail owns identity and navigation; its dark wash reaches the physical edge at every aspect ratio.
+- The left composition owns identity and navigation; its dark gradient reaches the physical edge seamlessly at every aspect ratio. No vertical rule exposes the internal safe-area boundary.
 - The live attract world remains legible to the right.
-- The wordmark uses Barlow and the cyan slash; player identity and currency form one compact status card.
+- The wordmark is the original Courier `T E A R`; its cyan slash is an occasional motion accent, not permanent decoration. Reduced-motion mode keeps the plain lockup.
+- Player identity and currency form one compact status card; signed-in state uses the original green status pip.
 - PLAY remains the unique filled action.
-- A small run dossier mirrors the selected mode, difficulty, and current field so the empty side has an intentional informational anchor without becoming a dashboard.
+- Mode and difficulty remain on PLAY's consequence line, while NOW SHOWING names the field. The open right side belongs to the living attract scene and receives no redundant run dossier.
+
+### Main-menu composition contract
+
+- The established logical anchors remain `x=100`, wordmark baseline `y=150`, identity `y=240`, PLAY `y=318`, and navigation beginning `y=426` in the 1600×900 composition.
+- Aspect-ratio overscan changes only the painted world and wash extent. It must not introduce a visible seam, resize the logo, relocate controls, or reinterpret a laptop browser as a special layout.
+- The left wash uses the original 0→800 logical gradient and extends its fill through the true viewport rectangle. This preserves the old laptop balance while preventing exposed canvas strips.
+- The attract scene carries the spectacle: silhouette clarity, biome palette, and readable combat motion matter more than adding menu ornament.
+- Pending-finale recovery remains the sole justified secondary content block because it exposes otherwise unavailable actions.
 
 ### Run setup
 
@@ -127,7 +138,7 @@ The authored safe composition remains 1600×900. `screenRectangle` is the true p
 
 Each substantial UI change is reviewed at minimum on:
 
-1. main menu at 1600×900 and 2048×1041;
+1. main menu at 1600×900, the reported 2048×1024 laptop capture, and 2048×1041;
 2. shop or another dense two-column catalogue;
 3. setup or settings with many interactive rows;
 4. draft/pause over live world rendering;

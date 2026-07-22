@@ -6,6 +6,7 @@ const path = require("node:path");
 
 const scenarios = [
   { name: "desktop-16:9", width: 1600, height: 900, dpr: 1 },
+  { name: "desktop-reported-laptop", width: 2048, height: 1024, dpr: 1 },
   { name: "desktop-ultrawide", width: 2048, height: 1041, dpr: 1 },
   { name: "desktop-4:3-hidpi", width: 1024, height: 768, dpr: 2 },
   { name: "mobile-landscape", width: 800, height: 360, dpr: 3 },
@@ -55,6 +56,7 @@ async function main() {
           innerHeight: window.innerHeight,
         },
         fonts: {
+          brand: document.fonts.check("16px 'Courier New'"),
           display: document.fonts.check("16px 'Barlow Condensed'"),
           body: document.fonts.check("16px 'IBM Plex Mono'"),
         },
@@ -71,6 +73,7 @@ async function main() {
       assert.ok(Math.abs(snapshot.input.pointer.y - viewport.logical.height / 2) < 1, `${scenario.name}: pointer y mapping`);
       assert.equal(snapshot.document.scrollWidth, snapshot.document.innerWidth, `${scenario.name}: no horizontal page overflow`);
       assert.equal(snapshot.document.scrollHeight, snapshot.document.innerHeight, `${scenario.name}: no vertical page overflow`);
+      assert.equal(snapshot.fonts.brand, true, `${scenario.name}: brand font ready`);
       assert.equal(snapshot.fonts.display, true, `${scenario.name}: display font ready`);
       assert.equal(snapshot.fonts.body, true, `${scenario.name}: body font ready`);
       if (process.env.TEAR_VISUAL_DIR) {

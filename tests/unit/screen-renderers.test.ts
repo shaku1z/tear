@@ -12,12 +12,13 @@ class TestUi implements ScreenUiPort {
   readonly ink = "#000";
   readonly t = {
     type: { wordmark: 80, display: 52, h1: 40, h2: 30, title: 24, lead: 20, body: 16, label: 14, caption: 13, micro: 11 },
-    font: { display: "sans-serif", body: "monospace", displayWeight: 600, bodyWeight: 400, bodyMediumWeight: 500 },
+    font: { brand: "'Courier New', monospace", display: "sans-serif", body: "monospace", displayWeight: 600, bodyWeight: 400, bodyMediumWeight: 500 },
     alpha: { full: 1, soft: 0.8, muted: 0.6, faint: 0.3 },
     color: { accent: "#13c4d6", muted: "#888", danger: "#e23b3b" },
     metric: { btnH: 52, btnGap: 10 },
   };
   text(): void { return; }
+  wordmark(): void { return; }
   displayText(): void { return; }
   title(): void { return; }
   tag(): void { return; }
@@ -110,13 +111,18 @@ describe("legacy screen renderer registry", () => {
     renderer.menu({ id: "menu", playerName: "Guest", signedIn: false, coins: 0, shards: 0, unlocked: 0,
       modeLabel: "Endless", difficultyLabel: "Normal", biome: "The Grounds" });
     expect(rectangles[0]).toEqual([-120, -40, 920, 980]);
+    expect(rectangles).toHaveLength(1);
     expect(controls.find((control) => control.action.type === "navigate" && control.action.to === "setup"))
       .toMatchObject({ x: 100, y: 318, w: 320, h: 86 });
+    expect(controls[0]).toMatchObject({ dot: "#8a93a6", ghost: true });
   });
 
   it("preserves critical legacy labels and the independent audio-control contract", () => {
-    const files = ["menu-setup.ts", "settings-rename.ts", "draft-reserve-tierup.ts", "pause-results.ts"];
-    const source = files.map((file) => readFileSync(fileURLToPath(new URL(`../../src/presentation/screens/${file}`, import.meta.url)), "utf8")).join("\n");
+    const screenFiles = ["menu-setup.ts", "settings-rename.ts", "draft-reserve-tierup.ts", "pause-results.ts"];
+    const source = [
+      ...screenFiles.map((file) => readFileSync(fileURLToPath(new URL(`../../src/presentation/screens/${file}`, import.meta.url)), "utf8")),
+      readFileSync(fileURLToPath(new URL("../../src/presentation/ui-menu.ts", import.meta.url)), "utf8"),
+    ].join("\n");
     for (const label of [
       "T E A R", "PLAY", "SHOP", "ACHIEVEMENTS", "LEADERBOARDS", "CODEX", "SETTINGS",
       "BEGIN RUN", "MASTER", "MUSIC", "SOUND EFFECTS", "RESERVE A CARD", "THE WAY OPENS",

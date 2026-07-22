@@ -27,6 +27,7 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
             // Chapter typography roles (Pantheon VI). Bundled families with deterministic
             // Courier/Arial fallbacks; never hardcode these strings at call sites.
             font: {
+                brand: "'Courier New', 'Nimbus Mono PS', 'Liberation Mono', monospace", // established Tear interface + wordmark
                 display: "'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif", // condensed display titles
                 body: "'IBM Plex Mono', 'Courier New', monospace", // readable mono lore
                 displayWeight: 600, bodyWeight: 400, bodyMediumWeight: 500,

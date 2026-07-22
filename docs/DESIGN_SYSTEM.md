@@ -18,11 +18,11 @@ If you find yourself reaching for `ctx` to draw something new, stop and **add a 
 ### Type scale — `UI.t.type` (px)
 Names describe **role**, not size, so screens stay consistent (every screen title is `h1`, every tagline `caption`).
 
-`UI.title`, bold/action roles, tabs, tags, and section hierarchy use **Barlow Condensed SemiBold**. `UI.text`, wrapped copy, notes, and telemetry use **IBM Plex Mono**. `UI.font(size, true)` therefore selects the display family and `UI.font(size, false)` selects the body family. Courier New and Arial Narrow are fallbacks only.
+The ordinary game interface preserves Tear's established **Courier New** identity. `UI.font`, `UI.text`, `UI.displayText`, `UI.title`, buttons, tabs, tags, cards, HUD labels, and the wordmark all use that core mono family; bold is hierarchy, not a family switch. **Barlow Condensed SemiBold** and **IBM Plex Mono** are explicit cinematic/chapter roles reached through `UI.displayFont` and `UI.bodyFont`. They must not silently replace the main game interface again.
 
 | Token | px | Use |
 |---|---|---|
-| `wordmark` | 80 | The "T E A R" logo only |
+| `wordmark` | 80 | The plain spaced "T E A R" logo only |
 | `display` | 52 | Full-screen splash headers (PAUSED, VICTORY, DEFEATED, stage banner) |
 | `h1` | 40 | Primary screen title (SHOP, ABILITIES, SELECT RUN, …) |
 | `h2` | 30 | Secondary title / dialog heading |
@@ -88,7 +88,8 @@ Optional args are marked `?`. All draw to the passed `ctx`.
 | Component | Signature | When to use |
 |---|---|---|
 | `UI.text` | `UI.text(ctx, str, x, y, size?, align?, alpha?)` | Body / inline copy (`size` defaults `type.body`) |
-| `UI.displayText` | `UI.displayText(ctx, str, x, y, size?, align?, alpha?)` | Display-family name/value with explicit alignment |
+| `UI.displayText` | `UI.displayText(ctx, str, x, y, size?, align?, alpha?)` | Bold core-interface name/value with explicit alignment |
+| `UI.wordmark` | `UI.wordmark(ctx, x, y, time, reducedMotion?)` | Original spaced TEAR lockup with its brief periodic blade sweep |
 | `UI.title` | `UI.title(ctx, str, x, y, size?)` | Bold centred heading (`size` defaults `type.h1`) |
 | `UI.tag` | `UI.tag(ctx, str, x, y, color?, align?, size?)` | Small coloured label/tag (defaults `type.micro`) |
 | `UI.screenHeader` | `UI.screenHeader(ctx, title, subtitle?, y?, big?)` | Title + muted tagline at top of a screen; **returns the y below it** |

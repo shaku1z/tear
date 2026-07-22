@@ -16,7 +16,7 @@ export function createUiFoundation(dependencies: UiDependencies) {
   const { CONFIG, Input, OVERSCAN } = dependencies;
   return {
 font(this: UiRuntime, size: number, bold?: boolean) {
-            return bold ? this.displayFont(size) : this.bodyFont(size);
+            return `${bold ? "bold " : ""}${String(size)}px ${this.t.font.brand}`;
         },
         // ---- CHAPTER TYPE ROLES (Pantheon VI) -----------------------------------
         // Never hardcode the family strings at a call site; go through these.
@@ -79,12 +79,13 @@ font(this: UiRuntime, size: number, bold?: boolean) {
             ctx.fillText(str, x, y);
             ctx.globalAlpha = 1;
         },
-        // Display-family text with explicit alignment. Use for names or emphatic
-        // values that are not centred screen titles.
+        // Core-interface emphasis with explicit alignment. Cinematic/chapter
+        // compositions opt into displayFont directly instead of replacing Tear's
+        // established mono identity across ordinary game screens.
         displayText(this: UiRuntime, ctx: CanvasRenderingContext2D, str: string, x: number, y: number, size?: number, align?: Align, alpha?: number) {
             ctx.globalAlpha = alpha ?? this.t.alpha.full;
             ctx.fillStyle = this.ink;
-            ctx.font = this.displayFont(truthyOr(size, () => this.t.type.lead));
+            ctx.font = this.font(truthyOr(size, () => this.t.type.lead), true);
             ctx.textAlign = truthyOr(align, () => "left");
             ctx.textBaseline = "alphabetic";
             ctx.fillText(str, x, y);
@@ -93,7 +94,7 @@ font(this: UiRuntime, size: number, bold?: boolean) {
         // bold, centred heading. size defaults to the `h1` token.
         title(this: UiRuntime, ctx: CanvasRenderingContext2D, str: string, x: number, y: number, size?: number) {
             ctx.fillStyle = this.ink;
-            ctx.font = this.displayFont(truthyOr(size, () => this.t.type.h1));
+            ctx.font = this.font(truthyOr(size, () => this.t.type.h1), true);
             ctx.textAlign = "center";
             ctx.textBaseline = "alphabetic";
             ctx.fillText(str, x, y);
@@ -102,10 +103,10 @@ font(this: UiRuntime, size: number, bold?: boolean) {
         fitTitle(this: UiRuntime, ctx: CanvasRenderingContext2D, str: string, x: number, y: number, maxW: number, startSize?: number, minSize?: number) {
             let size = truthyOr(startSize, () => this.t.type.title);
             const floor = truthyOr(minSize, () => this.t.type.label);
-            ctx.font = this.displayFont(size);
+            ctx.font = this.font(size, true);
             while (ctx.measureText(str).width > maxW && size > floor) {
                 size--;
-                ctx.font = this.displayFont(size);
+                ctx.font = this.font(size, true);
             }
             this.title(ctx, str, x, y, size);
         },

@@ -23,7 +23,7 @@ export interface LiveScreenButton {
   readonly [key: string]: unknown;
   readonly x: number; readonly y: number; readonly w: number; readonly h: number; readonly label: string;
   readonly enabled?: boolean; readonly sel?: boolean; readonly ghost?: boolean;
-  readonly hero?: boolean; readonly glyph?: string; readonly sub?: string;
+  readonly hero?: boolean; readonly glyph?: string; readonly dot?: string; readonly sub?: string;
   readonly accent?: string; readonly confirm?: boolean; readonly _hideBox?: boolean;
   readonly size?: number; readonly action: () => void;
 }
@@ -53,6 +53,7 @@ function toButton(control: ScreenControl, dispatch: (action: ScreenAction) => vo
     ...(control.ghost === undefined ? {} : { ghost: control.ghost }),
     ...(control.hero === undefined ? {} : { hero: control.hero }),
     ...(control.glyph === undefined ? {} : { glyph: control.glyph }),
+    ...(control.dot === undefined ? {} : { dot: control.dot }),
     ...(control.sub === undefined ? {} : { sub: control.sub }),
     ...(control.accent === undefined ? {} : { accent: control.accent }),
     ...(control.confirm === undefined ? {} : { confirm: control.confirm }),

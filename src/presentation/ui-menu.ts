@@ -4,6 +4,24 @@ import { truthyOr } from "./value-fallback";
 export function createUiMenu(dependencies: UiDependencies) {
   const { CONFIG, OVERSCAN } = dependencies;
   return {
+wordmark(this: UiRuntime, ctx: CanvasRenderingContext2D, x: number, y: number, time: number, reducedMotion?: boolean) {
+            this.text(ctx, "T E A R", x, y, this.t.type.wordmark, "left");
+            if (reducedMotion) return;
+            const cycle = (time % 4.2) / 0.5;
+            if (cycle >= 1) return;
+            const slashX = x + cycle * 380;
+            const amount = Math.sin(cycle * Math.PI);
+            ctx.save();
+            ctx.globalAlpha = 0.85 * amount;
+            ctx.strokeStyle = this.t.color.accent;
+            ctx.lineWidth = 4;
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            ctx.moveTo(slashX - 26, y + 10);
+            ctx.lineTo(slashX + 26, y - 52);
+            ctx.stroke();
+            ctx.restore();
+        },
 menuBackdrop(this: UiRuntime, ctx: CanvasRenderingContext2D, time: number) {
             ctx.save();
             const vw = CONFIG.view.w, vh = CONFIG.view.h;
