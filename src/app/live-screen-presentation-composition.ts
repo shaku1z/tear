@@ -57,7 +57,10 @@ export function createLiveScreenPresentationComposition(
   const renderer = createLiveScreenRenderers({
     ...options.renderer,
     dispatch: (action) => { dispatch(action); },
-    renderPreview: (id, bounds) => { library.drawReplayPreview(id, bounds); },
+    renderPreview: (id, bounds) => {
+      if (id.startsWith("creature:")) library.drawCreaturePreview(id.slice("creature:".length), bounds);
+      else library.drawReplayPreview(id, bounds);
+    },
   });
   const replay: ReplayScreenAdapter = createLiveReplayScreenAdapter({
     ...options.replay, renderers: renderer,

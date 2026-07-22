@@ -95,6 +95,8 @@ export interface ScreenUiPort {
   wrappedText(context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, size?: number, align?: CanvasTextAlign, alpha?: number): void;
   accentStrip(context: CanvasRenderingContext2D, x: number, y: number, width: number, color?: string, thickness?: number): void;
   fitTitle(context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, startSize?: number, minSize?: number): void;
+  spine(context: CanvasRenderingContext2D, x: number, y: number, height: number, color?: string, width?: number): void;
+  badge(context: CanvasRenderingContext2D, text: string, x: number, y: number, color?: string, align?: CanvasTextAlign, size?: number): void;
   keyBadge(context: CanvasRenderingContext2D, x: number, y: number, size: number, label: string | number, color?: string): void;
   tierPips(context: CanvasRenderingContext2D, cx: number, y: number, count: number, next: number, color: string): void;
   scrollHint(context: CanvasRenderingContext2D, x: number, y: number, canUp: boolean, canDown: boolean): void;
@@ -138,6 +140,12 @@ export interface CardView extends ChoiceView {
   readonly progress?: number; readonly progressLabel?: string; readonly locked?: boolean;
   readonly rewardPrimary?: string; readonly rewardSecondary?: string; readonly rarity?: string;
   readonly previewId?: string; readonly shimmer?: number; readonly flash?: number;
+  /** Bestiary detail (source drawBestiaryEntry): stat chips, kill history, rollable affixes. */
+  readonly stats?: readonly Readonly<{ label: string; value: string }>[];
+  readonly felled?: Readonly<{ label: string; color: string }>;
+  readonly affixes?: readonly Readonly<{ id: string; color: string }>[];
+  readonly variants?: string;
+  readonly boss?: boolean;
 }
 export interface StatView { readonly label: string; readonly value: string; readonly detail?: string; readonly glyph?: string; readonly accent?: string }
 export interface ReplayView { readonly id: string; readonly title: string; readonly detail: string; readonly available?: boolean; readonly badge?: string; readonly timestamp?: string; readonly thumbnailId?: string; readonly pinned?: boolean; readonly shared?: boolean; readonly local?: boolean; readonly rank?: number }

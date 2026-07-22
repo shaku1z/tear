@@ -301,7 +301,9 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
           !CINEMA.active && startBossTransformation(enemy, request),
         achievementsEnabled: achTracks,
         setBossBanner: (text, color) => { bossBeat = { text, color, t: 1.15, dur: 1.15 }; },
-        consumeThrow: () => GHOST.recording() ? authoritativeInput.consumeThrow() : Input.consumeThrow(),
+        // Raw device edge in every live run (recording is passive; the authoritative
+        // input only replays sealed envelopes during verification).
+        consumeThrow: () => Input.consumeThrow(),
         weaponSegmentContact: weaponCapsuleIntersectsSegment,
         createCharger: (x, y) => makeCombatEnemy(new dependencies.Charger(x, y)),
         createReflection: (x, y) => makeCombatEnemy(new ReflectionEnemy(x, y)),

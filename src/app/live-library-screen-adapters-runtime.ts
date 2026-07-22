@@ -13,8 +13,10 @@ import { buildLeaderboardRow, buildProfileRecords, buildProfileReplays, buildPro
 import { ReplayLibraryController } from "./replay-library-controller";
 import { renderReplayThumbnail } from "../presentation/replay-thumbnail";
 
-type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "Cloud" | "CONFIG" | "DAILY" | "FirebaseProvider" |
-  "META" | "PROFILE" | "STAGES" | "UI" | "UPGRADES" | "VAULT">;
+type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "AFFIXES" | "Aldric" | "Armored" | "Bomber" | "Charger" |
+  "Chimera" | "Cloud" | "Colossus" | "CONFIG" | "DAILY" | "Echo" | "FirebaseProvider" | "Flyer" |
+  "META" | "PROFILE" | "Ranged" | "STAGES" | "Support" | "UI" | "UPGRADES" | "VARIANTS" | "VAULT" |
+  "Warden" | "Wraith" | "applyVariant">;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 type Category = Readonly<{ name: string; color: string }>;
 
@@ -46,6 +48,7 @@ export interface LibraryScreenAdapters {
   readonly renderAchievements: () => void;
   readonly renderLeaderboards: () => void;
   readonly drawReplayPreview: (source: string, bounds: Readonly<{ x: number; y: number; w: number; h: number }>) => void;
+  readonly drawCreaturePreview: (name: string, bounds: Readonly<{ x: number; y: number; w: number; h: number }>) => void;
   readonly selectCodexTab: (id: string) => void;
   readonly selectCodexFilter: (id: string) => void;
   readonly cycleCodexSort: () => void;
@@ -87,11 +90,70 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
   const rowView = (row: LeaderboardRowSource, fallbackId?: string) =>
     buildLeaderboardRow(row, d.CONFIG.modes, d.Cloud.user?.id, services.formatTime, fallbackId);
 
+  // ---- bestiary live instances (source bestiary(): one preview enemy per entry) ----
+  interface BestiaryInstance {
+    hw: number; hh: number; maxHp: number; contactDmg: number; speed?: number; kind?: string; bossId?: string;
+    x: number; y: number; facing: number; flash: number; stun: number; spawnT: number; _noBar?: boolean;
+    draw(context: CanvasRenderingContext2D, player: unknown): void;
+  }
+  let bestiaryInstances: Record<string, BestiaryInstance | null> | null = null;
+  const bestiaryInstance = (name: string): BestiaryInstance | null => {
+    if (bestiaryInstances === null) {
+      const safe = (make: () => unknown): BestiaryInstance | null => {
+        try { return make() as BestiaryInstance; } catch { return null; }
+      };
+      const withVariant = (enemy: unknown, variant: unknown): unknown => { d.applyVariant(enemy as never, variant as never); return enemy; };
+      bestiaryInstances = {
+        "Charger": safe(() => withVariant(new d.Charger(0, 0), d.VARIANTS.charger?.[0])),
+        "Shooter": safe(() => withVariant(new d.Ranged(0, 0), d.VARIANTS.ranged?.[0])),
+        "Flyer": safe(() => withVariant(new d.Flyer(0, 0), d.VARIANTS.flyer?.[0])),
+        "Bomber": safe(() => withVariant(new d.Bomber(0, 0), d.VARIANTS.bomber?.[0])),
+        "Armored": safe(() => new d.Armored(0, 0)),
+        "Priest": safe(() => new d.Support(0, 0, "priest")),
+        "Mender": safe(() => new d.Support(0, 0, "mender")),
+        "Herald": safe(() => new d.Support(0, 0, "herald")),
+        "Anchor": safe(() => new d.Support(0, 0, "anchor")),
+        "Wraith": safe(() => new d.Wraith(0, 0)),
+        "Chimera": safe(() => new d.Chimera(0, 0)),
+        "The Warden": safe(() => new d.Warden(0, 0)),
+        "Iron Colossus": safe(() => new d.Colossus(0, 0)),
+        "Berserker King": safe(() => new d.Aldric(0, 0)),
+        "The Echo": safe(() => new d.Echo(0, 0)),
+      };
+    }
+    return bestiaryInstances[name] ?? null;
+  };
+  const bestiaryDetail = (name: string, boss: boolean) => {
+    const inst = bestiaryInstance(name);
+    if (inst === null) return undefined;
+    const colors = d.CONFIG.colors as Record<string, string | undefined>;
+    const accent = (inst.kind !== undefined ? colors[inst.kind] : undefined)
+      ?? (boss ? d.UI.t.color.danger : d.UI.t.color.accent);
+    const stats = [
+      { label: "HP", value: String(Math.round(inst.maxHp)) },
+      { label: boss ? "TOUCH" : "DMG", value: String(Math.round(inst.contactDmg)) },
+      ...(boss ? [] : [{ label: "SPD", value: String(Math.round(inst.speed ?? 0)) }]),
+    ];
+    let felled;
+    if (boss && inst.bossId !== undefined) {
+      const stat = d.PROFILE.stat("kill" + inst.bossId.charAt(0).toUpperCase() + inst.bossId.slice(1));
+      if (stat) felled = { label: "☠ FELLED", color: "#2f9e6b" };
+    } else if (!boss && inst.kind !== undefined) {
+      const stat = d.PROFILE.stat("kill_" + inst.kind);
+      if (stat) felled = { label: "FELLED ×" + String(stat), color: accent };
+    }
+    const affixes = boss ? undefined
+      : d.AFFIXES.filter((affix) => affix.appliesTo(inst as never)).map((affix) => ({ id: affix.id, color: affix.color }));
+    return { accent, stats, ...(felled === undefined ? {} : { felled }), ...(affixes === undefined ? {} : { affixes }) };
+  };
+  // source PREVIEW_PLAYER: a still stand-in so enemy draw() has someone to face
+  const previewPlayer = { x: 360, y: 0, hw: 16, hh: 25, facing: 1, invulnerable: false, dashTimer: 0, vx: 0, vy: 0, onGround: true };
+
   const renderCodex = (): void => {
     codexTab = services.stepTab(CODEX_TABS, codexTab, () => { services.setScroll(0); });
     const bestiary = buildBestiaryView(bestiaryFilter,
       Object.fromEntries(Object.entries(categories).map(([id, category]) => [id, category.color])),
-      d.UI.t.color.danger, d.UI.t.color.accent);
+      d.UI.t.color.danger, d.UI.t.color.accent, bestiaryDetail);
     const cards = buildCodexAbilityCards({ upgrades: d.UPGRADES, filter: codexFilter, sort: codexSort,
       tierView: codexTierView, categories, fallbackCategory, uniqueColor: d.UI.t.color.unique, mutedColor: d.UI.t.color.muted });
     const guide = codexTab === "guide" ? buildCodexGuide(d.CONFIG.trick.pts, d.CONFIG.trick.tiers) : undefined;
@@ -181,6 +243,19 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     renderCodex, renderProfile, renderAchievements, renderLeaderboards,
     drawReplayPreview: (source, bounds) => { renderReplayThumbnail({ canvas: services.canvas, source, bounds,
       cache: replayThumbs, createImage: () => new Image(), ink: d.UI.ink }); },
+    // source drawCreature: render the live enemy instance scaled into its preview box
+    drawCreaturePreview: (name, bounds) => {
+      const context = services.canvas, inst = bestiaryInstance(name);
+      if (inst === null) { context.fillStyle = "#eee"; context.fillRect(bounds.x + 8, bounds.y + 8, bounds.w - 16, bounds.h - 16); return; }
+      const maxDim = Math.max(inst.hw * 2, inst.hh * 2) + 18;
+      const scale = Math.min((bounds.w - 22) / maxDim, (bounds.h - 22) / maxDim);
+      inst.x = 0; inst.y = 0; inst.facing = 1; inst.flash = 0; inst.stun = 0; inst.spawnT = 0; inst._noBar = true;
+      context.save();
+      context.beginPath(); context.rect(bounds.x, bounds.y, bounds.w, bounds.h); context.clip();
+      context.translate(bounds.x + bounds.w / 2, bounds.y + bounds.h / 2); context.scale(scale, scale);
+      try { inst.draw(context, previewPlayer); } catch { /* fall back to nothing */ }
+      context.restore();
+    },
     selectCodexTab: (id) => { codexTab = id; services.setScroll(0); },
     selectCodexFilter: (id) => { if (codexTab === "bestiary") bestiaryFilter = id; else codexFilter = id; services.setScroll(0); },
     cycleCodexSort: () => { codexSort = codexSort === "category" ? "name" : codexSort === "name" ? "type" : "category"; services.setScroll(0); },

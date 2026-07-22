@@ -17,7 +17,8 @@ export function buildCodexScreenSnapshot(input: {
     ? input.abilityFilters.map(([id, label]) => ({ id, label, selected: id === input.filter }))
     : input.tab === "bestiary" ? input.bestiaryFilters : undefined;
   const columns = input.tab === "bestiary" ? 2 : 4;
-  const maximumScroll = Math.max(0, (Math.ceil(cards.length / columns) - 3) * 168);
+  // source strides: bestiary rows are 150 tall + 16 gap; ability grid rows 150 + 18
+  const maximumScroll = Math.max(0, (Math.ceil(cards.length / columns) - 3) * (input.tab === "bestiary" ? 166 : 168));
   const scroll = Math.max(0, Math.min(maximumScroll, input.scroll));
   return Object.freeze({ maximumScroll, view: Object.freeze({ id: "codex", tab: input.tab,
     tabs: input.tabs.map(([id, label]) => ({ id, label, selected: id === input.tab })), cards,
@@ -99,13 +100,29 @@ const BESTIARY: readonly BestiaryEntry[] = Object.freeze([
   { name: "The Echo", role: "STAGE 4 — THE VOIDSPIRE", category: "boss", boss: true, desc: "You. Mirrors your last trick on a delay; repeat yourself and it anticipates. Splits in two, then vanishes in a blinding white-out." },
 ]);
 
-export function buildBestiaryView(filter: string, categoryColors: Readonly<Record<string, string>>, danger: string, accent: string): Readonly<{ filters: readonly CardView[]; cards: readonly CardView[] }> {
+export interface BestiaryEntryDetail {
+  readonly accent?: string;
+  readonly stats?: readonly Readonly<{ label: string; value: string }>[];
+  readonly felled?: Readonly<{ label: string; color: string }>;
+  readonly affixes?: readonly Readonly<{ id: string; color: string }>[];
+}
+
+export function buildBestiaryView(filter: string, categoryColors: Readonly<Record<string, string>>, danger: string, accent: string,
+  detail?: (name: string, boss: boolean) => BestiaryEntryDetail | undefined): Readonly<{ filters: readonly CardView[]; cards: readonly CardView[] }> {
   const ids = [["all", "ALL"], ["melee", "MELEE"], ["ranged", "RANGED"], ["air", "AIR"], ["support", "SUPPORT"], ["boss", "BOSS"]] as const;
   return Object.freeze({ filters: ids.map(([id, label]) => ({ id, label, selected: id === filter })),
-    cards: BESTIARY.filter((entry) => filter === "all" || entry.category === filter).map((entry) => ({
-      id: "bestiary:" + entry.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), label: entry.name,
-      category: entry.role, badge: entry.boss ? "MULTI-PHASE" : entry.category.toUpperCase(), description: entry.desc,
-      ...(entry.variants === undefined ? {} : { footer: "VARIANTS: " + entry.variants }),
-      accent: entry.boss ? danger : (categoryColors[entry.category] ?? accent),
-    })) });
+    cards: BESTIARY.filter((entry) => filter === "all" || entry.category === filter).map((entry) => {
+      const rich = detail?.(entry.name, entry.boss === true);
+      return {
+        id: "bestiary:" + entry.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), label: entry.name,
+        category: entry.role, badge: entry.boss ? "MULTI-PHASE" : entry.category.toUpperCase(), description: entry.desc,
+        ...(entry.variants === undefined || entry.variants === "—" ? {} : { variants: entry.variants }),
+        boss: entry.boss === true,
+        previewId: "creature:" + entry.name,
+        accent: rich?.accent ?? (entry.boss ? danger : (categoryColors[entry.category] ?? accent)),
+        ...(rich?.stats === undefined ? {} : { stats: rich.stats }),
+        ...(rich?.felled === undefined ? {} : { felled: rich.felled }),
+        ...(rich?.affixes === undefined ? {} : { affixes: rich.affixes }),
+      };
+    }) });
 }

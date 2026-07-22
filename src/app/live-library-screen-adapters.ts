@@ -2,7 +2,9 @@ import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../presentation/screens/live-screen-renderers";
 import { ABILITY_CATEGORY_ORDER, SPECIAL_ABILITY_COLOR, abilityBadge } from "../presentation/codex-snapshots";
 
-type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "Cloud" | "CONFIG" | "DAILY" | "FirebaseProvider" |
+type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "AFFIXES" | "Aldric" | "Armored" | "Bomber" | "Charger" |
+  "Chimera" | "Colossus" | "Echo" | "Flyer" | "Ranged" | "Support" | "VARIANTS" | "Warden" | "Wraith" | "applyVariant" |
+  "Cloud" | "CONFIG" | "DAILY" | "FirebaseProvider" |
   "META" | "PROFILE" | "STAGES" | "UI" | "UPGRADES" | "VAULT">;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 type Category = Readonly<{ name: string; color: string }>;
@@ -35,6 +37,7 @@ export interface LibraryScreenAdapters {
   readonly renderAchievements: () => void;
   readonly renderLeaderboards: () => void;
   readonly drawReplayPreview: (source: string, bounds: Readonly<{ x: number; y: number; w: number; h: number }>) => void;
+  readonly drawCreaturePreview: (name: string, bounds: Readonly<{ x: number; y: number; w: number; h: number }>) => void;
   readonly selectCodexTab: (id: string) => void;
   readonly selectCodexFilter: (id: string) => void;
   readonly cycleCodexSort: () => void;
@@ -86,6 +89,7 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
     renderAchievements: () => { render((value) => { value.renderAchievements(); }); },
     renderLeaderboards: () => { render((value) => { value.renderLeaderboards(); }); },
     drawReplayPreview: (source, bounds) => { render((value) => { value.drawReplayPreview(source, bounds); }); },
+    drawCreaturePreview: (name, bounds) => { render((value) => { value.drawCreaturePreview(name, bounds); }); },
     selectCodexTab: (id) => { invoke((value) => { value.selectCodexTab(id); }); },
     selectCodexFilter: (id) => { invoke((value) => { value.selectCodexFilter(id); }); },
     cycleCodexSort: () => { invoke((value) => { value.cycleCodexSort(); }); },
