@@ -64,15 +64,35 @@ async function startPlayground(page) {
   });
 }
 
+async function warmPlaygroundRuntime(page) {
+  await spawnRepresentativeEnemies(page, 1);
+  await startPlayground(page);
+}
+
 async function spawnRepresentativeEnemies(page, commandCount, onSample) {
-  for (let index = 1; index <= commandCount; index++) {
-    const key = String(index);
-    await page.keyboard.down(key);
-    await page.waitForTimeout(40);
-    await page.keyboard.up(key);
-    await page.waitForTimeout(35);
+  for (let attempt = 0; attempt < 12; attempt++) {
+    await page.keyboard.press("KeyE");
+    try {
+      await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "pgmenu", undefined, { timeout: 500 });
+      break;
+    } catch (error) {
+      if (error?.name !== "TimeoutError") throw error;
+    }
+  }
+  assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "pgmenu",
+    "performance fixture could not open the Playground build menu");
+  await page.waitForLoadState("networkidle", { timeout: 10000 });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+
+  for (let index = 0; index < commandCount; index++) {
+    const before = await page.evaluate(() => window.__PANTHEON_TEST.state().enemyCount);
+    const column = index % 3, row = Math.floor(index / 3);
+    await page.mouse.click(278 + column * 206, 229 + row * 52);
+    await page.waitForFunction((count) => window.__PANTHEON_TEST.state().enemyCount > count, before, { timeout: 5000 });
     if (onSample) await onSample(await diagnostics(page));
   }
+  await page.mouse.click(800, 850);
+  await waitForGameState(page, "playing");
 }
 
 function gauge(snapshot, name) {
@@ -113,6 +133,7 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
     await session.send("Emulation.setCPUThrottlingRate", { rate: scenario.cpuThrottleRate });
   }
   await startPlayground(page);
+  await warmPlaygroundRuntime(page);
   const longTasksBefore = (await diagnostics(page)).longTasks;
   const peakGauges = { enemies: 0, projectiles: 0, effects: 0 };
   const samplePeak = (snapshot) => {
@@ -134,6 +155,7 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
   assertAtMost(snapshot.render.p95Ms, scenario.renderP95Ms, `${label} render p95 ms`);
   assertAtMost(snapshot.frame.p95Ms, scenario.frameP95Ms, `${label} frame-work p95 ms`);
   assertAtMost(result.newLongTasks, scenario.newLongTasksMax, `${label} new >50 ms frames`);
+  assert.ok(peakGauges.enemies > 0, `${label} did not exercise representative enemies`);
   await page.close();
   return result;
 }
