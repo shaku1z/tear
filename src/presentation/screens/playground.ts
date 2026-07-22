@@ -54,7 +54,7 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
       const x = left + (index % 2) * (cardWidth + 24), y = top + Math.floor(index / 2) * rowHeight - context.scroll;
       if (y + 80 < top - 10 || y > height - 108) return;
       ui.card(context.canvas, x, y, cardWidth, 80, false); ui.accentStrip(context.canvas, x, y, cardWidth, choice.accent);
-      ui.text(context.canvas, choice.label, x + 16, y + 28, ui.t.type.lead);
+      ui.displayText(context.canvas, choice.label, x + 16, y + 28, ui.t.type.lead);
       if (choice.description) ui.text(context.canvas, choice.description, x + 16, y + 50, ui.t.type.micro, "left", ui.t.alpha.soft);
       if (choice.sub) ui.tag(context.canvas, choice.sub, x + 16, y + 69, choice.accent, "left", ui.t.type.micro);
       context.enqueue({ x: x + cardWidth - 118, y: y + 20, w: 102, h: 40, label: choice.glyph ?? "TAKE", enabled: choice.enabled,

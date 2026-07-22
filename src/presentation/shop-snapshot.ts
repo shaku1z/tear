@@ -17,7 +17,7 @@ export function buildShopSnapshot(input: {
   if (Math.abs(displayedCoins - input.realCoins) < 0.6) displayedCoins = input.realCoins;
   const groups = [SHOP_CATEGORIES.slice(0, 2), SHOP_CATEGORIES.slice(2)];
   const columnHeight = (categories: readonly (readonly [string, string])[]): number => categories.reduce((height, [id]) =>
-    height + 36 + input.items.filter((item) => item.cat === id).length * 74, 0);
+    height + 36 + input.items.filter((item) => item.cat === id).length * 74, 0) + Math.max(0, categories.length - 1) * 12;
   const maximumScroll = Math.max(0, Math.max(...groups.map(columnHeight)) - (input.height - 262));
   const scroll = Math.max(0, Math.min(maximumScroll, input.scroll));
   const view: ShopScreenView = { id: "shop", coins: Math.round(displayedCoins),

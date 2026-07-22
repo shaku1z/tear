@@ -1,8 +1,8 @@
 // ------- biome backdrop: parallax sky, distant ridges, ambient motes, depth + post -------
 // Turns the flat per-stage tint into a layered, moving scene. Drawn in three places:
-//   Backdrop.draw(...)      â€” inside the world camera, BEFORE platforms (sky + parallax + motes)
-//   Backdrop.platform(...)  â€” per platform, gives ledges/floor depth (gradient + edge + shadow)
-//   Backdrop.post(...)      â€” screen space, AFTER the world, BEFORE the HUD (vignette + grain)
+//   Backdrop.draw(...)      — inside the world camera, BEFORE platforms (sky + parallax + motes)
+//   Backdrop.platform(...)  — per platform, gives ledges/floor depth (gradient + edge + shadow)
+//   Backdrop.post(...)      — screen space, AFTER the world, BEFORE the HUD (vignette + grain)
 // Phase 2 ships a strong generic treatment driven by each stage's palette; Phase 3 layers in
 // per-biome art (silhouettes, biome particles, set dressing) on top of this engine.
 import { A11Y, CLOCK, CONFIG, GFX, OVERSCAN, THEME, _relLum } from "../config/game-config";
@@ -67,7 +67,7 @@ export interface BiomeArt {
 const Backdrop: BackdropController = {
   get W() { return CONFIG.view.w; },
   get H() { return CONFIG.view.h; },
-  // fullscreen overscan bleed (logical px per side) â€” scene fills extend this far
+  // fullscreen overscan bleed (logical px per side) — scene fills extend this far
   // beyond the arena so true fullscreen never letterboxes
   get PX() { return (typeof OVERSCAN !== "undefined") ? OVERSCAN.x : 0; },
   get PY() { return (typeof OVERSCAN !== "undefined") ? OVERSCAN.y : 0; },

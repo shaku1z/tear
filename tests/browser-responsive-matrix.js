@@ -6,6 +6,7 @@ const path = require("node:path");
 
 const scenarios = [
   { name: "desktop-16:9", width: 1600, height: 900, dpr: 1 },
+  { name: "desktop-ultrawide", width: 2048, height: 1041, dpr: 1 },
   { name: "desktop-4:3-hidpi", width: 1024, height: 768, dpr: 2 },
   { name: "mobile-landscape", width: 800, height: 360, dpr: 3 },
   { name: "mobile-portrait", width: 390, height: 844, dpr: 3 },
@@ -41,6 +42,7 @@ async function main() {
       await page.route("**/*", (route) => route.request().url().startsWith(origin) ? route.continue() : route.abort());
       await page.goto(`${origin}/?test=1&bossdebug=1`, { waitUntil: "domcontentloaded" });
       await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__?.viewport, undefined, { timeout: 20_000 });
+      await page.evaluate(() => document.fonts.ready);
       await page.mouse.move(scenario.width / 2, scenario.height / 2);
       await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().mode === "mouse");
       const snapshot = await page.evaluate(() => ({
@@ -51,6 +53,10 @@ async function main() {
           scrollHeight: document.documentElement.scrollHeight,
           innerWidth: window.innerWidth,
           innerHeight: window.innerHeight,
+        },
+        fonts: {
+          display: document.fonts.check("16px 'Barlow Condensed'"),
+          body: document.fonts.check("16px 'IBM Plex Mono'"),
         },
       }));
       const { viewport } = snapshot;
@@ -65,6 +71,51 @@ async function main() {
       assert.ok(Math.abs(snapshot.input.pointer.y - viewport.logical.height / 2) < 1, `${scenario.name}: pointer y mapping`);
       assert.equal(snapshot.document.scrollWidth, snapshot.document.innerWidth, `${scenario.name}: no horizontal page overflow`);
       assert.equal(snapshot.document.scrollHeight, snapshot.document.innerHeight, `${scenario.name}: no vertical page overflow`);
+      assert.equal(snapshot.fonts.display, true, `${scenario.name}: display font ready`);
+      assert.equal(snapshot.fonts.body, true, `${scenario.name}: body font ready`);
+      if (process.env.TEAR_VISUAL_DIR) {
+        fs.mkdirSync(process.env.TEAR_VISUAL_DIR, { recursive: true });
+        const fileName = scenario.name.replace(/[^a-z0-9-]+/gi, "-");
+        const capture = async (screen) => page.screenshot({ path: path.join(process.env.TEAR_VISUAL_DIR, `${fileName}-${screen}.png`) });
+        const settle = async (screen) => {
+          await page.waitForFunction((expected) => window.__PANTHEON_TEST?.state().game === expected, screen, { timeout: 10_000 });
+          await page.waitForLoadState("networkidle");
+          await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        };
+        const logicalClick = async (x, y) => {
+          const cssScale = scenario.width / (viewport.logical.width + viewport.overscan.x * 2);
+          await page.mouse.click((x + viewport.overscan.x) * cssScale, (y + viewport.overscan.y) * cssScale);
+        };
+        await capture("menu");
+        if (scenario.name.startsWith("desktop")) {
+          await logicalClick(260, 452); await settle("shop"); await capture("shop");
+          await logicalClick(800, 854); await settle("menu");
+          await logicalClick(260, 360); await settle("setup"); await capture("setup");
+          await logicalClick(800, 854); await settle("menu");
+          await logicalClick(260, 696); await settle("settings"); await capture("settings");
+          await logicalClick(800, 169); await page.waitForTimeout(120); await capture("settings-audio");
+          await logicalClick(800, 854); await settle("menu");
+          await logicalClick(260, 635); await settle("codex"); await capture("codex");
+          await logicalClick(800, 854); await settle("menu");
+          await logicalClick(260, 269); await settle("profile"); await capture("profile");
+          await logicalClick(800, 854); await settle("menu");
+          await logicalClick(260, 513); await settle("achievements"); await capture("achievements");
+          await logicalClick(800, 854); await settle("menu");
+          await logicalClick(260, 574); await settle("leaderboards"); await capture("leaderboards");
+          await logicalClick(800, 854); await settle("menu");
+          await page.evaluate(() => window.__PANTHEON_TEST.openDraft({ expanded: true, rerolls: 2, reserve: true }));
+          await settle("draft"); await capture("draft");
+          await page.reload({ waitUntil: "domcontentloaded" });
+          await page.waitForFunction(() => window.__PANTHEON_TEST && window.__TEAR_CATALOG_DEBUG__, undefined, { timeout: 20_000 });
+          await page.mouse.click(10, 10);
+          await page.evaluate(() => window.__PANTHEON_TEST.startMode("endless"));
+          await settle("playing");
+          await page.evaluate(() => window.__PANTHEON_TEST.pause());
+          await settle("paused"); await capture("paused");
+          await page.evaluate(() => { window.__PANTHEON_TEST.resume(); window.__PANTHEON_TEST.openTerminal("gameover"); });
+          await settle("gameover"); await capture("gameover");
+        }
+      }
       assert.deepEqual(errors, [], `${scenario.name}: browser errors`);
       await context.close();
     }

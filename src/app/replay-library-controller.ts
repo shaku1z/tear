@@ -29,7 +29,7 @@ export class ReplayLibraryController {
       if (!this.#ports.enterReplay(local, "profile")) this.#ports.setProfileMessage("couldn't load that recording");
       return;
     }
-    this.#ports.setProfileMessage("loading replayâ€¦");
+    this.#ports.setProfileMessage("loading replay…");
     void this.#ports.cloud.loadReplay(id).then((record) => {
       this.#ports.setProfileMessage("");
       if (record === null || !this.#ports.enterReplay(record, "leaderboards")) this.#ports.setProfileMessage("couldn't load that replay");
@@ -43,18 +43,18 @@ export class ReplayLibraryController {
     if (!this.#ports.cloud.hasLeaderboards()) { this.#ports.setProfileMessage("sharing needs the online layer"); return; }
     const record = this.#ports.vault.get(id);
     if (record === null) { this.#ports.setProfileMessage("couldn't load that recording"); return; }
-    this.#ports.setProfileMessage("publishingâ€¦");
+    this.#ports.setProfileMessage("publishing…");
     void this.#ports.cloud.publishReplay(record, null).then((shareId) => {
       if (shareId !== null && shareId !== undefined && shareId !== "") {
         this.#ports.vault.setShareId(id, shareId);
-        this.#ports.setProfileMessage("published to the global feed âœ“");
-      } else this.#ports.setProfileMessage("publish failed â€” try again");
-    }).catch(() => { this.#ports.setProfileMessage("publish failed â€” try again"); });
+        this.#ports.setProfileMessage("published to the global feed ✓");
+      } else this.#ports.setProfileMessage("publish failed — try again");
+    }).catch(() => { this.#ports.setProfileMessage("publish failed — try again"); });
   }
 
   #watchGhost(id: string): void {
     const [, mode = "", difficulty = ""] = id.split(":");
-    this.#ports.setLeaderboardMessage("loading replayâ€¦");
+    this.#ports.setLeaderboardMessage("loading replay…");
     void this.#ports.cloud.loadGhost(mode, difficulty).then((record) => {
       this.#ports.setLeaderboardMessage("");
       if (record === null || !this.#ports.enterReplay(record, "leaderboards")) this.#ports.setLeaderboardMessage("no replay yet");

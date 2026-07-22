@@ -192,7 +192,7 @@ _chapterLayout(this: UiRuntime, o: UiOptions): ChapterLayout {
             ctx.save();
             ctx.globalAlpha = k * a.finalRewardDim;
             ctx.fillStyle = t.color.cinema;
-            ctx.fillRect(0, 0, vw, vh);
+            ctx.fillRect(-OVERSCAN.x, -OVERSCAN.y, vw + OVERSCAN.x * 2, vh + OVERSCAN.y * 2);
             ctx.globalAlpha = k * a.finalRewardPanel;
             ctx.fillStyle = t.color.cinema;
             ctx.fillRect(x, y, w, h);

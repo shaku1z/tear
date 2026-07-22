@@ -14,7 +14,7 @@ const BIOME_ART: Record<string, BiomeArt> = {
     motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, {}, view); },
   },
 
-  // The Grounds â€” clean dawn, disciplined order: warm light, a colonnade, light shafts
+  // The Grounds — clean dawn, disciplined order: warm light, a colonnade, light shafts
   "The Grounds": {
     sky(B, ctx, stage, c, _t, gy, view) {
       B.baseSky(ctx, stage, c, gy, 0.10, view);
@@ -43,7 +43,7 @@ const BIOME_ART: Record<string, BiomeArt> = {
     motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, { drift: 20, aMul: 0.8 }, view); },
   },
 
-  // The Undercroft â€” gray steel industry: furnace glow, girders, a slow-turning gear, embers
+  // The Undercroft — gray steel industry: furnace glow, girders, a slow-turning gear, embers
   "The Undercroft": {
     sky(B, ctx, stage, c, _t, gy, view) {
       B.baseSky(ctx, stage, c, gy, 0.08, view);
@@ -88,7 +88,7 @@ const BIOME_ART: Record<string, BiomeArt> = {
     motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, { rgb: "255,150,70", dir: -1, glow: true, sizeMul: 0.8, aMul: 1.2 }, view); },
   },
 
-  // The Crimson Fields â€” golden-hour battlefield: warm sky, hills, burning banners, ash
+  // The Crimson Fields — golden-hour battlefield: warm sky, hills, burning banners, ash
   "The Crimson Fields": {
     sky(B, ctx, stage, c, _t, gy, view) {
       B.baseSky(ctx, stage, c, gy, 0.0, view);
@@ -119,7 +119,7 @@ const BIOME_ART: Record<string, BiomeArt> = {
     motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, { rgb: "255,140,70", dir: -1, glow: true, drift: 30, aMul: 1.1 }, view); },
   },
 
-  // The Voidspire â€” surreal violet: aurora bands, floating broken geometry, drifting shards
+  // The Voidspire — surreal violet: aurora bands, floating broken geometry, drifting shards
   "The Voidspire": {
     sky(B, ctx, stage, c, t, gy, view) {
       B.baseSky(ctx, stage, c, gy, 0.14, view);
@@ -153,7 +153,7 @@ const BIOME_ART: Record<string, BiomeArt> = {
     motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, { rgb: "180,120,220", twinkle: true, drift: 24, aMul: 0.9 }, view); },
   },
 
-  // The Tear â€” the void: a central glowing rift that pulses and lights the scene, a starfield
+  // The Tear — the void: a central glowing rift that pulses and lights the scene, a starfield
   "The Tear": {
     sky(B, ctx, stage, c, t, gy, view) {
       B.baseSky(ctx, stage, c, gy, 0.10, view);

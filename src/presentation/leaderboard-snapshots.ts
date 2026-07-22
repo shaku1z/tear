@@ -34,9 +34,9 @@ export function buildFeedLeaderboardSnapshot(input: CommonInput & {
     id: "leaderboards", tab: input.tab, tabs: tabViews(input), rows: input.rows,
     signInRequired: !input.cloudAvailable,
     message: input.message || (!input.cloudAvailable ? "The global feed needs an account."
-      : input.loading ? "Loading the feedâ€¦"
-        : input.rows.length === 0 ? "Nothing published yet â€” be the first."
-          : "published runs from every blade â€” yours share from PROFILE â–¸ REPLAYS"),
+      : input.loading ? "Loading the feed…"
+        : input.rows.length === 0 ? "Nothing published yet — be the first."
+          : "published runs from every blade — yours share from PROFILE ▸ REPLAYS"),
     canScrollUp: state.canScrollUp, canScrollDown: state.canScrollDown,
   }) });
 }
@@ -60,7 +60,7 @@ export function buildRankedLeaderboardSnapshot(input: CommonInput & {
   const medals = ["#e0a326", "#c9ccd6", "#cd7f32"] as const;
   const podium = input.data.slice(0, 3).map((row, index) => ({
     rank: index + 1, name: (row.name ?? "Player").slice(0, 14),
-    detail: `wave ${String(row.wave ?? 0)} Â· ${(row.score ?? 0).toLocaleString()} pts`,
+    detail: `wave ${String(row.wave ?? 0)} · ${(row.score ?? 0).toLocaleString()} pts`,
     color: medals[index] ?? medals[2], mine: input.currentUserId !== undefined && row.uid === input.currentUserId,
     ...(row.replayId !== undefined ? { replayId: row.replayId }
       : index === 0 && ghostId !== undefined ? { replayId: ghostId } : {}),
@@ -70,20 +70,20 @@ export function buildRankedLeaderboardSnapshot(input: CommonInput & {
   const state = scrollState(maximumScroll, input.scroll);
   const myIndex = input.currentUserId === undefined ? -1 : input.data.findIndex((row) => row.uid === input.currentUserId);
   const ownRank = input.currentUserId !== undefined && myIndex >= 10
-    ? `#${String(myIndex + 1)} YOU Â· wave ${String(input.data[myIndex]?.wave ?? 0)} Â· ${String(input.data[myIndex]?.score ?? 0)} pts`
+    ? `#${String(myIndex + 1)} YOU · wave ${String(input.data[myIndex]?.wave ?? 0)} · ${String(input.data[myIndex]?.score ?? 0)} pts`
     : input.currentUserId !== undefined && myIndex === -1
       ? input.localBest.wave || input.localBest.score
-        ? `unranked Â· local best wave ${String(input.localBest.wave)} Â· ${String(input.localBest.score)} pts`
-        : "unranked Â· no local record yet"
+        ? `unranked · local best wave ${String(input.localBest.wave)} · ${String(input.localBest.score)} pts`
+        : "unranked · no local record yet"
       : undefined;
   return Object.freeze({ maximumScroll, view: Object.freeze({
     id: "leaderboards", tab: input.tab, tabs: tabViews(input), rows, podium,
     ...(ownRank === undefined ? {} : { ownRank }), signInRequired: !input.cloudAvailable,
     modes: input.modes.map((mode) => ({ id: mode.id, label: mode.label.toUpperCase(), selected: mode.id === input.mode })),
     difficulties: input.difficulties.map((difficulty) => ({ id: difficulty.id, label: difficulty.label.toUpperCase(), selected: difficulty.id === input.difficulty })),
-    message: input.message || (!input.cloudAvailable ? "Global leaderboards need an account â€” your runs are waiting to count."
-      : input.loading ? "Loading the ranksâ€¦"
-        : input.data.length === 0 ? "No runs recorded on this board yet â€” set the first."
+    message: input.message || (!input.cloudAvailable ? "Global leaderboards need an account — your runs are waiting to count."
+      : input.loading ? "Loading the ranks…"
+        : input.data.length === 0 ? "No runs recorded on this board yet — set the first."
           : "the world's finest runs"),
     canScrollUp: state.canScrollUp, canScrollDown: state.canScrollDown,
   }) });

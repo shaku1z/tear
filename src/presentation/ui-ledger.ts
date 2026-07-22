@@ -139,19 +139,30 @@ keycap(this: UiRuntime, ctx: CanvasRenderingContext2D, key: string, x: number, y
         },
         sheet(this: UiRuntime, ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, hue?: string) {
             ctx.save();
-            ctx.globalAlpha = 0.10;
+            ctx.globalAlpha = 0.14;
             ctx.fillStyle = "#0a0b10"; // soft drop shadow
             ctx.fillRect(x + 6, y + 8, w, h);
-            ctx.globalAlpha = 0.62;
+            ctx.globalAlpha = 0.70;
             ctx.fillStyle = this.t.color.paper; // the paper surface
             ctx.fillRect(x, y, w, h);
-            ctx.globalAlpha = 0.22;
+            ctx.globalAlpha = 0.28;
             ctx.strokeStyle = this.ink;
             ctx.lineWidth = 1;
             ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1); // hairline frame
             ctx.globalAlpha = 1;
-            ctx.fillStyle = truthyOr(hue, () => this.t.color.accent); // signature top edge
-            ctx.fillRect(x, y, w, 3);
+            const signature = truthyOr(hue, () => this.t.color.accent);
+            ctx.fillStyle = signature; // signature top edge
+            ctx.fillRect(x, y, w, 4);
+            // Registration marks make the surface read like a deliberate field sheet,
+            // not a generic translucent modal. They stay outside the content rhythm.
+            const mark = 16;
+            ctx.globalAlpha = 0.42; ctx.strokeStyle = this.ink; ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x + mark, y + 14); ctx.lineTo(x + mark, y + 28); ctx.moveTo(x + 10, y + 20); ctx.lineTo(x + 24, y + 20);
+            ctx.moveTo(x + w - mark, y + h - 14); ctx.lineTo(x + w - mark, y + h - 28); ctx.moveTo(x + w - 10, y + h - 20); ctx.lineTo(x + w - 24, y + h - 20);
+            ctx.stroke();
+            ctx.globalAlpha = 0.16; ctx.fillStyle = signature;
+            ctx.fillRect(x + 34, y + h - 18, Math.min(180, w * 0.16), 2);
             ctx.restore();
         },
         // a plain bordered panel

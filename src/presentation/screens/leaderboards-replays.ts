@@ -7,11 +7,11 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
   function leaderboards(view: LeaderboardsScreenView): void {
     const { canvas } = context;
     ui.header(canvas, "LEADERBOARDS", "records, rivals, and replay ghosts", context.enterAmount, "#13c4d6");
-    tabs(context, view.tabs, (id) => ({ type: "leaderboards.selectTab", id }));
-    if (view.modes) tabs(context, view.modes, (id) => ({ type: "leaderboards.selectBoard", id: `mode:${id}` }), 224);
-    if (view.difficulties) tabs(context, view.difficulties, (id) => ({ type: "leaderboards.selectBoard", id: `difficulty:${id}` }), 266);
-    else if (view.boards) tabs(context, view.boards, (id) => ({ type: "leaderboards.selectBoard", id }), 174);
-    if (view.message) ui.text(canvas, view.message, width / 2, 222, ui.t.type.caption, "center", ui.t.alpha.muted);
+    tabs(context, view.tabs, (id) => ({ type: "leaderboards.selectTab", id }), 150);
+    if (view.modes) tabs(context, view.modes, (id) => ({ type: "leaderboards.selectBoard", id: `mode:${id}` }), 206);
+    if (view.difficulties) tabs(context, view.difficulties, (id) => ({ type: "leaderboards.selectBoard", id: `difficulty:${id}` }), 250);
+    else if (view.boards) tabs(context, view.boards, (id) => ({ type: "leaderboards.selectBoard", id }), 204);
+    if (view.message) ui.text(canvas, view.message, width / 2, view.modes ? 316 : 258, ui.t.type.caption, "center", ui.t.alpha.muted);
     if (view.signInRequired) context.enqueue({ x: width / 2 - 160, y: 460, w: 320, h: 46, label: "SIGN IN VIA PROFILE", action: { type: "navigate", to: "profile", tab: "bests" } });
     if (view.podium) {
       const positions = [{ x: width / 2 - 130, y: 316, w: 260, h: 132 }, { x: width / 2 - 420, y: 334, w: 260, h: 114 }, { x: width / 2 + 160, y: 344, w: 260, h: 104 }];
@@ -24,7 +24,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
         if (entry.replayId) context.enqueue({ x: position.x + position.w - 58, y: position.y + position.h - 40, w: 48, h: 30, label: "▶", action: { type: "leaderboards.watchReplay", id: entry.replayId } });
       });
     }
-    const top = view.podium ? 492 : (view.modes ? 316 : (view.boards ? 236 : 196));
+    const top = view.podium ? 492 : (view.modes ? 316 : (view.boards ? 262 : 214));
     canvas.save(); canvas.beginPath(); canvas.rect(0, top - 8, width, height - top - 94); canvas.clip();
     view.rows.forEach((row, index) => {
       const y = top + index * 66 - context.scroll;

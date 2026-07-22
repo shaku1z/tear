@@ -2,21 +2,23 @@
 
 ## Overview
 
-The design system lives in `src/presentation/ui.ts` as the `UI` object: a token layer (`UI.t`) plus a set of canvas components (`UI.*`). All menu, HUD, and overlay UI must be drawn through it — never hand-roll text, panels, or buttons at the call site. In-world game art (enemies, the player, particles, biome backdrops) is exempt; this system is only for chrome/UI.
+The design system is composed by `src/presentation/ui.ts` from focused modules such as `ui-foundation.ts`, `ui-ledger.ts`, `ui-menu.ts`, and `ui-chapter.ts`: a token layer (`UI.t`) plus canvas components (`UI.*`). Read [VISUAL_DESIGN_DIRECTION.md](./VISUAL_DESIGN_DIRECTION.md) first for the product-level visual and responsive contract.
 
 ## The Golden Rule
 
-**Route every piece of UI through `UI`.** Two halves of the same rule:
+**Route repeated UI language through `UI`.** Two halves of the same rule:
 
-- **Never poke `ctx` directly for UI.** No raw `ctx.fillText`, `ctx.fillRect`, `ctx.font`, `ctx.fillStyle`, etc. for menus/HUD/overlays. A component already exists for almost everything; if it doesn't, add one.
+- **Do not duplicate a shared component with raw canvas calls.** Screen-specific compositions may use canvas primitives, but typography must use the font tokens and repeated surfaces belong in `UI`.
 - **Never hardcode a value that exists as a token.** Sizes, spacings, metrics, alphas, and colours all live in `UI.t`. Pull from there instead of typing `16`, `0.55`, or `"#000"`.
 
 If you find yourself reaching for `ctx` to draw something new, stop and **add a component to `UI`** (see "Adding a new component" below) rather than inlining it.
 
 ## Token catalog — `UI.t`
 
-### Type scale — `UI.t.type` (px, Courier mono)
+### Type scale — `UI.t.type` (px)
 Names describe **role**, not size, so screens stay consistent (every screen title is `h1`, every tagline `caption`).
+
+`UI.title`, bold/action roles, tabs, tags, and section hierarchy use **Barlow Condensed SemiBold**. `UI.text`, wrapped copy, notes, and telemetry use **IBM Plex Mono**. `UI.font(size, true)` therefore selects the display family and `UI.font(size, false)` selects the body family. Courier New and Arial Narrow are fallbacks only.
 
 | Token | px | Use |
 |---|---|---|
@@ -86,6 +88,7 @@ Optional args are marked `?`. All draw to the passed `ctx`.
 | Component | Signature | When to use |
 |---|---|---|
 | `UI.text` | `UI.text(ctx, str, x, y, size?, align?, alpha?)` | Body / inline copy (`size` defaults `type.body`) |
+| `UI.displayText` | `UI.displayText(ctx, str, x, y, size?, align?, alpha?)` | Display-family name/value with explicit alignment |
 | `UI.title` | `UI.title(ctx, str, x, y, size?)` | Bold centred heading (`size` defaults `type.h1`) |
 | `UI.tag` | `UI.tag(ctx, str, x, y, color?, align?, size?)` | Small coloured label/tag (defaults `type.micro`) |
 | `UI.screenHeader` | `UI.screenHeader(ctx, title, subtitle?, y?, big?)` | Title + muted tagline at top of a screen; **returns the y below it** |

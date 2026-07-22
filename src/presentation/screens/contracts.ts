@@ -73,11 +73,13 @@ export interface ScreenUiPort {
   readonly ink: string;
   readonly t: {
     readonly type: Record<string, number> & { readonly wordmark: number; readonly display: number; readonly h1: number; readonly h2: number; readonly title: number; readonly lead: number; readonly body: number; readonly label: number; readonly caption: number; readonly micro: number };
+    readonly font: Readonly<{ readonly display: string; readonly body: string; readonly displayWeight: number; readonly bodyWeight: number; readonly bodyMediumWeight: number }>;
     readonly alpha: Record<string, number> & { readonly full: number; readonly soft: number; readonly muted: number; readonly faint: number };
     readonly color: Record<string, string> & { readonly accent: string; readonly muted: string; readonly danger: string };
     readonly metric: Record<string, number> & { readonly btnH: number; readonly btnGap: number };
   };
   text(context: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: CanvasTextAlign, alpha?: number): void;
+  displayText(context: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: CanvasTextAlign, alpha?: number): void;
   title(context: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number): void;
   tag(context: CanvasRenderingContext2D, text: string, x: number, y: number, color?: string, align?: CanvasTextAlign, size?: number): void;
   header(context: CanvasRenderingContext2D, title: string, subtitle?: string, animation?: number, hue?: string): void;
@@ -107,6 +109,8 @@ export interface ScreenRenderContext {
   readonly focus: number;
   readonly touch: boolean;
   readonly reducedMotion: boolean;
+  /** True physical viewport expressed in logical coordinates, including aspect-ratio overscan. */
+  readonly screenRectangle: Readonly<{ x: number; y: number; w: number; h: number }>;
   enqueue(control: ScreenControl): void;
   renderPreview?(id: string, bounds: Readonly<{ x: number; y: number; w: number; h: number }>): void;
 }

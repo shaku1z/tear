@@ -39,6 +39,7 @@ export interface LiveScreenRendererOptions {
   readonly focus: () => number;
   readonly touch: () => boolean;
   readonly reducedMotion: () => boolean;
+  readonly screenRectangle?: () => Readonly<{ x: number; y: number; w: number; h: number }>;
   readonly dispatch: (action: ScreenAction) => void;
   readonly enqueue: (button: LiveScreenButton) => void;
   readonly renderPreview: (id: string, bounds: Readonly<{ x: number; y: number; w: number; h: number }>) => void;
@@ -75,7 +76,7 @@ function createColdScreenBoundary(context: ScreenRenderContext): ColdScreenRende
   function loadingFrame(): void {
     ensureLoaded();
     context.ui.header(context.canvas, "LOADING", "opening the archive", context.enterAmount, context.ui.t.color.accent);
-    context.ui.text(context.canvas, "â—‡", context.width / 2, context.height / 2, 36, "center", 0.5);
+    context.ui.text(context.canvas, "◇", context.width / 2, context.height / 2, 36, "center", 0.5);
   }
 
   return Object.freeze({
@@ -102,6 +103,9 @@ export function createLiveScreenRenderers(options: LiveScreenRendererOptions): L
     get focus() { return options.focus(); },
     get touch() { return options.touch(); },
     get reducedMotion() { return options.reducedMotion(); },
+    get screenRectangle() {
+      return options.screenRectangle?.() ?? { x: 0, y: 0, w: options.width, h: options.height };
+    },
     enqueue(control: ScreenControl) { options.enqueue(toButton(control, options.dispatch)); },
     renderPreview: options.renderPreview,
   };

@@ -1,5 +1,17 @@
 import type { CardView, ScreenAction, ScreenRenderContext } from "./contracts";
 
+export function ellipsize(context: CanvasRenderingContext2D, value: string, maximumWidth: number): string {
+  if (context.measureText(value).width <= maximumWidth) return value;
+  const suffix = "…";
+  let low = 0, high = value.length;
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2);
+    if (context.measureText(value.slice(0, middle).trimEnd() + suffix).width <= maximumWidth) low = middle;
+    else high = middle - 1;
+  }
+  return value.slice(0, low).trimEnd() + suffix;
+}
+
 export function backControl(context: ScreenRenderContext, to: ScreenAction = { type: "navigate", to: "menu" }): void {
   context.enqueue({
     x: context.width / 2 - 110, y: context.height - 70, w: 220, h: 48,
@@ -47,7 +59,7 @@ export function cardGrid(
     if (card.accent) context.ui.accentStrip(context.canvas, x, y, width, card.accent, 4);
     const heading = [card.badge, card.category].filter(Boolean).join("  ·  ");
     if (heading) context.ui.tag(context.canvas, heading, x + 16, y + 24, card.accent, "left", 11);
-    context.ui.text(context.canvas, card.label, x + width / 2, y + 54, 18, "center");
+    context.ui.title(context.canvas, card.label, x + width / 2, y + 54, 20);
     if (card.tierCount && card.tierCount > 1) {
       const selected = Math.max(0, Math.min(card.tier ?? 0, card.tierCount - 1));
       const startX = x + 18;
@@ -58,7 +70,14 @@ export function cardGrid(
       }
       context.ui.tag(context.canvas, selected === 0 ? "BASE" : `TIER ${String(selected + 1)}`, startX + card.tierCount * 16 + 4, y + 76, card.accent, "left", 10);
     }
-    if (card.description) context.ui.wrappedText(context.canvas, card.description, x + width / 2, y + (card.tierCount && card.tierCount > 1 ? 94 : 78), width - 32, 18, 12, "center");
+    if (card.description) {
+      if (card.progress !== undefined) {
+        context.canvas.font = `${String(context.ui.t.font.bodyWeight)} 11px ${context.ui.t.font.body}`;
+        context.ui.text(context.canvas, ellipsize(context.canvas, card.description, width - 36), x + width / 2, y + 74, 11, "center", context.ui.t.alpha.soft);
+      } else {
+        context.ui.wrappedText(context.canvas, card.description, x + width / 2, y + (card.tierCount && card.tierCount > 1 ? 94 : 78), width - 32, 18, 12, "center");
+      }
+    }
     if (card.progress !== undefined) {
       context.ui.bar(context.canvas, x + 16, y + height - 32, width - 132, 5, card.progress, card.accent);
       if (card.progressLabel) context.ui.tag(context.canvas, card.progressLabel, x + 16, y + height - 12, card.accent, "left", 10);

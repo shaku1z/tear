@@ -130,6 +130,7 @@ export interface UiRuntime {
   trackedText(context: CanvasRenderingContext2D, text: string, x: number, y: number, tracking: number, align?: Align): number;
   chapterWash(context: CanvasRenderingContext2D, side: string, washKind: string | undefined, amount: number): string;
   text(context: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: Align, alpha?: number): void;
+  displayText(context: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: Align, alpha?: number): void;
   title(context: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number): void;
   tag(context: CanvasRenderingContext2D, text: string, x: number, y: number, color?: string, align?: Align, size?: number): void;
   divider(context: CanvasRenderingContext2D, x: number, y: number, width: number, alpha?: number): void;

@@ -35,11 +35,15 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       { label: "MAIN MENU", action: { type: "navigate", to: "confirmquit" } },
     ], 220, 210);
     ui.sectionLabel(canvas, "ARSENAL", 400, 190, 640);
+    if (view.abilities.length === 0) {
+      ui.text(canvas, "No abilities yet — upgrades appear between waves.", 720, 286, ui.t.type.caption, "center", ui.t.alpha.muted);
+      ui.tag(canvas, "SURVIVE THE WAVE · CHOOSE YOUR BUILD", 720, 318, ui.t.color.accent, "center", ui.t.type.micro);
+    }
     view.abilities.slice(0, 7).forEach((ability, index) => {
       const y = 218 + index * 76;
       ui.card(canvas, 400, y, 640, 64, false);
       if (ability.accent) ui.accentStrip(canvas, 400, y, 640, ability.accent, 4);
-      ui.text(canvas, ability.label, 420, y + 26, ui.t.type.label);
+      ui.displayText(canvas, ability.label, 420, y + 26, ui.t.type.lead);
       if (ability.description) ui.text(canvas, ability.description, 420, y + 48, ui.t.type.micro, "left", ui.t.alpha.soft);
       ui.tag(canvas, ability.footer ?? (ability.tier ? `TIER ${String(ability.tier)}` : (ability.owned ? `×${String(ability.owned)}` : "")), 1020, y + 26, ability.accent, "right", ui.t.type.micro);
     });
@@ -74,7 +78,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     if (view.isNew) ui.tag(canvas, "★ NEW BEST", width / 2, 130, ui.t.color.accent, "center", ui.t.type.caption);
     else if (view.best) ui.text(canvas, view.best, width / 2, 130, ui.t.type.caption, "center", ui.t.alpha.muted);
     ui.tag(canvas, "REWARDS", 80, 200, ui.t.color.accent, "left", ui.t.type.micro);
-    ui.title(canvas, `+${String(view.earned)}`, 80, 236, ui.t.type.h2);
+    ui.displayText(canvas, `+${String(view.earned)}`, 80, 236, ui.t.type.h2);
     ui.text(canvas, `coins  ·  ${String(view.coins)} total`, 80, 258, ui.t.type.caption, "left", ui.t.alpha.soft);
     const actions: { label: string; action: ScreenAction }[] = [{ label: "RETRY", action: { type: "results.retry" } }];
     if (view.replayAvailable) actions.push({ label: "▶  WATCH REPLAY", action: { type: "results.watchReplay" } });

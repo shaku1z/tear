@@ -1,5 +1,5 @@
 import type { CodexScreenView, ScreenRenderContext, ShopScreenView } from "./contracts";
-import { backControl, cardGrid, scrollHint, tabs } from "./screen-primitives";
+import { backControl, cardGrid, ellipsize, scrollHint, tabs } from "./screen-primitives";
 
 export function createCodexShopRenderers(context: ScreenRenderContext) {
   const { ui, width, height } = context;
@@ -84,40 +84,57 @@ export function createCodexShopRenderers(context: ScreenRenderContext) {
     const gold = "#e0a326";
     ui.header(canvas, "SHOP", "permanent upgrades — applied at the start of every run", context.enterAmount, gold);
     ui.tag(canvas, "COINS", width - 220, 130, ui.t.color.muted, "right", ui.t.type.micro);
-    ui.title(canvas, view.coins.toLocaleString(), width - 220, 108, ui.t.type.h1);
+    ui.displayText(canvas, view.coins.toLocaleString(), width - 220, 108, ui.t.type.h1, "right");
     ui.tag(canvas, `${String(view.ownedLevels)} / ${String(view.totalLevels)} LEVELS OWNED   ·   LIFETIME EARNED ◆ ${view.lifetimeEarned.toLocaleString()}`,
       240, 130, ui.t.color.muted, "left", ui.t.type.micro);
-    const columnX = [240, 830];
-    view.sections.forEach((section, sectionIndex) => {
-      const column = sectionIndex < Math.ceil(view.sections.length / 2) ? 0 : 1;
-      const localSection = column === 0 ? sectionIndex : sectionIndex - Math.ceil(view.sections.length / 2);
-      let y = 176 + localSection * 300 - context.scroll;
-      y = ui.sectionLabel(canvas, section.label, columnX[column] ?? 240, y, 550, gold) + 6;
-      section.items.forEach((item) => {
-        const x = columnX[column] ?? 240;
-        ui.card(canvas, x, y, 550, 62, false);
-        if (item.flash && item.flash > 0) { canvas.globalAlpha = item.flash; canvas.fillStyle = gold; canvas.fillRect(x, y, 550, 62); canvas.globalAlpha = 1; }
-        ui.tag(canvas, item.glyph ?? "◆", x + 32, y + 40, item.level ? gold : ui.t.color.muted, "center", 22);
-        ui.text(canvas, item.label, x + 66, y + 24, ui.t.type.body);
-        if (item.level !== undefined && item.maxLevel !== undefined) ui.tag(canvas, `LV ${String(item.level)}/${String(item.maxLevel)}`, x + 250, y + 24, item.level ? gold : ui.t.color.muted, "left", ui.t.type.micro);
-        if (item.description) ui.text(canvas, item.description, x + 66, y + 45, ui.t.type.micro, "left", ui.t.alpha.soft);
-        const maxed = item.level !== undefined && item.maxLevel !== undefined && item.level >= item.maxLevel;
-        if (item.level !== undefined && item.maxLevel !== undefined) {
-          const right = x + 430, gap = 11, start = right - (item.maxLevel - 1) * gap;
-          for (let pip = 0; pip < item.maxLevel; pip++) {
-            canvas.beginPath(); canvas.arc(start + pip * gap, y + 31, 3.5, 0, Math.PI * 2);
-            if (pip < item.level) { canvas.fillStyle = gold; canvas.fill(); }
-            else { canvas.strokeStyle = ui.t.color.muted; canvas.lineWidth = 1; canvas.stroke(); }
+    const columnX = [240, 830] as const, columnWidth = 550, cardHeight = 62, rowHeight = 74;
+    const viewTop = 158, viewBottom = height - 104;
+    const split = Math.ceil(view.sections.length / 2);
+    const columns = [view.sections.slice(0, split), view.sections.slice(split)] as const;
+    canvas.save(); canvas.beginPath(); canvas.rect(210, viewTop, width - 420, viewBottom - viewTop); canvas.clip();
+    columns.forEach((sections, column) => {
+      const x = columnX[column] ?? columnX[0];
+      let y = 176 - context.scroll;
+      sections.forEach((section, localSection) => {
+        const sectionStart = y;
+        y = ui.sectionLabel(canvas, section.label, x, y, columnWidth, gold) + 6;
+        ui.tag(canvas, String(section.items.length).padStart(2, "0"), x + columnWidth, sectionStart, gold, "right", ui.t.type.micro);
+        section.items.forEach((item) => {
+          const visible = y + cardHeight >= viewTop && y <= viewBottom;
+          const level = item.level ?? 0, maximumLevel = item.maxLevel ?? 0;
+          const maxed = maximumLevel > 0 && level >= maximumLevel;
+          ui.card(canvas, x, y, columnWidth, cardHeight, false, { edge: level > 0 ? gold : ui.t.color.muted });
+          canvas.globalAlpha = level > 0 ? 0.16 : 0.055; canvas.fillStyle = level > 0 ? gold : ui.ink;
+          canvas.fillRect(x + 10, y + 9, 44, 44); canvas.globalAlpha = 1;
+          if (item.flash && item.flash > 0) { canvas.globalAlpha = item.flash * 0.3; canvas.fillStyle = gold; canvas.fillRect(x, y, columnWidth, cardHeight); canvas.globalAlpha = 1; }
+          ui.tag(canvas, item.glyph ?? "◆", x + 32, y + 40, level > 0 ? gold : ui.t.color.muted, "center", 22);
+          ui.displayText(canvas, item.label, x + 66, y + 24, ui.t.type.lead);
+          if (maximumLevel > 0) {
+            const nameWidth = canvas.measureText(item.label).width;
+            ui.tag(canvas, `LV ${String(level)}/${String(maximumLevel)}`, Math.min(x + 306, x + 80 + nameWidth), y + 24, level > 0 ? gold : ui.t.color.muted, "left", ui.t.type.micro);
+            const right = x + 430, gap = 11, start = right - (maximumLevel - 1) * gap;
+            for (let pip = 0; pip < maximumLevel; pip++) {
+              canvas.beginPath(); canvas.arc(start + pip * gap, y + 31, 3.5, 0, Math.PI * 2);
+              if (pip < level) { canvas.fillStyle = gold; canvas.fill(); }
+              else { canvas.strokeStyle = ui.t.color.muted; canvas.lineWidth = 1; canvas.stroke(); }
+            }
           }
-        }
-        context.enqueue({
-          x: x + 446, y: y + 11, w: 94, h: 40, label: maxed ? "MAX" : (item.cost ?? "BUY"),
-          selected: maxed, enabled: !maxed && item.enabled !== false, accent: !maxed && item.enabled !== false ? gold : undefined,
-          action: { type: "shop.buy", id: item.id }, size: 13,
+          if (item.description) {
+            canvas.font = `${String(ui.t.font.bodyWeight)} ${String(ui.t.type.micro)}px ${ui.t.font.body}`;
+            ui.text(canvas, ellipsize(canvas, item.description, columnWidth - 306), x + 66, y + 45, ui.t.type.micro, "left", ui.t.alpha.soft);
+          }
+          const canBuy = !maxed && item.enabled !== false;
+          context.enqueue({
+            x: x + 446, y: y + 11, w: 94, h: 40, label: maxed ? "MAX" : (item.cost ?? "BUY"),
+            selected: maxed, enabled: visible && canBuy, hiddenBox: !visible, accent: canBuy ? gold : undefined,
+            action: { type: "shop.buy", id: item.id }, size: 13,
+          });
+          y += rowHeight;
         });
-        y += 74;
+        if (localSection < sections.length - 1) y += 12;
       });
     });
+    canvas.restore();
     scrollHint(context, view.canScrollUp, view.canScrollDown, height - 96);
     backControl(context);
   }

@@ -1,10 +1,23 @@
 import type { Align, ButtonSpec, Rect, TokenSnapshot, UiDependencies, UiRuntime } from "./ui-contracts";
 import { truthyOr } from "./value-fallback";
 
+function fitLine(context: CanvasRenderingContext2D, value: string, maximumWidth: number): string {
+    if (context.measureText(value).width <= maximumWidth) return value;
+    let low = 0, high = value.length;
+    while (low < high) {
+        const middle = Math.ceil((low + high) / 2);
+        if (context.measureText(value.slice(0, middle).trimEnd() + "…").width <= maximumWidth) low = middle;
+        else high = middle - 1;
+    }
+    return value.slice(0, low).trimEnd() + "…";
+}
+
 export function createUiFoundation(dependencies: UiDependencies) {
-  const { CONFIG, Input } = dependencies;
+  const { CONFIG, Input, OVERSCAN } = dependencies;
   return {
-font(this: UiRuntime, size: number, bold?: boolean) { return `${bold ? "bold " : ""}${String(size)}px 'Courier New', monospace`; },
+font(this: UiRuntime, size: number, bold?: boolean) {
+            return bold ? this.displayFont(size) : this.bodyFont(size);
+        },
         // ---- CHAPTER TYPE ROLES (Pantheon VI) -----------------------------------
         // Never hardcode the family strings at a call site; go through these.
         displayFont(this: UiRuntime, size: number, weight?: number) { return `${String(truthyOr(weight, () => this.t.font.displayWeight))} ${String(size)}px ${this.t.font.display}`; },
@@ -40,7 +53,7 @@ font(this: UiRuntime, size: number, bold?: boolean) { return `${bold ? "bold " :
             // a whole-screen breath of dim first (only ~26%, biome stays legible)
             ctx.globalAlpha = k * t.chapter.washDim;
             ctx.fillStyle = washKind === "light" ? "#f8f7f4" : "#06070c";
-            ctx.fillRect(0, 0, vw, vh);
+            ctx.fillRect(-OVERSCAN.x, -OVERSCAN.y, vw + OVERSCAN.x * 2, vh + OVERSCAN.y * 2);
             ctx.globalAlpha = k;
             const g = side === "right"
                 ? ctx.createLinearGradient(vw, 0, vw - span, 0)
@@ -49,9 +62,9 @@ font(this: UiRuntime, size: number, bold?: boolean) { return `${bold ? "bold " :
             g.addColorStop(1, washKind === "light" ? "rgba(248,247,244,0)" : "rgba(6,7,12,0)");
             ctx.fillStyle = g;
             if (side === "right")
-                ctx.fillRect(vw - span, 0, span, vh);
+                ctx.fillRect(vw - span, -OVERSCAN.y, span + OVERSCAN.x, vh + OVERSCAN.y * 2);
             else
-                ctx.fillRect(0, 0, span, vh);
+                ctx.fillRect(-OVERSCAN.x, -OVERSCAN.y, span + OVERSCAN.x, vh + OVERSCAN.y * 2);
             ctx.restore();
             return washKind === "light" ? "#12131a" : "#f1eff9"; // the ink color that reads on this wash
         },
@@ -66,10 +79,21 @@ font(this: UiRuntime, size: number, bold?: boolean) { return `${bold ? "bold " :
             ctx.fillText(str, x, y);
             ctx.globalAlpha = 1;
         },
+        // Display-family text with explicit alignment. Use for names or emphatic
+        // values that are not centred screen titles.
+        displayText(this: UiRuntime, ctx: CanvasRenderingContext2D, str: string, x: number, y: number, size?: number, align?: Align, alpha?: number) {
+            ctx.globalAlpha = alpha ?? this.t.alpha.full;
+            ctx.fillStyle = this.ink;
+            ctx.font = this.displayFont(truthyOr(size, () => this.t.type.lead));
+            ctx.textAlign = truthyOr(align, () => "left");
+            ctx.textBaseline = "alphabetic";
+            ctx.fillText(str, x, y);
+            ctx.globalAlpha = 1;
+        },
         // bold, centred heading. size defaults to the `h1` token.
         title(this: UiRuntime, ctx: CanvasRenderingContext2D, str: string, x: number, y: number, size?: number) {
             ctx.fillStyle = this.ink;
-            ctx.font = this.font(truthyOr(size, () => this.t.type.h1), true);
+            ctx.font = this.displayFont(truthyOr(size, () => this.t.type.h1));
             ctx.textAlign = "center";
             ctx.textBaseline = "alphabetic";
             ctx.fillText(str, x, y);
@@ -78,10 +102,10 @@ font(this: UiRuntime, size: number, bold?: boolean) { return `${bold ? "bold " :
         fitTitle(this: UiRuntime, ctx: CanvasRenderingContext2D, str: string, x: number, y: number, maxW: number, startSize?: number, minSize?: number) {
             let size = truthyOr(startSize, () => this.t.type.title);
             const floor = truthyOr(minSize, () => this.t.type.label);
-            ctx.font = this.font(size, true);
+            ctx.font = this.displayFont(size);
             while (ctx.measureText(str).width > maxW && size > floor) {
                 size--;
-                ctx.font = this.font(size, true);
+                ctx.font = this.displayFont(size);
             }
             this.title(ctx, str, x, y, size);
         },
@@ -209,11 +233,11 @@ font(this: UiRuntime, size: number, bold?: boolean) { return `${bold ? "bold " :
                     }
                     const hx = b.x + (b.glyph ? 70 : 24) + a * 6;
                     ctx.font = this.font(truthyOr(b.size, () => 34), true);
-                    ctx.fillText(b.label, hx, cy - (b.sub ? 12 : 0) + 1);
+                    ctx.fillText(fitLine(ctx, b.label, b.x + b.w - hx - 18), hx, cy - (b.sub ? 12 : 0) + 1);
                     if (b.sub) {
                         ctx.globalAlpha = 0.72;
                         ctx.font = this.font(this.t.type.caption, true);
-                        ctx.fillText(b.sub, hx, cy + 16);
+                        ctx.fillText(fitLine(ctx, b.sub, b.x + b.w - hx - 18), hx, cy + 16);
                         ctx.globalAlpha = 1;
                     }
                     ctx.textBaseline = "alphabetic";
@@ -248,11 +272,11 @@ font(this: UiRuntime, size: number, bold?: boolean) { return `${bold ? "bold " :
                 }
                 ctx.fillStyle = on ? "#f1eff9" : "rgba(241,239,249,0.4)";
                 ctx.font = this.font(truthyOr(b.size, () => this.t.type.lead), true);
-                ctx.fillText(b.label, labelX, (b.sub ? cy - 10 : cy) + 1);
+                ctx.fillText(fitLine(ctx, b.label, b.x + b.w - labelX - 16), labelX, (b.sub ? cy - 10 : cy) + 1);
                 if (b.sub) {
                     ctx.globalAlpha = 0.6;
                     ctx.font = this.font(this.t.type.caption, false);
-                    ctx.fillText(b.sub, labelX, cy + 12);
+                    ctx.fillText(fitLine(ctx, b.sub, b.x + b.w - labelX - 16), labelX, cy + 12);
                     ctx.globalAlpha = 1;
                 }
                 ctx.textBaseline = "alphabetic";
@@ -319,11 +343,12 @@ font(this: UiRuntime, size: number, bold?: boolean) { return `${bold ? "bold " :
                 ctx.fillStyle = selected ? this.t.color.paper : (on ? this.ink : this.t.color.disabled);
                 ctx.font = this.font(truthyOr(b.size, () => this.t.type.lead), true);
                 ctx.textAlign = "left";
-                ctx.fillText(b.label, lx2, (b.sub ? cy2 - 9 : cy2) + 1);
+                const rightReserve = b.pips ? 110 : 16;
+                ctx.fillText(fitLine(ctx, b.label, b.x + b.w - lx2 - rightReserve), lx2, (b.sub ? cy2 - 9 : cy2) + 1);
                 if (b.sub) {
                     ctx.globalAlpha = selected ? 0.75 : 0.55;
                     ctx.font = this.font(this.t.type.micro, false);
-                    ctx.fillText(b.sub, lx2, cy2 + 12);
+                    ctx.fillText(fitLine(ctx, b.sub, b.x + b.w - lx2 - rightReserve), lx2, cy2 + 12);
                     ctx.globalAlpha = 1;
                 }
                 ctx.textBaseline = "alphabetic";

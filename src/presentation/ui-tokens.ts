@@ -7,7 +7,8 @@ export function createUiState(CONFIG: Config) {
 ink: "#000", // live foreground colour (flipped to light on dark biomes by the game)
         // ---- TOKENS -------------------------------------------------------------
         t: {
-            // type scale (px, Courier mono). Names describe ROLE, not size, so screens
+            // Type scale. Barlow Condensed owns hierarchy/actions; IBM Plex Mono owns
+            // prose and data. Names describe ROLE, not size, so screens
             // stay consistent: every screen title is `type.h1`, every tagline `type.caption`.
             type: {
                 wordmark: 80, // the "T E A R" logo only

@@ -7,15 +7,15 @@ export function createSettingsRenameRenderers(context: ScreenRenderContext) {
   function settings(view: SettingsScreenView): void {
     const { canvas } = context;
     ui.header(canvas, "SETTINGS", "sound, controls, display, accessibility, and account", context.enterAmount);
-    tabs(context, view.tabs, (id) => ({ type: "settings.selectTab", id }));
+    tabs(context, view.tabs, (id) => ({ type: "settings.selectTab", id }), 150);
     const left = 320;
     const panelWidth = width - 640;
-    let y = 190 - context.scroll;
-    canvas.save(); canvas.beginPath(); canvas.rect(left - 24, 158, panelWidth + 48, height - 260); canvas.clip();
+    let y = 210 - context.scroll;
+    canvas.save(); canvas.beginPath(); canvas.rect(left - 24, 196, panelWidth + 48, height - 298); canvas.clip();
     view.sections.forEach((section) => {
       y = ui.sectionLabel(canvas, section.label, left, y, panelWidth) + 8;
       section.rows.forEach((row) => {
-        const visible = y + 54 >= 158 && y <= height - 102;
+        const visible = y + 54 >= 196 && y <= height - 102;
         if (!visible) { y += 54; return; }
         ui.text(canvas, row.label, left + 12, y + 27, ui.t.type.body);
         if (row.kind === "stepper") {

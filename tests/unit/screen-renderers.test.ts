@@ -12,11 +12,13 @@ class TestUi implements ScreenUiPort {
   readonly ink = "#000";
   readonly t = {
     type: { wordmark: 80, display: 52, h1: 40, h2: 30, title: 24, lead: 20, body: 16, label: 14, caption: 13, micro: 11 },
+    font: { display: "sans-serif", body: "monospace", displayWeight: 600, bodyWeight: 400, bodyMediumWeight: 500 },
     alpha: { full: 1, soft: 0.8, muted: 0.6, faint: 0.3 },
     color: { accent: "#13c4d6", muted: "#888", danger: "#e23b3b" },
     metric: { btnH: 52, btnGap: 10 },
   };
   text(): void { return; }
+  displayText(): void { return; }
   title(): void { return; }
   tag(): void { return; }
   header(): void { return; }
@@ -37,12 +39,12 @@ function createControlContext(controls: ScreenControl[]): ScreenRenderContext {
     get canvas(): CanvasRenderingContext2D { throw new Error("canvas should not be read by control-planning tests"); },
     ui: new TestUi(),
     width: 1600, height: 900, time: 0, enterAmount: 1, scroll: 0, focus: 0,
-    touch: false, reducedMotion: false,
+    touch: false, reducedMotion: false, screenRectangle: { x: 0, y: 0, w: 1600, h: 900 },
     enqueue(control): void { controls.push(control); },
   };
 }
 
-function canvasStub(): CanvasRenderingContext2D {
+function canvasStub(rectangles?: number[][]): CanvasRenderingContext2D {
   const values = new Map<PropertyKey, unknown>();
   const gradient: CanvasGradient = { addColorStop(): void { return; } };
   return new Proxy({} as CanvasRenderingContext2D, {
@@ -50,6 +52,7 @@ function canvasStub(): CanvasRenderingContext2D {
       if (values.has(property)) return values.get(property);
       if (property === "measureText") return (text: string): TextMetrics => ({ width: text.length * 8 } as TextMetrics);
       if (property === "createLinearGradient" || property === "createRadialGradient") return (): CanvasGradient => gradient;
+      if (property === "fillRect") return (...args: number[]): void => { rectangles?.push(args); };
       return (): void => { return; };
     },
     set(_target, property, value): boolean { values.set(property, value); return true; },
@@ -59,7 +62,7 @@ function canvasStub(): CanvasRenderingContext2D {
 function createRenderContext(controls: ScreenControl[]): ScreenRenderContext {
   return {
     canvas: canvasStub(), ui: new TestUi(), width: 1600, height: 900, time: 0, enterAmount: 1,
-    scroll: 0, focus: 0, touch: false, reducedMotion: false,
+    scroll: 0, focus: 0, touch: false, reducedMotion: false, screenRectangle: { x: 0, y: 0, w: 1600, h: 900 },
     enqueue(control): void { controls.push(control); },
   };
 }
@@ -98,6 +101,19 @@ describe("legacy screen renderer registry", () => {
     ]);
   });
 
+  it("paints menu chrome through the true viewport overscan while keeping controls in the safe composition", () => {
+    const rectangles: number[][] = [];
+    const controls: ScreenControl[] = [];
+    const base = createRenderContext(controls);
+    const renderer = createLegacyScreenRenderers({ ...base, canvas: canvasStub(rectangles),
+      screenRectangle: { x: -120, y: -40, w: 1840, h: 980 } });
+    renderer.menu({ id: "menu", playerName: "Guest", signedIn: false, coins: 0, shards: 0, unlocked: 0,
+      modeLabel: "Endless", difficultyLabel: "Normal", biome: "The Grounds" });
+    expect(rectangles[0]).toEqual([-120, -40, 920, 980]);
+    expect(controls.find((control) => control.action.type === "navigate" && control.action.to === "setup"))
+      .toMatchObject({ x: 100, y: 318, w: 320, h: 86 });
+  });
+
   it("preserves critical legacy labels and the independent audio-control contract", () => {
     const files = ["menu-setup.ts", "settings-rename.ts", "draft-reserve-tierup.ts", "pause-results.ts"];
     const source = files.map((file) => readFileSync(fileURLToPath(new URL(`../../src/presentation/screens/${file}`, import.meta.url)), "utf8")).join("\n");
@@ -120,6 +136,24 @@ describe("legacy screen renderer registry", () => {
     ]);
     expect(controls.find((control) => control.action.type === "setup.start")).toMatchObject({ y: 726, h: 66 });
     expect(controls.filter((control) => control.action.type === "setup.selectBoss")).toHaveLength(2);
+  });
+
+  it("flows shop categories by their real contents instead of fixed-height slots", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const item = (id: string) => ({ id, label: id.toUpperCase(), level: 0, maxLevel: 3, cost: "10c", enabled: true });
+    renderer.shop({ id: "shop", coins: 100, ownedLevels: 0, totalLevels: 18, lifetimeEarned: 100,
+      sections: [
+        { label: "VITALITY", items: [item("v1"), item("v2"), item("v3")] },
+        { label: "BLADE", items: [item("b1")] },
+        { label: "TEMPO", items: [item("t1")] },
+        { label: "FORTUNE", items: [item("f1"), item("f2")] },
+      ] });
+    const buys = controls.filter((control) => control.action.type === "shop.buy");
+    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "v1")?.y).toBe(217);
+    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "b1")?.y).toBe(481);
+    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "t1")?.y).toBe(217);
+    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "f1")?.y).toBe(333);
   });
 
   it("models Codex guide details and rich profile/achievement surfaces without gameplay callbacks", () => {

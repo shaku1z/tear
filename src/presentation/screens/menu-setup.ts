@@ -9,12 +9,16 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     const railX = 100;
     const railWidth = 320;
     const wordmarkY = 150;
-    const gradient = canvas.createLinearGradient(0, 0, 800, 0);
+    const viewport = context.screenRectangle;
+    const gradient = canvas.createLinearGradient(viewport.x, 0, 800, 0);
     gradient.addColorStop(0, "rgba(6,7,12,0.90)");
     gradient.addColorStop(0.56, "rgba(6,7,12,0.60)");
     gradient.addColorStop(1, "rgba(6,7,12,0)");
-    canvas.fillStyle = gradient; canvas.fillRect(0, 0, 800, height);
-    ui.text(canvas, "T E A R", railX, wordmarkY, ui.t.type.wordmark, "left");
+    canvas.fillStyle = gradient; canvas.fillRect(viewport.x, viewport.y, 800 - viewport.x, viewport.h);
+    canvas.globalAlpha = 0.34; canvas.strokeStyle = "#f1eff9"; canvas.lineWidth = 1;
+    canvas.beginPath(); canvas.moveTo(railX - 18, viewport.y); canvas.lineTo(railX - 18, viewport.y + viewport.h); canvas.stroke(); canvas.globalAlpha = 1;
+    canvas.fillStyle = "#f1eff9"; canvas.font = `${String(ui.t.type.wordmark)}px ${ui.t.font.display}`;
+    canvas.textAlign = "left"; canvas.textBaseline = "alphabetic"; canvas.fillText("T E A R", railX, wordmarkY);
     const slash = context.reducedMotion ? 1 : Math.min(1, Math.max(0, context.enterAmount * 1.3));
     canvas.save(); canvas.globalAlpha = 0.45 + slash * 0.45; canvas.strokeStyle = ui.t.color.accent; canvas.lineWidth = 3;
     canvas.beginPath(); canvas.moveTo(railX + 28, wordmarkY + 14); canvas.lineTo(railX + 250 * slash, wordmarkY - 70 * slash); canvas.stroke();
@@ -23,6 +27,23 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     ui.text(canvas, "a momentum-blade survival game", railX, wordmarkY + 34, ui.t.type.caption, "left", ui.t.alpha.muted);
     if (view.biome) ui.tag(canvas, `◈ NOW SHOWING — ${view.biome.toUpperCase()}`, railX, wordmarkY + 62, ui.t.color.accent, "left", ui.t.type.micro);
     ui.text(canvas, "cut clean · keep moving · chase the multiplier", railX, height - 46, ui.t.type.micro, "left", ui.t.alpha.faint);
+
+    // A quiet run dossier balances the rail without turning the live attract scene
+    // into a dashboard. It makes the current selection legible before PLAY and gives
+    // wide canvases an intentional second anchor.
+    const dossierX = width - 318, dossierY = 102, dossierWidth = 238, dossierHeight = 142;
+    canvas.fillStyle = "rgba(6,7,12,0.46)"; canvas.fillRect(dossierX, dossierY, dossierWidth, dossierHeight);
+    canvas.strokeStyle = "rgba(241,239,249,0.28)"; canvas.lineWidth = 1; canvas.strokeRect(dossierX, dossierY, dossierWidth, dossierHeight);
+    canvas.fillStyle = ui.t.color.accent; canvas.fillRect(dossierX, dossierY, 3, dossierHeight);
+    canvas.font = `${String(ui.t.font.displayWeight)} 13px ${ui.t.font.display}`;
+    canvas.fillStyle = ui.t.color.accent; canvas.textAlign = "left"; canvas.fillText("NEXT CUT // RUN DOSSIER", dossierX + 18, dossierY + 25);
+    canvas.font = `${String(ui.t.font.displayWeight)} 24px ${ui.t.font.display}`;
+    canvas.fillStyle = "#f1eff9"; canvas.fillText(view.modeLabel.toUpperCase(), dossierX + 18, dossierY + 61);
+    canvas.font = `${String(ui.t.font.bodyWeight)} 11px ${ui.t.font.body}`;
+    canvas.fillStyle = "rgba(241,239,249,0.66)";
+    canvas.fillText(`DIFFICULTY  ${view.difficultyLabel.toUpperCase()}`, dossierX + 18, dossierY + 88);
+    canvas.fillText(`FIELD       ${(view.biome ?? "UNCHARTED").toUpperCase()}`, dossierX + 18, dossierY + 110);
+    canvas.fillStyle = "rgba(241,239,249,0.22)"; canvas.fillRect(dossierX + 18, dossierY + 124, dossierWidth - 36, 1);
 
     context.enqueue({
       x: railX, y: 240, w: railWidth, h: 58, label: view.playerName.toUpperCase(),

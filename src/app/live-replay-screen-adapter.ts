@@ -61,7 +61,7 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     ensureLoaded();
     const ui = d.UI;
     ui.header(services.canvas, "LOADING REPLAY", "preparing the recorded run", 1, ui.t.color.accent);
-    ui.text(services.canvas, "â—‡", services.width / 2, services.height / 2, 36, "center", 0.5);
+    ui.text(services.canvas, "◇", services.width / 2, services.height / 2, 36, "center", 0.5);
   }
   function exit(): void {
     if (runtime) { runtime.exit(); return; }

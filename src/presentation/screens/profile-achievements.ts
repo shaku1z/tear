@@ -87,7 +87,7 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
     const x = context.width / 2 - 560, right = context.width / 2 + 560, y = 130, height = 100;
     canvas.globalAlpha = 0.05; canvas.fillStyle = ui.ink; canvas.fillRect(x, y, right - x, height); canvas.globalAlpha = 1;
     ui.tag(canvas, view.signedIn ? "● CLOUD LINKED" : "○ LOCAL PROFILE", x + 18, y + 22, view.signedIn ? "#2f9e6b" : ui.t.color.muted, "left", ui.t.type.micro);
-    ui.title(canvas, view.name.toUpperCase(), x + 18, y + 54, ui.t.type.h2);
+    ui.displayText(canvas, view.name.toUpperCase(), x + 18, y + 54, ui.t.type.h2);
     if (view.cloudStatus) ui.text(canvas, view.cloudStatus, x + 18, y + 78, ui.t.type.caption, "left", ui.t.alpha.muted);
     const passport = view.passport;
     if (!passport) return;
@@ -119,7 +119,7 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
       if (view.nextUp) ui.tag(canvas, `NEXT UP ▸  ${view.nextUp}`, x + width - 22, 292, ui.t.color.accent, "right", ui.t.type.micro);
     }
     tabs(context, view.categories, (id) => ({ type: "achievements.selectCategory", id }), view.dailies ? 328 : 150);
-    cardGrid(context, view.cards, (id) => ({ type: "achievements.inspect", id }), { top: view.dailies ? 382 : 210, columns: 2, rows: 4, height: 110 });
+    cardGrid(context, view.cards, (id) => ({ type: "achievements.inspect", id }), { top: view.dailies ? 382 : 210, columns: 2, rows: 3, height: 128 });
     scrollHint(context, view.canScrollUp, view.canScrollDown);
     backControl(context);
   }
