@@ -2,6 +2,11 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "tear",
   "compatibility_date": "2026-07-21",
+  // Workers Builds runs only `wrangler deploy`; this builds the standalone
+  // bundle first so ./dist/standalone exists in CI (dist/ is gitignored).
+  "build": {
+    "command": "pnpm run build:standalone"
+  },
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
