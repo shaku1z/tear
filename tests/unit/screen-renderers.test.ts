@@ -31,6 +31,9 @@ class TestUi implements ScreenUiPort {
   dim(): void { return; }
   wrappedText(): void { return; }
   accentStrip(): void { return; }
+  fitTitle(): void { return; }
+  keyBadge(): void { return; }
+  tierPips(): void { return; }
   scrollHint(): void { return; }
   finalReward(): void { return; }
 }
@@ -39,7 +42,8 @@ function createControlContext(controls: ScreenControl[]): ScreenRenderContext {
   return {
     get canvas(): CanvasRenderingContext2D { throw new Error("canvas should not be read by control-planning tests"); },
     ui: new TestUi(),
-    width: 1600, height: 900, time: 0, enterAmount: 1, scroll: 0, focus: 0,
+    width: 1600, height: 900, time: 0, enterAmount: 1, enterSeconds: 1, deltaSeconds: 1 / 60,
+    mouse: { x: -1, y: -1 }, scroll: 0, focus: 0,
     touch: false, reducedMotion: false, screenRectangle: { x: 0, y: 0, w: 1600, h: 900 },
     enqueue(control): void { controls.push(control); },
   };
@@ -63,7 +67,7 @@ function canvasStub(rectangles?: number[][]): CanvasRenderingContext2D {
 function createRenderContext(controls: ScreenControl[]): ScreenRenderContext {
   return {
     canvas: canvasStub(), ui: new TestUi(), width: 1600, height: 900, time: 0, enterAmount: 1,
-    scroll: 0, focus: 0, touch: false, reducedMotion: false, screenRectangle: { x: 0, y: 0, w: 1600, h: 900 },
+    enterSeconds: 1, deltaSeconds: 1 / 60, mouse: { x: -1, y: -1 }, scroll: 0, focus: 0, touch: false, reducedMotion: false, screenRectangle: { x: 0, y: 0, w: 1600, h: 900 },
     enqueue(control): void { controls.push(control); },
   };
 }

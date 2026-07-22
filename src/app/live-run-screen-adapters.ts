@@ -39,7 +39,7 @@ export interface RunScreenServices {
   readonly fallbackCategory: () => AbilityCategory;
   readonly categoryOrder: readonly string[];
   readonly specialColor: string;
-  readonly abilityBadge: (choice: RewardChoice) => Readonly<{ label: string }>;
+  readonly abilityBadge: (choice: RewardChoice) => Readonly<{ label: string; color: string }>;
   readonly formatTime: (seconds: number) => string;
   readonly clamp: (value: number, minimum: number, maximum: number) => number;
   readonly saveBest: (mode: string, difficulty: string, wave: number, score: number, seconds: number) => void;
@@ -78,7 +78,7 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
     ...(upgrade.tiers === undefined ? {} : { tiers: upgrade.tiers.map((tier) => ({ desc: tier.desc })) }),
   });
   const draftCard = (choice: RewardChoice) => buildDraftCard(presentUpgrade(choice), state.run().mods, services.categories(),
-    services.fallbackCategory(), services.abilityBadge(choice).label, services.specialColor);
+    services.fallbackCategory(), services.abilityBadge(choice), services.specialColor);
   const abilityCards = () => buildAbilityCards(d.UPGRADES.map(presentUpgrade), state.run().mods, services.categories(),
     services.fallbackCategory(), services.categoryOrder, services.specialColor);
   const progressRows = () => {

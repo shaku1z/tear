@@ -93,6 +93,9 @@ export interface ScreenUiPort {
   dim(context: CanvasRenderingContext2D, width: number, height: number, alpha?: number): void;
   wrappedText(context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, size?: number, align?: CanvasTextAlign, alpha?: number): void;
   accentStrip(context: CanvasRenderingContext2D, x: number, y: number, width: number, color?: string, thickness?: number): void;
+  fitTitle(context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, startSize?: number, minSize?: number): void;
+  keyBadge(context: CanvasRenderingContext2D, x: number, y: number, size: number, label: string | number, color?: string): void;
+  tierPips(context: CanvasRenderingContext2D, cx: number, y: number, count: number, next: number, color: string): void;
   scrollHint(context: CanvasRenderingContext2D, x: number, y: number, canUp: boolean, canDown: boolean): void;
   finalReward(context: CanvasRenderingContext2D, options: {
     amount: number; label: string; title: string; sigil: string; color: string; reward: string; detail: string;
@@ -106,6 +109,12 @@ export interface ScreenRenderContext {
   readonly height: number;
   readonly time: number;
   readonly enterAmount: number;
+  /** Raw seconds since the screen was entered (drives staggered deal-in animations). */
+  readonly enterSeconds: number;
+  /** UI-frame delta seconds (drives hover-animation lerps). */
+  readonly deltaSeconds: number;
+  /** Logical-space pointer position for canvas hover states. */
+  readonly mouse: Readonly<{ x: number; y: number }>;
   readonly scroll: number;
   readonly focus: number;
   readonly touch: boolean;
@@ -216,7 +225,7 @@ export interface RenameScreenView {
   readonly id: "rename"; readonly value: string; readonly length: number; readonly maxLength: number;
   readonly firstRun: boolean; readonly message?: string; readonly minLength?: number;
 }
-export interface DraftCardView extends CardView { readonly tier?: number; readonly nextTier?: number }
+export interface DraftCardView extends CardView { readonly tier?: number; readonly nextTier?: number; readonly badgeColor?: string }
 export interface DraftScreenView {
   readonly id: "draft"; readonly wave: number; readonly cards: readonly DraftCardView[]; readonly rerolls: number;
 }

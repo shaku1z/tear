@@ -35,6 +35,9 @@ export interface LiveScreenRendererOptions {
   readonly height: number;
   readonly time: () => number;
   readonly enterAmount: () => number;
+  readonly enterSeconds: () => number;
+  readonly deltaSeconds: () => number;
+  readonly mouse: () => Readonly<{ x: number; y: number }>;
   readonly scroll: () => number;
   readonly focus: () => number;
   readonly touch: () => boolean;
@@ -100,6 +103,9 @@ export function createLiveScreenRenderers(options: LiveScreenRendererOptions): L
     canvas: options.canvas, ui: options.ui, width: options.width, height: options.height,
     get time() { return options.time(); },
     get enterAmount() { return options.enterAmount(); },
+    get enterSeconds() { return options.enterSeconds(); },
+    get deltaSeconds() { return options.deltaSeconds(); },
+    get mouse() { return options.mouse(); },
     get scroll() { return options.scroll(); },
     get focus() { return options.focus(); },
     get touch() { return options.touch(); },

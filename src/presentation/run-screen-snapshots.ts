@@ -25,13 +25,16 @@ export function fortuneDraftDescription(owned: number): string {
 export function buildDraftCard(
   upgrade: UpgradePresentationSource, state: UpgradePresentationState,
   categories: Readonly<Record<string, UpgradeCategoryPresentation>>, fallback: UpgradeCategoryPresentation,
-  badge: string, specialColor: string,
+  badge: string | Readonly<{ label: string; color: string }>, specialColor: string,
 ): DraftCardView {
   const category = categories[upgrade.cat] ?? fallback;
   const owned = state.owned[upgrade.id] ?? 0;
+  const badgeLabel = typeof badge === "string" ? badge : badge.label;
   return Object.freeze({ id: upgrade.id, label: upgrade.name,
     description: upgrade.id === "fortune" ? fortuneDraftDescription(owned) : upgrade.desc,
-    owned, badge, category: category.name, accent: upgrade.tiers === undefined ? category.color : specialColor });
+    owned, badge: badgeLabel, category: category.name,
+    accent: upgrade.tiers === undefined ? category.color : specialColor,
+    ...(typeof badge === "string" ? {} : { badgeColor: badge.color }) });
 }
 
 export function buildAbilityCards(
