@@ -3,13 +3,14 @@ const { withJourney } = require("./browser-journey-harness");
 
 withJourney({ name: "playground journeys", port: 8144 }, async ({ page, waitScreen }) => {
   async function pressUntilScreen(key, screen) {
-    await page.mouse.click(10, 10);
     for (let attempt = 0; attempt < 12; attempt++) {
       await page.keyboard.press(key);
-      await page.waitForTimeout(80);
-      if ((await page.evaluate(() => window.__PANTHEON_TEST.state().game)) === screen) {
+      try {
+        await page.waitForFunction((expected) => window.__PANTHEON_TEST.state().game === expected, screen, { timeout: 500 });
         await waitScreen(screen);
         return;
+      } catch (error) {
+        if (error?.name !== "TimeoutError") throw error;
       }
     }
     const snapshot = await page.evaluate(() => ({ state: window.__PANTHEON_TEST.state(), input: window.__TEAR_CATALOG_DEBUG__.input.snapshot() }));
