@@ -2,6 +2,7 @@ import { buildLiveMusicObservation, type LiveMusicActor, type LiveMusicPlayer, t
 import type { MusicContextObservation } from "../audio/music-director";
 import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
+import { AIM_MAGNITUDE_SCALE } from "../input/game-action";
 
 export interface MutableBossIntro { delay: number; t: number; dur: number; boss: (LiveMusicActor & { introT: number }) | null }
 export interface MutableFramePreludeState {
@@ -45,7 +46,8 @@ export interface FixedSimulationPort {
 }
 export interface FixedSimulationInput {
   dt: number; timeScale: number; hitStop: number; state(): string; simulation: FixedSimulationPort;
-  recording(): boolean; sampleAim(): Readonly<{ x: number; y: number }>; pushAim(turn: number): void;
+  recording(): boolean; readonly aimRadius: number;
+  sampleAim(): Readonly<{ x: number; y: number }>; pushAim(turn: number, magnitude: number): void;
   drainActions(tick: number): readonly CommandEnvelope<GameAction>[];
   authoritativeStep(tick: number, seconds: number, actions: readonly CommandEnvelope<GameAction>[]): void;
   clearOverrides(): void; step(seconds: number): void; gauge(name: "simulationTick" | "simulationSteps" | "simulationDroppedMs", value: number): void;
@@ -56,7 +58,8 @@ export function advanceFixedSimulation(input: FixedSimulationInput): number {
     if (input.state() !== "playing") return;
     if (input.recording()) {
       const aim = input.sampleAim(), angle = Math.atan2(aim.y, aim.x), normalized = angle < 0 ? angle + Math.PI * 2 : angle;
-      input.pushAim(Math.round(normalized / (Math.PI * 2) * 1_000_000) % 1_000_000);
+      const magnitude = Math.round(Math.max(0, Math.min(1, Math.hypot(aim.x, aim.y) / input.aimRadius)) * AIM_MAGNITUDE_SCALE);
+      input.pushAim(Math.round(normalized / (Math.PI * 2) * 1_000_000) % 1_000_000, magnitude);
       input.authoritativeStep(tick, seconds, input.drainActions(tick));
     } else { input.clearOverrides(); input.step(seconds); }
   });

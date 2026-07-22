@@ -23,13 +23,13 @@ describe("SemanticInputBuffer", () => {
     const buffer = new SemanticInputBuffer();
     buffer.startRecording();
     buffer.setMovement(-1, 0);
-    buffer.setAimVector(0, 1);
+    buffer.setAimVector(0, 0.5);
     buffer.push({ type: "jump", phase: "pressed" });
     buffer.push({ type: "weapon", intent: "throw", phase: "pressed" });
 
     expect(buffer.drain(30).map((entry) => entry.command)).toEqual([
       { type: "move", x: -1_000, y: 0 },
-      { type: "aim", turn: 250_000 },
+      { type: "aim", turn: 250_000, magnitude: 500 },
       { type: "jump", phase: "pressed" },
       { type: "weapon", intent: "throw", phase: "pressed" },
     ]);

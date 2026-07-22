@@ -74,4 +74,16 @@ describe("authoritative semantic replay", () => {
     expect(() => { input.beginTick(1, [nextRun.command(1, { type: "move", x: 0, y: 0 })]); }).not.toThrow();
     expect(input.snapshot().tick).toBe(1);
   });
+
+  it("reconstructs recorded reticle distance and keeps angle-only replays at full reach", () => {
+    const input = new AuthoritativeInputState();
+    const sequencer = new EnvelopeSequencer();
+    input.beginTick(1, [sequencer.command(1, { type: "aim", turn: 250_000, magnitude: 400 })]);
+    const partial = input.aimVector();
+    expect(partial.x).toBeCloseTo(0, 8); expect(partial.y).toBeCloseTo(0.4, 8);
+
+    input.beginTick(2, [sequencer.command(2, { type: "aim", turn: 500_000 })]);
+    const legacy = input.aimVector();
+    expect(legacy.x).toBeCloseTo(-1, 8); expect(legacy.y).toBeCloseTo(0, 8);
+  });
 });

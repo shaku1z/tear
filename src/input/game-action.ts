@@ -1,5 +1,6 @@
 export const INPUT_AXIS_SCALE = 1_000;
 export const AIM_TURN_SCALE = 1_000_000;
+export const AIM_MAGNITUDE_SCALE = 1_000;
 
 export type InputPhase = "pressed" | "released";
 export type WeaponIntent = "primary" | "secondary" | "throw" | "recall";
@@ -11,7 +12,7 @@ export type WeaponIntent = "primary" | "secondary" | "throw" | "recall";
  */
 export type GameAction =
   | Readonly<{ type: "move"; x: number; y: number }>
-  | Readonly<{ type: "aim"; turn: number }>
+  | Readonly<{ type: "aim"; turn: number; magnitude?: number }>
   | Readonly<{ type: "weapon"; intent: WeaponIntent; phase: InputPhase }>
   | Readonly<{ type: "ability"; abilityId: string; phase: InputPhase }>
   | Readonly<{ type: "jump"; phase: InputPhase }>
@@ -70,9 +71,13 @@ export function normalizeGameAction(candidate: unknown): GameActionNormalization
     }
     case "aim": {
       const turn = fixedInteger(candidate.turn, 0, AIM_TURN_SCALE - 1);
-      return turn === undefined
-        ? failure("aim turn must be an integer from 0 to 999999")
-        : success({ type: "aim", turn });
+      if (turn === undefined) return failure("aim turn must be an integer from 0 to 999999");
+      const magnitude = candidate.magnitude === undefined
+        ? AIM_MAGNITUDE_SCALE
+        : fixedInteger(candidate.magnitude, 0, AIM_MAGNITUDE_SCALE);
+      return magnitude === undefined
+        ? failure("aim magnitude must be an integer from 0 to 1000")
+        : success({ type: "aim", turn, magnitude });
     }
     case "weapon": {
       const intent = candidate.intent;

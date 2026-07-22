@@ -46,6 +46,45 @@ function controllerEvent(type: string, activeGamepad: Gamepad): Event {
 }
 
 describe("legacy input adapter", () => {
+  it("requests capture only during play and consumes raw movement while pointer lock owns the canvas", () => {
+    const windowTarget = new EventTarget();
+    const documentTarget = new EventTarget() as Document;
+    const semantic = new SemanticInputBuffer();
+    const input = createLegacyInput({ config: CONFIG, safeArea: { l: 0, r: 0, t: 0, b: 0 },
+      overscan: { x: 0, y: 0 }, window: windowTarget as Window, document: documentTarget,
+      navigator: { vibrate: () => true }, performance, semantic });
+    let lockRequests = 0;
+    const canvas = new EventTarget() as HTMLCanvasElement;
+    Object.defineProperties(canvas, {
+      requestPointerLock: { value: () => { lockRequests += 1; } },
+      getBoundingClientRect: { value: () => ({ left: 0, top: 0, width: 1_600, height: 900 }) },
+    });
+    let pointerLockElement: Element | null = null;
+    Object.defineProperty(documentTarget, "pointerLockElement", { get: () => pointerLockElement });
+    input.init(canvas);
+    const pointerEvent = (type: string, values: Readonly<Record<string, number>>): Event => {
+      const event = new Event(type);
+      for (const [key, value] of Object.entries(values)) Object.defineProperty(event, key, { value });
+      return event;
+    };
+
+    canvas.dispatchEvent(pointerEvent("click", { clientX: 800, clientY: 450 }));
+    expect(lockRequests).toBe(0);
+    input.allowLock = true;
+    canvas.dispatchEvent(pointerEvent("click", { clientX: 800, clientY: 450 }));
+    expect(lockRequests).toBe(1);
+
+    pointerLockElement = canvas;
+    documentTarget.dispatchEvent(new Event("pointerlockchange"));
+    canvas.dispatchEvent(pointerEvent("mousemove", { clientX: 800, clientY: 450, movementX: 12, movementY: -4 }));
+    expect(input.consumeDelta()).toEqual({ x: 12, y: -4 });
+    expect(input.consumeDelta()).toEqual({ x: 0, y: 0 });
+
+    pointerLockElement = null;
+    documentTarget.dispatchEvent(new Event("pointerlockchange"));
+    expect(input.locked).toBe(false);
+  });
+
   it("records tether edges once and exposes additive mouse/controller hold state", () => {
     const semantic = new SemanticInputBuffer();
     const input = createInput(semantic);

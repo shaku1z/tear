@@ -1,6 +1,6 @@
 import { EnvelopeSequencer, type CommandEnvelope } from "../app/messages";
 import type { GameAction } from "./game-action";
-import { AIM_TURN_SCALE, INPUT_AXIS_SCALE, normalizeGameAction } from "./game-action";
+import { AIM_MAGNITUDE_SCALE, AIM_TURN_SCALE, INPUT_AXIS_SCALE, normalizeGameAction } from "./game-action";
 
 export type SemanticInputListener = (envelope: CommandEnvelope<GameAction>) => void;
 
@@ -52,12 +52,14 @@ export class SemanticInputBuffer {
 
   setAimVector(x: number, y: number): void {
     if (!this.#recording) return;
-    if (!Number.isFinite(x) || !Number.isFinite(y) || Math.hypot(x, y) < 1e-9) return;
+    const length = Math.hypot(x, y);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || length < 1e-9) return;
     const radians = Math.atan2(y, x);
     const normalized = radians < 0 ? radians + Math.PI * 2 : radians;
     const turn = Math.round(normalized / (Math.PI * 2) * AIM_TURN_SCALE) % AIM_TURN_SCALE;
-    if (this.#aim?.type === "aim" && this.#aim.turn === turn) return;
-    this.#aim = Object.freeze({ type: "aim", turn });
+    const magnitude = Math.round(Math.max(0, Math.min(1, length)) * AIM_MAGNITUDE_SCALE);
+    if (this.#aim?.type === "aim" && this.#aim.turn === turn && this.#aim.magnitude === magnitude) return;
+    this.#aim = Object.freeze({ type: "aim", turn, magnitude });
     this.#aimDirty = true;
   }
 
@@ -70,7 +72,8 @@ export class SemanticInputBuffer {
       return;
     }
     if (normalized.action.type === "aim") {
-      if (this.#aim?.type !== "aim" || this.#aim.turn !== normalized.action.turn) {
+      if (this.#aim?.type !== "aim" || this.#aim.turn !== normalized.action.turn
+        || this.#aim.magnitude !== normalized.action.magnitude) {
         this.#aim = normalized.action;
         this.#aimDirty = true;
       }

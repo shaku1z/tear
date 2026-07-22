@@ -12,6 +12,14 @@ describe("normalizeGameAction", () => {
   it("rejects non-canonical analog values before they reach deterministic code", () => {
     expect(normalizeGameAction({ type: "move", x: 0.5, y: 0 })).toMatchObject({ ok: false });
     expect(normalizeGameAction({ type: "aim", turn: 1_000_000 })).toMatchObject({ ok: false });
+    expect(normalizeGameAction({ type: "aim", turn: 0, magnitude: 1_001 })).toMatchObject({ ok: false });
+  });
+
+  it("preserves reticle distance while defaulting legacy angle-only aim to full reach", () => {
+    expect(normalizeGameAction({ type: "aim", turn: 250_000, magnitude: 500 }))
+      .toEqual({ ok: true, action: { type: "aim", turn: 250_000, magnitude: 500 } });
+    expect(normalizeGameAction({ type: "aim", turn: 250_000 }))
+      .toEqual({ ok: true, action: { type: "aim", turn: 250_000, magnitude: 1_000 } });
   });
 
   it("normalizes identifiers and weapon phases", () => {

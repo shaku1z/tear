@@ -1,5 +1,5 @@
 import type { CommandEnvelope } from "../../domain/envelopes";
-import { AIM_TURN_SCALE, INPUT_AXIS_SCALE, type GameAction } from "../../input/game-action";
+import { AIM_MAGNITUDE_SCALE, AIM_TURN_SCALE, INPUT_AXIS_SCALE, type GameAction } from "../../input/game-action";
 
 export interface AuthoritativeInputSnapshot {
   readonly tick: number;
@@ -10,7 +10,7 @@ export interface AuthoritativeInputSnapshot {
 }
 
 export class AuthoritativeInputState {
-  #tick = 0; #moveX = 0; #moveY = 0; #aimTurn = 0; #primaryHeld = false;
+  #tick = 0; #moveX = 0; #moveY = 0; #aimTurn = 0; #aimMagnitude = AIM_MAGNITUDE_SCALE; #primaryHeld = false;
   #jumpPressed = false; #dashPressed = false; #dashX = 0; #dashY = 0; #throwPressed = false;
 
   beginTick(tick: number, envelopes: readonly CommandEnvelope<GameAction>[]): void {
@@ -21,7 +21,7 @@ export class AuthoritativeInputState {
       const action = envelope.command;
       switch (action.type) {
         case "move": this.#moveX = action.x; this.#moveY = action.y; break;
-        case "aim": this.#aimTurn = action.turn; break;
+        case "aim": this.#aimTurn = action.turn; this.#aimMagnitude = action.magnitude ?? AIM_MAGNITUDE_SCALE; break;
         case "weapon":
           if (action.intent === "primary") this.#primaryHeld = action.phase === "pressed";
           if ((action.intent === "throw" || action.intent === "recall") && action.phase === "pressed") this.#throwPressed = true;
@@ -47,7 +47,8 @@ export class AuthoritativeInputState {
 
   aimVector(): Readonly<{ x: number; y: number }> {
     const angle = this.#aimTurn / AIM_TURN_SCALE * Math.PI * 2;
-    return Object.freeze({ x: Math.cos(angle), y: Math.sin(angle) });
+    const magnitude = this.#aimMagnitude / AIM_MAGNITUDE_SCALE;
+    return Object.freeze({ x: Math.cos(angle) * magnitude, y: Math.sin(angle) * magnitude });
   }
 
   snapshot(): AuthoritativeInputSnapshot {
@@ -56,7 +57,8 @@ export class AuthoritativeInputState {
   }
 
   reset(): void {
-    this.#tick = 0; this.#moveX = 0; this.#moveY = 0; this.#aimTurn = 0; this.#primaryHeld = false;
+    this.#tick = 0; this.#moveX = 0; this.#moveY = 0; this.#aimTurn = 0;
+    this.#aimMagnitude = AIM_MAGNITUDE_SCALE; this.#primaryHeld = false;
     this.#jumpPressed = false; this.#dashPressed = false; this.#dashX = 0; this.#dashY = 0; this.#throwPressed = false;
   }
 }

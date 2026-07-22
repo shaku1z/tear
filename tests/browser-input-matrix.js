@@ -92,13 +92,24 @@ async function main() {
   }
   await controller.waitForFunction(() => document.body.dataset.cursor === "native");
   assert.equal(await controller.locator("canvas").evaluate((canvas) => getComputedStyle(canvas).cursor), "default");
+  assert.equal(await controller.locator("#lockhint").evaluate((hint) => getComputedStyle(hint).display), "block");
   await controller.mouse.click(800, 450);
   await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked);
   await controller.waitForFunction(() => document.body.dataset.cursor === "hidden");
+  assert.equal(await controller.locator("#lockhint").evaluate((hint) => getComputedStyle(hint).display), "none");
   const aimBeforeMove = await controller.evaluate(() => window.__PANTHEON_TEST.state().bladeAim);
   assert.ok(aimBeforeMove && (await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording)),
     "recorded live play exposes authoritative blade aim");
-  await controller.mouse.move(1_050, 450, { steps: 2 });
+  const reachBeforeMove = Math.hypot(aimBeforeMove.x, aimBeforeMove.y);
+  await controller.mouse.move(800, 475);
+  await controller.waitForFunction((before) => {
+    const after = window.__PANTHEON_TEST.state().bladeAim;
+    return after && Math.hypot(after.x, after.y) < before - 8;
+  }, reachBeforeMove, { timeout: 10_000 });
+  const aimAfterShortMove = await controller.evaluate(() => window.__PANTHEON_TEST.state().bladeAim);
+  assert.ok(aimAfterShortMove && Math.hypot(aimAfterShortMove.x, aimAfterShortMove.y) < reachBeforeMove - 8,
+    "a short captured movement preserves the source reticle distance instead of expanding to full reach");
+  await controller.mouse.move(1_050, 475, { steps: 2 });
   await controller.waitForFunction((before) => {
     const after = window.__PANTHEON_TEST.state().bladeAim;
     return after && after.x > before.x + 10;
@@ -113,6 +124,11 @@ async function main() {
     if (window.__PANTHEON_TEST.state().game === "paused") window.__PANTHEON_TEST.resume();
   });
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
+  await controller.waitForFunction(() => document.body.dataset.cursor === "native");
+  assert.equal(await controller.locator("#lockhint").evaluate((hint) => getComputedStyle(hint).display), "block");
+  await controller.mouse.click(800, 450);
+  await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked);
+  await controller.waitForFunction(() => document.body.dataset.cursor === "hidden");
   await controller.evaluate(() => window.__PANTHEON_TEST.startMode("playground"));
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().mode === "playground");
   await controller.evaluate(() => {
