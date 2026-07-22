@@ -27,7 +27,8 @@ export function createCodexShopRenderers(context: ScreenRenderContext) {
         });
       }
     } else {
-      const subtitle = view.tab === "guide" ? "HOW TO WIELD THE BLADE" : "ENEMIES, BOSSES, AND THEIR COUNTERPLAY";
+      const subtitle = view.tab === "guide" ? "HOW TO WIELD THE BLADE"
+        : "every foe — what it does, its stats, and the affixes it can roll";
       ui.text(canvas, subtitle, width / 2, 186, ui.t.type.caption, "center", ui.t.alpha.muted);
       if (view.tab === "bestiary" && view.filters) {
         const chipWidth = 120, gap = 8;
@@ -44,9 +45,97 @@ export function createCodexShopRenderers(context: ScreenRenderContext) {
       backControl(context);
       return;
     }
-    cardGrid(context, view.cards, (id) => ({ type: "codex.inspect", id }), { top: 244, columns: view.tab === "bestiary" ? 2 : 4 });
-    scrollHint(context, view.canScrollUp, view.canScrollDown);
+    if (view.tab === "bestiary") bestiaryGrid(view.cards);
+    else {
+      cardGrid(context, view.cards, (id) => ({ type: "codex.inspect", id }), { top: 244, columns: 4 });
+      scrollHint(context, view.canScrollUp, view.canScrollDown);
+    }
     backControl(context);
+  }
+
+  // ---- bestiary (source codexTabBestiary + drawBestiaryEntry) ----
+  function wrapLeft(text: string, x: number, y: number, maxW: number, lineHeight: number, size: number, alpha?: number): number {
+    const { canvas } = context;
+    canvas.font = ui.font(size, false); canvas.textAlign = "left"; canvas.fillStyle = ui.ink;
+    canvas.globalAlpha = alpha ?? 1;
+    const words = text.split(" "); let line = "", yy = y;
+    for (const word of words) {
+      const test = line ? line + " " + word : word;
+      if (canvas.measureText(test).width > maxW && line) { canvas.fillText(line, x, yy); line = word; yy += lineHeight; }
+      else line = test;
+    }
+    if (line) canvas.fillText(line, x, yy);
+    canvas.globalAlpha = 1; return yy;
+  }
+
+  function statChip(x: number, y: number, label: string, value: string): number {
+    const { canvas } = context, t = ui.t, w = 92, h = 26;
+    canvas.strokeStyle = t.color.disabled ?? "#bbb"; canvas.lineWidth = 1.5; canvas.strokeRect(x, y, w, h);
+    ui.tag(canvas, label, x + 9, y + 17, t.color.muted, "left", t.type.micro);
+    canvas.fillStyle = ui.ink; canvas.font = ui.font(t.type.caption, true); canvas.textAlign = "right"; canvas.textBaseline = "alphabetic";
+    canvas.fillText(value, x + w - 9, y + 17);
+    return x + w + 8;
+  }
+
+  function affixChip(x: number, y: number, id: string, color: string): number {
+    const { canvas } = context;
+    const txt = id.toUpperCase();
+    canvas.font = ui.font(ui.t.type.micro, true); const w = canvas.measureText(txt).width + 16;
+    canvas.fillStyle = color; canvas.globalAlpha = 0.16; canvas.fillRect(x, y - 13, w, 18); canvas.globalAlpha = 1;
+    canvas.strokeStyle = color; canvas.lineWidth = 1; canvas.strokeRect(x, y - 13, w, 18);
+    canvas.fillStyle = color; canvas.textAlign = "left"; canvas.fillText(txt, x + 8, y);
+    return x + w + 7;
+  }
+
+  function bestiaryEntry(card: CodexScreenView["cards"][number], x: number, y: number, w: number, h: number): void {
+    const { canvas } = context, t = ui.t;
+    const ac = card.accent ?? (card.boss ? t.color.danger : t.color.accent);
+    ui.panel(canvas, x, y, w, h);
+    ui.spine(canvas, x, y, h, ac, 6);
+    // your history with this foe: boss pantheon FELLED seal / per-kind tally
+    if (card.felled) ui.badge(canvas, card.felled.label, x + w - 14, y + h - 14, card.felled.color, "right");
+    // preview (sized for the 150-tall card)
+    const bw = 116, bx = x + 16, by = y + (h - 116) / 2;
+    canvas.strokeStyle = t.color.disabled ?? "#bbb"; canvas.lineWidth = 1.5; canvas.strokeRect(bx, by, bw, 116);
+    if (card.previewId) context.renderPreview?.(card.previewId, { x: bx, y: by, w: bw, h: 116 });
+    // header line: name + role
+    const ix = bx + bw + 20, rx = x + w;
+    canvas.fillStyle = ui.ink; canvas.font = ui.font(t.type.lead, true); canvas.textAlign = "left"; canvas.textBaseline = "alphabetic";
+    const nameW = canvas.measureText(card.label).width;
+    canvas.fillText(card.label, ix, y + 30);
+    if (card.category) ui.tag(canvas, card.category, ix + nameW + 14, y + 30, ac, "left", t.type.micro);
+    // stat chips
+    let sx = ix;
+    for (const stat of card.stats ?? []) sx = statChip(sx, y + 40, stat.label, stat.value);
+    // description (micro; even a 3-line wrap clears the VARIANTS row below)
+    wrapLeft(card.description ?? "", ix, y + 78, rx - ix - 24, 17, t.type.micro, t.alpha.soft);
+    // variants line
+    if (card.variants) ui.tag(canvas, "VARIANTS:  " + card.variants, ix, y + h - 30, t.color.muted, "left", t.type.micro);
+    // bottom line: affix chips (mobs) or a phase note (bosses)
+    if (card.boss) {
+      ui.tag(canvas, "MULTI-PHASE  —  attacks escalate as its health falls", ix, y + h - 12, t.color.danger, "left", t.type.micro);
+    } else if (card.affixes) {
+      canvas.font = ui.font(t.type.micro, true); canvas.fillStyle = t.color.muted; canvas.textAlign = "left"; canvas.textBaseline = "alphabetic";
+      canvas.fillText("CAN ROLL:", ix, y + h - 12);
+      let axx = ix + canvas.measureText("CAN ROLL:").width + 12;
+      for (const affix of card.affixes) axx = affixChip(axx, y + h - 12, affix.id, affix.color);
+    }
+  }
+
+  function bestiaryGrid(cards: CodexScreenView["cards"]): void {
+    const { canvas } = context, t = ui.t;
+    const cols = 2, mx = 210, gap = 24, cardW = (width - mx * 2 - gap) / cols, cardH = 150, stride = cardH + 16, top = 244, vis = 3;
+    const gridRows = Math.ceil(cards.length / cols), maxOff = Math.max(0, gridRows - vis);
+    const off = Math.max(0, Math.min(maxOff, Math.round(context.scroll / stride)));
+    for (let r = 0; r < vis; r += 1) for (let c = 0; c < cols; c += 1) {
+      const index = (off + r) * cols + c;
+      const card = cards[index];
+      if (card === undefined) continue;
+      bestiaryEntry(card, mx + c * (cardW + gap), top + r * stride, cardW, cardH);
+    }
+    if (maxOff > 0) ui.scrollHint(canvas, width / 2, top + vis * stride - 14, off > 0, off < maxOff);
+    ui.tag(canvas, "affixes: up to 3 per enemy, each ≈ (wave−1)×6% per slot — chaos scales with the wave",
+      width / 2, top + vis * stride + 4, t.color.muted, "center", t.type.micro);
   }
 
   function guide(view: NonNullable<CodexScreenView["guide"]>): void {
