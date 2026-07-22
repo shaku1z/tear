@@ -15,6 +15,7 @@ withJourney({ name: "progression journeys", port: 8142 }, async ({ page, boot, w
   const initialDraft = await page.evaluate(() => window.__PANTHEON_TEST.state().draft || null);
   assert.ok(initialDraft && initialDraft.choiceCount >= 3, "draft hook prepares real choices");
   await page.keyboard.press("r");
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().draft?.rerolls === 1, undefined, { timeout: 5000 });
   assert.equal((await page.evaluate(() => window.__PANTHEON_TEST.state().draft.rerolls)), 1, "real R input consumes one reroll");
   await page.mouse.click(314, 300);
   await waitScreen("reserve");
