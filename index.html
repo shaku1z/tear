@@ -75,10 +75,6 @@
       image-rendering: auto;
       touch-action: none;    /* mobile: the game owns every gesture (no scroll/zoom) */
     }
-    /* input-modality cursor ownership: the pointer is visible only when the mouse
-       owns the UI (data-imode set each frame from Input.mode). Keyboard, gamepad,
-       and touch keep it hidden. Pointer-lock still hides it during play regardless. */
-    body[data-imode="mouse"] canvas { cursor: default; }
     #hint {
       position: absolute;
       left: 12px;
@@ -133,6 +129,11 @@
       margin: 0;
       /* the JS logic will set top/left/width/height/font-size to match the canvas panel exactly */
     }
+    /* Tear owns cursor presentation throughout the game shell. Non-playing screens
+       draw the ink arrow on the canvas; gameplay uses the blade reticle. Keeping the
+       hardware cursor hidden over DOM controls too prevents either surface from
+       appearing underneath a second browser pointer. */
+    #wrap, #wrap * { cursor: none; }
   </style>
 </head>
 <body>

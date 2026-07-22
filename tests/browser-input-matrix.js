@@ -56,7 +56,8 @@ async function main() {
   const ultrawide = await browser.newPage({ viewport: { width: 1920, height: 800 } });
   await configure(ultrawide);
   await ultrawide.waitForFunction(() => document.body.dataset.imode === "mouse");
-  assert.equal(await ultrawide.locator("canvas").evaluate((canvas) => getComputedStyle(canvas).cursor), "default");
+  assert.equal(await ultrawide.locator("canvas").evaluate((canvas) => getComputedStyle(canvas).cursor), "none");
+  assert.equal(await ultrawide.locator("#fs").evaluate((button) => getComputedStyle(button).cursor), "none");
   await ultrawide.mouse.move(480, 400);
   await ultrawide.waitForFunction(() => {
     const pointer = window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointer;
@@ -67,7 +68,7 @@ async function main() {
   assert.equal(await ultrawide.locator("canvas").evaluate((canvas) => getComputedStyle(canvas).cursor), "none");
   await ultrawide.mouse.move(600, 400);
   await ultrawide.waitForFunction(() => document.body.dataset.imode === "mouse");
-  assert.equal(await ultrawide.locator("canvas").evaluate((canvas) => getComputedStyle(canvas).cursor), "default");
+  assert.equal(await ultrawide.locator("canvas").evaluate((canvas) => getComputedStyle(canvas).cursor), "none");
   await ultrawide.close();
 
   const controller = await browser.newPage({ viewport: { width: 1600, height: 900 } });
@@ -92,7 +93,7 @@ async function main() {
     await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
   }
   await controller.waitForFunction(() => document.body.dataset.imode === "mouse");
-  assert.equal(await controller.locator("canvas").evaluate((canvas) => getComputedStyle(canvas).cursor), "default");
+  assert.equal(await controller.locator("canvas").evaluate((canvas) => getComputedStyle(canvas).cursor), "none");
   assert.equal(await controller.locator("#lockhint").evaluate((hint) => getComputedStyle(hint).display), "block");
   await controller.mouse.click(800, 450);
   await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked);

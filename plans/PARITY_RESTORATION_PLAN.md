@@ -66,6 +66,7 @@ The oracle's `enemy.js` (4225 lines), `player.js`, `mirror.js`, `projectile.js`,
 ## Confirmed parity repairs
 
 - **Boss arrival release (2026-07-22):** the oracle mutates the live boss's `introT` to zero before discarding `bossIntro` (`js/game.js@ee5e931:3593-3594`). The redesigned frame boundary advanced a detached snapshot, discarded it on the terminal frame, and stranded the real actor at a small positive `introT`. That permanently activated every boss's movement and collision-protection gate. The adapter now explicitly commits the terminal mutation, with a detached-snapshot unit regression and a five-boss browser journey that proves intro release, post-intro AI movement, pointer capture, and real held-blade damage.
+- **Exclusive Tear cursor ownership (2026-07-22, user-blessed oracle divergence):** the oracle draws its ink arrow on every non-playing screen (`js/game.js@ee5e931:3868`) but also exposes the native cursor for mouse input (`index.html@ee5e931:80`), producing two overlapping cursor surfaces. The game shell now keeps the hardware cursor hidden across canvas and DOM controls while retaining the authored ink arrow and gameplay blade reticle. The browser input matrix protects mouse, keyboard, pointer-lock, fullscreen-control, and ultrawide states.
 
 ## Sequencing & effort
 
