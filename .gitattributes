@@ -13,3 +13,8 @@ CRAZYGAMES.md      export-ignore
 .gitattributes     export-ignore
 .claude/           export-ignore
 js/DESIGN_SYSTEM.md export-ignore
+
+# TearScore provenance hashes must survive platform-specific checkouts exactly.
+public/vendor/tear-score/*.js text eol=lf
+public/vendor/tear-score/*.json text eol=lf
+public/vendor/tear-score/*.md text eol=lf
