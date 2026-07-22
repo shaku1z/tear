@@ -25,6 +25,7 @@ Validate the live typed presentation architecture and gather deterministic brows
 - Screenshots support qualitative review; do not introduce pixel-perfect baselines unless the user explicitly requests and the repository adopts that contract.
 - Preserve input parity, visible focus, back/escape paths, scroll reachability, safe areas, reduced motion, contrast, and readable telegraphs.
 - In-world art may use renderer primitives directly; distinguish it from interface chrome before reporting a design-system violation.
+- If a screen looks or behaves differently from the pre-redesign source, treat oracle commit `ee5e931` as the reference and use `$tear-oracle-parity` to locate and restore the authoritative behavior.
 
 ## Completion
 

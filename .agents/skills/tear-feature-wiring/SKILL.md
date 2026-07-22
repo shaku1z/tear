@@ -19,6 +19,7 @@ Route feature work through Tear's live typed architecture. Let TypeScript, contr
 4. Add the smallest deterministic unit/contract/conformance evidence first. Add built-browser evidence when the feature is visible, interactive, lifecycle-sensitive, or target-specific.
 5. Update `docs/FEATURE_INVENTORY.md` with the credible evidence that preserves the feature.
 6. Use `$tear-change-gate` to run targeted checks, then the required release gate when applicable.
+7. If the feature existed in the pre-redesign monolith, verify the ported behavior against oracle `ee5e931` with `$tear-oracle-parity` before claiming the feature is preserved.
 
 ## Rules
 

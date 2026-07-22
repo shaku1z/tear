@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tear Oracle Parity"
+  short_description: "Restore and verify behavior against the pre-redesign oracle ee5e931"
+  default_prompt: "Use $tear-oracle-parity to compare this behavior against the ee5e931 oracle and restore source parity."
