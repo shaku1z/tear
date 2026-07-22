@@ -78,7 +78,7 @@ async function main() {
   await controller.waitForFunction(() => document.fullscreenElement?.id === "wrap");
   await controller.evaluate(() => document.exitFullscreen());
   await controller.waitForFunction(() => document.fullscreenElement === null);
-  await controller.evaluate(() => window.__PANTHEON_TEST.startMode("playground"));
+  await controller.evaluate(() => window.__PANTHEON_TEST.startMode("endless"));
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
   await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLockAllowed);
   if (await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked)) {
@@ -95,6 +95,14 @@ async function main() {
   await controller.mouse.click(800, 450);
   await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked);
   await controller.waitForFunction(() => document.body.dataset.cursor === "hidden");
+  const aimBeforeMove = await controller.evaluate(() => window.__PANTHEON_TEST.state().bladeAim);
+  assert.ok(aimBeforeMove && (await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording)),
+    "recorded live play exposes authoritative blade aim");
+  await controller.mouse.move(1_050, 450, { steps: 2 });
+  await controller.waitForFunction((before) => {
+    const after = window.__PANTHEON_TEST.state().bladeAim;
+    return after && after.x > before.x + 10;
+  }, aimBeforeMove, { timeout: 10_000 });
   await controller.keyboard.press("Escape");
   await controller.waitForFunction(() => !window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked);
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused");
@@ -105,6 +113,8 @@ async function main() {
     if (window.__PANTHEON_TEST.state().game === "paused") window.__PANTHEON_TEST.resume();
   });
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
+  await controller.evaluate(() => window.__PANTHEON_TEST.startMode("playground"));
+  await controller.waitForFunction(() => window.__PANTHEON_TEST.state().mode === "playground");
   await controller.evaluate(() => {
     const buttons = Array.from({ length: 16 }, () => ({ pressed: false, touched: false, value: 0 }));
     window.__testGamepad = { axes: [0, 0, 0, 0], buttons, connected: true, id: "Xbox Browser Matrix", index: 0, mapping: "standard", timestamp: 1 };

@@ -71,7 +71,7 @@ export function createLiveDebugSnapshot(options: LiveDebugSnapshotOptions): obje
   const input = document.getElementById("nameInput");
   const nameValue = input instanceof HTMLInputElement ? input.value.trim() : "";
   const renameValid = nameValue.length >= 3 && nameValue.length <= 16 && /^[a-zA-Z0-9 _-]+$/.test(nameValue);
-  const run = state.run(), player = state.player(), reward = options.reward, rename = options.rename;
+  const run = state.run(), player = state.player(), blade = state.blade(), reward = options.reward, rename = options.rename;
   return {
     game: options.screen, cinema: options.cinema.id, beat: options.cinema.beatId,
     active: options.cinema.active, cinemaElapsed: options.cinema.elapsed, touch: d.Input.touchActive(),
@@ -89,6 +89,7 @@ export function createLiveDebugSnapshot(options: LiveDebugSnapshotOptions): obje
     rename: rename.active ? { value: nameValue, length: nameValue.length, valid: renameValid, returnTo: rename.previous } : null,
     reducedMotion: d.A11Y.reducedMotion, highContrast: d.A11Y.highContrast, lowEffects: d.GFX.low,
     settings: options.settings, playerHp: player?.hp, enemyCount: state.enemies().length,
+    bladeAim: blade ? { x: blade.aimX, y: blade.aimY, reticleX: blade.reticleX, reticleY: blade.reticleY } : null,
     authoritative: options.authoritative,
     finale: options.finale && { phase: options.finale.phase, severed: options.finale.severed,
       landed: options.finale.landed, restoring: Boolean(options.finale.restoring) },

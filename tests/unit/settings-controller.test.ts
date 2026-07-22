@@ -84,6 +84,18 @@ describe("SettingsController", () => {
     }
   });
 
+  it("repairs frozen or malformed stored mouse sensitivity", () => {
+    const frozen = fixture(JSON.stringify({ sens: 0 }));
+    const frozenController = new SettingsController(frozen.dependencies);
+    expect(frozenController.settings.sens).toBe(0.2);
+    expect(frozen.config.blade.aimSensitivity).toBe(0.2);
+
+    const malformed = fixture(JSON.stringify({ sens: null }));
+    const malformedController = new SettingsController(malformed.dependencies);
+    expect(malformedController.settings.sens).toBe(0.9);
+    expect(malformed.config.blade.aimSensitivity).toBe(0.9);
+  });
+
   it("repairs unsupported cinematic values to full", () => {
     const test = fixture(JSON.stringify({ cinematics: "director-cut" }));
     const controller = new SettingsController(test.dependencies);

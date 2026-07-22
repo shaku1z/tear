@@ -45,7 +45,7 @@ export interface FixedSimulationPort {
 }
 export interface FixedSimulationInput {
   dt: number; timeScale: number; hitStop: number; state(): string; simulation: FixedSimulationPort;
-  recording(): boolean; aim(): Readonly<{ x: number; y: number }>; pushAim(turn: number): void;
+  recording(): boolean; sampleAim(): Readonly<{ x: number; y: number }>; pushAim(turn: number): void;
   drainActions(tick: number): readonly CommandEnvelope<GameAction>[];
   authoritativeStep(tick: number, seconds: number, actions: readonly CommandEnvelope<GameAction>[]): void;
   clearOverrides(): void; step(seconds: number): void; gauge(name: "simulationTick" | "simulationSteps" | "simulationDroppedMs", value: number): void;
@@ -55,7 +55,7 @@ export function advanceFixedSimulation(input: FixedSimulationInput): number {
   const advance = input.simulation.advance(input.dt * input.timeScale * 1000, (seconds, tick) => {
     if (input.state() !== "playing") return;
     if (input.recording()) {
-      const aim = input.aim(), angle = Math.atan2(aim.y, aim.x), normalized = angle < 0 ? angle + Math.PI * 2 : angle;
+      const aim = input.sampleAim(), angle = Math.atan2(aim.y, aim.x), normalized = angle < 0 ? angle + Math.PI * 2 : angle;
       input.pushAim(Math.round(normalized / (Math.PI * 2) * 1_000_000) % 1_000_000);
       input.authoritativeStep(tick, seconds, input.drainActions(tick));
     } else { input.clearOverrides(); input.step(seconds); }

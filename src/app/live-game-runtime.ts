@@ -380,7 +380,8 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     parrySlowScale: CONFIG.juice.parrySlowScale, cinemaActive: () => CINEMA.active,
     playgroundSlow: () => run.pg.slow === true, introScale: CONFIG.bossTheater.introScale, lerp, clamp,
     timeScale: () => timeScale, hitStop: () => hitStop, setHitStop: (value) => { hitStop = value; },
-    state: () => state, recording: () => GHOST.recording(), aim: () => ({ x: blade.aimX, y: blade.aimY }),
+    state: () => state, recording: () => GHOST.recording(),
+    sampleAim: () => blade.captureDeviceAim(blade.handPos(player)),
     pushAim: (turn) => { Input.semantic.push({ type: "aim", turn }); }, drainActions: (tick) => GHOST.drainActions(tick),
     clearOverrides: () => { delete player.aiInput; delete blade.lmbOverride; delete blade.aimOverride; },
     gauge: (name, value) => { DIAG.gauge(name, value); },
@@ -425,7 +426,8 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
         input.beginTick(tick, actions);
         player.aiInput = input; blade.lmbOverride = input.primaryHeld;
         const aim = input.aimVector();
-        blade.aimOverride = { x: player.x + aim.x * CONFIG.blade.aimRadius, y: player.y + aim.y * CONFIG.blade.aimRadius };
+        const hand = blade.handPos(player);
+        blade.aimOverride = { x: hand.x + aim.x * CONFIG.blade.aimRadius, y: hand.y + aim.y * CONFIG.blade.aimRadius };
       },
       snapshot: (tick, input) => projectCanonicalGameplayState(tick, input.snapshot(), run, player, blade,
         enemies.map((enemy) => ({

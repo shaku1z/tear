@@ -18,7 +18,7 @@ type FrameBase = Omit<LiveFrameRuntimeOptions, "fixedSimulationInput" | "musicIn
 export interface LiveCombatFrameContext extends FrameBase {
   readonly state: () => string;
   readonly recording: () => boolean;
-  readonly aim: () => Readonly<{ x: number; y: number }>;
+  readonly sampleAim: () => Readonly<{ x: number; y: number }>;
   readonly pushAim: (turn: number) => void;
   readonly drainActions: (tick: number) => readonly CommandEnvelope<GameAction>[];
   readonly clearOverrides: () => void;
@@ -33,7 +33,7 @@ export function createLiveCombatFrameOptions<State>(context: LiveCombatFrameCont
   api: LiveCombatFrameApi<State>): LiveFrameRuntimeOptions {
   return { ...context,
     fixedSimulationInput: () => ({ state: context.state, simulation: api.simulation,
-      recording: context.recording, aim: context.aim, pushAim: context.pushAim, drainActions: context.drainActions,
+      recording: context.recording, sampleAim: context.sampleAim, pushAim: context.pushAim, drainActions: context.drainActions,
       authoritativeStep: (tick, seconds, actions) => { api.authoritativeStep.execute(tick, seconds, actions); },
       clearOverrides: context.clearOverrides, step: (seconds) => { api.combatRuntime.step(seconds); }, gauge: context.gauge }),
     musicInput: context.musicObservation };

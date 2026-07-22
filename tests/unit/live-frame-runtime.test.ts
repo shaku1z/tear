@@ -21,10 +21,10 @@ describe("live frame runtime", () => {
       step(1 / 60, 4); return { tick: 4, steps: 1, droppedMilliseconds: 0 };
     } };
     advanceFixedSimulation({ dt: 1 / 60, timeScale: 1, hitStop: 0, state: () => "playing", simulation,
-      recording: () => true, aim: () => ({ x: 0, y: 1 }), pushAim: () => order.push("aim"),
+      recording: () => true, sampleAim: () => { order.push("sample"); return { x: 0, y: 1 }; }, pushAim: () => order.push("aim"),
       drainActions: () => { order.push("drain"); return []; }, authoritativeStep: () => order.push("step"),
       clearOverrides: vi.fn(), step: vi.fn(), gauge });
-    expect(order).toEqual(["aim", "drain", "step"]); expect(gauge).toHaveBeenCalledTimes(3);
+    expect(order).toEqual(["sample", "aim", "drain", "step"]); expect(gauge).toHaveBeenCalledTimes(3);
   });
 
   it("selects menu, boss and fallback music themes without platform globals", () => {

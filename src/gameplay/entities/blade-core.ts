@@ -123,6 +123,27 @@ abstract class BladeCore {
     return this.aimOverride;
   }
 
+  /**
+   * Samples the physical pointing device without consulting an authoritative
+   * replay override. Recorded live runs call this before encoding their aim so
+   * pointer-lock deltas are consumed exactly once by the fixed simulation.
+   */
+  captureDeviceAim(hand: BladePoint): BladePoint {
+    const B = CONFIG.blade;
+    if (Input.touchAim && Input.stickAim) {
+      this.aimX = Input.stickAim.x * B.aimRadius;
+      this.aimY = Input.stickAim.y * B.aimRadius;
+    } else if (Input.locked || Input.touchAim) {
+      const d = Input.consumeDelta();
+      this.aimX += d.x * B.aimSensitivity;
+      this.aimY += d.y * B.aimSensitivity;
+    } else {
+      this.aimX = Input.mouseX - hand.x;
+      this.aimY = Input.mouseY - hand.y;
+    }
+    return { x: this.aimX, y: this.aimY };
+  }
+
   // ---- aim / reticle (runs in every state so the throw direction stays current) ----
   _updateAim(hand: BladePoint, dt: number): void {
     const B = CONFIG.blade;
@@ -130,22 +151,7 @@ abstract class BladeCore {
       // attract-mode AI aims the blade at an absolute world point (else read the mouse)
       this.aimX = this.aimOverride.x - hand.x;
       this.aimY = this.aimOverride.y - hand.y;
-    } else if (Input.touchAim && Input.stickAim) {
-      // radial touch stick: the reticle sits where the stick points; the spring
-      // chasing it supplies the whip, so flicking the stick IS a fast cut
-      this.aimX = Input.stickAim.x * B.aimRadius;
-      this.aimY = Input.stickAim.y * B.aimRadius;
-    } else if (Input.locked || Input.touchAim) {
-      // captured mouse (or drag-mode touch): relative movement drives a
-      // player-anchored reticle
-      const d = Input.consumeDelta();
-      this.aimX += d.x * B.aimSensitivity;
-      this.aimY += d.y * B.aimSensitivity;
-    } else {
-      // free cursor (menus / before capture): aim toward the cursor
-      this.aimX = Input.mouseX - hand.x;
-      this.aimY = Input.mouseY - hand.y;
-    }
+    } else this.captureDeviceAim(hand);
     // hold left-click to ease the tether in close (exponential approach) for finer control.
     // lmbOverride lets an AI-driven second blade (the Mirror) control its own tether instead
     // of reading the human's mouse button (additive: undefined -> reads Input.lmb as before).

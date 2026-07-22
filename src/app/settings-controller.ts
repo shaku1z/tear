@@ -170,6 +170,9 @@ export class SettingsController {
   apply(): void {
     const { accessibility, config, gamepad, graphics, input, navigator, audio } = this.dependencies;
     const settings = this.settings;
+    const sensitivity = typeof settings.sens === "number" && Number.isFinite(settings.sens)
+      ? settings.sens : this.#defaultAimSensitivity;
+    settings.sens = clamp(sensitivity, 0.2, 3);
     config.blade.aimSensitivity = settings.sens;
     accessibility.flashScale = clamp(settings.flash, 0, 1);
     accessibility.reducedMotion = settings.reducedMotion;
