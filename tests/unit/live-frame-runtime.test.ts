@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { advanceFixedSimulation, advanceFramePrelude, emitLiveMusicEvent, syncMusicTheme,
+import { advanceFixedSimulation, advanceFramePrelude, commitBossIntroSnapshot, emitLiveMusicEvent, syncMusicTheme,
   type MutableFramePreludeState } from "../../src/app/live-frame-runtime";
 
 describe("live frame runtime", () => {
@@ -13,6 +13,18 @@ describe("live frame runtime", () => {
     expect(state.timeScale).toBe(0.2); expect(state.bossBeat).toBeNull(); expect(boss.introT).toBe(0.75);
     expect(state.flash).toBeCloseTo(0.2); expect(state).toMatchObject({ worldZoom: 1.75, zoom: 1.75,
       bannerTime: 0.75, stageBannerSeconds: 0.75, rankPopTime: 0.7 });
+  });
+
+  it("commits the terminal intro frame from a detached snapshot to the live boss", () => {
+    const boss = { hp: 10, maxHp: 10, introT: 0.0084 };
+    const live = { delay: 0, t: 0.9916, dur: 1, boss };
+    const state: MutableFramePreludeState = { slowMotion: 0, timeScale: 1, worldZoom: 1, worldZoomTarget: 1,
+      zoom: 1, flash: 0, bannerTime: 0, stageBannerSeconds: 0, rankPopTime: 0,
+      bossIntro: { delay: live.delay, t: live.t, dur: live.dur, boss: { ...boss } }, bossBeat: null };
+    advanceFramePrelude({ dt: 1 / 60, state, parrySlowScale: 0.2, cinemaActive: false, playgroundSlow: false,
+      introScale: 0.4, lerp: (a, b, t) => a + (b - a) * t, clamp: (v, min, max) => Math.max(min, Math.min(max, v)) });
+    expect(commitBossIntroSnapshot(live, state.bossIntro)).toBeNull();
+    expect(boss.introT).toBe(0);
   });
 
   it("records semantic aim passively while the raw device input drives the live step", () => {

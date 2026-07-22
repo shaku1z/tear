@@ -21,6 +21,7 @@
     "test:weapons": "node tests/weapon-overhaul.test.js",
     "test:browser": "node tests/browser-smoke.js",
     "test:browser:features": "node tests/browser-feature-matrix.js",
+    "test:browser:bosses": "node tests/browser-boss-parity.js",
     "test:browser:journeys": "node tests/browser-navigation-journeys.js && node tests/browser-progression-journeys.js && node tests/browser-playground-journeys.js && node tests/browser-terminal-journeys.js && node tests/browser-cinematic-preferences.js",
     "test:browser:input": "node tests/browser-input-matrix.js",
     "test:browser:responsive": "node tests/browser-responsive-matrix.js",
@@ -35,7 +36,7 @@
     "check:reproducible": "node scripts/check-reproducible-build.mjs",
     "check:cloudflare": "node scripts/check-cloudflare-dry-run.mjs",
     "check:crazygames-package": "node scripts/package-crazygames.mjs",
-    "check": "pnpm typecheck && pnpm lint && pnpm check:architecture && pnpm test && pnpm test:weapons && pnpm check:tear-score && pnpm build && pnpm check:bundles && pnpm check:crazygames-package && pnpm check:reproducible && pnpm check:cloudflare && pnpm test:browser && pnpm test:browser:features && pnpm test:browser:journeys && pnpm test:browser:input && pnpm test:browser:responsive && pnpm test:browser:performance && pnpm test:browser:audio && pnpm test:browser:platform && pnpm test:browser:crazygames-iframe && pnpm test:pwa",
+    "check": "pnpm typecheck && pnpm lint && pnpm check:architecture && pnpm test && pnpm test:weapons && pnpm check:tear-score && pnpm build && pnpm check:bundles && pnpm check:crazygames-package && pnpm check:reproducible && pnpm check:cloudflare && pnpm test:browser && pnpm test:browser:features && pnpm test:browser:bosses && pnpm test:browser:journeys && pnpm test:browser:input && pnpm test:browser:responsive && pnpm test:browser:performance && pnpm test:browser:audio && pnpm test:browser:platform && pnpm test:browser:crazygames-iframe && pnpm test:pwa",
     "deploy": "pnpm check && wrangler deploy"
   },
   "devDependencies": {

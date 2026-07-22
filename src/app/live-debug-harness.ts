@@ -2,6 +2,7 @@ import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameRun } from "./game-runtime-state";
 import type { LiveGameHostState } from "./live-game-host-state";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
+import type { BossId } from "../gameplay/run/content-director";
 import { eligibleTierChoices } from "../gameplay/run/reward-selection";
 import type { UpgradeDefinition } from "../gameplay/upgrades";
 import type { LegacyAppScreen, LegacyTransitionContext } from "./legacy-state-controller";
@@ -20,6 +21,7 @@ export interface LiveDebugHarnessContext {
   readonly width: number;
   readonly height: number;
   readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
+  readonly selectBoss: (boss: BossId) => void;
   readonly setScreen: (screen: LegacyAppScreen, detail?: LegacyTransitionContext) => void;
   readonly setContinueSeconds: (value: number) => void;
   readonly screen: () => string;
@@ -51,6 +53,9 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
   const clearCombat = (): void => { context.state.setEnemies([]); context.state.setProjectiles([]); };
   context.install(Object.freeze({
     startMode(mode?: RunMode, difficulty?: RunDifficulty) { context.startRun(mode ?? "endless", difficulty ?? "normal"); },
+    startBoss(boss: BossId, difficulty?: RunDifficulty) {
+      context.selectBoss(boss); context.startRun("bossonly", difficulty ?? "normal");
+    },
     openDraft(options?: { expanded?: boolean; rerolls?: number; reserve?: boolean }) {
       const selected = { expanded: true, rerolls: 2, reserve: true, ...options };
       context.startRun("endless", "normal");

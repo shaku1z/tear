@@ -12,6 +12,7 @@ import { createLiveInterfaceComposition, isRunDifficultySelection, isRunModeSele
 import { createLiveRunOrchestration } from "./live-run-orchestration-composition";
 import { createLiveSessionServices } from "./live-session-services-composition";
 import { createConfigRestorer } from "./runtime-initialization";
+import { commitBossIntroSnapshot } from "./live-frame-runtime";
 import { RuntimeFrameDriver } from "./runtime-frame-driver";
 import { createLiveMusicObservation, projectLiveMusicRun } from "./live-music-observation-adapter";
 import { isMenuScreen, renderRegisteredScreen } from "./screen-registry";
@@ -369,13 +370,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
       slowmo = frameState.slowMotion; timeScale = frameState.timeScale; worldZoom = frameState.worldZoom;
       zoom = frameState.zoom; flash = frameState.flash; bannerT = frameState.bannerTime;
       stageRuntime.bannerSeconds = frameState.stageBannerSeconds; rankPopT = frameState.rankPopTime;
-      if (frameState.bossIntro === null) bossIntro = null;
-      else if (bossIntro !== null) {
-        if (typeof frameState.bossIntro.boss?.introT === "number")
-          bossIntro.boss.introT = frameState.bossIntro.boss.introT;
-        bossIntro = { boss: bossIntro.boss, delay: frameState.bossIntro.delay,
-          t: frameState.bossIntro.t, dur: frameState.bossIntro.dur };
-      }
+      bossIntro = commitBossIntroSnapshot(bossIntro, frameState.bossIntro);
       if (frameState.bossBeat === null) bossBeat = null;
       else if (bossBeat !== null) bossBeat = { ...bossBeat, t: frameState.bossBeat.t };
     },
@@ -480,6 +475,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     renameSnapshot: settingsRenameAdapters.renameSnapshot, selectSettingsTab: settingsRenameAdapters.selectSettingsTab,
     replayStatus: replayAdapters.status, applyOptions: (options) => { Object.assign(settings, options); applySettings(); },
     settings, selected: () => ({ mode: selMode, difficulty: selDiff, weapon: selWeapon, boss: selBoss }),
+    selectBoss: (boss) => { selBoss = boss; },
     chapterBrief: () => Boolean(story.chapterFlow?.brief), finale: () => story.finale,
     rewardSnapshot: rewardRuntime.snapshot, authoritative: () => authoritativeStep.lastResult,
     startFinale: startAdventureFinale, severFinale: () => severFinaleAnchor(false),

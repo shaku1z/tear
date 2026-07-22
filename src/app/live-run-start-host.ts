@@ -143,13 +143,22 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
           weapon: run.weaponId, stats: { ...run.weaponStats }, events: run.weaponLog.slice(),
           player: { x: player.x, y: player.y, vx: player.vx, vy: player.vy },
           blade: { state: blade.state, throwId: blade.throwId, x: blade.x, y: blade.y,
+            tipX: blade.tipX, tipY: blade.tipY, tipVX: blade.tipVX, tipVY: blade.tipVY, tipSpeed: blade.tipSpeed,
+            aimX: blade.aimX, aimY: blade.aimY,
             vx: blade.vx, vy: blade.vy, flyTime: blade.flyTime, secondaryActive: blade.secondaryActive,
             impactResolved: blade.impactResolved, pierced: blade.pierced.size, tension: blade.tension,
             orbit: blade.orbit, linkTime: blade.linkT, circuitEnergy: blade.circuitEnergy,
             actionRange: Number.isFinite(blade.actionRange()) ? blade.actionRange() : null,
             actionDistance: blade.actionDistance(player) },
-          enemies: state.enemies().filter((enemy) => !enemy.dead).slice(0, 24).map((enemy) => ({
-            x: enemy.x, y: enemy.y, hp: enemy.hp, stun: enemy.stun, boss: enemy.isBoss, bound: enemy.boundT || 0 })),
+          enemies: state.enemies().filter((enemy) => !enemy.dead).slice(0, 24).map((enemy) => {
+            const authored = enemy as typeof enemy & { state?: string; stateT?: number; atkT?: number; phase?: number;
+              isMirrorBoss?: boolean; _live?: boolean };
+            return { x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, maxHp: enemy.maxHp,
+              stun: enemy.stun, spawnT: enemy.spawnT, introT: enemy.introT ?? 0, aliveT: enemy.aliveT,
+              boss: enemy.isBoss, bossId: enemy.bossId, state: authored.state, stateT: authored.stateT,
+              atkT: authored.atkT, phase: authored.phase, mirrorBoss: authored.isMirrorBoss,
+              live: authored._live, bound: enemy.boundT || 0 };
+          }),
           lifecycle: context.lifecycle.snapshot(),
         };
       };

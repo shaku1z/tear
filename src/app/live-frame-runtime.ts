@@ -38,6 +38,21 @@ export function advanceFramePrelude(input: FramePreludeInput): void {
   if (state.rankPopTime > 0) state.rankPopTime -= dt * 1.2;
 }
 
+export function commitBossIntroSnapshot<TBoss extends { introT?: number }>(
+  current: Readonly<{ delay: number; t: number; dur: number; boss: TBoss }> | null,
+  snapshot: MutableBossIntro | null,
+): { delay: number; t: number; dur: number; boss: TBoss } | null {
+  if (snapshot === null) {
+    // advanceFramePrelude zeroes the detached actor snapshot before clearing the
+    // terminal intro record. Preserve that final mutation on the live actor.
+    if (current?.boss) current.boss.introT = 0;
+    return null;
+  }
+  if (current === null) return null;
+  if (typeof snapshot.boss?.introT === "number") current.boss.introT = snapshot.boss.introT;
+  return { boss: current.boss, delay: snapshot.delay, t: snapshot.t, dur: snapshot.dur };
+}
+
 export interface FixedSimulationPort {
   readonly tick: number;
   advance(milliseconds: number, step: (seconds: number, tick: number) => void): Readonly<{

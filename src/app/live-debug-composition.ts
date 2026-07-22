@@ -3,6 +3,7 @@ import type { GameBlade, GamePlayer, GameRun } from "./game-runtime-state";
 import type { LiveGameHostState } from "./live-game-host-state";
 import type { LegacyAppScreen, LegacyTransitionContext } from "./legacy-state-controller";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
+import type { BossId } from "../gameplay/run/content-director";
 import type { UpgradeDefinition } from "../gameplay/upgrades";
 import { installLiveDebugHarness } from "./live-debug-harness";
 import { auditLiveEffects, createLiveDebugSnapshot } from "./live-debug-snapshot";
@@ -18,6 +19,7 @@ export interface LiveDebugCompositionOptions {
   readonly width: number;
   readonly height: number;
   readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
+  readonly selectBoss: (boss: BossId) => void;
   readonly setScreen: (screen: LegacyAppScreen, detail?: LegacyTransitionContext) => void;
   readonly screen: () => LegacyAppScreen;
   readonly setContinueSeconds: (value: number) => void;
@@ -49,7 +51,7 @@ export function installLiveGameDebug(options: LiveDebugCompositionOptions): void
   installLiveDebugHarness({
     enabled: options.enabled, dependencies: d, state: options.state, lifecycle: options.lifecycle,
     cinema: options.cinema, stage: options.stage, width: options.width, height: options.height,
-    startRun: options.startRun, setScreen: options.setScreen, screen: options.screen,
+    startRun: options.startRun, selectBoss: options.selectBoss, setScreen: options.setScreen, screen: options.screen,
     setContinueSeconds: options.setContinueSeconds, openDraft: options.openDraft, openTier: options.openTier,
     applyUpgrade: (upgrade) => { options.applyUpgrade(upgrade, {
       player: options.player(), blade: options.blade(), mods: options.run().mods,

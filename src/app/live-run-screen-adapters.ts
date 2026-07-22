@@ -97,7 +97,7 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
       shardsFor: (achievement) => withAchievement(achievement, 0, (source) => d.ACH.shardsFor(source)),
       coinsFor: (achievement) => withAchievement(achievement, 0, (source) => d.ACH.coinsFor(source)),
       rarityColor: (achievement) => withAchievement(achievement, d.ACH.RARITY.common.color,
-        (source) => (d.ACH.RARITY[source.rarity] ?? d.ACH.RARITY.common).color) });
+        (source) => d.ACH.RARITY[source.rarity].color) });
   };
   const resultLog = () => buildResultLog(state.outcome().log, services.trickColor);
 

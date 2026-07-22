@@ -63,6 +63,10 @@ The oracle's `enemy.js` (4225 lines), `player.js`, `mirror.js`, `projectile.js`,
 2. `docs/PARITY.md`: the contract table (cursor policy, pointer-lock lifecycle, frame model, draft guarantees) so future refactors have a spec instead of re-deriving from the monolith.
 3. Commit per phase, push after each commit (project rule). Suggested branch: continue on `codex/architectural-redesign`.
 
+## Confirmed parity repairs
+
+- **Boss arrival release (2026-07-22):** the oracle mutates the live boss's `introT` to zero before discarding `bossIntro` (`js/game.js@ee5e931:3593-3594`). The redesigned frame boundary advanced a detached snapshot, discarded it on the terminal frame, and stranded the real actor at a small positive `introT`. That permanently activated every boss's movement and collision-protection gate. The adapter now explicitly commits the terminal mutation, with a detached-snapshot unit regression and a five-boss browser journey that proves intro release, post-intro AI movement, pointer capture, and real held-blade damage.
+
 ## Sequencing & effort
 
 Phase 0 first and non-negotiable (~the microscope). Then 1 → 2 (the two named complaints), then 3 ∥ 4 (independent), then 5. Each phase ends with a side-by-side A/B session as the human acceptance test.
