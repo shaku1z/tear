@@ -1,3 +1,4 @@
+import { SemanticInputBuffer } from "../../src/input/semantic-buffer";
 import { describe, expect, it } from "vitest";
 import { LegacyGhostEngine, type LegacyReplayDependencies, type ReplayStore } from "../../src/replay/legacy-compat";
 import {
@@ -68,6 +69,27 @@ describe("visual replay migration", () => {
 });
 
 describe("LegacyGhostEngine", () => {
+  it("seals an interrupted recording whose drains outran the elapsed clock without throwing", () => {
+    // Regression: mid-run drains seal at the ABSOLUTE simulation tick while the
+    // recorder's elapsed clock is RELATIVE; the closing drain must clamp forward
+    // instead of handing the sequencer a smaller tick (which froze the game).
+    const values = new Map<string, string>();
+    const store: ReplayStore = { get: (key) => values.get(key) ?? null, set: (key, value) => { values.set(key, value); } };
+    const buffer = new SemanticInputBuffer();
+    const ghost = new LegacyGhostEngine({
+      store, document: {} as Document, now: () => 1, random: () => 0.5, semanticInput: buffer,
+      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 120, tearScore: () => provenance.tearScore },
+    });
+    ghost.startRec({ runId: "run-interrupted", seed: "seed" });
+    buffer.push({ type: "confirm" });
+    buffer.drain(5_000);   // absolute simulation tick, far ahead of recorded elapsed time
+    for (let index = 0; index < 25; index += 1) {
+      ghost.sample(1 / 120, { x: index, y: 400, facing: 1 }, { tipX: index + 20, tipY: 380 }, []);
+    }
+    expect(() => ghost.stopRec({ interruptedByNewRun: true })).not.toThrow();
+  });
+
+
   it("records semantic commands into the canonical packet and preserves playback", () => {
     const values = new Map<string, string>();
     const store: ReplayStore = { get: (key) => values.get(key) ?? null, set: (key, value) => { values.set(key, value); } };
@@ -81,6 +103,7 @@ describe("LegacyGhostEngine", () => {
         startRecording: () => undefined,
         stopRecording: () => undefined,
         drain: (tick) => tick > semanticTick ? [{ kind: "command", id: ++semanticTick, tick, command: { type: "confirm" } }] : [],
+        lastSealedTick: 0,
       },
       defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 60, tearScore: () => provenance.tearScore },
     };
@@ -133,6 +156,7 @@ describe("LegacyGhostEngine", () => {
         startRecording: () => undefined,
         stopRecording: () => undefined,
         drain: (tick) => { ticks.push(tick); return []; },
+        lastSealedTick: 0,
       },
       defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 60, tearScore: () => provenance.tearScore },
     });

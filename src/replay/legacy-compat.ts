@@ -23,6 +23,8 @@ export interface SemanticReplayInput {
   startRecording(): void;
   stopRecording(): void;
   drain(tick: number): readonly ReplayActionEnvelope[];
+  /** Highest tick the buffer's sequencer has sealed an envelope at (0 when none). */
+  readonly lastSealedTick: number;
 }
 
 export interface LegacyReplayDependencies {
@@ -210,7 +212,11 @@ export class LegacyGhostEngine {
       this.#dependencies.semanticInput?.stopRecording();
       return null;
     }
-    const finalTick = Math.max(0, Math.round(recording.elapsed * recording.provenance.ticksPerSecond));
+    // The recorder's elapsed clock is relative to the recording start while mid-run
+    // drains seal at the absolute simulation tick; clamp so the closing drain can
+    // never move the sequencer backwards (a throw here would kill the frame loop).
+    const finalTick = Math.max(0, Math.round(recording.elapsed * recording.provenance.ticksPerSecond),
+      this.#dependencies.semanticInput?.lastSealedTick ?? 0);
     recording.actions.push(...(this.#dependencies.semanticInput?.drain(finalTick) ?? []));
     this.#dependencies.semanticInput?.stopRecording();
     recording.provenance = {

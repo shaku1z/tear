@@ -31,6 +31,11 @@ export class SemanticInputBuffer {
     return this.#recording;
   }
 
+  /** Highest tick this buffer's sequencer has sealed an envelope at (0 when none). */
+  get lastSealedTick(): number {
+    return this.#sequencer.lastTick;
+  }
+
   startRecording(): void {
     this.reset();
     this.#sequencer.reset();
