@@ -105,6 +105,8 @@ async function main() {
     await frame.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused", undefined, { timeout: 20_000 });
     await frame.evaluate(() => window.__PANTHEON_TEST.resume());
     await frame.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing", undefined, { timeout: 20_000 });
+    await frame.waitForFunction(() => window.__crazyCalls.filter((call) => call.startsWith("gameplay-")).length >= 3,
+      undefined, { timeout: 20_000 });
     const calls = await frame.evaluate(() => window.__crazyCalls.slice());
     const gameplayCalls = calls.filter((call) => call.startsWith("gameplay-"));
     assert.deepEqual(gameplayCalls, ["gameplay-start", "gameplay-stop", "gameplay-start"]);

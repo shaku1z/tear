@@ -53,6 +53,21 @@ async function main() {
   assert.deepEqual(touchRelease.map((entry) => entry.command), [{ type: "move", x: 0, y: 0 }]);
   await touch.close();
 
+  const ultrawide = await browser.newPage({ viewport: { width: 1920, height: 800 } });
+  await configure(ultrawide);
+  await ultrawide.waitForFunction(() => document.body.dataset.cursor === "canvas");
+  assert.equal(await ultrawide.locator("canvas").evaluate((canvas) => getComputedStyle(canvas).cursor), "none");
+  await ultrawide.mouse.move(480, 400);
+  await ultrawide.waitForFunction(() => {
+    const pointer = window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointer;
+    return Math.abs(pointer.x - 260) < 1 && Math.abs(pointer.y - 450) < 1;
+  });
+  await ultrawide.keyboard.press("ArrowDown");
+  await ultrawide.waitForFunction(() => document.body.dataset.cursor === "hidden" && document.body.dataset.imode === "keyboard");
+  await ultrawide.mouse.move(600, 400);
+  await ultrawide.waitForFunction(() => document.body.dataset.cursor === "canvas" && document.body.dataset.imode === "mouse");
+  await ultrawide.close();
+
   const controller = await browser.newPage({ viewport: { width: 1600, height: 900 } });
   await controller.addInitScript(() => {
     window.__testGamepad = null;
@@ -66,10 +81,26 @@ async function main() {
   await controller.evaluate(() => window.__PANTHEON_TEST.startMode("playground"));
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
   await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLockAllowed);
+  if (await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked)) {
+    await controller.waitForFunction(() => document.body.dataset.cursor === "hidden");
+    await controller.keyboard.press("Escape");
+    await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused");
+    await controller.mouse.move(900, 450);
+    await controller.waitForFunction(() => document.body.dataset.cursor === "canvas");
+    await controller.evaluate(() => window.__PANTHEON_TEST.resume());
+    await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
+  }
+  await controller.waitForFunction(() => document.body.dataset.cursor === "native");
+  assert.equal(await controller.locator("canvas").evaluate((canvas) => getComputedStyle(canvas).cursor), "default");
   await controller.mouse.click(800, 450);
   await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked);
+  await controller.waitForFunction(() => document.body.dataset.cursor === "hidden");
   await controller.keyboard.press("Escape");
   await controller.waitForFunction(() => !window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked);
+  await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused");
+  assert.equal(await controller.evaluate(() => document.body.dataset.cursor), "hidden");
+  await controller.mouse.move(900, 450);
+  await controller.waitForFunction(() => document.body.dataset.cursor === "canvas");
   await controller.evaluate(() => {
     if (window.__PANTHEON_TEST.state().game === "paused") window.__PANTHEON_TEST.resume();
   });

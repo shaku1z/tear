@@ -1,4 +1,5 @@
 import type { LegacyInput, LegacyInputDependencies, Point, TouchZoneName } from "./legacy-input-contracts";
+import { mapClientPointerToLogical } from "./pointer-coordinate";
 
 interface ClientPoint {
   readonly clientX: number;
@@ -163,18 +164,10 @@ const Input: LegacyInput = {
     // overscan bleed, so subtract the overscan offset after scaling. When the
     // overlay zoom is up (small touch screens), invert it around the view center
     // so taps land where the zoomed pixels actually are.
-    const toLogical = (e: ClientPoint, r: DOMRect): Point => {
-      const ox = OVERSCAN.x;
-      const oy = OVERSCAN.y;
-      let x = (e.clientX - r.left) / r.width * (CONFIG.view.w + ox * 2) - ox;
-      let y = (e.clientY - r.top) / r.height * (CONFIG.view.h + oy * 2) - oy;
-      const z = this.uiZoom || 1;
-      if (z > 1.001) {
-        x = CONFIG.view.w / 2 + (x - CONFIG.view.w / 2) / z;
-        y = CONFIG.view.h / 2 + (y - CONFIG.view.h / 2) / z;
-      }
-      return { x, y };
-    };
+    const toLogical = (e: ClientPoint, r: DOMRect): Point => mapClientPointerToLogical(e, r, {
+      width: CONFIG.view.w, height: CONFIG.view.h,
+      overscanX: OVERSCAN.x, overscanY: OVERSCAN.y, uiZoom: this.uiZoom,
+    });
     const updateMouse = (e: MouseEvent): void => {
       if (this.locked) {
         // pointer-lock: accumulate raw movement, mapped to the reticle by the blade

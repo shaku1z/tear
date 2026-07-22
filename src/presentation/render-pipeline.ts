@@ -34,6 +34,7 @@ export interface RenderPipelinePorts<Screen extends string> {
   readonly drawButtons: () => void;
   readonly drawPostLayers: () => void;
   readonly drawCursor: () => void;
+  readonly showCanvasCursor: () => boolean;
   readonly drawControllerToast: () => void;
   readonly drawRotationGate: () => void;
   readonly firstEnabledButton: () => number;
@@ -90,7 +91,7 @@ export function renderPresentationFrame<Screen extends string>(ports: RenderPipe
     if (screen !== "playing") ports.drawButtons();
   }
   ports.drawPostLayers();
-  if (screen !== "playing") ports.drawCursor();
+  if (ports.showCanvasCursor()) ports.drawCursor();
   ports.drawControllerToast();
   if (ports.touchActive() && ports.canvas.clientHeight > ports.canvas.clientWidth) ports.drawRotationGate();
   if (screen !== ports.previousScreen()) {

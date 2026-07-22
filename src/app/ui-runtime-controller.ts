@@ -11,6 +11,7 @@ export interface InteractiveUiButton extends UiActionButton {
 }
 
 export interface UiRuntimeInput {
+  readonly mode: "mouse" | "keyboard" | "gamepad" | "touch";
   readonly mouseX: number;
   readonly mouseY: number;
   readonly ui: Readonly<{ pageUp: boolean; pageDown: boolean; tabPrev: boolean; tabNext: boolean }>;
@@ -65,7 +66,7 @@ export function handleUiRuntimeFrame(ports: UiRuntimePorts): void {
   const decision = coordinateUiFrame({
     screen: ports.screen(), buttons: ports.buttons(), focus: ports.focus(), scroll: ports.scroll(),
     scrollY: wheel.y, pageUp: input.ui.pageUp, pageDown: input.ui.pageDown,
-    pointer: { x: input.mouseX, y: input.mouseY }, touch,
+    pointer: { x: input.mouseX, y: input.mouseY }, pointerActive: input.mode === "mouse", touch,
     directions: { left: input.menuLeft(), right: input.menuRight(), up: input.menuUp(), down: input.menuDown() },
     previous: input.menuPrev(), next: input.menuNext(), pressed: input.pressed,
     padBack: input.padBack, confirm: input.confirmPressed(),

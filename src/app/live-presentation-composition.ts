@@ -6,6 +6,7 @@ import type { WorldCamera } from "../presentation/world/legacy-world-frame";
 import type { CinematicUiPort } from "../presentation/cinematics";
 import type { ButtonLayerUiPort, CanvasUiButton } from "../presentation/screens/button-layer";
 import type { InteractiveUiButton, UiRuntimeInput } from "./ui-runtime-controller";
+import { resolveCursorPresentation } from "../presentation/cursor-contract";
 import { createLivePresentationHost, type LivePresentationHost } from "./live-presentation-host";
 
 export interface LivePresentationSurface {
@@ -206,6 +207,9 @@ export function createLivePresentationFrameHost<Screen extends string,
       renderScreen: services.renderScreen, drawButtons: host.drawButtons,
       drawPostLayers: () => { services.wipe.draw(state.deltaSeconds()); services.drawAchievementToast(state.deltaSeconds()); },
       drawCursor: () => { ui.cursor(context, services.input.mouseX, services.input.mouseY); },
+      showCanvasCursor: () => resolveCursorPresentation({
+        screen: state.screen(), mode: services.input.mode, pointerLocked: services.pointerLocked(),
+      }) === "canvas",
       drawControllerToast: () => {
         const controller = services.controller();
         if (controller === null || controller.toastSeconds <= 0 || !controller.toastText) return;
@@ -228,6 +232,7 @@ export function createLivePresentationFrameHost<Screen extends string,
       chooseReserve: services.chooseReserve, rerollDraft: services.rerollDraft }),
     buttonLayer: () => ({ context, buttons: state.controls(), focus: state.focus(),
       pointerX: services.input.mouseX, pointerY: services.input.mouseY, deltaSeconds: state.deltaSeconds(),
+      pointerActive: services.input.mode === "mouse",
       enterSeconds: state.enterSeconds(), hoverAnimation: services.hoverAnimation, ui,
       entranceEase: services.ease }),
   });

@@ -1,4 +1,5 @@
 import type { InputMode, Point } from "../input/legacy-input-contracts";
+import { resolveCursorPresentation } from "../presentation/cursor-contract";
 
 export interface RuntimeFrameInputPort {
   readonly held: Set<string>;
@@ -184,6 +185,9 @@ export class RuntimeFrameCoordinator {
     this.#options.updateAttract(deltaSeconds, this.#options.isMenuScreen(state));
     this.#options.input.uiMode = !playing
       || (this.#options.cinema.active && this.#options.cinema.playerMode !== "finalBlade");
+    this.#options.document.body.dataset.cursor = resolveCursorPresentation({
+      screen: state, mode: this.#options.input.mode, pointerLocked: this.#options.input.locked,
+    });
     const density = this.#options.input.touchActive() && this.#options.cssPerLogicalPixel() < 0.6
       ? "touch" : "desktop";
     if (density !== this.#uiDensity) {

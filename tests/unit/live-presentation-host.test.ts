@@ -11,7 +11,7 @@ describe("live presentation host", () => {
     const screenDraw = vi.fn();
     const buttons = [{ x: 0, y: 0, w: 10, h: 10, label: "go", enabled: true, action: vi.fn() }];
     const input = {
-      mouseX: 0, mouseY: 0, ui: { pageUp: false, pageDown: false, tabPrev: false, tabNext: false },
+      mode: "mouse" as const, mouseX: 0, mouseY: 0, ui: { pageUp: false, pageDown: false, tabPrev: false, tabNext: false },
       pressed: new Set<string>(), padBack: false, touchActive: () => false,
       takeUIScroll: () => ({ x: 0, y: 0 }), menuLeft: () => false, menuRight: () => false,
       menuUp: () => false, menuDown: () => false, menuPrev: () => false, menuNext: () => false,
@@ -28,14 +28,14 @@ describe("live presentation host", () => {
         background: () => "#000", setTheme: vi.fn(), renderWorldLayers: screenDraw, renderReticle: vi.fn(),
         isMenuScreen: () => false, enterSeconds: () => 1, setEnterSeconds: vi.fn(), enterAmount: () => 1,
         setEnterAmount: vi.fn(), ease: (value) => value, resetScroll: vi.fn(), renderMenuBackdrop: vi.fn(),
-        renderScreen: vi.fn(), drawButtons: vi.fn(), drawPostLayers: vi.fn(), drawCursor: vi.fn(),
+        renderScreen: vi.fn(), drawButtons: vi.fn(), drawPostLayers: vi.fn(), drawCursor: vi.fn(), showCanvasCursor: () => false,
         drawControllerToast: vi.fn(), drawRotationGate: vi.fn(), firstEnabledButton: () => 0,
         setFocus: vi.fn(), updateDomHints: vi.fn(),
       }),
       uiPorts: () => ({ screen: () => "playing", buttons: () => buttons, focus: () => 0, setFocus: vi.fn(),
         scroll: () => 0, setScroll: vi.fn(), input, playInterfaceSound: vi.fn(), chooseUpgrade: vi.fn(),
         chooseReserve: vi.fn(), rerollDraft: vi.fn() }),
-      buttonLayer: () => ({ context, buttons, focus: 0, pointerX: 0, pointerY: 0, deltaSeconds: 1 / 60,
+      buttonLayer: () => ({ context, buttons, focus: 0, pointerX: 0, pointerY: 0, pointerActive: true, deltaSeconds: 1 / 60,
         enterSeconds: 1, hoverAnimation: {}, ui: { pointIn: () => false, chip: vi.fn(), button: vi.fn() },
         entranceEase: (value) => value }),
     });

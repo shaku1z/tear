@@ -27,7 +27,7 @@ describe("presentation runtime boundaries", () => {
       scroll: () => scroll,
       setScroll: (value) => { scroll = value; },
       input: {
-        mouseX: 500, mouseY: 500,
+        mode: "mouse", mouseX: 500, mouseY: 500,
         ui: { pageUp: false, pageDown: false, tabPrev: false, tabNext: false },
         pressed: new Set(), padBack: false,
         touchActive: () => false, takeUIScroll: () => ({ x: 0, y: 0 }),
@@ -66,7 +66,8 @@ describe("presentation runtime boundaries", () => {
       enterSeconds: () => 1, setEnterSeconds: () => events.push("enter-reset"), enterAmount: () => 1, setEnterAmount: () => { events.push("enter-amount"); },
       ease: (value) => value, resetScroll: () => events.push("scroll-reset"), renderMenuBackdrop: () => events.push("attract"),
       renderScreen: () => events.push("screen"), drawButtons: () => events.push("buttons"), drawPostLayers: () => events.push("post"),
-      drawCursor: () => events.push("cursor"), drawControllerToast: () => events.push("pad"), drawRotationGate: () => events.push("rotate"),
+      drawCursor: () => events.push("cursor"), showCanvasCursor: () => true,
+      drawControllerToast: () => events.push("pad"), drawRotationGate: () => events.push("rotate"),
       firstEnabledButton: () => 2, setFocus: (value) => { focus = value; }, updateDomHints: () => events.push("hints"),
     };
     renderPresentationFrame(ports);

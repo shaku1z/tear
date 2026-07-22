@@ -109,6 +109,23 @@ describe("RuntimeFrameCoordinator", () => {
     expect(harness.events).not.toContain("simulation");
   });
 
+  it("publishes the cursor surface after the final state transition for the frame", () => {
+    const harness = createHarness();
+    harness.input.mode = "mouse";
+    harness.coordinator.run(1 / 60);
+    expect(harness.options.document.body.dataset.cursor).toBe("native");
+
+    harness.input.locked = true;
+    harness.coordinator.run(1 / 60);
+    expect(harness.options.document.body.dataset.cursor).toBe("hidden");
+
+    harness.setPause(true);
+    harness.input.locked = false;
+    harness.coordinator.run(1 / 60);
+    expect(harness.state()).toBe("paused");
+    expect(harness.options.document.body.dataset.cursor).toBe("canvas");
+  });
+
   it("honors pause gates and playground/replay navigation without stepping gameplay", () => {
     const pauseHarness = createHarness();
     pauseHarness.setPause(true);

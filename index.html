@@ -75,10 +75,9 @@
       image-rendering: auto;
       touch-action: none;    /* mobile: the game owns every gesture (no scroll/zoom) */
     }
-    /* input-modality cursor ownership: the pointer is visible only when the mouse
-       owns the UI (data-imode set each frame from Input.mode). Keyboard, gamepad,
-       and touch keep it hidden. Pointer-lock still hides it during play regardless. */
-    body[data-imode="mouse"] canvas { cursor: default; }
+    /* Exactly one cursor surface owns the canvas. Menus draw Tear's original arrow;
+       uncaptured gameplay briefly uses the native pointer to make re-capture obvious. */
+    body[data-cursor="native"] canvas { cursor: default; }
     #hint {
       position: absolute;
       left: 12px;
