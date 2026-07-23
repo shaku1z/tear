@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tear Autonomous Playtester"
+  short_description: "Select and interpret deterministic Tear evidence"
+  default_prompt: "Use $tear-autonomous-playtester to select, run, interpret, minimize, and report the right Tear gameplay evidence."

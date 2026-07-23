@@ -14,8 +14,9 @@ function contentType(file) {
 }
 
 async function withJourney(options, run) {
-  const root = path.resolve(__dirname, "..", "dist", "standalone");
-  assert.ok(fs.existsSync(path.join(root, "index.html")), "dist/standalone is missing; run pnpm build:standalone first");
+  const buildDirectory = process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone";
+  const root = path.resolve(__dirname, "..", "dist", buildDirectory);
+  assert.ok(fs.existsSync(path.join(root, "index.html")), `dist/${buildDirectory} is missing; run pnpm build:test:standalone first`);
   const port = Number(process.env.TEAR_JOURNEY_PORT || options.port);
   const baseUrl = `http://127.0.0.1:${String(port)}`;
   const server = http.createServer((request, response) => {

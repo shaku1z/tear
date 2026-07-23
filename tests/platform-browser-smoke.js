@@ -6,7 +6,7 @@ const path = require("node:path");
 
 (async () => {
   const target = process.argv[2] || process.env.TEAR_SMOKE_TARGET || "standalone";
-  const root = path.resolve(__dirname, "..", "dist", target);
+  const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || `test-${target}`);
   const builtHtml = fs.readFileSync(path.resolve(root, "index.html"), "utf8");
   if (target === "crazygames") {
     assert.equal(builtHtml.includes('rel="manifest"'), false, "CrazyGames HTML must not advertise PWA installation");

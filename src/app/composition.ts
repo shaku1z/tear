@@ -39,7 +39,7 @@ import { createPlayerRenderer } from "../presentation/entities/player-renderer";
 import { createProjectileRenderer } from "../presentation/entities/projectile-renderer";
 import { createUi } from "../presentation/ui";
 import { createLegacyReplayCompatibility } from "../replay/legacy-compat";
-import { GAME_RANDOM } from "../simulation/run-random";
+import { GAME_RANDOM, GAME_RANDOM_STREAMS } from "../simulation/run-random";
 import { PerformanceMonitor } from "../diagnostics/performance-monitor";
 import { LegacyAppStateController } from "./legacy-state-controller";
 import { startLiveGame } from "./live-game-runtime";
@@ -87,7 +87,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   });
   const enemyTypes = createEnemyTypes({
     CLOCK, CONFIG, ...(clipper === undefined ? {} : { Clipper: clipper }),
-    FX, GAME_RANDOM, Projectile, SFX,
+    FX, GAME_RANDOM: GAME_RANDOM_STREAMS.stream("enemy-ai"), Projectile, SFX,
     presentation: enemyPresentation,
     aabbOverlap, clamp, cosmeticRandom, len, lerp, segPointDist, segSegmentDist,
   });
@@ -98,7 +98,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     drawBossTransformationWorld, weaponCapsuleIntersectsSegment,
   } = enemyTypes;
   const { Mirror, MirrorHost, ReflectionEnemy } = createMirrorTypes({
-    Blade, CLOCK, CONFIG, Enemy, FX, GAME_RANDOM, Player, Projectile, SFX, presentation: mirrorPresentation,
+    Blade, CLOCK, CONFIG, Enemy, FX, GAME_RANDOM: GAME_RANDOM_STREAMS.stream("boss"), Player, Projectile, SFX, presentation: mirrorPresentation,
     clamp, getWeapon, lerp, lerpAngle,
   });
   const Attract = createAttract({ Backdrop, Blade, CONFIG, FX, GFX, OVERSCAN, Player, STAGES, THEME, clamp });
@@ -136,7 +136,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     getMeta: () => META,
   });
   const { META, SHOP } = createMetaProgression<UpgradeDefinition, UpgradeApplyContext & ProgressionApplyContext>({
-    store: CG.store, config: CONFIG, cloud: Cloud, random: GAME_RANDOM, upgrades: UPGRADES,
+    store: CG.store, config: CONFIG, cloud: Cloud, random: GAME_RANDOM_STREAMS.stream("draft"), upgrades: UPGRADES,
     applyUpgrade: (upgrade, context) => { applyUpgrade(upgrade, context); },
   });
   const ACH = createAchievements({ meta: META, profile: PROFILE, audio: SFX, shop: SHOP, clamp });
@@ -147,7 +147,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const gameRuntimeDependencies = {
     A11Y, ACH, AFFIXES, APP, Aldric, Armored, Attract, BOSSFX, Backdrop, Blade, Bomber, Boss,
     CG, CLOCK, CONFIG, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, DAILY, DIAG, Echo,
-    FX, FirebaseProvider, Flyer, GAME_RANDOM, GFX, GHOST, Input, META, Mirror,
+    FX, FirebaseProvider, Flyer, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
     MirrorHost, OVERSCAN, PAD, PRESETS, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
     Ranged, ReflectionEnemy, SAFE, SFX, SHOP, STAGES, Source, Support, THEME, UI, UPGRADES,
     VAULT, VARIANTS, VoidGen, VoidWisp, WEAPONS, Warden, Wraith,
@@ -158,7 +158,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   } satisfies GameRuntimeDependencies;
   startLiveGame(gameRuntimeDependencies);
 
-  if (new URLSearchParams(window.location.search).get("test") === "1") {
+  if (__TEAR_TEST_BUILD__ && new URLSearchParams(window.location.search).get("test") === "1") {
     Object.defineProperty(window, "__TEAR_PLATFORM_SERVICES__", {
       configurable: true,
       get: () => platform.services,

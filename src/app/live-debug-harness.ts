@@ -3,11 +3,18 @@ import type { GameRun } from "./game-runtime-state";
 import type { LiveGameHostState } from "./live-game-host-state";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import type { BossId } from "../gameplay/run/content-director";
+import type { RunPhase } from "../gameplay/run/lifecycle";
 import { eligibleTierChoices } from "../gameplay/run/reward-selection";
 import type { UpgradeDefinition } from "../gameplay/upgrades";
 import type { LegacyAppScreen, LegacyTransitionContext } from "./legacy-state-controller";
 
-interface DebugLifecycle { clearWave(): void; prepareReward(reward: "draft" | "boss"): void; terminate(outcome: "defeat" | "victory"): void }
+export interface DebugLifecycle {
+  readonly phase: RunPhase;
+  activateWave(): void;
+  clearWave(): void;
+  prepareReward(reward: "draft" | "boss"): void;
+  terminate(outcome: "defeat" | "victory"): void;
+}
 interface DebugCinema { active: boolean; beat: unknown; cancel(reason: string): void; requestSkip(): void; advance(): void }
 interface DebugStage { index: number; current: unknown; platforms: unknown[] }
 
@@ -46,6 +53,14 @@ function runOf(state: LiveGameHostState): GameRun {
   return run;
 }
 
+export function clearPreparedOrActiveDebugWave(lifecycle: DebugLifecycle): void {
+  if (lifecycle.phase === "wave-prepared") lifecycle.activateWave();
+  if (lifecycle.phase !== "wave-active") {
+    throw new Error(`Debug journey requires an active or prepared wave, received ${lifecycle.phase}`);
+  }
+  lifecycle.clearWave();
+}
+
 /** Installs the browser-journey control surface without leaking it into production. */
 export function installLiveDebugHarness(context: LiveDebugHarnessContext): void {
   if (!context.enabled) return;
@@ -60,16 +75,37 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       const selected = { expanded: true, rerolls: 2, reserve: true, ...options };
       context.startRun("endless", "normal");
       const run = runOf(context.state); run.wave = Math.max(1, run.wave); run.spawnQueue.length = 0; context.state.setEnemies([]);
-      context.lifecycle.clearWave(); context.lifecycle.prepareReward("draft");
+      clearPreparedOrActiveDebugWave(context.lifecycle); context.lifecycle.prepareReward("draft");
       run.mods.expandedDraft = selected.expanded; run.mods.draftRerolls = Math.max(0, selected.rerolls | 0);
       run.mods.reservePick = selected.reserve; context.openDraft(); document.exitPointerLock();
     },
     openTierUp() {
       context.startRun("endless", "normal");
       const run = runOf(context.state); run.wave = Math.max(1, run.wave); run.spawnQueue.length = 0; context.state.setEnemies([]);
-      context.lifecycle.clearWave(); context.lifecycle.prepareReward("boss");
+      clearPreparedOrActiveDebugWave(context.lifecycle); context.lifecycle.prepareReward("boss");
       for (const upgrade of d.UPGRADES.filter((candidate) => candidate.tiers != null).slice(0, 4)) context.applyUpgrade(upgrade);
       context.openTier(eligibleTierChoices(d.UPGRADES, run.mods.owned, run.mods.tier)); document.exitPointerLock();
+    },
+    advanceAgentJourney(kind: "draft" | "tier") {
+      const run = runOf(context.state);
+      run.spawnQueue.length = 0;
+      clearCombat();
+      clearPreparedOrActiveDebugWave(context.lifecycle);
+      if (kind === "draft") {
+        context.lifecycle.prepareReward("draft");
+        run.mods.expandedDraft = false;
+        run.mods.reservePick = false;
+        run.mods.draftRerolls = 0;
+        context.openDraft();
+      } else {
+        run.wave = Math.max(10, run.wave);
+        context.lifecycle.prepareReward("boss");
+        for (const upgrade of d.UPGRADES.filter((candidate) => candidate.tiers != null).slice(0, 4)) {
+          context.applyUpgrade(upgrade);
+        }
+        context.openTier(eligibleTierChoices(d.UPGRADES, run.mods.owned, run.mods.tier));
+      }
+      document.exitPointerLock();
     },
     openTerminal(kind: "campaignWin" | "win" | "continue" | "gameover") {
       const campaign = kind === "campaignWin"; context.startRun(campaign ? "campaign" : "endless", "normal");

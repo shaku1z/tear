@@ -67,7 +67,7 @@ async function assertVisibilityLifecycle(page, baseline) {
 }
 
 (async () => {
-  const root = path.resolve(__dirname, "..", "dist", "standalone");
+  const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
   const port = Number(process.env.TEAR_AUDIO_TEST_PORT || 8125);
   const baseUrl = `http://127.0.0.1:${port}`;
   const server = http.createServer((request, response) => {

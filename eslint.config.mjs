@@ -45,13 +45,13 @@ const tearArchitecture = {
 
 export default tseslint.config(
   {
-    ignores: ["dist/**", "node_modules*/**", "vendor/**", "tear-crazygames/**"],
+    ignores: ["dist/**", "node_modules*/**", "vendor/**", "tear-crazygames/**", "workers/worker-configuration.d.ts"],
   },
   eslint.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
   {
-    files: ["src/**/*.ts", "tests/**/*.ts", "vite.config.ts", "vitest.config.ts"],
+    files: ["src/**/*.ts", "tests/**/*.ts", "workers/**/*.ts", "vite.config.ts", "vitest.config.ts", "vitest.endurance.config.ts"],
     languageOptions: {
       parserOptions: {
         projectService: true,

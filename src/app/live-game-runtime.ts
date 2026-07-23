@@ -465,7 +465,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   const { wipe: Wipe, frame: presentationHost, screens: screenComposition } = interfaceComposition;
   const { library: libraryAdapters, replay: replayAdapters, settings: settingsRenameAdapters, modelRenderers: presentationScreenRenderers } = screenComposition;
 
-  if (PANTHEON_DEBUG) void import("./live-debug-composition").then(({ installLiveGameDebug }) => { installLiveGameDebug({
+  if (__TEAR_TEST_BUILD__ && PANTHEON_DEBUG) void import("./live-debug-composition").then(({ installLiveGameDebug }) => { installLiveGameDebug({
     enabled: PANTHEON_DEBUG, dependencies, state: hostState, lifecycle: RUN_LIFECYCLE, cinema: CINEMA,
     stage: stageRuntime, width: W, height: H, startRun: (mode, difficulty) => { startRunWithPreflight(mode, difficulty); }, setScreen: setState, screen: () => state,
     setContinueSeconds: (value) => { continueT = value; }, openDraft: openRewardDraft, openTier: openRewardTier,

@@ -11,6 +11,11 @@ This is the migration checklist for the architectural redesign. A checked featur
 - [x] Keyboard/mouse, touch and controller input — `browser-smoke.js`, `browser-input-matrix.js`, and the semantic/legacy input unit suites.
 - [x] Fullscreen, pointer lock, focus loss and controller disconnect behavior — `browser-input-matrix.js` and the focus-release assertion in `browser-smoke.js`.
 - [x] Cloud/Firebase and offline/local capability fallbacks — `platform-firebase-cloud.test.ts`, `platform-cloud.test.ts`, `platform-browser.test.ts`, and `platform-legacy-compat.test.ts`.
+- [ ] TearBench/Ghost 3.0 operational completion — C0-C20 supplied typed
+  contracts and focused prototypes, but real-runtime integration, durable
+  Ghost/Academy storage, genuine learned policies, automatic Foundry operation,
+  complete visible experiences, and end-to-end certification remain tracked by
+  `plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md`.
 
 ## Game flow and modes
 
@@ -40,6 +45,11 @@ This is the migration checklist for the architectural redesign. A checked featur
 - [x] Leaderboard submission, identity and failure/offline behavior — `platform-shared-cloud.test.ts`, `platform-cloud.test.ts`, `platform-browser.test.ts`, and `platform-firebase-cloud.test.ts`.
 - [x] Replay recording, vault, publication, loading and legacy migration — replay visual/vault/envelope suites, `replay-round-trip.test.ts`, platform publication contracts, and the replay browser journey.
 - [x] Deterministic replay verification across render rates — `authoritative-replay.test.ts` verifies JSON-round-tripped actions at 30/60/144 Hz; replay hash/envelope/round-trip suites cover verification and serialization.
+- [ ] Ghost 3.0 durable Vault and governed cloud publication — current
+  capsule/Vault, Doctor, Theater, knowledge, coaching, player-experience, and
+  cloud-publication code proves contracts and pure behavior. Durable
+  cross-session storage, authenticated publication, deployed verification,
+  moderation operations, and player-visible flows remain completion work.
 
 ## Accessibility and settings
 

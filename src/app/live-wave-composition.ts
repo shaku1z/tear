@@ -55,7 +55,7 @@ export function createLiveWaveComposition(options: LiveWaveCompositionOptions): 
     tuning: () => d.CONFIG.run,
     stages: d.STAGES.map((stage) => ({ ...stage, boss: bossId(stage.boss) })),
     presets: d.PRESETS,
-    random: d.GAME_RANDOM,
+    random: d.GAME_RANDOM_STREAMS.stream("world"),
     modeDefinition: (mode) => d.CONFIG.modes.find((candidate) => candidate.id === mode) ?? {},
     currentStage: () => ({ index: options.stage.index, accent: options.stage.current.accent }),
     stageHasChapter: () => true,

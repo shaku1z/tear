@@ -1,0 +1,32 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "tear-ghost-publication",
+  "main": "workers/ghost-publication.ts",
+  "compatibility_date": "2026-07-23",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "logs": { "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.01 }
+  },
+  "r2_buckets": [
+    {
+      "binding": "GHOST_CAPSULES",
+      "bucket_name": "tear-ghost-capsules"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "GHOST_METADATA",
+      "database_name": "tear-ghost-metadata",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations/ghost"
+    }
+  ],
+  "services": [
+    {
+      "binding": "GHOST_VERIFIER",
+      "service": "tear-ghost-verifier"
+    }
+  ]
+}

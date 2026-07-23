@@ -5,7 +5,7 @@ const http = require("node:http");
 const path = require("node:path");
 
 const projectRoot = path.resolve(__dirname, "..");
-const buildRoot = path.resolve(projectRoot, "dist", "standalone");
+const buildRoot = path.resolve(projectRoot, "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
 const budgets = JSON.parse(fs.readFileSync(path.resolve(projectRoot, "config", "browser-performance-budgets.json"), "utf8"));
 const port = Number(process.env.TEAR_PERF_PORT || 8126);
 const baseUrl = `http://127.0.0.1:${port}`;

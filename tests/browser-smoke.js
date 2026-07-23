@@ -5,7 +5,7 @@ const http = require("node:http");
 const path = require("node:path");
 
 (async () => {
-  const root = path.resolve(__dirname, "..", "dist", "standalone");
+  const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
   const port = Number(process.env.TEAR_TEST_PORT || 8123);
   const baseUrl = `http://127.0.0.1:${port}`;
   const server = http.createServer((request, response) => {

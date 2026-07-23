@@ -5,7 +5,7 @@ const http = require("node:http");
 const path = require("node:path");
 
 async function main() {
-  const root = path.resolve(__dirname, "..", "dist", "crazygames");
+  const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-crazygames");
   const server = http.createServer((request, response) => {
     const pathname = new URL(request.url, "http://127.0.0.1").pathname;
     if (pathname === "/harness") {
