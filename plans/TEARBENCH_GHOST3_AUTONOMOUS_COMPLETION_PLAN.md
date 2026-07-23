@@ -8,6 +8,65 @@
 
 ---
 
+## 0. Mandatory First Action — Non-Lossy Requirements Annex
+
+No implementation checkpoint may begin until the original source has been
+converted into a complete atomic requirements annex. This is C21.0 and is the
+first blocking action of the entire program.
+
+The annex must be created as both:
+
+- `docs/TEARBENCH_GHOST3_NON_LOSSY_REQUIREMENTS_ANNEX.md` for human review;
+- `docs/tearbench-ghost3-requirements.json` for mechanical validation,
+  reporting, and CI.
+
+The annex must not summarize the source into broad themes. It must:
+
+1. Inventory all 93 level-two headings, 603 level-three headings, 175
+   level-four headings, tables, schemas, examples, acceptance gates, risks,
+   roadmap items, definitions of done, and living-document rules.
+2. Extract each normative statement into an atomic requirement. Compound
+   bullets must be split when their parts can be implemented or verified
+   independently.
+3. Preserve the exact source section, subsection, line range, source text hash,
+   requirement type, and original version for every entry.
+4. Assign a stable requirement ID that does not depend on row order.
+5. Label each entry as product behavior, architecture, data/schema, gameplay,
+   UI/UX, accessibility, performance, security, privacy, moderation, cloud,
+   compatibility, preservation, ML/training, operations, documentation,
+   rationale, example, or research reference.
+6. Record its current state, dependency IDs, owning subsystem, intended
+   checkpoint, implementation deliverable, user-visible result, evidence class,
+   acceptance condition, artifact, and disposition.
+7. Preserve duplicates as linked source occurrences instead of silently
+   deleting them.
+8. Record conflicts, superseded statements, optional recommendations, and
+   rejected/deferred requirements explicitly with rationale and authority.
+9. Distinguish source rationale and illustrative examples from normative
+   requirements without discarding either.
+10. Generate reverse indexes from checkpoint, subsystem, evidence class, source
+    section, and completion state back to every requirement.
+
+### C21.0 reconciliation gate
+
+The annex passes only when an automated source-to-annex audit proves:
+
+- every heading and normative source occurrence is represented;
+- every annex entry resolves to valid source lines and the reviewed source hash;
+- every actionable entry has exactly one primary checkpoint and acceptance gate;
+- every dependency resolves without cycles unless an explicitly reviewed cycle
+  is documented;
+- no entry is marked complete solely from a name, type, mock, in-memory adapter,
+  synthetic score, or unrelated unit test;
+- top-level, subsection, and reverse-index counts reconcile;
+- zero source occurrences remain unmapped, accidentally duplicated, or silently
+  discarded.
+
+Only documentation, extraction tooling, and validation needed to produce this
+annex may change before this gate passes. C22-C40 implementation is blocked.
+
+---
+
 ## 1. Why This Plan Exists
 
 The C0-C20 program created a broad typed scaffold: contracts, pure algorithms,
@@ -142,6 +201,33 @@ for CI, debugging, reproducibility, and expert automation.
 No later plateau may be called complete while an earlier dependency is only a
 contract or prototype.
 
+### Program sizing estimate
+
+The current C21-C40 document is a master program plan, not twenty sufficiently
+small implementation tickets. Based on the source's 603 level-three sections,
+175 level-four sections, and roughly 5,000 bullets, the provisional expectation
+is:
+
+- five to seven detailed execution plans after the annex;
+- twenty checkpoints per execution plan;
+- approximately 100-140 implementation checkpoints in total;
+- six to eight plan documents when this master plan is included.
+
+The likely execution-plan split is:
+
+1. deterministic runtime, contracts, State Forge, and progression;
+2. scripted autonomy, Class C control, scenarios, QA, and regression;
+3. Ghost recorder, capsule, Vault, Doctor, Theater, practice, and comparison;
+4. Academy, policy runtime, BC, DAgger, RL, ladder calibration, and Foundry;
+5. Coach, challenges, Studio, player experiences, cloud, privacy, and trust;
+6. operations, scheduling, preservation, matrices, and final certification.
+
+Five plans would be possible if the annex finds heavy duplication; seven would
+be safer if UI, cloud, ML, and preservation requirements need separate
+checkpoints. This estimate is not the guarantee. The guaranteed conversion is
+reached only when C21.0 produces zero unmapped atomic requirements and the
+generated dependency graph determines the exact checkpoint count.
+
 ---
 
 ## 6. Checkpoint Plan
@@ -151,11 +237,16 @@ contract or prototype.
 **Goal:** Establish an accurate baseline and prevent prototype code from being
 reported as a finished system.
 
+**First action — C21.0**
+
+- Complete and pass the mandatory non-lossy requirements annex in Section 0.
+- Do not begin repository implementation work for C22-C40 before it passes.
+
 **Deliverables**
 
-- Import every requirement from all 81 top-level source sections into a
-  machine-readable requirement registry with stable IDs.
-- Link every requirement to its source section and, when applicable, subsection.
+- Import every atomic requirement and every retained non-normative source
+  occurrence into the human-readable and machine-readable annexes.
+- Link every entry to exact source lines, headings, hashes, and source version.
 - Audit existing files, tests, commands, browser flows, storage adapters,
   workers, screens, and artifacts.
 - Replace optimistic `implemented` labels with the completion vocabulary from
@@ -179,6 +270,8 @@ reported as a finished system.
 
 **Exit gate**
 
+- The C21.0 source-to-annex reconciliation gate passes with zero unmapped
+  occurrences.
 - Every source requirement has a stable ID and disposition.
 - Every current completion claim points to evidence at the required layer.
 - The known Academy/Foundry misclassification is corrected.
@@ -1205,6 +1298,6 @@ Every top-level section from the original v0.6 source remains in scope:
 | 80. Living Document Rules | C21, C39-C40 |
 | 81. Changelog | C21, C39-C40 |
 
-Subsection-level requirement IDs created in C21 are the authoritative detailed
-trace. This table is the top-level completeness check; it is not permission to
-collapse or omit requirements within a source section.
+The C21.0 atomic annex is the authoritative detailed trace and must exist before
+implementation begins. This table is only the top-level completeness check; it
+is not permission to collapse or omit requirements within a source section.
