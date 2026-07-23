@@ -28,7 +28,7 @@ function scrollState(maximum: number, scroll: number) {
 export function buildFeedLeaderboardSnapshot(input: CommonInput & {
   readonly rows: readonly ReplayView[];
 }): LeaderboardSnapshotResult {
-  const maximumScroll = Math.max(0, input.rows.length * 66 - (input.height - 346));
+  const maximumScroll = Math.max(0, input.rows.length * 96 - (input.height - 364));
   const state = scrollState(maximumScroll, input.scroll);
   return Object.freeze({ maximumScroll, view: Object.freeze({
     id: "leaderboards", tab: input.tab, tabs: tabViews(input), rows: input.rows,
@@ -36,7 +36,7 @@ export function buildFeedLeaderboardSnapshot(input: CommonInput & {
     message: input.message || (!input.cloudAvailable ? "The global feed needs an account."
       : input.loading ? "Loading the feed…"
         : input.rows.length === 0 ? "Nothing published yet — be the first."
-          : "published runs from every blade — yours share from PROFILE ▸ REPLAYS"),
+          : ""),
     canScrollUp: state.canScrollUp, canScrollDown: state.canScrollDown,
   }) });
 }
@@ -62,11 +62,10 @@ export function buildRankedLeaderboardSnapshot(input: CommonInput & {
     rank: index + 1, name: (row.name ?? "Player").slice(0, 14),
     detail: `wave ${String(row.wave ?? 0)} · ${(row.score ?? 0).toLocaleString()} pts`,
     color: medals[index] ?? medals[2], mine: input.currentUserId !== undefined && row.uid === input.currentUserId,
-    ...(row.replayId !== undefined ? { replayId: row.replayId }
-      : index === 0 && ghostId !== undefined ? { replayId: ghostId } : {}),
+    ...(row.replayId !== undefined ? { replayId: row.replayId } : {}),
   }));
   const rows = input.data.slice(3).map((row, index) => ({ ...input.rowView(row), rank: index + 4 }));
-  const maximumScroll = Math.max(0, rows.length * 66 - (input.height - 602));
+  const maximumScroll = Math.max(0, rows.length * 34 - (input.height - 634));
   const state = scrollState(maximumScroll, input.scroll);
   const myIndex = input.currentUserId === undefined ? -1 : input.data.findIndex((row) => row.uid === input.currentUserId);
   const ownRank = input.currentUserId !== undefined && myIndex >= 10
@@ -78,13 +77,13 @@ export function buildRankedLeaderboardSnapshot(input: CommonInput & {
       : undefined;
   return Object.freeze({ maximumScroll, view: Object.freeze({
     id: "leaderboards", tab: input.tab, tabs: tabViews(input), rows, podium,
-    ...(ownRank === undefined ? {} : { ownRank }), signInRequired: !input.cloudAvailable,
+    ...(ownRank === undefined ? {} : { ownRank }), ...(ghostId === undefined ? {} : { legacyGhostId: ghostId }), signInRequired: !input.cloudAvailable,
     modes: input.modes.map((mode) => ({ id: mode.id, label: mode.label.toUpperCase(), selected: mode.id === input.mode })),
     difficulties: input.difficulties.map((difficulty) => ({ id: difficulty.id, label: difficulty.label.toUpperCase(), selected: difficulty.id === input.difficulty })),
     message: input.message || (!input.cloudAvailable ? "Global leaderboards need an account — your runs are waiting to count."
       : input.loading ? "Loading the ranks…"
         : input.data.length === 0 ? "No runs recorded on this board yet — set the first."
-          : "the world's finest runs"),
+          : ""),
     canScrollUp: state.canScrollUp, canScrollDown: state.canScrollDown,
   }) });
 }

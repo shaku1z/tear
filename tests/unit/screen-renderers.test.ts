@@ -35,6 +35,10 @@ class TestUi implements ScreenUiPort {
   fitTitle(): void { return; }
   spine(): void { return; }
   badge(): void { return; }
+  tabs(_context: CanvasRenderingContext2D, _id: string, labels: string[], _active: number, y: number,
+    push?: Parameters<ScreenUiPort["tabs"]>[5]): void {
+    labels.forEach((label, index) => { push?.({ x: 650 + index * 150, y, w: 150, h: 34, label, _tab: index, _hideBox: true }); });
+  }
   keyBadge(): void { return; }
   tierPips(): void { return; }
   scrollHint(): void { return; }
@@ -43,11 +47,11 @@ class TestUi implements ScreenUiPort {
 
 function createControlContext(controls: ScreenControl[]): ScreenRenderContext {
   return {
-    get canvas(): CanvasRenderingContext2D { throw new Error("canvas should not be read by control-planning tests"); },
+    canvas: canvasStub(),
     ui: new TestUi(),
     width: 1600, height: 900, time: 0, enterAmount: 1, enterSeconds: 1, deltaSeconds: 1 / 60,
     mouse: { x: -1, y: -1 }, scroll: 0, focus: 0,
-    touch: false, reducedMotion: false, screenRectangle: { x: 0, y: 0, w: 1600, h: 900 },
+    touch: false, reducedMotion: false, screenRectangle: { x: 0, y: 0, w: 1600, h: 900 }, safeInsets: { l: 0, r: 0, t: 0, b: 0 },
     enqueue(control): void { controls.push(control); },
   };
 }
@@ -70,7 +74,7 @@ function canvasStub(rectangles?: number[][]): CanvasRenderingContext2D {
 function createRenderContext(controls: ScreenControl[]): ScreenRenderContext {
   return {
     canvas: canvasStub(), ui: new TestUi(), width: 1600, height: 900, time: 0, enterAmount: 1,
-    enterSeconds: 1, deltaSeconds: 1 / 60, mouse: { x: -1, y: -1 }, scroll: 0, focus: 0, touch: false, reducedMotion: false, screenRectangle: { x: 0, y: 0, w: 1600, h: 900 },
+    enterSeconds: 1, deltaSeconds: 1 / 60, mouse: { x: -1, y: -1 }, scroll: 0, focus: 0, touch: false, reducedMotion: false, screenRectangle: { x: 0, y: 0, w: 1600, h: 900 }, safeInsets: { l: 0, r: 0, t: 0, b: 0 },
     enqueue(control): void { controls.push(control); },
   };
 }
@@ -201,6 +205,26 @@ describe("legacy screen renderer registry", () => {
       "leaderboards.selectBoard", "leaderboards.watchReplay", "replay.jumpChapter", "replay.togglePause",
       "replay.restart", "replay.toggleInfo", "replay.exit", "settings.activate",
     ]));
+    expect(controls.find((control) => control.action.type === "leaderboards.selectTab"))
+      .toMatchObject({ y: 124, h: 34, hiddenBox: true });
+    expect(controls.find((control) => control.action.type === "leaderboards.selectBoard" && control.action.id === "mode:endless"))
+      .toMatchObject({ y: 224, w: 190, h: 34, chip: true });
+    expect(controls.find((control) => control.action.type === "leaderboards.watchReplay"))
+      .toMatchObject({ x: 872, y: 408, w: 48, h: 30 });
+    expect(controls.find((control) => control.action.type === "replay.togglePause"))
+      .toMatchObject({ x: 292, y: 834, w: 96, h: 44 });
+  });
+
+  it("uses the oracle replay-vault row geometry and a profile-specific watch intent", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.profile({ id: "profile", tab: "replays", tabs: [{ id: "replays", label: "REPLAYS", selected: true }],
+      name: "Guest", signedIn: false, stats: [], replays: [{ id: "local-1", title: "You — Endless · normal",
+        detail: "wave 4 · 900 pts", available: true, local: true, pinned: false, shared: false }] });
+    expect(controls.find((control) => control.action.type === "profile.watchReplay"))
+      .toMatchObject({ x: 968, y: 342, w: 110, h: 40 });
+    expect(controls.find((control) => control.action.type === "profile.pinReplay"))
+      .toMatchObject({ x: 1086, y: 342, w: 78, h: 40 });
   });
 
   it("declares every legacy-only parity field needed before old screen ranges can be deleted", () => {

@@ -93,7 +93,9 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       const ty = py.map((y, index) => y - 20 + Math.round(Math.sin(index / 6) * 20));
       context.enterReplay({ v: 2, dt: 0.1, edt: 0.25, px, py, tx, ty, fc: px.map(() => 1),
         stages: [{ t: 0, s: 0 }, { t: 4.5, s: 1 }], waves: [{ t: 0, w: 1, e: "start" }, { t: 3, w: 1, e: "clear" }, { t: 4.5, w: 2, e: "boss" }],
-        spawns: [], esamp: [], deaths: [], events: [], loadout: [], thumb: null,
+        spawns: [], esamp: [], deaths: [], events: [],
+        // Oracle-published ghosts use the final summary form instead of timed picks.
+        loadout: [{ id: "tempo", tier: 3, n: 1 }, { id: "reach", tier: 1, n: 2 }], thumb: null,
         mode: "endless", diff: "normal", name: "Journey Tester", wave: 2, score: 1234, won: true }, "menu");
     },
     openRename() { if (context.screen() !== "menu") context.setScreen("menu"); context.setScreen("profile"); context.beginRename(); },

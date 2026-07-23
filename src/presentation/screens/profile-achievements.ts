@@ -1,5 +1,5 @@
 import type { AchievementsScreenView, ProfileScreenView, ScreenRenderContext } from "./contracts";
-import { backControl, cardGrid, scrollHint, tabs } from "./screen-primitives";
+import { backControl, cardGrid, replayRow, scrollHint, tabs } from "./screen-primitives";
 
 export function createProfileAchievementRenderers(context: ScreenRenderContext) {
   const { ui } = context;
@@ -14,24 +14,24 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
     const panelX = context.width / 2 - 460;
     if (view.message) ui.text(canvas, view.message, context.width / 2, 296, ui.t.type.caption, "center", ui.t.alpha.muted);
     if (view.tab === "replays" && view.replays) {
-      const top = 312, bottom = context.height - 110;
+      const top = 322, bottom = context.height - 110, rowHeight = 96, listX = context.width / 2 - 560, listWidth = 1120;
+      if (view.replays.length === 0 && view.emptyMessage) {
+        ui.text(canvas, view.emptyMessage, context.width / 2, top + 140, ui.t.type.body, "center", ui.t.alpha.muted);
+        context.enqueue({ x: context.width / 2 - 130, y: top + 168, w: 260, h: 46, label: "PLAY A RUN", action: { type: "profile.play" } });
+      }
       canvas.save(); canvas.beginPath(); canvas.rect(0, top - 8, context.width, bottom - top + 16); canvas.clip();
       view.replays.forEach((replay, index) => {
-        const y = 312 + index * 68 - context.scroll;
-        if (y + 58 < top - 8 || y > bottom + 8) return;
-        ui.card(canvas, panelX, y, 920, 58, false);
-        if (replay.thumbnailId) context.renderPreview?.(replay.thumbnailId, { x: panelX + 8, y: y + 4, w: 84, h: 48 });
-        const textX = replay.thumbnailId ? panelX + 106 : panelX + 18;
-        ui.text(canvas, replay.title, textX, y + 24, ui.t.type.label);
-        ui.text(canvas, replay.detail, textX, y + 44, ui.t.type.micro, "left", ui.t.alpha.muted);
-        const actionsX = panelX + 600;
-        context.enqueue({ x: actionsX, y: y + 9, w: 100, h: 40, label: "WATCH", enabled: replay.available, action: { type: "leaderboards.watchReplay", id: replay.id } });
+        const y = top + index * rowHeight - context.scroll;
+        if (y + rowHeight < top - 8 || y > bottom + 8) return;
+        replayRow(context, replay, listX, y, listWidth, replay.pinned ? "#e0a326" : undefined);
+        const actionsX = listX + listWidth - 392;
+        context.enqueue({ x: actionsX, y: y + 20, w: 110, h: 40, label: "▶  WATCH", enabled: replay.available, action: { type: "profile.watchReplay", id: replay.id } });
         if (replay.local) {
-          context.enqueue({ x: actionsX + 108, y: y + 9, w: 66, h: 40, label: replay.pinned ? "★" : "PIN", selected: replay.pinned,
+          context.enqueue({ x: actionsX + 118, y: y + 20, w: 78, h: 40, label: replay.pinned ? "★" : "PIN", selected: replay.pinned,
             action: { type: "profile.pinReplay", id: replay.id, pinned: !replay.pinned } });
-          context.enqueue({ x: actionsX + 182, y: y + 9, w: 86, h: 40, label: replay.shared ? "SHARED" : "SHARE", selected: replay.shared,
+          context.enqueue({ x: actionsX + 204, y: y + 20, w: 96, h: 40, label: replay.shared ? "SHARED" : "SHARE", selected: replay.shared,
             enabled: !replay.shared, action: { type: "profile.publishReplay", id: replay.id } });
-          context.enqueue({ x: actionsX + 276, y: y + 9, w: 44, h: 40, label: "✕", action: { type: "profile.deleteReplay", id: replay.id } });
+          context.enqueue({ x: actionsX + 308, y: y + 20, w: 64, h: 40, label: "✕", action: { type: "profile.deleteReplay", id: replay.id } });
         }
       });
       canvas.restore();

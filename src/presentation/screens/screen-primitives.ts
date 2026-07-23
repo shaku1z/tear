@@ -1,4 +1,4 @@
-import type { CardView, ScreenAction, ScreenRenderContext } from "./contracts";
+import type { CardView, ReplayView, ScreenAction, ScreenRenderContext } from "./contracts";
 
 export function ellipsize(context: CanvasRenderingContext2D, value: string, maximumWidth: number): string {
   if (context.measureText(value).width <= maximumWidth) return value;
@@ -21,13 +21,41 @@ export function backControl(context: ScreenRenderContext, to: ScreenAction = { t
 
 export function tabs(context: ScreenRenderContext, values: readonly { id: string; label: string; selected?: boolean | undefined }[], action: (id: string) => ScreenAction, y = 124): void {
   if (values.length === 0) return;
-  const gap = 8;
-  const width = Math.min(180, (context.width - 360 - gap * (values.length - 1)) / values.length);
+  const active = Math.max(0, values.findIndex((value) => value.selected));
+  context.ui.tabs(context.canvas, values.map((value) => value.id).join("-"), values.map((value) => value.label), active, y, (button) => {
+    const index = button._tab ?? 0;
+    const value = values[index];
+    if (value === undefined) return;
+    context.enqueue({ x: button.x, y: button.y, w: button.w, h: button.h, label: "", hiddenBox: true, action: action(value.id) });
+  });
+}
+
+export function chips(context: ScreenRenderContext,
+  values: readonly { id: string; label: string; selected?: boolean | undefined }[],
+  action: (id: string) => ScreenAction, y: number, width: number, height: number, gap = 8, size = 11): void {
+  if (values.length === 0) return;
   const start = (context.width - (width * values.length + gap * (values.length - 1))) / 2;
   values.forEach((value, index) => { context.enqueue({
-    x: start + index * (width + gap), y, w: width, h: 38,
-    label: value.label, selected: value.selected, action: action(value.id), size: 12,
+    x: start + index * (width + gap), y, w: width, h: height, label: value.label,
+    selected: value.selected, chip: true, action: action(value.id), size,
   }); });
+}
+
+/** Oracle replay-vault/feed row shared by Profile and Leaderboards. */
+export function replayRow(context: ScreenRenderContext, replay: ReplayView,
+  x: number, y: number, width: number, spineColor?: string): void {
+  const { canvas, ui } = context;
+  ui.card(canvas, x, y, width, 84, false);
+  if (spineColor) ui.spine(canvas, x, y, 84, spineColor);
+  canvas.save();
+  canvas.fillStyle = "#0e1017"; canvas.globalAlpha = 0.15; canvas.fillRect(x + 12, y + 6, 128, 72);
+  canvas.globalAlpha = 1;
+  if (replay.thumbnailId) context.renderPreview?.(replay.thumbnailId, { x: x + 12, y: y + 6, w: 128, h: 72 });
+  canvas.strokeStyle = ui.ink; canvas.globalAlpha = 0.35; canvas.lineWidth = 1; canvas.strokeRect(x + 12, y + 6, 128, 72);
+  canvas.restore();
+  ui.displayText(canvas, replay.title, x + 156, y + 30, ui.t.type.lead);
+  ui.text(canvas, replay.detail, x + 156, y + 54, ui.t.type.caption, "left", ui.t.alpha.soft);
+  if (replay.timestamp) ui.text(canvas, replay.timestamp, x + 156, y + 72, ui.t.type.micro, "left", ui.t.alpha.muted);
 }
 
 export function cardGrid(

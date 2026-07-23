@@ -34,7 +34,7 @@ export function buildProfileStats(stat: (key: string) => number, enterAmount: nu
 
 export interface ReplayIndexSource {
   readonly id: string; readonly ts: number; readonly pin?: boolean; readonly shareId?: string;
-  readonly sum?: Readonly<{ name?: string; mode?: string; diff?: string; wave?: number; score?: number; won?: boolean }>;
+  readonly sum?: Readonly<{ name?: string; mode?: string; diff?: string; wave?: number; score?: number; won?: boolean; thumb?: string }>;
 }
 export function buildProfileReplays(entries: readonly ReplayIndexSource[], modes: readonly ModeViewSource[]): readonly ReplayView[] {
   return entries.map((entry) => {
@@ -43,26 +43,32 @@ export function buildProfileReplays(entries: readonly ReplayIndexSource[], modes
       title: (summary.name ?? "You") + " — " + (mode?.label ?? summary.mode ?? "Run") + " · " + (summary.diff ?? ""),
       detail: "wave " + String(summary.wave ?? 0) + " · " + String(summary.score ?? 0) + " pts" + (summary.won ? " · ★ victory" : ""),
       available: true, local: true, pinned: entry.pin === true, shared: entry.shareId !== undefined,
-      timestamp: new Date(entry.ts).toLocaleDateString() });
+      ...(summary.thumb === undefined ? {} : { thumbnailId: summary.thumb }),
+      timestamp: new Date(entry.ts).toLocaleDateString() + (entry.shareId === undefined ? "" : " · PUBLISHED") });
   });
 }
 
 export interface LeaderboardRowSource {
   readonly replayId?: string; readonly shareId?: string; readonly name?: string; readonly uid?: string;
   readonly mode?: string; readonly diff?: string; readonly wave?: number; readonly score?: number; readonly time?: number;
-  readonly thumb?: string; readonly lb?: boolean; readonly createdAt?: string | number | Date;
+  readonly thumb?: string; readonly lb?: boolean; readonly won?: boolean; readonly createdAt?: string | number | Date;
 }
 export function buildLeaderboardRow(row: LeaderboardRowSource, modes: readonly ModeViewSource[],
   currentUserId: string | undefined, formatTime: (seconds: number) => string, fallbackId?: string): ReplayView {
   const mode = modes.find((entry) => entry.id === row.mode), id = row.replayId ?? row.shareId ?? fallbackId ?? "unavailable";
-  return Object.freeze({ id, title: (row.name ?? "Player") + (row.uid !== undefined && row.uid === currentUserId ? " (you)" : ""),
+  const mine = row.uid !== undefined && row.uid === currentUserId;
+  return Object.freeze({ id, title: row.mode !== undefined
+      ? (row.name ?? "Player") + " — " + (mode?.label ?? row.mode) + " · " + (row.diff ?? "")
+      : (row.name ?? "Player") + (mine ? " (you)" : ""),
     detail: row.mode !== undefined
-      ? (mode?.label ?? row.mode) + " · " + (row.diff ?? "") + " · wave " + String(row.wave ?? 0) + " · " + (row.score ?? 0).toLocaleString() + " pts"
+      ? "wave " + String(row.wave ?? 0) + " · " + (row.score ?? 0).toLocaleString() + " pts" + (row.won ? " · ★ victory" : "")
       : "wave " + String(row.wave ?? 0) + " · " + formatTime(row.time ?? 0) + " · " + (row.score ?? 0).toLocaleString() + " pts",
-    available: row.replayId !== undefined || row.shareId !== undefined || fallbackId !== undefined,
+    available: row.replayId !== undefined || row.shareId !== undefined || fallbackId !== undefined, mine,
+    wave: String(row.wave ?? 0), time: formatTime(row.time ?? 0), score: (row.score ?? 0).toLocaleString(),
     ...(row.thumb === undefined ? {} : { thumbnailId: row.thumb }),
     ...(row.lb ? { badge: "LEADERBOARD RUN" } : {}),
-    ...(row.createdAt === undefined ? {} : { timestamp: new Date(row.createdAt).toLocaleDateString() }) });
+    ...(row.createdAt === undefined ? {} : { timestamp: new Date(row.createdAt).toLocaleDateString()
+      + (row.lb ? " · LEADERBOARD RUN" : "") }) });
 }
 
 export interface ProfileAchievementSource { readonly id: string; readonly cat: string; readonly rarity: string }
@@ -81,7 +87,7 @@ export function buildProfileSnapshot(input: {
   readonly stat: (key: string) => number; readonly formatTime: (seconds: number) => string;
   readonly difficultyAccent: (difficultyId: string) => string;
 }): ProfileSnapshotResult {
-  const maximumScroll = Math.max(0, input.replays.length * 68 - (input.height - 422));
+  const maximumScroll = Math.max(0, input.replays.length * 96 - (input.height - 432));
   const scroll = Math.max(0, Math.min(maximumScroll, input.scroll));
   const rarityRank: Readonly<Record<string, number>> = { legendary: 0, epic: 1, rare: 2, uncommon: 3, common: 4 };
   const showcases = input.achievements.filter((entry) => input.unlocked(entry.id))
@@ -110,6 +116,7 @@ export function buildProfileSnapshot(input: {
       biomes: input.stages.map((stage, index) => ({ id: stage.id ?? String(index), label: stage.name, selected: index < input.stat("biomesSeen") })),
       bosses: input.bosses.map((boss) => ({ id: boss.id, label: boss.name,
         selected: input.stat("kill" + boss.id.charAt(0).toUpperCase() + boss.id.slice(1)) > 0 })) } } : {}),
-    ...(input.tab === "bests" && input.records.length === 0 ? { emptyMessage: "No runs recorded yet — go make some history." } : {}) };
+    ...(input.tab === "bests" && input.records.length === 0 ? { emptyMessage: "No runs recorded yet — go make some history." } : {}),
+    ...(input.tab === "replays" && input.replays.length === 0 ? { emptyMessage: "No runs recorded yet — every real run lands here automatically." } : {}) };
   return Object.freeze({ view: Object.freeze(view), maximumScroll });
 }

@@ -47,7 +47,7 @@ export interface LibraryScreenAdapters {
   readonly selectAchievementCategory: (id: string) => void;
   readonly selectLeaderboardTab: (id: string) => void;
   readonly selectLeaderboardBoard: (id: string) => void;
-  readonly watchReplay: (id: string) => void;
+  readonly watchReplay: (id: string, from?: "profile" | "leaderboards") => void;
   readonly publishReplay: (id: string) => void;
 }
 
@@ -99,7 +99,7 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
     selectAchievementCategory: (id) => { invoke((value) => { value.selectAchievementCategory(id); }); },
     selectLeaderboardTab: (id) => { invoke((value) => { value.selectLeaderboardTab(id); }); },
     selectLeaderboardBoard: (id) => { invoke((value) => { value.selectLeaderboardBoard(id); }); },
-    watchReplay: (id) => { invoke((value) => { value.watchReplay(id); }); },
+    watchReplay: (id, from) => { invoke((value) => { value.watchReplay(id, from); }); },
     publishReplay: (id) => { invoke((value) => { value.publishReplay(id); }); },
   };
   return Object.freeze(adapters);

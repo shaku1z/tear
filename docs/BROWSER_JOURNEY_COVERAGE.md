@@ -17,7 +17,7 @@ The progression/terminal gates intentionally fail when a required hook is absent
 
 - `openTierUp()` prepares a valid run with evolvable owned abilities, then uses the canonical tier-up transition.
 - `openTerminal(kind)` prepares canonical result state for `gameover`, `continue`, `win`, or `campaignWin`.
-- `openReplay()` enters a small valid replay fixture through the production replay loader.
+- `openReplay()` enters a small ee5e931-compatible replay fixture through the production replay loader, including the oracle's `{ id, tier, n }` final-loadout summary shape.
 - `openRename()` prepares the real DOM text-entry overlay and rename context without performing a cloud write.
 
 `state()` exposes read-only Attract, War Table selection, draft/reserve, replay, and rename summaries so the journeys can assert that real input reached the intended production action. These hooks are allowed only behind `PANTHEON_DEBUG` and may not bypass the production screen renderer or action handlers.

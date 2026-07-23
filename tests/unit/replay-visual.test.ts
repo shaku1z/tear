@@ -45,6 +45,23 @@ describe("visual replay migration", () => {
     expect(migrated).toMatchObject({ ok: true, recording: { v: 2, mode: "endless", score: 100 } });
   });
 
+  it("accepts the oracle's final-loadout summary shape used by published leaderboard ghosts", () => {
+    const fixture = { ...visualFixture(), loadout: [
+      { id: "tempo", tier: 3, n: 1 },
+      { id: "impale", tier: 1, n: 2 },
+    ] };
+    const migrated = migrateVisualRecording(JSON.parse(JSON.stringify(fixture)) as unknown);
+    expect(migrated).toMatchObject({ ok: true, recording: { loadout: [
+      { t: 0, id: "tempo", tier: 3, w: 0, n: 1 },
+      { t: 0, id: "impale", tier: 1, w: 0, n: 2 },
+    ] } });
+  });
+
+  it("does not loosen legacy loadout migration for malformed untrusted entries", () => {
+    const fixture = { ...visualFixture(), loadout: [{ id: "tempo", tier: 3 }] };
+    expect(migrateVisualRecording(fixture)).toMatchObject({ ok: false, error: "Replay event tracks are malformed." });
+  });
+
   it("round-trips a canonical hybrid packet with deterministic provenance and hash", () => {
     const packet = buildVisualReplayPacket(visualFixture(), provenance, [
       { kind: "command", id: 1, tick: 4, command: { type: "move", x: 1_000, y: 0 } },
@@ -123,6 +140,19 @@ describe("LegacyGhostEngine", () => {
     ghost.seek(0.45);
     expect(ghost.pose()).toMatchObject({ x: 45, y: 400, face: 1 });
     expect(ghost.duration()).toBeCloseTo(1.9);
+  });
+
+  it("keeps a final-loadout summary beside the canonical timed loadout track", () => {
+    const store: ReplayStore = { get: () => null, set: () => undefined };
+    const ghost = new LegacyGhostEngine({ store, document: {} as Document, now: () => 1, random: () => 0.5,
+      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 60, tearScore: () => provenance.tearScore } });
+    ghost.startRec();
+    ghost.loadoutPick("tempo", 2, 5);
+    for (let index = 0; index < 20; index += 1) ghost.sample(0.1, { x: index, y: 0, facing: 1 }, null, []);
+    const packet = ghost.stopRec({ loadout: [{ id: "tempo", tier: 2, n: 1 }] });
+    expect(packet?.loadout).toMatchObject([{ id: "tempo", tier: 2, w: 5 }]);
+    expect(packet?.finalLoadout).toEqual([{ id: "tempo", tier: 2, n: 1 }]);
+    expect(packet && verifyVisualReplayPacket(packet)).toBe(true);
   });
 
   it("seals the final TearScore journal instead of the pre-activation placeholder", () => {

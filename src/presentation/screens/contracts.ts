@@ -19,6 +19,7 @@ export type ScreenAction =
   | { readonly type: "codex.inspect"; readonly id: string }
   | { readonly type: "shop.buy"; readonly id: string }
   | { readonly type: "profile.selectTab"; readonly id: string }
+  | { readonly type: "profile.watchReplay"; readonly id: string }
   | { readonly type: "profile.signIn" }
   | { readonly type: "profile.signOut" }
   | { readonly type: "profile.rename" }
@@ -64,7 +65,7 @@ export type ScreenAction =
 export interface ScreenControl {
   readonly x: number; readonly y: number; readonly w: number; readonly h: number;
   readonly label: string; readonly action: ScreenAction;
-  readonly enabled?: boolean | undefined; readonly selected?: boolean | undefined; readonly ghost?: boolean | undefined;
+  readonly enabled?: boolean | undefined; readonly selected?: boolean | undefined; readonly ghost?: boolean | undefined; readonly chip?: boolean | undefined;
   readonly hero?: boolean | undefined; readonly glyph?: string | undefined; readonly dot?: string | undefined; readonly sub?: string | undefined; readonly accent?: string | undefined;
   readonly confirm?: boolean | undefined; readonly hiddenBox?: boolean | undefined; readonly size?: number | undefined;
 }
@@ -97,6 +98,8 @@ export interface ScreenUiPort {
   fitTitle(context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, startSize?: number, minSize?: number): void;
   spine(context: CanvasRenderingContext2D, x: number, y: number, height: number, color?: string, width?: number): void;
   badge(context: CanvasRenderingContext2D, text: string, x: number, y: number, color?: string, align?: CanvasTextAlign, size?: number): void;
+  tabs(context: CanvasRenderingContext2D, id: string, labels: string[], active: number, y: number,
+    push?: (button: Readonly<{ x: number; y: number; w: number; h: number; label: string; _tab?: number; _hideBox?: boolean }>) => void): void;
   keyBadge(context: CanvasRenderingContext2D, x: number, y: number, size: number, label: string | number, color?: string): void;
   tierPips(context: CanvasRenderingContext2D, cx: number, y: number, count: number, next: number, color: string): void;
   scrollHint(context: CanvasRenderingContext2D, x: number, y: number, canUp: boolean, canDown: boolean): void;
@@ -124,6 +127,7 @@ export interface ScreenRenderContext {
   readonly reducedMotion: boolean;
   /** True physical viewport expressed in logical coordinates, including aspect-ratio overscan. */
   readonly screenRectangle: Readonly<{ x: number; y: number; w: number; h: number }>;
+  readonly safeInsets: Readonly<{ l: number; r: number; t: number; b: number }>;
   enqueue(control: ScreenControl): void;
   renderPreview?(id: string, bounds: Readonly<{ x: number; y: number; w: number; h: number }>): void;
 }
@@ -148,7 +152,7 @@ export interface CardView extends ChoiceView {
   readonly boss?: boolean;
 }
 export interface StatView { readonly label: string; readonly value: string; readonly detail?: string; readonly glyph?: string; readonly accent?: string }
-export interface ReplayView { readonly id: string; readonly title: string; readonly detail: string; readonly available?: boolean; readonly badge?: string; readonly timestamp?: string; readonly thumbnailId?: string; readonly pinned?: boolean; readonly shared?: boolean; readonly local?: boolean; readonly rank?: number }
+export interface ReplayView { readonly id: string; readonly title: string; readonly detail: string; readonly available?: boolean; readonly badge?: string; readonly timestamp?: string; readonly thumbnailId?: string; readonly pinned?: boolean; readonly shared?: boolean; readonly local?: boolean; readonly rank?: number; readonly mine?: boolean; readonly wave?: string; readonly time?: string; readonly score?: string }
 export interface ProgressView {
   readonly label: string; readonly current: number; readonly goal: number; readonly detail?: string; readonly done?: boolean;
   /** Section heading the row belongs to on the pause/defeat progress panel (source drawRunProgressPanel). */
@@ -215,7 +219,7 @@ export interface LeaderboardsScreenView {
   readonly message?: string; readonly canScrollUp?: boolean; readonly canScrollDown?: boolean;
   readonly modes?: readonly ChoiceView[]; readonly difficulties?: readonly ChoiceView[];
   readonly podium?: readonly { readonly rank: number; readonly name: string; readonly detail: string; readonly color: string; readonly mine?: boolean; readonly replayId?: string }[];
-  readonly ownRank?: string; readonly signInRequired?: boolean;
+  readonly ownRank?: string; readonly signInRequired?: boolean; readonly legacyGhostId?: string;
 }
 export interface ReplayChapterView { readonly fraction: number; readonly boss: boolean }
 export interface ReplayScreenView {

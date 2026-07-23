@@ -20,4 +20,25 @@ describe("replay library controller", () => {
     controller.publish("a");
     expect(message).toHaveBeenCalledWith("already on the global feed");
   });
+
+  it("loads a linked leaderboard replay through the leaderboard status channel", async () => {
+    const record = { v: 2 }, enterReplay = vi.fn(() => true), profileMessage = vi.fn(), leaderboardMessage = vi.fn();
+    const controller = new ReplayLibraryController({ vault: { index: () => [], get: () => null, setShareId: vi.fn() },
+      cloud: { hasLeaderboards: () => true, loadGhost: vi.fn(), loadReplay: vi.fn(() => Promise.resolve(record)), publishReplay: vi.fn() },
+      enterReplay, setProfileMessage: profileMessage, setLeaderboardMessage: leaderboardMessage });
+    controller.watch("published-1", "leaderboards");
+    expect(leaderboardMessage).toHaveBeenCalledWith("loading replay…");
+    await vi.waitFor(() => { expect(enterReplay).toHaveBeenCalledWith(record, "leaderboards"); });
+    expect(leaderboardMessage).toHaveBeenLastCalledWith("");
+    expect(profileMessage).not.toHaveBeenCalled();
+  });
+
+  it("keeps linked replay failures visible on the surface that launched them", async () => {
+    const leaderboardMessage = vi.fn();
+    const controller = new ReplayLibraryController({ vault: { index: () => [], get: () => null, setShareId: vi.fn() },
+      cloud: { hasLeaderboards: () => true, loadGhost: vi.fn(), loadReplay: vi.fn(() => Promise.resolve(null)), publishReplay: vi.fn() },
+      enterReplay: vi.fn(() => false), setProfileMessage: vi.fn(), setLeaderboardMessage: leaderboardMessage });
+    controller.watch("missing", "leaderboards");
+    await vi.waitFor(() => { expect(leaderboardMessage).toHaveBeenLastCalledWith("couldn't load that replay"); });
+  });
 });

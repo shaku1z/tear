@@ -19,21 +19,24 @@ export interface ReplayLibraryPorts {
 
 export class ReplayLibraryController {
   readonly #ports: ReplayLibraryPorts;
+  #watchSequence = 0;
   constructor(ports: ReplayLibraryPorts) { this.#ports = ports; }
 
-  watch(id: string): void {
+  watch(id: string, from: "profile" | "leaderboards" = "profile"): void {
+    const sequence = ++this.#watchSequence;
     if (id.startsWith("ghost:")) { this.#watchGhost(id); return; }
     const local = this.#ports.vault.get(id);
     if (local !== null) {
-      this.#ports.setProfileMessage("");
-      if (!this.#ports.enterReplay(local, "profile")) this.#ports.setProfileMessage("couldn't load that recording");
+      this.#setMessage(from, "");
+      if (!this.#ports.enterReplay(local, from)) this.#setMessage(from, "couldn't load that recording");
       return;
     }
-    this.#ports.setProfileMessage("loading replay…");
+    this.#setMessage(from, "loading replay…");
     void this.#ports.cloud.loadReplay(id).then((record) => {
-      this.#ports.setProfileMessage("");
-      if (record === null || !this.#ports.enterReplay(record, "leaderboards")) this.#ports.setProfileMessage("couldn't load that replay");
-    }).catch(() => { this.#ports.setProfileMessage("couldn't load that replay"); });
+      if (sequence !== this.#watchSequence) return;
+      this.#setMessage(from, "");
+      if (record === null || !this.#ports.enterReplay(record, from)) this.#setMessage(from, "couldn't load that replay");
+    }).catch(() => { if (sequence === this.#watchSequence) this.#setMessage(from, "couldn't load that replay"); });
   }
 
   publish(id: string): void {
@@ -53,11 +56,18 @@ export class ReplayLibraryController {
   }
 
   #watchGhost(id: string): void {
+    const sequence = this.#watchSequence;
     const [, mode = "", difficulty = ""] = id.split(":");
     this.#ports.setLeaderboardMessage("loading replay…");
     void this.#ports.cloud.loadGhost(mode, difficulty).then((record) => {
+      if (sequence !== this.#watchSequence) return;
       this.#ports.setLeaderboardMessage("");
       if (record === null || !this.#ports.enterReplay(record, "leaderboards")) this.#ports.setLeaderboardMessage("no replay yet");
-    }).catch(() => { this.#ports.setLeaderboardMessage("no replay yet"); });
+    }).catch(() => { if (sequence === this.#watchSequence) this.#ports.setLeaderboardMessage("no replay yet"); });
+  }
+
+  #setMessage(from: "profile" | "leaderboards", message: string): void {
+    if (from === "profile") this.#ports.setProfileMessage(message);
+    else this.#ports.setLeaderboardMessage(message);
   }
 }

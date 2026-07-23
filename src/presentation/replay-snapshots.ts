@@ -5,6 +5,7 @@ export interface ReplayDataSource {
   readonly name?: string; readonly mode?: string; readonly wave?: number; readonly score?: number; readonly won?: boolean;
   readonly kills?: number; readonly peak?: number; readonly time?: number;
   readonly loadout?: readonly Readonly<{ id: string; tier?: number; n?: number }>[];
+  readonly finalLoadout?: readonly Readonly<{ id: string; tier?: number; n?: number }>[];
 }
 export interface ReplayPlaybackSource { readonly t: number; readonly playing: boolean; readonly speed: number }
 export interface ReplayChapterSource { readonly t: number; readonly boss?: boolean }
@@ -24,12 +25,18 @@ export function buildReplayScreenSnapshot(input: {
     { label: "PEAK MULTIPLIER", value: "×" + String(data.peak ?? 1) },
     { label: "TIME", value: input.formatTime(data.time ?? input.duration) },
   ];
-  const loadout = (data.loadout ?? []).flatMap((item) => {
+  const finalItems = new Map<string, { id: string; tier: number; n: number }>();
+  for (const item of data.finalLoadout ?? data.loadout ?? []) {
+    const previous = finalItems.get(item.id);
+    finalItems.set(item.id, { id: item.id, tier: item.tier ?? previous?.tier ?? 1,
+      n: item.n ?? ((previous?.n ?? 0) + 1) });
+  }
+  const loadout = [...finalItems.values()].flatMap((item) => {
     const upgrade = input.upgrades.find((entry) => entry.id === item.id);
     if (upgrade === undefined) return [];
     const category = input.categories[upgrade.cat] ?? input.fallbackCategory;
     return [{ id: item.id, label: upgrade.name, accent: upgrade.tiers !== undefined ? input.specialColor : category.color,
-      footer: upgrade.tiers !== undefined ? "TIER " + String(item.tier ?? 1) : (upgrade.unique ? "UNIQUE" : "×" + String(item.n ?? 1)) }];
+      footer: upgrade.tiers !== undefined ? "TIER " + String(item.tier) : (upgrade.unique ? "UNIQUE" : "×" + String(item.n)) }];
   });
   return Object.freeze({ id: "replay", title: data.name ?? "Player",
     detail: input.modeLabel + " · wave " + String(data.wave ?? 0) + " · " + String(data.score ?? 0) + " pts" + (data.won ? " · ★ VICTORY" : ""),

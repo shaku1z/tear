@@ -15,7 +15,14 @@ export interface VisualSpawnEvent {
 }
 export interface VisualDeathEvent { readonly t: number; readonly id: number; readonly c: string }
 export interface VisualEffectEvent { readonly t: number; readonly k: string; readonly x: number; readonly y: number }
-export interface VisualLoadoutEvent { readonly t: number; readonly id: string; readonly tier: number; readonly w: number }
+export interface VisualLoadoutEvent {
+  readonly t: number;
+  readonly id: string;
+  readonly tier: number;
+  readonly w: number;
+  /** Final-loadout stack count used by oracle-era replay packets. */
+  readonly n?: number;
+}
 
 export interface VisualRecordingV2 {
   readonly [key: string]: unknown;
@@ -84,9 +91,24 @@ function effectEvents(value: unknown): value is readonly VisualEffectEvent[] {
   return Array.isArray(value) && value.every((entry: unknown) => isRecord(entry) && finiteNumber(entry.t) && entry.t >= 0
     && typeof entry.k === "string" && finiteNumber(entry.x) && finiteNumber(entry.y));
 }
-function loadoutEvents(value: unknown): value is readonly VisualLoadoutEvent[] {
-  return Array.isArray(value) && value.every((entry: unknown) => isRecord(entry) && finiteNumber(entry.t) && entry.t >= 0
-    && typeof entry.id === "string" && finiteNumber(entry.tier) && finiteNumber(entry.w));
+function normalizeLoadoutEvents(value: unknown): readonly VisualLoadoutEvent[] | null {
+  if (!Array.isArray(value)) return null;
+  const normalized: VisualLoadoutEvent[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry) || typeof entry.id !== "string" || entry.id.length === 0 || !finiteNumber(entry.tier)) return null;
+    if (finiteNumber(entry.t) && entry.t >= 0 && finiteNumber(entry.w)) {
+      normalized.push(entry as unknown as VisualLoadoutEvent);
+      continue;
+    }
+    // ee5e931 packaged the final build summary over the timed loadout track via
+    // Object.assign. Public packets from that build contain { id, tier, n }.
+    if (entry.t === undefined && entry.w === undefined && finiteNumber(entry.n) && entry.n >= 1) {
+      normalized.push({ t: 0, id: entry.id, tier: entry.tier, w: 0, n: entry.n });
+      continue;
+    }
+    return null;
+  }
+  return normalized;
 }
 
 function sourceRecording(value: unknown): Record<string, unknown> | undefined {
@@ -124,9 +146,9 @@ export function migrateVisualRecording(value: unknown): VisualReplayResult {
   const esamp = isV2 ? source.esamp : [];
   const deaths = isV2 ? source.deaths : [];
   const events = isV2 ? source.events : [];
-  const loadout = isV2 ? source.loadout : [];
+  const loadout = isV2 ? normalizeLoadoutEvents(source.loadout) : [];
   if (!stageEvents(stages) || !waveEvents(waves) || !spawnEvents(spawns)
-    || !deathEvents(deaths) || !effectEvents(events) || !loadoutEvents(loadout)) {
+    || !deathEvents(deaths) || !effectEvents(events) || loadout === null) {
     return Object.freeze({ ok: false, error: "Replay event tracks are malformed." });
   }
   if (!Array.isArray(esamp) || !esamp.every((sample) => numberArray(sample) && sample.length >= 1 && sample.length % 3 === 1)) {

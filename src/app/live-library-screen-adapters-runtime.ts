@@ -58,7 +58,7 @@ export interface LibraryScreenAdapters {
   readonly selectAchievementCategory: (id: string) => void;
   readonly selectLeaderboardTab: (id: string) => void;
   readonly selectLeaderboardBoard: (id: string) => void;
-  readonly watchReplay: (id: string) => void;
+  readonly watchReplay: (id: string, from?: "profile" | "leaderboards") => void;
   readonly publishReplay: (id: string) => void;
 }
 
@@ -209,16 +209,16 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     services.renderers.achievements(result.view);
   };
   const renderLeaderboards = (): void => {
-    leaderboardTab = services.stepTab(leaderboardTabs, leaderboardTab, () => { services.setScroll(0); profileMessage = ""; });
+    leaderboardTab = services.stepTab(leaderboardTabs, leaderboardTab, () => { services.setScroll(0); leaderboardMessage = ""; });
     const cloud = d.Cloud.hasLeaderboards();
     if (leaderboardTab === "feed") {
       if (cloud && feedData === null && !feedLoading) {
         feedLoading = true;
         void d.Cloud.replayFeed(20).then((rows) => { feedData = rows ?? []; feedLoading = false; })
-          .catch(() => { feedData = []; feedLoading = false; profileMessage = "couldn't load the feed"; });
+          .catch(() => { feedData = []; feedLoading = false; leaderboardMessage = "couldn't load the feed"; });
       }
       const result = buildFeedLeaderboardSnapshot({ tabs: leaderboardTabs, tab: leaderboardTab, cloudAvailable: cloud,
-        message: profileMessage, loading: feedLoading, height: services.height, scroll: services.scroll(),
+        message: leaderboardMessage, loading: feedLoading, height: services.height, scroll: services.scroll(),
         rows: (feedData ?? []).map((row) => rowView(row, row.shareId)) });
       services.setScroll(services.clamp(services.scroll(), 0, result.maximumScroll)); services.renderers.leaderboards(result.view); return;
     }
@@ -263,10 +263,10 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       const count = 1 + (upgrade?.tiers?.length ?? 0); if (count > 1) codexTierView[id] = ((codexTierView[id] ?? 0) + 1) % count; },
     selectProfileTab: (id) => { profileTab = id; services.setScroll(0); profileMessage = ""; }, setProfileMessage: (message) => { profileMessage = message; },
     selectAchievementCategory: (id) => { achievementFilter = id; services.setScroll(0); },
-    selectLeaderboardTab: (id) => { leaderboardTab = id; services.setScroll(0); profileMessage = ""; },
+    selectLeaderboardTab: (id) => { leaderboardTab = id; services.setScroll(0); leaderboardMessage = ""; },
     selectLeaderboardBoard: (id) => { const [kind, value = ""] = id.split(":"); if (kind === "mode") leaderboardMode = value;
-      else if (kind === "difficulty") leaderboardDifficulty = value; services.setScroll(0); },
-    watchReplay: (id) => { replayLibrary.watch(id); }, publishReplay: (id) => { replayLibrary.publish(id); },
+      else if (kind === "difficulty") leaderboardDifficulty = value; services.setScroll(0); leaderboardMessage = ""; },
+    watchReplay: (id, from) => { replayLibrary.watch(id, from); }, publishReplay: (id) => { replayLibrary.publish(id); },
   };
   return Object.freeze(adapters);
 }

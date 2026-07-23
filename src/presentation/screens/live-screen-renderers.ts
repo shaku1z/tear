@@ -22,7 +22,7 @@ import type { createColdScreenRenderers } from "./cold-screen-renderers";
 export interface LiveScreenButton {
   readonly [key: string]: unknown;
   readonly x: number; readonly y: number; readonly w: number; readonly h: number; readonly label: string;
-  readonly enabled?: boolean; readonly sel?: boolean; readonly ghost?: boolean;
+  readonly enabled?: boolean; readonly sel?: boolean; readonly ghost?: boolean; readonly chip?: boolean;
   readonly hero?: boolean; readonly glyph?: string; readonly dot?: string; readonly sub?: string;
   readonly accent?: string; readonly confirm?: boolean; readonly _hideBox?: boolean;
   readonly size?: number; readonly action: () => void;
@@ -43,6 +43,7 @@ export interface LiveScreenRendererOptions {
   readonly touch: () => boolean;
   readonly reducedMotion: () => boolean;
   readonly screenRectangle?: () => Readonly<{ x: number; y: number; w: number; h: number }>;
+  readonly safeInsets?: () => Readonly<{ l: number; r: number; t: number; b: number }>;
   readonly dispatch: (action: ScreenAction) => void;
   readonly enqueue: (button: LiveScreenButton) => void;
   readonly renderPreview: (id: string, bounds: Readonly<{ x: number; y: number; w: number; h: number }>) => void;
@@ -54,6 +55,7 @@ function toButton(control: ScreenControl, dispatch: (action: ScreenAction) => vo
     ...(control.enabled === undefined ? {} : { enabled: control.enabled }),
     ...(control.selected === undefined ? {} : { sel: control.selected }),
     ...(control.ghost === undefined ? {} : { ghost: control.ghost }),
+    ...(control.chip === undefined ? {} : { chip: control.chip }),
     ...(control.hero === undefined ? {} : { hero: control.hero }),
     ...(control.glyph === undefined ? {} : { glyph: control.glyph }),
     ...(control.dot === undefined ? {} : { dot: control.dot }),
@@ -113,6 +115,7 @@ export function createLiveScreenRenderers(options: LiveScreenRendererOptions): L
     get screenRectangle() {
       return options.screenRectangle?.() ?? { x: 0, y: 0, w: options.width, h: options.height };
     },
+    get safeInsets() { return options.safeInsets?.() ?? { l: 0, r: 0, t: 0, b: 0 }; },
     enqueue(control: ScreenControl) { options.enqueue(toButton(control, options.dispatch)); },
     renderPreview: options.renderPreview,
   };

@@ -223,12 +223,14 @@ export class LegacyGhostEngine {
       ...recording.provenance,
       tearScore: tearScoreMetadata(this.#dependencies.defaults.tearScore()),
     };
+    const finalLoadout = Array.isArray(meta.loadout) ? meta.loadout : undefined;
     const raw: VisualRecordingV2 = {
       ...meta,
       v: 2, dt: this.RATE, edt: this.ERATE,
       px: recording.px, py: recording.py, tx: recording.tx, ty: recording.ty, fc: recording.fc,
       stages: recording.stages, waves: recording.waves, spawns: recording.spawns, esamp: recording.esamp,
       deaths: recording.deaths, events: recording.events, loadout: recording.loadout, thumb: recording.thumb,
+      ...(finalLoadout === undefined ? {} : { finalLoadout }),
     };
     return buildVisualReplayPacket(raw, recording.provenance, recording.actions);
   }
