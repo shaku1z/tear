@@ -34,7 +34,10 @@ class TestUi implements ScreenUiPort {
   font(size: number, bold?: boolean): string { return `${bold ? "bold " : ""}${String(size)}px monospace`; }
   fitTitle(): void { return; }
   spine(): void { return; }
-  badge(): void { return; }
+  badge(): number { return 48; }
+  avatar(): void { return; }
+  seal(): void { return; }
+  pips(): void { return; }
   tabs(_context: CanvasRenderingContext2D, _id: string, labels: string[], _active: number, y: number,
     push?: Parameters<ScreenUiPort["tabs"]>[5]): void {
     labels.forEach((label, index) => { push?.({ x: 650 + index * 150, y, w: 150, h: 34, label, _tab: index, _hideBox: true }); });
@@ -129,16 +132,20 @@ describe("legacy screen renderer registry", () => {
   });
 
   it("preserves critical legacy labels and the independent audio-control contract", () => {
-    const screenFiles = ["menu-setup.ts", "settings-rename.ts", "draft-reserve-tierup.ts", "pause-results.ts"];
+    const screenFiles = ["menu-setup.ts", "settings-rename.ts", "draft-reserve-tierup.ts", "pause-results.ts", "codex-shop.ts", "profile-achievements.ts"];
     const source = [
       ...screenFiles.map((file) => readFileSync(fileURLToPath(new URL(`../../src/presentation/screens/${file}`, import.meta.url)), "utf8")),
       readFileSync(fileURLToPath(new URL("../../src/presentation/ui-menu.ts", import.meta.url)), "utf8"),
     ].join("\n");
     for (const label of [
       "T E A R", "PLAY", "SHOP", "ACHIEVEMENTS", "LEADERBOARDS", "CODEX", "SETTINGS",
-      "BEGIN RUN", "MASTER", "MUSIC", "SOUND EFFECTS", "RESERVE A CARD", "THE WAY OPENS",
+      "START", "MASTER", "MUSIC", "SOUND EFFECTS", "RESERVE A CARD", "THE WAY OPENS",
+      "click to step through tiers", "DAILY CHALLENGES",
       "PAUSED", "QUIT RUN?", "YOU FELL", "DEFEATED", "VICTORY", "THE WORLD, RESTORED",
     ]) expect(source).toContain(label);
+    expect(source).toContain("ui.avatar");
+    expect(source).toContain("ui.seal");
+    expect(source).toContain("ui.pips");
     expect(source).not.toMatch(/localStorage|Cloud\.|CG\.|PROFILE\.|META\.|saveSettings|startRun\(/);
   });
 
@@ -151,7 +158,7 @@ describe("legacy screen renderer registry", () => {
     expect(controls.filter((control) => control.action.type === "setup.selectWeapon").map(({ y, h }) => ({ y, h }))).toEqual([
       { y: 168, h: 70 }, { y: 246, h: 70 }, { y: 324, h: 70 }, { y: 402, h: 70 },
     ]);
-    expect(controls.find((control) => control.action.type === "setup.start")).toMatchObject({ y: 726, h: 66 });
+    expect(controls.find((control) => control.action.type === "setup.start")).toMatchObject({ y: 726, h: 62, label: "START", glyph: "▶" });
     expect(controls.filter((control) => control.action.type === "setup.selectBoss")).toHaveLength(2);
   });
 

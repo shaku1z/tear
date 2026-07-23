@@ -31,7 +31,7 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
 
   // Exercise all selectable War Table columns, including the conditional boss picker.
   await clickAndWait(260, 360, "setup");
-  await page.mouse.click(430, 197 + 2 * 66); // GAUNTLET
+  await page.mouse.click(430, 195 + 2 * 60); // GAUNTLET
   await settleInput();
   await page.mouse.click(820, 197 + 2 * 66); // HARD
   await settleInput();
@@ -43,9 +43,9 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
   await clickAndWait(800, 850, "menu");
 
   await clickAndWait(260, 360, "setup");
-  await page.mouse.click(430, 197 + 5 * 66); // BOSS ONLY
+  await page.mouse.click(430, 509); // BOSS ONLY (first compact DEV row)
   await settleInput();
-  await page.mouse.click(870, 707); // THE WARDEN (first boss after SHUFFLE)
+  await page.mouse.click(870, 683); // THE WARDEN (first boss after SHUFFLE)
   await settleInput();
   assert.deepEqual(await setupSnapshot(), {
     mode: "bossonly", difficulty: "hard", weapon: "chainblade", boss: "warden",
@@ -57,11 +57,11 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
     .filter((mode) => !requestedMode || mode === requestedMode);
   for (let index = 0; index < modes.length; index++) {
     const mode = modes[index];
-    const cardIndex = ["campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox"].indexOf(mode);
+    const modeY = { campaign: 195, endless: 255, gauntlet: 315, playground: 375, tutorial: 435, bossonly: 509, sandbox: 549 }[mode];
     console.log(`navigation journey: starting ${mode}`);
     await boot();
     await clickAndWait(260, 360, "setup");
-    await page.mouse.click(430, 197 + cardIndex * 66);
+    await page.mouse.click(430, modeY);
     await settleInput();
     await page.mouse.click(800, 758);
     try {

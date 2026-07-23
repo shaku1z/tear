@@ -49,43 +49,90 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
   function setup(view: SetupScreenView): void {
     const { canvas } = context;
     ui.header(canvas, "SELECT RUN", undefined, context.enterAmount);
-    const columns = [
-      { title: "MODE", x: 240, width: 380, choices: view.modes, action: "setup.selectMode" as const, rowHeight: 66, cardHeight: 58 },
-      { title: "DIFFICULTY", x: 640, width: 360, choices: view.showDifficulty ? view.difficulties : [], action: "setup.selectDifficulty" as const, rowHeight: 66, cardHeight: 58 },
-      { title: "WEAPON", x: 1020, width: 340, choices: view.weapons, action: "setup.selectWeapon" as const, rowHeight: 78, cardHeight: 70 },
-    ];
-    columns.forEach((column) => {
-      ui.sectionLabel(canvas, column.title, column.x, 150, column.width);
-      column.choices.forEach((choice, index) => { context.enqueue({
-        x: column.x, y: 168 + index * column.rowHeight, w: column.width, h: column.cardHeight,
-        label: choice.label.toUpperCase(), glyph: choice.glyph, sub: choice.sub ?? choice.description,
-        selected: choice.selected, enabled: choice.enabled,
-        action: { type: column.action, id: choice.id },
+    const top = 150, rowTop = 168;
+    const modeX = 240, modeWidth = 380, difficultyX = 640, difficultyWidth = 360, weaponX = 1020, weaponWidth = 340;
+    ui.sectionLabel(canvas, "MODE", modeX, top, modeWidth);
+    const publicModes = view.modes.filter((choice) => choice.debug !== true);
+    publicModes.forEach((choice, index) => { context.enqueue({
+      x: modeX, y: rowTop + index * 60, w: modeWidth, h: 54, size: 17,
+      label: choice.label.toUpperCase(), glyph: choice.glyph, sub: choice.sub,
+      selected: choice.selected, enabled: choice.enabled,
+      action: { type: "setup.selectMode", id: choice.id },
+    }); });
+    const debugModes = view.modes.filter((choice) => choice.debug === true);
+    if (debugModes.length > 0) {
+      const debugY = rowTop + publicModes.length * 60 + 12;
+      ui.sectionLabel(canvas, "DEV", modeX, debugY, modeWidth, ui.t.color.muted);
+      debugModes.forEach((choice, index) => { context.enqueue({
+        x: modeX, y: debugY + 12 + index * 40, w: modeWidth, h: 34, size: 12,
+        label: choice.label.toUpperCase(), selected: choice.selected, enabled: choice.enabled,
+        action: { type: "setup.selectMode", id: choice.id },
       }); });
+    }
+
+    ui.sectionLabel(canvas, "DIFFICULTY", difficultyX, top, difficultyWidth);
+    if (view.showDifficulty) view.difficulties.forEach((choice, index) => {
+      const heat = ["#2f9e6b", "#13c4d6", "#e0a326", ui.t.color.danger, "#b06cff"][index] ?? ui.t.color.accent;
+      context.enqueue({
+        x: difficultyX, y: rowTop + index * 66, w: difficultyWidth, h: 58, size: 17,
+        label: choice.label.toUpperCase(), sub: choice.sub,
+        pips: { n: 5, filled: index + 1, color: heat },
+        selected: choice.selected, enabled: choice.enabled,
+        action: { type: "setup.selectDifficulty", id: choice.id },
+      });
     });
-    if (!view.showDifficulty) ui.text(canvas, "difficulty fixed for this training mode", 820, 250, ui.t.type.body, "center", ui.t.alpha.muted);
-    if (view.bestSummary) ui.tag(canvas, view.bestSummary, 240, height - 210, ui.t.color.muted, "left", ui.t.type.micro);
+    else {
+      ui.text(canvas, "set by the mode —", difficultyX + difficultyWidth / 2, rowTop + 120, ui.t.type.caption, "center", ui.t.alpha.muted);
+      ui.text(canvas, "training runs tune themselves", difficultyX + difficultyWidth / 2, rowTop + 144, ui.t.type.caption, "center", ui.t.alpha.muted);
+    }
+
+    ui.sectionLabel(canvas, "WEAPON", weaponX, top, weaponWidth);
+    view.weapons.forEach((choice, index) => { context.enqueue({
+      x: weaponX, y: rowTop + index * 78, w: weaponWidth, h: 70, size: 16,
+      label: choice.label.toUpperCase(), glyph: choice.glyph, sub: choice.sub,
+      selected: choice.selected, enabled: choice.enabled,
+      action: { type: "setup.selectWeapon", id: choice.id },
+    }); });
+
+    const blurbY = 588;
+    const foot = (x: number, w: number, text?: string): void => {
+      if (!text) return;
+      ui.divider(canvas, x, blurbY - 16, w, 0.1);
+      ui.wrappedText(canvas, text, x, blurbY, w - 8, 20, ui.t.type.caption, "left", ui.t.alpha.soft);
+    };
+    foot(modeX, modeWidth, view.modes.find((choice) => choice.selected)?.description);
+    foot(difficultyX, difficultyWidth, view.showDifficulty ? view.difficulties.find((choice) => choice.selected)?.description : undefined);
+    foot(weaponX, weaponWidth, view.weapons.find((choice) => choice.selected)?.description);
+
+    const stakesY = 668;
+    ui.divider(canvas, modeX, stakesY - 12, 1120, 0.14);
+    if (view.bestSummary) {
+      ui.tag(canvas, "YOUR BEST", modeX, stakesY + 6, ui.t.color.accent, "left", ui.t.type.micro);
+      ui.text(canvas, view.bestSummary.replace(/^YOUR BEST\s*·\s*/u, ""), modeX, stakesY + 30, ui.t.type.label, "left", ui.t.alpha.soft);
+    }
     if (view.bossChoices && view.bossChoices.length > 0) {
-      ui.sectionLabel(canvas, "BOSS TEST", 710, height - 234, 650);
+      ui.sectionLabel(canvas, "BOSS TEST", 710, stakesY - 18, 650);
       const gap = 8, choiceWidth = (650 - gap * (view.bossChoices.length - 1)) / view.bossChoices.length;
       view.bossChoices.forEach((choice, index) => {
         context.enqueue({
-          x: 710 + index * (choiceWidth + gap), y: height - 210, w: choiceWidth, h: 34,
+          x: 710 + index * (choiceWidth + gap), y: stakesY - 2, w: choiceWidth, h: 34,
           label: choice.label, selected: choice.selected, size: ui.t.type.micro,
           action: { type: "setup.selectBoss", id: choice.id },
         });
       });
     } else if (view.bounties && view.bounties.length > 0) {
-      ui.sectionLabel(canvas, "TODAY'S BOUNTIES", 710, height - 234, 650);
+      ui.tag(canvas, "TODAY'S BOUNTIES", modeX + 470, stakesY + 6, "#e0a326", "left", ui.t.type.micro);
       view.bounties.slice(0, 3).forEach((bounty, index) => {
-        const x = 710 + index * 218;
-        ui.text(canvas, bounty.label, x, height - 202, ui.t.type.micro, "left", bounty.done ? ui.t.alpha.faint : ui.t.alpha.soft);
-        ui.tag(canvas, bounty.detail, x, height - 180, bounty.done ? ui.t.color.muted : ui.t.color.accent, "left", ui.t.type.micro);
+        const x = modeX + 470 + index * 224;
+        ui.text(canvas, bounty.label, x, stakesY + 30, ui.t.type.micro, "left", bounty.done ? ui.t.alpha.faint : ui.t.alpha.soft);
+        ui.tag(canvas, bounty.detail, x, stakesY + 48, bounty.done ? "#2f9e6b" : ui.t.color.muted, "left", ui.t.type.micro);
       });
-    } else if (view.bountySummary) ui.tag(canvas, view.bountySummary, width - 240, height - 210, ui.t.color.muted, "right", ui.t.type.micro);
+    } else if (view.bountySummary) ui.tag(canvas, view.bountySummary, width - 240, stakesY + 30, ui.t.color.muted, "right", ui.t.type.micro);
+    canvas.font = ui.font(ui.t.type.caption, true);
+    const startWidth = Math.max(300, Math.round(canvas.measureText(view.startSummary).width) + 100);
     context.enqueue({
-      x: width / 2 - 210, y: height - 174, w: 420, h: 66,
-      label: "BEGIN RUN", sub: view.startSummary.toUpperCase(), hero: true,
+      x: width / 2 - startWidth / 2, y: 726, w: startWidth, h: 62,
+      label: "START", glyph: "▶", sub: view.startSummary.toUpperCase(), hero: true, ghost: true, size: 26,
       action: { type: "setup.start" },
     });
     backControl(context);

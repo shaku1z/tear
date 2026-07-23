@@ -72,6 +72,7 @@ export function createLiveDebugSnapshot(options: LiveDebugSnapshotOptions): obje
   const nameValue = input instanceof HTMLInputElement ? input.value.trim() : "";
   const renameValid = nameValue.length >= 3 && nameValue.length <= 16 && /^[a-zA-Z0-9 _-]+$/.test(nameValue);
   const run = state.run(), player = state.player(), blade = state.blade(), reward = options.reward, rename = options.rename;
+  const simulationTick = Math.round(d.CLOCK.sim * 120);
   return {
     game: options.screen, cinema: options.cinema.id, beat: options.cinema.beatId,
     active: options.cinema.active, cinemaElapsed: options.cinema.elapsed, touch: d.Input.touchActive(),
@@ -89,6 +90,22 @@ export function createLiveDebugSnapshot(options: LiveDebugSnapshotOptions): obje
     rename: rename.active ? { value: nameValue, length: nameValue.length, valid: renameValid, returnTo: rename.previous } : null,
     reducedMotion: d.A11Y.reducedMotion, highContrast: d.A11Y.highContrast, lowEffects: d.GFX.low,
     settings: options.settings, playerHp: player?.hp, enemyCount: state.enemies().length,
+    simulationTick, runTime: run?.runTime, waveTime: run?.waveTime,
+    playerTrace: player ? {
+      x: player.x, y: player.y, vx: player.vx, vy: player.vy, hp: player.hp,
+      onGround: player.onGround, coyote: player.coyote, jumpBuffer: player.jumpBuf,
+      dashTimer: player.dashTimer, dashCooldown: player.dashCd,
+    } : null,
+    bladeTrace: blade ? {
+      state: blade.state, x: blade.x, y: blade.y, vx: blade.vx, vy: blade.vy,
+      tipX: blade.tipX, tipY: blade.tipY, tipVX: blade.tipVX, tipVY: blade.tipVY,
+      aimX: blade.aimX, aimY: blade.aimY, reticleX: blade.reticleX, reticleY: blade.reticleY,
+      flyTime: blade.flyTime, tension: blade.tension, secondaryActive: blade.secondaryActive,
+    } : null,
+    enemyTrace: state.enemies().filter((enemy) => !enemy.dead).slice(0, 24).map((enemy) => ({
+      kind: enemy.kind, bossId: enemy.bossId, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy,
+      hp: enemy.hp, stun: enemy.stun, spawnT: enemy.spawnT, introT: enemy.introT ?? 0, aliveT: enemy.aliveT,
+    })),
     bladeAim: blade ? { x: blade.aimX, y: blade.aimY, reticleX: blade.reticleX, reticleY: blade.reticleY } : null,
     authoritative: options.authoritative,
     finale: options.finale && { phase: options.finale.phase, severed: options.finale.severed,

@@ -45,7 +45,8 @@ export function buildSetupSnapshot(input: {
     : undefined;
   return Object.freeze({ id: "setup",
     modes: input.modes.filter((entry) => !entry.debug || !input.livePlatform).map((entry) => ({ id: entry.id, label: entry.label,
-      description: entry.blurb, glyph: modeTrim[entry.id]?.glyph, sub: modeTrim[entry.id]?.sub, selected: entry.id === input.selectedMode })),
+      description: entry.blurb, glyph: modeTrim[entry.id]?.glyph, sub: modeTrim[entry.id]?.sub, selected: entry.id === input.selectedMode,
+      ...(entry.debug === true ? { debug: true } : {}) })),
     difficulties: input.difficulties.map((entry) => ({ id: entry.id, label: entry.label, description: entry.desc,
       sub: "×" + entry.mods.score.toFixed(1) + " score · " + (entry.id === "onehit" ? "×0.7→3.1 coins after wave 8" : "×" + entry.mods.coin.toFixed(2).replace(/0$/, "") + " coins"),
       selected: entry.id === input.selectedDifficulty })),

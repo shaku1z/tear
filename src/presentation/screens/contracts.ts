@@ -68,6 +68,7 @@ export interface ScreenControl {
   readonly enabled?: boolean | undefined; readonly selected?: boolean | undefined; readonly ghost?: boolean | undefined; readonly chip?: boolean | undefined;
   readonly hero?: boolean | undefined; readonly glyph?: string | undefined; readonly dot?: string | undefined; readonly sub?: string | undefined; readonly accent?: string | undefined;
   readonly confirm?: boolean | undefined; readonly hiddenBox?: boolean | undefined; readonly size?: number | undefined;
+  readonly pips?: Readonly<{ readonly n: number; readonly filled: number; readonly color: string }> | undefined;
 }
 
 export interface ScreenUiPort {
@@ -97,7 +98,10 @@ export interface ScreenUiPort {
   accentStrip(context: CanvasRenderingContext2D, x: number, y: number, width: number, color?: string, thickness?: number): void;
   fitTitle(context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, startSize?: number, minSize?: number): void;
   spine(context: CanvasRenderingContext2D, x: number, y: number, height: number, color?: string, width?: number): void;
-  badge(context: CanvasRenderingContext2D, text: string, x: number, y: number, color?: string, align?: CanvasTextAlign, size?: number): void;
+  badge(context: CanvasRenderingContext2D, text: string, x: number, y: number, color?: string, align?: CanvasTextAlign, size?: number): number;
+  avatar(context: CanvasRenderingContext2D, x: number, y: number, size: number): void;
+  seal(context: CanvasRenderingContext2D, cx: number, cy: number, radius: number, color: string, glyph: string, muted?: boolean): void;
+  pips(context: CanvasRenderingContext2D, rightX: number, y: number, count: number, filled: number, color?: string): void;
   tabs(context: CanvasRenderingContext2D, id: string, labels: string[], active: number, y: number,
     push?: (button: Readonly<{ x: number; y: number; w: number; h: number; label: string; _tab?: number; _hideBox?: boolean }>) => void): void;
   keyBadge(context: CanvasRenderingContext2D, x: number, y: number, size: number, label: string | number, color?: string): void;
@@ -136,6 +140,7 @@ export interface ChoiceView {
   readonly id: string; readonly label: string; readonly description?: string;
   readonly glyph?: string | undefined; readonly selected?: boolean | undefined; readonly enabled?: boolean | undefined;
   readonly accent?: string | undefined; readonly sub?: string | undefined;
+  readonly debug?: boolean | undefined;
 }
 export interface CardView extends ChoiceView {
   readonly category?: string; readonly badge?: string; readonly owned?: number;

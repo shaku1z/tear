@@ -34,6 +34,7 @@ export function buildAchievementSnapshot(input: {
       const unlocked = input.unlocked(entry.id);
       return { id: entry.id, label: entry.name, description: entry.desc,
         ...(category === undefined ? {} : { category: category.name }),
+        ...(category?.icon === undefined ? {} : { glyph: category.icon }),
         badge: rarity.name, locked: !unlocked, progress: input.progress(entry),
         progressLabel: unlocked ? "UNLOCKED" : input.progressText(entry),
         rewardPrimary: "◆ " + String(input.shardsFor(entry)) + " SHARDS", rewardSecondary: "◆ " + String(input.coinsFor(entry)) + " COINS",

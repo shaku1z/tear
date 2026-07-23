@@ -17,7 +17,7 @@ Dependencies point inward. Code in `domain`, `simulation`, and gameplay rules mu
 
 - The application state controller owns screens and legal transitions.
 - The run lifecycle owns run, wave, boss, reward, and termination phases.
-- The fixed-step scheduler owns authoritative 60 Hz simulation ticks. Rendering may interpolate but cannot advance game rules.
+- The fixed-step scheduler owns authoritative 120 Hz simulation ticks, matching the pre-redesign gameplay cadence. Rendering may interpolate but cannot advance game rules.
 - `RandomSource` and the simulation tick are the only gameplay randomness and time sources.
 - Input adapters normalize keyboard, pointer, touch, and controllers into semantic game actions.
 - Domain events fan completed facts out to presentation, audio, achievements, replay recording, and platform services.

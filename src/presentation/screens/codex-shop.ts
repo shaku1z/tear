@@ -1,5 +1,5 @@
 import type { CodexScreenView, ScreenRenderContext, ShopScreenView } from "./contracts";
-import { backControl, cardGrid, ellipsize, scrollHint, tabs } from "./screen-primitives";
+import { backControl, ellipsize, scrollHint, tabs } from "./screen-primitives";
 
 export function createCodexShopRenderers(context: ScreenRenderContext) {
   const { ui, width, height } = context;
@@ -46,11 +46,55 @@ export function createCodexShopRenderers(context: ScreenRenderContext) {
       return;
     }
     if (view.tab === "bestiary") bestiaryGrid(view.cards);
-    else {
-      cardGrid(context, view.cards, (id) => ({ type: "codex.inspect", id }), { top: 244, columns: 4 });
-      scrollHint(context, view.canScrollUp, view.canScrollDown);
-    }
+    else abilityGrid(view);
     backControl(context);
+  }
+
+  function abilityGrid(view: CodexScreenView): void {
+    const { canvas } = context;
+    const columns = 4, margin = 210, gap = 20, cardWidth = (width - margin * 2 - gap * 3) / columns;
+    const cardHeight = 150, stride = 170, top = 244, visibleRows = 3;
+    const offset = Math.max(0, Math.round(context.scroll / stride));
+    view.cards.slice(offset * columns, (offset + visibleRows) * columns).forEach((card, localIndex) => {
+      const column = localIndex % columns, row = Math.floor(localIndex / columns);
+      const x = margin + column * (cardWidth + gap), y = top + row * stride;
+      const accent = card.accent ?? ui.t.color.accent;
+      const special = card.badge?.includes("SPECIAL") === true;
+      const prized = special || card.badge?.includes("UNIQUE") === true;
+      ui.card(canvas, x, y, cardWidth, cardHeight, context.focus === offset * columns + localIndex);
+      ui.accentStrip(canvas, x, y, cardWidth, accent);
+      if (special) {
+        canvas.fillStyle = "#e8a32e"; canvas.globalAlpha = 0.9; canvas.fillRect(x, y + 6, cardWidth, 3);
+        const gleamX = x + ((context.time * 80 + x % 200) % (cardWidth + 60)) - 30;
+        const gradient = canvas.createLinearGradient(gleamX - 30, 0, gleamX + 30, 0);
+        gradient.addColorStop(0, "rgba(255,255,255,0)"); gradient.addColorStop(0.5, "rgba(255,255,255,0.85)");
+        gradient.addColorStop(1, "rgba(255,255,255,0)"); canvas.fillStyle = gradient; canvas.fillRect(x, y + 6, cardWidth, 3);
+        canvas.globalAlpha = 1;
+      }
+      if (card.badge) {
+        if (prized) ui.badge(canvas, card.badge, x + 12, y + 28, special ? "#e8a32e" : ui.t.color.unique, "left");
+        else ui.tag(canvas, card.badge, x + 12, y + 26, ui.t.color.muted, "left", ui.t.type.micro);
+      }
+      if (card.category) ui.tag(canvas, card.category, x + cardWidth - 12, y + 26, accent, "right", ui.t.type.micro);
+      canvas.fillStyle = ui.ink; canvas.textAlign = "left"; canvas.textBaseline = "alphabetic";
+      let titleSize = ui.t.type.title; canvas.font = ui.font(titleSize, true);
+      while (canvas.measureText(card.label).width > cardWidth - 24 && titleSize > ui.t.type.caption) {
+        titleSize -= 1; canvas.font = ui.font(titleSize, true);
+      }
+      canvas.fillText(card.label, x + 12, y + 54);
+      const tierCount = card.tierCount ?? 1, tier = Math.max(0, Math.min(card.tier ?? 0, tierCount - 1));
+      for (let index = 0; index < tierCount; index += 1) {
+        canvas.beginPath(); canvas.arc(x + 17 + index * 16, y + 73, 5, 0, Math.PI * 2);
+        if (index === tier) { canvas.fillStyle = accent; canvas.fill(); canvas.strokeStyle = ui.ink; canvas.lineWidth = 1.2; canvas.stroke(); }
+        else { canvas.strokeStyle = accent; canvas.lineWidth = 2; canvas.stroke(); }
+      }
+      if (tierCount > 1) ui.tag(canvas, tier === 0 ? "BASE" : `TIER ${String(tier + 1)}`, x + 19 + tierCount * 16, y + 77, accent, "left", ui.t.type.micro);
+      if (card.description) ui.wrappedText(canvas, card.description, x + 12, y + 99, cardWidth - 24, 17, ui.t.type.micro, "left");
+      if (tierCount > 1) ui.tag(canvas, "click to step through tiers", x + cardWidth / 2, y + cardHeight - 8, ui.t.color.muted, "center", ui.t.type.micro);
+      context.enqueue({ x, y, w: cardWidth, h: cardHeight, label: "", hiddenBox: true,
+        action: { type: "codex.inspect", id: card.id } });
+    });
+    scrollHint(context, view.canScrollUp, view.canScrollDown, top + visibleRows * stride + 2);
   }
 
   // ---- bestiary (source codexTabBestiary + drawBestiaryEntry) ----
@@ -172,8 +216,13 @@ export function createCodexShopRenderers(context: ScreenRenderContext) {
     const { canvas } = context;
     const gold = "#e0a326";
     ui.header(canvas, "SHOP", "permanent upgrades — applied at the start of every run", context.enterAmount, gold);
+    canvas.save(); canvas.textAlign = "right"; canvas.textBaseline = "alphabetic";
+    canvas.fillStyle = gold; canvas.font = ui.font(ui.t.type.h1, true);
+    const balance = view.coins.toLocaleString(), balanceWidth = canvas.measureText(balance).width;
+    canvas.fillText(balance, width - 220, 108);
+    canvas.font = ui.font(ui.t.type.title, true); canvas.fillText("◆", width - 220 - balanceWidth - 14, 108);
+    canvas.restore();
     ui.tag(canvas, "COINS", width - 220, 130, ui.t.color.muted, "right", ui.t.type.micro);
-    ui.displayText(canvas, view.coins.toLocaleString(), width - 220, 108, ui.t.type.h1, "right");
     ui.tag(canvas, `${String(view.ownedLevels)} / ${String(view.totalLevels)} LEVELS OWNED   ·   LIFETIME EARNED ◆ ${view.lifetimeEarned.toLocaleString()}`,
       240, 130, ui.t.color.muted, "left", ui.t.type.micro);
     const columnX = [240, 830] as const, columnWidth = 550, cardHeight = 62, rowHeight = 74;
@@ -185,31 +234,24 @@ export function createCodexShopRenderers(context: ScreenRenderContext) {
       const x = columnX[column] ?? columnX[0];
       let y = 176 - context.scroll;
       sections.forEach((section, localSection) => {
-        const sectionStart = y;
         y = ui.sectionLabel(canvas, section.label, x, y, columnWidth, gold) + 6;
-        ui.tag(canvas, String(section.items.length).padStart(2, "0"), x + columnWidth, sectionStart, gold, "right", ui.t.type.micro);
         section.items.forEach((item) => {
           const visible = y + cardHeight >= viewTop && y <= viewBottom;
           const level = item.level ?? 0, maximumLevel = item.maxLevel ?? 0;
           const maxed = maximumLevel > 0 && level >= maximumLevel;
-          ui.card(canvas, x, y, columnWidth, cardHeight, false, { edge: level > 0 ? gold : ui.t.color.muted });
+          ui.card(canvas, x, y, columnWidth, cardHeight, false);
           canvas.globalAlpha = level > 0 ? 0.16 : 0.055; canvas.fillStyle = level > 0 ? gold : ui.ink;
           canvas.fillRect(x + 10, y + 9, 44, 44); canvas.globalAlpha = 1;
           if (item.flash && item.flash > 0) { canvas.globalAlpha = item.flash * 0.3; canvas.fillStyle = gold; canvas.fillRect(x, y, columnWidth, cardHeight); canvas.globalAlpha = 1; }
           ui.tag(canvas, item.glyph ?? "◆", x + 32, y + 40, level > 0 ? gold : ui.t.color.muted, "center", 22);
-          ui.displayText(canvas, item.label, x + 66, y + 24, ui.t.type.lead);
+          ui.text(canvas, item.label, x + 66, y + 24, ui.t.type.body);
           if (maximumLevel > 0) {
             const nameWidth = canvas.measureText(item.label).width;
             ui.tag(canvas, `LV ${String(level)}/${String(maximumLevel)}`, Math.min(x + 306, x + 80 + nameWidth), y + 24, level > 0 ? gold : ui.t.color.muted, "left", ui.t.type.micro);
-            const right = x + 430, gap = 11, start = right - (maximumLevel - 1) * gap;
-            for (let pip = 0; pip < maximumLevel; pip++) {
-              canvas.beginPath(); canvas.arc(start + pip * gap, y + 31, 3.5, 0, Math.PI * 2);
-              if (pip < level) { canvas.fillStyle = gold; canvas.fill(); }
-              else { canvas.strokeStyle = ui.t.color.muted; canvas.lineWidth = 1; canvas.stroke(); }
-            }
+            ui.pips(canvas, x + columnWidth - 118, y + 31, maximumLevel, level, gold);
           }
           if (item.description) {
-            canvas.font = `${String(ui.t.font.bodyWeight)} ${String(ui.t.type.micro)}px ${ui.t.font.body}`;
+            canvas.font = ui.font(ui.t.type.micro, false);
             ui.text(canvas, ellipsize(canvas, item.description, columnWidth - 306), x + 66, y + 45, ui.t.type.micro, "left", ui.t.alpha.soft);
           }
           const canBuy = !maxed && item.enabled !== false;
