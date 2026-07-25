@@ -212,7 +212,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   const isDodgeProjectile = (value: unknown): value is Readonly<{ _dodged?: boolean }> =>
     typeof value === "object" && value !== null;
   const isSourceOwner = (value: unknown): value is GameEnemy & Parameters<typeof startVoidDescent>[0] =>
-    isGameEnemy(value) && "id" in value && typeof value.id === "string";
+    isGameEnemy(value);   // the descent derives its actor id from presentationId/bossId
   const isRitualOwner = (value: unknown): value is GameEnemy & NonNullable<Parameters<typeof startBossTransformation>[0]> =>
     isGameEnemy(value) && "bossName" in value && typeof value.bossName === "string" &&
     "cinematicT" in value && typeof value.cinematicT === "number";

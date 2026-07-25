@@ -50,6 +50,13 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
       this.elite = false;
       this.color = "#000";
       this.spawnT = 0;       // >0 while materializing (telegraph + can't act)
+      // Boss ritual/presentation state must EXIST from construction. The live runtime
+      // gates every phase transformation behind a `"cinematicT" in enemy` shape check
+      // (live-game-runtime isRitualOwner); a type-only `declare` emits no runtime field,
+      // so the very first ritual was refused, `cinematicRequest` was stranded, and the
+      // boss froze at its phase boundary — death-locked at 1 HP and unable to attack.
+      this.cinematicRequest = null;
+      this.cinematicT = 0;
       // Bosses linger for a short authored collapse instead of disappearing on the
       // lethal simulation tick. Ordinary enemies still die immediately.
       this.dying = false;
