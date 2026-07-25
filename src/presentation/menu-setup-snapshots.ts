@@ -1,3 +1,4 @@
+import { nowPlayingLabel, nowPlayingDetail } from "../audio/signal/now-playing";
 import type { MenuScreenView, SetupScreenView } from "./screens/contracts";
 
 export interface MenuModeSource { readonly id: string; readonly label: string; readonly blurb: string; readonly debug?: boolean }
@@ -16,7 +17,7 @@ export function buildMenuSnapshot(input: {
   readonly modes: readonly MenuModeSource[]; readonly difficulties: readonly MenuDifficultySource[];
   readonly biome: string; readonly pendingFinale: boolean;
 }): MenuScreenView {
-  return Object.freeze({ id: "menu", playerName: (input.campaignEmblem ? "◇ " : "") + (input.username || "GUEST"),
+  return Object.freeze({ id: "menu", nowPlaying: { label: nowPlayingLabel(), detail: nowPlayingDetail() }, playerName: (input.campaignEmblem ? "◇ " : "") + (input.username || "GUEST"),
     signedIn: input.signedIn, coins: input.coins, shards: input.shards, unlocked: input.unlocked,
     modeLabel: input.modes.find((entry) => entry.id === input.selectedMode)?.label ?? "Endless",
     difficultyLabel: input.difficulties.find((entry) => entry.id === input.selectedDifficulty)?.label ?? "Normal",

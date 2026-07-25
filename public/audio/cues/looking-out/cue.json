@@ -1,0 +1,168 @@
+{
+  "format": "tear-score-stem-cue",
+  "version": 1,
+  "id": "looking-out",
+  "name": "Looking Out",
+  "tempo": 165.9,
+  "timeSignature": [
+    4,
+    4
+  ],
+  "sourceSampleRate": 48000,
+  "grid": {
+    "downbeatFrame": 0,
+    "beatsPerBar": 4,
+    "barsPerLoop": 20,
+    "secondsPerBar": 1.44645,
+    "approvedBpm": 165.923468,
+    "barQuantizedCompatible": true
+  },
+  "loop": {
+    "startFrame": 0,
+    "endFrame": 1388592,
+    "mode": "hard"
+  },
+  "assetNote": "Pre-cut loop; frames file-relative.",
+  "stems": [
+    {
+      "id": "rhythm",
+      "role": "rhythm",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "hard",
+      "sources": [
+        {
+          "url": "opus/rhythm.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    },
+    {
+      "id": "pulse",
+      "role": "bass",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "hard",
+      "sources": [
+        {
+          "url": "opus/pulse.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    },
+    {
+      "id": "melody",
+      "role": "motif",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "crossfade",
+      "crossfadeFrames": 1440,
+      "sources": [
+        {
+          "url": "opus/melody.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    }
+  ],
+  "tiers": {
+    "0": {
+      "melody": -7
+    },
+    "1": {
+      "melody": -4,
+      "pulse": -7
+    },
+    "2": {
+      "melody": -2,
+      "pulse": -3,
+      "rhythm": -1
+    },
+    "3": {
+      "melody": -1,
+      "pulse": -1,
+      "rhythm": 0
+    },
+    "4": {
+      "melody": 0,
+      "pulse": 0,
+      "rhythm": 0
+    }
+  },
+  "provenance": {
+    "owner": "shatheartboy@gmail.com",
+    "license": "owned/licensed by owner",
+    "sourceSha256": "a4c6571c4c608f32ef1d5a8bd7c3aa8f767ebf1c49dd3b10b0fece41e1f10c8d"
+  },
+  "key": "C minor",
+  "analysis": {
+    "tempoConfidence": 0.033,
+    "tempoAlternatives": [
+      86.2
+    ],
+    "sourceDownbeatSeconds": 0.0406,
+    "secondsPerBar": 1.3929,
+    "keyConfidence": 0.053,
+    "keyAlternatives": [
+      "C major",
+      "F major"
+    ],
+    "seam": {
+      "seamDbBelowPeak": -32.9,
+      "rmsRatio": 0.94,
+      "verdict": "warning"
+    },
+    "analysedBpm": 172.3,
+    "approvedBpm": 165.923468,
+    "metricalFactor": 0.963,
+    "tempoDisagreementPercent": 3.7,
+    "phrasePlausibility": "typical",
+    "grid": {
+      "loopBars": 20,
+      "actualLoopFrames": 1388592,
+      "expectedLoopFrames": 1388592,
+      "barErrorFrames": 0,
+      "barErrorMs": 0,
+      "priorDriftMsPerCycle": 322,
+      "verdict": "review",
+      "consideredBpm": [
+        {
+          "bpm": 165.923,
+          "bars": 20,
+          "octaveDistancePercent": 3.7,
+          "phrase": "typical"
+        },
+        {
+          "bpm": 99.554,
+          "bars": 12,
+          "octaveDistancePercent": 15.56,
+          "phrase": "typical"
+        },
+        {
+          "bpm": 199.108,
+          "bars": 24,
+          "octaveDistancePercent": 15.56,
+          "phrase": "typical"
+        },
+        {
+          "bpm": 132.739,
+          "bars": 16,
+          "octaveDistancePercent": 54.08,
+          "phrase": "typical"
+        },
+        {
+          "bpm": 66.369,
+          "bars": 8,
+          "octaveDistancePercent": 54.08,
+          "phrase": "typical"
+        },
+        {
+          "bpm": 82.962,
+          "bars": 10,
+          "octaveDistancePercent": 3.7,
+          "phrase": "unusual"
+        }
+      ]
+    }
+  }
+}

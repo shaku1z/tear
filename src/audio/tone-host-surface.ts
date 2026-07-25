@@ -3,9 +3,11 @@ import { Distortion } from "tone/build/esm/effect/Distortion.js";
 import { MetalSynth } from "tone/build/esm/instrument/MetalSynth.js";
 import { MembraneSynth } from "tone/build/esm/instrument/MembraneSynth.js";
 import { MonoSynth } from "tone/build/esm/instrument/MonoSynth.js";
+import { FMSynth } from "tone/build/esm/instrument/FMSynth.js";
 import { NoiseSynth } from "tone/build/esm/instrument/NoiseSynth.js";
 import { PolySynth } from "tone/build/esm/instrument/PolySynth.js";
 import { Synth } from "tone/build/esm/instrument/Synth.js";
+import { Chorus } from "tone/build/esm/effect/Chorus.js";
 import { Filter } from "tone/build/esm/component/filter/Filter.js";
 import { Limiter } from "tone/build/esm/component/dynamics/Limiter.js";
 import { Context } from "tone/build/esm/core/context/Context.js";
@@ -40,7 +42,7 @@ const Transport = {
 function now(): number { return getContext().now(); }
 
 export {
-  Context, Distortion, FeedbackDelay, Filter, Gain, Limiter,
-  MembraneSynth, MetalSynth, MonoSynth, NoiseSynth, PolySynth, Synth,
+  Context, Chorus, Distortion, FeedbackDelay, Filter, Gain, Limiter,
+  MembraneSynth, MetalSynth, MonoSynth, FMSynth, NoiseSynth, PolySynth, Synth,
   Transport, now, setContext, start,
 };

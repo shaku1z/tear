@@ -171,6 +171,7 @@ export interface MenuScreenView {
   readonly coins: number; readonly shards: number; readonly unlocked: number;
   readonly modeLabel: string; readonly difficultyLabel: string; readonly biome?: string;
   readonly pendingFinale?: boolean;
+  readonly nowPlaying?: Readonly<{ label: string; detail: string }>;
 }
 export interface SetupScreenView {
   readonly id: "setup"; readonly modes: readonly ChoiceView[]; readonly difficulties: readonly ChoiceView[];

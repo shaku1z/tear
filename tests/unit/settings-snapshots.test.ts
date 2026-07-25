@@ -10,7 +10,10 @@ const environment = { lowGraphics: false, touch: false, installAvailable: false,
 describe("settings snapshots", () => {
   it("keeps hierarchical audio channels separate", () => {
     expect(buildSettingsSections("audio", settings, environment)[0]?.rows.map((row) => row.key)).toEqual([
-      "masterVolume", "musicVolume", "sfxVolume", "interfaceVolume", "masterMuted", "musicMuted", "sfxMuted", "interfaceMuted",
+      // Volumes, then THE SIGNAL's music preferences, then the mute toggles.
+      "masterVolume", "musicVolume", "sfxVolume", "interfaceVolume",
+      "menuMusic", "musicMode",
+      "masterMuted", "musicMuted", "sfxMuted", "interfaceMuted",
     ]);
   });
   it("exposes the full cinematic preference in accessibility", () => {

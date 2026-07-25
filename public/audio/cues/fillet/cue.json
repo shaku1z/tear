@@ -1,0 +1,185 @@
+{
+  "format": "tear-score-stem-cue",
+  "version": 1,
+  "id": "fillet",
+  "name": "Fillet",
+  "tempo": 109.7,
+  "timeSignature": [
+    4,
+    4
+  ],
+  "sourceSampleRate": 48000,
+  "grid": {
+    "downbeatFrame": 0,
+    "beatsPerBar": 4,
+    "barsPerLoop": 12,
+    "secondsPerBar": 2.187667,
+    "approvedBpm": 109.705927,
+    "barQuantizedCompatible": true
+  },
+  "loop": {
+    "startFrame": 0,
+    "endFrame": 1260096,
+    "mode": "hard"
+  },
+  "assetNote": "Pre-cut loop; frames file-relative.",
+  "stems": [
+    {
+      "id": "rhythm",
+      "role": "rhythm",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "hard",
+      "sources": [
+        {
+          "url": "opus/rhythm.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    },
+    {
+      "id": "pulse",
+      "role": "bass",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "hard",
+      "sources": [
+        {
+          "url": "opus/pulse.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    },
+    {
+      "id": "foundation",
+      "role": "bed",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "crossfade",
+      "crossfadeFrames": 1440,
+      "sources": [
+        {
+          "url": "opus/foundation.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    },
+    {
+      "id": "melody",
+      "role": "motif",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "crossfade",
+      "crossfadeFrames": 1440,
+      "sources": [
+        {
+          "url": "opus/melody.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    }
+  ],
+  "tiers": {
+    "0": {
+      "foundation": -7
+    },
+    "1": {
+      "foundation": -4,
+      "pulse": -7
+    },
+    "2": {
+      "foundation": -2,
+      "pulse": -3,
+      "rhythm": -1
+    },
+    "3": {
+      "foundation": -1,
+      "pulse": -1,
+      "rhythm": 0,
+      "melody": -2
+    },
+    "4": {
+      "foundation": 0,
+      "pulse": 0,
+      "rhythm": 0,
+      "melody": 0
+    }
+  },
+  "provenance": {
+    "owner": "shatheartboy@gmail.com",
+    "license": "owned/licensed by owner",
+    "sourceSha256": "0eef26bf8c402499b8b93ea99e0f6f11205504f05decc5473835777c70317b6f"
+  },
+  "key": "C# major",
+  "analysis": {
+    "tempoConfidence": 0.164,
+    "tempoAlternatives": [
+      56.1,
+      224.6
+    ],
+    "sourceDownbeatSeconds": 0.8884,
+    "secondsPerBar": 2.1371,
+    "keyConfidence": 0.094,
+    "keyAlternatives": [
+      "C# minor",
+      "E minor"
+    ],
+    "seam": {
+      "seamDbBelowPeak": -35.4,
+      "rmsRatio": 1.23,
+      "verdict": "pass"
+    },
+    "analysedBpm": 112.3,
+    "approvedBpm": 109.705927,
+    "metricalFactor": 0.9769,
+    "tempoDisagreementPercent": 2.31,
+    "phrasePlausibility": "typical",
+    "grid": {
+      "loopBars": 12,
+      "actualLoopFrames": 1260096,
+      "expectedLoopFrames": 1260096,
+      "barErrorFrames": 0,
+      "barErrorMs": 0,
+      "priorDriftMsPerCycle": 606,
+      "verdict": "review",
+      "consideredBpm": [
+        {
+          "bpm": 109.706,
+          "bars": 12,
+          "octaveDistancePercent": 2.31,
+          "phrase": "typical"
+        },
+        {
+          "bpm": 182.843,
+          "bars": 20,
+          "octaveDistancePercent": 18.59,
+          "phrase": "typical"
+        },
+        {
+          "bpm": 73.137,
+          "bars": 8,
+          "octaveDistancePercent": 34.87,
+          "phrase": "typical"
+        },
+        {
+          "bpm": 146.275,
+          "bars": 16,
+          "octaveDistancePercent": 34.87,
+          "phrase": "typical"
+        },
+        {
+          "bpm": 127.99,
+          "bars": 14,
+          "octaveDistancePercent": 13.97,
+          "phrase": "unusual"
+        },
+        {
+          "bpm": 91.422,
+          "bars": 10,
+          "octaveDistancePercent": 18.59,
+          "phrase": "unusual"
+        }
+      ]
+    }
+  }
+}

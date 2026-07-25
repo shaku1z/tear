@@ -4,6 +4,8 @@ import type { LegacyAppScreen } from "./legacy-state-controller";
 import { RenameController, type RenameSnapshot } from "./rename-controller";
 import type { SettingsController, GameSettings } from "./settings-controller";
 import { buildSettingsSections } from "../presentation/settings-snapshots";
+import { MENU_MUSIC_CHOICES } from "../audio/signal/loadout";
+import { STATION_CHOICES } from "../audio/signal/active-station";
 
 type Dependencies = Pick<GameRuntimeDependencies, "APP" | "GFX" | "Input" | "PAD" | "PROFILE" | "Cloud" | "PwaUpdate" | "UI">;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
@@ -38,7 +40,7 @@ const presetMeta = Object.freeze({
   split: { name: "SPLIT", tag: "ERGONOMIC", line: "Blade utility moves to the left hand.", map: "L1 Throw · L2 Tether · R1 Jump · R2 Dash" },
 });
 const settingsTabs = [["general", "GENERAL"], ["controls", "CONTROLS"], ["audio", "AUDIO"],
-  ["video", "VIDEO"], ["accessibility", "ACCESS"]] as const;
+  ["video", "VIDEO"], ["accessibility", "ACCESS"], ["signal", "SIGNAL"]] as const;
 
 export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRenameServices): SettingsRenameAdapters {
   const d = services.dependencies;
@@ -56,6 +58,9 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
     else if (key === "controls") cycle(key, ["auto", "touch", "desktop"]);
     else if (key === "touchAim") cycle(key, ["stick", "drag"]);
     else if (key === "cinematics") cycle(key, ["full", "brief", "off"]);
+    else if (key === "musicMode") cycle(key, ["adaptive", "full", "calm", "dynamic"]);
+    else if (key === "menuMusic") cycle(key, [...MENU_MUSIC_CHOICES]);
+    else if (key === "station") cycle(key, [...STATION_CHOICES]);
     else if (key === "guide") services.setCodexGuide();
     else if (key === "install" && services.installPrompt.available) services.installPrompt.prompt();
     else if (key === "update") void d.PwaUpdate.apply();

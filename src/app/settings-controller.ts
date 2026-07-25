@@ -1,4 +1,7 @@
 import type { LegacyAudioCompatibility } from "../audio/legacy-live-audio";
+import { setMusicMode } from "../audio/music-mode";
+import { MENU_MUSIC_DEFAULT, isMenuMusicChoice, setMenuMusic } from "../audio/signal/loadout";
+import { isStationChoice, setActiveStation } from "../audio/signal/active-station";
 import { sanitizeCinematicPreference, type CinematicPreference } from "./cinematic-preference";
 
 export type { CinematicPreference } from "./cinematic-preference";
@@ -9,6 +12,14 @@ export type TouchAimPreference = "stick" | "drag";
 export type TetherPreference = "hold" | "toggle";
 export type VibrationPreference = "off" | "low" | "medium" | "high";
 export type GlyphPreference = "auto" | "playstation" | "xbox" | "generic";
+/**
+ * How the recorded soundtrack reacts to play.
+ * `adaptive` — layers arrive/leave with fight intensity (default).
+ * `full`     — every stem always plays at full arrangement.
+ * `calm`     — stay in the relaxed arrangement; never escalate.
+ * `dynamic`  — adaptive with a wider swing (quieter lulls, bigger peaks).
+ */
+export type MusicModePreference = "adaptive" | "full" | "calm" | "dynamic";
 
 export interface GameSettings extends Record<string, unknown> {
   sens: number;
@@ -39,6 +50,11 @@ export interface GameSettings extends Record<string, unknown> {
   vibration: VibrationPreference;
   glyphStyle: GlyphPreference;
   autoPauseDisconnect: boolean;
+  musicMode: MusicModePreference;
+  /** THE SIGNAL: which work plays on the menu/shell ("default" = canonical). */
+  menuMusic: string;
+  /** THE SIGNAL: active radio station ("canonical" = Director mode). */
+  station: string;
 }
 
 interface SettingsConfig {
@@ -88,6 +104,7 @@ export interface SettingsControllerDependencies {
 }
 
 const vibrationValues: readonly VibrationPreference[] = ["off", "low", "medium", "high"];
+const musicModeValues: readonly MusicModePreference[] = ["adaptive", "full", "calm", "dynamic"];
 const glyphValues: readonly GlyphPreference[] = ["auto", "playstation", "xbox", "generic"];
 
 function clamp(value: number, minimum: number, maximum: number): number {
@@ -124,6 +141,9 @@ function defaults(aimSensitivity: number): GameSettings {
     vibration: "medium",
     glyphStyle: "auto",
     autoPauseDisconnect: true,
+    musicMode: "adaptive",
+    menuMusic: MENU_MUSIC_DEFAULT,
+    station: "canonical",
   };
 }
 
@@ -192,6 +212,12 @@ export class SettingsController {
     config.pad.doubleTapDash = settings.dashDoubleTap;
     config.pad.vibration = vibrationValues.includes(settings.vibration) ? settings.vibration : "medium";
     config.pad.glyphStyle = glyphValues.includes(settings.glyphStyle) ? settings.glyphStyle : "auto";
+    settings.musicMode = musicModeValues.includes(settings.musicMode) ? settings.musicMode : "adaptive";
+    setMusicMode(settings.musicMode);
+    settings.menuMusic = isMenuMusicChoice(settings.menuMusic) ? settings.menuMusic : MENU_MUSIC_DEFAULT;
+    setMenuMusic(settings.menuMusic);
+    settings.station = isStationChoice(settings.station) ? settings.station : "canonical";
+    setActiveStation(settings.station);
     audio.applySettings(settings);
   }
 

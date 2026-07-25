@@ -38,6 +38,13 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
       x: railX, y: 426 + index * 61, w: railWidth, h: 52, glyph, label, ghost: true,
       action: { type: "navigate", to, resetScroll: to !== "settings" },
     }); });
+    if (view.nowPlaying) {
+      context.enqueue({
+        x: railX, y: 426 + rail.length * 61 + 10, w: railWidth, h: 46, glyph: "♪", ghost: true,
+        label: view.nowPlaying.label, sub: view.nowPlaying.detail,
+        action: { type: "navigate", to: "settings", tab: "signal" },
+      });
+    }
     if (view.pendingFinale) {
       ui.tag(canvas, "◇ SAVED ADVENTURE CLEAR", railX + railWidth + 34, height - 146, ui.t.color.accent, "left", ui.t.type.micro);
       ui.text(canvas, "The Final Cut was interrupted.", railX + railWidth + 34, height - 118, ui.t.type.caption, "left", ui.t.alpha.soft);
