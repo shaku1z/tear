@@ -50,7 +50,9 @@ describe("cue grid integrity", () => {
   it.each(ids)("%s: approvedBpm agrees with secondsPerBar", (id) => {
     const cue = load(id);
     const implied = (60 * cue.grid.beatsPerBar) / cue.grid.secondsPerBar;
-    expect(cue.grid.approvedBpm).toBeCloseTo(implied, 4);
+    // secondsPerBar in the manifest is itself rounded to 6dp, so recomputing
+    // bpm from it reintroduces that rounding; 3dp is well past audible.
+    expect(cue.grid.approvedBpm).toBeCloseTo(implied, 3);
     // `tempo` is the rounded display value of the same number, never a guess.
     expect(cue.tempo).toBeCloseTo(cue.grid.approvedBpm, 1);
   });

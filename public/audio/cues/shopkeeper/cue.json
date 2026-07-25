@@ -156,12 +156,6 @@
           "phrase": "typical"
         },
         {
-          "bpm": 123.04,
-          "bars": 12,
-          "octaveDistancePercent": 50.05,
-          "phrase": "typical"
-        },
-        {
           "bpm": 143.547,
           "bars": 14,
           "octaveDistancePercent": 12.47,
@@ -178,6 +172,12 @@
           "bars": 10,
           "octaveDistancePercent": 25.04,
           "phrase": "unusual"
+        },
+        {
+          "bpm": 123.04,
+          "bars": 12,
+          "octaveDistancePercent": 50.05,
+          "phrase": "typical"
         }
       ]
     }

@@ -144,7 +144,7 @@
       "expectedLoopFrames": 724752,
       "barErrorFrames": 0,
       "barErrorMs": 0,
-      "priorDriftMsPerCycle": 52,
+      "priorDriftMsPerCycle": 5,
       "verdict": "pass",
       "consideredBpm": [
         {
@@ -160,16 +160,16 @@
           "phrase": "typical"
         },
         {
-          "bpm": 190.741,
-          "bars": 12,
-          "octaveDistancePercent": 25.26,
-          "phrase": "typical"
-        },
-        {
           "bpm": 95.371,
           "bars": 6,
           "octaveDistancePercent": 25.26,
           "phrase": "unusual"
+        },
+        {
+          "bpm": 190.741,
+          "bars": 12,
+          "octaveDistancePercent": 25.26,
+          "phrase": "typical"
         },
         {
           "bpm": 158.951,

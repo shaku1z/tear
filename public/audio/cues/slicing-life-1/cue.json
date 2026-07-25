@@ -140,9 +140,15 @@
       "expectedLoopFrames": 2100336,
       "barErrorFrames": 0,
       "barErrorMs": 0,
-      "priorDriftMsPerCycle": 1254,
+      "priorDriftMsPerCycle": 21,
       "verdict": "review",
       "consideredBpm": [
+        {
+          "bpm": 164.545,
+          "bars": 30,
+          "octaveDistancePercent": 2.87,
+          "phrase": "unusual"
+        },
         {
           "bpm": 87.757,
           "bars": 16,
@@ -156,28 +162,22 @@
           "phrase": "typical"
         },
         {
+          "bpm": 76.788,
+          "bars": 14,
+          "octaveDistancePercent": 9.34,
+          "phrase": "unusual"
+        },
+        {
           "bpm": 153.575,
           "bars": 28,
           "octaveDistancePercent": 9.34,
           "phrase": "typical"
         },
         {
-          "bpm": 197.454,
-          "bars": 36,
-          "octaveDistancePercent": 16.56,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 109.697,
-          "bars": 20,
-          "octaveDistancePercent": 29.51,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 131.636,
-          "bars": 24,
-          "octaveDistancePercent": 55.41,
-          "phrase": "typical"
+          "bpm": 186.484,
+          "bars": 34,
+          "octaveDistancePercent": 10.09,
+          "phrase": "unusual"
         }
       ]
     }

@@ -3,7 +3,7 @@
   "version": 1,
   "id": "steady",
   "name": "Steady",
-  "tempo": 188.5,
+  "tempo": 157.1,
   "timeSignature": [
     4,
     4
@@ -12,9 +12,9 @@
   "grid": {
     "downbeatFrame": 0,
     "beatsPerBar": 4,
-    "barsPerLoop": 12,
-    "secondsPerBar": 1.272922,
-    "approvedBpm": 188.5426,
+    "barsPerLoop": 10,
+    "secondsPerBar": 1.527506,
+    "approvedBpm": 157.118833,
     "barQuantizedCompatible": false
   },
   "loop": {
@@ -114,19 +114,31 @@
       "verdict": "pass"
     },
     "analysedBpm": 82,
-    "approvedBpm": 188.5426,
-    "metricalFactor": 2.2993,
-    "tempoDisagreementPercent": 14.97,
-    "phrasePlausibility": "typical",
+    "approvedBpm": 157.118833,
+    "metricalFactor": 1.9161,
+    "tempoDisagreementPercent": 4.2,
+    "phrasePlausibility": "unusual",
     "grid": {
-      "loopBars": 12,
+      "loopBars": 10,
       "actualLoopFrames": 733203,
       "expectedLoopFrames": 733203,
       "barErrorFrames": 0,
       "barErrorMs": 0,
-      "priorDriftMsPerCycle": 641,
+      "priorDriftMsPerCycle": 3,
       "verdict": "needs-approval",
       "consideredBpm": [
+        {
+          "bpm": 157.119,
+          "bars": 10,
+          "octaveDistancePercent": 4.2,
+          "phrase": "unusual"
+        },
+        {
+          "bpm": 94.271,
+          "bars": 6,
+          "octaveDistancePercent": 14.97,
+          "phrase": "unusual"
+        },
         {
           "bpm": 188.543,
           "bars": 12,
@@ -144,18 +156,6 @@
           "bars": 4,
           "octaveDistancePercent": 53.29,
           "phrase": "typical"
-        },
-        {
-          "bpm": 157.119,
-          "bars": 10,
-          "octaveDistancePercent": 4.2,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 94.271,
-          "bars": 6,
-          "octaveDistancePercent": 14.97,
-          "phrase": "unusual"
         },
         {
           "bpm": 78.559,

@@ -3,7 +3,7 @@
   "version": 1,
   "id": "bladeless",
   "name": "Bladeless",
-  "tempo": 176.7,
+  "tempo": 159,
   "timeSignature": [
     4,
     4
@@ -12,10 +12,10 @@
   "grid": {
     "downbeatFrame": 0,
     "beatsPerBar": 4,
-    "barsPerLoop": 20,
-    "secondsPerBar": 1.358249,
-    "approvedBpm": 176.698092,
-    "barQuantizedCompatible": false
+    "barsPerLoop": 18,
+    "secondsPerBar": 1.509166,
+    "approvedBpm": 159.028283,
+    "barQuantizedCompatible": true
   },
   "loop": {
     "startFrame": 0,
@@ -129,19 +129,31 @@
       "verdict": "needs-listening"
     },
     "analysedBpm": 161.5,
-    "approvedBpm": 176.698092,
-    "metricalFactor": 1.0941,
-    "tempoDisagreementPercent": 9.41,
-    "phrasePlausibility": "typical",
+    "approvedBpm": 159.028283,
+    "metricalFactor": 0.9847,
+    "tempoDisagreementPercent": 1.53,
+    "phrasePlausibility": "unusual",
     "grid": {
-      "loopBars": 20,
+      "loopBars": 18,
       "actualLoopFrames": 1303919,
       "expectedLoopFrames": 1303919,
       "barErrorFrames": 0,
       "barErrorMs": 0,
-      "priorDriftMsPerCycle": 416,
-      "verdict": "needs-approval",
+      "priorDriftMsPerCycle": 0,
+      "verdict": "review",
       "consideredBpm": [
+        {
+          "bpm": 159.028,
+          "bars": 18,
+          "octaveDistancePercent": 1.53,
+          "phrase": "unusual"
+        },
+        {
+          "bpm": 88.349,
+          "bars": 10,
+          "octaveDistancePercent": 9.41,
+          "phrase": "unusual"
+        },
         {
           "bpm": 176.698,
           "bars": 20,
@@ -161,21 +173,9 @@
           "phrase": "typical"
         },
         {
-          "bpm": 106.019,
-          "bars": 12,
-          "octaveDistancePercent": 31.29,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 159.028,
-          "bars": 18,
-          "octaveDistancePercent": 1.53,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 88.349,
-          "bars": 10,
-          "octaveDistancePercent": 9.41,
+          "bpm": 194.368,
+          "bars": 22,
+          "octaveDistancePercent": 20.35,
           "phrase": "unusual"
         }
       ]

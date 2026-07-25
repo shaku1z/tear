@@ -558,7 +558,7 @@
       "id": "bladeless",
       "title": "Bladeless",
       "category": "source-work",
-      "tempo": 176.7,
+      "tempo": 159,
       "key": "C# minor",
       "tags": [
         "void",
@@ -614,13 +614,13 @@
           "master": "works/bladeless/renders/masters/bladeless-ost-main.wav"
         }
       },
-      "barQuantized": false
+      "barQuantized": true
     },
     {
       "id": "steady",
       "title": "Steady",
       "category": "source-work",
-      "tempo": 188.5,
+      "tempo": 157.1,
       "key": "A minor",
       "tags": [
         "void",
