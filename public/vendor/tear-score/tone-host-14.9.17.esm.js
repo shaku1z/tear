@@ -1,49 +1,49 @@
-var Me = (s, e) => () => (e || (s((e = { exports: {} }).exports, e), s = null), e.exports);
-function Hi(s) {
+var De = (s, e) => () => (e || (s((e = { exports: {} }).exports, e), s = null), e.exports);
+function da(s) {
   return Math.pow(10, s / 20);
 }
-function Qi(s) {
+function pa(s) {
   return 20 * (Math.log(s) / Math.LN10);
 }
-function Yi(s) {
+function fa(s) {
   return Math.pow(2, s / 12);
 }
-var yn = 440;
-function Ji() {
-  return yn;
+var ys = 440;
+function ma() {
+  return ys;
 }
-function Ki(s) {
-  yn = s;
+function _a(s) {
+  ys = s;
 }
-function at(s) {
-  return Math.round(ea(s));
+function ct(s) {
+  return Math.round(ga(s));
 }
-function ea(s) {
-  return 69 + 12 * Math.log2(s / yn);
+function ga(s) {
+  return 69 + 12 * Math.log2(s / ys);
 }
-function Dr(s) {
-  return yn * Math.pow(2, (s - 69) / 12);
+function Ui(s) {
+  return ys * Math.pow(2, (s - 69) / 12);
 }
-var ta = /* @__PURE__ */ Me(((s, e) => {
+var va = /* @__PURE__ */ De(((s, e) => {
   function t(n) {
     if (Array.isArray(n)) return n;
   }
   e.exports = t, e.exports.__esModule = !0, e.exports.default = e.exports;
-})), na = /* @__PURE__ */ Me(((s, e) => {
-  function t(n, r) {
-    var i = n == null ? null : typeof Symbol < "u" && n[Symbol.iterator] || n["@@iterator"];
-    if (i != null) {
+})), ya = /* @__PURE__ */ De(((s, e) => {
+  function t(n, i) {
+    var r = n == null ? null : typeof Symbol < "u" && n[Symbol.iterator] || n["@@iterator"];
+    if (r != null) {
       var o, a, c, l, u = [], h = !0, d = !1;
       try {
-        if (c = (i = i.call(n)).next, r === 0) {
-          if (Object(i) !== i) return;
+        if (c = (r = r.call(n)).next, i === 0) {
+          if (Object(r) !== r) return;
           h = !1;
-        } else for (; !(h = (o = c.call(i)).done) && (u.push(o.value), u.length !== r); h = !0) ;
+        } else for (; !(h = (o = c.call(r)).done) && (u.push(o.value), u.length !== i); h = !0) ;
       } catch (f) {
         d = !0, a = f;
       } finally {
         try {
-          if (!h && i.return != null && (l = i.return(), Object(l) !== l)) return;
+          if (!h && r.return != null && (l = r.return(), Object(l) !== l)) return;
         } finally {
           if (d) throw a;
         }
@@ -52,122 +52,122 @@ var ta = /* @__PURE__ */ Me(((s, e) => {
     }
   }
   e.exports = t, e.exports.__esModule = !0, e.exports.default = e.exports;
-})), sa = /* @__PURE__ */ Me(((s, e) => {
-  function t(n, r) {
-    (r == null || r > n.length) && (r = n.length);
-    for (var i = 0, o = Array(r); i < r; i++) o[i] = n[i];
+})), Ta = /* @__PURE__ */ De(((s, e) => {
+  function t(n, i) {
+    (i == null || i > n.length) && (i = n.length);
+    for (var r = 0, o = Array(i); r < i; r++) o[r] = n[r];
     return o;
   }
   e.exports = t, e.exports.__esModule = !0, e.exports.default = e.exports;
-})), ra = /* @__PURE__ */ Me(((s, e) => {
-  var t = sa();
-  function n(r, i) {
-    if (r) {
-      if (typeof r == "string") return t(r, i);
-      var o = {}.toString.call(r).slice(8, -1);
-      return o === "Object" && r.constructor && (o = r.constructor.name), o === "Map" || o === "Set" ? Array.from(r) : o === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(o) ? t(r, i) : void 0;
+})), wa = /* @__PURE__ */ De(((s, e) => {
+  var t = Ta();
+  function n(i, r) {
+    if (i) {
+      if (typeof i == "string") return t(i, r);
+      var o = {}.toString.call(i).slice(8, -1);
+      return o === "Object" && i.constructor && (o = i.constructor.name), o === "Map" || o === "Set" ? Array.from(i) : o === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(o) ? t(i, r) : void 0;
     }
   }
   e.exports = n, e.exports.__esModule = !0, e.exports.default = e.exports;
-})), ia = /* @__PURE__ */ Me(((s, e) => {
+})), ba = /* @__PURE__ */ De(((s, e) => {
   function t() {
     throw new TypeError(`Invalid attempt to destructure non-iterable instance.
 In order to be iterable, non-array objects must have a [Symbol.iterator]() method.`);
   }
   e.exports = t, e.exports.__esModule = !0, e.exports.default = e.exports;
-})), aa = /* @__PURE__ */ Me(((s, e) => {
-  var t = ta(), n = na(), r = ra(), i = ia();
+})), xa = /* @__PURE__ */ De(((s, e) => {
+  var t = va(), n = ya(), i = wa(), r = ba();
   function o(a, c) {
-    return t(a) || n(a, c) || r(a, c) || i();
+    return t(a) || n(a, c) || i(a, c) || r();
   }
   e.exports = o, e.exports.__esModule = !0, e.exports.default = e.exports;
-})), oa = /* @__PURE__ */ Me(((s, e) => {
-  function t(n, r) {
-    if (!(n instanceof r)) throw new TypeError("Cannot call a class as a function");
+})), Ca = /* @__PURE__ */ De(((s, e) => {
+  function t(n, i) {
+    if (!(n instanceof i)) throw new TypeError("Cannot call a class as a function");
   }
   e.exports = t, e.exports.__esModule = !0, e.exports.default = e.exports;
-})), Er = /* @__PURE__ */ Me(((s, e) => {
+})), Gi = /* @__PURE__ */ De(((s, e) => {
   function t(n) {
     "@babel/helpers - typeof";
-    return e.exports = t = typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? function(r) {
-      return typeof r;
-    } : function(r) {
-      return r && typeof Symbol == "function" && r.constructor === Symbol && r !== Symbol.prototype ? "symbol" : typeof r;
+    return e.exports = t = typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? function(i) {
+      return typeof i;
+    } : function(i) {
+      return i && typeof Symbol == "function" && i.constructor === Symbol && i !== Symbol.prototype ? "symbol" : typeof i;
     }, e.exports.__esModule = !0, e.exports.default = e.exports, t(n);
   }
   e.exports = t, e.exports.__esModule = !0, e.exports.default = e.exports;
-})), ca = /* @__PURE__ */ Me(((s, e) => {
-  var t = Er().default;
-  function n(r, i) {
-    if (t(r) != "object" || !r) return r;
-    var o = r[Symbol.toPrimitive];
+})), Sa = /* @__PURE__ */ De(((s, e) => {
+  var t = Gi().default;
+  function n(i, r) {
+    if (t(i) != "object" || !i) return i;
+    var o = i[Symbol.toPrimitive];
     if (o !== void 0) {
-      var a = o.call(r, i || "default");
+      var a = o.call(i, r || "default");
       if (t(a) != "object") return a;
       throw new TypeError("@@toPrimitive must return a primitive value.");
     }
-    return (i === "string" ? String : Number)(r);
+    return (r === "string" ? String : Number)(i);
   }
   e.exports = n, e.exports.__esModule = !0, e.exports.default = e.exports;
-})), la = /* @__PURE__ */ Me(((s, e) => {
-  var t = Er().default, n = ca();
-  function r(i) {
-    var o = n(i, "string");
+})), Aa = /* @__PURE__ */ De(((s, e) => {
+  var t = Gi().default, n = Sa();
+  function i(r) {
+    var o = n(r, "string");
     return t(o) == "symbol" ? o : o + "";
   }
-  e.exports = r, e.exports.__esModule = !0, e.exports.default = e.exports;
-})), ua = /* @__PURE__ */ Me(((s, e) => {
-  var t = la();
-  function n(i, o) {
+  e.exports = i, e.exports.__esModule = !0, e.exports.default = e.exports;
+})), ka = /* @__PURE__ */ De(((s, e) => {
+  var t = Aa();
+  function n(r, o) {
     for (var a = 0; a < o.length; a++) {
       var c = o[a];
-      c.enumerable = c.enumerable || !1, c.configurable = !0, "value" in c && (c.writable = !0), Object.defineProperty(i, t(c.key), c);
+      c.enumerable = c.enumerable || !1, c.configurable = !0, "value" in c && (c.writable = !0), Object.defineProperty(r, t(c.key), c);
     }
   }
-  function r(i, o, a) {
-    return o && n(i.prototype, o), a && n(i, a), Object.defineProperty(i, "prototype", { writable: !1 }), i;
+  function i(r, o, a) {
+    return o && n(r.prototype, o), a && n(r, a), Object.defineProperty(r, "prototype", { writable: !1 }), r;
   }
-  e.exports = r, e.exports.__esModule = !0, e.exports.default = e.exports;
-})), ha = /* @__PURE__ */ Me(((s, e) => {
+  e.exports = i, e.exports.__esModule = !0, e.exports.default = e.exports;
+})), Oa = /* @__PURE__ */ De(((s, e) => {
   (function(t, n) {
-    typeof s == "object" && typeof e < "u" ? n(s, aa(), oa(), ua()) : typeof define == "function" && define.amd ? define([
+    typeof s == "object" && typeof e < "u" ? n(s, xa(), Ca(), ka()) : typeof define == "function" && define.amd ? define([
       "exports",
       "@babel/runtime/helpers/slicedToArray",
       "@babel/runtime/helpers/classCallCheck",
       "@babel/runtime/helpers/createClass"
     ], n) : (t = typeof globalThis < "u" ? globalThis : t || self, n(t.automationEvents = {}, t._slicedToArray, t._classCallCheck, t._createClass));
-  })(s, (function(t, n, r, i) {
+  })(s, (function(t, n, i, r) {
     "use strict";
-    var o = function(A, C, x) {
+    var o = function(A, x, C) {
       return {
-        endTime: C,
-        insertTime: x,
+        endTime: x,
+        insertTime: C,
         type: "exponentialRampToValue",
         value: A
       };
-    }, a = function(A, C, x) {
+    }, a = function(A, x, C) {
       return {
-        endTime: C,
-        insertTime: x,
+        endTime: x,
+        insertTime: C,
         type: "linearRampToValue",
         value: A
       };
-    }, c = function(A, C) {
+    }, c = function(A, x) {
       return {
-        startTime: C,
+        startTime: x,
         type: "setValue",
         value: A
       };
-    }, l = function(A, C, x) {
+    }, l = function(A, x, C) {
       return {
-        duration: x,
-        startTime: C,
+        duration: C,
+        startTime: x,
         type: "setValueCurve",
         values: A
       };
-    }, u = function(A, C, x) {
-      var D = x.startTime, R = x.target, V = x.timeConstant;
-      return R + (C - R) * Math.exp((D - A) / V);
+    }, u = function(A, x, C) {
+      var D = C.startTime, R = C.target, V = C.timeConstant;
+      return R + (x - R) * Math.exp((D - A) / V);
     }, h = function(A) {
       return A.type === "exponentialRampToValue";
     }, d = function(A) {
@@ -178,41 +178,41 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       return A.type === "setValue";
     }, m = function(A) {
       return A.type === "setValueCurve";
-    }, _ = function(A, C, x, D) {
-      var R = A[C];
-      return R === void 0 ? D : f(R) || p(R) ? R.value : m(R) ? R.values[R.values.length - 1] : u(x, _(A, C - 1, R.startTime, D), R);
-    }, v = function(A, C, x, D, R) {
-      return x === void 0 ? [D.insertTime, R] : f(x) ? [x.endTime, x.value] : p(x) ? [x.startTime, x.value] : m(x) ? [x.startTime + x.duration, x.values[x.values.length - 1]] : [x.startTime, _(A, C - 1, x.startTime, R)];
+    }, _ = function(A, x, C, D) {
+      var R = A[x];
+      return R === void 0 ? D : f(R) || p(R) ? R.value : m(R) ? R.values[R.values.length - 1] : u(C, _(A, x - 1, R.startTime, D), R);
+    }, v = function(A, x, C, D, R) {
+      return C === void 0 ? [D.insertTime, R] : f(C) ? [C.endTime, C.value] : p(C) ? [C.startTime, C.value] : m(C) ? [C.startTime + C.duration, C.values[C.values.length - 1]] : [C.startTime, _(A, x - 1, C.startTime, R)];
     }, b = function(A) {
       return A.type === "cancelAndHold";
     }, S = function(A) {
       return A.type === "cancelScheduledValues";
     }, k = function(A) {
       return b(A) || S(A) ? A.cancelTime : h(A) || d(A) ? A.endTime : A.startTime;
-    }, g = function(A, C, x, D) {
+    }, g = function(A, x, C, D) {
       var R = D.endTime, V = D.value;
-      return x === V ? V : 0 < x && 0 < V || x < 0 && V < 0 ? x * Math.pow(V / x, (A - C) / (R - C)) : A < R ? x : V;
-    }, T = function(A, C, x, D) {
+      return C === V ? V : 0 < C && 0 < V || C < 0 && V < 0 ? C * Math.pow(V / C, (A - x) / (R - x)) : A < R ? C : V;
+    }, T = function(A, x, C, D) {
       var R = D.endTime, V = D.value;
-      return x + (A - C) / (R - C) * (V - x);
-    }, y = function(A, C) {
-      var x = Math.floor(C);
-      if (x === C) return A[x];
-      var D = Math.ceil(C);
-      return (1 - (C - x)) * A[x] + (1 - (D - C)) * A[D];
-    }, w = function(A, C) {
-      var x = C.duration, D = C.startTime, R = C.values;
-      return y(R, (A - D) / x * (R.length - 1));
-    }, I = function(A, C, x) {
-      for (var D = A.length, R = Math.max(1, Math.floor(x / C * D)) + 1, V = A instanceof Float32Array ? new Float32Array(R) : A.slice(0, R), re = 0; re < R; re += 1) V[re] = y(A, re / (R - 1) * x / C * (D - 1));
+      return C + (A - x) / (R - x) * (V - C);
+    }, y = function(A, x) {
+      var C = Math.floor(x);
+      if (C === x) return A[C];
+      var D = Math.ceil(x);
+      return (1 - (x - C)) * A[C] + (1 - (D - x)) * A[D];
+    }, w = function(A, x) {
+      var C = x.duration, D = x.startTime, R = x.values;
+      return y(R, (A - D) / C * (R.length - 1));
+    }, I = function(A, x, C) {
+      for (var D = A.length, R = Math.max(1, Math.floor(C / x * D)) + 1, V = A instanceof Float32Array ? new Float32Array(R) : A.slice(0, R), ae = 0; ae < R; ae += 1) V[ae] = y(A, ae / (R - 1) * C / x * (D - 1));
       return V;
     }, E = function(A) {
       return A.type === "setTarget";
-    }, O = /* @__PURE__ */ (function() {
-      function F(A) {
-        r(this, F), this._automationEvents = [], this._currenTime = 0, this._defaultValue = A;
+    }, N = /* @__PURE__ */ (function() {
+      function P(A) {
+        i(this, P), this._automationEvents = [], this._currenTime = 0, this._defaultValue = A;
       }
-      return i(F, [
+      return r(P, [
         {
           key: Symbol.iterator,
           value: function() {
@@ -221,34 +221,34 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
         },
         {
           key: "add",
-          value: function(C) {
-            var x = k(C);
-            if (b(C) || S(C)) {
-              var D = this._automationEvents.findIndex(function(Oe) {
-                return S(C) && m(Oe) ? Oe.startTime + Oe.duration >= x : k(Oe) >= x;
+          value: function(x) {
+            var C = k(x);
+            if (b(x) || S(x)) {
+              var D = this._automationEvents.findIndex(function(Me) {
+                return S(x) && m(Me) ? Me.startTime + Me.duration >= C : k(Me) >= C;
               }), R = this._automationEvents[D];
-              if (D !== -1 && (this._automationEvents = this._automationEvents.slice(0, D)), b(C)) {
+              if (D !== -1 && (this._automationEvents = this._automationEvents.slice(0, D)), b(x)) {
                 var V = this._automationEvents[this._automationEvents.length - 1];
                 if (R !== void 0 && f(R)) {
                   if (V !== void 0 && E(V)) throw new Error("The internal list is malformed.");
-                  var re = V === void 0 ? R.insertTime : m(V) ? V.startTime + V.duration : k(V), z = V === void 0 ? this._defaultValue : m(V) ? V.values[V.values.length - 1] : V.value, J = h(R) ? g(x, re, z, R) : T(x, re, z, R), ie = h(R) ? o(J, x, this._currenTime) : a(J, x, this._currenTime);
-                  this._automationEvents.push(ie);
+                  var ae = V === void 0 ? R.insertTime : m(V) ? V.startTime + V.duration : k(V), $ = V === void 0 ? this._defaultValue : m(V) ? V.values[V.values.length - 1] : V.value, ee = h(R) ? g(C, ae, $, R) : T(C, ae, $, R), oe = h(R) ? o(ee, C, this._currenTime) : a(ee, C, this._currenTime);
+                  this._automationEvents.push(oe);
                 }
-                if (V !== void 0 && E(V) && this._automationEvents.push(c(this.getValue(x), x)), V !== void 0 && m(V) && V.startTime + V.duration > x) {
-                  var W = x - V.startTime;
+                if (V !== void 0 && E(V) && this._automationEvents.push(c(this.getValue(C), C)), V !== void 0 && m(V) && V.startTime + V.duration > C) {
+                  var W = C - V.startTime;
                   this._automationEvents[this._automationEvents.length - 1] = l(I(V.values, V.duration, W), V.startTime, W);
                 }
               }
             } else {
-              var Te = this._automationEvents.findIndex(function(Oe) {
-                return k(Oe) > x;
-              }), Se = Te === -1 ? this._automationEvents[this._automationEvents.length - 1] : this._automationEvents[Te - 1];
-              if (Se !== void 0 && m(Se) && k(Se) + Se.duration > x) return !1;
-              var Ue = h(C) ? o(C.value, C.endTime, this._currenTime) : d(C) ? a(C.value, x, this._currenTime) : C;
-              if (Te === -1) this._automationEvents.push(Ue);
+              var we = this._automationEvents.findIndex(function(Me) {
+                return k(Me) > C;
+              }), Oe = we === -1 ? this._automationEvents[this._automationEvents.length - 1] : this._automationEvents[we - 1];
+              if (Oe !== void 0 && m(Oe) && k(Oe) + Oe.duration > C) return !1;
+              var ze = h(x) ? o(x.value, x.endTime, this._currenTime) : d(x) ? a(x.value, C, this._currenTime) : x;
+              if (we === -1) this._automationEvents.push(ze);
               else {
-                if (m(C) && x + C.duration > k(this._automationEvents[Te])) return !1;
-                this._automationEvents.splice(Te, 0, Ue);
+                if (m(x) && C + x.duration > k(this._automationEvents[we])) return !1;
+                this._automationEvents.splice(we, 0, ze);
               }
             }
             return !0;
@@ -256,41 +256,41 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
         },
         {
           key: "flush",
-          value: function(C) {
-            var x = this._automationEvents.findIndex(function(V) {
-              return k(V) > C;
+          value: function(x) {
+            var C = this._automationEvents.findIndex(function(V) {
+              return k(V) > x;
             });
-            if (x > 1) {
-              var D = this._automationEvents.slice(x - 1), R = D[0];
-              E(R) && D.unshift(c(_(this._automationEvents, x - 2, R.startTime, this._defaultValue), R.startTime)), this._automationEvents = D;
+            if (C > 1) {
+              var D = this._automationEvents.slice(C - 1), R = D[0];
+              E(R) && D.unshift(c(_(this._automationEvents, C - 2, R.startTime, this._defaultValue), R.startTime)), this._automationEvents = D;
             }
           }
         },
         {
           key: "getValue",
-          value: function(C) {
+          value: function(x) {
             if (this._automationEvents.length === 0) return this._defaultValue;
-            var x = this._automationEvents.findIndex(function(Se) {
-              return k(Se) > C;
-            }), D = this._automationEvents[x], R = (x === -1 ? this._automationEvents.length : x) - 1, V = this._automationEvents[R];
-            if (V !== void 0 && E(V) && (D === void 0 || !f(D) || D.insertTime > C)) return u(C, _(this._automationEvents, R - 1, V.startTime, this._defaultValue), V);
+            var C = this._automationEvents.findIndex(function(Oe) {
+              return k(Oe) > x;
+            }), D = this._automationEvents[C], R = (C === -1 ? this._automationEvents.length : C) - 1, V = this._automationEvents[R];
+            if (V !== void 0 && E(V) && (D === void 0 || !f(D) || D.insertTime > x)) return u(x, _(this._automationEvents, R - 1, V.startTime, this._defaultValue), V);
             if (V !== void 0 && p(V) && (D === void 0 || !f(D))) return V.value;
-            if (V !== void 0 && m(V) && (D === void 0 || !f(D) || V.startTime + V.duration > C))
-              return C < V.startTime + V.duration ? w(C, V) : V.values[V.values.length - 1];
+            if (V !== void 0 && m(V) && (D === void 0 || !f(D) || V.startTime + V.duration > x))
+              return x < V.startTime + V.duration ? w(x, V) : V.values[V.values.length - 1];
             if (V !== void 0 && f(V) && (D === void 0 || !f(D))) return V.value;
             if (D !== void 0 && h(D)) {
-              var re = n(v(this._automationEvents, R, V, D, this._defaultValue), 2), z = re[0], J = re[1];
-              return g(C, z, J, D);
+              var ae = n(v(this._automationEvents, R, V, D, this._defaultValue), 2), $ = ae[0], ee = ae[1];
+              return g(x, $, ee, D);
             }
             if (D !== void 0 && d(D)) {
-              var ie = n(v(this._automationEvents, R, V, D, this._defaultValue), 2), W = ie[0], Te = ie[1];
-              return T(C, W, Te, D);
+              var oe = n(v(this._automationEvents, R, V, D, this._defaultValue), 2), W = oe[0], we = oe[1];
+              return T(x, W, we, D);
             }
             return this._defaultValue;
           }
         }
       ]);
-    })(), N = function(A) {
+    })(), M = function(A) {
       return {
         cancelTime: A,
         type: "cancelAndHold"
@@ -300,72 +300,72 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
         cancelTime: A,
         type: "cancelScheduledValues"
       };
-    }, P = function(A, C) {
+    }, F = function(A, x) {
       return {
-        endTime: C,
+        endTime: x,
         type: "exponentialRampToValue",
         value: A
       };
-    }, U = function(A, C) {
+    }, G = function(A, x) {
       return {
-        endTime: C,
+        endTime: x,
         type: "linearRampToValue",
         value: A
       };
-    }, j = function(A, C, x) {
+    }, j = function(A, x, C) {
       return {
-        startTime: C,
+        startTime: x,
         target: A,
-        timeConstant: x,
+        timeConstant: C,
         type: "setTarget"
       };
     };
-    t.AutomationEventList = O, t.createCancelAndHoldAutomationEvent = N, t.createCancelScheduledValuesAutomationEvent = q, t.createExponentialRampToValueAutomationEvent = P, t.createLinearRampToValueAutomationEvent = U, t.createSetTargetAutomationEvent = j, t.createSetValueAutomationEvent = c, t.createSetValueCurveAutomationEvent = l;
+    t.AutomationEventList = N, t.createCancelAndHoldAutomationEvent = M, t.createCancelScheduledValuesAutomationEvent = q, t.createExponentialRampToValueAutomationEvent = F, t.createLinearRampToValueAutomationEvent = G, t.createSetTargetAutomationEvent = j, t.createSetValueAutomationEvent = c, t.createSetValueCurveAutomationEvent = l;
   }));
-})), Ye = ha(), da = () => new DOMException("", "AbortError"), pa = (s) => (e, t, [n, r, i], o) => {
-  s(e[r], [
+})), Je = Oa(), Na = () => new DOMException("", "AbortError"), Ma = (s) => (e, t, [n, i, r], o) => {
+  s(e[i], [
     t,
     n,
-    i
+    r
   ], (a) => a[0] === t && a[1] === n, o);
-}, fa = (s) => (e, t, n) => {
-  const r = [];
-  for (let i = 0; i < n.numberOfInputs; i += 1) r.push(/* @__PURE__ */ new Set());
+}, Da = (s) => (e, t, n) => {
+  const i = [];
+  for (let r = 0; r < n.numberOfInputs; r += 1) i.push(/* @__PURE__ */ new Set());
   s.set(e, {
-    activeInputs: r,
+    activeInputs: i,
     outputs: /* @__PURE__ */ new Set(),
     passiveInputs: /* @__PURE__ */ new WeakMap(),
     renderer: t
   });
-}, ma = (s) => (e, t) => {
+}, Ea = (s) => (e, t) => {
   s.set(e, {
     activeInputs: /* @__PURE__ */ new Set(),
     passiveInputs: /* @__PURE__ */ new WeakMap(),
     renderer: t
   });
-}, St = /* @__PURE__ */ new WeakSet(), Ir = /* @__PURE__ */ new WeakMap(), As = /* @__PURE__ */ new WeakMap(), Rr = /* @__PURE__ */ new WeakMap(), ks = /* @__PURE__ */ new WeakMap(), Tn = /* @__PURE__ */ new WeakMap(), Vr = /* @__PURE__ */ new WeakMap(), Nn = /* @__PURE__ */ new WeakMap(), Mn = /* @__PURE__ */ new WeakMap(), Dn = /* @__PURE__ */ new WeakMap(), Pr = { construct() {
-  return Pr;
-} }, _a = (s) => {
+}, kt = /* @__PURE__ */ new WeakSet(), zi = /* @__PURE__ */ new WeakMap(), Rn = /* @__PURE__ */ new WeakMap(), $i = /* @__PURE__ */ new WeakMap(), Vn = /* @__PURE__ */ new WeakMap(), Ts = /* @__PURE__ */ new WeakMap(), Zi = /* @__PURE__ */ new WeakMap(), Ms = /* @__PURE__ */ new WeakMap(), Ds = /* @__PURE__ */ new WeakMap(), Es = /* @__PURE__ */ new WeakMap(), Xi = { construct() {
+  return Xi;
+} }, Ia = (s) => {
   try {
-    new new Proxy(s, Pr)();
+    new new Proxy(s, Xi)();
   } catch {
     return !1;
   }
   return !0;
-}, tr = /^import(?:(?:[\s]+[\w]+|(?:[\s]+[\w]+[\s]*,)?[\s]*\{[\s]*[\w]+(?:[\s]+as[\s]+[\w]+)?(?:[\s]*,[\s]*[\w]+(?:[\s]+as[\s]+[\w]+)?)*[\s]*}|(?:[\s]+[\w]+[\s]*,)?[\s]*\*[\s]+as[\s]+[\w]+)[\s]+from)?(?:[\s]*)("([^"\\]|\\.)+"|'([^'\\]|\\.)+')(?:[\s]*);?/, nr = (s, e) => {
+}, li = /^import(?:(?:[\s]+[\w]+|(?:[\s]+[\w]+[\s]*,)?[\s]*\{[\s]*[\w]+(?:[\s]+as[\s]+[\w]+)?(?:[\s]*,[\s]*[\w]+(?:[\s]+as[\s]+[\w]+)?)*[\s]*}|(?:[\s]+[\w]+[\s]*,)?[\s]*\*[\s]+as[\s]+[\w]+)[\s]+from)?(?:[\s]*)("([^"\\]|\\.)+"|'([^'\\]|\\.)+')(?:[\s]*);?/, ui = (s, e) => {
   const t = [];
-  let n = s.replace(/^[\s]+/, ""), r = n.match(tr);
-  for (; r !== null; ) {
-    const i = r[1].slice(1, -1), o = r[0].replace(/([\s]+)?;?$/, "").replace(i, new URL(i, e).toString());
-    t.push(o), n = n.slice(r[0].length).replace(/^[\s]+/, ""), r = n.match(tr);
+  let n = s.replace(/^[\s]+/, ""), i = n.match(li);
+  for (; i !== null; ) {
+    const r = i[1].slice(1, -1), o = i[0].replace(/([\s]+)?;?$/, "").replace(r, new URL(r, e).toString());
+    t.push(o), n = n.slice(i[0].length).replace(/^[\s]+/, ""), i = n.match(li);
   }
   return [t.join(";"), n];
-}, sr = (s) => {
+}, hi = (s) => {
   if (s !== void 0 && !Array.isArray(s)) throw new TypeError("The parameterDescriptors property of given value for processorCtor is not an array.");
-}, rr = (s) => {
-  if (!_a(s)) throw new TypeError("The given value for processorCtor should be a constructor.");
+}, di = (s) => {
+  if (!Ia(s)) throw new TypeError("The given value for processorCtor should be a constructor.");
   if (s.prototype === null || typeof s.prototype != "object") throw new TypeError("The given value for processorCtor should have a prototype.");
-}, ga = (s, e, t, n, r, i, o, a, c, l, u, h, d) => {
+}, Ra = (s, e, t, n, i, r, o, a, c, l, u, h, d) => {
   let f = 0;
   return (p, m, _ = { credentials: "omit" }) => {
     const v = u.get(p);
@@ -375,8 +375,8 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       const g = b.get(m);
       if (g !== void 0) return g;
     }
-    const S = i(p), k = S.audioWorklet === void 0 ? r(m).then(([g, T]) => {
-      const [y, w] = nr(g, T);
+    const S = r(p), k = S.audioWorklet === void 0 ? i(m).then(([g, T]) => {
+      const [y, w] = ui(g, T);
       return t(`${y};((a,b)=>{(a[b]=a[b]||[]).push((AudioWorkletProcessor,global,registerProcessor,sampleRate,self,window)=>{${w}
 })})(window,'_AWGS')`);
     }).then(() => {
@@ -385,26 +385,26 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       n(S.currentTime, S.sampleRate, () => g(class {
       }, void 0, (T, y) => {
         if (T.trim() === "") throw e();
-        const w = Mn.get(S);
+        const w = Ds.get(S);
         if (w !== void 0) {
           if (w.has(T)) throw e();
-          rr(y), sr(y.parameterDescriptors), w.set(T, y);
+          di(y), hi(y.parameterDescriptors), w.set(T, y);
         } else
-          rr(y), sr(y.parameterDescriptors), Mn.set(S, /* @__PURE__ */ new Map([[T, y]]));
+          di(y), hi(y.parameterDescriptors), Ds.set(S, /* @__PURE__ */ new Map([[T, y]]));
       }, S.sampleRate, void 0, void 0));
-    }) : Promise.all([r(m), Promise.resolve(s(h, h))]).then(([[g, T], y]) => {
+    }) : Promise.all([i(m), Promise.resolve(s(h, h))]).then(([[g, T], y]) => {
       const w = f + 1;
       f = w;
-      const [I, E] = nr(g, T), O = `${I};((AudioWorkletProcessor,registerProcessor)=>{${E}
-})(${y ? "AudioWorkletProcessor" : "class extends AudioWorkletProcessor {__b=new WeakSet();constructor(){super();(p=>p.postMessage=(q=>(m,t)=>q.call(p,m,t?t.filter(u=>!this.__b.has(u)):t))(p.postMessage))(this.port)}}"},(n,p)=>registerProcessor(n,class extends p{${y ? "" : "__c = (a) => a.forEach(e=>this.__b.add(e.buffer));"}process(i,o,p){${y ? "" : "i.forEach(this.__c);o.forEach(this.__c);this.__c(Object.values(p));"}return super.process(i.map(j=>j.some(k=>k.length===0)?[]:j),o,p)}}));registerProcessor('__sac${w}',class extends AudioWorkletProcessor{process(){return !1}})`, N = new Blob([O], { type: "application/javascript; charset=utf-8" }), q = URL.createObjectURL(N);
+      const [I, E] = ui(g, T), N = `${I};((AudioWorkletProcessor,registerProcessor)=>{${E}
+})(${y ? "AudioWorkletProcessor" : "class extends AudioWorkletProcessor {__b=new WeakSet();constructor(){super();(p=>p.postMessage=(q=>(m,t)=>q.call(p,m,t?t.filter(u=>!this.__b.has(u)):t))(p.postMessage))(this.port)}}"},(n,p)=>registerProcessor(n,class extends p{${y ? "" : "__c = (a) => a.forEach(e=>this.__b.add(e.buffer));"}process(i,o,p){${y ? "" : "i.forEach(this.__c);o.forEach(this.__c);this.__c(Object.values(p));"}return super.process(i.map(j=>j.some(k=>k.length===0)?[]:j),o,p)}}));registerProcessor('__sac${w}',class extends AudioWorkletProcessor{process(){return !1}})`, M = new Blob([N], { type: "application/javascript; charset=utf-8" }), q = URL.createObjectURL(M);
       return S.audioWorklet.addModule(q, _).then(() => {
         if (a(S)) return S;
-        const P = o(S);
-        return P.audioWorklet.addModule(q, _).then(() => P);
-      }).then((P) => {
+        const F = o(S);
+        return F.audioWorklet.addModule(q, _).then(() => F);
+      }).then((F) => {
         if (c === null) throw new SyntaxError();
         try {
-          new c(P, `__sac${w}`);
+          new c(F, `__sac${w}`);
         } catch {
           throw new SyntaxError();
         }
@@ -418,46 +418,46 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       g !== void 0 && g.delete(m);
     }), k;
   };
-}, Ve = (s, e) => {
+}, Fe = (s, e) => {
   const t = s.get(e);
   if (t === void 0) throw new Error("A value with the given key could not be found.");
   return t;
-}, wn = (s, e) => {
+}, ws = (s, e) => {
   const t = Array.from(s).filter(e);
   if (t.length > 1) throw Error("More than one element was found.");
   if (t.length === 0) throw Error("No element was found.");
   const [n] = t;
   return s.delete(n), n;
-}, Fr = (s, e, t, n) => {
-  const r = Ve(s, e), i = wn(r, (o) => o[0] === t && o[1] === n);
-  return r.size === 0 && s.delete(e), i;
-}, Gt = (s) => Ve(Vr, s), At = (s) => {
-  if (St.has(s)) throw new Error("The AudioNode is already stored.");
-  St.add(s), Gt(s).forEach((e) => e(!0));
-}, qr = (s) => "port" in s, zt = (s) => {
-  if (!St.has(s)) throw new Error("The AudioNode is not stored.");
-  St.delete(s), Gt(s).forEach((e) => e(!1));
-}, En = (s, e) => {
-  !qr(s) && e.every((t) => t.size === 0) && zt(s);
-}, va = (s, e, t, n, r, i, o, a, c, l, u, h, d) => {
+}, Hi = (s, e, t, n) => {
+  const i = Fe(s, e), r = ws(i, (o) => o[0] === t && o[1] === n);
+  return i.size === 0 && s.delete(e), r;
+}, $t = (s) => Fe(Zi, s), Ot = (s) => {
+  if (kt.has(s)) throw new Error("The AudioNode is already stored.");
+  kt.add(s), $t(s).forEach((e) => e(!0));
+}, Qi = (s) => "port" in s, Zt = (s) => {
+  if (!kt.has(s)) throw new Error("The AudioNode is not stored.");
+  kt.delete(s), $t(s).forEach((e) => e(!1));
+}, Is = (s, e) => {
+  !Qi(s) && e.every((t) => t.size === 0) && Zt(s);
+}, Va = (s, e, t, n, i, r, o, a, c, l, u, h, d) => {
   const f = /* @__PURE__ */ new WeakMap();
   return (p, m, _, v, b) => {
-    const { activeInputs: S, passiveInputs: k } = i(m), { outputs: g } = i(p), T = a(p), y = (w) => {
+    const { activeInputs: S, passiveInputs: k } = r(m), { outputs: g } = r(p), T = a(p), y = (w) => {
       const I = c(m), E = c(p);
       if (w) {
-        const O = Fr(k, p, _, v);
-        s(S, p, O, !1), !b && !h(p) && t(E, I, _, v), d(m) && At(m);
+        const N = Hi(k, p, _, v);
+        s(S, p, N, !1), !b && !h(p) && t(E, I, _, v), d(m) && Ot(m);
       } else {
-        const O = n(S, p, _, v);
-        e(k, v, O, !1), !b && !h(p) && r(E, I, _, v);
-        const N = o(m);
-        if (N === 0)
-          u(m) && En(m, S);
+        const N = n(S, p, _, v);
+        e(k, v, N, !1), !b && !h(p) && i(E, I, _, v);
+        const M = o(m);
+        if (M === 0)
+          u(m) && Is(m, S);
         else {
           const q = f.get(m);
           q !== void 0 && clearTimeout(q), f.set(m, setTimeout(() => {
-            u(m) && En(m, S);
-          }, N * 1e3));
+            u(m) && Is(m, S);
+          }, M * 1e3));
         }
       }
     };
@@ -475,18 +475,18 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       y
     ], !0), !0) : !1;
   };
-}, ya = (s) => (e, t, [n, r, i], o) => {
+}, Fa = (s) => (e, t, [n, i, r], o) => {
   const a = e.get(n);
   a === void 0 ? e.set(n, /* @__PURE__ */ new Set([[
-    r,
+    i,
     t,
-    i
+    r
   ]])) : s(a, [
-    r,
+    i,
     t,
-    i
-  ], (c) => c[0] === r && c[1] === t, o);
-}, Ta = (s) => (e, t) => {
+    r
+  ], (c) => c[0] === i && c[1] === t, o);
+}, Pa = (s) => (e, t) => {
   const n = s(e, {
     channelCount: 1,
     channelCountMode: "explicit",
@@ -494,13 +494,13 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     gain: 0
   });
   t.connect(n).connect(e.destination);
-  const r = () => {
-    t.removeEventListener("ended", r), t.disconnect(n), n.disconnect();
+  const i = () => {
+    t.removeEventListener("ended", i), t.disconnect(n), n.disconnect();
   };
-  t.addEventListener("ended", r);
-}, wa = (s) => (e, t) => {
+  t.addEventListener("ended", i);
+}, qa = (s) => (e, t) => {
   s(e).add(t);
-}, ba = {
+}, La = {
   channelCount: 2,
   channelCountMode: "max",
   channelInterpretation: "speakers",
@@ -508,12 +508,12 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   maxDecibels: -30,
   minDecibels: -100,
   smoothingTimeConstant: 0.8
-}, Ca = (s, e, t, n, r, i) => class extends s {
+}, Wa = (s, e, t, n, i, r) => class extends s {
   constructor(a, c) {
-    const l = r(a), u = n(l, {
-      ...ba,
+    const l = i(a), u = n(l, {
+      ...La,
       ...c
-    }), h = i(l) ? e() : null;
+    }), h = r(l) ? e() : null;
     super(a, !1, u, h), this._nativeAnalyserNode = u;
   }
   get fftSize() {
@@ -559,10 +559,10 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   getFloatTimeDomainData(a) {
     this._nativeAnalyserNode.getFloatTimeDomainData(a);
   }
-}, ye = (s, e) => s.context === e, xa = (s, e, t) => () => {
-  const n = /* @__PURE__ */ new WeakMap(), r = async (i, o) => {
-    let a = e(i);
-    return ye(a, o) || (a = s(o, {
+}, Te = (s, e) => s.context === e, ja = (s, e, t) => () => {
+  const n = /* @__PURE__ */ new WeakMap(), i = async (r, o) => {
+    let a = e(r);
+    return Te(a, o) || (a = s(o, {
       channelCount: a.channelCount,
       channelCountMode: a.channelCountMode,
       channelInterpretation: a.channelInterpretation,
@@ -570,50 +570,50 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       maxDecibels: a.maxDecibels,
       minDecibels: a.minDecibels,
       smoothingTimeConstant: a.smoothingTimeConstant
-    })), n.set(o, a), await t(i, o, a), a;
+    })), n.set(o, a), await t(r, o, a), a;
   };
-  return { render(i, o) {
+  return { render(r, o) {
     const a = n.get(o);
-    return a !== void 0 ? Promise.resolve(a) : r(i, o);
+    return a !== void 0 ? Promise.resolve(a) : i(r, o);
   } };
-}, on = (s) => {
+}, cs = (s) => {
   try {
     s.copyToChannel(/* @__PURE__ */ new Float32Array(1), 0, -1);
   } catch {
     return !1;
   }
   return !0;
-}, We = () => new DOMException("", "IndexSizeError"), Os = (s) => {
+}, Be = () => new DOMException("", "IndexSizeError"), Fn = (s) => {
   s.getChannelData = /* @__PURE__ */ ((e) => (t) => {
     try {
       return e.call(s, t);
     } catch (n) {
-      throw n.code === 12 ? We() : n;
+      throw n.code === 12 ? Be() : n;
     }
   })(s.getChannelData);
-}, Sa = { numberOfChannels: 1 }, Aa = (s, e, t, n, r, i, o, a) => {
+}, Ba = { numberOfChannels: 1 }, Ua = (s, e, t, n, i, r, o, a) => {
   let c = null;
-  return class Lr {
+  return class Yi {
     constructor(u) {
-      if (r === null) throw new Error("Missing the native OfflineAudioContext constructor.");
+      if (i === null) throw new Error("Missing the native OfflineAudioContext constructor.");
       const { length: h, numberOfChannels: d, sampleRate: f } = {
-        ...Sa,
+        ...Ba,
         ...u
       };
-      c === null && (c = new r(1, 1, 44100));
-      const p = n !== null && e(i, i) ? new n({
+      c === null && (c = new i(1, 1, 44100));
+      const p = n !== null && e(r, r) ? new n({
         length: h,
         numberOfChannels: d,
         sampleRate: f
       }) : c.createBuffer(d, h, f);
       if (p.numberOfChannels === 0) throw t();
-      return typeof p.copyFromChannel != "function" ? (o(p), Os(p)) : e(on, () => on(p)) || a(p), s.add(p), p;
+      return typeof p.copyFromChannel != "function" ? (o(p), Fn(p)) : e(cs, () => cs(p)) || a(p), s.add(p), p;
     }
     static [Symbol.hasInstance](u) {
-      return u !== null && typeof u == "object" && Object.getPrototypeOf(u) === Lr.prototype || s.has(u);
+      return u !== null && typeof u == "object" && Object.getPrototypeOf(u) === Yi.prototype || s.has(u);
     }
   };
-}, Ae = -34028234663852886e22, we = 34028234663852886e22, ze = (s) => St.has(s), ka = {
+}, Ne = -34028234663852886e22, be = 34028234663852886e22, Ze = (s) => kt.has(s), Ga = {
   buffer: null,
   channelCount: 2,
   channelCountMode: "max",
@@ -622,13 +622,13 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   loopEnd: 0,
   loopStart: 0,
   playbackRate: 1
-}, Oa = (s, e, t, n, r, i, o, a) => class extends s {
+}, za = (s, e, t, n, i, r, o, a) => class extends s {
   constructor(l, u) {
-    const h = i(l), d = {
-      ...ka,
+    const h = r(l), d = {
+      ...Ga,
       ...u
-    }, f = r(h, d), p = o(h), m = p ? e() : null;
-    super(l, !1, f, m), this._audioBufferSourceNodeRenderer = m, this._isBufferNullified = !1, this._isBufferSet = d.buffer !== null, this._nativeAudioBufferSourceNode = f, this._onended = null, this._playbackRate = t(this, p, f.playbackRate, we, Ae);
+    }, f = i(h, d), p = o(h), m = p ? e() : null;
+    super(l, !1, f, m), this._audioBufferSourceNodeRenderer = m, this._isBufferNullified = !1, this._isBufferSet = d.buffer !== null, this._nativeAudioBufferSourceNode = f, this._onended = null, this._playbackRate = t(this, p, f.playbackRate, be, Ne);
   }
   get buffer() {
     return this._isBufferNullified ? null : this._nativeAudioBufferSourceNode.buffer;
@@ -675,9 +675,9 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       u,
       h
     ]), this.context.state !== "closed") {
-      At(this);
+      Ot(this);
       const d = () => {
-        this._nativeAudioBufferSourceNode.removeEventListener("ended", d), ze(this) && zt(this);
+        this._nativeAudioBufferSourceNode.removeEventListener("ended", d), Ze(this) && Zt(this);
       };
       this._nativeAudioBufferSourceNode.addEventListener("ended", d);
     }
@@ -685,12 +685,12 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   stop(l = 0) {
     this._nativeAudioBufferSourceNode.stop(l), this._audioBufferSourceNodeRenderer !== null && (this._audioBufferSourceNodeRenderer.stop = l);
   }
-}, Na = (s, e, t, n, r) => () => {
-  const i = /* @__PURE__ */ new WeakMap();
+}, $a = (s, e, t, n, i) => () => {
+  const r = /* @__PURE__ */ new WeakMap();
   let o = null, a = null;
   const c = async (l, u) => {
     let h = t(l);
-    const d = ye(h, u);
+    const d = Te(h, u);
     return d || (h = e(u, {
       buffer: h.buffer,
       channelCount: h.channelCount,
@@ -700,7 +700,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       loopEnd: h.loopEnd,
       loopStart: h.loopStart,
       playbackRate: h.playbackRate.value
-    }), o !== null && h.start(...o), a !== null && h.stop(a)), i.set(u, h), d ? await s(u, l.playbackRate, h.playbackRate) : await n(u, l.playbackRate, h.playbackRate), await r(l, u, h), h;
+    }), o !== null && h.start(...o), a !== null && h.stop(a)), r.set(u, h), d ? await s(u, l.playbackRate, h.playbackRate) : await n(u, l.playbackRate, h.playbackRate), await i(l, u, h), h;
   };
   return {
     set start(l) {
@@ -710,29 +710,29 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       a = l;
     },
     render(l, u) {
-      const h = i.get(u);
+      const h = r.get(u);
       return h !== void 0 ? Promise.resolve(h) : c(l, u);
     }
   };
-}, Ma = (s) => "playbackRate" in s, Da = (s) => "frequency" in s && "gain" in s, Ea = (s) => "offset" in s, Ia = (s) => !("frequency" in s) && "gain" in s, Ra = (s) => "detune" in s && "frequency" in s && !("gain" in s), Va = (s) => "pan" in s, be = (s) => Ve(Ir, s), $t = (s) => Ve(Rr, s), In = (s, e) => {
-  const { activeInputs: t } = be(s);
-  t.forEach((r) => r.forEach(([i]) => {
-    e.includes(s) || In(i, [...e, s]);
+}, Za = (s) => "playbackRate" in s, Xa = (s) => "frequency" in s && "gain" in s, Ha = (s) => "offset" in s, Qa = (s) => !("frequency" in s) && "gain" in s, Ya = (s) => "detune" in s && "frequency" in s && !("gain" in s), Ja = (s) => "pan" in s, xe = (s) => Fe(zi, s), Xt = (s) => Fe($i, s), Rs = (s, e) => {
+  const { activeInputs: t } = xe(s);
+  t.forEach((i) => i.forEach(([r]) => {
+    e.includes(s) || Rs(r, [...e, s]);
   }));
-  const n = Ma(s) ? [s.playbackRate] : qr(s) ? Array.from(s.parameters.values()) : Da(s) ? [
+  const n = Za(s) ? [s.playbackRate] : Qi(s) ? Array.from(s.parameters.values()) : Xa(s) ? [
     s.Q,
     s.detune,
     s.frequency,
     s.gain
-  ] : Ea(s) ? [s.offset] : Ia(s) ? [s.gain] : Ra(s) ? [s.detune, s.frequency] : Va(s) ? [s.pan] : [];
-  for (const r of n) {
-    const i = $t(r);
-    i !== void 0 && i.activeInputs.forEach(([o]) => In(o, e));
+  ] : Ha(s) ? [s.offset] : Qa(s) ? [s.gain] : Ya(s) ? [s.detune, s.frequency] : Ja(s) ? [s.pan] : [];
+  for (const i of n) {
+    const r = Xt(i);
+    r !== void 0 && r.activeInputs.forEach(([o]) => Rs(o, e));
   }
-  ze(s) && zt(s);
-}, bn = (s) => {
-  In(s.destination, []);
-}, Wr = (s) => s === void 0 || typeof s == "number" || typeof s == "string" && (s === "balanced" || s === "interactive" || s === "playback"), Pa = (s, e, t, n, r, i, o, a, c) => class extends s {
+  Ze(s) && Zt(s);
+}, bs = (s) => {
+  Rs(s.destination, []);
+}, Ji = (s) => s === void 0 || typeof s == "number" || typeof s == "string" && (s === "balanced" || s === "interactive" || s === "playback"), Ka = (s, e, t, n, i, r, o, a, c) => class extends s {
   constructor(u = {}) {
     if (c === null) throw new Error("Missing the native AudioContext constructor.");
     let h;
@@ -742,7 +742,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       throw p.code === 12 && p.message === "sampleRate is not in range" ? t() : p;
     }
     if (h === null) throw n();
-    if (!Wr(u.latencyHint)) throw new TypeError(`The provided value '${u.latencyHint}' is not a valid enum value of type AudioContextLatencyCategory.`);
+    if (!Ji(u.latencyHint)) throw new TypeError(`The provided value '${u.latencyHint}' is not a valid enum value of type AudioContextLatencyCategory.`);
     if (u.sampleRate !== void 0 && h.sampleRate !== u.sampleRate) throw t();
     super(h, 2);
     const { latencyHint: d } = u, { sampleRate: f } = h;
@@ -764,14 +764,14 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     return this.state === "closed" ? this._nativeAudioContext.close().then(() => {
       throw e();
     }) : (this._state === "suspended" && (this._state = null), this._nativeAudioContext.close().then(() => {
-      this._nativeGainNode !== null && this._nativeOscillatorNode !== null && (this._nativeOscillatorNode.stop(), this._nativeGainNode.disconnect(), this._nativeOscillatorNode.disconnect()), bn(this);
+      this._nativeGainNode !== null && this._nativeOscillatorNode !== null && (this._nativeOscillatorNode.stop(), this._nativeGainNode.disconnect(), this._nativeOscillatorNode.disconnect()), bs(this);
     }));
   }
   createMediaElementSource(u) {
-    return new r(this, { mediaElement: u });
+    return new i(this, { mediaElement: u });
   }
   createMediaStreamDestination() {
-    return new i(this);
+    return new r(this);
   }
   createMediaStreamSource(u) {
     return new o(this, { mediaStream: u });
@@ -794,9 +794,9 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       throw u === void 0 ? e() : u;
     });
   }
-}, Fa = (s, e, t, n, r, i, o, a) => class extends s {
+}, eo = (s, e, t, n, i, r, o, a) => class extends s {
   constructor(l, u) {
-    const h = i(l), d = o(h), f = r(h, u, d), p = d ? e(a) : null;
+    const h = r(l), d = o(h), f = i(h, u, d), p = d ? e(a) : null;
     super(l, !1, f, p), this._isNodeOfNativeOfflineAudioContext = d, this._nativeAudioDestinationNode = f;
   }
   get channelCount() {
@@ -817,16 +817,16 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   get maxChannelCount() {
     return this._nativeAudioDestinationNode.maxChannelCount;
   }
-}, qa = (s) => {
-  const e = /* @__PURE__ */ new WeakMap(), t = async (n, r) => {
-    const i = r.destination;
-    return e.set(r, i), await s(n, r, i), i;
+}, to = (s) => {
+  const e = /* @__PURE__ */ new WeakMap(), t = async (n, i) => {
+    const r = i.destination;
+    return e.set(i, r), await s(n, i, r), r;
   };
-  return { render(n, r) {
-    const i = e.get(r);
-    return i !== void 0 ? Promise.resolve(i) : t(n, r);
+  return { render(n, i) {
+    const r = e.get(i);
+    return r !== void 0 ? Promise.resolve(r) : t(n, i);
   } };
-}, La = (s, e, t, n, r, i, o, a) => (c, l) => {
+}, so = (s, e, t, n, i, r, o, a) => (c, l) => {
   const u = l.listener, h = () => {
     const g = /* @__PURE__ */ new Float32Array(1), T = e(l, {
       channelCount: 1,
@@ -846,96 +846,96 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       0,
       0
     ];
-    const O = () => {
+    const N = () => {
       if (w) return;
       w = !0;
-      const U = n(l, 256, 9, 0);
-      U.onaudioprocess = ({ inputBuffer: j }) => {
-        const F = [
-          i(j, g, 0),
-          i(j, g, 1),
-          i(j, g, 2),
-          i(j, g, 3),
-          i(j, g, 4),
-          i(j, g, 5)
+      const G = n(l, 256, 9, 0);
+      G.onaudioprocess = ({ inputBuffer: j }) => {
+        const P = [
+          r(j, g, 0),
+          r(j, g, 1),
+          r(j, g, 2),
+          r(j, g, 3),
+          r(j, g, 4),
+          r(j, g, 5)
         ];
-        F.some((C, x) => C !== I[x]) && (u.setOrientation(...F), I = F);
+        P.some((x, C) => x !== I[C]) && (u.setOrientation(...P), I = P);
         const A = [
-          i(j, g, 6),
-          i(j, g, 7),
-          i(j, g, 8)
+          r(j, g, 6),
+          r(j, g, 7),
+          r(j, g, 8)
         ];
-        A.some((C, x) => C !== E[x]) && (u.setPosition(...A), E = A);
-      }, T.connect(U);
-    }, N = (U) => (j) => {
-      j !== I[U] && (I[U] = j, u.setOrientation(...I));
-    }, q = (U) => (j) => {
-      j !== E[U] && (E[U] = j, u.setPosition(...E));
-    }, P = (U, j, F) => {
+        A.some((x, C) => x !== E[C]) && (u.setPosition(...A), E = A);
+      }, T.connect(G);
+    }, M = (G) => (j) => {
+      j !== I[G] && (I[G] = j, u.setOrientation(...I));
+    }, q = (G) => (j) => {
+      j !== E[G] && (E[G] = j, u.setPosition(...E));
+    }, F = (G, j, P) => {
       const A = t(l, {
         channelCount: 1,
         channelCountMode: "explicit",
         channelInterpretation: "discrete",
         offset: j
       });
-      A.connect(T, 0, U), A.start(), Object.defineProperty(A.offset, "defaultValue", { get() {
+      A.connect(T, 0, G), A.start(), Object.defineProperty(A.offset, "defaultValue", { get() {
         return j;
       } });
-      const C = s({ context: c }, y, A.offset, we, Ae);
-      return a(C, "value", (x) => () => x.call(C), (x) => (D) => {
+      const x = s({ context: c }, y, A.offset, be, Ne);
+      return a(x, "value", (C) => () => C.call(x), (C) => (D) => {
         try {
-          x.call(C, D);
+          C.call(x, D);
         } catch (R) {
           if (R.code !== 9) throw R;
         }
-        O(), y && F(D);
-      }), C.cancelAndHoldAtTime = /* @__PURE__ */ ((x) => y ? () => {
-        throw r();
+        N(), y && P(D);
+      }), x.cancelAndHoldAtTime = /* @__PURE__ */ ((C) => y ? () => {
+        throw i();
       } : (...D) => {
-        const R = x.apply(C, D);
-        return O(), R;
-      })(C.cancelAndHoldAtTime), C.cancelScheduledValues = /* @__PURE__ */ ((x) => y ? () => {
-        throw r();
+        const R = C.apply(x, D);
+        return N(), R;
+      })(x.cancelAndHoldAtTime), x.cancelScheduledValues = /* @__PURE__ */ ((C) => y ? () => {
+        throw i();
       } : (...D) => {
-        const R = x.apply(C, D);
-        return O(), R;
-      })(C.cancelScheduledValues), C.exponentialRampToValueAtTime = /* @__PURE__ */ ((x) => y ? () => {
-        throw r();
+        const R = C.apply(x, D);
+        return N(), R;
+      })(x.cancelScheduledValues), x.exponentialRampToValueAtTime = /* @__PURE__ */ ((C) => y ? () => {
+        throw i();
       } : (...D) => {
-        const R = x.apply(C, D);
-        return O(), R;
-      })(C.exponentialRampToValueAtTime), C.linearRampToValueAtTime = /* @__PURE__ */ ((x) => y ? () => {
-        throw r();
+        const R = C.apply(x, D);
+        return N(), R;
+      })(x.exponentialRampToValueAtTime), x.linearRampToValueAtTime = /* @__PURE__ */ ((C) => y ? () => {
+        throw i();
       } : (...D) => {
-        const R = x.apply(C, D);
-        return O(), R;
-      })(C.linearRampToValueAtTime), C.setTargetAtTime = /* @__PURE__ */ ((x) => y ? () => {
-        throw r();
+        const R = C.apply(x, D);
+        return N(), R;
+      })(x.linearRampToValueAtTime), x.setTargetAtTime = /* @__PURE__ */ ((C) => y ? () => {
+        throw i();
       } : (...D) => {
-        const R = x.apply(C, D);
-        return O(), R;
-      })(C.setTargetAtTime), C.setValueAtTime = /* @__PURE__ */ ((x) => y ? () => {
-        throw r();
+        const R = C.apply(x, D);
+        return N(), R;
+      })(x.setTargetAtTime), x.setValueAtTime = /* @__PURE__ */ ((C) => y ? () => {
+        throw i();
       } : (...D) => {
-        const R = x.apply(C, D);
-        return O(), R;
-      })(C.setValueAtTime), C.setValueCurveAtTime = /* @__PURE__ */ ((x) => y ? () => {
-        throw r();
+        const R = C.apply(x, D);
+        return N(), R;
+      })(x.setValueAtTime), x.setValueCurveAtTime = /* @__PURE__ */ ((C) => y ? () => {
+        throw i();
       } : (...D) => {
-        const R = x.apply(C, D);
-        return O(), R;
-      })(C.setValueCurveAtTime), C;
+        const R = C.apply(x, D);
+        return N(), R;
+      })(x.setValueCurveAtTime), x;
     };
     return {
-      forwardX: P(0, 0, N(0)),
-      forwardY: P(1, 0, N(1)),
-      forwardZ: P(2, -1, N(2)),
-      positionX: P(6, 0, q(0)),
-      positionY: P(7, 0, q(1)),
-      positionZ: P(8, 0, q(2)),
-      upX: P(3, 0, N(3)),
-      upY: P(4, 1, N(4)),
-      upZ: P(5, 0, N(5))
+      forwardX: F(0, 0, M(0)),
+      forwardY: F(1, 0, M(1)),
+      forwardZ: F(2, -1, M(2)),
+      positionX: F(6, 0, q(0)),
+      positionY: F(7, 0, q(1)),
+      positionZ: F(8, 0, q(2)),
+      upX: F(3, 0, M(3)),
+      upY: F(4, 1, M(4)),
+      upZ: F(5, 0, M(5))
     };
   }, { forwardX: d, forwardY: f, forwardZ: p, positionX: m, positionY: _, positionZ: v, upX: b, upY: S, upZ: k } = u.forwardX === void 0 ? h() : u;
   return {
@@ -967,26 +967,26 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       return k;
     }
   };
-}, cn = (s) => "context" in s, Zt = (s) => cn(s[0]), gt = (s, e, t, n) => {
-  for (const r of s) if (t(r)) {
+}, ls = (s) => "context" in s, Ht = (s) => ls(s[0]), yt = (s, e, t, n) => {
+  for (const i of s) if (t(i)) {
     if (n) return !1;
     throw Error("The set contains at least one similar element.");
   }
   return s.add(e), !0;
-}, ir = (s, e, [t, n], r) => {
-  gt(s, [
+}, pi = (s, e, [t, n], i) => {
+  yt(s, [
     e,
     t,
     n
-  ], (i) => i[0] === e && i[1] === t, r);
-}, ar = (s, [e, t, n], r) => {
-  const i = s.get(e);
-  i === void 0 ? s.set(e, /* @__PURE__ */ new Set([[t, n]])) : gt(i, [t, n], (o) => o[0] === t, r);
-}, Et = (s) => "inputs" in s, ln = (s, e, t, n) => {
-  if (Et(e)) {
-    const r = e.inputs[n];
-    return s.connect(r, t, 0), [
-      r,
+  ], (r) => r[0] === e && r[1] === t, i);
+}, fi = (s, [e, t, n], i) => {
+  const r = s.get(e);
+  r === void 0 ? s.set(e, /* @__PURE__ */ new Set([[t, n]])) : yt(r, [t, n], (o) => o[0] === t, i);
+}, Rt = (s) => "inputs" in s, us = (s, e, t, n) => {
+  if (Rt(e)) {
+    const i = e.inputs[n];
+    return s.connect(i, t, 0), [
+      i,
       t,
       0
     ];
@@ -996,112 +996,112 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     t,
     n
   ];
-}, jr = (s, e, t) => {
+}, Ki = (s, e, t) => {
   for (const n of s) if (n[0] === e && n[1] === t)
     return s.delete(n), n;
   return null;
-}, Wa = (s, e, t) => wn(s, (n) => n[0] === e && n[1] === t), Br = (s, e) => {
-  if (!Gt(s).delete(e)) throw new Error("Missing the expected event listener.");
-}, Ur = (s, e, t) => {
-  const n = Ve(s, e), r = wn(n, (i) => i[0] === t);
-  return n.size === 0 && s.delete(e), r;
-}, un = (s, e, t, n) => {
-  Et(e) ? s.disconnect(e.inputs[n], t, 0) : s.disconnect(e, t, n);
-}, te = (s) => Ve(As, s), Lt = (s) => Ve(ks, s), ht = (s) => Nn.has(s), en = (s) => !St.has(s), or = (s, e) => new Promise((t) => {
+}, no = (s, e, t) => ws(s, (n) => n[0] === e && n[1] === t), er = (s, e) => {
+  if (!$t(s).delete(e)) throw new Error("Missing the expected event listener.");
+}, tr = (s, e, t) => {
+  const n = Fe(s, e), i = ws(n, (r) => r[0] === t);
+  return n.size === 0 && s.delete(e), i;
+}, hs = (s, e, t, n) => {
+  Rt(e) ? s.disconnect(e.inputs[n], t, 0) : s.disconnect(e, t, n);
+}, ne = (s) => Fe(Rn, s), jt = (s) => Fe(Vn, s), pt = (s) => Ms.has(s), ss = (s) => !kt.has(s), mi = (s, e) => new Promise((t) => {
   if (e !== null) t(!0);
   else {
-    const n = s.createScriptProcessor(256, 1, 1), r = s.createGain(), i = s.createBuffer(1, 2, 44100), o = i.getChannelData(0);
+    const n = s.createScriptProcessor(256, 1, 1), i = s.createGain(), r = s.createBuffer(1, 2, 44100), o = r.getChannelData(0);
     o[0] = 1, o[1] = 1;
     const a = s.createBufferSource();
-    a.buffer = i, a.loop = !0, a.connect(n).connect(s.destination), a.connect(r), a.disconnect(r), n.onaudioprocess = (c) => {
+    a.buffer = r, a.loop = !0, a.connect(n).connect(s.destination), a.connect(i), a.disconnect(i), n.onaudioprocess = (c) => {
       const l = c.inputBuffer.getChannelData(0);
       Array.prototype.some.call(l, (u) => u === 1) ? t(!0) : t(!1), a.stop(), n.onaudioprocess = null, a.disconnect(n), n.disconnect(s.destination);
     }, a.start();
   }
-}), kn = (s, e) => {
+}), Os = (s, e) => {
   const t = /* @__PURE__ */ new Map();
-  for (const n of s) for (const r of n) {
-    const i = t.get(r);
-    t.set(r, i === void 0 ? 1 : i + 1);
+  for (const n of s) for (const i of n) {
+    const r = t.get(i);
+    t.set(i, r === void 0 ? 1 : r + 1);
   }
-  t.forEach((n, r) => e(r, n));
-}, hn = (s) => "context" in s, ja = (s) => {
+  t.forEach((n, i) => e(i, n));
+}, ds = (s) => "context" in s, io = (s) => {
   const e = /* @__PURE__ */ new Map();
-  s.connect = /* @__PURE__ */ ((t) => (n, r = 0, i = 0) => {
-    const o = hn(n) ? t(n, r, i) : t(n, r), a = e.get(n);
+  s.connect = /* @__PURE__ */ ((t) => (n, i = 0, r = 0) => {
+    const o = ds(n) ? t(n, i, r) : t(n, i), a = e.get(n);
     return a === void 0 ? e.set(n, [{
-      input: i,
-      output: r
-    }]) : a.every((c) => c.input !== i || c.output !== r) && a.push({
-      input: i,
-      output: r
+      input: r,
+      output: i
+    }]) : a.every((c) => c.input !== r || c.output !== i) && a.push({
+      input: r,
+      output: i
     }), o;
-  })(s.connect.bind(s)), s.disconnect = /* @__PURE__ */ ((t) => (n, r, i) => {
+  })(s.connect.bind(s)), s.disconnect = /* @__PURE__ */ ((t) => (n, i, r) => {
     if (t.apply(s), n === void 0) e.clear();
     else if (typeof n == "number") for (const [o, a] of e) {
       const c = a.filter((l) => l.output !== n);
       c.length === 0 ? e.delete(o) : e.set(o, c);
     }
-    else if (e.has(n)) if (r === void 0) e.delete(n);
+    else if (e.has(n)) if (i === void 0) e.delete(n);
     else {
       const o = e.get(n);
       if (o !== void 0) {
-        const a = o.filter((c) => c.output !== r && (c.input !== i || i === void 0));
+        const a = o.filter((c) => c.output !== i && (c.input !== r || r === void 0));
         a.length === 0 ? e.delete(n) : e.set(n, a);
       }
     }
     for (const [o, a] of e) a.forEach((c) => {
-      hn(o) ? s.connect(o, c.output, c.input) : s.connect(o, c.output);
+      ds(o) ? s.connect(o, c.output, c.input) : s.connect(o, c.output);
     });
   })(s.disconnect);
-}, Ba = (s, e, t, n) => {
-  const { activeInputs: r, passiveInputs: i } = $t(e), { outputs: o } = be(s), a = Gt(s), c = (l) => {
-    const u = te(s), h = Lt(e);
+}, ro = (s, e, t, n) => {
+  const { activeInputs: i, passiveInputs: r } = Xt(e), { outputs: o } = xe(s), a = $t(s), c = (l) => {
+    const u = ne(s), h = jt(e);
     if (l) {
-      const d = Ur(i, s, t);
-      ir(r, s, d, !1), !n && !ht(s) && u.connect(h, t);
+      const d = tr(r, s, t);
+      pi(i, s, d, !1), !n && !pt(s) && u.connect(h, t);
     } else {
-      const d = Wa(r, s, t);
-      ar(i, d, !1), !n && !ht(s) && u.disconnect(h, t);
+      const d = no(i, s, t);
+      fi(r, d, !1), !n && !pt(s) && u.disconnect(h, t);
     }
   };
-  return gt(o, [e, t], (l) => l[0] === e && l[1] === t, !0) ? (a.add(c), ze(s) ? ir(r, s, [t, c], !0) : ar(i, [
+  return yt(o, [e, t], (l) => l[0] === e && l[1] === t, !0) ? (a.add(c), Ze(s) ? pi(i, s, [t, c], !0) : fi(r, [
     s,
     t,
     c
   ], !0), !0) : !1;
-}, Ua = (s, e, t, n) => {
-  const { activeInputs: r, passiveInputs: i } = be(e), o = jr(r[n], s, t);
-  return o === null ? [Fr(i, s, t, n)[2], !1] : [o[2], !0];
-}, Ga = (s, e, t) => {
-  const { activeInputs: n, passiveInputs: r } = $t(e), i = jr(n, s, t);
-  return i === null ? [Ur(r, s, t)[1], !1] : [i[2], !0];
-}, Ns = (s, e, t, n, r) => {
-  const [i, o] = Ua(s, t, n, r);
-  if (i !== null && (Br(s, i), o && !e && !ht(s) && un(te(s), te(t), n, r)), ze(t)) {
-    const { activeInputs: a } = be(t);
-    En(t, a);
+}, ao = (s, e, t, n) => {
+  const { activeInputs: i, passiveInputs: r } = xe(e), o = Ki(i[n], s, t);
+  return o === null ? [Hi(r, s, t, n)[2], !1] : [o[2], !0];
+}, oo = (s, e, t) => {
+  const { activeInputs: n, passiveInputs: i } = Xt(e), r = Ki(n, s, t);
+  return r === null ? [tr(i, s, t)[1], !1] : [r[2], !0];
+}, Pn = (s, e, t, n, i) => {
+  const [r, o] = ao(s, t, n, i);
+  if (r !== null && (er(s, r), o && !e && !pt(s) && hs(ne(s), ne(t), n, i)), Ze(t)) {
+    const { activeInputs: a } = xe(t);
+    Is(t, a);
   }
-}, Ms = (s, e, t, n) => {
-  const [r, i] = Ga(s, t, n);
-  r !== null && (Br(s, r), i && !e && !ht(s) && te(s).disconnect(Lt(t), n));
-}, za = (s, e) => {
-  const t = be(s), n = [];
-  for (const r of t.outputs)
-    Zt(r) ? Ns(s, e, ...r) : Ms(s, e, ...r), n.push(r[0]);
+}, qn = (s, e, t, n) => {
+  const [i, r] = oo(s, t, n);
+  i !== null && (er(s, i), r && !e && !pt(s) && ne(s).disconnect(jt(t), n));
+}, co = (s, e) => {
+  const t = xe(s), n = [];
+  for (const i of t.outputs)
+    Ht(i) ? Pn(s, e, ...i) : qn(s, e, ...i), n.push(i[0]);
   return t.outputs.clear(), n;
-}, $a = (s, e, t) => {
-  const n = be(s), r = [];
-  for (const i of n.outputs) i[1] === t && (Zt(i) ? Ns(s, e, ...i) : Ms(s, e, ...i), r.push(i[0]), n.outputs.delete(i));
-  return r;
-}, Za = (s, e, t, n, r) => {
-  const i = be(s);
-  return Array.from(i.outputs).filter((o) => o[0] === t && (n === void 0 || o[1] === n) && (r === void 0 || o[2] === r)).map((o) => (Zt(o) ? Ns(s, e, ...o) : Ms(s, e, ...o), i.outputs.delete(o), o[0]));
-}, Xa = (s, e, t, n, r, i, o, a, c, l, u, h, d, f, p, m) => class extends l {
+}, lo = (s, e, t) => {
+  const n = xe(s), i = [];
+  for (const r of n.outputs) r[1] === t && (Ht(r) ? Pn(s, e, ...r) : qn(s, e, ...r), i.push(r[0]), n.outputs.delete(r));
+  return i;
+}, uo = (s, e, t, n, i) => {
+  const r = xe(s);
+  return Array.from(r.outputs).filter((o) => o[0] === t && (n === void 0 || o[1] === n) && (i === void 0 || o[2] === i)).map((o) => (Ht(o) ? Pn(s, e, ...o) : qn(s, e, ...o), r.outputs.delete(o), o[0]));
+}, ho = (s, e, t, n, i, r, o, a, c, l, u, h, d, f, p, m) => class extends l {
   constructor(v, b, S, k) {
     super(S), this._context = v, this._nativeAudioNode = S;
     const g = u(v);
-    h(g) && t(or, () => or(g, m)) !== !0 && ja(S), As.set(this, S), Vr.set(this, /* @__PURE__ */ new Set()), v.state !== "closed" && b && At(this), s(this, k, S);
+    h(g) && t(mi, () => mi(g, m)) !== !0 && io(S), Rn.set(this, S), Zi.set(this, /* @__PURE__ */ new Set()), v.state !== "closed" && b && Ot(this), s(this, k, S);
   }
   get channelCount() {
     return this._nativeAudioNode.channelCount;
@@ -1131,43 +1131,43 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     return this._nativeAudioNode.numberOfOutputs;
   }
   connect(v, b = 0, S = 0) {
-    if (b < 0 || b >= this._nativeAudioNode.numberOfOutputs) throw r();
+    if (b < 0 || b >= this._nativeAudioNode.numberOfOutputs) throw i();
     const k = p(u(this._context));
-    if (d(v) || f(v)) throw i();
-    if (cn(v)) {
-      const T = te(v);
+    if (d(v) || f(v)) throw r();
+    if (ls(v)) {
+      const T = ne(v);
       try {
-        const y = ln(this._nativeAudioNode, T, b, S), w = en(this);
-        (k || w) && this._nativeAudioNode.disconnect(...y), this.context.state !== "closed" && !w && en(v) && At(v);
+        const y = us(this._nativeAudioNode, T, b, S), w = ss(this);
+        (k || w) && this._nativeAudioNode.disconnect(...y), this.context.state !== "closed" && !w && ss(v) && Ot(v);
       } catch (y) {
-        throw y.code === 12 ? i() : y;
+        throw y.code === 12 ? r() : y;
       }
-      return e(this, v, b, S, k) && kn(c([this], v), n(k)), v;
+      return e(this, v, b, S, k) && Os(c([this], v), n(k)), v;
     }
-    const g = Lt(v);
+    const g = jt(v);
     if (g.name === "playbackRate" && g.maxValue === 1024) throw o();
     try {
-      this._nativeAudioNode.connect(g, b), (k || en(this)) && this._nativeAudioNode.disconnect(g, b);
+      this._nativeAudioNode.connect(g, b), (k || ss(this)) && this._nativeAudioNode.disconnect(g, b);
     } catch (T) {
-      throw T.code === 12 ? i() : T;
+      throw T.code === 12 ? r() : T;
     }
-    Ba(this, v, b, k) && kn(c([this], v), n(k));
+    ro(this, v, b, k) && Os(c([this], v), n(k));
   }
   disconnect(v, b, S) {
     let k;
     const g = p(u(this._context));
-    if (v === void 0) k = za(this, g);
+    if (v === void 0) k = co(this, g);
     else if (typeof v == "number") {
-      if (v < 0 || v >= this.numberOfOutputs) throw r();
-      k = $a(this, g, v);
+      if (v < 0 || v >= this.numberOfOutputs) throw i();
+      k = lo(this, g, v);
     } else {
-      if (b !== void 0 && (b < 0 || b >= this.numberOfOutputs) || cn(v) && S !== void 0 && (S < 0 || S >= v.numberOfInputs)) throw r();
-      if (k = Za(this, g, v, b, S), k.length === 0) throw i();
+      if (b !== void 0 && (b < 0 || b >= this.numberOfOutputs) || ls(v) && S !== void 0 && (S < 0 || S >= v.numberOfInputs)) throw i();
+      if (k = uo(this, g, v, b, S), k.length === 0) throw r();
     }
-    for (const T of k) kn(c([this], T), a);
+    for (const T of k) Os(c([this], T), a);
   }
-}, Ha = (s, e, t, n, r, i, o, a, c, l, u, h, d) => (f, p, m, _ = null, v = null) => {
-  const b = m.value, S = new Ye.AutomationEventList(b), k = p ? n(S) : null, g = {
+}, po = (s, e, t, n, i, r, o, a, c, l, u, h, d) => (f, p, m, _ = null, v = null) => {
+  const b = m.value, S = new Je.AutomationEventList(b), k = p ? n(S) : null, g = {
     get defaultValue() {
       return b;
     },
@@ -1185,17 +1185,17 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     },
     cancelAndHoldAtTime(T) {
       if (typeof m.cancelAndHoldAtTime == "function")
-        k === null && S.flush(f.context.currentTime), S.add(r(T)), m.cancelAndHoldAtTime(T);
+        k === null && S.flush(f.context.currentTime), S.add(i(T)), m.cancelAndHoldAtTime(T);
       else {
         const y = Array.from(S).pop();
-        k === null && S.flush(f.context.currentTime), S.add(r(T));
+        k === null && S.flush(f.context.currentTime), S.add(i(T));
         const w = Array.from(S).pop();
         m.cancelScheduledValues(T), y !== w && w !== void 0 && (w.type === "exponentialRampToValue" ? m.exponentialRampToValueAtTime(w.value, w.endTime) : w.type === "linearRampToValue" ? m.linearRampToValueAtTime(w.value, w.endTime) : w.type === "setValue" ? m.setValueAtTime(w.value, w.startTime) : w.type === "setValueCurve" && m.setValueCurveAtTime(w.values, w.startTime, w.duration));
       }
       return g;
     },
     cancelScheduledValues(T) {
-      return k === null && S.flush(f.context.currentTime), S.add(i(T)), m.cancelScheduledValues(T), g;
+      return k === null && S.flush(f.context.currentTime), S.add(r(T)), m.cancelScheduledValues(T), g;
     },
     exponentialRampToValueAtTime(T, y) {
       if (T === 0) throw new RangeError();
@@ -1216,38 +1216,38 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     setValueCurveAtTime(T, y, w) {
       const I = T instanceof Float32Array ? T : new Float32Array(T);
       if (h !== null && h.name === "webkitAudioContext") {
-        const E = y + w, O = f.context.sampleRate, N = Math.ceil(y * O), q = Math.floor(E * O), P = q - N, U = new Float32Array(P);
-        for (let F = 0; F < P; F += 1) {
-          const A = (I.length - 1) / w * ((N + F) / O - y), C = Math.floor(A), x = Math.ceil(A);
-          U[F] = C === x ? I[C] : (1 - (A - C)) * I[C] + (1 - (x - A)) * I[x];
+        const E = y + w, N = f.context.sampleRate, M = Math.ceil(y * N), q = Math.floor(E * N), F = q - M, G = new Float32Array(F);
+        for (let P = 0; P < F; P += 1) {
+          const A = (I.length - 1) / w * ((M + P) / N - y), x = Math.floor(A), C = Math.ceil(A);
+          G[P] = x === C ? I[x] : (1 - (A - x)) * I[x] + (1 - (C - A)) * I[C];
         }
-        k === null && S.flush(f.context.currentTime), S.add(u(U, y, w)), m.setValueCurveAtTime(U, y, w);
-        const j = q / O;
-        j < E && d(g, U[U.length - 1], j), d(g, I[I.length - 1], E);
+        k === null && S.flush(f.context.currentTime), S.add(u(G, y, w)), m.setValueCurveAtTime(G, y, w);
+        const j = q / N;
+        j < E && d(g, G[G.length - 1], j), d(g, I[I.length - 1], E);
       } else
         k === null && S.flush(f.context.currentTime), S.add(u(I, y, w)), m.setValueCurveAtTime(I, y, w);
       return g;
     }
   };
   return t.set(g, m), e.set(g, f), s(g, k), g;
-}, Qa = (s) => ({ replay(e) {
+}, fo = (s) => ({ replay(e) {
   for (const t of s) if (t.type === "exponentialRampToValue") {
-    const { endTime: n, value: r } = t;
-    e.exponentialRampToValueAtTime(r, n);
+    const { endTime: n, value: i } = t;
+    e.exponentialRampToValueAtTime(i, n);
   } else if (t.type === "linearRampToValue") {
-    const { endTime: n, value: r } = t;
-    e.linearRampToValueAtTime(r, n);
+    const { endTime: n, value: i } = t;
+    e.linearRampToValueAtTime(i, n);
   } else if (t.type === "setTarget") {
-    const { startTime: n, target: r, timeConstant: i } = t;
-    e.setTargetAtTime(r, n, i);
+    const { startTime: n, target: i, timeConstant: r } = t;
+    e.setTargetAtTime(i, n, r);
   } else if (t.type === "setValue") {
-    const { startTime: n, value: r } = t;
-    e.setValueAtTime(r, n);
+    const { startTime: n, value: i } = t;
+    e.setValueAtTime(i, n);
   } else if (t.type === "setValueCurve") {
-    const { duration: n, startTime: r, values: i } = t;
-    e.setValueCurveAtTime(i, r, n);
+    const { duration: n, startTime: i, values: r } = t;
+    e.setValueCurveAtTime(r, i, n);
   } else throw new Error("Can't apply an unknown automation.");
-} }), Gr = class {
+} }), sr = class {
   constructor(s) {
     this._map = new Map(s);
   }
@@ -1272,7 +1272,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   values() {
     return this._map.values();
   }
-}, Ya = {
+}, mo = {
   channelCount: 2,
   channelCountMode: "explicit",
   channelInterpretation: "speakers",
@@ -1280,23 +1280,23 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   numberOfOutputs: 1,
   parameterData: {},
   processorOptions: {}
-}, Ja = (s, e, t, n, r, i, o, a, c, l, u, h, d, f) => class extends e {
+}, _o = (s, e, t, n, i, r, o, a, c, l, u, h, d, f) => class extends e {
   constructor(m, _, v) {
     var b;
     const S = a(m), k = c(S), g = u({
-      ...Ya,
+      ...mo,
       ...v
     });
     d(g);
-    const T = Mn.get(S), y = T?.get(_), w = r(k || S.state !== "closed" ? S : (b = o(S)) !== null && b !== void 0 ? b : S, k ? null : m.baseLatency, l, _, y, g), I = k ? n(_, g, y) : null;
+    const T = Ds.get(S), y = T?.get(_), w = i(k || S.state !== "closed" ? S : (b = o(S)) !== null && b !== void 0 ? b : S, k ? null : m.baseLatency, l, _, y, g), I = k ? n(_, g, y) : null;
     super(m, !0, w, I);
     const E = [];
-    w.parameters.forEach((N, q) => {
-      const P = t(this, k, N);
-      E.push([q, P]);
-    }), this._nativeAudioWorkletNode = w, this._onprocessorerror = null, this._parameters = new Gr(E), k && s(S, this);
-    const { activeInputs: O } = i(this);
-    h(w, O);
+    w.parameters.forEach((M, q) => {
+      const F = t(this, k, M);
+      E.push([q, F]);
+    }), this._nativeAudioWorkletNode = w, this._onprocessorerror = null, this._parameters = new sr(E), k && s(S, this);
+    const { activeInputs: N } = r(this);
+    h(w, N);
   }
   get onprocessorerror() {
     return this._onprocessorerror;
@@ -1314,46 +1314,46 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     return this._nativeAudioWorkletNode.port;
   }
 };
-function dn(s, e, t, n, r) {
+function ps(s, e, t, n, i) {
   if (typeof s.copyFromChannel == "function")
-    e[t].byteLength === 0 && (e[t] = /* @__PURE__ */ new Float32Array(128)), s.copyFromChannel(e[t], n, r);
+    e[t].byteLength === 0 && (e[t] = /* @__PURE__ */ new Float32Array(128)), s.copyFromChannel(e[t], n, i);
   else {
-    const i = s.getChannelData(n);
-    if (e[t].byteLength === 0) e[t] = i.slice(r, r + 128);
+    const r = s.getChannelData(n);
+    if (e[t].byteLength === 0) e[t] = r.slice(i, i + 128);
     else {
-      const o = new Float32Array(i.buffer, r * Float32Array.BYTES_PER_ELEMENT, 128);
+      const o = new Float32Array(r.buffer, i * Float32Array.BYTES_PER_ELEMENT, 128);
       e[t].set(o);
     }
   }
 }
-var zr = (s, e, t, n, r) => {
-  typeof s.copyToChannel == "function" ? e[t].byteLength !== 0 && s.copyToChannel(e[t], n, r) : e[t].byteLength !== 0 && s.getChannelData(n).set(e[t], r);
-}, pn = (s, e) => {
+var nr = (s, e, t, n, i) => {
+  typeof s.copyToChannel == "function" ? e[t].byteLength !== 0 && s.copyToChannel(e[t], n, i) : e[t].byteLength !== 0 && s.getChannelData(n).set(e[t], i);
+}, fs = (s, e) => {
   const t = [];
   for (let n = 0; n < s; n += 1) {
-    const r = [], i = typeof e == "number" ? e : e[n];
-    for (let o = 0; o < i; o += 1) r.push(/* @__PURE__ */ new Float32Array(128));
-    t.push(r);
+    const i = [], r = typeof e == "number" ? e : e[n];
+    for (let o = 0; o < r; o += 1) i.push(/* @__PURE__ */ new Float32Array(128));
+    t.push(i);
   }
   return t;
-}, Ka = (s, e) => Ve(Ve(Dn, s), te(e)), eo = async (s, e, t, n, r, i, o) => {
-  const a = e === null ? Math.ceil(s.context.length / 128) * 128 : e.length, c = n.channelCount * n.numberOfInputs, l = r.reduce((_, v) => _ + v, 0), u = l === 0 ? null : t.createBuffer(l, a, t.sampleRate);
-  if (i === void 0) throw new Error("Missing the processor constructor.");
-  const h = be(s), d = await Ka(t, s), f = pn(n.numberOfInputs, n.channelCount), p = pn(n.numberOfOutputs, r), m = Array.from(s.parameters.keys()).reduce((_, v) => ({
+}, go = (s, e) => Fe(Fe(Es, s), ne(e)), vo = async (s, e, t, n, i, r, o) => {
+  const a = e === null ? Math.ceil(s.context.length / 128) * 128 : e.length, c = n.channelCount * n.numberOfInputs, l = i.reduce((_, v) => _ + v, 0), u = l === 0 ? null : t.createBuffer(l, a, t.sampleRate);
+  if (r === void 0) throw new Error("Missing the processor constructor.");
+  const h = xe(s), d = await go(t, s), f = fs(n.numberOfInputs, n.channelCount), p = fs(n.numberOfOutputs, i), m = Array.from(s.parameters.keys()).reduce((_, v) => ({
     ..._,
     [v]: /* @__PURE__ */ new Float32Array(128)
   }), {});
   for (let _ = 0; _ < a; _ += 128) {
-    if (n.numberOfInputs > 0 && e !== null) for (let v = 0; v < n.numberOfInputs; v += 1) for (let b = 0; b < n.channelCount; b += 1) dn(e, f[v], b, b, _);
-    i.parameterDescriptors !== void 0 && e !== null && i.parameterDescriptors.forEach(({ name: v }, b) => {
-      dn(e, m, v, c + b, _);
+    if (n.numberOfInputs > 0 && e !== null) for (let v = 0; v < n.numberOfInputs; v += 1) for (let b = 0; b < n.channelCount; b += 1) ps(e, f[v], b, b, _);
+    r.parameterDescriptors !== void 0 && e !== null && r.parameterDescriptors.forEach(({ name: v }, b) => {
+      ps(e, m, v, c + b, _);
     });
-    for (let v = 0; v < n.numberOfInputs; v += 1) for (let b = 0; b < r[v]; b += 1) p[v][b].byteLength === 0 && (p[v][b] = /* @__PURE__ */ new Float32Array(128));
+    for (let v = 0; v < n.numberOfInputs; v += 1) for (let b = 0; b < i[v]; b += 1) p[v][b].byteLength === 0 && (p[v][b] = /* @__PURE__ */ new Float32Array(128));
     try {
       const v = f.map((S, k) => h.activeInputs[k].size === 0 ? [] : S), b = o(_ / t.sampleRate, t.sampleRate, () => d.process(v, p, m));
       if (u !== null) for (let S = 0, k = 0; S < n.numberOfOutputs; S += 1) {
-        for (let g = 0; g < r[S]; g += 1) zr(u, p[S], g, k + g, _);
-        k += r[S];
+        for (let g = 0; g < i[S]; g += 1) nr(u, p[S], g, k + g, _);
+        k += i[S];
       }
       if (!b) break;
     } catch (v) {
@@ -1367,80 +1367,80 @@ var zr = (s, e, t, n, r) => {
     }
   }
   return u;
-}, to = (s, e, t, n, r, i, o, a, c, l, u, h, d, f, p, m) => (_, v, b) => {
+}, yo = (s, e, t, n, i, r, o, a, c, l, u, h, d, f, p, m) => (_, v, b) => {
   const S = /* @__PURE__ */ new WeakMap();
   let k = null;
   const g = async (T, y) => {
     let w = u(T), I = null;
-    const E = ye(w, y), O = Array.isArray(v.outputChannelCount) ? v.outputChannelCount : Array.from(v.outputChannelCount);
+    const E = Te(w, y), N = Array.isArray(v.outputChannelCount) ? v.outputChannelCount : Array.from(v.outputChannelCount);
     if (h === null) {
-      const N = O.reduce((j, F) => j + F, 0), q = r(y, {
-        channelCount: Math.max(1, N),
+      const M = N.reduce((j, P) => j + P, 0), q = i(y, {
+        channelCount: Math.max(1, M),
         channelCountMode: "explicit",
         channelInterpretation: "discrete",
-        numberOfOutputs: Math.max(1, N)
-      }), P = [];
-      for (let j = 0; j < T.numberOfOutputs; j += 1) P.push(n(y, {
+        numberOfOutputs: Math.max(1, M)
+      }), F = [];
+      for (let j = 0; j < T.numberOfOutputs; j += 1) F.push(n(y, {
         channelCount: 1,
         channelCountMode: "explicit",
         channelInterpretation: "speakers",
-        numberOfInputs: O[j]
+        numberOfInputs: N[j]
       }));
-      const U = o(y, {
+      const G = o(y, {
         channelCount: v.channelCount,
         channelCountMode: v.channelCountMode,
         channelInterpretation: v.channelInterpretation,
         gain: 1
       });
-      U.connect = e.bind(null, P), U.disconnect = c.bind(null, P), I = [
+      G.connect = e.bind(null, F), G.disconnect = c.bind(null, F), I = [
         q,
-        P,
-        U
+        F,
+        G
       ];
     } else E || (w = new h(y, _));
     if (S.set(y, I === null ? w : I[2]), I !== null) {
       if (k === null) {
         if (b === void 0) throw new Error("Missing the processor constructor.");
         if (d === null) throw new Error("Missing the native OfflineAudioContext constructor.");
-        const F = T.channelCount * T.numberOfInputs, A = b.parameterDescriptors === void 0 ? 0 : b.parameterDescriptors.length, C = F + A;
-        k = eo(T, C === 0 ? null : await (async () => {
-          const D = new d(C, Math.ceil(T.context.length / 128) * 128, y.sampleRate), R = [], V = [];
-          for (let J = 0; J < v.numberOfInputs; J += 1)
+        const P = T.channelCount * T.numberOfInputs, A = b.parameterDescriptors === void 0 ? 0 : b.parameterDescriptors.length, x = P + A;
+        k = vo(T, x === 0 ? null : await (async () => {
+          const D = new d(x, Math.ceil(T.context.length / 128) * 128, y.sampleRate), R = [], V = [];
+          for (let ee = 0; ee < v.numberOfInputs; ee += 1)
             R.push(o(D, {
               channelCount: v.channelCount,
               channelCountMode: v.channelCountMode,
               channelInterpretation: v.channelInterpretation,
               gain: 1
-            })), V.push(r(D, {
+            })), V.push(i(D, {
               channelCount: v.channelCount,
               channelCountMode: "explicit",
               channelInterpretation: "discrete",
               numberOfOutputs: v.channelCount
             }));
-          const re = await Promise.all(Array.from(T.parameters.values()).map(async (J) => {
-            const ie = i(D, {
+          const ae = await Promise.all(Array.from(T.parameters.values()).map(async (ee) => {
+            const oe = r(D, {
               channelCount: 1,
               channelCountMode: "explicit",
               channelInterpretation: "discrete",
-              offset: J.value
+              offset: ee.value
             });
-            return await f(D, J, ie.offset), ie;
-          })), z = n(D, {
+            return await f(D, ee, oe.offset), oe;
+          })), $ = n(D, {
             channelCount: 1,
             channelCountMode: "explicit",
             channelInterpretation: "speakers",
-            numberOfInputs: Math.max(1, F + A)
+            numberOfInputs: Math.max(1, P + A)
           });
-          for (let J = 0; J < v.numberOfInputs; J += 1) {
-            R[J].connect(V[J]);
-            for (let ie = 0; ie < v.channelCount; ie += 1) V[J].connect(z, ie, J * v.channelCount + ie);
+          for (let ee = 0; ee < v.numberOfInputs; ee += 1) {
+            R[ee].connect(V[ee]);
+            for (let oe = 0; oe < v.channelCount; oe += 1) V[ee].connect($, oe, ee * v.channelCount + oe);
           }
-          for (const [J, ie] of re.entries())
-            ie.connect(z, 0, F + J), ie.start(0);
-          return z.connect(D.destination), await Promise.all(R.map((J) => p(T, D, J))), m(D);
-        })(), y, v, O, b, l);
+          for (const [ee, oe] of ae.entries())
+            oe.connect($, 0, P + ee), oe.start(0);
+          return $.connect(D.destination), await Promise.all(R.map((ee) => p(T, D, ee))), m(D);
+        })(), y, v, N, b, l);
       }
-      const N = await k, q = t(y, {
+      const M = await k, q = t(y, {
         buffer: null,
         channelCount: 2,
         channelCountMode: "max",
@@ -1449,17 +1449,17 @@ var zr = (s, e, t, n, r) => {
         loopEnd: 0,
         loopStart: 0,
         playbackRate: 1
-      }), [P, U, j] = I;
-      N !== null && (q.buffer = N, q.start(0)), q.connect(P);
-      for (let F = 0, A = 0; F < T.numberOfOutputs; F += 1) {
-        const C = U[F];
-        for (let x = 0; x < O[F]; x += 1) P.connect(C, A + x, x);
-        A += O[F];
+      }), [F, G, j] = I;
+      M !== null && (q.buffer = M, q.start(0)), q.connect(F);
+      for (let P = 0, A = 0; P < T.numberOfOutputs; P += 1) {
+        const x = G[P];
+        for (let C = 0; C < N[P]; C += 1) F.connect(x, A + C, C);
+        A += N[P];
       }
       return j;
     }
-    if (E) for (const [N, q] of T.parameters.entries()) await s(y, q, w.parameters.get(N));
-    else for (const [N, q] of T.parameters.entries()) await f(y, q, w.parameters.get(N));
+    if (E) for (const [M, q] of T.parameters.entries()) await s(y, q, w.parameters.get(M));
+    else for (const [M, q] of T.parameters.entries()) await f(y, q, w.parameters.get(M));
     return await p(T, y, w), w;
   };
   return { render(T, y) {
@@ -1467,7 +1467,7 @@ var zr = (s, e, t, n, r) => {
     const w = S.get(y);
     return w !== void 0 ? Promise.resolve(w) : g(T, y);
   } };
-}, no = (s, e, t, n, r, i, o, a, c, l, u, h, d, f, p, m, _, v, b, S) => class extends p {
+}, To = (s, e, t, n, i, r, o, a, c, l, u, h, d, f, p, m, _, v, b, S) => class extends p {
   constructor(g, T) {
     super(g, T), this._nativeContext = g, this._audioWorklet = s === void 0 ? void 0 : { addModule: (y, w) => s(this, y, w) };
   }
@@ -1478,7 +1478,7 @@ var zr = (s, e, t, n, r) => {
     return new e(this);
   }
   createBiquadFilter() {
-    return new r(this);
+    return new i(this);
   }
   createBuffer(g, T, y) {
     return new t({
@@ -1491,7 +1491,7 @@ var zr = (s, e, t, n, r) => {
     return new n(this);
   }
   createChannelMerger(g = 6) {
-    return new i(this, { numberOfInputs: g });
+    return new r(this, { numberOfInputs: g });
   }
   createChannelSplitter(g = 6) {
     return new o(this, { numberOfOutputs: g });
@@ -1541,7 +1541,7 @@ var zr = (s, e, t, n, r) => {
       throw typeof y == "function" && y(w), w;
     });
   }
-}, so = {
+}, wo = {
   Q: 1,
   channelCount: 2,
   channelCountMode: "max",
@@ -1550,13 +1550,13 @@ var zr = (s, e, t, n, r) => {
   frequency: 350,
   gain: 0,
   type: "lowpass"
-}, ro = (s, e, t, n, r, i, o, a) => class extends s {
+}, bo = (s, e, t, n, i, r, o, a) => class extends s {
   constructor(l, u) {
-    const h = i(l), d = r(h, {
-      ...so,
+    const h = r(l), d = i(h, {
+      ...wo,
       ...u
     }), f = o(h), p = f ? t() : null;
-    super(l, !1, d, p), this._Q = e(this, f, d.Q, we, Ae), this._detune = e(this, f, d.detune, 1200 * Math.log2(we), -1200 * Math.log2(we)), this._frequency = e(this, f, d.frequency, l.sampleRate / 2, 0), this._gain = e(this, f, d.gain, 40 * Math.log10(we), Ae), this._nativeBiquadFilterNode = d, a(this, 1);
+    super(l, !1, d, p), this._Q = e(this, f, d.Q, be, Ne), this._detune = e(this, f, d.detune, 1200 * Math.log2(be), -1200 * Math.log2(be)), this._frequency = e(this, f, d.frequency, l.sampleRate / 2, 0), this._gain = e(this, f, d.gain, 40 * Math.log10(be), Ne), this._nativeBiquadFilterNode = d, a(this, 1);
   }
   get detune() {
     return this._detune;
@@ -1584,10 +1584,10 @@ var zr = (s, e, t, n, r) => {
     }
     if (l.length !== u.length || u.length !== h.length) throw n();
   }
-}, io = (s, e, t, n, r) => () => {
-  const i = /* @__PURE__ */ new WeakMap(), o = async (a, c) => {
+}, xo = (s, e, t, n, i) => () => {
+  const r = /* @__PURE__ */ new WeakMap(), o = async (a, c) => {
     let l = t(a);
-    const u = ye(l, c);
+    const u = Te(l, c);
     return u || (l = e(c, {
       Q: l.Q.value,
       channelCount: l.channelCount,
@@ -1597,82 +1597,82 @@ var zr = (s, e, t, n, r) => {
       frequency: l.frequency.value,
       gain: l.gain.value,
       type: l.type
-    })), i.set(c, l), u ? (await s(c, a.Q, l.Q), await s(c, a.detune, l.detune), await s(c, a.frequency, l.frequency), await s(c, a.gain, l.gain)) : (await n(c, a.Q, l.Q), await n(c, a.detune, l.detune), await n(c, a.frequency, l.frequency), await n(c, a.gain, l.gain)), await r(a, c, l), l;
+    })), r.set(c, l), u ? (await s(c, a.Q, l.Q), await s(c, a.detune, l.detune), await s(c, a.frequency, l.frequency), await s(c, a.gain, l.gain)) : (await n(c, a.Q, l.Q), await n(c, a.detune, l.detune), await n(c, a.frequency, l.frequency), await n(c, a.gain, l.gain)), await i(a, c, l), l;
   };
   return { render(a, c) {
-    const l = i.get(c);
+    const l = r.get(c);
     return l !== void 0 ? Promise.resolve(l) : o(a, c);
   } };
-}, ao = (s, e) => (t, n) => {
-  const r = e.get(t);
-  if (r !== void 0) return r;
-  const i = s.get(t);
+}, Co = (s, e) => (t, n) => {
+  const i = e.get(t);
   if (i !== void 0) return i;
+  const r = s.get(t);
+  if (r !== void 0) return r;
   try {
     const o = n();
     return o instanceof Promise ? (s.set(t, o), o.catch(() => !1).then((a) => (s.delete(t), e.set(t, a), a))) : (e.set(t, o), o);
   } catch {
     return e.set(t, !1), !1;
   }
-}, oo = {
+}, So = {
   channelCount: 1,
   channelCountMode: "explicit",
   channelInterpretation: "speakers",
   numberOfInputs: 6
-}, co = (s, e, t, n, r) => class extends s {
+}, Ao = (s, e, t, n, i) => class extends s {
   constructor(o, a) {
     const c = n(o), l = t(c, {
-      ...oo,
+      ...So,
       ...a
-    }), u = r(c) ? e() : null;
+    }), u = i(c) ? e() : null;
     super(o, !1, l, u);
   }
-}, lo = (s, e, t) => () => {
-  const n = /* @__PURE__ */ new WeakMap(), r = async (i, o) => {
-    let a = e(i);
-    return ye(a, o) || (a = s(o, {
+}, ko = (s, e, t) => () => {
+  const n = /* @__PURE__ */ new WeakMap(), i = async (r, o) => {
+    let a = e(r);
+    return Te(a, o) || (a = s(o, {
       channelCount: a.channelCount,
       channelCountMode: a.channelCountMode,
       channelInterpretation: a.channelInterpretation,
       numberOfInputs: a.numberOfInputs
-    })), n.set(o, a), await t(i, o, a), a;
+    })), n.set(o, a), await t(r, o, a), a;
   };
-  return { render(i, o) {
+  return { render(r, o) {
     const a = n.get(o);
-    return a !== void 0 ? Promise.resolve(a) : r(i, o);
+    return a !== void 0 ? Promise.resolve(a) : i(r, o);
   } };
-}, uo = {
+}, Oo = {
   channelCount: 6,
   channelCountMode: "explicit",
   channelInterpretation: "discrete",
   numberOfOutputs: 6
-}, ho = (s, e, t, n, r, i) => class extends s {
+}, No = (s, e, t, n, i, r) => class extends s {
   constructor(a, c) {
-    const l = n(a), u = t(l, i({
-      ...uo,
+    const l = n(a), u = t(l, r({
+      ...Oo,
       ...c
-    })), h = r(l) ? e() : null;
+    })), h = i(l) ? e() : null;
     super(a, !1, u, h);
   }
-}, po = (s, e, t) => () => {
-  const n = /* @__PURE__ */ new WeakMap(), r = async (i, o) => {
-    let a = e(i);
-    return ye(a, o) || (a = s(o, {
+}, Mo = (s, e, t) => () => {
+  const n = /* @__PURE__ */ new WeakMap(), i = async (r, o) => {
+    let a = e(r);
+    return Te(a, o) || (a = s(o, {
       channelCount: a.channelCount,
       channelCountMode: a.channelCountMode,
       channelInterpretation: a.channelInterpretation,
       numberOfOutputs: a.numberOfOutputs
-    })), n.set(o, a), await t(i, o, a), a;
+    })), n.set(o, a), await t(r, o, a), a;
   };
-  return { render(i, o) {
+  return { render(r, o) {
     const a = n.get(o);
-    return a !== void 0 ? Promise.resolve(a) : r(i, o);
+    return a !== void 0 ? Promise.resolve(a) : i(r, o);
   } };
-}, fo = (s) => (e, t, n) => s(t, e, n), mo = (s) => (e, t, n = 0, r = 0) => {
-  const i = e[n];
-  if (i === void 0) throw s();
-  return hn(t) ? i.connect(t, 0, r) : i.connect(t, 0);
-}, _o = (s) => (e, t) => {
+}, Do = (s) => (e, t, n) => s(t, e, n), Eo = (s) => (e, t, n = 0, i = 0) => {
+  const r = e[n];
+  if (r === void 0) throw s();
+  return ds(t) ? r.connect(t, 0, i) : r.connect(t, 0);
+}, Io = (s) => (e, t) => {
   const n = s(e, {
     buffer: null,
     channelCount: 2,
@@ -1686,18 +1686,18 @@ var zr = (s, e, t, n, r) => {
   return n.buffer = e.createBuffer(1, 2, 44100), n.loop = !0, n.connect(t), n.start(), () => {
     n.stop(), n.disconnect(t);
   };
-}, go = {
+}, Ro = {
   channelCount: 2,
   channelCountMode: "max",
   channelInterpretation: "speakers",
   offset: 1
-}, vo = (s, e, t, n, r, i, o) => class extends s {
+}, Vo = (s, e, t, n, i, r, o) => class extends s {
   constructor(c, l) {
-    const u = r(c), h = n(u, {
-      ...go,
+    const u = i(c), h = n(u, {
+      ...Ro,
       ...l
-    }), d = i(u), f = d ? t() : null;
-    super(c, !1, h, f), this._constantSourceNodeRenderer = f, this._nativeConstantSourceNode = h, this._offset = e(this, d, h.offset, we, Ae), this._onended = null;
+    }), d = r(u), f = d ? t() : null;
+    super(c, !1, h, f), this._constantSourceNodeRenderer = f, this._nativeConstantSourceNode = h, this._offset = e(this, d, h.offset, be, Ne), this._onended = null;
   }
   get offset() {
     return this._offset;
@@ -1713,9 +1713,9 @@ var zr = (s, e, t, n, r) => {
   }
   start(c = 0) {
     if (this._nativeConstantSourceNode.start(c), this._constantSourceNodeRenderer !== null && (this._constantSourceNodeRenderer.start = c), this.context.state !== "closed") {
-      At(this);
+      Ot(this);
       const l = () => {
-        this._nativeConstantSourceNode.removeEventListener("ended", l), ze(this) && zt(this);
+        this._nativeConstantSourceNode.removeEventListener("ended", l), Ze(this) && Zt(this);
       };
       this._nativeConstantSourceNode.addEventListener("ended", l);
     }
@@ -1723,18 +1723,18 @@ var zr = (s, e, t, n, r) => {
   stop(c = 0) {
     this._nativeConstantSourceNode.stop(c), this._constantSourceNodeRenderer !== null && (this._constantSourceNodeRenderer.stop = c);
   }
-}, yo = (s, e, t, n, r) => () => {
-  const i = /* @__PURE__ */ new WeakMap();
+}, Fo = (s, e, t, n, i) => () => {
+  const r = /* @__PURE__ */ new WeakMap();
   let o = null, a = null;
   const c = async (l, u) => {
     let h = t(l);
-    const d = ye(h, u);
+    const d = Te(h, u);
     return d || (h = e(u, {
       channelCount: h.channelCount,
       channelCountMode: h.channelCountMode,
       channelInterpretation: h.channelInterpretation,
       offset: h.offset.value
-    }), o !== null && h.start(o), a !== null && h.stop(a)), i.set(u, h), d ? await s(u, l.offset, h.offset) : await n(u, l.offset, h.offset), await r(l, u, h), h;
+    }), o !== null && h.start(o), a !== null && h.stop(a)), r.set(u, h), d ? await s(u, l.offset, h.offset) : await n(u, l.offset, h.offset), await i(l, u, h), h;
   };
   return {
     set start(l) {
@@ -1744,23 +1744,23 @@ var zr = (s, e, t, n, r) => {
       a = l;
     },
     render(l, u) {
-      const h = i.get(u);
+      const h = r.get(u);
       return h !== void 0 ? Promise.resolve(h) : c(l, u);
     }
   };
-}, To = (s) => (e) => (s[0] = e, s[0]), wo = {
+}, Po = (s) => (e) => (s[0] = e, s[0]), qo = {
   buffer: null,
   channelCount: 2,
   channelCountMode: "clamped-max",
   channelInterpretation: "speakers",
   disableNormalization: !1
-}, bo = (s, e, t, n, r, i) => class extends s {
+}, Lo = (s, e, t, n, i, r) => class extends s {
   constructor(a, c) {
     const l = n(a), u = {
-      ...wo,
+      ...qo,
       ...c
-    }, h = t(l, u), d = r(l) ? e() : null;
-    super(a, !1, h, d), this._isBufferNullified = !1, this._nativeConvolverNode = h, u.buffer !== null && i(this, u.buffer.duration);
+    }, h = t(l, u), d = i(l) ? e() : null;
+    super(a, !1, h, d), this._isBufferNullified = !1, this._nativeConvolverNode = h, u.buffer !== null && r(this, u.buffer.duration);
   }
   get buffer() {
     return this._isBufferNullified ? null : this._nativeConvolverNode.buffer;
@@ -1768,9 +1768,9 @@ var zr = (s, e, t, n, r) => {
   set buffer(a) {
     if (this._nativeConvolverNode.buffer = a, a === null && this._nativeConvolverNode.buffer !== null) {
       const c = this._nativeConvolverNode.context;
-      this._nativeConvolverNode.buffer = c.createBuffer(1, 1, c.sampleRate), this._isBufferNullified = !0, i(this, 0);
+      this._nativeConvolverNode.buffer = c.createBuffer(1, 1, c.sampleRate), this._isBufferNullified = !0, r(this, 0);
     } else
-      this._isBufferNullified = !1, i(this, this._nativeConvolverNode.buffer === null ? 0 : this._nativeConvolverNode.buffer.duration);
+      this._isBufferNullified = !1, r(this, this._nativeConvolverNode.buffer === null ? 0 : this._nativeConvolverNode.buffer.duration);
   }
   get normalize() {
     return this._nativeConvolverNode.normalize;
@@ -1778,57 +1778,57 @@ var zr = (s, e, t, n, r) => {
   set normalize(a) {
     this._nativeConvolverNode.normalize = a;
   }
-}, Co = (s, e, t) => () => {
-  const n = /* @__PURE__ */ new WeakMap(), r = async (i, o) => {
-    let a = e(i);
-    return ye(a, o) || (a = s(o, {
+}, Wo = (s, e, t) => () => {
+  const n = /* @__PURE__ */ new WeakMap(), i = async (r, o) => {
+    let a = e(r);
+    return Te(a, o) || (a = s(o, {
       buffer: a.buffer,
       channelCount: a.channelCount,
       channelCountMode: a.channelCountMode,
       channelInterpretation: a.channelInterpretation,
       disableNormalization: !a.normalize
-    })), n.set(o, a), Et(a) ? await t(i, o, a.inputs[0]) : await t(i, o, a), a;
+    })), n.set(o, a), Rt(a) ? await t(r, o, a.inputs[0]) : await t(r, o, a), a;
   };
-  return { render(i, o) {
+  return { render(r, o) {
     const a = n.get(o);
-    return a !== void 0 ? Promise.resolve(a) : r(i, o);
+    return a !== void 0 ? Promise.resolve(a) : i(r, o);
   } };
-}, xo = (s, e) => (t, n, r) => {
+}, jo = (s, e) => (t, n, i) => {
   if (e === null) throw new Error("Missing the native OfflineAudioContext constructor.");
   try {
-    return new e(t, n, r);
-  } catch (i) {
-    throw i.name === "SyntaxError" ? s() : i;
+    return new e(t, n, i);
+  } catch (r) {
+    throw r.name === "SyntaxError" ? s() : r;
   }
-}, So = () => new DOMException("", "DataCloneError"), cr = (s) => {
+}, Bo = () => new DOMException("", "DataCloneError"), _i = (s) => {
   const { port1: e, port2: t } = new MessageChannel();
   return new Promise((n) => {
-    const r = () => {
+    const i = () => {
       t.onmessage = null, e.close(), t.close(), n();
     };
-    t.onmessage = () => r();
+    t.onmessage = () => i();
     try {
       e.postMessage(s, [s]);
     } catch {
     } finally {
-      r();
+      i();
     }
   });
-}, Ao = (s, e, t, n, r, i, o, a, c, l, u) => (h, d) => {
-  const f = o(h) ? h : i(h);
-  if (r.has(d)) {
+}, Uo = (s, e, t, n, i, r, o, a, c, l, u) => (h, d) => {
+  const f = o(h) ? h : r(h);
+  if (i.has(d)) {
     const p = t();
     return Promise.reject(p);
   }
   try {
-    r.add(d);
+    i.add(d);
   } catch {
   }
-  return e(c, () => c(f)) ? f.decodeAudioData(d).then((p) => (cr(d).catch(() => {
+  return e(c, () => c(f)) ? f.decodeAudioData(d).then((p) => (_i(d).catch(() => {
   }), e(a, () => a(p)) || u(p), s.add(p), p)) : new Promise((p, m) => {
     const _ = async () => {
       try {
-        await cr(d);
+        await _i(d);
       } catch {
       }
     }, v = (b) => {
@@ -1836,7 +1836,7 @@ var zr = (s, e, t, n, r) => {
     };
     try {
       f.decodeAudioData(d, (b) => {
-        typeof b.copyFromChannel != "function" && (l(b), Os(b)), s.add(b), _().then(() => p(b));
+        typeof b.copyFromChannel != "function" && (l(b), Fn(b)), s.add(b), _().then(() => p(b));
       }, (b) => {
         v(b === null ? n() : b);
       });
@@ -1844,67 +1844,67 @@ var zr = (s, e, t, n, r) => {
       v(b);
     }
   });
-}, ko = (s, e, t, n, r, i, o, a) => (c, l) => {
+}, Go = (s, e, t, n, i, r, o, a) => (c, l) => {
   const u = e.get(c);
   if (u === void 0) throw new Error("Missing the expected cycle count.");
-  const h = a(i(c.context));
+  const h = a(r(c.context));
   if (u === l) {
     if (e.delete(c), !h && o(c)) {
       const d = n(c), { outputs: f } = t(c);
-      for (const p of f) if (Zt(p)) s(d, n(p[0]), p[1], p[2]);
+      for (const p of f) if (Ht(p)) s(d, n(p[0]), p[1], p[2]);
       else {
-        const m = r(p[0]);
+        const m = i(p[0]);
         d.connect(m, p[1]);
       }
     }
   } else e.set(c, u - l);
-}, Oo = {
+}, zo = {
   channelCount: 2,
   channelCountMode: "max",
   channelInterpretation: "speakers",
   delayTime: 0,
   maxDelayTime: 1
-}, No = (s, e, t, n, r, i, o) => class extends s {
+}, $o = (s, e, t, n, i, r, o) => class extends s {
   constructor(c, l) {
-    const u = r(c), h = {
-      ...Oo,
+    const u = i(c), h = {
+      ...zo,
       ...l
-    }, d = n(u, h), f = i(u), p = f ? t(h.maxDelayTime) : null;
+    }, d = n(u, h), f = r(u), p = f ? t(h.maxDelayTime) : null;
     super(c, !1, d, p), this._delayTime = e(this, f, d.delayTime), o(this, h.maxDelayTime);
   }
   get delayTime() {
     return this._delayTime;
   }
-}, Mo = (s, e, t, n, r) => (i) => {
+}, Zo = (s, e, t, n, i) => (r) => {
   const o = /* @__PURE__ */ new WeakMap(), a = async (c, l) => {
     let u = t(c);
-    const h = ye(u, l);
+    const h = Te(u, l);
     return h || (u = e(l, {
       channelCount: u.channelCount,
       channelCountMode: u.channelCountMode,
       channelInterpretation: u.channelInterpretation,
       delayTime: u.delayTime.value,
-      maxDelayTime: i
-    })), o.set(l, u), h ? await s(l, c.delayTime, u.delayTime) : await n(l, c.delayTime, u.delayTime), await r(c, l, u), u;
+      maxDelayTime: r
+    })), o.set(l, u), h ? await s(l, c.delayTime, u.delayTime) : await n(l, c.delayTime, u.delayTime), await i(c, l, u), u;
   };
   return { render(c, l) {
     const u = o.get(l);
     return u !== void 0 ? Promise.resolve(u) : a(c, l);
   } };
-}, Do = (s) => (e, t, n, r) => s(e[r], (i) => i[0] === t && i[1] === n), Eo = (s) => (e, t) => {
+}, Xo = (s) => (e, t, n, i) => s(e[i], (r) => r[0] === t && r[1] === n), Ho = (s) => (e, t) => {
   s(e).delete(t);
-}, Io = (s) => "delayTime" in s, Ro = (s, e, t) => function n(r, i) {
-  const o = cn(i) ? i : t(s, i);
-  if (Io(o)) return [];
-  if (r[0] === o) return [r];
-  if (r.includes(o)) return [];
+}, Qo = (s) => "delayTime" in s, Yo = (s, e, t) => function n(i, r) {
+  const o = ls(r) ? r : t(s, r);
+  if (Qo(o)) return [];
+  if (i[0] === o) return [i];
+  if (i.includes(o)) return [];
   const { outputs: a } = e(o);
-  return Array.from(a).map((c) => n([...r, o], c[0])).reduce((c, l) => c.concat(l), []);
-}, Jt = (s, e, t) => {
+  return Array.from(a).map((c) => n([...i, o], c[0])).reduce((c, l) => c.concat(l), []);
+}, es = (s, e, t) => {
   const n = e[t];
   if (n === void 0) throw s();
   return n;
-}, Vo = (s) => (e, t = void 0, n = void 0, r = 0) => t === void 0 ? e.forEach((i) => i.disconnect()) : typeof t == "number" ? Jt(s, e, t).disconnect() : hn(t) ? n === void 0 ? e.forEach((i) => i.disconnect(t)) : r === void 0 ? Jt(s, e, n).disconnect(t, 0) : Jt(s, e, n).disconnect(t, 0, r) : n === void 0 ? e.forEach((i) => i.disconnect(t)) : Jt(s, e, n).disconnect(t, 0), Po = {
+}, Jo = (s) => (e, t = void 0, n = void 0, i = 0) => t === void 0 ? e.forEach((r) => r.disconnect()) : typeof t == "number" ? es(s, e, t).disconnect() : ds(t) ? n === void 0 ? e.forEach((r) => r.disconnect(t)) : i === void 0 ? es(s, e, n).disconnect(t, 0) : es(s, e, n).disconnect(t, 0, i) : n === void 0 ? e.forEach((r) => r.disconnect(t)) : es(s, e, n).disconnect(t, 0), Ko = {
   attack: 3e-3,
   channelCount: 2,
   channelCountMode: "clamped-max",
@@ -1913,10 +1913,10 @@ var zr = (s, e, t, n, r) => {
   ratio: 12,
   release: 0.25,
   threshold: -24
-}, Fo = (s, e, t, n, r, i, o, a) => class extends s {
+}, ec = (s, e, t, n, i, r, o, a) => class extends s {
   constructor(l, u) {
-    const h = i(l), d = n(h, {
-      ...Po,
+    const h = r(l), d = n(h, {
+      ...Ko,
       ...u
     }), f = o(h), p = f ? t() : null;
     super(l, !1, d, p), this._attack = e(this, f, d.attack), this._knee = e(this, f, d.knee), this._nativeDynamicsCompressorNode = d, this._ratio = e(this, f, d.ratio), this._release = e(this, f, d.release), this._threshold = e(this, f, d.threshold), a(this, 6e-3);
@@ -1930,7 +1930,7 @@ var zr = (s, e, t, n, r) => {
   set channelCount(l) {
     const u = this._nativeDynamicsCompressorNode.channelCount;
     if (this._nativeDynamicsCompressorNode.channelCount = l, l > 2)
-      throw this._nativeDynamicsCompressorNode.channelCount = u, r();
+      throw this._nativeDynamicsCompressorNode.channelCount = u, i();
   }
   get channelCountMode() {
     return this._nativeDynamicsCompressorNode.channelCountMode;
@@ -1938,7 +1938,7 @@ var zr = (s, e, t, n, r) => {
   set channelCountMode(l) {
     const u = this._nativeDynamicsCompressorNode.channelCountMode;
     if (this._nativeDynamicsCompressorNode.channelCountMode = l, l === "max")
-      throw this._nativeDynamicsCompressorNode.channelCountMode = u, r();
+      throw this._nativeDynamicsCompressorNode.channelCountMode = u, i();
   }
   get knee() {
     return this._knee;
@@ -1955,10 +1955,10 @@ var zr = (s, e, t, n, r) => {
   get threshold() {
     return this._threshold;
   }
-}, qo = (s, e, t, n, r) => () => {
-  const i = /* @__PURE__ */ new WeakMap(), o = async (a, c) => {
+}, tc = (s, e, t, n, i) => () => {
+  const r = /* @__PURE__ */ new WeakMap(), o = async (a, c) => {
     let l = t(a);
-    const u = ye(l, c);
+    const u = Te(l, c);
     return u || (l = e(c, {
       attack: l.attack.value,
       channelCount: l.channelCount,
@@ -1968,51 +1968,51 @@ var zr = (s, e, t, n, r) => {
       ratio: l.ratio.value,
       release: l.release.value,
       threshold: l.threshold.value
-    })), i.set(c, l), u ? (await s(c, a.attack, l.attack), await s(c, a.knee, l.knee), await s(c, a.ratio, l.ratio), await s(c, a.release, l.release), await s(c, a.threshold, l.threshold)) : (await n(c, a.attack, l.attack), await n(c, a.knee, l.knee), await n(c, a.ratio, l.ratio), await n(c, a.release, l.release), await n(c, a.threshold, l.threshold)), await r(a, c, l), l;
+    })), r.set(c, l), u ? (await s(c, a.attack, l.attack), await s(c, a.knee, l.knee), await s(c, a.ratio, l.ratio), await s(c, a.release, l.release), await s(c, a.threshold, l.threshold)) : (await n(c, a.attack, l.attack), await n(c, a.knee, l.knee), await n(c, a.ratio, l.ratio), await n(c, a.release, l.release), await n(c, a.threshold, l.threshold)), await i(a, c, l), l;
   };
   return { render(a, c) {
-    const l = i.get(c);
+    const l = r.get(c);
     return l !== void 0 ? Promise.resolve(l) : o(a, c);
   } };
-}, Lo = () => new DOMException("", "EncodingError"), Wo = (s) => (e) => new Promise((t, n) => {
+}, sc = () => new DOMException("", "EncodingError"), nc = (s) => (e) => new Promise((t, n) => {
   if (s === null) {
     n(/* @__PURE__ */ new SyntaxError());
     return;
   }
-  const r = s.document.head;
-  if (r === null) n(/* @__PURE__ */ new SyntaxError());
+  const i = s.document.head;
+  if (i === null) n(/* @__PURE__ */ new SyntaxError());
   else {
-    const i = s.document.createElement("script"), o = new Blob([e], { type: "application/javascript" }), a = URL.createObjectURL(o), c = s.onerror, l = () => {
+    const r = s.document.createElement("script"), o = new Blob([e], { type: "application/javascript" }), a = URL.createObjectURL(o), c = s.onerror, l = () => {
       s.onerror = c, URL.revokeObjectURL(a);
     };
     s.onerror = (u, h, d, f, p) => {
       if (h === a || h === s.location.href && d === 1 && f === 1)
         return l(), n(p), !1;
       if (c !== null) return c(u, h, d, f, p);
-    }, i.onerror = () => {
+    }, r.onerror = () => {
       l(), n(/* @__PURE__ */ new SyntaxError());
-    }, i.onload = () => {
+    }, r.onload = () => {
       l(), t();
-    }, i.src = a, i.type = "module", r.appendChild(i);
+    }, r.src = a, r.type = "module", i.appendChild(r);
   }
-}), jo = (s) => class {
+}), ic = (s) => class {
   constructor(t) {
     this._nativeEventTarget = t, this._listeners = /* @__PURE__ */ new WeakMap();
   }
-  addEventListener(t, n, r) {
+  addEventListener(t, n, i) {
     if (n !== null) {
-      let i = this._listeners.get(n);
-      i === void 0 && (i = s(this, n), typeof n == "function" && this._listeners.set(n, i)), this._nativeEventTarget.addEventListener(t, i, r);
+      let r = this._listeners.get(n);
+      r === void 0 && (r = s(this, n), typeof n == "function" && this._listeners.set(n, r)), this._nativeEventTarget.addEventListener(t, r, i);
     }
   }
   dispatchEvent(t) {
     return this._nativeEventTarget.dispatchEvent(t);
   }
-  removeEventListener(t, n, r) {
-    const i = n === null ? void 0 : this._listeners.get(n);
-    this._nativeEventTarget.removeEventListener(t, i === void 0 ? null : i, r);
+  removeEventListener(t, n, i) {
+    const r = n === null ? void 0 : this._listeners.get(n);
+    this._nativeEventTarget.removeEventListener(t, r === void 0 ? null : r, i);
   }
-}, Bo = (s) => (e, t, n) => {
+}, rc = (s) => (e, t, n) => {
   Object.defineProperties(s, {
     currentFrame: {
       configurable: !0,
@@ -2032,120 +2032,120 @@ var zr = (s, e, t, n, r) => {
   } finally {
     s !== null && (delete s.currentFrame, delete s.currentTime);
   }
-}, Uo = (s) => async (e) => {
+}, ac = (s) => async (e) => {
   try {
     const t = await fetch(e);
     if (t.ok) return [await t.text(), t.url];
   } catch {
   }
   throw s();
-}, Go = {
+}, oc = {
   channelCount: 2,
   channelCountMode: "max",
   channelInterpretation: "speakers",
   gain: 1
-}, zo = (s, e, t, n, r, i) => class extends s {
+}, cc = (s, e, t, n, i, r) => class extends s {
   constructor(a, c) {
-    const l = r(a), u = n(l, {
-      ...Go,
+    const l = i(a), u = n(l, {
+      ...oc,
       ...c
-    }), h = i(l), d = h ? t() : null;
-    super(a, !1, u, d), this._gain = e(this, h, u.gain, we, Ae);
+    }), h = r(l), d = h ? t() : null;
+    super(a, !1, u, d), this._gain = e(this, h, u.gain, be, Ne);
   }
   get gain() {
     return this._gain;
   }
-}, $o = (s, e, t, n, r) => () => {
-  const i = /* @__PURE__ */ new WeakMap(), o = async (a, c) => {
+}, lc = (s, e, t, n, i) => () => {
+  const r = /* @__PURE__ */ new WeakMap(), o = async (a, c) => {
     let l = t(a);
-    const u = ye(l, c);
+    const u = Te(l, c);
     return u || (l = e(c, {
       channelCount: l.channelCount,
       channelCountMode: l.channelCountMode,
       channelInterpretation: l.channelInterpretation,
       gain: l.gain.value
-    })), i.set(c, l), u ? await s(c, a.gain, l.gain) : await n(c, a.gain, l.gain), await r(a, c, l), l;
+    })), r.set(c, l), u ? await s(c, a.gain, l.gain) : await n(c, a.gain, l.gain), await i(a, c, l), l;
   };
   return { render(a, c) {
-    const l = i.get(c);
+    const l = r.get(c);
     return l !== void 0 ? Promise.resolve(l) : o(a, c);
   } };
-}, Zo = (s, e) => (t) => e(s, t), Xo = (s) => (e) => {
+}, uc = (s, e) => (t) => e(s, t), hc = (s) => (e) => {
   const t = s(e);
   if (t.renderer === null) throw new Error("Missing the renderer of the given AudioNode in the audio graph.");
   return t.renderer;
-}, Ho = (s) => (e) => {
+}, dc = (s) => (e) => {
   var t;
   return (t = s.get(e)) !== null && t !== void 0 ? t : 0;
-}, Qo = (s) => (e) => {
+}, pc = (s) => (e) => {
   const t = s(e);
   if (t.renderer === null) throw new Error("Missing the renderer of the given AudioParam in the audio graph.");
   return t.renderer;
-}, Yo = (s) => (e) => s.get(e), he = () => new DOMException("", "InvalidStateError"), Jo = (s) => (e) => {
+}, fc = (s) => (e) => s.get(e), he = () => new DOMException("", "InvalidStateError"), mc = (s) => (e) => {
   const t = s.get(e);
   if (t === void 0) throw he();
   return t;
-}, Ko = (s, e) => (t) => {
+}, _c = (s, e) => (t) => {
   let n = s.get(t);
   if (n !== void 0) return n;
   if (e === null) throw new Error("Missing the native OfflineAudioContext constructor.");
   return n = new e(1, 1, 44100), s.set(t, n), n;
-}, ec = (s) => (e) => {
+}, gc = (s) => (e) => {
   const t = s.get(e);
   if (t === void 0) throw new Error("The context has no set of AudioWorkletNodes.");
   return t;
-}, Cn = () => new DOMException("", "InvalidAccessError"), tc = (s) => {
-  s.getFrequencyResponse = /* @__PURE__ */ ((e) => (t, n, r) => {
-    if (t.length !== n.length || n.length !== r.length) throw Cn();
-    return e.call(s, t, n, r);
+}, xs = () => new DOMException("", "InvalidAccessError"), vc = (s) => {
+  s.getFrequencyResponse = /* @__PURE__ */ ((e) => (t, n, i) => {
+    if (t.length !== n.length || n.length !== i.length) throw xs();
+    return e.call(s, t, n, i);
   })(s.getFrequencyResponse);
-}, nc = {
+}, yc = {
   channelCount: 2,
   channelCountMode: "max",
   channelInterpretation: "speakers"
-}, sc = (s, e, t, n, r, i) => class extends s {
+}, Tc = (s, e, t, n, i, r) => class extends s {
   constructor(a, c) {
-    const l = n(a), u = r(l), h = {
-      ...nc,
+    const l = n(a), u = i(l), h = {
+      ...yc,
       ...c
     }, d = e(l, u ? null : a.baseLatency, h), f = u ? t(h.feedback, h.feedforward) : null;
-    super(a, !1, d, f), tc(d), this._nativeIIRFilterNode = d, i(this, 1);
+    super(a, !1, d, f), vc(d), this._nativeIIRFilterNode = d, r(this, 1);
   }
   getFrequencyResponse(a, c, l) {
     return this._nativeIIRFilterNode.getFrequencyResponse(a, c, l);
   }
-}, $r = (s, e, t, n, r, i, o, a, c, l, u) => {
+}, ir = (s, e, t, n, i, r, o, a, c, l, u) => {
   const h = l.length;
   let d = a;
   for (let f = 0; f < h; f += 1) {
     let p = t[0] * l[f];
-    for (let m = 1; m < r; m += 1) {
+    for (let m = 1; m < i; m += 1) {
       const _ = d - m & c - 1;
-      p += t[m] * i[_], p -= s[m] * o[_];
+      p += t[m] * r[_], p -= s[m] * o[_];
     }
-    for (let m = r; m < n; m += 1) p += t[m] * i[d - m & c - 1];
-    for (let m = r; m < e; m += 1) p -= s[m] * o[d - m & c - 1];
-    i[d] = l[f], o[d] = p, d = d + 1 & c - 1, u[f] = p;
+    for (let m = i; m < n; m += 1) p += t[m] * r[d - m & c - 1];
+    for (let m = i; m < e; m += 1) p -= s[m] * o[d - m & c - 1];
+    r[d] = l[f], o[d] = p, d = d + 1 & c - 1, u[f] = p;
   }
   return d;
-}, rc = (s, e, t, n) => {
-  const r = t instanceof Float64Array ? t : new Float64Array(t), i = n instanceof Float64Array ? n : new Float64Array(n), o = r.length, a = i.length, c = Math.min(o, a);
-  if (r[0] !== 1) {
-    for (let p = 0; p < o; p += 1) i[p] /= r[0];
-    for (let p = 1; p < a; p += 1) r[p] /= r[0];
+}, wc = (s, e, t, n) => {
+  const i = t instanceof Float64Array ? t : new Float64Array(t), r = n instanceof Float64Array ? n : new Float64Array(n), o = i.length, a = r.length, c = Math.min(o, a);
+  if (i[0] !== 1) {
+    for (let p = 0; p < o; p += 1) r[p] /= i[0];
+    for (let p = 1; p < a; p += 1) i[p] /= i[0];
   }
   const l = 32, u = new Float32Array(l), h = new Float32Array(l), d = e.createBuffer(s.numberOfChannels, s.length, s.sampleRate), f = s.numberOfChannels;
   for (let p = 0; p < f; p += 1) {
     const m = s.getChannelData(p), _ = d.getChannelData(p);
-    u.fill(0), h.fill(0), $r(r, o, i, a, c, u, h, 0, l, m, _);
+    u.fill(0), h.fill(0), ir(i, o, r, a, c, u, h, 0, l, m, _);
   }
   return d;
-}, ic = (s, e, t, n, r) => (i, o) => {
+}, bc = (s, e, t, n, i) => (r, o) => {
   const a = /* @__PURE__ */ new WeakMap();
   let c = null;
   const l = async (u, h) => {
     let d = null, f = e(u);
-    const p = ye(f, h);
+    const p = Te(f, h);
     if (h.createIIRFilter === void 0 ? d = s(h, {
       buffer: null,
       channelCount: 2,
@@ -2155,14 +2155,14 @@ var zr = (s, e, t, n, r) => {
       loopEnd: 0,
       loopStart: 0,
       playbackRate: 1
-    }) : p || (f = h.createIIRFilter(o, i)), a.set(h, d === null ? f : d), d !== null) {
+    }) : p || (f = h.createIIRFilter(o, r)), a.set(h, d === null ? f : d), d !== null) {
       if (c === null) {
         if (t === null) throw new Error("Missing the native OfflineAudioContext constructor.");
         const _ = new t(u.context.destination.channelCount, u.context.length, h.sampleRate);
         c = (async () => {
           await n(u, _, _.destination);
-          const v = await r(_);
-          return rc(v, h, i, o);
+          const v = await i(_);
+          return wc(v, h, r, o);
         })();
       }
       const m = await c;
@@ -2174,74 +2174,74 @@ var zr = (s, e, t, n, r) => {
     const d = a.get(h);
     return d !== void 0 ? Promise.resolve(d) : l(u, h);
   } };
-}, ac = (s, e, t, n, r, i) => (o) => (a, c) => {
+}, xc = (s, e, t, n, i, r) => (o) => (a, c) => {
   const l = s.get(a);
   if (l === void 0) {
-    if (!o && i(a)) {
+    if (!o && r(a)) {
       const u = n(a), { outputs: h } = t(a);
-      for (const d of h) if (Zt(d)) e(u, n(d[0]), d[1], d[2]);
+      for (const d of h) if (Ht(d)) e(u, n(d[0]), d[1], d[2]);
       else {
-        const f = r(d[0]);
+        const f = i(d[0]);
         u.disconnect(f, d[1]);
       }
     }
     s.set(a, c);
   } else s.set(a, l + c);
-}, oc = (s, e) => (t) => e(s.get(t)) || e(t), cc = (s, e) => (t) => s.has(t) || e(t), lc = (s, e) => (t) => s.has(t) || e(t), uc = (s, e) => (t) => e(s.get(t)) || e(t), hc = (s) => (e) => s !== null && e instanceof s, dc = (s) => (e) => s !== null && typeof s.AudioNode == "function" && e instanceof s.AudioNode, pc = (s) => (e) => s !== null && typeof s.AudioParam == "function" && e instanceof s.AudioParam, fc = (s, e) => (t) => s(t) || e(t), mc = (s) => (e) => s !== null && e instanceof s, _c = (s) => s !== null && s.isSecureContext, gc = (s, e, t, n) => class extends s {
-  constructor(i, o) {
-    const a = t(i), c = e(a, o);
+}, Cc = (s, e) => (t) => e(s.get(t)) || e(t), Sc = (s, e) => (t) => s.has(t) || e(t), Ac = (s, e) => (t) => s.has(t) || e(t), kc = (s, e) => (t) => e(s.get(t)) || e(t), Oc = (s) => (e) => s !== null && e instanceof s, Nc = (s) => (e) => s !== null && typeof s.AudioNode == "function" && e instanceof s.AudioNode, Mc = (s) => (e) => s !== null && typeof s.AudioParam == "function" && e instanceof s.AudioParam, Dc = (s, e) => (t) => s(t) || e(t), Ec = (s) => (e) => s !== null && e instanceof s, Ic = (s) => s !== null && s.isSecureContext, Rc = (s, e, t, n) => class extends s {
+  constructor(r, o) {
+    const a = t(r), c = e(a, o);
     if (n(a)) throw TypeError();
-    super(i, !0, c, null), this._nativeMediaElementAudioSourceNode = c;
+    super(r, !0, c, null), this._nativeMediaElementAudioSourceNode = c;
   }
   get mediaElement() {
     return this._nativeMediaElementAudioSourceNode.mediaElement;
   }
-}, vc = {
+}, Vc = {
   channelCount: 2,
   channelCountMode: "explicit",
   channelInterpretation: "speakers"
-}, yc = (s, e, t, n) => class extends s {
-  constructor(i, o) {
-    const a = t(i);
+}, Fc = (s, e, t, n) => class extends s {
+  constructor(r, o) {
+    const a = t(r);
     if (n(a)) throw new TypeError();
     const c = e(a, {
-      ...vc,
+      ...Vc,
       ...o
     });
-    super(i, !1, c, null), this._nativeMediaStreamAudioDestinationNode = c;
+    super(r, !1, c, null), this._nativeMediaStreamAudioDestinationNode = c;
   }
   get stream() {
     return this._nativeMediaStreamAudioDestinationNode.stream;
   }
-}, Tc = (s, e, t, n) => class extends s {
-  constructor(i, o) {
-    const a = t(i), c = e(a, o);
+}, Pc = (s, e, t, n) => class extends s {
+  constructor(r, o) {
+    const a = t(r), c = e(a, o);
     if (n(a)) throw new TypeError();
-    super(i, !0, c, null), this._nativeMediaStreamAudioSourceNode = c;
+    super(r, !0, c, null), this._nativeMediaStreamAudioSourceNode = c;
   }
   get mediaStream() {
     return this._nativeMediaStreamAudioSourceNode.mediaStream;
   }
-}, wc = (s, e, t) => class extends s {
-  constructor(r, i) {
-    const o = e(t(r), i);
-    super(r, !0, o, null);
+}, qc = (s, e, t) => class extends s {
+  constructor(i, r) {
+    const o = e(t(i), r);
+    super(i, !0, o, null);
   }
-}, bc = (s, e, t, n, r) => class extends n {
+}, Lc = (s, e, t, n, i) => class extends n {
   constructor(o = {}) {
-    if (r === null) throw new Error("Missing the native AudioContext constructor.");
+    if (i === null) throw new Error("Missing the native AudioContext constructor.");
     let a;
     try {
-      a = new r(o);
+      a = new i(o);
     } catch (u) {
       throw u.code === 12 && u.message === "sampleRate is not in range" ? e() : u;
     }
     if (a === null) throw t();
-    if (!Wr(o.latencyHint)) throw new TypeError(`The provided value '${o.latencyHint}' is not a valid enum value of type AudioContextLatencyCategory.`);
+    if (!Ji(o.latencyHint)) throw new TypeError(`The provided value '${o.latencyHint}' is not a valid enum value of type AudioContextLatencyCategory.`);
     if (o.sampleRate !== void 0 && a.sampleRate !== o.sampleRate) throw e();
     super(a, 2);
     const { latencyHint: c } = o, { sampleRate: l } = a;
-    if (this._baseLatency = typeof a.baseLatency == "number" ? a.baseLatency : c === "balanced" ? 512 / l : c === "interactive" || c === void 0 ? 256 / l : c === "playback" ? 1024 / l : Math.max(2, Math.min(128, Math.round(c * l / 128))) * 128 / l, this._nativeAudioContext = a, r.name === "webkitAudioContext" ? (this._nativeGainNode = a.createGain(), this._nativeOscillatorNode = a.createOscillator(), this._nativeGainNode.gain.value = 1e-37, this._nativeOscillatorNode.connect(this._nativeGainNode).connect(a.destination), this._nativeOscillatorNode.start()) : (this._nativeGainNode = null, this._nativeOscillatorNode = null), this._state = null, a.state === "running") {
+    if (this._baseLatency = typeof a.baseLatency == "number" ? a.baseLatency : c === "balanced" ? 512 / l : c === "interactive" || c === void 0 ? 256 / l : c === "playback" ? 1024 / l : Math.max(2, Math.min(128, Math.round(c * l / 128))) * 128 / l, this._nativeAudioContext = a, i.name === "webkitAudioContext" ? (this._nativeGainNode = a.createGain(), this._nativeOscillatorNode = a.createOscillator(), this._nativeGainNode.gain.value = 1e-37, this._nativeOscillatorNode.connect(this._nativeGainNode).connect(a.destination), this._nativeOscillatorNode.start()) : (this._nativeGainNode = null, this._nativeOscillatorNode = null), this._state = null, a.state === "running") {
       this._state = "suspended";
       const u = () => {
         this._state === "suspended" && (this._state = null), a.removeEventListener("statechange", u);
@@ -2259,7 +2259,7 @@ var zr = (s, e, t, n, r) => {
     return this.state === "closed" ? this._nativeAudioContext.close().then(() => {
       throw s();
     }) : (this._state === "suspended" && (this._state = null), this._nativeAudioContext.close().then(() => {
-      this._nativeGainNode !== null && this._nativeOscillatorNode !== null && (this._nativeOscillatorNode.stop(), this._nativeGainNode.disconnect(), this._nativeOscillatorNode.disconnect()), bn(this);
+      this._nativeGainNode !== null && this._nativeOscillatorNode !== null && (this._nativeOscillatorNode.stop(), this._nativeGainNode.disconnect(), this._nativeOscillatorNode.disconnect()), bs(this);
     }));
   }
   resume() {
@@ -2277,9 +2277,9 @@ var zr = (s, e, t, n, r) => {
       throw o === void 0 ? s() : o;
     });
   }
-}, Cc = (s, e, t, n, r, i) => class extends t {
+}, Wc = (s, e, t, n, i, r) => class extends t {
   constructor(a, c) {
-    super(a), this._nativeContext = a, Tn.set(this, a), n(a) && r.set(a, /* @__PURE__ */ new Set()), this._destination = new s(this, c), this._listener = e(this, a), this._onstatechange = null;
+    super(a), this._nativeContext = a, Ts.set(this, a), n(a) && i.set(a, /* @__PURE__ */ new Set()), this._destination = new s(this, c), this._listener = e(this, a), this._onstatechange = null;
   }
   get currentTime() {
     return this._nativeContext.currentTime;
@@ -2294,7 +2294,7 @@ var zr = (s, e, t, n, r) => {
     return this._onstatechange;
   }
   set onstatechange(a) {
-    const c = typeof a == "function" ? i(this, a) : null;
+    const c = typeof a == "function" ? r(this, a) : null;
     this._nativeContext.onstatechange = c;
     const l = this._nativeContext.onstatechange;
     this._onstatechange = l !== null && l === c ? a : l;
@@ -2305,7 +2305,7 @@ var zr = (s, e, t, n, r) => {
   get state() {
     return this._nativeContext.state;
   }
-}, dt = (s) => {
+}, ft = (s) => {
   const e = new Uint32Array([
     1179011410,
     40,
@@ -2328,13 +2328,13 @@ var zr = (s, e, t, n, r) => {
   } catch {
   }
   return !1;
-}, xc = { numberOfChannels: 1 }, Sc = (s, e, t, n, r) => class extends n {
+}, jc = { numberOfChannels: 1 }, Bc = (s, e, t, n, i) => class extends n {
   constructor(o) {
     const { length: a, numberOfChannels: c, sampleRate: l } = {
-      ...xc,
+      ...jc,
       ...o
     }, u = t(c, a, l);
-    s(dt, () => dt(u)) || u.addEventListener("statechange", /* @__PURE__ */ (() => {
+    s(ft, () => ft(u)) || u.addEventListener("statechange", /* @__PURE__ */ (() => {
       let h = 0;
       const d = (f) => {
         this._state === "running" && (h > 0 ? (u.removeEventListener("statechange", d), f.stopImmediatePropagation(), this._waitForThePromiseToSettle(f)) : h += 1);
@@ -2349,114 +2349,114 @@ var zr = (s, e, t, n, r) => {
     return this._state === null ? this._nativeOfflineAudioContext.state : this._state;
   }
   startRendering() {
-    return this._state === "running" ? Promise.reject(e()) : (this._state = "running", r(this.destination, this._nativeOfflineAudioContext).finally(() => {
-      this._state = null, bn(this);
+    return this._state === "running" ? Promise.reject(e()) : (this._state = "running", i(this.destination, this._nativeOfflineAudioContext).finally(() => {
+      this._state = null, bs(this);
     }));
   }
   _waitForThePromiseToSettle(o) {
     this._state === null ? this._nativeOfflineAudioContext.dispatchEvent(o) : setTimeout(() => this._waitForThePromiseToSettle(o));
   }
-}, Ac = (s, e) => (t, n, r) => {
-  const i = /* @__PURE__ */ new Set();
+}, Uc = (s, e) => (t, n, i) => {
+  const r = /* @__PURE__ */ new Set();
   return t.connect = /* @__PURE__ */ ((o) => (a, c = 0, l = 0) => {
-    const u = i.size === 0;
+    const u = r.size === 0;
     if (e(a))
-      return o.call(t, a, c, l), s(i, [
+      return o.call(t, a, c, l), s(r, [
         a,
         c,
         l
       ], (h) => h[0] === a && h[1] === c && h[2] === l, !0), u && n(), a;
-    o.call(t, a, c), s(i, [a, c], (h) => h[0] === a && h[1] === c, !0), u && n();
+    o.call(t, a, c), s(r, [a, c], (h) => h[0] === a && h[1] === c, !0), u && n();
   })(t.connect), t.disconnect = /* @__PURE__ */ ((o) => (a, c, l) => {
-    const u = i.size > 0;
+    const u = r.size > 0;
     if (a === void 0)
-      o.apply(t), i.clear();
+      o.apply(t), r.clear();
     else if (typeof a == "number") {
       o.call(t, a);
-      for (const d of i) d[1] === a && i.delete(d);
+      for (const d of r) d[1] === a && r.delete(d);
     } else {
       e(a) ? o.call(t, a, c, l) : o.call(t, a, c);
-      for (const d of i) d[0] === a && (c === void 0 || d[1] === c) && (l === void 0 || d[2] === l) && i.delete(d);
+      for (const d of r) d[0] === a && (c === void 0 || d[1] === c) && (l === void 0 || d[2] === l) && r.delete(d);
     }
-    const h = i.size === 0;
-    u && h && r();
+    const h = r.size === 0;
+    u && h && i();
   })(t.disconnect), t;
-}, ne = (s, e, t) => {
+}, ie = (s, e, t) => {
   const n = e[t];
   n !== void 0 && n !== s[t] && (s[t] = n);
 }, fe = (s, e) => {
-  ne(s, e, "channelCount"), ne(s, e, "channelCountMode"), ne(s, e, "channelInterpretation");
-}, lr = (s) => typeof s.getFloatTimeDomainData == "function", kc = (s) => {
+  ie(s, e, "channelCount"), ie(s, e, "channelCountMode"), ie(s, e, "channelInterpretation");
+}, gi = (s) => typeof s.getFloatTimeDomainData == "function", Gc = (s) => {
   s.getFloatTimeDomainData = (e) => {
     const t = new Uint8Array(e.length);
     s.getByteTimeDomainData(t);
     const n = Math.max(t.length, s.fftSize);
-    for (let r = 0; r < n; r += 1) e[r] = (t[r] - 128) * 78125e-7;
+    for (let i = 0; i < n; i += 1) e[i] = (t[i] - 128) * 78125e-7;
     return e;
   };
-}, Oc = (s, e) => (t, n) => {
-  const r = t.createAnalyser();
-  if (fe(r, n), !(n.maxDecibels > n.minDecibels)) throw e();
-  return ne(r, n, "fftSize"), ne(r, n, "maxDecibels"), ne(r, n, "minDecibels"), ne(r, n, "smoothingTimeConstant"), s(lr, () => lr(r)) || kc(r), r;
-}, Nc = (s) => s === null ? null : s.hasOwnProperty("AudioBuffer") ? s.AudioBuffer : null, ae = (s, e, t) => {
+}, zc = (s, e) => (t, n) => {
+  const i = t.createAnalyser();
+  if (fe(i, n), !(n.maxDecibels > n.minDecibels)) throw e();
+  return ie(i, n, "fftSize"), ie(i, n, "maxDecibels"), ie(i, n, "minDecibels"), ie(i, n, "smoothingTimeConstant"), s(gi, () => gi(i)) || Gc(i), i;
+}, $c = (s) => s === null ? null : s.hasOwnProperty("AudioBuffer") ? s.AudioBuffer : null, ce = (s, e, t) => {
   const n = e[t];
   n !== void 0 && n !== s[t].value && (s[t].value = n);
-}, Mc = (s) => {
+}, Zc = (s) => {
   s.start = /* @__PURE__ */ ((e) => {
     let t = !1;
-    return (n = 0, r = 0, i) => {
+    return (n = 0, i = 0, r) => {
       if (t) throw he();
-      e.call(s, n, r, i), t = !0;
+      e.call(s, n, i, r), t = !0;
     };
   })(s.start);
-}, Ds = (s) => {
-  s.start = /* @__PURE__ */ ((e) => (t = 0, n = 0, r) => {
-    if (typeof r == "number" && r < 0 || n < 0 || t < 0) throw new RangeError("The parameters can't be negative.");
-    e.call(s, t, n, r);
+}, Ln = (s) => {
+  s.start = /* @__PURE__ */ ((e) => (t = 0, n = 0, i) => {
+    if (typeof i == "number" && i < 0 || n < 0 || t < 0) throw new RangeError("The parameters can't be negative.");
+    e.call(s, t, n, i);
   })(s.start);
-}, Es = (s) => {
+}, Wn = (s) => {
   s.stop = /* @__PURE__ */ ((e) => (t = 0) => {
     if (t < 0) throw new RangeError("The parameter can't be negative.");
     e.call(s, t);
   })(s.stop);
-}, Dc = (s, e, t, n, r, i, o, a, c, l, u) => (h, d) => {
+}, Xc = (s, e, t, n, i, r, o, a, c, l, u) => (h, d) => {
   const f = h.createBufferSource();
-  return fe(f, d), ae(f, d, "playbackRate"), ne(f, d, "buffer"), ne(f, d, "loop"), ne(f, d, "loopEnd"), ne(f, d, "loopStart"), e(t, () => t(h)) || Mc(f), e(n, () => n(h)) || c(f), e(r, () => r(h)) || l(f, h), e(i, () => i(h)) || Ds(f), e(o, () => o(h)) || u(f, h), e(a, () => a(h)) || Es(f), s(h, f), f;
-}, Ec = (s) => s === null ? null : s.hasOwnProperty("AudioContext") ? s.AudioContext : s.hasOwnProperty("webkitAudioContext") ? s.webkitAudioContext : null, Ic = (s, e) => (t, n, r) => {
-  const i = t.destination;
-  if (i.channelCount !== n) try {
-    i.channelCount = n;
+  return fe(f, d), ce(f, d, "playbackRate"), ie(f, d, "buffer"), ie(f, d, "loop"), ie(f, d, "loopEnd"), ie(f, d, "loopStart"), e(t, () => t(h)) || Zc(f), e(n, () => n(h)) || c(f), e(i, () => i(h)) || l(f, h), e(r, () => r(h)) || Ln(f), e(o, () => o(h)) || u(f, h), e(a, () => a(h)) || Wn(f), s(h, f), f;
+}, Hc = (s) => s === null ? null : s.hasOwnProperty("AudioContext") ? s.AudioContext : s.hasOwnProperty("webkitAudioContext") ? s.webkitAudioContext : null, Qc = (s, e) => (t, n, i) => {
+  const r = t.destination;
+  if (r.channelCount !== n) try {
+    r.channelCount = n;
   } catch {
   }
-  r && i.channelCountMode !== "explicit" && (i.channelCountMode = "explicit"), i.maxChannelCount === 0 && Object.defineProperty(i, "maxChannelCount", { value: n });
+  i && r.channelCountMode !== "explicit" && (r.channelCountMode = "explicit"), r.maxChannelCount === 0 && Object.defineProperty(r, "maxChannelCount", { value: n });
   const o = s(t, {
     channelCount: n,
-    channelCountMode: i.channelCountMode,
-    channelInterpretation: i.channelInterpretation,
+    channelCountMode: r.channelCountMode,
+    channelInterpretation: r.channelInterpretation,
     gain: 1
   });
   return e(o, "channelCount", (a) => () => a.call(o), (a) => (c) => {
     a.call(o, c);
     try {
-      i.channelCount = c;
+      r.channelCount = c;
     } catch (l) {
-      if (c > i.maxChannelCount) throw l;
+      if (c > r.maxChannelCount) throw l;
     }
   }), e(o, "channelCountMode", (a) => () => a.call(o), (a) => (c) => {
-    a.call(o, c), i.channelCountMode = c;
+    a.call(o, c), r.channelCountMode = c;
   }), e(o, "channelInterpretation", (a) => () => a.call(o), (a) => (c) => {
-    a.call(o, c), i.channelInterpretation = c;
-  }), Object.defineProperty(o, "maxChannelCount", { get: () => i.maxChannelCount }), o.connect(i), o;
-}, Rc = (s) => s === null ? null : s.hasOwnProperty("AudioWorkletNode") ? s.AudioWorkletNode : null, Vc = (s) => {
+    a.call(o, c), r.channelInterpretation = c;
+  }), Object.defineProperty(o, "maxChannelCount", { get: () => r.maxChannelCount }), o.connect(r), o;
+}, Yc = (s) => s === null ? null : s.hasOwnProperty("AudioWorkletNode") ? s.AudioWorkletNode : null, Jc = (s) => {
   const { port1: e } = new MessageChannel();
   try {
     e.postMessage(s);
   } finally {
     e.close();
   }
-}, Pc = (s, e, t, n, r) => (i, o, a, c, l, u) => {
+}, Kc = (s, e, t, n, i) => (r, o, a, c, l, u) => {
   if (a !== null) try {
-    const h = new a(i, c, u), d = /* @__PURE__ */ new Map();
+    const h = new a(r, c, u), d = /* @__PURE__ */ new Map();
     let f = null;
     if (Object.defineProperties(h, {
       channelCount: {
@@ -2495,39 +2495,39 @@ var zr = (s, e, t, n, r) => {
       }
       return p.call(h, "error", m[1], m[2]), p.call(h, m[0], m[1], m[2]);
     })(h.removeEventListener), u.numberOfOutputs !== 0) {
-      const p = t(i, {
+      const p = t(r, {
         channelCount: 1,
         channelCountMode: "explicit",
         channelInterpretation: "discrete",
         gain: 0
       });
-      return h.connect(p).connect(i.destination), r(h, () => p.disconnect(), () => p.connect(i.destination));
+      return h.connect(p).connect(r.destination), i(h, () => p.disconnect(), () => p.connect(r.destination));
     }
     return h;
   } catch (h) {
     throw h.code === 11 ? n() : h;
   }
   if (l === void 0) throw n();
-  return Vc(u), e(i, o, l, u);
-}, Zr = (s, e) => s === null ? 512 : Math.max(512, Math.min(16384, Math.pow(2, Math.round(Math.log2(s * e))))), Fc = (s) => new Promise((e, t) => {
-  const { port1: n, port2: r } = new MessageChannel();
-  n.onmessage = ({ data: i }) => {
-    n.close(), r.close(), e(i);
-  }, n.onmessageerror = ({ data: i }) => {
-    n.close(), r.close(), t(i);
-  }, r.postMessage(s);
-}), qc = async (s, e) => new s(await Fc(e)), Lc = (s, e, t, n) => {
-  let r = Dn.get(s);
-  r === void 0 && (r = /* @__PURE__ */ new WeakMap(), Dn.set(s, r));
-  const i = qc(t, n);
-  return r.set(e, i), i;
-}, Wc = (s, e, t, n, r, i, o, a, c, l, u, h, d) => (f, p, m, _) => {
+  return Jc(u), e(r, o, l, u);
+}, rr = (s, e) => s === null ? 512 : Math.max(512, Math.min(16384, Math.pow(2, Math.round(Math.log2(s * e))))), el = (s) => new Promise((e, t) => {
+  const { port1: n, port2: i } = new MessageChannel();
+  n.onmessage = ({ data: r }) => {
+    n.close(), i.close(), e(r);
+  }, n.onmessageerror = ({ data: r }) => {
+    n.close(), i.close(), t(r);
+  }, i.postMessage(s);
+}), tl = async (s, e) => new s(await el(e)), sl = (s, e, t, n) => {
+  let i = Es.get(s);
+  i === void 0 && (i = /* @__PURE__ */ new WeakMap(), Es.set(s, i));
+  const r = tl(t, n);
+  return i.set(e, r), r;
+}, nl = (s, e, t, n, i, r, o, a, c, l, u, h, d) => (f, p, m, _) => {
   if (_.numberOfInputs === 0 && _.numberOfOutputs === 0) throw c();
   const v = Array.isArray(_.outputChannelCount) ? _.outputChannelCount : Array.from(_.outputChannelCount);
   if (v.some((L) => L < 1)) throw c();
   if (v.length !== _.numberOfOutputs) throw e();
   if (_.channelCountMode !== "explicit") throw c();
-  const b = _.channelCount * _.numberOfInputs, S = v.reduce((L, B) => L + B, 0), k = m.parameterDescriptors === void 0 ? 0 : m.parameterDescriptors.length;
+  const b = _.channelCount * _.numberOfInputs, S = v.reduce((L, U) => L + U, 0), k = m.parameterDescriptors === void 0 ? 0 : m.parameterDescriptors.length;
   if (b + k > 6 || S > 6) throw c();
   const g = new MessageChannel(), T = [], y = [];
   for (let L = 0; L < _.numberOfInputs; L += 1)
@@ -2536,32 +2536,32 @@ var zr = (s, e, t, n, r) => {
       channelCountMode: _.channelCountMode,
       channelInterpretation: _.channelInterpretation,
       gain: 1
-    })), y.push(r(f, {
+    })), y.push(i(f, {
       channelCount: _.channelCount,
       channelCountMode: "explicit",
       channelInterpretation: "discrete",
       numberOfOutputs: _.channelCount
     }));
   const w = [];
-  if (m.parameterDescriptors !== void 0) for (const { defaultValue: L, maxValue: B, minValue: de, name: se } of m.parameterDescriptors) {
-    const X = i(f, {
+  if (m.parameterDescriptors !== void 0) for (const { defaultValue: L, maxValue: U, minValue: de, name: re } of m.parameterDescriptors) {
+    const H = r(f, {
       channelCount: 1,
       channelCountMode: "explicit",
       channelInterpretation: "discrete",
-      offset: _.parameterData[se] !== void 0 ? _.parameterData[se] : L === void 0 ? 0 : L
+      offset: _.parameterData[re] !== void 0 ? _.parameterData[re] : L === void 0 ? 0 : L
     });
-    Object.defineProperties(X.offset, {
+    Object.defineProperties(H.offset, {
       defaultValue: { get: () => L === void 0 ? 0 : L },
-      maxValue: { get: () => B === void 0 ? we : B },
-      minValue: { get: () => de === void 0 ? Ae : de }
-    }), w.push(X);
+      maxValue: { get: () => U === void 0 ? be : U },
+      minValue: { get: () => de === void 0 ? Ne : de }
+    }), w.push(H);
   }
   const I = n(f, {
     channelCount: 1,
     channelCountMode: "explicit",
     channelInterpretation: "speakers",
     numberOfInputs: Math.max(1, b + k)
-  }), E = Zr(p, f.sampleRate), O = a(f, E, b + k, Math.max(1, S)), N = r(f, {
+  }), E = rr(p, f.sampleRate), N = a(f, E, b + k, Math.max(1, S)), M = i(f, {
     channelCount: Math.max(1, S),
     channelCountMode: "explicit",
     channelInterpretation: "discrete",
@@ -2575,15 +2575,15 @@ var zr = (s, e, t, n, r) => {
   }));
   for (let L = 0; L < _.numberOfInputs; L += 1) {
     T[L].connect(y[L]);
-    for (let B = 0; B < _.channelCount; B += 1) y[L].connect(I, B, L * _.channelCount + B);
+    for (let U = 0; U < _.channelCount; U += 1) y[L].connect(I, U, L * _.channelCount + U);
   }
-  const P = new Gr(m.parameterDescriptors === void 0 ? [] : m.parameterDescriptors.map(({ name: L }, B) => {
-    const de = w[B];
-    return de.connect(I, 0, b + B), de.start(0), [L, de.offset];
+  const F = new sr(m.parameterDescriptors === void 0 ? [] : m.parameterDescriptors.map(({ name: L }, U) => {
+    const de = w[U];
+    return de.connect(I, 0, b + U), de.start(0), [L, de.offset];
   }));
-  I.connect(O);
-  let U = _.channelInterpretation, j = null;
-  const F = _.numberOfOutputs === 0 ? [O] : q, A = {
+  I.connect(N);
+  let G = _.channelInterpretation, j = null;
+  const P = _.numberOfOutputs === 0 ? [N] : q, A = {
     get bufferSize() {
       return E;
     },
@@ -2600,14 +2600,14 @@ var zr = (s, e, t, n, r) => {
       throw t();
     },
     get channelInterpretation() {
-      return U;
+      return G;
     },
     set channelInterpretation(L) {
-      for (const B of T) B.channelInterpretation = L;
-      U = L;
+      for (const U of T) U.channelInterpretation = L;
+      G = L;
     },
     get context() {
-      return O.context;
+      return N.context;
     },
     get inputs() {
       return T;
@@ -2625,139 +2625,139 @@ var zr = (s, e, t, n, r) => {
       typeof j == "function" && A.removeEventListener("processorerror", j), j = typeof L == "function" ? L : null, typeof j == "function" && A.addEventListener("processorerror", j);
     },
     get parameters() {
-      return P;
+      return F;
     },
     get port() {
       return g.port2;
     },
     addEventListener(...L) {
-      return O.addEventListener(L[0], L[1], L[2]);
+      return N.addEventListener(L[0], L[1], L[2]);
     },
-    connect: s.bind(null, F),
-    disconnect: l.bind(null, F),
+    connect: s.bind(null, P),
+    disconnect: l.bind(null, P),
     dispatchEvent(...L) {
-      return O.dispatchEvent(L[0]);
+      return N.dispatchEvent(L[0]);
     },
     removeEventListener(...L) {
-      return O.removeEventListener(L[0], L[1], L[2]);
+      return N.removeEventListener(L[0], L[1], L[2]);
     }
-  }, C = /* @__PURE__ */ new Map();
-  g.port1.addEventListener = /* @__PURE__ */ ((L) => (...B) => {
-    if (B[0] === "message") {
-      const de = typeof B[1] == "function" ? B[1] : typeof B[1] == "object" && B[1] !== null && typeof B[1].handleEvent == "function" ? B[1].handleEvent : null;
+  }, x = /* @__PURE__ */ new Map();
+  g.port1.addEventListener = /* @__PURE__ */ ((L) => (...U) => {
+    if (U[0] === "message") {
+      const de = typeof U[1] == "function" ? U[1] : typeof U[1] == "object" && U[1] !== null && typeof U[1].handleEvent == "function" ? U[1].handleEvent : null;
       if (de !== null) {
-        const se = C.get(B[1]);
-        se !== void 0 ? B[1] = se : (B[1] = (X) => {
-          u(f.currentTime, f.sampleRate, () => de(X));
-        }, C.set(de, B[1]));
+        const re = x.get(U[1]);
+        re !== void 0 ? U[1] = re : (U[1] = (H) => {
+          u(f.currentTime, f.sampleRate, () => de(H));
+        }, x.set(de, U[1]));
       }
     }
-    return L.call(g.port1, B[0], B[1], B[2]);
-  })(g.port1.addEventListener), g.port1.removeEventListener = /* @__PURE__ */ ((L) => (...B) => {
-    if (B[0] === "message") {
-      const de = C.get(B[1]);
-      de !== void 0 && (C.delete(B[1]), B[1] = de);
+    return L.call(g.port1, U[0], U[1], U[2]);
+  })(g.port1.addEventListener), g.port1.removeEventListener = /* @__PURE__ */ ((L) => (...U) => {
+    if (U[0] === "message") {
+      const de = x.get(U[1]);
+      de !== void 0 && (x.delete(U[1]), U[1] = de);
     }
-    return L.call(g.port1, B[0], B[1], B[2]);
+    return L.call(g.port1, U[0], U[1], U[2]);
   })(g.port1.removeEventListener);
-  let x = null;
+  let C = null;
   Object.defineProperty(g.port1, "onmessage", {
-    get: () => x,
+    get: () => C,
     set: (L) => {
-      typeof x == "function" && g.port1.removeEventListener("message", x), x = typeof L == "function" ? L : null, typeof x == "function" && (g.port1.addEventListener("message", x), g.port1.start());
+      typeof C == "function" && g.port1.removeEventListener("message", C), C = typeof L == "function" ? L : null, typeof C == "function" && (g.port1.addEventListener("message", C), g.port1.start());
     }
   }), m.prototype.port = g.port1;
   let D = null;
-  Lc(f, A, m, _).then((L) => D = L);
-  const R = pn(_.numberOfInputs, _.channelCount), V = pn(_.numberOfOutputs, v), re = m.parameterDescriptors === void 0 ? [] : m.parameterDescriptors.reduce((L, { name: B }) => ({
+  sl(f, A, m, _).then((L) => D = L);
+  const R = fs(_.numberOfInputs, _.channelCount), V = fs(_.numberOfOutputs, v), ae = m.parameterDescriptors === void 0 ? [] : m.parameterDescriptors.reduce((L, { name: U }) => ({
     ...L,
-    [B]: /* @__PURE__ */ new Float32Array(128)
+    [U]: /* @__PURE__ */ new Float32Array(128)
   }), {});
-  let z = !0;
-  const J = () => {
-    _.numberOfOutputs > 0 && O.disconnect(N);
-    for (let L = 0, B = 0; L < _.numberOfOutputs; L += 1) {
+  let $ = !0;
+  const ee = () => {
+    _.numberOfOutputs > 0 && N.disconnect(M);
+    for (let L = 0, U = 0; L < _.numberOfOutputs; L += 1) {
       const de = q[L];
-      for (let se = 0; se < v[L]; se += 1) N.disconnect(de, B + se, se);
-      B += v[L];
+      for (let re = 0; re < v[L]; re += 1) M.disconnect(de, U + re, re);
+      U += v[L];
     }
-  }, ie = /* @__PURE__ */ new Map();
-  O.onaudioprocess = ({ inputBuffer: L, outputBuffer: B }) => {
+  }, oe = /* @__PURE__ */ new Map();
+  N.onaudioprocess = ({ inputBuffer: L, outputBuffer: U }) => {
     if (D !== null) {
       const de = h(A);
-      for (let se = 0; se < E; se += 128) {
-        for (let X = 0; X < _.numberOfInputs; X += 1) for (let H = 0; H < _.channelCount; H += 1) dn(L, R[X], H, H, se);
-        m.parameterDescriptors !== void 0 && m.parameterDescriptors.forEach(({ name: X }, H) => {
-          dn(L, re, X, b + H, se);
+      for (let re = 0; re < E; re += 128) {
+        for (let H = 0; H < _.numberOfInputs; H += 1) for (let Q = 0; Q < _.channelCount; Q += 1) ps(L, R[H], Q, Q, re);
+        m.parameterDescriptors !== void 0 && m.parameterDescriptors.forEach(({ name: H }, Q) => {
+          ps(L, ae, H, b + Q, re);
         });
-        for (let X = 0; X < _.numberOfInputs; X += 1) for (let H = 0; H < v[X]; H += 1) V[X][H].byteLength === 0 && (V[X][H] = /* @__PURE__ */ new Float32Array(128));
+        for (let H = 0; H < _.numberOfInputs; H += 1) for (let Q = 0; Q < v[H]; Q += 1) V[H][Q].byteLength === 0 && (V[H][Q] = /* @__PURE__ */ new Float32Array(128));
         try {
-          const X = R.map((H, Ee) => {
-            if (de[Ee].size > 0)
-              return ie.set(Ee, E / 128), H;
-            const Qe = ie.get(Ee);
-            return Qe === void 0 ? [] : (H.every((Zi) => Zi.every((Xi) => Xi === 0)) && (Qe === 1 ? ie.delete(Ee) : ie.set(Ee, Qe - 1)), H);
+          const H = R.map((Q, Ie) => {
+            if (de[Ie].size > 0)
+              return oe.set(Ie, E / 128), Q;
+            const Ye = oe.get(Ie);
+            return Ye === void 0 ? [] : (Q.every((ua) => ua.every((ha) => ha === 0)) && (Ye === 1 ? oe.delete(Ie) : oe.set(Ie, Ye - 1)), Q);
           });
-          z = u(f.currentTime + se / f.sampleRate, f.sampleRate, () => D.process(X, V, re));
-          for (let H = 0, Ee = 0; H < _.numberOfOutputs; H += 1) {
-            for (let Qe = 0; Qe < v[H]; Qe += 1) zr(B, V[H], Qe, Ee + Qe, se);
-            Ee += v[H];
+          $ = u(f.currentTime + re / f.sampleRate, f.sampleRate, () => D.process(H, V, ae));
+          for (let Q = 0, Ie = 0; Q < _.numberOfOutputs; Q += 1) {
+            for (let Ye = 0; Ye < v[Q]; Ye += 1) nr(U, V[Q], Ye, Ie + Ye, re);
+            Ie += v[Q];
           }
-        } catch (X) {
-          z = !1, A.dispatchEvent(new ErrorEvent("processorerror", {
-            colno: X.colno,
-            filename: X.filename,
-            lineno: X.lineno,
-            message: X.message
+        } catch (H) {
+          $ = !1, A.dispatchEvent(new ErrorEvent("processorerror", {
+            colno: H.colno,
+            filename: H.filename,
+            lineno: H.lineno,
+            message: H.message
           }));
         }
-        if (!z) {
-          for (let X = 0; X < _.numberOfInputs; X += 1) {
-            T[X].disconnect(y[X]);
-            for (let H = 0; H < _.channelCount; H += 1) y[se].disconnect(I, H, X * _.channelCount + H);
+        if (!$) {
+          for (let H = 0; H < _.numberOfInputs; H += 1) {
+            T[H].disconnect(y[H]);
+            for (let Q = 0; Q < _.channelCount; Q += 1) y[re].disconnect(I, Q, H * _.channelCount + Q);
           }
           if (m.parameterDescriptors !== void 0) {
-            const X = m.parameterDescriptors.length;
-            for (let H = 0; H < X; H += 1) {
-              const Ee = w[H];
-              Ee.disconnect(I, 0, b + H), Ee.stop();
+            const H = m.parameterDescriptors.length;
+            for (let Q = 0; Q < H; Q += 1) {
+              const Ie = w[Q];
+              Ie.disconnect(I, 0, b + Q), Ie.stop();
             }
           }
-          I.disconnect(O), O.onaudioprocess = null, W ? J() : Ue();
+          I.disconnect(N), N.onaudioprocess = null, W ? ee() : ze();
           break;
         }
       }
     }
   };
   let W = !1;
-  const Te = o(f, {
+  const we = o(f, {
     channelCount: 1,
     channelCountMode: "explicit",
     channelInterpretation: "discrete",
     gain: 0
-  }), Se = () => O.connect(Te).connect(f.destination), Ue = () => {
-    O.disconnect(Te), Te.disconnect();
-  }, Oe = () => {
-    if (z) {
-      Ue(), _.numberOfOutputs > 0 && O.connect(N);
-      for (let L = 0, B = 0; L < _.numberOfOutputs; L += 1) {
+  }), Oe = () => N.connect(we).connect(f.destination), ze = () => {
+    N.disconnect(we), we.disconnect();
+  }, Me = () => {
+    if ($) {
+      ze(), _.numberOfOutputs > 0 && N.connect(M);
+      for (let L = 0, U = 0; L < _.numberOfOutputs; L += 1) {
         const de = q[L];
-        for (let se = 0; se < v[L]; se += 1) N.connect(de, B + se, se);
-        B += v[L];
+        for (let re = 0; re < v[L]; re += 1) M.connect(de, U + re, re);
+        U += v[L];
       }
     }
     W = !0;
-  }, $i = () => {
-    z && (Se(), J()), W = !1;
+  }, la = () => {
+    $ && (Oe(), ee()), W = !1;
   };
-  return Se(), d(A, Oe, $i);
-}, Xr = (s, e) => {
+  return Oe(), d(A, Me, la);
+}, ar = (s, e) => {
   const t = s.createBiquadFilter();
-  return fe(t, e), ae(t, e, "Q"), ae(t, e, "detune"), ae(t, e, "frequency"), ae(t, e, "gain"), ne(t, e, "type"), t;
-}, jc = (s, e) => (t, n) => {
-  const r = t.createChannelMerger(n.numberOfInputs);
-  return s !== null && s.name === "webkitAudioContext" && e(t, r), fe(r, n), r;
-}, Bc = (s) => {
+  return fe(t, e), ce(t, e, "Q"), ce(t, e, "detune"), ce(t, e, "frequency"), ce(t, e, "gain"), ie(t, e, "type"), t;
+}, il = (s, e) => (t, n) => {
+  const i = t.createChannelMerger(n.numberOfInputs);
+  return s !== null && s.name === "webkitAudioContext" && e(t, i), fe(i, n), i;
+}, rl = (s) => {
   const e = s.numberOfOutputs;
   Object.defineProperty(s, "channelCount", {
     get: () => e,
@@ -2775,15 +2775,15 @@ var zr = (s, e, t, n, r) => {
       if (t !== "discrete") throw he();
     }
   });
-}, Wt = (s, e) => {
+}, Bt = (s, e) => {
   const t = s.createChannelSplitter(e.numberOfOutputs);
-  return fe(t, e), Bc(t), t;
-}, Uc = (s, e, t, n, r) => (i, o) => {
-  if (i.createConstantSource === void 0) return t(i, o);
-  const a = i.createConstantSource();
-  return fe(a, o), ae(a, o, "offset"), e(n, () => n(i)) || Ds(a), e(r, () => r(i)) || Es(a), s(i, a), a;
-}, It = (s, e) => (s.connect = e.connect.bind(e), s.disconnect = e.disconnect.bind(e), s), Gc = (s, e, t, n) => (r, { offset: i, ...o }) => {
-  const a = r.createBuffer(1, 2, 44100), c = e(r, {
+  return fe(t, e), rl(t), t;
+}, al = (s, e, t, n, i) => (r, o) => {
+  if (r.createConstantSource === void 0) return t(r, o);
+  const a = r.createConstantSource();
+  return fe(a, o), ce(a, o, "offset"), e(n, () => n(r)) || Ln(a), e(i, () => i(r)) || Wn(a), s(r, a), a;
+}, Vt = (s, e) => (s.connect = e.connect.bind(e), s.disconnect = e.disconnect.bind(e), s), ol = (s, e, t, n) => (i, { offset: r, ...o }) => {
+  const a = i.createBuffer(1, 2, 44100), c = e(i, {
     buffer: null,
     channelCount: 2,
     channelCountMode: "max",
@@ -2792,9 +2792,9 @@ var zr = (s, e, t, n, r) => {
     loopEnd: 0,
     loopStart: 0,
     playbackRate: 1
-  }), l = t(r, {
+  }), l = t(i, {
     ...o,
-    gain: i
+    gain: r
   }), u = a.getChannelData(0);
   u[0] = 1, u[1] = 1, c.buffer = a, c.loop = !0;
   const h = {
@@ -2855,47 +2855,47 @@ var zr = (s, e, t, n, r) => {
       c.stop.call(c, p);
     }
   }, d = () => c.connect(l), f = () => c.disconnect(l);
-  return s(r, c), n(It(h, l), d, f);
-}, zc = (s, e) => (t, n) => {
-  const r = t.createConvolver();
-  if (fe(r, n), n.disableNormalization === r.normalize && (r.normalize = !n.disableNormalization), ne(r, n, "buffer"), n.channelCount > 2 || (e(r, "channelCount", (i) => () => i.call(r), (i) => (o) => {
+  return s(i, c), n(Vt(h, l), d, f);
+}, cl = (s, e) => (t, n) => {
+  const i = t.createConvolver();
+  if (fe(i, n), n.disableNormalization === i.normalize && (i.normalize = !n.disableNormalization), ie(i, n, "buffer"), n.channelCount > 2 || (e(i, "channelCount", (r) => () => r.call(i), (r) => (o) => {
     if (o > 2) throw s();
-    return i.call(r, o);
+    return r.call(i, o);
   }), n.channelCountMode === "max")) throw s();
-  return e(r, "channelCountMode", (i) => () => i.call(r), (i) => (o) => {
+  return e(i, "channelCountMode", (r) => () => r.call(i), (r) => (o) => {
     if (o === "max") throw s();
-    return i.call(r, o);
-  }), r;
-}, ur = (s, e) => {
+    return r.call(i, o);
+  }), i;
+}, vi = (s, e) => {
   const t = s.createDelay(e.maxDelayTime);
-  return fe(t, e), ae(t, e, "delayTime"), t;
-}, $c = (s) => (e, t) => {
+  return fe(t, e), ce(t, e, "delayTime"), t;
+}, ll = (s) => (e, t) => {
   const n = e.createDynamicsCompressor();
   if (fe(n, t), t.channelCount > 2 || t.channelCountMode === "max") throw s();
-  return ae(n, t, "attack"), ae(n, t, "knee"), ae(n, t, "ratio"), ae(n, t, "release"), ae(n, t, "threshold"), n;
-}, xe = (s, e) => {
+  return ce(n, t, "attack"), ce(n, t, "knee"), ce(n, t, "ratio"), ce(n, t, "release"), ce(n, t, "threshold"), n;
+}, Ae = (s, e) => {
   const t = s.createGain();
-  return fe(t, e), ae(t, e, "gain"), t;
-}, Zc = (s) => (e, t, n) => {
+  return fe(t, e), ce(t, e, "gain"), t;
+}, ul = (s) => (e, t, n) => {
   if (e.createIIRFilter === void 0) return s(e, t, n);
-  const r = e.createIIRFilter(n.feedforward, n.feedback);
-  return fe(r, n), r;
+  const i = e.createIIRFilter(n.feedforward, n.feedback);
+  return fe(i, n), i;
 };
-function Xc(s, e) {
+function hl(s, e) {
   const t = e[0] * e[0] + e[1] * e[1];
   return [(s[0] * e[0] + s[1] * e[1]) / t, (s[1] * e[0] - s[0] * e[1]) / t];
 }
-function Hc(s, e) {
+function dl(s, e) {
   return [s[0] * e[0] - s[1] * e[1], s[0] * e[1] + s[1] * e[0]];
 }
-function hr(s, e) {
+function yi(s, e) {
   let t = [0, 0];
   for (let n = s.length - 1; n >= 0; n -= 1)
-    t = Hc(t, e), t[0] += s[n];
+    t = dl(t, e), t[0] += s[n];
   return t;
 }
-var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelInterpretation: c, feedback: l, feedforward: u }) => {
-  const h = Zr(i, r.sampleRate), d = l instanceof Float64Array ? l : new Float64Array(l), f = u instanceof Float64Array ? u : new Float64Array(u), p = d.length, m = f.length, _ = Math.min(p, m);
+var pl = (s, e, t, n) => (i, r, { channelCount: o, channelCountMode: a, channelInterpretation: c, feedback: l, feedforward: u }) => {
+  const h = rr(r, i.sampleRate), d = l instanceof Float64Array ? l : new Float64Array(l), f = u instanceof Float64Array ? u : new Float64Array(u), p = d.length, m = f.length, _ = Math.min(p, m);
   if (p === 0 || p > 20) throw n();
   if (d[0] === 0) throw e();
   if (m === 0 || m > 20) throw n();
@@ -2904,7 +2904,7 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
     for (let y = 0; y < m; y += 1) f[y] /= d[0];
     for (let y = 1; y < p; y += 1) d[y] /= d[0];
   }
-  const v = t(r, h, o, o);
+  const v = t(i, h, o, o);
   v.channelCount = o, v.channelCountMode = a, v.channelInterpretation = c;
   const b = 32, S = [], k = [], g = [];
   for (let y = 0; y < o; y += 1) {
@@ -2914,13 +2914,13 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
   }
   v.onaudioprocess = (y) => {
     const w = y.inputBuffer, I = y.outputBuffer, E = w.numberOfChannels;
-    for (let O = 0; O < E; O += 1) {
-      const N = w.getChannelData(O), q = I.getChannelData(O);
-      S[O] = $r(d, p, f, m, _, k[O], g[O], S[O], b, N, q);
+    for (let N = 0; N < E; N += 1) {
+      const M = w.getChannelData(N), q = I.getChannelData(N);
+      S[N] = ir(d, p, f, m, _, k[N], g[N], S[N], b, M, q);
     }
   };
-  const T = r.sampleRate / 2;
-  return It({
+  const T = i.sampleRate / 2;
+  return Vt({
     get bufferSize() {
       return h;
     },
@@ -2963,70 +2963,70 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
     getFrequencyResponse(y, w, I) {
       if (y.length !== w.length || w.length !== I.length) throw s();
       const E = y.length;
-      for (let O = 0; O < E; O += 1) {
-        const N = -Math.PI * (y[O] / T), q = [Math.cos(N), Math.sin(N)], P = Xc(hr(f, q), hr(d, q));
-        w[O] = Math.sqrt(P[0] * P[0] + P[1] * P[1]), I[O] = Math.atan2(P[1], P[0]);
+      for (let N = 0; N < E; N += 1) {
+        const M = -Math.PI * (y[N] / T), q = [Math.cos(M), Math.sin(M)], F = hl(yi(f, q), yi(d, q));
+        w[N] = Math.sqrt(F[0] * F[0] + F[1] * F[1]), I[N] = Math.atan2(F[1], F[0]);
       }
     },
     removeEventListener(...y) {
       return v.removeEventListener(y[0], y[1], y[2]);
     }
   }, v);
-}, Yc = (s, e) => s.createMediaElementSource(e.mediaElement), Jc = (s, e) => {
+}, fl = (s, e) => s.createMediaElementSource(e.mediaElement), ml = (s, e) => {
   const t = s.createMediaStreamDestination();
   return fe(t, e), t.numberOfOutputs === 1 && Object.defineProperty(t, "numberOfOutputs", { get: () => 0 }), t;
-}, Kc = (s, { mediaStream: e }) => {
+}, _l = (s, { mediaStream: e }) => {
   const t = e.getAudioTracks();
-  t.sort((i, o) => i.id < o.id ? -1 : i.id > o.id ? 1 : 0);
-  const n = t.slice(0, 1), r = s.createMediaStreamSource(new MediaStream(n));
-  return Object.defineProperty(r, "mediaStream", { value: e }), r;
-}, el = (s, e) => (t, { mediaStreamTrack: n }) => {
+  t.sort((r, o) => r.id < o.id ? -1 : r.id > o.id ? 1 : 0);
+  const n = t.slice(0, 1), i = s.createMediaStreamSource(new MediaStream(n));
+  return Object.defineProperty(i, "mediaStream", { value: e }), i;
+}, gl = (s, e) => (t, { mediaStreamTrack: n }) => {
   if (typeof t.createMediaStreamTrackSource == "function") return t.createMediaStreamTrackSource(n);
-  const r = new MediaStream([n]), i = t.createMediaStreamSource(r);
+  const i = new MediaStream([n]), r = t.createMediaStreamSource(i);
   if (n.kind !== "audio") throw s();
   if (e(t)) throw new TypeError();
-  return i;
-}, tl = (s) => s === null ? null : s.hasOwnProperty("OfflineAudioContext") ? s.OfflineAudioContext : s.hasOwnProperty("webkitOfflineAudioContext") ? s.webkitOfflineAudioContext : null, nl = (s, e, t, n, r, i) => (o, a) => {
+  return r;
+}, vl = (s) => s === null ? null : s.hasOwnProperty("OfflineAudioContext") ? s.OfflineAudioContext : s.hasOwnProperty("webkitOfflineAudioContext") ? s.webkitOfflineAudioContext : null, yl = (s, e, t, n, i, r) => (o, a) => {
   const c = o.createOscillator();
-  return fe(c, a), ae(c, a, "detune"), ae(c, a, "frequency"), a.periodicWave !== void 0 ? c.setPeriodicWave(a.periodicWave) : ne(c, a, "type"), e(t, () => t(o)) || Ds(c), e(n, () => n(o)) || i(c, o), e(r, () => r(o)) || Es(c), s(o, c), c;
-}, sl = (s) => (e, t) => {
+  return fe(c, a), ce(c, a, "detune"), ce(c, a, "frequency"), a.periodicWave !== void 0 ? c.setPeriodicWave(a.periodicWave) : ie(c, a, "type"), e(t, () => t(o)) || Ln(c), e(n, () => n(o)) || r(c, o), e(i, () => i(o)) || Wn(c), s(o, c), c;
+}, Tl = (s) => (e, t) => {
   const n = e.createPanner();
-  return n.orientationX === void 0 ? s(e, t) : (fe(n, t), ae(n, t, "orientationX"), ae(n, t, "orientationY"), ae(n, t, "orientationZ"), ae(n, t, "positionX"), ae(n, t, "positionY"), ae(n, t, "positionZ"), ne(n, t, "coneInnerAngle"), ne(n, t, "coneOuterAngle"), ne(n, t, "coneOuterGain"), ne(n, t, "distanceModel"), ne(n, t, "maxDistance"), ne(n, t, "panningModel"), ne(n, t, "refDistance"), ne(n, t, "rolloffFactor"), n);
-}, rl = (s, e, t, n, r, i, o, a, c, l) => (u, { coneInnerAngle: h, coneOuterAngle: d, coneOuterGain: f, distanceModel: p, maxDistance: m, orientationX: _, orientationY: v, orientationZ: b, panningModel: S, positionX: k, positionY: g, positionZ: T, refDistance: y, rolloffFactor: w, ...I }) => {
+  return n.orientationX === void 0 ? s(e, t) : (fe(n, t), ce(n, t, "orientationX"), ce(n, t, "orientationY"), ce(n, t, "orientationZ"), ce(n, t, "positionX"), ce(n, t, "positionY"), ce(n, t, "positionZ"), ie(n, t, "coneInnerAngle"), ie(n, t, "coneOuterAngle"), ie(n, t, "coneOuterGain"), ie(n, t, "distanceModel"), ie(n, t, "maxDistance"), ie(n, t, "panningModel"), ie(n, t, "refDistance"), ie(n, t, "rolloffFactor"), n);
+}, wl = (s, e, t, n, i, r, o, a, c, l) => (u, { coneInnerAngle: h, coneOuterAngle: d, coneOuterGain: f, distanceModel: p, maxDistance: m, orientationX: _, orientationY: v, orientationZ: b, panningModel: S, positionX: k, positionY: g, positionZ: T, refDistance: y, rolloffFactor: w, ...I }) => {
   const E = u.createPanner();
   if (I.channelCount > 2 || I.channelCountMode === "max") throw o();
   fe(E, I);
-  const O = {
+  const N = {
     channelCount: 1,
     channelCountMode: "explicit",
     channelInterpretation: "discrete"
-  }, N = t(u, {
-    ...O,
+  }, M = t(u, {
+    ...N,
     channelInterpretation: "speakers",
     numberOfInputs: 6
   }), q = n(u, {
     ...I,
     gain: 1
-  }), P = n(u, {
-    ...O,
+  }), F = n(u, {
+    ...N,
     gain: 1
-  }), U = n(u, {
-    ...O,
+  }), G = n(u, {
+    ...N,
     gain: 0
   }), j = n(u, {
-    ...O,
+    ...N,
     gain: 0
-  }), F = n(u, {
-    ...O,
+  }), P = n(u, {
+    ...N,
     gain: 0
   }), A = n(u, {
-    ...O,
+    ...N,
     gain: 0
-  }), C = n(u, {
-    ...O,
+  }), x = n(u, {
+    ...N,
     gain: 0
-  }), x = r(u, 256, 6, 1), D = i(u, {
-    ...O,
+  }), C = i(u, 256, 6, 1), D = r(u, {
+    ...N,
     curve: new Float32Array([1, 1]),
     oversample: "none"
   });
@@ -3039,22 +3039,22 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
     g,
     T
   ];
-  const re = /* @__PURE__ */ new Float32Array(1);
-  x.onaudioprocess = ({ inputBuffer: W }) => {
-    const Te = [
-      c(W, re, 0),
-      c(W, re, 1),
-      c(W, re, 2)
+  const ae = /* @__PURE__ */ new Float32Array(1);
+  C.onaudioprocess = ({ inputBuffer: W }) => {
+    const we = [
+      c(W, ae, 0),
+      c(W, ae, 1),
+      c(W, ae, 2)
     ];
-    Te.some((Ue, Oe) => Ue !== R[Oe]) && (E.setOrientation(...Te), R = Te);
-    const Se = [
-      c(W, re, 3),
-      c(W, re, 4),
-      c(W, re, 5)
+    we.some((ze, Me) => ze !== R[Me]) && (E.setOrientation(...we), R = we);
+    const Oe = [
+      c(W, ae, 3),
+      c(W, ae, 4),
+      c(W, ae, 5)
     ];
-    Se.some((Ue, Oe) => Ue !== V[Oe]) && (E.setPosition(...Se), V = Se);
-  }, Object.defineProperty(U.gain, "defaultValue", { get: () => 0 }), Object.defineProperty(j.gain, "defaultValue", { get: () => 0 }), Object.defineProperty(F.gain, "defaultValue", { get: () => 0 }), Object.defineProperty(A.gain, "defaultValue", { get: () => 0 }), Object.defineProperty(C.gain, "defaultValue", { get: () => 0 });
-  const z = {
+    Oe.some((ze, Me) => ze !== V[Me]) && (E.setPosition(...Oe), V = Oe);
+  }, Object.defineProperty(G.gain, "defaultValue", { get: () => 0 }), Object.defineProperty(j.gain, "defaultValue", { get: () => 0 }), Object.defineProperty(P.gain, "defaultValue", { get: () => 0 }), Object.defineProperty(A.gain, "defaultValue", { get: () => 0 }), Object.defineProperty(x.gain, "defaultValue", { get: () => 0 });
+  const $ = {
     get bufferSize() {
     },
     get channelCount() {
@@ -3122,10 +3122,10 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
       return E.numberOfOutputs;
     },
     get orientationX() {
-      return P.gain;
+      return F.gain;
     },
     get orientationY() {
-      return U.gain;
+      return G.gain;
     },
     get orientationZ() {
       return j.gain;
@@ -3137,13 +3137,13 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
       E.panningModel = W;
     },
     get positionX() {
-      return F.gain;
+      return P.gain;
     },
     get positionY() {
       return A.gain;
     },
     get positionZ() {
-      return C.gain;
+      return x.gain;
     },
     get refDistance() {
       return E.refDistance;
@@ -3169,29 +3169,29 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
       return q.removeEventListener(W[0], W[1], W[2]);
     }
   };
-  h !== z.coneInnerAngle && (z.coneInnerAngle = h), d !== z.coneOuterAngle && (z.coneOuterAngle = d), f !== z.coneOuterGain && (z.coneOuterGain = f), p !== z.distanceModel && (z.distanceModel = p), m !== z.maxDistance && (z.maxDistance = m), _ !== z.orientationX.value && (z.orientationX.value = _), v !== z.orientationY.value && (z.orientationY.value = v), b !== z.orientationZ.value && (z.orientationZ.value = b), S !== z.panningModel && (z.panningModel = S), k !== z.positionX.value && (z.positionX.value = k), g !== z.positionY.value && (z.positionY.value = g), T !== z.positionZ.value && (z.positionZ.value = T), y !== z.refDistance && (z.refDistance = y), w !== z.rolloffFactor && (z.rolloffFactor = w), (R[0] !== 1 || R[1] !== 0 || R[2] !== 0) && E.setOrientation(...R), (V[0] !== 0 || V[1] !== 0 || V[2] !== 0) && E.setPosition(...V);
-  const J = () => {
-    q.connect(E), s(q, D, 0, 0), D.connect(P).connect(N, 0, 0), D.connect(U).connect(N, 0, 1), D.connect(j).connect(N, 0, 2), D.connect(F).connect(N, 0, 3), D.connect(A).connect(N, 0, 4), D.connect(C).connect(N, 0, 5), N.connect(x).connect(u.destination);
-  }, ie = () => {
-    q.disconnect(E), a(q, D, 0, 0), D.disconnect(P), P.disconnect(N), D.disconnect(U), U.disconnect(N), D.disconnect(j), j.disconnect(N), D.disconnect(F), F.disconnect(N), D.disconnect(A), A.disconnect(N), D.disconnect(C), C.disconnect(N), N.disconnect(x), x.disconnect(u.destination);
+  h !== $.coneInnerAngle && ($.coneInnerAngle = h), d !== $.coneOuterAngle && ($.coneOuterAngle = d), f !== $.coneOuterGain && ($.coneOuterGain = f), p !== $.distanceModel && ($.distanceModel = p), m !== $.maxDistance && ($.maxDistance = m), _ !== $.orientationX.value && ($.orientationX.value = _), v !== $.orientationY.value && ($.orientationY.value = v), b !== $.orientationZ.value && ($.orientationZ.value = b), S !== $.panningModel && ($.panningModel = S), k !== $.positionX.value && ($.positionX.value = k), g !== $.positionY.value && ($.positionY.value = g), T !== $.positionZ.value && ($.positionZ.value = T), y !== $.refDistance && ($.refDistance = y), w !== $.rolloffFactor && ($.rolloffFactor = w), (R[0] !== 1 || R[1] !== 0 || R[2] !== 0) && E.setOrientation(...R), (V[0] !== 0 || V[1] !== 0 || V[2] !== 0) && E.setPosition(...V);
+  const ee = () => {
+    q.connect(E), s(q, D, 0, 0), D.connect(F).connect(M, 0, 0), D.connect(G).connect(M, 0, 1), D.connect(j).connect(M, 0, 2), D.connect(P).connect(M, 0, 3), D.connect(A).connect(M, 0, 4), D.connect(x).connect(M, 0, 5), M.connect(C).connect(u.destination);
+  }, oe = () => {
+    q.disconnect(E), a(q, D, 0, 0), D.disconnect(F), F.disconnect(M), D.disconnect(G), G.disconnect(M), D.disconnect(j), j.disconnect(M), D.disconnect(P), P.disconnect(M), D.disconnect(A), A.disconnect(M), D.disconnect(x), x.disconnect(M), M.disconnect(C), C.disconnect(u.destination);
   };
-  return l(It(z, E), J, ie);
-}, il = (s) => (e, { disableNormalization: t, imag: n, real: r }) => {
-  const i = n instanceof Float32Array ? n : new Float32Array(n), o = r instanceof Float32Array ? r : new Float32Array(r), a = e.createPeriodicWave(o, i, { disableNormalization: t });
+  return l(Vt($, E), ee, oe);
+}, bl = (s) => (e, { disableNormalization: t, imag: n, real: i }) => {
+  const r = n instanceof Float32Array ? n : new Float32Array(n), o = i instanceof Float32Array ? i : new Float32Array(i), a = e.createPeriodicWave(o, r, { disableNormalization: t });
   if (Array.from(n).length < 2) throw s();
   return a;
-}, Xt = (s, e, t, n) => s.createScriptProcessor(e, t, n), al = (s, e) => (t, n) => {
-  const r = n.channelCountMode;
-  if (r === "clamped-max") throw e();
+}, Qt = (s, e, t, n) => s.createScriptProcessor(e, t, n), xl = (s, e) => (t, n) => {
+  const i = n.channelCountMode;
+  if (i === "clamped-max") throw e();
   if (t.createStereoPanner === void 0) return s(t, n);
-  const i = t.createStereoPanner();
-  return fe(i, n), ae(i, n, "pan"), Object.defineProperty(i, "channelCountMode", {
-    get: () => r,
+  const r = t.createStereoPanner();
+  return fe(r, n), ce(r, n, "pan"), Object.defineProperty(r, "channelCountMode", {
+    get: () => i,
     set: (o) => {
-      if (o !== r) throw e();
+      if (o !== i) throw e();
     }
-  }), i;
-}, ol = (s, e, t, n, r, i) => {
+  }), r;
+}, Cl = (s, e, t, n, i, r) => {
   const a = new Float32Array([1, 1]), c = Math.PI / 2, l = {
     channelCount: 1,
     channelCountMode: "explicit",
@@ -3231,12 +3231,12 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
     };
   }, d = (p, m, _, v) => {
     const b = new Float32Array(16385), S = new Float32Array(16385), k = new Float32Array(16385), g = new Float32Array(16385), T = Math.floor(16385 / 2);
-    for (let F = 0; F < 16385; F += 1) if (F > T) {
-      const A = (F - T) / (16384 - T) * c;
-      b[F] = Math.cos(A), S[F] = Math.sin(A), k[F] = 0, g[F] = 1;
+    for (let P = 0; P < 16385; P += 1) if (P > T) {
+      const A = (P - T) / (16384 - T) * c;
+      b[P] = Math.cos(A), S[P] = Math.sin(A), k[P] = 0, g[P] = 1;
     } else {
-      const A = F / (16384 - T) * c;
-      b[F] = 1, S[F] = 0, k[F] = Math.cos(A), g[F] = Math.sin(A);
+      const A = P / (16384 - T) * c;
+      b[P] = 1, S[P] = 0, k[P] = Math.cos(A), g[P] = Math.sin(A);
     }
     const y = e(p, {
       channelCount: 2,
@@ -3252,19 +3252,19 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
     }), E = t(p, {
       ...l,
       gain: 0
-    }), O = n(p, {
+    }), N = n(p, {
       ...u,
       curve: S
-    }), N = n(p, {
+    }), M = n(p, {
       ...u,
       curve: a
     }), q = t(p, {
       ...l,
       gain: 0
-    }), P = n(p, {
+    }), F = n(p, {
       ...u,
       curve: k
-    }), U = t(p, {
+    }), G = t(p, {
       ...l,
       gain: 0
     }), j = n(p, {
@@ -3273,19 +3273,19 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
     });
     return {
       connectGraph() {
-        m.connect(y), m.connect(N.inputs === void 0 ? N : N.inputs[0]), y.connect(w, 0), y.connect(E, 0), y.connect(q, 1), y.connect(U, 1), N.connect(_), _.connect(I.inputs === void 0 ? I : I.inputs[0]), _.connect(O.inputs === void 0 ? O : O.inputs[0]), _.connect(P.inputs === void 0 ? P : P.inputs[0]), _.connect(j.inputs === void 0 ? j : j.inputs[0]), I.connect(w.gain), O.connect(E.gain), P.connect(q.gain), j.connect(U.gain), w.connect(v, 0, 0), q.connect(v, 0, 0), E.connect(v, 0, 1), U.connect(v, 0, 1);
+        m.connect(y), m.connect(M.inputs === void 0 ? M : M.inputs[0]), y.connect(w, 0), y.connect(E, 0), y.connect(q, 1), y.connect(G, 1), M.connect(_), _.connect(I.inputs === void 0 ? I : I.inputs[0]), _.connect(N.inputs === void 0 ? N : N.inputs[0]), _.connect(F.inputs === void 0 ? F : F.inputs[0]), _.connect(j.inputs === void 0 ? j : j.inputs[0]), I.connect(w.gain), N.connect(E.gain), F.connect(q.gain), j.connect(G.gain), w.connect(v, 0, 0), q.connect(v, 0, 0), E.connect(v, 0, 1), G.connect(v, 0, 1);
       },
       disconnectGraph() {
-        m.disconnect(y), m.disconnect(N.inputs === void 0 ? N : N.inputs[0]), y.disconnect(w, 0), y.disconnect(E, 0), y.disconnect(q, 1), y.disconnect(U, 1), N.disconnect(_), _.disconnect(I.inputs === void 0 ? I : I.inputs[0]), _.disconnect(O.inputs === void 0 ? O : O.inputs[0]), _.disconnect(P.inputs === void 0 ? P : P.inputs[0]), _.disconnect(j.inputs === void 0 ? j : j.inputs[0]), I.disconnect(w.gain), O.disconnect(E.gain), P.disconnect(q.gain), j.disconnect(U.gain), w.disconnect(v, 0, 0), q.disconnect(v, 0, 0), E.disconnect(v, 0, 1), U.disconnect(v, 0, 1);
+        m.disconnect(y), m.disconnect(M.inputs === void 0 ? M : M.inputs[0]), y.disconnect(w, 0), y.disconnect(E, 0), y.disconnect(q, 1), y.disconnect(G, 1), M.disconnect(_), _.disconnect(I.inputs === void 0 ? I : I.inputs[0]), _.disconnect(N.inputs === void 0 ? N : N.inputs[0]), _.disconnect(F.inputs === void 0 ? F : F.inputs[0]), _.disconnect(j.inputs === void 0 ? j : j.inputs[0]), I.disconnect(w.gain), N.disconnect(E.gain), F.disconnect(q.gain), j.disconnect(G.gain), w.disconnect(v, 0, 0), q.disconnect(v, 0, 0), E.disconnect(v, 0, 1), G.disconnect(v, 0, 1);
       }
     };
   }, f = (p, m, _, v, b) => {
     if (m === 1) return h(p, _, v, b);
     if (m === 2) return d(p, _, v, b);
-    throw r();
+    throw i();
   };
   return (p, { channelCount: m, channelCountMode: _, pan: v, ...b }) => {
-    if (_ === "max") throw r();
+    if (_ === "max") throw i();
     const S = s(p, {
       ...b,
       channelCount: 1,
@@ -3310,21 +3310,21 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
       get channelCount() {
         return k.channelCount;
       },
-      set channelCount(N) {
-        k.channelCount !== N && (I && y(), { connectGraph: T, disconnectGraph: y } = f(p, N, k, g, S), I && T()), k.channelCount = N;
+      set channelCount(M) {
+        k.channelCount !== M && (I && y(), { connectGraph: T, disconnectGraph: y } = f(p, M, k, g, S), I && T()), k.channelCount = M;
       },
       get channelCountMode() {
         return k.channelCountMode;
       },
-      set channelCountMode(N) {
-        if (N === "clamped-max" || N === "max") throw r();
-        k.channelCountMode = N;
+      set channelCountMode(M) {
+        if (M === "clamped-max" || M === "max") throw i();
+        k.channelCountMode = M;
       },
       get channelInterpretation() {
         return k.channelInterpretation;
       },
-      set channelInterpretation(N) {
-        k.channelInterpretation = N;
+      set channelInterpretation(M) {
+        k.channelInterpretation = M;
       },
       get context() {
         return k.context;
@@ -3341,50 +3341,50 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
       get pan() {
         return g.gain;
       },
-      addEventListener(...N) {
-        return k.addEventListener(N[0], N[1], N[2]);
+      addEventListener(...M) {
+        return k.addEventListener(M[0], M[1], M[2]);
       },
-      dispatchEvent(...N) {
-        return k.dispatchEvent(N[0]);
+      dispatchEvent(...M) {
+        return k.dispatchEvent(M[0]);
       },
-      removeEventListener(...N) {
-        return k.removeEventListener(N[0], N[1], N[2]);
+      removeEventListener(...M) {
+        return k.removeEventListener(M[0], M[1], M[2]);
       }
     };
     let I = !1;
     const E = () => {
       T(), I = !0;
-    }, O = () => {
+    }, N = () => {
       y(), I = !1;
     };
-    return i(It(w, S), E, O);
+    return r(Vt(w, S), E, N);
   };
-}, cl = (s, e, t, n, r, i, o) => (a, c) => {
+}, Sl = (s, e, t, n, i, r, o) => (a, c) => {
   const l = a.createWaveShaper();
-  if (i !== null && i.name === "webkitAudioContext" && a.createGain().gain.automationRate === void 0) return t(a, c);
+  if (r !== null && r.name === "webkitAudioContext" && a.createGain().gain.automationRate === void 0) return t(a, c);
   fe(l, c);
   const u = c.curve === null || c.curve instanceof Float32Array ? c.curve : new Float32Array(c.curve);
   if (u !== null && u.length < 2) throw e();
-  ne(l, { curve: u }, "curve"), ne(l, c, "oversample");
+  ie(l, { curve: u }, "curve"), ie(l, c, "oversample");
   let h = null, d = !1;
-  return o(l, "curve", (m) => () => m.call(l), (m) => (_) => (m.call(l, _), d && (n(_) && h === null ? h = s(a, l) : !n(_) && h !== null && (h(), h = null)), _)), r(l, () => {
+  return o(l, "curve", (m) => () => m.call(l), (m) => (_) => (m.call(l, _), d && (n(_) && h === null ? h = s(a, l) : !n(_) && h !== null && (h(), h = null)), _)), i(l, () => {
     d = !0, n(l.curve) && (h = s(a, l));
   }, () => {
     d = !1, h !== null && (h(), h = null);
   });
-}, ll = (s, e, t, n, r) => (i, { curve: o, oversample: a, ...c }) => {
-  const l = i.createWaveShaper(), u = i.createWaveShaper();
+}, Al = (s, e, t, n, i) => (r, { curve: o, oversample: a, ...c }) => {
+  const l = r.createWaveShaper(), u = r.createWaveShaper();
   fe(l, c), fe(u, c);
-  const h = t(i, {
+  const h = t(r, {
     ...c,
     gain: 1
-  }), d = t(i, {
+  }), d = t(r, {
     ...c,
     gain: -1
-  }), f = t(i, {
+  }), f = t(r, {
     ...c,
     gain: 1
-  }), p = t(i, {
+  }), p = t(r, {
     ...c,
     gain: -1
   });
@@ -3424,13 +3424,13 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
         const T = g.length, y = new Float32Array(T + 2 - T % 2), w = new Float32Array(T + 2 - T % 2);
         y[0] = g[0], w[0] = -g[T - 1];
         const I = Math.ceil((T + 1) / 2), E = (T + 1) / 2 - 1;
-        for (let O = 1; O < I; O += 1) {
-          const N = O / I * E, q = Math.floor(N), P = Math.ceil(N);
-          y[O] = q === P ? g[q] : (1 - (N - q)) * g[q] + (1 - (P - N)) * g[P], w[O] = q === P ? -g[T - 1 - q] : -((1 - (N - q)) * g[T - 1 - q]) - (1 - (P - N)) * g[T - 1 - P];
+        for (let N = 1; N < I; N += 1) {
+          const M = N / I * E, q = Math.floor(M), F = Math.ceil(M);
+          y[N] = q === F ? g[q] : (1 - (M - q)) * g[q] + (1 - (F - M)) * g[F], w[N] = q === F ? -g[T - 1 - q] : -((1 - (M - q)) * g[T - 1 - q]) - (1 - (F - M)) * g[T - 1 - F];
         }
         y[I] = T % 2 === 1 ? g[I - 1] : (g[I - 2] + g[I - 1]) / 2, l.curve = y, u.curve = w;
       }
-      v = g, _ && (n(v) && m === null ? m = s(i, h) : m !== null && (m(), m = null));
+      v = g, _ && (n(v) && m === null ? m = s(r, h) : m !== null && (m(), m = null));
     },
     get inputs() {
       return [h];
@@ -3459,12 +3459,12 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
   };
   o !== null && (b.curve = o instanceof Float32Array ? o : new Float32Array(o)), a !== b.oversample && (b.oversample = a);
   const S = () => {
-    h.connect(l).connect(f), h.connect(d).connect(u).connect(p).connect(f), _ = !0, n(v) && (m = s(i, h));
+    h.connect(l).connect(f), h.connect(d).connect(u).connect(p).connect(f), _ = !0, n(v) && (m = s(r, h));
   }, k = () => {
     h.disconnect(l), l.disconnect(f), h.disconnect(d), d.disconnect(u), u.disconnect(p), p.disconnect(f), _ = !1, m !== null && (m(), m = null);
   };
-  return r(It(b, f), S, k);
-}, ve = () => new DOMException("", "NotSupportedError"), ul = { numberOfChannels: 1 }, hl = (s, e, t, n, r) => class extends s {
+  return i(Vt(b, f), S, k);
+}, ye = () => new DOMException("", "NotSupportedError"), kl = { numberOfChannels: 1 }, Ol = (s, e, t, n, i) => class extends s {
   constructor(o, a, c) {
     let l;
     if (typeof o == "number" && a !== void 0 && c !== void 0) l = {
@@ -3475,10 +3475,10 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
     else if (typeof o == "object") l = o;
     else throw new Error("The given parameters are not valid.");
     const { length: u, numberOfChannels: h, sampleRate: d } = {
-      ...ul,
+      ...kl,
       ...l
     }, f = n(h, u, d);
-    e(dt, () => dt(f)) || f.addEventListener("statechange", /* @__PURE__ */ (() => {
+    e(ft, () => ft(f)) || f.addEventListener("statechange", /* @__PURE__ */ (() => {
       let p = 0;
       const m = (_) => {
         this._state === "running" && (p > 0 ? (f.removeEventListener("statechange", m), _.stopImmediatePropagation(), this._waitForThePromiseToSettle(_)) : p += 1);
@@ -3493,14 +3493,14 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
     return this._state === null ? this._nativeOfflineAudioContext.state : this._state;
   }
   startRendering() {
-    return this._state === "running" ? Promise.reject(t()) : (this._state = "running", r(this.destination, this._nativeOfflineAudioContext).finally(() => {
-      this._state = null, bn(this);
+    return this._state === "running" ? Promise.reject(t()) : (this._state = "running", i(this.destination, this._nativeOfflineAudioContext).finally(() => {
+      this._state = null, bs(this);
     }));
   }
   _waitForThePromiseToSettle(o) {
     this._state === null ? this._nativeOfflineAudioContext.dispatchEvent(o) : setTimeout(() => this._waitForThePromiseToSettle(o));
   }
-}, dl = {
+}, Nl = {
   channelCount: 2,
   channelCountMode: "max",
   channelInterpretation: "speakers",
@@ -3508,12 +3508,12 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
   frequency: 440,
   periodicWave: void 0,
   type: "sine"
-}, pl = (s, e, t, n, r, i, o) => class extends s {
+}, Ml = (s, e, t, n, i, r, o) => class extends s {
   constructor(c, l) {
-    const u = r(c), h = {
-      ...dl,
+    const u = i(c), h = {
+      ...Nl,
       ...l
-    }, d = t(u, h), f = i(u), p = f ? n() : null, m = c.sampleRate / 2;
+    }, d = t(u, h), f = r(u), p = f ? n() : null, m = c.sampleRate / 2;
     super(c, !1, d, p), this._detune = e(this, f, d.detune, 153600, -153600), this._frequency = e(this, f, d.frequency, m, -m), this._nativeOscillatorNode = d, this._onended = null, this._oscillatorNodeRenderer = p, this._oscillatorNodeRenderer !== null && h.periodicWave !== void 0 && (this._oscillatorNodeRenderer.periodicWave = h.periodicWave);
   }
   get detune() {
@@ -3542,9 +3542,9 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
   }
   start(c = 0) {
     if (this._nativeOscillatorNode.start(c), this._oscillatorNodeRenderer !== null && (this._oscillatorNodeRenderer.start = c), this.context.state !== "closed") {
-      At(this);
+      Ot(this);
       const l = () => {
-        this._nativeOscillatorNode.removeEventListener("ended", l), ze(this) && zt(this);
+        this._nativeOscillatorNode.removeEventListener("ended", l), Ze(this) && Zt(this);
       };
       this._nativeOscillatorNode.addEventListener("ended", l);
     }
@@ -3552,12 +3552,12 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
   stop(c = 0) {
     this._nativeOscillatorNode.stop(c), this._oscillatorNodeRenderer !== null && (this._oscillatorNodeRenderer.stop = c);
   }
-}, fl = (s, e, t, n, r) => () => {
-  const i = /* @__PURE__ */ new WeakMap();
+}, Dl = (s, e, t, n, i) => () => {
+  const r = /* @__PURE__ */ new WeakMap();
   let o = null, a = null, c = null;
   const l = async (u, h) => {
     let d = t(u);
-    const f = ye(d, h);
+    const f = Te(d, h);
     return f || (d = e(h, {
       channelCount: d.channelCount,
       channelCountMode: d.channelCountMode,
@@ -3566,7 +3566,7 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
       frequency: d.frequency.value,
       periodicWave: o === null ? void 0 : o,
       type: d.type
-    }), a !== null && d.start(a), c !== null && d.stop(c)), i.set(h, d), f ? (await s(h, u.detune, d.detune), await s(h, u.frequency, d.frequency)) : (await n(h, u.detune, d.detune), await n(h, u.frequency, d.frequency)), await r(u, h, d), d;
+    }), a !== null && d.start(a), c !== null && d.stop(c)), r.set(h, d), f ? (await s(h, u.detune, d.detune), await s(h, u.frequency, d.frequency)) : (await n(h, u.detune, d.detune), await n(h, u.frequency, d.frequency)), await i(u, h, d), d;
   };
   return {
     set periodicWave(u) {
@@ -3579,11 +3579,11 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
       c = u;
     },
     render(u, h) {
-      const d = i.get(h);
+      const d = r.get(h);
       return d !== void 0 ? Promise.resolve(d) : l(u, h);
     }
   };
-}, ml = {
+}, El = {
   channelCount: 2,
   channelCountMode: "clamped-max",
   channelInterpretation: "speakers",
@@ -3601,13 +3601,13 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
   positionZ: 0,
   refDistance: 1,
   rolloffFactor: 1
-}, _l = (s, e, t, n, r, i, o) => class extends s {
+}, Il = (s, e, t, n, i, r, o) => class extends s {
   constructor(c, l) {
-    const u = r(c), h = t(u, {
-      ...ml,
+    const u = i(c), h = t(u, {
+      ...El,
       ...l
-    }), d = i(u), f = d ? n() : null;
-    super(c, !1, h, f), this._nativePannerNode = h, this._orientationX = e(this, d, h.orientationX, we, Ae), this._orientationY = e(this, d, h.orientationY, we, Ae), this._orientationZ = e(this, d, h.orientationZ, we, Ae), this._positionX = e(this, d, h.positionX, we, Ae), this._positionY = e(this, d, h.positionY, we, Ae), this._positionZ = e(this, d, h.positionZ, we, Ae), o(this, 1);
+    }), d = r(u), f = d ? n() : null;
+    super(c, !1, h, f), this._nativePannerNode = h, this._orientationX = e(this, d, h.orientationX, be, Ne), this._orientationY = e(this, d, h.orientationY, be, Ne), this._orientationZ = e(this, d, h.orientationZ, be, Ne), this._positionX = e(this, d, h.positionX, be, Ne), this._positionY = e(this, d, h.positionY, be, Ne), this._positionZ = e(this, d, h.positionZ, be, Ne), o(this, 1);
   }
   get coneInnerAngle() {
     return this._nativePannerNode.coneInnerAngle;
@@ -3675,11 +3675,11 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
   set rolloffFactor(c) {
     this._nativePannerNode.rolloffFactor = c;
   }
-}, gl = (s, e, t, n, r, i, o, a, c, l) => () => {
+}, Rl = (s, e, t, n, i, r, o, a, c, l) => () => {
   const u = /* @__PURE__ */ new WeakMap();
   let h = null;
   const d = async (f, p) => {
-    let m = null, _ = i(f);
+    let m = null, _ = r(f);
     const v = {
       channelCount: _.channelCount,
       channelCountMode: _.channelCountMode,
@@ -3694,11 +3694,11 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
       panningModel: _.panningModel,
       refDistance: _.refDistance,
       rolloffFactor: _.rolloffFactor
-    }, S = ye(_, p);
+    }, S = Te(_, p);
     if ("bufferSize" in _ ? m = n(p, {
       ...v,
       gain: 1
-    }) : S || (_ = r(p, {
+    }) : S || (_ = i(p, {
       ...b,
       orientationX: _.orientationX.value,
       orientationY: _.orientationY.value,
@@ -3709,13 +3709,13 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
     })), u.set(p, m === null ? _ : m), m !== null) {
       if (h === null) {
         if (o === null) throw new Error("Missing the native OfflineAudioContext constructor.");
-        const O = new o(6, f.context.length, p.sampleRate), N = e(O, {
+        const N = new o(6, f.context.length, p.sampleRate), M = e(N, {
           channelCount: 1,
           channelCountMode: "explicit",
           channelInterpretation: "speakers",
           numberOfInputs: 6
         });
-        N.connect(O.destination), h = (async () => {
+        M.connect(N.destination), h = (async () => {
           const q = await Promise.all([
             f.orientationX,
             f.orientationY,
@@ -3723,18 +3723,18 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
             f.positionX,
             f.positionY,
             f.positionZ
-          ].map(async (P, U) => {
-            const j = t(O, {
+          ].map(async (F, G) => {
+            const j = t(N, {
               channelCount: 1,
               channelCountMode: "explicit",
               channelInterpretation: "discrete",
-              offset: U === 0 ? 1 : 0
+              offset: G === 0 ? 1 : 0
             });
-            return await a(O, P, j.offset), j;
+            return await a(N, F, j.offset), j;
           }));
-          for (let P = 0; P < 6; P += 1)
-            q[P].connect(N, 0, P), q[P].start(0);
-          return l(O);
+          for (let F = 0; F < 6; F += 1)
+            q[F].connect(M, 0, F), q[F].start(0);
+          return l(N);
         })();
       }
       const k = await h, g = n(p, {
@@ -3743,7 +3743,7 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
       });
       await c(f, p, g);
       const T = [];
-      for (let O = 0; O < k.numberOfChannels; O += 1) T.push(k.getChannelData(O));
+      for (let N = 0; N < k.numberOfChannels; N += 1) T.push(k.getChannelData(N));
       let y = [
         T[0][0],
         T[1][0],
@@ -3755,7 +3755,7 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
       ], I = n(p, {
         ...v,
         gain: 1
-      }), E = r(p, {
+      }), E = i(p, {
         ...b,
         orientationX: y[0],
         orientationY: y[1],
@@ -3765,23 +3765,23 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
         positionZ: w[2]
       });
       g.connect(I).connect(E.inputs[0]), E.connect(m);
-      for (let O = 128; O < k.length; O += 128) {
-        const N = [
-          T[0][O],
-          T[1][O],
-          T[2][O]
+      for (let N = 128; N < k.length; N += 128) {
+        const M = [
+          T[0][N],
+          T[1][N],
+          T[2][N]
         ], q = [
-          T[3][O],
-          T[4][O],
-          T[5][O]
+          T[3][N],
+          T[4][N],
+          T[5][N]
         ];
-        if (N.some((P, U) => P !== y[U]) || q.some((P, U) => P !== w[U])) {
-          y = N, w = q;
-          const P = O / p.sampleRate;
-          I.gain.setValueAtTime(0, P), I = n(p, {
+        if (M.some((F, G) => F !== y[G]) || q.some((F, G) => F !== w[G])) {
+          y = M, w = q;
+          const F = N / p.sampleRate;
+          I.gain.setValueAtTime(0, F), I = n(p, {
             ...v,
             gain: 0
-          }), E = r(p, {
+          }), E = i(p, {
             ...b,
             orientationX: y[0],
             orientationY: y[1],
@@ -3789,92 +3789,92 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
             positionX: w[0],
             positionY: w[1],
             positionZ: w[2]
-          }), I.gain.setValueAtTime(1, P), g.connect(I).connect(E.inputs[0]), E.connect(m);
+          }), I.gain.setValueAtTime(1, F), g.connect(I).connect(E.inputs[0]), E.connect(m);
         }
       }
       return m;
     }
-    return S ? (await s(p, f.orientationX, _.orientationX), await s(p, f.orientationY, _.orientationY), await s(p, f.orientationZ, _.orientationZ), await s(p, f.positionX, _.positionX), await s(p, f.positionY, _.positionY), await s(p, f.positionZ, _.positionZ)) : (await a(p, f.orientationX, _.orientationX), await a(p, f.orientationY, _.orientationY), await a(p, f.orientationZ, _.orientationZ), await a(p, f.positionX, _.positionX), await a(p, f.positionY, _.positionY), await a(p, f.positionZ, _.positionZ)), Et(_) ? await c(f, p, _.inputs[0]) : await c(f, p, _), _;
+    return S ? (await s(p, f.orientationX, _.orientationX), await s(p, f.orientationY, _.orientationY), await s(p, f.orientationZ, _.orientationZ), await s(p, f.positionX, _.positionX), await s(p, f.positionY, _.positionY), await s(p, f.positionZ, _.positionZ)) : (await a(p, f.orientationX, _.orientationX), await a(p, f.orientationY, _.orientationY), await a(p, f.orientationZ, _.orientationZ), await a(p, f.positionX, _.positionX), await a(p, f.positionY, _.positionY), await a(p, f.positionZ, _.positionZ)), Rt(_) ? await c(f, p, _.inputs[0]) : await c(f, p, _), _;
   };
   return { render(f, p) {
     const m = u.get(p);
     return m !== void 0 ? Promise.resolve(m) : d(f, p);
   } };
-}, vl = { disableNormalization: !1 }, yl = (s, e, t, n) => class Hr {
-  constructor(i, o) {
-    const a = s(e(i), n({
-      ...vl,
+}, Vl = { disableNormalization: !1 }, Fl = (s, e, t, n) => class or {
+  constructor(r, o) {
+    const a = s(e(r), n({
+      ...Vl,
       ...o
     }));
     return t.add(a), a;
   }
-  static [Symbol.hasInstance](i) {
-    return i !== null && typeof i == "object" && Object.getPrototypeOf(i) === Hr.prototype || t.has(i);
+  static [Symbol.hasInstance](r) {
+    return r !== null && typeof r == "object" && Object.getPrototypeOf(r) === or.prototype || t.has(r);
   }
-}, Tl = (s, e) => (t, n, r) => (s(n).replay(r), e(n, t, r)), wl = (s, e, t) => async (n, r, i) => {
+}, Pl = (s, e) => (t, n, i) => (s(n).replay(i), e(n, t, i)), ql = (s, e, t) => async (n, i, r) => {
   const o = s(n);
   await Promise.all(o.activeInputs.map((a, c) => Array.from(a).map(async ([l, u]) => {
-    const h = await e(l).render(l, r), d = n.context.destination;
-    !t(l) && (n !== d || !t(n)) && h.connect(i, u, c);
+    const h = await e(l).render(l, i), d = n.context.destination;
+    !t(l) && (n !== d || !t(n)) && h.connect(r, u, c);
   })).reduce((a, c) => [...a, ...c], []));
-}, bl = (s, e, t) => async (n, r, i) => {
+}, Ll = (s, e, t) => async (n, i, r) => {
   const o = e(n);
   await Promise.all(Array.from(o.activeInputs).map(async ([a, c]) => {
-    const l = await s(a).render(a, r);
-    t(a) || l.connect(i, c);
+    const l = await s(a).render(a, i);
+    t(a) || l.connect(r, c);
   }));
-}, Cl = (s, e, t, n) => (r) => s(dt, () => dt(r)) ? Promise.resolve(s(n, n)).then((i) => {
-  if (!i) {
-    const o = t(r, 512, 0, 1);
-    r.oncomplete = () => {
+}, Wl = (s, e, t, n) => (i) => s(ft, () => ft(i)) ? Promise.resolve(s(n, n)).then((r) => {
+  if (!r) {
+    const o = t(i, 512, 0, 1);
+    i.oncomplete = () => {
       o.onaudioprocess = null, o.disconnect();
-    }, o.onaudioprocess = () => r.currentTime, o.connect(r.destination);
+    }, o.onaudioprocess = () => i.currentTime, o.connect(i.destination);
   }
-  return r.startRendering();
-}) : new Promise((i) => {
-  const o = e(r, {
+  return i.startRendering();
+}) : new Promise((r) => {
+  const o = e(i, {
     channelCount: 1,
     channelCountMode: "explicit",
     channelInterpretation: "discrete",
     gain: 0
   });
-  r.oncomplete = (a) => {
-    o.disconnect(), i(a.renderedBuffer);
-  }, o.connect(r.destination), r.startRendering();
-}), xl = (s) => (e, t) => {
+  i.oncomplete = (a) => {
+    o.disconnect(), r(a.renderedBuffer);
+  }, o.connect(i.destination), i.startRendering();
+}), jl = (s) => (e, t) => {
   s.set(e, t);
-}, Sl = (s) => (e, t) => s.set(e, t), Al = (s, e, t, n, r, i, o, a) => (c, l) => t(c).render(c, l).then(() => Promise.all(Array.from(n(l)).map((u) => t(u).render(u, l)))).then(() => r(l)).then((u) => (typeof u.copyFromChannel != "function" ? (o(u), Os(u)) : e(i, () => i(u)) || a(u), s.add(u), u)), kl = {
+}, Bl = (s) => (e, t) => s.set(e, t), Ul = (s, e, t, n, i, r, o, a) => (c, l) => t(c).render(c, l).then(() => Promise.all(Array.from(n(l)).map((u) => t(u).render(u, l)))).then(() => i(l)).then((u) => (typeof u.copyFromChannel != "function" ? (o(u), Fn(u)) : e(r, () => r(u)) || a(u), s.add(u), u)), Gl = {
   channelCount: 2,
   channelCountMode: "explicit",
   channelInterpretation: "speakers",
   pan: 0
-}, Ol = (s, e, t, n, r, i) => class extends s {
+}, zl = (s, e, t, n, i, r) => class extends s {
   constructor(a, c) {
-    const l = r(a), u = t(l, {
-      ...kl,
+    const l = i(a), u = t(l, {
+      ...Gl,
       ...c
-    }), h = i(l), d = h ? n() : null;
+    }), h = r(l), d = h ? n() : null;
     super(a, !1, u, d), this._pan = e(this, h, u.pan);
   }
   get pan() {
     return this._pan;
   }
-}, Nl = (s, e, t, n, r) => () => {
-  const i = /* @__PURE__ */ new WeakMap(), o = async (a, c) => {
+}, $l = (s, e, t, n, i) => () => {
+  const r = /* @__PURE__ */ new WeakMap(), o = async (a, c) => {
     let l = t(a);
-    const u = ye(l, c);
+    const u = Te(l, c);
     return u || (l = e(c, {
       channelCount: l.channelCount,
       channelCountMode: l.channelCountMode,
       channelInterpretation: l.channelInterpretation,
       pan: l.pan.value
-    })), i.set(c, l), u ? await s(c, a.pan, l.pan) : await n(c, a.pan, l.pan), Et(l) ? await r(a, c, l.inputs[0]) : await r(a, c, l), l;
+    })), r.set(c, l), u ? await s(c, a.pan, l.pan) : await n(c, a.pan, l.pan), Rt(l) ? await i(a, c, l.inputs[0]) : await i(a, c, l), l;
   };
   return { render(a, c) {
-    const l = i.get(c);
+    const l = r.get(c);
     return l !== void 0 ? Promise.resolve(l) : o(a, c);
   } };
-}, Ml = (s) => () => {
+}, Zl = (s) => () => {
   if (s === null) return !1;
   try {
     new s({
@@ -3885,21 +3885,21 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
     return !1;
   }
   return !0;
-}, Dl = (s, e) => async () => {
+}, Xl = (s, e) => async () => {
   if (s === null) return !0;
   if (e === null) return !1;
-  const t = new Blob(['class A extends AudioWorkletProcessor{process(i){this.port.postMessage(i,[i[0][0].buffer])}}registerProcessor("a",A)'], { type: "application/javascript; charset=utf-8" }), n = new e(1, 128, 44100), r = URL.createObjectURL(t);
-  let i = !1, o = !1;
+  const t = new Blob(['class A extends AudioWorkletProcessor{process(i){this.port.postMessage(i,[i[0][0].buffer])}}registerProcessor("a",A)'], { type: "application/javascript; charset=utf-8" }), n = new e(1, 128, 44100), i = URL.createObjectURL(t);
+  let r = !1, o = !1;
   try {
-    await n.audioWorklet.addModule(r);
+    await n.audioWorklet.addModule(i);
     const a = new s(n, "a", { numberOfOutputs: 0 }), c = n.createOscillator();
-    a.port.onmessage = () => i = !0, a.onprocessorerror = () => o = !0, c.connect(a), c.start(0), await n.startRendering(), await new Promise((l) => setTimeout(l));
+    a.port.onmessage = () => r = !0, a.onprocessorerror = () => o = !0, c.connect(a), c.start(0), await n.startRendering(), await new Promise((l) => setTimeout(l));
   } catch {
   } finally {
-    URL.revokeObjectURL(r);
+    URL.revokeObjectURL(i);
   }
-  return i && !o;
-}, El = (s, e) => () => {
+  return r && !o;
+}, Hl = (s, e) => () => {
   if (e === null) return Promise.resolve(!1);
   const t = new e(1, 1, 44100), n = s(t, {
     channelCount: 1,
@@ -3907,23 +3907,23 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
     channelInterpretation: "discrete",
     gain: 0
   });
-  return new Promise((r) => {
+  return new Promise((i) => {
     t.oncomplete = () => {
-      n.disconnect(), r(t.currentTime !== 0);
+      n.disconnect(), i(t.currentTime !== 0);
     }, t.startRendering();
   });
-}, Qr = () => new DOMException("", "UnknownError"), Il = {
+}, cr = () => new DOMException("", "UnknownError"), Ql = {
   channelCount: 2,
   channelCountMode: "max",
   channelInterpretation: "speakers",
   curve: null,
   oversample: "none"
-}, Rl = (s, e, t, n, r, i, o) => class extends s {
+}, Yl = (s, e, t, n, i, r, o) => class extends s {
   constructor(c, l) {
-    const u = r(c), h = t(u, {
-      ...Il,
+    const u = i(c), h = t(u, {
+      ...Ql,
       ...l
-    }), d = i(u) ? n() : null;
+    }), d = r(u) ? n() : null;
     super(c, !0, h, d), this._isCurveNullified = !1, this._nativeWaveShaperNode = h, o(this, 1);
   }
   get curve() {
@@ -3943,48 +3943,48 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
   set oversample(c) {
     this._nativeWaveShaperNode.oversample = c;
   }
-}, Vl = (s, e, t) => () => {
-  const n = /* @__PURE__ */ new WeakMap(), r = async (i, o) => {
-    let a = e(i);
-    return ye(a, o) || (a = s(o, {
+}, Jl = (s, e, t) => () => {
+  const n = /* @__PURE__ */ new WeakMap(), i = async (r, o) => {
+    let a = e(r);
+    return Te(a, o) || (a = s(o, {
       channelCount: a.channelCount,
       channelCountMode: a.channelCountMode,
       channelInterpretation: a.channelInterpretation,
       curve: a.curve,
       oversample: a.oversample
-    })), n.set(o, a), Et(a) ? await t(i, o, a.inputs[0]) : await t(i, o, a), a;
+    })), n.set(o, a), Rt(a) ? await t(r, o, a.inputs[0]) : await t(r, o, a), a;
   };
-  return { render(i, o) {
+  return { render(r, o) {
     const a = n.get(o);
-    return a !== void 0 ? Promise.resolve(a) : r(i, o);
+    return a !== void 0 ? Promise.resolve(a) : i(r, o);
   } };
-}, Pl = () => typeof window > "u" ? null : window, Fl = (s, e) => (t) => {
-  t.copyFromChannel = (n, r, i = 0) => {
-    const o = s(i), a = s(r);
+}, Kl = () => typeof window > "u" ? null : window, eu = (s, e) => (t) => {
+  t.copyFromChannel = (n, i, r = 0) => {
+    const o = s(r), a = s(i);
     if (a >= t.numberOfChannels) throw e();
     const c = t.length, l = t.getChannelData(a), u = n.length;
     for (let h = o < 0 ? -o : 0; h + o < c && h < u; h += 1) n[h] = l[h + o];
-  }, t.copyToChannel = (n, r, i = 0) => {
-    const o = s(i), a = s(r);
+  }, t.copyToChannel = (n, i, r = 0) => {
+    const o = s(r), a = s(i);
     if (a >= t.numberOfChannels) throw e();
     const c = t.length, l = t.getChannelData(a), u = n.length;
     for (let h = o < 0 ? -o : 0; h + o < c && h < u; h += 1) l[h + o] = n[h];
   };
-}, ql = (s) => (e) => {
-  e.copyFromChannel = /* @__PURE__ */ ((t) => (n, r, i = 0) => {
-    const o = s(i), a = s(r);
+}, tu = (s) => (e) => {
+  e.copyFromChannel = /* @__PURE__ */ ((t) => (n, i, r = 0) => {
+    const o = s(r), a = s(i);
     if (o < e.length) return t.call(e, n, a, o);
-  })(e.copyFromChannel), e.copyToChannel = /* @__PURE__ */ ((t) => (n, r, i = 0) => {
-    const o = s(i), a = s(r);
+  })(e.copyFromChannel), e.copyToChannel = /* @__PURE__ */ ((t) => (n, i, r = 0) => {
+    const o = s(r), a = s(i);
     if (o < e.length) return t.call(e, n, a, o);
   })(e.copyToChannel);
-}, Ll = (s) => (e, t) => {
+}, su = (s) => (e, t) => {
   const n = t.createBuffer(1, 1, 44100);
-  e.buffer === null && (e.buffer = n), s(e, "buffer", (r) => () => {
-    const i = r.call(e);
-    return i === n ? null : i;
-  }, (r) => (i) => r.call(e, i === null ? n : i));
-}, Wl = (s, e) => (t, n) => {
+  e.buffer === null && (e.buffer = n), s(e, "buffer", (i) => () => {
+    const r = i.call(e);
+    return r === n ? null : r;
+  }, (i) => (r) => i.call(e, r === null ? n : r));
+}, nu = (s, e) => (t, n) => {
   n.channelCount = 1, n.channelCountMode = "explicit", Object.defineProperty(n, "channelCount", {
     get: () => 1,
     set: () => {
@@ -3996,30 +3996,30 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
       throw s();
     }
   });
-  const r = t.createBufferSource();
+  const i = t.createBufferSource();
   e(n, () => {
     const a = n.numberOfInputs;
-    for (let c = 0; c < a; c += 1) r.connect(n, 0, c);
-  }, () => r.disconnect(n));
-}, Yr = (s, e, t) => s.copyFromChannel === void 0 ? s.getChannelData(t)[0] : (s.copyFromChannel(e, t), e[0]), dr = (s) => {
+    for (let c = 0; c < a; c += 1) i.connect(n, 0, c);
+  }, () => i.disconnect(n));
+}, lr = (s, e, t) => s.copyFromChannel === void 0 ? s.getChannelData(t)[0] : (s.copyFromChannel(e, t), e[0]), Ti = (s) => {
   if (s === null) return !1;
   const e = s.length;
   return e % 2 !== 0 ? s[Math.floor(e / 2)] !== 0 : s[e / 2 - 1] + s[e / 2] !== 0;
-}, Ht = (s, e, t, n) => {
-  let r = s;
-  for (; !r.hasOwnProperty(e); ) r = Object.getPrototypeOf(r);
-  const { get: i, set: o } = Object.getOwnPropertyDescriptor(r, e);
+}, Yt = (s, e, t, n) => {
+  let i = s;
+  for (; !i.hasOwnProperty(e); ) i = Object.getPrototypeOf(i);
+  const { get: r, set: o } = Object.getOwnPropertyDescriptor(i, e);
   Object.defineProperty(s, e, {
-    get: t(i),
+    get: t(r),
     set: n(o)
   });
-}, jl = (s) => ({
+}, iu = (s) => ({
   ...s,
   outputChannelCount: s.outputChannelCount !== void 0 ? s.outputChannelCount : s.numberOfInputs === 1 && s.numberOfOutputs === 1 ? [s.channelCount] : Array.from({ length: s.numberOfOutputs }, () => 1)
-}), Bl = (s) => ({
+}), ru = (s) => ({
   ...s,
   channelCount: s.numberOfOutputs
-}), Ul = (s) => {
+}), au = (s) => {
   const { imag: e, real: t } = s;
   return e === void 0 ? t === void 0 ? {
     ...s,
@@ -4038,14 +4038,14 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
     imag: e,
     real: t
   };
-}, Jr = (s, e, t) => {
+}, ur = (s, e, t) => {
   try {
     s.setValueAtTime(e, t);
   } catch (n) {
     if (n.code !== 9) throw n;
-    Jr(s, e, t + 1e-7);
+    ur(s, e, t + 1e-7);
   }
-}, Gl = (s) => {
+}, ou = (s) => {
   const e = s.createBufferSource();
   e.start();
   try {
@@ -4054,7 +4054,7 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
     return !0;
   }
   return !1;
-}, zl = (s) => {
+}, cu = (s) => {
   const e = s.createBufferSource();
   e.buffer = s.createBuffer(1, 1, 44100);
   try {
@@ -4063,7 +4063,7 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
     return !1;
   }
   return !0;
-}, $l = (s) => {
+}, lu = (s) => {
   const e = s.createBufferSource();
   e.start();
   try {
@@ -4072,7 +4072,7 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
     return !1;
   }
   return !0;
-}, Is = (s) => {
+}, jn = (s) => {
   const e = s.createOscillator();
   try {
     e.start(-1);
@@ -4080,7 +4080,7 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
     return t instanceof RangeError;
   }
   return !1;
-}, Kr = (s) => {
+}, hr = (s) => {
   const e = s.createBuffer(1, 1, 44100), t = s.createBufferSource();
   t.buffer = e, t.start(), t.stop();
   try {
@@ -4088,7 +4088,7 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
   } catch {
     return !1;
   }
-}, Rs = (s) => {
+}, Bn = (s) => {
   const e = s.createOscillator();
   try {
     e.stop(-1);
@@ -4096,146 +4096,146 @@ var Qc = (s, e, t, n) => (r, i, { channelCount: o, channelCountMode: a, channelI
     return t instanceof RangeError;
   }
   return !1;
-}, Zl = (s) => {
+}, uu = (s) => {
   const { port1: e, port2: t } = new MessageChannel();
   try {
     e.postMessage(s);
   } finally {
     e.close(), t.close();
   }
-}, Xl = (s) => {
-  s.start = /* @__PURE__ */ ((e) => (t = 0, n = 0, r) => {
-    const i = s.buffer, o = i === null ? n : Math.min(i.duration, n);
-    i !== null && o > i.duration - 0.5 / s.context.sampleRate ? e.call(s, t, 0, 0) : e.call(s, t, o, r);
+}, hu = (s) => {
+  s.start = /* @__PURE__ */ ((e) => (t = 0, n = 0, i) => {
+    const r = s.buffer, o = r === null ? n : Math.min(r.duration, n);
+    r !== null && o > r.duration - 0.5 / s.context.sampleRate ? e.call(s, t, 0, 0) : e.call(s, t, o, i);
   })(s.start);
-}, ei = (s, e) => {
+}, dr = (s, e) => {
   const t = e.createGain();
   s.connect(t);
-  const n = /* @__PURE__ */ ((r) => () => {
-    r.call(s, t), s.removeEventListener("ended", n);
+  const n = /* @__PURE__ */ ((i) => () => {
+    i.call(s, t), s.removeEventListener("ended", n);
   })(s.disconnect);
-  s.addEventListener("ended", n), It(s, t), s.stop = /* @__PURE__ */ ((r) => {
-    let i = !1;
+  s.addEventListener("ended", n), Vt(s, t), s.stop = /* @__PURE__ */ ((i) => {
+    let r = !1;
     return (o = 0) => {
-      if (i) try {
-        r.call(s, o);
+      if (r) try {
+        i.call(s, o);
       } catch {
         t.gain.setValueAtTime(0, o);
       }
       else
-        r.call(s, o), i = !0;
+        i.call(s, o), r = !0;
     };
   })(s.stop);
-}, Rt = (s, e) => (t) => {
+}, Ft = (s, e) => (t) => {
   const n = { value: s };
   return Object.defineProperties(t, {
     currentTarget: n,
     target: n
   }), typeof e == "function" ? e.call(s, t) : e.handleEvent.call(s, t);
-}, Hl = pa(gt), Ql = ya(gt), Yl = Do(wn), ti = /* @__PURE__ */ new WeakMap(), Jl = Ho(ti), De = ao(/* @__PURE__ */ new Map(), /* @__PURE__ */ new WeakMap()), qe = Pl(), ni = Oc(De, We), Vs = Xo(be), ge = wl(be, Vs, ht), Kl = xa(ni, te, ge), K = Jo(Tn), He = tl(qe), Q = mc(He), si = /* @__PURE__ */ new WeakMap(), ri = jo(Rt), Vt = Ec(qe), Ps = hc(Vt), Fs = dc(qe), ii = pc(qe), jt = Rc(qe), ce = Xa(fa(Ir), va(Hl, Ql, ln, Yl, un, be, Jl, Gt, te, gt, ze, ht, en), De, ac(Nn, un, be, te, Lt, ze), We, Cn, ve, ko(ln, Nn, be, te, Lt, K, ze, Q), Ro(si, be, Ve), ri, K, Ps, Fs, ii, Q, jt), eu = Ca(ce, Kl, We, ni, K, Q), qs = /* @__PURE__ */ new WeakSet(), pr = Nc(qe), ai = To(/* @__PURE__ */ new Uint32Array(1)), Ls = Fl(ai, We), Ws = ql(ai), oi = Aa(qs, De, ve, pr, He, Ml(pr), Ls, Ws), fn = Ta(xe), ci = bl(Vs, $t, ht), je = fo(ci), Pt = Dc(fn, De, Gl, zl, $l, Is, Kr, Rs, Xl, Ll(Ht), ei), Be = Tl(Qo($t), ci), tu = Na(je, Pt, te, Be, ge), Pe = Ha(ma(Rr), si, ks, Qa, Ye.createCancelAndHoldAutomationEvent, Ye.createCancelScheduledValuesAutomationEvent, Ye.createExponentialRampToValueAutomationEvent, Ye.createLinearRampToValueAutomationEvent, Ye.createSetTargetAutomationEvent, Ye.createSetValueAutomationEvent, Ye.createSetValueCurveAutomationEvent, Vt, Jr), nu = Oa(ce, tu, Pe, he, Pt, K, Q, Rt), su = Fa(ce, qa, We, he, Ic(xe, Ht), K, Q, ge), ru = io(je, Xr, te, Be, ge), vt = Sl(ti), iu = ro(ce, Pe, ru, Cn, Xr, K, Q, vt), nt = Ac(gt, Fs), st = jc(Vt, Wl(he, nt)), au = co(ce, lo(st, te, ge), st, K, Q), ou = ho(ce, po(Wt, te, ge), Wt, K, Q, Bl), kt = Uc(fn, De, Gc(fn, Pt, xe, nt), Is, Rs), cu = vo(ce, Pe, yo(je, kt, te, Be, ge), kt, K, Q, Rt), fr = zc(ve, Ht), lu = bo(ce, Co(fr, te, ge), fr, K, Q, vt), uu = No(ce, Pe, Mo(je, ur, te, Be, ge), ur, K, Q, vt), mr = $c(ve), hu = Fo(ce, Pe, qo(je, mr, te, Be, ge), mr, ve, K, Q, vt), du = zo(ce, Pe, $o(je, xe, te, Be, ge), xe, K, Q), pu = Qc(Cn, he, Xt, ve), xn = Cl(De, xe, Xt, El(xe, He)), fu = ic(Pt, te, He, ge, xn), mu = sc(ce, Zc(pu), fu, K, Q, vt), _u = La(Pe, st, kt, Xt, ve, Yr, Q, Ht), li = /* @__PURE__ */ new WeakMap(), js = Cc(su, _u, ri, Q, li, Rt), _r = nl(fn, De, Is, Kr, Rs, ei), gu = pl(ce, Pe, _r, fl(je, _r, te, Be, ge), K, Q, Rt), gr = _o(Pt), mn = cl(gr, he, ll(gr, he, xe, dr, nt), dr, nt, Vt, Ht), vr = sl(rl(ln, he, st, xe, Xt, mn, ve, un, Yr, nt)), vu = _l(ce, Pe, vr, gl(je, st, kt, xe, vr, te, He, Be, ge, xn), K, Q, vt), yu = yl(il(We), K, /* @__PURE__ */ new WeakSet(), Ul), yr = al(ol(st, Wt, xe, mn, ve, nt), ve), Tu = Ol(ce, Pe, yr, Nl(je, yr, te, Be, ge), K, Q), wu = Rl(ce, he, mn, Vl(mn, te, ge), K, Q, vt), ui = _c(qe), Bs = Bo(qe), hi = /* @__PURE__ */ new WeakMap(), bu = Ko(hi, He), Cu = ui ? ga(De, ve, Wo(qe), Bs, Uo(da), K, bu, Q, jt, /* @__PURE__ */ new WeakMap(), /* @__PURE__ */ new WeakMap(), Dl(jt, He), qe) : void 0, xu = fc(Ps, Q), Su = Ao(qs, De, So, Lo, /* @__PURE__ */ new WeakSet(), K, xu, on, dt, Ls, Ws), di = no(Cu, eu, oi, nu, iu, au, ou, cu, lu, Su, uu, hu, du, mu, js, gu, vu, yu, Tu, wu), Au = gc(ce, Yc, K, Q), ku = yc(ce, Jc, K, Q), Ou = Tc(ce, Kc, K, Q), Nu = wc(ce, el(he, Q), K), Mu = Pa(di, he, ve, Qr, Au, ku, Ou, Nu, Vt), Us = ec(li), Du = wa(Us), pi = mo(We), Eu = Eo(Us), fi = Vo(We), mi = /* @__PURE__ */ new WeakMap(), Iu = Pc(he, Wc(pi, We, he, st, Wt, kt, xe, Xt, ve, fi, Bs, Zo(mi, Ve), nt), xe, ve, nt), Ru = to(je, pi, Pt, st, Wt, kt, xe, Eu, fi, Bs, te, jt, He, Be, ge, xn), Vu = Yo(hi), Pu = xl(mi), Tr = ui ? Ja(Du, ce, Pe, Ru, Iu, be, Vu, K, Q, jt, jl, Pu, Zl, Rt) : void 0, sd = bc(he, ve, Qr, js, Vt), _i = xo(ve, He), gi = Al(qs, De, Vs, Us, xn, on, Ls, Ws), rd = Sc(De, he, _i, js, gi), Fu = hl(di, De, he, _i, gi), qu = oc(Tn, Ps), Lu = cc(As, Fs), Wu = lc(ks, ii), ju = uc(Tn, Q);
-function pt(s) {
-  return Wu(s);
+}, du = Ma(yt), pu = Fa(yt), fu = Xo(ws), pr = /* @__PURE__ */ new WeakMap(), mu = dc(pr), Ee = Co(/* @__PURE__ */ new Map(), /* @__PURE__ */ new WeakMap()), We = Kl(), fr = zc(Ee, Be), Un = hc(xe), ve = ql(xe, Un, pt), _u = ja(fr, ne, ve), te = mc(Ts), Qe = vl(We), K = Ec(Qe), mr = /* @__PURE__ */ new WeakMap(), _r = ic(Ft), Pt = Hc(We), Gn = Oc(Pt), zn = Nc(We), gr = Mc(We), Ut = Yc(We), le = ho(Da(zi), Va(du, pu, us, fu, hs, xe, mu, $t, ne, yt, Ze, pt, ss), Ee, xc(Ms, hs, xe, ne, jt, Ze), Be, xs, ye, Go(us, Ms, xe, ne, jt, te, Ze, K), Yo(mr, xe, Fe), _r, te, Gn, zn, gr, K, Ut), gu = Wa(le, _u, Be, fr, te, K), $n = /* @__PURE__ */ new WeakSet(), wi = $c(We), vr = Po(/* @__PURE__ */ new Uint32Array(1)), Zn = eu(vr, Be), Xn = tu(vr), yr = Ua($n, Ee, ye, wi, Qe, Zl(wi), Zn, Xn), ms = Pa(Ae), Tr = Ll(Un, Xt, pt), Ue = Do(Tr), qt = Xc(ms, Ee, ou, cu, lu, jn, hr, Bn, hu, su(Yt), dr), Ge = Pl(pc(Xt), Tr), vu = $a(Ue, qt, ne, Ge, ve), Le = po(Ea($i), mr, Vn, fo, Je.createCancelAndHoldAutomationEvent, Je.createCancelScheduledValuesAutomationEvent, Je.createExponentialRampToValueAutomationEvent, Je.createLinearRampToValueAutomationEvent, Je.createSetTargetAutomationEvent, Je.createSetValueAutomationEvent, Je.createSetValueCurveAutomationEvent, Pt, ur), yu = za(le, vu, Le, he, qt, te, K, Ft), Tu = eo(le, to, Be, he, Qc(Ae, Yt), te, K, ve), wu = xo(Ue, ar, ne, Ge, ve), Tt = Bl(pr), bu = bo(le, Le, wu, xs, ar, te, K, Tt), nt = Uc(yt, zn), it = il(Pt, nu(he, nt)), xu = Ao(le, ko(it, ne, ve), it, te, K), Cu = No(le, Mo(Bt, ne, ve), Bt, te, K, ru), Nt = al(ms, Ee, ol(ms, qt, Ae, nt), jn, Bn), Su = Vo(le, Le, Fo(Ue, Nt, ne, Ge, ve), Nt, te, K, Ft), bi = cl(ye, Yt), Au = Lo(le, Wo(bi, ne, ve), bi, te, K, Tt), ku = $o(le, Le, Zo(Ue, vi, ne, Ge, ve), vi, te, K, Tt), xi = ll(ye), Ou = ec(le, Le, tc(Ue, xi, ne, Ge, ve), xi, ye, te, K, Tt), Nu = cc(le, Le, lc(Ue, Ae, ne, Ge, ve), Ae, te, K), Mu = pl(xs, he, Qt, ye), Cs = Wl(Ee, Ae, Qt, Hl(Ae, Qe)), Du = bc(qt, ne, Qe, ve, Cs), Eu = Tc(le, ul(Mu), Du, te, K, Tt), Iu = so(Le, it, Nt, Qt, ye, lr, K, Yt), wr = /* @__PURE__ */ new WeakMap(), Hn = Wc(Tu, Iu, _r, K, wr, Ft), Ci = yl(ms, Ee, jn, hr, Bn, dr), Ru = Ml(le, Le, Ci, Dl(Ue, Ci, ne, Ge, ve), te, K, Ft), Si = Io(qt), _s = Sl(Si, he, Al(Si, he, Ae, Ti, nt), Ti, nt, Pt, Yt), Ai = Tl(wl(us, he, it, Ae, Qt, _s, ye, hs, lr, nt)), Vu = Il(le, Le, Ai, Rl(Ue, it, Nt, Ae, Ai, ne, Qe, Ge, ve, Cs), te, K, Tt), Fu = Fl(bl(Be), te, /* @__PURE__ */ new WeakSet(), au), ki = xl(Cl(it, Bt, Ae, _s, ye, nt), ye), Pu = zl(le, Le, ki, $l(Ue, ki, ne, Ge, ve), te, K), qu = Yl(le, he, _s, Jl(_s, ne, ve), te, K, Tt), br = Ic(We), Qn = rc(We), xr = /* @__PURE__ */ new WeakMap(), Lu = _c(xr, Qe), Wu = br ? Ra(Ee, ye, nc(We), Qn, ac(Na), te, Lu, K, Ut, /* @__PURE__ */ new WeakMap(), /* @__PURE__ */ new WeakMap(), Xl(Ut, Qe), We) : void 0, ju = Dc(Gn, K), Bu = Uo($n, Ee, Bo, sc, /* @__PURE__ */ new WeakSet(), te, ju, cs, ft, Zn, Xn), Cr = To(Wu, gu, yr, yu, bu, xu, Cu, Su, Au, Bu, ku, Ou, Nu, Eu, Hn, Ru, Vu, Fu, Pu, qu), Uu = Rc(le, fl, te, K), Gu = Fc(le, ml, te, K), zu = Pc(le, _l, te, K), $u = qc(le, gl(he, K), te), Zu = Ka(Cr, he, ye, cr, Uu, Gu, zu, $u, Pt), Yn = gc(wr), Xu = qa(Yn), Sr = Eo(Be), Hu = Ho(Yn), Ar = Jo(Be), kr = /* @__PURE__ */ new WeakMap(), Qu = Kc(he, nl(Sr, Be, he, it, Bt, Nt, Ae, Qt, ye, Ar, Qn, uc(kr, Fe), nt), Ae, ye, nt), Yu = yo(Ue, Sr, qt, it, Bt, Nt, Ae, Hu, Ar, Qn, ne, Ut, Qe, Ge, ve, Cs), Ju = fc(xr), Ku = jl(kr), Oi = br ? _o(Xu, le, Le, Yu, Qu, xe, Ju, te, K, Ut, iu, Ku, uu, Ft) : void 0, gd = Lc(he, ye, cr, Hn, Pt), Or = jo(ye, Qe), Nr = Ul($n, Ee, Un, Yn, Cs, cs, Zn, Xn), vd = Bc(Ee, he, Or, Hn, Nr), eh = Ol(Cr, Ee, he, Or, Nr), th = Cc(Ts, Gn), sh = Sc(Rn, zn), nh = Ac(Vn, gr), ih = kc(Ts, K);
+function mt(s) {
+  return nh(s);
 }
-function Ke(s) {
-  return Lu(s);
+function et(s) {
+  return sh(s);
 }
-function tn(s) {
-  return ju(s);
+function ns(s) {
+  return ih(s);
 }
-function Ct(s) {
-  return qu(s);
+function St(s) {
+  return th(s);
 }
-function Bu(s) {
-  return s instanceof oi;
+function rh(s) {
+  return s instanceof yr;
 }
-function Re(s) {
+function Ve(s) {
   return s === void 0;
 }
 function Z(s) {
   return s !== void 0;
 }
-function Uu(s) {
+function ah(s) {
   return typeof s == "function";
 }
-function ft(s) {
+function _t(s) {
   return typeof s == "number";
 }
-function lt(s) {
+function ht(s) {
   return Object.prototype.toString.call(s) === "[object Object]" && s.constructor === Object;
 }
-function Gu(s) {
+function oh(s) {
   return typeof s == "boolean";
 }
-function Le(s) {
+function je(s) {
   return Array.isArray(s);
 }
-function mt(s) {
+function gt(s) {
   return typeof s == "string";
 }
-function zu(s, e) {
-  return s === "value" || pt(e) || Ke(e) || Bu(e);
+function ch(s, e) {
+  return s === "value" || mt(e) || et(e) || rh(e);
 }
-function et(s, ...e) {
+function tt(s, ...e) {
   if (!e.length) return s;
   const t = e.shift();
-  if (lt(s) && lt(t)) for (const n in t) zu(n, t[n]) ? s[n] = t[n] : lt(t[n]) ? (s[n] || Object.assign(s, { [n]: {} }), et(s[n], t[n])) : Object.assign(s, { [n]: t[n] });
-  return et(s, ...e);
+  if (ht(s) && ht(t)) for (const n in t) ch(n, t[n]) ? s[n] = t[n] : ht(t[n]) ? (s[n] || Object.assign(s, { [n]: {} }), tt(s[n], t[n])) : Object.assign(s, { [n]: t[n] });
+  return tt(s, ...e);
 }
-function $u(s, e) {
+function lh(s, e) {
   return s.length === e.length && s.every((t, n) => e[n] === t);
 }
-function M(s, e, t = [], n) {
-  const r = {}, i = Array.from(e);
-  if (lt(i[0]) && n && !Reflect.has(i[0], n) && (Object.keys(i[0]).some((o) => Reflect.has(s, o)) || (et(r, { [n]: i[0] }), t.splice(t.indexOf(n), 1), i.shift())), i.length === 1 && lt(i[0])) et(r, i[0]);
-  else for (let o = 0; o < t.length; o++) Z(i[o]) && (r[t[o]] = i[o]);
-  return et(s, r);
+function O(s, e, t = [], n) {
+  const i = {}, r = Array.from(e);
+  if (ht(r[0]) && n && !Reflect.has(r[0], n) && (Object.keys(r[0]).some((o) => Reflect.has(s, o)) || (tt(i, { [n]: r[0] }), t.splice(t.indexOf(n), 1), r.shift())), r.length === 1 && ht(r[0])) tt(i, r[0]);
+  else for (let o = 0; o < t.length; o++) Z(r[o]) && (i[t[o]] = r[o]);
+  return tt(s, i);
 }
-function Zu(s) {
+function uh(s) {
   return s.constructor.getDefaults();
 }
-function Rn(s, e) {
-  return Re(s) ? e : s;
+function Vs(s, e) {
+  return Ve(s) ? e : s;
 }
-function Fe(s, e) {
+function Se(s, e) {
   return e.forEach((t) => {
     Reflect.has(s, t) && delete s[t];
   }), s;
 }
-var vi = "14.9.17";
-function G(s, e) {
+var Mr = "14.9.17";
+function z(s, e) {
   if (!s) throw new Error(e);
 }
-function yt(s, e, t = 1 / 0) {
+function wt(s, e, t = 1 / 0) {
   if (!(e <= s && s <= t)) throw new RangeError(`Value must be within [${e}, ${t}], got: ${s}`);
 }
-function yi(s) {
-  !s.isOffline && s.state !== "running" && Sn('The AudioContext is "suspended". Invoke Tone.start() from a user action to start the audio.');
+function Dr(s) {
+  !s.isOffline && s.state !== "running" && Ss('The AudioContext is "suspended". Invoke Tone.start() from a user action to start the audio.');
 }
-var Ti = !1, wr = !1;
-function br(s) {
-  Ti = s;
+var Er = !1, Ni = !1;
+function Mi(s) {
+  Er = s;
 }
-function Xu(s) {
-  Re(s) && Ti && !wr && (wr = !0, Sn("Events scheduled inside of scheduled callbacks should use the passed in scheduling time. See https://github.com/Tonejs/Tone.js/wiki/Accurate-Timing"));
+function hh(s) {
+  Ve(s) && Er && !Ni && (Ni = !0, Ss("Events scheduled inside of scheduled callbacks should use the passed in scheduling time. See https://github.com/Tonejs/Tone.js/wiki/Accurate-Timing"));
 }
-var wi = console;
-function Hu(...s) {
-  wi.log(...s);
+var Ir = console;
+function dh(...s) {
+  Ir.log(...s);
 }
-function Sn(...s) {
-  wi.warn(...s);
+function Ss(...s) {
+  Ir.warn(...s);
 }
-function Qu(s) {
-  return new Mu(s);
+function ph(s) {
+  return new Zu(s);
 }
-function Yu(s, e, t) {
-  return new Fu(s, e, t);
+function fh(s, e, t) {
+  return new eh(s, e, t);
 }
-var ut = typeof self == "object" ? self : null, Ju = ut && (ut.hasOwnProperty("AudioContext") || ut.hasOwnProperty("webkitAudioContext"));
-function Ku(s, e, t) {
-  return G(Z(Tr), "This node only works in a secure context (https or localhost)"), new Tr(s, e, t);
+var dt = typeof self == "object" ? self : null, mh = dt && (dt.hasOwnProperty("AudioContext") || dt.hasOwnProperty("webkitAudioContext"));
+function _h(s, e, t) {
+  return z(Z(Oi), "This node only works in a secure context (https or localhost)"), new Oi(s, e, t);
 }
-var it = class {
+var ot = class {
   constructor() {
     this.debug = !1, this._wasDisposed = !1;
   }
@@ -4243,7 +4243,7 @@ var it = class {
     return {};
   }
   log(...s) {
-    (this.debug || ut && this.toString() === ut.TONE_DEBUG_CLASS) && Hu(this, ...s);
+    (this.debug || dt && this.toString() === dt.TONE_DEBUG_CLASS) && dh(this, ...s);
   }
   dispose() {
     return this._wasDisposed = !0, this;
@@ -4255,27 +4255,27 @@ var it = class {
     return this.name;
   }
 };
-it.version = vi;
-var Gs = 1e-6;
-function Ot(s, e) {
-  return s > e + Gs;
+ot.version = Mr;
+var Jn = 1e-6;
+function Mt(s, e) {
+  return s > e + Jn;
 }
-function Vn(s, e) {
-  return Ot(s, e) || Ie(s, e);
+function Fs(s, e) {
+  return Mt(s, e) || Re(s, e);
 }
-function _n(s, e) {
-  return s + Gs < e;
+function gs(s, e) {
+  return s + Jn < e;
 }
-function Ie(s, e) {
-  return Math.abs(s - e) < Gs;
+function Re(s, e) {
+  return Math.abs(s - e) < Jn;
 }
-function eh(s, e, t) {
+function gh(s, e, t) {
   return Math.max(Math.min(s, t), e);
 }
-var $e = class bi extends it {
+var Xe = class Rr extends ot {
   constructor() {
     super(), this.name = "Timeline", this._timeline = [];
-    const e = M(bi.getDefaults(), arguments, ["memory"]);
+    const e = O(Rr.getDefaults(), arguments, ["memory"]);
     this.memory = e.memory, this.increasing = e.increasing;
   }
   static getDefaults() {
@@ -4288,9 +4288,9 @@ var $e = class bi extends it {
     return this._timeline.length;
   }
   add(e) {
-    if (G(Reflect.has(e, "time"), "Timeline: events must have a time attribute"), e.time = e.time.valueOf(), this.increasing && this.length) {
+    if (z(Reflect.has(e, "time"), "Timeline: events must have a time attribute"), e.time = e.time.valueOf(), this.increasing && this.length) {
       const t = this._timeline[this.length - 1];
-      G(Vn(e.time, t.time), "The time must be greater than or equal to the last scheduled time"), this._timeline.push(e);
+      z(Fs(e.time, t.time), "The time must be greater than or equal to the last scheduled time"), this._timeline.push(e);
     } else {
       const t = this._search(e.time);
       this._timeline.splice(t + 1, 0, e);
@@ -4328,12 +4328,12 @@ var $e = class bi extends it {
   cancel(e) {
     if (this._timeline.length > 1) {
       let t = this._search(e);
-      if (t >= 0) if (Ie(this._timeline[t].time, e)) {
-        for (let n = t; n >= 0 && Ie(this._timeline[n].time, e); n--) t = n;
+      if (t >= 0) if (Re(this._timeline[t].time, e)) {
+        for (let n = t; n >= 0 && Re(this._timeline[n].time, e); n--) t = n;
         this._timeline = this._timeline.slice(0, t);
       } else this._timeline = this._timeline.slice(0, t + 1);
       else this._timeline = [];
-    } else this._timeline.length === 1 && Vn(this._timeline[0].time, e) && (this._timeline = []);
+    } else this._timeline.length === 1 && Fs(this._timeline[0].time, e) && (this._timeline = []);
     return this;
   }
   cancelBefore(e) {
@@ -4347,22 +4347,22 @@ var $e = class bi extends it {
   _search(e, t = "time") {
     if (this._timeline.length === 0) return -1;
     let n = 0;
-    const r = this._timeline.length;
-    let i = r;
-    if (r > 0 && this._timeline[r - 1][t] <= e) return r - 1;
-    for (; n < i; ) {
-      let o = Math.floor(n + (i - n) / 2);
+    const i = this._timeline.length;
+    let r = i;
+    if (i > 0 && this._timeline[i - 1][t] <= e) return i - 1;
+    for (; n < r; ) {
+      let o = Math.floor(n + (r - n) / 2);
       const a = this._timeline[o], c = this._timeline[o + 1];
-      if (Ie(a[t], e)) {
+      if (Re(a[t], e)) {
         for (let l = o; l < this._timeline.length; l++) {
           const u = this._timeline[l];
-          if (Ie(u[t], e)) o = l;
+          if (Re(u[t], e)) o = l;
           else break;
         }
         return o;
       } else {
-        if (_n(a[t], e) && Ot(c[t], e)) return o;
-        Ot(a[t], e) ? i = o : n = o + 1;
+        if (gs(a[t], e) && Mt(c[t], e)) return o;
+        Mt(a[t], e) ? r = o : n = o + 1;
       }
     }
     return -1;
@@ -4382,8 +4382,8 @@ var $e = class bi extends it {
     return this._iterate(t, n + 1), this;
   }
   forEachBetween(e, t, n) {
-    let r = this._search(e), i = this._search(t);
-    return r !== -1 && i !== -1 ? (this._timeline[r].time !== e && (r += 1), this._timeline[i].time === t && (i -= 1), this._iterate(n, r, i)) : r === -1 && this._iterate(n, 0, i), this;
+    let i = this._search(e), r = this._search(t);
+    return i !== -1 && r !== -1 ? (this._timeline[i].time !== e && (i += 1), this._timeline[r].time === t && (r -= 1), this._iterate(n, i, r)) : i === -1 && this._iterate(n, 0, r), this;
   }
   forEachFrom(e, t) {
     let n = this._search(e);
@@ -4392,12 +4392,12 @@ var $e = class bi extends it {
   }
   forEachAtTime(e, t) {
     const n = this._search(e);
-    if (n !== -1 && Ie(this._timeline[n].time, e)) {
-      let r = n;
-      for (let i = n; i >= 0 && Ie(this._timeline[i].time, e); i--) r = i;
-      this._iterate((i) => {
-        t(i);
-      }, r, n);
+    if (n !== -1 && Re(this._timeline[n].time, e)) {
+      let i = n;
+      for (let r = n; r >= 0 && Re(this._timeline[r].time, e); r--) i = r;
+      this._iterate((r) => {
+        t(r);
+      }, i, n);
     }
     return this;
   }
@@ -4405,19 +4405,19 @@ var $e = class bi extends it {
     return super.dispose(), this._timeline = [], this;
   }
 };
-function Tt(s, e, t, n) {
-  var r = arguments.length, i = r < 3 ? e : n === null ? n = Object.getOwnPropertyDescriptor(e, t) : n, o;
-  if (typeof Reflect == "object" && typeof Reflect.decorate == "function") i = Reflect.decorate(s, e, t, n);
-  else for (var a = s.length - 1; a >= 0; a--) (o = s[a]) && (i = (r < 3 ? o(i) : r > 3 ? o(e, t, i) : o(e, t)) || i);
-  return r > 3 && i && Object.defineProperty(e, t, i), i;
+function bt(s, e, t, n) {
+  var i = arguments.length, r = i < 3 ? e : n === null ? n = Object.getOwnPropertyDescriptor(e, t) : n, o;
+  if (typeof Reflect == "object" && typeof Reflect.decorate == "function") r = Reflect.decorate(s, e, t, n);
+  else for (var a = s.length - 1; a >= 0; a--) (o = s[a]) && (r = (i < 3 ? o(r) : i > 3 ? o(e, t, r) : o(e, t)) || r);
+  return i > 3 && r && Object.defineProperty(e, t, r), r;
 }
 function pe(s, e, t, n) {
-  function r(i) {
-    return i instanceof t ? i : new t(function(o) {
-      o(i);
+  function i(r) {
+    return r instanceof t ? r : new t(function(o) {
+      o(r);
     });
   }
-  return new (t || (t = Promise))(function(i, o) {
+  return new (t || (t = Promise))(function(r, o) {
     function a(u) {
       try {
         l(n.next(u));
@@ -4433,12 +4433,12 @@ function pe(s, e, t, n) {
       }
     }
     function l(u) {
-      u.done ? i(u.value) : r(u.value).then(a, c);
+      u.done ? r(u.value) : i(u.value).then(a, c);
     }
     l((n = n.apply(s, e || [])).next());
   });
 }
-var th = class {
+var vh = class {
   constructor(s, e, t, n) {
     this._callback = s, this._type = e, this._minimumUpdateInterval = Math.max(128 / (n || 44100), 1e-3), this.updateInterval = t, this._createClock();
   }
@@ -4493,48 +4493,48 @@ var th = class {
   dispose() {
     this._disposeClock();
   }
-}, Ci = [];
-function xi(s) {
-  Ci.push(s);
+}, Vr = [];
+function Fr(s) {
+  Vr.push(s);
 }
-function nh(s) {
-  Ci.forEach((e) => e(s));
+function yh(s) {
+  Vr.forEach((e) => e(s));
 }
-var Si = [];
-function Ai(s) {
-  Si.push(s);
+var Pr = [];
+function qr(s) {
+  Pr.push(s);
 }
-function sh(s) {
-  Si.forEach((e) => e(s));
+function Th(s) {
+  Pr.forEach((e) => e(s));
 }
-var zs = class ki extends it {
+var Kn = class Lr extends ot {
   constructor() {
     super(...arguments), this.name = "Emitter";
   }
   on(e, t) {
     return e.split(/\W+/).forEach((n) => {
-      Re(this._events) && (this._events = {}), this._events.hasOwnProperty(n) || (this._events[n] = []), this._events[n].push(t);
+      Ve(this._events) && (this._events = {}), this._events.hasOwnProperty(n) || (this._events[n] = []), this._events[n].push(t);
     }), this;
   }
   once(e, t) {
-    const n = (...r) => {
-      t(...r), this.off(e, n);
+    const n = (...i) => {
+      t(...i), this.off(e, n);
     };
     return this.on(e, n), this;
   }
   off(e, t) {
     return e.split(/\W+/).forEach((n) => {
-      if (Re(this._events) && (this._events = {}), this._events.hasOwnProperty(n)) if (Re(t)) this._events[n] = [];
+      if (Ve(this._events) && (this._events = {}), this._events.hasOwnProperty(n)) if (Ve(t)) this._events[n] = [];
       else {
-        const r = this._events[n];
-        for (let i = r.length - 1; i >= 0; i--) r[i] === t && r.splice(i, 1);
+        const i = this._events[n];
+        for (let r = i.length - 1; r >= 0; r--) i[r] === t && i.splice(r, 1);
       }
     }), this;
   }
   emit(e, ...t) {
     if (this._events && this._events.hasOwnProperty(e)) {
       const n = this._events[e].slice(0);
-      for (let r = 0, i = n.length; r < i; r++) n[r].apply(this, t);
+      for (let i = 0, r = n.length; i < r; i++) n[i].apply(this, t);
     }
     return this;
   }
@@ -4545,26 +4545,26 @@ var zs = class ki extends it {
       "off",
       "emit"
     ].forEach((t) => {
-      const n = Object.getOwnPropertyDescriptor(ki.prototype, t);
+      const n = Object.getOwnPropertyDescriptor(Lr.prototype, t);
       Object.defineProperty(e.prototype, t, n);
     });
   }
   dispose() {
     return super.dispose(), this._events = void 0, this;
   }
-}, Oi = class extends zs {
+}, Wr = class extends Kn {
   constructor() {
     super(...arguments), this.isOffline = !1;
   }
   toJSON() {
     return {};
   }
-}, $s = class Ni extends Oi {
+}, ei = class jr extends Wr {
   constructor() {
     var e, t;
-    super(), this.name = "Context", this._constants = /* @__PURE__ */ new Map(), this._timeouts = new $e(), this._timeoutIds = 0, this._initialized = !1, this._closeStarted = !1, this.isOffline = !1, this._workletPromise = null;
-    const n = M(Ni.getDefaults(), arguments, ["context"]);
-    n.context ? (this._context = n.context, this._latencyHint = ((e = arguments[0]) === null || e === void 0 ? void 0 : e.latencyHint) || "") : (this._context = Qu({ latencyHint: n.latencyHint }), this._latencyHint = n.latencyHint), this._ticker = new th(this.emit.bind(this, "tick"), n.clockSource, n.updateInterval, this._context.sampleRate), this.on("tick", this._timeoutLoop.bind(this)), this._context.onstatechange = () => {
+    super(), this.name = "Context", this._constants = /* @__PURE__ */ new Map(), this._timeouts = new Xe(), this._timeoutIds = 0, this._initialized = !1, this._closeStarted = !1, this.isOffline = !1, this._workletPromise = null;
+    const n = O(jr.getDefaults(), arguments, ["context"]);
+    n.context ? (this._context = n.context, this._latencyHint = ((e = arguments[0]) === null || e === void 0 ? void 0 : e.latencyHint) || "") : (this._context = ph({ latencyHint: n.latencyHint }), this._latencyHint = n.latencyHint), this._ticker = new vh(this.emit.bind(this, "tick"), n.clockSource, n.updateInterval, this._context.sampleRate), this.on("tick", this._timeoutLoop.bind(this)), this._context.onstatechange = () => {
       this.emit("statechange", this.state);
     }, this[!((t = arguments[0]) === null || t === void 0) && t.hasOwnProperty("updateInterval") ? "_lookAhead" : "lookAhead"] = n.lookAhead;
   }
@@ -4577,7 +4577,7 @@ var zs = class ki extends it {
     };
   }
   initialize() {
-    return this._initialized || (nh(this), this._initialized = !0), this;
+    return this._initialized || (yh(this), this._initialized = !0), this;
   }
   createAnalyser() {
     return this._context.createAnalyser();
@@ -4631,13 +4631,13 @@ var zs = class ki extends it {
     return this._context.createWaveShaper();
   }
   createMediaStreamSource(e) {
-    return G(Ct(this._context), "Not available if OfflineAudioContext"), this._context.createMediaStreamSource(e);
+    return z(St(this._context), "Not available if OfflineAudioContext"), this._context.createMediaStreamSource(e);
   }
   createMediaElementSource(e) {
-    return G(Ct(this._context), "Not available if OfflineAudioContext"), this._context.createMediaElementSource(e);
+    return z(St(this._context), "Not available if OfflineAudioContext"), this._context.createMediaElementSource(e);
   }
   createMediaStreamDestination() {
-    return G(Ct(this._context), "Not available if OfflineAudioContext"), this._context.createMediaStreamDestination();
+    return z(St(this._context), "Not available if OfflineAudioContext"), this._context.createMediaStreamDestination();
   }
   decodeAudioData(e) {
     return this._context.decodeAudioData(e);
@@ -4655,32 +4655,32 @@ var zs = class ki extends it {
     return this.initialize(), this._listener;
   }
   set listener(e) {
-    G(!this._initialized, "The listener cannot be set after initialization."), this._listener = e;
+    z(!this._initialized, "The listener cannot be set after initialization."), this._listener = e;
   }
   get transport() {
     return this.initialize(), this._transport;
   }
   set transport(e) {
-    G(!this._initialized, "The transport cannot be set after initialization."), this._transport = e;
+    z(!this._initialized, "The transport cannot be set after initialization."), this._transport = e;
   }
   get draw() {
     return this.initialize(), this._draw;
   }
   set draw(e) {
-    G(!this._initialized, "Draw cannot be set after initialization."), this._draw = e;
+    z(!this._initialized, "Draw cannot be set after initialization."), this._draw = e;
   }
   get destination() {
     return this.initialize(), this._destination;
   }
   set destination(e) {
-    G(!this._initialized, "The destination cannot be set after initialization."), this._destination = e;
+    z(!this._initialized, "The destination cannot be set after initialization."), this._destination = e;
   }
   createAudioWorkletNode(e, t) {
-    return Ku(this.rawContext, e, t);
+    return _h(this.rawContext, e, t);
   }
   addAudioWorkletModule(e) {
     return pe(this, void 0, void 0, function* () {
-      G(Z(this.rawContext.audioWorklet), "AudioWorkletNode is only available in a secure context (https or localhost)"), this._workletPromise || (this._workletPromise = this.rawContext.audioWorklet.addModule(e)), yield this._workletPromise;
+      z(Z(this.rawContext.audioWorklet), "AudioWorkletNode is only available in a secure context (https or localhost)"), this._workletPromise || (this._workletPromise = this.rawContext.audioWorklet.addModule(e)), yield this._workletPromise;
     });
   }
   workletsAreReady() {
@@ -4719,20 +4719,20 @@ var zs = class ki extends it {
     return this._context.currentTime;
   }
   resume() {
-    return Ct(this._context) ? this._context.resume() : Promise.resolve();
+    return St(this._context) ? this._context.resume() : Promise.resolve();
   }
   close() {
     return pe(this, void 0, void 0, function* () {
-      Ct(this._context) && this.state !== "closed" && !this._closeStarted && (this._closeStarted = !0, yield this._context.close()), this._initialized && sh(this);
+      St(this._context) && this.state !== "closed" && !this._closeStarted && (this._closeStarted = !0, yield this._context.close()), this._initialized && Th(this);
     });
   }
   getConstant(e) {
     if (this._constants.has(e)) return this._constants.get(e);
     {
       const t = this._context.createBuffer(1, 128, this._context.sampleRate), n = t.getChannelData(0);
-      for (let i = 0; i < n.length; i++) n[i] = e;
-      const r = this._context.createBufferSource();
-      return r.channelCount = 1, r.channelCountMode = "explicit", r.buffer = t, r.loop = !0, r.start(0), this._constants.set(e, r), r;
+      for (let r = 0; r < n.length; r++) n[r] = e;
+      const i = this._context.createBufferSource();
+      return i.channelCount = 1, i.channelCountMode = "explicit", i.buffer = t, i.loop = !0, i.start(0), this._constants.set(e, i), i;
     }
   }
   dispose() {
@@ -4762,19 +4762,19 @@ var zs = class ki extends it {
     return this.clearTimeout(e);
   }
   setInterval(e, t) {
-    const n = ++this._timeoutIds, r = () => {
-      const i = this.now();
+    const n = ++this._timeoutIds, i = () => {
+      const r = this.now();
       this._timeouts.add({
         callback: () => {
-          e(), r();
+          e(), i();
         },
         id: n,
-        time: i + t
+        time: r + t
       });
     };
-    return r(), n;
+    return i(), n;
   }
-}, rh = class extends Oi {
+}, wh = class extends Wr {
   constructor() {
     super(...arguments), this.lookAhead = 0, this.latencyHint = 0, this.isOffline = !1;
   }
@@ -4902,30 +4902,30 @@ var zs = class ki extends it {
     return 0;
   }
 };
-function Y(s, e) {
-  Le(e) ? e.forEach((t) => Y(s, t)) : Object.defineProperty(s, e, {
+function X(s, e) {
+  je(e) ? e.forEach((t) => X(s, t)) : Object.defineProperty(s, e, {
     enumerable: !0,
     writable: !1
   });
 }
-function Zs(s, e) {
-  Le(e) ? e.forEach((t) => Zs(s, t)) : Object.defineProperty(s, e, { writable: !0 });
+function ti(s, e) {
+  je(e) ? e.forEach((t) => ti(s, t)) : Object.defineProperty(s, e, { writable: !0 });
 }
-var le = () => {
-}, tt = class me extends it {
+var ue = () => {
+}, st = class me extends ot {
   constructor() {
-    super(), this.name = "ToneAudioBuffer", this.onload = le;
-    const e = M(me.getDefaults(), arguments, [
+    super(), this.name = "ToneAudioBuffer", this.onload = ue;
+    const e = O(me.getDefaults(), arguments, [
       "url",
       "onload",
       "onerror"
     ]);
-    this.reverse = e.reverse, this.onload = e.onload, mt(e.url) ? this.load(e.url).catch(e.onerror) : e.url && this.set(e.url);
+    this.reverse = e.reverse, this.onload = e.onload, gt(e.url) ? this.load(e.url).catch(e.onerror) : e.url && this.set(e.url);
   }
   static getDefaults() {
     return {
-      onerror: le,
-      onload: le,
+      onerror: ue,
+      onload: ue,
       reverse: !1
     };
   }
@@ -4959,25 +4959,25 @@ var le = () => {
     return super.dispose(), this._buffer = void 0, this;
   }
   fromArray(e) {
-    const t = Le(e) && e[0].length > 0, n = t ? e.length : 1, r = t ? e[0].length : e.length, i = _e(), o = i.createBuffer(n, r, i.sampleRate), a = !t && n === 1 ? [e] : e;
+    const t = je(e) && e[0].length > 0, n = t ? e.length : 1, i = t ? e[0].length : e.length, r = _e(), o = r.createBuffer(n, i, r.sampleRate), a = !t && n === 1 ? [e] : e;
     for (let c = 0; c < n; c++) o.copyToChannel(a[c], c);
     return this._buffer = o, this;
   }
   toMono(e) {
-    if (ft(e)) this.fromArray(this.toArray(e));
+    if (_t(e)) this.fromArray(this.toArray(e));
     else {
       let t = new Float32Array(this.length);
       const n = this.numberOfChannels;
-      for (let r = 0; r < n; r++) {
-        const i = this.toArray(r);
-        for (let o = 0; o < i.length; o++) t[o] += i[o];
+      for (let i = 0; i < n; i++) {
+        const r = this.toArray(i);
+        for (let o = 0; o < r.length; o++) t[o] += r[o];
       }
-      t = t.map((r) => r / n), this.fromArray(t);
+      t = t.map((i) => i / n), this.fromArray(t);
     }
     return this;
   }
   toArray(e) {
-    if (ft(e)) return this.getChannelData(e);
+    if (_t(e)) return this.getChannelData(e);
     if (this.numberOfChannels === 1) return this.toArray(0);
     {
       const t = [];
@@ -4989,11 +4989,11 @@ var le = () => {
     return this._buffer ? this._buffer.getChannelData(e) : /* @__PURE__ */ new Float32Array(0);
   }
   slice(e, t = this.duration) {
-    G(this.loaded, "Buffer is not loaded");
-    const n = Math.floor(e * this.sampleRate), r = Math.floor(t * this.sampleRate);
-    G(n < r, "The start time must be less than the end time");
-    const i = r - n, o = _e().createBuffer(this.numberOfChannels, i, this.sampleRate);
-    for (let a = 0; a < this.numberOfChannels; a++) o.copyToChannel(this.getChannelData(a).subarray(n, r), a);
+    z(this.loaded, "Buffer is not loaded");
+    const n = Math.floor(e * this.sampleRate), i = Math.floor(t * this.sampleRate);
+    z(n < i, "The start time must be less than the end time");
+    const r = i - n, o = _e().createBuffer(this.numberOfChannels, r, this.sampleRate);
+    for (let a = 0; a < this.numberOfChannels; a++) o.copyToChannel(this.getChannelData(a).subarray(n, i), a);
     return new me(o);
   }
   _reverse() {
@@ -5038,11 +5038,11 @@ var le = () => {
         }
         e = e.replace(t[0], c);
       }
-      const n = me.baseUrl === "" || me.baseUrl.endsWith("/") ? me.baseUrl : me.baseUrl + "/", r = document.createElement("a");
-      r.href = n + e, r.pathname = (r.pathname + r.hash).split("/").map(encodeURIComponent).join("/");
-      const i = yield fetch(r.href);
-      if (!i.ok) throw new Error(`could not load url: ${e}`);
-      const o = yield i.arrayBuffer();
+      const n = me.baseUrl === "" || me.baseUrl.endsWith("/") ? me.baseUrl : me.baseUrl + "/", i = document.createElement("a");
+      i.href = n + e, i.pathname = (i.pathname + i.hash).split("/").map(encodeURIComponent).join("/");
+      const r = yield fetch(i.href);
+      if (!r.ok) throw new Error(`could not load url: ${e}`);
+      const o = yield r.arrayBuffer();
       return yield _e().decodeAudioData(o);
     });
   }
@@ -5056,16 +5056,16 @@ var le = () => {
     });
   }
 };
-tt.baseUrl = "";
-tt.downloads = [];
-var Xs = class extends $s {
+st.baseUrl = "";
+st.downloads = [];
+var si = class extends ei {
   constructor() {
     super({
       clockSource: "offline",
-      context: tn(arguments[0]) ? arguments[0] : Yu(arguments[0], arguments[1] * arguments[2], arguments[2]),
+      context: ns(arguments[0]) ? arguments[0] : fh(arguments[0], arguments[1] * arguments[2], arguments[2]),
       lookAhead: 0,
-      updateInterval: tn(arguments[0]) ? 128 / arguments[0].sampleRate : 128 / arguments[2]
-    }), this.name = "OfflineContext", this._currentTime = 0, this.isOffline = !0, this._duration = tn(arguments[0]) ? arguments[0].length / arguments[0].sampleRate : arguments[1];
+      updateInterval: ns(arguments[0]) ? 128 / arguments[0].sampleRate : 128 / arguments[2]
+    }), this.name = "OfflineContext", this._currentTime = 0, this.isOffline = !0, this._duration = ns(arguments[0]) ? arguments[0].length / arguments[0].sampleRate : arguments[1];
   }
   now() {
     return this._currentTime;
@@ -5085,27 +5085,27 @@ var Xs = class extends $s {
   }
   render(s = !0) {
     return pe(this, void 0, void 0, function* () {
-      return yield this.workletsAreReady(), yield this._renderClock(s), new tt(yield this._context.startRendering());
+      return yield this.workletsAreReady(), yield this._renderClock(s), new st(yield this._context.startRendering());
     });
   }
   close() {
     return Promise.resolve();
   }
-}, Mi = new rh(), ot = Mi;
+}, Br = new wh(), lt = Br;
 function _e() {
-  return ot === Mi && Ju && ih(new $s()), ot;
+  return lt === Br && mh && bh(new ei()), lt;
 }
-function ih(s, e = !1) {
-  e && ot.dispose(), Ct(s) ? ot = new $s(s) : tn(s) ? ot = new Xs(s) : ot = s;
+function bh(s, e = !1) {
+  e && lt.dispose(), St(s) ? lt = new ei(s) : ns(s) ? lt = new si(s) : lt = s;
 }
-function id() {
-  return ot.resume();
+function yd() {
+  return lt.resume();
 }
-if (ut && !ut.TONE_SILENCE_LOGGING) {
-  const e = ` * Tone.js v${vi} * `;
+if (dt && !dt.TONE_SILENCE_LOGGING) {
+  const e = ` * Tone.js v${Mr} * `;
   console.log(`%c${e}`, "background: #000; color: #fff");
 }
-var ah = class Di extends it {
+var xh = class Ur extends ot {
   constructor(e, t, n) {
     super(), this.defaultUnits = "s", this._val = t, this._units = n, this.context = e, this._expressions = this._getExpressions();
   }
@@ -5125,8 +5125,8 @@ var ah = class Di extends it {
       },
       n: {
         method: (e, t) => {
-          const n = parseInt(e, 10), r = t === "." ? 1.5 : 1;
-          return n === 1 ? this._beatsToUnits(this._getTimeSignature()) * r : this._beatsToUnits(4 / n) * r;
+          const n = parseInt(e, 10), i = t === "." ? 1.5 : 1;
+          return n === 1 ? this._beatsToUnits(this._getTimeSignature()) * i : this._beatsToUnits(4 / n) * i;
         },
         regexp: /^(\d+)n(\.?)$/i
       },
@@ -5151,32 +5151,32 @@ var ah = class Di extends it {
       },
       tr: {
         method: (e, t, n) => {
-          let r = 0;
-          return e && e !== "0" && (r += this._beatsToUnits(this._getTimeSignature() * parseFloat(e))), t && t !== "0" && (r += this._beatsToUnits(parseFloat(t))), n && n !== "0" && (r += this._beatsToUnits(parseFloat(n) / 4)), r;
+          let i = 0;
+          return e && e !== "0" && (i += this._beatsToUnits(this._getTimeSignature() * parseFloat(e))), t && t !== "0" && (i += this._beatsToUnits(parseFloat(t))), n && n !== "0" && (i += this._beatsToUnits(parseFloat(n) / 4)), i;
         },
         regexp: /^(\d+(?:\.\d+)?):(\d+(?:\.\d+)?):?(\d+(?:\.\d+)?)?$/
       }
     };
   }
   valueOf() {
-    if (this._val instanceof Di && this.fromType(this._val), Re(this._val)) return this._noArg();
-    if (mt(this._val) && Re(this._units)) {
+    if (this._val instanceof Ur && this.fromType(this._val), Ve(this._val)) return this._noArg();
+    if (gt(this._val) && Ve(this._units)) {
       for (const e in this._expressions) if (this._expressions[e].regexp.test(this._val.trim())) {
         this._units = e;
         break;
       }
-    } else if (lt(this._val)) {
+    } else if (ht(this._val)) {
       let e = 0;
       for (const t in this._val) if (Z(this._val[t])) {
-        const n = this._val[t], r = new this.constructor(this.context, t).valueOf() * n;
-        e += r;
+        const n = this._val[t], i = new this.constructor(this.context, t).valueOf() * n;
+        e += i;
       }
       return e;
     }
     if (Z(this._units)) {
       const e = this._expressions[this._units], t = this._val.toString().trim().match(e.regexp);
       return t ? e.method.apply(this, t.slice(1)) : e.method.call(this, this._val);
-    } else return mt(this._val) ? parseFloat(this._val) : this._val;
+    } else return gt(this._val) ? parseFloat(this._val) : this._val;
   }
   _frequencyToUnits(e) {
     return 1 / e;
@@ -5228,7 +5228,7 @@ var ah = class Di extends it {
   toMilliseconds() {
     return this.toSeconds() * 1e3;
   }
-}, ct = class nn extends ah {
+}, ut = class is extends xh {
   constructor() {
     super(...arguments), this.name = "TimeClass";
   }
@@ -5240,7 +5240,7 @@ var ah = class Di extends it {
       },
       quantize: {
         method: (e) => {
-          const t = new nn(this.context, e).valueOf();
+          const t = new is(this.context, e).valueOf();
           return this._secondsToUnits(this.context.transport.nextSubdivision(t));
         },
         regexp: /^@(.+)/
@@ -5248,20 +5248,20 @@ var ah = class Di extends it {
     });
   }
   quantize(e, t = 1) {
-    const n = new this.constructor(this.context, e).valueOf(), r = this.valueOf();
-    return r + (Math.round(r / n) * n - r) * t;
+    const n = new this.constructor(this.context, e).valueOf(), i = this.valueOf();
+    return i + (Math.round(i / n) * n - i) * t;
   }
   toNotation() {
     const e = this.toSeconds(), t = ["1m"];
-    for (let i = 1; i < 9; i++) {
-      const o = Math.pow(2, i);
+    for (let r = 1; r < 9; r++) {
+      const o = Math.pow(2, r);
       t.push(o + "n."), t.push(o + "n"), t.push(o + "t");
     }
     t.push("0");
-    let n = t[0], r = new nn(this.context, t[0]).toSeconds();
-    return t.forEach((i) => {
-      const o = new nn(this.context, i).toSeconds();
-      Math.abs(o - e) < Math.abs(r - e) && (n = i, r = o);
+    let n = t[0], i = new is(this.context, t[0]).toSeconds();
+    return t.forEach((r) => {
+      const o = new is(this.context, r).toSeconds();
+      Math.abs(o - e) < Math.abs(i - e) && (n = r, i = o);
     }), n;
   }
   toBarsBeatsSixteenths() {
@@ -5269,13 +5269,13 @@ var ah = class Di extends it {
     let t = this.valueOf() / e;
     t = parseFloat(t.toFixed(4));
     const n = Math.floor(t / this._getTimeSignature());
-    let r = t % 1 * 4;
+    let i = t % 1 * 4;
     t = Math.floor(t) % this._getTimeSignature();
-    const i = r.toString();
-    return i.length > 3 && (r = parseFloat(parseFloat(i).toFixed(3))), [
+    const r = i.toString();
+    return r.length > 3 && (i = parseFloat(parseFloat(r).toFixed(3))), [
       n,
       t,
-      r
+      i
     ].join(":");
   }
   toTicks() {
@@ -5286,59 +5286,59 @@ var ah = class Di extends it {
     return this.valueOf();
   }
   toMidi() {
-    return at(this.toFrequency());
+    return ct(this.toFrequency());
   }
   _now() {
     return this.context.now();
   }
-}, An = class Ft extends ct {
+}, As = class Lt extends ut {
   constructor() {
     super(...arguments), this.name = "Frequency", this.defaultUnits = "hz";
   }
   static get A4() {
-    return Ji();
+    return ma();
   }
   static set A4(e) {
-    Ki(e);
+    _a(e);
   }
   _getExpressions() {
     return Object.assign({}, super._getExpressions(), {
       midi: {
         regexp: /^(\d+(?:\.\d+)?midi)/,
         method(e) {
-          return this.defaultUnits === "midi" ? e : Ft.mtof(e);
+          return this.defaultUnits === "midi" ? e : Lt.mtof(e);
         }
       },
       note: {
         regexp: /^([a-g]{1}(?:b|#|##|x|bb|###|#x|x#|bbb)?)(-?[0-9]+)/i,
         method(e, t) {
-          const n = oh[e.toLowerCase()] + (parseInt(t, 10) + 1) * 12;
-          return this.defaultUnits === "midi" ? n : Ft.mtof(n);
+          const n = Ch[e.toLowerCase()] + (parseInt(t, 10) + 1) * 12;
+          return this.defaultUnits === "midi" ? n : Lt.mtof(n);
         }
       },
       tr: {
         regexp: /^(\d+(?:\.\d+)?):(\d+(?:\.\d+)?):?(\d+(?:\.\d+)?)?/,
         method(e, t, n) {
-          let r = 1;
-          return e && e !== "0" && (r *= this._beatsToUnits(this._getTimeSignature() * parseFloat(e))), t && t !== "0" && (r *= this._beatsToUnits(parseFloat(t))), n && n !== "0" && (r *= this._beatsToUnits(parseFloat(n) / 4)), r;
+          let i = 1;
+          return e && e !== "0" && (i *= this._beatsToUnits(this._getTimeSignature() * parseFloat(e))), t && t !== "0" && (i *= this._beatsToUnits(parseFloat(t))), n && n !== "0" && (i *= this._beatsToUnits(parseFloat(n) / 4)), i;
         }
       }
     });
   }
   transpose(e) {
-    return new Ft(this.context, this.valueOf() * Yi(e));
+    return new Lt(this.context, this.valueOf() * fa(e));
   }
   harmonize(e) {
     return e.map((t) => this.transpose(t));
   }
   toMidi() {
-    return at(this.valueOf());
+    return ct(this.valueOf());
   }
   toNote() {
-    const e = this.toFrequency(), t = Math.log2(e / Ft.A4);
+    const e = this.toFrequency(), t = Math.log2(e / Lt.A4);
     let n = Math.round(12 * t) + 57;
-    const r = Math.floor(n / 12);
-    return r < 0 && (n += -12 * r), ch[n % 12] + r.toString();
+    const i = Math.floor(n / 12);
+    return i < 0 && (n += -12 * i), Sh[n % 12] + i.toString();
   }
   toSeconds() {
     return 1 / super.toSeconds();
@@ -5363,12 +5363,12 @@ var ah = class Di extends it {
     return 1 / e;
   }
   static mtof(e) {
-    return Dr(e);
+    return Ui(e);
   }
   static ftom(e) {
-    return at(e);
+    return ct(e);
   }
-}, oh = {
+}, Ch = {
   cbbb: -3,
   cbb: -2,
   cb: -1,
@@ -5439,7 +5439,7 @@ var ah = class Di extends it {
   "b###": 14,
   "bx#": 14,
   "b#x": 14
-}, ch = [
+}, Sh = [
   "C",
   "C#",
   "D",
@@ -5452,17 +5452,17 @@ var ah = class Di extends it {
   "A",
   "A#",
   "B"
-], qt = class extends ct {
+], Wt = class extends ut {
   constructor() {
     super(...arguments), this.name = "TransportTime";
   }
   _now() {
     return this.context.transport.seconds;
   }
-}, Ze = class sn extends it {
+}, He = class rs extends ot {
   constructor() {
     super();
-    const e = M(sn.getDefaults(), arguments, ["context"]);
+    const e = O(rs.getDefaults(), arguments, ["context"]);
     this.defaultContext ? this.context = this.defaultContext : this.context = e.context;
   }
   static getDefaults() {
@@ -5481,51 +5481,51 @@ var ah = class Di extends it {
     return 128 / this.context.sampleRate;
   }
   toSeconds(e) {
-    return Xu(e), new ct(this.context, e).toSeconds();
+    return hh(e), new ut(this.context, e).toSeconds();
   }
   toFrequency(e) {
-    return new An(this.context, e).toFrequency();
+    return new As(this.context, e).toFrequency();
   }
   toTicks(e) {
-    return new qt(this.context, e).toTicks();
+    return new Wt(this.context, e).toTicks();
   }
   _getPartialProperties(e) {
     const t = this.get();
     return Object.keys(t).forEach((n) => {
-      Re(e[n]) && delete t[n];
+      Ve(e[n]) && delete t[n];
     }), t;
   }
   get() {
-    const e = Zu(this);
+    const e = uh(this);
     return Object.keys(e).forEach((t) => {
       if (Reflect.has(this, t)) {
         const n = this[t];
-        Z(n) && Z(n.value) && Z(n.setValueAtTime) ? e[t] = n.value : n instanceof sn ? e[t] = n._getPartialProperties(e[t]) : Le(n) || ft(n) || mt(n) || Gu(n) ? e[t] = n : delete e[t];
+        Z(n) && Z(n.value) && Z(n.setValueAtTime) ? e[t] = n.value : n instanceof rs ? e[t] = n._getPartialProperties(e[t]) : je(n) || _t(n) || gt(n) || oh(n) ? e[t] = n : delete e[t];
       }
     }), e;
   }
   set(e) {
     return Object.keys(e).forEach((t) => {
-      Reflect.has(this, t) && Z(this[t]) && (this[t] && Z(this[t].value) && Z(this[t].setValueAtTime) ? this[t].value !== e[t] && (this[t].value = e[t]) : this[t] instanceof sn ? this[t].set(e[t]) : this[t] = e[t]);
+      Reflect.has(this, t) && Z(this[t]) && (this[t] && Z(this[t].value) && Z(this[t].setValueAtTime) ? this[t].value !== e[t] && (this[t].value = e[t]) : this[t] instanceof rs ? this[t].set(e[t]) : this[t] = e[t]);
     }), this;
   }
-}, ue = class rn extends Ze {
+}, se = class as extends He {
   constructor() {
-    super(M(rn.getDefaults(), arguments, [
+    super(O(as.getDefaults(), arguments, [
       "param",
       "units",
       "convert"
     ])), this.name = "Param", this.overridden = !1, this._minOutput = 1e-7;
-    const e = M(rn.getDefaults(), arguments, [
+    const e = O(as.getDefaults(), arguments, [
       "param",
       "units",
       "convert"
     ]);
-    for (G(Z(e.param) && (pt(e.param) || e.param instanceof rn), "param must be an AudioParam"); !pt(e.param); ) e.param = e.param._param;
-    this._swappable = Z(e.swappable) ? e.swappable : !1, this._swappable ? (this.input = this.context.createGain(), this._param = e.param, this.input.connect(this._param)) : this._param = this.input = e.param, this._events = new $e(1e3), this._initialValue = this._param.defaultValue, this.units = e.units, this.convert = e.convert, this._minValue = e.minValue, this._maxValue = e.maxValue, Z(e.value) && e.value !== this._toType(this._initialValue) && this.setValueAtTime(e.value, 0);
+    for (z(Z(e.param) && (mt(e.param) || e.param instanceof as), "param must be an AudioParam"); !mt(e.param); ) e.param = e.param._param;
+    this._swappable = Z(e.swappable) ? e.swappable : !1, this._swappable ? (this.input = this.context.createGain(), this._param = e.param, this.input.connect(this._param)) : this._param = this.input = e.param, this._events = new Xe(1e3), this._initialValue = this._param.defaultValue, this.units = e.units, this.convert = e.convert, this._minValue = e.minValue, this._maxValue = e.maxValue, Z(e.value) && e.value !== this._toType(this._initialValue) && this.setValueAtTime(e.value, 0);
   }
   static getDefaults() {
-    return Object.assign(Ze.getDefaults(), {
+    return Object.assign(He.getDefaults(), {
       convert: !0,
       units: "number"
     });
@@ -5547,40 +5547,40 @@ var ah = class Di extends it {
     return this.units === t;
   }
   _assertRange(e) {
-    return Z(this.maxValue) && Z(this.minValue) && yt(e, this._fromType(this.minValue), this._fromType(this.maxValue)), e;
+    return Z(this.maxValue) && Z(this.minValue) && wt(e, this._fromType(this.minValue), this._fromType(this.maxValue)), e;
   }
   _fromType(e) {
-    return this.convert && !this.overridden ? this._is(e, "time") ? this.toSeconds(e) : this._is(e, "decibels") ? Hi(e) : this._is(e, "frequency") ? this.toFrequency(e) : e : this.overridden ? 0 : e;
+    return this.convert && !this.overridden ? this._is(e, "time") ? this.toSeconds(e) : this._is(e, "decibels") ? da(e) : this._is(e, "frequency") ? this.toFrequency(e) : e : this.overridden ? 0 : e;
   }
   _toType(e) {
-    return this.convert && this.units === "decibels" ? Qi(e) : e;
+    return this.convert && this.units === "decibels" ? pa(e) : e;
   }
   setValueAtTime(e, t) {
-    const n = this.toSeconds(t), r = this._fromType(e);
-    return G(isFinite(r) && isFinite(n), `Invalid argument(s) to setValueAtTime: ${JSON.stringify(e)}, ${JSON.stringify(t)}`), this._assertRange(r), this.log(this.units, "setValueAtTime", e, n), this._events.add({
+    const n = this.toSeconds(t), i = this._fromType(e);
+    return z(isFinite(i) && isFinite(n), `Invalid argument(s) to setValueAtTime: ${JSON.stringify(e)}, ${JSON.stringify(t)}`), this._assertRange(i), this.log(this.units, "setValueAtTime", e, n), this._events.add({
       time: n,
       type: "setValueAtTime",
-      value: r
-    }), this._param.setValueAtTime(r, n), this;
+      value: i
+    }), this._param.setValueAtTime(i, n), this;
   }
   getValueAtTime(e) {
-    const t = Math.max(this.toSeconds(e), 0), n = this._events.getAfter(t), r = this._events.get(t);
-    let i = this._initialValue;
-    if (r === null) i = this._initialValue;
-    else if (r.type === "setTargetAtTime" && (n === null || n.type === "setValueAtTime")) {
-      const o = this._events.getBefore(r.time);
+    const t = Math.max(this.toSeconds(e), 0), n = this._events.getAfter(t), i = this._events.get(t);
+    let r = this._initialValue;
+    if (i === null) r = this._initialValue;
+    else if (i.type === "setTargetAtTime" && (n === null || n.type === "setValueAtTime")) {
+      const o = this._events.getBefore(i.time);
       let a;
-      o === null ? a = this._initialValue : a = o.value, r.type === "setTargetAtTime" && (i = this._exponentialApproach(r.time, a, r.value, r.constant, t));
-    } else if (n === null) i = r.value;
+      o === null ? a = this._initialValue : a = o.value, i.type === "setTargetAtTime" && (r = this._exponentialApproach(i.time, a, i.value, i.constant, t));
+    } else if (n === null) r = i.value;
     else if (n.type === "linearRampToValueAtTime" || n.type === "exponentialRampToValueAtTime") {
-      let o = r.value;
-      if (r.type === "setTargetAtTime") {
-        const a = this._events.getBefore(r.time);
+      let o = i.value;
+      if (i.type === "setTargetAtTime") {
+        const a = this._events.getBefore(i.time);
         a === null ? o = this._initialValue : o = a.value;
       }
-      n.type === "linearRampToValueAtTime" ? i = this._linearInterpolate(r.time, o, n.time, n.value, t) : i = this._exponentialInterpolate(r.time, o, n.time, n.value, t);
-    } else i = r.value;
-    return this._toType(i);
+      n.type === "linearRampToValueAtTime" ? r = this._linearInterpolate(i.time, o, n.time, n.value, t) : r = this._exponentialInterpolate(i.time, o, n.time, n.value, t);
+    } else r = i.value;
+    return this._toType(r);
   }
   setRampPoint(e) {
     e = this.toSeconds(e);
@@ -5588,22 +5588,22 @@ var ah = class Di extends it {
     return this.cancelAndHoldAtTime(e), this._fromType(t) === 0 && (t = this._toType(this._minOutput)), this.setValueAtTime(t, e), this;
   }
   linearRampToValueAtTime(e, t) {
-    const n = this._fromType(e), r = this.toSeconds(t);
-    return G(isFinite(n) && isFinite(r), `Invalid argument(s) to linearRampToValueAtTime: ${JSON.stringify(e)}, ${JSON.stringify(t)}`), this._assertRange(n), this._events.add({
-      time: r,
+    const n = this._fromType(e), i = this.toSeconds(t);
+    return z(isFinite(n) && isFinite(i), `Invalid argument(s) to linearRampToValueAtTime: ${JSON.stringify(e)}, ${JSON.stringify(t)}`), this._assertRange(n), this._events.add({
+      time: i,
       type: "linearRampToValueAtTime",
       value: n
-    }), this.log(this.units, "linearRampToValueAtTime", e, r), this._param.linearRampToValueAtTime(n, r), this;
+    }), this.log(this.units, "linearRampToValueAtTime", e, i), this._param.linearRampToValueAtTime(n, i), this;
   }
   exponentialRampToValueAtTime(e, t) {
     let n = this._fromType(e);
-    n = Ie(n, 0) ? this._minOutput : n, this._assertRange(n);
-    const r = this.toSeconds(t);
-    return G(isFinite(n) && isFinite(r), `Invalid argument(s) to exponentialRampToValueAtTime: ${JSON.stringify(e)}, ${JSON.stringify(t)}`), this._events.add({
-      time: r,
+    n = Re(n, 0) ? this._minOutput : n, this._assertRange(n);
+    const i = this.toSeconds(t);
+    return z(isFinite(n) && isFinite(i), `Invalid argument(s) to exponentialRampToValueAtTime: ${JSON.stringify(e)}, ${JSON.stringify(t)}`), this._events.add({
+      time: i,
       type: "exponentialRampToValueAtTime",
       value: n
-    }), this.log(this.units, "exponentialRampToValueAtTime", e, r), this._param.exponentialRampToValueAtTime(n, r), this;
+    }), this.log(this.units, "exponentialRampToValueAtTime", e, i), this._param.exponentialRampToValueAtTime(n, i), this;
   }
   exponentialRampTo(e, t, n) {
     return n = this.toSeconds(n), this.setRampPoint(n), this.exponentialRampToValueAtTime(e, n + this.toSeconds(t)), this;
@@ -5616,40 +5616,40 @@ var ah = class Di extends it {
   }
   exponentialApproachValueAtTime(e, t, n) {
     t = this.toSeconds(t), n = this.toSeconds(n);
-    const r = Math.log(n + 1) / Math.log(200);
-    return this.setTargetAtTime(e, t, r), this.cancelAndHoldAtTime(t + n * 0.9), this.linearRampToValueAtTime(e, t + n), this;
+    const i = Math.log(n + 1) / Math.log(200);
+    return this.setTargetAtTime(e, t, i), this.cancelAndHoldAtTime(t + n * 0.9), this.linearRampToValueAtTime(e, t + n), this;
   }
   setTargetAtTime(e, t, n) {
-    const r = this._fromType(e);
-    G(isFinite(n) && n > 0, "timeConstant must be a number greater than 0");
-    const i = this.toSeconds(t);
-    return this._assertRange(r), G(isFinite(r) && isFinite(i), `Invalid argument(s) to setTargetAtTime: ${JSON.stringify(e)}, ${JSON.stringify(t)}`), this._events.add({
+    const i = this._fromType(e);
+    z(isFinite(n) && n > 0, "timeConstant must be a number greater than 0");
+    const r = this.toSeconds(t);
+    return this._assertRange(i), z(isFinite(i) && isFinite(r), `Invalid argument(s) to setTargetAtTime: ${JSON.stringify(e)}, ${JSON.stringify(t)}`), this._events.add({
       constant: n,
-      time: i,
+      time: r,
       type: "setTargetAtTime",
-      value: r
-    }), this.log(this.units, "setTargetAtTime", e, i, n), this._param.setTargetAtTime(r, i, n), this;
+      value: i
+    }), this.log(this.units, "setTargetAtTime", e, r, n), this._param.setTargetAtTime(i, r, n), this;
   }
-  setValueCurveAtTime(e, t, n, r = 1) {
+  setValueCurveAtTime(e, t, n, i = 1) {
     n = this.toSeconds(n), t = this.toSeconds(t);
-    const i = this._fromType(e[0]) * r;
-    this.setValueAtTime(this._toType(i), t);
+    const r = this._fromType(e[0]) * i;
+    this.setValueAtTime(this._toType(r), t);
     const o = n / (e.length - 1);
     for (let a = 1; a < e.length; a++) {
-      const c = this._fromType(e[a]) * r;
+      const c = this._fromType(e[a]) * i;
       this.linearRampToValueAtTime(this._toType(c), t + a * o);
     }
     return this;
   }
   cancelScheduledValues(e) {
     const t = this.toSeconds(e);
-    return G(isFinite(t), `Invalid argument to cancelScheduledValues: ${JSON.stringify(e)}`), this._events.cancel(t), this._param.cancelScheduledValues(t), this.log(this.units, "cancelScheduledValues", t), this;
+    return z(isFinite(t), `Invalid argument to cancelScheduledValues: ${JSON.stringify(e)}`), this._events.cancel(t), this._param.cancelScheduledValues(t), this.log(this.units, "cancelScheduledValues", t), this;
   }
   cancelAndHoldAtTime(e) {
     const t = this.toSeconds(e), n = this._fromType(this.getValueAtTime(t));
-    G(isFinite(t), `Invalid argument to cancelAndHoldAtTime: ${JSON.stringify(e)}`), this.log(this.units, "cancelAndHoldAtTime", t, "value=" + n);
-    const r = this._events.get(t), i = this._events.getAfter(t);
-    return r && Ie(r.time, t) ? i ? (this._param.cancelScheduledValues(i.time), this._events.cancel(i.time)) : (this._param.cancelAndHoldAtTime(t), this._events.cancel(t + this.sampleTime)) : i && (this._param.cancelScheduledValues(i.time), this._events.cancel(i.time), i.type === "linearRampToValueAtTime" ? this.linearRampToValueAtTime(this._toType(n), t) : i.type === "exponentialRampToValueAtTime" && this.exponentialRampToValueAtTime(this._toType(n), t)), this._events.add({
+    z(isFinite(t), `Invalid argument to cancelAndHoldAtTime: ${JSON.stringify(e)}`), this.log(this.units, "cancelAndHoldAtTime", t, "value=" + n);
+    const i = this._events.get(t), r = this._events.getAfter(t);
+    return i && Re(i.time, t) ? r ? (this._param.cancelScheduledValues(r.time), this._events.cancel(r.time)) : (this._param.cancelAndHoldAtTime(t), this._events.cancel(t + this.sampleTime)) : r && (this._param.cancelScheduledValues(r.time), this._events.cancel(r.time), r.type === "linearRampToValueAtTime" ? this.linearRampToValueAtTime(this._toType(n), t) : r.type === "exponentialRampToValueAtTime" && this.exponentialRampToValueAtTime(this._toType(n), t)), this._events.add({
       time: t,
       type: "setValueAtTime",
       value: n
@@ -5663,15 +5663,15 @@ var ah = class Di extends it {
     e.setValueAtTime(this.getValueAtTime(t), t);
     const n = this._events.get(t);
     if (n && n.type === "setTargetAtTime") {
-      const r = this._events.getAfter(n.time), i = r ? r.time : t + 2, o = (i - t) / 10;
-      for (let a = t; a < i; a += o) e.linearRampToValueAtTime(this.getValueAtTime(a), a);
+      const i = this._events.getAfter(n.time), r = i ? i.time : t + 2, o = (r - t) / 10;
+      for (let a = t; a < r; a += o) e.linearRampToValueAtTime(this.getValueAtTime(a), a);
     }
-    return this._events.forEachAfter(this.context.currentTime, (r) => {
-      r.type === "cancelScheduledValues" ? e.cancelScheduledValues(r.time) : r.type === "setTargetAtTime" ? e.setTargetAtTime(r.value, r.time, r.constant) : e[r.type](r.value, r.time);
+    return this._events.forEachAfter(this.context.currentTime, (i) => {
+      i.type === "cancelScheduledValues" ? e.cancelScheduledValues(i.time) : i.type === "setTargetAtTime" ? e.setTargetAtTime(i.value, i.time, i.constant) : e[i.type](i.value, i.time);
     }), this;
   }
   setParam(e) {
-    G(this._swappable, "The Param must be assigned as 'swappable' in the constructor");
+    z(this._swappable, "The Param must be assigned as 'swappable' in the constructor");
     const t = this.input;
     return t.disconnect(this._param), this.apply(e), this._param = e, t.connect(this._param), this;
   }
@@ -5681,27 +5681,27 @@ var ah = class Di extends it {
   get defaultValue() {
     return this._toType(this._param.defaultValue);
   }
-  _exponentialApproach(e, t, n, r, i) {
-    return n + (t - n) * Math.exp(-(i - e) / r);
+  _exponentialApproach(e, t, n, i, r) {
+    return n + (t - n) * Math.exp(-(r - e) / i);
   }
-  _linearInterpolate(e, t, n, r, i) {
-    return t + (r - t) * ((i - e) / (n - e));
+  _linearInterpolate(e, t, n, i, r) {
+    return t + (i - t) * ((r - e) / (n - e));
   }
-  _exponentialInterpolate(e, t, n, r, i) {
-    return t * Math.pow(r / t, (i - e) / (n - e));
+  _exponentialInterpolate(e, t, n, i, r) {
+    return t * Math.pow(i / t, (r - e) / (n - e));
   }
-}, $ = class an extends Ze {
+}, B = class os extends He {
   constructor() {
     super(...arguments), this._internalChannels = [];
   }
   get numberOfInputs() {
-    return Z(this.input) ? pt(this.input) || this.input instanceof ue ? 1 : this.input.numberOfInputs : 0;
+    return Z(this.input) ? mt(this.input) || this.input instanceof se ? 1 : this.input.numberOfInputs : 0;
   }
   get numberOfOutputs() {
     return Z(this.output) ? this.output.numberOfOutputs : 0;
   }
   _isAudioNode(e) {
-    return Z(e) && (e instanceof an || Ke(e));
+    return Z(e) && (e instanceof os || et(e));
   }
   _getInternalNodes() {
     const e = this._internalChannels.slice(0);
@@ -5714,7 +5714,7 @@ var ah = class Di extends it {
   }
   _getChannelProperties() {
     const e = this._getInternalNodes();
-    G(e.length > 0, "ToneAudioNode does not have any internal nodes");
+    z(e.length > 0, "ToneAudioNode does not have any internal nodes");
     const t = e[0];
     return {
       channelCount: t.channelCount,
@@ -5744,56 +5744,56 @@ var ah = class Di extends it {
     this._setChannelProperties(Object.assign(t, { channelInterpretation: e }));
   }
   connect(e, t = 0, n = 0) {
-    return rt(this, e, t, n), this;
+    return Pe(this, e, t, n), this;
   }
   toDestination() {
     return this.connect(this.context.destination), this;
   }
   toMaster() {
-    return Sn("toMaster() has been renamed toDestination()"), this.toDestination();
+    return Ss("toMaster() has been renamed toDestination()"), this.toDestination();
   }
   disconnect(e, t = 0, n = 0) {
-    return lh(this, e, t, n), this;
+    return Gr(this, e, t, n), this;
   }
   chain(...e) {
-    return Bt(this, ...e), this;
+    return vt(this, ...e), this;
   }
   fan(...e) {
     return e.forEach((t) => this.connect(t)), this;
   }
   dispose() {
-    return super.dispose(), Z(this.input) && (this.input instanceof an ? this.input.dispose() : Ke(this.input) && this.input.disconnect()), Z(this.output) && (this.output instanceof an ? this.output.dispose() : Ke(this.output) && this.output.disconnect()), this._internalChannels = [], this;
+    return super.dispose(), Z(this.input) && (this.input instanceof os ? this.input.dispose() : et(this.input) && this.input.disconnect()), Z(this.output) && (this.output instanceof os ? this.output.dispose() : et(this.output) && this.output.disconnect()), this._internalChannels = [], this;
   }
 };
-function Bt(...s) {
+function vt(...s) {
   const e = s.shift();
-  s.reduce((t, n) => (t instanceof $ ? t.connect(n) : Ke(t) && rt(t, n), n), e);
+  s.reduce((t, n) => (t instanceof B ? t.connect(n) : et(t) && Pe(t, n), n), e);
 }
-function rt(s, e, t = 0, n = 0) {
-  for (G(Z(s), "Cannot connect from undefined node"), G(Z(e), "Cannot connect to undefined node"), (e instanceof $ || Ke(e)) && G(e.numberOfInputs > 0, "Cannot connect to node with no inputs"), G(s.numberOfOutputs > 0, "Cannot connect from node with no outputs"); e instanceof $ || e instanceof ue; ) Z(e.input) && (e = e.input);
-  for (; s instanceof $; ) Z(s.output) && (s = s.output);
-  pt(e) ? s.connect(e, t) : s.connect(e, t, n);
+function Pe(s, e, t = 0, n = 0) {
+  for (z(Z(s), "Cannot connect from undefined node"), z(Z(e), "Cannot connect to undefined node"), (e instanceof B || et(e)) && z(e.numberOfInputs > 0, "Cannot connect to node with no inputs"), z(s.numberOfOutputs > 0, "Cannot connect from node with no outputs"); e instanceof B || e instanceof se; ) Z(e.input) && (e = e.input);
+  for (; s instanceof B; ) Z(s.output) && (s = s.output);
+  mt(e) ? s.connect(e, t) : s.connect(e, t, n);
 }
-function lh(s, e, t = 0, n = 0) {
-  if (Z(e)) for (; e instanceof $; ) e = e.input;
-  for (; !Ke(s); ) Z(s.output) && (s = s.output);
-  pt(e) ? s.disconnect(e, t) : Ke(e) ? s.disconnect(e, t, n) : s.disconnect();
+function Gr(s, e, t = 0, n = 0) {
+  if (Z(e)) for (; e instanceof B; ) e = e.input;
+  for (; !et(s); ) Z(s.output) && (s = s.output);
+  mt(e) ? s.disconnect(e, t) : et(e) ? s.disconnect(e, t, n) : s.disconnect();
 }
-var uh = class Pn extends $ {
+var Ps = class qs extends B {
   constructor() {
-    super(M(Pn.getDefaults(), arguments, ["delayTime", "maxDelay"])), this.name = "Delay";
-    const e = M(Pn.getDefaults(), arguments, ["delayTime", "maxDelay"]), t = this.toSeconds(e.maxDelay);
-    this._maxDelay = Math.max(t, this.toSeconds(e.delayTime)), this._delayNode = this.input = this.output = this.context.createDelay(t), this.delayTime = new ue({
+    super(O(qs.getDefaults(), arguments, ["delayTime", "maxDelay"])), this.name = "Delay";
+    const e = O(qs.getDefaults(), arguments, ["delayTime", "maxDelay"]), t = this.toSeconds(e.maxDelay);
+    this._maxDelay = Math.max(t, this.toSeconds(e.delayTime)), this._delayNode = this.input = this.output = this.context.createDelay(t), this.delayTime = new se({
       context: this.context,
       param: this._delayNode.delayTime,
       units: "time",
       value: e.delayTime,
       minValue: 0,
       maxValue: this.maxDelay
-    }), Y(this, "delayTime");
+    }), X(this, "delayTime");
   }
   static getDefaults() {
-    return Object.assign($.getDefaults(), {
+    return Object.assign(B.getDefaults(), {
       delayTime: 0,
       maxDelay: 1
     });
@@ -5804,11 +5804,11 @@ var uh = class Pn extends $ {
   dispose() {
     return super.dispose(), this._delayNode.disconnect(), this.delayTime.dispose(), this;
   }
-}, oe = class Fn extends $ {
+}, J = class Ls extends B {
   constructor() {
-    super(M(Fn.getDefaults(), arguments, ["gain", "units"])), this.name = "Gain", this._gainNode = this.context.createGain(), this.input = this._gainNode, this.output = this._gainNode;
-    const e = M(Fn.getDefaults(), arguments, ["gain", "units"]);
-    this.gain = new ue({
+    super(O(Ls.getDefaults(), arguments, ["gain", "units"])), this.name = "Gain", this._gainNode = this.context.createGain(), this.input = this._gainNode, this.output = this._gainNode;
+    const e = O(Ls.getDefaults(), arguments, ["gain", "units"]);
+    this.gain = new se({
       context: this.context,
       convert: e.convert,
       param: this._gainNode.gain,
@@ -5816,10 +5816,10 @@ var uh = class Pn extends $ {
       value: e.gain,
       minValue: e.minValue,
       maxValue: e.maxValue
-    }), Y(this, "gain");
+    }), X(this, "gain");
   }
   static getDefaults() {
-    return Object.assign($.getDefaults(), {
+    return Object.assign(B.getDefaults(), {
       convert: !0,
       gain: 1,
       units: "gain"
@@ -5828,9 +5828,9 @@ var uh = class Pn extends $ {
   dispose() {
     return super.dispose(), this._gainNode.disconnect(), this.gain.dispose(), this;
   }
-}, Nt = class extends $ {
+}, Dt = class extends B {
   constructor(s) {
-    super(s), this.onended = le, this._startTime = -1, this._stopTime = -1, this._timeout = -1, this.output = new oe({
+    super(s), this.onended = ue, this._startTime = -1, this._stopTime = -1, this._timeout = -1, this.output = new J({
       context: this.context,
       gain: 0
     }), this._gainNode = this.output, this.getStateAtTime = function(e) {
@@ -5839,15 +5839,15 @@ var uh = class Pn extends $ {
     }, this._fadeIn = s.fadeIn, this._fadeOut = s.fadeOut, this._curve = s.curve, this.onended = s.onended;
   }
   static getDefaults() {
-    return Object.assign($.getDefaults(), {
+    return Object.assign(B.getDefaults(), {
       curve: "linear",
       fadeIn: 0,
       fadeOut: 0,
-      onended: le
+      onended: ue
     });
   }
   _startGain(s, e = 1) {
-    G(this._startTime === -1, "Source cannot be started more than once");
+    z(this._startTime === -1, "Source cannot be started more than once");
     const t = this.toSeconds(this._fadeIn);
     return this._startTime = s + t, this._startTime = Math.max(this._startTime, this.context.currentTime), t > 0 ? (this._gainNode.gain.setValueAtTime(0, s), this._curve === "linear" ? this._gainNode.gain.linearRampToValueAtTime(e, s + t) : this._gainNode.gain.exponentialApproachValueAtTime(e, s, t)) : this._gainNode.gain.setValueAtTime(e, s), this;
   }
@@ -5855,7 +5855,7 @@ var uh = class Pn extends $ {
     return this.log("stop", s), this._stopGain(this.toSeconds(s)), this;
   }
   _stopGain(s) {
-    G(this._startTime !== -1, "'start' must be called before 'stop'"), this.cancelStop();
+    z(this._startTime !== -1, "'start' must be called before 'stop'"), this.cancelStop();
     const e = this.toSeconds(this._fadeOut);
     return this._stopTime = this.toSeconds(s) + e, this._stopTime = Math.max(this._stopTime, this.now()), e > 0 ? this._curve === "linear" ? this._gainNode.gain.linearRampTo(0, e, s) : this._gainNode.gain.targetRampTo(0, e, s) : (this._gainNode.gain.cancelAndHoldAtTime(s), this._gainNode.gain.setValueAtTime(0, s)), this.context.clearTimeout(this._timeout), this._timeout = this.context.setTimeout(() => {
       const t = this._curve === "exponential" ? e * 2 : 0;
@@ -5863,7 +5863,7 @@ var uh = class Pn extends $ {
     }, this._stopTime - this.context.currentTime), this;
   }
   _onended() {
-    if (this.onended !== le && (this.onended(this), this.onended = le, !this.context.isOffline)) {
+    if (this.onended !== ue && (this.onended(this), this.onended = ue, !this.context.isOffline)) {
       const s = () => this.dispose();
       typeof window.requestIdleCallback < "u" ? window.requestIdleCallback(s) : setTimeout(s, 1e3);
     }
@@ -5872,16 +5872,16 @@ var uh = class Pn extends $ {
     return this.getStateAtTime(this.now());
   }
   cancelStop() {
-    return this.log("cancelStop"), G(this._startTime !== -1, "Source is not started"), this._gainNode.gain.cancelScheduledValues(this._startTime + this.sampleTime), this.context.clearTimeout(this._timeout), this._stopTime = -1, this;
+    return this.log("cancelStop"), z(this._startTime !== -1, "Source is not started"), this._gainNode.gain.cancelScheduledValues(this._startTime + this.sampleTime), this.context.clearTimeout(this._timeout), this._stopTime = -1, this;
   }
   dispose() {
-    return super.dispose(), this._gainNode.dispose(), this.onended = le, this;
+    return super.dispose(), this._gainNode.dispose(), this.onended = ue, this;
   }
-}, hh = class qn extends Nt {
+}, Ah = class Ws extends Dt {
   constructor() {
-    super(M(qn.getDefaults(), arguments, ["offset"])), this.name = "ToneConstantSource", this._source = this.context.createConstantSource();
-    const e = M(qn.getDefaults(), arguments, ["offset"]);
-    rt(this._source, this._gainNode), this.offset = new ue({
+    super(O(Ws.getDefaults(), arguments, ["offset"])), this.name = "ToneConstantSource", this._source = this.context.createConstantSource();
+    const e = O(Ws.getDefaults(), arguments, ["offset"]);
+    Pe(this._source, this._gainNode), this.offset = new se({
       context: this.context,
       convert: e.convert,
       param: this._source.offset,
@@ -5892,7 +5892,7 @@ var uh = class Pn extends $ {
     });
   }
   static getDefaults() {
-    return Object.assign(Nt.getDefaults(), {
+    return Object.assign(Dt.getDefaults(), {
       convert: !0,
       offset: 1,
       units: "number"
@@ -5908,11 +5908,11 @@ var uh = class Pn extends $ {
   dispose() {
     return super.dispose(), this.state === "started" && this.stop(), this._source.disconnect(), this.offset.dispose(), this;
   }
-}, ee = class Ln extends $ {
+}, Y = class js extends B {
   constructor() {
-    super(M(Ln.getDefaults(), arguments, ["value", "units"])), this.name = "Signal", this.override = !0;
-    const e = M(Ln.getDefaults(), arguments, ["value", "units"]);
-    this.output = this._constantSource = new hh({
+    super(O(js.getDefaults(), arguments, ["value", "units"])), this.name = "Signal", this.override = !0;
+    const e = O(js.getDefaults(), arguments, ["value", "units"]);
+    this.output = this._constantSource = new Ah({
       context: this.context,
       convert: e.convert,
       offset: e.value,
@@ -5922,14 +5922,14 @@ var uh = class Pn extends $ {
     }), this._constantSource.start(0), this.input = this._param = this._constantSource.offset;
   }
   static getDefaults() {
-    return Object.assign($.getDefaults(), {
+    return Object.assign(B.getDefaults(), {
       convert: !0,
       units: "number",
       value: 0
     });
   }
   connect(e, t = 0, n = 0) {
-    return Hs(this, e, t, n), this;
+    return ks(this, e, t, n), this;
   }
   dispose() {
     return super.dispose(), this._param.dispose(), this._constantSource.dispose(), this;
@@ -5964,8 +5964,8 @@ var uh = class Pn extends $ {
   setTargetAtTime(e, t, n) {
     return this._param.setTargetAtTime(e, t, n), this;
   }
-  setValueCurveAtTime(e, t, n, r) {
-    return this._param.setValueCurveAtTime(e, t, n, r), this;
+  setValueCurveAtTime(e, t, n, i) {
+    return this._param.setValueCurveAtTime(e, t, n, i), this;
   }
   cancelScheduledValues(e) {
     return this._param.cancelScheduledValues(e), this;
@@ -6007,28 +6007,28 @@ var uh = class Pn extends $ {
     return this._param.apply(e), this;
   }
 };
-function Hs(s, e, t, n) {
-  (e instanceof ue || pt(e) || e instanceof ee && e.override) && (e.cancelScheduledValues(0), e.setValueAtTime(0, 0), e instanceof ee && (e.overridden = !0)), rt(s, e, t, n);
+function ks(s, e, t, n) {
+  (e instanceof se || mt(e) || e instanceof Y && e.override) && (e.cancelScheduledValues(0), e.setValueAtTime(0, 0), e instanceof Y && (e.overridden = !0)), Pe(s, e, t, n);
 }
-var _t = class Ei extends $ {
+var rt = class zr extends B {
   constructor() {
-    super(Object.assign(M(Ei.getDefaults(), arguments, ["context"])));
+    super(Object.assign(O(zr.getDefaults(), arguments, ["context"])));
   }
   connect(e, t = 0, n = 0) {
-    return Hs(this, e, t, n), this;
+    return ks(this, e, t, n), this;
   }
-}, Qt = class Wn extends _t {
+}, Jt = class Bs extends rt {
   constructor() {
-    super(Object.assign(M(Wn.getDefaults(), arguments, ["mapping", "length"]))), this.name = "WaveShaper", this._shaper = this.context.createWaveShaper(), this.input = this._shaper, this.output = this._shaper;
-    const e = M(Wn.getDefaults(), arguments, ["mapping", "length"]);
-    Le(e.mapping) || e.mapping instanceof Float32Array ? this.curve = Float32Array.from(e.mapping) : Uu(e.mapping) && this.setMap(e.mapping, e.length);
+    super(Object.assign(O(Bs.getDefaults(), arguments, ["mapping", "length"]))), this.name = "WaveShaper", this._shaper = this.context.createWaveShaper(), this.input = this._shaper, this.output = this._shaper;
+    const e = O(Bs.getDefaults(), arguments, ["mapping", "length"]);
+    je(e.mapping) || e.mapping instanceof Float32Array ? this.curve = Float32Array.from(e.mapping) : ah(e.mapping) && this.setMap(e.mapping, e.length);
   }
   static getDefaults() {
-    return Object.assign(ee.getDefaults(), { length: 1024 });
+    return Object.assign(Y.getDefaults(), { length: 1024 });
   }
   setMap(e, t = 1024) {
     const n = new Float32Array(t);
-    for (let r = 0, i = t; r < i; r++) n[r] = e(r / (i - 1) * 2 - 1, r);
+    for (let i = 0, r = t; i < r; i++) n[i] = e(i / (r - 1) * 2 - 1, i);
     return this.curve = n, this;
   }
   get curve() {
@@ -6041,7 +6041,7 @@ var _t = class Ei extends $ {
     return this._shaper.oversample;
   }
   set oversample(e) {
-    G([
+    z([
       "none",
       "2x",
       "4x"
@@ -6050,9 +6050,9 @@ var _t = class Ei extends $ {
   dispose() {
     return super.dispose(), this._shaper.disconnect(), this;
   }
-}, dh = class extends _t {
+}, kh = class extends rt {
   constructor() {
-    super(...arguments), this.name = "GainToAudio", this._norm = new Qt({
+    super(...arguments), this.name = "GainToAudio", this._norm = new Jt({
       context: this.context,
       mapping: (s) => Math.abs(s) * 2 - 1
     }), this.input = this._norm, this.output = this._norm;
@@ -6060,34 +6060,34 @@ var _t = class Ei extends $ {
   dispose() {
     return super.dispose(), this._norm.dispose(), this;
   }
-}, ph = class jn extends $ {
+}, $r = class Us extends B {
   constructor() {
-    super(Object.assign(M(jn.getDefaults(), arguments, ["fade"]))), this.name = "CrossFade", this._panner = this.context.createStereoPanner(), this._split = this.context.createChannelSplitter(2), this._g2a = new dh({ context: this.context }), this.a = new oe({
+    super(Object.assign(O(Us.getDefaults(), arguments, ["fade"]))), this.name = "CrossFade", this._panner = this.context.createStereoPanner(), this._split = this.context.createChannelSplitter(2), this._g2a = new kh({ context: this.context }), this.a = new J({
       context: this.context,
       gain: 0
-    }), this.b = new oe({
+    }), this.b = new J({
       context: this.context,
       gain: 0
-    }), this.output = new oe({ context: this.context }), this._internalChannels = [this.a, this.b];
-    const e = M(jn.getDefaults(), arguments, ["fade"]);
-    this.fade = new ee({
+    }), this.output = new J({ context: this.context }), this._internalChannels = [this.a, this.b];
+    const e = O(Us.getDefaults(), arguments, ["fade"]);
+    this.fade = new Y({
       context: this.context,
       units: "normalRange",
       value: e.fade
-    }), Y(this, "fade"), this.context.getConstant(1).connect(this._panner), this._panner.connect(this._split), this._panner.channelCount = 1, this._panner.channelCountMode = "explicit", rt(this._split, this.a.gain, 0), rt(this._split, this.b.gain, 1), this.fade.chain(this._g2a, this._panner.pan), this.a.connect(this.output), this.b.connect(this.output);
+    }), X(this, "fade"), this.context.getConstant(1).connect(this._panner), this._panner.connect(this._split), this._panner.channelCount = 1, this._panner.channelCountMode = "explicit", Pe(this._split, this.a.gain, 0), Pe(this._split, this.b.gain, 1), this.fade.chain(this._g2a, this._panner.pan), this.a.connect(this.output), this.b.connect(this.output);
   }
   static getDefaults() {
-    return Object.assign($.getDefaults(), { fade: 0.5 });
+    return Object.assign(B.getDefaults(), { fade: 0.5 });
   }
   dispose() {
     return super.dispose(), this.a.dispose(), this.b.dispose(), this.output.dispose(), this.fade.dispose(), this._g2a.dispose(), this._panner.disconnect(), this._split.disconnect(), this;
   }
-}, gn = class extends $ {
+}, vs = class extends B {
   constructor(s) {
-    super(s), this.name = "Effect", this._dryWet = new ph({ context: this.context }), this.wet = this._dryWet.fade, this.effectSend = new oe({ context: this.context }), this.effectReturn = new oe({ context: this.context }), this.input = new oe({ context: this.context }), this.output = this._dryWet, this.input.fan(this._dryWet.a, this.effectSend), this.effectReturn.connect(this._dryWet.b), this.wet.setValueAtTime(s.wet, 0), this._internalChannels = [this.effectReturn, this.effectSend], Y(this, "wet");
+    super(s), this.name = "Effect", this._dryWet = new $r({ context: this.context }), this.wet = this._dryWet.fade, this.effectSend = new J({ context: this.context }), this.effectReturn = new J({ context: this.context }), this.input = new J({ context: this.context }), this.output = this._dryWet, this.input.fan(this._dryWet.a, this.effectSend), this.effectReturn.connect(this._dryWet.b), this.wet.setValueAtTime(s.wet, 0), this._internalChannels = [this.effectReturn, this.effectSend], X(this, "wet");
   }
   static getDefaults() {
-    return Object.assign($.getDefaults(), { wet: 1 });
+    return Object.assign(B.getDefaults(), { wet: 1 });
   }
   connectEffect(s) {
     return this._internalChannels.push(s), this.effectSend.chain(s, this.effectReturn), this;
@@ -6095,32 +6095,32 @@ var _t = class Ei extends $ {
   dispose() {
     return super.dispose(), this._dryWet.dispose(), this.effectSend.dispose(), this.effectReturn.dispose(), this.wet.dispose(), this;
   }
-}, Cr = class extends gn {
+}, Di = class extends vs {
   constructor(s) {
-    super(s), this.name = "FeedbackEffect", this._feedbackGain = new oe({
+    super(s), this.name = "FeedbackEffect", this._feedbackGain = new J({
       context: this.context,
       gain: s.feedback,
       units: "normalRange"
-    }), this.feedback = this._feedbackGain.gain, Y(this, "feedback"), this.effectReturn.chain(this._feedbackGain, this.effectSend);
+    }), this.feedback = this._feedbackGain.gain, X(this, "feedback"), this.effectReturn.chain(this._feedbackGain, this.effectSend);
   }
   static getDefaults() {
-    return Object.assign(gn.getDefaults(), { feedback: 0.125 });
+    return Object.assign(vs.getDefaults(), { feedback: 0.125 });
   }
   dispose() {
     return super.dispose(), this._feedbackGain.dispose(), this.feedback.dispose(), this;
   }
-}, ad = class Bn extends Cr {
+}, Td = class Gs extends Di {
   constructor() {
-    super(M(Bn.getDefaults(), arguments, ["delayTime", "feedback"])), this.name = "FeedbackDelay";
-    const e = M(Bn.getDefaults(), arguments, ["delayTime", "feedback"]);
-    this._delayNode = new uh({
+    super(O(Gs.getDefaults(), arguments, ["delayTime", "feedback"])), this.name = "FeedbackDelay";
+    const e = O(Gs.getDefaults(), arguments, ["delayTime", "feedback"]);
+    this._delayNode = new Ps({
       context: this.context,
       delayTime: e.delayTime,
       maxDelay: e.maxDelay
-    }), this.delayTime = this._delayNode.delayTime, this.connectEffect(this._delayNode), Y(this, "delayTime");
+    }), this.delayTime = this._delayNode.delayTime, this.connectEffect(this._delayNode), X(this, "delayTime");
   }
   static getDefaults() {
-    return Object.assign(Cr.getDefaults(), {
+    return Object.assign(Di.getDefaults(), {
       delayTime: 0.25,
       maxDelay: 1
     });
@@ -6128,17 +6128,17 @@ var _t = class Ei extends $ {
   dispose() {
     return super.dispose(), this._delayNode.dispose(), this.delayTime.dispose(), this;
   }
-}, od = class Un extends gn {
+}, wd = class zs extends vs {
   constructor() {
-    super(M(Un.getDefaults(), arguments, ["distortion"])), this.name = "Distortion";
-    const e = M(Un.getDefaults(), arguments, ["distortion"]);
-    this._shaper = new Qt({
+    super(O(zs.getDefaults(), arguments, ["distortion"])), this.name = "Distortion";
+    const e = O(zs.getDefaults(), arguments, ["distortion"]);
+    this._shaper = new Jt({
       context: this.context,
       length: 4096
     }), this._distortion = e.distortion, this.connectEffect(this._shaper), this.distortion = e.distortion, this.oversample = e.oversample;
   }
   static getDefaults() {
-    return Object.assign(gn.getDefaults(), {
+    return Object.assign(vs.getDefaults(), {
       distortion: 0.4,
       oversample: "none"
     });
@@ -6149,7 +6149,7 @@ var _t = class Ei extends $ {
   set distortion(e) {
     this._distortion = e;
     const t = e * 100, n = Math.PI / 180;
-    this._shaper.setMap((r) => Math.abs(r) < 1e-3 ? 0 : (3 + t) * r * 20 * n / (Math.PI + t * Math.abs(r)));
+    this._shaper.setMap((i) => Math.abs(i) < 1e-3 ? 0 : (3 + t) * i * 20 * n / (Math.PI + t * Math.abs(i)));
   }
   get oversample() {
     return this._shaper.oversample;
@@ -6161,48 +6161,48 @@ var _t = class Ei extends $ {
     return super.dispose(), this._shaper.dispose(), this;
   }
 };
-function Ii(s, e = 1 / 0) {
+function Zr(s, e = 1 / 0) {
   const t = /* @__PURE__ */ new WeakMap();
-  return function(n, r) {
-    Reflect.defineProperty(n, r, {
+  return function(n, i) {
+    Reflect.defineProperty(n, i, {
       configurable: !0,
       enumerable: !0,
       get: function() {
         return t.get(this);
       },
-      set: function(i) {
-        yt(i, s, e), t.set(this, i);
+      set: function(r) {
+        wt(r, s, e), t.set(this, r);
       }
     });
   };
 }
-function Yt(s, e = 1 / 0) {
+function Kt(s, e = 1 / 0) {
   const t = /* @__PURE__ */ new WeakMap();
-  return function(n, r) {
-    Reflect.defineProperty(n, r, {
+  return function(n, i) {
+    Reflect.defineProperty(n, i, {
       configurable: !0,
       enumerable: !0,
       get: function() {
         return t.get(this);
       },
-      set: function(i) {
-        yt(this.toSeconds(i), s, e), t.set(this, i);
+      set: function(r) {
+        wt(this.toSeconds(r), s, e), t.set(this, r);
       }
     });
   };
 }
-var Ne = class Gn extends $ {
+var ke = class $s extends B {
   constructor() {
-    super(M(Gn.getDefaults(), arguments, [
+    super(O($s.getDefaults(), arguments, [
       "attack",
       "decay",
       "sustain",
       "release"
-    ])), this.name = "Envelope", this._sig = new ee({
+    ])), this.name = "Envelope", this._sig = new Y({
       context: this.context,
       value: 0
     }), this.output = this._sig, this.input = void 0;
-    const e = M(Gn.getDefaults(), arguments, [
+    const e = O($s.getDefaults(), arguments, [
       "attack",
       "decay",
       "sustain",
@@ -6211,7 +6211,7 @@ var Ne = class Gn extends $ {
     this.attack = e.attack, this.decay = e.decay, this.sustain = e.sustain, this.release = e.release, this.attackCurve = e.attackCurve, this.releaseCurve = e.releaseCurve, this.decayCurve = e.decayCurve;
   }
   static getDefaults() {
-    return Object.assign($.getDefaults(), {
+    return Object.assign(B.getDefaults(), {
       attack: 0.01,
       attackCurve: "linear",
       decay: 0.1,
@@ -6225,18 +6225,18 @@ var Ne = class Gn extends $ {
     return this.getValueAtTime(this.now());
   }
   _getCurve(e, t) {
-    if (mt(e)) return e;
+    if (gt(e)) return e;
     {
       let n;
-      for (n in Kt) if (Kt[n][t] === e) return n;
+      for (n in ts) if (ts[n][t] === e) return n;
       return e;
     }
   }
   _setCurve(e, t, n) {
-    if (mt(n) && Reflect.has(Kt, n)) {
-      const r = Kt[n];
-      lt(r) ? e !== "_decayCurve" && (this[e] = r[t]) : this[e] = r;
-    } else if (Le(n) && e !== "_decayCurve") this[e] = n;
+    if (gt(n) && Reflect.has(ts, n)) {
+      const i = ts[n];
+      ht(i) ? e !== "_decayCurve" && (this[e] = i[t]) : this[e] = i;
+    } else if (je(n) && e !== "_decayCurve") this[e] = n;
     else throw new Error("Envelope: invalid curve: " + n);
   }
   get attackCurve() {
@@ -6260,10 +6260,10 @@ var Ne = class Gn extends $ {
   triggerAttack(e, t = 1) {
     this.log("triggerAttack", e, t), e = this.toSeconds(e);
     let n = this.toSeconds(this.attack);
-    const r = this.toSeconds(this.decay), i = this.getValueAtTime(e);
-    if (i > 0) {
+    const i = this.toSeconds(this.decay), r = this.getValueAtTime(e);
+    if (r > 0) {
       const o = 1 / n;
-      n = (1 - i) / o;
+      n = (1 - r) / o;
     }
     if (n < this.sampleTime)
       this._sig.cancelScheduledValues(e), this._sig.setValueAtTime(t, e);
@@ -6272,15 +6272,15 @@ var Ne = class Gn extends $ {
     else {
       this._sig.cancelAndHoldAtTime(e);
       let o = this._attackCurve;
-      for (let a = 1; a < o.length; a++) if (o[a - 1] <= i && i <= o[a]) {
-        o = this._attackCurve.slice(a), o[0] = i;
+      for (let a = 1; a < o.length; a++) if (o[a - 1] <= r && r <= o[a]) {
+        o = this._attackCurve.slice(a), o[0] = r;
         break;
       }
       this._sig.setValueCurveAtTime(o, e, n, t);
     }
-    if (r && this.sustain < 1) {
+    if (i && this.sustain < 1) {
       const o = t * this.sustain, a = e + n;
-      this.log("decay", a), this._decayCurve === "linear" ? this._sig.linearRampToValueAtTime(o, r + a) : this._sig.exponentialApproachValueAtTime(o, a, r);
+      this.log("decay", a), this._decayCurve === "linear" ? this._sig.linearRampToValueAtTime(o, i + a) : this._sig.exponentialApproachValueAtTime(o, a, i);
     }
     return this;
   }
@@ -6289,7 +6289,7 @@ var Ne = class Gn extends $ {
     const t = this.getValueAtTime(e);
     if (t > 0) {
       const n = this.toSeconds(this.release);
-      n < this.sampleTime ? this._sig.setValueAtTime(0, e) : this._releaseCurve === "linear" ? this._sig.linearRampTo(0, n, e) : this._releaseCurve === "exponential" ? this._sig.targetRampTo(0, n, e) : (G(Le(this._releaseCurve), "releaseCurve must be either 'linear', 'exponential' or an array"), this._sig.cancelAndHoldAtTime(e), this._sig.setValueCurveAtTime(this._releaseCurve, e, n, t));
+      n < this.sampleTime ? this._sig.setValueAtTime(0, e) : this._releaseCurve === "linear" ? this._sig.linearRampTo(0, n, e) : this._releaseCurve === "exponential" ? this._sig.targetRampTo(0, n, e) : (z(je(this._releaseCurve), "releaseCurve must be either 'linear', 'exponential' or an array"), this._sig.cancelAndHoldAtTime(e), this._sig.setValueCurveAtTime(this._releaseCurve, e, n, t));
     }
     return this;
   }
@@ -6303,35 +6303,35 @@ var Ne = class Gn extends $ {
     return this._sig.cancelScheduledValues(this.toSeconds(e)), this;
   }
   connect(e, t = 0, n = 0) {
-    return Hs(this, e, t, n), this;
+    return ks(this, e, t, n), this;
   }
   asArray(e = 1024) {
     return pe(this, void 0, void 0, function* () {
-      const t = e / this.context.sampleRate, n = new Xs(1, t, this.context.sampleRate), r = this.toSeconds(this.attack) + this.toSeconds(this.decay), i = r + this.toSeconds(this.release), o = i * 0.1, a = i + o, c = new this.constructor(Object.assign(this.get(), {
+      const t = e / this.context.sampleRate, n = new si(1, t, this.context.sampleRate), i = this.toSeconds(this.attack) + this.toSeconds(this.decay), r = i + this.toSeconds(this.release), o = r * 0.1, a = r + o, c = new this.constructor(Object.assign(this.get(), {
         attack: t * this.toSeconds(this.attack) / a,
         decay: t * this.toSeconds(this.decay) / a,
         release: t * this.toSeconds(this.release) / a,
         context: n
       }));
-      return c._sig.toDestination(), c.triggerAttackRelease(t * (r + o) / a, 0), (yield n.render()).getChannelData(0);
+      return c._sig.toDestination(), c.triggerAttackRelease(t * (i + o) / a, 0), (yield n.render()).getChannelData(0);
     });
   }
   dispose() {
     return super.dispose(), this._sig.dispose(), this;
   }
 };
-Tt([Yt(0)], Ne.prototype, "attack", void 0);
-Tt([Yt(0)], Ne.prototype, "decay", void 0);
-Tt([Ii(0, 1)], Ne.prototype, "sustain", void 0);
-Tt([Yt(0)], Ne.prototype, "release", void 0);
-var Kt = (() => {
+bt([Kt(0)], ke.prototype, "attack", void 0);
+bt([Kt(0)], ke.prototype, "decay", void 0);
+bt([Zr(0, 1)], ke.prototype, "sustain", void 0);
+bt([Kt(0)], ke.prototype, "release", void 0);
+var ts = (() => {
   let e, t;
   const n = [];
   for (e = 0; e < 128; e++) n[e] = Math.sin(e / 127 * (Math.PI / 2));
-  const r = [], i = 6.4;
+  const i = [], r = 6.4;
   for (e = 0; e < 127; e++)
-    t = e / 127, r[e] = (Math.sin(t * (Math.PI * 2) * i - Math.PI / 2) + 1) / 10 + t * 0.83;
-  r[127] = 1;
+    t = e / 127, i[e] = (Math.sin(t * (Math.PI * 2) * r - Math.PI / 2) + 1) / 10 + t * 0.83;
+  i[127] = 1;
   const o = [], a = 5;
   for (e = 0; e < 128; e++) o[e] = Math.ceil(e / 127 * a) / a;
   const c = [];
@@ -6363,8 +6363,8 @@ var Kt = (() => {
     exponential: "exponential",
     linear: "linear",
     ripple: {
-      In: r,
-      Out: u(r)
+      In: i,
+      Out: u(i)
     },
     sine: {
       In: c,
@@ -6375,26 +6375,26 @@ var Kt = (() => {
       Out: u(o)
     }
   };
-})(), xr = class zn extends $ {
+})(), Ei = class Zs extends B {
   constructor() {
-    super(M(zn.getDefaults(), arguments, ["frequency", "type"])), this.name = "BiquadFilter";
-    const e = M(zn.getDefaults(), arguments, ["frequency", "type"]);
-    this._filter = this.context.createBiquadFilter(), this.input = this.output = this._filter, this.Q = new ue({
+    super(O(Zs.getDefaults(), arguments, ["frequency", "type"])), this.name = "BiquadFilter";
+    const e = O(Zs.getDefaults(), arguments, ["frequency", "type"]);
+    this._filter = this.context.createBiquadFilter(), this.input = this.output = this._filter, this.Q = new se({
       context: this.context,
       units: "number",
       value: e.Q,
       param: this._filter.Q
-    }), this.frequency = new ue({
+    }), this.frequency = new se({
       context: this.context,
       units: "frequency",
       value: e.frequency,
       param: this._filter.frequency
-    }), this.detune = new ue({
+    }), this.detune = new se({
       context: this.context,
       units: "cents",
       value: e.detune,
       param: this._filter.detune
-    }), this.gain = new ue({
+    }), this.gain = new se({
       context: this.context,
       units: "decibels",
       convert: !1,
@@ -6403,7 +6403,7 @@ var Kt = (() => {
     }), this.type = e.type;
   }
   static getDefaults() {
-    return Object.assign($.getDefaults(), {
+    return Object.assign(B.getDefaults(), {
       Q: 1,
       type: "lowpass",
       frequency: 350,
@@ -6415,7 +6415,7 @@ var Kt = (() => {
     return this._filter.type;
   }
   set type(e) {
-    G([
+    z([
       "lowpass",
       "highpass",
       "bandpass",
@@ -6429,42 +6429,42 @@ var Kt = (() => {
   getFrequencyResponse(e = 128) {
     const t = new Float32Array(e);
     for (let o = 0; o < e; o++) t[o] = Math.pow(o / e, 2) * 19980 + 20;
-    const n = new Float32Array(e), r = new Float32Array(e), i = this.context.createBiquadFilter();
-    return i.type = this.type, i.Q.value = this.Q.value, i.frequency.value = this.frequency.value, i.gain.value = this.gain.value, i.getFrequencyResponse(t, n, r), n;
+    const n = new Float32Array(e), i = new Float32Array(e), r = this.context.createBiquadFilter();
+    return r.type = this.type, r.Q.value = this.Q.value, r.frequency.value = this.frequency.value, r.gain.value = this.gain.value, r.getFrequencyResponse(t, n, i), n;
   }
   dispose() {
     return super.dispose(), this._filter.disconnect(), this.Q.dispose(), this.frequency.dispose(), this.gain.dispose(), this.detune.dispose(), this;
   }
-}, $n = class Zn extends $ {
+}, Xs = class Hs extends B {
   constructor() {
-    super(M(Zn.getDefaults(), arguments, [
+    super(O(Hs.getDefaults(), arguments, [
       "frequency",
       "type",
       "rolloff"
-    ])), this.name = "Filter", this.input = new oe({ context: this.context }), this.output = new oe({ context: this.context }), this._filters = [];
-    const e = M(Zn.getDefaults(), arguments, [
+    ])), this.name = "Filter", this.input = new J({ context: this.context }), this.output = new J({ context: this.context }), this._filters = [];
+    const e = O(Hs.getDefaults(), arguments, [
       "frequency",
       "type",
       "rolloff"
     ]);
-    this._filters = [], this.Q = new ee({
+    this._filters = [], this.Q = new Y({
       context: this.context,
       units: "positive",
       value: e.Q
-    }), this.frequency = new ee({
+    }), this.frequency = new Y({
       context: this.context,
       units: "frequency",
       value: e.frequency
-    }), this.detune = new ee({
+    }), this.detune = new Y({
       context: this.context,
       units: "cents",
       value: e.detune
-    }), this.gain = new ee({
+    }), this.gain = new Y({
       context: this.context,
       units: "decibels",
       convert: !1,
       value: e.gain
-    }), this._type = e.type, this.rolloff = e.rolloff, Y(this, [
+    }), this._type = e.type, this.rolloff = e.rolloff, X(this, [
       "detune",
       "frequency",
       "gain",
@@ -6472,7 +6472,7 @@ var Kt = (() => {
     ]);
   }
   static getDefaults() {
-    return Object.assign($.getDefaults(), {
+    return Object.assign(B.getDefaults(), {
       Q: 1,
       detune: 0,
       frequency: 350,
@@ -6485,7 +6485,7 @@ var Kt = (() => {
     return this._type;
   }
   set type(e) {
-    G([
+    z([
       "lowpass",
       "highpass",
       "bandpass",
@@ -6500,22 +6500,22 @@ var Kt = (() => {
     return this._rolloff;
   }
   set rolloff(e) {
-    const t = ft(e) ? e : parseInt(e, 10), n = [
+    const t = _t(e) ? e : parseInt(e, 10), n = [
       -12,
       -24,
       -48,
       -96
     ];
-    let r = n.indexOf(t);
-    G(r !== -1, `rolloff can only be ${n.join(", ")}`), r += 1, this._rolloff = t, this.input.disconnect(), this._filters.forEach((i) => i.disconnect()), this._filters = new Array(r);
-    for (let i = 0; i < r; i++) {
-      const o = new xr({ context: this.context });
-      o.type = this._type, this.frequency.connect(o.frequency), this.detune.connect(o.detune), this.Q.connect(o.Q), this.gain.connect(o.gain), this._filters[i] = o;
+    let i = n.indexOf(t);
+    z(i !== -1, `rolloff can only be ${n.join(", ")}`), i += 1, this._rolloff = t, this.input.disconnect(), this._filters.forEach((r) => r.disconnect()), this._filters = new Array(i);
+    for (let r = 0; r < i; r++) {
+      const o = new Ei({ context: this.context });
+      o.type = this._type, this.frequency.connect(o.frequency), this.detune.connect(o.detune), this.Q.connect(o.Q), this.gain.connect(o.gain), this._filters[r] = o;
     }
-    this._internalChannels = this._filters, Bt(this.input, ...this._internalChannels, this.output);
+    this._internalChannels = this._filters, vt(this.input, ...this._internalChannels, this.output);
   }
   getFrequencyResponse(e = 128) {
-    const t = new xr({
+    const t = new Ei({
       frequency: this.frequency.value,
       gain: this.gain.value,
       Q: this.Q.value,
@@ -6523,59 +6523,59 @@ var Kt = (() => {
       detune: this.detune.value
     }), n = new Float32Array(e).map(() => 1);
     return this._filters.forEach(() => {
-      t.getFrequencyResponse(e).forEach((r, i) => n[i] *= r);
+      t.getFrequencyResponse(e).forEach((i, r) => n[r] *= i);
     }), t.dispose(), n;
   }
   dispose() {
     return super.dispose(), this._filters.forEach((e) => {
       e.dispose();
-    }), Zs(this, [
+    }), ti(this, [
       "detune",
       "frequency",
       "gain",
       "Q"
     ]), this.frequency.dispose(), this.Q.dispose(), this.detune.dispose(), this.gain.dispose(), this;
   }
-}, Mt = class Xn extends ee {
+}, at = class Qs extends Y {
   constructor() {
-    super(Object.assign(M(Xn.getDefaults(), arguments, ["value"]))), this.name = "Multiply", this.override = !1;
-    const e = M(Xn.getDefaults(), arguments, ["value"]);
-    this._mult = this.input = this.output = new oe({
+    super(Object.assign(O(Qs.getDefaults(), arguments, ["value"]))), this.name = "Multiply", this.override = !1;
+    const e = O(Qs.getDefaults(), arguments, ["value"]);
+    this._mult = this.input = this.output = new J({
       context: this.context,
       minValue: e.minValue,
       maxValue: e.maxValue
     }), this.factor = this._param = this._mult.gain, this.factor.setValueAtTime(e.value, 0);
   }
   static getDefaults() {
-    return Object.assign(ee.getDefaults(), { value: 0 });
+    return Object.assign(Y.getDefaults(), { value: 0 });
   }
   dispose() {
     return super.dispose(), this._mult.dispose(), this;
   }
-}, fh = class Ri extends ee {
+}, Oh = class Xr extends Y {
   constructor() {
-    super(Object.assign(M(Ri.getDefaults(), arguments, ["value"]))), this.override = !1, this.name = "Add", this._sum = new oe({ context: this.context }), this.input = this._sum, this.output = this._sum, this.addend = this._param, Bt(this._constantSource, this._sum);
+    super(Object.assign(O(Xr.getDefaults(), arguments, ["value"]))), this.override = !1, this.name = "Add", this._sum = new J({ context: this.context }), this.input = this._sum, this.output = this._sum, this.addend = this._param, vt(this._constantSource, this._sum);
   }
   static getDefaults() {
-    return Object.assign(ee.getDefaults(), { value: 0 });
+    return Object.assign(Y.getDefaults(), { value: 0 });
   }
   dispose() {
     return super.dispose(), this._sum.dispose(), this;
   }
-}, Vi = class Hn extends _t {
+}, ni = class Ys extends rt {
   constructor() {
-    super(Object.assign(M(Hn.getDefaults(), arguments, ["min", "max"]))), this.name = "Scale";
-    const e = M(Hn.getDefaults(), arguments, ["min", "max"]);
-    this._mult = this.input = new Mt({
+    super(Object.assign(O(Ys.getDefaults(), arguments, ["min", "max"]))), this.name = "Scale";
+    const e = O(Ys.getDefaults(), arguments, ["min", "max"]);
+    this._mult = this.input = new at({
       context: this.context,
       value: e.max - e.min
-    }), this._add = this.output = new fh({
+    }), this._add = this.output = new Oh({
       context: this.context,
       value: e.min
     }), this._min = e.min, this._max = e.max, this.input.connect(this.output);
   }
   static getDefaults() {
-    return Object.assign(_t.getDefaults(), {
+    return Object.assign(rt.getDefaults(), {
       max: 1,
       min: 0
     });
@@ -6598,18 +6598,18 @@ var Kt = (() => {
   dispose() {
     return super.dispose(), this._add.dispose(), this._mult.dispose(), this;
   }
-}, Qs = class Qn extends $ {
+}, ii = class Js extends B {
   constructor() {
-    super(M(Qn.getDefaults(), arguments, ["volume"])), this.name = "Volume";
-    const e = M(Qn.getDefaults(), arguments, ["volume"]);
-    this.input = this.output = new oe({
+    super(O(Js.getDefaults(), arguments, ["volume"])), this.name = "Volume";
+    const e = O(Js.getDefaults(), arguments, ["volume"]);
+    this.input = this.output = new J({
       context: this.context,
       gain: e.volume,
       units: "decibels"
-    }), this.volume = this.output.gain, Y(this, "volume"), this._unmutedVolume = e.volume, this.mute = e.mute;
+    }), this.volume = this.output.gain, X(this, "volume"), this._unmutedVolume = e.volume, this.mute = e.mute;
   }
   static getDefaults() {
-    return Object.assign($.getDefaults(), {
+    return Object.assign(B.getDefaults(), {
       mute: !1,
       volume: 0
     });
@@ -6623,18 +6623,18 @@ var Kt = (() => {
   dispose() {
     return super.dispose(), this.input.dispose(), this.volume.dispose(), this;
   }
-}, mh = class Yn extends $ {
+}, Nh = class Ks extends B {
   constructor() {
-    super(M(Yn.getDefaults(), arguments)), this.name = "Destination", this.input = new Qs({ context: this.context }), this.output = new oe({ context: this.context }), this.volume = this.input.volume;
-    const e = M(Yn.getDefaults(), arguments);
-    Bt(this.input, this.output, this.context.rawContext.destination), this.mute = e.mute, this._internalChannels = [
+    super(O(Ks.getDefaults(), arguments)), this.name = "Destination", this.input = new ii({ context: this.context }), this.output = new J({ context: this.context }), this.volume = this.input.volume;
+    const e = O(Ks.getDefaults(), arguments);
+    vt(this.input, this.output, this.context.rawContext.destination), this.mute = e.mute, this._internalChannels = [
       this.input,
       this.context.rawContext.destination,
       this.output
     ];
   }
   static getDefaults() {
-    return Object.assign($.getDefaults(), {
+    return Object.assign(B.getDefaults(), {
       mute: !1,
       volume: 0
     });
@@ -6646,7 +6646,7 @@ var Kt = (() => {
     this.input.mute = e;
   }
   chain(...e) {
-    return this.input.disconnect(), e.unshift(this.input), e.push(this.output), Bt(...e), this;
+    return this.input.disconnect(), e.unshift(this.input), e.push(this.output), vt(...e), this;
   }
   get maxChannelCount() {
     return this.context.rawContext.destination.maxChannelCount;
@@ -6655,15 +6655,15 @@ var Kt = (() => {
     return super.dispose(), this.volume.dispose(), this;
   }
 };
-xi((s) => {
-  s.destination = new mh({ context: s });
+Fr((s) => {
+  s.destination = new Nh({ context: s });
 });
-Ai((s) => {
+qr((s) => {
   s.destination.dispose();
 });
-var _h = class extends it {
+var Mh = class extends ot {
   constructor(s) {
-    super(), this.name = "TimelineValue", this._timeline = new $e({ memory: 10 }), this._initialValue = s;
+    super(), this.name = "TimelineValue", this._timeline = new Xe({ memory: 10 }), this._initialValue = s;
   }
   set(s, e) {
     return this._timeline.add({
@@ -6675,18 +6675,18 @@ var _h = class extends it {
     const e = this._timeline.get(s);
     return e ? e.value : this._initialValue;
   }
-}, Pi = class Jn extends _t {
+}, Hr = class en extends rt {
   constructor() {
-    super(Object.assign(M(Jn.getDefaults(), arguments, ["value"]))), this.name = "Pow";
-    const e = M(Jn.getDefaults(), arguments, ["value"]);
-    this._exponentScaler = this.input = this.output = new Qt({
+    super(Object.assign(O(en.getDefaults(), arguments, ["value"]))), this.name = "Pow";
+    const e = O(en.getDefaults(), arguments, ["value"]);
+    this._exponentScaler = this.input = this.output = new Jt({
       context: this.context,
       mapping: this._expFunc(e.value),
       length: 8192
     }), this._exponent = e.value;
   }
   static getDefaults() {
-    return Object.assign(_t.getDefaults(), { value: 1 });
+    return Object.assign(rt.getDefaults(), { value: 1 });
   }
   _expFunc(e) {
     return (t) => Math.pow(Math.abs(t), e);
@@ -6700,7 +6700,7 @@ var _h = class extends it {
   dispose() {
     return super.dispose(), this._exponentScaler.dispose(), this;
   }
-}, xt = class extends qt {
+}, At = class extends Wt {
   constructor() {
     super(...arguments), this.name = "Ticks", this.defaultUnits = "i";
   }
@@ -6722,13 +6722,13 @@ var _h = class extends it {
   toSeconds() {
     return this.valueOf() / this._getPPQ() * (60 / this._getBpm());
   }
-}, gh = class extends it {
+}, Dh = class extends ot {
   constructor() {
     super(...arguments), this.name = "IntervalTimeline", this._root = null, this._length = 0;
   }
   add(s) {
-    G(Z(s.time), "Events must have a time property"), G(Z(s.duration), "Events must have a duration parameter"), s.time = s.time.valueOf();
-    let e = new vh(s.time, s.time + s.duration, s);
+    z(Z(s.time), "Events must have a time property"), z(Z(s.duration), "Events must have a duration parameter"), s.time = s.time.valueOf();
+    let e = new Eh(s.time, s.time + s.duration, s);
     for (this._root === null ? this._root = e : this._root.insert(e), this._length++; e !== null; )
       e.updateHeight(), e.updateMax(), this._rebalance(e), e = e.parent;
     return this;
@@ -6832,7 +6832,7 @@ var _h = class extends it {
   dispose() {
     return super.dispose(), this._root !== null && this._root.traverse((s) => s.dispose()), this._root = null, this;
   }
-}, vh = class {
+}, Eh = class {
   constructor(s, e, t) {
     this._left = null, this._right = null, this.parent = null, this.height = 0, this.event = t, this.low = s, this.high = e, this.max = this.high;
   }
@@ -6876,7 +6876,7 @@ var _h = class extends it {
   dispose() {
     this.parent = null, this._left = null, this._right = null, this.event = null;
   }
-}, Ys = class extends $e {
+}, ri = class extends Xe {
   constructor(s = "stopped") {
     super(), this.name = "StateTimeline", this._initial = s, this.setStateAtTime(this._initial, 0);
   }
@@ -6885,7 +6885,7 @@ var _h = class extends it {
     return e !== null ? e.state : this._initial;
   }
   setStateAtTime(s, e, t) {
-    return yt(e, 0), this.add(Object.assign({}, t, {
+    return wt(e, 0), this.add(Object.assign({}, t, {
       state: s,
       time: e
     })), this;
@@ -6893,21 +6893,21 @@ var _h = class extends it {
   getLastState(s, e) {
     const t = this._search(e);
     for (let n = t; n >= 0; n--) {
-      const r = this._timeline[n];
-      if (r.state === s) return r;
+      const i = this._timeline[n];
+      if (i.state === s) return i;
     }
   }
   getNextState(s, e) {
     const t = this._search(e);
     if (t !== -1) for (let n = t; n < this._timeline.length; n++) {
-      const r = this._timeline[n];
-      if (r.state === s) return r;
+      const i = this._timeline[n];
+      if (i.state === s) return i;
     }
   }
-}, yh = class Kn extends ue {
+}, Ih = class tn extends se {
   constructor() {
-    super(M(Kn.getDefaults(), arguments, ["value"])), this.name = "TickParam", this._events = new $e(1 / 0), this._multiplier = 1;
-    const e = M(Kn.getDefaults(), arguments, ["value"]);
+    super(O(tn.getDefaults(), arguments, ["value"])), this.name = "TickParam", this._events = new Xe(1 / 0), this._multiplier = 1;
+    const e = O(tn.getDefaults(), arguments, ["value"]);
     this._multiplier = e.multiplier, this._events.cancel(0), this._events.add({
       ticks: 0,
       time: 0,
@@ -6916,7 +6916,7 @@ var _h = class extends it {
     }), this.setValueAtTime(e.value, 0);
   }
   static getDefaults() {
-    return Object.assign(ue.getDefaults(), {
+    return Object.assign(se.getDefaults(), {
       multiplier: 1,
       units: "hertz",
       value: 1
@@ -6924,9 +6924,9 @@ var _h = class extends it {
   }
   setTargetAtTime(e, t, n) {
     t = this.toSeconds(t), this.setRampPoint(t);
-    const r = this._fromType(e), i = this._events.get(t), o = Math.round(Math.max(1 / n, 1));
+    const i = this._fromType(e), r = this._events.get(t), o = Math.round(Math.max(1 / n, 1));
     for (let a = 0; a <= o; a++) {
-      const c = n * a + t, l = this._exponentialApproach(i.time, i.value, r, n, c);
+      const c = n * a + t, l = this._exponentialApproach(r.time, r.value, i, n, c);
       this.linearRampToValueAtTime(this._toType(l), c);
     }
     return this;
@@ -6934,20 +6934,20 @@ var _h = class extends it {
   setValueAtTime(e, t) {
     const n = this.toSeconds(t);
     super.setValueAtTime(e, t);
-    const r = this._events.get(n), i = this._events.previousEvent(r), o = this._getTicksUntilEvent(i, n);
-    return r.ticks = Math.max(o, 0), this;
+    const i = this._events.get(n), r = this._events.previousEvent(i), o = this._getTicksUntilEvent(r, n);
+    return i.ticks = Math.max(o, 0), this;
   }
   linearRampToValueAtTime(e, t) {
     const n = this.toSeconds(t);
     super.linearRampToValueAtTime(e, t);
-    const r = this._events.get(n), i = this._events.previousEvent(r), o = this._getTicksUntilEvent(i, n);
-    return r.ticks = Math.max(o, 0), this;
+    const i = this._events.get(n), r = this._events.previousEvent(i), o = this._getTicksUntilEvent(r, n);
+    return i.ticks = Math.max(o, 0), this;
   }
   exponentialRampToValueAtTime(e, t) {
     t = this.toSeconds(t);
-    const n = this._fromType(e), r = this._events.get(t), i = Math.round(Math.max((t - r.time) * 10, 1)), o = (t - r.time) / i;
-    for (let a = 0; a <= i; a++) {
-      const c = o * a + r.time, l = this._exponentialInterpolate(r.time, r.value, t, n, c);
+    const n = this._fromType(e), i = this._events.get(t), r = Math.round(Math.max((t - i.time) * 10, 1)), o = (t - i.time) / r;
+    for (let a = 0; a <= r; a++) {
+      const c = o * a + i.time, l = this._exponentialInterpolate(i.time, i.value, t, n, c);
       this.linearRampToValueAtTime(this._toType(l), c);
     }
     return this;
@@ -6959,28 +6959,28 @@ var _h = class extends it {
       type: "setValueAtTime",
       value: 0
     };
-    else if (Re(e.ticks)) {
+    else if (Ve(e.ticks)) {
       const o = this._events.previousEvent(e);
       e.ticks = this._getTicksUntilEvent(o, e.time);
     }
     const n = this._fromType(this.getValueAtTime(e.time));
-    let r = this._fromType(this.getValueAtTime(t));
-    const i = this._events.get(t);
-    return i && i.time === t && i.type === "setValueAtTime" && (r = this._fromType(this.getValueAtTime(t - this.sampleTime))), 0.5 * (t - e.time) * (n + r) + e.ticks;
+    let i = this._fromType(this.getValueAtTime(t));
+    const r = this._events.get(t);
+    return r && r.time === t && r.type === "setValueAtTime" && (i = this._fromType(this.getValueAtTime(t - this.sampleTime))), 0.5 * (t - e.time) * (n + i) + e.ticks;
   }
   getTicksAtTime(e) {
     const t = this.toSeconds(e), n = this._events.get(t);
     return Math.max(this._getTicksUntilEvent(n, t), 0);
   }
   getDurationOfTicks(e, t) {
-    const n = this.toSeconds(t), r = this.getTicksAtTime(t);
-    return this.getTimeOfTick(r + e) - n;
+    const n = this.toSeconds(t), i = this.getTicksAtTime(t);
+    return this.getTimeOfTick(i + e) - n;
   }
   getTimeOfTick(e) {
     const t = this._events.get(e, "ticks"), n = this._events.getAfter(e, "ticks");
     if (t && t.ticks === e) return t.time;
     if (t && n && n.type === "linearRampToValueAtTime" && t.value !== n.value) {
-      const r = this._fromType(this.getValueAtTime(t.time)), i = (this._fromType(this.getValueAtTime(n.time)) - r) / (n.time - t.time), o = Math.sqrt(Math.pow(r, 2) - 2 * i * (t.ticks - e)), a = (-r + o) / i, c = (-r - o) / i;
+      const i = this._fromType(this.getValueAtTime(t.time)), r = (this._fromType(this.getValueAtTime(n.time)) - i) / (n.time - t.time), o = Math.sqrt(Math.pow(i, 2) - 2 * r * (t.ticks - e)), a = (-i + o) / r, c = (-i - o) / r;
       return (a > 0 ? a : c) + t.time;
     } else return t ? t.value === 0 ? 1 / 0 : t.time + (e - t.ticks) / t.value : e / this._initialValue;
   }
@@ -6988,8 +6988,8 @@ var _h = class extends it {
     return this.getDurationOfTicks(e, t);
   }
   timeToTicks(e, t) {
-    const n = this.toSeconds(t), r = this.toSeconds(e), i = this.getTicksAtTime(n);
-    return this.getTicksAtTime(n + r) - i;
+    const n = this.toSeconds(t), i = this.toSeconds(e), r = this.getTicksAtTime(n);
+    return this.getTicksAtTime(n + i) - r;
   }
   _fromType(e) {
     return this.units === "bpm" && this.multiplier ? 1 / (60 / e / this.multiplier) : super._fromType(e);
@@ -7004,11 +7004,11 @@ var _h = class extends it {
     const t = this.value;
     this._multiplier = e, this.cancelScheduledValues(0), this.setValueAtTime(t, 0);
   }
-}, Th = class es extends ee {
+}, Rh = class sn extends Y {
   constructor() {
-    super(M(es.getDefaults(), arguments, ["value"])), this.name = "TickSignal";
-    const e = M(es.getDefaults(), arguments, ["value"]);
-    this.input = this._param = new yh({
+    super(O(sn.getDefaults(), arguments, ["value"])), this.name = "TickSignal";
+    const e = O(sn.getDefaults(), arguments, ["value"]);
+    this.input = this._param = new Ih({
       context: this.context,
       convert: e.convert,
       multiplier: e.multiplier,
@@ -7018,7 +7018,7 @@ var _h = class extends it {
     });
   }
   static getDefaults() {
-    return Object.assign(ee.getDefaults(), {
+    return Object.assign(Y.getDefaults(), {
       multiplier: 1,
       units: "hertz",
       value: 1
@@ -7048,21 +7048,21 @@ var _h = class extends it {
   dispose() {
     return super.dispose(), this._param.dispose(), this;
   }
-}, wh = class ts extends Ze {
+}, Vh = class nn extends He {
   constructor() {
-    super(M(ts.getDefaults(), arguments, ["frequency"])), this.name = "TickSource", this._state = new Ys(), this._tickOffset = new $e(), this._ticksAtTime = new $e(), this._secondsAtTime = new $e();
-    const e = M(ts.getDefaults(), arguments, ["frequency"]);
-    this.frequency = new Th({
+    super(O(nn.getDefaults(), arguments, ["frequency"])), this.name = "TickSource", this._state = new ri(), this._tickOffset = new Xe(), this._ticksAtTime = new Xe(), this._secondsAtTime = new Xe();
+    const e = O(nn.getDefaults(), arguments, ["frequency"]);
+    this.frequency = new Rh({
       context: this.context,
       units: e.units,
       value: e.frequency
-    }), Y(this, "frequency"), this._state.setStateAtTime("stopped", 0), this.setTicksAtTime(0, 0);
+    }), X(this, "frequency"), this._state.setStateAtTime("stopped", 0), this.setTicksAtTime(0, 0);
   }
   static getDefaults() {
     return Object.assign({
       frequency: 1,
       units: "hertz"
-    }, Ze.getDefaults());
+    }, He.getDefaults());
   }
   get state() {
     return this.getStateAtTime(this.now());
@@ -7087,21 +7087,21 @@ var _h = class extends it {
     return e = this.toSeconds(e), this._state.cancel(e), this._tickOffset.cancel(e), this._ticksAtTime.cancel(e), this._secondsAtTime.cancel(e), this;
   }
   getTicksAtTime(e) {
-    const t = this.toSeconds(e), n = this._state.getLastState("stopped", t), r = this._ticksAtTime.get(t), i = {
+    const t = this.toSeconds(e), n = this._state.getLastState("stopped", t), i = this._ticksAtTime.get(t), r = {
       state: "paused",
       time: t
     };
-    this._state.add(i);
-    let o = r || n, a = r ? r.ticks : 0, c = null;
+    this._state.add(r);
+    let o = i || n, a = i ? i.ticks : 0, c = null;
     return this._state.forEachBetween(o.time, t + this.sampleTime, (l) => {
       let u = o.time;
       const h = this._tickOffset.get(l.time);
-      h && h.time >= o.time && (a = h.ticks, u = h.time), o.state === "started" && l.state !== "started" && (a += this.frequency.getTicksAtTime(l.time) - this.frequency.getTicksAtTime(u), l.time !== i.time && (c = {
+      h && h.time >= o.time && (a = h.ticks, u = h.time), o.state === "started" && l.state !== "started" && (a += this.frequency.getTicksAtTime(l.time) - this.frequency.getTicksAtTime(u), l.time !== r.time && (c = {
         state: l.state,
         time: l.time,
         ticks: a
       })), o = l;
-    }), this._state.remove(i), c && this._ticksAtTime.add(c), a;
+    }), this._state.remove(r), c && this._ticksAtTime.add(c), a;
   }
   get ticks() {
     return this.getTicksAtTime(this.now());
@@ -7123,16 +7123,16 @@ var _h = class extends it {
       time: e
     };
     this._state.add(n);
-    const r = this._secondsAtTime.get(e);
-    let i = r || t, o = r ? r.seconds : 0, a = null;
-    return this._state.forEachBetween(i.time, e + this.sampleTime, (c) => {
-      let l = i.time;
+    const i = this._secondsAtTime.get(e);
+    let r = i || t, o = i ? i.seconds : 0, a = null;
+    return this._state.forEachBetween(r.time, e + this.sampleTime, (c) => {
+      let l = r.time;
       const u = this._tickOffset.get(c.time);
-      u && u.time >= i.time && (o = u.seconds, l = u.time), i.state === "started" && c.state !== "started" && (o += c.time - l, c.time !== n.time && (a = {
+      u && u.time >= r.time && (o = u.seconds, l = u.time), r.state === "started" && c.state !== "started" && (o += c.time - l, c.time !== n.time && (a = {
         state: c.state,
         time: c.time,
         seconds: o
-      })), i = c;
+      })), r = c;
     }), this._state.remove(n), a && this._secondsAtTime.add(a), o;
   }
   setTicksAtTime(e, t) {
@@ -7146,49 +7146,49 @@ var _h = class extends it {
     return e = this.toSeconds(e), this._state.getValueAtTime(e);
   }
   getTimeOfTick(e, t = this.now()) {
-    const n = this._tickOffset.get(t), r = this._state.get(t), i = Math.max(n.time, r.time), o = this.frequency.getTicksAtTime(i) + e - n.ticks;
+    const n = this._tickOffset.get(t), i = this._state.get(t), r = Math.max(n.time, i.time), o = this.frequency.getTicksAtTime(r) + e - n.ticks;
     return this.frequency.getTimeOfTick(o);
   }
   forEachTickBetween(e, t, n) {
-    let r = this._state.get(e);
+    let i = this._state.get(e);
     this._state.forEachBetween(e, t, (o) => {
-      r && r.state === "started" && o.state !== "started" && this.forEachTickBetween(Math.max(r.time, e), o.time - this.sampleTime, n), r = o;
+      i && i.state === "started" && o.state !== "started" && this.forEachTickBetween(Math.max(i.time, e), o.time - this.sampleTime, n), i = o;
     });
-    let i = null;
-    if (r && r.state === "started") {
-      const o = Math.max(r.time, e), a = this.frequency.getTicksAtTime(o), c = a - this.frequency.getTicksAtTime(r.time);
+    let r = null;
+    if (i && i.state === "started") {
+      const o = Math.max(i.time, e), a = this.frequency.getTicksAtTime(o), c = a - this.frequency.getTicksAtTime(i.time);
       let l = Math.ceil(c) - c;
-      l = Ie(l, 1) ? 0 : l;
+      l = Re(l, 1) ? 0 : l;
       let u = this.frequency.getTimeOfTick(a + l);
       for (; u < t; ) {
         try {
           n(u, Math.round(this.getTicksAtTime(u)));
         } catch (h) {
-          i = h;
+          r = h;
           break;
         }
         u += this.frequency.getDurationOfTicks(1, u);
       }
     }
-    if (i) throw i;
+    if (r) throw r;
     return this;
   }
   dispose() {
     return super.dispose(), this._state.dispose(), this._tickOffset.dispose(), this._ticksAtTime.dispose(), this._secondsAtTime.dispose(), this.frequency.dispose(), this;
   }
-}, Fi = class ns extends Ze {
+}, Qr = class rn extends He {
   constructor() {
-    super(M(ns.getDefaults(), arguments, ["callback", "frequency"])), this.name = "Clock", this.callback = le, this._lastUpdate = 0, this._state = new Ys("stopped"), this._boundLoop = this._loop.bind(this);
-    const e = M(ns.getDefaults(), arguments, ["callback", "frequency"]);
-    this.callback = e.callback, this._tickSource = new wh({
+    super(O(rn.getDefaults(), arguments, ["callback", "frequency"])), this.name = "Clock", this.callback = ue, this._lastUpdate = 0, this._state = new ri("stopped"), this._boundLoop = this._loop.bind(this);
+    const e = O(rn.getDefaults(), arguments, ["callback", "frequency"]);
+    this.callback = e.callback, this._tickSource = new Vh({
       context: this.context,
       frequency: e.frequency,
       units: e.units
-    }), this._lastUpdate = 0, this.frequency = this._tickSource.frequency, Y(this, "frequency"), this._state.setStateAtTime("stopped", 0), this.context.on("tick", this._boundLoop);
+    }), this._lastUpdate = 0, this.frequency = this._tickSource.frequency, X(this, "frequency"), this._state.setStateAtTime("stopped", 0), this.context.on("tick", this._boundLoop);
   }
   static getDefaults() {
-    return Object.assign(Ze.getDefaults(), {
-      callback: le,
+    return Object.assign(He.getDefaults(), {
+      callback: ue,
       frequency: 1,
       units: "hertz"
     });
@@ -7197,7 +7197,7 @@ var _h = class extends it {
     return this._state.getValueAtTime(this.now());
   }
   start(e, t) {
-    yi(this.context);
+    Dr(this.context);
     const n = this.toSeconds(e);
     return this.log("start", n), this._state.getValueAtTime(n) !== "started" && (this._state.setStateAtTime("started", n), this._tickSource.start(n, t), n < this._lastUpdate && this.emit("start", n, t)), this;
   }
@@ -7234,16 +7234,16 @@ var _h = class extends it {
     return this._tickSource.getTicksAtTime(e);
   }
   nextTickTime(e, t) {
-    const n = this.toSeconds(t), r = this.getTicksAtTime(n);
-    return this._tickSource.getTimeOfTick(r + e, n);
+    const n = this.toSeconds(t), i = this.getTicksAtTime(n);
+    return this._tickSource.getTimeOfTick(i + e, n);
   }
   _loop() {
     const e = this._lastUpdate, t = this.now();
     this._lastUpdate = t, this.log("loop", e, t), e !== t && (this._state.forEachBetween(e, t, (n) => {
       switch (n.state) {
         case "started":
-          const r = this._tickSource.getTicksAtTime(n.time);
-          this.emit("start", n.time, r);
+          const i = this._tickSource.getTicksAtTime(n.time);
+          this.emit("start", n.time, i);
           break;
         case "stopped":
           n.time !== 0 && this.emit("stop", n.time);
@@ -7252,8 +7252,8 @@ var _h = class extends it {
           this.emit("pause", n.time);
           break;
       }
-    }), this._tickSource.forEachTickBetween(e, t, (n, r) => {
-      this.callback(n, r);
+    }), this._tickSource.forEachTickBetween(e, t, (n, i) => {
+      this.callback(n, i);
     }));
   }
   getStateAtTime(e) {
@@ -7264,16 +7264,16 @@ var _h = class extends it {
     return super.dispose(), this.context.off("tick", this._boundLoop), this._tickSource.dispose(), this._state.dispose(), this;
   }
 };
-zs.mixin(Fi);
-var Ut = class ss {
+Kn.mixin(Qr);
+var Gt = class an {
   constructor(e, t) {
-    this.id = ss._eventId++, this._remainderTime = 0;
-    const n = Object.assign(ss.getDefaults(), t);
+    this.id = an._eventId++, this._remainderTime = 0;
+    const n = Object.assign(an.getDefaults(), t);
     this.transport = e, this.callback = n.callback, this._once = n.once, this.time = Math.floor(n.time), this._remainderTime = n.time - this.time;
   }
   static getDefaults() {
     return {
-      callback: le,
+      callback: ue,
       once: !1,
       time: 0
     };
@@ -7291,15 +7291,15 @@ var Ut = class ss {
     return this.callback = void 0, this;
   }
 };
-Ut._eventId = 0;
-var bh = class qi extends Ut {
+Gt._eventId = 0;
+var Fh = class Yr extends Gt {
   constructor(e, t) {
     super(e, t), this._currentId = -1, this._nextId = -1, this._nextTick = this.time, this._boundRestart = this._restart.bind(this);
-    const n = Object.assign(qi.getDefaults(), t);
+    const n = Object.assign(Yr.getDefaults(), t);
     this.duration = n.duration, this._interval = n.interval, this._nextTick = n.time, this.transport.on("start", this._boundRestart), this.transport.on("loopStart", this._boundRestart), this.transport.on("ticks", this._boundRestart), this.context = this.transport.context, this._restart();
   }
   static getDefaults() {
-    return Object.assign({}, Ut.getDefaults(), {
+    return Object.assign({}, Gt.getDefaults(), {
       duration: 1 / 0,
       interval: 1,
       once: !1
@@ -7309,32 +7309,32 @@ var bh = class qi extends Ut {
     this._createEvents(e), super.invoke(e);
   }
   _createEvent() {
-    return _n(this._nextTick, this.floatTime + this.duration) ? this.transport.scheduleOnce(this.invoke.bind(this), new xt(this.context, this._nextTick).toSeconds()) : -1;
+    return gs(this._nextTick, this.floatTime + this.duration) ? this.transport.scheduleOnce(this.invoke.bind(this), new At(this.context, this._nextTick).toSeconds()) : -1;
   }
   _createEvents(e) {
-    _n(this._nextTick + this._interval, this.floatTime + this.duration) && (this._nextTick += this._interval, this._currentId = this._nextId, this._nextId = this.transport.scheduleOnce(this.invoke.bind(this), new xt(this.context, this._nextTick).toSeconds()));
+    gs(this._nextTick + this._interval, this.floatTime + this.duration) && (this._nextTick += this._interval, this._currentId = this._nextId, this._nextId = this.transport.scheduleOnce(this.invoke.bind(this), new At(this.context, this._nextTick).toSeconds()));
   }
   _restart(e) {
     this.transport.clear(this._currentId), this.transport.clear(this._nextId), this._nextTick = this.floatTime;
     const t = this.transport.getTicksAtTime(e);
-    Ot(t, this.time) && (this._nextTick = this.floatTime + Math.ceil((t - this.floatTime) / this._interval) * this._interval), this._currentId = this._createEvent(), this._nextTick += this._interval, this._nextId = this._createEvent();
+    Mt(t, this.time) && (this._nextTick = this.floatTime + Math.ceil((t - this.floatTime) / this._interval) * this._interval), this._currentId = this._createEvent(), this._nextTick += this._interval, this._nextId = this._createEvent();
   }
   dispose() {
     return super.dispose(), this.transport.clear(this._currentId), this.transport.clear(this._nextId), this.transport.off("start", this._boundRestart), this.transport.off("loopStart", this._boundRestart), this.transport.off("ticks", this._boundRestart), this;
   }
-}, Li = class rs extends Ze {
+}, Jr = class on extends He {
   constructor() {
-    super(M(rs.getDefaults(), arguments)), this.name = "Transport", this._loop = new _h(!1), this._loopStart = 0, this._loopEnd = 0, this._scheduledEvents = {}, this._timeline = new $e(), this._repeatedEvents = new gh(), this._syncedSignals = [], this._swingAmount = 0;
-    const e = M(rs.getDefaults(), arguments);
-    this._ppq = e.ppq, this._clock = new Fi({
+    super(O(on.getDefaults(), arguments)), this.name = "Transport", this._loop = new Mh(!1), this._loopStart = 0, this._loopEnd = 0, this._scheduledEvents = {}, this._timeline = new Xe(), this._repeatedEvents = new Dh(), this._syncedSignals = [], this._swingAmount = 0;
+    const e = O(on.getDefaults(), arguments);
+    this._ppq = e.ppq, this._clock = new Qr({
       callback: this._processTick.bind(this),
       context: this.context,
       frequency: 0,
       units: "bpm"
-    }), this._bindClockEvents(), this.bpm = this._clock.frequency, this._clock.frequency.multiplier = e.ppq, this.bpm.setValueAtTime(e.bpm, 0), Y(this, "bpm"), this._timeSignature = e.timeSignature, this._swingTicks = e.ppq / 2;
+    }), this._bindClockEvents(), this.bpm = this._clock.frequency, this._clock.frequency.multiplier = e.ppq, this.bpm.setValueAtTime(e.bpm, 0), X(this, "bpm"), this._timeSignature = e.timeSignature, this._swingTicks = e.ppq / 2;
   }
   static getDefaults() {
-    return Object.assign(Ze.getDefaults(), {
+    return Object.assign(He.getDefaults(), {
       bpm: 120,
       loopEnd: "4m",
       loopStart: 0,
@@ -7346,32 +7346,32 @@ var bh = class qi extends Ut {
   }
   _processTick(e, t) {
     if (this._loop.get(e) && t >= this._loopEnd && (this.emit("loopEnd", e), this._clock.setTicksAtTime(this._loopStart, e), t = this._loopStart, this.emit("loopStart", e, this._clock.getSecondsAtTime(e)), this.emit("loop", e)), this._swingAmount > 0 && t % this._ppq !== 0 && t % (this._swingTicks * 2) !== 0) {
-      const n = t % (this._swingTicks * 2) / (this._swingTicks * 2), r = Math.sin(n * Math.PI) * this._swingAmount;
-      e += new xt(this.context, this._swingTicks * 2 / 3).toSeconds() * r;
+      const n = t % (this._swingTicks * 2) / (this._swingTicks * 2), i = Math.sin(n * Math.PI) * this._swingAmount;
+      e += new At(this.context, this._swingTicks * 2 / 3).toSeconds() * i;
     }
-    br(!0), this._timeline.forEachAtTime(t, (n) => n.invoke(e)), br(!1);
+    Mi(!0), this._timeline.forEachAtTime(t, (n) => n.invoke(e)), Mi(!1);
   }
   schedule(e, t) {
-    const n = new Ut(this, {
+    const n = new Gt(this, {
       callback: e,
-      time: new qt(this.context, t).toTicks()
+      time: new Wt(this.context, t).toTicks()
     });
     return this._addEvent(n, this._timeline);
   }
-  scheduleRepeat(e, t, n, r = 1 / 0) {
-    const i = new bh(this, {
+  scheduleRepeat(e, t, n, i = 1 / 0) {
+    const r = new Fh(this, {
       callback: e,
-      duration: new ct(this.context, r).toTicks(),
-      interval: new ct(this.context, t).toTicks(),
-      time: new qt(this.context, n).toTicks()
+      duration: new ut(this.context, i).toTicks(),
+      interval: new ut(this.context, t).toTicks(),
+      time: new Wt(this.context, n).toTicks()
     });
-    return this._addEvent(i, this._repeatedEvents);
+    return this._addEvent(r, this._repeatedEvents);
   }
   scheduleOnce(e, t) {
-    const n = new Ut(this, {
+    const n = new Gt(this, {
       callback: e,
       once: !0,
-      time: new qt(this.context, t).toTicks()
+      time: new Wt(this.context, t).toTicks()
     });
     return this._addEvent(n, this._timeline);
   }
@@ -7394,7 +7394,7 @@ var bh = class qi extends Ut {
   }
   _bindClockEvents() {
     this._clock.on("start", (e, t) => {
-      t = new xt(this.context, t).toSeconds(), this.emit("start", e, t);
+      t = new At(this.context, t).toSeconds(), this.emit("start", e, t);
     }), this._clock.on("stop", (e) => {
       this.emit("stop", e);
     }), this._clock.on("pause", (e) => {
@@ -7422,16 +7422,16 @@ var bh = class qi extends Ut {
     return this._timeSignature;
   }
   set timeSignature(e) {
-    Le(e) && (e = e[0] / e[1] * 4), this._timeSignature = e;
+    je(e) && (e = e[0] / e[1] * 4), this._timeSignature = e;
   }
   get loopStart() {
-    return new ct(this.context, this._loopStart, "i").toSeconds();
+    return new ut(this.context, this._loopStart, "i").toSeconds();
   }
   set loopStart(e) {
     this._loopStart = this.toTicks(e);
   }
   get loopEnd() {
-    return new ct(this.context, this._loopEnd, "i").toSeconds();
+    return new ut(this.context, this._loopEnd, "i").toSeconds();
   }
   set loopEnd(e) {
     this._loopEnd = this.toTicks(e);
@@ -7452,14 +7452,14 @@ var bh = class qi extends Ut {
     this._swingAmount = e;
   }
   get swingSubdivision() {
-    return new xt(this.context, this._swingTicks).toNotation();
+    return new At(this.context, this._swingTicks).toNotation();
   }
   set swingSubdivision(e) {
     this._swingTicks = this.toTicks(e);
   }
   get position() {
     const e = this.now(), t = this._clock.getTicksAtTime(e);
-    return new xt(this.context, t).toBarsBeatsSixteenths();
+    return new At(this.context, t).toBarsBeatsSixteenths();
   }
   set position(e) {
     const t = this.toTicks(e);
@@ -7485,8 +7485,8 @@ var bh = class qi extends Ut {
     if (this._clock.ticks !== e) {
       const t = this.now();
       if (this.state === "started") {
-        const n = this._clock.getTicksAtTime(t), r = t + this._clock.frequency.getDurationOfTicks(Math.ceil(n) - n, t);
-        this.emit("stop", r), this._clock.setTicksAtTime(e, r), this.emit("start", r, this._clock.getSecondsAtTime(r));
+        const n = this._clock.getTicksAtTime(t), i = t + this._clock.frequency.getDurationOfTicks(Math.ceil(n) - n, t);
+        this.emit("stop", i), this._clock.setTicksAtTime(e, i), this.emit("start", i, this._clock.getSecondsAtTime(i));
       } else
         this.emit("ticks", t), this._clock.setTicksAtTime(e, t);
     }
@@ -7506,24 +7506,24 @@ var bh = class qi extends Ut {
   nextSubdivision(e) {
     if (e = this.toTicks(e), this.state !== "started") return 0;
     {
-      const t = this.now(), n = this.getTicksAtTime(t), r = e - n % e;
-      return this._clock.nextTickTime(r, t);
+      const t = this.now(), n = this.getTicksAtTime(t), i = e - n % e;
+      return this._clock.nextTickTime(i, t);
     }
   }
   syncSignal(e, t) {
     const n = this.now();
-    let r = this.bpm, i = 1 / (60 / r.getValueAtTime(n) / this.PPQ), o = [];
+    let i = this.bpm, r = 1 / (60 / i.getValueAtTime(n) / this.PPQ), o = [];
     if (e.units === "time") {
-      const c = 0.015625 / i, l = new oe(c), u = new Pi(-1), h = new oe(c);
-      r.chain(l, u, h), r = h, i = 1 / i, o = [
+      const c = 0.015625 / r, l = new J(c), u = new Hr(-1), h = new J(c);
+      i.chain(l, u, h), i = h, r = 1 / r, o = [
         l,
         u,
         h
       ];
     }
-    t || (e.getValueAtTime(n) !== 0 ? t = e.getValueAtTime(n) / i : t = 0);
-    const a = new oe(t);
-    return r.connect(a), a.connect(e._param), o.push(a), this._syncedSignals.push({
+    t || (e.getValueAtTime(n) !== 0 ? t = e.getValueAtTime(n) / r : t = 0);
+    const a = new J(t);
+    return i.connect(a), a.connect(e._param), o.push(a), this._syncedSignals.push({
       initial: e.value,
       nodes: o,
       signal: e
@@ -7532,33 +7532,33 @@ var bh = class qi extends Ut {
   unsyncSignal(e) {
     for (let t = this._syncedSignals.length - 1; t >= 0; t--) {
       const n = this._syncedSignals[t];
-      n.signal === e && (n.nodes.forEach((r) => r.dispose()), n.signal.value = n.initial, this._syncedSignals.splice(t, 1));
+      n.signal === e && (n.nodes.forEach((i) => i.dispose()), n.signal.value = n.initial, this._syncedSignals.splice(t, 1));
     }
     return this;
   }
   dispose() {
-    return super.dispose(), this._clock.dispose(), Zs(this, "bpm"), this._timeline.dispose(), this._repeatedEvents.dispose(), this;
+    return super.dispose(), this._clock.dispose(), ti(this, "bpm"), this._timeline.dispose(), this._repeatedEvents.dispose(), this;
   }
 };
-zs.mixin(Li);
-xi((s) => {
-  s.transport = new Li({ context: s });
+Kn.mixin(Jr);
+Fr((s) => {
+  s.transport = new Jr({ context: s });
 });
-Ai((s) => {
+qr((s) => {
   s.transport.dispose();
 });
-var Ce = class extends $ {
+var ge = class extends B {
   constructor(s) {
-    super(s), this.input = void 0, this._state = new Ys("stopped"), this._synced = !1, this._scheduled = [], this._syncedStart = le, this._syncedStop = le, this._state.memory = 100, this._state.increasing = !0, this._volume = this.output = new Qs({
+    super(s), this.input = void 0, this._state = new ri("stopped"), this._synced = !1, this._scheduled = [], this._syncedStart = ue, this._syncedStop = ue, this._state.memory = 100, this._state.increasing = !0, this._volume = this.output = new ii({
       context: this.context,
       mute: s.mute,
       volume: s.volume
-    }), this.volume = this._volume.volume, Y(this, "volume"), this.onstop = s.onstop;
+    }), this.volume = this._volume.volume, X(this, "volume"), this.onstop = s.onstop;
   }
   static getDefaults() {
-    return Object.assign($.getDefaults(), {
+    return Object.assign(B.getDefaults(), {
       mute: !1,
-      onstop: le,
+      onstop: ue,
       volume: 0
     });
   }
@@ -7575,22 +7575,22 @@ var Ce = class extends $ {
     return this._synced ? s : Math.max(s, this.context.currentTime);
   }
   start(s, e, t) {
-    let n = Re(s) && this._synced ? this.context.transport.seconds : this.toSeconds(s);
+    let n = Ve(s) && this._synced ? this.context.transport.seconds : this.toSeconds(s);
     if (n = this._clampToCurrentTime(n), !this._synced && this._state.getValueAtTime(n) === "started")
-      G(Ot(n, this._state.get(n).time), "Start time must be strictly greater than previous start time"), this._state.cancel(n), this._state.setStateAtTime("started", n), this.log("restart", n), this.restart(n, e, t);
+      z(Mt(n, this._state.get(n).time), "Start time must be strictly greater than previous start time"), this._state.cancel(n), this._state.setStateAtTime("started", n), this.log("restart", n), this.restart(n, e, t);
     else if (this.log("start", n), this._state.setStateAtTime("started", n), this._synced) {
-      const r = this._state.get(n);
-      r && (r.offset = this.toSeconds(Rn(e, 0)), r.duration = t ? this.toSeconds(t) : void 0);
-      const i = this.context.transport.schedule((o) => {
+      const i = this._state.get(n);
+      i && (i.offset = this.toSeconds(Vs(e, 0)), i.duration = t ? this.toSeconds(t) : void 0);
+      const r = this.context.transport.schedule((o) => {
         this._start(o, e, t);
       }, n);
-      this._scheduled.push(i), this.context.transport.state === "started" && this.context.transport.getSecondsAtTime(this.immediate()) > n && this._syncedStart(this.now(), this.context.transport.seconds);
+      this._scheduled.push(r), this.context.transport.state === "started" && this.context.transport.getSecondsAtTime(this.immediate()) > n && this._syncedStart(this.now(), this.context.transport.seconds);
     } else
-      yi(this.context), this._start(n, e, t);
+      Dr(this.context), this._start(n, e, t);
     return this;
   }
   stop(s) {
-    let e = Re(s) && this._synced ? this.context.transport.seconds : this.toSeconds(s);
+    let e = Ve(s) && this._synced ? this.context.transport.seconds : this.toSeconds(s);
     if (e = this._clampToCurrentTime(e), this._state.getValueAtTime(e) === "started" || Z(this._state.getNextState("started", e))) {
       if (this.log("stop", e), !this._synced) this._stop(e);
       else {
@@ -7606,12 +7606,12 @@ var Ce = class extends $ {
   }
   sync() {
     return this._synced || (this._synced = !0, this._syncedStart = (s, e) => {
-      if (Ot(e, 0)) {
+      if (Mt(e, 0)) {
         const t = this._state.get(e);
         if (t && t.state === "started" && t.time !== e) {
           const n = e - this.toSeconds(t.time);
-          let r;
-          t.duration && (r = this.toSeconds(t.duration) - n), this._start(s, this.toSeconds(t.offset) + n, r);
+          let i;
+          t.duration && (i = this.toSeconds(t.duration) - n), this._start(s, this.toSeconds(t.offset) + n, i);
         }
       }
     }, this._syncedStop = (s) => {
@@ -7623,12 +7623,12 @@ var Ce = class extends $ {
     return this._synced && (this.context.transport.off("stop", this._syncedStop), this.context.transport.off("pause", this._syncedStop), this.context.transport.off("loopEnd", this._syncedStop), this.context.transport.off("start", this._syncedStart), this.context.transport.off("loopStart", this._syncedStart)), this._synced = !1, this._scheduled.forEach((s) => this.context.transport.clear(s)), this._scheduled = [], this._state.cancel(0), this._stop(0), this;
   }
   dispose() {
-    return super.dispose(), this.onstop = le, this.unsync(), this._volume.dispose(), this._state.dispose(), this;
+    return super.dispose(), this.onstop = ue, this.unsync(), this._volume.dispose(), this._state.dispose(), this;
   }
 };
-function wt(s, e) {
+function xt(s, e) {
   return pe(this, void 0, void 0, function* () {
-    const t = e / s.context.sampleRate, n = new Xs(1, t, s.context.sampleRate);
+    const t = e / s.context.sampleRate, n = new si(1, t, s.context.sampleRate);
     return new s.constructor(Object.assign(s.get(), {
       frequency: 2 / t,
       detune: 0,
@@ -7636,24 +7636,24 @@ function wt(s, e) {
     })).toDestination().start(0), (yield n.render()).getChannelData(0);
   });
 }
-var Ch = class is extends Nt {
+var Ph = class cn extends Dt {
   constructor() {
-    super(M(is.getDefaults(), arguments, ["frequency", "type"])), this.name = "ToneOscillatorNode", this._oscillator = this.context.createOscillator(), this._internalChannels = [this._oscillator];
-    const e = M(is.getDefaults(), arguments, ["frequency", "type"]);
-    rt(this._oscillator, this._gainNode), this.type = e.type, this.frequency = new ue({
+    super(O(cn.getDefaults(), arguments, ["frequency", "type"])), this.name = "ToneOscillatorNode", this._oscillator = this.context.createOscillator(), this._internalChannels = [this._oscillator];
+    const e = O(cn.getDefaults(), arguments, ["frequency", "type"]);
+    Pe(this._oscillator, this._gainNode), this.type = e.type, this.frequency = new se({
       context: this.context,
       param: this._oscillator.frequency,
       units: "frequency",
       value: e.frequency
-    }), this.detune = new ue({
+    }), this.detune = new se({
       context: this.context,
       param: this._oscillator.detune,
       units: "cents",
       value: e.detune
-    }), Y(this, ["frequency", "detune"]);
+    }), X(this, ["frequency", "detune"]);
   }
   static getDefaults() {
-    return Object.assign(Nt.getDefaults(), {
+    return Object.assign(Dt.getDefaults(), {
       detune: 0,
       frequency: 440,
       type: "sine"
@@ -7678,22 +7678,22 @@ var Ch = class is extends Nt {
   dispose() {
     return super.dispose(), this.state === "started" && this.stop(), this._oscillator.disconnect(), this.frequency.dispose(), this.detune.dispose(), this;
   }
-}, ke = class Je extends Ce {
+}, Ce = class Ke extends ge {
   constructor() {
-    super(M(Je.getDefaults(), arguments, ["frequency", "type"])), this.name = "Oscillator", this._oscillator = null;
-    const e = M(Je.getDefaults(), arguments, ["frequency", "type"]);
-    this.frequency = new ee({
+    super(O(Ke.getDefaults(), arguments, ["frequency", "type"])), this.name = "Oscillator", this._oscillator = null;
+    const e = O(Ke.getDefaults(), arguments, ["frequency", "type"]);
+    this.frequency = new Y({
       context: this.context,
       units: "frequency",
       value: e.frequency
-    }), Y(this, "frequency"), this.detune = new ee({
+    }), X(this, "frequency"), this.detune = new Y({
       context: this.context,
       units: "cents",
       value: e.detune
-    }), Y(this, "detune"), this._partials = e.partials, this._partialCount = e.partialCount, this._type = e.type, e.partialCount && e.type !== "custom" && (this._type = this.baseType + e.partialCount.toString()), this.phase = e.phase;
+    }), X(this, "detune"), this._partials = e.partials, this._partialCount = e.partialCount, this._type = e.type, e.partialCount && e.type !== "custom" && (this._type = this.baseType + e.partialCount.toString()), this.phase = e.phase;
   }
   static getDefaults() {
-    return Object.assign(Ce.getDefaults(), {
+    return Object.assign(ge.getDefaults(), {
       detune: 0,
       frequency: 440,
       partialCount: 0,
@@ -7703,7 +7703,7 @@ var Ch = class is extends Nt {
     });
   }
   _start(e) {
-    const t = this.toSeconds(e), n = new Ch({
+    const t = this.toSeconds(e), n = new Ph({
       context: this.context,
       onended: () => this.onstop(this)
     });
@@ -7724,9 +7724,9 @@ var Ch = class is extends Nt {
     return this.context.transport.unsyncSignal(this.frequency), this;
   }
   _getCachedPeriodicWave() {
-    if (this._type === "custom") return Je._periodicWaveCache.find((e) => e.phase === this._phase && $u(e.partials, this._partials));
+    if (this._type === "custom") return Ke._periodicWaveCache.find((e) => e.phase === this._phase && lh(e.partials, this._partials));
     {
-      const e = Je._periodicWaveCache.find((t) => t.type === this._type && t.phase === this._phase);
+      const e = Ke._periodicWaveCache.find((t) => t.type === this._type && t.phase === this._phase);
       return this._partialCount = e ? e.partialCount : this._partialCount, e;
     }
   }
@@ -7746,19 +7746,19 @@ var Ch = class is extends Nt {
     else {
       const n = this._getCachedPeriodicWave();
       if (Z(n)) {
-        const { partials: r, wave: i } = n;
-        this._wave = i, this._partials = r, this._oscillator !== null && this._oscillator.setPeriodicWave(this._wave);
+        const { partials: i, wave: r } = n;
+        this._wave = r, this._partials = i, this._oscillator !== null && this._oscillator.setPeriodicWave(this._wave);
       } else {
-        const [r, i] = this._getRealImaginary(e, this._phase), o = this.context.createPeriodicWave(r, i);
-        this._wave = o, this._oscillator !== null && this._oscillator.setPeriodicWave(this._wave), Je._periodicWaveCache.push({
-          imag: i,
+        const [i, r] = this._getRealImaginary(e, this._phase), o = this.context.createPeriodicWave(i, r);
+        this._wave = o, this._oscillator !== null && this._oscillator.setPeriodicWave(this._wave), Ke._periodicWaveCache.push({
+          imag: r,
           partialCount: this._partialCount,
           partials: this._partials,
           phase: this._phase,
-          real: r,
+          real: i,
           type: this._type,
           wave: this._wave
-        }), Je._periodicWaveCache.length > 100 && Je._periodicWaveCache.shift();
+        }), Ke._periodicWaveCache.length > 100 && Ke._periodicWaveCache.shift();
       }
     }
   }
@@ -7772,21 +7772,21 @@ var Ch = class is extends Nt {
     return this._partialCount;
   }
   set partialCount(e) {
-    yt(e, 0);
+    wt(e, 0);
     let t = this._type;
     const n = /^(sine|triangle|square|sawtooth)(\d+)$/.exec(this._type);
     if (n && (t = n[1]), this._type !== "custom") e === 0 ? this.type = t : this.type = t + e.toString();
     else {
-      const r = new Float32Array(e);
-      this._partials.forEach((i, o) => r[o] = i), this._partials = Array.from(r), this.type = this._type;
+      const i = new Float32Array(e);
+      this._partials.forEach((r, o) => i[o] = r), this._partials = Array.from(i), this.type = this._type;
     }
   }
   _getRealImaginary(e, t) {
     let n = 2048;
-    const r = new Float32Array(n), i = new Float32Array(n);
+    const i = new Float32Array(n), r = new Float32Array(n);
     let o = 1;
     if (e === "custom") {
-      if (o = this._partials.length + 1, this._partialCount = this._partials.length, n = o, this._partials.length === 0) return [r, i];
+      if (o = this._partials.length + 1, this._partialCount = this._partials.length, n = o, this._partials.length === 0) return [i, r];
     } else {
       const a = /^(sine|triangle|square|sawtooth)(\d+)$/.exec(e);
       a ? (o = parseInt(a[2], 10) + 1, this._partialCount = parseInt(a[2], 10), e = a[1], o = Math.max(o, 2), n = o) : this._partialCount = 0, this._partials = [];
@@ -7813,22 +7813,22 @@ var Ch = class is extends Nt {
         default:
           throw new TypeError("Oscillator: invalid type: " + e);
       }
-      l !== 0 ? (r[a] = -l * Math.sin(t * a), i[a] = l * Math.cos(t * a)) : (r[a] = 0, i[a] = 0);
+      l !== 0 ? (i[a] = -l * Math.sin(t * a), r[a] = l * Math.cos(t * a)) : (i[a] = 0, r[a] = 0);
     }
-    return [r, i];
+    return [i, r];
   }
   _inverseFFT(e, t, n) {
-    let r = 0;
-    const i = e.length;
-    for (let o = 0; o < i; o++) r += e[o] * Math.cos(o * n) + t[o] * Math.sin(o * n);
-    return r;
+    let i = 0;
+    const r = e.length;
+    for (let o = 0; o < r; o++) i += e[o] * Math.cos(o * n) + t[o] * Math.sin(o * n);
+    return i;
   }
   getInitialValue() {
     const [e, t] = this._getRealImaginary(this._type, 0);
     let n = 0;
-    const r = Math.PI * 2, i = 32;
-    for (let o = 0; o < i; o++) n = Math.max(this._inverseFFT(e, t, o / i * r), n);
-    return eh(-this._inverseFFT(e, t, this._phase) / n, -1, 1);
+    const i = Math.PI * 2, r = 32;
+    for (let o = 0; o < r; o++) n = Math.max(this._inverseFFT(e, t, o / r * i), n);
+    return gh(-this._inverseFFT(e, t, this._phase) / n, -1, 1);
   }
   get partials() {
     return this._partials.slice(0, this.partialCount);
@@ -7844,53 +7844,53 @@ var Ch = class is extends Nt {
   }
   asArray(e = 1024) {
     return pe(this, void 0, void 0, function* () {
-      return wt(this, e);
+      return xt(this, e);
     });
   }
   dispose() {
     return super.dispose(), this._oscillator !== null && this._oscillator.dispose(), this._wave = void 0, this.frequency.dispose(), this.detune.dispose(), this;
   }
 };
-ke._periodicWaveCache = [];
-var Js = class as extends Ce {
+Ce._periodicWaveCache = [];
+var ai = class ln extends ge {
   constructor() {
-    super(M(as.getDefaults(), arguments, [
+    super(O(ln.getDefaults(), arguments, [
       "frequency",
       "type",
       "modulationType"
-    ])), this.name = "FMOscillator", this._modulationNode = new oe({
+    ])), this.name = "FMOscillator", this._modulationNode = new J({
       context: this.context,
       gain: 0
     });
-    const e = M(as.getDefaults(), arguments, [
+    const e = O(ln.getDefaults(), arguments, [
       "frequency",
       "type",
       "modulationType"
     ]);
-    this._carrier = new ke({
+    this._carrier = new Ce({
       context: this.context,
       detune: e.detune,
       frequency: 0,
       onstop: () => this.onstop(this),
       phase: e.phase,
       type: e.type
-    }), this.detune = this._carrier.detune, this.frequency = new ee({
+    }), this.detune = this._carrier.detune, this.frequency = new Y({
       context: this.context,
       units: "frequency",
       value: e.frequency
-    }), this._modulator = new ke({
+    }), this._modulator = new Ce({
       context: this.context,
       phase: e.phase,
       type: e.modulationType
-    }), this.harmonicity = new Mt({
+    }), this.harmonicity = new at({
       context: this.context,
       units: "positive",
       value: e.harmonicity
-    }), this.modulationIndex = new Mt({
+    }), this.modulationIndex = new at({
       context: this.context,
       units: "positive",
       value: e.modulationIndex
-    }), this.frequency.connect(this._carrier.frequency), this.frequency.chain(this.harmonicity, this._modulator.frequency), this.frequency.chain(this.modulationIndex, this._modulationNode), this._modulator.connect(this._modulationNode.gain), this._modulationNode.connect(this._carrier.frequency), this._carrier.connect(this.output), this.detune.connect(this._modulator.detune), Y(this, [
+    }), this.frequency.connect(this._carrier.frequency), this.frequency.chain(this.harmonicity, this._modulator.frequency), this.frequency.chain(this.modulationIndex, this._modulationNode), this._modulator.connect(this._modulationNode.gain), this._modulationNode.connect(this._carrier.frequency), this._carrier.connect(this.output), this.detune.connect(this._modulator.detune), X(this, [
       "modulationIndex",
       "frequency",
       "detune",
@@ -7898,7 +7898,7 @@ var Js = class as extends Ce {
     ]);
   }
   static getDefaults() {
-    return Object.assign(ke.getDefaults(), {
+    return Object.assign(Ce.getDefaults(), {
       harmonicity: 1,
       modulationIndex: 2,
       modulationType: "square"
@@ -7951,23 +7951,23 @@ var Js = class as extends Ce {
   }
   asArray(e = 1024) {
     return pe(this, void 0, void 0, function* () {
-      return wt(this, e);
+      return xt(this, e);
     });
   }
   dispose() {
     return super.dispose(), this.frequency.dispose(), this.harmonicity.dispose(), this._carrier.dispose(), this._modulator.dispose(), this._modulationNode.dispose(), this.modulationIndex.dispose(), this;
   }
-}, Dt = class os extends $ {
+}, Et = class un extends B {
   constructor() {
-    super(M(os.getDefaults(), arguments)), this._scheduledEvents = [], this._synced = !1, this._original_triggerAttack = this.triggerAttack, this._original_triggerRelease = this.triggerRelease, this._syncedRelease = (t) => this._original_triggerRelease(t);
-    const e = M(os.getDefaults(), arguments);
-    this._volume = this.output = new Qs({
+    super(O(un.getDefaults(), arguments)), this._scheduledEvents = [], this._synced = !1, this._original_triggerAttack = this.triggerAttack, this._original_triggerRelease = this.triggerRelease, this._syncedRelease = (t) => this._original_triggerRelease(t);
+    const e = O(un.getDefaults(), arguments);
+    this._volume = this.output = new ii({
       context: this.context,
       volume: e.volume
-    }), this.volume = this._volume.volume, Y(this, "volume");
+    }), this.volume = this._volume.volume, X(this, "volume");
   }
   static getDefaults() {
-    return Object.assign($.getDefaults(), { volume: 0 });
+    return Object.assign(B.getDefaults(), { volume: 0 });
   }
   sync() {
     return this._syncState() && (this._syncMethod("triggerAttack", 1), this._syncMethod("triggerRelease", 0), this.context.transport.on("stop", this._syncedRelease), this.context.transport.on("pause", this._syncedRelease), this.context.transport.on("loopEnd", this._syncedRelease)), this;
@@ -7978,40 +7978,40 @@ var Js = class as extends Ce {
   }
   _syncMethod(e, t) {
     const n = this["_original_" + e] = this[e];
-    this[e] = (...r) => {
-      const i = r[t], o = this.context.transport.schedule((a) => {
-        r[t] = a, n.apply(this, r);
-      }, i);
+    this[e] = (...i) => {
+      const r = i[t], o = this.context.transport.schedule((a) => {
+        i[t] = a, n.apply(this, i);
+      }, r);
       this._scheduledEvents.push(o);
     };
   }
   unsync() {
     return this._scheduledEvents.forEach((e) => this.context.transport.clear(e)), this._scheduledEvents = [], this._synced && (this._synced = !1, this.triggerAttack = this._original_triggerAttack, this.triggerRelease = this._original_triggerRelease, this.context.transport.off("stop", this._syncedRelease), this.context.transport.off("pause", this._syncedRelease), this.context.transport.off("loopEnd", this._syncedRelease)), this;
   }
-  triggerAttackRelease(e, t, n, r) {
-    const i = this.toSeconds(n), o = this.toSeconds(t);
-    return this.triggerAttack(e, i, r), this.triggerRelease(i + o), this;
+  triggerAttackRelease(e, t, n, i) {
+    const r = this.toSeconds(n), o = this.toSeconds(t);
+    return this.triggerAttack(e, r, i), this.triggerRelease(r + o), this;
   }
   dispose() {
     return super.dispose(), this._volume.dispose(), this.unsync(), this._scheduledEvents = [], this;
   }
-}, Xe = class cs extends Dt {
+}, qe = class hn extends Et {
   constructor() {
-    super(M(cs.getDefaults(), arguments));
-    const e = M(cs.getDefaults(), arguments);
+    super(O(hn.getDefaults(), arguments));
+    const e = O(hn.getDefaults(), arguments);
     this.portamento = e.portamento, this.onsilence = e.onsilence;
   }
   static getDefaults() {
-    return Object.assign(Dt.getDefaults(), {
+    return Object.assign(Et.getDefaults(), {
       detune: 0,
-      onsilence: le,
+      onsilence: ue,
       portamento: 0
     });
   }
   triggerAttack(e, t, n = 1) {
     this.log("triggerAttack", e, t, n);
-    const r = this.toSeconds(t);
-    return this._triggerEnvelopeAttack(r, n), this.setNote(e, r), this;
+    const i = this.toSeconds(t);
+    return this._triggerEnvelopeAttack(i, n), this.setNote(e, i), this;
   }
   triggerRelease(e) {
     this.log("triggerRelease", e);
@@ -8019,62 +8019,62 @@ var Js = class as extends Ce {
     return this._triggerEnvelopeRelease(t), this;
   }
   setNote(e, t) {
-    const n = this.toSeconds(t), r = e instanceof An ? e.toFrequency() : e;
+    const n = this.toSeconds(t), i = e instanceof As ? e.toFrequency() : e;
     if (this.portamento > 0 && this.getLevelAtTime(n) > 0.05) {
-      const i = this.toSeconds(this.portamento);
-      this.frequency.exponentialRampTo(r, i, n);
-    } else this.frequency.setValueAtTime(r, n);
+      const r = this.toSeconds(this.portamento);
+      this.frequency.exponentialRampTo(i, r, n);
+    } else this.frequency.setValueAtTime(i, n);
     return this;
   }
 };
-Tt([Yt(0)], Xe.prototype, "portamento", void 0);
-var Sr = [
+bt([Kt(0)], qe.prototype, "portamento", void 0);
+var Ii = [
   1,
   1.483,
   1.932,
   2.546,
   2.63,
   3.897
-], cd = class ls extends Xe {
+], bd = class dn extends qe {
   constructor() {
-    super(M(ls.getDefaults(), arguments)), this.name = "MetalSynth", this._oscillators = [], this._freqMultipliers = [];
-    const e = M(ls.getDefaults(), arguments);
-    this.detune = new ee({
+    super(O(dn.getDefaults(), arguments)), this.name = "MetalSynth", this._oscillators = [], this._freqMultipliers = [];
+    const e = O(dn.getDefaults(), arguments);
+    this.detune = new Y({
       context: this.context,
       units: "cents",
       value: e.detune
-    }), this.frequency = new ee({
+    }), this.frequency = new Y({
       context: this.context,
       units: "frequency"
-    }), this._amplitude = new oe({
+    }), this._amplitude = new J({
       context: this.context,
       gain: 0
-    }).connect(this.output), this._highpass = new $n({
+    }).connect(this.output), this._highpass = new Xs({
       Q: 0,
       context: this.context,
       type: "highpass"
     }).connect(this._amplitude);
-    for (let t = 0; t < Sr.length; t++) {
-      const n = new Js({
+    for (let t = 0; t < Ii.length; t++) {
+      const n = new ai({
         context: this.context,
         harmonicity: e.harmonicity,
         modulationIndex: e.modulationIndex,
         modulationType: "square",
-        onstop: t === 0 ? () => this.onsilence(this) : le,
+        onstop: t === 0 ? () => this.onsilence(this) : ue,
         type: "square"
       });
       n.connect(this._highpass), this._oscillators[t] = n;
-      const r = new Mt({
+      const i = new at({
         context: this.context,
-        value: Sr[t]
+        value: Ii[t]
       });
-      this._freqMultipliers[t] = r, this.frequency.chain(r, n.frequency), this.detune.connect(n.detune);
+      this._freqMultipliers[t] = i, this.frequency.chain(i, n.frequency), this.detune.connect(n.detune);
     }
-    this._filterFreqScaler = new Vi({
+    this._filterFreqScaler = new ni({
       context: this.context,
       max: 7e3,
       min: this.toFrequency(e.resonance)
-    }), this.envelope = new Ne({
+    }), this.envelope = new ke({
       attack: e.envelope.attack,
       attackCurve: "linear",
       context: this.context,
@@ -8084,8 +8084,8 @@ var Sr = [
     }), this.envelope.chain(this._filterFreqScaler, this._highpass.frequency), this.envelope.connect(this._amplitude.gain), this._octaves = e.octaves, this.octaves = e.octaves;
   }
   static getDefaults() {
-    return et(Xe.getDefaults(), {
-      envelope: Object.assign(Fe(Ne.getDefaults(), Object.keys($.getDefaults())), {
+    return tt(qe.getDefaults(), {
+      envelope: Object.assign(Se(ke.getDefaults(), Object.keys(B.getDefaults())), {
         attack: 1e-3,
         decay: 1.4,
         release: 0.2
@@ -8134,14 +8134,14 @@ var Sr = [
   dispose() {
     return super.dispose(), this._oscillators.forEach((e) => e.dispose()), this._freqMultipliers.forEach((e) => e.dispose()), this.frequency.dispose(), this.detune.dispose(), this._filterFreqScaler.dispose(), this._amplitude.dispose(), this.envelope.dispose(), this._highpass.dispose(), this;
   }
-}, Ks = class Wi extends Ne {
+}, oi = class Kr extends ke {
   constructor() {
-    super(M(Wi.getDefaults(), arguments, [
+    super(O(Kr.getDefaults(), arguments, [
       "attack",
       "decay",
       "sustain",
       "release"
-    ])), this.name = "AmplitudeEnvelope", this._gainNode = new oe({
+    ])), this.name = "AmplitudeEnvelope", this._gainNode = new J({
       context: this.context,
       gain: 0
     }), this.output = this._gainNode, this.input = this._gainNode, this._sig.connect(this._gainNode.gain), this.output = this._gainNode, this.input = this._gainNode;
@@ -8149,9 +8149,9 @@ var Sr = [
   dispose() {
     return super.dispose(), this._gainNode.dispose(), this;
   }
-}, xh = class extends _t {
+}, ea = class extends rt {
   constructor() {
-    super(...arguments), this.name = "AudioToGain", this._norm = new Qt({
+    super(...arguments), this.name = "AudioToGain", this._norm = new Jt({
       context: this.context,
       mapping: (s) => (s + 1) / 2
     }), this.input = this._norm, this.output = this._norm;
@@ -8159,41 +8159,41 @@ var Sr = [
   dispose() {
     return super.dispose(), this._norm.dispose(), this;
   }
-}, ji = class us extends Ce {
+}, ta = class pn extends ge {
   constructor() {
-    super(M(us.getDefaults(), arguments, [
+    super(O(pn.getDefaults(), arguments, [
       "frequency",
       "type",
       "modulationType"
-    ])), this.name = "AMOscillator", this._modulationScale = new xh({ context: this.context }), this._modulationNode = new oe({ context: this.context });
-    const e = M(us.getDefaults(), arguments, [
+    ])), this.name = "AMOscillator", this._modulationScale = new ea({ context: this.context }), this._modulationNode = new J({ context: this.context });
+    const e = O(pn.getDefaults(), arguments, [
       "frequency",
       "type",
       "modulationType"
     ]);
-    this._carrier = new ke({
+    this._carrier = new Ce({
       context: this.context,
       detune: e.detune,
       frequency: e.frequency,
       onstop: () => this.onstop(this),
       phase: e.phase,
       type: e.type
-    }), this.frequency = this._carrier.frequency, this.detune = this._carrier.detune, this._modulator = new ke({
+    }), this.frequency = this._carrier.frequency, this.detune = this._carrier.detune, this._modulator = new Ce({
       context: this.context,
       phase: e.phase,
       type: e.modulationType
-    }), this.harmonicity = new Mt({
+    }), this.harmonicity = new at({
       context: this.context,
       units: "positive",
       value: e.harmonicity
-    }), this.frequency.chain(this.harmonicity, this._modulator.frequency), this._modulator.chain(this._modulationScale, this._modulationNode.gain), this._carrier.chain(this._modulationNode, this.output), Y(this, [
+    }), this.frequency.chain(this.harmonicity, this._modulator.frequency), this._modulator.chain(this._modulationScale, this._modulationNode.gain), this._carrier.chain(this._modulationNode, this.output), X(this, [
       "frequency",
       "detune",
       "harmonicity"
     ]);
   }
   static getDefaults() {
-    return Object.assign(ke.getDefaults(), {
+    return Object.assign(Ce.getDefaults(), {
       harmonicity: 1,
       modulationType: "square"
     });
@@ -8245,36 +8245,36 @@ var Sr = [
   }
   asArray(e = 1024) {
     return pe(this, void 0, void 0, function* () {
-      return wt(this, e);
+      return xt(this, e);
     });
   }
   dispose() {
     return super.dispose(), this.frequency.dispose(), this.detune.dispose(), this.harmonicity.dispose(), this._carrier.dispose(), this._modulator.dispose(), this._modulationNode.dispose(), this._modulationScale.dispose(), this;
   }
-}, Bi = class hs extends Ce {
+}, sa = class fn extends ge {
   constructor() {
-    super(M(hs.getDefaults(), arguments, [
+    super(O(fn.getDefaults(), arguments, [
       "frequency",
       "type",
       "spread"
     ])), this.name = "FatOscillator", this._oscillators = [];
-    const e = M(hs.getDefaults(), arguments, [
+    const e = O(fn.getDefaults(), arguments, [
       "frequency",
       "type",
       "spread"
     ]);
-    this.frequency = new ee({
+    this.frequency = new Y({
       context: this.context,
       units: "frequency",
       value: e.frequency
-    }), this.detune = new ee({
+    }), this.detune = new Y({
       context: this.context,
       units: "cents",
       value: e.detune
-    }), this._spread = e.spread, this._type = e.type, this._phase = e.phase, this._partials = e.partials, this._partialCount = e.partialCount, this.count = e.count, Y(this, ["frequency", "detune"]);
+    }), this._spread = e.spread, this._type = e.type, this._phase = e.phase, this._partials = e.partials, this._partialCount = e.partialCount, this.count = e.count, X(this, ["frequency", "detune"]);
   }
   static getDefaults() {
-    return Object.assign(ke.getDefaults(), {
+    return Object.assign(Ce.getDefaults(), {
       count: 3,
       spread: 20,
       type: "sawtooth"
@@ -8304,23 +8304,23 @@ var Sr = [
   set spread(e) {
     if (this._spread = e, this._oscillators.length > 1) {
       const t = -e / 2, n = e / (this._oscillators.length - 1);
-      this._forEach((r, i) => r.detune.value = t + n * i);
+      this._forEach((i, r) => i.detune.value = t + n * r);
     }
   }
   get count() {
     return this._oscillators.length;
   }
   set count(e) {
-    if (yt(e, 1), this._oscillators.length !== e) {
+    if (wt(e, 1), this._oscillators.length !== e) {
       this._forEach((t) => t.dispose()), this._oscillators = [];
       for (let t = 0; t < e; t++) {
-        const n = new ke({
+        const n = new Ce({
           context: this.context,
           volume: -6 - e * 1.1,
           type: this._type,
           phase: this._phase + t / e * 360,
           partialCount: this._partialCount,
-          onstop: t === 0 ? () => this.onstop(this) : le
+          onstop: t === 0 ? () => this.onstop(this) : ue
         });
         this.type === "custom" && (n.partials = this._partials), this.frequency.connect(n.frequency), this.detune.connect(n.detune), n.detune.overridden = !1, n.connect(this.output), this._oscillators[t] = n;
       }
@@ -8353,41 +8353,41 @@ var Sr = [
   }
   asArray(e = 1024) {
     return pe(this, void 0, void 0, function* () {
-      return wt(this, e);
+      return xt(this, e);
     });
   }
   dispose() {
     return super.dispose(), this.frequency.dispose(), this.detune.dispose(), this._forEach((e) => e.dispose()), this;
   }
-}, er = class ds extends Ce {
+}, ci = class mn extends ge {
   constructor() {
-    super(M(ds.getDefaults(), arguments, ["frequency", "width"])), this.name = "PulseOscillator", this._widthGate = new oe({
+    super(O(mn.getDefaults(), arguments, ["frequency", "width"])), this.name = "PulseOscillator", this._widthGate = new J({
       context: this.context,
       gain: 0
-    }), this._thresh = new Qt({
+    }), this._thresh = new Jt({
       context: this.context,
       mapping: (t) => t <= 0 ? -1 : 1
     });
-    const e = M(ds.getDefaults(), arguments, ["frequency", "width"]);
-    this.width = new ee({
+    const e = O(mn.getDefaults(), arguments, ["frequency", "width"]);
+    this.width = new Y({
       context: this.context,
       units: "audioRange",
       value: e.width
-    }), this._triangle = new ke({
+    }), this._triangle = new Ce({
       context: this.context,
       detune: e.detune,
       frequency: e.frequency,
       onstop: () => this.onstop(this),
       phase: e.phase,
       type: "triangle"
-    }), this.frequency = this._triangle.frequency, this.detune = this._triangle.detune, this._triangle.chain(this._thresh, this.output), this.width.chain(this._widthGate, this._thresh), Y(this, [
+    }), this.frequency = this._triangle.frequency, this.detune = this._triangle.detune, this._triangle.chain(this._thresh, this.output), this.width.chain(this._widthGate, this._thresh), X(this, [
       "width",
       "frequency",
       "detune"
     ]);
   }
   static getDefaults() {
-    return Object.assign(Ce.getDefaults(), {
+    return Object.assign(ge.getDefaults(), {
       detune: 0,
       frequency: 440,
       phase: 0,
@@ -8427,36 +8427,36 @@ var Sr = [
   }
   asArray(e = 1024) {
     return pe(this, void 0, void 0, function* () {
-      return wt(this, e);
+      return xt(this, e);
     });
   }
   dispose() {
     return super.dispose(), this._triangle.dispose(), this.width.dispose(), this._widthGate.dispose(), this._thresh.dispose(), this;
   }
-}, Ui = class ps extends Ce {
+}, na = class _n extends ge {
   constructor() {
-    super(M(ps.getDefaults(), arguments, ["frequency", "modulationFrequency"])), this.name = "PWMOscillator", this.sourceType = "pwm", this._scale = new Mt({
+    super(O(_n.getDefaults(), arguments, ["frequency", "modulationFrequency"])), this.name = "PWMOscillator", this.sourceType = "pwm", this._scale = new at({
       context: this.context,
       value: 2
     });
-    const e = M(ps.getDefaults(), arguments, ["frequency", "modulationFrequency"]);
-    this._pulse = new er({
+    const e = O(_n.getDefaults(), arguments, ["frequency", "modulationFrequency"]);
+    this._pulse = new ci({
       context: this.context,
       frequency: e.modulationFrequency
-    }), this._pulse.carrierType = "sine", this.modulationFrequency = this._pulse.frequency, this._modulator = new ke({
+    }), this._pulse.carrierType = "sine", this.modulationFrequency = this._pulse.frequency, this._modulator = new Ce({
       context: this.context,
       detune: e.detune,
       frequency: e.frequency,
       onstop: () => this.onstop(this),
       phase: e.phase
-    }), this.frequency = this._modulator.frequency, this.detune = this._modulator.detune, this._modulator.chain(this._scale, this._pulse.width), this._pulse.connect(this.output), Y(this, [
+    }), this.frequency = this._modulator.frequency, this.detune = this._modulator.detune, this._modulator.chain(this._scale, this._pulse.width), this._pulse.connect(this.output), X(this, [
       "modulationFrequency",
       "frequency",
       "detune"
     ]);
   }
   static getDefaults() {
-    return Object.assign(Ce.getDefaults(), {
+    return Object.assign(ge.getDefaults(), {
       detune: 0,
       frequency: 440,
       modulationFrequency: 0.4,
@@ -8493,35 +8493,35 @@ var Sr = [
   }
   asArray(e = 1024) {
     return pe(this, void 0, void 0, function* () {
-      return wt(this, e);
+      return xt(this, e);
     });
   }
   dispose() {
     return super.dispose(), this._pulse.dispose(), this._scale.dispose(), this._modulator.dispose(), this;
   }
-}, Ar = {
-  am: ji,
-  fat: Bi,
-  fm: Js,
-  oscillator: ke,
-  pulse: er,
-  pwm: Ui
-}, vn = class fs extends Ce {
+}, Ri = {
+  am: ta,
+  fat: sa,
+  fm: ai,
+  oscillator: Ce,
+  pulse: ci,
+  pwm: na
+}, It = class gn extends ge {
   constructor() {
-    super(M(fs.getDefaults(), arguments, ["frequency", "type"])), this.name = "OmniOscillator";
-    const e = M(fs.getDefaults(), arguments, ["frequency", "type"]);
-    this.frequency = new ee({
+    super(O(gn.getDefaults(), arguments, ["frequency", "type"])), this.name = "OmniOscillator";
+    const e = O(gn.getDefaults(), arguments, ["frequency", "type"]);
+    this.frequency = new Y({
       context: this.context,
       units: "frequency",
       value: e.frequency
-    }), this.detune = new ee({
+    }), this.detune = new Y({
       context: this.context,
       units: "cents",
       value: e.detune
-    }), Y(this, ["frequency", "detune"]), this.set(e);
+    }), X(this, ["frequency", "detune"]), this.set(e);
   }
   static getDefaults() {
-    return Object.assign(ke.getDefaults(), Js.getDefaults(), ji.getDefaults(), Bi.getDefaults(), er.getDefaults(), Ui.getDefaults());
+    return Object.assign(Ce.getDefaults(), ai.getDefaults(), ta.getDefaults(), sa.getDefaults(), ci.getDefaults(), na.getDefaults());
   }
   _start(e) {
     this._oscillator.start(e);
@@ -8561,10 +8561,10 @@ var Sr = [
   _createNewOscillator(e) {
     if (e !== this._sourceType) {
       this._sourceType = e;
-      const t = Ar[e], n = this.now();
+      const t = Ri[e], n = this.now();
       if (this._oscillator) {
-        const r = this._oscillator;
-        r.stop(n), this.context.setTimeout(() => r.dispose(), this.blockTime);
+        const i = this._oscillator;
+        i.stop(n), this.context.setTimeout(() => i.dispose(), this.blockTime);
       }
       this._oscillator = new t({ context: this.context }), this.frequency.connect(this._oscillator.frequency), this.detune.connect(this._oscillator.detune), this._oscillator.connect(this.output), this._oscillator.onstop = () => this.onstop(this), this.state === "started" && this._oscillator.start(n);
     }
@@ -8583,7 +8583,7 @@ var Sr = [
     this._oscillator.type !== "pwm" && this._oscillator.type !== "pulse" && (t = this._oscillator.type), e === "fm" ? this.type = "fm" + t : e === "am" ? this.type = "am" + t : e === "fat" ? this.type = "fat" + t : e === "oscillator" ? this.type = t : e === "pulse" ? this.type = "pulse" : e === "pwm" && (this.type = "pwm");
   }
   _getOscType(e, t) {
-    return e instanceof Ar[t];
+    return e instanceof Ri[t];
   }
   get baseType() {
     return this._oscillator.baseType;
@@ -8598,19 +8598,19 @@ var Sr = [
     if (this._getOscType(this._oscillator, "fat")) return this._oscillator.count;
   }
   set count(e) {
-    this._getOscType(this._oscillator, "fat") && ft(e) && (this._oscillator.count = e);
+    this._getOscType(this._oscillator, "fat") && _t(e) && (this._oscillator.count = e);
   }
   get spread() {
     if (this._getOscType(this._oscillator, "fat")) return this._oscillator.spread;
   }
   set spread(e) {
-    this._getOscType(this._oscillator, "fat") && ft(e) && (this._oscillator.spread = e);
+    this._getOscType(this._oscillator, "fat") && _t(e) && (this._oscillator.spread = e);
   }
   get modulationType() {
     if (this._getOscType(this._oscillator, "fm") || this._getOscType(this._oscillator, "am")) return this._oscillator.modulationType;
   }
   set modulationType(e) {
-    (this._getOscType(this._oscillator, "fm") || this._getOscType(this._oscillator, "am")) && mt(e) && (this._oscillator.modulationType = e);
+    (this._getOscType(this._oscillator, "fm") || this._getOscType(this._oscillator, "am")) && gt(e) && (this._oscillator.modulationType = e);
   }
   get modulationIndex() {
     if (this._getOscType(this._oscillator, "fm")) return this._oscillator.modulationIndex;
@@ -8623,21 +8623,21 @@ var Sr = [
   }
   asArray(e = 1024) {
     return pe(this, void 0, void 0, function* () {
-      return wt(this, e);
+      return xt(this, e);
     });
   }
   dispose() {
     return super.dispose(), this.detune.dispose(), this.frequency.dispose(), this._oscillator.dispose(), this;
   }
-}, ms = class _s extends Xe {
+}, zt = class vn extends qe {
   constructor() {
-    super(M(_s.getDefaults(), arguments)), this.name = "Synth";
-    const e = M(_s.getDefaults(), arguments);
-    this.oscillator = new vn(Object.assign({
+    super(O(vn.getDefaults(), arguments)), this.name = "Synth";
+    const e = O(vn.getDefaults(), arguments);
+    this.oscillator = new It(Object.assign({
       context: this.context,
       detune: e.detune,
       onstop: () => this.onsilence(this)
-    }, e.oscillator)), this.frequency = this.oscillator.frequency, this.detune = this.oscillator.detune, this.envelope = new Ks(Object.assign({ context: this.context }, e.envelope)), this.oscillator.chain(this.envelope, this.output), Y(this, [
+    }, e.oscillator)), this.frequency = this.oscillator.frequency, this.detune = this.oscillator.detune, this.envelope = new oi(Object.assign({ context: this.context }, e.envelope)), this.oscillator.chain(this.envelope, this.output), X(this, [
       "oscillator",
       "frequency",
       "detune",
@@ -8645,15 +8645,15 @@ var Sr = [
     ]);
   }
   static getDefaults() {
-    return Object.assign(Xe.getDefaults(), {
-      envelope: Object.assign(Fe(Ne.getDefaults(), Object.keys($.getDefaults())), {
+    return Object.assign(qe.getDefaults(), {
+      envelope: Object.assign(Se(ke.getDefaults(), Object.keys(B.getDefaults())), {
         attack: 5e-3,
         decay: 0.1,
         release: 1,
         sustain: 0.3
       }),
-      oscillator: Object.assign(Fe(vn.getDefaults(), [
-        ...Object.keys(Ce.getDefaults()),
+      oscillator: Object.assign(Se(It.getDefaults(), [
+        ...Object.keys(ge.getDefaults()),
         "frequency",
         "detune"
       ]), { type: "triangle" })
@@ -8661,8 +8661,8 @@ var Sr = [
   }
   _triggerEnvelopeAttack(e, t) {
     if (this.envelope.triggerAttack(e, t), this.oscillator.start(e), this.envelope.sustain === 0) {
-      const n = this.toSeconds(this.envelope.attack), r = this.toSeconds(this.envelope.decay);
-      this.oscillator.stop(e + n + r);
+      const n = this.toSeconds(this.envelope.attack), i = this.toSeconds(this.envelope.decay);
+      this.oscillator.stop(e + n + i);
     }
   }
   _triggerEnvelopeRelease(e) {
@@ -8674,14 +8674,14 @@ var Sr = [
   dispose() {
     return super.dispose(), this.oscillator.dispose(), this.envelope.dispose(), this;
   }
-}, Gi = class gs extends ms {
+}, ia = class yn extends zt {
   constructor() {
-    super(M(gs.getDefaults(), arguments)), this.name = "MembraneSynth", this.portamento = 0;
-    const e = M(gs.getDefaults(), arguments);
-    this.pitchDecay = e.pitchDecay, this.octaves = e.octaves, Y(this, ["oscillator", "envelope"]);
+    super(O(yn.getDefaults(), arguments)), this.name = "MembraneSynth", this.portamento = 0;
+    const e = O(yn.getDefaults(), arguments);
+    this.pitchDecay = e.pitchDecay, this.octaves = e.octaves, X(this, ["oscillator", "envelope"]);
   }
   static getDefaults() {
-    return et(Xe.getDefaults(), ms.getDefaults(), {
+    return tt(qe.getDefaults(), zt.getDefaults(), {
       envelope: {
         attack: 1e-3,
         attackCurve: "exponential",
@@ -8695,40 +8695,40 @@ var Sr = [
     });
   }
   setNote(e, t) {
-    const n = this.toSeconds(t), r = this.toFrequency(e instanceof An ? e.toFrequency() : e), i = r * this.octaves;
-    return this.oscillator.frequency.setValueAtTime(i, n), this.oscillator.frequency.exponentialRampToValueAtTime(r, n + this.toSeconds(this.pitchDecay)), this;
+    const n = this.toSeconds(t), i = this.toFrequency(e instanceof As ? e.toFrequency() : e), r = i * this.octaves;
+    return this.oscillator.frequency.setValueAtTime(r, n), this.oscillator.frequency.exponentialRampToValueAtTime(i, n + this.toSeconds(this.pitchDecay)), this;
   }
   dispose() {
     return super.dispose(), this;
   }
 };
-Tt([Ii(0)], Gi.prototype, "octaves", void 0);
-Tt([Yt(0)], Gi.prototype, "pitchDecay", void 0);
-var kr = class vs extends Ne {
+bt([Zr(0)], ia.prototype, "octaves", void 0);
+bt([Kt(0)], ia.prototype, "pitchDecay", void 0);
+var Vi = class Tn extends ke {
   constructor() {
-    super(M(vs.getDefaults(), arguments, [
+    super(O(Tn.getDefaults(), arguments, [
       "attack",
       "decay",
       "sustain",
       "release"
     ])), this.name = "FrequencyEnvelope";
-    const e = M(vs.getDefaults(), arguments, [
+    const e = O(Tn.getDefaults(), arguments, [
       "attack",
       "decay",
       "sustain",
       "release"
     ]);
-    this._octaves = e.octaves, this._baseFrequency = this.toFrequency(e.baseFrequency), this._exponent = this.input = new Pi({
+    this._octaves = e.octaves, this._baseFrequency = this.toFrequency(e.baseFrequency), this._exponent = this.input = new Hr({
       context: this.context,
       value: e.exponent
-    }), this._scale = this.output = new Vi({
+    }), this._scale = this.output = new ni({
       context: this.context,
       min: this._baseFrequency,
       max: this._baseFrequency * Math.pow(2, this._octaves)
     }), this._sig.chain(this._exponent, this._scale);
   }
   static getDefaults() {
-    return Object.assign(Ne.getDefaults(), {
+    return Object.assign(ke.getDefaults(), {
       baseFrequency: 200,
       exponent: 1,
       octaves: 4
@@ -8739,7 +8739,7 @@ var kr = class vs extends Ne {
   }
   set baseFrequency(e) {
     const t = this.toFrequency(e);
-    yt(t, 0), this._baseFrequency = t, this._scale.min = this._baseFrequency, this.octaves = this._octaves;
+    wt(t, 0), this._baseFrequency = t, this._scale.min = this._baseFrequency, this.octaves = this._octaves;
   }
   get octaves() {
     return this._octaves;
@@ -8756,15 +8756,15 @@ var kr = class vs extends Ne {
   dispose() {
     return super.dispose(), this._exponent.dispose(), this._scale.dispose(), this;
   }
-}, ld = class ys extends Xe {
+}, xd = class wn extends qe {
   constructor() {
-    super(M(ys.getDefaults(), arguments)), this.name = "MonoSynth";
-    const e = M(ys.getDefaults(), arguments);
-    this.oscillator = new vn(Object.assign(e.oscillator, {
+    super(O(wn.getDefaults(), arguments)), this.name = "MonoSynth";
+    const e = O(wn.getDefaults(), arguments);
+    this.oscillator = new It(Object.assign(e.oscillator, {
       context: this.context,
       detune: e.detune,
       onstop: () => this.onsilence(this)
-    })), this.frequency = this.oscillator.frequency, this.detune = this.oscillator.detune, this.filter = new $n(Object.assign(e.filter, { context: this.context })), this.filterEnvelope = new kr(Object.assign(e.filterEnvelope, { context: this.context })), this.envelope = new Ks(Object.assign(e.envelope, { context: this.context })), this.oscillator.chain(this.filter, this.envelope, this.output), this.filterEnvelope.connect(this.filter.frequency), Y(this, [
+    })), this.frequency = this.oscillator.frequency, this.detune = this.oscillator.detune, this.filter = new Xs(Object.assign(e.filter, { context: this.context })), this.filterEnvelope = new Vi(Object.assign(e.filterEnvelope, { context: this.context })), this.envelope = new oi(Object.assign(e.envelope, { context: this.context })), this.oscillator.chain(this.filter, this.envelope, this.output), this.filterEnvelope.connect(this.filter.frequency), X(this, [
       "oscillator",
       "frequency",
       "detune",
@@ -8774,19 +8774,19 @@ var kr = class vs extends Ne {
     ]);
   }
   static getDefaults() {
-    return Object.assign(Xe.getDefaults(), {
-      envelope: Object.assign(Fe(Ne.getDefaults(), Object.keys($.getDefaults())), {
+    return Object.assign(qe.getDefaults(), {
+      envelope: Object.assign(Se(ke.getDefaults(), Object.keys(B.getDefaults())), {
         attack: 5e-3,
         decay: 0.1,
         release: 1,
         sustain: 0.9
       }),
-      filter: Object.assign(Fe($n.getDefaults(), Object.keys($.getDefaults())), {
+      filter: Object.assign(Se(Xs.getDefaults(), Object.keys(B.getDefaults())), {
         Q: 1,
         rolloff: -12,
         type: "lowpass"
       }),
-      filterEnvelope: Object.assign(Fe(kr.getDefaults(), Object.keys($.getDefaults())), {
+      filterEnvelope: Object.assign(Se(Vi.getDefaults(), Object.keys(B.getDefaults())), {
         attack: 0.6,
         baseFrequency: 200,
         decay: 0.2,
@@ -8795,13 +8795,13 @@ var kr = class vs extends Ne {
         release: 2,
         sustain: 0.5
       }),
-      oscillator: Object.assign(Fe(vn.getDefaults(), Object.keys(Ce.getDefaults())), { type: "sawtooth" })
+      oscillator: Object.assign(Se(It.getDefaults(), Object.keys(ge.getDefaults())), { type: "sawtooth" })
     });
   }
   _triggerEnvelopeAttack(e, t = 1) {
     if (this.envelope.triggerAttack(e, t), this.filterEnvelope.triggerAttack(e), this.oscillator.start(e), this.envelope.sustain === 0) {
-      const n = this.toSeconds(this.envelope.attack), r = this.toSeconds(this.envelope.decay);
-      this.oscillator.stop(e + n + r);
+      const n = this.toSeconds(this.envelope.attack), i = this.toSeconds(this.envelope.decay);
+      this.oscillator.stop(e + n + i);
     }
   }
   _triggerEnvelopeRelease(e) {
@@ -8813,25 +8813,118 @@ var kr = class vs extends Ne {
   dispose() {
     return super.dispose(), this.oscillator.dispose(), this.envelope.dispose(), this.filterEnvelope.dispose(), this.filter.dispose(), this;
   }
-}, Sh = class Ts extends Nt {
+}, Fi = class bn extends qe {
   constructor() {
-    super(M(Ts.getDefaults(), arguments, ["url", "onload"])), this.name = "ToneBufferSource", this._source = this.context.createBufferSource(), this._internalChannels = [this._source], this._sourceStarted = !1, this._sourceStopped = !1;
-    const e = M(Ts.getDefaults(), arguments, ["url", "onload"]);
-    rt(this._source, this._gainNode), this._source.onended = () => this._stopSource(), this.playbackRate = new ue({
+    super(O(bn.getDefaults(), arguments)), this.name = "ModulationSynth";
+    const e = O(bn.getDefaults(), arguments);
+    this._carrier = new zt({
+      context: this.context,
+      oscillator: e.oscillator,
+      envelope: e.envelope,
+      onsilence: () => this.onsilence(this),
+      volume: -10
+    }), this._modulator = new zt({
+      context: this.context,
+      oscillator: e.modulation,
+      envelope: e.modulationEnvelope,
+      volume: -10
+    }), this.oscillator = this._carrier.oscillator, this.envelope = this._carrier.envelope, this.modulation = this._modulator.oscillator, this.modulationEnvelope = this._modulator.envelope, this.frequency = new Y({
+      context: this.context,
+      units: "frequency"
+    }), this.detune = new Y({
+      context: this.context,
+      value: e.detune,
+      units: "cents"
+    }), this.harmonicity = new at({
+      context: this.context,
+      value: e.harmonicity,
+      minValue: 0
+    }), this._modulationNode = new J({
+      context: this.context,
+      gain: 0
+    }), X(this, [
+      "frequency",
+      "harmonicity",
+      "oscillator",
+      "envelope",
+      "modulation",
+      "modulationEnvelope",
+      "detune"
+    ]);
+  }
+  static getDefaults() {
+    return Object.assign(qe.getDefaults(), {
+      harmonicity: 3,
+      oscillator: Object.assign(Se(It.getDefaults(), [
+        ...Object.keys(ge.getDefaults()),
+        "frequency",
+        "detune"
+      ]), { type: "sine" }),
+      envelope: Object.assign(Se(ke.getDefaults(), Object.keys(B.getDefaults())), {
+        attack: 0.01,
+        decay: 0.01,
+        sustain: 1,
+        release: 0.5
+      }),
+      modulation: Object.assign(Se(It.getDefaults(), [
+        ...Object.keys(ge.getDefaults()),
+        "frequency",
+        "detune"
+      ]), { type: "square" }),
+      modulationEnvelope: Object.assign(Se(ke.getDefaults(), Object.keys(B.getDefaults())), {
+        attack: 0.5,
+        decay: 0,
+        sustain: 1,
+        release: 0.5
+      })
+    });
+  }
+  _triggerEnvelopeAttack(e, t) {
+    this._carrier._triggerEnvelopeAttack(e, t), this._modulator._triggerEnvelopeAttack(e, t);
+  }
+  _triggerEnvelopeRelease(e) {
+    return this._carrier._triggerEnvelopeRelease(e), this._modulator._triggerEnvelopeRelease(e), this;
+  }
+  getLevelAtTime(e) {
+    return e = this.toSeconds(e), this.envelope.getValueAtTime(e);
+  }
+  dispose() {
+    return super.dispose(), this._carrier.dispose(), this._modulator.dispose(), this.frequency.dispose(), this.detune.dispose(), this.harmonicity.dispose(), this._modulationNode.dispose(), this;
+  }
+}, Cd = class xn extends Fi {
+  constructor() {
+    super(O(xn.getDefaults(), arguments)), this.name = "FMSynth";
+    const e = O(xn.getDefaults(), arguments);
+    this.modulationIndex = new at({
+      context: this.context,
+      value: e.modulationIndex
+    }), this.frequency.connect(this._carrier.frequency), this.frequency.chain(this.harmonicity, this._modulator.frequency), this.frequency.chain(this.modulationIndex, this._modulationNode), this.detune.fan(this._carrier.detune, this._modulator.detune), this._modulator.connect(this._modulationNode.gain), this._modulationNode.connect(this._carrier.frequency), this._carrier.connect(this.output);
+  }
+  static getDefaults() {
+    return Object.assign(Fi.getDefaults(), { modulationIndex: 10 });
+  }
+  dispose() {
+    return super.dispose(), this.modulationIndex.dispose(), this;
+  }
+}, qh = class Cn extends Dt {
+  constructor() {
+    super(O(Cn.getDefaults(), arguments, ["url", "onload"])), this.name = "ToneBufferSource", this._source = this.context.createBufferSource(), this._internalChannels = [this._source], this._sourceStarted = !1, this._sourceStopped = !1;
+    const e = O(Cn.getDefaults(), arguments, ["url", "onload"]);
+    Pe(this._source, this._gainNode), this._source.onended = () => this._stopSource(), this.playbackRate = new se({
       context: this.context,
       param: this._source.playbackRate,
       units: "positive",
       value: e.playbackRate
-    }), this.loop = e.loop, this.loopStart = e.loopStart, this.loopEnd = e.loopEnd, this._buffer = new tt(e.url, e.onload, e.onerror), this._internalChannels.push(this._source);
+    }), this.loop = e.loop, this.loopStart = e.loopStart, this.loopEnd = e.loopEnd, this._buffer = new st(e.url, e.onload, e.onerror), this._internalChannels.push(this._source);
   }
   static getDefaults() {
-    return Object.assign(Nt.getDefaults(), {
-      url: new tt(),
+    return Object.assign(Dt.getDefaults(), {
+      url: new st(),
       loop: !1,
       loopEnd: 0,
       loopStart: 0,
-      onload: le,
-      onerror: le,
+      onload: ue,
+      onerror: ue,
       playbackRate: 1
     });
   }
@@ -8853,18 +8946,18 @@ var kr = class vs extends Ne {
   set curve(e) {
     this._curve = e;
   }
-  start(e, t, n, r = 1) {
-    G(this.buffer.loaded, "buffer is either not set or not loaded");
-    const i = this.toSeconds(e);
-    this._startGain(i, r), this.loop ? t = Rn(t, this.loopStart) : t = Rn(t, 0);
+  start(e, t, n, i = 1) {
+    z(this.buffer.loaded, "buffer is either not set or not loaded");
+    const r = this.toSeconds(e);
+    this._startGain(r, i), this.loop ? t = Vs(t, this.loopStart) : t = Vs(t, 0);
     let o = Math.max(this.toSeconds(t), 0);
     if (this.loop) {
       const a = this.toSeconds(this.loopEnd) || this.buffer.duration, c = this.toSeconds(this.loopStart), l = a - c;
-      Vn(o, a) && (o = (o - c) % l + c), Ie(o, this.buffer.duration) && (o = 0);
+      Fs(o, a) && (o = (o - c) % l + c), Re(o, this.buffer.duration) && (o = 0);
     }
-    if (this._source.buffer = this.buffer.get(), this._source.loopEnd = this.toSeconds(this.loopEnd) || this.buffer.duration, _n(o, this.buffer.duration) && (this._sourceStarted = !0, this._source.start(i, o)), Z(n)) {
+    if (this._source.buffer = this.buffer.get(), this._source.loopEnd = this.toSeconds(this.loopEnd) || this.buffer.duration, gs(o, this.buffer.duration) && (this._sourceStarted = !0, this._source.start(r, o)), Z(n)) {
       let a = this.toSeconds(n);
-      a = Math.max(a, 0), this.stop(i + a);
+      a = Math.max(a, 0), this.stop(r + a);
     }
     return this;
   }
@@ -8898,14 +8991,14 @@ var kr = class vs extends Ne {
   dispose() {
     return super.dispose(), this._source.onended = null, this._source.disconnect(), this._buffer.dispose(), this.playbackRate.dispose(), this;
   }
-}, Or = class ws extends Ce {
+}, Pi = class Sn extends ge {
   constructor() {
-    super(M(ws.getDefaults(), arguments, ["type"])), this.name = "Noise", this._source = null;
-    const e = M(ws.getDefaults(), arguments, ["type"]);
+    super(O(Sn.getDefaults(), arguments, ["type"])), this.name = "Noise", this._source = null;
+    const e = O(Sn.getDefaults(), arguments, ["type"]);
     this._playbackRate = e.playbackRate, this.type = e.type, this._fadeIn = e.fadeIn, this._fadeOut = e.fadeOut;
   }
   static getDefaults() {
-    return Object.assign(Ce.getDefaults(), {
+    return Object.assign(ge.getDefaults(), {
       fadeIn: 0,
       fadeOut: 0,
       playbackRate: 1,
@@ -8916,7 +9009,7 @@ var kr = class vs extends Ne {
     return this._type;
   }
   set type(e) {
-    if (G(e in Nr, "Noise: invalid type: " + e), this._type !== e && (this._type = e, this.state === "started")) {
+    if (z(e in qi, "Noise: invalid type: " + e), this._type !== e && (this._type = e, this.state === "started")) {
       const t = this.now();
       this._stop(t), this._start(t);
     }
@@ -8928,8 +9021,8 @@ var kr = class vs extends Ne {
     this._playbackRate = e, this._source && (this._source.playbackRate.value = e);
   }
   _start(e) {
-    const t = Nr[this._type];
-    this._source = new Sh({
+    const t = qi[this._type];
+    this._source = new qh({
       url: t,
       context: this.context,
       fadeIn: this._fadeIn,
@@ -8960,69 +9053,69 @@ var kr = class vs extends Ne {
   dispose() {
     return super.dispose(), this._source && this._source.disconnect(), this;
   }
-}, bt = 44100 * 5, On = 2, Ge = {
+}, Ct = 44100 * 5, Ns = 2, $e = {
   brown: null,
   pink: null,
   white: null
-}, Nr = {
+}, qi = {
   get brown() {
-    if (!Ge.brown) {
+    if (!$e.brown) {
       const s = [];
-      for (let e = 0; e < On; e++) {
-        const t = new Float32Array(bt);
+      for (let e = 0; e < Ns; e++) {
+        const t = new Float32Array(Ct);
         s[e] = t;
         let n = 0;
-        for (let r = 0; r < bt; r++) {
-          const i = Math.random() * 2 - 1;
-          t[r] = (n + 0.02 * i) / 1.02, n = t[r], t[r] *= 3.5;
+        for (let i = 0; i < Ct; i++) {
+          const r = Math.random() * 2 - 1;
+          t[i] = (n + 0.02 * r) / 1.02, n = t[i], t[i] *= 3.5;
         }
       }
-      Ge.brown = new tt().fromArray(s);
+      $e.brown = new st().fromArray(s);
     }
-    return Ge.brown;
+    return $e.brown;
   },
   get pink() {
-    if (!Ge.pink) {
+    if (!$e.pink) {
       const s = [];
-      for (let e = 0; e < On; e++) {
-        const t = new Float32Array(bt);
+      for (let e = 0; e < Ns; e++) {
+        const t = new Float32Array(Ct);
         s[e] = t;
-        let n, r, i, o, a, c, l;
-        n = r = i = o = a = c = l = 0;
-        for (let u = 0; u < bt; u++) {
+        let n, i, r, o, a, c, l;
+        n = i = r = o = a = c = l = 0;
+        for (let u = 0; u < Ct; u++) {
           const h = Math.random() * 2 - 1;
-          n = 0.99886 * n + h * 0.0555179, r = 0.99332 * r + h * 0.0750759, i = 0.969 * i + h * 0.153852, o = 0.8665 * o + h * 0.3104856, a = 0.55 * a + h * 0.5329522, c = -0.7616 * c - h * 0.016898, t[u] = n + r + i + o + a + c + l + h * 0.5362, t[u] *= 0.11, l = h * 0.115926;
+          n = 0.99886 * n + h * 0.0555179, i = 0.99332 * i + h * 0.0750759, r = 0.969 * r + h * 0.153852, o = 0.8665 * o + h * 0.3104856, a = 0.55 * a + h * 0.5329522, c = -0.7616 * c - h * 0.016898, t[u] = n + i + r + o + a + c + l + h * 0.5362, t[u] *= 0.11, l = h * 0.115926;
         }
       }
-      Ge.pink = new tt().fromArray(s);
+      $e.pink = new st().fromArray(s);
     }
-    return Ge.pink;
+    return $e.pink;
   },
   get white() {
-    if (!Ge.white) {
+    if (!$e.white) {
       const s = [];
-      for (let e = 0; e < On; e++) {
-        const t = new Float32Array(bt);
+      for (let e = 0; e < Ns; e++) {
+        const t = new Float32Array(Ct);
         s[e] = t;
-        for (let n = 0; n < bt; n++) t[n] = Math.random() * 2 - 1;
+        for (let n = 0; n < Ct; n++) t[n] = Math.random() * 2 - 1;
       }
-      Ge.white = new tt().fromArray(s);
+      $e.white = new st().fromArray(s);
     }
-    return Ge.white;
+    return $e.white;
   }
-}, ud = class bs extends Dt {
+}, Sd = class An extends Et {
   constructor() {
-    super(M(bs.getDefaults(), arguments)), this.name = "NoiseSynth";
-    const e = M(bs.getDefaults(), arguments);
-    this.noise = new Or(Object.assign({ context: this.context }, e.noise)), this.envelope = new Ks(Object.assign({ context: this.context }, e.envelope)), this.noise.chain(this.envelope, this.output);
+    super(O(An.getDefaults(), arguments)), this.name = "NoiseSynth";
+    const e = O(An.getDefaults(), arguments);
+    this.noise = new Pi(Object.assign({ context: this.context }, e.noise)), this.envelope = new oi(Object.assign({ context: this.context }, e.envelope)), this.noise.chain(this.envelope, this.output);
   }
   static getDefaults() {
-    return Object.assign(Dt.getDefaults(), {
-      envelope: Object.assign(Fe(Ne.getDefaults(), Object.keys($.getDefaults())), {
+    return Object.assign(Et.getDefaults(), {
+      envelope: Object.assign(Se(ke.getDefaults(), Object.keys(B.getDefaults())), {
         decay: 0.1,
         sustain: 0
       }),
-      noise: Object.assign(Fe(Or.getDefaults(), Object.keys(Ce.getDefaults())), { type: "white" })
+      noise: Object.assign(Se(Pi.getDefaults(), Object.keys(ge.getDefaults())), { type: "white" })
     });
   }
   triggerAttack(e, t = 1) {
@@ -9040,46 +9133,46 @@ var kr = class vs extends Ne {
   dispose() {
     return super.dispose(), this.noise.dispose(), this.envelope.dispose(), this;
   }
-}, Mr = class zi extends An {
+}, Li = class ra extends As {
   constructor() {
     super(...arguments), this.name = "MidiClass", this.defaultUnits = "midi";
   }
   _frequencyToUnits(e) {
-    return at(super._frequencyToUnits(e));
+    return ct(super._frequencyToUnits(e));
   }
   _ticksToUnits(e) {
-    return at(super._ticksToUnits(e));
+    return ct(super._ticksToUnits(e));
   }
   _beatsToUnits(e) {
-    return at(super._beatsToUnits(e));
+    return ct(super._beatsToUnits(e));
   }
   _secondsToUnits(e) {
-    return at(super._secondsToUnits(e));
+    return ct(super._secondsToUnits(e));
   }
   toMidi() {
     return this.valueOf();
   }
   toFrequency() {
-    return Dr(this.toMidi());
+    return Ui(this.toMidi());
   }
   transpose(e) {
-    return new zi(this.context, this.toMidi() + e);
+    return new ra(this.context, this.toMidi() + e);
   }
-}, hd = class Cs extends Dt {
+}, Ad = class kn extends Et {
   constructor() {
-    super(M(Cs.getDefaults(), arguments, ["voice", "options"])), this.name = "PolySynth", this._availableVoices = [], this._activeVoices = [], this._voices = [], this._gcTimeout = -1, this._averageActiveVoices = 0, this._syncedRelease = (r) => this.releaseAll(r);
-    const e = M(Cs.getDefaults(), arguments, ["voice", "options"]);
-    G(!ft(e.voice), "DEPRECATED: The polyphony count is no longer the first argument.");
+    super(O(kn.getDefaults(), arguments, ["voice", "options"])), this.name = "PolySynth", this._availableVoices = [], this._activeVoices = [], this._voices = [], this._gcTimeout = -1, this._averageActiveVoices = 0, this._syncedRelease = (i) => this.releaseAll(i);
+    const e = O(kn.getDefaults(), arguments, ["voice", "options"]);
+    z(!_t(e.voice), "DEPRECATED: The polyphony count is no longer the first argument.");
     const t = e.voice.getDefaults();
     this.options = Object.assign(t, e.options), this.voice = e.voice, this.maxPolyphony = e.maxPolyphony, this._dummyVoice = this._getNextAvailableVoice();
     const n = this._voices.indexOf(this._dummyVoice);
     this._voices.splice(n, 1), this._gcTimeout = this.context.setInterval(this._collectGarbage.bind(this), 1);
   }
   static getDefaults() {
-    return Object.assign(Dt.getDefaults(), {
+    return Object.assign(Et.getDefaults(), {
       maxPolyphony: 32,
       options: {},
-      voice: ms
+      voice: zt
     });
   }
   get activeVoices() {
@@ -9097,8 +9190,8 @@ var kr = class vs extends Ne {
         context: this.context,
         onsilence: this._makeVoiceAvailable.bind(this)
       }));
-      return G(e instanceof Xe, "Voice must extend Monophonic class"), e.connect(this.output), this._voices.push(e), e;
-    } else Sn("Max polyphony exceeded. Note dropped.");
+      return z(e instanceof qe, "Voice must extend Monophonic class"), e.connect(this.output), this._voices.push(e), e;
+    } else Ss("Max polyphony exceeded. Note dropped.");
   }
   _collectGarbage() {
     if (this._averageActiveVoices = Math.max(this._averageActiveVoices * 0.95, this.activeVoices), this._availableVoices.length && this._voices.length > Math.ceil(this._averageActiveVoices + 1)) {
@@ -9107,47 +9200,47 @@ var kr = class vs extends Ne {
     }
   }
   _triggerAttack(e, t, n) {
-    e.forEach((r) => {
-      const i = new Mr(this.context, r).toMidi(), o = this._getNextAvailableVoice();
-      o && (o.triggerAttack(r, t, n), this._activeVoices.push({
-        midi: i,
+    e.forEach((i) => {
+      const r = new Li(this.context, i).toMidi(), o = this._getNextAvailableVoice();
+      o && (o.triggerAttack(i, t, n), this._activeVoices.push({
+        midi: r,
         voice: o,
         released: !1
-      }), this.log("triggerAttack", r, t));
+      }), this.log("triggerAttack", i, t));
     });
   }
   _triggerRelease(e, t) {
     e.forEach((n) => {
-      const r = new Mr(this.context, n).toMidi(), i = this._activeVoices.find(({ midi: o, released: a }) => o === r && !a);
-      i && (i.voice.triggerRelease(t), i.released = !0, this.log("triggerRelease", n, t));
+      const i = new Li(this.context, n).toMidi(), r = this._activeVoices.find(({ midi: o, released: a }) => o === i && !a);
+      r && (r.voice.triggerRelease(t), r.released = !0, this.log("triggerRelease", n, t));
     });
   }
-  _scheduleEvent(e, t, n, r) {
-    G(!this.disposed, "Synth was already disposed"), n <= this.now() ? e === "attack" ? this._triggerAttack(t, n, r) : this._triggerRelease(t, n) : this.context.setTimeout(() => {
-      this.disposed || this._scheduleEvent(e, t, n, r);
+  _scheduleEvent(e, t, n, i) {
+    z(!this.disposed, "Synth was already disposed"), n <= this.now() ? e === "attack" ? this._triggerAttack(t, n, i) : this._triggerRelease(t, n) : this.context.setTimeout(() => {
+      this.disposed || this._scheduleEvent(e, t, n, i);
     }, n - this.now());
   }
   triggerAttack(e, t, n) {
     Array.isArray(e) || (e = [e]);
-    const r = this.toSeconds(t);
-    return this._scheduleEvent("attack", e, r, n), this;
+    const i = this.toSeconds(t);
+    return this._scheduleEvent("attack", e, i, n), this;
   }
   triggerRelease(e, t) {
     Array.isArray(e) || (e = [e]);
     const n = this.toSeconds(t);
     return this._scheduleEvent("release", e, n), this;
   }
-  triggerAttackRelease(e, t, n, r) {
-    const i = this.toSeconds(n);
-    if (this.triggerAttack(e, i, r), Le(t)) {
-      G(Le(e), "If the duration is an array, the notes must also be an array"), e = e;
+  triggerAttackRelease(e, t, n, i) {
+    const r = this.toSeconds(n);
+    if (this.triggerAttack(e, r, i), je(t)) {
+      z(je(e), "If the duration is an array, the notes must also be an array"), e = e;
       for (let o = 0; o < e.length; o++) {
         const a = t[Math.min(o, t.length - 1)], c = this.toSeconds(a);
-        G(c > 0, "The duration must be greater than 0"), this.triggerRelease(e[o], i + c);
+        z(c > 0, "The duration must be greater than 0"), this.triggerRelease(e[o], r + c);
       }
     } else {
       const o = this.toSeconds(t);
-      G(o > 0, "The duration must be greater than 0"), this.triggerRelease(e, i + o);
+      z(o > 0, "The duration must be greater than 0"), this.triggerRelease(e, r + o);
     }
     return this;
   }
@@ -9155,8 +9248,8 @@ var kr = class vs extends Ne {
     return this._syncState() && (this._syncMethod("triggerAttack", 1), this._syncMethod("triggerRelease", 1), this.context.transport.on("stop", this._syncedRelease), this.context.transport.on("pause", this._syncedRelease), this.context.transport.on("loopEnd", this._syncedRelease)), this;
   }
   set(e) {
-    const t = Fe(e, ["onsilence", "context"]);
-    return this.options = et(this.options, t), this._voices.forEach((n) => n.set(t)), this._dummyVoice.set(t), this;
+    const t = Se(e, ["onsilence", "context"]);
+    return this.options = tt(this.options, t), this._voices.forEach((n) => n.set(t)), this._dummyVoice.set(t), this;
   }
   get() {
     return this._dummyVoice.get();
@@ -9170,11 +9263,261 @@ var kr = class vs extends Ne {
   dispose() {
     return super.dispose(), this._dummyVoice.dispose(), this._voices.forEach((e) => e.dispose()), this._activeVoices = [], this._availableVoices = [], this.context.clearInterval(this._gcTimeout), this;
   }
-}, Ah = class xs extends $ {
+}, aa = class On extends B {
   constructor() {
-    super(M(xs.getDefaults(), arguments, ["threshold", "ratio"])), this.name = "Compressor", this._compressor = this.context.createDynamicsCompressor(), this.input = this._compressor, this.output = this._compressor;
-    const e = M(xs.getDefaults(), arguments, ["threshold", "ratio"]);
-    this.threshold = new ue({
+    super(O(On.getDefaults(), arguments, ["channels"])), this.name = "Split";
+    const e = O(On.getDefaults(), arguments, ["channels"]);
+    this._splitter = this.input = this.output = this.context.createChannelSplitter(e.channels), this._internalChannels = [this._splitter];
+  }
+  static getDefaults() {
+    return Object.assign(B.getDefaults(), { channels: 2 });
+  }
+  dispose() {
+    return super.dispose(), this._splitter.disconnect(), this;
+  }
+}, oa = class Nn extends B {
+  constructor() {
+    super(O(Nn.getDefaults(), arguments, ["channels"])), this.name = "Merge";
+    const e = O(Nn.getDefaults(), arguments, ["channels"]);
+    this._merger = this.output = this.input = this.context.createChannelMerger(e.channels);
+  }
+  static getDefaults() {
+    return Object.assign(B.getDefaults(), { channels: 2 });
+  }
+  dispose() {
+    return super.dispose(), this._merger.disconnect(), this;
+  }
+}, Wi = class extends B {
+  constructor(s) {
+    super(s), this.name = "StereoEffect", this.input = new J({ context: this.context }), this.input.channelCount = 2, this.input.channelCountMode = "explicit", this._dryWet = this.output = new $r({
+      context: this.context,
+      fade: s.wet
+    }), this.wet = this._dryWet.fade, this._split = new aa({
+      context: this.context,
+      channels: 2
+    }), this._merge = new oa({
+      context: this.context,
+      channels: 2
+    }), this.input.connect(this._split), this.input.connect(this._dryWet.a), this._merge.connect(this._dryWet.b), X(this, ["wet"]);
+  }
+  connectEffectLeft(...s) {
+    this._split.connect(s[0], 0, 0), vt(...s), Pe(s[s.length - 1], this._merge, 0, 0);
+  }
+  connectEffectRight(...s) {
+    this._split.connect(s[0], 1, 0), vt(...s), Pe(s[s.length - 1], this._merge, 0, 1);
+  }
+  static getDefaults() {
+    return Object.assign(B.getDefaults(), { wet: 1 });
+  }
+  dispose() {
+    return super.dispose(), this._dryWet.dispose(), this._split.dispose(), this._merge.dispose(), this;
+  }
+}, ji = class extends Wi {
+  constructor(s) {
+    super(s), this.feedback = new Y({
+      context: this.context,
+      value: s.feedback,
+      units: "normalRange"
+    }), this._feedbackL = new J({ context: this.context }), this._feedbackR = new J({ context: this.context }), this._feedbackSplit = new aa({
+      context: this.context,
+      channels: 2
+    }), this._feedbackMerge = new oa({
+      context: this.context,
+      channels: 2
+    }), this._merge.connect(this._feedbackSplit), this._feedbackMerge.connect(this._split), this._feedbackSplit.connect(this._feedbackL, 0, 0), this._feedbackL.connect(this._feedbackMerge, 0, 0), this._feedbackSplit.connect(this._feedbackR, 1, 0), this._feedbackR.connect(this._feedbackMerge, 0, 1), this.feedback.fan(this._feedbackL.gain, this._feedbackR.gain), X(this, ["feedback"]);
+  }
+  static getDefaults() {
+    return Object.assign(Wi.getDefaults(), { feedback: 0.5 });
+  }
+  dispose() {
+    return super.dispose(), this.feedback.dispose(), this._feedbackL.dispose(), this._feedbackR.dispose(), this._feedbackSplit.dispose(), this._feedbackMerge.dispose(), this;
+  }
+}, Lh = class ca extends rt {
+  constructor() {
+    super(Object.assign(O(ca.getDefaults(), arguments))), this.name = "Zero", this._gain = new J({ context: this.context }), this.output = this._gain, this.input = void 0, Pe(this.context.getConstant(0), this._gain);
+  }
+  dispose() {
+    return super.dispose(), Gr(this.context.getConstant(0), this._gain), this;
+  }
+}, Bi = class Mn extends B {
+  constructor() {
+    super(O(Mn.getDefaults(), arguments, [
+      "frequency",
+      "min",
+      "max"
+    ])), this.name = "LFO", this._stoppedValue = 0, this._units = "number", this.convert = !0, this._fromType = se.prototype._fromType, this._toType = se.prototype._toType, this._is = se.prototype._is, this._clampValue = se.prototype._clampValue;
+    const e = O(Mn.getDefaults(), arguments, [
+      "frequency",
+      "min",
+      "max"
+    ]);
+    this._oscillator = new Ce(e), this.frequency = this._oscillator.frequency, this._amplitudeGain = new J({
+      context: this.context,
+      gain: e.amplitude,
+      units: "normalRange"
+    }), this.amplitude = this._amplitudeGain.gain, this._stoppedSignal = new Y({
+      context: this.context,
+      units: "audioRange",
+      value: 0
+    }), this._zeros = new Lh({ context: this.context }), this._a2g = new ea({ context: this.context }), this._scaler = this.output = new ni({
+      context: this.context,
+      max: e.max,
+      min: e.min
+    }), this.units = e.units, this.min = e.min, this.max = e.max, this._oscillator.chain(this._amplitudeGain, this._a2g, this._scaler), this._zeros.connect(this._a2g), this._stoppedSignal.connect(this._a2g), X(this, ["amplitude", "frequency"]), this.phase = e.phase;
+  }
+  static getDefaults() {
+    return Object.assign(Ce.getDefaults(), {
+      amplitude: 1,
+      frequency: "4n",
+      max: 1,
+      min: 0,
+      type: "sine",
+      units: "number"
+    });
+  }
+  start(e) {
+    return e = this.toSeconds(e), this._stoppedSignal.setValueAtTime(0, e), this._oscillator.start(e), this;
+  }
+  stop(e) {
+    return e = this.toSeconds(e), this._stoppedSignal.setValueAtTime(this._stoppedValue, e), this._oscillator.stop(e), this;
+  }
+  sync() {
+    return this._oscillator.sync(), this._oscillator.syncFrequency(), this;
+  }
+  unsync() {
+    return this._oscillator.unsync(), this._oscillator.unsyncFrequency(), this;
+  }
+  _setStoppedValue() {
+    this._stoppedValue = this._oscillator.getInitialValue(), this._stoppedSignal.value = this._stoppedValue;
+  }
+  get min() {
+    return this._toType(this._scaler.min);
+  }
+  set min(e) {
+    e = this._fromType(e), this._scaler.min = e;
+  }
+  get max() {
+    return this._toType(this._scaler.max);
+  }
+  set max(e) {
+    e = this._fromType(e), this._scaler.max = e;
+  }
+  get type() {
+    return this._oscillator.type;
+  }
+  set type(e) {
+    this._oscillator.type = e, this._setStoppedValue();
+  }
+  get partials() {
+    return this._oscillator.partials;
+  }
+  set partials(e) {
+    this._oscillator.partials = e, this._setStoppedValue();
+  }
+  get phase() {
+    return this._oscillator.phase;
+  }
+  set phase(e) {
+    this._oscillator.phase = e, this._setStoppedValue();
+  }
+  get units() {
+    return this._units;
+  }
+  set units(e) {
+    const t = this.min, n = this.max;
+    this._units = e, this.min = t, this.max = n;
+  }
+  get state() {
+    return this._oscillator.state;
+  }
+  connect(e, t, n) {
+    return (e instanceof se || e instanceof Y) && (this.convert = e.convert, this.units = e.units), ks(this, e, t, n), this;
+  }
+  dispose() {
+    return super.dispose(), this._oscillator.dispose(), this._stoppedSignal.dispose(), this._zeros.dispose(), this._scaler.dispose(), this._a2g.dispose(), this._amplitudeGain.dispose(), this.amplitude.dispose(), this;
+  }
+}, kd = class Dn extends ji {
+  constructor() {
+    super(O(Dn.getDefaults(), arguments, [
+      "frequency",
+      "delayTime",
+      "depth"
+    ])), this.name = "Chorus";
+    const e = O(Dn.getDefaults(), arguments, [
+      "frequency",
+      "delayTime",
+      "depth"
+    ]);
+    this._depth = e.depth, this._delayTime = e.delayTime / 1e3, this._lfoL = new Bi({
+      context: this.context,
+      frequency: e.frequency,
+      min: 0,
+      max: 1
+    }), this._lfoR = new Bi({
+      context: this.context,
+      frequency: e.frequency,
+      min: 0,
+      max: 1,
+      phase: 180
+    }), this._delayNodeL = new Ps({ context: this.context }), this._delayNodeR = new Ps({ context: this.context }), this.frequency = this._lfoL.frequency, X(this, ["frequency"]), this._lfoL.frequency.connect(this._lfoR.frequency), this.connectEffectLeft(this._delayNodeL), this.connectEffectRight(this._delayNodeR), this._lfoL.connect(this._delayNodeL.delayTime), this._lfoR.connect(this._delayNodeR.delayTime), this.depth = this._depth, this.type = e.type, this.spread = e.spread;
+  }
+  static getDefaults() {
+    return Object.assign(ji.getDefaults(), {
+      frequency: 1.5,
+      delayTime: 3.5,
+      depth: 0.7,
+      type: "sine",
+      spread: 180,
+      feedback: 0,
+      wet: 0.5
+    });
+  }
+  get depth() {
+    return this._depth;
+  }
+  set depth(e) {
+    this._depth = e;
+    const t = this._delayTime * e;
+    this._lfoL.min = Math.max(this._delayTime - t, 0), this._lfoL.max = this._delayTime + t, this._lfoR.min = Math.max(this._delayTime - t, 0), this._lfoR.max = this._delayTime + t;
+  }
+  get delayTime() {
+    return this._delayTime * 1e3;
+  }
+  set delayTime(e) {
+    this._delayTime = e / 1e3, this.depth = this._depth;
+  }
+  get type() {
+    return this._lfoL.type;
+  }
+  set type(e) {
+    this._lfoL.type = e, this._lfoR.type = e;
+  }
+  get spread() {
+    return this._lfoR.phase - this._lfoL.phase;
+  }
+  set spread(e) {
+    this._lfoL.phase = 90 - e / 2, this._lfoR.phase = e / 2 + 90;
+  }
+  start(e) {
+    return this._lfoL.start(e), this._lfoR.start(e), this;
+  }
+  stop(e) {
+    return this._lfoL.stop(e), this._lfoR.stop(e), this;
+  }
+  sync() {
+    return this._lfoL.sync(), this._lfoR.sync(), this;
+  }
+  unsync() {
+    return this._lfoL.unsync(), this._lfoR.unsync(), this;
+  }
+  dispose() {
+    return super.dispose(), this._lfoL.dispose(), this._lfoR.dispose(), this._delayNodeL.dispose(), this._delayNodeR.dispose(), this.frequency.dispose(), this;
+  }
+}, Wh = class En extends B {
+  constructor() {
+    super(O(En.getDefaults(), arguments, ["threshold", "ratio"])), this.name = "Compressor", this._compressor = this.context.createDynamicsCompressor(), this.input = this._compressor, this.output = this._compressor;
+    const e = O(En.getDefaults(), arguments, ["threshold", "ratio"]);
+    this.threshold = new se({
       minValue: this._compressor.threshold.minValue,
       maxValue: this._compressor.threshold.maxValue,
       context: this.context,
@@ -9182,21 +9525,21 @@ var kr = class vs extends Ne {
       param: this._compressor.threshold,
       units: "decibels",
       value: e.threshold
-    }), this.attack = new ue({
+    }), this.attack = new se({
       minValue: this._compressor.attack.minValue,
       maxValue: this._compressor.attack.maxValue,
       context: this.context,
       param: this._compressor.attack,
       units: "time",
       value: e.attack
-    }), this.release = new ue({
+    }), this.release = new se({
       minValue: this._compressor.release.minValue,
       maxValue: this._compressor.release.maxValue,
       context: this.context,
       param: this._compressor.release,
       units: "time",
       value: e.release
-    }), this.knee = new ue({
+    }), this.knee = new se({
       minValue: this._compressor.knee.minValue,
       maxValue: this._compressor.knee.maxValue,
       context: this.context,
@@ -9204,7 +9547,7 @@ var kr = class vs extends Ne {
       param: this._compressor.knee,
       units: "decibels",
       value: e.knee
-    }), this.ratio = new ue({
+    }), this.ratio = new se({
       minValue: this._compressor.ratio.minValue,
       maxValue: this._compressor.ratio.maxValue,
       context: this.context,
@@ -9212,7 +9555,7 @@ var kr = class vs extends Ne {
       param: this._compressor.ratio,
       units: "positive",
       value: e.ratio
-    }), Y(this, [
+    }), X(this, [
       "knee",
       "release",
       "attack",
@@ -9221,7 +9564,7 @@ var kr = class vs extends Ne {
     ]);
   }
   static getDefaults() {
-    return Object.assign($.getDefaults(), {
+    return Object.assign(B.getDefaults(), {
       attack: 3e-3,
       knee: 30,
       ratio: 12,
@@ -9235,20 +9578,20 @@ var kr = class vs extends Ne {
   dispose() {
     return super.dispose(), this._compressor.disconnect(), this.attack.dispose(), this.release.dispose(), this.threshold.dispose(), this.ratio.dispose(), this.knee.dispose(), this;
   }
-}, dd = class Ss extends $ {
+}, Od = class In extends B {
   constructor() {
-    super(Object.assign(M(Ss.getDefaults(), arguments, ["threshold"]))), this.name = "Limiter";
-    const e = M(Ss.getDefaults(), arguments, ["threshold"]);
-    this._compressor = this.input = this.output = new Ah({
+    super(Object.assign(O(In.getDefaults(), arguments, ["threshold"]))), this.name = "Limiter";
+    const e = O(In.getDefaults(), arguments, ["threshold"]);
+    this._compressor = this.input = this.output = new Wh({
       context: this.context,
       ratio: 20,
       attack: 3e-3,
       release: 0.01,
       threshold: e.threshold
-    }), this.threshold = this._compressor.threshold, Y(this, "threshold");
+    }), this.threshold = this._compressor.threshold, X(this, "threshold");
   }
   static getDefaults() {
-    return Object.assign($.getDefaults(), { threshold: -12 });
+    return Object.assign(B.getDefaults(), { threshold: -12 });
   }
   get reduction() {
     return this._compressor.reduction;
@@ -9256,7 +9599,7 @@ var kr = class vs extends Ne {
   dispose() {
     return super.dispose(), this._compressor.dispose(), this.threshold.dispose(), this;
   }
-}, pd = {
+}, Nd = {
   get position() {
     return _e().transport.position;
   },
@@ -9291,26 +9634,28 @@ var kr = class vs extends Ne {
     _e().transport.clear(s);
   }
 };
-function fd() {
+function Md() {
   return _e().now();
 }
 export {
-  $s as Context,
-  od as Distortion,
-  ad as FeedbackDelay,
-  $n as Filter,
-  oe as Gain,
-  dd as Limiter,
-  Gi as MembraneSynth,
-  cd as MetalSynth,
-  ld as MonoSynth,
-  ud as NoiseSynth,
-  hd as PolySynth,
-  ms as Synth,
-  pd as Transport,
-  fd as now,
-  ih as setContext,
-  id as start
+  kd as Chorus,
+  ei as Context,
+  wd as Distortion,
+  Cd as FMSynth,
+  Td as FeedbackDelay,
+  Xs as Filter,
+  J as Gain,
+  Od as Limiter,
+  ia as MembraneSynth,
+  bd as MetalSynth,
+  xd as MonoSynth,
+  Sd as NoiseSynth,
+  Ad as PolySynth,
+  zt as Synth,
+  Nd as Transport,
+  Md as now,
+  bh as setContext,
+  yd as start
 };
 
 //# sourceMappingURL=tone-host.esm.mjs.map

@@ -24,22 +24,14 @@ let moduleBundle = originalBundle.replace(
   toneGlobalPattern,
   `import*as ${toneBinding} from"./tone-host-14.9.17.esm.js";`,
 );
-const disposeBoundaries = [
-  {
-    source: "this.composerScheduleId=void 0,this.rack?.dispose()",
-    patched: "this.composerScheduleId=void 0,this.composer?.reset(),this.rack?.dispose()",
-  },
-  {
-    source: "this.composerScheduleId=void 0,(e=this.rack)",
-    patched: "this.composerScheduleId=void 0,(e=this.composer)==null||e.reset(),(e=this.rack)",
-  },
+const safeDisposeBoundaries = [
+  "this.scoreTransitionId=void 0,this.composer?.reset(),this.rack?.dispose()",
+  "this.scoreTransitionId=void 0,(e=this.composer)==null||e.reset(),(e=this.rack)",
 ];
-const matchingBoundaries = disposeBoundaries.filter(({ source }) => moduleBundle.includes(source));
+const matchingBoundaries = safeDisposeBoundaries.filter((source) => moduleBundle.includes(source));
 if (matchingBoundaries.length !== 1) {
-  throw new Error(`Expected exactly one TearScore composer disposal boundary; found ${matchingBoundaries.length}`);
+  throw new Error(`Expected exactly one upstream-safe TearScore composer disposal boundary; found ${matchingBoundaries.length}`);
 }
-const boundary = matchingBoundaries[0];
-moduleBundle = moduleBundle.replace(boundary.source, boundary.patched);
 if (moduleBundle.includes("globalThis.Tone")) throw new Error("Generated TearScore still depends on a Tone global");
 if (!moduleBundle.includes("export{")) throw new Error("Generated TearScore has no ESM exports");
 
@@ -60,7 +52,7 @@ Object.assign(provenance, {
   toneFormat: "host-context-esm",
   toneSha256,
   globalRuntimeDependencies: [],
-  compatibilityPatches: ["composer-reset-before-rack-dispose"],
+  compatibilityPatches: [],
 });
 Object.assign(upstreamManifest, {
   bundleSha256,
@@ -68,7 +60,7 @@ Object.assign(upstreamManifest, {
   artifactFormat: "esm",
   toneArtifact: "tone-host-14.9.17.esm.js",
   toneSha256,
-  compatibilityPatches: ["composer-reset-before-rack-dispose"],
+  compatibilityPatches: [],
 });
 await writeFile(provenancePath, `${JSON.stringify(provenance, null, 2)}\n`);
 await writeFile(upstreamManifestPath, `${JSON.stringify(upstreamManifest, null, 2)}\n`);

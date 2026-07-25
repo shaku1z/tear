@@ -103,12 +103,12 @@ export const SFX = Object.freeze({
     if (runtime) return runtime.debugSnapshot();
     const settings = migrateAudioSettings(pendingSettings ?? {});
     return { state: loadState === "failed" ? "failed" : "awaiting-user-activation", backend: null, settings, runtimeLoadState: loadState,
-      score: { scoreVersion: "0.1.0-alpha.1", run: null, contextSequence: 0, eventSequence: 0 },
+      score: { scoreVersion: "built-in-scores@0.1.0-alpha.2", run: null, contextSequence: 0, eventSequence: 0 },
       resources: { activeVoices: 0, activeVoiceGraphNodes: 0, voiceCap: 24, noiseBuffers: 0,
         cueRoutes: Object.freeze({}), routeDispatches: Object.freeze({ weapons: 0, enemies: 0, player: 0, environment: 0 }),
         lifecycleInstalled: false, lifecycleListeners: 0 } };
   },
-  musicScoreVersion() { return "0.1.0-alpha.1"; },
+  musicScoreVersion() { return "built-in-scores@0.1.0-alpha.2"; },
   musicReplayMetadata(): TearScoreReplayMetadata { return runtime?.musicReplayMetadata() ?? { enabled: false, reason: "not-recorded" }; },
   beginMusicRun(metadata: MusicRunSessionMetadata) {
     if (runtime) runtime.beginMusicRun(metadata);

@@ -130,7 +130,12 @@ describe("pinned TearScore ESM adapter", () => {
     expect(createHash("sha256").update(tone).digest("hex")).toBe(TEAR_SCORE_PROVENANCE.toneSha256);
     expect(bundle.toString("utf8")).toContain("export{");
     expect(bundle.toString("utf8")).not.toContain("globalThis.Tone");
-    expect(bundle.toString("utf8")).toContain("this.composer?.reset(),this.rack?.dispose()");
+    expect(bundle.toString("utf8")).toContain("this.scoreTransitionId=void 0,this.composer?.reset(),this.rack?.dispose()");
+    expect(bundle.toString("utf8")).toContain("triangleBass");
+    expect(bundle.toString("utf8")).toContain("bellLead");
+    expect(bundle.toString("utf8")).toContain("breath");
+    expect(bundle.toString("utf8")).not.toContain("Grounds Dynamic");
+    expect(bundle.toString("utf8")).not.toContain("MetalSynth");
     expect(manifest).toMatchObject({
       engineRepository: TEAR_SCORE_PROVENANCE.engineRepository,
       engineCommit: TEAR_SCORE_PROVENANCE.engineCommit,
@@ -138,7 +143,7 @@ describe("pinned TearScore ESM adapter", () => {
       artifactFormat: "esm",
       bundleSha256: TEAR_SCORE_PROVENANCE.bundleSha256,
       toneVersion: TEAR_SCORE_PROVENANCE.toneVersion,
-      compatibilityPatches: ["composer-reset-before-rack-dispose"],
+      compatibilityPatches: [],
     });
   });
 });

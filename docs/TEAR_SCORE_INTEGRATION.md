@@ -5,7 +5,11 @@ repository through `AudioSystem`'s `MusicBackend` contract. TearScore never owns
 host audio context, lifecycle, user settings, ad mute state, or game state.
 
 The checked-in runtime is the ESM release of `@tear-score/adapter-tear`
-`0.1.0-alpha.1`, paired with a narrow host-context ESM build of Tone.js `14.9.17`.
+`0.1.0-alpha.1` with built-in score revision `built-in-scores@0.1.0-alpha.2`,
+paired with a narrow host-context ESM build of Tone.js `14.9.17`. The score
+revision restores each oracle theme's tempo, tonic, two-bar drum, bass and lead
+identity, then derives five adaptive intensity tiers from that identity. Hats
+and percussion use filtered noise rather than pitched metallic oscillators.
 The host build deliberately omits Tone's eager root exports, which would otherwise
 create a second `AudioContext` before TearScore can install the AudioSystem-owned
 context. Neither artifact publishes or consumes a browser global. Exact SHA-256 values and the upstream commit are recorded in
@@ -18,8 +22,8 @@ Updating TearScore requires all of the following:
 1. Build and fully verify a release in the `tear-score` repository.
 2. Produce the release ESM, run `scripts/build-tear-score-tone-host.mjs`, then run
    `scripts/vendor-tear-score-esm.mjs` to enforce the module boundary and update provenance.
-   Vendoring also applies the audited `composer-reset-before-rack-dispose` lifecycle
-   compatibility patch so scheduled Tone callbacks are cleared before synth disposal.
+   The vendor gate requires the upstream adapter to clear scheduled composer
+   callbacks before synth disposal; it no longer patches that lifecycle behavior.
 3. Update the provenance record and checksums.
 4. Run audio contracts, replay provenance tests, bundle budgets, standalone PWA tests,
    CrazyGames lifecycle tests, and repeated-run leak tests.
