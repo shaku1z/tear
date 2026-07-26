@@ -39,6 +39,7 @@ export function tutorialInputPrompt(
       "READ THE CHARGE": { description, keys: ["DASH", "DRAG — SWING"] },
       "FIELD TEST": { description, keys: ["DASH", "DRAG — SWING", "DRAG ↑"] },
     };
+    if (title === "FIELD TEST") return { description, keys: ["DASH", "DRAG SWING"] };
     return prompts[title] ?? keyboardPrompt(description, keys);
   }
 
@@ -60,5 +61,6 @@ export function tutorialInputPrompt(
     "READ THE CHARGE": { description, keys: [dash, "RS — SWING"] },
     "FIELD TEST": { description, keys: [dash, "RS — SWING", "RS ↑"] },
   };
+  if (title === "FIELD TEST") return { description, keys: [dash, "RS SWING"] };
   return prompts[title] ?? keyboardPrompt(description, keys);
 }

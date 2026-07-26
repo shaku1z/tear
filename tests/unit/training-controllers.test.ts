@@ -114,7 +114,7 @@ describe("tutorial controller", () => {
   });
 
   it("credits an evade and punish only inside a live charger's readable windows", () => {
-    const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 11;
+    const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 12;
     const snapshot = {
       dt: 0.1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
       player: { onGround: true, vy: 0, dashTimer: 0.12, dashX: -1, x: 800, facing: 1 }, bladeState: "held",
@@ -130,7 +130,7 @@ describe("tutorial controller", () => {
   });
 
   it("does not turn an ordinary dash or cut into enemy-language credit", () => {
-    const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 11;
+    const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 12;
     const snapshot = { dt: 0.1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
       player: { onGround: true, vy: 0, dashTimer: 0.12, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
     controller.update(snapshot); controller.mark("strike"); controller.update({ ...snapshot, player: { ...snapshot.player, dashTimer: 0 } });
@@ -138,7 +138,7 @@ describe("tutorial controller", () => {
     expect(controller.counters.punish ?? 0).toBe(0);
   });
 
-  it("requires the complete baseline encounter language in the final field test", () => {
+  it("teaches Field Test as a readable evade, then punish route", () => {
     const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 12;
     const committed = {
       dt: 0.1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
@@ -146,13 +146,16 @@ describe("tutorial controller", () => {
       enemies: [{ id: "coach", kind: "charger", dead: false, tutorialDummy: false, hp: 100, maxHp: 100, x: 1040, y: 760, attack: "commit" }],
     };
     controller.update(committed);
-    controller.mark("strike"); controller.mark("launch"); controller.mark("deflect");
+    expect(controller.step().instruction?.(controller.counters)).toContain("STEP 2");
+    controller.mark("strike");
     const coach = committed.enemies[0];
     if (coach === undefined) throw new Error("field-test coach fixture missing");
     controller.update({ ...committed, player: { ...committed.player, dashTimer: 0 }, enemies: [{ ...coach, attack: "recover" }] });
 
     expect(controller.step().complete(controller.counters)).toBe(true);
-    expect(controller.counters).toMatchObject({ evade: 1, punish: 1, launch: 1, deflect: 1 });
+    expect(controller.step().instruction?.(controller.counters)).toContain("ROUTE COMPLETE");
+    expect(controller.counters).toMatchObject({ evade: 1, punish: 1 });
+    expect(controller.step().progress(controller.counters)).toEqual([2, 2]);
   });
 
   it("recovers an unreachable thrown blade without granting throw credit", () => {

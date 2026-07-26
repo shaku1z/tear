@@ -98,7 +98,7 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
   const lessonView = (): LiveTutorialLessonView => {
     const lesson = controller.step();
     return {
-      t: lesson.title, d: lesson.description, keys: lesson.keys,
+      t: lesson.title, d: lesson.instruction?.(controller.counters) ?? lesson.description, keys: lesson.keys,
       need: lesson.dummyCount, ranged: lesson.ranged, final: lesson.final,
       arena: lesson.arena ?? "runway", arenaLabel: tutorialArenaDefinition(lesson.arena ?? "runway").label,
       teachingFocus: lesson.teachingFocus ?? "movement",

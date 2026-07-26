@@ -42,7 +42,7 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
       const observation = environment.observe();
       const snapshot = tutorial();
       trace.push({
-        label, tick: observation.tick, lessonIndex: snapshot.lessonIndex, lesson: snapshot.lesson,
+        label, tick: observation.tick, lessonIndex: snapshot.lessonIndex, lesson: snapshot.lesson, description: snapshot.description,
         arena: snapshot.arena,
         counters: snapshot.counters, player: observation.player, blade: observation.blade,
         entities: observation.entities,
@@ -236,16 +236,15 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
       else moveTowardCoach();
     }
     waitForLessonToAdvance(11, 720);
+    if (!/STEP 1: WATCH THE CHARGER/u.test(tutorial().description)) {
+      throw new Error("Field Test must state its first action instead of hiding a compound objective");
+    }
     for (let tick = 0; tick < 8_400 && tutorial().lessonIndex === 12; tick += 1) {
       const counters = tutorial().counters, enemy = coach();
       if ((counters.evade ?? 0) === 0) {
         if (enemy?.state === "commit") evadeLiveCharge(enemy); else moveTowardCoach();
       } else if ((counters.punish ?? 0) === 0) {
         if (enemy?.state === "recover") swingThroughDummy(120000, 8); else moveTowardCoach();
-      } else if ((counters.launch ?? 0) === 0) {
-        moveTowardCoach(100); swing(250000, 750000, 6, 18);
-      } else if ((counters.deflect ?? 0) === 0) {
-        if (!returnVisibleShot()) step();
       } else step();
     }
     waitForLessonToAdvance(12, 720);

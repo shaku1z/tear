@@ -8,6 +8,8 @@ export type TutorialMark =
 export interface TutorialLesson {
   readonly title: string;
   readonly description: string;
+  /** Current plain-language instruction for multi-step encounter lessons. */
+  readonly instruction?: (counters: Readonly<Partial<Record<TutorialMark, number>>>) => string;
   readonly keys: readonly string[];
   /** Legacy lesson-local counters; Cutting Room uses entryMarks below. */
   readonly objectiveMarks?: readonly TutorialMark[];
@@ -123,8 +125,15 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   { title: "UPDRAFT", description: "While rising, carve up twice. A good cut can make the next route possible.", keys: ["W", "MOUSE UP"], arena: "liftwell", entryMarks: ["jump", "launch", "strike", "updraft"], teachingFocus: "momentum", dummyCount: 1, progress: (n) => [bounded(count(n, "updraft"), 2), 2], complete: (n) => count(n, "updraft") >= 2 },
   { title: "THROW", description: "Hit twice at range and recall twice. The blade stays part of your movement.", keys: ["RMB"], arena: "throw-lane", entryMarks: ["throwHit", "recall"], teachingFocus: "blade", dummyCount: 1, progress: (n) => [bounded(count(n, "throwHit"), 2) + bounded(count(n, "recall"), 2), 4], complete: (n) => count(n, "throwHit") >= 2 && count(n, "recall") >= 2 },
   { title: "PARRY", description: "Return two shots. A counter is a route change, not a panic button.", keys: ["MOUSE"], arena: "counterline", entryMarks: ["parry", "deflect"], teachingFocus: "counterplay", ranged: true, progress: (n) => [Math.min(4, count(n, "parry") * 2 || count(n, "deflect")), 4], complete: (n) => count(n, "parry") >= 2 || count(n, "deflect") >= 4 },
-  { title: "READ THE CHARGE", description: "Wait for the commitment. Dash clear, then cut only in recovery.", keys: ["SHIFT", "MOUSE"], arena: "read-line", entryMarks: ["evade", "punish"], teachingFocus: "enemy", coachCharger: true, progress: (n) => [bounded(count(n, "evade"), 1) + bounded(count(n, "punish"), 1), 2], complete: (n) => count(n, "evade") >= 1 && count(n, "punish") >= 1 },
-  { title: "FIELD TEST", description: "Evade the charge, punish recovery, open the air, then return one shot.", keys: ["SHIFT", "MOUSE", "MOUSE UP"], arena: "field-floor", entryMarks: ["evade", "punish", "launch", "deflect"], teachingFocus: "encounter", coachCharger: true, ranged: true, progress: (n) => [bounded(count(n, "evade"), 1) + bounded(count(n, "punish"), 1) + bounded(count(n, "launch"), 1) + bounded(count(n, "deflect"), 1), 4], complete: (n) => count(n, "evade") >= 1 && count(n, "punish") >= 1 && count(n, "launch") >= 1 && count(n, "deflect") >= 1 },
+  { title: "READ THE CHARGE", description: "Watch for the commitment. Dash clear when the Charger lunges.", keys: ["SHIFT"], arena: "read-line", entryMarks: ["evade"], teachingFocus: "enemy", coachCharger: true, progress: (n) => [bounded(count(n, "evade"), 1), 1], complete: (n) => count(n, "evade") >= 1 },
+  { title: "FIELD TEST", description: "Complete one clean combat route.", keys: ["SHIFT", "MOUSE"], arena: "field-floor", entryMarks: ["evade", "punish"], teachingFocus: "encounter", coachCharger: true,
+    instruction: (n) => {
+      if (count(n, "evade") < 1) return "STEP 1: WATCH THE CHARGER. When it commits, dash away.";
+      if (count(n, "punish") < 1) return "STEP 2: IT MISSED. Strike the Charger during recovery.";
+      return "ROUTE COMPLETE: evade, then punish recovery. Keep that rhythm.";
+    },
+    progress: (n) => [bounded(count(n, "evade"), 1) + bounded(count(n, "punish"), 1), 2],
+    complete: (n) => count(n, "evade") >= 1 && count(n, "punish") >= 1 },
   { title: "READY", description: "Move, make space, take height, and return pressure. The Tear awaits.", keys: [], arena: "ready-room", entryMarks: [], teachingFocus: "ready", final: true, progress: () => [0, 1], complete: () => false },
 ]);
 
@@ -142,8 +151,8 @@ const PRODUCTION_GHOST_TRACES: Readonly<Record<string, GhostScript>> = Object.fr
   UPDRAFT: { length: 3, path: productionGhostPath("UPDRAFT", 3), swings: [[0.62, 0.82, 1, -2]], hits: [0.74], target: [[0, 60, 0], [0.7, 60, 0], [1.1, 60, -190], [1.6, 60, -60], [2, 60, 0]] },
   THROW: { length: 3.4, path: productionGhostPath("THROW", 3.4), throwWindow: [0.6, 1.9], hits: [1.1] },
   PARRY: { length: 3, path: productionGhostPath("PARRY", 3), swings: [[0.78, 0.94, 0.9, -1.2]], shot: { start: 0.3, hit: 0.86, end: 1.6 } },
-  "READ THE CHARGE": { length: 3.2, path: productionGhostPath("READ THE CHARGE", 3.2), dashes: [[0.72, 0.92]], swings: [[1.68, 1.86, 0.9, -0.8]], hits: [1.78] },
-  "FIELD TEST": { length: 3.8, path: productionGhostPath("FIELD TEST", 3.8), dashes: [[0.62, 0.82]], swings: [[1.52, 1.7, 0.9, -0.8], [2.2, 2.4, 0.8, -1.9]], hits: [1.62, 2.3], shot: { start: 2.55, hit: 3.08, end: 3.7 } },
+  "READ THE CHARGE": { length: 2.4, path: productionGhostPath("READ THE CHARGE", 2.4), dashes: [[0.72, 0.92]] },
+  "FIELD TEST": { length: 2.5, path: productionGhostPath("FIELD TEST", 2.5), dashes: [[0.62, 0.82]], swings: [[1.52, 1.7, 0.9, -0.8]], hits: [1.62] },
 });
 
 function interpolate(frames: readonly TutorialGhostFrame[], time: number): Readonly<{ x: number; y: number }> {
