@@ -28,6 +28,19 @@ const ORACLE_PROBE = `
       });
       enemies = [enemy]; projectiles = [];
     },
+    prepareCombatParityScenario: () => {
+      const dx = blade.tipX - blade.x, dy = blade.tipY - blade.y;
+      const survivor = new Charger(blade.x + dx * 0.48, blade.y + dy * 0.48);
+      const victim = new Charger(blade.x + dx * 0.78, blade.y + dy * 0.78);
+      for (const enemy of [survivor, victim]) Object.assign(enemy, {
+        vx: 0, vy: 0, onGround: false, spawnT: 0, stun: 0.75, hitCd: 0, aliveT: 0,
+        behavior: "bull", atk: "idle", atkT: 0, atkCd: 9, canClimb: false, climber: false,
+        variant: "", variantName: "", affixes: [], affixCount: 0,
+      });
+      victim.hp = 1; victim.hpDisplay = 1;
+      Object.assign(blade, { state: "held", vx: 1800, vy: 0 });
+      enemies = [survivor, victim]; projectiles = [];
+    },
     screen: () => state,
     snapshot: () => {
       const hint = document.querySelector("#lockhint");
@@ -64,7 +77,10 @@ const ORACLE_PROBE = `
           hp: enemy.hp, stun: enemy.stun, spawnT: enemy.spawnT, introT: enemy.introT || 0, aliveT: enemy.aliveT,
           onGround: enemy.onGround, behavior: enemy.behavior, attack: enemy.atk, attackTime: enemy.atkT,
           attackCooldown: enemy.atkCd, attackDirection: enemy.atkDir, chargePower: enemy.chargePower,
+          maxHp: enemy.maxHp, hitCooldown: enemy.hitCd, dying: enemy.dying,
         })),
+        combat: run ? { enemyCount: enemies.filter((enemy) => !enemy.dead).length,
+          waveKills: run.waveKills, heldHits: run.weaponStats.heldHits } : null,
       };
     },
   });
@@ -118,6 +134,7 @@ async function installAdapter(page, kind, fixture) {
         source: { kind: "oracle", revision },
         startRun: () => window.__TEAR_ORACLE_PARITY__.startRun(mode, difficulty),
         prepareEnemyParityScenario: () => window.__TEAR_ORACLE_PARITY__.prepareEnemyParityScenario(),
+        prepareCombatParityScenario: () => window.__TEAR_ORACLE_PARITY__.prepareCombatParityScenario(),
         screen: () => window.__TEAR_ORACLE_PARITY__.screen(),
         snapshot: () => window.__TEAR_ORACLE_PARITY__.snapshot(),
       });
@@ -130,6 +147,7 @@ async function installAdapter(page, kind, fixture) {
       source: { kind: "current", revision: "working-tree" },
       startRun: () => window.__PANTHEON_TEST.startMode(mode, difficulty),
       prepareEnemyParityScenario: () => window.__PANTHEON_TEST.prepareEnemyParityScenario(),
+      prepareCombatParityScenario: () => window.__PANTHEON_TEST.prepareCombatParityScenario(),
       screen: () => window.__PANTHEON_TEST.state().game,
       snapshot: () => {
         const live = window.__PANTHEON_TEST.state();
@@ -156,6 +174,7 @@ async function installAdapter(page, kind, fixture) {
           player: live.playerTrace,
           blade: live.bladeTrace,
           enemies: live.enemyTrace,
+          combat: live.combatTrace,
         };
       },
     });
@@ -199,6 +218,8 @@ async function installTickBridge(page) {
       }));
       if (action.type === "prepareEnemyScenario") {
         window.__TEAR_PARITY_ADAPTER__.prepareEnemyParityScenario();
+      } else if (action.type === "prepareCombatScenario") {
+        window.__TEAR_PARITY_ADAPTER__.prepareCombatParityScenario();
       } else if (action.type === "mouseMove") {
         moveMouse(action.x, action.y);
       } else if (action.type === "mouseClick") {
@@ -623,6 +644,21 @@ function assertCurrentEnemyCharge(trace) {
   assert.ok(recovery.aliveT > windup.aliveT, "the enemy AI clock keeps advancing");
 }
 
+function assertCurrentCombatResolution(trace) {
+  assert.deepEqual(trace.pageErrors, [], `current combat trace page errors:\n${trace.pageErrors.join("\n")}`);
+  const strike = checkpoint(trace, "strike-resolved");
+  const recovered = checkpoint(trace, "timers-recovered");
+  assert.equal(strike.combat.enemyCount, 1, "the lethal target is removed in the collision tail");
+  assert.equal(strike.combat.waveKills, 1, "the lethal strike enters normal kill credit");
+  assert.equal(strike.combat.heldHits, 2, "the held blade records both real collision targets");
+  assert.ok(strike.enemies[0].hp < strike.enemies[0].maxHp, "the surviving target takes blade damage");
+  assert.ok(Math.abs(strike.enemies[0].vx) > 0, "the surviving target receives blade knockback");
+  assert.ok(strike.enemies[0].hitCooldown > 0, "the surviving target owns a post-hit immunity window");
+  assert.ok(strike.enemies[0].stun > 0, "stun remains active immediately after the strike");
+  assert.ok(recovered.enemies[0].hitCooldown <= 0, "the hit immunity window expires");
+  assert.ok(recovered.enemies[0].stun <= 0, "the stun timer recovers instead of freezing AI");
+}
+
 async function main() {
   const fixture = JSON.parse(fs.readFileSync(FIXTURE_FILE, "utf8"));
   const currentOnly = process.argv.includes("--current-only");
@@ -658,6 +694,7 @@ async function main() {
     fs.writeFileSync(currentFile, `${JSON.stringify(currentTrace, null, 2)}\n`);
     if (fixture.contract === "player-locomotion") assertCurrentLocomotion(currentTrace);
     else if (fixture.contract === "enemy-charge-cycle") assertCurrentEnemyCharge(currentTrace);
+    else if (fixture.contract === "combat-resolution") assertCurrentCombatResolution(currentTrace);
     else assertCurrentLifecycle(currentTrace);
 
     if (oracleServer) {

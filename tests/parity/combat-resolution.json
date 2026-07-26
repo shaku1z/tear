@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "combat-resolution",
+  "contract": "combat-resolution",
+  "description": "A deterministic real held-blade strike covering damage, knockback, hit immunity, kill credit, collection cleanup, and stun recovery.",
+  "viewport": {
+    "width": 1600,
+    "height": 900
+  },
+  "mode": "playground",
+  "difficulty": "normal",
+  "actions": [
+    { "type": "mouseMove", "x": 1000, "y": 450, "steps": 2, "checkpoint": "aim-authored" },
+    { "type": "prepareCombatScenario", "checkpoint": "strike-resolved" },
+    { "type": "wait", "ms": 850, "checkpoint": "timers-recovered" }
+  ]
+}

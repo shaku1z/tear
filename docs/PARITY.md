@@ -44,10 +44,11 @@ not depend on visual estimation alone.
 
 ## Parity microscope
 
-`pnpm parity:blade`, `pnpm parity:player`, and `pnpm parity:enemy` serve the
-pinned oracle and the current test build on separate local origins. They replay
-the blade lifecycle, player locomotion, or authored Charger fixture through
-both pages and write paired traces plus a report under `artifacts/parity/`.
+`pnpm parity:blade`, `pnpm parity:player`, `pnpm parity:enemy`, and
+`pnpm parity:combat` serve the pinned oracle and the current test build on
+separate local origins. They replay the blade lifecycle, player locomotion,
+authored Charger fixture, or held-strike resolution through both pages and
+write paired traces plus a report under `artifacts/parity/`.
 
 The blade fixture writes:
 
@@ -89,6 +90,14 @@ It covers windup, charge commit, arena locomotion, recovery, cooldown ownership,
 and the enemy AI clock. Its permanent current-build contract is
 `pnpm test:browser:enemy-charge`.
 
+The combat fixture is `tests/parity/combat-resolution.json`. After a shared
+mouse-input tick, its test-only action places two real Chargers directly on the
+live held-blade segment and gives the blade one authored velocity impulse. The
+production blade update, strike planner, enemy damage method, kill runtime, and
+collision tail remain untouched. It covers damage, impulse, post-hit immunity,
+lethal credit, dead-actor collection cleanup, and timer recovery. Its permanent
+current-build contract is `pnpm test:browser:combat-resolution`.
+
 ### Phase 0 blade baseline
 
 The parity adapter queues each event before a run segment starts, applies it
@@ -120,3 +129,13 @@ same authoritative ticks, and match attack direction, charge power, position,
 velocity, grounded state, cooldowns, and alive time. Enemy kind, behavior,
 attack phase, and grounded state are strict parity fields; continuous motion
 and timers retain narrow tolerances for future cross-browser trace evidence.
+
+### Phase 4 held-strike baseline
+
+The first combat-resolution capture reached zero differences across three
+checkpoints. Both builds consume the same authored aim tick, place the targets
+relative to their live blade geometry, damage both targets on the same
+authoritative step, remove and credit the lethal target, retain the survivor's
+hit immunity and stun, then expire both timers. The fixture deliberately enters
+through the real held-blade collision phase rather than calling `Enemy.hit`
+directly, so it protects the full blade-to-kill pipeline.

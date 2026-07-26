@@ -85,6 +85,23 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       context.state.setEnemies([enemy]);
       context.state.setProjectiles([]);
     },
+    /** Exact-tick parity fixture: drive a real held strike through damage, kill, and cleanup. */
+    prepareCombatParityScenario() {
+      const player = context.state.player(), blade = context.state.blade();
+      if (player === undefined || blade === undefined) throw new Error("Combat parity scenario requires a live player and blade");
+      const dx = blade.tipX - blade.x, dy = blade.tipY - blade.y;
+      const survivor = new d.Charger(blade.x + dx * 0.48, blade.y + dy * 0.48) as GameEnemy;
+      const victim = new d.Charger(blade.x + dx * 0.78, blade.y + dy * 0.78) as GameEnemy;
+      for (const enemy of [survivor, victim]) Object.assign(enemy, {
+        vx: 0, vy: 0, onGround: false, spawnT: 0, stun: 0.75, hitCd: 0, aliveT: 0,
+        behavior: "bull", atk: "idle", atkT: 0, atkCd: 9, canClimb: false, climber: false,
+        variant: "", variantName: "", affixes: [], affixCount: 0,
+      });
+      victim.hp = 1; victim.hpDisplay = 1;
+      Object.assign(blade, { state: "held", vx: 1800, vy: 0 });
+      context.state.setEnemies([survivor, victim]);
+      context.state.setProjectiles([]);
+    },
     /** Journey-only: drop the live boss to a health fraction so phase gates are reachable. */
     setBossHealthFraction(fraction: number) {
       const boss = context.state.enemies().find((enemy) => enemy.isBoss && !enemy.dead);
