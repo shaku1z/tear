@@ -1359,17 +1359,17 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-278A64327ABEC1CB` | 853-853 | 9 | architecture | no | reference | reference | C23 | documentation-validation | --- |
 | `TG3-3686E7F325171BEE` | 857-857 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | The first production-capable agent should be a heuristic controller built from the existing attract-mode logic. |
 | `TG3-21AC8D54CF8B7AE9` | 859-859 | 10 | ml-training | no | reference | reference | C24 | documentation-validation | This creates value before any model is trained. |
-| `TG3-850F85A76667374E` | 863-863 | 10 | ml-training | yes | prototype | required | C24 | deterministic-scenario, journey-checkpoint | The scripted bot should be split into modular systems. |
-| `TG3-F9635C494FC1A026` | 867-867 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Select relevant enemies |
-| `TG3-3337EBACFE0EC256` | 868-868 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Rank threats |
+| `TG3-850F85A76667374E` | 863-863 | 10 | ml-training | yes | visible | required | C24 | deterministic-scenario, journey-checkpoint | The scripted bot should be split into modular systems. |
+| `TG3-F9635C494FC1A026` | 867-867 | 10 | ml-training | yes | visible | required | C24 | deterministic-scenario, journey-checkpoint | Select relevant enemies |
+| `TG3-3337EBACFE0EC256` | 868-868 | 10 | ml-training | yes | visible | required | C24 | deterministic-scenario, journey-checkpoint | Rank threats |
 | `TG3-33C3015D0DCAEB09` | 869-869 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Predict projectile impact |
 | `TG3-061E4C6913D60B6C` | 870-870 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Detect safe spaces |
 | `TG3-1F8DFED4F669A4CA` | 871-871 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Find reachable platforms |
 | `TG3-CD57C2A227EFB723` | 872-872 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Detect attack windups |
 | `TG3-DC9057EB38230FB9` | 873-873 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Recognize boss phases |
-| `TG3-4D23ABC868754530` | 877-877 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Pursue target |
-| `TG3-378992D89AA0129E` | 878-878 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Maintain ideal combat distance |
-| `TG3-BEC61859F3AEF31F` | 879-879 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Jump between platforms |
+| `TG3-4D23ABC868754530` | 877-877 | 10 | ml-training | yes | visible | required | C24 | deterministic-scenario, journey-checkpoint | Pursue target |
+| `TG3-378992D89AA0129E` | 878-878 | 10 | ml-training | yes | visible | required | C24 | deterministic-scenario, journey-checkpoint | Maintain ideal combat distance |
+| `TG3-BEC61859F3AEF31F` | 879-879 | 10 | ml-training | yes | visible | required | C24 | deterministic-scenario, journey-checkpoint | Jump between platforms |
 | `TG3-47D24E0C42945D71` | 880-880 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Drop through platforms |
 | `TG3-437DD92931D2C0AF` | 881-881 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Recover from arena edges |
 | `TG3-656FBEAEDC77F612` | 882-882 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Escape hazard zones |
@@ -1380,10 +1380,10 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-0CA4E5C2959D3CB8` | 888-888 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | downward strike |
 | `TG3-551200E2370D593B` | 889-889 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Launch and juggle |
 | `TG3-047124D4D9FA39C2` | 890-890 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Use Power Slam |
-| `TG3-12077EEF10676F45` | 891-891 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Throw and recall |
+| `TG3-12077EEF10676F45` | 891-891 | 10 | ml-training | yes | visible | required | C24 | deterministic-scenario, journey-checkpoint | Throw and recall |
 | `TG3-DB17C6885D7C927C` | 892-892 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Use tether |
 | `TG3-263387BD4C9D5A11` | 893-893 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Target enemy weak points |
-| `TG3-0996580C641A9413` | 897-897 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Parry incoming projectiles |
+| `TG3-0996580C641A9413` | 897-897 | 10 | ml-training | yes | visible | required | C24 | deterministic-scenario, journey-checkpoint | Parry incoming projectiles |
 | `TG3-A9932EDF4447911E` | 898-898 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Dash through attacks |
 | `TG3-5BD7196FF1296FFB` | 899-899 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Reposition away from bombs or zones |
 | `TG3-41BC7CE5277E287D` | 900-900 | 10 | preservation | yes | missing | required | C24 | preservation-corpus, full-release-gate | Preserve dash charges when safe |
@@ -1391,8 +1391,8 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-60C210F9F5A2E098` | 905-905 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Select upgrades by policy profile |
 | `TG3-52ABE719D44B2024` | 906-906 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Focus priority enemies |
 | `TG3-CE3823B61A522344` | 907-907 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Handle boss mechanics |
-| `TG3-E1DEEF2125B22531` | 908-908 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Switch between aggression and survival |
-| `TG3-A1C0F061FAB83762` | 909-909 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Avoid prolonged inactivity |
+| `TG3-E1DEEF2125B22531` | 908-908 | 10 | ml-training | yes | visible | required | C24 | deterministic-scenario, journey-checkpoint | Switch between aggression and survival |
+| `TG3-A1C0F061FAB83762` | 909-909 | 10 | ml-training | yes | visible | required | C24 | deterministic-scenario, journey-checkpoint | Avoid prolonged inactivity |
 | `TG3-6FF65104571F3AC7` | 913-913 | 10 | ml-training | no | reference | reference | C24 | documentation-validation | The scripted agent remains useful as: |
 | `TG3-AD920568490A58B0` | 915-915 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | A deterministic smoke tester |
 | `TG3-4B7403D5ED5601D9` | 916-916 | 10 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | A baseline policy |
@@ -1514,38 +1514,38 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-17B4F5E79025A938` | 1154-1154 | 13 | ml-training | no | reference | reference | C34 | documentation-validation | --- |
 | `TG3-4F30B87278DE3604` | 1158-1158 | 14 | ml-training | no | reference | reference | C24 | documentation-validation | A single powerful policy will leave major blind spots. |
 | `TG3-567691FD736153E1` | 1158-1158 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | TearBench should maintain a fleet. |
-| `TG3-3F5F4DBCA103CCC6` | 1162-1162 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | \| Smoke Bot \| Confirms boot |
+| `TG3-3F5F4DBCA103CCC6` | 1162-1162 | 14 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | \| Smoke Bot \| Confirms boot |
 | `TG3-251E9AA760160E2B` | 1162-1162 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | run start |
 | `TG3-FBDF624249E273B4` | 1162-1162 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | movement |
 | `TG3-4BDDCF5C31707435` | 1162-1162 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | basic attack |
 | `TG3-99A89908C6B17721` | 1162-1162 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | pause |
 | `TG3-2BC54DDCD55FDB45` | 1162-1162 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | restart \| |
-| `TG3-A66760BBA4103C36` | 1163-1163 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | \| Competent Player \| Clears normal content consistently \| |
-| `TG3-70F21BC7A1AADF93` | 1164-1164 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | \| Style Player \| Exercises launches |
+| `TG3-A66760BBA4103C36` | 1163-1163 | 14 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | \| Competent Player \| Clears normal content consistently \| |
+| `TG3-70F21BC7A1AADF93` | 1164-1164 | 14 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | \| Style Player \| Exercises launches |
 | `TG3-AD2BD8FB512F0DFC` | 1164-1164 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | juggles |
 | `TG3-DEA73C47A707347D` | 1164-1164 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | slams |
 | `TG3-266900AA2ED7B73E` | 1164-1164 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | throws |
 | `TG3-E6909AAB2DA518FD` | 1164-1164 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | parries |
 | `TG3-400583E04EB3BFF3` | 1164-1164 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | combo systems \| |
-| `TG3-0169E606E35777EA` | 1165-1165 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | \| Survival Player \| Tests defense |
+| `TG3-0169E606E35777EA` | 1165-1165 | 14 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | \| Survival Player \| Tests defense |
 | `TG3-78F86AF845A497E3` | 1165-1165 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | healing |
 | `TG3-56A933E04CD53BB8` | 1165-1165 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | shields |
 | `TG3-8D24949096C84A05` | 1165-1165 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | revives |
 | `TG3-31A6B38C6FEB8FAF` | 1165-1165 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | long encounters \| |
-| `TG3-C105AADC4D0CAC98` | 1166-1166 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | \| Speedrunner \| Pressures transitions |
+| `TG3-C105AADC4D0CAC98` | 1166-1166 | 14 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | \| Speedrunner \| Pressures transitions |
 | `TG3-81657F0984023843` | 1166-1166 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | spawning |
 | `TG3-0A878DDAC2C33274` | 1166-1166 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | timers |
 | `TG3-149BCCC4B2D26686` | 1166-1166 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | race conditions \| |
-| `TG3-6D8E4F284AA96951` | 1167-1167 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | \| Controller Bot \| Uses gamepad semantics and validates menu/controller behavior \| |
-| `TG3-96C343F597C3831B` | 1168-1168 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | \| Touch Bot \| Exercises mobile controls and touch-specific interaction \| |
-| `TG3-6BC6AC58DB68E0E1` | 1169-1169 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | \| Menu Agent \| Tests tabs |
+| `TG3-6D8E4F284AA96951` | 1167-1167 | 14 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | \| Controller Bot \| Uses gamepad semantics and validates menu/controller behavior \| |
+| `TG3-96C343F597C3831B` | 1168-1168 | 14 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | \| Touch Bot \| Exercises mobile controls and touch-specific interaction \| |
+| `TG3-6BC6AC58DB68E0E1` | 1169-1169 | 14 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | \| Menu Agent \| Tests tabs |
 | `TG3-027D4C1A702B9B9D` | 1169-1169 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | scrolling |
 | `TG3-E2F9EB9311D4DA30` | 1169-1169 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | confirmation |
 | `TG3-F18153FB919D4DDD` | 1169-1169 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | back behavior |
 | `TG3-7336E7B4A76B7B06` | 1169-1169 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | focus transitions \| |
-| `TG3-7A199DFDD1664D90` | 1170-1170 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | \| Chaos Bot \| Produces unusual but valid combinations of inputs \| |
+| `TG3-7A199DFDD1664D90` | 1170-1170 | 14 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | \| Chaos Bot \| Produces unusual but valid combinations of inputs \| |
 | `TG3-3489453FECF20BE7` | 1171-1171 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | \| Fuzzer \| Mutates scenarios and action sequences \| |
-| `TG3-7496FC8FB21F4B29` | 1172-1172 | 14 | security | yes | missing | required | C24 | malformed-input, interaction-matrix | \| Exploit Hunter \| Searches for infinite score |
+| `TG3-7496FC8FB21F4B29` | 1172-1172 | 14 | security | yes | contract | required | C24 | malformed-input, interaction-matrix | \| Exploit Hunter \| Searches for infinite score |
 | `TG3-319C14F602E1A9D7` | 1172-1172 | 14 | security | yes | missing | required | C24 | malformed-input, interaction-matrix | invulnerability |
 | `TG3-892C6083823088AE` | 1172-1172 | 14 | security | yes | missing | required | C24 | malformed-input, interaction-matrix | clipping |
 | `TG3-C06011C9BFEB83F9` | 1172-1172 | 14 | security | yes | missing | required | C24 | malformed-input, interaction-matrix | softlocks |
@@ -1554,7 +1554,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-2089E3ADBCB3238E` | 1173-1173 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | animation states |
 | `TG3-1CABE1299473E508` | 1173-1173 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | readability |
 | `TG3-265C7D89CA3ED32B` | 1173-1173 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | rendering differences \| |
-| `TG3-8F22D88BCB14B1A2` | 1174-1174 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | \| Performance Agent \| Measures frame time |
+| `TG3-8F22D88BCB14B1A2` | 1174-1174 | 14 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | \| Performance Agent \| Measures frame time |
 | `TG3-CEBFCC336124FA0D` | 1174-1174 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | allocations |
 | `TG3-C776495CFFA9059C` | 1174-1174 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | entity counts |
 | `TG3-29FA3A1AC3FB82CC` | 1174-1174 | 14 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | long-run degradation \| |
@@ -1838,12 +1838,12 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-FF154E18FEBAAD0E` | 1794-1794 | 24 | architecture | no | reference | reference | C21 | documentation-validation | --- |
 | `TG3-C8F1122AB5B44E51` | 1798-1798 | 24 | ml-training | no | reference | reference | C24 | documentation-validation | Goal:: Upgrade attract-mode concepts into a competent real-game agent. |
 | `TG3-6D5E75F314B71E8D` | 1800-1800 | 24 | architecture | no | reference | reference | C24 | documentation-validation | Deliverables: |
-| `TG3-D6585770538E39B6` | 1802-1802 | 24 | architecture | yes | missing | required | C24 | unit-contract, full-release-gate | Threat selection |
-| `TG3-241A7B32302A1870` | 1803-1803 | 24 | architecture | yes | missing | required | C24 | unit-contract, full-release-gate | Navigation |
+| `TG3-D6585770538E39B6` | 1802-1802 | 24 | architecture | yes | visible | required | C24 | unit-contract, full-release-gate | Threat selection |
+| `TG3-241A7B32302A1870` | 1803-1803 | 24 | architecture | yes | visible | required | C24 | unit-contract, full-release-gate | Navigation |
 | `TG3-1163B5B3D0D28ABB` | 1804-1804 | 24 | gameplay | yes | missing | required | C24 | deterministic-scenario, base-comparison | Blade arc planner |
 | `TG3-1DA99ECAFAC7F479` | 1805-1805 | 24 | architecture | yes | missing | required | C24 | unit-contract, full-release-gate | Projectile avoidance and parrying |
-| `TG3-FD6ED3BC37242D1C` | 1806-1806 | 24 | architecture | yes | missing | required | C24 | unit-contract, full-release-gate | Throw and recall logic |
-| `TG3-1C160A320BF5F471` | 1807-1807 | 24 | architecture | yes | missing | required | C24 | unit-contract, full-release-gate | Upgrade selection |
+| `TG3-FD6ED3BC37242D1C` | 1806-1806 | 24 | architecture | yes | visible | required | C24 | unit-contract, full-release-gate | Throw and recall logic |
+| `TG3-1C160A320BF5F471` | 1807-1807 | 24 | architecture | yes | visible | required | C24 | unit-contract, full-release-gate | Upgrade selection |
 | `TG3-EF2A74E9AC4DB3B8` | 1808-1808 | 24 | gameplay | yes | missing | required | C24 | deterministic-scenario, base-comparison | Boss behavior modules |
 | `TG3-79F32343366968BF` | 1809-1809 | 24 | architecture | yes | missing | required | C24 | unit-contract, full-release-gate | Competent |
 | `TG3-A289050172F76F4B` | 1809-1809 | 24 | architecture | yes | missing | required | C24 | unit-contract, full-release-gate | style |
@@ -2444,9 +2444,9 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-44F9F90AC2BE07CE` | 2570-2570 | 31 | gameplay | yes | missing | required | C24 | deterministic-scenario, base-comparison | Recovery options |
 | `TG3-CA36C75D520579EF` | 2571-2571 | 31 | gameplay | yes | missing | required | C24 | deterministic-scenario, base-comparison | State-specific invariants |
 | `TG3-2AED64B83169D466` | 2572-2572 | 31 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Relevant artifact capture policy |
-| `TG3-E3F8CDF1025AD167` | 2576-2576 | 31 | gameplay | yes | missing | required | C24 | deterministic-scenario, base-comparison | A high-level Journey Director should own the current objective. |
+| `TG3-E3F8CDF1025AD167` | 2576-2576 | 31 | gameplay | yes | visible | required | C24 | deterministic-scenario, base-comparison | A high-level Journey Director should own the current objective. |
 | `TG3-28536BCDBC5847D8` | 2578-2578 | 31 | gameplay | no | reference | reference | C24 | documentation-validation | Examples: |
-| `TG3-4FE04CB609CC3AE7` | 2592-2592 | 31 | gameplay | yes | missing | required | C24 | deterministic-scenario, base-comparison | The Journey Director must not issue frame-by-frame blade commands. |
+| `TG3-4FE04CB609CC3AE7` | 2592-2592 | 31 | gameplay | yes | visible | required | C24 | deterministic-scenario, base-comparison | The Journey Director must not issue frame-by-frame blade commands. |
 | `TG3-22940F46A3C774BB` | 2592-2592 | 31 | gameplay | no | reference | reference | C24 | documentation-validation | It delegates to specialized policies. |
 | `TG3-CD6A5689A29AAF83` | 2596-2596 | 31 | ml-training | no | reference | reference | C24 | documentation-validation | Every state receives a timeout policy. |
 | `TG3-B61B58A92237E0A9` | 2598-2598 | 31 | gameplay | no | reference | reference | C24 | documentation-validation | Examples: |
@@ -2500,7 +2500,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-3EB8D507B525E21B` | 2685-2685 | 32 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Decide when to pause |
 | `TG3-1761B377669D444B` | 2685-2685 | 32 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | retry |
 | `TG3-8DBFA2A5F9605A9A` | 2685-2685 | 32 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | abandon |
-| `TG3-79655FE05D6100FB` | 2686-2686 | 32 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Coordinate full-mode completion |
+| `TG3-79655FE05D6100FB` | 2686-2686 | 32 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Coordinate full-mode completion |
 | `TG3-E5C92871A2C8714E` | 2688-2688 | 32 | ml-training | no | reference | reference | C24 | documentation-validation | Suggested implementation: |
 | `TG3-EAE447C714EA5FDB` | 2690-2690 | 32 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Explicit finite-state machine initially |
 | `TG3-D892EE323454EC7C` | 2691-2691 | 32 | ml-training | yes | missing | optional | C24 | deterministic-scenario, journey-checkpoint | Optional learned or language-model planner later |
@@ -2695,18 +2695,18 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-AF80B00F7C9663B3` | 3016-3016 | 34 | gameplay | yes | missing | required | C24 | deterministic-scenario, base-comparison | enemy density |
 | `TG3-5B61299BD01751A3` | 3016-3016 | 34 | gameplay | yes | missing | required | C24 | deterministic-scenario, base-comparison | build value |
 | `TG3-146E6C8CB103603B` | 3016-3016 | 34 | gameplay | yes | missing | required | C24 | deterministic-scenario, base-comparison | risk economics. |
-| `TG3-4138C98B2A63C9C3` | 3020-3020 | 34 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | The main policy should receive difficulty as an explicit condition. |
+| `TG3-4138C98B2A63C9C3` | 3020-3020 | 34 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | The main policy should receive difficulty as an explicit condition. |
 | `TG3-DAB3283C643A2CE0` | 3022-3022 | 34 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | It should learn different behavior such as: |
 | `TG3-251B3974F9AA5B7C` | 3024-3024 | 34 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Easy: broader exploration |
 | `TG3-F8FF8F8802318331` | 3024-3024 | 34 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | lower defensive urgency |
 | `TG3-CDD158047A066BDD` | 3024-3024 | 34 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | novice-style validation |
 | `TG3-271E093CF6BAA8FF` | 3025-3025 | 34 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Normal: intended balanced strategy |
-| `TG3-4B9B789C94A43B7F` | 3026-3026 | 34 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Hard: stronger threat prioritization and sustain valuation |
-| `TG3-89FE83A6D3036C8F` | 3027-3027 | 34 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Extreme: high discipline |
+| `TG3-4B9B789C94A43B7F` | 3026-3026 | 34 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Hard: stronger threat prioritization and sustain valuation |
+| `TG3-89FE83A6D3036C8F` | 3027-3027 | 34 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Extreme: high discipline |
 | `TG3-CBD83DDA1B889FE9` | 3027-3027 | 34 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | crowd control |
 | `TG3-D941E5F7A3F1EB76` | 3027-3027 | 34 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | optimized routing |
 | `TG3-7C87CE97A9912302` | 3027-3027 | 34 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | low tolerance for greed |
-| `TG3-67C351352445C9E8` | 3028-3028 | 34 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | One-Hit: near-zero-contact strategy |
+| `TG3-67C351352445C9E8` | 3028-3028 | 34 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | One-Hit: near-zero-contact strategy |
 | `TG3-BA8C86DBFF715CB5` | 3028-3028 | 34 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | maximum telegraph respect |
 | `TG3-31AB43899735A7AA` | 3028-3028 | 34 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | defensive spacing |
 | `TG3-DD6EBFA8A45E41AE` | 3028-3028 | 34 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | parry selectivity |
@@ -2750,12 +2750,12 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-4C59D6D80E75E7D3` | 3103-3103 | 34 | architecture | yes | missing | required | C24 | unit-contract, full-release-gate | Each tier should feel meaningfully distinct. |
 | `TG3-A8A97294CD726BAF` | 3105-3105 | 34 | architecture | yes | missing | required | C24 | unit-contract, full-release-gate | TearBench should detect: |
 | `TG3-789AC5AF558AD471` | 3107-3107 | 34 | architecture | yes | missing | required | C24 | unit-contract, full-release-gate | Easy accidentally becoming equivalent to Normal |
-| `TG3-9A637485B3604571` | 3108-3108 | 34 | architecture | yes | missing | required | C24 | unit-contract, full-release-gate | Hard only inflating HP without changing pressure |
-| `TG3-3BC86907EF6AF370` | 3109-3109 | 34 | architecture | yes | missing | required | C24 | unit-contract, full-release-gate | Extreme becoming mathematically impossible for intended builds |
-| `TG3-CC4CB6CD0813596C` | 3110-3110 | 34 | architecture | yes | missing | required | C24 | unit-contract, full-release-gate | One-Hit being invalidated by hidden or unreadable damage |
+| `TG3-9A637485B3604571` | 3108-3108 | 34 | architecture | yes | contract | required | C24 | unit-contract, full-release-gate | Hard only inflating HP without changing pressure |
+| `TG3-3BC86907EF6AF370` | 3109-3109 | 34 | architecture | yes | contract | required | C24 | unit-contract, full-release-gate | Extreme becoming mathematically impossible for intended builds |
+| `TG3-CC4CB6CD0813596C` | 3110-3110 | 34 | architecture | yes | contract | required | C24 | unit-contract, full-release-gate | One-Hit being invalidated by hidden or unreadable damage |
 | `TG3-F1B9DD56CDD3E1D4` | 3111-3111 | 34 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Reward multipliers failing to apply |
-| `TG3-3270651629C78173` | 3112-3112 | 34 | ui-ux | yes | missing | required | C24 | journey-checkpoint, interaction-matrix | Difficulty selection UI not matching applied modifiers |
-| `TG3-16507547DFB5DDE0` | 3113-3113 | 34 | architecture | yes | missing | required | C24 | unit-contract, full-release-gate | Playground live difficulty switching failing to renormalize state |
+| `TG3-3270651629C78173` | 3112-3112 | 34 | ui-ux | yes | contract | required | C24 | journey-checkpoint, interaction-matrix | Difficulty selection UI not matching applied modifiers |
+| `TG3-16507547DFB5DDE0` | 3113-3113 | 34 | architecture | yes | contract | required | C24 | unit-contract, full-release-gate | Playground live difficulty switching failing to renormalize state |
 | `TG3-C5885A00C262D1E6` | 3117-3117 | 34 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | Use a population rather than a single champion: |
 | `TG3-00D747489E117FA3` | 3119-3119 | 34 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Novice agent |
 | `TG3-03A3BBCC6E8FAFA9` | 3120-3120 | 34 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Developing agent |
@@ -2883,8 +2883,8 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-4A197EE82B669516` | 3339-3339 | 35 | gameplay | yes | missing | required | C24 | deterministic-scenario, base-comparison | Mixed roster does not deadlock wave logic. |
 | `TG3-A4F35F91583136B8` | 3341-3341 | 35 | gameplay | no | reference | reference | C24 | documentation-validation | Completion interpretation: |
 | `TG3-FEC82876B340D6E5` | 3343-3343 | 35 | gameplay | yes | missing | required | C24 | deterministic-scenario, base-comparison | Coverage target achieved and no critical invariant failure within configured duration. |
-| `TG3-59D8F390776B71F8` | 3347-3347 | 35 | operations | yes | missing | required | C24 | interaction-matrix, full-release-gate | Not every combination needs identical release cadence, but every valid combination must have an explicit status: |
-| `TG3-C90D6AE78F912186` | 3360-3360 | 35 | architecture | yes | missing | required | C24 | unit-contract, full-release-gate | No combination should silently fall through the cracks. |
+| `TG3-59D8F390776B71F8` | 3347-3347 | 35 | operations | yes | contract | required | C24 | interaction-matrix, full-release-gate | Not every combination needs identical release cadence, but every valid combination must have an explicit status: |
+| `TG3-C90D6AE78F912186` | 3360-3360 | 35 | architecture | yes | contract | required | C24 | unit-contract, full-release-gate | No combination should silently fall through the cracks. |
 | `TG3-0846B751CF6103D3` | 3362-3362 | 35 | architecture | no | reference | reference | C24 | documentation-validation | --- |
 | `TG3-FE2CFE65931868AB` | 3366-3366 | 36 | ml-training | yes | missing | required | C23 | deterministic-scenario, journey-checkpoint | A full-mode agent needs to make coherent long-term decisions. |
 | `TG3-CDD40B555DBB0191` | 3370-3370 | 36 | ml-training | yes | missing | required | C23 | deterministic-scenario, journey-checkpoint | The policy must observe: |
@@ -3224,60 +3224,60 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-31C8155A5E8B7D48` | 3878-3878 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Aerial build |
 | `TG3-57FB40367E930CD1` | 3879-3879 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Minimal-upgrade challenge agent |
 | `TG3-7C7F675B2FE7CC65` | 3880-3880 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Random legal build agent |
-| `TG3-2FA25FE172661A23` | 3886-3886 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | \| Chaos Bot \| High-entropy but legal action combinations \| |
-| `TG3-98E48A2BC97C6AC1` | 3887-3887 | 39 | security | yes | missing | required | C24 | malformed-input, interaction-matrix | \| Exploit Hunter \| Seek score |
+| `TG3-2FA25FE172661A23` | 3886-3886 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | \| Chaos Bot \| High-entropy but legal action combinations \| |
+| `TG3-98E48A2BC97C6AC1` | 3887-3887 | 39 | security | yes | contract | required | C24 | malformed-input, interaction-matrix | \| Exploit Hunter \| Seek score |
 | `TG3-68D6E32BB3E0FC66` | 3887-3887 | 39 | security | yes | missing | required | C24 | malformed-input, interaction-matrix | invulnerability |
 | `TG3-F0936385EAB98730` | 3887-3887 | 39 | security | yes | missing | required | C24 | malformed-input, interaction-matrix | collision |
 | `TG3-9C14086550DD606F` | 3887-3887 | 39 | security | yes | missing | required | C24 | malformed-input, interaction-matrix | progression exploits \| |
-| `TG3-EAD3DF0FC7345902` | 3888-3888 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | \| Softlock Hunter \| Seek states where progress cannot continue \| |
-| `TG3-64083693075EE253` | 3889-3889 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | \| Boundary Hunter \| Stress world bounds |
+| `TG3-EAD3DF0FC7345902` | 3888-3888 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | \| Softlock Hunter \| Seek states where progress cannot continue \| |
+| `TG3-64083693075EE253` | 3889-3889 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | \| Boundary Hunter \| Stress world bounds |
 | `TG3-038F8C37EB393F23` | 3889-3889 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | platforms |
 | `TG3-EB018C055CF54763` | 3889-3889 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | void |
 | `TG3-2AF8B782AFB36CF8` | 3889-3889 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | overscan \| |
-| `TG3-4D2C7740CB84B799` | 3890-3890 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | \| Transition Hunter \| Stress pause |
+| `TG3-4D2C7740CB84B799` | 3890-3890 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | \| Transition Hunter \| Stress pause |
 | `TG3-81B5E59AE016CC64` | 3890-3890 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | death |
 | `TG3-4257C715BEAAD73E` | 3890-3890 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | wave |
 | `TG3-C696AA637ED34572` | 3890-3890 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | boss |
 | `TG3-481E22C7E5122474` | 3890-3890 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | draft |
 | `TG3-1BE4623AFB04B44D` | 3890-3890 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | menu transitions \| |
-| `TG3-710C984FFB6A08E0` | 3891-3891 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | \| Economy Attacker \| Seek duplicate rewards |
+| `TG3-710C984FFB6A08E0` | 3891-3891 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | \| Economy Attacker \| Seek duplicate rewards |
 | `TG3-05609B42FC29593C` | 3891-3891 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | negative balances |
 | `TG3-61A67C31F97B58B1` | 3891-3891 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | save manipulation bugs \| |
-| `TG3-CEC40021FE17DD66` | 3892-3892 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | \| Replay Breaker \| Seek unreplayable or desynchronized runs \| |
-| `TG3-910E2C0F77E709D2` | 3896-3896 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Keyboard-only accessibility profile |
-| `TG3-3F61AE6061DDBECE` | 3897-3897 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Standard mouse profile |
-| `TG3-98DD81479F298A19` | 3898-3898 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Low-sensitivity mouse |
-| `TG3-7C22BC859C6D050D` | 3899-3899 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | High-sensitivity mouse |
-| `TG3-A651508E9B2A8A92` | 3900-3900 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Controller Default preset |
-| `TG3-F4BBCE6CEFDE220A` | 3901-3901 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Every additional controller preset |
-| `TG3-84D3B47D76E4E3A7` | 3902-3902 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Stick-drift profile |
-| `TG3-9A084F5F67D387D7` | 3903-3903 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | High-deadzone profile |
-| `TG3-05747CB6A3EE9F5B` | 3904-3904 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Touch radial-stick profile |
-| `TG3-7B002A6FBAC34B1E` | 3905-3905 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Touch relative-drag profile |
-| `TG3-8E07200BB31650CF` | 3906-3906 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Small-screen profile |
-| `TG3-F49D35EFFF5CD71B` | 3907-3907 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | High input-latency profile |
-| `TG3-805483A7572328BC` | 3908-3908 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Intermittent input-loss profile |
-| `TG3-BC8C32E4BB244F82` | 3912-3912 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | 30 FPS constrained |
-| `TG3-FE4C7603AC3BEA6E` | 3913-3913 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | 45 FPS unstable |
-| `TG3-BAFF4F6DF6C478BF` | 3914-3914 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | 60 FPS baseline |
-| `TG3-FCF4DB264162A207` | 3915-3915 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | 120 FPS |
-| `TG3-52B2EF8C817B4B59` | 3916-3916 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | 144+ FPS |
-| `TG3-6B8093DD4D837798` | 3917-3917 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Periodic long frame |
-| `TG3-D7B5AB9AC33BECB9` | 3918-3918 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | CPU-constrained |
-| `TG3-986D03D37A42E222` | 3919-3919 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | GPU/effects-constrained |
-| `TG3-78323D6112E1A2EC` | 3920-3920 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Background-tab pause and resume |
-| `TG3-332ECFF3CDC18B43` | 3921-3921 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Device orientation or viewport change where supported |
-| `TG3-252ABC7B545967E5` | 3925-3925 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Cautious |
-| `TG3-80E226797E78D8E9` | 3926-3926 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Aggressive |
-| `TG3-C75A93BE8576CE0D` | 3927-3927 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Greedy for score |
-| `TG3-C70C9FCE45D3473D` | 3928-3928 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Style-focused |
-| `TG3-FEBDD5E9363B6070` | 3929-3929 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Speedrunner |
-| `TG3-59DC9F2177A276F8` | 3930-3930 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Completionist |
-| `TG3-3428DF84247049C8` | 3931-3931 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Defensive parry player |
-| `TG3-67225615B8A5355C` | 3932-3932 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Throw-heavy player |
-| `TG3-CE708B1E33AD98A6` | 3933-3933 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Low-mechanics player |
-| `TG3-EB1813C1DBD392F5` | 3934-3934 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Panic-input player |
-| `TG3-4D3E544A14747281` | 3935-3935 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Hesitant menu user |
+| `TG3-CEC40021FE17DD66` | 3892-3892 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | \| Replay Breaker \| Seek unreplayable or desynchronized runs \| |
+| `TG3-910E2C0F77E709D2` | 3896-3896 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Keyboard-only accessibility profile |
+| `TG3-3F61AE6061DDBECE` | 3897-3897 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Standard mouse profile |
+| `TG3-98DD81479F298A19` | 3898-3898 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Low-sensitivity mouse |
+| `TG3-7C22BC859C6D050D` | 3899-3899 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | High-sensitivity mouse |
+| `TG3-A651508E9B2A8A92` | 3900-3900 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Controller Default preset |
+| `TG3-F4BBCE6CEFDE220A` | 3901-3901 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Every additional controller preset |
+| `TG3-84D3B47D76E4E3A7` | 3902-3902 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Stick-drift profile |
+| `TG3-9A084F5F67D387D7` | 3903-3903 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | High-deadzone profile |
+| `TG3-05747CB6A3EE9F5B` | 3904-3904 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Touch radial-stick profile |
+| `TG3-7B002A6FBAC34B1E` | 3905-3905 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Touch relative-drag profile |
+| `TG3-8E07200BB31650CF` | 3906-3906 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Small-screen profile |
+| `TG3-F49D35EFFF5CD71B` | 3907-3907 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | High input-latency profile |
+| `TG3-805483A7572328BC` | 3908-3908 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Intermittent input-loss profile |
+| `TG3-BC8C32E4BB244F82` | 3912-3912 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | 30 FPS constrained |
+| `TG3-FE4C7603AC3BEA6E` | 3913-3913 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | 45 FPS unstable |
+| `TG3-BAFF4F6DF6C478BF` | 3914-3914 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | 60 FPS baseline |
+| `TG3-FCF4DB264162A207` | 3915-3915 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | 120 FPS |
+| `TG3-52B2EF8C817B4B59` | 3916-3916 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | 144+ FPS |
+| `TG3-6B8093DD4D837798` | 3917-3917 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Periodic long frame |
+| `TG3-D7B5AB9AC33BECB9` | 3918-3918 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | CPU-constrained |
+| `TG3-986D03D37A42E222` | 3919-3919 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | GPU/effects-constrained |
+| `TG3-78323D6112E1A2EC` | 3920-3920 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Background-tab pause and resume |
+| `TG3-332ECFF3CDC18B43` | 3921-3921 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Device orientation or viewport change where supported |
+| `TG3-252ABC7B545967E5` | 3925-3925 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Cautious |
+| `TG3-80E226797E78D8E9` | 3926-3926 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Aggressive |
+| `TG3-C75A93BE8576CE0D` | 3927-3927 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Greedy for score |
+| `TG3-C70C9FCE45D3473D` | 3928-3928 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Style-focused |
+| `TG3-FEBDD5E9363B6070` | 3929-3929 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Speedrunner |
+| `TG3-59DC9F2177A276F8` | 3930-3930 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Completionist |
+| `TG3-3428DF84247049C8` | 3931-3931 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Defensive parry player |
+| `TG3-67225615B8A5355C` | 3932-3932 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Throw-heavy player |
+| `TG3-CE708B1E33AD98A6` | 3933-3933 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Low-mechanics player |
+| `TG3-EB1813C1DBD392F5` | 3934-3934 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Panic-input player |
+| `TG3-4D3E544A14747281` | 3935-3935 | 39 | ml-training | yes | contract | required | C24 | deterministic-scenario, journey-checkpoint | Hesitant menu user |
 | `TG3-4262209D84CCE703` | 3939-3939 | 39 | ml-training | no | reference | reference | C36 | documentation-validation | A champion that uses frame-perfect privileged knowledge can prove mechanical possibility but may hide human-facing problems. |
 | `TG3-4C9FEB8D68327953` | 3941-3941 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | The Human-Likeness Agent should enforce: |
 | `TG3-C87C7342E8CB5409` | 3943-3943 | 39 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Reaction delay distribution |
@@ -3823,7 +3823,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-80B250F909EBAA79` | 4986-4986 | 47 | ml-training | yes | missing | required | C22 | deterministic-scenario, journey-checkpoint | boss |
 | `TG3-17365FBDD456A6C4` | 4986-4986 | 47 | ml-training | yes | missing | required | C22 | deterministic-scenario, journey-checkpoint | evolution from the main menu |
 | `TG3-50D91DF350484344` | 4990-4990 | 47 | architecture | no | reference | reference | C22 | documentation-validation | Deliver: |
-| `TG3-CAA8EEEC599272EA` | 4992-4992 | 47 | architecture | yes | missing | required | C24 | unit-contract, full-release-gate | Long-horizon Journey Director |
+| `TG3-CAA8EEEC599272EA` | 4992-4992 | 47 | architecture | yes | visible | required | C24 | unit-contract, full-release-gate | Long-horizon Journey Director |
 | `TG3-ADB1A71906113774` | 4993-4993 | 47 | performance | yes | missing | required | C22 | interaction-matrix, long-run | Build memory |
 | `TG3-C3D1B6F616F4B9BC` | 4994-4994 | 47 | gameplay | yes | missing | required | C22 | deterministic-scenario, base-comparison | All biome and boss policies |
 | `TG3-F813070E61CB3CDA` | 4995-4995 | 47 | architecture | yes | missing | required | C25 | unit-contract, full-release-gate | Recovery controller |
@@ -3840,7 +3840,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-B27346EE45EA3F88` | 5017-5017 | 47 | architecture | no | reference | reference | C22 | documentation-validation | Deliver: |
 | `TG3-7FBD86B83F4F9297` | 5019-5019 | 47 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Difficulty conditioning |
 | `TG3-12A3F00E8BE33D92` | 5020-5020 | 47 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Specialist population |
-| `TG3-1D3803E774E1BBEB` | 5021-5021 | 47 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Fairness metrics |
+| `TG3-1D3803E774E1BBEB` | 5021-5021 | 47 | architecture | yes | contract | required | C22 | unit-contract, full-release-gate | Fairness metrics |
 | `TG3-BAAB922FBBF21FA4` | 5022-5022 | 47 | ui-ux | yes | missing | required | C22 | journey-checkpoint, interaction-matrix | Difficulty curve dashboard |
 | `TG3-B00ADEFAF63E1479` | 5023-5023 | 47 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Hard |
 | `TG3-1B4EB020DCFAED6D` | 5023-5023 | 47 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Extreme |
@@ -3848,12 +3848,12 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-ED3B3F4681A3DDB8` | 5025-5025 | 47 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Acceptance: |
 | `TG3-09672617B94E6776` | 5027-5027 | 47 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Defined stage and mode targets achieved for each difficulty |
 | `TG3-690003A41D2206D0` | 5031-5031 | 47 | architecture | no | reference | reference | C22 | documentation-validation | Deliver: |
-| `TG3-01902B33133CC36D` | 5033-5033 | 47 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Tutorial contract |
-| `TG3-5EC779667871EBA6` | 5034-5034 | 47 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Endless milestones |
-| `TG3-C586705A4C4B8FBB` | 5035-5035 | 47 | gameplay | yes | missing | required | C22 | deterministic-scenario, base-comparison | Gauntlet boss-cycle milestones |
-| `TG3-EE7D5769A2C0C72B` | 5036-5036 | 47 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Playground automation |
-| `TG3-385D4B639CA0D77B` | 5037-5037 | 47 | gameplay | yes | missing | required | C22 | deterministic-scenario, base-comparison | Boss Test completion |
-| `TG3-D1D40EBFD308AE66` | 5038-5038 | 47 | gameplay | yes | missing | required | C22 | deterministic-scenario, base-comparison | Enemy Test coverage |
+| `TG3-01902B33133CC36D` | 5033-5033 | 47 | architecture | yes | contract | required | C22 | unit-contract, full-release-gate | Tutorial contract |
+| `TG3-5EC779667871EBA6` | 5034-5034 | 47 | architecture | yes | contract | required | C22 | unit-contract, full-release-gate | Endless milestones |
+| `TG3-C586705A4C4B8FBB` | 5035-5035 | 47 | gameplay | yes | contract | required | C22 | deterministic-scenario, base-comparison | Gauntlet boss-cycle milestones |
+| `TG3-EE7D5769A2C0C72B` | 5036-5036 | 47 | architecture | yes | contract | required | C22 | unit-contract, full-release-gate | Playground automation |
+| `TG3-385D4B639CA0D77B` | 5037-5037 | 47 | gameplay | yes | contract | required | C22 | deterministic-scenario, base-comparison | Boss Test completion |
+| `TG3-D1D40EBFD308AE66` | 5038-5038 | 47 | gameplay | yes | contract | required | C22 | deterministic-scenario, base-comparison | Enemy Test coverage |
 | `TG3-920D519A518D2407` | 5040-5040 | 47 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Acceptance: |
 | `TG3-38CA6954C9A3F66F` | 5042-5042 | 47 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Every valid mode has an explicit certified status |
 | `TG3-FB631ED6959F45C9` | 5046-5046 | 47 | architecture | no | reference | reference | C25 | documentation-validation | Deliver: |
@@ -17698,11 +17698,12 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | bySourceSection | 80 | 15 |
 | bySourceSection | 81 | 461 |
 | bySourceSection | unsectioned | 8 |
-| byState | contract | 108 |
+| byState | contract | 179 |
 | byState | integrated | 58 |
-| byState | missing | 6557 |
-| byState | prototype | 162 |
+| byState | missing | 6470 |
+| byState | prototype | 161 |
 | byState | reference | 1806 |
+| byState | visible | 17 |
 | byDisposition | optional | 158 |
 | byDisposition | reference | 1806 |
 | byDisposition | rejected | 5 |

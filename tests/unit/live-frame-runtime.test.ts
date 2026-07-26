@@ -33,7 +33,7 @@ describe("live frame runtime", () => {
       step(1 / 60, 4); return { tick: 4, steps: 1, droppedMilliseconds: 0 };
     } };
     const result = advanceFixedSimulation({ dt: 1 / 60, timeScale: 1, hitStop: 0, state: () => "playing", simulation,
-      recording: () => true, aimRadius: 2,
+      recording: () => true, aimRadius: 2, captureDeviceAim: () => true,
       sampleAim: () => { order.push("sample"); return { x: 0, y: 1 }; },
       pushAim: (turn, magnitude) => { order.push(`aim:${String(turn)}:${String(magnitude)}`); },
       drainActions: () => { order.push("drain"); return []; },
@@ -44,6 +44,24 @@ describe("live frame runtime", () => {
     expect(order).toEqual(["before:4", "sample", "aim:250000:500", "drain", "clear", "authoritative", "after:4"]);
     expect(gauge).toHaveBeenCalledTimes(3);
     expect(result).toEqual({ hitStop: 0, steps: 1 });
+  });
+
+  it("preserves queued semantic aim when an external policy owns input", () => {
+    const order: string[] = [];
+    const simulation = { tick: 0, advance: (_ms: number, step: (seconds: number, tick: number) => void) => {
+      step(1 / 120, 9); return { tick: 9, steps: 1, droppedMilliseconds: 0 };
+    } };
+    advanceFixedSimulation({
+      dt: 1 / 120, timeScale: 1, hitStop: 0, state: () => "playing", simulation,
+      recording: () => true, aimRadius: 2, captureDeviceAim: () => false,
+      sampleAim: () => { order.push("sample"); return { x: 0, y: 1 }; },
+      pushAim: () => { order.push("device-aim"); },
+      drainActions: () => { order.push("drain-semantic"); return []; },
+      authoritativeStep: () => { order.push("authoritative"); },
+      clearOverrides: () => { order.push("clear"); }, step: () => { order.push("step"); },
+      gauge: () => { return; },
+    });
+    expect(order).toEqual(["drain-semantic", "clear", "authoritative"]);
   });
 
   it("selects menu, boss and fallback music themes without platform globals", () => {

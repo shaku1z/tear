@@ -11,10 +11,10 @@ import { DIFFICULTY_REGISTRY, ENTITY_KIND_REGISTRY, RUN_MODE_REGISTRY, WEAPON_RE
   type TearEntityKindId } from "./registries";
 import type { TearScenarioTransition } from "./runner";
 import { validateTearContract } from "./validation";
-import { installGhostLabPanel } from "./ghost-lab-panel";
-import { installLiveStateForgeStudio } from "./live-state-forge-studio-host";
-import { createLiveRuntimeSnapshotController } from "./live-runtime-snapshots";
-import { launchResolvedLiveState } from "./live-state-forge-scenario-launch";
+import { installGhostLabPanel } from "./ghost-lab-panel"; import { installLiveStateForgeStudio } from "./live-state-forge-studio-host";
+import { createLiveRuntimeSnapshotController } from "./live-runtime-snapshots"; import { projectLiveNavigationObservation } from "./live-observation-navigation";
+import { projectLiveProjectiles } from "./live-observation-projectiles"; import { launchResolvedLiveState } from "./live-state-forge-scenario-launch";
+import { projectLiveActorMechanics, projectLiveBehaviorMode, projectLiveBladeMechanics, projectLivePlayerMechanics } from "./live-observation-actors";
 import { certifyWave99HammerProgression, createCanonicalWave99HammerProgression, createWave99HistoricalRunState,
   forgeExitLaunchSnapshot } from "./state-forge-exit-gate";
 import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
@@ -55,14 +55,11 @@ function entityKind(enemy: GameEnemy): TearEntityKindId {
   return candidate;
 }
 
-/**
- * Canonical observation projection for the live application. It deliberately
- * reads the same host-owned player, blade, run, stage, lifecycle, and actor
- * objects consumed by gameplay; callers cannot supply transition fixtures.
- */
+/** Canonical live projection over the same host-owned actors consumed by gameplay;
+ * callers cannot supply transition fixtures. */
 export function projectLiveTearObservation(
   context: Pick<LiveTearRuntimeEnvironmentContext, "state" | "stage" | "lifecycle" | "screen" |
-    "width" | "height" | "actorId" | "choiceIds">,
+    "width" | "height" | "actorId" | "choiceIds" | "platforms">,
   tick: number,
   accessClass: Exclude<TearRuntimeAccessClass, "C">,
 ): TearObservationV1 {
@@ -83,25 +80,28 @@ export function projectLiveTearObservation(
     player: Object.freeze({
       x: player.x, y: player.y, vx: player.vx, vy: player.vy,
       hp: player.hp, maxHp: player.maxHp, facing: player.facing >= 0 ? 1 : -1,
-      grounded: player.onGround, dashCharges: player.dashCharges,
+      grounded: player.onGround, dashCharges: player.dashCharges, ...projectLivePlayerMechanics(player, accessClass),
     }),
     blade: Object.freeze({
       handX: blade.x, handY: blade.y, tipX: blade.tipX, tipY: blade.tipY,
       vx: blade.vx, vy: blade.vy, tipSpeed: blade.tipSpeed, state: blade.state,
+      ...projectLiveBladeMechanics(blade, accessClass),
     }),
-    entities: Object.freeze(livingEnemies.map((enemy) => {
-      const authoredState = "state" in enemy && typeof enemy.state === "string" ? enemy.state : undefined;
-      const attackState = typeof enemy.atk === "string" && enemy.atk.length > 0 ? enemy.atk : undefined;
-      const behaviorState = typeof enemy.behavior === "string" && enemy.behavior.length > 0
-        ? enemy.behavior
-        : undefined;
+    entities: Object.freeze([...livingEnemies.map((enemy) => {
+      const authoredState = "state" in enemy && typeof enemy.state === "string" ? enemy.state : undefined,
+        attackState = typeof enemy.atk === "string" && enemy.atk.length > 0 ? enemy.atk : undefined,
+        behaviorState = typeof enemy.behavior === "string" && enemy.behavior.length > 0 ? enemy.behavior : undefined,
+        behaviorMode = projectLiveBehaviorMode(enemy, accessClass);
       return Object.freeze({
         id: context.actorId(enemy), kind: entityKind(enemy), x: enemy.x, y: enemy.y,
         vx: enemy.vx, vy: enemy.vy, hpRatio: enemy.maxHp > 0 ? enemy.hp / enemy.maxHp : 0,
         state: authoredState ?? attackState ?? behaviorState ?? "idle",
+        ...(behaviorMode === undefined ? {} : { behaviorMode }),
+        ...projectLiveActorMechanics(enemy, accessClass),
         threat: enemy.isBoss ? 1 : Math.min(1, Math.max(0, enemy.contactDmg / Math.max(1, player.maxHp))),
       });
-    })),
+    }), ...projectLiveProjectiles(context.state.projectiles(), player, accessClass)]),
+    navigation: projectLiveNavigationObservation(context.platforms(), context.stage().name),
     run: Object.freeze({
       mode: RUN_MODE_REGISTRY.assert(run.mode),
       difficulty: DIFFICULTY_REGISTRY.assert(run.diff),
@@ -494,6 +494,6 @@ export function installLiveTearRuntimeBridge(
     writable: false,
     value: factory,
   });
-  installGhostLabPanel(factory);
-  installLiveStateForgeStudio(factory);
+  installGhostLabPanel(factory); installLiveStateForgeStudio(factory);
+  if (new URLSearchParams(window.location.search).get("watchagent") === "1") void import("../agents/live-watch-agent-host").then(({ installLiveWatchAgentHost }) => { installLiveWatchAgentHost(context, target); });
 }

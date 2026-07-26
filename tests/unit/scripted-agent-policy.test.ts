@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   SCRIPTED_POLICY_PROFILES,
+  MovementModule,
   TearScriptedPolicy,
   projectAgentActionsToLegacyControls,
   type TearAgentObservation,
@@ -57,7 +58,7 @@ describe("deterministic scripted agent hierarchy", () => {
     expect(flourish.trace.maneuver).toBe("secondary");
     expect(flourish.actions).toContainEqual({ type: "weapon", intent: "secondary", phase: "pressed" });
 
-    const distant = competent.decide(observation(state(20, [actor("far", 600, 450)])));
+    const distant = style.decide(observation(state(240, [actor("far", 750, 450)])));
     expect(distant.trace.maneuver).toBe("throw");
     expect(distant.actions).toContainEqual({ type: "weapon", intent: "throw", phase: "pressed" });
     expect(distant.actions.some((action) => action.type === "dash")).toBe(true);
@@ -66,7 +67,8 @@ describe("deterministic scripted agent hierarchy", () => {
     const recall = competent.decide(observation(state(21, [actor("far", 600)], {}, "thrown")));
     expect(recall.trace.maneuver).toBe("recall");
 
-    const parry = competent.decide(observation(state(22, [actor("shot", 160, 600, "projectile")])));
+    const parryProjectile = { ...actor("shot", 260, 600, "projectile"), vx: -500 };
+    const parry = competent.decide(observation(state(22, [parryProjectile])));
     expect(parry.trace.maneuver).toBe("parry");
   });
 
@@ -100,6 +102,158 @@ describe("deterministic scripted agent hierarchy", () => {
         JSON.stringify(new TearScriptedPolicy(profile).decide(input)));
       expect(new Set(decisions), profile).toHaveLength(1);
     }
+  });
+
+  it("locks a living target and uses the real throw lifecycle for held-blade-immune wraiths", () => {
+    const policy = new TearScriptedPolicy("competent");
+    expect(policy.decide(observation(state(1, [actor("locked", 180), actor("other", 500)]))).trace.targetId)
+      .toBe("locked");
+    const locked = policy.decide(observation(state(2, [actor("locked", 500), actor("other", 180)])));
+    expect(locked.trace.targetId).toBe("locked");
+
+    const wraith = new TearScriptedPolicy("competent").decide(
+      observation(state(3, [actor("wraith", 220, 600, "wraith")])),
+    );
+    expect(wraith.actions).toContainEqual({ type: "weapon", intent: "throw", phase: "pressed" });
+    const flying = new TearScriptedPolicy("competent").decide(
+      observation(state(4, [actor("wraith", 500, 600, "wraith")], {}, "flying")),
+    );
+    expect(flying.actions.some((action) => action.type === "weapon")).toBe(false);
+    const embedded = new TearScriptedPolicy("competent").decide(
+      observation(state(5, [actor("wraith", 500, 600, "wraith")], {}, "embedded")),
+    );
+    expect(embedded.actions).toContainEqual({ type: "weapon", intent: "recall", phase: "pressed" });
+  });
+
+  it("requests one controlled Ringblade Circuit return at low energy without steering or spam", () => {
+    const policy = new TearScriptedPolicy("competent");
+    const circuit = (tick: number, circuitEnergy: number): TearAgentObservation => {
+      const current = state(tick, [actor("target", 500)], {}, "circuiting");
+      return observation({
+        ...current,
+        blade: { ...current.blade, circuitEnergy },
+        run: { ...current.run, weapon: "ringblade" },
+      });
+    };
+
+    const aboveThreshold = policy.decide(circuit(40, 0.81));
+    expect(aboveThreshold.actions.some((action) => action.type === "weapon")).toBe(false);
+
+    const firstReturn = policy.decide(circuit(41, 0.8));
+    expect(firstReturn.trace.maneuver).toBe("secondary");
+    expect(firstReturn.actions).toContainEqual({
+      type: "weapon", intent: "secondary", phase: "pressed",
+    });
+
+    const repeatedLowEnergy = policy.decide(circuit(42, 0.2));
+    expect(repeatedLowEnergy.actions.some((action) => action.type === "weapon")).toBe(false);
+
+    const returning = state(43, [actor("target", 500)], {}, "returning");
+    policy.decide(observation({
+      ...returning,
+      run: { ...returning.run, weapon: "ringblade" },
+    }));
+    const nextCircuit = policy.decide(circuit(44, 0.3));
+    expect(nextCircuit.actions).toContainEqual({
+      type: "weapon", intent: "secondary", phase: "pressed",
+    });
+  });
+
+  it("does not apply Ringblade Circuit return control to another weapon", () => {
+    const current = state(50, [actor("target", 500)], {}, "circuiting");
+    const decision = new TearScriptedPolicy("competent").decide(observation({
+      ...current,
+      blade: { ...current.blade, circuitEnergy: 0.1 },
+      run: { ...current.run, weapon: "sword" },
+    }));
+
+    expect(decision.actions.some((action) => action.type === "weapon")).toBe(false);
+  });
+
+  it("evades a nearby movement threat without abandoning its locked attack target", () => {
+    const policy = new TearScriptedPolicy("competent");
+    const ringbladeState = (tick: number, entities: readonly TearObservedActorV1[]) => {
+      const current = state(tick, entities);
+      return { ...current, run: { ...current.run, weapon: "ringblade" } } satisfies TearObservationV1;
+    };
+    expect(policy.decide(observation(ringbladeState(1, [actor("locked", -300)]))).trace.targetId)
+      .toBe("locked");
+
+    const decision = policy.decide(observation(ringbladeState(
+      2,
+      [actor("locked", -300), actor("contact", 180)],
+    )));
+
+    expect(decision.trace.targetId).toBe("locked");
+    expect(decision.actions).toContainEqual({ type: "move", x: -1_000, y: 0 });
+    expect(decision.actions).toContainEqual({ type: "weapon", intent: "throw", phase: "pressed" });
+  });
+
+  it("offers Source a non-ringblade throw in the void and waits through hostile recovery", () => {
+    const source = { ...actor("source", 500, 400, "source"), behaviorMode: "void" };
+    const voidObservation = (tick: number, bladeState: string): TearAgentObservation => ({
+      state: state(tick, [source], {}, bladeState),
+      ui: { screen: "playing" },
+      boss: { id: "source", phase: "3" },
+    });
+    const policy = new TearScriptedPolicy("competent");
+
+    const offered = policy.decide(voidObservation(10, "held"));
+    expect(offered.trace.maneuver).toBe("throw");
+    expect(offered.actions).toContainEqual({ type: "weapon", intent: "throw", phase: "pressed" });
+    for (const bladeState of ["flying", "returning"]) {
+      const recovery = policy.decide(voidObservation(11, bladeState));
+      expect(recovery.actions.some((action) => action.type === "weapon")).toBe(false);
+    }
+  });
+
+  it("routes across observed transfer surfaces and avoids active live hazards", () => {
+    const movement = new MovementModule();
+    const target = actor("upper-target", 600, 580);
+    const navigation = {
+      surfaces: [
+        {
+          id: "lower", bounds: { minX: 0, maxX: 300, minY: 780, maxY: 800 },
+          oneWay: false, collidable: true, materializationState: "active",
+          lane: "lower" as const, connectionIds: ["upper"],
+        },
+        {
+          id: "transfer", bounds: { minX: 250, maxX: 350, minY: 700, maxY: 720 },
+          oneWay: true, collidable: true, materializationState: "active",
+          lane: "lower" as const, transferNode: true, connectionIds: ["upper"],
+        },
+        {
+          id: "upper", bounds: { minX: 500, maxX: 700, minY: 600, maxY: 620 },
+          oneWay: true, collidable: true, materializationState: "active",
+          lane: "upper" as const, transferNode: true, connectionIds: ["lower"],
+        },
+      ],
+      hazards: [],
+    };
+    const route = movement.decide({
+      observation: observation({ ...state(30, [target]), navigation }),
+      target,
+      profile: "competent",
+    });
+    expect(route.actions).toContainEqual({ type: "move", x: 1_000, y: 0 });
+    expect(route.actions).toContainEqual({ type: "jump", phase: "pressed" });
+
+    const hazard = movement.decide({
+      observation: observation({
+        ...state(31, [actor("enemy", 500)]),
+        navigation: {
+          surfaces: navigation.surfaces.slice(0, 1),
+          hazards: [{
+            id: "hazard:fire", surfaceId: "lower", type: "fire", state: "hot", active: true,
+            bounds: { minX: 140, maxX: 300, minY: 580, maxY: 800 },
+          }],
+        },
+      }),
+      target: actor("enemy", 500),
+      profile: "competent",
+    });
+    expect(hazard.actions).toContainEqual({ type: "move", x: -1_000, y: 0 });
+    expect(hazard.actions).toContainEqual({ type: "jump", phase: "pressed" });
   });
 
   it("projects semantic actions into the typed legacy player and blade seams", () => {

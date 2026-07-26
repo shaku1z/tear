@@ -90,7 +90,12 @@ export interface HeldBladeCollisionEffects {
 export interface HeldBladeCollisionHooks {
   weaponHit(enemy: HeldBladeEnemy, quality: number, damage: number, isSlam: boolean, isLaunch: boolean, empowered: boolean): HeldWeaponEffect | null | undefined;
   noteFirstDamage(enemy: HeldBladeEnemy, firstDamage: boolean): void;
-  logHit(damage: number, quality: number, mechanic?: string): void;
+  logHit(
+    damage: number,
+    quality: number,
+    observation: Readonly<{ strikeType: "hit" | "launch" | "updraft" | "slam" | "superslam" | "spike"; airborne: boolean }>,
+    mechanic?: string,
+  ): void;
   onKill(enemy: HeldBladeEnemy, cause?: string): void;
   dealArea(x: number, y: number, radius: number, damage: number): void;
   fireHit(enemy: HeldBladeEnemy, x: number, y: number): void;

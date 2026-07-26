@@ -62,6 +62,7 @@ export interface FixedSimulationPort {
 export interface FixedSimulationInput {
   dt: number; timeScale: number; hitStop: number; state(): string; simulation: FixedSimulationPort;
   recording(): boolean; readonly aimRadius: number;
+  captureDeviceAim(): boolean;
   sampleAim(): Readonly<{ x: number; y: number }>; pushAim(turn: number, magnitude: number): void;
   drainActions(tick: number): readonly CommandEnvelope<GameAction>[];
   beforeStep?(tick: number): void;
@@ -82,9 +83,13 @@ export function advanceFixedSimulation(input: FixedSimulationInput): FixedSimula
     // The semantic buffer is sealed exactly at the fixed tick. Its canonical
     // actions then drive the same authoritative step used by replay and TearBench.
     if (input.recording()) {
-      const aim = input.sampleAim(), angle = Math.atan2(aim.y, aim.x), normalized = angle < 0 ? angle + Math.PI * 2 : angle;
-      const magnitude = Math.round(Math.max(0, Math.min(1, Math.hypot(aim.x, aim.y) / input.aimRadius)) * AIM_MAGNITUDE_SCALE);
-      input.pushAim(Math.round(normalized / (Math.PI * 2) * 1_000_000) % 1_000_000, magnitude);
+      if (input.captureDeviceAim()) {
+        const aim = input.sampleAim(), angle = Math.atan2(aim.y, aim.x);
+        const normalized = angle < 0 ? angle + Math.PI * 2 : angle;
+        const magnitude = Math.round(Math.max(0, Math.min(1,
+          Math.hypot(aim.x, aim.y) / input.aimRadius)) * AIM_MAGNITUDE_SCALE);
+        input.pushAim(Math.round(normalized / (Math.PI * 2) * 1_000_000) % 1_000_000, magnitude);
+      }
       actions = input.drainActions(tick);
     }
     input.clearOverrides();

@@ -101,6 +101,10 @@ export function createLiveCombatActions<
     },
     removeBossClone: (clone) => { d.FX.ghost(clone.x, clone.y, clone.hw, clone.hh); },
     dramaticBeat() { f.addShake(d.CONFIG.juice.shakeBig); f.addFlash(d.CONFIG.juice.flashParry); },
+    onBladeStolen(enemy) {
+      f.logWeaponEvent("stolenBlade", { enemyKind: enemy.kind });
+      d.GHOST.event("stolenBlade", enemy.x, enemy.y);
+    },
     updateEffects: (seconds) => { d.FX.update(seconds); }, random: d.cosmeticRandom,
   };
   return { entities, opening, collision: createCollision(context), kill: createKill(context) };

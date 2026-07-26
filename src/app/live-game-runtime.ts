@@ -1,6 +1,4 @@
-import { MusicDirector } from "../audio/music-director";
-import { RunLifecycleController } from "../gameplay/run/lifecycle";
-import { BOSS_ROSTER } from "../gameplay/run/content-director";
+import { MusicDirector } from "../audio/music-director"; import { RunLifecycleController } from "../gameplay/run/lifecycle"; import { BOSS_ROSTER } from "../gameplay/run/content-director";
 import { projectCanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { CanvasUiButton } from "../presentation/screens/button-layer";
 import { blendHex as blendCol, easeOut as ez } from "../presentation/world/primitives";
@@ -37,13 +35,13 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   const browserRuntime = createLiveBrowserRuntime(dependencies);
   const { canvas, context: ctx, width: W, height: H, viewport, resizeCanvas, requestPointerLock: requestLock, installPrompt, lockHint, hint: hintEl,
     pantheonDebug: PANTHEON_DEBUG, testMode: TEST_MODE } = browserRuntime;
-  const restoreConfig = createConfigRestorer(CONFIG);
+  const restoreConfig = createConfigRestorer(CONFIG); let semanticInputAuthority = false; const requestOwnedPointerLock = () => { if (!semanticInputAuthority) requestLock(); };
   const sessionServices = createLiveSessionServices({
     dependencies, run: () => run, player: () => player, blade: () => blade,
     screen: () => state, setScreen: (screen) => { setState(screen); },
     achievementTracking: () => achTracks(),
     resetUi: (intent) => { if (intent.enter) enterT = 0; if (intent.focus) focus = 0; if (intent.scroll) listScroll = 0; },
-    requestPointerLock: requestLock, renamePrompted: () => settingsRenameAdapters.renamePrompted(),
+    requestPointerLock: requestOwnedPointerLock, renamePrompted: () => settingsRenameAdapters.renamePrompted(),
     renameActive: () => settingsRenameAdapters.renameActive(),
     markRenamePrompted: () => { settingsRenameAdapters.markRenamePrompted(); },
     beginRename: (firstRun) => { settingsRenameAdapters.beginRename(firstRun); },
@@ -123,7 +121,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     resolveKill: (enemy, cause) => { liveKillRuntime.resolve(enemy, cause); },
     setScreen: (screen) => { setState(screen); }, resetScroll: () => { listScroll = 0; },
     scroll: () => listScroll, setScroll: (value) => { listScroll = value; },
-    requestPointerLock: requestLock, selectStage: loadStage, beginWipe: () => { Wipe.begin(); },
+    requestPointerLock: requestOwnedPointerLock, selectStage: loadStage, beginWipe: () => { Wipe.begin(); },
     resetRun: (difficulty) => { startRunWithPreflight("playground", difficulty); },
     applySettingsCinematicPreference: () => settings.cinematics, shakeScale: () => settingsController.shakeScale,
     getShake: () => shake, setShake: (value) => { shake = value; },
@@ -183,7 +181,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
       return seed ?? dependencies.createRunSeed();
     },
     authoritativeResult: () => authoritativeStep.lastResult,
-    setScreen: (screen, detail) => { setState(screen, detail); }, requestPointerLock: requestLock,
+    setScreen: (screen, detail) => { setState(screen, detail); }, requestPointerLock: requestOwnedPointerLock,
     beginWipe: () => { Wipe.begin(); }, wipeRemainingSeconds: () => Wipe.remainingSeconds,
     setBannerSeconds: (value) => { bannerT = value; }, openTier: openRewardTier, openDraft: openRewardDraft,
     resetRewards: () => { rewardRuntime.reset(); }, saveBest, getBest, awardCoins, economyTelemetry,
@@ -349,7 +347,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     parrySlowScale: CONFIG.juice.parrySlowScale, cinemaActive: () => CINEMA.active,
     playgroundSlow: () => run.pg.slow === true, introScale: CONFIG.bossTheater.introScale, lerp, clamp,
     timeScale: () => timeScale, hitStop: () => hitStop, setHitStop: (value) => { hitStop = value; },
-    state: () => state, recording: () => GHOST.recording(), aimRadius: CONFIG.blade.aimRadius,
+    state: () => state, recording: () => GHOST.recording(), aimRadius: CONFIG.blade.aimRadius, captureDeviceAim: () => !semanticInputAuthority,
     sampleAim: () => blade.captureDeviceAim(blade.handPos(player)),
     pushAim: (turn, magnitude) => { Input.semantic.push({ type: "aim", turn, magnitude }); },
     drainActions: (tick) => GHOST.drainActions(tick),
@@ -376,7 +374,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     setState: (screen) => { if (isLegacyScreen(screen)) setState(screen); },
     input: Input, pad: typeof PAD === "undefined" ? null : PAD, navigator, document, canvas,
     cinema: CINEMA, clipper: dependencies.Clipper ?? null,
-    autoPauseDisconnect: () => settings.autoPauseDisconnect, requestPointerLock: requestLock,
+    autoPauseDisconnect: () => settings.autoPauseDisconnect, requestPointerLock: requestOwnedPointerLock,
     exitReplay: () => { replayAdapters.exit(); },
     advanceClocks: (dt, currentState) => {
       uiT += dt; enterT += dt; lastUiDt = dt; if (currentState === "win") winT += dt; else winT = 0;
@@ -461,18 +459,20 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
       runtimeState: () => ({ hitStop, shake, timeScale, slowmo, zoom, flash, bannerT, dashGhostT, worldZoom, worldZoomTarget, throwCd, rankPopT, rankPopText, lifecycle: RUN_LIFECYCLE.snapshot() }), restoreRuntimeState: (snapshot) => { hitStop = Number(snapshot.hitStop); shake = Number(snapshot.shake); timeScale = Number(snapshot.timeScale); slowmo = Number(snapshot.slowmo); zoom = Number(snapshot.zoom); flash = Number(snapshot.flash); bannerT = Number(snapshot.bannerT); dashGhostT = Number(snapshot.dashGhostT); worldZoom = Number(snapshot.worldZoom); worldZoomTarget = Number(snapshot.worldZoomTarget); throwCd = Number(snapshot.throwCd); rankPopT = Number(snapshot.rankPopT); rankPopText = String(snapshot.rankPopText); RUN_LIFECYCLE.restore(snapshot.lifecycle as ReturnType<typeof RUN_LIFECYCLE.snapshot>); },
     });
     installLiveTearRuntimeBridge({
-      width: W, height: H, state: hostState, actorId: (enemy) => combatRuntime.id(enemy, "enemy"),
+      width: W, height: H, state: hostState, actorId: (enemy) => combatRuntime.id(enemy, "enemy"), platforms: () => stageRuntime.platforms,
       stage: () => stageRuntime.current, lifecycle: () => RUN_LIFECYCLE.snapshot(),
-      choiceIds: () => liveRewardChoiceIds(actionRouting), screen: () => state,
+      choiceIds: () => liveRewardChoiceIds(actionRouting), progression: () => ({ wallet: dependencies.META.coins(), lifetimeEarned: dependencies.META.data.lifetimeEarned, levels: Object.fromEntries(dependencies.SHOP.map((item) => [item.id, dependencies.META.level(item.id)])), shop: dependencies.SHOP.map((item) => ({ id: item.id, level: dependencies.META.level(item.id), maxLevel: item.maxLevel, cost: dependencies.META.cost(item), enabled: dependencies.META.canBuy(item) })) }), outcome: () => overInfo, screen: () => state,
       setScreen: (screen) => { setState(screen); }, selectBoss: (bossId) => { selBoss = bossId; },
       selectWeapon: (weaponId) => { selWeapon = weaponId; hostState.setSelectedWeapon(weaponId); },
       setRunSeed: (seed) => { tearBenchRunSeed = seed; }, startRun: (mode, difficulty) => { startRunImmediate(mode, difficulty); },
-      stopFrameLoop: () => { frameDriver.stop(); }, pushAction: (action) => { Input.semantic.push(action); },
-      routeAction: (action) => routeLiveTearBenchAction(actionRouting, action),
+      stopFrameLoop: () => { frameDriver.stop(); }, startFrameLoop: () => { frameDriver.start(({ deltaSeconds }) => { combatHost.frameCoordinator.run(deltaSeconds); }); }, pushAction: (action) => { Input.semantic.push(action); },
+      setSemanticInputAuthority: (active) => { semanticInputAuthority = active; },
+      routeAction: (action) => routeLiveTearBenchAction(actionRouting, action), skipCinematic: () => { CINEMA.requestSkip(); },
+      activateControl: (action) => { presentationHost.render(); const encoded = JSON.stringify(action); const control = uiButtons.find((entry) => entry.enabled !== false && JSON.stringify(entry.semanticAction) === encoded); if (control === undefined) return false; screenComposition.dispatch(action); return true; },
       terminateRun: () => { if (RUN_LIFECYCLE.phase !== "terminated") RUN_LIFECYCLE.terminate("quit"); if (GHOST.recording()) GHOST.stopRec({ tearBenchTerminated: true }); setState("paused"); },
       resetSemanticInput: () => { Input.startSemanticRecording(); },
       advanceFixedTick: () => { const tick = simulation.tick + 1; authoritativeStep.execute(tick, 1 / 120, GHOST.drainActions(tick)); simulation.reset(tick); DIAG.gauge("simulationTick", tick); DIAG.gauge("simulationSteps", 1); return 1; },
-      advanceRenderFrame: (deltaSeconds) => liveFrameRuntime.advanceSimulation(deltaSeconds),
+      advanceRenderFrame: (deltaSeconds) => liveFrameRuntime.advanceSimulation(deltaSeconds), advanceApplicationFrame: (deltaSeconds) => { combatHost.frameCoordinator.run(deltaSeconds); },
       authoritative: () => authoritativeStep.lastResult, random: () => dependencies.GAME_RANDOM_STREAMS.snapshot(),
       render: () => { presentationHost.render(); }, screenshot: () => canvas.toDataURL("image/png"),
       subscribeEngineEvent: (listener) => GHOST.subscribe(listener),

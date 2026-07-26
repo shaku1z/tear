@@ -1,4 +1,4 @@
-import type { GameBlade, GameEnemy, GamePlayer, GameRun } from "../app/game-runtime-state";
+import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "../app/game-runtime-state";
 import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
 import type { LiveGhostEngineEvent } from "../replay/legacy-compat";
@@ -11,6 +11,8 @@ import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
 import type { TearProgressionLedger } from "./progression-ledger";
 import type { TearProgressionReplayResult } from "./progression-replay";
 import type { TearSdlResolved } from "./tearsdl";
+import type { ScreenAction } from "../presentation/screens/contracts";
+import type { RunResultInfo } from "../gameplay/run/outcome-planner";
 
 export type TearRuntimeAccessClass = "A" | "B" | "C";
 
@@ -20,6 +22,29 @@ export interface TearRuntimeEnvironmentMetrics {
   readonly acceptedActions: number;
   readonly emittedEvents: number;
   readonly screenshots: number;
+}
+
+export interface LiveObservationPlatform {
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+  readonly id?: string;
+  readonly platformId?: string;
+  readonly floor?: boolean;
+  readonly oneway?: boolean;
+  readonly collidable?: boolean;
+  readonly void?: boolean;
+  readonly voidLane?: "lower" | "upper";
+  readonly voidType?: "plain" | "fire" | "crumble" | "cage";
+  readonly voidRole?: string;
+  readonly materializationState?: string;
+  readonly transferNode?: boolean;
+  readonly connectionIds?: readonly string[];
+  readonly touchT?: number;
+  readonly fireOn?: boolean;
+  readonly fireState?: string;
+  readonly cageRect?: Readonly<{ x: number; y: number; w: number; h: number }> | null;
 }
 
 export interface TearStructuredRuntimeEnvironment {
@@ -79,11 +104,26 @@ export interface LiveTearRuntimeEnvironmentContext {
     player(): GamePlayer | undefined;
     blade(): GameBlade | undefined;
     enemies(): GameEnemy[];
+    projectiles(): GameProjectile[];
   }>;
+  readonly platforms: () => readonly LiveObservationPlatform[];
   readonly actorId: (enemy: GameEnemy) => string;
   readonly stage: () => Readonly<{ name: string }>;
   readonly lifecycle: () => Readonly<{ phase: string }>;
   readonly choiceIds: () => readonly string[];
+  readonly progression: () => Readonly<{
+    wallet: number;
+    lifetimeEarned: number;
+    levels: Readonly<Record<string, number>>;
+    shop: readonly Readonly<{
+      id: string;
+      level: number;
+      maxLevel: number;
+      cost: number;
+      enabled: boolean;
+    }>[];
+  }>;
+  readonly outcome: () => RunResultInfo | null;
   readonly screen: () => string;
   readonly setScreen: (screen: "playing" | "paused") => void;
   readonly terminateRun: () => void;
@@ -95,10 +135,15 @@ export interface LiveTearRuntimeEnvironmentContext {
     difficulty: TearScenarioV1["start"]["difficulty"],
   ) => void;
   readonly stopFrameLoop: () => void;
+  readonly startFrameLoop: () => void;
+  readonly setSemanticInputAuthority: (active: boolean) => void;
   readonly pushAction: (action: GameAction) => void;
   readonly routeAction: (action: GameAction) => boolean;
+  readonly activateControl: (action: ScreenAction) => boolean;
+  readonly skipCinematic: () => void;
   readonly resetSemanticInput: () => void;
   readonly advanceFixedTick: () => number;
+  readonly advanceApplicationFrame: (deltaSeconds: number) => void;
   readonly advanceRenderFrame: (deltaSeconds: number) => number;
   readonly authoritative: () => Readonly<{ tick: number; stateHash: string }> | null;
   readonly random: () => RunRandomStreamsSnapshot;

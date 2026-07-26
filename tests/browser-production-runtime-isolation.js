@@ -14,6 +14,10 @@ const bridgeMarkers = [
   "installLiveTearRuntimeBridge",
   "tear-ghost-lab",
   "Ghost Lab",
+  "__TEAR_WATCH_AGENT__",
+  "live-watch-agent-host",
+  "tear-watch-agent",
+  "Watch Agent",
 ];
 
 function filesUnder(directory) {
@@ -125,7 +129,9 @@ async function assertRuntimeIsolation(browser, target, directory) {
   });
 
   try {
-    await page.goto(`${host.origin}/`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.goto(`${host.origin}/?test=1&watchagent=1`, {
+      waitUntil: "domcontentloaded", timeout: 30_000,
+    });
     await page.waitForFunction(
       (expectedTarget) => window.__TEAR_BUILD__?.target === expectedTarget,
       target,
@@ -136,11 +142,17 @@ async function assertRuntimeIsolation(browser, target, directory) {
     }));
     const result = await page.evaluate(() => {
       const name = "__TEAR_RUNTIME_ENVIRONMENT__";
+      const watchName = "__TEAR_WATCH_AGENT__";
       return {
         own: Object.prototype.hasOwnProperty.call(globalThis, name),
         present: name in globalThis,
         descriptor: Object.getOwnPropertyDescriptor(globalThis, name),
         valueType: typeof globalThis[name],
+        watchOwn: Object.prototype.hasOwnProperty.call(globalThis, watchName),
+        watchPresent: watchName in globalThis,
+        watchDescriptor: Object.getOwnPropertyDescriptor(globalThis, watchName),
+        watchValueType: typeof globalThis[watchName],
+        watchPanel: document.getElementById("tear-watch-agent") !== null,
         build: globalThis.__TEAR_BUILD__,
         loadedScripts: performance.getEntriesByType("resource")
           .filter((entry) => entry.name.includes(".js")).length,
@@ -152,6 +164,11 @@ async function assertRuntimeIsolation(browser, target, directory) {
     assert.equal(result.present, false, `${target} exposes the test-only runtime bridge through its global chain`);
     assert.equal(result.descriptor, undefined);
     assert.equal(result.valueType, "undefined");
+    assert.equal(result.watchOwn, false, `${target} owns the test-only Watch Agent global`);
+    assert.equal(result.watchPresent, false, `${target} exposes the test-only Watch Agent global`);
+    assert.equal(result.watchDescriptor, undefined);
+    assert.equal(result.watchValueType, "undefined");
+    assert.equal(result.watchPanel, false, `${target} rendered the test-only Watch Agent panel`);
     assert.deepEqual(pageErrors, [], `${target} production bundle raised a page error while booting`);
   } finally {
     await context.close();

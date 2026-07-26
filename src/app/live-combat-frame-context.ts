@@ -19,6 +19,7 @@ export interface LiveCombatFrameContext extends FrameBase {
   readonly state: () => string;
   readonly recording: () => boolean;
   readonly aimRadius: number;
+  readonly captureDeviceAim: () => boolean;
   readonly sampleAim: () => Readonly<{ x: number; y: number }>;
   readonly pushAim: (turn: number, magnitude: number) => void;
   readonly drainActions: (tick: number) => readonly CommandEnvelope<GameAction>[];
@@ -37,6 +38,7 @@ export function createLiveCombatFrameOptions<State>(context: LiveCombatFrameCont
   return { ...context,
     fixedSimulationInput: () => ({ state: context.state, simulation: api.simulation,
       recording: context.recording, aimRadius: context.aimRadius,
+      captureDeviceAim: context.captureDeviceAim,
       sampleAim: context.sampleAim, pushAim: context.pushAim, drainActions: context.drainActions,
       ...(context.beforeSimulationStep ? { beforeStep: context.beforeSimulationStep } : {}),
       ...(context.afterSimulationStep ? { afterStep: context.afterSimulationStep } : {}),

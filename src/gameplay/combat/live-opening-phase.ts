@@ -6,10 +6,12 @@ import { handleWeaponTransport, type TransportBlade } from "./weapon-transport-r
 import { stepEnemyActors, stepEnemyStatuses, type EnemyStepActor } from "./enemy-step-runtime";
 import { stepBossRuntime, type BossStepEnemy, type BossStepPlatform, type BossStepPlayer, type BossStepRun } from "./boss-step-runtime";
 import { advancePlatformLifecycle, type BrokenPlatform, type CrackingPlatform } from "./platform-lifecycle-runtime";
+import { resolveEnemyBladeCatch, type BladeCatchEnemy } from "./enemy-blade-catch-runtime";
 
 export type LivePlayer = CombatPreludePlayer & LocomotionPlayer & BossStepPlayer;
 export type LiveBlade = CombatPreludeBlade & LocomotionBlade & SecondaryBlade & TransportBlade;
-export type LiveEnemy = LocomotionEnemy & SecondaryEnemy & EnemyStepActor & BossStepEnemy;
+export type LiveEnemy = LocomotionEnemy & SecondaryEnemy & EnemyStepActor & BossStepEnemy
+  & BladeCatchEnemy;
 export type LivePlatform = CrackingPlatform & BossStepPlatform;
 export type LiveRun = CombatPreludeRun & BossStepRun & {
   readonly mods: CombatPreludeRun["mods"];
@@ -90,6 +92,7 @@ export interface LiveOpeningPhaseHost {
   spawnBossClone: (boss: LiveEnemy) => void;
   removeBossClone: (clone: LiveEnemy) => void;
   dramaticBeat: () => void;
+  onBladeStolen: (enemy: LiveEnemy) => void;
   updateEffects: (dt: number) => void;
   random: () => number;
 }
@@ -118,6 +121,8 @@ export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): Liv
     groundY: CONFIG.world.groundY, viewportWidth: host.width,
     onKill: host.onKill, startTransformation: (enemy, request) => host.startTransformation(enemy as LiveEnemy, request) });
   if (transformed || host.transformationBlocked) return { blocked: true };
+  const bladeThief = resolveEnemyBladeCatch(host.enemies, blade, player);
+  if (bladeThief !== null) host.onBladeStolen(bladeThief);
   host.updateSupports(dt);
   stepEnemyStatuses({ dt, enemies: host.enemies, cinderSlow: !!run.mods.cinderSlow, random: host.random,
     ember: host.ember, drip: host.drip, didDie: (enemy) => enemy.dead, onArmorBypass: host.armorBypass,

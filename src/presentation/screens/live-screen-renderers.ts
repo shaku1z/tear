@@ -27,6 +27,7 @@ export interface LiveScreenButton {
   readonly pips?: Readonly<{ readonly n: number; readonly filled: number; readonly color: string }>;
   readonly accent?: string; readonly confirm?: boolean; readonly _hideBox?: boolean;
   readonly size?: number; readonly action: () => void;
+  readonly semanticAction: ScreenAction;
 }
 
 export interface LiveScreenRendererOptions {
@@ -65,7 +66,8 @@ function toButton(control: ScreenControl, dispatch: (action: ScreenAction) => vo
     ...(control.accent === undefined ? {} : { accent: control.accent }),
     ...(control.confirm === undefined ? {} : { confirm: control.confirm }),
     ...(control.hiddenBox === undefined ? {} : { _hideBox: control.hiddenBox }),
-    ...(control.size === undefined ? {} : { size: control.size }), action: () => { dispatch(control.action); },
+    ...(control.size === undefined ? {} : { size: control.size }),
+    semanticAction: control.action, action: () => { dispatch(control.action); },
   };
 }
 

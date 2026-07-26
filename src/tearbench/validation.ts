@@ -54,6 +54,49 @@ function issue(issues: TearContractValidationIssue[], path: string, message: str
   issues.push(Object.freeze({ path, message }));
 }
 
+function validateObservedBounds(value: unknown, path: string, issues: TearContractValidationIssue[]): void {
+  if (!isRecord(value)) { issue(issues, path, "must be an object"); return; }
+  for (const key of ["minX", "maxX", "minY", "maxY"]) {
+    if (!finite(value[key])) issue(issues, `${path}.${key}`, "must be finite");
+  }
+  if (finite(value.minX) && finite(value.maxX) && value.minX > value.maxX) {
+    issue(issues, path, "must have ordered horizontal bounds");
+  }
+  if (finite(value.minY) && finite(value.maxY) && value.minY > value.maxY) {
+    issue(issues, path, "must have ordered vertical bounds");
+  }
+}
+
+function validateNavigation(value: unknown, issues: TearContractValidationIssue[]): void {
+  if (!isRecord(value)) { issue(issues, "navigation", "must be an object"); return; }
+  if (!boundedArray(value.surfaces)) issue(issues, "navigation.surfaces", "must be a bounded array");
+  else value.surfaces.forEach((entry, index) => {
+    const path = `navigation.surfaces[${String(index)}]`;
+    if (!isRecord(entry)) { issue(issues, path, "must be an object"); return; }
+    if (!stringValue(entry.id)) issue(issues, `${path}.id`, "must be a bounded identifier");
+    validateObservedBounds(entry.bounds, `${path}.bounds`, issues);
+    if (typeof entry.oneWay !== "boolean" || typeof entry.collidable !== "boolean") {
+      issue(issues, path, "must declare boolean oneWay and collidable values");
+    }
+    if (!stringValue(entry.materializationState)) issue(issues, `${path}.materializationState`, "must be a bounded string");
+    if (entry.lane !== undefined && (typeof entry.lane !== "string"
+      || !["lower", "upper"].includes(entry.lane))) issue(issues, `${path}.lane`, "is not recognized");
+    if (!boundedArray(entry.connectionIds) || entry.connectionIds.some((id) => !stringValue(id))) {
+      issue(issues, `${path}.connectionIds`, "must be a bounded identifier array");
+    }
+  });
+  if (!boundedArray(value.hazards)) issue(issues, "navigation.hazards", "must be a bounded array");
+  else value.hazards.forEach((entry, index) => {
+    const path = `navigation.hazards[${String(index)}]`;
+    if (!isRecord(entry)) { issue(issues, path, "must be an object"); return; }
+    if (!stringValue(entry.id) || !stringValue(entry.surfaceId)) issue(issues, path, "must have bounded identifiers");
+    if (!["fire", "crumble", "cage"].includes(String(entry.type))) issue(issues, `${path}.type`, "is not recognized");
+    if (!stringValue(entry.state)) issue(issues, `${path}.state`, "must be a bounded string");
+    if (typeof entry.active !== "boolean") issue(issues, `${path}.active`, "must be boolean");
+    validateObservedBounds(entry.bounds, `${path}.bounds`, issues);
+  });
+}
+
 function readHashSet(value: unknown, path: string, issues: TearContractValidationIssue[]): TearHashSetV1 | undefined {
   if (!isRecord(value)) { issue(issues, path, "must be an object"); return undefined; }
   const keys = ["exact", "semantic", "visual", "progression", "environment"] as const;
@@ -109,6 +152,9 @@ function parseObservation(value: Record<string, unknown>, issues: TearContractVa
   if (!isRecord(player)) issue(issues, "player", "must be an object");
   else {
     for (const key of ["x", "y", "vx", "vy", "hp", "maxHp", "dashCharges"]) if (!finite(player[key])) issue(issues, `player.${key}`, "must be finite");
+    for (const key of ["halfWidth", "halfHeight", "dashTimer", "dashCooldown", "iframe", "maxCharges"]) {
+      if (player[key] !== undefined && (!finite(player[key]) || player[key] < 0)) issue(issues, `player.${key}`, "must be finite and nonnegative when present");
+    }
     if (player.facing !== -1 && player.facing !== 1) issue(issues, "player.facing", "must be -1 or 1");
     if (typeof player.grounded !== "boolean") issue(issues, "player.grounded", "must be boolean");
   }
@@ -117,6 +163,9 @@ function parseObservation(value: Record<string, unknown>, issues: TearContractVa
   else {
     for (const key of ["handX", "handY", "tipX", "tipY", "vx", "vy", "tipSpeed"]) if (!finite(blade[key])) issue(issues, `blade.${key}`, "must be finite");
     if (!stringValue(blade.state)) issue(issues, "blade.state", "must be a bounded string");
+    for (const key of ["orbit", "circuitEnergy"]) {
+      if (blade[key] !== undefined && !finite(blade[key])) issue(issues, `blade.${key}`, "must be finite when present");
+    }
   }
   if (!boundedArray(value.entities)) issue(issues, "entities", "must be a bounded array");
   else value.entities.forEach((entry, index) => {
@@ -124,7 +173,17 @@ function parseObservation(value: Record<string, unknown>, issues: TearContractVa
     if (!stringValue(entry.id)) issue(issues, `entities[${String(index)}].id`, "must be a bounded identifier");
     if (typeof entry.kind !== "string" || !ENTITY_KIND_REGISTRY.has(entry.kind)) issue(issues, `entities[${String(index)}].kind`, "is not registered");
     for (const key of ["x", "y", "vx", "vy"]) if (!finite(entry[key])) issue(issues, `entities[${String(index)}].${key}`, "must be finite");
+    if (entry.behaviorMode !== undefined && !stringValue(entry.behaviorMode)) {
+      issue(issues, `entities[${String(index)}].behaviorMode`, "must be a bounded string");
+    }
+    for (const key of ["halfWidth", "halfHeight", "contactReach", "contactDamage", "chargeMult", "auraDmg", "radius", "damage"]) {
+      if (entry[key] !== undefined && (!finite(entry[key]) || entry[key] < 0)) issue(issues, `entities[${String(index)}].${key}`, "must be finite and nonnegative when present");
+    }
+    if (entry.contactEnabled !== undefined && typeof entry.contactEnabled !== "boolean") issue(issues, `entities[${String(index)}].contactEnabled`, "must be boolean when present");
+    if (entry.unparryable !== undefined && typeof entry.unparryable !== "boolean") issue(issues, `entities[${String(index)}].unparryable`, "must be boolean when present");
+    if (entry.counterplay !== undefined && !stringValue(entry.counterplay)) issue(issues, `entities[${String(index)}].counterplay`, "must be a bounded string");
   });
+  if (value.navigation !== undefined) validateNavigation(value.navigation, issues);
   const run = value.run;
   if (!isRecord(run)) issue(issues, "run", "must be an object");
   else {

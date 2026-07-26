@@ -84,7 +84,10 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
     const firstDamage = enemy.firstPlayerDamageAt == null;
     const dealt = enemy.hit(strike.damage, blade.tipVX, blade.tipVY);
     hooks.noteFirstDamage(enemy, firstDamage); blade.recordHit(enemy); run.weaponStats.heldHits++;
-    hooks.logHit(strike.damage, quality, weaponEffect?.mechanic);
+    const strikeType = strike.spike ? "spike" : strike.empoweredSlam ? "superslam"
+      : strike.slam ? "slam" : strike.empoweredLaunch ? "updraft" : strike.launch ? "launch" : "hit";
+    const airborne = enemy.y < t.groundY - enemy.hh - 14;
+    hooks.logHit(strike.damage, quality, { strikeType, airborne }, weaponEffect?.mechanic);
     applyWeaponEffect(input, enemy, weaponEffect);
 
     let impulseHandled = false;
@@ -93,7 +96,7 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
         tipSpeed: blade.tipSpeed, tipVX: blade.tipVX, tipVY: blade.tipVY, isSlam: strike.slam,
         isLaunch: strike.launch, spike: strike.spike, empowered: strike.empoweredLaunch,
         empSlam: strike.empoweredSlam, heightF: strike.heightFraction, strikeF: strike.strikeFraction,
-        strikeType: strike.spike ? "spike" : strike.empoweredSlam ? "superslam" : strike.slam ? "slam" : strike.empoweredLaunch ? "updraft" : strike.launch ? "launch" : "hit" });
+        strikeType });
       impulseHandled = response === true || !!(response && response.handled);
     }
     if (player.rallySource === enemy) {
@@ -118,7 +121,6 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
     const weaponStyle = weaponEffect && (weaponEffect.mechanic === "break" && !weaponEffect.broke ? null : ({ trueCut: "trueCut", break: "break", drive: "drive", drag: "drag" } as Record<string, string>)[weaponEffect.mechanic ?? ""]);
     fx.style(strike.slam ? strike.empoweredSlam ? "superslam" : "slam" : strike.empoweredLaunch ? "updraft" : strike.launch ? "launch" : weaponStyle ?? "hit");
     fx.tutorial("strike");
-    const airborne = enemy.y < t.groundY - enemy.hh - 14;
     if (airborne) fx.tutorial("airHit");
     if (hooks.achievementsEnabled()) trackAchievements(input, enemy, strike.damage, airborne, strike.launch, strike.slam, strike.empoweredLaunch, strike.spike, strike.empoweredSlam);
     hooks.fireHit(enemy, point.px, point.py); hooks.fireSwingHit(enemy, point.px, point.py, dealt, quality, weaponEffect?.mechanic);

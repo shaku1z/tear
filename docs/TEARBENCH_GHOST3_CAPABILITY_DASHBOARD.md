@@ -11,11 +11,11 @@ never promoted to visible or certified gameplay evidence.
 
 | State | Requirements |
 |---|---:|
-| missing | 6557 |
-| contract | 108 |
-| prototype | 162 |
+| missing | 6470 |
+| contract | 179 |
+| prototype | 161 |
 | integrated | 58 |
-| visible | 0 |
+| visible | 17 |
 | certified | 0 |
 | deferred | 0 |
 | rejected | 0 |
@@ -25,9 +25,9 @@ never promoted to visible or certified gameplay evidence.
 | Checkpoint | Total | Missing | Contract | Prototype | Integrated | Visible | Certified |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | C21 | 371 | 371 | 0 | 0 | 0 | 0 | 0 |
-| C22 | 251 | 216 | 0 | 0 | 35 | 0 | 0 |
+| C22 | 251 | 209 | 7 | 0 | 35 | 0 | 0 |
 | C23 | 971 | 928 | 0 | 22 | 21 | 0 | 0 |
-| C24 | 651 | 650 | 0 | 1 | 0 | 0 | 0 |
+| C24 | 651 | 570 | 64 | 0 | 0 | 17 | 0 |
 | C25 | 184 | 180 | 4 | 0 | 0 | 0 | 0 |
 | C26 | 105 | 104 | 0 | 1 | 0 | 0 | 0 |
 | C27 | 1166 | 1097 | 10 | 58 | 1 | 0 | 0 |
@@ -57,6 +57,10 @@ never promoted to visible or certified gameplay evidence.
 | EVID-C23-PROGRESSION-TRUTH | 5 |
 | EVID-C23-TRANSACTIONAL-RESTORE | 2 |
 | EVID-C23-WAVE99-PLAYABLE-EPISODE | 8 |
+| EVID-C24-DIFFICULTY-EXPECTATION-CONTRACTS | 10 |
+| EVID-C24-HIERARCHICAL-SCRIPTED-CORE | 17 |
+| EVID-C24-MODE-COMPLETION-CONTRACTS | 9 |
+| EVID-C24-PERSONA-CONTRACTS | 52 |
 | EVID-FOUNDRY-CONTRACT | 14 |
 | EVID-GHOST-CLOUD-CONTRACTS | 63 |
 | EVID-GHOST-COACH-CONTRACT | 3 |
@@ -73,7 +77,7 @@ never promoted to visible or certified gameplay evidence.
 | EVID-PROGRESSION-LEDGER | 3 |
 | EVID-REGRESSION-HELPERS | 36 |
 | EVID-RUNTIME-FIXED-STEP | 0 |
-| EVID-SCRIPTED-POLICY | 1 |
+| EVID-SCRIPTED-POLICY | 0 |
 | EVID-SEMANTIC-ACTIONS | 0 |
 | EVID-STATE-CODECS | 10 |
 | EVID-TEARBENCH-CONTRACTS | 0 |
@@ -83,7 +87,7 @@ never promoted to visible or certified gameplay evidence.
 
 ## Blocking Truth
 
-- Missing normative requirements: 6557
-- Visible requirements: 0
+- Missing normative requirements: 6470
+- Visible requirements: 17
 - Certified requirements: 0
 - C22-C40 remain incomplete until their annex requirements reach their required evidence state.

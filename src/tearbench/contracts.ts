@@ -72,8 +72,53 @@ export interface TearObservedActorV1 {
   readonly vy: number;
   readonly hpRatio?: number;
   readonly state?: string;
+  readonly behaviorMode?: string;
+  readonly halfWidth?: number;
+  readonly halfHeight?: number;
+  readonly contactReach?: number;
+  readonly contactDamage?: number;
+  readonly chargeMult?: number;
+  readonly auraDmg?: number;
+  readonly contactEnabled?: boolean;
+  readonly radius?: number;
+  readonly damage?: number;
+  readonly counterplay?: string;
+  readonly unparryable?: boolean;
   readonly threat?: number;
   readonly ownerId?: string;
+}
+
+export interface TearObservedBoundsV1 {
+  readonly minX: number;
+  readonly maxX: number;
+  readonly minY: number;
+  readonly maxY: number;
+}
+
+export interface TearObservedSurfaceV1 {
+  readonly id: string;
+  readonly bounds: TearObservedBoundsV1;
+  readonly oneWay: boolean;
+  readonly collidable: boolean;
+  readonly materializationState: string;
+  readonly lane?: "lower" | "upper";
+  readonly role?: string;
+  readonly transferNode?: boolean;
+  readonly connectionIds: readonly string[];
+}
+
+export interface TearObservedHazardV1 {
+  readonly id: string;
+  readonly surfaceId: string;
+  readonly type: "fire" | "crumble" | "cage";
+  readonly state: string;
+  readonly active: boolean;
+  readonly bounds: TearObservedBoundsV1;
+}
+
+export interface TearNavigationObservationV1 {
+  readonly surfaces: readonly TearObservedSurfaceV1[];
+  readonly hazards: readonly TearObservedHazardV1[];
 }
 
 export interface TearObservationV1 {
@@ -85,12 +130,17 @@ export interface TearObservationV1 {
   readonly player: Readonly<{
     x: number; y: number; vx: number; vy: number; hp: number; maxHp: number;
     facing: -1 | 1; grounded: boolean; dashCharges: number;
+    halfWidth?: number; halfHeight?: number; dashTimer?: number; dashCooldown?: number;
+    iframe?: number; maxCharges?: number;
   }>;
   readonly blade: Readonly<{
     handX: number; handY: number; tipX: number; tipY: number;
     vx: number; vy: number; tipSpeed: number; state: string;
+    orbit?: number; circuitEnergy?: number;
   }>;
   readonly entities: readonly TearObservedActorV1[];
+  /** Structured world geometry available to Class A and Class B observers; never a Class C affordance. */
+  readonly navigation?: TearNavigationObservationV1;
   readonly run: Readonly<{
     mode: TearRunModeId; difficulty: TearDifficultyId; weapon: TearWeaponId;
     stage: string; wave: number; score: number; elapsedTicks: number;

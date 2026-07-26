@@ -108,7 +108,9 @@ function heldEffects(host: LiveCollisionPhaseHost): HeldBladeCollisionInput["eff
 }
 function heldHooks(host: LiveCollisionPhaseHost): HeldBladeCollisionInput["hooks"] {
   return { weaponHit: host.weaponHit, noteFirstDamage: host.noteFirstDamage,
-    logHit: (damage, quality, mechanic) => { host.logWeapon("heldHit", { damage, quality, ...(mechanic ? { mechanic } : {}) }); },
+    logHit: (damage, quality, observation, mechanic) => {
+      host.logWeapon("heldHit", { damage, quality, ...observation, ...(mechanic ? { mechanic } : {}) });
+    },
     onKill: host.onKill, dealArea: host.areaDamage, fireHit: host.makeHitEvent, fireSwingHit: host.makeSwingEvent,
     fireSlam: host.makeSlamEvent, achievementsEnabled: host.achievementsEnabled, addProfileStat: host.profileAdd,
     maxProfileStat: host.profileMax, bumpDaily: host.dailyBump, achievementSwing: () => { host.achievement("swing"); },
