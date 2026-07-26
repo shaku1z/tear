@@ -13,6 +13,7 @@ const STRICT_PATHS = new Set([
   "cursor.drawn",
   "cursor.lockHintVisible",
   "blade.state",
+  "player.onGround",
 ]);
 
 const DEFAULT_TOLERANCES = Object.freeze({
@@ -20,6 +21,10 @@ const DEFAULT_TOLERANCES = Object.freeze({
   "player.y": 6,
   "player.vx": 45,
   "player.vy": 45,
+  "player.coyote": 0.02,
+  "player.jumpBuffer": 0.02,
+  "player.dashTimer": 0.02,
+  "player.dashCooldown": 0.02,
   "blade.x": 10,
   "blade.y": 10,
   "blade.vx": 90,

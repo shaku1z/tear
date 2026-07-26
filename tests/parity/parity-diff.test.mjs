@@ -67,3 +67,28 @@ test("parity differ reports tick misalignment without inventing a physics regres
   assert.equal(report.unalignedCheckpointCount, 1);
   assert.equal(report.firstDivergence.field, "simulationTick");
 });
+
+test("parity differ treats grounded state as strict and movement timers as tolerant", () => {
+  const base = {
+    label: "landing",
+    screen: "playing",
+    simulationTick: 80,
+    input: { mode: "keyboard", pointerLocked: true, pointerLockAllowed: true },
+    cursor: { drawn: false, lockHintVisible: false },
+    player: { x: 100, y: 200, vx: 0, vy: 0, onGround: true, coyote: 0.1,
+      jumpBuffer: 0, dashTimer: 0.05, dashCooldown: 0.4 },
+    blade: { state: "held" },
+  };
+  const tolerated = compareParityTraces(
+    trace("oracle", [base]),
+    trace("current", [{ ...base, player: { ...base.player, coyote: 0.11,
+      dashTimer: 0.04, dashCooldown: 0.39 } }]),
+  );
+  assert.equal(tolerated.passed, true);
+
+  const airborne = compareParityTraces(
+    trace("oracle", [base]),
+    trace("current", [{ ...base, player: { ...base.player, onGround: false } }]),
+  );
+  assert.equal(airborne.firstDivergence.field, "player.onGround");
+});

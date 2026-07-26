@@ -44,10 +44,12 @@ not depend on visual estimation alone.
 
 ## Parity microscope
 
-`pnpm parity:blade` serves the pinned oracle and the current test build on
-separate local origins, replays
-`tests/parity/blade-pointer-lifecycle.json` through both pages, and writes three
-ignored artifacts under `artifacts/parity/`:
+`pnpm parity:blade` and `pnpm parity:player` serve the pinned oracle and the
+current test build on separate local origins. They replay the blade lifecycle
+or player locomotion fixture through both pages and write paired traces plus a
+report under `artifacts/parity/`.
+
+The blade fixture writes:
 
 - `blade-pointer-lifecycle.oracle.json`
 - `blade-pointer-lifecycle.current.json`
@@ -74,6 +76,12 @@ contract is `pnpm test:browser:blade-lifecycle`; it verifies capture, relative
 aim, tether hold, throw, pause/release, and fresh-run reset without requiring
 the external oracle worktree.
 
+The player fixture is `tests/parity/player-locomotion.json`. It dispatches
+keyboard edges immediately before named 120 Hz simulation steps and covers
+grounded acceleration, jump and release, airborne steering, directional dash,
+opposite-direction reversal, landing, and friction. Its permanent current-build
+contract is `pnpm test:browser:player-locomotion`.
+
 ### Phase 0 blade baseline
 
 The parity adapter queues each event before a run segment starts, applies it
@@ -88,3 +96,11 @@ reset. Paused screens may stop their clocks on different tick numbers because
 the browser delivers pointer-lock loss asynchronously; the differ still
 compares their frozen gameplay and lifecycle state but does not treat the
 inactive clock value itself as a physics divergence.
+
+### Phase 4 player baseline
+
+The first complete player capture reached zero differences across 15
+checkpoints. Both builds consumed every keyboard edge on the same authoritative
+tick and matched position, velocity, grounded state, coyote and jump-buffer
+timers, dash duration/cooldown, and the attached blade state throughout the
+scripted movement arc.

@@ -7,7 +7,10 @@ const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "..", "..");
-const FIXTURE_FILE = path.join(__dirname, "blade-pointer-lifecycle.json");
+const fixtureArgument = process.argv.find((argument) => argument.startsWith("--fixture="));
+const FIXTURE_FILE = fixtureArgument
+  ? path.resolve(REPOSITORY_ROOT, fixtureArgument.slice("--fixture=".length))
+  : path.join(__dirname, "blade-pointer-lifecycle.json");
 const OUTPUT_ROOT = path.join(REPOSITORY_ROOT, "artifacts", "parity");
 const ORACLE_REVISION = "ee5e93141d67cc02505b2227b3be0b10d1819e1c";
 const ORACLE_PROBE = `
@@ -169,6 +172,10 @@ async function installTickBridge(page) {
       const canvas = document.querySelector("canvas");
       const point = window.__TEAR_PARITY_MOUSE__ ?? { x: 800, y: 450 };
       const buttonIndex = action.button === "right" ? 2 : 0;
+      const dispatchKey = (type) => window.dispatchEvent(new KeyboardEvent(type, {
+        key: action.key ?? action.code, code: action.code ?? action.key,
+        bubbles: true, cancelable: true,
+      }));
       if (action.type === "mouseMove") {
         moveMouse(action.x, action.y);
       } else if (action.type === "mouseClick") {
@@ -191,14 +198,13 @@ async function installTickBridge(page) {
           bubbles: true, cancelable: true, clientX: point.x, clientY: point.y, button: buttonIndex,
         }));
       } else if (action.type === "keyPress") {
-        const code = action.key === "Escape" ? "Escape" : action.key;
         if (action.key === "Escape") void document.exitPointerLock();
-        window.dispatchEvent(new KeyboardEvent("keydown", {
-          key: action.key, code, bubbles: true, cancelable: true,
-        }));
-        window.dispatchEvent(new KeyboardEvent("keyup", {
-          key: action.key, code, bubbles: true, cancelable: true,
-        }));
+        dispatchKey("keydown");
+        dispatchKey("keyup");
+      } else if (action.type === "keyDown") {
+        dispatchKey("keydown");
+      } else if (action.type === "keyUp") {
+        dispatchKey("keyup");
       }
     };
     window.__TEAR_PARITY_TICK__ = {
@@ -328,11 +334,21 @@ async function applyAction(page, action) {
       }, action);
       break;
     case "keyPress":
-      await page.evaluate((key) => {
-        const code = key === "Escape" ? "Escape" : key;
-        window.dispatchEvent(new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true }));
-        window.dispatchEvent(new KeyboardEvent("keyup", { key, code, bubbles: true, cancelable: true }));
-      }, action.key);
+      await page.evaluate((entry) => {
+        const options = { key: entry.key ?? entry.code, code: entry.code ?? entry.key,
+          bubbles: true, cancelable: true };
+        window.dispatchEvent(new KeyboardEvent("keydown", options));
+        window.dispatchEvent(new KeyboardEvent("keyup", options));
+      }, action);
+      break;
+    case "keyDown":
+    case "keyUp":
+      await page.evaluate((entry) => {
+        window.dispatchEvent(new KeyboardEvent(entry.type === "keyDown" ? "keydown" : "keyup", {
+          key: entry.key ?? entry.code, code: entry.code ?? entry.key,
+          bubbles: true, cancelable: true,
+        }));
+      }, action);
       break;
     case "waitForPause":
       try {
@@ -408,7 +424,8 @@ async function captureTrace(browser, kind, baseUrl, root, fixture) {
   await installTickBridge(page);
   await page.mouse.click(10, 10);
   await settle(page);
-  const firstEscapeIndex = fixture.actions.findIndex((action) => action.type === "keyPress" && action.key === "Escape");
+  const escapeIndex = fixture.actions.findIndex((action) => action.type === "keyPress" && action.key === "Escape");
+  const firstEscapeIndex = escapeIndex < 0 ? fixture.actions.length : escapeIndex;
   const planned = new Map();
   let plannedTick = 0;
   const firstRunJobs = [];
@@ -546,6 +563,27 @@ function assertCurrentLifecycle(trace) {
     "fresh-run blade geometry remains finite");
 }
 
+function assertCurrentLocomotion(trace) {
+  assert.deepEqual(trace.pageErrors, [], `current locomotion trace page errors:\n${trace.pageErrors.join("\n")}`);
+  const settled = checkpoint(trace, "grounded-settled");
+  const accelerating = checkpoint(trace, "right-acceleration");
+  const airborne = checkpoint(trace, "jump-ascent");
+  const dash = checkpoint(trace, "dash-edge");
+  const reversed = checkpoint(trace, "left-reversal");
+  const landed = checkpoint(trace, "landed-reset");
+
+  assert.equal(settled.player.onGround, true, "the fixture begins on stable ground");
+  assert.ok(accelerating.player.x > settled.player.x + 10 && accelerating.player.vx > 0,
+    "held right movement accelerates and advances the player");
+  assert.equal(airborne.player.onGround, false, "jump leaves the ground");
+  assert.ok(airborne.player.vy < 0, "jump produces upward velocity");
+  assert.ok(dash.player.dashTimer > 0 && dash.player.vx > accelerating.player.vx,
+    "the airborne directional dash enters its authored burst");
+  assert.ok(reversed.player.vx < 0, "opposite input reverses horizontal motion");
+  assert.equal(landed.player.onGround, true, "the player lands after the scripted arc");
+  assert.ok(Math.abs(landed.player.vy) < 0.001, "landing resolves vertical velocity");
+}
+
 async function main() {
   const fixture = JSON.parse(fs.readFileSync(FIXTURE_FILE, "utf8"));
   const currentOnly = process.argv.includes("--current-only");
@@ -579,7 +617,8 @@ async function main() {
     fs.mkdirSync(OUTPUT_ROOT, { recursive: true });
     const currentFile = path.join(OUTPUT_ROOT, `${fixture.id}.current.json`);
     fs.writeFileSync(currentFile, `${JSON.stringify(currentTrace, null, 2)}\n`);
-    assertCurrentLifecycle(currentTrace);
+    if (fixture.contract === "player-locomotion") assertCurrentLocomotion(currentTrace);
+    else assertCurrentLifecycle(currentTrace);
 
     if (oracleServer) {
       const oracleTrace = await captureTrace(browser, "oracle", oracleServer.baseUrl, oracleRoot, fixture);
@@ -591,13 +630,13 @@ async function main() {
       const report = compareParityTraces(oracleTrace, currentTrace);
       const reportFile = path.join(OUTPUT_ROOT, `${fixture.id}.report.json`);
       fs.writeFileSync(reportFile, `${JSON.stringify(report, null, 2)}\n`);
-      console.log(`blade parity trace captured: ${report.comparedCheckpoints} checkpoints, ${report.divergenceCount} divergences`);
+      console.log(`${fixture.id} parity trace captured: ${report.comparedCheckpoints} checkpoints, ${report.divergenceCount} divergences`);
       if (report.firstDivergence) console.log(`first divergence: ${report.firstDivergence.label} / ${report.firstDivergence.field}`);
       console.log(`report: ${reportFile}`);
       if (process.env.TEAR_PARITY_STRICT === "1") assert.equal(report.passed, true,
-        `strict blade parity failed at ${report.firstDivergence?.label} / ${report.firstDivergence?.field}`);
+        `strict ${fixture.id} parity failed at ${report.firstDivergence?.label} / ${report.firstDivergence?.field}`);
     } else {
-      console.log(`current blade lifecycle passed (${currentTrace.checkpoints.length} checkpoints)`);
+      console.log(`current ${fixture.id} passed (${currentTrace.checkpoints.length} checkpoints)`);
     }
   } finally {
     if (browser) await browser.close();
