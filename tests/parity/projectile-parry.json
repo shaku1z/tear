@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "projectile-parry",
+  "contract": "projectile-parry",
+  "description": "A deterministic ordinary hostile projectile crossing a real held-blade tip, covering perfect classification, homing reflection, counter damage, Riposte guard, stat credit, and source impact.",
+  "viewport": {
+    "width": 1600,
+    "height": 900
+  },
+  "mode": "playground",
+  "difficulty": "normal",
+  "actions": [
+    { "type": "mouseMove", "x": 1000, "y": 450, "steps": 2, "checkpoint": "aim-authored" },
+    { "type": "prepareProjectileParryScenario", "checkpoint": "perfect-counter" },
+    { "type": "wait", "ms": 45, "checkpoint": "source-impact" }
+  ]
+}

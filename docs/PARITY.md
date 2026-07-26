@@ -103,6 +103,12 @@ ordinary Ranged actor just before its aim timer expires, then leaves movement,
 telegraph timing, projectile construction, and cooldown reset to production.
 Its permanent current-build contract is `pnpm test:browser:ranged-cycle`.
 
+The projectile-counter fixture is `tests/parity/projectile-parry.json`. It
+crosses one ordinary hostile projectile with a real high-speed held tip, then
+lets the production counter and projectile collision phases return it to its
+source. Its permanent current-build contract is
+`pnpm test:browser:projectile-parry`.
+
 ### Phase 0 blade baseline
 
 The parity adapter queues each event before a run segment starts, applies it
@@ -151,3 +157,11 @@ The first Ranged capture reached zero differences across three checkpoints.
 Both builds enter `windup`, count down the same telegraph, plant while aiming,
 emit the same two ordinary hostile projectiles, reset the aim cooldown, and
 return to `kite` on the same authoritative ticks.
+
+### Phase 4 projectile-counter baseline
+
+The first projectile-counter capture reached zero differences across three
+checkpoints. Both builds classify the same collision as a perfect full counter,
+home the shot toward its owner, assign the same reflected damage, grant the
+same Riposte guard, credit exactly one perfect parry, and consume the projectile
+after applying its return damage to the source.

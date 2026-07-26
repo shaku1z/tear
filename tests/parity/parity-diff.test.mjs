@@ -153,4 +153,10 @@ test("parity differ locks ranged AI and projectile family while tolerating fligh
     trace("current", [{ ...base, projectiles: [{ ...base.projectiles[0], family: "groundShock" }] }]),
   );
   assert.equal(wrongFamily.firstDivergence.field, "projectiles.0.family");
+
+  const wrongCounter = compareParityTraces(
+    trace("oracle", [{ ...base, projectiles: [{ ...base.projectiles[0], deflected: true, perfect: true }] }]),
+    trace("current", [{ ...base, projectiles: [{ ...base.projectiles[0], deflected: true, perfect: false }] }]),
+  );
+  assert.equal(wrongCounter.firstDivergence.field, "projectiles.0.perfect");
 });

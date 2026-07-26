@@ -40,6 +40,22 @@ const ORACLE_PROBE = `
       });
       enemies = [enemy]; projectiles = [];
     },
+    prepareProjectileParryScenario: () => {
+      const owner = new Ranged(1500, CONFIG.world.groundY - CONFIG.ranged.h / 2);
+      Object.assign(owner, {
+        vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 9, hitCd: 0, aliveT: 0,
+        behavior: "", state: "kite", aimTimer: 9, windT: 0, windMax: 0,
+        canClimb: false, climber: false, variant: "", variantName: "", affixes: [], affixCount: 0,
+      });
+      const actualTipX = blade.tipX, actualTipY = blade.tipY;
+      const shot = new Projectile(blade.x + (actualTipX - blade.x) * 0.62,
+        blade.y + (actualTipY - blade.y) * 0.62, -800, 0);
+      shot.r = 18; shot.owner = owner; shot.sourceEnemy = owner; shot.dmg = CONFIG.proj.dmg;
+      Object.assign(blade, { state: "held", vx: 0, vy: 0,
+        tipX: actualTipX - 28, tipY: actualTipY, prevTipX: actualTipX - 28, prevTipY: actualTipY });
+      run.mods.parryGuard = true; run.weaponStats.perfectParries = 0; player.guardT = 0;
+      enemies = [owner]; projectiles = [shot];
+    },
     prepareCombatParityScenario: () => {
       const dx = blade.tipX - blade.x, dy = blade.tipY - blade.y;
       const survivor = new Charger(blade.x + dx * 0.48, blade.y + dy * 0.48);
@@ -77,6 +93,7 @@ const ORACLE_PROBE = `
           x: player.x, y: player.y, vx: player.vx, vy: player.vy, hp: player.hp,
           onGround: player.onGround, coyote: player.coyote, jumpBuffer: player.jumpBuf,
           dashTimer: player.dashTimer, dashCooldown: player.dashCd,
+          guardTime: player.guardT,
         } : null,
         blade: blade ? {
           state: blade.state, x: blade.x, y: blade.y, vx: blade.vx, vy: blade.vy,
@@ -95,12 +112,14 @@ const ORACLE_PROBE = `
         })),
         projectiles: projectiles.filter((projectile) => !projectile.dead).slice(0, 24).map((projectile) => ({
           x: projectile.x, y: projectile.y, vx: projectile.vx, vy: projectile.vy, r: projectile.r,
-          life: projectile.life, damage: projectile.dmg, family: projectile.family,
+          life: projectile.life, damage: projectile.dmg, deflectDamage: projectile.deflectDmg,
+          family: projectile.family,
           kind: projectile.kind, deflected: projectile.deflected, perfect: projectile.perfect,
           charged: projectile.charged, dead: projectile.dead,
         })),
         combat: run ? { enemyCount: enemies.filter((enemy) => !enemy.dead).length,
-          waveKills: run.waveKills, heldHits: run.weaponStats.heldHits } : null,
+          waveKills: run.waveKills, heldHits: run.weaponStats.heldHits,
+          perfectParries: run.weaponStats.perfectParries } : null,
       };
     },
   });
@@ -155,6 +174,7 @@ async function installAdapter(page, kind, fixture) {
         startRun: () => window.__TEAR_ORACLE_PARITY__.startRun(mode, difficulty),
         prepareEnemyParityScenario: () => window.__TEAR_ORACLE_PARITY__.prepareEnemyParityScenario(),
         prepareRangedParityScenario: () => window.__TEAR_ORACLE_PARITY__.prepareRangedParityScenario(),
+        prepareProjectileParryScenario: () => window.__TEAR_ORACLE_PARITY__.prepareProjectileParryScenario(),
         prepareCombatParityScenario: () => window.__TEAR_ORACLE_PARITY__.prepareCombatParityScenario(),
         screen: () => window.__TEAR_ORACLE_PARITY__.screen(),
         snapshot: () => window.__TEAR_ORACLE_PARITY__.snapshot(),
@@ -169,6 +189,7 @@ async function installAdapter(page, kind, fixture) {
       startRun: () => window.__PANTHEON_TEST.startMode(mode, difficulty),
       prepareEnemyParityScenario: () => window.__PANTHEON_TEST.prepareEnemyParityScenario(),
       prepareRangedParityScenario: () => window.__PANTHEON_TEST.prepareRangedParityScenario(),
+      prepareProjectileParryScenario: () => window.__PANTHEON_TEST.prepareProjectileParryScenario(),
       prepareCombatParityScenario: () => window.__PANTHEON_TEST.prepareCombatParityScenario(),
       screen: () => window.__PANTHEON_TEST.state().game,
       snapshot: () => {
@@ -243,6 +264,8 @@ async function installTickBridge(page) {
         window.__TEAR_PARITY_ADAPTER__.prepareEnemyParityScenario();
       } else if (action.type === "prepareRangedScenario") {
         window.__TEAR_PARITY_ADAPTER__.prepareRangedParityScenario();
+      } else if (action.type === "prepareProjectileParryScenario") {
+        window.__TEAR_PARITY_ADAPTER__.prepareProjectileParryScenario();
       } else if (action.type === "prepareCombatScenario") {
         window.__TEAR_PARITY_ADAPTER__.prepareCombatParityScenario();
       } else if (action.type === "mouseMove") {
@@ -703,6 +726,24 @@ function assertCurrentRangedCycle(trace) {
     && projectile.deflected === false), "the volley enters the ordinary hostile projectile family");
 }
 
+function assertCurrentProjectileParry(trace) {
+  assert.deepEqual(trace.pageErrors, [], `current parry trace page errors:\n${trace.pageErrors.join("\n")}`);
+  const resolved = checkpoint(trace, "perfect-counter");
+  const impact = checkpoint(trace, "source-impact");
+  assert.equal(resolved.projectiles.length, 1, "the reflected projectile survives the collision tick");
+  assert.equal(resolved.projectiles[0].deflected, true, "the hostile projectile becomes player-deflected");
+  assert.equal(resolved.projectiles[0].perfect, true, "the high-speed counter resolves as a perfect parry");
+  assert.ok(resolved.projectiles[0].vx > 0, "the perfect parry homes the projectile toward its owner");
+  assert.ok(resolved.projectiles[0].deflectDamage > resolved.projectiles[0].damage,
+    "the reflected projectile receives its authored counter damage");
+  assert.equal(resolved.combat.perfectParries, 1, "the run records the perfect parry exactly once");
+  assert.ok(resolved.player.guardTime > 0, "Riposte guard is granted by the full counter");
+  assert.equal(impact.projectiles.length, 0, "the homing counter is consumed by its source");
+  assert.ok(impact.enemies[0].hp < impact.enemies[0].maxHp,
+    "the reflected projectile damages the enemy that fired it");
+  assert.equal(impact.combat.perfectParries, 1, "source impact cannot double-credit the counter");
+}
+
 async function main() {
   const fixture = JSON.parse(fs.readFileSync(FIXTURE_FILE, "utf8"));
   const currentOnly = process.argv.includes("--current-only");
@@ -740,6 +781,7 @@ async function main() {
     else if (fixture.contract === "enemy-charge-cycle") assertCurrentEnemyCharge(currentTrace);
     else if (fixture.contract === "combat-resolution") assertCurrentCombatResolution(currentTrace);
     else if (fixture.contract === "ranged-fire-cycle") assertCurrentRangedCycle(currentTrace);
+    else if (fixture.contract === "projectile-parry") assertCurrentProjectileParry(currentTrace);
     else assertCurrentLifecycle(currentTrace);
 
     if (oracleServer) {

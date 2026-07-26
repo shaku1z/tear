@@ -94,7 +94,7 @@ export function createLiveDebugSnapshot(options: LiveDebugSnapshotOptions): obje
     playerTrace: player ? {
       x: player.x, y: player.y, vx: player.vx, vy: player.vy, hp: player.hp,
       onGround: player.onGround, coyote: player.coyote, jumpBuffer: player.jumpBuf,
-      dashTimer: player.dashTimer, dashCooldown: player.dashCd,
+      dashTimer: player.dashTimer, dashCooldown: player.dashCd, guardTime: player.guardT,
     } : null,
     bladeTrace: blade ? {
       state: blade.state, x: blade.x, y: blade.y, vx: blade.vx, vy: blade.vy,
@@ -115,12 +115,13 @@ export function createLiveDebugSnapshot(options: LiveDebugSnapshotOptions): obje
     })),
     projectileTrace: state.projectiles().filter((projectile) => !projectile.dead).slice(0, 24).map((projectile) => ({
       x: projectile.x, y: projectile.y, vx: projectile.vx, vy: projectile.vy, r: projectile.r,
-      life: projectile.life, damage: projectile.dmg, family: projectile.family,
+      life: projectile.life, damage: projectile.dmg, deflectDamage: projectile.deflectDmg, family: projectile.family,
       kind: projectile.kind, deflected: projectile.deflected, perfect: projectile.perfect,
       charged: projectile.charged, dead: projectile.dead,
     })),
     combatTrace: run ? { enemyCount: state.enemies().filter((enemy) => !enemy.dead).length,
-      waveKills: run.waveKills, heldHits: run.weaponStats.heldHits } : null,
+      waveKills: run.waveKills, heldHits: run.weaponStats.heldHits,
+      perfectParries: run.weaponStats.perfectParries } : null,
     bladeAim: blade ? { x: blade.aimX, y: blade.aimY, reticleX: blade.reticleX, reticleY: blade.reticleY } : null,
     authoritative: options.authoritative,
     finale: options.finale && { phase: options.finale.phase, severed: options.finale.severed,

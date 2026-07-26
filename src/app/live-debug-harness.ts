@@ -1,5 +1,5 @@
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
-import type { GameEnemy, GameRun } from "./game-runtime-state";
+import type { GameEnemy, GameProjectile, GameRun } from "./game-runtime-state";
 import type { LiveGameHostState } from "./live-game-host-state";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import type { BossId } from "../gameplay/run/content-director";
@@ -101,6 +101,26 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       });
       context.state.setEnemies([enemy]);
       context.state.setProjectiles([]);
+    },
+    /** Exact-tick parity fixture: cross one hostile shot with a real high-speed held tip. */
+    prepareProjectileParryScenario() {
+      const player = context.state.player(), blade = context.state.blade(), run = runOf(context.state);
+      if (player === undefined || blade === undefined) throw new Error("Parry parity scenario requires a live player and blade");
+      const owner = new d.Ranged(1500, d.CONFIG.world.groundY - d.CONFIG.ranged.h / 2) as GameEnemy;
+      Object.assign(owner, {
+        vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 9, hitCd: 0, aliveT: 0,
+        behavior: "", state: "kite", aimTimer: 9, windT: 0, windMax: 0,
+        canClimb: false, climber: false, variant: "", variantName: "", affixes: [], affixCount: 0,
+      });
+      const actualTipX = blade.tipX, actualTipY = blade.tipY;
+      const shot = new d.Projectile(blade.x + (actualTipX - blade.x) * 0.62,
+        blade.y + (actualTipY - blade.y) * 0.62, -800, 0) as GameProjectile;
+      shot.r = 18; shot.owner = owner; shot.sourceEnemy = owner; shot.dmg = d.CONFIG.proj.dmg;
+      Object.assign(blade, { state: "held", vx: 0, vy: 0,
+        tipX: actualTipX - 28, tipY: actualTipY, prevTipX: actualTipX - 28, prevTipY: actualTipY });
+      run.mods.parryGuard = true; run.weaponStats.perfectParries = 0; player.guardT = 0;
+      context.state.setEnemies([owner]);
+      context.state.setProjectiles([shot]);
     },
     /** Exact-tick parity fixture: drive a real held strike through damage, kill, and cleanup. */
     prepareCombatParityScenario() {
