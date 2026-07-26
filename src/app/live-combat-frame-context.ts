@@ -4,8 +4,6 @@ import type { LiveCombatRuntime } from "../gameplay/combat/live-combat-runtime";
 import type { FixedStepScheduler } from "../simulation/fixed-step";
 import type { LiveFrameRuntime, LiveFrameRuntimeOptions, LiveMusicSyncInput } from "./live-frame-runtime";
 import type { RuntimeFrameCoordinatorOptions } from "./runtime-frame-coordinator";
-import type { CommandEnvelope } from "../domain/envelopes";
-import type { GameAction } from "../input/game-action";
 
 export interface LiveCombatFrameApi<State> {
   readonly simulation: FixedStepScheduler;
@@ -17,11 +15,6 @@ export interface LiveCombatFrameApi<State> {
 type FrameBase = Omit<LiveFrameRuntimeOptions, "fixedSimulationInput" | "musicInput">;
 export interface LiveCombatFrameContext extends FrameBase {
   readonly state: () => string;
-  readonly recording: () => boolean;
-  readonly aimRadius: number;
-  readonly observeAim: () => Readonly<{ x: number; y: number }>;
-  readonly pushAim: (turn: number, magnitude: number) => void;
-  readonly drainActions: (tick: number) => readonly CommandEnvelope<GameAction>[];
   readonly beforeSimulationStep?: (tick: number) => void;
   readonly afterSimulationStep?: (tick: number) => void;
   readonly clearOverrides: () => void;
@@ -36,8 +29,6 @@ export function createLiveCombatFrameOptions<State>(context: LiveCombatFrameCont
   api: LiveCombatFrameApi<State>): LiveFrameRuntimeOptions {
   return { ...context,
     fixedSimulationInput: () => ({ state: context.state, simulation: api.simulation,
-      recording: context.recording, aimRadius: context.aimRadius,
-      observeAim: context.observeAim, pushAim: context.pushAim, drainActions: context.drainActions,
       ...(context.beforeSimulationStep ? { beforeStep: context.beforeSimulationStep } : {}),
       ...(context.afterSimulationStep ? { afterStep: context.afterSimulationStep } : {}),
       clearOverrides: context.clearOverrides, step: (seconds) => { api.combatRuntime.step(seconds); }, gauge: context.gauge }),

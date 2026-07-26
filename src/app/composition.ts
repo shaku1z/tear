@@ -134,6 +134,9 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     now: () => Date.now(),
     random: () => Math.random(),
     semanticInput: Input.semantic,
+    // ee5e931 visual ghosts only sampled the completed world. Keep the command
+    // recorder available to explicit deterministic tooling, never live play.
+    captureSemanticActions: false,
     defaults: {
       rulesetVersion: "tear-rules-2026.07",
       build: { version: "0.1.0", revision: import.meta.env.MODE, target },

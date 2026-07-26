@@ -86,6 +86,33 @@ describe("visual replay migration", () => {
 });
 
 describe("LegacyGhostEngine", () => {
+  it("keeps production visual recording passive when hybrid commands are disabled", () => {
+    const values = new Map<string, string>();
+    const store: ReplayStore = { get: (key) => values.get(key) ?? null, set: (key, value) => { values.set(key, value); } };
+    const semantic = { starts: 0, drains: 0, stops: 0 };
+    const ghost = new LegacyGhostEngine({
+      store, document: {} as Document, now: () => 1, random: () => 0.5,
+      semanticInput: {
+        startRecording: () => { semantic.starts += 1; },
+        stopRecording: () => { semantic.stops += 1; },
+        drain: () => { semantic.drains += 1; return []; },
+        lastSealedTick: 0,
+      },
+      captureSemanticActions: false,
+      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 60, tearScore: () => provenance.tearScore },
+    });
+
+    ghost.startRec({ runId: "visual-only", seed: "seed" });
+    for (let index = 0; index < 20; index += 1) {
+      ghost.sample(0.1, { x: index, y: 400, facing: 1 }, { tipX: index + 20, tipY: 380 }, []);
+    }
+    const packet = ghost.stopRec({ mode: "endless", score: 200 });
+
+    expect(semantic).toEqual({ starts: 0, drains: 0, stops: 0 });
+    expect(packet?.actions).toEqual([]);
+    expect(packet?.px).toHaveLength(20);
+  });
+
   it("seals an interrupted recording whose drains outran the elapsed clock without throwing", () => {
     // Regression: mid-run drains seal at the ABSOLUTE simulation tick while the
     // recorder's elapsed clock is RELATIVE; the closing drain must clamp forward
