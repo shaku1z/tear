@@ -23,12 +23,12 @@ export interface LiveTutorialEnemy {
   hh: number;
   affixCount?: number;
   contactDmg: number;
+  atk?: string;
 }
 
 export interface LiveTutorialPlayer {
-  readonly onGround: boolean;
-  readonly vy: number;
-  readonly dashTimer: number;
+  readonly onGround: boolean; readonly vy: number; readonly dashTimer: number;
+  readonly dashX?: number; readonly dashY?: number;
   readonly x: number;
   readonly facing: number;
 }
@@ -68,7 +68,7 @@ export interface LiveTutorialLessonView {
   readonly final: boolean | undefined;
   readonly arena: TutorialArenaId;
   readonly arenaLabel: string;
-  readonly teachingFocus: "movement" | "blade" | "momentum" | "counterplay" | "ready";
+  readonly teachingFocus: "movement" | "blade" | "momentum" | "counterplay" | "enemy" | "encounter" | "ready";
   readonly prog: () => readonly [number, number];
   readonly ok: () => boolean;
 }
@@ -128,6 +128,7 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
         enemies: enemies.map((enemy, index) => ({
           id: String(index), kind: enemy.kind, dead: enemy.dead === true, tutorialDummy: enemy.tutDummy === true,
           hp: enemy.hp, maxHp: enemy.maxHp, x: enemy.x, y: enemy.y,
+          ...(enemy.atk === undefined ? {} : { attack: enemy.atk }),
         })),
       });
       for (const intent of intents) {
@@ -144,6 +145,12 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
               if (intent.x !== undefined) enemy.x = intent.x;
               enemy.y = port.groundY() - enemy.hh;
             }
+            if (intent.role === "coach") {
+              enemy.tutDummy = false; enemy.affixCount = 0; enemy.contactDmg = 0;
+              if (intent.x !== undefined) enemy.x = intent.x;
+              enemy.y = port.groundY() - enemy.hh;
+            }
+            if (intent.role === "shooter") enemy.contactDmg = 0;
             break;
           }
           case "stabilize-dummy": {

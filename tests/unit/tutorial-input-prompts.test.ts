@@ -27,5 +27,7 @@ describe("tutorial input prompts", () => {
     });
     expect(tutorialInputPrompt("FIELD TEST", "Carry the route", [], "touch", pad).keys)
       .toEqual(["DASH", "DRAG — SWING", "DRAG ↑"]);
+    expect(tutorialInputPrompt("READ THE CHARGE", "Wait for recovery", [], "gamepad", pad).keys)
+      .toEqual(["R2", "RS — SWING"]);
   });
 });

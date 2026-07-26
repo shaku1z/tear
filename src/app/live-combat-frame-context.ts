@@ -19,7 +19,7 @@ export interface LiveCombatFrameContext extends FrameBase {
   readonly state: () => string;
   readonly recording: () => boolean;
   readonly aimRadius: number;
-  readonly sampleAim: () => Readonly<{ x: number; y: number }>;
+  readonly observeAim: () => Readonly<{ x: number; y: number }>;
   readonly pushAim: (turn: number, magnitude: number) => void;
   readonly drainActions: (tick: number) => readonly CommandEnvelope<GameAction>[];
   readonly beforeSimulationStep?: (tick: number) => void;
@@ -37,10 +37,9 @@ export function createLiveCombatFrameOptions<State>(context: LiveCombatFrameCont
   return { ...context,
     fixedSimulationInput: () => ({ state: context.state, simulation: api.simulation,
       recording: context.recording, aimRadius: context.aimRadius,
-      sampleAim: context.sampleAim, pushAim: context.pushAim, drainActions: context.drainActions,
+      observeAim: context.observeAim, pushAim: context.pushAim, drainActions: context.drainActions,
       ...(context.beforeSimulationStep ? { beforeStep: context.beforeSimulationStep } : {}),
       ...(context.afterSimulationStep ? { afterStep: context.afterSimulationStep } : {}),
-      authoritativeStep: (tick, seconds, actions) => { api.authoritativeStep.execute(tick, seconds, actions); },
       clearOverrides: context.clearOverrides, step: (seconds) => { api.combatRuntime.step(seconds); }, gauge: context.gauge }),
     musicInput: context.musicObservation };
 }
