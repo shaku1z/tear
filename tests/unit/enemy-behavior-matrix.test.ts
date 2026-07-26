@@ -28,8 +28,8 @@ describe("enemy behavior preservation matrix", () => {
       const shotsA: InstanceType<typeof left.Projectile>[] = [];
       const shotsB: InstanceType<typeof right.Projectile>[] = [];
 
-      updateActor(a, 180, left.platforms, left.player, shotsA);
-      updateActor(b, 180, right.platforms, right.player, shotsB);
+      updateActor(a, 360, left.platforms, left.player, shotsA);
+      updateActor(b, 360, right.platforms, right.player, shotsB);
 
       expect(behaviorSnapshot(a, shotsA), kind).toEqual(behaviorSnapshot(b, shotsB));
       expect(Number.isFinite(a.x) && Number.isFinite(a.y), kind).toBe(true);
@@ -60,8 +60,8 @@ describe("enemy behavior preservation matrix", () => {
 
           const shotsA: InstanceType<typeof left.Projectile>[] = [];
           const shotsB: InstanceType<typeof right.Projectile>[] = [];
-          updateActor(a, 240, left.platforms, left.player, shotsA);
-          updateActor(b, 240, right.platforms, right.player, shotsB);
+          updateActor(a, 480, left.platforms, left.player, shotsA);
+          updateActor(b, 480, right.platforms, right.player, shotsB);
 
           expect(a.variant, kind).toBe(variant.id);
           expect(a.behavior, variant.id).not.toBe("");

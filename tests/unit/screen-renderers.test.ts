@@ -158,7 +158,7 @@ describe("legacy screen renderer registry", () => {
     expect(controls.filter((control) => control.action.type === "setup.selectWeapon").map(({ y, h }) => ({ y, h }))).toEqual([
       { y: 168, h: 70 }, { y: 246, h: 70 }, { y: 324, h: 70 }, { y: 402, h: 70 },
     ]);
-    expect(controls.find((control) => control.action.type === "setup.start")).toMatchObject({ y: 726, h: 62, label: "START", glyph: "▶" });
+    expect(controls.find((control) => control.action.type === "setup.start")).toMatchObject({ y: 726, h: 62, label: "START", glyph: "□" });
     expect(controls.filter((control) => control.action.type === "setup.selectBoss")).toHaveLength(2);
   });
 

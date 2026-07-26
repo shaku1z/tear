@@ -182,6 +182,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
           pointerLocked: Input.locked,
           pointerLockAllowed: Input.allowLock,
           pointer: { x: Input.mouseX, y: Input.mouseY },
+          ui: { ...Input.ui },
         }),
       }),
       audio: Object.freeze({

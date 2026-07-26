@@ -140,6 +140,7 @@ export interface ChoiceView {
   readonly id: string; readonly label: string; readonly description?: string;
   readonly glyph?: string | undefined; readonly selected?: boolean | undefined; readonly enabled?: boolean | undefined;
   readonly accent?: string | undefined; readonly sub?: string | undefined;
+  readonly detail?: string | undefined;
   readonly debug?: boolean | undefined;
 }
 export interface CardView extends ChoiceView {

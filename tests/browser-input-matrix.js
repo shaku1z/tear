@@ -77,6 +77,39 @@ async function main() {
     Object.defineProperty(navigator, "getGamepads", { configurable: true, value: () => window.__testGamepad ? [window.__testGamepad] : [] });
   });
   await configure(controller);
+  await controller.evaluate(() => {
+    const buttons = Array.from({ length: 16 }, () => ({ pressed: false, touched: false, value: 0 }));
+    window.__testGamepad = { axes: [0, 0, 0, 0], buttons, connected: true, id: "PlayStation Browser Matrix", index: 0, mapping: "standard", timestamp: 1 };
+    const event = new Event("gamepadconnected");
+    Object.defineProperty(event, "gamepad", { value: window.__testGamepad });
+    window.dispatchEvent(event);
+  });
+  await controller.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await controller.mouse.click(260, 360);
+  await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "setup");
+  await controller.evaluate(() => {
+    window.__testGamepad.buttons[2] = { pressed: true, touched: true, value: 1 };
+    window.__testGamepad.timestamp = 2;
+  });
+  await controller.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await controller.evaluate(() => {
+    window.__testGamepad.buttons[2] = { pressed: false, touched: false, value: 0 };
+    window.__testGamepad.timestamp = 3;
+  });
+  await controller.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await controller.evaluate(() => {
+    window.__testGamepad.buttons[2] = { pressed: true, touched: true, value: 1 };
+    window.__testGamepad.timestamp = 4;
+  });
+  await controller.waitForTimeout(500);
+  const squareState = await controller.evaluate(() => ({
+    game: window.__PANTHEON_TEST.state().game,
+    input: window.__TEAR_CATALOG_DEBUG__.input.snapshot(),
+  }));
+  assert.equal(squareState.game, "playing", `Square shortcut did not start the run: ${JSON.stringify(squareState.input)}`);
+  assert.equal((await controller.evaluate(() => window.__PANTHEON_TEST.state().setup)).mode, "endless",
+    "Square starts the selected setup directly without moving focus to START");
+  await configure(controller);
   await controller.locator("#fs").click();
   await controller.waitForFunction(() => document.fullscreenElement?.id === "wrap");
   await controller.evaluate(() => document.exitFullscreen());

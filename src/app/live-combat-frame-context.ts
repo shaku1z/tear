@@ -46,6 +46,6 @@ export function createLiveCombatCoordinatorOptions(context: LiveCombatCoordinato
   simulation: FixedStepScheduler, frameRuntime: LiveFrameRuntime): RuntimeFrameCoordinatorOptions {
   return { ...context,
     advancePlayingPrelude: (seconds) => { frameRuntime.advancePrelude(seconds); },
-    advancePlayingSimulation: (seconds) => { frameRuntime.advanceSimulation(seconds); },
+    advancePlayingSimulation: (seconds) => frameRuntime.advanceSimulation(seconds),
     resetSimulation: () => { simulation.reset(simulation.tick); }, syncMusic: () => { frameRuntime.syncMusic(); } };
 }

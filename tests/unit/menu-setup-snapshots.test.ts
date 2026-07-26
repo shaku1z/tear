@@ -10,8 +10,10 @@ describe("menu/setup snapshots", () => {
   });
   it("projects weapon identity and best summary", () => {
     const view = buildSetupSnapshot({ selectedMode: "endless", selectedDifficulty: "normal", selectedWeapon: "blade", selectedBoss: "shuffle",
-      modes, difficulties, weapons: [{ id: "blade", name: "Blade", blurb: "cut", tags: ["fast"], throwIdentity: "return" }],
+      modes, difficulties, weapons: [{ id: "blade", name: "Blade", blurb: "cut", tags: ["fast"], throwIdentity: "return",
+        ratings: { handling: 5, impact: 3, reach: 4, difficulty: 2 }, weaknesses: ["armor"] }],
       bosses: [], livePlatform: false, best: { wave: 2, score: 10 }, formatTime: String });
     expect(view.startSummary).toBe("ENDLESS · NORMAL · BLADE");
+    expect(view.weapons[0]?.detail).toBe("H 5 · I 3 · R 4 · D 2     WEAK: armor");
   });
 });

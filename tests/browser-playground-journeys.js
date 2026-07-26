@@ -26,7 +26,16 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, waitScre
   for (const key of ["1", "2", "3", "t", "b"]) {
     const before = await page.evaluate(() => window.__PANTHEON_TEST.state().enemyCount);
     await page.keyboard.press(key);
-    await page.waitForFunction((count) => window.__PANTHEON_TEST.state().enemyCount > count, before, { timeout: 5000 });
+    try {
+      await page.waitForFunction((count) => window.__PANTHEON_TEST.state().enemyCount > count, before, { timeout: 5000 });
+    } catch (error) {
+      if (error?.name !== "TimeoutError") throw error;
+      const snapshot = await page.evaluate(() => ({
+        state: window.__PANTHEON_TEST.state(),
+        input: window.__TEAR_CATALOG_DEBUG__.input.snapshot(),
+      }));
+      assert.fail(`${key} did not spawn an enemy from ${before}: ${JSON.stringify(snapshot)}`);
+    }
   }
   await page.keyboard.press("k");
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().enemyCount === 0, undefined, { timeout: 5000 });

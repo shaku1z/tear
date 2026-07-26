@@ -5,7 +5,9 @@ export interface MenuModeSource { readonly id: string; readonly label: string; r
 export interface MenuDifficultySource { readonly id: string; readonly label: string; readonly desc: string;
   readonly mods: Readonly<{ score: number; coin: number }> }
 export interface WeaponChoiceSource { readonly id: string; readonly name: string; readonly blurb: string;
-  readonly tags: readonly string[]; readonly throwIdentity: string }
+  readonly tags: readonly string[]; readonly throwIdentity: string;
+  readonly ratings?: Readonly<{ handling: number; impact: number; reach: number; difficulty: number }>;
+  readonly weaknesses?: readonly string[] }
 export interface BestSetupSource { readonly wave: number; readonly score: number; readonly time?: number }
 export interface BossChoiceSource { readonly id: string; readonly name: string }
 export interface BountyChoiceSource { readonly label: string; readonly detail: string; readonly done: boolean }
@@ -52,7 +54,11 @@ export function buildSetupSnapshot(input: {
       sub: "×" + entry.mods.score.toFixed(1) + " score · " + (entry.id === "onehit" ? "×0.7→3.1 coins after wave 8" : "×" + entry.mods.coin.toFixed(2).replace(/0$/, "") + " coins"),
       selected: entry.id === input.selectedDifficulty })),
     weapons: input.weapons.map((entry) => ({ id: entry.id, label: entry.name, description: entry.blurb,
-      sub: entry.tags.join(" · ") + " — " + entry.throwIdentity, selected: entry.id === input.selectedWeapon })),
+      sub: entry.tags.join(" · ") + " — " + entry.throwIdentity, selected: entry.id === input.selectedWeapon,
+      ...(entry.ratings === undefined ? {} : {
+        detail: `H ${String(entry.ratings.handling)} · I ${String(entry.ratings.impact)} · R ${String(entry.ratings.reach)} · D ${String(entry.ratings.difficulty)}` +
+          (entry.weaknesses?.length ? `     WEAK: ${entry.weaknesses.join(" / ")}` : ""),
+      }) })),
     showDifficulty, startSummary: ((mode?.label ?? "") + " · " + (showDifficulty && difficulty !== undefined ? difficulty.label + " · " : "") + (weapon?.name ?? "")).toUpperCase(),
     bestSummary: input.best.wave || input.best.score ? "YOUR BEST · wave " + String(input.best.wave) + " · " + String(input.best.score) + " pts · " + input.formatTime(input.best.time ?? 0)
       : "YOUR BEST · no record on this board yet",

@@ -192,4 +192,29 @@ describe("legacy gamepad adapter", () => {
     expect(input.padTether).toBe(false);
     expect(input.stickAim).toBeNull();
   });
+
+  it("maps Square/X to the semantic primary-context edge in menus", () => {
+    const input = createInput();
+    const listeners = new Map<string, EventListener>();
+    const windowPort = {
+      addEventListener(type: string, listener: EventListenerOrEventListenerObject) {
+        if (typeof listener === "function") listeners.set(type, listener);
+      },
+    } as Window;
+    const buttons = Array.from({ length: 16 }, () => button());
+    buttons[2] = button(true);
+    const activeGamepad = gamepad(buttons);
+    const { PAD } = createLegacyGamepad({
+      config: CONFIG, input, window: windowPort,
+      navigator: { getGamepads: () => [activeGamepad] }, semantic: input.semantic,
+    });
+    listeners.get("gamepadconnected")?.(controllerEvent("gamepadconnected", activeGamepad));
+
+    PAD.poll(1 / 120, true);
+    input.updateUI();
+
+    expect(input.ui.context1).toBe(true);
+    expect(input.pressed.has("Context1")).toBe(true);
+    expect(input.confirmPressed()).toBe(false);
+  });
 });

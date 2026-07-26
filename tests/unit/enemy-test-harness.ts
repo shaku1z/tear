@@ -79,8 +79,8 @@ export function createStandardActor(kind: EnemyKind, types: EnemyTypes): Behavio
   return STANDARD_ACTOR_FACTORIES[kind](types);
 }
 
-export function updateActor(actor: BehaviorActor, frames: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]): void {
-  for (let frame = 0; frame < frames; frame += 1) actor.update(1 / 60, platforms, player, projectiles);
+export function updateActor(actor: BehaviorActor, ticks: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]): void {
+  for (let tick = 0; tick < ticks; tick += 1) actor.update(1 / 120, platforms, player, projectiles);
 }
 
 export function behaviorSnapshot(actor: BehaviorActor, projectiles: readonly EnemyProjectile[]) {

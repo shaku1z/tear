@@ -67,8 +67,12 @@ export interface FixedSimulationInput {
   authoritativeStep(tick: number, seconds: number, actions: readonly CommandEnvelope<GameAction>[]): void;
   clearOverrides(): void; step(seconds: number): void; gauge(name: "simulationTick" | "simulationSteps" | "simulationDroppedMs", value: number): void;
 }
-export function advanceFixedSimulation(input: FixedSimulationInput): number {
-  if (input.hitStop > 0) return input.hitStop - input.dt;
+export interface FixedSimulationAdvance {
+  readonly hitStop: number;
+  readonly steps: number;
+}
+export function advanceFixedSimulation(input: FixedSimulationInput): FixedSimulationAdvance {
+  if (input.hitStop > 0) return Object.freeze({ hitStop: input.hitStop - input.dt, steps: 0 });
   const advance = input.simulation.advance(input.dt * input.timeScale * 1000, (seconds, tick) => {
     if (input.state() !== "playing") return;
     // Recording is passive (source contract: GHOST observes the sim, never drives it).
@@ -83,7 +87,8 @@ export function advanceFixedSimulation(input: FixedSimulationInput): number {
     input.clearOverrides(); input.step(seconds);
   });
   input.gauge("simulationTick", advance.tick); input.gauge("simulationSteps", advance.steps);
-  input.gauge("simulationDroppedMs", advance.droppedMilliseconds); return input.hitStop;
+  input.gauge("simulationDroppedMs", advance.droppedMilliseconds);
+  return Object.freeze({ hitStop: input.hitStop, steps: advance.steps });
 }
 
 export interface LiveMusicDirectorPort {
@@ -163,9 +168,11 @@ export class LiveFrameRuntime {
     this.#options.writePreludeState(state);
   }
 
-  advanceSimulation(dt: number): void {
-    this.#options.setHitStop(advanceFixedSimulation({ ...this.#options.fixedSimulationInput(), dt,
-      timeScale: this.#options.timeScale(), hitStop: this.#options.hitStop() }));
+  advanceSimulation(dt: number): number {
+    const result = advanceFixedSimulation({ ...this.#options.fixedSimulationInput(), dt,
+      timeScale: this.#options.timeScale(), hitStop: this.#options.hitStop() });
+    this.#options.setHitStop(result.hitStop);
+    return result.steps;
   }
 
   syncMusic(): void {

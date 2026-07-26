@@ -277,6 +277,10 @@ const PAD: LegacyGamepadInternal = {
       } else if (!navKey) this._navT = 0;
       if (this._edge(gp, 0)) Input.pressed.add("Enter");         // A = confirm
       if (this._edge(gp, 1)) Input.padBack = true;               // B = back (game routes to BACK)
+      if (this._edge(gp, 2)) {
+        Input._uiContext1 = true;
+        Input.pressed.add("Context1");                            // survives until the UI coordinator consumes this frame
+      }                                                          // Square/X = screen-primary shortcut
       // right stick = scroll intent for the active panel (px/frame, curved), axis-locked
       // to whichever direction dominates once past the scroll deadzone.
       const sDead = PAD_CONFIG.menuScrollDead, sMax = PAD_CONFIG.menuScrollMaxSpeed;
@@ -292,7 +296,7 @@ const PAD: LegacyGamepadInternal = {
       if (this._edge(gp, 5)) Input._uiTabNext = true;            // R1 = next tab
       if (this._edge(gp, 6)) Input._uiPageUp = true;             // L2 = page up
       if (this._edge(gp, 7)) Input._uiPageDown = true;           // R2 = page down
-      this._edge(gp, 9); this._edge(gp, 2);                      // keep prev[] fresh for shared buttons
+      this._edge(gp, 9);                                        // keep prev[] fresh for shared buttons
       this._release(); Input.setPadTether(false); this._tetherLatched = false;   // no movement or tether while in menus
       return;
     }

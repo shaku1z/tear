@@ -2,13 +2,13 @@
 
 These gates run the production standalone artifact with `?test=1&bossdebug=1`. Debug hooks may only prepare valid canonical state; all navigation and screen actions after preparation use real pointer or keyboard input.
 
-Run all four route/progression/playground/result journeys with `pnpm test:browser:journeys`. The full `pnpm check` also runs `browser-input-matrix.js`, which uses real touch events and an emulated standard gamepad to verify touch movement/release and controller movement/jump/disconnect-to-pause behavior in the same built artifact.
+Run all four route/progression/playground/result journeys with `pnpm test:browser:journeys`. The full `pnpm check` also runs `browser-input-matrix.js`, which uses real touch events and an emulated standard gamepad to verify touch movement/release, Square/X direct setup start, controller movement/jump, and disconnect-to-pause behavior in the same built artifact.
 
 | Gate | Real journeys |
 | --- | --- |
 | `browser-navigation-journeys.js` | Every menu hub route and BACK; War Table mode/difficulty/weapon/boss choices and return; all seven modes through BEGIN; pause/resume/confirm-quit/menu; required Attract entry/exit snapshot |
 | `browser-progression-journeys.js` | Draft keyboard reroll; pointer choice; reserve choose and skip; tier-up choice; Shop/Codex/Profile/Achievement/Leaderboard routes, tabs, cards and scrolling; both replay feeds; replay chapter/pause/speed/restart/info/back; rename DOM validation and Escape return |
-| `browser-playground-journeys.js` | In-world `1`/`2`/`3`/`T`/`B` hotkey spawns surviving the combat-tail entity commit; Build Menu entry and pointer spawn; Ability Lab entry, TAKE and scroll; Build Menu return; source-position RESUME; keyboard Tab resume |
+| `browser-playground-journeys.js` | In-world `1`/`2`/`3`/`T`/`B` hotkey spawns surviving both a sub-fixed-step display frame and the combat-tail entity commit; Build Menu entry and pointer spawn; Ability Lab entry, TAKE and scroll; Build Menu return; source-position RESUME; keyboard Tab resume |
 | `browser-terminal-journeys.js` | Game-over retry and menu; rewarded-continue give-up; non-campaign win replay/menu; campaign result/menu; deterministic final-cut advance/cut through restoration/results |
 
 ## Required debug preparation hooks

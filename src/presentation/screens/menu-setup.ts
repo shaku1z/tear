@@ -109,7 +109,11 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     };
     foot(modeX, modeWidth, view.modes.find((choice) => choice.selected)?.description);
     foot(difficultyX, difficultyWidth, view.showDifficulty ? view.difficulties.find((choice) => choice.selected)?.description : undefined);
-    foot(weaponX, weaponWidth, view.weapons.find((choice) => choice.selected)?.description);
+    const selectedWeapon = view.weapons.find((choice) => choice.selected);
+    foot(weaponX, weaponWidth, selectedWeapon?.description);
+    if (selectedWeapon?.detail) {
+      ui.text(canvas, selectedWeapon.detail, weaponX, blurbY + 45, ui.t.type.micro, "left", ui.t.alpha.muted);
+    }
 
     const stakesY = 668;
     ui.divider(canvas, modeX, stakesY - 12, 1120, 0.14);
@@ -139,7 +143,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     const startWidth = Math.max(300, Math.round(canvas.measureText(view.startSummary).width) + 100);
     context.enqueue({
       x: width / 2 - startWidth / 2, y: 726, w: startWidth, h: 62,
-      label: "START", glyph: "▶", sub: view.startSummary.toUpperCase(), hero: true, ghost: true, size: 26,
+      label: "START", glyph: "□", sub: view.startSummary.toUpperCase(), hero: true, ghost: true, size: 26,
       action: { type: "setup.start" },
     });
     backControl(context);

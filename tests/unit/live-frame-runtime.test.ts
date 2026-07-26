@@ -32,7 +32,7 @@ describe("live frame runtime", () => {
     const simulation = { tick: 0, advance: (_ms: number, step: (seconds: number, tick: number) => void) => {
       step(1 / 60, 4); return { tick: 4, steps: 1, droppedMilliseconds: 0 };
     } };
-    advanceFixedSimulation({ dt: 1 / 60, timeScale: 1, hitStop: 0, state: () => "playing", simulation,
+    const result = advanceFixedSimulation({ dt: 1 / 60, timeScale: 1, hitStop: 0, state: () => "playing", simulation,
       recording: () => true, aimRadius: 2,
       sampleAim: () => { order.push("sample"); return { x: 0, y: 1 }; },
       pushAim: (turn, magnitude) => { order.push(`aim:${String(turn)}:${String(magnitude)}`); },
@@ -41,6 +41,7 @@ describe("live frame runtime", () => {
       clearOverrides: () => order.push("clear"), step: () => order.push("step"), gauge });
     expect(order).toEqual(["sample", "aim:250000:500", "drain", "clear", "step"]);
     expect(gauge).toHaveBeenCalledTimes(3);
+    expect(result).toEqual({ hitStop: 0, steps: 1 });
   });
 
   it("selects menu, boss and fallback music themes without platform globals", () => {
