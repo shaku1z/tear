@@ -1,5 +1,9 @@
 # C6 — TearSDL, State Classes, Boundaries, and Forking
 
+> **Historical scaffold report:** This report proves only the contract/prototype
+> evidence named below. Current operational status is governed by the C21
+> requirements annex and capability dashboard.
+
 ## Outcome
 
 Complete. Plateau P2 is available: deterministic scenarios can describe and fork credible points in a run.

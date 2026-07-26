@@ -1,5 +1,9 @@
 # C8 — Visible Player-Journey Autonomy
 
+> **Historical scaffold report:** This report proves only the contract/prototype
+> evidence named below. Current operational status is governed by the C21
+> requirements annex and capability dashboard.
+
 ## Outcome
 
 Complete as an autonomy and evidence system. Engineering and black-box results cannot be conflated.

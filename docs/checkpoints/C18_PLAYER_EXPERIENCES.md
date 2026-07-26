@@ -1,5 +1,9 @@
 # C18 — Challenges, Studio, and Player Experiences
 
+> **Historical scaffold report:** This report proves only the contract/prototype
+> evidence named below. Current operational status is governed by the C21
+> requirements annex and capability dashboard.
+
 ## Outcome
 
 Complete. Trusted local Ghost truth now supports challenges, media creation, transparent playstyle summaries, and bounded Nemesis behavior.

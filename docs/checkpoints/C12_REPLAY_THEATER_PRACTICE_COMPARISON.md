@@ -1,5 +1,9 @@
 # C12 — Replay World, Theater, Practice, and Comparison
 
+> **Historical scaffold report:** This report proves only the contract/prototype
+> evidence named below. Current operational status is governed by the C21
+> requirements annex and capability dashboard.
+
 ## Outcome
 
 Complete. Causal Ghosts are seekable, inspectable, safely practicable, and comparable.

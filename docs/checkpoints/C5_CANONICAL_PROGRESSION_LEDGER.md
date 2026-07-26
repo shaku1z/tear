@@ -1,5 +1,9 @@
 # C5 — Canonical Progression Ledger and Historical Synthesis
 
+> **Historical scaffold report:** This report proves only the contract/prototype
+> evidence named below. Current operational status is governed by the C21
+> requirements annex and capability dashboard.
+
 ## Outcome
 
 Complete. Late-run setup is derived from ordered progression history rather than guessed final assignments.

@@ -1,5 +1,9 @@
 # C9 — Regression Intelligence and Graveyard MVP
 
+> **Historical scaffold report:** This report proves only the contract/prototype
+> evidence named below. Current operational status is governed by the C21
+> requirements annex and capability dashboard.
+
 ## Outcome
 
 Complete. Plateau P3 produces engineering-grade evidence from autonomous regression discoveries.

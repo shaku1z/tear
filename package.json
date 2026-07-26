@@ -23,6 +23,8 @@
     "test": "vitest run",
     "test:endurance": "vitest run --config vitest.endurance.config.ts",
     "tearbench": "node scripts/tearbench.mjs",
+    "requirements:generate": "node scripts/tearbench-requirements.mjs generate",
+    "requirements:check": "node scripts/tearbench-requirements.mjs check",
     "test:weapons": "node tests/weapon-overhaul.test.js",
     "test:browser": "node tests/browser-smoke.js",
     "test:browser:features": "node tests/browser-feature-matrix.js",
@@ -60,11 +62,11 @@
     "check:cloudflare": "node scripts/check-cloudflare-dry-run.mjs",
     "check:ghost-cloud": "wrangler types workers/worker-configuration.d.ts --config wrangler.ghost.jsonc && tsc -p tsconfig.worker.json && wrangler deploy --dry-run --config wrangler.ghost.jsonc",
     "check:crazygames-package": "node scripts/package-crazygames.mjs",
-    "check:local": "pnpm typecheck && pnpm lint && pnpm check:architecture && pnpm test && pnpm test:parity:unit",
+    "check:local": "pnpm requirements:check && pnpm typecheck && pnpm lint && pnpm check:architecture && pnpm test && pnpm test:parity:unit",
     "check:pr": "pnpm tearbench ci --files-from artifacts/tearbench/changed-files.txt && pnpm check",
     "check:nightly": "pnpm check",
     "check:weekly": "pnpm test:endurance && pnpm exec vitest run tests/unit/ghost-replay-world.test.ts tests/unit/ghost-capsule-vault.test.ts",
-    "check": "pnpm typecheck && pnpm lint && pnpm check:architecture && pnpm test && pnpm test:parity:unit && pnpm test:weapons && pnpm check:tear-score && pnpm build && pnpm check:test-isolation && pnpm check:bundles && pnpm check:crazygames-package && pnpm check:reproducible && pnpm check:cloudflare && pnpm check:ghost-cloud && pnpm build:test && pnpm test:browser && pnpm test:browser:features && pnpm test:browser:bosses && pnpm test:browser:journeys && pnpm test:browser:agent-journey && pnpm test:browser:input && pnpm test:browser:blade-lifecycle && pnpm test:browser:player-locomotion && pnpm test:browser:enemy-charge && pnpm test:browser:combat-resolution && pnpm test:browser:ranged-cycle && pnpm test:browser:projectile-parry && pnpm test:browser:mirror-pursuit && pnpm test:browser:responsive && pnpm test:browser:performance && pnpm test:browser:audio && pnpm test:browser:platform && pnpm test:browser:crazygames-iframe && pnpm test:pwa",
+    "check": "pnpm requirements:check && pnpm typecheck && pnpm lint && pnpm check:architecture && pnpm test && pnpm test:parity:unit && pnpm test:weapons && pnpm check:tear-score && pnpm build && pnpm check:test-isolation && pnpm check:bundles && pnpm check:crazygames-package && pnpm check:reproducible && pnpm check:cloudflare && pnpm check:ghost-cloud && pnpm build:test && pnpm test:browser && pnpm test:browser:features && pnpm test:browser:bosses && pnpm test:browser:journeys && pnpm test:browser:agent-journey && pnpm test:browser:input && pnpm test:browser:blade-lifecycle && pnpm test:browser:player-locomotion && pnpm test:browser:enemy-charge && pnpm test:browser:combat-resolution && pnpm test:browser:ranged-cycle && pnpm test:browser:projectile-parry && pnpm test:browser:mirror-pursuit && pnpm test:browser:responsive && pnpm test:browser:performance && pnpm test:browser:audio && pnpm test:browser:platform && pnpm test:browser:crazygames-iframe && pnpm test:pwa",
     "deploy": "pnpm check && wrangler deploy"
   },
   "devDependencies": {

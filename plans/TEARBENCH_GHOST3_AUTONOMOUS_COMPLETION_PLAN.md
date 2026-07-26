@@ -5,6 +5,7 @@
 **Source authority:** `TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN(3).md`, version 0.6, SHA-256 `007BE22193F5369B8450AAB33B95C6D3080176E6B2F91A1D504B545CA7FC7DDE`
 **Supersedes for completion claims:** `plans/TEARBENCH_GHOST3_ACTION_PLAN.md`
 **Purpose:** Convert every remaining part of the original vision into executable work, with gates that require real integration and user-visible outcomes.
+**Current progress:** C21 passed; C22 is next.
 
 ---
 
@@ -22,9 +23,10 @@ The annex must be created as both:
 
 The annex must not summarize the source into broad themes. It must:
 
-1. Inventory all 93 level-two headings, 603 level-three headings, 175
-   level-four headings, tables, schemas, examples, acceptance gates, risks,
-   roadmap items, definitions of done, and living-document rules.
+1. Inventory all raw heading-like source lines (93 level-two, 603 level-three,
+   and 175 level-four), all 865 structural Markdown headings outside fenced
+   examples, tables, schemas, examples, acceptance gates, risks, roadmap items,
+   definitions of done, and living-document rules.
 2. Extract each normative statement into an atomic requirement. Compound
    bullets must be split when their parts can be implemented or verified
    independently.
@@ -104,6 +106,8 @@ Every requirement must be labeled with exactly one of these states:
 
 | State | Meaning |
 |---|---|
+| `unverified` | The requirement is captured but has not completed repository evidence audit. |
+| `missing` | No credible implementation exists yet. |
 | `contract` | Types or interfaces exist, but no production implementation is proven. |
 | `prototype` | A narrow or in-memory implementation demonstrates an algorithm. |
 | `integrated` | The production composition root executes the capability. |

@@ -1,5 +1,9 @@
 # C7 — Scripted Policy Foundation and Agent Hierarchy
 
+> **Historical scaffold report:** This report proves only the contract/prototype
+> evidence named below. Current operational status is governed by the C21
+> requirements annex and capability dashboard.
+
 ## Outcome
 
 Complete. Tear has a deterministic real-game scripted player before neural training.

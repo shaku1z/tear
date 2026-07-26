@@ -1,5 +1,9 @@
 # C20 — Preservation, CI, and Release Certification
 
+> **Historical scaffold report:** This report proves only the contract/prototype
+> evidence named below. Current operational status is governed by the C21
+> requirements annex and capability dashboard.
+
 ## Outcome
 
 Complete. TearBench and Ghost 3.0 are now governed development and player infrastructure with preservation, evidence selection, endurance, and release-certification contracts.

@@ -1,5 +1,9 @@
 # C14 — Headless Simulation and Scale
 
+> **Historical scaffold report:** This report proves only the contract/prototype
+> evidence named below. Current operational status is governed by the C21
+> requirements annex and capability dashboard.
+
 ## Outcome
 
 Complete. TearBench can execute practical scenario populations without rendering while preserving browser authority for presentation and Class C.

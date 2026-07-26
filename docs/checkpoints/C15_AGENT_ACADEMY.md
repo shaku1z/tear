@@ -1,5 +1,9 @@
 # C15 — Agent Academy and Demonstration Corpus
 
+> **Historical scaffold report:** This report proves only the contract/prototype
+> evidence named below. Current operational status is governed by the C21
+> requirements annex and capability dashboard.
+
 ## Outcome
 
 Historical scaffold result only. C15 established data contracts and an

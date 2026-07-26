@@ -1,5 +1,9 @@
 # C19 — Cloud Publication, Verification, Privacy, and Moderation
 
+> **Historical scaffold report:** This report proves only the contract/prototype
+> evidence named below. Current operational status is governed by the C21
+> requirements annex and capability dashboard.
+
 ## Outcome
 
 Complete. Ghost publication remains local-first while a governed cloud boundary handles resumable transfer, honest verification, privacy, and moderation.

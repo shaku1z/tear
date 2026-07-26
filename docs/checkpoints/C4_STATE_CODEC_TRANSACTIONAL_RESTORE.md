@@ -1,5 +1,9 @@
 # C4 — Shared State Codec Registry and Transactional Restore
 
+> **Historical scaffold report:** This report proves only the contract/prototype
+> evidence named below. Current operational status is governed by the C21
+> requirements annex and capability dashboard.
+
 ## Outcome
 
 Complete. State Forge and Ghost now share one data-only codec and transactional restoration boundary.

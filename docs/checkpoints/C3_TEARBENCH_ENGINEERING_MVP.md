@@ -1,5 +1,9 @@
 # C3 — TearBench Engineering MVP
 
+> **Historical scaffold report:** This report proves only the contract/prototype
+> evidence named below. Current operational status is governed by the C21
+> requirements annex and capability dashboard.
+
 ## Outcome
 
 Complete. Plateau P1 is available as a deterministic engineering harness before any gameplay agent exists.

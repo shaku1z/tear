@@ -1,5 +1,9 @@
 # C13 — Ghost Knowledge Libraries and Scenario Bridge
 
+> **Historical scaffold report:** This report proves only the contract/prototype
+> evidence named below. Current operational status is governed by the C21
+> requirements annex and capability dashboard.
+
 ## Outcome
 
 Complete. Plateau P4 provides governed compounding local product and engineering knowledge.

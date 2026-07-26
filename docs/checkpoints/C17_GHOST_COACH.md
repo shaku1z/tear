@@ -1,5 +1,9 @@
 # C17 — Ghost Coach and Replay-to-Practice Loop
 
+> **Historical scaffold report:** This report proves only the contract/prototype
+> evidence named below. Current operational status is governed by the C21
+> requirements annex and capability dashboard.
+
 ## Outcome
 
 Complete. Structured replay evidence now produces targeted, measurable practice without invented claims.

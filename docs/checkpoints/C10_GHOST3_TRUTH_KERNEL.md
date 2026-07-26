@@ -1,5 +1,9 @@
 # C10 — Ghost 3.0 Truth Kernel
 
+> **Historical scaffold report:** This report proves only the contract/prototype
+> evidence named below. Current operational status is governed by the C21
+> requirements annex and capability dashboard.
+
 ## Outcome
 
 Complete. Ghost 3.0 exists beside Ghost 2.0; it does not replace or rewrite legacy playback.

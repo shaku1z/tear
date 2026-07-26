@@ -1,5 +1,9 @@
 # C11 — Ghost Capsule, Recorder, and Local Vault
 
+> **Historical scaffold report:** This report proves only the contract/prototype
+> evidence named below. Current operational status is governed by the C21
+> requirements annex and capability dashboard.
+
 ## Outcome
 
 Complete. Long causal recordings stream into integrity-checked local capsules without retaining the full run in memory.
