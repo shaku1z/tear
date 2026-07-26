@@ -56,6 +56,17 @@ const ORACLE_PROBE = `
       run.mods.parryGuard = true; run.weaponStats.perfectParries = 0; player.guardT = 0;
       enemies = [owner]; projectiles = [shot];
     },
+    prepareMirrorPursuitScenario: () => {
+      Object.assign(player, { x: 350, y: CONFIG.world.groundY - player.hh,
+        vx: 0, vy: 0, onGround: true, lastTrickT: 0, lastTrickKind: "" });
+      Mirror.active = false; Mirror.host = null; Mirror.fxq.length = 0;
+      const host = new MirrorHost(1200, CONFIG.world.groundY - CONFIG.echo.h / 2, run.mods);
+      Object.assign(host, {
+        _live: true, vx: 0, vy: 0, onGround: true, spawnT: 0, introT: 0,
+        stun: 0, hitCd: 0, aliveT: 0, variant: "", variantName: "", affixes: [], affixCount: 0,
+      });
+      enemies = [host]; projectiles = [];
+    },
     prepareCombatParityScenario: () => {
       const dx = blade.tipX - blade.x, dy = blade.tipY - blade.y;
       const survivor = new Charger(blade.x + dx * 0.48, blade.y + dy * 0.48);
@@ -117,6 +128,22 @@ const ORACLE_PROBE = `
           kind: projectile.kind, deflected: projectile.deflected, perfect: projectile.perfect,
           charged: projectile.charged, dead: projectile.dead,
         })),
+        mirror: Mirror.active ? {
+          active: Mirror.active, attached: Mirror.host === enemies[0],
+          phase: Mirror.phase, sync: Mirror.sync, state: Mirror._state,
+          stateTime: Mirror._stateT, decisionTime: Mirror._decideT,
+          moveCooldown: Mirror._moveCd, move: Mirror.mv ? Mirror.mv.id : null,
+          facing: Mirror.facing, readDistance: Mirror.read.dist,
+          actor: {
+            x: Mirror.actor.x, y: Mirror.actor.y, vx: Mirror.actor.vx, vy: Mirror.actor.vy,
+            onGround: Mirror.actor.onGround, dashTimer: Mirror.actor.dashTimer,
+          },
+          blade: {
+            state: Mirror.blade.state, x: Mirror.blade.x, y: Mirror.blade.y,
+            tipX: Mirror.blade.tipX, tipY: Mirror.blade.tipY,
+            tipVX: Mirror.blade.tipVX, tipVY: Mirror.blade.tipVY,
+          },
+        } : null,
         combat: run ? { enemyCount: enemies.filter((enemy) => !enemy.dead).length,
           waveKills: run.waveKills, heldHits: run.weaponStats.heldHits,
           perfectParries: run.weaponStats.perfectParries } : null,
@@ -175,6 +202,7 @@ async function installAdapter(page, kind, fixture) {
         prepareEnemyParityScenario: () => window.__TEAR_ORACLE_PARITY__.prepareEnemyParityScenario(),
         prepareRangedParityScenario: () => window.__TEAR_ORACLE_PARITY__.prepareRangedParityScenario(),
         prepareProjectileParryScenario: () => window.__TEAR_ORACLE_PARITY__.prepareProjectileParryScenario(),
+        prepareMirrorPursuitScenario: () => window.__TEAR_ORACLE_PARITY__.prepareMirrorPursuitScenario(),
         prepareCombatParityScenario: () => window.__TEAR_ORACLE_PARITY__.prepareCombatParityScenario(),
         screen: () => window.__TEAR_ORACLE_PARITY__.screen(),
         snapshot: () => window.__TEAR_ORACLE_PARITY__.snapshot(),
@@ -190,6 +218,7 @@ async function installAdapter(page, kind, fixture) {
       prepareEnemyParityScenario: () => window.__PANTHEON_TEST.prepareEnemyParityScenario(),
       prepareRangedParityScenario: () => window.__PANTHEON_TEST.prepareRangedParityScenario(),
       prepareProjectileParryScenario: () => window.__PANTHEON_TEST.prepareProjectileParryScenario(),
+      prepareMirrorPursuitScenario: () => window.__PANTHEON_TEST.prepareMirrorPursuitScenario(),
       prepareCombatParityScenario: () => window.__PANTHEON_TEST.prepareCombatParityScenario(),
       screen: () => window.__PANTHEON_TEST.state().game,
       snapshot: () => {
@@ -218,6 +247,7 @@ async function installAdapter(page, kind, fixture) {
           blade: live.bladeTrace,
           enemies: live.enemyTrace,
           projectiles: live.projectileTrace,
+          mirror: live.mirrorTrace,
           combat: live.combatTrace,
         };
       },
@@ -266,6 +296,8 @@ async function installTickBridge(page) {
         window.__TEAR_PARITY_ADAPTER__.prepareRangedParityScenario();
       } else if (action.type === "prepareProjectileParryScenario") {
         window.__TEAR_PARITY_ADAPTER__.prepareProjectileParryScenario();
+      } else if (action.type === "prepareMirrorPursuitScenario") {
+        window.__TEAR_PARITY_ADAPTER__.prepareMirrorPursuitScenario();
       } else if (action.type === "prepareCombatScenario") {
         window.__TEAR_PARITY_ADAPTER__.prepareCombatParityScenario();
       } else if (action.type === "mouseMove") {
@@ -744,6 +776,35 @@ function assertCurrentProjectileParry(trace) {
   assert.equal(impact.combat.perfectParries, 1, "source impact cannot double-credit the counter");
 }
 
+function assertCurrentMirrorPursuit(trace) {
+  assert.deepEqual(trace.pageErrors, [], `current Mirror trace page errors:\n${trace.pageErrors.join("\n")}`);
+  const attached = checkpoint(trace, "mirror-attached");
+  const pursuing = checkpoint(trace, "pursuit-commit");
+  const closing = checkpoint(trace, "pursuit-closing");
+  assert.equal(attached.mirror.active, true, "the live host attaches the Mirror brain");
+  assert.equal(attached.mirror.attached, true, "the Mirror brain owns the authored host");
+  assert.equal(attached.mirror.phase, 1, "full health begins in the sealed phase");
+  assert.equal(attached.mirror.state, "approach", "neutral AI chooses approach at long range");
+  assert.equal(attached.mirror.move, null, "the committed-move director remains gated during pursuit");
+  assert.equal(attached.mirror.blade.state, "held", "the reflected blade remains live and attached");
+  assert.ok(pursuing.mirror.actor.x < attached.mirror.actor.x
+    && pursuing.mirror.actor.vx < 0, "the real player integrator drives the Echo toward the player");
+  assert.ok(closing.mirror.actor.x < pursuing.mirror.actor.x,
+    "the pursuit continues across later authoritative ticks");
+  const attachedReadError = Math.abs(attached.mirror.readDistance
+    - Math.abs(attached.mirror.actor.x - attached.player.x));
+  const closingReadError = Math.abs(closing.mirror.readDistance
+    - Math.abs(closing.mirror.actor.x - closing.player.x));
+  assert.ok(closingReadError < attachedReadError,
+    "the perception model converges on the live closing distance");
+  assert.ok(closing.mirror.sync > attached.mirror.sync,
+    "sync escalation advances while the boss remains active");
+  assert.ok(closing.mirror.moveCooldown < attached.mirror.moveCooldown,
+    "the committed-move clock advances without firing early");
+  assert.ok(Number.isFinite(closing.mirror.blade.tipX) && Number.isFinite(closing.mirror.blade.tipY),
+    "the Echo blade tracks finite geometry throughout pursuit");
+}
+
 async function main() {
   const fixture = JSON.parse(fs.readFileSync(FIXTURE_FILE, "utf8"));
   const currentOnly = process.argv.includes("--current-only");
@@ -782,6 +843,7 @@ async function main() {
     else if (fixture.contract === "combat-resolution") assertCurrentCombatResolution(currentTrace);
     else if (fixture.contract === "ranged-fire-cycle") assertCurrentRangedCycle(currentTrace);
     else if (fixture.contract === "projectile-parry") assertCurrentProjectileParry(currentTrace);
+    else if (fixture.contract === "mirror-pursuit") assertCurrentMirrorPursuit(currentTrace);
     else assertCurrentLifecycle(currentTrace);
 
     if (oracleServer) {

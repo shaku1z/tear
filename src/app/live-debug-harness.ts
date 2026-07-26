@@ -122,6 +122,22 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       context.state.setEnemies([owner]);
       context.state.setProjectiles([shot]);
     },
+    /** Exact-tick parity fixture: attach THE ECHO and observe deterministic neutral pursuit. */
+    prepareMirrorPursuitScenario() {
+      const player = context.state.player(), run = runOf(context.state);
+      if (player === undefined) throw new Error("Mirror parity scenario requires a live player");
+      Object.assign(player, { x: 350, y: d.CONFIG.world.groundY - player.hh,
+        vx: 0, vy: 0, onGround: true, lastTrickT: 0, lastTrickKind: "" });
+      d.Mirror.active = false; d.Mirror.host = null; d.Mirror.fxq.length = 0;
+      const host = new d.MirrorHost(1200, d.CONFIG.world.groundY - d.CONFIG.echo.h / 2, run.mods) as
+        unknown as GameEnemy & { _live: boolean };
+      Object.assign(host, {
+        _live: true, vx: 0, vy: 0, onGround: true, spawnT: 0, introT: 0,
+        stun: 0, hitCd: 0, aliveT: 0, variant: "", variantName: "", affixes: [], affixCount: 0,
+      });
+      context.state.setEnemies([host]);
+      context.state.setProjectiles([]);
+    },
     /** Exact-tick parity fixture: drive a real held strike through damage, kill, and cleanup. */
     prepareCombatParityScenario() {
       const player = context.state.player(), blade = context.state.blade();

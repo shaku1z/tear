@@ -109,6 +109,11 @@ lets the production counter and projectile collision phases return it to its
 source. Its permanent current-build contract is
 `pnpm test:browser:projectile-parry`.
 
+The Mirror fixture is `tests/parity/mirror-pursuit.json`. It authors one live
+MirrorHost at long range and remains inside the deterministic pursuit window
+before committed-move selection. Its permanent current-build contract is
+`pnpm test:browser:mirror-pursuit`.
+
 ### Phase 0 blade baseline
 
 The parity adapter queues each event before a run segment starts, applies it
@@ -165,3 +170,11 @@ checkpoints. Both builds classify the same collision as a perfect full counter,
 home the shot toward its owner, assign the same reflected damage, grant the
 same Riposte guard, credit exactly one perfect parry, and consume the projectile
 after applying its return damage to the source.
+
+### Phase 4 Mirror pursuit baseline
+
+The first Mirror capture reached zero differences across four checkpoints.
+Both builds attach the brain to the same host, begin sealed and in `approach`,
+dash and continue closing through the real player integrator, converge the
+perception model on the live distance, grow sync, advance the committed-move
+clock without firing early, and retain finite held-blade geometry.

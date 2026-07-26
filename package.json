@@ -36,6 +36,7 @@
     "test:browser:combat-resolution": "node tests/parity/browser-blade-parity.js --current-only --fixture=tests/parity/combat-resolution.json",
     "test:browser:ranged-cycle": "node tests/parity/browser-blade-parity.js --current-only --fixture=tests/parity/ranged-fire-cycle.json",
     "test:browser:projectile-parry": "node tests/parity/browser-blade-parity.js --current-only --fixture=tests/parity/projectile-parry.json",
+    "test:browser:mirror-pursuit": "node tests/parity/browser-blade-parity.js --current-only --fixture=tests/parity/mirror-pursuit.json",
     "test:parity:unit": "node --test tests/parity/parity-diff.test.mjs",
     "parity:blade": "node tests/parity/browser-blade-parity.js",
     "parity:player": "node tests/parity/browser-blade-parity.js --fixture=tests/parity/player-locomotion.json",
@@ -43,6 +44,7 @@
     "parity:combat": "node tests/parity/browser-blade-parity.js --fixture=tests/parity/combat-resolution.json",
     "parity:ranged": "node tests/parity/browser-blade-parity.js --fixture=tests/parity/ranged-fire-cycle.json",
     "parity:projectile-parry": "node tests/parity/browser-blade-parity.js --fixture=tests/parity/projectile-parry.json",
+    "parity:mirror": "node tests/parity/browser-blade-parity.js --fixture=tests/parity/mirror-pursuit.json",
     "parity:diff": "node scripts/parity-diff.mjs",
     "test:browser:responsive": "node tests/browser-responsive-matrix.js",
     "test:browser:performance": "node tests/browser-performance.js",
@@ -62,7 +64,7 @@
     "check:pr": "pnpm tearbench ci --files-from artifacts/tearbench/changed-files.txt && pnpm check",
     "check:nightly": "pnpm check",
     "check:weekly": "pnpm test:endurance && pnpm exec vitest run tests/unit/ghost-replay-world.test.ts tests/unit/ghost-capsule-vault.test.ts",
-    "check": "pnpm typecheck && pnpm lint && pnpm check:architecture && pnpm test && pnpm test:parity:unit && pnpm test:weapons && pnpm check:tear-score && pnpm build && pnpm check:test-isolation && pnpm check:bundles && pnpm check:crazygames-package && pnpm check:reproducible && pnpm check:cloudflare && pnpm check:ghost-cloud && pnpm build:test && pnpm test:browser && pnpm test:browser:features && pnpm test:browser:bosses && pnpm test:browser:journeys && pnpm test:browser:agent-journey && pnpm test:browser:input && pnpm test:browser:blade-lifecycle && pnpm test:browser:player-locomotion && pnpm test:browser:enemy-charge && pnpm test:browser:combat-resolution && pnpm test:browser:ranged-cycle && pnpm test:browser:projectile-parry && pnpm test:browser:responsive && pnpm test:browser:performance && pnpm test:browser:audio && pnpm test:browser:platform && pnpm test:browser:crazygames-iframe && pnpm test:pwa",
+    "check": "pnpm typecheck && pnpm lint && pnpm check:architecture && pnpm test && pnpm test:parity:unit && pnpm test:weapons && pnpm check:tear-score && pnpm build && pnpm check:test-isolation && pnpm check:bundles && pnpm check:crazygames-package && pnpm check:reproducible && pnpm check:cloudflare && pnpm check:ghost-cloud && pnpm build:test && pnpm test:browser && pnpm test:browser:features && pnpm test:browser:bosses && pnpm test:browser:journeys && pnpm test:browser:agent-journey && pnpm test:browser:input && pnpm test:browser:blade-lifecycle && pnpm test:browser:player-locomotion && pnpm test:browser:enemy-charge && pnpm test:browser:combat-resolution && pnpm test:browser:ranged-cycle && pnpm test:browser:projectile-parry && pnpm test:browser:mirror-pursuit && pnpm test:browser:responsive && pnpm test:browser:performance && pnpm test:browser:audio && pnpm test:browser:platform && pnpm test:browser:crazygames-iframe && pnpm test:pwa",
     "deploy": "pnpm check && wrangler deploy"
   },
   "devDependencies": {

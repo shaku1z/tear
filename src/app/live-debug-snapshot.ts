@@ -119,6 +119,22 @@ export function createLiveDebugSnapshot(options: LiveDebugSnapshotOptions): obje
       kind: projectile.kind, deflected: projectile.deflected, perfect: projectile.perfect,
       charged: projectile.charged, dead: projectile.dead,
     })),
+    mirrorTrace: d.Mirror.active ? {
+      active: d.Mirror.active, attached: d.Mirror.host === state.enemies()[0],
+      phase: d.Mirror.phase, sync: d.Mirror.sync, state: d.Mirror._state,
+      stateTime: d.Mirror._stateT, decisionTime: d.Mirror._decideT,
+      moveCooldown: d.Mirror._moveCd, move: d.Mirror.mv?.id ?? null,
+      facing: d.Mirror.facing, readDistance: d.Mirror.read.dist,
+      actor: {
+        x: d.Mirror.actor.x, y: d.Mirror.actor.y, vx: d.Mirror.actor.vx, vy: d.Mirror.actor.vy,
+        onGround: d.Mirror.actor.onGround, dashTimer: d.Mirror.actor.dashTimer,
+      },
+      blade: {
+        state: d.Mirror.blade.state, x: d.Mirror.blade.x, y: d.Mirror.blade.y,
+        tipX: d.Mirror.blade.tipX, tipY: d.Mirror.blade.tipY,
+        tipVX: d.Mirror.blade.tipVX, tipVY: d.Mirror.blade.tipVY,
+      },
+    } : null,
     combatTrace: run ? { enemyCount: state.enemies().filter((enemy) => !enemy.dead).length,
       waveKills: run.waveKills, heldHits: run.weaponStats.heldHits,
       perfectParries: run.weaponStats.perfectParries } : null,

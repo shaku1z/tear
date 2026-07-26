@@ -160,3 +160,35 @@ test("parity differ locks ranged AI and projectile family while tolerating fligh
   );
   assert.equal(wrongCounter.firstDivergence.field, "projectiles.0.perfect");
 });
+
+test("parity differ locks Mirror ownership and state while tolerating pursuit motion", () => {
+  const base = {
+    label: "pursuit",
+    screen: "playing",
+    simulationTick: 80,
+    input: { mode: "mouse", pointerLocked: true, pointerLockAllowed: true },
+    cursor: { drawn: false, lockHintVisible: false },
+    player: { onGround: true },
+    blade: { state: "held" },
+    mirror: {
+      active: true, attached: true, phase: 1, sync: 0.36, state: "approach",
+      stateTime: 0, decisionTime: 0.2, moveCooldown: 1.8, move: null, facing: -1,
+      readDistance: 500,
+      actor: { x: 900, y: 775, vx: -430, vy: 0, onGround: true, dashTimer: 0 },
+      blade: { state: "held", x: 900, y: 700, tipX: 900, tipY: 605, tipVX: 0, tipVY: 0 },
+    },
+  };
+  const tolerated = compareParityTraces(
+    trace("oracle", [base]),
+    trace("current", [{ ...base, mirror: { ...base.mirror,
+      actor: { ...base.mirror.actor, x: 907, vx: -390 },
+      blade: { ...base.mirror.blade, tipX: 913 } } }]),
+  );
+  assert.equal(tolerated.passed, true);
+
+  const detached = compareParityTraces(
+    trace("oracle", [base]),
+    trace("current", [{ ...base, mirror: { ...base.mirror, attached: false } }]),
+  );
+  assert.equal(detached.firstDivergence.field, "mirror.attached");
+});
