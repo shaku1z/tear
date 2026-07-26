@@ -19,43 +19,49 @@ export function createTrainingTouchRenderers(context: LegacyWorldRenderContext) 
   }
 
   function tutorialCard(snapshot: TutorialCardSnapshot): void {
-    const type = ui.t.type, width = 700, x = context.width - width - 28 - context.safe.right;
-    const y = 24 + context.safe.top, height = 138;
+    const type = ui.t.type;
+    // Keep the center sightline clear for the score/combo meter and combat.
+    const available = context.width - context.safe.left - context.safe.right - 40;
+    const width = Math.max(320, Math.min(520, available * 0.38));
+    const x = context.width - context.safe.right - width - 20;
+    const y = 20 + context.safe.top, height = 166;
     canvas.save();
     canvas.globalAlpha = 0.88; canvas.fillStyle = ui.t.color.paper; canvas.fillRect(x, y, width, height);
     canvas.globalAlpha = 0.45; canvas.strokeStyle = "#000"; canvas.lineWidth = 1.5; canvas.strokeRect(x, y, width, height);
     canvas.globalAlpha = 1; canvas.fillStyle = ui.t.color.accent; canvas.fillRect(x, y, 4, height);
-    ui.tag(canvas, `LESSON ${String(snapshot.lessonIndex + 1)} / ${String(snapshot.lessonCount)}`, x + 20, y + 24, ui.t.color.accent, "left", type.micro);
+    ui.tag(canvas, `${snapshot.arenaLabel ?? "TRAINING"}  /  ${(snapshot.teachingFocus ?? "movement").toUpperCase()}`, x + 18, y + 22, ui.t.color.accent, "left", type.micro);
     canvas.fillStyle = "#000"; canvas.font = ui.font(type.label + 10, true); canvas.textAlign = "left";
-    canvas.fillText(snapshot.title, x + 20, y + 52);
+    canvas.fillText(snapshot.title, x + 18, y + 50);
     canvas.font = ui.font(type.caption, false); canvas.fillStyle = "rgba(0,0,0,0.75)";
-    wrapLeft(canvas, snapshot.description, x + 20, y + 74, width - 150, 19);
+    wrapLeft(canvas, snapshot.description, x + 18, y + 70, width - 36, 18);
     if (snapshot.progress && !snapshot.final) {
       const progress = snapshot.progress;
       canvas.font = ui.font(26, true); canvas.textAlign = "right";
       canvas.fillStyle = progress.current >= progress.goal ? ui.t.color.accent : "#000";
-      canvas.fillText(`${String(progress.current)} / ${String(progress.goal)}`, x + width - 22, y + 52);
-      canvas.globalAlpha = 0.15; canvas.fillStyle = "#000"; canvas.fillRect(x + width - 122, y + 62, 100, 5);
+      canvas.fillText(`${String(progress.current)} / ${String(progress.goal)}`, x + width - 18, y + 50);
+      canvas.globalAlpha = 0.15; canvas.fillStyle = "#000"; canvas.fillRect(x + width - 118, y + 60, 96, 4);
       canvas.globalAlpha = 1; canvas.fillStyle = ui.t.color.accent;
-      canvas.fillRect(x + width - 122, y + 62, 100 * clamp(progress.current / Math.max(1, progress.goal)), 5);
+      canvas.fillRect(x + width - 118, y + 60, 96 * clamp(progress.current / Math.max(1, progress.goal)), 4);
     }
     if (snapshot.keys.length > 0) {
       let keyX = x + 20;
       canvas.save();
-      for (const key of snapshot.keys) keyX = drawKeyCap(keyX, y + 84, key);
+      for (const key of snapshot.keys) keyX = drawKeyCap(keyX, y + 108, key);
       canvas.restore();
     }
     for (let index = 0; index < snapshot.lessonCount; index++) {
-      const dotX = x + 20 + index * 18;
-      canvas.beginPath(); canvas.arc(dotX, y + height - 13, 4, 0, Math.PI * 2);
+      const dotX = x + 18 + index * 14;
+      canvas.beginPath(); canvas.arc(dotX, y + height - 14, 3, 0, Math.PI * 2);
       if (index < snapshot.lessonIndex) { canvas.fillStyle = ui.t.color.accent; canvas.fill(); }
       else if (index === snapshot.lessonIndex) { canvas.fillStyle = "#000"; canvas.fill(); }
       else { canvas.strokeStyle = "rgba(0,0,0,0.3)"; canvas.lineWidth = 1.5; canvas.stroke(); }
     }
-    if (!snapshot.final) {
+    if (context.reducedMotion && snapshot.completedBeat < 0) {
       canvas.font = ui.font(type.micro, true); canvas.fillStyle = "rgba(0,0,0,0.4)"; canvas.textAlign = "right";
       canvas.fillText("N — skip lesson", x + width - 18, y + height - 10);
     }
+    canvas.font = ui.font(type.micro, true); canvas.fillStyle = "rgba(0,0,0,0.42)"; canvas.textAlign = "right";
+    canvas.fillText(`BLOCK ${String(snapshot.lessonIndex + 1)} / ${String(snapshot.lessonCount)}`, x + width - 16, y + height - 10);
     if (snapshot.completedBeat > 0) {
       const scale = 1 + (1 - Math.abs(snapshot.completedBeat - 0.9) / 0.9) * 0.4;
       canvas.font = ui.font(Math.round(40 * scale), true); canvas.fillStyle = ui.t.color.accent; canvas.textAlign = "right";

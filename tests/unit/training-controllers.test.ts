@@ -12,36 +12,86 @@ describe("tutorial controller", () => {
       player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [],
     };
     controller.update(snapshot);
-    for (let tick = 0; tick < 30; tick += 1) {
+    for (let tick = 0; tick < 60; tick += 1) {
       snapshot.player.x -= 2; controller.update(snapshot);
     }
-    for (let tick = 0; tick < 30; tick += 1) {
+    for (let tick = 0; tick < 60; tick += 1) {
       snapshot.player.x += 2; controller.update(snapshot);
     }
-    expect(controller.counters.moveL).toBeGreaterThan(25);
-    expect(controller.counters.moveR).toBeGreaterThan(25);
+    expect(controller.counters.moveL).toBeGreaterThanOrEqual(60);
+    expect(controller.counters.moveR).toBeGreaterThanOrEqual(60);
     expect(controller.completionDelay).toBeGreaterThan(0);
   });
 
   it("preserves lesson order, thresholds, and delayed progression", () => {
     const controller = new TutorialController(); controller.start(1600);
     expect(TUTORIAL_LESSONS.map((lesson) => lesson.title)).toEqual([
-      "MOVE", "JUMP", "DASH", "CUT", "LAUNCH", "JUGGLE", "SLAM", "POWER SLAM", "UPDRAFT", "THROW", "PARRY", "READY",
+      "MOVE", "JUMP", "DASH", "CUT", "LAUNCH", "JUGGLE", "SLAM", "POWER SLAM", "UPDRAFT", "THROW", "PARRY", "FIELD TEST", "READY",
     ]);
-    controller.counters.moveL = 26; controller.counters.moveR = 26;
+    controller.counters.moveL = 60; controller.counters.moveR = 60;
     const snapshot = { dt: 0.1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
       player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
-    expect(controller.update(snapshot)).toContainEqual({ type: "sound", cue: "rankup" });
+    expect(controller.update(snapshot)).toEqual(expect.arrayContaining([
+      { type: "reset-training-space" }, { type: "install-arena", arena: "runway" }, { type: "sound", cue: "rankup" },
+    ]));
     expect(controller.completionDelay).toBe(1.1);
     controller.update({ ...snapshot, dt: 1.11 });
     expect(controller.step().title).toBe("JUMP");
   });
 
+  it("clears objective evidence at the next block boundary", () => {
+    const controller = new TutorialController(); controller.start(1600);
+    const snapshot = { dt: 0, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
+      player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
+    controller.counters.moveL = 60; controller.counters.moveR = 60;
+    controller.update(snapshot); controller.update({ ...snapshot, dt: 1.2 });
+    controller.counters.jump = 3; controller.update(snapshot); controller.update({ ...snapshot, dt: 1.2 });
+    controller.counters.dash = 3; controller.update(snapshot); controller.update({ ...snapshot, dt: 1.2 });
+    controller.counters.strike = 6; controller.update(snapshot); controller.update({ ...snapshot, dt: 1.2 });
+    controller.mark("launch"); controller.mark("launch"); controller.mark("launch");
+    controller.update(snapshot); controller.update({ ...snapshot, dt: 1.2 });
+    expect(controller.step().title).toBe("JUGGLE");
+    expect(controller.counters.launch).toBe(0);
+    expect(controller.counters.airHit).toBe(0);
+    expect(controller.step().complete(controller.counters)).toBe(false);
+  });
+
   it("produces a deterministic renderer-neutral ghost snapshot", () => {
     const left = new TutorialController(), right = new TutorialController(); left.start(1600); right.start(1600);
+    const snapshot = { dt: 7, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
+      player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
+    left.update(snapshot); right.update(snapshot);
     left.ghostTime = 1.25; right.ghostTime = 1.25;
     expect(left.ghostSnapshot(800)).toEqual(right.ghostSnapshot(800));
-    expect(left.ghostSnapshot(800)).toMatchObject({ visible: true, lesson: "MOVE", actor: { y: 775 } });
+    expect(left.ghostSnapshot(800)).toMatchObject({ visible: true, demonstrating: true, lesson: "MOVE", actor: { y: 775 } });
+  });
+
+  it("only demonstrates after the player has had room to attempt the current block", () => {
+    const controller = new TutorialController(); controller.start(1600);
+    const snapshot = { dt: 1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
+      player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
+    for (let tick = 0; tick < 6; tick += 1) controller.update(snapshot);
+    expect(controller.ghostSnapshot(800).visible).toBe(false);
+    controller.update(snapshot);
+    expect(controller.ghostSnapshot(800)).toMatchObject({ visible: true, demonstrating: true });
+  });
+
+  it("credits an updraft only when a fresh production launch occurs while rising", () => {
+    const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 8;
+    const snapshot = { dt: 0, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
+      player: { onGround: false, vy: -400, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", bladeTipVY: -500, enemies: [] };
+    controller.mark("launch"); controller.update(snapshot);
+    expect(controller.counters.updraft).toBe(1);
+    controller.update({ ...snapshot, player: { ...snapshot.player, vy: 0 } });
+    expect(controller.counters.updraft).toBe(1);
+  });
+
+  it("recovers an unreachable thrown blade without granting throw credit", () => {
+    const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 9;
+    const snapshot = { dt: 1.21, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
+      player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "embedded", enemies: [] };
+    expect(controller.update(snapshot)).toContainEqual({ type: "recover-blade" });
+    expect(controller.counters.throwHit ?? 0).toBe(0);
   });
 
   it("recovers a tutorial dummy that has drifted out of the playable lesson", () => {

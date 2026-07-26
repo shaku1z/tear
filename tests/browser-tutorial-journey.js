@@ -43,6 +43,7 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
       const snapshot = tutorial();
       trace.push({
         label, tick: observation.tick, lessonIndex: snapshot.lessonIndex, lesson: snapshot.lesson,
+        arena: snapshot.arena,
         counters: snapshot.counters, player: observation.player, blade: observation.blade,
         entities: observation.entities,
       });
@@ -90,17 +91,20 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
 
     record("start");
 
-    step({ type: "move", x: -1000, y: 0 }); idle(60);
-    step({ type: "move", x: 1000, y: 0 }); idle(60);
+    for (let pass = 0; pass < 10 && tutorial().lessonIndex === 0; pass += 1) {
+      step({ type: "move", x: -1000, y: 0 }); idle(80);
+      step({ type: "move", x: 1000, y: 0 }); idle(80);
+      if ((tutorial().counters.moveL ?? 0) >= 60 && (tutorial().counters.moveR ?? 0) >= 60) break;
+    }
     step({ type: "move", x: 0, y: 0 });
     waitForLessonToAdvance(0);
 
-    for (let count = 0; count < 2 && tutorial().lessonIndex === 1; count += 1) {
+    for (let count = 0; count < 3 && tutorial().lessonIndex === 1; count += 1) {
       waitGrounded(); jump(); idle(150);
     }
     waitForLessonToAdvance(1);
 
-    for (let count = 0; count < 2 && tutorial().lessonIndex === 2; count += 1) {
+    for (let count = 0; count < 3 && tutorial().lessonIndex === 2; count += 1) {
       step({ type: "dash", x: count === 0 ? 1000 : -1000, y: 0 }); idle(110);
     }
     waitForLessonToAdvance(2);
@@ -113,7 +117,7 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
     waitForLessonToAdvance(3);
 
     approachDummy(70);
-    for (let attempt = 0; attempt < 20 && tutorial().lessonIndex === 4; attempt += 1) {
+    for (let attempt = 0; attempt < 50 && tutorial().lessonIndex === 4; attempt += 1) {
       swing(250000, 750000, 10, 24);
       approachDummy(70, 120);
     }
@@ -161,15 +165,17 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
     }
     waitForLessonToAdvance(8);
 
-    for (let attempt = 0; attempt < 15 && tutorial().lessonIndex === 9; attempt += 1) {
+    for (let attempt = 0; attempt < 30 && tutorial().lessonIndex === 9; attempt += 1) {
       approachDummy(80);
-      const dummy = liveDummy(), player = environment.observe().player;
-      const turn = dummy && dummy.x < player.x ? 500000 : 0;
+      const dummy = liveDummy(), blade = environment.observe().blade;
+      const turn = dummy
+        ? Math.round(((((Math.atan2(dummy.y - blade.handY, dummy.x - blade.handX) / (Math.PI * 2)) % 1) + 1) % 1) * 1_000_000) % 1_000_000
+        : 0;
       step({ type: "aim", turn, magnitude: 1000 }); idle(8);
       step({ type: "weapon", intent: "throw", phase: "pressed" });
-      step({ type: "weapon", intent: "throw", phase: "released" }); idle(45);
+      step({ type: "weapon", intent: "throw", phase: "released" }); idle(30);
       step({ type: "weapon", intent: "recall", phase: "pressed" });
-      step({ type: "weapon", intent: "recall", phase: "released" }); idle(100);
+      step({ type: "weapon", intent: "recall", phase: "released" }); idle(120);
     }
     waitForLessonToAdvance(9);
 
@@ -188,8 +194,16 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
       idle(4);
     }
     waitForLessonToAdvance(10, 720);
-    const reachedReady = tutorial().lessonIndex === 11;
-    idle(660);
+    step({ type: "dash", x: 1000, y: 0 }); idle(80);
+    approachDummy(70);
+    for (let attempt = 0; attempt < 30 && tutorial().lessonIndex === 11; attempt += 1) {
+      swing(attempt % 2 === 0 ? 500000 : 0, attempt % 2 === 0 ? 0 : 500000, 4, 12);
+      swing(250000, 750000, 6, 24);
+      approachDummy(70, 90);
+    }
+    waitForLessonToAdvance(11, 720);
+    const reachedReady = tutorial().lessonIndex === 12;
+    idle(240);
     record("terminal");
     return {
       reachedReady,
@@ -205,5 +219,9 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
   assert.equal(result.active, false, `tutorial remained active: ${JSON.stringify(last)}`);
   assert.equal(result.screen, "menu", `tutorial did not return to menu: ${JSON.stringify(last)}`);
   assert.ok(result.metrics.acceptedActions > 0, "journey must use player-valid actions");
+  assert.deepEqual([...new Set(result.trace.map((entry) => entry.arena))], [
+    "runway", "vertical-gate", "dash-lane", "blade-range", "launch-bay", "air-chain", "drop-well",
+    "dive-channel", "liftwell", "throw-lane", "counterline", "ready-room",
+  ], "every tutorial block must install its own arena");
   console.log(`Tutorial journey passed in ${result.metrics.fixedTicks} fixed ticks`);
 });
