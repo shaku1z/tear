@@ -24,7 +24,7 @@ export class AuthoritativeInputState {
         case "aim": this.#aimTurn = action.turn; this.#aimMagnitude = action.magnitude ?? AIM_MAGNITUDE_SCALE; break;
         case "weapon":
           if (action.intent === "primary") this.#primaryHeld = action.phase === "pressed";
-          if ((action.intent === "throw" || action.intent === "recall") && action.phase === "pressed") this.#throwPressed = true;
+          if (action.intent !== "primary" && action.phase === "pressed") this.#throwPressed = true;
           break;
         case "jump": this.#jumpPressed = action.phase === "pressed"; break;
         case "dash": this.#dashPressed = true; this.#dashX = action.x; this.#dashY = action.y; break;

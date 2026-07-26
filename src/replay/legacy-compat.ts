@@ -49,6 +49,17 @@ export interface RunReplayContext {
   readonly tearScore?: TearScoreReplayMetadata;
 }
 
+export type LiveGhostEngineEvent =
+  | Readonly<{ kind: "stage"; tick: number; stage: number }>
+  | Readonly<{ kind: "wave"; tick: number; wave: number; event: string }>
+  | Readonly<{ kind: "spawn"; tick: number; actorId: number; actorKind: string }>
+  | Readonly<{ kind: "death"; tick: number; actorId: number; cause: string }>
+  | Readonly<{ kind: "effect"; tick: number; effect: string; x: number; y: number }>;
+type UntickedLiveGhostEngineEvent =
+  LiveGhostEngineEvent extends infer Event
+    ? Event extends LiveGhostEngineEvent ? Omit<Event, "tick"> : never
+    : never;
+
 interface MutableRecording {
   t: number;
   elapsed: number;
@@ -94,6 +105,7 @@ export class LegacyGhostEngine {
   rec: MutableRecording | null = null;
   play: ReplayPlayback | null = null;
   readonly #dependencies: LegacyReplayDependencies;
+  readonly #eventListeners = new Set<(event: LiveGhostEngineEvent) => void>();
 
   constructor(dependencies: LegacyReplayDependencies) {
     this.#dependencies = dependencies;
@@ -119,6 +131,19 @@ export class LegacyGhostEngine {
   }
 
   recording(): boolean { return this.rec !== null; }
+
+  subscribe(listener: (event: LiveGhostEngineEvent) => void): () => void {
+    this.#eventListeners.add(listener);
+    return () => { this.#eventListeners.delete(listener); };
+  }
+
+  #emit(event: UntickedLiveGhostEngineEvent): void {
+    const value = Object.freeze({
+      ...event,
+      tick: this.#dependencies.semanticInput?.lastSealedTick ?? 0,
+    }) as LiveGhostEngineEvent;
+    for (const listener of this.#eventListeners) listener(value);
+  }
 
   /** Seals device actions onto the authoritative simulation tick before rules execute. */
   drainActions(tick: number): readonly ReplayActionEnvelope[] {
@@ -169,22 +194,33 @@ export class LegacyGhostEngine {
   }
 
   #time(): number { return this.rec === null ? 0 : Number(this.rec.t.toFixed(1)); }
-  stage(index: number): void { this.rec?.stages.push({ t: this.#time(), s: index }); }
-  wave(wave: number, event: string): void { this.rec?.waves.push({ t: this.#time(), w: wave, e: event }); }
+  stage(index: number): void {
+    this.rec?.stages.push({ t: this.#time(), s: index });
+    this.#emit({ kind: "stage", stage: index });
+  }
+  wave(wave: number, event: string): void {
+    this.rec?.waves.push({ t: this.#time(), w: wave, e: event });
+    this.#emit({ kind: "wave", wave, event });
+  }
 
   spawn(enemy: EnemySample | null, kind: string, extra?: Readonly<{ vn?: string; b?: string }>): void {
     if (this.rec === null || enemy === null) return;
     enemy._gid = ++this.rec.gid;
     const base = { t: this.#time(), id: enemy._gid, k: kind, x: Math.round(enemy.x), y: Math.round(enemy.y) };
     this.rec.spawns.push(extra === undefined ? base : { ...base, ...extra });
+    this.#emit({ kind: "spawn", actorId: enemy._gid, actorKind: kind });
   }
 
   death(enemy: EnemySample | null, cause = ""): void {
-    if (this.rec !== null && enemy?._gid !== undefined) this.rec.deaths.push({ t: this.#time(), id: enemy._gid, c: cause });
+    if (this.rec !== null && enemy?._gid !== undefined) {
+      this.rec.deaths.push({ t: this.#time(), id: enemy._gid, c: cause });
+      this.#emit({ kind: "death", actorId: enemy._gid, cause });
+    }
   }
 
   event(kind: string, x = 0, y = 0): void {
     this.rec?.events.push({ t: this.#time(), k: kind, x: Math.round(x), y: Math.round(y) });
+    this.#emit({ kind: "effect", effect: kind, x, y });
   }
 
   loadoutPick(id: string, tier = 1, wave = 0): void {

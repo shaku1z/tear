@@ -14,9 +14,10 @@ import { buildBossIntroSnapshot, buildPlaygroundHelpSnapshot, buildReticleSnapsh
   buildWaveBannerSnapshot } from "../presentation/world/overlay-snapshots";
 import { buildEnemyStatusSnapshot, buildEntityLayerSnapshot, buildFinaleWorldSnapshot,
   buildPantheonDebugSnapshot, buildSceneEffectsSnapshot, type VisualEnemySource } from "../presentation/world/runtime-snapshots";
+import { tutorialInputPrompt } from "../presentation/world/tutorial-input-prompts";
 
 type Dependencies = Pick<GameRuntimeDependencies,
-  "A11Y" | "ACH" | "Backdrop" | "CLOCK" | "CONFIG" | "FX" | "GFX" | "Input" |
+  "A11Y" | "ACH" | "Backdrop" | "CLOCK" | "CONFIG" | "FX" | "GFX" | "Input" | "PAD" |
   "PROFILE" | "SAFE" | "STAGES" | "THEME" | "UI" | "UPGRADES" | "cosmeticRandom" |
   "drawBossTransformationWorld">;
 type Stage = ReturnType<GameRuntimeDependencies["stageAt"]>;
@@ -167,8 +168,9 @@ export function createLiveWorldPresentationAdapters(
 
   const drawTutorialCard = (): void => {
     const lesson = tutorial.step();
+    const prompt = tutorialInputPrompt(lesson.t, lesson.d, lesson.keys, d.Input.mode, d.PAD);
     world.tutorialCard(buildTutorialCardSnapshot(tutorial.idx, tutorial.steps.length, {
-      t: lesson.t, d: lesson.d, keys: lesson.keys, prog: lesson.prog,
+      t: lesson.t, d: prompt.description, keys: prompt.keys, prog: lesson.prog,
       ...(lesson.final === undefined ? {} : { final: lesson.final }),
     }, tutorial.doneT));
   };

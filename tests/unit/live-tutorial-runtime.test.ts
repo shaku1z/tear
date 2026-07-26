@@ -54,4 +54,29 @@ describe("live tutorial runtime", () => {
     expect(spawn).toHaveBeenCalledWith("charger", 8);
     expect(spawned).toMatchObject({ tutDummy: true, affixCount: 0, contactDmg: 0, y: 680 });
   });
+
+  it("grounds and recenters a carried dummy at combat lesson boundaries", () => {
+    const enemy = { kind: "charger", dead: false, tutDummy: true, hp: 20, maxHp: 100,
+      stun: 0, x: 900, y: 300, vx: 80, vy: -600, onGround: false, hitCd: 1, hh: 20,
+      affixCount: 0, contactDmg: 0 };
+    const runtime = createLiveTutorialRuntime({
+      viewportWidth: 1600, groundY: () => 700, skipPressed: () => false,
+      movingLeft: () => false, movingRight: () => false,
+      player: () => ({ onGround: true, vy: 0, dashTimer: 0, x: 400, facing: 1 }),
+      bladeState: () => "held", enemies: () => [enemy], playSound: vi.fn(),
+      spawn: vi.fn(() => enemy), terminateRun: vi.fn(), navigate: vi.fn(), releasePointer: vi.fn(),
+      addProfileStat: vi.fn(), checkAchievements: vi.fn(), drawGhost: vi.fn(),
+    });
+    const advance = () => { runtime.update(0); runtime.update(1.2); };
+    runtime.start();
+    for (let index = 0; index < 26; index += 1) { runtime.mark("moveL"); runtime.mark("moveR"); }
+    advance();
+    runtime.mark("jump"); runtime.mark("jump"); advance();
+    runtime.mark("dash"); runtime.mark("dash"); advance();
+    Object.assign(enemy, { x: 900, y: 300, vx: 80, vy: -600, onGround: false, hitCd: 1, hp: 20 });
+    runtime.mark("strike"); runtime.mark("strike"); runtime.mark("strike"); advance();
+
+    expect(runtime.step().t).toBe("LAUNCH");
+    expect(enemy).toMatchObject({ x: 580, y: 680, vx: 0, vy: 0, onGround: true, hitCd: 0, hp: 100 });
+  });
 });

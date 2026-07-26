@@ -5,7 +5,7 @@
 **Source authority:** `TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN(3).md`, version 0.6, SHA-256 `007BE22193F5369B8450AAB33B95C6D3080176E6B2F91A1D504B545CA7FC7DDE`
 **Supersedes for completion claims:** `plans/TEARBENCH_GHOST3_ACTION_PLAN.md`
 **Purpose:** Convert every remaining part of the original vision into executable work, with gates that require real integration and user-visible outcomes.
-**Current progress:** C21 passed; C22 is next.
+**Current progress:** C21-C22 passed; C23 is next.
 
 ---
 

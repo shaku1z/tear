@@ -50,6 +50,7 @@ interface RunStartHostContext {
   readonly installRun: (run: GameRun) => void;
   readonly world: MutableWorldState;
   readonly resetAuthoritativeClocks: () => void;
+  readonly createRunSeed?: () => number;
   readonly loadStage: (index: number) => void;
   readonly stage: StagePort;
   readonly story: CampaignPort;
@@ -123,7 +124,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       context.stage.resetBanner();
       context.story.resetChapter();
     },
-    createRunSeed,
+    createRunSeed: context.createRunSeed ?? createRunSeed,
     resetRunRandom: (seed) => { GAME_RANDOM.reset(seed); },
     installSession: (session) => {
       const run: GameRun = {

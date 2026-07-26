@@ -48,6 +48,27 @@ function isBossPresentationActor(value: unknown): boolean {
 }
 
 describe("boss ritual gate", () => {
+  it("restores tutorial dummy grounding after knock-up physics", () => {
+    const types = createTestEnemyTypes();
+    const dummy = new types.Charger(300, CONFIG.world.groundY - 180);
+    Object.assign(dummy, { tutDummy: true, spawnT: 0, vy: 0, onGround: true });
+    const options = {
+      enemies: [dummy], platforms: [], player: {}, projectiles: [], freeze: false,
+      gravity: CONFIG.world.gravity, groundY: CONFIG.world.groundY, viewportWidth: CONFIG.view.w,
+      onKill() { return; }, startTransformation() { return false; },
+    };
+
+    stepEnemyActors({ ...options, dt: 1 / 120 });
+    expect(dummy.onGround, "an airborne tutorial dummy must not retain a stale grounded flag").toBe(false);
+
+    for (let tick = 0; tick < 240 && !dummy.onGround; tick += 1) {
+      stepEnemyActors({ ...options, dt: 1 / 120 });
+    }
+    expect(dummy.onGround, "floor contact must restore grounded state for slam classification").toBe(true);
+    expect(dummy.y).toBe(CONFIG.world.groundY - dummy.hh);
+    expect(dummy.vy).toBe(0);
+  });
+
   it("accepts a freshly constructed boss as a ritual owner", () => {
     const types = createTestEnemyTypes();
     for (const [name, Boss] of [["Warden", types.Warden], ["Colossus", types.Colossus],

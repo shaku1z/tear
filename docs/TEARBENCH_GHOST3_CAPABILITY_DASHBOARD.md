@@ -11,10 +11,10 @@ never promoted to visible or certified gameplay evidence.
 
 | State | Requirements |
 |---|---:|
-| missing | 6613 |
+| missing | 6578 |
 | contract | 108 |
 | prototype | 162 |
-| integrated | 2 |
+| integrated | 37 |
 | visible | 0 |
 | certified | 0 |
 | deferred | 0 |
@@ -25,7 +25,7 @@ never promoted to visible or certified gameplay evidence.
 | Checkpoint | Total | Missing | Contract | Prototype | Integrated | Visible | Certified |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | C21 | 371 | 371 | 0 | 0 | 0 | 0 | 0 |
-| C22 | 251 | 251 | 0 | 0 | 0 | 0 | 0 |
+| C22 | 251 | 216 | 0 | 0 | 35 | 0 | 0 |
 | C23 | 971 | 949 | 0 | 22 | 0 | 0 | 0 |
 | C24 | 651 | 650 | 0 | 1 | 0 | 0 | 0 |
 | C25 | 184 | 180 | 4 | 0 | 0 | 0 | 0 |
@@ -50,6 +50,9 @@ never promoted to visible or certified gameplay evidence.
 | Rule | Requirements matched |
 |---|---:|
 | EVID-ACADEMY-CONTRACTS | 9 |
+| EVID-C22-DISPOSABLE-ISOLATION | 12 |
+| EVID-C22-LIVE-RUNTIME-BRIDGE | 21 |
+| EVID-C22-RENDER-PROFILE-PARITY | 2 |
 | EVID-FOUNDRY-CONTRACT | 14 |
 | EVID-GHOST-CLOUD-CONTRACTS | 63 |
 | EVID-GHOST-COACH-CONTRACT | 3 |
@@ -76,7 +79,7 @@ never promoted to visible or certified gameplay evidence.
 
 ## Blocking Truth
 
-- Missing normative requirements: 6613
+- Missing normative requirements: 6578
 - Visible requirements: 0
 - Certified requirements: 0
 - C22-C40 remain incomplete until their annex requirements reach their required evidence state.

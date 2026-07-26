@@ -814,6 +814,7 @@ export function buildRequirements(parsed, checkpointMap) {
 
 function ruleMatches(requirement, rule) {
   if (!requirement.normative) return false;
+  if (Array.isArray(rule.requirementIds) && !rule.requirementIds.includes(requirement.id)) return false;
   if (
     Array.isArray(rule.sourceSections)
     && !rule.sourceSections.includes(requirement.sourceSection)

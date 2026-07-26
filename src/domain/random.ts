@@ -1,5 +1,8 @@
 export interface RandomSnapshot {
+  readonly algorithm?: "mulberry32";
+  readonly seed?: number;
   readonly state: number;
+  readonly cursor?: number;
 }
 
 export interface RandomSource {
@@ -18,8 +21,9 @@ function hashSeed(seed: number | string): number {
 
 /** A small deterministic PRNG for gameplay decisions. Never use for security. */
 export class SeededRandom implements RandomSource {
-  readonly #initialSeed: number;
+  #initialSeed: number;
   #state: number;
+  #cursor = 0;
 
   constructor(seed: number | string) {
     this.#initialSeed = hashSeed(seed) || 0x6d2b79f5;
@@ -30,8 +34,16 @@ export class SeededRandom implements RandomSource {
     return this.#initialSeed;
   }
 
+  /** Resets this exact stream object so constructor-injected references stay valid across runs. */
+  reseed(seed: number | string): void {
+    this.#initialSeed = hashSeed(seed) || 0x6d2b79f5;
+    this.#state = this.#initialSeed;
+    this.#cursor = 0;
+  }
+
   nextUint32(): number {
     this.#state = (this.#state + 0x6d2b79f5) >>> 0;
+    this.#cursor += 1;
     let value = this.#state;
     value = Math.imul(value ^ (value >>> 15), value | 1);
     value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
@@ -57,10 +69,17 @@ export class SeededRandom implements RandomSource {
   }
 
   snapshot(): RandomSnapshot {
-    return Object.freeze({ state: this.#state });
+    return Object.freeze({
+      algorithm: "mulberry32" as const,
+      seed: this.#initialSeed,
+      state: this.#state,
+      cursor: this.#cursor,
+    });
   }
 
   restore(snapshot: RandomSnapshot): void {
+    this.#initialSeed = snapshot.seed ?? this.#initialSeed;
     this.#state = snapshot.state >>> 0;
+    this.#cursor = snapshot.cursor ?? 0;
   }
 }

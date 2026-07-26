@@ -41,6 +41,7 @@ import { createUi } from "../presentation/ui";
 import { createLegacyReplayCompatibility } from "../replay/legacy-compat";
 import { GAME_RANDOM, GAME_RANDOM_STREAMS } from "../simulation/run-random";
 import { PerformanceMonitor } from "../diagnostics/performance-monitor";
+import { createTearTestEnvironment } from "../tearbench/test-environment";
 import { LegacyAppStateController } from "./legacy-state-controller";
 import { startLiveGame } from "./live-game-runtime";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
@@ -65,6 +66,14 @@ interface CompositionWindow extends Window {
 export function composeTearApplication(options: TearCompositionOptions): void {
   const { target, sdk, createCrazyGamesServices, createCloud, pwaUpdate } = options;
   const compositionWindow = window as CompositionWindow;
+  const tearTestMode = __TEAR_TEST_BUILD__ && new URLSearchParams(window.location.search).get("test") === "1";
+  const disposableValues = new Map<string, string>();
+  const tearTestEnvironment = tearTestMode ? createTearTestEnvironment("live-test-composition") : undefined;
+  const disposableStorage = tearTestMode ? {
+    getItem: (key: string) => disposableValues.get(key) ?? null,
+    setItem: (key: string, value: string) => { disposableValues.set(key, value); },
+    removeItem: (key: string) => { disposableValues.delete(key); },
+  } : undefined;
   // Optional capture tooling is a development adapter, never a production
   // gameplay dependency or shared writable global.
   const clipper = import.meta.env.DEV ? compositionWindow.Clipper : undefined;
@@ -107,6 +116,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     target,
     ...(sdk === undefined ? {} : { sdk }),
     ...(createCrazyGamesServices === undefined ? {} : { createCrazyGamesServices }),
+    ...(disposableStorage === undefined ? {} : { storage: disposableStorage }),
+    ...(tearTestEnvironment === undefined ? {} : { services: tearTestEnvironment.platform }),
   });
   const CG = platform.CG;
 
@@ -159,7 +170,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   } satisfies GameRuntimeDependencies;
   startLiveGame(gameRuntimeDependencies);
 
-  if (__TEAR_TEST_BUILD__ && new URLSearchParams(window.location.search).get("test") === "1") {
+  if (tearTestMode) {
     Object.defineProperty(window, "__TEAR_PLATFORM_SERVICES__", {
       configurable: true,
       get: () => platform.services,

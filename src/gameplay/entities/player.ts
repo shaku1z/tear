@@ -11,6 +11,7 @@ export interface PlayerInputPort {
   down(): boolean;
   dashPressed(): boolean;
   jumpPressed(): boolean;
+  consumeThrow?(): boolean;
   buzz?(duration: number): void;
 }
 

@@ -9,6 +9,7 @@ const forbidden = [
   "__TEAR_DIAGNOSTICS__",
   "__TEAR_PLATFORM_SERVICES__",
   "__PANTHEON_TEST",
+  "__TEAR_RUNTIME_ENVIRONMENT__",
 ];
 const failures = [];
 

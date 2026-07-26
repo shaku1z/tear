@@ -8,6 +8,7 @@ export interface LegacyPlatformCompatibilityOptions {
   readonly sdk?: CrazyGamesSdkShape;
   readonly createCrazyGamesServices?: (options: CrazyGamesPlatformOptions) => Promise<CrazyGamesPlatformServices>;
   readonly storage?: SyncStringStorage;
+  readonly services?: PlatformServices;
   readonly now?: () => number;
 }
 
@@ -73,7 +74,7 @@ function legacyStore(storage: SyncStringStorage | undefined, sdk: CrazyGamesSdkS
 
 export function createLegacyPlatformCompatibility(options: LegacyPlatformCompatibilityOptions): LegacyPlatformCompatibility {
   const storage = options.storage ?? defaultStorage();
-  let services = createBrowserPlatformServices(storage === undefined ? {} : { storage });
+  let services = options.services ?? createBrowserPlatformServices(storage === undefined ? {} : { storage });
   let unsubscribe: Unsubscribe | undefined;
   let suspendHook: () => void = () => { return; };
   let resumeHook: () => void = () => { return; };
@@ -98,6 +99,7 @@ export function createLegacyPlatformCompatibility(options: LegacyPlatformCompati
     live: false,
     env: "disabled",
     async init() {
+      if (options.services !== undefined) return false;
       if (options.target !== "crazygames" || !options.sdk || !options.createCrazyGamesServices) return false;
       try {
         const crazyGamesServices = await options.createCrazyGamesServices({

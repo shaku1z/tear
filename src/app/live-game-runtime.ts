@@ -17,36 +17,30 @@ import { RuntimeFrameDriver } from "./runtime-frame-driver";
 import { createLiveMusicObservation, projectLiveMusicRun } from "./live-music-observation-adapter";
 import { isMenuScreen, renderRegisteredScreen } from "./screen-registry";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
-import type { GameBlade, GameEnemy, GameFloater, GamePlayer, GameProjectile, GameRun,
-  GameSlowZone, GameTemporaryWall } from "./game-runtime-state";
+import type { GameBlade, GameEnemy, GameFloater, GamePlayer, GameProjectile, GameRun, GameSlowZone, GameTemporaryWall } from "./game-runtime-state";
 import type { BossBeatState, BossIntroState, LiveGameHostState } from "./live-game-host-state";
 import type { LegacyAppScreen, LegacyTransitionContext } from "./legacy-state-controller";
 import type { RunScreenState } from "./live-run-screen-adapters";
 import type { InteractiveUiButton } from "./ui-runtime-controller";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import { trainingRunRequiresPreflight } from "./live-training-host";
-
+import type { CommandEnvelope } from "../domain/envelopes";
+import type { GameAction } from "../input/game-action";
+import { emitLiveTearBenchPhysicalInput, liveRewardChoiceIds, routeLiveTearBenchAction } from "../tearbench/live-runtime-browser-adapters";
+import { isCombatPlatform, isDodgeProjectile, isEnemySample, isGameEnemy, isGameFloater, isRitualCue, isWeaponEffect, makeCombatEnemy } from "./live-runtime-type-guards";
 type UiButton = CanvasUiButton & InteractiveUiButton;
 type OutcomeInfo = ReturnType<RunScreenState["outcome"]>;
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
-
 export function startLiveGame(dependencies: GameRuntimeDependencies): void {
-  const {
-    A11Y, APP, Attract, Backdrop, CG, CLOCK, CONFIG, Cloud, DIAG,
-    FX, GFX, GHOST, Input, OVERSCAN, PAD,
-    ReflectionEnemy, SAFE, SFX, THEME, UI, VAULT,
-    applyUpgrade, clamp, cosmeticRandom, lerp,
-    weaponCapsuleIntersectsSegment,
-  } = dependencies;
-
+  const { A11Y, APP, Attract, Backdrop, CG, CLOCK, CONFIG, Cloud, DIAG, FX, GFX, GHOST,
+    Input, OVERSCAN, PAD, ReflectionEnemy, SAFE, SFX, THEME, UI, VAULT, applyUpgrade,
+    clamp, cosmeticRandom, lerp, weaponCapsuleIntersectsSegment } = dependencies;
 (function () {
   const browserRuntime = createLiveBrowserRuntime(dependencies);
   const { canvas, context: ctx, width: W, height: H, viewport, resizeCanvas,
     requestPointerLock: requestLock, installPrompt, lockHint, hint: hintEl,
     pantheonDebug: PANTHEON_DEBUG, testMode: TEST_MODE } = browserRuntime;
-
   const restoreConfig = createConfigRestorer(CONFIG);
-
   const sessionServices = createLiveSessionServices({
     dependencies, run: () => run, player: () => player, blade: () => blade,
     screen: () => state, setScreen: (screen) => { setState(screen); },
@@ -65,7 +59,6 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   const { awardCoins, telemetry: economyTelemetry } = economyRuntime;
   const { openDraft: openRewardDraft, openTier: openRewardTier } = rewardRuntime;
   const { read: getBest, record: saveBest } = bestScores.api;
-
   let state: LegacyAppScreen = APP.screen;
   function setState(next: LegacyAppScreen, context?: LegacyTransitionContext): LegacyAppScreen {
     state = APP.transition(next, context);
@@ -86,6 +79,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   let tempWalls: GameTemporaryWall[] = [];
   let rankPopT = 0, rankPopText = "";   // style rank-up flash
   let run: GameRun;
+  let tearBenchRunSeed: number | null = null;
   const RUN_LIFECYCLE = new RunLifecycleController();
   let lastGhost: ReplayPacket | null = null;
   let lastVaultId: string | null = null;
@@ -106,7 +100,6 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   let continueT = 0;   // rewarded-revive countdown
   let hudHpLag = 1, hudMultPrev = 1, hudMultPop = 0;   // HUD juice: health damage-chip + combo pop
   const hoverAnim: Record<string, number> = {};
-
   const hostState: LiveGameHostState = Object.freeze({
     run: () => run, setRun: (value) => { if (value !== null) run = value; },
     player: () => player, setPlayer: (value) => { if (value !== undefined) player = value; },
@@ -124,7 +117,6 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     lastVaultId: () => lastVaultId, setLastVaultId: (value) => { lastVaultId = value; },
     winSeconds: () => winT, setWinSeconds: (value) => { winT = value; },
   } satisfies LiveGameHostState);
-
   const campaignTraining = createLiveCampaignTrainingComposition({
     dependencies, state: hostState, lifecycle: RUN_LIFECYCLE, controllers: runControllers,
     width: W, height: H, canvas, context: ctx,
@@ -162,7 +154,6 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     updateAbilities: updateWeaponAbilities, emitThrowResolve,
     activateThrowSecondary, hook: weaponHook, shieldAbsorb: onShieldAbsorb, dealArea: dealAoE,
     addKillScore, fire, makeEvent: makeEv } = weaponRuntime;
-
   const { tutorial: TUT, runtime: playgroundRuntime, presentation: playgroundPresentation } = trainingHost;
   const { sourceRuntime: sourceVoidRuntime, runtime: cinematicRuntime } = cinematicHost;
   const syncVoidPlayerSupport = (...args: Parameters<typeof sourceVoidRuntime.syncPlayer>) => sourceVoidRuntime.syncPlayer(...args);
@@ -176,7 +167,6 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     update: updateTrick, color: trickColor,
     splitProjectile: spawnSplitShards, formatTime: fmtTime,
   } = styleAchievementRuntime;
-
   const { modeWaves, bossById, spawn: spawnOne,
     updateBossArenaPlatforms, lobExplode } = createLiveRunOrchestration({
     dependencies, state: hostState, lifecycle: RUN_LIFECYCLE, controllers: runControllers,
@@ -190,6 +180,11 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     finishWorldReset: () => { timeScale = 1; slowmo = 0; zoom = 1; flash = 0; bannerT = 0; dashGhostT = 0;
       throwCd = 0; worldZoom = 1; worldZoomTarget = 1; },
     resetAuthoritativeClocks: () => { simulation.reset(0); authoritativeInput.reset(); authoritativeStep.reset(); },
+    createRunSeed: () => {
+      const seed = tearBenchRunSeed;
+      tearBenchRunSeed = null;
+      return seed ?? dependencies.createRunSeed();
+    },
     authoritativeResult: () => authoritativeStep.lastResult,
     setScreen: (screen, detail) => { setState(screen, detail); }, requestPointerLock: requestLock,
     beginWipe: () => { Wipe.begin(); }, wipeRemainingSeconds: () => Wipe.remainingSeconds,
@@ -206,32 +201,12 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   type CombatHost = ReturnType<typeof createLiveCombatComposition<CombatSnapshot>>;
   type CombatCompositionInput = Parameters<typeof createLiveCombatComposition<CombatSnapshot>>[0];
   let openingProtection: ReturnType<typeof story.protection> = { active: false, lastMode: null };
-  const isGameEnemy = (value: unknown): value is GameEnemy => typeof value === "object" && value !== null &&
-    "cfg" in value && "hit" in value && "damageTakenMult" in value && "x" in value && "y" in value;
   const isGameProjectile = (value: unknown): value is GameProjectile => value instanceof dependencies.Projectile;
-  const isDodgeProjectile = (value: unknown): value is Readonly<{ _dodged?: boolean }> =>
-    typeof value === "object" && value !== null;
   const isSourceOwner = (value: unknown): value is GameEnemy & Parameters<typeof startVoidDescent>[0] =>
     isGameEnemy(value);   // the descent derives its actor id from presentationId/bossId
   const isRitualOwner = (value: unknown): value is GameEnemy & NonNullable<Parameters<typeof startBossTransformation>[0]> =>
     isGameEnemy(value) && "bossName" in value && typeof value.bossName === "string" &&
     "cinematicT" in value && typeof value.cinematicT === "number";
-  const isRitualCue = (value: unknown): value is NonNullable<Parameters<typeof startBossTransformation>[1]> =>
-    typeof value === "object" && value !== null && "id" in value && typeof value.id === "string";
-  const isEnemySample = (value: GameEnemy): value is GameEnemy & { _gid?: number } =>
-    value._gid === undefined || typeof value._gid === "number";
-  type CombatPlatform = (typeof stageRuntime.platforms)[number];
-  const isCombatPlatform = (value: unknown): value is CombatPlatform => typeof value === "object" && value !== null &&
-    "x" in value && typeof value.x === "number" && "y" in value && typeof value.y === "number" &&
-    "w" in value && typeof value.w === "number" && "h" in value && typeof value.h === "number";
-  const isGameFloater = (value: { y: number; life: number }): value is GameFloater =>
-    "x" in value && "text" in value && "big" in value && "col" in value;
-  const isWeaponEffect = (value: unknown): value is Readonly<{ mechanic?: string }> =>
-    typeof value === "object" && value !== null && (!("mechanic" in value) || typeof value.mechanic === "string");
-  const makeCombatEnemy = (value: unknown): GameEnemy => {
-    if (!isGameEnemy(value)) throw new TypeError("Combat enemy factory returned an incompatible actor");
-    return value;
-  };
   const musicObservation = createLiveMusicObservation({ director: musicDirector, appState: () => state,
     run: () => hostState.run(), player: () => hostState.player(), enemies: () => enemies, projectiles: () => projectiles,
     bossIntro: () => bossIntro, stage: () => ({ name: stageRuntime.current.name, index: stageRuntime.index }),
@@ -304,7 +279,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
         setBossBanner: (text, color) => { bossBeat = { text, color, t: 1.15, dur: 1.15 }; },
         // Raw device edge in every live run (recording is passive; the authoritative
         // input only replays sealed envelopes during verification).
-        consumeThrow: () => Input.consumeThrow(),
+        consumeThrow: () => player.aiInput?.consumeThrow?.() ?? Input.consumeThrow(),
         weaponSegmentContact: weaponCapsuleIntersectsSegment,
         createCharger: (x, y) => makeCombatEnemy(new dependencies.Charger(x, y)),
         createReflection: (x, y) => makeCombatEnemy(new ReflectionEnemy(x, y)),
@@ -446,10 +421,9 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   });
   const { simulation, authoritativeInput, combatEntityRuntime: combatRuntime,
     killRuntime: liveKillRuntime, frameRuntime: liveFrameRuntime, authoritativeStep } = combatHost;
-  // full-screen rect INCLUDING the fullscreen overscan bleed — use for any fill that
+  // full-screen rect INCLUDING the fullscreen overscan bleed â€” use for any fill that
   // must reach the true screen edges (backdrops, dims, vignettes), never for layout.
   const screenRect = () => presentationHost.screenRectangle();
-
   const biomeMode = () => ["campaign", "endless", "bossonly", "gauntlet", "tutorial", "playground"].includes(run.mode);
   let shopCoinShow: number | null = null;
   let shopFlash: Readonly<{ id: string; time: number }> | null = null;
@@ -474,24 +448,49 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   });
   const { wipe: Wipe, frame: presentationHost, screens: screenComposition } = interfaceComposition;
   const { library: libraryAdapters, replay: replayAdapters, settings: settingsRenameAdapters, modelRenderers: presentationScreenRenderers } = screenComposition;
-
-  if (__TEAR_TEST_BUILD__ && PANTHEON_DEBUG) void import("./live-debug-composition").then(({ installLiveGameDebug }) => { installLiveGameDebug({
-    enabled: PANTHEON_DEBUG, dependencies, state: hostState, lifecycle: RUN_LIFECYCLE, cinema: CINEMA,
-    stage: stageRuntime, width: W, height: H, startRun: (mode, difficulty) => { startRunWithPreflight(mode, difficulty); }, setScreen: setState, screen: () => state,
-    setContinueSeconds: (value) => { continueT = value; }, openDraft: openRewardDraft, openTier: openRewardTier,
-    run: () => run, player: () => player, blade: () => blade, applyUpgrade,
-    enterReplay: (record, from) => { replayAdapters.enter(record, from); },
-    beginRename: () => { settingsRenameAdapters.beginRename(false, true); },
-    renameSnapshot: settingsRenameAdapters.renameSnapshot, selectSettingsTab: settingsRenameAdapters.selectSettingsTab,
-    replayStatus: replayAdapters.status, applyOptions: (options) => { Object.assign(settings, options); applySettings(); },
-    settings, selected: () => ({ mode: selMode, difficulty: selDiff, weapon: selWeapon, boss: selBoss }),
-    selectBoss: (boss) => { selBoss = boss; },
-    chapterBrief: () => Boolean(story.chapterFlow?.brief), finale: () => story.finale,
-    rewardSnapshot: rewardRuntime.snapshot, authoritative: () => authoritativeStep.lastResult,
-    startFinale: startAdventureFinale, severFinale: () => severFinaleAnchor(false),
-  }); });
-
+  if (__TEAR_TEST_BUILD__ && TEST_MODE) void import("../tearbench/live-runtime-environment").then(({ installLiveTearRuntimeBridge }) => {
+    const consumedActions: CommandEnvelope<GameAction>[] = [];
+    Input.semantic.subscribe((entry) => { consumedActions.push(entry); });
+    const actionRouting = {
+      screen: () => state, setScreen: (screen: "playing" | "paused") => { setState(screen); },
+      runMode: () => run.mode, reward: rewardRuntime.snapshot,
+      chooseUpgrade: screenComposition.chooseUpgrade, chooseReserve: screenComposition.chooseReserve,
+      chooseTier: screenComposition.chooseTier, dispatchPlayground: dispatchPlaygroundAction,
+      renderControls: () => { presentationHost.render(); }, controls: () => uiButtons, focus: () => focus,
+    };
+    installLiveTearRuntimeBridge({
+      width: W, height: H, state: hostState, actorId: (enemy) => combatRuntime.id(enemy, "enemy"),
+      stage: () => stageRuntime.current, lifecycle: () => RUN_LIFECYCLE.snapshot(),
+      choiceIds: () => liveRewardChoiceIds(actionRouting), screen: () => state,
+      setScreen: (screen) => { setState(screen); }, selectBoss: (bossId) => { selBoss = bossId; },
+      selectWeapon: (weaponId) => { selWeapon = weaponId; hostState.setSelectedWeapon(weaponId); },
+      setRunSeed: (seed) => { tearBenchRunSeed = seed; }, startRun: (mode, difficulty) => { startRunImmediate(mode, difficulty); },
+      stopFrameLoop: () => { frameDriver.stop(); }, pushAction: (action) => { Input.semantic.push(action); },
+      routeAction: (action) => routeLiveTearBenchAction(actionRouting, action),
+      terminateRun: () => { if (RUN_LIFECYCLE.phase !== "terminated") RUN_LIFECYCLE.terminate("quit"); if (GHOST.recording()) GHOST.stopRec({ tearBenchTerminated: true }); setState("paused"); },
+      resetSemanticInput: () => { Input.startSemanticRecording(); },
+      advanceFixedTick: () => { const tick = simulation.tick + 1; authoritativeStep.execute(tick, 1 / 120, GHOST.drainActions(tick)); simulation.reset(tick); DIAG.gauge("simulationTick", tick); DIAG.gauge("simulationSteps", 1); return 1; },
+      advanceRenderFrame: (deltaSeconds) => liveFrameRuntime.advanceSimulation(deltaSeconds),
+      authoritative: () => authoritativeStep.lastResult, random: () => dependencies.GAME_RANDOM_STREAMS.snapshot(),
+      render: () => { presentationHost.render(); }, screenshot: () => canvas.toDataURL("image/png"),
+      subscribeEngineEvent: (listener) => GHOST.subscribe(listener),
+      drainConsumedActions: () => consumedActions.splice(0, consumedActions.length),
+      emitPhysicalInput: (input) => { emitLiveTearBenchPhysicalInput(input, { window, canvas, width: W, height: H }); },
+      setTimeEffectsForTest: (effects) => { if (effects.hitStop !== undefined) hitStop = effects.hitStop; if (effects.slowMotion !== undefined) slowmo = effects.slowMotion; if (effects.timeScale !== undefined) timeScale = effects.timeScale; },
+    }, window);
+  });
+  if (__TEAR_TEST_BUILD__ && PANTHEON_DEBUG) void import("./live-debug-composition").then(({ installLiveGameDebug }) => {
+    installLiveGameDebug({
+      enabled: PANTHEON_DEBUG, dependencies, state: hostState, lifecycle: RUN_LIFECYCLE, cinema: CINEMA, stage: stageRuntime, width: W, height: H,
+      startRun: (mode, difficulty) => { startRunWithPreflight(mode, difficulty); }, setScreen: setState, screen: () => state, setContinueSeconds: (value) => { continueT = value; },
+      openDraft: openRewardDraft, openTier: openRewardTier, run: () => run, player: () => player, blade: () => blade, applyUpgrade, enterReplay: (record, from) => { replayAdapters.enter(record, from); },
+      beginRename: () => { settingsRenameAdapters.beginRename(false, true); }, renameSnapshot: settingsRenameAdapters.renameSnapshot, selectSettingsTab: settingsRenameAdapters.selectSettingsTab,
+      replayStatus: replayAdapters.status, applyOptions: (options) => { Object.assign(settings, options); applySettings(); }, settings, selected: () => ({ mode: selMode, difficulty: selDiff, weapon: selWeapon, boss: selBoss }),
+      tutorialSnapshot: () => ({ active: TUT.active, lessonIndex: TUT.idx, lesson: TUT.step().t, completionDelay: TUT.doneT, endingTime: TUT.endT, counters: { ...TUT.n } }),
+      selectBoss: (boss) => { selBoss = boss; }, chapterBrief: () => Boolean(story.chapterFlow?.brief), finale: () => story.finale, rewardSnapshot: rewardRuntime.snapshot,
+      authoritative: () => authoritativeStep.lastResult, startFinale: startAdventureFinale, severFinale: () => severFinaleAnchor(false),
+    });
+  });
   combatHost.startFrameLoop();
 })();
-
 }

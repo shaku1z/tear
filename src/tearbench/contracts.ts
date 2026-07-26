@@ -102,6 +102,7 @@ export interface TearObservationV1 {
     boss?: Readonly<{ id: string; phase: string; validPhases: readonly string[] }>;
     ui?: Readonly<{ focusedId?: string; focusableIds: readonly string[] }>;
     paused?: boolean;
+    lifecyclePhase?: string;
     progressTick?: number;
     softlockLimitTicks?: number;
   }>;

@@ -61,9 +61,15 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
       fx.floater(enemy.x, enemy.y - 30, "SHIELD BREAK", true, t.colors.armoredShield);
     }
 
+    const tutorialDownDashGrace = t.blade.tutorialRecognition && player.dashY > 0
+      && (player.dashTimer > 0 || player.dashEndT > 0);
     const strikeInput = {
       baseDamage, tipVerticalSpeed: blade.tipVY, tipSpeed: blade.tipSpeed,
-      playerVerticalSpeed: player.vy, playerGrounded: player.onGround, playerHealth: player.hp, playerMaxHealth: player.maxHp,
+      playerVerticalSpeed: tutorialDownDashGrace
+        ? Math.max(player.vy, t.blade.slamPowerSpeed * (t.blade.slamEmpowerAt + 0.1))
+        : player.vy,
+      playerGrounded: player.onGround && !tutorialDownDashGrace,
+      playerHealth: player.hp, playerMaxHealth: player.maxHp,
       playerAirTime: player.airTime, dashEndTime: player.dashEndT, tempoTime: player.tempoT, tempoStacks: player.tempoStk,
       enemyGrounded: enemy.onGround, enemyY: enemy.y, enemyHalfHeight: enemy.hh, groundY: t.groundY,
       styleMultiplier, repeatScale: 1, runDamageMultiplier: hooks.runDamageMultiplier(), enemyDamageMultiplier: enemy.damageTakenMult(),

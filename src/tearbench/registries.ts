@@ -58,6 +58,7 @@ export type TearEventId = typeof EVENT_IDS[number];
 export const ENTITY_KIND_IDS = Object.freeze([
   "player", "blade", "projectile", "platform", "hazard",
   "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera",
+  "reflection", "void-wisp",
   "warden", "colossus", "aldric", "echo", "source",
 ] as const);
 export const ENTITY_KIND_REGISTRY = createStableRegistry("entity kind", ENTITY_KIND_IDS);

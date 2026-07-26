@@ -4,6 +4,95 @@
   "defaultNormativeState": "missing",
   "rules": [
     {
+      "id": "EVID-C22-LIVE-RUNTIME-BRIDGE",
+      "priority": 130,
+      "state": "integrated",
+      "requirementIds": [
+        "TG3-5AD34558D9270002",
+        "TG3-179B415EFE19B045",
+        "TG3-F61B69D944EA5766",
+        "TG3-4DDE791F28255399",
+        "TG3-A614771A0A46F528",
+        "TG3-AE0E070082C5236A",
+        "TG3-84AD01BED85F6E34",
+        "TG3-8623FB5908989875",
+        "TG3-67B07A5F11C09398",
+        "TG3-EC8A6D01A58F8E39",
+        "TG3-C4A749DE0E82DD39",
+        "TG3-56F1A31EDF776117",
+        "TG3-9580A423155EE2C2",
+        "TG3-82109F11039C5823",
+        "TG3-B669B03E489F8980",
+        "TG3-C122600232A39A7D",
+        "TG3-4581FE2DA0CD43C5",
+        "TG3-5351AAC1C0A1F5DE",
+        "TG3-C0BEA29CA4B1A283",
+        "TG3-0CFB27379EEB876D",
+        "TG3-08369A46B6E0192B"
+      ],
+      "textRegex": ".*",
+      "implementationRefs": [
+        "src/tearbench/live-runtime-environment.ts",
+        "src/app/live-game-runtime.ts",
+        "src/gameplay/runtime/authoritative-input.ts",
+        "src/replay/legacy-compat.ts"
+      ],
+      "evidenceRefs": [
+        "tests/browser-tear-runtime-environment.js",
+        "tests/unit/authoritative-game-action-boundary.test.ts",
+        "tests/unit/live-frame-runtime.test.ts"
+      ],
+      "notes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces."
+    },
+    {
+      "id": "EVID-C22-RENDER-PROFILE-PARITY",
+      "priority": 130,
+      "state": "integrated",
+      "requirementIds": [
+        "TG3-696953CB4F5CD620",
+        "TG3-89A63AD5C36FE767"
+      ],
+      "textRegex": ".*",
+      "implementationRefs": [
+        "src/tearbench/live-runtime-environment.ts",
+        "src/app/live-frame-runtime.ts",
+        "src/simulation/fixed-step.ts"
+      ],
+      "evidenceRefs": ["tests/browser-tear-runtime-environment.js"],
+      "notes": "Fresh browser processes drive 30, 60, 144, and uncapped-jitter render schedules to the same fixed tick and compare canonical semantic hashes."
+    },
+    {
+      "id": "EVID-C22-DISPOSABLE-ISOLATION",
+      "priority": 130,
+      "state": "integrated",
+      "requirementIds": [
+        "TG3-9D80C1BAD30B433D",
+        "TG3-CFDA0D25C3B4C9B3",
+        "TG3-49242F518708EBB7",
+        "TG3-E20EAAF76A5CCEAB",
+        "TG3-CB43003DF61ECB45",
+        "TG3-244F76D36ACFE06E",
+        "TG3-7E49E321ACE558E5",
+        "TG3-29EBF3C3045D9FE3",
+        "TG3-36FFE3CF3A3D7061",
+        "TG3-05AA234335FB4618",
+        "TG3-36E3DEFB3D7027CD",
+        "TG3-EBE527880D67E1A2"
+      ],
+      "textRegex": ".*",
+      "implementationRefs": [
+        "src/tearbench/test-environment.ts",
+        "src/app/composition.ts",
+        "src/platform/legacy-compat.ts",
+        "scripts/check-production-test-isolation.mjs"
+      ],
+      "evidenceRefs": [
+        "tests/browser-tear-runtime-environment.js",
+        "tests/browser-production-runtime-isolation.js"
+      ],
+      "notes": "Test composition uses memory-only persistence and unavailable external capabilities; tests prove unchanged localStorage and bridge absence from both production targets."
+    },
+    {
       "id": "EVID-RUNTIME-FIXED-STEP",
       "priority": 100,
       "state": "integrated",

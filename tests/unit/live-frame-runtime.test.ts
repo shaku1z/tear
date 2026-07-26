@@ -27,7 +27,7 @@ describe("live frame runtime", () => {
     expect(boss.introT).toBe(0);
   });
 
-  it("records semantic aim passively while the raw device input drives the live step", () => {
+  it("seals semantic input before the authoritative live step", () => {
     const order: string[] = []; const gauge = vi.fn();
     const simulation = { tick: 0, advance: (_ms: number, step: (seconds: number, tick: number) => void) => {
       step(1 / 60, 4); return { tick: 4, steps: 1, droppedMilliseconds: 0 };
@@ -41,7 +41,7 @@ describe("live frame runtime", () => {
       afterStep: (tick) => order.push(`after:${String(tick)}`),
       authoritativeStep: () => order.push("authoritative"),
       clearOverrides: () => order.push("clear"), step: () => order.push("step"), gauge });
-    expect(order).toEqual(["before:4", "sample", "aim:250000:500", "drain", "clear", "step", "after:4"]);
+    expect(order).toEqual(["before:4", "sample", "aim:250000:500", "drain", "clear", "authoritative", "after:4"]);
     expect(gauge).toHaveBeenCalledTimes(3);
     expect(result).toEqual({ hitStop: 0, steps: 1 });
   });

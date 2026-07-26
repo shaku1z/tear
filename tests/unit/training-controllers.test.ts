@@ -5,6 +5,24 @@ import { PlaygroundController, trainingPlatforms } from "../../src/gameplay/trai
 import { TUTORIAL_LESSONS, TutorialController } from "../../src/gameplay/training/tutorial-controller";
 
 describe("tutorial controller", () => {
+  it("credits observed movement from any authoritative input device", () => {
+    const controller = new TutorialController(); controller.start(1600);
+    const snapshot = {
+      dt: 1 / 60, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
+      player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [],
+    };
+    controller.update(snapshot);
+    for (let tick = 0; tick < 30; tick += 1) {
+      snapshot.player.x -= 2; controller.update(snapshot);
+    }
+    for (let tick = 0; tick < 30; tick += 1) {
+      snapshot.player.x += 2; controller.update(snapshot);
+    }
+    expect(controller.counters.moveL).toBeGreaterThan(25);
+    expect(controller.counters.moveR).toBeGreaterThan(25);
+    expect(controller.completionDelay).toBeGreaterThan(0);
+  });
+
   it("preserves lesson order, thresholds, and delayed progression", () => {
     const controller = new TutorialController(); controller.start(1600);
     expect(TUTORIAL_LESSONS.map((lesson) => lesson.title)).toEqual([
@@ -24,6 +42,32 @@ describe("tutorial controller", () => {
     left.ghostTime = 1.25; right.ghostTime = 1.25;
     expect(left.ghostSnapshot(800)).toEqual(right.ghostSnapshot(800));
     expect(left.ghostSnapshot(800)).toMatchObject({ visible: true, lesson: "MOVE", actor: { y: 775 } });
+  });
+
+  it("recovers a tutorial dummy that has drifted out of the playable lesson", () => {
+    const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 3;
+    const intents = controller.update({
+      dt: 1 / 60, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
+      player: { onGround: true, vy: 0, dashTimer: 0, x: 400, facing: 1 }, bladeState: "held",
+      enemies: [{ id: "dummy", kind: "charger", dead: false, tutorialDummy: true,
+        hp: 80, maxHp: 100, x: 1200, y: 750 }],
+    });
+    expect(intents).toContainEqual({ type: "reset-dummy", enemyId: "dummy", x: 580 });
+  });
+
+  it("awards tutorial completion exactly once before returning to the menu", () => {
+    const controller = new TutorialController(); controller.start(1600);
+    controller.lessonIndex = TUTORIAL_LESSONS.length - 1;
+    const snapshot = {
+      dt: 5.1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
+      player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [],
+    };
+    const completion = controller.update(snapshot);
+    expect(completion.filter((intent) => intent.type === "profile-stat")).toEqual([
+      { type: "profile-stat", stat: "tutorialDone", amount: 1 },
+    ]);
+    expect(completion).toContainEqual({ type: "navigate", screen: "menu" });
+    expect(controller.update(snapshot)).toEqual([]);
   });
 });
 

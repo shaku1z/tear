@@ -1138,14 +1138,14 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-998B539FB4FFFE46` | 190-190 | 3 | architecture | no | reference | reference | C21 | documentation-validation | --- |
 | `TG3-F838C351AFFFF4B3` | 194-194 | 4 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | TearBench should be treated as a first-class development subsystem, not a one-off bot. |
 | `TG3-55B6B7742C840095` | 198-198 | 4 | operations | yes | missing | optional | C39 | interaction-matrix, full-release-gate | TearBench should eventually support: |
-| `TG3-5AD34558D9270002` | 200-200 | 4 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Deterministic scenario launch |
-| `TG3-179B415EFE19B045` | 201-201 | 4 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Seeded random number generation |
-| `TG3-F61B69D944EA5766` | 202-202 | 4 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Fixed-step simulation |
+| `TG3-5AD34558D9270002` | 200-200 | 4 | architecture | yes | integrated | required | C22 | unit-contract, full-release-gate | Deterministic scenario launch |
+| `TG3-179B415EFE19B045` | 201-201 | 4 | architecture | yes | integrated | required | C22 | unit-contract, full-release-gate | Seeded random number generation |
+| `TG3-F61B69D944EA5766` | 202-202 | 4 | architecture | yes | integrated | required | C22 | unit-contract, full-release-gate | Fixed-step simulation |
 | `TG3-727043434F8EC75A` | 203-203 | 4 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Rendering-disabled fast simulation |
 | `TG3-6352DA5C5F09FBFE` | 204-204 | 4 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Audio-disabled test execution |
-| `TG3-9D80C1BAD30B433D` | 205-205 | 4 | cloud | yes | missing | required | C22 | unit-contract, interaction-matrix | Cloud and platform integration disablement |
-| `TG3-4DDE791F28255399` | 206-206 | 4 | gameplay | yes | missing | required | C22 | deterministic-scenario, base-comparison | Synthetic gameplay input |
-| `TG3-A614771A0A46F528` | 207-207 | 4 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Direct game-state observation |
+| `TG3-9D80C1BAD30B433D` | 205-205 | 4 | cloud | yes | integrated | required | C22 | unit-contract, interaction-matrix | Cloud and platform integration disablement |
+| `TG3-4DDE791F28255399` | 206-206 | 4 | gameplay | yes | integrated | required | C22 | deterministic-scenario, base-comparison | Synthetic gameplay input |
+| `TG3-A614771A0A46F528` | 207-207 | 4 | architecture | yes | integrated | required | C22 | unit-contract, full-release-gate | Direct game-state observation |
 | `TG3-C5D3336290C199D7` | 208-208 | 4 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Scenario mutation |
 | `TG3-B17254908B65AC9C` | 209-209 | 4 | ml-training | yes | missing | required | C22 | deterministic-scenario, journey-checkpoint | Multi-policy execution |
 | `TG3-06B2BBD0E95C868E` | 210-210 | 4 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Branch-to-branch comparison |
@@ -1158,7 +1158,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-C3EEA59065E26B03` | 217-217 | 4 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | CI integration |
 | `TG3-1991B9B55A883FB1` | 218-218 | 4 | ml-training | yes | missing | required | C39 | deterministic-scenario, journey-checkpoint | Agent Skill integration |
 | `TG3-783F519FB376EA86` | 222-222 | 4 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Determinism first.: Every important failure must be replayable from a seed and action trace. |
-| `TG3-AE0E070082C5236A` | 223-223 | 4 | ui-ux | yes | missing | required | C22 | journey-checkpoint, interaction-matrix | Structured state before pixels.: Policies should initially read game state directly rather than interpreting screenshots. |
+| `TG3-AE0E070082C5236A` | 223-223 | 4 | ui-ux | yes | integrated | required | C22 | journey-checkpoint, interaction-matrix | Structured state before pixels.: Policies should initially read game state directly rather than interpreting screenshots. |
 | `TG3-F70E997F99BF1F11` | 224-224 | 4 | ml-training | yes | missing | required | C24 | deterministic-scenario, journey-checkpoint | Scripted agents before neural agents.: Immediate QA value should arrive before model training begins. |
 | `TG3-AEFF29E26549C058` | 225-225 | 4 | ml-training | yes | missing | rejected | C22 | deterministic-scenario, journey-checkpoint | Multiple specialized agents.: One “best” player will not cover the entire bug surface. |
 | `TG3-57D67EAEEE3263CF` | 226-226 | 4 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Evidence over pass/fail.: Every failure should contain state |
@@ -1167,19 +1167,19 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-A5BB24E43F74559E` | 226-226 | 4 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | metrics |
 | `TG3-F76EF5D3690F41D5` | 226-226 | 4 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | reproduction details. |
 | `TG3-92AB5EBFDAD265ED` | 227-227 | 4 | gameplay | yes | missing | required | C22 | deterministic-scenario, base-comparison | Headless scalability.: The long-term simulation core should run without a browser renderer. |
-| `TG3-CFDA0D25C3B4C9B3` | 228-228 | 4 | cloud | yes | missing | required | C22 | unit-contract, interaction-matrix | Production isolation.: Test hooks must not affect normal players |
-| `TG3-49242F518708EBB7` | 228-228 | 4 | cloud | yes | missing | required | C22 | unit-contract, interaction-matrix | leaderboards |
-| `TG3-E20EAAF76A5CCEAB` | 228-228 | 4 | cloud | yes | missing | required | C22 | unit-contract, interaction-matrix | saves |
-| `TG3-CB43003DF61ECB45` | 228-228 | 4 | cloud | yes | missing | required | C22 | unit-contract, interaction-matrix | cloud synchronization |
-| `TG3-244F76D36ACFE06E` | 228-228 | 4 | cloud | yes | missing | required | C22 | unit-contract, interaction-matrix | public builds. |
+| `TG3-CFDA0D25C3B4C9B3` | 228-228 | 4 | cloud | yes | integrated | required | C22 | unit-contract, interaction-matrix | Production isolation.: Test hooks must not affect normal players |
+| `TG3-49242F518708EBB7` | 228-228 | 4 | cloud | yes | integrated | required | C22 | unit-contract, interaction-matrix | leaderboards |
+| `TG3-E20EAAF76A5CCEAB` | 228-228 | 4 | cloud | yes | integrated | required | C22 | unit-contract, interaction-matrix | saves |
+| `TG3-CB43003DF61ECB45` | 228-228 | 4 | cloud | yes | integrated | required | C22 | unit-contract, interaction-matrix | cloud synchronization |
+| `TG3-244F76D36ACFE06E` | 228-228 | 4 | cloud | yes | integrated | required | C22 | unit-contract, interaction-matrix | public builds. |
 | `TG3-E40AEA47871E892D` | 229-229 | 4 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Incremental adoption.: Every phase must create useful testing value independently. |
 | `TG3-A436F67F91ED7998` | 231-231 | 4 | architecture | no | reference | reference | C22 | documentation-validation | --- |
-| `TG3-84AD01BED85F6E34` | 235-235 | 5 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | A development-only API should be exposed from inside `js/game.js`. |
+| `TG3-84AD01BED85F6E34` | 235-235 | 5 | architecture | yes | integrated | required | C22 | unit-contract, full-release-gate | A development-only API should be exposed from inside `js/game.js`. |
 | `TG3-801FC3630F6F9C00` | 237-237 | 5 | architecture | no | reference | reference | C22 | documentation-validation | Recommended global name: |
-| `TG3-8623FB5908989875` | 243-243 | 5 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | The API should only exist when an explicit test flag is enabled, for example: |
+| `TG3-8623FB5908989875` | 243-243 | 5 | architecture | yes | integrated | required | C22 | unit-contract, full-release-gate | The API should only exist when an explicit test flag is enabled, for example: |
 | `TG3-49FC206A996627EE` | 249-249 | 5 | architecture | no | reference | reference | C22 | documentation-validation | or through a build-time constant. |
 | `TG3-D2146865003F51D2` | 313-313 | 5 | architecture | no | reference | reference | C22 | documentation-validation | Return value: |
-| `TG3-67B07A5F11C09398` | 326-326 | 5 | ml-training | yes | missing | required | C22 | deterministic-scenario, journey-checkpoint | The API should follow the conceptual structure used by established reinforcement-learning environments: |
+| `TG3-67B07A5F11C09398` | 326-326 | 5 | ml-training | yes | integrated | required | C22 | deterministic-scenario, journey-checkpoint | The API should follow the conceptual structure used by established reinforcement-learning environments: |
 | `TG3-997208BA257A605C` | 332-332 | 5 | architecture | no | reference | reference | C22 | documentation-validation | Return value: |
 | `TG3-A4C77280A5517740` | 345-345 | 5 | architecture | no | reference | reference | C22 | documentation-validation | Definitions: |
 | `TG3-AA329AE77563E4DE` | 347-347 | 5 | gameplay | yes | missing | required | C22 | deterministic-scenario, base-comparison | `terminated`: The episode reached a natural terminal state such as death |
@@ -1191,11 +1191,11 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-BE2CFD65AF8FC083` | 348-348 | 5 | performance | yes | missing | required | C22 | interaction-matrix, long-run | safety |
 | `TG3-D2D7E3D048DE3A75` | 348-348 | 5 | performance | yes | missing | required | C22 | interaction-matrix, long-run | test budget limit. |
 | `TG3-41FCA9D827F5D60E` | 349-349 | 5 | ml-training | yes | missing | required | C22 | deterministic-scenario, journey-checkpoint | `info`: Debugging data that should not be required for policy learning. |
-| `TG3-EC8A6D01A58F8E39` | 353-353 | 5 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | A browser bridge should not require one cross-process call for every simulation frame. |
+| `TG3-EC8A6D01A58F8E39` | 353-353 | 5 | architecture | yes | integrated | required | C22 | unit-contract, full-release-gate | A browser bridge should not require one cross-process call for every simulation frame. |
 | `TG3-2A7619FDCD9C0E07` | 355-355 | 5 | data-schema | no | reference | reference | C22 | documentation-validation | Recommended batch format: |
 | `TG3-23832CDB4C04FF88` | 388-388 | 5 | architecture | no | reference | reference | C22 | documentation-validation | This lowers browser automation overhead and makes deterministic traces smaller. |
 | `TG3-C73DA5FD4CD03B1A` | 390-390 | 5 | architecture | no | reference | reference | C22 | documentation-validation | --- |
-| `TG3-C4A749DE0E82DD39` | 394-394 | 6 | ui-ux | yes | missing | required | C22 | journey-checkpoint, interaction-matrix | The first learned policies should receive structured observations rather than screenshots. |
+| `TG3-C4A749DE0E82DD39` | 394-394 | 6 | ui-ux | yes | integrated | required | C22 | journey-checkpoint, interaction-matrix | The first learned policies should receive structured observations rather than screenshots. |
 | `TG3-033B36FB3A0B2558` | 542-542 | 6 | ml-training | yes | missing | required | C22 | deterministic-scenario, journey-checkpoint | For machine learning, values should generally be normalized: |
 | `TG3-A214799FC7A672C8` | 544-544 | 6 | gameplay | yes | missing | required | C22 | deterministic-scenario, base-comparison | Positions relative to player or arena center |
 | `TG3-339BF2825571CF70` | 545-545 | 6 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Coordinates divided by arena dimensions |
@@ -1216,9 +1216,9 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-76E578CE69603E53` | 565-565 | 6 | ml-training | yes | missing | required | C22 | deterministic-scenario, journey-checkpoint | Faster training |
 | `TG3-C86CABD851F64709` | 566-566 | 6 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Lower compute cost |
 | `TG3-6FB18F1AEC1F7A46` | 567-567 | 6 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Easier debugging |
-| `TG3-696953CB4F5CD620` | 568-568 | 6 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Better determinism |
+| `TG3-696953CB4F5CD620` | 568-568 | 6 | architecture | yes | integrated | required | C22 | unit-contract, full-release-gate | Better determinism |
 | `TG3-3613934D0942F757` | 569-569 | 6 | ml-training | yes | missing | required | C22 | deterministic-scenario, journey-checkpoint | Clearer policy interpretation |
-| `TG3-89A63AD5C36FE767` | 570-570 | 6 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Less sensitivity to rendering changes |
+| `TG3-89A63AD5C36FE767` | 570-570 | 6 | architecture | yes | integrated | required | C22 | unit-contract, full-release-gate | Less sensitivity to rendering changes |
 | `TG3-811E05D71A75DB8F` | 571-571 | 6 | ui-ux | yes | missing | required | C22 | journey-checkpoint, interaction-matrix | No dependence on resolution |
 | `TG3-1F825906C3D06D59` | 571-571 | 6 | ui-ux | yes | missing | required | C22 | journey-checkpoint, interaction-matrix | shaders |
 | `TG3-D37FCDA836AB3734` | 571-571 | 6 | ui-ux | yes | missing | required | C22 | journey-checkpoint, interaction-matrix | particles |
@@ -1240,15 +1240,15 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-6F09ABB2271AD092` | 643-643 | 8 | architecture | no | reference | reference | C22 | documentation-validation | Determinism is the foundation of credible autonomous testing. |
 | `TG3-31DFF3019CBE2721` | 647-647 | 8 | gameplay | yes | missing | required | C22 | deterministic-scenario, base-comparison | Replace gameplay-critical `Math.random()` usage with a seeded random source. |
 | `TG3-1AF055C222AF0162` | 648-648 | 8 | preservation | yes | missing | required | C22 | preservation-corpus, full-release-gate | Preserve a normal nondeterministic production source outside test mode. |
-| `TG3-56F1A31EDF776117` | 649-649 | 8 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Use a fixed simulation timestep. |
-| `TG3-9580A423155EE2C2` | 650-650 | 8 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Allow simulation to advance without `requestAnimationFrame`. |
+| `TG3-56F1A31EDF776117` | 649-649 | 8 | architecture | yes | integrated | required | C22 | unit-contract, full-release-gate | Use a fixed simulation timestep. |
+| `TG3-9580A423155EE2C2` | 650-650 | 8 | architecture | yes | integrated | required | C22 | unit-contract, full-release-gate | Allow simulation to advance without `requestAnimationFrame`. |
 | `TG3-02B8ADB0B0584CFE` | 651-651 | 8 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Disable or mock audio. |
-| `TG3-7E49E321ACE558E5` | 652-652 | 8 | cloud | yes | missing | required | C22 | unit-contract, interaction-matrix | Disable cloud saves and platform APIs. |
-| `TG3-29EBF3C3045D9FE3` | 653-653 | 8 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Prevent test runs from affecting achievements |
-| `TG3-36FFE3CF3A3D7061` | 653-653 | 8 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Prevent test runs from shards |
-| `TG3-05AA234335FB4618` | 653-653 | 8 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Prevent test runs from progression |
-| `TG3-36E3DEFB3D7027CD` | 653-653 | 8 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Prevent test runs from leaderboards |
-| `TG3-EBE527880D67E1A2` | 653-653 | 8 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Prevent test runs from analytics. |
+| `TG3-7E49E321ACE558E5` | 652-652 | 8 | cloud | yes | integrated | required | C22 | unit-contract, interaction-matrix | Disable cloud saves and platform APIs. |
+| `TG3-29EBF3C3045D9FE3` | 653-653 | 8 | architecture | yes | integrated | required | C22 | unit-contract, full-release-gate | Prevent test runs from affecting achievements |
+| `TG3-36FFE3CF3A3D7061` | 653-653 | 8 | architecture | yes | integrated | required | C22 | unit-contract, full-release-gate | Prevent test runs from shards |
+| `TG3-05AA234335FB4618` | 653-653 | 8 | architecture | yes | integrated | required | C22 | unit-contract, full-release-gate | Prevent test runs from progression |
+| `TG3-36E3DEFB3D7027CD` | 653-653 | 8 | architecture | yes | integrated | required | C22 | unit-contract, full-release-gate | Prevent test runs from leaderboards |
+| `TG3-EBE527880D67E1A2` | 653-653 | 8 | architecture | yes | integrated | required | C22 | unit-contract, full-release-gate | Prevent test runs from analytics. |
 | `TG3-A160B5A7B6A9EB6C` | 654-654 | 8 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Record the exact game build |
 | `TG3-948BA9199C5096EF` | 654-654 | 8 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | commit |
 | `TG3-F2F65EAF85507017` | 654-654 | 8 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | config hash |
@@ -1274,8 +1274,8 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-ACFA5449A0E272F2` | 696-696 | 8 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Browser environment |
 | `TG3-70704EDAC1160880` | 697-697 | 8 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Rendering optionally disabled |
 | `TG3-83130D9C679C2C4C` | 698-698 | 8 | cloud | yes | missing | required | C22 | unit-contract, interaction-matrix | Audio and cloud disabled |
-| `TG3-82109F11039C5823` | 699-699 | 8 | architecture | yes | missing | required | C22 | unit-contract, full-release-gate | Batched simulation stepping |
-| `TG3-B669B03E489F8980` | 700-700 | 8 | gameplay | yes | missing | required | C22 | deterministic-scenario, base-comparison | Used for early deterministic gameplay testing |
+| `TG3-82109F11039C5823` | 699-699 | 8 | architecture | yes | integrated | required | C22 | unit-contract, full-release-gate | Batched simulation stepping |
+| `TG3-B669B03E489F8980` | 700-700 | 8 | gameplay | yes | integrated | required | C22 | deterministic-scenario, base-comparison | Used for early deterministic gameplay testing |
 | `TG3-650CB5F897A52B38` | 704-704 | 8 | architecture | yes | missing | required | C30 | unit-contract, full-release-gate | Pure simulation module in Node.js or a worker process |
 | `TG3-4E6917F2AABC2376` | 705-705 | 8 | architecture | yes | missing | required | C30 | unit-contract, full-release-gate | No DOM or canvas dependency |
 | `TG3-E243956DCAC992AE` | 706-706 | 8 | architecture | yes | prototype | required | C30 | unit-contract, full-release-gate | Many parallel environments |
@@ -1788,7 +1788,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-CE3677C2DE3A91BA` | 1735-1735 | 24 | architecture | no | reference | reference | C21 | documentation-validation | Deliverables: |
 | `TG3-8D0AF7A9DD1AA779` | 1737-1737 | 24 | architecture | yes | missing | required | C21 | unit-contract, full-release-gate | TearBench architecture document |
 | `TG3-C1E2974769C7444A` | 1738-1738 | 24 | security | yes | missing | required | C21 | malformed-input, interaction-matrix | Test-mode security and isolation rules |
-| `TG3-C122600232A39A7D` | 1739-1739 | 24 | data-schema | yes | missing | required | C22 | unit-contract, malformed-input | Initial observation and action schemas |
+| `TG3-C122600232A39A7D` | 1739-1739 | 24 | data-schema | yes | integrated | required | C22 | unit-contract, malformed-input | Initial observation and action schemas |
 | `TG3-DD2832BF4C955F5C` | 1740-1740 | 24 | data-schema | yes | missing | required | C21 | unit-contract, malformed-input | Scenario schema |
 | `TG3-EEAE4402E3B0BAC4` | 1741-1741 | 24 | data-schema | yes | missing | required | C21 | unit-contract, malformed-input | Artifact schema |
 | `TG3-2469E2F23746FF51` | 1742-1742 | 24 | gameplay | yes | missing | required | C21 | deterministic-scenario, base-comparison | Definition of deterministic gameplay-critical randomness |
@@ -3469,7 +3469,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-B5851C34917C36A6` | 4212-4212 | 41 | architecture | yes | missing | required | C28 | unit-contract, full-release-gate | Graveyard |
 | `TG3-5981BBEDC606CC33` | 4212-4212 | 41 | architecture | yes | missing | required | C28 | unit-contract, full-release-gate | Frontier |
 | `TG3-AEB2ECC0624C142A` | 4212-4212 | 41 | architecture | yes | missing | required | C28 | unit-contract, full-release-gate | Corpus governance |
-| `TG3-4581FE2DA0CD43C5` | 4213-4213 | 41 | ml-training | yes | missing | required | C22 | deterministic-scenario, journey-checkpoint | Structured agent decision traces and observation-class labels |
+| `TG3-4581FE2DA0CD43C5` | 4213-4213 | 41 | ml-training | yes | integrated | required | C22 | deterministic-scenario, journey-checkpoint | Structured agent decision traces and observation-class labels |
 | `TG3-9139C06D3DDC9045` | 4214-4214 | 41 | architecture | yes | missing | required | C39 | unit-contract, full-release-gate | Timeline |
 | `TG3-EC5D1D14EBEFE64C` | 4214-4214 | 41 | architecture | yes | missing | required | C39 | unit-contract, full-release-gate | action |
 | `TG3-1D97B1DCE7A92957` | 4214-4214 | 41 | architecture | yes | missing | required | C39 | unit-contract, full-release-gate | state |
@@ -3754,7 +3754,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-85769871FB687A14` | 4885-4885 | 46 | ml-training | yes | missing | required | C21 | deterministic-scenario, journey-checkpoint | Model hash |
 | `TG3-9954E1D4E0B95EC6` | 4886-4886 | 46 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | Training dataset hash |
 | `TG3-54D3E1C8432D2A79` | 4887-4887 | 46 | ml-training | yes | missing | required | C21 | deterministic-scenario, journey-checkpoint | Environment commit |
-| `TG3-5351AAC1C0A1F5DE` | 4888-4888 | 46 | ml-training | yes | missing | required | C22 | deterministic-scenario, journey-checkpoint | Observation schema version |
+| `TG3-5351AAC1C0A1F5DE` | 4888-4888 | 46 | ml-training | yes | integrated | required | C22 | deterministic-scenario, journey-checkpoint | Observation schema version |
 | `TG3-316BB68E8C80477C` | 4889-4889 | 46 | ml-training | yes | missing | required | C21 | deterministic-scenario, journey-checkpoint | Action schema version |
 | `TG3-C37F15D72F95C00F` | 4890-4890 | 46 | ml-training | yes | missing | required | C21 | deterministic-scenario, journey-checkpoint | Reward configuration |
 | `TG3-7168BCB8690AC80D` | 4891-4891 | 46 | ml-training | yes | missing | required | C21 | deterministic-scenario, journey-checkpoint | Curriculum version |
@@ -3795,9 +3795,9 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-E114E5AF3EABF4A7` | 4943-4943 | 47 | ml-training | yes | missing | required | C25 | deterministic-scenario, journey-checkpoint | Agent can traverse every menu route with mouse and controller |
 | `TG3-CE63B6B2550C1C80` | 4944-4944 | 47 | ui-ux | yes | missing | required | C22 | journey-checkpoint, interaction-matrix | No direct state mutation in certification mode |
 | `TG3-7C8A568782D181CC` | 4948-4948 | 47 | gameplay | no | reference | reference | C22 | documentation-validation | Deliver: |
-| `TG3-C0BEA29CA4B1A283` | 4950-4950 | 47 | gameplay | yes | missing | required | C22 | deterministic-scenario, base-comparison | Full-game synthetic input channel |
-| `TG3-0CFB27379EEB876D` | 4951-4951 | 47 | gameplay | yes | missing | required | C22 | deterministic-scenario, base-comparison | Structured observations |
-| `TG3-08369A46B6E0192B` | 4952-4952 | 47 | gameplay | yes | missing | required | C22 | deterministic-scenario, base-comparison | Fixed-step deterministic simulation |
+| `TG3-C0BEA29CA4B1A283` | 4950-4950 | 47 | gameplay | yes | integrated | required | C22 | deterministic-scenario, base-comparison | Full-game synthetic input channel |
+| `TG3-0CFB27379EEB876D` | 4951-4951 | 47 | gameplay | yes | integrated | required | C22 | deterministic-scenario, base-comparison | Structured observations |
+| `TG3-08369A46B6E0192B` | 4952-4952 | 47 | gameplay | yes | integrated | required | C22 | deterministic-scenario, base-comparison | Fixed-step deterministic simulation |
 | `TG3-98D84DED5C43AE55` | 4953-4953 | 47 | gameplay | yes | missing | required | C24 | deterministic-scenario, base-comparison | Scripted combat baseline using real enemies |
 | `TG3-B6BDB025B14B2E91` | 4954-4954 | 47 | gameplay | yes | missing | required | C22 | deterministic-scenario, base-comparison | Wave watchdog and invariants |
 | `TG3-65E78C48083A4D77` | 4956-4956 | 47 | gameplay | yes | missing | required | C22 | deterministic-scenario, base-comparison | Acceptance: |
@@ -17699,8 +17699,8 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | bySourceSection | 81 | 461 |
 | bySourceSection | unsectioned | 8 |
 | byState | contract | 108 |
-| byState | integrated | 2 |
-| byState | missing | 6613 |
+| byState | integrated | 37 |
+| byState | missing | 6578 |
 | byState | prototype | 162 |
 | byState | reference | 1806 |
 | byDisposition | optional | 158 |

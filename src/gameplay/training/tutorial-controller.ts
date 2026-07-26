@@ -34,6 +34,8 @@ export interface TutorialEnemySnapshot {
   readonly tutorialDummy: boolean;
   readonly hp: number;
   readonly maxHp: number;
+  readonly x: number;
+  readonly y: number;
 }
 
 export interface TutorialUpdateSnapshot {
@@ -51,6 +53,7 @@ export type TutorialIntent =
   | Readonly<{ type: "sound"; cue: "rankup" | "ui" }>
   | Readonly<{ type: "spawn"; kind: "charger" | "ranged"; hpScale: number; role: "dummy" | "shooter"; x?: number }>
   | Readonly<{ type: "stabilize-dummy"; enemyId: string; minimumStun: number; healBelow: number }>
+  | Readonly<{ type: "reset-dummy"; enemyId: string; x: number }>
   | Readonly<{ type: "terminate-run"; reason: "quit" }>
   | Readonly<{ type: "navigate"; screen: "menu" }>
   | Readonly<{ type: "release-pointer" }>
@@ -127,11 +130,13 @@ export class TutorialController {
   private previousGrounded = true;
   private previousBladeState = "held";
   private dashLatched = false;
+  private previousPlayerX: number | undefined;
 
   start(viewportWidth: number): void {
     this.active = true; this.lessonIndex = 0; this.completionDelay = 0; this.endingTime = 0;
     this.ghostTime = 0; this.anchorX = viewportWidth * 0.2; this.previousGrounded = true;
     this.previousBladeState = "held"; this.dashLatched = false;
+    this.previousPlayerX = undefined;
     this.counters = {};
   }
 
@@ -150,8 +155,10 @@ export class TutorialController {
     if (snapshot.skipPressed && !lesson.final && this.completionDelay <= 0) {
       this.completionDelay = 0.4; intents.push({ type: "sound", cue: "ui" });
     }
-    if (snapshot.movingLeft) this.counters.moveL = count(this.counters, "moveL") + dt * 60;
-    if (snapshot.movingRight) this.counters.moveR = count(this.counters, "moveR") + dt * 60;
+    const horizontalDelta = this.previousPlayerX === undefined ? 0 : player.x - this.previousPlayerX;
+    this.previousPlayerX = player.x;
+    if (snapshot.movingLeft || horizontalDelta < -0.01) this.counters.moveL = count(this.counters, "moveL") + dt * 60;
+    if (snapshot.movingRight || horizontalDelta > 0.01) this.counters.moveR = count(this.counters, "moveR") + dt * 60;
     if (this.previousGrounded && !player.onGround && player.vy < -200) this.mark("jump");
     this.previousGrounded = player.onGround;
     if (player.dashTimer > 0 && !this.dashLatched) { this.mark("dash"); this.dashLatched = true; }
@@ -160,7 +167,13 @@ export class TutorialController {
     this.previousBladeState = snapshot.bladeState;
 
     const liveDummies = snapshot.enemies.filter((enemy) => enemy.tutorialDummy && !enemy.dead);
-    for (const enemy of liveDummies) intents.push({ type: "stabilize-dummy", enemyId: enemy.id, minimumStun: 1, healBelow: enemy.maxHp * 0.5 });
+    for (const enemy of liveDummies) {
+      intents.push({ type: "stabilize-dummy", enemyId: enemy.id, minimumStun: 1, healBelow: enemy.maxHp * 0.5 });
+      if (Math.abs(enemy.x - player.x) > 320) {
+        const x = Math.max(160, Math.min(player.x + (player.facing || 1) * 180, snapshot.viewportWidth - 160));
+        intents.push({ type: "reset-dummy", enemyId: enemy.id, x });
+      }
+    }
     if ((lesson.dummyCount ?? 0) > liveDummies.length) {
       const x = Math.max(160, Math.min(player.x + (player.facing || 1) * 260, snapshot.viewportWidth - 160));
       intents.push({ type: "spawn", kind: "charger", hpScale: 8, role: "dummy", x });
@@ -172,6 +185,10 @@ export class TutorialController {
       if (this.completionDelay <= 0) {
         this.lessonIndex = Math.min(this.lessonIndex + 1, TUTORIAL_LESSONS.length - 1);
         this.counters.airHit = 0; this.counters.strike = 0; this.ghostTime = 0;
+        if ((this.step().dummyCount ?? 0) > 0) {
+          const x = Math.max(160, Math.min(player.x + (player.facing || 1) * 180, snapshot.viewportWidth - 160));
+          for (const enemy of liveDummies) intents.push({ type: "reset-dummy", enemyId: enemy.id, x });
+        }
       }
     } else if (lesson.final) {
       this.endingTime += dt;

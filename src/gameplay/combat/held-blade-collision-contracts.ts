@@ -7,7 +7,7 @@ export interface BatonSegment {
 
 export interface HeldBladePlayer {
   x: number; y: number; vy: number; onGround: boolean; hp: number; maxHp: number;
-  airTime: number; dashEndT: number; tempoT: number; tempoStk: number;
+  airTime: number; dashTimer: number; dashX: number; dashY: number; dashEndT: number; tempoT: number; tempoStk: number;
   rallySource?: object | null; shield: number; maxShield: number;
   voidLane: string | null;
   claimRally(damage: number): number; heal(amount: number): void;
@@ -66,7 +66,7 @@ export interface HeldBladeTuning {
     minHitSpeed: number; launchPower: number; risingLaunchBonus: number;
     slamMinDownSpeed: number; launchMinUpSpeed: number; risingSpeedRef: number;
     slamPowerSpeed: number; slamEmpowerAt: number; slamMultiplier: number;
-    slamPowerBonus: number; risingDmgBonus: number;
+    slamPowerBonus: number; risingDmgBonus: number; tutorialRecognition: boolean;
   };
   style: { styleDamage: number; styleDamageMax: number; aerialRaveCap: number };
   hitStop: { small: number; big: number; threshold: number };

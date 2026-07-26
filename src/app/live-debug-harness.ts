@@ -43,6 +43,7 @@ export interface LiveDebugHarnessContext {
   readonly selectSettingsTab: (tab: string) => void;
   readonly auditEffects: () => object;
   readonly snapshot: () => object;
+  readonly tutorialSnapshot: () => object;
   readonly stopRecording: () => void;
   readonly install: (api: object) => void;
 }
@@ -243,6 +244,6 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
     pause() { if (context.screen() === "playing") context.setScreen("paused"); },
     resume() { if (context.screen() === "paused") context.setScreen("playing"); },
     openSettings(tab?: string) { if (context.screen() !== "menu") context.setScreen("menu"); context.setScreen("settings", { returnTo: "menu" }); if (tab) context.selectSettingsTab(tab); },
-    auditEffects: context.auditEffects, state: context.snapshot,
+    auditEffects: context.auditEffects, tutorial: context.tutorialSnapshot, state: context.snapshot,
   }));
 }

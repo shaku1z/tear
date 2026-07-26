@@ -15,6 +15,10 @@ export interface LiveTutorialEnemy {
   stun: number;
   x: number;
   y: number;
+  vx?: number;
+  vy?: number;
+  onGround?: boolean;
+  hitCd?: number;
   hh: number;
   affixCount?: number;
   contactDmg: number;
@@ -110,7 +114,7 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
         player: port.player(), bladeState: port.bladeState(), viewportWidth: port.viewportWidth,
         enemies: enemies.map((enemy, index) => ({
           id: String(index), kind: enemy.kind, dead: enemy.dead === true, tutorialDummy: enemy.tutDummy === true,
-          hp: enemy.hp, maxHp: enemy.maxHp,
+          hp: enemy.hp, maxHp: enemy.maxHp, x: enemy.x, y: enemy.y,
         })),
       });
       for (const intent of intents) {
@@ -130,6 +134,15 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
             if (enemy !== undefined) {
               enemy.stun = Math.max(enemy.stun, intent.minimumStun);
               if (enemy.hp < intent.healBelow) enemy.hp = enemy.maxHp;
+            }
+            break;
+          }
+          case "reset-dummy": {
+            const enemy = enemies[Number(intent.enemyId)];
+            if (enemy !== undefined) {
+              enemy.x = intent.x; enemy.y = port.groundY() - enemy.hh;
+              enemy.vx = 0; enemy.vy = 0; enemy.onGround = true; enemy.hitCd = 0;
+              enemy.stun = Math.max(enemy.stun, 1); enemy.hp = enemy.maxHp;
             }
             break;
           }

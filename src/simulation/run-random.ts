@@ -16,7 +16,14 @@ export class RunRandomStreams {
 
   reset(seed: number | string): void {
     this.#seed = seed;
-    this.#streams = this.#createStreams(seed);
+    this.#streams.legacy.reseed(seed);
+    this.#streams.combat.reseed(`${String(seed)}::combat`);
+    this.#streams["enemy-ai"].reseed(`${String(seed)}::enemy-ai`);
+    this.#streams.spawn.reseed(`${String(seed)}::spawn`);
+    this.#streams.draft.reseed(`${String(seed)}::draft`);
+    this.#streams.boss.reseed(`${String(seed)}::boss`);
+    this.#streams.world.reseed(`${String(seed)}::world`);
+    this.#streams.cosmetic.reseed(`${String(seed)}::cosmetic`);
   }
 
   stream(name: RunRandomStreamName): RandomSource {

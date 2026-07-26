@@ -65,7 +65,8 @@ export function runLiveCollisionPhase(host: LiveCollisionPhaseHost, dt: number):
   const { player, blade, run, state } = host;
   const held = blade.heldCollisionSegment(player);
   state.hitStop = resolveHeldBladeEnemyCollisions({ player, blade, enemies: state.enemies, run, segment: held,
-    currentHitStop: state.hitStop, tuning: heldTuning(host.width), effects: heldEffects(host), hooks: heldHooks(host),
+    currentHitStop: state.hitStop, tuning: heldTuning(host.width, host.run.mode === "tutorial"),
+    effects: heldEffects(host), hooks: heldHooks(host),
     segmentCircle: (segment, x, y, radius) => host.segmentCircle(segment.x1, segment.y1, segment.x2, segment.y2, x, y, radius),
     segmentPointDistance: host.segmentPointDistance, weaponSegmentContact: host.weaponSegmentContact,
     distance: host.distance }).hitStop;
@@ -86,13 +87,16 @@ export function runLiveCollisionPhase(host: LiveCollisionPhaseHost, dt: number):
   resolveDeath(host);
 }
 
-function heldTuning(width: number): HeldBladeCollisionInput["tuning"] {
+function heldTuning(width: number, tutorial: boolean): HeldBladeCollisionInput["tuning"] {
   return { width, groundY: CONFIG.world.groundY,
     blade: { minHitSpeed: CONFIG.blade.minHitSpeed, launchPower: CONFIG.blade.launchPower,
-      risingLaunchBonus: CONFIG.blade.risingLaunchBonus, slamMinDownSpeed: CONFIG.blade.slamMinDownSpeed,
-      launchMinUpSpeed: CONFIG.blade.launchMinUpSpeed, risingSpeedRef: CONFIG.blade.risingSpeedRef,
+      risingLaunchBonus: CONFIG.blade.risingLaunchBonus,
+      slamMinDownSpeed: tutorial ? Math.min(CONFIG.blade.slamMinDownSpeed, CONFIG.blade.minHitSpeed * 0.85) : CONFIG.blade.slamMinDownSpeed,
+      launchMinUpSpeed: tutorial ? Math.min(CONFIG.blade.launchMinUpSpeed, CONFIG.blade.minHitSpeed) : CONFIG.blade.launchMinUpSpeed,
+      risingSpeedRef: CONFIG.blade.risingSpeedRef,
       slamPowerSpeed: CONFIG.blade.slamPowerSpeed, slamEmpowerAt: CONFIG.blade.slamEmpowerAt,
-      slamMultiplier: CONFIG.blade.slamMultiplier, slamPowerBonus: CONFIG.blade.slamPowerBonus, risingDmgBonus: CONFIG.blade.risingDmgBonus },
+      slamMultiplier: CONFIG.blade.slamMultiplier, slamPowerBonus: CONFIG.blade.slamPowerBonus,
+      risingDmgBonus: CONFIG.blade.risingDmgBonus, tutorialRecognition: tutorial },
     style: { styleDamage: CONFIG.skill.styleDamage, styleDamageMax: CONFIG.skill.styleDamageMax, aerialRaveCap: CONFIG.skill.aerialRaveCap },
     hitStop: { small: CONFIG.hitStop.small, big: CONFIG.hitStop.big, threshold: CONFIG.hitStop.threshold },
     juice: { sparkCount: CONFIG.juice.sparkCount, shakeSmall: CONFIG.juice.shakeSmall, shakeBig: CONFIG.juice.shakeBig, zoomBig: CONFIG.juice.zoomBig },
