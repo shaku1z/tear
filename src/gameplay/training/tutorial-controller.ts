@@ -6,6 +6,8 @@ export interface TutorialLesson {
   readonly title: string;
   readonly description: string;
   readonly keys: readonly string[];
+  /** Technique counters owned by this lesson and cleared when the lesson begins. */
+  readonly objectiveMarks: readonly TutorialMark[];
   readonly dummyCount?: number;
   readonly ranged?: boolean;
   readonly final?: boolean;
@@ -74,18 +76,18 @@ const count = (counters: Readonly<Partial<Record<TutorialMark, number>>>, key: T
 const bounded = (value: number, target: number) => Math.min(value, target);
 
 const LESSONS: TutorialLesson[] = [
-  { title: "MOVE", description: "Run with A and D. Warm up — move both ways.", keys: ["A", "D"], progress: (n) => [(count(n, "moveL") > 25 ? 1 : 0) + (count(n, "moveR") > 25 ? 1 : 0), 2], complete: (n) => count(n, "moveL") > 25 && count(n, "moveR") > 25 },
-  { title: "JUMP", description: "W or Space to jump. Hold S on a ledge to drop through it.", keys: ["W", "SPACE"], progress: (n) => [bounded(count(n, "jump"), 2), 2], complete: (n) => count(n, "jump") >= 2 },
-  { title: "DASH", description: "Shift to dash — steer it mid-flight with W / A / S / D.", keys: ["SHIFT"], progress: (n) => [bounded(count(n, "dash"), 2), 2], complete: (n) => count(n, "dash") >= 2 },
-  { title: "CUT", description: "The blade follows your mouse — SPEED IS DAMAGE. Slash the dummy, fast.", keys: ["MOUSE"], dummyCount: 1, progress: (n) => [bounded(count(n, "strike"), 3), 3], complete: (n) => count(n, "strike") >= 3 },
-  { title: "LAUNCH", description: "A fast UPWARD swing pops an enemy into the air.", keys: ["MOUSE ↑"], dummyCount: 1, progress: (n) => [bounded(count(n, "launch"), 1), 1], complete: (n) => count(n, "launch") >= 1 },
-  { title: "JUGGLE", description: "Launch it — then cut it again before it lands.", keys: ["MOUSE ↑", "MOUSE"], dummyCount: 1, progress: (n) => [bounded(count(n, "airHit"), 2), 2], complete: (n) => count(n, "airHit") >= 2 },
-  { title: "SLAM", description: "While airborne, strike DOWN through an enemy — a slam hits harder.", keys: ["W", "MOUSE ↓"], dummyCount: 1, progress: (n) => [count(n, "slam") + count(n, "superslam") >= 1 ? 1 : 0, 1], complete: (n) => count(n, "slam") >= 1 || count(n, "superslam") >= 1 },
-  { title: "POWER SLAM", description: "Dash DOWN to fall fast, then slam mid-fall — a fast descent hits far harder.", keys: ["S + SHIFT", "MOUSE ↓"], dummyCount: 1, progress: (n) => [bounded(count(n, "superslam"), 1), 1], complete: (n) => count(n, "superslam") >= 1 },
-  { title: "UPDRAFT", description: "Launch WHILE RISING — jump first, then swing up hard.", keys: ["W", "MOUSE ↑"], dummyCount: 1, progress: (n) => [bounded(count(n, "updraft"), 1), 1], complete: (n) => count(n, "updraft") >= 1 },
-  { title: "THROW", description: "Right-click to hurl the blade through an enemy — right-click again to recall it.", keys: ["RMB"], dummyCount: 1, progress: (n) => [(count(n, "throwHit") >= 1 ? 1 : 0) + (count(n, "recall") >= 1 ? 1 : 0), 2], complete: (n) => count(n, "throwHit") >= 1 && count(n, "recall") >= 1 },
-  { title: "PARRY", description: "Swing FAST through an incoming shot to send it back. Perfect timing homes it.", keys: ["MOUSE"], ranged: true, progress: (n) => [count(n, "parry") >= 1 ? 2 : bounded(count(n, "deflect"), 2), 2], complete: (n) => count(n, "parry") >= 1 || count(n, "deflect") >= 2 },
-  { title: "READY", description: "That's the whole blade. Cut clean. Keep moving. The Tear awaits.", keys: [], final: true, progress: () => [0, 1], complete: () => false },
+  { title: "MOVE", description: "Run with A and D. Warm up — move both ways.", keys: ["A", "D"], objectiveMarks: ["moveL", "moveR"], progress: (n) => [(count(n, "moveL") > 25 ? 1 : 0) + (count(n, "moveR") > 25 ? 1 : 0), 2], complete: (n) => count(n, "moveL") > 25 && count(n, "moveR") > 25 },
+  { title: "JUMP", description: "W or Space to jump. Hold S on a ledge to drop through it.", keys: ["W", "SPACE"], objectiveMarks: ["jump"], progress: (n) => [bounded(count(n, "jump"), 2), 2], complete: (n) => count(n, "jump") >= 2 },
+  { title: "DASH", description: "Shift to dash — steer it mid-flight with W / A / S / D.", keys: ["SHIFT"], objectiveMarks: ["dash"], progress: (n) => [bounded(count(n, "dash"), 2), 2], complete: (n) => count(n, "dash") >= 2 },
+  { title: "CUT", description: "The blade follows your mouse — SPEED IS DAMAGE. Slash the dummy, fast.", keys: ["MOUSE"], objectiveMarks: ["strike"], dummyCount: 1, progress: (n) => [bounded(count(n, "strike"), 3), 3], complete: (n) => count(n, "strike") >= 3 },
+  { title: "LAUNCH", description: "A fast UPWARD swing pops an enemy into the air.", keys: ["MOUSE ↑"], objectiveMarks: ["launch"], dummyCount: 1, progress: (n) => [bounded(count(n, "launch"), 1), 1], complete: (n) => count(n, "launch") >= 1 },
+  { title: "JUGGLE", description: "Launch it — then cut it again before it lands.", keys: ["MOUSE ↑", "MOUSE"], objectiveMarks: ["airHit"], dummyCount: 1, progress: (n) => [bounded(count(n, "airHit"), 2), 2], complete: (n) => count(n, "airHit") >= 2 },
+  { title: "SLAM", description: "While airborne, strike DOWN through an enemy — a slam hits harder.", keys: ["W", "MOUSE ↓"], objectiveMarks: ["slam", "superslam"], dummyCount: 1, progress: (n) => [count(n, "slam") + count(n, "superslam") >= 1 ? 1 : 0, 1], complete: (n) => count(n, "slam") >= 1 || count(n, "superslam") >= 1 },
+  { title: "POWER SLAM", description: "Dash DOWN to fall fast, then slam mid-fall — a fast descent hits far harder.", keys: ["S + SHIFT", "MOUSE ↓"], objectiveMarks: ["superslam"], dummyCount: 1, progress: (n) => [bounded(count(n, "superslam"), 1), 1], complete: (n) => count(n, "superslam") >= 1 },
+  { title: "UPDRAFT", description: "Launch WHILE RISING — jump first, then swing up hard.", keys: ["W", "MOUSE ↑"], objectiveMarks: ["updraft"], dummyCount: 1, progress: (n) => [bounded(count(n, "updraft"), 1), 1], complete: (n) => count(n, "updraft") >= 1 },
+  { title: "THROW", description: "Right-click to hurl the blade through an enemy. Move within tether range, then right-click again to recall it.", keys: ["RMB"], objectiveMarks: ["throwHit", "recall"], dummyCount: 1, progress: (n) => [(count(n, "throwHit") >= 1 ? 1 : 0) + (count(n, "recall") >= 1 ? 1 : 0), 2], complete: (n) => count(n, "throwHit") >= 1 && count(n, "recall") >= 1 },
+  { title: "PARRY", description: "Swing FAST through an incoming shot to send it back. Perfect timing homes it.", keys: ["MOUSE"], objectiveMarks: ["parry", "deflect"], ranged: true, progress: (n) => [count(n, "parry") >= 1 ? 2 : bounded(count(n, "deflect"), 2), 2], complete: (n) => count(n, "parry") >= 1 || count(n, "deflect") >= 2 },
+  { title: "READY", description: "That's the whole blade. Cut clean. Keep moving. The Tear awaits.", keys: [], objectiveMarks: [], final: true, progress: () => [0, 1], complete: () => false },
 ];
 export const TUTORIAL_LESSONS: readonly TutorialLesson[] = Object.freeze(LESSONS);
 
@@ -131,6 +133,10 @@ export class TutorialController {
   private previousBladeState = "held";
   private dashLatched = false;
   private previousPlayerX: number | undefined;
+
+  private resetLessonObjective(lesson: TutorialLesson): void {
+    for (const mark of lesson.objectiveMarks) this.counters[mark] = 0;
+  }
 
   start(viewportWidth: number): void {
     this.active = true; this.lessonIndex = 0; this.completionDelay = 0; this.endingTime = 0;
@@ -184,7 +190,7 @@ export class TutorialController {
       this.completionDelay -= dt;
       if (this.completionDelay <= 0) {
         this.lessonIndex = Math.min(this.lessonIndex + 1, TUTORIAL_LESSONS.length - 1);
-        this.counters.airHit = 0; this.counters.strike = 0; this.ghostTime = 0;
+        this.resetLessonObjective(this.step()); this.ghostTime = 0;
         if ((this.step().dummyCount ?? 0) > 0) {
           const x = Math.max(160, Math.min(player.x + (player.facing || 1) * 180, snapshot.viewportWidth - 160));
           for (const enemy of liveDummies) intents.push({ type: "reset-dummy", enemyId: enemy.id, x });

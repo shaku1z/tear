@@ -157,19 +157,41 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
     waitForLessonToAdvance(7);
 
     for (let attempt = 0; attempt < 30 && tutorial().lessonIndex === 8; attempt += 1) {
-      approachDummy(70); waitGrounded(); jump(); idle(5); swing(250000, 750000, 3, 75);
+      // An updraft is not merely an upward cut: the player must still be in
+      // the strong rising window when the blade crosses the target.
+      step({ type: "aim", turn: 250000, magnitude: 1000 }); idle(8);
+      approachDummy(70); waitGrounded(); jump(); idle(2);
+      step({ type: "aim", turn: 750000, magnitude: 1000 });
+      idle(75);
     }
     waitForLessonToAdvance(8);
 
     for (let attempt = 0; attempt < 15 && tutorial().lessonIndex === 9; attempt += 1) {
       approachDummy(80);
-      const dummy = liveDummy(), player = environment.observe().player;
-      const turn = dummy && dummy.x < player.x ? 500000 : 0;
+      const dummy = liveDummy(), blade = environment.observe().blade;
+      const turn = dummy
+        ? Math.round(((((Math.atan2(dummy.y - blade.handY, dummy.x - blade.handX) / (Math.PI * 2)) % 1) + 1) % 1) * 1_000_000) % 1_000_000
+        : 0;
       step({ type: "aim", turn, magnitude: 1000 }); idle(8);
       step({ type: "weapon", intent: "throw", phase: "pressed" });
-      step({ type: "weapon", intent: "throw", phase: "released" }); idle(45);
-      step({ type: "weapon", intent: "recall", phase: "pressed" });
-      step({ type: "weapon", intent: "recall", phase: "released" }); idle(100);
+      step({ type: "weapon", intent: "throw", phase: "released" });
+      for (let tick = 0; tick < 360
+        && !["embedded", "held"].includes(environment.observe().blade.state); tick += 1) step();
+      for (let tick = 0; tick < 360 && environment.observe().blade.state !== "held"; tick += 1) {
+        const observation = environment.observe();
+        const dx = observation.blade.handX - observation.player.x;
+        if (Math.abs(dx) <= 280) break;
+        step({ type: "move", x: dx > 0 ? 350 : -350, y: 0 });
+      }
+      step({ type: "move", x: 0, y: 0 });
+      if (environment.observe().blade.state !== "held") {
+        step({ type: "weapon", intent: "recall", phase: "pressed" });
+        step({ type: "weapon", intent: "recall", phase: "released" });
+      }
+      for (let tick = 0; tick < 360 && environment.observe().blade.state !== "held"; tick += 1) step();
+      if ((tutorial().counters.throwHit ?? 0) > 0 && (tutorial().counters.recall ?? 0) > 0) {
+        for (let tick = 0; tick < 360 && tutorial().lessonIndex === 9; tick += 1) step();
+      }
     }
     waitForLessonToAdvance(9);
 
@@ -205,5 +227,11 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
   assert.equal(result.active, false, `tutorial remained active: ${JSON.stringify(last)}`);
   assert.equal(result.screen, "menu", `tutorial did not return to menu: ${JSON.stringify(last)}`);
   assert.ok(result.metrics.acceptedActions > 0, "journey must use player-valid actions");
+  const launchEntry = result.trace.find((entry) => entry.label === "after-3");
+  const powerSlamEntry = result.trace.find((entry) => entry.label === "after-6");
+  assert.equal(launchEntry?.lesson, "LAUNCH", "journey must reach the launch lesson");
+  assert.equal(launchEntry?.counters?.launch ?? 0, 0, "launch must not inherit an earlier upward cut");
+  assert.equal(powerSlamEntry?.lesson, "POWER SLAM", "journey must reach the power-slam lesson");
+  assert.equal(powerSlamEntry?.counters?.superslam ?? 0, 0, "power slam must not inherit the slam lesson");
   console.log(`Tutorial journey passed in ${result.metrics.fixedTicks} fixed ticks`);
 });

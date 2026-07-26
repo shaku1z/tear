@@ -3,6 +3,31 @@ import type {
 } from "./contracts";
 import { clamp, wrapLeft } from "./primitives";
 
+export interface TutorialCardLayout {
+  readonly x: number; readonly y: number; readonly width: number; readonly height: number;
+}
+
+/**
+ * Keeps the lesson card out of the centered style-meter lane. At narrow
+ * logical widths the card drops below that lane instead of squeezing its copy.
+ */
+export function tutorialCardLayout(
+  viewportWidth: number,
+  safe: Readonly<{ top: number; right: number; left: number }>,
+): TutorialCardLayout {
+  const height = 138;
+  const right = 28 + safe.right;
+  const meterRight = viewportWidth / 2 + 120;
+  const gap = 28;
+  const availableBesideMeter = viewportWidth - right - (meterRight + gap);
+  if (availableBesideMeter >= 460) {
+    const width = Math.min(700, availableBesideMeter);
+    return { x: viewportWidth - right - width, y: 24 + safe.top, width, height };
+  }
+  const width = Math.min(700, Math.max(320, viewportWidth - 56 - safe.left - safe.right));
+  return { x: (viewportWidth - width) / 2, y: 138 + safe.top, width, height };
+}
+
 export function createTrainingTouchRenderers(context: LegacyWorldRenderContext) {
   const canvas = context.canvas;
   const ui = context.ui;
@@ -19,8 +44,8 @@ export function createTrainingTouchRenderers(context: LegacyWorldRenderContext) 
   }
 
   function tutorialCard(snapshot: TutorialCardSnapshot): void {
-    const type = ui.t.type, width = 700, x = context.width - width - 28 - context.safe.right;
-    const y = 24 + context.safe.top, height = 138;
+    const type = ui.t.type;
+    const { width, x, y, height } = tutorialCardLayout(context.width, context.safe);
     canvas.save();
     canvas.globalAlpha = 0.88; canvas.fillStyle = ui.t.color.paper; canvas.fillRect(x, y, width, height);
     canvas.globalAlpha = 0.45; canvas.strokeStyle = "#000"; canvas.lineWidth = 1.5; canvas.strokeRect(x, y, width, height);

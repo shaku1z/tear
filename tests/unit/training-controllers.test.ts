@@ -37,6 +37,33 @@ describe("tutorial controller", () => {
     expect(controller.step().title).toBe("JUMP");
   });
 
+  it("requires launch and power slam after their lesson actually begins", () => {
+    const controller = new TutorialController(); controller.start(1600);
+    const snapshot = { dt: 0.1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
+      player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
+
+    controller.lessonIndex = 3;
+    controller.counters.strike = 3;
+    controller.counters.launch = 1;
+    controller.update(snapshot);
+    controller.update({ ...snapshot, dt: 1.11 });
+    expect(controller.step().title).toBe("LAUNCH");
+    expect(controller.counters.launch).toBe(0);
+    expect(controller.completionDelay).toBeLessThanOrEqual(0);
+    expect(controller.update(snapshot)).not.toContainEqual({ type: "sound", cue: "rankup" });
+
+    controller.lessonIndex = 6;
+    controller.completionDelay = 0;
+    controller.counters.slam = 0;
+    controller.counters.superslam = 1;
+    controller.update(snapshot);
+    controller.update({ ...snapshot, dt: 1.11 });
+    expect(controller.step().title).toBe("POWER SLAM");
+    expect(controller.counters.superslam).toBe(0);
+    expect(controller.completionDelay).toBeLessThanOrEqual(0);
+    expect(controller.update(snapshot)).not.toContainEqual({ type: "sound", cue: "rankup" });
+  });
+
   it("produces a deterministic renderer-neutral ghost snapshot", () => {
     const left = new TutorialController(), right = new TutorialController(); left.start(1600); right.start(1600);
     left.ghostTime = 1.25; right.ghostTime = 1.25;

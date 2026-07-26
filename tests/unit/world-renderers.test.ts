@@ -21,6 +21,7 @@ import {
   renderRearEntities,
   type EnemyVisualSnapshot,
 } from "../../src/presentation/world/entity-layer";
+import { tutorialCardLayout } from "../../src/presentation/world/training-touch";
 
 interface CanvasCall { readonly name: string; readonly arguments: readonly unknown[] }
 
@@ -149,6 +150,18 @@ describe("legacy world presentation renderers", () => {
       "TAB / E — build menu   ·   1–8 quick-spawn   ·   T dummy   ·   B boss",
       "JUMP", "◉ MOVE", "DRAG TO AIM & SWING ↷", "UNLOCKED  ·  RARE", "◆ +5  +20c",
     ]));
+  });
+
+  it("keeps the tutorial card clear of the centered style meter", () => {
+    const standard = tutorialCardLayout(1600, { top: 0, right: 0, left: 0 });
+    expect(standard.x).toBeGreaterThanOrEqual(1600 / 2 + 120 + 28);
+    expect(standard.x + standard.width).toBeLessThanOrEqual(1600 - 28);
+    expect(standard.y).toBe(24);
+
+    const narrow = tutorialCardLayout(1024, { top: 0, right: 0, left: 0 });
+    expect(narrow.y).toBeGreaterThan(119);
+    expect(narrow.x).toBeGreaterThanOrEqual(0);
+    expect(narrow.x + narrow.width).toBeLessThanOrEqual(1024);
   });
 
   it("renders Source/finale depth and every banner/reticle state through snapshots", () => {
