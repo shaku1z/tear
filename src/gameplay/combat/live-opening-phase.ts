@@ -85,7 +85,7 @@ export interface LiveOpeningPhaseHost {
   updateBossArenaPlatforms: (dt: number) => void;
   updateVoidScroll: (dt: number) => void;
   unlockWitness: () => void;
-  startVoidDescent: (boss: LiveEnemy) => void;
+  startVoidDescent: (boss: LiveEnemy) => boolean;
   spawnBossAdds: (boss: LiveEnemy) => LiveEnemy[];
   spawnBossClone: (boss: LiveEnemy) => void;
   removeBossClone: (clone: LiveEnemy) => void;
@@ -189,7 +189,7 @@ function runPlatformLifecycle(host: LiveOpeningPhaseHost, dt: number): void {
 function runBosses(host: LiveOpeningPhaseHost, dt: number): void {
   stepBossRuntime({ dt, player: host.player, platforms: host.platforms, enemies: host.enemies, run: host.run,
     thawMultiplier: CONFIG.source.thawSpeedMult || 1.35, maximumScrollSpeed: CONFIG.source.scrollSpeedMax,
-    unlockWitness: host.unlockWitness, startVoidDescent: (boss) => { host.startVoidDescent(boss as LiveEnemy); },
+    unlockWitness: host.unlockWitness, startVoidDescent: (boss) => host.startVoidDescent(boss as LiveEnemy),
     spawnAdds: (boss) => host.spawnBossAdds(boss as LiveEnemy), spawnClone: (boss) => { host.spawnBossClone(boss as LiveEnemy); },
     floater: (x, y, text) => { host.floater(x, y, text, true, "charger"); }, dramaticBeat: host.dramaticBeat,
     removeClone: (clone) => { host.removeBossClone(clone as LiveEnemy); },

@@ -212,7 +212,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   const isDodgeProjectile = (value: unknown): value is Readonly<{ _dodged?: boolean }> =>
     typeof value === "object" && value !== null;
   const isSourceOwner = (value: unknown): value is GameEnemy & Parameters<typeof startVoidDescent>[0] =>
-    isGameEnemy(value) && "id" in value && typeof value.id === "string";
+    isGameEnemy(value);   // the descent derives its actor id from presentationId/bossId
   const isRitualOwner = (value: unknown): value is GameEnemy & NonNullable<Parameters<typeof startBossTransformation>[0]> =>
     isGameEnemy(value) && "bossName" in value && typeof value.bossName === "string" &&
     "cinematicT" in value && typeof value.cinematicT === "number";
@@ -280,7 +280,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
         runDamageMultiplier: runDamageMult,
         updateWeaponAbilities, stepCinematic: stepCinematicPlaying, syncVoidSupport: syncVoidPlayerSupport,
         activateThrowSecondary, updateWave, updateBossArenaPlatforms, updateVoidScroll,
-        startVoidDescent: (boss) => { if (isSourceOwner(boss)) startVoidDescent(boss); },
+        startVoidDescent: (boss) => isSourceOwner(boss) && startVoidDescent(boss),
         nearestEnemy: (x, y) => { const enemy = nearestEnemy(x, y); return isGameEnemy(enemy) ? enemy : null; },
         openingNearestEnemy: () => { const enemy = nearestEnemy(blade.x, blade.y); return isGameEnemy(enemy) ? enemy : null; },
         areaDamage: (x, y, radius, damage, playerOwned) =>

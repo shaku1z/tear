@@ -15,7 +15,7 @@ export interface BossStepOptions {
   readonly dt: number; readonly player: BossStepPlayer; readonly platforms: readonly BossStepPlatform[];
   readonly enemies: BossStepEnemy[]; readonly run: BossStepRun;
   readonly thawMultiplier: number; readonly maximumScrollSpeed: number;
-  unlockWitness(): void; startVoidDescent(boss: BossStepEnemy): void;
+  unlockWitness(): void; startVoidDescent(boss: BossStepEnemy): boolean;
   spawnAdds(boss: BossStepEnemy): BossStepEnemy[]; spawnClone(boss: BossStepEnemy): void;
   floater(x: number, y: number, text: string): void; dramaticBeat(): void;
   removeClone(clone: BossStepEnemy): void; spikeImpact(enemy: BossStepEnemy): void;
@@ -30,7 +30,10 @@ export function stepBossRuntime(options: BossStepOptions): void {
       options.player.x - options.player.hw < platform.x + platform.w) : null;
     if (perch && options.player.y < boss.y - boss.hh * 0.4) { boss.campT = (boss.campT ?? 0) + options.dt; boss.campPlat = perch; }
     else { boss.campT = Math.max(0, (boss.campT ?? 0) - options.dt * 1.6); if (boss.campT <= 0) boss.campPlat = null; }
-    if (boss.requestVoidCinematic) { boss.requestVoidCinematic = false; options.startVoidDescent(boss); }
+    // Keep the request queued until the exclusive cinematic channel accepts it.
+    // Clearing first strands Source in `collapse` if an adapter rejects the owner
+    // or another cinematic still owns the channel.
+    if (boss.requestVoidCinematic && options.startVoidDescent(boss)) boss.requestVoidCinematic = false;
     if (boss.freezeVoid && options.run.voidScroll) { boss.freezeVoid = false; options.run.voidScroll.active = false; options.run.voidScroll.frozen = true; }
     if (boss.thawVoid && options.run.voidScroll) {
       boss.thawVoid = false; options.run.voidScroll.frozen = false; options.run.voidScroll.active = true;

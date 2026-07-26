@@ -84,12 +84,33 @@ describe("boss step runtime", () => {
     const voidScroll = { active: true, frozen: false, speed: 10, speedCap: 20 }, calls: string[] = [];
     stepBossRuntime({ dt: 0.1, player: { x: 800, y: 700, hw: 15, hh: 30, onGround: true }, platforms: [], enemies: [boss, spiked],
       run: { voidScroll }, thawMultiplier: 1.5, maximumScrollSpeed: 30,
-      unlockWitness() { calls.push("witness"); }, startVoidDescent() { calls.push("void"); }, spawnAdds() { return []; },
+      unlockWitness() { calls.push("witness"); }, startVoidDescent() { calls.push("void"); return true; }, spawnAdds() { return []; },
       spawnClone() { calls.push("clone"); }, floater() { calls.push("text"); }, dramaticBeat() { calls.push("beat"); },
       removeClone() { calls.push("remove"); }, spikeImpact() { calls.push("spike"); },
     });
     expect(voidScroll).toEqual({ active: true, frozen: false, speed: 15, speedCap: 45 });
     expect(spiked.spiked).toBe(false); expect(calls).toEqual(["spike"]);
+  });
+
+  it("retains Source's descent request until the cinematic channel accepts it", () => {
+    const boss = { x: 800, y: 300, hw: 40, hh: 60, facing: 1, isBoss: true, requestVoidCinematic: true };
+    let available = false, attempts = 0;
+    const step = () => {
+      stepBossRuntime({
+        dt: 0.1, player: { x: 800, y: 700, hw: 15, hh: 30, onGround: true },
+        platforms: [], enemies: [boss], run: {}, thawMultiplier: 1.5, maximumScrollSpeed: 30,
+        unlockWitness() { return; }, startVoidDescent() { attempts++; return available; }, spawnAdds() { return []; },
+        spawnClone() { return; }, floater() { return; }, dramaticBeat() { return; },
+        removeClone() { return; }, spikeImpact() { return; },
+      });
+    };
+
+    step();
+    expect(boss.requestVoidCinematic, "a busy/rejected launch must remain retryable").toBe(true);
+    available = true;
+    step();
+    expect(boss.requestVoidCinematic, "an accepted launch consumes the request exactly once").toBe(false);
+    expect(attempts).toBe(2);
   });
 });
 

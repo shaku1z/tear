@@ -68,6 +68,13 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
   const clearCombat = (): void => { context.state.setEnemies([]); context.state.setProjectiles([]); };
   context.install(Object.freeze({
     startMode(mode?: RunMode, difficulty?: RunDifficulty) { context.startRun(mode ?? "endless", difficulty ?? "normal"); },
+    /** Journey-only: drop the live boss to a health fraction so phase gates are reachable. */
+    setBossHealthFraction(fraction: number) {
+      const boss = context.state.enemies().find((enemy) => enemy.isBoss && !enemy.dead);
+      if (boss === undefined) throw new Error("No live boss to damage");
+      boss.hp = Math.max(1, Math.round(boss.maxHp * fraction));
+      boss.hpDisplay = boss.hp;
+    },
     startBoss(boss: BossId, difficulty?: RunDifficulty) {
       context.selectBoss(boss); context.startRun("bossonly", difficulty ?? "normal");
     },

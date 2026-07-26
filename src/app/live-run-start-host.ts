@@ -152,11 +152,15 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
             actionDistance: blade.actionDistance(player) },
           enemies: state.enemies().filter((enemy) => !enemy.dead).slice(0, 24).map((enemy) => {
             const authored = enemy as typeof enemy & { state?: string; stateT?: number; atkT?: number; phase?: number;
-              isMirrorBoss?: boolean; _live?: boolean };
+              phaseMarker?: number; mode?: string; cinematicT?: number; cinematicRequest?: unknown;
+              requestVoidCinematic?: boolean; isMirrorBoss?: boolean; _live?: boolean };
             return { x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, maxHp: enemy.maxHp,
               stun: enemy.stun, spawnT: enemy.spawnT, introT: enemy.introT ?? 0, aliveT: enemy.aliveT,
               boss: enemy.isBoss, bossId: enemy.bossId, state: authored.state, stateT: authored.stateT,
-              atkT: authored.atkT, phase: authored.phase, mirrorBoss: authored.isMirrorBoss,
+              atkT: authored.atkT, phase: authored.isMirrorBoss === true ? Mirror.phase : authored.phase,
+              phaseMarker: authored.phaseMarker, mode: authored.mode,
+              cinematicT: authored.cinematicT, cinematicPending: authored.cinematicRequest != null,
+              voidPending: authored.requestVoidCinematic === true, mirrorBoss: authored.isMirrorBoss,
               live: authored._live, bound: enemy.boundT || 0 };
           }),
           lifecycle: context.lifecycle.snapshot(),
