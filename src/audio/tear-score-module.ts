@@ -16,11 +16,11 @@ import type {
 
 export const TEAR_SCORE_PROVENANCE = Object.freeze({
   engineRepository: "shaku1z/tear-score",
-  engineCommit: "766b910d07264fd81154be29a3d809c63de5c310",
+  engineCommit: "7633f1e49b15073a28b7d5d0b84e2c12cdb463b9",
   version: "0.1.0-alpha.1",
-  builtAt: "2026-07-23T06:05:42.378Z",
+  builtAt: "2026-07-26T00:22:40.659Z",
   artifactFormat: "esm",
-  bundleSha256: "40912513926fe43765ceec1ae596db806b24b94f1e9a2098be84aaea898a45de",
+  bundleSha256: "b4f304d85a1dfb8197abcb6c2e33ba1addc40e354c7689f717c22a1a7acd793c",
   toneVersion: "14.9.17",
   toneSha256: "5dd8825c21f50486eea7353b0abdf06119dd76409e4271e3fa54fe8545463446",
 });

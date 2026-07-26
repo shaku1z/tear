@@ -34,19 +34,22 @@ describe("THE SIGNAL catalog", () => {
   });
 
   it("skips versions that are not yet produced", () => {
-    const source = findWork(catalog, "the-source")!;
+    const source = findWork(catalog, "the-source");
+    if (!source) throw new Error("the-source work is required");
     // final-phase is planned but unavailable, so boss must fall back to adaptive-game
     expect(source.versions["final-phase"]?.available).toBe(false);
     expect(selectVersion(source, "boss", ["final-phase", "adaptive-game"])?.versionId).toBe("adaptive-game");
   });
 
   it("honours the station's preferred version order when available", () => {
-    const beserker = findWork(catalog, "beserker")!;
+    const beserker = findWork(catalog, "beserker");
+    if (!beserker) throw new Error("beserker work is required");
     expect(selectVersion(beserker, "gameplay", ["adaptive-game"])?.versionId).toBe("adaptive-game");
   });
 
   it("THE ARCHIVE yields nothing for gameplay because its versions are linear", () => {
-    const archive = findStation(catalog, "archive")!;
+    const archive = findStation(catalog, "archive");
+    if (!archive) throw new Error("archive station is required");
     expect(archive.filters.adaptiveRequiredDuringGameplay).toBe(false);
     // canonical-ost versions are all unavailable + linear, so no gameplay-safe pick
     expect(stationWorks(catalog, archive, "gameplay")).toHaveLength(0);
@@ -54,13 +57,15 @@ describe("THE SIGNAL catalog", () => {
 
   it("routes the Void biome and its boss to distinct works", () => {
     expect(findWork(catalog, "looking-out")).not.toBeNull();
-    const boss = findWork(catalog, "reflection-of-the-bladeless")!;
+    const boss = findWork(catalog, "reflection-of-the-bladeless");
+    if (!boss) throw new Error("reflection-of-the-bladeless work is required");
     // the Void boss cue must be legal during a boss fight
     expect(selectVersion(boss, "boss", ["adaptive-game"])?.versionId).toBe("adaptive-game");
   });
 
   it("CUTLINE draws the kinetic combat works for gameplay", () => {
-    const cutline = findStation(catalog, "cutline")!;
+    const cutline = findStation(catalog, "cutline");
+    if (!cutline) throw new Error("cutline station is required");
     const works = stationWorks(catalog, cutline, "gameplay").map((w) => w.id);
     expect(works).toContain("beserker");
   });

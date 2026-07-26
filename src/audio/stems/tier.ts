@@ -25,7 +25,7 @@ export function planTierGains(
   cue: StemCueManifest,
   tier: Tier,
 ): Record<string, number> {
-  const mix = cue.tiers[tier] ?? {};
+  const mix = cue.tiers[tier];
   const out: Record<string, number> = {};
   for (const stem of cue.stems) {
     const tierDb = mix[stem.id];

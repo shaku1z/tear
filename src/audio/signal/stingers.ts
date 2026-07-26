@@ -96,7 +96,9 @@ export class StingerPlayer {
     source.buffer = buffer;
     source.connect(gain);
     source.start(now + 0.01);
-    source.onended = () => source.disconnect();
+    source.onended = () => {
+      source.disconnect();
+    };
     this.#lastPlayed.set(id, now);
     this.#lastAny = now;
     return true;

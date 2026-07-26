@@ -103,7 +103,9 @@ export class BiomeStemBackend implements MusicBackend {
     this.#context = unwrapBrowserAudioContext(host.context);
     this.#output = unwrapBrowserAudioNode(host.output);
     // React immediately when the player changes the music mode in settings.
-    this.#stopModeWatch = onMusicModeChange(() => this.#applyTier(0.5));
+    this.#stopModeWatch = onMusicModeChange(() => {
+      this.#applyTier(0.5);
+    });
     // Re-pick the shell track when the player changes their menu-music loadout.
     this.#stopLoadoutWatch = onLoadoutChange(() => {
       if (!this.#onShell) return;
@@ -368,10 +370,10 @@ export class BiomeStemBackend implements MusicBackend {
     // canonical, so this bar length matches the audio exactly instead of to
     // however many decimals the manifest happened to round to.
     this.#activeSecondsPerBar =
-      grid?.barsPerLoop && this.#activeLoopSeconds > 0
+      grid.barsPerLoop > 0 && this.#activeLoopSeconds > 0
         ? this.#activeLoopSeconds / grid.barsPerLoop
-        : secondsPerBar(loaded.manifest.tempo, grid?.beatsPerBar ?? 4);
-    this.#activeBarQuantized = grid?.barQuantizedCompatible !== false;
+        : secondsPerBar(loaded.manifest.tempo, grid.beatsPerBar);
+    this.#activeBarQuantized = grid.barQuantizedCompatible !== false;
     this.#activeStartedAt = now;
     this.#active = { cueId, player, cueGain };
     this.#publishNowPlaying(cueId);

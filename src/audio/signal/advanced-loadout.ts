@@ -117,7 +117,10 @@ export function resolveSlot(
     return picked ? { kind: "work", workId, versionId: picked.versionId } : { kind: "canonical" };
   }
 
-  // station
+  // `effectivePolicy` resolves inherit, but keep this boundary total in case its
+  // contract changes or malformed persisted data reaches the resolver.
+  if (policy.type !== "station") return { kind: "canonical" };
+
   const entry = pickNext(catalog, policy.stationId, context, options.stationState, options.seed);
   if (!entry || !isLoaded(entry.workId)) return { kind: "canonical" };
   return { kind: "work", workId: entry.workId, versionId: entry.versionId };

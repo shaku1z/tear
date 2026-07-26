@@ -61,9 +61,10 @@ describe("cue grid integrity", () => {
     const cue = load(id);
     const grid = cue.analysis?.grid;
     expect(grid).toBeDefined();
-    expect(Math.abs(grid!.barErrorMs)).toBeLessThanOrEqual(5);
+    if (!grid) throw new Error(`${id} is missing analyzed grid data`);
+    expect(Math.abs(grid.barErrorMs)).toBeLessThanOrEqual(5);
     // A cue may only advertise bar-quantization if it passed review.
-    if (cue.grid.barQuantizedCompatible) expect(grid!.verdict).not.toBe("needs-approval");
+    if (cue.grid.barQuantizedCompatible) expect(grid.verdict).not.toBe("needs-approval");
   });
 
   it.each(ids)("%s: records a real tempo and key, never a placeholder", (id) => {

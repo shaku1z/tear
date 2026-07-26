@@ -39,7 +39,7 @@ async function fetchCue(cueId: string): Promise<LoadedCueRef> {
   const baseUrl = `audio/cues/${cueId}`;
   const url = new URL(`${baseUrl}/cue.json`, document.baseURI).href;
   const manifest = (await fetch(url).then((response) => {
-    if (!response.ok) throw new Error(`cue ${cueId} not found (${response.status})`);
+    if (!response.ok) throw new Error(`cue ${cueId} not found (${String(response.status)})`);
     return response.json();
   })) as LoadedCueRef["manifest"];
   return { id: cueId, manifest, baseUrl };
@@ -87,7 +87,7 @@ export async function installStemCueMusicBackend(cueId: string): Promise<boolean
     const base = `audio/cues/${cueId}`;
     const url = new URL(`${base}/cue.json`, document.baseURI).href;
     const cue = (await fetch(url).then((response) => {
-      if (!response.ok) throw new Error(`cue ${cueId} not found (${response.status})`);
+      if (!response.ok) throw new Error(`cue ${cueId} not found (${String(response.status)})`);
       return response.json();
     })) as StemCueManifest;
     installPrimaryMusicBackend(() => new StemCueMusicBackend(cue, base));

@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const [tearScoreInput, toneInput] = process.argv.slice(2);
-if (!tearScoreInput || !toneInput) {
-  throw new Error("Usage: node scripts/vendor-tear-score-esm.mjs <tear-score-esm> <tone-esm>");
+const [tearScoreInput, toneInput, sourceManifestInput] = process.argv.slice(2);
+if (!tearScoreInput || !toneInput || !sourceManifestInput) {
+  throw new Error("Usage: node scripts/vendor-tear-score-esm.mjs <tear-score-esm> <tone-esm> <source-manifest>");
 }
 
 const root = resolve(import.meta.dirname, "..");
@@ -16,6 +16,12 @@ const toneOutput = resolve(vendorDirectory, "tone-host-14.9.17.esm.js");
 
 const originalBundle = await readFile(resolve(tearScoreInput), "utf8");
 const toneBundle = await readFile(resolve(toneInput));
+const sourceManifest = JSON.parse(await readFile(resolve(sourceManifestInput), "utf8"));
+for (const field of ["engineRepository", "engineCommit", "version", "builtAt", "toneVersion"]) {
+  if (typeof sourceManifest[field] !== "string" || sourceManifest[field].length === 0) {
+    throw new Error(`TearScore source manifest is missing ${field}`);
+  }
+}
 const toneGlobalPattern = /var ([A-Za-z_$][\w$]*)=globalThis\.Tone,([A-Za-z_$][\w$]*)=\1;/u;
 const match = toneGlobalPattern.exec(originalBundle);
 if (!match) throw new Error("TearScore ESM does not contain the expected explicit Tone host boundary");
@@ -45,6 +51,9 @@ const provenance = JSON.parse(await readFile(provenancePath, "utf8"));
 const upstreamManifest = JSON.parse(await readFile(upstreamManifestPath, "utf8"));
 
 Object.assign(provenance, {
+  engineRepository: sourceManifest.engineRepository,
+  engineCommit: sourceManifest.engineCommit,
+  engineVersion: sourceManifest.version,
   artifact: "tear-score.esm.js",
   artifactFormat: "esm",
   artifactSha256: bundleSha256,
@@ -55,6 +64,11 @@ Object.assign(provenance, {
   compatibilityPatches: [],
 });
 Object.assign(upstreamManifest, {
+  engineRepository: sourceManifest.engineRepository,
+  engineCommit: sourceManifest.engineCommit,
+  version: sourceManifest.version,
+  builtAt: sourceManifest.builtAt,
+  toneVersion: sourceManifest.toneVersion,
   bundleSha256,
   artifact: "tear-score.esm.js",
   artifactFormat: "esm",

@@ -136,6 +136,8 @@ describe("pinned TearScore ESM adapter", () => {
     expect(bundle.toString("utf8")).toContain("breath");
     expect(bundle.toString("utf8")).not.toContain("Grounds Dynamic");
     expect(bundle.toString("utf8")).not.toContain("MetalSynth");
+    expect(bundle.toString("utf8")).toMatch(/setValueAtTime\([^,]+,[^)]+\.atTime\)/u);
+    expect(bundle.toString("utf8")).toMatch(/setTempo\([^,]+,\{atTime:/u);
     expect(manifest).toMatchObject({
       engineRepository: TEAR_SCORE_PROVENANCE.engineRepository,
       engineCommit: TEAR_SCORE_PROVENANCE.engineCommit,

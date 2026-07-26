@@ -36,7 +36,7 @@ export function applyMusicMode(tier: Tier, mode: MusicMode = current): Tier {
     case "calm":
       return Math.min(tier, 1) as Tier;
     case "dynamic":
-      return (tier <= 1 ? 0 : tier >= 3 ? 4 : tier) as Tier;
+      return tier <= 1 ? 0 : tier >= 3 ? 4 : tier;
     default:
       return tier;
   }

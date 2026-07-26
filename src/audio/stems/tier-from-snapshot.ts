@@ -17,7 +17,7 @@ export function tierFromSnapshot(snapshot: MusicContextSnapshot): Tier {
     return 0;
   }
 
-  const rank = (snapshot.comboRankId ?? "").toUpperCase();
+  const rank = snapshot.comboRankId.toUpperCase();
   if (rank === "TEARING!" || rank === "TEARING") return 4;
 
   const boss = snapshot.bossActive && (snapshot.bossHealthRatio ?? 1) >= 0;
@@ -29,7 +29,7 @@ export function tierFromSnapshot(snapshot: MusicContextSnapshot): Tier {
     normalized(snapshot.liveEnemies ?? 0, 8) * 0.65 +
     normalized(snapshot.queuedEnemies ?? 0, 8) * 0.35;
   const projectilePressure = normalized(snapshot.projectileCount ?? 0, 12);
-  const healthRisk = 1 - clamp01(snapshot.playerHealthRatio ?? 1);
+  const healthRisk = 1 - clamp01(snapshot.playerHealthRatio);
   const combo =
     ({ NICE: 0.2, STYLISH: 0.4, BRUTAL: 0.6, SAVAGE: 0.8, "TEARING!": 1 } as Record<string, number>)[
       rank
@@ -49,8 +49,10 @@ export function tierFromSnapshot(snapshot: MusicContextSnapshot): Tier {
   );
 
   const score = Math.max(intensity, danger * 0.9, tension * 0.75);
-  const enter = [0.12, 0.32, 0.58, 0.82];
+  const enter = [0.12, 0.32, 0.58, 0.82] as const;
   let tier = 0;
-  for (let level = 0; level < enter.length; level += 1) if (score >= enter[level]) tier = level + 1;
+  for (const [level, threshold] of enter.entries()) {
+    if (score >= threshold) tier = level + 1;
+  }
   return tier as Tier;
 }

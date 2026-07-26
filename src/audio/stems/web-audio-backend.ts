@@ -12,7 +12,7 @@ export function pickSource(
 
 function resolveUrl(baseUrl: string, url: string): string {
   if (/^https?:\/\//u.test(url) || url.startsWith("/")) return url;
-  const base = new URL(`${baseUrl.replace(/\/?$/u, "/")}`, document.baseURI);
+  const base = new URL(baseUrl.replace(/\/?$/u, "/"), document.baseURI);
   return new URL(url, base).href;
 }
 
@@ -109,7 +109,7 @@ export class WebAudioStemBackend implements StemAudioBackend {
     if (!source) throw new Error(`Stem ${asset.id} has no playable source.`);
     const url = resolveUrl(this.baseUrl, source.url);
     const bytes = await fetch(url).then((response) => {
-      if (!response.ok) throw new Error(`Stem ${asset.id} failed to load: ${response.status}`);
+      if (!response.ok) throw new Error(`Stem ${asset.id} failed to load: ${String(response.status)}`);
       return response.arrayBuffer();
     });
     const buffer = await this.context.decodeAudioData(bytes);

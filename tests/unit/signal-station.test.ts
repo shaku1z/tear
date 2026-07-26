@@ -17,7 +17,8 @@ describe("THE SIGNAL station engine", () => {
   it("picks a gameplay-safe entry from a station", () => {
     const entry = pickNext(catalog, "cutline", "gameplay", createStationState(), 1);
     expect(entry).not.toBeNull();
-    expect(entry!.versionId).toBe("adaptive-game");
+    if (!entry) throw new Error("cutline must provide a gameplay entry");
+    expect(entry.versionId).toBe("adaptive-game");
   });
 
   it("is deterministic for the same seed and state", () => {
@@ -29,9 +30,11 @@ describe("THE SIGNAL station engine", () => {
 
   it("avoids immediately repeating a recently played work", () => {
     let state = createStationState();
-    const first = pickNext(catalog, "still", "gameplay", state, 7)!;
+    const first = pickNext(catalog, "still", "gameplay", state, 7);
+    if (!first) throw new Error("still must provide a first gameplay entry");
     state = remember(state, first.workId);
-    const second = pickNext(catalog, "still", "gameplay", state, 7)!;
+    const second = pickNext(catalog, "still", "gameplay", state, 7);
+    if (!second) throw new Error("still must provide a second gameplay entry");
     expect(second.workId).not.toBe(first.workId);
   });
 

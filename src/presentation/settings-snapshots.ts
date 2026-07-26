@@ -26,6 +26,8 @@ const musicModeNotes: Readonly<Record<string, string>> = {
   calm: "STAY RELAXED — NEVER ESCALATES",
   dynamic: "BARER LULLS, BIGGER PEAKS",
 };
+const musicModeNote = (mode: string | undefined): string =>
+  musicModeNotes[mode ?? "adaptive"] ?? "LAYERS FOLLOW THE FIGHT";
 
 export function buildSettingsSections(tab: string, settings: SettingsSnapshotSource, environment: SettingsEnvironmentSnapshot): SettingsSections {
   if (tab === "audio") return [{ label: "AUDIO MIX", rows: [
@@ -34,7 +36,7 @@ export function buildSettingsSections(tab: string, settings: SettingsSnapshotSou
     { key: "sfxVolume", label: "Sound effects volume", value: percent(settings.sfxVolume), kind: "stepper" },
     { key: "interfaceVolume", label: "Interface volume", value: percent(settings.interfaceVolume), kind: "stepper" },
     { key: "menuMusic", label: "Menu music", value: menuMusicLabel(settings.menuMusic ?? "default"), kind: "cycle", note: "THE SIGNAL · SHELL SLOT" },
-    { key: "musicMode", label: "Soundtrack behavior", value: (settings.musicMode ?? "adaptive").toUpperCase(), kind: "cycle", note: musicModeNotes[settings.musicMode ?? "adaptive"] ?? musicModeNotes.adaptive },
+    { key: "musicMode", label: "Soundtrack behavior", value: (settings.musicMode ?? "adaptive").toUpperCase(), kind: "cycle", note: musicModeNote(settings.musicMode) },
     { key: "masterMuted", label: "Master audio", value: "", kind: "toggle", on: !settings.masterMuted },
     { key: "musicMuted", label: "Music", value: "", kind: "toggle", on: !settings.musicMuted },
     { key: "sfxMuted", label: "Sound effects", value: "", kind: "toggle", on: !settings.sfxMuted },
@@ -46,7 +48,7 @@ export function buildSettingsSections(tab: string, settings: SettingsSnapshotSou
       { key: "nowPlaying", label: "Now playing", value: nowPlayingLabel(np), kind: "cycle", enabled: false },
       { key: "station", label: "Station", value: stationLabel(settings.station ?? "canonical"), kind: "cycle", note: stationNote(settings.station ?? "canonical") },
       { key: "menuMusic", label: "Menu music", value: menuMusicLabel(settings.menuMusic ?? "default"), kind: "cycle", note: "SHELL SLOT" },
-      { key: "musicMode", label: "Soundtrack behavior", value: (settings.musicMode ?? "adaptive").toUpperCase(), kind: "cycle", note: musicModeNotes[settings.musicMode ?? "adaptive"] ?? musicModeNotes.adaptive },
+      { key: "musicMode", label: "Soundtrack behavior", value: (settings.musicMode ?? "adaptive").toUpperCase(), kind: "cycle", note: musicModeNote(settings.musicMode) },
     ] }];
   }
   if (tab === "video") return [{ label: "VIDEO", rows: [
