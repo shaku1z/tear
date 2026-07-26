@@ -85,6 +85,23 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       context.state.setEnemies([enemy]);
       context.state.setProjectiles([]);
     },
+    /** Exact-tick parity fixture: enter the real Ranged telegraph, fire, and kite loop. */
+    prepareRangedParityScenario() {
+      const player = context.state.player();
+      if (player === undefined) throw new Error("Ranged parity scenario requires a live player");
+      Object.assign(player, { x: 450, y: d.CONFIG.world.groundY - player.hh,
+        vx: 0, vy: 0, onGround: true });
+      const enemy = new d.Ranged(1150, d.CONFIG.world.groundY - d.CONFIG.ranged.h / 2) as
+        GameEnemy & { state: string; aimTimer: number; windT: number; windMax: number };
+      Object.assign(enemy, {
+        vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 0, hitCd: 0, aliveT: 0,
+        behavior: "", state: "kite", aimTimer: 0.05, windT: 0, windMax: 0,
+        fireRateMult: 1, auraHaste: 1, auraDmg: 1, volley: 1,
+        canClimb: false, climber: false, variant: "", variantName: "", affixes: [], affixCount: 0,
+      });
+      context.state.setEnemies([enemy]);
+      context.state.setProjectiles([]);
+    },
     /** Exact-tick parity fixture: drive a real held strike through damage, kill, and cleanup. */
     prepareCombatParityScenario() {
       const player = context.state.player(), blade = context.state.blade();

@@ -98,6 +98,11 @@ collision tail remain untouched. It covers damage, impulse, post-hit immunity,
 lethal credit, dead-actor collection cleanup, and timer recovery. Its permanent
 current-build contract is `pnpm test:browser:combat-resolution`.
 
+The Ranged fixture is `tests/parity/ranged-fire-cycle.json`. It authors one
+ordinary Ranged actor just before its aim timer expires, then leaves movement,
+telegraph timing, projectile construction, and cooldown reset to production.
+Its permanent current-build contract is `pnpm test:browser:ranged-cycle`.
+
 ### Phase 0 blade baseline
 
 The parity adapter queues each event before a run segment starts, applies it
@@ -139,3 +144,10 @@ authoritative step, remove and credit the lethal target, retain the survivor's
 hit immunity and stun, then expire both timers. The fixture deliberately enters
 through the real held-blade collision phase rather than calling `Enemy.hit`
 directly, so it protects the full blade-to-kill pipeline.
+
+### Phase 4 Ranged baseline
+
+The first Ranged capture reached zero differences across three checkpoints.
+Both builds enter `windup`, count down the same telegraph, plant while aiming,
+emit the same two ordinary hostile projectiles, reset the aim cooldown, and
+return to `kite` on the same authoritative ticks.

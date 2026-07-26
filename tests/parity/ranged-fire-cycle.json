@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "ranged-fire-cycle",
+  "contract": "ranged-fire-cycle",
+  "description": "A deterministic Ranged enemy covering range approach, telegraph ownership, windup countdown, authored double-tap creation, cooldown reset, and return to kiting.",
+  "viewport": {
+    "width": 1600,
+    "height": 900
+  },
+  "mode": "playground",
+  "difficulty": "normal",
+  "actions": [
+    { "type": "prepareRangedScenario", "checkpoint": "windup-entered" },
+    { "type": "wait", "ms": 400, "checkpoint": "telegraph-late" },
+    { "type": "wait", "ms": 400, "checkpoint": "volley-fired" }
+  ]
+}

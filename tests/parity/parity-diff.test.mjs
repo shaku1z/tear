@@ -127,3 +127,30 @@ test("parity differ locks enemy attack phases while tolerating sub-frame motion 
   );
   assert.equal(wrongPhase.firstDivergence.field, "enemies.0.attack");
 });
+
+test("parity differ locks ranged AI and projectile family while tolerating flight drift", () => {
+  const base = {
+    label: "volley",
+    screen: "playing",
+    simulationTick: 96,
+    input: { mode: "mouse", pointerLocked: true, pointerLockAllowed: true },
+    cursor: { drawn: false, lockHintVisible: false },
+    player: { onGround: true },
+    blade: { state: "held" },
+    enemies: [{ kind: "ranged", behavior: "", aiState: "kite", onGround: true,
+      aimTimer: 2.3, windTime: -0.01, windMax: 0.7 }],
+    projectiles: [{ family: "ordinaryProjectile", kind: "dart", deflected: false,
+      perfect: false, charged: false, x: 900, y: 700, vx: -800, vy: 20, life: 5.9 }],
+  };
+  const tolerated = compareParityTraces(
+    trace("oracle", [base]),
+    trace("current", [{ ...base, projectiles: [{ ...base.projectiles[0], x: 911, vx: -760 }] }]),
+  );
+  assert.equal(tolerated.passed, true);
+
+  const wrongFamily = compareParityTraces(
+    trace("oracle", [base]),
+    trace("current", [{ ...base, projectiles: [{ ...base.projectiles[0], family: "groundShock" }] }]),
+  );
+  assert.equal(wrongFamily.firstDivergence.field, "projectiles.0.family");
+});

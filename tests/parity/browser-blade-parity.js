@@ -28,6 +28,18 @@ const ORACLE_PROBE = `
       });
       enemies = [enemy]; projectiles = [];
     },
+    prepareRangedParityScenario: () => {
+      Object.assign(player, { x: 450, y: CONFIG.world.groundY - player.hh,
+        vx: 0, vy: 0, onGround: true });
+      const enemy = new Ranged(1150, CONFIG.world.groundY - CONFIG.ranged.h / 2);
+      Object.assign(enemy, {
+        vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 0, hitCd: 0, aliveT: 0,
+        behavior: "", state: "kite", aimTimer: 0.05, windT: 0, windMax: 0,
+        fireRateMult: 1, auraHaste: 1, auraDmg: 1, volley: 1,
+        canClimb: false, climber: false, variant: "", variantName: "", affixes: [], affixCount: 0,
+      });
+      enemies = [enemy]; projectiles = [];
+    },
     prepareCombatParityScenario: () => {
       const dx = blade.tipX - blade.x, dy = blade.tipY - blade.y;
       const survivor = new Charger(blade.x + dx * 0.48, blade.y + dy * 0.48);
@@ -78,6 +90,14 @@ const ORACLE_PROBE = `
           onGround: enemy.onGround, behavior: enemy.behavior, attack: enemy.atk, attackTime: enemy.atkT,
           attackCooldown: enemy.atkCd, attackDirection: enemy.atkDir, chargePower: enemy.chargePower,
           maxHp: enemy.maxHp, hitCooldown: enemy.hitCd, dying: enemy.dying,
+          aiState: enemy.state, aimTimer: enemy.aimTimer,
+          windTime: enemy.windT, windMax: enemy.windMax,
+        })),
+        projectiles: projectiles.filter((projectile) => !projectile.dead).slice(0, 24).map((projectile) => ({
+          x: projectile.x, y: projectile.y, vx: projectile.vx, vy: projectile.vy, r: projectile.r,
+          life: projectile.life, damage: projectile.dmg, family: projectile.family,
+          kind: projectile.kind, deflected: projectile.deflected, perfect: projectile.perfect,
+          charged: projectile.charged, dead: projectile.dead,
         })),
         combat: run ? { enemyCount: enemies.filter((enemy) => !enemy.dead).length,
           waveKills: run.waveKills, heldHits: run.weaponStats.heldHits } : null,
@@ -134,6 +154,7 @@ async function installAdapter(page, kind, fixture) {
         source: { kind: "oracle", revision },
         startRun: () => window.__TEAR_ORACLE_PARITY__.startRun(mode, difficulty),
         prepareEnemyParityScenario: () => window.__TEAR_ORACLE_PARITY__.prepareEnemyParityScenario(),
+        prepareRangedParityScenario: () => window.__TEAR_ORACLE_PARITY__.prepareRangedParityScenario(),
         prepareCombatParityScenario: () => window.__TEAR_ORACLE_PARITY__.prepareCombatParityScenario(),
         screen: () => window.__TEAR_ORACLE_PARITY__.screen(),
         snapshot: () => window.__TEAR_ORACLE_PARITY__.snapshot(),
@@ -147,6 +168,7 @@ async function installAdapter(page, kind, fixture) {
       source: { kind: "current", revision: "working-tree" },
       startRun: () => window.__PANTHEON_TEST.startMode(mode, difficulty),
       prepareEnemyParityScenario: () => window.__PANTHEON_TEST.prepareEnemyParityScenario(),
+      prepareRangedParityScenario: () => window.__PANTHEON_TEST.prepareRangedParityScenario(),
       prepareCombatParityScenario: () => window.__PANTHEON_TEST.prepareCombatParityScenario(),
       screen: () => window.__PANTHEON_TEST.state().game,
       snapshot: () => {
@@ -174,6 +196,7 @@ async function installAdapter(page, kind, fixture) {
           player: live.playerTrace,
           blade: live.bladeTrace,
           enemies: live.enemyTrace,
+          projectiles: live.projectileTrace,
           combat: live.combatTrace,
         };
       },
@@ -218,6 +241,8 @@ async function installTickBridge(page) {
       }));
       if (action.type === "prepareEnemyScenario") {
         window.__TEAR_PARITY_ADAPTER__.prepareEnemyParityScenario();
+      } else if (action.type === "prepareRangedScenario") {
+        window.__TEAR_PARITY_ADAPTER__.prepareRangedParityScenario();
       } else if (action.type === "prepareCombatScenario") {
         window.__TEAR_PARITY_ADAPTER__.prepareCombatParityScenario();
       } else if (action.type === "mouseMove") {
@@ -659,6 +684,25 @@ function assertCurrentCombatResolution(trace) {
   assert.ok(recovered.enemies[0].stun <= 0, "the stun timer recovers instead of freezing AI");
 }
 
+function assertCurrentRangedCycle(trace) {
+  assert.deepEqual(trace.pageErrors, [], `current ranged trace page errors:\n${trace.pageErrors.join("\n")}`);
+  const entered = checkpoint(trace, "windup-entered");
+  const late = checkpoint(trace, "telegraph-late");
+  const fired = checkpoint(trace, "volley-fired");
+  assert.equal(entered.enemies[0].aiState, "windup", "the shooter enters its authored telegraph");
+  assert.ok(entered.enemies[0].windTime > 0 && entered.enemies[0].windMax > 0,
+    "the telegraph owns a finite windup window");
+  assert.ok(late.enemies[0].windTime < entered.enemies[0].windTime,
+    "the telegraph counts down through production enemy updates");
+  assert.equal(fired.enemies[0].aiState, "kite", "the shooter returns to kiting after firing");
+  assert.ok(fired.enemies[0].aimTimer > 0, "the next-shot cooldown resets after the volley");
+  assert.equal(fired.projectiles.length, 2, "the default Ranged attack emits its authored double tap");
+  assert.ok(fired.projectiles.every((projectile) => projectile.vx < 0),
+    "both hostile projectiles travel toward the player");
+  assert.ok(fired.projectiles.every((projectile) => projectile.family === "ordinaryProjectile"
+    && projectile.deflected === false), "the volley enters the ordinary hostile projectile family");
+}
+
 async function main() {
   const fixture = JSON.parse(fs.readFileSync(FIXTURE_FILE, "utf8"));
   const currentOnly = process.argv.includes("--current-only");
@@ -695,6 +739,7 @@ async function main() {
     if (fixture.contract === "player-locomotion") assertCurrentLocomotion(currentTrace);
     else if (fixture.contract === "enemy-charge-cycle") assertCurrentEnemyCharge(currentTrace);
     else if (fixture.contract === "combat-resolution") assertCurrentCombatResolution(currentTrace);
+    else if (fixture.contract === "ranged-fire-cycle") assertCurrentRangedCycle(currentTrace);
     else assertCurrentLifecycle(currentTrace);
 
     if (oracleServer) {
