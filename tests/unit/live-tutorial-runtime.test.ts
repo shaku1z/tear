@@ -13,7 +13,8 @@ describe("live tutorial runtime", () => {
       movingLeft: () => false, movingRight: () => false,
       player: () => ({ onGround: true, vy: 0, dashTimer: 0, x: 400, facing: 1 }),
       bladeState: () => "held", enemies: () => enemies, playSound: vi.fn(),
-      spawn: vi.fn(() => tutorialEnemy), terminateRun: vi.fn(), navigate: vi.fn(), releasePointer: vi.fn(),
+      spawn: vi.fn(() => tutorialEnemy), installArena: vi.fn(), resetTrainingSpace: vi.fn(),
+      terminateRun: vi.fn(), navigate: vi.fn(), releasePointer: vi.fn(),
       addProfileStat: vi.fn(), checkAchievements: vi.fn(), drawGhost,
     });
     runtime.start();
@@ -41,14 +42,14 @@ describe("live tutorial runtime", () => {
       movingLeft: () => false, movingRight: () => false,
       player: () => ({ onGround: true, vy: 0, dashTimer: 0, x: 400, facing: 1 }),
       bladeState: () => "held", enemies: () => enemies, playSound: vi.fn(), spawn,
-      terminateRun: vi.fn(), navigate: vi.fn(), releasePointer: vi.fn(), addProfileStat: vi.fn(),
+      installArena: vi.fn(), resetTrainingSpace: vi.fn(), terminateRun: vi.fn(), navigate: vi.fn(), releasePointer: vi.fn(), addProfileStat: vi.fn(),
       checkAchievements: vi.fn(), drawGhost: vi.fn(),
     });
     runtime.start();
-    for (let index = 0; index < 26; index++) { runtime.mark("moveL"); runtime.mark("moveR"); }
+    for (let index = 0; index < 60; index++) { runtime.mark("moveL"); runtime.mark("moveR"); }
     runtime.update(0); runtime.update(1.2);
-    runtime.mark("jump"); runtime.mark("jump"); runtime.update(0); runtime.update(1.2);
-    runtime.mark("dash"); runtime.mark("dash"); runtime.update(0); runtime.update(1.2);
+    runtime.mark("jump"); runtime.mark("jump"); runtime.mark("jump"); runtime.update(0); runtime.update(1.2);
+    runtime.mark("dash"); runtime.mark("dash"); runtime.mark("dash"); runtime.update(0); runtime.update(1.2);
     runtime.update(0);
     expect(runtime.step().t).toBe("CUT");
     expect(spawn).toHaveBeenCalledWith("charger", 8);
@@ -64,17 +65,17 @@ describe("live tutorial runtime", () => {
       movingLeft: () => false, movingRight: () => false,
       player: () => ({ onGround: true, vy: 0, dashTimer: 0, x: 400, facing: 1 }),
       bladeState: () => "held", enemies: () => [enemy], playSound: vi.fn(),
-      spawn: vi.fn(() => enemy), terminateRun: vi.fn(), navigate: vi.fn(), releasePointer: vi.fn(),
+      spawn: vi.fn(() => enemy), installArena: vi.fn(), resetTrainingSpace: vi.fn(), terminateRun: vi.fn(), navigate: vi.fn(), releasePointer: vi.fn(),
       addProfileStat: vi.fn(), checkAchievements: vi.fn(), drawGhost: vi.fn(),
     });
     const advance = () => { runtime.update(0); runtime.update(1.2); };
     runtime.start();
-    for (let index = 0; index < 26; index += 1) { runtime.mark("moveL"); runtime.mark("moveR"); }
+    for (let index = 0; index < 60; index += 1) { runtime.mark("moveL"); runtime.mark("moveR"); }
     advance();
-    runtime.mark("jump"); runtime.mark("jump"); advance();
-    runtime.mark("dash"); runtime.mark("dash"); advance();
+    runtime.mark("jump"); runtime.mark("jump"); runtime.mark("jump"); advance();
+    runtime.mark("dash"); runtime.mark("dash"); runtime.mark("dash"); advance();
     Object.assign(enemy, { x: 900, y: 300, vx: 80, vy: -600, onGround: false, hitCd: 1, hp: 20 });
-    runtime.mark("strike"); runtime.mark("strike"); runtime.mark("strike"); advance();
+    for (let index = 0; index < 6; index += 1) runtime.mark("strike"); advance();
 
     expect(runtime.step().t).toBe("LAUNCH");
     expect(enemy).toMatchObject({ x: 580, y: 680, vx: 0, vy: 0, onGround: true, hitCd: 0, hp: 100 });

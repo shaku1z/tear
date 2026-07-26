@@ -489,7 +489,9 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
       openDraft: openRewardDraft, openTier: openRewardTier, run: () => run, player: () => player, blade: () => blade, applyUpgrade, enterReplay: (record, from) => { replayAdapters.enter(record, from); },
       beginRename: () => { settingsRenameAdapters.beginRename(false, true); }, renameSnapshot: settingsRenameAdapters.renameSnapshot, selectSettingsTab: settingsRenameAdapters.selectSettingsTab,
       replayStatus: replayAdapters.status, applyOptions: (options) => { Object.assign(settings, options); applySettings(); }, settings, selected: () => ({ mode: selMode, difficulty: selDiff, weapon: selWeapon, boss: selBoss }),
-      tutorialSnapshot: () => ({ active: TUT.active, lessonIndex: TUT.idx, lesson: TUT.step().t, completionDelay: TUT.doneT, endingTime: TUT.endT, counters: { ...TUT.n } }),
+      tutorialSnapshot: () => ({ active: TUT.active, lessonIndex: TUT.idx, lesson: TUT.step().t,
+        arena: TUT.step().arena, arenaLabel: TUT.step().arenaLabel, teachingFocus: TUT.step().teachingFocus,
+        completionDelay: TUT.doneT, endingTime: TUT.endT, counters: { ...TUT.n } }),
       selectBoss: (boss) => { selBoss = boss; }, chapterBrief: () => Boolean(story.chapterFlow?.brief), finale: () => story.finale, rewardSnapshot: rewardRuntime.snapshot,
       authoritative: () => authoritativeStep.lastResult, startFinale: startAdventureFinale, severFinale: () => severFinaleAnchor(false),
     });

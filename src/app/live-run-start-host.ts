@@ -7,6 +7,7 @@ import { planRunStart, type RunStartPlan } from "../gameplay/run/run-start-plan"
 import { RunReplacementGuard } from "../gameplay/run/run-replacement";
 import type { BossId } from "../gameplay/run/content-director";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
+import { tutorialUsesBaselineLoadout } from "../gameplay/training/tutorial-contract";
 
 interface MutableWorldState {
   resetTransient(): void;
@@ -191,7 +192,10 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       }
     },
     applyMetaProgression: () => {
-      META.apply({ player: requirePlayer(state), blade: requireBlade(state), mods: requireRun(state).mods });
+      const run = requireRun(state);
+      if (!tutorialUsesBaselineLoadout(run.mode)) {
+        META.apply({ player: requirePlayer(state), blade: requireBlade(state), mods: run.mods });
+      }
       context.resetRewards();
     },
     activateOpeningContent: (mode) => {

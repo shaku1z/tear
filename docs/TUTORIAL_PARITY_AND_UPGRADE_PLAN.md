@@ -23,6 +23,34 @@ The governing principle is:
 
 > Do not count inputs. Prove control, vary the situation, then prove transfer.
 
+## Cutting Room 2.0 implementation status
+
+The live tutorial now uses the Cutting Room curriculum rather than the old
+shared playground layout. This is deliberately a baseline-only teaching run:
+
+- each of the thirteen blocks installs fresh task-specific platforms and clears
+  prior enemies, projectiles, player velocity, and blade throw state;
+- objective evidence is reset at every block entry, so a launch, slam, or
+  other valid action from the previous block cannot pre-complete the next one;
+- movement and combat objectives now require repeated player-valid actions;
+- the rising-cut exercise accepts only a fresh production launch or a fresh
+  collision inside an observed rising window; it never credits itself;
+- failed throw routes recover the blade without awarding hit or recall credit;
+- permanent meta/shop progression is skipped for tutorial runs, and tutorial
+  mode never starts campaign waves, drafts, or shops;
+- the objective field sheet is responsive and stays in the right-side safe
+  lane instead of crossing the score/combo sightline;
+- controller/touch prompt labels resolve through the active input bindings;
+- ghost demonstrations are now adaptive: they appear for a short labeled loop
+  only after the player has stalled, and a relevant live action dismisses them;
+- the deterministic browser journey completes every block with actual semantic
+  gameplay input and asserts every arena transition.
+
+The larger chamber progression below remains the content direction for follow-up
+work: enemy-language rooms, a wave-like mixed final encounter, selectable
+checkpoints, and a post-completion practice selector are not represented as
+completed merely because the core curriculum has been stabilized.
+
 ## Version 1 repair status
 
 The current parity repair now establishes a trustworthy baseline:

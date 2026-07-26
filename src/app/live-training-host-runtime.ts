@@ -7,6 +7,7 @@ import { createPlaygroundRuntimeBridge } from "../gameplay/training/runtime-brid
 import { createLivePlaygroundPresentation } from "../gameplay/training/live-playground-presentation";
 import type { PlaygroundScreenModel } from "../gameplay/training/live-playground-presentation";
 import type { ArenaPlatform } from "../gameplay/training/arena-rules";
+import { createTutorialArena } from "../gameplay/training/tutorial-arenas";
 import type { LegacyAppScreen } from "./legacy-state-controller";
 import type { TutorialGhostSnapshot } from "../gameplay/training/tutorial-controller";
 import { BOSS_ROSTER } from "../gameplay/run/content-director";
@@ -59,12 +60,33 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
   const tutorial = createLiveTutorialRuntime({
     viewportWidth: context.width, groundY: () => d.CONFIG.world.groundY,
     skipPressed: () => d.Input.pressed.has("KeyN"), movingLeft: () => d.Input.left(), movingRight: () => d.Input.right(),
-    player, bladeState: () => state.blade()?.state ?? "held", enemies: () => state.enemies(),
+    player, bladeState: () => state.blade()?.state ?? "held", bladeTipVY: () => state.blade()?.tipVY ?? 0, enemies: () => state.enemies(),
     playSound: (cue) => { if (cue === "rankup") d.SFX.rankup(); else d.SFX.ui(); },
     spawn: (kind, hpScale) => {
       const enemy = context.spawn(kind, hpScale);
       if (enemy === undefined) throw new Error(`Training spawn failed for ${kind}`);
       return enemy;
+    },
+    installArena: (arena) => {
+      context.stage.platforms = createTutorialArena(arena, context.width, context.height, d.CONFIG.world.groundY);
+    },
+    resetTrainingSpace: () => {
+      state.setEnemies([]); state.setProjectiles([]);
+      const actor = player();
+      actor.x = context.width * 0.20; actor.y = d.CONFIG.world.groundY - actor.hh;
+      actor.vx = 0; actor.vy = 0; actor.onGround = true; actor.hp = actor.maxHp;
+      const blade = state.blade();
+      if (blade !== undefined) {
+        const handX = actor.x + d.CONFIG.blade.handOffsetX, handY = actor.y + d.CONFIG.blade.handOffsetY;
+        blade.state = "held"; blade.x = handX; blade.y = handY; blade.vx = 0; blade.vy = 0;
+        blade.flyTime = 0; blade.throwOrigin = null; blade.pierced.clear(); blade.trail.length = 0;
+      }
+    },
+    recoverBlade: () => {
+      const actor = player(), blade = state.blade();
+      if (blade === undefined) return;
+      blade.state = "held"; blade.x = actor.x + d.CONFIG.blade.handOffsetX; blade.y = actor.y + d.CONFIG.blade.handOffsetY;
+      blade.vx = 0; blade.vy = 0; blade.flyTime = 0; blade.throwOrigin = null; blade.pierced.clear(); blade.trail.length = 0;
     },
     terminateRun: (reason) => { context.lifecycle.terminate(reason); },
     navigate: (screen) => { context.navigate(screen); }, releasePointer: context.releasePointer,

@@ -137,6 +137,7 @@ export interface HudSnapshot {
 export interface TutorialCardSnapshot {
   readonly lessonIndex: number; readonly lessonCount: number; readonly title: string; readonly description: string;
   readonly keys: readonly string[]; readonly final: boolean; readonly completedBeat: number;
+  readonly arenaLabel?: string; readonly teachingFocus?: string;
   readonly progress?: { readonly current: number; readonly goal: number } | undefined;
 }
 

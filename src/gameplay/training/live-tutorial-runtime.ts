@@ -5,6 +5,7 @@ import {
   type TutorialLesson,
   type TutorialMark,
 } from "./tutorial-controller";
+import { tutorialArenaDefinition, type TutorialArenaId } from "./tutorial-arenas";
 
 export interface LiveTutorialEnemy {
   readonly kind: string;
@@ -40,9 +41,14 @@ export interface LiveTutorialPort<TEnemy extends LiveTutorialEnemy> {
   readonly movingRight: () => boolean;
   readonly player: () => LiveTutorialPlayer;
   readonly bladeState: () => string;
+  readonly bladeTipVY?: () => number;
   readonly enemies: () => TEnemy[];
   readonly playSound: (cue: "rankup" | "ui") => void;
   readonly spawn: (kind: "charger" | "ranged", hpScale: number) => TEnemy;
+  readonly installArena: (arena: TutorialArenaId) => void;
+  /** Clear task-local enemies/projectiles and return the player/blade to a safe start. */
+  readonly resetTrainingSpace: () => void;
+  readonly recoverBlade?: () => void;
   readonly terminateRun: (reason: "quit") => void;
   readonly navigate: (screen: "menu") => void;
   readonly releasePointer: () => void;
@@ -58,6 +64,9 @@ export interface LiveTutorialLessonView {
   readonly need: number | undefined;
   readonly ranged: boolean | undefined;
   readonly final: boolean | undefined;
+  readonly arena: TutorialArenaId;
+  readonly arenaLabel: string;
+  readonly teachingFocus: "movement" | "blade" | "momentum" | "counterplay" | "ready";
   readonly prog: () => readonly [number, number];
   readonly ok: () => boolean;
 }
@@ -89,6 +98,8 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
     return {
       t: lesson.title, d: lesson.description, keys: lesson.keys,
       need: lesson.dummyCount, ranged: lesson.ranged, final: lesson.final,
+      arena: lesson.arena ?? "runway", arenaLabel: tutorialArenaDefinition(lesson.arena ?? "runway").label,
+      teachingFocus: lesson.teachingFocus ?? "movement",
       prog: () => lesson.progress(controller.counters),
       ok: () => lesson.complete(controller.counters),
     };
@@ -111,7 +122,7 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
       const enemies = port.enemies();
       const intents = controller.update({
         dt, skipPressed: port.skipPressed(), movingLeft: port.movingLeft(), movingRight: port.movingRight(),
-        player: port.player(), bladeState: port.bladeState(), viewportWidth: port.viewportWidth,
+        player: port.player(), bladeState: port.bladeState(), bladeTipVY: port.bladeTipVY?.() ?? 0, viewportWidth: port.viewportWidth,
         enemies: enemies.map((enemy, index) => ({
           id: String(index), kind: enemy.kind, dead: enemy.dead === true, tutorialDummy: enemy.tutDummy === true,
           hp: enemy.hp, maxHp: enemy.maxHp, x: enemy.x, y: enemy.y,
@@ -120,6 +131,9 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
       for (const intent of intents) {
         switch (intent.type) {
           case "sound": port.playSound(intent.cue); break;
+          case "install-arena": port.installArena(intent.arena); break;
+          case "reset-training-space": port.resetTrainingSpace(); break;
+          case "recover-blade": port.recoverBlade?.(); break;
           case "spawn": {
             const enemy = port.spawn(intent.kind, intent.hpScale);
             if (intent.role === "dummy") {

@@ -171,6 +171,7 @@ export function createLiveWorldPresentationAdapters(
     const prompt = tutorialInputPrompt(lesson.t, lesson.d, lesson.keys, d.Input.mode, d.PAD);
     world.tutorialCard(buildTutorialCardSnapshot(tutorial.idx, tutorial.steps.length, {
       t: lesson.t, d: prompt.description, keys: prompt.keys, prog: lesson.prog,
+      arenaLabel: lesson.arenaLabel, teachingFocus: lesson.teachingFocus,
       ...(lesson.final === undefined ? {} : { final: lesson.final }),
     }, tutorial.doneT));
   };

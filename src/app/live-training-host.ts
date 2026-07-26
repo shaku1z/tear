@@ -54,6 +54,7 @@ export interface LiveTrainingHost extends TrainingRuntime {
 function emptyProgress(): readonly [number, number] { return [0, 0]; }
 const fallbackLesson: ReturnType<LiveTutorialRuntime["step"]> = Object.freeze({
   t: "", d: "", keys: Object.freeze([]), need: undefined, ranged: undefined, final: undefined,
+  arena: "runway", arenaLabel: "THE RUNWAY", teachingFocus: "movement",
   prog: emptyProgress, ok: () => false,
 });
 

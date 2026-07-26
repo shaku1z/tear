@@ -11,12 +11,14 @@ import type {
 
 export interface TutorialLessonSource {
   readonly t: string; readonly d: string; readonly keys?: readonly string[]; readonly final?: boolean;
+  readonly arenaLabel?: string; readonly teachingFocus?: string;
   readonly prog?: () => readonly [number, number];
 }
 export function buildTutorialCardSnapshot(index: number, count: number, lesson: TutorialLessonSource, doneTime: number): TutorialCardSnapshot {
   const progress = lesson.prog !== undefined && lesson.final !== true ? lesson.prog() : undefined;
   return Object.freeze({ lessonIndex: index, lessonCount: count, title: lesson.t, description: lesson.d,
     keys: lesson.keys ?? [], final: lesson.final === true, completedBeat: doneTime,
+    arenaLabel: lesson.arenaLabel ?? "TRAINING", teachingFocus: lesson.teachingFocus ?? "movement",
     progress: progress === undefined ? undefined : { current: progress[0], goal: progress[1] } });
 }
 
