@@ -16,6 +16,18 @@ const ORACLE_REVISION = "ee5e93141d67cc02505b2227b3be0b10d1819e1c";
 const ORACLE_PROBE = `
   window.__TEAR_ORACLE_PARITY__ = Object.freeze({
     startRun: (mode, difficulty) => { startRun(mode, difficulty); },
+    prepareEnemyParityScenario: () => {
+      player.x = W / 2; player.y = CONFIG.world.groundY - player.hh;
+      player.vx = 0; player.vy = 0; player.onGround = true;
+      const enemy = new Charger(W / 2 + 300, CONFIG.world.groundY - CONFIG.enemy.h / 2);
+      Object.assign(enemy, {
+        vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 0, hitCd: 0, aliveT: 0,
+        behavior: "bull", atk: "windup", atkT: 0.3, atkMax: 0.3, atkDir: -1,
+        atkCd: 0, chargePower: 0.5, chargeMult: 1, canClimb: false, climber: false,
+        variant: "", variantName: "", affixes: [], affixCount: 0,
+      });
+      enemies = [enemy]; projectiles = [];
+    },
     screen: () => state,
     snapshot: () => {
       const hint = document.querySelector("#lockhint");
@@ -47,6 +59,12 @@ const ORACLE_PROBE = `
           aimX: blade.aimX, aimY: blade.aimY, reticleX: blade.reticleX, reticleY: blade.reticleY,
           flyTime: blade.flyTime, tension: blade.tension, secondaryActive: blade.secondaryActive,
         } : null,
+        enemies: enemies.filter((enemy) => !enemy.dead).slice(0, 24).map((enemy) => ({
+          kind: enemy.kind, bossId: enemy.bossId, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy,
+          hp: enemy.hp, stun: enemy.stun, spawnT: enemy.spawnT, introT: enemy.introT || 0, aliveT: enemy.aliveT,
+          onGround: enemy.onGround, behavior: enemy.behavior, attack: enemy.atk, attackTime: enemy.atkT,
+          attackCooldown: enemy.atkCd, attackDirection: enemy.atkDir, chargePower: enemy.chargePower,
+        })),
       };
     },
   });
@@ -98,7 +116,8 @@ async function installAdapter(page, kind, fixture) {
     await page.evaluate(({ mode, difficulty, revision }) => {
       window.__TEAR_PARITY_ADAPTER__ = Object.freeze({
         source: { kind: "oracle", revision },
-        startRun: () => { window.__TEAR_ORACLE_PARITY__.startRun(mode, difficulty); },
+        startRun: () => window.__TEAR_ORACLE_PARITY__.startRun(mode, difficulty),
+        prepareEnemyParityScenario: () => window.__TEAR_ORACLE_PARITY__.prepareEnemyParityScenario(),
         screen: () => window.__TEAR_ORACLE_PARITY__.screen(),
         snapshot: () => window.__TEAR_ORACLE_PARITY__.snapshot(),
       });
@@ -109,7 +128,8 @@ async function installAdapter(page, kind, fixture) {
   await page.evaluate(({ mode, difficulty }) => {
     window.__TEAR_PARITY_ADAPTER__ = Object.freeze({
       source: { kind: "current", revision: "working-tree" },
-      startRun: () => { window.__PANTHEON_TEST.startMode(mode, difficulty); },
+      startRun: () => window.__PANTHEON_TEST.startMode(mode, difficulty),
+      prepareEnemyParityScenario: () => window.__PANTHEON_TEST.prepareEnemyParityScenario(),
       screen: () => window.__PANTHEON_TEST.state().game,
       snapshot: () => {
         const live = window.__PANTHEON_TEST.state();
@@ -135,6 +155,7 @@ async function installAdapter(page, kind, fixture) {
           },
           player: live.playerTrace,
           blade: live.bladeTrace,
+          enemies: live.enemyTrace,
         };
       },
     });
@@ -176,7 +197,9 @@ async function installTickBridge(page) {
         key: action.key ?? action.code, code: action.code ?? action.key,
         bubbles: true, cancelable: true,
       }));
-      if (action.type === "mouseMove") {
+      if (action.type === "prepareEnemyScenario") {
+        window.__TEAR_PARITY_ADAPTER__.prepareEnemyParityScenario();
+      } else if (action.type === "mouseMove") {
         moveMouse(action.x, action.y);
       } else if (action.type === "mouseClick") {
         moveMouse(action.x, action.y);
@@ -584,6 +607,22 @@ function assertCurrentLocomotion(trace) {
   assert.ok(Math.abs(landed.player.vy) < 0.001, "landing resolves vertical velocity");
 }
 
+function assertCurrentEnemyCharge(trace) {
+  assert.deepEqual(trace.pageErrors, [], `current enemy trace page errors:\n${trace.pageErrors.join("\n")}`);
+  const windup = checkpoint(trace, "charge-windup").enemies[0];
+  const commit = checkpoint(trace, "charge-commit").enemies[0];
+  const advancing = checkpoint(trace, "charge-advancing").enemies[0];
+  const recovery = checkpoint(trace, "charge-recovery").enemies[0];
+
+  assert.equal(windup.attack, "windup", "the authored enemy begins in its readable windup");
+  assert.equal(commit.attack, "commit", "the windup transitions into a committed charge");
+  assert.ok(commit.vx < -500, "the committed charge moves toward the player");
+  assert.ok(advancing.x < commit.x - 20, "the charge advances through the arena");
+  assert.equal(recovery.attack, "recover", "the committed attack enters recovery");
+  assert.ok(recovery.attackCooldown > 0, "recovery owns the next-attack cooldown");
+  assert.ok(recovery.aliveT > windup.aliveT, "the enemy AI clock keeps advancing");
+}
+
 async function main() {
   const fixture = JSON.parse(fs.readFileSync(FIXTURE_FILE, "utf8"));
   const currentOnly = process.argv.includes("--current-only");
@@ -618,6 +657,7 @@ async function main() {
     const currentFile = path.join(OUTPUT_ROOT, `${fixture.id}.current.json`);
     fs.writeFileSync(currentFile, `${JSON.stringify(currentTrace, null, 2)}\n`);
     if (fixture.contract === "player-locomotion") assertCurrentLocomotion(currentTrace);
+    else if (fixture.contract === "enemy-charge-cycle") assertCurrentEnemyCharge(currentTrace);
     else assertCurrentLifecycle(currentTrace);
 
     if (oracleServer) {

@@ -92,3 +92,38 @@ test("parity differ treats grounded state as strict and movement timers as toler
   );
   assert.equal(airborne.firstDivergence.field, "player.onGround");
 });
+
+test("parity differ locks enemy attack phases while tolerating sub-frame motion drift", () => {
+  const base = {
+    label: "charge",
+    screen: "playing",
+    simulationTick: 64,
+    input: { mode: "keyboard", pointerLocked: true, pointerLockAllowed: true },
+    cursor: { drawn: false, lockHintVisible: false },
+    player: { onGround: true },
+    blade: { state: "held" },
+    enemies: [{
+      kind: "charger", behavior: "bull", attack: "commit", onGround: true,
+      x: 900, y: 700, vx: -800, vy: 0, hp: 100, stun: 0,
+      spawnT: 0, aliveT: 0.5, attackTime: 0.4, attackCooldown: 0,
+      attackDirection: -1, chargePower: 0.5,
+    }],
+  };
+  const tolerated = compareParityTraces(
+    trace("oracle", [base]),
+    trace("current", [{
+      ...base,
+      enemies: [{ ...base.enemies[0], x: 907, vx: -760, attackTime: 0.415 }],
+    }]),
+  );
+  assert.equal(tolerated.passed, true);
+
+  const wrongPhase = compareParityTraces(
+    trace("oracle", [base]),
+    trace("current", [{
+      ...base,
+      enemies: [{ ...base.enemies[0], attack: "recover" }],
+    }]),
+  );
+  assert.equal(wrongPhase.firstDivergence.field, "enemies.0.attack");
+});

@@ -44,10 +44,10 @@ not depend on visual estimation alone.
 
 ## Parity microscope
 
-`pnpm parity:blade` and `pnpm parity:player` serve the pinned oracle and the
-current test build on separate local origins. They replay the blade lifecycle
-or player locomotion fixture through both pages and write paired traces plus a
-report under `artifacts/parity/`.
+`pnpm parity:blade`, `pnpm parity:player`, and `pnpm parity:enemy` serve the
+pinned oracle and the current test build on separate local origins. They replay
+the blade lifecycle, player locomotion, or authored Charger fixture through
+both pages and write paired traces plus a report under `artifacts/parity/`.
 
 The blade fixture writes:
 
@@ -82,6 +82,13 @@ grounded acceleration, jump and release, airborne steering, directional dash,
 opposite-direction reversal, landing, and friction. Its permanent current-build
 contract is `pnpm test:browser:player-locomotion`.
 
+The enemy fixture is `tests/parity/enemy-charge-cycle.json`. A test-only action
+authors the same live Charger immediately before tick one in both builds,
+removing spawn and affix randomness while retaining the production enemy step.
+It covers windup, charge commit, arena locomotion, recovery, cooldown ownership,
+and the enemy AI clock. Its permanent current-build contract is
+`pnpm test:browser:enemy-charge`.
+
 ### Phase 0 blade baseline
 
 The parity adapter queues each event before a run segment starts, applies it
@@ -104,3 +111,12 @@ checkpoints. Both builds consumed every keyboard edge on the same authoritative
 tick and matched position, velocity, grounded state, coyote and jump-buffer
 timers, dash duration/cooldown, and the attached blade state throughout the
 scripted movement arc.
+
+### Phase 4 regular-enemy baseline
+
+The first authored Charger capture reached zero differences across six
+checkpoints. Both builds transition from windup to commit and recovery on the
+same authoritative ticks, and match attack direction, charge power, position,
+velocity, grounded state, cooldowns, and alive time. Enemy kind, behavior,
+attack phase, and grounded state are strict parity fields; continuous motion
+and timers retain narrow tolerances for future cross-browser trace evidence.

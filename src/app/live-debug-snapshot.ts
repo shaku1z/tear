@@ -105,6 +105,8 @@ export function createLiveDebugSnapshot(options: LiveDebugSnapshotOptions): obje
     enemyTrace: state.enemies().filter((enemy) => !enemy.dead).slice(0, 24).map((enemy) => ({
       kind: enemy.kind, bossId: enemy.bossId, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy,
       hp: enemy.hp, stun: enemy.stun, spawnT: enemy.spawnT, introT: enemy.introT ?? 0, aliveT: enemy.aliveT,
+      onGround: enemy.onGround, behavior: enemy.behavior, attack: enemy.atk, attackTime: enemy.atkT,
+      attackCooldown: enemy.atkCd, attackDirection: enemy.atkDir, chargePower: enemy.chargePower,
     })),
     bladeAim: blade ? { x: blade.aimX, y: blade.aimY, reticleX: blade.reticleX, reticleY: blade.reticleY } : null,
     authoritative: options.authoritative,

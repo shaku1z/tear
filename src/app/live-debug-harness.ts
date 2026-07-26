@@ -1,5 +1,5 @@
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
-import type { GameRun } from "./game-runtime-state";
+import type { GameEnemy, GameRun } from "./game-runtime-state";
 import type { LiveGameHostState } from "./live-game-host-state";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import type { BossId } from "../gameplay/run/content-director";
@@ -68,6 +68,23 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
   const clearCombat = (): void => { context.state.setEnemies([]); context.state.setProjectiles([]); };
   context.install(Object.freeze({
     startMode(mode?: RunMode, difficulty?: RunDifficulty) { context.startRun(mode ?? "endless", difficulty ?? "normal"); },
+    /** Exact-tick parity fixture: author one Charger after the run exists, before its next step. */
+    prepareEnemyParityScenario() {
+      const player = context.state.player();
+      if (player === undefined) throw new Error("Enemy parity scenario requires a live player");
+      player.x = context.width / 2; player.y = d.CONFIG.world.groundY - player.hh;
+      player.vx = 0; player.vy = 0; player.onGround = true;
+      const enemy = new d.Charger(context.width / 2 + 300,
+        d.CONFIG.world.groundY - d.CONFIG.enemy.h / 2) as GameEnemy;
+      Object.assign(enemy, {
+        vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 0, hitCd: 0, aliveT: 0,
+        behavior: "bull", atk: "windup", atkT: 0.3, atkMax: 0.3, atkDir: -1,
+        atkCd: 0, chargePower: 0.5, chargeMult: 1, canClimb: false, climber: false,
+        variant: "", variantName: "", affixes: [], affixCount: 0,
+      });
+      context.state.setEnemies([enemy]);
+      context.state.setProjectiles([]);
+    },
     /** Journey-only: drop the live boss to a health fraction so phase gates are reachable. */
     setBossHealthFraction(fraction: number) {
       const boss = context.state.enemies().find((enemy) => enemy.isBoss && !enemy.dead);
