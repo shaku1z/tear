@@ -142,6 +142,7 @@ export function compareParityTraces(oracleTrace, currentTrace, options = {}) {
   validateTrace(oracleTrace, "oracle");
   validateTrace(currentTrace, "current");
   const tolerances = { ...DEFAULT_TOLERANCES, ...(options.tolerances ?? {}) };
+  const comparisonPaths = options.paths ?? COMPARISON_PATHS;
   const currentByLabel = new Map(currentTrace.checkpoints.map((checkpoint) => [checkpoint.label, checkpoint]));
   const divergences = [];
   const missing = [];
@@ -155,7 +156,7 @@ export function compareParityTraces(oracleTrace, currentTrace, options = {}) {
       continue;
     }
     const requiresTickAlignment = oracle.screen === "playing" || current.screen === "playing";
-    for (const field of COMPARISON_PATHS) {
+    for (const field of comparisonPaths) {
       if (!STRICT_PATHS.has(field)
         && requiresTickAlignment
         && Number.isFinite(oracle.simulationTick)

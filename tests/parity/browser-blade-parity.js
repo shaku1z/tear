@@ -853,7 +853,7 @@ async function main() {
       const { compareParityTraces } = await import(pathToFileURL(
         path.join(REPOSITORY_ROOT, "scripts", "parity-diff.mjs"),
       ).href);
-      const report = compareParityTraces(oracleTrace, currentTrace);
+      const report = compareParityTraces(oracleTrace, currentTrace, fixture.comparison);
       const reportFile = path.join(OUTPUT_ROOT, `${fixture.id}.report.json`);
       fs.writeFileSync(reportFile, `${JSON.stringify(report, null, 2)}\n`);
       console.log(`${fixture.id} parity trace captured: ${report.comparedCheckpoints} checkpoints, ${report.divergenceCount} divergences`);

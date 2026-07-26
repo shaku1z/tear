@@ -28,6 +28,26 @@ test("parity differ accepts fields inside their documented tolerance", () => {
   assert.equal(compareParityTraces(oracle, current).passed, true);
 });
 
+test("parity differ supports a narrow contract without comparing unrelated world state", () => {
+  const base = {
+    label: "relative-aim",
+    screen: "playing",
+    input: { mode: "mouse", pointerLocked: true, pointerLockAllowed: true, pointer: { x: 800, y: 475 } },
+    cursor: { drawn: false, lockHintVisible: false },
+    player: { onGround: true },
+    blade: { state: "held", aimX: 42, aimY: -18, reticleX: 842, reticleY: 432 },
+    enemies: [{ kind: "charger", x: 300 }],
+  };
+  const current = {
+    ...base,
+    enemies: [{ kind: "charger", x: 900 }],
+  };
+  const report = compareParityTraces(trace("oracle", [base]), trace("current", [current]), {
+    paths: ["screen", "input.pointerLocked", "input.pointer.x", "input.pointer.y", "blade.state", "blade.aimX", "blade.aimY", "blade.reticleX", "blade.reticleY"],
+  });
+  assert.equal(report.passed, true);
+});
+
 test("parity differ reports the first lifecycle divergence with its checkpoint and field", () => {
   const base = {
     label: "capture",
