@@ -41,3 +41,50 @@ recorded above. Otherwise the oracle wins.
 The local oracle worktree convention is `../Tear-oracle`. Debug snapshots expose
 simulation time, 120 Hz tick, player, blade, and enemy traces so parity checks do
 not depend on visual estimation alone.
+
+## Parity microscope
+
+`pnpm parity:blade` serves the pinned oracle and the current test build on
+separate local origins, replays
+`tests/parity/blade-pointer-lifecycle.json` through both pages, and writes three
+ignored artifacts under `artifacts/parity/`:
+
+- `blade-pointer-lifecycle.oracle.json`
+- `blade-pointer-lifecycle.current.json`
+- `blade-pointer-lifecycle.report.json`
+
+The oracle server injects a read-only runtime probe inside the legacy
+`game.js` closure. It does not edit the oracle worktree. The command refuses to
+run if `../Tear-oracle` is not exactly at `ee5e931`.
+
+Each named checkpoint records the screen, input owner, pointer-lock lifecycle,
+authored cursor visibility, simulation time, player body, blade hilt and tip,
+aim/reticle, throw state, and tether state. `scripts/parity-diff.mjs` aligns
+checkpoints by label and reports the first differing field as well as every
+later divergence. Run it directly with:
+
+```text
+pnpm parity:diff <oracle-trace.json> <current-trace.json> [report.json]
+```
+
+The twin run is diagnostic by default, so it produces a report without failing
+the command while parity restoration is active. Set `TEAR_PARITY_STRICT=1` to
+turn any reported difference into a failing gate. The permanent current-build
+contract is `pnpm test:browser:blade-lifecycle`; it verifies capture, relative
+aim, tether hold, throw, pause/release, and fresh-run reset without requiring
+the external oracle worktree.
+
+### Phase 0 blade baseline
+
+The parity adapter queues each event before a run segment starts, applies it
+immediately before a named authoritative step, and captures immediately after a
+later named step. This avoids render-frame and catch-up-batch timing noise.
+
+The first complete 16-checkpoint capture reached zero active-play differences:
+the oracle and current build consumed all eight mouse events on the same ticks,
+then matched player state, blade hilt/tip position and velocity, aim/reticle,
+tension, tether, throw state, cursor visibility, pause/release, and fresh-run
+reset. Paused screens may stop their clocks on different tick numbers because
+the browser delivers pointer-lock loss asynchronously; the differ still
+compares their frozen gameplay and lifecycle state but does not treat the
+inactive clock value itself as a physics divergence.

@@ -64,6 +64,8 @@ export interface FixedSimulationInput {
   recording(): boolean; readonly aimRadius: number;
   sampleAim(): Readonly<{ x: number; y: number }>; pushAim(turn: number, magnitude: number): void;
   drainActions(tick: number): readonly CommandEnvelope<GameAction>[];
+  beforeStep?(tick: number): void;
+  afterStep?(tick: number): void;
   authoritativeStep(tick: number, seconds: number, actions: readonly CommandEnvelope<GameAction>[]): void;
   clearOverrides(): void; step(seconds: number): void; gauge(name: "simulationTick" | "simulationSteps" | "simulationDroppedMs", value: number): void;
 }
@@ -75,6 +77,7 @@ export function advanceFixedSimulation(input: FixedSimulationInput): FixedSimula
   if (input.hitStop > 0) return Object.freeze({ hitStop: input.hitStop - input.dt, steps: 0 });
   const advance = input.simulation.advance(input.dt * input.timeScale * 1000, (seconds, tick) => {
     if (input.state() !== "playing") return;
+    input.beforeStep?.(tick);
     // Recording is passive (source contract: GHOST observes the sim, never drives it).
     // The raw device input always runs the live step; the sealed envelopes exist only
     // for the replay file, so live feel is identical whether or not a ghost is taping.
@@ -85,6 +88,7 @@ export function advanceFixedSimulation(input: FixedSimulationInput): FixedSimula
       input.drainActions(tick);
     }
     input.clearOverrides(); input.step(seconds);
+    input.afterStep?.(tick);
   });
   input.gauge("simulationTick", advance.tick); input.gauge("simulationSteps", advance.steps);
   input.gauge("simulationDroppedMs", advance.droppedMilliseconds);

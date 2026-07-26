@@ -37,9 +37,11 @@ describe("live frame runtime", () => {
       sampleAim: () => { order.push("sample"); return { x: 0, y: 1 }; },
       pushAim: (turn, magnitude) => { order.push(`aim:${String(turn)}:${String(magnitude)}`); },
       drainActions: () => { order.push("drain"); return []; },
+      beforeStep: (tick) => order.push(`before:${String(tick)}`),
+      afterStep: (tick) => order.push(`after:${String(tick)}`),
       authoritativeStep: () => order.push("authoritative"),
       clearOverrides: () => order.push("clear"), step: () => order.push("step"), gauge });
-    expect(order).toEqual(["sample", "aim:250000:500", "drain", "clear", "step"]);
+    expect(order).toEqual(["before:4", "sample", "aim:250000:500", "drain", "clear", "step", "after:4"]);
     expect(gauge).toHaveBeenCalledTimes(3);
     expect(result).toEqual({ hitStop: 0, steps: 1 });
   });

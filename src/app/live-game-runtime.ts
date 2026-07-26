@@ -381,6 +381,16 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     sampleAim: () => blade.captureDeviceAim(blade.handPos(player)),
     pushAim: (turn, magnitude) => { Input.semantic.push({ type: "aim", turn, magnitude }); },
     drainActions: (tick) => GHOST.drainActions(tick),
+    ...(__TEAR_TEST_BUILD__ ? {
+      beforeSimulationStep: (tick: number) => {
+        const hook = (window as Window & { __TEAR_PARITY_TICK__?: { before?(tick: number): void } }).__TEAR_PARITY_TICK__;
+        hook?.before?.(tick);
+      },
+      afterSimulationStep: (tick: number) => {
+        const hook = (window as Window & { __TEAR_PARITY_TICK__?: { after?(tick: number): void } }).__TEAR_PARITY_TICK__;
+        hook?.after?.(tick);
+      },
+    } : {}),
     clearOverrides: () => { delete player.aiInput; delete blade.lmbOverride; delete blade.aimOverride; },
     gauge: (name, value) => { DIAG.gauge(name, value); },
     musicObservation,

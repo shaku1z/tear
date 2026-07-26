@@ -182,6 +182,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
           secondaryPressed: Input.rmb,
           pointerLocked: Input.locked,
           pointerLockAllowed: Input.allowLock,
+          tetherHeld: Input.tetherHeld,
           pointer: { x: Input.mouseX, y: Input.mouseY },
           ui: { ...Input.ui },
         }),
