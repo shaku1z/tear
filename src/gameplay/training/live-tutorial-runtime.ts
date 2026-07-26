@@ -49,6 +49,8 @@ export interface LiveTutorialPort<TEnemy extends LiveTutorialEnemy> {
   /** Clear task-local enemies/projectiles and return the player/blade to a safe start. */
   readonly resetTrainingSpace: () => void;
   readonly recoverBlade?: () => void;
+  /** Starts the separate no-wave practice run after the curriculum completes. */
+  readonly beginPractice: () => void;
   readonly terminateRun: (reason: "quit") => void;
   readonly navigate: (screen: "menu") => void;
   readonly releasePointer: () => void;
@@ -134,6 +136,7 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
           case "install-arena": port.installArena(intent.arena); break;
           case "reset-training-space": port.resetTrainingSpace(); break;
           case "recover-blade": port.recoverBlade?.(); break;
+          case "begin-practice": port.beginPractice(); break;
           case "spawn": {
             const enemy = port.spawn(intent.kind, intent.hpScale);
             if (intent.role === "dummy") {

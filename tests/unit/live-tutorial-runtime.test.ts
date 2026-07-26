@@ -14,6 +14,7 @@ describe("live tutorial runtime", () => {
       player: () => ({ onGround: true, vy: 0, dashTimer: 0, x: 400, facing: 1 }),
       bladeState: () => "held", enemies: () => enemies, playSound: vi.fn(),
       spawn: vi.fn(() => tutorialEnemy), installArena: vi.fn(), resetTrainingSpace: vi.fn(),
+      beginPractice: vi.fn(),
       terminateRun: vi.fn(), navigate: vi.fn(), releasePointer: vi.fn(),
       addProfileStat: vi.fn(), checkAchievements: vi.fn(), drawGhost,
     });
@@ -42,7 +43,7 @@ describe("live tutorial runtime", () => {
       movingLeft: () => false, movingRight: () => false,
       player: () => ({ onGround: true, vy: 0, dashTimer: 0, x: 400, facing: 1 }),
       bladeState: () => "held", enemies: () => enemies, playSound: vi.fn(), spawn,
-      installArena: vi.fn(), resetTrainingSpace: vi.fn(), terminateRun: vi.fn(), navigate: vi.fn(), releasePointer: vi.fn(), addProfileStat: vi.fn(),
+      installArena: vi.fn(), resetTrainingSpace: vi.fn(), beginPractice: vi.fn(), terminateRun: vi.fn(), navigate: vi.fn(), releasePointer: vi.fn(), addProfileStat: vi.fn(),
       checkAchievements: vi.fn(), drawGhost: vi.fn(),
     });
     runtime.start();
@@ -65,7 +66,7 @@ describe("live tutorial runtime", () => {
       movingLeft: () => false, movingRight: () => false,
       player: () => ({ onGround: true, vy: 0, dashTimer: 0, x: 400, facing: 1 }),
       bladeState: () => "held", enemies: () => [enemy], playSound: vi.fn(),
-      spawn: vi.fn(() => enemy), installArena: vi.fn(), resetTrainingSpace: vi.fn(), terminateRun: vi.fn(), navigate: vi.fn(), releasePointer: vi.fn(),
+      spawn: vi.fn(() => enemy), installArena: vi.fn(), resetTrainingSpace: vi.fn(), beginPractice: vi.fn(), terminateRun: vi.fn(), navigate: vi.fn(), releasePointer: vi.fn(),
       addProfileStat: vi.fn(), checkAchievements: vi.fn(), drawGhost: vi.fn(),
     });
     const advance = () => { runtime.update(0); runtime.update(1.2); };

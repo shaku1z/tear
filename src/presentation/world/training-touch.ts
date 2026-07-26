@@ -77,10 +77,6 @@ export function createTrainingTouchRenderers(context: LegacyWorldRenderContext) 
       else if (index === snapshot.lessonIndex) { canvas.fillStyle = "#000"; canvas.fill(); }
       else { canvas.strokeStyle = "rgba(0,0,0,0.3)"; canvas.lineWidth = 1.5; canvas.stroke(); }
     }
-    if (context.reducedMotion && snapshot.completedBeat < 0) {
-      canvas.font = ui.font(type.micro, true); canvas.fillStyle = "rgba(0,0,0,0.4)"; canvas.textAlign = "right";
-      canvas.fillText("N — skip lesson", x + width - 18, y + height - 10);
-    }
     canvas.font = ui.font(type.micro, true); canvas.fillStyle = "rgba(0,0,0,0.42)"; canvas.textAlign = "right";
     canvas.fillText(`BLOCK ${String(snapshot.lessonIndex + 1)} / ${String(snapshot.lessonCount)}`, x + width - 16, y + height - 10);
     if (snapshot.completedBeat > 0) {
@@ -90,7 +86,7 @@ export function createTrainingTouchRenderers(context: LegacyWorldRenderContext) 
     }
     if (snapshot.final) {
       canvas.font = ui.font(type.micro, true); canvas.fillStyle = "rgba(0,0,0,0.5)"; canvas.textAlign = "right";
-      canvas.fillText("returning to the menu…", x + width - 16, y + 24);
+      canvas.fillText("course complete · practice arena loading…", x + width - 16, y + 24);
     }
     canvas.restore(); canvas.textAlign = "left";
   }

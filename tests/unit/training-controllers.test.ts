@@ -132,7 +132,7 @@ describe("tutorial controller", () => {
     expect(intents).toContainEqual({ type: "reset-dummy", enemyId: "dummy", x: 580 });
   });
 
-  it("awards tutorial completion exactly once before returning to the menu", () => {
+  it("awards tutorial completion exactly once before entering the practice arena", () => {
     const controller = new TutorialController(); controller.start(1600);
     controller.lessonIndex = TUTORIAL_LESSONS.length - 1;
     const snapshot = {
@@ -143,7 +143,8 @@ describe("tutorial controller", () => {
     expect(completion.filter((intent) => intent.type === "profile-stat")).toEqual([
       { type: "profile-stat", stat: "tutorialDone", amount: 1 },
     ]);
-    expect(completion).toContainEqual({ type: "navigate", screen: "menu" });
+    expect(completion).toContainEqual({ type: "begin-practice" });
+    expect(completion).not.toContainEqual({ type: "navigate", screen: "menu" });
     expect(controller.update(snapshot)).toEqual([]);
   });
 });

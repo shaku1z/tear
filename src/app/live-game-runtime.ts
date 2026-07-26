@@ -125,6 +125,10 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     scroll: () => listScroll, setScroll: (value) => { listScroll = value; },
     requestPointerLock: requestLock, selectStage: loadStage, beginWipe: () => { Wipe.begin(); },
     resetRun: (difficulty) => { startRunWithPreflight("playground", difficulty); },
+    // The tutorial runtime has already completed its training preflight. Keep
+    // this handoff synchronous so a fixed-tick tutorial completion cannot sit
+    // behind an unflushed Promise microtask.
+    startPractice: () => { startRunImmediate("playground", "normal"); },
     applySettingsCinematicPreference: () => settings.cinematics, shakeScale: () => settingsController.shakeScale,
     getShake: () => shake, setShake: (value) => { shake = value; },
     getZoom: () => zoom, setZoom: (value) => { zoom = value; },

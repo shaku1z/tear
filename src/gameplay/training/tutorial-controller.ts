@@ -1,4 +1,5 @@
 import type { TutorialArenaId } from "./tutorial-arenas";
+import { productionGhostPath, type TutorialGhostFrame } from "./tutorial-production-ghost";
 
 export type TutorialMark =
   | "airHit" | "dash" | "deflect" | "jump" | "launch" | "moveL" | "moveR"
@@ -20,13 +21,12 @@ export interface TutorialLesson {
   complete(counters: Readonly<Partial<Record<TutorialMark, number>>>): boolean;
 }
 
-type Frame = readonly [time: number, x: number, y: number];
 type Swing = readonly [start: number, end: number, from: number, to: number];
 
 interface GhostScript {
   readonly length: number;
-  readonly path: readonly Frame[];
-  readonly target?: readonly Frame[];
+  readonly path: readonly TutorialGhostFrame[];
+  readonly target?: readonly TutorialGhostFrame[];
   readonly swings?: readonly Swing[];
   readonly dashes?: readonly (readonly [number, number])[];
   readonly hits?: readonly number[];
@@ -65,6 +65,7 @@ export type TutorialIntent =
   | Readonly<{ type: "spawn"; kind: "charger" | "ranged"; hpScale: number; role: "dummy" | "shooter"; x?: number }>
   | Readonly<{ type: "stabilize-dummy"; enemyId: string; minimumStun: number; healBelow: number }>
   | Readonly<{ type: "reset-dummy"; enemyId: string; x: number }>
+  | Readonly<{ type: "begin-practice" }>
   | Readonly<{ type: "terminate-run"; reason: "quit" }>
   | Readonly<{ type: "navigate"; screen: "menu" }>
   | Readonly<{ type: "release-pointer" }>
@@ -125,21 +126,21 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
 
 export const TUTORIAL_LESSONS: readonly TutorialLesson[] = CUTTING_ROOM_LESSONS;
 
-const GHOST_SCRIPTS: Readonly<Record<string, GhostScript>> = Object.freeze({
-  MOVE: { length: 3, path: [[0, 0, 0], [1.4, 170, 0], [2.9, 0, 0]] },
-  JUMP: { length: 3, path: [[0, 0, 0], [0.5, 0, 0], [0.85, 0, -130], [1.2, 0, 0], [1.7, 0, 0], [2.05, 0, -130], [2.4, 0, 0]] },
-  DASH: { length: 3, path: [[0, 0, 0], [0.5, 0, 0], [0.72, 230, 0], [1.7, 230, 0], [1.92, 0, 0]], dashes: [[0.5, 0.72], [1.7, 1.92]] },
-  CUT: { length: 3, path: [[0, 0, 0]], swings: [[0.5, 0.68, -0.9, 0.7], [1.3, 1.48, 0.7, -0.9], [2.1, 2.28, -0.9, 0.7]], hits: [0.6, 1.4, 2.2] },
-  LAUNCH: { length: 3.2, path: [[0, 0, 0]], swings: [[0.8, 1, 0.8, -1.9]], hits: [0.92], target: [[0, 0, 0], [0.9, 0, 0], [1.3, 0, -170], [1.8, 0, -50], [2.2, 0, 0]] },
-  JUGGLE: { length: 3.4, path: [[0, 0, 0]], swings: [[0.5, 0.7, 0.8, -1.9], [1.25, 1.42, -0.5, -2.1], [1.95, 2.12, -2.1, -0.5]], hits: [0.62, 1.33, 2.03], target: [[0, 0, 0], [0.6, 0, 0], [1, 0, -160], [1.35, 0, -110], [1.7, 0, -170], [2.05, 0, -120], [2.6, 0, 0]] },
-  SLAM: { length: 3.2, path: [[0, 0, 0], [0.5, 0, 0], [0.85, 40, -140], [1.15, 80, -30], [1.4, 80, 0], [2.2, 0, 0]], swings: [[0.95, 1.15, -0.6, 2.2]], hits: [1.08], target: [[0, 80, 0]] },
-  "POWER SLAM": { length: 3.4, path: [[0, 0, 0], [0.45, 0, 0], [0.75, 30, -170], [0.95, 60, -170], [1.15, 85, -20], [1.35, 85, 0], [2.3, 0, 0]], dashes: [[0.95, 1.15]], swings: [[1.05, 1.25, -0.5, 2.3]], hits: [1.18], target: [[0, 85, 0]] },
-  UPDRAFT: { length: 3, path: [[0, 0, 0], [0.45, 0, 0], [0.8, 20, -150], [1.2, 30, -20], [1.45, 30, 0], [2.2, 0, 0]], swings: [[0.62, 0.82, 1, -2]], hits: [0.74], target: [[0, 60, 0], [0.7, 60, 0], [1.1, 60, -190], [1.6, 60, -60], [2, 60, 0]] },
-  THROW: { length: 3.4, path: [[0, 0, 0]], throwWindow: [0.6, 1.9], hits: [1.1] },
-  PARRY: { length: 3, path: [[0, 0, 0]], swings: [[0.78, 0.94, 0.9, -1.2]], shot: { start: 0.3, hit: 0.86, end: 1.6 } },
+const PRODUCTION_GHOST_TRACES: Readonly<Record<string, GhostScript>> = Object.freeze({
+  MOVE: { length: 3, path: productionGhostPath("MOVE", 3) },
+  JUMP: { length: 3, path: productionGhostPath("JUMP", 3) },
+  DASH: { length: 3, path: productionGhostPath("DASH", 3), dashes: [[0.52, 0.72], [1.94, 2.14]] },
+  CUT: { length: 3, path: productionGhostPath("CUT", 3), swings: [[0.5, 0.68, -0.9, 0.7], [1.3, 1.48, 0.7, -0.9], [2.1, 2.28, -0.9, 0.7]], hits: [0.6, 1.4, 2.2] },
+  LAUNCH: { length: 3.2, path: productionGhostPath("LAUNCH", 3.2), swings: [[0.8, 1, 0.8, -1.9]], hits: [0.92], target: [[0, 0, 0], [0.9, 0, 0], [1.3, 0, -170], [1.8, 0, -50], [2.2, 0, 0]] },
+  JUGGLE: { length: 3.4, path: productionGhostPath("JUGGLE", 3.4), swings: [[0.5, 0.7, 0.8, -1.9], [1.25, 1.42, -0.5, -2.1], [1.95, 2.12, -2.1, -0.5]], hits: [0.62, 1.33, 2.03], target: [[0, 0, 0], [0.6, 0, 0], [1, 0, -160], [1.35, 0, -110], [1.7, 0, -170], [2.05, 0, -120], [2.6, 0, 0]] },
+  SLAM: { length: 3.2, path: productionGhostPath("SLAM", 3.2), swings: [[0.95, 1.15, -0.6, 2.2]], hits: [1.08], target: [[0, 80, 0]] },
+  "POWER SLAM": { length: 3.4, path: productionGhostPath("POWER SLAM", 3.4), dashes: [[0.82, 1.02]], swings: [[1.05, 1.25, -0.5, 2.3]], hits: [1.18], target: [[0, 85, 0]] },
+  UPDRAFT: { length: 3, path: productionGhostPath("UPDRAFT", 3), swings: [[0.62, 0.82, 1, -2]], hits: [0.74], target: [[0, 60, 0], [0.7, 60, 0], [1.1, 60, -190], [1.6, 60, -60], [2, 60, 0]] },
+  THROW: { length: 3.4, path: productionGhostPath("THROW", 3.4), throwWindow: [0.6, 1.9], hits: [1.1] },
+  PARRY: { length: 3, path: productionGhostPath("PARRY", 3), swings: [[0.78, 0.94, 0.9, -1.2]], shot: { start: 0.3, hit: 0.86, end: 1.6 } },
 });
 
-function interpolate(frames: readonly Frame[], time: number): Readonly<{ x: number; y: number }> {
+function interpolate(frames: readonly TutorialGhostFrame[], time: number): Readonly<{ x: number; y: number }> {
   const first = frames[0];
   if (!first) return { x: 0, y: 0 };
   if (time <= first[0]) return { x: first[1], y: first[2] };
@@ -279,8 +280,10 @@ export class TutorialController {
     } else if (lesson.final) {
       this.endingTime += dt;
       if (this.endingTime > READY_RETURN_SECONDS) {
-        this.stop(); intents.push({ type: "terminate-run", reason: "quit" }, { type: "navigate", screen: "menu" },
-          { type: "release-pointer" }, { type: "profile-stat", stat: "tutorialDone", amount: 1 }, { type: "achievement-check" });
+        // Completion is a handoff, not an ejection. The Playground is a
+        // no-wave training run, preserving the course's zero-upgrade baseline.
+        this.stop(); intents.push({ type: "profile-stat", stat: "tutorialDone", amount: 1 },
+          { type: "achievement-check" }, { type: "release-pointer" }, { type: "begin-practice" });
       }
     } else if (lesson.complete(this.counters)) {
       this.completionDelay = 1.1; intents.push({ type: "sound", cue: "rankup" });
@@ -289,7 +292,7 @@ export class TutorialController {
   }
 
   ghostSnapshot(groundY: number): TutorialGhostSnapshot {
-    const lesson = this.step(), script = GHOST_SCRIPTS[lesson.title];
+    const lesson = this.step(), script = PRODUCTION_GHOST_TRACES[lesson.title];
     const hidden: TutorialGhostSnapshot = { visible: false, demonstrating: false, lesson: lesson.title, time: 0, actor: { x: 0, y: 0, facing: 1, dashAfterimages: [] }, target: { visible: false, x: 0, y: 0, hit: false }, blade: { x: 0, y: 0, angle: 0.25, swinging: false, thrown: false, hit: false }, shot: { visible: false, x: 0, y: 0, deflected: false } };
     if (lesson.final || !script || this.coachDemoTime <= 0) return hidden;
     const time = this.ghostTime % script.length, position = interpolate(script.path, time);

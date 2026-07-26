@@ -229,6 +229,7 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
       reachedReady,
       active: tutorial().active,
       screen: window.__PANTHEON_TEST.state().game,
+      mode: window.__PANTHEON_TEST.state().mode,
       metrics: environment.metrics(),
       trace,
     };
@@ -237,7 +238,8 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
   const last = result.trace.at(-1);
   assert.equal(result.reachedReady, true, `tutorial did not reach READY: ${JSON.stringify(last)}`);
   assert.equal(result.active, false, `tutorial remained active: ${JSON.stringify(last)}`);
-  assert.equal(result.screen, "menu", `tutorial did not return to menu: ${JSON.stringify(last)}`);
+  assert.equal(result.mode, "playground", `tutorial did not hand off to practice: ${JSON.stringify(last)}`);
+  assert.equal(result.screen, "playing", `practice did not enter a playable arena: ${JSON.stringify(last)}`);
   assert.ok(result.metrics.acceptedActions > 0, "journey must use player-valid actions");
   const launchEntry = result.trace.find((entry) => entry.label === "after-3");
   const powerSlamEntry = result.trace.find((entry) => entry.label === "after-6");

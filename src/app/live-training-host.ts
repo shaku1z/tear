@@ -28,6 +28,7 @@ export interface LiveTrainingHostContext {
   readonly selectStage: (index: number) => void;
   readonly wipe: () => void;
   readonly resetRun: (difficulty: RunDifficulty) => void;
+  readonly startPractice: () => void;
   readonly selectedWeapon: () => string;
   readonly selectWeapon: (id: string) => void;
   readonly addFloater: (x: number, y: number, text: string, emphasis: boolean, color: string) => void;
