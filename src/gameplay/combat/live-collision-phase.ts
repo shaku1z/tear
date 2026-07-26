@@ -8,7 +8,7 @@ import { resolveHeldBladeParries, type ParryBlade, type ParryPlayer, type ParryP
   type ParryRun } from "./blade-parry-runtime";
 import { resolveEnemyContact, resolveHostileBladeContact, type ContactEnemy, type ContactPlayer,
   type HostileBlade } from "./contact-runtime";
-import { finalizeCombatTick, markFallenEnemies, resolvePlayerDeath, type TailEnemy, type TailFloater,
+import { finalizeCombatTick, markFallenEnemies, resolvePlayerDeath, runTrainingTick, type TailEnemy, type TailFloater,
   type TailPlayer, type TailProjectile, type TailRun } from "./combat-tail-runtime";
 import type { CombatEntityRuntime } from "./combat-entity-runtime";
 import type { BladePlayerPort } from "../entities/blade-contracts";
@@ -80,7 +80,10 @@ export function runLiveCollisionPhase(host: LiveCollisionPhaseHost, dt: number):
   const tail = finalizeCombatTick({ dt, enemies: state.enemies, projectiles: state.projectiles, floaters: state.floaters,
     shake: state.shake, shakeDecay: CONFIG.juice.shakeDecay, player, run, hooks: tailHooks(host) });
   state.enemies = tail.enemies as LiveEnemy[]; state.projectiles = tail.projectiles as LiveProjectile[];
-  state.floaters = tail.floaters; state.shake = tail.shake; resolveDeath(host);
+  state.floaters = tail.floaters; state.shake = tail.shake;
+  // Only now that the surviving lists are installed may training spawn onto them.
+  runTrainingTick(run.mode, dt, { updateTutorial: host.updateTutorial, updatePlayground: host.updatePlayground });
+  resolveDeath(host);
 }
 
 function heldTuning(width: number): HeldBladeCollisionInput["tuning"] {
@@ -168,7 +171,7 @@ function tailHooks(host: LiveCollisionPhaseHost) {
   return { ghostRecording: host.ghostRecording, ghostDeath: host.ghostDeath, ghostSample: host.ghostSample,
     updateTrick: host.updateTrick, breakStreak: () => { host.achievement("break"); }, jumped: () => { host.achievement("jump"); },
     achievementTick: host.achievementTick, maxStat: host.profileMax, checkAchievements: host.checkAchievements,
-    achievementsEnabled: host.achievementsEnabled, updateTutorial: host.updateTutorial, updatePlayground: host.updatePlayground };
+    achievementsEnabled: host.achievementsEnabled };
 }
 function resolveDeath(host: LiveCollisionPhaseHost): void {
   resolvePlayerDeath(host.player, host.run, {

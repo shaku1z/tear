@@ -15,7 +15,20 @@ export interface CombatCleanupHooks {
   ghostRecording(): boolean; ghostDeath(enemy: TailEnemy): void; ghostSample(dt: number, enemies: readonly TailEnemy[]): void;
   updateTrick(dt: number): void; breakStreak(): void; jumped(): void; achievementTick(dt: number): void;
   maxStat(name: string, value: number): void; checkAchievements(): void; achievementsEnabled(): boolean;
-  updateTutorial(dt: number): void; updatePlayground(): void;
+}
+
+export interface TrainingTickHooks { updateTutorial(dt: number): void; updatePlayground(): void }
+
+/**
+ * Runs the training-mode tick. This MUST happen after the caller has installed the
+ * surviving entity lists: training spawns push onto the live enemy array, and the
+ * source (ee5e931 js/game.js:3419 then :3446) filters the array before stepping the
+ * playground. Running it inside finalizeCombatTick pushed onto the pre-filter array,
+ * which the caller then overwrote — silently discarding every hotkey spawn.
+ */
+export function runTrainingTick(mode: string, dt: number, hooks: TrainingTickHooks): void {
+  if (mode === "tutorial") hooks.updateTutorial(dt);
+  else if (mode === "playground") hooks.updatePlayground();
 }
 export interface CombatCleanupInput {
   dt: number; enemies: readonly TailEnemy[]; projectiles: readonly TailProjectile[]; floaters: readonly TailFloater[];
@@ -46,7 +59,6 @@ export function finalizeCombatTick(input: CombatCleanupInput): CombatCleanupResu
   run._prevGround = player.onGround;
   if (player.onGround) { run._airT = 0; run._updraftChain = 0; } else run._airT = (run._airT ?? 0) + dt;
   if (hooks.achievementsEnabled()) updateAchievements(dt, enemies, run, hooks);
-  if (run.mode === "tutorial") hooks.updateTutorial(dt); else if (run.mode === "playground") hooks.updatePlayground();
   return { enemies, projectiles, floaters, shake };
 }
 

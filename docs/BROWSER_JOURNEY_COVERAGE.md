@@ -8,7 +8,7 @@ Run all four route/progression/playground/result journeys with `pnpm test:browse
 | --- | --- |
 | `browser-navigation-journeys.js` | Every menu hub route and BACK; War Table mode/difficulty/weapon/boss choices and return; all seven modes through BEGIN; pause/resume/confirm-quit/menu; required Attract entry/exit snapshot |
 | `browser-progression-journeys.js` | Draft keyboard reroll; pointer choice; reserve choose and skip; tier-up choice; Shop/Codex/Profile/Achievement/Leaderboard routes, tabs, cards and scrolling; both replay feeds; replay chapter/pause/speed/restart/info/back; rename DOM validation and Escape return |
-| `browser-playground-journeys.js` | In-world Build Menu entry; enemy spawn; Ability Lab entry, TAKE and scroll; Build Menu return; pointer resume; keyboard Tab resume |
+| `browser-playground-journeys.js` | In-world `1`/`2`/`3`/`T`/`B` hotkey spawns surviving the combat-tail entity commit; Build Menu entry and pointer spawn; Ability Lab entry, TAKE and scroll; Build Menu return; source-position RESUME; keyboard Tab resume |
 | `browser-terminal-journeys.js` | Game-over retry and menu; rewarded-continue give-up; non-campaign win replay/menu; campaign result/menu; deterministic final-cut advance/cut through restoration/results |
 
 ## Required debug preparation hooks

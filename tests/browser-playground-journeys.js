@@ -21,6 +21,17 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, waitScre
   await waitScreen("playing");
   console.log("playground journey: run ready");
 
+  // Hotkey spawns run at the combat-tail boundary. Each must survive the filtered
+  // entity-list commit performed earlier in the same fixed tick.
+  for (const key of ["1", "2", "3", "t", "b"]) {
+    const before = await page.evaluate(() => window.__PANTHEON_TEST.state().enemyCount);
+    await page.keyboard.press(key);
+    await page.waitForFunction((count) => window.__PANTHEON_TEST.state().enemyCount > count, before, { timeout: 5000 });
+  }
+  await page.keyboard.press("k");
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().enemyCount === 0, undefined, { timeout: 5000 });
+  console.log("playground journey: combat hotkey spawns survive the tail commit");
+
   // The in-world E shortcut shown by the production Playground help opens the tools.
   await pressUntilScreen("e", "pgmenu");
   console.log("playground journey: build menu open");
@@ -35,10 +46,10 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, waitScre
   await page.mouse.click(721, 272); // TAKE the first available ability
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   await page.mouse.wheel(0, 500);
-  await page.mouse.click(800, 850); // BUILD MENU
+  await page.mouse.click(800, 850); // BUILD MENU (lab back control)
   await waitScreen("pgmenu");
   console.log("playground journey: returned to build menu");
-  await page.mouse.click(800, 850); // RESUME
+  await page.mouse.click(800, 780); // RESUME (source-position band under the actions row)
   await waitScreen("playing");
   console.log("playground journey: pointer resume");
 

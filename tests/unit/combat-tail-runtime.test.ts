@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { finalizeCombatTick, resolvePlayerDeath, type CombatCleanupHooks, type TailPlayer, type TailRun } from "../../src/gameplay/combat/combat-tail-runtime";
+import { finalizeCombatTick, resolvePlayerDeath, runTrainingTick, type CombatCleanupHooks, type TailPlayer, type TailRun } from "../../src/gameplay/combat/combat-tail-runtime";
 
 const player = (): TailPlayer => ({ x: 0, y: 0, vy: -200, hp: 10, maxHp: 100, iframe: 0, onGround: false,
   tookHit: true, shopRevives: 0, abilityRevives: 0, oneHit: false });
@@ -7,7 +7,7 @@ const run = (): TailRun => ({ mode: "campaign", runTime: 0, waveTime: 0, _prevGr
 function cleanupHooks(): CombatCleanupHooks {
   return { ghostRecording: () => false, ghostDeath: vi.fn(), ghostSample: vi.fn(), updateTrick: vi.fn(),
     breakStreak: vi.fn(), jumped: vi.fn(), achievementTick: vi.fn(), maxStat: vi.fn(), checkAchievements: vi.fn(),
-    achievementsEnabled: () => true, updateTutorial: vi.fn(), updatePlayground: vi.fn() };
+    achievementsEnabled: () => true };
 }
 describe("combat tick tail", () => {
   it("filters before updating survivors and records hit/air achievement state", () => {
@@ -17,6 +17,24 @@ describe("combat tick tail", () => {
       floaters: [{ y: 10, life: 1 }], shake: 5, shakeDecay: 4, player: p, run: r, hooks });
     expect(result.enemies).toEqual([alive]); expect(update).toHaveBeenCalledWith(0.25); expect(result.shake).toBe(4);
     expect(r).toMatchObject({ runTime: 0.25, waveTime: 0.25, _dmgThisWave: true, _airT: 0.25 });
+  });
+  it("keeps the training tick out of the tail so late spawns survive", () => {
+    // The tail must not run training itself: its filtered lists are installed by the
+    // caller afterwards, so a playground spawn issued here would be discarded.
+    const hooks = cleanupHooks() as CombatCleanupHooks & Record<string, unknown>;
+    expect(hooks.updatePlayground).toBeUndefined();
+
+    // A playground spawn pushed onto the installed list must be preserved.
+    const live: { dead: boolean; y: number; bleedStacks: number; burnT: number }[] = [{ dead: true, y: 0, bleedStacks: 0, burnT: 0 }];
+    const r = run(); r.mode = "playground";
+    const result = finalizeCombatTick({ dt: 0.25, enemies: live, projectiles: [], floaters: [], shake: 0,
+      shakeDecay: 4, player: player(), run: r, hooks: cleanupHooks() });
+    const installed = result.enemies;   // what the caller installs as the live list
+    runTrainingTick(r.mode, 0.25, {
+      updateTutorial: vi.fn(),
+      updatePlayground: () => { installed.push({ dead: false, y: 0, bleedStacks: 0, burnT: 0 }); },
+    });
+    expect(installed).toHaveLength(1);
   });
   it("honors revive priority before the ad and terminal paths", () => {
     const p = player(); p.hp = 0; p.shopRevives = 1; p.abilityRevives = 1; const r = run();
