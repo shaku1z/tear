@@ -33,9 +33,9 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
   await clickAndWait(260, 360, "setup");
   await page.mouse.click(430, 195 + 2 * 60); // GAUNTLET
   await settleInput();
-  await page.mouse.click(820, 197 + 2 * 66); // HARD
+  await page.mouse.click(820, 196 + 2 * 60); // HARD
   await settleInput();
-  await page.mouse.click(1180, 203 + 3 * 78); // CHAINBLADE
+  await page.mouse.click(1180, 196 + 3 * 60); // CHAINBLADE
   await settleInput();
   assert.deepEqual(await setupSnapshot(), {
     mode: "gauntlet", difficulty: "hard", weapon: "chainblade", boss: "shuffle",

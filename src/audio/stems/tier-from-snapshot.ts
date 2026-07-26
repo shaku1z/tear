@@ -1,4 +1,4 @@
-import type { MusicContextSnapshot } from "../music-contracts";
+import { isMusicShell, type MusicContextSnapshot } from "../music-contracts";
 import type { Tier } from "./types";
 
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
@@ -12,7 +12,8 @@ const normalized = (value: number, max: number): number => clamp01(value / max);
 export function tierFromSnapshot(snapshot: MusicContextSnapshot): Tier {
   const scene = snapshot.scene;
   // The menu is a showcase, not a lull: play the complete arrangement there.
-  if (scene === "main-menu") return 4;
+  if (isMusicShell(scene, snapshot.biomeId)) return 4;
+  if (scene === "main-menu") return 0;
   if (scene === "preparation" || scene === "paused" || scene === "draft") {
     return 0;
   }

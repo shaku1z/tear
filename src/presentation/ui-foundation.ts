@@ -14,6 +14,8 @@ function fitLine(context: CanvasRenderingContext2D, value: string, maximumWidth:
 
 export function createUiFoundation(dependencies: UiDependencies) {
   const { CONFIG, Input, OVERSCAN } = dependencies;
+  const controllerGlyph = dependencies.controllerGlyph ??
+    ((index: number) => index === 4 ? "L1" : index === 5 ? "R1" : `#${String(index)}`);
   return {
 font(this: UiRuntime, size: number, bold?: boolean) {
             return `${bold ? "bold " : ""}${String(size)}px ${this.t.font.brand}`;
@@ -447,9 +449,9 @@ font(this: UiRuntime, size: number, bold?: boolean) {
                 ctx.font = this.font(t.type.micro, true);
                 ctx.textBaseline = "middle";
                 ctx.textAlign = "right";
-                ctx.fillText("L1 ‹", x0 - 12, y + h / 2);
+                ctx.fillText(`${controllerGlyph(4)} ‹`, x0 - 12, y + h / 2);
                 ctx.textAlign = "left";
-                ctx.fillText("› R1", x0 + total + 12, y + h / 2);
+                ctx.fillText(`› ${controllerGlyph(5)}`, x0 + total + 12, y + h / 2);
                 ctx.globalAlpha = 1;
             }
             ctx.textBaseline = "alphabetic";

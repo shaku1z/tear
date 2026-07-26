@@ -32,13 +32,6 @@ export interface SettingsRenameAdapters {
 }
 
 const presetOrder = ["default", "standard", "tear", "classic", "split"] as const;
-const presetMeta = Object.freeze({
-  default: { name: "DEFAULT", tag: "CURRENT", line: "Familiar, flexible, unchanged.", map: "L1 Tether · R1/L2 Throw · R2 Dash" },
-  standard: { name: "STANDARD", tag: "RECOMMENDED", line: "Balanced shoulders, familiar backups.", map: "L1 Jump · L2 Dash · R1 Throw · R2 Tether" },
-  tear: { name: "TEAR", tag: "EXPERT", line: "Pure twin-stick. No face-button actions.", map: "L1 Jump · L2 Dash · R1 Throw · R2 Tether" },
-  classic: { name: "CLASSIC", tag: "FAMILIAR", line: "Traditional action-platformer feel.", map: "Cross Jump · Circle Dash · L2 Tether" },
-  split: { name: "SPLIT", tag: "ERGONOMIC", line: "Blade utility moves to the left hand.", map: "L1 Throw · L2 Tether · R1 Jump · R2 Dash" },
-});
 const settingsTabs = [["general", "GENERAL"], ["controls", "CONTROLS"], ["audio", "AUDIO"],
   ["video", "VIDEO"], ["accessibility", "ACCESS"], ["signal", "SIGNAL"]] as const;
 
@@ -69,8 +62,22 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
   };
   const renderSettings = (): void => {
     settingsTab = services.stepTab(settingsTabs, settingsTab, () => { services.setScroll(0); maximumScroll = 0; });
+    const g = (index: number): string => d.PAD.glyph(index);
+    const presetMeta = Object.freeze({
+      default: { name: "DEFAULT", tag: "CURRENT", line: "Familiar, flexible, unchanged.",
+        map: `${g(4)} Tether · ${g(5)}/${g(6)} Throw · ${g(7)} Dash` },
+      standard: { name: "STANDARD", tag: "RECOMMENDED", line: "Balanced shoulders, familiar backups.",
+        map: `${g(4)} Jump · ${g(6)} Dash · ${g(5)} Throw · ${g(7)} Tether` },
+      tear: { name: "TEAR", tag: "EXPERT", line: "Pure twin-stick. No face-button actions.",
+        map: `${g(4)} Jump · ${g(6)} Dash · ${g(5)} Throw · ${g(7)} Tether` },
+      classic: { name: "CLASSIC", tag: "FAMILIAR", line: "Traditional action-platformer feel.",
+        map: `${g(0)} Jump · ${g(1)} Dash · ${g(6)} Tether` },
+      split: { name: "SPLIT", tag: "ERGONOMIC", line: "Blade utility moves to the left hand.",
+        map: `${g(4)} Throw · ${g(6)} Tether · ${g(5)} Jump · ${g(7)} Dash` },
+    });
     const sections = buildSettingsSections(settingsTab, services.settings, { lowGraphics: d.GFX.low,
-      touch: d.Input.touchActive(), installAvailable: services.installPrompt.available, update: d.PwaUpdate.snapshot(), presets: presetMeta });
+      touch: d.Input.touchActive(), installAvailable: services.installPrompt.available, update: d.PwaUpdate.snapshot(),
+      presets: presetMeta, controllerGlyphs: [g(0), g(1), g(2), g(3)] });
     const rowCount = sections.reduce((count, section) => count + section.rows.length, 0);
     maximumScroll = Math.max(0, rowCount * 54 + sections.length * 48 - 610);
     services.setScroll(services.clamp(services.scroll(), 0, maximumScroll));

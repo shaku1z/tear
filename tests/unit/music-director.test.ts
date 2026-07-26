@@ -39,13 +39,20 @@ describe("MusicDirector", () => {
     expect(port.emitMusicEvent).toHaveBeenCalledWith(expect.objectContaining({ type: "combo-rank-changed", rankId: "NICE", timeMs: 126 }));
   });
 
-  it("ends exactly once after a main-menu observation", () => {
+  it("keeps an in-run settings observation alive and ends only at the real shell", () => {
     const port = {
       beginMusicRun: vi.fn(), updateMusicContext: vi.fn(), emitMusicEvent: vi.fn(), endMusicRun: vi.fn(),
     };
     const director = new MusicDirector(port);
     director.begin({ runId: "run-1", runSeed: "1", rulesetVersion: "rules", gameVersion: "game", scoreVersion: "score" });
     director.update(observation(10, { scene: "main-menu" }));
+    expect(director.active).toBe(true);
+    expect(port.endMusicRun).not.toHaveBeenCalled();
+
+    director.update(observation(20, { scene: "combat" }));
+    expect(port.updateMusicContext).toHaveBeenCalledWith(expect.objectContaining({ scene: "combat", biomeId: "ruins" }));
+
+    director.update(observation(30, { scene: "main-menu", biomeId: "menu" }));
     director.end();
     expect(port.endMusicRun).toHaveBeenCalledTimes(1);
   });

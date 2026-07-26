@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isMusicShell } from "../../src/audio/music-contracts";
 
 /**
  * Regression guards for two routing bugs found in play:
@@ -8,25 +9,21 @@ import { describe, expect, it } from "vitest";
  *     every snapshot and each attempt cancelled the previous one.
  */
 
-/** Mirrors BiomeStemBackend's shell test. */
-const isShell = (scene: string, biomeId: string) =>
-  scene === "main-menu" && biomeId === "menu";
-
 describe("shell detection", () => {
   it("treats the real main menu as the shell", () => {
-    expect(isShell("main-menu", "menu")).toBe(true);
+    expect(isMusicShell("main-menu", "menu")).toBe(true);
   });
 
   it("does NOT treat settings opened during a run as the shell", () => {
     // scene resolves to main-menu for settings/shop/codex, but a live run
     // always reports its biome — that is what distinguishes the two.
-    expect(isShell("main-menu", "The Crimson Fields")).toBe(false);
-    expect(isShell("main-menu", "The Voidspire")).toBe(false);
+    expect(isMusicShell("main-menu", "The Crimson Fields")).toBe(false);
+    expect(isMusicShell("main-menu", "The Voidspire")).toBe(false);
   });
 
   it("never treats gameplay scenes as the shell", () => {
     for (const scene of ["combat", "boss", "paused", "draft", "victory"]) {
-      expect(isShell(scene, "The Grounds")).toBe(false);
+      expect(isMusicShell(scene as Parameters<typeof isMusicShell>[0], "The Grounds")).toBe(false);
     }
   });
 });

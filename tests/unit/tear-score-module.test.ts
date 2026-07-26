@@ -94,12 +94,15 @@ describe("pinned TearScore ESM adapter", () => {
     const first = { runId: "run-one", runSeed: "1", rulesetVersion: "rules", gameVersion: "game", scoreVersion: "score" };
     await client.beginRun(first);
     client.updateContext(context(1));
+    client.updateContext({ ...context(1), sequence: 2, timeMs: 124, scene: "main-menu" });
+    client.updateContext({ ...context(1), sequence: 3, timeMs: 125 });
     client.emitEvent({ type: "perfect-parry", eventId: "p1", timeMs: 126, weaponId: "sword" });
     client.emitEvent({ type: "boss-entered", eventId: "b1", timeMs: 127, bossId: "warden" });
-    expect(updates).toHaveLength(3);
+    expect(updates).toHaveLength(4);
     expect(updates[0]).toMatchObject({ screen: "playing", liveEnemies: 3, player: { comboRank: "SHARP" } });
-    expect(updates[1]).toMatchObject({ player: { comboGauge: 1 } });
-    expect(updates[2]).toMatchObject({ boss: { active: true, id: "warden" } });
+    expect(updates[1]).toMatchObject({ screen: "paused", biome: "The Grounds" });
+    expect(updates[2]).toMatchObject({ screen: "playing", biome: "The Grounds" });
+    expect(updates[3]).toMatchObject({ boss: { active: true, id: "warden" } });
 
     await client.endRun();
     const second = { ...first, runId: "run-two", runSeed: "2" };

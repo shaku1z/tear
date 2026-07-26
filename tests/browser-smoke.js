@@ -89,10 +89,15 @@ const path = require("node:path");
 
   // Exercise the real shell controls, including the contextual Settings return.
   const waitForScreen = async (screen) => {
-    await page.waitForFunction(
-      (expected) => window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen === expected,
-      screen,
-    );
+    try {
+      await page.waitForFunction(
+        (expected) => window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen === expected,
+        screen,
+      );
+    } catch (error) {
+      const actual = await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot());
+      throw new Error(`Expected screen ${screen}; received ${JSON.stringify(actual)}`, { cause: error });
+    }
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   };
   await page.mouse.click(260, 360); // PLAY
@@ -100,10 +105,10 @@ const path = require("node:path");
   await page.mouse.click(800, 758); // BEGIN
   await waitForScreen("playing");
   try {
-    await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().backend?.startsWith("tear-score@"));
+    await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().backend === "stem-cue:biome-routed");
   } catch (error) {
     const failedAudio = await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot());
-    assert.fail(`TearScore did not become active: ${JSON.stringify(failedAudio)}\n${browserLogs.join("\n") || error.message}`);
+    assert.fail(`Default biome-stem backend did not become active: ${JSON.stringify(failedAudio)}\n${browserLogs.join("\n") || error.message}`);
   }
   try {
     await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().score.run?.runId);
@@ -112,7 +117,9 @@ const path = require("node:path");
     assert.fail(`TearScore run did not start: ${JSON.stringify(failedRun)}\n${browserLogs.join("\n") || error.message}`);
   }
   const firstMusicRun = await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot());
-  assert.equal(firstMusicRun.score.enabled, true);
+  assert.equal(firstMusicRun.backend, "stem-cue:biome-routed");
+  assert.equal(firstMusicRun.score.enabled, false);
+  assert.equal(firstMusicRun.score.reason, "not-recorded");
   assert.ok(firstMusicRun.score.run?.runId);
   await page.keyboard.press("p");
   await waitForScreen("paused");
@@ -165,7 +172,7 @@ const path = require("node:path");
       await page.mouse.click(260, 360);
       await page.waitForTimeout(450);
     }
-    await page.mouse.click(1180, 200 + i * 78);
+    await page.mouse.click(1180, 196 + i * 60);
     await page.waitForTimeout(80);
     await page.mouse.click(800, 758);
     await page.waitForTimeout(500);

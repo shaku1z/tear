@@ -177,6 +177,7 @@ export interface MenuScreenView {
 export interface SetupScreenView {
   readonly id: "setup"; readonly modes: readonly ChoiceView[]; readonly difficulties: readonly ChoiceView[];
   readonly weapons: readonly ChoiceView[]; readonly showDifficulty: boolean; readonly startSummary: string;
+  readonly startGlyph: string;
   readonly bestSummary?: string; readonly bountySummary?: string;
   readonly bossChoices?: readonly ChoiceView[];
   readonly bounties?: readonly Readonly<{ label: string; detail: string; done: boolean }>[];

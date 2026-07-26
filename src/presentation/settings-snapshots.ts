@@ -17,6 +17,7 @@ export interface SettingsEnvironmentSnapshot {
   readonly lowGraphics: boolean; readonly touch: boolean; readonly installAvailable: boolean;
   readonly update: Readonly<{ ready: boolean; applying: boolean }>;
   readonly presets: Readonly<Record<string, ControllerPresetView>>;
+  readonly controllerGlyphs?: readonly string[];
 }
 export type SettingsSections = SettingsScreenView["sections"];
 const percent = (value: number): string => String(Math.round(value * 100)) + "%";
@@ -71,7 +72,9 @@ export function buildSettingsSections(tab: string, settings: SettingsSnapshotSou
       { key: "padDeadR", label: "Right-stick deadzone", value: percent(settings.padDeadR ?? 0.22), kind: "stepper" },
       { key: "padAimSens", label: "Controller aim sensitivity", value: percent(settings.padAimSens ?? 1), kind: "stepper" },
       { key: "vibration", label: "Vibration", value: (settings.vibration ?? "medium").toUpperCase(), kind: "cycle" },
-      { key: "glyphStyle", label: "Controller glyphs", value: (settings.glyphStyle ?? "auto").toUpperCase(), kind: "cycle" },
+      { key: "glyphStyle", label: "Controller glyphs",
+        value: (settings.glyphStyle ?? "auto").toUpperCase() +
+          (environment.controllerGlyphs?.length ? "   " + environment.controllerGlyphs.join("  ") : ""), kind: "cycle" },
       { key: "sens", label: "Blade / mouse sensitivity", value: settings.sens.toFixed(2), kind: "stepper" },
       { key: "controls", label: "Control mode", value: settings.controls === "auto" ? "AUTO (" + (environment.touch ? "TOUCH" : "DESKTOP") + ")" : settings.controls.toUpperCase(), kind: "cycle" },
     ];

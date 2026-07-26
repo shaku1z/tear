@@ -72,7 +72,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     { config: CONFIG, safeArea: SAFE, overscan: OVERSCAN, window, document, navigator, performance },
     { createInput: createLegacyInput, createGamepad: createLegacyGamepad },
   );
-  const UI = createUi({ CLOCK, CONFIG, Input, OVERSCAN, clamp });
+  const UI = createUi({ CLOCK, CONFIG, Input, OVERSCAN, clamp,
+    controllerGlyph: (buttonIndex) => PAD.glyph(buttonIndex) });
   const playerPresentation = createPlayerRenderer({ colors: CONFIG.colors, graphics: GFX, theme: THEME, clamp });
   const bladePresentation = createBladeRenderer({ clock: CLOCK, config: CONFIG, graphics: GFX, theme: THEME, clamp, len, lerp });
   const projectilePresentation = createProjectileRenderer({ clock: CLOCK, config: CONFIG, graphics: GFX, theme: THEME, clamp });

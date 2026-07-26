@@ -32,7 +32,7 @@ This checklist is the deletion contract for the legacy screen ranges. A row is p
 
 ## Non-negotiable deletion checks
 
-- Browser smoke must click each setup weapon at `y = 200 + index × 78` and observe that exact weapon in the started run.
+- Browser smoke must click each setup weapon on the shared choice grid (`y = 168 + index × 60`, height `56`) and observe that exact weapon in the started run.
 - Every legacy button must map to a `ScreenAction`; renderers never receive executable callbacks.
 - Replay world simulation, DOM text input, persistence, audio and platform APIs must not move into screen renderers.
 - Screen view snapshots must be captured before drawing and remain immutable throughout rendering.

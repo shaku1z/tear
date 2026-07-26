@@ -91,7 +91,7 @@ async function spawnRepresentativeEnemies(page, commandCount, onSample) {
     await page.waitForFunction((count) => window.__PANTHEON_TEST.state().enemyCount > count, before, { timeout: 5000 });
     if (onSample) await onSample(await diagnostics(page));
   }
-  await page.mouse.click(800, 850);
+  await page.mouse.click(800, 780); // RESUME from the Playground build menu
   await waitForGameState(page, "playing");
 }
 

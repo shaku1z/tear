@@ -1,5 +1,6 @@
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../presentation/screens/live-screen-renderers";
+import type { LegacyGamepad } from "../input/legacy-input-contracts";
 import { BOSS_ROSTER } from "../gameplay/run/content-director";
 import {
   ABILITY_CATEGORY_ORDER, CODEX_TABS, SPECIAL_ABILITY_COLOR, abilityBadge,
@@ -16,7 +17,7 @@ import { renderReplayThumbnail } from "../presentation/replay-thumbnail";
 type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "AFFIXES" | "Aldric" | "Armored" | "Bomber" | "Charger" |
   "Chimera" | "Cloud" | "Colossus" | "CONFIG" | "DAILY" | "Echo" | "FirebaseProvider" | "Flyer" |
   "META" | "PROFILE" | "Ranged" | "STAGES" | "Support" | "UI" | "UPGRADES" | "VARIANTS" | "VAULT" |
-  "Warden" | "Wraith" | "applyVariant">;
+  "Warden" | "Wraith" | "applyVariant"> & Readonly<{ PAD: LegacyGamepad }>;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 type Category = Readonly<{ name: string; color: string }>;
 
@@ -156,7 +157,10 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       d.UI.t.color.danger, d.UI.t.color.accent, bestiaryDetail);
     const cards = buildCodexAbilityCards({ upgrades: d.UPGRADES, filter: codexFilter, sort: codexSort,
       tierView: codexTierView, categories, fallbackCategory, uniqueColor: d.UI.t.color.unique, mutedColor: d.UI.t.color.muted });
-    const guide = codexTab === "guide" ? buildCodexGuide(d.CONFIG.trick.pts, d.CONFIG.trick.tiers) : undefined;
+    const guide = codexTab === "guide" ? buildCodexGuide(d.CONFIG.trick.pts, d.CONFIG.trick.tiers, {
+      jump: d.PAD.bindingLabel("jump"), dash: d.PAD.bindingLabel("dash"),
+      throw: d.PAD.bindingLabel("throw"), tether: d.PAD.bindingLabel("tether"), pause: d.PAD.glyph(9),
+    }) : undefined;
     const result = buildCodexScreenSnapshot({ tab: codexTab, filter: codexFilter, sort: codexSort,
       scroll: services.scroll(), tabs: CODEX_TABS, abilityCards: cards,
       abilityFilters: [["all", "ALL"], ...ABILITY_CATEGORY_ORDER.map((id) => [id, categories[id]?.name ?? id] as const)],

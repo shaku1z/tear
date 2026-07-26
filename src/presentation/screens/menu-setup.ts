@@ -58,10 +58,13 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     ui.header(canvas, "SELECT RUN", undefined, context.enterAmount);
     const top = 150, rowTop = 168;
     const modeX = 240, modeWidth = 380, difficultyX = 640, difficultyWidth = 360, weaponX = 1020, weaponWidth = 340;
+    // Keep the oracle's rich row content on a shared grid so each choice scans
+    // cleanly across mode, difficulty, and weapon.
+    const rowHeight = 56, rowPitch = 60;
     ui.sectionLabel(canvas, "MODE", modeX, top, modeWidth);
     const publicModes = view.modes.filter((choice) => choice.debug !== true);
     publicModes.forEach((choice, index) => { context.enqueue({
-      x: modeX, y: rowTop + index * 60, w: modeWidth, h: 54, size: 17,
+      x: modeX, y: rowTop + index * rowPitch, w: modeWidth, h: rowHeight, size: 17,
       label: choice.label.toUpperCase(), glyph: choice.glyph, sub: choice.sub,
       selected: choice.selected, enabled: choice.enabled,
       action: { type: "setup.selectMode", id: choice.id },
@@ -81,7 +84,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     if (view.showDifficulty) view.difficulties.forEach((choice, index) => {
       const heat = ["#2f9e6b", "#13c4d6", "#e0a326", ui.t.color.danger, "#b06cff"][index] ?? ui.t.color.accent;
       context.enqueue({
-        x: difficultyX, y: rowTop + index * 66, w: difficultyWidth, h: 58, size: 17,
+        x: difficultyX, y: rowTop + index * rowPitch, w: difficultyWidth, h: rowHeight, size: 17,
         label: choice.label.toUpperCase(), sub: choice.sub,
         pips: { n: 5, filled: index + 1, color: heat },
         selected: choice.selected, enabled: choice.enabled,
@@ -95,7 +98,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
 
     ui.sectionLabel(canvas, "WEAPON", weaponX, top, weaponWidth);
     view.weapons.forEach((choice, index) => { context.enqueue({
-      x: weaponX, y: rowTop + index * 78, w: weaponWidth, h: 70, size: 16,
+      x: weaponX, y: rowTop + index * rowPitch, w: weaponWidth, h: rowHeight, size: 16,
       label: choice.label.toUpperCase(), glyph: choice.glyph, sub: choice.sub,
       selected: choice.selected, enabled: choice.enabled,
       action: { type: "setup.selectWeapon", id: choice.id },
@@ -143,7 +146,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     const startWidth = Math.max(300, Math.round(canvas.measureText(view.startSummary).width) + 100);
     context.enqueue({
       x: width / 2 - startWidth / 2, y: 726, w: startWidth, h: 62,
-      label: "START", glyph: "□", sub: view.startSummary.toUpperCase(), hero: true, ghost: true, size: 26,
+      label: "START", glyph: view.startGlyph, sub: view.startSummary.toUpperCase(), hero: true, ghost: true, size: 26,
       action: { type: "setup.start" },
     });
     backControl(context);

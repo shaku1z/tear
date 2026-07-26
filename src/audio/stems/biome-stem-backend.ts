@@ -7,7 +7,9 @@ import type {
   MusicEvent,
   MusicReplayMetadata,
   MusicRunSessionMetadata,
+  MusicScene,
 } from "../music-contracts";
+import { isMusicShell } from "../music-contracts";
 import { applyMusicMode, onMusicModeChange } from "../music-mode";
 import { onLoadoutChange, resolveMenuCueId } from "../signal/loadout";
 import { getActiveStation, onStationChange } from "../signal/active-station";
@@ -89,7 +91,7 @@ export class BiomeStemBackend implements MusicBackend {
   /** Menu screens push no snapshots, so the shell context is the starting state. */
   #onShell = true;
   #lastBiomeId = "menu";
-  #lastScene = "main-menu";
+  #lastScene: MusicScene = "main-menu";
 
   constructor(cues: readonly LoadedCueRef[], biomeMap: Record<string, string>, defaultCueId: string, catalog: SignalCatalog | null = null, bossMap: Record<string, string> = {}) {
     this.#catalog = catalog;
@@ -132,15 +134,14 @@ export class BiomeStemBackend implements MusicBackend {
     // Menu/shell screens use the player's loadout; gameplay uses biome routing.
     // "settings"/"shop"/etc. all resolve to the main-menu scene, so scene alone
     // would hand the menu track over mid-run. A live run always reports a biome.
-    this.#onShell = snapshot.scene === "main-menu" && snapshot.biomeId === "menu";
+    this.#onShell = isMusicShell(snapshot.scene, snapshot.biomeId);
     this.#lastBiomeId = snapshot.biomeId;
     this.#lastScene = snapshot.scene;
     this.#lastBossId = snapshot.bossId;
     const cueId = this.#routeCueId(snapshot.biomeId, snapshot.scene);
     if (cueId !== this.#active?.cueId) {
       // Entering or leaving the menu is a UI swap; keep it snappy.
-      const menuSwap =
-        snapshot.scene === "main-menu" || this.#active?.cueId === this.#defaultCueId;
+      const menuSwap = this.#onShell || this.#active?.cueId === this.#shellCueId();
       void this.#activate(
         cueId,
         menuSwap ? MENU_CROSSFADE_SECONDS : CROSSFADE_SECONDS,
@@ -257,8 +258,8 @@ export class BiomeStemBackend implements MusicBackend {
   }
 
   /** Canonical (biome/menu) routing, ignoring any station. */
-  #canonicalCueId(biomeId: string, scene: string): string {
-    if (scene === "main-menu") return this.#shellCueId();
+  #canonicalCueId(biomeId: string, scene: MusicScene): string {
+    if (isMusicShell(scene, biomeId)) return this.#shellCueId();
     // A boss with its own track overrides the biome cue for that fight.
     if (scene === "boss" && this.#lastBossId) {
       const bossCue = this.#bossMap[this.#lastBossId];
@@ -274,11 +275,11 @@ export class BiomeStemBackend implements MusicBackend {
    * pick is remembered so it can resume afterwards. Outside a boss, an active
    * station programmes the track; `canonical` falls back to biome routing.
    */
-  #routeCueId(biomeId: string, scene: string): string {
+  #routeCueId(biomeId: string, scene: MusicScene): string {
     const canonical = this.#canonicalCueId(biomeId, scene);
     const station = getActiveStation();
     if (station === "canonical" || !this.#catalog) return canonical;
-    if (scene === "main-menu") return canonical; // shell slot owns the menu
+    if (isMusicShell(scene, biomeId)) return canonical; // shell slot owns the menu
 
     // Boss/story takeover — remember what the station wanted, play canonical.
     if (scene === "boss" || scene === "victory" || scene === "defeat") {

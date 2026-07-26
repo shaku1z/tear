@@ -34,6 +34,7 @@ const modeTrim: Readonly<Record<string, Readonly<{ glyph: string; sub: string }>
 
 export function buildSetupSnapshot(input: {
   readonly selectedMode: string; readonly selectedDifficulty: string; readonly selectedWeapon: string; readonly selectedBoss: string;
+  readonly startGlyph: string;
   readonly modes: readonly MenuModeSource[]; readonly difficulties: readonly MenuDifficultySource[]; readonly weapons: readonly WeaponChoiceSource[];
   readonly bosses: readonly BossChoiceSource[]; readonly bounties?: readonly BountyChoiceSource[]; readonly livePlatform: boolean;
   readonly best: BestSetupSource; readonly formatTime: (seconds: number) => string;
@@ -59,7 +60,8 @@ export function buildSetupSnapshot(input: {
         detail: `H ${String(entry.ratings.handling)} · I ${String(entry.ratings.impact)} · R ${String(entry.ratings.reach)} · D ${String(entry.ratings.difficulty)}` +
           (entry.weaknesses?.length ? `     WEAK: ${entry.weaknesses.join(" / ")}` : ""),
       }) })),
-    showDifficulty, startSummary: ((mode?.label ?? "") + " · " + (showDifficulty && difficulty !== undefined ? difficulty.label + " · " : "") + (weapon?.name ?? "")).toUpperCase(),
+    showDifficulty, startGlyph: input.startGlyph,
+    startSummary: ((mode?.label ?? "") + " · " + (showDifficulty && difficulty !== undefined ? difficulty.label + " · " : "") + (weapon?.name ?? "")).toUpperCase(),
     bestSummary: input.best.wave || input.best.score ? "YOUR BEST · wave " + String(input.best.wave) + " · " + String(input.best.score) + " pts · " + input.formatTime(input.best.time ?? 0)
       : "YOUR BEST · no record on this board yet",
     ...(bossChoices === undefined ? {} : { bossChoices }),

@@ -9,6 +9,7 @@ import type {
   MusicReplayMetadata,
   MusicRunSessionMetadata,
 } from "./music-contracts";
+import { isMusicShell } from "./music-contracts";
 import type {
   TearScoreClient,
   TearScoreInitializeOptions,
@@ -84,7 +85,8 @@ function isTearScoreModule(value: unknown): value is TearScoreModule {
 }
 
 function toGameContext(snapshot: MusicContextSnapshot): TearScoreGameContext {
-  const screen = snapshot.scene === "main-menu" ? "menu"
+  const screen = snapshot.scene === "main-menu"
+    ? (isMusicShell(snapshot.scene, snapshot.biomeId) ? "menu" : "paused")
     : snapshot.scene === "preparation" ? "setup"
       : snapshot.scene === "paused" ? "paused"
         : snapshot.scene === "draft" ? "draft"
@@ -208,11 +210,10 @@ class PinnedModuleTearScoreClient implements TearScoreClient {
         player: { ...player, comboRank: event.rankId },
       };
     } else {
-      const player = previous.player ?? { healthRatio: 1, comboGauge: 0, comboMultiplier: 1, comboRank: "" };
-      this.#lastContext = {
-        ...previous,
-        player: { ...player, comboGauge: 1 },
-      };
+      // Stingers are deliberately disabled until every cue has a matching accent.
+      // Keep the event in the deterministic journal, but do not force an
+      // unrelated arrangement layer into the currently playing composition.
+      return;
     }
     // Adapter 0.1 exposes context snapshots rather than a separate event channel.
     // Sending the adjusted snapshot here preserves same-frame semantic delivery.

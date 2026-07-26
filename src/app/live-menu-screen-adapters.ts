@@ -1,9 +1,10 @@
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../presentation/screens/live-screen-renderers";
+import type { LegacyGamepad } from "../input/legacy-input-contracts";
 import { createLiveMenuScreenAdaptersRuntime } from "./live-menu-screen-adapters-runtime";
 
 type Dependencies = Pick<GameRuntimeDependencies, "Attract" | "CG" | "Cloud" | "CONFIG" | "DAILY" | "META" |
-  "PROFILE" | "SFX" | "SHOP" | "UI" | "WEAPONS">;
+  "PROFILE" | "SFX" | "SHOP" | "UI" | "WEAPONS"> & Readonly<{ PAD: LegacyGamepad }>;
 type ScreenRenderers = ReturnType<typeof createLiveScreenRenderers>;
 type BestScore = Readonly<{ wave: number; score: number; time?: number }>;
 
