@@ -6,6 +6,7 @@ import {
   captureCodecState,
   createDefaultStateCodecRegistry,
   diffCodecWorlds,
+  restoreSnapshotIntoLiveWorld,
   restoreSnapshotTransactionally,
   type TearCodecWorld,
   type TearSnapshotV1,
@@ -32,15 +33,22 @@ function populatedWorld(): TearCodecWorld {
     id: "player", x: 10, y: 20, vx: 2, vy: 0, hp: 100, maxHp: 100,
   });
   candidate.components.set("tear.blade.v1", {
-    id: "blade", ownerId: "player", x: 30, y: 20, vx: 0, vy: 0, state: "held",
+    id: "blade", ownerId: "player", weaponId: "sword", x: 30, y: 20, vx: 0, vy: 0, state: "held",
   });
   candidate.components.set("tear.enemy.v1", [
-    { id: "enemy-1", ownerId: "enemy-1", targetId: "player", x: 400, y: 20, hp: 30 },
+    { id: "enemy-1", factoryId: "charger", ownerId: "enemy-1", targetId: "player", x: 400, y: 20, hp: 30 },
   ]);
   candidate.components.set("tear.projectile.v1", [
-    { id: "projectile-1", ownerId: "enemy-1", targetId: "player", x: 300, y: 20, vx: -3, vy: 0 },
+    { id: "projectile-1", factoryId: "projectile", ownerId: "enemy-1", targetId: "player", x: 300, y: 20, vx: -3, vy: 0 },
   ]);
-  candidate.components.set("tear.run.v1", { wave: 4, elapsedTicks: 60, score: 1200 });
+  candidate.components.set("tear.run.v1", { mode: "endless", difficulty: "hard", wave: 4, tick: 60, elapsedTicks: 60, score: 1200 });
+  candidate.components.set("tear.world.v1", { clock: 60, identityState: {} });
+  candidate.components.set("tear.boss.v1", []);
+  candidate.components.set("tear.platform.v1", []);
+  candidate.components.set("tear.hazard.v1", { slowZones: [], walls: [] });
+  candidate.components.set("tear.ui.v1", { screen: "playing", focusId: "-1" });
+  candidate.components.set("tear.reward.v1", { selection: null });
+  candidate.components.set("tear.configuration.v1", { rulesetVersion: "test", values: {} });
   candidate.components.set("tear.rng.v1", { combat: { algorithm: "mulberry32", state: 42 } });
   return candidate;
 }
@@ -145,5 +153,50 @@ describe("TearBench shared state codec registry", () => {
     expect(result.ok).toBe(false);
     expect(replacements).toBe(0);
     if (!result.ok) expect(result.issues.some((issue) => issue.message.includes("dangerous"))).toBe(true);
+  });
+
+  it("rejects duplicate stable identities before rebuilding references", () => {
+    const registry = createDefaultStateCodecRegistry();
+    const snapshot = snapshotFrom(populatedWorld());
+    const hostile: TearSnapshotV1 = {
+      ...structuredClone(snapshot),
+      state: {
+        ...snapshot.state,
+        "tear.enemy.v1": [
+          { id: "enemy-1", factoryId: "charger", targetId: "player", x: 10, y: 20 },
+          { id: "enemy-1", factoryId: "charger", targetId: "player", x: 30, y: 20 },
+        ],
+      },
+    };
+    const result = restoreSnapshotTransactionally(hostile, registry, factory, { replace() { /* unreachable */ } });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues.some((issue) => issue.message.includes("duplicate entity id enemy-1"))).toBe(true);
+  });
+
+  it("stages constructor/reference rebuilding off-run and rolls back a failed live commit", () => {
+    const registry = createDefaultStateCodecRegistry();
+    const original = populatedWorld();
+    const snapshot = snapshotFrom(original);
+    const previous = populatedWorld();
+    previous.components.set("tear.run.v1", { wave: 2, elapsedTicks: 20, score: 30 });
+    let active = structuredClone(previous.components.get("tear.run.v1"));
+    let commits = 0;
+    const result = restoreSnapshotIntoLiveWorld(snapshot, registry, factory, {
+      capture: () => previous,
+      stage(candidate, context) {
+        context.requireIdentity("player");
+        context.requireIdentity("enemy-1");
+        return structuredClone(candidate.components.get("tear.run.v1"));
+      },
+      validate: () => [],
+      commit(candidate) {
+        commits += 1;
+        active = candidate;
+        if (commits === 1) throw new Error("host rejected candidate");
+      },
+    });
+    expect(result).toMatchObject({ ok: false, phase: "commit", rolledBack: true });
+    expect(commits).toBe(2);
+    expect(active).toEqual(previous.components.get("tear.run.v1"));
   });
 });

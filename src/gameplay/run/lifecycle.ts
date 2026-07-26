@@ -131,6 +131,14 @@ export class RunLifecycleController {
   #snapshot = initialRunLifecycleSnapshot();
 
   snapshot(): RunLifecycleSnapshot { return this.#snapshot; }
+  restore(snapshot: RunLifecycleSnapshot): void {
+    if (!RUN_PHASES.includes(snapshot.phase)) throw new TypeError(`invalid restored lifecycle phase ${snapshot.phase}`);
+    if (!Number.isSafeInteger(snapshot.revision) || snapshot.revision < 0) {
+      throw new RangeError("restored lifecycle revision must be non-negative");
+    }
+    if (snapshot.wave !== null) assertPositiveWave(snapshot.wave);
+    this.#snapshot = Object.freeze(structuredClone(snapshot));
+  }
   get phase(): RunPhase { return this.#snapshot.phase; }
   get isWaveActive(): boolean { return this.#snapshot.phase === "wave-active"; }
   get hasPreparedWave(): boolean { return this.#snapshot.phase === "wave-prepared"; }

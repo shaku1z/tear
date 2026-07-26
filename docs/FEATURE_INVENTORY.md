@@ -16,10 +16,16 @@ This is the migration checklist for the architectural redesign. A checked featur
   Ghost/Academy storage, genuine learned policies, automatic Foundry operation,
   complete visible experiences, and end-to-end certification remain tracked by
   `plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md`.
+- [x] Test-build State Forge Studio — `tearbench-state-forge-studio.test.ts`
+  keeps structural, reachability, and population-plausibility reports
+  independent; `browser-state-forge-studio.js` proves the `?stateforge=1` live
+  host can launch and capture a disposable runtime, inspect provenance and
+  diffs, fork and transactionally watch a checkpoint, import/export TearSDL,
+  and fail closed on malformed editor input.
 
 ## Game flow and modes
 
-- [x] Main menu, setup/war table and tutorial — `browser-navigation-journeys.js`, `browser-feature-matrix.js`, `browser-tutorial-journey.js`, and `training-controllers.test.ts`; setup preserves the oracle risk pips, weapon identity/rating strip, and hero START treatment through the typed live-renderer boundary while placing all public choices on one aligned row grid. Tutorial preserves the oracle lesson contract, recovers/reset dummies, completes through real semantic gameplay input, awards completion once, and adapts prompts to keyboard/mouse, configured controller glyphs, and touch. The researched next-generation chamber curriculum is in `TUTORIAL_PARITY_AND_UPGRADE_PLAN.md`.
+- [x] Main menu, setup/war table and tutorial — `browser-navigation-journeys.js`, `browser-feature-matrix.js`, `browser-tutorial-journey.js`, and `training-controllers.test.ts`; setup preserves the oracle risk pips, weapon identity/rating strip, and hero START treatment through the typed live-renderer boundary while placing all public choices on one aligned row grid. Tutorial preserves the oracle lesson contract, resets objective evidence when each lesson activates, recovers and resets dummies, completes through real semantic gameplay input, awards completion once, adapts prompts to keyboard/mouse, configured controller glyphs, and touch, and keeps its objective card outside the centered style-meter lane. The researched next-generation movement curriculum, production-physics ghost, changing action-block stage, and zero-upgrade contract are in `TUTORIAL_PARITY_AND_UPGRADE_PLAN.md`.
 - [x] Endless, campaign/adventure and every published challenge/training mode — both browser mode matrices start all seven published modes; `run-wave-rules.test.ts` and `run-session.test.ts` characterize their lifecycle classes.
 - [x] Run start, wave progression, biome progression and boss transitions — the run lifecycle, wave planner/scheduler/clear, browser smoke, and boss phase suites.
 - [x] Upgrade draft, reroll, reserve and boss tier-up flows — `browser-progression-journeys.js`, `gameplay-definitions.test.ts`, and `weapon-ability-conformance.test.ts`.

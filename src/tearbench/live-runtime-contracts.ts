@@ -4,7 +4,13 @@ import type { GameAction } from "../input/game-action";
 import type { LiveGhostEngineEvent } from "../replay/legacy-compat";
 import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
 import type { TearCausalEventV1, TearObservationV1, TearScenarioV1 } from "./contracts";
+import type { TearSnapshotV1, TearStateClass } from "./contracts";
 import type { TearScenarioTransition } from "./runner";
+import type { TearLiveRestoreResult, TearLiveWorldAdapter } from "./live-state-snapshot";
+import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
+import type { TearProgressionLedger } from "./progression-ledger";
+import type { TearProgressionReplayResult } from "./progression-replay";
+import type { TearSdlResolved } from "./tearsdl";
 
 export type TearRuntimeAccessClass = "A" | "B" | "C";
 
@@ -39,6 +45,11 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
   readonly accessClass: "A";
   rng(): RunRandomStreamsSnapshot;
   setTimeEffectsForTest(effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>): void;
+  captureSnapshot(id: string, stateClass?: TearStateClass): TearSnapshotV1;
+  restoreSnapshot(snapshot: TearSnapshotV1): TearLiveRestoreResult;
+  forgeExitLaunch(launch: StateForgeExitLaunch): TearLiveRestoreResult;
+  forgeWave99Hammer(): TearLiveRestoreResult;
+  forgeResolvedScenario(resolved: TearSdlResolved): TearLiveRestoreResult;
 }
 
 export interface TearClassBRuntimeEnvironment extends Omit<TearStructuredRuntimeEnvironment, "accessClass" | "rng"> {
@@ -99,6 +110,8 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly setTimeEffectsForTest: (
     effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>,
   ) => void;
+  readonly stateForge: TearLiveWorldAdapter<unknown>;
+  readonly replayProgression: (ledger: TearProgressionLedger) => TearProgressionReplayResult;
 }
 
 export interface TearRuntimeBridgeFactory {

@@ -13,12 +13,10 @@ import {
   type VisualStageEvent,
   type VisualWaveEvent,
 } from "./visual-replay";
-
 export interface ReplayStore {
   get(key: string): string | null;
   set(key: string, value: string): void;
 }
-
 export interface SemanticReplayInput {
   startRecording(): void;
   stopRecording(): void;
@@ -26,7 +24,6 @@ export interface SemanticReplayInput {
   /** Highest tick the buffer's sequencer has sealed an envelope at (0 when none). */
   readonly lastSealedTick: number;
 }
-
 export interface LegacyReplayDependencies {
   readonly store: ReplayStore;
   readonly document: Document;
@@ -60,7 +57,7 @@ type UntickedLiveGhostEngineEvent =
     ? Event extends LiveGhostEngineEvent ? Omit<Event, "tick"> : never
     : never;
 
-interface MutableRecording {
+export interface MutableRecording {
   t: number;
   elapsed: number;
   acc: number;
@@ -84,6 +81,8 @@ interface MutableRecording {
   actions: ReplayActionEnvelope[];
   provenance: VisualReplayProvenance;
 }
+
+export interface LegacyGhostRuntimeState { readonly recording: MutableRecording | null }
 
 interface PlayerSample { readonly x: number; readonly y: number; readonly facing: number }
 interface BladeSample { readonly tipX: number; readonly tipY: number }
@@ -131,6 +130,9 @@ export class LegacyGhostEngine {
   }
 
   recording(): boolean { return this.rec !== null; }
+
+  captureRuntimeState(): LegacyGhostRuntimeState { return Object.freeze({ recording: this.rec === null ? null : structuredClone(this.rec) }); }
+  restoreRuntimeState(state: LegacyGhostRuntimeState): void { this.rec = state.recording === null ? null : structuredClone(state.recording); }
 
   subscribe(listener: (event: LiveGhostEngineEvent) => void): () => void {
     this.#eventListeners.add(listener);

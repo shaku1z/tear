@@ -23,6 +23,7 @@ export interface LiveRewardRun<TChoice extends RewardChoice> extends LegacyRewar
 export interface LiveRewardRuntime<TChoice extends RewardChoice> {
   readonly selection: RewardSelectionController<TChoice> | null;
   readonly snapshot: () => RewardSelectionSnapshot<TChoice> | null;
+  readonly restore: (snapshot: RewardSelectionSnapshot<TChoice> | null) => void;
   readonly reset: () => void;
   readonly openDraft: () => void;
   readonly openTier: (choices: readonly TChoice[]) => void;
@@ -61,6 +62,11 @@ export function createLiveRewardRuntime<TChoice extends RewardChoice>(
   return {
     get selection() { return selection; },
     snapshot: () => selection?.snapshot() ?? null,
+    restore: (snapshot) => {
+      if (snapshot === null) { selection = null; return; }
+      selection = create();
+      selection.restore(snapshot);
+    },
     reset: () => { selection = create(); },
     openDraft: () => { selection = create(); execute(selection.openDraft(options.run().wave, options.roll)); },
     openTier: (choices) => { selection = create(); execute(selection.openTierUp(choices)); },

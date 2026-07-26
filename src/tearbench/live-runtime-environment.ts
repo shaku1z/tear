@@ -4,32 +4,25 @@ import { normalizeGameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
 import type { GameEnemy } from "../app/game-runtime-state";
 import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
-import type { TearCausalEventV1, TearObservationV1, TearScenarioV1 } from "./contracts";
+import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1,
+  TearStateClass } from "./contracts";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
-import {
-  DIFFICULTY_REGISTRY,
-  ENTITY_KIND_REGISTRY,
-  RUN_MODE_REGISTRY,
-  WEAPON_REGISTRY,
-  type TearEntityKindId,
-} from "./registries";
+import { DIFFICULTY_REGISTRY, ENTITY_KIND_REGISTRY, RUN_MODE_REGISTRY, WEAPON_REGISTRY,
+  type TearEntityKindId } from "./registries";
 import type { TearScenarioTransition } from "./runner";
 import { validateTearContract } from "./validation";
 import { installGhostLabPanel } from "./ghost-lab-panel";
-import type {
-  LiveTearRuntimeEnvironmentContext,
-  TearClassARuntimeEnvironment,
-  TearClassBRuntimeEnvironment,
-  TearClassCRuntimeEnvironment,
-  TearPhysicalInput,
-  TearRuntimeAccessClass,
-  TearRuntimeBridgeFactory,
-  TearRuntimeEnvironment,
-  TearRuntimeEnvironmentMetrics,
-  TearStructuredRuntimeEnvironment,
-} from "./live-runtime-contracts";
+import { installLiveStateForgeStudio } from "./live-state-forge-studio-host";
+import { createLiveRuntimeSnapshotController } from "./live-runtime-snapshots";
+import { launchResolvedLiveState } from "./live-state-forge-scenario-launch";
+import { certifyWave99HammerProgression, createCanonicalWave99HammerProgression, createWave99HistoricalRunState,
+  forgeExitLaunchSnapshot } from "./state-forge-exit-gate";
+import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
+import type { LiveTearRuntimeEnvironmentContext, TearClassARuntimeEnvironment,
+  TearClassBRuntimeEnvironment, TearClassCRuntimeEnvironment, TearPhysicalInput,
+  TearRuntimeAccessClass, TearRuntimeBridgeFactory, TearRuntimeEnvironment,
+  TearRuntimeEnvironmentMetrics, TearStructuredRuntimeEnvironment } from "./live-runtime-contracts";
 export type * from "./live-runtime-contracts";
-
 function availableActions(screen: string, runMode: string): readonly GameAction["type"][] {
   if (screen === "playing") return Object.freeze([
     "move", "aim", "weapon", "jump", "dash", ...(runMode === "playground" ? ["ability" as const] : []), "pause",
@@ -195,6 +188,15 @@ export function createLiveTearRuntimeEnvironment(
   };
   const metrics = (): TearRuntimeEnvironmentMetrics => Object.freeze({
     resets, fixedTicks, acceptedActions, emittedEvents: eventLog.length, screenshots: screenshotCount,
+  });
+  const snapshots = createLiveRuntimeSnapshotController(context, accessClass, (snapshot, result) => {
+    lastCallerEnvelopeId = 0;
+    context.resetSemanticInput();
+    context.drainConsumedActions();
+    observation = projectLiveTearObservation(context, snapshot.tick, accessClass);
+    eventLog.push(createEvent(sequence++, snapshot.tick, "system.checkpoint", {
+      snapshotId: snapshot.id, operation: "restored", exactHash: result.exactHash,
+    }, "developer"));
   });
 
   const environment: TearStructuredRuntimeEnvironment & Readonly<{ rng(): RunRandomStreamsSnapshot }> = {
@@ -424,6 +426,23 @@ export function createLiveTearRuntimeEnvironment(
     setTimeEffectsForTest: (effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>) => {
       context.setTimeEffectsForTest(effects);
     },
+    captureSnapshot: (id: string, stateClass?: TearStateClass) => snapshots.capture(id, stateClass),
+    restoreSnapshot: (snapshot: TearSnapshotV1) => snapshots.restore(snapshot),
+    forgeExitLaunch: (launch: StateForgeExitLaunch) =>
+      snapshots.restore(forgeExitLaunchSnapshot(snapshots.capture(`source-${launch.id}`), launch)),
+    forgeWave99Hammer: () => {
+      const progression = createCanonicalWave99HammerProgression();
+      const replay = context.replayProgression(progression.ledger);
+      const certificate = certifyWave99HammerProgression(progression), history = createWave99HistoricalRunState(certificate);
+      const run = context.state.run(), player = context.state.player();
+      if (run === null || player === undefined) throw new Error("wave-99 forge requires an active live run");
+      run.wave = 99; run.score = certificate.metrics.score; run.waveKills = history.currentWaveKills; run.runTime = history.runTime; run.waveLog = [...history.waveLog];
+      run.mult = certificate.metrics.style; player.maxHp = certificate.metrics.maxHp; player.hp = certificate.metrics.hp;
+      Reflect.set(run, "stateForgeEvidence", { ...certificate, liveReplay: replay, ledger: progression.ledger });
+      const forged = snapshots.capture("wave99-start", "reconstructed-reachable");
+      return Object.freeze({ ok: true as const, exactHash: forged.hashes.exact, semanticHash: forged.hashes.semantic });
+    },
+    forgeResolvedScenario: (resolved: Parameters<TearClassARuntimeEnvironment["forgeResolvedScenario"]>[0]) => launchResolvedLiveState(resolved, environment, snapshots, context),
   });
   return Object.freeze({
     accessClass: "B" as const,
@@ -476,4 +495,5 @@ export function installLiveTearRuntimeBridge(
     value: factory,
   });
   installGhostLabPanel(factory);
+  installLiveStateForgeStudio(factory);
 }

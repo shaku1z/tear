@@ -4,6 +4,97 @@
   "defaultNormativeState": "missing",
   "rules": [
     {
+      "id": "EVID-C23-LIVE-STATE-RESTORE",
+      "priority": 140,
+      "state": "integrated",
+      "requirementIds": [
+        "TG3-25513CF509A1AB03",
+        "TG3-102BCB3CEED39B2D",
+        "TG3-8470CEE7C0D3077F",
+        "TG3-44EC867F8F05E493",
+        "TG3-ABDFD8972FC3657B",
+        "TG3-C4E642CD6D505F59"
+      ],
+      "textRegex": ".*",
+      "implementationRefs": [
+        "src/app/live-state-forge-adapter.ts",
+        "src/tearbench/live-state-snapshot.ts",
+        "src/tearbench/live-codec-validation.ts"
+      ],
+      "evidenceRefs": [
+        "tests/browser-state-forge-runtime.js",
+        "docs/checkpoints/C23_PRODUCTION_GRADE_STATE_FORGE.md"
+      ],
+      "notes": "C23 captures all registered live runtime domains, reloads the browser document, restores the snapshot, and matches the next 600 exact hashes under the same semantic actions."
+    },
+    {
+      "id": "EVID-C23-TRANSACTIONAL-RESTORE",
+      "priority": 140,
+      "state": "integrated",
+      "requirementIds": [
+        "TG3-0DB1B78F317A82E5",
+        "TG3-650816790DB7DCF5"
+      ],
+      "textRegex": ".*",
+      "implementationRefs": [
+        "src/app/live-state-forge-adapter.ts",
+        "src/tearbench/state-codecs.ts"
+      ],
+      "evidenceRefs": [
+        "tests/browser-state-forge-runtime.js",
+        "docs/checkpoints/C23_PRODUCTION_GRADE_STATE_FORGE.md"
+      ],
+      "notes": "Candidate state is rebuilt and validated off-world; both validation failure and an induced mid-commit failure leave the active world at its prior exact hash."
+    },
+    {
+      "id": "EVID-C23-PROGRESSION-TRUTH",
+      "priority": 140,
+      "state": "integrated",
+      "requirementIds": [
+        "TG3-C8A43534203DC628",
+        "TG3-BA250B3B9DE87971",
+        "TG3-CE65518BDDA14334",
+        "TG3-9AB5BDF315174AA8",
+        "TG3-FF786100610CCE35"
+      ],
+      "textRegex": ".*",
+      "implementationRefs": [
+        "src/tearbench/progression-ledger.ts",
+        "src/tearbench/progression-replay.ts",
+        "src/app/live-state-forge-progression.ts"
+      ],
+      "evidenceRefs": [
+        "tests/unit/tearbench-progression-ledger.test.ts",
+        "tests/browser-state-forge-exit-matrix.js"
+      ],
+      "notes": "The canonical scheduler emits legal events and live reconstruction replays draft mutations and tier evolutions in ledger order through production upgrade functions with expected configuration hashes."
+    },
+    {
+      "id": "EVID-C23-WAVE99-PLAYABLE-EPISODE",
+      "priority": 140,
+      "state": "integrated",
+      "requirementIds": [
+        "TG3-19275629003705AC",
+        "TG3-EAF9D7430BA7D92F",
+        "TG3-1A2CA289900AD51A",
+        "TG3-93B8C9EA0A038A37",
+        "TG3-CE08BE3D7950B3D2",
+        "TG3-5222424A5EFF3221",
+        "TG3-9DB9A9FDE2B71A34",
+        "TG3-4515EC0ABC3E2CB7"
+      ],
+      "textRegex": ".*",
+      "implementationRefs": [
+        "src/tearbench/state-forge-exit-gate.ts",
+        "src/tearbench/state-validity.ts"
+      ],
+      "evidenceRefs": [
+        "tests/browser-state-forge-exit-matrix.js",
+        "docs/checkpoints/C23_PRODUCTION_GRADE_STATE_FORGE.md"
+      ],
+      "notes": "The canonical Hard Endless wave-99 Hammer case launches visibly with a legal synthetic ledger, exactly 99 picks and mutations, separate validity evidence, a live snapshot, Ghost runtime state, metrics, and failure fields. This rule does not promote the separate replay-artifact requirement."
+    },
+    {
       "id": "EVID-C22-LIVE-RUNTIME-BRIDGE",
       "priority": 130,
       "state": "integrated",

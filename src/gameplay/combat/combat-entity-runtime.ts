@@ -51,6 +51,13 @@ export interface CombatEntityRuntimeHooks {
   areaDamage(x: number, y: number, radius: number, damage: number, playerOwned: boolean): number;
 }
 
+export interface CombatEntityIdentityState {
+  readonly nextEntityId: number;
+  readonly nextWallSequence: number;
+  readonly nextSlowZoneSequence: number;
+  readonly claimedIds: readonly string[];
+}
+
 export interface ProjectilePhaseTuning {
   projectileDamage: number; projectileSpeed: number; deflectBoost: number; deflectDamageMultiplier: number;
   runDamageMultiplier: number; phaseStep: boolean; parryStun: boolean; aegisParry: boolean;
@@ -70,17 +77,56 @@ function isDead(entity: LiveCombatEntity): boolean { return entity.dead; }
 export class CombatEntityRuntime {
   readonly #hooks: CombatEntityRuntimeHooks;
   readonly #ids = new WeakMap<object, string>();
+  readonly #claimedIds = new Set<string>();
   #nextEntityId = 1; #nextWallSequence = 1; #nextSlowZoneSequence = 1;
 
   constructor(hooks: CombatEntityRuntimeHooks) { this.#hooks = hooks; }
   get nextSlowZoneSequence(): number { return this.#nextSlowZoneSequence; }
   set nextSlowZoneSequence(value: number) { this.#nextSlowZoneSequence = value; }
 
+  captureIdentityState(): CombatEntityIdentityState {
+    return Object.freeze({
+      nextEntityId: this.#nextEntityId,
+      nextWallSequence: this.#nextWallSequence,
+      nextSlowZoneSequence: this.#nextSlowZoneSequence,
+      claimedIds: Object.freeze([...this.#claimedIds].sort()),
+    });
+  }
+
+  restoreIdentityState(state: CombatEntityIdentityState): void {
+    if (![state.nextEntityId, state.nextWallSequence, state.nextSlowZoneSequence]
+      .every((value) => Number.isSafeInteger(value) && value >= 1)) {
+      throw new RangeError("combat entity identity counters must be positive safe integers");
+    }
+    this.#nextEntityId = state.nextEntityId;
+    this.#nextWallSequence = state.nextWallSequence;
+    this.#nextSlowZoneSequence = state.nextSlowZoneSequence;
+    this.#claimedIds.clear();
+    for (const id of state.claimedIds) this.#claimedIds.add(id);
+  }
+
   id(entity: object & { id?: string }, prefix: string): string {
     if (typeof entity.id === "string" && (prefix === "wall" || prefix === "zone")) return entity.id;
     let id = this.#ids.get(entity);
-    if (!id) { id = `${prefix}:${String(this.#nextEntityId)}`; this.#nextEntityId += 1; this.#ids.set(entity, id); }
+    if (!id) {
+      do {
+        id = `${prefix}:${String(this.#nextEntityId)}`;
+        this.#nextEntityId += 1;
+      } while (this.#claimedIds.has(id));
+      this.#ids.set(entity, id);
+      this.#claimedIds.add(id);
+    }
     return id;
+  }
+
+  bindId(entity: object, id: string): void {
+    if (!/^(?:enemy|projectile):[1-9][0-9]*$/u.test(id)) throw new RangeError(`invalid combat entity id: ${id}`);
+    const existing = this.#ids.get(entity);
+    if (existing !== undefined && existing !== id) throw new TypeError(`entity is already bound to ${existing}`);
+    this.#ids.set(entity, id);
+    this.#claimedIds.add(id);
+    const sequence = Number.parseInt(id.slice(id.indexOf(":") + 1), 10);
+    this.#nextEntityId = Math.max(this.#nextEntityId, sequence + 1);
   }
 
   actorSnapshots(objects: Map<string, LiveCombatEntity>): CombatActorState[] {

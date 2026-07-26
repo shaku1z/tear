@@ -99,6 +99,29 @@ describe("TearSDL and checkpoint forking", () => {
     expect(new Set(unchanged.map((value) => JSON.stringify(value)))).toHaveLength(1);
   });
 
+  it("exports, migrates, time-travels, diffs, and imports a branch bank atomically", () => {
+    const bank = new TearCheckpointBank();
+    bank.addSnapshot(checkpoint());
+    bank.fork("root", "low-hp", 21, { player: { hp: 1 } });
+    bank.fork("root", "high-score", 22, { run: { score: 99_000 } });
+    expect(bank.list().map((entry) => entry.id)).toEqual(["root", "low-hp", "high-score"]);
+    expect(bank.diff("low-hp", "high-score")).toEqual(["$.player.hp", "$.run.score"]);
+
+    const archive = bank.export();
+    const restored = new TearCheckpointBank();
+    restored.import(archive);
+    expect(restored.materialize("low-hp")).toEqual(bank.materialize("low-hp"));
+    expect(restored.export()).toEqual(archive);
+
+    const hostile = {
+      ...structuredClone(archive),
+      deltas: archive.deltas.map((delta, index) =>
+        index === 0 ? { ...delta, parentId: "missing" } : structuredClone(delta)),
+    };
+    expect(() => { restored.import(hostile); }).toThrow(/missing parent/u);
+    expect(restored.materialize("low-hp")).toEqual(bank.materialize("low-hp"));
+  });
+
   it("builds the canonical hard endless wave-99 Hammer package", () => {
     const result = createWave99HammerPackage();
     expect(result).toMatchObject({

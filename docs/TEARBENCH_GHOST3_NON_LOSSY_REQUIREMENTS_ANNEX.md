@@ -4110,15 +4110,15 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-0F5036CBE9C32B13` | 5260-5260 | 49 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | Class E results must never be mixed into balance or fairness conclusions. |
 | `TG3-18234744A93FE49D` | 5264-5264 | 49 | gameplay | no | reference | reference | C23 | documentation-validation | The arbitrary-state system is not complete until the following works reliably: |
 | `TG3-8E7EFE90063D64B8` | 5280-5280 | 49 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | The command must produce: |
-| `TG3-19275629003705AC` | 5282-5282 | 49 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | A legal run state |
-| `TG3-EAF9D7430BA7D92F` | 5283-5283 | 49 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | A complete synthetic progression ledger |
-| `TG3-1A2CA289900AD51A` | 5284-5284 | 49 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | The exact number of earned selections |
-| `TG3-93B8C9EA0A038A37` | 5285-5285 | 49 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | A config-derivation trace |
-| `TG3-CE08BE3D7950B3D2` | 5286-5286 | 49 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | A reachability score |
-| `TG3-5222424A5EFF3221` | 5287-5287 | 49 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | A population-plausibility score |
-| `TG3-9DB9A9FDE2B71A34` | 5288-5288 | 49 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | A visible playable episode |
+| `TG3-19275629003705AC` | 5282-5282 | 49 | gameplay | yes | integrated | required | C23 | deterministic-scenario, base-comparison | A legal run state |
+| `TG3-EAF9D7430BA7D92F` | 5283-5283 | 49 | gameplay | yes | integrated | required | C23 | deterministic-scenario, base-comparison | A complete synthetic progression ledger |
+| `TG3-1A2CA289900AD51A` | 5284-5284 | 49 | gameplay | yes | integrated | required | C23 | deterministic-scenario, base-comparison | The exact number of earned selections |
+| `TG3-93B8C9EA0A038A37` | 5285-5285 | 49 | gameplay | yes | integrated | required | C23 | deterministic-scenario, base-comparison | A config-derivation trace |
+| `TG3-CE08BE3D7950B3D2` | 5286-5286 | 49 | gameplay | yes | integrated | required | C23 | deterministic-scenario, base-comparison | A reachability score |
+| `TG3-5222424A5EFF3221` | 5287-5287 | 49 | gameplay | yes | integrated | required | C23 | deterministic-scenario, base-comparison | A population-plausibility score |
+| `TG3-9DB9A9FDE2B71A34` | 5288-5288 | 49 | gameplay | yes | integrated | required | C23 | deterministic-scenario, base-comparison | A visible playable episode |
 | `TG3-4A78587E7B6D3014` | 5289-5289 | 49 | gameplay | yes | prototype | required | C23 | deterministic-scenario, base-comparison | A replay and state snapshot |
-| `TG3-4515EC0ABC3E2CB7` | 5290-5290 | 49 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | Episode metrics and failures |
+| `TG3-4515EC0ABC3E2CB7` | 5290-5290 | 49 | gameplay | yes | integrated | required | C23 | deterministic-scenario, base-comparison | Episode metrics and failures |
 | `TG3-82485A146C9B23A7` | 5292-5292 | 49 | gameplay | no | reference | reference | C23 | documentation-validation | --- |
 | `TG3-341B8DCA63B81C33` | 5296-5296 | 50 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | The subsystem responsible for arbitrary-state simulation should be named **Tear State Forge**. |
 | `TG3-3839E04415CA3EB9` | 5298-5298 | 50 | architecture | no | reference | reference | C23 | documentation-validation | State Forge is not a loose set of debug cheats. |
@@ -4326,7 +4326,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-F40974743649BCBE` | 5535-5535 | 50 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Render one non-advancing verification frame. |
 | `TG3-76787F24ADD74F7B` | 5536-5536 | 50 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Compute fingerprints. |
 | `TG3-FD8C714B0B481E12` | 5537-5537 | 50 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Resume only if validation passes or the scenario explicitly allows faults. |
-| `TG3-650816790DB7DCF5` | 5539-5539 | 50 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | A failed restore must leave the previous runtime intact or reset cleanly. |
+| `TG3-650816790DB7DCF5` | 5539-5539 | 50 | architecture | yes | integrated | required | C23 | unit-contract, full-release-gate | A failed restore must leave the previous runtime intact or reset cleanly. |
 | `TG3-3962566A6AF3A40A` | 5539-5539 | 50 | architecture | no | reference | reference | C23 | documentation-validation | Partial restoration is unacceptable. |
 | `TG3-114E2ACECFFAA2B3` | 5541-5541 | 50 | architecture | no | reference | reference | C23 | documentation-validation | --- |
 | `TG3-0C2699093F2BA6DF` | 5545-5545 | 51 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | The system must distinguish three questions that are easy to conflate: |
@@ -4387,7 +4387,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-5B93D77AEF6595B8` | 5658-5658 | 52 | architecture | yes | missing | optional | C23 | unit-contract, full-release-gate | Future game updates |
 | `TG3-C22FA35B86E46A3B` | 5659-5659 | 52 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Revive or continuation systems |
 | `TG3-431EACDD65DDEA14` | 5660-5660 | 52 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Challenge modifiers |
-| `TG3-C8A43534203DC628` | 5662-5662 | 52 | operations | yes | missing | required | C23 | interaction-matrix, full-release-gate | Instead, TearBench should invoke the same progression scheduler the game uses and ask it to emit events up to the target point. |
+| `TG3-C8A43534203DC628` | 5662-5662 | 52 | operations | yes | integrated | required | C23 | interaction-matrix, full-release-gate | Instead, TearBench should invoke the same progression scheduler the game uses and ask it to emit events up to the target point. |
 | `TG3-2A11C5DADF37D5AD` | 5666-5666 | 52 | ml-training | no | reference | reference | C23 | documentation-validation | Recommended events: |
 | `TG3-D29811AD13C962A8` | 5694-5694 | 52 | ml-training | yes | missing | required | C23 | deterministic-scenario, journey-checkpoint | Each event must contain: |
 | `TG3-43A489399BB3B1F2` | 5696-5696 | 52 | ml-training | yes | missing | required | C23 | deterministic-scenario, journey-checkpoint | Sequence number |
@@ -4403,7 +4403,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-F15CB0A91D30EA9A` | 5722-5722 | 52 | operations | yes | missing | required | C23 | interaction-matrix, full-release-gate | Resolve the event schedule. |
 | `TG3-5B87CEB9F5A58E09` | 5723-5723 | 52 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | Generate legal draft offers. |
 | `TG3-67AC0AA8512400E1` | 5724-5724 | 52 | ml-training | yes | missing | required | C23 | deterministic-scenario, journey-checkpoint | Choose from them using a selected history policy. |
-| `TG3-BA250B3B9DE87971` | 5725-5725 | 52 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Apply actual upgrade functions. |
+| `TG3-BA250B3B9DE87971` | 5725-5725 | 52 | architecture | yes | integrated | required | C23 | unit-contract, full-release-gate | Apply actual upgrade functions. |
 | `TG3-93981870F17B3466` | 5726-5726 | 52 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | Process boss-tier evolution opportunities. |
 | `TG3-5180B358239F95D4` | 5727-5727 | 52 | ml-training | yes | missing | required | C23 | deterministic-scenario, journey-checkpoint | Generate score |
 | `TG3-AC45E744C31A3A37` | 5727-5727 | 52 | ml-training | yes | missing | required | C23 | deterministic-scenario, journey-checkpoint | damage |
@@ -4416,10 +4416,10 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-CE6D6D2F5A4BB52C` | 5737-5737 | 52 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | Apply selected weapon. |
 | `TG3-F1AD129CA1CE51DB` | 5738-5738 | 52 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Apply persistent/meta progression in production order. |
 | `TG3-9A8E1516EEF9256E` | 5739-5739 | 52 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Apply difficulty and remote modifiers in production order. |
-| `TG3-CE65518BDDA14334` | 5740-5740 | 52 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | Replay every draft pick in ledger order. |
-| `TG3-9AB5BDF315174AA8` | 5741-5741 | 52 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Replay every tier evolution in ledger order. |
+| `TG3-CE65518BDDA14334` | 5740-5740 | 52 | gameplay | yes | integrated | required | C23 | deterministic-scenario, base-comparison | Replay every draft pick in ledger order. |
+| `TG3-9AB5BDF315174AA8` | 5741-5741 | 52 | architecture | yes | integrated | required | C23 | unit-contract, full-release-gate | Replay every tier evolution in ledger order. |
 | `TG3-7A8524A02B89B4BD` | 5742-5742 | 52 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Apply current transient effects. |
-| `TG3-FF786100610CCE35` | 5743-5743 | 52 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Compare the resulting config hash against the ledger’s expected hash. |
+| `TG3-FF786100610CCE35` | 5743-5743 | 52 | architecture | yes | integrated | required | C23 | unit-contract, full-release-gate | Compare the resulting config hash against the ledger’s expected hash. |
 | `TG3-862A25EFFA57A851` | 5745-5745 | 52 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Directly assigning final damage |
 | `TG3-9062CA0E8C80A631` | 5745-5745 | 52 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | reach |
 | `TG3-6391AC20F44A2AFF` | 5745-5745 | 52 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | speed |
@@ -5471,15 +5471,15 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-E646658E17E01601` | 7687-7687 | 63 | ui-ux | no | reference | reference | C39 | documentation-validation | --- |
 | `TG3-546A6C72DDDC0636` | 7693-7693 | 64 | data-schema | no | reference | reference | C21 | documentation-validation | Deliver: |
 | `TG3-7FA84E43A9315399` | 7695-7695 | 64 | data-schema | yes | missing | required | C21 | unit-contract, malformed-input | Versioned full-state schema |
-| `TG3-25513CF509A1AB03` | 7696-7696 | 64 | data-schema | yes | missing | required | C23 | unit-contract, malformed-input | Exact capture and restore |
+| `TG3-25513CF509A1AB03` | 7696-7696 | 64 | data-schema | yes | integrated | required | C23 | unit-contract, malformed-input | Exact capture and restore |
 | `TG3-61662AA936B2487E` | 7697-7697 | 64 | data-schema | yes | missing | required | C21 | unit-contract, malformed-input | State fingerprints |
-| `TG3-0DB1B78F317A82E5` | 7698-7698 | 64 | data-schema | yes | missing | required | C23 | unit-contract, malformed-input | Transactional restore |
-| `TG3-102BCB3CEED39B2D` | 7699-7699 | 64 | data-schema | yes | missing | required | C23 | unit-contract, malformed-input | Snapshot artifact format |
+| `TG3-0DB1B78F317A82E5` | 7698-7698 | 64 | data-schema | yes | integrated | required | C23 | unit-contract, malformed-input | Transactional restore |
+| `TG3-102BCB3CEED39B2D` | 7699-7699 | 64 | data-schema | yes | integrated | required | C23 | unit-contract, malformed-input | Snapshot artifact format |
 | `TG3-4714D3B06CC5D5B6` | 7701-7701 | 64 | data-schema | yes | missing | required | C21 | unit-contract, malformed-input | Acceptance: |
-| `TG3-8470CEE7C0D3077F` | 7703-7703 | 64 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | Capture any live combat frame |
-| `TG3-44EC867F8F05E493` | 7703-7703 | 64 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | reload the page |
-| `TG3-ABDFD8972FC3657B` | 7703-7703 | 64 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | restore it |
-| `TG3-C4E642CD6D505F59` | 7703-7703 | 64 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | produce the same next 600 deterministic ticks under the same actions. |
+| `TG3-8470CEE7C0D3077F` | 7703-7703 | 64 | gameplay | yes | integrated | required | C23 | deterministic-scenario, base-comparison | Capture any live combat frame |
+| `TG3-44EC867F8F05E493` | 7703-7703 | 64 | gameplay | yes | integrated | required | C23 | deterministic-scenario, base-comparison | reload the page |
+| `TG3-ABDFD8972FC3657B` | 7703-7703 | 64 | gameplay | yes | integrated | required | C23 | deterministic-scenario, base-comparison | restore it |
+| `TG3-C4E642CD6D505F59` | 7703-7703 | 64 | gameplay | yes | integrated | required | C23 | deterministic-scenario, base-comparison | produce the same next 600 deterministic ticks under the same actions. |
 | `TG3-C901A8BACD6BBA11` | 7707-7707 | 64 | architecture | no | reference | reference | C21 | documentation-validation | Deliver: |
 | `TG3-D032932CF97EC5D4` | 7709-7709 | 64 | architecture | yes | missing | required | C21 | unit-contract, full-release-gate | Progression event stream |
 | `TG3-B9052BB9D8EE707F` | 7710-7710 | 64 | gameplay | yes | missing | required | C21 | deterministic-scenario, base-comparison | Draft and tier opportunity enumeration |
@@ -17699,8 +17699,8 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | bySourceSection | 81 | 461 |
 | bySourceSection | unsectioned | 8 |
 | byState | contract | 108 |
-| byState | integrated | 37 |
-| byState | missing | 6578 |
+| byState | integrated | 58 |
+| byState | missing | 6557 |
 | byState | prototype | 162 |
 | byState | reference | 1806 |
 | byDisposition | optional | 158 |

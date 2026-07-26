@@ -11,6 +11,7 @@ import { createLiveCombatComposition } from "./live-combat-composition";
 import { createLiveInterfaceComposition, isRunDifficultySelection, isRunModeSelection } from "./live-interface-composition";
 import { createLiveRunOrchestration } from "./live-run-orchestration-composition";
 import { createLiveSessionServices } from "./live-session-services-composition";
+import { replayLiveStateForgeProgression } from "./live-state-forge-progression";
 import { createConfigRestorer } from "./runtime-initialization";
 import { commitBossIntroSnapshot } from "./live-frame-runtime";
 import { RuntimeFrameDriver } from "./runtime-frame-driver";
@@ -28,17 +29,13 @@ import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
 import { emitLiveTearBenchPhysicalInput, liveRewardChoiceIds, routeLiveTearBenchAction } from "../tearbench/live-runtime-browser-adapters";
 import { isCombatPlatform, isDodgeProjectile, isEnemySample, isGameEnemy, isGameFloater, isRitualCue, isWeaponEffect, makeCombatEnemy } from "./live-runtime-type-guards";
-type UiButton = CanvasUiButton & InteractiveUiButton;
-type OutcomeInfo = ReturnType<RunScreenState["outcome"]>;
-type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
+import { createLiveStateForgeAdapter } from "./live-state-forge-adapter";
+type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnType<RunScreenState["outcome"]>; type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 export function startLiveGame(dependencies: GameRuntimeDependencies): void {
-  const { A11Y, APP, Attract, Backdrop, CG, CLOCK, CONFIG, Cloud, DIAG, FX, GFX, GHOST,
-    Input, OVERSCAN, PAD, ReflectionEnemy, SAFE, SFX, THEME, UI, VAULT, applyUpgrade,
-    clamp, cosmeticRandom, lerp, weaponCapsuleIntersectsSegment } = dependencies;
+  const { A11Y, APP, Attract, Backdrop, CG, CLOCK, CONFIG, Cloud, DIAG, FX, GFX, GHOST, Input, OVERSCAN, PAD, ReflectionEnemy, SAFE, SFX, THEME, UI, VAULT, applyUpgrade, clamp, cosmeticRandom, lerp, weaponCapsuleIntersectsSegment } = dependencies;
 (function () {
   const browserRuntime = createLiveBrowserRuntime(dependencies);
-  const { canvas, context: ctx, width: W, height: H, viewport, resizeCanvas,
-    requestPointerLock: requestLock, installPrompt, lockHint, hint: hintEl,
+  const { canvas, context: ctx, width: W, height: H, viewport, resizeCanvas, requestPointerLock: requestLock, installPrompt, lockHint, hint: hintEl,
     pantheonDebug: PANTHEON_DEBUG, testMode: TEST_MODE } = browserRuntime;
   const restoreConfig = createConfigRestorer(CONFIG);
   const sessionServices = createLiveSessionServices({
@@ -451,13 +448,18 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   if (__TEAR_TEST_BUILD__ && TEST_MODE) void import("../tearbench/live-runtime-environment").then(({ installLiveTearRuntimeBridge }) => {
     const consumedActions: CommandEnvelope<GameAction>[] = [];
     Input.semantic.subscribe((entry) => { consumedActions.push(entry); });
-    const actionRouting = {
-      screen: () => state, setScreen: (screen: "playing" | "paused") => { setState(screen); },
-      runMode: () => run.mode, reward: rewardRuntime.snapshot,
-      chooseUpgrade: screenComposition.chooseUpgrade, chooseReserve: screenComposition.chooseReserve,
-      chooseTier: screenComposition.chooseTier, dispatchPlayground: dispatchPlaygroundAction,
-      renderControls: () => { presentationHost.render(); }, controls: () => uiButtons, focus: () => focus,
+    const actionRouting = { screen: () => state, setScreen: (screen: "playing" | "paused") => { setState(screen); },
+      runMode: () => run.mode, reward: rewardRuntime.snapshot, chooseUpgrade: screenComposition.chooseUpgrade, chooseReserve: screenComposition.chooseReserve,
+      chooseTier: screenComposition.chooseTier, dispatchPlayground: dispatchPlaygroundAction, renderControls: () => { presentationHost.render(); }, controls: () => uiButtons, focus: () => focus,
     };
+    const stateForge = createLiveStateForgeAdapter({
+      dependencies, state: hostState, actorId: (entity, prefix) => combatRuntime.id(entity, prefix), bindActorId: (entity, id) => { combatRuntime.bindId(entity, id); },
+      platforms: () => stageRuntime.platforms, replacePlatforms: (values) => { stageRuntime.platforms.splice(0, stageRuntime.platforms.length, ...values); }, slowZones: () => slowZones, walls: () => tempWalls,
+      screen: () => state, setScreen: (screen) => { if (!isLegacyScreen(screen)) throw new RangeError(`invalid restored screen: ${screen}`); setState(screen); }, focus: () => focus, setFocus: (value) => { focus = value; },
+      tick: () => simulation.tick, setTick: (tick) => { simulation.reset(tick); authoritativeInput.reset(); authoritativeStep.reset(); },
+      rng: () => dependencies.GAME_RANDOM_STREAMS.snapshot(), restoreRng: (snapshot) => { dependencies.GAME_RANDOM_STREAMS.restore(snapshot); }, restoreConfiguration: restoreConfig, reward: rewardRuntime.snapshot, restoreReward: rewardRuntime.restore, captureGhost: () => GHOST.captureRuntimeState(), restoreGhost: (snapshot) => { GHOST.restoreRuntimeState(snapshot); }, captureIdentityState: () => combatRuntime.captureIdentityState(), restoreIdentityState: (snapshot) => { combatRuntime.restoreIdentityState(snapshot); },
+      runtimeState: () => ({ hitStop, shake, timeScale, slowmo, zoom, flash, bannerT, dashGhostT, worldZoom, worldZoomTarget, throwCd, rankPopT, rankPopText, lifecycle: RUN_LIFECYCLE.snapshot() }), restoreRuntimeState: (snapshot) => { hitStop = Number(snapshot.hitStop); shake = Number(snapshot.shake); timeScale = Number(snapshot.timeScale); slowmo = Number(snapshot.slowmo); zoom = Number(snapshot.zoom); flash = Number(snapshot.flash); bannerT = Number(snapshot.bannerT); dashGhostT = Number(snapshot.dashGhostT); worldZoom = Number(snapshot.worldZoom); worldZoomTarget = Number(snapshot.worldZoomTarget); throwCd = Number(snapshot.throwCd); rankPopT = Number(snapshot.rankPopT); rankPopText = String(snapshot.rankPopText); RUN_LIFECYCLE.restore(snapshot.lifecycle as ReturnType<typeof RUN_LIFECYCLE.snapshot>); },
+    });
     installLiveTearRuntimeBridge({
       width: W, height: H, state: hostState, actorId: (enemy) => combatRuntime.id(enemy, "enemy"),
       stage: () => stageRuntime.current, lifecycle: () => RUN_LIFECYCLE.snapshot(),
@@ -477,6 +479,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
       drainConsumedActions: () => consumedActions.splice(0, consumedActions.length),
       emitPhysicalInput: (input) => { emitLiveTearBenchPhysicalInput(input, { window, canvas, width: W, height: H }); },
       setTimeEffectsForTest: (effects) => { if (effects.hitStop !== undefined) hitStop = effects.hitStop; if (effects.slowMotion !== undefined) slowmo = effects.slowMotion; if (effects.timeScale !== undefined) timeScale = effects.timeScale; },
+      stateForge, replayProgression: (ledger) => replayLiveStateForgeProgression({ dependencies, state: hostState, restoreConfiguration: restoreConfig }, ledger),
     }, window);
   });
   if (__TEAR_TEST_BUILD__ && PANTHEON_DEBUG) void import("./live-debug-composition").then(({ installLiveGameDebug }) => {

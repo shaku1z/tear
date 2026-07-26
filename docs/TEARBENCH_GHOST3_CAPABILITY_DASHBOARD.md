@@ -11,10 +11,10 @@ never promoted to visible or certified gameplay evidence.
 
 | State | Requirements |
 |---|---:|
-| missing | 6578 |
+| missing | 6557 |
 | contract | 108 |
 | prototype | 162 |
-| integrated | 37 |
+| integrated | 58 |
 | visible | 0 |
 | certified | 0 |
 | deferred | 0 |
@@ -26,7 +26,7 @@ never promoted to visible or certified gameplay evidence.
 |---|---:|---:|---:|---:|---:|---:|---:|
 | C21 | 371 | 371 | 0 | 0 | 0 | 0 | 0 |
 | C22 | 251 | 216 | 0 | 0 | 35 | 0 | 0 |
-| C23 | 971 | 949 | 0 | 22 | 0 | 0 | 0 |
+| C23 | 971 | 928 | 0 | 22 | 21 | 0 | 0 |
 | C24 | 651 | 650 | 0 | 1 | 0 | 0 | 0 |
 | C25 | 184 | 180 | 4 | 0 | 0 | 0 | 0 |
 | C26 | 105 | 104 | 0 | 1 | 0 | 0 | 0 |
@@ -53,6 +53,10 @@ never promoted to visible or certified gameplay evidence.
 | EVID-C22-DISPOSABLE-ISOLATION | 12 |
 | EVID-C22-LIVE-RUNTIME-BRIDGE | 21 |
 | EVID-C22-RENDER-PROFILE-PARITY | 2 |
+| EVID-C23-LIVE-STATE-RESTORE | 6 |
+| EVID-C23-PROGRESSION-TRUTH | 5 |
+| EVID-C23-TRANSACTIONAL-RESTORE | 2 |
+| EVID-C23-WAVE99-PLAYABLE-EPISODE | 8 |
 | EVID-FOUNDRY-CONTRACT | 14 |
 | EVID-GHOST-CLOUD-CONTRACTS | 63 |
 | EVID-GHOST-COACH-CONTRACT | 3 |
@@ -79,7 +83,7 @@ never promoted to visible or certified gameplay evidence.
 
 ## Blocking Truth
 
-- Missing normative requirements: 6578
+- Missing normative requirements: 6557
 - Visible requirements: 0
 - Certified requirements: 0
 - C22-C40 remain incomplete until their annex requirements reach their required evidence state.

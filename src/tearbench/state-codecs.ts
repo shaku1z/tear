@@ -1,6 +1,7 @@
 import { stableVerificationHash } from "../replay/hash";
 import type { TearSnapshotV1 } from "./contracts";
 import { CODEC_REGISTRY, type TearCodecId } from "./registries";
+import { validateLiveCodecPayload } from "./live-codec-validation";
 
 export type TearCodecValue =
   | null | boolean | number | string
@@ -67,9 +68,18 @@ function cloneData<T extends TearCodecValue>(value: T): T {
   return structuredClone(value);
 }
 
-const referenceKeys = new Set([
+export const TEAR_REFERENCE_KEYS = Object.freeze([
   "ownerId", "targetId", "summonerId", "platformId", "projectileId", "stolenBladeId",
-]);
+] as const);
+const referenceKeys = new Set<string>(TEAR_REFERENCE_KEYS);
+
+function declaresIdentity(codecId: TearCodecId, key: string): boolean {
+  return key === "id" || (codecId === "tear.platform.v1" && key === "platformId");
+}
+
+function declaresReference(codecId: TearCodecId, key: string): boolean {
+  return referenceKeys.has(key) && !declaresIdentity(codecId, key);
+}
 
 function indexIdentitiesAndReferences(
   world: TearCodecWorld,
@@ -86,8 +96,8 @@ function indexIdentitiesAndReferences(
   }
   if (value === null || typeof value !== "object") return;
   for (const [key, entry] of Object.entries(value)) {
-    if (key === "id" && typeof entry === "string") world.entityIds.add(entry);
-    if (referenceKeys.has(key) && typeof entry === "string") {
+    if (declaresIdentity(codecId, key) && typeof entry === "string") world.entityIds.add(entry);
+    if (declaresReference(codecId, key) && typeof entry === "string") {
       world.references.set(`${codecId}:${path}.${key}`, entry);
     }
     indexIdentitiesAndReferences(world, codecId, entry, `${path}.${key}`);
@@ -133,6 +143,74 @@ export function createDataOnlyCodec(id: TearCodecId): TearStateCodec {
   return Object.freeze(codec);
 }
 
+export function createLiveStateCodec(id: TearCodecId): TearStateCodec {
+  const dataCodec = createDataOnlyCodec(id);
+  return Object.freeze({
+    ...dataCodec,
+    validate(payload: unknown) {
+      const dataIssues = dataCodec.validate(payload);
+      return dataIssues.length > 0
+        ? dataIssues
+        : Object.freeze(validateLiveCodecPayload(id, payload));
+    },
+  });
+}
+
+export interface TearIdentityGraph {
+  readonly identities: ReadonlyMap<string, Readonly<{ codecId: TearCodecId; path: string }>>;
+  readonly references: ReadonlyMap<string, string>;
+  readonly issues: readonly TearCodecIssue[];
+}
+
+/** Builds the stable-id graph used before any live constructors or host state are touched. */
+export function buildTearIdentityGraph(world: TearCodecWorld): TearIdentityGraph {
+  const identities = new Map<string, Readonly<{ codecId: TearCodecId; path: string }>>();
+  const references = new Map<string, string>();
+  const issues: TearCodecIssue[] = [];
+  const visit = (codecId: TearCodecId, value: TearCodecValue, path: string): void => {
+    if (Array.isArray(value)) {
+      const entries = value as readonly TearCodecValue[];
+      entries.forEach((entry, index) => { visit(codecId, entry, `${path}[${String(index)}]`); });
+      return;
+    }
+    if (value === null || typeof value !== "object") return;
+    for (const [key, entry] of Object.entries(value)) {
+      const entryPath = `${path}.${key}`;
+      if (declaresIdentity(codecId, key) && typeof entry === "string") {
+        const previous = identities.get(entry);
+        if (previous === undefined) identities.set(entry, Object.freeze({ codecId, path: entryPath }));
+        else if (codecId === "tear.platform.v1" && key === "platformId") {
+          // Authored arena platforms repeat their stable id inside baseSpec.
+        }
+        else issues.push({
+          codecId,
+          path: entryPath,
+          message: `duplicate entity id ${entry}; first declared at ${previous.codecId}:${previous.path}`,
+        });
+      }
+      if (declaresReference(codecId, key) && typeof entry === "string") {
+        references.set(`${codecId}:${entryPath}`, entry);
+      }
+      visit(codecId, entry, entryPath);
+    }
+  };
+  for (const codecId of CODEC_REGISTRY.ids) {
+    const value = world.components.get(codecId);
+    if (value !== undefined) visit(codecId, value, "$");
+  }
+  for (const [source, target] of references) {
+    if (target === "player" || target === "blade" || identities.has(target)) continue;
+    const separator = source.indexOf(":");
+    const codecId = source.slice(0, separator) as TearCodecId;
+    issues.push({ codecId, path: source.slice(separator + 1), message: `reference target ${target} does not exist` });
+  }
+  return Object.freeze({
+    identities,
+    references,
+    issues: Object.freeze(issues),
+  });
+}
+
 export class TearStateCodecRegistry {
   readonly #codecs = new Map<TearCodecId, TearStateCodec>();
 
@@ -155,7 +233,7 @@ export class TearStateCodecRegistry {
 
 export function createDefaultStateCodecRegistry(): TearStateCodecRegistry {
   const registry = new TearStateCodecRegistry();
-  for (const id of CODEC_REGISTRY.ids) registry.register(createDataOnlyCodec(id));
+  for (const id of CODEC_REGISTRY.ids) registry.register(createLiveStateCodec(id));
   return registry;
 }
 
@@ -208,6 +286,7 @@ export function restoreSnapshotTransactionally(
   }
   if (issues.length === 0) {
     for (const codec of registry.list()) issues.push(...codec.resolveReferences(temporary));
+    issues.push(...buildTearIdentityGraph(temporary).issues);
     issues.push(...factory.validate(temporary).map((message) => ({
       codecId: "tear.world.v1" as const,
       path: "$",

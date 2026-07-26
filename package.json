@@ -32,6 +32,8 @@
     "test:browser:journeys": "node tests/browser-navigation-journeys.js && node tests/browser-progression-journeys.js && node tests/browser-playground-journeys.js && node tests/browser-terminal-journeys.js && node tests/browser-cinematic-preferences.js",
     "test:browser:agent-journey": "node tests/browser-agent-journey.js",
     "test:browser:tear-runtime": "node tests/browser-tear-runtime-environment.js",
+    "test:browser:state-forge": "node tests/browser-state-forge-runtime.js && node tests/browser-state-forge-studio.js && node tests/browser-state-forge-exit-matrix.js",
+    "test:browser:state-forge-studio": "node tests/browser-state-forge-studio.js",
     "test:browser:production-isolation": "node tests/browser-production-runtime-isolation.js",
     "test:browser:input": "node tests/browser-input-matrix.js",
     "test:browser:blade-lifecycle": "node tests/parity/browser-blade-parity.js --current-only",
@@ -63,12 +65,13 @@
     "check:reproducible": "node scripts/check-reproducible-build.mjs",
     "check:cloudflare": "node scripts/check-cloudflare-dry-run.mjs",
     "check:ghost-cloud": "wrangler types workers/worker-configuration.d.ts --config wrangler.ghost.jsonc && tsc -p tsconfig.worker.json && wrangler deploy --dry-run --config wrangler.ghost.jsonc",
+    "check:c23": "pnpm requirements:check && pnpm typecheck && pnpm lint && pnpm check:architecture && pnpm exec vitest run tests/unit/tearbench-state-codecs.test.ts tests/unit/tearbench-tearsdl.test.ts tests/unit/tearbench-progression-ledger.test.ts tests/unit/tearbench-state-forge-exit-gate.test.ts tests/unit/tearbench-state-forge-factories.test.ts tests/unit/tearbench-state-forge-studio.test.ts tests/unit/tearbench-state-forge-timeline.test.ts && pnpm build:test:standalone && pnpm test:browser:state-forge",
     "check:crazygames-package": "node scripts/package-crazygames.mjs",
     "check:local": "pnpm requirements:check && pnpm typecheck && pnpm lint && pnpm check:architecture && pnpm test && pnpm test:parity:unit",
     "check:pr": "pnpm tearbench ci --files-from artifacts/tearbench/changed-files.txt && pnpm check",
     "check:nightly": "pnpm check",
     "check:weekly": "pnpm test:endurance && pnpm exec vitest run tests/unit/ghost-replay-world.test.ts tests/unit/ghost-capsule-vault.test.ts",
-    "check": "pnpm requirements:check && pnpm typecheck && pnpm lint && pnpm check:architecture && pnpm test && pnpm test:parity:unit && pnpm test:weapons && pnpm check:tear-score && pnpm build && pnpm check:test-isolation && pnpm test:browser:production-isolation && pnpm check:bundles && pnpm check:crazygames-package && pnpm check:reproducible && pnpm check:cloudflare && pnpm check:ghost-cloud && pnpm build:test && pnpm test:browser && pnpm test:browser:features && pnpm test:browser:bosses && pnpm test:browser:journeys && pnpm test:browser:agent-journey && pnpm test:browser:tear-runtime && pnpm test:browser:input && pnpm test:browser:blade-lifecycle && pnpm test:browser:player-locomotion && pnpm test:browser:enemy-charge && pnpm test:browser:combat-resolution && pnpm test:browser:ranged-cycle && pnpm test:browser:projectile-parry && pnpm test:browser:mirror-pursuit && pnpm test:browser:responsive && pnpm test:browser:performance && pnpm test:browser:audio && pnpm test:browser:platform && pnpm test:browser:crazygames-iframe && pnpm test:pwa",
+    "check": "pnpm requirements:check && pnpm typecheck && pnpm lint && pnpm check:architecture && pnpm test && pnpm test:parity:unit && pnpm test:weapons && pnpm check:tear-score && pnpm build && pnpm check:test-isolation && pnpm test:browser:production-isolation && pnpm check:bundles && pnpm check:crazygames-package && pnpm check:reproducible && pnpm check:cloudflare && pnpm check:ghost-cloud && pnpm build:test && pnpm test:browser && pnpm test:browser:features && pnpm test:browser:bosses && pnpm test:browser:journeys && pnpm test:browser:agent-journey && pnpm test:browser:tear-runtime && pnpm test:browser:state-forge && pnpm test:browser:input && pnpm test:browser:blade-lifecycle && pnpm test:browser:player-locomotion && pnpm test:browser:enemy-charge && pnpm test:browser:combat-resolution && pnpm test:browser:ranged-cycle && pnpm test:browser:projectile-parry && pnpm test:browser:mirror-pursuit && pnpm test:browser:responsive && pnpm test:browser:performance && pnpm test:browser:audio && pnpm test:browser:platform && pnpm test:browser:crazygames-iframe && pnpm test:pwa",
     "deploy": "pnpm check && wrangler deploy"
   },
   "devDependencies": {

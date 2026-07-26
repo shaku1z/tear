@@ -7,6 +7,7 @@ import {
 import type { TearScenarioV1, TearSnapshotV1, TearStateClass } from "./contracts";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
 import { synthesizeProgression } from "./progression-ledger";
+import { evaluateTearStateValidity } from "./state-validity";
 
 export interface TearSdlDocumentV1 {
   readonly format: "tearsdl";
@@ -133,14 +134,12 @@ export function resolveTearSdl(
   const difficulty = DIFFICULTY_REGISTRY.assert(flattened.start.difficulty);
   const weapon = WEAPON_REGISTRY.assert(flattened.start.weapon);
   const wave = flattened.start.wave ?? 1;
-  const reachabilityReasons: string[] = [];
-  if (flattened.stateClass === "adversarial-impossible") reachabilityReasons.push("state is intentionally classified as adversarial-impossible");
-  if (flattened.start.bossPhase !== undefined && flattened.start.boss === undefined) {
-    reachabilityReasons.push("a boss phase requires a declared boss");
-  }
-  const plausibleReasons: string[] = [];
-  const provisional = flattened.stateClass === "plausible-population";
-  if (provisional) plausibleReasons.push("population plausibility is provisional until consented samples exist");
+  const validity = evaluateTearStateValidity({
+    stateClass: flattened.stateClass,
+    start: flattened.start,
+    ...(flattened.state === undefined ? {} : { state: flattened.state }),
+    ...(flattened.constraints === undefined ? {} : { constraints: flattened.constraints }),
+  });
   const scenario: TearScenarioV1 = Object.freeze({
     format: TEAR_CONTRACT_FORMAT,
     kind: "scenario",
@@ -168,9 +167,17 @@ export function resolveTearSdl(
   return Object.freeze({
     document: flattened,
     scenario,
-    structural: Object.freeze({ valid: true, issues: Object.freeze(issues) }),
-    reachability: Object.freeze({ reachable: reachabilityReasons.length === 0, reasons: Object.freeze(reachabilityReasons) }),
-    plausibility: Object.freeze({ plausible: !provisional, provisional, reasons: Object.freeze(plausibleReasons) }),
+    structural: Object.freeze({
+      valid: validity.structural.valid,
+      issues: Object.freeze([
+        ...issues,
+        ...validity.structural.issues.map((issue) => ({
+          path: issue.path, severity: "error" as const, message: issue.message,
+        })),
+      ]),
+    }),
+    reachability: validity.reachability,
+    plausibility: validity.plausibility,
     resolvedHash: stableVerificationHash(flattened),
   });
 }
@@ -193,6 +200,20 @@ export interface TearCheckpointDelta {
   readonly parentId: string;
   readonly tick: number;
   readonly statePatch: Readonly<Record<string, unknown>>;
+}
+
+export interface TearCheckpointArchiveV1 {
+  readonly format: "tear-checkpoint-bank";
+  readonly schemaVersion: 1;
+  readonly snapshots: readonly TearSnapshotV1[];
+  readonly deltas: readonly TearCheckpointDelta[];
+}
+
+export interface TearCheckpointEntry {
+  readonly id: string;
+  readonly kind: "snapshot" | "delta";
+  readonly tick: number;
+  readonly parentId?: string;
 }
 
 export class TearCheckpointBank {
@@ -218,6 +239,63 @@ export class TearCheckpointBank {
     const delta = this.#deltas.get(id);
     if (delta === undefined) throw new RangeError(`checkpoint does not exist: ${id}`);
     return mergeRecords(this.materialize(delta.parentId), delta.statePatch);
+  }
+
+  list(): readonly TearCheckpointEntry[] {
+    return Object.freeze([
+      ...[...this.#snapshots.values()].map((snapshot) => Object.freeze({
+        id: snapshot.id, kind: "snapshot" as const, tick: snapshot.tick,
+      })),
+      ...[...this.#deltas.values()].map((delta) => Object.freeze({
+        id: delta.id, kind: "delta" as const, tick: delta.tick, parentId: delta.parentId,
+      })),
+    ].sort((left, right) => left.tick - right.tick || left.id.localeCompare(right.id)));
+  }
+
+  diff(leftId: string, rightId: string): readonly string[] {
+    const left = this.materialize(leftId);
+    const right = this.materialize(rightId);
+    const paths = new Set<string>();
+    const visit = (leftValue: unknown, rightValue: unknown, path: string): void => {
+      if (Object.is(leftValue, rightValue)) return;
+      if (leftValue !== undefined && rightValue !== undefined
+        && stableVerificationHash(leftValue) === stableVerificationHash(rightValue)) return;
+      if (isRecord(leftValue) && isRecord(rightValue)) {
+        const keys = new Set([...Object.keys(leftValue), ...Object.keys(rightValue)]);
+        for (const key of [...keys].sort()) visit(leftValue[key], rightValue[key], `${path}.${key}`);
+        return;
+      }
+      paths.add(path);
+    };
+    visit(left, right, "$");
+    return Object.freeze([...paths].sort());
+  }
+
+  export(): TearCheckpointArchiveV1 {
+    return Object.freeze({
+      format: "tear-checkpoint-bank",
+      schemaVersion: 1,
+      snapshots: Object.freeze([...this.#snapshots.values()].map((snapshot) => structuredClone(snapshot))),
+      deltas: Object.freeze([...this.#deltas.values()].map((delta) => structuredClone(delta))),
+    });
+  }
+
+  import(archive: TearCheckpointArchiveV1): void {
+    const candidate = new TearCheckpointBank();
+    for (const snapshot of archive.snapshots) candidate.addSnapshot(snapshot);
+    const pending = [...archive.deltas];
+    while (pending.length > 0) {
+      const index = pending.findIndex((delta) =>
+        candidate.#snapshots.has(delta.parentId) || candidate.#deltas.has(delta.parentId));
+      if (index < 0) throw new TypeError("checkpoint archive contains a cycle or missing parent");
+      const [delta] = pending.splice(index, 1);
+      if (delta === undefined) throw new Error("checkpoint archive import lost a delta");
+      candidate.fork(delta.parentId, delta.id, delta.tick, delta.statePatch);
+    }
+    this.#snapshots.clear();
+    this.#deltas.clear();
+    for (const snapshot of candidate.#snapshots.values()) this.#snapshots.set(snapshot.id, snapshot);
+    for (const delta of candidate.#deltas.values()) this.#deltas.set(delta.id, delta);
   }
 }
 
@@ -252,7 +330,7 @@ export function createWave99HammerPackage(): Readonly<Record<string, unknown>> {
   const progression = synthesizeProgression({
     mode: "endless", difficulty: "hard", weapon: "hammer", targetWave: 99,
     policy: "archetype",
-    selections: [{ id: "impact", tier: 5 }, { id: "recall", tier: 4 }, { id: "guard", tier: 3 }],
+    selections: [{ id: "keen_edge", tier: 5 }, { id: "bloodrite", tier: 3 }, { id: "air_dash", tier: 1 }],
   });
   const snapshot = Object.freeze({
     id: "wave99-start",

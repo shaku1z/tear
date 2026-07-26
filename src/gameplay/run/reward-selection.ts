@@ -235,6 +235,13 @@ export class RewardSelectionController<TChoice extends RewardChoice> {
 
   constructor(options: RewardSelectionOptions<TChoice>) { this.#snapshot = initialRewardSelectionSnapshot(options); }
   snapshot(): RewardSelectionSnapshot<TChoice> { return this.#snapshot; }
+  restore(snapshot: RewardSelectionSnapshot<TChoice>): void {
+    nonNegativeInteger(snapshot.rerolls, "rerolls");
+    nonNegativeInteger(snapshot.specialsOffered, "specialsOffered");
+    nonNegativeInteger(snapshot.revision, "revision");
+    if (snapshot.wave !== 0) positiveWave(snapshot.wave);
+    this.#snapshot = immutableSnapshot(snapshot);
+  }
   dispatch(event: RewardSelectionEvent<TChoice>): RewardSelectionTransition<TChoice> {
     const result = transitionRewardSelection(this.#snapshot, event);
     this.#snapshot = result.snapshot;
