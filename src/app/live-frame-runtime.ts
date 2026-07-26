@@ -2,7 +2,6 @@ import { buildLiveMusicObservation, type LiveMusicActor, type LiveMusicPlayer, t
 import type { MusicContextObservation } from "../audio/music-director";
 import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
-import { AIM_MAGNITUDE_SCALE } from "../input/game-action";
 
 export interface MutableBossIntro { delay: number; t: number; dur: number; boss: (LiveMusicActor & { introT: number }) | null }
 export interface MutableFramePreludeState {
@@ -61,13 +60,12 @@ export interface FixedSimulationPort {
 }
 export interface FixedSimulationInput {
   dt: number; timeScale: number; hitStop: number; state(): string; simulation: FixedSimulationPort;
-  recording(): boolean; readonly aimRadius: number;
-  captureDeviceAim(): boolean;
-  sampleAim(): Readonly<{ x: number; y: number }>; pushAim(turn: number, magnitude: number): void;
+  /** Only an explicit automation owner may replace the physical live-input step. */
+  semanticInputAuthority(): boolean;
   drainActions(tick: number): readonly CommandEnvelope<GameAction>[];
+  authoritativeStep(tick: number, seconds: number, actions: readonly CommandEnvelope<GameAction>[]): void;
   beforeStep?(tick: number): void;
   afterStep?(tick: number): void;
-  authoritativeStep(tick: number, seconds: number, actions: readonly CommandEnvelope<GameAction>[]): void;
   clearOverrides(): void; step(seconds: number): void; gauge(name: "simulationTick" | "simulationSteps" | "simulationDroppedMs", value: number): void;
 }
 export interface FixedSimulationAdvance {
@@ -79,21 +77,12 @@ export function advanceFixedSimulation(input: FixedSimulationInput): FixedSimula
   const advance = input.simulation.advance(input.dt * input.timeScale * 1000, (seconds, tick) => {
     if (input.state() !== "playing") return;
     input.beforeStep?.(tick);
-    let actions: readonly CommandEnvelope<GameAction>[] = Object.freeze([]);
-    // The semantic buffer is sealed exactly at the fixed tick. Its canonical
-    // actions then drive the same authoritative step used by replay and TearBench.
-    if (input.recording()) {
-      if (input.captureDeviceAim()) {
-        const aim = input.sampleAim(), angle = Math.atan2(aim.y, aim.x);
-        const normalized = angle < 0 ? angle + Math.PI * 2 : angle;
-        const magnitude = Math.round(Math.max(0, Math.min(1,
-          Math.hypot(aim.x, aim.y) / input.aimRadius)) * AIM_MAGNITUDE_SCALE);
-        input.pushAim(Math.round(normalized / (Math.PI * 2) * 1_000_000) % 1_000_000, magnitude);
-      }
-      actions = input.drainActions(tick);
-    }
+    // Source contract: the live step owns physical input. The visual ghost is
+    // sampled downstream by the game loop and is never part of this control path.
+    // Ghost3's watch agent is the sole explicit semantic owner.
+    const actions = input.semanticInputAuthority() ? input.drainActions(tick) : Object.freeze([]);
     input.clearOverrides();
-    if (input.recording()) input.authoritativeStep(tick, seconds, actions);
+    if (input.semanticInputAuthority()) input.authoritativeStep(tick, seconds, actions);
     else input.step(seconds);
     input.afterStep?.(tick);
   });

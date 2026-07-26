@@ -8,25 +8,26 @@ const pad = {
 };
 
 describe("tutorial input prompts", () => {
-  it("preserves legacy keyboard and mouse prompts", () => {
-    expect(tutorialInputPrompt("CUT", "Mouse copy", ["MOUSE"], "mouse", pad)).toEqual({
-      description: "Mouse copy",
-      keys: ["MOUSE"],
+  it("preserves semantic keyboard and mouse prompts", () => {
+    expect(tutorialInputPrompt("CUT", "Current curriculum", ["MOUSE"], "mouse", pad)).toEqual({
+      description: "Current curriculum", keys: ["MOUSE"],
     });
   });
 
   it("uses configured gamepad bindings without hard-coding a console layout", () => {
-    expect(tutorialInputPrompt("POWER SLAM", "Keyboard copy", ["S + SHIFT"], "gamepad", pad)).toEqual({
-      description: "Steer DOWN and dash, then slam mid-fall — fast descent hits far harder.",
-      keys: ["LS ↓ + R2", "RS ↓"],
+    expect(tutorialInputPrompt("POWER SLAM", "Current curriculum", ["S + SHIFT"], "gamepad", pad)).toEqual({
+      description: "Current curriculum", keys: ["LS ↓ + R2", "RS ↓"],
     });
-    expect(tutorialInputPrompt("THROW", "Keyboard copy", ["RMB"], "gamepad", pad).keys).toEqual(["R1"]);
+    expect(tutorialInputPrompt("THROW", "Current curriculum", ["RMB"], "gamepad", pad).keys).toEqual(["R1"]);
   });
 
-  it("teaches touch gestures instead of keyboard or mouse controls", () => {
-    expect(tutorialInputPrompt("LAUNCH", "Keyboard copy", ["MOUSE ↑"], "touch", pad)).toEqual({
-      description: "A fast UPWARD drag pops an enemy into the air.",
-      keys: ["DRAG ↑"],
+  it("teaches current touch gestures and the mixed-verbs field test", () => {
+    expect(tutorialInputPrompt("LAUNCH", "Current curriculum", ["MOUSE ↑"], "touch", pad)).toEqual({
+      description: "Current curriculum", keys: ["DRAG ↑"],
     });
+    expect(tutorialInputPrompt("FIELD TEST", "Carry the route", [], "touch", pad).keys)
+      .toEqual(["DASH", "DRAG — SWING", "DRAG ↑"]);
+    expect(tutorialInputPrompt("READ THE CHARGE", "Wait for recovery", [], "gamepad", pad).keys)
+      .toEqual(["R2", "RS — SWING"]);
   });
 });

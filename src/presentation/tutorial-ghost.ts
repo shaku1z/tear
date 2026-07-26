@@ -58,6 +58,6 @@ export function drawTutorialGhost(
     context.globalAlpha = 0.25; context.fillRect(shot.x + (shot.deflected ? -26 : 8), shot.y - 2, 20, 4);
   }
   context.globalAlpha = 0.55;
-  label.draw(context, "GHOST", actor.x, actor.y - 40, palette.accent);
+  label.draw(context, snapshot.demonstrating ? "DEMONSTRATION" : "GHOST", actor.x, actor.y - 40, palette.accent);
   context.restore();
 }

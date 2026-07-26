@@ -17,11 +17,7 @@ export interface LiveCombatFrameApi<State> {
 type FrameBase = Omit<LiveFrameRuntimeOptions, "fixedSimulationInput" | "musicInput">;
 export interface LiveCombatFrameContext extends FrameBase {
   readonly state: () => string;
-  readonly recording: () => boolean;
-  readonly aimRadius: number;
-  readonly captureDeviceAim: () => boolean;
-  readonly sampleAim: () => Readonly<{ x: number; y: number }>;
-  readonly pushAim: (turn: number, magnitude: number) => void;
+  readonly semanticInputAuthority: () => boolean;
   readonly drainActions: (tick: number) => readonly CommandEnvelope<GameAction>[];
   readonly beforeSimulationStep?: (tick: number) => void;
   readonly afterSimulationStep?: (tick: number) => void;
@@ -37,9 +33,7 @@ export function createLiveCombatFrameOptions<State>(context: LiveCombatFrameCont
   api: LiveCombatFrameApi<State>): LiveFrameRuntimeOptions {
   return { ...context,
     fixedSimulationInput: () => ({ state: context.state, simulation: api.simulation,
-      recording: context.recording, aimRadius: context.aimRadius,
-      captureDeviceAim: context.captureDeviceAim,
-      sampleAim: context.sampleAim, pushAim: context.pushAim, drainActions: context.drainActions,
+      semanticInputAuthority: context.semanticInputAuthority, drainActions: context.drainActions,
       ...(context.beforeSimulationStep ? { beforeStep: context.beforeSimulationStep } : {}),
       ...(context.afterSimulationStep ? { afterStep: context.afterSimulationStep } : {}),
       authoritativeStep: (tick, seconds, actions) => { api.authoritativeStep.execute(tick, seconds, actions); },

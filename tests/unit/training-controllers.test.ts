@@ -12,26 +12,28 @@ describe("tutorial controller", () => {
       player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [],
     };
     controller.update(snapshot);
-    for (let tick = 0; tick < 30; tick += 1) {
+    for (let tick = 0; tick < 60; tick += 1) {
       snapshot.player.x -= 2; controller.update(snapshot);
     }
-    for (let tick = 0; tick < 30; tick += 1) {
+    for (let tick = 0; tick < 60; tick += 1) {
       snapshot.player.x += 2; controller.update(snapshot);
     }
-    expect(controller.counters.moveL).toBeGreaterThan(25);
-    expect(controller.counters.moveR).toBeGreaterThan(25);
+    expect(controller.counters.moveL).toBeGreaterThanOrEqual(60);
+    expect(controller.counters.moveR).toBeGreaterThanOrEqual(60);
     expect(controller.completionDelay).toBeGreaterThan(0);
   });
 
   it("preserves lesson order, thresholds, and delayed progression", () => {
     const controller = new TutorialController(); controller.start(1600);
     expect(TUTORIAL_LESSONS.map((lesson) => lesson.title)).toEqual([
-      "MOVE", "JUMP", "DASH", "CUT", "LAUNCH", "JUGGLE", "SLAM", "POWER SLAM", "UPDRAFT", "THROW", "PARRY", "READY",
+      "MOVE", "JUMP", "DASH", "CUT", "LAUNCH", "JUGGLE", "SLAM", "POWER SLAM", "UPDRAFT", "THROW", "PARRY", "READ THE CHARGE", "FIELD TEST", "READY",
     ]);
-    controller.counters.moveL = 26; controller.counters.moveR = 26;
+    controller.counters.moveL = 60; controller.counters.moveR = 60;
     const snapshot = { dt: 0.1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
       player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
-    expect(controller.update(snapshot)).toContainEqual({ type: "sound", cue: "rankup" });
+    expect(controller.update(snapshot)).toEqual(expect.arrayContaining([
+      { type: "reset-training-space" }, { type: "install-arena", arena: "runway" }, { type: "sound", cue: "rankup" },
+    ]));
     expect(controller.completionDelay).toBe(1.1);
     controller.update({ ...snapshot, dt: 1.11 });
     expect(controller.step().title).toBe("JUMP");
@@ -43,8 +45,8 @@ describe("tutorial controller", () => {
       player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
 
     controller.lessonIndex = 3;
-    controller.counters.strike = 3;
-    controller.counters.launch = 1;
+    controller.counters.strike = 6;
+    controller.counters.launch = 3;
     controller.update(snapshot);
     controller.update({ ...snapshot, dt: 1.11 });
     expect(controller.step().title).toBe("LAUNCH");
@@ -54,8 +56,8 @@ describe("tutorial controller", () => {
 
     controller.lessonIndex = 6;
     controller.completionDelay = 0;
-    controller.counters.slam = 0;
-    controller.counters.superslam = 1;
+    controller.counters.slam = 2;
+    controller.counters.superslam = 2;
     controller.update(snapshot);
     controller.update({ ...snapshot, dt: 1.11 });
     expect(controller.step().title).toBe("POWER SLAM");
@@ -64,11 +66,101 @@ describe("tutorial controller", () => {
     expect(controller.update(snapshot)).not.toContainEqual({ type: "sound", cue: "rankup" });
   });
 
+  it("clears objective evidence at the next block boundary", () => {
+    const controller = new TutorialController(); controller.start(1600);
+    const snapshot = { dt: 0, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
+      player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
+    controller.counters.moveL = 60; controller.counters.moveR = 60;
+    controller.update(snapshot); controller.update({ ...snapshot, dt: 1.2 });
+    controller.counters.jump = 3; controller.update(snapshot); controller.update({ ...snapshot, dt: 1.2 });
+    controller.counters.dash = 3; controller.update(snapshot); controller.update({ ...snapshot, dt: 1.2 });
+    controller.counters.strike = 6; controller.update(snapshot); controller.update({ ...snapshot, dt: 1.2 });
+    controller.mark("launch"); controller.mark("launch"); controller.mark("launch");
+    controller.update(snapshot); controller.update({ ...snapshot, dt: 1.2 });
+    expect(controller.step().title).toBe("JUGGLE");
+    expect(controller.counters.launch).toBe(0);
+    expect(controller.counters.airHit).toBe(0);
+    expect(controller.step().complete(controller.counters)).toBe(false);
+  });
+
   it("produces a deterministic renderer-neutral ghost snapshot", () => {
     const left = new TutorialController(), right = new TutorialController(); left.start(1600); right.start(1600);
+    const snapshot = { dt: 7, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
+      player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
+    left.update(snapshot); right.update(snapshot);
     left.ghostTime = 1.25; right.ghostTime = 1.25;
     expect(left.ghostSnapshot(800)).toEqual(right.ghostSnapshot(800));
-    expect(left.ghostSnapshot(800)).toMatchObject({ visible: true, lesson: "MOVE", actor: { y: 775 } });
+    expect(left.ghostSnapshot(800)).toMatchObject({ visible: true, demonstrating: true, lesson: "MOVE", actor: { y: 775 } });
+  });
+
+  it("only demonstrates after the player has had room to attempt the current block", () => {
+    const controller = new TutorialController(); controller.start(1600);
+    const snapshot = { dt: 1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
+      player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
+    for (let tick = 0; tick < 6; tick += 1) controller.update(snapshot);
+    expect(controller.ghostSnapshot(800).visible).toBe(false);
+    controller.update(snapshot);
+    expect(controller.ghostSnapshot(800)).toMatchObject({ visible: true, demonstrating: true });
+  });
+
+  it("credits an updraft only when a fresh production launch occurs while rising", () => {
+    const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 8;
+    const snapshot = { dt: 0, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
+      player: { onGround: false, vy: -400, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", bladeTipVY: -500, enemies: [] };
+    controller.mark("launch"); controller.update(snapshot);
+    expect(controller.counters.updraft).toBe(1);
+    controller.update({ ...snapshot, player: { ...snapshot.player, vy: 0 } });
+    expect(controller.counters.updraft).toBe(1);
+  });
+
+  it("credits an evade and punish only inside a live charger's readable windows", () => {
+    const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 11;
+    const snapshot = {
+      dt: 0.1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
+      player: { onGround: true, vy: 0, dashTimer: 0.12, dashX: -1, x: 800, facing: 1 }, bladeState: "held",
+      enemies: [{ id: "coach", kind: "charger", dead: false, tutorialDummy: false, hp: 100, maxHp: 100, x: 1040, y: 760, attack: "commit" }],
+    };
+    controller.update(snapshot);
+    expect(controller.counters.evade).toBe(1);
+    controller.mark("strike");
+    const coach = snapshot.enemies[0];
+    if (coach === undefined) throw new Error("tutorial coach fixture missing");
+    controller.update({ ...snapshot, player: { ...snapshot.player, dashTimer: 0 }, enemies: [{ ...coach, attack: "recover" }] });
+    expect(controller.counters.punish).toBe(1);
+  });
+
+  it("does not turn an ordinary dash or cut into enemy-language credit", () => {
+    const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 11;
+    const snapshot = { dt: 0.1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
+      player: { onGround: true, vy: 0, dashTimer: 0.12, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
+    controller.update(snapshot); controller.mark("strike"); controller.update({ ...snapshot, player: { ...snapshot.player, dashTimer: 0 } });
+    expect(controller.counters.evade ?? 0).toBe(0);
+    expect(controller.counters.punish ?? 0).toBe(0);
+  });
+
+  it("requires the complete baseline encounter language in the final field test", () => {
+    const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 12;
+    const committed = {
+      dt: 0.1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
+      player: { onGround: true, vy: 0, dashTimer: 0.12, dashX: -1, x: 800, facing: 1 }, bladeState: "held",
+      enemies: [{ id: "coach", kind: "charger", dead: false, tutorialDummy: false, hp: 100, maxHp: 100, x: 1040, y: 760, attack: "commit" }],
+    };
+    controller.update(committed);
+    controller.mark("strike"); controller.mark("launch"); controller.mark("deflect");
+    const coach = committed.enemies[0];
+    if (coach === undefined) throw new Error("field-test coach fixture missing");
+    controller.update({ ...committed, player: { ...committed.player, dashTimer: 0 }, enemies: [{ ...coach, attack: "recover" }] });
+
+    expect(controller.step().complete(controller.counters)).toBe(true);
+    expect(controller.counters).toMatchObject({ evade: 1, punish: 1, launch: 1, deflect: 1 });
+  });
+
+  it("recovers an unreachable thrown blade without granting throw credit", () => {
+    const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 9;
+    const snapshot = { dt: 1.21, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
+      player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "embedded", enemies: [] };
+    expect(controller.update(snapshot)).toContainEqual({ type: "recover-blade" });
+    expect(controller.counters.throwHit ?? 0).toBe(0);
   });
 
   it("recovers a tutorial dummy that has drifted out of the playable lesson", () => {
@@ -82,7 +174,7 @@ describe("tutorial controller", () => {
     expect(intents).toContainEqual({ type: "reset-dummy", enemyId: "dummy", x: 580 });
   });
 
-  it("awards tutorial completion exactly once before returning to the menu", () => {
+  it("awards tutorial completion exactly once before entering the practice arena", () => {
     const controller = new TutorialController(); controller.start(1600);
     controller.lessonIndex = TUTORIAL_LESSONS.length - 1;
     const snapshot = {
@@ -93,7 +185,8 @@ describe("tutorial controller", () => {
     expect(completion.filter((intent) => intent.type === "profile-stat")).toEqual([
       { type: "profile-stat", stat: "tutorialDone", amount: 1 },
     ]);
-    expect(completion).toContainEqual({ type: "navigate", screen: "menu" });
+    expect(completion).toContainEqual({ type: "begin-practice" });
+    expect(completion).not.toContainEqual({ type: "navigate", screen: "menu" });
     expect(controller.update(snapshot)).toEqual([]);
   });
 });

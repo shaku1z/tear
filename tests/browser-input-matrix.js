@@ -132,8 +132,24 @@ async function main() {
   await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked);
   assert.equal(await controller.locator("#lockhint").evaluate((hint) => getComputedStyle(hint).display), "none");
   const aimBeforeMove = await controller.evaluate(() => window.__PANTHEON_TEST.state().bladeAim);
-  assert.ok(aimBeforeMove && (await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording)),
-    "recorded live play exposes authoritative blade aim");
+  assert.ok(aimBeforeMove, "recorded live play exposes the physical blade aim");
+  assert.equal(await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording), false,
+    "visual ghost recording must not start a second semantic input pipeline");
+  for (const mode of ["campaign", "endless", "gauntlet", "bossonly", "sandbox"]) {
+    await controller.evaluate((selectedMode) => window.__PANTHEON_TEST.startMode(selectedMode), mode);
+    await controller.waitForFunction((selectedMode) => {
+      const state = window.__PANTHEON_TEST.state();
+      return state.game === "playing" && state.mode === selectedMode;
+    }, mode);
+    assert.equal(await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording), false,
+      `${mode} visual ghost recording must not replace live physical blade input`);
+  }
+  await controller.evaluate(() => window.__PANTHEON_TEST.startMode("endless"));
+  await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing"
+    && window.__PANTHEON_TEST.state().mode === "endless");
+  await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLockAllowed);
+  await controller.mouse.click(800, 450);
+  await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked);
   const reachBeforeMove = Math.hypot(aimBeforeMove.x, aimBeforeMove.y);
   await controller.mouse.move(800, 475);
   await controller.waitForFunction((before) => {

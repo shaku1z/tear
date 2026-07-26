@@ -12,7 +12,7 @@ confused:
 
 The Version 1 order remains:
 
-`MOVE -> JUMP -> DASH -> CUT -> LAUNCH -> JUGGLE -> SLAM -> POWER SLAM -> UPDRAFT -> THROW -> PARRY -> READY`
+`MOVE -> JUMP -> DASH -> CUT -> LAUNCH -> JUGGLE -> SLAM -> POWER SLAM -> UPDRAFT -> THROW -> PARRY -> READ THE CHARGE -> FIELD TEST -> READY`
 
 Version 2, "The Cutting Room", is not a longer control checklist. It is a short
 authored first run made from changing action blocks. The arena itself presents
@@ -23,22 +23,73 @@ The governing principle is:
 
 > Do not count inputs. Prove control, vary the situation, then prove transfer.
 
+## Cutting Room 2.0 implementation status
+
+The live tutorial now uses the Cutting Room curriculum rather than the old
+shared playground layout. This is deliberately a baseline-only teaching run:
+
+- each of the fourteen blocks installs fresh task-specific platforms and clears
+  prior enemies, projectiles, player velocity, and blade throw state;
+- objective evidence is reset at every block entry, so a launch, slam, or
+  other valid action from the previous block cannot pre-complete the next one;
+- movement and combat objectives now require repeated player-valid actions;
+- the rising-cut exercise accepts only a fresh production launch or a fresh
+  collision inside an observed rising window; it never credits itself;
+- failed throw routes recover the blade without awarding hit or recall credit;
+- permanent meta/shop progression is skipped for tutorial runs, and tutorial
+  mode never starts campaign waves, drafts, or shops;
+- the objective field sheet is responsive and stays in the right-side safe
+  lane instead of crossing the score/combo sightline;
+- controller/touch prompt labels resolve through the active input bindings while
+  retaining the exact, current objective wording and repetition target;
+- ghost demonstrations are now adaptive: they appear for a short labeled loop
+  only after the player has stalled, a relevant live action dismisses them, and
+  their actor route is sampled through the production Player physics/collision
+  model rather than hand-eased animation points;
+- completion awards credit once and immediately enters the baseline, no-wave
+  Playground practice arena instead of ejecting the player to the main menu;
+- the deterministic browser journey completes every block with actual semantic
+  gameplay input and asserts every arena transition.
+
+- `READ THE CHARGE` uses a real baseline Charger. Only a dash *away from its
+  live committed charge* earns the evade; only a subsequent blade hit inside
+  recovery earns the punish. Generic dashes and cuts cannot complete it.
+- `FIELD TEST` combines a fresh charge evade, recovery punish, upward opening,
+  and projectile deflection in `THE FIELD`. It uses no draft, shop, meta, or
+  tutorial damage bonus and hands directly into the same no-wave practice arena.
+- The coach ghosts for both encounter rooms are sampled from the production
+  Player movement model, so their escape routes are physically possible.
+
+Selectable checkpoints, explicit assist controls, a technique summary, and a
+post-completion practice selector remain follow-up work; they are not implied by
+the completed enemy-language and field-test slice.
+
 ## Version 1 repair status
 
 The current parity repair now establishes a trustworthy baseline:
 
 - Movement credit observes authoritative player displacement, so keyboard,
-  controller, touch, replay, and semantic test input share one rule.
-- Tutorial dummies retain valid grounded state and are reset between combat
-  lessons.
-- Unreachable dummies are recovered near the player.
-- Tutorial-only slam recognition is compatible with redesigned blade physics
-  without weakening campaign combat.
-- Tutorial prompts resolve the active input device, controller preset, glyph
-  family, and touch controls.
-- Completion credit is awarded once, after the tutorial controller stops.
-- A deterministic browser journey completes the tutorial with production input
-  and physics. It does not mutate counters, skip lessons, or call tutorial
+  controller, touch, replay, and deterministic semantic input all progress the
+  same lesson.
+- Tutorial dummies maintain grounded state in their dedicated physics path.
+  This prevents grounded strikes from being misclassified as airborne attacks.
+- Dummies are reset between combat lessons, including position, velocity,
+  cooldown, health, and grounded state.
+- A dummy that drifts more than 320 world units from the player is recovered to
+  a reachable position instead of leaving the lesson softlocked.
+- Slam recognition uses tutorial-only tolerance compatible with the redesigned
+  blade dynamics. The production combat thresholds remain unchanged.
+- A down-dash landing-window strike can satisfy POWER SLAM while the tutorial
+  dash is still active, matching what the ghost demonstration communicates.
+- Tutorial prompts adapt to the active keyboard/mouse, controller, or touch
+  input mode. Controller action labels come from the configured preset and
+  glyph resolver.
+- Completion stops the controller before awarding `tutorialDone`, checking
+  achievements, releasing the pointer, and handing off synchronously to the
+  no-wave practice arena. A regression test proves that credit is emitted once
+  and the browser journey proves the live handoff.
+- A deterministic browser journey completes every lesson using real semantic
+  gameplay actions. It does not mutate counters, skip lessons, or call tutorial
   internals to manufacture success.
 
 This round also fixes three legacy defects that parity alone would have
@@ -657,6 +708,17 @@ interface TutorialBlockDefinition {
 ### Objective semantics
 
 An objective owns:
+
+The shipped Cutting Room now additionally includes:
+
+- [x] Add enemy-language training and a baseline-only mixed encounter with
+  actual Charger `commit`/`recover` evidence plus a ranged response.
+- [x] Hand off immediately to the no-wave practice arena after course completion.
+- [ ] Add explicit wave cadence, a technique summary, and a post-completion
+  practice selector.
+- Add contextual first-run campaign onboarding for the real draft/shop screens;
+  keep them absent from the tutorial.
+- Retire version 1 only after completion and abandonment metrics meet targets.
 
 - activation tick;
 - accepted semantic outcomes;

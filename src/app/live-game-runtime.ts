@@ -123,6 +123,10 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     scroll: () => listScroll, setScroll: (value) => { listScroll = value; },
     requestPointerLock: requestOwnedPointerLock, selectStage: loadStage, beginWipe: () => { Wipe.begin(); },
     resetRun: (difficulty) => { startRunWithPreflight("playground", difficulty); },
+    // The tutorial runtime has already completed its training preflight. Keep
+    // this handoff synchronous so a fixed-tick tutorial completion cannot sit
+    // behind an unflushed Promise microtask.
+    startPractice: () => { startRunImmediate("playground", "normal"); },
     applySettingsCinematicPreference: () => settings.cinematics, shakeScale: () => settingsController.shakeScale,
     getShake: () => shake, setShake: (value) => { shake = value; },
     getZoom: () => zoom, setZoom: (value) => { zoom = value; },
@@ -347,10 +351,8 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     parrySlowScale: CONFIG.juice.parrySlowScale, cinemaActive: () => CINEMA.active,
     playgroundSlow: () => run.pg.slow === true, introScale: CONFIG.bossTheater.introScale, lerp, clamp,
     timeScale: () => timeScale, hitStop: () => hitStop, setHitStop: (value) => { hitStop = value; },
-    state: () => state, recording: () => GHOST.recording(), aimRadius: CONFIG.blade.aimRadius, captureDeviceAim: () => !semanticInputAuthority,
-    sampleAim: () => blade.captureDeviceAim(blade.handPos(player)),
-    pushAim: (turn, magnitude) => { Input.semantic.push({ type: "aim", turn, magnitude }); },
-    drainActions: (tick) => GHOST.drainActions(tick),
+    state: () => state, semanticInputAuthority: () => semanticInputAuthority,
+    drainActions: (tick) => Input.drainSemanticActions(tick),
     ...(__TEAR_TEST_BUILD__ ? {
       beforeSimulationStep: (tick: number) => {
         const hook = (window as Window & { __TEAR_PARITY_TICK__?: { before?(tick: number): void } }).__TEAR_PARITY_TICK__;
@@ -471,7 +473,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
       activateControl: (action) => { presentationHost.render(); const encoded = JSON.stringify(action); const control = uiButtons.find((entry) => entry.enabled !== false && JSON.stringify(entry.semanticAction) === encoded); if (control === undefined) return false; screenComposition.dispatch(action); return true; },
       terminateRun: () => { if (RUN_LIFECYCLE.phase !== "terminated") RUN_LIFECYCLE.terminate("quit"); if (GHOST.recording()) GHOST.stopRec({ tearBenchTerminated: true }); setState("paused"); },
       resetSemanticInput: () => { Input.startSemanticRecording(); },
-      advanceFixedTick: () => { const tick = simulation.tick + 1; authoritativeStep.execute(tick, 1 / 120, GHOST.drainActions(tick)); simulation.reset(tick); DIAG.gauge("simulationTick", tick); DIAG.gauge("simulationSteps", 1); return 1; },
+      advanceFixedTick: () => { const tick = simulation.tick + 1; authoritativeStep.execute(tick, 1 / 120, Input.drainSemanticActions(tick)); simulation.reset(tick); DIAG.gauge("simulationTick", tick); DIAG.gauge("simulationSteps", 1); return 1; },
       advanceRenderFrame: (deltaSeconds) => liveFrameRuntime.advanceSimulation(deltaSeconds), advanceApplicationFrame: (deltaSeconds) => { combatHost.frameCoordinator.run(deltaSeconds); },
       authoritative: () => authoritativeStep.lastResult, random: () => dependencies.GAME_RANDOM_STREAMS.snapshot(),
       render: () => { presentationHost.render(); }, screenshot: () => canvas.toDataURL("image/png"),
@@ -489,7 +491,9 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
       openDraft: openRewardDraft, openTier: openRewardTier, run: () => run, player: () => player, blade: () => blade, applyUpgrade, enterReplay: (record, from) => { replayAdapters.enter(record, from); },
       beginRename: () => { settingsRenameAdapters.beginRename(false, true); }, renameSnapshot: settingsRenameAdapters.renameSnapshot, selectSettingsTab: settingsRenameAdapters.selectSettingsTab,
       replayStatus: replayAdapters.status, applyOptions: (options) => { Object.assign(settings, options); applySettings(); }, settings, selected: () => ({ mode: selMode, difficulty: selDiff, weapon: selWeapon, boss: selBoss }),
-      tutorialSnapshot: () => ({ active: TUT.active, lessonIndex: TUT.idx, lesson: TUT.step().t, completionDelay: TUT.doneT, endingTime: TUT.endT, counters: { ...TUT.n } }),
+      tutorialSnapshot: () => ({ active: TUT.active, lessonIndex: TUT.idx, lessonCount: TUT.steps.length, lesson: TUT.step().t,
+        arena: TUT.step().arena, arenaLabel: TUT.step().arenaLabel, teachingFocus: TUT.step().teachingFocus,
+        completionDelay: TUT.doneT, endingTime: TUT.endT, counters: { ...TUT.n } }),
       selectBoss: (boss) => { selBoss = boss; }, chapterBrief: () => Boolean(story.chapterFlow?.brief), finale: () => story.finale, rewardSnapshot: rewardRuntime.snapshot,
       authoritative: () => authoritativeStep.lastResult, startFinale: startAdventureFinale, severFinale: () => severFinaleAnchor(false),
     });

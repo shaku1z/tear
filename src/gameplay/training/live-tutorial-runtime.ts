@@ -5,6 +5,7 @@ import {
   type TutorialLesson,
   type TutorialMark,
 } from "./tutorial-controller";
+import { tutorialArenaDefinition, type TutorialArenaId } from "./tutorial-arenas";
 
 export interface LiveTutorialEnemy {
   readonly kind: string;
@@ -22,12 +23,12 @@ export interface LiveTutorialEnemy {
   hh: number;
   affixCount?: number;
   contactDmg: number;
+  atk?: string;
 }
 
 export interface LiveTutorialPlayer {
-  readonly onGround: boolean;
-  readonly vy: number;
-  readonly dashTimer: number;
+  readonly onGround: boolean; readonly vy: number; readonly dashTimer: number;
+  readonly dashX?: number; readonly dashY?: number;
   readonly x: number;
   readonly facing: number;
 }
@@ -40,9 +41,16 @@ export interface LiveTutorialPort<TEnemy extends LiveTutorialEnemy> {
   readonly movingRight: () => boolean;
   readonly player: () => LiveTutorialPlayer;
   readonly bladeState: () => string;
+  readonly bladeTipVY?: () => number;
   readonly enemies: () => TEnemy[];
   readonly playSound: (cue: "rankup" | "ui") => void;
   readonly spawn: (kind: "charger" | "ranged", hpScale: number) => TEnemy;
+  readonly installArena: (arena: TutorialArenaId) => void;
+  /** Clear task-local enemies/projectiles and return the player/blade to a safe start. */
+  readonly resetTrainingSpace: () => void;
+  readonly recoverBlade?: () => void;
+  /** Starts the separate no-wave practice run after the curriculum completes. */
+  readonly beginPractice: () => void;
   readonly terminateRun: (reason: "quit") => void;
   readonly navigate: (screen: "menu") => void;
   readonly releasePointer: () => void;
@@ -58,6 +66,9 @@ export interface LiveTutorialLessonView {
   readonly need: number | undefined;
   readonly ranged: boolean | undefined;
   readonly final: boolean | undefined;
+  readonly arena: TutorialArenaId;
+  readonly arenaLabel: string;
+  readonly teachingFocus: "movement" | "blade" | "momentum" | "counterplay" | "enemy" | "encounter" | "ready";
   readonly prog: () => readonly [number, number];
   readonly ok: () => boolean;
 }
@@ -89,6 +100,8 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
     return {
       t: lesson.title, d: lesson.description, keys: lesson.keys,
       need: lesson.dummyCount, ranged: lesson.ranged, final: lesson.final,
+      arena: lesson.arena ?? "runway", arenaLabel: tutorialArenaDefinition(lesson.arena ?? "runway").label,
+      teachingFocus: lesson.teachingFocus ?? "movement",
       prog: () => lesson.progress(controller.counters),
       ok: () => lesson.complete(controller.counters),
     };
@@ -111,15 +124,20 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
       const enemies = port.enemies();
       const intents = controller.update({
         dt, skipPressed: port.skipPressed(), movingLeft: port.movingLeft(), movingRight: port.movingRight(),
-        player: port.player(), bladeState: port.bladeState(), viewportWidth: port.viewportWidth,
+        player: port.player(), bladeState: port.bladeState(), bladeTipVY: port.bladeTipVY?.() ?? 0, viewportWidth: port.viewportWidth,
         enemies: enemies.map((enemy, index) => ({
           id: String(index), kind: enemy.kind, dead: enemy.dead === true, tutorialDummy: enemy.tutDummy === true,
           hp: enemy.hp, maxHp: enemy.maxHp, x: enemy.x, y: enemy.y,
+          ...(enemy.atk === undefined ? {} : { attack: enemy.atk }),
         })),
       });
       for (const intent of intents) {
         switch (intent.type) {
           case "sound": port.playSound(intent.cue); break;
+          case "install-arena": port.installArena(intent.arena); break;
+          case "reset-training-space": port.resetTrainingSpace(); break;
+          case "recover-blade": port.recoverBlade?.(); break;
+          case "begin-practice": port.beginPractice(); break;
           case "spawn": {
             const enemy = port.spawn(intent.kind, intent.hpScale);
             if (intent.role === "dummy") {
@@ -127,6 +145,12 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
               if (intent.x !== undefined) enemy.x = intent.x;
               enemy.y = port.groundY() - enemy.hh;
             }
+            if (intent.role === "coach") {
+              enemy.tutDummy = false; enemy.affixCount = 0; enemy.contactDmg = 0;
+              if (intent.x !== undefined) enemy.x = intent.x;
+              enemy.y = port.groundY() - enemy.hh;
+            }
+            if (intent.role === "shooter") enemy.contactDmg = 0;
             break;
           }
           case "stabilize-dummy": {

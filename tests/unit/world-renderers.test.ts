@@ -146,7 +146,7 @@ describe("legacy world presentation renderers", () => {
       rarityColor: "#b06cff", categoryIcon: "◆", shards: 5, coins: 20, reveal: 1 });
     const drawnText = canvasCalls.filter((call) => call.name === "fillText").map((call) => call.arguments[0]);
     expect(drawnText).toEqual(expect.arrayContaining([
-      "DASH THROUGH", "N — skip lesson", "✓",
+      "DASH THROUGH", "BLOCK 2 / 5", "✓",
       "TAB / E — build menu   ·   1–8 quick-spawn   ·   T dummy   ·   B boss",
       "JUMP", "◉ MOVE", "DRAG TO AIM & SWING ↷", "UNLOCKED  ·  RARE", "◆ +5  +20c",
     ]));

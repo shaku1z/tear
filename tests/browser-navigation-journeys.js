@@ -73,6 +73,14 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
       const snapshot = await page.evaluate(() => window.__PANTHEON_TEST.state());
       assert.fail(`${mode} BEGIN did not start its selected mode: ${JSON.stringify(snapshot)} (${error.message})`);
     }
+    if (mode === "tutorial") {
+      assert.deepEqual(await page.evaluate(() => {
+        const tutorial = window.__PANTHEON_TEST.tutorial();
+        return { active: tutorial.active, lesson: tutorial.lesson, lessonCount: tutorial.lessonCount, arena: tutorial.arena };
+      }), {
+        active: true, lesson: "MOVE", lessonCount: 14, arena: "runway",
+      }, "Tutorial must launch the Cutting Room curriculum, not only a generic tutorial mode");
+    }
     await page.evaluate(() => window.__PANTHEON_TEST.skip());
     await page.waitForFunction(() => window.__PANTHEON_TEST.state().active === false, undefined, { timeout: 3000 });
     assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().active), false, `${mode} opening is safely skippable`);
