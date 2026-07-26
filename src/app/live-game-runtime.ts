@@ -353,10 +353,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     parrySlowScale: CONFIG.juice.parrySlowScale, cinemaActive: () => CINEMA.active,
     playgroundSlow: () => run.pg.slow === true, introScale: CONFIG.bossTheater.introScale, lerp, clamp,
     timeScale: () => timeScale, hitStop: () => hitStop, setHitStop: (value) => { hitStop = value; },
-    state: () => state, recording: () => GHOST.recording(), aimRadius: CONFIG.blade.aimRadius,
-    observeAim: () => ({ x: blade.aimX, y: blade.aimY }),
-    pushAim: (turn, magnitude) => { Input.semantic.push({ type: "aim", turn, magnitude }); },
-    drainActions: (tick) => GHOST.drainActions(tick),
+    state: () => state,
     ...(__TEAR_TEST_BUILD__ ? {
       beforeSimulationStep: (tick: number) => {
         const hook = (window as Window & { __TEAR_PARITY_TICK__?: { before?(tick: number): void } }).__TEAR_PARITY_TICK__;
@@ -475,7 +472,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
       routeAction: (action) => routeLiveTearBenchAction(actionRouting, action),
       terminateRun: () => { if (RUN_LIFECYCLE.phase !== "terminated") RUN_LIFECYCLE.terminate("quit"); if (GHOST.recording()) GHOST.stopRec({ tearBenchTerminated: true }); setState("paused"); },
       resetSemanticInput: () => { Input.startSemanticRecording(); },
-      advanceFixedTick: () => { const tick = simulation.tick + 1; authoritativeStep.execute(tick, 1 / 120, GHOST.drainActions(tick)); simulation.reset(tick); DIAG.gauge("simulationTick", tick); DIAG.gauge("simulationSteps", 1); return 1; },
+      advanceFixedTick: () => { const tick = simulation.tick + 1; authoritativeStep.execute(tick, 1 / 120, Input.drainSemanticActions(tick)); simulation.reset(tick); DIAG.gauge("simulationTick", tick); DIAG.gauge("simulationSteps", 1); return 1; },
       advanceRenderFrame: (deltaSeconds) => liveFrameRuntime.advanceSimulation(deltaSeconds),
       authoritative: () => authoritativeStep.lastResult, random: () => dependencies.GAME_RANDOM_STREAMS.snapshot(),
       render: () => { presentationHost.render(); }, screenshot: () => canvas.toDataURL("image/png"),

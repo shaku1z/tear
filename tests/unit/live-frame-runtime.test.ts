@@ -27,20 +27,16 @@ describe("live frame runtime", () => {
     expect(boss.introT).toBe(0);
   });
 
-  it("keeps replay capture passive to the raw live step", () => {
+  it("keeps the visual ghost out of the raw live input step", () => {
     const order: string[] = []; const gauge = vi.fn();
     const simulation = { tick: 0, advance: (_ms: number, step: (seconds: number, tick: number) => void) => {
       step(1 / 60, 4); return { tick: 4, steps: 1, droppedMilliseconds: 0 };
     } };
     const result = advanceFixedSimulation({ dt: 1 / 60, timeScale: 1, hitStop: 0, state: () => "playing", simulation,
-      recording: () => true, aimRadius: 2,
-      observeAim: () => { order.push("observe"); return { x: 0, y: 1 }; },
-      pushAim: (turn, magnitude) => { order.push(`aim:${String(turn)}:${String(magnitude)}`); },
-      drainActions: () => { order.push("drain"); return []; },
       beforeStep: (tick) => order.push(`before:${String(tick)}`),
       afterStep: (tick) => order.push(`after:${String(tick)}`),
       clearOverrides: () => order.push("clear"), step: () => order.push("step"), gauge });
-    expect(order).toEqual(["before:4", "clear", "step", "observe", "aim:250000:500", "drain", "after:4"]);
+    expect(order).toEqual(["before:4", "clear", "step", "after:4"]);
     expect(gauge).toHaveBeenCalledTimes(3);
     expect(result).toEqual({ hitStop: 0, steps: 1 });
   });

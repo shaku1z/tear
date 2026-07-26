@@ -1,8 +1,5 @@
 import { buildLiveMusicObservation, type LiveMusicActor, type LiveMusicPlayer, type LiveMusicRun } from "../audio/live-music-observation";
 import type { MusicContextObservation } from "../audio/music-director";
-import type { CommandEnvelope } from "../domain/envelopes";
-import type { GameAction } from "../input/game-action";
-import { AIM_MAGNITUDE_SCALE } from "../input/game-action";
 
 export interface MutableBossIntro { delay: number; t: number; dur: number; boss: (LiveMusicActor & { introT: number }) | null }
 export interface MutableFramePreludeState {
@@ -61,10 +58,6 @@ export interface FixedSimulationPort {
 }
 export interface FixedSimulationInput {
   dt: number; timeScale: number; hitStop: number; state(): string; simulation: FixedSimulationPort;
-  recording(): boolean; readonly aimRadius: number;
-  /** Observes the blade aim after the raw live simulation has applied device input. */
-  observeAim(): Readonly<{ x: number; y: number }>; pushAim(turn: number, magnitude: number): void;
-  drainActions(tick: number): readonly CommandEnvelope<GameAction>[];
   beforeStep?(tick: number): void;
   afterStep?(tick: number): void;
   clearOverrides(): void; step(seconds: number): void; gauge(name: "simulationTick" | "simulationSteps" | "simulationDroppedMs", value: number): void;
@@ -78,17 +71,10 @@ export function advanceFixedSimulation(input: FixedSimulationInput): FixedSimula
   const advance = input.simulation.advance(input.dt * input.timeScale * 1000, (seconds, tick) => {
     if (input.state() !== "playing") return;
     input.beforeStep?.(tick);
-    // Source contract: the live step owns physical input. Recording observes the
-    // completed result; it must never pre-consume pointer deltas or replace the
-    // player with its quantized replay input.
+    // Source contract: the live step owns physical input. The visual ghost is
+    // sampled downstream by the game loop and is never part of this control path.
     input.clearOverrides();
     input.step(seconds);
-    if (input.recording()) {
-      const aim = input.observeAim(), angle = Math.atan2(aim.y, aim.x), normalized = angle < 0 ? angle + Math.PI * 2 : angle;
-      const magnitude = Math.round(Math.max(0, Math.min(1, Math.hypot(aim.x, aim.y) / input.aimRadius)) * AIM_MAGNITUDE_SCALE);
-      input.pushAim(Math.round(normalized / (Math.PI * 2) * 1_000_000) % 1_000_000, magnitude);
-      input.drainActions(tick);
-    }
     input.afterStep?.(tick);
   });
   input.gauge("simulationTick", advance.tick); input.gauge("simulationSteps", advance.steps);

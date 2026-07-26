@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "blade-pointer-recorded-lifecycle",
+  "description": "The source pointer lifecycle exercised in an achievement-tracked run. Visual ghost capture must remain observational and never alter physical blade control.",
+  "viewport": {
+    "width": 1600,
+    "height": 900
+  },
+  "mode": "endless",
+  "difficulty": "normal",
+  "actions": [
+    { "type": "wait", "ms": 250, "checkpoint": "run-settled" },
+    { "type": "mouseMove", "x": 960, "y": 360, "steps": 2, "checkpoint": "absolute-aim" },
+    { "type": "mouseClick", "x": 800, "y": 450, "button": "left", "checkpoint": "pointer-captured" },
+    { "type": "mouseMove", "x": 800, "y": 475, "steps": 1, "checkpoint": "short-locked-delta" },
+    { "type": "mouseMove", "x": 1050, "y": 475, "steps": 3, "checkpoint": "long-locked-delta" },
+    { "type": "mouseDown", "button": "left", "checkpoint": "tether-held" },
+    { "type": "wait", "ms": 120, "checkpoint": "tether-loaded" },
+    { "type": "mouseUp", "button": "left", "checkpoint": "tether-released" },
+    { "type": "mouseDown", "button": "right", "checkpoint": "throw-edge" },
+    { "type": "mouseUp", "button": "right", "checkpoint": "throw-released" },
+    { "type": "wait", "ms": 180, "checkpoint": "throw-flight" },
+    { "type": "keyPress", "key": "Escape", "checkpoint": "capture-lost" },
+    { "type": "waitForPause", "timeoutMs": 2000, "checkpoint": "paused-after-capture-loss" },
+    { "type": "mouseMove", "x": 900, "y": 450, "steps": 2, "checkpoint": "paused-mouse-owner" },
+    { "type": "restartRun", "checkpoint": "fresh-run" },
+    { "type": "wait", "ms": 180, "checkpoint": "fresh-run-settled" }
+  ]
+}

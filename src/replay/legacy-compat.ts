@@ -30,6 +30,12 @@ export interface LegacyReplayDependencies {
   readonly now: () => number;
   readonly random: () => number;
   readonly semanticInput?: SemanticReplayInput;
+  /**
+   * Hybrid command packets are useful to deterministic tooling, but the oracle
+   * visual ghost never owned browser input. Live play keeps this off so starting
+   * a recorded run cannot create a second input pipeline.
+   */
+  readonly captureSemanticActions?: boolean;
   readonly defaults: Readonly<{
     rulesetVersion: string;
     build: ReplayBuildMetadata;
@@ -110,6 +116,10 @@ export class LegacyGhostEngine {
     this.#dependencies = dependencies;
   }
 
+  #semanticInput(): SemanticReplayInput | undefined {
+    return this.#dependencies.captureSemanticActions === false ? undefined : this.#dependencies.semanticInput;
+  }
+
   startRec(context: RunReplayContext = {}): void {
     const fallbackId = `run-${String(this.#dependencies.now())}`;
     this.rec = {
@@ -126,7 +136,7 @@ export class LegacyGhostEngine {
         tearScore: tearScoreMetadata(context.tearScore ?? this.#dependencies.defaults.tearScore()),
       },
     };
-    this.#dependencies.semanticInput?.startRecording();
+    this.#semanticInput()?.startRecording();
   }
 
   recording(): boolean { return this.rec !== null; }
@@ -142,14 +152,14 @@ export class LegacyGhostEngine {
   #emit(event: UntickedLiveGhostEngineEvent): void {
     const value = Object.freeze({
       ...event,
-      tick: this.#dependencies.semanticInput?.lastSealedTick ?? 0,
+      tick: this.#semanticInput()?.lastSealedTick ?? 0,
     }) as LiveGhostEngineEvent;
     for (const listener of this.#eventListeners) listener(value);
   }
 
   /** Seals device actions onto the authoritative simulation tick before rules execute. */
   drainActions(tick: number): readonly ReplayActionEnvelope[] {
-    const actions = this.#dependencies.semanticInput?.drain(tick) ?? [];
+    const actions = this.#semanticInput()?.drain(tick) ?? [];
     this.rec?.actions.push(...actions);
     return actions;
   }
@@ -247,16 +257,16 @@ export class LegacyGhostEngine {
     const recording = this.rec;
     this.rec = null;
     if (recording === null || recording.px.length < 20) {
-      this.#dependencies.semanticInput?.stopRecording();
+      this.#semanticInput()?.stopRecording();
       return null;
     }
     // The recorder's elapsed clock is relative to the recording start while mid-run
     // drains seal at the absolute simulation tick; clamp so the closing drain can
     // never move the sequencer backwards (a throw here would kill the frame loop).
     const finalTick = Math.max(0, Math.round(recording.elapsed * recording.provenance.ticksPerSecond),
-      this.#dependencies.semanticInput?.lastSealedTick ?? 0);
-    recording.actions.push(...(this.#dependencies.semanticInput?.drain(finalTick) ?? []));
-    this.#dependencies.semanticInput?.stopRecording();
+      this.#semanticInput()?.lastSealedTick ?? 0);
+    recording.actions.push(...(this.#semanticInput()?.drain(finalTick) ?? []));
+    this.#semanticInput()?.stopRecording();
     recording.provenance = {
       ...recording.provenance,
       tearScore: tearScoreMetadata(this.#dependencies.defaults.tearScore()),
