@@ -44,6 +44,7 @@ export interface LiveCampaignTrainingOptions {
   readonly selectStage: (index: number) => void;
   readonly beginWipe: () => void;
   readonly resetRun: (difficulty: RunDifficulty) => void;
+  readonly startPractice: () => void;
   readonly applySettingsCinematicPreference: () => CinematicPreference;
   readonly shakeScale: () => number;
   readonly getShake: () => number;
@@ -113,7 +114,7 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
     lifecycle: options.lifecycle, stage: campaign.stage, spawn: options.spawn,
     navigate: options.setScreen, resetScroll: options.resetScroll,
     releasePointer: () => { document.exitPointerLock(); }, requestPointer: options.requestPointerLock,
-    selectStage: options.selectStage, wipe: options.beginWipe, resetRun: options.resetRun,
+    selectStage: options.selectStage, wipe: options.beginWipe, resetRun: options.resetRun, startPractice: options.startPractice,
     selectedWeapon: () => options.state.selectedWeapon(),
     selectWeapon: (weapon) => { options.state.setSelectedWeapon(weapon); }, addFloater,
     drawGhost: (snapshot) => { drawTutorialGhost(options.context, snapshot, {

@@ -32,6 +32,7 @@ export interface LiveTrainingHostContext {
   readonly selectStage: (index: number) => void;
   readonly wipe: () => void;
   readonly resetRun: (difficulty: RunDifficulty) => void;
+  readonly startPractice: () => void;
   readonly selectedWeapon: () => string;
   readonly selectWeapon: (id: string) => void;
   readonly addFloater: (x: number, y: number, text: string, emphasis: boolean, color: string) => void;
@@ -88,6 +89,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
       blade.state = "held"; blade.x = actor.x + d.CONFIG.blade.handOffsetX; blade.y = actor.y + d.CONFIG.blade.handOffsetY;
       blade.vx = 0; blade.vy = 0; blade.flyTime = 0; blade.throwOrigin = null; blade.pierced.clear(); blade.trail.length = 0;
     },
+    beginPractice: context.startPractice,
     terminateRun: (reason) => { context.lifecycle.terminate(reason); },
     navigate: (screen) => { context.navigate(screen); }, releasePointer: context.releasePointer,
     addProfileStat: (stat, amount) => { d.PROFILE.addStat(stat, amount); },

@@ -28,9 +28,14 @@ shared playground layout. This is deliberately a baseline-only teaching run:
   mode never starts campaign waves, drafts, or shops;
 - the objective field sheet is responsive and stays in the right-side safe
   lane instead of crossing the score/combo sightline;
-- controller/touch prompt labels resolve through the active input bindings;
+- controller/touch prompt labels resolve through the active input bindings while
+  retaining the exact, current objective wording and repetition target;
 - ghost demonstrations are now adaptive: they appear for a short labeled loop
-  only after the player has stalled, and a relevant live action dismisses them;
+  only after the player has stalled, a relevant live action dismisses them, and
+  their actor route is sampled through the production Player physics/collision
+  model rather than hand-eased animation points;
+- completion awards credit once and immediately enters the baseline, no-wave
+  Playground practice arena instead of ejecting the player to the main menu;
 - the deterministic browser journey completes every block with actual semantic
   gameplay input and asserts every arena transition.
 
@@ -58,8 +63,9 @@ completed merely because the core curriculum has been stabilized.
   input mode. Controller action labels come from the configured preset and
   glyph resolver.
 - Completion stops the controller before awarding `tutorialDone`, checking
-  achievements, releasing the pointer, and returning to the menu. A regression
-  test proves that credit is emitted once.
+  achievements, releasing the pointer, and handing off synchronously to the
+  no-wave practice arena. A regression test proves that credit is emitted once
+  and the browser journey proves the live handoff.
 - A deterministic browser journey completes every lesson using real semantic
   gameplay actions. It does not mutate counters, skip lessons, or call tutorial
   internals to manufacture success.
