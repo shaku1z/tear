@@ -3,7 +3,7 @@ import { productionGhostPath, type TutorialGhostFrame } from "./tutorial-product
 
 export type TutorialMark =
   | "airHit" | "dash" | "deflect" | "jump" | "launch" | "moveL" | "moveR"
-  | "parry" | "recall" | "slam" | "strike" | "superslam" | "throwHit" | "updraft";
+  | "evade" | "parry" | "punish" | "recall" | "slam" | "strike" | "superslam" | "throwHit" | "updraft";
 
 export interface TutorialLesson {
   readonly title: string;
@@ -11,9 +11,11 @@ export interface TutorialLesson {
   readonly keys: readonly string[];
   readonly arena?: TutorialArenaId;
   readonly entryMarks?: readonly TutorialMark[];
-  readonly teachingFocus?: "movement" | "blade" | "momentum" | "counterplay" | "ready";
+  readonly teachingFocus?: "movement" | "blade" | "momentum" | "counterplay" | "enemy" | "encounter" | "ready";
   readonly dummyCount?: number;
   readonly ranged?: boolean;
+  /** A real AI charger with zero contact damage; it teaches state reads, not DPS racing. */
+  readonly coachCharger?: boolean;
   readonly final?: boolean;
   progress(counters: Readonly<Partial<Record<TutorialMark, number>>>): readonly [number, number];
   complete(counters: Readonly<Partial<Record<TutorialMark, number>>>): boolean;
@@ -41,6 +43,7 @@ export interface TutorialEnemySnapshot {
   readonly maxHp: number;
   readonly x: number;
   readonly y: number;
+  readonly attack?: string;
 }
 
 export interface TutorialUpdateSnapshot {
@@ -48,7 +51,7 @@ export interface TutorialUpdateSnapshot {
   readonly skipPressed: boolean;
   readonly movingLeft: boolean;
   readonly movingRight: boolean;
-  readonly player: Readonly<{ onGround: boolean; vy: number; dashTimer: number; x: number; facing: number }>;
+  readonly player: Readonly<{ onGround: boolean; vy: number; dashTimer: number; dashX?: number; dashY?: number; x: number; facing: number }>;
   readonly bladeState: string;
   readonly bladeTipVY?: number;
   readonly enemies: readonly TutorialEnemySnapshot[];
@@ -60,7 +63,7 @@ export type TutorialIntent =
   | Readonly<{ type: "install-arena"; arena: TutorialArenaId }>
   | Readonly<{ type: "reset-training-space" }>
   | Readonly<{ type: "recover-blade" }>
-  | Readonly<{ type: "spawn"; kind: "charger" | "ranged"; hpScale: number; role: "dummy" | "shooter"; x?: number }>
+  | Readonly<{ type: "spawn"; kind: "charger" | "ranged"; hpScale: number; role: "dummy" | "shooter" | "coach"; x?: number }>
   | Readonly<{ type: "stabilize-dummy"; enemyId: string; minimumStun: number; healBelow: number }>
   | Readonly<{ type: "reset-dummy"; enemyId: string; x: number }>
   | Readonly<{ type: "begin-practice" }>
@@ -118,7 +121,8 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
   { title: "UPDRAFT", description: "While rising, carve up twice. A good cut can make the next route possible.", keys: ["W", "MOUSE UP"], arena: "liftwell", entryMarks: ["jump", "launch", "strike", "updraft"], teachingFocus: "momentum", dummyCount: 1, progress: (n) => [bounded(count(n, "updraft"), 2), 2], complete: (n) => count(n, "updraft") >= 2 },
   { title: "THROW", description: "Hit twice at range and recall twice. The blade stays part of your movement.", keys: ["RMB"], arena: "throw-lane", entryMarks: ["throwHit", "recall"], teachingFocus: "blade", dummyCount: 1, progress: (n) => [bounded(count(n, "throwHit"), 2) + bounded(count(n, "recall"), 2), 4], complete: (n) => count(n, "throwHit") >= 2 && count(n, "recall") >= 2 },
   { title: "PARRY", description: "Return two shots. A counter is a route change, not a panic button.", keys: ["MOUSE"], arena: "counterline", entryMarks: ["parry", "deflect"], teachingFocus: "counterplay", ranged: true, progress: (n) => [Math.min(4, count(n, "parry") * 2 || count(n, "deflect")), 4], complete: (n) => count(n, "parry") >= 2 || count(n, "deflect") >= 4 },
-  { title: "FIELD TEST", description: "Dash into range, land two cuts, then make one upward opening. Carry the whole route.", keys: ["SHIFT", "MOUSE", "MOUSE UP"], arena: "ready-room", entryMarks: ["dash", "strike", "launch"], teachingFocus: "ready", dummyCount: 1, progress: (n) => [bounded(count(n, "dash"), 1) + bounded(count(n, "strike"), 2) + bounded(count(n, "launch"), 1), 4], complete: (n) => count(n, "dash") >= 1 && count(n, "strike") >= 2 && count(n, "launch") >= 1 },
+  { title: "READ THE CHARGE", description: "Wait for the commitment. Dash clear, then cut only in recovery.", keys: ["SHIFT", "MOUSE"], arena: "read-line", entryMarks: ["evade", "punish"], teachingFocus: "enemy", coachCharger: true, progress: (n) => [bounded(count(n, "evade"), 1) + bounded(count(n, "punish"), 1), 2], complete: (n) => count(n, "evade") >= 1 && count(n, "punish") >= 1 },
+  { title: "FIELD TEST", description: "Evade the charge, punish recovery, open the air, then return one shot.", keys: ["SHIFT", "MOUSE", "MOUSE UP"], arena: "field-floor", entryMarks: ["evade", "punish", "launch", "deflect"], teachingFocus: "encounter", coachCharger: true, ranged: true, progress: (n) => [bounded(count(n, "evade"), 1) + bounded(count(n, "punish"), 1) + bounded(count(n, "launch"), 1) + bounded(count(n, "deflect"), 1), 4], complete: (n) => count(n, "evade") >= 1 && count(n, "punish") >= 1 && count(n, "launch") >= 1 && count(n, "deflect") >= 1 },
   { title: "READY", description: "Move, make space, take height, and return pressure. The Tear awaits.", keys: [], arena: "ready-room", entryMarks: [], teachingFocus: "ready", final: true, progress: () => [0, 1], complete: () => false },
 ]);
 
@@ -136,6 +140,8 @@ const PRODUCTION_GHOST_TRACES: Readonly<Record<string, GhostScript>> = Object.fr
   UPDRAFT: { length: 3, path: productionGhostPath("UPDRAFT", 3), swings: [[0.62, 0.82, 1, -2]], hits: [0.74], target: [[0, 60, 0], [0.7, 60, 0], [1.1, 60, -190], [1.6, 60, -60], [2, 60, 0]] },
   THROW: { length: 3.4, path: productionGhostPath("THROW", 3.4), throwWindow: [0.6, 1.9], hits: [1.1] },
   PARRY: { length: 3, path: productionGhostPath("PARRY", 3), swings: [[0.78, 0.94, 0.9, -1.2]], shot: { start: 0.3, hit: 0.86, end: 1.6 } },
+  "READ THE CHARGE": { length: 3.2, path: productionGhostPath("READ THE CHARGE", 3.2), dashes: [[0.72, 0.92]], swings: [[1.68, 1.86, 0.9, -0.8]], hits: [1.78] },
+  "FIELD TEST": { length: 3.8, path: productionGhostPath("FIELD TEST", 3.8), dashes: [[0.62, 0.82]], swings: [[1.52, 1.7, 0.9, -0.8], [2.2, 2.4, 0.8, -1.9]], hits: [1.62, 2.3], shot: { start: 2.55, hit: 3.08, end: 3.7 } },
 });
 
 function interpolate(frames: readonly TutorialGhostFrame[], time: number): Readonly<{ x: number; y: number }> {
@@ -169,6 +175,9 @@ export class TutorialController {
   private observedLaunches = 0;
   private observedStrikes = 0;
   private risingCutWindow = 0;
+  private chargeCommitWindow = 0;
+  private chargeRecoveryWindow = 0;
+  private chargeCommitAwayX = 0;
   private bladeAwayTime = 0;
   private previousGrounded = true;
   private previousBladeState = "held";
@@ -182,7 +191,7 @@ export class TutorialController {
     this.previousPlayerX = undefined;
     this.counters = {};
     this.pendingArena = this.step().arena ?? "runway";
-    this.evidencePulse = false; this.coachIdle = 0; this.coachDemoTime = 0; this.observedLaunches = 0; this.observedStrikes = 0; this.risingCutWindow = 0; this.bladeAwayTime = 0;
+    this.evidencePulse = false; this.coachIdle = 0; this.coachDemoTime = 0; this.observedLaunches = 0; this.observedStrikes = 0; this.risingCutWindow = 0; this.chargeCommitWindow = 0; this.chargeRecoveryWindow = 0; this.chargeCommitAwayX = 0; this.bladeAwayTime = 0;
   }
 
   stop(): void { this.active = false; }
@@ -204,7 +213,7 @@ export class TutorialController {
     this.ghostTime = 0;
     this.pendingArena = lesson.arena ?? "runway";
     this.evidencePulse = false; this.coachIdle = 0; this.coachDemoTime = 0;
-    this.observedLaunches = count(this.counters, "launch"); this.observedStrikes = count(this.counters, "strike"); this.risingCutWindow = 0; this.bladeAwayTime = 0;
+    this.observedLaunches = count(this.counters, "launch"); this.observedStrikes = count(this.counters, "strike"); this.risingCutWindow = 0; this.chargeCommitWindow = 0; this.chargeRecoveryWindow = 0; this.chargeCommitAwayX = 0; this.bladeAwayTime = 0;
   }
 
   update(snapshot: TutorialUpdateSnapshot): readonly TutorialIntent[] {
@@ -226,7 +235,21 @@ export class TutorialController {
     this.previousGrounded = player.onGround;
     if (!player.onGround && player.vy < -120) this.risingCutWindow = 0.8;
     else this.risingCutWindow = Math.max(0, this.risingCutWindow - dt);
-    if (player.dashTimer > 0 && !this.dashLatched) { this.mark("dash"); this.dashLatched = true; }
+    const charger = snapshot.enemies.find((enemy) => enemy.kind === "charger" && !enemy.tutorialDummy && !enemy.dead);
+    if (charger?.attack === "commit") {
+      this.chargeCommitWindow = 1.15;
+      this.chargeCommitAwayX = Math.sign(player.x - charger.x) || -(player.facing || 1);
+    }
+    else this.chargeCommitWindow = Math.max(0, this.chargeCommitWindow - dt);
+    if (charger?.attack === "recover") this.chargeRecoveryWindow = 1.15;
+    else this.chargeRecoveryWindow = Math.max(0, this.chargeRecoveryWindow - dt);
+    if (player.dashTimer > 0 && !this.dashLatched) {
+      this.mark("dash");
+      const dashX = Math.sign(player.dashX ?? 0), verticalEscape = (player.dashY ?? 0) < -0.5;
+      if ((lesson.entryMarks ?? []).includes("evade") && this.chargeCommitWindow > 0
+        && (verticalEscape || (dashX !== 0 && dashX === this.chargeCommitAwayX))) this.mark("evade");
+      this.dashLatched = true;
+    }
     if (player.dashTimer <= 0) this.dashLatched = false;
     if (this.previousBladeState === "returning" && snapshot.bladeState === "held") this.mark("recall");
     this.previousBladeState = snapshot.bladeState;
@@ -243,6 +266,8 @@ export class TutorialController {
     this.observedLaunches = launches;
     const strikes = count(this.counters, "strike");
     if (lesson.title === "UPDRAFT" && strikes > this.observedStrikes && this.risingCutWindow > 0) this.mark("updraft");
+    if ((lesson.entryMarks ?? []).includes("punish") && strikes > this.observedStrikes
+      && count(this.counters, "evade") > 0 && this.chargeRecoveryWindow > 0) this.mark("punish");
     this.observedStrikes = strikes;
 
     const liveDummies = snapshot.enemies.filter((enemy) => enemy.tutorialDummy && !enemy.dead);
@@ -264,6 +289,10 @@ export class TutorialController {
       else this.coachIdle += dt;
       if (this.coachDemoTime > 0) this.coachDemoTime = Math.max(0, this.coachDemoTime - dt);
       else if (this.coachIdle >= 7) { this.coachIdle = 0; this.coachDemoTime = 3.8; this.ghostTime = 0; }
+    }
+    if (lesson.coachCharger && !charger) {
+      const x = Math.max(160, Math.min(player.x + (player.facing || 1) * 330, snapshot.viewportWidth - 160));
+      intents.push({ type: "spawn", kind: "charger", hpScale: 2, role: "coach", x });
     }
 
     if (this.completionDelay > 0) {

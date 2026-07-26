@@ -357,7 +357,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     playgroundSlow: () => run.pg.slow === true, introScale: CONFIG.bossTheater.introScale, lerp, clamp,
     timeScale: () => timeScale, hitStop: () => hitStop, setHitStop: (value) => { hitStop = value; },
     state: () => state, recording: () => GHOST.recording(), aimRadius: CONFIG.blade.aimRadius,
-    sampleAim: () => blade.captureDeviceAim(blade.handPos(player)),
+    observeAim: () => ({ x: blade.aimX, y: blade.aimY }),
     pushAim: (turn, magnitude) => { Input.semantic.push({ type: "aim", turn, magnitude }); },
     drainActions: (tick) => GHOST.drainActions(tick),
     ...(__TEAR_TEST_BUILD__ ? {

@@ -36,6 +36,7 @@ export function tutorialInputPrompt(
       UPDRAFT: { description, keys: ["JUMP", "DRAG ↑"] },
       THROW: { description, keys: ["THROW"] },
       PARRY: { description, keys: ["DRAG — SWING"] },
+      "READ THE CHARGE": { description, keys: ["DASH", "DRAG — SWING"] },
       "FIELD TEST": { description, keys: ["DASH", "DRAG — SWING", "DRAG ↑"] },
     };
     return prompts[title] ?? keyboardPrompt(description, keys);
@@ -56,6 +57,7 @@ export function tutorialInputPrompt(
     UPDRAFT: { description, keys: [jump, "RS ↑"] },
     THROW: { description, keys: [throwBlade] },
     PARRY: { description, keys: ["RS — SWING"] },
+    "READ THE CHARGE": { description, keys: [dash, "RS — SWING"] },
     "FIELD TEST": { description, keys: [dash, "RS — SWING", "RS ↑"] },
   };
   return prompts[title] ?? keyboardPrompt(description, keys);

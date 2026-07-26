@@ -88,6 +88,31 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
       for (let index = 0; index < limit && !environment.observe().player.grounded; index += 1) step();
       return environment.observe().player.grounded;
     };
+    const coach = () => environment.observe().entities.find((entity) => entity.kind === "charger");
+    const moveTowardCoach = (distance = 190) => {
+      const enemy = coach(), player = environment.observe().player;
+      if (!enemy) { step(); return; }
+      const dx = enemy.x - player.x;
+      step({ type: "move", x: Math.abs(dx) <= distance ? 0 : (dx > 0 ? 1000 : -1000), y: 0 });
+    };
+    const evadeLiveCharge = (enemy) => {
+      const player = environment.observe().player;
+      const away = player.x < enemy.x ? -1000 : 1000;
+      step({ type: "dash", x: away, y: 0 });
+      idle(4);
+    };
+    const returnVisibleShot = () => {
+      const shot = window.__PANTHEON_TEST.state().projectileTrace.find((projectile) => !projectile.deflected);
+      const blade = environment.observe().blade;
+      if (!shot || Math.hypot(shot.x - blade.handX, shot.y - blade.handY) > 210) return false;
+      const angle = Math.atan2(shot.y - blade.handY, shot.x - blade.handX);
+      const center = Math.round(((((angle / (Math.PI * 2)) % 1) + 1) % 1) * 1_000_000) % 1_000_000;
+      step({ type: "aim", turn: (center - 120000 + 1_000_000) % 1_000_000, magnitude: 1000 });
+      idle(2);
+      step({ type: "aim", turn: (center + 120000) % 1_000_000, magnitude: 1000 });
+      idle(4);
+      return true;
+    };
 
     record("start");
 
@@ -180,29 +205,31 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
     waitForLessonToAdvance(9);
 
     for (let tick = 0; tick < 3_600 && tutorial().lessonIndex === 10; tick += 1) {
-      const shot = window.__PANTHEON_TEST.state().projectileTrace.find((projectile) => !projectile.deflected);
-      const blade = environment.observe().blade;
-      if (!shot || Math.hypot(shot.x - blade.handX, shot.y - blade.handY) > 210) {
-        step();
-        continue;
-      }
-      const angle = Math.atan2(shot.y - blade.handY, shot.x - blade.handX);
-      const center = Math.round(((((angle / (Math.PI * 2)) % 1) + 1) % 1) * 1_000_000) % 1_000_000;
-      step({ type: "aim", turn: (center - 120000 + 1_000_000) % 1_000_000, magnitude: 1000 });
-      idle(2);
-      step({ type: "aim", turn: (center + 120000) % 1_000_000, magnitude: 1000 });
-      idle(4);
+      if (!returnVisibleShot()) step();
     }
     waitForLessonToAdvance(10, 720);
-    step({ type: "dash", x: 1000, y: 0 }); idle(80);
-    approachDummy(70);
-    for (let attempt = 0; attempt < 30 && tutorial().lessonIndex === 11; attempt += 1) {
-      swing(attempt % 2 === 0 ? 500000 : 0, attempt % 2 === 0 ? 0 : 500000, 4, 12);
-      swing(250000, 750000, 6, 24);
-      approachDummy(70, 90);
+    for (let tick = 0; tick < 4_800 && tutorial().lessonIndex === 11; tick += 1) {
+      const counters = tutorial().counters, enemy = coach();
+      if (!enemy) { step(); continue; }
+      if ((counters.evade ?? 0) === 0 && enemy.state === "commit") evadeLiveCharge(enemy);
+      else if ((counters.evade ?? 0) > 0 && (counters.punish ?? 0) === 0 && enemy.state === "recover") swingThroughDummy(120000, 8);
+      else moveTowardCoach();
     }
     waitForLessonToAdvance(11, 720);
-    const reachedReady = tutorial().lessonIndex === 12;
+    for (let tick = 0; tick < 8_400 && tutorial().lessonIndex === 12; tick += 1) {
+      const counters = tutorial().counters, enemy = coach();
+      if ((counters.evade ?? 0) === 0) {
+        if (enemy?.state === "commit") evadeLiveCharge(enemy); else moveTowardCoach();
+      } else if ((counters.punish ?? 0) === 0) {
+        if (enemy?.state === "recover") swingThroughDummy(120000, 8); else moveTowardCoach();
+      } else if ((counters.launch ?? 0) === 0) {
+        moveTowardCoach(100); swing(250000, 750000, 6, 18);
+      } else if ((counters.deflect ?? 0) === 0) {
+        if (!returnVisibleShot()) step();
+      } else step();
+    }
+    waitForLessonToAdvance(12, 720);
+    const reachedReady = tutorial().lessonIndex === 13;
     idle(240);
     record("terminal");
     return {
@@ -223,7 +250,7 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
   assert.ok(result.metrics.acceptedActions > 0, "journey must use player-valid actions");
   assert.deepEqual([...new Set(result.trace.map((entry) => entry.arena))], [
     "runway", "vertical-gate", "dash-lane", "blade-range", "launch-bay", "air-chain", "drop-well",
-    "dive-channel", "liftwell", "throw-lane", "counterline", "ready-room",
+    "dive-channel", "liftwell", "throw-lane", "counterline", "read-line", "field-floor", "ready-room",
   ], "every tutorial block must install its own arena");
   console.log(`Tutorial journey passed in ${result.metrics.fixedTicks} fixed ticks`);
 });

@@ -68,6 +68,8 @@ export const TUTORIAL_PRODUCTION_GHOST_INPUTS: Readonly<Record<string, readonly 
   UPDRAFT: Object.freeze([{ at: 0.3, jump: true }]),
   THROW: Object.freeze([]),
   PARRY: Object.freeze([]),
+  "READ THE CHARGE": Object.freeze([{ at: 0, duration: 0.62, right: true }, { at: 0.72, duration: 0.32, left: true }, { at: 0.74, dash: true }]),
+  "FIELD TEST": Object.freeze([{ at: 0, duration: 0.56, right: true }, { at: 0.62, duration: 0.30, left: true }, { at: 0.64, dash: true }, { at: 1.92, jump: true }]),
 });
 
 export function productionGhostPath(title: string, length: number): readonly TutorialGhostFrame[] {

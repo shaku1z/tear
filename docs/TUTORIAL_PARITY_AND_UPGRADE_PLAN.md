@@ -5,7 +5,7 @@
 The repaired tutorial preserves the oracle lesson order and success rules while
 making them viable under the redesigned runtime:
 
-`MOVE -> JUMP -> DASH -> CUT -> LAUNCH -> JUGGLE -> SLAM -> POWER SLAM -> UPDRAFT -> THROW -> PARRY -> READY`
+`MOVE -> JUMP -> DASH -> CUT -> LAUNCH -> JUGGLE -> SLAM -> POWER SLAM -> UPDRAFT -> THROW -> PARRY -> READ THE CHARGE -> FIELD TEST -> READY`
 
 The parity repair and the future redesign are intentionally separate. The
 current tutorial must remain a dependable baseline while the upgraded tutorial
@@ -16,7 +16,7 @@ is developed behind an explicit version boundary.
 The live tutorial now uses the Cutting Room curriculum rather than the old
 shared playground layout. This is deliberately a baseline-only teaching run:
 
-- each of the thirteen blocks installs fresh task-specific platforms and clears
+- each of the fourteen blocks installs fresh task-specific platforms and clears
   prior enemies, projectiles, player velocity, and blade throw state;
 - objective evidence is reset at every block entry, so a launch, slam, or
   other valid action from the previous block cannot pre-complete the next one;
@@ -39,10 +39,18 @@ shared playground layout. This is deliberately a baseline-only teaching run:
 - the deterministic browser journey completes every block with actual semantic
   gameplay input and asserts every arena transition.
 
-The larger chamber progression below remains the content direction for follow-up
-work: enemy-language rooms, a wave-like mixed final encounter, selectable
-checkpoints, and a post-completion practice selector are not represented as
-completed merely because the core curriculum has been stabilized.
+- `READ THE CHARGE` uses a real baseline Charger. Only a dash *away from its
+  live committed charge* earns the evade; only a subsequent blade hit inside
+  recovery earns the punish. Generic dashes and cuts cannot complete it.
+- `FIELD TEST` combines a fresh charge evade, recovery punish, upward opening,
+  and projectile deflection in `THE FIELD`. It uses no draft, shop, meta, or
+  tutorial damage bonus and hands directly into the same no-wave practice arena.
+- The coach ghosts for both encounter rooms are sampled from the production
+  Player movement model, so their escape routes are physically possible.
+
+Selectable checkpoints, explicit assist controls, a technique summary, and a
+post-completion practice selector remain follow-up work; they are not implied by
+the completed enemy-language and field-test slice.
 
 ## Parity repair now implemented
 
@@ -379,9 +387,11 @@ fallback until all T2 gates pass.
 
 ### T4 — Final exam and integration
 
-- Add enemy-language training, wave cadence, the mixed encounter, and immediate
-  campaign handoff.
-- Add post-tutorial technique summary.
+- [x] Add enemy-language training and a baseline-only mixed encounter with
+  actual Charger `commit`/`recover` evidence plus a ranged response.
+- [x] Hand off immediately to the no-wave practice arena after course completion.
+- [ ] Add explicit wave cadence, a technique summary, and a post-completion
+  practice selector.
 - Add contextual first-run campaign onboarding for the real draft/shop screens;
   keep them absent from the tutorial.
 - Retire version 1 only after completion and abandonment metrics meet targets.

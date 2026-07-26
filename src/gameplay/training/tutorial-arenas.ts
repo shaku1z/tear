@@ -7,7 +7,7 @@ import type { ArenaPlatform } from "./arena-rules";
 export type TutorialArenaId =
   | "runway" | "vertical-gate" | "dash-lane" | "blade-range" | "launch-bay"
   | "air-chain" | "drop-well" | "dive-channel" | "liftwell" | "throw-lane"
-  | "counterline" | "ready-room";
+  | "counterline" | "read-line" | "field-floor" | "ready-room";
 
 export interface TutorialArenaDefinition {
   readonly id: TutorialArenaId;
@@ -27,6 +27,8 @@ export const TUTORIAL_ARENAS: readonly TutorialArenaDefinition[] = Object.freeze
   { id: "liftwell", label: "THE LIFT WELL", purpose: "Create height while rising." },
   { id: "throw-lane", label: "THE THROW LANE", purpose: "Control space away from the hand." },
   { id: "counterline", label: "THE COUNTERLINE", purpose: "Turn pressure back on its owner." },
+  { id: "read-line", label: "THE READ LINE", purpose: "Wait for a commitment, then take the safe opening." },
+  { id: "field-floor", label: "THE FIELD", purpose: "Carry movement, pressure, and counterplay together." },
   { id: "ready-room", label: "THE EXIT", purpose: "Carry the whole language forward." },
 ]);
 
@@ -56,6 +58,8 @@ export function createTutorialArena(id: TutorialArenaId, viewportWidth: number, 
     liftwell: [surface(id, 0, x(0.26), y(180), 220), surface(id, 1, x(0.62), y(300), 220)],
     "throw-lane": [surface(id, 0, x(0.18), y(130), 190), surface(id, 1, x(0.70), y(130), 190)],
     counterline: [surface(id, 0, x(0.32), y(145), 210), surface(id, 1, x(0.62), y(145), 210)],
+    "read-line": [surface(id, 0, x(0.30), y(150), 220), surface(id, 1, x(0.67), y(150), 220)],
+    "field-floor": [surface(id, 0, x(0.22), y(120), 220), surface(id, 1, x(0.49), y(235), 240), surface(id, 2, x(0.76), y(120), 190)],
     "ready-room": [surface(id, 0, x(0.30), y(170), 230), surface(id, 1, x(0.60), y(270), 230)],
   };
   return [floor, ...layouts[id]];
