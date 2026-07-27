@@ -2,7 +2,7 @@
   "format": "tear-score-stem-cue",
   "version": 1,
   "id": "slicing-life-1",
-  "name": "Slicing Life 1",
+  "name": "Slicing Life",
   "tempo": 87.8,
   "timeSignature": [
     4,
@@ -26,15 +26,14 @@
   "assetNote": "Pre-cut loop; frames file-relative.",
   "stems": [
     {
-      "id": "foundation",
-      "role": "bed",
+      "id": "rhythm",
+      "role": "rhythm",
       "channels": 2,
       "gainDb": 0,
-      "seamMode": "crossfade",
-      "crossfadeFrames": 1440,
+      "seamMode": "hard",
       "sources": [
         {
-          "url": "opus/foundation.ogg",
+          "url": "opus/revisions/6e0c00ea65944d1d839321fcf6a65272/rhythm.ogg",
           "mime": "audio/ogg; codecs=\"opus\""
         }
       ]
@@ -47,20 +46,21 @@
       "seamMode": "hard",
       "sources": [
         {
-          "url": "opus/pulse.ogg",
+          "url": "opus/revisions/6e0c00ea65944d1d839321fcf6a65272/pulse.ogg",
           "mime": "audio/ogg; codecs=\"opus\""
         }
       ]
     },
     {
-      "id": "rhythm",
-      "role": "rhythm",
+      "id": "foundation",
+      "role": "bed",
       "channels": 2,
       "gainDb": 0,
-      "seamMode": "hard",
+      "seamMode": "crossfade",
+      "crossfadeFrames": 1440,
       "sources": [
         {
-          "url": "opus/rhythm.ogg",
+          "url": "opus/revisions/6e0c00ea65944d1d839321fcf6a65272/foundation.ogg",
           "mime": "audio/ogg; codecs=\"opus\""
         }
       ]
@@ -74,7 +74,7 @@
       "crossfadeFrames": 1440,
       "sources": [
         {
-          "url": "opus/melody.ogg",
+          "url": "opus/revisions/6e0c00ea65944d1d839321fcf6a65272/melody.ogg",
           "mime": "audio/ogg; codecs=\"opus\""
         }
       ]
@@ -112,13 +112,12 @@
     "sourceSha256": "f93f002299b622623ef9ece9cf267ad3722ff25d50ad26cb110a87e09e3e3103"
   },
   "analysis": {
-    "tempoConfidence": 0.125,
+    "tempoConfidence": 0.164,
     "tempoAlternatives": [
       42.4,
       169.4
     ],
-    "sourceDownbeatSeconds": 1.916,
-    "secondsPerBar": 2.8335,
+    "sourceDownbeatSeconds": 1.8086,
     "keyConfidence": 0.048,
     "keyAlternatives": [
       "G major",
@@ -126,7 +125,7 @@
     ],
     "seam": {
       "seamDbBelowPeak": -35.5,
-      "rmsRatio": 0.76,
+      "rmsRatio": 0.74,
       "verdict": "pass"
     },
     "analysedBpm": 84.7,
@@ -140,20 +139,20 @@
       "expectedLoopFrames": 2100336,
       "barErrorFrames": 0,
       "barErrorMs": 0,
-      "priorDriftMsPerCycle": 21,
-      "verdict": "review",
+      "priorDriftMsPerCycle": 0,
+      "verdict": "approved",
       "consideredBpm": [
+        {
+          "bpm": 87.757387,
+          "bars": 16,
+          "octaveDistancePercent": 3.61,
+          "phrase": "typical"
+        },
         {
           "bpm": 164.545,
           "bars": 30,
           "octaveDistancePercent": 2.87,
           "phrase": "unusual"
-        },
-        {
-          "bpm": 87.757,
-          "bars": 16,
-          "octaveDistancePercent": 3.61,
-          "phrase": "typical"
         },
         {
           "bpm": 175.515,
