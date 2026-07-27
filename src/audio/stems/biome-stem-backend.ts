@@ -18,6 +18,8 @@ import { createStationState, pickNext, remember, type StationState } from "../si
 import type { SignalCatalog } from "../signal/catalog";
 import { StingerPlayer } from "../signal/stingers";
 import { nextBoundaryTime, secondsPerBar } from "../signal/quantize";
+import { resolveMusicRoute } from "../signal/music-routing-resolver";
+import type { MusicRoutingManifest, RoutingScene } from "../signal/music-routing-types";
 import { StemCuePlayer } from "./StemCuePlayer";
 import { loopSeconds } from "./tier";
 import { tierFromSnapshot } from "./tier-from-snapshot";
@@ -53,7 +55,7 @@ const QUANTIZE_BARS = 2;
 export class BiomeStemBackend implements MusicBackend {
   readonly id = "stem-cue:biome-routed";
   readonly #cues = new Map<string, LoadedCueRef>();
-  readonly #biomeMap: Readonly<Record<string, string>>;
+  readonly #routing: MusicRoutingManifest;
   readonly #defaultCueId: string;
   readonly #muteReasons = new Set<TemporaryMuteReason>();
 
@@ -74,7 +76,6 @@ export class BiomeStemBackend implements MusicBackend {
   /** While paused, ignore the user's music mode and use the adaptive tier. */
   #modeExempt = false;
   #catalog: SignalCatalog | null = null;
-  #bossMap: Readonly<Record<string, string>> = {};
   #lastBossId: string | null = null;
   #stationState: StationState = createStationState();
   #stopStationWatch: (() => void) | null = null;
@@ -93,12 +94,11 @@ export class BiomeStemBackend implements MusicBackend {
   #lastBiomeId = "menu";
   #lastScene: MusicScene = "main-menu";
 
-  constructor(cues: readonly LoadedCueRef[], biomeMap: Record<string, string>, defaultCueId: string, catalog: SignalCatalog | null = null, bossMap: Record<string, string> = {}) {
+  constructor(cues: readonly LoadedCueRef[], routing: MusicRoutingManifest, catalog: SignalCatalog | null = null) {
     this.#catalog = catalog;
-    this.#bossMap = bossMap;
     for (const cue of cues) this.#cues.set(cue.id, cue);
-    this.#biomeMap = biomeMap;
-    this.#defaultCueId = defaultCueId;
+    this.#routing = routing;
+    this.#defaultCueId = routing.defaultWorkId;
   }
 
   async initialize(host: MusicBackendHost): Promise<void> {
@@ -260,12 +260,17 @@ export class BiomeStemBackend implements MusicBackend {
   /** Canonical (biome/menu) routing, ignoring any station. */
   #canonicalCueId(biomeId: string, scene: MusicScene): string {
     if (isMusicShell(scene, biomeId)) return this.#shellCueId();
-    // A boss with its own track overrides the biome cue for that fight.
-    if (scene === "boss" && this.#lastBossId) {
-      const bossCue = this.#bossMap[this.#lastBossId];
-      if (bossCue && this.#cues.has(bossCue)) return bossCue;
-    }
-    return this.#biomeMap[biomeId] ?? this.#defaultCueId;
+    const routeScene: RoutingScene = scene === "boss"
+      ? "boss"
+      : scene === "victory" || scene === "defeat"
+        ? scene
+        : "gameplay";
+    const routed = resolveMusicRoute(this.#routing, {
+      biomeId,
+      scene: routeScene,
+      bossId: this.#lastBossId,
+    }, this.#stationSeed);
+    return this.#cues.has(routed) ? routed : this.#defaultCueId;
   }
 
   /**

@@ -3,23 +3,20 @@ import { BiomeStemBackend, type LoadedCueRef } from "./stems/biome-stem-backend"
 import { StemCueMusicBackend } from "./stems/stem-cue-backend";
 import type { StemCueManifest } from "./stems/types";
 import type { SignalCatalog } from "./signal/catalog";
+import { FALLBACK_MUSIC_ROUTING, loadMusicRouting } from "./signal/music-routing-loader";
 
 /** Stage name (music `biomeId`) → recorded cue id. */
-const BIOME_CUE_MAP: Readonly<Record<string, string>> = {
-  menu: "fillet",
-  "The Grounds": "slicing-life-1",
-  "The Undercroft": "slicing-life-2",
-  "The Crimson Fields": "beserker",
-  "The Voidspire": "looking-out",
-  "The Tear": "the-source",
-};
 /** Boss id → its own cue, overriding the biome track during that fight. */
-const BOSS_CUE_MAP: Readonly<Record<string, string>> = {
-  echo: "reflection-of-the-bladeless",
-};
-const DEFAULT_CUE_ID = "fillet";
+const DEFAULT_CUE_ID = FALLBACK_MUSIC_ROUTING.defaultWorkId;
 /** Routed cues are guaranteed; the catalog adds every other playable work. */
-const ROUTED_CUE_IDS = [...new Set([DEFAULT_CUE_ID, ...Object.values(BIOME_CUE_MAP), ...Object.values(BOSS_CUE_MAP)])];
+const ROUTED_CUE_IDS = [
+  DEFAULT_CUE_ID,
+  ...FALLBACK_MUSIC_ROUTING.rules.flatMap((rule) =>
+    rule.selection.type === "primary"
+      ? [rule.selection.workId]
+      : rule.selection.entries.map((entry) => entry.workId),
+  ),
+];
 
 /**
  * Cue *manifests* are small JSON; audio stays lazy (decoded in `#activate`), so
@@ -68,12 +65,13 @@ export async function installBiomeStemBackend(): Promise<boolean> {
     const catalog = await fetch(new URL("audio/catalog.json", document.baseURI).href)
       .then((r) => (r.ok ? (r.json() as Promise<SignalCatalog>) : null))
       .catch(() => null);
+    const routing = await loadMusicRouting();
     const settled = await Promise.allSettled(playableCueIds(catalog).map(fetchCue));
     const cues = settled
       .filter((r): r is PromiseFulfilledResult<LoadedCueRef> => r.status === "fulfilled")
       .map((r) => r.value);
-    if (!cues.some((c) => c.id === DEFAULT_CUE_ID)) throw new Error("default cue failed to load");
-    installPrimaryMusicBackend(() => new BiomeStemBackend(cues, BIOME_CUE_MAP, DEFAULT_CUE_ID, catalog, BOSS_CUE_MAP));
+    if (!cues.some((c) => c.id === routing.defaultWorkId)) throw new Error("default cue failed to load");
+    installPrimaryMusicBackend(() => new BiomeStemBackend(cues, routing, catalog));
     return true;
   } catch (error) {
     console.warn("Biome stem engine unavailable; falling back", error);

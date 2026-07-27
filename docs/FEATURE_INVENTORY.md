@@ -68,6 +68,11 @@ This is the migration checklist for the architectural redesign. A checked featur
 
 ## Audio
 
+- [x] Data-driven recorded-cue routing — `public/audio/music-routing.json` is
+  schema-validated and resolved through `src/audio/signal/music-routing-*`;
+  `music-routing.test.ts` preserves the five accepted biome choices, Echo's
+  Reflection override, terminal/boss fallback, and malformed-manifest rejection.
+
 - [x] Built-in TearScore musical identity and adaptive arrangements — all six themes preserve the oracle tempo, tonic and two-bar drum, bass and lead identity across five intensity tiers; evidence: sibling `tear-score/packages/testing/test/themes.test.ts` plus Tear's vendored-module contract.
 
 - [x] Shared host-owned AudioContext lifecycle — `audio-system.test.ts` and `browser-audio.js` prove single creation/activation across repeated runs.
