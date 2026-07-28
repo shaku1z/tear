@@ -25,7 +25,11 @@ function normalizeBiome(value: string): string {
 function matches(rule: MusicRoutingRule, context: MusicRoutingContext): boolean {
   const match = rule.match;
   if (match.scene !== undefined && match.scene !== context.scene) return false;
-  if (match.biome !== undefined && match.biome !== normalizeBiome(context.biomeId)) return false;
+  if (
+    match.biome !== undefined &&
+    normalizeBiome(match.biome) !== normalizeBiome(context.biomeId)
+  )
+    return false;
   if (match.bossId !== undefined && match.bossId !== context.bossId) return false;
   if (match.bossRequired === true && !context.bossId) return false;
   return true;

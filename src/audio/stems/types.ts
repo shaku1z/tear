@@ -38,6 +38,8 @@ export interface StemAsset {
   readonly channels: 1 | 2;
   /** Static trim applied on top of tier gain. */
   readonly gainDb: number;
+  /** Static stereo position from full left (-1) through center (0) to right (1). */
+  readonly pan?: number;
   /** Codec alternatives; the loader picks the first the browser can play. */
   readonly sources: readonly StemSource[];
   /** Per-stem seam behaviour (drums=hard, pads=crossfade, reverb=tail-overlap). */

@@ -38,6 +38,21 @@ describe("data-driven music routing", () => {
     })).toBe("fillet");
   });
 
+  it("normalizes authored biome aliases on both sides of a route match", () => {
+    expect(resolveMusicRoute({
+      format: "tear-music-routing",
+      version: 1,
+      defaultWorkId: "fillet",
+      rules: [{
+        id: "friendly-alias",
+        match: { scene: "gameplay", biome: "grounds" },
+        selection: { type: "primary", workId: "slicing-life-1" },
+      }],
+    }, { biomeId: "The Grounds", scene: "gameplay", bossId: null })).toBe(
+      "slicing-life-1",
+    );
+  });
+
   it("rejects malformed asset input before routing reaches the music backend", () => {
     expect(() => validateMusicRoutingManifest({
       format: "tear-music-routing",

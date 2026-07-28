@@ -1,5 +1,5 @@
 import { loopSeconds, planTierGains, secondsPerBar } from "./tier";
-import type { StemAsset, StemCueManifest, Tier } from "./types";
+import type { LoopMode, StemAsset, StemCueManifest, Tier } from "./types";
 import { assertValidStemCue } from "./validate";
 
 /**
@@ -14,7 +14,14 @@ import { assertValidStemCue } from "./validate";
  */
 export interface StemVoice {
   readonly id: string;
-  configureLoop(loopStartSeconds: number, loopEndSeconds: number): void;
+  configureLoop(
+    loopStartSeconds: number,
+    loopEndSeconds: number,
+    options?: {
+      readonly mode: LoopMode;
+      readonly crossfadeSeconds?: number;
+    },
+  ): void;
   start(atTime: number, offsetSeconds: number): void;
   rampGain(target: number, atTime: number, rampSeconds: number): void;
   setGain(value: number): void;
@@ -80,7 +87,18 @@ export class StemCuePlayer {
     const at = backend.now() + (options.leadSeconds ?? 0.15);
     const gains = planTierGains(cue, this.#tier);
     for (const [id, voice] of this.#voices) {
-      voice.configureLoop(startSeconds, endSeconds);
+      const asset = cue.stems.find((candidate) => candidate.id === id);
+      const crossfadeFrames =
+        asset?.crossfadeFrames ?? cue.loop.crossfadeFrames;
+      voice.configureLoop(startSeconds, endSeconds, {
+        mode: asset?.seamMode ?? cue.loop.mode,
+        ...(crossfadeFrames === undefined
+          ? {}
+          : {
+              crossfadeSeconds:
+                crossfadeFrames / cue.sourceSampleRate,
+            }),
+      });
       // Silent stems still start so their phase matches when they fade in later.
       voice.setGain(gains[id] ?? 0);
       voice.start(at, introOffset);

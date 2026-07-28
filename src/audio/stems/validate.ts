@@ -45,6 +45,26 @@ export function validateStemCue(value: unknown): CueValidationResult {
     else stemIds.add(stemId);
     if (stem.channels !== 1 && stem.channels !== 2)
       errors.push(`Stem ${stemId} must be mono or stereo.`);
+    if (
+      stem.pan !== undefined &&
+      (typeof stem.pan !== "number" ||
+        !Number.isFinite(stem.pan) ||
+        stem.pan < -1 ||
+        stem.pan > 1)
+    )
+      errors.push(`Stem ${stemId} pan must be between -1 and 1.`);
+    if (
+      stem.seamMode !== undefined &&
+      stem.seamMode !== "hard" &&
+      stem.seamMode !== "crossfade" &&
+      stem.seamMode !== "tail-overlap"
+    )
+      errors.push(`Stem ${stemId} has an unsupported seam mode.`);
+    if (
+      stem.crossfadeFrames !== undefined &&
+      (!isFrame(stem.crossfadeFrames) || stem.crossfadeFrames === 0)
+    )
+      errors.push(`Stem ${stemId} crossfadeFrames must be a positive integer.`);
     if (!Array.isArray(stem.sources) || stem.sources.length === 0)
       errors.push(`Stem ${stemId} needs at least one codec source.`);
   }
@@ -54,6 +74,29 @@ export function validateStemCue(value: unknown): CueValidationResult {
     errors.push("loop.startFrame and loop.endFrame must be non-negative integer frames.");
   else if (loop.endFrame <= loop.startFrame)
     errors.push("loop.endFrame must be greater than loop.startFrame.");
+  else if (
+    loop.crossfadeFrames !== undefined &&
+    (!isFrame(loop.crossfadeFrames) ||
+      loop.crossfadeFrames === 0 ||
+      loop.crossfadeFrames * 2 >= loop.endFrame - loop.startFrame)
+  )
+    errors.push("loop.crossfadeFrames must be positive and shorter than half the loop.");
+
+  if (loop && isFrame(loop.startFrame) && isFrame(loop.endFrame) && loop.endFrame > loop.startFrame) {
+    const loopFrames = loop.endFrame - loop.startFrame;
+    for (const candidate of stems) {
+      if (!isRecord(candidate)) continue;
+      const stem = candidate;
+      if (
+        stem.crossfadeFrames !== undefined &&
+        isFrame(stem.crossfadeFrames) &&
+        stem.crossfadeFrames * 2 >= loopFrames
+      )
+        errors.push(
+          `Stem ${text(stem.id)} crossfadeFrames must be shorter than half the loop.`,
+        );
+    }
+  }
 
   for (const candidate of [cue.intro, cue.outro]) {
     if (candidate === undefined) continue;

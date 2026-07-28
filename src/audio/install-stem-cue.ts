@@ -4,6 +4,7 @@ import { StemCueMusicBackend } from "./stems/stem-cue-backend";
 import type { StemCueManifest } from "./stems/types";
 import type { SignalCatalog } from "./signal/catalog";
 import { FALLBACK_MUSIC_ROUTING, loadMusicRouting } from "./signal/music-routing-loader";
+import { requestedFoundryPreview } from "./foundry-preview";
 
 /** Stage name (music `biomeId`) → recorded cue id. */
 /** Boss id → its own cue, overriding the biome track during that fight. */
@@ -88,7 +89,10 @@ export async function installStemCueMusicBackend(cueId: string): Promise<boolean
       if (!response.ok) throw new Error(`cue ${cueId} not found (${String(response.status)})`);
       return response.json();
     })) as StemCueManifest;
-    installPrimaryMusicBackend(() => new StemCueMusicBackend(cue, base));
+    const preview = requestedFoundryPreview();
+    installPrimaryMusicBackend(
+      () => new StemCueMusicBackend(cue, base, preview),
+    );
     return true;
   } catch (error) {
     console.warn(`Stem cue "${cueId}" unavailable; falling back`, error);
