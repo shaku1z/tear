@@ -63,6 +63,8 @@ export interface FixedSimulationInput {
   /** Only an explicit automation owner may replace the physical live-input step. */
   semanticInputAuthority(): boolean;
   drainActions(tick: number): readonly CommandEnvelope<GameAction>[];
+  /** Passive recorder hook: inputs are sealed here but never fed into physical gameplay. */
+  recordSealedActions?(tick: number, actions: readonly CommandEnvelope<GameAction>[]): void;
   authoritativeStep(tick: number, seconds: number, actions: readonly CommandEnvelope<GameAction>[]): void;
   beforeStep?(tick: number): void;
   afterStep?(tick: number): void;
@@ -80,7 +82,11 @@ export function advanceFixedSimulation(input: FixedSimulationInput): FixedSimula
     // Source contract: the live step owns physical input. The visual ghost is
     // sampled downstream by the game loop and is never part of this control path.
     // Ghost3's watch agent is the sole explicit semantic owner.
-    const actions = input.semanticInputAuthority() ? input.drainActions(tick) : Object.freeze([]);
+    // Every fixed tick seals canonical device-mapped commands once. On ordinary
+    // player runs these remain observation-only; only explicit automation is
+    // allowed to pass the same sealed actions into gameplay.
+    const actions = input.drainActions(tick);
+    input.recordSealedActions?.(tick, actions);
     input.clearOverrides();
     if (input.semanticInputAuthority()) input.authoritativeStep(tick, seconds, actions);
     else input.step(seconds);

@@ -50,9 +50,12 @@ const path = require("node:path");
     platform: window.__TEAR_PLATFORM_SERVICES__.id,
     envelope: JSON.parse(localStorage.getItem("tear_profile_v2") || "null"),
   }));
-  assert.equal(boot.platform, target === "crazygames" ? "crazygames" : "browser");
-  assert.equal(boot.envelope.schema, "tear.profile");
-  assert.equal(boot.envelope.schemaVersion, 2);
+  // Test builds deliberately compose the TearBench service façade when the
+  // test URL is present. Target-specific HTML/bundle assertions above remain
+  // the platform check; the runtime identity here must not pretend to be a
+  // shipped browser or CrazyGames session.
+  assert.equal(boot.platform, "tearbench");
+  assert.equal(boot.envelope, null, "TearBench test services must not silently exercise production profile persistence");
 
   await page.mouse.click(260, 360);
   await page.waitForTimeout(350);

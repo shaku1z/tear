@@ -19,6 +19,7 @@ export interface LiveCombatFrameContext extends FrameBase {
   readonly state: () => string;
   readonly semanticInputAuthority: () => boolean;
   readonly drainActions: (tick: number) => readonly CommandEnvelope<GameAction>[];
+  readonly recordSealedActions?: (tick: number, actions: readonly CommandEnvelope<GameAction>[]) => void;
   readonly beforeSimulationStep?: (tick: number) => void;
   readonly afterSimulationStep?: (tick: number) => void;
   readonly clearOverrides: () => void;
@@ -34,6 +35,7 @@ export function createLiveCombatFrameOptions<State>(context: LiveCombatFrameCont
   return { ...context,
     fixedSimulationInput: () => ({ state: context.state, simulation: api.simulation,
       semanticInputAuthority: context.semanticInputAuthority, drainActions: context.drainActions,
+      ...(context.recordSealedActions ? { recordSealedActions: context.recordSealedActions } : {}),
       ...(context.beforeSimulationStep ? { beforeStep: context.beforeSimulationStep } : {}),
       ...(context.afterSimulationStep ? { afterStep: context.afterSimulationStep } : {}),
       authoritativeStep: (tick, seconds, actions) => { api.authoritativeStep.execute(tick, seconds, actions); },

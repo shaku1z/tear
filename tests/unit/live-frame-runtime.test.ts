@@ -38,7 +38,7 @@ describe("live frame runtime", () => {
       afterStep: (tick) => order.push(`after:${String(tick)}`),
       authoritativeStep: () => order.push("authoritative"),
       clearOverrides: () => order.push("clear"), step: () => order.push("step"), gauge });
-    expect(order).toEqual(["before:4", "clear", "step", "after:4"]);
+    expect(order).toEqual(["before:4", "drain", "clear", "step", "after:4"]);
     expect(gauge).toHaveBeenCalledTimes(3);
     expect(result).toEqual({ hitStop: 0, steps: 1 });
   });

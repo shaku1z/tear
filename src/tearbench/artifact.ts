@@ -1,12 +1,34 @@
 import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
-import type { TearBuildIdentityV1, TearFailureArtifactV1, TearScenarioV1 } from "./contracts";
+import type { TearBuildIdentityV1, TearFailureArtifactV1, TearScenarioV1, TearSnapshotV1 } from "./contracts";
 import type { TearBenchRunResult } from "./runner";
 
 export interface TearBenchConsoleEntry {
   readonly level: "debug" | "info" | "warning" | "error";
   readonly tick?: number;
   readonly message: string;
+}
+
+/**
+ * Physical presentation inputs are part of a replay coordinate. They are not
+ * gameplay actions: a materializer must establish them before it creates the
+ * live runtime, then record exactly what it established.
+ */
+export interface TearBenchPresentationInputV1 {
+  readonly viewport?: Readonly<{ width: number; height: number }>;
+  readonly colorScheme?: "light" | "dark" | "no-preference";
+  readonly reducedMotion?: "reduce" | "no-preference";
+}
+
+/**
+ * Optional, persisted start-coordinate evidence for a materialized run.
+ * `initialSnapshot` is a real State Forge snapshot, never an ad-hoc partial
+ * object. The build identity remains on the run artifact because base and
+ * candidate revisions are intentionally allowed to differ.
+ */
+export interface TearBenchReplayContextV1 {
+  readonly initialSnapshot?: TearSnapshotV1;
+  readonly presentation?: TearBenchPresentationInputV1;
 }
 
 export interface TearBenchArtifactHooks {
@@ -33,6 +55,7 @@ export interface TearBenchRunArtifactV1 {
   readonly hashes: Readonly<{ semantic: string }>;
   readonly attachments: Readonly<Record<string, string>>;
   readonly rerun: Readonly<{ scenarioId: string; scenarioVersion: number; seed: string; actionTrace: string }>;
+  readonly replayContext?: TearBenchReplayContextV1;
 }
 
 export function createRunArtifact(

@@ -63,6 +63,11 @@ type UntickedLiveGhostEngineEvent =
     ? Event extends LiveGhostEngineEvent ? Omit<Event, "tick"> : never
     : never;
 
+export interface LegacyGhostRecordingObserver {
+  started(context: Readonly<RunReplayContext>): void;
+  stopped(meta: Readonly<Record<string, unknown>>): void;
+}
+
 export interface MutableRecording {
   t: number;
   elapsed: number;
@@ -111,6 +116,7 @@ export class LegacyGhostEngine {
   play: ReplayPlayback | null = null;
   readonly #dependencies: LegacyReplayDependencies;
   readonly #eventListeners = new Set<(event: LiveGhostEngineEvent) => void>();
+  #recordingObserver: LegacyGhostRecordingObserver | null = null;
 
   constructor(dependencies: LegacyReplayDependencies) {
     this.#dependencies = dependencies;
@@ -137,9 +143,11 @@ export class LegacyGhostEngine {
       },
     };
     this.#semanticInput()?.startRecording();
+    this.#recordingObserver?.started(Object.freeze({ ...context }));
   }
 
   recording(): boolean { return this.rec !== null; }
+  setRecordingObserver(observer: LegacyGhostRecordingObserver | null): void { this.#recordingObserver = observer; }
 
   captureRuntimeState(): LegacyGhostRuntimeState { return Object.freeze({ recording: this.rec === null ? null : structuredClone(this.rec) }); }
   restoreRuntimeState(state: LegacyGhostRuntimeState): void { this.rec = state.recording === null ? null : structuredClone(state.recording); }
@@ -258,6 +266,7 @@ export class LegacyGhostEngine {
     this.rec = null;
     if (recording === null || recording.px.length < 20) {
       this.#semanticInput()?.stopRecording();
+      if (recording !== null) this.#recordingObserver?.stopped(meta);
       return null;
     }
     // The recorder's elapsed clock is relative to the recording start while mid-run
@@ -280,7 +289,9 @@ export class LegacyGhostEngine {
       deaths: recording.deaths, events: recording.events, loadout: recording.loadout, thumb: recording.thumb,
       ...(finalLoadout === undefined ? {} : { finalLoadout }),
     };
-    return buildVisualReplayPacket(raw, recording.provenance, recording.actions);
+    const packet = buildVisualReplayPacket(raw, recording.provenance, recording.actions);
+    this.#recordingObserver?.stopped(meta);
+    return packet;
   }
 
   begin(value: unknown): ReplayPlayback | null {

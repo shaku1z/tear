@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   GHOST_VAULT_STORES,
   GhostDoctor,
+  GhostCapsuleReader,
   GhostLocalVault,
   GhostStreamingRecorder,
   capsuleDebugJson,
@@ -58,6 +59,51 @@ describe("Ghost capsule recorder and local Vault", () => {
     const recovered = await afterRefresh.recoverIncompleteSessions();
     expect(recovered).toHaveLength(1);
     expect(recovered[0]).toMatchObject({ id: "crashed-run", status: "recovered", chunks: [{ sequence: 0 }] });
+    expect(await backend.keys("journals")).toEqual([]);
+  });
+
+  it("loads verified named tracks back from a completed capsule", async () => {
+    const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
+    const recorder = new GhostStreamingRecorder({
+      sessionId: "reader-run", createdAt: "2026-07-28T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault,
+    });
+    await recorder.start();
+    await recorder.append({ kind: "commands", tick: 3, value: { command: { type: "dash" } } });
+    await recorder.append({ kind: "rng", tick: 4, value: { gameplay: "state" } });
+    await recorder.append({ kind: "results", tick: 4, value: { outcome: "defeat" } });
+    await recorder.finalize("2026-07-28T00:00:01.000Z");
+
+    const capsule = await new GhostCapsuleReader(vault).read("reader-run");
+    expect(capsule.manifest.status).toBe("complete");
+    expect(capsule.manifest.recordingProfile).toBe("forensic-qa");
+    expect(capsule.maxTick).toBe(4);
+    expect(capsule.tracks.commands).toEqual([{ kind: "commands", tick: 3, value: { command: { type: "dash" } } }]);
+    expect(capsule.tracks.rng).toEqual([{ kind: "rng", tick: 4, value: { gameplay: "state" } }]);
+    expect(capsule.tracks.results).toEqual([{ kind: "results", tick: 4, value: { outcome: "defeat" } }]);
+  });
+
+  it("quarantines an interrupted recording whose committed evidence no longer validates", async () => {
+    const stores = new Map<GhostVaultStore, Map<string, string>>();
+    const backend = createMemoryGhostVaultBackend(stores);
+    const beforeRefresh = new GhostLocalVault(backend);
+    const recorder = new GhostStreamingRecorder({
+      sessionId: "interrupted-corrupt-run",
+      createdAt: "2026-07-28T00:00:00.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+      vault: beforeRefresh,
+    });
+    await recorder.start();
+    await recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } });
+    const manifest = await beforeRefresh.getManifest("interrupted-corrupt-run");
+    const chunk = manifest?.chunks[0];
+    if (chunk === undefined) throw new Error("interrupted fixture did not commit a chunk");
+    await backend.put("chunks", chunk.id, "{\"tampered\":true}");
+
+    const recovered = await new GhostLocalVault(backend).recoverIncompleteSessions();
+    expect(recovered).toMatchObject([{ id: "interrupted-corrupt-run", status: "quarantined" }]);
+    expect(await backend.get("quarantine", "recovery:interrupted-corrupt-run")).toContain("checksum mismatch");
+    expect(await backend.keys("journals")).toEqual([]);
   });
 
   it("detects and quarantines corrupt chunks without preventing Vault startup", async () => {

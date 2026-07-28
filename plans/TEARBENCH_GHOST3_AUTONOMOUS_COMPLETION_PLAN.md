@@ -5,7 +5,8 @@
 **Source authority:** `TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN(3).md`, version 0.6, SHA-256 `007BE22193F5369B8450AAB33B95C6D3080176E6B2F91A1D504B545CA7FC7DDE`
 **Supersedes for completion claims:** `plans/TEARBENCH_GHOST3_ACTION_PLAN.md`
 **Purpose:** Convert every remaining part of the original vision into executable work, with gates that require real integration and user-visible outcomes.
-**Current progress:** C21-C24 passed; C25 is next and has not begun.
+**Current progress:** C21-C24 passed; C25 is in progress. Its implementation
+foundation is verified, but its Class C exit gate remains open.
 
 ### Execution record through C24
 
@@ -15,10 +16,21 @@
 | C22 | Passed | `7ee49cd` | Deterministic live-runtime bridge and production isolation |
 | C23 | Passed | `e88b70b` | State Forge, progression truth, restore/fork, and live scenario evidence |
 | C24 | Passed | This checkpoint commit | Full `pnpm check:c24` exit 0 on 2026-07-26; 51 focused tests; real-simulation mechanic matrix; seed-117 Easy Adventure completion and exact repeatability; earned longitudinal progression; production isolation |
+| C26 | Passed | Pending checkpoint commit | Full `pnpm check:c26` exit 0 on 2026-07-28; a real browser-test-build planted dash regression is repeatedly reproduced and minimized across clean commits, stably bisected, fixed, retained, rerun from Graveyard evidence, and automatically selected by a later movement diff |
 
 C24 is intentionally classified as an engineering/Class A privileged diagnostic
-gate, not Class B or Class C certification. Work is paused here; C25 physical
-input and black-box certification remains entirely outstanding.
+gate, not Class B or Class C certification. C25 physical-input and black-box
+certification is now in progress; see `docs/checkpoints/C25_CLASS_C_FOUNDATION.md`
+for its verified foundation and its explicit remaining exit criteria. C26's
+Class A regression-discovery exit gate is complete; see
+`docs/checkpoints/C26_REGRESSION_DISCOVERY_FOUNDATION.md`. This does not
+certify C25's distinct Class C work.
+
+C27 has begun with an explicitly separate Ghost 3.0 recorder foundation;
+see `docs/checkpoints/C27_AUTHORITATIVE_RECORDER_FOUNDATION.md`. It is not a
+recorder/capsule completion claim until real-run, browser-persisted evidence
+passes the C27 exit gate. The foundation now includes separate privileged and
+physical-input browser evidence, but not the full C27 capsule/replay contract.
 
 ---
 

@@ -1,4 +1,6 @@
 import { stableVerificationHash } from "../replay/hash";
+import type { TearBenchRunArtifactV1 } from "./artifact";
+import type { TearBuildIdentityV1, TearFailureArtifactV1, TearObservationClass } from "./contracts";
 
 export interface TearRegressionFrame {
   readonly tick: number;
@@ -19,6 +21,149 @@ export interface TearRegressionComparison {
     candidate: TearRegressionFrame;
   }>;
   readonly downstreamDivergenceTicks: readonly number[];
+}
+
+/**
+ * Durable C26 comparison evidence. This intentionally stores the complete
+ * run-artifact identities alongside the first material divergence, rather
+ * than reducing a base/candidate comparison to a boolean test result.
+ */
+export interface TearRegressionInvestigation {
+  readonly format: "tearbench-regression-investigation";
+  readonly schemaVersion: 1;
+  readonly createdAt: string;
+  readonly observationClass: TearObservationClass;
+  readonly coordinates: Readonly<{
+    readonly scenarioId: string;
+    readonly scenarioVersion: number;
+    readonly seed: string;
+    readonly actionsHash: string;
+    readonly target: string;
+    readonly rulesetVersion: string;
+    readonly configHash: string;
+  }>;
+  readonly base: Readonly<{ id: string; build: TearBuildIdentityV1; artifactHash: string }>;
+  readonly candidate: Readonly<{ id: string; build: TearBuildIdentityV1; artifactHash: string }>;
+  readonly comparison: TearRegressionComparison;
+  readonly status: "equivalent" | "diverged";
+  readonly evidenceHash: string;
+}
+
+function artifactIdentity(artifact: TearBenchRunArtifactV1): string {
+  return stableVerificationHash({
+    id: artifact.id, build: artifact.build, scenario: artifact.resolvedScenario,
+    seed: artifact.seed, actionsHash: stableVerificationHash(artifact.actions),
+    semanticHash: artifact.hashes.semantic, ticks: artifact.ticks,
+    eventIds: artifact.events.map((event) => event.id),
+    failureIds: artifact.failures.map((failure) => failure.id), metrics: artifact.metrics,
+  });
+}
+
+function semanticFrames(artifact: TearBenchRunArtifactV1): readonly TearRegressionFrame[] {
+  const actionHash = stableVerificationHash(artifact.actions);
+  return Object.freeze(artifact.observations.map((observation) => {
+    const state = Object.freeze({ player: observation.player, blade: observation.blade, entities: observation.entities, run: observation.run });
+    return Object.freeze({
+      tick: observation.tick,
+      semanticHash: stableVerificationHash(state),
+      actionHash,
+      state,
+      entityHashes: Object.freeze(Object.fromEntries(observation.entities.map((entity) => [entity.id, stableVerificationHash(entity)]))),
+      buildHash: artifactIdentity(artifact),
+    });
+  }));
+}
+
+function same(value: unknown, expected: unknown, label: string): void {
+  if (value !== expected) throw new TypeError(`regression investigation requires identical ${label}`);
+}
+
+/**
+ * Compares two fully materialized TearBench runs. Candidate code may differ,
+ * but scenario, seed, semantic action trace, observation authority, target,
+ * ruleset and configuration are required to match before any divergence is
+ * attributed to the candidate.
+ */
+export function investigateRegressionRuns(input: Readonly<{
+  base: TearBenchRunArtifactV1;
+  candidate: TearBenchRunArtifactV1;
+  createdAt: string;
+}>): TearRegressionInvestigation {
+  const { base, candidate } = input;
+  same(candidate.resolvedScenario.id, base.resolvedScenario.id, "scenario id");
+  same(candidate.resolvedScenario.version, base.resolvedScenario.version, "scenario version");
+  same(candidate.seed, base.seed, "seed");
+  same(stableVerificationHash(candidate.actions), stableVerificationHash(base.actions), "semantic action trace");
+  const baseClass = base.observations[0]?.observationClass;
+  const candidateClass = candidate.observations[0]?.observationClass;
+  if (baseClass === undefined || candidateClass === undefined) throw new TypeError("regression investigation requires non-empty observations");
+  same(candidateClass, baseClass, "observation class");
+  same(candidate.build.target, base.build.target, "build target");
+  same(candidate.build.rulesetVersion, base.build.rulesetVersion, "ruleset version");
+  same(candidate.build.configHash, base.build.configHash, "configuration hash");
+  const actionsHash = stableVerificationHash(base.actions);
+  const coordinates = Object.freeze({
+    scenarioId: base.resolvedScenario.id, scenarioVersion: base.resolvedScenario.version,
+    seed: base.seed, actionsHash, target: base.build.target,
+    rulesetVersion: base.build.rulesetVersion, configHash: base.build.configHash,
+  });
+  const comparison = compareRegressionTraces(semanticFrames(base), semanticFrames(candidate));
+  const data = {
+    format: "tearbench-regression-investigation" as const, schemaVersion: 1 as const,
+    createdAt: input.createdAt, observationClass: baseClass, coordinates,
+    base: Object.freeze({ id: base.id, build: base.build, artifactHash: artifactIdentity(base) }),
+    candidate: Object.freeze({ id: candidate.id, build: candidate.build, artifactHash: artifactIdentity(candidate) }),
+    comparison, status: comparison.equivalent ? "equivalent" as const : "diverged" as const,
+  };
+  return Object.freeze({ ...data, evidenceHash: stableVerificationHash(data) });
+}
+
+/**
+ * Turns a material base/candidate divergence into a portable invariant
+ * failure. This is the durable failure input for a Graveyard entry: it is not
+ * a generic test assertion and it retains both runnable runs plus the first
+ * material tick that made the candidate incompatible with its declared base.
+ */
+export function createBranchDivergenceFailure(input: Readonly<{
+  investigation: TearRegressionInvestigation;
+  candidate: TearBenchRunArtifactV1;
+  baseRunPath: string;
+  candidateRunPath: string;
+  investigationPath: string;
+}>): TearFailureArtifactV1 {
+  const first = input.investigation.comparison.firstMaterialDivergence;
+  if (input.investigation.status !== "diverged" || first === undefined) {
+    throw new TypeError("a branch-divergence failure requires a material investigation divergence");
+  }
+  if (input.candidate.id !== input.investigation.candidate.id) {
+    throw new TypeError("branch-divergence failure candidate does not match the investigation artifact");
+  }
+  const exact = stableVerificationHash({ base: input.investigation.base.artifactHash, candidate: input.investigation.candidate.artifactHash });
+  const visual = stableVerificationHash(input.candidate.attachments.screenshot ?? "no-screenshot");
+  const progression = stableVerificationHash(input.candidate.observations.at(-1)?.run ?? {});
+  const environment = stableVerificationHash(input.candidate.build);
+  return Object.freeze({
+    format: "tear-contract",
+    kind: "failure",
+    schemaVersion: 1,
+    id: `branch-divergence-${input.candidate.id}`,
+    scenarioId: input.candidate.resolvedScenario.id,
+    scenarioVersion: input.candidate.resolvedScenario.version,
+    seed: input.candidate.seed,
+    build: input.candidate.build,
+    firstFailureTick: first.tick,
+    invariantId: "replay.branch-equivalence",
+    severity: "error",
+    message: `candidate diverged from declared base at fixed tick ${String(first.tick)}`,
+    actions: input.candidate.actions,
+    eventIds: input.candidate.events.map((event) => event.id),
+    hashes: Object.freeze({ exact, semantic: input.candidate.hashes.semantic, visual, progression, environment }),
+    attachments: Object.freeze({
+      baseRun: input.baseRunPath,
+      candidateRun: input.candidateRunPath,
+      investigation: input.investigationPath,
+    }),
+  });
 }
 
 export function compareRegressionTraces(

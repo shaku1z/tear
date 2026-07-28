@@ -28,6 +28,12 @@ import type { GameAction } from "../input/game-action";
 import { emitLiveTearBenchPhysicalInput, liveRewardChoiceIds, routeLiveTearBenchAction } from "../tearbench/live-runtime-browser-adapters";
 import { isCombatPlatform, isDodgeProjectile, isEnemySample, isGameEnemy, isGameFloater, isRitualCue, isWeaponEffect, makeCombatEnemy } from "./live-runtime-type-guards";
 import { createLiveStateForgeAdapter } from "./live-state-forge-adapter";
+import { createBrowserGhostLiveRecorder, listBrowserGhostCapsuleManifests, readBrowserGhostCapsule, readBrowserGhostCapsuleReplay } from "../ghost/live-recorder";
+import { createLiveGhostCausalEvent } from "../ghost/live-causal-events";
+import { captureLiveStateForgeSnapshot } from "../tearbench/live-runtime-snapshots";
+import { createDefaultStateCodecRegistry } from "../tearbench/state-codecs";
+import { ENTITY_KIND_REGISTRY } from "../tearbench/registries";
+import { stableVerificationHash } from "../replay/hash";
 type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnType<RunScreenState["outcome"]>; type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   const { A11Y, APP, Attract, Backdrop, CG, CLOCK, CONFIG, Cloud, DIAG, FX, GFX, GHOST, Input, OVERSCAN, PAD, ReflectionEnemy, SAFE, SFX, THEME, UI, VAULT, applyUpgrade, clamp, cosmeticRandom, lerp, weaponCapsuleIntersectsSegment } = dependencies;
@@ -36,6 +42,18 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   const { canvas, context: ctx, width: W, height: H, viewport, resizeCanvas, requestPointerLock: requestLock, installPrompt, lockHint, hint: hintEl,
     pantheonDebug: PANTHEON_DEBUG, testMode: TEST_MODE } = browserRuntime;
   const restoreConfig = createConfigRestorer(CONFIG); let semanticInputAuthority = false; const requestOwnedPointerLock = () => { if (!semanticInputAuthority) requestLock(); };
+  const ghostV3 = createBrowserGhostLiveRecorder(window.indexedDB);
+  let ghostV3EventSequence = 0;
+  GHOST.setRecordingObserver(ghostV3 === null ? null : {
+    started(context) {
+      Input.startSemanticRecording();
+      ghostV3EventSequence = 0;
+      ghostV3.start({ sessionId: `ghost-v3-${context.runId ?? `run-${String(Date.now())}`}`,
+        createdAt: new Date().toISOString(), provenance: context });
+    },
+    stopped(meta) { void ghostV3.finish(meta); Input.stopSemanticRecording(); },
+  });
+  GHOST.subscribe((event) => { ghostV3?.record("events", event.tick, createLiveGhostCausalEvent(event, ++ghostV3EventSequence)); });
   const sessionServices = createLiveSessionServices({
     dependencies, run: () => run, player: () => player, blade: () => blade,
     screen: () => state, setScreen: (screen) => { setState(screen); },
@@ -353,16 +371,32 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     timeScale: () => timeScale, hitStop: () => hitStop, setHitStop: (value) => { hitStop = value; },
     state: () => state, semanticInputAuthority: () => semanticInputAuthority,
     drainActions: (tick) => Input.drainSemanticActions(tick),
+    recordSealedActions: (_tick, actions) => { for (const action of actions) ghostV3?.record("commands", action.tick, action); },
     ...(__TEAR_TEST_BUILD__ ? {
       beforeSimulationStep: (tick: number) => {
         const hook = (window as Window & { __TEAR_PARITY_TICK__?: { before?(tick: number): void } }).__TEAR_PARITY_TICK__;
         hook?.before?.(tick);
       },
-      afterSimulationStep: (tick: number) => {
+    } : {}),
+    afterSimulationStep: (tick: number) => {
+      if (ghostV3?.active === true && tick % ghostV3.keyframeIntervalTicks === 0) {
+        const random = dependencies.GAME_RANDOM_STREAMS.snapshot();
+        ghostV3.record("keyframes", tick, {
+          player: { x: player.x, y: player.y, vx: player.vx, vy: player.vy, hp: player.hp, facing: player.facing },
+          blade: { x: blade.x, y: blade.y, vx: blade.vx, vy: blade.vy, state: blade.state },
+          enemies: enemies.filter((enemy) => !enemy.dead).map((enemy) => ({
+            id: enemy._gid, kind: enemy.kind, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp,
+          })),
+          random,
+        });
+        ghostV3.record("rng", tick, random);
+        captureGhostStateSnapshot(tick);
+      }
+      if (__TEAR_TEST_BUILD__) {
         const hook = (window as Window & { __TEAR_PARITY_TICK__?: { after?(tick: number): void } }).__TEAR_PARITY_TICK__;
         hook?.after?.(tick);
-      },
-    } : {}),
+      }
+    },
     clearOverrides: () => { delete player.aiInput; delete blade.lmbOverride; delete blade.aimOverride; },
     gauge: (name, value) => { DIAG.gauge(name, value); },
     musicObservation,
@@ -418,6 +452,32 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   });
   const { simulation, authoritativeInput, combatEntityRuntime: combatRuntime,
     killRuntime: liveKillRuntime, frameRuntime: liveFrameRuntime, authoritativeStep } = combatHost;
+  const liveStateForge = createLiveStateForgeAdapter({
+    dependencies, state: hostState, actorId: (entity, prefix) => combatRuntime.id(entity, prefix), bindActorId: (entity, id) => { combatRuntime.bindId(entity, id); },
+    platforms: () => stageRuntime.platforms, replacePlatforms: (values) => { stageRuntime.platforms.splice(0, stageRuntime.platforms.length, ...values); }, slowZones: () => slowZones, walls: () => tempWalls,
+    screen: () => state, setScreen: (screen) => { if (!isLegacyScreen(screen)) throw new RangeError(`invalid restored screen: ${screen}`); setState(screen); }, focus: () => focus, setFocus: (value) => { focus = value; },
+    tick: () => simulation.tick, setTick: (tick) => { simulation.reset(tick); authoritativeInput.reset(); authoritativeStep.reset(); },
+    rng: () => dependencies.GAME_RANDOM_STREAMS.snapshot(), restoreRng: (snapshot) => { dependencies.GAME_RANDOM_STREAMS.restore(snapshot); }, restoreConfiguration: restoreConfig, reward: rewardRuntime.snapshot, restoreReward: rewardRuntime.restore, captureGhost: () => GHOST.captureRuntimeState(), restoreGhost: (snapshot) => { GHOST.restoreRuntimeState(snapshot); }, captureIdentityState: () => combatRuntime.captureIdentityState(), restoreIdentityState: (snapshot) => { combatRuntime.restoreIdentityState(snapshot); },
+    runtimeState: () => ({ hitStop, shake, timeScale, slowmo, zoom, flash, bannerT, dashGhostT, worldZoom, worldZoomTarget, throwCd, rankPopT, rankPopText, lifecycle: RUN_LIFECYCLE.snapshot() }), restoreRuntimeState: (snapshot) => { hitStop = Number(snapshot.hitStop); shake = Number(snapshot.shake); timeScale = Number(snapshot.timeScale); slowmo = Number(snapshot.slowmo); zoom = Number(snapshot.zoom); flash = Number(snapshot.flash); bannerT = Number(snapshot.bannerT); dashGhostT = Number(snapshot.dashGhostT); worldZoom = Number(snapshot.worldZoom); worldZoomTarget = Number(snapshot.worldZoomTarget); throwCd = Number(snapshot.throwCd); rankPopT = Number(snapshot.rankPopT); rankPopText = String(snapshot.rankPopText); RUN_LIFECYCLE.restore(snapshot.lifecycle as ReturnType<typeof RUN_LIFECYCLE.snapshot>); },
+  });
+  const ghostSnapshotRegistry = createDefaultStateCodecRegistry();
+  const captureGhostStateSnapshot = (tick: number): void => {
+    const recorder = ghostV3;
+    if (recorder?.active !== true) return;
+    try {
+      recorder.record("keyframes", tick, captureLiveStateForgeSnapshot({
+        id: `ghost-v3-${String(run.runSeed)}-keyframe-${String(tick)}`, tick, stateClass: "recorded-canonical",
+        seed: String(run.runSeed), stateForge: liveStateForge, rng: dependencies.GAME_RANDOM_STREAMS.snapshot(), registry: ghostSnapshotRegistry,
+        observationClass: "structured-state", producer: "ghost-v3-live-recorder", target: "live-browser",
+        contentHash: stableVerificationHash(ENTITY_KIND_REGISTRY.ids),
+        visualHash: stableVerificationHash({ tick, player: { x: player.x, y: player.y, facing: player.facing }, blade: { x: blade.x, y: blade.y, state: blade.state } }),
+        actor: "human", executionClass: "engineering", trainingConsent: "no-training",
+      }));
+    } catch (error) {
+      // Recording may degrade, but a storage/snapshot problem must never halt a live run.
+      recorder.record("events", tick, { type: "ghost.snapshot-degraded", reason: error instanceof Error ? error.message : String(error) });
+    }
+  };
   // full-screen rect INCLUDING the fullscreen overscan bleed â€” use for any fill that
   // must reach the true screen edges (backdrops, dims, vignettes), never for layout.
   const screenRect = () => presentationHost.screenRectangle();
@@ -446,20 +506,23 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   const { wipe: Wipe, frame: presentationHost, screens: screenComposition } = interfaceComposition;
   const { library: libraryAdapters, replay: replayAdapters, settings: settingsRenameAdapters, modelRenderers: presentationScreenRenderers } = screenComposition;
   if (__TEAR_TEST_BUILD__ && TEST_MODE) void import("../tearbench/live-runtime-environment").then(({ installLiveTearRuntimeBridge }) => {
+    Object.defineProperty(window, "__TEAR_GHOST_V3__", {
+      configurable: true,
+      value: Object.freeze({
+        manifest: () => ghostV3?.lastManifest ?? null,
+        manifests: () => listBrowserGhostCapsuleManifests(window.indexedDB),
+        read: (id: string) => readBrowserGhostCapsule(window.indexedDB, id),
+        replay: (id: string) => readBrowserGhostCapsuleReplay(window.indexedDB, id),
+        active: () => ghostV3?.active === true,
+        failure: () => ghostV3?.failure ?? null,
+      }),
+    });
     const consumedActions: CommandEnvelope<GameAction>[] = [];
     Input.semantic.subscribe((entry) => { consumedActions.push(entry); });
     const actionRouting = { screen: () => state, setScreen: (screen: "playing" | "paused") => { setState(screen); },
       runMode: () => run.mode, reward: rewardRuntime.snapshot, chooseUpgrade: screenComposition.chooseUpgrade, chooseReserve: screenComposition.chooseReserve,
       chooseTier: screenComposition.chooseTier, dispatchPlayground: dispatchPlaygroundAction, renderControls: () => { presentationHost.render(); }, controls: () => uiButtons, focus: () => focus,
     };
-    const stateForge = createLiveStateForgeAdapter({
-      dependencies, state: hostState, actorId: (entity, prefix) => combatRuntime.id(entity, prefix), bindActorId: (entity, id) => { combatRuntime.bindId(entity, id); },
-      platforms: () => stageRuntime.platforms, replacePlatforms: (values) => { stageRuntime.platforms.splice(0, stageRuntime.platforms.length, ...values); }, slowZones: () => slowZones, walls: () => tempWalls,
-      screen: () => state, setScreen: (screen) => { if (!isLegacyScreen(screen)) throw new RangeError(`invalid restored screen: ${screen}`); setState(screen); }, focus: () => focus, setFocus: (value) => { focus = value; },
-      tick: () => simulation.tick, setTick: (tick) => { simulation.reset(tick); authoritativeInput.reset(); authoritativeStep.reset(); },
-      rng: () => dependencies.GAME_RANDOM_STREAMS.snapshot(), restoreRng: (snapshot) => { dependencies.GAME_RANDOM_STREAMS.restore(snapshot); }, restoreConfiguration: restoreConfig, reward: rewardRuntime.snapshot, restoreReward: rewardRuntime.restore, captureGhost: () => GHOST.captureRuntimeState(), restoreGhost: (snapshot) => { GHOST.restoreRuntimeState(snapshot); }, captureIdentityState: () => combatRuntime.captureIdentityState(), restoreIdentityState: (snapshot) => { combatRuntime.restoreIdentityState(snapshot); },
-      runtimeState: () => ({ hitStop, shake, timeScale, slowmo, zoom, flash, bannerT, dashGhostT, worldZoom, worldZoomTarget, throwCd, rankPopT, rankPopText, lifecycle: RUN_LIFECYCLE.snapshot() }), restoreRuntimeState: (snapshot) => { hitStop = Number(snapshot.hitStop); shake = Number(snapshot.shake); timeScale = Number(snapshot.timeScale); slowmo = Number(snapshot.slowmo); zoom = Number(snapshot.zoom); flash = Number(snapshot.flash); bannerT = Number(snapshot.bannerT); dashGhostT = Number(snapshot.dashGhostT); worldZoom = Number(snapshot.worldZoom); worldZoomTarget = Number(snapshot.worldZoomTarget); throwCd = Number(snapshot.throwCd); rankPopT = Number(snapshot.rankPopT); rankPopText = String(snapshot.rankPopText); RUN_LIFECYCLE.restore(snapshot.lifecycle as ReturnType<typeof RUN_LIFECYCLE.snapshot>); },
-    });
     installLiveTearRuntimeBridge({
       width: W, height: H, state: hostState, actorId: (enemy) => combatRuntime.id(enemy, "enemy"), platforms: () => stageRuntime.platforms,
       stage: () => stageRuntime.current, lifecycle: () => RUN_LIFECYCLE.snapshot(),
@@ -481,7 +544,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
       drainConsumedActions: () => consumedActions.splice(0, consumedActions.length),
       emitPhysicalInput: (input) => { emitLiveTearBenchPhysicalInput(input, { window, canvas, width: W, height: H }); },
       setTimeEffectsForTest: (effects) => { if (effects.hitStop !== undefined) hitStop = effects.hitStop; if (effects.slowMotion !== undefined) slowmo = effects.slowMotion; if (effects.timeScale !== undefined) timeScale = effects.timeScale; },
-      stateForge, replayProgression: (ledger) => replayLiveStateForgeProgression({ dependencies, state: hostState, restoreConfiguration: restoreConfig }, ledger),
+      stateForge: liveStateForge, replayProgression: (ledger) => replayLiveStateForgeProgression({ dependencies, state: hostState, restoreConfiguration: restoreConfig }, ledger),
     }, window);
   });
   if (__TEAR_TEST_BUILD__ && PANTHEON_DEBUG) void import("./live-debug-composition").then(({ installLiveGameDebug }) => {

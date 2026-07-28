@@ -96,10 +96,16 @@ export function emitLiveTearBenchPhysicalInput(
     return;
   }
   const rectangle = target.canvas.getBoundingClientRect();
-  target.canvas.dispatchEvent(new PointerEvent(input.phase === "pressed" ? "pointerdown" : "pointerup", {
-    clientX: rectangle.left + input.x / target.width * rectangle.width,
-    clientY: rectangle.top + input.y / target.height * rectangle.height,
-    button: input.button,
-    bubbles: true,
-  }));
+  const clientX = rectangle.left + input.x / target.width * rectangle.width;
+  const clientY = rectangle.top + input.y / target.height * rectangle.height;
+  const pointerPhase = input.phase === "pressed" ? "pointerdown" : "pointerup";
+  const mousePhase = input.phase === "pressed" ? "mousedown" : "mouseup";
+  // A bridge pointer event does not cause browsers to synthesize the matching
+  // mouse/click sequence. Deliver that normal device sequence explicitly so a
+  // Class-C caller can operate the same canvas controls as a real pointer.
+  target.canvas.dispatchEvent(new PointerEvent(pointerPhase, { clientX, clientY, button: input.button, bubbles: true }));
+  target.canvas.dispatchEvent(new MouseEvent(mousePhase, { clientX, clientY, button: input.button, bubbles: true }));
+  if (input.phase === "released" && input.button === 0) {
+    target.canvas.dispatchEvent(new MouseEvent("click", { clientX, clientY, button: 0, bubbles: true }));
+  }
 }

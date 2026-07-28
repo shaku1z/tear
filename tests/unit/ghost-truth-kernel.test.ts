@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   GhostTimeline,
+  GHOST_RECORDING_PROFILES,
   createGhostV3,
   migrateLegacyReplayToGhost,
   negotiateRecordingProfile,
@@ -56,6 +57,12 @@ function event(
 }
 
 describe("Ghost 3.0 truth kernel", () => {
+  it("defines the four explicit capture profiles without silently dropping required truth", () => {
+    expect(Object.keys(GHOST_RECORDING_PROFILES)).toEqual(["compact-public", "coaching", "forensic-qa", "cinematic"]);
+    expect(GHOST_RECORDING_PROFILES.coaching.tracks).toMatchObject({ commands: "required", rng: "required", keyframes: "required" });
+    expect(GHOST_RECORDING_PROFILES["forensic-qa"].tracks.presentation).toBe("required");
+  });
+
   it("orders integer-tick events and answers causal parent/child queries", () => {
     const parent = event("hit-1", "blade.hit", 10, 1);
     const child = event("kill-1", "combat.kill", 10, 2, ["hit-1"]);

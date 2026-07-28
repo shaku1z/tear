@@ -1,4 +1,6 @@
 import { stableVerificationHash } from "../replay/hash";
+import { decodeGhostChunkPayload, encodeGhostChunkPayload, type GhostChunkEncoding } from "./capsule-codec";
+import { GHOST_RECORDING_PROFILES, type GhostRecordingProfileId } from "./recording-profiles";
 
 export const GHOST_VAULT_STORES = Object.freeze([
   "manifests", "chunks", "assets", "indexes", "uploadJobs", "analysis", "lineage", "settings", "journals", "quarantine",
@@ -13,7 +15,7 @@ export interface TearGhostChunkIndexEntry {
   readonly sequence: number;
   readonly fromTick: number;
   readonly toTick: number;
-  readonly encoding: "json";
+  readonly encoding: GhostChunkEncoding;
   readonly compressedBytes: number;
   readonly uncompressedBytes: number;
   readonly checksum: string;
@@ -25,6 +27,8 @@ export interface TearGhostManifest {
   readonly id: string;
   readonly status: "recording" | "complete" | "recovered" | "repaired" | "quarantined";
   readonly createdAt: string;
+  /** Older schema-v1 capsules predate declared profile negotiation. */
+  readonly recordingProfile: GhostRecordingProfileId | "legacy-unknown";
   readonly completedAt?: string;
   readonly chunks: readonly TearGhostChunkIndexEntry[];
   readonly rootIntegrity: string;
@@ -49,18 +53,72 @@ export interface GhostEncoderWorkerPort {
 
 export function createInlineGhostEncoderWorker(): GhostEncoderWorkerPort {
   return {
-    encode(payload, prepareThumbnail) {
-      const encoded = JSON.stringify(payload);
-      const bytes = new TextEncoder().encode(encoded).byteLength;
+    encode(payload: unknown, prepareThumbnail: boolean): Promise<GhostEncodedChunk> {
+      const encoded = encodeGhostChunkPayload(payload);
       return Promise.resolve({
-        encoded,
-        compressedBytes: bytes,
-        uncompressedBytes: bytes,
-        checksum: stableVerificationHash(encoded),
+        encoded: encoded.encoded,
+        compressedBytes: encoded.compressedBytes,
+        uncompressedBytes: encoded.uncompressedBytes,
+        checksum: stableVerificationHash(encoded.encoded),
         ...(prepareThumbnail ? { thumbnail: `data:application/x-tearghost-thumb,${stableVerificationHash(payload)}` } : {}),
       });
     },
   };
+}
+
+interface GhostEncoderWorkerResponse extends Partial<GhostEncodedChunk> {
+  readonly id: number;
+  readonly error?: string;
+}
+
+/**
+ * Creates the production browser encoder transport. Vite emits the worker as
+ * a separate module; callers keep the inline encoder only for non-browser
+ * runtimes and focused deterministic tests.
+ */
+export function createBrowserGhostEncoderWorker(): GhostEncoderWorkerPort | undefined {
+  if (typeof Worker === "undefined") return undefined;
+  const worker = new Worker(new URL("./capsule-encoder-worker.ts", import.meta.url), { type: "module" });
+  let nextId = 0;
+  const pending = new Map<number, Readonly<{ resolve(value: GhostEncodedChunk): void; reject(reason: unknown): void }>>();
+  const rejectPending = (reason: unknown): void => {
+    for (const entry of pending.values()) entry.reject(reason);
+    pending.clear();
+  };
+  worker.addEventListener("error", (event) => { rejectPending(event.error ?? new Error(event.message)); });
+  worker.addEventListener("message", (event: MessageEvent<GhostEncoderWorkerResponse>) => {
+    const response = event.data;
+    const entry = pending.get(response.id);
+    if (entry === undefined) return;
+    pending.delete(response.id);
+    if (response.error !== undefined) { entry.reject(new Error(response.error)); return; }
+    if (typeof response.encoded !== "string" || typeof response.compressedBytes !== "number"
+      || typeof response.uncompressedBytes !== "number" || typeof response.checksum !== "string") {
+      entry.reject(new TypeError("Ghost encoder worker returned an invalid response"));
+      return;
+    }
+    entry.resolve(Object.freeze({
+      encoded: response.encoded,
+      compressedBytes: response.compressedBytes,
+      uncompressedBytes: response.uncompressedBytes,
+      checksum: response.checksum,
+      ...(typeof response.thumbnail === "string" ? { thumbnail: response.thumbnail } : {}),
+    }));
+  });
+  return Object.freeze({
+    encode(payload: unknown, prepareThumbnail: boolean): Promise<GhostEncodedChunk> {
+      return new Promise<GhostEncodedChunk>((resolve, reject) => {
+        const id = ++nextId;
+        pending.set(id, Object.freeze({ resolve, reject }));
+        try {
+          worker.postMessage(Object.freeze({ id, payload, prepareThumbnail }));
+        } catch (error) {
+          pending.delete(id);
+          reject(error instanceof Error ? error : new Error(String(error)));
+        }
+      });
+    },
+  });
 }
 
 export interface GhostVaultBackend {
@@ -68,6 +126,14 @@ export interface GhostVaultBackend {
   put(store: GhostVaultStore, key: string, value: string): Promise<void>;
   remove(store: GhostVaultStore, key: string): Promise<void>;
   keys(store: GhostVaultStore): Promise<readonly string[]>;
+  commit(operations: readonly GhostVaultWrite[]): Promise<void>;
+}
+
+/** A single durable write used for journals, chunks, manifests, and indexes. */
+export interface GhostVaultWrite {
+  readonly store: GhostVaultStore;
+  readonly key: string;
+  readonly value?: string;
 }
 
 export function createMemoryGhostVaultBackend(
@@ -86,6 +152,20 @@ export function createMemoryGhostVaultBackend(
     put(name, key, value) { store(name).set(key, value); return Promise.resolve(); },
     remove(name, key) { store(name).delete(key); return Promise.resolve(); },
     keys(name) { return Promise.resolve(Object.freeze([...store(name).keys()].sort())); },
+    commit(operations) {
+      const copies = new Map<GhostVaultStore, Map<string, string>>();
+      const target = (name: GhostVaultStore): Map<string, string> => {
+        let values = copies.get(name);
+        if (values === undefined) { values = new Map(store(name)); copies.set(name, values); }
+        return values;
+      };
+      for (const operation of operations) {
+        if (operation.value === undefined) target(operation.store).delete(operation.key);
+        else target(operation.store).set(operation.key, operation.value);
+      }
+      for (const [name, values] of copies) stores.set(name, values);
+      return Promise.resolve();
+    },
   };
 }
 
@@ -128,6 +208,21 @@ export async function createIndexedDbGhostVaultBackend(
       const keys = await transaction<IDBValidKey[]>(store, "readonly", (objectStore) => objectStore.getAllKeys());
       return Object.freeze(keys.map(String).sort());
     },
+    commit(operations) {
+      return new Promise<void>((resolve, reject) => {
+        const stores = [...new Set(operations.map((operation) => operation.store))];
+        if (stores.length === 0) { resolve(); return; }
+        const tx = database.transaction(stores, "readwrite");
+        for (const operation of operations) {
+          const objectStore = tx.objectStore(operation.store);
+          if (operation.value === undefined) objectStore.delete(operation.key);
+          else objectStore.put(operation.value, operation.key);
+        }
+        tx.oncomplete = () => { resolve(); };
+        tx.onerror = () => { reject(tx.error ?? new Error("IndexedDB recording commit failed")); };
+        tx.onabort = () => { reject(tx.error ?? new Error("IndexedDB recording commit aborted")); };
+      });
+    },
   };
   return Object.freeze(backend);
 }
@@ -164,7 +259,7 @@ function parseChunkIndex(value: unknown): TearGhostChunkIndexEntry {
     || !Number.isSafeInteger(value.sequence)
     || !Number.isSafeInteger(value.fromTick)
     || !Number.isSafeInteger(value.toTick)
-    || value.encoding !== "json"
+    || value.encoding !== "utf8-base64"
     || !Number.isSafeInteger(value.compressedBytes)
     || !Number.isSafeInteger(value.uncompressedBytes)
     || typeof value.checksum !== "string") {
@@ -176,7 +271,7 @@ function parseChunkIndex(value: unknown): TearGhostChunkIndexEntry {
     sequence: value.sequence as number,
     fromTick: value.fromTick as number,
     toTick: value.toTick as number,
-    encoding: "json",
+    encoding: "utf8-base64",
     compressedBytes: value.compressedBytes as number,
     uncompressedBytes: value.uncompressedBytes as number,
     checksum: value.checksum,
@@ -205,6 +300,9 @@ function parseCapsuleManifest(value: unknown): TearGhostManifest {
     id: value.id,
     status: value.status as TearGhostManifest["status"],
     createdAt: value.createdAt,
+    recordingProfile: typeof value.recordingProfile === "string" && value.recordingProfile in GHOST_RECORDING_PROFILES
+      ? value.recordingProfile as GhostRecordingProfileId
+      : "legacy-unknown",
     ...(typeof value.completedAt === "string" ? { completedAt: value.completedAt } : {}),
     chunks,
     rootIntegrity: value.rootIntegrity,
@@ -228,34 +326,68 @@ export class GhostLocalVault {
 
   backend(): GhostVaultBackend { return this.#backend; }
 
+  #manifestWrites(manifest: TearGhostManifest): readonly GhostVaultWrite[] {
+    return Object.freeze([
+      { store: "manifests", key: manifest.id, value: JSON.stringify(manifest) },
+      { store: "indexes", key: `manifest:${manifest.id}`, value: JSON.stringify({
+        status: manifest.status, createdAt: manifest.createdAt, chunks: manifest.chunks.length,
+      }) },
+    ]);
+  }
+
   async putManifest(manifest: TearGhostManifest): Promise<void> {
-    await this.#backend.put("manifests", manifest.id, JSON.stringify(manifest));
-    await this.#backend.put("indexes", `manifest:${manifest.id}`, JSON.stringify({
-      status: manifest.status, createdAt: manifest.createdAt, chunks: manifest.chunks.length,
-    }));
+    await this.#backend.commit(this.#manifestWrites(manifest));
   }
 
   async getManifest(id: string): Promise<TearGhostManifest | undefined> {
     const value = await this.#backend.get("manifests", id);
-    return value === undefined ? undefined : JSON.parse(value) as TearGhostManifest;
+    return value === undefined ? undefined : parseCapsuleManifest(JSON.parse(value) as unknown);
   }
 
   async putChunk(sessionId: string, entry: TearGhostChunkIndexEntry, encoded: string): Promise<void> {
     if (stableVerificationHash(encoded) !== entry.checksum) throw new TypeError(`chunk checksum mismatch before commit: ${entry.id}`);
-    await this.#backend.put("chunks", entry.id, encoded);
-    await this.#backend.put("journals", sessionId, JSON.stringify({ sessionId, lastChunkId: entry.id, committedSequence: entry.sequence }));
+    await this.#backend.commit([
+      { store: "chunks", key: entry.id, value: encoded },
+      { store: "journals", key: sessionId, value: JSON.stringify({ sessionId, lastChunkId: entry.id, committedSequence: entry.sequence }) },
+    ]);
+  }
+
+  /** Atomically exposes one newly encoded recording chunk and its recovery state. */
+  async commitRecordingChunk(manifest: TearGhostManifest, entry: TearGhostChunkIndexEntry, encoded: string): Promise<void> {
+    if (stableVerificationHash(encoded) !== entry.checksum) throw new TypeError(`chunk checksum mismatch before commit: ${entry.id}`);
+    if (!manifest.chunks.some((chunk) => chunk.id === entry.id && chunk.checksum === entry.checksum)) {
+      throw new TypeError(`recording manifest does not include committed chunk: ${entry.id}`);
+    }
+    await this.#backend.commit([
+      { store: "chunks", key: entry.id, value: encoded },
+      { store: "journals", key: manifest.id, value: JSON.stringify({
+        sessionId: manifest.id, lastChunkId: entry.id, committedSequence: entry.sequence,
+      }) },
+      ...this.#manifestWrites(manifest),
+    ]);
+  }
+
+  /** Starts a recoverable session without exposing a manifest with no journal. */
+  async beginSession(manifest: TearGhostManifest): Promise<void> {
+    if (manifest.status !== "recording") throw new TypeError("only a recording manifest can begin a session");
+    await this.#backend.commit([
+      ...this.#manifestWrites(manifest),
+      { store: "journals", key: manifest.id, value: JSON.stringify({ sessionId: manifest.id, committedSequence: -1 }) },
+    ]);
   }
 
   async readChunk(entry: TearGhostChunkIndexEntry): Promise<unknown> {
     const encoded = await this.#backend.get("chunks", entry.id);
     if (encoded === undefined) throw new RangeError(`chunk is missing: ${entry.id}`);
     if (stableVerificationHash(encoded) !== entry.checksum) throw new TypeError(`chunk checksum mismatch: ${entry.id}`);
-    return JSON.parse(encoded) as unknown;
+    return decodeGhostChunkPayload(entry.encoding, encoded);
   }
 
   async completeSession(manifest: TearGhostManifest): Promise<void> {
-    await this.putManifest(manifest);
-    await this.#backend.remove("journals", manifest.id);
+    await this.#backend.commit([
+      ...this.#manifestWrites(manifest),
+      { store: "journals", key: manifest.id },
+    ]);
   }
 
   async recoverIncompleteSessions(): Promise<readonly TearGhostManifest[]> {
@@ -263,8 +395,29 @@ export class GhostLocalVault {
     for (const id of await this.#backend.keys("journals")) {
       const manifest = await this.getManifest(id);
       if (manifest === undefined) continue;
-      const next = Object.freeze({ ...manifest, status: "recovered" as const });
+      let status: "recovered" | "quarantined" = "recovered";
+      let reason: string | undefined;
+      try {
+        if (ghostRootIntegrity(manifest.chunks) !== manifest.rootIntegrity) {
+          throw new TypeError("recording manifest root integrity mismatch");
+        }
+        for (const entry of manifest.chunks) await this.readChunk(entry);
+      } catch (error) {
+        status = "quarantined";
+        reason = error instanceof Error ? error.message : String(error);
+      }
+      const next = Object.freeze({ ...manifest, status });
       await this.putManifest(next);
+      if (reason !== undefined) {
+        await this.#backend.put("quarantine", `recovery:${id}`, JSON.stringify({
+          capsuleId: id,
+          reason,
+          recoveredAt: new Date().toISOString(),
+        }));
+      }
+      // A recovery attempt has reached a terminal durable state. Keeping the
+      // journal would repeatedly mutate the same manifest on every startup.
+      await this.#backend.remove("journals", id);
       recovered.push(next);
     }
     return Object.freeze(recovered);
@@ -358,6 +511,7 @@ export interface GhostRecorderOptions {
   readonly maxPendingWrites: number;
   readonly vault: GhostLocalVault;
   readonly worker?: GhostEncoderWorkerPort;
+  readonly recordingProfile?: GhostRecordingProfileId;
 }
 
 export class GhostStreamingRecorder {
@@ -381,10 +535,7 @@ export class GhostStreamingRecorder {
 
   async start(): Promise<void> {
     const manifest = this.#manifest("recording");
-    await this.#options.vault.putManifest(manifest);
-    await this.#options.vault.backend().put("journals", this.#options.sessionId, JSON.stringify({
-      sessionId: this.#options.sessionId, committedSequence: -1,
-    }));
+    await this.#options.vault.beginSession(manifest);
   }
 
   async append(entry: GhostRecorderEntry): Promise<void> {
@@ -395,6 +546,10 @@ export class GhostStreamingRecorder {
       }
       return;
     }
+    // Each chunk is one named replay track. Besides making random access
+    // explicit, this prevents a terminal result or keyframe from being hidden
+    // inside an undifferentiated events chunk.
+    if (this.#buffer.length > 0 && this.#buffer[0]?.kind !== entry.kind) await this.flush();
     this.#buffer.push(Object.freeze(structuredClone(entry)));
     this.#maxBufferedEntries = Math.max(this.#maxBufferedEntries, this.#buffer.length);
     if (this.#buffer.length >= this.#options.chunkEntries) await this.flush();
@@ -415,17 +570,17 @@ export class GhostStreamingRecorder {
         sequence,
         fromTick: Math.min(...entries.map((entry) => entry.tick)),
         toTick: Math.max(...entries.map((entry) => entry.tick)),
-        encoding: "json",
+        encoding: "utf8-base64",
         compressedBytes: encoded.compressedBytes,
         uncompressedBytes: encoded.uncompressedBytes,
         checksum: encoded.checksum,
       });
-      await this.#options.vault.putChunk(this.#options.sessionId, index, encoded.encoded);
+      const nextChunks = Object.freeze([...this.#chunks, index]);
+      await this.#options.vault.commitRecordingChunk(this.#manifest("recording", undefined, nextChunks), index, encoded.encoded);
       this.#chunks.push(index);
       if (encoded.thumbnail !== undefined) {
         await this.#options.vault.backend().put("assets", `${this.#options.sessionId}:thumbnail:${String(sequence)}`, encoded.thumbnail);
       }
-      await this.#options.vault.putManifest(this.#manifest("recording"));
     } finally {
       this.#pendingWrites -= 1;
     }
@@ -439,14 +594,16 @@ export class GhostStreamingRecorder {
     return manifest;
   }
 
-  #manifest(status: TearGhostManifest["status"], completedAt?: string): TearGhostManifest {
-    const chunks = Object.freeze([...this.#chunks]);
+  #manifest(status: TearGhostManifest["status"], completedAt?: string,
+    chunkOverride?: readonly TearGhostChunkIndexEntry[]): TearGhostManifest {
+    const chunks = Object.freeze([...(chunkOverride ?? this.#chunks)]);
     return Object.freeze({
       format: "tearghost-capsule",
       schemaVersion: 1,
       id: this.#options.sessionId,
       status,
       createdAt: this.#options.createdAt,
+      recordingProfile: this.#options.recordingProfile ?? "forensic-qa",
       ...(completedAt === undefined ? {} : { completedAt }),
       chunks,
       rootIntegrity: ghostRootIntegrity(chunks),
