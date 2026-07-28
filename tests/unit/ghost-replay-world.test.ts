@@ -30,8 +30,21 @@ const trident: GhostReplayTrident = {
 function emptyWorld(): TearCodecWorld {
   const world = { components: new Map(), references: new Map(), entityIds: new Set(["player", "blade"]) };
   for (const id of CODEC_REGISTRY.ids) world.components.set(id, {});
-  world.components.set("tear.player.v1", { id: "player", x: 5, y: 0 });
-  world.components.set("tear.run.v1", { elapsedTicks: 5 });
+  world.components.set("tear.player.v1", { id: "player", x: 5, y: 0, hp: 100, maxHp: 100 });
+  world.components.set("tear.blade.v1", { id: "blade", ownerId: "player", weaponId: "sword" });
+  world.components.set("tear.enemy.v1", []);
+  world.components.set("tear.boss.v1", []);
+  world.components.set("tear.projectile.v1", []);
+  world.components.set("tear.platform.v1", []);
+  world.components.set("tear.hazard.v1", { slowZones: [], walls: [] });
+  world.components.set("tear.run.v1", {
+    mode: "endless", difficulty: "normal", wave: 1, tick: 5, elapsedTicks: 5,
+  });
+  world.components.set("tear.world.v1", { clock: 5, identityState: {} });
+  world.components.set("tear.ui.v1", { screen: "playing", focusId: "-1" });
+  world.components.set("tear.reward.v1", { selection: null });
+  world.components.set("tear.configuration.v1", { rulesetVersion: "rules", values: {} });
+  world.components.set("tear.rng.v1", { combat: { algorithm: "mulberry32", state: 1 } });
   return world;
 }
 
