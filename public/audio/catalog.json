@@ -123,13 +123,14 @@
         },
         "canonical-ost": {
           "class": "C",
-          "available": false,
+          "available": true,
           "linear": true,
           "contexts": [
             "archive",
             "menu",
             "replay"
-          ]
+          ],
+          "master": "works/shopkeeper/renders/masters/shopkeeper-ost-main.wav"
         },
         "menu-edit": {
           "class": "B",
@@ -197,13 +198,14 @@
         },
         "canonical-ost": {
           "class": "C",
-          "available": false,
+          "available": true,
           "linear": true,
           "contexts": [
             "archive",
             "menu",
             "replay"
-          ]
+          ],
+          "master": "works/the-source/renders/masters/the-source-ost-main.wav"
         },
         "final-phase": {
           "class": "A",
@@ -345,13 +347,14 @@
         },
         "canonical-ost": {
           "class": "C",
-          "available": false,
+          "available": true,
           "linear": true,
           "vocals": true,
           "contexts": [
             "archive",
             "replay"
-          ]
+          ],
+          "master": "works/slicing-life-1/renders/masters/slicing-life-1-ost-main.wav"
         }
       },
       "barQuantized": true
@@ -407,23 +410,25 @@
         },
         "canonical-ost": {
           "class": "C",
-          "available": false,
+          "available": true,
           "linear": true,
           "vocals": true,
           "contexts": [
             "archive",
             "replay"
-          ]
+          ],
+          "master": "works/slicing-life-2/renders/masters/slicing-life-2-ost-main.wav"
         },
         "instrumental": {
           "class": "C",
-          "available": false,
+          "available": true,
           "linear": true,
           "vocals": false,
           "contexts": [
             "archive",
             "menu"
-          ]
+          ],
+          "master": "works/slicing-life-2/renders/masters/slicing-life-2-instrumental.wav"
         }
       },
       "barQuantized": true
