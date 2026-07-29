@@ -119,9 +119,12 @@ const CONFIG = {
       wheelSpin: 14, wheelReturnSpin: 19, wheelReturnMult: 1.28,
     },
     chainblade: {
-        lashForce: 780, hookDuration: 3.1, slingSpeed: 1650, collisionDamage: 28,
-        releaseStun: 0.38, heavyBreak: 28, bossTug: 0.24,
-      minRadius: 70, maxRadius: 300, tightenRate: 260, angularControl: 8.2,
+      lashForce: 780, hookDuration: 3.1, slingSpeed: 1650, collisionDamage: 28,
+      releaseStun: 0.38, heavyBreak: 28, bossTug: 0.24,
+      minRadius: 70, maxRadius: 300, tightenRate: 260, linkSegments: 14,
+      angularAcceleration: 34, angularDamping: 4.2, maxAngularSpeed: 8.5,
+      orbitSpring: 18, orbitFollow: 9, releaseOrbitMult: 1.08,
+      releaseMomentumCarry: 0.18, maxReleaseSpeed: 2600, knockbackReference: 10,
     },
     riftlock: {
       chambers: 4, chamberReform: 1.35, razorCooldown: 0.24, razorDamage: 42,

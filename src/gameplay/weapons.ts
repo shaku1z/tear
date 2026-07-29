@@ -20,7 +20,7 @@ export interface WeaponChannels {
 }
 
 export interface WeaponRatings { handling: number; impact: number; reach: number; difficulty: number }
-export interface WeaponEnemyPort { seamT: number }
+export interface WeaponEnemyPort { seamT: number; readonly [key: string]: unknown }
 export interface WeaponPlayerPort { x: number; y: number; vx: number; vy: number; facing: number }
 export interface WeaponPlatformPort { x: number; y: number; w: number; h: number; oneway?: boolean; floor?: boolean }
 
@@ -38,7 +38,7 @@ export interface WeaponBladePort {
   repeatScale(enemy: object): number;
   swingId: number;
   attackId: number;
-  resolveReversal(): "armed" | "reversal" | null;
+  resolveReversal(target: object): "armed" | "reversal" | null;
   heldDamageMultiplierAt(x: number, y: number): number;
   resetRiftlock(): void;
   claimRiftBayonet(): boolean;
@@ -131,7 +131,7 @@ const WEAPONS: readonly WeaponDefinition[] = [
     damageProfile() { return 1; },
     onHeldHit(ctx) {
       if (ctx.quality < 0.58) return null;
-      return ctx.blade.resolveReversal() === "reversal"
+      return ctx.blade.resolveReversal(ctx.enemy) === "reversal"
         ? { mechanic: "reversal", damageMult: CONFIG.weapons.sword.reversalDamageMult }
         : null;
     },

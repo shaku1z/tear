@@ -43,24 +43,65 @@ export function createBladeRenderer({
 
     if (blade.model === "greatsword") {
       context.save(); context.translate(blade.x, blade.y); context.rotate(blade.angle);
-      const length = len(blade.tipX - blade.x, blade.tipY - blade.y), width = 13 * scale;
-      context.beginPath(); context.moveTo(0, -width * 0.45); context.lineTo(length * 0.72, -width);
-      context.lineTo(length, 0); context.lineTo(length * 0.72, width); context.lineTo(0, width * 0.45); context.closePath(); context.fill();
-      context.strokeStyle = theme.dark ? "rgba(10,12,20,0.9)" : "#fff"; context.lineWidth = 2; context.stroke();
+      const length = len(blade.tipX - blade.x, blade.tipY - blade.y), width = 14 * scale;
+      const outline = theme.dark ? "rgba(10,12,20,0.9)" : "#fff";
+      // A readable two-handed hilt: pommel, wrapped grip, shoulders, and a broad
+      // crossguard remain visible even when the weapon is spinning at throw scale.
+      context.fillStyle = theme.ink;
+      context.beginPath(); context.arc(-25 * scale, 0, 5.5 * scale, 0, Math.PI * 2); context.fill();
+      context.fillRect(-24 * scale, -4.5 * scale, 24 * scale, 9 * scale);
+      context.strokeStyle = outline; context.lineWidth = 1.5 * scale;
+      for (let x = -20; x <= -4; x += 5) {
+        context.beginPath(); context.moveTo(x * scale, -4.5 * scale);
+        context.lineTo((x + 3) * scale, 4.5 * scale); context.stroke();
+      }
+      context.lineWidth = 5 * scale; context.beginPath();
+      context.moveTo(-2 * scale, -20 * scale); context.lineTo(7 * scale, 0);
+      context.lineTo(-2 * scale, 20 * scale); context.stroke();
+      context.lineWidth = 3 * scale; context.beginPath();
+      context.moveTo(-7 * scale, -17 * scale); context.lineTo(8 * scale, -10 * scale);
+      context.moveTo(-7 * scale, 17 * scale); context.lineTo(8 * scale, 10 * scale); context.stroke();
+
+      // Broad shouldered blade with a central fuller and a clipped, weighty point.
+      context.beginPath(); context.moveTo(4 * scale, -width * 0.6); context.lineTo(length * 0.2, -width);
+      context.lineTo(length * 0.76, -width * 0.82); context.lineTo(length, 0);
+      context.lineTo(length * 0.76, width * 0.82); context.lineTo(length * 0.2, width);
+      context.lineTo(4 * scale, width * 0.6); context.closePath(); context.fill();
+      context.strokeStyle = outline; context.lineWidth = 2 * scale; context.stroke();
+      context.globalAlpha = 0.45; context.strokeStyle = outline; context.lineWidth = 2 * scale;
+      context.beginPath(); context.moveTo(12 * scale, 0); context.lineTo(length * 0.78, 0); context.stroke();
+      context.globalAlpha = 1;
       context.restore(); return;
     }
 
     if (blade.model === "chainblade") {
       const hand = blade.lastHand() ?? { x: blade.x, y: blade.y };
-      context.lineWidth = 3; context.strokeStyle = blade.tension > 0.7 ? config.colors.perfect : theme.ink;
-      context.beginPath(); context.moveTo(hand.x, hand.y);
-      const segments = 7;
-      for (let index = 1; index <= segments; index++) {
+      const chainColor = blade.tension > 0.7 ? config.colors.perfect : theme.ink;
+      const segments = config.weapons.chainblade.linkSegments;
+      const sagAmount = (1 - blade.tension) * Math.min(42, len(blade.tipX - hand.x, blade.tipY - hand.y) * 0.16);
+      const points: { x: number; y: number }[] = [];
+      for (let index = 0; index <= segments; index++) {
         const amount = index / segments;
-        const sag = Math.sin(amount * Math.PI) * (1 - blade.tension) * 28;
-        context.lineTo(lerp(hand.x, blade.tipX, amount), lerp(hand.y, blade.tipY, amount) + sag);
+        points.push({
+          x: lerp(hand.x, blade.tipX, amount),
+          y: lerp(hand.y, blade.tipY, amount) + Math.sin(amount * Math.PI) * sagAmount,
+        });
       }
+      context.lineWidth = 2 * scale; context.strokeStyle = chainColor;
+      context.beginPath(); context.moveTo(points[0]?.x ?? hand.x, points[0]?.y ?? hand.y);
+      for (const point of points.slice(1)) context.lineTo(point.x, point.y);
       context.stroke();
+      // Alternating elongated links make the chain articulate instead of reading as
+      // a single rubber tether. Link positions are deterministic simulation output.
+      for (let index = 1; index < points.length - 1; index++) {
+        const point = points[index], previous = points[index - 1], next = points[index + 1];
+        if (!point || !previous || !next) continue;
+        context.save(); context.translate(point.x, point.y);
+        context.rotate(Math.atan2(next.y - previous.y, next.x - previous.x) + (index % 2 ? 0 : Math.PI / 2));
+        context.strokeStyle = chainColor; context.lineWidth = 2 * scale;
+        context.beginPath(); context.ellipse(0, 0, 5 * scale, 2.7 * scale, 0, 0, Math.PI * 2); context.stroke();
+        context.restore();
+      }
       context.save(); context.translate(blade.tipX, blade.tipY); context.rotate(blade.angle);
       context.beginPath(); context.moveTo(13 * scale, 0); context.lineTo(-7 * scale, -11 * scale); context.lineTo(-3 * scale, 0); context.lineTo(-7 * scale, 11 * scale); context.closePath(); context.fill();
       context.restore(); return;
@@ -69,14 +110,41 @@ export function createBladeRenderer({
     if (blade.model === "riftlock") {
       context.save(); context.translate(blade.x, blade.y); context.rotate(blade.angle);
       const length = len(blade.tipX - blade.x, blade.tipY - blade.y);
-      context.fillRect(-5 * scale, -9 * scale, length * 0.58, 18 * scale);
+      const outline = theme.dark ? "rgba(10,12,20,0.9)" : "#fff";
+      // Heavy pistol silhouette: angled grip, beavertail, trigger guard, slide,
+      // squared muzzle, and a blade beneath the barrel.
+      context.fillStyle = theme.ink;
+      context.beginPath();
+      context.moveTo(8 * scale, 2 * scale); context.lineTo(28 * scale, 4 * scale);
+      context.lineTo(22 * scale, 30 * scale); context.lineTo(8 * scale, 27 * scale);
+      context.lineTo(2 * scale, 8 * scale); context.closePath(); context.fill();
+      context.strokeStyle = outline; context.lineWidth = 1.5 * scale; context.stroke();
+      context.beginPath(); context.moveTo(10 * scale, 10 * scale); context.lineTo(22 * scale, 12 * scale);
+      context.moveTo(11 * scale, 16 * scale); context.lineTo(20.5 * scale, 18 * scale);
+      context.moveTo(13 * scale, 22 * scale); context.lineTo(19 * scale, 23.5 * scale); context.stroke();
+
+      context.fillStyle = theme.ink;
+      context.fillRect(-7 * scale, -13 * scale, length * 0.68, 17 * scale);
+      context.strokeStyle = outline; context.lineWidth = 1.8 * scale;
+      context.strokeRect(-7 * scale, -13 * scale, length * 0.68, 17 * scale);
+      context.fillRect(length * 0.58, -10 * scale, length * 0.13, 13 * scale);
+      context.strokeRect(length * 0.58, -10 * scale, length * 0.13, 13 * scale);
+      context.beginPath(); context.moveTo(-3 * scale, 4 * scale); context.lineTo(length * 0.55, 4 * scale);
+      context.lineTo(length * 0.48, 10 * scale); context.lineTo(18 * scale, 10 * scale);
+      context.lineTo(12 * scale, 4 * scale); context.closePath(); context.fill();
+      context.strokeStyle = outline; context.stroke();
+      context.beginPath(); context.ellipse(28 * scale, 8 * scale, 10 * scale, 7 * scale, 0, 0, Math.PI * 2); context.stroke();
+      context.beginPath(); context.moveTo(27 * scale, 3 * scale); context.lineTo(24 * scale, 10 * scale); context.stroke();
+
       const chambers = clamp(Math.floor(blade.riftChambers), 0, 4);
       for (let index = 0; index < 4; index++) {
         context.fillStyle = index < chambers ? config.colors.bladeGlow : (theme.dark ? "#1b2130" : "#747983");
-        context.fillRect(length * (0.12 + index * 0.09), -4 * scale, 4 * scale, 8 * scale);
+        context.fillRect(length * (0.13 + index * 0.085), -8 * scale, 4 * scale, 6 * scale);
       }
-      context.fillStyle = theme.ink; context.beginPath();
-      context.moveTo(length * 0.58, -5 * scale); context.lineTo(length, 0); context.lineTo(length * 0.58, 5 * scale); context.closePath(); context.fill();
+      context.fillStyle = theme.ink;
+      context.beginPath(); context.moveTo(length * 0.49, 9 * scale); context.lineTo(length, 0);
+      context.lineTo(length * 0.6, 15 * scale); context.closePath(); context.fill();
+      context.strokeStyle = outline; context.lineWidth = 1.8 * scale; context.stroke();
       context.restore();
       return;
     }

@@ -49,20 +49,43 @@ describe("Final Five weapon roster", () => {
 
   it("requires a distinct, exited opposite swing for Sword Reversal", () => {
     const { blade, clock, config } = makeBlade("sword");
+    const target = {};
     blade.swingId = 1;
     blade.tipX = 0;
     blade.tipY = 0;
     blade.tipVX = 900;
     blade.tipVY = 0;
-    expect(blade.resolveReversal()).toBe("armed");
+    expect(blade.resolveReversal(target)).toBe("armed");
+    expect(Array.isArray(blade.reversals)).toBe(true);
+    expect(structuredClone(blade.reversals)).toHaveLength(1);
 
     blade.tipX = config.weapons.sword.reversalExitRadius + 1;
     blade._updateReversalState();
     blade.swingId = 2;
     blade.tipVX = -900;
-    expect(blade.resolveReversal()).toBe("reversal");
-    expect(blade.resolveReversal()).toBe("armed");
+    expect(blade.resolveReversal(target)).toBe("reversal");
+    expect(blade.resolveReversal(target)).toBe("armed");
     expect(clock.sim).toBe(0);
+  });
+
+  it("cannot complete Sword Reversal by crossing into a different target", () => {
+    const { blade, config, weapon } = makeBlade("sword");
+    const first = { seamT: 0 };
+    const second = { seamT: 0 };
+    const context = (enemy: typeof first) => ({
+      blade, player: { x: 0, y: 0, vx: 0, vy: 0, facing: 1 },
+      platforms: [], dt: 1 / 60, enemy, quality: 1, damage: 20, secondary: false,
+    });
+    blade.swingId = 1; blade.tipX = 0; blade.tipY = 0; blade.tipVX = 900; blade.tipVY = 0;
+    expect(weapon.onHeldHit(context(first))).toBeNull();
+    blade.tipX = config.weapons.sword.reversalExitRadius + 1;
+    blade._updateReversalState();
+    blade.swingId = 2; blade.tipVX = -900;
+
+    expect(weapon.onHeldHit(context(second))).toBeNull();
+    expect(weapon.onHeldHit(context(first))).toMatchObject({
+      mechanic: "reversal", damageMult: config.weapons.sword.reversalDamageMult,
+    });
   });
 
   it("returns Sword Threadcut through captured throw-hit waypoints in reverse order", () => {
@@ -92,6 +115,50 @@ describe("Final Five weapon roster", () => {
 
     expect(blade.heldDamageMultiplierAt(0, 0)).toBeLessThan(blade.heldDamageMultiplierAt(100, 0));
     expect(blade.heldDamageMultiplierAt(100, 0)).toBe(1);
+  });
+
+  it("launches Greatsword Wheel Cut without snapping its visible center and spins around that center", () => {
+    const { blade, input } = makeBlade("greatsword");
+    const player = { x: 0, y: 0, vx: 0, vy: 0, facing: 1 };
+    blade.x = 120; blade.y = 180; blade.angle = Math.PI / 2;
+    blade.tipX = blade.x + Math.cos(blade.angle) * blade.curLength;
+    blade.tipY = blade.y + Math.sin(blade.angle) * blade.curLength;
+    blade.tipSpeed = 900;
+    input.mouseX = 500; input.mouseY = 180;
+    blade.aimX = 300; blade.aimY = 0;
+    const centerBefore = { x: (blade.x + blade.tipX) / 2, y: (blade.y + blade.tipY) / 2 };
+
+    expect(blade.throwBlade()).toBe(true);
+    expect(blade.angle).toBeCloseTo(Math.PI / 2);
+    expect((blade.x + blade.tipX) / 2).toBeCloseTo(centerBefore.x);
+    expect((blade.y + blade.tipY) / 2).toBeCloseTo(centerBefore.y);
+
+    blade._updateWheelCut(1 / 60, player, []);
+    const centerAfter = { x: (blade.x + blade.tipX) / 2, y: (blade.y + blade.tipY) / 2 };
+    expect(centerAfter.x - centerBefore.x).toBeCloseTo(blade.vx / 60, 3);
+    expect(centerAfter.y - centerBefore.y).toBeCloseTo(blade.vy / 60, 3);
+    expect(blade.angle).toBeGreaterThan(Math.PI / 2);
+  });
+
+  it("stops an obstructed Wheel Cut at its last swept-safe center instead of teleporting the hilt", () => {
+    const { blade, input } = makeBlade("greatsword");
+    const player = { x: 0, y: 0, vx: 0, vy: 0, facing: 1 };
+    blade.x = 120; blade.y = 180; blade.angle = Math.PI / 2;
+    blade.tipX = blade.x + Math.cos(blade.angle) * blade.curLength;
+    blade.tipY = blade.y + Math.sin(blade.angle) * blade.curLength;
+    blade.tipSpeed = 900; input.mouseX = 500; input.mouseY = 180;
+    blade.aimX = 300; blade.aimY = 0;
+    const centerBefore = { x: (blade.x + blade.tipX) / 2, y: (blade.y + blade.tipY) / 2 };
+    expect(blade.throwBlade()).toBe(true);
+    const maximumFrameTravel = Math.hypot(blade.vx, blade.vy) / 60;
+
+    blade._updateWheelCut(1 / 60, player, [{ x: 145, y: 220, w: 24, h: 80 }]);
+
+    const centerAfter = { x: (blade.x + blade.tipX) / 2, y: (blade.y + blade.tipY) / 2 };
+    expect(blade.state).toBe("embedded");
+    expect(Math.hypot(centerAfter.x - centerBefore.x, centerAfter.y - centerBefore.y))
+      .toBeLessThanOrEqual(maximumFrameTravel + 0.01);
+    expect(blade.embeddedNew).toBe(true);
   });
 
   it("hooks with Chainblade and reserves the sling route for the secondary action", () => {
@@ -146,6 +213,31 @@ describe("Final Five weapon roster", () => {
     expect(blade.state).toBe("returning");
     expect(blade.hookTarget).toBeNull();
     expect(Math.abs(target.vx - beforeRelease.vx) + Math.abs(target.vy - beforeRelease.vy)).toBeGreaterThan(0);
+  });
+
+  it("scales Chainblade fling continuously by mass, knockback susceptibility, and secondary power", () => {
+    const releaseSpeed = (weight: number, knockbackTaken: number, power = 1) => {
+      const { blade } = makeBlade("chainblade");
+      const player = { x: 0, y: 0, vx: 0, vy: 0, facing: 1 };
+      const target = {
+        x: 150, y: 0, vx: 0, vy: 0, radius: 16, weight, stun: 0,
+        dead: false, dying: false, isBoss: false, cfg: { knockbackTaken },
+        hit: () => undefined,
+      };
+      blade.state = "hooked"; blade.hookTarget = target; blade.linkT = 2;
+      blade.slingRadius = 150; blade.slingAngle = 0; blade.slingAngularVelocity = 4;
+      blade.channelMods.secondaryPower = power;
+      expect(blade._releaseHook(player)).toBe("recalled");
+      return Math.hypot(target.vx, target.vy);
+    };
+
+    const light = releaseSpeed(1, 10);
+    const heavy = releaseSpeed(2.2, 10);
+    const resistant = releaseSpeed(1, 3);
+    const enhanced = releaseSpeed(1, 10, 1.25);
+    expect(light).toBeGreaterThan(heavy);
+    expect(light).toBeGreaterThan(resistant);
+    expect(enhanced).toBeGreaterThan(light);
   });
 
   it("spends exactly one Riftlock chamber per Razor Round and emits an identified action", () => {

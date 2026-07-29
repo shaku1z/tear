@@ -54,4 +54,15 @@ describe("thrown collision runtime", () => {
     resolveThrownCollisions(weapon, player, [first, second], [], run, tuning, fx);
     expect(firstHit).toHaveBeenCalledOnce(); expect(secondHit).not.toHaveBeenCalled(); expect(weapon.hookTarget).toBe(first);
   });
+
+  it("redirects a spinning weapon's velocity without snapping its visual angle", () => {
+    const weapon = { ...blade(), angle: 0.75, preserveRedirectAngle: true };
+    const first = enemy({ x: 5, y: 0 });
+    const second = enemy({ x: 100, y: 100 });
+    const redirectedRun: ThrownRun = { weaponId: "greatsword", mods: { redirect: true }, weaponStats: { throwHits: 0 } };
+    resolveThrownCollisions(weapon, player, [first, second], [], redirectedRun, tuning, hooks());
+
+    expect(weapon.vy).toBeGreaterThan(0);
+    expect(weapon.angle).toBe(0.75);
+  });
 });

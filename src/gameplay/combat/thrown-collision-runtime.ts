@@ -7,6 +7,7 @@ export interface ThrowEffect {
 }
 export interface ThrownBlade {
   x: number; y: number; vx: number; vy: number; angle: number; state: string; thrown: boolean;
+  readonly preserveRedirectAngle?: boolean;
   throwDmg: number; throwBaseDmg?: number; throwId: number; secondaryActive: boolean;
   throwOrigin?: { x: number; y: number } | null; pierced: Set<object>; hookTarget?: object | null; slingCollided?: Set<object>;
   linkT?: number;
@@ -153,7 +154,8 @@ function redirectBlade(blade: ThrownBlade, enemies: readonly ThrownEnemy[],
   for (const enemy of enemies) { if (enemy.dead || blade.pierced.has(enemy)) continue; const distance = hooks.distance(enemy.x - blade.x, enemy.y - blade.y); if (distance < nearest) { nearest = distance; target = enemy; } }
   if (!target || nearest >= 700) return;
   const speed = hooks.distance(blade.vx, blade.vy) || t.throwSpeed, dx = target.x - blade.x, dy = target.y - blade.y, magnitude = hooks.distance(dx, dy) || 1;
-  blade.vx = dx / magnitude * speed; blade.vy = dy / magnitude * speed; blade.angle = Math.atan2(dy, dx);
+  blade.vx = dx / magnitude * speed; blade.vy = dy / magnitude * speed;
+  if (!blade.preserveRedirectAngle) blade.angle = Math.atan2(dy, dx);
   hooks.burst(blade.x, blade.y, dx, dy, 3, t.colors.bladeTrail);
 }
 

@@ -35,8 +35,8 @@ This is the migration checklist for the architectural redesign. A checked featur
 
 ## Combat and content
 
-- [x] Sword, hammer, spear, chainblade and ringblade start and throw/recall characterization — `weapon-overhaul.test.js`, `gameplay-definitions.test.ts`, and the five-weapon built-artifact smoke loop.
-- [x] Weapon-specific throw identities and completed weapon action safety checks — `weapon-overhaul.test.js` and `gameplay-definitions.test.ts`.
+- [x] Sword, Hammer, Greatsword, Chainblade, and Riftlock start and throw/recall characterization — `final-five-weapon-roster.test.ts`, `gameplay-definitions.test.ts`, and the five-weapon built-artifact smoke loop. The focused roster suite preserves same-target Sword Reversal, center-continuous Greatsword Wheel Cut, articulated/mass-aware Chainblade sling behavior, and identified Riftlock chamber actions.
+- [x] Weapon-specific throw identities and completed weapon action safety checks — `final-five-weapon-roster.test.ts`, `thrown-collision-runtime.test.ts`, and `gameplay-definitions.test.ts`.
 - [x] Player movement, jump, dash, drop-through, tether and trick scoring — `player-locomotion.test.ts` characterizes acceleration/friction, coyote and buffered jumps, dash transitions/charges and one-way drop-through; the semantic input and trick-runtime suites cover tether/actions and scoring.
 - [x] Weapon-by-ability conformance across normal, special and unique upgrades — `weapon-ability-conformance.test.ts` exhausts every weapon/upgrade pairing and `gameplay-definitions.test.ts` protects the authored catalogue.
 - [x] Projectiles, particles, supports, zones, walls and stage hazards — `combat-entity-conformance.test.ts`, `presentation-systems.test.ts`, `gameplay-definitions.test.ts`, and `training-controllers.test.ts`.

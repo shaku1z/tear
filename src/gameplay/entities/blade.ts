@@ -16,10 +16,11 @@ function createBlade(dependencies: BladeDependencies) {
   const { CLOCK, CONFIG, Input, presentation, clamp, len, lerp } = dependencies;
 
 class Blade extends BladeCore {
-  reversal: {
+  reversals: {
+    target: object;
     x: number; y: number; directionX: number; directionY: number;
     swingId: number; expiresAt: number; exited: boolean;
-  } | null = null;
+  }[] = [];
 
   override update(dt: number, player: BladePlayerPort, platforms: readonly BladePlatformPort[]): void {
     super.update(dt, player, platforms);
@@ -88,29 +89,35 @@ class Blade extends BladeCore {
   }
 
   _updateReversalState(): void {
-    const reversal = this.reversal;
-    if (!reversal) return;
-    if (CLOCK.sim > reversal.expiresAt) { this.reversal = null; return; }
-    if (!reversal.exited && len(this.tipX - reversal.x, this.tipY - reversal.y) >= CONFIG.weapons.sword.reversalExitRadius) {
-      reversal.exited = true;
+    if (!Array.isArray(this.reversals)) this.reversals = [];
+    for (let index = this.reversals.length - 1; index >= 0; index--) {
+      const reversal = this.reversals[index];
+      if (!reversal) continue;
+      if (CLOCK.sim > reversal.expiresAt) { this.reversals.splice(index, 1); continue; }
+      if (!reversal.exited && len(this.tipX - reversal.x, this.tipY - reversal.y) >= CONFIG.weapons.sword.reversalExitRadius) {
+        reversal.exited = true;
+      }
     }
   }
 
-  resolveReversal(): "armed" | "reversal" | null {
+  resolveReversal(target: object): "armed" | "reversal" | null {
     const speed = len(this.tipVX, this.tipVY);
     if (speed < 1) return null;
     const directionX = this.tipVX / speed, directionY = this.tipVY / speed;
-    const current = this.reversal;
+    if (!Array.isArray(this.reversals)) this.reversals = [];
+    const currentIndex = this.reversals.findIndex((entry) => entry.target === target);
+    const current = this.reversals[currentIndex];
     if (!current || CLOCK.sim > current.expiresAt) {
-      this.reversal = {
-        x: this.tipX, y: this.tipY, directionX, directionY, swingId: this.swingId,
+      if (currentIndex >= 0) this.reversals.splice(currentIndex, 1);
+      this.reversals.push({
+        target, x: this.tipX, y: this.tipY, directionX, directionY, swingId: this.swingId,
         expiresAt: CLOCK.sim + CONFIG.weapons.sword.reversalWindow, exited: false,
-      };
+      });
       return "armed";
     }
     const dot = current.directionX * directionX + current.directionY * directionY;
     if (!current.exited || current.swingId === this.swingId || dot > CONFIG.weapons.sword.reversalOppositeDot) return null;
-    this.reversal = null;
+    this.reversals.splice(currentIndex, 1);
     return "reversal";
   }
 
@@ -210,12 +217,66 @@ class Blade extends BladeCore {
   }
 
   _updateWheelCut(dt: number, player: BladePlayerPort, platforms: readonly BladePlatformPort[]): void {
-    this._updateStandardThrown(dt, player, platforms, false);
+    const length = this.curLength;
+    const centerX = this.x + Math.cos(this.angle) * length * 0.5;
+    const centerY = this.y + Math.sin(this.angle) * length * 0.5;
+    const previousX = this.x, previousY = this.y, previousAngle = this.angle;
+    // Generic embedding assumes a straight, tip-first projectile and can move its
+    // hilt hundreds of pixels while backing it out of a wall. Wheel Cut is a
+    // center-pivoting body, so it owns a swept collision below.
+    this._updateStandardThrown(dt, player, this.state === "flying" ? [] : platforms, false);
     if (this.state === "flying" || this.state === "returning") {
       const spin = this.state === "returning" ? -CONFIG.weapons.greatsword.wheelReturnSpin : this.wheelSpin;
-      this.angle += spin * dt;
+      const translatedCenterX = centerX + (this.x - previousX);
+      const translatedCenterY = centerY + (this.y - previousY);
+      const nextAngle = previousAngle + spin * dt;
+      if (this.state === "flying") {
+        const steps = clamp(Math.ceil(Math.abs(spin * dt) * length / 10), 2, 10);
+        let safeAmount = 0;
+        for (let step = 1; step <= steps; step++) {
+          const amount = step / steps;
+          const sampleX = lerp(centerX, translatedCenterX, amount);
+          const sampleY = lerp(centerY, translatedCenterY, amount);
+          const sampleAngle = previousAngle + spin * dt * amount;
+          if (this._wheelTouchesSolid(sampleX, sampleY, sampleAngle, length, platforms)) {
+            const safeCenterX = lerp(centerX, translatedCenterX, safeAmount);
+            const safeCenterY = lerp(centerY, translatedCenterY, safeAmount);
+            this.angle = previousAngle + spin * dt * safeAmount;
+            this.x = safeCenterX - Math.cos(this.angle) * length * 0.5;
+            this.y = safeCenterY - Math.sin(this.angle) * length * 0.5;
+            this._recomputeTip(dt);
+            this.impactVX = this.vx; this.impactVY = this.vy;
+            this.state = "embedded"; this.vx = 0; this.vy = 0; this.embeddedNew = true;
+            return;
+          }
+          safeAmount = amount;
+        }
+      }
+      this.angle = nextAngle;
+      this.x = translatedCenterX - Math.cos(this.angle) * length * 0.5;
+      this.y = translatedCenterY - Math.sin(this.angle) * length * 0.5;
       this._recomputeTip(dt);
     }
+  }
+
+  _wheelTouchesSolid(
+    centerX: number, centerY: number, angle: number, length: number,
+    platforms: readonly BladePlatformPort[],
+  ): boolean {
+    const half = length * 0.5;
+    const cos = Math.cos(angle), sin = Math.sin(angle);
+    const samples = Math.max(8, Math.ceil(length / 12));
+    const pad = 8;
+    for (let index = 0; index <= samples; index++) {
+      const along = -half + length * index / samples;
+      const x = centerX + cos * along, y = centerY + sin * along;
+      if (x <= pad || x >= CONFIG.view.w - pad || y <= pad || y >= CONFIG.view.h - pad) return true;
+      for (const platform of platforms) {
+        if (x >= platform.x - pad && x <= platform.x + platform.w + pad
+          && y >= platform.y - pad && y <= platform.y + platform.h + pad) return true;
+      }
+    }
+    return false;
   }
 
   _launchHook(): void {
@@ -248,8 +309,9 @@ class Blade extends BladeCore {
         const aimLength = len(this.aimX, this.aimY);
         const targetAngle = aimLength > 1 ? Math.atan2(this.aimY, this.aimX) : this.slingAngle;
         const angleDelta = Math.atan2(Math.sin(targetAngle - this.slingAngle), Math.cos(targetAngle - this.slingAngle));
-        const desiredAngularVelocity = clamp(angleDelta * W.angularControl, -W.angularControl * 1.4, W.angularControl * 1.4);
-        this.slingAngularVelocity = lerp(this.slingAngularVelocity, desiredAngularVelocity, clamp(W.angularControl * dt, 0, 1));
+        this.slingAngularVelocity += angleDelta * W.angularAcceleration * dt;
+        this.slingAngularVelocity *= Math.exp(-W.angularDamping * dt);
+        this.slingAngularVelocity = clamp(this.slingAngularVelocity, -W.maxAngularSpeed, W.maxAngularSpeed);
         this.slingAngle += this.slingAngularVelocity * dt;
         const aimRadius = clamp(aimLength, W.minRadius, W.maxRadius);
         this.slingRadius = Input.tetherHeld
@@ -258,10 +320,10 @@ class Blade extends BladeCore {
         const tangentX = -Math.sin(this.slingAngle), tangentY = Math.cos(this.slingAngle);
         const desiredX = hand.x + Math.cos(this.slingAngle) * this.slingRadius;
         const desiredY = hand.y + Math.sin(this.slingAngle) * this.slingRadius;
-        const resistance = e.isBoss ? W.bossTug : (e.weight > 2 ? 0.48 : 1);
-        const follow = clamp(W.angularControl * dt * resistance, 0, 1);
-        const targetVX = player.vx + tangentX * this.slingRadius * this.slingAngularVelocity + (desiredX - e.x) * W.angularControl;
-        const targetVY = player.vy + tangentY * this.slingRadius * this.slingAngularVelocity + (desiredY - e.y) * W.angularControl;
+        const resistance = this._chainMassResponse(e);
+        const follow = 1 - Math.exp(-W.orbitFollow * resistance * dt);
+        const targetVX = player.vx + tangentX * this.slingRadius * this.slingAngularVelocity + (desiredX - e.x) * W.orbitSpring;
+        const targetVY = player.vy + tangentY * this.slingRadius * this.slingAngularVelocity + (desiredY - e.y) * W.orbitSpring;
         e.vx = lerp(e.vx, targetVX, follow);
         e.vy = lerp(e.vy, targetVY, follow);
         this.tension = clamp(1 - this.slingRadius / W.maxRadius, 0, 1);
@@ -309,10 +371,14 @@ class Blade extends BladeCore {
       const W = CONFIG.weapons.chainblade;
       const direction = Math.sign(this.slingAngularVelocity) || 1;
       const tangentX = -Math.sin(this.slingAngle) * direction, tangentY = Math.cos(this.slingAngle) * direction;
-      const resistance = e.isBoss ? W.bossTug : (e.weight > 2 ? 0.48 : 1);
-      const releaseSpeed = Math.max(W.slingSpeed * this.channel("secondaryPower"), len(e.vx, e.vy));
-      e.vx += tangentX * releaseSpeed * resistance;
-      e.vy += tangentY * releaseSpeed * resistance;
+      const resistance = this._chainMassResponse(e);
+      const knockbackTaken = Math.max(0.01, e.cfg?.knockbackTaken ?? W.knockbackReference);
+      const knockbackResponse = clamp(Math.sqrt(knockbackTaken / W.knockbackReference), 0.35, 1.4);
+      const orbitalSpeed = Math.abs(this.slingRadius * this.slingAngularVelocity) * W.releaseOrbitMult;
+      const poweredSpeed = Math.max(W.slingSpeed * this.channel("secondaryPower"), orbitalSpeed);
+      const releaseSpeed = clamp(poweredSpeed * resistance * knockbackResponse, 0, W.maxReleaseSpeed);
+      e.vx = player.vx + e.vx * W.releaseMomentumCarry + tangentX * releaseSpeed;
+      e.vy = player.vy + e.vy * W.releaseMomentumCarry + tangentY * releaseSpeed;
       if (e.isBoss) { player.vx -= tangentX * releaseSpeed * 0.18; player.vy -= tangentY * releaseSpeed * 0.12; }
       else e.stun = Math.max(e.stun, W.releaseStun * (e.weight > 2 ? 0.55 : 1));
       if ((e.isBoss || e.weight > 2) && e.applyBreak) e.applyBreak(W.heavyBreak);
@@ -320,6 +386,11 @@ class Blade extends BladeCore {
       return "recalled";
     }
     return this._beginReturn(player);
+  }
+
+  _chainMassResponse(enemy: BladeEnemyPort): number {
+    const response = 1 / Math.sqrt(Math.max(0.5, enemy.weight || 1));
+    return enemy.isBoss ? Math.min(response, CONFIG.weapons.chainblade.bossTug) : clamp(response, 0.38, 1);
   }
 
   _beginBackblast(player: BladePlayerPort): BladeActionResult {
@@ -376,7 +447,10 @@ class Blade extends BladeCore {
     const am = len(dirX, dirY);
     if (am < 1) { dirX = Math.cos(this.angle); dirY = Math.sin(this.angle); }
     else { dirX /= am; dirY /= am; }
-    this.angle = Math.atan2(dirY, dirX);   // blade points the way it's thrown
+    // Wheel Cut preserves the released pose and immediately begins rotating about
+    // the blade's center. Snapping a long Greatsword to its travel vector makes the
+    // visible weapon jump before the first flight step.
+    if (this.weapon?.id !== "greatsword") this.angle = Math.atan2(dirY, dirX);
     const channelSpeed = this.channel("throwSpeed");
     const sp = clamp((T.speed + this.tipSpeed * T.speedFromSwing) * channelSpeed, T.speed * channelSpeed, T.maxSpeed * channelSpeed);
     this.vx = dirX * sp;
@@ -416,6 +490,7 @@ class Blade extends BladeCore {
   }
 
   get thrown() { return ["flying", "returning", "embedded", "hooked"].includes(this.state); }
+  get preserveRedirectAngle() { return this.weapon?.id === "greatsword"; }
 
   // how "clean" the swing is: 1 = a true perpendicular cut, ~0 = a straight poke/thrust.
   // (the perpendicular component of tip velocity relative to the blade's own axis)

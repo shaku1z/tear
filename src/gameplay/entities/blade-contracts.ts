@@ -28,6 +28,7 @@ export interface BladePlayerPort { x: number; y: number; vx: number; vy: number;
 export interface BladeEnemyPort {
   x: number; y: number; vx: number; vy: number; radius: number; dead: boolean; dying?: boolean;
   isBoss?: boolean; weight: number; anchored?: boolean; stun: number;
+  cfg?: { knockbackTaken?: number };
   applyBreak?: ((power: number) => void) | undefined;
   hit(damage: number, fromX: number, fromY: number): void;
 }
