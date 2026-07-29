@@ -38,7 +38,7 @@ export interface ThrownRun {
 }
 export interface ThrownCollisionTuning {
   duelCooldown: number; throwLowMultiplier: number; throwHighMultiplier: number; recallMultiplier: number;
-  maxThrowSpeed: number; throwSpeed: number; chainbladeHookDuration: number;
+  maxThrowSpeed: number; throwSpeed: number; chainbladeHookDuration: number; riftCaptureDuration: number;
   hitStopSmall: number; shakeSmall: number; sparkCount: number;
   colors: { deflected: string; armoredShield: string; perfect: string; charger: string; bladeTrail: string };
 }
@@ -121,6 +121,11 @@ function resolveThrownEnemyHit(blade: ThrownBlade, player: ThrownPlayer, enemy: 
     if (!blade.claimImpact()) { blade.state = "returning"; return true; }
     if (effect.mechanic === "meteor") { blade.forceEmbed(); hooks.lobExplode(enemy.x, enemy.y); }
     else if (effect.mechanic === "hook") { blade.hookTarget = enemy; blade.slingCollided = new Set(); blade.state = "hooked"; blade.vx = 0; blade.vy = 0; blade.linkT = t.chainbladeHookDuration * blade.channel("controlDuration"); enemy.boundT = blade.linkT; }
+    else if (effect.mechanic === "capture") {
+      blade.hookTarget = enemy; blade.state = "captured"; blade.vx = 0; blade.vy = 0;
+      blade.linkT = t.riftCaptureDuration * blade.channel("controlDuration");
+      if (!enemy.isBoss) enemy.boundT = Math.max(enemy.boundT ?? 0, blade.linkT);
+    }
     return true;
   }
   if ((run.mods.redirect || effect?.redirect) && blade.state === "flying") redirectBlade(blade, enemies, t, hooks);

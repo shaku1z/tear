@@ -39,16 +39,19 @@ export interface WeaponBladePort {
   swingId: number;
   attackId: number;
   resolveReversal(target: object): "armed" | "reversal" | null;
+  primeReversal(target: object): boolean;
   heldDamageMultiplierAt(x: number, y: number): number;
   resetRiftlock(): void;
   claimRiftBayonet(): boolean;
+  claimRiftRecoilCut(target: object): boolean;
   refillRiftChambers(amount: number): void;
   _launchStraight(): void;
   _launchBallistic(gravity: number): void;
   _launchWheelCut(): void;
   _launchHook(): void;
   _launchLooseCannon(): void;
-  _updateStandardThrown(dt: number, player: WeaponPlayerPort, platforms: readonly WeaponPlatformPort[], retrace: boolean): void;
+  _updateStandardThrown(dt: number, player: WeaponPlayerPort, platforms: readonly WeaponPlatformPort[],
+    retrace: boolean, maximumLife?: number): void;
   _updateBallisticThrown(dt: number, player: WeaponPlayerPort, platforms: readonly WeaponPlatformPort[]): void;
   _updateWheelCut(dt: number, player: WeaponPlayerPort, platforms: readonly WeaponPlatformPort[]): void;
   _updateHookThrown(dt: number, player: WeaponPlayerPort, platforms: readonly WeaponPlatformPort[]): void;
@@ -71,6 +74,7 @@ export interface WeaponMechanicResult {
   hitIframe?: number;
   breakPower?: number;
   force?: number;
+  stun?: number;
   damageMult?: number;
   consumeSeam?: boolean;
   stop?: boolean;
@@ -132,7 +136,8 @@ const WEAPONS: readonly WeaponDefinition[] = [
     onHeldHit(ctx) {
       if (ctx.quality < 0.58) return null;
       return ctx.blade.resolveReversal(ctx.enemy) === "reversal"
-        ? { mechanic: "reversal", damageMult: CONFIG.weapons.sword.reversalDamageMult }
+        ? { mechanic: "reversal", damageMult: CONFIG.weapons.sword.reversalDamageMult,
+          stun: CONFIG.weapons.sword.reversalStun }
         : null;
     },
     onThrowLaunch(ctx) { ctx.blade._launchStraight(); },
@@ -156,7 +161,6 @@ const WEAPONS: readonly WeaponDefinition[] = [
       B.damageScale *= 1.28; B.maxDamage = Math.round(B.maxDamage * 1.48);
       B.minHitSpeed *= 1.34; B.slamMultiplier *= 1.35; B.launchPower *= 1.38;
       B.deflectMinSpeed *= 1.22; B.perfectSpeed *= 1.28;
-      B.throw.speed *= 0.82; B.throw.returnSpeed *= 0.78;
     },
     applyPlayerChassis() {
       CONFIG.player.moveSpeed *= 0.96; CONFIG.player.airAccel *= 0.92;
@@ -190,7 +194,7 @@ const WEAPONS: readonly WeaponDefinition[] = [
     qualityMetric(ctx) { return ctx.blade.sliceQuality(); },
     damageProfile(ctx) { return lerp(0.76, 1.16, ctx.quality); },
     onHeldHit(ctx) { return ctx.quality >= CONFIG.weapons.greatsword.cleaveThreshold
-      ? { mechanic: "cleave", damageMult: CONFIG.weapons.greatsword.cleaveDamageMult, repeatScale: 1 }
+      ? { mechanic: "cleave", repeatScale: 1 }
       : null; },
     onThrowLaunch(ctx) { ctx.blade._launchWheelCut(); },
     updateThrown(ctx) { ctx.blade._updateWheelCut(ctx.dt, ctx.player, ctx.platforms); },
@@ -239,10 +243,15 @@ const WEAPONS: readonly WeaponDefinition[] = [
     qualityMetric(ctx) { return ctx.blade.sliceQuality(); },
     damageProfile(ctx) { return lerp(0.82, 1.04, ctx.quality); },
     onReset(ctx) { ctx.blade.resetRiftlock(); },
-    onHeldHit(ctx) { return { mechanic: ctx.blade.claimRiftBayonet() ? "chamberCut" : "bayonet" }; },
+    onHeldHit(ctx) {
+      const chambered = ctx.blade.claimRiftBayonet();
+      return { mechanic: ctx.blade.claimRiftRecoilCut(ctx.enemy) ? "recoilCut" : chambered ? "chamberCut" : "bayonet" };
+    },
     onThrowLaunch(ctx) { ctx.blade._launchLooseCannon(); },
     updateThrown(ctx) { ctx.blade._updateLooseCannon(ctx.dt, ctx.player, ctx.platforms); },
-    onThrowHit(ctx) { return { mechanic: ctx.secondary ? "backblast" : "looseCannon" }; },
+    onThrowHit(ctx) {
+      return ctx.secondary ? { mechanic: "backblast" } : { mechanic: "capture", stop: true };
+    },
     onSecondaryThrowAction(ctx) { return ctx.blade._beginBackblast(ctx.player); },
     onCatch(ctx) { ctx.blade.refillRiftChambers(CONFIG.weapons.riftlock.catchRefill); },
   },

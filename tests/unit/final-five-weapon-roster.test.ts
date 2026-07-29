@@ -88,20 +88,39 @@ describe("Final Five weapon roster", () => {
     });
   });
 
+  it("lets a Sword Perfect Parry prime the same guarded Reversal route", () => {
+    const { blade, config } = makeBlade("sword");
+    const target = { radius: 24 };
+    blade.swingId = 3; blade.tipX = 10; blade.tipY = 20; blade.tipVX = 1000; blade.tipVY = 0;
+    expect(blade.primeReversal(target)).toBe(true);
+    blade.tipX += Math.max(config.weapons.sword.reversalExitRadius,
+      target.radius + config.weapons.sword.reversalExitPadding) + 1;
+    blade._updateReversalState();
+    blade.swingId = 4; blade.tipVX = -1000;
+    expect(blade.resolveReversal(target)).toBe("reversal");
+  });
+
   it("returns Sword Threadcut through captured throw-hit waypoints in reverse order", () => {
     const { blade } = makeBlade("sword");
     const player = { x: 0, y: 0, vx: 0, vy: 0, facing: 1 };
+    const firstTarget = { x: 40, y: 0, dead: false };
+    const movingTarget = { x: 80, y: 0, dead: false };
     blade.state = "flying";
-    blade.recordHit({ x: 40, y: 0 } as never);
-    blade.recordHit({ x: 80, y: 0 } as never);
+    blade.recordHit(firstTarget as never);
+    blade.recordHit(movingTarget as never);
     blade.throwOrigin = { x: -100, y: 0 };
     blade.x = 80;
     blade.y = 0;
     blade.freeRecall = true;
 
     expect(blade._beginReturn(player, { retrace: true })).toBe("recalled");
+    movingTarget.x = 120;
+    blade._updateStandardThrown(1 / 60, player, [], true);
+    expect(blade.vx).toBeGreaterThan(0);
+    blade.x = movingTarget.x;
     blade._updateStandardThrown(1 / 60, player, [], true);
     expect(blade.threadcutIndex).toBe(0);
+    firstTarget.dead = true;
     blade._updateStandardThrown(1 / 60, player, [], true);
     expect(blade.vx).toBeLessThan(0);
   });
@@ -159,6 +178,33 @@ describe("Final Five weapon roster", () => {
     expect(Math.hypot(centerAfter.x - centerBefore.x, centerAfter.y - centerBefore.y))
       .toBeLessThanOrEqual(maximumFrameTravel + 0.01);
     expect(blade.embeddedNew).toBe(true);
+  });
+
+  it("aligns a returning Greatsword across its travel instead of continuing Wheel spin", () => {
+    const { blade } = makeBlade("greatsword");
+    const player = { x: 0, y: 0, vx: 0, vy: 0, facing: 1 };
+    blade.state = "returning"; blade.secondaryActive = true; blade.x = 300; blade.y = 100;
+    blade.angle = 0; blade.tipX = blade.x + blade.curLength; blade.tipY = blade.y;
+    blade._updateWheelCut(1 / 60, player, []);
+    const travelAngle = Math.atan2(blade.vy, blade.vx);
+    const across = Math.abs(Math.sin(blade.angle - travelAngle));
+    expect(across).toBeGreaterThan(0.1);
+    expect(blade.angle).toBeLessThan(Math.PI / 2);
+  });
+
+  it("retains substantially more Greatsword momentum through light targets than bosses", () => {
+    const retained = (enemy: { weight: number; isBoss?: boolean; anchored?: boolean }) => {
+      const { blade } = makeBlade("greatsword");
+      blade.vx = 1000; blade.vy = 0;
+      const retention = blade.applyHeldResistance(enemy as never);
+      return { retention, speed: Math.hypot(blade.vx, blade.vy) };
+    };
+    const light = retained({ weight: 1 });
+    const heavy = retained({ weight: 3 });
+    const boss = retained({ weight: 8, isBoss: true });
+    expect(light.speed).toBeGreaterThan(heavy.speed);
+    expect(heavy.speed).toBeGreaterThan(boss.speed);
+    expect(light.retention).toBeGreaterThan(boss.retention);
   });
 
   it("hooks with Chainblade and reserves the sling route for the secondary action", () => {
@@ -240,6 +286,18 @@ describe("Final Five weapon roster", () => {
     expect(enhanced).toBeGreaterThan(light);
   });
 
+  it("uses only the Chainblade head for full held damage and simulates articulated links", () => {
+    const { blade } = makeBlade("chainblade");
+    const player = { x: 100, y: 100, vx: 0, vy: 0, facing: 1 };
+    blade.x = 170; blade.y = 100; blade.angle = 0; blade.tipX = 245; blade.tipY = 100;
+    blade.update(1 / 120, player, []);
+    const segment = blade.heldCollisionSegment(player);
+    expect(segment.x1).toBeGreaterThan(player.x + 100);
+    expect(segment.x2).toBe(blade.tipX);
+    expect(blade.chainPoints).toHaveLength(blade.weapon?.id === "chainblade" ? 15 : 0);
+    expect(blade.chainCollisionSegments()).toHaveLength(14);
+  });
+
   it("spends exactly one Riftlock chamber per Razor Round and emits an identified action", () => {
     const { blade, config } = makeBlade("riftlock");
     const player = { x: 20, y: 30, vx: 0, vy: 0, facing: 1 };
@@ -258,5 +316,65 @@ describe("Final Five weapon roster", () => {
     expect(razorRound?.throwId).toBe(7);
     expect(razorRound?.attackId).toEqual(expect.any(Number));
     expect(razorRound?.remote).toBe(false);
+    expect(razorRound?.secondary).toBe(false);
+  });
+
+  it("fires Riftlock only on a fresh tether press", () => {
+    const { blade, input } = makeBlade("riftlock");
+    const player = { x: 20, y: 30, vx: 0, vy: 0, facing: 1 };
+    blade.aimX = 100; blade.aimY = 0;
+    input.tetherHeld = true;
+    blade.update(1 / 120, player, []);
+    expect(blade.drainWeaponEvents()).toHaveLength(1);
+    blade.update(0.4, player, []);
+    expect(blade.drainWeaponEvents()).toHaveLength(0);
+    input.tetherHeld = false; blade.update(1 / 120, player, []);
+    input.tetherHeld = true; blade.update(1 / 120, player, []);
+    expect(blade.drainWeaponEvents()).toHaveLength(1);
+  });
+
+  it("classifies a recoil-driven Riftlock bayonet crossing without granting hidden area damage", () => {
+    const { blade, weapon } = makeBlade("riftlock");
+    const player = { x: 0, y: 0, vx: 0, vy: 0, facing: 1 };
+    const enemy = { seamT: 0 };
+    blade.aimX = 100; blade.aimY = 0; blade.swingId = 4;
+    expect(blade._fireRazorRound(player)).toBe(true);
+    const context = { blade, player, platforms: [], dt: 1 / 120, enemy, quality: 1, damage: 20, secondary: false };
+    expect(weapon.onHeldHit(context)).toMatchObject({ mechanic: "recoilCut" });
+    expect(weapon.onHeldHit(context)).toMatchObject({ mechanic: "bayonet" });
+  });
+
+  it("keeps Loose Cannon airborne for its authored control duration and emits a real Backblast round", () => {
+    const { blade, config } = makeBlade("riftlock");
+    const player = { x: 0, y: 0, vx: 0, vy: 0, facing: 1 };
+    blade.state = "flying"; blade.x = 800; blade.y = 400; blade.tipX = 900; blade.tipY = 400;
+    blade.vx = 0; blade.vy = 0; blade._launchLooseCannon();
+    for (let index = 0; index < 26; index++) blade._updateLooseCannon(0.1, player, []);
+    expect(blade.flyTime).toBeGreaterThan(config.blade.throw.maxLife);
+    expect(blade.state).toBe("flying");
+    blade.freeRecall = true;
+    expect(blade._beginBackblast(player)).toBe("recalled");
+    const [round] = blade.drainWeaponEvents();
+    expect(round).toMatchObject({ type: "backblastRound", secondary: true, remote: true });
+    blade._updateLooseCannon(1 / 120, player, []);
+    expect(Math.hypot(blade.vx, blade.vy)).toBeGreaterThanOrEqual(config.weapons.riftlock.backblastSpeed);
+  });
+
+  it("captures a normal target with Riftlock and transfers bounded remote recoil by target mass", () => {
+    const { blade } = makeBlade("riftlock");
+    const player = { x: 0, y: 0, vx: 0, vy: 0, facing: 1 };
+    const target = {
+      x: 300, y: 100, vx: 0, vy: 0, radius: 20, dead: false, dying: false,
+      weight: 2, stun: 0, hit: () => undefined,
+    };
+    blade.state = "captured"; blade.hookTarget = target; blade.linkT = 1; blade.looseCannonT = 1;
+    blade.aimX = 100; blade.aimY = 0;
+    expect(blade._fireRazorRound(player)).toBe(true);
+    expect(target.vx).toBeLessThan(0);
+    blade._updateLooseCannon(1 / 120, player, []);
+    expect(blade.tipX).toBeCloseTo(target.x);
+    blade.freeRecall = true;
+    expect(blade._beginBackblast(player)).toBe("recalled");
+    expect(blade.hookTarget).toBeNull();
   });
 });

@@ -71,6 +71,9 @@ export type CombatEntityIntent =
       cause: "reflected"; projectileId: EntityId; perfect: boolean; sourceId: EntityId | null;
       parryStun: number; aegisParry: boolean; achievementTracking: boolean;
       noteFirstPlayerDamage: true; emitReflectedHit: true }>
+  | Readonly<{ type: "weapon-projectile-hit"; enemyId: EntityId; projectileId: EntityId;
+      damage: number; dx: number; dy: number; weaponId: string; attackId: number; throwId: number;
+      remote: boolean; secondary: boolean }>
   | Readonly<{ type: "damage-enemy-aoe"; x: number; y: number; radius: number; damage: number;
       playerOwned: boolean; sourceId: EntityId | null; achievement: BombAchievementSpec | null }>
   | Readonly<{ type: "deflect-projectile"; projectileId: EntityId; dx: number; dy: number; speed: number; perfect: false }>
@@ -163,6 +166,12 @@ export interface ProjectileState {
   readonly armed: boolean;
   readonly armT: number;
   readonly life: number;
+  readonly playerOwned?: boolean;
+  readonly weaponId?: string | null;
+  readonly attackId?: number;
+  readonly throwId?: number;
+  readonly remote?: boolean;
+  readonly secondary?: boolean;
 }
 
 export interface ProjectilePatch {

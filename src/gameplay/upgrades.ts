@@ -316,6 +316,7 @@ const UPGRADES: readonly UpgradeDefinition[] = [
     apply: () => {
       CONFIG.blade.damageScale *= 1.30; CONFIG.blade.maxDamage = Math.round(CONFIG.blade.maxDamage * 1.20);
       CONFIG.blade.throw.damage *= 1.30; CONFIG.blade.throw.damageFromSpeed *= 1.30;
+      CONFIG.weapons.riftlock.razorDamage *= 1.30;
       CONFIG.player.dmgTakenMult *= 1.25;
     } },
 

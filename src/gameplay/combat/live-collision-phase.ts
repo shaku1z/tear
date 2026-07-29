@@ -19,6 +19,7 @@ export type LiveBlade = HeldBladeWeapon & ThrownBlade & ParryBlade & HostileBlad
   aimX: number; aimY: number;
   weapon?: Readonly<{ id?: string }> | null;
   refillRiftChambers(amount: number): void;
+  primeReversal(target: object): boolean;
 };
 export type LiveEnemy = HeldBladeEnemy & ThrownEnemy & ContactEnemy & TailEnemy;
 export type LiveProjectile = SweeperProjectile & ParryProjectile & TailProjectile;
@@ -126,6 +127,7 @@ function runThrown(host: LiveCollisionPhaseHost): void {
     duelCooldown: CONFIG.exotic.duelCd, throwLowMultiplier: CONFIG.blade.throw.loMult, throwHighMultiplier: CONFIG.blade.throw.hiMult,
     recallMultiplier: CONFIG.blade.throw.recallMult, maxThrowSpeed: CONFIG.blade.throw.maxSpeed, throwSpeed: CONFIG.blade.throw.speed,
     chainbladeHookDuration: CONFIG.weapons.chainblade.hookDuration,
+    riftCaptureDuration: CONFIG.weapons.riftlock.captureDuration,
     hitStopSmall: CONFIG.hitStop.small, shakeSmall: CONFIG.juice.shakeSmall, sparkCount: CONFIG.juice.sparkCount,
     colors: { deflected: CONFIG.colors.deflected, armoredShield: CONFIG.colors.armoredShield, perfect: CONFIG.colors.perfect,
       charger: CONFIG.colors.charger, bladeTrail: CONFIG.colors.bladeTrail } }, {
@@ -162,6 +164,7 @@ function runParries(host: LiveCollisionPhaseHost, held: HeldBladeCollisionInput[
     style: host.addStyle, sound: (name) => { host.sound(name); }, achievementParry: () => { host.achievement("parry"); },
     logPerfectParry: (source) => {
       if (host.blade.weapon?.id === "riftlock") host.blade.refillRiftChambers(CONFIG.weapons.riftlock.perfectParryRefill);
+      if (host.blade.weapon?.id === "sword" && source && typeof source === "object") host.blade.primeReversal(source);
       host.logWeapon("perfectParry", { source: source && typeof source === "object" && "kind" in source ? Reflect.get(source, "kind") : undefined });
     },
     emitPerfectParry: host.emitPerfectParry, firePerfectParry: host.makePerfectParryEvent });

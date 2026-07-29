@@ -11,7 +11,8 @@ type Opening = LiveOpeningPhaseHost;
 type Collision = LiveCollisionPhaseHost;
 export type CombatPlayer = Opening["player"] & Collision["player"] & LiveCombatPlayer & KillPlayer & MirrorPlayerPort;
 export type CombatBlade = Opening["blade"] & Collision["blade"] & MirrorBladePort & {
-  tipX: number; tipY: number; throwDmg: number; stolenBy?: unknown; hostile?: boolean;
+  tipX: number; tipY: number; throwDmg: number; throwBaseDmg?: number;
+  stolenBy?: unknown; hostile?: boolean;
 };
 export type CombatRun = Opening["run"] & Collision["run"] & KillRun & { runTime: number; isBossWave?: boolean };
 export type CombatEnemy = Opening["enemies"][number] & Collision["state"]["enemies"][number] & {

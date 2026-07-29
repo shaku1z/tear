@@ -7,13 +7,17 @@ export interface SecondaryBlade {
   hookTarget?: SecondaryEnemy | null; slingCollided?: Set<SecondaryEnemy>; caughtNew: boolean; embeddedNew: boolean;
   redirectSpent?: boolean; flyTime: number; vx: number; vy: number; impactVX?: number | null; impactVY?: number | null;
   channel(name: string): number; claimImpact(): boolean;
+  slingWorldCooldown?: number;
 }
+export interface SecondaryPlatform { x: number; y: number; w: number; h: number }
 export interface WeaponSecondaryOptions {
   readonly previousState: string; readonly wasReturning: boolean; readonly linkBroken: boolean;
   readonly blade: SecondaryBlade; readonly enemies: SecondaryEnemy[];
   readonly secondPass: number; readonly redirect: boolean; readonly stormBurst: number;
   readonly collisionDamage: number; readonly slingSpeed: number; readonly throwSpeed: number;
   readonly damageMultiplier: number;
+  readonly dt: number; readonly platforms: readonly SecondaryPlatform[];
+  readonly width: number; readonly groundY: number; readonly worldCollisionCooldown: number;
   distance(ax: number, ay: number, bx: number, by: number): number;
   aoe(x: number, y: number, radius: number, damage: number): void; ring(x: number, y: number, radius: number): void;
   burst(enemy: SecondaryEnemy, vx: number, vy: number): void; floater(enemy: SecondaryEnemy, text: string): void;
@@ -25,6 +29,7 @@ export interface WeaponSecondaryOptions {
 
 export function stepWeaponSecondary(options: WeaponSecondaryOptions): void {
   const { blade } = options;
+  blade.slingWorldCooldown = Math.max(0, (blade.slingWorldCooldown ?? 0) - options.dt);
   if (blade.state === "hooked" && blade.hookTarget && !blade.hookTarget.dead) {
     const dragged = blade.hookTarget;
     for (const other of options.enemies) {
@@ -40,6 +45,34 @@ export function stepWeaponSecondary(options: WeaponSecondaryOptions): void {
           .sort((left, right) => options.distance(left.x, left.y, dragged.x, dragged.y) - options.distance(right.x, right.y, dragged.x, dragged.y))[0];
         if (next) { const dx = next.x - dragged.x, dy = next.y - dragged.y, length = Math.hypot(dx, dy) || 1;
           dragged.vx = dx / length * options.slingSpeed; dragged.vy = dy / length * options.slingSpeed; }
+      }
+    }
+    const speed = Math.hypot(dragged.vx, dragged.vy);
+    if ((blade.slingWorldCooldown ?? 0) <= 0 && speed >= 500) {
+      let normalX = 0, normalY = 0, collided = false;
+      if (dragged.x - dragged.radius <= 0) { normalX = 1; collided = true; }
+      else if (dragged.x + dragged.radius >= options.width) { normalX = -1; collided = true; }
+      else if (dragged.y + dragged.radius >= options.groundY) { normalY = -1; collided = true; }
+      if (!collided) for (const platform of options.platforms) {
+        const closestX = Math.max(platform.x, Math.min(dragged.x, platform.x + platform.w));
+        const closestY = Math.max(platform.y, Math.min(dragged.y, platform.y + platform.h));
+        const dx = dragged.x - closestX, dy = dragged.y - closestY;
+        if (dx * dx + dy * dy > dragged.radius * dragged.radius) continue;
+        if (Math.abs(dx) > Math.abs(dy)) normalX = Math.sign(dx) || (dragged.x < platform.x + platform.w / 2 ? -1 : 1);
+        else normalY = Math.sign(dy) || (dragged.y < platform.y + platform.h / 2 ? -1 : 1);
+        collided = true; break;
+      }
+      if (collided) {
+        const damage = options.collisionDamage * 0.75 * blade.channel("secondaryPower")
+          * options.secondPass * options.damageMultiplier;
+        dragged.hit(damage, normalX * speed, normalY * speed);
+        const dot = dragged.vx * normalX + dragged.vy * normalY;
+        dragged.vx = (dragged.vx - 1.6 * dot * normalX) * 0.58;
+        dragged.vy = (dragged.vy - 1.6 * dot * normalY) * 0.58;
+        blade.slingWorldCooldown = options.worldCollisionCooldown;
+        options.burst(dragged, normalX * speed, normalY * speed);
+        options.floater(dragged, `IMPACT ${String(Math.round(damage))}`);
+        if (options.didDie(dragged)) options.onKill(dragged);
       }
     }
   }

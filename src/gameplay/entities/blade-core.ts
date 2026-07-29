@@ -1,6 +1,6 @@
 import type {
-  BladeDependencies, BladeEnemyPort, BladePlatformPort, BladePlayerPort, BladePoint, BladeWeaponEvent,
-  BladeWeaponPort, BladeChannels,
+  BladeDependencies, BladeEnemyPort, BladePlatformPort, BladePlayerPort, BladePoint, BladeThreadcutWaypoint,
+  BladeWeaponEvent, BladeWeaponPort, BladeChannels,
 } from "./blade-contracts";
 
 export function createBladeCore(dependencies: BladeDependencies) {
@@ -18,7 +18,7 @@ abstract class BladeCore {
   channelMods: BladeChannels; throwId: number; throwOrigin: BladePoint | null;
   throwResolved: boolean; impactResolved: boolean; secondaryActive: boolean; secondaryQueued: boolean;
   secondaryStartedNew: boolean; hookTarget: BladeEnemyPort | null;
-  threadcutRoute: BladePoint[]; threadcutIndex: number;
+  threadcutRoute: BladeThreadcutWaypoint[]; threadcutIndex: number;
   linkT: number; linkBrokenNew: string | false;
   tension: number; _repeatHits: Map<object, number>; _lastHand: BladePoint | null;
   hostile: boolean; stolenBy: unknown;
@@ -32,7 +32,12 @@ abstract class BladeCore {
   slingRadius: number; slingAngle: number; slingAngularVelocity: number;
   swingId: number; attackId: number; swingActive: boolean;
   riftChambers: number; riftChamberCooldown: number; riftFireCooldown: number; riftBayonetSwingId: number;
+  riftTriggerHeld: boolean; riftRecoilUntil: number; riftRecoilHits: Set<object>;
+  backblastActive: boolean;
   weaponEvents: BladeWeaponEvent[];
+  chainPoints: BladePoint[];
+  chainPrevious: BladePoint[];
+  slingWorldCooldown: number;
 
   constructor() {
     this.x = CONFIG.view.w * 0.5;
@@ -101,7 +106,14 @@ abstract class BladeCore {
     this.riftChamberCooldown = 0;
     this.riftFireCooldown = 0;
     this.riftBayonetSwingId = -1;
+    this.riftTriggerHeld = false;
+    this.riftRecoilUntil = 0;
+    this.riftRecoilHits = new Set();
+    this.backblastActive = false;
     this.weaponEvents = [];
+    this.chainPoints = [];
+    this.chainPrevious = [];
+    this.slingWorldCooldown = 0;
   }
 
   forceEmbed(): void {

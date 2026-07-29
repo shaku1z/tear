@@ -3,7 +3,7 @@ import type { PreparedVictory } from "../gameplay/run/outcome-planner";
 import type { RunLifecycleController } from "../gameplay/run/lifecycle";
 import { eligibleTierChoices } from "../gameplay/run/reward-selection";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
-import type { GameEnemy, GamePlayer, GameRun } from "./game-runtime-state";
+import type { GameBlade, GameEnemy, GamePlayer, GameRun } from "./game-runtime-state";
 import type { createLiveCampaignHost } from "./live-campaign-host";
 import type { createLiveContentComposition } from "./live-content-composition";
 import type { LiveRunControllerRegistry } from "./live-run-controller-api";
@@ -27,6 +27,7 @@ export interface LiveWaveCompositionOptions {
   readonly story: CampaignHost["story"];
   readonly run: () => GameRun;
   readonly player: () => GamePlayer;
+  readonly blade: () => GameBlade;
   readonly enemies: () => GameEnemy[];
   readonly spawn: Content["spawn"];
   readonly loreBusy: () => boolean;
@@ -72,7 +73,11 @@ export function createLiveWaveComposition(options: LiveWaveCompositionOptions): 
       beginCampaignChapter: options.beginCampaignChapter,
       recordWave: (wave, marker) => { d.GHOST.wave(wave, marker); },
       snapshotReplay: (slot) => { d.GHOST.snapshot(options.canvas, slot); },
-      prepareWave: (wave, boss, deferred) => { options.lifecycle.prepareWave(wave, boss, deferred); },
+      prepareWave: (wave, boss, deferred) => {
+        const weapon = d.WEAPONS.find((candidate) => candidate.id === options.run().weaponId);
+        weapon?.onReset?.({ blade: options.blade() });
+        options.lifecycle.prepareWave(wave, boss, deferred);
+      },
       activateWave: () => { options.lifecycle.activateWave(); },
       showWaveBanner: () => { options.setBannerSeconds(d.CONFIG.juice.bannerTime); },
       playWaveSound: () => { d.SFX.wave(); },

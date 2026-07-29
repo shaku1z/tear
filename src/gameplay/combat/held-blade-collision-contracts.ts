@@ -19,11 +19,15 @@ export interface HeldBladeWeapon {
   damageAt(): number; hitQuality(enemy: HeldBladeEnemy): number;
   claimAttack(): number; heldDamageMultiplierAt(x: number, y: number): number;
   recordHit(enemy: HeldBladeEnemy): void;
+  canHitHeldEnemy?(enemy: HeldBladeEnemy): boolean;
+  recordHeldHit?(enemy: HeldBladeEnemy): void;
+  applyHeldResistance?(enemy: HeldBladeEnemy): number;
+  chainCollisionSegments?(): readonly HeldBladeSegment[];
 }
 
 export interface HeldWeaponEffect {
   mechanic?: string; repeatScale?: number; hitIframe?: number; seam?: number;
-  breakPower?: number; broke?: boolean; force?: number; damageMult?: number;
+  breakPower?: number; broke?: boolean; force?: number; stun?: number; damageMult?: number;
 }
 
 export interface HeldBladeEnemy {

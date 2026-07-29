@@ -117,7 +117,7 @@ export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): Liv
   state.throwCooldown = timers.throwCooldown;
   if (prelude.blocked) return { blocked: true };
   if (prelude.linkBreakReason) host.linkBroken(prelude.linkBreakReason);
-  runSecondary(host, prelude.previousBladeState, prelude.wasReturning, !!prelude.linkBreakReason);
+  runSecondary(host, dt, prelude.previousBladeState, prelude.wasReturning, !!prelude.linkBreakReason);
   host.updateFeedback(dt); runLocomotion(host, dt); runTransport(host); host.updateWave(dt);
   const transformed = stepEnemyActors({ dt, enemies: host.enemies, platforms: host.platforms, player,
     projectiles: host.projectiles, freeze: run.pg?.freeze === true, gravity: CONFIG.world.gravity,
@@ -135,12 +135,14 @@ export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): Liv
   return { blocked: false };
 }
 
-function runSecondary(host: LiveOpeningPhaseHost, previousState: string, wasReturning: boolean, linkBroken: boolean): void {
+function runSecondary(host: LiveOpeningPhaseHost, dt: number, previousState: string, wasReturning: boolean, linkBroken: boolean): void {
   const { blade, run } = host;
   stepWeaponSecondary({ previousState, wasReturning, linkBroken, blade, enemies: host.enemies,
     secondPass: Number(run.mods.secondPass) || 1, redirect: !!run.mods.redirect, stormBurst: Number(run.mods.stormBurst) || 0,
     collisionDamage: CONFIG.weapons.chainblade.collisionDamage, slingSpeed: CONFIG.weapons.chainblade.slingSpeed,
     throwSpeed: CONFIG.blade.throw.speed, damageMultiplier: host.runDamageMultiplier(), distance: host.distance,
+    dt, platforms: host.platforms, width: host.width, groundY: CONFIG.world.groundY,
+    worldCollisionCooldown: CONFIG.weapons.chainblade.worldCollisionCooldown,
     aoe: host.areaDamage, ring: (x, y, radius) => { host.ring(x, y, radius, "perfect"); },
     burst: (enemy, vx, vy) => { host.burst(enemy.x, enemy.y, vx, vy, 7, "perfect"); },
     floater: (enemy, text) => { host.floater(enemy.x, enemy.y - 30, text, true, "perfect"); },

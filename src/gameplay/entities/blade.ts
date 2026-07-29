@@ -1,5 +1,6 @@
 // ------- the momentum blade -------
 import { createBladeCore } from "./blade-core";
+import { chainCollisionSegments, updateChainNodes } from "./blade-chain-runtime";
 import type {
   BladeActionResult, BladeDependencies, BladeEnemyPort, BladePlatformPort, BladeWeaponEvent,
   BladePlayerPort,
@@ -26,6 +27,7 @@ class Blade extends BladeCore {
     super.update(dt, player, platforms);
     this._updateReversalState();
     this._updateRiftlock(dt, player);
+    this._updateChainNodes(dt, this.handPos(player));
   }
 
   resetRiftlock(): void {
@@ -33,6 +35,10 @@ class Blade extends BladeCore {
     this.riftChamberCooldown = 0;
     this.riftFireCooldown = 0;
     this.riftBayonetSwingId = -1;
+    this.riftTriggerHeld = false;
+    this.riftRecoilUntil = 0;
+    this.riftRecoilHits.clear();
+    this.backblastActive = false;
     this.weaponEvents.length = 0;
   }
 
@@ -46,6 +52,12 @@ class Blade extends BladeCore {
     if (this.weapon?.id !== "riftlock" || this.riftBayonetSwingId === this.swingId) return false;
     this.riftBayonetSwingId = this.swingId;
     this.refillRiftChambers(CONFIG.weapons.riftlock.bayonetRefill);
+    return true;
+  }
+
+  claimRiftRecoilCut(target: object): boolean {
+    if (this.weapon?.id !== "riftlock" || CLOCK.sim > this.riftRecoilUntil || this.riftRecoilHits.has(target)) return false;
+    this.riftRecoilHits.add(target);
     return true;
   }
 
@@ -65,7 +77,9 @@ class Blade extends BladeCore {
         if (this.riftChambers < CONFIG.weapons.riftlock.chambers) this.riftChamberCooldown = CONFIG.weapons.riftlock.chamberReform;
       }
     }
-    if (Input.tetherHeld) this._fireRazorRound(player);
+    const pressed = Input.tetherHeld && !this.riftTriggerHeld;
+    this.riftTriggerHeld = Input.tetherHeld;
+    if (pressed) this._fireRazorRound(player);
   }
 
   _fireRazorRound(player: BladePlayerPort): boolean {
@@ -78,12 +92,29 @@ class Blade extends BladeCore {
     this.riftFireCooldown = remote ? CONFIG.weapons.riftlock.remoteShotCooldown : CONFIG.weapons.riftlock.razorCooldown;
     this.riftChamberCooldown = Math.max(this.riftChamberCooldown, CONFIG.weapons.riftlock.chamberReform);
     const recoil = CONFIG.weapons.riftlock.recoil;
-    if (remote) { this.vx -= directionX * recoil; this.vy -= directionY * recoil; }
-    else { this.vx -= directionX * recoil * 0.25; this.vy -= directionY * recoil * 0.25; player.vx -= directionX * recoil; player.vy -= directionY * recoil; }
+    if (remote) {
+      this.vx -= directionX * recoil; this.vy -= directionY * recoil;
+      if (this.state === "captured" && this.hookTarget) {
+        const target = this.hookTarget;
+        const massResponse = 1 / Math.sqrt(Math.max(0.5, target.weight || 1));
+        const transfer = target.isBoss
+          ? CONFIG.weapons.riftlock.captureBossTransfer
+          : CONFIG.weapons.riftlock.captureRecoilTransfer * massResponse;
+        target.vx -= directionX * recoil * transfer;
+        target.vy -= directionY * recoil * transfer;
+      }
+    }
+    else {
+      this.vx -= directionX * recoil * 0.25; this.vy -= directionY * recoil * 0.25;
+      player.vx -= directionX * recoil; player.vy -= directionY * recoil;
+      this.riftRecoilUntil = CLOCK.sim + CONFIG.weapons.riftlock.recoilCutWindow;
+      this.riftRecoilHits.clear();
+    }
     const attackId = this.claimAttack();
     this.weaponEvents.push(Object.freeze({
       type: "razorRound", x: this.tipX, y: this.tipY, vx: directionX * speed, vy: directionY * speed,
-      damage: CONFIG.weapons.riftlock.razorDamage, attackId, throwId: this.throwId, remote,
+      damage: CONFIG.weapons.riftlock.razorDamage * (remote ? this.channel("throwPower") : 1),
+      attackId, throwId: this.throwId, remote, secondary: false,
     }));
     return true;
   }
@@ -94,7 +125,10 @@ class Blade extends BladeCore {
       const reversal = this.reversals[index];
       if (!reversal) continue;
       if (CLOCK.sim > reversal.expiresAt) { this.reversals.splice(index, 1); continue; }
-      if (!reversal.exited && len(this.tipX - reversal.x, this.tipY - reversal.y) >= CONFIG.weapons.sword.reversalExitRadius) {
+      const targetRadius = Number(Reflect.get(reversal.target, "radius")) || 0;
+      const exitRadius = Math.max(CONFIG.weapons.sword.reversalExitRadius,
+        targetRadius + CONFIG.weapons.sword.reversalExitPadding);
+      if (!reversal.exited && len(this.tipX - reversal.x, this.tipY - reversal.y) >= exitRadius) {
         reversal.exited = true;
       }
     }
@@ -121,6 +155,20 @@ class Blade extends BladeCore {
     return "reversal";
   }
 
+  primeReversal(target: object): boolean {
+    if (this.weapon?.id !== "sword") return false;
+    const existing = this.reversals.findIndex((entry) => entry.target === target);
+    if (existing >= 0) this.reversals.splice(existing, 1);
+    const speed = len(this.tipVX, this.tipVY);
+    const directionX = speed > 0 ? this.tipVX / speed : Math.cos(this.angle);
+    const directionY = speed > 0 ? this.tipVY / speed : Math.sin(this.angle);
+    this.reversals.push({
+      target, x: this.tipX, y: this.tipY, directionX, directionY,
+      swingId: this.swingId, expiresAt: CLOCK.sim + CONFIG.weapons.sword.reversalWindow, exited: false,
+    });
+    return true;
+  }
+
   heldDamageMultiplierAt(x: number, y: number): number {
     if (this.weapon?.id !== "greatsword") return 1;
     const dx = this.tipX - this.x, dy = this.tipY - this.y, lengthSquared = dx * dx + dy * dy || 1;
@@ -137,7 +185,8 @@ class Blade extends BladeCore {
     this._updateStandardThrown(dt, player, platforms, false);
   }
 
-  _updateStandardThrown(dt: number, player: BladePlayerPort, platforms: readonly BladePlatformPort[], retrace: boolean): void {
+  _updateStandardThrown(dt: number, player: BladePlayerPort, platforms: readonly BladePlatformPort[], retrace: boolean,
+    maximumLife = CONFIG.blade.throw.maxLife): void {
     const B = CONFIG.blade, T = B.throw;
 
     if (this.state === "returning") {
@@ -145,9 +194,13 @@ class Blade extends BladeCore {
       let target = hand;
       let targetIsThreadcutWaypoint = false;
       if ((this.retraceReturn || retrace) && !this.retraceDone) {
-        const routeTarget = this.threadcutRoute[this.threadcutIndex];
+        let routeTarget = this.threadcutRoute[this.threadcutIndex];
+        while (routeTarget && (routeTarget.target.dead || routeTarget.target.dying)) {
+          this.threadcutIndex -= 1;
+          routeTarget = this.threadcutRoute[this.threadcutIndex];
+        }
         if (routeTarget) {
-          target = routeTarget;
+          target = routeTarget.target;
           targetIsThreadcutWaypoint = true;
         } else if (this.throwOrigin) target = this.throwOrigin;
         else this.retraceDone = true;
@@ -159,7 +212,8 @@ class Blade extends BladeCore {
         else this.retraceDone = true;
       }
       const homeD = len(hand.x - this.x, hand.y - this.y);
-      const returnSpeed = T.returnSpeed * this.channel("returnSpeed");
+      const returnSpeed = Math.max(T.returnSpeed * this.channel("returnSpeed"),
+        this.backblastActive ? CONFIG.weapons.riftlock.backblastSpeed : 0);
       if ((target === hand || this.retraceDone) && homeD <= Math.max(26, returnSpeed * dt)) {
         // reattach to the hand -> back to a normal held blade
         this.state = "held";
@@ -169,6 +223,7 @@ class Blade extends BladeCore {
         this.hookTarget = null; this.secondaryActive = false;
         this.secondaryQueued = false; this.secondaryStartedNew = false;
         this.linkBrokenNew = false;
+        this.backblastActive = false;
         this.caughtNew = true;
         if (this.weapon?.onCatch) this.weapon.onCatch({ blade: this });
         this._recomputeTip(dt);
@@ -188,7 +243,7 @@ class Blade extends BladeCore {
       this.y += this.vy * dt;
       this._recomputeTip(dt);
       this._pushTrail();
-      if (this.flyTime >= T.maxLife || this._embedIfHit(platforms)) {
+      if (this.flyTime >= maximumLife || this._embedIfHit(platforms)) {
         this.impactVX = this.vx; this.impactVY = this.vy;
         this.state = "embedded";
         this.vx = 0; this.vy = 0;
@@ -226,10 +281,15 @@ class Blade extends BladeCore {
     // center-pivoting body, so it owns a swept collision below.
     this._updateStandardThrown(dt, player, this.state === "flying" ? [] : platforms, false);
     if (this.state === "flying" || this.state === "returning") {
-      const spin = this.state === "returning" ? -CONFIG.weapons.greatsword.wheelReturnSpin : this.wheelSpin;
+      const spin = this.state === "returning" ? 0 : this.wheelSpin;
       const translatedCenterX = centerX + (this.x - previousX);
       const translatedCenterY = centerY + (this.y - previousY);
-      const nextAngle = previousAngle + spin * dt;
+      let nextAngle = previousAngle + spin * dt;
+      if (this.state === "returning") {
+        const targetAngle = Math.atan2(this.vy, this.vx) + Math.PI / 2;
+        const delta = Math.atan2(Math.sin(targetAngle - previousAngle), Math.cos(targetAngle - previousAngle));
+        nextAngle = previousAngle + delta * clamp(CONFIG.weapons.greatsword.wheelReturnAlign * dt, 0, 1);
+      }
       if (this.state === "flying") {
         const steps = clamp(Math.ceil(Math.abs(spin * dt) * length / 10), 2, 10);
         let safeAmount = 0;
@@ -314,9 +374,14 @@ class Blade extends BladeCore {
         this.slingAngularVelocity = clamp(this.slingAngularVelocity, -W.maxAngularSpeed, W.maxAngularSpeed);
         this.slingAngle += this.slingAngularVelocity * dt;
         const aimRadius = clamp(aimLength, W.minRadius, W.maxRadius);
+        const priorRadius = this.slingRadius;
         this.slingRadius = Input.tetherHeld
           ? Math.max(W.minRadius, this.slingRadius - W.tightenRate * dt)
           : lerp(this.slingRadius, aimRadius, clamp(3 * dt, 0, 1));
+        if (Input.tetherHeld && this.slingRadius < priorRadius && this.slingRadius > 0) {
+          this.slingAngularVelocity = clamp(this.slingAngularVelocity * priorRadius / this.slingRadius,
+            -W.maxAngularSpeed, W.maxAngularSpeed);
+        }
         const tangentX = -Math.sin(this.slingAngle), tangentY = Math.cos(this.slingAngle);
         const desiredX = hand.x + Math.cos(this.slingAngle) * this.slingRadius;
         const desiredY = hand.y + Math.sin(this.slingAngle) * this.slingRadius;
@@ -326,6 +391,12 @@ class Blade extends BladeCore {
         const targetVY = player.vy + tangentY * this.slingRadius * this.slingAngularVelocity + (desiredY - e.y) * W.orbitSpring;
         e.vx = lerp(e.vx, targetVX, follow);
         e.vy = lerp(e.vy, targetVY, follow);
+        if (resistance < 0.6) {
+          const desiredPlayerX = e.x - Math.cos(this.slingAngle) * this.slingRadius;
+          const desiredPlayerY = e.y - Math.sin(this.slingAngle) * this.slingRadius;
+          player.vx += clamp((desiredPlayerX - player.x) * W.anchorPull * dt, -W.anchorMaxSpeed, W.anchorMaxSpeed);
+          player.vy += clamp((desiredPlayerY - player.y) * W.anchorPull * dt, -W.anchorMaxSpeed, W.anchorMaxSpeed);
+        }
         this.tension = clamp(1 - this.slingRadius / W.maxRadius, 0, 1);
         this._placeTipAt(e.x, e.y, hand);
         this._recomputeTip(dt); return;
@@ -345,7 +416,23 @@ class Blade extends BladeCore {
 
   _updateLooseCannon(dt: number, player: BladePlayerPort, platforms: readonly BladePlatformPort[]): void {
     this.looseCannonT = Math.max(0, this.looseCannonT - dt);
-    this._updateStandardThrown(dt, player, platforms, false);
+    if (this.state === "captured") {
+      const target = this.hookTarget;
+      this.linkT = Math.max(0, this.linkT - dt);
+      if (!target || target.dead || target.dying || this.linkT <= 0 || this.looseCannonT <= 0) {
+        this.hookTarget = null;
+        this.state = "returning";
+      } else {
+        this._placeTipAt(target.x, target.y, this.handPos(player));
+        this.vx = target.vx;
+        this.vy = target.vy;
+        this._recomputeTip(dt);
+        this._pushTrail();
+        return;
+      }
+    }
+    this._updateStandardThrown(dt, player, platforms, false,
+      CONFIG.weapons.riftlock.looseCannonDuration * this.channel("controlDuration"));
     if (this.looseCannonT <= 0 && this.state === "flying") this.state = "returning";
   }
 
@@ -355,6 +442,7 @@ class Blade extends BladeCore {
     this.pierced = new Set(); this.hostile = false; this.stolenBy = null;
     this.secondaryActive = true; this.retraceReturn = !!(opts.retrace); this.retraceDone = false;
     this.threadcutIndex = this.retraceReturn ? this.threadcutRoute.length - 1 : -1;
+    if (this.state === "captured") this.hookTarget = null;
     this.state = "returning";
     return "recalled";
   }
@@ -396,12 +484,17 @@ class Blade extends BladeCore {
   _beginBackblast(player: BladePlayerPort): BladeActionResult {
     const result = this._beginReturn(player);
     if (result === "recalled") {
-      const speed = Math.max(CONFIG.weapons.riftlock.backblastSpeed, len(this.vx, this.vy));
-      this.vx *= -1; this.vy *= -1;
-      if (len(this.vx, this.vy) < 1) {
-        const hand = this.handPos(player), dx = hand.x - this.x, dy = hand.y - this.y, distance = len(dx, dy) || 1;
-        this.vx = dx / distance * speed; this.vy = dy / distance * speed;
-      }
+      const hand = this.handPos(player), awayX = this.x - hand.x, awayY = this.y - hand.y;
+      const distance = len(awayX, awayY) || 1;
+      const attackId = this.claimAttack();
+      this.weaponEvents.push(Object.freeze({
+        type: "backblastRound", x: this.tipX, y: this.tipY,
+        vx: awayX / distance * CONFIG.weapons.riftlock.razorSpeed,
+        vy: awayY / distance * CONFIG.weapons.riftlock.razorSpeed,
+        damage: CONFIG.weapons.riftlock.razorDamage * this.channel("secondaryPower"),
+        attackId, throwId: this.throwId, remote: true, secondary: true,
+      }));
+      this.backblastActive = true;
     }
     return result;
   }
@@ -473,6 +566,7 @@ class Blade extends BladeCore {
     this.retraceReturn = false; this.retraceDone = false;
     this.redirectSpent = false;
     this.impactVX = null; this.impactVY = null;
+    this.backblastActive = false;
     this._repeatHits.clear();
     this.hostile = false; this.stolenBy = null;
     this.state = "flying";
@@ -523,10 +617,15 @@ class Blade extends BladeCore {
     return this.weapon?.throwCollisionPad ?? 4;
   }
 
-  heldCollisionSegment(player: BladePlayerPort): { x1: number; y1: number; x2: number; y2: number; pad: number } {
+  heldCollisionSegment(_player: BladePlayerPort): { x1: number; y1: number; x2: number; y2: number; pad: number } {
+    void _player;
     if (this.weapon?.id === "chainblade") {
-      const hand = this.handPos(player);
-      return { x1: hand.x, y1: hand.y, x2: this.tipX, y2: this.tipY, pad: 5 };
+      const headLength = 28;
+      return {
+        x1: this.tipX - Math.cos(this.angle) * headLength,
+        y1: this.tipY - Math.sin(this.angle) * headLength,
+        x2: this.tipX, y2: this.tipY, pad: 7,
+      };
     }
     const pad = this.weapon?.id === "greatsword" ? 11 : 4;
     return { x1: this.x, y1: this.y, x2: this.tipX, y2: this.tipY, pad };
@@ -539,25 +638,41 @@ class Blade extends BladeCore {
   recordHit(enemy: BladeEnemyPort): void {
     this._repeatHits.set(enemy, CLOCK.sim);
     if (this.weapon?.id === "sword" && this.state === "flying") {
-      const previous = this.threadcutRoute.reduce(
-        (_previous, point) => point,
-        { x: Number.NaN, y: Number.NaN },
-      );
-      if (previous.x !== enemy.x || previous.y !== enemy.y) {
-        this.threadcutRoute.push({ x: enemy.x, y: enemy.y });
+      const previous = this.threadcutRoute.at(-1);
+      if (previous?.target !== enemy) {
+        this.threadcutRoute.push({ x: enemy.x, y: enemy.y, target: enemy });
       }
     }
   }
+
+  canHitHeldEnemy(enemy: object): boolean {
+    return this.weapon?.id !== "greatsword" || this._repeatHits.get(enemy) !== this.swingId;
+  }
+
+  recordHeldHit(enemy: object): void {
+    if (this.weapon?.id === "greatsword") this._repeatHits.set(enemy, this.swingId);
+  }
+
+  applyHeldResistance(enemy: BladeEnemyPort): number {
+    if (this.weapon?.id !== "greatsword") return 1;
+    const W = CONFIG.weapons.greatsword;
+    const retention = enemy.isBoss ? W.bossMomentumRetention
+      : enemy.anchored || enemy.weight > 2.5 ? W.heavyMomentumRetention
+      : enemy.weight > 1.25 ? W.mediumMomentumRetention
+      : W.lightMomentumRetention;
+    this.vx *= retention;
+    this.vy *= retention;
+    return retention;
+  }
+
+  chainCollisionSegments(): readonly { x1: number; y1: number; x2: number; y2: number; pad: number }[] { return chainCollisionSegments(this); }
+  _updateChainNodes(dt: number, hand: { x: number; y: number }): void { updateChainNodes(this, dt, hand, CONFIG); }
 
   canHitThrownEnemy(enemy: BladeEnemyPort): boolean {
     if (this.weapon?.id === "hammer" && this.state === "returning" && this.pierced.size >= CONFIG.weapons.hammer.recallTargetCap) return false;
     return !this.pierced.has(enemy);
   }
 
-  // damage for a held swing (0 if below threshold or not held).
-  // Skill shaping: a clean CUT beats a POKE, and a committed arm swing (the hilt
-  // actually travelling) beats a wrist-flick of the tip. Style->damage is applied
-  // by the combat loop (it needs the live trick multiplier).
   damageAt(): number {
     const B = CONFIG.blade, S = CONFIG.skill;
     if (this.state !== "held" || this.tipSpeed < B.minHitSpeed) return 0;

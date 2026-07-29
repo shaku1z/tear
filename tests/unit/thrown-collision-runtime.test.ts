@@ -3,7 +3,7 @@ import { resolveThrownCollisions, type ThrownBlade, type ThrownCollisionHooks,
   type ThrownCollisionTuning, type ThrownEnemy, type ThrownPlayer, type ThrownRun } from "../../src/gameplay/combat/thrown-collision-runtime";
 
 const tuning: ThrownCollisionTuning = { duelCooldown: 2, throwLowMultiplier: 0.8, throwHighMultiplier: 1.2,
-  recallMultiplier: 1, maxThrowSpeed: 900, throwSpeed: 500, chainbladeHookDuration: 2,
+  recallMultiplier: 1, maxThrowSpeed: 900, throwSpeed: 500, chainbladeHookDuration: 2, riftCaptureDuration: 1.4,
   hitStopSmall: 0.1, shakeSmall: 2, sparkCount: 4,
   colors: { deflected: "d", armoredShield: "a", perfect: "p", charger: "c", bladeTrail: "t" } };
 
@@ -53,6 +53,16 @@ describe("thrown collision runtime", () => {
     fx.weaponHit = () => ({ stop: true, mechanic: "hook" });
     resolveThrownCollisions(weapon, player, [first, second], [], run, tuning, fx);
     expect(firstHit).toHaveBeenCalledOnce(); expect(secondHit).not.toHaveBeenCalled(); expect(weapon.hookTarget).toBe(first);
+  });
+
+  it("lodges Riftlock in a normal target for a bounded Capture state", () => {
+    const weapon = blade(); const foe = enemy(); const fx = hooks();
+    fx.weaponHit = () => ({ stop: true, mechanic: "capture" });
+    resolveThrownCollisions(weapon, player, [foe], [], run, tuning, fx);
+    expect(weapon.state).toBe("captured");
+    expect(weapon.hookTarget).toBe(foe);
+    expect(weapon.linkT).toBe(tuning.riftCaptureDuration);
+    expect(foe.boundT).toBe(tuning.riftCaptureDuration);
   });
 
   it("redirects a spinning weapon's velocity without snapping its visual angle", () => {

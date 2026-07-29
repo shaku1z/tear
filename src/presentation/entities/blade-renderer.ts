@@ -78,9 +78,10 @@ export function createBladeRenderer({
       const hand = blade.lastHand() ?? { x: blade.x, y: blade.y };
       const chainColor = blade.tension > 0.7 ? config.colors.perfect : theme.ink;
       const segments = config.weapons.chainblade.linkSegments;
+      const simulated = blade.chainPoints.length === segments + 1 ? blade.chainPoints : null;
       const sagAmount = (1 - blade.tension) * Math.min(42, len(blade.tipX - hand.x, blade.tipY - hand.y) * 0.16);
-      const points: { x: number; y: number }[] = [];
-      for (let index = 0; index <= segments; index++) {
+      const points: { x: number; y: number }[] = simulated ? blade.chainPoints.slice() : [];
+      if (!simulated) for (let index = 0; index <= segments; index++) {
         const amount = index / segments;
         points.push({
           x: lerp(hand.x, blade.tipX, amount),
@@ -193,12 +194,28 @@ export function createBladeRenderer({
     if (glow) context.restore();
   }
 
+  function drawReversalMarks(context: CanvasRenderingContext2D, blade: BladeRenderSnapshot): void {
+    if (blade.model !== "sword") return;
+    context.strokeStyle = config.colors.perfect;
+    context.lineWidth = 2;
+    for (const mark of blade.reversals) {
+      const requiredX = -mark.directionX, requiredY = -mark.directionY;
+      context.globalAlpha = mark.exited ? 0.9 : 0.45;
+      context.beginPath(); context.arc(mark.x, mark.y, mark.exited ? 16 : 12, 0, Math.PI * 2);
+      context.moveTo(mark.x, mark.y);
+      context.lineTo(mark.x + requiredX * 18, mark.y + requiredY * 18);
+      context.stroke();
+    }
+    context.globalAlpha = 1;
+  }
+
   return {
     draw(surface: unknown, blade: BladeRenderSnapshot, player: BladePlayerPort): void {
       if (!isCanvasSurface(surface)) return;
       const context = surface;
       const hand = blade.handPos(player);
       drawTrail(context, blade);
+      drawReversalMarks(context, blade);
 
       if (blade.state === "held") {
         if (!blade.finalFree) {

@@ -125,7 +125,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
 
   createLiveWaveComposition({
     dependencies: d, lifecycle: options.lifecycle, controllers: options.controllers,
-    stage, story, run: options.run, player: options.player, enemies: options.enemies, spawn: content.spawn,
+    stage, story, run: options.run, player: options.player, blade: options.blade, enemies: options.enemies, spawn: content.spawn,
     loreBusy: campaignRuntime.loreBusy, achievementTracking: options.achievementTracking,
     achievementCheck: options.achievementCheck, achievementTracker: options.achievementTracker,
     beginWipe: options.beginWipe, loadStage: options.controllers.api.loadStage,

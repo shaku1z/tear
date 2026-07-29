@@ -17,6 +17,8 @@ export interface LiveCombatEntity {
   deflectDmg?: number; pierce?: boolean; pierced?: ReadonlySet<unknown> | null; unparryable?: boolean; dmg?: number | null;
   root?: number; curve?: boolean; curved?: boolean; curveT?: number; bomb?: boolean; mud?: boolean; mine?: boolean;
   armed?: boolean; armT?: number; life?: number;
+  playerOwned?: boolean; weaponId?: string | null; attackId?: number; throwId?: number;
+  remote?: boolean; secondary?: boolean;
   hit?(damage: number, dx: number, dy: number): number; deflect?(dx: number, dy: number, speed: number, perfect: boolean): void;
   counterSweeper?(method: string, dx: number, dy: number, speed: number): boolean;
   shatterSweeper?(reason: string): void;
@@ -48,6 +50,9 @@ export interface CombatEntityRuntimeHooks {
   noteFirstDamage(enemy: LiveCombatEntity, first: boolean): void; reflectedHit(enemy: LiveCombatEntity,
     projectile: LiveCombatEntity | null, source: LiveCombatEntity | null): void; bossHit(enemy: LiveCombatEntity): void;
   onKill(enemy: LiveCombatEntity, cause: string): void;
+  weaponProjectileHit?(projectile: LiveCombatEntity, enemy: LiveCombatEntity,
+    hit: Readonly<{ damage: number; dx: number; dy: number; weaponId: string; attackId: number;
+      throwId: number; remote: boolean; secondary: boolean }>): void;
   areaDamage(x: number, y: number, radius: number, damage: number, playerOwned: boolean): number;
 }
 
@@ -159,7 +164,10 @@ export class CombatEntityRuntime {
         unparryable: !!projectile.unparryable, dmg: projectile.dmg, root: legacyZero(projectile.root),
         curve: !!projectile.curve, curved: !!projectile.curved, curveT: legacyZero(projectile.curveT),
         bomb: !!projectile.bomb, mud: !!projectile.mud, mine: !!projectile.mine, armed: !!projectile.armed,
-        armT: legacyZero(projectile.armT), life: projectile.life ?? 0 } as ProjectileState;
+        armT: legacyZero(projectile.armT), life: projectile.life ?? 0,
+        playerOwned: !!projectile.playerOwned, weaponId: projectile.weaponId ?? null,
+        attackId: projectile.attackId ?? 0, throwId: projectile.throwId ?? 0,
+        remote: !!projectile.remote, secondary: !!projectile.secondary } as ProjectileState;
     });
   }
 
@@ -278,6 +286,13 @@ export class CombatEntityRuntime {
     else if (intent.type === "achievement-max") h.maxStat(intent.stat, intent.value); else if (intent.type === "achievement-check") h.checkAchievements();
     else if (intent.type === "damage-player") this.#damagePlayer(intent, projectile, objects);
     else if (intent.type === "damage-enemy") this.#damageEnemy(intent, projectile, objects);
+    else if (intent.type === "weapon-projectile-hit") {
+      const enemy = objects.get(intent.enemyId);
+      if (projectile && enemy && !enemy.dead && !enemy.dying) {
+        if (h.weaponProjectileHit) h.weaponProjectileHit(projectile, enemy, intent);
+        else enemy.hit?.(intent.damage, intent.dx, intent.dy);
+      }
+    }
     else if (intent.type === "damage-enemy-aoe") this.#damageArea(intent, objects);
   }
 

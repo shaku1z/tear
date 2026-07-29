@@ -91,6 +91,8 @@ class Projectile {
   embeddedLife: number; groundImpact: boolean; whistleStage: number; sourceStolen: unknown;
   embedded: boolean; harmless: boolean; _embedNotified: boolean; _groundImpactDone: boolean;
   sweeperStyle?: string; bossAttack?: string; crescent?: boolean; quake?: boolean; shatterReason?: string;
+  declare playerOwned: boolean; declare weaponId: string | null; declare attackId: number; declare throwId: number;
+  declare remote: boolean; declare secondary: boolean;
 
   constructor(x: number, y: number, vx: number, vy: number) {
     this.x = x; this.y = y;

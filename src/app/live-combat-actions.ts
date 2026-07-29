@@ -31,6 +31,41 @@ export function createLiveCombatActions<
       f.fireMod(f.modHook("onReflectedHit"), f.makeEvent(enemy.x, enemy.y, enemy, "reflected",
         { projectile: shot, sourceEnemy: source, applySever: f.applySever }));
     },
+    weaponProjectileHit(projectile, target, hit) {
+      const enemy = target as Enemy;
+      let damage = hit.damage;
+      if (hit.secondary && Number(run().mods.secondPass)) damage *= Number(run().mods.secondPass);
+      damage *= f.runDamageMultiplier() * enemy.damageTakenMult();
+      const first = enemy.firstPlayerDamageAt == null;
+      enemy.hit(damage, hit.dx, hit.dy);
+      f.noteFirstDamage(enemy, first);
+      const event = f.makeEvent(enemy.x, enemy.y, enemy, hit.secondary ? "secondary" : "weaponProjectile", {
+        type: "weaponProjectileHit", weaponId: hit.weaponId, attackId: hit.attackId,
+        throwId: hit.throwId, remote: hit.remote, secondary: hit.secondary, damageDealt: damage,
+      });
+      f.fireMod(f.modHook("onHit"), event);
+      if (hit.secondary) f.fireMod(f.modHook("onReturnHit"), event);
+      if (hit.remote) {
+        f.emitThrowResolve(enemy, damage);
+        const ramp = Number(run().mods.throwRamp) || 0;
+        if (ramp > 0) {
+          const scale = 1 + ramp, weapon = blade();
+          weapon.throwDmg = Math.min(weapon.throwDmg * scale, (weapon.throwBaseDmg ?? weapon.throwDmg) * 2);
+          const speed = Math.hypot(weapon.vx, weapon.vy), cap = d.CONFIG.blade.throw.maxSpeed * 1.2;
+          if (speed > 0) {
+            const next = Math.min(cap, speed * scale);
+            weapon.vx = weapon.vx / speed * next; weapon.vy = weapon.vy / speed * next;
+          }
+        }
+      }
+      if (run().mods.razorStun && !enemy.isBoss) enemy.stun = Math.max(enemy.stun, 0.45);
+      d.FX.burst(enemy.x, enemy.y, hit.dx, hit.dy, 7, enemy.color);
+      f.addFloater(enemy.x, enemy.y - 28, String(Math.round(damage)), true, d.CONFIG.colors.perfect);
+      f.logWeaponEvent(hit.secondary ? "backblastRoundHit" : "razorRoundHit",
+        { attackId: hit.attackId, throwId: hit.throwId, remote: hit.remote, damage });
+      projectile.dead = true;
+      if (enemy.dead) context.resolveKill(enemy, "skill");
+    },
     bossHit: f.entityBossHit, onKill: f.entityResolveKill,
     areaDamage: (x, y, radius, damage, playerOwned) => f.areaDamage(x, y, radius, damage, playerOwned),
   };
@@ -49,27 +84,16 @@ export function createLiveCombatActions<
     updateWeaponAbilities: f.updateWeaponAbilities,
     flushWeaponActions(events) {
       for (const event of events) {
-        const travel = 760, endX = event.x + event.vx / Math.max(1, Math.hypot(event.vx, event.vy)) * travel;
-        const endY = event.y + event.vy / Math.max(1, Math.hypot(event.vx, event.vy)) * travel;
-        const target = enemies().find((enemy) => !enemy.dead && !enemy.dying
-          && d.segCircle(event.x, event.y, endX, endY, enemy.x, enemy.y, enemy.radius + 6));
-        const impactX = target?.x ?? endX, impactY = target?.y ?? endY;
-        d.FX.ribbon(event.x, event.y, impactX, impactY, d.CONFIG.colors.perfect);
+        const shot = new d.Projectile(event.x, event.y, event.vx, event.vy);
+        shot.setFamily("weaponProjectile"); shot.playerOwned = true; shot.weaponId = "riftlock";
+        shot.attackId = event.attackId; shot.throwId = event.throwId; shot.remote = event.remote;
+        shot.secondary = event.secondary; shot.kind = "razor"; shot.r = d.CONFIG.weapons.riftlock.razorRadius;
+        shot.life = d.CONFIG.weapons.riftlock.razorLife; shot.dmg = event.damage;
+        shot.tint = d.CONFIG.colors.perfect; shot.unparryable = true; shot.counterplay = "weapon";
+        projectiles().push(shot as unknown as Projectile);
         d.FX.burst(event.x, event.y, event.vx, event.vy, 5, d.CONFIG.colors.perfect);
-        if (target) {
-          const first = target.firstPlayerDamageAt == null;
-          target.hit(event.damage, event.vx, event.vy);
-          f.noteFirstDamage(target, first);
-          if (target.dead) context.resolveKill(target, "skill");
-          d.FX.burst(target.x, target.y, event.vx, event.vy, 7, target.color);
-          f.addFloater(target.x, target.y - 28, String(Math.round(event.damage)), true, d.CONFIG.colors.perfect);
-        }
-        if (!event.remote) {
-          f.areaDamage(player().x, player().y, d.CONFIG.weapons.riftlock.recoilCutRadius,
-            d.CONFIG.weapons.riftlock.recoilCutDamage);
-          d.FX.ring(player().x, player().y, 9, d.CONFIG.colors.perfect);
-        }
-        f.logWeaponEvent("razorRound", { attackId: event.attackId, throwId: event.throwId, remote: event.remote, hit: target !== undefined });
+        f.logWeaponEvent(event.type, { attackId: event.attackId, throwId: event.throwId,
+          remote: event.remote, secondary: event.secondary });
       }
     },
     updateWorldHazards: (seconds) => { updateWorldHazards(context, seconds); },

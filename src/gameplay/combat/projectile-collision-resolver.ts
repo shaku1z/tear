@@ -115,6 +115,29 @@ function planReflectedCollision(
   return intents;
 }
 
+function planWeaponProjectileCollision(
+  projectile: ProjectileState,
+  input: ProjectileCollisionInput,
+): readonly CombatEntityIntent[] {
+  for (const actor of input.actors) {
+    if (actor.dead || actor.dying || actor.spawnT > 0) continue;
+    if (distance(projectile.x, projectile.y, actor.x, actor.y) > projectile.r + actor.radius) continue;
+    const damage = projectile.dmg ?? input.tuning.projectileDamage;
+    return [
+      {
+        type: "weapon-projectile-hit", enemyId: actor.id, projectileId: projectile.id,
+        damage, dx: projectile.vx, dy: projectile.vy,
+        weaponId: projectile.weaponId ?? "riftlock", attackId: projectile.attackId ?? 0,
+        throwId: projectile.throwId ?? 0, remote: !!projectile.remote, secondary: !!projectile.secondary,
+      },
+      { type: "fx-burst", x: projectile.x, y: projectile.y, dx: projectile.vx, dy: projectile.vy,
+        count: input.tuning.sparkCount, color: input.tuning.deflectedColor },
+      { type: "projectile-patch", projectileId: projectile.id, patch: { dead: true } },
+    ];
+  }
+  return [];
+}
+
 function planHostileCollision(
   projectile: ProjectileState,
   input: ProjectileCollisionInput,
@@ -163,6 +186,9 @@ export function planProjectileCollisions(input: ProjectileCollisionInput): reado
   for (const projectile of input.projectiles) {
     if (projectile.dead || projectile.bomb || projectile.mine || projectile.mud) continue;
     if (projectile.family === "sweeper") intents.push(...planSweeperCollision(projectile, input));
+    else if (projectile.playerOwned && projectile.family === "weaponProjectile") {
+      intents.push(...planWeaponProjectileCollision(projectile, input));
+    }
     else if (projectile.deflected) intents.push(...planReflectedCollision(projectile, input));
     else intents.push(...planHostileCollision(projectile, input));
   }

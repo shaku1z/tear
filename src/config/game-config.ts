@@ -106,7 +106,8 @@ const CONFIG = {
   weapons: {
     sword: {
       reversalWindow: 1.45, reversalExitRadius: 86, reversalOppositeDot: -0.55,
-      reversalDamageMult: 1.65, threadcutDamageMult: 1.35,
+      reversalExitPadding: 18, reversalDamageMult: 1.65, reversalStun: 0.24,
+      threadcutDamageMult: 1.35,
     },
     hammer: {
       weakFloor: 0.28, commitmentRef: 760, fullCommitMult: 1.32,
@@ -115,8 +116,10 @@ const CONFIG = {
       meteorBreak: 75, recallTargetCap: 2,
     },
     greatsword: {
-      weakNearHilt: 0.48, cleaveThreshold: 0.68, cleaveDamageMult: 1.12,
-      wheelSpin: 14, wheelReturnSpin: 19, wheelReturnMult: 1.28,
+      weakNearHilt: 0.48, cleaveThreshold: 0.68, cleaveDamageMult: 1,
+      lightMomentumRetention: 0.92, mediumMomentumRetention: 0.78,
+      heavyMomentumRetention: 0.55, bossMomentumRetention: 0.35,
+      wheelSpin: 14, wheelReturnAlign: 13, wheelReturnMult: 1.28,
     },
     chainblade: {
       lashForce: 780, hookDuration: 3.1, slingSpeed: 1650, collisionDamage: 28,
@@ -125,12 +128,15 @@ const CONFIG = {
       angularAcceleration: 34, angularDamping: 4.2, maxAngularSpeed: 8.5,
       orbitSpring: 18, orbitFollow: 9, releaseOrbitMult: 1.08,
       releaseMomentumCarry: 0.18, maxReleaseSpeed: 2600, knockbackReference: 10,
+      anchorPull: 11, anchorMaxSpeed: 900, worldCollisionCooldown: 0.16,
     },
     riftlock: {
       chambers: 4, chamberReform: 1.35, razorCooldown: 0.24, razorDamage: 42,
-      razorSpeed: 1450, recoil: 520, recoilCutRadius: 35, recoilCutDamage: 25,
+      razorSpeed: 1450, razorRadius: 6, razorLife: 1.15, recoil: 520,
+      recoilCutWindow: 0.2,
       bayonetRefill: 1, perfectParryRefill: 2, catchRefill: 1,
       looseCannonDuration: 4.2, remoteShotCooldown: 0.3, backblastSpeed: 4200,
+      captureDuration: 1.4, captureRecoilTransfer: 0.72, captureBossTransfer: 0.16,
     },
   },
 
@@ -512,7 +518,9 @@ const CONFIG = {
       { at: 110, mult: 4,   name: "SAVAGE" },
       { at: 175, mult: 5,   name: "TEARING!" },
     ],
-    pts: { hit: 2, reversal: 8, break: 8, cleave: 5, lash: 5, throwHit: 4, threadcut: 8, wheelCut: 5, deflect: 5, launch: 5, slam: 8, superslam: 11, updraft: 10, parry: 12 },
+    pts: { hit: 2, reversal: 8, break: 8, cleave: 5, lash: 5, recoilCut: 7,
+      throwHit: 4, threadcut: 8, wheelCut: 5, deflect: 5, launch: 5, slam: 8,
+      superslam: 11, updraft: 10, parry: 12 },
   },
 
   // ---- difficulties (selectable from the menu) ----

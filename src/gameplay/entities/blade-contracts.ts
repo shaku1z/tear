@@ -13,10 +13,12 @@ import type {
 export type GameConfig = typeof GAME_CONFIG;
 
 export interface BladePoint { x: number; y: number }
+export interface BladeThreadcutWaypoint extends BladePoint { target: BladeEnemyPort }
 export interface BladeWeaponEvent {
-  readonly type: "razorRound";
+  readonly type: "razorRound" | "backblastRound";
   readonly x: number; readonly y: number; readonly vx: number; readonly vy: number;
   readonly damage: number; readonly attackId: number; readonly throwId: number; readonly remote: boolean;
+  readonly secondary: boolean;
 }
 export type BladeActionResult = WeaponActionResult;
 export interface BladeChannels {
@@ -90,6 +92,10 @@ export interface BladeRenderSnapshot {
   readonly trail: readonly Readonly<{ hx: number; hy: number; tx: number; ty: number }>[];
   readonly trailColor?: string; readonly glowColor?: string; readonly restoredTrail?: boolean;
   readonly tension: number; readonly riftChambers: number; readonly riftChamberCooldown: number;
+  readonly chainPoints: readonly BladePoint[];
+  readonly reversals: readonly Readonly<{
+    x: number; y: number; directionX: number; directionY: number; exited: boolean;
+  }>[];
   readonly finalFree?: boolean;
   readonly hostile: boolean; readonly stolenBy: unknown; readonly hideThrowUI?: boolean;
   handPos(player: BladePlayerPort): BladePoint;
