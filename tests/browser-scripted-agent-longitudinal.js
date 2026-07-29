@@ -16,7 +16,7 @@ withJourney({ name: "C24 longitudinal earned-profile journey", port: 8155 }, asy
   await page.getByLabel("Profile").selectOption("competent");
   await page.getByLabel("Mode").selectOption("campaign");
   await page.getByLabel("Difficulty").selectOption("easy");
-  await page.getByLabel("Weapon").selectOption("ringblade");
+  await page.getByLabel("Weapon").selectOption("riftlock");
   await page.getByLabel("Journey").selectOption("longitudinal-earned-profile");
   await page.getByLabel("Seed").fill(String(baseSeed));
   await page.getByLabel("Max episodes").fill(String(maxEpisodes));

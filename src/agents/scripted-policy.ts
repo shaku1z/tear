@@ -95,35 +95,20 @@ export interface BladeMotorDecision {
   readonly actions: readonly GameAction[];
 }
 
-const CIRCUIT_SECONDARY_RETURN_ENERGY = 0.8;
-
 export class BladeMotorModule implements TearAgentModule<BladeMotorInput, BladeMotorDecision> {
-  #circuitReturnIssued = false;
-
   decide(input: BladeMotorInput): BladeMotorDecision {
     const { state } = input.observation;
     const target = input.target;
     const observedBoss = input.observation.boss ?? state.diagnostics?.boss;
-    const sourceEncounter = state.run.weapon !== "ringblade" && observedBoss?.id === "source";
+    const sourceEncounter = observedBoss?.id === "source";
     const sourceVoidWindow = sourceEncounter && target?.behaviorMode === "void";
-    const activeCircuit = state.run.weapon === "ringblade" && state.blade.state === "circuiting";
-    if (!activeCircuit) this.#circuitReturnIssued = false;
-    if (["thrown", "embedded", "latched"].includes(state.blade.state)) {
+    if (["thrown", "embedded", "hooked"].includes(state.blade.state)) {
       return { maneuver: "recall", actions: [{ type: "weapon", intent: "recall", phase: "pressed" }] };
     }
-    if (activeCircuit) {
-      const shouldReturn = state.blade.circuitEnergy !== undefined
-        && state.blade.circuitEnergy <= CIRCUIT_SECONDARY_RETURN_ENERGY;
-      if (shouldReturn && !this.#circuitReturnIssued) {
-        this.#circuitReturnIssued = true;
-        return {
-          maneuver: "secondary",
-          actions: [{ type: "weapon", intent: "secondary", phase: "pressed" }],
-        };
-      }
-      return { maneuver: "recall", actions: [] };
+    if (state.blade.state === "flying" && state.run.weapon === "riftlock") {
+      return { maneuver: "recall", actions: [{ type: "weapon", intent: "recall", phase: "pressed" }] };
     }
-    if (["flying", "returning", "reeling", "yanking", "circuiting"].includes(state.blade.state)) {
+    if (["flying", "returning", "slinging"].includes(state.blade.state)) {
       return { maneuver: "recall", actions: [] };
     }
     if (target !== undefined && sourceVoidWindow) {
@@ -160,9 +145,9 @@ export class BladeMotorModule implements TearAgentModule<BladeMotorInput, BladeM
       && Math.hypot(entity.x - state.player.x, entity.y - state.player.y) < 260);
     const scheduledStyleThrow = (input.profile === "style" || input.profile === "chaos")
       && state.tick % 120 < 2;
-    const circuitLaunch = state.run.weapon === "ringblade" && distance > 120;
+    const riftlockLaunch = state.run.weapon === "riftlock" && distance > 120;
     if (target.kind === "wraith"
-      || circuitLaunch
+      || riftlockLaunch
       || (!nearbyHostile && distance > 420 && scheduledStyleThrow)) {
       return { maneuver: "throw", actions: [directAim, { type: "weapon", intent: "throw", phase: "pressed" }] };
     }
@@ -216,8 +201,8 @@ export class MovementModule implements TearAgentModule<BladeMotorInput, Movement
     const player = input.observation.state.player;
     const target = input.target;
     const blade = input.observation.state.blade;
-    const ringblade = input.observation.state.run.weapon === "ringblade";
-    if (["embedded", "latched"].includes(blade.state)
+    const riftlock = input.observation.state.run.weapon === "riftlock";
+    if (["embedded", "hooked"].includes(blade.state)
       && Math.hypot(blade.handX - player.x, blade.handY - player.y) > 210) {
       const x = blade.handX >= player.x ? INPUT_AXIS_SCALE : -INPUT_AXIS_SCALE;
       return {
@@ -265,7 +250,7 @@ export class MovementModule implements TearAgentModule<BladeMotorInput, Movement
       || /attack|charge|commit|wind|pounce|slam|stomp|strike|swing/u.test(target.state ?? "");
     const evade = away;
     const moveX = atLeftEdge ? INPUT_AXIS_SCALE : atRightEdge ? -INPUT_AXIS_SCALE
-      : danger ? evade : ringblade ? away : distance < 100 ? away : distance > 145 ? toward : orbit;
+      : danger ? evade : riftlock ? away : distance < 100 ? away : distance > 145 ? toward : orbit;
     const dropThrough = target.y > player.y + 100 && player.grounded;
     const powerSlam = target.y > player.y + (armoredTarget ? 25 : 70)
       && !player.grounded && distance < 300;
@@ -279,9 +264,9 @@ export class MovementModule implements TearAgentModule<BladeMotorInput, Movement
     if ((dropThrough && input.observation.state.tick % 45 < 2) || route.jump) {
       actions.push({ type: "jump", phase: "pressed" });
     }
-    if ((ringblade || danger || target.y < player.y - 70 || distance < 240)
+    if ((riftlock || danger || target.y < player.y - 70 || distance < 240)
       && player.grounded && !dropThrough) actions.push({ type: "jump", phase: "pressed" });
-    if (ringblade && player.dashCharges > 0 && (distance < 360 || atLeftEdge || atRightEdge)) {
+    if (riftlock && player.dashCharges > 0 && (distance < 360 || atLeftEdge || atRightEdge)) {
       actions.push({ type: "dash", x: routedX, y: 0 });
     } else if (armoredTarget && player.grounded && distance < 180 && player.dashCharges > 0) {
       actions.push({ type: "dash", x: 0, y: -INPUT_AXIS_SCALE });

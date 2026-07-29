@@ -13,6 +13,11 @@ import type {
 export type GameConfig = typeof GAME_CONFIG;
 
 export interface BladePoint { x: number; y: number }
+export interface BladeWeaponEvent {
+  readonly type: "razorRound";
+  readonly x: number; readonly y: number; readonly vx: number; readonly vy: number;
+  readonly damage: number; readonly attackId: number; readonly throwId: number; readonly remote: boolean;
+}
 export type BladeActionResult = WeaponActionResult;
 export interface BladeChannels {
   throwPower: number; throwSpeed: number; remoteRange: number;
@@ -48,7 +53,7 @@ export interface BladeWeaponPort {
   onThrowLaunch(context: WeaponBladeContext): void;
   updateThrown(context: WeaponUpdateContext): void;
   onSecondaryThrowAction(context: WeaponPlayerContext): BladeActionResult;
-  onCatch?(context: BladeWeaponContext): void;
+  onCatch?(context: WeaponBladeContext): void;
 }
 
 export interface BladeInputPort {
@@ -83,8 +88,8 @@ export interface BladeRenderSnapshot {
   readonly state: string; readonly throwSizeMult: number; readonly model: string;
   readonly trail: readonly Readonly<{ hx: number; hy: number; tx: number; ty: number }>[];
   readonly trailColor?: string; readonly glowColor?: string; readonly restoredTrail?: boolean;
-  readonly tension: number; readonly circuitEnergy: number; readonly circuitEnergyMax: number;
-  readonly circuitOrbit: number; readonly orbit: number; readonly finalFree?: boolean;
+  readonly tension: number; readonly riftChambers: number; readonly riftChamberCooldown: number;
+  readonly finalFree?: boolean;
   readonly hostile: boolean; readonly stolenBy: unknown; readonly hideThrowUI?: boolean;
   handPos(player: BladePlayerPort): BladePoint;
   lastHand(): BladePoint | null;

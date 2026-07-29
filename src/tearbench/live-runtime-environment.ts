@@ -222,6 +222,7 @@ export function createLiveTearRuntimeEnvironment(
         context.selectBoss(nextScenario.start.boss);
       }
       context.stopFrameLoop();
+      context.resetEntityIdentities();
       context.setRunSeed(numericSeed(nextScenario.seed));
       context.selectWeapon(nextScenario.start.weapon);
       context.startRun(nextScenario.start.mode, nextScenario.start.difficulty);

@@ -1,4 +1,5 @@
 import { MusicDirector } from "../audio/music-director"; import { RunLifecycleController } from "../gameplay/run/lifecycle"; import { BOSS_ROSTER } from "../gameplay/run/content-director";
+import { migrateWeaponSelection } from "../gameplay/weapon-selection";
 import { projectCanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { CanvasUiButton } from "../presentation/screens/button-layer";
 import { blendHex as blendCol, easeOut as ez } from "../presentation/world/primitives";
@@ -46,12 +47,11 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   let ghostV3EventSequence = 0;
   GHOST.setRecordingObserver(ghostV3 === null ? null : {
     started(context) {
-      Input.startSemanticRecording();
       ghostV3EventSequence = 0;
       ghostV3.start({ sessionId: `ghost-v3-${context.runId ?? `run-${String(Date.now())}`}`,
         createdAt: new Date().toISOString(), provenance: context });
     },
-    stopped(meta) { void ghostV3.finish(meta); Input.stopSemanticRecording(); },
+    stopped(meta) { void ghostV3.finish(meta); },
   });
   GHOST.subscribe((event) => { ghostV3?.record("events", event.tick, createLiveGhostCausalEvent(event, ++ghostV3EventSequence)); });
   const sessionServices = createLiveSessionServices({
@@ -75,6 +75,9 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   let state: LegacyAppScreen = APP.screen;
   function setState(next: LegacyAppScreen, context?: LegacyTransitionContext): LegacyAppScreen {
     state = APP.transition(next, context);
+    // Input events can arrive before the next animation frame refreshes this flag.
+    // Keep touch routing aligned with an immediate menu/gameplay state transition.
+    Input.uiMode = state !== "playing";
     return state;
   }
   let player: GamePlayer;
@@ -124,7 +127,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     temporaryWalls: () => tempWalls, setTemporaryWalls: (value) => { tempWalls = value; },
     bossIntro: () => bossIntro, setBossIntro: (value) => { bossIntro = value; },
     bossBeat: () => bossBeat, setBossBeat: (value) => { bossBeat = value; },
-    selectedWeapon: () => selWeapon, setSelectedWeapon: (value) => { selWeapon = value; },
+    selectedWeapon: () => selWeapon, setSelectedWeapon: (value) => { selWeapon = migrateWeaponSelection(value); },
     outcome: () => overInfo, setOutcome: (value) => { overInfo = value; },
     lastRecording: () => lastGhost, setLastRecording: (value) => { lastGhost = value; },
     lastVaultId: () => lastVaultId, setLastVaultId: (value) => { lastVaultId = value; },
@@ -528,7 +531,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
       stage: () => stageRuntime.current, lifecycle: () => RUN_LIFECYCLE.snapshot(),
       choiceIds: () => liveRewardChoiceIds(actionRouting), progression: () => ({ wallet: dependencies.META.coins(), lifetimeEarned: dependencies.META.data.lifetimeEarned, levels: Object.fromEntries(dependencies.SHOP.map((item) => [item.id, dependencies.META.level(item.id)])), shop: dependencies.SHOP.map((item) => ({ id: item.id, level: dependencies.META.level(item.id), maxLevel: item.maxLevel, cost: dependencies.META.cost(item), enabled: dependencies.META.canBuy(item) })) }), outcome: () => overInfo, screen: () => state,
       setScreen: (screen) => { setState(screen); }, selectBoss: (bossId) => { selBoss = bossId; },
-      selectWeapon: (weaponId) => { selWeapon = weaponId; hostState.setSelectedWeapon(weaponId); },
+      selectWeapon: (weaponId) => { hostState.setSelectedWeapon(weaponId); },
       setRunSeed: (seed) => { tearBenchRunSeed = seed; }, startRun: (mode, difficulty) => { startRunImmediate(mode, difficulty); },
       stopFrameLoop: () => { frameDriver.stop(); }, startFrameLoop: () => { frameDriver.start(({ deltaSeconds }) => { combatHost.frameCoordinator.run(deltaSeconds); }); }, pushAction: (action) => { Input.semantic.push(action); },
       setSemanticInputAuthority: (active) => { semanticInputAuthority = active; },
@@ -536,6 +539,9 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
       activateControl: (action) => { presentationHost.render(); const encoded = JSON.stringify(action); const control = uiButtons.find((entry) => entry.enabled !== false && JSON.stringify(entry.semanticAction) === encoded); if (control === undefined) return false; screenComposition.dispatch(action); return true; },
       terminateRun: () => { if (RUN_LIFECYCLE.phase !== "terminated") RUN_LIFECYCLE.terminate("quit"); if (GHOST.recording()) GHOST.stopRec({ tearBenchTerminated: true }); setState("paused"); },
       resetSemanticInput: () => { Input.startSemanticRecording(); },
+      resetEntityIdentities: () => {
+        combatRuntime.restoreIdentityState({ nextEntityId: 1, nextWallSequence: 1, nextSlowZoneSequence: 1, claimedIds: [] });
+      },
       advanceFixedTick: () => { const tick = simulation.tick + 1; authoritativeStep.execute(tick, 1 / 120, Input.drainSemanticActions(tick)); simulation.reset(tick); DIAG.gauge("simulationTick", tick); DIAG.gauge("simulationSteps", 1); return 1; },
       advanceRenderFrame: (deltaSeconds) => liveFrameRuntime.advanceSimulation(deltaSeconds), advanceApplicationFrame: (deltaSeconds) => { combatHost.frameCoordinator.run(deltaSeconds); },
       authoritative: () => authoritativeStep.lastResult, random: () => dependencies.GAME_RANDOM_STREAMS.snapshot(),

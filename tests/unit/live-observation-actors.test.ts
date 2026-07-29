@@ -12,12 +12,12 @@ describe("live actor observation projection", () => {
     expect(projectLiveBehaviorMode({ mode: "" }, "A")).toBeUndefined();
   });
 
-  it("exposes finite ringblade mechanics to Class A/B but never Class C", () => {
-    const ringblade = { orbit: 0.75, circuitEnergy: 2.5 };
-    expect(projectLiveBladeMechanics(ringblade, "A")).toEqual(ringblade);
-    expect(projectLiveBladeMechanics(ringblade, "B")).toEqual(ringblade);
-    expect(projectLiveBladeMechanics(ringblade, "C")).toEqual({});
-    expect(projectLiveBladeMechanics({ orbit: Number.NaN }, "A")).toEqual({});
+  it("exposes finite Riftlock chamber mechanics to Class A/B but never Class C", () => {
+    const riftlock = { riftChambers: 3, riftChamberCooldown: 0.75 };
+    expect(projectLiveBladeMechanics(riftlock, "A")).toEqual({ chambers: 3, chamberCooldown: 0.75 });
+    expect(projectLiveBladeMechanics(riftlock, "B")).toEqual({ chambers: 3, chamberCooldown: 0.75 });
+    expect(projectLiveBladeMechanics(riftlock, "C")).toEqual({});
+    expect(projectLiveBladeMechanics({ riftChambers: Number.NaN }, "A")).toEqual({});
   });
 
   it("projects finite avoidance geometry and timing only for A/B", () => {

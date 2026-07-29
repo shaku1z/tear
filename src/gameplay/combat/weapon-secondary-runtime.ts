@@ -4,15 +4,15 @@ export interface SecondaryEnemy {
 }
 export interface SecondaryBlade {
   state: string; x: number; y: number; tipX: number; tipY: number; throwDmg: number; throwId: number;
-  anchorTarget?: SecondaryEnemy | null; chainCollided?: Set<SecondaryEnemy>; caughtNew: boolean; embeddedNew: boolean;
-  redirectSpent?: boolean; flyTime: number; vx: number; vy: number; impactVX?: number | null; impactVY?: number | null; anchorTerrain?: boolean;
+  hookTarget?: SecondaryEnemy | null; slingCollided?: Set<SecondaryEnemy>; caughtNew: boolean; embeddedNew: boolean;
+  redirectSpent?: boolean; flyTime: number; vx: number; vy: number; impactVX?: number | null; impactVY?: number | null;
   channel(name: string): number; claimImpact(): boolean;
 }
 export interface WeaponSecondaryOptions {
   readonly previousState: string; readonly wasReturning: boolean; readonly linkBroken: boolean;
   readonly blade: SecondaryBlade; readonly enemies: SecondaryEnemy[];
   readonly secondPass: number; readonly redirect: boolean; readonly stormBurst: number;
-  readonly collisionDamage: number; readonly yankSpeed: number; readonly throwSpeed: number;
+  readonly collisionDamage: number; readonly slingSpeed: number; readonly throwSpeed: number;
   readonly damageMultiplier: number;
   distance(ax: number, ay: number, bx: number, by: number): number;
   aoe(x: number, y: number, radius: number, damage: number): void; ring(x: number, y: number, radius: number): void;
@@ -25,16 +25,12 @@ export interface WeaponSecondaryOptions {
 
 export function stepWeaponSecondary(options: WeaponSecondaryOptions): void {
   const { blade } = options;
-  if (options.previousState === "reeling" && blade.state === "returning" && !options.linkBroken) {
-    const damage = blade.throwDmg * 0.55 * blade.channel("secondaryPower") * options.secondPass;
-    options.aoe(blade.x, blade.y, 105, damage); options.ring(blade.x, blade.y, 12);
-  }
-  if (blade.state === "yanking" && blade.anchorTarget && !blade.anchorTarget.dead) {
-    const dragged = blade.anchorTarget;
+  if (blade.state === "hooked" && blade.hookTarget && !blade.hookTarget.dead) {
+    const dragged = blade.hookTarget;
     for (const other of options.enemies) {
-      if (other === dragged || other.dead || blade.chainCollided?.has(other)) continue;
+      if (other === dragged || other.dead || blade.slingCollided?.has(other)) continue;
       if (options.distance(other.x, other.y, dragged.x, dragged.y) > other.radius + dragged.radius) continue;
-      blade.chainCollided?.add(other);
+      blade.slingCollided?.add(other);
       const damage = options.collisionDamage * blade.channel("secondaryPower") * options.secondPass * options.damageMultiplier;
       other.hit(damage, dragged.vx, dragged.vy); dragged.hit(damage * 0.35, -dragged.vx, -dragged.vy);
       options.burst(other, dragged.vx, dragged.vy); options.floater(other, `COLLISION ${String(Math.round(damage))}`);
@@ -43,7 +39,7 @@ export function stepWeaponSecondary(options: WeaponSecondaryOptions): void {
         const next = options.enemies.filter((enemy) => enemy !== dragged && enemy !== other && !enemy.dead)
           .sort((left, right) => options.distance(left.x, left.y, dragged.x, dragged.y) - options.distance(right.x, right.y, dragged.x, dragged.y))[0];
         if (next) { const dx = next.x - dragged.x, dy = next.y - dragged.y, length = Math.hypot(dx, dy) || 1;
-          dragged.vx = dx / length * options.yankSpeed; dragged.vy = dy / length * options.yankSpeed; }
+          dragged.vx = dx / length * options.slingSpeed; dragged.vy = dy / length * options.slingSpeed; }
       }
     }
   }
@@ -53,12 +49,4 @@ export function stepWeaponSecondary(options: WeaponSecondaryOptions): void {
   blade.embeddedNew = false;
   const impact = options.worldImpact();
   if (impact?.mechanic === "meteor" && blade.claimImpact()) { options.lobExplode(); options.emitThrowResolve(); }
-  else if (impact?.mechanic === "anchorTerrain") {
-    if (options.redirect && !blade.redirectSpent) {
-      blade.redirectSpent = true; blade.state = "flying"; blade.flyTime = 0;
-      const target = options.nearestEnemy(), dx = target ? target.x - blade.x : -(blade.impactVX ?? 1);
-      const dy = target ? target.y - blade.y : -(blade.impactVY ?? 0), magnitude = Math.hypot(dx, dy), divisor = magnitude === 0 ? 1 : magnitude;
-      blade.vx = dx / divisor * options.throwSpeed * blade.channel("throwSpeed"); blade.vy = dy / divisor * options.throwSpeed * blade.channel("throwSpeed");
-    } else if (blade.claimImpact()) blade.anchorTerrain = true;
-  }
 }

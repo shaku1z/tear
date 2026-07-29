@@ -105,8 +105,8 @@ const CONFIG = {
   // ---- five weapon identities (exclusive mechanics live here, not in the draft pool) ----
   weapons: {
     sword: {
-      trueCutThreshold: 0.82, trueCutMult: 1.24, trueCutHitIframe: 0.13,
-      seamDuration: 2.4, crosscutMult: 1.75,
+      reversalWindow: 1.45, reversalExitRadius: 86, reversalOppositeDot: -0.55,
+      reversalDamageMult: 1.65, threadcutDamageMult: 1.35,
     },
     hammer: {
       weakFloor: 0.28, commitmentRef: 760, fullCommitMult: 1.32,
@@ -114,21 +114,20 @@ const CONFIG = {
       meteorGravity: 1850, meteorRadius: 170, meteorStun: 0.85,
       meteorBreak: 75, recallTargetCap: 2,
     },
-    spear: {
-      axialFloor: 0.34, maxReachBonus: 0.24, driveForce: 880, driveThreshold: 0.58,
-      wallPinDuration: 0.55, reelSpeed: 1380, linkDuration: 4.2,
-      heavyWeight: 2.2,
+    greatsword: {
+      weakNearHilt: 0.48, cleaveThreshold: 0.68, cleaveDamageMult: 1.12,
+      wheelSpin: 14, wheelReturnSpin: 19, wheelReturnMult: 1.28,
     },
     chainblade: {
-      tensionFloor: 0.30, fullTensionAt: 0.65, dragForce: 780,
-      bindDuration: 3.1, yankSpeed: 1650, collisionDamage: 28,
-      yankMinDuration: 0.8, arrivalStun: 0.38, yankBreak: 28, bossTug: 0.24,
+        lashForce: 780, hookDuration: 3.1, slingSpeed: 1650, collisionDamage: 28,
+        releaseStun: 0.38, heavyBreak: 28, bossTug: 0.24,
+      minRadius: 70, maxRadius: 300, tightenRate: 260, angularControl: 8.2,
     },
-    ringblade: {
-      orbitBuild: 1.35, orbitDecay: 0.62, orbitReverseLoss: 0.62,
-      orbitDamage: 0.42, orbitMove: 0.03, repeatWindow: 0.34,
-      repeatFloor: 0.46, circuitEnergy: 3.9, bounceCost: 0.52,
-      enemyCost: 0.40, steer: 4.25, tangentMin: 0.22, tangentMax: 0.82,
+    riftlock: {
+      chambers: 4, chamberReform: 1.35, razorCooldown: 0.24, razorDamage: 42,
+      razorSpeed: 1450, recoil: 520, recoilCutRadius: 35, recoilCutDamage: 25,
+      bayonetRefill: 1, perfectParryRefill: 2, catchRefill: 1,
+      looseCannonDuration: 4.2, remoteShotCooldown: 0.3, backblastSpeed: 4200,
     },
   },
 
@@ -510,7 +509,7 @@ const CONFIG = {
       { at: 110, mult: 4,   name: "SAVAGE" },
       { at: 175, mult: 5,   name: "TEARING!" },
     ],
-    pts: { hit: 2, trueCut: 6, break: 8, drive: 5, drag: 5, throwHit: 4, crosscut: 8, circuit: 5, deflect: 5, launch: 5, slam: 8, superslam: 11, updraft: 10, parry: 12 },
+    pts: { hit: 2, reversal: 8, break: 8, cleave: 5, lash: 5, throwHit: 4, threadcut: 8, wheelCut: 5, deflect: 5, launch: 5, slam: 8, superslam: 11, updraft: 10, parry: 12 },
   },
 
   // ---- difficulties (selectable from the menu) ----

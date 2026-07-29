@@ -19,7 +19,7 @@ export interface BladeRendererDependencies {
 }
 
 export function createBladeRenderer({
-  clock, config, graphics, theme, clamp, len, lerp,
+  config, graphics, theme, clamp, len, lerp,
 }: BladeRendererDependencies): BladePresentationPort {
   function drawBody(context: CanvasRenderingContext2D, blade: BladeRenderSnapshot): void {
     const scale = blade.state === "held" ? 1 : blade.throwSizeMult;
@@ -41,11 +41,12 @@ export function createBladeRenderer({
       context.restore(); return;
     }
 
-    if (blade.model === "spear") {
-      context.lineWidth = 5 * scale;
-      context.beginPath(); context.moveTo(blade.x, blade.y); context.lineTo(blade.tipX, blade.tipY); context.stroke();
-      context.save(); context.translate(blade.tipX, blade.tipY); context.rotate(blade.angle);
-      context.beginPath(); context.moveTo(8 * scale, 0); context.lineTo(-13 * scale, -9 * scale); context.lineTo(-9 * scale, 0); context.lineTo(-13 * scale, 9 * scale); context.closePath(); context.fill();
+    if (blade.model === "greatsword") {
+      context.save(); context.translate(blade.x, blade.y); context.rotate(blade.angle);
+      const length = len(blade.tipX - blade.x, blade.tipY - blade.y), width = 13 * scale;
+      context.beginPath(); context.moveTo(0, -width * 0.45); context.lineTo(length * 0.72, -width);
+      context.lineTo(length, 0); context.lineTo(length * 0.72, width); context.lineTo(0, width * 0.45); context.closePath(); context.fill();
+      context.strokeStyle = theme.dark ? "rgba(10,12,20,0.9)" : "#fff"; context.lineWidth = 2; context.stroke();
       context.restore(); return;
     }
 
@@ -65,24 +66,18 @@ export function createBladeRenderer({
       context.restore(); return;
     }
 
-    if (blade.model === "ringblade") {
-      const radius = 20 * scale;
-      context.lineWidth = 7 * scale; context.strokeStyle = theme.ink;
-      context.beginPath(); context.arc(blade.x, blade.y, radius, 0, Math.PI * 2); context.stroke();
-      context.lineWidth = 2; context.strokeStyle = config.colors.bladeGlow;
-      const charge = blade.state === "held" ? blade.orbit : blade.circuitOrbit;
-      const spin = clock.sim * (5 + charge * 9);
-      for (let index = 0; index < 3; index++) {
-        const angle = spin + index * Math.PI * 2 / 3;
-        context.beginPath(); context.arc(blade.x, blade.y, radius + 3, angle, angle + 0.55); context.stroke();
+    if (blade.model === "riftlock") {
+      context.save(); context.translate(blade.x, blade.y); context.rotate(blade.angle);
+      const length = len(blade.tipX - blade.x, blade.tipY - blade.y);
+      context.fillRect(-5 * scale, -9 * scale, length * 0.58, 18 * scale);
+      const chambers = clamp(Math.floor(blade.riftChambers), 0, 4);
+      for (let index = 0; index < 4; index++) {
+        context.fillStyle = index < chambers ? config.colors.bladeGlow : (theme.dark ? "#1b2130" : "#747983");
+        context.fillRect(length * (0.12 + index * 0.09), -4 * scale, 4 * scale, 8 * scale);
       }
-      if (blade.state === "circuiting" && blade.circuitEnergyMax > 0) {
-        const energy = clamp(blade.circuitEnergy / blade.circuitEnergyMax, 0, 1);
-        context.globalAlpha = 0.35 + energy * 0.65;
-        context.lineWidth = 3; context.beginPath();
-        context.arc(blade.x, blade.y, radius + 7, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * energy);
-        context.stroke(); context.globalAlpha = 1;
-      }
+      context.fillStyle = theme.ink; context.beginPath();
+      context.moveTo(length * 0.58, -5 * scale); context.lineTo(length, 0); context.lineTo(length * 0.58, 5 * scale); context.closePath(); context.fill();
+      context.restore();
       return;
     }
 
@@ -161,7 +156,7 @@ export function createBladeRenderer({
         context.setLineDash([]);
       }
       drawBody(context, blade);
-      if (["embedded", "latched"].includes(blade.state) && inRange) {
+      if (["embedded", "hooked"].includes(blade.state) && inRange) {
         context.strokeStyle = theme.ink; context.lineWidth = 2; context.beginPath();
         context.arc(actionPoint.x, actionPoint.y, 13, 0, Math.PI * 2); context.stroke();
       }

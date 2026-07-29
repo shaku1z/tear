@@ -59,9 +59,9 @@ function weaponCategories(
   weapon: TearProgressionRequest["weapon"],
 ): readonly UpgradeCategory[] {
   if (weapon === "hammer") return ["offense", "resilience", "mobility"];
-  if (weapon === "spear") return ["throw", "mobility", "offense"];
+  if (weapon === "greatsword") return ["throw", "offense", "mobility"];
   if (weapon === "chainblade") return ["throw", "utility", "mobility"];
-  if (weapon === "ringblade") return ["throw", "parry", "utility"];
+  if (weapon === "riftlock") return ["throw", "parry", "offense"];
   return ["parry", "offense", "mobility"];
 }
 

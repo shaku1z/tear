@@ -8,6 +8,7 @@ import { RunReplacementGuard } from "../gameplay/run/run-replacement";
 import type { BossId } from "../gameplay/run/content-director";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import { tutorialUsesBaselineLoadout } from "../gameplay/training/tutorial-contract";
+import { FINAL_FIVE_WEAPON_SCHEMA_VERSION, migrateWeaponSelection } from "../gameplay/weapon-selection";
 
 interface MutableWorldState {
   resetTransient(): void;
@@ -93,7 +94,8 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       Mirror.host = null;
       BOSSFX.q.length = 0;
       context.restoreConfig();
-      const weaponId = state.selectedWeapon();
+      const weaponId = migrateWeaponSelection(state.selectedWeapon());
+      state.setSelectedWeapon(weaponId);
       context.applySettings();
       try { SFX.setVoidDescent(0, 0.05); SFX.setMusicDuck(1, 0.12); } catch { /* optional audio backend */ }
       const difficulties = CONFIG.difficulties.flatMap((definition) => isRunDifficulty(definition.id)
@@ -149,7 +151,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
             aimX: blade.aimX, aimY: blade.aimY,
             vx: blade.vx, vy: blade.vy, flyTime: blade.flyTime, secondaryActive: blade.secondaryActive,
             impactResolved: blade.impactResolved, pierced: blade.pierced.size, tension: blade.tension,
-            orbit: blade.orbit, linkTime: blade.linkT, circuitEnergy: blade.circuitEnergy,
+            linkTime: blade.linkT, chambers: blade.riftChambers, chamberCooldown: blade.riftChamberCooldown,
             actionRange: Number.isFinite(blade.actionRange()) ? blade.actionRange() : null,
             actionDistance: blade.actionDistance(player) },
           enemies: state.enemies().filter((enemy) => !enemy.dead).slice(0, 24).map((enemy) => {
@@ -175,7 +177,11 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       if (mode !== "bossonly" && mode !== "sandbox") { PROFILE.markMode(mode); context.achievementCheck(); }
     },
     startRecording: (runId, seed) => {
-      if (context.achievementTracking()) { GHOST.startRec({ runId, seed: String(seed) }); Input.syncSemanticMovement(); }
+      if (context.achievementTracking()) {
+        GHOST.startRec({ runId, seed: String(seed), weaponId: migrateWeaponSelection(requireRun(state).weaponId),
+          weaponSchemaVersion: FINAL_FIVE_WEAPON_SCHEMA_VERSION });
+        Input.syncSemanticMovement();
+      }
     },
     configureMode: (mode) => {
       const run = requireRun(state);

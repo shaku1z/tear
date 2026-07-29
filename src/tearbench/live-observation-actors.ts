@@ -11,14 +11,14 @@ export function projectLiveBehaviorMode(
 }
 
 export function projectLiveBladeMechanics(
-  blade: Readonly<{ orbit?: unknown; circuitEnergy?: unknown }>,
+  blade: Readonly<{ riftChambers?: unknown; riftChamberCooldown?: unknown }>,
   accessClass: TearRuntimeAccessClass,
-): Readonly<{ orbit?: number; circuitEnergy?: number }> {
+): Readonly<{ chambers?: number; chamberCooldown?: number }> {
   if (accessClass === "C") return Object.freeze({});
   return Object.freeze({
-    ...(typeof blade.orbit === "number" && Number.isFinite(blade.orbit) ? { orbit: blade.orbit } : {}),
-    ...(typeof blade.circuitEnergy === "number" && Number.isFinite(blade.circuitEnergy)
-      ? { circuitEnergy: blade.circuitEnergy }
+    ...(typeof blade.riftChambers === "number" && Number.isFinite(blade.riftChambers) ? { chambers: blade.riftChambers } : {}),
+    ...(typeof blade.riftChamberCooldown === "number" && Number.isFinite(blade.riftChamberCooldown)
+      ? { chamberCooldown: blade.riftChamberCooldown }
       : {}),
   });
 }

@@ -103,13 +103,15 @@ async function assertVisibilityLifecycle(page, baseline) {
       }
     });
     await page.addInitScript(() => {
-      localStorage.setItem("tear_settings", JSON.stringify({
-        vol: 0.75,
-        music: true,
-        musicVolume: 0.35,
-        sfxVolume: 0.8,
-        interfaceVolume: 0.45,
-      }));
+      window.__TEAR_TEST_STORAGE__ = {
+        tear_settings: JSON.stringify({
+          vol: 0.75,
+          music: true,
+          musicVolume: 0.35,
+          sfxVolume: 0.8,
+          interfaceVolume: 0.45,
+        }),
+      };
       const NativeAudioContext = window.AudioContext;
       window.__tearAudioContextCount = 0;
       window.AudioContext = class extends NativeAudioContext {

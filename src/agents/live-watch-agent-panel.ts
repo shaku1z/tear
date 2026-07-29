@@ -46,7 +46,7 @@ export function installLiveWatchAgentPanel(
     "easy", "normal", "hard", "extreme", "onehit",
   ] as const, defaults.difficulty);
   const weapon = select("Weapon", [
-    "sword", "hammer", "spear", "chainblade", "ringblade",
+    "sword", "hammer", "greatsword", "chainblade", "riftlock",
   ] as const, defaults.weapon);
   const journey = select("Journey", [
     "single-run", "longitudinal-earned-profile",

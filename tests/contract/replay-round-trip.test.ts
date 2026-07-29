@@ -25,7 +25,7 @@ function recordAtRenderRate(renderRate: number): ReplayEnvelopeV2 {
     schemaVersion: 2,
     rulesetVersion: "contract-rules",
     build: { version: "contract", revision: "contract", target: "test" },
-    run: { runId: "contract-run", seed: "contract-seed", ticksPerSecond: 60 },
+    run: { runId: "contract-run", seed: "contract-seed", ticksPerSecond: 60, weaponId: "sword", weaponSchemaVersion: "final-five-v1" },
     actions,
     final: { tick: scheduler.tick, stateHash: stableVerificationHash(finalState) },
     tearScore: { enabled: false, reason: "disabled" },

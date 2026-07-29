@@ -15,7 +15,7 @@ const scenario = Object.freeze({
   profile: process.env.C24_REPEAT_PROFILE || "competent",
   mode: process.env.C24_REPEAT_MODE || "campaign",
   difficulty: process.env.C24_REPEAT_DIFFICULTY || "easy",
-  weapon: process.env.C24_REPEAT_WEAPON || "ringblade",
+  weapon: process.env.C24_REPEAT_WEAPON || "riftlock",
   boss: process.env.C24_REPEAT_BOSS || "shuffle",
   seed: requestedSeed,
   skipCinematics: true,

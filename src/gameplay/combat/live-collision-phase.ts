@@ -17,6 +17,8 @@ export type LivePlayer = HeldBladePlayer & ThrownPlayer & ParryPlayer & ContactP
 export type LiveBlade = HeldBladeWeapon & ThrownBlade & ParryBlade & HostileBlade & {
   heldCollisionSegment(player: LivePlayer): HeldBladeCollisionInput["segment"];
   aimX: number; aimY: number;
+  weapon?: Readonly<{ id?: string }> | null;
+  refillRiftChambers(amount: number): void;
 };
 export type LiveEnemy = HeldBladeEnemy & ThrownEnemy & ContactEnemy & TailEnemy;
 export type LiveProjectile = SweeperProjectile & ParryProjectile & TailProjectile;
@@ -101,7 +103,7 @@ function heldTuning(width: number, tutorial: boolean): HeldBladeCollisionInput["
     hitStop: { small: CONFIG.hitStop.small, big: CONFIG.hitStop.big, threshold: CONFIG.hitStop.threshold },
     juice: { sparkCount: CONFIG.juice.sparkCount, shakeSmall: CONFIG.juice.shakeSmall, shakeBig: CONFIG.juice.shakeBig, zoomBig: CONFIG.juice.zoomBig },
     colors: { perfect: CONFIG.colors.perfect, armoredShield: CONFIG.colors.armoredShield, slam: CONFIG.colors.slam, charger: CONFIG.colors.charger },
-    spearWallPinDuration: CONFIG.weapons.spear.wallPinDuration, lifestealCooldown: CONFIG.resilience.lifestealCd };
+    lifestealCooldown: CONFIG.resilience.lifestealCd };
 }
 function heldEffects(host: LiveCollisionPhaseHost): HeldBladeCollisionInput["effects"] {
   return host.effects;
@@ -123,7 +125,7 @@ function runThrown(host: LiveCollisionPhaseHost): void {
   resolveThrownCollisions(blade, player, state.enemies, state.projectiles, run, {
     duelCooldown: CONFIG.exotic.duelCd, throwLowMultiplier: CONFIG.blade.throw.loMult, throwHighMultiplier: CONFIG.blade.throw.hiMult,
     recallMultiplier: CONFIG.blade.throw.recallMult, maxThrowSpeed: CONFIG.blade.throw.maxSpeed, throwSpeed: CONFIG.blade.throw.speed,
-    ringbladeEnemyCost: CONFIG.weapons.ringblade.enemyCost, chainbladeBindDuration: CONFIG.weapons.chainblade.bindDuration,
+    chainbladeHookDuration: CONFIG.weapons.chainblade.hookDuration,
     hitStopSmall: CONFIG.hitStop.small, shakeSmall: CONFIG.juice.shakeSmall, sparkCount: CONFIG.juice.sparkCount,
     colors: { deflected: CONFIG.colors.deflected, armoredShield: CONFIG.colors.armoredShield, perfect: CONFIG.colors.perfect,
       charger: CONFIG.colors.charger, bladeTrail: CONFIG.colors.bladeTrail } }, {
@@ -158,7 +160,10 @@ function runParries(host: LiveCollisionPhaseHost, held: HeldBladeCollisionInput[
     zoom: host.addZoom, flash: host.addFlash, flare: host.flare,
     slowMotion: host.triggerSlowMotion, extendSlowMotion: (scale) => { state.slowMotion = Math.max(state.slowMotion, CONFIG.juice.parrySlowmo * scale); },
     style: host.addStyle, sound: (name) => { host.sound(name); }, achievementParry: () => { host.achievement("parry"); },
-    logPerfectParry: (source) => { host.logWeapon("perfectParry", { source: source && typeof source === "object" && "kind" in source ? Reflect.get(source, "kind") : undefined }); },
+    logPerfectParry: (source) => {
+      if (host.blade.weapon?.id === "riftlock") host.blade.refillRiftChambers(CONFIG.weapons.riftlock.perfectParryRefill);
+      host.logWeapon("perfectParry", { source: source && typeof source === "object" && "kind" in source ? Reflect.get(source, "kind") : undefined });
+    },
     emitPerfectParry: host.emitPerfectParry, firePerfectParry: host.makePerfectParryEvent });
 }
 

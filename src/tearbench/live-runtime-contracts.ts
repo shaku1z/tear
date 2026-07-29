@@ -142,6 +142,8 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly activateControl: (action: ScreenAction) => boolean;
   readonly skipCinematic: () => void;
   readonly resetSemanticInput: () => void;
+  /** Restores test-host entity identity allocation before a disposable scenario begins. */
+  readonly resetEntityIdentities: () => void;
   readonly advanceFixedTick: () => number;
   readonly advanceApplicationFrame: (deltaSeconds: number) => void;
   readonly advanceRenderFrame: (deltaSeconds: number) => number;

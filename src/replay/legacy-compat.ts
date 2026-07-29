@@ -1,4 +1,5 @@
 import type { ReplayActionEnvelope, ReplayBuildMetadata, TearScoreReplayMetadata } from "./envelope";
+import type { FINAL_FIVE_WEAPON_SCHEMA_VERSION, WeaponId } from "../gameplay/weapon-selection";
 import { acceptedRecording, arrayValue, isRecord, numberValue, stringValue, tearScoreMetadata } from "./legacy-compat-validation";
 import {
   buildVisualReplayPacket,
@@ -40,6 +41,8 @@ export interface LegacyReplayDependencies {
     rulesetVersion: string;
     build: ReplayBuildMetadata;
     ticksPerSecond: number;
+    weaponId: WeaponId;
+    weaponSchemaVersion: typeof FINAL_FIVE_WEAPON_SCHEMA_VERSION;
     tearScore: () => TearScoreReplayMetadata;
   }>;
 }
@@ -50,6 +53,8 @@ export interface RunReplayContext {
   readonly rulesetVersion?: string;
   readonly build?: ReplayBuildMetadata;
   readonly tearScore?: TearScoreReplayMetadata;
+  readonly weaponId?: WeaponId;
+  readonly weaponSchemaVersion?: typeof FINAL_FIVE_WEAPON_SCHEMA_VERSION;
 }
 
 export type LiveGhostEngineEvent =
@@ -139,6 +144,8 @@ export class LegacyGhostEngine {
         runId: context.runId ?? fallbackId,
         seed: context.seed ?? fallbackId,
         ticksPerSecond: this.#dependencies.defaults.ticksPerSecond,
+        weaponId: context.weaponId ?? this.#dependencies.defaults.weaponId,
+        weaponSchemaVersion: context.weaponSchemaVersion ?? this.#dependencies.defaults.weaponSchemaVersion,
         tearScore: tearScoreMetadata(context.tearScore ?? this.#dependencies.defaults.tearScore()),
       },
     };

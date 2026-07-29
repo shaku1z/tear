@@ -39,6 +39,6 @@ describe("replay library controller", () => {
       cloud: { hasLeaderboards: () => true, loadGhost: vi.fn(), loadReplay: vi.fn(() => Promise.resolve(null)), publishReplay: vi.fn() },
       enterReplay: vi.fn(() => false), setProfileMessage: vi.fn(), setLeaderboardMessage: leaderboardMessage });
     controller.watch("missing", "leaderboards");
-    await vi.waitFor(() => { expect(leaderboardMessage).toHaveBeenLastCalledWith("couldn't load that replay"); });
+    await vi.waitFor(() => { expect(leaderboardMessage).toHaveBeenLastCalledWith("replay unavailable — it uses an older weapon runtime"); });
   });
 });

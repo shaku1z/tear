@@ -29,7 +29,7 @@ async function main() {
   await touch.evaluate(() => window.__PANTHEON_TEST.startMode("playground"));
   await touch.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
   await touch.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.startRecording());
-  await touch.evaluate(() => {
+  const touchMove = await touch.evaluate(() => {
     const canvas = document.querySelector("canvas");
     const send = (type, x, y) => {
       const point = new Touch({ identifier: 17, target: canvas, clientX: x, clientY: y, pageX: x, pageY: y, radiusX: 8, radiusY: 8, force: 1 });
@@ -37,19 +37,19 @@ async function main() {
     };
     send("touchstart", 200, 450);
     send("touchmove", 290, 450);
+    return {
+      input: window.__TEAR_CATALOG_DEBUG__.input.snapshot(),
+      actions: window.__TEAR_CATALOG_DEBUG__.input.drain(10),
+    };
   });
-  const touchMove = await touch.evaluate(() => ({
-    input: window.__TEAR_CATALOG_DEBUG__.input.snapshot(),
-    actions: window.__TEAR_CATALOG_DEBUG__.input.drain(10),
-  }));
   assert.equal(touchMove.input.mode, "touch");
   assert.deepEqual(touchMove.actions.map((entry) => entry.command), [{ type: "move", x: 1000, y: 0 }]);
-  await touch.evaluate(() => {
+  const touchRelease = await touch.evaluate(() => {
     const canvas = document.querySelector("canvas");
     const point = new Touch({ identifier: 17, target: canvas, clientX: 290, clientY: 450, pageX: 290, pageY: 450 });
     canvas.dispatchEvent(new TouchEvent("touchend", { bubbles: true, cancelable: true, touches: [], changedTouches: [point] }));
+    return window.__TEAR_CATALOG_DEBUG__.input.drain(11);
   });
-  const touchRelease = await touch.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.drain(11));
   assert.deepEqual(touchRelease.map((entry) => entry.command), [{ type: "move", x: 0, y: 0 }]);
   await touch.close();
 
@@ -192,6 +192,7 @@ async function main() {
   // time must not synthesize a gameplay edge.
   await controller.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   await controller.evaluate(() => {
+    window.__TEAR_CATALOG_DEBUG__.input.drainObserved();
     window.__TEAR_CATALOG_DEBUG__.input.startRecording();
     window.__testGamepad.axes = [0.8, 0, 0.7, 0];
     window.__testGamepad.buttons[0] = { pressed: true, touched: true, value: 1 };
@@ -199,7 +200,9 @@ async function main() {
   });
   await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().mode === "gamepad");
   await controller.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  const padActions = await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.drain(20));
+  // The live fixed loop owns sealing and can consume the pending buffer before
+  // a second browser RPC runs. Observe the sealed commands instead of racing it.
+  const padActions = await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.drainObserved());
   assert.ok(padActions.some((entry) => entry.command.type === "move" && entry.command.x === 1000));
   assert.ok(padActions.some((entry) => entry.command.type === "jump" && entry.command.phase === "pressed"));
   await controller.evaluate(() => {

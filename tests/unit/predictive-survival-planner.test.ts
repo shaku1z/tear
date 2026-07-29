@@ -42,7 +42,7 @@ function observation(
       },
       entities,
       run: {
-        mode: "campaign", difficulty: "easy", weapon: "ringblade",
+        mode: "campaign", difficulty: "easy", weapon: "riftlock",
         stage: "grounds", wave: 7, score: 0, elapsedTicks: tick,
       },
       diagnostics: {

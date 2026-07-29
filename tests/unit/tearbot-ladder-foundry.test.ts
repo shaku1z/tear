@@ -21,7 +21,7 @@ const items: TearScenarioItem[] = Array.from({ length: 100 }, (_, index) => ({
     perception: 0.25,
   },
   domain: ["movement", "blade", "defense", "boss"][index % 4] ?? "movement",
-  weapon: ["sword", "hammer", "spear"][index % 3] ?? "sword",
+  weapon: ["sword", "hammer", "greatsword"][index % 3] ?? "sword",
   mode: ["campaign", "endless"][index % 2] ?? "campaign",
   gameDifficulty: ["normal", "hard"][index % 2] ?? "normal",
 }));
@@ -45,7 +45,7 @@ describe("TearBot Ladder and Agent Foundry", () => {
     expect(result.report.adjacentSeparation).toHaveLength(8);
     expect(Math.min(...result.report.adjacentSeparation)).toBeGreaterThan(0.005);
     expect(Object.keys(result.report.byDomain)).toEqual(["movement", "blade", "defense", "boss"]);
-    expect(Object.keys(result.report.byWeapon)).toEqual(["sword", "hammer", "spear"]);
+    expect(Object.keys(result.report.byWeapon)).toEqual(["sword", "hammer", "greatsword"]);
     expect(Object.keys(result.report.byMode)).toEqual(["campaign", "endless"]);
   });
 

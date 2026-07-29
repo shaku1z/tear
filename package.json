@@ -25,7 +25,7 @@
     "tearbench": "node scripts/tearbench.mjs",
     "requirements:generate": "node scripts/tearbench-requirements.mjs generate",
     "requirements:check": "node scripts/tearbench-requirements.mjs check",
-    "test:weapons": "node tests/weapon-overhaul.test.js",
+    "test:weapons": "pnpm exec vitest run tests/unit/final-five-weapon-roster.test.ts",
     "test:browser": "node tests/browser-smoke.js",
     "test:browser:features": "node tests/browser-feature-matrix.js",
     "test:browser:bosses": "node tests/browser-boss-parity.js",

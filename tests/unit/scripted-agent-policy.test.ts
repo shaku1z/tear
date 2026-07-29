@@ -125,61 +125,27 @@ describe("deterministic scripted agent hierarchy", () => {
     expect(embedded.actions).toContainEqual({ type: "weapon", intent: "recall", phase: "pressed" });
   });
 
-  it("requests one controlled Ringblade Circuit return at low energy without steering or spam", () => {
+  it("recalls a launched Riftlock once and waits through its return route", () => {
     const policy = new TearScriptedPolicy("competent");
-    const circuit = (tick: number, circuitEnergy: number): TearAgentObservation => {
-      const current = state(tick, [actor("target", 500)], {}, "circuiting");
-      return observation({
-        ...current,
-        blade: { ...current.blade, circuitEnergy },
-        run: { ...current.run, weapon: "ringblade" },
-      });
-    };
+    const flying = state(40, [actor("target", 500)], {}, "flying");
+    const recalled = policy.decide(observation({ ...flying, run: { ...flying.run, weapon: "riftlock" } }));
+    expect(recalled.actions).toContainEqual({ type: "weapon", intent: "recall", phase: "pressed" });
 
-    const aboveThreshold = policy.decide(circuit(40, 0.81));
-    expect(aboveThreshold.actions.some((action) => action.type === "weapon")).toBe(false);
-
-    const firstReturn = policy.decide(circuit(41, 0.8));
-    expect(firstReturn.trace.maneuver).toBe("secondary");
-    expect(firstReturn.actions).toContainEqual({
-      type: "weapon", intent: "secondary", phase: "pressed",
-    });
-
-    const repeatedLowEnergy = policy.decide(circuit(42, 0.2));
-    expect(repeatedLowEnergy.actions.some((action) => action.type === "weapon")).toBe(false);
-
-    const returning = state(43, [actor("target", 500)], {}, "returning");
-    policy.decide(observation({
-      ...returning,
-      run: { ...returning.run, weapon: "ringblade" },
-    }));
-    const nextCircuit = policy.decide(circuit(44, 0.3));
-    expect(nextCircuit.actions).toContainEqual({
-      type: "weapon", intent: "secondary", phase: "pressed",
-    });
-  });
-
-  it("does not apply Ringblade Circuit return control to another weapon", () => {
-    const current = state(50, [actor("target", 500)], {}, "circuiting");
-    const decision = new TearScriptedPolicy("competent").decide(observation({
-      ...current,
-      blade: { ...current.blade, circuitEnergy: 0.1 },
-      run: { ...current.run, weapon: "sword" },
-    }));
-
-    expect(decision.actions.some((action) => action.type === "weapon")).toBe(false);
+    const returning = state(41, [actor("target", 500)], {}, "returning");
+    const waiting = policy.decide(observation({ ...returning, run: { ...returning.run, weapon: "riftlock" } }));
+    expect(waiting.actions.some((action) => action.type === "weapon")).toBe(false);
   });
 
   it("evades a nearby movement threat without abandoning its locked attack target", () => {
     const policy = new TearScriptedPolicy("competent");
-    const ringbladeState = (tick: number, entities: readonly TearObservedActorV1[]) => {
+    const riftlockState = (tick: number, entities: readonly TearObservedActorV1[]) => {
       const current = state(tick, entities);
-      return { ...current, run: { ...current.run, weapon: "ringblade" } } satisfies TearObservationV1;
+      return { ...current, run: { ...current.run, weapon: "riftlock" } } satisfies TearObservationV1;
     };
-    expect(policy.decide(observation(ringbladeState(1, [actor("locked", -300)]))).trace.targetId)
+    expect(policy.decide(observation(riftlockState(1, [actor("locked", -300)]))).trace.targetId)
       .toBe("locked");
 
-    const decision = policy.decide(observation(ringbladeState(
+    const decision = policy.decide(observation(riftlockState(
       2,
       [actor("locked", -300), actor("contact", 180)],
     )));
@@ -189,7 +155,7 @@ describe("deterministic scripted agent hierarchy", () => {
     expect(decision.actions).toContainEqual({ type: "weapon", intent: "throw", phase: "pressed" });
   });
 
-  it("offers Source a non-ringblade throw in the void and waits through hostile recovery", () => {
+  it("offers Source a throw in the void and waits through hostile recovery", () => {
     const source = { ...actor("source", 500, 400, "source"), behaviorMode: "void" };
     const voidObservation = (tick: number, bladeState: string): TearAgentObservation => ({
       state: state(tick, [source], {}, bladeState),

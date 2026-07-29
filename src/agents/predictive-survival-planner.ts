@@ -201,7 +201,7 @@ function desiredDirection(observation: TearAgentObservation, target?: TearObserv
   const distance = Math.hypot(dx, target.y - observation.state.player.y);
   const toward = Math.sign(dx) as Direction;
   const away = -toward as Direction;
-  if (observation.state.run.weapon === "ringblade") {
+  if (observation.state.run.weapon === "riftlock") {
     if (distance < 240) return away;
     if (distance > 420) return toward;
     return Math.floor(observation.state.tick / 150) % 2 === 0 ? 1 : -1;

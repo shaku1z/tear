@@ -1,4 +1,4 @@
-export type WatchWeaponId = "sword" | "hammer" | "spear" | "chainblade" | "ringblade";
+export type WatchWeaponId = "sword" | "hammer" | "greatsword" | "chainblade" | "riftlock";
 
 const GENERAL: Readonly<Record<string, number>> = Object.freeze({
   last_stand: 1_125, concussive: 1_100, vitality: 1_075, bulwark: 1_050,
@@ -9,7 +9,7 @@ const GENERAL: Readonly<Record<string, number>> = Object.freeze({
   hard_turn: 575, adrenaline: 550, air_superiority: 525,
 });
 
-const RINGBLADE: Readonly<Record<string, number>> = Object.freeze({
+const RIFTLOCK: Readonly<Record<string, number>> = Object.freeze({
   last_stand: 1_200, concussive: 1_175, bulwark: 1_150, tough_hide: 1_125,
   kinetic: 1_100, vitality: 1_085, air_dash: 1_075, quick_recovery: 1_050,
   boomerang: 1_025, deadly_throw: 1_000, throw_momentum: 975, throw_giant: 950,
@@ -21,5 +21,5 @@ const RINGBLADE: Readonly<Record<string, number>> = Object.freeze({
 });
 
 export function buildWatchChoiceScore(id: string, weapon: WatchWeaponId): number {
-  return (weapon === "ringblade" ? RINGBLADE[id] : GENERAL[id]) ?? GENERAL[id] ?? 300;
+  return (weapon === "riftlock" ? RIFTLOCK[id] : GENERAL[id]) ?? GENERAL[id] ?? 300;
 }

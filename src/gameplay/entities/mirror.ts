@@ -71,8 +71,8 @@ const Mirror: MirrorController = {
     };
     const b = this.blade = new Blade();
     // Echo mirrors the equipped silhouette and the already-active global handling
-    // tune, but deliberately keeps the shared straight throw. Full Anchor/Bind/Circuit
-    // states would let boss AI create impossible control loops against the player.
+    // tune, but deliberately keeps the shared straight throw. Full Hook, Wheel Cut, or remote
+    // control states would let boss AI create impossible control loops against the player.
     const reflectedWeapon = typeof getWeapon === "function" ? getWeapon((mods?.weaponId) ?? "sword") : null;
     if (reflectedWeapon) { b.model = reflectedWeapon.model || "sword"; b.mirroredWeaponId = reflectedWeapon.id; }
     const aimOverride = b.aimOverridePoint();
@@ -121,7 +121,7 @@ const Mirror: MirrorController = {
     this._recordEcho(dt, player);
     this._watchTricks(player);
 
-    // brain: lock > reeling > committed move > neutral
+    // brain: lock > return route > committed move > neutral
     const ai = this.ai;
     ai.left = ai.right = ai.up = ai.down = false;
     if (this.lock) {                                         // saber lock: lean into the bind, blade crossed

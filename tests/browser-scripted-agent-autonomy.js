@@ -21,7 +21,7 @@ withJourney({ name: "C24 competent scripted-agent autonomy", port: 8153 }, async
   await page.getByLabel("Profile").selectOption("competent");
   await page.getByLabel("Mode").selectOption("campaign");
   await page.getByLabel("Difficulty").selectOption("easy");
-  await page.getByLabel("Weapon").selectOption("ringblade");
+  await page.getByLabel("Weapon").selectOption("riftlock");
   await page.getByLabel("Seed").fill("117");
 
   const artifactDirectory = path.resolve(__dirname, "..", "artifacts", "tearbench", "c24");
@@ -32,7 +32,7 @@ withJourney({ name: "C24 competent scripted-agent autonomy", port: 8153 }, async
   let result = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.snapshot());
   assert.deepEqual(result.selection, {
     profile: "competent", mode: "campaign", difficulty: "easy",
-    weapon: "ringblade", boss: "shuffle", seed: 117, skipCinematics: true,
+    weapon: "riftlock", boss: "shuffle", seed: 117, skipCinematics: true,
   });
   assert.equal(result.executionClass, "engineering");
   assert.equal(result.observationLabel, "Class A - privileged diagnostic");
@@ -71,7 +71,7 @@ withJourney({ name: "C24 competent scripted-agent autonomy", port: 8153 }, async
     certified: false,
     scenario: {
       profile: "competent", mode: "campaign", difficulty: "easy",
-      weapon: "ringblade", boss: "shuffle", seed: 117,
+      weapon: "riftlock", boss: "shuffle", seed: 117,
     },
     controls: {
       startSurface: "visible Watch Agent panel",
@@ -119,7 +119,7 @@ withJourney({ name: "C24 competent scripted-agent autonomy", port: 8153 }, async
   assert.deepEqual(artifact.intentEvidence.structured, result.structuredIntent);
   assert.ok(Array.isArray(result.watchdogs.active));
   assert.match(runtimeMetadata.panelText, /Policy: competent/u);
-  assert.match(runtimeMetadata.panelText, /Run: campaign \/ easy \/ ringblade/u);
+  assert.match(runtimeMetadata.panelText, /Run: campaign \/ easy \/ riftlock/u);
   assert.match(runtimeMetadata.panelText, /Observation: Class A - privileged diagnostic/u);
   assert.match(runtimeMetadata.panelText, /Invariants:/u);
   assert.match(runtimeMetadata.panelText, /Memory: [1-9][0-9]* decisions/u);

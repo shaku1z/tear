@@ -106,7 +106,7 @@ describe("production progression ledger", () => {
         : index % 5 + 1;
       const mode = modes[index % modes.length] ?? "campaign";
       const difficulty = index % 3 === 0 ? "extreme" : index % 2 === 0 ? "normal" : "hard";
-      const weapon = index % 3 === 0 ? "sword" : index % 3 === 1 ? "hammer" : "ringblade";
+      const weapon = index % 3 === 0 ? "sword" : index % 3 === 1 ? "hammer" : "riftlock";
       const policy = policies[index % policies.length] ?? "coverage-seeking";
       const result = synthesizeProgression({
         mode, difficulty, weapon, targetWave, policy,
@@ -151,7 +151,7 @@ describe("production progression ledger", () => {
       waveTargets: [...new Set([...waveTargets, 1, 2, 3, 4, 5])].sort((a, b) => a - b),
       modes,
       difficulties: ["normal", "hard", "extreme"],
-      weapons: ["sword", "hammer", "ringblade"],
+      weapons: ["sword", "hammer", "riftlock"],
       policies,
       productionCatalogueSize: UPGRADES.length,
       orderedConfigurationReplay: true,

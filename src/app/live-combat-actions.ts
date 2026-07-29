@@ -47,6 +47,31 @@ export function createLiveCombatActions<
     runDamageMultiplier: f.runDamageMultiplier, stepCinematic: f.stepCinematic,
     flushClosingInput() { d.Input.takeClick(); d.Input.tJump = false; },
     updateWeaponAbilities: f.updateWeaponAbilities,
+    flushWeaponActions(events) {
+      for (const event of events) {
+        const travel = 760, endX = event.x + event.vx / Math.max(1, Math.hypot(event.vx, event.vy)) * travel;
+        const endY = event.y + event.vy / Math.max(1, Math.hypot(event.vx, event.vy)) * travel;
+        const target = enemies().find((enemy) => !enemy.dead && !enemy.dying
+          && d.segCircle(event.x, event.y, endX, endY, enemy.x, enemy.y, enemy.radius + 6));
+        const impactX = target?.x ?? endX, impactY = target?.y ?? endY;
+        d.FX.ribbon(event.x, event.y, impactX, impactY, d.CONFIG.colors.perfect);
+        d.FX.burst(event.x, event.y, event.vx, event.vy, 5, d.CONFIG.colors.perfect);
+        if (target) {
+          const first = target.firstPlayerDamageAt == null;
+          target.hit(event.damage, event.vx, event.vy);
+          f.noteFirstDamage(target, first);
+          if (target.dead) context.resolveKill(target, "skill");
+          d.FX.burst(target.x, target.y, event.vx, event.vy, 7, target.color);
+          f.addFloater(target.x, target.y - 28, String(Math.round(event.damage)), true, d.CONFIG.colors.perfect);
+        }
+        if (!event.remote) {
+          f.areaDamage(player().x, player().y, d.CONFIG.weapons.riftlock.recoilCutRadius,
+            d.CONFIG.weapons.riftlock.recoilCutDamage);
+          d.FX.ring(player().x, player().y, 9, d.CONFIG.colors.perfect);
+        }
+        f.logWeaponEvent("razorRound", { attackId: event.attackId, throwId: event.throwId, remote: event.remote, hit: target !== undefined });
+      }
+    },
     updateWorldHazards: (seconds) => { updateWorldHazards(context, seconds); },
     syncVoidSupport: f.syncVoidSupport, activateThrowSecondary: f.activateThrowSecondary,
     linkBroken(reason) {
@@ -75,7 +100,7 @@ export function createLiveCombatActions<
     fireWeaponCatch() { f.fireMod(f.modHook("onWeaponCatch"), f.makeEvent(player().x, player().y, null, "catch",
       { type: "weaponCatch", throwId: blade().throwId, weaponId: run().weaponId })); },
     fireThrowLaunch(throwId) { f.fireMod(f.modHook("onThrowLaunch"), f.makeEvent(blade().x, blade().y, null, "throw",
-      { type: "throwLaunch", throwId, weaponId: run().weaponId })); },
+      { type: "throwLaunch", throwId, weaponId: run().weaponId, attackId: blade().attackId })); },
     logThrowLaunch: (throwId) => { f.logWeaponEvent("throwLaunch", { throwId }); },
     weaponWorldImpact: f.weaponWorldImpact, lobExplode: () => { f.lobExplode(blade().x, blade().y); },
     emitThrowResolve: () => { f.emitThrowResolve(null, blade().throwDmg); }, nearestEnemy: () => f.openingNearestEnemy(),
@@ -129,10 +154,18 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
     distance: d.len, clamp: d.clamp, lerp: d.lerp, nearestEnemy: f.nearestEnemy, areaDamage: f.areaDamage,
     lobExplode: f.lobExplode, splitProjectile: f.splitProjectile, triggerSlowMotion: f.triggerSlowMotion,
     emitPerfectParry: () => { context.emitMusicEvent("perfect-parry", { weaponId: live.run().weaponId }); },
-    makeHitEvent: (enemy, x, y) => { f.fireMod(f.modHook("onHit"), f.makeEvent(x, y, enemy)); },
-    makeSwingEvent: (enemy, x, y, damage, quality, mechanic) => { f.fireMod(f.modHook("onSwingHit"), f.makeEvent(x, y, enemy, "swing", { type: "swingHit", damageDealt: damage, quality, mechanic })); },
+    makeHitEvent: (enemy, x, y) => { f.fireMod(f.modHook("onHit"), f.makeEvent(x, y, enemy, "hit", {
+      weaponId: live.run().weaponId, swingId: live.blade().swingId, attackId: live.blade().attackId, throwId: live.blade().throwId,
+    })); },
+    makeSwingEvent: (enemy, x, y, damage, quality, mechanic) => { f.fireMod(f.modHook("onSwingHit"), f.makeEvent(x, y, enemy, "swing", {
+      type: "swingHit", damageDealt: damage, quality, mechanic, weaponId: live.run().weaponId,
+      swingId: live.blade().swingId, attackId: live.blade().attackId, throwId: live.blade().throwId,
+    })); },
     makeSlamEvent: (enemy) => { f.fireMod(f.modHook("onSlam"), f.makeEvent(enemy.x, enemy.y, enemy)); },
-    makeReturnEvent: (enemy, damage) => { f.fireMod(f.modHook("onReturnHit"), f.makeEvent(enemy.x, enemy.y, enemy, "secondary", { type: "returnHit", throwId: live.blade().throwId, weaponId: live.run().weaponId, damageDealt: damage })); },
+    makeReturnEvent: (enemy, damage) => { f.fireMod(f.modHook("onReturnHit"), f.makeEvent(enemy.x, enemy.y, enemy, "secondary", {
+      type: "returnHit", throwId: live.blade().throwId, weaponId: live.run().weaponId,
+      attackId: live.blade().attackId, damageDealt: damage,
+    })); },
     makePerfectParryEvent: (shot) => { const event = f.makeEvent(shot.x, shot.y, null, "parry", { type: "perfectParry", sourceEnemy: shot.sourceEnemy ?? shot.owner, projectile: shot, applySever: f.applySever }); f.fireMod(f.modHook("onParry"), event); f.fireMod(f.modHook("onPerfectParry"), event); },
     profileAdd: (name, value) => { d.PROFILE.addStat(name, value); }, profileMax: (name, value) => { d.PROFILE.maxStat(name, value); },
     dailyBump: (name, value) => { d.DAILY.bump(name, value); }, achievementsEnabled: f.achievementsEnabled,

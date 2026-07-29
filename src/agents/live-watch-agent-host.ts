@@ -18,7 +18,7 @@ export interface TearWatchAgentOptions {
   readonly profile?: TearAgentProfileId;
   readonly mode?: RunMode;
   readonly difficulty?: RunDifficulty;
-  readonly weapon?: "sword" | "hammer" | "spear" | "chainblade" | "ringblade";
+  readonly weapon?: "sword" | "hammer" | "greatsword" | "chainblade" | "riftlock";
   readonly boss?: "shuffle" | "warden" | "colossus" | "aldric" | "echo" | "source";
   readonly seed?: number;
   readonly skipCinematics?: boolean;
@@ -70,7 +70,7 @@ export interface TearWatchAgentSnapshot {
   readonly engineEvents: readonly LiveGhostEngineEvent[];
   readonly weaponEvents: readonly unknown[];
   readonly weaponStats?: Readonly<{
-    heldHits: number; trueCuts: number; throws: number; throwHits: number; perfectParries: number;
+    heldHits: number; reversals: number; throws: number; throwHits: number; perfectParries: number;
   }>;
   readonly draftPicks: readonly Readonly<{ tick: number; offered: readonly string[]; selected: string }>[];
   readonly lastTrace?: TearAgentIntentTrace;
@@ -124,7 +124,7 @@ const DEFAULTS: Required<TearWatchAgentOptions> = {
   profile: "competent",
   mode: "campaign",
   difficulty: "easy",
-  weapon: "ringblade",
+  weapon: "riftlock",
   boss: "shuffle",
   seed: 62,
   skipCinematics: true,
@@ -174,7 +174,7 @@ function immutableSnapshot(context: LiveTearRuntimeEnvironmentContext, state: Mu
     weaponEvents: Object.freeze((run === null || run === undefined ? [] : run.weaponLog).map((event) =>
       event && typeof event === "object" ? Object.freeze({ ...event }) : event)),
     ...(run === null || run === undefined ? {} : { weaponStats: Object.freeze({
-      heldHits: run.weaponStats.heldHits, trueCuts: run.weaponStats.trueCuts,
+      heldHits: run.weaponStats.heldHits, reversals: run.weaponStats.reversals,
       throws: run.weaponStats.throws, throwHits: run.weaponStats.throwHits,
       perfectParries: run.weaponStats.perfectParries,
     }) }),

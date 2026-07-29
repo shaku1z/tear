@@ -155,7 +155,7 @@ describe("legacy screen renderer registry", () => {
     renderer.setup({ id: "setup",
       modes: ["endless", "rush", "daily", "boss"].map((id) => ({ id, label: id })),
       difficulties: ["easy", "normal", "hard", "tear"].map((id) => ({ id, label: id })),
-      weapons: ["sword", "chainblade", "ringblade", "scythe"].map((id) => ({ id, label: id })), showDifficulty: true,
+      weapons: ["sword", "chainblade", "riftlock", "scythe"].map((id) => ({ id, label: id })), showDifficulty: true,
       startGlyph: "▢", startSummary: "ENDLESS · NORMAL · SWORD",
       bossChoices: [{ id: "shuffle", label: "SHUFFLE" }, { id: "warden", label: "WARDEN" }] });
     const sharedGrid = [

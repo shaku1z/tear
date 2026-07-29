@@ -1,5 +1,5 @@
-import type { ReplayActionEnvelope, ReplayEnvelopeV2 } from "../replay/envelope";
-import { parseReplayEnvelope } from "../replay/envelope";
+import type { ReplayActionEnvelope } from "../replay/envelope";
+import { normalizeGameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearCausalEventV1, TearSnapshotV1 } from "../tearbench/contracts";
 import { EVENT_REGISTRY, withinTickPhaseOrder } from "../tearbench/registries";
@@ -275,17 +275,14 @@ export function createGhostV3(input: Omit<GhostEnvelopeV3, "format" | "schemaVer
 }
 
 export function migrateLegacyReplayToGhost(value: unknown): GhostEnvelopeV3 {
-  const parsed = parseReplayEnvelope(value);
-  if (!parsed.ok) throw new TypeError(`legacy replay is invalid: ${parsed.issues.map((issue) => issue.message).join("; ")}`);
-  const replay: ReplayEnvelopeV2 = parsed.replay;
-  const sourceClassification = isLegacyV1(value) ? "legacy-v1" : "legacy-v2";
+  const replay = legacyReplayPreview(value);
   return createGhostV3({
     id: `ghost-${replay.run.runId}`,
     rulesetVersion: replay.rulesetVersion,
-    sourceClassification,
+    sourceClassification: replay.sourceClassification,
     trident: Object.freeze({
       command: capability("command", "declared-unverified", replay.actions.length > 0, false, false,
-        "legacy actions lack native V3 environment and checkpoint verification"),
+        "legacy actions lack a verified Final Five weapon schema and checkpoint verification"),
       state: capability("state", "absent", false, false, false, "legacy replay has only a final hash"),
       visual: capability("visual", "legacy-visual", true, false, true, "watchable legacy presentation; never simulation verification"),
     }),
@@ -296,12 +293,70 @@ export function migrateLegacyReplayToGhost(value: unknown): GhostEnvelopeV3 {
   });
 }
 
-function isLegacyV1(value: unknown): boolean {
-  if (typeof value === "string") {
-    try { return isLegacyV1(JSON.parse(value) as unknown); } catch { return false; }
-  }
-  return typeof value === "object" && value !== null && "schemaVersion" in value && value.schemaVersion === 1;
+function legacyReplayPreview(value: unknown): Readonly<{
+  run: Readonly<{ runId: string }>;
+  rulesetVersion: string;
+  sourceClassification: "legacy-v1" | "legacy-v2";
+  actions: readonly ReplayActionEnvelope[];
+  final: Readonly<{ tick: number; stateHash: string }>;
+}> {
+  const source = parseLegacyRecord(value);
+  if (source === null) throw new TypeError("legacy replay is invalid: expected a replay object");
+  const legacyV1 = source.schemaVersion === 1;
+  const rulesetVersion = typeof source.rulesetVersion === "string" && source.rulesetVersion.length > 0
+    ? source.rulesetVersion : "legacy-ruleset-unknown";
+  const runId = legacyV1
+    ? `legacy-${stringValue(source.seed, "unknown")}`
+    : typeof (source.run as Record<string, unknown> | undefined)?.runId === "string"
+      ? (source.run as Record<string, unknown>).runId as string : "legacy-run-unknown";
+  const actions = legacyActions(source.actions, legacyV1);
+  const final = legacyV1
+    ? { tick: integer(source.finalTick), stateHash: stringValue(source.finalHash, "legacy-final-hash") }
+    : legacyFinal(source.final);
+  return Object.freeze({
+    run: Object.freeze({ runId }), rulesetVersion, actions: Object.freeze(actions), final: Object.freeze(final),
+    sourceClassification: legacyV1 ? "legacy-v1" : "legacy-v2",
+  });
 }
+
+function parseLegacyRecord(value: unknown): Record<string, unknown> | null {
+  let parsed = value;
+  if (typeof parsed === "string") {
+    try { parsed = JSON.parse(parsed) as unknown; } catch { return null; }
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
+  const outer = parsed as Record<string, unknown>;
+  const recording = outer.schema === "tear.replay" && isRecord(outer.recording)
+    ? outer.recording : outer;
+  return recording;
+}
+
+function legacyActions(value: unknown, legacyV1: boolean): ReplayActionEnvelope[] {
+  if (!Array.isArray(value)) return [];
+  const actions: ReplayActionEnvelope[] = [];
+  for (let index = 0; index < value.length; index += 1) {
+    const entry: unknown = value[index];
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) continue;
+    const record = entry as Record<string, unknown>;
+    const normalized = normalizeGameAction(legacyV1 ? record.action : record.command);
+    const tick = integer(record.tick);
+    if (!normalized.ok || tick < 0) continue;
+    const id = legacyV1 ? index + 1 : integer(record.id);
+    if (id <= 0) continue;
+    actions.push(Object.freeze({ kind: "command", id, tick, command: normalized.action }));
+  }
+  return actions;
+}
+
+function legacyFinal(value: unknown): Readonly<{ tick: number; stateHash: string }> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return { tick: 0, stateHash: "legacy-final-hash" };
+  const record = value as Record<string, unknown>;
+  return { tick: integer(record.tick), stateHash: stringValue(record.stateHash, "legacy-final-hash") };
+}
+
+function integer(value: unknown): number { return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : 0; }
+function stringValue(value: unknown, fallback: string): string { return typeof value === "string" && value.length > 0 ? value : fallback; }
+function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
 
 export interface GhostRoundTripReport {
   readonly record: boolean;

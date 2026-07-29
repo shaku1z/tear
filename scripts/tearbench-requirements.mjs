@@ -233,6 +233,10 @@ function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+function sourceSha256(value) {
+  return sha256(value.replaceAll("\r\n", "\n"));
+}
+
 function normalizeText(value) {
   return value
     .replaceAll(/\r?\n/g, " ")
@@ -928,7 +932,7 @@ export function buildDocument(
   const normativeOccurrenceIds = new Set(
     requirements.filter((item) => item.normative).map((item) => item.sourceOccurrenceId),
   );
-  const sourceHash = sha256(sourceText).toUpperCase();
+  const sourceHash = sourceSha256(sourceText).toUpperCase();
   return {
     format: "tearbench-ghost3-requirements",
     schemaVersion: 1,

@@ -16,7 +16,7 @@ function fixtures() {
     heal() { order.push("heal"); }, update() { order.push("player"); },
   };
   const blade: CombatPreludeBlade = {
-    state: "returning", secondaryStartedNew: true, linkBrokenNew: "range", orbit: 0,
+    state: "returning", secondaryStartedNew: true, linkBrokenNew: "range", drainWeaponEvents: () => [],
     update() { order.push("blade"); this.state = "held"; },
   };
   const run: CombatPreludeRun = { mods: { flowGuard: true, flowRegen: true }, mult: 3, lifestealCd: 1,
@@ -29,9 +29,10 @@ describe("combat step prelude", () => {
     const { order, player, blade, run } = fixtures();
     const result = stepCombatPrelude({ dt: 0.1, blocking: true, playerMode: "landing", player, blade, run,
       platforms: [], protection: { active: false, lastMode: null }, timers: { throwCooldown: 1 },
-      tuning: { flowGuardTier: 3, flowGuardMultiplier: 0.7, thrownMoveBoost: 1.1, orbitMove: 0.1 }, overrunMovementMultiplier: 1,
+      tuning: { flowGuardTier: 3, flowGuardMultiplier: 0.7, thrownMoveBoost: 1.1 }, overrunMovementMultiplier: 1,
       stepCinematic() { order.push("cinematic"); }, flushClosingInput() { order.push("flush"); },
       updateWeaponAbilities() { order.push("weapon"); }, updateZonesAndWalls() { order.push("zones"); },
+      flushWeaponActions() { order.push("weapon-actions"); },
       syncVoidSupport() { order.push("support"); }, activateThrowSecondary() { order.push("secondary"); },
     });
     expect(result.blocked).toBe(true); expect(order).toEqual(["cinematic"]); expect(player.cinematicProtected).toBe(true);
@@ -41,12 +42,13 @@ describe("combat step prelude", () => {
     const { order, player, blade, run } = fixtures();
     const protection = { active: true, lastMode: "landing" as string | null }, timers = { throwCooldown: 0.5 };
     const result = stepCombatPrelude({ dt: 0.1, blocking: false, playerMode: "", player, blade, run, platforms: [], protection, timers,
-      tuning: { flowGuardTier: 3, flowGuardMultiplier: 0.7, thrownMoveBoost: 1.1, orbitMove: 0.1 }, overrunMovementMultiplier: 1,
+      tuning: { flowGuardTier: 3, flowGuardMultiplier: 0.7, thrownMoveBoost: 1.1 }, overrunMovementMultiplier: 1,
       stepCinematic() { order.push("cinematic"); }, flushClosingInput() { order.push("flush"); },
       updateWeaponAbilities() { order.push("weapon"); }, updateZonesAndWalls() { order.push("zones"); },
+      flushWeaponActions() { order.push("weapon-actions"); },
       syncVoidSupport() { order.push("support"); }, activateThrowSecondary() { order.push("secondary"); },
     });
-    expect(order).toEqual(["flush", "heal", "weapon", "zones", "player", "support", "blade", "secondary"]);
+    expect(order).toEqual(["flush", "heal", "weapon", "zones", "player", "support", "blade", "weapon-actions", "secondary"]);
     expect(result).toEqual({ blocked: false, previousBladeState: "returning", wasReturning: true, linkBreakReason: "range" });
     expect(player.cinematicGraceT).toBe(0.7); expect(timers.throwCooldown).toBeCloseTo(0.4);
     expect(run.weaponStats.distanceMoved).toBeCloseTo(0.5);

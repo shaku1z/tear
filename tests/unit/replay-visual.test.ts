@@ -25,6 +25,8 @@ const provenance = {
   runId: "run-a",
   seed: "seed-a",
   ticksPerSecond: 60,
+  weaponId: "sword",
+  weaponSchemaVersion: "final-five-v1",
   tearScore: { enabled: true, engineVersion: "0.1", scoreVersion: "score-a", seed: "music-a", eventJournalHash: "journal-a" },
 } as const;
 
@@ -72,7 +74,7 @@ describe("visual replay migration", () => {
       format: "tear-replay",
       schemaVersion: 2,
       rulesetVersion: "rules-a",
-      run: { runId: "run-a", seed: "seed-a", ticksPerSecond: 60 },
+      run: { runId: "run-a", seed: "seed-a", ticksPerSecond: 60, weaponId: "sword", weaponSchemaVersion: "final-five-v1" },
       build: provenance.build,
       tearScore: provenance.tearScore,
     });
@@ -99,7 +101,8 @@ describe("LegacyGhostEngine", () => {
         lastSealedTick: 0,
       },
       captureSemanticActions: false,
-      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 60, tearScore: () => provenance.tearScore },
+      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 60,
+        weaponId: provenance.weaponId, weaponSchemaVersion: provenance.weaponSchemaVersion, tearScore: () => provenance.tearScore },
     });
 
     ghost.startRec({ runId: "visual-only", seed: "seed" });
@@ -122,7 +125,8 @@ describe("LegacyGhostEngine", () => {
     const buffer = new SemanticInputBuffer();
     const ghost = new LegacyGhostEngine({
       store, document: {} as Document, now: () => 1, random: () => 0.5, semanticInput: buffer,
-      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 120, tearScore: () => provenance.tearScore },
+      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 120,
+        weaponId: provenance.weaponId, weaponSchemaVersion: provenance.weaponSchemaVersion, tearScore: () => provenance.tearScore },
     });
     ghost.startRec({ runId: "run-interrupted", seed: "seed" });
     buffer.push({ type: "confirm" });
@@ -149,7 +153,8 @@ describe("LegacyGhostEngine", () => {
         drain: (tick) => tick > semanticTick ? [{ kind: "command", id: ++semanticTick, tick, command: { type: "confirm" } }] : [],
         lastSealedTick: 0,
       },
-      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 60, tearScore: () => provenance.tearScore },
+      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 60,
+        weaponId: provenance.weaponId, weaponSchemaVersion: provenance.weaponSchemaVersion, tearScore: () => provenance.tearScore },
     };
     const ghost = new LegacyGhostEngine(dependencies);
     ghost.startRec({ runId: "run-live", seed: "seed-live" });
@@ -172,7 +177,8 @@ describe("LegacyGhostEngine", () => {
   it("keeps a final-loadout summary beside the canonical timed loadout track", () => {
     const store: ReplayStore = { get: () => null, set: () => undefined };
     const ghost = new LegacyGhostEngine({ store, document: {} as Document, now: () => 1, random: () => 0.5,
-      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 60, tearScore: () => provenance.tearScore } });
+      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 60,
+        weaponId: provenance.weaponId, weaponSchemaVersion: provenance.weaponSchemaVersion, tearScore: () => provenance.tearScore } });
     ghost.startRec();
     ghost.loadoutPick("tempo", 2, 5);
     for (let index = 0; index < 20; index += 1) ghost.sample(0.1, { x: index, y: 0, facing: 1 }, null, []);
@@ -192,6 +198,8 @@ describe("LegacyGhostEngine", () => {
         rulesetVersion: provenance.rulesetVersion,
         build: provenance.build,
         ticksPerSecond: 60,
+        weaponId: provenance.weaponId,
+        weaponSchemaVersion: provenance.weaponSchemaVersion,
         tearScore: () => score,
       },
     });
@@ -215,7 +223,8 @@ describe("LegacyGhostEngine", () => {
         drain: (tick) => { ticks.push(tick); return []; },
         lastSealedTick: 0,
       },
-      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 60, tearScore: () => provenance.tearScore },
+      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 60,
+        weaponId: provenance.weaponId, weaponSchemaVersion: provenance.weaponSchemaVersion, tearScore: () => provenance.tearScore },
     });
     ghost.startRec();
     for (let index = 0; index < 9_010; index += 1) ghost.sample(0.1, { x: index, y: 0, facing: 1 }, null, []);

@@ -407,10 +407,11 @@ export function createLiveStateForgeAdapter(
     commit(candidate) {
       options.restoreConfiguration();
       const weapon = options.dependencies.applyWeapon(candidate.weaponId);
-      restoreCapturedConfiguration(options.dependencies.CONFIG, candidate.configuration, new Map());
-      candidate.blade.weapon = weapon;
-      candidate.blade.model = weapon.model;
-      options.state.setRun(candidate.run);
+        restoreCapturedConfiguration(options.dependencies.CONFIG, candidate.configuration, new Map());
+        candidate.blade.weapon = weapon;
+        candidate.blade.model = weapon.model;
+        weapon.onReset?.({ blade: candidate.blade });
+        options.state.setRun(candidate.run);
       options.state.setPlayer(candidate.player);
       options.state.setBlade(candidate.blade);
       options.state.setEnemies(candidate.enemies);

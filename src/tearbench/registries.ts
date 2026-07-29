@@ -64,7 +64,7 @@ export const ENTITY_KIND_IDS = Object.freeze([
 export const ENTITY_KIND_REGISTRY = createStableRegistry("entity kind", ENTITY_KIND_IDS);
 export type TearEntityKindId = typeof ENTITY_KIND_IDS[number];
 
-export const WEAPON_IDS = Object.freeze(["sword", "hammer", "spear", "chainblade", "ringblade"] as const);
+export const WEAPON_IDS = Object.freeze(["sword", "hammer", "greatsword", "chainblade", "riftlock"] as const);
 export const WEAPON_REGISTRY = createStableRegistry("weapon", WEAPON_IDS);
 export type TearWeaponId = typeof WEAPON_IDS[number];
 

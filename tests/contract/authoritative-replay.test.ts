@@ -50,7 +50,7 @@ describe("authoritative semantic replay", () => {
     const envelope: ReplayEnvelopeV2 = {
       format: "tear-replay", schemaVersion: 2, rulesetVersion: "authoritative-contract",
       build: { version: "contract", revision: "contract", target: "test" },
-      run: { runId: "authoritative-run", seed: "fixed-seed", ticksPerSecond: 60 },
+      run: { runId: "authoritative-run", seed: "fixed-seed", ticksPerSecond: 60, weaponId: "sword", weaponSchemaVersion: "final-five-v1" },
       actions,
       final: { tick: baseline.tick, stateHash: baseline.stateHash },
       tearScore: { enabled: false, reason: "disabled" },

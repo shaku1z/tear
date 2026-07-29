@@ -96,6 +96,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     prepareWorld: options.prepareWorld, applySettings: options.applySettings,
     configureBlade: (blade, weaponId) => {
       const weapon = d.applyWeapon(weaponId); blade.weapon = weapon; blade.model = weapon.model;
+      weapon.onReset?.({ blade });
     },
     createPlayer: (x, y) => new d.Player(x, y), createBlade: () => new d.Blade(),
     installRun: (session) => { options.state.setRun(session); },

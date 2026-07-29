@@ -136,7 +136,7 @@ export interface TearObservationV1 {
   readonly blade: Readonly<{
     handX: number; handY: number; tipX: number; tipY: number;
     vx: number; vy: number; tipSpeed: number; state: string;
-    orbit?: number; circuitEnergy?: number;
+    chambers?: number; chamberCooldown?: number;
   }>;
   readonly entities: readonly TearObservedActorV1[];
   /** Structured world geometry available to Class A and Class B observers; never a Class C affordance. */

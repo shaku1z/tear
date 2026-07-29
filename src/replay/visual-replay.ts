@@ -1,5 +1,6 @@
 import type { ReplayActionEnvelope, ReplayBuildMetadata, ReplayEnvelopeV2, TearScoreReplayMetadata } from "./envelope";
 import { CURRENT_REPLAY_SCHEMA_VERSION, REPLAY_FORMAT, validateReplayEnvelope } from "./envelope";
+import type { FINAL_FIVE_WEAPON_SCHEMA_VERSION, WeaponId } from "../gameplay/weapon-selection";
 import { stableVerificationHash } from "./hash";
 
 export interface VisualStageEvent { readonly t: number; readonly s: number }
@@ -52,6 +53,8 @@ export interface VisualReplayProvenance {
   readonly runId: string;
   readonly seed: string;
   readonly ticksPerSecond: number;
+  readonly weaponId: WeaponId;
+  readonly weaponSchemaVersion: typeof FINAL_FIVE_WEAPON_SCHEMA_VERSION;
   readonly tearScore: TearScoreReplayMetadata;
 }
 
@@ -213,7 +216,8 @@ export function buildVisualReplayPacket(
     schemaVersion: CURRENT_REPLAY_SCHEMA_VERSION,
     rulesetVersion: provenance.rulesetVersion,
     build: Object.freeze({ ...provenance.build }),
-    run: Object.freeze({ runId: provenance.runId, seed: provenance.seed, ticksPerSecond: provenance.ticksPerSecond }),
+    run: Object.freeze({ runId: provenance.runId, seed: provenance.seed, ticksPerSecond: provenance.ticksPerSecond,
+      weaponId: provenance.weaponId, weaponSchemaVersion: provenance.weaponSchemaVersion }),
     actions: Object.freeze([...actions]),
     final: Object.freeze({ tick: finalTick, stateHash: stableVerificationHash(visualVerificationState(recording, actions)) }),
     tearScore: Object.freeze({ ...provenance.tearScore }),

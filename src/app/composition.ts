@@ -56,6 +56,7 @@ export interface TearCompositionOptions {
 
 interface CompositionWindow extends Window {
   readonly Clipper?: Readonly<{ start(): void; stop(): void }>;
+  readonly __TEAR_TEST_STORAGE__?: Readonly<Record<string, string>>;
   __TEAR_CATALOG_DEBUG__?: object;
 }
 
@@ -67,7 +68,11 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const { target, sdk, createCrazyGamesServices, createCloud, pwaUpdate } = options;
   const compositionWindow = window as CompositionWindow;
   const tearTestMode = __TEAR_TEST_BUILD__ && new URLSearchParams(window.location.search).get("test") === "1";
-  const disposableValues = new Map<string, string>();
+  // Test pages may seed the isolated adapter before composition. Production never
+  // reads this value and continues to use the platform's real storage adapter.
+  const disposableValues = new Map<string, string>(tearTestMode
+    ? Object.entries(compositionWindow.__TEAR_TEST_STORAGE__ ?? {})
+    : []);
   const tearTestEnvironment = tearTestMode ? createTearTestEnvironment("live-test-composition") : undefined;
   const disposableStorage = tearTestMode ? {
     getItem: (key: string) => disposableValues.get(key) ?? null,
@@ -141,6 +146,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
       rulesetVersion: "tear-rules-2026.07",
       build: { version: "0.1.0", revision: import.meta.env.MODE, target },
       ticksPerSecond: 120,
+      weaponId: "sword",
+      weaponSchemaVersion: "final-five-v1",
       tearScore: () => SFX.musicReplayMetadata(),
     },
   });
@@ -174,6 +181,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   startLiveGame(gameRuntimeDependencies);
 
   if (tearTestMode) {
+    const observedSemanticActions: ReturnType<typeof Input.drainSemanticActions>[number][] = [];
+    Input.semantic.subscribe((entry) => { observedSemanticActions.push(entry); });
     Object.defineProperty(window, "__TEAR_PLATFORM_SERVICES__", {
       configurable: true,
       get: () => platform.services,
@@ -189,6 +198,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
         startRecording: () => { Input.startSemanticRecording(); },
         stopRecording: () => { Input.stopSemanticRecording(); },
         drain: (tick: number) => Input.drainSemanticActions(tick),
+        drainObserved: () => observedSemanticActions.splice(0, observedSemanticActions.length),
         snapshot: () => ({
           mode: Input.mode,
           held: [...Input.held].sort(),

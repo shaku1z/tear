@@ -1,4 +1,5 @@
 import type { BladePlatformPort } from "../entities/blade-contracts";
+import type { BladeWeaponEvent } from "../entities/blade-contracts";
 
 export interface CombatPreludePlayer {
   cinematicProtected: boolean; cinematicGraceT: number; flowDR: number; hazardT: number;
@@ -10,7 +11,8 @@ export interface CombatPreludePlayer {
 
 export interface CombatPreludeBlade {
   state: string; secondaryStartedNew: boolean; linkBrokenNew: string | false;
-  weapon?: Readonly<{ id?: string }> | null; orbit: number;
+  weapon?: Readonly<{ id?: string }> | null;
+  drainWeaponEvents(): readonly BladeWeaponEvent[];
   update(dt: number, player: CombatPreludePlayer, platforms: readonly BladePlatformPort[]): void;
 }
 
@@ -32,9 +34,10 @@ export interface CombatStepPreludeOptions {
   readonly platforms: readonly BladePlatformPort[];
   readonly protection: { active: boolean; lastMode: string | null };
   readonly timers: { throwCooldown: number };
-  readonly tuning: { flowGuardTier: number; flowGuardMultiplier: number; thrownMoveBoost: number; orbitMove: number };
+  readonly tuning: { flowGuardTier: number; flowGuardMultiplier: number; thrownMoveBoost: number };
   readonly overrunMovementMultiplier: number;
   stepCinematic(dt: number): void; flushClosingInput(): void; updateWeaponAbilities(dt: number): void;
+  flushWeaponActions(events: readonly BladeWeaponEvent[]): void;
   updateZonesAndWalls(dt: number): void; syncVoidSupport(): void;
   activateThrowSecondary(): void;
 }
@@ -64,14 +67,14 @@ export function stepCombatPrelude(options: CombatStepPreludeOptions): CombatStep
   options.updateWeaponAbilities(dt);
   if (player.hazardT > 0) player.hazardT = Math.max(0, player.hazardT - dt);
   options.updateZonesAndWalls(dt);
-  const orbitMove = blade.weapon?.id === "ringblade" ? 1 + blade.orbit * options.tuning.orbitMove : 1;
-  player.moveBoost = (blade.state !== "held" ? options.tuning.thrownMoveBoost : 1) * options.overrunMovementMultiplier * orbitMove *
+  player.moveBoost = (blade.state !== "held" ? options.tuning.thrownMoveBoost : 1) * options.overrunMovementMultiplier *
     (player.tempoT > 0 ? 1.18 : 1) * (player.afterimageT > 0 ? player.afterimageSpeedMult : 1);
   player.update(dt, options.platforms); run.weaponStats.distanceMoved += Math.hypot(player.vx, player.vy) * dt;
   if (run.voidScroll) options.syncVoidSupport();
   else { player.supportPlatform = null; player.voidLane = null; player.voidMajorWindow = false; }
   const previousBladeState = blade.state, wasReturning = previousBladeState === "returning";
   blade.update(dt, player, options.platforms);
+  options.flushWeaponActions(blade.drainWeaponEvents());
   if (blade.secondaryStartedNew) { blade.secondaryStartedNew = false; options.activateThrowSecondary(); }
   const linkBreakReason = blade.linkBrokenNew;
   if (linkBreakReason) blade.linkBrokenNew = false;

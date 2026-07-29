@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 
-const weapons = ["sword", "hammer", "spear", "chainblade", "ringblade"];
+const weapons = ["sword", "hammer", "greatsword", "chainblade", "riftlock"];
 const difficulties = ["easy", "normal", "hard", "extreme", "onehit"];
 const collectiveRequiredCoreMechanics = [
   "heldSlash", "launch", "juggle", "slam", "updraft",
@@ -16,9 +16,9 @@ const collectiveNonStolenMechanics = collectiveRequiredCoreMechanics.filter(
 const weaponIdentityRequirements = Object.freeze({
   sword: ["heldSlash"],
   hammer: ["heldSlash"],
-  spear: ["heldSlash"],
+  greatsword: ["heldSlash"],
   chainblade: ["heldSlash"],
-  ringblade: ["throw", "recall"],
+  riftlock: ["throw", "recall"],
 });
 const modeContracts = [
   { id: "tutorial", mode: "tutorial", difficulties: null },
@@ -44,9 +44,9 @@ function mechanics(snapshot) {
     evidence: condition ? evidence : "No corresponding live signal occurred in this bounded run.",
   });
   const recalled = stats.throws > 0 && [...states].some((state) =>
-    ["returning", "reeling", "yanking", "held"].includes(state));
+    ["returning", "slinging", "held"].includes(state));
   const tethered = snapshot.bladeTether.contracted
-    || control.some((entry) => entry.state === "latched");
+    || control.some((entry) => entry.state === "hooked");
   const stolenAt = control.findIndex((entry) => entry.hostile && entry.stolen);
   const recoveredAt = control.findIndex((entry, index) =>
     index > stolenAt && !entry.hostile && !entry.stolen && entry.state === "held");

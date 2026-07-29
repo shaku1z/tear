@@ -53,7 +53,7 @@ const path = require("node:path");
     diagnosticsFrozen: Object.isFrozen(window.__TEAR_DIAGNOSTICS__),
     canvas: { width: document.querySelector("canvas").width, height: document.querySelector("canvas").height },
   }));
-  assert.equal(snapshot.weapons.map((weapon) => weapon.id).join(","), "sword,hammer,spear,chainblade,ringblade");
+  assert.equal(snapshot.weapons.map((weapon) => weapon.id).join(","), "sword,hammer,greatsword,chainblade,riftlock");
   assert.equal(new Set(snapshot.weapons.map((weapon) => weapon.throwIdentity)).size, 5);
   assert.equal(snapshot.abilities.sort().join(","), "Overrun,Sever,Stormbank");
   assert.equal(snapshot.audio.settings.masterVolume, 0.6);
@@ -150,7 +150,7 @@ const path = require("node:path");
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running");
   await page.waitForTimeout(500);
   if (process.env.TEAR_SCREENSHOT) await page.screenshot({ path: process.env.TEAR_SCREENSHOT });
-  const weaponIds = ["sword", "hammer", "spear", "chainblade", "ringblade"];
+  const weaponIds = ["sword", "hammer", "greatsword", "chainblade", "riftlock"];
   async function pulseThrowUntilLaunched(expectedThrows) {
     let snapshot = null;
     for (let attempt = 0; attempt < 60; attempt++) {

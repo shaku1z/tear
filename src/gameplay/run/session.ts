@@ -21,7 +21,7 @@ export interface CreateRunSessionOptions<TMods> {
 
 export interface RunWeaponStats {
   heldHits: number;
-  trueCuts: number;
+  reversals: number;
   throws: number;
   throwHits: number;
   perfectParries: number;
@@ -95,8 +95,9 @@ export function createRunSession<TMods extends { weaponId?: string }>(
 ): RunSession<TMods> {
   if (!Number.isSafeInteger(options.runSeed) || options.runSeed < 1) throw new RangeError("runSeed must be a positive integer");
   if (!Number.isSafeInteger(options.voidSeed) || options.voidSeed < 1) throw new RangeError("voidSeed must be a positive integer");
+  const weaponId = migrateWeaponSelection(options.weaponId);
   const mods = options.mods;
-  mods.weaponId = options.weaponId;
+  mods.weaponId = weaponId;
   return {
     mode: options.mode,
     diff: options.difficulty,
@@ -128,8 +129,8 @@ export function createRunSession<TMods extends { weaponId?: string }>(
     _dmgThisRun: false,
     _dmgThisStage: false,
     _achSnap: [...options.achievementSnapshot],
-    weaponId: options.weaponId,
-    weaponStats: { heldHits: 0, trueCuts: 0, throws: 0, throwHits: 0, perfectParries: 0, breakTriggers: 0, distanceMoved: 0 },
+    weaponId,
+    weaponStats: { heldHits: 0, reversals: 0, throws: 0, throwHits: 0, perfectParries: 0, breakTriggers: 0, distanceMoved: 0 },
     weaponLog: [],
     biomeState: { swung: false, thrown: false, jumped: false },
     _staticParry: 0,
@@ -146,3 +147,4 @@ export function createRunSession<TMods extends { weaponId?: string }>(
   };
 }
 import type { WaveSpawnSpec } from "./wave-planner";
+import { migrateWeaponSelection } from "../weapon-selection";

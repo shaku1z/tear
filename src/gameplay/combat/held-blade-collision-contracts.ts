@@ -15,14 +15,15 @@ export interface HeldBladePlayer {
 
 export interface HeldBladeWeapon {
   x: number; y: number; tipX: number; tipY: number; tipVX: number; tipVY: number;
-  tipSpeed: number; angle: number; throwId: number;
+  tipSpeed: number; angle: number; throwId: number; swingId: number; attackId: number;
   damageAt(): number; hitQuality(enemy: HeldBladeEnemy): number;
+  claimAttack(): number; heldDamageMultiplierAt(x: number, y: number): number;
   recordHit(enemy: HeldBladeEnemy): void;
 }
 
 export interface HeldWeaponEffect {
   mechanic?: string; repeatScale?: number; hitIframe?: number; seam?: number;
-  breakPower?: number; broke?: boolean; force?: number;
+  breakPower?: number; broke?: boolean; force?: number; damageMult?: number;
 }
 
 export interface HeldBladeEnemy {
@@ -56,7 +57,7 @@ export interface HeldBladeMods {
 
 export interface HeldBladeRun {
   mult: number; mods: HeldBladeMods; lifestealCd: number;
-  weaponStats: { heldHits: number; trueCuts: number; breakTriggers: number };
+  weaponStats: { heldHits: number; reversals: number; breakTriggers: number };
   _updraftChain?: number; _aldricSlams?: number;
 }
 
@@ -72,7 +73,7 @@ export interface HeldBladeTuning {
   hitStop: { small: number; big: number; threshold: number };
   juice: { sparkCount: number; shakeSmall: number; shakeBig: number; zoomBig: number };
   colors: { perfect: string; armoredShield: string; slam: string; charger: string };
-  spearWallPinDuration: number; lifestealCooldown: number;
+  lifestealCooldown: number;
 }
 
 export interface HeldBladeCollisionEffects {

@@ -52,10 +52,11 @@ export function replayLiveStateForgeProgression(
     },
     selectWeapon(weaponId) {
       const weapon = d.applyWeapon(weaponId);
-      run.weaponId = weapon.id;
-      blade.weapon = weapon;
-      blade.model = weapon.model;
-    },
+        run.weaponId = weapon.id;
+        blade.weapon = weapon;
+        blade.model = weapon.model;
+        weapon.onReset?.({ blade });
+      },
     applyMeta(id, value) {
       if (value !== 0) throw new TypeError(`live State Forge does not invent unsupported meta mutation ${id}`);
     },

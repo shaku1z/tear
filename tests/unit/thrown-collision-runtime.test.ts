@@ -3,14 +3,14 @@ import { resolveThrownCollisions, type ThrownBlade, type ThrownCollisionHooks,
   type ThrownCollisionTuning, type ThrownEnemy, type ThrownPlayer, type ThrownRun } from "../../src/gameplay/combat/thrown-collision-runtime";
 
 const tuning: ThrownCollisionTuning = { duelCooldown: 2, throwLowMultiplier: 0.8, throwHighMultiplier: 1.2,
-  recallMultiplier: 1, maxThrowSpeed: 900, throwSpeed: 500, ringbladeEnemyCost: 1, chainbladeBindDuration: 2,
+  recallMultiplier: 1, maxThrowSpeed: 900, throwSpeed: 500, chainbladeHookDuration: 2,
   hitStopSmall: 0.1, shakeSmall: 2, sparkCount: 4,
   colors: { deflected: "d", armoredShield: "a", perfect: "p", charger: "c", bladeTrail: "t" } };
 
 function blade(): ThrownBlade {
   const hit = vi.fn();
   return { x: 0, y: 0, vx: 100, vy: 0, angle: 0, state: "flying", thrown: true, throwDmg: 10,
-    throwBaseDmg: 10, throwId: 1, secondaryActive: false, circuitEnergy: 0, pierced: new Set(),
+    throwBaseDmg: 10, throwId: 1, secondaryActive: false, pierced: new Set(),
     thrownCollisionSegment: () => ({ x1: 0, y1: 0, x2: 20, y2: 0 }), thrownCollisionPad: () => 2,
     canHitThrownEnemy: () => true, channel: () => 1, recordHit: hit, claimImpact: () => true, forceEmbed: vi.fn() };
 }
@@ -50,8 +50,8 @@ describe("thrown collision runtime", () => {
   it("stops the enemy pass after a weapon-owned impact claim", () => {
     const weapon = blade(); const firstHit = vi.fn(() => 1); const secondHit = vi.fn(() => 1);
     const first = enemy({ x: 5, hit: firstHit }); const second = enemy({ x: 10, hit: secondHit }); const fx = hooks();
-    fx.weaponHit = () => ({ stop: true, mechanic: "anchor" });
+    fx.weaponHit = () => ({ stop: true, mechanic: "hook" });
     resolveThrownCollisions(weapon, player, [first, second], [], run, tuning, fx);
-    expect(firstHit).toHaveBeenCalledOnce(); expect(secondHit).not.toHaveBeenCalled(); expect(weapon.anchorTarget).toBe(first);
+    expect(firstHit).toHaveBeenCalledOnce(); expect(secondHit).not.toHaveBeenCalled(); expect(weapon.hookTarget).toBe(first);
   });
 });
