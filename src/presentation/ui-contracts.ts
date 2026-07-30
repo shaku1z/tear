@@ -8,6 +8,7 @@ export interface UiDependencies {
     Input: {
         mode?: string;
     };
+    controllerGlyph?: (buttonIndex: number) => string;
     OVERSCAN: Overscan;
     clamp: (value: number, minimum: number, maximum: number) => number;
 }

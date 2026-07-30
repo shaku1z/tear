@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "runtimes": [
+    {
+      "buildId": "ghost-v3-launch",
+      "module": "src/ghost/truth-kernel.ts",
+      "migrationModule": "src/replay/envelope.ts",
+      "verificationProfile": "command-state-visual",
+      "playback": "exact",
+      "status": "supported"
+    },
+    {
+      "buildId": "ghost-v2-legacy",
+      "module": "src/replay/envelope.ts",
+      "migrationModule": "src/ghost/truth-kernel.ts",
+      "verificationProfile": "command-final-hash",
+      "playback": "semantic",
+      "status": "supported"
+    },
+    {
+      "buildId": "ghost-v1-legacy",
+      "module": "src/replay/envelope.ts",
+      "migrationModule": "src/replay/envelope.ts",
+      "verificationProfile": "legacy-visual",
+      "playback": "visual-only",
+      "status": "retired"
+    }
+  ],
+  "aliases": [
+    { "alias": "current-ranked", "targetId": "ghost-v3-launch" },
+    { "alias": "legacy-command", "targetId": "ghost-v2-legacy" }
+  ],
+  "tombstones": [
+    {
+      "id": "ghost-v3-prototype-unversioned",
+      "reason": "Pre-contract prototype IDs are permanently non-verifiable.",
+      "replacementId": "ghost-v3-launch"
+    }
+  ],
+  "migrationFixtures": [
+    {
+      "id": "replay-v1-to-v2-to-ghost-v3",
+      "source": "tests/unit/replay-envelope.test.ts",
+      "target": "src/ghost/truth-kernel.ts"
+    },
+    {
+      "id": "persistence-replay-v0-to-current",
+      "source": "tests/unit/persistence-envelopes.test.ts",
+      "target": "src/persistence/replay-envelope.ts"
+    }
+  ],
+  "goldenReplayCorpus": [
+    {
+      "id": "authoritative-render-rate-round-trip",
+      "source": "tests/unit/authoritative-replay.test.ts",
+      "expectedStatus": "verified"
+    },
+    {
+      "id": "replay-v1-migration",
+      "source": "tests/unit/replay-envelope.test.ts",
+      "expectedStatus": "verified-after-migration"
+    },
+    {
+      "id": "ghost-v1-visual-degradation",
+      "source": "tests/unit/ghost-truth-kernel.test.ts",
+      "expectedStatus": "visual-only"
+    }
+  ]
+}

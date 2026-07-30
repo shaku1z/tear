@@ -19,7 +19,7 @@ function frame(overrides: Partial<UiFrameInput> = {}): UiFrameInput {
     screen: "menu", buttons, focus: 0, scroll: 0, scrollY: 0, pageUp: false, pageDown: false,
     pointer: { x: -100, y: -100 }, touch: false,
     directions: { left: false, right: false, up: false, down: false },
-    previous: false, next: false, pressed: new Set(), padBack: false, confirm: false,
+    previous: false, next: false, pressed: new Set(), padBack: false, confirm: false, context1: false,
     ...overrides,
   };
 }
@@ -52,6 +52,17 @@ describe("semantic UI action coordinator", () => {
   it("routes controller back to an enabled BACK action and confirm to focused action", () => {
     expect(coordinateUiFrame(frame({ padBack: true })).action).toEqual({ type: "activate-button", index: 2, source: "back" });
     expect(coordinateUiFrame(frame({ focus: 1, confirm: true })).action).toEqual({ type: "activate-button", index: 1, source: "confirm" });
+  });
+
+  it("routes the controller primary context shortcut directly to START on setup", () => {
+    const setupButtons = [
+      { x: 0, y: 0, w: 100, h: 40, label: "MODE" },
+      { x: 0, y: 60, w: 100, h: 40, label: "START" },
+      { x: 0, y: 120, w: 100, h: 40, label: "BACK" },
+    ] as const;
+    expect(coordinateUiFrame(frame({
+      screen: "setup", buttons: setupButtons, focus: 0, context1: true,
+    })).action).toEqual({ type: "activate-button", index: 1, source: "confirm" });
   });
 
   it("lets pointer hover move focus in every input modality (source handleUI contract)", () => {

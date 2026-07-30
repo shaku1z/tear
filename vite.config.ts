@@ -65,7 +65,8 @@ function targetDependencyBoundary(target: "standalone" | "crazygames"): Plugin {
 }
 
 export default defineConfig(({ mode }) => {
-  const target = mode === "crazygames" ? "crazygames" : "standalone";
+  const testBuild = mode === "test-standalone" || mode === "test-crazygames";
+  const target = mode === "crazygames" || mode === "test-crazygames" ? "crazygames" : "standalone";
   return {
     // CrazyGames unpacks uploads below a portal-owned path, so bundle assets
     // must be relative instead of rooted at the host origin.
@@ -103,8 +104,11 @@ export default defineConfig(({ mode }) => {
         },
       })] : []),
     ],
+    define: {
+      __TEAR_TEST_BUILD__: JSON.stringify(testBuild),
+    },
     build: {
-      outDir: `dist/${target}`,
+      outDir: testBuild ? `dist/test-${target}` : `dist/${target}`,
       emptyOutDir: true,
       sourcemap: false,
       target: "baseline-widely-available",

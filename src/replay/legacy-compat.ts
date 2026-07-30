@@ -1,4 +1,5 @@
 import type { ReplayActionEnvelope, ReplayBuildMetadata, TearScoreReplayMetadata } from "./envelope";
+import type { FINAL_FIVE_WEAPON_SCHEMA_VERSION, WeaponId } from "../gameplay/weapon-selection";
 import { acceptedRecording, arrayValue, isRecord, numberValue, stringValue, tearScoreMetadata } from "./legacy-compat-validation";
 import {
   buildVisualReplayPacket,
@@ -13,12 +14,10 @@ import {
   type VisualStageEvent,
   type VisualWaveEvent,
 } from "./visual-replay";
-
 export interface ReplayStore {
   get(key: string): string | null;
   set(key: string, value: string): void;
 }
-
 export interface SemanticReplayInput {
   startRecording(): void;
   stopRecording(): void;
@@ -26,17 +25,24 @@ export interface SemanticReplayInput {
   /** Highest tick the buffer's sequencer has sealed an envelope at (0 when none). */
   readonly lastSealedTick: number;
 }
-
 export interface LegacyReplayDependencies {
   readonly store: ReplayStore;
   readonly document: Document;
   readonly now: () => number;
   readonly random: () => number;
   readonly semanticInput?: SemanticReplayInput;
+  /**
+   * Hybrid command packets are useful to deterministic tooling, but the oracle
+   * visual ghost never owned browser input. Live play keeps this off so starting
+   * a recorded run cannot create a second input pipeline.
+   */
+  readonly captureSemanticActions?: boolean;
   readonly defaults: Readonly<{
     rulesetVersion: string;
     build: ReplayBuildMetadata;
     ticksPerSecond: number;
+    weaponId: WeaponId;
+    weaponSchemaVersion: typeof FINAL_FIVE_WEAPON_SCHEMA_VERSION;
     tearScore: () => TearScoreReplayMetadata;
   }>;
 }
@@ -47,9 +53,27 @@ export interface RunReplayContext {
   readonly rulesetVersion?: string;
   readonly build?: ReplayBuildMetadata;
   readonly tearScore?: TearScoreReplayMetadata;
+  readonly weaponId?: WeaponId;
+  readonly weaponSchemaVersion?: typeof FINAL_FIVE_WEAPON_SCHEMA_VERSION;
 }
 
-interface MutableRecording {
+export type LiveGhostEngineEvent =
+  | Readonly<{ kind: "stage"; tick: number; stage: number }>
+  | Readonly<{ kind: "wave"; tick: number; wave: number; event: string }>
+  | Readonly<{ kind: "spawn"; tick: number; actorId: number; actorKind: string }>
+  | Readonly<{ kind: "death"; tick: number; actorId: number; cause: string }>
+  | Readonly<{ kind: "effect"; tick: number; effect: string; x: number; y: number }>;
+type UntickedLiveGhostEngineEvent =
+  LiveGhostEngineEvent extends infer Event
+    ? Event extends LiveGhostEngineEvent ? Omit<Event, "tick"> : never
+    : never;
+
+export interface LegacyGhostRecordingObserver {
+  started(context: Readonly<RunReplayContext>): void;
+  stopped(meta: Readonly<Record<string, unknown>>): void;
+}
+
+export interface MutableRecording {
   t: number;
   elapsed: number;
   acc: number;
@@ -74,6 +98,8 @@ interface MutableRecording {
   provenance: VisualReplayProvenance;
 }
 
+export interface LegacyGhostRuntimeState { readonly recording: MutableRecording | null }
+
 interface PlayerSample { readonly x: number; readonly y: number; readonly facing: number }
 interface BladeSample { readonly tipX: number; readonly tipY: number }
 interface EnemySample { x: number; y: number; dead?: boolean; _gid?: number }
@@ -94,9 +120,15 @@ export class LegacyGhostEngine {
   rec: MutableRecording | null = null;
   play: ReplayPlayback | null = null;
   readonly #dependencies: LegacyReplayDependencies;
+  readonly #eventListeners = new Set<(event: LiveGhostEngineEvent) => void>();
+  #recordingObserver: LegacyGhostRecordingObserver | null = null;
 
   constructor(dependencies: LegacyReplayDependencies) {
     this.#dependencies = dependencies;
+  }
+
+  #semanticInput(): SemanticReplayInput | undefined {
+    return this.#dependencies.captureSemanticActions === false ? undefined : this.#dependencies.semanticInput;
   }
 
   startRec(context: RunReplayContext = {}): void {
@@ -112,17 +144,37 @@ export class LegacyGhostEngine {
         runId: context.runId ?? fallbackId,
         seed: context.seed ?? fallbackId,
         ticksPerSecond: this.#dependencies.defaults.ticksPerSecond,
+        weaponId: context.weaponId ?? this.#dependencies.defaults.weaponId,
+        weaponSchemaVersion: context.weaponSchemaVersion ?? this.#dependencies.defaults.weaponSchemaVersion,
         tearScore: tearScoreMetadata(context.tearScore ?? this.#dependencies.defaults.tearScore()),
       },
     };
-    this.#dependencies.semanticInput?.startRecording();
+    this.#semanticInput()?.startRecording();
+    this.#recordingObserver?.started(Object.freeze({ ...context }));
   }
 
   recording(): boolean { return this.rec !== null; }
+  setRecordingObserver(observer: LegacyGhostRecordingObserver | null): void { this.#recordingObserver = observer; }
+
+  captureRuntimeState(): LegacyGhostRuntimeState { return Object.freeze({ recording: this.rec === null ? null : structuredClone(this.rec) }); }
+  restoreRuntimeState(state: LegacyGhostRuntimeState): void { this.rec = state.recording === null ? null : structuredClone(state.recording); }
+
+  subscribe(listener: (event: LiveGhostEngineEvent) => void): () => void {
+    this.#eventListeners.add(listener);
+    return () => { this.#eventListeners.delete(listener); };
+  }
+
+  #emit(event: UntickedLiveGhostEngineEvent): void {
+    const value = Object.freeze({
+      ...event,
+      tick: this.#semanticInput()?.lastSealedTick ?? 0,
+    }) as LiveGhostEngineEvent;
+    for (const listener of this.#eventListeners) listener(value);
+  }
 
   /** Seals device actions onto the authoritative simulation tick before rules execute. */
   drainActions(tick: number): readonly ReplayActionEnvelope[] {
-    const actions = this.#dependencies.semanticInput?.drain(tick) ?? [];
+    const actions = this.#semanticInput()?.drain(tick) ?? [];
     this.rec?.actions.push(...actions);
     return actions;
   }
@@ -169,22 +221,33 @@ export class LegacyGhostEngine {
   }
 
   #time(): number { return this.rec === null ? 0 : Number(this.rec.t.toFixed(1)); }
-  stage(index: number): void { this.rec?.stages.push({ t: this.#time(), s: index }); }
-  wave(wave: number, event: string): void { this.rec?.waves.push({ t: this.#time(), w: wave, e: event }); }
+  stage(index: number): void {
+    this.rec?.stages.push({ t: this.#time(), s: index });
+    this.#emit({ kind: "stage", stage: index });
+  }
+  wave(wave: number, event: string): void {
+    this.rec?.waves.push({ t: this.#time(), w: wave, e: event });
+    this.#emit({ kind: "wave", wave, event });
+  }
 
   spawn(enemy: EnemySample | null, kind: string, extra?: Readonly<{ vn?: string; b?: string }>): void {
     if (this.rec === null || enemy === null) return;
     enemy._gid = ++this.rec.gid;
     const base = { t: this.#time(), id: enemy._gid, k: kind, x: Math.round(enemy.x), y: Math.round(enemy.y) };
     this.rec.spawns.push(extra === undefined ? base : { ...base, ...extra });
+    this.#emit({ kind: "spawn", actorId: enemy._gid, actorKind: kind });
   }
 
   death(enemy: EnemySample | null, cause = ""): void {
-    if (this.rec !== null && enemy?._gid !== undefined) this.rec.deaths.push({ t: this.#time(), id: enemy._gid, c: cause });
+    if (this.rec !== null && enemy?._gid !== undefined) {
+      this.rec.deaths.push({ t: this.#time(), id: enemy._gid, c: cause });
+      this.#emit({ kind: "death", actorId: enemy._gid, cause });
+    }
   }
 
   event(kind: string, x = 0, y = 0): void {
     this.rec?.events.push({ t: this.#time(), k: kind, x: Math.round(x), y: Math.round(y) });
+    this.#emit({ kind: "effect", effect: kind, x, y });
   }
 
   loadoutPick(id: string, tier = 1, wave = 0): void {
@@ -209,16 +272,17 @@ export class LegacyGhostEngine {
     const recording = this.rec;
     this.rec = null;
     if (recording === null || recording.px.length < 20) {
-      this.#dependencies.semanticInput?.stopRecording();
+      this.#semanticInput()?.stopRecording();
+      if (recording !== null) this.#recordingObserver?.stopped(meta);
       return null;
     }
     // The recorder's elapsed clock is relative to the recording start while mid-run
     // drains seal at the absolute simulation tick; clamp so the closing drain can
     // never move the sequencer backwards (a throw here would kill the frame loop).
     const finalTick = Math.max(0, Math.round(recording.elapsed * recording.provenance.ticksPerSecond),
-      this.#dependencies.semanticInput?.lastSealedTick ?? 0);
-    recording.actions.push(...(this.#dependencies.semanticInput?.drain(finalTick) ?? []));
-    this.#dependencies.semanticInput?.stopRecording();
+      this.#semanticInput()?.lastSealedTick ?? 0);
+    recording.actions.push(...(this.#semanticInput()?.drain(finalTick) ?? []));
+    this.#semanticInput()?.stopRecording();
     recording.provenance = {
       ...recording.provenance,
       tearScore: tearScoreMetadata(this.#dependencies.defaults.tearScore()),
@@ -232,7 +296,9 @@ export class LegacyGhostEngine {
       deaths: recording.deaths, events: recording.events, loadout: recording.loadout, thumb: recording.thumb,
       ...(finalLoadout === undefined ? {} : { finalLoadout }),
     };
-    return buildVisualReplayPacket(raw, recording.provenance, recording.actions);
+    const packet = buildVisualReplayPacket(raw, recording.provenance, recording.actions);
+    this.#recordingObserver?.stopped(meta);
+    return packet;
   }
 
   begin(value: unknown): ReplayPlayback | null {

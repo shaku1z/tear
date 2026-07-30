@@ -39,8 +39,9 @@ import { createPlayerRenderer } from "../presentation/entities/player-renderer";
 import { createProjectileRenderer } from "../presentation/entities/projectile-renderer";
 import { createUi } from "../presentation/ui";
 import { createLegacyReplayCompatibility } from "../replay/legacy-compat";
-import { GAME_RANDOM } from "../simulation/run-random";
+import { GAME_RANDOM, GAME_RANDOM_STREAMS } from "../simulation/run-random";
 import { PerformanceMonitor } from "../diagnostics/performance-monitor";
+import { createTearTestEnvironment } from "../tearbench/test-environment";
 import { LegacyAppStateController } from "./legacy-state-controller";
 import { startLiveGame } from "./live-game-runtime";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
@@ -55,6 +56,7 @@ export interface TearCompositionOptions {
 
 interface CompositionWindow extends Window {
   readonly Clipper?: Readonly<{ start(): void; stop(): void }>;
+  readonly __TEAR_TEST_STORAGE__?: Readonly<Record<string, string>>;
   __TEAR_CATALOG_DEBUG__?: object;
 }
 
@@ -65,6 +67,18 @@ interface CompositionWindow extends Window {
 export function composeTearApplication(options: TearCompositionOptions): void {
   const { target, sdk, createCrazyGamesServices, createCloud, pwaUpdate } = options;
   const compositionWindow = window as CompositionWindow;
+  const tearTestMode = __TEAR_TEST_BUILD__ && new URLSearchParams(window.location.search).get("test") === "1";
+  // Test pages may seed the isolated adapter before composition. Production never
+  // reads this value and continues to use the platform's real storage adapter.
+  const disposableValues = new Map<string, string>(tearTestMode
+    ? Object.entries(compositionWindow.__TEAR_TEST_STORAGE__ ?? {})
+    : []);
+  const tearTestEnvironment = tearTestMode ? createTearTestEnvironment("live-test-composition") : undefined;
+  const disposableStorage = tearTestMode ? {
+    getItem: (key: string) => disposableValues.get(key) ?? null,
+    setItem: (key: string, value: string) => { disposableValues.set(key, value); },
+    removeItem: (key: string) => { disposableValues.delete(key); },
+  } : undefined;
   // Optional capture tooling is a development adapter, never a production
   // gameplay dependency or shared writable global.
   const clipper = import.meta.env.DEV ? compositionWindow.Clipper : undefined;
@@ -72,7 +86,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     { config: CONFIG, safeArea: SAFE, overscan: OVERSCAN, window, document, navigator, performance },
     { createInput: createLegacyInput, createGamepad: createLegacyGamepad },
   );
-  const UI = createUi({ CLOCK, CONFIG, Input, OVERSCAN, clamp });
+  const UI = createUi({ CLOCK, CONFIG, Input, OVERSCAN, clamp,
+    controllerGlyph: (buttonIndex) => PAD.glyph(buttonIndex) });
   const playerPresentation = createPlayerRenderer({ colors: CONFIG.colors, graphics: GFX, theme: THEME, clamp });
   const bladePresentation = createBladeRenderer({ clock: CLOCK, config: CONFIG, graphics: GFX, theme: THEME, clamp, len, lerp });
   const projectilePresentation = createProjectileRenderer({ clock: CLOCK, config: CONFIG, graphics: GFX, theme: THEME, clamp });
@@ -87,7 +102,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   });
   const enemyTypes = createEnemyTypes({
     CLOCK, CONFIG, ...(clipper === undefined ? {} : { Clipper: clipper }),
-    FX, GAME_RANDOM, Projectile, SFX,
+    FX, GAME_RANDOM: GAME_RANDOM_STREAMS.stream("enemy-ai"), Projectile, SFX,
     presentation: enemyPresentation,
     aabbOverlap, clamp, cosmeticRandom, len, lerp, segPointDist, segSegmentDist,
   });
@@ -98,7 +113,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     drawBossTransformationWorld, weaponCapsuleIntersectsSegment,
   } = enemyTypes;
   const { Mirror, MirrorHost, ReflectionEnemy } = createMirrorTypes({
-    Blade, CLOCK, CONFIG, Enemy, FX, GAME_RANDOM, Player, Projectile, SFX, presentation: mirrorPresentation,
+    Blade, CLOCK, CONFIG, Enemy, FX, GAME_RANDOM: GAME_RANDOM_STREAMS.stream("boss"), Player, Projectile, SFX, presentation: mirrorPresentation,
     clamp, getWeapon, lerp, lerpAngle,
   });
   const Attract = createAttract({ Backdrop, Blade, CONFIG, FX, GFX, OVERSCAN, Player, STAGES, THEME, clamp });
@@ -106,6 +121,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     target,
     ...(sdk === undefined ? {} : { sdk }),
     ...(createCrazyGamesServices === undefined ? {} : { createCrazyGamesServices }),
+    ...(disposableStorage === undefined ? {} : { storage: disposableStorage }),
+    ...(tearTestEnvironment === undefined ? {} : { services: tearTestEnvironment.platform }),
   });
   const CG = platform.CG;
 
@@ -122,10 +139,15 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     now: () => Date.now(),
     random: () => Math.random(),
     semanticInput: Input.semantic,
+    // ee5e931 visual ghosts only sampled the completed world. Keep the command
+    // recorder available to explicit deterministic tooling, never live play.
+    captureSemanticActions: false,
     defaults: {
       rulesetVersion: "tear-rules-2026.07",
       build: { version: "0.1.0", revision: import.meta.env.MODE, target },
       ticksPerSecond: 120,
+      weaponId: "sword",
+      weaponSchemaVersion: "final-five-v1",
       tearScore: () => SFX.musicReplayMetadata(),
     },
   });
@@ -136,7 +158,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     getMeta: () => META,
   });
   const { META, SHOP } = createMetaProgression<UpgradeDefinition, UpgradeApplyContext & ProgressionApplyContext>({
-    store: CG.store, config: CONFIG, cloud: Cloud, random: GAME_RANDOM, upgrades: UPGRADES,
+    store: CG.store, config: CONFIG, cloud: Cloud, random: GAME_RANDOM_STREAMS.stream("draft"), upgrades: UPGRADES,
     applyUpgrade: (upgrade, context) => { applyUpgrade(upgrade, context); },
   });
   const ACH = createAchievements({ meta: META, profile: PROFILE, audio: SFX, shop: SHOP, clamp });
@@ -147,7 +169,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const gameRuntimeDependencies = {
     A11Y, ACH, AFFIXES, APP, Aldric, Armored, Attract, BOSSFX, Backdrop, Blade, Bomber, Boss,
     CG, CLOCK, CONFIG, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, DAILY, DIAG, Echo,
-    FX, FirebaseProvider, Flyer, GAME_RANDOM, GFX, GHOST, Input, META, Mirror,
+    FX, FirebaseProvider, Flyer, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
     MirrorHost, OVERSCAN, PAD, PRESETS, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
     Ranged, ReflectionEnemy, SAFE, SFX, SHOP, STAGES, Source, Support, THEME, UI, UPGRADES,
     VAULT, VARIANTS, VoidGen, VoidWisp, WEAPONS, Warden, Wraith,
@@ -158,7 +180,9 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   } satisfies GameRuntimeDependencies;
   startLiveGame(gameRuntimeDependencies);
 
-  if (new URLSearchParams(window.location.search).get("test") === "1") {
+  if (tearTestMode) {
+    const observedSemanticActions: ReturnType<typeof Input.drainSemanticActions>[number][] = [];
+    Input.semantic.subscribe((entry) => { observedSemanticActions.push(entry); });
     Object.defineProperty(window, "__TEAR_PLATFORM_SERVICES__", {
       configurable: true,
       get: () => platform.services,
@@ -174,6 +198,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
         startRecording: () => { Input.startSemanticRecording(); },
         stopRecording: () => { Input.stopSemanticRecording(); },
         drain: (tick: number) => Input.drainSemanticActions(tick),
+        drainObserved: () => observedSemanticActions.splice(0, observedSemanticActions.length),
         snapshot: () => ({
           mode: Input.mode,
           held: [...Input.held].sort(),
@@ -181,7 +206,9 @@ export function composeTearApplication(options: TearCompositionOptions): void {
           secondaryPressed: Input.rmb,
           pointerLocked: Input.locked,
           pointerLockAllowed: Input.allowLock,
+          tetherHeld: Input.tetherHeld,
           pointer: { x: Input.mouseX, y: Input.mouseY },
+          ui: { ...Input.ui },
         }),
       }),
       audio: Object.freeze({

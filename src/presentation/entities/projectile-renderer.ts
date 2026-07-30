@@ -50,6 +50,17 @@ export function createProjectileRenderer({
         drawTrail(context, projectile, trailColor, dark);
       }
 
+      if (projectile.kind === "razor") {
+        const angle = Math.atan2(projectile.vy, projectile.vx);
+        context.save(); context.translate(projectile.x, projectile.y); context.rotate(angle);
+        context.fillStyle = colors.perfect;
+        context.beginPath(); context.moveTo(projectile.r * 2, 0);
+        context.lineTo(-projectile.r, -projectile.r * 0.7);
+        context.lineTo(-projectile.r, projectile.r * 0.7);
+        context.closePath(); context.fill();
+        context.restore(); return;
+      }
+
       if (projectile.sweeper) {
         const radius = 30;
         const state = projectile.sweeperState ?? "hostile";

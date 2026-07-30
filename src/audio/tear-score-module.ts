@@ -9,6 +9,7 @@ import type {
   MusicReplayMetadata,
   MusicRunSessionMetadata,
 } from "./music-contracts";
+import { isMusicShell } from "./music-contracts";
 import type {
   TearScoreClient,
   TearScoreInitializeOptions,
@@ -16,13 +17,13 @@ import type {
 
 export const TEAR_SCORE_PROVENANCE = Object.freeze({
   engineRepository: "shaku1z/tear-score",
-  engineCommit: "766b910d07264fd81154be29a3d809c63de5c310",
+  engineCommit: "7633f1e49b15073a28b7d5d0b84e2c12cdb463b9",
   version: "0.1.0-alpha.1",
-  builtAt: "2026-07-19T13:45:03.775Z",
+  builtAt: "2026-07-26T00:22:40.659Z",
   artifactFormat: "esm",
-  bundleSha256: "fe1147cc4eb19719be9d9511c141345bf31affa34641022f4963bc52433ccbb8",
+  bundleSha256: "b4f304d85a1dfb8197abcb6c2e33ba1addc40e354c7689f717c22a1a7acd793c",
   toneVersion: "14.9.17",
-  toneSha256: "15a9fb8e393c132f1c06ba1d71def8b8f3eeb83c288023b346af6321bcf26e26",
+  toneSha256: "5dd8825c21f50486eea7353b0abdf06119dd76409e4271e3fa54fe8545463446",
 });
 
 const TEAR_SCORE_PATH = "vendor/tear-score/tear-score.esm.js";
@@ -84,7 +85,8 @@ function isTearScoreModule(value: unknown): value is TearScoreModule {
 }
 
 function toGameContext(snapshot: MusicContextSnapshot): TearScoreGameContext {
-  const screen = snapshot.scene === "main-menu" ? "menu"
+  const screen = snapshot.scene === "main-menu"
+    ? (isMusicShell(snapshot.scene, snapshot.biomeId) ? "menu" : "paused")
     : snapshot.scene === "preparation" ? "setup"
       : snapshot.scene === "paused" ? "paused"
         : snapshot.scene === "draft" ? "draft"
@@ -208,11 +210,10 @@ class PinnedModuleTearScoreClient implements TearScoreClient {
         player: { ...player, comboRank: event.rankId },
       };
     } else {
-      const player = previous.player ?? { healthRatio: 1, comboGauge: 0, comboMultiplier: 1, comboRank: "" };
-      this.#lastContext = {
-        ...previous,
-        player: { ...player, comboGauge: 1 },
-      };
+      // Stingers are deliberately disabled until every cue has a matching accent.
+      // Keep the event in the deterministic journal, but do not force an
+      // unrelated arrangement layer into the currently playing composition.
+      return;
     }
     // Adapter 0.1 exposes context snapshots rather than a separate event channel.
     // Sending the adjusted snapshot here preserves same-frame semantic delivery.

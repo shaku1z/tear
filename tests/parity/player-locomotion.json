@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "player-locomotion",
+  "contract": "player-locomotion",
+  "description": "An exact-tick keyboard stream covering grounded acceleration, jump, airborne steering, directional dash, reversal, landing, and grounded friction.",
+  "viewport": {
+    "width": 1600,
+    "height": 900
+  },
+  "mode": "playground",
+  "difficulty": "normal",
+  "actions": [
+    { "type": "wait", "ms": 250, "checkpoint": "grounded-settled" },
+    { "type": "keyDown", "key": "d", "code": "KeyD", "checkpoint": "right-edge" },
+    { "type": "wait", "ms": 250, "checkpoint": "right-acceleration" },
+    { "type": "keyDown", "key": " ", "code": "Space", "checkpoint": "jump-edge" },
+    { "type": "keyUp", "key": " ", "code": "Space", "checkpoint": "jump-release" },
+    { "type": "wait", "ms": 120, "checkpoint": "jump-ascent" },
+    { "type": "keyDown", "key": "Shift", "code": "ShiftLeft", "checkpoint": "dash-edge" },
+    { "type": "keyUp", "key": "Shift", "code": "ShiftLeft", "checkpoint": "air-dash" },
+    { "type": "wait", "ms": 180, "checkpoint": "dash-recovery" },
+    { "type": "keyUp", "key": "d", "code": "KeyD", "checkpoint": "right-release" },
+    { "type": "keyDown", "key": "a", "code": "KeyA", "checkpoint": "left-edge" },
+    { "type": "wait", "ms": 280, "checkpoint": "left-reversal" },
+    { "type": "keyUp", "key": "a", "code": "KeyA", "checkpoint": "left-release" },
+    { "type": "wait", "ms": 800, "checkpoint": "landed-reset" },
+    { "type": "wait", "ms": 250, "checkpoint": "ground-friction" }
+  ]
+}

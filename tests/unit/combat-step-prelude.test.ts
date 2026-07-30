@@ -16,7 +16,7 @@ function fixtures() {
     heal() { order.push("heal"); }, update() { order.push("player"); },
   };
   const blade: CombatPreludeBlade = {
-    state: "returning", secondaryStartedNew: true, linkBrokenNew: "range", orbit: 0,
+    state: "returning", secondaryStartedNew: true, linkBrokenNew: "range", drainWeaponEvents: () => [],
     update() { order.push("blade"); this.state = "held"; },
   };
   const run: CombatPreludeRun = { mods: { flowGuard: true, flowRegen: true }, mult: 3, lifestealCd: 1,
@@ -29,9 +29,10 @@ describe("combat step prelude", () => {
     const { order, player, blade, run } = fixtures();
     const result = stepCombatPrelude({ dt: 0.1, blocking: true, playerMode: "landing", player, blade, run,
       platforms: [], protection: { active: false, lastMode: null }, timers: { throwCooldown: 1 },
-      tuning: { flowGuardTier: 3, flowGuardMultiplier: 0.7, thrownMoveBoost: 1.1, orbitMove: 0.1 }, overrunMovementMultiplier: 1,
+      tuning: { flowGuardTier: 3, flowGuardMultiplier: 0.7, thrownMoveBoost: 1.1 }, overrunMovementMultiplier: 1,
       stepCinematic() { order.push("cinematic"); }, flushClosingInput() { order.push("flush"); },
       updateWeaponAbilities() { order.push("weapon"); }, updateZonesAndWalls() { order.push("zones"); },
+      flushWeaponActions() { order.push("weapon-actions"); },
       syncVoidSupport() { order.push("support"); }, activateThrowSecondary() { order.push("secondary"); },
     });
     expect(result.blocked).toBe(true); expect(order).toEqual(["cinematic"]); expect(player.cinematicProtected).toBe(true);
@@ -41,12 +42,13 @@ describe("combat step prelude", () => {
     const { order, player, blade, run } = fixtures();
     const protection = { active: true, lastMode: "landing" as string | null }, timers = { throwCooldown: 0.5 };
     const result = stepCombatPrelude({ dt: 0.1, blocking: false, playerMode: "", player, blade, run, platforms: [], protection, timers,
-      tuning: { flowGuardTier: 3, flowGuardMultiplier: 0.7, thrownMoveBoost: 1.1, orbitMove: 0.1 }, overrunMovementMultiplier: 1,
+      tuning: { flowGuardTier: 3, flowGuardMultiplier: 0.7, thrownMoveBoost: 1.1 }, overrunMovementMultiplier: 1,
       stepCinematic() { order.push("cinematic"); }, flushClosingInput() { order.push("flush"); },
       updateWeaponAbilities() { order.push("weapon"); }, updateZonesAndWalls() { order.push("zones"); },
+      flushWeaponActions() { order.push("weapon-actions"); },
       syncVoidSupport() { order.push("support"); }, activateThrowSecondary() { order.push("secondary"); },
     });
-    expect(order).toEqual(["flush", "heal", "weapon", "zones", "player", "support", "blade", "secondary"]);
+    expect(order).toEqual(["flush", "heal", "weapon", "zones", "player", "support", "blade", "weapon-actions", "secondary"]);
     expect(result).toEqual({ blocked: false, previousBladeState: "returning", wasReturning: true, linkBreakReason: "range" });
     expect(player.cinematicGraceT).toBe(0.7); expect(timers.throwCooldown).toBeCloseTo(0.4);
     expect(run.weaponStats.distanceMoved).toBeCloseTo(0.5);
@@ -84,12 +86,33 @@ describe("boss step runtime", () => {
     const voidScroll = { active: true, frozen: false, speed: 10, speedCap: 20 }, calls: string[] = [];
     stepBossRuntime({ dt: 0.1, player: { x: 800, y: 700, hw: 15, hh: 30, onGround: true }, platforms: [], enemies: [boss, spiked],
       run: { voidScroll }, thawMultiplier: 1.5, maximumScrollSpeed: 30,
-      unlockWitness() { calls.push("witness"); }, startVoidDescent() { calls.push("void"); }, spawnAdds() { return []; },
+      unlockWitness() { calls.push("witness"); }, startVoidDescent() { calls.push("void"); return true; }, spawnAdds() { return []; },
       spawnClone() { calls.push("clone"); }, floater() { calls.push("text"); }, dramaticBeat() { calls.push("beat"); },
       removeClone() { calls.push("remove"); }, spikeImpact() { calls.push("spike"); },
     });
     expect(voidScroll).toEqual({ active: true, frozen: false, speed: 15, speedCap: 45 });
     expect(spiked.spiked).toBe(false); expect(calls).toEqual(["spike"]);
+  });
+
+  it("retains Source's descent request until the cinematic channel accepts it", () => {
+    const boss = { x: 800, y: 300, hw: 40, hh: 60, facing: 1, isBoss: true, requestVoidCinematic: true };
+    let available = false, attempts = 0;
+    const step = () => {
+      stepBossRuntime({
+        dt: 0.1, player: { x: 800, y: 700, hw: 15, hh: 30, onGround: true },
+        platforms: [], enemies: [boss], run: {}, thawMultiplier: 1.5, maximumScrollSpeed: 30,
+        unlockWitness() { return; }, startVoidDescent() { attempts++; return available; }, spawnAdds() { return []; },
+        spawnClone() { return; }, floater() { return; }, dramaticBeat() { return; },
+        removeClone() { return; }, spikeImpact() { return; },
+      });
+    };
+
+    step();
+    expect(boss.requestVoidCinematic, "a busy/rejected launch must remain retryable").toBe(true);
+    available = true;
+    step();
+    expect(boss.requestVoidCinematic, "an accepted launch consumes the request exactly once").toBe(false);
+    expect(attempts).toBe(2);
   });
 });
 

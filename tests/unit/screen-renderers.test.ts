@@ -152,13 +152,19 @@ describe("legacy screen renderer registry", () => {
   it("preserves setup hit geometry, Boss Test selection, bounties, and the legacy start target", () => {
     const controls: ScreenControl[] = [];
     const renderer = createLegacyScreenRenderers(createRenderContext(controls));
-    renderer.setup({ id: "setup", modes: [{ id: "endless", label: "Endless" }], difficulties: [{ id: "normal", label: "Normal" }],
-      weapons: ["sword", "chainblade", "ringblade", "scythe"].map((id) => ({ id, label: id })), showDifficulty: true,
-      startSummary: "ENDLESS · NORMAL · SWORD", bossChoices: [{ id: "shuffle", label: "SHUFFLE" }, { id: "warden", label: "WARDEN" }] });
-    expect(controls.filter((control) => control.action.type === "setup.selectWeapon").map(({ y, h }) => ({ y, h }))).toEqual([
-      { y: 168, h: 70 }, { y: 246, h: 70 }, { y: 324, h: 70 }, { y: 402, h: 70 },
-    ]);
-    expect(controls.find((control) => control.action.type === "setup.start")).toMatchObject({ y: 726, h: 62, label: "START", glyph: "▶" });
+    renderer.setup({ id: "setup",
+      modes: ["endless", "rush", "daily", "boss"].map((id) => ({ id, label: id })),
+      difficulties: ["easy", "normal", "hard", "tear"].map((id) => ({ id, label: id })),
+      weapons: ["sword", "chainblade", "riftlock", "scythe"].map((id) => ({ id, label: id })), showDifficulty: true,
+      startGlyph: "▢", startSummary: "ENDLESS · NORMAL · SWORD",
+      bossChoices: [{ id: "shuffle", label: "SHUFFLE" }, { id: "warden", label: "WARDEN" }] });
+    const sharedGrid = [
+      { y: 168, h: 56 }, { y: 228, h: 56 }, { y: 288, h: 56 }, { y: 348, h: 56 },
+    ];
+    for (const action of ["setup.selectMode", "setup.selectDifficulty", "setup.selectWeapon"]) {
+      expect(controls.filter((control) => control.action.type === action).map(({ y, h }) => ({ y, h }))).toEqual(sharedGrid);
+    }
+    expect(controls.find((control) => control.action.type === "setup.start")).toMatchObject({ y: 726, h: 62, label: "START", glyph: "▢" });
     expect(controls.filter((control) => control.action.type === "setup.selectBoss")).toHaveLength(2);
   });
 

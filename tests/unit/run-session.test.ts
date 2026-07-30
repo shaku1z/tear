@@ -9,7 +9,7 @@ describe("run session factory", () => {
     const session = createRunSession({
       mode,
       difficulty: "normal",
-      weaponId: "spear",
+      weaponId: "greatsword",
       runSeed: 123,
       voidSeed: 456,
       mods,
@@ -18,11 +18,11 @@ describe("run session factory", () => {
     });
     expect(session).toMatchObject({
       mode, diff: "normal", wave: 0, score: 0, clearTimer: -1,
-      weaponId: "spear", runSeed: 123, voidSeed: 456,
+      weaponId: "greatsword", runSeed: 123, voidSeed: 456,
       coinMod: 1.1, scoreMod: 1.4, diffHp: 1.3, diffCount: 1.15,
       chapterState: mode === "campaign" ? "LORE_ENTER" : "WAVE_LIVE",
     });
-    expect(session.mods.weaponId).toBe("spear");
+    expect(session.mods.weaponId).toBe("greatsword");
     expect(session.spawnQueue).toEqual([]);
     expect(session.waveLog).toEqual([]);
   });

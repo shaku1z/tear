@@ -8,13 +8,24 @@ This is the migration checklist for the architectural redesign. A checked featur
 - [x] Installable/offline PWA and safe update recovery — `pwa-offline.js` and `pwa-update.test.ts`.
 - [x] CrazyGames iframe release and SDK lifecycle — `browser-crazygames-iframe.js`, `platform-crazygames.test.ts`, the CrazyGames platform smoke, and package validation.
 - [x] Responsive/overscan Canvas 2D presentation — `browser-responsive-matrix.js` covers four viewport/DPR profiles; the iframe gate also covers portrait resizing.
-- [x] Keyboard/mouse, touch and controller input — `browser-smoke.js`, `browser-input-matrix.js`, and the semantic/legacy input unit suites.
+- [x] Keyboard/mouse, touch and controller input — `browser-smoke.js`, `browser-input-matrix.js`, and the semantic/legacy input unit suites. The built controller matrix proves the west face button starts the selected setup directly without focus-traversing to START; prompts resolve through the active PlayStation/Xbox/generic glyph family and current bindings. One-shot gameplay edges remain buffered across display frames that do not produce a 120 Hz fixed tick, preventing high-refresh input loss.
 - [x] Fullscreen, pointer lock, focus loss and controller disconnect behavior — `browser-input-matrix.js` and the focus-release assertion in `browser-smoke.js`.
 - [x] Cloud/Firebase and offline/local capability fallbacks — `platform-firebase-cloud.test.ts`, `platform-cloud.test.ts`, `platform-browser.test.ts`, and `platform-legacy-compat.test.ts`.
+- [ ] TearBench/Ghost 3.0 operational completion — C0-C20 supplied typed
+  contracts and focused prototypes, but real-runtime integration, durable
+  Ghost/Academy storage, genuine learned policies, automatic Foundry operation,
+  complete visible experiences, and end-to-end certification remain tracked by
+  `plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md`.
+- [x] Test-build State Forge Studio — `tearbench-state-forge-studio.test.ts`
+  keeps structural, reachability, and population-plausibility reports
+  independent; `browser-state-forge-studio.js` proves the `?stateforge=1` live
+  host can launch and capture a disposable runtime, inspect provenance and
+  diffs, fork and transactionally watch a checkpoint, import/export TearSDL,
+  and fail closed on malformed editor input.
 
 ## Game flow and modes
 
-- [x] Main menu, setup/war table and tutorial — `browser-navigation-journeys.js`, `browser-feature-matrix.js`, and `training-controllers.test.ts`.
+- [x] Main menu, setup/war table and tutorial — `browser-navigation-journeys.js`, `browser-feature-matrix.js`, `browser-tutorial-journey.js`, and `training-controllers.test.ts`; setup preserves the oracle risk pips, weapon identity/rating strip, and hero START treatment through the typed live-renderer boundary while placing all public choices on one aligned row grid. The fourteen-block Cutting Room resets its task arena/state per block and never applies shop/meta upgrades. Read the Charge teaches the defensive read; Field Test then states and validates one two-step route—evade, then punish recovery—before handing off to no-wave practice. Prompts adapt to keyboard/mouse, configured controller glyphs, and touch; the browser journey completes the whole course through real semantic gameplay input.
 - [x] Endless, campaign/adventure and every published challenge/training mode — both browser mode matrices start all seven published modes; `run-wave-rules.test.ts` and `run-session.test.ts` characterize their lifecycle classes.
 - [x] Run start, wave progression, biome progression and boss transitions — the run lifecycle, wave planner/scheduler/clear, browser smoke, and boss phase suites.
 - [x] Upgrade draft, reroll, reserve and boss tier-up flows — `browser-progression-journeys.js`, `gameplay-definitions.test.ts`, and `weapon-ability-conformance.test.ts`.
@@ -24,13 +35,13 @@ This is the migration checklist for the architectural redesign. A checked featur
 
 ## Combat and content
 
-- [x] Sword, hammer, spear, chainblade and ringblade start and throw/recall characterization — `weapon-overhaul.test.js`, `gameplay-definitions.test.ts`, and the five-weapon built-artifact smoke loop.
-- [x] Weapon-specific throw identities and completed weapon action safety checks — `weapon-overhaul.test.js` and `gameplay-definitions.test.ts`.
+- [x] Sword, Hammer, Greatsword, Chainblade, and Riftlock start and throw/recall characterization — `final-five-weapon-roster.test.ts`, `thrown-collision-runtime.test.ts`, `weapon-projectile-runtime.test.ts`, `weapon-secondary-runtime.test.ts`, `gameplay-definitions.test.ts`, and the five-weapon built-artifact smoke loop. The focused roster suite preserves exit/opposite-swing Sword Reversal and live-target Threadcut, collision-safe Greatsword Wheel Cut and mass-based cleaving momentum, articulated/mass-aware Chainblade sling and world impacts, plus visible player-owned Riftlock rounds, recoil cuts, Capture, and zero-chamber Backblast.
+- [x] Weapon-specific throw identities and completed weapon action safety checks — `final-five-weapon-roster.test.ts`, `thrown-collision-runtime.test.ts`, and `gameplay-definitions.test.ts`.
 - [x] Player movement, jump, dash, drop-through, tether and trick scoring — `player-locomotion.test.ts` characterizes acceleration/friction, coyote and buffered jumps, dash transitions/charges and one-way drop-through; the semantic input and trick-runtime suites cover tether/actions and scoring.
 - [x] Weapon-by-ability conformance across normal, special and unique upgrades — `weapon-ability-conformance.test.ts` exhausts every weapon/upgrade pairing and `gameplay-definitions.test.ts` protects the authored catalogue.
 - [x] Projectiles, particles, supports, zones, walls and stage hazards — `combat-entity-conformance.test.ts`, `presentation-systems.test.ts`, `gameplay-definitions.test.ts`, and `training-controllers.test.ts`.
-- [x] Every standard enemy, variant and affix — `enemy-catalogue.test.ts`, `enemy-behavior-matrix.test.ts`, and `enemy-factory.test.ts`.
-- [x] Every boss, boss phase, arena mutation and Pantheon/Source sequence — `boss-phase-conformance.test.ts`, `boss-ritual-controller.test.ts`, `training-controllers.test.ts`, `campaign-controllers.test.ts`, and run-content/wave conformance.
+- [x] Every standard enemy, variant and affix — `enemy-catalogue.test.ts`, `enemy-behavior-matrix.test.ts`, and `enemy-factory.test.ts`. The behavior matrix now runs at the live 120 Hz simulation cadence, and Mirror conformance drives its AI through the real player integrator so immobility cannot be hidden by a no-op actor double.
+- [x] Every boss, boss phase, arena mutation and Pantheon/Source sequence — `boss-phase-conformance.test.ts`, `boss-ritual-gate.test.ts`, `boss-ritual-controller.test.ts`, `browser-boss-parity.js`, `training-controllers.test.ts`, `campaign-controllers.test.ts`, and run-content/wave conformance. The built journey crosses both Warden/Colossus rituals, Aldric's crownfall and resurrection, Echo's split/final form, and Source's void descent before proving live AI and held-blade damage. Source's authored stolen-blade counter is wired through the typed live enemy/blade coordinator, emits a semantic `stolenBlade` Ghost event, and is covered at the wiring boundary by `enemy-blade-catch-runtime.test.ts`; the C24 natural Boss Test currently records catch/recovery as not observed because the agent dies before the void phase.
 - [x] Difficulty, run modifiers, permanent upgrades and economy rewards — the run session/wave suites, `gameplay-definitions.test.ts`, `weapon-ability-conformance.test.ts`, `progression-systems.test.ts`, `coin-awards.test.ts`, and `run-outcome-planner.test.ts`.
 
 ## Persistence and online behavior
@@ -40,6 +51,11 @@ This is the migration checklist for the architectural redesign. A checked featur
 - [x] Leaderboard submission, identity and failure/offline behavior — `platform-shared-cloud.test.ts`, `platform-cloud.test.ts`, `platform-browser.test.ts`, and `platform-firebase-cloud.test.ts`.
 - [x] Replay recording, vault, publication, loading and legacy migration — replay visual/vault/envelope suites, `replay-round-trip.test.ts`, platform publication contracts, and the replay browser journey.
 - [x] Deterministic replay verification across render rates — `authoritative-replay.test.ts` verifies JSON-round-tripped actions at 30/60/144 Hz; replay hash/envelope/round-trip suites cover verification and serialization.
+- [ ] Ghost 3.0 durable Vault and governed cloud publication — current
+  capsule/Vault, Doctor, Theater, knowledge, coaching, player-experience, and
+  cloud-publication code proves contracts and pure behavior. Durable
+  cross-session storage, authenticated publication, deployed verification,
+  moderation operations, and player-visible flows remain completion work.
 
 ## Accessibility and settings
 
@@ -52,10 +68,17 @@ This is the migration checklist for the architectural redesign. A checked featur
 
 ## Audio
 
+- [x] Data-driven recorded-cue routing — `public/audio/music-routing.json` is
+  schema-validated and resolved through `src/audio/signal/music-routing-*`;
+  `music-routing.test.ts` preserves the five accepted biome choices, Echo's
+  Reflection override, terminal/boss fallback, and malformed-manifest rejection.
+
+- [x] Built-in TearScore musical identity and adaptive arrangements — all six themes preserve the oracle tempo, tonic and two-bar drum, bass and lead identity across five intensity tiers; evidence: sibling `tear-score/packages/testing/test/themes.test.ts` plus Tear's vendored-module contract.
+
 - [x] Shared host-owned AudioContext lifecycle — `audio-system.test.ts` and `browser-audio.js` prove single creation/activation across repeated runs.
 - [x] Hierarchical Master/Music/SFX/Interface mixer and internal SFX buses — `audio-mixer.test.ts` verifies graph routing, hierarchical mutes, persistence, and gain ramps.
 - [x] Existing synthesized SFX and UI feedback routed by category — `synth-cue-routing.test.ts` locks all 64 authored cues to player/weapon/enemy/environment routes; `browser-audio.js` exercises every route through distinct conditioned backend chains while UI remains on Interface.
-- [x] TearScore ESM music backend with run session, semantic events and provenance — `tear-score-module.test.ts`, `music-director.test.ts`, `audio-system.test.ts`, `scripts/verify-tear-score-provenance.mjs`.
+- [x] TearScore ESM music backend with run session, semantic events and provenance — `tear-score-module.test.ts`, `music-director.test.ts`, `audio-system.test.ts`, `scripts/verify-tear-score-provenance.mjs`. Shell ownership requires both the main-menu scene and menu biome, so in-run Settings preserves the current run cue; perfect-parry events remain journaled without injecting unrelated arrangement layers while cue-matched stingers are disabled.
 - [x] Legacy music as exclusive initialization/runtime fallback — `audio-system.test.ts` and the blocked-TearScore branch in `browser-audio.js` prove disposal and exclusive `legacy-synth` selection.
 - [x] Ad, portal, visibility, suspension and repeated-run leak tests — `audio-system.test.ts` and `browser-audio.js` account for contexts, mixer/backend/voice nodes, lifecycle listeners and fallback timers through repeated runs and disposal; CI runs a real headed hidden/visible tab transition under Xvfb while local headless runs retain an explicitly labeled simulation.
 

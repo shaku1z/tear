@@ -16,6 +16,11 @@ export type MusicScene =
   | "victory"
   | "defeat";
 
+/** Only the real menu owns shell music; menu-shaped overlays during a run do not. */
+export function isMusicShell(scene: MusicScene, biomeId: string): boolean {
+  return scene === "main-menu" && biomeId === "menu";
+}
+
 export interface MusicRunSessionMetadata {
   readonly runId: string;
   readonly runSeed: string;

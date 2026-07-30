@@ -31,15 +31,26 @@ describe("live music observation", () => {
     const observation = buildLiveMusicObservation({
       appState: "menu",
       run: { runTime: 0, mode: "arcade", diff: "normal", spawnQueue: [], combo: 0 },
-      player: null, actors: [], projectiles: [], stageName: null, stageIndex: 0,
+      player: null, actors: [], projectiles: [], stageName: "stale-stage", stageIndex: 0,
       totalWaves: 0, waveActive: false, runPhase: "idle", topComboThreshold: 0,
       bossIntroActor: null,
     });
 
     expect(observation).toMatchObject({
-      scene: "main-menu", bossActive: false, bossId: null, bossPhase: null,
+      scene: "main-menu", biomeId: "menu", bossActive: false, bossId: null, bossPhase: null,
       playerHealthRatio: 1, comboGauge: 0, playerMoving: false, playerAirborne: false,
     });
     expect(observation).not.toHaveProperty("bossHealthRatio");
+  });
+
+  it("keeps the live biome when Settings is opened during a run", () => {
+    const observation = buildLiveMusicObservation({
+      appState: "settings",
+      run: { runTime: 2, mode: "endless", diff: "normal", spawnQueue: [], combo: 0 },
+      player: null, actors: [], projectiles: [], stageName: "ruins", stageIndex: 1,
+      totalWaves: 5, waveActive: false, runPhase: "paused", topComboThreshold: 1,
+      bossIntroActor: null,
+    });
+    expect(observation).toMatchObject({ scene: "main-menu", biomeId: "ruins" });
   });
 });

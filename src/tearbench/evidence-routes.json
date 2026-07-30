@@ -1,0 +1,65 @@
+[
+  {
+    "id": "combat",
+    "prefixes": ["src/gameplay/combat/", "src/gameplay/entities/", "src/gameplay/weapons.ts"],
+    "scenarios": ["blade-valid-cut", "projectile-parry-basic"],
+    "graveyardCases": ["planted-downstream-divergence"],
+    "journeyCheckpoint": "normal-adventure-wave",
+    "baseComparison": "oracle-ee5e931",
+    "interactionMatrices": ["input", "frame-rate", "performance"]
+  },
+  {
+    "id": "movement",
+    "prefixes": ["src/gameplay/entities/player", "src/input/", "src/gameplay/stages.ts"],
+    "scenarios": ["movement-jump", "dash-one-way-platform"],
+    "graveyardCases": ["movement-boundary-history"],
+    "journeyCheckpoint": "normal-adventure-wave",
+    "baseComparison": "oracle-ee5e931",
+    "interactionMatrices": ["input", "viewport", "frame-rate"]
+  },
+  {
+    "id": "progression",
+    "prefixes": ["src/gameplay/run/", "src/gameplay/progression/", "src/gameplay/upgrades.ts"],
+    "scenarios": ["wave-clear-to-draft", "draft-selection-to-gameplay"],
+    "graveyardCases": ["progression-ledger-history"],
+    "journeyCheckpoint": "draft-return-to-gameplay",
+    "baseComparison": "main-base",
+    "interactionMatrices": ["platform", "network", "interruption"]
+  },
+  {
+    "id": "presentation",
+    "prefixes": ["src/presentation/", "src/app/live-", "tests/browser-"],
+    "scenarios": ["boot-start-run"],
+    "graveyardCases": ["screen-route-history"],
+    "journeyCheckpoint": "menu-to-menu-smoke",
+    "baseComparison": "oracle-ee5e931",
+    "interactionMatrices": ["browser", "input", "viewport"]
+  },
+  {
+    "id": "persistence-cloud",
+    "prefixes": ["src/persistence/", "src/platform/", "src/ghost/", "workers/", "migrations/", "wrangler"],
+    "scenarios": ["boot-start-run"],
+    "graveyardCases": ["migration-and-corruption-history"],
+    "journeyCheckpoint": "replay-library-round-trip",
+    "baseComparison": "main-base",
+    "interactionMatrices": ["platform", "network", "interruption"]
+  },
+  {
+    "id": "audio",
+    "prefixes": ["src/audio/", "public/vendor/tear-score/"],
+    "scenarios": ["boot-start-run"],
+    "graveyardCases": ["audio-lifecycle-history"],
+    "journeyCheckpoint": "audio-repeated-run",
+    "baseComparison": "oracle-ee5e931",
+    "interactionMatrices": ["browser", "platform", "interruption", "long-run"]
+  },
+  {
+    "id": "shared-runtime",
+    "prefixes": ["src/simulation/", "src/domain/", "src/tearbench/", "src/agents/"],
+    "scenarios": ["boot-start-run", "movement-jump", "dash-one-way-platform", "blade-valid-cut", "projectile-parry-basic", "wave-clear-to-draft", "draft-selection-to-gameplay"],
+    "graveyardCases": ["all-shared-runtime-history"],
+    "journeyCheckpoint": "menu-to-menu-smoke",
+    "baseComparison": "main-base",
+    "interactionMatrices": ["browser", "input", "platform", "viewport", "frame-rate", "network", "interruption", "performance", "long-run"]
+  }
+]

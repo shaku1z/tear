@@ -97,8 +97,8 @@ describe("combat entity conformance", () => {
       const supportA = a as typeof a & { links: typeof ally[]; range: number; auraPulse: number };
       const supportB = b as typeof b & { links: typeof ally[]; range: number; auraPulse: number };
       supportA.links = [ally]; supportB.links = [ally];
-      updateActor(a, 60, left.platforms, left.player, []);
-      updateActor(b, 60, right.platforms, right.player, []);
+      updateActor(a, 120, left.platforms, left.player, []);
+      updateActor(b, 120, right.platforms, right.player, []);
       expect(a).toMatchObject({ kind: "support", supportType: type, dead: false });
       expect({ x: a.x, vx: a.vx, auraPulse: supportA.auraPulse }).toEqual({ x: b.x, vx: b.vx, auraPulse: supportB.auraPulse });
       expect(supportA.links).toEqual([ally]);

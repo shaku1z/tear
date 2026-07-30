@@ -1,0 +1,42 @@
+{
+  "format": "tear-music-routing",
+  "version": 1,
+  "defaultWorkId": "fillet",
+  "rules": [
+    {
+      "id": "shell-fillet",
+      "match": { "scene": "menu" },
+      "selection": { "type": "primary", "workId": "fillet" }
+    },
+    {
+      "id": "grounds-gameplay",
+      "match": { "biome": "the-grounds", "scene": "gameplay" },
+      "selection": { "type": "primary", "workId": "slicing-life-1" }
+    },
+    {
+      "id": "undercroft-gameplay",
+      "match": { "biome": "the-undercroft", "scene": "gameplay" },
+      "selection": { "type": "primary", "workId": "slicing-life-2" }
+    },
+    {
+      "id": "crimson-gameplay",
+      "match": { "biome": "the-crimson-fields", "scene": "gameplay" },
+      "selection": { "type": "primary", "workId": "beserker" }
+    },
+    {
+      "id": "voidspire-gameplay",
+      "match": { "biome": "the-voidspire", "scene": "gameplay" },
+      "selection": { "type": "primary", "workId": "looking-out" }
+    },
+    {
+      "id": "tear-gameplay",
+      "match": { "biome": "the-tear", "scene": "gameplay" },
+      "selection": { "type": "primary", "workId": "the-source" }
+    },
+    {
+      "id": "echo-boss",
+      "match": { "bossId": "echo", "scene": "boss" },
+      "selection": { "type": "primary", "workId": "reflection-of-the-bladeless" }
+    }
+  ]
+}

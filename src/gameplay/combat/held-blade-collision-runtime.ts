@@ -9,6 +9,19 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
   const styleMultiplier = 1 + Math.min((run.mult - 1) * t.style.styleDamage, t.style.styleDamageMax);
   let hitStop = input.currentHitStop;
 
+  const chainSegments = blade.chainCollisionSegments?.() ?? [];
+  if (chainSegments.length > 0) {
+    const magnitude = input.distance(blade.tipVX, blade.tipVY) || 1;
+    for (const enemy of enemies) {
+      if (enemy.dead || enemy.dying || enemy.anchored || (enemy.boundT ?? 0) > 0) continue;
+      if (!chainSegments.some((chain) => input.segmentCircle(chain, enemy.x, enemy.y, enemy.radius + chain.pad))) continue;
+      const shove = Math.min(220, blade.tipSpeed * 0.07) / Math.max(1, enemy.weight);
+      enemy.vx += blade.tipVX / magnitude * shove;
+      enemy.vy += blade.tipVY / magnitude * shove;
+      enemy.boundT = 0.08;
+    }
+  }
+
   for (const enemy of enemies) {
     if (!enemy.dead && enemy.trySeverSiphon?.(blade)) {
       const x = (blade.x + blade.tipX) / 2, y = (blade.y + blade.tipY) / 2;
@@ -19,7 +32,8 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
   }
 
   for (const enemy of enemies) {
-    if (enemy.dead || enemy.dying || (enemy.introT ?? 0) > 0 || enemy.hitCd > 0) continue;
+    if (enemy.dead || enemy.dying || (enemy.introT ?? 0) > 0 || enemy.hitCd > 0
+      || (blade.canHitHeldEnemy && !blade.canHitHeldEnemy(enemy))) continue;
     const liveWeapon = enemy.parryBaton && (enemy.batonStrike ?? 0) > 0 ? enemy.batonSegment?.() ?? null : null;
     const weaponContact = liveWeapon ? input.weaponSegmentContact(liveWeapon, segment.x1, segment.y1, segment.x2, segment.y2) : false;
     if (!input.segmentCircle(segment, enemy.x, enemy.y, enemy.radius + segment.pad) && !weaponContact) continue;
@@ -61,9 +75,17 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
       fx.floater(enemy.x, enemy.y - 30, "SHIELD BREAK", true, t.colors.armoredShield);
     }
 
+    const tutorialDownDashGrace = t.blade.tutorialRecognition && player.dashY > 0
+      && (player.dashTimer > 0 || player.dashEndT > 0);
+    const point = input.segmentPointDistance(blade.x, blade.y, blade.tipX, blade.tipY, enemy.x, enemy.y);
+    const contactDamage = baseDamage * blade.heldDamageMultiplierAt(point.px, point.py);
     const strikeInput = {
-      baseDamage, tipVerticalSpeed: blade.tipVY, tipSpeed: blade.tipSpeed,
-      playerVerticalSpeed: player.vy, playerGrounded: player.onGround, playerHealth: player.hp, playerMaxHealth: player.maxHp,
+      baseDamage: contactDamage, tipVerticalSpeed: blade.tipVY, tipSpeed: blade.tipSpeed,
+      playerVerticalSpeed: tutorialDownDashGrace
+        ? Math.max(player.vy, t.blade.slamPowerSpeed * (t.blade.slamEmpowerAt + 0.1))
+        : player.vy,
+      playerGrounded: player.onGround && !tutorialDownDashGrace,
+      playerHealth: player.hp, playerMaxHealth: player.maxHp,
       playerAirTime: player.airTime, dashEndTime: player.dashEndT, tempoTime: player.tempoT, tempoStacks: player.tempoStk,
       enemyGrounded: enemy.onGround, enemyY: enemy.y, enemyHalfHeight: enemy.hh, groundY: t.groundY,
       styleMultiplier, repeatScale: 1, runDamageMultiplier: hooks.runDamageMultiplier(), enemyDamageMultiplier: enemy.damageTakenMult(),
@@ -73,12 +95,19 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
     };
     const initial = planHeldStrike(strikeInput);
     const quality = blade.hitQuality(enemy);
-    const weaponEffect = hooks.weaponHit(enemy, quality, baseDamage * (initial.slam ? t.blade.slamMultiplier : 1), initial.slam, initial.launch, initial.empoweredSlam);
-    const strike = planHeldStrike({ ...strikeInput, repeatScale: weaponEffect?.repeatScale ?? 1 });
+    const weaponEffect = hooks.weaponHit(enemy, quality, contactDamage * (initial.slam ? t.blade.slamMultiplier : 1), initial.slam, initial.launch, initial.empoweredSlam);
+    const plannedStrike = planHeldStrike({ ...strikeInput, repeatScale: weaponEffect?.repeatScale ?? 1 });
+    const strike = weaponEffect?.damageMult === undefined ? plannedStrike
+      : { ...plannedStrike, damage: plannedStrike.damage * weaponEffect.damageMult };
     const firstDamage = enemy.firstPlayerDamageAt == null;
+    blade.claimAttack();
     const dealt = enemy.hit(strike.damage, blade.tipVX, blade.tipVY);
-    hooks.noteFirstDamage(enemy, firstDamage); blade.recordHit(enemy); run.weaponStats.heldHits++;
-    hooks.logHit(strike.damage, quality, weaponEffect?.mechanic);
+    hooks.noteFirstDamage(enemy, firstDamage); blade.recordHit(enemy); blade.recordHeldHit?.(enemy);
+    blade.applyHeldResistance?.(enemy); run.weaponStats.heldHits++;
+    const strikeType = strike.spike ? "spike" : strike.empoweredSlam ? "superslam"
+      : strike.slam ? "slam" : strike.empoweredLaunch ? "updraft" : strike.launch ? "launch" : "hit";
+    const airborne = enemy.y < t.groundY - enemy.hh - 14;
+    hooks.logHit(strike.damage, quality, { strikeType, airborne }, weaponEffect?.mechanic);
     applyWeaponEffect(input, enemy, weaponEffect);
 
     let impulseHandled = false;
@@ -87,7 +116,7 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
         tipSpeed: blade.tipSpeed, tipVX: blade.tipVX, tipVY: blade.tipVY, isSlam: strike.slam,
         isLaunch: strike.launch, spike: strike.spike, empowered: strike.empoweredLaunch,
         empSlam: strike.empoweredSlam, heightF: strike.heightFraction, strikeF: strike.strikeFraction,
-        strikeType: strike.spike ? "spike" : strike.empoweredSlam ? "superslam" : strike.slam ? "slam" : strike.empoweredLaunch ? "updraft" : strike.launch ? "launch" : "hit" });
+        strikeType });
       impulseHandled = response === true || !!(response && response.handled);
     }
     if (player.rallySource === enemy) {
@@ -100,7 +129,6 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
     }
     if (strike.empoweredLaunch && run.mods.tempest) applyTempest(input, enemy, baseDamage);
 
-    const point = input.segmentPointDistance(blade.x, blade.y, blade.tipX, blade.tipY, enemy.x, enemy.y);
     fx.burst(point.px, point.py, blade.tipVX, blade.tipVY, t.juice.sparkCount, enemy.color);
     if (strike.slam || strike.empoweredLaunch) fx.ring(enemy.x, enemy.y, strike.empoweredSlam ? 13 : 8, t.colors.slam);
     const tag = strike.spike ? "▼" : strike.empoweredSlam ? "⇊" : strike.slam ? "!" : strike.launch ? strike.empoweredLaunch ? "⇈" : "↑" : "";
@@ -109,10 +137,11 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
     fx.shake(strike.big || strike.launch ? t.juice.shakeBig : t.juice.shakeSmall);
     if (strike.big) fx.zoom(t.juice.zoomBig);
     fx.sound("hit", strike.big); if (strike.slam) fx.sound("slam"); else if (strike.empoweredLaunch) fx.sound("updraft"); else if (strike.launch) fx.sound("launch");
-    const weaponStyle = weaponEffect && (weaponEffect.mechanic === "break" && !weaponEffect.broke ? null : ({ trueCut: "trueCut", break: "break", drive: "drive", drag: "drag" } as Record<string, string>)[weaponEffect.mechanic ?? ""]);
+    const weaponStyle = weaponEffect && (weaponEffect.mechanic === "break" && !weaponEffect.broke ? null
+      : ({ reversal: "reversal", break: "break", cleave: "cleave", lash: "lash",
+        recoilCut: "recoilCut" } as Record<string, string>)[weaponEffect.mechanic ?? ""]);
     fx.style(strike.slam ? strike.empoweredSlam ? "superslam" : "slam" : strike.empoweredLaunch ? "updraft" : strike.launch ? "launch" : weaponStyle ?? "hit");
     fx.tutorial("strike");
-    const airborne = enemy.y < t.groundY - enemy.hh - 14;
     if (airborne) fx.tutorial("airHit");
     if (hooks.achievementsEnabled()) trackAchievements(input, enemy, strike.damage, airborne, strike.launch, strike.slam, strike.empoweredLaunch, strike.spike, strike.empoweredSlam);
     hooks.fireHit(enemy, point.px, point.py); hooks.fireSwingHit(enemy, point.px, point.py, dealt, quality, weaponEffect?.mechanic);
@@ -133,19 +162,15 @@ function applyWeaponEffect(input: HeldBladeCollisionInput, enemy: HeldBladeEnemy
   if (!effect) return;
   const { blade, run, tuning: t, effects: fx } = input;
   if (effect.hitIframe != null) enemy.hitCd = Math.min(enemy.hitCd, effect.hitIframe);
-  if (effect.mechanic === "trueCut") {
-    enemy.applySeam(effect.seam, blade.throwId); run.weaponStats.trueCuts++; fx.ribbon(blade.x, blade.y, blade.tipX, blade.tipY, t.colors.perfect); fx.floater(enemy.x, enemy.y - 42, "TRUE CUT", true, t.colors.perfect);
+  if (effect.mechanic === "reversal") {
+    run.weaponStats.reversals++; enemy.stun = Math.max(enemy.stun, enemy.isBoss ? 0 : effect.stun ?? 0);
+    fx.ribbon(blade.x, blade.y, blade.tipX, blade.tipY, t.colors.perfect); fx.floater(enemy.x, enemy.y - 42, "REVERSAL", true, t.colors.perfect);
   } else if (effect.mechanic === "break" && enemy.applyBreak && effect.breakPower !== undefined) {
     if (enemy.applyBreak(effect.breakPower)) { effect.broke = true; run.weaponStats.breakTriggers++; fx.floater(enemy.x, enemy.y - 42, "BREAK", true, t.colors.armoredShield); fx.ring(enemy.x, enemy.y, 15, t.colors.armoredShield); }
-  } else if (effect.mechanic === "drive" && !enemy.anchored) {
-    const resistance = enemy.isBoss ? 0.22 : 1 / enemy.weight;
-    enemy.vx += Math.cos(blade.angle) * (effect.force ?? 0) * resistance; enemy.vy += Math.sin(blade.angle) * (effect.force ?? 0) * resistance; enemy.driveT = t.spearWallPinDuration;
-    if (!enemy.isBoss && (enemy.x < enemy.hw + 24 || enemy.x > t.width - enemy.hw - 24)) enemy.stun = Math.max(enemy.stun, t.spearWallPinDuration);
-    fx.floater(enemy.x, enemy.y - 40, "DRIVE", false, t.colors.perfect);
-  } else if (effect.mechanic === "drag" && !enemy.anchored) {
+  } else if (effect.mechanic === "lash" && !enemy.anchored) {
     const magnitude = input.distance(blade.tipVX, blade.tipVY) || 1, resistance = enemy.isBoss ? 0.16 : 1 / enemy.weight;
     enemy.vx += blade.tipVX / magnitude * (effect.force ?? 0) * resistance; enemy.vy += blade.tipVY / magnitude * (effect.force ?? 0) * resistance; enemy.boundT = 0.25;
-    fx.floater(enemy.x, enemy.y - 40, "DRAG", false, t.colors.perfect);
+    fx.floater(enemy.x, enemy.y - 40, "LASH", false, t.colors.perfect);
   }
 }
 

@@ -94,12 +94,15 @@ describe("pinned TearScore ESM adapter", () => {
     const first = { runId: "run-one", runSeed: "1", rulesetVersion: "rules", gameVersion: "game", scoreVersion: "score" };
     await client.beginRun(first);
     client.updateContext(context(1));
+    client.updateContext({ ...context(1), sequence: 2, timeMs: 124, scene: "main-menu" });
+    client.updateContext({ ...context(1), sequence: 3, timeMs: 125 });
     client.emitEvent({ type: "perfect-parry", eventId: "p1", timeMs: 126, weaponId: "sword" });
     client.emitEvent({ type: "boss-entered", eventId: "b1", timeMs: 127, bossId: "warden" });
-    expect(updates).toHaveLength(3);
+    expect(updates).toHaveLength(4);
     expect(updates[0]).toMatchObject({ screen: "playing", liveEnemies: 3, player: { comboRank: "SHARP" } });
-    expect(updates[1]).toMatchObject({ player: { comboGauge: 1 } });
-    expect(updates[2]).toMatchObject({ boss: { active: true, id: "warden" } });
+    expect(updates[1]).toMatchObject({ screen: "paused", biome: "The Grounds" });
+    expect(updates[2]).toMatchObject({ screen: "playing", biome: "The Grounds" });
+    expect(updates[3]).toMatchObject({ boss: { active: true, id: "warden" } });
 
     await client.endRun();
     const second = { ...first, runId: "run-two", runSeed: "2" };
@@ -130,7 +133,14 @@ describe("pinned TearScore ESM adapter", () => {
     expect(createHash("sha256").update(tone).digest("hex")).toBe(TEAR_SCORE_PROVENANCE.toneSha256);
     expect(bundle.toString("utf8")).toContain("export{");
     expect(bundle.toString("utf8")).not.toContain("globalThis.Tone");
-    expect(bundle.toString("utf8")).toContain("this.composer?.reset(),this.rack?.dispose()");
+    expect(bundle.toString("utf8")).toContain("this.scoreTransitionId=void 0,this.composer?.reset(),this.rack?.dispose()");
+    expect(bundle.toString("utf8")).toContain("triangleBass");
+    expect(bundle.toString("utf8")).toContain("bellLead");
+    expect(bundle.toString("utf8")).toContain("breath");
+    expect(bundle.toString("utf8")).not.toContain("Grounds Dynamic");
+    expect(bundle.toString("utf8")).not.toContain("MetalSynth");
+    expect(bundle.toString("utf8")).toMatch(/setValueAtTime\([^,]+,[^)]+\.atTime\)/u);
+    expect(bundle.toString("utf8")).toMatch(/setTempo\([^,]+,\{atTime:/u);
     expect(manifest).toMatchObject({
       engineRepository: TEAR_SCORE_PROVENANCE.engineRepository,
       engineCommit: TEAR_SCORE_PROVENANCE.engineCommit,
@@ -138,7 +148,7 @@ describe("pinned TearScore ESM adapter", () => {
       artifactFormat: "esm",
       bundleSha256: TEAR_SCORE_PROVENANCE.bundleSha256,
       toneVersion: TEAR_SCORE_PROVENANCE.toneVersion,
-      compatibilityPatches: ["composer-reset-before-rack-dispose"],
+      compatibilityPatches: [],
     });
   });
 });

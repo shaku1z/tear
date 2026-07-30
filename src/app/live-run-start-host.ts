@@ -7,6 +7,8 @@ import { planRunStart, type RunStartPlan } from "../gameplay/run/run-start-plan"
 import { RunReplacementGuard } from "../gameplay/run/run-replacement";
 import type { BossId } from "../gameplay/run/content-director";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
+import { tutorialUsesBaselineLoadout } from "../gameplay/training/tutorial-contract";
+import { FINAL_FIVE_WEAPON_SCHEMA_VERSION, migrateWeaponSelection } from "../gameplay/weapon-selection";
 
 interface MutableWorldState {
   resetTransient(): void;
@@ -50,6 +52,7 @@ interface RunStartHostContext {
   readonly installRun: (run: GameRun) => void;
   readonly world: MutableWorldState;
   readonly resetAuthoritativeClocks: () => void;
+  readonly createRunSeed?: () => number;
   readonly loadStage: (index: number) => void;
   readonly stage: StagePort;
   readonly story: CampaignPort;
@@ -91,7 +94,8 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       Mirror.host = null;
       BOSSFX.q.length = 0;
       context.restoreConfig();
-      const weaponId = state.selectedWeapon();
+      const weaponId = migrateWeaponSelection(state.selectedWeapon());
+      state.setSelectedWeapon(weaponId);
       context.applySettings();
       try { SFX.setVoidDescent(0, 0.05); SFX.setMusicDuck(1, 0.12); } catch { /* optional audio backend */ }
       const difficulties = CONFIG.difficulties.flatMap((definition) => isRunDifficulty(definition.id)
@@ -123,7 +127,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       context.stage.resetBanner();
       context.story.resetChapter();
     },
-    createRunSeed,
+    createRunSeed: context.createRunSeed ?? createRunSeed,
     resetRunRandom: (seed) => { GAME_RANDOM.reset(seed); },
     installSession: (session) => {
       const run: GameRun = {
@@ -147,16 +151,20 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
             aimX: blade.aimX, aimY: blade.aimY,
             vx: blade.vx, vy: blade.vy, flyTime: blade.flyTime, secondaryActive: blade.secondaryActive,
             impactResolved: blade.impactResolved, pierced: blade.pierced.size, tension: blade.tension,
-            orbit: blade.orbit, linkTime: blade.linkT, circuitEnergy: blade.circuitEnergy,
+            linkTime: blade.linkT, chambers: blade.riftChambers, chamberCooldown: blade.riftChamberCooldown,
             actionRange: Number.isFinite(blade.actionRange()) ? blade.actionRange() : null,
             actionDistance: blade.actionDistance(player) },
           enemies: state.enemies().filter((enemy) => !enemy.dead).slice(0, 24).map((enemy) => {
             const authored = enemy as typeof enemy & { state?: string; stateT?: number; atkT?: number; phase?: number;
-              isMirrorBoss?: boolean; _live?: boolean };
+              phaseMarker?: number; mode?: string; cinematicT?: number; cinematicRequest?: unknown;
+              requestVoidCinematic?: boolean; isMirrorBoss?: boolean; _live?: boolean };
             return { x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, maxHp: enemy.maxHp,
               stun: enemy.stun, spawnT: enemy.spawnT, introT: enemy.introT ?? 0, aliveT: enemy.aliveT,
               boss: enemy.isBoss, bossId: enemy.bossId, state: authored.state, stateT: authored.stateT,
-              atkT: authored.atkT, phase: authored.phase, mirrorBoss: authored.isMirrorBoss,
+              atkT: authored.atkT, phase: authored.isMirrorBoss === true ? Mirror.phase : authored.phase,
+              phaseMarker: authored.phaseMarker, mode: authored.mode,
+              cinematicT: authored.cinematicT, cinematicPending: authored.cinematicRequest != null,
+              voidPending: authored.requestVoidCinematic === true, mirrorBoss: authored.isMirrorBoss,
               live: authored._live, bound: enemy.boundT || 0 };
           }),
           lifecycle: context.lifecycle.snapshot(),
@@ -169,7 +177,11 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       if (mode !== "bossonly" && mode !== "sandbox") { PROFILE.markMode(mode); context.achievementCheck(); }
     },
     startRecording: (runId, seed) => {
-      if (context.achievementTracking()) { GHOST.startRec({ runId, seed: String(seed) }); Input.syncSemanticMovement(); }
+      if (context.achievementTracking()) {
+        GHOST.startRec({ runId, seed: String(seed), weaponId: migrateWeaponSelection(requireRun(state).weaponId),
+          weaponSchemaVersion: FINAL_FIVE_WEAPON_SCHEMA_VERSION });
+        Input.syncSemanticMovement();
+      }
     },
     configureMode: (mode) => {
       const run = requireRun(state);
@@ -186,7 +198,10 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       }
     },
     applyMetaProgression: () => {
-      META.apply({ player: requirePlayer(state), blade: requireBlade(state), mods: requireRun(state).mods });
+      const run = requireRun(state);
+      if (!tutorialUsesBaselineLoadout(run.mode)) {
+        META.apply({ player: requirePlayer(state), blade: requireBlade(state), mods: run.mods });
+      }
       context.resetRewards();
     },
     activateOpeningContent: (mode) => {

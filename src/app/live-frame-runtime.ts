@@ -2,7 +2,6 @@ import { buildLiveMusicObservation, type LiveMusicActor, type LiveMusicPlayer, t
 import type { MusicContextObservation } from "../audio/music-director";
 import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
-import { AIM_MAGNITUDE_SCALE } from "../input/game-action";
 
 export interface MutableBossIntro { delay: number; t: number; dur: number; boss: (LiveMusicActor & { introT: number }) | null }
 export interface MutableFramePreludeState {
@@ -61,29 +60,41 @@ export interface FixedSimulationPort {
 }
 export interface FixedSimulationInput {
   dt: number; timeScale: number; hitStop: number; state(): string; simulation: FixedSimulationPort;
-  recording(): boolean; readonly aimRadius: number;
-  sampleAim(): Readonly<{ x: number; y: number }>; pushAim(turn: number, magnitude: number): void;
+  /** Only an explicit automation owner may replace the physical live-input step. */
+  semanticInputAuthority(): boolean;
   drainActions(tick: number): readonly CommandEnvelope<GameAction>[];
+  /** Passive recorder hook: inputs are sealed here but never fed into physical gameplay. */
+  recordSealedActions?(tick: number, actions: readonly CommandEnvelope<GameAction>[]): void;
   authoritativeStep(tick: number, seconds: number, actions: readonly CommandEnvelope<GameAction>[]): void;
+  beforeStep?(tick: number): void;
+  afterStep?(tick: number): void;
   clearOverrides(): void; step(seconds: number): void; gauge(name: "simulationTick" | "simulationSteps" | "simulationDroppedMs", value: number): void;
 }
-export function advanceFixedSimulation(input: FixedSimulationInput): number {
-  if (input.hitStop > 0) return input.hitStop - input.dt;
+export interface FixedSimulationAdvance {
+  readonly hitStop: number;
+  readonly steps: number;
+}
+export function advanceFixedSimulation(input: FixedSimulationInput): FixedSimulationAdvance {
+  if (input.hitStop > 0) return Object.freeze({ hitStop: input.hitStop - input.dt, steps: 0 });
   const advance = input.simulation.advance(input.dt * input.timeScale * 1000, (seconds, tick) => {
     if (input.state() !== "playing") return;
-    // Recording is passive (source contract: GHOST observes the sim, never drives it).
-    // The raw device input always runs the live step; the sealed envelopes exist only
-    // for the replay file, so live feel is identical whether or not a ghost is taping.
-    if (input.recording()) {
-      const aim = input.sampleAim(), angle = Math.atan2(aim.y, aim.x), normalized = angle < 0 ? angle + Math.PI * 2 : angle;
-      const magnitude = Math.round(Math.max(0, Math.min(1, Math.hypot(aim.x, aim.y) / input.aimRadius)) * AIM_MAGNITUDE_SCALE);
-      input.pushAim(Math.round(normalized / (Math.PI * 2) * 1_000_000) % 1_000_000, magnitude);
-      input.drainActions(tick);
-    }
-    input.clearOverrides(); input.step(seconds);
+    input.beforeStep?.(tick);
+    // Source contract: the live step owns physical input. The visual ghost is
+    // sampled downstream by the game loop and is never part of this control path.
+    // Ghost3's watch agent is the sole explicit semantic owner.
+    // Every fixed tick seals canonical device-mapped commands once. On ordinary
+    // player runs these remain observation-only; only explicit automation is
+    // allowed to pass the same sealed actions into gameplay.
+    const actions = input.drainActions(tick);
+    input.recordSealedActions?.(tick, actions);
+    input.clearOverrides();
+    if (input.semanticInputAuthority()) input.authoritativeStep(tick, seconds, actions);
+    else input.step(seconds);
+    input.afterStep?.(tick);
   });
   input.gauge("simulationTick", advance.tick); input.gauge("simulationSteps", advance.steps);
-  input.gauge("simulationDroppedMs", advance.droppedMilliseconds); return input.hitStop;
+  input.gauge("simulationDroppedMs", advance.droppedMilliseconds);
+  return Object.freeze({ hitStop: input.hitStop, steps: advance.steps });
 }
 
 export interface LiveMusicDirectorPort {
@@ -163,9 +174,11 @@ export class LiveFrameRuntime {
     this.#options.writePreludeState(state);
   }
 
-  advanceSimulation(dt: number): void {
-    this.#options.setHitStop(advanceFixedSimulation({ ...this.#options.fixedSimulationInput(), dt,
-      timeScale: this.#options.timeScale(), hitStop: this.#options.hitStop() }));
+  advanceSimulation(dt: number): number {
+    const result = advanceFixedSimulation({ ...this.#options.fixedSimulationInput(), dt,
+      timeScale: this.#options.timeScale(), hitStop: this.#options.hitStop() });
+    this.#options.setHitStop(result.hitStop);
+    return result.steps;
   }
 
   syncMusic(): void {

@@ -14,8 +14,9 @@ function contentType(file) {
 }
 
 async function withJourney(options, run) {
-  const root = path.resolve(__dirname, "..", "dist", "standalone");
-  assert.ok(fs.existsSync(path.join(root, "index.html")), "dist/standalone is missing; run pnpm build:standalone first");
+  const buildDirectory = process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone";
+  const root = path.resolve(__dirname, "..", "dist", buildDirectory);
+  assert.ok(fs.existsSync(path.join(root, "index.html")), `dist/${buildDirectory} is missing; run pnpm build:test:standalone first`);
   const port = Number(process.env.TEAR_JOURNEY_PORT || options.port);
   const baseUrl = `http://127.0.0.1:${String(port)}`;
   const server = http.createServer((request, response) => {
@@ -31,7 +32,10 @@ async function withJourney(options, run) {
     await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
     const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
     browser = await chromium.launch({ headless: true, ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}) });
-    const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+    const page = await browser.newPage({ viewport: options.viewport || { width: 1600, height: 900 } });
+    if (options.colorScheme || options.reducedMotion) {
+      await page.emulateMedia({ colorScheme: options.colorScheme, reducedMotion: options.reducedMotion });
+    }
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.stack || error.message));
     await page.route("**/*", (route) => route.request().url().startsWith(`${baseUrl}/`) ? route.continue() : route.abort());

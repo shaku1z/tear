@@ -1,7 +1,11 @@
 import type { ArenaPlatform, SourceVoidActor, SourceVoidController, SourceVoidIntent, SourceVoidPlayer, SourceVoidState } from "../training/arena-rules";
 import type { VoidLane } from "../voidgen-contracts";
 
-export interface SourceRuntimeOwner extends SourceVoidActor {
+// The live boss actor is NOT a SourceVoidActor: it carries no `id`. The descent
+// derives one from presentationId/bossId (see `actor` below and cinematic-launch-runtime),
+// so requiring `id` here only produced a runtime guard the Source could never satisfy.
+export interface SourceRuntimeOwner extends Omit<SourceVoidActor, "id"> {
+  id?: string;
   readonly presentationId?: string; readonly bossId?: string;
   breachState?: string; breachContactSpent?: boolean;
   beginVoidRun?(): void; startVoidSiphon?(player: SourceRuntimePlayer): number;

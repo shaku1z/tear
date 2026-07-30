@@ -199,7 +199,7 @@ export interface LegacyInput {
   consumeThrow(): boolean;
   takeClick(): Point | null;
   takeWheel(): number;
-  endFrame(): void;
+  endFrame(preserveSimulationEdges?: boolean): void;
 }
 
 export type PadAction = "jump" | "dash" | "throw" | "tether";

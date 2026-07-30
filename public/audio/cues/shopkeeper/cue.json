@@ -1,0 +1,185 @@
+{
+  "format": "tear-score-stem-cue",
+  "version": 1,
+  "id": "shopkeeper",
+  "name": "Shopkeeper Keep Keeping",
+  "tempo": 82,
+  "timeSignature": [
+    4,
+    4
+  ],
+  "sourceSampleRate": 48000,
+  "key": "C minor",
+  "grid": {
+    "downbeatFrame": 0,
+    "beatsPerBar": 4,
+    "barsPerLoop": 8,
+    "secondsPerBar": 2.925875,
+    "approvedBpm": 82.026744,
+    "barQuantizedCompatible": true
+  },
+  "loop": {
+    "startFrame": 0,
+    "endFrame": 1123536,
+    "mode": "hard"
+  },
+  "assetNote": "Pre-cut loop; frames file-relative.",
+  "stems": [
+    {
+      "id": "foundation",
+      "role": "bed",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "crossfade",
+      "crossfadeFrames": 1440,
+      "sources": [
+        {
+          "url": "opus/foundation.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    },
+    {
+      "id": "pulse",
+      "role": "bass",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "hard",
+      "sources": [
+        {
+          "url": "opus/pulse.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    },
+    {
+      "id": "rhythm",
+      "role": "rhythm",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "hard",
+      "sources": [
+        {
+          "url": "opus/rhythm.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    },
+    {
+      "id": "melody",
+      "role": "motif",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "crossfade",
+      "crossfadeFrames": 1440,
+      "sources": [
+        {
+          "url": "opus/melody.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    }
+  ],
+  "tiers": {
+    "0": {
+      "foundation": -7
+    },
+    "1": {
+      "foundation": -4,
+      "pulse": -7
+    },
+    "2": {
+      "foundation": -2,
+      "pulse": -3,
+      "rhythm": -1
+    },
+    "3": {
+      "foundation": -1,
+      "pulse": -1,
+      "rhythm": 0,
+      "melody": -2
+    },
+    "4": {
+      "foundation": 0,
+      "pulse": 0,
+      "rhythm": 0,
+      "melody": 0
+    }
+  },
+  "provenance": {
+    "owner": "shatheartboy@gmail.com",
+    "license": "Owned/licensed by owner, confirmed 2026-07-23.",
+    "sourceSha256": "fad335ba4e4c903d67f5f5be3e0d8931a2dcfe7923755c68d844a42449de6e10"
+  },
+  "analysis": {
+    "tempoConfidence": 0.286,
+    "tempoAlternatives": [
+      41,
+      164
+    ],
+    "sourceDownbeatSeconds": 0.6908,
+    "secondsPerBar": 2.9268,
+    "keyConfidence": 0.145,
+    "keyAlternatives": [
+      "D major",
+      "G major"
+    ],
+    "seam": {
+      "seamDbBelowPeak": -56.3,
+      "rmsRatio": 0.97,
+      "verdict": "pass"
+    },
+    "analysedBpm": 82,
+    "approvedBpm": 82.026744,
+    "metricalFactor": 1.0003,
+    "tempoDisagreementPercent": 0.03,
+    "phrasePlausibility": "typical",
+    "grid": {
+      "loopBars": 8,
+      "actualLoopFrames": 1123536,
+      "expectedLoopFrames": 1123536,
+      "barErrorFrames": 0,
+      "barErrorMs": 0,
+      "priorDriftMsPerCycle": 8,
+      "verdict": "pass",
+      "consideredBpm": [
+        {
+          "bpm": 82.027,
+          "bars": 8,
+          "octaveDistancePercent": 0.03,
+          "phrase": "typical"
+        },
+        {
+          "bpm": 164.053,
+          "bars": 16,
+          "octaveDistancePercent": 0.03,
+          "phrase": "typical"
+        },
+        {
+          "bpm": 143.547,
+          "bars": 14,
+          "octaveDistancePercent": 12.47,
+          "phrase": "unusual"
+        },
+        {
+          "bpm": 184.56,
+          "bars": 18,
+          "octaveDistancePercent": 12.54,
+          "phrase": "unusual"
+        },
+        {
+          "bpm": 102.533,
+          "bars": 10,
+          "octaveDistancePercent": 25.04,
+          "phrase": "unusual"
+        },
+        {
+          "bpm": 123.04,
+          "bars": 12,
+          "octaveDistancePercent": 50.05,
+          "phrase": "typical"
+        }
+      ]
+    }
+  }
+}

@@ -14,7 +14,7 @@ export interface RuntimeFrameInputPort {
   touchActive(): boolean;
   pausePressed(): boolean;
   escapePressed(): boolean;
-  endFrame(): void;
+  endFrame(preserveSimulationEdges?: boolean): void;
 }
 
 export interface RuntimeFramePadPort {
@@ -63,7 +63,7 @@ export interface RuntimeFrameCoordinatorOptions {
   readonly clipper: Readonly<{ start(): void; stop(): void }> | null;
   readonly autoPauseDisconnect: () => boolean;
   readonly advancePlayingPrelude: (deltaSeconds: number) => void;
-  readonly advancePlayingSimulation: (deltaSeconds: number) => void;
+  readonly advancePlayingSimulation: (deltaSeconds: number) => number;
   readonly resetSimulation: () => void;
   readonly requestPointerLock: () => void;
   readonly exitReplay: () => void;
@@ -97,8 +97,10 @@ export class RuntimeFrameCoordinator {
 
   run(deltaSeconds: number): void {
     const frameStarted = this.#options.now();
+    const startedPlaying = this.#options.state() === "playing";
     this.#prepareInput(deltaSeconds);
-    if (this.#options.state() === "playing") this.#advancePlaying(deltaSeconds);
+    let simulationSteps = 0;
+    if (this.#options.state() === "playing") simulationSteps = this.#advancePlaying(deltaSeconds);
     else this.#advanceInactive();
     this.#advanceApplication(deltaSeconds);
 
@@ -106,7 +108,11 @@ export class RuntimeFrameCoordinator {
     this.#options.render();
     const renderFinished = this.#options.now();
     this.#options.handleUi();
-    this.#options.input.endFrame();
+    // A display frame can be shorter than one fixed step (especially at high
+    // refresh rates). Keep gameplay edges alive until at least one simulation
+    // tick can observe them; otherwise a valid tap is randomly discarded.
+    const preserveSimulationEdges = startedPlaying && this.#options.state() === "playing" && simulationSteps === 0;
+    this.#options.input.endFrame(preserveSimulationEdges);
     this.#recordDiagnostics(frameStarted, simulationFinished, renderFinished);
   }
 
@@ -142,7 +148,7 @@ export class RuntimeFrameCoordinator {
     input.allowLock = this.#options.state() === "playing";
   }
 
-  #advancePlaying(deltaSeconds: number): void {
+  #advancePlaying(deltaSeconds: number): number {
     const { canvas, document, input } = this.#options;
     this.#options.advancePlayingPrelude(deltaSeconds);
     if (input.locked) this.#wasPointerLocked = true;
@@ -152,9 +158,9 @@ export class RuntimeFrameCoordinator {
       this.#options.setState("paused");
       this.#wasPointerLocked = false;
       try { document.exitPointerLock(); } catch { /* Pointer lock may already be gone. */ }
-      return;
+      return 0;
     }
-    this.#options.advancePlayingSimulation(deltaSeconds);
+    return this.#options.advancePlayingSimulation(deltaSeconds);
   }
 
   #advanceInactive(): void {

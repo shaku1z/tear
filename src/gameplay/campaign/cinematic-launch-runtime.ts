@@ -20,12 +20,20 @@ export interface SourceDescentLaunchOptions {
 
 export function launchSourceDescent(options: SourceDescentLaunchOptions): boolean {
   if (options.cinema.active) return false;
-  const started = options.controller.beginDescent({ id: options.owner.presentationId ?? options.owner.bossId ?? "source",
-    x: options.owner.x, y: options.owner.y, color: options.owner.color });
+  // The live boss carries no generic `id`. Give the cinematic a stable adapter whose
+  // position remains a live view of the actor without mutating the combat entity.
+  const actorId = options.owner.presentationId ?? options.owner.bossId ?? "source";
+  const voidActor = {
+    id: actorId,
+    get x() { return options.owner.x; },
+    get y() { return options.owner.y; },
+    get color() { return options.owner.color; },
+  };
+  const started = options.controller.beginDescent(voidActor);
   options.setTransition(started.transition);
   function sync(transition: SourceVoidTransitionState): SourceVoidState | null {
     if (!transition.stream) return null;
-    transition.stream.owner = options.owner; options.setStream(transition.stream); return transition.stream;
+    transition.stream.owner = voidActor; options.setStream(transition.stream); return transition.stream;
   }
   function enter(transition: SourceVoidTransitionState, beat: SourceDescentBeat): void {
     options.execute(options.controller.enterDescentBeat(transition, beat.id,

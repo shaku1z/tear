@@ -94,7 +94,7 @@ export function createLiveDebugSnapshot(options: LiveDebugSnapshotOptions): obje
     playerTrace: player ? {
       x: player.x, y: player.y, vx: player.vx, vy: player.vy, hp: player.hp,
       onGround: player.onGround, coyote: player.coyote, jumpBuffer: player.jumpBuf,
-      dashTimer: player.dashTimer, dashCooldown: player.dashCd,
+      dashTimer: player.dashTimer, dashCooldown: player.dashCd, guardTime: player.guardT,
     } : null,
     bladeTrace: blade ? {
       state: blade.state, x: blade.x, y: blade.y, vx: blade.vx, vy: blade.vy,
@@ -105,7 +105,39 @@ export function createLiveDebugSnapshot(options: LiveDebugSnapshotOptions): obje
     enemyTrace: state.enemies().filter((enemy) => !enemy.dead).slice(0, 24).map((enemy) => ({
       kind: enemy.kind, bossId: enemy.bossId, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy,
       hp: enemy.hp, stun: enemy.stun, spawnT: enemy.spawnT, introT: enemy.introT ?? 0, aliveT: enemy.aliveT,
+      onGround: enemy.onGround, behavior: enemy.behavior, attack: enemy.atk, attackTime: enemy.atkT,
+      attackCooldown: enemy.atkCd, attackDirection: enemy.atkDir, chargePower: enemy.chargePower,
+      maxHp: enemy.maxHp, hitCooldown: enemy.hitCd, dying: enemy.dying,
+      aiState: "state" in enemy ? enemy.state : undefined,
+      aimTimer: "aimTimer" in enemy ? enemy.aimTimer : undefined,
+      windTime: "windT" in enemy ? enemy.windT : undefined,
+      windMax: "windMax" in enemy ? enemy.windMax : undefined,
     })),
+    projectileTrace: state.projectiles().filter((projectile) => !projectile.dead).slice(0, 24).map((projectile) => ({
+      x: projectile.x, y: projectile.y, vx: projectile.vx, vy: projectile.vy, r: projectile.r,
+      life: projectile.life, damage: projectile.dmg, deflectDamage: projectile.deflectDmg, family: projectile.family,
+      kind: projectile.kind, deflected: projectile.deflected, perfect: projectile.perfect,
+      charged: projectile.charged, dead: projectile.dead,
+    })),
+    mirrorTrace: d.Mirror.active ? {
+      active: d.Mirror.active, attached: d.Mirror.host === state.enemies()[0],
+      phase: d.Mirror.phase, sync: d.Mirror.sync, state: d.Mirror._state,
+      stateTime: d.Mirror._stateT, decisionTime: d.Mirror._decideT,
+      moveCooldown: d.Mirror._moveCd, move: d.Mirror.mv?.id ?? null,
+      facing: d.Mirror.facing, readDistance: d.Mirror.read.dist,
+      actor: {
+        x: d.Mirror.actor.x, y: d.Mirror.actor.y, vx: d.Mirror.actor.vx, vy: d.Mirror.actor.vy,
+        onGround: d.Mirror.actor.onGround, dashTimer: d.Mirror.actor.dashTimer,
+      },
+      blade: {
+        state: d.Mirror.blade.state, x: d.Mirror.blade.x, y: d.Mirror.blade.y,
+        tipX: d.Mirror.blade.tipX, tipY: d.Mirror.blade.tipY,
+        tipVX: d.Mirror.blade.tipVX, tipVY: d.Mirror.blade.tipVY,
+      },
+    } : null,
+    combatTrace: run ? { enemyCount: state.enemies().filter((enemy) => !enemy.dead).length,
+      waveKills: run.waveKills, heldHits: run.weaponStats.heldHits,
+      perfectParries: run.weaponStats.perfectParries } : null,
     bladeAim: blade ? { x: blade.aimX, y: blade.aimY, reticleX: blade.reticleX, reticleY: blade.reticleY } : null,
     authoritative: options.authoritative,
     finale: options.finale && { phase: options.finale.phase, severed: options.finale.severed,

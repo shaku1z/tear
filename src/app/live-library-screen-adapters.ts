@@ -1,11 +1,12 @@
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../presentation/screens/live-screen-renderers";
+import type { LegacyGamepad } from "../input/legacy-input-contracts";
 import { ABILITY_CATEGORY_ORDER, SPECIAL_ABILITY_COLOR, abilityBadge } from "../presentation/codex-snapshots";
 
 type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "AFFIXES" | "Aldric" | "Armored" | "Bomber" | "Charger" |
   "Chimera" | "Colossus" | "Echo" | "Flyer" | "Ranged" | "Support" | "VARIANTS" | "Warden" | "Wraith" | "applyVariant" |
   "Cloud" | "CONFIG" | "DAILY" | "FirebaseProvider" |
-  "META" | "PROFILE" | "STAGES" | "UI" | "UPGRADES" | "VAULT">;
+  "META" | "PROFILE" | "STAGES" | "UI" | "UPGRADES" | "VAULT"> & Readonly<{ PAD: LegacyGamepad }>;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 type Category = Readonly<{ name: string; color: string }>;
 

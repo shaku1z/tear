@@ -1,0 +1,184 @@
+{
+  "format": "tear-score-stem-cue",
+  "version": 1,
+  "id": "slicing-life-1",
+  "name": "Slicing Life",
+  "tempo": 87.8,
+  "timeSignature": [
+    4,
+    4
+  ],
+  "sourceSampleRate": 48000,
+  "key": "C major",
+  "grid": {
+    "downbeatFrame": 0,
+    "beatsPerBar": 4,
+    "barsPerLoop": 16,
+    "secondsPerBar": 2.734812,
+    "approvedBpm": 87.757387,
+    "barQuantizedCompatible": true
+  },
+  "loop": {
+    "startFrame": 0,
+    "endFrame": 2100336,
+    "mode": "hard"
+  },
+  "assetNote": "Pre-cut loop; frames file-relative.",
+  "stems": [
+    {
+      "id": "rhythm",
+      "role": "rhythm",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "hard",
+      "sources": [
+        {
+          "url": "opus/revisions/6e0c00ea65944d1d839321fcf6a65272/rhythm.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    },
+    {
+      "id": "pulse",
+      "role": "bass",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "hard",
+      "sources": [
+        {
+          "url": "opus/revisions/6e0c00ea65944d1d839321fcf6a65272/pulse.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    },
+    {
+      "id": "foundation",
+      "role": "bed",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "crossfade",
+      "crossfadeFrames": 1440,
+      "sources": [
+        {
+          "url": "opus/revisions/6e0c00ea65944d1d839321fcf6a65272/foundation.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    },
+    {
+      "id": "melody",
+      "role": "motif",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "crossfade",
+      "crossfadeFrames": 1440,
+      "sources": [
+        {
+          "url": "opus/revisions/6e0c00ea65944d1d839321fcf6a65272/melody.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    }
+  ],
+  "tiers": {
+    "0": {
+      "foundation": -7
+    },
+    "1": {
+      "foundation": -4,
+      "pulse": -7
+    },
+    "2": {
+      "foundation": -2,
+      "pulse": -3,
+      "rhythm": -1
+    },
+    "3": {
+      "foundation": -1,
+      "pulse": -1,
+      "rhythm": 0,
+      "melody": -2
+    },
+    "4": {
+      "foundation": 0,
+      "pulse": 0,
+      "rhythm": 0,
+      "melody": 0
+    }
+  },
+  "provenance": {
+    "owner": "shatheartboy@gmail.com",
+    "license": "Owned/licensed by owner, confirmed 2026-07-23.",
+    "sourceSha256": "f93f002299b622623ef9ece9cf267ad3722ff25d50ad26cb110a87e09e3e3103"
+  },
+  "analysis": {
+    "tempoConfidence": 0.164,
+    "tempoAlternatives": [
+      42.4,
+      169.4
+    ],
+    "sourceDownbeatSeconds": 1.8086,
+    "keyConfidence": 0.048,
+    "keyAlternatives": [
+      "G major",
+      "C minor"
+    ],
+    "seam": {
+      "seamDbBelowPeak": -35.5,
+      "rmsRatio": 0.74,
+      "verdict": "pass"
+    },
+    "analysedBpm": 84.7,
+    "approvedBpm": 87.757387,
+    "metricalFactor": 1.0361,
+    "tempoDisagreementPercent": 3.61,
+    "phrasePlausibility": "typical",
+    "grid": {
+      "loopBars": 16,
+      "actualLoopFrames": 2100336,
+      "expectedLoopFrames": 2100336,
+      "barErrorFrames": 0,
+      "barErrorMs": 0,
+      "priorDriftMsPerCycle": 0,
+      "verdict": "approved",
+      "consideredBpm": [
+        {
+          "bpm": 87.757387,
+          "bars": 16,
+          "octaveDistancePercent": 3.61,
+          "phrase": "typical"
+        },
+        {
+          "bpm": 164.545,
+          "bars": 30,
+          "octaveDistancePercent": 2.87,
+          "phrase": "unusual"
+        },
+        {
+          "bpm": 175.515,
+          "bars": 32,
+          "octaveDistancePercent": 3.61,
+          "phrase": "typical"
+        },
+        {
+          "bpm": 76.788,
+          "bars": 14,
+          "octaveDistancePercent": 9.34,
+          "phrase": "unusual"
+        },
+        {
+          "bpm": 153.575,
+          "bars": 28,
+          "octaveDistancePercent": 9.34,
+          "phrase": "typical"
+        },
+        {
+          "bpm": 186.484,
+          "bars": 34,
+          "octaveDistancePercent": 10.09,
+          "phrase": "unusual"
+        }
+      ]
+    }
+  }
+}

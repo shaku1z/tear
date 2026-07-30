@@ -3,12 +3,13 @@ export interface ThrownPlayer {
   rallySource?: object | null; claimRally(damage: number): number;
 }
 export interface ThrowEffect {
-  mechanic?: string; damageMult?: number; consumeSeam?: boolean; seam?: number; stop?: boolean; redirect?: boolean;
+  mechanic?: string; damageMult?: number; stop?: boolean; redirect?: boolean;
 }
 export interface ThrownBlade {
   x: number; y: number; vx: number; vy: number; angle: number; state: string; thrown: boolean;
-  throwDmg: number; throwBaseDmg?: number; throwId: number; secondaryActive: boolean; circuitEnergy: number;
-  throwOrigin?: { x: number; y: number } | null; pierced: Set<object>; anchorTarget?: object | null;
+  readonly preserveRedirectAngle?: boolean;
+  throwDmg: number; throwBaseDmg?: number; throwId: number; secondaryActive: boolean;
+  throwOrigin?: { x: number; y: number } | null; pierced: Set<object>; hookTarget?: object | null; slingCollided?: Set<object>;
   linkT?: number;
   thrownCollisionSegment(): { x1: number; y1: number; x2: number; y2: number };
   thrownCollisionPad(): number; canHitThrownEnemy(enemy: ThrownEnemy): boolean; channel(name: string): number;
@@ -37,7 +38,7 @@ export interface ThrownRun {
 }
 export interface ThrownCollisionTuning {
   duelCooldown: number; throwLowMultiplier: number; throwHighMultiplier: number; recallMultiplier: number;
-  maxThrowSpeed: number; throwSpeed: number; ringbladeEnemyCost: number; chainbladeBindDuration: number;
+  maxThrowSpeed: number; throwSpeed: number; chainbladeHookDuration: number; riftCaptureDuration: number;
   hitStopSmall: number; shakeSmall: number; sparkCount: number;
   colors: { deflected: string; armoredShield: string; perfect: string; charger: string; bladeTrail: string };
 }
@@ -62,7 +63,7 @@ export function resolveThrownCollisions(
   blade: ThrownBlade, player: ThrownPlayer, enemies: readonly ThrownEnemy[], projectiles: readonly SweeperProjectile[],
   run: ThrownRun, tuning: ThrownCollisionTuning, hooks: ThrownCollisionHooks,
 ): void {
-  if (!blade.thrown || !["flying", "returning", "circuiting", "yanking"].includes(blade.state)) return;
+  if (!blade.thrown || !["flying", "returning"].includes(blade.state)) return;
   const segment = blade.thrownCollisionSegment();
   for (const shot of projectiles) {
     if (shot.dead || shot.family !== "sweeper" || shot.sweeperState !== "hostile" || shot.hitLatch) continue;
@@ -93,7 +94,7 @@ export function resolveThrownCollisions(
 function resolveThrownEnemyHit(blade: ThrownBlade, player: ThrownPlayer, enemy: ThrownEnemy,
   enemies: readonly ThrownEnemy[], run: ThrownRun, t: ThrownCollisionTuning, hooks: ThrownCollisionHooks): boolean {
   blade.pierced.add(enemy);
-  const secondary = blade.state === "returning" || blade.state === "yanking" || blade.secondaryActive;
+  const secondary = blade.state === "returning" || blade.secondaryActive;
   const effect = hooks.weaponHit(enemy, secondary, blade.throwId); const highHealth = enemy.hp > enemy.maxHp * 0.5;
   let damage = blade.throwDmg * (blade.state === "returning" ? (highHealth ? t.throwLowMultiplier : t.throwHighMultiplier) : (highHealth ? t.throwHighMultiplier : t.throwLowMultiplier));
   if (blade.state === "returning") damage *= t.recallMultiplier;
@@ -112,29 +113,31 @@ function resolveThrownEnemyHit(blade: ThrownBlade, player: ThrownPlayer, enemy: 
   }
   applyThrowMods(blade, player, enemy, run, t, hooks);
   hooks.burst(enemy.x, enemy.y, blade.vx, blade.vy, t.sparkCount, enemy.color); hooks.floater(enemy.x, enemy.y - 26, Math.round(damage).toString(), true);
-  hooks.setHitStop(t.hitStopSmall); hooks.shake(t.shakeSmall); hooks.style(effect?.mechanic === "crosscut" ? "crosscut" : effect?.mechanic === "circuit" ? "circuit" : "throwHit");
+  hooks.setHitStop(t.hitStopSmall); hooks.shake(t.shakeSmall); hooks.style(effect?.mechanic === "threadcut" ? "threadcut" : effect?.mechanic === "wheelCut" || effect?.mechanic === "wheelReturn" ? "wheelCut" : "throwHit");
   if (hooks.achievementsEnabled()) hooks.recordThrowAchievement(enemy, blade.pierced.size, damage);
   hooks.fireHit(enemy); if (secondary) hooks.fireReturnHit(enemy, damage);
   if (enemy.dead) { if (hooks.achievementsEnabled() && blade.pierced.size >= 2) hooks.recordPierceKill(); hooks.onKill(enemy); }
   if (effect?.stop) {
     if (!blade.claimImpact()) { blade.state = "returning"; return true; }
     if (effect.mechanic === "meteor") { blade.forceEmbed(); hooks.lobExplode(enemy.x, enemy.y); }
-    else if (effect.mechanic === "anchor") { blade.anchorTarget = enemy; blade.forceEmbed(); }
-    else if (effect.mechanic === "bind") { blade.anchorTarget = enemy; blade.state = "latched"; blade.vx = 0; blade.vy = 0; blade.linkT = t.chainbladeBindDuration * blade.channel("controlDuration"); enemy.boundT = blade.linkT; }
+    else if (effect.mechanic === "hook") { blade.hookTarget = enemy; blade.slingCollided = new Set(); blade.state = "hooked"; blade.vx = 0; blade.vy = 0; blade.linkT = t.chainbladeHookDuration * blade.channel("controlDuration"); enemy.boundT = blade.linkT; }
+    else if (effect.mechanic === "capture") {
+      blade.hookTarget = enemy; blade.state = "captured"; blade.vx = 0; blade.vy = 0;
+      blade.linkT = t.riftCaptureDuration * blade.channel("controlDuration");
+      if (!enemy.isBoss) enemy.boundT = Math.max(enemy.boundT ?? 0, blade.linkT);
+    }
     return true;
   }
-  if ((run.mods.redirect || effect?.redirect) && (blade.state === "flying" || blade.state === "circuiting")) redirectBlade(blade, enemies, run, t, hooks);
+  if ((run.mods.redirect || effect?.redirect) && blade.state === "flying") redirectBlade(blade, enemies, t, hooks);
   return false;
 }
 
 function applyThrowEffect(blade: ThrownBlade, enemy: ThrownEnemy, effect: ThrowEffect | null | undefined,
   t: ThrownCollisionTuning, hooks: ThrownCollisionHooks): void {
-  if (effect?.mechanic === "seam") enemy.applySeam(effect.seam, blade.throwId);
-  else if (effect?.mechanic === "crosscut") {
-    if (effect.consumeSeam) { enemy.seamT = 0; enemy.seamThrowId = 0; }
+  if (effect?.mechanic === "threadcut") {
     hooks.ribbon(blade.throwOrigin?.x ?? blade.x, blade.throwOrigin?.y ?? blade.y, enemy.x, enemy.y, t.colors.perfect);
-    hooks.floater(enemy.x, enemy.y - 44, "CROSSCUT", true, t.colors.perfect);
-  } else if (effect?.mechanic === "circuit") blade.circuitEnergy -= t.ringbladeEnemyCost;
+    hooks.floater(enemy.x, enemy.y - 44, "THREADCUT", true, t.colors.perfect);
+  }
 }
 
 function applyThrowMods(blade: ThrownBlade, player: ThrownPlayer, enemy: ThrownEnemy, run: ThrownRun,
@@ -143,22 +146,22 @@ function applyThrowMods(blade: ThrownBlade, player: ThrownPlayer, enemy: ThrownE
     if (blade.state === "flying" && (run.mods.impaleAll || blade.pierced.size === 1)) { enemy.applyBleed(run.mods.impale); if (!enemy.isBoss) enemy.stun = Math.max(enemy.stun, 1.2); hooks.ring(enemy.x, enemy.y, 8, t.colors.charger); }
     if (blade.state === "returning" && run.mods.impaleRecall && enemy.bleedStacks > 0) { const dealt = enemy.detonateBleed(); hooks.floater(enemy.x, enemy.y - 32, `RUPTURE ${String(Math.round(dealt))}`, true, t.colors.charger); if (enemy.dead) hooks.onKill(enemy, "skill"); }
   }
-  const secondary = blade.state === "returning" || blade.state === "yanking" || blade.secondaryActive;
+  const secondary = blade.state === "returning" || blade.secondaryActive;
   if (run.mods.capture && !secondary) { const control = 0.45 + run.mods.capture * 0.25; if (!enemy.isBoss) enemy.stun = Math.max(enemy.stun, control); else enemy.applyBreak?.(18 * run.mods.capture); enemy.boundT = Math.max(enemy.boundT ?? 0, control); }
   if (run.mods.throwRamp) { const scale = 1 + run.mods.throwRamp; blade.throwDmg = Math.min(blade.throwDmg * scale, (blade.throwBaseDmg ?? blade.throwDmg) * 2); const cap = t.maxThrowSpeed * 1.2; blade.vx = hooks.clamp(blade.vx * scale, -cap, cap); blade.vy = hooks.clamp(blade.vy * scale, -cap, cap); }
   if (run.mods.razorStun && !enemy.isBoss) enemy.stun = Math.max(enemy.stun, 0.45);
   if (run.mods.vortexRecall && blade.state === "returning" && !enemy.anchored) { const dx = player.x - enemy.x, dy = player.y - enemy.y, magnitude = hooks.distance(dx, dy) || 1; enemy.vx += dx / magnitude * 720 / enemy.weight; enemy.vy += dy / magnitude * 420 / enemy.weight - 120; hooks.burst(enemy.x, enemy.y, dx, dy, 4, t.colors.perfect); }
 }
 
-function redirectBlade(blade: ThrownBlade, enemies: readonly ThrownEnemy[], run: ThrownRun,
+function redirectBlade(blade: ThrownBlade, enemies: readonly ThrownEnemy[],
   t: ThrownCollisionTuning, hooks: ThrownCollisionHooks): void {
   let target: ThrownEnemy | null = null, nearest = Infinity;
   for (const enemy of enemies) { if (enemy.dead || blade.pierced.has(enemy)) continue; const distance = hooks.distance(enemy.x - blade.x, enemy.y - blade.y); if (distance < nearest) { nearest = distance; target = enemy; } }
   if (!target || nearest >= 700) return;
   const speed = hooks.distance(blade.vx, blade.vy) || t.throwSpeed, dx = target.x - blade.x, dy = target.y - blade.y, magnitude = hooks.distance(dx, dy) || 1;
-  blade.vx = dx / magnitude * speed; blade.vy = dy / magnitude * speed; blade.angle = Math.atan2(dy, dx);
+  blade.vx = dx / magnitude * speed; blade.vy = dy / magnitude * speed;
+  if (!blade.preserveRedirectAngle) blade.angle = Math.atan2(dy, dx);
   hooks.burst(blade.x, blade.y, dx, dy, 3, t.colors.bladeTrail);
-  if (blade.state === "circuiting") blade.circuitEnergy += run.mods.redirect ? 0.45 : 0.12;
 }
 
 function projectileIsDead(projectile: SweeperProjectile): boolean { return projectile.dead; }

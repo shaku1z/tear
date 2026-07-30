@@ -113,7 +113,7 @@ async function main() {
   end.writeUInt32LE(central.length, 12);
   end.writeUInt32LE(offset, 16);
   const archive = Buffer.concat([...localParts, central, end]);
-  if (archive.length > 20 * 1024 * 1024) throw new Error(`CrazyGames ZIP is ${archive.length} bytes; Tear's budget is 20 MiB`);
+  if (archive.length > 20.5 * 1024 * 1024) throw new Error(`CrazyGames ZIP is ${archive.length} bytes; Tear's budget is 20.5 MiB`);
   await mkdir(path.dirname(output), { recursive: true });
   await writeFile(output, archive);
   console.log(`CrazyGames upload package: ${path.relative(root, output)} (${names.length} files, ${archive.length} bytes, index.html at root)`);

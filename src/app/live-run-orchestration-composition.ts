@@ -49,6 +49,7 @@ export interface LiveRunOrchestrationOptions {
   readonly resetTransientWorld: () => void;
   readonly finishWorldReset: () => void;
   readonly resetAuthoritativeClocks: () => void;
+  readonly createRunSeed?: () => number;
   readonly authoritativeResult: () => Readonly<{ tick: number; stateHash: string }> | null;
   readonly setScreen: (screen: LegacyAppScreen, context?: LegacyTransitionContext) => void;
   readonly requestPointerLock: () => void;
@@ -95,11 +96,13 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     prepareWorld: options.prepareWorld, applySettings: options.applySettings,
     configureBlade: (blade, weaponId) => {
       const weapon = d.applyWeapon(weaponId); blade.weapon = weapon; blade.model = weapon.model;
+      weapon.onReset?.({ blade });
     },
     createPlayer: (x, y) => new d.Player(x, y), createBlade: () => new d.Blade(),
     installRun: (session) => { options.state.setRun(session); },
     world: { resetTransient: options.resetTransientWorld, finishReset: options.finishWorldReset },
     resetAuthoritativeClocks: options.resetAuthoritativeClocks,
+    ...(options.createRunSeed === undefined ? {} : { createRunSeed: options.createRunSeed }),
     loadStage: options.controllers.api.loadStage, stage, story, lifecycle: options.lifecycle,
     install: (controller) => { options.controllers.installRunStart(controller); },
     setScreen: (screen, detail) => { options.setScreen(screen, detail); },
@@ -122,7 +125,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
 
   createLiveWaveComposition({
     dependencies: d, lifecycle: options.lifecycle, controllers: options.controllers,
-    stage, story, run: options.run, player: options.player, enemies: options.enemies, spawn: content.spawn,
+    stage, story, run: options.run, player: options.player, blade: options.blade, enemies: options.enemies, spawn: content.spawn,
     loreBusy: campaignRuntime.loreBusy, achievementTracking: options.achievementTracking,
     achievementCheck: options.achievementCheck, achievementTracker: options.achievementTracker,
     beginWipe: options.beginWipe, loadStage: options.controllers.api.loadStage,

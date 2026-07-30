@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   migrateReplayV1,
+  parseReplayEnvelope,
   validateReplayEnvelope,
   verifyReplayFinalState,
   type ReplayEnvelopeV1,
@@ -15,7 +16,7 @@ function replayFixture(): ReplayEnvelopeV2 {
     schemaVersion: 2,
     rulesetVersion: "rules-2026.07",
     build: { version: "0.2.0", revision: "abc123", target: "standalone" },
-    run: { runId: "run-a", seed: "seed-a", ticksPerSecond: 60 },
+    run: { runId: "run-a", seed: "seed-a", ticksPerSecond: 60, weaponId: "sword", weaponSchemaVersion: "final-five-v1" },
     actions: [
       { kind: "command", id: 1, tick: 1, command: { type: "move", x: 1_000, y: 0 } },
       { kind: "command", id: 2, tick: 8, command: { type: "weapon", intent: "throw", phase: "pressed" } },
@@ -52,7 +53,7 @@ describe("replay envelope", () => {
     if (!result.ok) expect(result.issues.map((entry) => entry.path)).toContain("actions");
   });
 
-  it("migrates schema 1 with explicit legacy provenance", () => {
+  it("marks schema 1 replays incompatible when no verified weapon migration exists", () => {
     const legacy: ReplayEnvelopeV1 = {
       schemaVersion: 1,
       rulesetVersion: "legacy-rules",
@@ -62,9 +63,19 @@ describe("replay envelope", () => {
       finalTick: 8,
       finalHash: "legacy-state-hash",
     };
-    const migrated = migrateReplayV1(legacy);
-    expect(migrated.schemaVersion).toBe(2);
-    expect(migrated.actions[0]).toMatchObject({ id: 1, tick: 2, command: { type: "interact" } });
-    expect(migrated.tearScore).toEqual({ enabled: false, reason: "not-recorded" });
+    expect(() => migrateReplayV1(legacy)).toThrow("no verified Final Five weapon schema");
+    const parsed = parseReplayEnvelope(legacy);
+    expect(parsed.ok).toBe(false);
+    if (!parsed.ok) {
+      expect(parsed.issues.some((issue) => issue.message.includes("no verified Final Five weapon schema"))).toBe(true);
+    }
+  });
+
+  it("rejects a current replay that omits Final Five weapon provenance", () => {
+    const replay = replayFixture();
+    const missingSchema = { ...replay, run: { runId: replay.run.runId, seed: replay.run.seed, ticksPerSecond: replay.run.ticksPerSecond } };
+    expect(validateReplayEnvelope(missingSchema)).toMatchObject({ ok: false, issues: [
+      expect.objectContaining({ path: "run" }),
+    ] });
   });
 });

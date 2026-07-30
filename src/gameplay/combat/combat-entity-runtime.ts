@@ -17,6 +17,8 @@ export interface LiveCombatEntity {
   deflectDmg?: number; pierce?: boolean; pierced?: ReadonlySet<unknown> | null; unparryable?: boolean; dmg?: number | null;
   root?: number; curve?: boolean; curved?: boolean; curveT?: number; bomb?: boolean; mud?: boolean; mine?: boolean;
   armed?: boolean; armT?: number; life?: number;
+  playerOwned?: boolean; weaponId?: string | null; attackId?: number; throwId?: number;
+  remote?: boolean; secondary?: boolean;
   hit?(damage: number, dx: number, dy: number): number; deflect?(dx: number, dy: number, speed: number, perfect: boolean): void;
   counterSweeper?(method: string, dx: number, dy: number, speed: number): boolean;
   shatterSweeper?(reason: string): void;
@@ -48,7 +50,17 @@ export interface CombatEntityRuntimeHooks {
   noteFirstDamage(enemy: LiveCombatEntity, first: boolean): void; reflectedHit(enemy: LiveCombatEntity,
     projectile: LiveCombatEntity | null, source: LiveCombatEntity | null): void; bossHit(enemy: LiveCombatEntity): void;
   onKill(enemy: LiveCombatEntity, cause: string): void;
+  weaponProjectileHit?(projectile: LiveCombatEntity, enemy: LiveCombatEntity,
+    hit: Readonly<{ damage: number; dx: number; dy: number; weaponId: string; attackId: number;
+      throwId: number; remote: boolean; secondary: boolean }>): void;
   areaDamage(x: number, y: number, radius: number, damage: number, playerOwned: boolean): number;
+}
+
+export interface CombatEntityIdentityState {
+  readonly nextEntityId: number;
+  readonly nextWallSequence: number;
+  readonly nextSlowZoneSequence: number;
+  readonly claimedIds: readonly string[];
 }
 
 export interface ProjectilePhaseTuning {
@@ -70,17 +82,56 @@ function isDead(entity: LiveCombatEntity): boolean { return entity.dead; }
 export class CombatEntityRuntime {
   readonly #hooks: CombatEntityRuntimeHooks;
   readonly #ids = new WeakMap<object, string>();
+  readonly #claimedIds = new Set<string>();
   #nextEntityId = 1; #nextWallSequence = 1; #nextSlowZoneSequence = 1;
 
   constructor(hooks: CombatEntityRuntimeHooks) { this.#hooks = hooks; }
   get nextSlowZoneSequence(): number { return this.#nextSlowZoneSequence; }
   set nextSlowZoneSequence(value: number) { this.#nextSlowZoneSequence = value; }
 
+  captureIdentityState(): CombatEntityIdentityState {
+    return Object.freeze({
+      nextEntityId: this.#nextEntityId,
+      nextWallSequence: this.#nextWallSequence,
+      nextSlowZoneSequence: this.#nextSlowZoneSequence,
+      claimedIds: Object.freeze([...this.#claimedIds].sort()),
+    });
+  }
+
+  restoreIdentityState(state: CombatEntityIdentityState): void {
+    if (![state.nextEntityId, state.nextWallSequence, state.nextSlowZoneSequence]
+      .every((value) => Number.isSafeInteger(value) && value >= 1)) {
+      throw new RangeError("combat entity identity counters must be positive safe integers");
+    }
+    this.#nextEntityId = state.nextEntityId;
+    this.#nextWallSequence = state.nextWallSequence;
+    this.#nextSlowZoneSequence = state.nextSlowZoneSequence;
+    this.#claimedIds.clear();
+    for (const id of state.claimedIds) this.#claimedIds.add(id);
+  }
+
   id(entity: object & { id?: string }, prefix: string): string {
     if (typeof entity.id === "string" && (prefix === "wall" || prefix === "zone")) return entity.id;
     let id = this.#ids.get(entity);
-    if (!id) { id = `${prefix}:${String(this.#nextEntityId)}`; this.#nextEntityId += 1; this.#ids.set(entity, id); }
+    if (!id) {
+      do {
+        id = `${prefix}:${String(this.#nextEntityId)}`;
+        this.#nextEntityId += 1;
+      } while (this.#claimedIds.has(id));
+      this.#ids.set(entity, id);
+      this.#claimedIds.add(id);
+    }
     return id;
+  }
+
+  bindId(entity: object, id: string): void {
+    if (!/^(?:enemy|projectile):[1-9][0-9]*$/u.test(id)) throw new RangeError(`invalid combat entity id: ${id}`);
+    const existing = this.#ids.get(entity);
+    if (existing !== undefined && existing !== id) throw new TypeError(`entity is already bound to ${existing}`);
+    this.#ids.set(entity, id);
+    this.#claimedIds.add(id);
+    const sequence = Number.parseInt(id.slice(id.indexOf(":") + 1), 10);
+    this.#nextEntityId = Math.max(this.#nextEntityId, sequence + 1);
   }
 
   actorSnapshots(objects: Map<string, LiveCombatEntity>): CombatActorState[] {
@@ -113,7 +164,10 @@ export class CombatEntityRuntime {
         unparryable: !!projectile.unparryable, dmg: projectile.dmg, root: legacyZero(projectile.root),
         curve: !!projectile.curve, curved: !!projectile.curved, curveT: legacyZero(projectile.curveT),
         bomb: !!projectile.bomb, mud: !!projectile.mud, mine: !!projectile.mine, armed: !!projectile.armed,
-        armT: legacyZero(projectile.armT), life: projectile.life ?? 0 } as ProjectileState;
+        armT: legacyZero(projectile.armT), life: projectile.life ?? 0,
+        playerOwned: !!projectile.playerOwned, weaponId: projectile.weaponId ?? null,
+        attackId: projectile.attackId ?? 0, throwId: projectile.throwId ?? 0,
+        remote: !!projectile.remote, secondary: !!projectile.secondary } as ProjectileState;
     });
   }
 
@@ -232,6 +286,13 @@ export class CombatEntityRuntime {
     else if (intent.type === "achievement-max") h.maxStat(intent.stat, intent.value); else if (intent.type === "achievement-check") h.checkAchievements();
     else if (intent.type === "damage-player") this.#damagePlayer(intent, projectile, objects);
     else if (intent.type === "damage-enemy") this.#damageEnemy(intent, projectile, objects);
+    else if (intent.type === "weapon-projectile-hit") {
+      const enemy = objects.get(intent.enemyId);
+      if (projectile && enemy && !enemy.dead && !enemy.dying) {
+        if (h.weaponProjectileHit) h.weaponProjectileHit(projectile, enemy, intent);
+        else enemy.hit?.(intent.damage, intent.dx, intent.dy);
+      }
+    }
     else if (intent.type === "damage-enemy-aoe") this.#damageArea(intent, objects);
   }
 

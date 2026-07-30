@@ -41,6 +41,7 @@ export interface LiveDebugCompositionOptions {
   readonly finale: () => Parameters<typeof createLiveDebugSnapshot>[0]["finale"];
   readonly rewardSnapshot: () => Parameters<typeof createLiveDebugSnapshot>[0]["reward"];
   readonly authoritative: () => Parameters<typeof createLiveDebugSnapshot>[0]["authoritative"];
+  readonly tutorialSnapshot: () => object;
   readonly startFinale: Parameters<typeof installLiveDebugHarness>[0]["startFinale"];
   readonly severFinale: () => unknown;
 }
@@ -62,6 +63,7 @@ export function installLiveGameDebug(options: LiveDebugCompositionOptions): void
     stopRecording: () => { if (d.GHOST.recording()) d.GHOST.stopRec({ debugFinale: true }); },
     install: (api) => { Object.defineProperty(window, "__PANTHEON_TEST", { configurable: true, value: api }); },
     auditEffects: () => auditLiveEffects(d, options.width, options.height),
+    tutorialSnapshot: options.tutorialSnapshot,
     snapshot: () => createLiveDebugSnapshot({
       dependencies: d, state: options.state, width: options.width, height: options.height,
       screen: options.screen(), cinema: options.cinema, settings: {

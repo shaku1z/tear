@@ -60,7 +60,11 @@ export function buildCodexAbilityCards(input: {
 interface TrickPoints { readonly hit: number; readonly throwHit: number; readonly deflect: number; readonly launch: number;
   readonly slam: number; readonly updraft: number; readonly superslam: number; readonly parry: number }
 interface TrickTier { readonly name?: string; readonly at: number; readonly mult: number }
-export function buildCodexGuide(points: TrickPoints, tiersSource: readonly TrickTier[]): NonNullable<CodexScreenView["guide"]> {
+export interface ControllerGuideLabels {
+  readonly jump: string; readonly dash: string; readonly throw: string; readonly tether: string; readonly pause: string;
+}
+export function buildCodexGuide(points: TrickPoints, tiersSource: readonly TrickTier[],
+  controller: ControllerGuideLabels): NonNullable<CodexScreenView["guide"]> {
   const tricks = [
     ["/", "CUT", points.hit, "any clean blade hit"], ["➹", "THROW HIT", points.throwHit, "the thrown blade connects"],
     ["↩", "DEFLECT", points.deflect, "bat a shot away"], ["↑", "LAUNCH", points.launch, "fast UP swing pops them airborne"],
@@ -76,7 +80,8 @@ export function buildCodexGuide(points: TrickPoints, tiersSource: readonly Trick
     { keys: ["MOUSE"], description: "the blade — clean CUTS beat pokes" },
     { keys: ["RMB"], description: "throw / recall inside the dashed ring" },
     { keys: ["P"], description: "pause" }, { keys: ["ESC"], description: "release the mouse" },
-  ], controller: ["left stick move · right stick swings the blade", "A jump · B dash · X throw · ▸ pause"],
+  ], controller: ["left stick move · right stick swings the blade",
+    `${controller.jump} jump · ${controller.dash} dash · ${controller.throw} throw · ${controller.tether} tether · ${controller.pause} pause`],
     tricks: sorted, ladder: tiers.map((tier) => ({ name: tier.name ?? "", multiplier: tier.mult, fraction: tier.at / maximum })),
     variety: "VARIETY: repeating the same trick earns fewer points — mix your attacks." });
 }

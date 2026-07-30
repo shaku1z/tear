@@ -383,7 +383,12 @@ const Input: LegacyInput = {
     return w;
   },
 
-  endFrame() { this.pressed.clear(); this.rmb = false; this.clicked = false; this.tJump = false; this.tDash = false; this.tPause = false; },
+  endFrame(preserveSimulationEdges = false) {
+    if (!preserveSimulationEdges) {
+      this.pressed.clear(); this.rmb = false; this.tJump = false; this.tDash = false;
+    }
+    this.clicked = false; this.tPause = false;
+  },
 };
 return Input;
 }

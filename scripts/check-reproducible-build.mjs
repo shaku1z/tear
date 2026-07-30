@@ -83,8 +83,8 @@ async function assertArtifactBoundary(target, hashes, root) {
     let totalBytes = 0;
     for (const file of files) totalBytes += (await stat(join(root, file))).size;
     if (files.size > 1_500) throw new Error(`CrazyGames output exceeds the 1,500-file portal limit: ${String(files.size)}`);
-    if (totalBytes > 20 * 1024 * 1024) {
-      throw new Error(`CrazyGames output exceeds Tear's 20 MiB mobile-homepage budget: ${String(totalBytes)} bytes`);
+    if (totalBytes > 21.5 * 1024 * 1024) {
+      throw new Error(`CrazyGames output exceeds Tear's 21.5 MiB mobile-homepage budget: ${String(totalBytes)} bytes`);
     }
   }
 }

@@ -1,0 +1,919 @@
+{
+  "format": "tear-signal-catalog",
+  "version": 1,
+  "note": "R1 — canonical Music Work catalog. One work, many versions; TearScore picks the best version for the current context. `available:false` marks a version that is planned but not yet produced.",
+  "compatibilityClasses": {
+    "A": "Fully adaptive — stems, intro, loop, tier map, apex, outro. Safe anywhere.",
+    "B": "Adaptive radio edit — entry, loopable body, grouped stems, basic intensity. Safe for normal combat/Endless.",
+    "C": "Linear OST — full authored song, no gameplay loop contract. Archive/menu/replay/Album Mode.",
+    "D": "Stinger/moment — intro, victory, boss arrival, outro. Never general gameplay music."
+  },
+  "works": [
+    {
+      "id": "fillet",
+      "title": "Fillet",
+      "category": "source-work",
+      "tempo": 109.7,
+      "key": "C# major",
+      "tags": [
+        "calm",
+        "menu",
+        "melodic",
+        "neo-soul"
+      ],
+      "stations": [
+        "still",
+        "archive"
+      ],
+      "unlock": {
+        "type": "default"
+      },
+      "rights": {
+        "gameUse": true,
+        "streamSafe": true,
+        "vodSafe": true,
+        "albumRelease": true,
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "versions": {
+        "adaptive-game": {
+          "class": "A",
+          "available": true,
+          "adaptive": true,
+          "loopable": true,
+          "stemmed": true,
+          "cue": "audio/cues/fillet",
+          "contexts": [
+            "menu",
+            "gameplay",
+            "shell"
+          ],
+          "roles": [
+            "rhythm",
+            "pulse",
+            "foundation",
+            "melody"
+          ],
+          "loopSeconds": 26.25
+        },
+        "canonical-ost": {
+          "class": "C",
+          "available": true,
+          "linear": true,
+          "contexts": [
+            "archive",
+            "menu",
+            "replay"
+          ],
+          "master": "works/fillet/renders/masters/fillet-ost-main.wav"
+        }
+      },
+      "barQuantized": true
+    },
+    {
+      "id": "shopkeeper",
+      "title": "Shopkeeper, Keep Keeping",
+      "category": "source-work",
+      "tempo": 82,
+      "key": "C minor",
+      "tags": [
+        "calm",
+        "guitar",
+        "neo-soul",
+        "menu"
+      ],
+      "stations": [
+        "still",
+        "archive"
+      ],
+      "unlock": {
+        "type": "default"
+      },
+      "rights": {
+        "gameUse": true,
+        "streamSafe": true,
+        "vodSafe": true,
+        "albumRelease": true,
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "versions": {
+        "adaptive-game": {
+          "class": "A",
+          "available": true,
+          "adaptive": true,
+          "loopable": true,
+          "stemmed": true,
+          "cue": "audio/cues/shopkeeper",
+          "contexts": [
+            "menu",
+            "gameplay",
+            "shell"
+          ],
+          "roles": [
+            "foundation",
+            "pulse",
+            "rhythm",
+            "melody"
+          ],
+          "loopSeconds": 23.41
+        },
+        "canonical-ost": {
+          "class": "C",
+          "available": true,
+          "linear": true,
+          "contexts": [
+            "archive",
+            "menu",
+            "replay"
+          ],
+          "master": "works/shopkeeper/renders/masters/shopkeeper-ost-main.wav"
+        },
+        "menu-edit": {
+          "class": "B",
+          "available": false,
+          "loopable": true,
+          "contexts": [
+            "menu",
+            "shop",
+            "codex",
+            "shell"
+          ]
+        }
+      },
+      "barQuantized": true
+    },
+    {
+      "id": "the-source",
+      "title": "The Source",
+      "category": "source-work",
+      "tempo": 87,
+      "key": "C# minor",
+      "tags": [
+        "nocturnal",
+        "boss",
+        "electronic",
+        "dark"
+      ],
+      "stations": [
+        "descent",
+        "voidcast",
+        "archive"
+      ],
+      "unlock": {
+        "type": "boss-defeat",
+        "bossId": "source"
+      },
+      "rights": {
+        "gameUse": true,
+        "streamSafe": true,
+        "vodSafe": true,
+        "albumRelease": true,
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "versions": {
+        "adaptive-game": {
+          "class": "A",
+          "available": true,
+          "adaptive": true,
+          "loopable": true,
+          "stemmed": true,
+          "cue": "audio/cues/the-source",
+          "contexts": [
+            "gameplay",
+            "boss"
+          ],
+          "roles": [
+            "foundation",
+            "pulse",
+            "rhythm",
+            "melody"
+          ],
+          "loopSeconds": 44.14
+        },
+        "canonical-ost": {
+          "class": "C",
+          "available": true,
+          "linear": true,
+          "contexts": [
+            "archive",
+            "menu",
+            "replay"
+          ],
+          "master": "works/the-source/renders/masters/the-source-ost-main.wav"
+        },
+        "final-phase": {
+          "class": "A",
+          "available": false,
+          "adaptive": true,
+          "loopable": true,
+          "contexts": [
+            "boss",
+            "gameplay"
+          ]
+        }
+      },
+      "barQuantized": true
+    },
+    {
+      "id": "beserker",
+      "title": "Beserker",
+      "category": "source-work",
+      "tempo": 127.2,
+      "key": "F minor",
+      "tags": [
+        "combat",
+        "kinetic",
+        "latin",
+        "percussive",
+        "boss"
+      ],
+      "stations": [
+        "cutline",
+        "descent",
+        "archive"
+      ],
+      "unlock": {
+        "type": "boss-defeat",
+        "bossId": "aldric"
+      },
+      "rights": {
+        "gameUse": true,
+        "streamSafe": true,
+        "vodSafe": true,
+        "albumRelease": true,
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "versions": {
+        "adaptive-game": {
+          "class": "A",
+          "available": true,
+          "adaptive": true,
+          "loopable": true,
+          "stemmed": true,
+          "cue": "audio/cues/beserker",
+          "contexts": [
+            "gameplay",
+            "boss"
+          ],
+          "bossIntro": true,
+          "roles": [
+            "foundation",
+            "pulse",
+            "rhythm",
+            "melody"
+          ],
+          "loopSeconds": 15.1
+        },
+        "canonical-ost": {
+          "class": "C",
+          "available": true,
+          "linear": true,
+          "contexts": [
+            "archive",
+            "menu",
+            "replay"
+          ],
+          "durationSeconds": 252.28,
+          "master": "works/beserker/renders/masters/beserker-ost-main.wav",
+          "status": "Source-preserved full mix, mastered. The earlier reconstructed version (Latin reprise fusion) was rejected by the owner and reverted 2026-07-25."
+        },
+        "final-phase": {
+          "class": "A",
+          "available": false,
+          "adaptive": true,
+          "loopable": true,
+          "contexts": [
+            "boss"
+          ]
+        }
+      },
+      "barQuantized": true
+    },
+    {
+      "id": "slicing-life-1",
+      "title": "Slicing Life",
+      "category": "source-work",
+      "tempo": 87.8,
+      "key": "C major",
+      "tags": [
+        "bright",
+        "vocal",
+        "melodic"
+      ],
+      "stations": [
+        "still",
+        "archive"
+      ],
+      "unlock": {
+        "type": "biome-enter",
+        "biome": "The Grounds"
+      },
+      "rights": {
+        "gameUse": true,
+        "streamSafe": true,
+        "vodSafe": true,
+        "albumRelease": true,
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "versions": {
+        "adaptive-game": {
+          "class": "A",
+          "available": true,
+          "adaptive": true,
+          "loopable": true,
+          "stemmed": true,
+          "cue": "audio/cues/slicing-life-1",
+          "contexts": [
+            "gameplay"
+          ],
+          "vocals": false,
+          "roles": [
+            "foundation",
+            "pulse",
+            "rhythm",
+            "melody"
+          ],
+          "loopSeconds": 43.76
+        },
+        "canonical-ost": {
+          "class": "C",
+          "available": true,
+          "linear": true,
+          "vocals": true,
+          "contexts": [
+            "archive",
+            "replay"
+          ],
+          "master": "works/slicing-life-1/renders/masters/slicing-life-1-ost-main.wav"
+        }
+      },
+      "barQuantized": true
+    },
+    {
+      "id": "slicing-life-2",
+      "title": "Slicing Life II",
+      "category": "source-work",
+      "tempo": 86,
+      "key": "C major",
+      "tags": [
+        "bright",
+        "vocal",
+        "melodic",
+        "guitar"
+      ],
+      "stations": [
+        "still",
+        "archive"
+      ],
+      "unlock": {
+        "type": "biome-enter",
+        "biome": "The Undercroft"
+      },
+      "rights": {
+        "gameUse": true,
+        "streamSafe": true,
+        "vodSafe": true,
+        "albumRelease": true,
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "versions": {
+        "adaptive-game": {
+          "class": "A",
+          "available": true,
+          "adaptive": true,
+          "loopable": true,
+          "stemmed": true,
+          "cue": "audio/cues/slicing-life-2",
+          "contexts": [
+            "gameplay"
+          ],
+          "vocals": false,
+          "roles": [
+            "foundation",
+            "pulse",
+            "rhythm",
+            "melody"
+          ],
+          "loopSeconds": 44.64
+        },
+        "canonical-ost": {
+          "class": "C",
+          "available": true,
+          "linear": true,
+          "vocals": true,
+          "contexts": [
+            "archive",
+            "replay"
+          ],
+          "master": "works/slicing-life-2/renders/masters/slicing-life-2-ost-main.wav"
+        },
+        "instrumental": {
+          "class": "C",
+          "available": true,
+          "linear": true,
+          "vocals": false,
+          "contexts": [
+            "archive",
+            "menu"
+          ],
+          "master": "works/slicing-life-2/renders/masters/slicing-life-2-instrumental.wav"
+        }
+      },
+      "barQuantized": true
+    },
+    {
+      "id": "looking-out",
+      "title": "Looking Out",
+      "category": "source-work",
+      "tempo": 165.9,
+      "key": "C minor",
+      "tags": [
+        "void",
+        "ambient",
+        "dark",
+        "nocturnal"
+      ],
+      "stations": [
+        "voidcast",
+        "descent",
+        "archive"
+      ],
+      "unlock": {
+        "type": "biome-enter",
+        "biome": "The Voidspire"
+      },
+      "rights": {
+        "gameUse": true,
+        "streamSafe": true,
+        "vodSafe": true,
+        "albumRelease": true,
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "versions": {
+        "adaptive-game": {
+          "class": "A",
+          "available": true,
+          "adaptive": true,
+          "loopable": true,
+          "stemmed": true,
+          "cue": "audio/cues/looking-out",
+          "contexts": [
+            "gameplay"
+          ],
+          "roles": [
+            "rhythm",
+            "pulse",
+            "melody"
+          ],
+          "loopSeconds": 28.93
+        },
+        "canonical-ost": {
+          "class": "C",
+          "available": true,
+          "linear": true,
+          "contexts": [
+            "archive",
+            "menu",
+            "replay"
+          ],
+          "master": "works/looking-out/renders/masters/looking-out-ost-main.wav"
+        }
+      },
+      "barQuantized": true
+    },
+    {
+      "id": "reflection-of-the-bladeless",
+      "title": "Reflection Of The Bladeless",
+      "category": "source-work",
+      "tempo": 75,
+      "key": "G# major",
+      "tags": [
+        "void",
+        "boss",
+        "dark",
+        "kinetic"
+      ],
+      "stations": [
+        "voidcast",
+        "descent",
+        "cutline",
+        "archive"
+      ],
+      "unlock": {
+        "type": "boss-defeat",
+        "bossId": "echo"
+      },
+      "rights": {
+        "gameUse": true,
+        "streamSafe": true,
+        "vodSafe": true,
+        "albumRelease": true,
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "versions": {
+        "adaptive-game": {
+          "class": "A",
+          "available": true,
+          "adaptive": true,
+          "loopable": true,
+          "stemmed": true,
+          "cue": "audio/cues/reflection-of-the-bladeless",
+          "contexts": [
+            "gameplay",
+            "boss"
+          ],
+          "roles": [
+            "rhythm",
+            "pulse",
+            "melody"
+          ],
+          "loopSeconds": 25.59
+        },
+        "canonical-ost": {
+          "class": "C",
+          "available": true,
+          "linear": true,
+          "contexts": [
+            "archive",
+            "menu",
+            "replay"
+          ],
+          "master": "works/reflection-of-the-bladeless/renders/masters/reflection-of-the-bladeless-ost-main.wav"
+        }
+      },
+      "barQuantized": true
+    },
+    {
+      "id": "bladeless",
+      "title": "Bladeless",
+      "category": "source-work",
+      "tempo": 159,
+      "key": "C# minor",
+      "tags": [
+        "void",
+        "dark",
+        "nocturnal"
+      ],
+      "stations": [
+        "voidcast",
+        "still",
+        "archive"
+      ],
+      "unlock": {
+        "type": "biome-enter",
+        "biome": "The Voidspire"
+      },
+      "rights": {
+        "gameUse": true,
+        "streamSafe": true,
+        "vodSafe": true,
+        "albumRelease": true,
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "versions": {
+        "adaptive-game": {
+          "class": "A",
+          "available": true,
+          "adaptive": true,
+          "loopable": true,
+          "stemmed": true,
+          "cue": "audio/cues/bladeless",
+          "contexts": [
+            "gameplay"
+          ],
+          "roles": [
+            "rhythm",
+            "pulse",
+            "melody",
+            "foundation"
+          ],
+          "loopSeconds": 27.16
+        },
+        "canonical-ost": {
+          "class": "C",
+          "available": true,
+          "linear": true,
+          "contexts": [
+            "archive",
+            "menu",
+            "replay"
+          ],
+          "master": "works/bladeless/renders/masters/bladeless-ost-main.wav"
+        }
+      },
+      "barQuantized": true
+    },
+    {
+      "id": "steady",
+      "title": "Steady",
+      "category": "source-work",
+      "tempo": 157.1,
+      "key": "A minor",
+      "tags": [
+        "void",
+        "calm",
+        "nocturnal"
+      ],
+      "stations": [
+        "voidcast",
+        "still",
+        "archive"
+      ],
+      "unlock": {
+        "type": "biome-enter",
+        "biome": "The Voidspire"
+      },
+      "rights": {
+        "gameUse": true,
+        "streamSafe": true,
+        "vodSafe": true,
+        "albumRelease": true,
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "versions": {
+        "adaptive-game": {
+          "class": "A",
+          "available": true,
+          "adaptive": true,
+          "loopable": true,
+          "stemmed": true,
+          "cue": "audio/cues/steady",
+          "contexts": [
+            "gameplay"
+          ],
+          "roles": [
+            "rhythm",
+            "pulse",
+            "melody"
+          ],
+          "loopSeconds": 15.28
+        },
+        "canonical-ost": {
+          "class": "C",
+          "available": true,
+          "linear": true,
+          "contexts": [
+            "archive",
+            "menu",
+            "replay"
+          ],
+          "master": "works/steady/renders/masters/steady-ost-main.wav"
+        }
+      },
+      "barQuantized": false
+    },
+    {
+      "id": "troubleshooting",
+      "title": "Troubleshooting",
+      "category": "source-work",
+      "tempo": 160.1,
+      "key": "C# minor",
+      "tags": [
+        "void",
+        "kinetic",
+        "combat"
+      ],
+      "stations": [
+        "voidcast",
+        "cutline",
+        "archive"
+      ],
+      "unlock": {
+        "type": "biome-enter",
+        "biome": "The Voidspire"
+      },
+      "rights": {
+        "gameUse": true,
+        "streamSafe": true,
+        "vodSafe": true,
+        "albumRelease": true,
+        "territories": [
+          "worldwide"
+        ]
+      },
+      "versions": {
+        "adaptive-game": {
+          "class": "A",
+          "available": true,
+          "adaptive": true,
+          "loopable": true,
+          "stemmed": true,
+          "cue": "audio/cues/troubleshooting",
+          "contexts": [
+            "gameplay"
+          ],
+          "roles": [
+            "rhythm",
+            "pulse",
+            "melody"
+          ],
+          "loopSeconds": 17.98
+        },
+        "canonical-ost": {
+          "class": "C",
+          "available": true,
+          "linear": true,
+          "contexts": [
+            "archive",
+            "menu",
+            "replay"
+          ],
+          "master": "works/troubleshooting/renders/masters/troubleshooting-ost-main.wav"
+        }
+      },
+      "barQuantized": true
+    }
+  ],
+  "stations": [
+    {
+      "id": "descent",
+      "name": "DESCENT",
+      "description": "Canonical Tear score. Story-first.",
+      "selection": {
+        "mode": "weighted-shuffle",
+        "repeatProtection": 4
+      },
+      "filters": {
+        "tagsAny": [
+          "boss",
+          "dark",
+          "nocturnal"
+        ],
+        "adaptiveRequiredDuringGameplay": true
+      },
+      "contextRules": {
+        "menu": [
+          "menu-edit",
+          "adaptive-game"
+        ],
+        "gameplay": [
+          "adaptive-game"
+        ],
+        "boss": [
+          "final-phase",
+          "adaptive-game"
+        ]
+      }
+    },
+    {
+      "id": "cutline",
+      "name": "CUTLINE",
+      "description": "Momentum, pressure, impact.",
+      "selection": {
+        "mode": "weighted-shuffle",
+        "repeatProtection": 4
+      },
+      "filters": {
+        "tagsAny": [
+          "combat",
+          "kinetic",
+          "percussive"
+        ],
+        "adaptiveRequiredDuringGameplay": true
+      },
+      "contextRules": {
+        "menu": [
+          "menu-edit",
+          "adaptive-game"
+        ],
+        "gameplay": [
+          "adaptive-game"
+        ],
+        "boss": [
+          "final-phase",
+          "adaptive-game"
+        ]
+      }
+    },
+    {
+      "id": "still",
+      "name": "STILL",
+      "description": "Calm and melodic.",
+      "selection": {
+        "mode": "weighted-shuffle",
+        "repeatProtection": 3
+      },
+      "filters": {
+        "tagsAny": [
+          "calm",
+          "neo-soul",
+          "guitar",
+          "bright"
+        ],
+        "adaptiveRequiredDuringGameplay": true
+      },
+      "contextRules": {
+        "menu": [
+          "menu-edit",
+          "adaptive-game"
+        ],
+        "gameplay": [
+          "adaptive-game"
+        ],
+        "boss": [
+          "adaptive-game"
+        ]
+      }
+    },
+    {
+      "id": "echo",
+      "name": "ECHO",
+      "description": "Alternate and experimental versions.",
+      "selection": {
+        "mode": "weighted-shuffle",
+        "repeatProtection": 3
+      },
+      "filters": {
+        "tagsAny": [
+          "experimental",
+          "remix"
+        ],
+        "adaptiveRequiredDuringGameplay": true
+      },
+      "contextRules": {
+        "menu": [
+          "adaptive-game"
+        ],
+        "gameplay": [
+          "adaptive-game"
+        ],
+        "boss": [
+          "adaptive-game"
+        ]
+      }
+    },
+    {
+      "id": "archive",
+      "name": "THE ARCHIVE",
+      "description": "Linear soundtrack programming.",
+      "selection": {
+        "mode": "sequential",
+        "repeatProtection": 0
+      },
+      "filters": {
+        "tagsAny": [],
+        "adaptiveRequiredDuringGameplay": false
+      },
+      "contextRules": {
+        "menu": [
+          "canonical-ost",
+          "instrumental"
+        ],
+        "gameplay": [
+          "canonical-ost"
+        ],
+        "boss": [
+          "canonical-ost"
+        ]
+      }
+    },
+    {
+      "id": "voidcast",
+      "name": "VOIDCAST",
+      "description": "Dark ambient and atmospheric.",
+      "selection": {
+        "mode": "weighted-shuffle",
+        "repeatProtection": 3
+      },
+      "filters": {
+        "tagsAny": [
+          "dark",
+          "nocturnal",
+          "ambient"
+        ],
+        "adaptiveRequiredDuringGameplay": true
+      },
+      "contextRules": {
+        "menu": [
+          "adaptive-game"
+        ],
+        "gameplay": [
+          "adaptive-game"
+        ],
+        "boss": [
+          "adaptive-game"
+        ]
+      }
+    }
+  ]
+}

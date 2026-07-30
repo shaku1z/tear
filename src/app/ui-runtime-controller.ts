@@ -14,7 +14,7 @@ export interface UiRuntimeInput {
   readonly mode: "mouse" | "keyboard" | "gamepad" | "touch";
   readonly mouseX: number;
   readonly mouseY: number;
-  readonly ui: Readonly<{ pageUp: boolean; pageDown: boolean; tabPrev: boolean; tabNext: boolean }>;
+  readonly ui: Readonly<{ pageUp: boolean; pageDown: boolean; tabPrev: boolean; tabNext: boolean; context1?: boolean }>;
   readonly pressed: ReadonlySet<string>;
   padBack: boolean;
   touchActive(): boolean;
@@ -69,7 +69,7 @@ export function handleUiRuntimeFrame(ports: UiRuntimePorts): void {
     pointer: { x: input.mouseX, y: input.mouseY }, touch,
     directions: { left: input.menuLeft(), right: input.menuRight(), up: input.menuUp(), down: input.menuDown() },
     previous: input.menuPrev(), next: input.menuNext(), pressed: input.pressed,
-    padBack: input.padBack, confirm: input.confirmPressed(),
+    padBack: input.padBack, confirm: input.confirmPressed(), context1: input.ui.context1 ?? false,
   });
   ports.setFocus(decision.focus);
   ports.setScroll(decision.scroll);

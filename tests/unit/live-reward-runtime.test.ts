@@ -19,6 +19,11 @@ describe("live reward runtime", () => {
     runtime.openDraft();
     expect(runtime.snapshot()).toMatchObject({ phase: "draft", wave: 4, rerolls: 1, specialsOffered: 1 });
     expect(setScreen).toHaveBeenCalledWith("draft");
+    const capturedDraft = structuredClone(runtime.snapshot());
+    runtime.reset();
+    expect(runtime.snapshot()?.phase).toBe("idle");
+    runtime.restore(capturedDraft);
+    expect(runtime.snapshot()).toEqual(capturedDraft);
     runtime.selectDraft(0);
     expect(applyUpgrade).toHaveBeenCalledWith({ id: "power" });
     expect(runtime.snapshot()?.phase).toBe("complete");

@@ -145,6 +145,21 @@ describe("boss phase conformance", () => {
     expect(clone.dead).toBe(true);
   });
 
+  it("drives THE MIRROR through the real player integrator at the live 120 Hz cadence", () => {
+    const { Mirror, host, platforms, mirrorPlayer } = createMirrorTestHarness([0.2, 0.7, 0.4]);
+    const projectiles: EnemyProjectile[] = [];
+    const startX = host.x;
+
+    for (let tick = 0; tick < 360; tick += 1) {
+      host.update(1 / 120, platforms, mirrorPlayer, projectiles);
+    }
+
+    expect(Math.abs(host.x - startX)).toBeGreaterThan(40);
+    expect(host.x).toBe(Mirror.actor.x);
+    expect(Number.isFinite(host.x) && Number.isFinite(host.y)).toBe(true);
+    expect(["approach", "space", "strike", "bait", "punish", "dodge", "echo", "throw"]).toContain(Mirror._state);
+  });
+
   it("preserves Source collapse, frozen kneel, true-form thaw and death cleanup", () => {
     const { boss, platforms, player } = createBoss("source");
     const projectiles: EnemyProjectile[] = [];

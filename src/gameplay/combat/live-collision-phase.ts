@@ -8,7 +8,7 @@ import { resolveHeldBladeParries, type ParryBlade, type ParryPlayer, type ParryP
   type ParryRun } from "./blade-parry-runtime";
 import { resolveEnemyContact, resolveHostileBladeContact, type ContactEnemy, type ContactPlayer,
   type HostileBlade } from "./contact-runtime";
-import { finalizeCombatTick, markFallenEnemies, resolvePlayerDeath, type TailEnemy, type TailFloater,
+import { finalizeCombatTick, markFallenEnemies, resolvePlayerDeath, runTrainingTick, type TailEnemy, type TailFloater,
   type TailPlayer, type TailProjectile, type TailRun } from "./combat-tail-runtime";
 import type { CombatEntityRuntime } from "./combat-entity-runtime";
 import type { BladePlayerPort } from "../entities/blade-contracts";
@@ -17,6 +17,9 @@ export type LivePlayer = HeldBladePlayer & ThrownPlayer & ParryPlayer & ContactP
 export type LiveBlade = HeldBladeWeapon & ThrownBlade & ParryBlade & HostileBlade & {
   heldCollisionSegment(player: LivePlayer): HeldBladeCollisionInput["segment"];
   aimX: number; aimY: number;
+  weapon?: Readonly<{ id?: string }> | null;
+  refillRiftChambers(amount: number): void;
+  primeReversal(target: object): boolean;
 };
 export type LiveEnemy = HeldBladeEnemy & ThrownEnemy & ContactEnemy & TailEnemy;
 export type LiveProjectile = SweeperProjectile & ParryProjectile & TailProjectile;
@@ -65,7 +68,8 @@ export function runLiveCollisionPhase(host: LiveCollisionPhaseHost, dt: number):
   const { player, blade, run, state } = host;
   const held = blade.heldCollisionSegment(player);
   state.hitStop = resolveHeldBladeEnemyCollisions({ player, blade, enemies: state.enemies, run, segment: held,
-    currentHitStop: state.hitStop, tuning: heldTuning(host.width), effects: heldEffects(host), hooks: heldHooks(host),
+    currentHitStop: state.hitStop, tuning: heldTuning(host.width, host.run.mode === "tutorial"),
+    effects: heldEffects(host), hooks: heldHooks(host),
     segmentCircle: (segment, x, y, radius) => host.segmentCircle(segment.x1, segment.y1, segment.x2, segment.y2, x, y, radius),
     segmentPointDistance: host.segmentPointDistance, weaponSegmentContact: host.weaponSegmentContact,
     distance: host.distance }).hitStop;
@@ -80,28 +84,36 @@ export function runLiveCollisionPhase(host: LiveCollisionPhaseHost, dt: number):
   const tail = finalizeCombatTick({ dt, enemies: state.enemies, projectiles: state.projectiles, floaters: state.floaters,
     shake: state.shake, shakeDecay: CONFIG.juice.shakeDecay, player, run, hooks: tailHooks(host) });
   state.enemies = tail.enemies as LiveEnemy[]; state.projectiles = tail.projectiles as LiveProjectile[];
-  state.floaters = tail.floaters; state.shake = tail.shake; resolveDeath(host);
+  state.floaters = tail.floaters; state.shake = tail.shake;
+  // Only now that the surviving lists are installed may training spawn onto them.
+  runTrainingTick(run.mode, dt, { updateTutorial: host.updateTutorial, updatePlayground: host.updatePlayground });
+  resolveDeath(host);
 }
 
-function heldTuning(width: number): HeldBladeCollisionInput["tuning"] {
+function heldTuning(width: number, tutorial: boolean): HeldBladeCollisionInput["tuning"] {
   return { width, groundY: CONFIG.world.groundY,
     blade: { minHitSpeed: CONFIG.blade.minHitSpeed, launchPower: CONFIG.blade.launchPower,
-      risingLaunchBonus: CONFIG.blade.risingLaunchBonus, slamMinDownSpeed: CONFIG.blade.slamMinDownSpeed,
-      launchMinUpSpeed: CONFIG.blade.launchMinUpSpeed, risingSpeedRef: CONFIG.blade.risingSpeedRef,
+      risingLaunchBonus: CONFIG.blade.risingLaunchBonus,
+      slamMinDownSpeed: tutorial ? Math.min(CONFIG.blade.slamMinDownSpeed, CONFIG.blade.minHitSpeed * 0.85) : CONFIG.blade.slamMinDownSpeed,
+      launchMinUpSpeed: tutorial ? Math.min(CONFIG.blade.launchMinUpSpeed, CONFIG.blade.minHitSpeed) : CONFIG.blade.launchMinUpSpeed,
+      risingSpeedRef: CONFIG.blade.risingSpeedRef,
       slamPowerSpeed: CONFIG.blade.slamPowerSpeed, slamEmpowerAt: CONFIG.blade.slamEmpowerAt,
-      slamMultiplier: CONFIG.blade.slamMultiplier, slamPowerBonus: CONFIG.blade.slamPowerBonus, risingDmgBonus: CONFIG.blade.risingDmgBonus },
+      slamMultiplier: CONFIG.blade.slamMultiplier, slamPowerBonus: CONFIG.blade.slamPowerBonus,
+      risingDmgBonus: CONFIG.blade.risingDmgBonus, tutorialRecognition: tutorial },
     style: { styleDamage: CONFIG.skill.styleDamage, styleDamageMax: CONFIG.skill.styleDamageMax, aerialRaveCap: CONFIG.skill.aerialRaveCap },
     hitStop: { small: CONFIG.hitStop.small, big: CONFIG.hitStop.big, threshold: CONFIG.hitStop.threshold },
     juice: { sparkCount: CONFIG.juice.sparkCount, shakeSmall: CONFIG.juice.shakeSmall, shakeBig: CONFIG.juice.shakeBig, zoomBig: CONFIG.juice.zoomBig },
     colors: { perfect: CONFIG.colors.perfect, armoredShield: CONFIG.colors.armoredShield, slam: CONFIG.colors.slam, charger: CONFIG.colors.charger },
-    spearWallPinDuration: CONFIG.weapons.spear.wallPinDuration, lifestealCooldown: CONFIG.resilience.lifestealCd };
+    lifestealCooldown: CONFIG.resilience.lifestealCd };
 }
 function heldEffects(host: LiveCollisionPhaseHost): HeldBladeCollisionInput["effects"] {
   return host.effects;
 }
 function heldHooks(host: LiveCollisionPhaseHost): HeldBladeCollisionInput["hooks"] {
   return { weaponHit: host.weaponHit, noteFirstDamage: host.noteFirstDamage,
-    logHit: (damage, quality, mechanic) => { host.logWeapon("heldHit", { damage, quality, ...(mechanic ? { mechanic } : {}) }); },
+    logHit: (damage, quality, observation, mechanic) => {
+      host.logWeapon("heldHit", { damage, quality, ...observation, ...(mechanic ? { mechanic } : {}) });
+    },
     onKill: host.onKill, dealArea: host.areaDamage, fireHit: host.makeHitEvent, fireSwingHit: host.makeSwingEvent,
     fireSlam: host.makeSlamEvent, achievementsEnabled: host.achievementsEnabled, addProfileStat: host.profileAdd,
     maxProfileStat: host.profileMax, bumpDaily: host.dailyBump, achievementSwing: () => { host.achievement("swing"); },
@@ -114,7 +126,8 @@ function runThrown(host: LiveCollisionPhaseHost): void {
   resolveThrownCollisions(blade, player, state.enemies, state.projectiles, run, {
     duelCooldown: CONFIG.exotic.duelCd, throwLowMultiplier: CONFIG.blade.throw.loMult, throwHighMultiplier: CONFIG.blade.throw.hiMult,
     recallMultiplier: CONFIG.blade.throw.recallMult, maxThrowSpeed: CONFIG.blade.throw.maxSpeed, throwSpeed: CONFIG.blade.throw.speed,
-    ringbladeEnemyCost: CONFIG.weapons.ringblade.enemyCost, chainbladeBindDuration: CONFIG.weapons.chainblade.bindDuration,
+    chainbladeHookDuration: CONFIG.weapons.chainblade.hookDuration,
+    riftCaptureDuration: CONFIG.weapons.riftlock.captureDuration,
     hitStopSmall: CONFIG.hitStop.small, shakeSmall: CONFIG.juice.shakeSmall, sparkCount: CONFIG.juice.sparkCount,
     colors: { deflected: CONFIG.colors.deflected, armoredShield: CONFIG.colors.armoredShield, perfect: CONFIG.colors.perfect,
       charger: CONFIG.colors.charger, bladeTrail: CONFIG.colors.bladeTrail } }, {
@@ -149,7 +162,11 @@ function runParries(host: LiveCollisionPhaseHost, held: HeldBladeCollisionInput[
     zoom: host.addZoom, flash: host.addFlash, flare: host.flare,
     slowMotion: host.triggerSlowMotion, extendSlowMotion: (scale) => { state.slowMotion = Math.max(state.slowMotion, CONFIG.juice.parrySlowmo * scale); },
     style: host.addStyle, sound: (name) => { host.sound(name); }, achievementParry: () => { host.achievement("parry"); },
-    logPerfectParry: (source) => { host.logWeapon("perfectParry", { source: source && typeof source === "object" && "kind" in source ? Reflect.get(source, "kind") : undefined }); },
+    logPerfectParry: (source) => {
+      if (host.blade.weapon?.id === "riftlock") host.blade.refillRiftChambers(CONFIG.weapons.riftlock.perfectParryRefill);
+      if (host.blade.weapon?.id === "sword" && source && typeof source === "object") host.blade.primeReversal(source);
+      host.logWeapon("perfectParry", { source: source && typeof source === "object" && "kind" in source ? Reflect.get(source, "kind") : undefined });
+    },
     emitPerfectParry: host.emitPerfectParry, firePerfectParry: host.makePerfectParryEvent });
 }
 
@@ -168,7 +185,7 @@ function tailHooks(host: LiveCollisionPhaseHost) {
   return { ghostRecording: host.ghostRecording, ghostDeath: host.ghostDeath, ghostSample: host.ghostSample,
     updateTrick: host.updateTrick, breakStreak: () => { host.achievement("break"); }, jumped: () => { host.achievement("jump"); },
     achievementTick: host.achievementTick, maxStat: host.profileMax, checkAchievements: host.checkAchievements,
-    achievementsEnabled: host.achievementsEnabled, updateTutorial: host.updateTutorial, updatePlayground: host.updatePlayground };
+    achievementsEnabled: host.achievementsEnabled };
 }
 function resolveDeath(host: LiveCollisionPhaseHost): void {
   resolvePlayerDeath(host.player, host.run, {

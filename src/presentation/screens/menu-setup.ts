@@ -38,6 +38,13 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
       x: railX, y: 426 + index * 61, w: railWidth, h: 52, glyph, label, ghost: true,
       action: { type: "navigate", to, resetScroll: to !== "settings" },
     }); });
+    if (view.nowPlaying) {
+      context.enqueue({
+        x: railX, y: 426 + rail.length * 61 + 10, w: railWidth, h: 46, glyph: "♪", ghost: true,
+        label: view.nowPlaying.label, sub: view.nowPlaying.detail,
+        action: { type: "navigate", to: "settings", tab: "signal" },
+      });
+    }
     if (view.pendingFinale) {
       ui.tag(canvas, "◇ SAVED ADVENTURE CLEAR", railX + railWidth + 34, height - 146, ui.t.color.accent, "left", ui.t.type.micro);
       ui.text(canvas, "The Final Cut was interrupted.", railX + railWidth + 34, height - 118, ui.t.type.caption, "left", ui.t.alpha.soft);
@@ -51,10 +58,13 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     ui.header(canvas, "SELECT RUN", undefined, context.enterAmount);
     const top = 150, rowTop = 168;
     const modeX = 240, modeWidth = 380, difficultyX = 640, difficultyWidth = 360, weaponX = 1020, weaponWidth = 340;
+    // Keep the oracle's rich row content on a shared grid so each choice scans
+    // cleanly across mode, difficulty, and weapon.
+    const rowHeight = 56, rowPitch = 60;
     ui.sectionLabel(canvas, "MODE", modeX, top, modeWidth);
     const publicModes = view.modes.filter((choice) => choice.debug !== true);
     publicModes.forEach((choice, index) => { context.enqueue({
-      x: modeX, y: rowTop + index * 60, w: modeWidth, h: 54, size: 17,
+      x: modeX, y: rowTop + index * rowPitch, w: modeWidth, h: rowHeight, size: 17,
       label: choice.label.toUpperCase(), glyph: choice.glyph, sub: choice.sub,
       selected: choice.selected, enabled: choice.enabled,
       action: { type: "setup.selectMode", id: choice.id },
@@ -74,7 +84,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     if (view.showDifficulty) view.difficulties.forEach((choice, index) => {
       const heat = ["#2f9e6b", "#13c4d6", "#e0a326", ui.t.color.danger, "#b06cff"][index] ?? ui.t.color.accent;
       context.enqueue({
-        x: difficultyX, y: rowTop + index * 66, w: difficultyWidth, h: 58, size: 17,
+        x: difficultyX, y: rowTop + index * rowPitch, w: difficultyWidth, h: rowHeight, size: 17,
         label: choice.label.toUpperCase(), sub: choice.sub,
         pips: { n: 5, filled: index + 1, color: heat },
         selected: choice.selected, enabled: choice.enabled,
@@ -88,7 +98,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
 
     ui.sectionLabel(canvas, "WEAPON", weaponX, top, weaponWidth);
     view.weapons.forEach((choice, index) => { context.enqueue({
-      x: weaponX, y: rowTop + index * 78, w: weaponWidth, h: 70, size: 16,
+      x: weaponX, y: rowTop + index * rowPitch, w: weaponWidth, h: rowHeight, size: 16,
       label: choice.label.toUpperCase(), glyph: choice.glyph, sub: choice.sub,
       selected: choice.selected, enabled: choice.enabled,
       action: { type: "setup.selectWeapon", id: choice.id },
@@ -102,7 +112,11 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     };
     foot(modeX, modeWidth, view.modes.find((choice) => choice.selected)?.description);
     foot(difficultyX, difficultyWidth, view.showDifficulty ? view.difficulties.find((choice) => choice.selected)?.description : undefined);
-    foot(weaponX, weaponWidth, view.weapons.find((choice) => choice.selected)?.description);
+    const selectedWeapon = view.weapons.find((choice) => choice.selected);
+    foot(weaponX, weaponWidth, selectedWeapon?.description);
+    if (selectedWeapon?.detail) {
+      ui.text(canvas, selectedWeapon.detail, weaponX, blurbY + 45, ui.t.type.micro, "left", ui.t.alpha.muted);
+    }
 
     const stakesY = 668;
     ui.divider(canvas, modeX, stakesY - 12, 1120, 0.14);
@@ -132,7 +146,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     const startWidth = Math.max(300, Math.round(canvas.measureText(view.startSummary).width) + 100);
     context.enqueue({
       x: width / 2 - startWidth / 2, y: 726, w: startWidth, h: 62,
-      label: "START", glyph: "▶", sub: view.startSummary.toUpperCase(), hero: true, ghost: true, size: 26,
+      label: "START", glyph: view.startGlyph, sub: view.startSummary.toUpperCase(), hero: true, ghost: true, size: 26,
       action: { type: "setup.start" },
     });
     backControl(context);

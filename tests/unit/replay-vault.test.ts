@@ -10,7 +10,8 @@ function packet(): ReturnType<typeof buildVisualReplayPacket> {
   };
   return buildVisualReplayPacket(recording, {
     rulesetVersion: "rules", build: { version: "test", revision: "test", target: "test" },
-    runId: "run", seed: "seed", ticksPerSecond: 60, tearScore: { enabled: false, reason: "disabled" },
+    runId: "run", seed: "seed", ticksPerSecond: 60, weaponId: "sword", weaponSchemaVersion: "final-five-v1",
+    tearScore: { enabled: false, reason: "disabled" },
   }, []);
 }
 

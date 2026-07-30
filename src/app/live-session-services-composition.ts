@@ -47,7 +47,7 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
   const reward = createLiveRewardRuntime({
     run: options.run,
     roll: (request) => d.rollUpgrades(request.count, options.run().mods, {
-      random: d.GAME_RANDOM, forceSpecial: request.forceSpecial, excludeIds: request.excludeIds,
+      random: d.GAME_RANDOM_STREAMS.stream("draft"), forceSpecial: request.forceSpecial, excludeIds: request.excludeIds,
     }),
     transitionPorts: {
       applyUpgrade: (choice) => { d.applyUpgrade(choice, {

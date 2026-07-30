@@ -140,6 +140,7 @@ export interface ChoiceView {
   readonly id: string; readonly label: string; readonly description?: string;
   readonly glyph?: string | undefined; readonly selected?: boolean | undefined; readonly enabled?: boolean | undefined;
   readonly accent?: string | undefined; readonly sub?: string | undefined;
+  readonly detail?: string | undefined;
   readonly debug?: boolean | undefined;
 }
 export interface CardView extends ChoiceView {
@@ -171,10 +172,12 @@ export interface MenuScreenView {
   readonly coins: number; readonly shards: number; readonly unlocked: number;
   readonly modeLabel: string; readonly difficultyLabel: string; readonly biome?: string;
   readonly pendingFinale?: boolean;
+  readonly nowPlaying?: Readonly<{ label: string; detail: string }>;
 }
 export interface SetupScreenView {
   readonly id: "setup"; readonly modes: readonly ChoiceView[]; readonly difficulties: readonly ChoiceView[];
   readonly weapons: readonly ChoiceView[]; readonly showDifficulty: boolean; readonly startSummary: string;
+  readonly startGlyph: string;
   readonly bestSummary?: string; readonly bountySummary?: string;
   readonly bossChoices?: readonly ChoiceView[];
   readonly bounties?: readonly Readonly<{ label: string; detail: string; done: boolean }>[];

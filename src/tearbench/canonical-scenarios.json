@@ -1,0 +1,51 @@
+[
+  {
+    "id": "boot-start-run",
+    "description": "Boot the application and enter the first run state.",
+    "tags": ["boot", "journey"],
+    "maxTicks": 1440,
+    "testFiles": ["tests/unit/run-lifecycle.test.ts", "tests/unit/app-state-machine.test.ts"]
+  },
+  {
+    "id": "movement-jump",
+    "description": "Move and complete a grounded jump without invalid state.",
+    "tags": ["movement", "jump"],
+    "maxTicks": 720,
+    "testFiles": ["tests/unit/player-locomotion.test.ts"]
+  },
+  {
+    "id": "dash-one-way-platform",
+    "description": "Dash and resolve a one-way platform contact.",
+    "tags": ["movement", "dash", "platform"],
+    "maxTicks": 720,
+    "testFiles": ["tests/unit/player-locomotion.test.ts"]
+  },
+  {
+    "id": "blade-valid-cut",
+    "description": "Generate a blade contact above the valid cut threshold.",
+    "tags": ["blade", "damage"],
+    "maxTicks": 720,
+    "testFiles": ["tests/unit/gameplay-definitions.test.ts", "tests/unit/blade-parry-runtime.test.ts"]
+  },
+  {
+    "id": "projectile-parry-basic",
+    "description": "Deflect a standard projectile without invalid player health.",
+    "tags": ["projectile", "parry"],
+    "maxTicks": 720,
+    "testFiles": ["tests/unit/blade-parry-runtime.test.ts"]
+  },
+  {
+    "id": "wave-clear-to-draft",
+    "description": "Clear a wave and enter the draft state.",
+    "tags": ["wave", "draft"],
+    "maxTicks": 1440,
+    "testFiles": ["tests/unit/live-wave-controller.test.ts", "tests/unit/run-wave-clear-planner.test.ts"]
+  },
+  {
+    "id": "draft-selection-to-gameplay",
+    "description": "Select one legal draft choice and resume gameplay.",
+    "tags": ["draft", "journey"],
+    "maxTicks": 1440,
+    "testFiles": ["tests/unit/reward-selection.test.ts", "tests/unit/reward-transition-adapter.test.ts"]
+  }
+]

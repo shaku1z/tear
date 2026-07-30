@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "enemy-charge-cycle",
+  "contract": "enemy-charge-cycle",
+  "description": "A deterministic authored Charger covering windup, commit, arena locomotion, recovery, cooldown ownership, and the enemy AI clock without spawn or random-roll variance.",
+  "viewport": {
+    "width": 1600,
+    "height": 900
+  },
+  "mode": "playground",
+  "difficulty": "normal",
+  "actions": [
+    { "type": "prepareEnemyScenario", "checkpoint": "enemy-authored" },
+    { "type": "wait", "ms": 80, "checkpoint": "charge-windup" },
+    { "type": "wait", "ms": 260, "checkpoint": "charge-commit" },
+    { "type": "wait", "ms": 260, "checkpoint": "charge-advancing" },
+    { "type": "wait", "ms": 260, "checkpoint": "charge-late-commit" },
+    { "type": "wait", "ms": 260, "checkpoint": "charge-recovery" }
+  ]
+}

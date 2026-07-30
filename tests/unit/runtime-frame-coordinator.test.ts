@@ -13,6 +13,7 @@ function createHarness(initialState = "playing") {
   let cinemaActive = false;
   let cinemaPlayerMode: string | undefined;
   let cssPerLogicalPixel = 1;
+  let simulationSteps = 1;
   let now = 0;
   const events: string[] = [];
   const input: RuntimeFrameInputPort = {
@@ -42,7 +43,7 @@ function createHarness(initialState = "playing") {
     clipper: null,
     autoPauseDisconnect: () => true,
     advancePlayingPrelude: () => { events.push("prelude"); },
-    advancePlayingSimulation: () => { events.push("simulation"); },
+    advancePlayingSimulation: () => { events.push("simulation"); return simulationSteps; },
     resetSimulation: () => { events.push("reset"); },
     requestPointerLock: () => { events.push("request-lock"); },
     exitReplay: () => { events.push("exit-replay"); },
@@ -74,6 +75,7 @@ function createHarness(initialState = "playing") {
       cinemaPlayerMode = playerMode;
     },
     setCssPerLogicalPixel: (value: number) => { cssPerLogicalPixel = value; },
+    setSimulationSteps: (value: number) => { simulationSteps = value; },
     options,
   };
 }
@@ -148,5 +150,16 @@ describe("RuntimeFrameCoordinator", () => {
     expect(harness.events).toContain("density:touch");
     expect(harness.input.uiMode).toBe(true);
     expect(harness.events.filter((event) => event === "simulation")).toHaveLength(1);
+  });
+
+  it("preserves gameplay edges across display frames that produce no fixed step", () => {
+    const harness = createHarness();
+    const endFrame = vi.fn();
+    harness.input.endFrame = endFrame;
+    harness.setSimulationSteps(0);
+
+    harness.coordinator.run(1 / 240);
+
+    expect(endFrame).toHaveBeenCalledWith(true);
   });
 });

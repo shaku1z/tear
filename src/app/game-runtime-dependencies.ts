@@ -28,7 +28,7 @@ import type { cosmeticRandom } from "../presentation/cosmetic-random";
 import type { FX } from "../presentation/particles";
 import type { createUi } from "../presentation/ui";
 import type { createLegacyReplayCompatibility } from "../replay/legacy-compat";
-import type { GAME_RANDOM } from "../simulation/run-random";
+import type { GAME_RANDOM, GAME_RANDOM_STREAMS } from "../simulation/run-random";
 import type { PerformanceMonitor } from "../diagnostics/performance-monitor";
 import type { LegacyAppStateController } from "./legacy-state-controller";
 
@@ -52,7 +52,8 @@ export interface GameRuntimeDependencies {
   readonly Cloud: Cloud["Cloud"]; readonly Colossus: EnemyTypes["Colossus"];
   readonly DAILY: ReturnType<typeof createDailyChallenges>; readonly DIAG: PerformanceMonitor;
   readonly Echo: EnemyTypes["Echo"]; readonly FX: typeof FX; readonly FirebaseProvider: Cloud["FirebaseProvider"];
-  readonly Flyer: EnemyTypes["Flyer"]; readonly GAME_RANDOM: typeof GAME_RANDOM; readonly GFX: typeof GFX;
+  readonly Flyer: EnemyTypes["Flyer"]; readonly GAME_RANDOM: typeof GAME_RANDOM;
+  readonly GAME_RANDOM_STREAMS: typeof GAME_RANDOM_STREAMS; readonly GFX: typeof GFX;
   readonly GHOST: ReplayCompatibility["GHOST"]; readonly Input: LegacyInput;
   readonly META: ReturnType<typeof createMetaProgression>["META"]; readonly Mirror: MirrorTypes["Mirror"];
   readonly MirrorHost: MirrorTypes["MirrorHost"]; readonly OVERSCAN: typeof OVERSCAN;

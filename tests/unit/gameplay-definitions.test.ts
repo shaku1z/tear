@@ -9,9 +9,9 @@ describe("gameplay definition catalogues", () => {
     expect(WEAPONS.map((weapon) => weapon.id)).toEqual([
       "sword",
       "hammer",
-      "spear",
+      "greatsword",
       "chainblade",
-      "ringblade",
+      "riftlock",
     ]);
     expect(new Set(WEAPONS.map((weapon) => weapon.throwIdentity)).size).toBe(5);
     expect(getWeapon("missing").id).toBe("sword");

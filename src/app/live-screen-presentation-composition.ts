@@ -41,7 +41,9 @@ export interface LiveScreenPresentationComposition {
   readonly modelRenderers: ReturnType<typeof createLiveScreenRenderers>;
   readonly chooseUpgrade: (index: number) => void;
   readonly chooseReserve: (index: number) => void;
+  readonly chooseTier: (index: number) => void;
   readonly rerollDraft: () => void;
+  readonly dispatch: ReturnType<typeof createLiveScreenActionBindings>;
 }
 
 function isLegacyScreen(value: string): value is LegacyAppScreen {
@@ -101,6 +103,7 @@ export function createLiveScreenPresentationComposition(
       leaderboards: library.renderLeaderboards, rename: settings.renderRename,
       pgmenu: options.playground.renderMenu, pglab: options.playground.renderLab,
     }),
-    chooseUpgrade: run.chooseUpgrade, chooseReserve: run.chooseReserve, rerollDraft: run.rerollDraft,
+    chooseUpgrade: run.chooseUpgrade, chooseReserve: run.chooseReserve, chooseTier: run.chooseTierUp,
+    rerollDraft: run.rerollDraft, dispatch,
   });
 }

@@ -6,7 +6,7 @@ const path = require("node:path");
 
 (async () => {
   const target = process.argv[2] || process.env.TEAR_SMOKE_TARGET || "standalone";
-  const root = path.resolve(__dirname, "..", "dist", target);
+  const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || `test-${target}`);
   const builtHtml = fs.readFileSync(path.resolve(root, "index.html"), "utf8");
   if (target === "crazygames") {
     assert.equal(builtHtml.includes('rel="manifest"'), false, "CrazyGames HTML must not advertise PWA installation");
@@ -50,9 +50,12 @@ const path = require("node:path");
     platform: window.__TEAR_PLATFORM_SERVICES__.id,
     envelope: JSON.parse(localStorage.getItem("tear_profile_v2") || "null"),
   }));
-  assert.equal(boot.platform, target === "crazygames" ? "crazygames" : "browser");
-  assert.equal(boot.envelope.schema, "tear.profile");
-  assert.equal(boot.envelope.schemaVersion, 2);
+  // Test builds deliberately compose the TearBench service façade when the
+  // test URL is present. Target-specific HTML/bundle assertions above remain
+  // the platform check; the runtime identity here must not pretend to be a
+  // shipped browser or CrazyGames session.
+  assert.equal(boot.platform, "tearbench");
+  assert.equal(boot.envelope, null, "TearBench test services must not silently exercise production profile persistence");
 
   await page.mouse.click(260, 360);
   await page.waitForTimeout(350);

@@ -27,20 +27,36 @@ describe("live frame runtime", () => {
     expect(boss.introT).toBe(0);
   });
 
-  it("records semantic aim passively while the raw device input drives the live step", () => {
+  it("keeps the visual ghost out of the raw live input step", () => {
     const order: string[] = []; const gauge = vi.fn();
     const simulation = { tick: 0, advance: (_ms: number, step: (seconds: number, tick: number) => void) => {
       step(1 / 60, 4); return { tick: 4, steps: 1, droppedMilliseconds: 0 };
     } };
-    advanceFixedSimulation({ dt: 1 / 60, timeScale: 1, hitStop: 0, state: () => "playing", simulation,
-      recording: () => true, aimRadius: 2,
-      sampleAim: () => { order.push("sample"); return { x: 0, y: 1 }; },
-      pushAim: (turn, magnitude) => { order.push(`aim:${String(turn)}:${String(magnitude)}`); },
-      drainActions: () => { order.push("drain"); return []; },
+    const result = advanceFixedSimulation({ dt: 1 / 60, timeScale: 1, hitStop: 0, state: () => "playing", simulation,
+      semanticInputAuthority: () => false, drainActions: () => { order.push("drain"); return []; },
+      beforeStep: (tick) => order.push(`before:${String(tick)}`),
+      afterStep: (tick) => order.push(`after:${String(tick)}`),
       authoritativeStep: () => order.push("authoritative"),
       clearOverrides: () => order.push("clear"), step: () => order.push("step"), gauge });
-    expect(order).toEqual(["sample", "aim:250000:500", "drain", "clear", "step"]);
+    expect(order).toEqual(["before:4", "drain", "clear", "step", "after:4"]);
     expect(gauge).toHaveBeenCalledTimes(3);
+    expect(result).toEqual({ hitStop: 0, steps: 1 });
+  });
+
+  it("preserves queued semantic aim when an external policy owns input", () => {
+    const order: string[] = [];
+    const simulation = { tick: 0, advance: (_ms: number, step: (seconds: number, tick: number) => void) => {
+      step(1 / 120, 9); return { tick: 9, steps: 1, droppedMilliseconds: 0 };
+    } };
+    advanceFixedSimulation({
+      dt: 1 / 120, timeScale: 1, hitStop: 0, state: () => "playing", simulation,
+      semanticInputAuthority: () => true,
+      drainActions: () => { order.push("drain-semantic"); return []; },
+      authoritativeStep: () => { order.push("authoritative"); },
+      clearOverrides: () => { order.push("clear"); }, step: () => { order.push("step"); },
+      gauge: () => { return; },
+    });
+    expect(order).toEqual(["drain-semantic", "clear", "authoritative"]);
   });
 
   it("selects menu, boss and fallback music themes without platform globals", () => {

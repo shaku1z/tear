@@ -6,10 +6,13 @@ import { handleWeaponTransport, type TransportBlade } from "./weapon-transport-r
 import { stepEnemyActors, stepEnemyStatuses, type EnemyStepActor } from "./enemy-step-runtime";
 import { stepBossRuntime, type BossStepEnemy, type BossStepPlatform, type BossStepPlayer, type BossStepRun } from "./boss-step-runtime";
 import { advancePlatformLifecycle, type BrokenPlatform, type CrackingPlatform } from "./platform-lifecycle-runtime";
+import { resolveEnemyBladeCatch, type BladeCatchEnemy } from "./enemy-blade-catch-runtime";
+import type { BladeWeaponEvent } from "../entities/blade-contracts";
 
 export type LivePlayer = CombatPreludePlayer & LocomotionPlayer & BossStepPlayer;
 export type LiveBlade = CombatPreludeBlade & LocomotionBlade & SecondaryBlade & TransportBlade;
-export type LiveEnemy = LocomotionEnemy & SecondaryEnemy & EnemyStepActor & BossStepEnemy;
+export type LiveEnemy = LocomotionEnemy & SecondaryEnemy & EnemyStepActor & BossStepEnemy
+  & BladeCatchEnemy;
 export type LivePlatform = CrackingPlatform & BossStepPlatform;
 export type LiveRun = CombatPreludeRun & BossStepRun & {
   readonly mods: CombatPreludeRun["mods"];
@@ -48,6 +51,7 @@ export interface LiveOpeningPhaseHost {
   stepCinematic: (dt: number) => void;
   flushClosingInput: () => void;
   updateWeaponAbilities: (dt: number) => void;
+  flushWeaponActions(events: readonly BladeWeaponEvent[]): void;
   updateWorldHazards: (dt: number) => void;
   syncVoidSupport: () => void;
   activateThrowSecondary: () => void;
@@ -85,11 +89,12 @@ export interface LiveOpeningPhaseHost {
   updateBossArenaPlatforms: (dt: number) => void;
   updateVoidScroll: (dt: number) => void;
   unlockWitness: () => void;
-  startVoidDescent: (boss: LiveEnemy) => void;
+  startVoidDescent: (boss: LiveEnemy) => boolean;
   spawnBossAdds: (boss: LiveEnemy) => LiveEnemy[];
   spawnBossClone: (boss: LiveEnemy) => void;
   removeBossClone: (clone: LiveEnemy) => void;
   dramaticBeat: () => void;
+  onBladeStolen: (enemy: LiveEnemy) => void;
   updateEffects: (dt: number) => void;
   random: () => number;
 }
@@ -103,21 +108,24 @@ export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): Liv
   const prelude = stepCombatPrelude({ dt, blocking: host.blocking, playerMode: host.playerMode,
     player, blade, run, platforms: host.platforms, protection: host.protection, timers,
     tuning: { flowGuardTier: CONFIG.resilience.flowGuardTier, flowGuardMultiplier: CONFIG.resilience.flowGuardMult,
-      thrownMoveBoost: CONFIG.player.thrownMoveBoost, orbitMove: CONFIG.weapons.ringblade.orbitMove },
+      thrownMoveBoost: CONFIG.player.thrownMoveBoost },
     overrunMovementMultiplier: host.overrunMovementMultiplier(), stepCinematic: host.stepCinematic,
     flushClosingInput: host.flushClosingInput, updateWeaponAbilities: host.updateWeaponAbilities,
+    flushWeaponActions: (events) => { host.flushWeaponActions(events); },
     updateZonesAndWalls: host.updateWorldHazards, syncVoidSupport: host.syncVoidSupport,
     activateThrowSecondary: host.activateThrowSecondary });
   state.throwCooldown = timers.throwCooldown;
   if (prelude.blocked) return { blocked: true };
   if (prelude.linkBreakReason) host.linkBroken(prelude.linkBreakReason);
-  runSecondary(host, prelude.previousBladeState, prelude.wasReturning, !!prelude.linkBreakReason);
+  runSecondary(host, dt, prelude.previousBladeState, prelude.wasReturning, !!prelude.linkBreakReason);
   host.updateFeedback(dt); runLocomotion(host, dt); runTransport(host); host.updateWave(dt);
   const transformed = stepEnemyActors({ dt, enemies: host.enemies, platforms: host.platforms, player,
     projectiles: host.projectiles, freeze: run.pg?.freeze === true, gravity: CONFIG.world.gravity,
     groundY: CONFIG.world.groundY, viewportWidth: host.width,
     onKill: host.onKill, startTransformation: (enemy, request) => host.startTransformation(enemy as LiveEnemy, request) });
   if (transformed || host.transformationBlocked) return { blocked: true };
+  const bladeThief = resolveEnemyBladeCatch(host.enemies, blade, player);
+  if (bladeThief !== null) host.onBladeStolen(bladeThief);
   host.updateSupports(dt);
   stepEnemyStatuses({ dt, enemies: host.enemies, cinderSlow: !!run.mods.cinderSlow, random: host.random,
     ember: host.ember, drip: host.drip, didDie: (enemy) => enemy.dead, onArmorBypass: host.armorBypass,
@@ -127,12 +135,14 @@ export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): Liv
   return { blocked: false };
 }
 
-function runSecondary(host: LiveOpeningPhaseHost, previousState: string, wasReturning: boolean, linkBroken: boolean): void {
+function runSecondary(host: LiveOpeningPhaseHost, dt: number, previousState: string, wasReturning: boolean, linkBroken: boolean): void {
   const { blade, run } = host;
   stepWeaponSecondary({ previousState, wasReturning, linkBroken, blade, enemies: host.enemies,
     secondPass: Number(run.mods.secondPass) || 1, redirect: !!run.mods.redirect, stormBurst: Number(run.mods.stormBurst) || 0,
-    collisionDamage: CONFIG.weapons.chainblade.collisionDamage, yankSpeed: CONFIG.weapons.chainblade.yankSpeed,
+    collisionDamage: CONFIG.weapons.chainblade.collisionDamage, slingSpeed: CONFIG.weapons.chainblade.slingSpeed,
     throwSpeed: CONFIG.blade.throw.speed, damageMultiplier: host.runDamageMultiplier(), distance: host.distance,
+    dt, platforms: host.platforms, width: host.width, groundY: CONFIG.world.groundY,
+    worldCollisionCooldown: CONFIG.weapons.chainblade.worldCollisionCooldown,
     aoe: host.areaDamage, ring: (x, y, radius) => { host.ring(x, y, radius, "perfect"); },
     burst: (enemy, vx, vy) => { host.burst(enemy.x, enemy.y, vx, vy, 7, "perfect"); },
     floater: (enemy, text) => { host.floater(enemy.x, enemy.y - 30, text, true, "perfect"); },
@@ -189,7 +199,7 @@ function runPlatformLifecycle(host: LiveOpeningPhaseHost, dt: number): void {
 function runBosses(host: LiveOpeningPhaseHost, dt: number): void {
   stepBossRuntime({ dt, player: host.player, platforms: host.platforms, enemies: host.enemies, run: host.run,
     thawMultiplier: CONFIG.source.thawSpeedMult || 1.35, maximumScrollSpeed: CONFIG.source.scrollSpeedMax,
-    unlockWitness: host.unlockWitness, startVoidDescent: (boss) => { host.startVoidDescent(boss as LiveEnemy); },
+    unlockWitness: host.unlockWitness, startVoidDescent: (boss) => host.startVoidDescent(boss as LiveEnemy),
     spawnAdds: (boss) => host.spawnBossAdds(boss as LiveEnemy), spawnClone: (boss) => { host.spawnBossClone(boss as LiveEnemy); },
     floater: (x, y, text) => { host.floater(x, y, text, true, "charger"); }, dramaticBeat: host.dramaticBeat,
     removeClone: (clone) => { host.removeBossClone(clone as LiveEnemy); },

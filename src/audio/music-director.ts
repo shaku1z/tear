@@ -1,4 +1,5 @@
 import {
+  isMusicShell,
   MUSIC_CONTEXT_SCHEMA_VERSION,
   type MusicContextSnapshot,
   type MusicEvent,
@@ -100,7 +101,7 @@ export class MusicDirector {
       });
       this.#nextSnapshotMs = observation.timeMs + this.intervalMs;
     }
-    if (observation.scene === "main-menu") this.end();
+    if (isMusicShell(observation.scene, observation.biomeId)) this.end();
   }
 
   end(): void {

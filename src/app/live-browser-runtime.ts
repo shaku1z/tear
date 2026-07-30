@@ -28,6 +28,6 @@ export function createLiveBrowserRuntime(d: BrowserDependencies): LiveBrowserRun
   return Object.freeze({ canvas: element, context, width: d.CONFIG.view.w, height: d.CONFIG.view.h, viewport,
     resizeCanvas: () => { viewport.resize(); }, requestPointerLock: pointer.api.request,
     installPrompt: new InstallPromptController(window), lockHint: document.getElementById("lockhint"),
-    hint: document.getElementById("hint"), pantheonDebug: parameters.get("bossdebug") === "1",
+    hint: document.getElementById("hint"), pantheonDebug: __TEAR_TEST_BUILD__ && parameters.get("bossdebug") === "1",
     testMode: parameters.get("test") === "1" });
 }

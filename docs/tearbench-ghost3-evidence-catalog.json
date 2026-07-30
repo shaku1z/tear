@@ -1,0 +1,604 @@
+{
+  "format": "tearbench-ghost3-evidence-catalog",
+  "schemaVersion": 1,
+  "defaultNormativeState": "missing",
+  "rules": [
+    {
+      "id": "EVID-C24-HIERARCHICAL-SCRIPTED-CORE",
+      "priority": 150,
+      "state": "visible",
+      "requirementIds": [
+        "TG3-850F85A76667374E",
+        "TG3-F9635C494FC1A026",
+        "TG3-3337EBACFE0EC256",
+        "TG3-4D23ABC868754530",
+        "TG3-378992D89AA0129E",
+        "TG3-BEC61859F3AEF31F",
+        "TG3-12077EEF10676F45",
+        "TG3-0996580C641A9413",
+        "TG3-E1DEEF2125B22531",
+        "TG3-A1C0F061FAB83762",
+        "TG3-D6585770538E39B6",
+        "TG3-241A7B32302A1870",
+        "TG3-FD6ED3BC37242D1C",
+        "TG3-1C160A320BF5F471",
+        "TG3-E3F8CDF1025AD167",
+        "TG3-4FE04CB609CC3AE7",
+        "TG3-CAA8EEEC599272EA"
+      ],
+      "textRegex": ".*",
+      "implementationRefs": [
+        "src/tearbench/scripted-agent-hierarchy.ts",
+        "src/agents/hierarchical-policy-adapter.ts",
+        "src/agents/scripted-policy.ts",
+        "src/agents/scripted-policy-navigation.ts",
+        "src/agents/live-watch-agent-host.ts"
+      ],
+      "evidenceRefs": [
+        "tests/unit/tearbench-scripted-agent-hierarchy.test.ts",
+        "tests/unit/hierarchical-policy-adapter.test.ts",
+        "tests/browser-scripted-agent-autonomy.js",
+        "tests/browser-scripted-agent-repeatability.js",
+        "tests/browser-scripted-agent-matrix.js",
+        "docs/checkpoints/C24_FULL_SCRIPTED_AGENT_AUTONOMY.md"
+      ],
+      "notes": "C24 makes the hierarchy action-authoritative over the operational semantic batch and exposes its structured intent in the visible Watch Agent engineering panel. Class A browser evidence completes Easy Adventure menu-to-menu twice on seed 117 with identical transcript hashes, exercises all five weapons and the declared core mechanic set, and proves natural Source stolen-blade recovery. Visible state remains engineering-only and does not claim Class B/C or certification."
+    },
+    {
+      "id": "EVID-C24-PERSONA-CONTRACTS",
+      "priority": 150,
+      "state": "contract",
+      "requirementIds": [
+        "TG3-3F5F4DBCA103CCC6",
+        "TG3-A66760BBA4103C36",
+        "TG3-70F21BC7A1AADF93",
+        "TG3-0169E606E35777EA",
+        "TG3-C105AADC4D0CAC98",
+        "TG3-6D8E4F284AA96951",
+        "TG3-96C343F597C3831B",
+        "TG3-6BC6AC58DB68E0E1",
+        "TG3-7A199DFDD1664D90",
+        "TG3-7496FC8FB21F4B29",
+        "TG3-8F22D88BCB14B1A2",
+        "TG3-910E2C0F77E709D2",
+        "TG3-3F61AE6061DDBECE",
+        "TG3-98DD81479F298A19",
+        "TG3-7C22BC859C6D050D",
+        "TG3-A651508E9B2A8A92",
+        "TG3-F4BBCE6CEFDE220A",
+        "TG3-84D3B47D76E4E3A7",
+        "TG3-9A084F5F67D387D7",
+        "TG3-05747CB6A3EE9F5B",
+        "TG3-7B002A6FBAC34B1E",
+        "TG3-8E07200BB31650CF",
+        "TG3-F49D35EFFF5CD71B",
+        "TG3-805483A7572328BC",
+        "TG3-BC8C32E4BB244F82",
+        "TG3-FE4C7603AC3BEA6E",
+        "TG3-BAFF4F6DF6C478BF",
+        "TG3-FCF4DB264162A207",
+        "TG3-52B2EF8C817B4B59",
+        "TG3-6B8093DD4D837798",
+        "TG3-D7B5AB9AC33BECB9",
+        "TG3-986D03D37A42E222",
+        "TG3-78323D6112E1A2EC",
+        "TG3-332ECFF3CDC18B43",
+        "TG3-252ABC7B545967E5",
+        "TG3-80E226797E78D8E9",
+        "TG3-C75A93BE8576CE0D",
+        "TG3-C70C9FCE45D3473D",
+        "TG3-FEBDD5E9363B6070",
+        "TG3-59DC9F2177A276F8",
+        "TG3-3428DF84247049C8",
+        "TG3-67225615B8A5355C",
+        "TG3-CE708B1E33AD98A6",
+        "TG3-EB1813C1DBD392F5",
+        "TG3-4D3E544A14747281",
+        "TG3-2FA25FE172661A23",
+        "TG3-98E48A2BC97C6AC1",
+        "TG3-EAD3DF0FC7345902",
+        "TG3-64083693075EE253",
+        "TG3-4D2C7740CB84B799",
+        "TG3-710C984FFB6A08E0",
+        "TG3-CEC40021FE17DD66"
+      ],
+      "textRegex": ".*",
+      "implementationRefs": ["src/agents/persona-contracts.ts"],
+      "evidenceRefs": [
+        "tests/unit/agent-static-contracts.test.ts",
+        "docs/checkpoints/C24_FULL_SCRIPTED_AGENT_AUTONOMY.md"
+      ],
+      "notes": "C24 defines immutable persona objectives, directives, and required metrics across core, hardware, performance, behavioral, and QA-adversary categories. Every entry remains contract-defined and uncertified; this rule does not claim that the personas have executed."
+    },
+    {
+      "id": "EVID-C24-MODE-COMPLETION-CONTRACTS",
+      "priority": 150,
+      "state": "contract",
+      "requirementIds": [
+        "TG3-01902B33133CC36D",
+        "TG3-5EC779667871EBA6",
+        "TG3-C586705A4C4B8FBB",
+        "TG3-EE7D5769A2C0C72B",
+        "TG3-385D4B639CA0D77B",
+        "TG3-D1D40EBFD308AE66",
+        "TG3-59D8F390776B71F8",
+        "TG3-C90D6AE78F912186",
+        "TG3-79655FE05D6100FB"
+      ],
+      "textRegex": ".*",
+      "implementationRefs": ["src/agents/mode-completion-contracts.ts"],
+      "evidenceRefs": [
+        "tests/unit/agent-static-contracts.test.ts",
+        "tests/browser-scripted-agent-matrix.js",
+        "docs/checkpoints/C24_FULL_SCRIPTED_AGENT_AUTONOMY.md"
+      ],
+      "notes": "C24 defines explicit journeys, completion kinds, applicable difficulties, evidence, assertions, and honest no-live-certification status for all seven production modes. Contract state does not assert any natural mode completion."
+    },
+    {
+      "id": "EVID-C24-DIFFICULTY-EXPECTATION-CONTRACTS",
+      "priority": 150,
+      "state": "contract",
+      "requirementIds": [
+        "TG3-4138C98B2A63C9C3",
+        "TG3-4B9B789C94A43B7F",
+        "TG3-89FE83A6D3036C8F",
+        "TG3-67C351352445C9E8",
+        "TG3-1D3803E774E1BBEB",
+        "TG3-9A637485B3604571",
+        "TG3-3BC86907EF6AF370",
+        "TG3-CC4CB6CD0813596C",
+        "TG3-3270651629C78173",
+        "TG3-16507547DFB5DDE0"
+      ],
+      "textRegex": ".*",
+      "implementationRefs": ["src/agents/difficulty-expectations.ts"],
+      "evidenceRefs": [
+        "tests/unit/agent-static-contracts.test.ts",
+        "docs/checkpoints/C24_FULL_SCRIPTED_AGENT_AUTONOMY.md"
+      ],
+      "notes": "C24 makes difficulty an explicit condition, defines qualitative Easy through One-Hit postures, enumerates fairness metrics and identity failures, and intentionally leaves numeric completion targets null until consented human data exists."
+    },
+    {
+      "id": "EVID-C23-LIVE-STATE-RESTORE",
+      "priority": 140,
+      "state": "integrated",
+      "requirementIds": [
+        "TG3-25513CF509A1AB03",
+        "TG3-102BCB3CEED39B2D",
+        "TG3-8470CEE7C0D3077F",
+        "TG3-44EC867F8F05E493",
+        "TG3-ABDFD8972FC3657B",
+        "TG3-C4E642CD6D505F59"
+      ],
+      "textRegex": ".*",
+      "implementationRefs": [
+        "src/app/live-state-forge-adapter.ts",
+        "src/tearbench/live-state-snapshot.ts",
+        "src/tearbench/live-codec-validation.ts"
+      ],
+      "evidenceRefs": [
+        "tests/browser-state-forge-runtime.js",
+        "docs/checkpoints/C23_PRODUCTION_GRADE_STATE_FORGE.md"
+      ],
+      "notes": "C23 captures all registered live runtime domains, reloads the browser document, restores the snapshot, and matches the next 600 exact hashes under the same semantic actions."
+    },
+    {
+      "id": "EVID-C23-TRANSACTIONAL-RESTORE",
+      "priority": 140,
+      "state": "integrated",
+      "requirementIds": [
+        "TG3-0DB1B78F317A82E5",
+        "TG3-650816790DB7DCF5"
+      ],
+      "textRegex": ".*",
+      "implementationRefs": [
+        "src/app/live-state-forge-adapter.ts",
+        "src/tearbench/state-codecs.ts"
+      ],
+      "evidenceRefs": [
+        "tests/browser-state-forge-runtime.js",
+        "docs/checkpoints/C23_PRODUCTION_GRADE_STATE_FORGE.md"
+      ],
+      "notes": "Candidate state is rebuilt and validated off-world; both validation failure and an induced mid-commit failure leave the active world at its prior exact hash."
+    },
+    {
+      "id": "EVID-C23-PROGRESSION-TRUTH",
+      "priority": 140,
+      "state": "integrated",
+      "requirementIds": [
+        "TG3-C8A43534203DC628",
+        "TG3-BA250B3B9DE87971",
+        "TG3-CE65518BDDA14334",
+        "TG3-9AB5BDF315174AA8",
+        "TG3-FF786100610CCE35"
+      ],
+      "textRegex": ".*",
+      "implementationRefs": [
+        "src/tearbench/progression-ledger.ts",
+        "src/tearbench/progression-replay.ts",
+        "src/app/live-state-forge-progression.ts"
+      ],
+      "evidenceRefs": [
+        "tests/unit/tearbench-progression-ledger.test.ts",
+        "tests/browser-state-forge-exit-matrix.js"
+      ],
+      "notes": "The canonical scheduler emits legal events and live reconstruction replays draft mutations and tier evolutions in ledger order through production upgrade functions with expected configuration hashes."
+    },
+    {
+      "id": "EVID-C23-WAVE99-PLAYABLE-EPISODE",
+      "priority": 140,
+      "state": "integrated",
+      "requirementIds": [
+        "TG3-19275629003705AC",
+        "TG3-EAF9D7430BA7D92F",
+        "TG3-1A2CA289900AD51A",
+        "TG3-93B8C9EA0A038A37",
+        "TG3-CE08BE3D7950B3D2",
+        "TG3-5222424A5EFF3221",
+        "TG3-9DB9A9FDE2B71A34",
+        "TG3-4515EC0ABC3E2CB7"
+      ],
+      "textRegex": ".*",
+      "implementationRefs": [
+        "src/tearbench/state-forge-exit-gate.ts",
+        "src/tearbench/state-validity.ts"
+      ],
+      "evidenceRefs": [
+        "tests/browser-state-forge-exit-matrix.js",
+        "docs/checkpoints/C23_PRODUCTION_GRADE_STATE_FORGE.md"
+      ],
+      "notes": "The canonical Hard Endless wave-99 Hammer case launches visibly with a legal synthetic ledger, exactly 99 picks and mutations, separate validity evidence, a live snapshot, Ghost runtime state, metrics, and failure fields. This rule does not promote the separate replay-artifact requirement."
+    },
+    {
+      "id": "EVID-C22-LIVE-RUNTIME-BRIDGE",
+      "priority": 130,
+      "state": "integrated",
+      "requirementIds": [
+        "TG3-5AD34558D9270002",
+        "TG3-179B415EFE19B045",
+        "TG3-F61B69D944EA5766",
+        "TG3-4DDE791F28255399",
+        "TG3-A614771A0A46F528",
+        "TG3-AE0E070082C5236A",
+        "TG3-84AD01BED85F6E34",
+        "TG3-8623FB5908989875",
+        "TG3-67B07A5F11C09398",
+        "TG3-EC8A6D01A58F8E39",
+        "TG3-C4A749DE0E82DD39",
+        "TG3-56F1A31EDF776117",
+        "TG3-9580A423155EE2C2",
+        "TG3-82109F11039C5823",
+        "TG3-B669B03E489F8980",
+        "TG3-C122600232A39A7D",
+        "TG3-4581FE2DA0CD43C5",
+        "TG3-5351AAC1C0A1F5DE",
+        "TG3-C0BEA29CA4B1A283",
+        "TG3-0CFB27379EEB876D",
+        "TG3-08369A46B6E0192B"
+      ],
+      "textRegex": ".*",
+      "implementationRefs": [
+        "src/tearbench/live-runtime-environment.ts",
+        "src/app/live-game-runtime.ts",
+        "src/gameplay/runtime/authoritative-input.ts",
+        "src/replay/legacy-compat.ts"
+      ],
+      "evidenceRefs": [
+        "tests/browser-tear-runtime-environment.js",
+        "tests/unit/authoritative-game-action-boundary.test.ts",
+        "tests/unit/live-frame-runtime.test.ts"
+      ],
+      "notes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces."
+    },
+    {
+      "id": "EVID-C22-RENDER-PROFILE-PARITY",
+      "priority": 130,
+      "state": "integrated",
+      "requirementIds": [
+        "TG3-696953CB4F5CD620",
+        "TG3-89A63AD5C36FE767"
+      ],
+      "textRegex": ".*",
+      "implementationRefs": [
+        "src/tearbench/live-runtime-environment.ts",
+        "src/app/live-frame-runtime.ts",
+        "src/simulation/fixed-step.ts"
+      ],
+      "evidenceRefs": ["tests/browser-tear-runtime-environment.js"],
+      "notes": "Fresh browser processes drive 30, 60, 144, and uncapped-jitter render schedules to the same fixed tick and compare canonical semantic hashes."
+    },
+    {
+      "id": "EVID-C22-DISPOSABLE-ISOLATION",
+      "priority": 130,
+      "state": "integrated",
+      "requirementIds": [
+        "TG3-9D80C1BAD30B433D",
+        "TG3-CFDA0D25C3B4C9B3",
+        "TG3-49242F518708EBB7",
+        "TG3-E20EAAF76A5CCEAB",
+        "TG3-CB43003DF61ECB45",
+        "TG3-244F76D36ACFE06E",
+        "TG3-7E49E321ACE558E5",
+        "TG3-29EBF3C3045D9FE3",
+        "TG3-36FFE3CF3A3D7061",
+        "TG3-05AA234335FB4618",
+        "TG3-36E3DEFB3D7027CD",
+        "TG3-EBE527880D67E1A2"
+      ],
+      "textRegex": ".*",
+      "implementationRefs": [
+        "src/tearbench/test-environment.ts",
+        "src/app/composition.ts",
+        "src/platform/legacy-compat.ts",
+        "scripts/check-production-test-isolation.mjs"
+      ],
+      "evidenceRefs": [
+        "tests/browser-tear-runtime-environment.js",
+        "tests/browser-production-runtime-isolation.js"
+      ],
+      "notes": "Test composition uses memory-only persistence and unavailable external capabilities; tests prove unchanged localStorage and bridge absence from both production targets."
+    },
+    {
+      "id": "EVID-RUNTIME-FIXED-STEP",
+      "priority": 100,
+      "state": "integrated",
+      "sourceSections": [3, 5, 8, 28, 33, 69],
+      "textRegex": "(fixed[- ]step|simulation tick|tick rate|render rates?)",
+      "excludeTextRegex": "(class c|pixel|training throughput|recorded|recording|Ghost)",
+      "implementationRefs": ["src/simulation/fixed-step.ts"],
+      "evidenceRefs": ["tests/unit/fixed-step.test.ts", "tests/contract/authoritative-replay.test.ts"],
+      "notes": "The production runtime owns a fixed simulation cadence and authoritative replay tests cover render-rate independence; broader TearBench runtime control remains missing."
+    },
+    {
+      "id": "EVID-SEMANTIC-ACTIONS",
+      "priority": 100,
+      "state": "integrated",
+      "sourceSections": [3, 5, 7, 28, 33, 67, 69],
+      "textRegex": "(GameAction|semantic action|device-independent action|after device mapping|before gameplay consumption)",
+      "excludeTextRegex": "(pixel-only|class c|training policy|recorded|recording|Ghost)",
+      "implementationRefs": ["src/input/game-action.ts", "src/input/legacy-compat.ts"],
+      "evidenceRefs": ["tests/unit/input-game-action.test.ts", "tests/unit/input-legacy-compat.test.ts"],
+      "notes": "Semantic actions are production inputs; the full Ghost 3 authoritative recorder boundary is not yet integrated."
+    },
+    {
+      "id": "EVID-LEGACY-REPLAY",
+      "priority": 100,
+      "state": "integrated",
+      "sourceSections": [3, 66, 67, 75, 78, 79],
+      "textRegex": "(Ghost 2\\.0|ReplayEnvelopeV2|legacy visual|legacy replay|canonical action recording|existing replay)",
+      "excludeTextRegex": "(migrate.*exact|invent|Ghost 3\\.0 recorder)",
+      "implementationRefs": ["src/replay/envelope.ts", "src/replay/legacy-compat.ts", "src/replay/visual-replay.ts"],
+      "evidenceRefs": ["tests/unit/replay-envelope.test.ts", "tests/unit/replay-visual.test.ts", "tests/contract/replay-round-trip.test.ts"],
+      "notes": "Existing replay and legacy playback are production capabilities; they do not establish Ghost 3.0 causal fidelity."
+    },
+    {
+      "id": "EVID-NAMED-RNG-STREAMS",
+      "priority": 90,
+      "state": "prototype",
+      "sourceSections": [8, 33, 49, 50, 56, 69, 79],
+      "textRegex": "(named RNG|RNG stream|cosmetic RNG|random stream|RNG cursor)",
+      "implementationRefs": ["src/simulation/run-random.ts"],
+      "evidenceRefs": ["tests/unit/run-random-streams.test.ts"],
+      "notes": "Named streams exist and selected production consumers use them, but exhaustive gameplay-stream injection and snapshot parity remain incomplete."
+    },
+    {
+      "id": "EVID-TEARBENCH-CONTRACTS",
+      "priority": 80,
+      "state": "contract",
+      "sourceSections": [4, 5, 6, 7, 9, 45, 46, 63],
+      "textRegex": "(TearObservationV1|TearActionV1|TearScenarioV1|TearSnapshotV1|TearFailureArtifactV1|stable registr|within-tick phase)",
+      "implementationRefs": ["src/tearbench/contracts.ts", "src/tearbench/registries.ts", "src/tearbench/validation.ts"],
+      "evidenceRefs": ["tests/unit/tearbench-contracts.test.ts"],
+      "notes": "Versioned data contracts and validators exist; production observation/action/state projection remains a later checkpoint."
+    },
+    {
+      "id": "EVID-TEARBENCH-RUNNER",
+      "priority": 80,
+      "state": "prototype",
+      "sourceSections": [4, 5, 9, 15, 16, 45, 63],
+      "textRegex": "(scenario runner|TearBench runner|reset.*observe.*step|batched actions|failure artifact|invariant capture)",
+      "excludeTextRegex": "(real game|production runtime|class c|pixel)",
+      "implementationRefs": ["src/tearbench/runner.ts", "src/tearbench/artifact.ts", "src/tearbench/invariants.ts", "src/tearbench/scenario-registry.ts"],
+      "evidenceRefs": ["tests/unit/tearbench-runner.test.ts", "tests/unit/tearbench-test-environment.test.ts"],
+      "notes": "The runner proves orchestration contracts over supplied transitions, not a real Tear environment."
+    },
+    {
+      "id": "EVID-STATE-CODECS",
+      "priority": 80,
+      "state": "prototype",
+      "sourceSections": [49, 50, 51, 54, 56, 79],
+      "textRegex": "(state codec|codec registry|transactional restore|snapshot|state diff|checkpoint bank)",
+      "excludeTextRegex": "(any supported combat frame|actual live world|10,000|wave 99)",
+      "implementationRefs": ["src/tearbench/state-codecs.ts"],
+      "evidenceRefs": ["tests/unit/tearbench-state-codecs.test.ts"],
+      "notes": "Data-only codec and transactional-restore contracts exist; complete live-world codecs do not."
+    },
+    {
+      "id": "EVID-PROGRESSION-LEDGER",
+      "priority": 80,
+      "state": "prototype",
+      "sourceSections": [52, 53, 54],
+      "textRegex": "(progression ledger|build synthesis|earned pick|draft history|tier synthesis)",
+      "excludeTextRegex": "(production scheduler|actual run|10,000)",
+      "implementationRefs": ["src/tearbench/progression-ledger.ts"],
+      "evidenceRefs": ["tests/unit/tearbench-progression-ledger.test.ts"],
+      "notes": "Pure progression and synthesis helpers exist; production-order parity is not established."
+    },
+    {
+      "id": "EVID-TEARSDL",
+      "priority": 80,
+      "state": "prototype",
+      "sourceSections": [49, 50, 51, 54, 55, 56, 63],
+      "textRegex": "(TearSDL|scenario inheritance|scenario lint|boundary scenario|situation query)",
+      "excludeTextRegex": "(natural-language compiler|real game launch|Studio)",
+      "implementationRefs": ["src/tearbench/tearsdl.ts"],
+      "evidenceRefs": ["tests/unit/tearbench-tearsdl.test.ts"],
+      "notes": "A JSON TearSDL prototype resolves, validates, and creates boundaries; the complete language and live launch path remain missing."
+    },
+    {
+      "id": "EVID-REGRESSION-HELPERS",
+      "priority": 80,
+      "state": "prototype",
+      "sourceSections": [16, 17, 40, 43, 56, 79],
+      "textRegex": "(first material divergence|failure signature|delta-debug|minimi[sz]|Graveyard|bisect)",
+      "excludeTextRegex": "(automatically discovers|real regression|clean process)",
+      "implementationRefs": ["src/tearbench/regression-intelligence.ts"],
+      "evidenceRefs": ["tests/unit/tearbench-regression-intelligence.test.ts"],
+      "notes": "Pure comparison, minimization, clustering, and attribution helpers exist; automated real-build execution is absent."
+    },
+    {
+      "id": "EVID-SCRIPTED-POLICY",
+      "priority": 80,
+      "state": "prototype",
+      "sourceSections": [10, 14, 28, 30, 32, 34, 35, 36, 39],
+      "textRegex": "(scripted (?:agent|bot|policy)|Tactical Combat|Blade Motor|Journey Director|intent trace|competent policy)",
+      "excludeTextRegex": "(complete.*Adventure|real menu|class c|pixel|certif)",
+      "implementationRefs": ["src/agents/scripted-policy.ts", "src/agents/journey-director.ts", "src/agents/contracts.ts"],
+      "evidenceRefs": ["tests/unit/scripted-agent-policy.test.ts", "tests/unit/agent-journey-director.test.ts"],
+      "notes": "Deterministic decision modules exist over supplied observations; live full-journey competence is not established."
+    },
+    {
+      "id": "EVID-PHYSICAL-ADAPTER-CONTRACTS",
+      "priority": 80,
+      "state": "contract",
+      "sourceSections": [28, 31, 33, 41],
+      "textRegex": "(physical input|keyboard.*controller.*touch|UI parity|observation parity)",
+      "excludeTextRegex": "(pixel-only|class c|complete.*run|certif)",
+      "implementationRefs": ["src/agents/physical-adapters.ts"],
+      "evidenceRefs": ["tests/unit/agent-journey-director.test.ts"],
+      "notes": "Physical emission and UI-parity contracts exist; a pixel perception/control system does not."
+    },
+    {
+      "id": "EVID-HEADLESS-ABSTRACTION",
+      "priority": 80,
+      "state": "prototype",
+      "sourceSections": [8, 23, 24, 38, 40, 46, 47],
+      "textRegex": "(headless|parallel environments?|environment pool|batched transport|artifact sampl)",
+      "excludeTextRegex": "(real gameplay core|production parity|training throughput)",
+      "implementationRefs": ["src/tearbench/headless.ts"],
+      "evidenceRefs": ["tests/unit/tearbench-headless.test.ts"],
+      "notes": "A generic DOM-free environment abstraction exists; it is not the production Tear simulation."
+    },
+    {
+      "id": "EVID-ACADEMY-CONTRACTS",
+      "priority": 80,
+      "state": "prototype",
+      "sourceSections": [11, 12, 37, 38, 77],
+      "textRegex": "(demonstration|behavior clon|dataset split|recovery demonstration|human takeover|policy correction|Academy)",
+      "excludeTextRegex": "(trainable sequence|real gameplay corpus|persisted policy|automatic)",
+      "implementationRefs": ["src/agents/academy.ts"],
+      "evidenceRefs": ["tests/unit/agent-academy.test.ts"],
+      "notes": "Governance contracts and an in-memory majority lookup baseline exist; real corpus persistence and model training do not."
+    },
+    {
+      "id": "EVID-LADDER-PROTOTYPE",
+      "priority": 80,
+      "state": "prototype",
+      "sourceSections": [58, 59, 60, 62, 63],
+      "textRegex": "(Astuteness Vector|bounded rationality|Level (?:[1-9]|Ω)|item response|human anchor|monotonicity|adjacent-level)",
+      "excludeTextRegex": "(executed policy|real human|measured gameplay|dashboard)",
+      "implementationRefs": ["src/agents/ladder-foundry.ts"],
+      "evidenceRefs": ["tests/unit/tearbot-ladder-foundry.test.ts"],
+      "notes": "Synthetic formulas and item-response helpers exist; levels are not calibrated from executed policies."
+    },
+    {
+      "id": "EVID-FOUNDRY-CONTRACT",
+      "priority": 85,
+      "state": "contract",
+      "sourceSections": [61, 62, 64, 77],
+      "textRegex": "(Agent Foundry|champion|challenger|promotion|rollback|weakness miner)",
+      "excludeTextRegex": "(trains? a challenger|creates? a challenger|automatic|durable workflow|self-improving)",
+      "implementationRefs": ["src/agents/ladder-foundry.ts"],
+      "evidenceRefs": ["tests/unit/tearbot-ladder-foundry.test.ts"],
+      "notes": "Caller-supplied challenger evaluation and rollback decisions exist; the Foundry does not create or train policies."
+    },
+    {
+      "id": "EVID-GHOST-TRUTH-CONTRACTS",
+      "priority": 80,
+      "state": "contract",
+      "sourceSections": [65, 66, 67, 68, 69, 78, 79],
+      "textRegex": "(Replay Trident|GhostTimeline|quality card|recording profile|event ontology|causal graph|GhostEnvelopeV3)",
+      "excludeTextRegex": "(authoritative boundary|real run|worker encoding|player can)",
+      "implementationRefs": ["src/ghost/truth-kernel.ts"],
+      "evidenceRefs": ["tests/unit/ghost-truth-kernel.test.ts"],
+      "notes": "Pure Ghost 3 truth contracts exist; the live recorder and full replay truth path are absent."
+    },
+    {
+      "id": "EVID-GHOST-VAULT-PROTOTYPE",
+      "priority": 80,
+      "state": "prototype",
+      "sourceSections": [68, 69, 73, 75, 79],
+      "textRegex": "(Ghost Vault|capsule|chunk index|journal|quota|Ghost Doctor|quarantine)",
+      "excludeTextRegex": "(IndexedDB|browser restart|real worker|cross-session|cloud)",
+      "implementationRefs": ["src/ghost/capsule-vault.ts", "src/ghost/ghost-doctor.ts"],
+      "evidenceRefs": ["tests/unit/ghost-capsule-vault.test.ts"],
+      "notes": "Memory-backed capsule/Vault and Doctor helpers exist; durable IndexedDB and worker behavior do not."
+    },
+    {
+      "id": "EVID-GHOST-THEATER-PROTOTYPE",
+      "priority": 80,
+      "state": "prototype",
+      "sourceSections": [70, 72, 79],
+      "textRegex": "(Ghost Theater|replay world|seek|Ghost Lens|event-aligned|trajectory diff|Practice from here)",
+      "excludeTextRegex": "(player can|accessible|mobile|real capsule|browser)",
+      "implementationRefs": ["src/ghost/replay-world.ts", "src/ghost/theater.ts"],
+      "evidenceRefs": ["tests/unit/ghost-replay-world.test.ts"],
+      "notes": "Transport, seek, comparison, and practice helpers exist without a complete player-facing Theater."
+    },
+    {
+      "id": "EVID-GHOST-COACH-CONTRACT",
+      "priority": 80,
+      "state": "contract",
+      "sourceSections": [72, 76],
+      "textRegex": "(Run Autopsy|Ghost Coach|draft regret|one-fix|skill graph|replay-to-drill)",
+      "excludeTextRegex": "(player can|visible|real counterfactual|measured improvement)",
+      "implementationRefs": ["src/ghost/coach.ts"],
+      "evidenceRefs": ["tests/unit/ghost-coach.test.ts"],
+      "notes": "Pure analysis contracts exist; real evidence ingestion and player UI are absent."
+    },
+    {
+      "id": "EVID-PLAYER-EXPERIENCE-CONTRACTS",
+      "priority": 75,
+      "state": "contract",
+      "sourceSections": [71, 72, 79],
+      "textRegex": "(Chase Your Best|Ghost Race|Beat This Run|Boss Memory|Daily Echo|Learning Ghost|Nemesis Ghost|Run DNA|career archive|Ghost Studio)",
+      "excludeTextRegex": "(player can|visible|export.*media|complete UI)",
+      "implementationRefs": ["src/ghost/player-experiences.ts"],
+      "evidenceRefs": ["tests/unit/ghost-player-experiences.test.ts"],
+      "notes": "Definitions and pure proof/EDL/DNA helpers exist; complete player experiences do not."
+    },
+    {
+      "id": "EVID-GHOST-CLOUD-CONTRACTS",
+      "priority": 75,
+      "state": "contract",
+      "sourceSections": [73, 74, 78],
+      "textRegex": "(publication|upload|verification verdict|eligibility|privacy class|moderation|relay|D1|R2)",
+      "excludeTextRegex": "(authenticated|deployed|real service|cross-device|player can|atomic upload)",
+      "implementationRefs": ["src/ghost/cloud-publication.ts", "workers/ghost-publication.ts", "migrations/ghost/0001_ghost_publication.sql"],
+      "evidenceRefs": ["tests/unit/ghost-cloud-publication.test.ts"],
+      "notes": "Local service contracts, Worker source, and schema exist; no live-service outcome is claimed."
+    },
+    {
+      "id": "EVID-PRESERVATION-CONTRACTS",
+      "priority": 75,
+      "state": "contract",
+      "sourceSections": [75, 78, 79],
+      "textRegex": "(historical runtime|golden.*replay|alias|tombstone|preservation manifest|cross-version)",
+      "excludeTextRegex": "(full corpus passes|release certified|actual historical package)",
+      "implementationRefs": ["preservation/ghost-runtime-manifest.json", "src/tearbench/release-certification.ts"],
+      "evidenceRefs": ["tests/unit/tearbench-release-certification.test.ts"],
+      "notes": "Preservation and certificate contracts exist; a complete historical runtime corpus does not."
+    },
+    {
+      "id": "EVID-TEARBENCH-TOOLING",
+      "priority": 70,
+      "state": "prototype",
+      "sourceSections": [21, 44, 45, 63, 64, 76, 78, 79],
+      "textRegex": "(tearbench (?:run|rerun|select|ci|certify)|diff-aware|release certificate|Tear Autonomous Playtester Skill)",
+      "excludeTextRegex": "(full release|automatically receives.*real|class c)",
+      "implementationRefs": ["scripts/tearbench.mjs", ".agents/skills/tear-autonomous-playtester/SKILL.md"],
+      "evidenceRefs": ["tests/unit/tearbench-release-certification.test.ts", "tests/unit/tearbench-runner.test.ts"],
+      "notes": "CLI and Skill prototypes exist; their current scenario evidence is not equivalent to full gameplay certification."
+    }
+  ]
+}

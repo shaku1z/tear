@@ -1,4 +1,5 @@
 import type { RunDifficulty, RunWaveLogEntry } from "../gameplay/run/session";
+import { migrateWeaponSelection } from "../gameplay/weapon-selection";
 
 export interface PendingFinaleRecord {
   readonly weapon?: string;
@@ -111,7 +112,7 @@ export class LivePendingFinaleController {
     recordingReason: "claimedFinale" | "resumedFinale",
     stage: number,
   ): PendingFinaleRecord {
-    this.#port.selectWeapon(record.weapon ?? this.#port.selectedWeapon());
+    this.#port.selectWeapon(migrateWeaponSelection(record.weapon ?? this.#port.selectedWeapon()));
     this.#port.startCampaign(record.diff ?? "normal");
     this.#port.cancelCinematic(cancelReason);
     const run = this.#port.run();

@@ -67,7 +67,7 @@ async function assertVisibilityLifecycle(page, baseline) {
 }
 
 (async () => {
-  const root = path.resolve(__dirname, "..", "dist", "standalone");
+  const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
   const port = Number(process.env.TEAR_AUDIO_TEST_PORT || 8125);
   const baseUrl = `http://127.0.0.1:${port}`;
   const server = http.createServer((request, response) => {
@@ -95,15 +95,23 @@ async function assertVisibilityLifecycle(page, baseline) {
     const gameContext = await browser.newContext();
     const page = await gameContext.newPage();
     const pageErrors = [];
+    const timingWarnings = [];
     page.on("pageerror", (error) => pageErrors.push(error.stack || error.message));
+    page.on("console", (message) => {
+      if (message.text().includes("Events scheduled inside of scheduled callbacks")) {
+        timingWarnings.push(message.text());
+      }
+    });
     await page.addInitScript(() => {
-      localStorage.setItem("tear_settings", JSON.stringify({
-        vol: 0.75,
-        music: true,
-        musicVolume: 0.35,
-        sfxVolume: 0.8,
-        interfaceVolume: 0.45,
-      }));
+      window.__TEAR_TEST_STORAGE__ = {
+        tear_settings: JSON.stringify({
+          vol: 0.75,
+          music: true,
+          musicVolume: 0.35,
+          sfxVolume: 0.8,
+          interfaceVolume: 0.45,
+        }),
+      };
       const NativeAudioContext = window.AudioContext;
       window.__tearAudioContextCount = 0;
       window.AudioContext = class extends NativeAudioContext {
@@ -114,7 +122,11 @@ async function assertVisibilityLifecycle(page, baseline) {
       };
     });
     await page.route("**/*", (route) => {
-      if (route.request().url().startsWith(`${baseUrl}/`)) route.continue();
+      const url = route.request().url();
+      // This page exercises the pinned TearScore fallback specifically. Recorded
+      // stems are the normal primary backend and have their own contract suite.
+      if (url.includes("/audio/cues/")) route.abort("failed");
+      else if (url.startsWith(`${baseUrl}/`)) route.continue();
       else route.abort();
     });
     await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, { waitUntil: "domcontentloaded", timeout: 20000 });
@@ -172,6 +184,9 @@ async function assertVisibilityLifecycle(page, baseline) {
       }, mode);
       await page.waitForTimeout(150);
     }
+    // The first menu-to-gameplay score swap lands on the next musical bar.
+    // Keep the page alive past that boundary so callback-time regressions surface.
+    await page.waitForTimeout(2_500);
     const repeated = await page.evaluate(() => ({
       audio: window.__TEAR_CATALOG_DEBUG__.audio.snapshot(),
       contexts: window.__tearAudioContextCount,
@@ -187,6 +202,7 @@ async function assertVisibilityLifecycle(page, baseline) {
     assert.deepEqual(settledRepeated.resources.system, resourceBaseline.system,
       "repeated runs do not add contexts, mixer nodes, or backend nodes");
     assert.deepEqual(pageErrors, []);
+    assert.deepEqual(timingWarnings, [], "score transitions use Tone's scheduled callback time");
 
     await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false })));
     await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "disposed");
@@ -207,7 +223,7 @@ async function assertVisibilityLifecycle(page, baseline) {
     fallback.on("pageerror", (error) => fallbackErrors.push(error.stack || error.message));
     await fallback.route("**/*", (route) => {
       const url = route.request().url();
-      if (url.includes("/vendor/tear-score/")) route.abort("failed");
+      if (url.includes("/vendor/tear-score/") || url.includes("/audio/cues/")) route.abort("failed");
       else if (url.startsWith(`${baseUrl}/`)) route.continue();
       else route.abort();
     });

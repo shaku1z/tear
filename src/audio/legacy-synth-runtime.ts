@@ -92,7 +92,7 @@ const SYNTH = {
         system: LIVE_AUDIO.system.debugResourceSnapshot(),
       }) };
   },
-  musicScoreVersion() { return "0.1.0-alpha.1"; },
+  musicScoreVersion() { return "built-in-scores@0.1.0-alpha.2"; },
   musicReplayMetadata() { return LIVE_AUDIO.musicReplayMetadata(); },
   beginMusicRun(metadata: MusicRunSessionMetadata) { LIVE_AUDIO.beginMusicRun(metadata); },
   updateMusicContext(snapshot: MusicContextSnapshot) { LIVE_AUDIO.updateMusicContext(snapshot); },

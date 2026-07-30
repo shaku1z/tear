@@ -1,0 +1,189 @@
+{
+  "format": "tear-score-stem-cue",
+  "version": 1,
+  "id": "beserker",
+  "name": "Beserker",
+  "tempo": 127.2,
+  "timeSignature": [
+    4,
+    4
+  ],
+  "sourceSampleRate": 48000,
+  "key": "F minor",
+  "grid": {
+    "downbeatFrame": 0,
+    "beatsPerBar": 4,
+    "barsPerLoop": 8,
+    "secondsPerBar": 1.887375,
+    "approvedBpm": 127.160739,
+    "barQuantizedCompatible": true
+  },
+  "loop": {
+    "startFrame": 0,
+    "endFrame": 724752,
+    "mode": "hard"
+  },
+  "assetNote": "Pre-cut loop; frames file-relative.",
+  "stems": [
+    {
+      "id": "foundation",
+      "role": "bed",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "crossfade",
+      "crossfadeFrames": 1440,
+      "sources": [
+        {
+          "url": "opus/foundation.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    },
+    {
+      "id": "pulse",
+      "role": "bass",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "hard",
+      "sources": [
+        {
+          "url": "opus/pulse.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    },
+    {
+      "id": "rhythm",
+      "role": "rhythm",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "hard",
+      "sources": [
+        {
+          "url": "opus/rhythm.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    },
+    {
+      "id": "melody",
+      "role": "motif",
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "crossfade",
+      "crossfadeFrames": 1440,
+      "sources": [
+        {
+          "url": "opus/melody.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    }
+  ],
+  "tiers": {
+    "0": {
+      "foundation": -7
+    },
+    "1": {
+      "foundation": -4,
+      "pulse": -7
+    },
+    "2": {
+      "foundation": -2,
+      "pulse": -3,
+      "rhythm": -1
+    },
+    "3": {
+      "foundation": -1,
+      "pulse": -1,
+      "rhythm": 0,
+      "melody": -2
+    },
+    "4": {
+      "foundation": 0,
+      "pulse": 0,
+      "rhythm": 0,
+      "melody": 0
+    }
+  },
+  "provenance": {
+    "owner": "shatheartboy@gmail.com",
+    "license": "Owned/licensed by owner, confirmed 2026-07-23.",
+    "sourceSha256": "edb51fca4ee5b5b64087b6f8607052d0d7cdf50b46e9df523fb3e40c8c3f76ca"
+  },
+  "bossIntro": {
+    "asset": "intro.ogg",
+    "lengthSeconds": 40.073,
+    "note": "latin groove; plays once when the boss fight begins"
+  },
+  "analysis": {
+    "tempoConfidence": 0.217,
+    "tempoAlternatives": [
+      127.6
+    ],
+    "sourceDownbeatSeconds": 3.2393,
+    "secondsPerBar": 3.7618,
+    "keyConfidence": 0.034,
+    "keyAlternatives": [
+      "F major",
+      "A# minor"
+    ],
+    "seam": {
+      "seamDbBelowPeak": -45.7,
+      "rmsRatio": 2.17,
+      "verdict": "pass"
+    },
+    "analysedBpm": 63.8,
+    "approvedBpm": 127.160739,
+    "metricalFactor": 1.9931,
+    "tempoDisagreementPercent": 0.34,
+    "phrasePlausibility": "typical",
+    "grid": {
+      "loopBars": 8,
+      "actualLoopFrames": 724752,
+      "expectedLoopFrames": 724752,
+      "barErrorFrames": 0,
+      "barErrorMs": 0,
+      "priorDriftMsPerCycle": 5,
+      "verdict": "pass",
+      "consideredBpm": [
+        {
+          "bpm": 127.161,
+          "bars": 8,
+          "octaveDistancePercent": 0.34,
+          "phrase": "typical"
+        },
+        {
+          "bpm": 63.58,
+          "bars": 4,
+          "octaveDistancePercent": 0.34,
+          "phrase": "typical"
+        },
+        {
+          "bpm": 95.371,
+          "bars": 6,
+          "octaveDistancePercent": 25.26,
+          "phrase": "unusual"
+        },
+        {
+          "bpm": 190.741,
+          "bars": 12,
+          "octaveDistancePercent": 25.26,
+          "phrase": "typical"
+        },
+        {
+          "bpm": 158.951,
+          "bars": 10,
+          "octaveDistancePercent": 37.72,
+          "phrase": "unusual"
+        },
+        {
+          "bpm": 111.266,
+          "bars": 7,
+          "octaveDistancePercent": 12.8,
+          "phrase": "implausible"
+        }
+      ]
+    }
+  }
+}

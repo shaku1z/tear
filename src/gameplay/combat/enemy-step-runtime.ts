@@ -1,6 +1,7 @@
 export interface EnemyStepActor {
   x: number; y: number; vx: number; vy: number; hw: number; hh: number;
   hp: number; maxHp: number; dead: boolean; dying?: boolean; spawnT: number; stun: number; hitCd: number;
+  onGround: boolean;
   tutDummy?: boolean; cinematicRequest?: unknown; kind?: string; enraged?: boolean; isBoss?: boolean;
   bleedStacks: number; burnT: number; markT: number; slowStatus: number; _stFx: number; color?: string;
   _deathCause?: string; behavior?: string;
@@ -26,10 +27,11 @@ export function stepEnemyActors(options: EnemyActorStepOptions): boolean {
     if (enemy.tutDummy) {
       enemy.tickTimers(options.dt); enemy.stun = 1;
       enemy.vy = (enemy.vy || 0) + options.gravity * options.dt;
+      enemy.onGround = false;
       enemy.x += (enemy.vx || 0) * options.dt; enemy.y += enemy.vy * options.dt;
       enemy.vx = (enemy.vx || 0) * Math.max(0, 1 - 4 * options.dt);
       const floorY = options.groundY - enemy.hh;
-      if (enemy.y >= floorY) { enemy.y = floorY; enemy.vy = 0; enemy.vx *= 0.85; }
+      if (enemy.y >= floorY) { enemy.y = floorY; enemy.vy = 0; enemy.vx *= 0.85; enemy.onGround = true; }
       enemy.x = Math.max(enemy.hw, Math.min(enemy.x, options.viewportWidth - enemy.hw)); continue;
     }
     if (enemy.stun > 0) { enemy.tickTimers(options.dt); continue; }

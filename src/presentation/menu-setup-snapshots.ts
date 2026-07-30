@@ -1,10 +1,13 @@
+import { nowPlayingLabel, nowPlayingDetail } from "../audio/signal/now-playing";
 import type { MenuScreenView, SetupScreenView } from "./screens/contracts";
 
 export interface MenuModeSource { readonly id: string; readonly label: string; readonly blurb: string; readonly debug?: boolean }
 export interface MenuDifficultySource { readonly id: string; readonly label: string; readonly desc: string;
   readonly mods: Readonly<{ score: number; coin: number }> }
 export interface WeaponChoiceSource { readonly id: string; readonly name: string; readonly blurb: string;
-  readonly tags: readonly string[]; readonly throwIdentity: string }
+  readonly tags: readonly string[]; readonly throwIdentity: string;
+  readonly ratings?: Readonly<{ handling: number; impact: number; reach: number; difficulty: number }>;
+  readonly weaknesses?: readonly string[] }
 export interface BestSetupSource { readonly wave: number; readonly score: number; readonly time?: number }
 export interface BossChoiceSource { readonly id: string; readonly name: string }
 export interface BountyChoiceSource { readonly label: string; readonly detail: string; readonly done: boolean }
@@ -16,7 +19,7 @@ export function buildMenuSnapshot(input: {
   readonly modes: readonly MenuModeSource[]; readonly difficulties: readonly MenuDifficultySource[];
   readonly biome: string; readonly pendingFinale: boolean;
 }): MenuScreenView {
-  return Object.freeze({ id: "menu", playerName: (input.campaignEmblem ? "◇ " : "") + (input.username || "GUEST"),
+  return Object.freeze({ id: "menu", nowPlaying: { label: nowPlayingLabel(), detail: nowPlayingDetail() }, playerName: (input.campaignEmblem ? "◇ " : "") + (input.username || "GUEST"),
     signedIn: input.signedIn, coins: input.coins, shards: input.shards, unlocked: input.unlocked,
     modeLabel: input.modes.find((entry) => entry.id === input.selectedMode)?.label ?? "Endless",
     difficultyLabel: input.difficulties.find((entry) => entry.id === input.selectedDifficulty)?.label ?? "Normal",
@@ -31,6 +34,7 @@ const modeTrim: Readonly<Record<string, Readonly<{ glyph: string; sub: string }>
 
 export function buildSetupSnapshot(input: {
   readonly selectedMode: string; readonly selectedDifficulty: string; readonly selectedWeapon: string; readonly selectedBoss: string;
+  readonly startGlyph: string;
   readonly modes: readonly MenuModeSource[]; readonly difficulties: readonly MenuDifficultySource[]; readonly weapons: readonly WeaponChoiceSource[];
   readonly bosses: readonly BossChoiceSource[]; readonly bounties?: readonly BountyChoiceSource[]; readonly livePlatform: boolean;
   readonly best: BestSetupSource; readonly formatTime: (seconds: number) => string;
@@ -51,8 +55,13 @@ export function buildSetupSnapshot(input: {
       sub: "×" + entry.mods.score.toFixed(1) + " score · " + (entry.id === "onehit" ? "×0.7→3.1 coins after wave 8" : "×" + entry.mods.coin.toFixed(2).replace(/0$/, "") + " coins"),
       selected: entry.id === input.selectedDifficulty })),
     weapons: input.weapons.map((entry) => ({ id: entry.id, label: entry.name, description: entry.blurb,
-      sub: entry.tags.join(" · ") + " — " + entry.throwIdentity, selected: entry.id === input.selectedWeapon })),
-    showDifficulty, startSummary: ((mode?.label ?? "") + " · " + (showDifficulty && difficulty !== undefined ? difficulty.label + " · " : "") + (weapon?.name ?? "")).toUpperCase(),
+      sub: entry.tags.join(" · ") + " — " + entry.throwIdentity, selected: entry.id === input.selectedWeapon,
+      ...(entry.ratings === undefined ? {} : {
+        detail: `H ${String(entry.ratings.handling)} · I ${String(entry.ratings.impact)} · R ${String(entry.ratings.reach)} · D ${String(entry.ratings.difficulty)}` +
+          (entry.weaknesses?.length ? `     WEAK: ${entry.weaknesses.join(" / ")}` : ""),
+      }) })),
+    showDifficulty, startGlyph: input.startGlyph,
+    startSummary: ((mode?.label ?? "") + " · " + (showDifficulty && difficulty !== undefined ? difficulty.label + " · " : "") + (weapon?.name ?? "")).toUpperCase(),
     bestSummary: input.best.wave || input.best.score ? "YOUR BEST · wave " + String(input.best.wave) + " · " + String(input.best.score) + " pts · " + input.formatTime(input.best.time ?? 0)
       : "YOUR BEST · no record on this board yet",
     ...(bossChoices === undefined ? {} : { bossChoices }),

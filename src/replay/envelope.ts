@@ -1,5 +1,6 @@
 import type { CommandEnvelope } from "../app/messages";
 import { hasMonotonicEnvelopes } from "../app/messages";
+import { FINAL_FIVE_WEAPON_SCHEMA_VERSION, isWeaponId, type WeaponId } from "../gameplay/weapon-selection";
 import type { GameAction } from "../input/game-action";
 import { normalizeGameAction } from "../input/game-action";
 import { stableVerificationHash } from "./hash";
@@ -17,6 +18,8 @@ export interface ReplayRunMetadata {
   readonly runId: string;
   readonly seed: string;
   readonly ticksPerSecond: number;
+  readonly weaponId: WeaponId;
+  readonly weaponSchemaVersion: typeof FINAL_FIVE_WEAPON_SCHEMA_VERSION;
 }
 
 export type TearScoreReplayMetadata =
@@ -131,10 +134,13 @@ export function validateReplayEnvelope(value: unknown): ReplayValidationResult {
   let run: ReplayRunMetadata | undefined;
   if (!isRecord(value.run)) {
     issue(issues, "run", "must be an object");
-  } else if (!nonEmptyString(value.run.runId) || !nonEmptyString(value.run.seed) || !positiveInteger(value.run.ticksPerSecond)) {
-    issue(issues, "run", "runId and seed must be non-empty strings and ticksPerSecond a positive integer");
+  } else if (!nonEmptyString(value.run.runId) || !nonEmptyString(value.run.seed) || !positiveInteger(value.run.ticksPerSecond)
+    || typeof value.run.weaponId !== "string" || !isWeaponId(value.run.weaponId)
+    || value.run.weaponSchemaVersion !== FINAL_FIVE_WEAPON_SCHEMA_VERSION) {
+    issue(issues, "run", "must declare a supported Final Five weapon schema and weapon ID");
   } else {
-    run = Object.freeze({ runId: value.run.runId, seed: value.run.seed, ticksPerSecond: value.run.ticksPerSecond });
+    run = Object.freeze({ runId: value.run.runId, seed: value.run.seed, ticksPerSecond: value.run.ticksPerSecond,
+      weaponId: value.run.weaponId, weaponSchemaVersion: value.run.weaponSchemaVersion });
   }
 
   const actions: ReplayActionEnvelope[] = [];
@@ -190,25 +196,8 @@ export function validateReplayEnvelope(value: unknown): ReplayValidationResult {
 
 /** Converts the sole legacy schema into the current explicit envelope. */
 export function migrateReplayV1(value: ReplayEnvelopeV1): ReplayEnvelopeV2 {
-  const actions = value.actions.map((entry, index): ReplayActionEnvelope => {
-    const normalized = normalizeGameAction(entry.action);
-    if (!normalized.ok || !safeNonNegativeInteger(entry.tick)) throw new TypeError(`Invalid legacy action at index ${String(index)}`);
-    return Object.freeze({ kind: "command", id: index + 1, tick: entry.tick, command: normalized.action });
-  });
-  if (!hasMonotonicEnvelopes(actions)) throw new TypeError("Legacy action ticks must never decrease");
-  const replay: ReplayEnvelopeV2 = {
-    format: REPLAY_FORMAT,
-    schemaVersion: CURRENT_REPLAY_SCHEMA_VERSION,
-    rulesetVersion: value.rulesetVersion,
-    build: Object.freeze({ version: value.buildVersion, revision: "legacy-unknown", target: "legacy-browser" }),
-    run: Object.freeze({ runId: `legacy-${stableVerificationHash(value.seed)}`, seed: String(value.seed), ticksPerSecond: value.ticksPerSecond ?? 60 }),
-    actions: Object.freeze(actions),
-    final: Object.freeze({ tick: value.finalTick, stateHash: value.finalHash }),
-    tearScore: Object.freeze({ enabled: false, reason: "not-recorded" }),
-  };
-  const result = validateReplayEnvelope(replay);
-  if (!result.ok) throw new TypeError(`Migrated replay is invalid: ${result.issues.map((entry) => `${entry.path} ${entry.message}`).join("; ")}`);
-  return result.replay;
+  void value;
+  throw new TypeError("Legacy replay has no verified Final Five weapon schema and cannot claim deterministic playback.");
 }
 
 function normalizeReplayV1(value: Record<string, unknown>): ReplayEnvelopeV1 | null {

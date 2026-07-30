@@ -17,11 +17,11 @@ export interface LiveCombatFrameApi<State> {
 type FrameBase = Omit<LiveFrameRuntimeOptions, "fixedSimulationInput" | "musicInput">;
 export interface LiveCombatFrameContext extends FrameBase {
   readonly state: () => string;
-  readonly recording: () => boolean;
-  readonly aimRadius: number;
-  readonly sampleAim: () => Readonly<{ x: number; y: number }>;
-  readonly pushAim: (turn: number, magnitude: number) => void;
+  readonly semanticInputAuthority: () => boolean;
   readonly drainActions: (tick: number) => readonly CommandEnvelope<GameAction>[];
+  readonly recordSealedActions?: (tick: number, actions: readonly CommandEnvelope<GameAction>[]) => void;
+  readonly beforeSimulationStep?: (tick: number) => void;
+  readonly afterSimulationStep?: (tick: number) => void;
   readonly clearOverrides: () => void;
   readonly gauge: (name: "simulationTick" | "simulationSteps" | "simulationDroppedMs", value: number) => void;
   readonly musicObservation: () => LiveMusicSyncInput;
@@ -34,8 +34,10 @@ export function createLiveCombatFrameOptions<State>(context: LiveCombatFrameCont
   api: LiveCombatFrameApi<State>): LiveFrameRuntimeOptions {
   return { ...context,
     fixedSimulationInput: () => ({ state: context.state, simulation: api.simulation,
-      recording: context.recording, aimRadius: context.aimRadius,
-      sampleAim: context.sampleAim, pushAim: context.pushAim, drainActions: context.drainActions,
+      semanticInputAuthority: context.semanticInputAuthority, drainActions: context.drainActions,
+      ...(context.recordSealedActions ? { recordSealedActions: context.recordSealedActions } : {}),
+      ...(context.beforeSimulationStep ? { beforeStep: context.beforeSimulationStep } : {}),
+      ...(context.afterSimulationStep ? { afterStep: context.afterSimulationStep } : {}),
       authoritativeStep: (tick, seconds, actions) => { api.authoritativeStep.execute(tick, seconds, actions); },
       clearOverrides: context.clearOverrides, step: (seconds) => { api.combatRuntime.step(seconds); }, gauge: context.gauge }),
     musicInput: context.musicObservation };
@@ -46,6 +48,6 @@ export function createLiveCombatCoordinatorOptions(context: LiveCombatCoordinato
   simulation: FixedStepScheduler, frameRuntime: LiveFrameRuntime): RuntimeFrameCoordinatorOptions {
   return { ...context,
     advancePlayingPrelude: (seconds) => { frameRuntime.advancePrelude(seconds); },
-    advancePlayingSimulation: (seconds) => { frameRuntime.advanceSimulation(seconds); },
+    advancePlayingSimulation: (seconds) => frameRuntime.advanceSimulation(seconds),
     resetSimulation: () => { simulation.reset(simulation.tick); }, syncMusic: () => { frameRuntime.syncMusic(); } };
 }

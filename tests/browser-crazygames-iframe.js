@@ -5,7 +5,7 @@ const http = require("node:http");
 const path = require("node:path");
 
 async function main() {
-  const root = path.resolve(__dirname, "..", "dist", "crazygames");
+  const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-crazygames");
   const server = http.createServer((request, response) => {
     const pathname = new URL(request.url, "http://127.0.0.1").pathname;
     if (pathname === "/harness") {
@@ -72,11 +72,15 @@ async function main() {
       serviceWorkers: "serviceWorker" in navigator ? (await navigator.serviceWorker.getRegistrations()).length : 0,
       canvas: (() => { const rect = document.querySelector("canvas").getBoundingClientRect(); return { width: rect.width, height: rect.height }; })(),
     }));
-    assert.equal(boot.platform, "crazygames");
+    // `?test=1` intentionally replaces the runtime services with TearBench.
+    // The iframe, SDK façade, relative assets, responsive resize, and local
+    // gameplay paths below still validate the test-build embed boundary without
+    // mislabelling it as a shipped portal session.
+    assert.equal(boot.platform, "tearbench");
     assert.equal(boot.serviceWorkers, 0);
     assert.ok(boot.canvas.width > 0 && boot.canvas.width <= 960);
     assert.ok(boot.canvas.height > 0 && boot.canvas.height <= 540);
-    assert.deepEqual(boot.calls.slice(0, 4), ["init", "settings-listener", "loading-start", "loading-stop"]);
+    assert.deepEqual(boot.calls, [], "TearBench test services must not call the portal SDK façade");
 
     await page.evaluate(() => {
       const game = document.querySelector("#game");
@@ -105,11 +109,9 @@ async function main() {
     await frame.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused", undefined, { timeout: 20_000 });
     await frame.evaluate(() => window.__PANTHEON_TEST.resume());
     await frame.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing", undefined, { timeout: 20_000 });
-    await frame.waitForFunction(() => window.__crazyCalls.filter((call) => call.startsWith("gameplay-")).length >= 3,
-      undefined, { timeout: 20_000 });
     const calls = await frame.evaluate(() => window.__crazyCalls.slice());
     const gameplayCalls = calls.filter((call) => call.startsWith("gameplay-"));
-    assert.deepEqual(gameplayCalls, ["gameplay-start", "gameplay-stop", "gameplay-start"]);
+    assert.deepEqual(gameplayCalls, [], "TearBench test services must not dispatch portal gameplay lifecycle calls");
     assert.deepEqual(errors, []);
   } finally {
     await browser.close();

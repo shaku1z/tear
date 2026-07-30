@@ -28,6 +28,7 @@ export interface UiFrameInput {
   readonly pressed: ReadonlySet<string>;
   readonly padBack: boolean;
   readonly confirm: boolean;
+  readonly context1: boolean;
 }
 
 export type UiSemanticAction =
@@ -80,7 +81,16 @@ export function stepUiTab<Key>(
     : Object.freeze({ key: next[0], changed: true });
 }
 
-function quickAction(screen: string, pressed: ReadonlySet<string>): UiSemanticAction | null {
+function quickAction(
+  screen: string,
+  pressed: ReadonlySet<string>,
+  buttons: readonly UiActionButton[],
+  context1: boolean,
+): UiSemanticAction | null {
+  if (screen === "setup" && (context1 || pressed.has("Context1"))) {
+    const index = buttons.findIndex((button) => button.enabled !== false && button.label === "START");
+    if (index >= 0) return Object.freeze({ type: "activate-button", index, source: "confirm" });
+  }
   if (screen === "draft") {
     for (let index = 0; index < 4; index += 1) {
       if (pressed.has(`Digit${String(index + 1)}`)) return Object.freeze({ type: "choose-upgrade", index });
@@ -126,7 +136,7 @@ export function coordinateUiFrame(input: UiFrameInput): UiFrameDecision {
     else if (input.next) focus = enabled[(position + 1) % enabled.length] ?? focus;
   }
 
-  const shortcut = quickAction(input.screen, input.pressed);
+  const shortcut = quickAction(input.screen, input.pressed, input.buttons, input.context1);
   if (shortcut) return Object.freeze({ focus, scroll, action: shortcut, consumePadBack: false, pointer: "leave", playUiSound: false });
 
   if (input.padBack) {

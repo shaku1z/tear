@@ -1,24 +1,10 @@
 import { CLOCK, CONFIG } from "../../src/config/game-config";
-import { clamp, lerp } from "../../src/domain/geometry";
+import { aabbOverlap, clamp, len, lerp } from "../../src/domain/geometry";
 import type { BladeActionResult, BladePoint } from "../../src/gameplay/entities/blade";
 import { createMirrorTypes } from "../../src/gameplay/entities/mirror";
 import type { MirrorBladePort, MirrorPlayerPort } from "../../src/gameplay/entities/mirror-contracts";
-import type { PlayerInputPort, PlayerPlatformPort } from "../../src/gameplay/entities/player";
+import { createPlayer, type PlayerInputPort, type PlayerPlatformPort } from "../../src/gameplay/entities/player";
 import { createEnemyHarness } from "./enemy-test-harness";
-
-class MirrorTestPlayer implements MirrorPlayerPort {
-  x: number; y: number; vx = 0; vy = 0; hw = 15; hh = 23;
-  hp = 100; maxHp = 100; facing = 1; onGround = true;
-  maxDashCharges = 1; dashCharges = 1; dashTimer = 0; iframe = 0; guardT = 0;
-  lastTrickT = 0; lastTrickKind = ""; aiInput?: PlayerInputPort;
-  constructor(x: number, y: number) { this.x = x; this.y = y; }
-  get invulnerable() { return this.iframe > 0; }
-  update(dt: number, platforms: readonly PlayerPlatformPort[]): void { void platforms; this.x += this.vx * dt; this.y += this.vy * dt; }
-  draw(surface: unknown): void { void surface; }
-  takeHit(damage: number, knockbackX: number, knockbackY: number): string {
-    this.hp -= damage; this.vx += knockbackX; this.vy += knockbackY; return this.hp <= 0 ? "dead" : "hit";
-  }
-}
 
 class MirrorTestBlade implements MirrorBladePort {
   x = 0; y = 0; vx = 0; vy = 0; tipX = 0; tipY = 0; tipVX = 0; tipVY = 0; tipSpeed = 0;
@@ -34,9 +20,17 @@ class MirrorTestBlade implements MirrorBladePort {
 }
 
 function noOp(...args: unknown[]): void { void args; }
-const FX = { burst: noOp, death: noOp, explode: noOp, flash: noOp, ghost: noOp, ring: noOp };
+const FX = { burst: noOp, death: noOp, drip: noOp, explode: noOp, flash: noOp, ghost: noOp, ring: noOp };
 const SFX = { boom: noOp, crescent: noOp, hurt: noOp, recall: noOp, saberBreak: noOp, saberLock: noOp,
   saberSizzle: noOp, slam: noOp, swing: noOp, throwBlade: noOp, updraft: noOp };
+const neutralInput: PlayerInputPort = {
+  right: () => false, left: () => false, up: () => false, down: () => false,
+  dashPressed: () => false, jumpPressed: () => false,
+};
+const MirrorTestPlayer = createPlayer({
+  CONFIG, FX, GFX: { low: true }, Input: neutralInput,
+  presentation: { draw: noOp }, aabbOverlap, clamp, len,
+});
 
 export function createMirrorTestHarness(randomValues: readonly number[] = [0.5]) {
   const enemyHarness = createEnemyHarness(randomValues);
@@ -54,5 +48,6 @@ export function createMirrorTestHarness(randomValues: readonly number[] = [0.5])
   const host = new types.MirrorHost(800, CONFIG.world.groundY - CONFIG.echo.h / 2, { weaponId: "sword" });
   host._live = true;
   types.Mirror.attach(host, host._mods);
-  return { ...enemyHarness, ...types, host };
+  const mirrorPlayer = new MirrorTestPlayer(1120, CONFIG.world.groundY - CONFIG.player.h / 2);
+  return { ...enemyHarness, ...types, host, mirrorPlayer };
 }

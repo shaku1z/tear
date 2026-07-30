@@ -13,6 +13,13 @@ import type {
 export type GameConfig = typeof GAME_CONFIG;
 
 export interface BladePoint { x: number; y: number }
+export interface BladeThreadcutWaypoint extends BladePoint { target: BladeEnemyPort }
+export interface BladeWeaponEvent {
+  readonly type: "razorRound" | "backblastRound";
+  readonly x: number; readonly y: number; readonly vx: number; readonly vy: number;
+  readonly damage: number; readonly attackId: number; readonly throwId: number; readonly remote: boolean;
+  readonly secondary: boolean;
+}
 export type BladeActionResult = WeaponActionResult;
 export interface BladeChannels {
   throwPower: number; throwSpeed: number; remoteRange: number;
@@ -23,6 +30,7 @@ export interface BladePlayerPort { x: number; y: number; vx: number; vy: number;
 export interface BladeEnemyPort {
   x: number; y: number; vx: number; vy: number; radius: number; dead: boolean; dying?: boolean;
   isBoss?: boolean; weight: number; anchored?: boolean; stun: number;
+  cfg?: { knockbackTaken?: number };
   applyBreak?: ((power: number) => void) | undefined;
   hit(damage: number, fromX: number, fromY: number): void;
 }
@@ -48,7 +56,7 @@ export interface BladeWeaponPort {
   onThrowLaunch(context: WeaponBladeContext): void;
   updateThrown(context: WeaponUpdateContext): void;
   onSecondaryThrowAction(context: WeaponPlayerContext): BladeActionResult;
-  onCatch?(context: BladeWeaponContext): void;
+  onCatch?(context: WeaponBladeContext): void;
 }
 
 export interface BladeInputPort {
@@ -83,8 +91,12 @@ export interface BladeRenderSnapshot {
   readonly state: string; readonly throwSizeMult: number; readonly model: string;
   readonly trail: readonly Readonly<{ hx: number; hy: number; tx: number; ty: number }>[];
   readonly trailColor?: string; readonly glowColor?: string; readonly restoredTrail?: boolean;
-  readonly tension: number; readonly circuitEnergy: number; readonly circuitEnergyMax: number;
-  readonly circuitOrbit: number; readonly orbit: number; readonly finalFree?: boolean;
+  readonly tension: number; readonly riftChambers: number; readonly riftChamberCooldown: number;
+  readonly chainPoints: readonly BladePoint[];
+  readonly reversals: readonly Readonly<{
+    x: number; y: number; directionX: number; directionY: number; exited: boolean;
+  }>[];
+  readonly finalFree?: boolean;
   readonly hostile: boolean; readonly stolenBy: unknown; readonly hideThrowUI?: boolean;
   handPos(player: BladePlayerPort): BladePoint;
   lastHand(): BladePoint | null;

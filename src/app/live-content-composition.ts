@@ -59,7 +59,7 @@ export function createLiveContentComposition(options: LiveContentCompositionOpti
   const content = createLiveContentHost<GameEnemy>({
     width: options.width,
     groundY: d.CONFIG.world.groundY,
-    random: d.GAME_RANDOM,
+    random: d.GAME_RANDOM_STREAMS.stream("spawn"),
     run: options.run,
     modes: () => d.CONFIG.modes,
     stages: d.STAGES,
@@ -85,9 +85,9 @@ export function createLiveContentComposition(options: LiveContentCompositionOpti
       return requireGameEnemy(new d.Boss(options.width / 2, d.CONFIG.world.groundY - 140));
     },
     applyPreset: (enemy, preset) => { d.applyPreset(enemy, preset); },
-    rollVariant: (kind, wave) => d.rollVariant(kind, wave, d.GAME_RANDOM),
+    rollVariant: (kind, wave) => d.rollVariant(kind, wave, d.GAME_RANDOM_STREAMS.stream("spawn")),
     applyVariant: (enemy, variant) => { d.applyVariant(enemy, variant); },
-    rollAffixes: (enemy, wave) => { d.rollAffixes(enemy, wave, d.GAME_RANDOM); },
+    rollAffixes: (enemy, wave) => { d.rollAffixes(enemy, wave, d.GAME_RANDOM_STREAMS.stream("spawn")); },
     arrivalEffect(enemy, boss) {
       d.FX.ring(enemy.x, enemy.y, 10, enemy.color);
       if (boss && !d.GFX.low) {

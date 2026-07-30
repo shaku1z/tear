@@ -1,13 +1,12 @@
 // ------- interchangeable weapons (one per run, chosen at setup) -------
-// The Blade owns shared position, aim, collision helpers, and event identity. Each
-// definition below owns feel, quality, damage expression, throw lifecycle, model,
-// chassis, and selection copy. Hooks are deliberately capability-based: abilities
-// consume normalized combat events and never switch on weapon ids.
+// Weapon definitions own feel, damage expression, lifecycle, and selection copy.
+// Blade owns shared movement, stable identities, and collision geometry.
 
 import { CONFIG } from "../config/game-config";
 import { clamp, len, lerp } from "../domain/geometry";
+import { migrateWeaponSelection, type WeaponId } from "./weapon-selection";
 
-export type WeaponId = "sword" | "hammer" | "spear" | "chainblade" | "ringblade";
+export type { WeaponId } from "./weapon-selection";
 export type WeaponModel = WeaponId;
 export type WeaponActionResult = "recalled" | "queued" | "busy" | "toofar";
 
@@ -20,33 +19,10 @@ export interface WeaponChannels {
   controlDuration: number;
 }
 
-export interface WeaponRatings {
-  handling: number;
-  impact: number;
-  reach: number;
-  difficulty: number;
-}
-
-export interface WeaponEnemyPort {
-  seamT: number;
-}
-
-export interface WeaponPlayerPort {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  facing: number;
-}
-
-export interface WeaponPlatformPort {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  oneway?: boolean;
-  floor?: boolean;
-}
+export interface WeaponRatings { handling: number; impact: number; reach: number; difficulty: number }
+export interface WeaponEnemyPort { seamT: number; readonly [key: string]: unknown }
+export interface WeaponPlayerPort { x: number; y: number; vx: number; vy: number; facing: number }
+export interface WeaponPlatformPort { x: number; y: number; w: number; h: number; oneway?: boolean; floor?: boolean }
 
 export interface WeaponBladePort {
   vx: number;
@@ -54,54 +30,42 @@ export interface WeaponBladePort {
   tipX: number;
   tipY: number;
   tension: number;
-  orbit: number;
-  circuitOrbit: number;
   linkT: number;
   _lastHand: { x: number; y: number } | null;
   sliceQuality(): number;
   axialQuality(): number;
   channel(name: keyof WeaponChannels): number;
   repeatScale(enemy: object): number;
+  swingId: number;
+  attackId: number;
+  resolveReversal(target: object): "armed" | "reversal" | null;
+  primeReversal(target: object): boolean;
+  heldDamageMultiplierAt(x: number, y: number): number;
+  resetRiftlock(): void;
+  claimRiftBayonet(): boolean;
+  claimRiftRecoilCut(target: object): boolean;
+  refillRiftChambers(amount: number): void;
   _launchStraight(): void;
   _launchBallistic(gravity: number): void;
-  _launchChain(): void;
-  _launchCircuit(): void;
-  _updateStandardThrown(dt: number, player: WeaponPlayerPort, platforms: readonly WeaponPlatformPort[], allowControl: boolean): void;
+  _launchWheelCut(): void;
+  _launchHook(): void;
+  _launchLooseCannon(): void;
+  _updateStandardThrown(dt: number, player: WeaponPlayerPort, platforms: readonly WeaponPlatformPort[],
+    retrace: boolean, maximumLife?: number): void;
   _updateBallisticThrown(dt: number, player: WeaponPlayerPort, platforms: readonly WeaponPlatformPort[]): void;
-  _updateSpearThrown(dt: number, player: WeaponPlayerPort, platforms: readonly WeaponPlatformPort[]): void;
-  _updateChainThrown(dt: number, player: WeaponPlayerPort, platforms: readonly WeaponPlatformPort[]): void;
-  _updateCircuit(dt: number, player: WeaponPlayerPort, platforms: readonly WeaponPlatformPort[]): void;
+  _updateWheelCut(dt: number, player: WeaponPlayerPort, platforms: readonly WeaponPlatformPort[]): void;
+  _updateHookThrown(dt: number, player: WeaponPlayerPort, platforms: readonly WeaponPlatformPort[]): void;
+  _updateLooseCannon(dt: number, player: WeaponPlayerPort, platforms: readonly WeaponPlatformPort[]): void;
   _beginReturn(player: WeaponPlayerPort, options?: { retrace: boolean }): WeaponActionResult;
-  _beginSpearReel(player: WeaponPlayerPort): WeaponActionResult;
-  _beginYank(player: WeaponPlayerPort): WeaponActionResult;
-  _beginCircuitReturn(player: WeaponPlayerPort): WeaponActionResult;
+  _releaseHook(player: WeaponPlayerPort): WeaponActionResult;
+  _beginBackblast(player: WeaponPlayerPort): WeaponActionResult;
 }
 
-export interface WeaponBladeContext {
-  blade: WeaponBladePort;
-}
-
-export interface WeaponPlayerContext extends WeaponBladeContext {
-  player: WeaponPlayerPort;
-}
-
-export interface WeaponUpdateContext extends WeaponPlayerContext {
-  platforms: readonly WeaponPlatformPort[];
-  dt: number;
-}
-
-export interface WeaponDamageContext extends WeaponBladeContext {
-  quality: number;
-  baseDamage?: number;
-}
-
-export interface WeaponContext extends WeaponUpdateContext {
-  enemy: WeaponEnemyPort;
-  quality: number;
-  damage: number;
-  secondary: boolean;
-}
-
+export interface WeaponBladeContext { blade: WeaponBladePort }
+export interface WeaponPlayerContext extends WeaponBladeContext { player: WeaponPlayerPort }
+export interface WeaponUpdateContext extends WeaponPlayerContext { platforms: readonly WeaponPlatformPort[]; dt: number }
+export interface WeaponDamageContext extends WeaponBladeContext { quality: number; baseDamage?: number }
+export interface WeaponContext extends WeaponUpdateContext { enemy: WeaponEnemyPort; quality: number; damage: number; secondary: boolean }
 export interface WeaponQualityContext { blade: WeaponBladePort }
 
 export interface WeaponMechanicResult {
@@ -110,6 +74,7 @@ export interface WeaponMechanicResult {
   hitIframe?: number;
   breakPower?: number;
   force?: number;
+  stun?: number;
   damageMult?: number;
   consumeSeam?: boolean;
   stop?: boolean;
@@ -140,6 +105,8 @@ export interface WeaponDefinition {
   onThrowHit(context: WeaponContext): WeaponMechanicResult | null;
   onWorldImpact?(context: WeaponContext): WeaponMechanicResult;
   onSecondaryThrowAction(context: WeaponPlayerContext): WeaponActionResult;
+  onReset?(context: WeaponBladeContext): void;
+  onCatch?(context: WeaponBladeContext): void;
 }
 
 function weaponChannels(values: Partial<WeaponChannels> = {}): WeaponChannels {
@@ -152,13 +119,12 @@ function weaponChannels(values: Partial<WeaponChannels> = {}): WeaponChannels {
 const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: "sword", name: "Sword", model: "sword",
-    playstyle: "Control, parries, and consistency.",
-    description: "Responsive and precise. Clean cuts apply Seams, and the recalled Sword retraces its path to Crosscut marked targets.",
-    blurb: "Responsive precision · True Edge · Crosscut recall",
-    tags: ["Precision", "Parry", "Recall"], weaknesses: ["Low burst", "Weak armor", "No wide control"],
-    throwIdentity: "Crosscut", ratings: { handling: 5, impact: 3, reach: 3, difficulty: 2 },
-    throwCollisionPad: 4,
-    channels: weaponChannels(),
+    playstyle: "Control, parries, and deliberate reversals.",
+    description: "The responsive baseline. Leave a first cut, reverse through the line with a new swing, then Threadcut your throw route home.",
+    blurb: "Responsive precision · Reversal · Threadcut recall",
+    tags: ["Precision", "Parry", "Recall"], weaknesses: ["Low burst", "Narrow control", "Requires timing"],
+    throwIdentity: "Threadcut", ratings: { handling: 5, impact: 3, reach: 3, difficulty: 2 },
+    throwCollisionPad: 4, channels: weaponChannels(),
     applyPhysics() {
       const B = CONFIG.blade;
       B.springStiffness *= 1.08; B.angleSmooth *= 1.1;
@@ -166,22 +132,17 @@ const WEAPONS: readonly WeaponDefinition[] = [
     },
     applyPlayerChassis() { CONFIG.player.thrownMoveBoost = 1.15; },
     qualityMetric(ctx) { return ctx.blade.sliceQuality(); },
-    damageProfile(ctx) {
-      const W = CONFIG.weapons.sword;
-      return ctx.quality >= W.trueCutThreshold ? W.trueCutMult : 1;
-    },
+    damageProfile() { return 1; },
     onHeldHit(ctx) {
-      const W = CONFIG.weapons.sword;
-      if (ctx.quality < W.trueCutThreshold) return null;
-      return { mechanic: "trueCut", seam: W.seamDuration, hitIframe: W.trueCutHitIframe };
+      if (ctx.quality < 0.58) return null;
+      return ctx.blade.resolveReversal(ctx.enemy) === "reversal"
+        ? { mechanic: "reversal", damageMult: CONFIG.weapons.sword.reversalDamageMult,
+          stun: CONFIG.weapons.sword.reversalStun }
+        : null;
     },
     onThrowLaunch(ctx) { ctx.blade._launchStraight(); },
     updateThrown(ctx) { ctx.blade._updateStandardThrown(ctx.dt, ctx.player, ctx.platforms, true); },
-    onThrowHit(ctx) {
-      const W = CONFIG.weapons.sword;
-      if (ctx.secondary && ctx.enemy.seamT > 0) return { mechanic: "crosscut", damageMult: W.crosscutMult, consumeSeam: true };
-      return ctx.secondary ? null : { mechanic: "seam", seam: W.seamDuration };
-    },
+    onThrowHit(ctx) { return ctx.secondary ? { mechanic: "threadcut", damageMult: CONFIG.weapons.sword.threadcutDamageMult } : null; },
     onSecondaryThrowAction(ctx) { return ctx.blade._beginReturn(ctx.player, { retrace: true }); },
   },
   {
@@ -200,7 +161,6 @@ const WEAPONS: readonly WeaponDefinition[] = [
       B.damageScale *= 1.28; B.maxDamage = Math.round(B.maxDamage * 1.48);
       B.minHitSpeed *= 1.34; B.slamMultiplier *= 1.35; B.launchPower *= 1.38;
       B.deflectMinSpeed *= 1.22; B.perfectSpeed *= 1.28;
-      B.throw.speed *= 0.82; B.throw.returnSpeed *= 0.78;
     },
     applyPlayerChassis() {
       CONFIG.player.moveSpeed *= 0.96; CONFIG.player.airAccel *= 0.92;
@@ -213,48 +173,41 @@ const WEAPONS: readonly WeaponDefinition[] = [
     updateThrown(ctx) { ctx.blade._updateBallisticThrown(ctx.dt, ctx.player, ctx.platforms); },
     onThrowHit(ctx) { return ctx.secondary ? { mechanic: "hammerReturn" } : { mechanic: "meteor", stop: true }; },
     onWorldImpact() { return { mechanic: "meteor" }; },
-    onSecondaryThrowAction(ctx) { return ctx.blade._beginReturn(ctx.player); },
+    onSecondaryThrowAction(ctx) { return ctx.blade._beginReturn(ctx.player, { retrace: false }); },
   },
   {
-    id: "spear", name: "Spear", model: "spear",
-    playstyle: "Reach, pursuit, and movement.",
-    description: "Long-reaching and mobile. Drive through targets, then Anchor Cast into enemies or terrain to control distance.",
-    blurb: "Axial thrusts · Drive · Anchor Cast traversal",
-    tags: ["Reach", "Mobility", "Single Target"], weaknesses: ["Narrow", "Weak sweeps", "Weak slam"],
-    throwIdentity: "Anchor Cast", ratings: { handling: 4, impact: 3, reach: 5, difficulty: 4 },
-    throwCollisionPad: 7,
-    channels: weaponChannels({ throwSpeed: 1.18, remoteRange: 1.35, returnSpeed: 1.12, controlDuration: 1.1 }),
+    id: "greatsword", name: "Greatsword", model: "greatsword",
+    playstyle: "Formation cleaving and committed routes.",
+    description: "A broad steel edge carries through lighter foes. Throw a spinning Wheel Cut and call it back edge-first.",
+    blurb: "Broad edge · Cleaving Momentum · Wheel Cut",
+    tags: ["Reach", "Cleave", "Formation"], weaknesses: ["Slow", "Weak near hilt", "Committed"],
+    throwIdentity: "Wheel Cut", ratings: { handling: 2, impact: 4, reach: 5, difficulty: 4 },
+    throwCollisionPad: 10,
+    channels: weaponChannels({ throwPower: 1.14, throwSpeed: 0.92, returnSpeed: 0.94 }),
     applyPhysics() {
       const B = CONFIG.blade;
-      B.length += 36; B.aimRadius += 20; B.maxReach += 28;
-      B.springStiffness *= 1.12; B.damping *= 1.04; B.gravity *= 0.72; B.angleSmooth *= 1.12;
-      B.slamMultiplier *= 0.58; B.launchPower *= 1.12;
+      B.length += 30; B.aimRadius += 14; B.maxReach += 24;
+      B.springStiffness *= 0.76; B.damping *= 1.15; B.gravity *= 1.2; B.angleSmooth *= 0.72;
+      B.damageScale *= 1.18; B.maxDamage = Math.round(B.maxDamage * 1.22);
     },
-    applyPlayerChassis() {
-      CONFIG.player.moveSpeed *= 1.03; CONFIG.player.airAccel *= 1.08;
-      CONFIG.player.knockbackMult *= 0.95; CONFIG.player.thrownMoveBoost = 1.12;
-    },
-    qualityMetric(ctx) { return ctx.blade.axialQuality(); },
-    damageProfile(ctx) {
-      const W = CONFIG.weapons.spear;
-      const hand = ctx.blade._lastHand;
-      const reach = hand ? clamp(len(ctx.blade.tipX - hand.x, ctx.blade.tipY - hand.y) / (CONFIG.blade.maxReach + CONFIG.blade.length), 0, 1) : 0;
-      return lerp(W.axialFloor, 1, ctx.quality) * (1 + reach * W.maxReachBonus);
-    },
-    onHeldHit(ctx) { return ctx.quality >= CONFIG.weapons.spear.driveThreshold ? { mechanic: "drive", force: CONFIG.weapons.spear.driveForce * ctx.quality } : null; },
-    onThrowLaunch(ctx) { ctx.blade._launchStraight(); ctx.blade.linkT = CONFIG.weapons.spear.linkDuration * ctx.blade.channel("controlDuration"); },
-    updateThrown(ctx) { ctx.blade._updateSpearThrown(ctx.dt, ctx.player, ctx.platforms); },
-    onThrowHit(ctx) { return ctx.secondary ? { mechanic: "anchorReturn" } : { mechanic: "anchor", stop: true }; },
-    onWorldImpact() { return { mechanic: "anchorTerrain" }; },
-    onSecondaryThrowAction(ctx) { return ctx.blade._beginSpearReel(ctx.player); },
+    applyPlayerChassis() { CONFIG.player.moveSpeed *= 0.97; CONFIG.player.airAccel *= 0.94; CONFIG.player.thrownMoveBoost = 1.12; },
+    qualityMetric(ctx) { return ctx.blade.sliceQuality(); },
+    damageProfile(ctx) { return lerp(0.76, 1.16, ctx.quality); },
+    onHeldHit(ctx) { return ctx.quality >= CONFIG.weapons.greatsword.cleaveThreshold
+      ? { mechanic: "cleave", repeatScale: 1 }
+      : null; },
+    onThrowLaunch(ctx) { ctx.blade._launchWheelCut(); },
+    updateThrown(ctx) { ctx.blade._updateWheelCut(ctx.dt, ctx.player, ctx.platforms); },
+    onThrowHit(ctx) { return { mechanic: ctx.secondary ? "wheelReturn" : "wheelCut", damageMult: ctx.secondary ? CONFIG.weapons.greatsword.wheelReturnMult : 1 }; },
+    onSecondaryThrowAction(ctx) { return ctx.blade._beginReturn(ctx.player, { retrace: false }); },
   },
   {
     id: "chainblade", name: "Chainblade", model: "chainblade",
-    playstyle: "Crowd manipulation and advanced momentum control.",
-    description: "Build Tension, sweep enemies into position, and Bind priority targets before Yanking them through the fight.",
-    blurb: "Flexible reach · Tension and Drag · Bind / Yank",
-    tags: ["Control", "Pull", "Expert"], weaknesses: ["Delayed", "Needs space", "Low boss damage"],
-    throwIdentity: "Bind / Yank", ratings: { handling: 2, impact: 3, reach: 5, difficulty: 5 },
+    playstyle: "Crowd control through physical reach and sling momentum.",
+    description: "A compact blade with a full-damage Lash. Hook a target, swing it through the arena, and release it tangentially on recall.",
+    blurb: "Compact Lash · Hook & Sling · Tangential release",
+    tags: ["Control", "Sling", "Expert"], weaknesses: ["Needs space", "Setup", "Low boss damage"],
+    throwIdentity: "Hook & Sling", ratings: { handling: 3, impact: 3, reach: 5, difficulty: 5 },
     throwCollisionPad: 9,
     channels: weaponChannels({ remoteRange: 1.35, controlDuration: 1.2, secondaryPower: 1.15 }),
     applyPhysics() {
@@ -263,57 +216,50 @@ const WEAPONS: readonly WeaponDefinition[] = [
       B.springStiffness *= 0.64; B.damping *= 0.82; B.gravity *= 1.04;
       B.angleSmooth *= 0.76; B.maxSpeed *= 1.06; B.perfectSpeed *= 1.12;
     },
-    applyPlayerChassis() {
-      CONFIG.player.moveSpeed *= 0.98; CONFIG.player.airAccel *= 0.96;
-      CONFIG.player.knockbackMult *= 0.85; CONFIG.player.thrownMoveBoost = 1;
-    },
-    qualityMetric(ctx) { return ctx.blade.tension; },
-    damageProfile(ctx) { return lerp(CONFIG.weapons.chainblade.tensionFloor, 1.12, ctx.quality); },
-    onHeldHit(ctx) { return ctx.quality >= CONFIG.weapons.chainblade.fullTensionAt ? { mechanic: "drag", force: CONFIG.weapons.chainblade.dragForce * ctx.quality } : null; },
-    onThrowLaunch(ctx) { ctx.blade._launchChain(); },
-    updateThrown(ctx) { ctx.blade._updateChainThrown(ctx.dt, ctx.player, ctx.platforms); },
-    onThrowHit(ctx) { return ctx.secondary ? { mechanic: "yank" } : { mechanic: "bind", stop: true }; },
-    onSecondaryThrowAction(ctx) { return ctx.blade._beginYank(ctx.player); },
+    applyPlayerChassis() { CONFIG.player.moveSpeed *= 0.98; CONFIG.player.airAccel *= 0.96; CONFIG.player.knockbackMult *= 0.85; },
+    qualityMetric(ctx) { return ctx.blade.sliceQuality(); },
+    damageProfile(ctx) { return lerp(0.88, 1.08, ctx.quality); },
+    onHeldHit(ctx) { return ctx.quality >= 0.5 ? { mechanic: "lash", force: CONFIG.weapons.chainblade.lashForce * ctx.quality } : null; },
+    onThrowLaunch(ctx) { ctx.blade._launchHook(); },
+    updateThrown(ctx) { ctx.blade._updateHookThrown(ctx.dt, ctx.player, ctx.platforms); },
+    onThrowHit(ctx) { return ctx.secondary ? { mechanic: "sling" } : { mechanic: "hook", stop: true }; },
+    onSecondaryThrowAction(ctx) { return ctx.blade._releaseHook(ctx.player); },
   },
   {
-    id: "ringblade", name: "Ringblade", model: "ringblade",
-    playstyle: "Speed, ranged pressure, and continuous flow.",
-    description: "Maintain Orbit to increase power, then steer a ricocheting Circuit through the arena.",
-    blurb: "Continuous Orbit · fast multi-hit · Circuit ricochet",
-    tags: ["Speed", "Throw", "Flow"], weaknesses: ["Low impact", "Weak armor", "Orbit upkeep"],
-    throwIdentity: "Circuit", ratings: { handling: 5, impact: 2, reach: 3, difficulty: 4 },
-    throwCollisionPad: 12,
-    channels: weaponChannels({ throwSpeed: 1.08, remoteRange: 1.25, returnSpeed: 1.20, controlDuration: 1.2 }),
+    id: "riftlock", name: "Riftlock", model: "riftlock",
+    playstyle: "Ranged pressure, recoil routes, and bayonet recovery.",
+    description: "Fire Razor Rounds from four reforming chambers, then throw the whole weapon as a Loose Cannon and command it remotely.",
+    blurb: "Razor Rounds · Recoil Cut · Loose Cannon",
+    tags: ["Ranged", "Recoil", "Resource"], weaknesses: ["Chambers", "Precise fire", "No wide control"],
+    throwIdentity: "Loose Cannon", ratings: { handling: 4, impact: 3, reach: 5, difficulty: 5 },
+    throwCollisionPad: 7,
+    channels: weaponChannels({ throwSpeed: 1.06, remoteRange: 1.35, returnSpeed: 1.15, controlDuration: 1.1 }),
     applyPhysics() {
       const B = CONFIG.blade;
-      B.length -= 16; B.springStiffness *= 1.22; B.damping *= 1.10;
-      B.gravity *= 0.55; B.angleSmooth *= 1.28; B.minHitSpeed *= 0.82;
-      B.damageScale *= 0.7; B.maxDamage = Math.round(B.maxDamage * 0.68);
-      B.enemyHitIframe *= 0.62; B.slamMultiplier *= 0.55; B.launchPower *= 0.65;
-      B.deflectMinSpeed *= 0.92;
+      B.length += 8; B.springStiffness *= 1.12; B.damping *= 1.04; B.gravity *= 0.82; B.angleSmooth *= 1.16;
+      B.deflectMinSpeed *= 0.92; B.perfectSpeed *= 0.94;
     },
-    applyPlayerChassis() {
-      CONFIG.player.moveSpeed *= 1.05; CONFIG.player.airAccel *= 1.1;
-      CONFIG.player.knockbackMult *= 1.12; CONFIG.player.thrownMoveBoost = 1.06;
+    applyPlayerChassis() { CONFIG.player.moveSpeed *= 1.02; CONFIG.player.airAccel *= 1.04; CONFIG.player.thrownMoveBoost = 1.08; },
+    qualityMetric(ctx) { return ctx.blade.sliceQuality(); },
+    damageProfile(ctx) { return lerp(0.82, 1.04, ctx.quality); },
+    onReset(ctx) { ctx.blade.resetRiftlock(); },
+    onHeldHit(ctx) {
+      const chambered = ctx.blade.claimRiftBayonet();
+      return { mechanic: ctx.blade.claimRiftRecoilCut(ctx.enemy) ? "recoilCut" : chambered ? "chamberCut" : "bayonet" };
     },
-    qualityMetric(ctx) { return Math.max(0.28, ctx.blade.orbit); },
-    damageProfile(ctx) { return 0.78 + ctx.blade.orbit * CONFIG.weapons.ringblade.orbitDamage; },
-    onHeldHit(ctx) { return { mechanic: "orbit", repeatScale: ctx.blade.repeatScale(ctx.enemy) }; },
-    onThrowLaunch(ctx) { ctx.blade._launchCircuit(); },
-    updateThrown(ctx) { ctx.blade._updateCircuit(ctx.dt, ctx.player, ctx.platforms); },
+    onThrowLaunch(ctx) { ctx.blade._launchLooseCannon(); },
+    updateThrown(ctx) { ctx.blade._updateLooseCannon(ctx.dt, ctx.player, ctx.platforms); },
     onThrowHit(ctx) {
-      return {
-        mechanic: "circuit",
-        damageMult: (0.82 + ctx.blade.circuitOrbit * 0.38) * ctx.blade.repeatScale(ctx.enemy),
-        redirect: !ctx.secondary,
-      };
+      return ctx.secondary ? { mechanic: "backblast" } : { mechanic: "capture", stop: true };
     },
-    onSecondaryThrowAction(ctx) { return ctx.blade._beginCircuitReturn(ctx.player); },
+    onSecondaryThrowAction(ctx) { return ctx.blade._beginBackblast(ctx.player); },
+    onCatch(ctx) { ctx.blade.refillRiftChambers(CONFIG.weapons.riftlock.catchRefill); },
   },
 ];
 
 function getWeapon(id: string): WeaponDefinition {
-  const weapon = WEAPONS.find((entry) => entry.id === id) ?? WEAPONS[0];
+  const selected = migrateWeaponSelection(id);
+  const weapon = WEAPONS.find((entry) => entry.id === selected) ?? WEAPONS[0];
   if (!weapon) throw new Error("Weapon catalogue must contain a fallback weapon");
   return weapon;
 }
@@ -326,3 +272,4 @@ function applyWeapon(id: string): WeaponDefinition {
 }
 
 export { WEAPONS, applyWeapon, getWeapon };
+export { migrateWeaponSelection, WEAPON_SELECTION_MIGRATION } from "./weapon-selection";

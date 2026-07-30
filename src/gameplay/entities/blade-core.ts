@@ -1,6 +1,6 @@
 import type {
-  BladeDependencies, BladeEnemyPort, BladePlatformPort, BladePlayerPort, BladePoint,
-  BladeWeaponPort, BladeChannels,
+  BladeDependencies, BladeEnemyPort, BladePlatformPort, BladePlayerPort, BladePoint, BladeThreadcutWaypoint,
+  BladeWeaponEvent, BladeWeaponPort, BladeChannels,
 } from "./blade-contracts";
 
 export function createBladeCore(dependencies: BladeDependencies) {
@@ -17,17 +17,27 @@ abstract class BladeCore {
   embeddedNew: boolean; caughtNew: boolean; model: string; weapon: BladeWeaponPort | null;
   channelMods: BladeChannels; throwId: number; throwOrigin: BladePoint | null;
   throwResolved: boolean; impactResolved: boolean; secondaryActive: boolean; secondaryQueued: boolean;
-  secondaryStartedNew: boolean; anchorTarget: BladeEnemyPort | null; anchorTerrain: boolean;
-  linkT: number; linkBrokenNew: string | false; circuitEnergy: number; circuitEnergyMax: number;
-  circuitOrbit: number; orbit: number; orbitDir: number; _orbitAngle: number | null;
+  secondaryStartedNew: boolean; hookTarget: BladeEnemyPort | null;
+  threadcutRoute: BladeThreadcutWaypoint[]; threadcutIndex: number;
+  linkT: number; linkBrokenNew: string | false;
   tension: number; _repeatHits: Map<object, number>; _lastHand: BladePoint | null;
   hostile: boolean; stolenBy: unknown;
   impactVX?: number | null; impactVY?: number | null; lengthBonus?: number; aimOverride?: BladePoint;
-  lmbOverride?: boolean; throwGravity?: number; chainCollided?: Set<BladeEnemyPort>; circuitBounceCd?: number;
-  circuitMaxLife?: number; finalFree?: boolean; redirectSpent?: boolean; releaseVX?: number;
+  lmbOverride?: boolean; throwGravity?: number; slingCollided?: Set<BladeEnemyPort>;
+  finalFree?: boolean; redirectSpent?: boolean; releaseVX?: number;
   releaseVY?: number; restoredTrail?: boolean; retraceDone?: boolean;
   retraceReturn?: boolean; throwBaseDmg: number; glowColor?: string; trailColor?: string;
   hideThrowUI?: boolean; mirroredWeaponId?: string;
+  wheelSpin: number; looseCannonT: number;
+  slingRadius: number; slingAngle: number; slingAngularVelocity: number;
+  swingId: number; attackId: number; swingActive: boolean;
+  riftChambers: number; riftChamberCooldown: number; riftFireCooldown: number; riftBayonetSwingId: number;
+  riftTriggerHeld: boolean; riftRecoilUntil: number; riftRecoilHits: Set<object>;
+  backblastActive: boolean;
+  weaponEvents: BladeWeaponEvent[];
+  chainPoints: BladePoint[];
+  chainPrevious: BladePoint[];
+  slingWorldCooldown: number;
 
   constructor() {
     this.x = CONFIG.view.w * 0.5;
@@ -64,7 +74,7 @@ abstract class BladeCore {
     this.throwCooldownMult = 1;   // shop: faster release recovery between throws
     this.embeddedNew = false;     // set the frame a flying blade embeds (for lob shockwave)
     this.caughtNew = false;       // set when a return completes (normalized catch event)
-    this.model = "sword";         // visual: sword | hammer | spear | chainblade | ringblade
+    this.model = "sword";         // visual: sword | hammer | greatsword | chainblade | riftlock
     this.weapon = null;
     this.channelMods = { throwPower: 1, throwSpeed: 1, remoteRange: 1, secondaryPower: 1, returnSpeed: 1, controlDuration: 1 };
     this.throwId = 0;
@@ -74,21 +84,36 @@ abstract class BladeCore {
     this.secondaryActive = false;
     this.secondaryQueued = false;
     this.secondaryStartedNew = false;
-    this.anchorTarget = null;
-    this.anchorTerrain = false;
+    this.hookTarget = null;
+    this.threadcutRoute = [];
+    this.threadcutIndex = -1;
     this.linkT = 0;
     this.linkBrokenNew = false;
-    this.circuitEnergy = 0;
-    this.circuitEnergyMax = 0;
-    this.circuitOrbit = 0;
-    this.orbit = 0;
-    this.orbitDir = 0;
-    this._orbitAngle = null;
     this.tension = 0;
     this._repeatHits = new Map();
     this._lastHand = null;
     this.hostile = false;          // Source capture: the flying blade can temporarily turn against its owner
     this.stolenBy = null;          // actor currently controlling that hostile flight
+    this.wheelSpin = 0;
+    this.looseCannonT = 0;
+    this.slingRadius = 0;
+    this.slingAngle = 0;
+    this.slingAngularVelocity = 0;
+    this.swingId = 0;
+    this.attackId = 0;
+    this.swingActive = false;
+    this.riftChambers = 0;
+    this.riftChamberCooldown = 0;
+    this.riftFireCooldown = 0;
+    this.riftBayonetSwingId = -1;
+    this.riftTriggerHeld = false;
+    this.riftRecoilUntil = 0;
+    this.riftRecoilHits = new Set();
+    this.backblastActive = false;
+    this.weaponEvents = [];
+    this.chainPoints = [];
+    this.chainPrevious = [];
+    this.slingWorldCooldown = 0;
   }
 
   forceEmbed(): void {
@@ -169,15 +194,6 @@ abstract class BladeCore {
   }
 
   _recomputeTip(dt: number): void {
-    if (this.model === "ringblade") {
-      this.prevTipX = this.tipX; this.prevTipY = this.tipY;
-      this.tipX = this.x; this.tipY = this.y;
-      this.tipVX = this.vx; this.tipVY = this.vy;
-      this.tipSpeed = len(this.tipVX, this.tipVY);
-      const target = clamp((this.tipSpeed - CONFIG.blade.minHitSpeed) / 3000, 0, 1);
-      this.glowV = lerp(this.glowV, target, clamp(10 * dt, 0, 1));
-      return;
-    }
     const L = this.curLength;
     this.prevTipX = this.tipX;
     this.prevTipY = this.tipY;
@@ -191,11 +207,7 @@ abstract class BladeCore {
   }
 
   _pushTrail(): void {
-    if (this.model === "ringblade") {
-      const motion = len(this.vx, this.vy), a = motion > 1 ? Math.atan2(this.vy, this.vx) + Math.PI / 2 : this.angle + Math.PI / 2;
-      const r = 18 * (this.state === "held" ? 1 : this.throwSizeMult), px = Math.cos(a) * r, py = Math.sin(a) * r;
-      this.trail.push({ hx: this.x - px, hy: this.y - py, tx: this.x + px, ty: this.y + py });
-    } else this.trail.push({ hx: this.x, hy: this.y, tx: this.tipX, ty: this.tipY });
+    this.trail.push({ hx: this.x, hy: this.y, tx: this.tipX, ty: this.tipY });
     if (this.trail.length > CONFIG.juice.trailSamples) this.trail.shift();
   }
 
@@ -225,14 +237,11 @@ abstract class BladeCore {
     return CONFIG.blade.throw.reclaimDistance * this.channel("remoteRange") + CONFIG.blade.throw.returnSpeed * this.recallWindow;
   }
 
-  linkRange(): number {
-    if (this.weapon?.id === "spear" && this.freeRecall) return Infinity;
-    return CONFIG.blade.throw.reclaimDistance * this.channel("remoteRange") + CONFIG.blade.throw.returnSpeed * this.recallWindow;
-  }
+  linkRange(): number { return this.recallRange(); }
 
   _actionPoint(): BladePoint {
-    if (this.anchorTarget && !this.anchorTarget.dead && !this.anchorTarget.dying) return { x: this.anchorTarget.x, y: this.anchorTarget.y };
-    if (this.weapon && (this.weapon.id === "spear" || this.weapon.id === "chainblade")) return { x: this.tipX, y: this.tipY };
+    if (this.hookTarget && !this.hookTarget.dead && !this.hookTarget.dying) return { x: this.hookTarget.x, y: this.hookTarget.y };
+    if (this.weapon?.id === "chainblade") return { x: this.tipX, y: this.tipY };
     return { x: this.x, y: this.y };
   }
 
@@ -242,9 +251,7 @@ abstract class BladeCore {
 
   actionRange(): number {
     const id = this.weapon?.id;
-    if (id === "ringblade" && this.state === "circuiting") return Infinity;
-    if (id === "spear" && ["flying", "embedded", "reeling"].includes(this.state)) return this.linkRange();
-    if (id === "chainblade" && ["flying", "latched", "yanking"].includes(this.state)) return this.linkRange();
+    if (id === "chainblade" && ["flying", "hooked", "slinging"].includes(this.state)) return this.linkRange();
     return this.recallRange();
   }
 
@@ -271,27 +278,12 @@ abstract class BladeCore {
     this.y = ty - dy * this.curLength;
   }
 
-  _updateWeaponMeters(dt: number, hand: BladePoint): void {
+  _updateWeaponMeters(_dt: number, hand: BladePoint): void {
     const chain = this.weapon?.id === "chainblade";
     const reach = Math.max(1, CONFIG.blade.maxReach * 1.25);
     const visibleDistance = chain ? len(this.tipX - hand.x, this.tipY - hand.y) : len(this.x - hand.x, this.y - hand.y);
     const effectiveExtension = chain ? Math.max(0, visibleDistance - this.curLength) : visibleDistance;
     this.tension = clamp(effectiveExtension / reach, 0, 1);
-    if (this.weapon?.id !== "ringblade") { this.orbit = Math.max(0, this.orbit - dt); this._orbitAngle = null; return; }
-    const W = CONFIG.weapons.ringblade;
-    const a = Math.atan2(this.y - hand.y, this.x - hand.x);
-    if (this._orbitAngle != null) {
-      let da = a - this._orbitAngle;
-      while (da > Math.PI) da -= Math.PI * 2;
-      while (da < -Math.PI) da += Math.PI * 2;
-      const dir = Math.sign(da);
-      if (dir && this.orbitDir && dir !== this.orbitDir) this.orbit *= W.orbitReverseLoss;
-      if (dir) this.orbitDir = dir;
-      const angularSpeed = Math.abs(da) / Math.max(dt, 0.001);
-      if (angularSpeed > 1.4 && this.tipSpeed > CONFIG.blade.minHitSpeed * 0.55) this.orbit = clamp(this.orbit + angularSpeed * W.orbitBuild * dt * 0.16, 0, 1);
-      else this.orbit = Math.max(0, this.orbit - W.orbitDecay * dt);
-    }
-    this._orbitAngle = a;
   }
 
   _updateHeld(dt: number, hand: BladePoint): void {
@@ -348,8 +340,19 @@ abstract class BladeCore {
     this.angle = lerpAngle(this.angle, aimAngle, clamp(B.angleSmooth * dt, 0, 1));
 
     this._recomputeTip(dt);
+    this._updateSwingIdentity();
     this._pushTrail();
   }
+
+  _updateSwingIdentity(): void {
+    const threshold = CONFIG.blade.minHitSpeed;
+    if (this.tipSpeed >= threshold && !this.swingActive) {
+      this.swingActive = true;
+      this.swingId += 1;
+    } else if (this.tipSpeed < threshold * 0.45) this.swingActive = false;
+  }
+
+  claimAttack(): number { this.attackId += 1; return this.attackId; }
 
   abstract _updateThrown(dt: number, player: BladePlayerPort, platforms: readonly BladePlatformPort[]): void;
 }

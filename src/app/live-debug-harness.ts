@@ -1,13 +1,20 @@
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
-import type { GameRun } from "./game-runtime-state";
+import type { GameEnemy, GameProjectile, GameRun } from "./game-runtime-state";
 import type { LiveGameHostState } from "./live-game-host-state";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import type { BossId } from "../gameplay/run/content-director";
+import type { RunPhase } from "../gameplay/run/lifecycle";
 import { eligibleTierChoices } from "../gameplay/run/reward-selection";
 import type { UpgradeDefinition } from "../gameplay/upgrades";
 import type { LegacyAppScreen, LegacyTransitionContext } from "./legacy-state-controller";
 
-interface DebugLifecycle { clearWave(): void; prepareReward(reward: "draft" | "boss"): void; terminate(outcome: "defeat" | "victory"): void }
+export interface DebugLifecycle {
+  readonly phase: RunPhase;
+  activateWave(): void;
+  clearWave(): void;
+  prepareReward(reward: "draft" | "boss"): void;
+  terminate(outcome: "defeat" | "victory"): void;
+}
 interface DebugCinema { active: boolean; beat: unknown; cancel(reason: string): void; requestSkip(): void; advance(): void }
 interface DebugStage { index: number; current: unknown; platforms: unknown[] }
 
@@ -36,6 +43,7 @@ export interface LiveDebugHarnessContext {
   readonly selectSettingsTab: (tab: string) => void;
   readonly auditEffects: () => object;
   readonly snapshot: () => object;
+  readonly tutorialSnapshot: () => object;
   readonly stopRecording: () => void;
   readonly install: (api: object) => void;
 }
@@ -46,6 +54,14 @@ function runOf(state: LiveGameHostState): GameRun {
   return run;
 }
 
+export function clearPreparedOrActiveDebugWave(lifecycle: DebugLifecycle): void {
+  if (lifecycle.phase === "wave-prepared") lifecycle.activateWave();
+  if (lifecycle.phase !== "wave-active") {
+    throw new Error(`Debug journey requires an active or prepared wave, received ${lifecycle.phase}`);
+  }
+  lifecycle.clearWave();
+}
+
 /** Installs the browser-journey control surface without leaking it into production. */
 export function installLiveDebugHarness(context: LiveDebugHarnessContext): void {
   if (!context.enabled) return;
@@ -53,6 +69,100 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
   const clearCombat = (): void => { context.state.setEnemies([]); context.state.setProjectiles([]); };
   context.install(Object.freeze({
     startMode(mode?: RunMode, difficulty?: RunDifficulty) { context.startRun(mode ?? "endless", difficulty ?? "normal"); },
+    /** Exact-tick parity fixture: author one Charger after the run exists, before its next step. */
+    prepareEnemyParityScenario() {
+      const player = context.state.player();
+      if (player === undefined) throw new Error("Enemy parity scenario requires a live player");
+      player.x = context.width / 2; player.y = d.CONFIG.world.groundY - player.hh;
+      player.vx = 0; player.vy = 0; player.onGround = true;
+      const enemy = new d.Charger(context.width / 2 + 300,
+        d.CONFIG.world.groundY - d.CONFIG.enemy.h / 2) as GameEnemy;
+      Object.assign(enemy, {
+        vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 0, hitCd: 0, aliveT: 0,
+        behavior: "bull", atk: "windup", atkT: 0.3, atkMax: 0.3, atkDir: -1,
+        atkCd: 0, chargePower: 0.5, chargeMult: 1, canClimb: false, climber: false,
+        variant: "", variantName: "", affixes: [], affixCount: 0,
+      });
+      context.state.setEnemies([enemy]);
+      context.state.setProjectiles([]);
+    },
+    /** Exact-tick parity fixture: enter the real Ranged telegraph, fire, and kite loop. */
+    prepareRangedParityScenario() {
+      const player = context.state.player();
+      if (player === undefined) throw new Error("Ranged parity scenario requires a live player");
+      Object.assign(player, { x: 450, y: d.CONFIG.world.groundY - player.hh,
+        vx: 0, vy: 0, onGround: true });
+      const enemy = new d.Ranged(1150, d.CONFIG.world.groundY - d.CONFIG.ranged.h / 2) as
+        GameEnemy & { state: string; aimTimer: number; windT: number; windMax: number };
+      Object.assign(enemy, {
+        vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 0, hitCd: 0, aliveT: 0,
+        behavior: "", state: "kite", aimTimer: 0.05, windT: 0, windMax: 0,
+        fireRateMult: 1, auraHaste: 1, auraDmg: 1, volley: 1,
+        canClimb: false, climber: false, variant: "", variantName: "", affixes: [], affixCount: 0,
+      });
+      context.state.setEnemies([enemy]);
+      context.state.setProjectiles([]);
+    },
+    /** Exact-tick parity fixture: cross one hostile shot with a real high-speed held tip. */
+    prepareProjectileParryScenario() {
+      const player = context.state.player(), blade = context.state.blade(), run = runOf(context.state);
+      if (player === undefined || blade === undefined) throw new Error("Parry parity scenario requires a live player and blade");
+      const owner = new d.Ranged(1500, d.CONFIG.world.groundY - d.CONFIG.ranged.h / 2) as GameEnemy;
+      Object.assign(owner, {
+        vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 9, hitCd: 0, aliveT: 0,
+        behavior: "", state: "kite", aimTimer: 9, windT: 0, windMax: 0,
+        canClimb: false, climber: false, variant: "", variantName: "", affixes: [], affixCount: 0,
+      });
+      const actualTipX = blade.tipX, actualTipY = blade.tipY;
+      const shot = new d.Projectile(blade.x + (actualTipX - blade.x) * 0.62,
+        blade.y + (actualTipY - blade.y) * 0.62, -800, 0) as GameProjectile;
+      shot.r = 18; shot.owner = owner; shot.sourceEnemy = owner; shot.dmg = d.CONFIG.proj.dmg;
+      Object.assign(blade, { state: "held", vx: 0, vy: 0,
+        tipX: actualTipX - 28, tipY: actualTipY, prevTipX: actualTipX - 28, prevTipY: actualTipY });
+      run.mods.parryGuard = true; run.weaponStats.perfectParries = 0; player.guardT = 0;
+      context.state.setEnemies([owner]);
+      context.state.setProjectiles([shot]);
+    },
+    /** Exact-tick parity fixture: attach THE ECHO and observe deterministic neutral pursuit. */
+    prepareMirrorPursuitScenario() {
+      const player = context.state.player(), run = runOf(context.state);
+      if (player === undefined) throw new Error("Mirror parity scenario requires a live player");
+      Object.assign(player, { x: 350, y: d.CONFIG.world.groundY - player.hh,
+        vx: 0, vy: 0, onGround: true, lastTrickT: 0, lastTrickKind: "" });
+      d.Mirror.active = false; d.Mirror.host = null; d.Mirror.fxq.length = 0;
+      const host = new d.MirrorHost(1200, d.CONFIG.world.groundY - d.CONFIG.echo.h / 2, run.mods) as
+        unknown as GameEnemy & { _live: boolean };
+      Object.assign(host, {
+        _live: true, vx: 0, vy: 0, onGround: true, spawnT: 0, introT: 0,
+        stun: 0, hitCd: 0, aliveT: 0, variant: "", variantName: "", affixes: [], affixCount: 0,
+      });
+      context.state.setEnemies([host]);
+      context.state.setProjectiles([]);
+    },
+    /** Exact-tick parity fixture: drive a real held strike through damage, kill, and cleanup. */
+    prepareCombatParityScenario() {
+      const player = context.state.player(), blade = context.state.blade();
+      if (player === undefined || blade === undefined) throw new Error("Combat parity scenario requires a live player and blade");
+      const dx = blade.tipX - blade.x, dy = blade.tipY - blade.y;
+      const survivor = new d.Charger(blade.x + dx * 0.48, blade.y + dy * 0.48) as GameEnemy;
+      const victim = new d.Charger(blade.x + dx * 0.78, blade.y + dy * 0.78) as GameEnemy;
+      for (const enemy of [survivor, victim]) Object.assign(enemy, {
+        vx: 0, vy: 0, onGround: false, spawnT: 0, stun: 0.75, hitCd: 0, aliveT: 0,
+        behavior: "bull", atk: "idle", atkT: 0, atkCd: 9, canClimb: false, climber: false,
+        variant: "", variantName: "", affixes: [], affixCount: 0,
+      });
+      victim.hp = 1; victim.hpDisplay = 1;
+      Object.assign(blade, { state: "held", vx: 1800, vy: 0 });
+      context.state.setEnemies([survivor, victim]);
+      context.state.setProjectiles([]);
+    },
+    /** Journey-only: drop the live boss to a health fraction so phase gates are reachable. */
+    setBossHealthFraction(fraction: number) {
+      const boss = context.state.enemies().find((enemy) => enemy.isBoss && !enemy.dead);
+      if (boss === undefined) throw new Error("No live boss to damage");
+      boss.hp = Math.max(1, Math.round(boss.maxHp * fraction));
+      boss.hpDisplay = boss.hp;
+    },
     startBoss(boss: BossId, difficulty?: RunDifficulty) {
       context.selectBoss(boss); context.startRun("bossonly", difficulty ?? "normal");
     },
@@ -60,16 +170,37 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       const selected = { expanded: true, rerolls: 2, reserve: true, ...options };
       context.startRun("endless", "normal");
       const run = runOf(context.state); run.wave = Math.max(1, run.wave); run.spawnQueue.length = 0; context.state.setEnemies([]);
-      context.lifecycle.clearWave(); context.lifecycle.prepareReward("draft");
+      clearPreparedOrActiveDebugWave(context.lifecycle); context.lifecycle.prepareReward("draft");
       run.mods.expandedDraft = selected.expanded; run.mods.draftRerolls = Math.max(0, selected.rerolls | 0);
       run.mods.reservePick = selected.reserve; context.openDraft(); document.exitPointerLock();
     },
     openTierUp() {
       context.startRun("endless", "normal");
       const run = runOf(context.state); run.wave = Math.max(1, run.wave); run.spawnQueue.length = 0; context.state.setEnemies([]);
-      context.lifecycle.clearWave(); context.lifecycle.prepareReward("boss");
+      clearPreparedOrActiveDebugWave(context.lifecycle); context.lifecycle.prepareReward("boss");
       for (const upgrade of d.UPGRADES.filter((candidate) => candidate.tiers != null).slice(0, 4)) context.applyUpgrade(upgrade);
       context.openTier(eligibleTierChoices(d.UPGRADES, run.mods.owned, run.mods.tier)); document.exitPointerLock();
+    },
+    advanceAgentJourney(kind: "draft" | "tier") {
+      const run = runOf(context.state);
+      run.spawnQueue.length = 0;
+      clearCombat();
+      clearPreparedOrActiveDebugWave(context.lifecycle);
+      if (kind === "draft") {
+        context.lifecycle.prepareReward("draft");
+        run.mods.expandedDraft = false;
+        run.mods.reservePick = false;
+        run.mods.draftRerolls = 0;
+        context.openDraft();
+      } else {
+        run.wave = Math.max(10, run.wave);
+        context.lifecycle.prepareReward("boss");
+        for (const upgrade of d.UPGRADES.filter((candidate) => candidate.tiers != null).slice(0, 4)) {
+          context.applyUpgrade(upgrade);
+        }
+        context.openTier(eligibleTierChoices(d.UPGRADES, run.mods.owned, run.mods.tier));
+      }
+      document.exitPointerLock();
     },
     openTerminal(kind: "campaignWin" | "win" | "continue" | "gameover") {
       const campaign = kind === "campaignWin"; context.startRun(campaign ? "campaign" : "endless", "normal");
@@ -113,6 +244,6 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
     pause() { if (context.screen() === "playing") context.setScreen("paused"); },
     resume() { if (context.screen() === "paused") context.setScreen("playing"); },
     openSettings(tab?: string) { if (context.screen() !== "menu") context.setScreen("menu"); context.setScreen("settings", { returnTo: "menu" }); if (tab) context.selectSettingsTab(tab); },
-    auditEffects: context.auditEffects, state: context.snapshot,
+    auditEffects: context.auditEffects, tutorial: context.tutorialSnapshot, state: context.snapshot,
   }));
 }

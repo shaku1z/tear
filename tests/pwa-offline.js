@@ -5,7 +5,7 @@ const http = require("node:http");
 const path = require("node:path");
 
 (async () => {
-  const root = path.resolve(__dirname, "..", "dist", "standalone");
+  const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
   const server = http.createServer((request, response) => {
     const pathname = new URL(request.url, "http://127.0.0.1").pathname;
     const relative = pathname === "/" ? "index.html" : pathname.slice(1);

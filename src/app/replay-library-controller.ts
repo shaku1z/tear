@@ -28,14 +28,14 @@ export class ReplayLibraryController {
     const local = this.#ports.vault.get(id);
     if (local !== null) {
       this.#setMessage(from, "");
-      if (!this.#ports.enterReplay(local, from)) this.#setMessage(from, "couldn't load that recording");
+      if (!this.#ports.enterReplay(local, from)) this.#setMessage(from, "replay unavailable — it uses an older weapon runtime");
       return;
     }
     this.#setMessage(from, "loading replay…");
     void this.#ports.cloud.loadReplay(id).then((record) => {
       if (sequence !== this.#watchSequence) return;
       this.#setMessage(from, "");
-      if (record === null || !this.#ports.enterReplay(record, from)) this.#setMessage(from, "couldn't load that replay");
+      if (record === null || !this.#ports.enterReplay(record, from)) this.#setMessage(from, "replay unavailable — it uses an older weapon runtime");
     }).catch(() => { if (sequence === this.#watchSequence) this.#setMessage(from, "couldn't load that replay"); });
   }
 

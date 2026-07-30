@@ -18,6 +18,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 11.15.0
@@ -27,6 +29,16 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
+      - name: Select and run diff-aware TearBench evidence
+        shell: bash
+        run: |
+          mkdir -p artifacts/tearbench
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}" > artifacts/tearbench/changed-files.txt
+          else
+            git diff --name-only "${{ github.sha }}^" "${{ github.sha }}" > artifacts/tearbench/changed-files.txt
+          fi
+          pnpm tearbench ci --files-from artifacts/tearbench/changed-files.txt
       - run: xvfb-run -a pnpm check
         env:
           TEAR_HEADED_VISIBILITY: "1"
@@ -36,5 +48,6 @@ jobs:
           path: |
             dist
             artifacts/tear-crazygames.zip
+            artifacts/tearbench
           if-no-files-found: error
           retention-days: 14

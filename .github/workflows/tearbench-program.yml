@@ -1,0 +1,87 @@
+name: TearBench Program
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+    - cron: "23 8 * * 0"
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Evidence profile
+        required: true
+        default: nightly
+        type: choice
+        options:
+          - nightly
+          - weekly-endurance
+          - release-candidate
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tearbench-program-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  nightly:
+    if: github.event_name == 'schedule' && github.event.schedule == '17 6 * * *' || inputs.profile == 'nightly'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: xvfb-run -a pnpm check
+        env:
+          TEAR_HEADED_VISIBILITY: "1"
+
+  weekly-endurance:
+    if: github.event_name == 'schedule' && github.event.schedule == '23 8 * * 0' || inputs.profile == 'weekly-endurance'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:weekly
+
+  release-candidate:
+    if: inputs.profile == 'release-candidate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: xvfb-run -a pnpm check
+        env:
+          TEAR_HEADED_VISIBILITY: "1"
+      - run: pnpm test:endurance
+      - run: pnpm tearbench certify --commit "${{ github.sha }}" --full-check passed
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tear-release-certificate
+          path: artifacts/tearbench/release-certificate.json
+          if-no-files-found: error
+          retention-days: 90
