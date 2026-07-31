@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-07-30. This records the first eighteen executable migration
+In progress as of 2026-07-30. This records the first nineteen executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -300,6 +300,31 @@ headless Tear gameplay portable.
   (untracked) and is the input the detached comparison will consume. This is
   live-side capture and live determinism only; no detached trace has been
   compared against it yet.
+- `tests/unit/detached-live-parity.test.ts` performs the comparison itself.
+  It hydrates the live State Forge origin snapshot into a world built by the
+  production composition, restores the live RNG state, replays the live
+  action schedule through the production opening phase, and hashes the same
+  `projectCanonicalGameplayState` projection the live authoritative step
+  hashes, so the two hash sequences are directly comparable.
+
+  **Measured result: 0 of 180 ticks agree.** That figure is reported, not
+  asserted upward. Two concrete divergences are recorded as assertions so
+  they cannot be quietly lost:
+
+  1. `run.runTime` advances in the live host (1.5 s over 180 ticks) and stays
+     at 0 in the detached world. Run-clock accumulation lives outside the two
+     combat phases, and the canonical projection includes `run.time`, so this
+     alone breaks every hash from the first tick.
+  2. After the same ticks and actions the detached player has travelled a
+     different distance (1466.9 versus 1541.9 on x), so at least one
+     movement-affecting update is still live-host-owned.
+
+  The detached replay is itself deterministic — two replays of one artifact
+  agree on every hash and on the whole outward effect sequence — and the
+  hydration rebuilds the live entity set. When either divergence is fixed its
+  assertion fails, forcing the finding to be re-recorded rather than deleted.
+  This is the honest current state of C27A parity: the comparison exists and
+  fails, and no replay, headless, or learning portability claim may be made.
 
 ## Remaining C27A work
 

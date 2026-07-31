@@ -58,8 +58,14 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
       const origin = environment.captureSnapshot(`${label}-origin`, "recorded-canonical");
       const hashes = [];
       const events = [];
+      const checkpoints = [];
       for (let tick = 1; tick <= scenarioValue.maxTicks; tick += 1) {
         const transition = environment.step(scheduledActions[tick] ?? []);
+        // A few full State Forge checkpoints make a hash mismatch diagnosable:
+        // they say WHICH field diverged, not merely that something did.
+        if (tick <= 3 || tick === 30 || tick === scenarioValue.maxTicks) {
+          checkpoints.push({ tick, state: environment.captureSnapshot(`${label}-tick-${String(tick)}`, "recorded-canonical").state });
+        }
         hashes.push({
           tick: transition.observation.tick,
           canonical: transition.info.canonicalStateHash,
@@ -68,7 +74,7 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
         for (const event of transition.events) events.push({ tick: event.tick, type: event.type });
       }
       return {
-        origin, hashes, events,
+        origin, hashes, events, checkpoints,
         rng: environment.rng(),
         finalObservation: environment.observe(),
       };
@@ -94,6 +100,7 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
   // deterministic before any detached comparison is meaningful.
   assert.deepEqual(second.hashes, first.hashes, "two live runs of one scenario must produce one hash sequence");
   assert.deepEqual(second.events, first.events, "two live runs of one scenario must emit one event sequence");
+  assert.ok(first.checkpoints.length >= 3, "the live trace must carry diagnostic state checkpoints");
   assert.deepEqual(second.rng, first.rng, "two live runs of one scenario must end on one RNG state");
 
   assert.ok(first.origin && typeof first.origin === "object", "the live trace must carry a State Forge origin snapshot");
@@ -101,6 +108,7 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
   fs.mkdirSync(path.dirname(ARTIFACT), { recursive: true });
   fs.writeFileSync(ARTIFACT, `${JSON.stringify({
     scenario, schedule, origin: first.origin, hashes: first.hashes, events: first.events,
+    checkpoints: first.checkpoints,
     rng: first.rng, capturedAt: new Date().toISOString(),
   }, null, 2)}\n`);
 

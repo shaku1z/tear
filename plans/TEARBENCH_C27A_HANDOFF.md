@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** eighteenth C27A foundation slice complete (the live parity trace
-is captured and live determinism is proven). This is not a C27A completion or release claim.
+**Status:** nineteenth C27A foundation slice complete (the live-versus-detached
+comparison runs and currently fails, with divergences recorded). This is not a C27A completion or release claim.
 
 ## Resume protocol (mandatory)
 
@@ -131,10 +131,17 @@ Before coding, read this file, then:
   page produce one hash sequence, one event sequence, and one RNG state. The
   artifact lands in `artifacts/tearbench/c27a/live-parity-trace.json`
   (untracked; regenerate with the gate).
+- The nineteenth slice ran the comparison. `tests/unit/detached-live-parity.test.ts`
+  hydrates the live origin snapshot into a production-composed world,
+  restores the live RNG, replays the live schedule through the opening phase,
+  and hashes the same canonical projection. **0 of 180 ticks agree.**
+  Recorded divergences: (1) `run.runTime` advances live and not detached, so
+  every hash breaks at tick 1; (2) the detached player ends 75 units short on
+  x. Both are asserted, so fixing either forces the finding to be updated.
 
 ## Latest evidence
 
-All of the following were run from this worktree after the live-trace slice:
+All of the following were run from this worktree after the parity-comparison slice:
 
 - `pnpm check:c27a:foundation` passed: typecheck, lint, architecture gate,
   20 test files / 64 tests, standalone test build, and
@@ -165,19 +172,17 @@ All of the following were run from this worktree after the live-trace slice:
 
 ## Exact next C27A boundary
 
-Both combat phases run detached and deterministically. The decisive missing
-evidence is now the comparison itself: capture a live trace of the same seed
-and scripted actions through the TearBench bridge (Class A exact advancement,
-`advanceExact`), then compare it tick for tick against the detached trace —
-canonical actions, gameplay events, RNG snapshots, and authoritative state
-hashes. Expect an initial mismatch and treat each difference as a finding: the
-live host still owns wave orchestration, kill scoring, run outcome, and
-cinematics, and the detached fixture stubs them, so the first comparison must
-either restrict the scenario to a window where those are inert or move the
-missing orchestration behind ports the detached world can call. Record every
-divergence in the checkpoint rather than narrowing the fixture until it agrees.
-No replay, headless, or learning portability claim may be made until that
-comparison passes on a real scenario.
+The comparison exists and fails at 0/180. Close the two recorded divergences,
+in order. First the run clock: find where the live host advances
+`run.runTime` (it is outside `runLiveOpeningPhase` and
+`runLiveCollisionPhase`) and move it behind a port the detached world calls,
+then re-measure. Second the movement gap: bisect it by comparing the
+per-tick player transform against the live checkpoints already in the
+artifact at ticks 1-3, 30, and 180 — the divergence is small and late, which
+points at an update the live host runs around the phases rather than at the
+physics itself. Add checkpoints at more ticks if the bisect needs them.
+Re-run the comparison after each fix and record the new figure in the
+checkpoint. Do not narrow the scenario to make the number look better.
 
 Preserve menu-time lazy construction and the one existing
 `TearSimulationRuntime`/scheduler, and extend the context only where real
