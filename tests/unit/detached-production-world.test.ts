@@ -3,83 +3,25 @@ import { describe, expect, it } from "vitest";
 import { EnvelopeSequencer, type CommandEnvelope } from "../../src/domain/envelopes";
 import type { GameAction } from "../../src/input/game-action";
 import { CONFIG } from "../../src/config/game-config";
-import { createLiveAuthoritativeInputAdapter } from "../../src/app/live-authoritative-input-adapter";
-import { createLiveWorldComposition, type LiveWorldSessionPort } from "../../src/app/live-world-composition";
-import {
-  createLiveWorldSimulationFactories,
-  type LiveWorldSimulationFactoryOptions,
-} from "../../src/app/live-world-simulation-factories";
-import type { GameRuntimeDependencies } from "../../src/app/game-runtime-dependencies";
 import { TearSimulationRuntime } from "../../src/gameplay/runtime/tear-simulation-runtime";
-import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
-import { createParticleSystem } from "../../src/presentation/particles";
 import { stableVerificationHash } from "../../src/replay/hash";
-import { createRunRandom } from "../../src/simulation/run-random";
+import { createDetachedWorld, DETACHED_PLATFORMS } from "./detached-world-harness";
 
-type Options = LiveWorldSimulationFactoryOptions;
 interface Platform { x: number; y: number; w: number; h: number; floor?: boolean; oneway?: boolean }
 
-const PLATFORMS: readonly Platform[] = Object.freeze([
-  { x: 0, y: CONFIG.world.groundY, w: CONFIG.view.w, h: CONFIG.view.h - CONFIG.world.groundY, floor: true },
-  { x: 650, y: 520, w: 300, h: 24, oneway: true },
-]);
-
-function silentSink(): unknown {
-  // Effects and audio are outward adapters; a detached world records nothing.
-  return new Proxy({}, { get: () => () => undefined });
-}
-
-function idleInput(): unknown {
-  const off = () => false;
-  return { right: off, left: off, up: off, down: off, dashPressed: off, jumpPressed: off, consumeThrow: off };
-}
+const PLATFORMS = DETACHED_PLATFORMS as readonly Platform[];
 
 /**
- * Builds a world with no DOM, canvas, screens, audio, storage, or live host,
- * using the same production composition the application uses.
+ * The narrowest detached step: production entity updates only, with no combat
+ * phase, live host, DOM, canvas, screens, audio, or storage.
  */
 function createDetachedProductionWorld(seed: string) {
-  const clock = createTearWorldClock();
-  const random = createRunRandom();
-  const effects = createParticleSystem();
-  random.streams.reset(seed);
-  const factories = createLiveWorldSimulationFactories({
-    clock, effects, sound: silentSink() as Options["sound"], input: idleInput() as Options["input"],
-    ui: silentSink() as Options["ui"],
-    random: { enemyAi: random.streams.stream("enemy-ai"), boss: random.streams.stream("boss") },
-  });
-  const dependencies = {
-    CLOCK: clock, GAME_RANDOM: random.service, GAME_RANDOM_STREAMS: random.streams, FX: effects,
-    Backdrop: { resetFx: () => undefined }, Mirror: { active: false, host: null }, BOSSFX: factories.enemyTypes.BOSSFX,
-    Player: factories.Player, Blade: factories.Blade, Projectile: factories.Projectile,
-    Charger: factories.enemyTypes.Charger, Ranged: factories.enemyTypes.Ranged, Flyer: factories.enemyTypes.Flyer,
-    Bomber: factories.enemyTypes.Bomber, Armored: factories.enemyTypes.Armored, Wraith: factories.enemyTypes.Wraith,
-    Chimera: factories.enemyTypes.Chimera, Warden: factories.enemyTypes.Warden, Colossus: factories.enemyTypes.Colossus,
-    Aldric: factories.enemyTypes.Aldric, Source: factories.enemyTypes.Source, Support: factories.enemyTypes.Support,
-    VoidWisp: factories.enemyTypes.VoidWisp, Boss: factories.enemyTypes.Boss,
-    MirrorHost: factories.mirrorTypes.MirrorHost, ReflectionEnemy: factories.mirrorTypes.ReflectionEnemy,
-  } as unknown as GameRuntimeDependencies;
-  const session: LiveWorldSessionPort = {
-    selectedWeapon: () => "sword", setSelectedWeapon: () => undefined,
-    outcome: () => null, setOutcome: () => undefined,
-    lastRecording: () => null, setLastRecording: () => undefined,
-    lastVaultId: () => null, setLastVaultId: () => undefined,
-    winSeconds: () => 0, setWinSeconds: () => undefined,
-  };
-  const world = createLiveWorldComposition({ dependencies, session, restoreConfiguration: () => undefined });
-  world.context.services.random.resetRun(seed);
-  const player = world.entities.createPlayer(400, CONFIG.world.groundY - 80);
-  const blade = world.entities.createBlade();
-  world.state.setPlayer(player);
-  world.state.setBlade(blade);
-  world.state.setEnemies([
-    world.entities.createEnemy("charger", 900, CONFIG.world.groundY - CONFIG.enemy.h / 2, null as never),
-    world.entities.createEnemy("flyer", 1_100, 300, null as never),
-  ]);
-  const input = createLiveAuthoritativeInputAdapter({
-    player: () => world.state.player() as never,
-    blade: () => world.state.blade() as never,
-    aimRadius: () => CONFIG.blade.aimRadius,
+  const { world, clock, effects, random, factories, input } = createDetachedWorld({
+    seed,
+    enemies: [
+      { id: "charger", x: 900, y: CONFIG.world.groundY - CONFIG.enemy.h / 2 },
+      { id: "flyer", x: 1_100, y: 300 },
+    ],
   });
   const runtime = new TearSimulationRuntime<Record<string, unknown>>({
     actionPort: input.actionPort,

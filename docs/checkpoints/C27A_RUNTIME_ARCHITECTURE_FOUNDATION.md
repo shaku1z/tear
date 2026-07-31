@@ -265,6 +265,10 @@ headless Tear gameplay portable.
   orchestration, and cinematics, which remain live-host-owned. This is a
   detached opening-phase determinism proof, not a full combat tick and not
   live-versus-detached parity.
+- `tests/unit/detached-world-harness.ts` is now the one detached-world
+  builder both fixtures use. It takes a seed, an optional run mode, and the
+  enemy factory ids to spawn, so the next phase fixture starts from a world
+  rather than re-deriving one.
 
 ## Remaining C27A work
 

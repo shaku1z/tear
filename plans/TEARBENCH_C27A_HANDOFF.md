@@ -115,6 +115,9 @@ Before coding, read this file, then:
   contains `sound:swing`, `fireDashStart`, and `sound:land`, proving real
   prelude/locomotion/transport/enemy code ran. Same-seed runs agree on
   hashes and on the outward sequence.
+- Both detached fixtures now share `tests/unit/detached-world-harness.ts`,
+  which builds the world, run, actors, and input adapter from a seed and an
+  enemy spawn list. Write the collision fixture against that harness.
 
 ## Latest evidence
 
