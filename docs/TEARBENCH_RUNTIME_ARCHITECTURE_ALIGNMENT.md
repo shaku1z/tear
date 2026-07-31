@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first twenty executable C27A slices are complete:
+The first twenty-one executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -171,9 +171,16 @@ The first twenty executable C27A slices are complete:
   attempt did not run), the captured configuration (now applied through
   one shared `applyTearCodecConfiguration`), and wave content (the
   detached harness now runs the production content and wave runtimes).
-  This is one scenario, not certification: other modes, bosses,
-  cinematics, terminal outcomes, and longer runs are untested, and outward
-  effects are still recorded rather than performed.
+- The comparison is now a matrix, not one case. Four scenarios are captured and
+  compared: endless/normal/sword, endless/hard/hammer, playground/normal/sword,
+  and a 600-tick endless run. Live and detached agree on **every** authoritative
+  state hash of **every** scenario, and the final run clock and player transform
+  match to the last float bit. Different difficulties, weapons, and modes
+  execute different production code, so live and DOM-free execution
+  demonstrably share the production simulation composition across this matrix.
+  The gate refuses to run with fewer than four distinct captured scenarios.
+  Still untested: boss waves, cinematics, and terminal outcomes; outward
+  effects remain recorded rather than performed.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

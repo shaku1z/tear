@@ -114,7 +114,7 @@ Named status:
 - **C25:** physical/black-box foundation verified; exit open.
 - **C26:** regression discovery passed `pnpm check:c26` on 2026-07-28.
 - **C27:** recorder/capsule foundation only; checkpoint open.
-- **C27A:** twenty shared-world architecture slices in this tree; blocking and incomplete.
+- **C27A:** twenty-one shared-world architecture slices in this tree; blocking and incomplete.
 - **C28-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -169,7 +169,7 @@ Do not claim TearBot automatically learns merely because scripted policies, trai
 
 Read [`TEARBENCH_C27A_HANDOFF.md`](TEARBENCH_C27A_HANDOFF.md) before editing.
 
-Twenty C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, focused tests, and physical browser diagnostics.
+Twenty-one C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, focused tests, and physical browser diagnostics.
 
 Important files:
 
@@ -188,7 +188,7 @@ Important files:
 
 ### Exact next slice
 
-The live-versus-detached comparison passes on the parity scenario (180/180 authoritative hashes). Widen it: add scenarios for other modes, difficulties, a boss wave, and a longer run; extend the detached harness to kill scoring, run outcome, and cinematics so a terminal run compares end to end; then make emitted effects comparable, not just recorded. Every divergence is a composition defect to fix, never a tolerance to widen.
+Live-versus-detached parity now holds on a four-scenario matrix (endless normal/sword, endless hard/hammer, playground, and a 600-tick run) with every authoritative hash equal. Widen it to the untested regions in order: a boss wave, terminal outcomes (kill runtime and run outcome in the detached harness), cinematics, and comparable outward effects. Every divergence is a defect to fix in the composition, never a tolerance to widen.
 
 Preserve:
 

@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** twentieth C27A foundation slice complete (the live-versus-detached
-comparison passes on the parity scenario, 180/180 ticks). This is not a C27A completion or release claim.
+**Status:** twenty-first C27A foundation slice complete (live-versus-detached
+parity holds across a four-scenario matrix).
 
 ## Resume protocol (mandatory)
 
@@ -145,6 +145,12 @@ Before coding, read this file, then:
   hydrator and shared with the live State Forge restore; (3) build the
   production content and wave runtimes over the detached world, so wave
   planning, spawn scheduling, and enemy construction are the real ones.
+- The twenty-first slice widened parity from one scenario to a matrix. The
+  live capture now drives endless/normal/sword, endless/hard/hammer,
+  playground/normal/sword, and a 600-tick endless run, writing one artifact
+  per scenario plus an index. The comparison discovers every artifact and
+  asserts full per-tick hash equality for each. All four match on every tick;
+  the gate fails if fewer than four distinct scenarios were captured.
 
 ## Latest evidence
 
@@ -179,17 +185,17 @@ All of the following were run from this worktree after the parity-passing slice:
 
 ## Exact next C27A boundary
 
-Parity holds on one scenario. Widen it until the shared-core claim is real
-rather than anecdotal. In order: (1) add parity scenarios for other modes and
-difficulties, a boss wave, and a longer run, driving each through the same
-capture-and-compare pair; (2) extend the detached harness to the kill runtime,
-run outcome, and cinematic orchestration so a terminal run can be compared end
-to end; (3) make the outward effect surfaces (audio, particles, achievements,
-profile) comparable rather than merely recorded, so a divergence in what the
-world *emits* is caught as well as what it *is*. Each new scenario is one
-browser capture plus one comparison, and every divergence is a defect to fix
-in the composition, never a tolerance to widen or a field to drop from the
-projection.
+Parity holds across four scenarios. Keep widening until the untested regions
+are covered, in order: (1) a boss wave — reach one by capturing a longer run
+or by launching a forged State Forge state, since the detached side hydrates
+whatever the live world held; (2) terminal outcomes — extend the detached
+harness to the kill runtime and run outcome so a death or win can be compared
+end to end; (3) cinematics, which currently short-circuit in the detached
+host; (4) make the outward effect surfaces comparable rather than merely
+recorded, so a divergence in what a world *emits* is caught as well as what it
+*is*. Each addition is one browser capture plus one comparison, and every
+divergence is a defect to fix in the composition — never a tolerance to widen,
+a scenario to shorten, or a field to drop from the projection.
 
 Preserve menu-time lazy construction and the one existing
 `TearSimulationRuntime`/scheduler, and extend the context only where real

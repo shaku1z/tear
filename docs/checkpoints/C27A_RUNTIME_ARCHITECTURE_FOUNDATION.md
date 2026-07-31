@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-07-30. This records the first twenty executable migration
+In progress as of 2026-07-30. This records the first twenty-one executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -366,6 +366,22 @@ particles, achievements, profile, pointer) instead of performing them, and
 kill scoring, run outcome, and cinematic orchestration are not yet
 exercised. It is not a C27A completion claim, and it is not certification
 of replay, headless execution, or learning portability.
+
+- The parity comparison is now a matrix rather than one case. The live
+  capture drives four scenarios — endless/normal/sword, endless/hard/hammer,
+  playground/normal/sword, and a 600-tick endless run — each captured twice
+  for live determinism and written to its own artifact, with an index file.
+  The detached comparison discovers every artifact and asserts, per scenario,
+  that hydration rebuilds the live entity set, that the detached replay is
+  deterministic, and that the detached canonical hash equals the live
+  authoritative hash on **every** tick.
+
+  **All four scenarios match on every tick** (180, 180, 180, and 600), and
+  the final run clock and player x match the live values to the last float
+  bit. Different difficulties, weapons, and modes execute different
+  production code, so the shared-core claim now rests on a matrix rather than
+  an anecdote. The gate refuses to run with fewer than four distinct captured
+  scenarios, so the matrix cannot silently shrink back to one case.
 
 ## Remaining C27A work
 

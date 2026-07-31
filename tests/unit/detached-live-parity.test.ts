@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -10,7 +10,7 @@ import { applyTearCodecConfiguration, hydrateTearCodecWorld, type TearCodecValue
 import { CONFIG } from "../../src/config/game-config";
 import { createDetachedCombatPhases, createDetachedWaveRuntime, createDetachedWorld } from "./detached-world-harness";
 
-const ARTIFACT = resolve("artifacts/tearbench/c27a/live-parity-trace.json");
+const ARTIFACT_DIR = resolve("artifacts/tearbench/c27a");
 
 interface LiveTrace {
   readonly scenario: { readonly seed: string; readonly maxTicks: number;
@@ -23,9 +23,13 @@ interface LiveTrace {
     readonly canonical: Record<string, unknown> }[];
 }
 
-function readTrace(): LiveTrace | null {
-  if (!existsSync(ARTIFACT)) return null;
-  return JSON.parse(readFileSync(ARTIFACT, "utf8")) as LiveTrace;
+/** Every captured scenario, so the matrix is compared rather than one case. */
+function readTraces(): readonly LiveTrace[] {
+  if (!existsSync(ARTIFACT_DIR)) return [];
+  return readdirSync(ARTIFACT_DIR)
+    .filter((name) => name.startsWith("c27a.live-parity-trace") && name.endsWith(".json"))
+    .sort()
+    .map((name) => JSON.parse(readFileSync(resolve(ARTIFACT_DIR, name), "utf8")) as LiveTrace);
 }
 
 /**
@@ -99,83 +103,87 @@ function replayDetached(trace: LiveTrace) {
   return { detached, hashes, states, outward, staged };
 }
 
-const trace = readTrace();
+const traces = readTraces();
 
-function requireTrace(): LiveTrace {
-  if (trace === null) throw new Error("live parity trace artifact is missing");
-  return trace;
-}
-
-describe.skipIf(trace === null)("detached world against the live trace", () => {
-  it("hydrates the live origin snapshot into a production-composed world", () => {
-    const live = requireTrace();
-    const { staged, detached } = replayDetached(live);
-
-    expect(staged.player).toBeTruthy();
-    expect(staged.blade).toBeTruthy();
-    expect(detached.world.state.run()).not.toBeNull();
-    // Whatever the live run had spawned by the origin tick must be rebuilt,
-    // and the replay may then spawn more through the production wave runtime.
-    expect(detached.world.state.enemies().length).toBeGreaterThanOrEqual(staged.enemies.length);
+describe.skipIf(traces.length === 0)("detached world against the live trace", () => {
+  it("compares every captured scenario", () => {
+    // A missing matrix would silently reduce this gate to one case.
+    expect(traces.length).toBeGreaterThanOrEqual(4);
+    expect(new Set(traces.map((entry) => entry.scenario.seed)).size).toBe(traces.length);
   });
 
-  it("replays the live action schedule deterministically after hydration", () => {
-    const live = requireTrace();
-    const first = replayDetached(live);
-    const second = replayDetached(live);
+  for (const live of traces) {
+    const label = `${live.scenario.start.mode}/${live.scenario.start.difficulty}/${live.scenario.start.weapon}` +
+      ` x${String(live.scenario.maxTicks)}`;
 
-    expect(second.hashes).toEqual(first.hashes);
-    expect(second.outward).toEqual(first.outward);
-    expect(first.hashes).toHaveLength(live.scenario.maxTicks);
-  });
+    it(`hydrates the live origin snapshot into a production-composed world (${label})`, () => {
+      const { staged, detached } = replayDetached(live);
 
-  it("matches the live authoritative hash on every tick of the scenario", () => {
-    const live = requireTrace();
-    const { hashes, states, detached } = replayDetached(live);
-    let matched = 0;
-    for (const [index, entry] of hashes.entries()) {
-      const expected = live.hashes[index];
-      if (expected?.canonical !== entry.canonical) break;
-      matched += 1;
-    }
-    const finalCheckpoint = live.checkpoints.at(-1);
-    const liveRun = finalCheckpoint?.state["tear.run.v1"] as { runTime: number } | undefined;
-    const detachedRunState = detached.world.state.run() as never as { runTime: number };
+      expect(staged.player).toBeTruthy();
+      expect(staged.blade).toBeTruthy();
+      expect(detached.world.state.run()).not.toBeNull();
+      // Whatever the live run had spawned by the origin tick must be rebuilt,
+      // and the replay may then spawn more through the production wave runtime.
+      expect(detached.world.state.enemies().length).toBeGreaterThanOrEqual(staged.enemies.length);
+    });
 
-    expect(hashes).toHaveLength(live.hashes.length);
-    expect(hashes[0]?.tick).toBe(live.hashes[0]?.tick);
-    // The whole sequence, not a prefix: live and detached must agree on every
-    // authoritative state hash for this scenario.
-    expect(hashes.map((entry) => entry.canonical)).toEqual(live.hashes.map((entry) => entry.canonical));
-    expect(matched).toBe(live.hashes.length);
+    it(`replays the live action schedule deterministically after hydration (${label})`, () => {
+      const first = replayDetached(live);
+      const second = replayDetached(live);
 
-    // Closed divergence: the run clock is accumulated by finalizeCombatTick
-    // inside the collision phase, so once the detached world runs BOTH phases
-    // its run time matches the live host exactly, to the last float bit.
-    expect(liveRun?.runTime).toBeGreaterThan(0);
-    expect(detachedRunState.runTime).toBe(liveRun?.runTime);
+      expect(second.hashes).toEqual(first.hashes);
+      expect(second.outward).toEqual(first.outward);
+      expect(first.hashes).toHaveLength(live.scenario.maxTicks);
+    });
 
-    // Closed divergence: with the captured configuration restored and the
-    // production wave runtime spawning content, the detached player ends the
-    // scenario on exactly the live x, to the last float bit.
-    const livePlayer = finalCheckpoint?.state["tear.player.v1"] as { x: number } | undefined;
-    const detachedPlayer = detached.world.state.player() as never as { x: number };
-    expect(livePlayer?.x).toBeTypeOf("number");
-    expect(detachedPlayer.x).toBe(livePlayer?.x);
+    it(`matches the live authoritative hash on every tick (${label})`, () => {
+      const { hashes, states, detached } = replayDetached(live);
+      let matched = 0;
+      for (const [index, entry] of hashes.entries()) {
+        const expected = live.hashes[index];
+        if (expected?.canonical !== entry.canonical) break;
+        matched += 1;
+      }
+      const finalCheckpoint = live.checkpoints.at(-1);
+      const liveRun = finalCheckpoint?.state["tear.run.v1"] as { runTime: number } | undefined;
+      const detachedRunState = detached.world.state.run() as never as { runTime: number };
 
-    console.log(`detached/live canonical hash agreement: ${String(matched)}/${String(live.hashes.length)} ticks`);
-    const firstDivergent = live.hashes[matched];
-    const detachedState = states[matched] as Record<string, unknown> | undefined;
-    if (firstDivergent !== undefined && detachedState !== undefined) {
-      for (const key of Object.keys(firstDivergent.state)) {
-        const liveValue = JSON.stringify(firstDivergent.state[key]);
-        const detachedValue = JSON.stringify(detachedState[key]);
-        if (liveValue !== detachedValue) {
-          console.log(`t${String(firstDivergent.tick)} DIVERGES ${key}:
+      if (matched !== live.hashes.length) {
+        const firstDivergent = live.hashes[matched];
+        const detachedState = states[matched] as Record<string, unknown> | undefined;
+        if (firstDivergent !== undefined && detachedState !== undefined) {
+          for (const key of Object.keys(firstDivergent.state)) {
+            const liveValue = JSON.stringify(firstDivergent.state[key]);
+            const detachedValue = JSON.stringify(detachedState[key]);
+            if (liveValue !== detachedValue) {
+              console.log(`${label} t${String(firstDivergent.tick)} DIVERGES ${key}:
   live     ${liveValue}
   detached ${detachedValue}`);
+            }
+          }
         }
       }
-    }
-  });
+
+      expect(hashes).toHaveLength(live.hashes.length);
+      expect(hashes[0]?.tick).toBe(live.hashes[0]?.tick);
+      // The whole sequence, not a prefix: live and detached must agree on every
+      // authoritative state hash for this scenario.
+      expect(hashes.map((entry) => entry.canonical)).toEqual(live.hashes.map((entry) => entry.canonical));
+      expect(matched).toBe(live.hashes.length);
+
+      // Closed divergence: the run clock is accumulated by finalizeCombatTick
+      // inside the collision phase, so once the detached world runs BOTH phases
+      // its run time matches the live host exactly, to the last float bit.
+      expect(liveRun?.runTime).toBeGreaterThan(0);
+      expect(detachedRunState.runTime).toBe(liveRun?.runTime);
+
+      // Closed divergence: with the captured configuration restored and the
+      // production wave runtime spawning content, the detached player ends the
+      // scenario on exactly the live x, to the last float bit.
+      const livePlayer = finalCheckpoint?.state["tear.player.v1"] as { x: number } | undefined;
+      const detachedPlayer = detached.world.state.player() as never as { x: number };
+      expect(livePlayer?.x).toBeTypeOf("number");
+      expect(detachedPlayer.x).toBe(livePlayer?.x);
+    });
+  }
 });
