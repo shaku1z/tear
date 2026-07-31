@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** tenth C27A foundation slice complete (per-world entity-factory
-construction). This is not a C27A completion or release claim.
+**Status:** eleventh C27A foundation slice complete (per-world clock and
+named RNG ownership). This is not a C27A completion or release claim.
 
 ## Resume protocol (mandatory)
 
@@ -79,18 +79,33 @@ Before coding, read this file, then:
   types. `composition.ts` calls it once. Two worlds are now constructible
   without a second composition root; the test proves per-world clock capture
   and per-world boss feedback through the production path.
+- The eleventh slice removed the last shared time and randomness instances.
+  `src/gameplay/runtime/tear-world-clock.ts` creates a world's clock and
+  `createRunRandom()` creates its `RunRandomStreams` plus legacy service.
+  `src/config/game-config.ts` no longer exports `CLOCK`; `run-random` no longer
+  exports `GAME_RANDOM` / `GAME_RANDOM_STREAMS`. The composition root creates
+  both and passes them inward, and `installBackdropClock` binds the one
+  presentation module that read the clock as a global. Six entity/UI unit
+  suites moved to `createTearWorldClock()`.
 
 ## Latest evidence
 
-All of the following were run from this worktree after the factory slice:
+All of the following were run from this worktree after the clock/RNG slice:
 
 - `pnpm check:c27a:foundation` passed: typecheck, lint, architecture gate,
-  15 test files / 47 tests, standalone test build, and
+  16 test files / 50 tests, standalone test build, and
   `browser-c27a-physical-canonical-input`.
-- Because the factory slice touched the composition root, the production
-  build, `test:browser:features`, `test:browser:bosses`,
-  `test:browser:journeys`, and the blade-lifecycle, mirror-pursuit, and
+- Because these slices touched the composition root, the production build,
+  `test:browser:features`, `test:browser:bosses`, `test:browser:journeys`,
+  `test:browser:responsive`, and the blade-lifecycle, mirror-pursuit, and
   combat-resolution parity fixtures were also rerun and passed.
+- `pnpm check:c26` passed: 5 test files / 24 tests plus the planted live
+  regression.
+- Note for future runs: `tests/unit/tearbench-progression-ledger.test.ts`
+  synthesizes 10,000 states and takes ~36 s alone. It hit vitest's 120 s
+  timeout once while other gates were competing for the machine, then passed
+  on a clean rerun. Treat a timeout there as machine load, not a regression,
+  but confirm with an isolated run.
 - `pnpm check:c27:foundation` passed: requirements, typecheck, lint,
   architecture, 14 test files / 69 tests, standalone build, and all seven C27
   browser proofs.
@@ -106,17 +121,16 @@ All of the following were run from this worktree after the factory slice:
 
 ## Exact next C27A boundary
 
-Entity construction is now per-world, so the remaining shared services are the
-ones the *live world composition* still reads as module singletons rather than
-receiving: `CLOCK` (still `src/config/game-config.ts`'s exported object, which
-`src/presentation/backdrop.ts` also imports directly), `GAME_RANDOM` /
-`GAME_RANDOM_STREAMS`, and `FX`. Give the composition root an explicit
-world-services bundle it creates and passes to both the entity factories and
-`createLiveWorldContext`, then remove the direct global imports from the
-remaining consumers (backdrop first — it is the only presentation module
-reading the sim clock as a global). Each step gets a focused isolation test
-proving two bundles do not share state. Preserve menu-time lazy construction
-and the one existing
+Clock, RNG, and entity construction are per-world. The remaining shared world
+service is the particle system: `src/presentation/particles.ts` exports a
+single `FX` object literal that every world's entity constructors and the
+backdrop write into. Convert it to a `createParticleSystem()` factory, have the
+composition root create one per world and pass it to
+`createLiveWorldSimulationFactories`, `createLiveWorldContext`, and the
+presentation adapters, and prove two systems do not share particles. After that
+the remaining blocker is the closure-owned run/world construction inside
+`live-game-runtime.ts`. Preserve menu-time lazy construction and the one
+existing
 `TearSimulationRuntime`/scheduler, and extend the context only where real
 ownership moves; do not add cosmetic ports merely to make the architecture
 diagram look complete.

@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-07-30. This records the first ten executable migration
+In progress as of 2026-07-30. This records the first eleven executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -178,6 +178,20 @@ headless Tear gameplay portable.
   This is the first evidence that a second world is constructible without a
   second composition root; the live application still builds exactly one, and
   no replay or headless world consumes it yet.
+- The simulation clock and named RNG are no longer module singletons.
+  `src/gameplay/runtime/tear-world-clock.ts` creates one world's clock;
+  `createRunRandom()` in `src/simulation/run-random.ts` creates one world's
+  `RunRandomStreams` plus its legacy single-stream service. `src/config/
+  game-config.ts` no longer exports `CLOCK`, and `run-random` no longer exports
+  `GAME_RANDOM` / `GAME_RANDOM_STREAMS` instances; the composition root creates
+  both and passes them to the entity factories, the world context, and the
+  runtime dependencies. `src/presentation/backdrop.ts` — the one presentation
+  module that read the sim clock as a global — now takes the live world's clock
+  through `installBackdropClock`, keeping it an outward adapter that reads
+  world time without owning it. `tests/unit/tear-world-clock.test.ts` proves
+  clock isolation, stream isolation from a shared seed, and asserts the two
+  modules expose no instance to reintroduce the coupling. Six entity/UI unit
+  suites were migrated off the former config clock export.
 
 ## Remaining C27A work
 

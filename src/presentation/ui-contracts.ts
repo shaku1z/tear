@@ -1,4 +1,4 @@
-export type Clock = typeof ClockValue;
+export type Clock = TearWorldClock;
 export type Config = typeof ConfigValue;
 export type Overscan = typeof OverscanValue;
 export type Align = CanvasTextAlign;
@@ -142,5 +142,6 @@ export interface UiRuntime {
   _chapterLayout(options: UiOptions): ChapterLayout;
   _bladeMark(context: CanvasRenderingContext2D, x: number, y: number, scale: number, color: string, direction: number): void;
 }
-import type { CLOCK as ClockValue, CONFIG as ConfigValue, OVERSCAN as OverscanValue } from "../config/game-config";
+import type { CONFIG as ConfigValue, OVERSCAN as OverscanValue } from "../config/game-config";
+import type { TearWorldClock } from "../gameplay/runtime/tear-world-clock";
 import type { UiTokens } from "./ui-tokens";

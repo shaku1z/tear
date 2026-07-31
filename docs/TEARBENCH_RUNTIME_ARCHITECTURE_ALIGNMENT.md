@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first ten executable C27A slices are complete:
+The first eleven executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -120,6 +120,12 @@ The first ten executable C27A slices are complete:
   test in which each world's enemies stamp their own clock and each world owns
   its own boss-feedback queue. The live application still builds exactly one
   world, and configuration/graphics/theme remain shared application values.
+- The simulation clock and named RNG streams are created per world by
+  `tear-world-clock` and `createRunRandom`. `game-config` no longer exports
+  `CLOCK` and `run-random` no longer exports module instances, so the "one time
+  source and one RNG path per world" rule is now structural rather than
+  conventional. The backdrop receives the live world's clock through an
+  explicit install seam.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

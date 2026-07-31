@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { CLOCK, CONFIG } from "../../src/config/game-config";
+import { CONFIG } from "../../src/config/game-config";
+import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
+
+const CLOCK = createTearWorldClock();
 import { aabbOverlap, clamp, len, lerp, segPointDist, segSegmentDist } from "../../src/domain/geometry";
 import { createEnemyTypes } from "../../src/gameplay/entities/enemies";
 import { createProjectile } from "../../src/gameplay/entities/projectile";

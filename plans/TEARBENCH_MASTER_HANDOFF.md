@@ -114,7 +114,7 @@ Named status:
 - **C25:** physical/black-box foundation verified; exit open.
 - **C26:** regression discovery passed `pnpm check:c26` on 2026-07-28.
 - **C27:** recorder/capsule foundation only; checkpoint open.
-- **C27A:** ten shared-world architecture slices in this tree; blocking and incomplete.
+- **C27A:** eleven shared-world architecture slices in this tree; blocking and incomplete.
 - **C28-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -169,13 +169,14 @@ Do not claim TearBot automatically learns merely because scripted policies, trai
 
 Read [`TEARBENCH_C27A_HANDOFF.md`](TEARBENCH_C27A_HANDOFF.md) before editing.
 
-Ten C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, focused tests, and physical browser diagnostics.
+Eleven C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, focused tests, and physical browser diagnostics.
 
 Important files:
 
 - `src/gameplay/runtime/tear-world-context.ts`
 - `src/gameplay/runtime/tear-world-transient-state.ts`
 - `src/app/live-world-simulation-factories.ts`
+- `src/gameplay/runtime/tear-world-clock.ts`
 - `src/app/live-world-context.ts`
 - `src/app/live-combat-world-state.ts`
 - `src/gameplay/runtime/tear-world-entity-construction.ts`
@@ -186,7 +187,7 @@ Important files:
 
 ### Exact next slice
 
-Give the composition root an explicit world-services bundle (clock, named RNG, effects) that it creates and passes to both `createLiveWorldSimulationFactories` and `createLiveWorldContext`, then remove the remaining direct global imports — `src/presentation/backdrop.ts` reads `CLOCK` from `src/config/game-config.ts` today. Each step gets a two-bundle isolation test.
+Make the particle system per world: `src/presentation/particles.ts` still exports one shared `FX` object literal. Convert it to a factory, create one per world in the composition root, pass it to the entity factories, world context, and presentation adapters, and prove two systems do not share particles.
 
 Preserve:
 
@@ -326,17 +327,18 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 ### Evidence last verified at this pause
 
 All of the following were run from this worktree after the per-world
-transient/frame-feel and entity-factory slices:
+transient/frame-feel, entity-factory, and clock/RNG slices:
 
 - `pnpm check:c27a:foundation` passed:
   - typecheck, lint, architecture;
-  - 15 test files / 47 tests;
+  - 16 test files / 50 tests;
   - standalone build;
   - physical C27A browser proof.
 - `pnpm check:c27:foundation` passed:
   - requirements, typecheck, lint, architecture;
   - 14 test files / 69 tests;
   - build and 7 browser proofs.
+- `pnpm check:c26` passed: 5 test files / 24 tests plus the planted live regression.
 - `pnpm check:c23` passed:
   - requirements, typecheck, lint, architecture;
   - 9 test files / 39 tests;

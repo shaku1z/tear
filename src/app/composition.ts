@@ -1,10 +1,11 @@
 import { SFX } from "../audio/legacy-synth";
-import { A11Y, CLOCK, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME } from "../config/game-config";
+import { A11Y, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME } from "../config/game-config";
 import { aabbOverlap, clamp, len, lerp, segCircle, segPointDist } from "../domain/geometry";
 import { AFFIXES, PRESETS, applyPreset, rollAffixes } from "../gameplay/affixes";
 import { createAchievements } from "../gameplay/progression/achievements";
 import { createDailyChallenges, localCalendarClock } from "../gameplay/progression/challenges";
 import { TearGameplayEventBus } from "../gameplay/runtime/gameplay-events";
+import { createTearWorldClock } from "../gameplay/runtime/tear-world-clock";
 import { createMetaProgression, type ProgressionApplyContext } from "../gameplay/progression/meta";
 import { STAGES, stageAt, stagePlatforms } from "../gameplay/stages";
 import {
@@ -24,13 +25,13 @@ import { createLegacyPlatformCompatibility } from "../platform/legacy-compat";
 import { createRunSeed } from "../platform/run-seed";
 import type { PwaUpdateCapability } from "../platform/pwa-update";
 import { createAttract } from "../presentation/attract";
-import { Backdrop } from "../presentation/backdrop";
+import { Backdrop, installBackdropClock } from "../presentation/backdrop";
 import { Cinematics } from "../presentation/cinematics";
 import { cosmeticRandom } from "../presentation/cosmetic-random";
 import { FX } from "../presentation/particles";
 import { createUi } from "../presentation/ui";
 import { createLegacyReplayCompatibility } from "../replay/legacy-compat";
-import { GAME_RANDOM, GAME_RANDOM_STREAMS } from "../simulation/run-random";
+import { createRunRandom } from "../simulation/run-random";
 import { PerformanceMonitor } from "../diagnostics/performance-monitor";
 import { createTearTestEnvironment } from "../tearbench/test-support";
 import { LegacyAppStateController } from "./legacy-state-controller";
@@ -69,6 +70,11 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   // Optional capture tooling is a development adapter, never a production
   // gameplay dependency or shared writable global.
   const clipper = import.meta.env.DEV ? compositionWindow.Clipper : undefined;
+  // This world's simulation clock and named RNG streams. They are created here, not imported as a
+  // module singleton, so a second world cannot inherit live stream cursors.
+  const CLOCK = createTearWorldClock();
+  installBackdropClock(CLOCK);
+  const { streams: GAME_RANDOM_STREAMS, service: GAME_RANDOM } = createRunRandom();
   const { Input, PAD } = createLegacyInputCompatibility(
     { config: CONFIG, safeArea: SAFE, overscan: OVERSCAN, window, document, navigator, performance },
     { createInput: createLegacyInput, createGamepad: createLegacyGamepad },

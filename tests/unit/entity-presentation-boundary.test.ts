@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
-import { CLOCK, CONFIG } from "../../src/config/game-config";
+import { CONFIG } from "../../src/config/game-config";
+import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
+
+const CLOCK = createTearWorldClock();
 import type { BladePlayerPort, BladePresentationPort } from "../../src/gameplay/entities/blade";
 import { createBlade } from "../../src/gameplay/entities/blade";
 import type { PlayerPresentationPort } from "../../src/gameplay/entities/player";

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { CLOCK, CONFIG, OVERSCAN } from "../../src/config/game-config";
+import { CONFIG, OVERSCAN } from "../../src/config/game-config";
+import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
+
+const CLOCK = createTearWorldClock();
 import { clamp } from "../../src/domain/geometry";
 import { createUi } from "../../src/presentation/ui";
 

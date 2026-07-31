@@ -5,12 +5,23 @@
 //   Backdrop.post(...)      — screen space, AFTER the world, BEFORE the HUD (vignette + grain)
 // Phase 2 ships a strong generic treatment driven by each stage's palette; Phase 3 layers in
 // per-biome art (silhouettes, biome particles, set dressing) on top of this engine.
-import { A11Y, CLOCK, CONFIG, GFX, OVERSCAN, THEME, _relLum } from "../config/game-config";
+import { A11Y, CONFIG, GFX, OVERSCAN, THEME, _relLum } from "../config/game-config";
+import { createTearWorldClock, type TearWorldClock } from "../gameplay/runtime/tear-world-clock";
 import type { STAGES as StageValues } from "../gameplay/stages";
 import { BIOME_ART } from "./backdrop-biomes";
 import { clamp, lerp } from "../domain/geometry";
 import { VoidGen } from "../gameplay/voidgen";
 import type { VoidPlatform } from "../gameplay/voidgen";
+
+// The backdrop is an outward presentation adapter: it reads the world's
+// simulation time but must not own it. The composition root installs the live
+// world's clock; the standalone default keeps module import side-effect free.
+let CLOCK: TearWorldClock = createTearWorldClock();
+
+/** Binds the backdrop to one world's simulation clock. */
+export function installBackdropClock(clock: TearWorldClock): void {
+  CLOCK = clock;
+}
 
 function truthyString(value: string | undefined, fallback: string): string {
   if (value) return value;

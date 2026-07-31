@@ -1,5 +1,6 @@
 import type { SFX } from "../audio/legacy-synth";
-import type { A11Y, CLOCK, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME } from "../config/game-config";
+import type { A11Y, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME } from "../config/game-config";
+import type { TearWorldClock } from "../gameplay/runtime/tear-world-clock";
 import type * as Geometry from "../domain/geometry";
 import type * as Affixes from "../gameplay/affixes";
 import type { createBlade } from "../gameplay/entities/blade";
@@ -29,7 +30,7 @@ import type { cosmeticRandom } from "../presentation/cosmetic-random";
 import type { FX } from "../presentation/particles";
 import type { createUi } from "../presentation/ui";
 import type { createLegacyReplayCompatibility } from "../replay/legacy-compat";
-import type { GAME_RANDOM, GAME_RANDOM_STREAMS } from "../simulation/run-random";
+import type { RunRandomService, RunRandomStreams } from "../simulation/run-random";
 import type { PerformanceMonitor } from "../diagnostics/performance-monitor";
 import type { LegacyAppStateController } from "./legacy-state-controller";
 
@@ -47,15 +48,15 @@ export interface GameRuntimeDependencies {
   readonly Attract: ReturnType<typeof createAttract>; readonly BOSSFX: EnemyTypes["BOSSFX"];
   readonly Backdrop: typeof Backdrop; readonly Blade: ReturnType<typeof createBlade>;
   readonly Bomber: EnemyTypes["Bomber"]; readonly Boss: EnemyTypes["Boss"];
-  readonly CG: PlatformCompatibility["CG"]; readonly CLOCK: typeof CLOCK; readonly CONFIG: typeof CONFIG;
+  readonly CG: PlatformCompatibility["CG"]; readonly CLOCK: TearWorldClock; readonly CONFIG: typeof CONFIG;
   readonly Charger: EnemyTypes["Charger"]; readonly Chimera: EnemyTypes["Chimera"];
   readonly Cinematics: typeof Cinematics; readonly Clipper: Readonly<{ start(): void; stop(): void }> | undefined;
   readonly Cloud: Cloud["Cloud"]; readonly Colossus: EnemyTypes["Colossus"];
   readonly DAILY: ReturnType<typeof createDailyChallenges>; readonly DIAG: PerformanceMonitor;
   readonly Echo: EnemyTypes["Echo"]; readonly FX: typeof FX; readonly FirebaseProvider: Cloud["FirebaseProvider"];
   readonly Flyer: EnemyTypes["Flyer"]; readonly GAMEPLAY_EVENTS: TearGameplayEventBus;
-  readonly GAME_RANDOM: typeof GAME_RANDOM;
-  readonly GAME_RANDOM_STREAMS: typeof GAME_RANDOM_STREAMS; readonly GFX: typeof GFX;
+  readonly GAME_RANDOM: RunRandomService;
+  readonly GAME_RANDOM_STREAMS: RunRandomStreams; readonly GFX: typeof GFX;
   readonly GHOST: ReplayCompatibility["GHOST"]; readonly Input: LegacyInput;
   readonly META: ReturnType<typeof createMetaProgression>["META"]; readonly Mirror: MirrorTypes["Mirror"];
   readonly MirrorHost: MirrorTypes["MirrorHost"]; readonly OVERSCAN: typeof OVERSCAN;

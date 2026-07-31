@@ -1,4 +1,7 @@
-import { CLOCK, CONFIG } from "../../src/config/game-config";
+import { CONFIG } from "../../src/config/game-config";
+import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
+
+const CLOCK = createTearWorldClock();
 import { aabbOverlap, clamp, len, lerp, segPointDist, segSegmentDist } from "../../src/domain/geometry";
 import { createEnemyTypes, type EnemyTypes } from "../../src/gameplay/entities/enemies";
 import type { EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../../src/gameplay/entities/enemy-contracts";
