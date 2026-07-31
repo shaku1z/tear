@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first nineteen executable C27A slices are complete:
+The first twenty executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -164,10 +164,16 @@ The first nineteen executable C27A slices are complete:
   180 authoritative state hashes, the event sequence, and the ending RNG
   state, with two live runs proven identical. The detached side has not been
   compared against it.
-- The comparison now runs and currently fails: 0 of 180 ticks agree. Two
-  divergences are recorded as assertions — the run clock advances only in
-  the live host, and the detached player travels a different distance — so
-  the shared-core claim is measurably false today rather than unexamined.
+- The comparison now passes: the detached world reproduces the live
+  authoritative state hash on all 180 ticks of the parity scenario, with
+  the whole sequence asserted. Three divergences were closed to get there:
+  the run clock (accumulated inside the collision phase, which the first
+  attempt did not run), the captured configuration (now applied through
+  one shared `applyTearCodecConfiguration`), and wave content (the
+  detached harness now runs the production content and wave runtimes).
+  This is one scenario, not certification: other modes, bosses,
+  cinematics, terminal outcomes, and longer runs are untested, and outward
+  effects are still recorded rather than performed.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

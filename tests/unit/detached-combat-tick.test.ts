@@ -3,14 +3,8 @@ import { describe, expect, it } from "vitest";
 import { EnvelopeSequencer, type CommandEnvelope } from "../../src/domain/envelopes";
 import type { GameAction } from "../../src/input/game-action";
 import { CONFIG } from "../../src/config/game-config";
-import { aabbOverlap, clamp, len, lerp, segCircle, segPointDist } from "../../src/domain/geometry";
-import { CombatEntityRuntime, type CombatEntityRuntimeHooks } from "../../src/gameplay/combat/combat-entity-runtime";
-import { runLiveCollisionPhase, type LiveCollisionPhaseHost } from "../../src/gameplay/combat/live-collision-phase";
-import { runLiveOpeningPhase, type LiveOpeningPhaseHost } from "../../src/gameplay/combat/live-opening-phase";
 import { TearSimulationRuntime } from "../../src/gameplay/runtime/tear-simulation-runtime";
-import { createDetachedWorld, DETACHED_PLATFORMS } from "./detached-world-harness";
-
-const PLATFORMS = DETACHED_PLATFORMS as unknown as LiveOpeningPhaseHost["platforms"];
+import { createDetachedCombatPhases, createDetachedWorld } from "./detached-world-harness";
 
 /**
  * A detached world that runs BOTH halves of a production combat tick: the
@@ -23,7 +17,7 @@ const PLATFORMS = DETACHED_PLATFORMS as unknown as LiveOpeningPhaseHost["platfor
  * collections come from the world composition, not a live host closure.
  */
 function createDetachedCombatWorld(seed: string) {
-  const { world, clock, effects, transient, input, run } = createDetachedWorld({
+  const detached = createDetachedWorld({
     seed,
     enemies: [
       { id: "charger", x: 520, y: CONFIG.world.groundY - CONFIG.enemy.h / 2 },
@@ -31,129 +25,19 @@ function createDetachedCombatWorld(seed: string) {
       { id: "ranged", x: 1_150, y: CONFIG.world.groundY - CONFIG.ranged.h / 2 },
     ],
   });
-  const outward: string[] = [];
-  const note = (name: string) => () => { outward.push(name); };
+  const { world, clock, effects, transient, input, run } = detached;
+  const phases = createDetachedCombatPhases(detached);
+  const { outward, combat } = phases;
   const player = () => world.state.player() as never;
   const blade = () => world.state.blade() as never;
-
-  const entityHooks = {
-    actors: () => world.state.enemies(), projectiles: () => world.state.projectiles(),
-    player: () => world.state.player(),
-    slowZones: () => world.state.slowZones(), setSlowZones: (zones: never[]) => { world.state.setSlowZones(zones); },
-    walls: () => world.state.temporaryWalls(), setWalls: (walls: never[]) => { world.state.setTemporaryWalls(walls); },
-    platforms: () => [...PLATFORMS],
-    ring: (x: number, y: number, radius: number, color: string) => { effects.ring(x, y, radius, color); },
-    burst: (x: number, y: number, dx: number, dy: number, count: number, color: string) => { effects.burst(x, y, dx, dy, count, color); },
-    explode: (x: number, y: number, color: string, scale: number) => { effects.explode(x, y, color, scale); },
-    fxFlash: (x: number, y: number, radius: number, color: string) => { effects.flash(x, y, radius, color); },
-    floater: note("floater"), shake: note("shake"), flash: note("flash"),
-    sound: (cue: string) => { outward.push(`sound:${cue}`); },
-    loseStyle: note("loseStyle"), shieldAbsorbed: note("shieldAbsorbed"), addStyle: note("addStyle"),
-    dashDodge: note("dashDodge"), maxStat: note("maxStat"), checkAchievements: note("checkAchievements"),
-    noteFirstDamage: note("noteFirstDamage"), reflectedHit: note("reflectedHit"), bossHit: note("bossHit"),
-    onKill: (enemy: { dead?: boolean }) => { enemy.dead = true; outward.push("onKill"); },
-    areaDamage: () => 0,
-  } as unknown as CombatEntityRuntimeHooks;
-  const combat = new CombatEntityRuntime(entityHooks);
-
-  const opening = {
-    get player() { return player(); }, get blade() { return blade(); },
-    get run() { return world.state.run() as never; },
-    get enemies() { return world.state.enemies() as never; },
-    get projectiles() { return world.state.projectiles(); },
-    platforms: PLATFORMS, state: transient.opening, width: CONFIG.view.w,
-    blocking: false, playerMode: "play", protection: transient.protection,
-    lowGraphics: false, transformationBlocked: false,
-    overrunMovementMultiplier: () => 1, runDamageMultiplier: () => 1,
-    stepCinematic: () => undefined, flushClosingInput: note("flushClosingInput"),
-    updateWeaponAbilities: () => undefined, updateWorldHazards: () => undefined,
-    syncVoidSupport: () => undefined, activateThrowSecondary: note("activateThrowSecondary"),
-    linkBroken: (reason: string) => { outward.push(`linkBroken:${reason}`); },
-    distance: (ax: number, ay: number, bx: number, by: number) => len(ax - bx, ay - by),
-    areaDamage: note("areaDamage"), ring: note("ring"), burst: note("burst"), floater: note("floater"),
-    shake: note("shake"), sound: (name: string) => { outward.push(`sound:${name}`); },
-    ghost: note("ghost"), ember: note("ember"), smoke: note("smoke"), drip: note("drip"),
-    overlap: (a: { x: number; y: number; hw: number; hh: number }, b: { x: number; y: number; hw: number; hh: number }) =>
-      aabbOverlap(a.x, a.y, a.hw, a.hh, b.x, b.y, b.hw, b.hh),
-    styleHit: note("styleHit"),
-    onKill: (enemy: { dead?: boolean }) => { enemy.dead = true; outward.push("onKill"); },
-    fireDashStart: note("fireDashStart"), fireDashContact: note("fireDashContact"),
-    fireWeaponCatch: note("fireWeaponCatch"), fireThrowLaunch: note("fireThrowLaunch"),
-    logThrowLaunch: note("logThrowLaunch"), weaponWorldImpact: () => null,
-    lobExplode: note("lobExplode"), emitThrowResolve: note("emitThrowResolve"),
-    nearestEnemy: () => (world.state.enemies()[0] ?? null) as never,
-    updateFeedback: () => undefined, consumeThrow: () => input.consumeThrow(() => false),
-    updateWave: () => undefined, startTransformation: () => false, updateSupports: () => undefined,
-    armorBypass: note("armorBypass"), resolveBossZones: () => undefined,
-    updateBossArenaPlatforms: () => undefined, updateVoidScroll: () => undefined,
-    unlockWitness: note("unlockWitness"), startVoidDescent: () => false,
-    spawnBossAdds: () => [], spawnBossClone: () => undefined, removeBossClone: () => undefined,
-    dramaticBeat: note("dramaticBeat"), onBladeStolen: note("onBladeStolen"),
-    updateEffects: (dt: number) => { effects.update(dt); },
-    random: () => world.context.services.random.stream("enemy-ai").next(),
-  } as unknown as LiveOpeningPhaseHost;
-
-  // The collision phase mutates its state object in place, so it reads the
-  // world's impact record and its live collections and writes both back.
-  const collisionState = {
-    get hitStop() { return transient.impact.hitStop; }, set hitStop(value: number) { transient.impact.hitStop = value; },
-    get slowMotion() { return transient.impact.slowMotion; }, set slowMotion(value: number) { transient.impact.slowMotion = value; },
-    get shake() { return transient.impact.shake; }, set shake(value: number) { transient.impact.shake = value; },
-    get enemies() { return world.state.enemies(); }, set enemies(value: unknown[]) { world.state.setEnemies(value as never[]); },
-    get projectiles() { return world.state.projectiles(); }, set projectiles(value: unknown[]) { world.state.setProjectiles(value as never[]); },
-    get floaters() { return world.state.floaters(); }, set floaters(value: unknown[]) { world.state.setFloaters(value as never[]); },
-  } as unknown as LiveCollisionPhaseHost["state"];
-  const collisionEffects = {
-    burst: note("fx:burst"), ring: note("fx:ring"), flash: note("fx:flash"), ribbon: note("fx:ribbon"),
-    explode: note("fx:explode"), floater: note("fx:floater"), shake: note("fx:shake"), zoom: note("fx:zoom"),
-    buzz: note("fx:buzz"), sound: (name: string) => { outward.push(`hit:${name}`); },
-    style: note("fx:style"), tutorial: note("fx:tutorial"),
-  };
-  const collision = {
-    get player() { return player(); }, get blade() { return blade(); },
-    get run() { return world.state.run() as never; },
-    combat, width: CONFIG.view.w, state: collisionState,
-    weaponHit: (enemy: { hp: number; dead: boolean }, _quality: number, damage: number) => {
-      enemy.hp -= damage; if (enemy.hp <= 0) enemy.dead = true;
-      outward.push("weaponHit"); return null;
-    },
-    throwHit: () => { outward.push("throwHit"); return null; },
-    runDamageMultiplier: () => 1, noteFirstDamage: note("noteFirstDamage"),
-    logWeapon: (type: string) => { outward.push(`logWeapon:${type}`); },
-    emitThrowResolve: note("emitThrowResolve"),
-    onKill: (enemy: { dead?: boolean }) => { enemy.dead = true; outward.push("onKill"); },
-    addFloater: note("addFloater"), effects: collisionEffects,
-    sound: (cue: string) => { outward.push(`sound:${cue}`); }, flare: note("flare"),
-    addShake: note("addShake"), addZoom: note("addZoom"), addFlash: note("addFlash"), addStyle: note("addStyle"),
-    segmentCircle: (x1: number, y1: number, x2: number, y2: number, x: number, y: number, radius: number) =>
-      segCircle(x1, y1, x2, y2, x, y, radius),
-    segmentPointDistance: (x1: number, y1: number, x2: number, y2: number, x: number, y: number) =>
-      segPointDist(x1, y1, x2, y2, x, y),
-    weaponSegmentContact: () => false,
-    distance: (x: number, y: number) => len(x, y), clamp, lerp,
-    nearestEnemy: () => (world.state.enemies()[0] ?? null) as never,
-    areaDamage: () => 0, lobExplode: note("lobExplode"), splitProjectile: note("splitProjectile"),
-    triggerSlowMotion: note("triggerSlowMotion"), emitPerfectParry: note("emitPerfectParry"),
-    makeHitEvent: note("makeHitEvent"), makeSwingEvent: note("makeSwingEvent"), makeSlamEvent: note("makeSlamEvent"),
-    makeReturnEvent: note("makeReturnEvent"), makePerfectParryEvent: note("makePerfectParryEvent"),
-    profileAdd: () => undefined, profileMax: () => undefined, dailyBump: () => undefined,
-    achievementsEnabled: () => false, achievement: note("achievement"), checkAchievements: () => undefined,
-    tutorialMark: () => undefined,
-    ghostRecording: () => false, ghostDeath: note("ghostDeath"), ghostSample: () => undefined, ghostRevive: note("ghostRevive"),
-    updateTrick: () => undefined, achievementTick: () => undefined, updateTutorial: () => undefined,
-    updatePlayground: () => undefined, overlap: aabbOverlap,
-    onShieldAbsorb: note("onShieldAbsorb"), loseStyle: note("loseStyle"), buzz: () => undefined,
-    requestAdContinue: note("requestAdContinue"), adAvailable: () => false, endRun: note("endRun"),
-  } as unknown as LiveCollisionPhaseHost;
 
   const runtime = new TearSimulationRuntime<Record<string, unknown>>({
     actionPort: input.actionPort,
     step: (seconds) => {
       clock.sim += seconds;
-      // The same order the live combat host uses: opening, then collision,
-      // and collision is skipped when the opening half blocks the tick.
-      if (runLiveOpeningPhase(opening, seconds).blocked) return;
-      runLiveCollisionPhase(collision, seconds);
+      // The harness runs the same order the live combat host uses: opening,
+      // then collision, with collision skipped when the opening half blocks.
+      phases.step(seconds);
     },
     snapshot: (tick) => {
       const actor: { x: number; y: number; vx: number; vy: number; hp: number } = player();

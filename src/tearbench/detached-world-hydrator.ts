@@ -138,6 +138,26 @@ function numberField(value: TearCodecValue, key: string): number {
  * It intentionally has no commit operation: live/browser mutation belongs to
  * an outward adapter, while replay/headless hosts can keep the staged world.
  */
+/**
+ * Restores a captured configuration payload onto a live configuration object.
+ * Hydration is not complete without it: entity tuning reads configuration, so
+ * a world restored without its captured values would simulate differently from
+ * the world the snapshot came from.
+ */
+export function applyTearCodecConfiguration(
+  target: object,
+  payload: TearCodecValue,
+  identities: ReadonlyMap<string, object> = new Map(),
+): void {
+  if (!record(payload) || !record(payload.values)) {
+    throw new TypeError("configuration payload requires encoded values");
+  }
+  const values = decodeTearCodecValue(payload.values, identities);
+  if (!record(values)) throw new TypeError("decoded configuration must be an object");
+  const mutable = target as Record<string, unknown>;
+  for (const [key, value] of Object.entries(values)) mutable[key] = value;
+}
+
 export function hydrateTearCodecWorld<
   Run,
   Player extends object,

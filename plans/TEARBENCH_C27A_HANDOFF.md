@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** nineteenth C27A foundation slice complete (the live-versus-detached
-comparison runs and currently fails, with divergences recorded). This is not a C27A completion or release claim.
+**Status:** twentieth C27A foundation slice complete (the live-versus-detached
+comparison passes on the parity scenario, 180/180 ticks). This is not a C27A completion or release claim.
 
 ## Resume protocol (mandatory)
 
@@ -135,13 +135,20 @@ Before coding, read this file, then:
   hydrates the live origin snapshot into a production-composed world,
   restores the live RNG, replays the live schedule through the opening phase,
   and hashes the same canonical projection. **0 of 180 ticks agree.**
-  Recorded divergences: (1) `run.runTime` advances live and not detached, so
-  every hash breaks at tick 1; (2) the detached player ends 75 units short on
-  x. Both are asserted, so fixing either forces the finding to be updated.
+  It first measured 0 of 180 ticks agreeing.
+- The twentieth slice closed every divergence and the comparison now passes
+  **180/180**, with the whole hash sequence asserted. The three fixes:
+  (1) run both combat phases — `run.runTime` is accumulated by
+  `finalizeCombatTick` inside the collision phase, not outside the phases as
+  the previous note wrongly claimed; (2) apply the captured configuration
+  through `applyTearCodecConfiguration`, now exported from the portable
+  hydrator and shared with the live State Forge restore; (3) build the
+  production content and wave runtimes over the detached world, so wave
+  planning, spawn scheduling, and enemy construction are the real ones.
 
 ## Latest evidence
 
-All of the following were run from this worktree after the parity-comparison slice:
+All of the following were run from this worktree after the parity-passing slice:
 
 - `pnpm check:c27a:foundation` passed: typecheck, lint, architecture gate,
   20 test files / 64 tests, standalone test build, and
@@ -172,17 +179,17 @@ All of the following were run from this worktree after the parity-comparison sli
 
 ## Exact next C27A boundary
 
-The comparison exists and fails at 0/180. Close the two recorded divergences,
-in order. First the run clock: find where the live host advances
-`run.runTime` (it is outside `runLiveOpeningPhase` and
-`runLiveCollisionPhase`) and move it behind a port the detached world calls,
-then re-measure. Second the movement gap: bisect it by comparing the
-per-tick player transform against the live checkpoints already in the
-artifact at ticks 1-3, 30, and 180 — the divergence is small and late, which
-points at an update the live host runs around the phases rather than at the
-physics itself. Add checkpoints at more ticks if the bisect needs them.
-Re-run the comparison after each fix and record the new figure in the
-checkpoint. Do not narrow the scenario to make the number look better.
+Parity holds on one scenario. Widen it until the shared-core claim is real
+rather than anecdotal. In order: (1) add parity scenarios for other modes and
+difficulties, a boss wave, and a longer run, driving each through the same
+capture-and-compare pair; (2) extend the detached harness to the kill runtime,
+run outcome, and cinematic orchestration so a terminal run can be compared end
+to end; (3) make the outward effect surfaces (audio, particles, achievements,
+profile) comparable rather than merely recorded, so a divergence in what the
+world *emits* is caught as well as what it *is*. Each new scenario is one
+browser capture plus one comparison, and every divergence is a defect to fix
+in the composition, never a tolerance to widen or a field to drop from the
+projection.
 
 Preserve menu-time lazy construction and the one existing
 `TearSimulationRuntime`/scheduler, and extend the context only where real

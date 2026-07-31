@@ -6,6 +6,15 @@ import {
   type LiveWorldSimulationFactoryOptions,
 } from "../../src/app/live-world-simulation-factories";
 import type { GameRuntimeDependencies } from "../../src/app/game-runtime-dependencies";
+import { aabbOverlap, clamp, len, lerp, segCircle, segPointDist } from "../../src/domain/geometry";
+import { CombatEntityRuntime, type CombatEntityRuntimeHooks } from "../../src/gameplay/combat/combat-entity-runtime";
+import { runLiveCollisionPhase, type LiveCollisionPhaseHost } from "../../src/gameplay/combat/live-collision-phase";
+import { runLiveOpeningPhase, type LiveOpeningPhaseHost } from "../../src/gameplay/combat/live-opening-phase";
+import { PRESETS, applyPreset, rollAffixes } from "../../src/gameplay/affixes";
+import { createLiveContentRuntime } from "../../src/gameplay/run/live-content-runtime";
+import { createLiveWaveHost } from "../../src/app/live-wave-host";
+import { STAGES } from "../../src/gameplay/stages";
+import { applyVariant, rollVariant } from "../../src/gameplay/variants";
 import { newMods } from "../../src/gameplay/upgrades";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
 import { createTearWorldTransientState } from "../../src/gameplay/runtime/tear-world-transient-state";
@@ -94,4 +103,242 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
     aimRadius: () => CONFIG.blade.aimRadius,
   });
   return { world, clock, effects, random, factories, transient, input, run };
+}
+
+export type DetachedWorld = ReturnType<typeof createDetachedWorld>;
+
+export interface DetachedCombatPhaseOptions {
+  /** Defaults to the harness arena; hydrated worlds pass their own platforms. */
+  readonly platforms?: readonly unknown[];
+  /** The production wave update, when the caller wants live content spawning. */
+  readonly updateWave?: (dt: number) => void;
+}
+
+/**
+ * Builds both production combat-phase hosts over one detached world, with all
+ * outward effects recorded rather than rendered, played, or persisted. The
+ * returned `step` runs the same two phases in the same order as the live
+ * combat host, including its skip when the opening half blocks the tick.
+ */
+export function createDetachedCombatPhases(
+  detached: DetachedWorld,
+  options: DetachedCombatPhaseOptions = {},
+) {
+  const { world, effects, transient, input } = detached;
+  const platforms = (options.platforms ?? DETACHED_PLATFORMS) as unknown as LiveOpeningPhaseHost["platforms"];
+  const outward: string[] = [];
+  const note = (name: string) => () => { outward.push(name); };
+  const player = () => world.state.player() as never;
+  const blade = () => world.state.blade() as never;
+
+  const entityHooks = {
+    actors: () => world.state.enemies(), projectiles: () => world.state.projectiles(),
+    player: () => world.state.player(),
+    slowZones: () => world.state.slowZones(), setSlowZones: (zones: never[]) => { world.state.setSlowZones(zones); },
+    walls: () => world.state.temporaryWalls(), setWalls: (walls: never[]) => { world.state.setTemporaryWalls(walls); },
+    platforms: () => [...platforms],
+    ring: (x: number, y: number, radius: number, color: string) => { effects.ring(x, y, radius, color); },
+    burst: (x: number, y: number, dx: number, dy: number, count: number, color: string) => { effects.burst(x, y, dx, dy, count, color); },
+    explode: (x: number, y: number, color: string, scale: number) => { effects.explode(x, y, color, scale); },
+    fxFlash: (x: number, y: number, radius: number, color: string) => { effects.flash(x, y, radius, color); },
+    floater: note("floater"), shake: note("shake"), flash: note("flash"),
+    sound: (cue: string) => { outward.push(`sound:${cue}`); },
+    loseStyle: note("loseStyle"), shieldAbsorbed: note("shieldAbsorbed"), addStyle: note("addStyle"),
+    dashDodge: note("dashDodge"), maxStat: note("maxStat"), checkAchievements: note("checkAchievements"),
+    noteFirstDamage: note("noteFirstDamage"), reflectedHit: note("reflectedHit"), bossHit: note("bossHit"),
+    onKill: (enemy: { dead?: boolean }) => { enemy.dead = true; outward.push("onKill"); },
+    areaDamage: () => 0,
+  } as unknown as CombatEntityRuntimeHooks;
+  const combat = new CombatEntityRuntime(entityHooks);
+
+  const opening = {
+    get player() { return player(); }, get blade() { return blade(); },
+    get run() { return world.state.run() as never; },
+    get enemies() { return world.state.enemies() as never; },
+    get projectiles() { return world.state.projectiles(); },
+    platforms, state: transient.opening, width: CONFIG.view.w,
+    blocking: false, playerMode: "play", protection: transient.protection,
+    lowGraphics: false, transformationBlocked: false,
+    overrunMovementMultiplier: () => 1, runDamageMultiplier: () => 1,
+    stepCinematic: () => undefined, flushClosingInput: note("flushClosingInput"),
+    updateWeaponAbilities: () => undefined, updateWorldHazards: () => undefined,
+    syncVoidSupport: () => undefined, activateThrowSecondary: note("activateThrowSecondary"),
+    linkBroken: (reason: string) => { outward.push(`linkBroken:${reason}`); },
+    distance: (ax: number, ay: number, bx: number, by: number) => len(ax - bx, ay - by),
+    areaDamage: note("areaDamage"), ring: note("ring"), burst: note("burst"), floater: note("floater"),
+    shake: note("shake"), sound: (name: string) => { outward.push(`sound:${name}`); },
+    ghost: note("ghost"), ember: note("ember"), smoke: note("smoke"), drip: note("drip"),
+    overlap: (a: { x: number; y: number; hw: number; hh: number }, b: { x: number; y: number; hw: number; hh: number }) =>
+      aabbOverlap(a.x, a.y, a.hw, a.hh, b.x, b.y, b.hw, b.hh),
+    styleHit: note("styleHit"),
+    onKill: (enemy: { dead?: boolean }) => { enemy.dead = true; outward.push("onKill"); },
+    fireDashStart: note("fireDashStart"), fireDashContact: note("fireDashContact"),
+    fireWeaponCatch: note("fireWeaponCatch"), fireThrowLaunch: note("fireThrowLaunch"),
+    logThrowLaunch: note("logThrowLaunch"), weaponWorldImpact: () => null,
+    lobExplode: note("lobExplode"), emitThrowResolve: note("emitThrowResolve"),
+    nearestEnemy: () => (world.state.enemies()[0] ?? null) as never,
+    updateFeedback: () => undefined, consumeThrow: () => input.consumeThrow(() => false),
+    updateWave: (dt: number) => { options.updateWave?.(dt); }, startTransformation: () => false, updateSupports: () => undefined,
+    armorBypass: note("armorBypass"), resolveBossZones: () => undefined,
+    updateBossArenaPlatforms: () => undefined, updateVoidScroll: () => undefined,
+    unlockWitness: note("unlockWitness"), startVoidDescent: () => false,
+    spawnBossAdds: () => [], spawnBossClone: () => undefined, removeBossClone: () => undefined,
+    dramaticBeat: note("dramaticBeat"), onBladeStolen: note("onBladeStolen"),
+    updateEffects: (dt: number) => { effects.update(dt); },
+    random: () => world.context.services.random.stream("enemy-ai").next(),
+  } as unknown as LiveOpeningPhaseHost;
+
+  // The collision phase mutates its state object in place, so it reads the
+  // world's impact record and its live collections and writes both back.
+  const collisionState = {
+    get hitStop() { return transient.impact.hitStop; }, set hitStop(value: number) { transient.impact.hitStop = value; },
+    get slowMotion() { return transient.impact.slowMotion; }, set slowMotion(value: number) { transient.impact.slowMotion = value; },
+    get shake() { return transient.impact.shake; }, set shake(value: number) { transient.impact.shake = value; },
+    get enemies() { return world.state.enemies(); }, set enemies(value: unknown[]) { world.state.setEnemies(value as never[]); },
+    get projectiles() { return world.state.projectiles(); }, set projectiles(value: unknown[]) { world.state.setProjectiles(value as never[]); },
+    get floaters() { return world.state.floaters(); }, set floaters(value: unknown[]) { world.state.setFloaters(value as never[]); },
+  } as unknown as LiveCollisionPhaseHost["state"];
+  const collisionEffects = {
+    burst: note("fx:burst"), ring: note("fx:ring"), flash: note("fx:flash"), ribbon: note("fx:ribbon"),
+    explode: note("fx:explode"), floater: note("fx:floater"), shake: note("fx:shake"), zoom: note("fx:zoom"),
+    buzz: note("fx:buzz"), sound: (name: string) => { outward.push(`hit:${name}`); },
+    style: note("fx:style"), tutorial: note("fx:tutorial"),
+  };
+  const collision = {
+    get player() { return player(); }, get blade() { return blade(); },
+    get run() { return world.state.run() as never; },
+    combat, width: CONFIG.view.w, state: collisionState,
+    weaponHit: (enemy: { hp: number; dead: boolean }, _quality: number, damage: number) => {
+      enemy.hp -= damage; if (enemy.hp <= 0) enemy.dead = true;
+      outward.push("weaponHit"); return null;
+    },
+    throwHit: () => { outward.push("throwHit"); return null; },
+    runDamageMultiplier: () => 1, noteFirstDamage: note("noteFirstDamage"),
+    logWeapon: (type: string) => { outward.push(`logWeapon:${type}`); },
+    emitThrowResolve: note("emitThrowResolve"),
+    onKill: (enemy: { dead?: boolean }) => { enemy.dead = true; outward.push("onKill"); },
+    addFloater: note("addFloater"), effects: collisionEffects,
+    sound: (cue: string) => { outward.push(`sound:${cue}`); }, flare: note("flare"),
+    addShake: note("addShake"), addZoom: note("addZoom"), addFlash: note("addFlash"), addStyle: note("addStyle"),
+    segmentCircle: (x1: number, y1: number, x2: number, y2: number, x: number, y: number, radius: number) =>
+      segCircle(x1, y1, x2, y2, x, y, radius),
+    segmentPointDistance: (x1: number, y1: number, x2: number, y2: number, x: number, y: number) =>
+      segPointDist(x1, y1, x2, y2, x, y),
+    weaponSegmentContact: () => false,
+    distance: (x: number, y: number) => len(x, y), clamp, lerp,
+    nearestEnemy: () => (world.state.enemies()[0] ?? null) as never,
+    areaDamage: () => 0, lobExplode: note("lobExplode"), splitProjectile: note("splitProjectile"),
+    triggerSlowMotion: note("triggerSlowMotion"), emitPerfectParry: note("emitPerfectParry"),
+    makeHitEvent: note("makeHitEvent"), makeSwingEvent: note("makeSwingEvent"), makeSlamEvent: note("makeSlamEvent"),
+    makeReturnEvent: note("makeReturnEvent"), makePerfectParryEvent: note("makePerfectParryEvent"),
+    profileAdd: () => undefined, profileMax: () => undefined, dailyBump: () => undefined,
+    achievementsEnabled: () => false, achievement: note("achievement"), checkAchievements: () => undefined,
+    tutorialMark: () => undefined,
+    ghostRecording: () => false, ghostDeath: note("ghostDeath"), ghostSample: () => undefined, ghostRevive: note("ghostRevive"),
+    updateTrick: () => undefined, achievementTick: () => undefined, updateTutorial: () => undefined,
+    updatePlayground: () => undefined, overlap: aabbOverlap,
+    onShieldAbsorb: note("onShieldAbsorb"), loseStyle: note("loseStyle"), buzz: () => undefined,
+    requestAdContinue: note("requestAdContinue"), adAvailable: () => false, endRun: note("endRun"),
+  } as unknown as LiveCollisionPhaseHost;
+
+  return Object.freeze({
+    outward, combat, opening, collision,
+    step(seconds: number): void {
+      if (runLiveOpeningPhase(opening, seconds).blocked) return;
+      runLiveCollisionPhase(collision, seconds);
+    },
+  });
+}
+
+/**
+ * Builds the production content and wave runtimes over a detached world.
+ *
+ * Wave planning, spawn scheduling, and enemy construction are the real
+ * production implementations; only outward presentation (banners, audio,
+ * bloom, profile counters, pointer release) is recorded instead of performed.
+ */
+export function createDetachedWaveRuntime(detached: DetachedWorld, platforms: readonly unknown[] = DETACHED_PLATFORMS) {
+  const { world, random, factories } = detached;
+  const outward: string[] = [];
+  const note = (name: string) => () => { outward.push(name); };
+  const run = () => world.state.run() as never as Record<string, unknown>;
+  const install = (enemy: unknown) => { world.state.setEnemies([...world.state.enemies(), enemy as never]); };
+  const content = createLiveContentRuntime({
+    width: CONFIG.view.w,
+    random: random.streams.stream("spawn"),
+    run: () => {
+      const active = run() as unknown as { mode: string; wave: number; curBoss?: string };
+      return { mode: active.mode, wave: active.wave,
+        ...(active.curBoss === undefined ? {} : { curBoss: active.curBoss }) };
+    },
+    modes: () => CONFIG.modes as never,
+    stages: STAGES,
+    platforms: () => platforms as never,
+    groundY: () => CONFIG.world.groundY,
+    construction: {
+      sideSpawn: () => 0,
+      createGround: (kind: string) => world.entities.createEnemy(kind, 0, 0, run() as never) as never,
+      createAir: (kind: string, x: number, y: number) => world.entities.createEnemy(kind, x, y, run() as never) as never,
+      createSupport: (kind: string) => world.entities.createEnemy(kind, 0, 0, run() as never) as never,
+      createBoss: () => world.entities.createEnemy("boss", 0, 0, run() as never) as never,
+      beginBossPresentation: note("bossPresentation"),
+    },
+    spawning: {
+      random: random.streams.stream("spawn"),
+      run: () => run() as never,
+      campaignStage: () => 0,
+      contentWave: () => 0,
+      groundSpawn: () => ({ x: 0, y: 0 }),
+      applyPreset: (enemy: unknown, preset: unknown) => { applyPreset(enemy as never, preset as never); },
+      rollVariant: (kind: string, wave: number) => rollVariant(kind as never, wave, random.streams.stream("spawn")),
+      applyVariant: (enemy: unknown, variant: unknown) => { applyVariant(enemy as never, variant as never); },
+      rollAffixes: (enemy: unknown, wave: number) => { rollAffixes(enemy as never, wave, random.streams.stream("spawn")); },
+      arrivalEffect: note("arrivalEffect"),
+      recordSpawn: note("recordSpawn"),
+      install,
+    },
+    createBoss: () => world.entities.createEnemy("boss", 0, 0, run() as never) as never,
+  });
+  const waves = createLiveWaveHost({
+    run: () => run() as never,
+    tuning: () => CONFIG.run,
+    stages: STAGES as never,
+    presets: PRESETS,
+    random: random.streams.stream("world"),
+    modeDefinition: (mode: string) => CONFIG.modes.find((candidate) => candidate.id === mode) ?? {},
+    currentStage: () => ({ index: 0, accent: "#ffffff" }),
+    stageHasChapter: () => true,
+    chapterFlowActive: () => false,
+    lifecycle: {
+      hasPreparedWave: () => world.lifecycle.hasPreparedWave,
+      isWaveActive: () => world.lifecycle.isWaveActive,
+      pendingReward: () => world.lifecycle.reward,
+    },
+    planIntents: {
+      beginWipe: note("beginWipe"), loadStage: note("loadStage"), setStageBanner: note("setStageBanner"),
+      beginCampaignChapter: () => false, recordWave: note("recordWave"), snapshotReplay: note("snapshotReplay"),
+      prepareWave: (wave: number, boss: boolean, deferred: boolean) => { world.lifecycle.prepareWave(wave, boss, deferred); },
+      activateWave: () => { world.lifecycle.activateWave(); },
+      showWaveBanner: note("showWaveBanner"), playWaveSound: note("playWaveSound"),
+    },
+    clearIntents: {
+      clearWave: () => { world.lifecycle.clearWave(); },
+      bloom: note("bloom"), recordWave: note("recordWave"), profileMax: note("profileMax"),
+      profileAdd: note("profileAdd"), dailyBump: note("dailyBump"), hordeCleared: note("hordeCleared"),
+      achievementCheck: note("achievementCheck"), stageDone: note("stageDone"),
+      healPlayer: (amount: number) => { (world.state.player() as never as { heal(value: number): void }).heal(amount); },
+      prepareReward: (reward: unknown) => { world.lifecycle.prepareReward(reward as never); },
+      startAdventureFinale: note("startAdventureFinale"), winRun: note("winRun"),
+      releasePointer: note("releasePointer"), openTierUp: note("openTierUp"), openDraft: note("openDraft"),
+    },
+    spawn: (spec: unknown) => { content.spawn(spec as never); },
+    enemyCount: () => world.state.enemies().length,
+    loreBusy: () => false,
+    achievementTracking: () => false,
+    playerOneHit: () => (world.state.player() as never as { oneHit: boolean }).oneHit,
+    availableTierUpCount: () => 0,
+    install: () => undefined,
+  });
+  void factories;
+  return Object.freeze({ content, waves, outward, update: (dt: number) => { waves.update(dt); } });
 }

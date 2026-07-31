@@ -22,6 +22,7 @@ import type { UpgradeDefinition } from "../gameplay/upgrades";
 import type { TearCodecValue, TearCodecWorld } from "../tearbench/state-codecs";
 import type { TearLiveRestoreContext, TearLiveWorldAdapter } from "../tearbench/live-state-snapshot";
 import {
+  applyTearCodecConfiguration,
   decodeTearCodecValue,
   hydrateTearCodecWorld,
   type TearStagedWorld,
@@ -124,20 +125,6 @@ function encode(
   }
   stack.delete(value);
   return Object.freeze(encoded);
-}
-
-function restoreCapturedConfiguration(
-  target: object,
-  payload: TearCodecValue,
-  identities: ReadonlyMap<string, object>,
-): void {
-  if (!record(payload) || !record(payload.values)) {
-    throw new TypeError("live configuration payload requires encoded values");
-  }
-  const values = decodeTearCodecValue(payload.values, identities);
-  if (!record(values)) throw new TypeError("decoded live configuration must be an object");
-  const mutable = target as Record<string, unknown>;
-  for (const [key, value] of Object.entries(values)) mutable[key] = value;
 }
 
 function hydrateUpgrade(
@@ -301,7 +288,7 @@ export function createLiveStateForgeAdapter(
     commit(candidate) {
       options.worldServices.configuration.resetToBase();
       const weapon = options.dependencies.applyWeapon(candidate.weaponId);
-      restoreCapturedConfiguration(options.dependencies.CONFIG, candidate.configuration, new Map());
+      applyTearCodecConfiguration(options.dependencies.CONFIG, candidate.configuration, new Map());
       candidate.blade.weapon = weapon;
       candidate.blade.model = weapon.model;
       options.state.setRun(candidate.run);

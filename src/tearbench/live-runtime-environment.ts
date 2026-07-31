@@ -429,6 +429,7 @@ export function createLiveTearRuntimeEnvironment(
     ...environment,
     accessClass: "A" as const,
     rng: () => context.random(),
+    canonicalState: () => context.authoritative()?.state ?? null,
     setTimeEffectsForTest: (effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>) => {
       context.setTimeEffectsForTest(effects);
     },

@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-07-30. This records the first nineteen executable migration
+In progress as of 2026-07-30. This records the first twenty executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -323,8 +323,49 @@ headless Tear gameplay portable.
   agree on every hash and on the whole outward effect sequence — and the
   hydration rebuilds the live entity set. When either divergence is fixed its
   assertion fails, forcing the finding to be re-recorded rather than deleted.
-  This is the honest current state of C27A parity: the comparison exists and
-  fails, and no replay, headless, or learning portability claim may be made.
+  The comparison was first run at 0 of 180 ticks agreeing. It now passes in
+  full; the findings and the fixes are recorded below.
+
+### Live-versus-detached parity result
+
+**The detached world now reproduces the live authoritative state hash on
+all 180 ticks of the parity scenario.** The comparison asserts the whole
+sequence, not a prefix, so any regression in the shared core fails the
+gate.
+
+Reaching it required closing three real divergences, each a genuine defect
+in the detached composition rather than a tolerance to be relaxed:
+
+1. **Run clock.** `run.runTime` is accumulated by `finalizeCombatTick`,
+   inside the collision phase. The first parity attempt ran only the
+   opening phase, so the run clock never advanced and the canonical
+   `run.time` broke every hash at tick 1. (An earlier version of this
+   report claimed the accumulation lived outside both phases; that was
+   wrong and is corrected here.)
+2. **Captured configuration.** Entity tuning reads `CONFIG`, and a
+   snapshot carries the configuration values the world was running with.
+   Hydrating without applying them left the blade lerping toward a
+   slightly different target — identical y, ~0.04 different x at tick 1.
+   `applyTearCodecConfiguration` is now exported from the portable
+   hydrator and used by both the live State Forge restore and the detached
+   world, so there is one implementation rather than two.
+3. **Wave content.** The live world spawned a charger at tick 36 that the
+   detached world had no way to produce. The detached harness now builds
+   the production `createLiveContentRuntime` and `createLiveWaveHost` over
+   its own world, so wave planning, spawn scheduling, and enemy
+   construction are the real implementations.
+
+What this does and does not establish. It establishes that one live
+scenario — endless/normal/sword, a fixed seed, a sealed 180-tick action
+schedule — executes identically in the live application and in a world
+composed outside it, through the same entity constructors, combat phases,
+wave runtime, RNG streams, and canonical projection. It does not establish
+parity across modes, bosses, cinematics, longer runs, or terminal
+outcomes; the detached harness still records outward effects (audio,
+particles, achievements, profile, pointer) instead of performing them, and
+kill scoring, run outcome, and cinematic orchestration are not yet
+exercised. It is not a C27A completion claim, and it is not certification
+of replay, headless execution, or learning portability.
 
 ## Remaining C27A work
 

@@ -64,12 +64,19 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
         // A few full State Forge checkpoints make a hash mismatch diagnosable:
         // they say WHICH field diverged, not merely that something did.
         if (tick <= 3 || tick === 30 || tick === scenarioValue.maxTicks) {
-          checkpoints.push({ tick, state: environment.captureSnapshot(`${label}-tick-${String(tick)}`, "recorded-canonical").state });
+          checkpoints.push({
+            tick,
+            canonical: environment.canonicalState(),
+            state: environment.captureSnapshot(`${label}-tick-${String(tick)}`, "recorded-canonical").state,
+          });
         }
         hashes.push({
           tick: transition.observation.tick,
           canonical: transition.info.canonicalStateHash,
           observed: transition.info.stateHash,
+          // The canonical state is what the authoritative step hashed. Keeping
+          // it per tick turns "the hashes differ" into "this field differs".
+          state: environment.canonicalState(),
         });
         for (const event of transition.events) events.push({ tick: event.tick, type: event.type });
       }

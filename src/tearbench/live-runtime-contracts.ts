@@ -72,6 +72,12 @@ export interface TearStructuredRuntimeEnvironment {
 export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvironment {
   readonly accessClass: "A";
   rng(): RunRandomStreamsSnapshot;
+  /**
+   * The authoritative canonical verification state of the last executed tick.
+   * Class A is privileged diagnostics: this observes what the production step
+   * already hashed, and is never an alternative source of truth for it.
+   */
+  canonicalState(): unknown;
   setTimeEffectsForTest(effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>): void;
   captureSnapshot(id: string, stateClass?: TearStateClass): TearSnapshotV1;
   restoreSnapshot(snapshot: TearSnapshotV1): TearLiveRestoreResult;
@@ -142,7 +148,7 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly advanceFixedTick: () => number;
   readonly advanceApplicationFrame: (deltaSeconds: number) => void;
   readonly advanceRenderFrame: (deltaSeconds: number) => number;
-  readonly authoritative: () => Readonly<{ tick: number; stateHash: string }> | null;
+  readonly authoritative: () => Readonly<{ tick: number; stateHash: string; state?: unknown }> | null;
   readonly random: () => RunRandomStreamsSnapshot;
   readonly render: () => void;
   readonly screenshot: () => string;
