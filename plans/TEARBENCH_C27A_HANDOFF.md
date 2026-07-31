@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** ninth C27A foundation slice complete (per-world transient combat
-and frame-feel state). This is not a C27A completion or release claim.
+**Status:** tenth C27A foundation slice complete (per-world entity-factory
+construction). This is not a C27A completion or release claim.
 
 ## Resume protocol (mandatory)
 
@@ -71,21 +71,33 @@ Before coding, read this file, then:
   time-effects hook use `transient.feel`. `resetFeel()` restores dilation and
   framing on run reset and deliberately leaves the rank popup alone, matching
   the previous `finishWorldReset` boundary exactly.
+- The tenth slice extracted one world's entity constructors from the
+  composition root into `src/app/live-world-simulation-factories.ts`. The
+  factory takes clock, effects, sound, input, UI, and the named `enemy-ai` /
+  `boss` RNG streams explicitly, and returns `Blade`, `Player`, `Projectile`,
+  the enemy presentation, enemy types (with their own `BOSSFX`), and mirror
+  types. `composition.ts` calls it once. Two worlds are now constructible
+  without a second composition root; the test proves per-world clock capture
+  and per-world boss feedback through the production path.
 
 ## Latest evidence
 
-All of the following were run from this worktree after the frame-feel slice:
+All of the following were run from this worktree after the factory slice:
 
 - `pnpm check:c27a:foundation` passed: typecheck, lint, architecture gate,
-  14 test files / 45 tests, standalone test build, and
+  15 test files / 47 tests, standalone test build, and
   `browser-c27a-physical-canonical-input`.
+- Because the factory slice touched the composition root, the production
+  build, `test:browser:features`, `test:browser:bosses`,
+  `test:browser:journeys`, and the blade-lifecycle, mirror-pursuit, and
+  combat-resolution parity fixtures were also rerun and passed.
 - `pnpm check:c27:foundation` passed: requirements, typecheck, lint,
   architecture, 14 test files / 69 tests, standalone build, and all seven C27
   browser proofs.
 - `pnpm check:c23` passed: requirements, typecheck, lint, architecture, 9 test
   files / 39 tests, standalone build, 600-tick live restore, State Forge
   Studio, and the exit matrix.
-- `pnpm test` passed: 218 test files / 884 tests.
+- `pnpm test` passed: 219 test files / 886 tests.
 - `pnpm requirements:check` and `git diff --check` passed.
 - `src/app/live-game-runtime.ts` measures 690 physical lines.
 - The standalone build emits the existing non-fatal >500 kB chunk warning.
@@ -94,13 +106,17 @@ All of the following were run from this worktree after the frame-feel slice:
 
 ## Exact next C27A boundary
 
-Replace the world context's app-backed service *implementations* with per-world
-ones, in this order: the clock (`CLOCK.sim` is a module singleton that a second
-world would share), then named RNG (`GAME_RANDOM` / `GAME_RANDOM_STREAMS`),
-effects (`FX` / `Backdrop.resetFx`), Mirror, and boss feedback (`BOSSFX.q`).
-`live-world-context.ts` is already the only live seam for all five, so each one
-is a contained substitution plus a focused isolation test proving two contexts
-do not share state. Preserve menu-time lazy construction and the one existing
+Entity construction is now per-world, so the remaining shared services are the
+ones the *live world composition* still reads as module singletons rather than
+receiving: `CLOCK` (still `src/config/game-config.ts`'s exported object, which
+`src/presentation/backdrop.ts` also imports directly), `GAME_RANDOM` /
+`GAME_RANDOM_STREAMS`, and `FX`. Give the composition root an explicit
+world-services bundle it creates and passes to both the entity factories and
+`createLiveWorldContext`, then remove the direct global imports from the
+remaining consumers (backdrop first — it is the only presentation module
+reading the sim clock as a global). Each step gets a focused isolation test
+proving two bundles do not share state. Preserve menu-time lazy construction
+and the one existing
 `TearSimulationRuntime`/scheduler, and extend the context only where real
 ownership moves; do not add cosmetic ports merely to make the architecture
 diagram look complete.

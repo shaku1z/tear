@@ -1,12 +1,7 @@
 import { SFX } from "../audio/legacy-synth";
 import { A11Y, CLOCK, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME } from "../config/game-config";
-import { aabbOverlap, clamp, len, lerp, lerpAngle, segCircle, segPointDist, segSegmentDist } from "../domain/geometry";
+import { aabbOverlap, clamp, len, lerp, segCircle, segPointDist } from "../domain/geometry";
 import { AFFIXES, PRESETS, applyPreset, rollAffixes } from "../gameplay/affixes";
-import { createBlade } from "../gameplay/entities/blade";
-import { createEnemyTypes } from "../gameplay/entities/enemies";
-import { createMirrorTypes } from "../gameplay/entities/mirror";
-import { createPlayer } from "../gameplay/entities/player";
-import { createProjectile } from "../gameplay/entities/projectile";
 import { createAchievements } from "../gameplay/progression/achievements";
 import { createDailyChallenges, localCalendarClock } from "../gameplay/progression/challenges";
 import { TearGameplayEventBus } from "../gameplay/runtime/gameplay-events";
@@ -18,7 +13,7 @@ import {
 } from "../gameplay/upgrades";
 import { VARIANTS, applyVariant, rollVariant } from "../gameplay/variants";
 import { VoidGen } from "../gameplay/voidgen";
-import { WEAPONS, applyWeapon, getWeapon } from "../gameplay/weapons";
+import { WEAPONS, applyWeapon } from "../gameplay/weapons";
 import { createLegacyInputCompatibility } from "../input/legacy-compat";
 import { createLegacyGamepad } from "../input/legacy-gamepad";
 import { createLegacyInput } from "../input/legacy-input";
@@ -32,18 +27,14 @@ import { createAttract } from "../presentation/attract";
 import { Backdrop } from "../presentation/backdrop";
 import { Cinematics } from "../presentation/cinematics";
 import { cosmeticRandom } from "../presentation/cosmetic-random";
-import { createLegacyEnemyPresentation } from "../presentation/enemies/legacy-enemy-renderers";
 import { FX } from "../presentation/particles";
-import { createBladeRenderer } from "../presentation/entities/blade-renderer";
-import { createMirrorRenderer } from "../presentation/entities/mirror-renderer";
-import { createPlayerRenderer } from "../presentation/entities/player-renderer";
-import { createProjectileRenderer } from "../presentation/entities/projectile-renderer";
 import { createUi } from "../presentation/ui";
 import { createLegacyReplayCompatibility } from "../replay/legacy-compat";
 import { GAME_RANDOM, GAME_RANDOM_STREAMS } from "../simulation/run-random";
 import { PerformanceMonitor } from "../diagnostics/performance-monitor";
 import { createTearTestEnvironment } from "../tearbench/test-support";
 import { LegacyAppStateController } from "./legacy-state-controller";
+import { createLiveWorldSimulationFactories } from "./live-world-simulation-factories";
 import { startLiveGame } from "./live-game-runtime";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 
@@ -84,34 +75,20 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   );
   const UI = createUi({ CLOCK, CONFIG, Input, OVERSCAN, clamp,
     controllerGlyph: (buttonIndex) => PAD.glyph(buttonIndex) });
-  const playerPresentation = createPlayerRenderer({ colors: CONFIG.colors, graphics: GFX, theme: THEME, clamp });
-  const bladePresentation = createBladeRenderer({ clock: CLOCK, config: CONFIG, graphics: GFX, theme: THEME, clamp, len, lerp });
-  const projectilePresentation = createProjectileRenderer({ clock: CLOCK, config: CONFIG, graphics: GFX, theme: THEME, clamp });
-  const mirrorPresentation = createMirrorRenderer({
-    clock: CLOCK, config: CONFIG, effects: FX, graphics: GFX, theme: THEME, clamp, cosmeticRandom,
+  // One world's entity constructors. The factory takes the mutable world
+  // services explicitly, so a second world can be built without a second
+  // composition root; the live application still builds exactly one.
+  const { Blade, Player, Projectile, enemyTypes, mirrorTypes } = createLiveWorldSimulationFactories({
+    clock: CLOCK, effects: FX, sound: SFX, input: Input, ui: UI,
+    random: { enemyAi: GAME_RANDOM_STREAMS.stream("enemy-ai"), boss: GAME_RANDOM_STREAMS.stream("boss") },
+    ...(clipper === undefined ? {} : { clipper }),
   });
-  const Blade = createBlade({ CLOCK, CONFIG, Input, presentation: bladePresentation, clamp, len, lerp, lerpAngle });
-  const Player = createPlayer({ CONFIG, FX, GFX, Input, presentation: playerPresentation, aabbOverlap, clamp, len });
-  const Projectile = createProjectile({ CLOCK, CONFIG, FX, SFX, presentation: projectilePresentation, clamp, len, lerp });
-  const enemyPresentation = createLegacyEnemyPresentation({
-    A11Y, CLOCK, CONFIG, GFX, THEME, UI, clamp, len, lerp,
-  });
-  const enemyTypes = createEnemyTypes({
-    CLOCK, CONFIG, ...(clipper === undefined ? {} : { Clipper: clipper }),
-    FX, GAME_RANDOM: GAME_RANDOM_STREAMS.stream("enemy-ai"), Projectile, SFX,
-    presentation: enemyPresentation,
-    aabbOverlap, clamp, cosmeticRandom, len, lerp, segPointDist, segSegmentDist,
-  });
-  enemyPresentation.install(enemyTypes);
   const {
-    Aldric, Armored, BOSSFX, Bomber, Boss, Charger, Chimera, Colossus, Echo, Enemy,
+    Aldric, Armored, BOSSFX, Bomber, Boss, Charger, Chimera, Colossus, Echo,
     Flyer, Ranged, Source, Support, VoidWisp, Warden, Wraith,
     drawBossTransformationWorld, weaponCapsuleIntersectsSegment,
   } = enemyTypes;
-  const { Mirror, MirrorHost, ReflectionEnemy } = createMirrorTypes({
-    Blade, CLOCK, CONFIG, Enemy, FX, GAME_RANDOM: GAME_RANDOM_STREAMS.stream("boss"), Player, Projectile, SFX, presentation: mirrorPresentation,
-    clamp, getWeapon, lerp, lerpAngle,
-  });
+  const { Mirror, MirrorHost, ReflectionEnemy } = mirrorTypes;
   const Attract = createAttract({ Backdrop, Blade, CONFIG, FX, GFX, OVERSCAN, Player, STAGES, THEME, clamp });
   const platform = createLegacyPlatformCompatibility({
     target,

@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first nine executable C27A slices are complete:
+The first ten executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -113,6 +113,13 @@ The first nine executable C27A slices are complete:
   camera release, State Forge runtime capture/restore, and the interface frame
   and world state read the one owned record, and `resetFeel()` reproduces the
   previous run-reset boundary exactly.
+- `live-world-simulation-factories` extracts one world's entity constructors
+  from the composition root and takes the mutable world services — clock,
+  effects, sound, input, UI, named RNG streams — as explicit arguments. Two
+  worlds are now constructible without a second composition root, proved by a
+  test in which each world's enemies stamp their own clock and each world owns
+  its own boss-feedback queue. The live application still builds exactly one
+  world, and configuration/graphics/theme remain shared application values.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

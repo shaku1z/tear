@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-07-30. This records the first nine executable migration
+In progress as of 2026-07-30. This records the first ten executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -161,6 +161,23 @@ headless Tear gameplay portable.
   14 suites / 45 tests with the Class-C physical-input browser journey, and
   `pnpm check:c23`, `pnpm check:c27:foundation`, and the full unit suite were
   rerun from this worktree afterwards.
+- `src/app/live-world-simulation-factories.ts` extracts one world's entity
+  constructors out of the composition root. `createLiveWorldSimulationFactories`
+  receives the mutable world services explicitly — clock, effect sink, sound
+  sink, input source, UI surface, the named `enemy-ai`/`boss` RNG streams, and
+  the optional developer clipper — and returns that world's `Blade`, `Player`,
+  `Projectile`, enemy presentation, enemy types (including their own `BOSSFX`
+  queue), and mirror types. `composition.ts` now calls it once instead of
+  building eleven factories inline against module singletons. Configuration,
+  graphics, theme, accessibility, geometry, and cosmetic random stay shared
+  application values and are named honestly as such in the module.
+  `tests/unit/live-world-simulation-factories.test.ts` constructs two worlds
+  through the production path and proves each captured its own clock (enemies
+  stamp different `firstPlayerDamageAt` values, and advancing one world's clock
+  does not affect the other) and its own boss-feedback queue and constructors.
+  This is the first evidence that a second world is constructible without a
+  second composition root; the live application still builds exactly one, and
+  no replay or headless world consumes it yet.
 
 ## Remaining C27A work
 

@@ -114,7 +114,7 @@ Named status:
 - **C25:** physical/black-box foundation verified; exit open.
 - **C26:** regression discovery passed `pnpm check:c26` on 2026-07-28.
 - **C27:** recorder/capsule foundation only; checkpoint open.
-- **C27A:** nine shared-world architecture slices in this tree; blocking and incomplete.
+- **C27A:** ten shared-world architecture slices in this tree; blocking and incomplete.
 - **C28-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -169,12 +169,13 @@ Do not claim TearBot automatically learns merely because scripted policies, trai
 
 Read [`TEARBENCH_C27A_HANDOFF.md`](TEARBENCH_C27A_HANDOFF.md) before editing.
 
-Nine C27A slices currently establish entity-construction separation, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, focused tests, and physical browser diagnostics.
+Ten C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, focused tests, and physical browser diagnostics.
 
 Important files:
 
 - `src/gameplay/runtime/tear-world-context.ts`
 - `src/gameplay/runtime/tear-world-transient-state.ts`
+- `src/app/live-world-simulation-factories.ts`
 - `src/app/live-world-context.ts`
 - `src/app/live-combat-world-state.ts`
 - `src/gameplay/runtime/tear-world-entity-construction.ts`
@@ -185,7 +186,7 @@ Important files:
 
 ### Exact next slice
 
-Replace the world context's app-backed service implementations with per-world ones — clock, then named RNG, effects, Mirror, and boss feedback — each with a focused two-context isolation test. `src/app/live-world-context.ts` is already the only live seam for all five.
+Give the composition root an explicit world-services bundle (clock, named RNG, effects) that it creates and passes to both `createLiveWorldSimulationFactories` and `createLiveWorldContext`, then remove the remaining direct global imports — `src/presentation/backdrop.ts` reads `CLOCK` from `src/config/game-config.ts` today. Each step gets a two-bundle isolation test.
 
 Preserve:
 
@@ -325,11 +326,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 ### Evidence last verified at this pause
 
 All of the following were run from this worktree after the per-world
-transient/frame-feel slices:
+transient/frame-feel and entity-factory slices:
 
 - `pnpm check:c27a:foundation` passed:
   - typecheck, lint, architecture;
-  - 14 test files / 45 tests;
+  - 15 test files / 47 tests;
   - standalone build;
   - physical C27A browser proof.
 - `pnpm check:c27:foundation` passed:
@@ -340,9 +341,10 @@ transient/frame-feel slices:
   - requirements, typecheck, lint, architecture;
   - 9 test files / 39 tests;
   - build and the State Forge browser restore/studio/exit matrix.
-- `pnpm test` passed: 218 test files / 884 tests.
+- `pnpm test` passed: 219 test files / 886 tests.
 - `pnpm requirements:check` and `git diff --check` passed.
 - `src/app/live-game-runtime.ts` measured 690 physical lines.
+- The production build, browser feature matrix, boss parity, navigation/progression/playground/terminal journeys, and the blade/mirror/combat parity fixtures passed after the composition-root change.
 - Full `pnpm check` has not been run for a release claim.
 - The existing bundle warning above 500 kB is nonfatal; no bundle-performance release claim exists.
 
