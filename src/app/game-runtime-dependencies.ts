@@ -27,7 +27,7 @@ import type { createAttract } from "../presentation/attract";
 import type { Backdrop } from "../presentation/backdrop";
 import type { Cinematics } from "../presentation/cinematics";
 import type { cosmeticRandom } from "../presentation/cosmetic-random";
-import type { FX } from "../presentation/particles";
+import type { ParticleSystem } from "../presentation/particles";
 import type { createUi } from "../presentation/ui";
 import type { createLegacyReplayCompatibility } from "../replay/legacy-compat";
 import type { RunRandomService, RunRandomStreams } from "../simulation/run-random";
@@ -53,7 +53,7 @@ export interface GameRuntimeDependencies {
   readonly Cinematics: typeof Cinematics; readonly Clipper: Readonly<{ start(): void; stop(): void }> | undefined;
   readonly Cloud: Cloud["Cloud"]; readonly Colossus: EnemyTypes["Colossus"];
   readonly DAILY: ReturnType<typeof createDailyChallenges>; readonly DIAG: PerformanceMonitor;
-  readonly Echo: EnemyTypes["Echo"]; readonly FX: typeof FX; readonly FirebaseProvider: Cloud["FirebaseProvider"];
+  readonly Echo: EnemyTypes["Echo"]; readonly FX: ParticleSystem; readonly FirebaseProvider: Cloud["FirebaseProvider"];
   readonly Flyer: EnemyTypes["Flyer"]; readonly GAMEPLAY_EVENTS: TearGameplayEventBus;
   readonly GAME_RANDOM: RunRandomService;
   readonly GAME_RANDOM_STREAMS: RunRandomStreams; readonly GFX: typeof GFX;

@@ -114,7 +114,7 @@ Named status:
 - **C25:** physical/black-box foundation verified; exit open.
 - **C26:** regression discovery passed `pnpm check:c26` on 2026-07-28.
 - **C27:** recorder/capsule foundation only; checkpoint open.
-- **C27A:** eleven shared-world architecture slices in this tree; blocking and incomplete.
+- **C27A:** twelve shared-world architecture slices in this tree; blocking and incomplete.
 - **C28-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -169,7 +169,7 @@ Do not claim TearBot automatically learns merely because scripted policies, trai
 
 Read [`TEARBENCH_C27A_HANDOFF.md`](TEARBENCH_C27A_HANDOFF.md) before editing.
 
-Eleven C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, focused tests, and physical browser diagnostics.
+Twelve C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, focused tests, and physical browser diagnostics.
 
 Important files:
 
@@ -187,7 +187,7 @@ Important files:
 
 ### Exact next slice
 
-Make the particle system per world: `src/presentation/particles.ts` still exports one shared `FX` object literal. Convert it to a factory, create one per world in the composition root, pass it to the entity factories, world context, and presentation adapters, and prove two systems do not share particles.
+No shared mutable world service instance remains. Extract the closure-owned world bring-up inside `startLiveGame` into one `createLiveWorld(...)` composition (factories, clock, RNG, particles, world state, world context, entity-construction adapter) that can build a world the live host does not own; leave the combat host, frame coordinator, and presentation outward. Then run a detached world through it and compare traces against the live world.
 
 Preserve:
 
@@ -327,11 +327,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 ### Evidence last verified at this pause
 
 All of the following were run from this worktree after the per-world
-transient/frame-feel, entity-factory, and clock/RNG slices:
+transient/frame-feel, entity-factory, clock/RNG, and particle slices:
 
 - `pnpm check:c27a:foundation` passed:
   - typecheck, lint, architecture;
-  - 16 test files / 50 tests;
+  - 16 test files / 51 tests;
   - standalone build;
   - physical C27A browser proof.
 - `pnpm check:c27:foundation` passed:
@@ -343,7 +343,7 @@ transient/frame-feel, entity-factory, and clock/RNG slices:
   - requirements, typecheck, lint, architecture;
   - 9 test files / 39 tests;
   - build and the State Forge browser restore/studio/exit matrix.
-- `pnpm test` passed: 219 test files / 886 tests.
+- `pnpm test` passed: 220 test files / 890 tests.
 - `pnpm requirements:check` and `git diff --check` passed.
 - `src/app/live-game-runtime.ts` measured 690 physical lines.
 - The production build, browser feature matrix, boss parity, navigation/progression/playground/terminal journeys, and the blade/mirror/combat parity fixtures passed after the composition-root change.

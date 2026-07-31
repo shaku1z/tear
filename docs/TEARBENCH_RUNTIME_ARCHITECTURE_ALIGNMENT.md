@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first eleven executable C27A slices are complete:
+The first twelve executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -126,6 +126,11 @@ The first eleven executable C27A slices are complete:
   source and one RNG path per world" rule is now structural rather than
   conventional. The backdrop receives the live world's clock through an
   explicit install seam.
+- The particle system is created per world by `createParticleSystem()`; no
+  module `FX` instance remains. Every mutable service the live world
+  composition previously read as a module singleton is now created per world
+  and passed inward. The closure-owned run/world construction inside
+  `live-game-runtime.ts` is the remaining portability blocker.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

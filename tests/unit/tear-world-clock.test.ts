@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import * as gameConfig from "../../src/config/game-config";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
+import * as particles from "../../src/presentation/particles";
 import * as runRandom from "../../src/simulation/run-random";
 
 describe("per-world time and randomness", () => {
@@ -22,7 +23,21 @@ describe("per-world time and randomness", () => {
     expect("CLOCK" in gameConfig).toBe(false);
     expect("GAME_RANDOM" in runRandom).toBe(false);
     expect("GAME_RANDOM_STREAMS" in runRandom).toBe(false);
+    expect("FX" in particles).toBe(false);
     expect(typeof runRandom.createRunRandom).toBe("function");
+    expect(typeof particles.createParticleSystem).toBe("function");
+  });
+
+  it("gives each world its own particle system", () => {
+    const first = particles.createParticleSystem();
+    const second = particles.createParticleSystem();
+
+    first.ring(10, 20, 4, "#fff");
+
+    expect(first.list.length).toBeGreaterThan(0);
+    expect(second.list).toHaveLength(0);
+    first.reset();
+    expect(first.list).toHaveLength(0);
   });
 
   it("gives each created world independent named random streams", () => {

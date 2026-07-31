@@ -28,7 +28,7 @@ import { createAttract } from "../presentation/attract";
 import { Backdrop, installBackdropClock } from "../presentation/backdrop";
 import { Cinematics } from "../presentation/cinematics";
 import { cosmeticRandom } from "../presentation/cosmetic-random";
-import { FX } from "../presentation/particles";
+import { createParticleSystem } from "../presentation/particles";
 import { createUi } from "../presentation/ui";
 import { createLegacyReplayCompatibility } from "../replay/legacy-compat";
 import { createRunRandom } from "../simulation/run-random";
@@ -73,6 +73,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   // This world's simulation clock and named RNG streams. They are created here, not imported as a
   // module singleton, so a second world cannot inherit live stream cursors.
   const CLOCK = createTearWorldClock();
+  const FX = createParticleSystem();
   installBackdropClock(CLOCK);
   const { streams: GAME_RANDOM_STREAMS, service: GAME_RANDOM } = createRunRandom();
   const { Input, PAD } = createLegacyInputCompatibility(

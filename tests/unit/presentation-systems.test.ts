@@ -2,7 +2,9 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { Cinematics, type CinematicScript } from "../../src/presentation/cinematics";
-import { FX } from "../../src/presentation/particles";
+import { createParticleSystem } from "../../src/presentation/particles";
+
+const FX = createParticleSystem();
 
 describe("presentation system boundaries", () => {
   it("requires a fresh post-arm confirm before advancing a cinematic line", () => {

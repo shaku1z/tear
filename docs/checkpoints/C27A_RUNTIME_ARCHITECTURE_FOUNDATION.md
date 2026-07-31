@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-07-30. This records the first eleven executable migration
+In progress as of 2026-07-30. This records the first twelve executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -192,6 +192,15 @@ headless Tear gameplay portable.
   clock isolation, stream isolation from a shared seed, and asserts the two
   modules expose no instance to reintroduce the coupling. Six entity/UI unit
   suites were migrated off the former config clock export.
+- `src/presentation/particles.ts` exports `createParticleSystem()` instead of a
+  shared `FX` object literal. The composition root creates one system per world
+  and passes it to the entity factories, the world context's effects service,
+  and the runtime dependencies, so particles emitted by one world can no longer
+  land in another. The isolation test asserts the module exposes no instance
+  and that emitting into one system leaves a second empty. With this, every
+  mutable service the live world composition previously read as a module
+  singleton — clock, named RNG, particles, boss feedback, entity constructors —
+  is created per world.
 
 ## Remaining C27A work
 

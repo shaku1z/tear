@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** eleventh C27A foundation slice complete (per-world clock and
-named RNG ownership). This is not a C27A completion or release claim.
+**Status:** twelfth C27A foundation slice complete (per-world particle
+system; no shared mutable world service instances remain). This is not a C27A completion or release claim.
 
 ## Resume protocol (mandatory)
 
@@ -87,13 +87,19 @@ Before coding, read this file, then:
   both and passes them inward, and `installBackdropClock` binds the one
   presentation module that read the clock as a global. Six entity/UI unit
   suites moved to `createTearWorldClock()`.
+- The twelfth slice replaced the shared `FX` object literal with
+  `createParticleSystem()`. The composition root creates one per world and
+  passes it to the entity factories, the world context's effects service, and
+  the runtime dependencies. No module-level mutable world service instance
+  remains: clock, named RNG, particles, boss feedback, and entity constructors
+  are all per world.
 
 ## Latest evidence
 
-All of the following were run from this worktree after the clock/RNG slice:
+All of the following were run from this worktree after the particle slice:
 
 - `pnpm check:c27a:foundation` passed: typecheck, lint, architecture gate,
-  16 test files / 50 tests, standalone test build, and
+  16 test files / 51 tests, standalone test build, and
   `browser-c27a-physical-canonical-input`.
 - Because these slices touched the composition root, the production build,
   `test:browser:features`, `test:browser:bosses`, `test:browser:journeys`,
@@ -112,7 +118,7 @@ All of the following were run from this worktree after the clock/RNG slice:
 - `pnpm check:c23` passed: requirements, typecheck, lint, architecture, 9 test
   files / 39 tests, standalone build, 600-tick live restore, State Forge
   Studio, and the exit matrix.
-- `pnpm test` passed: 219 test files / 886 tests.
+- `pnpm test` passed: 220 test files / 890 tests.
 - `pnpm requirements:check` and `git diff --check` passed.
 - `src/app/live-game-runtime.ts` measures 690 physical lines.
 - The standalone build emits the existing non-fatal >500 kB chunk warning.
@@ -121,16 +127,17 @@ All of the following were run from this worktree after the clock/RNG slice:
 
 ## Exact next C27A boundary
 
-Clock, RNG, and entity construction are per-world. The remaining shared world
-service is the particle system: `src/presentation/particles.ts` exports a
-single `FX` object literal that every world's entity constructors and the
-backdrop write into. Convert it to a `createParticleSystem()` factory, have the
-composition root create one per world and pass it to
-`createLiveWorldSimulationFactories`, `createLiveWorldContext`, and the
-presentation adapters, and prove two systems do not share particles. After that
-the remaining blocker is the closure-owned run/world construction inside
-`live-game-runtime.ts`. Preserve menu-time lazy construction and the one
-existing
+No shared mutable world service instance remains, so the blocker is now the
+closure-owned run/world construction inside `startLiveGame`. Extract the world
+bring-up — `createLiveWorldSimulationFactories`, the clock, RNG, particle
+system, world state, world context, and the entity-construction adapter — into
+one `createLiveWorld(...)` composition that `startLiveGame` calls, so the same
+call can build a world the live host does not own. Do not move the combat host,
+frame coordinator, or presentation into it: those stay outward. Then have a
+detached world use that composition and compare its action, event, RNG,
+snapshot, and hash trace against the live world before making any replay,
+headless, or learning portability claim. Preserve menu-time lazy construction
+and the one existing
 `TearSimulationRuntime`/scheduler, and extend the context only where real
 ownership moves; do not add cosmetic ports merely to make the architecture
 diagram look complete.
