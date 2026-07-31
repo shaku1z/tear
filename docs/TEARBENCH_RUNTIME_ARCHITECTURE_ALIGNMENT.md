@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first thirteen executable C27A slices are complete:
+The first fourteen executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -137,6 +137,13 @@ The first thirteen executable C27A slices are complete:
   host, frame coordinator, and presentation stay outward. A detached world
   can be built from the same call, but no detached, replay, or headless
   world consumes it yet, and no parity trace has been compared.
+- A detached world built from that composition now runs. It drives real
+  production player and enemy code through the shared
+  `TearSimulationRuntime` in Node, with no DOM, canvas, screens, audio,
+  storage, or live host, and two worlds on one seed produce identical
+  authoritative hashes for 120 ticks. Combat phases beyond entity update
+  still live in the live host, so this is composition determinism, not
+  live-versus-detached combat parity.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

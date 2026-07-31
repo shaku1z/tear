@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** thirteenth C27A foundation slice complete (one call builds one
-live world). This is not a C27A completion or release claim.
+**Status:** fourteenth C27A foundation slice complete (a detached world
+built from the production composition runs). This is not a C27A completion or release claim.
 
 ## Resume protocol (mandatory)
 
@@ -99,13 +99,20 @@ Before coding, read this file, then:
   `startLiveGame` passes a session port (weapon, outcome, recording, vault
   id, win seconds) plus write-through mirrors for the local views it still
   caches, and no longer constructs those pieces itself.
+- The fourteenth slice ran a detached world through that composition:
+  production entity constructors, a real player/blade/charger/flyer, the
+  canonical input adapter, and the shared `TearSimulationRuntime` for 120
+  exact ticks in Node. Two worlds on one seed match hash for hash; a
+  different seed diverges; a second world shares nothing. Only
+  `Player.update` and enemy `update` run — blade transport, collision,
+  kill, wave, and cinematic phases are still live-host-owned.
 
 ## Latest evidence
 
-All of the following were run from this worktree after the world-composition slice:
+All of the following were run from this worktree after the detached-world slice:
 
 - `pnpm check:c27a:foundation` passed: typecheck, lint, architecture gate,
-  17 test files / 54 tests, standalone test build, and
+  18 test files / 58 tests, standalone test build, and
   `browser-c27a-physical-canonical-input`.
 - Because these slices touched the composition root, the production build,
   `test:browser:features`, `test:browser:bosses`, `test:browser:journeys`,
@@ -124,7 +131,7 @@ All of the following were run from this worktree after the world-composition sli
 - `pnpm check:c23` passed: requirements, typecheck, lint, architecture, 9 test
   files / 39 tests, standalone build, 600-tick live restore, State Forge
   Studio, and the exit matrix.
-- `pnpm test` passed: 221 test files / 893 tests.
+- `pnpm test` passed: 222 test files / 897 tests.
 - `pnpm requirements:check` and `git diff --check` passed.
 - `src/app/live-game-runtime.ts` measures 685 physical lines.
 - The standalone build emits the existing non-fatal >500 kB chunk warning.
@@ -133,17 +140,17 @@ All of the following were run from this worktree after the world-composition sli
 
 ## Exact next C27A boundary
 
-One call now builds one live world. The next step is to actually run a
-second world through it: build a detached world from
-`createLiveWorldComposition` plus `createLiveWorldSimulationFactories`,
-drive it with the shared `TearSimulationRuntime`, and compare its canonical
-action ordering, gameplay events, RNG snapshots, and state hashes against a
-live trace of the same seed and scenario. Until that parity evidence
-exists, no replay, headless, or learning portability claim may be made. The
-known remaining coupling is that combat still runs inside
-`createLiveCombatHost`, which also owns the browser frame coordinator: a
-detached world must reuse the world composition without that host, not copy
-it. Preserve menu-time lazy construction and the one existing
+A detached world runs the entity layer of the production composition. The
+next boundary is to widen what that world steps, one production phase at a
+time, without copying `createLiveCombatHost`. Start with the blade: its
+transport and held/thrown lifecycle need only player, blade, enemies, and
+config, so extract the live host's blade step into a port the detached
+world can call, then extend the detached fixture and compare it against a
+live trace of the same seed. Collision, kill, wave, and cinematic phases
+follow, each with its own port and trace comparison. No replay, headless,
+or learning portability claim may be made until a full combat tick runs in
+both and their canonical actions, gameplay events, RNG snapshots, and state
+hashes agree. Preserve menu-time lazy construction and the one existing
 `TearSimulationRuntime`/scheduler, and extend the context only where real
 ownership moves; do not add cosmetic ports merely to make the architecture
 diagram look complete.

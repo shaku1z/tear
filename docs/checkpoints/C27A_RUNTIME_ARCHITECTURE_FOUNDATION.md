@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-07-30. This records the first thirteen executable migration
+In progress as of 2026-07-30. This records the first fourteen executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -216,6 +216,26 @@ headless Tear gameplay portable.
   instances, and that two worlds keep separate state, transient records,
   entities, and lifecycles. `src/app/live-game-runtime.ts` is 685 physical
   lines.
+- `tests/unit/detached-production-world.test.ts` is the first evidence that
+  a world built from the production composition actually runs. It creates
+  a clock, RNG, and particle system, builds the production entity
+  constructors with `createLiveWorldSimulationFactories`, assembles the
+  world with `createLiveWorldComposition`, constructs a real player, blade,
+  charger, and flyer through the entity port, projects canonical actions
+  with `createLiveAuthoritativeInputAdapter`, and drives the shared
+  `TearSimulationRuntime` for 120 exact ticks in Node with no DOM, canvas,
+  screens, audio, storage, or live host. It proves the scripted actions
+  move the production player, that two worlds on one seed produce identical
+  authoritative state hashes tick for tick, that a different seed diverges
+  through the world's own streams, and that a second world shares no
+  clock, particles, entities, or constructors.
+
+  Scope is deliberately narrow and must not be overstated: the step runs
+  production `Player.update` and enemy `update` only. Blade transport,
+  collision, kill, wave, and cinematic phases still run inside
+  `createLiveCombatHost`, so this is a detached-composition determinism
+  proof, not live-versus-detached combat parity and not a replay, headless,
+  or learning portability claim.
 
 ## Remaining C27A work
 
