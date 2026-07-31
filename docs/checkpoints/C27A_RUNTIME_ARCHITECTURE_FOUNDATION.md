@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-07-30. This records the first fifteen executable migration
+In progress as of 2026-07-30. This records the first sixteen executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -244,6 +244,27 @@ headless Tear gameplay portable.
   RunRandomStreams();` in the real worktree was confirmed to fail the gate
   before being reverted. Per-world ownership of time, randomness, and particles
   is now mechanically enforced rather than conventional.
+- `tests/unit/detached-opening-phase.test.ts` widens the detached world to
+  the real opening combat phase. It builds the world exactly as above, adds
+  a legal run (`newMods()`, weapon stats, void/boss fields), spawns a
+  production charger and ranged enemy, and calls `runLiveOpeningPhase` as
+  the simulation step for 180 exact ticks. The host is assembled from the
+  world composition with every outward effect recorded instead of
+  rendered, played, or persisted, and its opening/protection state is the
+  world's own transient record.
+
+  The scripted swing, jump, and dash reach real production combat code:
+  the recorded outward trace contains `sound:swing`, `fireDashStart`,
+  `sound:land`, bursts, smoke, and dash ghosts, so the phase is genuinely
+  executing prelude, weapon secondary, locomotion, transport, enemy actor,
+  status, platform, and boss steps rather than returning blocked. Two runs
+  on one seed produce identical state hashes and an identical outward
+  effect sequence; a different seed diverges.
+
+  Still outside the detached step: the collision phase, kill runtime, wave
+  orchestration, and cinematics, which remain live-host-owned. This is a
+  detached opening-phase determinism proof, not a full combat tick and not
+  live-versus-detached parity.
 
 ## Remaining C27A work
 

@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first fifteen executable C27A slices are complete:
+The first sixteen executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -147,6 +147,12 @@ The first fifteen executable C27A slices are complete:
 - The architecture gate now fails if `game-config`, `run-random`, or
   `particles` reintroduces a shared `CLOCK`, `GAME_RANDOM`,
   `GAME_RANDOM_STREAMS`, or `FX` instance, proved with a planted violation.
+- The detached world now runs the real opening combat phase
+  (`runLiveOpeningPhase`) as its simulation step, with outward effects
+  recorded rather than rendered. Same-seed runs agree on state hashes and
+  on the outward effect sequence. Collision, kill, wave, and cinematic
+  phases remain live-host-owned, so this is still not a full combat tick
+  nor live-versus-detached parity.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

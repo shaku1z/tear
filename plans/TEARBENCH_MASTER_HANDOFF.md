@@ -114,7 +114,7 @@ Named status:
 - **C25:** physical/black-box foundation verified; exit open.
 - **C26:** regression discovery passed `pnpm check:c26` on 2026-07-28.
 - **C27:** recorder/capsule foundation only; checkpoint open.
-- **C27A:** fifteen shared-world architecture slices in this tree; blocking and incomplete.
+- **C27A:** sixteen shared-world architecture slices in this tree; blocking and incomplete.
 - **C28-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -169,7 +169,7 @@ Do not claim TearBot automatically learns merely because scripted policies, trai
 
 Read [`TEARBENCH_C27A_HANDOFF.md`](TEARBENCH_C27A_HANDOFF.md) before editing.
 
-Fifteen C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, focused tests, and physical browser diagnostics.
+Sixteen C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, focused tests, and physical browser diagnostics.
 
 Important files:
 
@@ -188,7 +188,7 @@ Important files:
 
 ### Exact next slice
 
-A detached world built from `createLiveWorldComposition` now runs real production player and enemy code through the shared `TearSimulationRuntime` with deterministic hashes. Widen what it steps one production phase at a time — blade transport first, then collision, kill, wave, and cinematic — by extracting each phase into a port the detached world can call rather than copying `createLiveCombatHost`, and compare each against a live trace of the same seed.
+The detached world now runs the real opening combat phase deterministically. Next: build the collision-phase host from the same world composition (impact state from the transient record, collections from `live-combat-world-state`, outward effects recorded), run opening plus collision as one detached combat tick, then capture a live trace of the same seed through the TearBench bridge and compare canonical actions, gameplay events, RNG snapshots, and state hashes tick for tick. Kill, wave, and cinematic orchestration follow.
 
 Preserve:
 
@@ -332,7 +332,7 @@ transient/frame-feel, entity-factory, clock/RNG, and particle slices:
 
 - `pnpm check:c27a:foundation` passed:
   - typecheck, lint, architecture;
-  - 18 test files / 58 tests;
+  - 19 test files / 61 tests;
   - standalone build;
   - physical C27A browser proof.
 - `pnpm check:c27:foundation` passed:
@@ -344,7 +344,7 @@ transient/frame-feel, entity-factory, clock/RNG, and particle slices:
   - requirements, typecheck, lint, architecture;
   - 9 test files / 39 tests;
   - build and the State Forge browser restore/studio/exit matrix.
-- `pnpm test` passed: 222 test files / 897 tests.
+- `pnpm test` passed: 223 test files / 900 tests.
 - `pnpm requirements:check` and `git diff --check` passed.
 - `src/app/live-game-runtime.ts` measured 685 physical lines.
 - The production build, browser feature matrix, boss parity, navigation/progression/playground/terminal journeys, and the blade/mirror/combat parity fixtures passed after the composition-root change.
