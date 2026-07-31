@@ -58,7 +58,10 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
       id: ability.id, tier: active().mods.tier[ability.id] ?? 1, count: active().mods.owned[ability.id] ?? 1,
     })),
     authoritativeResult: options.authoritativeResult,
-    stopRecording: (summary) => d.GHOST.stopRec(recordingMetadata(summary)),
+    stopRecording: (summary) => {
+      try { return d.GHOST.stopRec(recordingMetadata(summary)); }
+      finally { d.Input.stopSemanticRecording(); }
+    },
     storeReplay: (recording, summary) => d.VAULT.add(recording, storedRecordingMetadata(summary)),
     setLastRecording: options.setLastRecording,
     setLastVaultId: options.setLastVaultId,
@@ -71,7 +74,19 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     preparedVictory: () => active()._victoryPrepared ?? null,
     storePreparedVictory: (prepared) => { active()._victoryPrepared = prepared; },
     stopClipper: () => { d.Clipper?.stop(); },
-    terminate: (outcome) => { options.lifecycle.terminate(outcome); },
+    terminate: (outcome) => {
+      try { options.lifecycle.terminate(outcome); }
+      finally { d.Input.stopSemanticRecording(); }
+    },
+    publishTerminal: (outcome, run) => {
+      const runId = options.lifecycle.snapshot().sessionId;
+      if (runId === null) return;
+      d.GAMEPLAY_EVENTS.emit({
+        kind: "run", transition: outcome === "victory" ? "completed" : "defeated", runId,
+        mode: run.mode, difficulty: run.diff, weaponId: run.weaponId,
+        wave: run.wave, score: run.score, runTimeSeconds: run.runTime,
+      });
+    },
     saveBest: (run) => options.saveBest(run.mode, run.diff, run.wave, run.score, run.runTime),
     best: (run) => options.getBest(run.mode, run.diff),
     awardCoins: options.awardCoins,
@@ -115,7 +130,10 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     groundY: () => d.CONFIG.world.groundY,
     viewport: () => ({ width: options.width, height: options.height }),
     isRecording: () => d.GHOST.recording(),
-    stopInterruptedRecording: (reason) => { d.GHOST.stopRec({ [reason]: true }); },
+    stopInterruptedRecording: (reason) => {
+      try { d.GHOST.stopRec({ [reason]: true }); }
+      finally { d.Input.stopSemanticRecording(); }
+    },
     presentClaimed(result) { options.setOutcome(result); options.setScreen("win"); options.resetWinSeconds(); d.SFX.wave(); d.CG.happytime(); },
     launchFinale: (death, recovered) => { options.startFinale(death, recovered); },
     installRecording: (controller) => { options.controllers.installRecording(controller); },

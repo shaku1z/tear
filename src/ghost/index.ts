@@ -3,6 +3,7 @@ export * from "./recording-profiles";
 export * from "./capsule-vault";
 export * from "./capsule-reader";
 export * from "./capsule-replay-envelope";
+export * from "./replay-admission";
 export * from "./live-recorder";
 export * from "./live-causal-events";
 export * from "./ghost-doctor";

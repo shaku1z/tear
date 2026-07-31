@@ -5,6 +5,11 @@ TearBot, and Ghost 3.0 program.
 
 ## Authority
 
+The current durable continuation state is recorded in
+[`../plans/TEARBENCH_MASTER_HANDOFF.md`](../plans/TEARBENCH_MASTER_HANDOFF.md).
+That handoff records working-tree and checkpoint position; it does not override
+the authorities below.
+
 The program has three governing documents:
 
 1. [Autonomous completion plan](../plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md)
@@ -22,6 +27,11 @@ Atomic requirement truth and current evidence state live in:
 - `docs/tearbench-ghost3-requirements.json`
 - `docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md`
 - `docs/tearbench-ghost3-evidence-catalog.json`
+
+The accepted runtime-boundary correction is recorded in
+[`TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md`](TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md).
+It is a binding dependency of the replay-world, headless, and learning
+checkpoints rather than an optional refactor.
 
 The reviewed source design is identified by:
 

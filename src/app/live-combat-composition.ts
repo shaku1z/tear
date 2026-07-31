@@ -5,12 +5,14 @@ import { createLiveCombatCoordinatorOptions, createLiveCombatFrameOptions,
 import { createLiveCombatHost, type LiveCombatHostFactoryOptions,
   type LiveCombatHostRuntimeApi } from "./live-combat-host-factory";
 import type { RuntimeFrameDriver } from "./runtime-frame-driver";
+import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
 
 type CombatLifecycleOptions = Pick<LiveCombatRuntimeOptions,
   "advanceClock" | "captureProtection" | "applyProtection">;
 
 export interface LiveCombatCompositionOptions<State> {
   readonly frameDriver: RuntimeFrameDriver;
+  readonly gameplayEvents?: TearGameplayEventPort;
   readonly adapters: LiveCombatAdapterContext;
   readonly lifecycle: CombatLifecycleOptions;
   readonly frame: LiveCombatFrameContext;
@@ -30,6 +32,7 @@ export function createLiveCombatComposition<State>(
 
   const host: LiveCombatHostRuntimeApi<State> = createLiveCombatHost<State>({
     frameDriver: options.frameDriver,
+    ...(options.gameplayEvents === undefined ? {} : { gameplayEvents: options.gameplayEvents }),
     combatEntities: adapters.entities,
     kill: adapters.kill,
     createCombat: () => ({

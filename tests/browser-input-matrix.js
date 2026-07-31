@@ -28,7 +28,10 @@ async function main() {
   await configure(touch);
   await touch.evaluate(() => window.__PANTHEON_TEST.startMode("playground"));
   await touch.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
-  await touch.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.startRecording());
+  assert.equal(await touch.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording), true,
+    "playground uses the normal shared canonical input session");
+  const touchStartX = await touch.evaluate(() => window.__PANTHEON_TEST.state().playerTrace?.x);
+  assert.equal(typeof touchStartX, "number", "touch journey requires a live player position");
   await touch.evaluate(() => {
     const canvas = document.querySelector("canvas");
     const send = (type, x, y) => {
@@ -38,19 +41,28 @@ async function main() {
     send("touchstart", 200, 450);
     send("touchmove", 290, 450);
   });
+  // The normal physical frame loop now owns draining the shared canonical
+  // stream. Verify the player-visible result instead of competing with it for
+  // buffer ownership; C27A separately captures the sealed envelopes.
+  await touch.waitForFunction((startX) => {
+    const trace = window.__PANTHEON_TEST.state().playerTrace;
+    return trace && trace.x > startX + 1;
+  }, touchStartX);
   const touchMove = await touch.evaluate(() => ({
     input: window.__TEAR_CATALOG_DEBUG__.input.snapshot(),
-    actions: window.__TEAR_CATALOG_DEBUG__.input.drain(10),
+    player: window.__PANTHEON_TEST.state().playerTrace,
   }));
   assert.equal(touchMove.input.mode, "touch");
-  assert.deepEqual(touchMove.actions.map((entry) => entry.command), [{ type: "move", x: 1000, y: 0 }]);
+  assert.ok(touchMove.player.x > touchStartX + 1, "touch movement did not reach the live player");
   await touch.evaluate(() => {
     const canvas = document.querySelector("canvas");
     const point = new Touch({ identifier: 17, target: canvas, clientX: 290, clientY: 450, pageX: 290, pageY: 450 });
     canvas.dispatchEvent(new TouchEvent("touchend", { bubbles: true, cancelable: true, touches: [], changedTouches: [point] }));
   });
-  const touchRelease = await touch.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.drain(11));
-  assert.deepEqual(touchRelease.map((entry) => entry.command), [{ type: "move", x: 0, y: 0 }]);
+  await touch.waitForFunction(() => {
+    const trace = window.__PANTHEON_TEST.state().playerTrace;
+    return trace && Math.abs(trace.vx) < 1;
+  }, undefined, { timeout: 5_000 });
   await touch.close();
 
   const ultrawide = await browser.newPage({ viewport: { width: 1920, height: 800 } });
@@ -133,16 +145,16 @@ async function main() {
   assert.equal(await controller.locator("#lockhint").evaluate((hint) => getComputedStyle(hint).display), "none");
   const aimBeforeMove = await controller.evaluate(() => window.__PANTHEON_TEST.state().bladeAim);
   assert.ok(aimBeforeMove, "recorded live play exposes the physical blade aim");
-  assert.equal(await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording), false,
-    "visual ghost recording must not start a second semantic input pipeline");
+  assert.equal(await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording), true,
+    "every live run owns one shared canonical device-input session independently of Ghost 2");
   for (const mode of ["campaign", "endless", "gauntlet", "bossonly", "sandbox"]) {
     await controller.evaluate((selectedMode) => window.__PANTHEON_TEST.startMode(selectedMode), mode);
     await controller.waitForFunction((selectedMode) => {
       const state = window.__PANTHEON_TEST.state();
       return state.game === "playing" && state.mode === selectedMode;
     }, mode);
-    assert.equal(await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording), false,
-      `${mode} visual ghost recording must not replace live physical blade input`);
+    assert.equal(await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording), true,
+      `${mode} must keep the shared canonical device-input session active`);
   }
   await controller.evaluate(() => window.__PANTHEON_TEST.startMode("endless"));
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing"
@@ -191,17 +203,20 @@ async function main() {
   // introducing activity. A gamepad that is already holding A at connection
   // time must not synthesize a gameplay edge.
   await controller.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const gamepadStart = await controller.evaluate(() => window.__PANTHEON_TEST.state().playerTrace);
   await controller.evaluate(() => {
-    window.__TEAR_CATALOG_DEBUG__.input.startRecording();
     window.__testGamepad.axes = [0.8, 0, 0.7, 0];
     window.__testGamepad.buttons[0] = { pressed: true, touched: true, value: 1 };
     window.__testGamepad.timestamp = 2;
   });
   await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().mode === "gamepad");
-  await controller.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  const padActions = await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.drain(20));
-  assert.ok(padActions.some((entry) => entry.command.type === "move" && entry.command.x === 1000));
-  assert.ok(padActions.some((entry) => entry.command.type === "jump" && entry.command.phase === "pressed"));
+  await controller.waitForFunction((before) => {
+    const trace = window.__PANTHEON_TEST.state().playerTrace;
+    return trace && trace.x > before.x + 1 && trace.y < before.y - 1;
+  }, gamepadStart);
+  const gamepadResult = await controller.evaluate(() => window.__PANTHEON_TEST.state().playerTrace);
+  assert.ok(gamepadResult.x > gamepadStart.x + 1, "gamepad movement did not reach the live player");
+  assert.ok(gamepadResult.y < gamepadStart.y - 1, "gamepad A press did not make the live player jump");
   await controller.evaluate(() => {
     const disconnected = window.__testGamepad;
     window.__testGamepad = null;

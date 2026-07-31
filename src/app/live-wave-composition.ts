@@ -7,6 +7,7 @@ import type { GameEnemy, GamePlayer, GameRun } from "./game-runtime-state";
 import type { createLiveCampaignHost } from "./live-campaign-host";
 import type { createLiveContentComposition } from "./live-content-composition";
 import type { LiveRunControllerRegistry } from "./live-run-controller-api";
+import type { LiveWorldServices } from "./live-world-context";
 import { createLiveWaveHost } from "./live-wave-host";
 import type { WavePlanIntentPort } from "./live-wave-intent-coordinator";
 
@@ -25,6 +26,7 @@ export interface LiveWaveCompositionOptions {
   readonly controllers: LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
   readonly stage: CampaignHost["stage"];
   readonly story: CampaignHost["story"];
+  readonly worldServices: Pick<LiveWorldServices, "random">;
   readonly run: () => GameRun;
   readonly player: () => GamePlayer;
   readonly enemies: () => GameEnemy[];
@@ -55,7 +57,7 @@ export function createLiveWaveComposition(options: LiveWaveCompositionOptions): 
     tuning: () => d.CONFIG.run,
     stages: d.STAGES.map((stage) => ({ ...stage, boss: bossId(stage.boss) })),
     presets: d.PRESETS,
-    random: d.GAME_RANDOM_STREAMS.stream("world"),
+    random: options.worldServices.random.stream("world"),
     modeDefinition: (mode) => d.CONFIG.modes.find((candidate) => candidate.id === mode) ?? {},
     currentStage: () => ({ index: options.stage.index, accent: options.stage.current.accent }),
     stageHasChapter: () => true,
@@ -70,7 +72,7 @@ export function createLiveWaveComposition(options: LiveWaveCompositionOptions): 
       loadStage: options.loadStage,
       setStageBanner: (name, duration) => { options.stage.setBanner(name, duration); },
       beginCampaignChapter: options.beginCampaignChapter,
-      recordWave: (wave, marker) => { d.GHOST.wave(wave, marker); },
+      recordWave: (wave, marker) => { d.GAMEPLAY_EVENTS.emit({ kind: "wave", wave, event: marker }); },
       snapshotReplay: (slot) => { d.GHOST.snapshot(options.canvas, slot); },
       prepareWave: (wave, boss, deferred) => { options.lifecycle.prepareWave(wave, boss, deferred); },
       activateWave: () => { options.lifecycle.activateWave(); },
@@ -80,7 +82,7 @@ export function createLiveWaveComposition(options: LiveWaveCompositionOptions): 
     clearIntents: {
       clearWave: () => { options.lifecycle.clearWave(); },
       bloom: (color, strength, duration) => { d.Backdrop.bloom(color, strength, duration); },
-      recordWave: (wave, marker) => { d.GHOST.wave(wave, marker); },
+      recordWave: (wave, marker) => { d.GAMEPLAY_EVENTS.emit({ kind: "wave", wave, event: marker }); },
       profileMax: (stat, value) => { d.PROFILE.maxStat(stat, value); },
       profileAdd: (stat, value) => { d.PROFILE.addStat(stat, value); },
       dailyBump: (challenge, value, operation) => { d.DAILY.bump(challenge, value, operation); },

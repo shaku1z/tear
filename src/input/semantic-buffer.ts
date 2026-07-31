@@ -47,6 +47,19 @@ export class SemanticInputBuffer {
     this.reset();
   }
 
+  /**
+   * Drops unsealed one-shot actions without resetting the sequencer. This is
+   * used when a live run leaves gameplay (pause/reward/menu) so a later resume
+   * cannot replay an old jump, dash, throw, or UI-derived edge. Current level
+   * controls are deliberately marked dirty for the next canonical tick.
+   */
+  discardUnsealed(): void {
+    if (!this.#recording) return;
+    this.#pendingEdges.length = 0;
+    this.#movementDirty = true;
+    this.#aimDirty = this.#aim !== undefined;
+  }
+
   setMovement(x: number, y: number): void {
     if (!this.#recording) return;
     const next = Object.freeze({ type: "move" as const, x: axis(x), y: axis(y) });

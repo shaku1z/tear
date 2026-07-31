@@ -1,14 +1,14 @@
-import { stableVerificationHash } from "../replay/hash";
-import type { TearSnapshotV1 } from "./contracts";
-import type { TearRuntimeBridgeFactory } from "./live-runtime-contracts";
+import { stableVerificationHash } from "../../replay/hash";
+import type { TearSnapshotV1 } from "../contracts";
+import type { TearRuntimeBridgeFactory } from "../live-runtime-contracts";
 import {
   installStateForgeStudio,
   type StateForgeCheckpointItem,
   type StateForgeForkRequest,
   type StateForgeStudioHost,
 } from "./state-forge-studio";
-import type { TearSdlDocumentV1, TearSdlResolved } from "./tearsdl";
-import { TearCheckpointBank } from "./tearsdl";
+import type { TearSdlDocumentV1, TearSdlResolved } from "../tearsdl";
+import { TearCheckpointBank } from "../tearsdl";
 
 const INITIAL_DOCUMENT: TearSdlDocumentV1 = Object.freeze({
   format: "tearsdl",

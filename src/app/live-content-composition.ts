@@ -4,31 +4,24 @@ import { createLiveContentHost } from "./live-content-host";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameEnemy, GamePlayer, GameRun } from "./game-runtime-state";
 import type { LiveGameHostState } from "./live-game-host-state";
+import type { LiveWorldEntityConstructionPort } from "./live-world-entity-factory";
+import type { LiveWorldServices } from "./live-world-context";
 import type { createLiveCampaignHost } from "./live-campaign-host";
 
 type CampaignStage = ReturnType<typeof createLiveCampaignHost>["stage"];
 
-function isGameEnemy(value: object): value is GameEnemy {
-  return "cfg" in value && "hit" in value && typeof value.hit === "function" &&
-    "update" in value && typeof value.update === "function" &&
-    "x" in value && typeof value.x === "number" && "y" in value && typeof value.y === "number" &&
-    "hp" in value && typeof value.hp === "number" && "maxHp" in value && typeof value.maxHp === "number";
-}
-
-function requireGameEnemy(value: object): GameEnemy {
-  if (!isGameEnemy(value)) throw new TypeError("Content factory produced an invalid live enemy");
-  return value;
-}
-
 export interface LiveContentCompositionOptions {
   readonly dependencies: GameRuntimeDependencies;
+  readonly entities: LiveWorldEntityConstructionPort;
   readonly state: LiveGameHostState;
+  readonly worldServices: Pick<LiveWorldServices, "random">;
   readonly stage: CampaignStage;
   readonly width: number;
   readonly height: number;
   readonly run: () => GameRun;
   readonly player: () => GamePlayer;
   readonly enemies: () => GameEnemy[];
+  readonly actorId: (enemy: GameEnemy) => string;
   readonly wipeRemainingSeconds: () => number;
   readonly setBossIntro: (enemy: GameEnemy, duration: number, delay: number) => void;
   readonly clearBossBeat: () => void;
@@ -59,35 +52,30 @@ export function createLiveContentComposition(options: LiveContentCompositionOpti
   const content = createLiveContentHost<GameEnemy>({
     width: options.width,
     groundY: d.CONFIG.world.groundY,
-    random: d.GAME_RANDOM_STREAMS.stream("spawn"),
+    random: options.worldServices.random.stream("spawn"),
     run: options.run,
     modes: () => d.CONFIG.modes,
     stages: d.STAGES,
     stageIndex: () => options.stage.index,
     platforms: () => options.stage.platforms,
     setPlatforms: (value) => { options.stage.platforms = value; },
-    createGround(kind) {
-      if (kind === "ranged") return new d.Ranged(0, 0);
-      if (kind === "bomber") return new d.Bomber(0, 0);
-      if (kind === "armored") return new d.Armored(0, 0);
-      if (kind === "chimera") return new d.Chimera(0, 0);
-      return new d.Charger(0, 0);
-    },
-    createAir: (kind, x, y) => kind === "flyer" ? new d.Flyer(x, y) : new d.Wraith(x, y),
-    createSupport: (kind) => new d.Support(0, 0, kind),
-    createDefaultBoss: () => new d.Boss(options.width / 2, d.CONFIG.world.groundY - 140),
+    createGround: (kind) => options.entities.createEnemy(kind, 0, 0, options.run()),
+    createAir: (kind, x, y) => options.entities.createEnemy(kind, x, y, options.run()),
+    createSupport: (kind) => options.entities.createEnemy(kind, 0, 0, options.run()),
+    createDefaultBoss: () => options.entities.createEnemy("boss", options.width / 2, d.CONFIG.world.groundY - 140, options.run()),
     createBoss(id) {
-      if (id === "source") return requireGameEnemy(new d.Source(options.width / 2, d.CONFIG.world.groundY - 300));
-      if (id === "echo") return requireGameEnemy(new d.MirrorHost(options.width / 2, d.CONFIG.world.groundY - d.CONFIG.echo.h / 2, options.run().mods));
-      if (id === "aldric") return requireGameEnemy(new d.Aldric(options.width / 2, d.CONFIG.world.groundY - d.CONFIG.aldric.h / 2));
-      if (id === "colossus") return requireGameEnemy(new d.Colossus(options.width / 2, d.CONFIG.world.groundY - d.CONFIG.colossus.h / 2));
-      if (id === "warden") return requireGameEnemy(new d.Warden(options.width / 2, d.CONFIG.world.groundY - 140));
-      return requireGameEnemy(new d.Boss(options.width / 2, d.CONFIG.world.groundY - 140));
+      const x = options.width / 2;
+      if (id === "source") return options.entities.createEnemy("source", x, d.CONFIG.world.groundY - 300, options.run());
+      if (id === "echo") return options.entities.createEnemy("echo", x, d.CONFIG.world.groundY - d.CONFIG.echo.h / 2, options.run());
+      if (id === "aldric") return options.entities.createEnemy("aldric", x, d.CONFIG.world.groundY - d.CONFIG.aldric.h / 2, options.run());
+      if (id === "colossus") return options.entities.createEnemy("colossus", x, d.CONFIG.world.groundY - d.CONFIG.colossus.h / 2, options.run());
+      if (id === "warden") return options.entities.createEnemy("warden", x, d.CONFIG.world.groundY - 140, options.run());
+      return options.entities.createEnemy("boss", x, d.CONFIG.world.groundY - 140, options.run());
     },
     applyPreset: (enemy, preset) => { d.applyPreset(enemy, preset); },
-    rollVariant: (kind, wave) => d.rollVariant(kind, wave, d.GAME_RANDOM_STREAMS.stream("spawn")),
+    rollVariant: (kind, wave) => d.rollVariant(kind, wave, options.worldServices.random.stream("spawn")),
     applyVariant: (enemy, variant) => { d.applyVariant(enemy, variant); },
-    rollAffixes: (enemy, wave) => { d.rollAffixes(enemy, wave, d.GAME_RANDOM_STREAMS.stream("spawn")); },
+    rollAffixes: (enemy, wave) => { d.rollAffixes(enemy, wave, options.worldServices.random.stream("spawn")); },
     arrivalEffect(enemy, boss) {
       d.FX.ring(enemy.x, enemy.y, 10, enemy.color);
       if (boss && !d.GFX.low) {
@@ -95,7 +83,12 @@ export function createLiveContentComposition(options: LiveContentCompositionOpti
         d.FX.burst(enemy.x, enemy.y, 0, -1, 10, enemy.color);
       }
     },
-    recordSpawn: (enemy, role, detail) => { d.GHOST.spawn(enemy, role, detail); },
+    recordSpawn: (enemy, role, detail) => {
+      d.GAMEPLAY_EVENTS.emit({
+        kind: "spawn", actorId: options.actorId(enemy), actorKind: role, x: enemy.x, y: enemy.y,
+        variantName: detail.vn, bossId: detail.b,
+      });
+    },
     install: (enemy) => { options.enemies().push(enemy); },
     startClipper: () => { d.Clipper?.start(); },
     bossIntroDuration: d.CONFIG.bossTheater.introDur,

@@ -25,6 +25,7 @@ describe("LiveRunStartController", () => {
       exposeDebugState: () => events.push("debug"),
       updateProgressionTracking: () => events.push("progression"),
       startRecording: () => events.push("recording"),
+      publishRunStarted: () => events.push("event:started"),
       configureMode: () => events.push("mode"),
       applyMetaProgression: () => events.push("meta"),
       activateOpeningContent: () => events.push("content"),
@@ -38,7 +39,7 @@ describe("LiveRunStartController", () => {
     expect(session.voidSeed).toBeGreaterThan(0);
     expect(events).toEqual([
       "replace", "world", "clocks", "random", "install", "finish-world", "lifecycle:run-9ix", "debug",
-      "progression", "recording", "mode", "meta", "content", "playing", "music", "lock",
+      "progression", "recording", "event:started", "mode", "meta", "content", "playing", "music", "lock",
     ]);
   });
 });

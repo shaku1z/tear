@@ -7,17 +7,27 @@ import { planRunStart, type RunStartPlan } from "../gameplay/run/run-start-plan"
 import { RunReplacementGuard } from "../gameplay/run/run-replacement";
 import type { BossId } from "../gameplay/run/content-director";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
+import type { RunLifecycleSnapshot } from "../gameplay/run/lifecycle";
 import { tutorialUsesBaselineLoadout } from "../gameplay/training/tutorial-contract";
+import type { RandomSource } from "../domain/random";
+import type { TearWorldServices } from "../gameplay/runtime/tear-world-context";
+import type { RunRandomStreamName, RunRandomStreamsSnapshot } from "../simulation/run-random";
 
 interface MutableWorldState {
   resetTransient(): void;
   finishReset(): void;
 }
 
+type WorldServices = Pick<
+  TearWorldServices<RunRandomStreamsSnapshot, RunRandomStreamName, RandomSource>,
+  "configuration" | "random" | "clock" | "effects" | "mirror" | "bossFeedback"
+>;
+
 interface RunLifecyclePort {
   start(sessionId: string): void;
   activateTraining(): void;
-  snapshot(): unknown;
+  terminate(outcome: "quit"): void;
+  snapshot(): RunLifecycleSnapshot;
 }
 
 interface StagePort {
@@ -42,7 +52,6 @@ interface RunStartHostContext {
   readonly dependencies: GameRuntimeDependencies;
   readonly state: LiveGameHostState;
   readonly width: number;
-  readonly restoreConfig: () => void;
   readonly prepareWorld: () => void;
   readonly applySettings: () => void;
   readonly configureBlade: (blade: GameBlade, weaponId: string) => void;
@@ -50,6 +59,7 @@ interface RunStartHostContext {
   readonly createBlade: () => GameBlade;
   readonly installRun: (run: GameRun) => void;
   readonly world: MutableWorldState;
+  readonly services: WorldServices;
   readonly resetAuthoritativeClocks: () => void;
   readonly createRunSeed?: () => number;
   readonly loadStage: (index: number) => void;
@@ -77,22 +87,37 @@ interface RunStartHostContext {
 /** Owns the complete new-run transaction and its world-reset side effects. */
 export function createLiveRunStartHost(context: RunStartHostContext): LiveRunStartController<ReturnType<GameRuntimeDependencies["newMods"]>> {
   const { dependencies, state } = context;
-  const { CONFIG, REMOTE, GHOST, GAME_RANDOM, PROFILE, META, SFX, FX, Backdrop, CLOCK,
-    Mirror, BOSSFX, Input, createRunSeed, newMods } = dependencies;
+  const { CONFIG, REMOTE, GHOST, PROFILE, META, SFX, GAMEPLAY_EVENTS, Input, createRunSeed, newMods } = dependencies;
   const replacement = new RunReplacementGuard({
     recording: () => GHOST.recording(),
-    stopInterruptedRecording: () => { GHOST.stopRec({ interruptedByNewRun: true }); },
+    stopInterruptedRecording: () => {
+      const activeRun = state.run();
+      const lifecycle = context.lifecycle.snapshot();
+      if (activeRun !== null && lifecycle.sessionId !== null && lifecycle.phase !== "terminated") {
+        context.lifecycle.terminate("quit");
+        GAMEPLAY_EVENTS.emit({
+        kind: "run", transition: "abandoned", runId: lifecycle.sessionId,
+          mode: activeRun.mode, difficulty: activeRun.diff, weaponId: activeRun.weaponId,
+          wave: activeRun.wave, score: activeRun.score,
+          runTimeSeconds: activeRun.runTime, reason: "replaced-by-new-run",
+        });
+      }
+      try { GHOST.stopRec({ interruptedByNewRun: true }); }
+      finally { Input.stopSemanticRecording(); }
+    },
   });
   let startingPlan: RunStartPlan | null = null;
 
   const controller = new LiveRunStartController({
-    replaceActiveRun: () => { replacement.sealActiveRecording(); },
+    replaceActiveRun: () => {
+      try { replacement.sealActiveRecording(); }
+      finally { Input.stopSemanticRecording(); }
+    },
     initializeWorld: (_mode, difficulty) => {
       context.prepareWorld();
-      Mirror.active = false;
-      Mirror.host = null;
-      BOSSFX.q.length = 0;
-      context.restoreConfig();
+      context.services.mirror.reset();
+      context.services.bossFeedback.clear();
+      context.services.configuration.resetToBase();
       const weaponId = state.selectedWeapon();
       context.applySettings();
       try { SFX.setVoidDescent(0, 0.05); SFX.setMusicDuck(1, 0.12); } catch { /* optional audio backend */ }
@@ -112,9 +137,8 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       state.setProjectiles([]);
       state.setFloaters([]);
       context.world.resetTransient();
-      FX.reset();
-      Backdrop.resetFx();
-      CLOCK.sim = 0;
+      context.services.effects.resetWorld();
+      context.services.clock.reset();
       return { weaponId, mods: newMods(), scaling: startingPlan.scaling,
         achievementSnapshot: Object.keys(PROFILE.data.ach) };
     },
@@ -126,7 +150,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       context.story.resetChapter();
     },
     createRunSeed: context.createRunSeed ?? createRunSeed,
-    resetRunRandom: (seed) => { GAME_RANDOM.reset(seed); },
+    resetRunRandom: (seed) => { context.services.random.resetRun(seed); },
     installSession: (session) => {
       const run: GameRun = {
         ...session, diffDmg: 1, bossIdx: 0, bossOrder: [], curBoss: null, voidScroll: null,
@@ -159,7 +183,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
             return { x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, maxHp: enemy.maxHp,
               stun: enemy.stun, spawnT: enemy.spawnT, introT: enemy.introT ?? 0, aliveT: enemy.aliveT,
               boss: enemy.isBoss, bossId: enemy.bossId, state: authored.state, stateT: authored.stateT,
-              atkT: authored.atkT, phase: authored.isMirrorBoss === true ? Mirror.phase : authored.phase,
+              atkT: authored.atkT, phase: authored.isMirrorBoss === true ? dependencies.Mirror.phase : authored.phase,
               phaseMarker: authored.phaseMarker, mode: authored.mode,
               cinematicT: authored.cinematicT, cinematicPending: authored.cinematicRequest != null,
               voidPending: authored.requestVoidCinematic === true, mirrorBoss: authored.isMirrorBoss,
@@ -175,7 +199,19 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       if (mode !== "bossonly" && mode !== "sandbox") { PROFILE.markMode(mode); context.achievementCheck(); }
     },
     startRecording: (runId, seed) => {
-      if (context.achievementTracking()) { GHOST.startRec({ runId, seed: String(seed) }); Input.syncSemanticMovement(); }
+      // Canonical device input is the live simulation's normal route, not a
+      // Ghost 2-only observation feature.  Start it before the optional visual
+      // recorder so the very first live tick (and its V3 sidecar) sees the
+      // current held movement state.
+      Input.startSemanticRecording();
+      Input.syncSemanticMovement();
+      if (context.achievementTracking()) GHOST.startRec({ runId, seed: String(seed) });
+    },
+    publishRunStarted: (session, runId) => {
+      GAMEPLAY_EVENTS.emit({
+        kind: "run", transition: "started", runId, mode: session.mode, difficulty: session.diff,
+        weaponId: session.weaponId, wave: session.wave, score: session.score, runTimeSeconds: session.runTime,
+      });
     },
     configureMode: (mode) => {
       const run = requireRun(state);

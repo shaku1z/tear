@@ -6,6 +6,8 @@ import type { RunLifecycleController } from "../gameplay/run/lifecycle";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "./game-runtime-state";
 import type { LiveGameHostState } from "./live-game-host-state";
+import type { LiveWorldEntityConstructionPort } from "./live-world-entity-factory";
+import type { LiveWorldServices } from "./live-world-context";
 import type { LegacyAppScreen, LegacyTransitionContext } from "./legacy-state-controller";
 import type { LiveRunControllerRegistry } from "./live-run-controller-api";
 import type { createLiveCampaignHost } from "./live-campaign-host";
@@ -25,6 +27,7 @@ type WeaponRuntime = ReturnType<typeof createLiveWeaponRuntime<GameEnemy>>;
 
 export interface LiveRunOrchestrationOptions {
   readonly dependencies: GameRuntimeDependencies;
+  readonly entities: LiveWorldEntityConstructionPort;
   readonly state: LiveGameHostState;
   readonly lifecycle: RunLifecycleController;
   readonly controllers: Controllers;
@@ -40,10 +43,11 @@ export interface LiveRunOrchestrationOptions {
   readonly player: () => GamePlayer;
   readonly blade: () => GameBlade;
   readonly enemies: () => GameEnemy[];
+  readonly actorId: (enemy: GameEnemy) => string;
   readonly setEnemies: (value: GameEnemy[]) => void;
   readonly setProjectiles: (value: GameProjectile[]) => void;
   readonly selectedBoss: () => string;
-  readonly restoreConfig: () => void;
+  readonly worldServices: Pick<LiveWorldServices, "configuration" | "random" | "clock" | "effects" | "mirror" | "bossFeedback">;
   readonly applySettings: () => void;
   readonly prepareWorld: () => void;
   readonly resetTransientWorld: () => void;
@@ -83,8 +87,8 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
   const addZoom = (amount: number): void => { options.weapon.addZoom(amount); };
   const dealArea: LiveRunOrchestrationOptions["weapon"]["dealArea"] = (...args) => options.weapon.dealArea(...args);
   const content = createLiveContentComposition({
-    dependencies: d, state: options.state, stage, width: options.width, height: options.height,
-    run: options.run, player: options.player, enemies: options.enemies,
+    dependencies: d, entities: options.entities, state: options.state, worldServices: options.worldServices, stage, width: options.width, height: options.height,
+    run: options.run, player: options.player, enemies: options.enemies, actorId: options.actorId,
     wipeRemainingSeconds: options.wipeRemainingSeconds,
     setBossIntro: (enemy, duration, delay) => { options.state.setBossIntro({ boss: enemy, t: 0, dur: duration, delay }); },
     clearBossBeat: () => { options.state.setBossBeat(null); },
@@ -92,12 +96,12 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
   });
 
   createLiveRunStartHost({
-    dependencies: d, state: options.state, width: options.width, restoreConfig: options.restoreConfig,
+    dependencies: d, state: options.state, width: options.width, services: options.worldServices,
     prepareWorld: options.prepareWorld, applySettings: options.applySettings,
     configureBlade: (blade, weaponId) => {
       const weapon = d.applyWeapon(weaponId); blade.weapon = weapon; blade.model = weapon.model;
     },
-    createPlayer: (x, y) => new d.Player(x, y), createBlade: () => new d.Blade(),
+    createPlayer: (x, y) => options.entities.createPlayer(x, y), createBlade: () => options.entities.createBlade(),
     installRun: (session) => { options.state.setRun(session); },
     world: { resetTransient: options.resetTransientWorld, finishReset: options.finishWorldReset },
     resetAuthoritativeClocks: options.resetAuthoritativeClocks,
@@ -124,7 +128,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
 
   createLiveWaveComposition({
     dependencies: d, lifecycle: options.lifecycle, controllers: options.controllers,
-    stage, story, run: options.run, player: options.player, enemies: options.enemies, spawn: content.spawn,
+    stage, story, worldServices: options.worldServices, run: options.run, player: options.player, enemies: options.enemies, spawn: content.spawn,
     loreBusy: campaignRuntime.loreBusy, achievementTracking: options.achievementTracking,
     achievementCheck: options.achievementCheck, achievementTracker: options.achievementTracker,
     beginWipe: options.beginWipe, loadStage: options.controllers.api.loadStage,

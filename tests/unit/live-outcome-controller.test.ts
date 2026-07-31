@@ -25,6 +25,7 @@ function createHarness() {
     achievementTracking: () => true,
     economyTelemetry: () => ({ earned: 12 }),
     recordDefeatProgress: () => { events.push("record-defeat"); },
+    publishTerminal: (outcome) => { events.push(`event:${outcome}`); },
     executeVictoryIntents: () => { events.push("victory-intents"); },
     persistPendingFinale: () => { events.push("pending-finale"); },
     saveProfile: () => { events.push("save-profile"); },
@@ -44,7 +45,7 @@ describe("LiveRunOutcomeController", () => {
 
     expect(result.log).toEqual([{ wave: 4, time: 8, kills: 3, peak: 2, died: true }]);
     expect(events).toEqual([
-      "stop-clipper", "append-wave", "terminate:defeat", "save-best", "award-coins",
+      "stop-clipper", "append-wave", "terminate:defeat", "event:defeat", "save-best", "award-coins",
       "record-defeat", "present:defeat",
     ]);
   });
@@ -56,6 +57,7 @@ describe("LiveRunOutcomeController", () => {
 
     expect(prepared()).toEqual({ isNew: true, earned: 12, coins: 99 });
     expect(events.filter((event) => event === "save-best")).toHaveLength(1);
+    expect(events.filter((event) => event === "event:victory")).toHaveLength(1);
     expect(events).toContain("pending-finale");
 
     events.length = 0;

@@ -1,5 +1,5 @@
 import { stableVerificationHash } from "../replay/hash";
-import type { TearExecutionClass, TearObservationClass, TearProvenanceV1, TearSnapshotV1, TearStateClass } from "./contracts";
+import type { TearBuildIdentityV1, TearExecutionClass, TearObservationClass, TearProvenanceV1, TearSnapshotV1, TearStateClass } from "./contracts";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
 import type { LiveTearRuntimeEnvironmentContext, TearRuntimeAccessClass } from "./live-runtime-contracts";
 import { restoreSnapshotIntoLiveWorld, type TearLiveRestoreResult } from "./live-state-snapshot";
@@ -26,6 +26,14 @@ export interface LiveStateForgeSnapshotCapture {
   readonly target: string;
   readonly contentHash: string;
   readonly visualHash: string;
+  /**
+   * The stable run/bootstrap build fields for a replayable recording.  The
+   * configuration hash is deliberately derived from this individual keyframe:
+   * upgrades can legally mutate configuration after the tick-zero bootstrap.
+   */
+  readonly staticBuild?: Omit<TearBuildIdentityV1, "configHash">;
+  /** Optional integrity-protected bootstrap event that this keyframe extends. */
+  readonly sourceId?: TearProvenanceV1["sourceId"];
   readonly actor?: TearProvenanceV1["actor"];
   readonly executionClass?: TearExecutionClass;
   readonly trainingConsent?: TearProvenanceV1["trainingConsent"];
@@ -36,6 +44,16 @@ export function captureLiveStateForgeSnapshot(input: LiveStateForgeSnapshotCaptu
   if (!/^[a-z0-9][a-z0-9._-]{0,127}$/u.test(input.id)) throw new TypeError("snapshot id is invalid");
   const world = input.world ?? input.stateForge.capture();
   const captured = captureCodecState(world, input.registry);
+  const configurationHash = stableVerificationHash(captured.state["tear.configuration.v1"]);
+  const build = input.staticBuild === undefined
+    ? Object.freeze({
+      version: "0.1.0", revision: "working-tree", target: input.target, rulesetVersion: "live",
+      contentHash: input.contentHash, configHash: configurationHash,
+    })
+    : Object.freeze({ ...input.staticBuild, configHash: configurationHash });
+  if (input.staticBuild !== undefined && (input.target !== build.target || input.contentHash !== build.contentHash)) {
+    throw new TypeError("snapshot target and content hash must agree with its supplied build fingerprint");
+  }
   return Object.freeze({
     format: TEAR_CONTRACT_FORMAT, kind: "snapshot", schemaVersion: TEAR_CONTRACT_VERSION,
     id: input.id, tick: input.tick, stateClass: input.stateClass, seed: input.seed,
@@ -49,10 +67,8 @@ export function captureLiveStateForgeSnapshot(input: LiveStateForgeSnapshotCaptu
     }),
     provenance: Object.freeze({
       actor: input.actor ?? "state-forge", producer: input.producer,
-      build: Object.freeze({
-        version: "0.1.0", revision: "working-tree", target: input.target, rulesetVersion: "live",
-        contentHash: input.contentHash, configHash: stableVerificationHash(captured.state["tear.configuration.v1"]),
-      }),
+      build,
+      ...(input.sourceId === undefined ? {} : { sourceId: input.sourceId }),
       executionClass: input.executionClass ?? "engineering", observationClass: input.observationClass,
       trainingConsent: input.trainingConsent ?? "no-training",
     }),

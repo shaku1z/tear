@@ -1,7 +1,7 @@
-import type { GameAction } from "../input/game-action";
-import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION, type TearObservationV1, type TearScenarioV1 } from "./contracts";
-import { runInvariantChecks } from "./invariants";
-import type { TearRuntimeBridgeFactory } from "./live-runtime-contracts";
+import type { GameAction } from "../../input/game-action";
+import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION, type TearObservationV1, type TearScenarioV1 } from "../contracts";
+import { runInvariantChecks } from "../invariants";
+import type { TearRuntimeBridgeFactory } from "../live-runtime-contracts";
 
 export function installGhostLabPanel(factory: TearRuntimeBridgeFactory): void {
   if (new URLSearchParams(window.location.search).get("ghostlab") !== "1") return;

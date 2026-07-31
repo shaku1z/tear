@@ -1,12 +1,17 @@
 # TearBench, TearBot, State Forge, and Ghost 3.0 Autonomous Completion Plan
 
-**Status:** In progress; paused after C24 at the user's requested boundary
+**Status:** In progress; paused at a deliberate handoff boundary during C27/C27A
 **Created:** 2026-07-23
 **Source authority:** `TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN(3).md`, version 0.6, SHA-256 `007BE22193F5369B8450AAB33B95C6D3080176E6B2F91A1D504B545CA7FC7DDE`
 **Supersedes for completion claims:** `plans/TEARBENCH_GHOST3_ACTION_PLAN.md`
 **Purpose:** Convert every remaining part of the original vision into executable work, with gates that require real integration and user-visible outcomes.
-**Current progress:** C21-C24 passed; C25 is in progress. Its implementation
-foundation is verified, but its Class C exit gate remains open.
+**Current progress:** C21-C24 and C26 passed. C25's implementation foundation is
+verified, but its Class C exit gate remains open. C27 implementation is active;
+C27A is now a blocking runtime-architecture correction before replay-world,
+headless, or learning completion claims. Its seven-slice foundation includes
+shared live-world entity construction, a generic per-world state/service
+context, and combat collection ownership through that context, but not a
+portable full-world runtime.
 
 ### Execution record through C24
 
@@ -222,7 +227,7 @@ for CI, debugging, reproducibility, and expert automation.
 |---|---|---|
 | P7 — Truthful Baseline | C21-C22 | All prior claims are audited; contracts are wired to the real runtime. |
 | P8 — Real Autonomous QA | C23-C26 | State Forge, scripted autonomy, and regression intelligence operate on real Tear gameplay. |
-| P9 — Operational Ghost 3.0 | C27-C30 | Real runs record, persist, replay, seek, fork, compare, and survive restarts. |
+| P9 — Operational Ghost 3.0 | C27-C30, including C27A | Real runs record, persist, replay, seek, fork, compare, and survive restarts through the redesigned typed runtime boundary. |
 | P10 — Autonomous Learning | C31-C36 | Real data trains real policies; Foundry improves them automatically and visibly. |
 | P11 — Player and Cloud Product | C37-C39 | Coach, challenges, Studio, publication, verification, privacy, and operations are usable. |
 | P12 — Final Certification | C40 | The entire original vision has traceable evidence and an honest final release certificate. |
@@ -517,6 +522,52 @@ physical controls available to a person.
 - Record-to-replay, seek, fork, practice, export/import, and migration
   round-trip invariants pass on real capsules.
 - V1/V2 playback remains unchanged and is never relabeled as exact V3 truth.
+
+---
+
+## C27A — Runtime Architecture Alignment
+
+**Goal:** Ensure TearBench, Ghost 3.0, replay, headless execution, and learning
+use the redesigned typed Tear architecture rather than cementing transitional
+live-runtime internals into a second platform.
+
+**Authority**
+
+- `docs/TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md`
+- Architecture decision D14 in
+  `docs/TEARBENCH_GHOST3_ARCHITECTURE_DECISIONS.md`
+
+**Deliverables**
+
+- Define narrow inward-facing fixed-step, canonical-action,
+  structural-observation, state-codec, RNG, lifecycle, and typed-event ports.
+- Move concrete app-world projection behind adapters.
+- Add native gameplay event ownership and independent Ghost 2/Ghost 3 adapters.
+- Replace direct TearBench manipulation of AI/blade override fields with a
+  gameplay input adapter.
+- Extract one reusable deterministic simulation composition without DOM,
+  Canvas, screens, audio, persistence, or platform dependencies.
+- Separate portable TearBench core, browser adapters, simulation adapters, and
+  development UI through enforceable dependency rules.
+- Extend the architecture gate to reject forbidden imports and prove it catches
+  a planted violation.
+- Rerun architecture-dependent C22-C27 evidence after migration.
+
+**Exit gate**
+
+- Portable TearBench core has no dependency on `src/app`, DOM/Canvas UI, or
+  Ghost 2 legacy compatibility types.
+- Live, replay, and headless environments execute the same simulation
+  implementation and agree on action/event order, RNG, snapshots, and semantic
+  hashes for the parity corpus.
+- Ghost 2 remains compatible through its own outward adapter; Ghost 3 records
+  native typed event truth through a separate adapter.
+- The automated architecture check rejects planted forbidden dependency edges.
+- A same-worktree rerun of affected C22-C27 gates passes.
+
+C27A does not renumber or remove any original checkpoint. It is a blocking
+correction discovered during implementation. C29, C30, and C31-C36 may be
+developed provisionally but cannot pass until C27A passes.
 
 ---
 

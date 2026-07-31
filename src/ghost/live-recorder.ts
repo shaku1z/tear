@@ -6,9 +6,11 @@ import {
   type GhostChunkKind,
   type GhostEncoderWorkerPort,
   type TearGhostManifest,
+  type GhostVaultWrite,
 } from "./capsule-vault";
 import { GhostCapsuleReader, type GhostReadCapsule } from "./capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope, type GhostCapsuleReplayMapping } from "./capsule-replay-envelope";
+import { assessGhostReplayAdmission, type GhostReplayAdmission } from "./replay-admission";
 import { createLiveGhostBootstrapEvent } from "./live-causal-events";
 import { ghostRecordingProfile, type GhostRecordingProfileId } from "./recording-profiles";
 
@@ -23,8 +25,21 @@ export interface GhostLiveRecorderOptions {
   readonly now: () => string;
   readonly chunkEntries?: number;
   readonly maxPendingWrites?: number;
+  /** Maximum entries held before/during an asynchronous durable flush. */
+  readonly maxStagingEntries?: number;
   readonly worker?: GhostEncoderWorkerPort;
   readonly recordingProfile?: GhostRecordingProfileId;
+}
+
+/**
+ * Optional construction hooks for a browser-side recorder. Production callers
+ * use the defaults; the commit hook exists so browser evidence can exercise a
+ * real IndexedDB Vault's asynchronous fault path without changing gameplay.
+ */
+export interface BrowserGhostLiveRecorderOptions {
+  readonly chunkEntries?: number;
+  readonly maxPendingWrites?: number;
+  readonly beforeCommit?: (operations: readonly GhostVaultWrite[]) => void | Promise<void>;
 }
 
 interface LiveGhostCaptureSession {
@@ -48,7 +63,7 @@ interface LiveGhostCaptureSession {
 export class GhostLiveRecorder {
   readonly #options: Required<Pick<GhostLiveRecorderOptions, "now">>
     & Readonly<Pick<GhostLiveRecorderOptions, "createVault">>
-    & Readonly<{ chunkEntries: number; maxPendingWrites: number; keyframeIntervalTicks: number; worker?: GhostEncoderWorkerPort; recordingProfile: GhostRecordingProfileId }>;
+    & Readonly<{ chunkEntries: number; maxPendingWrites: number; maxStagingEntries: number; keyframeIntervalTicks: number; worker?: GhostEncoderWorkerPort; recordingProfile: GhostRecordingProfileId }>;
   #activeSession: LiveGhostCaptureSession | null = null;
   #failure: string | null = null;
   #lastManifest: TearGhostManifest | null = null;
@@ -59,11 +74,17 @@ export class GhostLiveRecorder {
 
   constructor(options: GhostLiveRecorderOptions) {
     const profile = ghostRecordingProfile(options.recordingProfile ?? "coaching");
+    const maxStagingEntries = options.maxStagingEntries
+      ?? Math.max(profile.chunkEntries, profile.chunkEntries * profile.maxPendingWrites * 2);
+    if (!Number.isSafeInteger(maxStagingEntries) || maxStagingEntries < 1) {
+      throw new RangeError("Ghost V3 staging capacity must be a positive safe integer");
+    }
     this.#options = Object.freeze({
       createVault: options.createVault,
       now: options.now,
       chunkEntries: options.chunkEntries ?? profile.chunkEntries,
       maxPendingWrites: options.maxPendingWrites ?? profile.maxPendingWrites,
+      maxStagingEntries,
       keyframeIntervalTicks: profile.keyframeIntervalTicks,
       recordingProfile: profile.id as GhostRecordingProfileId,
       ...(options.worker === undefined ? {} : { worker: options.worker }),
@@ -72,6 +93,7 @@ export class GhostLiveRecorder {
 
   get active(): boolean { return this.#activeSession !== null; }
   get keyframeIntervalTicks(): number { return this.#options.keyframeIntervalTicks; }
+  get maxStagingEntries(): number { return this.#options.maxStagingEntries; }
   get failure(): string | null { return this.#failure; }
   get lastManifest(): TearGhostManifest | null { return this.#lastManifest; }
 
@@ -96,12 +118,17 @@ export class GhostLiveRecorder {
 
   record(kind: GhostChunkKind, tick: number, value: unknown): void {
     const session = this.#activeSession;
-    if (session === null) return;
+    if (session === null || this.#hasFailed(session)) return;
     this.#enqueue(session, kind, tick, value);
   }
 
   #enqueue(session: LiveGhostCaptureSession, kind: GhostChunkKind, tick: number, value: unknown): void {
+    if (session.failure !== null) return;
     if (!Number.isSafeInteger(tick) || tick < 0) throw new RangeError("Ghost V3 entries require a non-negative integer tick");
+    if (session.pending.length >= this.#options.maxStagingEntries) {
+      this.#fail(session, new Error(`Ghost V3 staging capacity exceeded (${String(this.#options.maxStagingEntries)} entries)`));
+      return;
+    }
     session.lastRecordedTick = Math.max(session.lastRecordedTick, tick);
     session.pending.push(Object.freeze({ kind, tick, value: structuredClone(value) }));
     void this.#flush(session);
@@ -117,8 +144,16 @@ export class GhostLiveRecorder {
     try {
       this.#enqueue(session, "results", session.lastRecordedTick, result);
       await session.opening;
+      if (this.#hasFailed(session)) return null;
       await this.#flush(session);
-      const manifest = session.recorder === null ? null : await session.recorder.finalize(this.#options.now());
+      if (this.#hasFailed(session)) return null;
+      let manifest: TearGhostManifest | null = null;
+      try {
+        manifest = session.recorder === null ? null : await session.recorder.finalize(this.#options.now());
+      } catch (error) {
+        this.#fail(session, error);
+        return null;
+      }
       if (manifest !== null && session.sequence >= this.#lastCompletedSequence) {
         this.#lastCompletedSequence = session.sequence;
         this.#lastManifest = manifest;
@@ -126,12 +161,7 @@ export class GhostLiveRecorder {
       return manifest;
     } finally {
       session.pending = [];
-      if (session.failure !== null && session.sequence >= this.#lastFailureSequence
-        && session.sequence >= this.#lastCompletedSequence
-        && this.#isNewestSession(session)) {
-        this.#lastFailureSequence = session.sequence;
-        this.#failure = `session ${session.id}: ${session.failure}`;
-      }
+      this.#surfaceFailure(session);
     }
   }
 
@@ -145,13 +175,13 @@ export class GhostLiveRecorder {
         vault: await this.#openRecoveredVault(),
         ...(this.#options.worker === undefined ? {} : { worker: this.#options.worker }),
         recordingProfile: this.#options.recordingProfile,
+        provenance: session.input.provenance,
       });
       await recorder.start();
       session.recorder = recorder;
       await this.#flush(session);
     } catch (error) {
-      session.failure = error instanceof Error ? error.message : String(error);
-      session.pending = [];
+      this.#fail(session, error);
     }
   }
 
@@ -171,15 +201,19 @@ export class GhostLiveRecorder {
   }
 
   async #flush(session: LiveGhostCaptureSession): Promise<void> {
-    if (session.recorder === null) return;
+    if (session.recorder === null || session.failure !== null) return;
     if (session.flushing !== null) return session.flushing;
-    session.flushing = this.#flushQueued(session);
+    session.flushing = this.#flushQueued(session).catch((error: unknown) => { this.#fail(session, error); });
     try {
       await session.flushing;
     } finally {
       session.flushing = null;
     }
-    if (session.pending.length > 0) await this.#flush(session);
+    if (!this.#hasFailed(session) && session.pending.length > 0) await this.#flush(session);
+  }
+
+  #hasFailed(session: LiveGhostCaptureSession): boolean {
+    return session.failure !== null;
   }
 
   async #flushQueued(session: LiveGhostCaptureSession): Promise<void> {
@@ -191,15 +225,47 @@ export class GhostLiveRecorder {
     }
   }
 
+  #fail(session: LiveGhostCaptureSession, error: unknown): void {
+    if (session.failure !== null) return;
+    session.failure = error instanceof Error ? error.message : String(error);
+    this.#surfaceFailure(session);
+    // The recording journal remains durable and recoverable/quarantinable on
+    // the next open, but no later entry may make a failed capture look whole.
+    session.pending = [];
+  }
+
+  #surfaceFailure(session: LiveGhostCaptureSession): void {
+    if (session.failure === null || session.sequence < this.#lastFailureSequence
+      || session.sequence < this.#lastCompletedSequence || !this.#isNewestSession(session)) return;
+    this.#lastFailureSequence = session.sequence;
+    this.#failure = `session ${session.id}: ${session.failure}`;
+  }
+
 }
 
 /** Browser construction remains explicit so unsupported storage never affects play. */
-export function createBrowserGhostLiveRecorder(factory: IDBFactory | undefined): GhostLiveRecorder | null {
+export function createBrowserGhostLiveRecorder(
+  factory: IDBFactory | undefined,
+  options: BrowserGhostLiveRecorderOptions = {},
+): GhostLiveRecorder | null {
   if (factory === undefined) return null;
   const worker = createBrowserGhostEncoderWorker();
+  const beforeCommit = options.beforeCommit;
   return new GhostLiveRecorder({
-    createVault: async () => new GhostLocalVault(await createIndexedDbGhostVaultBackend(factory)),
+    createVault: async () => {
+      const backend = await createIndexedDbGhostVaultBackend(factory);
+      if (beforeCommit === undefined) return new GhostLocalVault(backend);
+      return new GhostLocalVault(Object.freeze({
+        ...backend,
+        commit: async (operations: readonly GhostVaultWrite[]): Promise<void> => {
+          await beforeCommit(operations);
+          await backend.commit(operations);
+        },
+      }));
+    },
     now: () => new Date().toISOString(),
+    ...(options.chunkEntries === undefined ? {} : { chunkEntries: options.chunkEntries }),
+    ...(options.maxPendingWrites === undefined ? {} : { maxPendingWrites: options.maxPendingWrites }),
     ...(worker === undefined ? {} : { worker }),
   });
 }
@@ -229,4 +295,17 @@ export async function readBrowserGhostCapsuleReplay(
 ): Promise<GhostCapsuleReplayMapping | undefined> {
   const capsule = await readBrowserGhostCapsule(factory, id);
   return capsule === undefined ? undefined : mapGhostCapsuleToReplayEnvelope(capsule);
+}
+
+/**
+ * Reopens a persisted capsule and fail-closes replay admission. This only
+ * reports matching metadata; it never treats the live app as a detached
+ * replay runtime or promotes any V3 truth track to verified.
+ */
+export async function readBrowserGhostCapsuleReplayAdmission(
+  factory: IDBFactory | undefined,
+  id: string,
+): Promise<GhostReplayAdmission | undefined> {
+  const capsule = await readBrowserGhostCapsule(factory, id);
+  return capsule === undefined ? undefined : assessGhostReplayAdmission(capsule);
 }

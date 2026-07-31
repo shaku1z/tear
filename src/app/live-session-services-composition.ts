@@ -56,8 +56,14 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
       tierUp: (choice) => { d.tierUp(choice.id, {
         player: options.player(), blade: options.blade(), mods: options.run().mods,
       }); },
-      ghostLoadout: (choiceId, tier, wave) => { d.GHOST.loadoutPick(choiceId, tier, wave); },
-      ghostEvent: (event) => { d.GHOST.event(event, options.player().x, options.player().y); },
+      ghostLoadout: (choiceId, tier, wave) => {
+        d.GAMEPLAY_EVENTS.emit({ kind: "loadout", choiceId, tier, wave });
+      },
+      ghostEvent: (event) => {
+        d.GAMEPLAY_EVENTS.emit({
+          kind: "effect", effect: event, x: options.player().x, y: options.player().y,
+        });
+      },
       consumeInput: () => { d.Input.consumeDelta(); }, resetUi: options.resetUi,
       setScreen: options.setScreen, startNextWave: controllers.api.startNextWave,
       requestPointer: options.requestPointerLock,

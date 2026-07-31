@@ -1,7 +1,7 @@
-import type { TearProvenanceV1 } from "./contracts";
-import type { StateForgeEvaluation, StateForgeReport, StateForgeValueDiff } from "./state-forge-studio-model";
-import { diffStateForgeValues, evaluateStateForgeSource } from "./state-forge-studio-model";
-import type { TearSdlDocumentV1, TearSdlResolved } from "./tearsdl";
+import type { TearProvenanceV1 } from "../contracts";
+import type { StateForgeEvaluation, StateForgeReport, StateForgeValueDiff } from "../state-forge-studio-model";
+import { diffStateForgeValues, evaluateStateForgeSource } from "../state-forge-studio-model";
+import type { TearSdlDocumentV1, TearSdlResolved } from "../tearsdl";
 
 export interface StateForgeCheckpointItem {
   readonly id: string;

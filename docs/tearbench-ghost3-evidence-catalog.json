@@ -327,7 +327,7 @@
       ],
       "textRegex": ".*",
       "implementationRefs": [
-        "src/tearbench/test-environment.ts",
+        "src/tearbench/test-support/test-environment.ts",
         "src/app/composition.ts",
         "src/platform/legacy-compat.ts",
         "scripts/check-production-test-isolation.mjs"

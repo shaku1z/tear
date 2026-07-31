@@ -29,6 +29,8 @@ export interface TearGhostManifest {
   readonly createdAt: string;
   /** Older schema-v1 capsules predate declared profile negotiation. */
   readonly recordingProfile: GhostRecordingProfileId | "legacy-unknown";
+  /** Immutable run/build/configuration origin; absent only on older schema-v1 capsules. */
+  readonly provenance?: Readonly<Record<string, unknown>>;
   readonly completedAt?: string;
   readonly chunks: readonly TearGhostChunkIndexEntry[];
   readonly rootIntegrity: string;
@@ -40,6 +42,7 @@ export interface TearGhostManifest {
 }
 
 export interface GhostEncodedChunk {
+  readonly encoding: GhostChunkEncoding;
   readonly encoded: string;
   readonly compressedBytes: number;
   readonly uncompressedBytes: number;
@@ -51,11 +54,16 @@ export interface GhostEncoderWorkerPort {
   encode(payload: unknown, prepareThumbnail: boolean): Promise<GhostEncodedChunk>;
 }
 
+function isGhostChunkEncoding(value: unknown): value is GhostChunkEncoding {
+  return value === "utf8-base64" || value === "utf8-base64-v1" || value === "gzip-base64-v1";
+}
+
 export function createInlineGhostEncoderWorker(): GhostEncoderWorkerPort {
   return {
     encode(payload: unknown, prepareThumbnail: boolean): Promise<GhostEncodedChunk> {
       const encoded = encodeGhostChunkPayload(payload);
       return Promise.resolve({
+        encoding: encoded.encoding,
         encoded: encoded.encoded,
         compressedBytes: encoded.compressedBytes,
         uncompressedBytes: encoded.uncompressedBytes,
@@ -92,12 +100,14 @@ export function createBrowserGhostEncoderWorker(): GhostEncoderWorkerPort | unde
     if (entry === undefined) return;
     pending.delete(response.id);
     if (response.error !== undefined) { entry.reject(new Error(response.error)); return; }
-    if (typeof response.encoded !== "string" || typeof response.compressedBytes !== "number"
+    if (!isGhostChunkEncoding(response.encoding)
+      || typeof response.encoded !== "string" || typeof response.compressedBytes !== "number"
       || typeof response.uncompressedBytes !== "number" || typeof response.checksum !== "string") {
       entry.reject(new TypeError("Ghost encoder worker returned an invalid response"));
       return;
     }
     entry.resolve(Object.freeze({
+      encoding: response.encoding,
       encoded: response.encoded,
       compressedBytes: response.compressedBytes,
       uncompressedBytes: response.uncompressedBytes,
@@ -259,7 +269,7 @@ function parseChunkIndex(value: unknown): TearGhostChunkIndexEntry {
     || !Number.isSafeInteger(value.sequence)
     || !Number.isSafeInteger(value.fromTick)
     || !Number.isSafeInteger(value.toTick)
-    || value.encoding !== "utf8-base64"
+    || !isGhostChunkEncoding(value.encoding)
     || !Number.isSafeInteger(value.compressedBytes)
     || !Number.isSafeInteger(value.uncompressedBytes)
     || typeof value.checksum !== "string") {
@@ -271,7 +281,7 @@ function parseChunkIndex(value: unknown): TearGhostChunkIndexEntry {
     sequence: value.sequence as number,
     fromTick: value.fromTick as number,
     toTick: value.toTick as number,
-    encoding: "utf8-base64",
+    encoding: value.encoding,
     compressedBytes: value.compressedBytes as number,
     uncompressedBytes: value.uncompressedBytes as number,
     checksum: value.checksum,
@@ -303,6 +313,9 @@ function parseCapsuleManifest(value: unknown): TearGhostManifest {
     recordingProfile: typeof value.recordingProfile === "string" && value.recordingProfile in GHOST_RECORDING_PROFILES
       ? value.recordingProfile as GhostRecordingProfileId
       : "legacy-unknown",
+    ...(dataRecord(value.provenance)
+      ? { provenance: Object.freeze(structuredClone(value.provenance)) }
+      : {}),
     ...(typeof value.completedAt === "string" ? { completedAt: value.completedAt } : {}),
     chunks,
     rootIntegrity: value.rootIntegrity,
@@ -380,7 +393,7 @@ export class GhostLocalVault {
     const encoded = await this.#backend.get("chunks", entry.id);
     if (encoded === undefined) throw new RangeError(`chunk is missing: ${entry.id}`);
     if (stableVerificationHash(encoded) !== entry.checksum) throw new TypeError(`chunk checksum mismatch: ${entry.id}`);
-    return decodeGhostChunkPayload(entry.encoding, encoded);
+    return decodeGhostChunkPayload(entry.encoding, encoded, entry.uncompressedBytes);
   }
 
   async completeSession(manifest: TearGhostManifest): Promise<void> {
@@ -459,6 +472,10 @@ export class GhostLocalVault {
       const ratio = entry.uncompressedBytes / Math.max(1, entry.compressedBytes);
       if (ratio > limits.maxExpansionRatio) throw new RangeError(`capsule chunk expansion ratio is unsafe: ${entry.id}`);
       if (stableVerificationHash(encoded) !== entry.checksum) throw new TypeError(`capsule chunk checksum mismatch: ${entry.id}`);
+      // Decode before committing untrusted bytes. The declared uncompressed
+      // size is also the hard streaming ceiling, so dishonest metadata cannot
+      // turn a small compressed import into an unbounded allocation.
+      await decodeGhostChunkPayload(entry.encoding, encoded, entry.uncompressedBytes);
     }
     for (const entry of manifest.chunks) {
       const encoded = chunks[entry.id];
@@ -512,6 +529,7 @@ export interface GhostRecorderOptions {
   readonly vault: GhostLocalVault;
   readonly worker?: GhostEncoderWorkerPort;
   readonly recordingProfile?: GhostRecordingProfileId;
+  readonly provenance?: Readonly<Record<string, unknown>>;
 }
 
 export class GhostStreamingRecorder {
@@ -570,7 +588,7 @@ export class GhostStreamingRecorder {
         sequence,
         fromTick: Math.min(...entries.map((entry) => entry.tick)),
         toTick: Math.max(...entries.map((entry) => entry.tick)),
-        encoding: "utf8-base64",
+        encoding: encoded.encoding,
         compressedBytes: encoded.compressedBytes,
         uncompressedBytes: encoded.uncompressedBytes,
         checksum: encoded.checksum,
@@ -604,6 +622,9 @@ export class GhostStreamingRecorder {
       status,
       createdAt: this.#options.createdAt,
       recordingProfile: this.#options.recordingProfile ?? "forensic-qa",
+      ...(this.#options.provenance === undefined
+        ? {}
+        : { provenance: Object.freeze(structuredClone(this.#options.provenance)) }),
       ...(completedAt === undefined ? {} : { completedAt }),
       chunks,
       rootIntegrity: ghostRootIntegrity(chunks),

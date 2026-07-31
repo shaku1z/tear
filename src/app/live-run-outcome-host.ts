@@ -28,6 +28,7 @@ export interface LiveRunOutcomeHostContext<TReplay extends RecordedReplay> {
   readonly storePreparedVictory: (prepared: PreparedVictory) => void;
   readonly stopClipper: () => void;
   readonly terminate: (outcome: "defeat" | "victory") => void;
+  readonly publishTerminal: (outcome: "defeat" | "victory", run: OutcomeRunState) => void;
   readonly saveBest: (run: OutcomeRunState) => boolean;
   readonly best: (run: OutcomeRunState) => BestRecord;
   readonly awardCoins: (score: number) => number;
@@ -93,6 +94,7 @@ export function createLiveRunOutcomeHost<TReplay extends RecordedReplay>(
     storePreparedVictory: context.storePreparedVictory,
     stopClipper: context.stopClipper,
     terminate: context.terminate,
+    publishTerminal: context.publishTerminal,
     saveBest: context.saveBest,
     best: context.best,
     awardCoins: context.awardCoins,

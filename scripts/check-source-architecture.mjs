@@ -13,6 +13,148 @@ const authoredDataExceptions = new Set([
 // the original provisional 500-line cap.
 const MAX_SUBSYSTEM_LINES = 700;
 const errors = [];
+const forbiddenDependencyRules = Object.freeze([
+  Object.freeze({
+    roots: Object.freeze(["src/ghost/", "src/agents/", "src/tearbench/"]),
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*replay\/legacy-compat["']/u,
+    message: "portable Ghost, agent, and TearBench modules cannot depend on the Ghost 2 compatibility adapter",
+  }),
+  Object.freeze({
+    roots: Object.freeze(["src/tearbench/"]),
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*app\/game-runtime-state["']/u,
+    message: "portable TearBench modules must consume structural simulation ports, not concrete app world types",
+  }),
+  Object.freeze({
+    roots: Object.freeze([
+      "src/gameplay/runtime/tear-simulation-runtime.ts",
+      "src/gameplay/runtime/tear-world-entity-construction.ts",
+      "src/gameplay/runtime/tear-world-context.ts",
+    ]),
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*(?:app\/|presentation\/|audio\/|persistence\/|platform\/|replay\/legacy-compat)[^"']*["']/u,
+    message: "portable simulation and world-construction modules cannot depend on outward app, presentation, service, or Ghost 2 adapters",
+  }),
+  Object.freeze({
+    roots: Object.freeze([
+      "src/gameplay/runtime/tear-simulation-runtime.ts",
+      "src/gameplay/runtime/tear-world-entity-construction.ts",
+      "src/gameplay/runtime/tear-world-context.ts",
+    ]),
+    pattern: /\b(?:window|document|HTMLCanvasElement|CanvasRenderingContext2D)\b/u,
+    message: "portable simulation and world-construction modules cannot reference browser or Canvas globals",
+  }),
+  Object.freeze({
+    roots: Object.freeze(["src/tearbench/detached-world-hydrator.ts", "src/tearbench/detached-world-runtime.ts"]),
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*(?:app\/|presentation\/|audio\/|persistence\/|platform\/|replay\/legacy-compat)[^"']*["']/u,
+    message: "detached TearBench world modules cannot depend on outward app, presentation, service, or Ghost 2 adapters",
+  }),
+  Object.freeze({
+    roots: Object.freeze(["src/tearbench/detached-world-hydrator.ts", "src/tearbench/detached-world-runtime.ts"]),
+    pattern: /\b(?:window|document|HTMLCanvasElement|CanvasRenderingContext2D)\b/u,
+    message: "detached TearBench world modules cannot reference browser or Canvas globals",
+  }),
+  Object.freeze({
+    roots: Object.freeze(["src/tearbench/live-runtime-environment.ts", "src/tearbench/live-runtime-action-routing.ts"]),
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*(?:app\/|presentation\/|audio\/|persistence\/|platform\/|replay\/legacy-compat|browser\/)[^"']*["']/u,
+    message: "portable live TearBench modules cannot depend on browser or outward adapters",
+  }),
+  Object.freeze({
+    roots: Object.freeze(["src/tearbench/live-runtime-environment.ts", "src/tearbench/live-runtime-action-routing.ts"]),
+    pattern: /\b(?:window|document|HTMLElement|HTML\w*Element|Canvas\w*|KeyboardEvent|PointerEvent|MouseEvent|Gamepad)\b/u,
+    message: "portable live TearBench modules cannot reference browser or Canvas globals",
+  }),
+  Object.freeze({
+    roots: Object.freeze(["src/tearbench/browser/"]),
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*(?:app\/|replay\/legacy-compat)[^"']*["']/u,
+    message: "browser TearBench adapters cannot depend on app-world or Ghost 2 compatibility modules",
+  }),
+  Object.freeze({
+    roots: Object.freeze(["src/tearbench/index.ts"]),
+    pattern: /export\s+\*\s+from\s+["']\.\/(?:ghost-lab-panel|state-forge-studio|live-state-forge-studio-host|test-environment|browser(?:\/[^"']*)?|test-support(?:\/[^"']*)?)["']/u,
+    message: "the portable TearBench barrel cannot re-export browser/developer UI or test-support modules",
+  }),
+  Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /\b(?:aiInput|lmbOverride|aimOverride)\b/u,
+    message: "live composition must route automation input through the live authoritative input adapter",
+  }),
+]);
+
+function dependencyErrors(relative, text) {
+  return forbiddenDependencyRules.flatMap((rule) =>
+    rule.roots.some((prefix) => relative.startsWith(prefix)) && rule.pattern.test(text)
+      ? [`${relative}: ${rule.message}`]
+      : []);
+}
+
+// A planted forbidden edge proves this gate is capable of rejecting the
+// dependency it claims to enforce, without modifying the worktree.
+if (dependencyErrors("src/tearbench/__planted-violation.ts",
+  'import type { LiveGhostEngineEvent } from "../replay/legacy-compat";').length !== 1) {
+  throw new Error("source architecture dependency-rule self-test failed");
+}
+if (dependencyErrors("src/tearbench/__planted-world-violation.ts",
+  'import type { GameEnemy } from "../app/game-runtime-state";').length !== 1) {
+  throw new Error("source architecture world-port rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/runtime/tear-simulation-runtime.ts",
+  'import { startLiveGame } from "../../app/live-game-runtime";').length !== 1) {
+  throw new Error("source architecture portable simulation import-rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/runtime/tear-simulation-runtime.ts",
+  'const canvas: HTMLCanvasElement | null = null;').length !== 1) {
+  throw new Error("source architecture portable simulation browser-rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/runtime/tear-world-entity-construction.ts",
+  'import type { GameRuntimeDependencies } from "../../app/game-runtime-dependencies";').length !== 1) {
+  throw new Error("source architecture world-construction import-rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/runtime/tear-world-entity-construction.ts",
+  'const canvas: HTMLCanvasElement | null = null;').length !== 1) {
+  throw new Error("source architecture world-construction browser-rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/runtime/tear-world-context.ts",
+  'import type { GameRuntimeDependencies } from "../../app/game-runtime-dependencies";').length !== 1) {
+  throw new Error("source architecture world-context import-rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/runtime/tear-world-context.ts",
+  'const canvas: HTMLCanvasElement | null = null;').length !== 1) {
+  throw new Error("source architecture world-context browser-rule self-test failed");
+}
+if (dependencyErrors("src/tearbench/detached-world-hydrator.ts",
+  'import type { GameRuntimeDependencies } from "../app/game-runtime-dependencies";').length !== 1) {
+  throw new Error("source architecture detached hydrator import-rule self-test failed");
+}
+if (dependencyErrors("src/tearbench/detached-world-hydrator.ts",
+  'const canvas: HTMLCanvasElement | null = null;').length !== 1) {
+  throw new Error("source architecture detached hydrator browser-rule self-test failed");
+}
+if (dependencyErrors("src/tearbench/detached-world-runtime.ts",
+  'import type { GameRuntimeDependencies } from "../app/game-runtime-dependencies";').length !== 1) {
+  throw new Error("source architecture detached runtime import-rule self-test failed");
+}
+if (dependencyErrors("src/tearbench/detached-world-runtime.ts",
+  'const canvas: HTMLCanvasElement | null = null;').length !== 1) {
+  throw new Error("source architecture detached runtime browser-rule self-test failed");
+}
+if (dependencyErrors("src/tearbench/live-runtime-environment.ts",
+  'import { installGhostLabPanel } from "./browser/ghost-lab-panel";').length !== 1) {
+  throw new Error("source architecture portable live environment import-rule self-test failed");
+}
+if (dependencyErrors("src/tearbench/live-runtime-action-routing.ts",
+  'const pointer = new PointerEvent("pointerdown");').length !== 1) {
+  throw new Error("source architecture portable live action browser-rule self-test failed");
+}
+if (dependencyErrors("src/tearbench/browser/live-runtime-bridge.ts",
+  'import { startLiveGame } from "../../app/live-game-runtime";').length !== 1) {
+  throw new Error("source architecture browser adapter import-rule self-test failed");
+}
+if (dependencyErrors("src/tearbench/index.ts",
+  'export * from "./state-forge-studio";').length !== 1) {
+  throw new Error("source architecture portable barrel-rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts", "player.aiInput = input;").length !== 1) {
+  throw new Error("source architecture live input adapter-rule self-test failed");
+}
 
 function walk(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -33,6 +175,7 @@ for (const file of walk(sourceRoot)) {
   for (const suppression of ["@ts-ignore", "@ts-nocheck", "eslint-disable"]) {
     if (text.includes(suppression)) errors.push(`${relative}: contains forbidden ${suppression} suppression`);
   }
+  errors.push(...dependencyErrors(relative, text));
 }
 
 if (errors.length > 0) {

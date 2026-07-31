@@ -1,5 +1,6 @@
 import type { AuthoritativeInputState } from "../gameplay/runtime/authoritative-input";
 import type { AuthoritativeStepController } from "../gameplay/runtime/authoritative-step";
+import type { TearSimulationRuntime } from "../gameplay/runtime/tear-simulation-runtime";
 import type { LiveCombatRuntime } from "../gameplay/combat/live-combat-runtime";
 import type { FixedStepScheduler } from "../simulation/fixed-step";
 import type { LiveFrameRuntime, LiveFrameRuntimeOptions, LiveMusicSyncInput } from "./live-frame-runtime";
@@ -8,6 +9,7 @@ import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
 
 export interface LiveCombatFrameApi<State> {
+  readonly simulationRuntime: TearSimulationRuntime<State>;
   readonly simulation: FixedStepScheduler;
   readonly authoritativeInput: AuthoritativeInputState;
   readonly authoritativeStep: AuthoritativeStepController<State>;
@@ -17,12 +19,11 @@ export interface LiveCombatFrameApi<State> {
 type FrameBase = Omit<LiveFrameRuntimeOptions, "fixedSimulationInput" | "musicInput">;
 export interface LiveCombatFrameContext extends FrameBase {
   readonly state: () => string;
-  readonly semanticInputAuthority: () => boolean;
   readonly drainActions: (tick: number) => readonly CommandEnvelope<GameAction>[];
   readonly recordSealedActions?: (tick: number, actions: readonly CommandEnvelope<GameAction>[]) => void;
   readonly beforeSimulationStep?: (tick: number) => void;
   readonly afterSimulationStep?: (tick: number) => void;
-  readonly clearOverrides: () => void;
+  readonly clearSimulationInput: () => void;
   readonly gauge: (name: "simulationTick" | "simulationSteps" | "simulationDroppedMs", value: number) => void;
   readonly musicObservation: () => LiveMusicSyncInput;
 }
@@ -33,13 +34,12 @@ export type LiveCombatCoordinatorContext = Omit<RuntimeFrameCoordinatorOptions, 
 export function createLiveCombatFrameOptions<State>(context: LiveCombatFrameContext,
   api: LiveCombatFrameApi<State>): LiveFrameRuntimeOptions {
   return { ...context,
-    fixedSimulationInput: () => ({ state: context.state, simulation: api.simulation,
-      semanticInputAuthority: context.semanticInputAuthority, drainActions: context.drainActions,
+    fixedSimulationInput: () => ({ state: context.state, simulation: api.simulationRuntime,
+      drainActions: context.drainActions,
       ...(context.recordSealedActions ? { recordSealedActions: context.recordSealedActions } : {}),
       ...(context.beforeSimulationStep ? { beforeStep: context.beforeSimulationStep } : {}),
       ...(context.afterSimulationStep ? { afterStep: context.afterSimulationStep } : {}),
-      authoritativeStep: (tick, seconds, actions) => { api.authoritativeStep.execute(tick, seconds, actions); },
-      clearOverrides: context.clearOverrides, step: (seconds) => { api.combatRuntime.step(seconds); }, gauge: context.gauge }),
+      clearSimulationInput: context.clearSimulationInput, gauge: context.gauge }),
     musicInput: context.musicObservation };
 }
 

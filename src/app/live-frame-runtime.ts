@@ -2,6 +2,7 @@ import { buildLiveMusicObservation, type LiveMusicActor, type LiveMusicPlayer, t
 import type { MusicContextObservation } from "../audio/music-director";
 import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
+import type { TearSimulationAdvanceLifecycle } from "../gameplay/runtime/tear-simulation-runtime";
 
 export interface MutableBossIntro { delay: number; t: number; dur: number; boss: (LiveMusicActor & { introT: number }) | null }
 export interface MutableFramePreludeState {
@@ -53,48 +54,73 @@ export function commitBossIntroSnapshot<TBoss extends { introT?: number }>(
 }
 
 export interface FixedSimulationPort {
-  readonly tick: number;
-  advance(milliseconds: number, step: (seconds: number, tick: number) => void): Readonly<{
+  advance(milliseconds: number, actionsForTick: (tick: number) => readonly CommandEnvelope<GameAction>[],
+    lifecycle?: TearSimulationAdvanceLifecycle): Readonly<{
     tick: number; steps: number; droppedMilliseconds: number;
   }>;
+  /** Exact deterministic tooling uses the same canonical action/lifecycle path. */
+  advanceExact?(actionsForTick: (tick: number) => readonly CommandEnvelope<GameAction>[],
+    lifecycle?: TearSimulationAdvanceLifecycle): Readonly<{ tick: number; steps: 0 | 1 }>;
 }
 export interface FixedSimulationInput {
   dt: number; timeScale: number; hitStop: number; state(): string; simulation: FixedSimulationPort;
-  /** Only an explicit automation owner may replace the physical live-input step. */
-  semanticInputAuthority(): boolean;
   drainActions(tick: number): readonly CommandEnvelope<GameAction>[];
-  /** Passive recorder hook: inputs are sealed here but never fed into physical gameplay. */
+  /** Passive recorder hook: commands are sealed before the shared canonical step. */
   recordSealedActions?(tick: number, actions: readonly CommandEnvelope<GameAction>[]): void;
-  authoritativeStep(tick: number, seconds: number, actions: readonly CommandEnvelope<GameAction>[]): void;
   beforeStep?(tick: number): void;
   afterStep?(tick: number): void;
-  clearOverrides(): void; step(seconds: number): void; gauge(name: "simulationTick" | "simulationSteps" | "simulationDroppedMs", value: number): void;
+  clearSimulationInput(): void; gauge(name: "simulationTick" | "simulationSteps" | "simulationDroppedMs", value: number): void;
 }
 export interface FixedSimulationAdvance {
   readonly hitStop: number;
   readonly steps: number;
 }
+
+type FixedSimulationTickInput = Pick<FixedSimulationInput,
+  "state" | "drainActions" | "recordSealedActions" | "beforeStep" | "afterStep" | "clearSimulationInput">;
+
+function sealedActionsForTick(input: FixedSimulationTickInput,
+  tick: number): readonly CommandEnvelope<GameAction>[] {
+  // Device and autonomous inputs both become sealed envelopes here. The
+  // runtime below is the sole owner that applies them to live gameplay.
+  const actions = input.drainActions(tick);
+  input.recordSealedActions?.(tick, actions);
+  return actions;
+}
+
+function fixedSimulationLifecycle(input: FixedSimulationTickInput): TearSimulationAdvanceLifecycle {
+  return {
+    shouldStep: () => input.state() === "playing",
+    beforeStep: (tick) => { input.beforeStep?.(tick); },
+    afterStep: (tick) => { input.afterStep?.(tick); },
+    // The projection is browser-only state.  Keep it alive for the whole
+    // canonical tick (including snapshots), then clear it even if gameplay
+    // throws so it cannot bleed into the next tick.
+    cleanupStep: () => { input.clearSimulationInput(); },
+  };
+}
+
 export function advanceFixedSimulation(input: FixedSimulationInput): FixedSimulationAdvance {
   if (input.hitStop > 0) return Object.freeze({ hitStop: input.hitStop - input.dt, steps: 0 });
-  const advance = input.simulation.advance(input.dt * input.timeScale * 1000, (seconds, tick) => {
-    if (input.state() !== "playing") return;
-    input.beforeStep?.(tick);
-    // Source contract: the live step owns physical input. The visual ghost is
-    // sampled downstream by the game loop and is never part of this control path.
-    // Ghost3's watch agent is the sole explicit semantic owner.
-    // Every fixed tick seals canonical device-mapped commands once. On ordinary
-    // player runs these remain observation-only; only explicit automation is
-    // allowed to pass the same sealed actions into gameplay.
-    const actions = input.drainActions(tick);
-    input.recordSealedActions?.(tick, actions);
-    input.clearOverrides();
-    if (input.semanticInputAuthority()) input.authoritativeStep(tick, seconds, actions);
-    else input.step(seconds);
-    input.afterStep?.(tick);
-  });
+  const advance = input.simulation.advance(input.dt * input.timeScale * 1000,
+    (tick) => sealedActionsForTick(input, tick), fixedSimulationLifecycle(input));
   input.gauge("simulationTick", advance.tick); input.gauge("simulationSteps", advance.steps);
   input.gauge("simulationDroppedMs", advance.droppedMilliseconds);
   return Object.freeze({ hitStop: input.hitStop, steps: advance.steps });
+}
+
+/** Runs one deterministic tooling tick without render-time hit-stop/time scale. */
+export function advanceExactFixedSimulation(input: FixedSimulationTickInput & Readonly<{
+  simulation: FixedSimulationPort;
+  gauge(name: "simulationTick" | "simulationSteps" | "simulationDroppedMs", value: number): void;
+}>): number {
+  if (input.simulation.advanceExact === undefined) throw new Error("fixed simulation does not support exact canonical ticks");
+  const advance = input.simulation.advanceExact(
+    (tick) => sealedActionsForTick(input, tick), fixedSimulationLifecycle(input),
+  );
+  input.gauge("simulationTick", advance.tick); input.gauge("simulationSteps", advance.steps);
+  input.gauge("simulationDroppedMs", 0);
+  return advance.steps;
 }
 
 export interface LiveMusicDirectorPort {
@@ -179,6 +205,11 @@ export class LiveFrameRuntime {
       timeScale: this.#options.timeScale(), hitStop: this.#options.hitStop() });
     this.#options.setHitStop(result.hitStop);
     return result.steps;
+  }
+
+  /** Test/headless adapter: one canonical tick, with the same action lifecycle. */
+  advanceExactSimulation(): number {
+    return advanceExactFixedSimulation(this.#options.fixedSimulationInput());
   }
 
   syncMusic(): void {

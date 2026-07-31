@@ -1,7 +1,7 @@
-import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "../app/game-runtime-state";
 import type { CommandEnvelope } from "../domain/envelopes";
+import type { ScreenAction } from "../domain/screen-actions";
 import type { GameAction } from "../input/game-action";
-import type { LiveGhostEngineEvent } from "../replay/legacy-compat";
+import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
 import type { TearCausalEventV1, TearObservationV1, TearScenarioV1 } from "./contracts";
 import type { TearSnapshotV1, TearStateClass } from "./contracts";
@@ -11,8 +11,11 @@ import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
 import type { TearProgressionLedger } from "./progression-ledger";
 import type { TearProgressionReplayResult } from "./progression-replay";
 import type { TearSdlResolved } from "./tearsdl";
-import type { ScreenAction } from "../presentation/screens/contracts";
 import type { RunResultInfo } from "../gameplay/run/outcome-planner";
+import type {
+  TearSimulationEnemyView,
+  TearSimulationWorldView,
+} from "../simulation/runtime-world-port";
 
 export type TearRuntimeAccessClass = "A" | "B" | "C";
 
@@ -99,15 +102,9 @@ export type TearRuntimeEnvironment =
 export interface LiveTearRuntimeEnvironmentContext {
   readonly width: number;
   readonly height: number;
-  readonly state: Readonly<{
-    run(): GameRun | null;
-    player(): GamePlayer | undefined;
-    blade(): GameBlade | undefined;
-    enemies(): GameEnemy[];
-    projectiles(): GameProjectile[];
-  }>;
+  readonly state: TearSimulationWorldView;
   readonly platforms: () => readonly LiveObservationPlatform[];
-  readonly actorId: (enemy: GameEnemy) => string;
+  readonly actorId: (enemy: TearSimulationEnemyView) => string;
   readonly stage: () => Readonly<{ name: string }>;
   readonly lifecycle: () => Readonly<{ phase: string }>;
   readonly choiceIds: () => readonly string[];
@@ -149,7 +146,7 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly random: () => RunRandomStreamsSnapshot;
   readonly render: () => void;
   readonly screenshot: () => string;
-  readonly subscribeEngineEvent: (listener: (event: LiveGhostEngineEvent) => void) => () => void;
+  readonly subscribeEngineEvent: (listener: (event: TearGameplayEvent) => void) => () => void;
   readonly drainConsumedActions: () => readonly CommandEnvelope<GameAction>[];
   readonly emitPhysicalInput: (input: TearPhysicalInput) => void;
   readonly setTimeEffectsForTest: (

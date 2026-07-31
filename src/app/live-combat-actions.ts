@@ -103,7 +103,7 @@ export function createLiveCombatActions<
     dramaticBeat() { f.addShake(d.CONFIG.juice.shakeBig); f.addFlash(d.CONFIG.juice.flashParry); },
     onBladeStolen(enemy) {
       f.logWeaponEvent("stolenBlade", { enemyKind: enemy.kind });
-      d.GHOST.event("stolenBlade", enemy.x, enemy.y);
+      d.GAMEPLAY_EVENTS.emit({ kind: "effect", effect: "stolenBlade", x: enemy.x, y: enemy.y });
     },
     updateEffects: (seconds) => { d.FX.update(seconds); }, random: d.cosmeticRandom,
   };
@@ -142,7 +142,9 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
       else if (name === "jump") ports.achievement.jumped(); else ports.achievement.revived(); },
     checkAchievements: f.checkAchievements, tutorialMark: (name) => { ports.tutorial.mark(name); },
     ghostRecording: () => d.GHOST.recording(), ghostDeath: f.ghostDeath, ghostSample: f.ghostSample,
-    ghostRevive: () => { d.GHOST.event("revive", live.player().x, live.player().y); }, updateTrick: f.updateTrick,
+    ghostRevive: () => {
+      d.GAMEPLAY_EVENTS.emit({ kind: "effect", effect: "revive", x: live.player().x, y: live.player().y });
+    }, updateTrick: f.updateTrick,
     achievementTick: (seconds) => { ports.achievement.tick(seconds); }, updateTutorial: (seconds) => { ports.tutorial.update(seconds); },
     updatePlayground: f.updatePlayground, overlap: d.aabbOverlap, onShieldAbsorb: f.onShieldAbsorb,
     loseStyle: f.loseStyle, buzz: (milliseconds) => { d.Input.buzz(milliseconds); }, requestAdContinue: context.requestContinue,
@@ -161,7 +163,10 @@ function createKill(context: LiveCombatActionContext): LiveKillHost {
     maxStat: (name: string, value: number) => { d.PROFILE.maxStat(name, value); }, bumpDaily: (name: string, value: number) => { d.DAILY.bump(name, value); },
     bossKillAchievement: (enemy) => { ports.achievement.bossKill(enemy); },
     killAchievement: (enemy) => { ports.achievement.onKill(enemy); }, checkAchievements: f.checkAchievements,
-    bossGhostMoment: (enemy) => { d.GHOST.event("bossKill", enemy.x, enemy.y); d.GHOST.snapshot(context.canvas, 4); },
+    bossGhostMoment: (enemy) => {
+      d.GAMEPLAY_EVENTS.emit({ kind: "effect", effect: "bossKill", x: enemy.x, y: enemy.y });
+      d.GHOST.snapshot(context.canvas, 4);
+    },
     deathEffect: (enemy, shards) => { d.FX.death(enemy.x, enemy.y, shards, enemy.color); }, deathSound: () => { f.playSound("death"); },
     makeDeathEvent: (enemy, cause, clean) => f.makeEvent(enemy.x, enemy.y, enemy, cause,
       { cleanElimination: clean, addOverrunStack: f.addOverrunStack }),

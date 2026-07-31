@@ -66,6 +66,7 @@ describe("Ghost capsule recorder and local Vault", () => {
     const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
     const recorder = new GhostStreamingRecorder({
       sessionId: "reader-run", createdAt: "2026-07-28T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault,
+      provenance: { runId: "reader-run", seed: "reader-seed", rulesetVersion: "rules-a" },
     });
     await recorder.start();
     await recorder.append({ kind: "commands", tick: 3, value: { command: { type: "dash" } } });
@@ -76,6 +77,9 @@ describe("Ghost capsule recorder and local Vault", () => {
     const capsule = await new GhostCapsuleReader(vault).read("reader-run");
     expect(capsule.manifest.status).toBe("complete");
     expect(capsule.manifest.recordingProfile).toBe("forensic-qa");
+    expect(capsule.manifest.provenance).toEqual({
+      runId: "reader-run", seed: "reader-seed", rulesetVersion: "rules-a",
+    });
     expect(capsule.maxTick).toBe(4);
     expect(capsule.tracks.commands).toEqual([{ kind: "commands", tick: 3, value: { command: { type: "dash" } } }]);
     expect(capsule.tracks.rng).toEqual([{ kind: "rng", tick: 4, value: { gameplay: "state" } }]);

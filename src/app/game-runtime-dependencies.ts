@@ -9,6 +9,7 @@ import type { createPlayer } from "../gameplay/entities/player";
 import type { createProjectile } from "../gameplay/entities/projectile";
 import type { createAchievements } from "../gameplay/progression/achievements";
 import type { createDailyChallenges } from "../gameplay/progression/challenges";
+import type { TearGameplayEventBus } from "../gameplay/runtime/gameplay-events";
 import type { createMetaProgression } from "../gameplay/progression/meta";
 import type * as Stages from "../gameplay/stages";
 import type * as Upgrades from "../gameplay/upgrades";
@@ -52,7 +53,8 @@ export interface GameRuntimeDependencies {
   readonly Cloud: Cloud["Cloud"]; readonly Colossus: EnemyTypes["Colossus"];
   readonly DAILY: ReturnType<typeof createDailyChallenges>; readonly DIAG: PerformanceMonitor;
   readonly Echo: EnemyTypes["Echo"]; readonly FX: typeof FX; readonly FirebaseProvider: Cloud["FirebaseProvider"];
-  readonly Flyer: EnemyTypes["Flyer"]; readonly GAME_RANDOM: typeof GAME_RANDOM;
+  readonly Flyer: EnemyTypes["Flyer"]; readonly GAMEPLAY_EVENTS: TearGameplayEventBus;
+  readonly GAME_RANDOM: typeof GAME_RANDOM;
   readonly GAME_RANDOM_STREAMS: typeof GAME_RANDOM_STREAMS; readonly GFX: typeof GFX;
   readonly GHOST: ReplayCompatibility["GHOST"]; readonly Input: LegacyInput;
   readonly META: ReturnType<typeof createMetaProgression>["META"]; readonly Mirror: MirrorTypes["Mirror"];

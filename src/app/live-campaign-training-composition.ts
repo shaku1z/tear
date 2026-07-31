@@ -5,6 +5,7 @@ import { cinematicLaunchPolicy, type CinematicPreference } from "./cinematic-pre
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "./game-runtime-state";
 import type { LiveGameHostState } from "./live-game-host-state";
+import type { LiveWorldEntityConstructionPort } from "./live-world-entity-factory";
 import type { LegacyAppScreen } from "./legacy-state-controller";
 import type { LiveRunControllerRegistry } from "./live-run-controller-api";
 import { createLiveCampaignHost } from "./live-campaign-host";
@@ -22,6 +23,7 @@ type Controllers = LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVict
 
 export interface LiveCampaignTrainingOptions {
   readonly dependencies: GameRuntimeDependencies;
+  readonly entities: LiveWorldEntityConstructionPort;
   readonly state: LiveGameHostState;
   readonly lifecycle: RunLifecycleController;
   readonly controllers: Controllers;
@@ -140,7 +142,8 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
     clearBossBeat: () => { options.state.setBossBeat(null); },
     setWorldZoom: (value) => { options.setWorldZoom(value, false); },
     spawnWisp: (x, y, lane) => {
-      const wisp = new d.VoidWisp(x, y); wisp.voidLane = lane; wisp.spawnT = 0.25;
+      const wisp = options.entities.createEnemy("void-wisp", x, y, options.run()) as GameEnemy & { voidLane: string };
+      wisp.voidLane = lane; wisp.spawnT = 0.25;
       options.state.enemies().push(wisp);
     },
     addFlash: (amount) => { weapon.addFlash(amount); }, addShake: (amount) => { weapon.addShake(amount); },
@@ -154,8 +157,11 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
   });
 
   style = createLiveStyleHost({
-    dependencies: d, state: options.state, tutorial: training.tutorial,
-    captureGhost: (trick, x, y, importance) => { d.GHOST.event(trick, x, y); d.GHOST.snapshot(options.canvas, importance); },
+    dependencies: d, entities: options.entities, state: options.state, tutorial: training.tutorial,
+    captureGhost: (trick, x, y, importance) => {
+      d.GAMEPLAY_EVENTS.emit({ kind: "effect", effect: trick, x, y });
+      d.GHOST.snapshot(options.canvas, importance);
+    },
     rankUp: (rank) => { options.showRank(rank); d.SFX.rankup(); },
     musicRankChanged: (rank) => { options.emitMusicEvent("combo-rank-changed", { rankId: rank }); },
     addProjectile: (projectile) => { options.projectiles().push(projectile); },

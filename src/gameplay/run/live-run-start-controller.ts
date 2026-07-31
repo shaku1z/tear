@@ -23,6 +23,7 @@ export interface LiveRunStartPort<TMods extends { weaponId?: string }> {
   readonly exposeDebugState: () => void;
   readonly updateProgressionTracking: (mode: RunMode) => void;
   readonly startRecording: (runId: string, runSeed: number) => void;
+  readonly publishRunStarted: (session: RunSession<TMods>, runId: string) => void;
   readonly configureMode: (mode: RunMode) => void;
   readonly applyMetaProgression: () => void;
   readonly activateOpeningContent: (mode: RunMode) => void;
@@ -64,6 +65,7 @@ export class LiveRunStartController<TMods extends { weaponId?: string }> {
     this.#port.exposeDebugState();
     this.#port.updateProgressionTracking(mode);
     this.#port.startRecording(sessionId, runSeed);
+    this.#port.publishRunStarted(session, sessionId);
     this.#port.configureMode(mode);
     this.#port.applyMetaProgression();
     this.#port.activateOpeningContent(mode);

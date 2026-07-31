@@ -9,6 +9,7 @@ import { createPlayer } from "../gameplay/entities/player";
 import { createProjectile } from "../gameplay/entities/projectile";
 import { createAchievements } from "../gameplay/progression/achievements";
 import { createDailyChallenges, localCalendarClock } from "../gameplay/progression/challenges";
+import { TearGameplayEventBus } from "../gameplay/runtime/gameplay-events";
 import { createMetaProgression, type ProgressionApplyContext } from "../gameplay/progression/meta";
 import { STAGES, stageAt, stagePlatforms } from "../gameplay/stages";
 import {
@@ -41,7 +42,7 @@ import { createUi } from "../presentation/ui";
 import { createLegacyReplayCompatibility } from "../replay/legacy-compat";
 import { GAME_RANDOM, GAME_RANDOM_STREAMS } from "../simulation/run-random";
 import { PerformanceMonitor } from "../diagnostics/performance-monitor";
-import { createTearTestEnvironment } from "../tearbench/test-environment";
+import { createTearTestEnvironment } from "../tearbench/test-support";
 import { LegacyAppStateController } from "./legacy-state-controller";
 import { startLiveGame } from "./live-game-runtime";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
@@ -128,15 +129,17 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     writerId: () => CG.live ? "crazygames" : "browser",
     log: (message) => { console.log(message); },
   });
+  const GAMEPLAY_EVENTS = new TearGameplayEventBus(() => Input.semantic.lastSealedTick);
   const { GHOST, VAULT } = createLegacyReplayCompatibility({
     store: CG.store,
     document,
     now: () => Date.now(),
     random: () => Math.random(),
     semanticInput: Input.semantic,
-    // ee5e931 visual ghosts only sampled the completed world. Keep the command
-    // recorder available to explicit deterministic tooling, never live play.
+    // Ghost 2 remains a visual compatibility recorder. The live runtime owns
+    // the shared canonical input stream; Ghost 2 does not capture commands.
     captureSemanticActions: false,
+    gameplayEvents: GAMEPLAY_EVENTS,
     defaults: {
       rulesetVersion: "tear-rules-2026.07",
       build: { version: "0.1.0", revision: import.meta.env.MODE, target },
@@ -162,7 +165,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const gameRuntimeDependencies = {
     A11Y, ACH, AFFIXES, APP, Aldric, Armored, Attract, BOSSFX, Backdrop, Blade, Bomber, Boss,
     CG, CLOCK, CONFIG, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, DAILY, DIAG, Echo,
-    FX, FirebaseProvider, Flyer, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
+    FX, FirebaseProvider, Flyer, GAMEPLAY_EVENTS, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
     MirrorHost, OVERSCAN, PAD, PRESETS, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
     Ranged, ReflectionEnemy, SAFE, SFX, SHOP, STAGES, Source, Support, THEME, UI, UPGRADES,
     VAULT, VARIANTS, VoidGen, VoidWisp, WEAPONS, Warden, Wraith,

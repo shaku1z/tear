@@ -1,5 +1,5 @@
 import { stableVerificationHash } from "../replay/hash";
-import { encodeGhostChunkPayload } from "./capsule-codec";
+import { encodeGhostChunkPayloadCompressed } from "./capsule-codec";
 
 interface EncodeRequest {
   readonly id: number;
@@ -7,10 +7,11 @@ interface EncodeRequest {
   readonly prepareThumbnail: boolean;
 }
 
-function encode(request: EncodeRequest): Readonly<Record<string, unknown>> {
-  const encoded = encodeGhostChunkPayload(request.payload);
+async function encode(request: EncodeRequest): Promise<Readonly<Record<string, unknown>>> {
+  const encoded = await encodeGhostChunkPayloadCompressed(request.payload);
   return Object.freeze({
     id: request.id,
+    encoding: encoded.encoding,
     encoded: encoded.encoded,
     compressedBytes: encoded.compressedBytes,
     uncompressedBytes: encoded.uncompressedBytes,
@@ -20,12 +21,14 @@ function encode(request: EncodeRequest): Readonly<Record<string, unknown>> {
 }
 
 self.addEventListener("message", (event: MessageEvent<EncodeRequest>) => {
-  try {
-    self.postMessage(encode(event.data));
-  } catch (error) {
-    self.postMessage(Object.freeze({
-      id: event.data.id,
-      error: error instanceof Error ? error.message : String(error),
-    }));
-  }
+  void (async () => {
+    try {
+      self.postMessage(await encode(event.data));
+    } catch (error) {
+      self.postMessage(Object.freeze({
+        id: event.data.id,
+        error: error instanceof Error ? error.message : String(error),
+      }));
+    }
+  })();
 });

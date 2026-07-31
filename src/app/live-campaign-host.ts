@@ -64,7 +64,7 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
     rememberBiome: (name) => { services.rememberBiome(name); },
     resetStageAchievements: () => { services.resetStageAchievements(); },
     resetPlayerStagePassives: () => { state.player()?.resetStagePassives(); },
-    recordReplayStage: (index) => { d.GHOST.stage(index); },
+    recordReplayStage: (index) => { d.GAMEPLAY_EVENTS.emit({ kind: "stage", stage: index }); },
   }));
   const runtime = createLiveCampaignRuntime({ runtime: story,
     cinema: { start: (script, context) => { cinema.start(adaptCinematicScript(script, context), {}); } },

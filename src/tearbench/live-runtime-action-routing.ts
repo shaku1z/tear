@@ -1,5 +1,4 @@
 import type { GameAction } from "../input/game-action";
-import type { TearPhysicalInput } from "./live-runtime-contracts";
 
 interface Choice {
   readonly id: string;
@@ -16,6 +15,7 @@ interface RuntimeControl {
   readonly action: () => void;
 }
 
+/** DOM-free semantic routing contract for the live runtime's screen actions. */
 export interface TearBenchActionRouting {
   readonly screen: () => string;
   readonly setScreen: (screen: "playing" | "paused") => void;
@@ -38,6 +38,7 @@ export function liveRewardChoiceIds(context: TearBenchActionRouting): readonly s
   return [];
 }
 
+/** Routes a semantic action without reading or producing browser events. */
 export function routeLiveTearBenchAction(context: TearBenchActionRouting, action: GameAction): boolean {
   const screen = context.screen();
   if (action.type === "pause") {
@@ -83,29 +84,4 @@ export function routeLiveTearBenchAction(context: TearBenchActionRouting, action
   if (control === undefined) return false;
   control.action();
   return true;
-}
-
-export function emitLiveTearBenchPhysicalInput(
-  input: TearPhysicalInput,
-  target: Readonly<{ window: Window; canvas: HTMLCanvasElement; width: number; height: number }>,
-): void {
-  if (input.type === "key") {
-    target.window.dispatchEvent(new KeyboardEvent(input.phase === "pressed" ? "keydown" : "keyup", {
-      code: input.code, bubbles: true,
-    }));
-    return;
-  }
-  const rectangle = target.canvas.getBoundingClientRect();
-  const clientX = rectangle.left + input.x / target.width * rectangle.width;
-  const clientY = rectangle.top + input.y / target.height * rectangle.height;
-  const pointerPhase = input.phase === "pressed" ? "pointerdown" : "pointerup";
-  const mousePhase = input.phase === "pressed" ? "mousedown" : "mouseup";
-  // A bridge pointer event does not cause browsers to synthesize the matching
-  // mouse/click sequence. Deliver that normal device sequence explicitly so a
-  // Class-C caller can operate the same canvas controls as a real pointer.
-  target.canvas.dispatchEvent(new PointerEvent(pointerPhase, { clientX, clientY, button: input.button, bubbles: true }));
-  target.canvas.dispatchEvent(new MouseEvent(mousePhase, { clientX, clientY, button: input.button, bubbles: true }));
-  if (input.phase === "released" && input.button === 0) {
-    target.canvas.dispatchEvent(new MouseEvent("click", { clientX, clientY, button: 0, bubbles: true }));
-  }
 }

@@ -1,6 +1,6 @@
 import type { ScreenAction } from "../presentation/screens/contracts";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
-import type { LiveGhostEngineEvent } from "../replay/legacy-compat";
+import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import type { LiveTearRuntimeEnvironmentContext } from "../tearbench/live-runtime-contracts";
 import { projectLiveTearObservation } from "../tearbench/live-runtime-environment";
 import type { TearStructuredAgentIntent } from "../tearbench/scripted-agent-hierarchy";
@@ -67,7 +67,7 @@ export interface TearWatchAgentSnapshot {
     tick: number; state: string; hostile: boolean; stolen: boolean;
   }>[];
   readonly bladeTether: Readonly<{ minimum: number; maximum: number; contracted: boolean }>;
-  readonly engineEvents: readonly LiveGhostEngineEvent[];
+  readonly engineEvents: readonly TearGameplayEvent[];
   readonly weaponEvents: readonly unknown[];
   readonly weaponStats?: Readonly<{
     heldHits: number; trueCuts: number; throws: number; throwHits: number; perfectParries: number;
@@ -107,7 +107,7 @@ interface MutableState {
   lastBladeSignature?: string;
   tetherMinimum: number;
   tetherMaximum: number;
-  engineEvents: LiveGhostEngineEvent[];
+  engineEvents: TearGameplayEvent[];
   draftPicks: { tick: number; offered: readonly string[]; selected: string }[];
   lastTrace?: TearAgentIntentTrace;
   structuredIntent?: TearStructuredAgentIntent;

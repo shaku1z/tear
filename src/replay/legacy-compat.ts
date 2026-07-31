@@ -1,4 +1,10 @@
 import type { ReplayActionEnvelope, ReplayBuildMetadata, TearScoreReplayMetadata } from "./envelope";
+import {
+  TearGameplayEventBus,
+  type TearGameplayEventPort,
+  type TearGameplayEvent,
+  type UntickedTearGameplayEvent,
+} from "../gameplay/runtime/gameplay-events";
 import { acceptedRecording, arrayValue, isRecord, numberValue, stringValue, tearScoreMetadata } from "./legacy-compat-validation";
 import {
   buildVisualReplayPacket,
@@ -36,6 +42,8 @@ export interface LegacyReplayDependencies {
    * a recorded run cannot create a second input pipeline.
    */
   readonly captureSemanticActions?: boolean;
+  /** Native gameplay event boundary; Ghost 2 is only one outward consumer. */
+  readonly gameplayEvents?: TearGameplayEventPort;
   readonly defaults: Readonly<{
     rulesetVersion: string;
     build: ReplayBuildMetadata;
@@ -52,19 +60,16 @@ export interface RunReplayContext {
   readonly tearScore?: TearScoreReplayMetadata;
 }
 
-export type LiveGhostEngineEvent =
-  | Readonly<{ kind: "stage"; tick: number; stage: number }>
-  | Readonly<{ kind: "wave"; tick: number; wave: number; event: string }>
-  | Readonly<{ kind: "spawn"; tick: number; actorId: number; actorKind: string }>
-  | Readonly<{ kind: "death"; tick: number; actorId: number; cause: string }>
-  | Readonly<{ kind: "effect"; tick: number; effect: string; x: number; y: number }>;
-type UntickedLiveGhostEngineEvent =
-  LiveGhostEngineEvent extends infer Event
-    ? Event extends LiveGhostEngineEvent ? Omit<Event, "tick"> : never
-    : never;
+/** @deprecated Import TearGameplayEvent from gameplay/runtime instead. */
+export type LiveGhostEngineEvent = TearGameplayEvent;
 
 export interface LegacyGhostRecordingObserver {
-  started(context: Readonly<RunReplayContext>): void;
+  /**
+   * The resolved recording-provenance snapshot, never the partial caller
+   * input. Sidecars need the actual build, ruleset, seed, and clock that
+   * Ghost 2 committed to its own recording.
+   */
+  started(provenance: Readonly<VisualReplayProvenance>): void;
   stopped(meta: Readonly<Record<string, unknown>>): void;
 }
 
@@ -97,7 +102,7 @@ export interface LegacyGhostRuntimeState { readonly recording: MutableRecording 
 
 interface PlayerSample { readonly x: number; readonly y: number; readonly facing: number }
 interface BladeSample { readonly tipX: number; readonly tipY: number }
-interface EnemySample { x: number; y: number; dead?: boolean; _gid?: number }
+interface EnemySample { x: number; y: number; dead?: boolean; _gid?: number; stableId?: string }
 
 export interface ReplayPlayback {
   readonly d: VisualRecordingV2;
@@ -115,11 +120,15 @@ export class LegacyGhostEngine {
   rec: MutableRecording | null = null;
   play: ReplayPlayback | null = null;
   readonly #dependencies: LegacyReplayDependencies;
-  readonly #eventListeners = new Set<(event: LiveGhostEngineEvent) => void>();
+  readonly #gameplayEvents: TearGameplayEventPort;
+  readonly #visualIds = new Map<string, number>();
+  readonly #actorIdsByVisualId = new Map<number, string>();
   #recordingObserver: LegacyGhostRecordingObserver | null = null;
 
   constructor(dependencies: LegacyReplayDependencies) {
     this.#dependencies = dependencies;
+    this.#gameplayEvents = dependencies.gameplayEvents ?? new TearGameplayEventBus();
+    this.#gameplayEvents.subscribe((event) => { this.#recordGameplayEvent(event); });
   }
 
   #semanticInput(): SemanticReplayInput | undefined {
@@ -142,8 +151,10 @@ export class LegacyGhostEngine {
         tearScore: tearScoreMetadata(context.tearScore ?? this.#dependencies.defaults.tearScore()),
       },
     };
+    this.#visualIds.clear();
+    this.#actorIdsByVisualId.clear();
     this.#semanticInput()?.startRecording();
-    this.#recordingObserver?.started(Object.freeze({ ...context }));
+    this.#recordingObserver?.started(Object.freeze(structuredClone(this.rec.provenance)));
   }
 
   recording(): boolean { return this.rec !== null; }
@@ -152,17 +163,54 @@ export class LegacyGhostEngine {
   captureRuntimeState(): LegacyGhostRuntimeState { return Object.freeze({ recording: this.rec === null ? null : structuredClone(this.rec) }); }
   restoreRuntimeState(state: LegacyGhostRuntimeState): void { this.rec = state.recording === null ? null : structuredClone(state.recording); }
 
-  subscribe(listener: (event: LiveGhostEngineEvent) => void): () => void {
-    this.#eventListeners.add(listener);
-    return () => { this.#eventListeners.delete(listener); };
+  subscribe(listener: (event: TearGameplayEvent) => void): () => void {
+    return this.#gameplayEvents.subscribe(listener);
   }
 
-  #emit(event: UntickedLiveGhostEngineEvent): void {
-    const value = Object.freeze({
-      ...event,
-      tick: this.#semanticInput()?.lastSealedTick ?? 0,
-    }) as LiveGhostEngineEvent;
-    for (const listener of this.#eventListeners) listener(value);
+  #emit(event: UntickedTearGameplayEvent): void {
+    if (this.#dependencies.gameplayEvents === undefined) {
+      this.#gameplayEvents.publish({
+        ...event,
+        tick: this.#semanticInput()?.lastSealedTick ?? 0,
+      });
+      return;
+    }
+    this.#gameplayEvents.emit(event);
+  }
+
+  #recordGameplayEvent(event: TearGameplayEvent): void {
+    if (event.kind === "run") {
+      // Run lifecycle truth is a V3 causal concern. Ghost 2's visual packet
+      // has no compatible track for it and must remain byte-compatible.
+      return;
+    }
+    if (event.kind === "stage") {
+      this.rec?.stages.push({ t: this.#time(), s: event.stage });
+    } else if (event.kind === "wave") {
+      this.rec?.waves.push({ t: this.#time(), w: event.wave, e: event.event });
+    } else if (event.kind === "effect") {
+      this.rec?.events.push({
+        t: this.#time(), k: event.effect, x: Math.round(event.x), y: Math.round(event.y),
+      });
+    } else if (event.kind === "loadout") {
+      this.rec?.loadout.push({
+        t: this.#time(), id: event.choiceId, tier: event.tier, w: event.wave,
+      });
+    } else if (event.kind === "spawn") {
+      const recording = this.rec;
+      if (recording === null || this.#visualIds.has(event.actorId)) return;
+      const visualId = ++recording.gid;
+      this.#visualIds.set(event.actorId, visualId);
+      this.#actorIdsByVisualId.set(visualId, event.actorId);
+      const base = { t: this.#time(), id: visualId, k: event.actorKind, x: Math.round(event.x), y: Math.round(event.y) };
+      recording.spawns.push(event.variantName === undefined && event.bossId === undefined
+        ? base
+        : { ...base, ...(event.variantName === undefined ? {} : { vn: event.variantName }),
+          ...(event.bossId === undefined ? {} : { b: event.bossId }) });
+    } else {
+      const visualId = this.#visualIds.get(event.actorId);
+      if (visualId !== undefined) this.rec?.deaths.push({ t: this.#time(), id: visualId, c: event.cause });
+    }
   }
 
   /** Seals device actions onto the authoritative simulation tick before rules execute. */
@@ -190,7 +238,8 @@ export class LegacyGhostEngine {
       recording.eacc -= this.ERATE;
       const enemyTick = [Math.round(recording.t * 10)];
       for (const enemy of enemies) {
-        if (!enemy.dead && enemy._gid !== undefined) enemyTick.push(enemy._gid, Math.round(enemy.x), Math.round(enemy.y));
+        const visualId = enemy._gid ?? (enemy.stableId === undefined ? undefined : this.#visualIds.get(enemy.stableId));
+        if (!enemy.dead && visualId !== undefined) enemyTick.push(visualId, Math.round(enemy.x), Math.round(enemy.y));
       }
       recording.esamp.push(enemyTick);
     }
@@ -215,36 +264,37 @@ export class LegacyGhostEngine {
 
   #time(): number { return this.rec === null ? 0 : Number(this.rec.t.toFixed(1)); }
   stage(index: number): void {
-    this.rec?.stages.push({ t: this.#time(), s: index });
     this.#emit({ kind: "stage", stage: index });
   }
   wave(wave: number, event: string): void {
-    this.rec?.waves.push({ t: this.#time(), w: wave, e: event });
     this.#emit({ kind: "wave", wave, event });
   }
 
   spawn(enemy: EnemySample | null, kind: string, extra?: Readonly<{ vn?: string; b?: string }>): void {
     if (this.rec === null || enemy === null) return;
-    enemy._gid = ++this.rec.gid;
-    const base = { t: this.#time(), id: enemy._gid, k: kind, x: Math.round(enemy.x), y: Math.round(enemy.y) };
-    this.rec.spawns.push(extra === undefined ? base : { ...base, ...extra });
-    this.#emit({ kind: "spawn", actorId: enemy._gid, actorKind: kind });
+    const actorId = `legacy-ghost:${String(this.rec.gid + 1)}`;
+    this.#emit({
+      kind: "spawn", actorId, actorKind: kind, x: enemy.x, y: enemy.y,
+      ...(extra?.vn === undefined ? {} : { variantName: extra.vn }),
+      ...(extra?.b === undefined ? {} : { bossId: extra.b }),
+    });
+    const visualId = this.#visualIds.get(actorId);
+    if (visualId !== undefined) enemy._gid = visualId;
   }
 
   death(enemy: EnemySample | null, cause = ""): void {
     if (this.rec !== null && enemy?._gid !== undefined) {
-      this.rec.deaths.push({ t: this.#time(), id: enemy._gid, c: cause });
-      this.#emit({ kind: "death", actorId: enemy._gid, cause });
+      const actorId = this.#actorIdsByVisualId.get(enemy._gid);
+      if (actorId !== undefined) this.#emit({ kind: "death", actorId, cause });
     }
   }
 
   event(kind: string, x = 0, y = 0): void {
-    this.rec?.events.push({ t: this.#time(), k: kind, x: Math.round(x), y: Math.round(y) });
     this.#emit({ kind: "effect", effect: kind, x, y });
   }
 
   loadoutPick(id: string, tier = 1, wave = 0): void {
-    this.rec?.loadout.push({ t: this.#time(), id, tier, w: wave });
+    this.#emit({ kind: "loadout", choiceId: id, tier, wave });
   }
 
   snapshot(canvas: HTMLCanvasElement | null, priority: number): void {

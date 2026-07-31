@@ -12,9 +12,24 @@ This is the migration checklist for the architectural redesign. A checked featur
 - [x] Fullscreen, pointer lock, focus loss and controller disconnect behavior — `browser-input-matrix.js` and the focus-release assertion in `browser-smoke.js`.
 - [x] Cloud/Firebase and offline/local capability fallbacks — `platform-firebase-cloud.test.ts`, `platform-cloud.test.ts`, `platform-browser.test.ts`, and `platform-legacy-compat.test.ts`.
 - [ ] TearBench/Ghost 3.0 operational completion — C0-C20 supplied typed
-  contracts and focused prototypes, but real-runtime integration, durable
-  Ghost/Academy storage, genuine learned policies, automatic Foundry operation,
-  complete visible experiences, and end-to-end certification remain tracked by
+  contracts and focused prototypes. C27 now has native-event/capsule browser
+  foundation evidence, including persisted V3 `run.started`/`run.abandoned`
+  causal boundaries from both Class A and physical-input paths, a
+  browser-reload recovery proof for a valid interrupted recording, and an
+  injected browser quota-failure containment/recovery proof; C27A now routes
+  both normal physical frames and exact tooling through one live-consumed
+  portable fixed-step core (`check:c27:foundation`,
+  `check:c27a:foundation`) and a shared live-world entity-construction catalog
+  now keeps State Forge and active gameplay on the same production factory
+  choices. A generic per-world state/service context now also centralizes the
+  live run, actor collections, configuration, named RNG, clocks, effects,
+  Mirror, and boss-feedback seam, while explicitly retaining the current app
+  implementations behind its adapter. The combat action path now uses that
+  shared collection owner rather than a second collection adapter. Real
+  full-world portability, durable
+  Ghost/Academy storage, genuine learned policies,
+  automatic Foundry operation, complete visible experiences, and end-to-end
+  certification remain tracked by
   `plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md`.
 - [x] Test-build State Forge Studio — `tearbench-state-forge-studio.test.ts`
   keeps structural, reachability, and population-plausibility reports
@@ -53,7 +68,11 @@ This is the migration checklist for the architectural redesign. A checked featur
 - [x] Deterministic replay verification across render rates — `authoritative-replay.test.ts` verifies JSON-round-tripped actions at 30/60/144 Hz; replay hash/envelope/round-trip suites cover verification and serialization.
 - [ ] Ghost 3.0 durable Vault and governed cloud publication — current
   capsule/Vault, Doctor, Theater, knowledge, coaching, player-experience, and
-  cloud-publication code proves contracts and pure behavior. Durable
+  cloud-publication code proves contracts and pure behavior. C27 now includes
+  a real IndexedDB live-capture sidecar plus a persisted V1 replay bootstrap
+  and fail-closed admission check; a physical browser run proves that context
+  is durable while correctly reporting no compatible detached runtime. It is
+  not yet V3 playback, verification, or a player-facing Theater. Durable
   cross-session storage, authenticated publication, deployed verification,
   moderation operations, and player-visible flows remain completion work.
 

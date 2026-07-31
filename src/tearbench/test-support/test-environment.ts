@@ -1,8 +1,8 @@
-import type { PlatformServices } from "../platform/contracts";
-import { unavailable } from "../platform/contracts";
-import { createLifecycleController } from "../platform/lifecycle";
-import { createMemoryStorage } from "../platform/storage";
-import { RunRandomStreams, type RunRandomStreamName } from "../simulation/run-random";
+import type { PlatformServices } from "../../platform/contracts";
+import { unavailable } from "../../platform/contracts";
+import { createLifecycleController } from "../../platform/lifecycle";
+import { createMemoryStorage } from "../../platform/storage";
+import { RunRandomStreams, type RunRandomStreamName } from "../../simulation/run-random";
 
 export interface TearTestWriteAttempt {
   readonly capability: "cloud" | "leaderboard" | "achievement" | "analytics" | "advertisement";

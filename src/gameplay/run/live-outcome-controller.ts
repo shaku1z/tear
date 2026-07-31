@@ -20,6 +20,7 @@ export interface LiveOutcomeControllerPort {
   storePreparedVictory(prepared: PreparedVictory): void;
   stopClipper(): void;
   terminate(outcome: TerminalOutcome): void;
+  publishTerminal(outcome: TerminalOutcome, run: OutcomeRunState): void;
   saveBest(run: OutcomeRunState): boolean;
   best(run: OutcomeRunState): BestRecord;
   awardCoins(score: number): number;
@@ -51,6 +52,7 @@ export class LiveRunOutcomeController {
     this.#port.replaceWaveLog(appendDefeatWave(run.waveLog, this.#port.waveActive(), run));
     run = this.#port.snapshot();
     this.#port.terminate("defeat");
+    this.#port.publishTerminal("defeat", run);
     const prepared = this.#prepareResult(run);
     if (this.#port.achievementTracking()) this.#port.recordDefeatProgress(run, prepared.earned);
     const result = buildRunResult(run, { best: this.#port.best(run), prepared, victory: false });
@@ -64,6 +66,9 @@ export class LiveRunOutcomeController {
     this.#port.stopClipper();
     const run = this.#port.snapshot();
     const prepared = this.#prepareResult(run);
+    // Completion is established at the scored/progression boundary. This must
+    // precede the victory recording intent, which closes the V3 sidecar.
+    this.#port.publishTerminal("victory", run);
     this.#port.executeVictoryIntents(planVictoryProgression({
       run,
       campaign,

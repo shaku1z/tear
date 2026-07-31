@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createTearTestEnvironment } from "../../src/tearbench";
+import { createTearTestEnvironment } from "../../src/tearbench/test-support";
 
 describe("TearBench test environment", () => {
   it("provides only disposable storage and unavailable remote capabilities", async () => {

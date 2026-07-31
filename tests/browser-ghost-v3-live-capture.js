@@ -16,16 +16,27 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page }) 
       environment.step(tick === 1 ? [{ kind: "command", tick, id: 1, command: { type: "move", x: 1000, y: 0 } }]
         : tick === 25 ? [{ kind: "command", tick, id: 2, command: { type: "dash", x: 1000, y: 0 } }] : []);
     }
+    environment.pause();
+    environment.resume();
     environment.terminate();
   });
-  await page.waitForFunction(() => window.__TEAR_GHOST_V3__.manifest() !== null, undefined, { timeout: 20000 });
+  await page.waitForFunction(() => window.__TEAR_GHOST_V3__.manifest() !== null
+    || window.__TEAR_GHOST_V3__.failure() !== null, undefined, { timeout: 20000 });
+  assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
   const manifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
   const persisted = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifests());
   assert.equal(manifest.status, "complete");
   assert.equal(manifest.recordingProfile, "coaching");
+  assert.equal(typeof manifest.provenance.runId, "string");
+  assert.equal(typeof manifest.provenance.seed, "string");
   assert.ok(persisted.some((candidate) => candidate.id === manifest.id && candidate.status === "complete"));
   const capsule = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id);
   assert.equal(capsule.tracks.events.length > 0, true);
+  const eventTypes = capsule.tracks.events.map((entry) => entry.value?.type);
+  assert.ok(eventTypes.includes("run.started"), "live capsule omitted its authoritative start boundary");
+  assert.ok(eventTypes.includes("run.paused"), "live pause did not enter the V3 causal track");
+  assert.ok(eventTypes.includes("run.resumed"), "live resume did not enter the V3 causal track");
+  assert.ok(eventTypes.includes("run.abandoned"), "lifecycle termination did not enter the V3 capsule before shutdown");
   assert.equal(capsule.tracks.results.length > 0, true);
   assert.ok(manifest.chunks.some((chunk) => chunk.kind === "events"));
   assert.ok(manifest.chunks.some((chunk) => chunk.kind === "results"));

@@ -1,6 +1,7 @@
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameBlade, GamePlayer, GameRun } from "./game-runtime-state";
 import type { LiveGameHostState } from "./live-game-host-state";
+import type { LiveWorldEntityConstructionPort } from "./live-world-entity-factory";
 import type { LegacyAppScreen, LegacyTransitionContext } from "./legacy-state-controller";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import type { BossId } from "../gameplay/run/content-director";
@@ -11,6 +12,7 @@ import { auditLiveEffects, createLiveDebugSnapshot } from "./live-debug-snapshot
 export interface LiveDebugCompositionOptions {
   readonly enabled: boolean;
   readonly dependencies: GameRuntimeDependencies;
+  readonly entities: LiveWorldEntityConstructionPort;
   readonly state: LiveGameHostState;
   readonly lifecycle: Parameters<typeof installLiveDebugHarness>[0]["lifecycle"];
   readonly cinema: Parameters<typeof installLiveDebugHarness>[0]["cinema"] &
@@ -50,7 +52,7 @@ export interface LiveDebugCompositionOptions {
 export function installLiveGameDebug(options: LiveDebugCompositionOptions): void {
   const d = options.dependencies;
   installLiveDebugHarness({
-    enabled: options.enabled, dependencies: d, state: options.state, lifecycle: options.lifecycle,
+    enabled: options.enabled, dependencies: d, entities: options.entities, state: options.state, lifecycle: options.lifecycle,
     cinema: options.cinema, stage: options.stage, width: options.width, height: options.height,
     startRun: options.startRun, selectBoss: options.selectBoss, setScreen: options.setScreen, screen: options.screen,
     setContinueSeconds: options.setContinueSeconds, openDraft: options.openDraft, openTier: options.openTier,
@@ -60,7 +62,10 @@ export function installLiveGameDebug(options: LiveDebugCompositionOptions): void
     enterReplay: options.enterReplay, beginRename: options.beginRename, applyOptions: options.applyOptions,
     startFinale: options.startFinale, severFinale: options.severFinale,
     selectSettingsTab: options.selectSettingsTab,
-    stopRecording: () => { if (d.GHOST.recording()) d.GHOST.stopRec({ debugFinale: true }); },
+    stopRecording: () => {
+      try { if (d.GHOST.recording()) d.GHOST.stopRec({ debugFinale: true }); }
+      finally { d.Input.stopSemanticRecording(); }
+    },
     install: (api) => { Object.defineProperty(window, "__PANTHEON_TEST", { configurable: true, value: api }); },
     auditEffects: () => auditLiveEffects(d, options.width, options.height),
     tutorialSnapshot: options.tutorialSnapshot,

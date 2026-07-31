@@ -1,6 +1,7 @@
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
-import type { GameEnemy, GameProjectile, GameRun } from "./game-runtime-state";
+import type { GameEnemy, GameRun } from "./game-runtime-state";
 import type { LiveGameHostState } from "./live-game-host-state";
+import type { LiveWorldEntityConstructionPort } from "./live-world-entity-factory";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import type { BossId } from "../gameplay/run/content-director";
 import type { RunPhase } from "../gameplay/run/lifecycle";
@@ -21,6 +22,7 @@ interface DebugStage { index: number; current: unknown; platforms: unknown[] }
 export interface LiveDebugHarnessContext {
   readonly enabled: boolean;
   readonly dependencies: GameRuntimeDependencies;
+  readonly entities: LiveWorldEntityConstructionPort;
   readonly state: LiveGameHostState;
   readonly lifecycle: DebugLifecycle;
   readonly cinema: DebugCinema;
@@ -75,8 +77,8 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       if (player === undefined) throw new Error("Enemy parity scenario requires a live player");
       player.x = context.width / 2; player.y = d.CONFIG.world.groundY - player.hh;
       player.vx = 0; player.vy = 0; player.onGround = true;
-      const enemy = new d.Charger(context.width / 2 + 300,
-        d.CONFIG.world.groundY - d.CONFIG.enemy.h / 2) as GameEnemy;
+      const enemy = context.entities.createEnemy("charger", context.width / 2 + 300,
+        d.CONFIG.world.groundY - d.CONFIG.enemy.h / 2, runOf(context.state));
       Object.assign(enemy, {
         vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 0, hitCd: 0, aliveT: 0,
         behavior: "bull", atk: "windup", atkT: 0.3, atkMax: 0.3, atkDir: -1,
@@ -92,7 +94,8 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       if (player === undefined) throw new Error("Ranged parity scenario requires a live player");
       Object.assign(player, { x: 450, y: d.CONFIG.world.groundY - player.hh,
         vx: 0, vy: 0, onGround: true });
-      const enemy = new d.Ranged(1150, d.CONFIG.world.groundY - d.CONFIG.ranged.h / 2) as
+      const enemy = context.entities.createEnemy("ranged", 1150, d.CONFIG.world.groundY - d.CONFIG.ranged.h / 2,
+        runOf(context.state)) as
         GameEnemy & { state: string; aimTimer: number; windT: number; windMax: number };
       Object.assign(enemy, {
         vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 0, hitCd: 0, aliveT: 0,
@@ -107,15 +110,15 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
     prepareProjectileParryScenario() {
       const player = context.state.player(), blade = context.state.blade(), run = runOf(context.state);
       if (player === undefined || blade === undefined) throw new Error("Parry parity scenario requires a live player and blade");
-      const owner = new d.Ranged(1500, d.CONFIG.world.groundY - d.CONFIG.ranged.h / 2) as GameEnemy;
+      const owner = context.entities.createEnemy("ranged", 1500, d.CONFIG.world.groundY - d.CONFIG.ranged.h / 2, run);
       Object.assign(owner, {
         vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 9, hitCd: 0, aliveT: 0,
         behavior: "", state: "kite", aimTimer: 9, windT: 0, windMax: 0,
         canClimb: false, climber: false, variant: "", variantName: "", affixes: [], affixCount: 0,
       });
       const actualTipX = blade.tipX, actualTipY = blade.tipY;
-      const shot = new d.Projectile(blade.x + (actualTipX - blade.x) * 0.62,
-        blade.y + (actualTipY - blade.y) * 0.62, -800, 0) as GameProjectile;
+      const shot = context.entities.createProjectile(blade.x + (actualTipX - blade.x) * 0.62,
+        blade.y + (actualTipY - blade.y) * 0.62, -800, 0);
       shot.r = 18; shot.owner = owner; shot.sourceEnemy = owner; shot.dmg = d.CONFIG.proj.dmg;
       Object.assign(blade, { state: "held", vx: 0, vy: 0,
         tipX: actualTipX - 28, tipY: actualTipY, prevTipX: actualTipX - 28, prevTipY: actualTipY });
@@ -130,7 +133,7 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       Object.assign(player, { x: 350, y: d.CONFIG.world.groundY - player.hh,
         vx: 0, vy: 0, onGround: true, lastTrickT: 0, lastTrickKind: "" });
       d.Mirror.active = false; d.Mirror.host = null; d.Mirror.fxq.length = 0;
-      const host = new d.MirrorHost(1200, d.CONFIG.world.groundY - d.CONFIG.echo.h / 2, run.mods) as
+      const host = context.entities.createEnemy("echo", 1200, d.CONFIG.world.groundY - d.CONFIG.echo.h / 2, run) as
         unknown as GameEnemy & { _live: boolean };
       Object.assign(host, {
         _live: true, vx: 0, vy: 0, onGround: true, spawnT: 0, introT: 0,
@@ -141,11 +144,11 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
     },
     /** Exact-tick parity fixture: drive a real held strike through damage, kill, and cleanup. */
     prepareCombatParityScenario() {
-      const player = context.state.player(), blade = context.state.blade();
+      const player = context.state.player(), blade = context.state.blade(), run = runOf(context.state);
       if (player === undefined || blade === undefined) throw new Error("Combat parity scenario requires a live player and blade");
       const dx = blade.tipX - blade.x, dy = blade.tipY - blade.y;
-      const survivor = new d.Charger(blade.x + dx * 0.48, blade.y + dy * 0.48) as GameEnemy;
-      const victim = new d.Charger(blade.x + dx * 0.78, blade.y + dy * 0.78) as GameEnemy;
+      const survivor = context.entities.createEnemy("charger", blade.x + dx * 0.48, blade.y + dy * 0.48, run);
+      const victim = context.entities.createEnemy("charger", blade.x + dx * 0.78, blade.y + dy * 0.78, run);
       for (const enemy of [survivor, victim]) Object.assign(enemy, {
         vx: 0, vy: 0, onGround: false, spawnT: 0, stun: 0.75, hitCd: 0, aliveT: 0,
         behavior: "bull", atk: "idle", atkT: 0, atkCd: 9, canClimb: false, climber: false,

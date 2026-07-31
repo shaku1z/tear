@@ -2,6 +2,7 @@ import type { GameBlade, GameEnemy, GameFloater, GamePlayer, GameProjectile, Gam
   GameSlowZone, GameTemporaryWall } from "./game-runtime-state";
 import type { RunResultInfo } from "../gameplay/run/outcome-planner";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
+import type { TearWorldState } from "../gameplay/runtime/tear-world-context";
 
 type ReplayPacket = ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>;
 
@@ -19,28 +20,19 @@ export interface BossBeatState {
   dur: number;
 }
 
-/** Shared lazy boundary for replaceable game-host state during the strict cutover. */
-export interface LiveGameHostState {
-  run(): (GameRun & { voidDescent?: unknown }) | null;
-  setRun(value: (GameRun & { voidDescent?: unknown }) | null): void;
-  player(): GamePlayer | undefined;
-  setPlayer(value: GamePlayer | undefined): void;
-  blade(): GameBlade | undefined;
-  setBlade(value: GameBlade | undefined): void;
-  enemies(): GameEnemy[];
-  setEnemies(value: GameEnemy[]): void;
-  projectiles(): GameProjectile[];
-  setProjectiles(value: GameProjectile[]): void;
-  floaters(): GameFloater[];
-  setFloaters(value: GameFloater[]): void;
-  slowZones(): GameSlowZone[];
-  setSlowZones(value: GameSlowZone[]): void;
-  temporaryWalls(): GameTemporaryWall[];
-  setTemporaryWalls(value: GameTemporaryWall[]): void;
-  bossIntro(): BossIntroState | null;
-  setBossIntro(value: BossIntroState | null): void;
-  bossBeat(): BossBeatState | null;
-  setBossBeat(value: BossBeatState | null): void;
+/** App-facing extension of the portable replaceable per-world state contract. */
+export interface LiveGameHostState extends TearWorldState<
+  GameRun & { voidDescent?: unknown },
+  GamePlayer,
+  GameBlade,
+  GameEnemy,
+  GameProjectile,
+  GameFloater,
+  GameSlowZone,
+  GameTemporaryWall,
+  BossIntroState,
+  BossBeatState
+> {
   selectedWeapon(): string;
   setSelectedWeapon(value: string): void;
   outcome(): RunResultInfo | null;

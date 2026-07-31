@@ -2,7 +2,7 @@ import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
 import { normalizeGameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
-import type { GameEnemy } from "../app/game-runtime-state";
+import type { TearSimulationEnemyView } from "../simulation/runtime-world-port";
 import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
 import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1,
   TearStateClass } from "./contracts";
@@ -11,7 +11,6 @@ import { DIFFICULTY_REGISTRY, ENTITY_KIND_REGISTRY, RUN_MODE_REGISTRY, WEAPON_RE
   type TearEntityKindId } from "./registries";
 import type { TearScenarioTransition } from "./runner";
 import { validateTearContract } from "./validation";
-import { installGhostLabPanel } from "./ghost-lab-panel"; import { installLiveStateForgeStudio } from "./live-state-forge-studio-host";
 import { createLiveRuntimeSnapshotController } from "./live-runtime-snapshots"; import { projectLiveNavigationObservation } from "./live-observation-navigation";
 import { projectLiveProjectiles } from "./live-observation-projectiles"; import { launchResolvedLiveState } from "./live-state-forge-scenario-launch";
 import { projectLiveActorMechanics, projectLiveBehaviorMode, projectLiveBladeMechanics, projectLivePlayerMechanics } from "./live-observation-actors";
@@ -19,9 +18,8 @@ import { certifyWave99HammerProgression, createCanonicalWave99HammerProgression,
   forgeExitLaunchSnapshot } from "./state-forge-exit-gate";
 import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
 import type { LiveTearRuntimeEnvironmentContext, TearClassARuntimeEnvironment,
-  TearClassBRuntimeEnvironment, TearClassCRuntimeEnvironment, TearPhysicalInput,
-  TearRuntimeAccessClass, TearRuntimeBridgeFactory, TearRuntimeEnvironment,
-  TearRuntimeEnvironmentMetrics, TearStructuredRuntimeEnvironment } from "./live-runtime-contracts";
+  TearClassBRuntimeEnvironment, TearRuntimeAccessClass, TearRuntimeEnvironmentMetrics,
+  TearStructuredRuntimeEnvironment } from "./live-runtime-contracts";
 export type * from "./live-runtime-contracts";
 function availableActions(screen: string, runMode: string): readonly GameAction["type"][] {
   if (screen === "playing") return Object.freeze([
@@ -43,7 +41,7 @@ function numericSeed(seed: string): number {
   return (hash >>> 0) || 1;
 }
 
-function entityKind(enemy: GameEnemy): TearEntityKindId {
+function entityKind(enemy: TearSimulationEnemyView): TearEntityKindId {
   let raw = enemy.kind;
   if (typeof enemy.bossId === "string" && enemy.bossId.length > 0) raw = enemy.bossId;
   else if (enemy.kind === "support" && "supportType" in enemy && typeof enemy.supportType === "string") {
@@ -115,7 +113,7 @@ export function projectLiveTearObservation(
         livingWaveEnemies: livingEnemies.length,
         ...(boss === undefined ? {} : {
           boss: Object.freeze({
-            id: boss.bossId || boss.kind || "boss",
+            id: boss.bossId ?? boss.kind,
             phase: "phase" in boss && (typeof boss.phase === "string" || typeof boss.phase === "number")
               ? String(boss.phase)
               : ("state" in boss && typeof boss.state === "string" ? boss.state : "active"),
@@ -168,10 +166,15 @@ export function createLiveTearRuntimeEnvironment(
   context.subscribeEngineEvent((event) => {
     if (scenario === null) return;
     let type: TearCausalEventV1["type"];
-    if (event.kind === "stage") type = "stage.entered";
+    if (event.kind === "run") {
+      type = event.transition === "started" ? "run.started" : event.transition === "paused" ? "run.paused"
+        : event.transition === "resumed" ? "run.resumed" : event.transition === "completed" ? "run.completed"
+          : event.transition === "defeated" ? "run.defeated" : "run.abandoned";
+    } else if (event.kind === "stage") type = "stage.entered";
     else if (event.kind === "wave") type = event.event === "clear" ? "wave.cleared" : "wave.started";
     else if (event.kind === "spawn") type = "enemy.spawned";
     else if (event.kind === "death") type = "enemy.defeated";
+    else if (event.kind === "loadout") type = event.tier > 1 ? "tier.selected" : "draft.selected";
     else if (event.effect.includes("parry")) type = "combat.perfect-parry";
     else if (event.effect.includes("throw")) type = "blade.thrown";
     else if (/recall|catch/u.test(event.effect)) type = "blade.recalled";
@@ -222,6 +225,10 @@ export function createLiveTearRuntimeEnvironment(
         context.selectBoss(nextScenario.start.boss);
       }
       context.stopFrameLoop();
+      // Structured TearBench runs own the canonical action source for their
+      // lifetime. Physical pointer sampling remains available only to the
+      // visible Class-C/manual route.
+      context.setSemanticInputAuthority(true);
       context.setRunSeed(numericSeed(nextScenario.seed));
       context.selectWeapon(nextScenario.start.weapon);
       context.startRun(nextScenario.start.mode, nextScenario.start.difficulty);
@@ -376,7 +383,6 @@ export function createLiveTearRuntimeEnvironment(
         paused = true;
         context.setScreen("paused");
         if (observation !== null) observation = projectLiveTearObservation(context, observation.tick, accessClass);
-        eventLog.push(createEvent(sequence++, observation?.tick ?? 0, "run.paused", {}));
       }
     },
     resume() {
@@ -385,12 +391,12 @@ export function createLiveTearRuntimeEnvironment(
         paused = false;
         context.setScreen("playing");
         if (observation !== null) observation = projectLiveTearObservation(context, observation.tick, accessClass);
-        eventLog.push(createEvent(sequence++, observation?.tick ?? 0, "run.resumed", {}));
       }
     },
     terminate() {
       requireStructured(accessClass, "programmatic termination");
       context.terminateRun();
+      context.setSemanticInputAuthority(false);
       terminated = true;
       if (observation !== null) observation = projectLiveTearObservation(context, observation.tick, accessClass);
       eventLog.push(createEvent(sequence++, observation?.tick ?? 0, "run.abandoned", {}));
@@ -463,37 +469,4 @@ export function createLiveTearRuntimeEnvironment(
     stateHash: () => environment.stateHash(),
     screenshot: () => environment.screenshot(),
   });
-}
-/*
-
-  title.textContent = "Ghost Lab · Live Disposable Runtime";
-*/
-/** Installs an immutable factory; each access-class adapter owns isolated control state. */
-export function installLiveTearRuntimeBridge(
-  context: LiveTearRuntimeEnvironmentContext,
-  target: Window & { __TEAR_RUNTIME_ENVIRONMENT__?: TearRuntimeBridgeFactory },
-): void {
-  function createAdapter(accessClass: "A"): TearClassARuntimeEnvironment;
-  function createAdapter(accessClass: "B"): TearClassBRuntimeEnvironment;
-  function createAdapter(accessClass: "C"): TearClassCRuntimeEnvironment;
-  function createAdapter(accessClass: string): TearRuntimeEnvironment {
-    if (accessClass === "A") return createLiveTearRuntimeEnvironment(context, "A");
-    if (accessClass === "B") return createLiveTearRuntimeEnvironment(context, "B");
-    if (accessClass === "C") {
-      return Object.freeze({
-        accessClass: "C" as const,
-        screenshot: () => { context.render(); return context.screenshot(); },
-        physicalInput: (input: TearPhysicalInput) => { context.emitPhysicalInput(input); },
-      });
-    }
-    throw new RangeError(`unknown Tear runtime access class: ${accessClass}`);
-  }
-  const factory: TearRuntimeBridgeFactory = Object.freeze({ create: createAdapter });
-  Object.defineProperty(target, "__TEAR_RUNTIME_ENVIRONMENT__", {
-    configurable: false,
-    writable: false,
-    value: factory,
-  });
-  installGhostLabPanel(factory); installLiveStateForgeStudio(factory);
-  if (new URLSearchParams(window.location.search).get("watchagent") === "1") void import("../agents/live-watch-agent-host").then(({ installLiveWatchAgentHost }) => { installLiveWatchAgentHost(context, target); });
 }

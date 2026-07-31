@@ -1,11 +1,13 @@
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { LiveGameHostState } from "./live-game-host-state";
+import type { LiveWorldEntityConstructionPort } from "./live-world-entity-factory";
 import type { LiveTutorialRuntime } from "../gameplay/training/live-tutorial-runtime";
 import { createLiveStyleAchievementRuntime } from "../gameplay/scoring/live-style-achievement-runtime";
 import type { TutorialMark } from "../gameplay/training/tutorial-controller";
 
 export interface LiveStyleHostServices {
   readonly dependencies: GameRuntimeDependencies;
+  readonly entities: Pick<LiveWorldEntityConstructionPort, "createProjectile">;
   readonly state: LiveGameHostState;
   readonly tutorial: LiveTutorialRuntime;
   readonly captureGhost: (trick: string, x: number, y: number, importance: 1 | 2 | 3) => void;
@@ -46,7 +48,7 @@ export function createLiveStyleHost(services: LiveStyleHostServices) {
     },
     profileMax: (stat, value) => { d.PROFILE.maxStat(stat, value); }, achievementCheck,
     metaLevel: (id) => d.META.level(id), projectileSpeed: () => d.CONFIG.proj.speed,
-    createProjectile: (x, y, vx, vy) => new d.Projectile(x, y, vx, vy),
+    createProjectile: services.entities.createProjectile,
     addProjectile: services.addProjectile,
   });
 }
