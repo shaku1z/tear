@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** seventeenth C27A foundation slice complete (both production combat
-phases run detached). This is not a C27A completion or release claim.
+**Status:** eighteenth C27A foundation slice complete (the live parity trace
+is captured and live determinism is proven). This is not a C27A completion or release claim.
 
 ## Resume protocol (mandatory)
 
@@ -124,14 +124,21 @@ Before coding, read this file, then:
   collections, and a portable `CombatEntityRuntime`. Held-blade contact
   resolves real damage (`weaponHit`, `logWeapon:heldHit`, `makeSwingEvent`,
   `hit:slam`); same-seed runs agree on hashes and the outward sequence.
+- The eighteenth slice captured the live half: `test:browser:c27a-live-parity-trace`
+  resets a Class-A scenario on a fixed seed, snapshots State Forge before the
+  first stepped tick, drives 180 exact ticks with a sealed schedule, and
+  records authoritative hashes, events, and ending RNG. Two live runs in one
+  page produce one hash sequence, one event sequence, and one RNG state. The
+  artifact lands in `artifacts/tearbench/c27a/live-parity-trace.json`
+  (untracked; regenerate with the gate).
 
 ## Latest evidence
 
-All of the following were run from this worktree after the combat-tick slice:
+All of the following were run from this worktree after the live-trace slice:
 
 - `pnpm check:c27a:foundation` passed: typecheck, lint, architecture gate,
   20 test files / 64 tests, standalone test build, and
-  `browser-c27a-physical-canonical-input`.
+  `browser-c27a-physical-canonical-input`, and `browser-c27a-live-parity-trace`.
 - Because these slices touched the composition root, the production build,
   `test:browser:features`, `test:browser:bosses`, `test:browser:journeys`,
   `test:browser:responsive`, and the blade-lifecycle, mirror-pursuit, and

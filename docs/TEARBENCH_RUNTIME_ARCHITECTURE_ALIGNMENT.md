@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first seventeen executable C27A slices are complete:
+The first eighteen executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -159,6 +159,11 @@ The first seventeen executable C27A slices are complete:
   Held-blade contact resolves real damage. Wave, kill scoring, outcome, and
   cinematics stay live-host-owned and no live trace has been compared, so
   parity is still unproven.
+- The live half of the comparison is now captured: a Class-A scenario on a
+  fixed seed yields a State Forge origin snapshot, a sealed action schedule,
+  180 authoritative state hashes, the event sequence, and the ending RNG
+  state, with two live runs proven identical. The detached side has not been
+  compared against it.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

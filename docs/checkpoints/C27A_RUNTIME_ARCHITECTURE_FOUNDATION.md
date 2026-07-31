@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-07-30. This records the first seventeen executable migration
+In progress as of 2026-07-30. This records the first eighteen executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -288,6 +288,18 @@ headless Tear gameplay portable.
   live-host-owned, and no live trace has been captured for comparison. This
   is a detached two-phase combat determinism proof, not live-versus-detached
   parity and not a replay, headless, or learning portability claim.
+- `tests/browser-c27a-live-parity-trace.js` captures the live half of the
+  comparison from the real application: it resets a Class-A scenario on a
+  fixed seed, takes a State Forge origin snapshot before the first stepped
+  tick, drives 180 exact ticks with a sealed action schedule, and records the
+  authoritative per-tick state hashes, the gameplay events, and the ending
+  RNG state. It runs the whole scenario twice in one page and asserts both
+  runs produce one hash sequence, one event sequence, and one RNG state, so
+  live determinism is established before anything is compared against it.
+  The artifact is written to `artifacts/tearbench/c27a/live-parity-trace.json`
+  (untracked) and is the input the detached comparison will consume. This is
+  live-side capture and live determinism only; no detached trace has been
+  compared against it yet.
 
 ## Remaining C27A work
 
