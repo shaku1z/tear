@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-07-30. This records the first sixteen executable migration
+In progress as of 2026-07-30. This records the first seventeen executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -269,6 +269,25 @@ headless Tear gameplay portable.
   builder both fixtures use. It takes a seed, an optional run mode, and the
   enemy factory ids to spawn, so the next phase fixture starts from a world
   rather than re-deriving one.
+- `tests/unit/detached-combat-tick.test.ts` runs BOTH production combat
+  phases detached for 240 exact ticks: `runLiveOpeningPhase` then
+  `runLiveCollisionPhase`, in the live host's order, with collision skipped
+  when the opening half blocks the tick. The collision host is built from the
+  same world composition: impact state is a view over the world's transient
+  record, the enemy/projectile/floater collections are the world's own, and a
+  portable `CombatEntityRuntime` supplies projectile and bomber phases.
+
+  The collision half genuinely resolves contact: the recorded trace contains
+  `weaponHit`, `logWeapon:heldHit`, `makeSwingEvent`, `makeSlamEvent`,
+  `hit:hit`, `hit:slam`, `sound:hurt`, and `loseStyle`, and production damage
+  reaches the enemies (two of three end the run below their starting hp).
+  Two runs on one seed agree on every state hash and on the whole outward
+  effect sequence; another seed diverges.
+
+  Wave orchestration, kill scoring, run outcome, and cinematics remain
+  live-host-owned, and no live trace has been captured for comparison. This
+  is a detached two-phase combat determinism proof, not live-versus-detached
+  parity and not a replay, headless, or learning portability claim.
 
 ## Remaining C27A work
 

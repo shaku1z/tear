@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** sixteenth C27A foundation slice complete (the detached world runs
-the real opening combat phase). This is not a C27A completion or release claim.
+**Status:** seventeenth C27A foundation slice complete (both production combat
+phases run detached). This is not a C27A completion or release claim.
 
 ## Resume protocol (mandatory)
 
@@ -118,13 +118,19 @@ Before coding, read this file, then:
 - Both detached fixtures now share `tests/unit/detached-world-harness.ts`,
   which builds the world, run, actors, and input adapter from a seed and an
   enemy spawn list. Write the collision fixture against that harness.
+- The seventeenth slice added the collision phase. A detached world now runs
+  `runLiveOpeningPhase` then `runLiveCollisionPhase` for 240 exact ticks,
+  with impact state viewing the world's transient record, the world's own
+  collections, and a portable `CombatEntityRuntime`. Held-blade contact
+  resolves real damage (`weaponHit`, `logWeapon:heldHit`, `makeSwingEvent`,
+  `hit:slam`); same-seed runs agree on hashes and the outward sequence.
 
 ## Latest evidence
 
-All of the following were run from this worktree after the opening-phase slice:
+All of the following were run from this worktree after the combat-tick slice:
 
 - `pnpm check:c27a:foundation` passed: typecheck, lint, architecture gate,
-  19 test files / 61 tests, standalone test build, and
+  20 test files / 64 tests, standalone test build, and
   `browser-c27a-physical-canonical-input`.
 - Because these slices touched the composition root, the production build,
   `test:browser:features`, `test:browser:bosses`, `test:browser:journeys`,
@@ -143,7 +149,7 @@ All of the following were run from this worktree after the opening-phase slice:
 - `pnpm check:c23` passed: requirements, typecheck, lint, architecture, 9 test
   files / 39 tests, standalone build, 600-tick live restore, State Forge
   Studio, and the exit matrix.
-- `pnpm test` passed: 223 test files / 900 tests.
+- `pnpm test` passed: 224 test files / 903 tests.
 - `pnpm requirements:check` and `git diff --check` passed.
 - `src/app/live-game-runtime.ts` measures 685 physical lines.
 - The standalone build emits the existing non-fatal >500 kB chunk warning.
@@ -152,17 +158,19 @@ All of the following were run from this worktree after the opening-phase slice:
 
 ## Exact next C27A boundary
 
-The detached world runs the opening phase. The next boundary is the
-collision phase: `runLiveCollisionPhase` needs the same world plus a hit,
-throw, parry, contact, and tail port set. Build that host from the world
-composition the same way — outward effects recorded, the impact state taken
-from the world's transient record and the collections from
-`live-combat-world-state` — then run opening plus collision as one detached
-combat tick. After that, capture a live trace of the same seed through the
-TearBench bridge and compare canonical actions, gameplay events, RNG
-snapshots, and state hashes tick for tick. Kill, wave, and cinematic
-orchestration follow. No replay, headless, or learning portability claim
-may be made until that live-versus-detached comparison passes.
+Both combat phases run detached and deterministically. The decisive missing
+evidence is now the comparison itself: capture a live trace of the same seed
+and scripted actions through the TearBench bridge (Class A exact advancement,
+`advanceExact`), then compare it tick for tick against the detached trace —
+canonical actions, gameplay events, RNG snapshots, and authoritative state
+hashes. Expect an initial mismatch and treat each difference as a finding: the
+live host still owns wave orchestration, kill scoring, run outcome, and
+cinematics, and the detached fixture stubs them, so the first comparison must
+either restrict the scenario to a window where those are inert or move the
+missing orchestration behind ports the detached world can call. Record every
+divergence in the checkpoint rather than narrowing the fixture until it agrees.
+No replay, headless, or learning portability claim may be made until that
+comparison passes on a real scenario.
 
 Preserve menu-time lazy construction and the one existing
 `TearSimulationRuntime`/scheduler, and extend the context only where real

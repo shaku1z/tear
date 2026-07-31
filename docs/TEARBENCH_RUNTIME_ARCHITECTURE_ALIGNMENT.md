@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first sixteen executable C27A slices are complete:
+The first seventeen executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -153,6 +153,12 @@ The first sixteen executable C27A slices are complete:
   on the outward effect sequence. Collision, kill, wave, and cinematic
   phases remain live-host-owned, so this is still not a full combat tick
   nor live-versus-detached parity.
+- Both combat phases now run detached in the live host's order, with the
+  collision host reading the world's transient impact record and its own
+  collections and a portable `CombatEntityRuntime` for projectile phases.
+  Held-blade contact resolves real damage. Wave, kill scoring, outcome, and
+  cinematics stay live-host-owned and no live trace has been compared, so
+  parity is still unproven.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition
