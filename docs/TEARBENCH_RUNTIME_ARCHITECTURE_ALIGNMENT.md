@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first twelve executable C27A slices are complete:
+The first thirteen executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -131,6 +131,12 @@ The first twelve executable C27A slices are complete:
   composition previously read as a module singleton is now created per world
   and passed inward. The closure-owned run/world construction inside
   `live-game-runtime.ts` is the remaining portability blocker.
+- `live-world-composition` builds one live world — state, entity
+  construction, lifecycle, services, transient records — in a single call
+  that the live host now consumes. It is world-only by design; the combat
+  host, frame coordinator, and presentation stay outward. A detached world
+  can be built from the same call, but no detached, replay, or headless
+  world consumes it yet, and no parity trace has been compared.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

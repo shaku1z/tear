@@ -86,7 +86,7 @@ These figures do not mean newer work has no value. They mean most original atomi
 - Keep DOM/browser adapters at the app edge. Gameplay/runtime composition stays portable.
 - Test seams may observe/drive production behavior but must not become production authority.
 - Preserve lazy menu-time construction and startup semantics unless a checkpoint explicitly changes them.
-- Keep `src/app/live-game-runtime.ts` within the user-approved 700 physical-line ceiling. It is currently 690 lines.
+- Keep `src/app/live-game-runtime.ts` within the user-approved 700 physical-line ceiling. It is currently 685 lines.
 - Preserve honest execution classes:
   - **A:** privileged in-process deterministic execution.
   - **B:** production runtime through supported bridges.
@@ -114,7 +114,7 @@ Named status:
 - **C25:** physical/black-box foundation verified; exit open.
 - **C26:** regression discovery passed `pnpm check:c26` on 2026-07-28.
 - **C27:** recorder/capsule foundation only; checkpoint open.
-- **C27A:** twelve shared-world architecture slices in this tree; blocking and incomplete.
+- **C27A:** thirteen shared-world architecture slices in this tree; blocking and incomplete.
 - **C28-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -169,7 +169,7 @@ Do not claim TearBot automatically learns merely because scripted policies, trai
 
 Read [`TEARBENCH_C27A_HANDOFF.md`](TEARBENCH_C27A_HANDOFF.md) before editing.
 
-Twelve C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, focused tests, and physical browser diagnostics.
+Thirteen C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, focused tests, and physical browser diagnostics.
 
 Important files:
 
@@ -177,6 +177,7 @@ Important files:
 - `src/gameplay/runtime/tear-world-transient-state.ts`
 - `src/app/live-world-simulation-factories.ts`
 - `src/gameplay/runtime/tear-world-clock.ts`
+- `src/app/live-world-composition.ts`
 - `src/app/live-world-context.ts`
 - `src/app/live-combat-world-state.ts`
 - `src/gameplay/runtime/tear-world-entity-construction.ts`
@@ -187,7 +188,7 @@ Important files:
 
 ### Exact next slice
 
-No shared mutable world service instance remains. Extract the closure-owned world bring-up inside `startLiveGame` into one `createLiveWorld(...)` composition (factories, clock, RNG, particles, world state, world context, entity-construction adapter) that can build a world the live host does not own; leave the combat host, frame coordinator, and presentation outward. Then run a detached world through it and compare traces against the live world.
+Run a second world through `createLiveWorldComposition`: build a detached world from it plus `createLiveWorldSimulationFactories`, drive it with the shared `TearSimulationRuntime`, and compare canonical actions, gameplay events, RNG snapshots, and state hashes against a live trace of the same seed. Combat still runs inside `createLiveCombatHost`, which also owns the browser frame coordinator, so a detached world must reuse the world composition without that host rather than copying it.
 
 Preserve:
 
@@ -331,7 +332,7 @@ transient/frame-feel, entity-factory, clock/RNG, and particle slices:
 
 - `pnpm check:c27a:foundation` passed:
   - typecheck, lint, architecture;
-  - 16 test files / 51 tests;
+  - 17 test files / 54 tests;
   - standalone build;
   - physical C27A browser proof.
 - `pnpm check:c27:foundation` passed:
@@ -343,9 +344,9 @@ transient/frame-feel, entity-factory, clock/RNG, and particle slices:
   - requirements, typecheck, lint, architecture;
   - 9 test files / 39 tests;
   - build and the State Forge browser restore/studio/exit matrix.
-- `pnpm test` passed: 220 test files / 890 tests.
+- `pnpm test` passed: 221 test files / 893 tests.
 - `pnpm requirements:check` and `git diff --check` passed.
-- `src/app/live-game-runtime.ts` measured 690 physical lines.
+- `src/app/live-game-runtime.ts` measured 685 physical lines.
 - The production build, browser feature matrix, boss parity, navigation/progression/playground/terminal journeys, and the blade/mirror/combat parity fixtures passed after the composition-root change.
 - Full `pnpm check` has not been run for a release claim.
 - The existing bundle warning above 500 kB is nonfatal; no bundle-performance release claim exists.

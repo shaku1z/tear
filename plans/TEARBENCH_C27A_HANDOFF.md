@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** twelfth C27A foundation slice complete (per-world particle
-system; no shared mutable world service instances remain). This is not a C27A completion or release claim.
+**Status:** thirteenth C27A foundation slice complete (one call builds one
+live world). This is not a C27A completion or release claim.
 
 ## Resume protocol (mandatory)
 
@@ -25,7 +25,7 @@ Before coding, read this file, then:
    headless simulator. Replay/headless work may use the production composition
    only after that same composition is genuinely portable.
 5. Keep `src/app/live-game-runtime.ts` at or below 700 lines. The current file
-   has 690 physical lines; the architecture gate is the authoritative limit.
+   has 685 physical lines; the architecture gate is the authoritative limit.
 
 ## Completed in this handoff
 
@@ -93,13 +93,19 @@ Before coding, read this file, then:
   the runtime dependencies. No module-level mutable world service instance
   remains: clock, named RNG, particles, boss feedback, and entity constructors
   are all per world.
+- The thirteenth slice added `src/app/live-world-composition.ts`.
+  `createLiveWorldComposition` builds one world's state,
+  entity-construction adapter, run lifecycle, and world context together.
+  `startLiveGame` passes a session port (weapon, outcome, recording, vault
+  id, win seconds) plus write-through mirrors for the local views it still
+  caches, and no longer constructs those pieces itself.
 
 ## Latest evidence
 
-All of the following were run from this worktree after the particle slice:
+All of the following were run from this worktree after the world-composition slice:
 
 - `pnpm check:c27a:foundation` passed: typecheck, lint, architecture gate,
-  16 test files / 51 tests, standalone test build, and
+  17 test files / 54 tests, standalone test build, and
   `browser-c27a-physical-canonical-input`.
 - Because these slices touched the composition root, the production build,
   `test:browser:features`, `test:browser:bosses`, `test:browser:journeys`,
@@ -118,26 +124,26 @@ All of the following were run from this worktree after the particle slice:
 - `pnpm check:c23` passed: requirements, typecheck, lint, architecture, 9 test
   files / 39 tests, standalone build, 600-tick live restore, State Forge
   Studio, and the exit matrix.
-- `pnpm test` passed: 220 test files / 890 tests.
+- `pnpm test` passed: 221 test files / 893 tests.
 - `pnpm requirements:check` and `git diff --check` passed.
-- `src/app/live-game-runtime.ts` measures 690 physical lines.
+- `src/app/live-game-runtime.ts` measures 685 physical lines.
 - The standalone build emits the existing non-fatal >500 kB chunk warning.
   It is not a passed bundle-budget/release claim.
 - Full `pnpm check` has not been run for a release claim.
 
 ## Exact next C27A boundary
 
-No shared mutable world service instance remains, so the blocker is now the
-closure-owned run/world construction inside `startLiveGame`. Extract the world
-bring-up — `createLiveWorldSimulationFactories`, the clock, RNG, particle
-system, world state, world context, and the entity-construction adapter — into
-one `createLiveWorld(...)` composition that `startLiveGame` calls, so the same
-call can build a world the live host does not own. Do not move the combat host,
-frame coordinator, or presentation into it: those stay outward. Then have a
-detached world use that composition and compare its action, event, RNG,
-snapshot, and hash trace against the live world before making any replay,
-headless, or learning portability claim. Preserve menu-time lazy construction
-and the one existing
+One call now builds one live world. The next step is to actually run a
+second world through it: build a detached world from
+`createLiveWorldComposition` plus `createLiveWorldSimulationFactories`,
+drive it with the shared `TearSimulationRuntime`, and compare its canonical
+action ordering, gameplay events, RNG snapshots, and state hashes against a
+live trace of the same seed and scenario. Until that parity evidence
+exists, no replay, headless, or learning portability claim may be made. The
+known remaining coupling is that combat still runs inside
+`createLiveCombatHost`, which also owns the browser frame coordinator: a
+detached world must reuse the world composition without that host, not copy
+it. Preserve menu-time lazy construction and the one existing
 `TearSimulationRuntime`/scheduler, and extend the context only where real
 ownership moves; do not add cosmetic ports merely to make the architecture
 diagram look complete.

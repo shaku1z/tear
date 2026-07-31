@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-07-30. This records the first twelve executable migration
+In progress as of 2026-07-30. This records the first thirteen executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -201,6 +201,21 @@ headless Tear gameplay portable.
   mutable service the live world composition previously read as a module
   singleton — clock, named RNG, particles, boss feedback, entity constructors —
   is created per world.
+- `src/app/live-world-composition.ts` builds one live world in a single
+  call: its replaceable `LiveGameHostState`, the entity-construction
+  adapter, the run lifecycle controller, and the world context with its
+  services and transient records. `startLiveGame` no longer constructs
+  those four pieces itself; it passes a session port for values that
+  outlive a world (selected weapon, outcome, last recording, vault id, win
+  seconds) and write-through mirrors for the hot-path views it still
+  caches locally. The composition is deliberately world-only — combat
+  host, frame coordinator, input, and presentation stay outward — so the
+  same call can build a world the live host does not own.
+  `tests/unit/live-world-composition.test.ts` proves the assembled world,
+  that mirrors receive the world-owned values rather than caller
+  instances, and that two worlds keep separate state, transient records,
+  entities, and lifecycles. `src/app/live-game-runtime.ts` is 685 physical
+  lines.
 
 ## Remaining C27A work
 

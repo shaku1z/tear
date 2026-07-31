@@ -1,6 +1,5 @@
-import { MusicDirector } from "../audio/music-director"; import { RunLifecycleController } from "../gameplay/run/lifecycle"; import { BOSS_ROSTER } from "../gameplay/run/content-director";
+import { MusicDirector } from "../audio/music-director"; import { BOSS_ROSTER } from "../gameplay/run/content-director";
 import { projectCanonicalGameplayState } from "../gameplay/runtime/canonical-state";
-import { createTearWorldState } from "../gameplay/runtime/tear-world-context";
 import type { CanvasUiButton } from "../presentation/screens/button-layer";
 import { blendHex as blendCol, easeOut as ez } from "../presentation/world/primitives";
 import { createLiveBrowserRuntime } from "./live-browser-runtime";
@@ -17,12 +16,11 @@ import { commitBossIntroSnapshot } from "./live-frame-runtime";
 import { RuntimeFrameDriver } from "./runtime-frame-driver";
 import { createLiveMusicObservation, projectLiveMusicRun } from "./live-music-observation-adapter";
 import { isMenuScreen, renderRegisteredScreen } from "./screen-registry";
-import { createLiveWorldEntityFactory } from "./live-world-entity-factory";
-import { createLiveWorldContext } from "./live-world-context";
+import { createLiveWorldComposition } from "./live-world-composition";
 import { createLiveCombatWorldState } from "./live-combat-world-state";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameBlade, GameEnemy, GameFloater, GamePlayer, GameProjectile, GameRun, GameSlowZone, GameTemporaryWall } from "./game-runtime-state";
-import type { BossBeatState, BossIntroState, LiveGameHostState } from "./live-game-host-state";
+import type { BossBeatState, BossIntroState } from "./live-game-host-state";
 import type { LegacyAppScreen, LegacyTransitionContext } from "./legacy-state-controller";
 import type { RunScreenState } from "./live-run-screen-adapters";
 import type { InteractiveUiButton } from "./ui-runtime-controller";
@@ -51,7 +49,6 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   const { canvas, context: ctx, width: W, height: H, viewport, resizeCanvas, requestPointerLock: requestLock, installPrompt, lockHint, hint: hintEl,
     pantheonDebug: PANTHEON_DEBUG, testMode: TEST_MODE } = browserRuntime;
   const restoreConfig = createConfigRestorer(CONFIG); let semanticInputAuthority = false; const requestOwnedPointerLock = () => { if (!semanticInputAuthority) requestLock(); };
-  const worldEntities = createLiveWorldEntityFactory(dependencies);
   const ghostV3 = createBrowserGhostLiveRecorder(
     window.indexedDB,
     createGhostV3BrowserTestOptions(TEST_MODE, window.location.search),
@@ -152,19 +149,15 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     else if (prior === "paused" && state === "playing") emitRunScreenTransition("resumed");
     return state;
   }
-  const portableWorldState = createTearWorldState<GameRun & { voidDescent?: unknown }, GamePlayer, GameBlade, GameEnemy, GameProjectile,
-    GameFloater, GameSlowZone, GameTemporaryWall, BossIntroState, BossBeatState>();
   let player: GamePlayer; let blade: GameBlade;
-  let enemies = portableWorldState.enemies(); let projectiles = portableWorldState.projectiles();
-  let floaters = portableWorldState.floaters();
+  let enemies: GameEnemy[] = []; let projectiles: GameProjectile[] = []; let floaters: GameFloater[] = [];
   // Time dilation, camera framing (the void run pulls world zoom OUT), banner
   // and rank readouts, hit stop, slow motion, shake, the blade-throw cooldown,
   // dash ghosting, and the opening audio cadence are per-world transient
   // records owned by the world context below, not live-host closures.
-  let slowZones = portableWorldState.slowZones(); let tempWalls = portableWorldState.temporaryWalls();
+  let slowZones: GameSlowZone[] = []; let tempWalls: GameTemporaryWall[] = [];
   let run: GameRun;
   let tearBenchRunSeed: number | null = null;
-  const RUN_LIFECYCLE = new RunLifecycleController();
   const emitRunScreenTransition = (transition: "paused" | "resumed"): void => {
     const lifecycle = RUN_LIFECYCLE.snapshot();
     if (lifecycle.sessionId === null || lifecycle.phase === "terminated") return;
@@ -206,24 +199,26 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   let continueT = 0;   // rewarded-revive countdown
   let hudHpLag = 1, hudMultPrev = 1, hudMultPop = 0;   // HUD juice: health damage-chip + combo pop
   const hoverAnim: Record<string, number> = {};
-  const hostState: LiveGameHostState = Object.freeze({
-    run: () => portableWorldState.run(), setRun: (value) => { if (value !== null) { portableWorldState.setRun(value); run = value; } },
-    player: () => portableWorldState.player(), setPlayer: (value) => { if (value !== undefined) { portableWorldState.setPlayer(value); player = value; } },
-    blade: () => portableWorldState.blade(), setBlade: (value) => { if (value !== undefined) { portableWorldState.setBlade(value); blade = value; } },
-    enemies: () => portableWorldState.enemies(), setEnemies: (value) => { portableWorldState.setEnemies(value); enemies = portableWorldState.enemies(); },
-    projectiles: () => portableWorldState.projectiles(), setProjectiles: (value) => { portableWorldState.setProjectiles(value); projectiles = portableWorldState.projectiles(); },
-    floaters: () => portableWorldState.floaters(), setFloaters: (value) => { portableWorldState.setFloaters(value); floaters = portableWorldState.floaters(); },
-    slowZones: () => portableWorldState.slowZones(), setSlowZones: (value) => { portableWorldState.setSlowZones(value); slowZones = portableWorldState.slowZones(); },
-    temporaryWalls: () => portableWorldState.temporaryWalls(), setTemporaryWalls: (value) => { portableWorldState.setTemporaryWalls(value); tempWalls = portableWorldState.temporaryWalls(); },
-    bossIntro: () => portableWorldState.bossIntro(), setBossIntro: (value) => { portableWorldState.setBossIntro(value); bossIntro = value; },
-    bossBeat: () => portableWorldState.bossBeat(), setBossBeat: (value) => { portableWorldState.setBossBeat(value); bossBeat = value; },
-    selectedWeapon: () => selWeapon, setSelectedWeapon: (value) => { selWeapon = value; },
-    outcome: () => overInfo, setOutcome: (value) => { overInfo = value; },
-    lastRecording: () => lastGhost, setLastRecording: (value) => { lastGhost = value; },
-    lastVaultId: () => lastVaultId, setLastVaultId: (value) => { lastVaultId = value; },
-    winSeconds: () => winT, setWinSeconds: (value) => { winT = value; },
-  } satisfies LiveGameHostState);
-  const worldContext = createLiveWorldContext({ dependencies, state: hostState, entities: worldEntities, lifecycle: RUN_LIFECYCLE, restoreConfiguration: restoreConfig });
+  // One call builds this world: replaceable state, entity construction, run
+  // lifecycle, services, and transient records. The mirrors keep the host's
+  // hot-path views in step; the world remains the owner.
+  const { state: hostState, context: worldContext, entities: worldEntities, lifecycle: RUN_LIFECYCLE } = createLiveWorldComposition({
+    dependencies, restoreConfiguration: restoreConfig,
+    session: {
+      selectedWeapon: () => selWeapon, setSelectedWeapon: (value) => { selWeapon = value; },
+      outcome: () => overInfo, setOutcome: (value) => { overInfo = value; },
+      lastRecording: () => lastGhost, setLastRecording: (value) => { lastGhost = value; },
+      lastVaultId: () => lastVaultId, setLastVaultId: (value) => { lastVaultId = value; },
+      winSeconds: () => winT, setWinSeconds: (value) => { winT = value; },
+    },
+    mirrors: {
+      run: (value) => { run = value; }, player: (value) => { player = value; }, blade: (value) => { blade = value; },
+      enemies: (value) => { enemies = value; }, projectiles: (value) => { projectiles = value; },
+      floaters: (value) => { floaters = value; }, slowZones: (value) => { slowZones = value; },
+      temporaryWalls: (value) => { tempWalls = value; },
+      bossIntro: (value) => { bossIntro = value; }, bossBeat: (value) => { bossBeat = value; },
+    },
+  });
   // One world owns its transient opening/impact records; combat, the frame
   // prelude, State Forge, and the debug surfaces all read the same instances.
   const { transient } = worldContext; const impact = transient.impact; const openingCarry = transient.opening;
