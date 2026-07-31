@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-07-30. This records the first fourteen executable migration
+In progress as of 2026-07-30. This records the first fifteen executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -236,6 +236,14 @@ headless Tear gameplay portable.
   `createLiveCombatHost`, so this is a detached-composition determinism
   proof, not live-versus-detached combat parity and not a replay, headless,
   or learning portability claim.
+- `scripts/check-source-architecture.mjs` now rejects a reintroduced shared
+  world instance: `src/config/game-config.ts`, `src/simulation/run-random.ts`,
+  and `src/presentation/particles.ts` may export factories but not a `CLOCK`,
+  `GAME_RANDOM`, `GAME_RANDOM_STREAMS`, or `FX` instance. The rule carries its
+  own self-tests, and a planted `export const GAME_RANDOM_STREAMS = new
+  RunRandomStreams();` in the real worktree was confirmed to fail the gate
+  before being reverted. Per-world ownership of time, randomness, and particles
+  is now mechanically enforced rather than conventional.
 
 ## Remaining C27A work
 

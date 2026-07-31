@@ -77,6 +77,17 @@ const forbiddenDependencyRules = Object.freeze([
     pattern: /\b(?:aiInput|lmbOverride|aimOverride)\b/u,
     message: "live composition must route automation input through the live authoritative input adapter",
   }),
+  Object.freeze({
+    roots: Object.freeze([
+      "src/config/game-config.ts",
+      "src/simulation/run-random.ts",
+      "src/presentation/particles.ts",
+    ]),
+    // A world's clock, randomness, and particles must be created per world and
+    // passed inward. A module-level instance would silently couple two worlds.
+    pattern: /export\s*\{[^}]*\b(?:CLOCK|GAME_RANDOM|GAME_RANDOM_STREAMS|FX)\b[^}]*\}|export\s+const\s+(?:CLOCK|GAME_RANDOM|GAME_RANDOM_STREAMS|FX)\b/u,
+    message: "world clock, random, and particle modules cannot export a shared instance; export a factory instead",
+  }),
 ]);
 
 function dependencyErrors(relative, text) {
@@ -107,6 +118,16 @@ if (dependencyErrors("src/gameplay/runtime/tear-simulation-runtime.ts",
 if (dependencyErrors("src/gameplay/runtime/tear-world-entity-construction.ts",
   'import type { GameRuntimeDependencies } from "../../app/game-runtime-dependencies";').length !== 1) {
   throw new Error("source architecture world-construction import-rule self-test failed");
+}
+if (dependencyErrors("src/config/game-config.ts", "export { A11Y, CLOCK, CONFIG };").length !== 1) {
+  throw new Error("source architecture per-world instance rule self-test failed");
+}
+if (dependencyErrors("src/simulation/run-random.ts",
+  "export const GAME_RANDOM_STREAMS = new RunRandomStreams();").length !== 1) {
+  throw new Error("source architecture per-world random rule self-test failed");
+}
+if (dependencyErrors("src/presentation/particles.ts", "export { createParticleSystem };").length !== 0) {
+  throw new Error("source architecture per-world factory export must remain allowed");
 }
 if (dependencyErrors("src/gameplay/runtime/tear-world-entity-construction.ts",
   'const canvas: HTMLCanvasElement | null = null;').length !== 1) {

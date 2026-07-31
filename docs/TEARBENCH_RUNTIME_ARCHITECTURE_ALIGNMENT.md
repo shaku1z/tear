@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first fourteen executable C27A slices are complete:
+The first fifteen executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -144,6 +144,9 @@ The first fourteen executable C27A slices are complete:
   authoritative hashes for 120 ticks. Combat phases beyond entity update
   still live in the live host, so this is composition determinism, not
   live-versus-detached combat parity.
+- The architecture gate now fails if `game-config`, `run-random`, or
+  `particles` reintroduces a shared `CLOCK`, `GAME_RANDOM`,
+  `GAME_RANDOM_STREAMS`, or `FX` instance, proved with a planted violation.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

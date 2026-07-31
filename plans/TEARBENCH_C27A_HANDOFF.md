@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** fourteenth C27A foundation slice complete (a detached world
-built from the production composition runs). This is not a C27A completion or release claim.
+**Status:** fifteenth C27A foundation slice complete (per-world ownership of
+time, randomness, and particles is now gate-enforced). This is not a C27A completion or release claim.
 
 ## Resume protocol (mandatory)
 
@@ -106,6 +106,9 @@ Before coding, read this file, then:
   different seed diverges; a second world shares nothing. Only
   `Player.update` and enemy `update` run — blade transport, collision,
   kill, wave, and cinematic phases are still live-host-owned.
+- The fifteenth slice added an architecture rule rejecting a reintroduced
+  shared `CLOCK` / `GAME_RANDOM` / `GAME_RANDOM_STREAMS` / `FX` export, with
+  self-tests and a confirmed planted-violation failure.
 
 ## Latest evidence
 
