@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 
 import { EnvelopeSequencer, type CommandEnvelope } from "../../src/domain/envelopes";
 import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
@@ -81,6 +82,7 @@ function codecWorld(tick = 0): TearCodecWorld {
   components.set("tear.reward.v1", { selection: null });
   components.set("tear.configuration.v1", { rulesetVersion: "fixture", values: {} });
   components.set("tear.rng.v1", {});
+  components.set("tear.cinematic.v1", INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 as never);
   return { components, references: new Map(), entityIds: new Set(["player", "blade"]) };
 }
 

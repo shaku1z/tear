@@ -268,7 +268,10 @@ export function hydrateTearCodecWorld<
       ? decodeTearCodecValue(worldPayload.identityState, identities) as IdentityState
       : { nextEntityId: 1, nextWallSequence: 1, nextSlowZoneSequence: 1, claimedIds: [] } as IdentityState,
     identityBindings: Object.freeze(identityBindings),
-    runtime: decodeTearCodecValue(record(worldPayload) && record(worldPayload.runtime)
-      ? worldPayload.runtime : {}, identities) as Readonly<Record<string, unknown>>,
+    runtime: Object.freeze({
+      ...(decodeTearCodecValue(record(worldPayload) && record(worldPayload.runtime)
+        ? worldPayload.runtime : {}, identities) as Readonly<Record<string, unknown>>),
+      cinema: decodeTearCodecValue(component(world, "tear.cinematic.v1"), identities),
+    }),
   });
 }

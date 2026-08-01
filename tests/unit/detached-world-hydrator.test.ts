@@ -8,6 +8,7 @@ import {
   type TearWorldConstructionPort,
   type TearWorldHydrationContext,
 } from "../../src/tearbench";
+import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 
 interface FakePlayer extends Record<string, unknown> {
   kind: "player";
@@ -131,6 +132,7 @@ function completeCodecWorld(): TearCodecWorld {
   components.set("tear.reward.v1", { selection: { choices: ["damage"], reservedChoice: null } });
   components.set("tear.configuration.v1", { rulesetVersion: "fixture", values: { gravity: 1 } });
   components.set("tear.rng.v1", { combat: { algorithm: "mulberry32", state: 123 } });
+  components.set("tear.cinematic.v1", INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 as never);
   return {
     components,
     references: new Map(),

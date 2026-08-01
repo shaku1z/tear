@@ -128,8 +128,8 @@ const KNOWN_DIVERGENCES: ReadonlyMap<string, string> = new Map([
   ["c27a.live-parity-trace.campaign",
     "campaign opens on a chapter brief whose cinematic blocks combat. The " +
     "timeline is now portable gameplay (gameplay/runtime/cinematic-director), " +
-    "but the world does not yet own a director, State Forge does not capture " +
-    "its position, and campaign scripts still carry app callbacks a detached " +
+    "the world owns a director and State Forge captures its position, but " +
+    "campaign scripts still carry app callbacks a detached " +
     "world cannot reconstruct, so the detached run advances while the live run " +
     "is still held"],
 ]);
@@ -210,6 +210,14 @@ describe.skipIf(traces.length === 0)("detached world against the live trace", ()
       expect(hashes[0]?.tick).toBe(live.hashes[0]?.tick);
 
       if (known !== undefined) {
+        const cinemaState = live.origin.state["tear.cinematic.v1"] as {
+          active?: boolean; scriptId?: string | null; beatId?: string | null;
+        } | undefined;
+        expect(cinemaState).toMatchObject({
+          active: true,
+          scriptId: "chapter-0",
+        });
+        expect(cinemaState?.beatId).toBeTruthy();
         // Recorded defect, not an accepted tolerance: when it is fixed this
         // assertion fails and the KNOWN_DIVERGENCES entry must be removed.
         expect(known.length).toBeGreaterThan(0);

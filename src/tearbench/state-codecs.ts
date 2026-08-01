@@ -2,6 +2,7 @@ import { stableVerificationHash } from "../replay/hash";
 import type { TearSnapshotV1 } from "./contracts";
 import { CODEC_REGISTRY, type TearCodecId } from "./registries";
 import { validateLiveCodecPayload } from "./live-codec-validation";
+import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../gameplay/runtime/cinematic-director";
 
 export type TearCodecValue =
   | null | boolean | number | string
@@ -263,8 +264,10 @@ export function restoreSnapshotTransactionally(
   const temporary = factory.createEmpty();
   const issues: TearCodecIssue[] = [];
   for (const codec of registry.list()) {
-    const encodedVersion = snapshot.codecs[codec.id];
-    const raw = payloadFor(snapshot, codec.id);
+    const isLegacyCinema = codec.id === "tear.cinematic.v1"
+      && snapshot.codecs[codec.id] === undefined && payloadFor(snapshot, codec.id) === undefined;
+    const encodedVersion = isLegacyCinema ? 1 : snapshot.codecs[codec.id];
+    const raw = isLegacyCinema ? INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 : payloadFor(snapshot, codec.id);
     if (encodedVersion === undefined || raw === undefined) {
       issues.push({ codecId: codec.id, path: `state.${codec.id}`, message: "required codec payload is missing" });
       continue;

@@ -1,4 +1,5 @@
 import type { TearSnapshotV1 } from "./contracts";
+import type { CinematicDirectorStateV1 } from "../gameplay/runtime/cinematic-director";
 import {
   buildTearIdentityGraph,
   restoreSnapshotTransactionally,
@@ -124,6 +125,7 @@ export interface TearLiveCodecPayloadMapV1 {
   readonly "tear.reward.v1": TearStateRecord;
   readonly "tear.configuration.v1": TearConfigurationStateV1;
   readonly "tear.rng.v1": TearRngStateV1;
+  readonly "tear.cinematic.v1": CinematicDirectorStateV1;
 }
 
 export interface TearLiveRestoreContext {

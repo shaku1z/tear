@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 
 import {
   CODEC_REGISTRY,
@@ -50,6 +51,7 @@ function populatedWorld(): TearCodecWorld {
   candidate.components.set("tear.reward.v1", { selection: null });
   candidate.components.set("tear.configuration.v1", { rulesetVersion: "test", values: {} });
   candidate.components.set("tear.rng.v1", { combat: { algorithm: "mulberry32", state: 42 } });
+  candidate.components.set("tear.cinematic.v1", INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 as never);
   return candidate;
 }
 
@@ -105,6 +107,40 @@ function advance(candidate: TearCodecWorld, direction: -1 | 1): void {
 }
 
 describe("TearBench shared state codec registry", () => {
+  it("migrates pre-cinematic v1 snapshots to the canonical inactive component", () => {
+    const registry = createDefaultStateCodecRegistry();
+    const base = structuredClone(snapshotFrom(populatedWorld()));
+    const codecs: Record<string, number> = { ...base.codecs };
+    const state: Record<string, unknown> = { ...base.state };
+    delete codecs["tear.cinematic.v1"];
+    delete state["tear.cinematic.v1"];
+    const snapshot = { ...base, codecs, state } as TearSnapshotV1;
+    let restored = world();
+
+    const result = restoreSnapshotTransactionally(snapshot, registry, factory, {
+      replace(candidate) { restored = candidate; },
+    });
+
+    expect(result.ok).toBe(true);
+    expect(restored.components.get("tear.cinematic.v1")).toEqual(INACTIVE_CINEMATIC_DIRECTOR_STATE_V1);
+  });
+
+  it("rejects noncanonical inactive cinematic state during decode", () => {
+    const snapshot = structuredClone(snapshotFrom(populatedWorld()));
+    const hostile = { ...snapshot, state: { ...snapshot.state, "tear.cinematic.v1": {
+      ...INACTIVE_CINEMATIC_DIRECTOR_STATE_V1,
+      elapsedSeconds: 1,
+      totalElapsedSeconds: 1,
+    } } } as TearSnapshotV1;
+
+    const result = restoreSnapshotTransactionally(hostile, createDefaultStateCodecRegistry(), factory, {
+      replace() { throw new Error("invalid snapshot must not commit"); },
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues.some((entry) => entry.message.includes("canonical idle"))).toBe(true);
+  });
+
   it("captures, restores into a fresh world, and reproduces the next 600 ticks", () => {
     const registry = createDefaultStateCodecRegistry();
     const original = populatedWorld();

@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-08-01. This records the first twenty-seven executable migration
+In progress as of 2026-08-01. This records the first twenty-eight executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -460,9 +460,10 @@ of replay, headless execution, or learning portability.
   **Open divergence — the cinematic combat gate is not world state.** A
   campaign run opens on a chapter brief whose cinematic sets
   `blocksCombat`, so `runLiveOpeningPhase` returns blocked and the live
-  world is held still. The gate is owned by `src/presentation/cinematics.ts`
-  through the live host's `CINEMA.active && CINEMA.blocksCombat`; it is
-  neither captured by State Forge nor reproducible by a detached world, so
+  world is held still. At discovery, the gate was owned by
+  `src/presentation/cinematics.ts` through the live host's
+  `CINEMA.active && CINEMA.blocksCombat`; it was neither captured by State
+  Forge nor reproducible by a detached world, so
   the detached run advances from tick 1 while the live run is frozen. The
   comparison records this in `KNOWN_DIVERGENCES` with its cause and asserts
   the scenario *still* diverges, so closing it forces the entry to be
@@ -478,10 +479,10 @@ of replay, headless execution, or learning portability.
   extends the portable timeline and adds `draw`. The latch is still private;
   the renderer reads it through two named accessors instead.
 
-  This is why the campaign divergence exists at all: whether combat may
+  This is why the campaign divergence existed at all: whether combat may
   advance is decided by that timeline, so it was simulation living in
   presentation. The move does not close the divergence on its own — the
-  At that slice the world did not yet own a director, State Forge did not
+  world at that slice did not yet own a director, State Forge did not
   capture its position, and campaign scripts still carried app callbacks a detached
   world cannot reconstruct — and the `KNOWN_DIVERGENCES` entry now states
   exactly that. Behaviour is unchanged: the full unit suite, the production
@@ -494,13 +495,37 @@ of replay, headless execution, or learning portability.
   campaign host rather than creating another timeline. Detached fixtures use
   the gameplay-only director through the same dependency surface. Focused tests
   prove context identity and two-world isolation; `check:c27a:foundation`, the
-  boss browser matrix, and TearBench-selected CI evidence pass. State Forge
-  capture/restore and portable campaign script binding remain open, so campaign
-  is still the one asserted divergence.
+  boss browser matrix, and TearBench-selected CI evidence pass. Portable
+  campaign script binding remains open, so campaign is still the one asserted
+  divergence.
+- State Forge now carries that director position in a dedicated,
+  schema-validated `tear.cinematic.v1` component instead of generic runtime
+  data. Capture includes stable script revision and beat identity plus the
+  behavior-bearing timers and reveal/skip state. Restore validates the bound
+  script before commit mutation, does not invoke callbacks, re-arms physical
+  input, and canonicalizes inactive state. The live browser journey proves
+  exact active `chapter-0` serialized-position restore with input re-armed,
+  active-to-idle rollback safety, and fail-closed rejection of a same-id scene
+  from another run session. Pre-cinematic v1 snapshots migrate to canonical
+  idle. This is same-bound-world restoration evidence; detached campaign
+  parity remains open until script/context reconstruction loses its app
+  closures.
+
+  The post-slice gate passed 21 C27A files / 73 tests, regenerated the 12 live
+  parity traces, and passed the 37-test detached comparison. `check:c23` also
+  passed 10 files / 50 tests and every State Forge browser journey, including
+  the active campaign restoration proof. These are foundation results, not a
+  C27A exit or release claim.
+  TearBench's changed-file selector also passed 15 files / 83 tests and its
+  Graveyard rerun, and the built boss parity journey passed.
 
 ## Remaining C27A work
 
-1. Move the current live adapter's configuration, RNG, effects, clocks,
+1. Make active campaign scripts and their context reconstructible from a
+   fresh or detached candidate world without app-closure callbacks, bind them
+   silently to the world-owned director, and remove the campaign entry from
+   `KNOWN_DIVERGENCES` only after the full parity trace matches.
+2. Move the current live adapter's configuration, RNG, effects, clocks,
    Mirror, and boss feedback implementations inward behind the established
    world context, then extract the closure-owned
    run/world construction and real combat adapter state from
@@ -509,14 +534,14 @@ of replay, headless execution, or learning portability.
    storage, platform, or presentation dependencies. The state/service contract
    is in place; app-backed implementations and closure-owned frame/combat
    state remain blockers.
-2. Extend mechanically enforced portable-core boundaries as the remaining
+3. Extend mechanically enforced portable-core boundaries as the remaining
    live-world construction moves inward. The public barrel, test support,
    developer UI, structured live environment, and action routing are now
    separated; the remaining closure-owned production world is still app-bound.
-3. Build replay-world and headless adapters from that same full real
+4. Build replay-world and headless adapters from that same full real
    composition; the hydrated-world shell is evidence for the runtime seam, not
    a substitute for playable Tear parity.
-4. Extend mechanically enforced dependency rules for the portable core and
+5. Extend mechanically enforced dependency rules for the portable core and
    rerun the affected C22-C27 evidence set from the same worktree.
 
 See `docs/TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md` for the binding target

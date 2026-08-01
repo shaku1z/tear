@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** twenty-seventh C27A foundation slice complete (one cinematic
-director is now owned by each world).
+**Status:** twenty-eighth C27A foundation slice complete (State Forge now
+captures and transactionally restores a world's cinematic position).
 
 ## Resume protocol (mandatory)
 
@@ -27,7 +27,7 @@ Before coding, read this file, then:
    headless simulator. Replay/headless work may use the production composition
    only after that same composition is genuinely portable.
 5. Keep `src/app/live-game-runtime.ts` at or below 700 lines. The current file
-   has 687 physical lines; the architecture gate is the authoritative limit.
+   has 696 physical lines; the architecture gate is the authoritative limit.
 
 ## Completed in this handoff
 
@@ -179,8 +179,8 @@ Before coding, read this file, then:
 - The twenty-fifth slice added campaign and gauntlet scenarios. Gauntlet
   matched on every tick. Campaign diverges at tick 1 because a chapter
   brief's cinematic sets `blocksCombat` and freezes the live world, and
-  that gate lives in `src/presentation/cinematics.ts` — it is not captured
-  by State Forge and a detached world cannot reproduce it. The comparison
+  at that slice the gate lived in `src/presentation/cinematics.ts`; it was not
+  captured by State Forge or reproducible by a detached world. The comparison
   records it in `KNOWN_DIVERGENCES` with its cause and asserts the scenario
   still diverges, so the entry cannot rot after a fix.
 - The twenty-sixth slice split `src/presentation/cinematics.ts`. The beat
@@ -198,17 +198,34 @@ Before coding, read this file, then:
   Combat, campaign, rendering, debug, cancellation, and the frame coordinator
   therefore continue to observe one timeline, while detached compositions use
   the gameplay-only `CinematicTimeline.Director`. Focused tests prove context
-  identity and two-world isolation. This does not restore an active scene or
-  close campaign parity; State Forge still omits director position.
+  identity and two-world isolation. At that slice this did not restore an
+  active scene or close campaign parity; State Forge still omitted position.
+- The twenty-eighth slice added the dedicated `tear.cinematic.v1` State Forge
+  codec. It captures active script revision and beat identity plus
+  elapsed/reveal/fully-visible/total timing and active reveal/skip state.
+  The director validates its complete binding before mutation, restores
+  silently without replaying callbacks, re-arms physical input, and
+  canonicalizes every inactive history to one hash-stable idle payload. The
+  live State Forge browser journey captures a real active `chapter-0` brief,
+  proves it advances, proves a later invalid-screen commit rolls back to the
+  exact prior cinematic payload, and proves a valid restore lands exactly at
+  source payload after re-arming input. It also proves active-to-inactive
+  rollback retains the prior binding and rejects a same-id chapter from a
+  different run session before mutation. Pre-cinematic v1 snapshots migrate to
+  canonical idle, preserving their historical behavior; they cannot recover
+  active cinema that the old format never recorded. Fresh/detached campaign
+  script construction remains the next slice.
 
 ## Latest evidence
 
 All of the following were run from this worktree after the parity-passing slice:
 
-- `pnpm check:c27a:foundation` passed: typecheck, lint, architecture gate,
-  20 test files / 64 tests, standalone test build, and
+- `pnpm check:c27a:foundation` passed after slice 28: typecheck, lint,
+  architecture gate, 21 test files / 73 tests, standalone test build,
   `browser-c27a-physical-canonical-input`, and `browser-c27a-live-parity-trace`.
-- `pnpm test:browser:bosses` passed after the ownership change.
+  The trace regenerated all 12 scenarios and the detached comparison passed
+  its 37 tests with the campaign divergence still truthfully open.
+- `pnpm test:browser:bosses` passed after cinematic State Forge restore.
 - `pnpm tearbench ci --files-from artifacts/tearbench/c27a-slice27-files.txt`
   passed its selected 8 test files / 37 tests and Graveyard rerun.
 - Because these slices touched the composition root, the production build,
@@ -225,24 +242,28 @@ All of the following were run from this worktree after the parity-passing slice:
 - `pnpm check:c27:foundation` passed: requirements, typecheck, lint,
   architecture, 14 test files / 69 tests, standalone build, and all seven C27
   browser proofs.
-- `pnpm check:c23` passed: requirements, typecheck, lint, architecture, 9 test
-  files / 39 tests, standalone build, 600-tick live restore, State Forge
-  Studio, and the exit matrix.
+- `pnpm check:c23` passed after slice 28: requirements, typecheck, lint,
+  architecture, 10 test files / 50 tests, standalone build, active-campaign
+  cinematic restore/rollback plus the original 600-tick live continuation,
+  State Forge Studio, and the exit matrix.
+- The final reveal-consistency guard then passed its focused director suite
+  (10 tests), typecheck, changed-file lint, and diff check.
+- `pnpm tearbench ci --files <slice-28-files>` selected presentation and
+  shared-runtime evidence and passed 15 files / 83 tests plus its Graveyard
+  rerun.
 - `pnpm test` passed: 224 test files / 903 tests.
 - `pnpm requirements:check` and `git diff --check` passed.
-- `src/app/live-game-runtime.ts` measures 687 physical lines.
+- `src/app/live-game-runtime.ts` measures 696 physical lines.
 - The standalone build emits the existing non-fatal >500 kB chunk warning.
   It is not a passed bundle-budget/release claim.
 - Full `pnpm check` has not been run for a release claim.
 
 ## Exact next C27A boundary
 
-Eleven of twelve captured scenarios match on every tick, and the world now
-owns the portable gameplay timeline. Continue closing the campaign divergence
-in two steps: (1) capture its position in State Forge (script id, beat index,
-elapsed/reveal/fullyVisible/total seconds, skipping, finished, plus any
-behavior-bearing latch/reveal state required for exact continuation) so a
-restore lands mid-brief exactly where the live run was; (2) make the scripts a
+Eleven of twelve captured scenarios match on every tick. The world owns the
+portable gameplay timeline and State Forge now captures and transactionally
+restores its complete behavior-bearing position in the bound live world.
+Finish closing the campaign divergence by making the scripts a fresh or
 detached world needs constructible without app
 callbacks — the campaign brief's beats close over live systems today, so
 either those callbacks become explicit world ports or the brief's world

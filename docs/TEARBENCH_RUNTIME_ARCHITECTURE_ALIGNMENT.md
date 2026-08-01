@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first twenty-seven executable C27A slices are complete:
+The first twenty-eight executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -213,8 +213,13 @@ The first twenty-seven executable C27A slices are complete:
   constructs the live renderer-capable director and places it on the generic
   world context; campaign composition consumes that same instance, so no
   second timeline or scheduler was introduced. Detached test worlds construct
-  the gameplay-only implementation. Active-scene State Forge restoration and
-  callback-free campaign script reconstruction remain the next blockers.
+  the gameplay-only implementation. State Forge now captures and atomically
+  restores the active script revision, beat identity, and behavior-bearing
+  timing/reveal/skip state through `tear.cinematic.v1`; its live browser proof
+  covers exact serialized-position restoration, input re-arm, active-to-idle
+  rollback, and stale-session rejection without callback replay. Callback-free
+  campaign script/context reconstruction for a fresh or detached world remains
+  the next blocker.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition
@@ -226,14 +231,14 @@ core claim can be made. The precise evidence and remaining work are recorded in
 
 ### Next extraction order (binding)
 
-The next C27A implementation slice is not a second combat host and not a
-parallel headless simulator. The shared entity-construction catalog and generic
-world context now converge active-world outer construction, mutable references,
-transient combat records, and narrow service calls without changing production
-choices. The next binding extraction moves the context’s app-backed
-configuration, RNG, effects, clock, Mirror, and boss-feedback implementations,
-and then the closure-owned run/world construction, into the real per-world
-composition behind narrow outward adapters.
+The next C27A implementation slice is not a second combat host or parallel
+headless simulator. First reconstruct the active campaign chapter script and
+its context from candidate world state through explicit gameplay ports, then
+bind the validated script to the world-owned director without replaying
+callbacks. This must close the recorded campaign parity divergence. After that,
+continue moving app-backed configuration, RNG, effects, clock, Mirror,
+boss-feedback, and closure-owned run/world construction into the real
+per-world composition behind narrow outward adapters.
 
 Only after that composition exists may replay and headless worlds use it. They
 must not copy `createLiveCombatHost`, which also owns the browser frame

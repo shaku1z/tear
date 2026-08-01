@@ -119,7 +119,7 @@ Named status:
 - **C25:** physical/black-box foundation verified; exit open.
 - **C26:** regression discovery passed `pnpm check:c26` on 2026-07-28.
 - **C27:** recorder/capsule foundation only; checkpoint open.
-- **C27A:** twenty-seven shared-world architecture slices in this tree; blocking and incomplete.
+- **C27A:** twenty-eight shared-world architecture slices in this tree; blocking and incomplete.
 - **C28-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -174,7 +174,7 @@ Do not claim TearBot automatically learns merely because scripted policies, trai
 
 Read [`TEARBENCH_C27A_HANDOFF.md`](TEARBENCH_C27A_HANDOFF.md) before editing.
 
-Twenty-six C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, focused tests, and physical browser diagnostics.
+Twenty-eight C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, world-owned cinema, versioned cinematic State Forge capture/restore, focused tests, and physical browser diagnostics.
 
 Important files:
 
@@ -193,7 +193,7 @@ Important files:
 
 ### Exact next slice
 
-Eleven of twelve captured parity scenarios match the live authoritative hash on every executed tick; campaign is a recorded open divergence. The timeline is gameplay-owned and one director instance now belongs to each world. Close the divergence by capturing its complete behavior-bearing position in State Forge and making campaign scripts reconstructible for a detached world through explicit gameplay ports rather than app closures. Then continue with comparable outward effects, a win outcome, and a wave-boundary run.
+Eleven of twelve captured parity scenarios match the live authoritative hash on every executed tick; campaign is a recorded open divergence. The timeline is gameplay-owned, one director belongs to each world, and `tear.cinematic.v1` now restores an active live brief exactly and transactionally. Close the divergence by making campaign scripts reconstructible for a fresh/detached world through explicit gameplay ports rather than app closures. Then continue with comparable outward effects, a win outcome, and a wave-boundary run.
 
 Preserve:
 
@@ -332,14 +332,14 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-All of the following were run from this worktree after the per-world
-transient/frame-feel, entity-factory, clock/RNG, and particle slices:
+All of the following were run from this worktree through C27A slice 28:
 
 - `pnpm check:c27a:foundation` passed:
   - typecheck, lint, architecture;
-  - 20 test files / 64 tests;
+  - 21 test files / 73 tests;
   - standalone build;
-  - physical C27A browser proof.
+  - physical C27A browser proof and 12-scenario parity capture;
+  - 37 detached parity tests.
 - `pnpm check:c27:foundation` passed:
   - requirements, typecheck, lint, architecture;
   - 14 test files / 69 tests;
@@ -347,11 +347,12 @@ transient/frame-feel, entity-factory, clock/RNG, and particle slices:
 - `pnpm check:c26` passed: 5 test files / 24 tests plus the planted live regression.
 - `pnpm check:c23` passed:
   - requirements, typecheck, lint, architecture;
-  - 9 test files / 39 tests;
-  - build and the State Forge browser restore/studio/exit matrix.
+  - 10 test files / 50 tests;
+  - build and the State Forge active-cinema restore/studio/exit matrix.
 - `pnpm test` passed: 224 test files / 903 tests.
 - `pnpm requirements:check` and `git diff --check` passed.
-- `src/app/live-game-runtime.ts` measured 687 physical lines.
+- TearBench changed-file CI passed 15 files / 83 tests plus its Graveyard rerun.
+- `src/app/live-game-runtime.ts` measures 696 physical lines.
 - The production build, browser feature matrix, boss parity, navigation/progression/playground/terminal journeys, and the blade/mirror/combat parity fixtures passed after the composition-root change.
 - Full `pnpm check` has not been run for a release claim.
 - The existing bundle warning above 500 kB is nonfatal; no bundle-performance release claim exists.

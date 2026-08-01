@@ -229,7 +229,7 @@ plan — they do not replace it.
 - [x] A detached world runs both production combat phases
 - [x] Live↔detached parity across a scenario matrix — 11 of 12 scenarios, every executed tick
 - [x] Campaign parity: world owns a cinematic director instance
-- [ ] Campaign parity: State Forge captures director position (script id, beat index, elapsed/reveal/fullyVisible/total, skipping, finished)
+- [x] Campaign parity: State Forge captures active director position (script id/revision, beat id/index, elapsed/reveal/fullyVisible/total and skipping), with canonical idle migration, input re-arm, same-session restore, rollback, and stale-session rejection proof
 - [ ] Campaign parity: scripts a detached world needs are constructible without app callbacks
 - [ ] `KNOWN_DIVERGENCES` is empty
 - [ ] Outward effect streams are compared, not merely recorded

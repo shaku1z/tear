@@ -27,8 +27,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   implementations behind its adapter. The combat action path now uses that
   shared collection owner rather than a second collection adapter. Each world
   now also owns exactly one cinematic director used by campaign, combat, and
-  presentation; State Forge restoration and detached construction of the
-  callback-bound campaign script remain open, so campaign parity is 11 of 12
+  presentation. The dedicated `tear.cinematic.v1` State Forge component
+  captures and transactionally restores an active same-session live script/beat
+  position with input re-armed, with rollback and stale-session rejection
+  browser proof; detached construction of the
+  callback-bound campaign script remains open, so campaign parity is 11 of 12
   scenarios rather than a completion claim. Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,

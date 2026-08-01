@@ -84,6 +84,9 @@ export interface LiveStateForgeAdapterOptions {
   readonly restoreIdentityState: (state: CombatEntityIdentityState) => void;
   readonly runtimeState: () => Readonly<Record<string, unknown>>;
   readonly restoreRuntimeState: (state: Readonly<Record<string, unknown>>) => void;
+  readonly captureCinema: () => unknown;
+  /** Validates the candidate's behavior-bearing cinematic binding before commit mutation. */
+  readonly validateCinema: (runtime: Readonly<Record<string, unknown>>) => void;
 }
 
 // Input projection is owned by the live frame lifecycle, not State Forge.
@@ -234,6 +237,7 @@ function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
     rulesetVersion: "live", values: encode(options.dependencies.CONFIG, identities),
   }));
   components.set("tear.rng.v1", encode(options.worldServices.random.snapshot(), identities));
+  components.set("tear.cinematic.v1", encode(options.captureCinema(), identities));
   return { components, references: new Map(), entityIds: new Set() };
 }
 
@@ -291,6 +295,8 @@ export function createLiveStateForgeAdapter(
       if (candidate.enemies.some((enemy) => !Number.isFinite(enemy.x) || !Number.isFinite(enemy.y))) {
         issues.push("enemy transform is not finite");
       }
+      try { options.validateCinema(candidate.runtime); }
+      catch (error) { issues.push(error instanceof Error ? error.message : String(error)); }
       return Object.freeze(issues);
     },
     commit(candidate) {
@@ -312,12 +318,16 @@ export function createLiveStateForgeAdapter(
       options.restoreGhost(candidate.ghost);
       options.restoreIdentityState(candidate.identityState);
       options.restoreReward(candidate.reward);
-      options.restoreRuntimeState(candidate.runtime);
       for (const binding of candidate.identityBindings) options.bindActorId(binding.entity, binding.id);
       options.setTick(candidate.tick);
       options.clearInputProjection();
       options.setFocus(candidate.focus);
       options.setScreen(candidate.screen);
+      // Runtime restoration is deliberately last. In particular, an inactive
+      // cinema snapshot destructively clears its current binding; no later
+      // commit action may throw and make the prior active binding unavailable
+      // to the transactional rollback candidate.
+      options.restoreRuntimeState(candidate.runtime);
     },
   };
   return Object.freeze(adapter);

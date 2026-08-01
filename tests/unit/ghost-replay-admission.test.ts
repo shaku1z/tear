@@ -9,6 +9,7 @@ import {
   ghostLiveBootstrapEventId,
 } from "../../src/ghost";
 import { stableVerificationHash } from "../../src/replay/hash";
+import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 import {
   CODEC_REGISTRY,
   captureCodecState,
@@ -66,6 +67,7 @@ function bootstrapSnapshot(context: ReturnType<typeof createGhostReplayRunContex
   };
   for (const id of CODEC_REGISTRY.ids) world.components.set(id, {});
   world.components.set("tear.configuration.v1", CONFIGURATION);
+  world.components.set("tear.cinematic.v1", INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 as never);
   world.components.set("tear.rng.v1", Object.freeze(Object.fromEntries(Object.entries(context.rng).map(([name, value]) => [name,
     Object.freeze({ algorithm: value.algorithm, ...(value.seed === undefined ? {} : { seed: value.seed }), state: value.state,
       ...(value.cursor === undefined ? {} : { cursor: value.cursor }) }),

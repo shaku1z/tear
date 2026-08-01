@@ -30,7 +30,50 @@ export interface CinematicDirectorPort {
   requestSkip(): void;
   complete(): void;
   cancel(reason: string): void;
+  captureState(): CinematicDirectorStateV1;
+  validateState(snapshot: unknown, binding?: CinematicDirectorBinding): CinematicDirectorStateV1;
+  restoreState(snapshot: unknown, binding?: CinematicDirectorBinding): void;
 }
+
+export interface CinematicDirectorBinding {
+  readonly script: CinematicScript;
+  readonly context: Readonly<Record<string, unknown>>;
+}
+
+/** Data-only position of a bound cinematic script; callbacks are never serialized. */
+export interface CinematicDirectorStateV1 {
+  readonly format: "tear.cinematic-director";
+  readonly schemaVersion: 1;
+  readonly active: boolean;
+  readonly scriptId: string | null;
+  readonly scriptRevision: string | null;
+  readonly beatId: string | null;
+  readonly beatIndex: number;
+  readonly elapsedSeconds: number;
+  readonly revealElapsedSeconds: number;
+  readonly fullyVisibleElapsedSeconds: number;
+  readonly totalElapsedSeconds: number;
+  readonly fullyVisible: boolean;
+  readonly skipping: boolean;
+  readonly finished: boolean;
+}
+
+export const INACTIVE_CINEMATIC_DIRECTOR_STATE_V1: CinematicDirectorStateV1 = Object.freeze({
+  format: "tear.cinematic-director",
+  schemaVersion: 1,
+  active: false,
+  scriptId: null,
+  scriptRevision: null,
+  beatId: null,
+  beatIndex: -1,
+  elapsedSeconds: 0,
+  revealElapsedSeconds: 0,
+  fullyVisibleElapsedSeconds: 0,
+  totalElapsedSeconds: 0,
+  fullyVisible: true,
+  skipping: false,
+  finished: false,
+});
 
 interface RevealSpec {
   mode?: "none" | "phrase" | "characters";
@@ -74,6 +117,7 @@ export interface CinematicBeat {
 
 export interface CinematicScript {
   readonly id: string;
+  readonly revision?: string;
   readonly beats: readonly CinematicBeat[];
   kind?: string;
   brief?: boolean;
@@ -176,6 +220,78 @@ const CinematicTimeline = (() => {
       this.elapsed = 0; this.revealElapsed = 0; this.fullyVisibleElapsed = 0;
       this.totalElapsed = 0; this.skipping = false; this.finished = false; this.forceReveal = false;
       this._revealDur = 0; this._autoAfter = 0;
+      this._latch.reset();
+    }
+    captureState(): CinematicDirectorStateV1 {
+      // An inactive director has no behavior-bearing position. Canonicalize it
+      // so a prior cancelled/completed script cannot leak irrelevant timers
+      // into world hashes or make equivalent idle worlds compare differently.
+      const script = this.script;
+      if (script === null) return INACTIVE_CINEMATIC_DIRECTOR_STATE_V1;
+      if (this.index < 0 || this.beat === undefined) {
+        throw new Error("cinematic director capture requires a stable beat boundary");
+      }
+      return Object.freeze({
+        format: "tear.cinematic-director",
+        schemaVersion: 1,
+        active: true,
+        scriptId: script.id,
+        scriptRevision: scriptRevision(script),
+        beatId: this.beat.id,
+        beatIndex: this.index,
+        elapsedSeconds: this.elapsed,
+        revealElapsedSeconds: this.revealElapsed,
+        fullyVisibleElapsedSeconds: this.fullyVisibleElapsed,
+        totalElapsedSeconds: this.totalElapsed,
+        fullyVisible: this.fullyVisible,
+        skipping: this.skipping,
+        finished: this.finished,
+      });
+    }
+    validateState(snapshot: unknown, binding?: CinematicDirectorBinding): CinematicDirectorStateV1 {
+      const state = validateDirectorState(snapshot);
+      if (state.active) {
+        const script = binding?.script ?? this.script;
+        if (script?.id !== state.scriptId || scriptRevision(script) !== state.scriptRevision) {
+          throw new RangeError(`bound cinematic script ${String(state.scriptId)} is unavailable`);
+        }
+        const beat = script.beats[state.beatIndex];
+        if (beat?.id !== state.beatId) {
+          throw new RangeError(`bound cinematic beat ${String(state.beatId)} is unavailable`);
+        }
+        const revealSeconds = revealDuration(beat, Boolean(script.brief));
+        if ((!state.fullyVisible && (revealSeconds <= 0 || state.revealElapsedSeconds >= revealSeconds)) ||
+          (!state.fullyVisible && state.fullyVisibleElapsedSeconds > 0)) {
+          throw new TypeError("cinematic director reveal visibility is inconsistent with its bound beat");
+        }
+      }
+      return state;
+    }
+    restoreState(snapshot: unknown, binding?: CinematicDirectorBinding): void {
+      const state = this.validateState(snapshot, binding);
+      if (state.active) {
+        const script = binding?.script ?? this.script;
+        if (script === null) throw new RangeError(`bound cinematic script ${String(state.scriptId)} is unavailable`);
+        this.script = script;
+        if (binding !== undefined) this.context = binding.context;
+      }
+      // Restoring state must not replay onStart/onEnter/onExit/onCancel. The
+      // current script/context binding is retained only when its stable id and
+      // beat identity match the validated snapshot.
+      if (!state.active) { this.script = null; this.context = null; }
+      this.index = state.beatIndex;
+      this.elapsed = state.elapsedSeconds;
+      this.revealElapsed = state.revealElapsedSeconds;
+      this.fullyVisibleElapsed = state.fullyVisibleElapsedSeconds;
+      this.totalElapsed = state.totalElapsedSeconds;
+      this.skipping = state.skipping;
+      this.finished = state.finished;
+      const beat = this.beat;
+      this._revealDur = beat ? revealDuration(beat, this.brief) : 0;
+      this._autoAfter = beat ? autoAfter(beat, this.brief) : 0;
+      this.forceReveal = state.fullyVisible && this._revealDur > 0 && this.revealElapsed < this._revealDur;
+      // Held physical input is adapter state, not canonical world state. A
+      // restored scene must release and re-arm before accepting a fresh press.
       this._latch.reset();
     }
     get active() { return !!this.script; }
@@ -313,3 +429,83 @@ const CinematicTimeline = (() => {
 
 export { CinematicTimeline };
 export type CinematicDirector = InstanceType<typeof CinematicTimeline.Director>;
+
+function validateDirectorState(value: unknown): CinematicDirectorStateV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("cinematic director state must be an object");
+  }
+  const state = value as Partial<CinematicDirectorStateV1>;
+  if (state.format !== "tear.cinematic-director" || state.schemaVersion !== 1) {
+    throw new TypeError("unsupported cinematic director state version");
+  }
+  const active = booleanValue(state.active, "active");
+  const scriptId = nullableString(state.scriptId, "scriptId");
+  const revision = nullableString(state.scriptRevision, "scriptRevision");
+  const beatId = nullableString(state.beatId, "beatId");
+  const beatIndex = integerValue(state.beatIndex, "beatIndex");
+  const skipping = booleanValue(state.skipping, "skipping");
+  const finished = booleanValue(state.finished, "finished");
+  if (active && (!scriptId || !revision || !beatId || beatIndex < 0 || finished)) {
+    throw new TypeError("active cinematic director state requires script and beat identity");
+  }
+  if (!active && (scriptId !== null || revision !== null || beatId !== null || beatIndex !== -1 || skipping)) {
+    throw new TypeError("inactive cinematic director state cannot retain script or beat identity");
+  }
+  const elapsedSeconds = secondsValue(state.elapsedSeconds, "elapsedSeconds");
+  const totalElapsedSeconds = secondsValue(state.totalElapsedSeconds, "totalElapsedSeconds");
+  if (totalElapsedSeconds < elapsedSeconds) {
+    throw new TypeError("cinematic director totalElapsedSeconds cannot precede elapsedSeconds");
+  }
+  const revealElapsedSeconds = secondsValue(state.revealElapsedSeconds, "revealElapsedSeconds");
+  const fullyVisibleElapsedSeconds = secondsValue(state.fullyVisibleElapsedSeconds, "fullyVisibleElapsedSeconds");
+  const fullyVisible = booleanValue(state.fullyVisible, "fullyVisible");
+  if (revealElapsedSeconds > elapsedSeconds || fullyVisibleElapsedSeconds > elapsedSeconds) {
+    throw new TypeError("cinematic director reveal timing cannot exceed beat elapsedSeconds");
+  }
+  if (!active && (elapsedSeconds !== 0 || revealElapsedSeconds !== 0 || fullyVisibleElapsedSeconds !== 0 ||
+    totalElapsedSeconds !== 0 || !fullyVisible || finished)) {
+    throw new TypeError("inactive cinematic director state must use the canonical idle position");
+  }
+  return Object.freeze({
+    format: "tear.cinematic-director",
+    schemaVersion: 1,
+    active,
+    scriptId,
+    scriptRevision: revision,
+    beatId,
+    beatIndex,
+    elapsedSeconds,
+    revealElapsedSeconds,
+    fullyVisibleElapsedSeconds,
+    totalElapsedSeconds,
+    fullyVisible,
+    skipping,
+    finished,
+  });
+}
+
+function scriptRevision(script: CinematicScript): string {
+  return script.revision ?? `${script.id}@1`;
+}
+
+function booleanValue(value: unknown, label: string): boolean {
+  if (typeof value !== "boolean") throw new TypeError(`cinematic director ${label} must be boolean`);
+  return value;
+}
+
+function nullableString(value: unknown, label: string): string | null {
+  if (value !== null && typeof value !== "string") throw new TypeError(`cinematic director ${label} must be string or null`);
+  return value;
+}
+
+function integerValue(value: unknown, label: string): number {
+  if (!Number.isSafeInteger(value)) throw new TypeError(`cinematic director ${label} must be a safe integer`);
+  return value as number;
+}
+
+function secondsValue(value: unknown, label: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    throw new TypeError(`cinematic director ${label} must be finite non-negative seconds`);
+  }
+  return value;
+}

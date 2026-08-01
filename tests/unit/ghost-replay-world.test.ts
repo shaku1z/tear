@@ -20,6 +20,7 @@ import {
   type TearSnapshotV1,
 } from "../../src/tearbench";
 import { stableVerificationHash } from "../../src/replay/hash";
+import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 
 const trident: GhostReplayTrident = {
   command: { kind: "command", status: "verified", available: true, resumable: true, seekable: false, reason: "test" },
@@ -45,6 +46,7 @@ function emptyWorld(): TearCodecWorld {
   world.components.set("tear.reward.v1", { selection: null });
   world.components.set("tear.configuration.v1", { rulesetVersion: "rules", values: {} });
   world.components.set("tear.rng.v1", { combat: { algorithm: "mulberry32", state: 1 } });
+  world.components.set("tear.cinematic.v1", INACTIVE_CINEMATIC_DIRECTOR_STATE_V1);
   return world;
 }
 

@@ -8,6 +8,7 @@ import {
   mapGhostCapsuleToReplayEnvelope,
 } from "../../src/ghost";
 import { stableVerificationHash } from "../../src/replay/hash";
+import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 import {
   CODEC_REGISTRY,
   captureCodecState,
@@ -21,6 +22,7 @@ function world(): TearCodecWorld {
   for (const id of CODEC_REGISTRY.ids) result.components.set(id, {});
   result.components.set("tear.player.v1", { id: "player", x: 5, y: 0 });
   result.components.set("tear.run.v1", { elapsedTicks: 5 });
+  result.components.set("tear.cinematic.v1", INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 as never);
   return result;
 }
 
