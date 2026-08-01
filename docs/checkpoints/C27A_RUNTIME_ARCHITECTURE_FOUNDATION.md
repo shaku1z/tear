@@ -549,11 +549,24 @@ of replay, headless execution, or learning portability.
   events: current parry/throw/recall/dash effect labels now receive their
   registered causal IDs instead of a generic checkpoint. Existing capsules
   are immutable and are not reclassified.
+- The fixed combat graph now has a DOM/app-free production factory.
+  `createTearCombatSimulation` owns one entity identity runtime, kill runtime,
+  two-phase combat runtime, gameplay event port, authoritative action/hash
+  step, and 120 Hz scheduler. The browser host delegates to it and retains only
+  frame coordination. Planted architecture checks reject outward imports and
+  browser globals; focused tests prove exact phase order, scheduler/input/step
+  identity, native event tick binding, and idempotent browser-loop start.
+  Detached parity still constructs its scheduler separately, so full shared
+  composition and outward-stream checklist items remain open.
+  The post-slice `check:c27a:foundation` gate passed 31 files / 103 tests,
+  rebuilt the standalone app, regenerated all 12 live traces, and passed all
+  37 detached comparisons.
 
 ## Remaining C27A work
 
-1. Build live and detached combat through one shared gameplay-core assembly,
-   wire its typed event bus to the real wave/spawn publishers with stable
+1. Move detached parity onto the new shared gameplay-core assembly, restoring
+   captured identity allocator state and actor bindings before tick 1. Wire its
+   one typed event bus to the real wave/spawn publishers with stable
    production actor IDs, and compare complete ordered semantic streams rather
    than merely recording harness strings. Then add
    a win outcome plus a wave-boundary crossing to the live↔detached matrix.

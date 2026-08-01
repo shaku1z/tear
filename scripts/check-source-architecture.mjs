@@ -27,6 +27,7 @@ const forbiddenDependencyRules = Object.freeze([
   Object.freeze({
     roots: Object.freeze([
       "src/gameplay/runtime/tear-simulation-runtime.ts",
+      "src/gameplay/runtime/tear-combat-simulation.ts",
       "src/gameplay/runtime/tear-world-entity-construction.ts",
       "src/gameplay/runtime/tear-world-context.ts",
     ]),
@@ -36,6 +37,7 @@ const forbiddenDependencyRules = Object.freeze([
   Object.freeze({
     roots: Object.freeze([
       "src/gameplay/runtime/tear-simulation-runtime.ts",
+      "src/gameplay/runtime/tear-combat-simulation.ts",
       "src/gameplay/runtime/tear-world-entity-construction.ts",
       "src/gameplay/runtime/tear-world-context.ts",
     ]),
@@ -114,6 +116,14 @@ if (dependencyErrors("src/gameplay/runtime/tear-simulation-runtime.ts",
 if (dependencyErrors("src/gameplay/runtime/tear-simulation-runtime.ts",
   'const canvas: HTMLCanvasElement | null = null;').length !== 1) {
   throw new Error("source architecture portable simulation browser-rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/runtime/tear-combat-simulation.ts",
+  'import { LiveFrameRuntime } from "../../app/live-frame-runtime";').length !== 1) {
+  throw new Error("source architecture portable combat import-rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/runtime/tear-combat-simulation.ts",
+  'const context: CanvasRenderingContext2D | null = null;').length !== 1) {
+  throw new Error("source architecture portable combat browser-rule self-test failed");
 }
 if (dependencyErrors("src/gameplay/runtime/tear-world-entity-construction.ts",
   'import type { GameRuntimeDependencies } from "../../app/game-runtime-dependencies";').length !== 1) {

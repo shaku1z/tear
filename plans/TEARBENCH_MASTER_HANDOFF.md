@@ -135,7 +135,7 @@ Current engineering capabilities, with the qualifications above:
 - Physical browser harness foundations and diagnostics; the full C25 exit is pending.
 - C26 regression investigation, minimization, bisect, and graveyard workflows.
 - C27 V3 recording/capsule foundations: manifests, chunks, journals, recovery, budgets, interruption/terminal tests, and browser proof in the tested scope.
-- C27A foundations: DOM-free world context, live adapter, shared entity construction, combat collections owned through `LiveGameHostState`, complete per-world transient opening/impact records, detached hydration/runtime, reconstructible campaign chapter bindings with 12/12 exact fixed-tick parity, and one native-gameplay-fact causal adapter shared by Ghost V3 and TearBench.
+- C27A foundations: DOM-free world context, live adapter, shared entity construction, combat collections owned through `LiveGameHostState`, complete per-world transient opening/impact records, detached hydration/runtime, reconstructible campaign chapter bindings with 12/12 exact fixed-tick parity, one native-gameplay-fact causal adapter shared by Ghost V3 and TearBench, and a gameplay-only fixed combat assembly now consumed by the live browser host.
 
 Current `scripts/tearbench.mjs` command families:
 
@@ -193,7 +193,7 @@ Important files:
 
 ### Exact next slice
 
-All twelve captured fixed-tick parity scenarios match the live authoritative hash on every executed tick. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding lets State Forge and detached worlds reconstruct and advance an active brief through explicit gameplay ports. Legacy active chapters without that binding fail closed. Ghost V3 and TearBench now share the semantic native-event adapter; next extract the duplicated gameplay-only combat assembly, wire real detached wave/spawn facts, and compare them before adding a win outcome and wave-boundary run.
+All twelve captured fixed-tick parity scenarios match the live authoritative hash on every executed tick. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding lets State Forge and detached worlds reconstruct and advance an active brief through explicit gameplay ports. Legacy active chapters without that binding fail closed. Ghost V3 and TearBench share the semantic native-event adapter, and the live host delegates its fixed combat graph to the portable gameplay assembly. Next move detached parity onto that same factory, restore captured actor identity, wire real detached wave/spawn facts, and compare them before adding a win outcome and wave-boundary run.
 
 Preserve:
 
@@ -332,7 +332,12 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-All of the following were run from this worktree through C27A slice 30:
+All of the following were run from this worktree through C27A slice 31:
+
+- `pnpm check:c27a:foundation` passed after slice 31's shared combat
+  extraction: 31 focused files / 103 tests, architecture, standalone build,
+  physical browser proof, fresh 12-scenario capture, and 37 detached parity
+  tests.
 
 - `pnpm check:c27a:foundation` passed after the shared semantic event adapter:
   29 focused files / 101 tests, standalone test build, physical browser proof,
@@ -382,8 +387,8 @@ After each slice, record exact commands/results, test counts, browser artifacts,
 ## 13. Working-tree and Git safety
 
 - Current branch: `codex/ghost3-autonomous-completion-plan`.
-- Slice 29 is the last pushed coherent green boundary. Slice 30 adds the shared
-  semantic event adapter and is the current validation/commit boundary. After that
+- Slice 30 is the last pushed coherent green boundary. Slice 31 extracts the
+  shared combat assembly and is the current validation/commit boundary. After that
   boundary, the only expected unrelated working-tree item is the rendering
   plan named below.
 - `plans/EXTREME_RENDERING_IMPLEMENTATION_PLAN.md` is unrelated untracked user work. Never stage, edit, delete, or include it in a TearBench commit.

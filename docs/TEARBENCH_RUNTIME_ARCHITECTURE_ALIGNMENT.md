@@ -238,11 +238,13 @@ core claim can be made. The precise evidence and remaining work are recorded in
 
 ### Next extraction order (binding)
 
-The native-gameplay-fact to causal-event translation is now shared by Ghost V3
-and TearBench. The next C27A implementation slice is not a second combat host
-or parallel headless simulator. Extract the gameplay-only combat simulation
-assembly already duplicated by live and detached hosts, then use its one event
-bus and stable actor identity to compare real wave/spawn semantic streams. Add
+The native-gameplay-fact to causal-event translation is shared by Ghost V3 and
+TearBench, and the live browser now delegates its fixed combat graph to the
+gameplay-only `createTearCombatSimulation` factory. The next C27A implementation
+slice is not a second combat host or parallel headless simulator. Move detached
+parity onto this factory, restore captured actor identity through its returned
+`CombatEntityRuntime`, then use its one event bus to compare real wave/spawn
+semantic streams. Add
 win plus wave-boundary scenarios only through production transitions, then
 continue moving app-backed configuration, RNG,
 effects, clock, Mirror, boss-feedback, and closure-owned run/world construction

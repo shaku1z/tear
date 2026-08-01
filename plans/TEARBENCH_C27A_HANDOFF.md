@@ -239,10 +239,25 @@ Before coding, read this file, then:
   deliberately only the shared observation contract: detached production
   publishers and live-to-detached stream equality remain the next slice, and
   no audio, particle, pixel, wave-boundary, or victory parity is claimed yet.
+- The thirty-first slice extracted `createTearCombatSimulation` as the
+  gameplay-only owner of one combat entity identity runtime, kill runtime,
+  two-phase combat runtime, gameplay event port, authoritative input/step, and
+  fixed scheduler. The live app host now delegates that entire graph and keeps
+  only frame/runtime coordination and idempotent browser-loop start. The
+  architecture gate has planted checks rejecting app, presentation, service,
+  Ghost 2, DOM, or Canvas dependencies in the new core. Focused tests prove
+  phase order, injected event tick ownership, object identity, and the one-loop
+  live wrapper. Detached replay has not yet adopted this factory, so this slice
+  is an extraction seam rather than a live-to-detached assembly-parity claim.
 
 ## Latest evidence
 
 All of the following were run from this worktree after the parity-passing slice:
+
+- `pnpm check:c27a:foundation` passed after slice 31: typecheck, lint,
+  architecture (including planted portable-combat violations), 31 test files /
+  103 tests, standalone test build, the physical-input browser proof, fresh
+  12-scenario live capture, and all 37 detached parity tests.
 
 - `pnpm check:c27a:foundation` passed after slice 30: typecheck, lint,
   architecture, 29 test files / 101 tests, standalone test build, the physical
@@ -295,9 +310,10 @@ portable gameplay timeline; chapter bindings reconstruct from data through
 explicit gameplay ports; and State Forge transactionally restores their full
 behavior-bearing position across worlds. The next boundary is comparable
 outward-effect streams plus a win outcome and a wave-boundary crossing. The
-semantic adapter is now shared, but the detached side still needs the same
-combat assembly/event bus and real wave/spawn publishers before equality can be
-asserted. Extract that shared combat assembly next; do not synthesize a
+semantic adapter and combat assembly are now shared production facilities, but
+the detached side still needs to consume that assembly/event bus and publish
+real wave/spawn facts before equality can be asserted. Adopt it next, restoring
+the captured entity-identity state/bindings before tick 1; do not synthesize a
 `run.completed` fact from the detached harness's current `winRun` note. Then
 continue extracting the closure-owned run/world construction. Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
