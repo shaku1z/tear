@@ -56,8 +56,9 @@ describe("Tear world context", () => {
       mirror: Object.freeze({ reset: () => { calls.push("mirror"); } }),
       bossFeedback: Object.freeze({ clear: () => { calls.push("boss-feedback"); } }),
     };
+    const cinema = Object.freeze({ active: false, id: undefined });
     const context = createTearWorldContext(state, { create: "entities" }, { phase: "ready" }, services,
-      createTearWorldTransientState());
+      createTearWorldTransientState(), cinema);
 
     context.services.configuration.resetToBase();
     context.services.random.resetRun("seed");
@@ -68,6 +69,7 @@ describe("Tear world context", () => {
     expect(context.services.random.stream("spawn")).toEqual({ id: "spawn-stream" });
     expect(context.services.clock.seconds()).toBe(12);
     expect(context.services.effects.count()).toBe(4);
+    expect(context.cinema).toBe(cinema);
     expect(calls).toEqual(["configuration", "reset:seed", "restore:before", "set:4", "advance:0.5", "clock", "effects", "mirror", "boss-feedback"]);
     expect(context.transient.impact).toEqual({ hitStop: 0, slowMotion: 0, shake: 0 });
     expect(Object.isFrozen(context)).toBe(true);

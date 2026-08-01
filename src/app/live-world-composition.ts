@@ -96,8 +96,12 @@ export function createLiveWorldComposition(options: LiveWorldCompositionOptions)
   } satisfies LiveGameHostState);
   const entities = createLiveWorldEntityFactory(options.dependencies);
   const lifecycle = new RunLifecycleController();
+  // The world owns the simulation timeline. The live factory adds drawing;
+  // detached compositions may supply the gameplay-only implementation through
+  // the same dependency surface.
+  const cinema = new options.dependencies.Cinematics.Director();
   const context = createLiveWorldContext({
-    dependencies: options.dependencies, state, entities, lifecycle,
+    dependencies: options.dependencies, state, entities, lifecycle, cinema,
     restoreConfiguration: options.restoreConfiguration,
   });
   return Object.freeze({ state, context, entities, lifecycle });

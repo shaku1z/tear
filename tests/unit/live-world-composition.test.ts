@@ -5,6 +5,7 @@ import type { GameRuntimeDependencies } from "../../src/app/game-runtime-depende
 import { createParticleSystem } from "../../src/presentation/particles";
 import { createRunRandom } from "../../src/simulation/run-random";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
+import { CinematicTimeline } from "../../src/gameplay/runtime/cinematic-director";
 
 function createWorldDependencies() {
   const random = createRunRandom();
@@ -13,6 +14,7 @@ function createWorldDependencies() {
     CLOCK: clock, GAME_RANDOM: random.service, GAME_RANDOM_STREAMS: random.streams,
     FX: createParticleSystem(), Backdrop: { resetFx: () => undefined },
     Mirror: { active: true, host: {} }, BOSSFX: { q: [{ kind: "queued" }] },
+    Cinematics: CinematicTimeline,
   } as unknown as GameRuntimeDependencies;
   return { dependencies, clock, random };
 }
@@ -42,6 +44,7 @@ describe("live world composition", () => {
     expect(world.lifecycle.phase).toBe(world.context.lifecycle.phase);
     expect(clock.sim).toBe(0.25);
     expect(world.context.transient.impact).toEqual({ hitStop: 0, slowMotion: 0, shake: 0 });
+    expect(world.context.cinema).toBeInstanceOf(CinematicTimeline.Director);
     expect(typeof world.entities.createPlayer).toBe("function");
     expect(Object.isFrozen(world)).toBe(true);
   });
@@ -87,5 +90,6 @@ describe("live world composition", () => {
     expect(second.context.transient.impact.shake).toBe(0);
     expect(first.entities).not.toBe(second.entities);
     expect(first.lifecycle).not.toBe(second.lifecycle);
+    expect(first.context.cinema).not.toBe(second.context.cinema);
   });
 });

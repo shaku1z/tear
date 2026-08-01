@@ -224,7 +224,8 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   const { transient } = worldContext; const impact = transient.impact; const openingCarry = transient.opening;
   const feel = transient.feel;
   const campaignTraining = createLiveCampaignTrainingComposition({
-    dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE, controllers: runControllers,
+    dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE,
+    cinema: worldContext.cinema, controllers: runControllers,
     width: W, height: H, canvas, context: ctx,
     run: () => run, player: () => player, blade: () => blade, enemies: () => enemies,
     projectiles: () => projectiles,
@@ -252,7 +253,8 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   });
   const { campaign: campaignHost, training: trainingHost, cinematic: cinematicHost,
     style: styleAchievementRuntime, weapon: weaponRuntime, addFloater } = campaignTraining;
-  const { cinema: CINEMA, stage: stageRuntime, story, runtime: campaignRuntime } = campaignHost;
+  const CINEMA = worldContext.cinema;
+  const { stage: stageRuntime, story, runtime: campaignRuntime } = campaignHost;
   const startRunWithPreflight = (mode: RunMode, difficulty: RunDifficulty): void => {
     if (!trainingRunRequiresPreflight(mode)) { startRunImmediate(mode, difficulty); return; }
     void trainingHost.ensureLoaded().then(() => { startRunImmediate(mode, difficulty); }).catch((error: unknown) => {

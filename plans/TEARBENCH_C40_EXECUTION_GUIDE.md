@@ -228,7 +228,7 @@ plan — they do not replace it.
 - [x] One call builds one world (`createLiveWorldComposition`)
 - [x] A detached world runs both production combat phases
 - [x] Live↔detached parity across a scenario matrix — 11 of 12 scenarios, every executed tick
-- [ ] Campaign parity: world owns a cinematic director instance
+- [x] Campaign parity: world owns a cinematic director instance
 - [ ] Campaign parity: State Forge captures director position (script id, beat index, elapsed/reveal/fullyVisible/total, skipping, finished)
 - [ ] Campaign parity: scripts a detached world needs are constructible without app callbacks
 - [ ] `KNOWN_DIVERGENCES` is empty

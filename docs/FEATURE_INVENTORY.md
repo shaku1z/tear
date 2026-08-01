@@ -25,7 +25,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   live run, actor collections, configuration, named RNG, clocks, effects,
   Mirror, and boss-feedback seam, while explicitly retaining the current app
   implementations behind its adapter. The combat action path now uses that
-  shared collection owner rather than a second collection adapter. Real
+  shared collection owner rather than a second collection adapter. Each world
+  now also owns exactly one cinematic director used by campaign, combat, and
+  presentation; State Forge restoration and detached construction of the
+  callback-bound campaign script remain open, so campaign parity is 11 of 12
+  scenarios rather than a completion claim. Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,
   automatic Foundry operation, complete visible experiences, and end-to-end

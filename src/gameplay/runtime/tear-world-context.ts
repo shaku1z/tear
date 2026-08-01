@@ -123,20 +123,22 @@ export interface TearWorldServices<RandomSnapshot, RandomStreamName extends stri
  * transient per-step records to the shared runtime. It is intentionally not a
  * replacement for app-level UI or storage.
  */
-export interface TearWorldContext<State, Entities, Lifecycle, Services, Transient> {
+export interface TearWorldContext<State, Entities, Lifecycle, Services, Transient, Cinema> {
   readonly state: State;
   readonly entities: Entities;
   readonly lifecycle: Lifecycle;
   readonly services: Services;
   readonly transient: Transient;
+  readonly cinema: Cinema;
 }
 
-export function createTearWorldContext<State, Entities, Lifecycle, Services, Transient>(
+export function createTearWorldContext<State, Entities, Lifecycle, Services, Transient, Cinema>(
   state: State,
   entities: Entities,
   lifecycle: Lifecycle,
   services: Services,
   transient: Transient,
-): TearWorldContext<State, Entities, Lifecycle, Services, Transient> {
-  return Object.freeze({ state, entities, lifecycle, services, transient });
+  cinema: Cinema,
+): TearWorldContext<State, Entities, Lifecycle, Services, Transient, Cinema> {
+  return Object.freeze({ state, entities, lifecycle, services, transient, cinema });
 }

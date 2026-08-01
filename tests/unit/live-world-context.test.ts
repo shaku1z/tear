@@ -22,9 +22,11 @@ describe("live world context", () => {
       Mirror: { active: true, host: { id: "mirror" } },
       BOSSFX: { q: [1, 2] },
     };
+    const cinema = { active: false } as never;
     const context = createLiveWorldContext({
       dependencies, state: {} as LiveGameHostState, entities: {} as never,
-      lifecycle: {} as never, restoreConfiguration: () => { calls.push("configuration"); },
+      lifecycle: {} as never, cinema,
+      restoreConfiguration: () => { calls.push("configuration"); },
     });
 
     context.services.configuration.resetToBase();
@@ -35,6 +37,7 @@ describe("live world context", () => {
     expect(context.services.clock.seconds()).toBe(0);
     expect(context.services.effects.count()).toBe(2);
     expect(context.services.random.stream("spawn").next()).toBe(0);
+    expect(context.cinema).toBe(cinema);
     expect(dependencies.Mirror).toEqual({ active: false, host: null });
     expect(dependencies.BOSSFX.q).toEqual([]);
     expect(calls).toEqual(["configuration", "reset:17", "restore", "fx", "backdrop"]);

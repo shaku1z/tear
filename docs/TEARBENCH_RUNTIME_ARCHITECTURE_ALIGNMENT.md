@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first twenty-six executable C27A slices are complete:
+The first twenty-seven executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -206,9 +206,15 @@ The first twenty-six executable C27A slices are complete:
 - The cinematic timeline has since moved into gameplay
   (`gameplay/runtime/cinematic-director`), leaving only the canvas
   renderer in presentation. Deciding whether combat may advance is
-  simulation. Closing the campaign divergence still needs the world to own
-  a director, State Forge to capture its position, and campaign scripts to
-  be constructible without app callbacks.
+  simulation. At that slice, closing the campaign divergence still needed the
+  world to own a director, State Forge to capture its position, and campaign
+  scripts to be constructible without app callbacks.
+- Each world now owns one director instance. `createLiveWorldComposition`
+  constructs the live renderer-capable director and places it on the generic
+  world context; campaign composition consumes that same instance, so no
+  second timeline or scheduler was introduced. Detached test worlds construct
+  the gameplay-only implementation. Active-scene State Forge restoration and
+  callback-free campaign script reconstruction remain the next blockers.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

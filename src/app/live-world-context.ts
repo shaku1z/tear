@@ -12,6 +12,7 @@ import {
 import type { RunRandomStreamName, RunRandomStreamsSnapshot } from "../simulation/run-random";
 import type { LiveGameHostState } from "./live-game-host-state";
 import type { LiveWorldEntityConstructionPort } from "./live-world-entity-factory";
+import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 
 /** Narrow live adapter dependencies; this is deliberately not GameRuntimeDependencies. */
 export interface LiveWorldContextDependencies {
@@ -34,12 +35,15 @@ export type LiveWorldServices = TearWorldServices<
   RandomSource
 >;
 
+export type LiveWorldCinema = InstanceType<GameRuntimeDependencies["Cinematics"]["Director"]>;
+
 export type LiveWorldContext = TearWorldContext<
   LiveGameHostState,
   LiveWorldEntityConstructionPort,
   RunLifecycleController,
   LiveWorldServices,
-  TearWorldTransientState
+  TearWorldTransientState,
+  LiveWorldCinema
 >;
 
 export interface LiveWorldContextOptions {
@@ -47,6 +51,7 @@ export interface LiveWorldContextOptions {
   readonly state: LiveGameHostState;
   readonly entities: LiveWorldEntityConstructionPort;
   readonly lifecycle: RunLifecycleController;
+  readonly cinema: LiveWorldCinema;
   readonly restoreConfiguration: () => void;
 }
 
@@ -81,5 +86,5 @@ export function createLiveWorldContext(options: LiveWorldContextOptions): LiveWo
   // The transient opening/impact records are created here so one world owns
   // them, replacing the former live-runtime closure variables.
   return createTearWorldContext(options.state, options.entities, options.lifecycle, Object.freeze(services),
-    createTearWorldTransientState());
+    createTearWorldTransientState(), options.cinema);
 }

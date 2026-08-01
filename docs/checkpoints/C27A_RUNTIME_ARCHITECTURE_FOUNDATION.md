@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-07-30. This records the first twenty-six executable migration
+In progress as of 2026-08-01. This records the first twenty-seven executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -214,7 +214,7 @@ headless Tear gameplay portable.
   `tests/unit/live-world-composition.test.ts` proves the assembled world,
   that mirrors receive the world-owned values rather than caller
   instances, and that two worlds keep separate state, transient records,
-  entities, and lifecycles. `src/app/live-game-runtime.ts` is 685 physical
+  entities, and lifecycles. `src/app/live-game-runtime.ts` is 687 physical
   lines.
 - `tests/unit/detached-production-world.test.ts` is the first evidence that
   a world built from the production composition actually runs. It creates
@@ -481,13 +481,22 @@ of replay, headless execution, or learning portability.
   This is why the campaign divergence exists at all: whether combat may
   advance is decided by that timeline, so it was simulation living in
   presentation. The move does not close the divergence on its own — the
-  world still does not own a director, State Forge still does not capture
-  its position, and campaign scripts still carry app callbacks a detached
+  At that slice the world did not yet own a director, State Forge did not
+  capture its position, and campaign scripts still carried app callbacks a detached
   world cannot reconstruct — and the `KNOWN_DIVERGENCES` entry now states
   exactly that. Behaviour is unchanged: the full unit suite, the production
   build, the browser feature/boss matrices, all navigation, progression,
   playground, terminal, and cinematic-preference journeys, the 12-scenario
   capture, and the 37 comparison tests all pass.
+- One cinematic director is now part of each world composition. The live world
+  constructs its presentation-capable director in `createLiveWorldComposition`,
+  retains it on `TearWorldContext`, and injects that same instance into the
+  campaign host rather than creating another timeline. Detached fixtures use
+  the gameplay-only director through the same dependency surface. Focused tests
+  prove context identity and two-world isolation; `check:c27a:foundation`, the
+  boss browser matrix, and TearBench-selected CI evidence pass. State Forge
+  capture/restore and portable campaign script binding remain open, so campaign
+  is still the one asserted divergence.
 
 ## Remaining C27A work
 

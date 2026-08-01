@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** twenty-sixth C27A foundation slice complete (the cinematic timeline
-is gameplay; only its renderer is presentation).
+**Status:** twenty-seventh C27A foundation slice complete (one cinematic
+director is now owned by each world).
 
 ## Resume protocol (mandatory)
 
@@ -27,7 +27,7 @@ Before coding, read this file, then:
    headless simulator. Replay/headless work may use the production composition
    only after that same composition is genuinely portable.
 5. Keep `src/app/live-game-runtime.ts` at or below 700 lines. The current file
-   has 685 physical lines; the architecture gate is the authoritative limit.
+   has 687 physical lines; the architecture gate is the authoritative limit.
 
 ## Completed in this handoff
 
@@ -191,6 +191,15 @@ Before coding, read this file, then:
   surface by extending the portable timeline. Behaviour is unchanged and all
   browser journeys pass; the campaign divergence stays recorded, with its
   entry updated to name what is still missing.
+- The twenty-seventh slice moved director instance ownership into the world.
+  `createLiveWorldComposition` now constructs exactly one presentation-capable
+  director, `TearWorldContext` retains it as `cinema`, and the live campaign
+  host receives that exact instance instead of constructing another one.
+  Combat, campaign, rendering, debug, cancellation, and the frame coordinator
+  therefore continue to observe one timeline, while detached compositions use
+  the gameplay-only `CinematicTimeline.Director`. Focused tests prove context
+  identity and two-world isolation. This does not restore an active scene or
+  close campaign parity; State Forge still omits director position.
 
 ## Latest evidence
 
@@ -199,6 +208,9 @@ All of the following were run from this worktree after the parity-passing slice:
 - `pnpm check:c27a:foundation` passed: typecheck, lint, architecture gate,
   20 test files / 64 tests, standalone test build, and
   `browser-c27a-physical-canonical-input`, and `browser-c27a-live-parity-trace`.
+- `pnpm test:browser:bosses` passed after the ownership change.
+- `pnpm tearbench ci --files-from artifacts/tearbench/c27a-slice27-files.txt`
+  passed its selected 8 test files / 37 tests and Graveyard rerun.
 - Because these slices touched the composition root, the production build,
   `test:browser:features`, `test:browser:bosses`, `test:browser:journeys`,
   `test:browser:responsive`, and the blade-lifecycle, mirror-pursuit, and
@@ -218,21 +230,20 @@ All of the following were run from this worktree after the parity-passing slice:
   Studio, and the exit matrix.
 - `pnpm test` passed: 224 test files / 903 tests.
 - `pnpm requirements:check` and `git diff --check` passed.
-- `src/app/live-game-runtime.ts` measures 685 physical lines.
+- `src/app/live-game-runtime.ts` measures 687 physical lines.
 - The standalone build emits the existing non-fatal >500 kB chunk warning.
   It is not a passed bundle-budget/release claim.
 - Full `pnpm check` has not been run for a release claim.
 
 ## Exact next C27A boundary
 
-Eleven of twelve captured scenarios match on every tick, and the cinematic
-timeline is now portable gameplay. Finish closing the campaign divergence in
-three steps: (1) give the world a director instance — the live host builds
-one today and the combat phases read it through `CINEMA`, so route that
-through the world context; (2) capture its position in State Forge (script
-id, beat index, elapsed/reveal/fullyVisible/total seconds, skipping,
-finished) so a restore lands mid-brief exactly where the live run was;
-(3) make the scripts a detached world needs constructible without app
+Eleven of twelve captured scenarios match on every tick, and the world now
+owns the portable gameplay timeline. Continue closing the campaign divergence
+in two steps: (1) capture its position in State Forge (script id, beat index,
+elapsed/reveal/fullyVisible/total seconds, skipping, finished, plus any
+behavior-bearing latch/reveal state required for exact continuation) so a
+restore lands mid-brief exactly where the live run was; (2) make the scripts a
+detached world needs constructible without app
 callbacks — the campaign brief's beats close over live systems today, so
 either those callbacks become explicit world ports or the brief's world
 effects move into gameplay beside the timeline. Then continue: comparable

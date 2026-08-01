@@ -20,12 +20,14 @@ import type { LiveWaveSpawnSpec } from "../gameplay/run/live-enemy-spawn";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 type Controllers = LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
+type Cinema = InstanceType<GameRuntimeDependencies["Cinematics"]["Director"]>;
 
 export interface LiveCampaignTrainingOptions {
   readonly dependencies: GameRuntimeDependencies;
   readonly entities: LiveWorldEntityConstructionPort;
   readonly state: LiveGameHostState;
   readonly lifecycle: RunLifecycleController;
+  readonly cinema: Cinema;
   readonly controllers: Controllers;
   readonly width: number;
   readonly height: number;
@@ -74,7 +76,7 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
     return style;
   };
   const campaign = createLiveCampaignHost({
-    dependencies: d, state: options.state,
+    dependencies: d, state: options.state, cinema: options.cinema,
     installStage: (controller) => { options.controllers.installStage(controller); },
     lifecycle: options.lifecycle, activatePreparedWave: options.controllers.api.activatePreparedWave,
     prepareVictory: options.controllers.api.prepareVictoryRecord, win: options.controllers.api.winRun,

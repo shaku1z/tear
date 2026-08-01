@@ -19,6 +19,7 @@ type Cinema = InstanceType<GameRuntimeDependencies["Cinematics"]["Director"]>;
 export interface CampaignHostServices {
   readonly dependencies: GameRuntimeDependencies;
   readonly state: LiveGameHostState;
+  readonly cinema: Cinema;
   readonly installStage: (controller: Readonly<{ load(index: number): void }>) => void;
   readonly lifecycle: RunLifecycleController;
   readonly activatePreparedWave: () => void;
@@ -46,7 +47,7 @@ export interface LiveCampaignHost {
 
 export function createLiveCampaignHost(services: CampaignHostServices): LiveCampaignHost {
   const { dependencies: d, state, lifecycle } = services;
-  const cinema = new d.Cinematics.Director();
+  const cinema = services.cinema;
   const stage = new StageRuntimeState<Stage, Platforms>(d.stageAt,
     (index) => d.stagePlatforms(index).map((platform) => ({ ...platform })));
   const run = () => required(state.run(), "run");

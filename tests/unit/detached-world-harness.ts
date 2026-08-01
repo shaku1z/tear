@@ -25,6 +25,7 @@ import { createBossArena } from "../../src/gameplay/training/arena-rules";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { newMods } from "../../src/gameplay/upgrades";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
+import { CinematicTimeline } from "../../src/gameplay/runtime/cinematic-director";
 import { createTearWorldTransientState } from "../../src/gameplay/runtime/tear-world-transient-state";
 import { createParticleSystem } from "../../src/presentation/particles";
 import { createRunRandom } from "../../src/simulation/run-random";
@@ -85,6 +86,7 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
   const dependencies = {
     CLOCK: clock, GAME_RANDOM: random.service, GAME_RANDOM_STREAMS: random.streams, FX: effects,
     Backdrop: { resetFx: () => undefined }, Mirror: factories.mirrorTypes.Mirror, BOSSFX: factories.enemyTypes.BOSSFX,
+    Cinematics: CinematicTimeline,
     Player: factories.Player, Blade: factories.Blade, Projectile: factories.Projectile,
     Charger: factories.enemyTypes.Charger, Ranged: factories.enemyTypes.Ranged, Flyer: factories.enemyTypes.Flyer,
     Bomber: factories.enemyTypes.Bomber, Armored: factories.enemyTypes.Armored, Wraith: factories.enemyTypes.Wraith,
