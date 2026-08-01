@@ -237,8 +237,8 @@ plan — they do not replace it.
   admission receipts, and eight logical zoom/flash/shake receipts now match
   exactly; audio dispatch is now observed but seven mix requests are
   logical-target-only and all finale cues are voice-cap-rejected, while rendered
-  pixels, successful audio graph/PCM/device output, haptics, and exact external
-  outcome chronology remain open)
+  pixels, successful audio graph/PCM/device output, haptics, durable external
+  outcome effects, and persistence/cloud/replay/analytics output remain open)
 - [x] A natural wave/reward boundary crossing is in the matrix
 - [x] A real campaign win outcome is in the matrix (certified reconstructed
   wave-49 frontier + production wave-50 transition + explicit one-hit Source
@@ -249,7 +249,7 @@ plan — they do not replace it.
 **Exit:** the alignment doc's exit gate, with the parity corpus green and no
 recorded divergence.
 
-Current Slice 38 boundary: the refreshed 13-scenario corpus contains 5,732
+Current Slice 39 boundary: the refreshed 13-scenario corpus contains 5,732
 fixed ticks and 33 native facts (14 in the natural route, including three
 enemy defeats). A portable finale runtime and Class-A application-frame API
 carry the certified Source-victory route through live and detached hosts, and
@@ -277,13 +277,15 @@ audio graph/device output, physical haptics, or a complete
 outcome/progression/cloud-effect chronology. `pnpm check:c27a:slice37` passes
 its 1 file / 5 tests; the focused campaign-victory unit portion currently passes
 10 files / 36 tests. The complete `pnpm check:c27a` gate also passed through
-Slice 38: foundation 36 files / 127 tests, the 13-scenario / 5,732-tick /
+Slice 39: foundation 36 files / 127 tests, the 13-scenario / 5,732-tick /
 33-native-fact browser corpus, 40 detached comparator tests, a campaign-victory
 subgate covering 10 files / 36 tests, the 1,176-transition browser route, one
-detached finale-parity test, Slice 37's 1 file / 5 tests, and Slice 38's 7 files
-/ 15 tests. The affected same-worktree sweep is green: the C22 live-runtime
-browser proof and C23 through C27 package gates passed. Slice 38 is ready to
-commit, not yet committed or pushed.
+detached finale-parity test, Slice 37's 1 file / 5 tests, Slice 38's 7 files /
+18 tests, and Slice 39's 4 files / 10 tests. The affected same-worktree sweep
+is green: the C22 live-runtime browser proof and C23 through C27 package gates
+passed. Slice 38 commit `40c8f44` is pushed to
+`origin/codex/ghost3-autonomous-completion-plan`; Slice 39 is ready to commit
+and not yet pushed.
 
 Slice 38 adds a data-only audio dispatch journal and a typed in-memory outcome
 chronology. In a refreshed 1,176-transition browser Source victory, explicit
@@ -297,9 +299,19 @@ scheduling outcomes that rule out a successful-scheduling claim for this run;
 it does not prove audibility, PCM, audio graph or speaker/device output, or any
 production audio result. The live test bridge and detached world both collect an
 immutable in-memory terminal/finale ordering receipt. Exact live/detached
-outcome parity is still open because external adapter inputs and return values
-are not modeled. Next: capture those external outcome-adapter values, then
-continue extracting the full shared production runtime.
+outcome parity was still open because external adapter inputs and return values
+were not modeled.
+
+Slice 39 closes that bounded gap: the browser artifact records exactly 42
+monotonic terminal external-decision entries (13 initial synchronization
+terminal decision/request, 22 finale-outward, and 7 cache/terminal). Detached
+consumes captured synchronous score-newness, award/wallet, consistent
+achievement policy, telemetry, victory intents, best, pending-finale request,
+and presentation inputs, and matches the full journal exactly. This does not
+prove durable profile persistence or local-storage survival, cloud/replay/
+analytics completion, pixels, audio-device, or platform-device output. Next:
+portable production-world extraction—presentation-free factories/bootstrap,
+then configuration isolation.
 
 ### C27 — Authoritative recorder and capsule
 

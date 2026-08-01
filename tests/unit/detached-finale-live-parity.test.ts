@@ -7,6 +7,10 @@ import { CONFIG } from "../../src/config/game-config";
 import type { CommandEnvelope } from "../../src/domain/envelopes";
 import type { FinaleIntent } from "../../src/gameplay/campaign/finale-controller";
 import type { FinaleOutwardCall } from "../../src/gameplay/campaign/finale-outward-call";
+import type {
+  OutcomeChronologyEffect,
+  OutcomeChronologyEntry,
+} from "../../src/gameplay/run/outcome-chronology-journal";
 import { TearGameplayEventBus, type TearGameplayEvent } from
   "../../src/gameplay/runtime/gameplay-events";
 import { applyWeapon } from "../../src/gameplay/weapons";
@@ -21,8 +25,10 @@ import { projectGameplayEventForParity, type TearSemanticEngineEventV1 } from
 import {
   createDetachedCombatSimulation,
   createDetachedFinaleComposition,
+  createDetachedRunOutcomeController,
   createDetachedWaveRewardRuntime,
   createDetachedWorld,
+  type CapturedSynchronousOutcomeInputs,
   restoreDetachedChapterBinding,
   restoreDetachedTransientRuntime,
 } from "./detached-world-harness";
@@ -42,6 +48,7 @@ interface CampaignVictoryArtifact {
   readonly terminal: RuntimeSnapshot;
   readonly finaleIntents: readonly (readonly FinaleIntent[])[];
   readonly finaleOutward: readonly FinaleOutwardCall[];
+  readonly outcomeChronology: readonly OutcomeChronologyEntry[];
   readonly events: readonly TearSemanticEngineEventV1[];
   readonly terminalRun: Readonly<Record<string, unknown>>;
   readonly terminalWorld: Readonly<Record<string, unknown>>;
@@ -54,8 +61,72 @@ function readArtifact(): CampaignVictoryArtifact | null {
   const parsed = JSON.parse(readFileSync(ARTIFACT, "utf8")) as Partial<CampaignVictoryArtifact>;
   return parsed.preFinale === undefined || parsed.preFinaleHeldActions === undefined
     || parsed.finaleIntents === undefined || parsed.finaleOutward === undefined
+    || parsed.outcomeChronology === undefined
     ? null
     : parsed as CampaignVictoryArtifact;
+}
+
+function effectsOf<Type extends OutcomeChronologyEffect["type"]>(
+  chronology: readonly OutcomeChronologyEntry[],
+  type: Type,
+): readonly Extract<OutcomeChronologyEffect, Readonly<{ type: Type }>>[] {
+  const effects = chronology.map((entry) => entry.effect).filter((effect) => effect.type === type);
+  return effects as unknown as readonly Extract<OutcomeChronologyEffect, Readonly<{ type: Type }>>[];
+}
+
+function requireSingleEffect<Type extends OutcomeChronologyEffect["type"]>(
+  chronology: readonly OutcomeChronologyEntry[],
+  type: Type,
+): Extract<OutcomeChronologyEffect, Readonly<{ type: Type }>> {
+  const entries = effectsOf(chronology, type);
+  if (entries.length !== 1 || entries[0] === undefined) {
+    throw new Error(`campaign victory outcome transcript requires one ${type}, received ${String(entries.length)}`);
+  }
+  return entries[0];
+}
+
+function deriveCapturedSynchronousOutcomeInputs(
+  chronology: readonly OutcomeChronologyEntry[],
+): CapturedSynchronousOutcomeInputs {
+  const score = requireSingleEffect(chronology, "outcome.score-newness-decided");
+  const coinAward = requireSingleEffect(chronology, "outcome.coins-awarded");
+  const wallet = requireSingleEffect(chronology, "outcome.wallet-read");
+  const terminal = requireSingleEffect(chronology, "outcome.terminal-published");
+  const telemetry = requireSingleEffect(chronology, "outcome.economy-telemetry-read");
+  const intents = requireSingleEffect(chronology, "outcome.victory-intents-dispatched");
+  const stored = requireSingleEffect(chronology, "outcome.prepared-stored");
+  const pending = requireSingleEffect(chronology, "outcome.pending-finale-write-requested");
+  const presentation = requireSingleEffect(chronology, "outcome.presentation-dispatched");
+  const policies = effectsOf(chronology, "outcome.achievement-policy-read");
+  const bestReads = effectsOf(chronology, "outcome.best-read");
+  if (terminal.outcome !== "victory" || presentation.outcome !== "victory") {
+    throw new Error("campaign victory outcome transcript contains a non-victory terminal adapter result");
+  }
+  if (coinAward.score !== score.run.score || telemetry.earned !== coinAward.earned) {
+    throw new Error("campaign victory outcome transcript has incompatible score/economy adapter inputs");
+  }
+  const prepared = Object.freeze({ isNew: score.isNew, earned: coinAward.earned, coins: wallet.coins });
+  expect(stored.prepared).toEqual(prepared);
+  expect(terminal.run).toEqual(score.run);
+  if (policies.length !== 3 || policies.some((policy) => policy.enabled !== policies[0]?.enabled)) {
+    throw new Error("campaign victory outcome transcript must retain three consistent achievement-policy reads");
+  }
+  if (bestReads.length !== 2 || bestReads[0] === undefined || bestReads[1] === undefined) {
+    throw new Error("campaign victory outcome transcript must retain both best-score reads");
+  }
+  expect(bestReads[0].run).toEqual(score.run);
+  expect(bestReads[1].run).toEqual(score.run);
+  expect(bestReads[1].best).toEqual(bestReads[0].best);
+  return Object.freeze({
+    run: score.run,
+    prepared,
+    best: bestReads[0].best,
+    achievementTracking: policies[0]?.enabled ?? false,
+    economyTelemetry: telemetry.telemetry,
+    victoryIntents: intents.intents,
+    pendingFinale: pending.record,
+    presentation: Object.freeze({ outcome: presentation.outcome, result: presentation.result }),
+  });
 }
 
 function restorePreFinale(artifact: CampaignVictoryArtifact) {
@@ -109,7 +180,9 @@ describe.skipIf(artifact === null)("detached finale against the live campaign vi
     const native: TearGameplayEvent[] = [];
     const events = new TearGameplayEventBus(() => artifact.preFinale.tick);
     events.subscribe((event) => { native.push(event); });
-    const finale = createDetachedFinaleComposition(detached, events);
+    const capturedOutcomeInputs = deriveCapturedSynchronousOutcomeInputs(artifact.outcomeChronology);
+    const outcome = createDetachedRunOutcomeController(detached, events, { capturedInputs: capturedOutcomeInputs });
+    const finale = createDetachedFinaleComposition(detached, events, outcome);
     let updateWave: (seconds: number) => void = () => undefined;
     const core = createDetachedCombatSimulation(detached, {
       platforms: detached.stage.platforms,
@@ -166,8 +239,10 @@ describe.skipIf(artifact === null)("detached finale against the live campaign vi
     }
 
     expect(frames).toBeLessThan(900);
+    outcome.assertCapturedInputsConsumed();
     expect(finale.intentBatches).toEqual(artifact.finaleIntents);
     expect(finale.outwardCalls).toEqual(artifact.finaleOutward);
+    expect(finale.outcomeChronology).toEqual(artifact.outcomeChronology);
     expect(finale.outwardCalls
       .filter((call) => call.type === "world-zoom" || call.type === "flash" || call.type === "shake")
       .map((call) => ({ type: call.type, receipt: call.receipt })))

@@ -135,6 +135,11 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page }) => {
       finaleIntents: environment.finaleIntentProjection(),
       finaleOutward: environment.finaleOutwardProjection(),
       finaleAudio: environment.audioDispatchProjection(),
+      // The receipt journal is intentionally data-only. It captures only the
+      // synchronous adapter decisions accepted by this live run, so a
+      // detached reconstruction can inject those decisions without claiming
+      // that a profile, cloud push, or device side effect completed.
+      outcomeChronology: environment.outcomeChronologyProjection(),
       terminalRun: runState(terminal), terminalWorld: worldState(terminal),
       terminalUi: uiState(terminal), terminalCinema: cinemaState(terminal),
     };
@@ -236,6 +241,12 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page }) => {
     { accepted: true, requested: 1, emitted: 1, rejected: { culled: 0, budget: 0 }, listDelta: 1 },
     { accepted: true, requested: 14, emitted: 14, rejected: { culled: 0, budget: 0 }, listDelta: 14 },
   ]);
+  const outcomeEffects = evidence.outcomeChronology.map((entry) => entry.effect.type);
+  assert.ok(outcomeEffects.includes("outcome.prepared-stored")
+    || outcomeEffects.includes("outcome.prepared-cache-hit"));
+  assert.ok(outcomeEffects.includes("outcome.presentation-dispatched"));
+  assert.deepEqual(evidence.outcomeChronology.map((entry) => entry.sequence),
+    evidence.outcomeChronology.map((_, index) => index));
   assert.ok(evidence.events.some((event) => event.type === "enemy.spawned" && event.payload.bossId === "source"));
   assert.ok(evidence.events.some((event) => event.type === "enemy.defeated"));
   assert.ok(evidence.events.some((event) => event.type === "wave.cleared" && event.payload.wave === 50));

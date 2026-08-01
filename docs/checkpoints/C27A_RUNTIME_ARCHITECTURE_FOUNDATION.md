@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-08-01. This records the first thirty-eight executable migration
+In progress as of 2026-08-01. This records the first thirty-nine executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -669,12 +669,13 @@ of replay, headless execution, or learning portability.
   aggregation of flash and shake. This proves logical feel state and transient
   restoration, not rendered pixels, audio scheduling, PCM/audibility, audio
   graph/device output, or physical haptics. The integrated `pnpm check:c27a`
-  gate now passes through Slice 38: foundation 36 files / 127 tests, 13 browser
+  gate now passes through Slice 39: foundation 36 files / 127 tests, 13 browser
   scenarios / 5,732 ticks / 33 native facts, 40 detached comparisons, campaign
   victory 10 files / 36 tests with the 1,176-transition Source browser route and
-  one detached finale-parity test, Slice 37's 1 file / 5 tests, and Slice 38's
-  7 files / 15 tests. Slice 38 is ready to commit; it is not yet committed or
-  pushed.
+  one detached finale-parity test, Slice 37's 1 file / 5 tests, Slice 38's 7
+  files / 18 tests, and Slice 39's 4 files / 10 tests. Slice 38 commit
+  `40c8f44` is pushed to `origin/codex/ghost3-autonomous-completion-plan`;
+  Slice 39 is ready to commit and is not yet pushed.
 - The thirty-eighth slice adds immutable, data-only audio-dispatch receipts and
   an in-memory typed outcome chronology receipt. The refreshed 1,176-transition
   Source-victory browser journey explicitly activates the audio context and
@@ -690,14 +691,25 @@ of replay, headless execution, or learning portability.
   immutable outcome/finale ordering in memory, but exact live-to-detached outcome
   parity remains unproved because external adapter inputs and return values are
   not yet modeled or captured.
+- The thirty-ninth slice captures that missing terminal external-decision
+  transcript and proves exact live-to-detached parity for it. The refreshed
+  Source browser artifact has exactly 42 monotonic immutable entries: 13 initial
+  synchronization terminal decision/request entries, 22 finale-outward entries,
+  and 7 cache/terminal entries. Detached replay consumes captured synchronous
+  score-newness, award/wallet, consistent achievement policy, telemetry, victory
+  intents, best, pending-finale request, and presentation inputs, then matches
+  the complete journal exactly. This remains an in-memory/test evidence boundary:
+  it does not prove durable profile persistence or local-storage survival, nor
+  cloud, replay, analytics, pixels, audio-device, or platform-device output.
 
 ## Remaining C27A work
 
-1. Capture and model external outcome-adapter inputs and return values so the
-   in-memory chronology can become an exact live-to-detached comparison. Then
-   extend the existing intent/adapter, particle-admission, logical-feel, and
-   software-audio receipts into rendered evidence, successful audio graph/
-   audibility evidence where available, and physical haptic results. The
+1. Continue portable production-world extraction: move presentation-free
+   factories and bootstrap inward first, then isolate configuration. Preserve
+   the exact terminal transcript comparison while extending the existing
+   intent/adapter, particle-admission, logical-feel, and software-audio receipts
+   into rendered evidence, successful audio graph/audibility evidence where
+   available, and physical haptic results. The
    matrix includes a real production Source victory from a
    certified reconstructed wave-49 frontier and explicit one-hit State Forge
    child; it is not evidence of a naturally played full 50-wave campaign.

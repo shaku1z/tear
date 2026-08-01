@@ -8,7 +8,7 @@
 **Current progress:** C21-C24 and C26 passed. C25's implementation foundation is
 verified, but its Class C exit gate remains open. C27 implementation is active;
 C27A is a blocking runtime-architecture correction before replay-world,
-headless, or learning completion claims. Thirty-eight executable slices now
+headless, or learning completion claims. Thirty-nine executable slices now
 include shared world construction, exact 13-scenario state/native-event parity
 (5,732 ticks / 33 native facts), portable combat/outcome/reward/finale paths, a
 natural wave/reward crossing, and a real Source victory from a certified
@@ -17,11 +17,12 @@ and detached match the finale's seven exact intent batches and all 22
 post-return outward-adapter calls in exact order and arguments. Six concrete
 particle-admission receipts and eight logical feel receipts now also compare
 exactly. Software audio dispatch and an in-memory outcome chronology are now
-observable, but the real Source run contains only logical-target mix changes and
-voice-cap cue rejections, not output. This remains deliberately narrower than
-randomized particle internals, pixels, audible audio, device haptics, or exact
-external outcome/progression/cloud chronology. The work does not yet provide a
-portable full-world runtime or a naturally played 50-wave campaign.
+observable, and the captured terminal external-decision journal matches live to
+detached exactly. The real Source run still contains only logical-target mix
+changes and voice-cap cue rejections, not output. This remains deliberately
+narrower than randomized particle internals, pixels, durable profile/cloud/
+replay/analytics effects, audible audio, or device haptics. The work does not
+yet provide a portable full-world runtime or a naturally played 50-wave campaign.
 
 ### Execution record through C24
 
@@ -563,7 +564,7 @@ live-runtime internals into a second platform.
   a planted violation.
 - Rerun architecture-dependent C22-C27 evidence after migration.
 
-**Current Slice 38 evidence boundary**
+**Current Slice 39 evidence boundary**
 
 - Native defeat publication is gameplay-owned and no longer depends on the
   legacy Ghost 2 `_gid` recording path; the refreshed fixed-tick corpus has 33
@@ -589,13 +590,15 @@ live-runtime internals into a second platform.
   receipts match exactly, including zoom before/after state and flash/shake
   maximum aggregation. This proves logical feel state rather than pixels,
   audible PCM/audio graph/device output, or physical vibration.
-- The complete `pnpm check:c27a` gate passes through Slice 38: foundation 36
+- The complete `pnpm check:c27a` gate passes through Slice 39: foundation 36
   files / 127 tests, 13 browser scenarios / 5,732 ticks / 33 native facts, 40
   detached comparator tests, campaign victory 10 files / 36 tests, a
   1,176-transition real browser route, and one detached finale-parity test;
-  Slice 37 adds 1 file / 5 tests and Slice 38 adds 7 files / 15 tests. Its C22
-  live-runtime proof and C23 through C27 package gates pass in the same
-  worktree. Slice 38 is ready to commit, not yet committed or pushed.
+  Slice 37 adds 1 file / 5 tests, Slice 38 adds 7 files / 18 tests, and Slice 39
+  adds 4 files / 10 tests. Its C22 live-runtime proof and C23 through C27 package
+  gates pass in the same worktree. Slice 38 commit `40c8f44` is pushed to
+  `origin/codex/ghost3-autonomous-completion-plan`; Slice 39 is ready to commit
+  and not yet pushed.
 - Slice 38 captures 12 `executing` and 12 matching `completed` audio-dispatch
   receipts in the refreshed 1,176-transition browser route after explicit audio
   context activation. All seven finale mix requests are `logical-target-only`
@@ -606,12 +609,21 @@ live-runtime internals into a second platform.
   output claim. The typed in-memory outcome chronology records ordering on the
   live test bridge and detached host, but cannot yet compare them exactly while
   external adapter inputs and return values are unmodeled.
+- Slice 39 captures that terminal external-decision transcript exactly: 42
+  monotonic browser-artifact entries (13 initial synchronization terminal
+  decision/request, 22 finale-outward, and 7 cache/terminal). Detached consumes
+  captured synchronous score-newness, award/wallet, consistent achievement
+  policy, telemetry, victory intents, best, pending-finale request, and
+  presentation inputs, then matches the full journal exactly. This is not
+  durable profile/local-storage, cloud/replay/analytics, pixel, audio-device, or
+  platform-device evidence. Next: presentation-free production factories and
+  bootstrap, then configuration isolation.
 - This preserves real victory-outcome execution plus intent, adapter-dispatch,
-  renderer-independent particle-admission, and logical-feel parity. The Slice-38
-  outcome chronology is capture-only, not exact live/detached outcome parity.
-  It is not proof of randomized particle state, rendered pixels, PCM output/
-  audibility, successful audio graph/device output, physical vibration, or exact
-  external progression/cloud chronology.
+  renderer-independent particle-admission, logical-feel, and terminal
+  external-decision transcript parity. It is not proof of randomized particle
+  state, rendered pixels, durable profile/local-storage survival, cloud/replay/
+  analytics completion, PCM output/audibility, successful audio graph/device
+  output, or physical vibration.
 
 **Exit gate**
 

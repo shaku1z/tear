@@ -60,10 +60,13 @@ export class LiveRunOutcomeController {
     this.#port.publishTerminal("defeat", run);
     this.#record({ type: "outcome.terminal-published", outcome: "defeat", run });
     const prepared = this.#prepareResult(run);
-    if (this.#port.achievementTracking()) this.#port.recordDefeatProgress(run, prepared.earned);
-    const result = buildRunResult(run, { best: this.#port.best(run), prepared, victory: false });
+    if (this.#achievementTracking()) {
+      this.#port.recordDefeatProgress(run, prepared.earned);
+      this.#record({ type: "outcome.defeat-progression-dispatched", run, earned: prepared.earned });
+    }
+    const result = buildRunResult(run, { best: this.#best(run), prepared, victory: false });
     this.#port.present("defeat", result);
-    this.#record({ type: "outcome.presented", outcome: "defeat", result });
+    this.#record({ type: "outcome.presentation-dispatched", outcome: "defeat", result });
     return result;
   }
 
@@ -81,23 +84,32 @@ export class LiveRunOutcomeController {
     // precede the victory recording intent, which closes the V3 sidecar.
     this.#port.publishTerminal("victory", run);
     this.#record({ type: "outcome.terminal-published", outcome: "victory", run });
-    this.#port.executeVictoryIntents(planVictoryProgression({
+    const achievementTracking = this.#achievementTracking();
+    const economy = this.#port.economyTelemetry(prepared.earned);
+    this.#record({ type: "outcome.economy-telemetry-read", earned: prepared.earned, telemetry: economy });
+    const intents = planVictoryProgression({
       run,
       campaign,
-      achievementTracking: this.#port.achievementTracking(),
+      achievementTracking,
       earned: prepared.earned,
-      economy: this.#port.economyTelemetry(prepared.earned),
-    }));
+      economy,
+    });
+    this.#port.executeVictoryIntents(intents);
+    this.#record({ type: "outcome.victory-intents-dispatched", intents });
     this.#port.storePreparedVictory(prepared);
     this.#record({ type: "outcome.prepared-stored", prepared });
     if (campaign && persistFinale) {
-      const record = buildPendingFinale(run, this.#port.best(run), prepared);
+      const record = buildPendingFinale(run, this.#best(run), prepared);
       this.#port.persistPendingFinale(record);
-      this.#record({ type: "outcome.pending-finale-persisted", record });
+      this.#record({ type: "outcome.pending-finale-write-requested", record });
     } else {
       this.#port.saveProfile();
+      this.#record({ type: "outcome.profile-save-requested" });
     }
-    if (this.#port.achievementTracking()) this.#port.pushCloud();
+    if (this.#achievementTracking()) {
+      this.#port.pushCloud();
+      this.#record({ type: "outcome.cloud-push-requested" });
+    }
     return prepared;
   }
 
@@ -105,17 +117,20 @@ export class LiveRunOutcomeController {
     const prepared = this.prepareVictory(campaign, false);
     const run = this.#port.snapshot();
     const result = buildRunResult(run, {
-      best: this.#port.best(run), prepared, victory: true, campaign,
+      best: this.#best(run), prepared, victory: true, campaign,
     });
     if (campaign) {
       this.#port.clearPendingFinale();
-      this.#record({ type: "outcome.pending-finale-cleared" });
-      if (this.#port.achievementTracking()) this.#port.pushCloud();
+      this.#record({ type: "outcome.pending-finale-clear-requested" });
+      if (this.#achievementTracking()) {
+        this.#port.pushCloud();
+        this.#record({ type: "outcome.cloud-push-requested" });
+      }
     }
     this.#port.terminate("victory");
     this.#record({ type: "outcome.lifecycle-terminated", outcome: "victory" });
     this.#port.present("victory", result);
-    this.#record({ type: "outcome.presented", outcome: "victory", result });
+    this.#record({ type: "outcome.presentation-dispatched", outcome: "victory", result });
     return result;
   }
 
@@ -124,11 +139,29 @@ export class LiveRunOutcomeController {
   }
 
   #prepareResult(run: OutcomeRunState): PreparedVictory {
+    const isNew = this.#port.saveBest(run);
+    this.#record({ type: "outcome.score-newness-decided", run, isNew });
+    const earned = this.#port.awardCoins(run.score);
+    this.#record({ type: "outcome.coins-awarded", score: run.score, earned });
+    const coins = this.#port.coins();
+    this.#record({ type: "outcome.wallet-read", coins });
     return Object.freeze({
-      isNew: this.#port.saveBest(run),
-      earned: this.#port.awardCoins(run.score),
-      coins: this.#port.coins(),
+      isNew,
+      earned,
+      coins,
     });
+  }
+
+  #achievementTracking(): boolean {
+    const enabled = this.#port.achievementTracking();
+    this.#record({ type: "outcome.achievement-policy-read", enabled });
+    return enabled;
+  }
+
+  #best(run: OutcomeRunState): BestRecord {
+    const best = this.#port.best(run);
+    this.#record({ type: "outcome.best-read", run, best });
+    return best;
   }
 
   #record(effect: OutcomeChronologyEffect): void {

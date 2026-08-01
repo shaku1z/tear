@@ -152,13 +152,16 @@ describe("detached portable finale runtime", () => {
     ]));
     const chronology = finale.outcomeChronology;
     expect(chronology.map((entry) => entry.sequence)).toEqual(chronology.map((_, index) => index));
-    expect(chronology.slice(0, 4).map((entry) => entry.effect.type)).toEqual([
-      "outcome.stop-clipper", "outcome.terminal-published", "outcome.prepared-stored",
-      "outcome.pending-finale-persisted",
+    expect(chronology.slice(0, 12).map((entry) => entry.effect.type)).toEqual([
+      "outcome.stop-clipper", "outcome.score-newness-decided", "outcome.coins-awarded",
+      "outcome.wallet-read", "outcome.terminal-published", "outcome.achievement-policy-read",
+      "outcome.economy-telemetry-read", "outcome.victory-intents-dispatched",
+      "outcome.prepared-stored", "outcome.best-read", "outcome.pending-finale-write-requested",
+      "outcome.achievement-policy-read",
     ]);
-    expect(chronology.slice(-4).map((entry) => entry.effect.type)).toEqual([
-      "outcome.prepared-cache-hit", "outcome.pending-finale-cleared",
-      "outcome.lifecycle-terminated", "outcome.presented",
+    expect(chronology.slice(-6).map((entry) => entry.effect.type)).toEqual([
+      "outcome.prepared-cache-hit", "outcome.best-read", "outcome.pending-finale-clear-requested",
+      "outcome.achievement-policy-read", "outcome.lifecycle-terminated", "outcome.presentation-dispatched",
     ]);
     expect(nativeEvents.filter((event) => event.kind === "run" && event.transition === "completed")).toHaveLength(1);
   });

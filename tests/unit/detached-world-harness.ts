@@ -19,7 +19,14 @@ import { PRESETS, applyPreset, rollAffixes } from "../../src/gameplay/affixes";
 import { createLiveContentRuntime } from "../../src/gameplay/run/live-content-runtime";
 import { LiveRunOutcomeController, type LiveOutcomeControllerPort } from
   "../../src/gameplay/run/live-outcome-controller";
-import { snapshotOutcomeRun, type PreparedVictory } from "../../src/gameplay/run/outcome-planner";
+import {
+  snapshotOutcomeRun,
+  type OutcomeRunState,
+  type PendingFinaleRecord,
+  type PreparedVictory,
+  type RunResultInfo,
+  type VictoryProgressionIntent,
+} from "../../src/gameplay/run/outcome-planner";
 import { BOSS_ROSTER } from "../../src/gameplay/run/content-director";
 import { createLiveWaveHost } from "../../src/app/live-wave-host";
 import { routeLiveTearBenchAction } from "../../src/tearbench/live-runtime-action-routing";
@@ -510,16 +517,66 @@ export function createDetachedCombatPhases(
   });
 }
 
+/**
+ * The synchronous decisions returned by the live host while it crossed one
+ * terminal boundary. This is deliberately narrower than durable profile,
+ * cloud, or device completion: those adapters are only requested and
+ * chronologized, never represented as completed detached operations.
+ */
+export interface CapturedSynchronousOutcomeInputs {
+  readonly run: OutcomeRunState;
+  readonly prepared: PreparedVictory;
+  readonly best: Readonly<{ wave: number; score: number; time: number }>;
+  readonly achievementTracking: boolean;
+  readonly economyTelemetry: Readonly<Record<string, unknown>>;
+  readonly victoryIntents: readonly VictoryProgressionIntent[];
+  readonly pendingFinale: PendingFinaleRecord;
+  readonly presentation: Readonly<{ outcome: "defeat" | "victory"; result: RunResultInfo }>;
+}
+
+export interface DetachedOutcomeControllerOptions {
+  readonly chronology?: OutcomeChronologyJournal;
+  /**
+   * Captured live adapter responses. When supplied, every synchronous result
+   * is injected from this fixture rather than reconstructed from detached
+   * defaults, and mismatched transcript inputs fail at their first use.
+   */
+  readonly capturedInputs?: CapturedSynchronousOutcomeInputs;
+}
+
+function stableOutcomeValue(value: unknown): string {
+  if (value === undefined) return "undefined";
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableOutcomeValue).join(",")}]`;
+  const record = value as Readonly<Record<string, unknown>>;
+  return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stableOutcomeValue(record[key])}`).join(",")}}`;
+}
+
+function requireCapturedOutcomeMatch(label: string, actual: unknown, expected: unknown): void {
+  if (stableOutcomeValue(actual) !== stableOutcomeValue(expected)) {
+    throw new Error(`captured outcome transcript mismatch at ${label}`);
+  }
+}
+
 /** Portable production outcome controller with persistence/presentation replaced by recorded adapters. */
 export function createDetachedRunOutcomeController(
   detached: DetachedWorld,
   events: TearGameplayEventPort,
-  chronology: OutcomeChronologyJournal = createOutcomeChronologyJournal(),
+  options: DetachedOutcomeControllerOptions = {},
 ) {
+  const chronology = options.chronology ?? createOutcomeChronologyJournal();
+  const captured = options.capturedInputs;
+  const used = {
+    score: false, coins: false, wallet: false, policy: false, economy: false,
+    intents: false, best: false, pendingFinale: false, presentation: false,
+  };
   const outward: string[] = [];
   let pendingFinale: unknown = null;
   let presented: Readonly<{ outcome: "defeat" | "victory"; result: unknown }> | null = null;
   const active = () => detached.world.state.run() as never as Record<string, unknown>;
+  const validateRun = (label: string, run: OutcomeRunState): void => {
+    if (captured !== undefined) requireCapturedOutcomeMatch(label, run, captured.run);
+  };
   const publishTerminal = createTearTerminalRunFactPublisher(
     events, () => detached.world.lifecycle.snapshot().sessionId,
   );
@@ -528,25 +585,65 @@ export function createDetachedRunOutcomeController(
     replaceWaveLog: (log) => { active().waveLog = [...log]; },
     waveActive: () => detached.world.lifecycle.isWaveActive,
     preparedVictory: () => (active()._victoryPrepared as PreparedVictory | null | undefined) ?? null,
-    storePreparedVictory: (prepared) => { active()._victoryPrepared = prepared; },
+    storePreparedVictory: (prepared) => {
+      if (captured !== undefined) requireCapturedOutcomeMatch("store prepared", prepared, captured.prepared);
+      active()._victoryPrepared = prepared;
+    },
     stopClipper: () => { outward.push("stopClipper"); },
     terminate: (outcome) => { detached.world.lifecycle.terminate(outcome); },
     publishTerminal,
-    saveBest: () => false,
-    best: (run) => ({ wave: run.wave, score: run.score, time: run.runTime }),
-    awardCoins: () => 0, coins: () => 0, achievementTracking: () => false,
-    economyTelemetry: () => Object.freeze({}), recordDefeatProgress: () => undefined,
-    executeVictoryIntents: (intents) => { outward.push(...intents.map((intent) => `victory:${intent.type}`)); },
-    persistPendingFinale: (record) => { pendingFinale = structuredClone(record); outward.push("persistFinale"); },
+    saveBest: (run) => {
+      validateRun("save best", run); used.score = true;
+      return captured?.prepared.isNew ?? false;
+    },
+    best: (run) => {
+      validateRun("best read", run); used.best = true;
+      return captured?.best ?? { wave: run.wave, score: run.score, time: run.runTime };
+    },
+    awardCoins: (score) => {
+      if (captured !== undefined && score !== captured.run.score) {
+        throw new Error("captured outcome transcript mismatch at coin award score");
+      }
+      used.coins = true;
+      return captured?.prepared.earned ?? 0;
+    },
+    coins: () => { used.wallet = true; return captured?.prepared.coins ?? 0; },
+    achievementTracking: () => { used.policy = true; return captured?.achievementTracking ?? false; },
+    economyTelemetry: (earned) => {
+      if (captured !== undefined && earned !== captured.prepared.earned) {
+        throw new Error("captured outcome transcript mismatch at economy telemetry earned value");
+      }
+      used.economy = true;
+      return captured?.economyTelemetry ?? Object.freeze({});
+    },
+    recordDefeatProgress: () => undefined,
+    executeVictoryIntents: (intents) => {
+      if (captured !== undefined) requireCapturedOutcomeMatch("victory intents", intents, captured.victoryIntents);
+      used.intents = true; outward.push(...intents.map((intent) => `victory:${intent.type}`));
+    },
+    persistPendingFinale: (record) => {
+      if (captured !== undefined) requireCapturedOutcomeMatch("pending finale request", record, captured.pendingFinale);
+      used.pendingFinale = true; pendingFinale = structuredClone(record); outward.push("persistFinale");
+    },
     saveProfile: () => { outward.push("saveProfile"); },
     clearPendingFinale: () => { pendingFinale = null; outward.push("clearFinale"); },
     pushCloud: () => { outward.push("pushCloud"); },
-    present: (outcome, result) => { presented = Object.freeze({ outcome, result }); outward.push(`present:${outcome}`); },
+    present: (outcome, result) => {
+      if (captured !== undefined) {
+        requireCapturedOutcomeMatch("presentation", { outcome, result }, captured.presentation);
+      }
+      used.presentation = true; presented = Object.freeze({ outcome, result }); outward.push(`present:${outcome}`);
+    },
     midgame: (callback) => { callback(); }, restartCurrentRun: () => undefined,
     observeOutcomeChronology: chronology.record,
   };
+  const assertCapturedInputsConsumed = (): void => {
+    if (captured === undefined) return;
+    const missing = Object.entries(used).filter(([, consumed]) => !consumed).map(([name]) => name);
+    if (missing.length > 0) throw new Error(`captured outcome transcript did not consume: ${missing.join(", ")}`);
+  };
   return Object.freeze({ controller: new LiveRunOutcomeController(port), outward,
-    chronology, pendingFinale: () => pendingFinale, presented: () => presented });
+    chronology, pendingFinale: () => pendingFinale, presented: () => presented, assertCapturedInputsConsumed });
 }
 
 /**
