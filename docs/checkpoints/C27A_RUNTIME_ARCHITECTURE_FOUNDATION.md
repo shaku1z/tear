@@ -741,6 +741,23 @@ of replay, headless execution, or learning portability.
   use live application configuration or services. It does not claim headless
   completion, full production-world portability, rendered-pixel parity,
   audibility/device output, or C27A completion.
+- The forty-second slice makes particle construction's policy explicit.
+  `createParticleSystem(policy)` now receives the owning world's effect budgets
+  plus live adapters for graphics quality, reduced motion, and
+  cosmetic entropy. The particle module imports neither process configuration
+  nor its former cosmetic-random singleton. Production and detached
+  composition both supply the policy explicitly; the production policy uses
+  the world-owned `effects` record and app preference closures. A focused
+  two-system test proves independent effect budgets, dynamic low-graphics
+  admission, and independent reduced-motion ring updates. The source boundary
+  rejects value, mixed, aliased, and type imports from either forbidden module.
+
+  This proves policy injection and data-level particle admission isolation,
+  not per-world app preferences, particle pixel output, randomized particle
+  field equality, Backdrop/renderer/UI isolation, full live-world concurrency,
+  headless execution, or C27A completion. The next extraction is a data-only
+  generic world bootstrap for the already-owned simulation services; its
+  presentation-policy adapter remains outside that portable core.
 
 ## Remaining C27A work
 

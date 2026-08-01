@@ -13,7 +13,10 @@ function createWorldDependencies() {
   const clock = createTearWorldClock();
   const dependencies = {
     CLOCK: clock, GAME_RANDOM: random.service, GAME_RANDOM_STREAMS: random.streams,
-    FX: createParticleSystem(), Backdrop: { resetFx: () => undefined },
+    FX: createParticleSystem({
+      effects: { highBudget: 1, lowBudget: 1, cullMargin: 0 },
+      lowGraphics: () => false, reducedMotion: () => false, random: () => 0.5,
+    }), Backdrop: { resetFx: () => undefined },
     Mirror: { active: true, host: {} }, BOSSFX: { q: [{ kind: "queued" }] },
     Cinematics: CinematicTimeline,
   } as unknown as GameRuntimeDependencies;

@@ -101,6 +101,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "world clock, random, and particle modules cannot export a shared instance; export a factory instead",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/presentation/particles.ts"]),
+    pattern: /from\s+["'][^"']*(?:config\/game-config|cosmetic-random)["']/u,
+    message: "the particle factory must receive policy and entropy through an explicit per-world port",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/gameplay/weapons.ts",
       "src/gameplay/upgrades.ts",
@@ -183,6 +188,16 @@ if (dependencyErrors("src/simulation/run-random.ts",
 }
 if (dependencyErrors("src/presentation/particles.ts", "export { createParticleSystem };").length !== 0) {
   throw new Error("source architecture per-world factory export must remain allowed");
+}
+if (dependencyErrors("src/presentation/particles.ts",
+  'import { CONFIG } from "../config/game-config";').length !== 1
+  || dependencyErrors("src/presentation/particles.ts",
+    'import { GFX, A11Y as accessibility } from "../config/game-config";').length !== 1
+  || dependencyErrors("src/presentation/particles.ts",
+    'import type { CONFIG } from "../config/game-config";').length !== 1
+  || dependencyErrors("src/presentation/particles.ts",
+    'import { cosmeticRandom } from "./cosmetic-random";').length !== 1) {
+  throw new Error("source architecture particle policy injection rule self-test failed");
 }
 if (dependencyErrors("src/gameplay/runtime/tear-world-entity-construction.ts",
   'const canvas: HTMLCanvasElement | null = null;').length !== 1) {

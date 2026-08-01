@@ -1,7 +1,5 @@
 // ------- lightweight FX: sparks + shockwave rings + shards (color-aware) -------
-import { A11Y, CONFIG, GFX } from "../config/game-config";
 import { clamp } from "../domain/geometry";
-import { cosmeticRandom } from "./cosmetic-random";
 
 interface ViewRect { left: number; top: number; right: number; bottom: number }
 interface ParticleBase { type: string; x: number; y: number; life: number; max: number; col?: string | null; critical?: boolean }
@@ -31,6 +29,18 @@ export interface ParticleEmissionReceipt {
   readonly emitted: number;
   readonly rejected: Readonly<{ culled: number; budget: number }>;
   readonly listDelta: number;
+}
+
+/** Runtime presentation policy supplied by the composition that owns this world. */
+export interface ParticleSystemPolicy {
+  readonly effects: Readonly<{
+    highBudget: number;
+    lowBudget: number;
+    cullMargin: number;
+  }>;
+  readonly lowGraphics: () => boolean;
+  readonly reducedMotion: () => boolean;
+  readonly random: () => number;
 }
 
 function emissionReceipt(
@@ -82,7 +92,7 @@ export interface ParticleSystem {
  * no module instance, so a second world cannot inherit or overwrite the live
  * world's particles.
  */
-function createParticleSystem(): ParticleSystem {
+function createParticleSystem(policy: ParticleSystemPolicy): ParticleSystem {
   return {
     list: [],
     view: null,
@@ -104,7 +114,7 @@ function createParticleSystem(): ParticleSystem {
       return x1 + m >= this.view.left && x0 - m <= this.view.right && y1 + m >= this.view.top && y0 - m <= this.view.bottom;
     },
     _emit(p, critical) {
-      const E = CONFIG.effects, budget = GFX.low ? E.lowBudget : E.highBudget;
+      const E = policy.effects, budget = policy.lowGraphics() ? E.lowBudget : E.highBudget;
       if (!this._visible(p, E.cullMargin)) return "culled";
       p.critical = critical;
       if (this.list.length >= budget) {
@@ -121,13 +131,13 @@ function createParticleSystem(): ParticleSystem {
     },
 
     spark(x, y, dirX, dirY, col) {
-      const a = Math.atan2(dirY, dirX) + (cosmeticRandom() - 0.5) * 1.3;
-      const sp = 220 + cosmeticRandom() * 460;
+      const a = Math.atan2(dirY, dirX) + (policy.random() - 0.5) * 1.3;
+      const sp = 220 + policy.random() * 460;
       return this._emit({
         type: "spark", x, y,
         vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
         col: col ?? "#000",
-        life: 0.22 + cosmeticRandom() * 0.12, max: 0.34,
+        life: 0.22 + policy.random() * 0.12, max: 0.34,
       }, false);
     },
 
@@ -157,14 +167,14 @@ function createParticleSystem(): ParticleSystem {
 
     // a spinning shard (used for enemy death shatter)
     shard(x, y, col) {
-      const a = cosmeticRandom() * Math.PI * 2;
-      const sp = 160 + cosmeticRandom() * 460;
+      const a = policy.random() * Math.PI * 2;
+      const sp = 160 + policy.random() * 460;
       this._emit({
         type: "shard", x, y,
         vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 120,
-        rot: cosmeticRandom() * Math.PI, spin: (cosmeticRandom() - 0.5) * 18,
-        size: 5 + cosmeticRandom() * 7, col: col ?? "#000",
-        life: 0.4 + cosmeticRandom() * 0.25, max: 0.65,
+        rot: policy.random() * Math.PI, spin: (policy.random() - 0.5) * 18,
+        size: 5 + policy.random() * 7, col: col ?? "#000",
+        life: 0.4 + policy.random() * 0.25, max: 0.65,
       }, false);
     },
 
@@ -181,12 +191,12 @@ function createParticleSystem(): ParticleSystem {
       this._emit({ type: "shock", x, y, r: radius, vr: ((maxR ?? 160) - radius) / life, col: col ?? "#fff", thick: thick ?? 6, life, max: life }, true);
     },
     smoke(x, y, col) {
-      this._emit({ type: "smoke", x: x + (cosmeticRandom() - 0.5) * 16, y, vx: (cosmeticRandom() - 0.5) * 40, vy: -30 - cosmeticRandom() * 55, size: 9 + cosmeticRandom() * 13, col: col ?? "#33323a", life: 0.5 + cosmeticRandom() * 0.45, max: 0.95 }, false);
+      this._emit({ type: "smoke", x: x + (policy.random() - 0.5) * 16, y, vx: (policy.random() - 0.5) * 40, vy: -30 - policy.random() * 55, size: 9 + policy.random() * 13, col: col ?? "#33323a", life: 0.5 + policy.random() * 0.45, max: 0.95 }, false);
     },
     // a full explosion: flash core + double shockwave + sparks + shards + embers + smoke.
     explode(x, y, col, scale) {
       scale ??= 1;
-      const low = GFX.low;
+      const low = policy.lowGraphics();
       this.flash(x, y, 54 * scale, col);
       this.shockwave(x, y, 16 * scale, col, 175 * scale, 7 * scale);
       this.shockwave(x, y, 6 * scale, "#ffffff", 112 * scale, 3 * scale);
@@ -203,24 +213,24 @@ function createParticleSystem(): ParticleSystem {
     // a rising, flickering fire ember (burn / flame dash)
     ember(x, y, col) {
       this._emit({
-        type: "ember", x: x + (cosmeticRandom() - 0.5) * 12, y: y + (cosmeticRandom() - 0.5) * 8,
-        vx: (cosmeticRandom() - 0.5) * 50, vy: -70 - cosmeticRandom() * 120,
-        col: col ?? (cosmeticRandom() < 0.5 ? "#ff8a1e" : "#ffd23e"),
-        size: 2.5 + cosmeticRandom() * 3.5, life: 0.35 + cosmeticRandom() * 0.35, max: 0.7,
+        type: "ember", x: x + (policy.random() - 0.5) * 12, y: y + (policy.random() - 0.5) * 8,
+        vx: (policy.random() - 0.5) * 50, vy: -70 - policy.random() * 120,
+        col: col ?? (policy.random() < 0.5 ? "#ff8a1e" : "#ffd23e"),
+        size: 2.5 + policy.random() * 3.5, life: 0.35 + policy.random() * 0.35, max: 0.7,
       }, false);
     },
 
     // a falling blood drip (bleed)
     drip(x, y, col) {
       this._emit({
-        type: "drip", x: x + (cosmeticRandom() - 0.5) * 10, y,
-        vx: (cosmeticRandom() - 0.5) * 36, vy: 20 + cosmeticRandom() * 70,
-        col: col ?? "#b81d1d", size: 3 + cosmeticRandom() * 3, life: 0.45 + cosmeticRandom() * 0.3, max: 0.75,
+        type: "drip", x: x + (policy.random() - 0.5) * 10, y,
+        vx: (policy.random() - 0.5) * 36, vy: 20 + policy.random() * 70,
+        col: col ?? "#b81d1d", size: 3 + policy.random() * 3, life: 0.45 + policy.random() * 0.3, max: 0.75,
       }, false);
     },
 
     update(dt) {
-      const motion = A11Y.reducedMotion ? 0.25 : 1;
+      const motion = policy.reducedMotion() ? 0.25 : 1;
       for (const p of this.list) {
         p.life -= dt;
         if (p.type === "spark") {

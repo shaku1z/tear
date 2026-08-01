@@ -1,4 +1,4 @@
-import { CONFIG, GFX } from "../../src/config/game-config";
+import { A11Y, CONFIG, GFX } from "../../src/config/game-config";
 import { createLiveAuthoritativeInputAdapter } from "../../src/app/live-authoritative-input-adapter";
 import { createTearWorldConfiguration } from "../../src/gameplay/runtime/tear-world-configuration";
 import { createLiveWorldComposition, type LiveWorldSessionPort } from "../../src/app/live-world-composition";
@@ -131,7 +131,12 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
   const config = configuration.value;
   const clock = createTearWorldClock();
   const random = createRunRandom();
-  const effects = createParticleSystem();
+  const effects = createParticleSystem({
+    effects: config.effects,
+    lowGraphics: () => GFX.low,
+    reducedMotion: () => A11Y.reducedMotion,
+    random: cosmeticRandom,
+  });
   const transient = createTearWorldTransientState();
   random.streams.reset(options.seed);
   const factories = createTearWorldSimulationFactories({

@@ -75,12 +75,17 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   // This world's simulation clock and named RNG streams. They are created here, not imported as a
   // module singleton, so a second world cannot inherit live stream cursors.
   const CLOCK = createTearWorldClock();
-  const FX = createParticleSystem();
   // Tuning is mutable during a run (weapon, difficulty, upgrades), so every
   // composition gets its own stable configuration record before any entity
   // constructor or input adapter captures it.
   const worldConfiguration = createTearWorldConfiguration(CONFIG);
   const worldConfig = worldConfiguration.value;
+  const FX = createParticleSystem({
+    effects: worldConfig.effects,
+    lowGraphics: () => GFX.low,
+    reducedMotion: () => A11Y.reducedMotion,
+    random: cosmeticRandom,
+  });
   installBackdropClock(CLOCK);
   const { streams: GAME_RANDOM_STREAMS, service: GAME_RANDOM } = createRunRandom();
   const { Input, PAD } = createLegacyInputCompatibility(

@@ -248,6 +248,14 @@ The first thirty-four executable C27A slices are complete:
   particle policy, Backdrop, renderer/UI, browser input, audio, and persistence
   remain outward app adapters and do not yet permit concurrent complete live
   worlds or a portable full-world claim.
+- `createParticleSystem` now accepts an explicit world policy: the world-owned
+  effect-budget record and closures for app graphics/accessibility preferences
+  and cosmetic entropy. It imports neither the process configuration nor the
+  cosmetic-random module. Live and detached composition construct that policy
+  at their boundary, and two systems demonstrably retain independent budgets
+  and reduced-motion behavior. This is a necessary policy-injection seam, not
+  proof that graphics/accessibility preferences, pixels, Backdrop, renderer/UI,
+  input, audio, persistence, or complete live worlds are isolated.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 41 update (current)
+#### Slice 42 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -360,12 +360,23 @@ passed: foundation 36 files / 130 tests, the 13-scenario / 5,732-tick /
 33-native-fact browser corpus and 40 detached comparisons, campaign victory 10
 files / 36 tests and 1,176 transitions, and Slice 41 7 files / 53 tests.
 
-This does not isolate particle policy, Backdrop, renderer/UI, browser input,
-audio, persistence, cloud, or any other app-level adapter; it does not prove
-concurrent complete live worlds, headless/full-world portability, or C27A
-completion. The exact next slice is to inject particle policy into the
-per-world particle factory and prove independent two-world effect admission as
-the first generic-bootstrap prerequisite.
+Slice 41 did not yet isolate particle policy, Backdrop, renderer/UI, browser
+input, audio, persistence, cloud, or any other app-level adapter; it did not
+prove concurrent complete live worlds, headless/full-world portability, or
+C27A completion. Particle-policy injection was the next prerequisite.
+
+Slice 42 supplies that prerequisite. `createParticleSystem(policy)` receives
+the constructed world's effect budgets and explicit graphics, accessibility,
+and cosmetic-entropy adapters; the particle module no longer imports process
+configuration or the cosmetic-random singleton. Live and detached composition
+supply their policy explicitly. `pnpm check:c27a:slice42` passed its 5 focused
+files / 20 tests and source-architecture gate, including two injected systems
+with independent budgets, dynamic low-graphics admission, and independent
+reduced-motion behavior. This is policy/data admission isolation only: it does
+not prove per-world app preferences, pixels, Backdrop/renderer/UI/input/audio
+isolation, concurrent full live worlds, headless/full-world portability, or
+C27A completion. Next, extract a data-only generic bootstrap for config, clock,
+and named RNG while keeping presentation policy at the outer adapter boundary.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser
