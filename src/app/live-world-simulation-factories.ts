@@ -45,13 +45,16 @@ export function createLiveWorldSimulationPresentationAdapter(
 ): TearWorldEntityPresentationPorts {
   const { clock, effects, ui, configuration, geometry, cosmeticRandom } = options;
   const { accessibility, config, graphics, theme } = configuration;
+  const { colors, juice, world } = config;
   const playerPresentation = createPlayerRenderer({ colors: config.colors, graphics, theme, clamp: geometry.clamp });
   const bladePresentation = createBladeRenderer({
-    clock, config, graphics, theme, clamp: geometry.clamp, len: geometry.len, lerp: geometry.lerp,
+    clock, policy: { colors, juice }, graphics, theme, clamp: geometry.clamp, len: geometry.len, lerp: geometry.lerp,
   });
-  const projectilePresentation = createProjectileRenderer({ clock, config, graphics, theme, clamp: geometry.clamp });
+  const projectilePresentation = createProjectileRenderer({
+    clock, policy: { colors, world }, graphics, theme, clamp: geometry.clamp,
+  });
   const mirrorPresentation = createMirrorRenderer({
-    clock, config, effects, graphics, theme, clamp: geometry.clamp, cosmeticRandom,
+    clock, policy: { colors, world }, effects, graphics, theme, clamp: geometry.clamp, cosmeticRandom,
   });
   const enemyPresentation = createLegacyEnemyPresentation({
     A11Y: accessibility, CLOCK: clock, CONFIG: config, GFX: graphics, THEME: theme, UI: ui,

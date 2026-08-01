@@ -197,21 +197,18 @@ Important files:
 
 ### Exact next slice
 
-Slice 47 completes the bounded menu-Attract visual-policy step.
-`AttractVisualPolicy` projects its viewport, world/blade values, palette,
-overscan, dynamic graphics, and theme; composition supplies it and the deferred
-Attract renderer no longer imports process configuration even as types. Focused
-two-controller evidence proves distinct dimensions, platform layout, and
-palette-driven effects, and the architecture fence rejects renewed config
-imports. `pnpm check:c27a:slice47` passed (7 files / 22 tests plus
-architecture); built navigation, progression, playground, terminal, and
-cinematic-preference journeys and the six-scenario responsive matrix pass; a
-desktop menu capture was reviewed. Fresh foundation passed 36 files / 130 tests
-and campaign victory passed 10 files / 36 tests and 1,176 browser transitions.
-This is Attract visual-policy wiring only. Next, move the Blade, Mirror, and
-Projectile entity renderers' process-config type dependency behind narrow
-composition-supplied rendering policies without claiming pixel parity or
-full-world concurrency.
+Slice 48 completes the bounded Blade, Mirror, and Projectile renderer-policy
+step. The live presentation adapter projects only each Canvas port's required
+palette, ground geometry, and Blade trail tuning; none of those renderer modules
+imports process configuration, even as types. Direct Canvas-port evidence proves
+palette choices stay local to independent renderer sets, and architecture
+rejects renewed imports. `pnpm check:c27a:slice48` passed (8 files / 23 tests
+plus architecture); built journeys and the six-scenario responsive matrix pass;
+fresh foundation passed 36 files / 130 tests and campaign victory passed 10
+files / 36 tests and 1,176 browser transitions. This is renderer-policy wiring
+only, not pixel parity. Next, extract the legacy enemy renderer family's broad
+presentation configuration behind a structural policy without claiming full-
+world concurrency.
 
 All thirteen captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream: 5,732 ticks and 33 native facts, including the three natural-trace enemy defeats now published independently of Ghost 2 sampling. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome/reward/finale controllers, scheduler shape, event bus, and restored actor identity. The natural matrix route clears wave 1, selects a real offered draft card without advancing the fixed scheduler, and reaches a wave-2 spawn. A separate certified route reconstructs the wave-49 frontier, starts production wave 50, applies an explicit Source one-hit State Forge child, and executes real victory; live and detached match all seven finale intent batches and all 22 outward calls after their concrete adapters return, in exact order and with exact arguments. They also match six immutable ring/burst particle-admission receipts, eight logical feel receipts after restoration of the captured pre-finale transient, and the complete 42-entry terminal external-decision transcript (13 initial synchronization terminal decision/request, 22 finale-outward, and 7 cache/terminal). The refreshed browser route explicitly activates audio, then observes 12 executing plus 12 completed dispatch receipts: all seven mixes are logical-target-only and all cues are voice-cap-rejected, so no output is claimed. Slice 40 adds portable `tear-world-simulation-factories.ts` with no app/presentation/browser imports; the app renderer supplies real Canvas ports and detached supplies explicit no-op ports under architecture fences. Next: generic world bootstrap, then configuration isolation, which still blocks truly simultaneous full worlds. This evidence does not claim a naturally played 50-wave campaign, randomized particle parity, rendered-pixel parity, headless/full-world portability, configuration isolation, durable profile/local-storage survival, cloud/replay/analytics completion, successful PCM/audibility or audio graph/device parity, or device vibration.
 
@@ -352,11 +349,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      Slice 47 gives the deferred menu Attract renderer explicit visual policy without changing its displayed menu behavior.
-PROVEN BY:           `pnpm check:c27a:slice47` passed: 7 focused files / 22 tests and architecture. Built navigation/progression/playground/terminal/cinematic journeys and the six-scenario responsive matrix passed; a desktop menu capture was inspected. Fresh C27A foundation passed 36 files / 130 tests, 13 live scenarios and 40 detached comparisons; campaign victory passed 10 files / 36 tests and 1,176 transitions.
-REMAINING HERE:      Isolate entity-renderer, input, audio, and persistence adapter dependencies. Those adapters still prevent concurrent complete worlds and C27A remains blocking.
+DONE THIS STEP:      Slice 48 gives Blade, Mirror, and Projectile Canvas ports narrow composition-supplied renderer policies.
+PROVEN BY:           `pnpm check:c27a:slice48` passed: 8 focused files / 23 tests and architecture. Built navigation/progression/playground/terminal/cinematic journeys and the six-scenario responsive matrix passed. Fresh C27A foundation passed 36 files / 130 tests, 13 live scenarios and 40 detached comparisons; campaign victory passed 10 files / 36 tests and 1,176 transitions.
+REMAINING HERE:      Isolate the legacy enemy renderer family plus input, audio, and persistence adapter dependencies. Those adapters still prevent concurrent complete worlds and C27A remains blocking.
 REMAINING TO C40:    C27 completion, C25 exit, and C28-C40 remain after C27A closes.
-NEXT SLICE:          Move the Blade, Mirror, and Projectile entity renderers' direct process-configuration type dependencies behind narrow composition-supplied rendering policies. Preserve current behavior; do not claim rendered parity or full live-world concurrency.
+NEXT SLICE:          Move the legacy enemy renderer family's broad presentation configuration behind a structural policy. Preserve current behavior; do not claim rendered parity or full live-world concurrency.
 
 All of the following were run from this worktree through C27A slice 36:
 

@@ -1,4 +1,3 @@
-import type { CONFIG as GAME_CONFIG } from "../../config/game-config";
 import type {
   MirrorHostRenderSnapshot,
   MirrorPresentationPort,
@@ -7,11 +6,15 @@ import type {
 } from "../../gameplay/entities/mirror";
 import { isCanvasSurface } from "./canvas-surface";
 
-type GameConfig = typeof GAME_CONFIG;
-
+export interface MirrorRendererPolicy {
+  readonly world: Readonly<{ groundY: number }>;
+  readonly colors: Readonly<{
+    armoredShield: string; charger: string; eye: string; perfect: string; slam: string;
+  }>;
+}
 export interface MirrorRendererDependencies {
   readonly clock: { readonly sim: number };
-  readonly config: GameConfig;
+  readonly policy: MirrorRendererPolicy;
   readonly effects: { burst(x: number, y: number, dx: number, dy: number, count: number, color: string): void };
   readonly graphics: { readonly low: boolean };
   readonly theme: { readonly ink: string };
@@ -20,12 +23,12 @@ export interface MirrorRendererDependencies {
 }
 
 export function createMirrorRenderer({
-  clock, config, effects, graphics, theme, clamp, cosmeticRandom,
+  clock, policy, effects, graphics, theme, clamp, cosmeticRandom,
 }: MirrorRendererDependencies): MirrorPresentationPort {
   function drawTelegraph(context: CanvasRenderingContext2D, mirror: MirrorRenderSnapshot): void {
     const move = mirror.mv;
     if (move?.id !== "slam" || (move.ph !== "tele" && move.ph !== "hang" && move.ph !== "exec")) return;
-    const groundY = config.world.groundY;
+    const groundY = policy.world.groundY;
     const actor = mirror.actor;
     const pulse = 0.5 + 0.5 * Math.sin(clock.sim * 1000 / 70);
     context.save(); context.globalAlpha = 0.12 + 0.16 * pulse; context.fillStyle = mirror.color;
@@ -104,27 +107,27 @@ export function createMirrorRenderer({
     context.fillStyle = "rgba(0,0,0,0.82)"; context.fillRect(x - 1.5, y - 1.5, width + 3, height + 3);
     context.fillStyle = "#39343f"; context.fillRect(x, y, width, height);
     if (displayHealth > health) {
-      context.fillStyle = config.colors.slam; context.fillRect(x + width * health, y, width * (displayHealth - health), height);
+      context.fillStyle = policy.colors.slam; context.fillRect(x + width * health, y, width * (displayHealth - health), height);
     }
-    context.fillStyle = low ? config.colors.charger : "#fff"; context.fillRect(x, y, width * health, height);
+    context.fillStyle = low ? policy.colors.charger : "#fff"; context.fillRect(x, y, width * health, height);
     if (hit > 0) {
       context.globalAlpha = hit * 0.7; context.fillStyle = "#fff"; context.fillRect(x, y, width * health, height); context.globalAlpha = 1;
     }
-    context.fillStyle = low ? config.colors.charger : config.colors.eye;
+    context.fillStyle = low ? policy.colors.charger : policy.colors.eye;
     context.fillRect(x + width * health - 1.5, y - 1, 2.5, height + 2);
     if (shielded) {
-      context.fillStyle = config.colors.perfect;
+      context.fillStyle = policy.colors.perfect;
       context.fillRect(x, y - 5, width * clamp(reflection.shield / reflection.maxShield, 0, 1), 3);
     }
     if (status) {
       let statusX = x;
       const statusY = y - (shielded ? 9 : 5) - 4;
-      if (reflection.bleedStacks > 0) { context.fillStyle = config.colors.charger; context.fillRect(statusX, statusY, 4, 4); statusX += 6; }
-      if (reflection.burnT > 0) { context.fillStyle = config.colors.slam; context.fillRect(statusX, statusY, 4, 4); statusX += 6; }
-      if (reflection.markT > 0) { context.fillStyle = config.colors.eye; context.fillRect(statusX, statusY, 4, 4); }
-      if (reflection.seamT > 0) { statusX += 6; context.fillStyle = config.colors.perfect; context.fillRect(statusX, statusY, 2, 6); }
+      if (reflection.bleedStacks > 0) { context.fillStyle = policy.colors.charger; context.fillRect(statusX, statusY, 4, 4); statusX += 6; }
+      if (reflection.burnT > 0) { context.fillStyle = policy.colors.slam; context.fillRect(statusX, statusY, 4, 4); statusX += 6; }
+      if (reflection.markT > 0) { context.fillStyle = policy.colors.eye; context.fillRect(statusX, statusY, 4, 4); }
+      if (reflection.seamT > 0) { statusX += 6; context.fillStyle = policy.colors.perfect; context.fillRect(statusX, statusY, 2, 6); }
       if (reflection.severT > 0) { statusX += 6; context.fillStyle = "#b06cff"; context.fillRect(statusX, statusY, 4, 4); }
-      if (reflection.breakPressure > 0) { statusX += 6; context.fillStyle = config.colors.armoredShield; context.fillRect(statusX, statusY, 5, 3); }
+      if (reflection.breakPressure > 0) { statusX += 6; context.fillStyle = policy.colors.armoredShield; context.fillRect(statusX, statusY, 5, 3); }
     }
     context.restore();
   }
@@ -179,7 +182,7 @@ export function createMirrorRenderer({
         context.stroke();
       }
       context.restore();
-      context.fillStyle = config.colors.eye;
+      context.fillStyle = policy.colors.eye;
       context.fillRect(actor.x + mirror.facing * 5 - 4, actor.y - actor.hh + 12, 8, 5);
       mirror.blade.draw(surface, actor);
       drawGlint(context, mirror); drawWaves(context, mirror); drawLock(context, mirror);
@@ -190,7 +193,7 @@ export function createMirrorRenderer({
       const x = host.x - host.hw;
       const y = host.y - host.hh;
       surface.fillStyle = theme.ink; surface.fillRect(x, y, host.hw * 2, host.hh * 2);
-      surface.fillStyle = config.colors.eye; surface.fillRect(host.x + host.facing * 5 - 4, y + 12, 8, 5);
+      surface.fillStyle = policy.colors.eye; surface.fillRect(host.x + host.facing * 5 - 4, y + 12, 8, 5);
       surface.strokeStyle = "#b06cff"; surface.lineWidth = 3; surface.lineCap = "round";
       surface.beginPath(); surface.moveTo(host.x, host.y); surface.lineTo(host.x, host.y - host.hh - 26); surface.stroke();
     },
@@ -209,7 +212,7 @@ export function createMirrorRenderer({
       surface.beginPath(); surface.moveTo(reflection.x, reflection.y - reflection.hh); surface.lineTo(reflection.x + reflection.hw, reflection.y);
       surface.lineTo(reflection.x, reflection.y + reflection.hh); surface.lineTo(reflection.x - reflection.hw, reflection.y); surface.closePath(); surface.fill();
       surface.shadowBlur = 0; surface.strokeStyle = "#ffffff"; surface.lineWidth = 2; surface.globalAlpha = 0.85; surface.stroke();
-      surface.globalAlpha = 1; surface.fillStyle = config.colors.eye; surface.fillRect(reflection.x + reflection.facing * 4 - 4, reflection.y - 6, 8, 5);
+      surface.globalAlpha = 1; surface.fillStyle = policy.colors.eye; surface.fillRect(reflection.x + reflection.facing * 4 - 4, reflection.y - 6, 8, 5);
       surface.restore();
       drawReflectionHp(surface, reflection);
     },

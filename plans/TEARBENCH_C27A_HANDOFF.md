@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** forty-seventh C27A foundation slice implemented (per-world menu
-Attract visual policy); checkpoint remains open
+**Status:** forty-eighth C27A foundation slice implemented (narrow Blade,
+Mirror, and Projectile renderer policies); checkpoint remains open
 and blocking pending generic world bootstrap, presentation-policy isolation,
 and rendered/audio/haptic exits.
 
@@ -452,7 +452,7 @@ All of the following were run from this worktree after the parity-passing slice:
 
 ## Exact next C27A boundary
 
-**Slice 47 supersedes the earlier configuration-isolation wording below.**
+**Slice 48 supersedes the earlier configuration-isolation wording below.**
 `TearWorldConfiguration` now owns one stable mutable config record per
 constructed simulation world, created before constructors capture tuning. It
 validates snapshots before reconciling root/nested references in place; State
@@ -503,6 +503,13 @@ caches and transient lights are local to the controller. This is not full
   This deliberately does not isolate Attract's cosmetic entropy, player/blade
   renderer, or particle system.
 
+  Slice 48 moves the Blade, Mirror, and Projectile Canvas ports' palette,
+  required ground geometry, and Blade trail tuning behind narrow renderer
+  policies supplied by the live presentation adapter. All three renderer modules
+  now have no process-config imports, including types; direct Canvas-port tests
+  prove two renderer sets keep their palette choices separate. This is not pixel
+  parity or a replacement for the still-broad legacy enemy renderer family.
+
 All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
@@ -525,7 +532,8 @@ Slice 41 adds simulation tuning isolation; Slice 42 injects particle policy;
   Backdrop state/policy per controller; and Slice 45 owns cinematic Canvas
   renderer timing per composition. Slice 46 owns Canvas UI policy per
   composition. Slice 47 owns menu Attract visual policy per composition. Entity
-  rendering and the remaining presentation-policy isolation still precede true
+  rendering now has narrow policies for Blade, Mirror, and Projectile; legacy
+  enemy rendering and remaining presentation-policy isolation still precede true
   simultaneous complete worlds.
 Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
@@ -545,6 +553,13 @@ composition with parity evidence.
 
 ## Working-tree safety
 
+- Slice 48 is the next intentional commit on
+  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
+  files / 23 tests plus source architecture; built journeys and six responsive
+  viewport/DPR scenarios passed. Fresh foundation passed 36 files / 130 tests,
+  a fresh 13-scenario trace, and 40 detached comparisons, while campaign victory
+  passed 10 files / 36 tests and 1,176 transitions. The next boundary is the
+  broad legacy enemy renderer presentation policy, still not a second runtime.
 - Slice 47 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 7
   files / 22 tests plus source architecture; built navigation, progression,

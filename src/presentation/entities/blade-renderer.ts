@@ -1,4 +1,3 @@
-import type { CONFIG as GAME_CONFIG } from "../../config/game-config";
 import type {
   BladePlayerPort,
   BladePresentationPort,
@@ -6,11 +5,13 @@ import type {
 } from "../../gameplay/entities/blade";
 import { isCanvasSurface } from "./canvas-surface";
 
-type GameConfig = typeof GAME_CONFIG;
-
+export interface BladeRendererPolicy {
+  readonly colors: Readonly<{ bladeGlow: string; bladeTrail: string; perfect: string }>;
+  readonly juice: Readonly<{ trailAlpha: number }>;
+}
 export interface BladeRendererDependencies {
   readonly clock: { readonly sim: number };
-  readonly config: GameConfig;
+  readonly policy: BladeRendererPolicy;
   readonly graphics: { readonly low: boolean };
   readonly theme: { readonly dark: boolean; readonly ink: string; readonly rim: string };
   readonly clamp: (value: number, min: number, max: number) => number;
@@ -19,7 +20,7 @@ export interface BladeRendererDependencies {
 }
 
 export function createBladeRenderer({
-  clock, config, graphics, theme, clamp, len, lerp,
+  clock, policy, graphics, theme, clamp, len, lerp,
 }: BladeRendererDependencies): BladePresentationPort {
   function drawBody(context: CanvasRenderingContext2D, blade: BladeRenderSnapshot): void {
     const scale = blade.state === "held" ? 1 : blade.throwSizeMult;
@@ -51,7 +52,7 @@ export function createBladeRenderer({
 
     if (blade.model === "chainblade") {
       const hand = blade.lastHand() ?? { x: blade.x, y: blade.y };
-      context.lineWidth = 3; context.strokeStyle = blade.tension > 0.7 ? config.colors.perfect : theme.ink;
+      context.lineWidth = 3; context.strokeStyle = blade.tension > 0.7 ? policy.colors.perfect : theme.ink;
       context.beginPath(); context.moveTo(hand.x, hand.y);
       const segments = 7;
       for (let index = 1; index <= segments; index++) {
@@ -69,7 +70,7 @@ export function createBladeRenderer({
       const radius = 20 * scale;
       context.lineWidth = 7 * scale; context.strokeStyle = theme.ink;
       context.beginPath(); context.arc(blade.x, blade.y, radius, 0, Math.PI * 2); context.stroke();
-      context.lineWidth = 2; context.strokeStyle = config.colors.bladeGlow;
+      context.lineWidth = 2; context.strokeStyle = policy.colors.bladeGlow;
       const charge = blade.state === "held" ? blade.orbit : blade.circuitOrbit;
       const spin = clock.sim * (5 + charge * 9);
       for (let index = 0; index < 3; index++) {
@@ -100,7 +101,7 @@ export function createBladeRenderer({
     const trail = blade.trail;
     const glow = theme.dark;
     if (glow) { context.save(); context.globalCompositeOperation = "lighter"; }
-    context.fillStyle = blade.trailColor ?? config.colors.bladeTrail;
+    context.fillStyle = blade.trailColor ?? policy.colors.bladeTrail;
     const restored = ["#13c4d6", "#e0a326", "#b06cff", "#2f9e6b", "#eafcff"];
     for (let index = 1; index < trail.length; index++) {
       const previous = trail[index - 1];
@@ -108,7 +109,7 @@ export function createBladeRenderer({
       if (!previous || !current) continue;
       const segment = len(current.tx - previous.tx, current.ty - previous.ty);
       const speedAlpha = clamp((segment - 1) / 22, 0, 1);
-      const alpha = (index / trail.length) * (config.juice.trailAlpha + 0.3) * speedAlpha;
+      const alpha = (index / trail.length) * (policy.juice.trailAlpha + 0.3) * speedAlpha;
       if (alpha <= 0.002) continue;
       if (blade.restoredTrail) context.fillStyle = restored[index % restored.length] ?? restored[0] ?? "#13c4d6";
       context.globalAlpha = alpha;
@@ -124,7 +125,7 @@ export function createBladeRenderer({
     const glow = theme.dark;
     if (glow) { context.save(); context.globalCompositeOperation = "lighter"; }
     context.globalAlpha = 0.2 + blade.glowV * 0.5;
-    context.fillStyle = blade.glowColor ?? config.colors.bladeGlow;
+    context.fillStyle = blade.glowColor ?? policy.colors.bladeGlow;
     context.beginPath(); context.arc(blade.tipX, blade.tipY, 4 + blade.glowV * 13, 0, Math.PI * 2); context.fill();
     context.globalAlpha = 1;
     if (glow) context.restore();

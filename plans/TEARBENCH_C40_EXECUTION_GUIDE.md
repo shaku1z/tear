@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 47 update (current)
+#### Slice 48 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -453,6 +453,20 @@ persistence, pixel parity, concurrent complete live worlds, or C27A completion.
 Next, move the Blade, Mirror, and Projectile entity renderers' direct
 process-configuration type dependencies behind narrow composition-supplied
 rendering policies.
+
+Slice 48 supplies those entity policies. Blade, Mirror, and Projectile Canvas
+ports now receive only their required palette, ground geometry, and Blade trail
+tuning from the live presentation adapter; none imports process configuration,
+even as types. Direct Canvas-port evidence proves palette choices remain local
+to independent renderer sets, and architecture rejects renewed imports. `pnpm
+check:c27a:slice48` passed 8 focused files / 23 tests plus architecture. Built
+journeys and the six-scenario responsive matrix passed; fresh foundation and
+campaign-victory gates passed.
+
+This is renderer-policy ownership only, not pixel parity, legacy enemy renderer
+isolation, concurrent complete live worlds, or C27A completion. Next, move the
+legacy enemy renderer family's broad presentation configuration behind a
+structural policy.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

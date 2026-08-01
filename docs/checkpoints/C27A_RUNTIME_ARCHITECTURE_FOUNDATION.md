@@ -849,6 +849,21 @@ of replay, headless execution, or learning portability.
   applications, and C27A completion open. The next presentation boundary is the
   three entity renderers' direct process-config type dependency.
 
+- The forty-eighth slice gives the Blade, Mirror, and Projectile Canvas ports
+  separate structural renderer policies. The live presentation adapter supplies
+  only each port's required palette, world geometry, and Blade trail tuning;
+  none of the three renderer modules imports process configuration, including
+  types. Direct Canvas-port evidence proves the three palette paths are local
+  to two independent renderer sets, and the architecture gate prevents renewed
+  imports. Built journeys, responsive matrix, fresh foundation, and
+  campaign-victory gates pass.
+
+  This is renderer-policy ownership, not pixel parity or full enemy-presentation
+  isolation. The remaining legacy enemy renderer family still carries its broad
+  presentation configuration, while input, audio, persistence, device output,
+  headless/replay/learning portability, independent full applications, and C27A
+  completion remain open.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap
