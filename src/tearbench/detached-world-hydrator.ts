@@ -62,6 +62,7 @@ export interface TearStagedWorld<
   readonly screen: string;
   readonly focus: number;
   readonly tick: number;
+  readonly stageIndex: number;
   readonly rng: Rng;
   readonly configuration: TearCodecValue;
   readonly reward: Reward | null;
@@ -257,6 +258,7 @@ export function hydrateTearCodecWorld<
     screen: stringField(ui, "screen"),
     focus: Number.parseInt(stringField(ui, "focusId"), 10),
     tick: numberField(runPayload, "tick"),
+    stageIndex: numberField(runPayload, "stage"),
     rng: decodeTearCodecValue(component(world, "tear.rng.v1"), identities) as Rng,
     configuration: decodeTearCodecValue(component(world, "tear.configuration.v1"), identities) as TearCodecValue,
     reward: port.hydrateReward(component(world, "tear.reward.v1")),

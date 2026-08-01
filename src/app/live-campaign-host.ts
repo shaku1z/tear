@@ -68,7 +68,10 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
     recordReplayStage: (index) => { d.GAMEPLAY_EVENTS.emit({ kind: "stage", stage: index }); },
   }));
   const runtime = createLiveCampaignRuntime({ runtime: story,
-    cinema: { start: (script, context) => { cinema.start(adaptCinematicScript(script, context), {}); } },
+    cinema: {
+      start: (script, context) => { cinema.start(adaptCinematicScript(script, context), {}); },
+      startBinding: (binding) => { cinema.start(binding.script, binding.context); },
+    },
     run: () => state.run(), player, blade, stageAt: (index) => d.stageAt(index),
     preference: () => services.cinematicPreference(),
     preparedWave: () => lifecycle.hasPreparedWave, activationDeferred: () => lifecycle.activationDeferred,

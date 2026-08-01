@@ -15,6 +15,10 @@ import {
   type FinaleIntentPorts,
 } from "./campaign-intent-coordinator";
 import type { CampaignRuntimeState } from "./campaign-runtime-state";
+import { parseCampaignChapterBindingSpec, stageCampaignChapterBinding,
+  type CampaignChapterBindingPort, type CampaignChapterBindingSpecV1 } from
+  "../gameplay/campaign/chapter-cinematic-binding";
+import type { CinematicDirectorBinding } from "../gameplay/runtime/cinematic-director";
 
 export interface LiveCampaignRun {
   readonly mode: string;
@@ -76,6 +80,14 @@ export interface LiveCampaignRuntimeApi {
   readonly beginFinaleRestoration: () => void;
   readonly tryFinaleBladeCut: (segment: LiveFinaleBladeSegment) => void;
   readonly startAdventureFinale: (death?: Readonly<{ x: number; y: number }>, recovered?: boolean) => void;
+  readonly stageChapterBinding: (value: unknown) => StagedLiveChapterBinding | null;
+  readonly installChapterBinding: (value: unknown) => CinematicDirectorBinding | undefined;
+}
+
+export interface StagedLiveChapterBinding {
+  readonly binding: CinematicDirectorBinding;
+  readonly spec: CampaignChapterBindingSpecV1;
+  install(): void;
 }
 
 /** Bound campaign API that owns all spanning chapter/finale orchestration and intent dispatch. */
@@ -87,6 +99,24 @@ export function createLiveCampaignRuntime(port: LiveCampaignRuntimePort): LiveCa
   };
   const dispatchFinale = (intents: Parameters<typeof dispatchFinaleIntents>[0]): void => {
     dispatchFinaleIntents(intents, port.finaleIntents);
+  };
+  const chapterBindingPort = (): CampaignChapterBindingPort => ({
+    dispatch: dispatchChapter,
+    preparedWave: port.preparedWave,
+    activationDeferred: port.activationDeferred,
+    clear: () => { port.runtime.clearChapterBinding(); },
+  });
+  const stageChapterBinding = (value: unknown): StagedLiveChapterBinding | null => {
+    if (value === null || value === undefined) return null;
+    const spec = parseCampaignChapterBindingSpec(value);
+    const stage = port.stageAt(spec.stageIndex);
+    if (stage?.chapter === undefined) throw new RangeError(`campaign chapter stage ${String(spec.stageIndex)} is unavailable`);
+    const staged = stageCampaignChapterBinding(spec, stage, chapterBindingPort());
+    return Object.freeze({
+      binding: staged.binding,
+      spec: staged.spec,
+      install() { port.runtime.installChapterBinding(staged); },
+    });
   };
   const api: LiveCampaignRuntimeApi = {
     loreBusy: () => {
@@ -153,6 +183,13 @@ export function createLiveCampaignRuntime(port: LiveCampaignRuntimePort): LiveCa
           return { x: velocityComponent(blade.tipVX, 0), y: velocityComponent(blade.tipVY, -1) };
         },
       });
+    },
+    stageChapterBinding,
+    installChapterBinding: (value) => {
+      const staged = stageChapterBinding(value);
+      if (staged === null) { port.runtime.resetChapter(); return undefined; }
+      staged.install();
+      return staged.binding;
     },
   };
   return Object.freeze(api);

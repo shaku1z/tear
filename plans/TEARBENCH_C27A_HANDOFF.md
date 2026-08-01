@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** twenty-eighth C27A foundation slice complete (State Forge now
-captures and transactionally restores a world's cinematic position).
+**Status:** twenty-ninth C27A foundation slice complete (campaign chapter
+bindings now reconstruct across worlds); checkpoint remains open and blocking.
 
 ## Resume protocol (mandatory)
 
@@ -210,21 +210,36 @@ Before coding, read this file, then:
   proves it advances, proves a later invalid-screen commit rolls back to the
   exact prior cinematic payload, and proves a valid restore lands exactly at
   source payload after re-arming input. It also proves active-to-inactive
-  rollback retains the prior binding and rejects a same-id chapter from a
-  different run session before mutation. Pre-cinematic v1 snapshots migrate to
+  rollback retains the prior binding. The then-current cross-session rejection
+  was a temporary safety boundary superseded by slice 29's reconstructible
+  binding. Pre-cinematic v1 snapshots migrate to
   canonical idle, preserving their historical behavior; they cannot recover
   active cinema that the old format never recorded. Fresh/detached campaign
   script construction remains the next slice.
+- The twenty-ninth slice replaced app-closure chapter scripts with a versioned,
+  data-only `tear.campaign-chapter-binding` specification. Candidate worlds
+  rebuild the controller, flow, content-fingerprinted script, and explicit
+  gameplay intent ports before State Forge mutation. Capture now also preserves
+  stage identity/banner, strict lifecycle state, cinematic protection, and the
+  complete opening-phase carry record. The browser journey proves exact
+  cross-session reconstruction, real next-beat continuation, and pre-mutation
+  rejection of malformed bindings/transients. Legacy active chapter snapshots
+  without a binding fail closed; inactive legacy runtime records receive
+  canonical defaults. Detached worlds restore lifecycle and chapter ports, can
+  complete into the prepared wave, and all 12 fixed-tick live trace scenarios
+  now match every authoritative hash. `KNOWN_DIVERGENCES` and its exception
+  branch are gone.
+  Generic non-chapter active scenes remain bound-session only.
 
 ## Latest evidence
 
 All of the following were run from this worktree after the parity-passing slice:
 
-- `pnpm check:c27a:foundation` passed after slice 28: typecheck, lint,
-  architecture gate, 21 test files / 73 tests, standalone test build,
+- `pnpm check:c27a:foundation` passed after slice 29: typecheck, lint,
+  architecture gate, 28 test files / 96 tests, standalone test build,
   `browser-c27a-physical-canonical-input`, and `browser-c27a-live-parity-trace`.
   The trace regenerated all 12 scenarios and the detached comparison passed
-  its 37 tests with the campaign divergence still truthfully open.
+  all 37 tests with no recorded divergence.
 - `pnpm test:browser:bosses` passed after cinematic State Forge restore.
 - `pnpm tearbench ci --files-from artifacts/tearbench/c27a-slice27-files.txt`
   passed its selected 8 test files / 37 tests and Graveyard rerun.
@@ -242,8 +257,8 @@ All of the following were run from this worktree after the parity-passing slice:
 - `pnpm check:c27:foundation` passed: requirements, typecheck, lint,
   architecture, 14 test files / 69 tests, standalone build, and all seven C27
   browser proofs.
-- `pnpm check:c23` passed after slice 28: requirements, typecheck, lint,
-  architecture, 10 test files / 50 tests, standalone build, active-campaign
+- `pnpm check:c23` passed after slice 29: requirements, typecheck, lint,
+  architecture, 13 test files / 62 tests, standalone build, active-campaign
   cinematic restore/rollback plus the original 600-tick live continuation,
   State Forge Studio, and the exit matrix.
 - The final reveal-consistency guard then passed its focused director suite
@@ -253,25 +268,22 @@ All of the following were run from this worktree after the parity-passing slice:
   rerun.
 - `pnpm test` passed: 224 test files / 903 tests.
 - `pnpm requirements:check` and `git diff --check` passed.
-- `src/app/live-game-runtime.ts` measures 696 physical lines.
+- `src/app/live-game-runtime.ts` measures 698 physical lines (including the final line boundary).
 - The standalone build emits the existing non-fatal >500 kB chunk warning.
   It is not a passed bundle-budget/release claim.
 - Full `pnpm check` has not been run for a release claim.
 
 ## Exact next C27A boundary
 
-Eleven of twelve captured scenarios match on every tick. The world owns the
-portable gameplay timeline and State Forge now captures and transactionally
-restores its complete behavior-bearing position in the bound live world.
-Finish closing the campaign divergence by making the scripts a fresh or
-detached world needs constructible without app
-callbacks — the campaign brief's beats close over live systems today, so
-either those callbacks become explicit world ports or the brief's world
-effects move into gameplay beside the timeline. Then continue: comparable
-outward effects, a win outcome, and a wave-boundary run. Every divergence is
-a defect to fix in the composition or a restated rule to delete from the
-harness — never a tolerance to widen, a scenario to shorten, or a field to
-drop from the projection.
+All twelve captured fixed-tick scenarios now match on every tick. The world owns the
+portable gameplay timeline; chapter bindings reconstruct from data through
+explicit gameplay ports; and State Forge transactionally restores their full
+behavior-bearing position across worlds. The next boundary is comparable
+outward-effect streams plus a win outcome and a wave-boundary crossing. Then
+continue extracting the closure-owned run/world construction. Any newly found
+divergence is a defect to fix in the composition or a restated rule to delete
+from the harness — never a tolerance to widen, a scenario to shorten, or a
+field to drop from the projection.
 
 Preserve menu-time lazy construction and the one existing
 `TearSimulationRuntime`/scheduler, and extend the context only where real
@@ -289,8 +301,8 @@ composition with parity evidence.
 - Do not discard unrelated dirty work. In particular,
   `plans/EXTREME_RENDERING_IMPLEMENTATION_PLAN.md` was already untracked and
   is outside this C27A handoff scope.
-- No commit or push was made as part of this pause. Inspect the actual branch
-  and `git status --short` before staging; stage only intentional TearBench
-  work when the user authorizes a commit.
+- Slice 29 is a coherent green commit/push boundary on the active `codex/`
+  branch. Inspect the actual branch and `git status --short` before later
+  staging; stage only intentional TearBench work.
 - Do not claim C27, C27A, replay, headless, learning, or release completion
   from the foundation gates listed above.

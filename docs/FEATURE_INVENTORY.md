@@ -27,12 +27,16 @@ This is the migration checklist for the architectural redesign. A checked featur
   implementations behind its adapter. The combat action path now uses that
   shared collection owner rather than a second collection adapter. Each world
   now also owns exactly one cinematic director used by campaign, combat, and
-  presentation. The dedicated `tear.cinematic.v1` State Forge component
-  captures and transactionally restores an active same-session live script/beat
-  position with input re-armed, with rollback and stale-session rejection
-  browser proof; detached construction of the
-  callback-bound campaign script remains open, so campaign parity is 11 of 12
-  scenarios rather than a completion claim. Real
+  presentation. The dedicated `tear.cinematic.v1` State Forge component and
+  content-fingerprinted data-only chapter binding capture and transactionally
+  restore an active campaign position with input re-armed, including validated
+  cross-session reconstruction and next-beat continuation. Legacy active
+  chapters without a binding fail closed; generic active scenes remain
+  same-session-bound. Detached construction uses explicit gameplay ports, and
+  all 12 fixed-tick scenarios now match without a divergence exception. This
+  is still not a C27A completion claim: render-frame/outward-effect parity,
+  win/wave-boundary coverage, and full production-world extraction remain.
+  Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,
   automatic Foundry operation, complete visible experiences, and end-to-end

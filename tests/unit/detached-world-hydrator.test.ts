@@ -84,6 +84,7 @@ function completeCodecWorld(): TearCodecWorld {
   });
   components.set("tear.run.v1", {
     mode: "campaign",
+    stage: 0,
     tick: 42,
     wave: 3,
     player: ref("player"),

@@ -119,7 +119,7 @@ Named status:
 - **C25:** physical/black-box foundation verified; exit open.
 - **C26:** regression discovery passed `pnpm check:c26` on 2026-07-28.
 - **C27:** recorder/capsule foundation only; checkpoint open.
-- **C27A:** twenty-eight shared-world architecture slices in this tree; blocking and incomplete.
+- **C27A:** twenty-nine shared-world architecture slices in this tree; blocking and incomplete.
 - **C28-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -135,7 +135,7 @@ Current engineering capabilities, with the qualifications above:
 - Physical browser harness foundations and diagnostics; the full C25 exit is pending.
 - C26 regression investigation, minimization, bisect, and graveyard workflows.
 - C27 V3 recording/capsule foundations: manifests, chunks, journals, recovery, budgets, interruption/terminal tests, and browser proof in the tested scope.
-- C27A foundations: DOM-free world context, live adapter, shared entity construction, combat collections owned through `LiveGameHostState`, per-world transient opening/impact records, and detached hydration/runtime.
+- C27A foundations: DOM-free world context, live adapter, shared entity construction, combat collections owned through `LiveGameHostState`, complete per-world transient opening/impact records, detached hydration/runtime, and reconstructible campaign chapter bindings with 12/12 exact fixed-tick parity.
 
 Current `scripts/tearbench.mjs` command families:
 
@@ -174,7 +174,7 @@ Do not claim TearBot automatically learns merely because scripted policies, trai
 
 Read [`TEARBENCH_C27A_HANDOFF.md`](TEARBENCH_C27A_HANDOFF.md) before editing.
 
-Twenty-eight C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, world-owned cinema, versioned cinematic State Forge capture/restore, focused tests, and physical browser diagnostics.
+Twenty-nine C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, complete per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, world-owned cinema, versioned cinematic State Forge capture/restore, data-only campaign binding reconstruction, focused tests, and physical browser diagnostics.
 
 Important files:
 
@@ -193,7 +193,7 @@ Important files:
 
 ### Exact next slice
 
-Eleven of twelve captured parity scenarios match the live authoritative hash on every executed tick; campaign is a recorded open divergence. The timeline is gameplay-owned, one director belongs to each world, and `tear.cinematic.v1` now restores an active live brief exactly and transactionally. Close the divergence by making campaign scripts reconstructible for a fresh/detached world through explicit gameplay ports rather than app closures. Then continue with comparable outward effects, a win outcome, and a wave-boundary run.
+All twelve captured fixed-tick parity scenarios match the live authoritative hash on every executed tick. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding lets State Forge and detached worlds reconstruct and advance an active brief through explicit gameplay ports. Legacy active chapters without that binding fail closed. Continue with comparable outward effects, a win outcome, and a wave-boundary run.
 
 Preserve:
 
@@ -332,14 +332,14 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-All of the following were run from this worktree through C27A slice 28:
+All of the following were run from this worktree through C27A slice 29:
 
 - `pnpm check:c27a:foundation` passed:
   - typecheck, lint, architecture;
-  - 21 test files / 73 tests;
+  - 28 test files / 96 tests;
   - standalone build;
   - physical C27A browser proof and 12-scenario parity capture;
-  - 37 detached parity tests.
+  - 37 detached parity tests with all 12 scenarios exact and no exception.
 - `pnpm check:c27:foundation` passed:
   - requirements, typecheck, lint, architecture;
   - 14 test files / 69 tests;
@@ -347,12 +347,12 @@ All of the following were run from this worktree through C27A slice 28:
 - `pnpm check:c26` passed: 5 test files / 24 tests plus the planted live regression.
 - `pnpm check:c23` passed:
   - requirements, typecheck, lint, architecture;
-  - 10 test files / 50 tests;
+  - 13 test files / 62 tests;
   - build and the State Forge active-cinema restore/studio/exit matrix.
 - `pnpm test` passed: 224 test files / 903 tests.
 - `pnpm requirements:check` and `git diff --check` passed.
 - TearBench changed-file CI passed 15 files / 83 tests plus its Graveyard rerun.
-- `src/app/live-game-runtime.ts` measures 696 physical lines.
+- `src/app/live-game-runtime.ts` measures 698 physical lines including its final line boundary.
 - The production build, browser feature matrix, boss parity, navigation/progression/playground/terminal journeys, and the blade/mirror/combat parity fixtures passed after the composition-root change.
 - Full `pnpm check` has not been run for a release claim.
 - The existing bundle warning above 500 kB is nonfatal; no bundle-performance release claim exists.
@@ -378,12 +378,14 @@ After each slice, record exact commands/results, test counts, browser artifacts,
 ## 13. Working-tree and Git safety
 
 - Current branch: `codex/ghost3-autonomous-completion-plan`.
-- The tree contains substantial uncommitted TearBench/C27/C27A work.
-- No commit or push was made at this pause.
+- Slice 29 is the current coherent green commit/push boundary. After that
+  boundary, the only expected unrelated working-tree item is the rendering
+  plan named below.
 - `plans/EXTREME_RENDERING_IMPLEMENTATION_PLAN.md` is unrelated untracked user work. Never stage, edit, delete, or include it in a TearBench commit.
 - Preserve existing changes; do not use destructive reset/checkout.
 - Before committing, inspect status, diff/stat, and staged diff; stage only related files.
-- The user intends related work to be branched/committed/pushed, but the succeeding agent should verify the desired publication boundary before doing so.
+- Keep later slices on the active branch and publish only after their own
+  canonical gates and documentation are green.
 
 ## 14. Succeeding agent's first-turn checklist
 

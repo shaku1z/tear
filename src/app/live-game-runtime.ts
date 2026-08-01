@@ -32,6 +32,7 @@ import { liveRewardChoiceIds, routeLiveTearBenchAction } from "../tearbench/live
 import { emitLiveTearBenchPhysicalInput } from "../tearbench/browser/live-physical-input";
 import { isCombatPlatform, isDodgeProjectile, isEnemySample, isGameEnemy, isGameFloater, isRitualCue, isWeaponEffect } from "./live-runtime-type-guards";
 import { createLiveStateForgeAdapter } from "./live-state-forge-adapter";
+import { createLiveStateForgeRuntimeBridge } from "./live-state-forge-runtime-bridge";
 import { createBrowserGhostLiveRecorder, listBrowserGhostCapsuleManifests, readBrowserGhostCapsule, readBrowserGhostCapsuleReplay, readBrowserGhostCapsuleReplayAdmission } from "../ghost/live-recorder";
 import { createLiveGhostCausalEvent, ghostLiveBootstrapEventId } from "../ghost/live-causal-events";
 import { createGhostV3BrowserTestOptions } from "./ghost-v3-browser-test-options";
@@ -560,22 +561,23 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   // composition.  Bind their tick source once the shared runtime exists so all
   // live events use the canonical clock rather than input-recorder timing.
   GAMEPLAY_EVENTS.setTickSource(() => simulationRuntime.scheduler.tick);
+  const stateForgeRuntime = createLiveStateForgeRuntimeBridge({
+    captureTransient: () => ({ hitStop: impact.hitStop, shake: impact.shake, timeScale: feel.timeScale, slowmo: impact.slowMotion, zoom: feel.zoom, flash: feel.flash, bannerT: feel.bannerSeconds, dashGhostT: openingCarry.dashGhostTime, landingV: openingCarry.landingVelocity, wasDashing: openingCarry.wasDashing, wasSwinging: openingCarry.wasSwinging, wasOnGround: openingCarry.wasOnGround, worldZoom: feel.worldZoom, worldZoomTarget: feel.worldZoomTarget, throwCd: openingCarry.throwCooldown, rankPopT: feel.rankPopupSeconds, rankPopText: feel.rankPopupText }),
+    restoreTransient: (snapshot) => { transient.assignImpact({ hitStop: Number(snapshot.hitStop), slowMotion: Number(snapshot.slowmo), shake: Number(snapshot.shake) }); transient.assignOpening({ throwCooldown: Number(snapshot.throwCd), dashGhostTime: Number(snapshot.dashGhostT), landingVelocity: Number(snapshot.landingV), wasDashing: Boolean(snapshot.wasDashing), wasSwinging: Boolean(snapshot.wasSwinging), wasOnGround: Boolean(snapshot.wasOnGround) }); feel.timeScale = Number(snapshot.timeScale); feel.zoom = Number(snapshot.zoom); feel.flash = Number(snapshot.flash); feel.bannerSeconds = Number(snapshot.bannerT); feel.worldZoom = Number(snapshot.worldZoom); feel.worldZoomTarget = Number(snapshot.worldZoomTarget); feel.rankPopupSeconds = Number(snapshot.rankPopT); feel.rankPopupText = String(snapshot.rankPopText); },
+    captureLifecycle: RUN_LIFECYCLE.snapshot.bind(RUN_LIFECYCLE), restoreLifecycle: RUN_LIFECYCLE.restore.bind(RUN_LIFECYCLE),
+    captureChapterBinding: story.captureChapterBinding.bind(story), stageChapterBinding: campaignRuntime.stageChapterBinding, installChapterBinding: campaignRuntime.installChapterBinding,
+    captureCinemaProtection: story.protection.bind(story), restoreCinemaProtection: story.applyProtection.bind(story),
+    captureStageBanner: () => ({ name: stageRuntime.name, seconds: stageRuntime.bannerSeconds }), restoreStageBanner: stageRuntime.restoreBanner.bind(stageRuntime), cinema: CINEMA,
+  });
   const liveStateForge = createLiveStateForgeAdapter({
     dependencies, entities: worldEntities, worldServices: worldContext.services, state: hostState, actorId: (entity, prefix) => combatRuntime.id(entity, prefix), bindActorId: (entity, id) => { combatRuntime.bindId(entity, id); },
-    platforms: () => stageRuntime.platforms, replacePlatforms: (values) => { stageRuntime.platforms.splice(0, stageRuntime.platforms.length, ...values); }, slowZones: () => slowZones, walls: () => tempWalls,
+    platforms: () => stageRuntime.platforms, stageIndex: () => stageRuntime.index, restoreStageIndex: (index) => { stageRuntime.restoreIndex(index); }, replacePlatforms: (values) => { stageRuntime.platforms.splice(0, stageRuntime.platforms.length, ...values); }, slowZones: () => slowZones, walls: () => tempWalls,
     screen: () => state, setScreen: (screen) => { if (!isLegacyScreen(screen)) throw new RangeError(`invalid restored screen: ${screen}`); setState(screen); }, focus: () => focus, setFocus: (value) => { focus = value; },
     tick: () => simulation.tick, setTick: (tick) => { simulationRuntime.reset(tick); }, clearInputProjection: () => { liveInputAdapter.clear(); },
     reward: rewardRuntime.snapshot, restoreReward: rewardRuntime.restore, captureGhost: () => GHOST.captureRuntimeState(), restoreGhost: (snapshot) => { GHOST.restoreRuntimeState(snapshot); }, captureIdentityState: () => combatRuntime.captureIdentityState(), restoreIdentityState: (snapshot) => { combatRuntime.restoreIdentityState(snapshot); },
-    runtimeState: () => ({ hitStop: impact.hitStop, shake: impact.shake, timeScale: feel.timeScale, slowmo: impact.slowMotion, zoom: feel.zoom, flash: feel.flash, bannerT: feel.bannerSeconds, dashGhostT: openingCarry.dashGhostTime, worldZoom: feel.worldZoom, worldZoomTarget: feel.worldZoomTarget, throwCd: openingCarry.throwCooldown, rankPopT: feel.rankPopupSeconds, rankPopText: feel.rankPopupText, lifecycle: RUN_LIFECYCLE.snapshot() }), restoreRuntimeState: (snapshot) => { transient.assignImpact({ hitStop: Number(snapshot.hitStop), slowMotion: Number(snapshot.slowmo), shake: Number(snapshot.shake) }); feel.timeScale = Number(snapshot.timeScale); feel.zoom = Number(snapshot.zoom); feel.flash = Number(snapshot.flash); feel.bannerSeconds = Number(snapshot.bannerT); openingCarry.dashGhostTime = Number(snapshot.dashGhostT); feel.worldZoom = Number(snapshot.worldZoom); feel.worldZoomTarget = Number(snapshot.worldZoomTarget); openingCarry.throwCooldown = Number(snapshot.throwCd); feel.rankPopupSeconds = Number(snapshot.rankPopT); feel.rankPopupText = String(snapshot.rankPopText); RUN_LIFECYCLE.restore(snapshot.lifecycle as ReturnType<typeof RUN_LIFECYCLE.snapshot>); CINEMA.restoreState(snapshot.cinema); },
+    runtimeState: stateForgeRuntime.capture, restoreRuntimeState: stateForgeRuntime.restore,
     captureCinema: () => CINEMA.captureState(),
-    validateCinema: (runtime) => {
-      const candidateLifecycle = runtime.lifecycle as { sessionId?: unknown } | undefined;
-      const candidateCinema = runtime.cinema as { active?: unknown } | undefined;
-      if (candidateCinema?.active === true && candidateLifecycle?.sessionId !== RUN_LIFECYCLE.snapshot().sessionId) {
-        throw new RangeError("active cinematic belongs to a different run session");
-      }
-      CINEMA.validateState(runtime.cinema);
-    },
+    validateCinema: stateForgeRuntime.validate,
   });
   const ghostSnapshotRegistry = createDefaultStateCodecRegistry();
   const captureGhostStateSnapshot = (tick: number): void => {

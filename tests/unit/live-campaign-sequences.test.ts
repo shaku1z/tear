@@ -9,6 +9,7 @@ import {
   type CampaignCinematicScript,
 } from "../../src/app/live-campaign-sequences";
 import type { FinaleIntent } from "../../src/gameplay/campaign/finale-controller";
+import type { CinematicDirectorBinding } from "../../src/gameplay/runtime/cinematic-director";
 
 function runtime(): CampaignRuntimeState {
   return new CampaignRuntimeState(
@@ -45,9 +46,24 @@ class ExercisingCinema implements CampaignCinematicChannel {
     script.beats[0]?.onEnter?.(context, director);
     script.onComplete?.(context, director);
   }
+
+  startBinding(binding: CinematicDirectorBinding): void {
+    this.started = true;
+    this.playerModes = binding.script.beats.map((beat) => beat.playerMode);
+    const director = { elapsed: 0, totalElapsed: 0, skipping: false, progress: 0,
+      revealProgress: 1, fullyVisible: true, active: true, id: binding.script.id,
+      beatId: binding.script.beats[0]?.id, brief: false, blocksCombat: true, hideHud: true,
+      playerMode: "locked", skipTo: () => true, requestSkip: () => undefined,
+      complete: () => undefined, cancel: () => undefined, captureState: () => { throw new Error("not used"); },
+      validateState: () => { throw new Error("not used"); }, restoreState: () => undefined };
+    binding.script.onStart?.(binding.context, director);
+    binding.script.beats[0]?.onEnter?.(binding.context, director);
+    binding.script.onComplete?.(binding.context, director);
+  }
 }
 
 class SkippingCinema implements CampaignCinematicChannel {
+  startBinding(): void { throw new Error("chapter binding is not used by this finale fixture"); }
   start<Context>(script: CampaignCinematicScript<Context>, context: Context): void {
     const director = { elapsed: 1, progress: 1, skipTo: () => true };
     script.onStart?.(context, director);

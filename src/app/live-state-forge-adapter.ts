@@ -65,6 +65,8 @@ export interface LiveStateForgeAdapterOptions {
   readonly actorId: (entity: object, prefix: "enemy" | "projectile") => string;
   readonly bindActorId: (entity: object, id: string) => void;
   readonly platforms: () => Platform[];
+  readonly stageIndex: () => number;
+  readonly restoreStageIndex: (index: number) => void;
   readonly replacePlatforms: (platforms: Platform[]) => void;
   readonly slowZones: () => GameSlowZone[];
   readonly walls: () => GameTemporaryWall[];
@@ -86,7 +88,7 @@ export interface LiveStateForgeAdapterOptions {
   readonly restoreRuntimeState: (state: Readonly<Record<string, unknown>>) => void;
   readonly captureCinema: () => unknown;
   /** Validates the candidate's behavior-bearing cinematic binding before commit mutation. */
-  readonly validateCinema: (runtime: Readonly<Record<string, unknown>>) => void;
+  readonly validateCinema: (runtime: Readonly<Record<string, unknown>>, run: GameRun, stageIndex: number) => void;
 }
 
 // Input projection is owned by the live frame lifecycle, not State Forge.
@@ -210,7 +212,7 @@ function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
   }));
   components.set("tear.run.v1", Object.freeze({
     ...(encode(run, identities) as Readonly<Record<string, TearCodecValue>>),
-    mode: run.mode, difficulty: run.diff, stage: 0, wave: run.wave,
+    mode: run.mode, difficulty: run.diff, stage: options.stageIndex(), wave: run.wave,
     tick: options.tick(), score: run.score,
   }));
   components.set("tear.world.v1", Object.freeze({
@@ -292,10 +294,12 @@ export function createLiveStateForgeAdapter(
         issues.push("player health is outside legal bounds");
       }
       if (!Number.isSafeInteger(candidate.tick) || candidate.tick < 0) issues.push("simulation tick is invalid");
+      if (!Number.isSafeInteger(candidate.stageIndex) || candidate.stageIndex < 0 ||
+        candidate.stageIndex >= options.dependencies.STAGES.length) issues.push("campaign stage index is invalid");
       if (candidate.enemies.some((enemy) => !Number.isFinite(enemy.x) || !Number.isFinite(enemy.y))) {
         issues.push("enemy transform is not finite");
       }
-      try { options.validateCinema(candidate.runtime); }
+      try { options.validateCinema(candidate.runtime, candidate.run, candidate.stageIndex); }
       catch (error) { issues.push(error instanceof Error ? error.message : String(error)); }
       return Object.freeze(issues);
     },
@@ -313,6 +317,7 @@ export function createLiveStateForgeAdapter(
       options.state.setFloaters(candidate.floaters);
       options.state.setSlowZones(candidate.slowZones);
       options.state.setTemporaryWalls(candidate.walls);
+      options.restoreStageIndex(candidate.stageIndex);
       options.replacePlatforms(candidate.platforms);
       options.worldServices.random.restore(candidate.rng);
       options.restoreGhost(candidate.ghost);

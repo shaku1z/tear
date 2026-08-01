@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-08-01. This records the first twenty-eight executable migration
+In progress as of 2026-08-01. This records the first twenty-nine executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -495,21 +495,19 @@ of replay, headless execution, or learning portability.
   campaign host rather than creating another timeline. Detached fixtures use
   the gameplay-only director through the same dependency surface. Focused tests
   prove context identity and two-world isolation; `check:c27a:foundation`, the
-  boss browser matrix, and TearBench-selected CI evidence pass. Portable
-  campaign script binding remains open, so campaign is still the one asserted
-  divergence.
+  boss browser matrix, and TearBench-selected CI evidence pass. At that slice
+  campaign script binding remained open, so campaign was still
+  the one asserted divergence; the data-only binding slice below closes it.
 - State Forge now carries that director position in a dedicated,
   schema-validated `tear.cinematic.v1` component instead of generic runtime
   data. Capture includes stable script revision and beat identity plus the
   behavior-bearing timers and reveal/skip state. Restore validates the bound
   script before commit mutation, does not invoke callbacks, re-arms physical
   input, and canonicalizes inactive state. The live browser journey proves
-  exact active `chapter-0` serialized-position restore with input re-armed,
-  active-to-idle rollback safety, and fail-closed rejection of a same-id scene
-  from another run session. Pre-cinematic v1 snapshots migrate to canonical
-  idle. This is same-bound-world restoration evidence; detached campaign
-  parity remains open until script/context reconstruction loses its app
-  closures.
+  exact active `chapter-0` serialized-position restore with input re-armed and
+  active-to-idle rollback safety. Pre-cinematic v1 snapshots migrate to
+  canonical idle. This established position serialization; the next slice
+  supplied portable script/context reconstruction.
 
   The post-slice gate passed 21 C27A files / 73 tests, regenerated the 12 live
   parity traces, and passed the 37-test detached comparison. `check:c23` also
@@ -518,13 +516,29 @@ of replay, headless execution, or learning portability.
   C27A exit or release claim.
   TearBench's changed-file selector also passed 15 files / 83 tests and its
   Graveyard rerun, and the built boss parity journey passed.
+- Campaign chapter cinema is now reconstructible from a versioned data-only
+  binding. The binding rebuilds its controller, flow, content-fingerprinted
+  script, and explicit intent ports against the candidate stage before commit.
+  State Forge also preserves stage identity/banner, strict lifecycle state,
+  cinematic protection, and the complete opening-phase carry record. A fresh
+  campaign session can restore and advance the captured chapter exactly;
+  malformed bindings, lifecycle, and transient values fail during validation.
+  Legacy active chapter snapshots without the binding fail closed, while
+  inactive legacy runtime records receive canonical defaults. Generic active
+  non-chapter scenes remain bound-session only.
+- The detached host restores that lifecycle and the real authoritative chapter
+  intents, including prepared-wave activation. The regenerated 12-scenario
+  corpus matches every live authoritative hash, all 37 parity tests pass, and
+  the `KNOWN_DIVERGENCES` map and exception branch have been deleted.
+- After this slice, `check:c27a:foundation` passed 28 files / 96 tests plus the
+  physical browser path, fresh 12-scenario capture, and 37 parity tests.
+  `check:c23` passed 13 files / 62 tests and every State Forge browser journey.
+  These remain foundation results, not C27A exit or release certification.
 
 ## Remaining C27A work
 
-1. Make active campaign scripts and their context reconstructible from a
-   fresh or detached candidate world without app-closure callbacks, bind them
-   silently to the world-owned director, and remove the campaign entry from
-   `KNOWN_DIVERGENCES` only after the full parity trace matches.
+1. Compare outward effect streams rather than merely recording them, and add
+   a win outcome plus a wave-boundary crossing to the live↔detached matrix.
 2. Move the current live adapter's configuration, RNG, effects, clocks,
    Mirror, and boss feedback implementations inward behind the established
    world context, then extract the closure-owned

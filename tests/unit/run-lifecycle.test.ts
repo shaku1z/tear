@@ -5,6 +5,7 @@ import {
   RUN_PHASES,
   RunLifecycleController,
   transitionRunLifecycle,
+  validateRunLifecycleSnapshot,
   type RunLifecycleEvent,
   type RunLifecycleSnapshot,
   type RunPhase,
@@ -84,5 +85,15 @@ describe("run lifecycle transition contract", () => {
     lifecycle.activateWave();
     lifecycle.beginFinale();
     expect(lifecycle.phase).toBe("finale");
+  });
+
+  it("rejects serialized lifecycle states that cannot legally continue", () => {
+    expect(() => { validateRunLifecycleSnapshot({ ...snapshotAt("wave-prepared"), sessionId: null }); })
+      .toThrow(/inconsistent/);
+    expect(() => { validateRunLifecycleSnapshot({ ...snapshotAt("wave-active"), activationDeferred: true }); })
+      .toThrow(/inconsistent/);
+    expect(() => { validateRunLifecycleSnapshot({ ...snapshotAt("reward-pending"), reward: null }); })
+      .toThrow(/inconsistent/);
+    expect(validateRunLifecycleSnapshot(snapshotAt("wave-prepared"))).toEqual(snapshotAt("wave-prepared"));
   });
 });

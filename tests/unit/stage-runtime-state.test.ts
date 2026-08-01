@@ -9,4 +9,15 @@ describe("stage runtime state", () => {
     state.resetBanner();
     expect(state.bannerSeconds).toBe(0);
   });
+
+  it("restores stage identity and banner without replacing captured platforms", () => {
+    const state = new StageRuntimeState((index: number) => ({ index }), (index: number) => [`platform-${String(index)}`]);
+    state.platforms = ["captured-platform"];
+    state.restoreIndex(2);
+    state.restoreBanner("The Verge", 1.25);
+
+    expect(state).toMatchObject({ index: 2, current: { index: 2 }, platforms: ["captured-platform"],
+      name: "The Verge", bannerSeconds: 1.25 });
+    expect(() => { state.restoreBanner("bad", -1); }).toThrow(/seconds are invalid/);
+  });
 });

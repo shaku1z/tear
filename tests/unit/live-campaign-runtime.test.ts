@@ -21,7 +21,7 @@ describe("live campaign runtime", () => {
     const activatePreparedWave = vi.fn();
     const chapterStates: string[] = [];
     const runtime = createLiveCampaignRuntime({
-      runtime: story(), cinema: { start: vi.fn() }, run: () => run,
+      runtime: story(), cinema: { start: vi.fn(), startBinding: vi.fn() }, run: () => run,
       player: () => ({ x: 0, y: 0, vx: 0, vy: 0, onGround: true }), blade: () => ({}),
       stageAt: () => ({ name: "Ash", blurb: "Descend", accent: "#f00", dark: false,
         chapter: { number: 1, symbol: "I", title: "Embers", intro: "Enter", pages: [] } }),

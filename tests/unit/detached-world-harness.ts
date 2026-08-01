@@ -17,7 +17,7 @@ import { cosmeticRandom } from "../../src/presentation/cosmetic-random";
 import { PRESETS, applyPreset, rollAffixes } from "../../src/gameplay/affixes";
 import { createLiveContentRuntime } from "../../src/gameplay/run/live-content-runtime";
 import { createLiveWaveHost } from "../../src/app/live-wave-host";
-import { STAGES } from "../../src/gameplay/stages";
+import { STAGES, stageAt } from "../../src/gameplay/stages";
 import { applyVariant, rollVariant } from "../../src/gameplay/variants";
 import { planBossPlacement } from "../../src/gameplay/run/boss-placement";
 import { beginBossEncounter } from "../../src/gameplay/run/boss-encounter";
@@ -26,9 +26,14 @@ import { applyWeapon } from "../../src/gameplay/weapons";
 import { newMods } from "../../src/gameplay/upgrades";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
 import { CinematicTimeline } from "../../src/gameplay/runtime/cinematic-director";
+import { parseCampaignChapterBindingSpec, stageCampaignChapterBinding } from
+  "../../src/gameplay/campaign/chapter-cinematic-binding";
+import type { ChapterIntent } from "../../src/gameplay/campaign/chapter-controller";
+import { stepCinematicPlayer } from "../../src/gameplay/campaign/cinematic-player-runtime";
 import { createTearWorldTransientState } from "../../src/gameplay/runtime/tear-world-transient-state";
 import { createParticleSystem } from "../../src/presentation/particles";
 import { createRunRandom } from "../../src/simulation/run-random";
+import type { RunLifecycleSnapshot } from "../../src/gameplay/run/lifecycle";
 
 type Options = LiveWorldSimulationFactoryOptions;
 
@@ -125,11 +130,45 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
   });
   // Platforms are mutable world state: a boss encounter swaps in its arena,
   // and both the wave runtime and the combat phases must see the same array.
-  const stage: { platforms: unknown[] } = { platforms: [...DETACHED_PLATFORMS] };
+  const stage: { index: number; platforms: unknown[] } = { index: 0, platforms: [...DETACHED_PLATFORMS] };
   return { world, clock, effects, random, factories, transient, input, run, stage };
 }
 
 export type DetachedWorld = ReturnType<typeof createDetachedWorld>;
+
+/** Rebuilds an active chapter from data only; exact Class-A ticks do not advance RAF cinema time. */
+export function restoreDetachedChapterBinding(
+  detached: DetachedWorld,
+  runtime: Readonly<Record<string, unknown>>,
+): void {
+  detached.world.lifecycle.restore(runtime.lifecycle as RunLifecycleSnapshot);
+  const rawSpec = runtime.chapterBinding;
+  if (rawSpec === null || rawSpec === undefined) {
+    detached.world.context.cinema.restoreState(runtime.cinema);
+    return;
+  }
+  const spec = parseCampaignChapterBindingSpec(rawSpec);
+  const stage = stageAt(spec.stageIndex);
+  const dispatch = (intents: readonly ChapterIntent[]): void => {
+    for (const intent of intents) {
+      if (intent.type === "chapter-state") {
+        const run = detached.world.state.run() as never as { chapterState: string };
+        run.chapterState = intent.state;
+      } else if (intent.type === "clear-projectiles") {
+        detached.world.state.setProjectiles([]);
+      } else if (intent.type === "activate-prepared-wave" && detached.world.lifecycle.hasPreparedWave) {
+        detached.world.lifecycle.activateWave();
+      }
+    }
+  };
+  const staged = stageCampaignChapterBinding(spec, stage, {
+    dispatch,
+    preparedWave: () => detached.world.lifecycle.hasPreparedWave,
+    activationDeferred: () => detached.world.lifecycle.activationDeferred,
+    clear: () => undefined,
+  });
+  detached.world.context.cinema.restoreState(runtime.cinema, staged.binding);
+}
 
 export interface DetachedCombatPhaseOptions {
   /** Defaults to the harness arena; hydrated worlds pass their own platforms. */
@@ -182,10 +221,18 @@ export function createDetachedCombatPhases(
     get enemies() { return world.state.enemies() as never; },
     get projectiles() { return world.state.projectiles(); },
     get platforms() { return platforms(); }, state: transient.opening, width: CONFIG.view.w,
-    blocking: false, playerMode: "play", protection: transient.protection,
-    lowGraphics: false, transformationBlocked: false,
+    get blocking() { return world.context.cinema.active && world.context.cinema.blocksCombat; },
+    get playerMode() { return world.context.cinema.playerMode; }, protection: transient.protection,
+    lowGraphics: false,
+    get transformationBlocked() { return world.context.cinema.active && world.context.cinema.blocksCombat; },
     overrunMovementMultiplier: () => 1, runDamageMultiplier: () => 1,
-    stepCinematic: () => undefined, flushClosingInput: note("flushClosingInput"),
+    stepCinematic: (dt: number) => {
+      stepCinematicPlayer({ dt, mode: world.context.cinema.playerMode, player: player(), blade: blade(),
+        platforms: platforms(), gravity: CONFIG.world.gravity, maxFall: CONFIG.player.maxFall,
+        descentLiftVelocity: CONFIG.source.descentLiftV, viewportWidth: CONFIG.view.w,
+        finale: null, lerp, clamp, onFinaleLanded: () => undefined,
+        onFinaleBladeCut: () => undefined, onLanding: () => undefined });
+    }, flushClosingInput: note("flushClosingInput"),
     updateWeaponAbilities: () => undefined, updateWorldHazards: () => undefined,
     syncVoidSupport: () => undefined, activateThrowSecondary: note("activateThrowSecondary"),
     linkBroken: (reason: string) => { outward.push(`linkBroken:${reason}`); },
@@ -352,7 +399,7 @@ export function createDetachedWaveRuntime(detached: DetachedWorld, platforms?: r
     spawning: {
       random: random.streams.stream("spawn"),
       run: () => run() as never,
-      campaignStage: () => 0,
+      campaignStage: () => stage.index,
       contentWave: () => 0,
       groundSpawn: () => ({ x: 0, y: 0 }),
       applyPreset: (enemy: unknown, preset: unknown) => { applyPreset(enemy as never, preset as never); },
@@ -372,7 +419,7 @@ export function createDetachedWaveRuntime(detached: DetachedWorld, platforms?: r
     presets: PRESETS,
     random: random.streams.stream("world"),
     modeDefinition: (mode: string) => CONFIG.modes.find((candidate) => candidate.id === mode) ?? {},
-    currentStage: () => ({ index: 0, accent: "#ffffff" }),
+    currentStage: () => ({ index: stage.index, accent: stageAt(stage.index).accent }),
     stageHasChapter: () => true,
     chapterFlowActive: () => false,
     lifecycle: {

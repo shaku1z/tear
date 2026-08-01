@@ -71,7 +71,7 @@ function codecWorld(tick = 0): TearCodecWorld {
   const components = new Map<TearCodecId, TearCodecValue>();
   components.set("tear.player.v1", { id: "player", x: 0, y: 0, hp: 100, maxHp: 100 });
   components.set("tear.blade.v1", { id: "blade", ownerId: "player", weaponId: "sword", x: 0, y: 0 });
-  components.set("tear.run.v1", { mode: "endless", tick, mods: {}, player: { $ref: "player" }, blade: { $ref: "blade" } });
+  components.set("tear.run.v1", { mode: "endless", stage: 0, tick, mods: {}, player: { $ref: "player" }, blade: { $ref: "blade" } });
   components.set("tear.world.v1", { clock: tick, floaters: [], ghost: { recording: null }, identityState: {}, runtime: {} });
   components.set("tear.enemy.v1", []);
   components.set("tear.boss.v1", []);

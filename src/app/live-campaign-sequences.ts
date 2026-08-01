@@ -1,7 +1,5 @@
 import type {
-  CampaignChapterSequence,
   CampaignStage,
-  ChapterBeat,
   ChapterIntent,
   ChapterPage,
 } from "../gameplay/campaign/chapter-controller";
@@ -13,6 +11,9 @@ import type {
   FinaleState,
 } from "../gameplay/campaign/finale-controller";
 import type { CampaignRuntimeState } from "./campaign-runtime-state";
+import { createCampaignChapterBindingSpec, stageCampaignChapterBinding,
+  type CampaignChapterBindingPort } from "../gameplay/campaign/chapter-cinematic-binding";
+import type { CinematicDirectorBinding } from "../gameplay/runtime/cinematic-director";
 
 export interface CampaignCinematicDirector {
   readonly elapsed: number;
@@ -40,6 +41,7 @@ export interface CampaignCinematicScript<Context> {
 
 export interface CampaignCinematicChannel {
   start<Context>(script: CampaignCinematicScript<Context>, context: Context): void;
+  startBinding(binding: CinematicDirectorBinding): void;
 }
 
 export interface ChapterSequenceLaunchOptions {
@@ -60,40 +62,34 @@ export interface ChapterSequenceLaunchOptions {
 
 /** Launches or deterministically skips one chapter without leaking sequence policy into the game loop. */
 export function launchCampaignChapter(options: ChapterSequenceLaunchOptions): void {
-  const controller = options.runtime.chapterController;
-  controller.prologueShown = options.prologueShown;
-  const result = controller.begin(options.stageIndex, options.stage, options.priorOutro, options.brief);
-  options.rememberPrologue(controller.prologueShown);
-  options.runtime.chapterFlow = result.flow;
+  const port: CampaignChapterBindingPort = {
+    dispatch: options.dispatch,
+    preparedWave: options.preparedWave,
+    activationDeferred: options.activationDeferred,
+    clear: () => { options.runtime.clearChapterBinding(); },
+  };
+  const staged = stageCampaignChapterBinding(createCampaignChapterBindingSpec({
+    stageIndex: options.stageIndex,
+    priorOutro: options.priorOutro,
+    brief: options.brief,
+    prologueShownBefore: options.prologueShown,
+    timing: options.runtime.chapterController.timing,
+  }), options.stage, port);
+  options.runtime.installChapterBinding(staged);
+  options.rememberPrologue(staged.prologueShownAfter);
   options.clearBossBeat();
-  options.dispatch(result.intents);
+  options.dispatch(staged.initialIntents);
 
   const complete = (): void => {
-    options.dispatch(controller.complete(options.preparedWave(), options.activationDeferred()));
-    options.runtime.chapterFlow = null;
+    options.dispatch(staged.controller.complete(options.preparedWave(), options.activationDeferred()));
+    options.runtime.clearChapterBinding();
   };
   if (!options.play) {
-    options.dispatch(controller.onStart());
+    options.dispatch(staged.controller.onStart());
     complete();
     return;
   }
-
-  const beats: readonly (CampaignCinematicBeat<typeof result.flow> & ChapterBeat)[] = result.sequence.beats.map((beat) => ({
-    ...beat,
-    onEnter() { options.dispatch(controller.enterBeat(beat.id)); },
-  }));
-  const script: CampaignCinematicScript<typeof result.flow> & CampaignChapterSequence = {
-    ...result.sequence,
-    beats,
-    onStart() { options.dispatch(controller.onStart()); },
-    onSkip(_context, director) { director.skipTo("reveal"); },
-    onComplete() { complete(); },
-    onCancel() {
-      options.dispatch(controller.cancel(options.preparedWave()));
-      options.runtime.chapterFlow = null;
-    },
-  };
-  options.cinema.start(script, result.flow);
+  options.cinema.startBinding(staged.binding);
 }
 
 export interface FinaleSequenceLaunchOptions {

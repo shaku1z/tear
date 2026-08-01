@@ -70,6 +70,51 @@ export function initialRunLifecycleSnapshot(): RunLifecycleSnapshot {
   });
 }
 
+function lifecycleRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Strictly validates a serialized lifecycle before it can poison a restored world. */
+export function validateRunLifecycleSnapshot(value: unknown): RunLifecycleSnapshot {
+  if (!lifecycleRecord(value)) throw new TypeError("run lifecycle snapshot must be an object");
+  if (typeof value.phase !== "string" || !RUN_PHASES.some((phase) => phase === value.phase)) {
+    throw new TypeError("run lifecycle phase is invalid");
+  }
+  const phase = value.phase as RunPhase;
+  if (value.sessionId !== null && (typeof value.sessionId !== "string" || value.sessionId.length === 0)) {
+    throw new TypeError("run lifecycle sessionId is invalid");
+  }
+  if (value.wave !== null && (!Number.isSafeInteger(value.wave) || Number(value.wave) < 1)) {
+    throw new TypeError("run lifecycle wave is invalid");
+  }
+  if (typeof value.bossWave !== "boolean" || typeof value.activationDeferred !== "boolean") {
+    throw new TypeError("run lifecycle flags are invalid");
+  }
+  if (value.reward !== null && value.reward !== "draft" && value.reward !== "boss") {
+    throw new TypeError("run lifecycle reward is invalid");
+  }
+  if (value.outcome !== null && value.outcome !== "defeat" && value.outcome !== "victory" && value.outcome !== "quit") {
+    throw new TypeError("run lifecycle outcome is invalid");
+  }
+  if (!Number.isSafeInteger(value.revision) || Number(value.revision) < 0) {
+    throw new TypeError("run lifecycle revision is invalid");
+  }
+  const activeSession = typeof value.sessionId === "string";
+  const wavePhase = phase === "wave-prepared" || phase === "wave-active" || phase === "wave-cleared" ||
+    phase === "reward-pending";
+  if ((phase === "idle") !== !activeSession || (wavePhase && value.wave === null) ||
+    (phase !== "wave-prepared" && value.activationDeferred) ||
+    ((phase === "reward-pending") !== (value.reward !== null)) ||
+    ((phase === "terminated") !== (value.outcome !== null))) {
+    throw new TypeError("run lifecycle fields are inconsistent with its phase");
+  }
+  const wave = value.wave === null ? null : Number(value.wave);
+  return Object.freeze({ phase, sessionId: value.sessionId, wave,
+    bossWave: value.bossWave, activationDeferred: value.activationDeferred,
+    reward: value.reward, outcome: value.outcome,
+    revision: Number(value.revision) });
+}
+
 function assertPositiveWave(wave: number): void {
   if (!Number.isSafeInteger(wave) || wave < 1) throw new RangeError("wave must be a positive integer");
 }
@@ -132,12 +177,7 @@ export class RunLifecycleController {
 
   snapshot(): RunLifecycleSnapshot { return this.#snapshot; }
   restore(snapshot: RunLifecycleSnapshot): void {
-    if (!RUN_PHASES.includes(snapshot.phase)) throw new TypeError(`invalid restored lifecycle phase ${snapshot.phase}`);
-    if (!Number.isSafeInteger(snapshot.revision) || snapshot.revision < 0) {
-      throw new RangeError("restored lifecycle revision must be non-negative");
-    }
-    if (snapshot.wave !== null) assertPositiveWave(snapshot.wave);
-    this.#snapshot = Object.freeze(structuredClone(snapshot));
+    this.#snapshot = validateRunLifecycleSnapshot(snapshot);
   }
   get phase(): RunPhase { return this.#snapshot.phase; }
   get isWaveActive(): boolean { return this.#snapshot.phase === "wave-active"; }

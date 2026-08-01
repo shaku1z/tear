@@ -10,7 +10,8 @@ import { applyTearCodecConfiguration, hydrateTearCodecWorld, type TearCodecValue
 import { CONFIG } from "../../src/config/game-config";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { createConfigRestorer } from "../../src/app/runtime-initialization";
-import { createDetachedCombatPhases, createDetachedWaveRuntime, createDetachedWorld } from "./detached-world-harness";
+import { createDetachedCombatPhases, createDetachedWaveRuntime, createDetachedWorld,
+  restoreDetachedChapterBinding } from "./detached-world-harness";
 
 const ARTIFACT_DIR = resolve("artifacts/tearbench/c27a");
 
@@ -77,6 +78,8 @@ function replayDetached(trace: LiveTrace) {
   stagedBlade.model = weapon.model;
   const rng = trace.origin.state["tear.rng.v1"];
   if (rng !== undefined) world.context.services.random.restore(rng as never);
+  detached.stage.index = staged.stageIndex;
+  restoreDetachedChapterBinding(detached, staged.runtime);
 
   const platforms = staged.platforms.length > 0 ? staged.platforms : undefined;
   const waves = createDetachedWaveRuntime(detached, platforms);
@@ -119,21 +122,6 @@ function replayDetached(trace: LiveTrace) {
   return { detached, hashes, states, outward, staged };
 }
 
-/**
- * Scenarios whose divergence is a known, named, unfixed defect rather than a
- * passing case. Each entry must state the cause. The suite asserts these still
- * diverge, so closing one forces its entry to be removed rather than rotting.
- */
-const KNOWN_DIVERGENCES: ReadonlyMap<string, string> = new Map([
-  ["c27a.live-parity-trace.campaign",
-    "campaign opens on a chapter brief whose cinematic blocks combat. The " +
-    "timeline is now portable gameplay (gameplay/runtime/cinematic-director), " +
-    "the world owns a director and State Forge captures its position, but " +
-    "campaign scripts still carry app callbacks a detached " +
-    "world cannot reconstruct, so the detached run advances while the live run " +
-    "is still held"],
-]);
-
 const traces = readTraces();
 
 describe.skipIf(traces.length === 0)("detached world against the live trace", () => {
@@ -142,10 +130,6 @@ describe.skipIf(traces.length === 0)("detached world against the live trace", ()
     expect(traces.length).toBeGreaterThanOrEqual(4);
     // A terminal run is the only scenario that exercises death resolution.
     expect(traces.some((entry) => entry.terminated === true)).toBe(true);
-    // Every recorded divergence must name a scenario that was actually captured.
-    for (const id of KNOWN_DIVERGENCES.keys()) {
-      expect(traces.some((entry) => entry.scenario.id === id)).toBe(true);
-    }
     expect(new Set(traces.map((entry) => entry.scenario.seed)).size).toBe(traces.length);
   });
 
@@ -159,6 +143,10 @@ describe.skipIf(traces.length === 0)("detached world against the live trace", ()
       expect(staged.player).toBeTruthy();
       expect(staged.blade).toBeTruthy();
       expect(detached.world.state.run()).not.toBeNull();
+      expect(detached.world.context.cinema.captureState()).toEqual(staged.runtime.cinema);
+      if (live.scenario.start.mode === "campaign") {
+        expect(detached.world.context.cinema).toMatchObject({ active: true, id: "chapter-0", blocksCombat: true });
+      }
       // Whatever the live run had spawned by the origin tick must be rebuilt,
       // and the replay may then spawn more through the production wave runtime.
       expect(detached.world.state.enemies().length).toBeGreaterThanOrEqual(staged.enemies.length);
@@ -173,12 +161,7 @@ describe.skipIf(traces.length === 0)("detached world against the live trace", ()
       expect(first.hashes).toHaveLength(live.hashes.length);
     });
 
-    const known = KNOWN_DIVERGENCES.get(live.scenario.id);
-    const title = known === undefined
-      ? `matches the live authoritative hash on every tick (${label})`
-      : `still diverges from the live trace for a recorded reason (${label})`;
-
-    it(title, () => {
+    it(`matches the live authoritative hash on every tick (${label})`, () => {
       const { hashes, states, detached } = replayDetached(live);
       let matched = 0;
       for (const [index, entry] of hashes.entries()) {
@@ -209,31 +192,15 @@ describe.skipIf(traces.length === 0)("detached world against the live trace", ()
       expect(hashes).toHaveLength(live.hashes.length);
       expect(hashes[0]?.tick).toBe(live.hashes[0]?.tick);
 
-      if (known !== undefined) {
-        const cinemaState = live.origin.state["tear.cinematic.v1"] as {
-          active?: boolean; scriptId?: string | null; beatId?: string | null;
-        } | undefined;
-        expect(cinemaState).toMatchObject({
-          active: true,
-          scriptId: "chapter-0",
-        });
-        expect(cinemaState?.beatId).toBeTruthy();
-        // Recorded defect, not an accepted tolerance: when it is fixed this
-        // assertion fails and the KNOWN_DIVERGENCES entry must be removed.
-        expect(known.length).toBeGreaterThan(0);
-        expect(matched).toBeLessThan(live.hashes.length);
-        return;
-      }
-
       // The whole sequence, not a prefix: live and detached must agree on every
       // authoritative state hash for this scenario.
       expect(hashes.map((entry) => entry.canonical)).toEqual(live.hashes.map((entry) => entry.canonical));
       expect(matched).toBe(live.hashes.length);
 
-      // Closed divergence: the run clock is accumulated by finalizeCombatTick
-      // inside the collision phase, so once the detached world runs BOTH phases
-      // its run time matches the live host exactly, to the last float bit.
-      expect(liveRun?.runTime).toBeGreaterThan(0);
+      // The run clock is accumulated by finalizeCombatTick inside the collision
+      // phase. A blocking chapter correctly leaves it at zero; every other
+      // trace advances it. In both cases the exact live value is authoritative.
+      expect(liveRun?.runTime).toBeTypeOf("number");
       expect(detachedRunState.runTime).toBe(liveRun?.runTime);
 
       // Closed divergence: with the captured configuration restored and the
