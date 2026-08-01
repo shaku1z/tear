@@ -6,6 +6,7 @@ import { createAchievements } from "../gameplay/progression/achievements";
 import { createDailyChallenges, localCalendarClock } from "../gameplay/progression/challenges";
 import { TearGameplayEventBus } from "../gameplay/runtime/gameplay-events";
 import { createTearWorldClock } from "../gameplay/runtime/tear-world-clock";
+import { createTearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
 import { createMetaProgression, type ProgressionApplyContext } from "../gameplay/progression/meta";
 import { STAGES, stageAt, stagePlatforms } from "../gameplay/stages";
 import {
@@ -75,24 +76,29 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   // module singleton, so a second world cannot inherit live stream cursors.
   const CLOCK = createTearWorldClock();
   const FX = createParticleSystem();
+  // Tuning is mutable during a run (weapon, difficulty, upgrades), so every
+  // composition gets its own stable configuration record before any entity
+  // constructor or input adapter captures it.
+  const worldConfiguration = createTearWorldConfiguration(CONFIG);
+  const worldConfig = worldConfiguration.value;
   installBackdropClock(CLOCK);
   const { streams: GAME_RANDOM_STREAMS, service: GAME_RANDOM } = createRunRandom();
   const { Input, PAD } = createLegacyInputCompatibility(
-    { config: CONFIG, safeArea: SAFE, overscan: OVERSCAN, window, document, navigator, performance },
+    { config: worldConfig, safeArea: SAFE, overscan: OVERSCAN, window, document, navigator, performance },
     { createInput: createLegacyInput, createGamepad: createLegacyGamepad },
   );
-  const UI = createUi({ CLOCK, CONFIG, Input, OVERSCAN, clamp,
+  const UI = createUi({ CLOCK, CONFIG: worldConfig, Input, OVERSCAN, clamp,
     controllerGlyph: (buttonIndex) => PAD.glyph(buttonIndex) });
   // One world's entity constructors. The factory takes the mutable world
   // services explicitly, so a second world can be built without a second
   // composition root; the live application still builds exactly one.
   const presentation = createLiveWorldSimulationPresentationAdapter({
     clock: CLOCK, effects: FX, ui: UI,
-    configuration: { accessibility: A11Y, config: CONFIG, graphics: GFX, theme: THEME },
+    configuration: { accessibility: A11Y, config: worldConfig, graphics: GFX, theme: THEME },
     geometry: { clamp, len, lerp }, cosmeticRandom,
   });
   const { Blade, Player, Projectile, enemyTypes, mirrorTypes } = createTearWorldSimulationFactories({
-    clock: CLOCK, config: CONFIG, graphics: GFX, effects: FX, sound: SFX, input: Input,
+    clock: CLOCK, config: worldConfig, graphics: GFX, effects: FX, sound: SFX, input: Input,
     random: { enemyAi: GAME_RANDOM_STREAMS.stream("enemy-ai"), boss: GAME_RANDOM_STREAMS.stream("boss") },
     presentation, geometry: { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist },
     cosmeticRandom, getWeapon,
@@ -104,7 +110,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     drawBossTransformationWorld, weaponCapsuleIntersectsSegment,
   } = enemyTypes;
   const { Mirror, MirrorHost, ReflectionEnemy } = mirrorTypes;
-  const Attract = createAttract({ Backdrop, Blade, CONFIG, FX, GFX, OVERSCAN, Player, STAGES, THEME, clamp });
+  const Attract = createAttract({ Backdrop, Blade, CONFIG: worldConfig, FX, GFX, OVERSCAN, Player, STAGES, THEME, clamp });
   const platform = createLegacyPlatformCompatibility({
     target,
     ...(sdk === undefined ? {} : { sdk }),
@@ -146,7 +152,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     getMeta: () => META,
   });
   const { META, SHOP } = createMetaProgression<UpgradeDefinition, UpgradeApplyContext & ProgressionApplyContext>({
-    store: CG.store, config: CONFIG, cloud: Cloud, random: GAME_RANDOM_STREAMS.stream("draft"), upgrades: UPGRADES,
+    store: CG.store, config: worldConfig, cloud: Cloud, random: GAME_RANDOM_STREAMS.stream("draft"), upgrades: UPGRADES,
     applyUpgrade: (upgrade, context) => { applyUpgrade(upgrade, context); },
   });
   const ACH = createAchievements({ meta: META, profile: PROFILE, audio: SFX, shop: SHOP, clamp });
@@ -156,7 +162,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
 
   const gameRuntimeDependencies = {
     A11Y, ACH, AFFIXES, APP, Aldric, Armored, Attract, BOSSFX, Backdrop, Blade, Bomber, Boss,
-    CG, CLOCK, CONFIG, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, DAILY, DIAG, Echo,
+    CG, CLOCK, CONFIG: worldConfig, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, DAILY, DIAG, Echo,
     FX, FirebaseProvider, Flyer, GAMEPLAY_EVENTS, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
     MirrorHost, OVERSCAN, PAD, PRESETS, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
     Ranged, ReflectionEnemy, SAFE, SFX, SHOP, STAGES, Source, Support, THEME, UI, UPGRADES,
@@ -166,7 +172,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     newMods, nextTierDesc, rollAffixes, rollUpgrades, rollVariant, segCircle,
     segPointDist, stageAt, stagePlatforms, tierUp, weaponCapsuleIntersectsSegment,
   } satisfies GameRuntimeDependencies;
-  startLiveGame(gameRuntimeDependencies);
+  startLiveGame(gameRuntimeDependencies, worldConfiguration);
 
   if (tearTestMode) {
     Object.defineProperty(window, "__TEAR_PLATFORM_SERVICES__", {
@@ -210,7 +216,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
         const canvas = document.querySelector<HTMLCanvasElement>("#game");
         const rect = canvas?.getBoundingClientRect();
         return {
-          logical: { width: CONFIG.view.w, height: CONFIG.view.h },
+          logical: { width: worldConfig.view.w, height: worldConfig.view.h },
           css: { width: rect?.width ?? 0, height: rect?.height ?? 0 },
           backing: { width: canvas?.width ?? 0, height: canvas?.height ?? 0 },
           overscan: { x: OVERSCAN.x, y: OVERSCAN.y },

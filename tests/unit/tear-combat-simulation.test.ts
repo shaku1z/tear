@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { CONFIG } from "../../src/config/game-config";
 import type { CombatEntityRuntimeHooks } from "../../src/gameplay/combat/combat-entity-runtime";
 import type { LiveCollisionPhaseHost } from "../../src/gameplay/combat/live-collision-phase";
 import type { LiveKillHost } from "../../src/gameplay/combat/live-kill-runtime";
@@ -14,6 +15,7 @@ describe("Tear combat simulation", () => {
     const events = new TearGameplayEventBus();
     events.subscribe((event) => { observed.push(event); });
     const opening = {
+      config: CONFIG,
       player: { cinematicProtected: false },
       blade: { state: "held" },
       run: {},

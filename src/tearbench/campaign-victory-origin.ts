@@ -1,7 +1,7 @@
 import { stableVerificationHash } from "../replay/hash";
 import { RunLifecycleController } from "../gameplay/run/lifecycle";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../gameplay/runtime/cinematic-director";
-import { stageAt, stagePlatforms } from "../gameplay/stages";
+import { stageAt } from "../gameplay/stages";
 import { UPGRADES } from "../gameplay/upgrades";
 import type { TearSnapshotV1 } from "./contracts";
 import {
@@ -184,6 +184,7 @@ function portableUpgradeChoice(id: string): Readonly<Record<string, unknown>> {
 export function createCampaignWave49RewardFrontier(
   sourceSnapshot: TearSnapshotV1,
   certificate: CampaignVictoryOriginCertificate,
+  platformsForStage: (index: number) => readonly unknown[],
 ): TearSnapshotV1 {
   certifyFrontierInput(certificate);
   if (stableVerificationHash(sourceSnapshot.state) !== sourceSnapshot.hashes.exact) {
@@ -274,7 +275,7 @@ export function createCampaignWave49RewardFrontier(
   (forged.state as MutableRecord)["tear.enemy.v1"] = Object.freeze([]);
   (forged.state as MutableRecord)["tear.boss.v1"] = Object.freeze([]);
   (forged.state as MutableRecord)["tear.projectile.v1"] = Object.freeze([]);
-  (forged.state as MutableRecord)["tear.platform.v1"] = Object.freeze(stagePlatforms(4));
+  (forged.state as MutableRecord)["tear.platform.v1"] = Object.freeze(platformsForStage(4));
   (forged.state as MutableRecord)["tear.cinematic.v1"] = INACTIVE_CINEMATIC_DIRECTOR_STATE_V1;
   run.stateForgeVictoryOrigin = Object.freeze({
     certificateId: certificate.id,

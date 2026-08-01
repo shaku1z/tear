@@ -6,6 +6,7 @@ import { createParticleSystem } from "../../src/presentation/particles";
 import { createRunRandom } from "../../src/simulation/run-random";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
 import { CinematicTimeline } from "../../src/gameplay/runtime/cinematic-director";
+import { createTearWorldConfiguration } from "../../src/gameplay/runtime/tear-world-configuration";
 
 function createWorldDependencies() {
   const random = createRunRandom();
@@ -30,12 +31,16 @@ function createSession(): LiveWorldSessionPort {
   };
 }
 
+function createConfiguration() {
+  return createTearWorldConfiguration({} as GameRuntimeDependencies["CONFIG"]);
+}
+
 describe("live world composition", () => {
   it("builds one world's state, entities, lifecycle, and context together", () => {
     const { dependencies, clock } = createWorldDependencies();
 
     const world = createLiveWorldComposition({
-      dependencies, session: createSession(), restoreConfiguration: () => undefined,
+      dependencies, session: createSession(), configuration: createConfiguration(),
     });
     world.context.services.clock.advance(0.25);
 
@@ -53,7 +58,7 @@ describe("live world composition", () => {
     const { dependencies } = createWorldDependencies();
     const seen: Record<string, unknown> = {};
     const world = createLiveWorldComposition({
-      dependencies, session: createSession(), restoreConfiguration: () => undefined,
+      dependencies, session: createSession(), configuration: createConfiguration(),
       mirrors: {
         enemies: (value) => { seen.enemies = value; },
         bossBeat: (value) => { seen.bossBeat = value; },
@@ -76,11 +81,11 @@ describe("live world composition", () => {
   it("keeps two worlds' state and transient records apart", () => {
     const first = createLiveWorldComposition({
       dependencies: createWorldDependencies().dependencies, session: createSession(),
-      restoreConfiguration: () => undefined,
+      configuration: createConfiguration(),
     });
     const second = createLiveWorldComposition({
       dependencies: createWorldDependencies().dependencies, session: createSession(),
-      restoreConfiguration: () => undefined,
+      configuration: createConfiguration(),
     });
 
     first.state.setEnemies([{ id: "enemy" }] as never);

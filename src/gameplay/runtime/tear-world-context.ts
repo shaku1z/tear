@@ -1,3 +1,5 @@
+import type { TearWorldConfiguration } from "./tear-world-configuration";
+
 /**
  * Portable mutable world state. Hosts may replace a whole entity collection,
  * while simulation code keeps stable access to the current per-world values.
@@ -104,8 +106,8 @@ export function createTearWorldState<
 }
 
 /** Explicit outward services a real world needs before its implementation can become per-world. */
-export interface TearWorldServices<RandomSnapshot, RandomStreamName extends string, RandomStream> {
-  readonly configuration: Readonly<{ resetToBase(): void }>;
+export interface TearWorldServices<RandomSnapshot, RandomStreamName extends string, RandomStream, Configuration extends object = object> {
+  readonly configuration: TearWorldConfiguration<Configuration>;
   readonly random: Readonly<{
     resetRun(seed: number | string): void;
     stream(name: RandomStreamName): RandomStream;

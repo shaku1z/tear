@@ -100,6 +100,22 @@ const forbiddenDependencyRules = Object.freeze([
     pattern: /export\s*\{[^}]*\b(?:CLOCK|GAME_RANDOM|GAME_RANDOM_STREAMS|FX)\b[^}]*\}|export\s+const\s+(?:CLOCK|GAME_RANDOM|GAME_RANDOM_STREAMS|FX)\b/u,
     message: "world clock, random, and particle modules cannot export a shared instance; export a factory instead",
   }),
+  Object.freeze({
+    roots: Object.freeze([
+      "src/gameplay/weapons.ts",
+      "src/gameplay/upgrades.ts",
+      "src/gameplay/stages.ts",
+      "src/gameplay/combat/live-opening-phase.ts",
+      "src/gameplay/combat/live-collision-phase.ts",
+      "src/gameplay/combat/live-kill-runtime.ts",
+      "src/gameplay/runtime/cinematic-director.ts",
+      "src/gameplay/training/tutorial-production-ghost.ts",
+    ]),
+    // Reject reordered, mixed, and aliased value imports too. `import type`
+    // remains legal because these modules still describe the config shape.
+    pattern: /import(?!\s+type)\s*\{[^}]*\bCONFIG\b[^}]*\}\s*from\s*["'][^"']*config\/game-config["']/u,
+    message: "world-owned gameplay must receive configuration through an explicit port",
+  }),
 ]);
 
 function dependencyErrors(relative, text) {
@@ -149,6 +165,17 @@ if (dependencyErrors("src/gameplay/runtime/tear-world-entity-construction.ts",
 }
 if (dependencyErrors("src/config/game-config.ts", "export { A11Y, CLOCK, CONFIG };").length !== 1) {
   throw new Error("source architecture per-world instance rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/weapons.ts", 'import { CONFIG } from "../config/game-config";').length !== 1
+  || dependencyErrors("src/gameplay/upgrades.ts", 'import { CONFIG } from "../config/game-config";').length !== 1
+  || dependencyErrors("src/gameplay/stages.ts", 'import { CONFIG } from "../config/game-config";').length !== 1
+  || dependencyErrors("src/gameplay/combat/live-opening-phase.ts", 'import { CONFIG } from "../../config/game-config";').length !== 1
+  || dependencyErrors("src/gameplay/combat/live-collision-phase.ts", 'import { CONFIG } from "../../config/game-config";').length !== 1
+  || dependencyErrors("src/gameplay/combat/live-kill-runtime.ts", 'import { CONFIG } from "../../config/game-config";').length !== 1
+  || dependencyErrors("src/gameplay/runtime/cinematic-director.ts", 'import { CONFIG } from "../../config/game-config";').length !== 1
+  || dependencyErrors("src/gameplay/training/tutorial-production-ghost.ts", 'import { GFX, CONFIG as worldConfig } from "../../config/game-config";').length !== 1
+  || dependencyErrors("src/gameplay/weapons.ts", 'import type { CONFIG } from "../config/game-config";').length !== 0) {
+  throw new Error("source architecture world-configuration injection rule self-test failed");
 }
 if (dependencyErrors("src/simulation/run-random.ts",
   "export const GAME_RANDOM_STREAMS = new RunRandomStreams();").length !== 1) {

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { CONFIG } from "../../src/config/game-config";
 import {
   captureCampaignChapterBindingSpec,
   createCampaignChapterBindingSpec,
@@ -36,7 +37,7 @@ describe("portable campaign chapter binding", () => {
     const staged = stageCampaignChapterBinding(spec(), stage, {
       dispatch, preparedWave: () => true, activationDeferred: () => true, clear: vi.fn(),
     });
-    const source = new CinematicTimeline.Director();
+    const source = new CinematicTimeline.Director(CONFIG);
     source.start(staged.binding.script, staged.binding.context);
     source.update(0.05);
     const snapshot = source.captureState();
@@ -46,7 +47,7 @@ describe("portable campaign chapter binding", () => {
       captureCampaignChapterBindingSpec(staged.spec, staged.flow), stage,
       { dispatch, preparedWave: () => true, activationDeferred: () => true, clear: vi.fn() },
     );
-    const restored = new CinematicTimeline.Director();
+    const restored = new CinematicTimeline.Director(CONFIG);
     restored.restoreState(snapshot, reconstructed.binding);
 
     expect(dispatch).not.toHaveBeenCalled();
@@ -70,9 +71,9 @@ describe("portable campaign chapter binding", () => {
     const reconstructed = stageCampaignChapterBinding(spec(), stage, {
       dispatch, preparedWave: () => true, activationDeferred: () => true, clear,
     });
-    const source = new CinematicTimeline.Director();
+    const source = new CinematicTimeline.Director(CONFIG);
     source.start(reconstructed.binding.script, reconstructed.binding.context);
-    const restored = new CinematicTimeline.Director();
+    const restored = new CinematicTimeline.Director(CONFIG);
     dispatch.mockClear();
     restored.restoreState(source.captureState(), reconstructed.binding);
 
@@ -100,14 +101,14 @@ describe("portable campaign chapter binding", () => {
     const original = stageCampaignChapterBinding(spec(), stage, {
       dispatch: vi.fn(), preparedWave: () => true, activationDeferred: () => true, clear: vi.fn(),
     });
-    const source = new CinematicTimeline.Director();
+    const source = new CinematicTimeline.Director(CONFIG);
     source.start(original.binding.script, original.binding.context);
     const changedStage: CampaignStage = { ...stage, chapter: { ...stage.chapter,
       pages: [{ label: "THE VERGE", text: "Changed content." }] } };
     const changed = stageCampaignChapterBinding(spec(), changedStage, {
       dispatch: vi.fn(), preparedWave: () => true, activationDeferred: () => true, clear: vi.fn(),
     });
-    expect(() => { new CinematicTimeline.Director().restoreState(source.captureState(), changed.binding); })
+    expect(() => { new CinematicTimeline.Director(CONFIG).restoreState(source.captureState(), changed.binding); })
       .toThrow(/script chapter-0 is unavailable/);
   });
 });

@@ -74,7 +74,7 @@ export function createLiveReplayScreenAdapterRuntime(services: ReplayScreenServi
     const replay = context, data = replay.data;
     d.GHOST.update(services.deltaSeconds());
     const stageIndex = (d.GHOST.stageAt() % d.STAGES.length + d.STAGES.length) % d.STAGES.length;
-    if (stageIndex !== replay.stage) { replay.stage = stageIndex; replay.platforms = d.stagePlatforms(stageIndex); }
+    if (stageIndex !== replay.stage) { replay.stage = stageIndex; replay.platforms = d.stagePlatforms(stageIndex, d.CONFIG); }
     const stage = d.stageAt(stageIndex), pose = d.GHOST.pose(); d.THEME.set(stage.bg); d.UI.ink = d.THEME.ink;
     renderReplayWorldFrame({ canvas: services.canvas, screen: services.screenRectangle(), width: services.width, stage,
       platforms: replay.platforms, platformIsFloor: (platform) => "floor" in platform && platform.floor, backdrop: d.Backdrop, effects: d.FX,

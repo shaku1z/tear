@@ -11,7 +11,7 @@ import { createLiveInterfaceComposition, isRunDifficultySelection, isRunModeSele
 import { createLiveRunOrchestration } from "./live-run-orchestration-composition";
 import { createLiveSessionServices } from "./live-session-services-composition";
 import { replayLiveStateForgeProgression } from "./live-state-forge-progression";
-import { createConfigRestorer } from "./runtime-initialization";
+import type { TearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
 import { commitBossIntroSnapshot } from "./live-frame-runtime";
 import { RuntimeFrameDriver } from "./runtime-frame-driver";
 import { createLiveMusicObservation, projectLiveMusicRun } from "./live-music-observation-adapter";
@@ -41,14 +41,13 @@ import { captureLiveStateForgeSnapshot } from "../tearbench/live-runtime-snapsho
 import { createDefaultStateCodecRegistry } from "../tearbench/state-codecs";
 import { ENTITY_KIND_REGISTRY } from "../tearbench/registries";
 import { stableVerificationHash } from "../replay/hash";
-type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnType<RunScreenState["outcome"]>; type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
-export function startLiveGame(dependencies: GameRuntimeDependencies): void {
+type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnType<RunScreenState["outcome"]>; type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>; export function startLiveGame(dependencies: GameRuntimeDependencies, configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>): void {
   const { A11Y, APP, Attract, Backdrop, CG, CONFIG, Cloud, DIAG, FX, GAMEPLAY_EVENTS, GFX, GHOST, Input, OVERSCAN, PAD, SAFE, SFX, THEME, UI, VAULT, applyUpgrade, clamp, cosmeticRandom, lerp, weaponCapsuleIntersectsSegment } = dependencies;
 (function () {
   const browserRuntime = createLiveBrowserRuntime(dependencies);
   const { canvas, context: ctx, width: W, height: H, viewport, resizeCanvas, requestPointerLock: requestLock, installPrompt, lockHint, hint: hintEl,
     pantheonDebug: PANTHEON_DEBUG, testMode: TEST_MODE } = browserRuntime;
-  const restoreConfig = createConfigRestorer(CONFIG); let semanticInputAuthority = false; const requestOwnedPointerLock = () => { if (!semanticInputAuthority) requestLock(); };
+  let semanticInputAuthority = false; const requestOwnedPointerLock = () => { if (!semanticInputAuthority) requestLock(); };
   const ghostV3 = createBrowserGhostLiveRecorder(
     window.indexedDB,
     createGhostV3BrowserTestOptions(TEST_MODE, window.location.search),
@@ -203,7 +202,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   // lifecycle, services, and transient records. The mirrors keep the host's
   // hot-path views in step; the world remains the owner.
   const { state: hostState, context: worldContext, entities: worldEntities, lifecycle: RUN_LIFECYCLE } = createLiveWorldComposition({
-    dependencies, restoreConfiguration: restoreConfig,
+    dependencies, configuration,
     session: {
       selectedWeapon: () => selWeapon, setSelectedWeapon: (value) => { selWeapon = value; },
       outcome: () => overInfo, setOutcome: (value) => { overInfo = value; },
@@ -372,10 +371,10 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
         endRun, checkAchievements: achCheck, addKillScore,
         applySever: (enemy, tier) => { if (isGameEnemy(enemy)) applySever(enemy, tier); }, fire,
         makeEvent: (x, y, enemy, cause, detail) => makeEv(x, y, isGameEnemy(enemy) ? enemy : null, cause, detail),
-        weaponHook: (name, detail) => { const effect = weaponHook(name, detail); return isWeaponEffect(effect) ? effect : null; },
+        weaponHook: (name, detail) => { const effect = weaponHook(name, { config: CONFIG, ...detail }); return isWeaponEffect(effect) ? effect : null; },
         modHook: (name) => run.mods[name], fireMod: fire,
         logWeaponEvent, weaponWorldImpact: () => { const effect = weaponHook("onWorldImpact",
-          { blade, player, platforms: stageRuntime.platforms, x: blade.x, y: blade.y });
+          { config: CONFIG, blade, player, platforms: stageRuntime.platforms, x: blade.x, y: blade.y });
           return isWeaponEffect(effect) ? effect : null; },
         startTransformation: (enemy, request) => isRitualOwner(enemy) && isRitualCue(request) &&
           !CINEMA.active && startBossTransformation(enemy, request),
@@ -658,6 +657,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     };
     installLiveTearRuntimeBridge({
       width: W, height: H, state: hostState, actorId: (enemy) => combatRuntime.id(enemy, "enemy"), platforms: () => stageRuntime.platforms,
+      platformsForStage: (index) => dependencies.stagePlatforms(index, CONFIG),
       stage: () => ({ ...stageRuntime.current, index: stageRuntime.index }), lifecycle: () => RUN_LIFECYCLE.snapshot(), bossIntroActive: () => bossIntro !== null,
       choiceIds: () => liveRewardChoiceIds(actionRouting), progression: () => ({ wallet: dependencies.META.coins(), lifetimeEarned: dependencies.META.data.lifetimeEarned, levels: Object.fromEntries(dependencies.SHOP.map((item) => [item.id, dependencies.META.level(item.id)])), shop: dependencies.SHOP.map((item) => ({ id: item.id, level: dependencies.META.level(item.id), maxLevel: item.maxLevel, cost: dependencies.META.cost(item), enabled: dependencies.META.canBuy(item) })) }), outcome: () => overInfo, screen: () => state,
       setScreen: (screen) => { setState(screen); }, selectBoss: (bossId) => { selBoss = bossId; },
@@ -677,7 +677,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
       drainConsumedActions: () => consumedActions.splice(0, consumedActions.length),
       emitPhysicalInput: (input) => { emitLiveTearBenchPhysicalInput(input, { window, canvas, width: W, height: H }); },
       setTimeEffectsForTest: (effects) => { if (effects.hitStop !== undefined) impact.hitStop = effects.hitStop; if (effects.slowMotion !== undefined) impact.slowMotion = effects.slowMotion; if (effects.timeScale !== undefined) feel.timeScale = effects.timeScale; },
-      stateForge: liveStateForge, replayProgression: (ledger) => replayLiveStateForgeProgression({ dependencies, state: hostState, restoreConfiguration: restoreConfig }, ledger), loadStage: runControllers.api.loadStage, startNextWave: runControllers.api.startNextWave, applyBossFinisher: (bossId, remainingHp) => { const matches = enemies.filter((enemy) => enemy.isBoss && enemy.bossId === bossId && !enemy.dead && !enemy.dying); if (matches.length !== 1 || matches[0] === undefined) throw new Error(`boss-finisher requires exactly one live ${bossId}`); matches[0].hp = remainingHp; matches[0].hpDisplay = remainingHp; }, captureProgressionRuntime: () => run.mods, restoreProgressionRuntime: (runtime) => { run.mods = runtime as typeof run.mods; }, finaleIntents: () => finaleIntentBatches, finaleOutwardCalls: () => finaleOutwardCalls, audioDispatchReceipts: () => audioDispatchReceipts, outcomeChronology: () => outcomeChronology?.entries() ?? [],
+      stateForge: liveStateForge, replayProgression: (ledger) => replayLiveStateForgeProgression({ dependencies, state: hostState, configuration }, ledger), loadStage: runControllers.api.loadStage, startNextWave: runControllers.api.startNextWave, applyBossFinisher: (bossId, remainingHp) => { const matches = enemies.filter((enemy) => enemy.isBoss && enemy.bossId === bossId && !enemy.dead && !enemy.dying); if (matches.length !== 1 || matches[0] === undefined) throw new Error(`boss-finisher requires exactly one live ${bossId}`); matches[0].hp = remainingHp; matches[0].hpDisplay = remainingHp; }, captureProgressionRuntime: () => run.mods, restoreProgressionRuntime: (runtime) => { run.mods = runtime as typeof run.mods; }, finaleIntents: () => finaleIntentBatches, finaleOutwardCalls: () => finaleOutwardCalls, audioDispatchReceipts: () => audioDispatchReceipts, outcomeChronology: () => outcomeChronology?.entries() ?? [],
     }, window);
   });
   if (__TEAR_TEST_BUILD__ && PANTHEON_DEBUG) void import("./live-debug-composition").then(({ installLiveGameDebug }) => {

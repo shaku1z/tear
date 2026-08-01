@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { CONFIG } from "../../src/config/game-config";
 import { CinematicTimeline, INACTIVE_CINEMATIC_DIRECTOR_STATE_V1,
   type CinematicScript } from "../../src/gameplay/runtime/cinematic-director";
 
@@ -13,7 +14,7 @@ const script: CinematicScript = Object.freeze({
 });
 
 function activeDirector() {
-  const director = new CinematicTimeline.Director();
+  const director = new CinematicTimeline.Director(CONFIG);
   director.start(script, { world: "live" });
   director.update(0.25, {});
   director.update(0.12, { key: true });
@@ -62,7 +63,7 @@ describe("cinematic director state", () => {
   it("rejects a mismatched active script without mutating the current timeline", () => {
     const source = activeDirector();
     const captured = source.captureState();
-    const target = new CinematicTimeline.Director();
+    const target = new CinematicTimeline.Director(CONFIG);
     target.start({ ...script, id: "campaign.chapter.2" }, {});
     const before = target.captureState();
 
@@ -111,12 +112,12 @@ describe("cinematic director state", () => {
       onStart: () => { calls.push("start"); },
       beats: script.beats.map((beat) => ({ ...beat, onEnter: () => { calls.push(`enter:${beat.id}`); } })),
     };
-    const source = new CinematicTimeline.Director();
+    const source = new CinematicTimeline.Director(CONFIG);
     source.start(boundScript, { world: "source" });
     source.update(0.4, {});
     const snapshot = source.captureState();
     calls.length = 0;
-    const restored = new CinematicTimeline.Director();
+    const restored = new CinematicTimeline.Director(CONFIG);
 
     restored.restoreState(snapshot, { script: boundScript, context: { world: "restored" } });
 

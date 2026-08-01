@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 import { stagePlatforms } from "../../src/gameplay/stages";
+import { CONFIG } from "../../src/config/game-config";
 import { UPGRADES } from "../../src/gameplay/upgrades";
 import { stableVerificationHash } from "../../src/replay/hash";
 import {
@@ -119,7 +120,7 @@ describe("campaign victory State Forge origin", () => {
     const source = sourceSnapshot();
     const before = structuredClone(source);
     const certificate = createCampaignVictoryOrigin();
-    const frontier = createCampaignWave49RewardFrontier(source, certificate);
+    const frontier = createCampaignWave49RewardFrontier(source, certificate, (index) => stagePlatforms(index, CONFIG));
     const run = codec(frontier, "tear.run.v1");
     const world = codec(frontier, "tear.world.v1");
     const runtime = world.runtime as Record<string, unknown>;
@@ -150,7 +151,7 @@ describe("campaign victory State Forge origin", () => {
     expect(frontier.state["tear.enemy.v1"]).toEqual([]);
     expect(frontier.state["tear.boss.v1"]).toEqual([]);
     expect(frontier.state["tear.projectile.v1"]).toEqual([]);
-    expect(frontier.state["tear.platform.v1"]).toEqual(stagePlatforms(4));
+    expect(frontier.state["tear.platform.v1"]).toEqual(stagePlatforms(4, CONFIG));
     expect(frontier.state["tear.cinematic.v1"]).toEqual(INACTIVE_CINEMATIC_DIRECTOR_STATE_V1);
     expect(codec(frontier, "tear.player.v1")).toMatchObject({
       cinematicProtected: false, cinematicGraceT: 0,
@@ -186,14 +187,14 @@ describe("campaign victory State Forge origin", () => {
     const wrongMode = structuredClone(sourceSnapshot());
     (wrongMode.state["tear.run.v1"] as { mode: string }).mode = "endless";
     (wrongMode.hashes as { exact: string }).exact = stableVerificationHash(wrongMode.state);
-    expect(() => createCampaignWave49RewardFrontier(wrongMode, certificate)).toThrow(/Campaign Normal Sword/u);
+    expect(() => createCampaignWave49RewardFrontier(wrongMode, certificate, (index) => stagePlatforms(index, CONFIG))).toThrow(/Campaign Normal Sword/u);
 
     const corrupt = structuredClone(sourceSnapshot());
     (corrupt.state["tear.run.v1"] as { score: number }).score = 99;
-    expect(() => createCampaignWave49RewardFrontier(corrupt, certificate)).toThrow(/source exact hash/u);
+    expect(() => createCampaignWave49RewardFrontier(corrupt, certificate, (index) => stagePlatforms(index, CONFIG))).toThrow(/source exact hash/u);
 
     const altered = structuredClone(certificate);
     (altered.finalReward as { selectedId: string }).selectedId = "not-the-certified-choice";
-    expect(() => createCampaignWave49RewardFrontier(sourceSnapshot(), altered)).toThrow(/canonical wave-49 certificate/u);
+    expect(() => createCampaignWave49RewardFrontier(sourceSnapshot(), altered, (index) => stagePlatforms(index, CONFIG))).toThrow(/canonical wave-49 certificate/u);
   });
 });

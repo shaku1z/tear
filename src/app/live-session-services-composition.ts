@@ -50,10 +50,10 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
       random: d.GAME_RANDOM_STREAMS.stream("draft"), forceSpecial: request.forceSpecial, excludeIds: request.excludeIds,
     }),
     transitionPorts: {
-      applyUpgrade: (choice) => { d.applyUpgrade(choice, {
+      applyUpgrade: (choice) => { d.applyUpgrade(choice, { config: d.CONFIG,
         player: options.player(), blade: options.blade(), mods: options.run().mods,
       }); },
-      tierUp: (choice) => { d.tierUp(choice.id, {
+      tierUp: (choice) => { d.tierUp(choice.id, { config: d.CONFIG,
         player: options.player(), blade: options.blade(), mods: options.run().mods,
       }); },
       ghostLoadout: (choiceId, tier, wave) => {

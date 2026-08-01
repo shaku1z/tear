@@ -13,6 +13,7 @@ import type { RunRandomStreamName, RunRandomStreamsSnapshot } from "../simulatio
 import type { LiveGameHostState } from "./live-game-host-state";
 import type { LiveWorldEntityConstructionPort } from "./live-world-entity-factory";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
+import type { TearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
 
 /** Narrow live adapter dependencies; this is deliberately not GameRuntimeDependencies. */
 export interface LiveWorldContextDependencies {
@@ -32,7 +33,8 @@ export interface LiveWorldContextDependencies {
 export type LiveWorldServices = TearWorldServices<
   RunRandomStreamsSnapshot,
   RunRandomStreamName,
-  RandomSource
+  RandomSource,
+  GameRuntimeDependencies["CONFIG"]
 >;
 
 export type LiveWorldCinema = InstanceType<GameRuntimeDependencies["Cinematics"]["Director"]>;
@@ -52,7 +54,7 @@ export interface LiveWorldContextOptions {
   readonly entities: LiveWorldEntityConstructionPort;
   readonly lifecycle: RunLifecycleController;
   readonly cinema: LiveWorldCinema;
-  readonly restoreConfiguration: () => void;
+  readonly configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>;
 }
 
 /**
@@ -63,7 +65,7 @@ export interface LiveWorldContextOptions {
 export function createLiveWorldContext(options: LiveWorldContextOptions): LiveWorldContext {
   const d = options.dependencies;
   const services: LiveWorldServices = {
-    configuration: Object.freeze({ resetToBase: options.restoreConfiguration }),
+    configuration: options.configuration,
     random: Object.freeze({
       resetRun: (seed) => { d.GAME_RANDOM.reset(seed); },
       stream: (name) => d.GAME_RANDOM_STREAMS.stream(name),

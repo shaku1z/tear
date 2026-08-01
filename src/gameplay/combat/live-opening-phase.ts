@@ -1,4 +1,4 @@
-import { CONFIG } from "../../config/game-config";
+import type { CONFIG as GameConfiguration } from "../../config/game-config";
 import { stepCombatPrelude, type CombatPreludeBlade, type CombatPreludePlayer, type CombatPreludeRun } from "./combat-step-prelude";
 import { stepLocomotionCombat, type LocomotionBlade, type LocomotionEnemy, type LocomotionPlayer } from "./locomotion-combat-runtime";
 import { stepWeaponSecondary, type SecondaryBlade, type SecondaryEnemy } from "./weapon-secondary-runtime";
@@ -32,6 +32,8 @@ export interface LiveOpeningState {
 }
 
 export interface LiveOpeningPhaseHost {
+  /** The owning world's mutable configuration, captured before any actors. */
+  readonly config: typeof GameConfiguration;
   readonly player: LivePlayer;
   readonly blade: LiveBlade;
   readonly run: LiveRun;
@@ -101,12 +103,12 @@ export interface LiveOpeningPhaseResult { readonly blocked: boolean }
 
 /** Runs the movement, actor, arena, and boss half of one deterministic fixed tick. */
 export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): LiveOpeningPhaseResult {
-  const { player, blade, run, state } = host;
+  const { player, blade, run, state, config } = host;
   const timers = { throwCooldown: state.throwCooldown };
   const prelude = stepCombatPrelude({ dt, blocking: host.blocking, playerMode: host.playerMode,
     player, blade, run, platforms: host.platforms, protection: host.protection, timers,
-    tuning: { flowGuardTier: CONFIG.resilience.flowGuardTier, flowGuardMultiplier: CONFIG.resilience.flowGuardMult,
-      thrownMoveBoost: CONFIG.player.thrownMoveBoost, orbitMove: CONFIG.weapons.ringblade.orbitMove },
+    tuning: { flowGuardTier: config.resilience.flowGuardTier, flowGuardMultiplier: config.resilience.flowGuardMult,
+      thrownMoveBoost: config.player.thrownMoveBoost, orbitMove: config.weapons.ringblade.orbitMove },
     overrunMovementMultiplier: host.overrunMovementMultiplier(), stepCinematic: host.stepCinematic,
     flushClosingInput: host.flushClosingInput, updateWeaponAbilities: host.updateWeaponAbilities,
     updateZonesAndWalls: host.updateWorldHazards, syncVoidSupport: host.syncVoidSupport,
@@ -117,8 +119,8 @@ export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): Liv
   runSecondary(host, prelude.previousBladeState, prelude.wasReturning, !!prelude.linkBreakReason);
   host.updateFeedback(dt); runLocomotion(host, dt); runTransport(host); host.updateWave(dt);
   const transformed = stepEnemyActors({ dt, enemies: host.enemies, platforms: host.platforms, player,
-    projectiles: host.projectiles, freeze: run.pg?.freeze === true, gravity: CONFIG.world.gravity,
-    groundY: CONFIG.world.groundY, viewportWidth: host.width,
+    projectiles: host.projectiles, freeze: run.pg?.freeze === true, gravity: config.world.gravity,
+    groundY: config.world.groundY, viewportWidth: host.width,
     onKill: host.onKill, startTransformation: (enemy, request) => host.startTransformation(enemy as LiveEnemy, request) });
   if (transformed || host.transformationBlocked) return { blocked: true };
   const bladeThief = resolveEnemyBladeCatch(host.enemies, blade, player);
@@ -133,11 +135,11 @@ export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): Liv
 }
 
 function runSecondary(host: LiveOpeningPhaseHost, previousState: string, wasReturning: boolean, linkBroken: boolean): void {
-  const { blade, run } = host;
+  const { blade, run, config } = host;
   stepWeaponSecondary({ previousState, wasReturning, linkBroken, blade, enemies: host.enemies,
     secondPass: Number(run.mods.secondPass) || 1, redirect: !!run.mods.redirect, stormBurst: Number(run.mods.stormBurst) || 0,
-    collisionDamage: CONFIG.weapons.chainblade.collisionDamage, yankSpeed: CONFIG.weapons.chainblade.yankSpeed,
-    throwSpeed: CONFIG.blade.throw.speed, damageMultiplier: host.runDamageMultiplier(), distance: host.distance,
+    collisionDamage: config.weapons.chainblade.collisionDamage, yankSpeed: config.weapons.chainblade.yankSpeed,
+    throwSpeed: config.blade.throw.speed, damageMultiplier: host.runDamageMultiplier(), distance: host.distance,
     aoe: host.areaDamage, ring: (x, y, radius) => { host.ring(x, y, radius, "perfect"); },
     burst: (enemy, vx, vy) => { host.burst(enemy.x, enemy.y, vx, vy, 7, "perfect"); },
     floater: (enemy, text) => { host.floater(enemy.x, enemy.y - 30, text, true, "perfect"); },
@@ -149,13 +151,13 @@ function runSecondary(host: LiveOpeningPhaseHost, previousState: string, wasRetu
 }
 
 function runLocomotion(host: LiveOpeningPhaseHost, dt: number): void {
-  const { player, blade, run, state } = host;
+  const { player, blade, run, state, config } = host;
   const locomotion = { wasDashing: state.wasDashing, wasSwinging: state.wasSwinging, wasOnGround: state.wasOnGround,
     dashGhostTime: state.dashGhostTime, landingVelocity: state.landingVelocity, contacts: run._dashContacts ?? new Set<LocomotionEnemy>() };
   stepLocomotionCombat({ dt, player, blade, enemies: host.enemies, state: locomotion,
     concussive: Number(run.mods.concussive) || 0, concussiveStun: !!run.mods.concStun, concussiveRefund: !!run.mods.concRefund,
     phantomDamage: Number(run.mods.phantomDash) || 0, phantomRefund: !!run.mods.phantomRefund, cinder: !!run.mods.cinder,
-    maxFall: CONFIG.player.maxFall, ghostInterval: CONFIG.juice.dashGhostInterval, lowGraphics: host.lowGraphics,
+    maxFall: config.player.maxFall, ghostInterval: config.juice.dashGhostInterval, lowGraphics: host.lowGraphics,
     overlap: host.overlap, distance: (actor, enemy) => host.distance(actor.x, actor.y, enemy.x, enemy.y),
     aoe: (radius, damage) => { host.areaDamage(player.x, player.y, radius, damage); },
     dashStarted: host.fireDashStart, dashContact: (enemy) => { host.fireDashContact(enemy as LiveEnemy); },
@@ -193,7 +195,7 @@ function runPlatformLifecycle(host: LiveOpeningPhaseHost, dt: number): void {
 
 function runBosses(host: LiveOpeningPhaseHost, dt: number): void {
   stepBossRuntime({ dt, player: host.player, platforms: host.platforms, enemies: host.enemies, run: host.run,
-    thawMultiplier: CONFIG.source.thawSpeedMult || 1.35, maximumScrollSpeed: CONFIG.source.scrollSpeedMax,
+    thawMultiplier: host.config.source.thawSpeedMult || 1.35, maximumScrollSpeed: host.config.source.scrollSpeedMax,
     unlockWitness: host.unlockWitness, startVoidDescent: (boss) => host.startVoidDescent(boss as LiveEnemy),
     spawnAdds: (boss) => host.spawnBossAdds(boss as LiveEnemy), spawnClone: (boss) => { host.spawnBossClone(boss as LiveEnemy); },
     floater: (x, y, text) => { host.floater(x, y, text, true, "charger"); }, dramaticBeat: host.dramaticBeat,

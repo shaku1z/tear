@@ -58,7 +58,7 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
   const { dependencies: d, state, lifecycle } = services;
   const cinema = services.cinema;
   const stage = new StageRuntimeState<Stage, Platforms>(d.stageAt,
-    (index) => d.stagePlatforms(index).map((platform) => ({ ...platform })));
+    (index) => d.stagePlatforms(index, d.CONFIG).map((platform) => ({ ...platform })));
   const run = () => required(state.run(), "run");
   const player = () => required(state.player(), "player");
   const blade = () => required(state.blade(), "blade");

@@ -135,7 +135,7 @@ Current engineering capabilities, with the qualifications above:
 - Physical browser harness foundations and diagnostics; the full C25 exit is pending.
 - C26 regression investigation, minimization, bisect, and graveyard workflows.
 - C27 V3 recording/capsule foundations: manifests, chunks, journals, recovery, budgets, interruption/terminal tests, and browser proof in the tested scope.
-- C27A foundations: DOM-free world context, shared construction and combat assembly, reconstructible campaign bindings, and 13/13 exact fixed-tick plus post-origin native-event parity. Live and detached use shared spawn/wave/terminal publishers, the gameplay outcome controller, and portable reward/finale runtimes; the matrix includes a natural wave clear, real draft selection, wave-2 spawn, and a real Source victory from a certified reconstructed wave-49 frontier plus explicit one-hit State Forge child. The finale's seven intent batches, 22 accepted outward-adapter calls, six concrete particle-admission receipts, eight logical feel receipts, and the 42-entry terminal external-decision transcript match exactly. Slice 40 adds a factory module with no app/presentation/browser imports; live Canvas and detached no-op ports are explicit and architecture-fenced. The browser additionally observes audio dispatch, but the real run's seven mixes are logical-target-only and every finale cue is voice-cap-rejected. Randomized particle internals, pixels, headless/full-world portability, configuration isolation, durable profile/local-storage survival, cloud/replay/analytics completion, successful audio graph/PCM/speaker/device output, and haptics remain open.
+- C27A foundations: DOM-free world context, shared construction and combat assembly, reconstructible campaign bindings, and 13/13 exact fixed-tick plus post-origin native-event parity. Live and detached use shared spawn/wave/terminal publishers, the gameplay outcome controller, and portable reward/finale runtimes; the matrix includes a natural wave clear, real draft selection, wave-2 spawn, and a real Source victory from a certified reconstructed wave-49 frontier plus explicit one-hit State Forge child. The finale's seven intent batches, 22 accepted outward-adapter calls, six concrete particle-admission receipts, eight logical feel receipts, and the 42-entry terminal external-decision transcript match exactly. Slice 40 adds a factory module with no app/presentation/browser imports; Slice 41 adds per-world simulation tuning ownership for State Forge, rules, combat, cinematic timing, and tutorial ghost physics. The browser additionally observes audio dispatch, but the real run's seven mixes are logical-target-only and every finale cue is voice-cap-rejected. Particle policy, Backdrop, renderer/UI, browser input, audio, persistence/cloud/replay/analytics, pixels, device output, headless/full-world portability, and concurrent complete live worlds remain open.
 
 Current `scripts/tearbench.mjs` command families:
 
@@ -174,11 +174,12 @@ Do not claim TearBot automatically learns merely because scripted policies, trai
 
 Read [`TEARBENCH_C27A_HANDOFF.md`](TEARBENCH_C27A_HANDOFF.md) before editing.
 
-Forty C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, shared combat/outcome/reward/finale execution, exact state/native-event parity through a natural wave boundary, world-owned cinema, versioned State Forge restoration, data-only campaign reconstruction, a certified real Source-victory route, exact finale-intent and adapter-dispatch parity, exact particle-admission and logical-feel receipts, bounded software-audio receipts, exact terminal external-decision transcript parity, and an architecture-fenced portable simulation-factory seam, plus focused tests and physical browser diagnostics.
+Forty-one C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, shared combat/outcome/reward/finale execution, exact state/native-event parity through a natural wave boundary, world-owned cinema, versioned State Forge restoration, data-only campaign reconstruction, a certified real Source-victory route, exact finale-intent and adapter-dispatch parity, exact particle-admission and logical-feel receipts, bounded software-audio receipts, exact terminal external-decision transcript parity, an architecture-fenced portable simulation-factory seam, and stable simulation tuning ownership, plus focused tests and physical browser diagnostics.
 
 Important files:
 
 - `src/gameplay/runtime/tear-world-context.ts`
+- `src/gameplay/runtime/tear-world-configuration.ts`
 - `src/gameplay/runtime/tear-world-transient-state.ts`
 - `src/app/live-world-simulation-factories.ts`
 - `src/gameplay/runtime/tear-world-clock.ts`
@@ -195,6 +196,18 @@ Important files:
 - `src/gameplay/run/outcome-chronology-journal.ts`
 
 ### Exact next slice
+
+Slice 41 supersedes the former configuration-isolation plan: the composition
+root now owns a stable `TearWorldConfiguration` before consumers capture tuning.
+Its complete-shape-validated in-place restore serves State Forge and real
+weapons, upgrades, stages, combat, cinema, and tutorial ghosts; the architecture
+gate rejects direct/mixed/aliased global config value imports in those paths.
+The complete `pnpm check:c27a` passed (foundation 36 files / 130 tests;
+13 scenarios / 5,732 ticks / 33 native facts / 40 detached comparisons;
+campaign victory 10 files / 36 tests and 1,176 browser transitions; Slice 41
+7 files / 53 tests). This is simulation tuning isolation only. Next, inject
+particle policy into the per-world particle factory and prove independent
+two-world admission before using it for generic world bootstrap.
 
 All thirteen captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream: 5,732 ticks and 33 native facts, including the three natural-trace enemy defeats now published independently of Ghost 2 sampling. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome/reward/finale controllers, scheduler shape, event bus, and restored actor identity. The natural matrix route clears wave 1, selects a real offered draft card without advancing the fixed scheduler, and reaches a wave-2 spawn. A separate certified route reconstructs the wave-49 frontier, starts production wave 50, applies an explicit Source one-hit State Forge child, and executes real victory; live and detached match all seven finale intent batches and all 22 outward calls after their concrete adapters return, in exact order and with exact arguments. They also match six immutable ring/burst particle-admission receipts, eight logical feel receipts after restoration of the captured pre-finale transient, and the complete 42-entry terminal external-decision transcript (13 initial synchronization terminal decision/request, 22 finale-outward, and 7 cache/terminal). The refreshed browser route explicitly activates audio, then observes 12 executing plus 12 completed dispatch receipts: all seven mixes are logical-target-only and all cues are voice-cap-rejected, so no output is claimed. Slice 40 adds portable `tear-world-simulation-factories.ts` with no app/presentation/browser imports; the app renderer supplies real Canvas ports and detached supplies explicit no-op ports under architecture fences. Next: generic world bootstrap, then configuration isolation, which still blocks truly simultaneous full worlds. This evidence does not claim a naturally played 50-wave campaign, randomized particle parity, rendered-pixel parity, headless/full-world portability, configuration isolation, durable profile/local-storage survival, cloud/replay/analytics completion, successful PCM/audibility or audio graph/device parity, or device vibration.
 
@@ -335,11 +348,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      Slice 40 extracts an architecture-fenced portable simulation-factory seam with live Canvas and detached no-op ports.
-PROVEN BY:           `tear-world-simulation-factories.ts` has no app/presentation/browser imports; architecture checks fence violations. Full `pnpm check:c27a` passes through Slice 40: foundation 36 files / 128 tests, 13 browser scenarios / 5,732 ticks / 33 native facts, 40 detached comparator tests; campaign-victory 10 files / 36 tests, real browser 1,176 transitions, 1 detached finale-parity test, Slice 37 (1 file / 5 tests), Slice 38 (7 files / 18 tests), and Slice 39 (4 files / 10 tests). Slice 39 commit `30c4877` is pushed; Slice 40 is ready to commit, not pushed.
-REMAINING HERE:      Generic world bootstrap, then configuration isolation; isolation still blocks truly simultaneous full worlds and C27A remains blocking.
+DONE THIS STEP:      Slice 41 gives each constructed simulation world a stable owned tuning record and State Forge restore path.
+PROVEN BY:           Full `pnpm check:c27a`: foundation 36 files / 130 tests; 13 browser scenarios / 5,732 ticks / 33 native facts / 40 detached comparisons; campaign victory 10 files / 36 tests / 1,176 transitions; Slice 41 7 files / 53 tests. Architecture fences reject direct, mixed, and aliased global config value imports in world-owned rule, combat, cinema, and tutorial-ghost code.
+REMAINING HERE:      Generic bootstrap and presentation-policy isolation; particle policy, Backdrop, renderer/UI, input, audio, persistence, and other app adapters still prevent concurrent complete worlds and C27A remains blocking.
 REMAINING TO C40:    C27 completion, C25 exit, and C28-C40 remain after C27A closes.
-NEXT SLICE:          Extract generic world bootstrap, then isolate configuration while preserving exact transcript parity; do not introduce a second runtime or normalize divergences.
+NEXT SLICE:          Inject configuration/policy into the particle factory and prove two worlds admit effects independently; advance generic bootstrap without a second runtime or normalized divergence.
 
 All of the following were run from this worktree through C27A slice 36:
 

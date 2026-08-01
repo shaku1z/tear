@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { CONFIG } from "../../src/config/game-config";
 import { createCampaignChapterBindingSpec, stageCampaignChapterBinding } from
   "../../src/gameplay/campaign/chapter-cinematic-binding";
 import type { CampaignChapterTiming } from "../../src/gameplay/campaign/chapter-controller";
@@ -21,7 +22,7 @@ describe("detached campaign binding", () => {
     const staged = stageCampaignChapterBinding(spec, stageAt(0), {
       dispatch: vi.fn(), preparedWave: () => true, activationDeferred: () => true, clear: vi.fn(),
     });
-    const source = new CinematicTimeline.Director();
+    const source = new CinematicTimeline.Director(CONFIG);
     source.start(staged.binding.script, staged.binding.context);
 
     restoreDetachedChapterBinding(detached, {

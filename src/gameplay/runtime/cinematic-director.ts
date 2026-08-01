@@ -7,10 +7,12 @@
 // beat's mode. A world that cannot advance this timeline cannot reproduce a
 // run that opens on a brief, so the timeline lives in gameplay and only its
 // drawing lives in presentation.
-import { CONFIG } from "../../config/game-config";
+import type { CONFIG as GAME_CONFIG } from "../../config/game-config";
 
 type CompletionPolicy = "condition" | "confirm" | "confirm-or-timeout" | "timed";
 type CinematicContext = Record<string, unknown>;
+type CinematicConfiguration = typeof GAME_CONFIG;
+type CinematicPresentationConfiguration = CinematicConfiguration["presentation"];
 
 export interface CinematicDirectorPort {
   readonly active: boolean;
@@ -140,20 +142,23 @@ interface LatchResult { reveal: boolean; skip: boolean }
 const CinematicTimeline = (() => {
   "use strict";
 
-  const P = () => CONFIG.presentation;
   const clamp01 = (value: number) => value < 0 ? 0 : value > 1 ? 1 : value;
   const wordCount = (value?: string) => value ? value.trim().split(/\s+/).filter(Boolean).length : 0;
 
   // Compute a human reveal duration for a dialogue line: a base character rate
   // plus natural pauses on punctuation. Chapter/lore uses a short phrase stagger.
-  function revealDuration(beat: CinematicBeat, brief: boolean): number {
+  function revealDuration(
+    beat: CinematicBeat,
+    brief: boolean,
+    presentation: CinematicPresentationConfiguration,
+  ): number {
     if (brief) return 0;                                  // Brief shows the line immediately
     const rv = beat.reveal;
     if (rv?.mode === "none") return 0;
     if (rv?.mode === "phrase") return rv.duration ?? 0.32;
     const line = beat.line;
     if (!line) return 0;
-    const p = P(), cps = rv?.charsPerSecond ?? p.revealCharsPerSec;
+    const p = presentation, cps = rv?.charsPerSecond ?? p.revealCharsPerSec;
     let d = line.length / cps;
     for (const ch of line) {
       if (ch === ",") d += p.revealCommaPause;
@@ -164,8 +169,12 @@ const CinematicTimeline = (() => {
   }
   // The auto-advance fallback for a spoken beat, measured from beat start. Full
   // mode is clamped never below 4s; Brief holds a shown line 2.2–3.2s by length.
-  function autoAfter(beat: CinematicBeat, brief: boolean): number {
-    const p = P(), words = wordCount(beat.line);
+  function autoAfter(
+    beat: CinematicBeat,
+    brief: boolean,
+    presentation: CinematicPresentationConfiguration,
+  ): number {
+    const p = presentation, words = wordCount(beat.line);
     if (brief) return Math.min(p.briefHoldMax, Math.max(p.briefHoldMin, p.briefHoldMin + words * p.briefHoldPerWord));
     return Math.min(p.bossAutoMax, Math.max(p.bossAutoMin, p.bossAutoBase + words / 3.2));
   }
@@ -178,12 +187,12 @@ const CinematicTimeline = (() => {
     releasedT = 0;
     holdT = 0;
     prev: ConfirmSources = {};
-    constructor() { this.reset(); }
+    constructor(private readonly presentation: CinematicPresentationConfiguration) { this.reset(); }
     reset() { this.armed = false; this.releasedT = 0; this.holdT = 0; this.prev = {}; }
     begin() { this.reset(); }   // scene start: nothing counts until release+arm
     // sources: { key, touch, pad, mouse } booleans of "currently held"; click = edge
     update(dt: number, sources: ConfirmSources = {}): LatchResult {
-      const s = sources, p = P();
+      const s = sources, p = this.presentation;
       const confirmDown = [s.key, s.touch, s.pad].some(Boolean);   // mouse excluded from arming + skip
       if (!this.armed) {
         this.releasedT = confirmDown ? 0 : this.releasedT + dt;
@@ -201,7 +210,7 @@ const CinematicTimeline = (() => {
   }
 
   class Director {
-    private readonly _latch = new InputLatch();
+    private readonly _latch: InputLatch;
     script: CinematicScript | null = null;
     context: CinematicContext | null = null;
     index = -1;
@@ -214,7 +223,10 @@ const CinematicTimeline = (() => {
     forceReveal = false;
     private _revealDur = 0;
     private _autoAfter = 0;
-    constructor() { this.reset(); }
+    constructor(private readonly configuration: CinematicConfiguration) {
+      this._latch = new InputLatch(configuration.presentation);
+      this.reset();
+    }
     reset() {
       this.script = null; this.context = null; this.index = -1;
       this.elapsed = 0; this.revealElapsed = 0; this.fullyVisibleElapsed = 0;
@@ -259,7 +271,7 @@ const CinematicTimeline = (() => {
         if (beat?.id !== state.beatId) {
           throw new RangeError(`bound cinematic beat ${String(state.beatId)} is unavailable`);
         }
-        const revealSeconds = revealDuration(beat, Boolean(script.brief));
+        const revealSeconds = revealDuration(beat, Boolean(script.brief), this.configuration.presentation);
         if ((!state.fullyVisible && (revealSeconds <= 0 || state.revealElapsedSeconds >= revealSeconds)) ||
           (!state.fullyVisible && state.fullyVisibleElapsedSeconds > 0)) {
           throw new TypeError("cinematic director reveal visibility is inconsistent with its bound beat");
@@ -287,8 +299,8 @@ const CinematicTimeline = (() => {
       this.skipping = state.skipping;
       this.finished = state.finished;
       const beat = this.beat;
-      this._revealDur = beat ? revealDuration(beat, this.brief) : 0;
-      this._autoAfter = beat ? autoAfter(beat, this.brief) : 0;
+      this._revealDur = beat ? revealDuration(beat, this.brief, this.configuration.presentation) : 0;
+      this._autoAfter = beat ? autoAfter(beat, this.brief, this.configuration.presentation) : 0;
       this.forceReveal = state.fullyVisible && this._revealDur > 0 && this.revealElapsed < this._revealDur;
       // Held physical input is adapter state, not canonical world state. A
       // restored scene must release and re-arm before accepting a fresh press.
@@ -324,7 +336,7 @@ const CinematicTimeline = (() => {
     get latchHoldSeconds(): number { return this._latch.holdT; }
     get autoImminent() {
       const b = this.beat; if (!b || this._policy(b) !== "confirm-or-timeout") return false;
-      return this._autoAfter - this.elapsed <= P().autoGlyphLead;
+      return this._autoAfter - this.elapsed <= this.configuration.presentation.autoGlyphLead;
     }
     start(script: CinematicScript | null | undefined, context: CinematicContext = {}): this {
       if (!script || !Array.isArray(script.beats) || !script.beats.length) throw new Error("Cinematics.start requires beats");
@@ -342,8 +354,8 @@ const CinematicTimeline = (() => {
     private _enter(): void {
       this.elapsed = 0; this.revealElapsed = 0; this.fullyVisibleElapsed = 0; this.forceReveal = false;
       const b = this.beat;
-      this._revealDur = b ? revealDuration(b, this.brief) : 0;
-      this._autoAfter = b ? autoAfter(b, this.brief) : 0;
+      this._revealDur = b ? revealDuration(b, this.brief, this.configuration.presentation) : 0;
+      this._autoAfter = b ? autoAfter(b, this.brief, this.configuration.presentation) : 0;
       if (b?.onEnter) b.onEnter(this.context ?? {}, this);
     }
     private _advance(): void {
@@ -404,7 +416,7 @@ const CinematicTimeline = (() => {
         case "confirm":
           return;   // never auto-advances — waits for the player
         case "confirm-or-timeout":
-          if (this.revealProgress >= 1 && this.fullyVisibleElapsed >= P().minFullyVisible && this.elapsed >= this._autoAfter) this._advance();
+          if (this.revealProgress >= 1 && this.fullyVisibleElapsed >= this.configuration.presentation.minFullyVisible && this.elapsed >= this._autoAfter) this._advance();
           return;
         default:      // "timed"
           if (this.elapsed >= this._duration(beat)) this._advance();

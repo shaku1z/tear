@@ -136,6 +136,8 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly height: number;
   readonly state: TearSimulationWorldView;
   readonly platforms: () => readonly LiveObservationPlatform[];
+  /** World-owned stage geometry used by the certified State Forge frontier. */
+  readonly platformsForStage: (index: number) => readonly unknown[];
   readonly actorId: (enemy: TearSimulationEnemyView) => string;
   readonly stage: () => Readonly<{ name: string; index: number }>;
   readonly lifecycle: () => Readonly<{ phase: string; wave?: number | null; bossWave?: boolean; reward?: string | null }>;

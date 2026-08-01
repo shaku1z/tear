@@ -8,7 +8,7 @@ const FX = createParticleSystem();
 
 describe("presentation system boundaries", () => {
   it("requires a fresh post-arm confirm before advancing a cinematic line", () => {
-    const director = new Cinematics.Director();
+    const director = new Cinematics.Director(CONFIG);
     const script = {
       id: "input-latch",
       beats: [

@@ -236,6 +236,18 @@ The first thirty-four executable C27A slices are complete:
   11 native records, and the complete before/after route state. This proves a
   natural wave/reward boundary, not campaign victory or presentation/audio/
   pixel parity.
+- `tear-world-configuration` now gives a constructed simulation world its own
+  stable mutable tuning record before constructors capture configuration.
+  Base reset and State Forge restoration reconcile the existing root and nested
+  records in place after complete-shape validation, so an invalid snapshot
+  cannot partially erase a live configuration. The composition root, world
+  context, State Forge, weapon/upgrade/stage rules, combat phases, cinematic
+  timeline, and tutorial ghost sampler use that explicit record. The source
+  architecture gate rejects direct value imports of the process config in those
+  world-owned modules. This is evidence for simulation tuning isolation only:
+  particle policy, Backdrop, renderer/UI, browser input, audio, and persistence
+  remain outward app adapters and do not yet permit concurrent complete live
+  worlds or a portable full-world claim.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition
@@ -256,8 +268,8 @@ implementation slice is not a second combat host or parallel headless
 simulator. Use the shared bus and identity runtime to publish and compare real
 wave/spawn semantic streams. Add a campaign win scenario only through the
 production finale and outcome transitions, then
-continue moving app-backed configuration, RNG,
-effects, clock, Mirror, boss-feedback, and closure-owned run/world construction
+continue moving app-backed presentation policy/effects,
+clock, Mirror, boss-feedback, and closure-owned run/world construction
 into the real per-world composition behind narrow outward adapters.
 
 Only after that composition exists may replay and headless worlds use it. They

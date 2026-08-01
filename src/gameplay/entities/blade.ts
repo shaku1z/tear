@@ -18,7 +18,7 @@ function createBlade(dependencies: BladeDependencies) {
 class Blade extends BladeCore {
   _updateThrown(dt: number, player: BladePlayerPort, platforms: readonly BladePlatformPort[]): void {
     if (this.weapon?.updateThrown) {
-      this.weapon.updateThrown({ blade: this, dt, player, platforms });
+      this.weapon.updateThrown({ blade: this, config: CONFIG, dt, player, platforms });
       return;
     }
     this._updateStandardThrown(dt, player, platforms, false);
@@ -362,7 +362,7 @@ class Blade extends BladeCore {
     this._repeatHits.clear();
     this.hostile = false; this.stolenBy = null;
     this.state = "flying";
-    if (this.weapon?.onThrowLaunch) this.weapon.onThrowLaunch({ blade: this });
+    if (this.weapon?.onThrowLaunch) this.weapon.onThrowLaunch({ blade: this, config: CONFIG });
     return true;
   }
 
@@ -370,7 +370,7 @@ class Blade extends BladeCore {
   tryRecall(player: BladePlayerPort): BladeActionResult {
     if (this.state === "held" || this.state === "returning" || this.secondaryActive || this.secondaryQueued) return "busy";
     if (this.weapon?.onSecondaryThrowAction) {
-      return this.weapon.onSecondaryThrowAction({ blade: this, player });
+      return this.weapon.onSecondaryThrowAction({ blade: this, config: CONFIG, player });
     }
     return this._beginReturn(player);
   }
@@ -394,7 +394,7 @@ class Blade extends BladeCore {
   hitQuality(enemy?: object): number {
     void enemy;
     if (this.weapon?.qualityMetric) {
-      return clamp(this.weapon.qualityMetric({ blade: this }), 0, 1);
+      return clamp(this.weapon.qualityMetric({ blade: this, config: CONFIG }), 0, 1);
     }
     return this.sliceQuality();
   }
@@ -451,7 +451,7 @@ class Blade extends BladeCore {
     dmg *= lerp(S.pokeFloor, 1, quality);
     const commit = clamp(len(this.vx, this.vy) / S.commitRef, 0, 1);
     dmg *= lerp(S.commitFloor, 1, commit);
-    if (this.weapon?.damageProfile) dmg *= this.weapon.damageProfile({ blade: this, quality, baseDamage: dmg });
+    if (this.weapon?.damageProfile) dmg *= this.weapon.damageProfile({ blade: this, config: CONFIG, quality, baseDamage: dmg });
     return dmg;
   }
 

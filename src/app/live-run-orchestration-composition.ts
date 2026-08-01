@@ -103,7 +103,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     dependencies: d, state: options.state, width: options.width, services: options.worldServices,
     prepareWorld: options.prepareWorld, applySettings: options.applySettings,
     configureBlade: (blade, weaponId) => {
-      const weapon = d.applyWeapon(weaponId); blade.weapon = weapon; blade.model = weapon.model;
+      const weapon = d.applyWeapon(d.CONFIG, weaponId); blade.weapon = weapon; blade.model = weapon.model;
     },
     createPlayer: (x, y) => options.entities.createPlayer(x, y), createBlade: () => options.entities.createBlade(),
     installRun: (session) => { options.state.setRun(session); },

@@ -5,12 +5,12 @@ import { productionGhostPath, recordProductionGhostTrace } from "../../src/gamep
 describe("tutorial production ghost traces", () => {
   it("samples the real Player physics deterministically", () => {
     const events = [{ at: 0, duration: 0.6, right: true }, { at: 0.2, jump: true }] as const;
-    expect(recordProductionGhostTrace(1.4, events)).toEqual(recordProductionGhostTrace(1.4, events));
+    expect(recordProductionGhostTrace(CONFIG, 1.4, events)).toEqual(recordProductionGhostTrace(CONFIG, 1.4, events));
   });
 
   it("uses the runtime jump and dash model rather than an eased actor path", () => {
-    const jump = productionGhostPath("JUMP", 3);
-    const dash = productionGhostPath("DASH", 3);
+    const jump = productionGhostPath(CONFIG, "JUMP", 3);
+    const dash = productionGhostPath(CONFIG, "DASH", 3);
     expect(Math.min(...jump.map((frame) => frame[2]))).toBeLessThan(-100);
     const dashPeakSpeed = Math.max(...dash.slice(1).map((frame, index) => {
       const previous = dash[index];

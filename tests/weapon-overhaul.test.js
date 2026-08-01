@@ -116,8 +116,8 @@ assert.ok(CONFIG.blade.maxReach < baseline.blade.maxReach, "Hammer has shorter p
 assert.ok(CONFIG.player.knockbackMult < 1, "Hammer chassis resists knockback");
 hammer.throwBlade();
 assert.equal(hammer.throwGravity, CONFIG.weapons.hammer.meteorGravity);
-const hammerOutgoing = hammer.weapon.onThrowHit({ blade: hammer, enemy: {}, secondary: false });
-const hammerReturning = hammer.weapon.onThrowHit({ blade: hammer, enemy: {}, secondary: true });
+const hammerOutgoing = hammer.weapon.onThrowHit({ config: CONFIG, blade: hammer, enemy: {}, secondary: false });
+const hammerReturning = hammer.weapon.onThrowHit({ config: CONFIG, blade: hammer, enemy: {}, secondary: true });
 assert.equal(hammerOutgoing.mechanic, "meteor");
 assert.equal(hammerOutgoing.stop, true);
 assert.notEqual(hammerReturning.stop, true, "Hammer return cannot re-trigger Meteor embedding");
@@ -138,8 +138,8 @@ assert.ok(spear.axialQuality() < 0.01);
 const chain = makeBlade("chainblade");
 chain.throwBlade();
 assert.ok(chain.linkT > 0);
-const chainOutgoing = chain.weapon.onThrowHit({ blade: chain, enemy: {}, secondary: false });
-const chainReturning = chain.weapon.onThrowHit({ blade: chain, enemy: {}, secondary: true });
+const chainOutgoing = chain.weapon.onThrowHit({ config: CONFIG, blade: chain, enemy: {}, secondary: false });
+const chainReturning = chain.weapon.onThrowHit({ config: CONFIG, blade: chain, enemy: {}, secondary: true });
 assert.equal(chainOutgoing.stop, true);
 assert.notEqual(chainReturning.stop, true, "Yank cannot immediately re-bind its target");
 
@@ -151,8 +151,8 @@ assert.equal(ring.state, "circuiting");
 assert.ok(ring.circuitEnergy > CONFIG.weapons.ringblade.circuitEnergy);
 assert.ok(Math.abs(ring.vy) > Math.abs(ring.vx), "Circuit inherits the held weapon's release tangent");
 
-const spearThrowEffect = spear.weapon.onThrowHit({ blade: spear, enemy: {}, secondary: false });
-const spearReturnEffect = spear.weapon.onThrowHit({ blade: spear, enemy: {}, secondary: true });
+const spearThrowEffect = spear.weapon.onThrowHit({ config: CONFIG, blade: spear, enemy: {}, secondary: false });
+const spearReturnEffect = spear.weapon.onThrowHit({ config: CONFIG, blade: spear, enemy: {}, secondary: true });
 assert.equal(spearThrowEffect.stop, true);
 assert.notEqual(spearReturnEffect.stop, true, "Spear return cannot re-anchor on contact");
 
@@ -394,7 +394,7 @@ for (const id of ["sword", "hammer"]) {
   const target = {};
   blade.circuitOrbit = 0;
   CLOCK.sim = 10; blade.recordHit(target); CLOCK.sim += 0.05;
-  const repeated = blade.weapon.onThrowHit({ blade, enemy: target, secondary: false });
+  const repeated = blade.weapon.onThrowHit({ config: CONFIG, blade, enemy: target, secondary: false });
   assert.ok(repeated.damageMult < 0.82, "Circuit applies same-target diminishing damage");
 }
 

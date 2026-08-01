@@ -36,6 +36,7 @@ export function createLiveCombatActions<
     areaDamage: (x, y, radius, damage, playerOwned) => f.areaDamage(x, y, radius, damage, playerOwned),
   };
   const opening: Omit<LiveOpeningPhaseHost, "state"> = {
+    config: d.CONFIG,
     get player() { return player(); }, get blade() { return blade(); }, get run() { return run(); },
     get enemies() { return enemies(); }, get projectiles() { return projectiles(); },
     get platforms() { return ports.stage.platforms; }, width: context.width,
@@ -114,9 +115,10 @@ export function createLiveCombatActions<
 function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPhaseHost, "state" | "combat"> {
   const { dependencies: d, live, ports } = context, f = ports.functions;
   return {
+    config: d.CONFIG,
     get player() { return live.player(); }, get blade() { return live.blade(); }, get run() { return live.run(); }, width: context.width,
-    weaponHit: (enemy, quality, damage, slam, launch, empowered) => f.weaponHook("onHeldHit", { blade: live.blade(), player: live.player(), enemy, quality, damage, isSlam: slam, isLaunch: launch, empowered }),
-    throwHit: (enemy, secondary, throwId) => f.weaponHook("onThrowHit", { blade: live.blade(), player: live.player(), enemy, secondary, throwId }),
+    weaponHit: (enemy, quality, damage, slam, launch, empowered) => f.weaponHook("onHeldHit", { config: d.CONFIG, blade: live.blade(), player: live.player(), enemy, quality, damage, isSlam: slam, isLaunch: launch, empowered }),
+    throwHit: (enemy, secondary, throwId) => f.weaponHook("onThrowHit", { config: d.CONFIG, blade: live.blade(), player: live.player(), enemy, secondary, throwId }),
     runDamageMultiplier: f.runDamageMultiplier, noteFirstDamage: f.noteFirstDamage, logWeapon: f.logWeapon,
     emitThrowResolve: f.emitThrowResolve, onKill: context.resolveKill,
     addFloater: f.addFloater, addShake: f.addShake, addZoom: f.addZoom, addFlash: f.addFlash, addStyle: f.addStyle,
@@ -156,6 +158,7 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
 function createKill(context: LiveCombatActionContext): LiveKillHost {
   const { dependencies: d, live, ports } = context, f = ports.functions;
   return {
+    config: d.CONFIG,
     enemies: () => live.enemies(), projectiles: () => live.projectiles(), run: () => live.run(), player: () => live.player(), now: () => d.CLOCK.sim,
     stageIndex: () => ports.stage.index, finalStageIndex: d.STAGES.length - 1,
     stageAccent: () => ports.stage.current.accent ?? "#ffffff", stageChapterBossOutro: () => ports.stage.current.chapter?.bossOutro ?? null,

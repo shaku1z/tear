@@ -22,6 +22,7 @@ function makeContext(): UpgradeApplyContext {
       iframe: 0,
       heal() { return; },
     },
+    config: CONFIG,
     blade: {
       channelMods: {
         throwPower: 1,
@@ -55,7 +56,7 @@ describe("weapon-by-ability conformance", () => {
       for (const weapon of WEAPONS) {
         for (const upgrade of UPGRADES) {
           Object.assign(CONFIG, structuredClone(baseline));
-          applyWeapon(weapon.id);
+          applyWeapon(CONFIG, weapon.id);
           const context = makeContext();
           expect(() => { applyUpgrade(upgrade, context); }, `${weapon.id} + ${upgrade.id}`).not.toThrow();
           for (let tier = 0; tier < (upgrade.tiers?.length ?? 0); tier++) {

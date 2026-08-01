@@ -9,16 +9,11 @@ import { TearGameplayEventBus, type TearGameplayEvent } from "../../src/gameplay
 import { projectGameplayEventForParity, type TearSemanticEngineEventV1 } from
   "../../src/tearbench/gameplay-causal-events";
 import { applyTearCodecConfiguration, hydrateTearCodecWorld, type TearCodecValue } from "../../src/tearbench";
-import { CONFIG } from "../../src/config/game-config";
 import { applyWeapon } from "../../src/gameplay/weapons";
-import { createConfigRestorer } from "../../src/app/runtime-initialization";
 import { createDetachedCombatSimulation, createDetachedWaveRewardRuntime, createDetachedWorld,
   createDetachedRunOutcomeController, restoreDetachedChapterBinding } from "./detached-world-harness";
 
 const ARTIFACT_DIR = resolve("artifacts/tearbench/c27a");
-
-// Captured once at module load, before any scenario mutates tuning.
-const restoreConfiguration = createConfigRestorer(CONFIG);
 
 interface LiveTrace {
   readonly scenario: { readonly id: string; readonly seed: string; readonly maxTicks: number;
@@ -88,9 +83,11 @@ function replayDetached(trace: LiveTrace) {
   // apply the weapon (which mutates tuning), then restore the captured
   // configuration over it, then install the weapon on the blade. Any other
   // order leaves the world tuned differently from the one it came from.
-  restoreConfiguration();
-  const weapon = applyWeapon(staged.weaponId);
-  applyTearCodecConfiguration(CONFIG, staged.configuration);
+  detached.configuration.resetToBase();
+  const weapon = applyWeapon(detached.configuration.value, staged.weaponId);
+  const restoredConfiguration = detached.configuration.snapshot();
+  applyTearCodecConfiguration(restoredConfiguration, staged.configuration);
+  detached.configuration.restore(restoredConfiguration);
   const stagedBlade = staged.blade as { weapon: unknown; model: unknown };
   stagedBlade.weapon = weapon;
   stagedBlade.model = weapon.model;

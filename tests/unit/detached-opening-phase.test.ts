@@ -6,16 +6,16 @@ import { CONFIG } from "../../src/config/game-config";
 import { len } from "../../src/domain/geometry";
 import { runLiveOpeningPhase, type LiveOpeningPhaseHost } from "../../src/gameplay/combat/live-opening-phase";
 import { TearSimulationRuntime } from "../../src/gameplay/runtime/tear-simulation-runtime";
-import { createDetachedWorld, DETACHED_PLATFORMS } from "./detached-world-harness";
+import { createDetachedWorld, detachedPlatforms } from "./detached-world-harness";
 
-const PLATFORMS = DETACHED_PLATFORMS as unknown as LiveOpeningPhaseHost["platforms"];
+const PLATFORMS = detachedPlatforms(CONFIG) as unknown as LiveOpeningPhaseHost["platforms"];
 
 /**
  * A world plus the real opening combat phase, with every outward effect
  * recorded instead of rendered, played, or persisted.
  */
 function createDetachedOpeningWorld(seed: string) {
-  const { world, clock, effects, transient, input, run } = createDetachedWorld({
+  const { world, clock, effects, transient, input, run, configuration } = createDetachedWorld({
     seed,
     enemies: [
       { id: "charger", x: 760, y: CONFIG.world.groundY - CONFIG.enemy.h / 2 },
@@ -25,6 +25,7 @@ function createDetachedOpeningWorld(seed: string) {
   const outward: string[] = [];
   const note = (name: string) => () => { outward.push(name); };
   const host = {
+    config: configuration.value,
     get player() { return world.state.player() as never; },
     get blade() { return world.state.blade() as never; },
     get run() { return world.state.run() as never; },

@@ -2,8 +2,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { createConfigRestorer } from "../../src/app/runtime-initialization";
-import { CONFIG } from "../../src/config/game-config";
 import type { CommandEnvelope } from "../../src/domain/envelopes";
 import type { FinaleIntent } from "../../src/gameplay/campaign/finale-controller";
 import type { FinaleOutwardCall } from "../../src/gameplay/campaign/finale-outward-call";
@@ -34,8 +32,6 @@ import {
 } from "./detached-world-harness";
 
 const ARTIFACT = resolve("artifacts/tearbench/c27a/campaign-source-victory.json");
-const restoreConfiguration = createConfigRestorer(CONFIG);
-
 interface RuntimeSnapshot {
   readonly tick: number;
   readonly state: Record<string, TearCodecValue>;
@@ -151,9 +147,11 @@ function restorePreFinale(artifact: CampaignVictoryArtifact) {
   world.state.setSlowZones(staged.slowZones as never);
   world.state.setTemporaryWalls(staged.walls as never);
 
-  restoreConfiguration();
-  const weapon = applyWeapon(staged.weaponId);
-  applyTearCodecConfiguration(CONFIG, staged.configuration);
+  detached.configuration.resetToBase();
+  const weapon = applyWeapon(detached.configuration.value, staged.weaponId);
+  const restoredConfiguration = detached.configuration.snapshot();
+  applyTearCodecConfiguration(restoredConfiguration, staged.configuration);
+  detached.configuration.restore(restoredConfiguration);
   Object.assign(staged.blade as { weapon: unknown; model: unknown }, { weapon, model: weapon.model });
   const rng = artifact.preFinale.state["tear.rng.v1"];
   if (rng !== undefined) world.context.services.random.restore(rng as never);

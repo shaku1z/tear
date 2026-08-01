@@ -5,10 +5,10 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** fortieth C27A foundation slice implemented (portable simulation-
-factory extraction with explicit app Canvas and detached no-op ports); checkpoint
-remains open and blocking pending generic world bootstrap, configuration
-isolation, and rendered/audio/haptic exits.
+**Status:** forty-first C27A foundation slice implemented (per-world simulation
+tuning ownership with stable State Forge restoration); checkpoint remains open
+and blocking pending generic world bootstrap, presentation-policy isolation,
+and rendered/audio/haptic exits.
 
 ## Resume protocol (mandatory)
 
@@ -357,6 +357,16 @@ Before coding, read this file, then:
 
 All of the following were run from this worktree after the parity-passing slice:
 
+- Slice 41: `pnpm check:c27a` passed after per-world simulation tuning
+  ownership. Foundation: 36 files / 130 tests; browser live parity: 13
+  scenarios / 5,732 ticks / 33 native facts with 40 detached comparisons;
+  campaign victory: 10 files / 36 tests plus the 1,176-transition browser
+  route; Slice 41: 7 files / 53 tests. The source gate rejects direct,
+  mixed, and aliased value imports of `CONFIG` for world-owned weapons,
+  upgrades, stages, combat phases, cinematic timing, and tutorial ghost
+  physics. This proof excludes particle policy, Backdrop, renderer/UI, input,
+  audio, persistence, cloud, and complete multi-live-world operation.
+
 - `pnpm check:c27a` passed through Slice 40. Its foundation subgate passed 36
   files / 128 tests, regenerated all 13 browser scenarios across 5,732 ticks /
   33 native facts, and passed the 40-test detached comparator. Its campaign-
@@ -442,6 +452,19 @@ All of the following were run from this worktree after the parity-passing slice:
 
 ## Exact next C27A boundary
 
+**Slice 41 supersedes the earlier configuration-isolation wording below.**
+`TearWorldConfiguration` now owns one stable mutable config record per
+constructed simulation world, created before constructors capture tuning. It
+validates snapshots before reconciling root/nested references in place; State
+Forge uses that service for capture and base-reset/weapon/codec restore. Real
+weapons, upgrades, stage geometry, combat, cinematic timing, and tutorial ghost
+physics receive the record explicitly, with architecture checks rejecting
+global-config value imports in these paths. This is simulation tuning isolation,
+not complete concurrent live-world or presentation isolation. The next slice is
+to inject particle-policy configuration into `createParticleSystem` and prove
+two worlds can admit effects under distinct policies without cross-world state;
+that is the first generic-bootstrap prerequisite. Keep one runtime/scheduler.
+
 All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
@@ -458,10 +481,9 @@ Audio scheduling is now observed, but the browser result is seven
 logical-target-only mix requests and cue rejection by the voice cap, not output.
 The exact 42-entry terminal external-decision transcript now matches across
 hosts, but it remains in-memory/test evidence rather than durable external
-effect evidence. Slice 40 now carries the presentation-free simulation factory,
-but generic world bootstrap remains. The next boundary is generic world
-bootstrap, then configuration isolation; the latter still blocks true
-simultaneous full worlds. Any newly found
+effect evidence. Slice 40 carries the presentation-free simulation factory;
+Slice 41 adds simulation tuning isolation. Generic bootstrap and presentation
+policy isolation remain before true simultaneous complete worlds. Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
 from the harness — never a tolerance to widen, a scenario to shorten, or a
 field to drop from the projection.
@@ -482,10 +504,11 @@ composition with parity evidence.
 - Do not discard unrelated dirty work. In particular,
   `plans/EXTREME_RENDERING_IMPLEMENTATION_PLAN.md` was already untracked and
   is outside this C27A handoff scope.
-- Slice 39 commit `30c4877` is the pushed green boundary on
-  `origin/codex/ghost3-autonomous-completion-plan`. Slice 40 factory extraction
-  is ready to commit and not yet pushed. Its next boundary is generic world
-  bootstrap, then configuration isolation. Inspect the
+- Slice 40 commit `3dfd410` is the pushed green boundary on
+  `origin/codex/ghost3-autonomous-completion-plan`. Slice 41 has passed the
+  complete `pnpm check:c27a` gate and is the next intentional commit in this
+  handoff; its next boundary is particle-policy injection for generic bootstrap.
+  Inspect the
   actual branch and `git status --short` before later staging; stage only
   intentional TearBench work.
 - Do not claim C27, C27A, replay, headless, learning, or release completion

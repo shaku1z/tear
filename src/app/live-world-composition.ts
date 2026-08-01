@@ -7,6 +7,7 @@ import type { GameBlade, GameEnemy, GameFloater, GamePlayer, GameProjectile, Gam
 import type { BossBeatState, BossIntroState, LiveGameHostState } from "./live-game-host-state";
 import { createLiveWorldContext, type LiveWorldContext } from "./live-world-context";
 import { createLiveWorldEntityFactory, type LiveWorldEntityConstructionPort } from "./live-world-entity-factory";
+import type { TearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
 
 type WorldRun = GameRun & { voidDescent?: unknown };
 type PortableWorldState = TearWorldState<
@@ -50,7 +51,7 @@ export interface LiveWorldSessionPort {
 export interface LiveWorldCompositionOptions {
   readonly dependencies: GameRuntimeDependencies;
   readonly session: LiveWorldSessionPort;
-  readonly restoreConfiguration: () => void;
+  readonly configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>;
   readonly mirrors?: LiveWorldMirrors;
 }
 
@@ -99,10 +100,10 @@ export function createLiveWorldComposition(options: LiveWorldCompositionOptions)
   // The world owns the simulation timeline. The live factory adds drawing;
   // detached compositions may supply the gameplay-only implementation through
   // the same dependency surface.
-  const cinema = new options.dependencies.Cinematics.Director();
+  const cinema = new options.dependencies.Cinematics.Director(options.configuration.value);
   const context = createLiveWorldContext({
     dependencies: options.dependencies, state, entities, lifecycle, cinema,
-    restoreConfiguration: options.restoreConfiguration,
+    configuration: options.configuration,
   });
   return Object.freeze({ state, context, entities, lifecycle });
 }

@@ -53,7 +53,7 @@ type Candidate = TearStagedWorld<
   LegacyGhostRuntimeState
 >;
 type StateForgeWorldServices = Pick<
-  TearWorldServices<RunRandomStreamsSnapshot, RunRandomStreamName, RandomSource>,
+  TearWorldServices<RunRandomStreamsSnapshot, RunRandomStreamName, RandomSource, GameRuntimeDependencies["CONFIG"]>,
   "configuration" | "random"
 >;
 
@@ -236,7 +236,7 @@ function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
   components.set("tear.ui.v1", Object.freeze({ screen: options.screen(), focusId: String(options.focus()) }));
   components.set("tear.reward.v1", Object.freeze({ selection: encode(options.reward(), identities) }));
   components.set("tear.configuration.v1", Object.freeze({
-    rulesetVersion: "live", values: encode(options.dependencies.CONFIG, identities),
+    rulesetVersion: "live", values: encode(options.worldServices.configuration.value, identities),
   }));
   components.set("tear.rng.v1", encode(options.worldServices.random.snapshot(), identities));
   components.set("tear.cinematic.v1", encode(options.captureCinema(), identities));
@@ -305,8 +305,12 @@ export function createLiveStateForgeAdapter(
     },
     commit(candidate) {
       options.worldServices.configuration.resetToBase();
-      const weapon = options.dependencies.applyWeapon(candidate.weaponId);
-      applyTearCodecConfiguration(options.dependencies.CONFIG, candidate.configuration, new Map());
+      const weapon = options.dependencies.applyWeapon(options.worldServices.configuration.value, candidate.weaponId);
+      // Hydrate codec values into a detached snapshot, then reconcile them
+      // through the service. Entity constructors retain nested config records.
+      const restoredConfiguration = options.worldServices.configuration.snapshot();
+      applyTearCodecConfiguration(restoredConfiguration, candidate.configuration, new Map());
+      options.worldServices.configuration.restore(restoredConfiguration);
       candidate.blade.weapon = weapon;
       candidate.blade.model = weapon.model;
       options.state.setRun(candidate.run);

@@ -239,7 +239,7 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       const run = runOf(context.state); run.wave = d.STAGES.length * 10; run.score = 12345; run.runTime = 612; run.spawnQueue.length = 0;
       run._victoryPrepared = { isNew: true, earned: 321, coins: d.META.coins() };
       context.stage.index = d.STAGES.length - 1; context.stage.current = d.stageAt(context.stage.index);
-      context.stage.platforms = d.stagePlatforms(context.stage.index); clearCombat(); context.stopRecording();
+      context.stage.platforms = d.stagePlatforms(context.stage.index, d.CONFIG); clearCombat(); context.stopRecording();
       context.startFinale({ x: context.width / 2, y: context.height * 0.4 }, true);
     },
     cut: context.severFinale, skip() { context.cinema.requestSkip(); },

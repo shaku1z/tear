@@ -516,6 +516,7 @@ export function createLiveTearRuntimeEnvironment(
         context.loadStage(4);
         const frontier = createCampaignWave49RewardFrontier(
           snapshots.capture("campaign-wave-49-source", "reconstructed-reachable"), certificate,
+          context.platformsForStage,
         );
         const progressionRuntime = context.captureProgressionRuntime();
         const restored = snapshots.restore(frontier);

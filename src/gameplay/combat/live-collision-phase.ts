@@ -1,4 +1,4 @@
-import { CONFIG } from "../../config/game-config";
+import type { CONFIG as GameConfiguration } from "../../config/game-config";
 import type { HeldBladeCollisionInput, HeldBladeEnemy, HeldBladePlayer, HeldBladeRun,
   HeldBladeWeapon, HeldWeaponEffect } from "./held-blade-collision-contracts";
 import { resolveHeldBladeEnemyCollisions } from "./held-blade-collision-runtime";
@@ -29,6 +29,8 @@ export interface LiveCollisionPhaseState {
   enemies: LiveEnemy[]; projectiles: LiveProjectile[]; floaters: TailFloater[];
 }
 export interface LiveCollisionPhaseHost {
+  /** The owning world's mutable configuration, captured before any actors. */
+  readonly config: typeof GameConfiguration;
   readonly player: LivePlayer; readonly blade: LiveBlade; readonly run: LiveRun;
   readonly combat: CombatEntityRuntime; readonly width: number;
   readonly state: LiveCollisionPhaseState;
@@ -63,10 +65,10 @@ export interface LiveCollisionPhaseHost {
 
 /** Runs the collision-to-death half of a fixed combat tick as one typed phase. */
 export function runLiveCollisionPhase(host: LiveCollisionPhaseHost, dt: number): void {
-  const { player, blade, run, state } = host;
+  const { player, blade, run, state, config } = host;
   const held = blade.heldCollisionSegment(player);
   state.hitStop = resolveHeldBladeEnemyCollisions({ player, blade, enemies: state.enemies, run, segment: held,
-    currentHitStop: state.hitStop, tuning: heldTuning(host.width, host.run.mode === "tutorial"),
+    currentHitStop: state.hitStop, tuning: heldTuning(config, host.width, host.run.mode === "tutorial"),
     effects: heldEffects(host), hooks: heldHooks(host),
     segmentCircle: (segment, x, y, radius) => host.segmentCircle(segment.x1, segment.y1, segment.x2, segment.y2, x, y, radius),
     segmentPointDistance: host.segmentPointDistance, weaponSegmentContact: host.weaponSegmentContact,
@@ -74,13 +76,13 @@ export function runLiveCollisionPhase(host: LiveCollisionPhaseHost, dt: number):
   runThrown(host); runParries(host, held); host.combat.resolveProjectilePhases(dt, projectileTuning(host));
   resolveEnemyContact(state.enemies, player, { overlaps: host.overlap, segmentDistance: () => Infinity,
     onHit: () => { host.loseStyle(); host.sound("hurt"); }, onAbsorbed: host.onShieldAbsorb, onHostileBladeResolved: () => undefined });
-  resolveHostileBladeContact(blade, player, player.hw, CONFIG.source.stolenBladeDmg || 18, {
+  resolveHostileBladeContact(blade, player, player.hw, config.source.stolenBladeDmg || 18, {
     overlaps: () => false, segmentDistance: (x1, y1, x2, y2, x, y) => host.segmentPointDistance(x1, y1, x2, y2, x, y).dist,
     onHit: () => { host.loseStyle(); host.sound("hurt"); }, onAbsorbed: host.onShieldAbsorb,
-    onHostileBladeResolved: (target, weapon) => { host.effects.burst(target.x, target.y, weapon.vx, weapon.vy, 8, CONFIG.colors.perfect); } });
-  markFallenEnemies(state.enemies, CONFIG.view.h + 40); host.combat.resolveBomberDeaths(projectileTuning(host));
+    onHostileBladeResolved: (target, weapon) => { host.effects.burst(target.x, target.y, weapon.vx, weapon.vy, 8, config.colors.perfect); } });
+  markFallenEnemies(state.enemies, config.view.h + 40); host.combat.resolveBomberDeaths(projectileTuning(host));
   const tail = finalizeCombatTick({ dt, enemies: state.enemies, projectiles: state.projectiles, floaters: state.floaters,
-    shake: state.shake, shakeDecay: CONFIG.juice.shakeDecay, player, run, hooks: tailHooks(host) });
+    shake: state.shake, shakeDecay: config.juice.shakeDecay, player, run, hooks: tailHooks(host) });
   state.enemies = tail.enemies as LiveEnemy[]; state.projectiles = tail.projectiles as LiveProjectile[];
   state.floaters = tail.floaters; state.shake = tail.shake;
   // Only now that the surviving lists are installed may training spawn onto them.
@@ -88,21 +90,21 @@ export function runLiveCollisionPhase(host: LiveCollisionPhaseHost, dt: number):
   resolveDeath(host);
 }
 
-function heldTuning(width: number, tutorial: boolean): HeldBladeCollisionInput["tuning"] {
-  return { width, groundY: CONFIG.world.groundY,
-    blade: { minHitSpeed: CONFIG.blade.minHitSpeed, launchPower: CONFIG.blade.launchPower,
-      risingLaunchBonus: CONFIG.blade.risingLaunchBonus,
-      slamMinDownSpeed: tutorial ? Math.min(CONFIG.blade.slamMinDownSpeed, CONFIG.blade.minHitSpeed * 0.85) : CONFIG.blade.slamMinDownSpeed,
-      launchMinUpSpeed: tutorial ? Math.min(CONFIG.blade.launchMinUpSpeed, CONFIG.blade.minHitSpeed) : CONFIG.blade.launchMinUpSpeed,
-      risingSpeedRef: CONFIG.blade.risingSpeedRef,
-      slamPowerSpeed: CONFIG.blade.slamPowerSpeed, slamEmpowerAt: CONFIG.blade.slamEmpowerAt,
-      slamMultiplier: CONFIG.blade.slamMultiplier, slamPowerBonus: CONFIG.blade.slamPowerBonus,
-      risingDmgBonus: CONFIG.blade.risingDmgBonus, tutorialRecognition: tutorial },
-    style: { styleDamage: CONFIG.skill.styleDamage, styleDamageMax: CONFIG.skill.styleDamageMax, aerialRaveCap: CONFIG.skill.aerialRaveCap },
-    hitStop: { small: CONFIG.hitStop.small, big: CONFIG.hitStop.big, threshold: CONFIG.hitStop.threshold },
-    juice: { sparkCount: CONFIG.juice.sparkCount, shakeSmall: CONFIG.juice.shakeSmall, shakeBig: CONFIG.juice.shakeBig, zoomBig: CONFIG.juice.zoomBig },
-    colors: { perfect: CONFIG.colors.perfect, armoredShield: CONFIG.colors.armoredShield, slam: CONFIG.colors.slam, charger: CONFIG.colors.charger },
-    spearWallPinDuration: CONFIG.weapons.spear.wallPinDuration, lifestealCooldown: CONFIG.resilience.lifestealCd };
+function heldTuning(config: typeof GameConfiguration, width: number, tutorial: boolean): HeldBladeCollisionInput["tuning"] {
+  return { width, groundY: config.world.groundY,
+    blade: { minHitSpeed: config.blade.minHitSpeed, launchPower: config.blade.launchPower,
+      risingLaunchBonus: config.blade.risingLaunchBonus,
+      slamMinDownSpeed: tutorial ? Math.min(config.blade.slamMinDownSpeed, config.blade.minHitSpeed * 0.85) : config.blade.slamMinDownSpeed,
+      launchMinUpSpeed: tutorial ? Math.min(config.blade.launchMinUpSpeed, config.blade.minHitSpeed) : config.blade.launchMinUpSpeed,
+      risingSpeedRef: config.blade.risingSpeedRef,
+      slamPowerSpeed: config.blade.slamPowerSpeed, slamEmpowerAt: config.blade.slamEmpowerAt,
+      slamMultiplier: config.blade.slamMultiplier, slamPowerBonus: config.blade.slamPowerBonus,
+      risingDmgBonus: config.blade.risingDmgBonus, tutorialRecognition: tutorial },
+    style: { styleDamage: config.skill.styleDamage, styleDamageMax: config.skill.styleDamageMax, aerialRaveCap: config.skill.aerialRaveCap },
+    hitStop: { small: config.hitStop.small, big: config.hitStop.big, threshold: config.hitStop.threshold },
+    juice: { sparkCount: config.juice.sparkCount, shakeSmall: config.juice.shakeSmall, shakeBig: config.juice.shakeBig, zoomBig: config.juice.zoomBig },
+    colors: { perfect: config.colors.perfect, armoredShield: config.colors.armoredShield, slam: config.colors.slam, charger: config.colors.charger },
+    spearWallPinDuration: config.weapons.spear.wallPinDuration, lifestealCooldown: config.resilience.lifestealCd };
 }
 function heldEffects(host: LiveCollisionPhaseHost): HeldBladeCollisionInput["effects"] {
   return host.effects;
@@ -120,14 +122,14 @@ function heldHooks(host: LiveCollisionPhaseHost): HeldBladeCollisionInput["hooks
 }
 
 function runThrown(host: LiveCollisionPhaseHost): void {
-  const { blade, player, run, state } = host;
+  const { blade, player, run, state, config } = host;
   resolveThrownCollisions(blade, player, state.enemies, state.projectiles, run, {
-    duelCooldown: CONFIG.exotic.duelCd, throwLowMultiplier: CONFIG.blade.throw.loMult, throwHighMultiplier: CONFIG.blade.throw.hiMult,
-    recallMultiplier: CONFIG.blade.throw.recallMult, maxThrowSpeed: CONFIG.blade.throw.maxSpeed, throwSpeed: CONFIG.blade.throw.speed,
-    ringbladeEnemyCost: CONFIG.weapons.ringblade.enemyCost, chainbladeBindDuration: CONFIG.weapons.chainblade.bindDuration,
-    hitStopSmall: CONFIG.hitStop.small, shakeSmall: CONFIG.juice.shakeSmall, sparkCount: CONFIG.juice.sparkCount,
-    colors: { deflected: CONFIG.colors.deflected, armoredShield: CONFIG.colors.armoredShield, perfect: CONFIG.colors.perfect,
-      charger: CONFIG.colors.charger, bladeTrail: CONFIG.colors.bladeTrail } }, {
+    duelCooldown: config.exotic.duelCd, throwLowMultiplier: config.blade.throw.loMult, throwHighMultiplier: config.blade.throw.hiMult,
+    recallMultiplier: config.blade.throw.recallMult, maxThrowSpeed: config.blade.throw.maxSpeed, throwSpeed: config.blade.throw.speed,
+    ringbladeEnemyCost: config.weapons.ringblade.enemyCost, chainbladeBindDuration: config.weapons.chainblade.bindDuration,
+    hitStopSmall: config.hitStop.small, shakeSmall: config.juice.shakeSmall, sparkCount: config.juice.sparkCount,
+    colors: { deflected: config.colors.deflected, armoredShield: config.colors.armoredShield, perfect: config.colors.perfect,
+      charger: config.colors.charger, bladeTrail: config.colors.bladeTrail } }, {
     segmentCircle: (segment, x, y, radius) => host.segmentCircle(segment.x1, segment.y1, segment.x2, segment.y2, x, y, radius),
     distance: host.distance, clamp: host.clamp, weaponHit: host.throwHit, runDamageMultiplier: host.runDamageMultiplier,
     noteFirstDamage: host.noteFirstDamage, logHit: (throwId, damage, secondary, mechanic) => { host.logWeapon("throwHit", { throwId, damage, secondary, ...(mechanic ? { mechanic } : {}) }); },
@@ -143,35 +145,36 @@ function runThrown(host: LiveCollisionPhaseHost): void {
 }
 
 function runParries(host: LiveCollisionPhaseHost, held: HeldBladeCollisionInput["segment"]): void {
-  const { blade, player, run, state } = host;
+  const { blade, player, run, state, config } = host;
   resolveHeldBladeParries(state.projectiles, blade, player, run, {
-    deflectMinSpeed: CONFIG.blade.deflectMinSpeed, perfectSpeed: CONFIG.blade.perfectSpeed,
-    counterParryFactor: CONFIG.blade.counterParryFactor, parryGuardTime: CONFIG.resilience.parryGuardTime,
-    hitStopSmall: CONFIG.hitStop.small, hitStopBig: CONFIG.hitStop.big, shakeSmall: CONFIG.juice.shakeSmall,
-    shakeBig: CONFIG.juice.shakeBig, zoomParry: CONFIG.juice.zoomParry, zoomBig: CONFIG.juice.zoomBig,
-    flashParry: CONFIG.juice.flashParry, bomberBlastRadius: CONFIG.bomber.blastRadius,
-    bomberBlastDamage: CONFIG.bomber.blastDmg, colors: { perfect: CONFIG.colors.perfect, deflected: CONFIG.colors.deflected, bomber: CONFIG.colors.bomber } }, {
+    deflectMinSpeed: config.blade.deflectMinSpeed, perfectSpeed: config.blade.perfectSpeed,
+    counterParryFactor: config.blade.counterParryFactor, parryGuardTime: config.resilience.parryGuardTime,
+    hitStopSmall: config.hitStop.small, hitStopBig: config.hitStop.big, shakeSmall: config.juice.shakeSmall,
+    shakeBig: config.juice.shakeBig, zoomParry: config.juice.zoomParry, zoomBig: config.juice.zoomBig,
+    flashParry: config.juice.flashParry, bomberBlastRadius: config.bomber.blastRadius,
+    bomberBlastDamage: config.bomber.blastDmg, colors: { perfect: config.colors.perfect, deflected: config.colors.deflected, bomber: config.colors.bomber } }, {
     intersects: (shot) => host.segmentCircle(held.x1, held.y1, held.x2, held.y2, shot.x, shot.y, shot.r + held.pad),
     clamp: host.clamp, lerp: host.lerp, nearestEnemy: host.nearestEnemy,
     burst: (...args) => { host.effects.burst(...args); }, ring: (...args) => { host.effects.ring(...args); },
     explode: (...args) => { host.effects.explode(...args); }, floater: host.addFloater,
     areaDamage: host.areaDamage, split: host.splitProjectile, setHitStop: (value) => { state.hitStop = value; }, shake: host.addShake,
     zoom: host.addZoom, flash: host.addFlash, flare: host.flare,
-    slowMotion: host.triggerSlowMotion, extendSlowMotion: (scale) => { state.slowMotion = Math.max(state.slowMotion, CONFIG.juice.parrySlowmo * scale); },
+    slowMotion: host.triggerSlowMotion, extendSlowMotion: (scale) => { state.slowMotion = Math.max(state.slowMotion, config.juice.parrySlowmo * scale); },
     style: host.addStyle, sound: (name) => { host.sound(name); }, achievementParry: () => { host.achievement("parry"); },
     logPerfectParry: (source) => { host.logWeapon("perfectParry", { source: source && typeof source === "object" && "kind" in source ? Reflect.get(source, "kind") : undefined }); },
     emitPerfectParry: host.emitPerfectParry, firePerfectParry: host.makePerfectParryEvent });
 }
 
 function projectileTuning(host: LiveCollisionPhaseHost) {
-  return { projectileDamage: CONFIG.proj.dmg, projectileSpeed: CONFIG.proj.speed, deflectBoost: CONFIG.blade.deflectBoost,
-    deflectDamageMultiplier: CONFIG.blade.deflectDmgMult, runDamageMultiplier: host.runDamageMultiplier(), phaseStep: !!host.run.mods.phaseStep,
-    parryStun: !!host.run.mods.parryStun, aegisParry: !!host.run.mods.aegisParry, sparkCount: CONFIG.juice.sparkCount,
-    deflectedColor: CONFIG.colors.deflected, rootColor: CONFIG.colors.armoredShield, shakeBig: CONFIG.juice.shakeBig,
-    shakeSmall: CONFIG.juice.shakeSmall, achievementTracking: host.achievementsEnabled(), groundY: CONFIG.world.groundY,
-    mineTrigger: CONFIG.bomber.mineTrigger, blastRadius: CONFIG.bomber.blastRadius, blastDamage: CONFIG.bomber.blastDmg,
-    sludgeZoneRadius: CONFIG.exotic.sludgeZoneR, sludgeZoneLife: CONFIG.exotic.sludgeZoneLife, bomberColor: CONFIG.colors.bomber,
-    perfectColor: CONFIG.colors.perfect, sludgeColor: CONFIG.colors.sludge, flashParry: CONFIG.juice.flashParry, enemyShotColor: CONFIG.colors.enemyShot };
+  const { config } = host;
+  return { projectileDamage: config.proj.dmg, projectileSpeed: config.proj.speed, deflectBoost: config.blade.deflectBoost,
+    deflectDamageMultiplier: config.blade.deflectDmgMult, runDamageMultiplier: host.runDamageMultiplier(), phaseStep: !!host.run.mods.phaseStep,
+    parryStun: !!host.run.mods.parryStun, aegisParry: !!host.run.mods.aegisParry, sparkCount: config.juice.sparkCount,
+    deflectedColor: config.colors.deflected, rootColor: config.colors.armoredShield, shakeBig: config.juice.shakeBig,
+    shakeSmall: config.juice.shakeSmall, achievementTracking: host.achievementsEnabled(), groundY: config.world.groundY,
+    mineTrigger: config.bomber.mineTrigger, blastRadius: config.bomber.blastRadius, blastDamage: config.bomber.blastDmg,
+    sludgeZoneRadius: config.exotic.sludgeZoneR, sludgeZoneLife: config.exotic.sludgeZoneLife, bomberColor: config.colors.bomber,
+    perfectColor: config.colors.perfect, sludgeColor: config.colors.sludge, flashParry: config.juice.flashParry, enemyShotColor: config.colors.enemyShot };
 }
 
 function tailHooks(host: LiveCollisionPhaseHost) {
@@ -182,14 +185,15 @@ function tailHooks(host: LiveCollisionPhaseHost) {
 }
 function resolveDeath(host: LiveCollisionPhaseHost): void {
   resolvePlayerDeath(host.player, host.run, {
-    trainingReset: (target) => { host.addFloater(target.x, target.y - 44, "RESET", true, CONFIG.colors.perfect); host.effects.ring(target.x, target.y, 14, CONFIG.colors.perfect); },
+    trainingReset: (target) => { host.addFloater(target.x, target.y - 44, "RESET", true, host.config.colors.perfect); host.effects.ring(target.x, target.y, 14, host.config.colors.perfect); },
     shopRevive: (target) => { revive(host, target, false); }, abilityRevive: (target) => { revive(host, target, true); },
     adAvailable: host.adAvailable, requestAdContinue: host.requestAdContinue, endRun: host.endRun });
 }
 function revive(host: LiveCollisionPhaseHost, target: TailPlayer, ability: boolean): void {
-  if (ability) { host.effects.explode(target.x, target.y, CONFIG.colors.charger, 1.1); host.addFloater(target.x, target.y - 44, "LAST STAND", true, CONFIG.colors.charger); }
-  else { host.effects.ring(target.x, target.y, 16, CONFIG.colors.perfect); host.effects.burst(target.x, target.y, 0, -1, 16, CONFIG.colors.perfect); host.addFloater(target.x, target.y - 44, "SECOND WIND", true, CONFIG.colors.perfect); }
-  host.addShake(CONFIG.juice.shakeBig); host.addFlash(CONFIG.juice.flashParry);
+  const { config } = host;
+  if (ability) { host.effects.explode(target.x, target.y, config.colors.charger, 1.1); host.addFloater(target.x, target.y - 44, "LAST STAND", true, config.colors.charger); }
+  else { host.effects.ring(target.x, target.y, 16, config.colors.perfect); host.effects.burst(target.x, target.y, 0, -1, 16, config.colors.perfect); host.addFloater(target.x, target.y - 44, "SECOND WIND", true, config.colors.perfect); }
+  host.addShake(config.juice.shakeBig); host.addFlash(config.juice.flashParry);
   host.sound(ability ? "counter" : "parry");
   if (host.achievementsEnabled()) { host.profileAdd("revivesUsed", 1); host.achievement("revive"); host.ghostRevive(); host.checkAchievements(); }
 }

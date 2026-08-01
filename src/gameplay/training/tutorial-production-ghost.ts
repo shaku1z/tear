@@ -1,4 +1,4 @@
-import { CONFIG } from "../../config/game-config";
+import type { CONFIG as GameConfiguration } from "../../config/game-config";
 import { createPlayer, type PlayerInputPort, type PlayerPlatformPort } from "../entities/player";
 
 export type TutorialGhostFrame = readonly [time: number, x: number, y: number];
@@ -21,6 +21,7 @@ export interface TutorialGhostInputEvent {
  * the actor through an impossible route.
  */
 export function recordProductionGhostTrace(
+  config: typeof GameConfiguration,
   length: number,
   events: readonly TutorialGhostInputEvent[],
 ): readonly TutorialGhostFrame[] {
@@ -32,7 +33,7 @@ export function recordProductionGhostTrace(
     return time >= event.at && time < end;
   });
   const Player = createPlayer({
-    CONFIG,
+    CONFIG: config,
     FX: { burst: () => undefined, drip: () => undefined },
     GFX: { low: true },
     Input: {
@@ -44,12 +45,12 @@ export function recordProductionGhostTrace(
     clamp: (value, min, max) => Math.max(min, Math.min(max, value)),
     len: (x, y) => Math.hypot(x, y),
   });
-  const startX = CONFIG.view.w * 0.2;
-  const player = new Player(startX, CONFIG.world.groundY - CONFIG.player.h / 2);
-  const floor: readonly PlayerPlatformPort[] = [{ x: 0, y: CONFIG.world.groundY, w: CONFIG.view.w, h: CONFIG.view.h - CONFIG.world.groundY, floor: true }];
+  const startX = config.view.w * 0.2;
+  const player = new Player(startX, config.world.groundY - config.player.h / 2);
+  const floor: readonly PlayerPlatformPort[] = [{ x: 0, y: config.world.groundY, w: config.view.w, h: config.view.h - config.world.groundY, floor: true }];
   const frames: TutorialGhostFrame[] = [];
   for (let tick = 0; tick <= Math.ceil(length / step); tick += 1) {
-    if (tick % 3 === 0 || tick === 0) frames.push([Number(time.toFixed(3)), Number((player.x - startX).toFixed(2)), Number((player.y - (CONFIG.world.groundY - player.hh)).toFixed(2))]);
+    if (tick % 3 === 0 || tick === 0) frames.push([Number(time.toFixed(3)), Number((player.x - startX).toFixed(2)), Number((player.y - (config.world.groundY - player.hh)).toFixed(2))]);
     player.update(step, floor);
     time += step;
   }
@@ -72,6 +73,6 @@ export const TUTORIAL_PRODUCTION_GHOST_INPUTS: Readonly<Record<string, readonly 
   "FIELD TEST": Object.freeze([{ at: 0, duration: 0.56, right: true }, { at: 0.62, duration: 0.30, left: true }, { at: 0.64, dash: true }, { at: 1.92, jump: true }]),
 });
 
-export function productionGhostPath(title: string, length: number): readonly TutorialGhostFrame[] {
-  return recordProductionGhostTrace(length, TUTORIAL_PRODUCTION_GHOST_INPUTS[title] ?? []);
+export function productionGhostPath(config: typeof GameConfiguration, title: string, length: number): readonly TutorialGhostFrame[] {
+  return recordProductionGhostTrace(config, length, TUTORIAL_PRODUCTION_GHOST_INPUTS[title] ?? []);
 }

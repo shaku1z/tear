@@ -5,6 +5,8 @@ import {
   type LiveWorldContextDependencies,
 } from "../../src/app/live-world-context";
 import type { LiveGameHostState } from "../../src/app/live-game-host-state";
+import { createTearWorldConfiguration } from "../../src/gameplay/runtime/tear-world-configuration";
+import type { GameRuntimeDependencies } from "../../src/app/game-runtime-dependencies";
 
 describe("live world context", () => {
   it("adapts live singleton services through narrow world ports", () => {
@@ -26,7 +28,7 @@ describe("live world context", () => {
     const context = createLiveWorldContext({
       dependencies, state: {} as LiveGameHostState, entities: {} as never,
       lifecycle: {} as never, cinema,
-      restoreConfiguration: () => { calls.push("configuration"); },
+      configuration: createTearWorldConfiguration({} as GameRuntimeDependencies["CONFIG"]),
     });
 
     context.services.configuration.resetToBase();
@@ -40,6 +42,6 @@ describe("live world context", () => {
     expect(context.cinema).toBe(cinema);
     expect(dependencies.Mirror).toEqual({ active: false, host: null });
     expect(dependencies.BOSSFX.q).toEqual([]);
-    expect(calls).toEqual(["configuration", "reset:17", "restore", "fx", "backdrop"]);
+    expect(calls).toEqual(["reset:17", "restore", "fx", "backdrop"]);
   });
 });

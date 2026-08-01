@@ -56,7 +56,7 @@ export function installLiveGameDebug(options: LiveDebugCompositionOptions): void
     cinema: options.cinema, stage: options.stage, width: options.width, height: options.height,
     startRun: options.startRun, selectBoss: options.selectBoss, setScreen: options.setScreen, screen: options.screen,
     setContinueSeconds: options.setContinueSeconds, openDraft: options.openDraft, openTier: options.openTier,
-    applyUpgrade: (upgrade) => { options.applyUpgrade(upgrade, {
+    applyUpgrade: (upgrade) => { options.applyUpgrade(upgrade, { config: options.dependencies.CONFIG,
       player: options.player(), blade: options.blade(), mods: options.run().mods,
     }); },
     enterReplay: options.enterReplay, beginRename: options.beginRename, applyOptions: options.applyOptions,

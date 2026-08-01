@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-08-01. This records the first forty executable migration
+In progress as of 2026-08-01. This records the first forty-one executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -711,12 +711,41 @@ of replay, headless execution, or learning portability.
   production world, or configuration isolation. Generic world bootstrap and
   configuration isolation remain next, with configuration isolation still
   blocking truly simultaneous full worlds.
+- The forty-first slice gives each constructed simulation world a stable,
+  mutable `TearWorldConfiguration` record. The composition root clones the
+  base configuration before input, factories, world composition, UI, meta, or
+  run services capture it. `snapshot`, `restore`, and `resetToBase` reconcile
+  the stable root and nested records in place; restore validates the complete
+  data shape before mutation, so both unclonable and cloneable malformed
+  snapshots fail without changing the world. State Forge now captures that
+  owned record and restores it in the required order: base reset, selected
+  weapon, detached codec hydration, then stable in-place restore.
+
+  Weapons, upgrades, stage geometry, opening/collision/kill combat, cinematic
+  timing, and production tutorial-ghost physics all receive that world config
+  explicitly. The architecture gate rejects direct value imports of `CONFIG`
+  in those world-owned modules, including aliased or mixed named imports. The
+  detached harness likewise creates its own config service and no longer has a
+  globally captured platform fixture. Unit evidence exercises two distinct
+  tuning records through real weapon, upgrade, difficulty, and stage rules;
+  focused tests cover the combat/cinematic/tutorial ports and campaign
+  frontier. The complete `pnpm check:c27a` gate passed from this worktree:
+  foundation 36 files / 130 tests, a fresh 13-scenario / 5,732-tick / 33-native
+  fact browser corpus with 40 detached comparisons, campaign-victory 10 files
+  / 36 tests plus the 1,176-transition browser route, and Slice 41's 7 files /
+  53 tests.
+
+  This establishes **simulation tuning isolation**, not complete concurrent
+  live-world isolation. Particle admission policy, backdrop/renderer/UI,
+  browser input, audio, persistence, cloud, and other app-level adapters still
+  use live application configuration or services. It does not claim headless
+  completion, full production-world portability, rendered-pixel parity,
+  audibility/device output, or C27A completion.
 
 ## Remaining C27A work
 
-1. Continue portable production-world extraction with generic world bootstrap,
-   then isolate configuration. Configuration isolation still blocks true
-   simultaneous full worlds. Preserve the exact terminal transcript comparison
+1. Continue portable production-world extraction with generic world bootstrap
+   and presentation-policy isolation. Preserve the exact terminal transcript comparison
    while extending the existing
    intent/adapter, particle-admission, logical-feel, and software-audio receipts
    into rendered evidence, successful audio graph/audibility evidence where

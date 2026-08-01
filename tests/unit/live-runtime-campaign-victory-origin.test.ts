@@ -98,6 +98,7 @@ function fixture(options: Readonly<{
       projectiles: () => [],
     },
     platforms: () => component("tear.platform.v1") as readonly Record<string, unknown>[],
+    platformsForStage: () => [],
     actorId: () => "unused",
     stage: () => ({ name: `stage-${String(stageIndex)}`, index: stageIndex }),
     lifecycle: () => {

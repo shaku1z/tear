@@ -323,6 +323,28 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
+#### Slice 41 update (current)
+
+Slice 41 completes the bounded **simulation tuning isolation** step. Before any
+world consumer captures configuration, the composition root creates one stable
+`TearWorldConfiguration`. Its reset and restore reconcile the existing root and
+nested records in place, after rejecting malformed cloneable snapshots; State
+Forge captures that owned record and restores it through base reset, selected
+weapon, detached codec hydration, and stable restore. Weapons, upgrades, stage
+geometry, opening/collision/kill combat, cinematic timing, and tutorial ghost
+physics receive explicit config. The architecture gate rejects direct, mixed,
+or aliased global-config value imports in those modules. `pnpm check:c27a`
+passed: foundation 36 files / 130 tests, the 13-scenario / 5,732-tick /
+33-native-fact browser corpus and 40 detached comparisons, campaign victory 10
+files / 36 tests and 1,176 transitions, and Slice 41 7 files / 53 tests.
+
+This does not isolate particle policy, Backdrop, renderer/UI, browser input,
+audio, persistence, cloud, or any other app-level adapter; it does not prove
+concurrent complete live worlds, headless/full-world portability, or C27A
+completion. The exact next slice is to inject particle policy into the
+per-world particle factory and prove independent two-world effect admission as
+the first generic-bootstrap prerequisite.
+
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser
 - [ ] Versioned durable capsule contract with provenance, compatibility, integrity

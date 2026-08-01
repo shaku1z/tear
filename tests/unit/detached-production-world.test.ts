@@ -5,11 +5,11 @@ import type { GameAction } from "../../src/input/game-action";
 import { CONFIG } from "../../src/config/game-config";
 import { TearSimulationRuntime } from "../../src/gameplay/runtime/tear-simulation-runtime";
 import { stableVerificationHash } from "../../src/replay/hash";
-import { createDetachedWorld, DETACHED_PLATFORMS } from "./detached-world-harness";
+import { createDetachedWorld, detachedPlatforms } from "./detached-world-harness";
 
 interface Platform { x: number; y: number; w: number; h: number; floor?: boolean; oneway?: boolean }
 
-const PLATFORMS = DETACHED_PLATFORMS as readonly Platform[];
+const PLATFORMS = detachedPlatforms(CONFIG) as readonly Platform[];
 
 /**
  * The narrowest detached step: production entity updates only, with no combat

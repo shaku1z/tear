@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CONFIG } from "../../src/config/game-config";
 
 import { BossArenaRules, SourceVoidController, createBossArena } from "../../src/gameplay/training/arena-rules";
 import { PlaygroundController, trainingPlatforms } from "../../src/gameplay/training/playground-controller";
@@ -6,7 +7,7 @@ import { TUTORIAL_LESSONS, TutorialController } from "../../src/gameplay/trainin
 
 describe("tutorial controller", () => {
   it("credits observed movement from any authoritative input device", () => {
-    const controller = new TutorialController(); controller.start(1600);
+    const controller = new TutorialController(CONFIG); controller.start(1600);
     const snapshot = {
       dt: 1 / 60, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
       player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [],
@@ -24,7 +25,7 @@ describe("tutorial controller", () => {
   });
 
   it("preserves lesson order, thresholds, and delayed progression", () => {
-    const controller = new TutorialController(); controller.start(1600);
+    const controller = new TutorialController(CONFIG); controller.start(1600);
     expect(TUTORIAL_LESSONS.map((lesson) => lesson.title)).toEqual([
       "MOVE", "JUMP", "DASH", "CUT", "LAUNCH", "JUGGLE", "SLAM", "POWER SLAM", "UPDRAFT", "THROW", "PARRY", "READ THE CHARGE", "FIELD TEST", "READY",
     ]);
@@ -40,7 +41,7 @@ describe("tutorial controller", () => {
   });
 
   it("requires launch and power slam after their lesson actually begins", () => {
-    const controller = new TutorialController(); controller.start(1600);
+    const controller = new TutorialController(CONFIG); controller.start(1600);
     const snapshot = { dt: 0.1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
       player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
 
@@ -67,7 +68,7 @@ describe("tutorial controller", () => {
   });
 
   it("clears objective evidence at the next block boundary", () => {
-    const controller = new TutorialController(); controller.start(1600);
+    const controller = new TutorialController(CONFIG); controller.start(1600);
     const snapshot = { dt: 0, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
       player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
     controller.counters.moveL = 60; controller.counters.moveR = 60;
@@ -84,7 +85,7 @@ describe("tutorial controller", () => {
   });
 
   it("produces a deterministic renderer-neutral ghost snapshot", () => {
-    const left = new TutorialController(), right = new TutorialController(); left.start(1600); right.start(1600);
+    const left = new TutorialController(CONFIG), right = new TutorialController(CONFIG); left.start(1600); right.start(1600);
     const snapshot = { dt: 7, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
       player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
     left.update(snapshot); right.update(snapshot);
@@ -94,7 +95,7 @@ describe("tutorial controller", () => {
   });
 
   it("only demonstrates after the player has had room to attempt the current block", () => {
-    const controller = new TutorialController(); controller.start(1600);
+    const controller = new TutorialController(CONFIG); controller.start(1600);
     const snapshot = { dt: 1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
       player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
     for (let tick = 0; tick < 6; tick += 1) controller.update(snapshot);
@@ -104,7 +105,7 @@ describe("tutorial controller", () => {
   });
 
   it("credits an updraft only when a fresh production launch occurs while rising", () => {
-    const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 8;
+    const controller = new TutorialController(CONFIG); controller.start(1600); controller.lessonIndex = 8;
     const snapshot = { dt: 0, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
       player: { onGround: false, vy: -400, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", bladeTipVY: -500, enemies: [] };
     controller.mark("launch"); controller.update(snapshot);
@@ -114,7 +115,7 @@ describe("tutorial controller", () => {
   });
 
   it("credits an evade and punish only inside a live charger's readable windows", () => {
-    const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 12;
+    const controller = new TutorialController(CONFIG); controller.start(1600); controller.lessonIndex = 12;
     const snapshot = {
       dt: 0.1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
       player: { onGround: true, vy: 0, dashTimer: 0.12, dashX: -1, x: 800, facing: 1 }, bladeState: "held",
@@ -130,7 +131,7 @@ describe("tutorial controller", () => {
   });
 
   it("does not turn an ordinary dash or cut into enemy-language credit", () => {
-    const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 12;
+    const controller = new TutorialController(CONFIG); controller.start(1600); controller.lessonIndex = 12;
     const snapshot = { dt: 0.1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
       player: { onGround: true, vy: 0, dashTimer: 0.12, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
     controller.update(snapshot); controller.mark("strike"); controller.update({ ...snapshot, player: { ...snapshot.player, dashTimer: 0 } });
@@ -139,7 +140,7 @@ describe("tutorial controller", () => {
   });
 
   it("teaches Field Test as a readable evade, then punish route", () => {
-    const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 12;
+    const controller = new TutorialController(CONFIG); controller.start(1600); controller.lessonIndex = 12;
     const committed = {
       dt: 0.1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
       player: { onGround: true, vy: 0, dashTimer: 0.12, dashX: -1, x: 800, facing: 1 }, bladeState: "held",
@@ -159,7 +160,7 @@ describe("tutorial controller", () => {
   });
 
   it("recovers an unreachable thrown blade without granting throw credit", () => {
-    const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 9;
+    const controller = new TutorialController(CONFIG); controller.start(1600); controller.lessonIndex = 9;
     const snapshot = { dt: 1.21, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
       player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "embedded", enemies: [] };
     expect(controller.update(snapshot)).toContainEqual({ type: "recover-blade" });
@@ -167,7 +168,7 @@ describe("tutorial controller", () => {
   });
 
   it("recovers a tutorial dummy that has drifted out of the playable lesson", () => {
-    const controller = new TutorialController(); controller.start(1600); controller.lessonIndex = 3;
+    const controller = new TutorialController(CONFIG); controller.start(1600); controller.lessonIndex = 3;
     const intents = controller.update({
       dt: 1 / 60, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
       player: { onGround: true, vy: 0, dashTimer: 0, x: 400, facing: 1 }, bladeState: "held",
@@ -178,7 +179,7 @@ describe("tutorial controller", () => {
   });
 
   it("awards tutorial completion exactly once before entering the practice arena", () => {
-    const controller = new TutorialController(); controller.start(1600);
+    const controller = new TutorialController(CONFIG); controller.start(1600);
     controller.lessonIndex = TUTORIAL_LESSONS.length - 1;
     const snapshot = {
       dt: 5.1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,

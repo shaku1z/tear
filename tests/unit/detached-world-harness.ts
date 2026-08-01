@@ -1,6 +1,6 @@
 import { CONFIG, GFX } from "../../src/config/game-config";
 import { createLiveAuthoritativeInputAdapter } from "../../src/app/live-authoritative-input-adapter";
-import { createConfigRestorer } from "../../src/app/runtime-initialization";
+import { createTearWorldConfiguration } from "../../src/gameplay/runtime/tear-world-configuration";
 import { createLiveWorldComposition, type LiveWorldSessionPort } from "../../src/app/live-world-composition";
 import {
   createTearWorldSimulationFactories,
@@ -70,14 +70,13 @@ import type { RunLifecycleSnapshot } from "../../src/gameplay/run/lifecycle";
 
 type Options = TearWorldSimulationFactoryOptions;
 
-/** Ground plus one oneway ledge; enough arena for locomotion and contact. */
-export const DETACHED_PLATFORMS = Object.freeze([
-  { x: 0, y: CONFIG.world.groundY, w: CONFIG.view.w, h: CONFIG.view.h - CONFIG.world.groundY, floor: true },
-  { x: 650, y: 520, w: 300, h: 24, oneway: true },
-]);
-
-/** Captured once at module load, before any world mutates tuning. */
-const restoreBaseConfiguration = createConfigRestorer(CONFIG);
+/** Ground plus one oneway ledge; each test chooses its world configuration. */
+export function detachedPlatforms(config: typeof CONFIG) {
+  return Object.freeze([
+    { x: 0, y: config.world.groundY, w: config.view.w, h: config.view.h - config.world.groundY, floor: true },
+    { x: 650, y: 520, w: 300, h: 24, oneway: true },
+  ]);
+}
 
 function sink(): unknown {
   // Outward effects and audio are adapters; a detached world records nothing.
@@ -128,20 +127,22 @@ export interface DetachedWorldOptions {
  * whichever production phase they want to step.
  */
 export function createDetachedWorld(options: DetachedWorldOptions) {
+  const configuration = createTearWorldConfiguration(CONFIG);
+  const config = configuration.value;
   const clock = createTearWorldClock();
   const random = createRunRandom();
   const effects = createParticleSystem();
   const transient = createTearWorldTransientState();
   random.streams.reset(options.seed);
   const factories = createTearWorldSimulationFactories({
-    clock, config: CONFIG, graphics: GFX, effects, sound: sink() as Options["sound"],
+    clock, config, graphics: GFX, effects, sound: sink() as Options["sound"],
     input: idleInput() as Options["input"], presentation: detachedPresentation(),
     random: { enemyAi: random.streams.stream("enemy-ai"), boss: random.streams.stream("boss") },
     geometry: { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist },
     cosmeticRandom,
   });
   const dependencies = {
-    CLOCK: clock, GAME_RANDOM: random.service, GAME_RANDOM_STREAMS: random.streams, FX: effects,
+    CLOCK: clock, CONFIG: config, GAME_RANDOM: random.service, GAME_RANDOM_STREAMS: random.streams, FX: effects,
     Backdrop: { resetFx: () => undefined }, Mirror: factories.mirrorTypes.Mirror, BOSSFX: factories.enemyTypes.BOSSFX,
     Cinematics: CinematicTimeline,
     Player: factories.Player, Blade: factories.Blade, Projectile: factories.Projectile,
@@ -159,17 +160,17 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
     lastVaultId: () => null, setLastVaultId: () => undefined,
     winSeconds: () => 0, setWinSeconds: () => undefined,
   };
-  const world = createLiveWorldComposition({ dependencies, session, restoreConfiguration: () => undefined });
+  const world = createLiveWorldComposition({ dependencies, session, configuration });
   world.context.services.random.resetRun(options.seed);
   const run = detachedRun(options.mode);
   world.state.setRun(run as never);
-  world.state.setPlayer(world.entities.createPlayer(400, CONFIG.world.groundY - 80));
+  world.state.setPlayer(world.entities.createPlayer(400, config.world.groundY - 80));
   const blade = world.entities.createBlade() as { weapon?: unknown; model?: unknown };
   // Run start resets configuration to base and then installs the weapon
   // definition on the blade. applyWeapon mutates tuning, so without the reset a
   // second world in the same process would inherit the first world's tuning.
-  restoreBaseConfiguration();
-  const weapon = applyWeapon(run.weaponId);
+  configuration.resetToBase();
+  const weapon = applyWeapon(config, run.weaponId);
   blade.weapon = weapon;
   blade.model = weapon.model;
   world.state.setBlade(blade as never);
@@ -178,12 +179,12 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
   const input = createLiveAuthoritativeInputAdapter({
     player: () => world.state.player() as never,
     blade: () => world.state.blade() as never,
-    aimRadius: () => CONFIG.blade.aimRadius,
+    aimRadius: () => config.blade.aimRadius,
   });
   // Platforms are mutable world state: a boss encounter swaps in its arena,
   // and both the wave runtime and the combat phases must see the same array.
-  const stage: { index: number; platforms: unknown[] } = { index: 0, platforms: [...DETACHED_PLATFORMS] };
-  return { world, clock, effects, random, factories, transient, input, run, stage };
+  const stage: { index: number; platforms: unknown[] } = { index: 0, platforms: stagePlatforms(0, config) };
+  return { world, configuration, clock, effects, random, factories, transient, input, run, stage };
 }
 
 export type DetachedWorld = ReturnType<typeof createDetachedWorld>;
@@ -282,6 +283,7 @@ export function createDetachedCombatPhases(
   options: DetachedCombatPhaseOptions = {},
 ) {
   const { world, effects, transient, input, stage } = detached;
+  const config = detached.configuration.value;
   if (options.platforms !== undefined) stage.platforms = [...options.platforms];
   const platforms = () => stage.platforms as unknown as LiveOpeningPhaseHost["platforms"];
   const outward: string[] = [];
@@ -296,8 +298,8 @@ export function createDetachedCombatPhases(
       const authoritative = (player() as { aiInput?: { left(): boolean; right(): boolean } }).aiInput;
       return authoritative?.left() === true || authoritative?.right() === true;
     },
-    tuning: () => CONFIG.trick,
-    colors: () => CONFIG.colors,
+    tuning: () => config.trick,
+    colors: () => config.colors,
     // The browser parity trace starts a Ghost recording for the run. Supplying
     // its gameplay-event port is the detached host's equivalent capability.
     ghostRecording: () => options.gameplayEvents !== undefined,
@@ -315,7 +317,7 @@ export function createDetachedCombatPhases(
     },
     profileMax: note("profileMax"), achievementCheck: note("achievementCheck"),
     metaLevel: () => 0,
-    projectileSpeed: () => CONFIG.proj.speed,
+    projectileSpeed: () => config.proj.speed,
     createProjectile: (x, y, vx, vy) => world.entities.createProjectile(x, y, vx, vy) as never,
     addProjectile: (projectile) => { world.state.setProjectiles([...world.state.projectiles(), projectile]); },
   });
@@ -349,11 +351,12 @@ export function createDetachedCombatPhases(
   let combat = options.deferCombatRuntime === true ? null : new CombatEntityRuntime(entityHooks);
 
   const opening = {
+    config,
     get player() { return player(); }, get blade() { return blade(); },
     get run() { return world.state.run() as never; },
     get enemies() { return world.state.enemies() as never; },
     get projectiles() { return world.state.projectiles(); },
-    get platforms() { return platforms(); }, state: transient.opening, width: CONFIG.view.w,
+    get platforms() { return platforms(); }, state: transient.opening, width: config.view.w,
     get blocking() { return world.context.cinema.active && world.context.cinema.blocksCombat; },
     get playerMode() { return world.context.cinema.playerMode; }, protection: transient.protection,
     lowGraphics: false,
@@ -361,8 +364,8 @@ export function createDetachedCombatPhases(
     overrunMovementMultiplier: () => 1, runDamageMultiplier: () => 1,
     stepCinematic: (dt: number) => {
       stepCinematicPlayer({ dt, mode: world.context.cinema.playerMode, player: player(), blade: blade(),
-        platforms: platforms(), gravity: CONFIG.world.gravity, maxFall: CONFIG.player.maxFall,
-        descentLiftVelocity: CONFIG.source.descentLiftV, viewportWidth: CONFIG.view.w,
+        platforms: platforms(), gravity: config.world.gravity, maxFall: config.player.maxFall,
+        descentLiftVelocity: config.source.descentLiftV, viewportWidth: config.view.w,
         finale: options.finale?.snapshot() ?? null, lerp, clamp,
         onFinaleLanded: () => { options.finale?.markLanded(); },
         onFinaleBladeCut: (segment) => { options.finale?.tryBladeCut(segment); }, onLanding: () => undefined });
@@ -427,23 +430,24 @@ export function createDetachedCombatPhases(
     style: (kind: string) => { style.addStyle(kind); }, tutorial: note("fx:tutorial"),
   };
   const collision = {
+    config,
     get player() { return player(); }, get blade() { return blade(); },
     get run() { return world.state.run() as never; },
     get combat() {
       if (combat === null) throw new Error("detached combat runtime has not been composed");
       return combat;
-    }, width: CONFIG.view.w, state: collisionState,
+    }, width: config.view.w, state: collisionState,
     // The production weapon hook, exactly as the live combat adapter calls it.
     // A hand-rolled damage rule here would silently diverge from the live world.
     weaponHit: (enemy: unknown, quality: number, damage: number, slam: boolean, launch: boolean, empowered: boolean) => {
       outward.push("weaponHit");
       return invokeWeaponHook((blade() as { weapon?: object | null }).weapon, "onHeldHit",
-        { blade: blade(), player: player(), enemy, quality, damage, isSlam: slam, isLaunch: launch, empowered }) as never;
+        { config, blade: blade(), player: player(), enemy, quality, damage, isSlam: slam, isLaunch: launch, empowered }) as never;
     },
     throwHit: (enemy: unknown, secondary: boolean, throwId: number) => {
       outward.push("throwHit");
       return invokeWeaponHook((blade() as { weapon?: object | null }).weapon, "onThrowHit",
-        { blade: blade(), player: player(), enemy, secondary, throwId }) as never;
+        { config, blade: blade(), player: player(), enemy, secondary, throwId }) as never;
     },
     runDamageMultiplier: () => 1, noteFirstDamage: note("noteFirstDamage"),
     logWeapon: (type: string) => { outward.push(`logWeapon:${type}`); },
@@ -483,6 +487,7 @@ export function createDetachedCombatPhases(
   } as unknown as LiveCollisionPhaseHost;
 
   const kill = {
+    config,
     enemies: () => world.state.enemies() as never,
     projectiles: () => world.state.projectiles() as never,
     run: () => world.state.run() as never,
@@ -495,7 +500,7 @@ export function createDetachedCombatPhases(
     hasStageChapter: () => true,
     bossRosterSize: BOSS_ROSTER.length,
     achievementsEnabled: nativeTracking,
-    addKillScore: () => { addKillScore(world.state.run() as never, CONFIG.run.scorePerKill, CONFIG.run.scoreMult); },
+    addKillScore: () => { addKillScore(world.state.run() as never, config.run.scorePerKill, config.run.scoreMult); },
     addStat: () => undefined, maxStat: () => undefined, bumpDaily: () => undefined,
     bossKillAchievement: note("bossKillAchievement"), killAchievement: note("killAchievement"),
     checkAchievements: () => undefined,
@@ -677,6 +682,7 @@ export function createDetachedFinaleComposition(
   outcome = createDetachedRunOutcomeController(detached, events),
 ) {
   const { world, effects, stage } = detached;
+  const config = detached.configuration.value;
   const outward: string[] = [];
   const outwardCalls: FinaleOutwardCall[] = [];
   const recordOutward = (call: FinaleOutwardCall): void => {
@@ -688,9 +694,9 @@ export function createDetachedFinaleComposition(
   const intentBatches: (readonly FinaleIntent[])[] = [];
   const runtime: FinaleRuntimeState = {
     finale: null,
-    finaleController: new FinaleController(CONFIG.finale),
+    finaleController: new FinaleController(config.finale),
     resetFinale() {
-      this.finaleController = new FinaleController(CONFIG.finale);
+      this.finaleController = new FinaleController(config.finale);
       this.finale = null;
     },
     syncFinale() {
@@ -722,8 +728,8 @@ export function createDetachedFinaleComposition(
     prepareVictory: (campaign, persistFinale) => outcome.controller.prepareVictory(campaign, persistFinale),
     win: (campaign) => { outcome.controller.victory(campaign); },
     formatTime: (seconds) => seconds.toFixed(2),
-    viewport: { width: CONFIG.view.w, height: CONFIG.view.h },
-    perfectColor: () => CONFIG.colors.perfect,
+    viewport: { width: config.view.w, height: config.view.h },
+    perfectColor: () => config.colors.perfect,
     observeIntents: (intents) => { intentBatches.push(intents); },
     reducedMotion: () => false,
     lowGraphics: () => false,
@@ -798,7 +804,7 @@ export function createDetachedFinaleComposition(
         recordOutward({ type: "sound", cue, index });
       },
       restoreStageZero: () => {
-        stage.index = 0; stage.platforms = stagePlatforms(0);
+        stage.index = 0; stage.platforms = stagePlatforms(0, detached.configuration.value);
         world.state.setSlowZones([]); world.state.setTemporaryWalls([]);
         world.state.setProjectiles([]); world.state.setEnemies([]);
       },
@@ -893,6 +899,7 @@ export function createDetachedWaveRuntime(
   }>,
 ) {
   const { world, random, factories, stage } = detached;
+  const config = detached.configuration.value;
   if (platforms !== undefined) stage.platforms = [...platforms];
   const outward: string[] = [];
   const note = (name: string) => () => { outward.push(name); };
@@ -905,21 +912,21 @@ export function createDetachedWaveRuntime(
   // The same shared placement the live content composition uses; a restated
   // copy here is exactly how a detached world silently diverges.
   const makeBoss = (id: string) => {
-    const placement = planBossPlacement(id, CONFIG.view.w, CONFIG);
+    const placement = planBossPlacement(id, config.view.w, config);
     return world.entities.createEnemy(placement.factoryId, placement.x, placement.y, run() as never) as never;
   };
   const content = createLiveContentRuntime({
-    width: CONFIG.view.w,
+    width: config.view.w,
     random: random.streams.stream("spawn"),
     run: () => {
       const active = run() as unknown as { mode: string; wave: number; curBoss?: string };
       return { mode: active.mode, wave: active.wave,
         ...(active.curBoss === undefined ? {} : { curBoss: active.curBoss }) };
     },
-    modes: () => CONFIG.modes as never,
+    modes: () => config.modes as never,
     stages: STAGES,
     platforms: () => stage.platforms as never,
-    groundY: () => CONFIG.world.groundY,
+    groundY: () => config.world.groundY,
     construction: {
       sideSpawn: () => 0,
       createGround: (kind: string) => world.entities.createEnemy(kind, 0, 0, run() as never) as never,
@@ -930,11 +937,11 @@ export function createDetachedWaveRuntime(
       // carried adds, arena swap — is the shared production routine. Only the
       // banner/wipe/clip presentation is recorded.
       beginBossPresentation: (enemy: unknown) => {
-        beginBossEncounter(run() as never, enemy as never, CONFIG.bossTheater.introDur, {
+        beginBossEncounter(run() as never, enemy as never, config.bossTheater.introDur, {
           platforms: () => stage.platforms as never[],
           setPlatforms: (value: never[]) => { stage.platforms = value; },
-          arenaFor: (bossId: string) => createBossArena(bossId, CONFIG.view.w, CONFIG.view.h,
-            CONFIG.world.groundY, CONFIG.bossArena.reformWarn)?.map((platform) => ({ ...platform })) as never[] | null ?? null,
+          arenaFor: (bossId: string) => createBossArena(bossId, config.view.w, config.view.h,
+            config.world.groundY, config.bossArena.reformWarn)?.map((platform) => ({ ...platform })) as never[] | null ?? null,
         });
         note("bossPresentation")();
       },
@@ -957,11 +964,11 @@ export function createDetachedWaveRuntime(
   });
   const waves = createLiveWaveHost({
     run: () => run() as never,
-    tuning: () => CONFIG.run,
+    tuning: () => config.run,
     stages: STAGES as never,
     presets: PRESETS,
     random: random.streams.stream("world"),
-    modeDefinition: (mode: string) => CONFIG.modes.find((candidate) => candidate.id === mode) ?? {},
+    modeDefinition: (mode: string) => config.modes.find((candidate) => candidate.id === mode) ?? {},
     currentStage: () => ({ index: stage.index, accent: stageAt(stage.index).accent }),
     stageHasChapter: () => true,
     chapterFlowActive: () => false,
@@ -1034,11 +1041,11 @@ export function createDetachedWaveRewardRuntime(
       excludeIds: request.excludeIds,
     }),
     transitionPorts: {
-      applyUpgrade: (choice) => { applyUpgrade(choice, {
+      applyUpgrade: (choice) => { applyUpgrade(choice, { config: detached.configuration.value,
         player: detached.world.state.player() as never, blade: detached.world.state.blade() as never,
         mods: run().mods,
       }); },
-      tierUp: (choice) => { tierUp(choice.id, {
+      tierUp: (choice) => { tierUp(choice.id, { config: detached.configuration.value,
         player: detached.world.state.player() as never, blade: detached.world.state.blade() as never,
         mods: run().mods,
       }); },
