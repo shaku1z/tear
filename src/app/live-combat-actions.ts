@@ -1,3 +1,4 @@
+import { updateMirrorCombat } from "../gameplay/combat/mirror-combat-feedback";
 import { overrunMovementMultiplier } from "../gameplay/combat/overrun";
 import { applyCombatFeedback, type CombatFeedbackEvent } from "../gameplay/combat/combat-feedback-runtime";
 import type { CombatEntityRuntimeHooks } from "../gameplay/combat/combat-entity-runtime";
@@ -188,9 +189,9 @@ function resolveColor(d: LiveCombatActionContext["dependencies"], color?: string
 function updateRuntimeFeedback(context: LiveCombatActionContext, seconds: number): void {
   const { dependencies: d, live, ports } = context, f = ports.functions, target = live.player();
   if (d.Mirror.active) {
-    d.Mirror.updateCombat(seconds, target, live.blade());
-    if (d.Mirror.host?.dead) {
-      d.Mirror.active = false;
+    // The combat read itself is shared simulation; the floater and the queued
+    // effect flush below are this host's presentation.
+    if (updateMirrorCombat(d.Mirror, seconds, target, live.blade())) {
       f.addFloater(target.x, target.y - 70, "REFLECTION SHATTERED", true, d.Mirror.color);
     }
     applyFeedback(context, d.Mirror.fxq.splice(0), { x: target.x, y: target.y - 70, color: d.Mirror.color }, true);

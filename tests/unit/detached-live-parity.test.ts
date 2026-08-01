@@ -19,7 +19,8 @@ const restoreConfiguration = createConfigRestorer(CONFIG);
 
 interface LiveTrace {
   readonly scenario: { readonly seed: string; readonly maxTicks: number;
-    readonly start: { readonly mode: string; readonly difficulty: string; readonly weapon: string } };
+    readonly start: { readonly mode: string; readonly difficulty: string; readonly weapon: string;
+      readonly boss?: string } };
   readonly schedule: Record<string, readonly { readonly tick: number; readonly id: number; readonly command: GameAction }[]>;
   readonly origin: { readonly tick: number; readonly state: Record<string, TearCodecValue> };
   readonly terminated?: boolean;
@@ -130,7 +131,7 @@ describe.skipIf(traces.length === 0)("detached world against the live trace", ()
   });
 
   for (const live of traces) {
-    const label = `${live.scenario.start.mode}/${live.scenario.start.difficulty}/${live.scenario.start.weapon}` +
+    const label = `${live.scenario.start.mode}/${live.scenario.start.boss ?? live.scenario.start.difficulty}/${live.scenario.start.weapon}` +
       ` x${String(live.hashes.length)}${live.terminated === true ? " terminal" : ""}`;
 
     it(`hydrates the live origin snapshot into a production-composed world (${label})`, () => {

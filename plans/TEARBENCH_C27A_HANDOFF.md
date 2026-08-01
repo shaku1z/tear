@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** twenty-third C27A foundation slice complete (terminal runs join
-the parity matrix; the State Forge Map codec defect is fixed).
+**Status:** twenty-fourth C27A foundation slice complete (the whole boss
+roster is in the parity matrix; the Mirror combat read is now shared).
 
 ## Resume protocol (mandatory)
 
@@ -167,6 +167,13 @@ Before coding, read this file, then:
   render-only entropy from the seeded `enemy-ai` stream and stopped
   hand-rolling weapon damage; it calls `invokeWeaponHook` and installs the
   weapon in the live commit order. Six scenarios now match on every tick.
+- The twenty-fourth slice added colossus, aldric, echo, and source
+  scenarios. The Echo diverged at tick 215 because
+  `Mirror.updateCombat(...)` — how the boss reads and answers the player —
+  was called only from the live adapter's `updateRuntimeFeedback`.
+  `gameplay/combat/mirror-combat-feedback.ts` now owns that advance and the
+  shatter transition, and the harness uses the world's real mirror types
+  instead of a placeholder. Ten scenarios now match on every tick.
 
 ## Latest evidence
 
@@ -201,16 +208,17 @@ All of the following were run from this worktree after the parity-passing slice:
 
 ## Exact next C27A boundary
 
-Parity holds across six scenarios, including a boss run and a terminal run.
-Continue in order: (1) cinematics, which the detached host still
-short-circuits — a scenario that triggers a boss transformation or void
-descent will expose whatever the live host does around them; (2) make the
-outward effect surfaces comparable rather than merely recorded, so a
-divergence in what a world *emits* is caught as well as what it *is*;
-(3) the other four boss ids; (4) a win outcome, since only a death is
-covered. Every divergence so far has been a defect in the composition or a
-restated rule in the harness — never a tolerance to widen, a scenario to
-shorten, or a field to drop from the projection. Keep it that way.
+Parity holds across ten scenarios: three ordinary runs, all five bosses, a
+600-tick run, and a terminal run. Continue in order: (1) make the outward
+effect surfaces comparable rather than merely recorded, so a divergence in
+what a world *emits* is caught as well as what it *is* — the detached
+harness records effect names today, and the live side does not export a
+comparable stream yet; (2) a win outcome, since only a death is covered;
+(3) campaign and gauntlet modes, and a run long enough to cross a wave
+boundary with rewards. Every divergence so far has been a defect in the
+composition or a restated rule in the harness — never a tolerance to widen,
+a scenario to shorten, or a field to drop from the projection. Keep it that
+way.
 
 Preserve menu-time lazy construction and the one existing
 `TearSimulationRuntime`/scheduler, and extend the context only where real

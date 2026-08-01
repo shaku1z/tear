@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first twenty-three executable C27A slices are complete:
+The first twenty-four executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -190,8 +190,14 @@ The first twenty-three executable C27A slices are complete:
   now round-trips Maps. Six scenarios — endless normal/sword, endless
   hard/hammer, playground, bossonly/warden, a 600-tick endless run, and the
   terminal run — match the live authoritative hash on every executed tick,
-  covering death resolution and the run ending. Still untested:
-  cinematics; outward effects remain recorded rather than performed.
+  covering death resolution and the run ending.
+- The full boss roster then joined the matrix and the Echo diverged: the
+  Mirror's per-tick combat read lived inside the live adapter, so a world
+  without that adapter left the boss inert. `mirror-combat-feedback` now
+  owns the advance and the shatter transition. Ten scenarios — three
+  ordinary runs, all five bosses, a 600-tick run, and a terminal run —
+  match the live authoritative hash on every executed tick. Outward
+  effects remain recorded rather than performed.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

@@ -51,6 +51,14 @@ const scenarios = [
     start: { mode: "bossonly", difficulty: "normal", weapon: "sword", boss: "warden" },
     maxTicks: 300,
   }),
+  // The remaining roster. Each boss brings its own steps, arena, and
+  // cinematic hooks, so one boss is not evidence for the others.
+  ...["colossus", "aldric", "echo", "source"].map((boss) => scenarioFor({
+    id: `c27a.live-parity-trace.boss-${boss}`,
+    seed: `c27a-parity-boss-${boss}`,
+    start: { mode: "bossonly", difficulty: "normal", weapon: "sword", boss },
+    maxTicks: 300,
+  })),
   scenarioFor({
     id: "c27a.live-parity-trace.terminal",
     seed: "c27a-parity-terminal",

@@ -12,6 +12,7 @@ import { CombatEntityRuntime, type CombatEntityRuntimeHooks } from "../../src/ga
 import { runLiveCollisionPhase, type LiveCollisionPhaseHost } from "../../src/gameplay/combat/live-collision-phase";
 import { runLiveOpeningPhase, type LiveOpeningPhaseHost } from "../../src/gameplay/combat/live-opening-phase";
 import { invokeWeaponHook } from "../../src/gameplay/combat/weapon-runtime-coordinator";
+import { updateMirrorCombat } from "../../src/gameplay/combat/mirror-combat-feedback";
 import { cosmeticRandom } from "../../src/presentation/cosmetic-random";
 import { PRESETS, applyPreset, rollAffixes } from "../../src/gameplay/affixes";
 import { createLiveContentRuntime } from "../../src/gameplay/run/live-content-runtime";
@@ -83,7 +84,7 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
   });
   const dependencies = {
     CLOCK: clock, GAME_RANDOM: random.service, GAME_RANDOM_STREAMS: random.streams, FX: effects,
-    Backdrop: { resetFx: () => undefined }, Mirror: { active: false, host: null }, BOSSFX: factories.enemyTypes.BOSSFX,
+    Backdrop: { resetFx: () => undefined }, Mirror: factories.mirrorTypes.Mirror, BOSSFX: factories.enemyTypes.BOSSFX,
     Player: factories.Player, Blade: factories.Blade, Projectile: factories.Projectile,
     Charger: factories.enemyTypes.Charger, Ranged: factories.enemyTypes.Ranged, Flyer: factories.enemyTypes.Flyer,
     Bomber: factories.enemyTypes.Bomber, Armored: factories.enemyTypes.Armored, Wraith: factories.enemyTypes.Wraith,
@@ -199,7 +200,20 @@ export function createDetachedCombatPhases(
     logThrowLaunch: note("logThrowLaunch"), weaponWorldImpact: () => null,
     lobExplode: note("lobExplode"), emitThrowResolve: note("emitThrowResolve"),
     nearestEnemy: () => (world.state.enemies()[0] ?? null) as never,
-    updateFeedback: () => undefined, consumeThrow: () => input.consumeThrow(() => false),
+    updateFeedback: (dt: number) => {
+      // The Echo reads the player every tick through this call; without it the
+      // Mirror boss stands inert. The queued effects are drained like the live
+      // host drains them, but recorded instead of rendered.
+      const mirror = detached.factories.mirrorTypes.Mirror as unknown as
+        Parameters<typeof updateMirrorCombat>[0] & { fxq?: unknown[] };
+      if (updateMirrorCombat(mirror, dt, player(), blade())) outward.push("mirrorShattered");
+      if (mirror.fxq !== undefined && mirror.fxq.length > 0) {
+        outward.push(`mirrorFx:${String(mirror.fxq.splice(0).length)}`);
+      }
+      const drained = detached.factories.enemyTypes.BOSSFX.drain();
+      if (drained.length > 0) outward.push(`bossFx:${String(drained.length)}`);
+    },
+    consumeThrow: () => input.consumeThrow(() => false),
     updateWave: (dt: number) => { options.updateWave?.(dt); }, startTransformation: () => false, updateSupports: () => undefined,
     armorBypass: note("armorBypass"), resolveBossZones: () => undefined,
     updateBossArenaPlatforms: () => undefined, updateVoidScroll: () => undefined,

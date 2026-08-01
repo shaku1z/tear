@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-07-30. This records the first twenty-three executable migration
+In progress as of 2026-07-30. This records the first twenty-four executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -432,6 +432,25 @@ of replay, headless execution, or learning portability.
   903-tick terminal run — all matching the live authoritative hash on every
   executed tick. The comparison also asserts that at least one captured
   scenario is terminal, so death coverage cannot silently disappear.
+
+- The whole boss roster joined the matrix: colossus, aldric, echo, and
+  source each get their own 300-tick scenario, because one boss is not
+  evidence for the others. Four of the five matched immediately; the Echo
+  diverged at tick 215, with the live player taking damage and knockback
+  while the detached player stood untouched.
+
+  The cause was another canonical routine living inside the live adapter:
+  `updateRuntimeFeedback` called `Mirror.updateCombat(...)` each tick, which
+  is how the Echo reads the player and answers. A world that skips it leaves
+  the boss inert. `src/gameplay/combat/mirror-combat-feedback.ts` now owns
+  that advance and the shatter transition; `live-combat-actions` calls it
+  and keeps only the floater and the queued-effect flush as presentation.
+  The detached harness also had a placeholder `Mirror` object in its
+  dependencies, so it now uses the world's real mirror types.
+
+  All ten scenarios — three ordinary runs, five bosses, a 600-tick run, and
+  the terminal run — match the live authoritative hash on every executed
+  tick.
 
 ## Remaining C27A work
 
