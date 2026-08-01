@@ -5,9 +5,10 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** thirty-fourth C27A foundation slice implemented (exact natural
-wave/reward parity); checkpoint remains open and blocking pending real victory,
-outward presentation/audio/effect parity, and full-world portability exits.
+**Status:** thirty-fifth C27A foundation slice implemented (certified campaign
+Source victory and exact finale-intent parity); checkpoint remains open and
+blocking pending concrete outward presentation/audio/effect parity and
+full-world portability exits.
 
 ## Resume protocol (mandatory)
 
@@ -275,13 +276,42 @@ Before coding, read this file, then:
   trace naturally clears wave 1 at tick 1457, selects offered `glass_cannon`
   through the production semantic route at tick 1553 without a fixed tick,
   starts wave 2, and observes its first spawn at tick 1589. All 1,589 hashes,
-  11 native facts, and the before/after reward route state match exactly.
-  This closes natural wave/reward coverage only; victory and outward
-  presentation/audio/pixel parity remain open.
+  14 native facts, and the before/after reward route state match exactly. The
+  refreshed full corpus has 33 native facts; the three natural-trace defeat
+  facts became visible after native defeat publication was correctly separated
+  from optional legacy Ghost 2 `_gid` sampling.
+  At the slice-34 boundary this closed natural wave/reward coverage only;
+  victory and outward presentation/audio/pixel parity remained open.
+- The thirty-fifth slice reaches a real production campaign victory from a
+  certified, deliberately bounded origin: a canonical nonterminal wave-49
+  ledger is reconstructed into the real pending reward frontier, the production
+  transition starts wave 50, and an explicit State Forge `boss-finisher` child
+  changes only Source `hp`/`hpDisplay` to 1 after the authored intro. Semantic
+  combat and application frames then execute the real Source downed/TRUE FORM/
+  death sequence, wave clear, terminal outcome, finale, restoration, and win.
+  Both the frontier forge and surgical finisher are transactional: planted
+  validation/hash failures restore the original world and progression hooks.
+  This is not a claim that all 50 campaign waves were naturally played. A new
+  portable finale runtime is shared by live and detached hosts, and an observer
+  captures its seven immutable intent batches before adaptation. Starting from
+  the same post-defeat snapshot, live and detached match those finale intent
+  batches exactly. The match covers the finale's lifecycle, combat clear,
+  camera/world, blade, cut-beat effects, sound/vibration requests, restoration,
+  and win instructions; it does not yet certify equality of concrete audio,
+  particle, vibration-device, or pixel output produced by outward adapters.
 
 ## Latest evidence
 
 All of the following were run from this worktree after the parity-passing slice:
+
+- `pnpm check:c27a` passed after slice 35. Its foundation subgate passed 36
+  files / 126 tests, regenerated all 13 browser scenarios across 5,732 ticks /
+  33 native facts, and passed the 40-test detached comparator. Its campaign-
+  victory subgate passed 10 files / 31 tests, executed the real Source-victory
+  browser route through 1,176 transitions, and passed the dedicated detached
+  finale-parity test. The same worktree also passed the C22 live-runtime
+  browser proof and the complete C23, C24, C25-foundation, C26, and
+  C27-foundation gates.
 
 - `pnpm requirements:check` and `pnpm check:c27a:foundation` passed after
   slice 34: zero unmapped source lines; typecheck, lint, planted architecture
@@ -351,16 +381,17 @@ All of the following were run from this worktree after the parity-passing slice:
 
 ## Exact next C27A boundary
 
-All twelve captured fixed-tick scenarios now match on every tick and every
+All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
 explicit gameplay ports; and State Forge transactionally restores their full
-behavior-bearing position across worlds. The next boundary is a natural
-real campaign victory, followed by comparable presentation/audio/effect
-streams. Do not synthesize a `run.completed` fact
-from a detached harness note; route victory through the same production
-outcome controller, as defeat now does. Then
-continue extracting the closure-owned run/world construction. Any newly found
+behavior-bearing position across worlds. The campaign-Source proof now routes
+victory through the production outcome controller and shared portable finale,
+using a certified reconstructed wave-49 frontier and an explicit one-hit
+State Forge child rather than a synthetic `run.completed` note. Its seven
+finale intent batches match live to detached exactly. The next boundary is to
+compare the concrete presentation/audio/effect adapters and rendered evidence,
+then continue extracting the closure-owned run/world construction. Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
 from the harness — never a tolerance to widen, a scenario to shorten, or a
 field to drop from the projection.
@@ -381,9 +412,9 @@ composition with parity evidence.
 - Do not discard unrelated dirty work. In particular,
   `plans/EXTREME_RENDERING_IMPLEMENTATION_PLAN.md` was already untracked and
   is outside this C27A handoff scope.
-- Slice 33 is the last pushed green boundary; slice 34 is the current green
-  natural wave/reward parity boundary awaiting its commit on the active
-  `codex/` branch. Inspect the
+- Slice 34 is the last pushed green boundary; slice 35 is the current campaign
+  victory/finale-intent boundary with its complete `pnpm check:c27a` gate green
+  and awaiting commit on the active `codex/` branch. Inspect the
   actual branch and `git status --short` before later staging; stage only
   intentional TearBench work.
 - Do not claim C27, C27A, replay, headless, learning, or release completion

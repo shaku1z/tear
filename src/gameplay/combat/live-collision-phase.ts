@@ -53,7 +53,8 @@ export interface LiveCollisionPhaseHost {
   profileAdd: (name: string, value: number) => void; profileMax: (name: string, value: number) => void; dailyBump: (name: string, value: number) => void;
   achievementsEnabled: () => boolean; achievement: (name: "swing" | "throw" | "parry" | "break" | "jump" | "revive", enemy?: LiveEnemy) => void;
   checkAchievements: () => void; tutorialMark: (name: "strike" | "airHit") => void;
-  ghostRecording: () => boolean; ghostDeath: (enemy: LiveEnemy) => void; ghostSample: (dt: number, enemies: readonly LiveEnemy[]) => void; ghostRevive: () => void;
+  enemyDefeated: (enemy: LiveEnemy) => void;
+  ghostRecording: () => boolean; ghostSample: (dt: number, enemies: readonly LiveEnemy[]) => void; ghostRevive: () => void;
   updateTrick: (dt: number) => void; achievementTick: (dt: number) => void; updateTutorial: (dt: number) => void; updatePlayground: () => void;
   overlap: (ax: number, ay: number, ahw: number, ahh: number, bx: number, by: number, bhw: number, bhh: number) => boolean;
   onShieldAbsorb: () => void; loseStyle: () => void; buzz: (milliseconds: number) => void;
@@ -174,7 +175,7 @@ function projectileTuning(host: LiveCollisionPhaseHost) {
 }
 
 function tailHooks(host: LiveCollisionPhaseHost) {
-  return { ghostRecording: host.ghostRecording, ghostDeath: host.ghostDeath, ghostSample: host.ghostSample,
+  return { enemyDefeated: host.enemyDefeated, ghostRecording: host.ghostRecording, ghostSample: host.ghostSample,
     updateTrick: host.updateTrick, breakStreak: () => { host.achievement("break"); }, jumped: () => { host.achievement("jump"); },
     achievementTick: host.achievementTick, maxStat: host.profileMax, checkAchievements: host.checkAchievements,
     achievementsEnabled: host.achievementsEnabled };

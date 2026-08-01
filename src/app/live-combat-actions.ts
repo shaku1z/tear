@@ -142,7 +142,7 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
       else if (name === "parry") ports.achievement.parry(); else if (name === "break") ports.achievement.breakStreak();
       else if (name === "jump") ports.achievement.jumped(); else ports.achievement.revived(); },
     checkAchievements: f.checkAchievements, tutorialMark: (name) => { ports.tutorial.mark(name); },
-    ghostRecording: () => d.GHOST.recording(), ghostDeath: f.ghostDeath, ghostSample: f.ghostSample,
+    enemyDefeated: f.enemyDefeated, ghostRecording: () => d.GHOST.recording(), ghostSample: f.ghostSample,
     ghostRevive: () => {
       d.GAMEPLAY_EVENTS.emit({ kind: "effect", effect: "revive", x: live.player().x, y: live.player().y });
     }, updateTrick: f.updateTrick,

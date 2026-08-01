@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-08-01. This records the first thirty-four executable migration
+In progress as of 2026-08-01. This records the first thirty-five executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -599,21 +599,55 @@ of replay, headless execution, or learning portability.
   selects the offered `glass_cannon` at tick 1553 without advancing the fixed
   scheduler, emits the exact draft/pickup/wave-start facts, and spawns wave 2's
   first enemy at tick 1589. Live rerun and detached replay match all 1,589
-  authoritative hashes, all 11 native semantic records, and the complete
+  authoritative hashes, all 14 native semantic records, and the complete
   before/after route state. The full 13-scenario corpus contains 5,732 fixed
-  ticks and 30 native records. This closes natural wave-boundary coverage only;
-  campaign victory and presentation/audio/pixel outward parity remain open.
+  ticks and 33 native records. Three newly visible `enemy.defeated` records in
+  the natural trace exposed and closed a production publication defect: modern
+  core actor IDs now publish native defeat truth independently of the optional
+  legacy Ghost 2 `_gid` sampling path. This closes natural wave-boundary
+  coverage only;
+  At the slice-34 boundary, campaign victory and presentation/audio/pixel
+  outward parity remained open.
   The post-slice `requirements:check` and `check:c27a:foundation` gates passed:
   zero unmapped source lines, 33 focused files / 112 tests, the physical-input
   browser proof, a fresh 13-scenario / 5,732-tick capture, and all 40 exact
   detached state/native-stream/route comparisons.
+- The thirty-fifth slice adds a certified campaign-Source victory route without
+  pretending that the browser played all preceding campaign waves. It derives
+  a canonical nonterminal wave-49 ledger, reconstructs the real pending reward
+  frontier, uses the production transition to start wave 50, waits through the
+  authored Source intro, and applies an explicit State Forge `boss-finisher`
+  child that changes only the live Source's `hp`/`hpDisplay` to 1. Semantic
+  combat input then drives the real Source downed/TRUE FORM/death sequence,
+  wave-50 clear, `run.completed`, campaign finale, and presented win. The
+  frontier and finisher commits fail closed; planted failures prove full world
+  rollback and restoration of the original progression runtime hooks. The
+  portable gameplay finale runtime is shared by live and detached hosts; its
+  observer records seven exact, immutable intent batches before their adapters
+  apply them. The live and detached finale comparison begins from the same
+  captured post-defeat snapshot and matches those batches exactly, including
+  lifecycle, combat clear, world zoom, final blade, three cut beats, stage/player
+  restoration, sound, vibration, and win intents. A Class-A application-frame
+  API advances the same cinematic director needed by the browser and detached
+  route. This proves campaign outcome execution and finale *intent* parity. It
+  does not yet prove equality of every adapter-produced particle, audio sample,
+  controller vibration, rendered pixel, or other presentation side effect.
+  The integrated post-slice `pnpm check:c27a` gate passed: the foundation
+  subgate ran 36 files / 126 tests, regenerated the 13-scenario live corpus
+  across 5,732 ticks / 33 native facts, and passed all 40 detached comparator
+  tests; the campaign-victory subgate ran 10 files / 31 tests, completed the
+  real browser route in 1,176 transitions, and passed the dedicated detached
+  finale-parity test. The affected same-worktree sweep is also green: the C22
+  live-runtime browser proof plus `check:c23`, `check:c24`,
+  `check:c25:foundation`, `check:c26`, and `check:c27:foundation` all passed.
 
 ## Remaining C27A work
 
-1. Add a real campaign victory to the live↔detached matrix, then compare the
-   full outward presentation/audio/effect streams. The current 13-scenario
-   matrix already compares every post-origin native semantic record exactly
-   and includes the natural wave/reward boundary.
+1. Extend the now-exact finale intent comparison through the outward adapters
+   and compare their concrete presentation/audio/effect streams and rendered
+   evidence. The matrix includes a real production Source victory from a
+   certified reconstructed wave-49 frontier and explicit one-hit State Forge
+   child; it is not evidence of a naturally played full 50-wave campaign.
 2. Move the current live adapter's configuration, RNG, effects, clocks,
    Mirror, and boss feedback implementations inward behind the established
    world context, then extract the closure-owned
@@ -630,8 +664,8 @@ of replay, headless execution, or learning portability.
 4. Build replay-world and headless adapters from that same full real
    composition; the hydrated-world shell is evidence for the runtime seam, not
    a substitute for playable Tear parity.
-5. Extend mechanically enforced dependency rules for the portable core and
-   rerun the affected C22-C27 evidence set from the same worktree.
+5. Extend mechanically enforced dependency rules as the remaining portable
+   core boundary moves inward; rerun affected evidence after each such slice.
 
 See `docs/TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md` for the binding target
 and `plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md` for the full exit

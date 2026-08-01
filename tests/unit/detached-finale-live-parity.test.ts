@@ -1,0 +1,192 @@
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
+
+import { createConfigRestorer } from "../../src/app/runtime-initialization";
+import { CONFIG } from "../../src/config/game-config";
+import type { CommandEnvelope } from "../../src/domain/envelopes";
+import type { FinaleIntent } from "../../src/gameplay/campaign/finale-controller";
+import { TearGameplayEventBus, type TearGameplayEvent } from
+  "../../src/gameplay/runtime/gameplay-events";
+import { applyWeapon } from "../../src/gameplay/weapons";
+import type { GameAction } from "../../src/input/game-action";
+import {
+  applyTearCodecConfiguration,
+  hydrateTearCodecWorld,
+  type TearCodecValue,
+} from "../../src/tearbench";
+import { projectGameplayEventForParity, type TearSemanticEngineEventV1 } from
+  "../../src/tearbench/gameplay-causal-events";
+import {
+  createDetachedCombatSimulation,
+  createDetachedFinaleComposition,
+  createDetachedWaveRewardRuntime,
+  createDetachedWorld,
+  restoreDetachedChapterBinding,
+} from "./detached-world-harness";
+
+const ARTIFACT = resolve("artifacts/tearbench/c27a/campaign-source-victory.json");
+const restoreConfiguration = createConfigRestorer(CONFIG);
+
+interface RuntimeSnapshot {
+  readonly tick: number;
+  readonly state: Record<string, TearCodecValue>;
+}
+
+interface CampaignVictoryArtifact {
+  readonly scenario: { readonly seed: string };
+  readonly preFinale: RuntimeSnapshot;
+  readonly preFinaleHeldActions: readonly GameAction[];
+  readonly terminal: RuntimeSnapshot;
+  readonly finaleIntents: readonly (readonly FinaleIntent[])[];
+  readonly events: readonly TearSemanticEngineEventV1[];
+  readonly terminalRun: Readonly<Record<string, unknown>>;
+  readonly terminalWorld: Readonly<Record<string, unknown>>;
+  readonly terminalUi: Readonly<Record<string, unknown>>;
+  readonly terminalCinema: Readonly<Record<string, unknown>>;
+}
+
+function readArtifact(): CampaignVictoryArtifact | null {
+  if (!existsSync(ARTIFACT)) return null;
+  const parsed = JSON.parse(readFileSync(ARTIFACT, "utf8")) as Partial<CampaignVictoryArtifact>;
+  return parsed.preFinale === undefined || parsed.preFinaleHeldActions === undefined || parsed.finaleIntents === undefined
+    ? null
+    : parsed as CampaignVictoryArtifact;
+}
+
+function restorePreFinale(artifact: CampaignVictoryArtifact) {
+  const detached = createDetachedWorld({ seed: artifact.scenario.seed, mode: "campaign" });
+  const codecWorld = {
+    components: new Map(Object.entries(artifact.preFinale.state)),
+    references: new Map<string, string>(),
+    entityIds: new Set<string>(),
+  } as never;
+  const staged = hydrateTearCodecWorld(
+    { ...detached.world.entities, hydrateReward: () => null },
+    codecWorld,
+    { requireIdentity: (id: string) => id },
+  );
+  const { world } = detached;
+  world.state.setRun(staged.run);
+  world.state.setPlayer(staged.player);
+  world.state.setBlade(staged.blade);
+  world.state.setEnemies(staged.enemies);
+  world.state.setProjectiles(staged.projectiles);
+  world.state.setFloaters(staged.floaters as never);
+  world.state.setSlowZones(staged.slowZones as never);
+  world.state.setTemporaryWalls(staged.walls as never);
+
+  restoreConfiguration();
+  const weapon = applyWeapon(staged.weaponId);
+  applyTearCodecConfiguration(CONFIG, staged.configuration);
+  Object.assign(staged.blade as { weapon: unknown; model: unknown }, { weapon, model: weapon.model });
+  const rng = artifact.preFinale.state["tear.rng.v1"];
+  if (rng !== undefined) world.context.services.random.restore(rng as never);
+  detached.stage.index = staged.stageIndex;
+  detached.stage.platforms = [...staged.platforms];
+
+  restoreDetachedChapterBinding(detached, staged.runtime);
+  return { detached, staged };
+}
+
+function withoutSequence(event: TearSemanticEngineEventV1): Omit<TearSemanticEngineEventV1, "sequence"> {
+  const { sequence, ...rest } = event;
+  void sequence;
+  return rest;
+}
+
+const artifact = readArtifact();
+
+describe.skipIf(artifact === null)("detached finale against the live campaign victory", () => {
+  it("replays the exact post-defeat boundary through identical finale intents and victory state", () => {
+    if (artifact === null) throw new Error("campaign victory artifact is missing the finale parity boundary");
+    const { detached, staged } = restorePreFinale(artifact);
+    const native: TearGameplayEvent[] = [];
+    const events = new TearGameplayEventBus(() => artifact.preFinale.tick);
+    events.subscribe((event) => { native.push(event); });
+    const finale = createDetachedFinaleComposition(detached, events);
+    let updateWave: (seconds: number) => void = () => undefined;
+    const core = createDetachedCombatSimulation(detached, {
+      platforms: detached.stage.platforms,
+      gameplayEvents: events,
+      updateWave: (seconds) => { updateWave(seconds); },
+      finale: {
+        snapshot: finale.snapshot,
+        markLanded: finale.markLanded,
+        tryBladeCut: finale.tryBladeCut,
+      },
+      snapshot: (tick) => ({
+        tick,
+        lifecycle: detached.world.lifecycle.snapshot(),
+        cinema: detached.world.context.cinema.captureState(),
+        finale: finale.snapshot(),
+      }),
+    });
+    const waves = createDetachedWaveRewardRuntime(
+      detached,
+      events,
+      (enemy) => core.combatEntityRuntime.id(enemy, "enemy"),
+      detached.stage.platforms,
+      finale,
+    );
+    updateWave = waves.update;
+    core.combatEntityRuntime.restoreIdentityState(staged.identityState as never);
+    for (const binding of staged.identityBindings) core.combatEntityRuntime.bindId(binding.entity, binding.id);
+    core.simulationRuntime.reset(artifact.preFinale.tick);
+    core.authoritativeInput.beginTick(
+      artifact.preFinale.tick,
+      artifact.preFinaleHeldActions.map((command, index): CommandEnvelope<GameAction> => ({
+        kind: "command", tick: artifact.preFinale.tick, id: index + 1, command,
+      })),
+    );
+    events.setTickSource(() => core.simulationRuntime.scheduler.tick);
+
+    let clearSteps = 0;
+    while (detached.world.lifecycle.phase !== "finale" && clearSteps < 1_200) {
+      core.simulationRuntime.advanceOne([]);
+      clearSteps += 1;
+    }
+    expect(detached.world.lifecycle.phase).toBe("finale");
+    expect(clearSteps).toBeGreaterThan(0);
+    expect(clearSteps).toBeLessThan(1_200);
+
+    let frames = 0;
+    while (detached.world.lifecycle.phase !== "terminated" && frames < 900) {
+      if (frames === 0) detached.world.context.cinema.requestSkip();
+      finale.advanceApplicationFrame(
+        1 / 60,
+        (seconds) => core.simulationRuntime.advance(seconds * 1_000, () => []),
+      );
+      frames += 1;
+    }
+
+    expect(frames).toBeLessThan(900);
+    expect(finale.intentBatches).toEqual(artifact.finaleIntents);
+    const liveAfterBoundary = artifact.events
+      .filter((event) => event.tick > artifact.preFinale.tick)
+      .map(withoutSequence);
+    expect(native.map((event, sequence) => withoutSequence(projectGameplayEventForParity(event, sequence))))
+      .toEqual(liveAfterBoundary);
+
+    const run = detached.world.state.run() as never as Record<string, unknown>;
+    expect(detached.world.lifecycle.snapshot()).toMatchObject({ phase: "terminated", outcome: "victory", wave: 50 });
+    expect(detached.world.context.cinema.active).toBe(false);
+    expect(finale.snapshot()).toBeNull();
+    expect(finale.outcome.pendingFinale()).toBeNull();
+    const presented = finale.outcome.presented();
+    expect(presented?.outcome).toBe("victory");
+    expect(presented?.result).toMatchObject({ win: true, campaign: true, wave: 50 });
+    expect(run).toMatchObject({
+      mode: artifact.terminalRun.mode,
+      diff: artifact.terminalRun.diff,
+      weaponId: artifact.terminalRun.weaponId,
+      wave: artifact.terminalRun.wave,
+      score: artifact.terminalRun.score,
+    });
+    expect(detached.world.lifecycle.snapshot()).toMatchObject(
+      (artifact.terminalWorld.runtime as { lifecycle: Record<string, unknown> }).lifecycle,
+    );
+    expect(finale.outcome.presented()?.outcome).toBe(artifact.terminalUi.screen === "win" ? "victory" : undefined);
+    expect(detached.world.context.cinema.active).toBe(artifact.terminalCinema.active);
+  });
+});

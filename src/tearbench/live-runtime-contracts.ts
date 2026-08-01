@@ -13,6 +13,7 @@ import type { TearProgressionLedger } from "./progression-ledger";
 import type { TearProgressionReplayResult } from "./progression-replay";
 import type { TearSdlResolved } from "./tearsdl";
 import type { RunResultInfo } from "../gameplay/run/outcome-planner";
+import type { FinaleIntent } from "../gameplay/campaign/finale-controller";
 import type {
   TearSimulationEnemyView,
   TearSimulationWorldView,
@@ -74,6 +75,15 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
   readonly accessClass: "A";
   rng(): RunRandomStreamsSnapshot;
   /**
+   * Advances the real application-frame path for privileged cinematic evidence.
+   * This is deliberately separate from fixed-step and render-profile stepping:
+   * application code may advance zero or several authoritative simulation ticks.
+   */
+  advanceApplicationFrame(
+    deltaSeconds: number,
+    options?: Readonly<{ skipCinematic?: boolean }>,
+  ): Readonly<{ beforeTick: number; afterTick: number; fixedTickDelta: number }>;
+  /**
    * The authoritative canonical verification state of the last executed tick.
    * Class A is privileged diagnostics: this observes what the production step
    * already hashed, and is never an alternative source of truth for it.
@@ -81,11 +91,15 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
   canonicalState(): unknown;
   /** Native-only, post-origin semantic facts with a host-independent local ordering. */
   engineEventProjection(): readonly TearSemanticEngineEventV1[];
+  /** Exact immutable portable finale intent batches emitted since reset. */
+  finaleIntentProjection(): readonly (readonly FinaleIntent[])[];
   setTimeEffectsForTest(effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>): void;
   captureSnapshot(id: string, stateClass?: TearStateClass): TearSnapshotV1;
   restoreSnapshot(snapshot: TearSnapshotV1): TearLiveRestoreResult;
   forgeExitLaunch(launch: StateForgeExitLaunch): TearLiveRestoreResult;
   forgeWave99Hammer(): TearLiveRestoreResult;
+  /** Resumes a certified wave-49 campaign frontier through the production wave controller. */
+  forgeCampaignFinalWave(): TearLiveRestoreResult;
   forgeResolvedScenario(resolved: TearSdlResolved): TearLiveRestoreResult;
 }
 
@@ -114,8 +128,9 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly state: TearSimulationWorldView;
   readonly platforms: () => readonly LiveObservationPlatform[];
   readonly actorId: (enemy: TearSimulationEnemyView) => string;
-  readonly stage: () => Readonly<{ name: string }>;
-  readonly lifecycle: () => Readonly<{ phase: string }>;
+  readonly stage: () => Readonly<{ name: string; index: number }>;
+  readonly lifecycle: () => Readonly<{ phase: string; wave?: number | null; bossWave?: boolean; reward?: string | null }>;
+  readonly bossIntroActive: () => boolean;
   readonly choiceIds: () => readonly string[];
   readonly progression: () => Readonly<{
     wallet: number;
@@ -163,6 +178,16 @@ export interface LiveTearRuntimeEnvironmentContext {
   ) => void;
   readonly stateForge: TearLiveWorldAdapter<unknown>;
   readonly replayProgression: (ledger: TearProgressionLedger) => TearProgressionReplayResult;
+  /** Narrow privileged bridge used to resume a certified State Forge wave frontier. */
+  readonly loadStage: (index: number) => void;
+  /** Dispatches the production wave controller rather than restating wave planning in TearBench. */
+  readonly startNextWave: () => void;
+  /** Commits the two validated health fields of a surgical boss-finisher child in place. */
+  readonly applyBossFinisher: (bossId: string, remainingHp: 1) => void;
+  /** Keeps production-installed upgrade closures across a data-only codec reconstruction. */
+  readonly captureProgressionRuntime: () => unknown;
+  readonly restoreProgressionRuntime: (runtime: unknown) => void;
+  readonly finaleIntents: () => readonly (readonly FinaleIntent[])[];
 }
 
 export interface TearRuntimeBridgeFactory {

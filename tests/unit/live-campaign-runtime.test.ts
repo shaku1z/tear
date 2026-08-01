@@ -47,4 +47,46 @@ describe("live campaign runtime", () => {
     expect(chapterStates).toContain("LORE_ENTER");
     expect(chapterStates.at(-1)).toBe("WAVE_LIVE");
   });
+
+  it("forwards the portable immutable finale intent batch without app-layer encoding", () => {
+    const run = { mode: "campaign", chapterState: "WAVE_LIVE", score: 42, runTime: 3 };
+    const observed: unknown[] = [];
+    const order: string[] = [];
+    const runtime = createLiveCampaignRuntime({
+      runtime: story(),
+      cinema: { start: () => undefined, startBinding: vi.fn() },
+      run: () => run,
+      player: () => ({ x: 10, y: 20, vx: 0, vy: 0, onGround: true }),
+      blade: () => ({}),
+      stageAt: () => null,
+      preference: () => "off",
+      preparedWave: () => false,
+      activationDeferred: () => false,
+      chapterIntents: {
+        activatePreparedWave: vi.fn(), setChapterState: vi.fn(), clearProjectiles: vi.fn(),
+        musicDuck: vi.fn(), resetStageBanner: vi.fn(), sound: vi.fn(),
+      },
+      finaleIntents: {
+        beginLifecycle: () => { order.push("adapter"); },
+        clearCombat: vi.fn(), freezeVoid: vi.fn(), worldZoom: vi.fn(), finalBlade: vi.fn(),
+        ring: vi.fn(), burst: vi.fn(), flash: vi.fn(), shake: vi.fn(), vibrate: vi.fn(), sound: vi.fn(),
+        restoreStageZero: vi.fn(), restorePlayer: vi.fn(), voidMix: vi.fn(), musicDuck: vi.fn(), win: vi.fn(),
+      },
+      observeFinaleIntents: (batch) => { observed.push(batch); order.push("observer"); },
+      clearBossBeat: vi.fn(),
+      prepareVictory: () => ({ isNew: false, earned: 0, coins: 0 }),
+      win: vi.fn(), formatTime: () => "0:03", viewport: { width: 1600, height: 900 },
+      perfectColor: () => "#fff", reducedMotion: () => false, lowGraphics: () => false,
+    });
+
+    runtime.startAdventureFinale({ x: 30, y: 40 });
+
+    expect(order.slice(0, 2)).toEqual(["observer", "adapter"]);
+    expect(observed[0]).toEqual([
+      { type: "begin-finale-lifecycle" }, { type: "clear-combat" }, { type: "freeze-void" },
+      { type: "world-zoom", value: 0.8 }, { type: "final-blade", active: true, restoredTrail: true },
+    ]);
+    expect(Object.isFrozen(observed[0])).toBe(true);
+    expect((observed[0] as readonly unknown[]).every(Object.isFrozen)).toBe(true);
+  });
 });

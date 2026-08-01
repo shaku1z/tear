@@ -232,14 +232,32 @@ plan — they do not replace it.
 - [x] Campaign parity: State Forge captures active director position and a content-fingerprinted data-only chapter binding, with canonical inactive migration, input re-arm, rollback, validated cross-session reconstruction/continuation, and fail-closed legacy-active rejection
 - [x] Campaign parity: chapter scripts a detached world needs are constructible without app callbacks through explicit gameplay ports
 - [x] `KNOWN_DIVERGENCES` is empty
-- [ ] Outward effect streams are compared, not merely recorded
+- [ ] Outward effect streams are compared, not merely recorded (the seven
+  finale intent batches now match exactly; concrete adapter audio/effect/pixel
+  output remains open)
 - [x] A natural wave/reward boundary crossing is in the matrix
-- [ ] A real campaign win outcome is in the matrix
+- [x] A real campaign win outcome is in the matrix (certified reconstructed
+  wave-49 frontier + production wave-50 transition + explicit one-hit Source
+  State Forge child; not a claim of naturally playing all 50 waves)
 - [ ] Portable core has zero `src/app`, DOM/Canvas, or Ghost 2 imports (gate-enforced)
 - [ ] Affected C22–C27 gates rerun green from one worktree
 
 **Exit:** the alignment doc's exit gate, with the parity corpus green and no
 recorded divergence.
+
+Current Slice 35 boundary: the refreshed 13-scenario corpus contains 5,732
+fixed ticks and 33 native facts (14 in the natural route, including three
+enemy defeats). A portable finale runtime and Class-A application-frame API
+carry the certified Source-victory route through live and detached hosts, and
+all seven finale intent batches compare exactly before adaptation. The next
+slice must compare the adapters' concrete presentation, audio, effect,
+vibration, and rendered results; intent equality alone does not check the full
+outward-stream item above. The integrated `pnpm check:c27a` gate passed with a
+36-file / 126-test foundation subgate, the 13-scenario / 5,732-tick / 33-native-
+fact browser corpus, 40 detached comparator tests, and a campaign-victory
+subgate covering 10 files / 31 tests, the 1,176-transition real browser route,
+and one detached finale-parity test. The affected same-worktree sweep is green:
+the C22 live-runtime browser proof and C23 through C27 package gates passed.
 
 ### C27 — Authoritative recorder and capsule
 

@@ -17,6 +17,7 @@ import { projectLiveProjectiles } from "./live-observation-projectiles"; import 
 import { projectLiveActorMechanics, projectLiveBehaviorMode, projectLiveBladeMechanics, projectLivePlayerMechanics } from "./live-observation-actors";
 import { certifyWave99HammerProgression, createCanonicalWave99HammerProgression, createWave99HistoricalRunState,
   forgeExitLaunchSnapshot } from "./state-forge-exit-gate";
+import { createCampaignVictoryOrigin, createCampaignWave49RewardFrontier } from "./campaign-victory-origin";
 import { createGameplayCausalEvent, projectGameplayEventForParity } from "./gameplay-causal-events";
 import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
 import type { LiveTearRuntimeEnvironmentContext, TearClassARuntimeEnvironment,
@@ -152,6 +153,14 @@ function requireStructured(accessClass: TearRuntimeAccessClass, operation: strin
 /** Creates the test-build-only controller for the actual browser gameplay host. */
 export function createLiveTearRuntimeEnvironment(
   context: LiveTearRuntimeEnvironmentContext,
+  accessClass: "A",
+): TearClassARuntimeEnvironment;
+export function createLiveTearRuntimeEnvironment(
+  context: LiveTearRuntimeEnvironmentContext,
+  accessClass: "B",
+): TearClassBRuntimeEnvironment;
+export function createLiveTearRuntimeEnvironment(
+  context: LiveTearRuntimeEnvironmentContext,
   accessClass: "A" | "B",
 ): TearClassARuntimeEnvironment | TearClassBRuntimeEnvironment {
   let scenario: TearScenarioV1 | null = null;
@@ -164,6 +173,7 @@ export function createLiveTearRuntimeEnvironment(
   let acceptedActions = 0;
   let screenshotCount = 0;
   let lastCallerEnvelopeId = 0;
+  let finaleIntentStart = 0;
   const eventLog: TearCausalEventV1[] = [];
   const nativeEventLog: TearGameplayEvent[] = [];
   context.subscribeEngineEvent((event) => {
@@ -232,6 +242,7 @@ export function createLiveTearRuntimeEnvironment(
       context.drainConsumedActions();
       eventLog.length = 0;
       nativeEventLog.length = 0;
+      finaleIntentStart = context.finaleIntents().length;
       resets += 1;
       observation = projectLiveTearObservation(context, 0, accessClass);
       eventLog.push(createEvent(sequence++, 0, "run.started", {
@@ -419,15 +430,62 @@ export function createLiveTearRuntimeEnvironment(
     ...environment,
     accessClass: "A" as const,
     rng: () => context.random(),
+    advanceApplicationFrame: (
+      deltaSeconds: number,
+      options: Readonly<{ skipCinematic?: boolean }> = {},
+    ) => {
+      if (!(deltaSeconds > 0) || !Number.isFinite(deltaSeconds)) {
+        throw new RangeError("application-frame delta must be finite and positive");
+      }
+      if (scenario === null || observation === null) {
+        throw new Error("Tear runtime must be reset before stepping");
+      }
+      if (paused || terminated) throw new Error("application-frame stepping requires a running Tear runtime");
+      const beforeTick = context.authoritative()?.tick ?? observation.tick;
+      if (options.skipCinematic === true) context.skipCinematic();
+      context.advanceApplicationFrame(deltaSeconds);
+      const afterTick = context.authoritative()?.tick ?? beforeTick;
+      if (!Number.isSafeInteger(beforeTick) || !Number.isSafeInteger(afterTick) || afterTick < beforeTick) {
+        throw new Error("application frame produced an invalid authoritative tick delta");
+      }
+      const fixedTickDelta = afterTick - beforeTick;
+      fixedTicks += fixedTickDelta;
+      observation = projectLiveTearObservation(context, afterTick, accessClass);
+      terminated = context.screen() === "gameover" || context.screen() === "win";
+      context.render();
+      return Object.freeze({ beforeTick, afterTick, fixedTickDelta });
+    },
     canonicalState: () => context.authoritative()?.state ?? null,
     engineEventProjection: () => Object.freeze(nativeEventLog.map(projectGameplayEventForParity)),
+    finaleIntentProjection: () => Object.freeze(context.finaleIntents().slice(finaleIntentStart)),
     setTimeEffectsForTest: (effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>) => {
       context.setTimeEffectsForTest(effects);
     },
     captureSnapshot: (id: string, stateClass?: TearStateClass) => snapshots.capture(id, stateClass),
     restoreSnapshot: (snapshot: TearSnapshotV1) => snapshots.restore(snapshot),
-    forgeExitLaunch: (launch: StateForgeExitLaunch) =>
-      snapshots.restore(forgeExitLaunchSnapshot(snapshots.capture(`source-${launch.id}`), launch)),
+    forgeExitLaunch: (launch: StateForgeExitLaunch) => {
+      if (launch.kind === "boss-finisher" && context.bossIntroActive()) {
+        throw new Error("boss-finisher origin requires the production boss introduction to be complete");
+      }
+      const original = snapshots.capture(`source-${launch.id}`);
+      const forged = forgeExitLaunchSnapshot(original, launch);
+      if (launch.kind !== "boss-finisher") return snapshots.restore(forged);
+      const progressionRuntime = context.captureProgressionRuntime();
+      try {
+        context.applyBossFinisher(launch.boss, launch.remainingHp);
+        const committed = snapshots.capture(launch.id, "surgical-valid");
+        if (committed.hashes.exact !== forged.hashes.exact) {
+          throw new Error("boss-finisher surgical commit changed fields outside its declared health pair");
+        }
+        return Object.freeze({ ok: true as const, exactHash: committed.hashes.exact,
+          semanticHash: committed.hashes.semantic });
+      } catch (error) {
+        const rollback = snapshots.restore(original);
+        context.restoreProgressionRuntime(progressionRuntime);
+        if (!rollback.ok) throw new Error("boss-finisher rollback failed", { cause: error });
+        throw error;
+      }
+    },
     forgeWave99Hammer: () => {
       const progression = createCanonicalWave99HammerProgression();
       const replay = context.replayProgression(progression.ledger);
@@ -439,6 +497,44 @@ export function createLiveTearRuntimeEnvironment(
       Reflect.set(run, "stateForgeEvidence", { ...certificate, liveReplay: replay, ledger: progression.ledger });
       const forged = snapshots.capture("wave99-start", "reconstructed-reachable");
       return Object.freeze({ ok: true as const, exactHash: forged.hashes.exact, semanticHash: forged.hashes.semantic });
+    },
+    forgeCampaignFinalWave: () => {
+      const certificate = createCampaignVictoryOrigin();
+      const original = snapshots.capture("campaign-wave-49-original");
+      const originalProgressionRuntime = context.captureProgressionRuntime();
+      try {
+        const replay = context.replayProgression(certificate.ledger);
+        context.loadStage(4);
+        const frontier = createCampaignWave49RewardFrontier(
+          snapshots.capture("campaign-wave-49-source", "reconstructed-reachable"), certificate,
+        );
+        const progressionRuntime = context.captureProgressionRuntime();
+        const restored = snapshots.restore(frontier);
+        context.restoreProgressionRuntime(progressionRuntime);
+        if (!restored.ok) {
+          const rollback = snapshots.restore(original);
+          context.restoreProgressionRuntime(originalProgressionRuntime);
+          if (!rollback.ok) throw new Error("campaign final-wave rollback failed");
+          return Object.freeze({ ...restored, rolledBack: true });
+        }
+        const run = context.state.run();
+        if (run === null) throw new Error("campaign final-wave forge requires an active live run");
+        Reflect.set(run, "stateForgeEvidence", Object.freeze({
+          certificateId: certificate.id, currentWave: certificate.currentWave, nextWave: certificate.nextWave,
+          terminal: certificate.terminal, progressionHash: certificate.ledger.progressionHash,
+          configurationHash: certificate.configurationHash, provenanceKind: certificate.provenance.kind,
+          liveReplay: replay,
+        }));
+        context.startNextWave();
+        context.setScreen("playing");
+        const started = snapshots.capture("campaign-wave-50-start", "reconstructed-reachable");
+        return Object.freeze({ ok: true as const, exactHash: started.hashes.exact, semanticHash: started.hashes.semantic });
+      } catch (error) {
+        const rollback = snapshots.restore(original);
+        context.restoreProgressionRuntime(originalProgressionRuntime);
+        if (!rollback.ok) throw new Error("campaign final-wave rollback failed", { cause: error });
+        throw error;
+      }
     },
     forgeResolvedScenario: (resolved: Parameters<TearClassARuntimeEnvironment["forgeResolvedScenario"]>[0]) => launchResolvedLiveState(resolved, environment, snapshots, context),
   });

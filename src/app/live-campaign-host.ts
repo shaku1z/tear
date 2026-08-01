@@ -11,6 +11,7 @@ import type { CinematicPreference } from "./cinematic-preference";
 import type { CampaignCinematicBeat, CampaignCinematicDirector, CampaignCinematicScript } from "./live-campaign-sequences";
 import type { CinematicBeat, CinematicScript } from "../presentation/cinematics";
 import type { ArenaPlatform } from "../gameplay/training/arena-rules";
+import type { FinaleIntent } from "../gameplay/campaign/finale-controller";
 
 type Stage = ReturnType<GameRuntimeDependencies["stageAt"]>;
 type Platforms = ArenaPlatform[];
@@ -36,6 +37,7 @@ export interface CampaignHostServices {
   readonly setWorldZoom: (value: number) => void;
   readonly width: number;
   readonly height: number;
+  readonly observeFinaleIntents?: (intents: readonly FinaleIntent[]) => void;
 }
 
 export interface LiveCampaignHost {
@@ -123,6 +125,7 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
     clearBossBeat: () => { state.setBossBeat(null); }, prepareVictory: services.prepareVictory, win: services.win,
     formatTime: services.formatTime, viewport: { width: services.width, height: services.height },
     perfectColor: () => d.CONFIG.colors.perfect, reducedMotion: () => d.A11Y.reducedMotion, lowGraphics: () => d.GFX.low,
+    ...(services.observeFinaleIntents === undefined ? {} : { observeFinaleIntents: services.observeFinaleIntents }),
   });
   return Object.freeze({ cinema, stage, story, runtime });
 }

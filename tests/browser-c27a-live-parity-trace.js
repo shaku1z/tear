@@ -293,6 +293,13 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
       assert.equal(first.routeBoundaries[0].after.wave, 2);
       assert.ok(first.routeBoundaries[0].before.focusableIds.includes(
         first.segments.find((segment) => segment.kind === "route").actions[0].command.choiceId));
+      const defeated = first.engineEvents.filter((event) => event.type === "enemy.defeated");
+      const cleared = first.engineEvents.find((event) => event.type === "wave.cleared"
+        && event.payload.wave === 1);
+      assert.equal(defeated.length, 3,
+        `${where}: natural wave must publish one native defeat for each production enemy`);
+      assert.ok(cleared && defeated.every((event) => event.tick < cleared.tick),
+        `${where}: all native defeats must precede the wave-clear fact`);
     }
     assert.equal(second.hashes.length, first.hashes.length, `${where}: both live runs must end on the same tick`);
     assert.ok(first.hashes.every((entry) => typeof entry.canonical === "string" && entry.canonical.length > 0),

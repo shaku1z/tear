@@ -32,9 +32,10 @@ const forbiddenDependencyRules = Object.freeze([
       "src/gameplay/runtime/tear-world-entity-construction.ts",
       "src/gameplay/runtime/tear-world-context.ts",
       "src/gameplay/run/reward-runtime.ts",
+      "src/gameplay/campaign/finale-runtime.ts",
     ]),
     pattern: /(?:from\s+|import\s*\()\s*["'][^"']*(?:app\/|presentation\/|audio\/|persistence\/|platform\/|tearbench\/|replay\/legacy-compat)[^"']*["']/u,
-    message: "portable simulation and world-construction modules cannot depend on outward app, TearBench, presentation, service, or Ghost 2 adapters",
+    message: "portable gameplay modules cannot depend on outward app, TearBench, presentation, service, or Ghost 2 adapters",
   }),
   Object.freeze({
     roots: Object.freeze([
@@ -44,9 +45,10 @@ const forbiddenDependencyRules = Object.freeze([
       "src/gameplay/runtime/tear-world-entity-construction.ts",
       "src/gameplay/runtime/tear-world-context.ts",
       "src/gameplay/run/reward-runtime.ts",
+      "src/gameplay/campaign/finale-runtime.ts",
     ]),
     pattern: /\b(?:window|document|HTMLCanvasElement|CanvasRenderingContext2D)\b/u,
-    message: "portable simulation and world-construction modules cannot reference browser or Canvas globals",
+    message: "portable gameplay modules cannot reference browser or Canvas globals",
   }),
   Object.freeze({
     roots: Object.freeze(["src/tearbench/detached-world-hydrator.ts", "src/tearbench/detached-world-runtime.ts"]),
@@ -174,6 +176,18 @@ if (dependencyErrors("src/gameplay/run/reward-runtime.ts",
 if (dependencyErrors("src/gameplay/run/reward-runtime.ts",
   'document.exitPointerLock();').length !== 1) {
   throw new Error("source architecture portable reward browser-rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/campaign/finale-runtime.ts",
+  'import { createLiveCampaignRuntime } from "../../app/live-campaign-runtime";').length !== 1) {
+  throw new Error("source architecture portable finale import-rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/campaign/finale-runtime.ts",
+  'window.requestAnimationFrame(() => document.exitPointerLock());').length !== 1) {
+  throw new Error("source architecture portable finale browser-rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/campaign/finale-runtime.ts",
+  'import { FinaleController } from "./finale-controller";').length !== 0) {
+  throw new Error("source architecture portable finale inward dependency self-test failed");
 }
 if (dependencyErrors("src/tearbench/detached-world-hydrator.ts",
   'import type { GameRuntimeDependencies } from "../app/game-runtime-dependencies";').length !== 1) {
