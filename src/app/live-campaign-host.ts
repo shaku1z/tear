@@ -14,7 +14,9 @@ import type { ArenaPlatform } from "../gameplay/training/arena-rules";
 import type { FinaleIntent } from "../gameplay/campaign/finale-controller";
 import {
   observeFinaleOutwardCall,
+  type FinaleMaximumFeelReceipt,
   type FinaleOutwardCallObserver,
+  type FinaleWorldZoomReceipt,
 } from "../gameplay/campaign/finale-outward-call";
 
 type Stage = ReturnType<GameRuntimeDependencies["stageAt"]>;
@@ -35,10 +37,10 @@ export interface CampaignHostServices {
   readonly resetStageAchievements: () => void;
   readonly rememberBiome: (name: string) => void;
   readonly cinematicPreference: () => CinematicPreference;
-  readonly addFlash: (amount: number) => void;
-  readonly addShake: (amount: number) => void;
+  readonly addFlash: (amount: number) => FinaleMaximumFeelReceipt;
+  readonly addShake: (amount: number) => FinaleMaximumFeelReceipt;
   readonly formatTime: (seconds: number) => string;
-  readonly setWorldZoom: (value: number) => void;
+  readonly setWorldZoom: (value: number) => FinaleWorldZoomReceipt;
   readonly width: number;
   readonly height: number;
   readonly observeFinaleIntents?: (intents: readonly FinaleIntent[]) => void;
@@ -104,8 +106,8 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
         activeRun.voidDescent = null;
       },
       worldZoom(value) {
-        services.setWorldZoom(value);
-        observeFinaleOutwardCall(services.observeFinaleOutwardCall, { type: "world-zoom", value });
+        const receipt = services.setWorldZoom(value);
+        observeFinaleOutwardCall(services.observeFinaleOutwardCall, { type: "world-zoom", value, receipt });
       },
       finalBlade(active, restoredTrail) {
         const weapon = blade();
@@ -115,20 +117,21 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
         const hand = weapon.handPos(player()); weapon.x = hand.x; weapon.y = hand.y; weapon.vx = 0; weapon.vy = 0;
       },
       ring(x, y, radius, color) {
-        d.FX.ring(x, y, radius, color);
-        observeFinaleOutwardCall(services.observeFinaleOutwardCall, { type: "ring", x, y, radius, color });
+        const receipt = d.FX.ring(x, y, radius, color);
+        observeFinaleOutwardCall(services.observeFinaleOutwardCall, { type: "ring", x, y, radius, color, receipt });
       },
       burst(x, y, dx, dy, count, color) {
-        d.FX.burst(x, y, dx, dy, count, color);
-        observeFinaleOutwardCall(services.observeFinaleOutwardCall, { type: "burst", x, y, dx, dy, count, color });
+        const receipt = d.FX.burst(x, y, dx, dy, count, color);
+        observeFinaleOutwardCall(services.observeFinaleOutwardCall,
+          { type: "burst", x, y, dx, dy, count, color, receipt });
       },
       flash(amount) {
-        services.addFlash(amount);
-        observeFinaleOutwardCall(services.observeFinaleOutwardCall, { type: "flash", amount });
+        const receipt = services.addFlash(amount);
+        observeFinaleOutwardCall(services.observeFinaleOutwardCall, { type: "flash", amount, receipt });
       },
       shake(amount) {
-        services.addShake(amount);
-        observeFinaleOutwardCall(services.observeFinaleOutwardCall, { type: "shake", amount });
+        const receipt = services.addShake(amount);
+        observeFinaleOutwardCall(services.observeFinaleOutwardCall, { type: "shake", amount, receipt });
       },
       vibrate(pattern) {
         d.Input.buzz([...pattern]);

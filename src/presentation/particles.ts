@@ -17,6 +17,38 @@ interface EmberParticle extends ParticleBase { type: "ember"; vx: number; vy: nu
 interface DripParticle extends ParticleBase { type: "drip"; vx: number; vy: number; size: number }
 type Particle = SparkParticle | RingParticle | RibbonParticle | ShardParticle | FlashParticle | ShockParticle | SmokeParticle | GhostParticle | EmberParticle | DripParticle;
 
+export type ParticleEmissionDisposition = "emitted" | "culled" | "budget";
+
+/**
+ * Data-only result for one requested effect operation.
+ *
+ * This deliberately excludes randomized particle fields and rendered pixels.
+ * It reports only whether the concrete particle adapter admitted the request.
+ */
+export interface ParticleEmissionReceipt {
+  readonly accepted: boolean;
+  readonly requested: number;
+  readonly emitted: number;
+  readonly rejected: Readonly<{ culled: number; budget: number }>;
+  readonly listDelta: number;
+}
+
+function emissionReceipt(
+  requested: number,
+  emitted: number,
+  culled: number,
+  budget: number,
+  listDelta: number,
+): ParticleEmissionReceipt {
+  return Object.freeze({
+    accepted: emitted > 0,
+    requested,
+    emitted,
+    rejected: Object.freeze({ culled, budget }),
+    listDelta,
+  });
+}
+
 export interface ParticleSystem {
   list: Particle[];
   view: ViewRect | null;
@@ -24,10 +56,10 @@ export interface ParticleSystem {
   reset(): void;
   setViewRect(view: ViewRect | null): void;
   _visible(particle: Particle, extra: number): boolean;
-  _emit(particle: Particle, critical: boolean): boolean;
-  spark(x: number, y: number, dirX: number, dirY: number, color?: string): void;
-  burst(x: number, y: number, dirX: number, dirY: number, count: number, color?: string): void;
-  ring(x: number, y: number, radius?: number, color?: string): void;
+  _emit(particle: Particle, critical: boolean): ParticleEmissionDisposition;
+  spark(x: number, y: number, dirX: number, dirY: number, color?: string): ParticleEmissionDisposition;
+  burst(x: number, y: number, dirX: number, dirY: number, count: number, color?: string): ParticleEmissionReceipt;
+  ring(x: number, y: number, radius?: number, color?: string): ParticleEmissionReceipt;
   ribbon(x0: number, y0: number, x1: number, y1: number, color?: string): void;
   shard(x: number, y: number, color?: string): void;
   death(x: number, y: number, count?: number, color?: string): void;
@@ -73,25 +105,25 @@ function createParticleSystem(): ParticleSystem {
     },
     _emit(p, critical) {
       const E = CONFIG.effects, budget = GFX.low ? E.lowBudget : E.highBudget;
-      if (!this._visible(p, E.cullMargin)) return false;
+      if (!this._visible(p, E.cullMargin)) return "culled";
       p.critical = critical;
       if (this.list.length >= budget) {
-        if (!critical) return false;
+        if (!critical) return "budget";
         let replace = -1;
         for (let i = 0; i < this.list.length; i++) {
           const particle = this.list[i];
           if (particle && !particle.critical) { replace = i; break; }
         }
         if (replace < 0) replace = this._criticalCursor++ % this.list.length;
-        this.list[replace] = p; return true;
+        this.list[replace] = p; return "emitted";
       }
-      this.list.push(p); return true;
+      this.list.push(p); return "emitted";
     },
 
     spark(x, y, dirX, dirY, col) {
       const a = Math.atan2(dirY, dirX) + (cosmeticRandom() - 0.5) * 1.3;
       const sp = 220 + cosmeticRandom() * 460;
-      this._emit({
+      return this._emit({
         type: "spark", x, y,
         vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
         col: col ?? "#000",
@@ -100,11 +132,23 @@ function createParticleSystem(): ParticleSystem {
     },
 
     burst(x, y, dirX, dirY, n, col) {
-      for (let i = 0; i < n; i++) this.spark(x, y, dirX, dirY, col);
+      const before = this.list.length;
+      let requested = 0, emitted = 0, culled = 0, budget = 0;
+      for (let i = 0; i < n; i++) {
+        requested++;
+        const result = this.spark(x, y, dirX, dirY, col);
+        if (result === "emitted") emitted++;
+        else if (result === "culled") culled++;
+        else budget++;
+      }
+      return emissionReceipt(requested, emitted, culled, budget, this.list.length - before);
     },
 
     ring(x, y, r0, col) {
-      this._emit({ type: "ring", x, y, r: r0 ?? 6, col: col ?? "#000", life: 0.32, max: 0.32 }, false);
+      const before = this.list.length;
+      const result = this._emit({ type: "ring", x, y, r: r0 ?? 6, col: col ?? "#000", life: 0.32, max: 0.32 }, false);
+      return emissionReceipt(1, result === "emitted" ? 1 : 0, result === "culled" ? 1 : 0,
+        result === "budget" ? 1 : 0, this.list.length - before);
     },
 
     ribbon(x0, y0, x1, y1, col) {

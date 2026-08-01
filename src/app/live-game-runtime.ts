@@ -245,7 +245,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     getZoom: () => feel.zoom, setZoom: (value) => { feel.zoom = value; },
     getFlash: () => feel.flash, setFlash: (value) => { feel.flash = value; },
     setSlowMotion: (value) => { impact.slowMotion = value; }, setHitStop: (value) => { impact.hitStop = value; },
-    setWorldZoom: (value, immediate) => { feel.worldZoomTarget = value; if (immediate) feel.worldZoom = value; },
+    setWorldZoom: (value, immediate) => { const before = Object.freeze({ current: feel.worldZoom, target: feel.worldZoomTarget }); feel.worldZoomTarget = value; if (immediate) feel.worldZoom = value; return Object.freeze({ requested: value, immediate, before, after: Object.freeze({ current: feel.worldZoom, target: feel.worldZoomTarget }) }); },
     renderMenu: (model) => { presentationScreenRenderers.pgmenu(model); },
     renderLab: (model) => { presentationScreenRenderers.pglab(model); },
     abilityColors: () => libraryAdapters.categories,

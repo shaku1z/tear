@@ -18,7 +18,11 @@ import type { RunDifficulty } from "../gameplay/run/session";
 import type { PlaygroundScreenModel } from "../gameplay/training/live-playground-presentation";
 import type { LiveWaveSpawnSpec } from "../gameplay/run/live-enemy-spawn";
 import type { FinaleIntent } from "../gameplay/campaign/finale-controller";
-import type { FinaleOutwardCallObserver } from "../gameplay/campaign/finale-outward-call";
+import type {
+  FinaleMaximumFeelReceipt,
+  FinaleOutwardCallObserver,
+  FinaleWorldZoomReceipt,
+} from "../gameplay/campaign/finale-outward-call";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 type Controllers = LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
@@ -61,7 +65,7 @@ export interface LiveCampaignTrainingOptions {
   readonly setFlash: (value: number) => void;
   readonly setSlowMotion: (value: number) => void;
   readonly setHitStop: (value: number) => void;
-  readonly setWorldZoom: (value: number, immediate: boolean) => void;
+  readonly setWorldZoom: (value: number, immediate: boolean) => FinaleWorldZoomReceipt;
   readonly renderMenu: (model: PlaygroundScreenModel) => void;
   readonly renderLab: (model: PlaygroundScreenModel) => void;
   readonly abilityColors: () => Readonly<Record<string, Readonly<{ color: string }>>>;
@@ -89,10 +93,16 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
     resetStageAchievements: () => { requireStyle().achievements.stageReset(); },
     rememberBiome(name) { d.PROFILE.maxStat("biomesSeen", d.PROFILE.markBiome(name)); requireStyle().check(); },
     cinematicPreference: options.applySettingsCinematicPreference,
-    addFlash: (amount) => { options.setFlash(Math.max(options.getFlash(), amount)); },
-    addShake: (amount) => { options.setShake(Math.max(options.getShake(), amount)); },
+    addFlash: (amount): FinaleMaximumFeelReceipt => {
+      const before = options.getFlash(); options.setFlash(Math.max(before, amount));
+      return Object.freeze({ requested: amount, before, after: options.getFlash(), aggregation: "maximum" });
+    },
+    addShake: (amount): FinaleMaximumFeelReceipt => {
+      const before = options.getShake(); options.setShake(Math.max(before, amount));
+      return Object.freeze({ requested: amount, before, after: options.getShake(), aggregation: "maximum" });
+    },
     formatTime: (seconds) => requireStyle().formatTime(seconds),
-    setWorldZoom: (value) => { options.setWorldZoom(value, true); },
+    setWorldZoom: (value) => options.setWorldZoom(value, true),
     width: options.width, height: options.height,
     ...(options.observeFinaleIntents === undefined ? {} : { observeFinaleIntents: options.observeFinaleIntents }),
     ...(options.observeFinaleOutwardCall === undefined ? {} : { observeFinaleOutwardCall: options.observeFinaleOutwardCall }),

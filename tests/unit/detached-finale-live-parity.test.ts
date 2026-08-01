@@ -24,6 +24,7 @@ import {
   createDetachedWaveRewardRuntime,
   createDetachedWorld,
   restoreDetachedChapterBinding,
+  restoreDetachedTransientRuntime,
 } from "./detached-world-harness";
 
 const ARTIFACT = resolve("artifacts/tearbench/c27a/campaign-source-victory.json");
@@ -88,6 +89,7 @@ function restorePreFinale(artifact: CampaignVictoryArtifact) {
   detached.stage.index = staged.stageIndex;
   detached.stage.platforms = [...staged.platforms];
 
+  restoreDetachedTransientRuntime(detached, staged.runtime);
   restoreDetachedChapterBinding(detached, staged.runtime);
   return { detached, staged };
 }
@@ -166,6 +168,33 @@ describe.skipIf(artifact === null)("detached finale against the live campaign vi
     expect(frames).toBeLessThan(900);
     expect(finale.intentBatches).toEqual(artifact.finaleIntents);
     expect(finale.outwardCalls).toEqual(artifact.finaleOutward);
+    expect(finale.outwardCalls
+      .filter((call) => call.type === "world-zoom" || call.type === "flash" || call.type === "shake")
+      .map((call) => ({ type: call.type, receipt: call.receipt })))
+      .toEqual([
+        { type: "world-zoom", receipt: { requested: 0.84, immediate: true,
+          before: { current: 0.8000000001419295, target: 1 }, after: { current: 0.84, target: 0.84 } } },
+        { type: "flash", receipt: { requested: 0.135, before: 0, after: 0.135, aggregation: "maximum" } },
+        { type: "shake", receipt: { requested: 5, before: 16.125, after: 16.125, aggregation: "maximum" } },
+        { type: "flash", receipt: { requested: 0.17, before: 0.135, after: 0.17, aggregation: "maximum" } },
+        { type: "shake", receipt: { requested: 7, before: 16.125, after: 16.125, aggregation: "maximum" } },
+        { type: "flash", receipt: { requested: 0.20500000000000002, before: 0.17,
+          after: 0.20500000000000002, aggregation: "maximum" } },
+        { type: "shake", receipt: { requested: 9, before: 16.125, after: 16.125, aggregation: "maximum" } },
+        { type: "world-zoom", receipt: { requested: 1, immediate: true,
+          before: { current: 0.84, target: 0.84 }, after: { current: 1, target: 1 } } },
+      ]);
+    expect(finale.outwardCalls
+      .filter((call) => call.type === "ring" || call.type === "burst")
+      .map((call) => call.receipt))
+      .toEqual([
+        { accepted: true, requested: 1, emitted: 1, rejected: { culled: 0, budget: 0 }, listDelta: 1 },
+        { accepted: true, requested: 14, emitted: 14, rejected: { culled: 0, budget: 0 }, listDelta: 14 },
+        { accepted: true, requested: 1, emitted: 1, rejected: { culled: 0, budget: 0 }, listDelta: 1 },
+        { accepted: true, requested: 14, emitted: 14, rejected: { culled: 0, budget: 0 }, listDelta: 14 },
+        { accepted: true, requested: 1, emitted: 1, rejected: { culled: 0, budget: 0 }, listDelta: 1 },
+        { accepted: true, requested: 14, emitted: 14, rejected: { culled: 0, budget: 0 }, listDelta: 14 },
+      ]);
     const liveAfterBoundary = artifact.events
       .filter((event) => event.tick > artifact.preFinale.tick)
       .map(withoutSequence);

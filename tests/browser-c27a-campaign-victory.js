@@ -162,6 +162,32 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page }) => {
     "ring", "burst", "flash", "shake", "sound", "vibrate",
     "world-zoom", "sound",
   ]);
+  const feelCalls = evidence.finaleOutward.filter((call) =>
+    call.type === "world-zoom" || call.type === "flash" || call.type === "shake");
+  assert.deepEqual(feelCalls.map((call) => ({ type: call.type, receipt: call.receipt })), [
+    { type: "world-zoom", receipt: { requested: 0.84, immediate: true,
+      before: { current: 0.8000000001419295, target: 1 }, after: { current: 0.84, target: 0.84 } } },
+    { type: "flash", receipt: { requested: 0.135, before: 0, after: 0.135, aggregation: "maximum" } },
+    { type: "shake", receipt: { requested: 5, before: 16.125, after: 16.125, aggregation: "maximum" } },
+    { type: "flash", receipt: { requested: 0.17, before: 0.135, after: 0.17, aggregation: "maximum" } },
+    { type: "shake", receipt: { requested: 7, before: 16.125, after: 16.125, aggregation: "maximum" } },
+    { type: "flash", receipt: { requested: 0.20500000000000002, before: 0.17,
+      after: 0.20500000000000002, aggregation: "maximum" } },
+    { type: "shake", receipt: { requested: 9, before: 16.125, after: 16.125, aggregation: "maximum" } },
+    { type: "world-zoom", receipt: { requested: 1, immediate: true,
+      before: { current: 0.84, target: 0.84 }, after: { current: 1, target: 1 } } },
+  ]);
+
+  const particleCalls = evidence.finaleOutward.filter((call) => call.type === "ring" || call.type === "burst");
+  assert.equal(particleCalls.length, 6);
+  assert.deepEqual(particleCalls.map((call) => call.receipt), [
+    { accepted: true, requested: 1, emitted: 1, rejected: { culled: 0, budget: 0 }, listDelta: 1 },
+    { accepted: true, requested: 14, emitted: 14, rejected: { culled: 0, budget: 0 }, listDelta: 14 },
+    { accepted: true, requested: 1, emitted: 1, rejected: { culled: 0, budget: 0 }, listDelta: 1 },
+    { accepted: true, requested: 14, emitted: 14, rejected: { culled: 0, budget: 0 }, listDelta: 14 },
+    { accepted: true, requested: 1, emitted: 1, rejected: { culled: 0, budget: 0 }, listDelta: 1 },
+    { accepted: true, requested: 14, emitted: 14, rejected: { culled: 0, budget: 0 }, listDelta: 14 },
+  ]);
   assert.ok(evidence.events.some((event) => event.type === "enemy.spawned" && event.payload.bossId === "source"));
   assert.ok(evidence.events.some((event) => event.type === "enemy.defeated"));
   assert.ok(evidence.events.some((event) => event.type === "wave.cleared" && event.payload.wave === 50));

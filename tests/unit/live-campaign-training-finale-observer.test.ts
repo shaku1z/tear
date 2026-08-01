@@ -43,4 +43,29 @@ describe("live campaign/training composition finale observation", () => {
     expect((forwarding.services as { observeFinaleIntents?: unknown }).observeFinaleIntents).toBe(observer);
     expect((forwarding.services as { observeFinaleOutwardCall?: unknown }).observeFinaleOutwardCall).toBe(outwardObserver);
   });
+
+  it("returns exact maximum-aggregation receipts for finale flash and shake", () => {
+    let flash = 0.8, shake = 12;
+    const options = {
+      dependencies: {}, entities: {}, state: {}, lifecycle: {}, cinema: {},
+      controllers: { api: {}, installStage: vi.fn() },
+      getFlash: () => flash, setFlash: (value: number) => { flash = value; },
+      getShake: () => shake, setShake: (value: number) => { shake = value; },
+    } as unknown as LiveCampaignTrainingOptions;
+
+    createLiveCampaignTrainingComposition(options);
+    const services = forwarding.services as {
+      addFlash(amount: number): unknown;
+      addShake(amount: number): unknown;
+    };
+
+    expect(services.addFlash(0.6)).toEqual({
+      requested: 0.6, before: 0.8, after: 0.8, aggregation: "maximum",
+    });
+    expect(services.addShake(9)).toEqual({
+      requested: 9, before: 12, after: 12, aggregation: "maximum",
+    });
+    expect(flash).toBe(0.8);
+    expect(shake).toBe(12);
+  });
 });

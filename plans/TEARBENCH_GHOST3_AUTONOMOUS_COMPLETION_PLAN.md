@@ -8,16 +8,18 @@
 **Current progress:** C21-C24 and C26 passed. C25's implementation foundation is
 verified, but its Class C exit gate remains open. C27 implementation is active;
 C27A is a blocking runtime-architecture correction before replay-world,
-headless, or learning completion claims. Thirty-six executable slices now
+headless, or learning completion claims. Thirty-seven executable slices now
 include shared world construction, exact 13-scenario state/native-event parity
 (5,732 ticks / 33 native facts), portable combat/outcome/reward/finale paths, a
 natural wave/reward crossing, and a real Source victory from a certified
 reconstructed wave-49 frontier plus explicit one-hit State Forge child. Live
 and detached match the finale's seven exact intent batches and all 22
-post-return outward-adapter calls in exact order and arguments. The work does
-not yet provide a portable full-world runtime, a naturally played 50-wave
-campaign, concrete particle/pixel/audio/haptic result parity, or a complete
-shared outcome/progression/cloud-effect chronology.
+post-return outward-adapter calls in exact order and arguments. Six concrete
+particle-admission receipts and eight logical feel receipts now also compare
+exactly; that remains deliberately narrower than randomized particle internals,
+pixels, audible audio, device haptics, or a shared outcome/progression/cloud
+chronology. The work does not yet provide a portable full-world runtime or a
+naturally played 50-wave campaign.
 
 ### Execution record through C24
 
@@ -559,7 +561,7 @@ live-runtime internals into a second platform.
   a planted violation.
 - Rerun architecture-dependent C22-C27 evidence after migration.
 
-**Current Slice 36 evidence boundary**
+**Current Slice 37 evidence boundary**
 
 - Native defeat publication is gameplay-owned and no longer depends on the
   legacy Ghost 2 `_gid` recording path; the refreshed fixed-tick corpus has 33
@@ -575,15 +577,27 @@ live-runtime internals into a second platform.
   requests, sound cues, and mixer requests. Live collection is test-build-only
   and exposed only through Class A. Detached combat clear now also matches live
   by clearing `bossIntro` and `bossBeat`, with planted coverage.
-- The integrated `pnpm check:c27a` gate is green: foundation 36 files / 127
-  tests, 13 browser scenarios / 5,732 ticks / 33 native facts, and 40 detached
-  comparator tests; campaign victory 10 files / 35 tests, a 1,176-transition
-  real browser route, and one detached finale-parity test. The C22 live-runtime
-  proof and C23 through C27 package gates also pass in the same worktree.
-- This is outcome, intent, and adapter-dispatch parity. It is not proof that
-  randomized particle state, rendered pixels, PCM output/audibility, or physical
-  device vibration are equal, nor that all progression/cloud effects share one
-  verified chronology.
+- Slice 37 adds immutable `ParticleEmissionReceipt` results to the concrete
+  ring/burst adapter boundary: admission, requested/emitted counts, separate
+  cull and budget rejection counts, and list delta. All six ring/burst calls in
+  the 1,176-transition real Source victory match exactly between live and
+  detached. These are renderer-independent admission results, not randomized
+  particle internals or pixel evidence. The detached pre-finale origin restores
+  captured feel/impact transient state; both zoom and all six flash/shake logical
+  receipts match exactly, including zoom before/after state and flash/shake
+  maximum aggregation. This proves logical feel state rather than pixels,
+  audible PCM/audio graph/device output, or physical vibration.
+- `pnpm check:c27a:slice37` passes 1 file / 5 tests. The focused
+  campaign-victory unit portion currently passes 10 files / 36 tests. The last
+  full `pnpm check:c27a` gate remains the Slice-36 result: foundation 36 files /
+  127 tests, 13 browser scenarios / 5,732 ticks / 33 native facts, 40 detached
+  comparator tests, campaign victory 10 files / 35 tests, a 1,176-transition
+  real browser route, and one detached finale-parity test; its C22 live-runtime
+  proof and C23 through C27 package gates passed in the same worktree.
+- This is outcome, intent, adapter-dispatch, renderer-independent particle
+  admission, and logical-feel parity. It is not proof of randomized particle
+  state, rendered pixels, PCM output/audibility, audio graph/device output,
+  physical vibration, or a verified complete progression/cloud chronology.
 
 **Exit gate**
 

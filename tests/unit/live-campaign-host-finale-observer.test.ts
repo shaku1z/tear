@@ -5,7 +5,10 @@ import { CONFIG } from "../../src/config/game-config";
 import type { GameRuntimeDependencies } from "../../src/app/game-runtime-dependencies";
 import type { LiveGameHostState } from "../../src/app/live-game-host-state";
 import type { FinaleIntentPorts } from "../../src/gameplay/campaign/finale-runtime";
-import type { FinaleOutwardCall } from "../../src/gameplay/campaign/finale-outward-call";
+import type {
+  FinaleOutwardCall,
+  FinaleParticleEmissionReceipt,
+} from "../../src/gameplay/campaign/finale-outward-call";
 
 const forwarding = vi.hoisted((): { port: unknown } => ({ port: undefined }));
 
@@ -49,6 +52,13 @@ describe("live campaign host finale observation", () => {
     const order: string[] = [];
     const observed: FinaleOutwardCall[] = [];
     const concrete = (name: string) => () => { order.push(`concrete:${name}`); };
+    let flash = 0.7, shake = 11;
+    let worldZoom = 1, worldZoomTarget = 1;
+    const receipt: FinaleParticleEmissionReceipt = Object.freeze({
+      accepted: true, requested: 1, emitted: 1,
+      rejected: Object.freeze({ culled: 0, budget: 0 }), listDelta: 1,
+    });
+    const particle = (name: string, result = receipt) => () => { order.push(`concrete:${name}`); return result; };
     const dependencies = {
       CONFIG,
       UI: { t: { motion: {
@@ -56,7 +66,7 @@ describe("live campaign host finale observation", () => {
         biomeRevealBrief: 0.1, biomeRevealFull: 0.2, readyBrief: 0.1, readyFull: 0.2,
       } } },
       stageAt: () => ({ name: "Ash" }), stagePlatforms: () => [],
-      FX: { ring: concrete("ring"), burst: concrete("burst") },
+      FX: { ring: particle("ring"), burst: particle("burst", { ...receipt, requested: 7, emitted: 7, listDelta: 7 }) },
       Input: { buzz: concrete("vibrate") },
       SFX: {
         finalCut: concrete("final-cut"), finalRelic: concrete("final-relic"),
@@ -70,8 +80,23 @@ describe("live campaign host finale observation", () => {
       prepareVictory: () => ({ isNew: false, earned: 0, coins: 0 }), win: vi.fn(),
       achievementsEnabled: () => false, checkAchievements: vi.fn(), resetStageAchievements: vi.fn(),
       rememberBiome: vi.fn(), cinematicPreference: () => "full" as const,
-      addFlash: concrete("flash"), addShake: concrete("shake"), formatTime: () => "0:00",
-      setWorldZoom: concrete("world-zoom"), width: 1600, height: 900,
+      addFlash(amount: number) {
+        order.push("concrete:flash"); const before = flash; flash = Math.max(flash, amount);
+        return Object.freeze({ requested: amount, before, after: flash, aggregation: "maximum" as const });
+      },
+      addShake(amount: number) {
+        order.push("concrete:shake"); const before = shake; shake = Math.max(shake, amount);
+        return Object.freeze({ requested: amount, before, after: shake, aggregation: "maximum" as const });
+      },
+      formatTime: () => "0:00",
+      setWorldZoom(value: number) {
+        order.push("concrete:world-zoom");
+        const before = Object.freeze({ current: worldZoom, target: worldZoomTarget });
+        worldZoom = value; worldZoomTarget = value;
+        return Object.freeze({ requested: value, immediate: true, before,
+          after: Object.freeze({ current: worldZoom, target: worldZoomTarget }) });
+      },
+      width: 1600, height: 900,
       observeFinaleOutwardCall(call: FinaleOutwardCall) {
         order.push(`observe:${call.type}`);
         observed.push(call);
@@ -94,10 +119,15 @@ describe("live campaign host finale observation", () => {
     ports.musicDuck(0.1, 0.2);
 
     expect(observed).toEqual([
-      { type: "world-zoom", value: 0.82 },
-      { type: "ring", x: 1, y: 2, radius: 3, color: "#abc" },
-      { type: "burst", x: 4, y: 5, dx: 0.5, dy: -1, count: 7, color: "#def" },
-      { type: "flash", amount: 0.6 }, { type: "shake", amount: 9 },
+      { type: "world-zoom", value: 0.82, receipt: { requested: 0.82, immediate: true,
+        before: { current: 1, target: 1 }, after: { current: 0.82, target: 0.82 } } },
+      { type: "ring", x: 1, y: 2, radius: 3, color: "#abc", receipt },
+      { type: "burst", x: 4, y: 5, dx: 0.5, dy: -1, count: 7, color: "#def",
+        receipt: { ...receipt, requested: 7, emitted: 7, listDelta: 7 } },
+      { type: "flash", amount: 0.6,
+        receipt: { requested: 0.6, before: 0.7, after: 0.7, aggregation: "maximum" } },
+      { type: "shake", amount: 9,
+        receipt: { requested: 9, before: 11, after: 11, aggregation: "maximum" } },
       { type: "vibrate", pattern: [10, 20] },
       { type: "sound", cue: "final-cut", index: 2 },
       { type: "sound", cue: "final-relic", index: 3 },
@@ -112,6 +142,10 @@ describe("live campaign host finale observation", () => {
     ]));
     expect(observed.every(Object.isFrozen)).toBe(true);
     expect(Object.isFrozen(observed[5]?.type === "vibrate" ? observed[5].pattern : null)).toBe(true);
+    expect(Object.isFrozen(observed[1]?.type === "ring" ? observed[1].receipt : null)).toBe(true);
+    expect(Object.isFrozen(observed[1]?.type === "ring" ? observed[1].receipt.rejected : null)).toBe(true);
+    expect(Object.isFrozen(observed[0]?.type === "world-zoom" ? observed[0].receipt.before : null)).toBe(true);
+    expect(Object.isFrozen(observed[3]?.type === "flash" ? observed[3].receipt : null)).toBe(true);
   });
 
   it("does not journal an outward call rejected by its concrete adapter", () => {
@@ -130,13 +164,15 @@ describe("live campaign host finale observation", () => {
       lifecycle: {} as never, activatePreparedWave: vi.fn(),
       prepareVictory: () => ({ isNew: false, earned: 0, coins: 0 }), win: vi.fn(),
       achievementsEnabled: () => false, checkAchievements: vi.fn(), resetStageAchievements: vi.fn(),
-      rememberBiome: vi.fn(), cinematicPreference: () => "full", addFlash: vi.fn(), addShake: vi.fn(),
+      rememberBiome: vi.fn(), cinematicPreference: () => "full",
+      addFlash: () => { throw new Error("flash rejected"); }, addShake: vi.fn(),
       formatTime: () => "0:00", setWorldZoom: vi.fn(), width: 1600, height: 900,
       observeFinaleOutwardCall: observer,
     });
 
     const ports = (forwarding.port as { finaleIntents: FinaleIntentPorts }).finaleIntents;
     expect(() => { ports.ring(1, 2, 3, "#abc"); }).toThrow("ring rejected");
+    expect(() => { ports.flash(0.5); }).toThrow("flash rejected");
     expect(observer).not.toHaveBeenCalled();
   });
 

@@ -5,10 +5,11 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** thirty-sixth C27A foundation slice implemented (exact finale intent
-and adapter-dispatch parity from a certified campaign Source victory);
-checkpoint remains open and blocking pending concrete outward-result parity,
-chronological outcome/progression evidence, and full-world portability exits.
+**Status:** thirty-seventh C27A foundation slice implemented (exact particle
+admission and logical-feel receipts from a certified campaign Source victory);
+checkpoint remains open and blocking pending audio scheduling, rendered/audio/
+haptic result evidence, chronological outcome/progression evidence, and
+full-world portability exits.
 
 ## Resume protocol (mandatory)
 
@@ -311,15 +312,30 @@ Before coding, read this file, then:
   either regression. This is adapter-dispatch parity, not proof of randomized
   particle equality, pixel equality, PCM output or audibility, device vibration,
   or complete outcome/progression/cloud effects.
+- The thirty-seventh slice turns the live and detached particle adapter result
+  into an immutable, data-only `ParticleEmissionReceipt`: `accepted`, requested
+  and emitted counts, distinct cull/budget rejections, and list delta. All six
+  ring/burst calls in the 1,176-transition Source victory match exactly. This is
+  renderer-independent admission evidence, not randomized particle internals or
+  pixel parity. The detached route restores the captured pre-finale feel/impact
+  transient before it runs the finale. The two world-zoom and six flash/shake
+  receipts then match exactly, including zoom current/target before and after
+  each mutation and flash/shake's real maximum aggregation. This proves logical
+  feel state and transient restoration only; it does not prove rendered pixels,
+  audio scheduling, audible PCM/audio graph/device output, or physical haptics.
 
 ## Latest evidence
 
 All of the following were run from this worktree after the parity-passing slice:
 
-- `pnpm check:c27a` passed after slice 36. Its foundation subgate passed 36
+- `pnpm check:c27a:slice37` passed 1 file / 5 tests. The focused
+  campaign-victory unit portion currently passed 10 files / 36 tests. The
+  complete C27A gate also passed after Slice 37 as recorded below.
+
+- `pnpm check:c27a` passed after slice 37. Its foundation subgate passed 36
   files / 127 tests, regenerated all 13 browser scenarios across 5,732 ticks /
   33 native facts, and passed the 40-test detached comparator. Its campaign-
-  victory subgate passed 10 files / 35 tests, executed the real Source-victory
+  victory subgate passed 10 files / 36 tests, executed the real Source-victory
   browser route through 1,176 transitions, and passed the dedicated detached
   finale-parity test. The same worktree also passed the C22 live-runtime
   browser proof and the complete C23, C24, C25-foundation, C26, and
@@ -402,10 +418,12 @@ victory through the production outcome controller and shared portable finale,
 using a certified reconstructed wave-49 frontier and an explicit one-hit
 State Forge child rather than a synthetic `run.completed` note. Its seven
 finale intent batches and 22 accepted outward-adapter calls match live to
-detached exactly. The next boundary is to capture concrete adapter
-receipts/results and add one shared chronological outcome journal spanning the
-finale and progression/cloud effects, then continue extracting the closure-owned
-run/world construction. Any newly found
+detached exactly. Its six ring/burst `ParticleEmissionReceipt` values also
+match exactly, as do eight logical feel receipts after captured transient
+restoration (two zoom and six flash/shake, including maximum aggregation). The
+next boundary is audio scheduling receipts and one shared chronological
+outcome/progression/cloud journal, then continued extraction of the
+closure-owned run/world construction. Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
 from the harness — never a tolerance to widen, a scenario to shorten, or a
 field to drop from the projection.
@@ -426,9 +444,8 @@ composition with parity evidence.
 - Do not discard unrelated dirty work. In particular,
   `plans/EXTREME_RENDERING_IMPLEMENTATION_PLAN.md` was already untracked and
   is outside this C27A handoff scope.
-- Slice 35 is the last pushed green boundary; slice 36 is the current outward-
-  adapter-dispatch boundary with its complete `pnpm check:c27a` gate green
-  and awaiting commit on the active `codex/` branch. Inspect the
+- Slice 36 is the last pushed green boundary; Slice 37 is the current particle-
+  admission/logical-feel receipt boundary and remains uncommitted. Inspect the
   actual branch and `git status --short` before later staging; stage only
   intentional TearBench work.
 - Do not claim C27, C27A, replay, headless, learning, or release completion

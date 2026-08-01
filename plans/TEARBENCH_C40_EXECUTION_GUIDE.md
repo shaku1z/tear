@@ -233,8 +233,10 @@ plan — they do not replace it.
 - [x] Campaign parity: chapter scripts a detached world needs are constructible without app callbacks through explicit gameplay ports
 - [x] `KNOWN_DIVERGENCES` is empty
 - [ ] Outward effect streams are compared, not merely recorded (the seven
-  finale intent batches and 22 post-return adapter calls now match exactly;
-  concrete receipts/results for audio/effect/pixel/haptic output remain open)
+  finale intent batches, 22 post-return adapter calls, six concrete ring/burst
+  admission receipts, and eight logical zoom/flash/shake receipts now match
+  exactly; audio scheduling, rendered pixels, PCM/audio graph/device output,
+  haptics, and full outcome chronology remain open)
 - [x] A natural wave/reward boundary crossing is in the matrix
 - [x] A real campaign win outcome is in the matrix (certified reconstructed
   wave-49 frontier + production wave-50 transition + explicit one-hit Source
@@ -245,7 +247,7 @@ plan — they do not replace it.
 **Exit:** the alignment doc's exit gate, with the parity corpus green and no
 recorded divergence.
 
-Current Slice 36 boundary: the refreshed 13-scenario corpus contains 5,732
+Current Slice 37 boundary: the refreshed 13-scenario corpus contains 5,732
 fixed ticks and 33 native facts (14 in the natural route, including three
 enemy defeats). A portable finale runtime and Class-A application-frame API
 carry the certified Source-victory route through live and detached hosts, and
@@ -254,17 +256,32 @@ immutable `FinaleOutwardCall` journal records only after each concrete adapter
 returns; the real Source-victory route matches all 22 live/detached calls in
 exact order and arguments across world zoom, FX requests, feel/haptic requests,
 sound cues, and mixer requests. Live collection is test-build-only and Class-A
-only. Detached combat clear now also clears `bossIntro` and `bossBeat`, matching
-live with planted regression coverage. This proves adapter dispatch, not
-randomized particle state, pixels, PCM/audibility, physical vibration, or the
-complete outcome/progression/cloud-effect chronology. The next slice must
-capture concrete adapter receipts/results and one shared chronological outcome
-journal. The integrated `pnpm check:c27a` gate passed with a
-36-file / 127-test foundation subgate, the 13-scenario / 5,732-tick / 33-native-
-fact browser corpus, 40 detached comparator tests, and a campaign-victory
-subgate covering 10 files / 35 tests, the 1,176-transition real browser route,
-and one detached finale-parity test. The affected same-worktree sweep is green:
-the C22 live-runtime browser proof and C23 through C27 package gates passed.
+only. Detached combat clear also clears `bossIntro` and `bossBeat`, matching
+live with planted regression coverage.
+
+Slice 37 makes two previously unproved concrete boundaries observable without
+claiming their renderer/device internals. Every finale ring and burst now returns
+an immutable `ParticleEmissionReceipt` containing `accepted`, `requested`,
+`emitted`, separate cull/budget rejections, and `listDelta`. The real
+1,176-transition Source victory has six such calls (three ring/burst pairs),
+and live and detached receipts match exactly. This proves renderer-independent
+particle admission only: it excludes random particle fields and rendered pixels.
+The detached origin restores captured feel/impact transient state before the
+finale. Its two world-zoom and six flash/shake calls likewise match exact logical
+receipts: zoom's before/after current and target state, plus flash/shake
+before/after values under the real maximum aggregation rule. It proves logical
+feel state and transient restoration, not screen pixels, audio scheduling/PCM or
+audio graph/device output, physical haptics, or a complete
+outcome/progression/cloud-effect chronology. `pnpm check:c27a:slice37` passes
+its 1 file / 5 tests; the focused campaign-victory unit portion currently passes
+10 files / 36 tests. The next boundary is concrete audio scheduling receipts and
+one shared chronological outcome/progression/cloud journal. The complete
+`pnpm check:c27a` gate also passed after Slice 37: foundation 36 files / 127 tests,
+the 13-scenario / 5,732-tick / 33-native-fact browser corpus, 40 detached
+comparator tests, and a campaign-victory subgate covering 10 files / 36 tests,
+the 1,176-transition browser route, and one detached finale-parity test. The
+affected same-worktree sweep is green: the C22 live-runtime browser proof and
+C23 through C27 package gates passed.
 
 ### C27 — Authoritative recorder and capsule
 

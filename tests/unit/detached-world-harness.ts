@@ -159,6 +159,31 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
 
 export type DetachedWorld = ReturnType<typeof createDetachedWorld>;
 
+/** Restores the portable per-world carry captured at a State Forge boundary. */
+export function restoreDetachedTransientRuntime(
+  detached: DetachedWorld,
+  runtime: Readonly<Record<string, unknown>>,
+): void {
+  const transient = detached.world.context.transient;
+  transient.assignImpact({
+    hitStop: Number(runtime.hitStop), slowMotion: Number(runtime.slowmo), shake: Number(runtime.shake),
+  });
+  transient.assignOpening({
+    throwCooldown: Number(runtime.throwCd), dashGhostTime: Number(runtime.dashGhostT),
+    landingVelocity: Number(runtime.landingV), wasDashing: Boolean(runtime.wasDashing),
+    wasSwinging: Boolean(runtime.wasSwinging), wasOnGround: Boolean(runtime.wasOnGround),
+  });
+  Object.assign(transient.feel, {
+    timeScale: Number(runtime.timeScale), zoom: Number(runtime.zoom), flash: Number(runtime.flash),
+    bannerSeconds: Number(runtime.bannerT), worldZoom: Number(runtime.worldZoom),
+    worldZoomTarget: Number(runtime.worldZoomTarget), rankPopupSeconds: Number(runtime.rankPopT),
+    rankPopupText: String(runtime.rankPopText),
+  });
+  const protection = runtime.cinemaProtection as Readonly<{ active?: unknown; lastMode?: unknown }> | undefined;
+  transient.assignProtection({ active: Boolean(protection?.active),
+    lastMode: typeof protection?.lastMode === "string" ? protection.lastMode : null });
+}
+
 /** Rebuilds an active chapter from data only; exact Class-A ticks do not advance RAF cinema time. */
 export function restoreDetachedChapterBinding(
   detached: DetachedWorld,
@@ -599,7 +624,12 @@ export function createDetachedFinaleComposition(
       },
       worldZoom: (value) => {
         outward.push(`worldZoom:${String(value)}`);
-        recordOutward({ type: "world-zoom", value });
+        const feel = world.context.transient.feel;
+        const before = Object.freeze({ current: feel.worldZoom, target: feel.worldZoomTarget });
+        feel.worldZoomTarget = value; feel.worldZoom = value;
+        const receipt = Object.freeze({ requested: value, immediate: true, before,
+          after: Object.freeze({ current: feel.worldZoom, target: feel.worldZoomTarget }) });
+        recordOutward({ type: "world-zoom", value, receipt });
       },
       finalBlade: (active, restoredTrail) => {
         const weapon = blade();
@@ -612,20 +642,28 @@ export function createDetachedFinaleComposition(
         weapon.vx = 0; weapon.vy = 0;
       },
       ring: (x, y, radius, color) => {
-        effects.ring(x, y, radius, color);
-        recordOutward({ type: "ring", x, y, radius, color });
+        const receipt = effects.ring(x, y, radius, color);
+        recordOutward({ type: "ring", x, y, radius, color, receipt });
       },
       burst: (x, y, dx, dy, count, color) => {
-        effects.burst(x, y, dx, dy, count, color);
-        recordOutward({ type: "burst", x, y, dx, dy, count, color });
+        const receipt = effects.burst(x, y, dx, dy, count, color);
+        recordOutward({ type: "burst", x, y, dx, dy, count, color, receipt });
       },
       flash: (amount) => {
         outward.push(`flash:${String(amount)}`);
-        recordOutward({ type: "flash", amount });
+        const before = world.context.transient.feel.flash;
+        world.context.transient.feel.flash = Math.max(before, amount);
+        const receipt = Object.freeze({ requested: amount, before, after: world.context.transient.feel.flash,
+          aggregation: "maximum" as const });
+        recordOutward({ type: "flash", amount, receipt });
       },
       shake: (amount) => {
         outward.push(`shake:${String(amount)}`);
-        recordOutward({ type: "shake", amount });
+        const before = world.context.transient.impact.shake;
+        world.context.transient.impact.shake = Math.max(before, amount);
+        const receipt = Object.freeze({ requested: amount, before, after: world.context.transient.impact.shake,
+          aggregation: "maximum" as const });
+        recordOutward({ type: "shake", amount, receipt });
       },
       vibrate: (pattern) => {
         outward.push(`vibrate:${pattern.join(",")}`);

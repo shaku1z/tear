@@ -128,7 +128,8 @@ describe("Class-A live application-frame surface", () => {
 
   it("projects only successful outward calls recorded after the current reset", () => {
     const fixture = contextFixture();
-    fixture.finaleOutwardCalls.push(Object.freeze({ type: "flash", amount: 0.1 }));
+    fixture.finaleOutwardCalls.push(Object.freeze({ type: "flash", amount: 0.1,
+      receipt: Object.freeze({ requested: 0.1, before: 0, after: 0.1, aggregation: "maximum" }) }));
     const environment = createLiveTearRuntimeEnvironment(fixture.context, "A");
     environment.reset(SCENARIO);
     fixture.finaleOutwardCalls.push(Object.freeze({ type: "sound", cue: "final-cut", index: 2 }));

@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-08-01. This records the first thirty-six executable migration
+In progress as of 2026-08-01. This records the first thirty-seven executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -656,14 +656,31 @@ of replay, headless execution, or learning portability.
   chronology. The Slice-36 campaign-victory subgate passed 10 files / 35 tests,
   reran the real browser route through 1,176 transitions, and passed the one
   dedicated detached finale-parity test.
+- The thirty-seventh slice crosses two concrete but bounded result boundaries.
+  `ParticleEmissionReceipt` is immutable and data-only: every ring or burst
+  reports admission, requested/emitted counts, separate cull/budget rejections,
+  and list delta after the concrete particle adapter runs. The real
+  1,176-transition Source victory has six ring/burst calls, and their complete
+  receipts match live to detached exactly. This proves renderer-independent
+  particle admission, not randomized particle state or pixels. The detached
+  origin now restores the captured pre-finale feel/impact transient before
+  execution. Its two world-zoom receipts and six flash/shake receipts match
+  exactly, including zoom's before/after current-target pair and the maximum
+  aggregation of flash and shake. This proves logical feel state and transient
+  restoration, not rendered pixels, audio scheduling, PCM/audibility, audio
+  graph/device output, or physical haptics. `pnpm check:c27a:slice37` passes
+  1 file / 5 tests; the focused campaign-victory unit portion currently passes
+  10 files / 36 tests. The next boundary is audio scheduling receipts plus one
+  shared chronological outcome/progression/cloud journal.
 
 ## Remaining C27A work
 
-1. Extend the now-exact finale intent and 22-call adapter-dispatch comparisons
-   into concrete adapter receipts/results: deterministic particle/effect state,
-   rendered evidence, audio production/audibility, and physical haptic results.
-   Add one shared chronological outcome journal spanning finale dispatch and
-   progression/cloud effects rather than comparing isolated projections. The
+1. Extend the now-exact finale intent, 22-call adapter-dispatch, six particle
+   admission, and eight logical-feel comparisons into concrete audio scheduling
+   receipts, rendered evidence, audio production/audibility, and physical haptic
+   results. Add one shared chronological outcome journal spanning finale
+   dispatch and progression/cloud effects rather than comparing isolated
+   projections. The
    matrix includes a real production Source victory from a
    certified reconstructed wave-49 frontier and explicit one-hit State Forge
    child; it is not evidence of a naturally played full 50-wave campaign.
