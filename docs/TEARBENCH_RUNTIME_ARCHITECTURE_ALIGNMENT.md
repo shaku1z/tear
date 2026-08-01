@@ -256,6 +256,14 @@ The first thirty-four executable C27A slices are complete:
   and reduced-motion behavior. This is a necessary policy-injection seam, not
   proof that graphics/accessibility preferences, pixels, Backdrop, renderer/UI,
   input, audio, persistence, or complete live worlds are isolated.
+- `createTearWorldBootstrap(baseConfiguration)` now centralizes the existing
+  configuration service, simulation clock, and named RNG service behind a
+  data-only, caller-supplied base. The only two construction paths—the live
+  app composition and detached production harness—use it. Its dependency
+  fence rejects process configuration, app, presentation, and browser edges.
+  This is shared construction ownership, not a full-world factory: Backdrop
+  remains process-global, and presentation/input/audio/persistence adapters
+  are still app-bound.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

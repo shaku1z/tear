@@ -32,6 +32,7 @@ const forbiddenDependencyRules = Object.freeze([
       "src/gameplay/runtime/tear-world-entity-construction.ts",
       "src/gameplay/runtime/tear-world-context.ts",
       "src/gameplay/runtime/tear-world-simulation-factories.ts",
+      "src/gameplay/runtime/tear-world-bootstrap.ts",
       "src/gameplay/run/reward-runtime.ts",
       "src/gameplay/campaign/finale-runtime.ts",
       "src/gameplay/campaign/finale-outward-call.ts",
@@ -47,6 +48,7 @@ const forbiddenDependencyRules = Object.freeze([
       "src/gameplay/runtime/tear-world-entity-construction.ts",
       "src/gameplay/runtime/tear-world-context.ts",
       "src/gameplay/runtime/tear-world-simulation-factories.ts",
+      "src/gameplay/runtime/tear-world-bootstrap.ts",
       "src/gameplay/run/reward-runtime.ts",
       "src/gameplay/campaign/finale-runtime.ts",
       "src/gameplay/campaign/finale-outward-call.ts",
@@ -104,6 +106,11 @@ const forbiddenDependencyRules = Object.freeze([
     roots: Object.freeze(["src/presentation/particles.ts"]),
     pattern: /from\s+["'][^"']*(?:config\/game-config|cosmetic-random)["']/u,
     message: "the particle factory must receive policy and entropy through an explicit per-world port",
+  }),
+  Object.freeze({
+    roots: Object.freeze(["src/gameplay/runtime/tear-world-bootstrap.ts"]),
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*config\/game-config["']/u,
+    message: "the generic world bootstrap must receive base configuration through its explicit caller port",
   }),
   Object.freeze({
     roots: Object.freeze([
@@ -198,6 +205,18 @@ if (dependencyErrors("src/presentation/particles.ts",
   || dependencyErrors("src/presentation/particles.ts",
     'import { cosmeticRandom } from "./cosmetic-random";').length !== 1) {
   throw new Error("source architecture particle policy injection rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/runtime/tear-world-bootstrap.ts",
+  'import { CONFIG } from "../../config/game-config";').length !== 1
+  || dependencyErrors("src/gameplay/runtime/tear-world-bootstrap.ts",
+    'import type { CONFIG } from "../../config/game-config";').length !== 1) {
+  throw new Error("source architecture generic bootstrap configuration rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/runtime/tear-world-bootstrap.ts",
+  'import { startLiveGame } from "../../app/live-game-runtime";').length !== 1
+  || dependencyErrors("src/gameplay/runtime/tear-world-bootstrap.ts",
+    'const canvas: HTMLCanvasElement | null = null;').length !== 1) {
+  throw new Error("source architecture generic bootstrap portability rule self-test failed");
 }
 if (dependencyErrors("src/gameplay/runtime/tear-world-entity-construction.ts",
   'const canvas: HTMLCanvasElement | null = null;').length !== 1) {

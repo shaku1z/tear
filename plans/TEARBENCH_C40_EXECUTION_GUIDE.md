@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 42 update (current)
+#### Slice 43 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -375,8 +375,20 @@ with independent budgets, dynamic low-graphics admission, and independent
 reduced-motion behavior. This is policy/data admission isolation only: it does
 not prove per-world app preferences, pixels, Backdrop/renderer/UI/input/audio
 isolation, concurrent full live worlds, headless/full-world portability, or
-C27A completion. Next, extract a data-only generic bootstrap for config, clock,
-and named RNG while keeping presentation policy at the outer adapter boundary.
+C27A completion. Its next follow-up was the data-only generic bootstrap for
+config, clock, and named RNG while keeping presentation policy at the outer
+adapter boundary.
+
+Slice 43 supplies that data-only bootstrap. `createTearWorldBootstrap(base)`
+returns fresh configuration, clock, and named RNG services before either live
+or detached construction captures them. It imports no process configuration,
+app, presentation, or browser surface; both construction paths now use it, and
+the run lifecycle remains the authority that resets a seed. `pnpm
+check:c27a:slice43` passed 6 focused files / 19 tests plus architecture. Fresh
+foundation and campaign-victory gates also passed. This does not isolate the
+process-global Backdrop, renderer/UI/input/audio/persistence, rendered output,
+or complete live worlds. Next, replace Backdrop's global clock binding with an
+explicit per-world presentation adapter/factory policy.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

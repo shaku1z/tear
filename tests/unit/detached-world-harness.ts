@@ -1,6 +1,6 @@
 import { A11Y, CONFIG, GFX } from "../../src/config/game-config";
 import { createLiveAuthoritativeInputAdapter } from "../../src/app/live-authoritative-input-adapter";
-import { createTearWorldConfiguration } from "../../src/gameplay/runtime/tear-world-configuration";
+import { createTearWorldBootstrap } from "../../src/gameplay/runtime/tear-world-bootstrap";
 import { createLiveWorldComposition, type LiveWorldSessionPort } from "../../src/app/live-world-composition";
 import {
   createTearWorldSimulationFactories,
@@ -44,7 +44,6 @@ import { eligibleTierChoices } from "../../src/gameplay/run/reward-selection";
 import { createLiveStyleAchievementRuntime } from "../../src/gameplay/scoring/live-style-achievement-runtime";
 import { tracksAchievements } from "../../src/gameplay/progression/achievement-runtime";
 import type { GameAction } from "../../src/input/game-action";
-import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
 import { CinematicTimeline } from "../../src/gameplay/runtime/cinematic-director";
 import { parseCampaignChapterBindingSpec, stageCampaignChapterBinding } from
   "../../src/gameplay/campaign/chapter-cinematic-binding";
@@ -65,7 +64,6 @@ import type { TearGameplayEventPort } from "../../src/gameplay/runtime/gameplay-
 import { createTearSpawnFactPublisher, createTearTerminalRunFactPublisher, createTearWaveFactPublisher } from
   "../../src/gameplay/runtime/gameplay-event-publishers";
 import { createParticleSystem } from "../../src/presentation/particles";
-import { createRunRandom } from "../../src/simulation/run-random";
 import type { RunLifecycleSnapshot } from "../../src/gameplay/run/lifecycle";
 
 type Options = TearWorldSimulationFactoryOptions;
@@ -127,10 +125,8 @@ export interface DetachedWorldOptions {
  * whichever production phase they want to step.
  */
 export function createDetachedWorld(options: DetachedWorldOptions) {
-  const configuration = createTearWorldConfiguration(CONFIG);
+  const { configuration, clock, random } = createTearWorldBootstrap(CONFIG);
   const config = configuration.value;
-  const clock = createTearWorldClock();
-  const random = createRunRandom();
   const effects = createParticleSystem({
     effects: config.effects,
     lowGraphics: () => GFX.low,

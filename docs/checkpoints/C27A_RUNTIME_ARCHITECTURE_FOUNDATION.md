@@ -758,6 +758,24 @@ of replay, headless execution, or learning portability.
   headless execution, or C27A completion. The next extraction is a data-only
   generic world bootstrap for the already-owned simulation services; its
   presentation-policy adapter remains outside that portable core.
+- The forty-third slice centralizes those existing data-only simulation
+  services in `createTearWorldBootstrap(baseConfiguration)`. Every bootstrap
+  returns one independently owned configuration service, simulation clock, and
+  named RNG service; it receives its base configuration explicitly and imports
+  no process configuration, app, presentation, or browser API. The live
+  composition root and detached production harness are the two construction
+  callers; they retain their separate explicit particle policy adapters and
+  the run lifecycle still controls when a seed is applied. Focused tests prove
+  configuration/reset, clock, and named-stream isolation. Architecture checks
+  reject app/browser edges and either value or type imports of process config.
+  The full C27A foundation and campaign-victory gates pass after migration.
+
+  This centralizes service construction only. It does not make the Backdrop or
+  any other presentation adapter per-world, and does not prove isolated app
+  preferences, pixels, concurrent full live worlds, headless execution,
+  replay/learning portability, or C27A completion. The next presentation
+  boundary is replacing the process-global Backdrop clock binding with an
+  explicit per-world adapter/factory policy.
 
 ## Remaining C27A work
 

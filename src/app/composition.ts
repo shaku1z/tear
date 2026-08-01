@@ -5,8 +5,7 @@ import { AFFIXES, PRESETS, applyPreset, rollAffixes } from "../gameplay/affixes"
 import { createAchievements } from "../gameplay/progression/achievements";
 import { createDailyChallenges, localCalendarClock } from "../gameplay/progression/challenges";
 import { TearGameplayEventBus } from "../gameplay/runtime/gameplay-events";
-import { createTearWorldClock } from "../gameplay/runtime/tear-world-clock";
-import { createTearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
+import { createTearWorldBootstrap } from "../gameplay/runtime/tear-world-bootstrap";
 import { createMetaProgression, type ProgressionApplyContext } from "../gameplay/progression/meta";
 import { STAGES, stageAt, stagePlatforms } from "../gameplay/stages";
 import {
@@ -32,7 +31,6 @@ import { cosmeticRandom } from "../presentation/cosmetic-random";
 import { createParticleSystem } from "../presentation/particles";
 import { createUi } from "../presentation/ui";
 import { createLegacyReplayCompatibility } from "../replay/legacy-compat";
-import { createRunRandom } from "../simulation/run-random";
 import { PerformanceMonitor } from "../diagnostics/performance-monitor";
 import { createTearTestEnvironment } from "../tearbench/test-support";
 import { LegacyAppStateController } from "./legacy-state-controller";
@@ -72,13 +70,9 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   // Optional capture tooling is a development adapter, never a production
   // gameplay dependency or shared writable global.
   const clipper = import.meta.env.DEV ? compositionWindow.Clipper : undefined;
-  // This world's simulation clock and named RNG streams. They are created here, not imported as a
-  // module singleton, so a second world cannot inherit live stream cursors.
-  const CLOCK = createTearWorldClock();
-  // Tuning is mutable during a run (weapon, difficulty, upgrades), so every
-  // composition gets its own stable configuration record before any entity
-  // constructor or input adapter captures it.
-  const worldConfiguration = createTearWorldConfiguration(CONFIG);
+  // These data-only services are created before any world constructor captures
+  // them. The bootstrap deliberately leaves all presentation adapters outside.
+  const { configuration: worldConfiguration, clock: CLOCK, random } = createTearWorldBootstrap(CONFIG);
   const worldConfig = worldConfiguration.value;
   const FX = createParticleSystem({
     effects: worldConfig.effects,
@@ -87,7 +81,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     random: cosmeticRandom,
   });
   installBackdropClock(CLOCK);
-  const { streams: GAME_RANDOM_STREAMS, service: GAME_RANDOM } = createRunRandom();
+  const { streams: GAME_RANDOM_STREAMS, service: GAME_RANDOM } = random;
   const { Input, PAD } = createLegacyInputCompatibility(
     { config: worldConfig, safeArea: SAFE, overscan: OVERSCAN, window, document, navigator, performance },
     { createInput: createLegacyInput, createGamepad: createLegacyGamepad },
