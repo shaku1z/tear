@@ -37,6 +37,13 @@ function snapshotAt(phase: RunPhase): RunLifecycleSnapshot {
 }
 
 describe("run lifecycle transition contract", () => {
+  it("resets the run-scoped revision and session namespace", () => {
+    const lifecycle = new RunLifecycleController();
+    lifecycle.start("first"); lifecycle.prepareWave(1, false, false); lifecycle.activateWave();
+    expect(lifecycle.snapshot().revision).toBeGreaterThan(0);
+    expect(lifecycle.reset()).toMatchObject({ phase: "idle", sessionId: null, revision: 0 });
+    expect(lifecycle.start("second").revision).toBe(1);
+  });
   it("exhaustively accepts declared events and rejects every undeclared event", () => {
     for (const phase of RUN_PHASES) {
       for (const event of EVENTS) {

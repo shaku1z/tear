@@ -22,13 +22,19 @@ import { LiveRunOutcomeController, type LiveOutcomeControllerPort } from
 import { snapshotOutcomeRun, type PreparedVictory } from "../../src/gameplay/run/outcome-planner";
 import { BOSS_ROSTER } from "../../src/gameplay/run/content-director";
 import { createLiveWaveHost } from "../../src/app/live-wave-host";
+import { routeLiveTearBenchAction } from "../../src/tearbench/live-runtime-action-routing";
 import { STAGES, stageAt } from "../../src/gameplay/stages";
 import { applyVariant, rollVariant } from "../../src/gameplay/variants";
 import { planBossPlacement } from "../../src/gameplay/run/boss-placement";
 import { beginBossEncounter } from "../../src/gameplay/run/boss-encounter";
 import { createBossArena } from "../../src/gameplay/training/arena-rules";
 import { applyWeapon } from "../../src/gameplay/weapons";
-import { newMods } from "../../src/gameplay/upgrades";
+import { applyUpgrade, newMods, rollUpgrades, tierUp, UPGRADES, type UpgradeDefinition } from
+  "../../src/gameplay/upgrades";
+import { createRewardRuntime } from "../../src/gameplay/run/reward-runtime";
+import { eligibleTierChoices } from "../../src/gameplay/run/reward-selection";
+import { createLiveStyleAchievementRuntime } from "../../src/gameplay/scoring/live-style-achievement-runtime";
+import type { GameAction } from "../../src/input/game-action";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
 import { CinematicTimeline } from "../../src/gameplay/runtime/cinematic-director";
 import { parseCampaignChapterBindingSpec, stageCampaignChapterBinding } from
@@ -189,6 +195,8 @@ export interface DetachedCombatPhaseOptions {
   readonly deferCombatRuntime?: boolean;
   /** Portable outcome endpoint used when death resolution terminates a run. */
   readonly endRun?: () => void;
+  /** Native gameplay facts published by portable production subsystems. */
+  readonly gameplayEvents?: TearGameplayEventPort;
 }
 
 export interface DetachedCombatSimulationOptions<State> extends DetachedCombatPhaseOptions {
@@ -213,6 +221,37 @@ export function createDetachedCombatPhases(
   const note = (name: string) => () => { outward.push(name); };
   const player = () => world.state.player() as never;
   const blade = () => world.state.blade() as never;
+  const style = createLiveStyleAchievementRuntime({
+    run: () => world.state.run() as never,
+    player: () => player(),
+    enemies: () => world.state.enemies() as never,
+    moving: () => {
+      const authoritative = (player() as { aiInput?: { left(): boolean; right(): boolean } }).aiInput;
+      return authoritative?.left() === true || authoritative?.right() === true;
+    },
+    tuning: () => CONFIG.trick,
+    colors: () => CONFIG.colors,
+    // The browser parity trace starts a Ghost recording for the run. Supplying
+    // its gameplay-event port is the detached host's equivalent capability.
+    ghostRecording: () => options.gameplayEvents !== undefined,
+    styleIntents: {
+      tutorialMark: (kind) => { outward.push(`tutorial:${kind}`); },
+      ghostCapture: (kind, x, y) => { options.gameplayEvents?.emit({ kind: "effect", effect: kind, x, y }); },
+      playerTrick: (kind, at) => {
+        const activePlayer = player() as { lastTrickKind?: string; lastTrickT?: number };
+        activePlayer.lastTrickKind = kind; activePlayer.lastTrickT = at;
+      },
+      rankUp: (rank) => { outward.push(`rankUp:${rank}`); },
+      musicRankChanged: (rank) => { outward.push(`musicRank:${rank}`); },
+      haptic: note("haptic"), profileAdd: note("profileAdd"), dailyBump: note("dailyBump"),
+      profileMax: note("profileMax"), achievementCheck: note("achievementCheck"),
+    },
+    profileMax: note("profileMax"), achievementCheck: note("achievementCheck"),
+    metaLevel: () => 0,
+    projectileSpeed: () => CONFIG.proj.speed,
+    createProjectile: (x, y, vx, vy) => world.entities.createProjectile(x, y, vx, vy) as never,
+    addProjectile: (projectile) => { world.state.setProjectiles([...world.state.projectiles(), projectile]); },
+  });
 
   let resolveKill: (enemy: { dead?: boolean }, cause?: string) => void = (enemy) => {
     enemy.dead = true; outward.push("onKill");
@@ -229,8 +268,10 @@ export function createDetachedCombatPhases(
     fxFlash: (x: number, y: number, radius: number, color: string) => { effects.flash(x, y, radius, color); },
     floater: note("floater"), shake: note("shake"), flash: note("flash"),
     sound: (cue: string) => { outward.push(`sound:${cue}`); },
-    loseStyle: note("loseStyle"), shieldAbsorbed: note("shieldAbsorbed"), addStyle: note("addStyle"),
-    dashDodge: note("dashDodge"), maxStat: note("maxStat"), checkAchievements: note("checkAchievements"),
+    loseStyle: () => { style.loseStyle(); }, shieldAbsorbed: note("shieldAbsorbed"),
+    addStyle: (kind: string) => { style.addStyle(kind); },
+    dashDodge: (projectile: unknown) => { style.achievements.dashDodge(projectile as never); },
+    maxStat: note("maxStat"), checkAchievements: () => { style.check(); },
     noteFirstDamage: note("noteFirstDamage"), reflectedHit: note("reflectedHit"), bossHit: note("bossHit"),
     onKill: (enemy: { dead?: boolean }, cause: string) => { resolveKill(enemy, cause); },
     areaDamage: () => 0,
@@ -264,7 +305,7 @@ export function createDetachedCombatPhases(
     ghost: note("ghost"), ember: note("ember"), smoke: note("smoke"), drip: note("drip"),
     overlap: (a: { x: number; y: number; hw: number; hh: number }, b: { x: number; y: number; hw: number; hh: number }) =>
       aabbOverlap(a.x, a.y, a.hw, a.hh, b.x, b.y, b.hw, b.hh),
-    styleHit: note("styleHit"),
+    styleHit: () => { style.addStyle("hit"); },
     onKill: (enemy: { dead?: boolean }, cause?: string) => { resolveKill(enemy, cause); },
     fireDashStart: note("fireDashStart"), fireDashContact: note("fireDashContact"),
     fireWeaponCatch: note("fireWeaponCatch"), fireThrowLaunch: note("fireThrowLaunch"),
@@ -312,7 +353,7 @@ export function createDetachedCombatPhases(
     burst: note("fx:burst"), ring: note("fx:ring"), flash: note("fx:flash"), ribbon: note("fx:ribbon"),
     explode: note("fx:explode"), floater: note("fx:floater"), shake: note("fx:shake"), zoom: note("fx:zoom"),
     buzz: note("fx:buzz"), sound: (name: string) => { outward.push(`hit:${name}`); },
-    style: note("fx:style"), tutorial: note("fx:tutorial"),
+    style: (kind: string) => { style.addStyle(kind); }, tutorial: note("fx:tutorial"),
   };
   const collision = {
     get player() { return player(); }, get blade() { return blade(); },
@@ -339,7 +380,8 @@ export function createDetachedCombatPhases(
     onKill: (enemy: { dead?: boolean }, cause?: string) => { resolveKill(enemy, cause); },
     addFloater: note("addFloater"), effects: collisionEffects,
     sound: (cue: string) => { outward.push(`sound:${cue}`); }, flare: note("flare"),
-    addShake: note("addShake"), addZoom: note("addZoom"), addFlash: note("addFlash"), addStyle: note("addStyle"),
+    addShake: note("addShake"), addZoom: note("addZoom"), addFlash: note("addFlash"),
+    addStyle: (kind: string) => { style.addStyle(kind); },
     segmentCircle: (x1: number, y1: number, x2: number, y2: number, x: number, y: number, radius: number) =>
       segCircle(x1, y1, x2, y2, x, y, radius),
     segmentPointDistance: (x1: number, y1: number, x2: number, y2: number, x: number, y: number) =>
@@ -347,7 +389,8 @@ export function createDetachedCombatPhases(
     weaponSegmentContact: () => false,
     distance: (x: number, y: number) => len(x, y), clamp, lerp,
     nearestEnemy: () => (world.state.enemies()[0] ?? null) as never,
-    areaDamage: () => 0, lobExplode: note("lobExplode"), splitProjectile: note("splitProjectile"),
+    areaDamage: () => 0, lobExplode: note("lobExplode"),
+    splitProjectile: (projectile: never) => { style.splitProjectile(projectile); },
     triggerSlowMotion: note("triggerSlowMotion"), emitPerfectParry: note("emitPerfectParry"),
     makeHitEvent: note("makeHitEvent"), makeSwingEvent: note("makeSwingEvent"), makeSlamEvent: note("makeSlamEvent"),
     makeReturnEvent: note("makeReturnEvent"), makePerfectParryEvent: note("makePerfectParryEvent"),
@@ -355,9 +398,10 @@ export function createDetachedCombatPhases(
     achievementsEnabled: () => false, achievement: note("achievement"), checkAchievements: () => undefined,
     tutorialMark: () => undefined,
     ghostRecording: () => false, ghostDeath: note("ghostDeath"), ghostSample: () => undefined, ghostRevive: note("ghostRevive"),
-    updateTrick: () => undefined, achievementTick: () => undefined, updateTutorial: () => undefined,
+    updateTrick: (seconds: number) => { style.update(seconds); },
+    achievementTick: (seconds: number) => { style.achievements.tick(seconds); }, updateTutorial: () => undefined,
     updatePlayground: () => undefined, overlap: aabbOverlap,
-    onShieldAbsorb: note("onShieldAbsorb"), loseStyle: note("loseStyle"), buzz: () => undefined,
+    onShieldAbsorb: note("onShieldAbsorb"), loseStyle: () => { style.loseStyle(); }, buzz: () => undefined,
     requestAdContinue: note("requestAdContinue"), adAvailable: () => false,
     endRun: options.endRun ?? note("endRun"),
   } as unknown as LiveCollisionPhaseHost;
@@ -483,6 +527,12 @@ export function createDetachedWaveRuntime(
     events: TearGameplayEventPort;
     actorId: (enemy: Readonly<{ x: number; y: number }>) => string;
   }>,
+  progression?: Readonly<{
+    openDraft: () => void;
+    openTier: (choices: readonly UpgradeDefinition[]) => void;
+    startAdventureFinale?: () => void;
+    winRun?: () => void;
+  }>,
 ) {
   const { world, random, factories, stage } = detached;
   if (platforms !== undefined) stage.platforms = [...platforms];
@@ -576,17 +626,83 @@ export function createDetachedWaveRuntime(
       achievementCheck: note("achievementCheck"), stageDone: note("stageDone"),
       healPlayer: (amount: number) => { (world.state.player() as never as { heal(value: number): void }).heal(amount); },
       prepareReward: (reward: unknown) => { world.lifecycle.prepareReward(reward as never); },
-      startAdventureFinale: note("startAdventureFinale"), winRun: note("winRun"),
-      releasePointer: note("releasePointer"), openTierUp: note("openTierUp"), openDraft: note("openDraft"),
+      startAdventureFinale: progression?.startAdventureFinale ?? note("startAdventureFinale"),
+      winRun: progression?.winRun ?? note("winRun"), releasePointer: note("releasePointer"),
+      openTierUp: () => {
+        const current = run() as unknown as { mods: { owned: Readonly<Record<string, number>>;
+          tier: Readonly<Record<string, number>> } };
+        progression?.openTier(eligibleTierChoices(UPGRADES, current.mods.owned, current.mods.tier));
+        if (progression === undefined) note("openTierUp")();
+      },
+      openDraft: progression?.openDraft ?? note("openDraft"),
     },
     spawn: (spec: unknown) => { content.spawn(spec as never); },
     enemyCount: () => world.state.enemies().length,
     loreBusy: () => false,
     achievementTracking: () => false,
     playerOneHit: () => (world.state.player() as never as { oneHit: boolean }).oneHit,
-    availableTierUpCount: () => 0,
+    availableTierUpCount: () => {
+      const current = run() as unknown as { mods: { owned: Readonly<Record<string, number>>;
+        tier: Readonly<Record<string, number>> } };
+      return eligibleTierChoices(UPGRADES, current.mods.owned, current.mods.tier).length;
+    },
     install: () => undefined,
   });
   void factories;
   return Object.freeze({ content, waves, outward, update: (dt: number) => { waves.update(dt); } });
+}
+
+/** One portable wave/reward/action composition for detached replay and headless evidence. */
+export function createDetachedWaveRewardRuntime(
+  detached: DetachedWorld,
+  events: TearGameplayEventPort,
+  actorId: (enemy: Readonly<{ x: number; y: number }>) => string,
+  platforms?: readonly unknown[],
+) {
+  let reward: ReturnType<typeof createRewardRuntime<UpgradeDefinition>> | null = null;
+  let screen = "playing";
+  const outward: string[] = [];
+  const run = () => detached.world.state.run() as never as ReturnType<typeof detachedRun>;
+  const waves = createDetachedWaveRuntime(detached, platforms, { events, actorId }, {
+    openDraft: () => { if (reward === null) throw new Error("detached reward runtime is not installed"); reward.openDraft(); },
+    openTier: (choices) => { if (reward === null) throw new Error("detached reward runtime is not installed"); reward.openTier(choices); },
+  });
+  reward = createRewardRuntime<UpgradeDefinition>({
+    run: () => run() as never,
+    roll: (request) => rollUpgrades(request.count, run().mods, {
+      random: detached.random.streams.stream("draft"), forceSpecial: request.forceSpecial,
+      excludeIds: request.excludeIds,
+    }),
+    transitionPorts: {
+      applyUpgrade: (choice) => { applyUpgrade(choice, {
+        player: detached.world.state.player() as never, blade: detached.world.state.blade() as never,
+        mods: run().mods,
+      }); },
+      tierUp: (choice) => { tierUp(choice.id, {
+        player: detached.world.state.player() as never, blade: detached.world.state.blade() as never,
+        mods: run().mods,
+      }); },
+      ghostLoadout: (choiceId, tier, wave) => { events.emit({ kind: "loadout", choiceId, tier, wave }); },
+      ghostEvent: (effect) => {
+        const player = detached.world.state.player() as never as { x: number; y: number };
+        events.emit({ kind: "effect", effect, x: player.x, y: player.y });
+      },
+      consumeInput: () => { outward.push("consumeInput"); }, resetUi: () => { outward.push("resetUi"); },
+      setScreen: (next) => { screen = next; }, startNextWave: () => { waves.waves.startNextWave(); },
+      requestPointer: () => { outward.push("requestPointer"); },
+    },
+  });
+  const activeReward = reward;
+  const routing = {
+    screen: () => screen, setScreen: (next: "playing" | "paused") => { screen = next; },
+    runMode: () => run().mode, reward: () => activeReward.snapshot(),
+    chooseUpgrade: (index: number) => { activeReward.selectDraft(index); },
+    chooseReserve: (index: number) => { activeReward.selectReserve(index); },
+    chooseTier: (index: number) => { activeReward.selectTier(index); },
+    dispatchPlayground: () => undefined, renderControls: () => undefined,
+    controls: () => [], focus: () => -1,
+  };
+  return Object.freeze({ ...waves, reward: activeReward,
+    get outward() { return Object.freeze([...waves.outward, ...outward]); },
+    screen: () => screen, routeAction: (action: GameAction) => routeLiveTearBenchAction(routing, action) });
 }

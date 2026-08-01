@@ -5,9 +5,9 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** thirty-third C27A foundation slice implemented (exact native-event
-parity); checkpoint remains open and blocking pending wave/victory/outward and
-full-world portability exits.
+**Status:** thirty-fourth C27A foundation slice implemented (exact natural
+wave/reward parity); checkpoint remains open and blocking pending real victory,
+outward presentation/audio/effect parity, and full-world portability exits.
 
 ## Resume protocol (mandatory)
 
@@ -270,10 +270,24 @@ Before coding, read this file, then:
   a real live determinism defect by resetting the combat identity namespace
   during each new world initialization. It does not claim
   presentation/audio/pixel parity, a wave transition, or victory coverage.
+- The thirty-fourth slice moves reward selection and its ordered transition
+  executor under gameplay and composes it in both hosts. The new thirteenth
+  trace naturally clears wave 1 at tick 1457, selects offered `glass_cannon`
+  through the production semantic route at tick 1553 without a fixed tick,
+  starts wave 2, and observes its first spawn at tick 1589. All 1,589 hashes,
+  11 native facts, and the before/after reward route state match exactly.
+  This closes natural wave/reward coverage only; victory and outward
+  presentation/audio/pixel parity remain open.
 
 ## Latest evidence
 
 All of the following were run from this worktree after the parity-passing slice:
+
+- `pnpm requirements:check` and `pnpm check:c27a:foundation` passed after
+  slice 34: zero unmapped source lines; typecheck, lint, planted architecture
+  rules, 33 focused files / 112 tests, standalone rebuild, physical-input
+  browser proof, a fresh 13-scenario / 5,732-tick live capture, and all 40
+  exact state/native-stream/route comparisons.
 
 - `pnpm requirements:check` and `pnpm check:c27a:foundation` passed after
   slice 33: zero unmapped source lines; typecheck, lint, planted architecture
@@ -330,7 +344,7 @@ All of the following were run from this worktree after the parity-passing slice:
   rerun.
 - `pnpm test` passed: 224 test files / 903 tests.
 - `pnpm requirements:check` and `git diff --check` passed.
-- `src/app/live-game-runtime.ts` measures 697 physical lines.
+- `src/app/live-game-runtime.ts` measures 698 physical lines.
 - The standalone build emits the existing non-fatal >500 kB chunk warning.
   It is not a passed bundle-budget/release claim.
 - Full `pnpm check` has not been run for a release claim.
@@ -342,8 +356,8 @@ post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
 explicit gameplay ports; and State Forge transactionally restores their full
 behavior-bearing position across worlds. The next boundary is a natural
-wave-boundary crossing and real campaign victory, followed by comparable
-presentation/audio/effect streams. Do not synthesize a `run.completed` fact
+real campaign victory, followed by comparable presentation/audio/effect
+streams. Do not synthesize a `run.completed` fact
 from a detached harness note; route victory through the same production
 outcome controller, as defeat now does. Then
 continue extracting the closure-owned run/world construction. Any newly found
@@ -367,8 +381,9 @@ composition with parity evidence.
 - Do not discard unrelated dirty work. In particular,
   `plans/EXTREME_RENDERING_IMPLEMENTATION_PLAN.md` was already untracked and
   is outside this C27A handoff scope.
-- Slice 32 is the last pushed green boundary; slice 33 is the current exact
-  native-event parity boundary on the active `codex/` branch. Inspect the
+- Slice 33 is the last pushed green boundary; slice 34 is the current green
+  natural wave/reward parity boundary awaiting its commit on the active
+  `codex/` branch. Inspect the
   actual branch and `git status --short` before later staging; stage only
   intentional TearBench work.
 - Do not claim C27, C27A, replay, headless, learning, or release completion

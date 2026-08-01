@@ -8,10 +8,11 @@
 **Current progress:** C21-C24 and C26 passed. C25's implementation foundation is
 verified, but its Class C exit gate remains open. C27 implementation is active;
 C27A is a blocking runtime-architecture correction before replay-world,
-headless, or learning completion claims. Thirty-three executable slices now
-include shared world construction, exact 12-scenario state/native-event parity,
-and one portable combat/outcome path, but not yet a portable full-world runtime,
-natural wave/victory coverage, or complete outward-effect parity.
+headless, or learning completion claims. Thirty-four executable slices now
+include shared world construction, exact 13-scenario state/native-event parity,
+one portable combat/outcome path, and a natural wave/reward crossing, but not
+yet a portable full-world runtime, real campaign victory, or complete
+outward-effect parity.
 
 ### Execution record through C24
 

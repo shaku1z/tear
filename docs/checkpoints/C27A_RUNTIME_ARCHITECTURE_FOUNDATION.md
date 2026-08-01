@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-08-01. This records the first thirty-three executable migration
+In progress as of 2026-08-01. This records the first thirty-four executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -590,13 +590,30 @@ of replay, headless execution, or learning portability.
   The post-slice `requirements:check` and `check:c27a:foundation` gates passed:
   31 focused files / 108 tests, the physical-input browser path, a fresh
   12-scenario live capture, and all 37 exact state/native-stream comparisons.
+- The thirty-fourth slice adds an exact natural wave/reward boundary to the
+  live↔detached matrix. The portable reward runtime and ordered transition
+  executor now live under gameplay and are composed by both hosts; detached
+  input routes the recorded `draft-choice` through the same production
+  semantic action router. Seed `audit-wave-natural` naturally clears wave 1 at
+  tick 1457, opens the real draft after the production 96-tick clear pause,
+  selects the offered `glass_cannon` at tick 1553 without advancing the fixed
+  scheduler, emits the exact draft/pickup/wave-start facts, and spawns wave 2's
+  first enemy at tick 1589. Live rerun and detached replay match all 1,589
+  authoritative hashes, all 11 native semantic records, and the complete
+  before/after route state. The full 13-scenario corpus contains 5,732 fixed
+  ticks and 30 native records. This closes natural wave-boundary coverage only;
+  campaign victory and presentation/audio/pixel outward parity remain open.
+  The post-slice `requirements:check` and `check:c27a:foundation` gates passed:
+  zero unmapped source lines, 33 focused files / 112 tests, the physical-input
+  browser proof, a fresh 13-scenario / 5,732-tick capture, and all 40 exact
+  detached state/native-stream/route comparisons.
 
 ## Remaining C27A work
 
-1. Add a natural wave-boundary crossing and a real campaign victory to the
-   live↔detached matrix, then compare their full native and outward
-   presentation/audio/effect streams. The current 12-scenario matrix already
-   compares every post-origin native semantic record exactly.
+1. Add a real campaign victory to the live↔detached matrix, then compare the
+   full outward presentation/audio/effect streams. The current 13-scenario
+   matrix already compares every post-origin native semantic record exactly
+   and includes the natural wave/reward boundary.
 2. Move the current live adapter's configuration, RNG, effects, clocks,
    Mirror, and boss feedback implementations inward behind the established
    world context, then extract the closure-owned

@@ -5,7 +5,7 @@ import type { GameBlade, GamePlayer, GameRun } from "./game-runtime-state";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { LegacyAppScreen } from "./legacy-state-controller";
 import { initializeLivePlatformBootstrap } from "./live-platform-bootstrap";
-import { createLiveRewardRuntime } from "./live-reward-runtime";
+import { createRewardRuntime } from "../gameplay/run/reward-runtime";
 import { LiveRunControllerRegistry } from "./live-run-controller-api";
 import { SettingsController } from "./settings-controller";
 
@@ -44,7 +44,7 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
     shop: d.SHOP, shopId: (item) => item.id, achievementTracking: options.achievementTracking,
     addProfileStat: (stat, amount) => { d.PROFILE.addStat(stat, amount); },
   });
-  const reward = createLiveRewardRuntime({
+  const reward = createRewardRuntime({
     run: options.run,
     roll: (request) => d.rollUpgrades(request.count, options.run().mods, {
       random: d.GAME_RANDOM_STREAMS.stream("draft"), forceSpecial: request.forceSpecial, excludeIds: request.excludeIds,

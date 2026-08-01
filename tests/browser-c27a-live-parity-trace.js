@@ -88,6 +88,13 @@ const scenarios = [
     start: { mode: "endless", difficulty: "normal", weapon: "sword" },
     maxTicks: 600,
   }),
+  scenarioFor({
+    id: "c27a.live-parity-trace.natural-wave",
+    seed: "audit-wave-natural",
+    start: { mode: "endless", difficulty: "easy", weapon: "sword" },
+    maxTicks: 1800,
+    adaptiveNaturalWave: true,
+  }),
 ];
 
 function action(tick, id, command) {
@@ -124,7 +131,67 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
     }));
 
     const captured = await page.evaluate(({ scenarioValue, scheduledActions }) => {
-      const trace = (label) => {
+      const wrap = (observation, commands, nextId) => commands.map((command) => ({
+        kind: "command", tick: observation.tick + 1, id: nextId(), command,
+      }));
+      const naturalWaveActions = (observation, nextId) => {
+        if (observation.availableActions.includes("draft-choice")) {
+          const choiceId = observation.diagnostics?.ui?.focusableIds?.[0];
+          if (typeof choiceId !== "string") throw new Error("natural wave draft has no offered choice");
+          return wrap(observation, [{ type: "draft-choice", choiceId }], nextId);
+        }
+        const actors = observation.entities.filter((entity) => entity.kind !== "projectile");
+        if (actors.length === 0) return wrap(observation, [{ type: "move", x: 0, y: 0 }], nextId);
+        const player = observation.player;
+        actors.sort((left, right) => {
+          const ld = Math.hypot(left.x - player.x, left.y - player.y);
+          const rd = Math.hypot(right.x - player.x, right.y - player.y);
+          return ld - rd || left.id.localeCompare(right.id);
+        });
+        const target = actors[0];
+        const dx = target.x - player.x, dy = target.y - player.y, distance = Math.hypot(dx, dy);
+        const toward = dx > 0 ? 1000 : -1000;
+        const moveX = distance < 100 ? -toward : distance > 145 ? toward
+          : (Math.floor(observation.tick / 150) % 2 === 0 ? 1000 : -1000);
+        const phase = observation.tick % 20;
+        const sweep = phase < 12 ? -1.05 + 2.1 * (phase / 11) : 0;
+        const angle = Math.atan2(target.y - observation.blade.handY,
+          target.x - observation.blade.handX) + sweep;
+        const scale = 1_000_000;
+        const turn = ((Math.floor(angle / (Math.PI * 2) * scale) % scale) + scale) % scale;
+        const commands = [
+          { type: "move", x: moveX, y: dy > 100 && player.grounded ? 1000 : 0 },
+          { type: "aim", turn, magnitude: 1000 },
+          { type: "weapon", intent: "primary", phase: "pressed" },
+        ];
+        if (player.grounded && (target.y < player.y - 70 || distance < 240)) {
+          commands.push({ type: "jump", phase: "pressed" });
+        }
+        if (player.dashCharges > 0 && (distance < 100 || distance > 560)) {
+          commands.push({ type: "dash", x: toward, y: 0 });
+        }
+        return wrap(observation, commands, nextId);
+      };
+      const routeProjection = (environment) => {
+        const observation = environment.observe();
+        const state = environment.captureSnapshot(`route-${String(observation.tick)}`, "recorded-canonical").state;
+        const run = state["tear.run.v1"] ?? {};
+        const world = state["tear.world.v1"] ?? {};
+        const reward = state["tear.reward.v1"] ?? {};
+        const ui = state["tear.ui.v1"] ?? {};
+        return {
+          tick: observation.tick, screen: ui.screen, wave: observation.run.wave,
+          lifecycle: world.runtime?.lifecycle,
+          reward: reward.selection === null ? null : {
+            phase: reward.selection?.phase,
+            choiceIds: reward.selection?.choices?.map((choice) => choice.id) ?? [],
+            reserveChoiceIds: reward.selection?.reserveChoices?.map((choice) => choice.id) ?? [],
+          },
+          focusableIds: observation.diagnostics?.ui?.focusableIds ?? [],
+          owned: run.mods?.owned ?? {},
+        };
+      };
+      const trace = (label, replaySegments) => {
         const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
         environment.reset(scenarioValue);
         // The origin snapshot is taken before the first stepped tick so a
@@ -133,10 +200,33 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
         const hashes = [];
         const events = [];
         const checkpoints = [];
+        const segments = [];
+        const routeBoundaries = [];
         let terminated = false;
-        for (let tick = 1; tick <= scenarioValue.maxTicks && !terminated; tick += 1) {
-          const transition = environment.step(scheduledActions[tick] ?? []);
+        let commandId = 0, cursor = 0;
+        const nextId = () => ++commandId;
+        while (hashes.length < scenarioValue.maxTicks && !terminated) {
+          if (replaySegments !== null && cursor >= replaySegments.length) break;
+          const before = environment.observe();
+          const actions = replaySegments !== null ? replaySegments[cursor].actions
+            : scenarioValue.adaptiveNaturalWave === true
+              ? naturalWaveActions(before, nextId)
+              : scheduledActions[before.tick + 1] ?? [];
+          const beforeRoute = before.availableActions.includes("draft-choice")
+            ? routeProjection(environment) : null;
+          const transition = environment.step(actions);
           terminated = transition.terminated === true;
+          const routed = transition.observation.tick === before.tick;
+          const segment = routed
+            ? { kind: "route", atTick: before.tick, actions }
+            : { kind: "fixed", fromTick: before.tick, toTick: transition.observation.tick, actions };
+          if (scenarioValue.adaptiveNaturalWave === true) segments.push(segment);
+          if (routed) {
+            routeBoundaries.push({ before: beforeRoute, after: routeProjection(environment) });
+            cursor += 1;
+            continue;
+          }
+          const tick = transition.observation.tick;
           // A few full State Forge checkpoints make a hash mismatch diagnosable:
           // they say WHICH field diverged, not merely that something did.
           if (tick <= 3 || tick === 30 || tick === scenarioValue.maxTicks || terminated) {
@@ -155,16 +245,31 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
             state: environment.canonicalState(),
           });
           for (const event of transition.events) events.push({ tick: event.tick, type: event.type });
+          cursor += 1;
+          if (scenarioValue.adaptiveNaturalWave === true && replaySegments === null) {
+            const native = environment.engineEventProjection();
+            const waveStart = native.find((event) => event.type === "wave.started" && event.payload.wave === 2);
+            const postStartSpawn = waveStart && native.find((event) => event.type === "enemy.spawned"
+              && event.tick > waveStart.tick);
+            const observation = environment.observe();
+            if (waveStart && postStartSpawn && observation.run.wave === 2 && observation.entities.length > 0
+              && observation.availableActions.includes("move")) break;
+          }
         }
+        const finalTick = environment.observe().tick;
+        if (checkpoints.at(-1)?.tick !== finalTick) checkpoints.push({
+          tick: finalTick, canonical: environment.canonicalState(),
+          state: environment.captureSnapshot(`${label}-tick-${String(finalTick)}`, "recorded-canonical").state,
+        });
         const engineEvents = environment.engineEventProjection();
         return {
-          origin, hashes, events, engineEvents, checkpoints, terminated,
+          origin, hashes, events, engineEvents, checkpoints, terminated, segments, routeBoundaries,
           rng: environment.rng(),
           finalObservation: environment.observe(),
         };
       };
-      const first = trace("first");
-      const second = trace("second");
+      const first = trace("first", null);
+      const second = trace("second", scenarioValue.adaptiveNaturalWave === true ? first.segments : null);
       return { first, second };
     }, { scenarioValue: scenario, scheduledActions: schedule });
 
@@ -176,8 +281,18 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
       `${where}: the live trace must cover the ticks it executed`);
     if (scenario.idle === true) {
       assert.ok(first.terminated, `${where}: a terminal scenario must actually end the run`);
-    } else {
+    } else if (scenario.adaptiveNaturalWave !== true) {
       assert.equal(first.hashes.length, scenario.maxTicks, `${where}: a surviving run must cover every scheduled tick`);
+    } else {
+      assert.ok(first.hashes.length < scenario.maxTicks, `${where}: natural wave proof must reach its stop condition`);
+      assert.equal(first.routeBoundaries.length, 1, `${where}: natural wave proof must route exactly one draft`);
+      assert.equal(first.routeBoundaries[0].before.tick, first.routeBoundaries[0].after.tick,
+        `${where}: draft routing must not advance the fixed scheduler`);
+      assert.equal(first.routeBoundaries[0].before.screen, "draft");
+      assert.equal(first.routeBoundaries[0].after.screen, "playing");
+      assert.equal(first.routeBoundaries[0].after.wave, 2);
+      assert.ok(first.routeBoundaries[0].before.focusableIds.includes(
+        first.segments.find((segment) => segment.kind === "route").actions[0].command.choiceId));
     }
     assert.equal(second.hashes.length, first.hashes.length, `${where}: both live runs must end on the same tick`);
     assert.ok(first.hashes.every((entry) => typeof entry.canonical === "string" && entry.canonical.length > 0),
@@ -194,6 +309,8 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
     assert.deepEqual(second.events, first.events, `${where}: two live runs must emit one event sequence`);
     assert.deepEqual(second.engineEvents, first.engineEvents,
       `${where}: two live runs must emit one native gameplay-event sequence`);
+    assert.deepEqual(second.routeBoundaries, first.routeBoundaries,
+      `${where}: two live runs must emit one route-boundary state sequence`);
     assert.deepEqual(first.engineEvents.map((event) => event.sequence),
       first.engineEvents.map((_, index) => index),
       `${where}: native gameplay events must use one contiguous local order`);
@@ -206,7 +323,9 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
 
     const target = artifactPath(scenario);
     fs.writeFileSync(target, `${JSON.stringify({
-      scenario, schedule, origin: first.origin, hashes: first.hashes, events: first.events,
+      scenario, schedule, ...(scenario.adaptiveNaturalWave === true ? { segments: first.segments,
+        routeBoundaries: first.routeBoundaries } : {}),
+      origin: first.origin, hashes: first.hashes, events: first.events,
       engineEventProjection: {
         format: "tear-semantic-engine-events", schemaVersion: 1,
         boundary: { kind: "post-origin-snapshot", originTick: first.origin.tick },

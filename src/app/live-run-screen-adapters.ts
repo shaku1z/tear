@@ -1,6 +1,6 @@
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GamePlayer, GameRun } from "./game-runtime-state";
-import type { LiveRewardRuntime } from "./live-reward-runtime";
+import type { RewardRuntime } from "../gameplay/run/reward-runtime";
 import type { createLiveScreenRenderers } from "../presentation/screens/live-screen-renderers";
 import { buildAbilityCards, buildDraftCard, buildGameoverSnapshot, buildPausedSnapshot,
   buildResultLog, buildRunProgressSnapshot, buildTierCards, buildWinSnapshot,
@@ -11,7 +11,7 @@ type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "CG" | "CONFIG" | "DAI
   "SFX" | "UPGRADES" | "nextTierDesc">;
 type ActionRun = GameRun & { adRevived?: boolean };
 type Upgrade = GameRuntimeDependencies["UPGRADES"][number];
-type RewardRuntime = LiveRewardRuntime<Upgrade>;
+type UpgradeRewardRuntime = RewardRuntime<Upgrade>;
 type ScreenRenderers = ReturnType<typeof createLiveScreenRenderers>;
 type AbilityCategories = Parameters<typeof buildDraftCard>[2];
 type AbilityCategory = Parameters<typeof buildDraftCard>[3];
@@ -33,7 +33,7 @@ export interface RunScreenState {
 
 export interface RunScreenServices {
   readonly dependencies: Dependencies;
-  readonly reward: RewardRuntime;
+  readonly reward: UpgradeRewardRuntime;
   readonly renderers: ScreenRenderers;
   readonly categories: () => AbilityCategories;
   readonly fallbackCategory: () => AbilityCategory;

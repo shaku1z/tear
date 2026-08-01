@@ -31,9 +31,10 @@ const forbiddenDependencyRules = Object.freeze([
       "src/gameplay/runtime/gameplay-event-publishers.ts",
       "src/gameplay/runtime/tear-world-entity-construction.ts",
       "src/gameplay/runtime/tear-world-context.ts",
+      "src/gameplay/run/reward-runtime.ts",
     ]),
-    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*(?:app\/|presentation\/|audio\/|persistence\/|platform\/|replay\/legacy-compat)[^"']*["']/u,
-    message: "portable simulation and world-construction modules cannot depend on outward app, presentation, service, or Ghost 2 adapters",
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*(?:app\/|presentation\/|audio\/|persistence\/|platform\/|tearbench\/|replay\/legacy-compat)[^"']*["']/u,
+    message: "portable simulation and world-construction modules cannot depend on outward app, TearBench, presentation, service, or Ghost 2 adapters",
   }),
   Object.freeze({
     roots: Object.freeze([
@@ -42,6 +43,7 @@ const forbiddenDependencyRules = Object.freeze([
       "src/gameplay/runtime/gameplay-event-publishers.ts",
       "src/gameplay/runtime/tear-world-entity-construction.ts",
       "src/gameplay/runtime/tear-world-context.ts",
+      "src/gameplay/run/reward-runtime.ts",
     ]),
     pattern: /\b(?:window|document|HTMLCanvasElement|CanvasRenderingContext2D)\b/u,
     message: "portable simulation and world-construction modules cannot reference browser or Canvas globals",
@@ -160,6 +162,18 @@ if (dependencyErrors("src/gameplay/runtime/tear-world-context.ts",
 if (dependencyErrors("src/gameplay/runtime/tear-world-context.ts",
   'const canvas: HTMLCanvasElement | null = null;').length !== 1) {
   throw new Error("source architecture world-context browser-rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/run/reward-runtime.ts",
+  'import { startLiveGame } from "../../app/live-game-runtime";').length !== 1) {
+  throw new Error("source architecture portable reward import-rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/run/reward-runtime.ts",
+  'import { routeLiveTearBenchAction } from "../../tearbench/live-runtime-action-routing";').length !== 1) {
+  throw new Error("source architecture portable reward direction-rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/run/reward-runtime.ts",
+  'document.exitPointerLock();').length !== 1) {
+  throw new Error("source architecture portable reward browser-rule self-test failed");
 }
 if (dependencyErrors("src/tearbench/detached-world-hydrator.ts",
   'import type { GameRuntimeDependencies } from "../app/game-runtime-dependencies";').length !== 1) {

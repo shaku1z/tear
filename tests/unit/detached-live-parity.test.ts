@@ -12,7 +12,7 @@ import { applyTearCodecConfiguration, hydrateTearCodecWorld, type TearCodecValue
 import { CONFIG } from "../../src/config/game-config";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { createConfigRestorer } from "../../src/app/runtime-initialization";
-import { createDetachedCombatSimulation, createDetachedWaveRuntime, createDetachedWorld,
+import { createDetachedCombatSimulation, createDetachedWaveRewardRuntime, createDetachedWorld,
   createDetachedRunOutcomeController, restoreDetachedChapterBinding } from "./detached-world-harness";
 
 const ARTIFACT_DIR = resolve("artifacts/tearbench/c27a");
@@ -37,6 +37,13 @@ interface LiveTrace {
     boundary: Readonly<{ kind: "post-origin-snapshot"; originTick: number }>;
     events: readonly TearSemanticEngineEventV1[];
   }>;
+  readonly segments?: readonly (
+    | Readonly<{ kind: "fixed"; fromTick: number; toTick: number;
+      actions: readonly { readonly command: GameAction }[] }>
+    | Readonly<{ kind: "route"; atTick: number;
+      actions: readonly { readonly command: GameAction }[] }>
+  )[];
+  readonly routeBoundaries?: readonly unknown[];
 }
 
 /** Every captured scenario, so the matrix is compared rather than one case. */
@@ -116,10 +123,9 @@ function replayDetached(trace: LiveTrace) {
       }),
     ),
   });
-  const waves = createDetachedWaveRuntime(detached, platforms, {
-    events: gameplayEvents,
-    actorId: (enemy) => core.combatEntityRuntime.id(enemy, "enemy"),
-  });
+  const waves = createDetachedWaveRewardRuntime(
+    detached, gameplayEvents, (enemy) => core.combatEntityRuntime.id(enemy, "enemy"), platforms,
+  );
   updateWave = waves.update;
   const runtime = core.simulationRuntime;
   gameplayEvents.setTickSource(() => runtime.scheduler.tick);
@@ -133,16 +139,45 @@ function replayDetached(trace: LiveTrace) {
   const sequencer = new EnvelopeSequencer();
   const hashes: { tick: number; canonical: string }[] = [];
   const states: unknown[] = [];
-  for (let tick = 1; tick <= trace.hashes.length; tick += 1) {
-    const scheduled = trace.schedule[String(tick)] ?? [];
-    const actions: CommandEnvelope<GameAction>[] = scheduled.map((entry) => sequencer.command(tick, entry.command));
-    const result = runtime.advanceOne(actions);
-    hashes.push({ tick: result.tick, canonical: result.stateHash });
-    states.push(result.state);
+  const routeBoundaries: unknown[] = [];
+  const routeProjection = () => {
+    const active = world.state.run() as never as { wave: number; mods: { owned: Record<string, number> } };
+    const selection = waves.reward.snapshot();
+    return {
+      tick: runtime.scheduler.tick, screen: waves.screen(), wave: active.wave,
+      lifecycle: world.lifecycle.snapshot(),
+      reward: selection === null ? null : {
+        phase: selection.phase, choiceIds: selection.choices.map((choice) => choice.id),
+        reserveChoiceIds: selection.reserveChoices.map((choice) => choice.id),
+      },
+      focusableIds: waves.screen() === "draft" ? selection?.choices.map((choice) => choice.id) ?? [] : [],
+      owned: { ...active.mods.owned },
+    };
+  };
+  const segments = trace.segments ?? trace.hashes.map((_, index) => {
+    const tick = index + 1;
+    return { kind: "fixed" as const, fromTick: tick - 1, toTick: tick,
+      actions: trace.schedule[String(tick)] ?? [] };
+  });
+  for (const segment of segments) {
+    if (segment.kind === "route") {
+      const before = routeProjection();
+      for (const entry of segment.actions) {
+        sequencer.command(segment.atTick + 1, entry.command);
+        if (!waves.routeAction(entry.command)) throw new Error(`detached route rejected ${entry.command.type}`);
+      }
+      routeBoundaries.push({ before, after: routeProjection() });
+    } else {
+      const actions: CommandEnvelope<GameAction>[] = segment.actions.map((entry) =>
+        sequencer.command(segment.toTick, entry.command));
+      const result = runtime.advanceOne(actions);
+      hashes.push({ tick: result.tick, canonical: result.stateHash });
+      states.push(result.state);
+    }
   }
   return { detached, hashes, states, outward, staged,
     originIdentity, finalIdentity: core.combatEntityRuntime.captureIdentityState(), gameplayEvents,
-    engineEvents: nativeEvents.map(projectGameplayEventForParity) };
+    engineEvents: nativeEvents.map(projectGameplayEventForParity), routeBoundaries };
 }
 
 const traces = readTraces();
@@ -193,7 +228,7 @@ describe.skipIf(traces.length === 0)("detached world against the live trace", ()
     });
 
     it(`matches the live authoritative hash on every tick (${label})`, () => {
-      const { hashes, states, detached, engineEvents } = replayDetached(live);
+      const { hashes, states, detached, engineEvents, routeBoundaries } = replayDetached(live);
       let matched = 0;
       for (const [index, entry] of hashes.entries()) {
         const expected = live.hashes[index];
@@ -243,6 +278,7 @@ describe.skipIf(traces.length === 0)("detached world against the live trace", ()
       expect(detachedPlayer.x).toBe(livePlayer?.x);
 
       expect(engineEvents).toEqual(live.engineEventProjection.events);
+      expect(routeBoundaries).toEqual(live.routeBoundaries ?? []);
     });
   }
 });

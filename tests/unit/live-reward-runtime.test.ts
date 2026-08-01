@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createLiveRewardRuntime } from "../../src/app/live-reward-runtime";
+import { createRewardRuntime } from "../../src/gameplay/run/reward-runtime";
 
 describe("live reward runtime", () => {
   it("owns controller replacement and persists draft transitions through its ports", () => {
@@ -8,7 +8,7 @@ describe("live reward runtime", () => {
         reservePick: false, owned: {} } };
     const setScreen = vi.fn();
     const applyUpgrade = vi.fn();
-    const runtime = createLiveRewardRuntime({
+    const runtime = createRewardRuntime({
       run: () => run, roll: () => [{ id: "power" }, { id: "dash" }, { id: "storm", tiers: [{}] }],
       transitionPorts: {
         applyUpgrade, tierUp: vi.fn(), ghostLoadout: vi.fn(), ghostEvent: vi.fn(), consumeInput: vi.fn(),
@@ -33,7 +33,7 @@ describe("live reward runtime", () => {
     const run = { mode: "campaign" as const, wave: 1, specialBlock: -1, specialsOffered: 0,
       reservedUpgrade: null, mods: { draftRerolls: 0, tier: {}, owned: {} } };
     const consumeInput = vi.fn();
-    const runtime = createLiveRewardRuntime({
+    const runtime = createRewardRuntime({
       run: () => run, roll: () => [], transitionPorts: {
         applyUpgrade: vi.fn(), tierUp: vi.fn(), ghostLoadout: vi.fn(), ghostEvent: vi.fn(), consumeInput,
         resetUi: vi.fn(), setScreen: vi.fn(), startNextWave: vi.fn(), requestPointer: vi.fn(),

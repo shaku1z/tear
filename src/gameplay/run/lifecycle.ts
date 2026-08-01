@@ -176,6 +176,11 @@ export class RunLifecycleController {
   #snapshot = initialRunLifecycleSnapshot();
 
   snapshot(): RunLifecycleSnapshot { return this.#snapshot; }
+  /** Begins a distinct run with a fresh deterministic lifecycle revision namespace. */
+  reset(): RunLifecycleSnapshot {
+    this.#snapshot = initialRunLifecycleSnapshot();
+    return this.#snapshot;
+  }
   restore(snapshot: RunLifecycleSnapshot): void {
     this.#snapshot = validateRunLifecycleSnapshot(snapshot);
   }

@@ -24,6 +24,7 @@ type WorldServices = Pick<
 >;
 
 interface RunLifecyclePort {
+  reset(): RunLifecycleSnapshot;
   start(sessionId: string): void;
   activateTraining(): void;
   terminate(outcome: "quit"): void;
@@ -117,6 +118,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
     initializeWorld: (_mode, difficulty) => {
       context.prepareWorld();
       context.resetCombatIdentity();
+      context.lifecycle.reset();
       context.services.mirror.reset();
       context.services.bossFeedback.clear();
       context.services.configuration.resetToBase();

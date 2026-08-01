@@ -227,13 +227,14 @@ plan — they do not replace it.
 - [x] Architecture gate rejects a reintroduced shared instance (planted-violation proof)
 - [x] One call builds one world (`createLiveWorldComposition`)
 - [x] A detached world runs both production combat phases
-- [x] Live↔detached fixed-tick parity across a 12-scenario matrix, every executed tick
+- [x] Live↔detached fixed-tick parity across a 13-scenario matrix, every executed tick
 - [x] Campaign parity: world owns a cinematic director instance
 - [x] Campaign parity: State Forge captures active director position and a content-fingerprinted data-only chapter binding, with canonical inactive migration, input re-arm, rollback, validated cross-session reconstruction/continuation, and fail-closed legacy-active rejection
 - [x] Campaign parity: chapter scripts a detached world needs are constructible without app callbacks through explicit gameplay ports
 - [x] `KNOWN_DIVERGENCES` is empty
 - [ ] Outward effect streams are compared, not merely recorded
-- [ ] A win outcome and a wave-boundary crossing are in the matrix
+- [x] A natural wave/reward boundary crossing is in the matrix
+- [ ] A real campaign win outcome is in the matrix
 - [ ] Portable core has zero `src/app`, DOM/Canvas, or Ghost 2 imports (gate-enforced)
 - [ ] Affected C22–C27 gates rerun green from one worktree
 

@@ -119,7 +119,7 @@ Named status:
 - **C25:** physical/black-box foundation verified; exit open.
 - **C26:** regression discovery passed `pnpm check:c26` on 2026-07-28.
 - **C27:** recorder/capsule foundation only; checkpoint open.
-- **C27A:** thirty-three shared-world architecture slices in this tree; blocking and incomplete.
+- **C27A:** thirty-four shared-world architecture slices in this tree; blocking and incomplete.
 - **C28-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -135,7 +135,7 @@ Current engineering capabilities, with the qualifications above:
 - Physical browser harness foundations and diagnostics; the full C25 exit is pending.
 - C26 regression investigation, minimization, bisect, and graveyard workflows.
 - C27 V3 recording/capsule foundations: manifests, chunks, journals, recovery, budgets, interruption/terminal tests, and browser proof in the tested scope.
-- C27A foundations: DOM-free world context, shared construction and combat assembly, reconstructible campaign bindings, and 12/12 exact fixed-tick plus post-origin native-event parity. Live and detached use shared spawn/wave/terminal publishers and the gameplay outcome controller; the terminal trace preserves exact actor/session identity and run time.
+- C27A foundations: DOM-free world context, shared construction and combat assembly, reconstructible campaign bindings, and 13/13 exact fixed-tick plus post-origin native-event parity. Live and detached use shared spawn/wave/terminal publishers, the gameplay outcome controller, and the portable reward runtime; the matrix includes a natural wave clear, real draft selection, and wave-2 spawn.
 
 Current `scripts/tearbench.mjs` command families:
 
@@ -174,7 +174,7 @@ Do not claim TearBot automatically learns merely because scripted policies, trai
 
 Read [`TEARBENCH_C27A_HANDOFF.md`](TEARBENCH_C27A_HANDOFF.md) before editing.
 
-Thirty-three C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, shared combat/outcome execution, exact state/native-event parity, world-owned cinema, versioned State Forge restoration, data-only campaign reconstruction, focused tests, and physical browser diagnostics.
+Thirty-four C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, shared combat/outcome/reward execution, exact state/native-event parity through a natural wave boundary, world-owned cinema, versioned State Forge restoration, data-only campaign reconstruction, focused tests, and physical browser diagnostics.
 
 Important files:
 
@@ -193,7 +193,7 @@ Important files:
 
 ### Exact next slice
 
-All twelve captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome controller, scheduler shape, event bus, and restored actor identity. Next add a natural wave-boundary run and real campaign victory, then close outward presentation/audio/effect parity.
+All thirteen captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome/reward controllers, scheduler shape, event bus, and restored actor identity. The natural matrix route clears wave 1, selects a real offered draft card without advancing the fixed scheduler, and reaches a wave-2 spawn. Next add real campaign victory, then close outward presentation/audio/effect parity.
 
 Preserve:
 
@@ -332,7 +332,12 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-All of the following were run from this worktree through C27A slice 32:
+All of the following were run from this worktree through C27A slice 34:
+
+- `pnpm requirements:check` and `pnpm check:c27a:foundation` passed after the
+  natural reward boundary: zero unmapped source lines, 33 focused files / 112
+  tests, architecture, standalone build, physical browser proof, fresh
+  13-scenario / 5,732-tick capture, and all 40 exact detached comparisons.
 
 - `pnpm check:c27a:foundation` passed after detached shared-core adoption:
   31 focused files / 104 tests, architecture, standalone build, physical

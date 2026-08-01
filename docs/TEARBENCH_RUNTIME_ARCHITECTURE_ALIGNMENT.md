@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first thirty-three executable C27A slices are complete:
+The first thirty-four executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -227,6 +227,15 @@ The first thirty-three executable C27A slices are complete:
   same-session-bound. Detached worlds restore the lifecycle and can complete
   the chapter into the prepared wave. All 12 fixed-tick trace scenarios now
   match every hash and there is no `KNOWN_DIVERGENCES` exception.
+- The natural-wave scenario extends the matrix to 13. Both hosts compose the
+  portable reward runtime and transition executor, and detached input reaches
+  it through the same semantic action router. Seed `audit-wave-natural`
+  naturally clears wave 1 at tick 1457, selects the offered `glass_cannon` at
+  tick 1553 across a zero-fixed-tick route boundary, starts wave 2, and spawns
+  its first enemy at tick 1589. Live and detached match all 1,589 hashes, all
+  11 native records, and the complete before/after route state. This proves a
+  natural wave/reward boundary, not campaign victory or presentation/audio/
+  pixel parity.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition
@@ -241,12 +250,12 @@ core claim can be made. The precise evidence and remaining work are recorded in
 The native-gameplay-fact to causal-event translation is shared by Ghost V3 and
 TearBench, and the live browser now delegates its fixed combat graph to the
 gameplay-only `createTearCombatSimulation` factory. Detached combat and the
-12-scenario parity corpus now consume that same factory and restore captured
+13-scenario parity corpus now consume that same factory and restore captured
 actor identity through its returned `CombatEntityRuntime`. The next C27A
 implementation slice is not a second combat host or parallel headless
 simulator. Use the shared bus and identity runtime to publish and compare real
-wave/spawn semantic streams. Add
-win plus wave-boundary scenarios only through production transitions, then
+wave/spawn semantic streams. Add a campaign win scenario only through the
+production finale and outcome transitions, then
 continue moving app-backed configuration, RNG,
 effects, clock, Mirror, boss-feedback, and closure-owned run/world construction
 into the real per-world composition behind narrow outward adapters.
