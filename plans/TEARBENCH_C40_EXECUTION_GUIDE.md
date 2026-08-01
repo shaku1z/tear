@@ -235,8 +235,10 @@ plan — they do not replace it.
 - [ ] Outward effect streams are compared, not merely recorded (the seven
   finale intent batches, 22 post-return adapter calls, six concrete ring/burst
   admission receipts, and eight logical zoom/flash/shake receipts now match
-  exactly; audio scheduling, rendered pixels, PCM/audio graph/device output,
-  haptics, and full outcome chronology remain open)
+  exactly; audio dispatch is now observed but seven mix requests are
+  logical-target-only and all finale cues are voice-cap-rejected, while rendered
+  pixels, successful audio graph/PCM/device output, haptics, and exact external
+  outcome chronology remain open)
 - [x] A natural wave/reward boundary crossing is in the matrix
 - [x] A real campaign win outcome is in the matrix (certified reconstructed
   wave-49 frontier + production wave-50 transition + explicit one-hit Source
@@ -247,7 +249,7 @@ plan — they do not replace it.
 **Exit:** the alignment doc's exit gate, with the parity corpus green and no
 recorded divergence.
 
-Current Slice 37 boundary: the refreshed 13-scenario corpus contains 5,732
+Current Slice 38 boundary: the refreshed 13-scenario corpus contains 5,732
 fixed ticks and 33 native facts (14 in the natural route, including three
 enemy defeats). A portable finale runtime and Class-A application-frame API
 carry the certified Source-victory route through live and detached hosts, and
@@ -274,14 +276,30 @@ feel state and transient restoration, not screen pixels, audio scheduling/PCM or
 audio graph/device output, physical haptics, or a complete
 outcome/progression/cloud-effect chronology. `pnpm check:c27a:slice37` passes
 its 1 file / 5 tests; the focused campaign-victory unit portion currently passes
-10 files / 36 tests. The next boundary is concrete audio scheduling receipts and
-one shared chronological outcome/progression/cloud journal. The complete
-`pnpm check:c27a` gate also passed after Slice 37: foundation 36 files / 127 tests,
-the 13-scenario / 5,732-tick / 33-native-fact browser corpus, 40 detached
-comparator tests, and a campaign-victory subgate covering 10 files / 36 tests,
-the 1,176-transition browser route, and one detached finale-parity test. The
-affected same-worktree sweep is green: the C22 live-runtime browser proof and
-C23 through C27 package gates passed.
+10 files / 36 tests. The complete `pnpm check:c27a` gate also passed through
+Slice 38: foundation 36 files / 127 tests, the 13-scenario / 5,732-tick /
+33-native-fact browser corpus, 40 detached comparator tests, a campaign-victory
+subgate covering 10 files / 36 tests, the 1,176-transition browser route, one
+detached finale-parity test, Slice 37's 1 file / 5 tests, and Slice 38's 7 files
+/ 15 tests. The affected same-worktree sweep is green: the C22 live-runtime
+browser proof and C23 through C27 package gates passed. Slice 38 is ready to
+commit, not yet committed or pushed.
+
+Slice 38 adds a data-only audio dispatch journal and a typed in-memory outcome
+chronology. In a refreshed 1,176-transition browser Source victory, explicit
+audio-context activation yielded 12 `executing` records and 12 matching
+`completed` records. The active primary TearScore backend makes all seven finale
+mix requests `logical-target-only`: their logical target changes are observable,
+not successful graph automation. Finale cues reach the `environment` route under
+a running context, but every cue is `voice-cap-rejected` (silence 1 attempted /
+0 accepted; three cuts each 3 / 0; restore 4 / 0). This provides software
+scheduling outcomes that rule out a successful-scheduling claim for this run;
+it does not prove audibility, PCM, audio graph or speaker/device output, or any
+production audio result. The live test bridge and detached world both collect an
+immutable in-memory terminal/finale ordering receipt. Exact live/detached
+outcome parity is still open because external adapter inputs and return values
+are not modeled. Next: capture those external outcome-adapter values, then
+continue extracting the full shared production runtime.
 
 ### C27 — Authoritative recorder and capsule
 

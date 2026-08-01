@@ -4,6 +4,7 @@ import { createLiveTearRuntimeEnvironment } from "../../src/tearbench/live-runti
 import type { LiveTearRuntimeEnvironmentContext } from "../../src/tearbench/live-runtime-contracts";
 import type { TearScenarioV1 } from "../../src/tearbench/contracts";
 import type { FinaleOutwardCall } from "../../src/gameplay/campaign/finale-outward-call";
+import type { AudioDispatchReceipt } from "../../src/audio/audio-dispatch-receipts";
 
 const SCENARIO = Object.freeze({
   format: "tear-contract",
@@ -26,6 +27,7 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean }> = {}) 
   let screen = "playing";
   const calls: string[] = [];
   const finaleOutwardCalls: FinaleOutwardCall[] = [];
+  const audioDispatchReceipts: AudioDispatchReceipt[] = [];
   const run = {
     mode: "campaign", diff: "normal", weaponId: "sword", stage: 0,
     wave: 1, score: 0, spawnQueue: [], runSeed: 1,
@@ -93,8 +95,9 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean }> = {}) 
     replayProgression: () => ({ applied: 0, finalBuild: { owned: {}, tier: {} } }),
     finaleIntents: () => [],
     finaleOutwardCalls: () => finaleOutwardCalls,
+    audioDispatchReceipts: () => audioDispatchReceipts,
   } as unknown as LiveTearRuntimeEnvironmentContext;
-  return { context, calls, finaleOutwardCalls };
+  return { context, calls, finaleOutwardCalls, audioDispatchReceipts };
 }
 
 describe("Class-A live application-frame surface", () => {
@@ -124,6 +127,7 @@ describe("Class-A live application-frame surface", () => {
     const structured = createLiveTearRuntimeEnvironment(contextFixture().context, "B");
     expect("advanceApplicationFrame" in structured).toBe(false);
     expect("finaleOutwardProjection" in structured).toBe(false);
+    expect("audioDispatchProjection" in structured).toBe(false);
   });
 
   it("projects only successful outward calls recorded after the current reset", () => {

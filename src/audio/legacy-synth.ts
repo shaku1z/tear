@@ -3,9 +3,17 @@ import type { MusicContextSnapshot, MusicEvent, MusicRunSessionMetadata } from "
 import type { SFX as RuntimeSfxValue } from "./legacy-synth-runtime";
 import type { TearScoreReplayMetadata } from "../replay/envelope";
 import { captureAudioContextFromUserGesture, capturedAudioContext, disposeCapturedAudioContext } from "./audio-context-handoff";
+import {
+  createAudioDispatchJournal,
+  type AudioDispatchExecutionResult,
+  type AudioDispatchReceiptObserver,
+  type AudioDispatchRequest,
+} from "./audio-dispatch-receipts";
 
 type RuntimeSfx = typeof RuntimeSfxValue;
 type RuntimeAction = (runtime: RuntimeSfx) => void;
+type DispatchEntry = ReturnType<ReturnType<typeof createAudioDispatchJournal>["request"]>;
+interface QueuedRuntimeAction { readonly action: RuntimeAction; readonly dispatch?: DispatchEntry }
 
 let runtime: RuntimeSfx | undefined;
 let loading: Promise<RuntimeSfx | undefined> | undefined;
@@ -16,7 +24,8 @@ let pendingMusicRun: MusicRunSessionMetadata | undefined;
 let pendingMusicContext: MusicContextSnapshot | undefined;
 let pendingMusicEnd = false;
 const pendingMusicEvents: MusicEvent[] = [];
-const queued: RuntimeAction[] = [];
+const queued: QueuedRuntimeAction[] = [];
+const dispatchJournal = createAudioDispatchJournal();
 let removeActivationBridge: (() => void) | undefined;
 
 function installActivationBridge(): void {
@@ -49,13 +58,13 @@ function loadRuntime(): Promise<RuntimeSfx | undefined> {
     pendingMusicRun = undefined;
     pendingMusicContext = undefined;
     pendingMusicEnd = false;
-    for (const action of queued.splice(0)) action(runtime);
+    for (const entry of queued.splice(0)) entry.action(runtime);
     return runtime;
   }).catch((error: unknown) => {
     loadState = "failed";
     removeActivationBridge?.();
     disposeCapturedAudioContext();
-    queued.splice(0);
+    for (const entry of queued.splice(0)) if (entry.dispatch !== undefined) dispatchJournal.loadFailed(entry.dispatch);
     console.warn("Tear audio runtime failed to load", error);
     return undefined;
   });
@@ -65,8 +74,33 @@ function loadRuntime(): Promise<RuntimeSfx | undefined> {
 function invoke(action: RuntimeAction): void {
   if (runtime) action(runtime);
   else if (loadState !== "failed") {
-    if (queued.length >= 64) queued.shift();
-    queued.push(action);
+    if (queued.length >= 64) {
+      const evicted = queued.shift();
+      if (evicted?.dispatch !== undefined) dispatchJournal.evicted(evicted.dispatch, queued.length);
+    }
+    queued.push({ action });
+  }
+}
+
+function invokeObserved(
+  request: AudioDispatchRequest,
+  action: (audio: RuntimeSfx) => AudioDispatchExecutionResult,
+): void {
+  const dispatch = dispatchJournal.request(request);
+  const execute: RuntimeAction = (audio) => {
+    dispatchJournal.executing(dispatch);
+    try { dispatchJournal.completed(dispatch, action(audio)); }
+    catch (error) { dispatchJournal.executionFailed(dispatch, error); }
+  };
+  if (runtime) execute(runtime);
+  else if (loadState === "failed") dispatchJournal.loadFailed(dispatch);
+  else {
+    if (queued.length >= 64) {
+      const evicted = queued.shift();
+      if (evicted?.dispatch !== undefined) dispatchJournal.evicted(evicted.dispatch, queued.length);
+    }
+    queued.push({ action: execute, dispatch });
+    dispatchJournal.queued(dispatch, queued.length);
   }
 }
 
@@ -96,6 +130,7 @@ export const SFX = Object.freeze({
   get musicFilter(): BiquadFilterNode | null { return runtime?.musicFilter ?? null; },
   get _musicDuck(): number { return runtime?._musicDuck ?? 1; },
   get _voidMix(): number { return runtime?._voidMix ?? 0; },
+  observeDispatchReceipts(observer: AudioDispatchReceiptObserver) { return dispatchJournal.observe(observer); },
   init() { initialize(); }, resume() { if (runtime) runtime.resume(); else void loadRuntime(); },
   migrateSettings(settings: Record<string, unknown>, audioSource?: Record<string, unknown>) { return migrate(settings, audioSource); },
   applySettings(settings: Record<string, unknown>) { apply(settings); },
@@ -129,8 +164,14 @@ export const SFX = Object.freeze({
   setSfxMuted(on: boolean) { invoke((audio) => { audio.setSfxMuted(on); }); },
   setInterfaceMuted(on: boolean) { invoke((audio) => { audio.setInterfaceMuted(on); }); },
   setMusic(on: boolean) { invoke((audio) => { audio.setMusic(on); }); },
-  setMusicDuck(amount: number | null | undefined, seconds?: number) { invoke((audio) => { audio.setMusicDuck(amount, seconds); }); },
-  setVoidDescent(amount: number, seconds?: number) { invoke((audio) => { audio.setVoidDescent(amount, seconds); }); },
+  setMusicDuck(amount: number | null | undefined, seconds?: number) {
+    invokeObserved({ operation: "music-duck", arguments: [amount ?? 1, seconds ?? 0.18] },
+      (audio) => audio.setMusicDuckForReceipt(amount, seconds));
+  },
+  setVoidDescent(amount: number, seconds?: number) {
+    invokeObserved({ operation: "void-mix", arguments: [amount, seconds ?? 0.22] },
+      (audio) => audio.setVoidDescentForReceipt(amount, seconds));
+  },
   mute(on: boolean, reason?: string) { invoke((audio) => { audio.mute(on, reason); }); },
   setMusicTheme(name: string, boss: boolean) { invoke((audio) => { audio.setMusicTheme(name, boss); }); },
   swing(speed: number) { cue((audio) => { audio.swing(speed); }); },
@@ -156,9 +197,16 @@ export const SFX = Object.freeze({
   dialogueTone(identity: string | null | undefined) { cue((audio) => { audio.dialogueTone(identity); }); },
   voidGroundTear() { cue((audio) => { audio.voidGroundTear(); }); },
   sourceDepthPrepare(kind: string) { cue((audio) => { audio.sourceDepthPrepare(kind); }); }, sourceDepthSnap(kind: string) { cue((audio) => { audio.sourceDepthSnap(kind); }); },
-  aldricCrownFall() { cue((audio) => { audio.aldricCrownFall(); }); }, finalSilence() { cue((audio) => { audio.finalSilence(); }); },
-  finalRelic(step: number) { cue((audio) => { audio.finalRelic(step); }); }, finalCut(step: number) { cue((audio) => { audio.finalCut(step); }); },
-  finalRestore() { cue((audio) => { audio.finalRestore(); }); }, voidTransfer() { cue((audio) => { audio.voidTransfer(); }); },
+  aldricCrownFall() { cue((audio) => { audio.aldricCrownFall(); }); },
+  finalSilence() { invokeObserved({ operation: "final-silence", arguments: [] },
+    (audio) => audio.dispatchFinaleCueForReceipt("final-silence")); },
+  finalRelic(step: number) { invokeObserved({ operation: "final-relic", arguments: [step] },
+    (audio) => audio.dispatchFinaleCueForReceipt("final-relic", step)); },
+  finalCut(step: number) { invokeObserved({ operation: "final-cut", arguments: [step] },
+    (audio) => audio.dispatchFinaleCueForReceipt("final-cut", step)); },
+  finalRestore() { invokeObserved({ operation: "final-restore", arguments: [] },
+    (audio) => audio.dispatchFinaleCueForReceipt("final-restore")); },
+  voidTransfer() { cue((audio) => { audio.voidTransfer(); }); },
   echoResonance() { cue((audio) => { audio.echoResonance(); }); }, platformRebuild() { cue((audio) => { audio.platformRebuild(); }); },
   bossDeathWarden() { cue((audio) => { audio.bossDeathWarden(); }); }, bossDeathColossus() { cue((audio) => { audio.bossDeathColossus(); }); },
   bossDeathAldric() { cue((audio) => { audio.bossDeathAldric(); }); }, bossDeathEcho() { cue((audio) => { audio.bossDeathEcho(); }); },

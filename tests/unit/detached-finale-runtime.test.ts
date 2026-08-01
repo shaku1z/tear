@@ -150,6 +150,16 @@ describe("detached portable finale runtime", () => {
     expect(finale.outward).toEqual(expect.arrayContaining([
       "persistFinale", "clearFinale", "present:victory",
     ]));
+    const chronology = finale.outcomeChronology;
+    expect(chronology.map((entry) => entry.sequence)).toEqual(chronology.map((_, index) => index));
+    expect(chronology.slice(0, 4).map((entry) => entry.effect.type)).toEqual([
+      "outcome.stop-clipper", "outcome.terminal-published", "outcome.prepared-stored",
+      "outcome.pending-finale-persisted",
+    ]);
+    expect(chronology.slice(-4).map((entry) => entry.effect.type)).toEqual([
+      "outcome.prepared-cache-hit", "outcome.pending-finale-cleared",
+      "outcome.lifecycle-terminated", "outcome.presented",
+    ]);
     expect(nativeEvents.filter((event) => event.kind === "run" && event.transition === "completed")).toHaveLength(1);
   });
 });

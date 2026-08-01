@@ -15,6 +15,8 @@ import type { TearSdlResolved } from "./tearsdl";
 import type { RunResultInfo } from "../gameplay/run/outcome-planner";
 import type { FinaleIntent } from "../gameplay/campaign/finale-controller";
 import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call";
+import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts";
+import type { OutcomeChronologyEntry } from "../gameplay/run/outcome-chronology-journal";
 import type {
   TearSimulationEnemyView,
   TearSimulationWorldView,
@@ -96,6 +98,10 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
   finaleIntentProjection(): readonly (readonly FinaleIntent[])[];
   /** Successful outward finale adapter calls emitted since reset, in dispatch order. */
   finaleOutwardProjection(): readonly FinaleOutwardCall[];
+  /** Diagnostic software scheduling receipts since reset; never evidence of audible output. */
+  audioDispatchProjection(): readonly AudioDispatchReceipt[];
+  /** Immutable terminal-outcome and finale outward receipts since reset. */
+  outcomeChronologyProjection(): readonly OutcomeChronologyEntry[];
   setTimeEffectsForTest(effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>): void;
   captureSnapshot(id: string, stateClass?: TearStateClass): TearSnapshotV1;
   restoreSnapshot(snapshot: TearSnapshotV1): TearLiveRestoreResult;
@@ -192,6 +198,10 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly restoreProgressionRuntime: (runtime: unknown) => void;
   readonly finaleIntents: () => readonly (readonly FinaleIntent[])[];
   readonly finaleOutwardCalls: () => readonly FinaleOutwardCall[];
+  /** Test-build-only software scheduling receipts; absent from ordinary runtime fixtures. */
+  readonly audioDispatchReceipts?: () => readonly AudioDispatchReceipt[];
+  /** Test-build-only in-memory outcome receipts; absent in ordinary runtime fixtures. */
+  readonly outcomeChronology?: () => readonly OutcomeChronologyEntry[];
 }
 
 export interface TearRuntimeBridgeFactory {

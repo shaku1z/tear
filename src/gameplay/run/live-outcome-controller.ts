@@ -8,6 +8,7 @@ import {
   type RunResultInfo,
   type VictoryProgressionIntent,
 } from "./outcome-planner";
+import type { OutcomeChronologyEffect } from "./outcome-chronology-journal";
 
 type TerminalOutcome = "defeat" | "victory";
 type BestRecord = Readonly<{ wave: number; score: number; time: number }>;
@@ -36,6 +37,8 @@ export interface LiveOutcomeControllerPort {
   present(outcome: TerminalOutcome, result: RunResultInfo): void;
   midgame(callback: () => void): void;
   restartCurrentRun(): void;
+  /** Test-only in-memory receipt sink; it never participates in persistence. */
+  observeOutcomeChronology?: (effect: OutcomeChronologyEffect) => void;
 }
 
 /** Coordinates exactly-once terminal persistence before exposing a result screen. */
@@ -48,27 +51,36 @@ export class LiveRunOutcomeController {
 
   defeat(): RunResultInfo {
     this.#port.stopClipper();
+    this.#record({ type: "outcome.stop-clipper" });
     let run = this.#port.snapshot();
     this.#port.replaceWaveLog(appendDefeatWave(run.waveLog, this.#port.waveActive(), run));
     run = this.#port.snapshot();
     this.#port.terminate("defeat");
+    this.#record({ type: "outcome.lifecycle-terminated", outcome: "defeat" });
     this.#port.publishTerminal("defeat", run);
+    this.#record({ type: "outcome.terminal-published", outcome: "defeat", run });
     const prepared = this.#prepareResult(run);
     if (this.#port.achievementTracking()) this.#port.recordDefeatProgress(run, prepared.earned);
     const result = buildRunResult(run, { best: this.#port.best(run), prepared, victory: false });
     this.#port.present("defeat", result);
+    this.#record({ type: "outcome.presented", outcome: "defeat", result });
     return result;
   }
 
   prepareVictory(campaign: boolean, persistFinale: boolean): PreparedVictory {
     const existing = this.#port.preparedVictory();
-    if (existing !== null) return existing;
+    if (existing !== null) {
+      this.#record({ type: "outcome.prepared-cache-hit", prepared: existing });
+      return existing;
+    }
     this.#port.stopClipper();
+    this.#record({ type: "outcome.stop-clipper" });
     const run = this.#port.snapshot();
     const prepared = this.#prepareResult(run);
     // Completion is established at the scored/progression boundary. This must
     // precede the victory recording intent, which closes the V3 sidecar.
     this.#port.publishTerminal("victory", run);
+    this.#record({ type: "outcome.terminal-published", outcome: "victory", run });
     this.#port.executeVictoryIntents(planVictoryProgression({
       run,
       campaign,
@@ -77,8 +89,11 @@ export class LiveRunOutcomeController {
       economy: this.#port.economyTelemetry(prepared.earned),
     }));
     this.#port.storePreparedVictory(prepared);
+    this.#record({ type: "outcome.prepared-stored", prepared });
     if (campaign && persistFinale) {
-      this.#port.persistPendingFinale(buildPendingFinale(run, this.#port.best(run), prepared));
+      const record = buildPendingFinale(run, this.#port.best(run), prepared);
+      this.#port.persistPendingFinale(record);
+      this.#record({ type: "outcome.pending-finale-persisted", record });
     } else {
       this.#port.saveProfile();
     }
@@ -94,10 +109,13 @@ export class LiveRunOutcomeController {
     });
     if (campaign) {
       this.#port.clearPendingFinale();
+      this.#record({ type: "outcome.pending-finale-cleared" });
       if (this.#port.achievementTracking()) this.#port.pushCloud();
     }
     this.#port.terminate("victory");
+    this.#record({ type: "outcome.lifecycle-terminated", outcome: "victory" });
     this.#port.present("victory", result);
+    this.#record({ type: "outcome.presented", outcome: "victory", result });
     return result;
   }
 
@@ -111,5 +129,9 @@ export class LiveRunOutcomeController {
       earned: this.#port.awardCoins(run.score),
       coins: this.#port.coins(),
     });
+  }
+
+  #record(effect: OutcomeChronologyEffect): void {
+    this.#port.observeOutcomeChronology?.(effect);
   }
 }

@@ -5,10 +5,10 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** thirty-seventh C27A foundation slice implemented (exact particle
-admission and logical-feel receipts from a certified campaign Source victory);
-checkpoint remains open and blocking pending audio scheduling, rendered/audio/
-haptic result evidence, chronological outcome/progression evidence, and
+**Status:** thirty-eighth C27A foundation slice implemented (software audio
+scheduling receipts and immutable in-memory outcome chronology from the
+certified campaign Source victory); checkpoint remains open and blocking pending
+external outcome-adapter capture, rendered/audio/haptic result evidence, and
 full-world portability exits.
 
 ## Resume protocol (mandatory)
@@ -323,23 +323,39 @@ Before coding, read this file, then:
   each mutation and flash/shake's real maximum aggregation. This proves logical
   feel state and transient restoration only; it does not prove rendered pixels,
   audio scheduling, audible PCM/audio graph/device output, or physical haptics.
+- The thirty-eighth slice adds immutable data-only audio-dispatch receipts. In
+  the refreshed 1,176-transition browser journey, the test explicitly activates
+  the audio context and observes 12 `executing` records and their 12 matching
+  `completed` records. Under the active primary TearScore backend, all seven
+  finale mix requests are `logical-target-only`: logical targets are recorded,
+  but no graph automation succeeds or is claimed. Finale cues reach the
+  `environment` route under a running context, yet all are
+  `voice-cap-rejected`: silence attempts 1 / accepts 0; each of three cuts
+  attempts 3 / accepts 0; restore attempts 4 / accepts 0. This is software
+  scheduling evidence that expressly does not prove audibility, PCM,
+  speaker/device behavior, successful graph scheduling, or production output.
+  A typed immutable outcome chronology receipt now records live-test-bridge and
+  detached ordering in memory. It is not an exact live/detached outcome-parity
+  claim: external adapter inputs and return values remain unmodeled.
 
 ## Latest evidence
 
 All of the following were run from this worktree after the parity-passing slice:
 
-- `pnpm check:c27a:slice37` passed 1 file / 5 tests. The focused
-  campaign-victory unit portion currently passed 10 files / 36 tests. The
-  complete C27A gate also passed after Slice 37 as recorded below.
-
-- `pnpm check:c27a` passed after slice 37. Its foundation subgate passed 36
+- `pnpm check:c27a` passed through Slice 38. Its foundation subgate passed 36
   files / 127 tests, regenerated all 13 browser scenarios across 5,732 ticks /
   33 native facts, and passed the 40-test detached comparator. Its campaign-
   victory subgate passed 10 files / 36 tests, executed the real Source-victory
   browser route through 1,176 transitions, and passed the dedicated detached
-  finale-parity test. The same worktree also passed the C22 live-runtime
-  browser proof and the complete C23, C24, C25-foundation, C26, and
-  C27-foundation gates.
+  finale-parity test. Slice 37 passed 1 file / 5 tests, and Slice 38 passed 7
+  files / 15 tests. The same worktree also passed the C22 live-runtime browser
+  proof and the complete C23, C24, C25-foundation, C26, and C27-foundation
+  gates. Slice 38 is ready to commit, not yet committed or pushed.
+
+- The Slice-38 browser victory artifact was refreshed through 1,176 transitions
+  with the explicit audio-context activation and 12 executing / 12 completed
+  receipt sequence described above. This is a bounded browser observation, not
+  a fresh full C27A gate or a production-audio claim.
 
 - `pnpm requirements:check` and `pnpm check:c27a:foundation` passed after
   slice 34: zero unmapped source lines; typecheck, lint, planted architecture
@@ -420,10 +436,13 @@ State Forge child rather than a synthetic `run.completed` note. Its seven
 finale intent batches and 22 accepted outward-adapter calls match live to
 detached exactly. Its six ring/burst `ParticleEmissionReceipt` values also
 match exactly, as do eight logical feel receipts after captured transient
-restoration (two zoom and six flash/shake, including maximum aggregation). The
-next boundary is audio scheduling receipts and one shared chronological
-outcome/progression/cloud journal, then continued extraction of the
-closure-owned run/world construction. Any newly found
+restoration (two zoom and six flash/shake, including maximum aggregation).
+Audio scheduling is now observed, but the browser result is seven
+logical-target-only mix requests and cue rejection by the voice cap, not output.
+An immutable in-memory outcome chronology exists in both hosts without exact
+cross-host parity because external adapter input/return values are not modeled.
+The next boundary is that external outcome-adapter capture and the full shared
+production-runtime portability extraction. Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
 from the harness — never a tolerance to widen, a scenario to shorten, or a
 field to drop from the projection.
@@ -444,8 +463,9 @@ composition with parity evidence.
 - Do not discard unrelated dirty work. In particular,
   `plans/EXTREME_RENDERING_IMPLEMENTATION_PLAN.md` was already untracked and
   is outside this C27A handoff scope.
-- Slice 36 is the last pushed green boundary; Slice 37 is the current particle-
-  admission/logical-feel receipt boundary and remains uncommitted. Inspect the
+- Slice 36 is the last pushed green boundary; Slice 38 is the current audio-
+  receipt/outcome-chronology boundary and is ready to commit, not yet committed
+  or pushed. Inspect the
   actual branch and `git status --short` before later staging; stage only
   intentional TearBench work.
 - Do not claim C27, C27A, replay, headless, learning, or release completion

@@ -18,6 +18,7 @@ import { createLiveOutcomeComposition } from "./live-outcome-composition";
 import { createLiveRunStartHost } from "./live-run-start-host";
 import { createLiveVictoryProgressionExecutor } from "./live-victory-progression-host";
 import { createLiveWaveComposition } from "./live-wave-composition";
+import type { OutcomeChronologyEffect } from "../gameplay/run/outcome-chronology-journal";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 type Controllers = LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
@@ -77,6 +78,8 @@ export interface LiveRunOrchestrationOptions {
   readonly achievementTracker: Readonly<{ hordeCleared(seconds: number): void; stageDone(): void }>;
   readonly emitMusicOutcome: (outcome: "defeat" | "victory") => void;
   readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
+  /** Test-only synchronous terminal receipt sink. */
+  readonly observeOutcomeChronology?: (effect: OutcomeChronologyEffect) => void;
 }
 
 /** Installs the run transaction, content, wave, terminal, and victory controllers. */
@@ -160,6 +163,9 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     startRun: options.startRun,
     startFinale: (witnessed) => { campaignRuntime.startAdventureFinale(witnessed); }, cinema,
     width: options.width, height: options.height,
+    ...(options.observeOutcomeChronology === undefined
+      ? {}
+      : { observeOutcomeChronology: options.observeOutcomeChronology }),
   });
   return Object.freeze({ ...content, lobExplode });
 }

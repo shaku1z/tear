@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { LiveRunOutcomeController, type LiveOutcomeControllerPort } from "../../src/gameplay/run/live-outcome-controller";
 import type { OutcomeRunState, PreparedVictory } from "../../src/gameplay/run/outcome-planner";
+import { createOutcomeChronologyJournal } from "../../src/gameplay/run/outcome-chronology-journal";
 
 function createHarness() {
   let run: OutcomeRunState = {
@@ -10,6 +11,7 @@ function createHarness() {
   };
   let prepared: PreparedVictory | null = null;
   const events: string[] = [];
+  const chronology = createOutcomeChronologyJournal();
   const port: LiveOutcomeControllerPort = {
     snapshot: () => run,
     replaceWaveLog: (waveLog) => { run = { ...run, waveLog }; events.push("append-wave"); },
@@ -34,8 +36,9 @@ function createHarness() {
     present: (outcome) => { events.push(`present:${outcome}`); },
     midgame: (callback) => { events.push("midgame"); callback(); },
     restartCurrentRun: () => { events.push("restart"); },
+    observeOutcomeChronology: chronology.record,
   };
-  return { controller: new LiveRunOutcomeController(port), events, prepared: () => prepared };
+  return { controller: new LiveRunOutcomeController(port), events, chronology, prepared: () => prepared };
 }
 
 describe("LiveRunOutcomeController", () => {
@@ -51,7 +54,7 @@ describe("LiveRunOutcomeController", () => {
   });
 
   it("prepares victory once, persists finale state, and terminates before presentation", () => {
-    const { controller, events, prepared } = createHarness();
+    const { controller, events, chronology, prepared } = createHarness();
     controller.prepareVictory(true, true);
     controller.prepareVictory(true, true);
 
@@ -63,6 +66,20 @@ describe("LiveRunOutcomeController", () => {
     events.length = 0;
     controller.victory(true);
     expect(events).toEqual(["clear-finale", "push-cloud", "terminate:victory", "present:victory"]);
+    expect(chronology.entries().map((entry) => entry.effect.type)).toEqual([
+      "outcome.stop-clipper", "outcome.terminal-published", "outcome.prepared-stored",
+      "outcome.pending-finale-persisted", "outcome.prepared-cache-hit", "outcome.prepared-cache-hit",
+      "outcome.pending-finale-cleared", "outcome.lifecycle-terminated", "outcome.presented",
+    ]);
+    expect(chronology.entries().at(3)?.effect).toMatchObject({
+      type: "outcome.pending-finale-persisted",
+      record: { mode: "endless", wave: 4, score: 1200, earned: 12, coins: 99 },
+    });
+    expect(chronology.entries().at(-1)?.effect).toMatchObject({
+      type: "outcome.presented",
+      outcome: "victory",
+      result: { win: true, campaign: true, earned: 12, coins: 99 },
+    });
   });
 
   it("defers retry until the portal midgame callback", () => {

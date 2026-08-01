@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-08-01. This records the first thirty-seven executable migration
+In progress as of 2026-08-01. This records the first thirty-eight executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -668,19 +668,36 @@ of replay, headless execution, or learning portability.
   exactly, including zoom's before/after current-target pair and the maximum
   aggregation of flash and shake. This proves logical feel state and transient
   restoration, not rendered pixels, audio scheduling, PCM/audibility, audio
-  graph/device output, or physical haptics. `pnpm check:c27a:slice37` passes
-  1 file / 5 tests; the focused campaign-victory unit portion currently passes
-  10 files / 36 tests. The next boundary is audio scheduling receipts plus one
-  shared chronological outcome/progression/cloud journal.
+  graph/device output, or physical haptics. The integrated `pnpm check:c27a`
+  gate now passes through Slice 38: foundation 36 files / 127 tests, 13 browser
+  scenarios / 5,732 ticks / 33 native facts, 40 detached comparisons, campaign
+  victory 10 files / 36 tests with the 1,176-transition Source browser route and
+  one detached finale-parity test, Slice 37's 1 file / 5 tests, and Slice 38's
+  7 files / 15 tests. Slice 38 is ready to commit; it is not yet committed or
+  pushed.
+- The thirty-eighth slice adds immutable, data-only audio-dispatch receipts and
+  an in-memory typed outcome chronology receipt. The refreshed 1,176-transition
+  Source-victory browser journey explicitly activates the audio context and
+  observes 12 `executing` plus 12 matching `completed` audio records. Under the
+  active primary TearScore backend, all seven finale mix requests are
+  `logical-target-only`; their logical targets change but no graph automation is
+  claimed. Finale cues reach the `environment` route while that context is
+  running, yet every cue is `voice-cap-rejected`: final silence attempted 1 /
+  accepted 0, each of the three final cuts attempted 3 / accepted 0, and final
+  restore attempted 4 / accepted 0. This is direct evidence against a claim of
+  successful graph scheduling; it is not audibility, PCM, speaker/device, or
+  production-output evidence. Live test bridge and detached hosts each record
+  immutable outcome/finale ordering in memory, but exact live-to-detached outcome
+  parity remains unproved because external adapter inputs and return values are
+  not yet modeled or captured.
 
 ## Remaining C27A work
 
-1. Extend the now-exact finale intent, 22-call adapter-dispatch, six particle
-   admission, and eight logical-feel comparisons into concrete audio scheduling
-   receipts, rendered evidence, audio production/audibility, and physical haptic
-   results. Add one shared chronological outcome journal spanning finale
-   dispatch and progression/cloud effects rather than comparing isolated
-   projections. The
+1. Capture and model external outcome-adapter inputs and return values so the
+   in-memory chronology can become an exact live-to-detached comparison. Then
+   extend the existing intent/adapter, particle-admission, logical-feel, and
+   software-audio receipts into rendered evidence, successful audio graph/
+   audibility evidence where available, and physical haptic results. The
    matrix includes a real production Source victory from a
    certified reconstructed wave-49 frontier and explicit one-hit State Forge
    child; it is not evidence of a naturally played full 50-wave campaign.

@@ -8,6 +8,7 @@ import { createLiveRunOutcomeHost } from "./live-run-outcome-host";
 import type { RecordingSummary } from "../gameplay/run/outcome-planner";
 import type { StoredRecordingSummary } from "../gameplay/run/live-recording-controller";
 import { createTearTerminalRunFactPublisher } from "../gameplay/runtime/gameplay-event-publishers";
+import type { OutcomeChronologyEffect } from "../gameplay/run/outcome-chronology-journal";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 
@@ -45,6 +46,8 @@ export interface LiveOutcomeCompositionOptions {
   readonly cinema: Readonly<{ active: boolean; cancel(reason: string): void }>;
   readonly width: number;
   readonly height: number;
+  /** Test-only synchronous terminal receipt sink. */
+  readonly observeOutcomeChronology?: (effect: OutcomeChronologyEffect) => void;
 }
 
 /** Owns replay packaging, terminal progression, and pending-finale recovery wiring. */
@@ -113,6 +116,9 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     },
     midgame: (callback) => { d.CG.midgame(callback); },
     restartCurrentRun: () => { options.startRun(active().mode, active().diff); },
+    ...(options.observeOutcomeChronology === undefined
+      ? {}
+      : { observeOutcomeChronology: options.observeOutcomeChronology }),
     pendingFinale: () => d.PROFILE.pendingFinale(),
     selectedWeapon: options.selectedWeapon,
     selectWeapon: options.selectWeapon,

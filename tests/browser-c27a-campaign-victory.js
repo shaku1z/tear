@@ -15,6 +15,9 @@ const scenario = Object.freeze({
 
 withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15_000 });
+  await page.mouse.click(10, 10);
+  await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running",
+    undefined, { timeout: 20_000 });
   const evidence = await page.evaluate((scenarioValue) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
     environment.reset(scenarioValue);
@@ -131,6 +134,7 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page }) => {
       events: environment.engineEventProjection(), observation: environment.observe(),
       finaleIntents: environment.finaleIntentProjection(),
       finaleOutward: environment.finaleOutwardProjection(),
+      finaleAudio: environment.audioDispatchProjection(),
       terminalRun: runState(terminal), terminalWorld: worldState(terminal),
       terminalUi: uiState(terminal), terminalCinema: cinemaState(terminal),
     };
@@ -176,6 +180,50 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page }) => {
     { type: "shake", receipt: { requested: 9, before: 16.125, after: 16.125, aggregation: "maximum" } },
     { type: "world-zoom", receipt: { requested: 1, immediate: true,
       before: { current: 0.84, target: 0.84 }, after: { current: 1, target: 1 } } },
+  ]);
+  assert.equal(evidence.finaleAudio.length, 24);
+  assert.ok(evidence.finaleAudio.every((receipt, index) => receipt.phase === (index % 2 === 0 ? "executing" : "completed")));
+  assert.ok(evidence.finaleAudio.every((receipt, index) => index % 2 === 0
+    || receipt.requestId === evidence.finaleAudio[index - 1].requestId));
+  const completedAudio = evidence.finaleAudio.filter((receipt) => receipt.phase === "completed");
+  assert.equal(completedAudio.length, 12);
+  assert.deepEqual(completedAudio.filter((receipt) => receipt.result.kind === "cue")
+    .map((receipt) => receipt.request.operation),
+  ["final-silence", "final-cut", "final-cut", "final-cut", "final-restore"]);
+  const cueAudio = completedAudio.filter((entry) => entry.result.kind === "cue");
+  for (const receipt of cueAudio) {
+    assert.equal(receipt.result.kind, "cue");
+    assert.equal(receipt.result.route, "environment");
+    assert.equal(receipt.result.context, "running");
+    assert.ok(receipt.result.attempted > 0);
+    assert.ok(receipt.result.scheduling === "scheduled-to-audio-graph"
+      || receipt.result.scheduling === "voice-cap-rejected");
+    if (receipt.result.scheduling === "scheduled-to-audio-graph") assert.ok(receipt.result.accepted > 0);
+    else assert.equal(receipt.result.accepted, 0);
+  }
+  assert.deepEqual(cueAudio.map((receipt) => ({
+    operation: receipt.request.operation, scheduling: receipt.result.scheduling,
+    attempted: receipt.result.attempted, accepted: receipt.result.accepted,
+  })), [
+    { operation: "final-silence", scheduling: "voice-cap-rejected", attempted: 1, accepted: 0 },
+    { operation: "final-cut", scheduling: "voice-cap-rejected", attempted: 3, accepted: 0 },
+    { operation: "final-cut", scheduling: "voice-cap-rejected", attempted: 3, accepted: 0 },
+    { operation: "final-cut", scheduling: "voice-cap-rejected", attempted: 3, accepted: 0 },
+    { operation: "final-restore", scheduling: "voice-cap-rejected", attempted: 4, accepted: 0 },
+  ]);
+  const mixAudio = completedAudio.filter((receipt) => receipt.result.kind === "mix");
+  assert.deepEqual(mixAudio.map((receipt) => ({
+    operation: receipt.request.operation, context: receipt.result.context,
+    scheduling: receipt.result.scheduling, before: receipt.result.logicalBefore,
+    after: receipt.result.logicalAfter, duration: receipt.result.normalizedDuration,
+  })), [
+    { operation: "music-duck", context: "running", scheduling: "logical-target-only", before: 0.45, after: 1, duration: 0.25 },
+    { operation: "music-duck", context: "running", scheduling: "logical-target-only", before: 1, after: 0.45, duration: 0.18 },
+    { operation: "void-mix", context: "running", scheduling: "logical-target-only", before: 0, after: 0, duration: 0.05 },
+    { operation: "void-mix", context: "running", scheduling: "logical-target-only", before: 0, after: 1, duration: 0.45 },
+    { operation: "void-mix", context: "running", scheduling: "logical-target-only", before: 1, after: 0.72, duration: 0.55 },
+    { operation: "void-mix", context: "running", scheduling: "logical-target-only", before: 0.72, after: 0, duration: 0.9 },
+    { operation: "music-duck", context: "running", scheduling: "logical-target-only", before: 0.45, after: 1, duration: 0.75 },
   ]);
 
   const particleCalls = evidence.finaleOutward.filter((call) => call.type === "ring" || call.type === "burst");

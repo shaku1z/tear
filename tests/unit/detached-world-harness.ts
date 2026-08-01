@@ -48,6 +48,8 @@ import {
   type FinaleOutwardCall,
 } from "../../src/gameplay/campaign/finale-outward-call";
 import { createFinaleRuntime, type FinaleRuntimeState } from "../../src/gameplay/campaign/finale-runtime";
+import { createOutcomeChronologyJournal, type OutcomeChronologyJournal } from
+  "../../src/gameplay/run/outcome-chronology-journal";
 import { createTearWorldTransientState } from "../../src/gameplay/runtime/tear-world-transient-state";
 import { createTearCombatSimulation } from "../../src/gameplay/runtime/tear-combat-simulation";
 import type { AuthoritativeInputState } from "../../src/gameplay/runtime/authoritative-input";
@@ -512,6 +514,7 @@ export function createDetachedCombatPhases(
 export function createDetachedRunOutcomeController(
   detached: DetachedWorld,
   events: TearGameplayEventPort,
+  chronology: OutcomeChronologyJournal = createOutcomeChronologyJournal(),
 ) {
   const outward: string[] = [];
   let pendingFinale: unknown = null;
@@ -540,9 +543,10 @@ export function createDetachedRunOutcomeController(
     pushCloud: () => { outward.push("pushCloud"); },
     present: (outcome, result) => { presented = Object.freeze({ outcome, result }); outward.push(`present:${outcome}`); },
     midgame: (callback) => { callback(); }, restartCurrentRun: () => undefined,
+    observeOutcomeChronology: chronology.record,
   };
   return Object.freeze({ controller: new LiveRunOutcomeController(port), outward,
-    pendingFinale: () => pendingFinale, presented: () => presented });
+    chronology, pendingFinale: () => pendingFinale, presented: () => presented });
 }
 
 /**
@@ -559,7 +563,10 @@ export function createDetachedFinaleComposition(
   const outward: string[] = [];
   const outwardCalls: FinaleOutwardCall[] = [];
   const recordOutward = (call: FinaleOutwardCall): void => {
-    observeFinaleOutwardCall((record) => { outwardCalls.push(record); }, call);
+    observeFinaleOutwardCall((record) => {
+      outwardCalls.push(record);
+      outcome.chronology.record({ type: "finale-outward", call: record });
+    }, call);
   };
   const intentBatches: (readonly FinaleIntent[])[] = [];
   const runtime: FinaleRuntimeState = {
@@ -704,6 +711,7 @@ export function createDetachedFinaleComposition(
     outcome,
     get intentBatches() { return Object.freeze([...intentBatches]); },
     get outwardCalls() { return Object.freeze([...outwardCalls]); },
+    get outcomeChronology() { return outcome.chronology.entries(); },
     get outward() { return Object.freeze([...outcome.outward, ...outward]); },
     /** Director time is live-frame time; the supplied callback remains the one real simulation application frame. */
     advanceApplicationFrame<Result>(
