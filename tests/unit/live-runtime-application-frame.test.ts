@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createLiveTearRuntimeEnvironment } from "../../src/tearbench/live-runtime-environment";
 import type { LiveTearRuntimeEnvironmentContext } from "../../src/tearbench/live-runtime-contracts";
 import type { TearScenarioV1 } from "../../src/tearbench/contracts";
+import type { FinaleOutwardCall } from "../../src/gameplay/campaign/finale-outward-call";
 
 const SCENARIO = Object.freeze({
   format: "tear-contract",
@@ -24,6 +25,7 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean }> = {}) 
   let tick = 0;
   let screen = "playing";
   const calls: string[] = [];
+  const finaleOutwardCalls: FinaleOutwardCall[] = [];
   const run = {
     mode: "campaign", diff: "normal", weaponId: "sword", stage: 0,
     wave: 1, score: 0, spawnQueue: [], runSeed: 1,
@@ -90,8 +92,9 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean }> = {}) 
     },
     replayProgression: () => ({ applied: 0, finalBuild: { owned: {}, tier: {} } }),
     finaleIntents: () => [],
+    finaleOutwardCalls: () => finaleOutwardCalls,
   } as unknown as LiveTearRuntimeEnvironmentContext;
-  return { context, calls };
+  return { context, calls, finaleOutwardCalls };
 }
 
 describe("Class-A live application-frame surface", () => {
@@ -120,5 +123,18 @@ describe("Class-A live application-frame surface", () => {
 
     const structured = createLiveTearRuntimeEnvironment(contextFixture().context, "B");
     expect("advanceApplicationFrame" in structured).toBe(false);
+    expect("finaleOutwardProjection" in structured).toBe(false);
+  });
+
+  it("projects only successful outward calls recorded after the current reset", () => {
+    const fixture = contextFixture();
+    fixture.finaleOutwardCalls.push(Object.freeze({ type: "flash", amount: 0.1 }));
+    const environment = createLiveTearRuntimeEnvironment(fixture.context, "A");
+    environment.reset(SCENARIO);
+    fixture.finaleOutwardCalls.push(Object.freeze({ type: "sound", cue: "final-cut", index: 2 }));
+
+    const projection = environment.finaleOutwardProjection();
+    expect(projection).toEqual([{ type: "sound", cue: "final-cut", index: 2 }]);
+    expect(Object.isFrozen(projection)).toBe(true);
   });
 });

@@ -43,6 +43,10 @@ import { parseCampaignChapterBindingSpec, stageCampaignChapterBinding } from
 import type { ChapterIntent } from "../../src/gameplay/campaign/chapter-controller";
 import { stepCinematicPlayer } from "../../src/gameplay/campaign/cinematic-player-runtime";
 import { FinaleController, type FinaleIntent, type FinaleState } from "../../src/gameplay/campaign/finale-controller";
+import {
+  observeFinaleOutwardCall,
+  type FinaleOutwardCall,
+} from "../../src/gameplay/campaign/finale-outward-call";
 import { createFinaleRuntime, type FinaleRuntimeState } from "../../src/gameplay/campaign/finale-runtime";
 import { createTearWorldTransientState } from "../../src/gameplay/runtime/tear-world-transient-state";
 import { createTearCombatSimulation } from "../../src/gameplay/runtime/tear-combat-simulation";
@@ -528,6 +532,10 @@ export function createDetachedFinaleComposition(
 ) {
   const { world, effects, stage } = detached;
   const outward: string[] = [];
+  const outwardCalls: FinaleOutwardCall[] = [];
+  const recordOutward = (call: FinaleOutwardCall): void => {
+    observeFinaleOutwardCall((record) => { outwardCalls.push(record); }, call);
+  };
   const intentBatches: (readonly FinaleIntent[])[] = [];
   const runtime: FinaleRuntimeState = {
     finale: null,
@@ -575,6 +583,7 @@ export function createDetachedFinaleComposition(
       clearCombat: () => {
         world.state.setEnemies([]); world.state.setProjectiles([]);
         world.state.setSlowZones([]); world.state.setTemporaryWalls([]);
+        world.state.setBossIntro(null); world.state.setBossBeat(null);
         const active = run();
         if (Array.isArray(active.spawnQueue)) active.spawnQueue.length = 0;
         active.chapterState = "WAVE_LIVE";
@@ -588,7 +597,10 @@ export function createDetachedFinaleComposition(
         }
         active.voidDescent = null;
       },
-      worldZoom: (value) => { outward.push(`worldZoom:${String(value)}`); },
+      worldZoom: (value) => {
+        outward.push(`worldZoom:${String(value)}`);
+        recordOutward({ type: "world-zoom", value });
+      },
       finalBlade: (active, restoredTrail) => {
         const weapon = blade();
         weapon.finalFree = active;
@@ -599,12 +611,30 @@ export function createDetachedFinaleComposition(
         if (hand !== undefined) { weapon.x = hand.x; weapon.y = hand.y; }
         weapon.vx = 0; weapon.vy = 0;
       },
-      ring: (x, y, radius, color) => { effects.ring(x, y, radius, color); },
-      burst: (x, y, dx, dy, count, color) => { effects.burst(x, y, dx, dy, count, color); },
-      flash: (amount) => { outward.push(`flash:${String(amount)}`); },
-      shake: (amount) => { outward.push(`shake:${String(amount)}`); },
-      vibrate: (pattern) => { outward.push(`vibrate:${pattern.join(",")}`); },
-      sound: (cue, index) => { outward.push(`sound:${cue}:${String(index)}`); },
+      ring: (x, y, radius, color) => {
+        effects.ring(x, y, radius, color);
+        recordOutward({ type: "ring", x, y, radius, color });
+      },
+      burst: (x, y, dx, dy, count, color) => {
+        effects.burst(x, y, dx, dy, count, color);
+        recordOutward({ type: "burst", x, y, dx, dy, count, color });
+      },
+      flash: (amount) => {
+        outward.push(`flash:${String(amount)}`);
+        recordOutward({ type: "flash", amount });
+      },
+      shake: (amount) => {
+        outward.push(`shake:${String(amount)}`);
+        recordOutward({ type: "shake", amount });
+      },
+      vibrate: (pattern) => {
+        outward.push(`vibrate:${pattern.join(",")}`);
+        recordOutward({ type: "vibrate", pattern });
+      },
+      sound: (cue, index) => {
+        outward.push(`sound:${cue}:${String(index)}`);
+        recordOutward({ type: "sound", cue, index });
+      },
       restoreStageZero: () => {
         stage.index = 0; stage.platforms = stagePlatforms(0);
         world.state.setSlowZones([]); world.state.setTemporaryWalls([]);
@@ -615,8 +645,14 @@ export function createDetachedFinaleComposition(
         actor.x = clamp(actor.x, actor.hw + xMin, xMax - actor.hw);
         actor.y = Math.min(actor.y, yMax); actor.vx = 0; actor.vy = vy; actor.onGround = false;
       },
-      voidMix: (amount, duration) => { outward.push(`voidMix:${String(amount)}:${String(duration)}`); },
-      musicDuck: (amount, duration) => { outward.push(`musicDuck:${String(amount)}:${String(duration)}`); },
+      voidMix: (amount, duration) => {
+        outward.push(`voidMix:${String(amount)}:${String(duration)}`);
+        recordOutward({ type: "void-mix", amount, duration });
+      },
+      musicDuck: (amount, duration) => {
+        outward.push(`musicDuck:${String(amount)}:${String(duration)}`);
+        recordOutward({ type: "music-duck", amount, duration });
+      },
       win: (campaign) => { outcome.controller.victory(campaign); },
     },
   });
@@ -629,6 +665,7 @@ export function createDetachedFinaleComposition(
     tryBladeCut: finale.tryBladeCut,
     outcome,
     get intentBatches() { return Object.freeze([...intentBatches]); },
+    get outwardCalls() { return Object.freeze([...outwardCalls]); },
     get outward() { return Object.freeze([...outcome.outward, ...outward]); },
     /** Director time is live-frame time; the supplied callback remains the one real simulation application frame. */
     advanceApplicationFrame<Result>(

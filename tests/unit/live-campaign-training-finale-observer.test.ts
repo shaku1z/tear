@@ -30,14 +30,17 @@ import { createLiveCampaignTrainingComposition } from "../../src/app/live-campai
 describe("live campaign/training composition finale observation", () => {
   it("passes the observer callback directly into the campaign host services", () => {
     const observer = vi.fn();
+    const outwardObserver = vi.fn();
     const options = {
       dependencies: {}, entities: {}, state: {}, lifecycle: {}, cinema: {},
       controllers: { api: {}, installStage: vi.fn() },
       observeFinaleIntents: observer,
+      observeFinaleOutwardCall: outwardObserver,
     } as unknown as LiveCampaignTrainingOptions;
 
     createLiveCampaignTrainingComposition(options);
 
     expect((forwarding.services as { observeFinaleIntents?: unknown }).observeFinaleIntents).toBe(observer);
+    expect((forwarding.services as { observeFinaleOutwardCall?: unknown }).observeFinaleOutwardCall).toBe(outwardObserver);
   });
 });

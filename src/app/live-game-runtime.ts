@@ -1,4 +1,4 @@
-import { MusicDirector } from "../audio/music-director"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import { BOSS_ROSTER } from "../gameplay/run/content-director";
+import { MusicDirector } from "../audio/music-director"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call"; import { BOSS_ROSTER } from "../gameplay/run/content-director";
 import { projectCanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { CanvasUiButton } from "../presentation/screens/button-layer";
 import { blendHex as blendCol, easeOut as ez } from "../presentation/world/primitives";
@@ -224,7 +224,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
   // prelude, State Forge, and the debug surfaces all read the same instances.
   const { transient } = worldContext; const impact = transient.impact; const openingCarry = transient.opening;
   const feel = transient.feel;
-  const finaleIntentBatches: (readonly FinaleIntent[])[] = []; const campaignTraining = createLiveCampaignTrainingComposition({
+  const finaleIntentBatches: (readonly FinaleIntent[])[] = []; const finaleOutwardCalls: FinaleOutwardCall[] = []; const campaignTraining = createLiveCampaignTrainingComposition({
     dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE,
     cinema: worldContext.cinema, controllers: runControllers,
     width: W, height: H, canvas, context: ctx,
@@ -250,7 +250,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     renderLab: (model) => { presentationScreenRenderers.pglab(model); },
     abilityColors: () => libraryAdapters.categories,
     emitMusicEvent: (name, detail) => { liveFrameRuntime.emitMusicEvent(name, detail); },
-    ...(__TEAR_TEST_BUILD__ ? { observeFinaleIntents: (intents: readonly FinaleIntent[]) => { finaleIntentBatches.push(intents); } } : {}),
+    ...(__TEAR_TEST_BUILD__ ? { observeFinaleIntents: (intents: readonly FinaleIntent[]) => { finaleIntentBatches.push(intents); }, observeFinaleOutwardCall: (call: FinaleOutwardCall) => { finaleOutwardCalls.push(call); } } : {}),
     showRank: (rank) => { feel.rankPopupSeconds = 1; feel.rankPopupText = rank; },
   });
   const { campaign: campaignHost, training: trainingHost, cinematic: cinematicHost,
@@ -677,7 +677,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
       drainConsumedActions: () => consumedActions.splice(0, consumedActions.length),
       emitPhysicalInput: (input) => { emitLiveTearBenchPhysicalInput(input, { window, canvas, width: W, height: H }); },
       setTimeEffectsForTest: (effects) => { if (effects.hitStop !== undefined) impact.hitStop = effects.hitStop; if (effects.slowMotion !== undefined) impact.slowMotion = effects.slowMotion; if (effects.timeScale !== undefined) feel.timeScale = effects.timeScale; },
-      stateForge: liveStateForge, replayProgression: (ledger) => replayLiveStateForgeProgression({ dependencies, state: hostState, restoreConfiguration: restoreConfig }, ledger), loadStage: runControllers.api.loadStage, startNextWave: runControllers.api.startNextWave, applyBossFinisher: (bossId, remainingHp) => { const matches = enemies.filter((enemy) => enemy.isBoss && enemy.bossId === bossId && !enemy.dead && !enemy.dying); if (matches.length !== 1 || matches[0] === undefined) throw new Error(`boss-finisher requires exactly one live ${bossId}`); matches[0].hp = remainingHp; matches[0].hpDisplay = remainingHp; }, captureProgressionRuntime: () => run.mods, restoreProgressionRuntime: (runtime) => { run.mods = runtime as typeof run.mods; }, finaleIntents: () => finaleIntentBatches,
+      stateForge: liveStateForge, replayProgression: (ledger) => replayLiveStateForgeProgression({ dependencies, state: hostState, restoreConfiguration: restoreConfig }, ledger), loadStage: runControllers.api.loadStage, startNextWave: runControllers.api.startNextWave, applyBossFinisher: (bossId, remainingHp) => { const matches = enemies.filter((enemy) => enemy.isBoss && enemy.bossId === bossId && !enemy.dead && !enemy.dying); if (matches.length !== 1 || matches[0] === undefined) throw new Error(`boss-finisher requires exactly one live ${bossId}`); matches[0].hp = remainingHp; matches[0].hpDisplay = remainingHp; }, captureProgressionRuntime: () => run.mods, restoreProgressionRuntime: (runtime) => { run.mods = runtime as typeof run.mods; }, finaleIntents: () => finaleIntentBatches, finaleOutwardCalls: () => finaleOutwardCalls,
     }, window);
   });
   if (__TEAR_TEST_BUILD__ && PANTHEON_DEBUG) void import("./live-debug-composition").then(({ installLiveGameDebug }) => {

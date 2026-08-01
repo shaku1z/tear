@@ -14,6 +14,7 @@ import type { TearProgressionReplayResult } from "./progression-replay";
 import type { TearSdlResolved } from "./tearsdl";
 import type { RunResultInfo } from "../gameplay/run/outcome-planner";
 import type { FinaleIntent } from "../gameplay/campaign/finale-controller";
+import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call";
 import type {
   TearSimulationEnemyView,
   TearSimulationWorldView,
@@ -93,6 +94,8 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
   engineEventProjection(): readonly TearSemanticEngineEventV1[];
   /** Exact immutable portable finale intent batches emitted since reset. */
   finaleIntentProjection(): readonly (readonly FinaleIntent[])[];
+  /** Successful outward finale adapter calls emitted since reset, in dispatch order. */
+  finaleOutwardProjection(): readonly FinaleOutwardCall[];
   setTimeEffectsForTest(effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>): void;
   captureSnapshot(id: string, stateClass?: TearStateClass): TearSnapshotV1;
   restoreSnapshot(snapshot: TearSnapshotV1): TearLiveRestoreResult;
@@ -188,6 +191,7 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly captureProgressionRuntime: () => unknown;
   readonly restoreProgressionRuntime: (runtime: unknown) => void;
   readonly finaleIntents: () => readonly (readonly FinaleIntent[])[];
+  readonly finaleOutwardCalls: () => readonly FinaleOutwardCall[];
 }
 
 export interface TearRuntimeBridgeFactory {

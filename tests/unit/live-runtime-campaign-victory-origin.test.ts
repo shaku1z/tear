@@ -219,6 +219,7 @@ function fixture(options: Readonly<{
       run.wave = 50;
     },
     finaleIntents: () => [],
+    finaleOutwardCalls: () => [],
   } as unknown as LiveTearRuntimeEnvironmentContext;
   return {
     context, calls, replayed, sentinelMods,

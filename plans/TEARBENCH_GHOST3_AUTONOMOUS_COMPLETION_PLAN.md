@@ -8,14 +8,16 @@
 **Current progress:** C21-C24 and C26 passed. C25's implementation foundation is
 verified, but its Class C exit gate remains open. C27 implementation is active;
 C27A is a blocking runtime-architecture correction before replay-world,
-headless, or learning completion claims. Thirty-five executable slices now
+headless, or learning completion claims. Thirty-six executable slices now
 include shared world construction, exact 13-scenario state/native-event parity
 (5,732 ticks / 33 native facts), portable combat/outcome/reward/finale paths, a
 natural wave/reward crossing, and a real Source victory from a certified
 reconstructed wave-49 frontier plus explicit one-hit State Forge child. Live
-and detached match the finale's seven exact intent batches. The work does not
-yet provide a portable full-world runtime, a naturally played 50-wave campaign,
-or complete adapter-level presentation/audio/effect/pixel parity.
+and detached match the finale's seven exact intent batches and all 22
+post-return outward-adapter calls in exact order and arguments. The work does
+not yet provide a portable full-world runtime, a naturally played 50-wave
+campaign, concrete particle/pixel/audio/haptic result parity, or a complete
+shared outcome/progression/cloud-effect chronology.
 
 ### Execution record through C24
 
@@ -557,7 +559,7 @@ live-runtime internals into a second platform.
   a planted violation.
 - Rerun architecture-dependent C22-C27 evidence after migration.
 
-**Current Slice 35 evidence boundary**
+**Current Slice 36 evidence boundary**
 
 - Native defeat publication is gameplay-owned and no longer depends on the
   legacy Ghost 2 `_gid` recording path; the refreshed fixed-tick corpus has 33
@@ -567,13 +569,21 @@ live-runtime internals into a second platform.
   campaign victory after a narrowly validated State Forge boss finisher.
 - Live and detached hosts share the portable finale runtime and application-
   frame advancement, and match all seven pre-adapter finale intent batches.
-- The integrated `pnpm check:c27a` gate is green: foundation 36 files / 126
+- A portable immutable `FinaleOutwardCall` journal records only after each
+  concrete live/detached adapter returns. Both hosts match all 22 calls in exact
+  order and with exact arguments across world zoom, FX requests, feel/haptic
+  requests, sound cues, and mixer requests. Live collection is test-build-only
+  and exposed only through Class A. Detached combat clear now also matches live
+  by clearing `bossIntro` and `bossBeat`, with planted coverage.
+- The integrated `pnpm check:c27a` gate is green: foundation 36 files / 127
   tests, 13 browser scenarios / 5,732 ticks / 33 native facts, and 40 detached
-  comparator tests; campaign victory 10 files / 31 tests, a 1,176-transition
+  comparator tests; campaign victory 10 files / 35 tests, a 1,176-transition
   real browser route, and one detached finale-parity test. The C22 live-runtime
   proof and C23 through C27 package gates also pass in the same worktree.
-- This is outcome and intent parity, not proof that adapter-produced particles,
-  audio, device vibration, or rendered pixels are equal.
+- This is outcome, intent, and adapter-dispatch parity. It is not proof that
+  randomized particle state, rendered pixels, PCM output/audibility, or physical
+  device vibration are equal, nor that all progression/cloud effects share one
+  verified chronology.
 
 **Exit gate**
 

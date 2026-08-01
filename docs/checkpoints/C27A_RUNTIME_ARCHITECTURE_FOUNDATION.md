@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-08-01. This records the first thirty-five executable migration
+In progress as of 2026-08-01. This records the first thirty-six executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -633,19 +633,38 @@ of replay, headless execution, or learning portability.
   does not yet prove equality of every adapter-produced particle, audio sample,
   controller vibration, rendered pixel, or other presentation side effect.
   The integrated post-slice `pnpm check:c27a` gate passed: the foundation
-  subgate ran 36 files / 126 tests, regenerated the 13-scenario live corpus
+  subgate ran 36 files / 127 tests, regenerated the 13-scenario live corpus
   across 5,732 ticks / 33 native facts, and passed all 40 detached comparator
   tests; the campaign-victory subgate ran 10 files / 31 tests, completed the
   real browser route in 1,176 transitions, and passed the dedicated detached
   finale-parity test. The affected same-worktree sweep is also green: the C22
   live-runtime browser proof plus `check:c23`, `check:c24`,
   `check:c25:foundation`, `check:c26`, and `check:c27:foundation` all passed.
+- The thirty-sixth slice carries that same real Source-victory route across the
+  first concrete outward-adapter boundary. A portable, data-only
+  `FinaleOutwardCall` journal records an immutable call only after the concrete
+  live or detached adapter returns. Live and detached now match all 22 accepted
+  calls in exact chronological order with exact arguments: world zoom, effect
+  requests (ring, burst, flash, and shake), haptic requests, sound cues, and
+  mixer requests. Live collection exists only in the test build and is exposed
+  only through the Class-A TearBench surface; it does not add production
+  telemetry. The detached finale's combat clear also now clears `bossIntro` and
+  `bossBeat`, matching the live host, with planted regression coverage for both
+  fields. This proves adapter-dispatch parity. It does **not** prove equality of
+  randomized particle state, rendered pixels, PCM output or audibility, physical
+  device vibration, or the complete outcome/progression/cloud side-effect
+  chronology. The Slice-36 campaign-victory subgate passed 10 files / 35 tests,
+  reran the real browser route through 1,176 transitions, and passed the one
+  dedicated detached finale-parity test.
 
 ## Remaining C27A work
 
-1. Extend the now-exact finale intent comparison through the outward adapters
-   and compare their concrete presentation/audio/effect streams and rendered
-   evidence. The matrix includes a real production Source victory from a
+1. Extend the now-exact finale intent and 22-call adapter-dispatch comparisons
+   into concrete adapter receipts/results: deterministic particle/effect state,
+   rendered evidence, audio production/audibility, and physical haptic results.
+   Add one shared chronological outcome journal spanning finale dispatch and
+   progression/cloud effects rather than comparing isolated projections. The
+   matrix includes a real production Source victory from a
    certified reconstructed wave-49 frontier and explicit one-hit State Forge
    child; it is not evidence of a naturally played full 50-wave campaign.
 2. Move the current live adapter's configuration, RNG, effects, clocks,

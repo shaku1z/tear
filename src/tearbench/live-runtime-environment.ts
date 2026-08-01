@@ -174,6 +174,7 @@ export function createLiveTearRuntimeEnvironment(
   let screenshotCount = 0;
   let lastCallerEnvelopeId = 0;
   let finaleIntentStart = 0;
+  let finaleOutwardStart = 0;
   const eventLog: TearCausalEventV1[] = [];
   const nativeEventLog: TearGameplayEvent[] = [];
   context.subscribeEngineEvent((event) => {
@@ -243,6 +244,7 @@ export function createLiveTearRuntimeEnvironment(
       eventLog.length = 0;
       nativeEventLog.length = 0;
       finaleIntentStart = context.finaleIntents().length;
+      finaleOutwardStart = context.finaleOutwardCalls().length;
       resets += 1;
       observation = projectLiveTearObservation(context, 0, accessClass);
       eventLog.push(createEvent(sequence++, 0, "run.started", {
@@ -458,6 +460,7 @@ export function createLiveTearRuntimeEnvironment(
     canonicalState: () => context.authoritative()?.state ?? null,
     engineEventProjection: () => Object.freeze(nativeEventLog.map(projectGameplayEventForParity)),
     finaleIntentProjection: () => Object.freeze(context.finaleIntents().slice(finaleIntentStart)),
+    finaleOutwardProjection: () => Object.freeze(context.finaleOutwardCalls().slice(finaleOutwardStart)),
     setTimeEffectsForTest: (effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>) => {
       context.setTimeEffectsForTest(effects);
     },

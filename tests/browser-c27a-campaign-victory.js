@@ -130,6 +130,7 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page }) => {
       started, sourceSpawn, combatReady, surgical, preFinale, preFinaleHeldActions, finaleStart, terminal, trace,
       events: environment.engineEventProjection(), observation: environment.observe(),
       finaleIntents: environment.finaleIntentProjection(),
+      finaleOutward: environment.finaleOutwardProjection(),
       terminalRun: runState(terminal), terminalWorld: worldState(terminal),
       terminalUi: uiState(terminal), terminalCinema: cinemaState(terminal),
     };
@@ -153,6 +154,13 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page }) => {
     ["ring", "burst", "flash", "shake", "sound", "vibrate"],
     ["restore-stage-zero", "freeze-void", "world-zoom", "set-player-restoration", "sound"],
     ["final-blade", "win-run"],
+  ]);
+  assert.deepEqual(evidence.finaleOutward.map((call) => call.type), [
+    "world-zoom", "sound",
+    "ring", "burst", "flash", "shake", "sound", "vibrate",
+    "ring", "burst", "flash", "shake", "sound", "vibrate",
+    "ring", "burst", "flash", "shake", "sound", "vibrate",
+    "world-zoom", "sound",
   ]);
   assert.ok(evidence.events.some((event) => event.type === "enemy.spawned" && event.payload.bossId === "source"));
   assert.ok(evidence.events.some((event) => event.type === "enemy.defeated"));

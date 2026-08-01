@@ -5,10 +5,10 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** thirty-fifth C27A foundation slice implemented (certified campaign
-Source victory and exact finale-intent parity); checkpoint remains open and
-blocking pending concrete outward presentation/audio/effect parity and
-full-world portability exits.
+**Status:** thirty-sixth C27A foundation slice implemented (exact finale intent
+and adapter-dispatch parity from a certified campaign Source victory);
+checkpoint remains open and blocking pending concrete outward-result parity,
+chronological outcome/progression evidence, and full-world portability exits.
 
 ## Resume protocol (mandatory)
 
@@ -299,15 +299,27 @@ Before coding, read this file, then:
   camera/world, blade, cut-beat effects, sound/vibration requests, restoration,
   and win instructions; it does not yet certify equality of concrete audio,
   particle, vibration-device, or pixel output produced by outward adapters.
+- The thirty-sixth slice adds the portable, immutable `FinaleOutwardCall`
+  journal at the concrete-adapter boundary. Each entry is published only after
+  the corresponding live or detached adapter returns. From the same real
+  Source-victory boundary, both hosts match all 22 accepted calls in exact order
+  and with exact arguments across world zoom, ring/burst/flash/shake effect
+  requests, vibration requests, sound cues, and void/music mixer requests. The
+  live collector is test-build-only and reachable only through Class A, so it
+  does not create production telemetry. The detached `clearCombat` adapter now
+  also clears `bossIntro` and `bossBeat` like live, and planted coverage rejects
+  either regression. This is adapter-dispatch parity, not proof of randomized
+  particle equality, pixel equality, PCM output or audibility, device vibration,
+  or complete outcome/progression/cloud effects.
 
 ## Latest evidence
 
 All of the following were run from this worktree after the parity-passing slice:
 
-- `pnpm check:c27a` passed after slice 35. Its foundation subgate passed 36
-  files / 126 tests, regenerated all 13 browser scenarios across 5,732 ticks /
+- `pnpm check:c27a` passed after slice 36. Its foundation subgate passed 36
+  files / 127 tests, regenerated all 13 browser scenarios across 5,732 ticks /
   33 native facts, and passed the 40-test detached comparator. Its campaign-
-  victory subgate passed 10 files / 31 tests, executed the real Source-victory
+  victory subgate passed 10 files / 35 tests, executed the real Source-victory
   browser route through 1,176 transitions, and passed the dedicated detached
   finale-parity test. The same worktree also passed the C22 live-runtime
   browser proof and the complete C23, C24, C25-foundation, C26, and
@@ -389,9 +401,11 @@ behavior-bearing position across worlds. The campaign-Source proof now routes
 victory through the production outcome controller and shared portable finale,
 using a certified reconstructed wave-49 frontier and an explicit one-hit
 State Forge child rather than a synthetic `run.completed` note. Its seven
-finale intent batches match live to detached exactly. The next boundary is to
-compare the concrete presentation/audio/effect adapters and rendered evidence,
-then continue extracting the closure-owned run/world construction. Any newly found
+finale intent batches and 22 accepted outward-adapter calls match live to
+detached exactly. The next boundary is to capture concrete adapter
+receipts/results and add one shared chronological outcome journal spanning the
+finale and progression/cloud effects, then continue extracting the closure-owned
+run/world construction. Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
 from the harness — never a tolerance to widen, a scenario to shorten, or a
 field to drop from the projection.
@@ -412,8 +426,8 @@ composition with parity evidence.
 - Do not discard unrelated dirty work. In particular,
   `plans/EXTREME_RENDERING_IMPLEMENTATION_PLAN.md` was already untracked and
   is outside this C27A handoff scope.
-- Slice 34 is the last pushed green boundary; slice 35 is the current campaign
-  victory/finale-intent boundary with its complete `pnpm check:c27a` gate green
+- Slice 35 is the last pushed green boundary; slice 36 is the current outward-
+  adapter-dispatch boundary with its complete `pnpm check:c27a` gate green
   and awaiting commit on the active `codex/` branch. Inspect the
   actual branch and `git status --short` before later staging; stage only
   intentional TearBench work.

@@ -119,7 +119,7 @@ Named status:
 - **C25:** physical/black-box foundation verified; exit open.
 - **C26:** regression discovery passed `pnpm check:c26` on 2026-07-28.
 - **C27:** recorder/capsule foundation only; checkpoint open.
-- **C27A:** thirty-five shared-world architecture slices in this tree; blocking and incomplete.
+- **C27A:** thirty-six shared-world architecture slices in this tree; blocking and incomplete.
 - **C28-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -135,7 +135,7 @@ Current engineering capabilities, with the qualifications above:
 - Physical browser harness foundations and diagnostics; the full C25 exit is pending.
 - C26 regression investigation, minimization, bisect, and graveyard workflows.
 - C27 V3 recording/capsule foundations: manifests, chunks, journals, recovery, budgets, interruption/terminal tests, and browser proof in the tested scope.
-- C27A foundations: DOM-free world context, shared construction and combat assembly, reconstructible campaign bindings, and 13/13 exact fixed-tick plus post-origin native-event parity. Live and detached use shared spawn/wave/terminal publishers, the gameplay outcome controller, and portable reward/finale runtimes; the matrix includes a natural wave clear, real draft selection, wave-2 spawn, and a real Source victory from a certified reconstructed wave-49 frontier plus explicit one-hit State Forge child. The finale's seven outward intent batches match exactly; concrete adapter audio/effect/pixel parity remains open.
+- C27A foundations: DOM-free world context, shared construction and combat assembly, reconstructible campaign bindings, and 13/13 exact fixed-tick plus post-origin native-event parity. Live and detached use shared spawn/wave/terminal publishers, the gameplay outcome controller, and portable reward/finale runtimes; the matrix includes a natural wave clear, real draft selection, wave-2 spawn, and a real Source victory from a certified reconstructed wave-49 frontier plus explicit one-hit State Forge child. The finale's seven intent batches and 22 accepted outward-adapter calls match exactly in order and arguments; concrete particle, pixel, audio, haptic, and full outcome/progression/cloud result parity remains open.
 
 Current `scripts/tearbench.mjs` command families:
 
@@ -174,7 +174,7 @@ Do not claim TearBot automatically learns merely because scripted policies, trai
 
 Read [`TEARBENCH_C27A_HANDOFF.md`](TEARBENCH_C27A_HANDOFF.md) before editing.
 
-Thirty-five C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, shared combat/outcome/reward/finale execution, exact state/native-event parity through a natural wave boundary, world-owned cinema, versioned State Forge restoration, data-only campaign reconstruction, a certified real Source-victory route, exact finale-intent parity, focused tests, and physical browser diagnostics.
+Thirty-six C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, shared combat/outcome/reward/finale execution, exact state/native-event parity through a natural wave boundary, world-owned cinema, versioned State Forge restoration, data-only campaign reconstruction, a certified real Source-victory route, exact finale-intent and adapter-dispatch parity, focused tests, and physical browser diagnostics.
 
 Important files:
 
@@ -193,7 +193,7 @@ Important files:
 
 ### Exact next slice
 
-All thirteen captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream: 5,732 ticks and 33 native facts, including the three natural-trace enemy defeats now published independently of Ghost 2 sampling. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome/reward/finale controllers, scheduler shape, event bus, and restored actor identity. The natural matrix route clears wave 1, selects a real offered draft card without advancing the fixed scheduler, and reaches a wave-2 spawn. A separate certified route reconstructs the wave-49 frontier, starts production wave 50, applies an explicit Source one-hit State Forge child, and executes real victory; live and detached match all seven finale intent batches. Next compare concrete outward presentation/audio/effect adapters and rendered output. This evidence does not claim a naturally played 50-wave campaign or full pixel/audio/device parity.
+All thirteen captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream: 5,732 ticks and 33 native facts, including the three natural-trace enemy defeats now published independently of Ghost 2 sampling. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome/reward/finale controllers, scheduler shape, event bus, and restored actor identity. The natural matrix route clears wave 1, selects a real offered draft card without advancing the fixed scheduler, and reaches a wave-2 spawn. A separate certified route reconstructs the wave-49 frontier, starts production wave 50, applies an explicit Source one-hit State Forge child, and executes real victory; live and detached match all seven finale intent batches and all 22 outward calls after their concrete adapters return, in exact order and with exact arguments. Next capture concrete adapter receipts/results and a shared chronological outcome/progression journal. This evidence does not claim a naturally played 50-wave campaign, randomized particle parity, rendered-pixel parity, PCM/audibility parity, device vibration, or complete progression/cloud-effect parity.
 
 Preserve:
 
@@ -332,18 +332,18 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      Slice 35 adds certified Source victory, shared portable finale execution, exact seven-batch finale intent parity, application-frame advancement, and native defeat publication independent of Ghost 2 sampling.
-PROVEN BY:           `pnpm check:c27a` passed: foundation 36 files / 126 tests, 13 browser scenarios / 5,732 ticks / 33 native facts, 40 detached comparator tests; campaign-victory 10 files / 31 tests, real browser 1,176 transitions, and 1 detached finale-parity test.
-REMAINING HERE:      Compare concrete outward adapters/rendered evidence and finish full-world portability; the affected C22-C27 same-worktree sweep is green.
+DONE THIS STEP:      Slice 36 adds an immutable post-return `FinaleOutwardCall` journal, exact live/detached parity for all 22 outward adapter calls, and fixes/plants detached combat-clear parity for boss intro/beat state.
+PROVEN BY:           `pnpm check:c27a` passed: foundation 36 files / 127 tests, 13 browser scenarios / 5,732 ticks / 33 native facts, 40 detached comparator tests; campaign-victory 10 files / 35 tests, real browser 1,176 transitions, and 1 detached finale-parity test.
+REMAINING HERE:      Compare concrete adapter receipts/results, add a shared chronological outcome/progression/cloud journal, and finish full-world portability; C27A remains blocking.
 REMAINING TO C40:    C27 completion, C25 exit, and C28-C40 remain after C27A closes.
-NEXT SLICE:          Drive the exact shared finale intents through live and detached outward adapters and compare audio/effect/presentation results without normalizing divergences.
+NEXT SLICE:          Capture concrete live/detached adapter receipts/results and one shared chronological journal spanning finale dispatch and outcome/progression/cloud effects, without normalizing divergences.
 
-All of the following were run from this worktree through C27A slice 35:
+All of the following were run from this worktree through C27A slice 36:
 
 - `pnpm check:c27a` passed after the certified Source-victory slice: foundation
-  36 files / 126 tests, a fresh 13-scenario / 5,732-tick / 33-native-fact
+  36 files / 127 tests, a fresh 13-scenario / 5,732-tick / 33-native-fact
   browser corpus, all 40 detached comparator tests, and a campaign-victory
-  subgate covering 10 files / 31 tests, the 1,176-transition real browser
+  subgate covering 10 files / 35 tests, the 1,176-transition real browser
   route, and one dedicated detached finale-parity test. The C22 live-runtime
   browser proof and C23 through C27 package gates also passed in this worktree.
 

@@ -6,6 +6,7 @@ import { createConfigRestorer } from "../../src/app/runtime-initialization";
 import { CONFIG } from "../../src/config/game-config";
 import type { CommandEnvelope } from "../../src/domain/envelopes";
 import type { FinaleIntent } from "../../src/gameplay/campaign/finale-controller";
+import type { FinaleOutwardCall } from "../../src/gameplay/campaign/finale-outward-call";
 import { TearGameplayEventBus, type TearGameplayEvent } from
   "../../src/gameplay/runtime/gameplay-events";
 import { applyWeapon } from "../../src/gameplay/weapons";
@@ -39,6 +40,7 @@ interface CampaignVictoryArtifact {
   readonly preFinaleHeldActions: readonly GameAction[];
   readonly terminal: RuntimeSnapshot;
   readonly finaleIntents: readonly (readonly FinaleIntent[])[];
+  readonly finaleOutward: readonly FinaleOutwardCall[];
   readonly events: readonly TearSemanticEngineEventV1[];
   readonly terminalRun: Readonly<Record<string, unknown>>;
   readonly terminalWorld: Readonly<Record<string, unknown>>;
@@ -49,7 +51,8 @@ interface CampaignVictoryArtifact {
 function readArtifact(): CampaignVictoryArtifact | null {
   if (!existsSync(ARTIFACT)) return null;
   const parsed = JSON.parse(readFileSync(ARTIFACT, "utf8")) as Partial<CampaignVictoryArtifact>;
-  return parsed.preFinale === undefined || parsed.preFinaleHeldActions === undefined || parsed.finaleIntents === undefined
+  return parsed.preFinale === undefined || parsed.preFinaleHeldActions === undefined
+    || parsed.finaleIntents === undefined || parsed.finaleOutward === undefined
     ? null
     : parsed as CampaignVictoryArtifact;
 }
@@ -162,6 +165,7 @@ describe.skipIf(artifact === null)("detached finale against the live campaign vi
 
     expect(frames).toBeLessThan(900);
     expect(finale.intentBatches).toEqual(artifact.finaleIntents);
+    expect(finale.outwardCalls).toEqual(artifact.finaleOutward);
     const liveAfterBoundary = artifact.events
       .filter((event) => event.tick > artifact.preFinale.tick)
       .map(withoutSequence);

@@ -233,8 +233,8 @@ plan — they do not replace it.
 - [x] Campaign parity: chapter scripts a detached world needs are constructible without app callbacks through explicit gameplay ports
 - [x] `KNOWN_DIVERGENCES` is empty
 - [ ] Outward effect streams are compared, not merely recorded (the seven
-  finale intent batches now match exactly; concrete adapter audio/effect/pixel
-  output remains open)
+  finale intent batches and 22 post-return adapter calls now match exactly;
+  concrete receipts/results for audio/effect/pixel/haptic output remain open)
 - [x] A natural wave/reward boundary crossing is in the matrix
 - [x] A real campaign win outcome is in the matrix (certified reconstructed
   wave-49 frontier + production wave-50 transition + explicit one-hit Source
@@ -245,17 +245,24 @@ plan — they do not replace it.
 **Exit:** the alignment doc's exit gate, with the parity corpus green and no
 recorded divergence.
 
-Current Slice 35 boundary: the refreshed 13-scenario corpus contains 5,732
+Current Slice 36 boundary: the refreshed 13-scenario corpus contains 5,732
 fixed ticks and 33 native facts (14 in the natural route, including three
 enemy defeats). A portable finale runtime and Class-A application-frame API
 carry the certified Source-victory route through live and detached hosts, and
-all seven finale intent batches compare exactly before adaptation. The next
-slice must compare the adapters' concrete presentation, audio, effect,
-vibration, and rendered results; intent equality alone does not check the full
-outward-stream item above. The integrated `pnpm check:c27a` gate passed with a
-36-file / 126-test foundation subgate, the 13-scenario / 5,732-tick / 33-native-
+all seven finale intent batches compare exactly before adaptation. A portable
+immutable `FinaleOutwardCall` journal records only after each concrete adapter
+returns; the real Source-victory route matches all 22 live/detached calls in
+exact order and arguments across world zoom, FX requests, feel/haptic requests,
+sound cues, and mixer requests. Live collection is test-build-only and Class-A
+only. Detached combat clear now also clears `bossIntro` and `bossBeat`, matching
+live with planted regression coverage. This proves adapter dispatch, not
+randomized particle state, pixels, PCM/audibility, physical vibration, or the
+complete outcome/progression/cloud-effect chronology. The next slice must
+capture concrete adapter receipts/results and one shared chronological outcome
+journal. The integrated `pnpm check:c27a` gate passed with a
+36-file / 127-test foundation subgate, the 13-scenario / 5,732-tick / 33-native-
 fact browser corpus, 40 detached comparator tests, and a campaign-victory
-subgate covering 10 files / 31 tests, the 1,176-transition real browser route,
+subgate covering 10 files / 35 tests, the 1,176-transition real browser route,
 and one detached finale-parity test. The affected same-worktree sweep is green:
 the C22 live-runtime browser proof and C23 through C27 package gates passed.
 

@@ -18,6 +18,7 @@ import type { RunDifficulty } from "../gameplay/run/session";
 import type { PlaygroundScreenModel } from "../gameplay/training/live-playground-presentation";
 import type { LiveWaveSpawnSpec } from "../gameplay/run/live-enemy-spawn";
 import type { FinaleIntent } from "../gameplay/campaign/finale-controller";
+import type { FinaleOutwardCallObserver } from "../gameplay/campaign/finale-outward-call";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 type Controllers = LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
@@ -67,6 +68,7 @@ export interface LiveCampaignTrainingOptions {
   readonly emitMusicEvent: (name: string, detail?: Readonly<Record<string, unknown>>) => void;
   readonly showRank: (rank: string) => void;
   readonly observeFinaleIntents?: (intents: readonly FinaleIntent[]) => void;
+  readonly observeFinaleOutwardCall?: FinaleOutwardCallObserver;
 }
 
 /** Composes campaign, training, cinematics, weapon feedback, and style progression. */
@@ -93,6 +95,7 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
     setWorldZoom: (value) => { options.setWorldZoom(value, true); },
     width: options.width, height: options.height,
     ...(options.observeFinaleIntents === undefined ? {} : { observeFinaleIntents: options.observeFinaleIntents }),
+    ...(options.observeFinaleOutwardCall === undefined ? {} : { observeFinaleOutwardCall: options.observeFinaleOutwardCall }),
   });
 
   const addFloater = (x: number, y: number, text: string, big = false, color = "#000"): void => {
