@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 43 update (current)
+#### Slice 44 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -389,6 +389,19 @@ foundation and campaign-victory gates also passed. This does not isolate the
 process-global Backdrop, renderer/UI/input/audio/persistence, rendered output,
 or complete live worlds. Next, replace Backdrop's global clock binding with an
 explicit per-world presentation adapter/factory policy.
+
+Slice 44 supplies that Backdrop policy. `createBackdrop(policy)` creates one
+controller with its own cache and transient lighting, while receiving clock,
+world config, graphics/accessibility, overscan/theme, Canvas creation, and
+wall time explicitly. Neither Backdrop nor its biome art imports process
+configuration, and the architecture gate rejects global Backdrop/clock return
+paths. `pnpm check:c27a:slice44` passed 5 focused files / 17 tests plus
+architecture; the physical browser proof now asserts meaningful changed Canvas
+frames after movement, and one captured frame was inspected for readability
+and viewport coverage. This proves controller ownership and rendering
+continuity, not pixel parity, complete presentation isolation, concurrent full
+live worlds, or C27A completion. Next, move cinematic rendering's global
+presentation configuration behind an explicit per-world policy.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

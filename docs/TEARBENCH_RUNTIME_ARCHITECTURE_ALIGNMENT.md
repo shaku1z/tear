@@ -264,6 +264,14 @@ The first thirty-four executable C27A slices are complete:
   This is shared construction ownership, not a full-world factory: Backdrop
   remains process-global, and presentation/input/audio/persistence adapters
   are still app-bound.
+- `createBackdrop(policy)` replaces the global Backdrop object and its
+  installable clock. It owns per-controller Canvas caches and transient lights,
+  while receiving world config/time, visual preferences, overscan/theme,
+  wall time, and Canvas creation explicitly. Biome art consumes the
+  controller's graphics policy rather than process configuration. This proves
+  independent backdrop-controller state and live rendering continuity only;
+  it does not make the cinematic renderer, UI/input/audio/persistence, or a
+  complete live application concurrent-world safe.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

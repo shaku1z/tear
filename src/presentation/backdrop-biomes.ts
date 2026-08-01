@@ -1,4 +1,3 @@
-import { GFX } from "../config/game-config";
 import type { BiomeArt } from "./backdrop";
 
 // ------- per-biome art direction (lush atmosphere, layered on the engine) -------
@@ -158,7 +157,7 @@ const BIOME_ART: Record<string, BiomeArt> = {
     sky(B, ctx, stage, c, t, gy, view) {
       B.baseSky(ctx, stage, c, gy, 0.10, view);
       const vl = view ? view.left : -B.PX, vr = view ? view.right : B.W + B.PX;
-      const low = GFX.low;
+      const low = B.lowGraphics();
       // Distant membranes span world space rather than the original arena.  Their
       // very slow motion keeps the pull-out alive without competing with hazards.
       ctx.save(); ctx.lineCap = "round"; ctx.lineWidth = low ? 1.5 : 2;
@@ -188,7 +187,7 @@ const BIOME_ART: Record<string, BiomeArt> = {
     far(B, ctx, _stage, _c, t, px, _gy, view) {
       const vl = view ? view.left : -B.PX, vt = view ? view.top : -B.PY;
       const vr = view ? view.right : B.W + B.PX, vb = view ? view.bottom : B.H + B.PY;
-      const low = GFX.low, cell = 320, drift = -px * 18;
+      const low = B.lowGraphics(), cell = 320, drift = -px * 18;
       const x0 = Math.floor((vl - drift) / cell) - 1, x1 = Math.ceil((vr - drift) / cell) + 1;
       const y0 = Math.floor(vt / cell) - 1, y1 = Math.ceil(vb / cell) + 1;
       ctx.save(); ctx.lineCap = "square";

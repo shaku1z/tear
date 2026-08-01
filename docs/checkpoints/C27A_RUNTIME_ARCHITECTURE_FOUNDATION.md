@@ -776,6 +776,25 @@ of replay, headless execution, or learning portability.
   replay/learning portability, or C27A completion. The next presentation
   boundary is replacing the process-global Backdrop clock binding with an
   explicit per-world adapter/factory policy.
+- The forty-fourth slice does that for Canvas Backdrop. `createBackdrop(policy)`
+  now creates one controller with its own cache and transient-light list. Its
+  explicit policy supplies the world clock/configuration, graphics and
+  accessibility preferences, overscan/theme, wall-clock source, and Canvas
+  creation port. Neither Backdrop nor biome art imports process configuration,
+  and there is no installer or module-level controller/clock. The live
+  composition root creates the controller once and passes it through the
+  existing app contracts; the detached harness keeps its minimal reset port.
+  Direct two-controller evidence proves separate dimensions/preferences,
+  clock-timed flare expiry, effect reset, and cache/canvas allocation. The
+  built physical-input browser route requires meaningful changing frames after
+  movement; an inspected test frame showed a filled world canvas with readable
+  HUD and no exposed viewport seam. Foundation and campaign-victory gates pass.
+
+  This is controller/policy ownership and visible rendering continuity, not
+  rendered-pixel parity or independent full applications. Cinematic rendering,
+  UI/input/audio/persistence, device output, headless/replay/learning
+  portability, and C27A completion remain open. The next policy boundary is
+  the cinematic renderer's process-global presentation configuration.
 
 ## Remaining C27A work
 

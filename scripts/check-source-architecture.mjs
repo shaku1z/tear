@@ -108,6 +108,16 @@ const forbiddenDependencyRules = Object.freeze([
     message: "the particle factory must receive policy and entropy through an explicit per-world port",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/presentation/backdrop.ts", "src/presentation/backdrop-biomes.ts"]),
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*config\/game-config["']/u,
+    message: "the backdrop factory and biome art must receive configuration and preferences through explicit policy ports",
+  }),
+  Object.freeze({
+    roots: Object.freeze(["src/presentation/backdrop.ts"]),
+    pattern: /(?:^|\n)\s*(?:export\s+)?(?:const|let|var)\s+(?:Backdrop|CLOCK)\b/um,
+    message: "the backdrop module cannot retain a shared controller or clock; create one controller per composition",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/gameplay/runtime/tear-world-bootstrap.ts"]),
     pattern: /(?:from\s+|import\s*\()\s*["'][^"']*config\/game-config["']/u,
     message: "the generic world bootstrap must receive base configuration through its explicit caller port",
@@ -205,6 +215,18 @@ if (dependencyErrors("src/presentation/particles.ts",
   || dependencyErrors("src/presentation/particles.ts",
     'import { cosmeticRandom } from "./cosmetic-random";').length !== 1) {
   throw new Error("source architecture particle policy injection rule self-test failed");
+}
+if (dependencyErrors("src/presentation/backdrop.ts",
+  'import { CONFIG } from "../config/game-config";').length !== 1
+  || dependencyErrors("src/presentation/backdrop-biomes.ts",
+    'import type { GFX } from "../config/game-config";').length !== 1
+  || dependencyErrors("src/presentation/backdrop.ts",
+    'export const Backdrop = {};').length !== 1
+  || dependencyErrors("src/presentation/backdrop.ts",
+    'let CLOCK = createTearWorldClock();').length !== 1
+  || dependencyErrors("src/presentation/backdrop.ts",
+    'export function createBackdrop() { return {}; }').length !== 0) {
+  throw new Error("source architecture backdrop policy injection rule self-test failed");
 }
 if (dependencyErrors("src/gameplay/runtime/tear-world-bootstrap.ts",
   'import { CONFIG } from "../../config/game-config";').length !== 1

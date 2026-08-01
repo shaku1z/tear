@@ -452,7 +452,7 @@ All of the following were run from this worktree after the parity-passing slice:
 
 ## Exact next C27A boundary
 
-**Slice 43 supersedes the earlier configuration-isolation wording below.**
+**Slice 44 supersedes the earlier configuration-isolation wording below.**
 `TearWorldConfiguration` now owns one stable mutable config record per
 constructed simulation world, created before constructors capture tuning. It
 validates snapshots before reconciling root/nested references in place; State
@@ -473,10 +473,12 @@ into `createTearWorldBootstrap(baseConfiguration)`: both live composition and
 the detached production harness receive fresh service records through the same
 data-only factory. The bootstrap accepts its configuration explicitly and its
 architecture rule rejects process config, outward adapters, and browser globals.
-Particle and Backdrop policy stay outside it. This is not full presentation or
-concurrent-world isolation. The next slice replaces Backdrop's global clock
-binding with an explicit per-world presentation adapter/factory policy. Keep
-one runtime/scheduler.
+Particle policy stays outside it. Slice 44 now creates Backdrop through an
+explicit visual policy and removes its global controller/clock binding; its
+caches and transient lights are local to the controller. This is not full
+presentation or concurrent-world isolation. The next slice moves the cinematic
+renderer's global presentation configuration behind its own explicit policy.
+Keep one runtime/scheduler.
 
 All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
@@ -496,9 +498,10 @@ The exact 42-entry terminal external-decision transcript now matches across
 hosts, but it remains in-memory/test evidence rather than durable external
 effect evidence. Slice 40 carries the presentation-free simulation factory;
 Slice 41 adds simulation tuning isolation; Slice 42 injects particle policy;
-and Slice 43 centralizes generic simulation-service bootstrap. Backdrop and
-the remaining presentation-policy isolation still precede true simultaneous
-complete worlds. Any newly found
+Slice 43 centralizes generic simulation-service bootstrap; and Slice 44 owns
+Backdrop state/policy per controller. Cinematic rendering and the remaining
+presentation-policy isolation still precede true simultaneous complete worlds.
+Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
 from the harness — never a tolerance to widen, a scenario to shorten, or a
 field to drop from the projection.
@@ -519,13 +522,18 @@ composition with parity evidence.
 - Do not discard unrelated dirty work. In particular,
   `plans/EXTREME_RENDERING_IMPLEMENTATION_PLAN.md` was already untracked and
   is outside this C27A handoff scope.
-- Slice 43 is the next intentional commit on
-  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 6
-  files / 19 tests plus source architecture. The named C27A subgates also pass:
+- Slice 44 is the next intentional commit on
+  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 5
+  files / 17 tests plus source architecture, and the physical browser proof
+  asserts nontrivial changing Canvas frames after real movement. The named C27A
+  subgates also pass:
   foundation (36 files / 130 tests, fresh 13-scenario trace, 40 detached
   comparisons), campaign victory (10 files / 36 tests and 1,176 transitions),
   and slices 37–39 and 41–42. The next boundary is per-world Backdrop policy,
   not a second runtime.
+  Slice 43 and Slice 44 supersede that historical boundary: generic bootstrap
+  and Backdrop policy are now complete at their stated scope. The next boundary
+  is cinematic-renderer policy, still not a second runtime.
   Inspect the
   actual branch and `git status --short` before later staging; stage only
   intentional TearBench work.

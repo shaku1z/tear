@@ -25,7 +25,7 @@ import { createLegacyPlatformCompatibility } from "../platform/legacy-compat";
 import { createRunSeed } from "../platform/run-seed";
 import type { PwaUpdateCapability } from "../platform/pwa-update";
 import { createAttract } from "../presentation/attract";
-import { Backdrop, installBackdropClock } from "../presentation/backdrop";
+import { createBackdrop } from "../presentation/backdrop";
 import { Cinematics } from "../presentation/cinematics";
 import { cosmeticRandom } from "../presentation/cosmetic-random";
 import { createParticleSystem } from "../presentation/particles";
@@ -80,7 +80,10 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     reducedMotion: () => A11Y.reducedMotion,
     random: cosmeticRandom,
   });
-  installBackdropClock(CLOCK);
+  const Backdrop = createBackdrop({
+    clock: CLOCK, config: worldConfig, graphics: GFX, accessibility: A11Y,
+    overscan: OVERSCAN, theme: THEME, createCanvas: () => document.createElement("canvas"), performance,
+  });
   const { streams: GAME_RANDOM_STREAMS, service: GAME_RANDOM } = random;
   const { Input, PAD } = createLegacyInputCompatibility(
     { config: worldConfig, safeArea: SAFE, overscan: OVERSCAN, window, document, navigator, performance },

@@ -45,6 +45,9 @@ withJourney({ name: "C27A physical canonical input", port: 8162 }, async ({ page
   await physicalInput(page, { type: "pointer", x: 800, y: 755, button: 0, phase: "pressed" });
   await physicalInput(page, { type: "pointer", x: 800, y: 755, button: 0, phase: "released" });
   await waitScreen("playing");
+  const frameBeforeMovement = await page.screenshot({ type: "png" });
+  assert.ok(frameBeforeMovement.length > 1_000,
+    "the composed live canvas did not produce a meaningful pre-movement frame");
 
   // Keep a normal physical movement key held long enough to force several
   // 60-tick recorder snapshots. The live requestAnimationFrame loop, rather
@@ -52,6 +55,14 @@ withJourney({ name: "C27A physical canonical input", port: 8162 }, async ({ page
   await physicalInput(page, { type: "key", code: "KeyD", phase: "pressed" });
   await page.waitForTimeout(2_100);
   await physicalInput(page, { type: "key", code: "KeyD", phase: "released" });
+  const frameAfterMovement = await page.screenshot({ type: "png" });
+  assert.ok(frameAfterMovement.length > 1_000,
+    "the composed live canvas did not produce a meaningful post-movement frame");
+  assert.notDeepEqual(frameAfterMovement, frameBeforeMovement,
+    "the physical live run did not render a changed canvas frame after movement");
+  if (process.env.TEAR_CAPTURE_BACKDROP_FRAME) {
+    await page.screenshot({ path: process.env.TEAR_CAPTURE_BACKDROP_FRAME, type: "png" });
+  }
 
   // This is lifecycle cleanup only: it neither injects an action nor advances
   // a fixed tick. It completes the passive recorder so the capsule can be read.

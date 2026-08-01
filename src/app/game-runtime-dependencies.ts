@@ -24,7 +24,7 @@ import type { createLegacyPlatformCompatibility } from "../platform/legacy-compa
 import type { createRunSeed } from "../platform/run-seed";
 import type { PwaUpdateCapability } from "../platform/pwa-update";
 import type { createAttract } from "../presentation/attract";
-import type { Backdrop } from "../presentation/backdrop";
+import type { BackdropController } from "../presentation/backdrop";
 import type { Cinematics } from "../presentation/cinematics";
 import type { cosmeticRandom } from "../presentation/cosmetic-random";
 import type { ParticleSystem } from "../presentation/particles";
@@ -46,7 +46,7 @@ export interface GameRuntimeDependencies {
   readonly AFFIXES: typeof Affixes.AFFIXES; readonly APP: LegacyAppStateController;
   readonly Aldric: EnemyTypes["Aldric"]; readonly Armored: EnemyTypes["Armored"];
   readonly Attract: ReturnType<typeof createAttract>; readonly BOSSFX: EnemyTypes["BOSSFX"];
-  readonly Backdrop: typeof Backdrop; readonly Blade: ReturnType<typeof createBlade>;
+  readonly Backdrop: BackdropController; readonly Blade: ReturnType<typeof createBlade>;
   readonly Bomber: EnemyTypes["Bomber"]; readonly Boss: EnemyTypes["Boss"];
   readonly CG: PlatformCompatibility["CG"]; readonly CLOCK: TearWorldClock; readonly CONFIG: typeof CONFIG;
   readonly Charger: EnemyTypes["Charger"]; readonly Chimera: EnemyTypes["Chimera"];
