@@ -15,6 +15,9 @@ import { createLiveContentRuntime } from "../../src/gameplay/run/live-content-ru
 import { createLiveWaveHost } from "../../src/app/live-wave-host";
 import { STAGES } from "../../src/gameplay/stages";
 import { applyVariant, rollVariant } from "../../src/gameplay/variants";
+import { planBossPlacement } from "../../src/gameplay/run/boss-placement";
+import { beginBossEncounter } from "../../src/gameplay/run/boss-encounter";
+import { createBossArena } from "../../src/gameplay/training/arena-rules";
 import { newMods } from "../../src/gameplay/upgrades";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
 import { createTearWorldTransientState } from "../../src/gameplay/runtime/tear-world-transient-state";
@@ -102,7 +105,10 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
     blade: () => world.state.blade() as never,
     aimRadius: () => CONFIG.blade.aimRadius,
   });
-  return { world, clock, effects, random, factories, transient, input, run };
+  // Platforms are mutable world state: a boss encounter swaps in its arena,
+  // and both the wave runtime and the combat phases must see the same array.
+  const stage: { platforms: unknown[] } = { platforms: [...DETACHED_PLATFORMS] };
+  return { world, clock, effects, random, factories, transient, input, run, stage };
 }
 
 export type DetachedWorld = ReturnType<typeof createDetachedWorld>;
@@ -124,8 +130,9 @@ export function createDetachedCombatPhases(
   detached: DetachedWorld,
   options: DetachedCombatPhaseOptions = {},
 ) {
-  const { world, effects, transient, input } = detached;
-  const platforms = (options.platforms ?? DETACHED_PLATFORMS) as unknown as LiveOpeningPhaseHost["platforms"];
+  const { world, effects, transient, input, stage } = detached;
+  if (options.platforms !== undefined) stage.platforms = [...options.platforms];
+  const platforms = () => stage.platforms as unknown as LiveOpeningPhaseHost["platforms"];
   const outward: string[] = [];
   const note = (name: string) => () => { outward.push(name); };
   const player = () => world.state.player() as never;
@@ -136,7 +143,7 @@ export function createDetachedCombatPhases(
     player: () => world.state.player(),
     slowZones: () => world.state.slowZones(), setSlowZones: (zones: never[]) => { world.state.setSlowZones(zones); },
     walls: () => world.state.temporaryWalls(), setWalls: (walls: never[]) => { world.state.setTemporaryWalls(walls); },
-    platforms: () => [...platforms],
+    platforms: () => [...stage.platforms],
     ring: (x: number, y: number, radius: number, color: string) => { effects.ring(x, y, radius, color); },
     burst: (x: number, y: number, dx: number, dy: number, count: number, color: string) => { effects.burst(x, y, dx, dy, count, color); },
     explode: (x: number, y: number, color: string, scale: number) => { effects.explode(x, y, color, scale); },
@@ -156,7 +163,7 @@ export function createDetachedCombatPhases(
     get run() { return world.state.run() as never; },
     get enemies() { return world.state.enemies() as never; },
     get projectiles() { return world.state.projectiles(); },
-    platforms, state: transient.opening, width: CONFIG.view.w,
+    get platforms() { return platforms(); }, state: transient.opening, width: CONFIG.view.w,
     blocking: false, playerMode: "play", protection: transient.protection,
     lowGraphics: false, transformationBlocked: false,
     overrunMovementMultiplier: () => 1, runDamageMultiplier: () => 1,
@@ -257,12 +264,19 @@ export function createDetachedCombatPhases(
  * production implementations; only outward presentation (banners, audio,
  * bloom, profile counters, pointer release) is recorded instead of performed.
  */
-export function createDetachedWaveRuntime(detached: DetachedWorld, platforms: readonly unknown[] = DETACHED_PLATFORMS) {
-  const { world, random, factories } = detached;
+export function createDetachedWaveRuntime(detached: DetachedWorld, platforms?: readonly unknown[]) {
+  const { world, random, factories, stage } = detached;
+  if (platforms !== undefined) stage.platforms = [...platforms];
   const outward: string[] = [];
   const note = (name: string) => () => { outward.push(name); };
   const run = () => world.state.run() as never as Record<string, unknown>;
   const install = (enemy: unknown) => { world.state.setEnemies([...world.state.enemies(), enemy as never]); };
+  // The same shared placement the live content composition uses; a restated
+  // copy here is exactly how a detached world silently diverges.
+  const makeBoss = (id: string) => {
+    const placement = planBossPlacement(id, CONFIG.view.w, CONFIG);
+    return world.entities.createEnemy(placement.factoryId, placement.x, placement.y, run() as never) as never;
+  };
   const content = createLiveContentRuntime({
     width: CONFIG.view.w,
     random: random.streams.stream("spawn"),
@@ -273,15 +287,26 @@ export function createDetachedWaveRuntime(detached: DetachedWorld, platforms: re
     },
     modes: () => CONFIG.modes as never,
     stages: STAGES,
-    platforms: () => platforms as never,
+    platforms: () => stage.platforms as never,
     groundY: () => CONFIG.world.groundY,
     construction: {
       sideSpawn: () => 0,
       createGround: (kind: string) => world.entities.createEnemy(kind, 0, 0, run() as never) as never,
       createAir: (kind: string, x: number, y: number) => world.entities.createEnemy(kind, x, y, run() as never) as never,
       createSupport: (kind: string) => world.entities.createEnemy(kind, 0, 0, run() as never) as never,
-      createBoss: () => world.entities.createEnemy("boss", 0, 0, run() as never) as never,
-      beginBossPresentation: note("bossPresentation"),
+      createBoss: (id?: string) => makeBoss(id ?? ""),
+      // The canonical half of a boss encounter — intro freeze, fight clock,
+      // carried adds, arena swap — is the shared production routine. Only the
+      // banner/wipe/clip presentation is recorded.
+      beginBossPresentation: (enemy: unknown) => {
+        beginBossEncounter(run() as never, enemy as never, CONFIG.bossTheater.introDur, {
+          platforms: () => stage.platforms as never[],
+          setPlatforms: (value: never[]) => { stage.platforms = value; },
+          arenaFor: (bossId: string) => createBossArena(bossId, CONFIG.view.w, CONFIG.view.h,
+            CONFIG.world.groundY, CONFIG.bossArena.reformWarn)?.map((platform) => ({ ...platform })) as never[] | null ?? null,
+        });
+        note("bossPresentation")();
+      },
     },
     spawning: {
       random: random.streams.stream("spawn"),
@@ -297,7 +322,7 @@ export function createDetachedWaveRuntime(detached: DetachedWorld, platforms: re
       recordSpawn: note("recordSpawn"),
       install,
     },
-    createBoss: () => world.entities.createEnemy("boss", 0, 0, run() as never) as never,
+    createBoss: (id: string) => makeBoss(id),
   });
   const waves = createLiveWaveHost({
     run: () => run() as never,

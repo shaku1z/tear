@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first twenty-one executable C27A slices are complete:
+The first twenty-two executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -179,8 +179,14 @@ The first twenty-one executable C27A slices are complete:
   execute different production code, so live and DOM-free execution
   demonstrably share the production simulation composition across this matrix.
   The gate refuses to run with fewer than four distinct captured scenarios.
-  Still untested: boss waves, cinematics, and terminal outcomes; outward
-  effects remain recorded rather than performed.
+- A boss run joined the matrix, and closing it moved two canonical routines
+  into shared gameplay code: `planBossPlacement` (where a boss enters) and
+  `beginBossEncounter` (intro freeze, fight clock, carried adds, arena
+  swap). The live content host now calls both and retains only
+  presentation. Five scenarios — endless normal/sword, endless hard/hammer,
+  playground, bossonly/warden, and a 600-tick endless run — match the live
+  authoritative hash on every tick. Still untested: cinematics and terminal
+  outcomes; outward effects remain recorded rather than performed.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

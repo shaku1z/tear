@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** twenty-first C27A foundation slice complete (live-versus-detached
-parity holds across a four-scenario matrix).
+**Status:** twenty-second C27A foundation slice complete (boss runs join the
+parity matrix; boss placement and encounter start are now shared).
 
 ## Resume protocol (mandatory)
 
@@ -151,6 +151,13 @@ Before coding, read this file, then:
   per scenario plus an index. The comparison discovers every artifact and
   asserts full per-tick hash equality for each. All four match on every tick;
   the gate fails if fewer than four distinct scenarios were captured.
+- The twenty-second slice added a boss run to the matrix and closed it with
+  two composition fixes: `planBossPlacement` (shared spawn transform) and
+  `beginBossEncounter` (shared intro freeze, fight clock, carried adds, and
+  arena swap), both now called by the live content host/composition and by
+  any detached world. The detached harness gained mutable stage platforms so
+  an arena swap reaches the combat phases. Five scenarios now match on every
+  tick.
 
 ## Latest evidence
 
@@ -185,17 +192,15 @@ All of the following were run from this worktree after the parity-passing slice:
 
 ## Exact next C27A boundary
 
-Parity holds across four scenarios. Keep widening until the untested regions
-are covered, in order: (1) a boss wave — reach one by capturing a longer run
-or by launching a forged State Forge state, since the detached side hydrates
-whatever the live world held; (2) terminal outcomes — extend the detached
-harness to the kill runtime and run outcome so a death or win can be compared
-end to end; (3) cinematics, which currently short-circuit in the detached
-host; (4) make the outward effect surfaces comparable rather than merely
-recorded, so a divergence in what a world *emits* is caught as well as what it
-*is*. Each addition is one browser capture plus one comparison, and every
-divergence is a defect to fix in the composition — never a tolerance to widen,
-a scenario to shorten, or a field to drop from the projection.
+Parity holds across five scenarios, including a boss run. Continue in order:
+(1) terminal outcomes — extend the detached harness to the kill runtime and
+run outcome so a death or a win can be compared end to end; (2) cinematics,
+which the detached host still short-circuits; (3) make the outward effect
+surfaces comparable rather than merely recorded, so a divergence in what a
+world *emits* is caught as well as what it *is*; (4) more boss ids, since
+only warden is covered. Every divergence is a defect to fix in the
+composition — the last two were exactly that — never a tolerance to widen, a
+scenario to shorten, or a field to drop from the projection.
 
 Preserve menu-time lazy construction and the one existing
 `TearSimulationRuntime`/scheduler, and extend the context only where real

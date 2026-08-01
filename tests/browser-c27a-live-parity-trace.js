@@ -44,6 +44,14 @@ const scenarios = [
     start: { mode: "playground", difficulty: "normal", weapon: "sword" },
   }),
   scenarioFor({
+    id: "c27a.live-parity-trace.boss-warden",
+    seed: "c27a-parity-boss",
+    // A boss run exercises boss steps, arena platforms, and boss feedback that
+    // an ordinary opening wave never reaches.
+    start: { mode: "bossonly", difficulty: "normal", weapon: "sword", boss: "warden" },
+    maxTicks: 300,
+  }),
+  scenarioFor({
     id: "c27a.live-parity-trace.long",
     seed: "c27a-parity-long",
     start: { mode: "endless", difficulty: "normal", weapon: "sword" },

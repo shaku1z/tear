@@ -1,5 +1,6 @@
 import { BossArenaRules } from "../gameplay/training/arena-rules";
 import { createBossArenaRuntimeBridge } from "../gameplay/training/arena-runtime-bridge";
+import { planBossPlacement } from "../gameplay/run/boss-placement";
 import { createLiveContentHost } from "./live-content-host";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameEnemy, GamePlayer, GameRun } from "./game-runtime-state";
@@ -62,15 +63,16 @@ export function createLiveContentComposition(options: LiveContentCompositionOpti
     createGround: (kind) => options.entities.createEnemy(kind, 0, 0, options.run()),
     createAir: (kind, x, y) => options.entities.createEnemy(kind, x, y, options.run()),
     createSupport: (kind) => options.entities.createEnemy(kind, 0, 0, options.run()),
-    createDefaultBoss: () => options.entities.createEnemy("boss", options.width / 2, d.CONFIG.world.groundY - 140, options.run()),
+    createDefaultBoss: () => {
+      const placement = planBossPlacement("", options.width, d.CONFIG);
+      return options.entities.createEnemy(placement.factoryId, placement.x, placement.y, options.run());
+    },
     createBoss(id) {
-      const x = options.width / 2;
-      if (id === "source") return options.entities.createEnemy("source", x, d.CONFIG.world.groundY - 300, options.run());
-      if (id === "echo") return options.entities.createEnemy("echo", x, d.CONFIG.world.groundY - d.CONFIG.echo.h / 2, options.run());
-      if (id === "aldric") return options.entities.createEnemy("aldric", x, d.CONFIG.world.groundY - d.CONFIG.aldric.h / 2, options.run());
-      if (id === "colossus") return options.entities.createEnemy("colossus", x, d.CONFIG.world.groundY - d.CONFIG.colossus.h / 2, options.run());
-      if (id === "warden") return options.entities.createEnemy("warden", x, d.CONFIG.world.groundY - 140, options.run());
-      return options.entities.createEnemy("boss", x, d.CONFIG.world.groundY - 140, options.run());
+      // Spawn placement is canonical world state, so it is shared rather than
+      // restated: a detached, replay, or headless world must place bosses
+      // identically or its trace diverges on the first boss tick.
+      const placement = planBossPlacement(id, options.width, d.CONFIG);
+      return options.entities.createEnemy(placement.factoryId, placement.x, placement.y, options.run());
     },
     applyPreset: (enemy, preset) => { d.applyPreset(enemy, preset); },
     rollVariant: (kind, wave) => d.rollVariant(kind, wave, options.worldServices.random.stream("spawn")),

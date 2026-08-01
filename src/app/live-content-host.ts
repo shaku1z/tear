@@ -1,5 +1,6 @@
 import { createLiveContentRuntime, type ContentMode, type ContentStage,
   type LiveContentRuntimeApi } from "../gameplay/run/live-content-runtime";
+import { beginBossEncounter } from "../gameplay/run/boss-encounter";
 import type { EnemyPreset } from "../gameplay/affixes";
 import type { RandomSource } from "../domain/random";
 import type { LiveSpawnEnemy, LiveSpawnRun } from "../gameplay/run/live-enemy-spawn";
@@ -62,21 +63,17 @@ export function createLiveContentHost<TEnemy extends ContentHostEnemy>(
     createSupport: context.createSupport,
     createBoss: context.createDefaultBoss,
     beginBossPresentation(enemy: TEnemy) {
-      const active = run();
-      active._bossFightT = active.runTime;
+      // Canonical world changes are shared; only the four calls below are
+      // presentation, so a detached world reproduces the encounter exactly.
+      beginBossEncounter(run(), enemy, context.bossIntroDuration, {
+        platforms: context.platforms,
+        setPlatforms: context.setPlatforms,
+        arenaFor: context.bossArena,
+      });
       context.startClipper();
       context.setBossIntro(enemy, context.bossIntroDuration, context.wipeRemainingSeconds());
-      enemy.introT = context.bossIntroDuration;
       context.clearBossBeat();
       context.clearBanners();
-      active.bossAdds = null;
-      const arena = context.bossArena(enemy.bossId ?? "warden");
-      if (arena !== null) {
-        active._preBossPlatforms = context.platforms();
-        active._brokenPlats = null;
-        active._arenaBroken = [];
-        context.setPlatforms(arena);
-      }
     },
   };
   const spawning = {

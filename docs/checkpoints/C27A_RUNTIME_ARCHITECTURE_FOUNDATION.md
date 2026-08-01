@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-07-30. This records the first twenty-one executable migration
+In progress as of 2026-07-30. This records the first twenty-two executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -382,6 +382,25 @@ of replay, headless execution, or learning portability.
   production code, so the shared-core claim now rests on a matrix rather than
   an anecdote. The gate refuses to run with fewer than four distinct captured
   scenarios, so the matrix cannot silently shrink back to one case.
+
+- The matrix now includes a boss run (`bossonly`/warden, 300 ticks), and
+  closing it produced two real composition fixes rather than harness patches:
+
+  1. `src/gameplay/run/boss-placement.ts` owns where each boss enters the
+     arena. The live content composition and any detached world call the same
+     `planBossPlacement`; previously the live composition held the only copy
+     and a second host could place a boss anywhere.
+  2. `src/gameplay/run/boss-encounter.ts` owns the canonical half of starting
+     an encounter: intro freeze, fight-clock stamp, cleared carried adds, and
+     the arena platform swap. `live-content-host` now calls
+     `beginBossEncounter` and keeps only banners, wipe, clip capture, and the
+     intro overlay as presentation.
+
+  The detached harness also gained mutable stage platforms, because an arena
+  swap must be visible to both the wave runtime and the combat phases. With
+  those in place the boss scenario matches the live authoritative hash on all
+  300 ticks, and the matrix is five scenarios: endless normal/sword, endless
+  hard/hammer, playground, bossonly/warden, and a 600-tick endless run.
 
 ## Remaining C27A work
 
