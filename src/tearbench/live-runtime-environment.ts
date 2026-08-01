@@ -16,6 +16,7 @@ import { projectLiveProjectiles } from "./live-observation-projectiles"; import 
 import { projectLiveActorMechanics, projectLiveBehaviorMode, projectLiveBladeMechanics, projectLivePlayerMechanics } from "./live-observation-actors";
 import { certifyWave99HammerProgression, createCanonicalWave99HammerProgression, createWave99HistoricalRunState,
   forgeExitLaunchSnapshot } from "./state-forge-exit-gate";
+import { createGameplayCausalEvent } from "./gameplay-causal-events";
 import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
 import type { LiveTearRuntimeEnvironmentContext, TearClassARuntimeEnvironment,
   TearClassBRuntimeEnvironment, TearRuntimeAccessClass, TearRuntimeEnvironmentMetrics,
@@ -165,22 +166,7 @@ export function createLiveTearRuntimeEnvironment(
   const eventLog: TearCausalEventV1[] = [];
   context.subscribeEngineEvent((event) => {
     if (scenario === null) return;
-    let type: TearCausalEventV1["type"];
-    if (event.kind === "run") {
-      type = event.transition === "started" ? "run.started" : event.transition === "paused" ? "run.paused"
-        : event.transition === "resumed" ? "run.resumed" : event.transition === "completed" ? "run.completed"
-          : event.transition === "defeated" ? "run.defeated" : "run.abandoned";
-    } else if (event.kind === "stage") type = "stage.entered";
-    else if (event.kind === "wave") type = event.event === "clear" ? "wave.cleared" : "wave.started";
-    else if (event.kind === "spawn") type = "enemy.spawned";
-    else if (event.kind === "death") type = "enemy.defeated";
-    else if (event.kind === "loadout") type = event.tier > 1 ? "tier.selected" : "draft.selected";
-    else if (event.effect.includes("parry")) type = "combat.perfect-parry";
-    else if (event.effect.includes("throw")) type = "blade.thrown";
-    else if (/recall|catch/u.test(event.effect)) type = "blade.recalled";
-    else if (event.effect.includes("dash")) type = "player.dash-started";
-    else type = "system.checkpoint";
-    eventLog.push(createEvent(sequence++, event.tick, type, { ...event }, "engine"));
+    eventLog.push(createGameplayCausalEvent(event, sequence, `live:${String(event.tick)}:${String(sequence++)}`));
   });
 
   const observe = (): TearObservationV1 => {

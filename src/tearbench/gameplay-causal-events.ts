@@ -1,0 +1,90 @@
+import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
+import type { TearCausalEventV1 } from "./contracts";
+import type { TearEventId, TearWithinTickPhase } from "./registries";
+
+interface MappedGameplayEvent {
+  readonly type: TearEventId;
+  readonly phase: TearWithinTickPhase;
+  readonly actorId?: string;
+  readonly payload: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * One presentation-independent translation from native gameplay facts to the
+ * versioned Tear causal-event ontology. Ghost recording and TearBench must not
+ * maintain separate interpretations of the same simulation event.
+ */
+export function mapGameplayEventToCausalEvent(event: TearGameplayEvent): MappedGameplayEvent {
+  switch (event.kind) {
+    case "run": return {
+      type: event.transition === "started" ? "run.started" : event.transition === "paused" ? "run.paused"
+        : event.transition === "resumed" ? "run.resumed" : event.transition === "completed" ? "run.completed"
+          : event.transition === "defeated" ? "run.defeated" : "run.abandoned",
+      phase: event.transition === "started" || event.transition === "resumed"
+        ? "pre-simulation" : "post-simulation-commit",
+      payload: Object.freeze({
+        runId: event.runId, mode: event.mode, difficulty: event.difficulty, weapon: event.weaponId,
+        wave: event.wave, score: event.score, runTimeSeconds: event.runTimeSeconds,
+        ...(event.reason === undefined ? {} : { reason: event.reason }),
+      }),
+    };
+    case "stage": return {
+      type: "stage.entered", phase: "wave-draft-and-state-transitions",
+      payload: Object.freeze({ stage: event.stage }),
+    };
+    case "wave": return {
+      type: event.event === "start" ? "wave.started"
+        : event.event === "cleared" || event.event === "clear" ? "wave.cleared" : "wave.spawn-completed",
+      phase: "wave-draft-and-state-transitions",
+      payload: Object.freeze({ wave: event.wave, marker: event.event }),
+    };
+    case "spawn": return {
+      type: "enemy.spawned", phase: "wave-draft-and-state-transitions", actorId: event.actorId,
+      payload: Object.freeze({
+        actorKind: event.actorKind, x: event.x, y: event.y,
+        ...(event.variantName === undefined ? {} : { variantName: event.variantName }),
+        ...(event.bossId === undefined ? {} : { bossId: event.bossId }),
+      }),
+    };
+    case "death": return {
+      type: "enemy.defeated", phase: "deaths-and-rewards", actorId: event.actorId,
+      payload: Object.freeze({ cause: event.cause }),
+    };
+    case "loadout": return {
+      type: event.tier > 1 ? "tier.selected" : "draft.selected",
+      phase: "wave-draft-and-state-transitions",
+      payload: Object.freeze({ choiceId: event.choiceId, tier: event.tier, wave: event.wave }),
+    };
+    case "effect": return {
+      type: event.effect === "stolenBlade" ? "blade.stolen" : event.effect === "revive" ? "player.revived"
+        : event.effect === "bossKill" ? "boss.defeated" : event.effect.includes("parry") ? "combat.perfect-parry"
+          : event.effect.includes("throw") ? "blade.thrown" : /recall|catch/u.test(event.effect) ? "blade.recalled"
+            : event.effect.includes("dash") ? "player.dash-started" : "system.checkpoint",
+      phase: "post-simulation-commit",
+      payload: Object.freeze({ effect: event.effect, x: event.x, y: event.y }),
+    };
+  }
+}
+
+/** Builds a validated-shape V1 causal event while leaving host-specific IDs to composition. */
+export function createGameplayCausalEvent(
+  event: TearGameplayEvent,
+  sequence: number,
+  id: string,
+): TearCausalEventV1 {
+  if (!Number.isSafeInteger(sequence) || sequence < 0) {
+    throw new RangeError("gameplay causal event sequence must be a non-negative safe integer");
+  }
+  if (!Number.isSafeInteger(event.tick) || event.tick < 0) {
+    throw new RangeError("gameplay causal event tick must be a non-negative safe integer");
+  }
+  if (id.trim().length === 0 || id.length > 256) {
+    throw new RangeError("gameplay causal event ID must be a bounded nonblank identifier");
+  }
+  const mapped = mapGameplayEventToCausalEvent(event);
+  return Object.freeze({
+    format: "tear-contract", kind: "event", schemaVersion: 1,
+    id, type: mapped.type, tick: event.tick, phase: mapped.phase, sequence, source: "engine",
+    ...(mapped.actorId === undefined ? {} : { actorId: mapped.actorId }), payload: mapped.payload,
+  });
+}

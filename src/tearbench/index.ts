@@ -28,3 +28,4 @@ export * from "./black-box-certification";
 export * from "./black-box-artifact-adapter";
 export * from "./observation-channels";
 export * from "./physical-controller-certification";
+export * from "./gameplay-causal-events";

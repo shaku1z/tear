@@ -238,9 +238,13 @@ core claim can be made. The precise evidence and remaining work are recorded in
 
 ### Next extraction order (binding)
 
-The next C27A implementation slice is not a second combat host or parallel
-headless simulator. Compare outward effect streams and add win plus
-wave-boundary scenarios, then continue moving app-backed configuration, RNG,
+The native-gameplay-fact to causal-event translation is now shared by Ghost V3
+and TearBench. The next C27A implementation slice is not a second combat host
+or parallel headless simulator. Extract the gameplay-only combat simulation
+assembly already duplicated by live and detached hosts, then use its one event
+bus and stable actor identity to compare real wave/spawn semantic streams. Add
+win plus wave-boundary scenarios only through production transitions, then
+continue moving app-backed configuration, RNG,
 effects, clock, Mirror, boss-feedback, and closure-owned run/world construction
 into the real per-world composition behind narrow outward adapters.
 

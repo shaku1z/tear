@@ -230,10 +230,25 @@ Before coding, read this file, then:
   now match every authoritative hash. `KNOWN_DIVERGENCES` and its exception
   branch are gone.
   Generic non-chapter active scenes remain bound-session only.
+- The thirtieth slice began the outward-parity boundary by deleting the two
+  competing native-gameplay-event mappings. `tearbench/gameplay-causal-events`
+  is now the one semantic adapter used by both the production Ghost V3 recorder
+  and the live TearBench environment. It preserves exact typed payload values,
+  actor identity, authoritative tick, semantic within-tick phase, and sequence;
+  every native union variant is contract-validated in the C27A gate. This is
+  deliberately only the shared observation contract: detached production
+  publishers and live-to-detached stream equality remain the next slice, and
+  no audio, particle, pixel, wave-boundary, or victory parity is claimed yet.
 
 ## Latest evidence
 
 All of the following were run from this worktree after the parity-passing slice:
+
+- `pnpm check:c27a:foundation` passed after slice 30: typecheck, lint,
+  architecture, 29 test files / 101 tests, standalone test build, the physical
+  input browser proof, fresh 12-scenario live capture, and all 37 detached
+  parity tests. This validates the shared event adapter but does not yet close
+  outward-stream comparison.
 
 - `pnpm check:c27a:foundation` passed after slice 29: typecheck, lint,
   architecture gate, 28 test files / 96 tests, standalone test build,
@@ -279,7 +294,11 @@ All twelve captured fixed-tick scenarios now match on every tick. The world owns
 portable gameplay timeline; chapter bindings reconstruct from data through
 explicit gameplay ports; and State Forge transactionally restores their full
 behavior-bearing position across worlds. The next boundary is comparable
-outward-effect streams plus a win outcome and a wave-boundary crossing. Then
+outward-effect streams plus a win outcome and a wave-boundary crossing. The
+semantic adapter is now shared, but the detached side still needs the same
+combat assembly/event bus and real wave/spawn publishers before equality can be
+asserted. Extract that shared combat assembly next; do not synthesize a
+`run.completed` fact from the detached harness's current `winRun` note. Then
 continue extracting the closure-owned run/world construction. Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
 from the harness — never a tolerance to widen, a scenario to shorten, or a
@@ -301,7 +320,8 @@ composition with parity evidence.
 - Do not discard unrelated dirty work. In particular,
   `plans/EXTREME_RENDERING_IMPLEMENTATION_PLAN.md` was already untracked and
   is outside this C27A handoff scope.
-- Slice 29 is a coherent green commit/push boundary on the active `codex/`
+- Slice 29 is the last pushed green boundary; slice 30 is the current semantic
+  event-adapter boundary on the active `codex/`
   branch. Inspect the actual branch and `git status --short` before later
   staging; stage only intentional TearBench work.
 - Do not claim C27, C27A, replay, headless, learning, or release completion

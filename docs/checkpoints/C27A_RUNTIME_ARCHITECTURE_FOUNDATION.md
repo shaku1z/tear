@@ -534,10 +534,28 @@ of replay, headless execution, or learning portability.
   physical browser path, fresh 12-scenario capture, and 37 parity tests.
   `check:c23` passed 13 files / 62 tests and every State Forge browser journey.
   These remain foundation results, not C27A exit or release certification.
+- Native gameplay facts now have one shared semantic causal-event adapter.
+  Ghost V3 recording and the live TearBench environment no longer duplicate
+  type, phase, actor, or payload mapping. Focused coverage exercises every
+  native event kind, all run transitions, wave markers, optional-field
+  omission, immutability, and malformed tick/sequence/identity rejection.
+  This establishes the comparison vocabulary only. The detached world does
+  not yet publish the complete native stream, so the outward-stream checklist
+  remains open.
+  The post-slice `check:c27a:foundation` gate passed 29 files / 101 tests,
+  rebuilt the standalone test app, regenerated all 12 live traces, and passed
+  all 37 detached parity tests.
+  The adapter is a forward-only semantic enrichment for newly recorded V3
+  events: current parry/throw/recall/dash effect labels now receive their
+  registered causal IDs instead of a generic checkpoint. Existing capsules
+  are immutable and are not reclassified.
 
 ## Remaining C27A work
 
-1. Compare outward effect streams rather than merely recording them, and add
+1. Build live and detached combat through one shared gameplay-core assembly,
+   wire its typed event bus to the real wave/spawn publishers with stable
+   production actor IDs, and compare complete ordered semantic streams rather
+   than merely recording harness strings. Then add
    a win outcome plus a wave-boundary crossing to the live↔detached matrix.
 2. Move the current live adapter's configuration, RNG, effects, clocks,
    Mirror, and boss feedback implementations inward behind the established
