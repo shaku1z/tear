@@ -1,13 +1,14 @@
-import { CONFIG } from "../../src/config/game-config";
+import { CONFIG, GFX } from "../../src/config/game-config";
 import { createLiveAuthoritativeInputAdapter } from "../../src/app/live-authoritative-input-adapter";
 import { createConfigRestorer } from "../../src/app/runtime-initialization";
 import { createLiveWorldComposition, type LiveWorldSessionPort } from "../../src/app/live-world-composition";
 import {
-  createLiveWorldSimulationFactories,
-  type LiveWorldSimulationFactoryOptions,
-} from "../../src/app/live-world-simulation-factories";
+  createTearWorldSimulationFactories,
+  type TearWorldEntityPresentationPorts,
+  type TearWorldSimulationFactoryOptions,
+} from "../../src/gameplay/runtime/tear-world-simulation-factories";
 import type { GameRuntimeDependencies } from "../../src/app/game-runtime-dependencies";
-import { aabbOverlap, clamp, len, lerp, segCircle, segPointDist } from "../../src/domain/geometry";
+import { aabbOverlap, clamp, len, lerp, lerpAngle, segCircle, segPointDist, segSegmentDist } from "../../src/domain/geometry";
 import { CombatEntityRuntime, type CombatEntityRuntimeHooks } from "../../src/gameplay/combat/combat-entity-runtime";
 import type { LiveKillHost } from "../../src/gameplay/combat/live-kill-runtime";
 import { runLiveCollisionPhase, type LiveCollisionPhaseHost } from "../../src/gameplay/combat/live-collision-phase";
@@ -67,7 +68,7 @@ import { createParticleSystem } from "../../src/presentation/particles";
 import { createRunRandom } from "../../src/simulation/run-random";
 import type { RunLifecycleSnapshot } from "../../src/gameplay/run/lifecycle";
 
-type Options = LiveWorldSimulationFactoryOptions;
+type Options = TearWorldSimulationFactoryOptions;
 
 /** Ground plus one oneway ledge; enough arena for locomotion and contact. */
 export const DETACHED_PLATFORMS = Object.freeze([
@@ -86,6 +87,23 @@ function sink(): unknown {
 function idleInput(): unknown {
   const off = () => false;
   return { right: off, left: off, up: off, down: off, dashPressed: off, jumpPressed: off, consumeThrow: off };
+}
+
+/** Detached simulation deliberately supplies renderer-neutral no-op ports. */
+function detachedPresentation(): TearWorldEntityPresentationPorts {
+  return Object.freeze({
+    blade: { draw: () => undefined },
+    player: { draw: () => undefined },
+    projectile: { draw: () => undefined },
+    enemy: Object.freeze({
+      port: { drawBossTransformationWorld: () => undefined },
+      install: () => undefined,
+    }),
+    mirror: {
+      drawMirror: () => undefined, drawHostFallback: () => undefined,
+      drawReflection: () => undefined, saberLockSparks: () => undefined,
+    },
+  });
 }
 
 /** A legal minimal run: real upgrade mods, weapon stats, and boss/void fields. */
@@ -115,10 +133,12 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
   const effects = createParticleSystem();
   const transient = createTearWorldTransientState();
   random.streams.reset(options.seed);
-  const factories = createLiveWorldSimulationFactories({
-    clock, effects, sound: sink() as Options["sound"], input: idleInput() as Options["input"],
-    ui: sink() as Options["ui"],
+  const factories = createTearWorldSimulationFactories({
+    clock, config: CONFIG, graphics: GFX, effects, sound: sink() as Options["sound"],
+    input: idleInput() as Options["input"], presentation: detachedPresentation(),
     random: { enemyAi: random.streams.stream("enemy-ai"), boss: random.streams.stream("boss") },
+    geometry: { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist },
+    cosmeticRandom,
   });
   const dependencies = {
     CLOCK: clock, GAME_RANDOM: random.service, GAME_RANDOM_STREAMS: random.streams, FX: effects,

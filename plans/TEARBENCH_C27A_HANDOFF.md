@@ -5,10 +5,10 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** thirty-ninth C27A foundation slice implemented (exact terminal
-external-decision transcript parity from the certified campaign Source victory);
-checkpoint remains open and blocking pending presentation-free production-world
-factories/bootstrap, configuration isolation, and rendered/audio/haptic exits.
+**Status:** fortieth C27A foundation slice implemented (portable simulation-
+factory extraction with explicit app Canvas and detached no-op ports); checkpoint
+remains open and blocking pending generic world bootstrap, configuration
+isolation, and rendered/audio/haptic exits.
 
 ## Resume protocol (mandatory)
 
@@ -345,21 +345,28 @@ Before coding, read this file, then:
   presentation inputs before matching the full journal. It does not prove
   durable profile persistence/local-storage survival, cloud/replay/analytics
   completion, pixels, audio-device, or platform-device output.
+- The fortieth slice extracts portable
+  `src/gameplay/runtime/tear-world-simulation-factories.ts`. It has no app,
+  presentation, or browser imports and architecture checks fence reintroduced
+  violations. The app renderer adapter supplies real Canvas ports, while the
+  detached composition supplies explicit no-op ports. This proves the factory
+  seam only—not pixel parity, headless execution, a full portable production
+  world, or configuration isolation.
 
 ## Latest evidence
 
 All of the following were run from this worktree after the parity-passing slice:
 
-- `pnpm check:c27a` passed through Slice 39. Its foundation subgate passed 36
-  files / 127 tests, regenerated all 13 browser scenarios across 5,732 ticks /
+- `pnpm check:c27a` passed through Slice 40. Its foundation subgate passed 36
+  files / 128 tests, regenerated all 13 browser scenarios across 5,732 ticks /
   33 native facts, and passed the 40-test detached comparator. Its campaign-
   victory subgate passed 10 files / 36 tests, executed the real Source-victory
   browser route through 1,176 transitions, and passed the dedicated detached
   finale-parity test. Slice 37 passed 1 file / 5 tests, Slice 38 passed 7 files
   / 18 tests, and Slice 39 passed 4 files / 10 tests. The same worktree also
   passed the C22 live-runtime browser proof and the complete C23, C24,
-  C25-foundation, C26, and C27-foundation gates. Slice 38 commit `40c8f44` is
-  pushed to `origin/codex/ghost3-autonomous-completion-plan`; Slice 39 is ready
+  C25-foundation, C26, and C27-foundation gates. Slice 39 commit `30c4877` is
+  pushed to `origin/codex/ghost3-autonomous-completion-plan`; Slice 40 is ready
   to commit and not yet pushed.
 
 - The Slice-38 browser victory artifact was refreshed through 1,176 transitions
@@ -451,9 +458,10 @@ Audio scheduling is now observed, but the browser result is seven
 logical-target-only mix requests and cue rejection by the voice cap, not output.
 The exact 42-entry terminal external-decision transcript now matches across
 hosts, but it remains in-memory/test evidence rather than durable external
-effect evidence. The next boundary is portable production-world extraction:
-presentation-free factories/bootstrap first, then configuration isolation. Any
-newly found
+effect evidence. Slice 40 now carries the presentation-free simulation factory,
+but generic world bootstrap remains. The next boundary is generic world
+bootstrap, then configuration isolation; the latter still blocks true
+simultaneous full worlds. Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
 from the harness — never a tolerance to widen, a scenario to shorten, or a
 field to drop from the projection.
@@ -474,11 +482,10 @@ composition with parity evidence.
 - Do not discard unrelated dirty work. In particular,
   `plans/EXTREME_RENDERING_IMPLEMENTATION_PLAN.md` was already untracked and
   is outside this C27A handoff scope.
-- Slice 38 commit `40c8f44` is the pushed green boundary on
-  `origin/codex/ghost3-autonomous-completion-plan`. Slice 39 terminal external-
-  decision transcript/parity is ready to commit and not yet pushed; its next
-  boundary is presentation-free factories/bootstrap, then configuration
-  isolation. Inspect the
+- Slice 39 commit `30c4877` is the pushed green boundary on
+  `origin/codex/ghost3-autonomous-completion-plan`. Slice 40 factory extraction
+  is ready to commit and not yet pushed. Its next boundary is generic world
+  bootstrap, then configuration isolation. Inspect the
   actual branch and `git status --short` before later staging; stage only
   intentional TearBench work.
 - Do not claim C27, C27A, replay, headless, learning, or release completion

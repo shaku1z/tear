@@ -1,6 +1,6 @@
 import { SFX } from "../audio/legacy-synth";
 import { A11Y, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME } from "../config/game-config";
-import { aabbOverlap, clamp, len, lerp, segCircle, segPointDist } from "../domain/geometry";
+import { aabbOverlap, clamp, len, lerp, lerpAngle, segCircle, segPointDist, segSegmentDist } from "../domain/geometry";
 import { AFFIXES, PRESETS, applyPreset, rollAffixes } from "../gameplay/affixes";
 import { createAchievements } from "../gameplay/progression/achievements";
 import { createDailyChallenges, localCalendarClock } from "../gameplay/progression/challenges";
@@ -14,7 +14,7 @@ import {
 } from "../gameplay/upgrades";
 import { VARIANTS, applyVariant, rollVariant } from "../gameplay/variants";
 import { VoidGen } from "../gameplay/voidgen";
-import { WEAPONS, applyWeapon } from "../gameplay/weapons";
+import { WEAPONS, applyWeapon, getWeapon } from "../gameplay/weapons";
 import { createLegacyInputCompatibility } from "../input/legacy-compat";
 import { createLegacyGamepad } from "../input/legacy-gamepad";
 import { createLegacyInput } from "../input/legacy-input";
@@ -35,7 +35,8 @@ import { createRunRandom } from "../simulation/run-random";
 import { PerformanceMonitor } from "../diagnostics/performance-monitor";
 import { createTearTestEnvironment } from "../tearbench/test-support";
 import { LegacyAppStateController } from "./legacy-state-controller";
-import { createLiveWorldSimulationFactories } from "./live-world-simulation-factories";
+import { createTearWorldSimulationFactories } from "../gameplay/runtime/tear-world-simulation-factories";
+import { createLiveWorldSimulationPresentationAdapter } from "./live-world-simulation-factories";
 import { startLiveGame } from "./live-game-runtime";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 
@@ -85,9 +86,16 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   // One world's entity constructors. The factory takes the mutable world
   // services explicitly, so a second world can be built without a second
   // composition root; the live application still builds exactly one.
-  const { Blade, Player, Projectile, enemyTypes, mirrorTypes } = createLiveWorldSimulationFactories({
-    clock: CLOCK, effects: FX, sound: SFX, input: Input, ui: UI,
+  const presentation = createLiveWorldSimulationPresentationAdapter({
+    clock: CLOCK, effects: FX, ui: UI,
+    configuration: { accessibility: A11Y, config: CONFIG, graphics: GFX, theme: THEME },
+    geometry: { clamp, len, lerp }, cosmeticRandom,
+  });
+  const { Blade, Player, Projectile, enemyTypes, mirrorTypes } = createTearWorldSimulationFactories({
+    clock: CLOCK, config: CONFIG, graphics: GFX, effects: FX, sound: SFX, input: Input,
     random: { enemyAi: GAME_RANDOM_STREAMS.stream("enemy-ai"), boss: GAME_RANDOM_STREAMS.stream("boss") },
+    presentation, geometry: { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist },
+    cosmeticRandom, getWeapon,
     ...(clipper === undefined ? {} : { clipper }),
   });
   const {

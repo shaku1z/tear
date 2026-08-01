@@ -249,7 +249,7 @@ plan — they do not replace it.
 **Exit:** the alignment doc's exit gate, with the parity corpus green and no
 recorded divergence.
 
-Current Slice 39 boundary: the refreshed 13-scenario corpus contains 5,732
+Current Slice 40 boundary: the refreshed 13-scenario corpus contains 5,732
 fixed ticks and 33 native facts (14 in the natural route, including three
 enemy defeats). A portable finale runtime and Class-A application-frame API
 carry the certified Source-victory route through live and detached hosts, and
@@ -277,14 +277,14 @@ audio graph/device output, physical haptics, or a complete
 outcome/progression/cloud-effect chronology. `pnpm check:c27a:slice37` passes
 its 1 file / 5 tests; the focused campaign-victory unit portion currently passes
 10 files / 36 tests. The complete `pnpm check:c27a` gate also passed through
-Slice 39: foundation 36 files / 127 tests, the 13-scenario / 5,732-tick /
+Slice 40: foundation 36 files / 128 tests, the 13-scenario / 5,732-tick /
 33-native-fact browser corpus, 40 detached comparator tests, a campaign-victory
 subgate covering 10 files / 36 tests, the 1,176-transition browser route, one
 detached finale-parity test, Slice 37's 1 file / 5 tests, Slice 38's 7 files /
 18 tests, and Slice 39's 4 files / 10 tests. The affected same-worktree sweep
 is green: the C22 live-runtime browser proof and C23 through C27 package gates
-passed. Slice 38 commit `40c8f44` is pushed to
-`origin/codex/ghost3-autonomous-completion-plan`; Slice 39 is ready to commit
+passed. Slice 39 commit `30c4877` is pushed to
+`origin/codex/ghost3-autonomous-completion-plan`; Slice 40 is ready to commit
 and not yet pushed.
 
 Slice 38 adds a data-only audio dispatch journal and a typed in-memory outcome
@@ -309,9 +309,17 @@ consumes captured synchronous score-newness, award/wallet, consistent
 achievement policy, telemetry, victory intents, best, pending-finale request,
 and presentation inputs, and matches the full journal exactly. This does not
 prove durable profile persistence or local-storage survival, cloud/replay/
-analytics completion, pixels, audio-device, or platform-device output. Next:
-portable production-world extraction—presentation-free factories/bootstrap,
-then configuration isolation.
+analytics completion, pixels, audio-device, or platform-device output. Slice 40
+follows with the portable simulation-factory boundary.
+
+Slice 40 extracts the portable
+`src/gameplay/runtime/tear-world-simulation-factories.ts` factory boundary. It
+has no app, presentation, or browser import; architecture checks fence that
+invariant. The live app renderer adapter supplies its real Canvas ports and the
+detached composition supplies explicit no-op ports. This is not a pixel,
+headless, full-world, or configuration-isolation claim. Next: generic world
+bootstrap, then configuration isolation; that isolation still blocks truly
+simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 

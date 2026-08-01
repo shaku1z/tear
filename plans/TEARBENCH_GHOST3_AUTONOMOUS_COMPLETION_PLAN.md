@@ -8,7 +8,7 @@
 **Current progress:** C21-C24 and C26 passed. C25's implementation foundation is
 verified, but its Class C exit gate remains open. C27 implementation is active;
 C27A is a blocking runtime-architecture correction before replay-world,
-headless, or learning completion claims. Thirty-nine executable slices now
+headless, or learning completion claims. Forty executable slices now
 include shared world construction, exact 13-scenario state/native-event parity
 (5,732 ticks / 33 native facts), portable combat/outcome/reward/finale paths, a
 natural wave/reward crossing, and a real Source victory from a certified
@@ -564,7 +564,7 @@ live-runtime internals into a second platform.
   a planted violation.
 - Rerun architecture-dependent C22-C27 evidence after migration.
 
-**Current Slice 39 evidence boundary**
+**Current Slice 40 evidence boundary**
 
 - Native defeat publication is gameplay-owned and no longer depends on the
   legacy Ghost 2 `_gid` recording path; the refreshed fixed-tick corpus has 33
@@ -590,14 +590,14 @@ live-runtime internals into a second platform.
   receipts match exactly, including zoom before/after state and flash/shake
   maximum aggregation. This proves logical feel state rather than pixels,
   audible PCM/audio graph/device output, or physical vibration.
-- The complete `pnpm check:c27a` gate passes through Slice 39: foundation 36
-  files / 127 tests, 13 browser scenarios / 5,732 ticks / 33 native facts, 40
+- The complete `pnpm check:c27a` gate passes through Slice 40: foundation 36
+  files / 128 tests, 13 browser scenarios / 5,732 ticks / 33 native facts, 40
   detached comparator tests, campaign victory 10 files / 36 tests, a
   1,176-transition real browser route, and one detached finale-parity test;
   Slice 37 adds 1 file / 5 tests, Slice 38 adds 7 files / 18 tests, and Slice 39
   adds 4 files / 10 tests. Its C22 live-runtime proof and C23 through C27 package
-  gates pass in the same worktree. Slice 38 commit `40c8f44` is pushed to
-  `origin/codex/ghost3-autonomous-completion-plan`; Slice 39 is ready to commit
+  gates pass in the same worktree. Slice 39 commit `30c4877` is pushed to
+  `origin/codex/ghost3-autonomous-completion-plan`; Slice 40 is ready to commit
   and not yet pushed.
 - Slice 38 captures 12 `executing` and 12 matching `completed` audio-dispatch
   receipts in the refreshed 1,176-transition browser route after explicit audio
@@ -616,8 +616,14 @@ live-runtime internals into a second platform.
   policy, telemetry, victory intents, best, pending-finale request, and
   presentation inputs, then matches the full journal exactly. This is not
   durable profile/local-storage, cloud/replay/analytics, pixel, audio-device, or
-  platform-device evidence. Next: presentation-free production factories and
-  bootstrap, then configuration isolation.
+  platform-device evidence.
+- Slice 40 extracts portable
+  `src/gameplay/runtime/tear-world-simulation-factories.ts` with no app,
+  presentation, or browser imports; architecture checks fence violations. The
+  app renderer adapter supplies real Canvas ports and detached composition
+  explicit no-op ports. This is not a pixel, headless, full-world, or
+  configuration-isolation claim. Next: generic world bootstrap, then
+  configuration isolation, which still blocks truly simultaneous full worlds.
 - This preserves real victory-outcome execution plus intent, adapter-dispatch,
   renderer-independent particle-admission, logical-feel, and terminal
   external-decision transcript parity. It is not proof of randomized particle

@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-08-01. This records the first thirty-nine executable migration
+In progress as of 2026-08-01. This records the first forty executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -669,13 +669,14 @@ of replay, headless execution, or learning portability.
   aggregation of flash and shake. This proves logical feel state and transient
   restoration, not rendered pixels, audio scheduling, PCM/audibility, audio
   graph/device output, or physical haptics. The integrated `pnpm check:c27a`
-  gate now passes through Slice 39: foundation 36 files / 127 tests, 13 browser
+  gate now passes through Slice 40: foundation 36 files / 128 tests, 13 browser
   scenarios / 5,732 ticks / 33 native facts, 40 detached comparisons, campaign
   victory 10 files / 36 tests with the 1,176-transition Source browser route and
   one detached finale-parity test, Slice 37's 1 file / 5 tests, Slice 38's 7
-  files / 18 tests, and Slice 39's 4 files / 10 tests. Slice 38 commit
-  `40c8f44` is pushed to `origin/codex/ghost3-autonomous-completion-plan`;
-  Slice 39 is ready to commit and is not yet pushed.
+  files / 18 tests, Slice 39's 4 files / 10 tests, and Slice 40's portable
+  factory extraction. Slice 39 commit `30c4877` is pushed to
+  `origin/codex/ghost3-autonomous-completion-plan`; Slice 40 is ready to commit
+  and not yet pushed.
 - The thirty-eighth slice adds immutable, data-only audio-dispatch receipts and
   an in-memory typed outcome chronology receipt. The refreshed 1,176-transition
   Source-victory browser journey explicitly activates the audio context and
@@ -701,12 +702,22 @@ of replay, headless execution, or learning portability.
   the complete journal exactly. This remains an in-memory/test evidence boundary:
   it does not prove durable profile persistence or local-storage survival, nor
   cloud, replay, analytics, pixels, audio-device, or platform-device output.
+- The fortieth slice extracts the portable
+  `src/gameplay/runtime/tear-world-simulation-factories.ts` boundary. It imports
+  no app, presentation, or browser module; architecture checks fence those
+  forbidden edges. The live app renderer adapter supplies its real Canvas ports,
+  while detached composition supplies explicit no-op ports. This is a factory
+  boundary only: it does not prove pixels, headless execution, a full portable
+  production world, or configuration isolation. Generic world bootstrap and
+  configuration isolation remain next, with configuration isolation still
+  blocking truly simultaneous full worlds.
 
 ## Remaining C27A work
 
-1. Continue portable production-world extraction: move presentation-free
-   factories and bootstrap inward first, then isolate configuration. Preserve
-   the exact terminal transcript comparison while extending the existing
+1. Continue portable production-world extraction with generic world bootstrap,
+   then isolate configuration. Configuration isolation still blocks true
+   simultaneous full worlds. Preserve the exact terminal transcript comparison
+   while extending the existing
    intent/adapter, particle-admission, logical-feel, and software-audio receipts
    into rendered evidence, successful audio graph/audibility evidence where
    available, and physical haptic results. The
