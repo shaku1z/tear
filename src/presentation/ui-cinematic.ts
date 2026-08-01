@@ -2,7 +2,7 @@ import type { Align, UiDependencies, UiOptions, UiRuntime } from "./ui-contracts
 import { truthyOr } from "./value-fallback";
 
 export function createUiCinematic(dependencies: UiDependencies) {
-  const { CLOCK, CONFIG, clamp } = dependencies;
+  const { CLOCK, clamp, presentation: { view } } = dependencies;
   return {
 rallyOverlay(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
             const o = truthyOr<UiOptions>(opts, () => ({})), t = this.t, m = t.metric, a = t.alpha;
@@ -150,8 +150,8 @@ rallyOverlay(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
         // stroke, and lore epithet. `t` is elapsed real time, not simulation time.
         bossIntro(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
             const o = truthyOr<UiOptions>(opts, () => ({})), t = this.t, m = t.metric, a = t.alpha, motion = t.motion;
-            const fallbackW = CONFIG.view.w;
-            const fallbackH = CONFIG.view.h;
+            const fallbackW = view.w;
+            const fallbackH = view.h;
             const sr = truthyOr(o.screen, () => ({ x: 0, y: 0, w: fallbackW, h: fallbackH }));
             const vw = fallbackW, vh = fallbackH, cx = vw / 2;
             const elapsed = Math.max(0, Number(o.t) || 0), dur = Math.max(Number(o.dur) || 1.4, 0.001);
@@ -206,8 +206,8 @@ rallyOverlay(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
                 return;
             const t = this.t, m = t.metric;
             const a = o.alpha == null ? 1 : Math.max(0, Math.min(o.alpha || 0, 1));
-            const vw = CONFIG.view.w;
-            const vh = CONFIG.view.h;
+            const vw = view.w;
+            const vh = view.h;
             const w = Math.min(m.bossPhaseBannerW, vw - t.space.xl * 2);
             const h = m.bossPhaseBannerH, x = (vw - w) / 2, y = vh * m.bossPhaseBannerY - h / 2;
             const color = truthyOr(o.color, () => t.color.danger);
@@ -230,8 +230,8 @@ rallyOverlay(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
         // owns bars, vignette, accent seam and every screen-space measurement.
         cinematicFrame(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
             const o = truthyOr<UiOptions>(opts, () => ({})), t = this.t, m = t.metric, a = t.alpha;
-            const fallbackW = CONFIG.view.w;
-            const fallbackH = CONFIG.view.h;
+            const fallbackW = view.w;
+            const fallbackH = view.h;
             const sr = truthyOr(o.screen, () => ({ x: 0, y: 0, w: fallbackW, h: fallbackH }));
             const k = Math.max(0, Math.min(Number(o.amount) || 0, 1));
             const reduced = !!o.reducedMotion, barH = m.cinemaBarH * (reduced ? 1 : (1 - (1 - k) * (1 - k)));
@@ -256,8 +256,8 @@ rallyOverlay(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
         // wrapping lives here so no cinematic caller reaches into the canvas API.
         dialogueCard(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
             const o = truthyOr<UiOptions>(opts, () => ({})), t = this.t, m = t.metric, a = t.alpha;
-            const vw = CONFIG.view.w;
-            const vh = CONFIG.view.h;
+            const vw = view.w;
+            const vh = view.h;
             const k0 = Math.max(0, Math.min(Number(o.amount) || 0, 1));
             const k = 1 - (1 - k0) * (1 - k0), w = Math.min(m.cinemaDialogueW, vw - t.space.xl * 2);
             const h = m.cinemaDialogueH, x = (vw - w) / 2, y = vh - m.cinemaDialogueBottom - h + (1 - k) * t.space.lg;
@@ -327,7 +327,7 @@ rallyOverlay(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
         // dialogue card. `anchor`: lower-left | lower-right | upper-left | depth-center.
         bossDeclaration(this: UiRuntime, ctx: CanvasRenderingContext2D, o?: UiOptions) {
             o = truthyOr<UiOptions>(o, () => ({}));
-            const t = this.t, vw = CONFIG.view.w, vh = CONFIG.view.h;
+            const t = this.t, vw = view.w, vh = view.h;
             const k = clamp(o.amount ?? 1, 0, 1), color = truthyOr(o.color, () => t.color.accent);
             const scale = clamp(vh / 900, 0.8, 1.4), SM = Math.max(t.chapter.safeMargin, vw * t.chapter.safeVW);
             const anchor = vw < 720 ? "lower-center" : (truthyOr(o.anchor, () => "lower-left")); // narrow screens fall back to a lower third

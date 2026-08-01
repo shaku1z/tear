@@ -281,6 +281,14 @@ The first thirty-four executable C27A slices are complete:
   renderer factories retaining different advance timing. This does not prove
   pixel parity or isolate the UI/input/audio/persistence layers, so a complete
   live application is still not concurrent-world safe.
+- The Canvas UI factory now receives `UiPresentationPolicy`: only its viewport,
+  palette roles, and overscan, constructed by composition. UI contracts and
+  tokens have no process-config imports, including type imports; two UI
+  factories demonstrate separate viewport, palette, and overscan behavior and
+  the architecture gate prevents the dependency from returning. This preserves
+  existing screen behavior and styling but does not isolate Attract, entity
+  renderers, input, audio, or persistence, so a complete live application is
+  still not concurrent-world safe.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

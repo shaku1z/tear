@@ -128,6 +128,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "the cinematic renderer cannot retain a shared presentation runtime; create one per composition",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/presentation/ui-contracts.ts", "src/presentation/ui-tokens.ts"]),
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*config\/game-config["']/u,
+    message: "the UI factory must receive viewport, palette, and overscan through an explicit presentation policy",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/gameplay/runtime/tear-world-bootstrap.ts"]),
     pattern: /(?:from\s+|import\s*\()\s*["'][^"']*config\/game-config["']/u,
     message: "the generic world bootstrap must receive base configuration through its explicit caller port",
@@ -247,6 +252,14 @@ if (dependencyErrors("src/presentation/cinematics.ts",
   || dependencyErrors("src/presentation/cinematics.ts",
     'export function createCinematics() { return {}; }').length !== 0) {
   throw new Error("source architecture cinematic presentation policy rule self-test failed");
+}
+if (dependencyErrors("src/presentation/ui-contracts.ts",
+  'import type { CONFIG } from "../config/game-config";').length !== 1
+  || dependencyErrors("src/presentation/ui-tokens.ts",
+    'import type { CONFIG } from "../config/game-config";').length !== 1
+  || dependencyErrors("src/presentation/ui-contracts.ts",
+    'export interface UiPresentationPolicy {}').length !== 0) {
+  throw new Error("source architecture UI presentation policy rule self-test failed");
 }
 if (dependencyErrors("src/gameplay/runtime/tear-world-bootstrap.ts",
   'import { CONFIG } from "../../config/game-config";').length !== 1

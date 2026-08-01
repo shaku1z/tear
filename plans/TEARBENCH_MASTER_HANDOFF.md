@@ -197,19 +197,19 @@ Important files:
 
 ### Exact next slice
 
-Slice 45 completes the bounded cinematic Canvas-renderer policy step. The
-shared `CinematicTimeline` simulation remains unchanged; `createCinematics`
-creates a per-composition renderer runtime whose `Director` uses the supplied
-world presentation timing only while drawing dialogue. Composition passes the
-world's presentation record and the app dependency contract names that runtime.
-The architecture fence rejects a process-config import or global cinematic
-renderer, and focused two-factory evidence proves independent advance timing.
-`pnpm check:c27a:slice45` passed (5 files / 18 tests plus architecture); fresh
-foundation passed 36 files / 130 tests and campaign victory passed 10 files /
-36 tests and 1,176 browser transitions. This is Canvas-renderer timing policy
-ownership only. Next, move the UI factory's direct process-configuration
-dependency behind an explicit composition-supplied policy without changing
-the shared simulation timeline or claiming pixel parity/full-world concurrency.
+Slice 46 completes the bounded Canvas UI-policy step. `UiPresentationPolicy`
+projects only the UI's viewport, three palette roles, and overscan; composition
+supplies it to `createUi`, and UI contracts/tokens no longer import process
+configuration even as types. Focused two-factory evidence proves distinct
+viewport, palette, and overscan behavior, while the architecture fence rejects
+renewed config imports. `pnpm check:c27a:slice46` passed (6 files / 21 tests
+plus architecture); built navigation, progression, playground, terminal, and
+cinematic-preference journeys and the six-scenario responsive matrix pass;
+fresh foundation passed 36 files / 130 tests and campaign victory passed 10
+files / 36 tests and 1,176 browser transitions. This is UI policy wiring only,
+not a UI redesign. Next, move the Attract renderer's process-config type
+dependency behind an explicit composition-supplied visual policy without
+claiming pixel parity or full-world concurrency.
 
 All thirteen captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream: 5,732 ticks and 33 native facts, including the three natural-trace enemy defeats now published independently of Ghost 2 sampling. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome/reward/finale controllers, scheduler shape, event bus, and restored actor identity. The natural matrix route clears wave 1, selects a real offered draft card without advancing the fixed scheduler, and reaches a wave-2 spawn. A separate certified route reconstructs the wave-49 frontier, starts production wave 50, applies an explicit Source one-hit State Forge child, and executes real victory; live and detached match all seven finale intent batches and all 22 outward calls after their concrete adapters return, in exact order and with exact arguments. They also match six immutable ring/burst particle-admission receipts, eight logical feel receipts after restoration of the captured pre-finale transient, and the complete 42-entry terminal external-decision transcript (13 initial synchronization terminal decision/request, 22 finale-outward, and 7 cache/terminal). The refreshed browser route explicitly activates audio, then observes 12 executing plus 12 completed dispatch receipts: all seven mixes are logical-target-only and all cues are voice-cap-rejected, so no output is claimed. Slice 40 adds portable `tear-world-simulation-factories.ts` with no app/presentation/browser imports; the app renderer supplies real Canvas ports and detached supplies explicit no-op ports under architecture fences. Next: generic world bootstrap, then configuration isolation, which still blocks truly simultaneous full worlds. This evidence does not claim a naturally played 50-wave campaign, randomized particle parity, rendered-pixel parity, headless/full-world portability, configuration isolation, durable profile/local-storage survival, cloud/replay/analytics completion, successful PCM/audibility or audio graph/device parity, or device vibration.
 
@@ -350,11 +350,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      Slice 45 makes cinematic Canvas-renderer timing policy per-world explicit while retaining the shared simulation timeline.
-PROVEN BY:           `pnpm check:c27a:slice45` passed: 5 focused files / 18 tests and architecture. Fresh C27A foundation passed 36 files / 130 tests, 13 live scenarios and 40 detached comparisons; campaign victory passed 10 files / 36 tests and 1,176 transitions.
-REMAINING HERE:      Isolate the UI factory's direct process-configuration dependency, then continue UI/input/audio/persistence adapter isolation. Those adapters still prevent concurrent complete worlds and C27A remains blocking.
+DONE THIS STEP:      Slice 46 gives the Canvas UI factory explicit viewport, palette, and overscan policy without changing its screen behavior.
+PROVEN BY:           `pnpm check:c27a:slice46` passed: 6 focused files / 21 tests and architecture. Built navigation/progression/playground/terminal/cinematic journeys and the six-scenario responsive matrix passed; representative captures were inspected. Fresh C27A foundation passed 36 files / 130 tests, 13 live scenarios and 40 detached comparisons; campaign victory passed 10 files / 36 tests and 1,176 transitions.
+REMAINING HERE:      Isolate Attract, entity rendering, input, audio, and persistence adapter dependencies. Those adapters still prevent concurrent complete worlds and C27A remains blocking.
 REMAINING TO C40:    C27 completion, C25 exit, and C28-C40 remain after C27A closes.
-NEXT SLICE:          Move the UI factory's direct process-configuration dependency behind an explicit composition-supplied policy. Preserve its existing UI behavior and shared simulation timeline; do not claim rendered parity or full live-world concurrency.
+NEXT SLICE:          Move the Attract renderer's direct process-configuration type dependency behind an explicit composition-supplied visual policy. Preserve current behavior; do not claim rendered parity or full live-world concurrency.
 
 All of the following were run from this worktree through C27A slice 36:
 

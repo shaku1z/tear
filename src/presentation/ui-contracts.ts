@@ -1,15 +1,22 @@
 export type Clock = TearWorldClock;
-export type Config = typeof ConfigValue;
-export type Overscan = typeof OverscanValue;
 export type Align = CanvasTextAlign;
+export interface UiPalette {
+    readonly bomber: string;
+    readonly charger: string;
+    readonly perfect: string;
+}
+export interface UiPresentationPolicy {
+    readonly view: Readonly<{ w: number; h: number }>;
+    readonly colors: UiPalette;
+    readonly overscan: Readonly<{ x: number; y: number }>;
+}
 export interface UiDependencies {
     CLOCK: Clock;
-    CONFIG: Config;
+    presentation: UiPresentationPolicy;
     Input: {
         mode?: string;
     };
     controllerGlyph?: (buttonIndex: number) => string;
-    OVERSCAN: Overscan;
     clamp: (value: number, minimum: number, maximum: number) => number;
 }
 export interface Rect {
@@ -142,6 +149,5 @@ export interface UiRuntime {
   _chapterLayout(options: UiOptions): ChapterLayout;
   _bladeMark(context: CanvasRenderingContext2D, x: number, y: number, scale: number, color: string, direction: number): void;
 }
-import type { CONFIG as ConfigValue, OVERSCAN as OverscanValue } from "../config/game-config";
 import type { TearWorldClock } from "../gameplay/runtime/tear-world-clock";
 import type { UiTokens } from "./ui-tokens";

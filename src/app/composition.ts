@@ -90,7 +90,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     { config: worldConfig, safeArea: SAFE, overscan: OVERSCAN, window, document, navigator, performance },
     { createInput: createLegacyInput, createGamepad: createLegacyGamepad },
   );
-  const UI = createUi({ CLOCK, CONFIG: worldConfig, Input, OVERSCAN, clamp,
+  const UI = createUi({ CLOCK, presentation: { view: worldConfig.view, colors: worldConfig.colors, overscan: OVERSCAN }, Input, clamp,
     controllerGlyph: (buttonIndex) => PAD.glyph(buttonIndex) });
   // One world's entity constructors. The factory takes the mutable world
   // services explicitly, so a second world can be built without a second

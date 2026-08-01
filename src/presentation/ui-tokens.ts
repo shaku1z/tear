@@ -1,8 +1,6 @@
-import type { CONFIG as ConfigValue } from "../config/game-config";
+import type { UiPalette } from "./ui-contracts";
 
-type Config = typeof ConfigValue;
-
-export function createUiState(CONFIG: Config) {
+export function createUiState(colors: UiPalette) {
   return {
 ink: "#000", // live foreground colour (flipped to light on dark biomes by the game)
         // ---- TOKENS -------------------------------------------------------------
@@ -89,10 +87,10 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
                 cinemaInk: "#f1eff9", // title ink on the cinematic field
                 cinemaMuted: "#c9ccd6",
                 guard: "#e0a326", // posture / guard-break meter
-                get rally() { return CONFIG.colors.bomber; },
-                get accent() { return CONFIG.colors.perfect; },
-                get danger() { return CONFIG.colors.charger; },
-                get unique() { return CONFIG.colors.perfect; },
+                get rally() { return colors.bomber; },
+                get accent() { return colors.perfect; },
+                get danger() { return colors.charger; },
+                get unique() { return colors.perfect; },
             },
             motion: {
                 bossPhaseFlash: 0.7,

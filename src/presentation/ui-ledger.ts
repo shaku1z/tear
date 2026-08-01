@@ -2,7 +2,7 @@ import type { Align, CardOptions, Rect, UiDependencies, UiRuntime } from "./ui-c
 import { truthyOr } from "./value-fallback";
 
 export function createUiLedger(dependencies: UiDependencies) {
-  const { CONFIG } = dependencies;
+  const { presentation: { view } } = dependencies;
   return {
 keycap(this: UiRuntime, ctx: CanvasRenderingContext2D, key: string, x: number, y: number) {
             ctx.font = this.font(this.t.type.micro, true);
@@ -134,7 +134,7 @@ keycap(this: UiRuntime, ctx: CanvasRenderingContext2D, key: string, x: number, y
         // signature-hue top edge that gives each screen its identity).
         // Standard geometry: UI.sheetRect() so every screen wraps identically.
         sheetRect(this: UiRuntime) {
-            const vw = CONFIG.view.w, vh = CONFIG.view.h;
+            const vw = view.w, vh = view.h;
             return { x: vw / 2 - 620, y: 44, w: 1240, h: vh - 80 };
         },
         sheet(this: UiRuntime, ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, hue?: string) {

@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 45 update (current)
+#### Slice 46 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -420,6 +420,21 @@ complete UI/presentation isolation, concurrent full live worlds, or C27A
 completion. Next, move the UI factory's direct process-configuration dependency
 behind an explicit composition-supplied policy while preserving its current
 behavior and the single shared gameplay timeline.
+
+Slice 46 supplies that UI policy. `UiPresentationPolicy` projects only the
+viewport, three palette roles, and overscan that Canvas UI chrome consumes;
+composition supplies it to `createUi`, and UI contracts/tokens import no process
+configuration even as types. Focused two-factory evidence proves distinct
+viewport, palette, and overscan behavior, while source architecture rejects a
+renewed config import. `pnpm check:c27a:slice46` passed 6 focused files / 21
+tests plus architecture. The built navigation, progression, playground,
+terminal, and cinematic-preference journeys and the six-scenario responsive
+matrix passed; representative desktop and portrait captures were inspected.
+
+This preserves UI behavior and styling; it is not a UI redesign, pixel parity,
+complete presentation isolation, concurrent full live worlds, or C27A
+completion. Next, move Attract's direct process-configuration type dependency
+behind an explicit composition-supplied visual policy.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

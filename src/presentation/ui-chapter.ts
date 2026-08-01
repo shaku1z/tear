@@ -2,10 +2,10 @@ import type { ChapterLayout, UiDependencies, UiOptions, UiRuntime } from "./ui-c
 import { truthyOr } from "./value-fallback";
 
 export function createUiChapter(dependencies: UiDependencies) {
-  const { CONFIG, OVERSCAN, clamp } = dependencies;
+  const { clamp, presentation: { overscan, view } } = dependencies;
   return {
 _chapterLayout(this: UiRuntime, o: UiOptions): ChapterLayout {
-            const t = this.t, vw = CONFIG.view.w, vh = CONFIG.view.h;
+            const t = this.t, vw = view.w, vh = view.h;
             const scale = clamp(vh / 900, 0.78, 1.4);
             const SM = Math.max(t.chapter.safeMargin, vw * t.chapter.safeVW);
             const colW = Math.min(t.chapter.bodyColW * scale, vw - SM * 2);
@@ -176,7 +176,7 @@ _chapterLayout(this: UiRuntime, o: UiOptions): ChapterLayout {
             ctx.font = this.font(t.type.micro, true);
             ctx.textBaseline = "middle";
             ctx.textAlign = truthyOr(o.align, () => "center");
-            const x = o.x ?? CONFIG.view.w / 2, y = o.y ?? CONFIG.view.h - t.metric.cinematicPromptBottom;
+            const x = o.x ?? view.w / 2, y = o.y ?? view.h - t.metric.cinematicPromptBottom;
             ctx.fillText(o.text, x, y);
             ctx.restore();
         },
@@ -184,7 +184,7 @@ _chapterLayout(this: UiRuntime, o: UiOptions): ChapterLayout {
         // have resolved. Callers provide copy and values; this component owns all
         // screen-space geometry, type, color and hierarchy.
         finalReward(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
-            const o = truthyOr<UiOptions>(opts, () => ({})), t = this.t, m = t.metric, a = t.alpha, vw = CONFIG.view.w, vh = CONFIG.view.h;
+            const o = truthyOr<UiOptions>(opts, () => ({})), t = this.t, m = t.metric, a = t.alpha, vw = view.w, vh = view.h;
             const k0 = Math.max(0, Math.min(Number(o.amount) || 0, 1)), k = 1 - (1 - k0) * (1 - k0);
             const w = Math.min(m.finalRewardW, vw - t.space.xl * 2), h = Math.min(m.finalRewardH, vh - t.space.xl * 2);
             const x = (vw - w) / 2, y = (vh - h) / 2 + (1 - k) * t.space.lg, color = truthyOr(o.color, () => t.color.accent);
@@ -192,7 +192,7 @@ _chapterLayout(this: UiRuntime, o: UiOptions): ChapterLayout {
             ctx.save();
             ctx.globalAlpha = k * a.finalRewardDim;
             ctx.fillStyle = t.color.cinema;
-            ctx.fillRect(-OVERSCAN.x, -OVERSCAN.y, vw + OVERSCAN.x * 2, vh + OVERSCAN.y * 2);
+            ctx.fillRect(-overscan.x, -overscan.y, vw + overscan.x * 2, vh + overscan.y * 2);
             ctx.globalAlpha = k * a.finalRewardPanel;
             ctx.fillStyle = t.color.cinema;
             ctx.fillRect(x, y, w, h);
@@ -222,7 +222,7 @@ _chapterLayout(this: UiRuntime, o: UiOptions): ChapterLayout {
             ctx.restore();
         },
         finaleFracture(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
-            const o = truthyOr<UiOptions>(opts, () => ({})), t = this.t, m = t.metric, vw = CONFIG.view.w;
+            const o = truthyOr<UiOptions>(opts, () => ({})), t = this.t, m = t.metric, vw = view.w;
             const k = Math.max(0, Math.min(Number(o.amount) || 0, 1)), w = Math.min(m.finalFractureW, vw - t.space.xl * 2);
             const x = (vw - w) / 2, y = t.space.lg + 18, color = truthyOr(o.color, () => t.color.accent);
             ctx.save();
@@ -261,8 +261,8 @@ _chapterLayout(this: UiRuntime, o: UiOptions): ChapterLayout {
         // dim the frozen world behind an overlay (fades to PAPER, so overlay text is
         // always inked black regardless of the biome underneath)
         dim(this: UiRuntime, ctx: CanvasRenderingContext2D, w: number, h: number, a?: number) {
-            const ox = (typeof OVERSCAN !== "undefined") ? OVERSCAN.x : 0;
-            const oy = (typeof OVERSCAN !== "undefined") ? OVERSCAN.y : 0;
+            const ox = overscan.x;
+            const oy = overscan.y;
             ctx.globalAlpha = a ?? 0.78;
             ctx.fillStyle = this.t.color.paper;
             ctx.fillRect(-ox, -oy, w + ox * 2, h + oy * 2); // reach the true screen edges in fullscreen

@@ -2,7 +2,7 @@ import type { UiDependencies, UiRuntime } from "./ui-contracts";
 import { truthyOr } from "./value-fallback";
 
 export function createUiMenu(dependencies: UiDependencies) {
-  const { CONFIG, OVERSCAN } = dependencies;
+  const { presentation: { overscan, view } } = dependencies;
   return {
 wordmark(this: UiRuntime, ctx: CanvasRenderingContext2D, x: number, y: number, time: number, reducedMotion?: boolean) {
             this.text(ctx, "T E A R", x, y, this.t.type.wordmark, "left");
@@ -24,9 +24,9 @@ wordmark(this: UiRuntime, ctx: CanvasRenderingContext2D, x: number, y: number, t
         },
 menuBackdrop(this: UiRuntime, ctx: CanvasRenderingContext2D, time: number) {
             ctx.save();
-            const vw = CONFIG.view.w, vh = CONFIG.view.h;
-            const ox = (typeof OVERSCAN !== "undefined") ? OVERSCAN.x : 0;
-            const oy = (typeof OVERSCAN !== "undefined") ? OVERSCAN.y : 0;
+            const vw = view.w, vh = view.h;
+            const ox = overscan.x;
+            const oy = overscan.y;
             const span = Math.round((vw + ox * 2) * 1.5), n = 6;
             for (let i = 0; i < n; i++) {
                 const drift = (i * (span / n) + time * (16 + i * 5)) % span - 400 - ox;
@@ -53,7 +53,7 @@ menuBackdrop(this: UiRuntime, ctx: CanvasRenderingContext2D, time: number) {
         // so every sub-screen lines up identically. `anim` 0..1 drives the sweep.
         // `hue` = the screen's signature colour (defaults to accent cyan).
         header(this: UiRuntime, ctx: CanvasRenderingContext2D, title: string, subtitle?: string, anim?: number, hue?: string) {
-            const cx = CONFIG.view.w / 2;
+            const cx = view.w / 2;
             const a = anim ?? 1;
             this.title(ctx, title, cx, 92, this.t.type.h1);
             const w = 130 * a;

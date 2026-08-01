@@ -814,6 +814,24 @@ of replay, headless execution, or learning portability.
   output, headless/replay/learning portability, and C27A completion remain
   open.
 
+- The forty-sixth slice gives the shared Canvas UI factory the same explicit
+  presentation boundary. `UiPresentationPolicy` is a structural projection of
+  only the viewport, three palette roles, and overscan used by UI chrome;
+  `createUi` receives it from composition and its UI contracts/tokens no longer
+  import process configuration, even as types. Two factory instances prove
+  separate viewport, palette, and overscan behavior, and the architecture gate
+  rejects a renewed process-config import. The built standalone navigation,
+  progression, playground, terminal, cinematic-preference, and six-scenario
+  responsive routes pass; representative desktop and portrait captures were
+  inspected without claiming a new visual design. Fresh foundation and
+  campaign-victory gates pass.
+
+  This is UI policy wiring only, not a UI redesign, pixel parity, complete
+  presentation isolation, independent full applications, or C27A completion.
+  The next presentation boundary is the Attract renderer's process-config type
+  dependency; input, audio, persistence, device output, headless/replay/
+  learning portability, and C27A completion remain open.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap
