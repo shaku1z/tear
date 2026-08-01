@@ -114,6 +114,14 @@ function encode(
     stack.delete(value);
     return encoded;
   }
+  if (value instanceof Map) {
+    // Without this a Map encodes as `{}`: its entries are lost and a restore
+    // installs a plain object where gameplay expects Map methods.
+    const encoded = Object.freeze({ $map: Object.freeze([...value].map(([key, entry]) =>
+      Object.freeze([encode(key, identities, stack), encode(entry, identities, stack)]))) });
+    stack.delete(value);
+    return encoded;
+  }
   if (Array.isArray(value)) {
     const encoded = Object.freeze(value.map((entry) => encode(entry, identities, stack)));
     stack.delete(value);

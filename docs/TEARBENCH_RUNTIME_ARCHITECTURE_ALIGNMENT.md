@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first twenty-two executable C27A slices are complete:
+The first twenty-three executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -183,10 +183,15 @@ The first twenty-two executable C27A slices are complete:
   into shared gameplay code: `planBossPlacement` (where a boss enters) and
   `beginBossEncounter` (intro freeze, fight clock, carried adds, arena
   swap). The live content host now calls both and retains only
-  presentation. Five scenarios — endless normal/sword, endless hard/hammer,
-  playground, bossonly/warden, and a 600-tick endless run — match the live
-  authoritative hash on every tick. Still untested: cinematics and terminal
-  outcomes; outward effects remain recorded rather than performed.
+  presentation. A terminal run (idle player, hard, dies at tick 903) then
+  joined the matrix and exposed a real State Forge defect: the codec had no
+  `Map` case, so Maps encoded as `{}` and restored as plain objects,
+  breaking `blade._repeatHits` on the next hit for any restore. The codec
+  now round-trips Maps. Six scenarios — endless normal/sword, endless
+  hard/hammer, playground, bossonly/warden, a 600-tick endless run, and the
+  terminal run — match the live authoritative hash on every executed tick,
+  covering death resolution and the run ending. Still untested:
+  cinematics; outward effects remain recorded rather than performed.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

@@ -52,6 +52,15 @@ const scenarios = [
     maxTicks: 300,
   }),
   scenarioFor({
+    id: "c27a.live-parity-trace.terminal",
+    seed: "c27a-parity-terminal",
+    // An idle player on hard eventually dies. A terminal run exercises death
+    // resolution, revives, and the run ending, which no surviving run reaches.
+    start: { mode: "endless", difficulty: "hard", weapon: "sword" },
+    maxTicks: 3600,
+    idle: true,
+  }),
+  scenarioFor({
     id: "c27a.live-parity-trace.long",
     seed: "c27a-parity-long",
     start: { mode: "endless", difficulty: "normal", weapon: "sword" },
@@ -89,7 +98,7 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
   for (const scenario of scenarios) {
     const schedule = Object.fromEntries(Array.from({ length: scenario.maxTicks }, (_, index) => {
       const tick = index + 1;
-      return [tick, actionsAt(tick)];
+      return [tick, scenario.idle === true ? [] : actionsAt(tick)];
     }));
 
     const captured = await page.evaluate(({ scenarioValue, scheduledActions }) => {
@@ -102,11 +111,13 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
         const hashes = [];
         const events = [];
         const checkpoints = [];
-        for (let tick = 1; tick <= scenarioValue.maxTicks; tick += 1) {
+        let terminated = false;
+        for (let tick = 1; tick <= scenarioValue.maxTicks && !terminated; tick += 1) {
           const transition = environment.step(scheduledActions[tick] ?? []);
+          terminated = transition.terminated === true;
           // A few full State Forge checkpoints make a hash mismatch diagnosable:
           // they say WHICH field diverged, not merely that something did.
-          if (tick <= 3 || tick === 30 || tick === scenarioValue.maxTicks) {
+          if (tick <= 3 || tick === 30 || tick === scenarioValue.maxTicks || terminated) {
             checkpoints.push({
               tick,
               canonical: environment.canonicalState(),
@@ -124,7 +135,7 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
           for (const event of transition.events) events.push({ tick: event.tick, type: event.type });
         }
         return {
-          origin, hashes, events, checkpoints,
+          origin, hashes, events, checkpoints, terminated,
           rng: environment.rng(),
           finalObservation: environment.observe(),
         };
@@ -138,13 +149,20 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
     const second = captured.second;
     const where = `${scenario.id} (${scenario.start.mode}/${scenario.start.difficulty}/${scenario.start.weapon})`;
 
-    assert.equal(first.hashes.length, scenario.maxTicks, `${where}: the live trace must cover every scheduled tick`);
+    assert.ok(first.hashes.length > 0 && first.hashes.length <= scenario.maxTicks,
+      `${where}: the live trace must cover the ticks it executed`);
+    if (scenario.idle === true) {
+      assert.ok(first.terminated, `${where}: a terminal scenario must actually end the run`);
+    } else {
+      assert.equal(first.hashes.length, scenario.maxTicks, `${where}: a surviving run must cover every scheduled tick`);
+    }
+    assert.equal(second.hashes.length, first.hashes.length, `${where}: both live runs must end on the same tick`);
     assert.ok(first.hashes.every((entry) => typeof entry.canonical === "string" && entry.canonical.length > 0),
       `${where}: every live tick must publish an authoritative state hash`);
     assert.ok(new Set(first.hashes.map((entry) => entry.canonical)).size > 1,
       `${where}: a live trace whose hash never changes would not be exercising the world`);
     assert.deepEqual(first.hashes.map((entry) => entry.tick),
-      Array.from({ length: scenario.maxTicks }, (_, index) => index + 1),
+      Array.from({ length: first.hashes.length }, (_, index) => index + 1),
       `${where}: live ticks must advance one at a time from 1`);
 
     // Same seed, same actions, same application: the live side must be
@@ -158,12 +176,14 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
     const target = artifactPath(scenario);
     fs.writeFileSync(target, `${JSON.stringify({
       scenario, schedule, origin: first.origin, hashes: first.hashes, events: first.events,
+      terminated: first.terminated,
       checkpoints: first.checkpoints,
       rng: first.rng, capturedAt: new Date().toISOString(),
     }, null, 2)}
 `);
-    written.push({ id: scenario.id, ticks: first.hashes.length, file: path.basename(target) });
-    console.log(`  ${where}: ${String(first.hashes.length)} ticks`);
+    written.push({ id: scenario.id, ticks: first.hashes.length, terminated: first.terminated,
+      file: path.basename(target) });
+    console.log(`  ${where}: ${String(first.hashes.length)} ticks${first.terminated ? " (run ended)" : ""}`);
   }
 
   fs.writeFileSync(path.join(ARTIFACT_DIR, "live-parity-index.json"),

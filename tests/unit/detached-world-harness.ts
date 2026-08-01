@@ -1,5 +1,6 @@
 import { CONFIG } from "../../src/config/game-config";
 import { createLiveAuthoritativeInputAdapter } from "../../src/app/live-authoritative-input-adapter";
+import { createConfigRestorer } from "../../src/app/runtime-initialization";
 import { createLiveWorldComposition, type LiveWorldSessionPort } from "../../src/app/live-world-composition";
 import {
   createLiveWorldSimulationFactories,
@@ -10,6 +11,8 @@ import { aabbOverlap, clamp, len, lerp, segCircle, segPointDist } from "../../sr
 import { CombatEntityRuntime, type CombatEntityRuntimeHooks } from "../../src/gameplay/combat/combat-entity-runtime";
 import { runLiveCollisionPhase, type LiveCollisionPhaseHost } from "../../src/gameplay/combat/live-collision-phase";
 import { runLiveOpeningPhase, type LiveOpeningPhaseHost } from "../../src/gameplay/combat/live-opening-phase";
+import { invokeWeaponHook } from "../../src/gameplay/combat/weapon-runtime-coordinator";
+import { cosmeticRandom } from "../../src/presentation/cosmetic-random";
 import { PRESETS, applyPreset, rollAffixes } from "../../src/gameplay/affixes";
 import { createLiveContentRuntime } from "../../src/gameplay/run/live-content-runtime";
 import { createLiveWaveHost } from "../../src/app/live-wave-host";
@@ -18,6 +21,7 @@ import { applyVariant, rollVariant } from "../../src/gameplay/variants";
 import { planBossPlacement } from "../../src/gameplay/run/boss-placement";
 import { beginBossEncounter } from "../../src/gameplay/run/boss-encounter";
 import { createBossArena } from "../../src/gameplay/training/arena-rules";
+import { applyWeapon } from "../../src/gameplay/weapons";
 import { newMods } from "../../src/gameplay/upgrades";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
 import { createTearWorldTransientState } from "../../src/gameplay/runtime/tear-world-transient-state";
@@ -31,6 +35,9 @@ export const DETACHED_PLATFORMS = Object.freeze([
   { x: 0, y: CONFIG.world.groundY, w: CONFIG.view.w, h: CONFIG.view.h - CONFIG.world.groundY, floor: true },
   { x: 650, y: 520, w: 300, h: 24, oneway: true },
 ]);
+
+/** Captured once at module load, before any world mutates tuning. */
+const restoreBaseConfiguration = createConfigRestorer(CONFIG);
 
 function sink(): unknown {
   // Outward effects and audio are adapters; a detached world records nothing.
@@ -97,7 +104,15 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
   const run = detachedRun(options.mode);
   world.state.setRun(run as never);
   world.state.setPlayer(world.entities.createPlayer(400, CONFIG.world.groundY - 80));
-  world.state.setBlade(world.entities.createBlade());
+  const blade = world.entities.createBlade() as { weapon?: unknown; model?: unknown };
+  // Run start resets configuration to base and then installs the weapon
+  // definition on the blade. applyWeapon mutates tuning, so without the reset a
+  // second world in the same process would inherit the first world's tuning.
+  restoreBaseConfiguration();
+  const weapon = applyWeapon(run.weaponId);
+  blade.weapon = weapon;
+  blade.model = weapon.model;
+  world.state.setBlade(blade as never);
   world.state.setEnemies((options.enemies ?? []).map((spawn) =>
     world.entities.createEnemy(spawn.id, spawn.x, spawn.y, run as never)));
   const input = createLiveAuthoritativeInputAdapter({
@@ -192,7 +207,10 @@ export function createDetachedCombatPhases(
     spawnBossAdds: () => [], spawnBossClone: () => undefined, removeBossClone: () => undefined,
     dramaticBeat: note("dramaticBeat"), onBladeStolen: note("onBladeStolen"),
     updateEffects: (dt: number) => { effects.update(dt); },
-    random: () => world.context.services.random.stream("enemy-ai").next(),
+    // The live opening host passes cosmeticRandom here: this entropy is
+    // render-only. Drawing from a seeded stream instead would desynchronise
+    // enemy AI, so the detached world uses the same non-rules source.
+    random: cosmeticRandom,
   } as unknown as LiveOpeningPhaseHost;
 
   // The collision phase mutates its state object in place, so it reads the
@@ -215,11 +233,18 @@ export function createDetachedCombatPhases(
     get player() { return player(); }, get blade() { return blade(); },
     get run() { return world.state.run() as never; },
     combat, width: CONFIG.view.w, state: collisionState,
-    weaponHit: (enemy: { hp: number; dead: boolean }, _quality: number, damage: number) => {
-      enemy.hp -= damage; if (enemy.hp <= 0) enemy.dead = true;
-      outward.push("weaponHit"); return null;
+    // The production weapon hook, exactly as the live combat adapter calls it.
+    // A hand-rolled damage rule here would silently diverge from the live world.
+    weaponHit: (enemy: unknown, quality: number, damage: number, slam: boolean, launch: boolean, empowered: boolean) => {
+      outward.push("weaponHit");
+      return invokeWeaponHook((blade() as { weapon?: object | null }).weapon, "onHeldHit",
+        { blade: blade(), player: player(), enemy, quality, damage, isSlam: slam, isLaunch: launch, empowered }) as never;
     },
-    throwHit: () => { outward.push("throwHit"); return null; },
+    throwHit: (enemy: unknown, secondary: boolean, throwId: number) => {
+      outward.push("throwHit");
+      return invokeWeaponHook((blade() as { weapon?: object | null }).weapon, "onThrowHit",
+        { blade: blade(), player: player(), enemy, secondary, throwId }) as never;
+    },
     runDamageMultiplier: () => 1, noteFirstDamage: note("noteFirstDamage"),
     logWeapon: (type: string) => { outward.push(`logWeapon:${type}`); },
     emitThrowResolve: note("emitThrowResolve"),

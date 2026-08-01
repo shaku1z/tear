@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-07-30. This records the first twenty-two executable migration
+In progress as of 2026-07-30. This records the first twenty-three executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -401,6 +401,37 @@ of replay, headless execution, or learning portability.
   those in place the boss scenario matches the live authoritative hash on all
   300 ticks, and the matrix is five scenarios: endless normal/sword, endless
   hard/hammer, playground, bossonly/warden, and a 600-tick endless run.
+
+- A terminal run joined the matrix: an idle player on hard dies at live tick
+  903, so the capture stops when the run ends and the comparison replays the
+  ticks that actually executed. Death resolution, revives, and the run ending
+  are now covered. Closing it produced one real product defect and two
+  harness fidelity fixes:
+
+  1. **State Forge dropped every `Map`.** The encoder had a `$set` case but
+     none for `Map`, so a Map fell through to the generic object branch and
+     encoded as `{}` — its entries lost and its type replaced. A restored
+     blade therefore had a plain object in `_repeatHits`, and the next
+     `recordHit` threw `this._repeatHits.set is not a function`. This
+     affected any State Forge restore, not only detached worlds. The codec
+     now round-trips Maps through a `$map` encoding with identity-aware keys.
+  2. The detached harness drew the opening phase's `random` from the seeded
+     `enemy-ai` stream; the live host passes `cosmeticRandom`. Draining a
+     rules stream for render-only entropy would desynchronise enemy AI, so
+     the harness now uses the same non-rules source.
+  3. The harness had a hand-rolled `weaponHit` that subtracted damage
+     directly. It now calls the production `invokeWeaponHook`, and worlds
+     install the weapon definition the way run start does — reset
+     configuration to base, `applyWeapon`, restore the captured
+     configuration, then install the weapon on the blade. That order is the
+     live State Forge commit order; any other leaves the world tuned
+     differently from the one it came from.
+
+  The matrix is now six scenarios — endless normal/sword, endless
+  hard/hammer, playground, bossonly/warden, a 600-tick endless run, and the
+  903-tick terminal run — all matching the live authoritative hash on every
+  executed tick. The comparison also asserts that at least one captured
+  scenario is terminal, so death coverage cannot silently disappear.
 
 ## Remaining C27A work
 

@@ -114,7 +114,7 @@ Named status:
 - **C25:** physical/black-box foundation verified; exit open.
 - **C26:** regression discovery passed `pnpm check:c26` on 2026-07-28.
 - **C27:** recorder/capsule foundation only; checkpoint open.
-- **C27A:** twenty-two shared-world architecture slices in this tree; blocking and incomplete.
+- **C27A:** twenty-three shared-world architecture slices in this tree; blocking and incomplete.
 - **C28-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -169,7 +169,7 @@ Do not claim TearBot automatically learns merely because scripted policies, trai
 
 Read [`TEARBENCH_C27A_HANDOFF.md`](TEARBENCH_C27A_HANDOFF.md) before editing.
 
-Twenty-two C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, focused tests, and physical browser diagnostics.
+Twenty-three C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, focused tests, and physical browser diagnostics.
 
 Important files:
 
@@ -188,7 +188,7 @@ Important files:
 
 ### Exact next slice
 
-Live-versus-detached parity holds on a five-scenario matrix (endless normal/sword, endless hard/hammer, playground, bossonly/warden, and a 600-tick run) with every authoritative hash equal. Continue: terminal outcomes (kill runtime and run outcome in the detached harness), then cinematics, then comparable outward effects, then more boss ids. Every divergence is a defect to fix in the composition — the boss slice produced two such fixes, `planBossPlacement` and `beginBossEncounter`.
+Live-versus-detached parity holds on a six-scenario matrix (endless normal/sword, endless hard/hammer, playground, bossonly/warden, a 600-tick run, and a 903-tick terminal run) with every authoritative hash equal. Continue: cinematics, then comparable outward effects, then the other boss ids, then a win outcome. The terminal slice found a real State Forge defect — the codec dropped every `Map`, corrupting `blade._repeatHits` on any restore — which is what this matrix is for.
 
 Preserve:
 

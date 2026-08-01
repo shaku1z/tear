@@ -8,15 +8,21 @@ import { projectCanonicalGameplayState } from "../../src/gameplay/runtime/canoni
 import { TearSimulationRuntime } from "../../src/gameplay/runtime/tear-simulation-runtime";
 import { applyTearCodecConfiguration, hydrateTearCodecWorld, type TearCodecValue } from "../../src/tearbench";
 import { CONFIG } from "../../src/config/game-config";
+import { applyWeapon } from "../../src/gameplay/weapons";
+import { createConfigRestorer } from "../../src/app/runtime-initialization";
 import { createDetachedCombatPhases, createDetachedWaveRuntime, createDetachedWorld } from "./detached-world-harness";
 
 const ARTIFACT_DIR = resolve("artifacts/tearbench/c27a");
+
+// Captured once at module load, before any scenario mutates tuning.
+const restoreConfiguration = createConfigRestorer(CONFIG);
 
 interface LiveTrace {
   readonly scenario: { readonly seed: string; readonly maxTicks: number;
     readonly start: { readonly mode: string; readonly difficulty: string; readonly weapon: string } };
   readonly schedule: Record<string, readonly { readonly tick: number; readonly id: number; readonly command: GameAction }[]>;
   readonly origin: { readonly tick: number; readonly state: Record<string, TearCodecValue> };
+  readonly terminated?: boolean;
   readonly hashes: readonly { readonly tick: number; readonly canonical: string;
     readonly state: Record<string, unknown> }[];
   readonly checkpoints: readonly { readonly tick: number; readonly state: Record<string, TearCodecValue>;
@@ -58,7 +64,16 @@ function replayDetached(trace: LiveTrace) {
   world.state.setProjectiles(staged.projectiles);
   // Entity tuning reads configuration, so a world restored without the
   // captured values would simulate differently from the world it came from.
+  // Exactly the live State Forge commit order: reset configuration to base,
+  // apply the weapon (which mutates tuning), then restore the captured
+  // configuration over it, then install the weapon on the blade. Any other
+  // order leaves the world tuned differently from the one it came from.
+  restoreConfiguration();
+  const weapon = applyWeapon(staged.weaponId);
   applyTearCodecConfiguration(CONFIG, staged.configuration);
+  const stagedBlade = staged.blade as { weapon: unknown; model: unknown };
+  stagedBlade.weapon = weapon;
+  stagedBlade.model = weapon.model;
   const rng = trace.origin.state["tear.rng.v1"];
   if (rng !== undefined) world.context.services.random.restore(rng as never);
 
@@ -93,7 +108,7 @@ function replayDetached(trace: LiveTrace) {
   const sequencer = new EnvelopeSequencer();
   const hashes: { tick: number; canonical: string }[] = [];
   const states: unknown[] = [];
-  for (let tick = 1; tick <= trace.scenario.maxTicks; tick += 1) {
+  for (let tick = 1; tick <= trace.hashes.length; tick += 1) {
     const scheduled = trace.schedule[String(tick)] ?? [];
     const actions: CommandEnvelope<GameAction>[] = scheduled.map((entry) => sequencer.command(tick, entry.command));
     const result = runtime.advanceOne(actions);
@@ -109,12 +124,14 @@ describe.skipIf(traces.length === 0)("detached world against the live trace", ()
   it("compares every captured scenario", () => {
     // A missing matrix would silently reduce this gate to one case.
     expect(traces.length).toBeGreaterThanOrEqual(4);
+    // A terminal run is the only scenario that exercises death resolution.
+    expect(traces.some((entry) => entry.terminated === true)).toBe(true);
     expect(new Set(traces.map((entry) => entry.scenario.seed)).size).toBe(traces.length);
   });
 
   for (const live of traces) {
     const label = `${live.scenario.start.mode}/${live.scenario.start.difficulty}/${live.scenario.start.weapon}` +
-      ` x${String(live.scenario.maxTicks)}`;
+      ` x${String(live.hashes.length)}${live.terminated === true ? " terminal" : ""}`;
 
     it(`hydrates the live origin snapshot into a production-composed world (${label})`, () => {
       const { staged, detached } = replayDetached(live);
@@ -133,7 +150,7 @@ describe.skipIf(traces.length === 0)("detached world against the live trace", ()
 
       expect(second.hashes).toEqual(first.hashes);
       expect(second.outward).toEqual(first.outward);
-      expect(first.hashes).toHaveLength(live.scenario.maxTicks);
+      expect(first.hashes).toHaveLength(live.hashes.length);
     });
 
     it(`matches the live authoritative hash on every tick (${label})`, () => {

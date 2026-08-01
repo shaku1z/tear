@@ -92,6 +92,11 @@ export function decodeTearCodecValue(value: TearCodecValue, identities: Readonly
     if (identity === undefined) throw new RangeError(`snapshot reference target is missing: ${value.$ref}`);
     return identity;
   }
+  if ("$map" in value && Array.isArray(value.$map)) {
+    return new Map((value.$map as readonly (readonly TearCodecValue[])[]).map((pair) =>
+      [decodeTearCodecValue(pair[0] as TearCodecValue, identities),
+        decodeTearCodecValue(pair[1] as TearCodecValue, identities)]));
+  }
   if ("$set" in value && Array.isArray(value.$set)) {
     return new Set((value.$set as readonly TearCodecValue[]).map((entry) => decodeTearCodecValue(entry, identities)));
   }
