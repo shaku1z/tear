@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 46 update (current)
+#### Slice 47 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -435,6 +435,24 @@ This preserves UI behavior and styling; it is not a UI redesign, pixel parity,
 complete presentation isolation, concurrent full live worlds, or C27A
 completion. Next, move Attract's direct process-configuration type dependency
 behind an explicit composition-supplied visual policy.
+
+Slice 47 supplies that Attract policy. `AttractVisualPolicy` projects the
+deferred menu renderer's viewport, world/blade values, palette, overscan,
+dynamic graphics preference, and theme; composition supplies it and
+`attract-runtime` imports no process configuration, even as types. Focused
+two-controller evidence proves separate dimensions, ground/platform layout, and
+palette-driven effects, and architecture rejects a renewed import. `pnpm
+check:c27a:slice47` passed 7 focused files / 22 tests plus architecture. Built
+navigation, progression, playground, terminal, and cinematic-preference journeys
+and the six-scenario responsive matrix passed; a desktop menu capture was
+inspected.
+
+This is Attract visual-policy ownership only. It does not isolate its cosmetic
+entropy, player/blade/particle dependencies, entity renderers, input, audio,
+persistence, pixel parity, concurrent complete live worlds, or C27A completion.
+Next, move the Blade, Mirror, and Projectile entity renderers' direct
+process-configuration type dependencies behind narrow composition-supplied
+rendering policies.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

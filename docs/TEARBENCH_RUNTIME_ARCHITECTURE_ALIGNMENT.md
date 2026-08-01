@@ -289,6 +289,14 @@ The first thirty-four executable C27A slices are complete:
   existing screen behavior and styling but does not isolate Attract, entity
   renderers, input, audio, or persistence, so a complete live application is
   still not concurrent-world safe.
+- The deferred menu Attract renderer now receives `AttractVisualPolicy`, a
+  structural projection of its viewport, world/blade values, palette, overscan,
+  dynamic graphics preference, and theme. It imports no process configuration,
+  including types; direct two-controller evidence proves independent layout and
+  palette effect values, and architecture prevents regression. This does not
+  isolate Attract's existing cosmetic entropy, its player/blade/particle
+  dependencies, entity renderers, input, audio, or persistence, so a complete
+  live application is still not concurrent-world safe.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

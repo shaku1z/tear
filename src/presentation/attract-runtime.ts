@@ -6,15 +6,10 @@
 // FX is ticked/drawn here (the main loop only ticks FX while actually playing).
 import type { createBlade } from "../gameplay/entities/blade";
 import type { createPlayer } from "../gameplay/entities/player";
-import type { CONFIG as ConfigValue, GFX as GraphicsValue, OVERSCAN as OverscanValue, THEME as ThemeValue } from "../config/game-config";
 import type { STAGES as StageValues } from "../gameplay/stages";
 import type { ParticleSystem } from "./particles";
 import { cosmeticRandom } from "./cosmetic-random";
 
-type Config = typeof ConfigValue;
-type GraphicsSettings = typeof GraphicsValue;
-type Overscan = typeof OverscanValue;
-type Theme = typeof ThemeValue;
 type Stage = (typeof StageValues)[number];
 type PlayerConstructor = ReturnType<typeof createPlayer>;
 type BladeConstructor = ReturnType<typeof createBlade>;
@@ -25,6 +20,20 @@ interface Platform { x: number; y: number; w: number; h: number; floor?: boolean
 interface AiInput { left: boolean; right: boolean; up: boolean; down: boolean; _dash: boolean; _jump: boolean }
 interface Point { x: number; y: number }
 type FoeKind = "charger" | "ranged" | "bomber" | "armored" | "flyer" | "wraith";
+export interface AttractVisualPolicy {
+  readonly view: Readonly<{ w: number; h: number }>;
+  readonly world: Readonly<{ gravity: number; groundY: number }>;
+  readonly blade: Readonly<{ aimRadius: number; minHitSpeed: number }>;
+  readonly colors: Readonly<Record<FoeKind | "perfect", string>>;
+  readonly overscan: Readonly<{ x: number }>;
+  readonly lowGraphics: () => boolean;
+  readonly theme: Readonly<{
+    set(background: string): void;
+    readonly dark: boolean;
+    readonly ink: string;
+    readonly rim: string;
+  }>;
+}
 interface Foe {
   x: number; y: number; vx: number; vy: number; onGround: boolean; kind: FoeKind; color: string;
   hw: number; hh: number; flyer: boolean; fireCd: number; spawnT: number; flash: number; dead: boolean;
@@ -44,13 +53,10 @@ interface BackdropPort {
 export interface AttractDependencies {
   Backdrop: BackdropPort;
   Blade: BladeConstructor;
-  CONFIG: Config;
   FX: ParticleSystem;
-  GFX: GraphicsSettings;
-  OVERSCAN: Overscan;
   Player: PlayerConstructor;
   STAGES: readonly Stage[];
-  THEME: Theme;
+  policy: AttractVisualPolicy;
   clamp: (value: number, minimum: number, maximum: number) => number;
 }
 interface AttractController {
@@ -73,12 +79,13 @@ interface AttractController {
 }
 
 function createAttract(dependencies: AttractDependencies): AttractController {
-  const { Backdrop, Blade, CONFIG, FX, GFX, OVERSCAN, Player, STAGES, THEME, clamp } = dependencies;
+  const { Backdrop, Blade, FX, Player, STAGES, clamp, policy } = dependencies;
+  const { blade, colors, lowGraphics, overscan, theme, view, world } = policy;
 
 const Attract: AttractController = {
-  get W() { return CONFIG.view.w; },
-  get H() { return CONFIG.view.h; },
-  get GY() { return CONFIG.world.groundY; },
+  get W() { return view.w; },
+  get H() { return view.h; },
+  get GY() { return world.groundY; },
   t: 0, biomeList: [], biomePtr: 0, biomeT: 0, fade: 0,
   player: null, blade: null, platforms: [], ai: null, foes: [], shots: [],
   target: null, dashCd: 0, jumpCd: 0, aimAng: -1, ready: false,
@@ -135,7 +142,7 @@ const Attract: AttractController = {
       const pl = this.platforms[i];
       if (!pl) continue;
       pl.x -= 60 * dt;
-      if (pl.x + pl.w < -OVERSCAN.x - 40) pl.x = this.W + OVERSCAN.x + 40;
+      if (pl.x + pl.w < -overscan.x - 40) pl.x = this.W + overscan.x + 40;
     }
     const p = this.player, b = this.blade, ai = this.ai;
     if (!p || !b || !ai) return;
@@ -167,7 +174,7 @@ const Attract: AttractController = {
     // 0.16s sweep clears minHitSpeed so the cut lands exactly where the blade visibly slashes),
     // then a brief recover. Reads as approach -> slash -> approach, like a real player.
     {
-      const hand = { x: p.x, y: p.y - p.hh * 0.2 }, R = CONFIG.blade.aimRadius;
+      const hand = { x: p.x, y: p.y - p.hh * 0.2 }, R = blade.aimRadius;
       const baseAng = tg ? Math.atan2(tg.y - hand.y, tg.x - hand.x) : this.aimAng;
       const reach = tg ? Math.hypot(tg.x - hand.x, tg.y - hand.y) : 9999;
       this.swingT -= dt;
@@ -191,7 +198,7 @@ const Attract: AttractController = {
     // ---- the real blade cuts foes it sweeps through fast ----
     for (const f of this.foes) {
       if (f.dead || f.spawnT > 0) continue;
-      if (b.tipSpeed > CONFIG.blade.minHitSpeed && this._segNear(b.x, b.y, b.tipX, b.tipY, f.x, f.y, f.hw + 12)) this._kill(f);
+      if (b.tipSpeed > blade.minHitSpeed && this._segNear(b.x, b.y, b.tipX, b.tipY, f.x, f.y, f.hw + 12)) this._kill(f);
     }
 
     for (const f of this.foes) this._updateFoe(f, dt, p);
@@ -204,7 +211,7 @@ const Attract: AttractController = {
 
   _nearest() { const player = this.player; if (!player) return null; let bd = 1e9, best: Foe | null = null; for (const f of this.foes) { if (f.dead || f.spawnT > 0) continue; const d = Math.hypot(f.x - player.x, f.y - player.y); if (d < bd) { bd = d; best = f; } } return best; },
   _segNear(ax, ay, bx, by, px, py, r) { const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1; let tt = ((px - ax) * dx + (py - ay) * dy) / l2; tt = clamp(tt, 0, 1); return Math.hypot(px - (ax + dx * tt), py - (ay + dy * tt)) <= r; },
-  _kill(f, silent) { if (f.dead) return; f.dead = true; try { FX.death(f.x, f.y, 12, f.color); if (!silent) FX.burst(f.x, f.y, 0, -1, 6, CONFIG.colors.perfect); } catch { /* Visual feedback is best-effort. */ } },
+  _kill(f, silent) { if (f.dead) return; f.dead = true; try { FX.death(f.x, f.y, 12, f.color); if (!silent) FX.burst(f.x, f.y, 0, -1, 6, colors.perfect); } catch { /* Visual feedback is best-effort. */ } },
 
   _spawn() {
     const side = cosmeticRandom() < 0.5 ? -1 : 1;
@@ -212,7 +219,7 @@ const Attract: AttractController = {
     const kind = types[(cosmeticRandom() * types.length) | 0] ?? "charger";
     const flyer = kind === "flyer" || kind === "wraith";
     this.foes.push({ x: this.W / 2 + side * (600 + cosmeticRandom() * 280), y: flyer ? this.GY - 200 - cosmeticRandom() * 150 : this.GY - 22,
-      vx: 0, vy: 0, onGround: false, kind, color: CONFIG.colors[kind] || "#e23b3b", hw: 17, hh: 22, flyer,
+      vx: 0, vy: 0, onGround: false, kind, color: colors[kind] || "#e23b3b", hw: 17, hh: 22, flyer,
       fireCd: 1.1 + cosmeticRandom() * 2, spawnT: 0.4, flash: 0, dead: false,
       // per-kind behaviour state (walk/windup/charge, orbit/swoop, kite band, blink)
       st: "walk", stT: cosmeticRandom(), ph: cosmeticRandom() * 6.2832,
@@ -253,7 +260,7 @@ const Attract: AttractController = {
       }
       f.y = Math.min(f.y, this.GY - 60);   // airborne stays airborne
     } else {
-      f.vy += CONFIG.world.gravity * dt; f.y += f.vy * dt;
+      f.vy += world.gravity * dt; f.y += f.vy * dt;
       const floorY = this.GY - f.hh;
       if (f.y >= floorY) { f.y = floorY; f.vy = 0; f.onGround = true; } else f.onGround = false;
       if (f.onGround) {
@@ -285,13 +292,13 @@ const Attract: AttractController = {
     if (f.kind === "bomber" && f.onGround && adx < 120) { this._explode(f.x, f.y); this._kill(f, true); }
   },
   _fire(f, p) { const dx = p.x - f.x, dy = p.y - f.y, m = Math.hypot(dx, dy) || 1; this.shots.push({ x: f.x, y: f.y - 6, vx: dx / m * 440, vy: dy / m * 440, r: 8, tint: f.color, hist: [], deflected: false, dead: false }); },
-  _explode(x, y) { try { FX.explode(x, y, CONFIG.colors.bomber, 1.3); } catch { /* Visual feedback is best-effort. */ } },
+  _explode(x, y) { try { FX.explode(x, y, colors.bomber, 1.3); } catch { /* Visual feedback is best-effort. */ } },
   _updateShot(s, dt, _p, b) {
     s.hist.push({ x: s.x, y: s.y }); if (s.hist.length > 7) s.hist.shift();
     s.x += s.vx * dt; s.y += s.vy * dt;
     if (!s.deflected && b.tipSpeed > 850 && this._segNear(b.x, b.y, b.tipX, b.tipY, s.x, s.y, 20)) {
-      s.deflected = true; const m = Math.hypot(s.vx, s.vy) || 1; s.vx = -s.vx / m * 780; s.vy = -260; s.tint = CONFIG.colors.perfect;
-      FX.burst(s.x, s.y, s.vx, 0, 8, CONFIG.colors.perfect); FX.flash(s.x, s.y, 34, CONFIG.colors.perfect);
+      s.deflected = true; const m = Math.hypot(s.vx, s.vy) || 1; s.vx = -s.vx / m * 780; s.vy = -260; s.tint = colors.perfect;
+      FX.burst(s.x, s.y, s.vx, 0, 8, colors.perfect); FX.flash(s.x, s.y, 34, colors.perfect);
     }
     if (s.deflected) for (const f of this.foes) { if (f.dead || f.spawnT > 0) continue; if (Math.hypot(f.x - s.x, f.y - s.y) < 28) { this._kill(f); s.dead = true; break; } }
     if (s.x < -50 || s.x > this.W + 50 || s.y < -50 || s.y > this.H + 50) s.dead = true;
@@ -300,7 +307,7 @@ const Attract: AttractController = {
   // ---- drawing ----
   draw(ctx) {
     const stage = this.stage();
-    THEME.set(stage.bg);
+    theme.set(stage.bg);
     ctx.fillStyle = stage.bg; Backdrop.fillFull(ctx);   // include the fullscreen overscan bleed
     Backdrop.draw(ctx, stage, this.t, (this.player ? this.player.x : this.W / 2) + this.scroll);   // scrolled parallax = travel
     for (const pl of this.platforms) Backdrop.platform(ctx, pl, stage, !!pl.floor);
@@ -312,7 +319,7 @@ const Attract: AttractController = {
     Backdrop.post(ctx, stage);
   },
   _drawFoe(ctx, f) {
-    const lowG = GFX.low;
+    const lowG = lowGraphics();
     if (f.spawnT > 0) ctx.globalAlpha = 1 - f.spawnT / 0.4;
     if (f.flyer) {
       // airborne foes read as the game's actual flyer silhouette: a diamond, not a
@@ -322,24 +329,24 @@ const Attract: AttractController = {
       if (f.kind === "wraith") ctx.globalAlpha *= 0.8;
       ctx.beginPath(); ctx.moveTo(f.x, y - r); ctx.lineTo(f.x + r, y); ctx.lineTo(f.x, y + r); ctx.lineTo(f.x - r, y); ctx.closePath();
       ctx.fillStyle = f.flash > 0 ? "#fff" : f.color;
-      if (!lowG) { ctx.shadowColor = THEME.rim; ctx.shadowBlur = 6; }
+      if (!lowG) { ctx.shadowColor = theme.rim; ctx.shadowBlur = 6; }
       ctx.fill(); ctx.shadowBlur = 0;
-      ctx.strokeStyle = THEME.ink; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.strokeStyle = theme.ink; ctx.lineWidth = 2.5; ctx.stroke();
       ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(f.x, y, 3.5, 0, 6.2832); ctx.fill();
       ctx.globalAlpha = 1;
       return;
     }
     const x = f.x - f.hw, y = f.y - f.hh, w = f.hw * 2, h = f.hh * 2;
     ctx.fillStyle = f.flash > 0 ? "#fff" : f.color;
-    if (!lowG) { ctx.shadowColor = THEME.rim; ctx.shadowBlur = 6; }
+    if (!lowG) { ctx.shadowColor = theme.rim; ctx.shadowBlur = 6; }
     ctx.fillRect(x, y, w, h); ctx.shadowBlur = 0;
-    ctx.strokeStyle = THEME.ink; ctx.lineWidth = 2.5; ctx.strokeRect(x, y, w, h);
+    ctx.strokeStyle = theme.ink; ctx.lineWidth = 2.5; ctx.strokeRect(x, y, w, h);
     const playerX = this.player?.x ?? this.W / 2;
     ctx.fillStyle = "#fff"; ctx.fillRect(f.x + (f.x < playerX ? 4 : -10), y + 11, 6, 6);
     ctx.globalAlpha = 1;
   },
   _drawShot(ctx, s) {
-    const dark = THEME.dark, lowG = GFX.low;
+    const dark = theme.dark, lowG = lowGraphics();
     if (!lowG && s.hist.length > 1) {
       ctx.save(); if (dark) ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = s.tint; ctx.lineCap = "round";
       for (let i = 1; i < s.hist.length; i++) {
@@ -352,7 +359,7 @@ const Attract: AttractController = {
     }
     ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(Math.atan2(s.vy, s.vx));
     if (!lowG) { ctx.shadowColor = s.tint; ctx.shadowBlur = dark ? 12 : 7; }
-    ctx.fillStyle = s.tint; ctx.strokeStyle = THEME.ink; ctx.lineWidth = 1.5;
+    ctx.fillStyle = s.tint; ctx.strokeStyle = theme.ink; ctx.lineWidth = 1.5;
     const r = s.r; ctx.beginPath(); ctx.moveTo(r * 1.5, 0); ctx.quadraticCurveTo(0, -r * 0.9, -r, -r * 0.5); ctx.quadraticCurveTo(-r * 0.9, 0, -r, r * 0.5); ctx.quadraticCurveTo(0, r * 0.9, r * 1.5, 0); ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0; ctx.stroke();
     ctx.fillStyle = "#fff"; ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.arc(0, 0, r * 0.4, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
     ctx.restore();

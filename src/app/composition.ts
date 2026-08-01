@@ -113,7 +113,10 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     drawBossTransformationWorld, weaponCapsuleIntersectsSegment,
   } = enemyTypes;
   const { Mirror, MirrorHost, ReflectionEnemy } = mirrorTypes;
-  const Attract = createAttract({ Backdrop, Blade, CONFIG: worldConfig, FX, GFX, OVERSCAN, Player, STAGES, THEME, clamp });
+  const Attract = createAttract({ Backdrop, Blade, FX, Player, STAGES, clamp, policy: {
+    view: worldConfig.view, world: worldConfig.world, blade: worldConfig.blade,
+    colors: worldConfig.colors, overscan: OVERSCAN, lowGraphics: () => GFX.low, theme: THEME,
+  } });
   const platform = createLegacyPlatformCompatibility({
     target,
     ...(sdk === undefined ? {} : { sdk }),

@@ -133,6 +133,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "the UI factory must receive viewport, palette, and overscan through an explicit presentation policy",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/presentation/attract-runtime.ts"]),
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*config\/game-config["']/u,
+    message: "the Attract renderer must receive visual configuration through an explicit composition policy",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/gameplay/runtime/tear-world-bootstrap.ts"]),
     pattern: /(?:from\s+|import\s*\()\s*["'][^"']*config\/game-config["']/u,
     message: "the generic world bootstrap must receive base configuration through its explicit caller port",
@@ -260,6 +265,12 @@ if (dependencyErrors("src/presentation/ui-contracts.ts",
   || dependencyErrors("src/presentation/ui-contracts.ts",
     'export interface UiPresentationPolicy {}').length !== 0) {
   throw new Error("source architecture UI presentation policy rule self-test failed");
+}
+if (dependencyErrors("src/presentation/attract-runtime.ts",
+  'import type { CONFIG } from "../config/game-config";').length !== 1
+  || dependencyErrors("src/presentation/attract-runtime.ts",
+    'export interface AttractVisualPolicy {}').length !== 0) {
+  throw new Error("source architecture Attract visual policy rule self-test failed");
 }
 if (dependencyErrors("src/gameplay/runtime/tear-world-bootstrap.ts",
   'import { CONFIG } from "../../config/game-config";').length !== 1

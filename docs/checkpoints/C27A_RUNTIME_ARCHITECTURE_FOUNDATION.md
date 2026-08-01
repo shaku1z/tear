@@ -832,6 +832,23 @@ of replay, headless execution, or learning portability.
   dependency; input, audio, persistence, device output, headless/replay/
   learning portability, and C27A completion remain open.
 
+- The forty-seventh slice makes the deferred menu Attract renderer's visual
+  dependencies explicit. `AttractVisualPolicy` projects the menu renderer's
+  viewport, world/blade values, palette, overscan, dynamic graphics, and theme;
+  composition supplies it and `attract-runtime` no longer imports process
+  configuration even as types. Two direct controllers prove independent
+  dimensions, ground/platform layout, and palette-driven effects, while the
+  architecture gate blocks the dependency from returning. Built UI journeys and
+  the six-scenario responsive matrix pass; a captured desktop menu confirms the
+  live background remains readable behind the menu. Fresh foundation and
+  campaign-victory gates pass.
+
+  This is Attract visual-policy ownership only. It deliberately leaves its
+  existing cosmetic entropy, player/blade rendering, particle system, entity
+  renderers, input, audio, persistence, pixel parity, independent full
+  applications, and C27A completion open. The next presentation boundary is the
+  three entity renderers' direct process-config type dependency.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap
