@@ -126,10 +126,12 @@ function replayDetached(trace: LiveTrace) {
  */
 const KNOWN_DIVERGENCES: ReadonlyMap<string, string> = new Map([
   ["c27a.live-parity-trace.campaign",
-    "campaign opens on a chapter brief whose cinematic blocks combat; the gate " +
-    "is owned by the live presentation and is neither captured by State Forge " +
-    "nor reproducible by a detached world, so the detached run advances while " +
-    "the live run is still held"],
+    "campaign opens on a chapter brief whose cinematic blocks combat. The " +
+    "timeline is now portable gameplay (gameplay/runtime/cinematic-director), " +
+    "but the world does not yet own a director, State Forge does not capture " +
+    "its position, and campaign scripts still carry app callbacks a detached " +
+    "world cannot reconstruct, so the detached run advances while the live run " +
+    "is still held"],
 ]);
 
 const traces = readTraces();

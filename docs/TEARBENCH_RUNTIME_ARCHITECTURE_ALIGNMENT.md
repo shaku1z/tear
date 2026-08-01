@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first twenty-five executable C27A slices are complete:
+The first twenty-six executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -199,10 +199,16 @@ The first twenty-five executable C27A slices are complete:
   match the live authoritative hash on every executed tick. Outward
   effects remain recorded rather than performed.
 - Campaign and gauntlet then joined the matrix. Gauntlet matched;
-  campaign exposed the one open divergence: the cinematic combat gate is
+  campaign exposed the one open divergence: the cinematic combat gate was
   presentation-owned, so a campaign brief freezes the live world while a
   detached world advances. It is recorded as a named defect the
   comparison asserts still exists, not as an accepted tolerance.
+- The cinematic timeline has since moved into gameplay
+  (`gameplay/runtime/cinematic-director`), leaving only the canvas
+  renderer in presentation. Deciding whether combat may advance is
+  simulation. Closing the campaign divergence still needs the world to own
+  a director, State Forge to capture its position, and campaign scripts to
+  be constructible without app callbacks.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

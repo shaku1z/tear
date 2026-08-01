@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-07-30. This records the first twenty-five executable migration
+In progress as of 2026-07-30. This records the first twenty-six executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -468,6 +468,26 @@ of replay, headless execution, or learning portability.
   the scenario *still* diverges, so closing it forces the entry to be
   removed rather than left to rot. Eleven of the twelve captured scenarios
   match the live authoritative hash on every executed tick.
+
+- The cinematic timeline moved out of presentation.
+  `src/gameplay/runtime/cinematic-director.ts` now owns the beat machine:
+  reveal durations, auto-advance policy, the confirm/skip input latch, beat
+  advancement, and the `active`/`blocksCombat`/`playerMode` readouts the
+  combat phases gate on. `src/presentation/cinematics.ts` shrank to the
+  canvas renderer plus the historic `Cinematics.Director` surface, which now
+  extends the portable timeline and adds `draw`. The latch is still private;
+  the renderer reads it through two named accessors instead.
+
+  This is why the campaign divergence exists at all: whether combat may
+  advance is decided by that timeline, so it was simulation living in
+  presentation. The move does not close the divergence on its own — the
+  world still does not own a director, State Forge still does not capture
+  its position, and campaign scripts still carry app callbacks a detached
+  world cannot reconstruct — and the `KNOWN_DIVERGENCES` entry now states
+  exactly that. Behaviour is unchanged: the full unit suite, the production
+  build, the browser feature/boss matrices, all navigation, progression,
+  playground, terminal, and cinematic-preference journeys, the 12-scenario
+  capture, and the 37 comparison tests all pass.
 
 ## Remaining C27A work
 
