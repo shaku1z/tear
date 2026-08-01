@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first twenty-four executable C27A slices are complete:
+The first twenty-five executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -198,6 +198,11 @@ The first twenty-four executable C27A slices are complete:
   ordinary runs, all five bosses, a 600-tick run, and a terminal run —
   match the live authoritative hash on every executed tick. Outward
   effects remain recorded rather than performed.
+- Campaign and gauntlet then joined the matrix. Gauntlet matched;
+  campaign exposed the one open divergence: the cinematic combat gate is
+  presentation-owned, so a campaign brief freezes the live world while a
+  detached world advances. It is recorded as a named defect the
+  comparison asserts still exists, not as an accepted tolerance.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

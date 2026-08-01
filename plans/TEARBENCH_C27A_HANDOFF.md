@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** twenty-fourth C27A foundation slice complete (the whole boss
-roster is in the parity matrix; the Mirror combat read is now shared).
+**Status:** twenty-fifth C27A foundation slice complete (campaign and gauntlet
+captured; the cinematic combat gate is the one recorded open divergence).
 
 ## Resume protocol (mandatory)
 
@@ -174,6 +174,13 @@ Before coding, read this file, then:
   `gameplay/combat/mirror-combat-feedback.ts` now owns that advance and the
   shatter transition, and the harness uses the world's real mirror types
   instead of a placeholder. Ten scenarios now match on every tick.
+- The twenty-fifth slice added campaign and gauntlet scenarios. Gauntlet
+  matched on every tick. Campaign diverges at tick 1 because a chapter
+  brief's cinematic sets `blocksCombat` and freezes the live world, and
+  that gate lives in `src/presentation/cinematics.ts` — it is not captured
+  by State Forge and a detached world cannot reproduce it. The comparison
+  records it in `KNOWN_DIVERGENCES` with its cause and asserts the scenario
+  still diverges, so the entry cannot rot after a fix.
 
 ## Latest evidence
 
@@ -208,17 +215,21 @@ All of the following were run from this worktree after the parity-passing slice:
 
 ## Exact next C27A boundary
 
-Parity holds across ten scenarios: three ordinary runs, all five bosses, a
-600-tick run, and a terminal run. Continue in order: (1) make the outward
-effect surfaces comparable rather than merely recorded, so a divergence in
-what a world *emits* is caught as well as what it *is* — the detached
-harness records effect names today, and the live side does not export a
-comparable stream yet; (2) a win outcome, since only a death is covered;
-(3) campaign and gauntlet modes, and a run long enough to cross a wave
-boundary with rewards. Every divergence so far has been a defect in the
-composition or a restated rule in the harness — never a tolerance to widen,
-a scenario to shorten, or a field to drop from the projection. Keep it that
-way.
+Eleven of twelve captured scenarios match on every tick. Close the recorded
+campaign divergence first, because it is the only one: make the cinematic
+combat gate world state rather than presentation state. The gameplay
+contract is narrow — combat is blocked, the player is in a named mode, and
+the block ends on a timeline or a confirm — so extract that gate into
+gameplay, have `src/presentation/cinematics.ts` drive it, capture it in a
+State Forge component, and let a detached world restore and advance it.
+Then continue: (1) make the outward effect surfaces comparable rather than
+merely recorded, so a divergence in what a world *emits* is caught as well
+as what it *is*; (2) a win outcome, since only a death is covered; (3) a run
+long enough to cross a wave boundary with rewards, which needs an agent that
+can actually clear a wave. Every divergence is a defect to fix in the
+composition or a restated rule to delete from the harness — never a
+tolerance to widen, a scenario to shorten, or a field to drop from the
+projection.
 
 Preserve menu-time lazy construction and the one existing
 `TearSimulationRuntime`/scheduler, and extend the context only where real

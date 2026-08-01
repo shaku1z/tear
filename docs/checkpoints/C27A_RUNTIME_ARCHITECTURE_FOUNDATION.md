@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-07-30. This records the first twenty-four executable migration
+In progress as of 2026-07-30. This records the first twenty-five executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -451,6 +451,23 @@ of replay, headless execution, or learning portability.
   All ten scenarios — three ordinary runs, five bosses, a 600-tick run, and
   the terminal run — match the live authoritative hash on every executed
   tick.
+
+- Campaign and gauntlet joined the matrix, driving wave planners, stage
+  selection, and progression paths that endless never reaches. Gauntlet
+  matched on every tick. Campaign did not, and the cause is recorded rather
+  than worked around:
+
+  **Open divergence — the cinematic combat gate is not world state.** A
+  campaign run opens on a chapter brief whose cinematic sets
+  `blocksCombat`, so `runLiveOpeningPhase` returns blocked and the live
+  world is held still. The gate is owned by `src/presentation/cinematics.ts`
+  through the live host's `CINEMA.active && CINEMA.blocksCombat`; it is
+  neither captured by State Forge nor reproducible by a detached world, so
+  the detached run advances from tick 1 while the live run is frozen. The
+  comparison records this in `KNOWN_DIVERGENCES` with its cause and asserts
+  the scenario *still* diverges, so closing it forces the entry to be
+  removed rather than left to rot. Eleven of the twelve captured scenarios
+  match the live authoritative hash on every executed tick.
 
 ## Remaining C27A work
 

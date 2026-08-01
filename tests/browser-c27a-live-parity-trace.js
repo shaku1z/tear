@@ -59,6 +59,20 @@ const scenarios = [
     start: { mode: "bossonly", difficulty: "normal", weapon: "sword", boss },
     maxTicks: 300,
   })),
+  // Campaign and gauntlet drive different wave planners, stage selection, and
+  // progression paths than endless does.
+  scenarioFor({
+    id: "c27a.live-parity-trace.campaign",
+    seed: "c27a-parity-campaign",
+    start: { mode: "campaign", difficulty: "normal", weapon: "sword" },
+    maxTicks: 300,
+  }),
+  scenarioFor({
+    id: "c27a.live-parity-trace.gauntlet",
+    seed: "c27a-parity-gauntlet",
+    start: { mode: "gauntlet", difficulty: "normal", weapon: "spear" },
+    maxTicks: 300,
+  }),
   scenarioFor({
     id: "c27a.live-parity-trace.terminal",
     seed: "c27a-parity-terminal",

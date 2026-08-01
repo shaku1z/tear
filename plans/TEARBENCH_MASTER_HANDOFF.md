@@ -114,7 +114,7 @@ Named status:
 - **C25:** physical/black-box foundation verified; exit open.
 - **C26:** regression discovery passed `pnpm check:c26` on 2026-07-28.
 - **C27:** recorder/capsule foundation only; checkpoint open.
-- **C27A:** twenty-four shared-world architecture slices in this tree; blocking and incomplete.
+- **C27A:** twenty-five shared-world architecture slices in this tree; blocking and incomplete.
 - **C28-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -169,7 +169,7 @@ Do not claim TearBot automatically learns merely because scripted policies, trai
 
 Read [`TEARBENCH_C27A_HANDOFF.md`](TEARBENCH_C27A_HANDOFF.md) before editing.
 
-Twenty-four C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, focused tests, and physical browser diagnostics.
+Twenty-five C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, focused tests, and physical browser diagnostics.
 
 Important files:
 
@@ -188,7 +188,7 @@ Important files:
 
 ### Exact next slice
 
-Live-versus-detached parity holds on a ten-scenario matrix: three ordinary runs, all five bosses, a 600-tick run, and a 903-tick terminal run, with every authoritative hash equal. Continue: comparable outward effects, then a win outcome, then campaign/gauntlet modes and a wave-boundary run. The boss-roster slice found that the Echo's per-tick combat read lived in the live adapter, leaving the boss inert anywhere else — the fourth product-level fix this matrix has produced.
+Eleven of twelve captured parity scenarios match the live authoritative hash on every executed tick: three ordinary runs, all five bosses, gauntlet, a 600-tick run, and a 903-tick terminal run. The twelfth, campaign, is a recorded open divergence — the cinematic combat gate is presentation-owned, so a chapter brief freezes the live world while a detached world advances. Close it by making that gate world state (extract it into gameplay, drive it from presentation, capture it in a State Forge component), then continue with comparable outward effects, a win outcome, and a wave-boundary run.
 
 Preserve:
 
