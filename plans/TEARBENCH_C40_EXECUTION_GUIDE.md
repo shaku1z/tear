@@ -22,9 +22,8 @@ nothing calls?**
 > checkpoint demands — or an explicit, authorized `deferred`/`rejected`
 > disposition with a reason.
 
-Anything short of that is not C40. As of this writing the registry reports
-**6,470 missing / 179 contract / 161 prototype / 58 integrated / 17 visible /
-0 certified**. `certified` is the number that matters and it is zero.
+Anything short of that is not C40. Progress is measured by checkpoint exit gates
+in the completion plan and the §8 checklists — never by registry counts.
 
 ---
 
@@ -111,6 +110,8 @@ These have all been attempted on this program before. Each is a lie in code.
 - Claiming a checkpoint from its `:foundation` gate.
 - Deleting or silently rescoping a requirement. Use `deferred`/`rejected` with
   a reason instead.
+- Citing registry counts as progress or as a remaining-work estimate.
+- Mapping registry fragments to existing code merely to move a counter.
 
 ### 3.4 Divergence protocol
 
@@ -127,6 +128,24 @@ When a comparison fails: **the world is wrong until proven otherwise.**
 This protocol has already produced five product-level fixes: `planBossPlacement`,
 `beginBossEncounter`, the State Forge `$map` codec, `mirror-combat-feedback`,
 and the cinematic timeline move. That is the loop working.
+
+### 3.5 Registry counts are not progress
+
+`docs/tearbench-ghost3-requirements.json` is a non-lossy traceability index,
+not a work breakdown: it keeps design intent from being silently dropped, and
+`pnpm requirements:check` must continue to report `unmappedSourceLines: 0`.
+The generator split the 13,725-line source into 8,691 sentence/clause atoms
+from 6,933 source occurrences; 5,457 atoms (63%) contain three words or fewer,
+1,200 are marked duplicates, and 1,806 are non-normative. The C28 entries
+`repair` and `quarantine`, for example, are fragments of the same original
+bullet list as `IndexedDB storage`, `Vault health`, `crash journal`, and
+`export` — not independent deliverables.
+
+Therefore counts such as `missing`, `integrated`, or `certified` are neither a
+progress meter nor a forecast. A checkpoint clears only when its completion-plan
+exit gate and checklist evidence pass. When that happens, many related fragments
+may legitimately move together because they were pieces of the same paragraph;
+that is traceability, not incremental implementation progress.
 
 ---
 
@@ -177,6 +196,9 @@ REMAINING TO C40:    <checkpoints not started>
 NEXT SLICE:          <one sentence, actionable without this conversation>
 ```
 
+Every line must cite checkpoint checklist items and gate results, never registry
+counts.
+
 If `DONE THIS STEP` is empty for two consecutive pauses, stop and escalate to
 the user — the approach is wrong, not the effort.
 
@@ -186,7 +208,7 @@ the user — the approach is wrong, not the effort.
 
 | Scope | Command | What it proves |
 |---|---|---|
-| Requirements | `pnpm requirements:check` | registry intact, 0 unmapped source lines |
+| Requirements | `pnpm requirements:check` | nothing from the source was dropped — a guard, not a progress measure |
 | Boundaries | `pnpm check:architecture` | dependency direction, planted violations rejected |
 | Unit suite | `pnpm test` | whole-repo regression |
 | State Forge | `pnpm check:c23` | codecs, restore, Studio, exit matrix |
