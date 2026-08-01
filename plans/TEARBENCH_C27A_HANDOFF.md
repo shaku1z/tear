@@ -5,8 +5,9 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** twenty-ninth C27A foundation slice complete (campaign chapter
-bindings now reconstruct across worlds); checkpoint remains open and blocking.
+**Status:** thirty-third C27A foundation slice implemented (exact native-event
+parity); checkpoint remains open and blocking pending wave/victory/outward and
+full-world portability exits.
 
 ## Resume protocol (mandatory)
 
@@ -261,10 +262,24 @@ Before coding, read this file, then:
   not yet outward parity: detached wave/content callbacks still record strings
   rather than publish comparable native facts, and arbitrary mid-run transient
   restoration remains a later portable-restorer boundary.
+- The thirty-third slice gives live and detached hosts one portable mapping
+  for spawn, wave, and terminal run facts. Detached death reaches the real
+  gameplay outcome controller. The post-origin projection preserves every
+  payload field and compares equal across all 12 traces, including exact
+  terminal actor/session identity and tick-903 run time. This work also fixed
+  a real live determinism defect by resetting the combat identity namespace
+  during each new world initialization. It does not claim
+  presentation/audio/pixel parity, a wave transition, or victory coverage.
 
 ## Latest evidence
 
 All of the following were run from this worktree after the parity-passing slice:
+
+- `pnpm requirements:check` and `pnpm check:c27a:foundation` passed after
+  slice 33: zero unmapped source lines; typecheck, lint, planted architecture
+  rules, 31 focused files / 108 tests, standalone rebuild, physical-input
+  browser proof, fresh 12-scenario live capture, and all 37 exact
+  state/native-stream parity tests.
 
 - `pnpm check:c27a:foundation` passed after slice 32: typecheck, lint,
   architecture, 31 test files / 104 tests, standalone test build, the physical
@@ -315,24 +330,22 @@ All of the following were run from this worktree after the parity-passing slice:
   rerun.
 - `pnpm test` passed: 224 test files / 903 tests.
 - `pnpm requirements:check` and `git diff --check` passed.
-- `src/app/live-game-runtime.ts` measures 698 physical lines (including the final line boundary).
+- `src/app/live-game-runtime.ts` measures 697 physical lines.
 - The standalone build emits the existing non-fatal >500 kB chunk warning.
   It is not a passed bundle-budget/release claim.
 - Full `pnpm check` has not been run for a release claim.
 
 ## Exact next C27A boundary
 
-All twelve captured fixed-tick scenarios now match on every tick. The world owns the
+All twelve captured fixed-tick scenarios now match on every tick and every
+post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
 explicit gameplay ports; and State Forge transactionally restores their full
-behavior-bearing position across worlds. The next boundary is comparable
-outward-effect streams plus a win outcome and a wave-boundary crossing. The
-semantic adapter and combat assembly are now shared by the live and detached
-parity consumers, with captured identity restored. The detached wave/content
-adapters still need to publish real facts through that one bus and the browser
-artifact must expose the corresponding native stream before equality can be
-asserted. Wire and compare those next; do not synthesize a
-`run.completed` fact from the detached harness's current `winRun` note. Then
+behavior-bearing position across worlds. The next boundary is a natural
+wave-boundary crossing and real campaign victory, followed by comparable
+presentation/audio/effect streams. Do not synthesize a `run.completed` fact
+from a detached harness note; route victory through the same production
+outcome controller, as defeat now does. Then
 continue extracting the closure-owned run/world construction. Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
 from the harness — never a tolerance to widen, a scenario to shorten, or a
@@ -354,9 +367,9 @@ composition with parity evidence.
 - Do not discard unrelated dirty work. In particular,
   `plans/EXTREME_RENDERING_IMPLEMENTATION_PLAN.md` was already untracked and
   is outside this C27A handoff scope.
-- Slice 29 is the last pushed green boundary; slice 30 is the current semantic
-  event-adapter boundary on the active `codex/`
-  branch. Inspect the actual branch and `git status --short` before later
-  staging; stage only intentional TearBench work.
+- Slice 32 is the last pushed green boundary; slice 33 is the current exact
+  native-event parity boundary on the active `codex/` branch. Inspect the
+  actual branch and `git status --short` before later staging; stage only
+  intentional TearBench work.
 - Do not claim C27, C27A, replay, headless, learning, or release completion
   from the foundation gates listed above.

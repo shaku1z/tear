@@ -53,6 +53,7 @@ export interface LiveRunOrchestrationOptions {
   readonly resetTransientWorld: () => void;
   readonly finishWorldReset: () => void;
   readonly resetAuthoritativeClocks: () => void;
+  readonly resetCombatIdentity: () => void;
   readonly createRunSeed?: () => number;
   readonly authoritativeResult: () => Readonly<{ tick: number; stateHash: string }> | null;
   readonly setScreen: (screen: LegacyAppScreen, context?: LegacyTransitionContext) => void;
@@ -105,6 +106,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     installRun: (session) => { options.state.setRun(session); },
     world: { resetTransient: options.resetTransientWorld, finishReset: options.finishWorldReset },
     resetAuthoritativeClocks: options.resetAuthoritativeClocks,
+    resetCombatIdentity: options.resetCombatIdentity,
     ...(options.createRunSeed === undefined ? {} : { createRunSeed: options.createRunSeed }),
     loadStage: options.controllers.api.loadStage, stage, story, lifecycle: options.lifecycle,
     install: (controller) => { options.controllers.installRunStart(controller); },

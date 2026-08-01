@@ -293,7 +293,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies): void {
     resetTransientWorld: () => { impact.hitStop = 0; impact.shake = 0; },
     finishWorldReset: () => { transient.resetFeel(); impact.slowMotion = 0;
       openingCarry.dashGhostTime = 0; openingCarry.throwCooldown = 0; },
-    resetAuthoritativeClocks: () => { simulationRuntime.reset(0); },
+    resetAuthoritativeClocks: () => { simulationRuntime.reset(0); }, resetCombatIdentity: () => { combatRuntime.resetIdentity(); },
     createRunSeed: () => {
       const seed = tearBenchRunSeed;
       tearBenchRunSeed = null;

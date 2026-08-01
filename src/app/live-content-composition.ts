@@ -1,6 +1,7 @@
 import { BossArenaRules } from "../gameplay/training/arena-rules";
 import { createBossArenaRuntimeBridge } from "../gameplay/training/arena-runtime-bridge";
 import { planBossPlacement } from "../gameplay/run/boss-placement";
+import { createTearSpawnFactPublisher } from "../gameplay/runtime/gameplay-event-publishers";
 import { createLiveContentHost } from "./live-content-host";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameEnemy, GamePlayer, GameRun } from "./game-runtime-state";
@@ -32,6 +33,7 @@ export interface LiveContentCompositionOptions {
 /** Owns boss-arena effects and enemy construction as one content composition boundary. */
 export function createLiveContentComposition(options: LiveContentCompositionOptions) {
   const d = options.dependencies;
+  const publishSpawn = createTearSpawnFactPublisher(d.GAMEPLAY_EVENTS, options.actorId);
   const arenaRules = new BossArenaRules(d.CONFIG.bossArena, d.CONFIG.colors);
   const arena = createBossArenaRuntimeBridge({
     rules: arenaRules,
@@ -85,12 +87,7 @@ export function createLiveContentComposition(options: LiveContentCompositionOpti
         d.FX.burst(enemy.x, enemy.y, 0, -1, 10, enemy.color);
       }
     },
-    recordSpawn: (enemy, role, detail) => {
-      d.GAMEPLAY_EVENTS.emit({
-        kind: "spawn", actorId: options.actorId(enemy), actorKind: role, x: enemy.x, y: enemy.y,
-        variantName: detail.vn, bossId: detail.b,
-      });
-    },
+    recordSpawn: publishSpawn,
     install: (enemy) => { options.enemies().push(enemy); },
     startClipper: () => { d.Clipper?.start(); },
     bossIntroDuration: d.CONFIG.bossTheater.introDur,

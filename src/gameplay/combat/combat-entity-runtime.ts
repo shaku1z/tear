@@ -76,13 +76,22 @@ function isDead(entity: LiveCombatEntity): boolean { return entity.dead; }
 
 export class CombatEntityRuntime {
   readonly #hooks: CombatEntityRuntimeHooks;
-  readonly #ids = new WeakMap<object, string>();
+  #ids = new WeakMap<object, string>();
   readonly #claimedIds = new Set<string>();
   #nextEntityId = 1; #nextWallSequence = 1; #nextSlowZoneSequence = 1;
 
   constructor(hooks: CombatEntityRuntimeHooks) { this.#hooks = hooks; }
   get nextSlowZoneSequence(): number { return this.#nextSlowZoneSequence; }
   set nextSlowZoneSequence(value: number) { this.#nextSlowZoneSequence = value; }
+
+  /** Starts a new run with a fresh deterministic actor-identity namespace. */
+  resetIdentity(): void {
+    this.#ids = new WeakMap<object, string>();
+    this.#claimedIds.clear();
+    this.#nextEntityId = 1;
+    this.#nextWallSequence = 1;
+    this.#nextSlowZoneSequence = 1;
+  }
 
   captureIdentityState(): CombatEntityIdentityState {
     return Object.freeze({

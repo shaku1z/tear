@@ -156,8 +156,9 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
           });
           for (const event of transition.events) events.push({ tick: event.tick, type: event.type });
         }
+        const engineEvents = environment.engineEventProjection();
         return {
-          origin, hashes, events, checkpoints, terminated,
+          origin, hashes, events, engineEvents, checkpoints, terminated,
           rng: environment.rng(),
           finalObservation: environment.observe(),
         };
@@ -191,6 +192,14 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
     // deterministic before any detached comparison is meaningful.
     assert.deepEqual(second.hashes, first.hashes, `${where}: two live runs must produce one hash sequence`);
     assert.deepEqual(second.events, first.events, `${where}: two live runs must emit one event sequence`);
+    assert.deepEqual(second.engineEvents, first.engineEvents,
+      `${where}: two live runs must emit one native gameplay-event sequence`);
+    assert.deepEqual(first.engineEvents.map((event) => event.sequence),
+      first.engineEvents.map((_, index) => index),
+      `${where}: native gameplay events must use one contiguous local order`);
+    assert.ok(first.engineEvents.every((event, index) => index === 0 ||
+      event.tick >= first.engineEvents[index - 1].tick),
+    `${where}: native gameplay event ticks must not go backwards`);
     assert.ok(first.checkpoints.length >= 3, `${where}: the live trace must carry diagnostic state checkpoints`);
     assert.deepEqual(second.rng, first.rng, `${where}: two live runs must end on one RNG state`);
     assert.ok(first.origin && typeof first.origin === "object", `${where}: the live trace must carry an origin snapshot`);
@@ -198,6 +207,11 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
     const target = artifactPath(scenario);
     fs.writeFileSync(target, `${JSON.stringify({
       scenario, schedule, origin: first.origin, hashes: first.hashes, events: first.events,
+      engineEventProjection: {
+        format: "tear-semantic-engine-events", schemaVersion: 1,
+        boundary: { kind: "post-origin-snapshot", originTick: first.origin.tick },
+        events: first.engineEvents,
+      },
       terminated: first.terminated,
       checkpoints: first.checkpoints,
       rng: first.rng, capturedAt: new Date().toISOString(),

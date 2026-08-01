@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress as of 2026-08-01. This records the first twenty-nine executable migration
+In progress as of 2026-08-01. This records the first thirty-three executable migration
 slices. It is not a C27A completion claim and does not yet make replay or
 headless Tear gameplay portable.
 
@@ -573,15 +573,30 @@ of replay, headless execution, or learning portability.
   The post-slice `check:c27a:foundation` gate passed 31 files / 104 tests,
   rebuilt the standalone app, regenerated all 12 traces, and passed all 37
   shared-core detached comparisons.
+- The thirty-third slice closes native gameplay-fact parity for the current
+  12-scenario matrix. Live and detached content use the same portable spawn,
+  wave, and terminal-run publishers; detached death resolution reaches the
+  real `LiveRunOutcomeController`, not a synthetic test emission. A dedicated
+  post-origin projection preserves every semantic field, including exact
+  actor/session IDs, coordinates, markers, terminal run time, within-tick
+  phase, and bus arrival order, while excluding only host-local causal record
+  wrappers. Every projected record now equals live exactly alongside every
+  authoritative state hash. The comparison exposed and fixed a production
+  defect in which the live combat identity allocator survived new-run world
+  initialization. Focused tests and the architecture gate protect the reset
+  and the DOM/app-free publisher boundary. This closes the current native
+  semantic stream item; presentation/audio/pixel streams, a natural wave
+  boundary, and a real victory remain open.
+  The post-slice `requirements:check` and `check:c27a:foundation` gates passed:
+  31 focused files / 108 tests, the physical-input browser path, a fresh
+  12-scenario live capture, and all 37 exact state/native-stream comparisons.
 
 ## Remaining C27A work
 
-1. Wire the shared detached typed event bus to the real wave/spawn publishers
-   using the restored production actor identity, expose the live native stream,
-   and compare complete ordered records with stable
-   production actor IDs, and compare complete ordered semantic streams rather
-   than merely recording harness strings. Then add
-   a win outcome plus a wave-boundary crossing to the live↔detached matrix.
+1. Add a natural wave-boundary crossing and a real campaign victory to the
+   live↔detached matrix, then compare their full native and outward
+   presentation/audio/effect streams. The current 12-scenario matrix already
+   compares every post-origin native semantic record exactly.
 2. Move the current live adapter's configuration, RNG, effects, clocks,
    Mirror, and boss feedback implementations inward behind the established
    world context, then extract the closure-owned

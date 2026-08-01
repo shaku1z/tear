@@ -5,13 +5,15 @@ import { describe, expect, it } from "vitest";
 import { EnvelopeSequencer, type CommandEnvelope } from "../../src/domain/envelopes";
 import type { GameAction } from "../../src/input/game-action";
 import { projectCanonicalGameplayState } from "../../src/gameplay/runtime/canonical-state";
-import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
+import { TearGameplayEventBus, type TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
+import { projectGameplayEventForParity, type TearSemanticEngineEventV1 } from
+  "../../src/tearbench/gameplay-causal-events";
 import { applyTearCodecConfiguration, hydrateTearCodecWorld, type TearCodecValue } from "../../src/tearbench";
 import { CONFIG } from "../../src/config/game-config";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { createConfigRestorer } from "../../src/app/runtime-initialization";
 import { createDetachedCombatSimulation, createDetachedWaveRuntime, createDetachedWorld,
-  restoreDetachedChapterBinding } from "./detached-world-harness";
+  createDetachedRunOutcomeController, restoreDetachedChapterBinding } from "./detached-world-harness";
 
 const ARTIFACT_DIR = resolve("artifacts/tearbench/c27a");
 
@@ -29,6 +31,12 @@ interface LiveTrace {
     readonly state: Record<string, unknown> }[];
   readonly checkpoints: readonly { readonly tick: number; readonly state: Record<string, TearCodecValue>;
     readonly canonical: Record<string, unknown> }[];
+  readonly engineEventProjection: Readonly<{
+    format: "tear-semantic-engine-events";
+    schemaVersion: 1;
+    boundary: Readonly<{ kind: "post-origin-snapshot"; originTick: number }>;
+    events: readonly TearSemanticEngineEventV1[];
+  }>;
 }
 
 /** Every captured scenario, so the matrix is compared rather than one case. */
@@ -83,11 +91,15 @@ function replayDetached(trace: LiveTrace) {
   if (rng !== undefined) world.context.services.random.restore(rng as never);
   detached.stage.index = staged.stageIndex;
   const platforms = staged.platforms.length > 0 ? staged.platforms : undefined;
-  const waves = createDetachedWaveRuntime(detached, platforms);
   const gameplayEvents = new TearGameplayEventBus(() => trace.origin.tick);
+  const nativeEvents: TearGameplayEvent[] = [];
+  gameplayEvents.subscribe((event) => nativeEvents.push(event));
+  const outcome = createDetachedRunOutcomeController(detached, gameplayEvents);
+  let updateWave: (seconds: number) => void = () => undefined;
   const core = createDetachedCombatSimulation(detached, {
     ...(platforms === undefined ? {} : { platforms }),
-    updateWave: waves.update,
+    updateWave: (seconds) => { updateWave(seconds); },
+    endRun: () => { outcome.controller.defeat(); },
     gameplayEvents,
     // Exactly the live authoritative projection, so the hashes are comparable.
     snapshot: (tick, authoritativeInput) => projectCanonicalGameplayState(
@@ -104,6 +116,11 @@ function replayDetached(trace: LiveTrace) {
       }),
     ),
   });
+  const waves = createDetachedWaveRuntime(detached, platforms, {
+    events: gameplayEvents,
+    actorId: (enemy) => core.combatEntityRuntime.id(enemy, "enemy"),
+  });
+  updateWave = waves.update;
   const runtime = core.simulationRuntime;
   gameplayEvents.setTickSource(() => runtime.scheduler.tick);
   core.combatEntityRuntime.restoreIdentityState(staged.identityState as never);
@@ -124,7 +141,8 @@ function replayDetached(trace: LiveTrace) {
     states.push(result.state);
   }
   return { detached, hashes, states, outward, staged,
-    originIdentity, finalIdentity: core.combatEntityRuntime.captureIdentityState(), gameplayEvents };
+    originIdentity, finalIdentity: core.combatEntityRuntime.captureIdentityState(), gameplayEvents,
+    engineEvents: nativeEvents.map(projectGameplayEventForParity) };
 }
 
 const traces = readTraces();
@@ -136,6 +154,13 @@ describe.skipIf(traces.length === 0)("detached world against the live trace", ()
     // A terminal run is the only scenario that exercises death resolution.
     expect(traces.some((entry) => entry.terminated === true)).toBe(true);
     expect(new Set(traces.map((entry) => entry.scenario.seed)).size).toBe(traces.length);
+    for (const entry of traces) {
+      expect(entry.engineEventProjection).toBeDefined();
+      expect(entry.engineEventProjection.format).toBe("tear-semantic-engine-events");
+      expect(entry.engineEventProjection.schemaVersion).toBe(1);
+      expect(entry.engineEventProjection.boundary.kind).toBe("post-origin-snapshot");
+      expect(entry.engineEventProjection.boundary.originTick).toBe(entry.origin.tick);
+    }
   });
 
   for (const live of traces) {
@@ -168,7 +193,7 @@ describe.skipIf(traces.length === 0)("detached world against the live trace", ()
     });
 
     it(`matches the live authoritative hash on every tick (${label})`, () => {
-      const { hashes, states, detached } = replayDetached(live);
+      const { hashes, states, detached, engineEvents } = replayDetached(live);
       let matched = 0;
       for (const [index, entry] of hashes.entries()) {
         const expected = live.hashes[index];
@@ -216,6 +241,8 @@ describe.skipIf(traces.length === 0)("detached world against the live trace", ()
       const detachedPlayer = detached.world.state.player() as never as { x: number };
       expect(livePlayer?.x).toBeTypeOf("number");
       expect(detachedPlayer.x).toBe(livePlayer?.x);
+
+      expect(engineEvents).toEqual(live.engineEventProjection.events);
     });
   }
 });

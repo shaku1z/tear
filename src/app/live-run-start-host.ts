@@ -61,6 +61,7 @@ interface RunStartHostContext {
   readonly world: MutableWorldState;
   readonly services: WorldServices;
   readonly resetAuthoritativeClocks: () => void;
+  readonly resetCombatIdentity: () => void;
   readonly createRunSeed?: () => number;
   readonly loadStage: (index: number) => void;
   readonly stage: StagePort;
@@ -115,6 +116,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
     },
     initializeWorld: (_mode, difficulty) => {
       context.prepareWorld();
+      context.resetCombatIdentity();
       context.services.mirror.reset();
       context.services.bossFeedback.clear();
       context.services.configuration.resetToBase();

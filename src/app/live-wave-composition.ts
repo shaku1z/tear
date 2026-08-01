@@ -2,6 +2,7 @@ import type { BossId } from "../gameplay/run/content-director";
 import type { PreparedVictory } from "../gameplay/run/outcome-planner";
 import type { RunLifecycleController } from "../gameplay/run/lifecycle";
 import { eligibleTierChoices } from "../gameplay/run/reward-selection";
+import { createTearWaveFactPublisher } from "../gameplay/runtime/gameplay-event-publishers";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameEnemy, GamePlayer, GameRun } from "./game-runtime-state";
 import type { createLiveCampaignHost } from "./live-campaign-host";
@@ -52,6 +53,7 @@ export interface LiveWaveCompositionOptions {
 /** Composes wave planning, presentation intents, rewards, and clear progression. */
 export function createLiveWaveComposition(options: LiveWaveCompositionOptions): void {
   const d = options.dependencies;
+  const publishWave = createTearWaveFactPublisher(d.GAMEPLAY_EVENTS);
   createLiveWaveHost({
     run: options.run,
     tuning: () => d.CONFIG.run,
@@ -72,7 +74,7 @@ export function createLiveWaveComposition(options: LiveWaveCompositionOptions): 
       loadStage: options.loadStage,
       setStageBanner: (name, duration) => { options.stage.setBanner(name, duration); },
       beginCampaignChapter: options.beginCampaignChapter,
-      recordWave: (wave, marker) => { d.GAMEPLAY_EVENTS.emit({ kind: "wave", wave, event: marker }); },
+      recordWave: publishWave,
       snapshotReplay: (slot) => { d.GHOST.snapshot(options.canvas, slot); },
       prepareWave: (wave, boss, deferred) => { options.lifecycle.prepareWave(wave, boss, deferred); },
       activateWave: () => { options.lifecycle.activateWave(); },
@@ -82,7 +84,7 @@ export function createLiveWaveComposition(options: LiveWaveCompositionOptions): 
     clearIntents: {
       clearWave: () => { options.lifecycle.clearWave(); },
       bloom: (color, strength, duration) => { d.Backdrop.bloom(color, strength, duration); },
-      recordWave: (wave, marker) => { d.GAMEPLAY_EVENTS.emit({ kind: "wave", wave, event: marker }); },
+      recordWave: publishWave,
       profileMax: (stat, value) => { d.PROFILE.maxStat(stat, value); },
       profileAdd: (stat, value) => { d.PROFILE.addStat(stat, value); },
       dailyBump: (challenge, value, operation) => { d.DAILY.bump(challenge, value, operation); },

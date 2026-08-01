@@ -7,6 +7,7 @@ import type { LiveRunControllerRegistry } from "./live-run-controller-api";
 import { createLiveRunOutcomeHost } from "./live-run-outcome-host";
 import type { RecordingSummary } from "../gameplay/run/outcome-planner";
 import type { StoredRecordingSummary } from "../gameplay/run/live-recording-controller";
+import { createTearTerminalRunFactPublisher } from "../gameplay/runtime/gameplay-event-publishers";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 
@@ -50,6 +51,9 @@ export interface LiveOutcomeCompositionOptions {
 export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOptions): void {
   const d = options.dependencies;
   const active = options.run;
+  const publishTerminal = createTearTerminalRunFactPublisher(
+    d.GAMEPLAY_EVENTS, () => options.lifecycle.snapshot().sessionId,
+  );
   createLiveRunOutcomeHost<ReplayPacket>({
     snapshot: () => snapshotOutcomeRun(active()),
     displayName: () => d.Cloud.displayName(),
@@ -78,15 +82,7 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
       try { options.lifecycle.terminate(outcome); }
       finally { d.Input.stopSemanticRecording(); }
     },
-    publishTerminal: (outcome, run) => {
-      const runId = options.lifecycle.snapshot().sessionId;
-      if (runId === null) return;
-      d.GAMEPLAY_EVENTS.emit({
-        kind: "run", transition: outcome === "victory" ? "completed" : "defeated", runId,
-        mode: run.mode, difficulty: run.diff, weaponId: run.weaponId,
-        wave: run.wave, score: run.score, runTimeSeconds: run.runTime,
-      });
-    },
+    publishTerminal,
     saveBest: (run) => options.saveBest(run.mode, run.diff, run.wave, run.score, run.runTime),
     best: (run) => options.getBest(run.mode, run.diff),
     awardCoins: options.awardCoins,

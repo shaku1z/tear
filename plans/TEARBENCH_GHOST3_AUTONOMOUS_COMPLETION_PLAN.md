@@ -1,17 +1,17 @@
 # TearBench, TearBot, State Forge, and Ghost 3.0 Autonomous Completion Plan
 
-**Status:** In progress; paused at a deliberate handoff boundary during C27/C27A
+**Status:** In progress during C27/C27A
 **Created:** 2026-07-23
 **Source authority:** `TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN(3).md`, version 0.6, SHA-256 `007BE22193F5369B8450AAB33B95C6D3080176E6B2F91A1D504B545CA7FC7DDE`
 **Supersedes for completion claims:** `plans/TEARBENCH_GHOST3_ACTION_PLAN.md`
 **Purpose:** Convert every remaining part of the original vision into executable work, with gates that require real integration and user-visible outcomes.
 **Current progress:** C21-C24 and C26 passed. C25's implementation foundation is
 verified, but its Class C exit gate remains open. C27 implementation is active;
-C27A is now a blocking runtime-architecture correction before replay-world,
-headless, or learning completion claims. Its seven-slice foundation includes
-shared live-world entity construction, a generic per-world state/service
-context, and combat collection ownership through that context, but not a
-portable full-world runtime.
+C27A is a blocking runtime-architecture correction before replay-world,
+headless, or learning completion claims. Thirty-three executable slices now
+include shared world construction, exact 12-scenario state/native-event parity,
+and one portable combat/outcome path, but not yet a portable full-world runtime,
+natural wave/victory coverage, or complete outward-effect parity.
 
 ### Execution record through C24
 

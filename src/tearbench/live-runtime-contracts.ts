@@ -2,6 +2,7 @@ import type { CommandEnvelope } from "../domain/envelopes";
 import type { ScreenAction } from "../domain/screen-actions";
 import type { GameAction } from "../input/game-action";
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
+import type { TearSemanticEngineEventV1 } from "./gameplay-causal-events";
 import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
 import type { TearCausalEventV1, TearObservationV1, TearScenarioV1 } from "./contracts";
 import type { TearSnapshotV1, TearStateClass } from "./contracts";
@@ -78,6 +79,8 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
    * already hashed, and is never an alternative source of truth for it.
    */
   canonicalState(): unknown;
+  /** Native-only, post-origin semantic facts with a host-independent local ordering. */
+  engineEventProjection(): readonly TearSemanticEngineEventV1[];
   setTimeEffectsForTest(effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>): void;
   captureSnapshot(id: string, stateClass?: TearStateClass): TearSnapshotV1;
   restoreSnapshot(snapshot: TearSnapshotV1): TearLiveRestoreResult;

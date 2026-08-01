@@ -119,7 +119,7 @@ Named status:
 - **C25:** physical/black-box foundation verified; exit open.
 - **C26:** regression discovery passed `pnpm check:c26` on 2026-07-28.
 - **C27:** recorder/capsule foundation only; checkpoint open.
-- **C27A:** twenty-nine shared-world architecture slices in this tree; blocking and incomplete.
+- **C27A:** thirty-three shared-world architecture slices in this tree; blocking and incomplete.
 - **C28-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -135,7 +135,7 @@ Current engineering capabilities, with the qualifications above:
 - Physical browser harness foundations and diagnostics; the full C25 exit is pending.
 - C26 regression investigation, minimization, bisect, and graveyard workflows.
 - C27 V3 recording/capsule foundations: manifests, chunks, journals, recovery, budgets, interruption/terminal tests, and browser proof in the tested scope.
-- C27A foundations: DOM-free world context, live adapter, shared entity construction, combat collections owned through `LiveGameHostState`, complete per-world transient opening/impact records, detached hydration/runtime, reconstructible campaign chapter bindings with 12/12 exact fixed-tick parity, one native-gameplay-fact causal adapter shared by Ghost V3 and TearBench, and one gameplay-only fixed combat assembly now consumed by both the live browser and detached parity hosts with captured identity restoration.
+- C27A foundations: DOM-free world context, shared construction and combat assembly, reconstructible campaign bindings, and 12/12 exact fixed-tick plus post-origin native-event parity. Live and detached use shared spawn/wave/terminal publishers and the gameplay outcome controller; the terminal trace preserves exact actor/session identity and run time.
 
 Current `scripts/tearbench.mjs` command families:
 
@@ -174,7 +174,7 @@ Do not claim TearBot automatically learns merely because scripted policies, trai
 
 Read [`TEARBENCH_C27A_HANDOFF.md`](TEARBENCH_C27A_HANDOFF.md) before editing.
 
-Twenty-nine C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, its live adapter, combat collection ownership through `LiveGameHostState`, complete per-world transient opening/impact/frame-feel records, detached hydration/runtime foundations, world-owned cinema, versioned cinematic State Forge capture/restore, data-only campaign binding reconstruction, focused tests, and physical browser diagnostics.
+Thirty-three C27A slices currently establish entity-construction separation, per-world entity-factory construction, generic per-world DOM-free context, shared combat/outcome execution, exact state/native-event parity, world-owned cinema, versioned State Forge restoration, data-only campaign reconstruction, focused tests, and physical browser diagnostics.
 
 Important files:
 
@@ -193,7 +193,7 @@ Important files:
 
 ### Exact next slice
 
-All twelve captured fixed-tick parity scenarios match the live authoritative hash on every executed tick. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding lets State Forge and detached worlds reconstruct and advance an active brief through explicit gameplay ports. Legacy active chapters without that binding fail closed. Ghost V3 and TearBench share the semantic native-event adapter; live and detached parity now use the same portable combat assembly, scheduler shape, event-bus seam, and restored actor identity. Next wire real detached wave/spawn facts and compare the ordered native streams before adding a win outcome and wave-boundary run.
+All twelve captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome controller, scheduler shape, event bus, and restored actor identity. Next add a natural wave-boundary run and real campaign victory, then close outward presentation/audio/effect parity.
 
 Preserve:
 

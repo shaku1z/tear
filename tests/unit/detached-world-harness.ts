@@ -17,6 +17,9 @@ import { updateMirrorCombat } from "../../src/gameplay/combat/mirror-combat-feed
 import { cosmeticRandom } from "../../src/presentation/cosmetic-random";
 import { PRESETS, applyPreset, rollAffixes } from "../../src/gameplay/affixes";
 import { createLiveContentRuntime } from "../../src/gameplay/run/live-content-runtime";
+import { LiveRunOutcomeController, type LiveOutcomeControllerPort } from
+  "../../src/gameplay/run/live-outcome-controller";
+import { snapshotOutcomeRun, type PreparedVictory } from "../../src/gameplay/run/outcome-planner";
 import { BOSS_ROSTER } from "../../src/gameplay/run/content-director";
 import { createLiveWaveHost } from "../../src/app/live-wave-host";
 import { STAGES, stageAt } from "../../src/gameplay/stages";
@@ -36,6 +39,8 @@ import { createTearWorldTransientState } from "../../src/gameplay/runtime/tear-w
 import { createTearCombatSimulation } from "../../src/gameplay/runtime/tear-combat-simulation";
 import type { AuthoritativeInputState } from "../../src/gameplay/runtime/authoritative-input";
 import type { TearGameplayEventPort } from "../../src/gameplay/runtime/gameplay-events";
+import { createTearSpawnFactPublisher, createTearTerminalRunFactPublisher, createTearWaveFactPublisher } from
+  "../../src/gameplay/runtime/gameplay-event-publishers";
 import { createParticleSystem } from "../../src/presentation/particles";
 import { createRunRandom } from "../../src/simulation/run-random";
 import type { RunLifecycleSnapshot } from "../../src/gameplay/run/lifecycle";
@@ -182,6 +187,8 @@ export interface DetachedCombatPhaseOptions {
   readonly updateWave?: (dt: number) => void;
   /** Shared-core composition defers identity-runtime construction to the core factory. */
   readonly deferCombatRuntime?: boolean;
+  /** Portable outcome endpoint used when death resolution terminates a run. */
+  readonly endRun?: () => void;
 }
 
 export interface DetachedCombatSimulationOptions<State> extends DetachedCombatPhaseOptions {
@@ -351,7 +358,8 @@ export function createDetachedCombatPhases(
     updateTrick: () => undefined, achievementTick: () => undefined, updateTutorial: () => undefined,
     updatePlayground: () => undefined, overlap: aabbOverlap,
     onShieldAbsorb: note("onShieldAbsorb"), loseStyle: note("loseStyle"), buzz: () => undefined,
-    requestAdContinue: note("requestAdContinue"), adAvailable: () => false, endRun: note("endRun"),
+    requestAdContinue: note("requestAdContinue"), adAvailable: () => false,
+    endRun: options.endRun ?? note("endRun"),
   } as unknown as LiveCollisionPhaseHost;
 
   const kill = {
@@ -404,6 +412,37 @@ export function createDetachedCombatPhases(
   });
 }
 
+/** Portable production outcome controller with persistence/presentation replaced by recorded adapters. */
+export function createDetachedRunOutcomeController(
+  detached: DetachedWorld,
+  events: TearGameplayEventPort,
+) {
+  const outward: string[] = [];
+  const active = () => detached.world.state.run() as never as Record<string, unknown>;
+  const publishTerminal = createTearTerminalRunFactPublisher(
+    events, () => detached.world.lifecycle.snapshot().sessionId,
+  );
+  const port: LiveOutcomeControllerPort = {
+    snapshot: () => snapshotOutcomeRun(active() as never),
+    replaceWaveLog: (log) => { active().waveLog = [...log]; },
+    waveActive: () => detached.world.lifecycle.isWaveActive,
+    preparedVictory: () => (active()._victoryPrepared as PreparedVictory | null | undefined) ?? null,
+    storePreparedVictory: (prepared) => { active()._victoryPrepared = prepared; },
+    stopClipper: () => { outward.push("stopClipper"); },
+    terminate: (outcome) => { detached.world.lifecycle.terminate(outcome); },
+    publishTerminal,
+    saveBest: () => false,
+    best: (run) => ({ wave: run.wave, score: run.score, time: run.runTime }),
+    awardCoins: () => 0, coins: () => 0, achievementTracking: () => false,
+    economyTelemetry: () => Object.freeze({}), recordDefeatProgress: () => undefined,
+    executeVictoryIntents: () => undefined, persistPendingFinale: () => undefined,
+    saveProfile: () => undefined, clearPendingFinale: () => undefined, pushCloud: () => undefined,
+    present: (outcome) => { outward.push(`present:${outcome}`); },
+    midgame: (callback) => { callback(); }, restartCurrentRun: () => undefined,
+  };
+  return Object.freeze({ controller: new LiveRunOutcomeController(port), outward });
+}
+
 /** Uses the same gameplay-only combat/scheduler assembly as the live browser host. */
 export function createDetachedCombatSimulation<State>(
   detached: DetachedWorld,
@@ -437,11 +476,22 @@ export function createDetachedCombatSimulation<State>(
  * production implementations; only outward presentation (banners, audio,
  * bloom, profile counters, pointer release) is recorded instead of performed.
  */
-export function createDetachedWaveRuntime(detached: DetachedWorld, platforms?: readonly unknown[]) {
+export function createDetachedWaveRuntime(
+  detached: DetachedWorld,
+  platforms?: readonly unknown[],
+  nativeFacts?: Readonly<{
+    events: TearGameplayEventPort;
+    actorId: (enemy: Readonly<{ x: number; y: number }>) => string;
+  }>,
+) {
   const { world, random, factories, stage } = detached;
   if (platforms !== undefined) stage.platforms = [...platforms];
   const outward: string[] = [];
   const note = (name: string) => () => { outward.push(name); };
+  const publishSpawn = nativeFacts === undefined ? note("recordSpawn")
+    : createTearSpawnFactPublisher(nativeFacts.events, nativeFacts.actorId);
+  const publishWave = nativeFacts === undefined ? note("recordWave")
+    : createTearWaveFactPublisher(nativeFacts.events);
   const run = () => world.state.run() as never as Record<string, unknown>;
   const install = (enemy: unknown) => { world.state.setEnemies([...world.state.enemies(), enemy as never]); };
   // The same shared placement the live content composition uses; a restated
@@ -492,7 +542,7 @@ export function createDetachedWaveRuntime(detached: DetachedWorld, platforms?: r
       applyVariant: (enemy: unknown, variant: unknown) => { applyVariant(enemy as never, variant as never); },
       rollAffixes: (enemy: unknown, wave: number) => { rollAffixes(enemy as never, wave, random.streams.stream("spawn")); },
       arrivalEffect: note("arrivalEffect"),
-      recordSpawn: note("recordSpawn"),
+      recordSpawn: publishSpawn,
       install,
     },
     createBoss: (id: string) => makeBoss(id),
@@ -514,14 +564,14 @@ export function createDetachedWaveRuntime(detached: DetachedWorld, platforms?: r
     },
     planIntents: {
       beginWipe: note("beginWipe"), loadStage: note("loadStage"), setStageBanner: note("setStageBanner"),
-      beginCampaignChapter: () => false, recordWave: note("recordWave"), snapshotReplay: note("snapshotReplay"),
+      beginCampaignChapter: () => false, recordWave: publishWave, snapshotReplay: note("snapshotReplay"),
       prepareWave: (wave: number, boss: boolean, deferred: boolean) => { world.lifecycle.prepareWave(wave, boss, deferred); },
       activateWave: () => { world.lifecycle.activateWave(); },
       showWaveBanner: note("showWaveBanner"), playWaveSound: note("playWaveSound"),
     },
     clearIntents: {
       clearWave: () => { world.lifecycle.clearWave(); },
-      bloom: note("bloom"), recordWave: note("recordWave"), profileMax: note("profileMax"),
+      bloom: note("bloom"), recordWave: publishWave, profileMax: note("profileMax"),
       profileAdd: note("profileAdd"), dailyBump: note("dailyBump"), hordeCleared: note("hordeCleared"),
       achievementCheck: note("achievementCheck"), stageDone: note("stageDone"),
       healPlayer: (amount: number) => { (world.state.player() as never as { heal(value: number): void }).heal(amount); },

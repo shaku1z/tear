@@ -1,5 +1,6 @@
 import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
+import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import { normalizeGameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearSimulationEnemyView } from "../simulation/runtime-world-port";
@@ -16,7 +17,7 @@ import { projectLiveProjectiles } from "./live-observation-projectiles"; import 
 import { projectLiveActorMechanics, projectLiveBehaviorMode, projectLiveBladeMechanics, projectLivePlayerMechanics } from "./live-observation-actors";
 import { certifyWave99HammerProgression, createCanonicalWave99HammerProgression, createWave99HistoricalRunState,
   forgeExitLaunchSnapshot } from "./state-forge-exit-gate";
-import { createGameplayCausalEvent } from "./gameplay-causal-events";
+import { createGameplayCausalEvent, projectGameplayEventForParity } from "./gameplay-causal-events";
 import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
 import type { LiveTearRuntimeEnvironmentContext, TearClassARuntimeEnvironment,
   TearClassBRuntimeEnvironment, TearRuntimeAccessClass, TearRuntimeEnvironmentMetrics,
@@ -164,8 +165,10 @@ export function createLiveTearRuntimeEnvironment(
   let screenshotCount = 0;
   let lastCallerEnvelopeId = 0;
   const eventLog: TearCausalEventV1[] = [];
+  const nativeEventLog: TearGameplayEvent[] = [];
   context.subscribeEngineEvent((event) => {
     if (scenario === null) return;
+    nativeEventLog.push(event);
     eventLog.push(createGameplayCausalEvent(event, sequence, `live:${String(event.tick)}:${String(sequence++)}`));
   });
 
@@ -228,6 +231,7 @@ export function createLiveTearRuntimeEnvironment(
       lastCallerEnvelopeId = 0;
       context.drainConsumedActions();
       eventLog.length = 0;
+      nativeEventLog.length = 0;
       resets += 1;
       observation = projectLiveTearObservation(context, 0, accessClass);
       eventLog.push(createEvent(sequence++, 0, "run.started", {
@@ -416,6 +420,7 @@ export function createLiveTearRuntimeEnvironment(
     accessClass: "A" as const,
     rng: () => context.random(),
     canonicalState: () => context.authoritative()?.state ?? null,
+    engineEventProjection: () => Object.freeze(nativeEventLog.map(projectGameplayEventForParity)),
     setTimeEffectsForTest: (effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>) => {
       context.setTimeEffectsForTest(effects);
     },

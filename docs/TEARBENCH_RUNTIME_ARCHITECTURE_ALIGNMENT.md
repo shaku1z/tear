@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first twenty-nine executable C27A slices are complete:
+The first thirty-three executable C27A slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.

@@ -33,8 +33,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   cross-session reconstruction and next-beat continuation. Legacy active
   chapters without a binding fail closed; generic active scenes remain
   same-session-bound. Detached construction uses explicit gameplay ports, and
-  all 12 fixed-tick scenarios now match without a divergence exception. This
-  is still not a C27A completion claim: render-frame/outward-effect parity,
+  all 12 fixed-tick scenarios now match without a divergence exception. Their
+  complete post-origin native semantic streams also match exactly through
+  shared spawn, wave, and terminal publishers, including terminal outcome
+  controller behavior and stable actor/session identity. This is still not a
+  C27A completion claim: render-frame/outward-effect parity,
   win/wave-boundary coverage, and full production-world extraction remain.
   Real
   full-world portability, durable

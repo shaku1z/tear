@@ -9,6 +9,15 @@ interface MappedGameplayEvent {
   readonly payload: Readonly<Record<string, unknown>>;
 }
 
+export interface TearSemanticEngineEventV1 {
+  readonly tick: number;
+  readonly sequence: number;
+  readonly type: TearEventId;
+  readonly phase: TearWithinTickPhase;
+  readonly actorId?: string;
+  readonly payload: Readonly<Record<string, unknown>>;
+}
+
 /**
  * One presentation-independent translation from native gameplay facts to the
  * versioned Tear causal-event ontology. Ghost recording and TearBench must not
@@ -85,6 +94,24 @@ export function createGameplayCausalEvent(
   return Object.freeze({
     format: "tear-contract", kind: "event", schemaVersion: 1,
     id, type: mapped.type, tick: event.tick, phase: mapped.phase, sequence, source: "engine",
+    ...(mapped.actorId === undefined ? {} : { actorId: mapped.actorId }), payload: mapped.payload,
+  });
+}
+
+/** Host-independent native-event projection used only for live/detached equality evidence. */
+export function projectGameplayEventForParity(
+  event: TearGameplayEvent,
+  sequence: number,
+): TearSemanticEngineEventV1 {
+  if (!Number.isSafeInteger(sequence) || sequence < 0) {
+    throw new RangeError("gameplay parity event sequence must be a non-negative safe integer");
+  }
+  if (!Number.isSafeInteger(event.tick) || event.tick < 0) {
+    throw new RangeError("gameplay parity event tick must be a non-negative safe integer");
+  }
+  const mapped = mapGameplayEventToCausalEvent(event);
+  return Object.freeze({
+    tick: event.tick, sequence, type: mapped.type, phase: mapped.phase,
     ...(mapped.actorId === undefined ? {} : { actorId: mapped.actorId }), payload: mapped.payload,
   });
 }
