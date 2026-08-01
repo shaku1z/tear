@@ -12,6 +12,8 @@ is gameplay; only its renderer is presentation).
 
 Before coding, read this file, then:
 
+0. Read `plans/TEARBENCH_C40_EXECUTION_GUIDE.md` — the slice loop, evidence
+   law, anti-loop rules, and pause protocol are binding.
 1. Read `docs/TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md` and
    `docs/checkpoints/C27A_RUNTIME_ARCHITECTURE_FOUNDATION.md` in full.
 2. Treat `plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md` as the

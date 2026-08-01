@@ -1,0 +1,366 @@
+# TearBench → C40 Execution Guide
+
+**This file is the working discipline, not the scope.** Scope lives in
+[`TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md`](TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md)
+(goals, deliverables, exit gates per checkpoint) and in
+[`../docs/tearbench-ghost3-requirements.json`](../docs/tearbench-ghost3-requirements.json)
+(8,691 atomic requirements). Read
+[`TEARBENCH_MASTER_HANDOFF.md`](TEARBENCH_MASTER_HANDOFF.md) first for the
+current boundary.
+
+This file answers a different question: **how do you work so that the program
+actually reaches C40 instead of accumulating impressive-looking code that
+nothing calls?**
+
+---
+
+## 1. The goal, stated so it can fail
+
+> `pnpm check` passes on a clean tree, `pnpm tearbench certify --commit <sha>
+> --full-check passed` produces a certification artifact, and every required
+> atomic requirement in the registry carries evidence at or above the level its
+> checkpoint demands — or an explicit, authorized `deferred`/`rejected`
+> disposition with a reason.
+
+Anything short of that is not C40. As of this writing the registry reports
+**6,470 missing / 179 contract / 161 prototype / 58 integrated / 17 visible /
+0 certified**. `certified` is the number that matters and it is zero.
+
+---
+
+## 2. The slice loop — the only permitted unit of work
+
+Never start work that is not a slice. A slice is one coherent change that ends
+with the tree green and committed.
+
+1. **Read the boundary.** `TEARBENCH_MASTER_HANDOFF.md` §"Exact next slice",
+   then the active checkpoint report. Do not re-derive the plan.
+2. **State the slice contract out loud** before editing, in two sentences:
+   what this slice will make true, and what it explicitly will *not* claim.
+3. **Query the registry** for the requirements this slice touches, and read
+   their original source context — not a summary.
+4. **Implement the narrowest change** that makes the contract true.
+5. **Write the smallest test that would fail without it.** If you cannot write
+   a test that fails first, you do not understand the change yet.
+6. **Run the smallest canonical gate** (§6 table), then any gate whose
+   evidence your change could invalidate.
+7. **Update docs in the same slice**: the checkpoint report, the architecture
+   alignment doc if a boundary moved, and both handoffs. Never batch
+   documentation for "the end".
+8. **Commit and push.** One slice, one commit, message states what is proven
+   and what is not.
+9. **Write the next boundary** into the handoff before you stop.
+
+If a slice cannot finish green, revert it. A half-slice left in the tree costs
+the next agent more than it saved you.
+
+---
+
+## 3. Evidence law
+
+### 3.1 Levels, and what may claim them
+
+| Level | Means | Minimum proof |
+|---|---|---|
+| `missing` | nothing | — |
+| `contract` | types/interfaces exist | compiles |
+| `prototype` | logic exists, unit-tested | unit test |
+| `integrated` | the running app calls it | a non-test consumer + a gate that exercises it |
+| `visible` | a player can see/reach it in a normal build | browser journey screenshot/DOM proof |
+| `certified` | C40 release validation covered it | certification artifact |
+
+**Promotion is one level at a time and only with the proof in that row.** A
+foundation gate never promotes a checkpoint. A Class A hook never proves
+Class C. A green subset gate is not a release claim.
+
+### 3.2 The capability test — apply before writing "works" anywhere
+
+A module is **not** a capability until all three hold:
+
+```bash
+# 1. something outside its own folder imports it
+grep -rl "ghost/theater" src --include=*.ts | grep -v "^src/ghost/"
+# 2. a gate exercises that path
+# 3. for player features: it survives in the production bundle
+grep -o "Ghost Lab" dist/standalone/assets/*.js
+```
+
+As of this writing these modules exist, compile, and some have unit tests, but
+**zero consumers outside their own folder** — they are C0–C20 scaffolds, not
+capabilities:
+
+`ghost/replay-world` · `ghost/theater` · `ghost/coach` · `ghost/ghost-doctor` ·
+`ghost/knowledge-libraries` · `ghost/cloud-publication` ·
+`ghost/player-experiences` · `ghost/truth-kernel` · `agents/academy` ·
+`agents/ladder-foundry` · `agents/journey-director` ·
+`agents/hierarchical-policy-adapter`
+
+Rewriting one of these files is not progress. **Wiring one to the running
+product, with a gate, is.**
+
+### 3.3 Forbidden moves
+
+These have all been attempted on this program before. Each is a lie in code.
+
+- Narrowing a scenario, shortening a window, or dropping a field from a
+  projection so a comparison passes.
+- Restating a production rule inside a test harness instead of calling the
+  production function. Every such restatement has eventually diverged.
+- Widening a tolerance instead of fixing a divergence.
+- Marking a requirement done because a file exists.
+- Claiming a checkpoint from its `:foundation` gate.
+- Deleting or silently rescoping a requirement. Use `deferred`/`rejected` with
+  a reason instead.
+
+### 3.4 Divergence protocol
+
+When a comparison fails: **the world is wrong until proven otherwise.**
+
+1. Diagnose to a named field and tick, not "something differs".
+2. Decide: production defect, or harness restating a rule?
+3. Fix the production defect by moving the canonical routine into shared
+   gameplay code, or delete the restated rule from the harness.
+4. If it genuinely cannot be fixed this slice, record it in the comparison's
+   `KNOWN_DIVERGENCES` with its cause, and **assert that it still diverges** so
+   the entry cannot rot after a fix.
+
+This protocol has already produced five product-level fixes: `planBossPlacement`,
+`beginBossEncounter`, the State Forge `$map` codec, `mirror-combat-feedback`,
+and the cinematic timeline move. That is the loop working.
+
+---
+
+## 4. Anti-loop rules
+
+Agents waste turns in predictable ways. These are hard limits.
+
+- **Two-attempt rule.** Two failed attempts at the same fix → stop, write the
+  finding into the checkpoint report, move to the next independent item. Do not
+  attempt a third variation of the same idea.
+- **No re-exploration.** If the handoff names the next slice, start there.
+  Re-reading the whole plan to "get oriented" is not work.
+- **No speculative refactors.** Do not clean, rename, or restructure code that
+  the current slice does not require.
+- **No new abstraction without a second caller.** Ports invented for a diagram
+  are forbidden; the alignment doc says so explicitly.
+- **No parallel implementations, ever.** No second combat host, scheduler,
+  replay runtime, or headless simulator. Reuse the production composition.
+- **No re-running green gates to feel safe.** Run a gate when your change could
+  have broken it, or when a claim depends on it.
+- **No documentation-only turns** unless the slice was a documentation slice.
+  Docs are updated *with* the code, in the same commit.
+- **Do not run `pnpm requirements:generate` casually.** Inspect any generated
+  diff before committing it.
+
+**Loop smell:** if your last three actions were reads and no file changed, you
+are looping. Pick the next checklist item and edit something.
+
+---
+
+## 5. Pause protocol — every 3 slices, or when a checkpoint closes
+
+Run the probe, then write exactly five lines into the active checkpoint report.
+
+```bash
+pnpm requirements:check | tail -3
+git log --oneline -5
+pnpm test 2>&1 | grep -E "Test Files|Tests"
+```
+
+Then write:
+
+```text
+DONE THIS STEP:      <what is now true that was not>
+PROVEN BY:           <gate + counts, or "not proven">
+REMAINING HERE:      <what is left in this checkpoint>
+REMAINING TO C40:    <checkpoints not started>
+NEXT SLICE:          <one sentence, actionable without this conversation>
+```
+
+If `DONE THIS STEP` is empty for two consecutive pauses, stop and escalate to
+the user — the approach is wrong, not the effort.
+
+---
+
+## 6. Gate reference
+
+| Scope | Command | What it proves |
+|---|---|---|
+| Requirements | `pnpm requirements:check` | registry intact, 0 unmapped source lines |
+| Boundaries | `pnpm check:architecture` | dependency direction, planted violations rejected |
+| Unit suite | `pnpm test` | whole-repo regression |
+| State Forge | `pnpm check:c23` | codecs, restore, Studio, exit matrix |
+| Scripted agent | `pnpm check:c24` | Class A autonomy |
+| Class C | `pnpm check:c25:foundation` | physical-input foundation (**not** the exit) |
+| Regression | `pnpm check:c26` | investigate/minimize/bisect/graveyard + planted regression |
+| Recorder | `pnpm check:c27:foundation` | V3 capsules + 7 browser proofs |
+| Shared world | `pnpm check:c27a:foundation` | parity matrix + Class-C browser proof |
+| Release | `pnpm check` | the only gate that may support a release claim |
+
+---
+
+## 7. The route to C40
+
+Strict dependencies first. **C27A blocks C29, C30, and C31–C36 completion
+claims.** Do not develop learning on a simplified simulator.
+
+```text
+C27A ──► C27 ──► C28 ──► C29 ──► C30 ──┐
+  │                                     ├──► C31 ─► C32 ─► C33 ─► C34 ─► C35 ─► C36 ──► C37 ─► C38 ─► C39 ─► C40
+C25 ──────────────────────────────────┘
+```
+
+C25's exit is independent of C27A and may be closed in parallel when C27A is
+blocked on something else.
+
+---
+
+## 8. Checkpoint checklists
+
+Each item is a falsifiable statement. Tick it only when its proof exists.
+These are entry conditions to the checkpoint's exit gate in the completion
+plan — they do not replace it.
+
+### C27A — Shared world architecture *(active, blocking)*
+
+- [x] Every mutable world service is per-world (clock, RNG, particles, boss feedback, entity constructors)
+- [x] Architecture gate rejects a reintroduced shared instance (planted-violation proof)
+- [x] One call builds one world (`createLiveWorldComposition`)
+- [x] A detached world runs both production combat phases
+- [x] Live↔detached parity across a scenario matrix — 11 of 12 scenarios, every executed tick
+- [ ] Campaign parity: world owns a cinematic director instance
+- [ ] Campaign parity: State Forge captures director position (script id, beat index, elapsed/reveal/fullyVisible/total, skipping, finished)
+- [ ] Campaign parity: scripts a detached world needs are constructible without app callbacks
+- [ ] `KNOWN_DIVERGENCES` is empty
+- [ ] Outward effect streams are compared, not merely recorded
+- [ ] A win outcome and a wave-boundary crossing are in the matrix
+- [ ] Portable core has zero `src/app`, DOM/Canvas, or Ghost 2 imports (gate-enforced)
+- [ ] Affected C22–C27 gates rerun green from one worktree
+
+**Exit:** the alignment doc's exit gate, with the parity corpus green and no
+recorded divergence.
+
+### C27 — Authoritative recorder and capsule
+
+- [x] V3 recorder ships in the production bundle
+- [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser
+- [ ] Versioned durable capsule contract with provenance, compatibility, integrity
+- [ ] Measured real codecs and profiles against enforced storage/performance budgets
+- [ ] Real quota/device/storage-pressure evidence (not simulated branches)
+- [ ] Replay execution with seek, fork, practice, export/import, migration
+- [ ] Registry evidence for C27's 1,166 mapped requirements moved off `missing`
+
+### C25 — Physical input and black-box certification
+
+- [x] Foundation gate green
+- [ ] Real physical-input matrix (keyboard, pointer, touch, gamepad) driving visible outcomes
+- [ ] Visible-output validation from pixels, not from Class A state
+- [ ] Privilege boundary proven: no Class A hook reachable from the Class C path
+- [ ] `check:c25` exit gate exists and passes
+
+### C28 — Vault, Doctor, knowledge
+
+- [ ] `ghost/capsule-vault` reachable from the running app (not only `live-recorder` internals)
+- [ ] Indexing, retention, integrity checks run on real stored capsules
+- [ ] `ghost/ghost-doctor` diagnoses a real corrupted capsule end to end
+- [ ] `ghost/knowledge-libraries` has a non-test consumer
+- [ ] Browser journey proves a player reaches stored recordings
+
+### C29 — Replay world, Theater, comparison, practice
+
+- [ ] Replay executes on the C27A production composition (no second runtime)
+- [ ] Replay of a captured capsule reproduces its authoritative hashes
+- [ ] Seek, fork, and practice work from a replay
+- [ ] `ghost/theater` wired and player-visible
+- [ ] Side-by-side comparison of two runs
+
+### C30 — Headless and scalable episodes
+
+- [ ] Headless episodes run the same composition, no DOM
+- [ ] Headless↔live parity on the C27A matrix
+- [ ] Resource controls and measured throughput (episodes/minute, recorded)
+
+### C31 — Academy corpus and consent
+
+- [ ] Eligibility, consent, and provenance enforced before ingestion
+- [ ] Curation and retention run on real recorded episodes
+- [ ] `agents/academy` has a non-test consumer
+- [ ] A corpus exists and is inspectable
+
+### C32 — Policy runtime and artifact registry
+
+- [ ] Versioned policy artifacts with compatibility metadata
+- [ ] Reproducible evaluation of an artifact
+- [ ] Promotion and rollback both exercised
+- [ ] Safety controls reject an unsafe artifact in a test
+
+### C33 — Behavior cloning and DAgger
+
+- [ ] A policy is trained from Academy data and beats a scripted baseline on a measured metric
+- [ ] The run is reproducible from seed + corpus version
+- [ ] DAgger loop closes with recorded improvement
+
+### C34 — RL, self-play, curriculum
+
+- [ ] Offline RL trains from the corpus
+- [ ] Online RL / self-play runs on headless episodes
+- [ ] Curriculum and exploration controls are configurable and bounded
+- [ ] Safeguards stop a diverging run
+
+### C35 — Ladder and human calibration
+
+- [ ] Levels 1–9 and Omega exist as measured, distinguishable policies
+- [ ] Human-likeness calibration against real human traces
+- [ ] Ladder placement is reproducible
+
+### C36 — Autonomous Foundry
+
+- [ ] The full state machine runs unattended: collect → curate → train → evaluate → reject/promote → version → place → report
+- [ ] Scheduling, recovery from interruption, and progress reporting
+- [ ] **No terminal command is required to train** (the product does it)
+
+### C37 — Player experiences
+
+- [ ] Ghost Lab, Foundry, Academy, Bot Ladder, Watch Agent, Coach, Studio reachable in a normal build
+- [ ] Each surfaces: what is running, eligible data, candidate pass/fail reasons, active artifact, comparison, and pause/opt-out/rollback
+- [ ] Browser journeys prove each surface
+
+### C38 — Cloud, privacy, moderation
+
+- [ ] Sync, publication, and verification round-trip
+- [ ] Identity, privacy, consent enforced
+- [ ] Moderation and abuse resistance tested with hostile input
+
+### C39 — Operations and preservation
+
+- [ ] Scheduling, observability, operational recovery
+- [ ] Lifecycle management and preservation of capsules/artifacts
+- [ ] Restore-from-cold-storage drill passes
+
+### C40 — Certification
+
+- [ ] Full `pnpm check` green on a clean tree
+- [ ] Migration, performance, accessibility, security validated
+- [ ] Docs, dashboard, catalog, and checkpoint reports match repository reality
+- [ ] Every required requirement is evidenced or explicitly disposed
+- [ ] `pnpm tearbench certify` artifact produced and stored
+- [ ] Final git state clean, intentional, documented
+
+---
+
+## 9. Working-tree rules
+
+- Branch: `codex/ghost3-autonomous-completion-plan`.
+- `plans/EXTREME_RENDERING_IMPLEMENTATION_PLAN.md` is unrelated user work.
+  **Never stage, edit, or delete it.**
+- Inspect `git status` and the staged diff before committing; stage only files
+  the slice touched.
+- Never use destructive reset/checkout on a dirty tree.
+
+---
+
+## 10. When you are done for the session
+
+Leave the tree green, pushed, and the handoff updated with the next boundary.
+The measure of a good session is not lines written — it is **how little the
+next agent has to rediscover.**

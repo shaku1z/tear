@@ -23,6 +23,11 @@ Completion means C40's release criteria pass with real evidence. A contract API,
 
 Do not reconstruct the full scope from this handoff. The 13,725-line source was normalized into a queryable requirement registry so future plans and handoffs cannot omit its long tail.
 
+**Execution discipline:** [`TEARBENCH_C40_EXECUTION_GUIDE.md`](TEARBENCH_C40_EXECUTION_GUIDE.md)
+defines the slice loop, the evidence law, anti-loop rules, the pause protocol,
+and a per-checkpoint entry checklist through C40. Read it before working; it
+governs *how* to work, while the documents below define *what* to build.
+
 Mandatory reading order:
 
 1. [`docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md`](../docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md) — complete product intent and rationale.
