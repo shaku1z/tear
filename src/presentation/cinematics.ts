@@ -1,11 +1,8 @@
 // ------- cinematic renderer -------------------------------------------------
 // The timeline itself is simulation and lives in
 // `src/gameplay/runtime/cinematic-director.ts`. This module adds the canvas
-// drawing on top of it and keeps the historic `Cinematics.Director` surface.
-import { CONFIG } from "../config/game-config";
+// drawing on top of it through an explicit per-world presentation policy.
 import { CinematicTimeline } from "../gameplay/runtime/cinematic-director";
-
-const P = () => CONFIG.presentation;
 
 export type { CinematicBeat, CinematicScript, CinematicDirectorPort }
   from "../gameplay/runtime/cinematic-director";
@@ -26,7 +23,23 @@ export interface CinematicUiPort {
   dialogueCard(context: CanvasRenderingContext2D, options: Record<string, unknown>): void;
 }
 
-class Director extends CinematicTimeline.Director {
+export interface CinematicPresentationPolicy {
+  readonly presentation: Readonly<{ minFullyVisible: number; skipHold: number }>;
+}
+
+export type CinematicRendererDirector = InstanceType<typeof CinematicTimeline.Director> & Readonly<{
+  draw(context: CanvasRenderingContext2D, ui: CinematicUiPort, screen: ScreenRect, reducedMotion?: boolean): void;
+}>;
+
+export interface CinematicPresentationRuntime {
+  readonly Director: new (
+    configuration: ConstructorParameters<typeof CinematicTimeline.Director>[0],
+  ) => CinematicRendererDirector;
+}
+
+/** Creates the Canvas renderer class for one world's live presentation policy. */
+export function createCinematics(policy: CinematicPresentationPolicy): CinematicPresentationRuntime {
+  class Director extends CinematicTimeline.Director {
     draw(ctx: CanvasRenderingContext2D, ui: CinematicUiPort, screen: ScreenRect, reducedMotion = false): void {
       const script = this.script;
       if (!script) return;
@@ -77,8 +90,8 @@ class Director extends CinematicTimeline.Director {
         // readable, a hold ring while a newly armed skip charges, AUTO near a timeout.
         const shared = { speaker: b.speaker, line: b.line, color: b.color ?? script.color,
           amount: Math.min(1, this.elapsed / 0.22), reveal: reducedMotion ? 1 : this.revealProgress,
-          canAdvance: this.revealProgress >= 1 && this.fullyVisibleElapsed >= P().minFullyVisible * 0.5,
-          holdRing: this.latchArmed ? Math.min(1, this.latchHoldSeconds / P().skipHold) : 0,
+          canAdvance: this.revealProgress >= 1 && this.fullyVisibleElapsed >= policy.presentation.minFullyVisible * 0.5,
+          holdRing: this.latchArmed ? Math.min(1, this.latchHoldSeconds / policy.presentation.skipHold) : 0,
           auto: this.autoImminent };
         // Boss transformation rituals anchor the line to a corner so world
         // choreography owns the center; other scripts keep the dialogue card.
@@ -87,8 +100,7 @@ class Director extends CinematicTimeline.Director {
           (script.hint ?? "TAP TO ADVANCE  ·  HOLD TO SKIP") }, shared));
       }
     }
+  }
+
+  return Object.freeze({ Director } satisfies CinematicPresentationRuntime);
 }
-
-const Cinematics = Object.freeze({ Director });
-
-export { Cinematics };

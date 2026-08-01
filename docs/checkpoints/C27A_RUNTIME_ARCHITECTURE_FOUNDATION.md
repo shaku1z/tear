@@ -792,9 +792,27 @@ of replay, headless execution, or learning portability.
 
   This is controller/policy ownership and visible rendering continuity, not
   rendered-pixel parity or independent full applications. Cinematic rendering,
-  UI/input/audio/persistence, device output, headless/replay/learning
-  portability, and C27A completion remain open. The next policy boundary is
-  the cinematic renderer's process-global presentation configuration.
+   UI/input/audio/persistence, device output, headless/replay/learning
+   portability, and C27A completion remain open. The next policy boundary is
+   the cinematic renderer's process-global presentation configuration.
+
+- The forty-fifth slice makes that renderer policy explicit without moving the
+  shared gameplay timeline. `createCinematics(policy)` returns a renderer
+  runtime for one composition; its `Director` subclasses the unchanged
+  `CinematicTimeline.Director` and reads only the supplied presentation timing
+  when it draws Canvas dialogue. The live composition supplies the constructed
+  world's presentation record, while the app dependency contract names the
+  resulting `CinematicPresentationRuntime`. The source architecture gate
+  rejects either a process-config import or a global `Cinematics` runtime, and
+  focused two-composition evidence proves independent rendered advance timing.
+  Fresh foundation and campaign-victory gates pass.
+
+  This is Canvas renderer timing-policy ownership, not pixel parity, complete
+  UI/presentation isolation, independent full applications, or C27A
+  completion. The next presentation boundary is the UI factory's remaining
+  direct process-configuration dependency; input, audio, persistence, device
+  output, headless/replay/learning portability, and C27A completion remain
+  open.
 
 ## Remaining C27A work
 

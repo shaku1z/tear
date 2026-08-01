@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** forty-first C27A foundation slice implemented (per-world simulation
-tuning ownership with stable State Forge restoration); checkpoint remains open
+**Status:** forty-fifth C27A foundation slice implemented (per-world cinematic
+Canvas-renderer timing policy); checkpoint remains open
 and blocking pending generic world bootstrap, presentation-policy isolation,
 and rendered/audio/haptic exits.
 
@@ -452,7 +452,7 @@ All of the following were run from this worktree after the parity-passing slice:
 
 ## Exact next C27A boundary
 
-**Slice 44 supersedes the earlier configuration-isolation wording below.**
+**Slice 45 supersedes the earlier configuration-isolation wording below.**
 `TearWorldConfiguration` now owns one stable mutable config record per
 constructed simulation world, created before constructors capture tuning. It
 validates snapshots before reconciling root/nested references in place; State
@@ -476,9 +476,14 @@ architecture rule rejects process config, outward adapters, and browser globals.
 Particle policy stays outside it. Slice 44 now creates Backdrop through an
 explicit visual policy and removes its global controller/clock binding; its
 caches and transient lights are local to the controller. This is not full
-presentation or concurrent-world isolation. The next slice moves the cinematic
-renderer's global presentation configuration behind its own explicit policy.
-Keep one runtime/scheduler.
+  presentation or concurrent-world isolation. Slice 45 moves cinematic Canvas
+  renderer timing behind `createCinematics(policy)`. The factory creates a
+  renderer runtime for each composition and its `Director` extends the unchanged
+  shared `CinematicTimeline`; live composition supplies the world presentation
+  record. The architecture gate rejects a process-config import and a global
+  `Cinematics` renderer, and focused two-factory evidence proves distinct
+  rendered advance timing. This is not UI isolation, pixel parity, or complete
+  concurrent-world isolation. Keep one runtime/scheduler.
 
 All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
@@ -498,9 +503,10 @@ The exact 42-entry terminal external-decision transcript now matches across
 hosts, but it remains in-memory/test evidence rather than durable external
 effect evidence. Slice 40 carries the presentation-free simulation factory;
 Slice 41 adds simulation tuning isolation; Slice 42 injects particle policy;
-Slice 43 centralizes generic simulation-service bootstrap; and Slice 44 owns
-Backdrop state/policy per controller. Cinematic rendering and the remaining
-presentation-policy isolation still precede true simultaneous complete worlds.
+  Slice 43 centralizes generic simulation-service bootstrap; Slice 44 owns
+  Backdrop state/policy per controller; and Slice 45 owns cinematic Canvas
+  renderer timing per composition. The UI and remaining presentation-policy
+  isolation still precede true simultaneous complete worlds.
 Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
 from the harness — never a tolerance to widen, a scenario to shorten, or a
@@ -519,6 +525,13 @@ composition with parity evidence.
 
 ## Working-tree safety
 
+- Slice 45 is the next intentional commit on
+  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 5
+  files / 18 tests plus source architecture; fresh foundation passed 36 files /
+  130 tests, a fresh 13-scenario trace, and 40 detached comparisons, while
+  campaign victory passed 10 files / 36 tests and 1,176 transitions. The next
+  boundary is the UI factory's direct process-configuration dependency, still
+  not a second runtime.
 - Do not discard unrelated dirty work. In particular,
   `plans/EXTREME_RENDERING_IMPLEMENTATION_PLAN.md` was already untracked and
   is outside this C27A handoff scope.

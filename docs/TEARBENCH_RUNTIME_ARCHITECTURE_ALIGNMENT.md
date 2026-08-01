@@ -269,9 +269,18 @@ The first thirty-four executable C27A slices are complete:
   while receiving world config/time, visual preferences, overscan/theme,
   wall time, and Canvas creation explicitly. Biome art consumes the
   controller's graphics policy rather than process configuration. This proves
-  independent backdrop-controller state and live rendering continuity only;
-  it does not make the cinematic renderer, UI/input/audio/persistence, or a
-  complete live application concurrent-world safe.
+   independent backdrop-controller state and live rendering continuity only;
+   it does not make the cinematic renderer, UI/input/audio/persistence, or a
+   complete live application concurrent-world safe.
+- `createCinematics(policy)` now owns the Canvas-only renderer policy per
+  composition. It supplies presentation timing to a renderer `Director` that
+  extends the unchanged shared cinematic simulation timeline; composition
+  passes its world presentation record, and the app contract uses the explicit
+  renderer runtime type. The architecture gate rejects process-config imports
+  and a global renderer singleton, while focused evidence demonstrates two
+  renderer factories retaining different advance timing. This does not prove
+  pixel parity or isolate the UI/input/audio/persistence layers, so a complete
+  live application is still not concurrent-world safe.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

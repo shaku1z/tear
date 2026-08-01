@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 44 update (current)
+#### Slice 45 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -402,6 +402,24 @@ and viewport coverage. This proves controller ownership and rendering
 continuity, not pixel parity, complete presentation isolation, concurrent full
 live worlds, or C27A completion. Next, move cinematic rendering's global
 presentation configuration behind an explicit per-world policy.
+
+Slice 45 supplies that cinematic renderer policy without moving the shared
+simulation timeline. `createCinematics(policy)` returns a renderer runtime for
+one composition; its Canvas `Director` extends the unchanged
+`CinematicTimeline.Director` and reads the explicit presentation timing only
+when it draws dialogue. Live composition supplies the constructed world's
+presentation record, and the app dependency contract exposes the resulting
+`CinematicPresentationRuntime`. Source architecture rejects both a process
+configuration import and a global `Cinematics` runtime; focused two-factory
+evidence proves independent rendered advance timing. `pnpm check:c27a:slice45`
+passed 5 focused files / 18 tests plus architecture, and fresh foundation and
+campaign-victory gates passed.
+
+This proves Canvas renderer timing-policy ownership only, not pixel parity,
+complete UI/presentation isolation, concurrent full live worlds, or C27A
+completion. Next, move the UI factory's direct process-configuration dependency
+behind an explicit composition-supplied policy while preserving its current
+behavior and the single shared gameplay timeline.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

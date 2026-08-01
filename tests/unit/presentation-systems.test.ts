@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CONFIG, GFX } from "../../src/config/game-config";
-import { Cinematics, type CinematicScript } from "../../src/presentation/cinematics";
+import { createCinematics, type CinematicScript, type CinematicUiPort } from "../../src/presentation/cinematics";
 import { createParticleSystem, type ParticleSystemPolicy } from "../../src/presentation/particles";
 
 function particlePolicy(): ParticleSystemPolicy {
@@ -14,6 +14,7 @@ function particlePolicy(): ParticleSystemPolicy {
 }
 
 const FX = createParticleSystem(particlePolicy());
+const Cinematics = createCinematics({ presentation: CONFIG.presentation });
 
 describe("presentation system boundaries", () => {
   it("requires a fresh post-arm confirm before advancing a cinematic line", () => {
@@ -35,6 +36,32 @@ describe("presentation system boundaries", () => {
     director.update(0.01, {});
     director.update(0.01, { key: true });
     expect(director.beatId).toBe("next");
+  });
+
+  it("keeps cinematic rendering policy explicit and local to its composition", () => {
+    const first = createCinematics({ presentation: { minFullyVisible: 4, skipHold: 1 } });
+    const second = createCinematics({ presentation: { minFullyVisible: 0.5, skipHold: 1 } });
+    const script = {
+      id: "renderer-policy", beats: [{ id: "line", line: "One visible line.", reveal: { mode: "none" }, completion: "confirm" }],
+    } satisfies CinematicScript;
+    const dialogue = (values: Record<string, unknown>[]) => ({
+      t: { motion: { finalRewardIn: 1 } },
+      chapterHeader: () => undefined, chapterProgress: () => undefined, loreFragment: () => undefined,
+      chapterPrompt: () => undefined, biomeReveal: () => undefined, cinematicFrame: () => undefined,
+      finaleFracture: () => undefined, finalReward: () => undefined, cinematicPrompt: () => undefined,
+      bossDeclaration: () => undefined, dialogueCard: (_context: CanvasRenderingContext2D, options: Record<string, unknown>) => { values.push(options); },
+    }) satisfies CinematicUiPort;
+    const firstDirector = new first.Director(CONFIG), secondDirector = new second.Director(CONFIG);
+    firstDirector.start(script); secondDirector.start(script);
+    firstDirector.update(1, {}); secondDirector.update(1, {});
+    const firstCalls: Record<string, unknown>[] = [], secondCalls: Record<string, unknown>[] = [];
+
+    firstDirector.draw({} as CanvasRenderingContext2D, dialogue(firstCalls), {});
+    secondDirector.draw({} as CanvasRenderingContext2D, dialogue(secondCalls), {});
+
+    expect(first.Director).not.toBe(second.Director);
+    expect(firstCalls.at(0)).toMatchObject({ canAdvance: false });
+    expect(secondCalls.at(0)).toMatchObject({ canAdvance: true });
   });
 
   it("keeps the shared particle pool within its configured allocation cap", () => {

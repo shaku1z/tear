@@ -26,7 +26,7 @@ import { createRunSeed } from "../platform/run-seed";
 import type { PwaUpdateCapability } from "../platform/pwa-update";
 import { createAttract } from "../presentation/attract";
 import { createBackdrop } from "../presentation/backdrop";
-import { Cinematics } from "../presentation/cinematics";
+import { createCinematics } from "../presentation/cinematics";
 import { cosmeticRandom } from "../presentation/cosmetic-random";
 import { createParticleSystem } from "../presentation/particles";
 import { createUi } from "../presentation/ui";
@@ -84,6 +84,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     clock: CLOCK, config: worldConfig, graphics: GFX, accessibility: A11Y,
     overscan: OVERSCAN, theme: THEME, createCanvas: () => document.createElement("canvas"), performance,
   });
+  const Cinematics = createCinematics({ presentation: worldConfig.presentation });
   const { streams: GAME_RANDOM_STREAMS, service: GAME_RANDOM } = random;
   const { Input, PAD } = createLegacyInputCompatibility(
     { config: worldConfig, safeArea: SAFE, overscan: OVERSCAN, window, document, navigator, performance },

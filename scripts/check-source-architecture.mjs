@@ -118,6 +118,16 @@ const forbiddenDependencyRules = Object.freeze([
     message: "the backdrop module cannot retain a shared controller or clock; create one controller per composition",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/presentation/cinematics.ts"]),
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*config\/game-config["']/u,
+    message: "the cinematic renderer must receive presentation timing through an explicit per-world policy",
+  }),
+  Object.freeze({
+    roots: Object.freeze(["src/presentation/cinematics.ts"]),
+    pattern: /(?:^|\n)\s*(?:export\s+)?(?:const|let|var)\s+Cinematics\b/um,
+    message: "the cinematic renderer cannot retain a shared presentation runtime; create one per composition",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/gameplay/runtime/tear-world-bootstrap.ts"]),
     pattern: /(?:from\s+|import\s*\()\s*["'][^"']*config\/game-config["']/u,
     message: "the generic world bootstrap must receive base configuration through its explicit caller port",
@@ -227,6 +237,16 @@ if (dependencyErrors("src/presentation/backdrop.ts",
   || dependencyErrors("src/presentation/backdrop.ts",
     'export function createBackdrop() { return {}; }').length !== 0) {
   throw new Error("source architecture backdrop policy injection rule self-test failed");
+}
+if (dependencyErrors("src/presentation/cinematics.ts",
+  'import { CONFIG } from "../config/game-config";').length !== 1
+  || dependencyErrors("src/presentation/cinematics.ts",
+    'import type { CONFIG } from "../config/game-config";').length !== 1
+  || dependencyErrors("src/presentation/cinematics.ts",
+    'export const Cinematics = {};').length !== 1
+  || dependencyErrors("src/presentation/cinematics.ts",
+    'export function createCinematics() { return {}; }').length !== 0) {
+  throw new Error("source architecture cinematic presentation policy rule self-test failed");
 }
 if (dependencyErrors("src/gameplay/runtime/tear-world-bootstrap.ts",
   'import { CONFIG } from "../../config/game-config";').length !== 1
