@@ -249,10 +249,27 @@ Before coding, read this file, then:
   phase order, injected event tick ownership, object identity, and the one-loop
   live wrapper. Detached replay has not yet adopted this factory, so this slice
   is an extraction seam rather than a live-to-detached assembly-parity claim.
+- The thirty-second slice moved the detached combat and 12-scenario replay
+  consumers onto that exact factory. They now have one scheduler, authoritative
+  input/step, entity identity runtime, kill transaction, combat runtime, and
+  injected event bus. Hydration installs all captured collections, restores the
+  allocator (including reservations for absent actors), binds staged enemies
+  and projectiles in source order before any ID allocation, resets the captured
+  tick, and restores chapter runtime last. A focused kill proof shows the core
+  resolver mutates score/wave-kill state through `LiveKillRuntime`. Every prior
+  live hash and deterministic harness effect sequence remains exact. The bus is
+  not yet outward parity: detached wave/content callbacks still record strings
+  rather than publish comparable native facts, and arbitrary mid-run transient
+  restoration remains a later portable-restorer boundary.
 
 ## Latest evidence
 
 All of the following were run from this worktree after the parity-passing slice:
+
+- `pnpm check:c27a:foundation` passed after slice 32: typecheck, lint,
+  architecture, 31 test files / 104 tests, standalone test build, the physical
+  input browser proof, fresh 12-scenario live capture, and all 37 shared-core
+  detached parity tests.
 
 - `pnpm check:c27a:foundation` passed after slice 31: typecheck, lint,
   architecture (including planted portable-combat violations), 31 test files /
@@ -310,10 +327,11 @@ portable gameplay timeline; chapter bindings reconstruct from data through
 explicit gameplay ports; and State Forge transactionally restores their full
 behavior-bearing position across worlds. The next boundary is comparable
 outward-effect streams plus a win outcome and a wave-boundary crossing. The
-semantic adapter and combat assembly are now shared production facilities, but
-the detached side still needs to consume that assembly/event bus and publish
-real wave/spawn facts before equality can be asserted. Adopt it next, restoring
-the captured entity-identity state/bindings before tick 1; do not synthesize a
+semantic adapter and combat assembly are now shared by the live and detached
+parity consumers, with captured identity restored. The detached wave/content
+adapters still need to publish real facts through that one bus and the browser
+artifact must expose the corresponding native stream before equality can be
+asserted. Wire and compare those next; do not synthesize a
 `run.completed` fact from the detached harness's current `winRun` note. Then
 continue extracting the closure-owned run/world construction. Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete

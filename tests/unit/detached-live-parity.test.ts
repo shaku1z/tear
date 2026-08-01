@@ -5,12 +5,12 @@ import { describe, expect, it } from "vitest";
 import { EnvelopeSequencer, type CommandEnvelope } from "../../src/domain/envelopes";
 import type { GameAction } from "../../src/input/game-action";
 import { projectCanonicalGameplayState } from "../../src/gameplay/runtime/canonical-state";
-import { TearSimulationRuntime } from "../../src/gameplay/runtime/tear-simulation-runtime";
+import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
 import { applyTearCodecConfiguration, hydrateTearCodecWorld, type TearCodecValue } from "../../src/tearbench";
 import { CONFIG } from "../../src/config/game-config";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { createConfigRestorer } from "../../src/app/runtime-initialization";
-import { createDetachedCombatPhases, createDetachedWaveRuntime, createDetachedWorld,
+import { createDetachedCombatSimulation, createDetachedWaveRuntime, createDetachedWorld,
   restoreDetachedChapterBinding } from "./detached-world-harness";
 
 const ARTIFACT_DIR = resolve("artifacts/tearbench/c27a");
@@ -48,7 +48,7 @@ function readTraces(): readonly LiveTrace[] {
  */
 function replayDetached(trace: LiveTrace) {
   const detached = createDetachedWorld({ seed: trace.scenario.seed, mode: trace.scenario.start.mode });
-  const { world, clock, input } = detached;
+  const { world } = detached;
   const codecWorld = {
     components: new Map(Object.entries(trace.origin.state)),
     references: new Map<string, string>(),
@@ -64,6 +64,9 @@ function replayDetached(trace: LiveTrace) {
   world.state.setBlade(staged.blade);
   world.state.setEnemies(staged.enemies);
   world.state.setProjectiles(staged.projectiles);
+  world.state.setFloaters(staged.floaters as never);
+  world.state.setSlowZones(staged.slowZones as never);
+  world.state.setTemporaryWalls(staged.walls as never);
   // Entity tuning reads configuration, so a world restored without the
   // captured values would simulate differently from the world it came from.
   // Exactly the live State Forge commit order: reset configuration to base,
@@ -79,19 +82,13 @@ function replayDetached(trace: LiveTrace) {
   const rng = trace.origin.state["tear.rng.v1"];
   if (rng !== undefined) world.context.services.random.restore(rng as never);
   detached.stage.index = staged.stageIndex;
-  restoreDetachedChapterBinding(detached, staged.runtime);
-
   const platforms = staged.platforms.length > 0 ? staged.platforms : undefined;
   const waves = createDetachedWaveRuntime(detached, platforms);
-  const phases = createDetachedCombatPhases(detached, {
+  const gameplayEvents = new TearGameplayEventBus(() => trace.origin.tick);
+  const core = createDetachedCombatSimulation(detached, {
     ...(platforms === undefined ? {} : { platforms }),
     updateWave: waves.update,
-  });
-  const outward = phases.outward;
-
-  const runtime = new TearSimulationRuntime({
-    actionPort: input.actionPort,
-    step: (seconds) => { clock.sim += seconds; phases.step(seconds); },
+    gameplayEvents,
     // Exactly the live authoritative projection, so the hashes are comparable.
     snapshot: (tick, authoritativeInput) => projectCanonicalGameplayState(
       tick, authoritativeInput.snapshot(),
@@ -107,7 +104,14 @@ function replayDetached(trace: LiveTrace) {
       }),
     ),
   });
+  const runtime = core.simulationRuntime;
+  gameplayEvents.setTickSource(() => runtime.scheduler.tick);
+  core.combatEntityRuntime.restoreIdentityState(staged.identityState as never);
+  for (const binding of staged.identityBindings) core.combatEntityRuntime.bindId(binding.entity, binding.id);
+  const originIdentity = core.combatEntityRuntime.captureIdentityState();
   runtime.reset(trace.origin.tick);
+  restoreDetachedChapterBinding(detached, staged.runtime);
+  const outward = core.outward;
 
   const sequencer = new EnvelopeSequencer();
   const hashes: { tick: number; canonical: string }[] = [];
@@ -119,7 +123,8 @@ function replayDetached(trace: LiveTrace) {
     hashes.push({ tick: result.tick, canonical: result.stateHash });
     states.push(result.state);
   }
-  return { detached, hashes, states, outward, staged };
+  return { detached, hashes, states, outward, staged,
+    originIdentity, finalIdentity: core.combatEntityRuntime.captureIdentityState(), gameplayEvents };
 }
 
 const traces = readTraces();
@@ -138,11 +143,12 @@ describe.skipIf(traces.length === 0)("detached world against the live trace", ()
       ` x${String(live.hashes.length)}${live.terminated === true ? " terminal" : ""}`;
 
     it(`hydrates the live origin snapshot into a production-composed world (${label})`, () => {
-      const { staged, detached } = replayDetached(live);
+      const { staged, detached, originIdentity } = replayDetached(live);
 
       expect(staged.player).toBeTruthy();
       expect(staged.blade).toBeTruthy();
       expect(detached.world.state.run()).not.toBeNull();
+      expect(originIdentity).toEqual(staged.identityState);
       expect(detached.world.context.cinema.captureState()).toEqual(staged.runtime.cinema);
       if (live.scenario.start.mode === "campaign") {
         expect(detached.world.context.cinema).toMatchObject({ active: true, id: "chapter-0", blocksCombat: true });

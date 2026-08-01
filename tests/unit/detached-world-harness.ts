@@ -9,13 +9,15 @@ import {
 import type { GameRuntimeDependencies } from "../../src/app/game-runtime-dependencies";
 import { aabbOverlap, clamp, len, lerp, segCircle, segPointDist } from "../../src/domain/geometry";
 import { CombatEntityRuntime, type CombatEntityRuntimeHooks } from "../../src/gameplay/combat/combat-entity-runtime";
+import type { LiveKillHost } from "../../src/gameplay/combat/live-kill-runtime";
 import { runLiveCollisionPhase, type LiveCollisionPhaseHost } from "../../src/gameplay/combat/live-collision-phase";
 import { runLiveOpeningPhase, type LiveOpeningPhaseHost } from "../../src/gameplay/combat/live-opening-phase";
-import { invokeWeaponHook } from "../../src/gameplay/combat/weapon-runtime-coordinator";
+import { addKillScore, invokeWeaponHook } from "../../src/gameplay/combat/weapon-runtime-coordinator";
 import { updateMirrorCombat } from "../../src/gameplay/combat/mirror-combat-feedback";
 import { cosmeticRandom } from "../../src/presentation/cosmetic-random";
 import { PRESETS, applyPreset, rollAffixes } from "../../src/gameplay/affixes";
 import { createLiveContentRuntime } from "../../src/gameplay/run/live-content-runtime";
+import { BOSS_ROSTER } from "../../src/gameplay/run/content-director";
 import { createLiveWaveHost } from "../../src/app/live-wave-host";
 import { STAGES, stageAt } from "../../src/gameplay/stages";
 import { applyVariant, rollVariant } from "../../src/gameplay/variants";
@@ -31,6 +33,9 @@ import { parseCampaignChapterBindingSpec, stageCampaignChapterBinding } from
 import type { ChapterIntent } from "../../src/gameplay/campaign/chapter-controller";
 import { stepCinematicPlayer } from "../../src/gameplay/campaign/cinematic-player-runtime";
 import { createTearWorldTransientState } from "../../src/gameplay/runtime/tear-world-transient-state";
+import { createTearCombatSimulation } from "../../src/gameplay/runtime/tear-combat-simulation";
+import type { AuthoritativeInputState } from "../../src/gameplay/runtime/authoritative-input";
+import type { TearGameplayEventPort } from "../../src/gameplay/runtime/gameplay-events";
 import { createParticleSystem } from "../../src/presentation/particles";
 import { createRunRandom } from "../../src/simulation/run-random";
 import type { RunLifecycleSnapshot } from "../../src/gameplay/run/lifecycle";
@@ -59,7 +64,7 @@ function idleInput(): unknown {
 /** A legal minimal run: real upgrade mods, weapon stats, and boss/void fields. */
 export function detachedRun(mode = "endless") {
   return {
-    mode, mods: newMods(), mult: 1, lifestealCd: 0, weaponId: "sword", wave: 1, score: 0, runTime: 0,
+    mode, mods: newMods(), mult: 1, lifestealCd: 0, weaponId: "sword", wave: 1, score: 0, waveKills: 0, runTime: 0,
     weaponStats: { distanceMoved: 0, throws: 0 },
     voidScroll: null, bossAdds: [], echoClones: null,
   };
@@ -175,6 +180,13 @@ export interface DetachedCombatPhaseOptions {
   readonly platforms?: readonly unknown[];
   /** The production wave update, when the caller wants live content spawning. */
   readonly updateWave?: (dt: number) => void;
+  /** Shared-core composition defers identity-runtime construction to the core factory. */
+  readonly deferCombatRuntime?: boolean;
+}
+
+export interface DetachedCombatSimulationOptions<State> extends DetachedCombatPhaseOptions {
+  readonly gameplayEvents?: TearGameplayEventPort;
+  snapshot(tick: number, input: AuthoritativeInputState): State;
 }
 
 /**
@@ -195,6 +207,9 @@ export function createDetachedCombatPhases(
   const player = () => world.state.player() as never;
   const blade = () => world.state.blade() as never;
 
+  let resolveKill: (enemy: { dead?: boolean }, cause?: string) => void = (enemy) => {
+    enemy.dead = true; outward.push("onKill");
+  };
   const entityHooks = {
     actors: () => world.state.enemies(), projectiles: () => world.state.projectiles(),
     player: () => world.state.player(),
@@ -210,10 +225,10 @@ export function createDetachedCombatPhases(
     loseStyle: note("loseStyle"), shieldAbsorbed: note("shieldAbsorbed"), addStyle: note("addStyle"),
     dashDodge: note("dashDodge"), maxStat: note("maxStat"), checkAchievements: note("checkAchievements"),
     noteFirstDamage: note("noteFirstDamage"), reflectedHit: note("reflectedHit"), bossHit: note("bossHit"),
-    onKill: (enemy: { dead?: boolean }) => { enemy.dead = true; outward.push("onKill"); },
+    onKill: (enemy: { dead?: boolean }, cause: string) => { resolveKill(enemy, cause); },
     areaDamage: () => 0,
   } as unknown as CombatEntityRuntimeHooks;
-  const combat = new CombatEntityRuntime(entityHooks);
+  let combat = options.deferCombatRuntime === true ? null : new CombatEntityRuntime(entityHooks);
 
   const opening = {
     get player() { return player(); }, get blade() { return blade(); },
@@ -243,7 +258,7 @@ export function createDetachedCombatPhases(
     overlap: (a: { x: number; y: number; hw: number; hh: number }, b: { x: number; y: number; hw: number; hh: number }) =>
       aabbOverlap(a.x, a.y, a.hw, a.hh, b.x, b.y, b.hw, b.hh),
     styleHit: note("styleHit"),
-    onKill: (enemy: { dead?: boolean }) => { enemy.dead = true; outward.push("onKill"); },
+    onKill: (enemy: { dead?: boolean }, cause?: string) => { resolveKill(enemy, cause); },
     fireDashStart: note("fireDashStart"), fireDashContact: note("fireDashContact"),
     fireWeaponCatch: note("fireWeaponCatch"), fireThrowLaunch: note("fireThrowLaunch"),
     logThrowLaunch: note("logThrowLaunch"), weaponWorldImpact: () => null,
@@ -295,7 +310,10 @@ export function createDetachedCombatPhases(
   const collision = {
     get player() { return player(); }, get blade() { return blade(); },
     get run() { return world.state.run() as never; },
-    combat, width: CONFIG.view.w, state: collisionState,
+    get combat() {
+      if (combat === null) throw new Error("detached combat runtime has not been composed");
+      return combat;
+    }, width: CONFIG.view.w, state: collisionState,
     // The production weapon hook, exactly as the live combat adapter calls it.
     // A hand-rolled damage rule here would silently diverge from the live world.
     weaponHit: (enemy: unknown, quality: number, damage: number, slam: boolean, launch: boolean, empowered: boolean) => {
@@ -311,7 +329,7 @@ export function createDetachedCombatPhases(
     runDamageMultiplier: () => 1, noteFirstDamage: note("noteFirstDamage"),
     logWeapon: (type: string) => { outward.push(`logWeapon:${type}`); },
     emitThrowResolve: note("emitThrowResolve"),
-    onKill: (enemy: { dead?: boolean }) => { enemy.dead = true; outward.push("onKill"); },
+    onKill: (enemy: { dead?: boolean }, cause?: string) => { resolveKill(enemy, cause); },
     addFloater: note("addFloater"), effects: collisionEffects,
     sound: (cue: string) => { outward.push(`sound:${cue}`); }, flare: note("flare"),
     addShake: note("addShake"), addZoom: note("addZoom"), addFlash: note("addFlash"), addStyle: note("addStyle"),
@@ -336,13 +354,80 @@ export function createDetachedCombatPhases(
     requestAdContinue: note("requestAdContinue"), adAvailable: () => false, endRun: note("endRun"),
   } as unknown as LiveCollisionPhaseHost;
 
+  const kill = {
+    enemies: () => world.state.enemies() as never,
+    projectiles: () => world.state.projectiles() as never,
+    run: () => world.state.run() as never,
+    player: () => world.state.player() as never,
+    now: () => detached.clock.sim,
+    stageIndex: () => stage.index,
+    finalStageIndex: STAGES.length - 1,
+    stageAccent: () => stageAt(stage.index).accent,
+    stageChapterBossOutro: () => stageAt(stage.index).chapter.bossOutro,
+    hasStageChapter: () => true,
+    bossRosterSize: BOSS_ROSTER.length,
+    achievementsEnabled: () => false,
+    addKillScore: () => { addKillScore(world.state.run() as never, CONFIG.run.scorePerKill, CONFIG.run.scoreMult); },
+    addStat: () => undefined, maxStat: () => undefined, bumpDaily: () => undefined,
+    bossKillAchievement: note("bossKillAchievement"), killAchievement: note("killAchievement"),
+    checkAchievements: () => undefined, bossGhostMoment: note("bossGhostMoment"),
+    deathEffect: note("deathEffect"), deathSound: note("deathSound"),
+    makeDeathEvent: (enemy: unknown, cause: string | undefined, cleanElimination: boolean) =>
+      Object.freeze({ enemy, cause, cleanElimination }),
+    fire: (hooks: unknown, event: unknown) => {
+      if (Array.isArray(hooks)) {
+        for (const hook of hooks) if (typeof hook === "function") (hook as (value: unknown) => void)(event);
+      }
+    },
+    applySever: (enemy: { applySever?: (tier: number) => void }, tier: number) => { enemy.applySever?.(tier); },
+    ring: note("killRing"),
+    restorePlatforms: (value: unknown[]) => { stage.platforms = [...value]; },
+    releaseCamera: note("releaseCamera"), happyTime: note("happyTime"), bossPresentation: note("bossPresentation"),
+    releaseStolenBlade: (enemy: unknown) => {
+      const weapon = blade() as { hostile?: boolean; stolenBy?: unknown; state?: string };
+      if (weapon.stolenBy === enemy) { weapon.hostile = false; weapon.stolenBy = null; weapon.state = "returning"; }
+    },
+  } as unknown as LiveKillHost;
+
   return Object.freeze({
-    outward, combat, opening, collision,
+    outward, get combat() {
+      if (combat === null) throw new Error("detached combat runtime has not been composed");
+      return combat;
+    }, opening, collision, combatEntities: entityHooks, kill,
+    installCombat(runtime: CombatEntityRuntime, killResolver: typeof resolveKill): void {
+      combat = runtime; resolveKill = killResolver;
+    },
     step(seconds: number): void {
       if (runLiveOpeningPhase(opening, seconds).blocked) return;
       runLiveCollisionPhase(collision, seconds);
     },
   });
+}
+
+/** Uses the same gameplay-only combat/scheduler assembly as the live browser host. */
+export function createDetachedCombatSimulation<State>(
+  detached: DetachedWorld,
+  options: DetachedCombatSimulationOptions<State>,
+) {
+  const phases = createDetachedCombatPhases(detached, { ...options, deferCombatRuntime: true });
+  const core = createTearCombatSimulation<State>({
+    ...(options.gameplayEvents === undefined ? {} : { gameplayEvents: options.gameplayEvents }),
+    combatEntities: phases.combatEntities,
+    kill: phases.kill,
+    createCombat: ({ combatEntities, resolveKill: coreResolveKill }) => {
+      phases.installCombat(combatEntities, coreResolveKill as never);
+      return {
+        opening: phases.opening,
+        collision: phases.collision,
+        advanceClock: (seconds) => { detached.clock.sim += seconds; },
+        captureProtection: () => undefined,
+        applyProtection: () => undefined,
+      };
+    },
+    authoritative: { actionPort: detached.input.actionPort,
+      snapshot: (tick, input) => options.snapshot(tick, input) },
+  });
+  return Object.freeze({ ...core, outward: phases.outward, opening: phases.opening, collision: phases.collision });
 }
 
 /**

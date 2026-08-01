@@ -561,12 +561,24 @@ of replay, headless execution, or learning portability.
   The post-slice `check:c27a:foundation` gate passed 31 files / 103 tests,
   rebuilt the standalone app, regenerated all 12 live traces, and passed all
   37 detached comparisons.
+- Detached combat and the entire 12-scenario parity corpus now consume the
+  same `createTearCombatSimulation` factory as the browser host. State Forge
+  hydration restores all world collections plus the captured identity
+  allocator and actor bindings before reset/tick 1. A single injected gameplay
+  event bus follows that scheduler, and all kill callbacks reach the core
+  `LiveKillRuntime`; a focused proof observes real score and wave-kill mutation.
+  All existing hashes remain exact. Wave/content publishers are not yet wired
+  to the bus, so semantic outward equality remains open, as does arbitrary
+  mid-run transient restoration beyond the current valid origin corpus.
+  The post-slice `check:c27a:foundation` gate passed 31 files / 104 tests,
+  rebuilt the standalone app, regenerated all 12 traces, and passed all 37
+  shared-core detached comparisons.
 
 ## Remaining C27A work
 
-1. Move detached parity onto the new shared gameplay-core assembly, restoring
-   captured identity allocator state and actor bindings before tick 1. Wire its
-   one typed event bus to the real wave/spawn publishers with stable
+1. Wire the shared detached typed event bus to the real wave/spawn publishers
+   using the restored production actor identity, expose the live native stream,
+   and compare complete ordered records with stable
    production actor IDs, and compare complete ordered semantic streams rather
    than merely recording harness strings. Then add
    a win outcome plus a wave-boundary crossing to the live↔detached matrix.

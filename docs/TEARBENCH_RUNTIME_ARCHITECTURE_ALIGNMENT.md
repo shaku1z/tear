@@ -240,11 +240,12 @@ core claim can be made. The precise evidence and remaining work are recorded in
 
 The native-gameplay-fact to causal-event translation is shared by Ghost V3 and
 TearBench, and the live browser now delegates its fixed combat graph to the
-gameplay-only `createTearCombatSimulation` factory. The next C27A implementation
-slice is not a second combat host or parallel headless simulator. Move detached
-parity onto this factory, restore captured actor identity through its returned
-`CombatEntityRuntime`, then use its one event bus to compare real wave/spawn
-semantic streams. Add
+gameplay-only `createTearCombatSimulation` factory. Detached combat and the
+12-scenario parity corpus now consume that same factory and restore captured
+actor identity through its returned `CombatEntityRuntime`. The next C27A
+implementation slice is not a second combat host or parallel headless
+simulator. Use the shared bus and identity runtime to publish and compare real
+wave/spawn semantic streams. Add
 win plus wave-boundary scenarios only through production transitions, then
 continue moving app-backed configuration, RNG,
 effects, clock, Mirror, boss-feedback, and closure-owned run/world construction

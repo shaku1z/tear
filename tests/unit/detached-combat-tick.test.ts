@@ -3,8 +3,7 @@ import { describe, expect, it } from "vitest";
 import { EnvelopeSequencer, type CommandEnvelope } from "../../src/domain/envelopes";
 import type { GameAction } from "../../src/input/game-action";
 import { CONFIG } from "../../src/config/game-config";
-import { TearSimulationRuntime } from "../../src/gameplay/runtime/tear-simulation-runtime";
-import { createDetachedCombatPhases, createDetachedWorld } from "./detached-world-harness";
+import { createDetachedCombatSimulation, createDetachedWorld } from "./detached-world-harness";
 
 /**
  * A detached world that runs BOTH halves of a production combat tick: the
@@ -25,20 +24,11 @@ function createDetachedCombatWorld(seed: string) {
       { id: "ranged", x: 1_150, y: CONFIG.world.groundY - CONFIG.ranged.h / 2 },
     ],
   });
-  const { world, clock, effects, transient, input, run } = detached;
-  const phases = createDetachedCombatPhases(detached);
-  const { outward, combat } = phases;
+  const { world, clock, effects, transient, run } = detached;
   const player = () => world.state.player() as never;
   const blade = () => world.state.blade() as never;
 
-  const runtime = new TearSimulationRuntime<Record<string, unknown>>({
-    actionPort: input.actionPort,
-    step: (seconds) => {
-      clock.sim += seconds;
-      // The harness runs the same order the live combat host uses: opening,
-      // then collision, with collision skipped when the opening half blocks.
-      phases.step(seconds);
-    },
+  const core = createDetachedCombatSimulation<Record<string, unknown>>(detached, {
     snapshot: (tick) => {
       const actor: { x: number; y: number; vx: number; vy: number; hp: number } = player();
       const weapon: { x: number; y: number; state: string } = blade();
@@ -55,8 +45,9 @@ function createDetachedCombatWorld(seed: string) {
       };
     },
   });
+  const { outward, combatEntityRuntime: combat, simulationRuntime: runtime } = core;
   runtime.reset(0);
-  return { world, runtime, clock, effects, outward, transient, run, combat };
+  return { world, runtime, clock, effects, outward, transient, run, combat, killRuntime: core.killRuntime };
 }
 
 function scriptedActions(): ReadonlyMap<number, readonly CommandEnvelope<GameAction>[]> {
@@ -123,5 +114,20 @@ describe("detached combat tick", () => {
     expect(other.hashes).not.toEqual(base.hashes);
     expect(base.detached.combat.captureIdentityState())
       .not.toBe(other.detached.combat.captureIdentityState());
+  });
+
+  it("routes detached kills through the shared production kill transaction", () => {
+    const detached = createDetachedCombatWorld("kill-transaction");
+    const enemy = detached.world.state.enemies()[0] as never as { dead: boolean };
+    const run = detached.world.state.run() as never as { score: number; waveKills: number };
+    const before = { score: run.score, waveKills: run.waveKills };
+    enemy.dead = true;
+
+    detached.killRuntime.resolve(enemy as never, "blade");
+
+    expect(run.score).toBeGreaterThan(before.score);
+    expect(run.waveKills).toBe(before.waveKills + 1);
+    expect(detached.outward).toContain("deathEffect");
+    expect(detached.outward).toContain("deathSound");
   });
 });
