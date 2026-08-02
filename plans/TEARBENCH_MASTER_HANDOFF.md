@@ -181,9 +181,13 @@ Named status:
   world and fixed-step simulation composition. A 120-tick C30-to-C29 semantic
   comparison, fresh-environment isolation, exact bounded batches, cooperative
   cancellation/timeout, and bounded terminal-artifact retention pass. This is
-  an in-process pool, not worker or throughput evidence. Browser-fast corpus
-  parity, stress isolation, workers, retries/checkpoint restore, measured
-  throughput, visible failure reruns, and Academy/Foundry streaming remain open.
+  an in-process pool, not worker or throughput evidence. A C30 recorded-origin
+  attempt reached C27A boss-Aldric tick 35, then diverged at its live wave spawn
+  because the C29 source composition lacks the wave/reward lifecycle still held
+  by C27A's test-only detached harness; both unproven attempts were reverted.
+  Browser-fast corpus parity, stress isolation, workers, retries/checkpoint
+  restore, measured throughput, visible failure reruns, and Academy/Foundry
+  streaming remain open.
 - **C31-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -405,11 +409,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C30 now schedules fresh DOM-free production-composition episodes with exact bounded batches, cooperative cancellation/timeout outcomes, and bounded terminal-artifact retention; it still owns no second combat model.
-PROVEN BY:           `pnpm typecheck`, the focused 4-file / 9-test generic-headless/C30/C29 replay suite, and `pnpm check:architecture` pass. The production pool proves same-seed move/idle divergence and replay determinism, zero-tick cancelled/timed-out jobs, and a two-artifact cap.
-REMAINING HERE:      C30 needs C27A-matrix browser-fast parity with event/reward/terminal/cadence comparison, stress-tested parallel production episodes, workers, retries/checkpoint restore, target-hardware throughput/latency/memory/leak measurements, and visible failure reruns/Academy streaming. Current controls unblock but cannot clear the combined resource/throughput item until a declared production budget is measured.
+DONE THIS STEP:      C30 now has a bounded production-episode control surface, and its C27A recorded-origin comparison has isolated the first missing shared lifecycle boundary rather than silently substituting a test harness.
+PROVEN BY:           `pnpm typecheck`, the focused 4-file / 9-test generic-headless/C30/C29 replay suite, and `pnpm check:architecture` pass for the retained production pool. The reverted recorded-origin attempt matched boss-Aldric hashes through tick 35 and first diverged at live boss spawn tick 36, where C29 has no source-owned wave/reward lifecycle.
+REMAINING HERE:      C30 needs C27A-matrix browser-fast parity with event/reward/terminal/cadence comparison; that item is explicitly blocked on promoting the wave/reward lifecycle from C27A's detached test harness into shared C29/C30 source composition. It also needs stress-tested parallel production episodes, workers, retries/checkpoint restore, target-hardware throughput/latency/memory/leak measurements, and visible failure reruns/Academy streaming. Current controls only unblock the resource/throughput item.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Compare the production headless adapter against the C27A live matrix using the same scenarios and action traces; record a real mismatch instead of substituting the historical generic scaffold.
+NEXT SLICE:          Build a deterministic natural-production-episode benchmark with an explicit workload and developer-hardware budget; measure repeatability, throughput, latency, and retained-memory bounds without treating the historical generic scaffold as production evidence.
 
 All of the following were run from this worktree through C27A slice 36:
 

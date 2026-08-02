@@ -51,6 +51,19 @@ operational boundary it proves.
   same-seed move/idle episodes plus a repeat, cancelled, and timed-out job;
   the move result differs from idle, repeats exactly, stopped jobs take zero
   ticks, and only two terminal artifacts are retained.
+- **C27A-matrix boundary finding (2026-08-02):** a deliberately separate
+  recorded-origin C30 adapter was tried against every fixed-step C27A live
+  trace. Captured snapshots use the resolved numeric run seed while their
+  scenarios retain the caller seed; treating the snapshot coordinate as
+  authoritative fixed that adapter precondition. The first actual simulation
+  comparison then matched through boss-Aldric tick 35 and diverged at tick 36,
+  when live spawns Aldric. `createProductionGhostReplayComposition` hydrates
+  the world and combat runtime but has no source-owned wave/reward lifecycle to
+  perform that spawn; the earlier C27A detached proof obtains it from the
+  test-only `createDetachedWaveRewardRuntime` harness. Both unproven adapter
+  attempts were reverted under the two-attempt rule. This is a C29/C30 shared
+  composition gap, not evidence that the generic historical headless scaffold
+  has parity.
 - Architecture checks reject direct app, presentation, persistence, platform,
   browser, and Ghost 2 imports plus DOM/Canvas/browser globals in the C30
   adapter. The focused Node test executes it without a DOM.
@@ -64,7 +77,10 @@ operational boundary it proves.
 - [ ] Headless-to-live parity on the C27A matrix. The current one-episode
   semantic comparison is C30-to-C29 source-composition evidence only; no
   browser-fast matrix, native-event-order, reward, terminal-condition, or
-  cadence corpus is claimed.
+  cadence corpus is claimed. C27A matrix work is blocked specifically on moving
+  the live wave/reward lifecycle from the detached test harness into a
+  source-owned composition shared by C29 and C30; it must not be bypassed with
+  a second headless model.
 - [ ] Resource controls and measured throughput. There are no production worker
   processes, retries, checkpoint restore, target-hardware throughput, latency,
   memory, or leak measurements yet. In-process batching, cooperative
@@ -92,7 +108,8 @@ retain their respective evidence obligations.
 
 ## Next safe boundary
 
-Compare the production headless adapter against the C27A live matrix using the
-same scenarios and action traces. Record any mismatch as a production defect or
-a bounded known divergence; do not replace the live side with the historical
-generic scaffold.
+Build the deterministic natural-episode benchmark and measurement artifact for
+the existing production pool: state its workload and developer-hardware budget,
+then measure repeatability, throughput, latency, and retained-memory bounds.
+Do not call it C30 completion and do not use the historical generic scaffold's
+synthetic rate as a result for production worlds.
