@@ -2,6 +2,7 @@ import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../presentation/screens/live-screen-renderers";
 import type { LegacyGamepad } from "../input/legacy-input-contracts";
 import { ABILITY_CATEGORY_ORDER, SPECIAL_ABILITY_COLOR, abilityBadge } from "../presentation/codex-snapshots";
+import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
 
 type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "AFFIXES" | "Aldric" | "Armored" | "Bomber" | "Charger" |
   "Chimera" | "Colossus" | "Echo" | "Flyer" | "Ranged" | "Support" | "VARIANTS" | "Warden" | "Wraith" | "applyVariant" |
@@ -24,6 +25,7 @@ export interface LibraryScreenServices {
   readonly ease: (value: number) => number;
   readonly formatTime: (seconds: number) => string;
   readonly getBest: (mode: string, difficulty: string) => Readonly<{ wave: number; score: number; time?: number }>;
+  readonly ghostVault: GhostVaultLibraryPort;
   readonly enterReplay: (record: unknown, from: string) => boolean;
 }
 

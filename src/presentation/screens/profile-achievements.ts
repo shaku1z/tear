@@ -13,11 +13,13 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
     tabs(context, view.tabs, (id) => ({ type: "profile.selectTab", id }), 252);
     const panelX = context.width / 2 - 460;
     if (view.message) ui.text(canvas, view.message, context.width / 2, 296, ui.t.type.caption, "center", ui.t.alpha.muted);
-    if (view.tab === "replays" && view.replays) {
+    if ((view.tab === "replays" || view.tab === "vault") && view.replays) {
       const top = 322, bottom = context.height - 110, rowHeight = 96, listX = context.width / 2 - 560, listWidth = 1120;
       if (view.replays.length === 0 && view.emptyMessage) {
         ui.text(canvas, view.emptyMessage, context.width / 2, top + 140, ui.t.type.body, "center", ui.t.alpha.muted);
-        context.enqueue({ x: context.width / 2 - 130, y: top + 168, w: 260, h: 46, label: "PLAY A RUN", action: { type: "profile.play" } });
+        if (view.tab === "replays") {
+          context.enqueue({ x: context.width / 2 - 130, y: top + 168, w: 260, h: 46, label: "PLAY A RUN", action: { type: "profile.play" } });
+        }
       }
       canvas.save(); canvas.beginPath(); canvas.rect(0, top - 8, context.width, bottom - top + 16); canvas.clip();
       view.replays.forEach((replay, index) => {

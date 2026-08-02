@@ -240,6 +240,18 @@ describe("legacy screen renderer registry", () => {
       .toMatchObject({ x: 1086, y: 342, w: 78, h: 40 });
   });
 
+  it("renders Ghost Vault custody rows without exposing legacy replay mutations", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.profile({ id: "profile", tab: "vault", tabs: [{ id: "vault", label: "VAULT", selected: true }],
+      name: "Guest", signedIn: false, stats: [], replays: [{ id: "capsule:run-1", title: "Ghost V3 - COACHING",
+        detail: "COMPLETE - 3 CHUNKS", available: false, badge: "DURABLE CAPSULE" }] });
+    expect(controls.find((control) => control.action.type === "profile.watchReplay"))
+      .toMatchObject({ enabled: false, action: { type: "profile.watchReplay", id: "capsule:run-1" } });
+    expect(controls.some((control) => control.action.type === "profile.pinReplay")).toBe(false);
+    expect(controls.some((control) => control.action.type === "profile.deleteReplay")).toBe(false);
+  });
+
   it("declares every legacy-only parity field needed before old screen ranges can be deleted", () => {
     const contracts = readFileSync(fileURLToPath(new URL("../../src/presentation/screens/contracts.ts", import.meta.url)), "utf8");
     for (const field of [

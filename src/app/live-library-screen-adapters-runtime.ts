@@ -13,6 +13,7 @@ import { buildLeaderboardRow, buildProfileRecords, buildProfileReplays, buildPro
   type LeaderboardRowSource } from "../presentation/profile-snapshots";
 import { ReplayLibraryController } from "./replay-library-controller";
 import { renderReplayThumbnail } from "../presentation/replay-thumbnail";
+import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
 
 type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "AFFIXES" | "Aldric" | "Armored" | "Bomber" | "Charger" |
   "Chimera" | "Cloud" | "Colossus" | "CONFIG" | "DAILY" | "Echo" | "FirebaseProvider" | "Flyer" |
@@ -35,6 +36,7 @@ export interface LibraryScreenServices {
   readonly ease: (value: number) => number;
   readonly formatTime: (seconds: number) => string;
   readonly getBest: (mode: string, difficulty: string) => Readonly<{ wave: number; score: number; time?: number }>;
+  readonly ghostVault: GhostVaultLibraryPort;
   readonly enterReplay: (record: unknown, from: string) => boolean;
 }
 
@@ -71,7 +73,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     resilience: { name: "RESILIENCE", color: colors.deflected }, utility: { name: "UTILITY", color: colors.armored },
   });
   const fallbackCategory = categories.utility ?? { name: "UTILITY", color: colors.armored };
-  const profileTabs = [["bests", "BESTS"], ["replays", "REPLAYS"], ["stats", "STATS"]] as const;
+  const profileTabs = [["bests", "BESTS"], ["replays", "REPLAYS"], ["vault", "VAULT"], ["stats", "STATS"]] as const;
   const leaderboardTabs = [["global", "GLOBAL"], ["feed", "FEED"]] as const;
   const difficultyHeat: Readonly<Record<string, string | null>> = {
     easy: "#2f9e6b", normal: "#13c4d6", hard: "#e0a326", extreme: null, onehit: "#b06cff",
@@ -171,6 +173,24 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
   };
   const renderProfile = (): void => {
     profileTab = services.stepTab(profileTabs, profileTab, () => { services.setScroll(0); profileMessage = ""; });
+    let ghostVault = services.ghostVault.snapshot();
+    if (profileTab === "vault" && ghostVault.status === "idle") {
+      services.ghostVault.refresh();
+      ghostVault = services.ghostVault.snapshot();
+    }
+    const vaultReplays = ghostVault.capsules.map((capsule) => Object.freeze({
+      id: `capsule:${capsule.id}`,
+      title: `Ghost V3 - ${capsule.recordingProfile.toUpperCase()}`,
+      detail: `${capsule.status.toUpperCase()} - ${String(capsule.chunkCount)} CHUNKS`,
+      badge: "DURABLE CAPSULE",
+      available: false,
+      timestamp: new Date(capsule.createdAt).toLocaleDateString(),
+    }));
+    if (profileTab === "vault" && ghostVault.message !== undefined) profileMessage = ghostVault.message;
+    else if (profileTab === "vault" && ghostVault.status === "loading") profileMessage = "opening Ghost Vault...";
+    else if (profileTab === "vault" && ghostVault.status === "ready" && ghostVault.capsules.length === 0) {
+      profileMessage = "No Ghost capsules stored on this device yet.";
+    }
     const signedIn = d.Cloud.loggedIn(), canSignIn = d.Cloud.canSignIn();
     const records = buildProfileRecords(d.CONFIG.modes, d.CONFIG.difficulties, services.getBest);
     const stats = profileTab === "stats" ? buildProfileStats((key) => d.PROFILE.stat(key),
@@ -185,7 +205,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       records, replays: profileTab === "replays" ? buildProfileReplays(d.VAULT.index().map((entry) => ({
         id: entry.id, ts: entry.ts, pin: entry.pin, sum: entry.sum,
         ...(typeof entry.shareId === "string" ? { shareId: entry.shareId } : {}),
-      })), d.CONFIG.modes) : [], stats,
+      })), d.CONFIG.modes) : (profileTab === "vault" ? vaultReplays : []), stats,
       message: profileMessage, height: services.height, scroll: services.scroll(), achievements: d.ACH.list,
       unlocked: (id) => d.PROFILE.unlocked(id), categoryIcon: (category) => Object.entries(d.ACH.CATS).find(([id]) => id === category)?.[1].icon ?? "★",
       rarityColor: (rarity) => (Object.entries(d.ACH.RARITY).find(([id]) => id === rarity)?.[1] ?? d.ACH.RARITY.common).color, stages: d.STAGES, bosses: BOSS_ROSTER,

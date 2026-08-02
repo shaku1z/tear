@@ -122,7 +122,11 @@ Named status:
 - **C27A:** closed shared-composition correction; the checkpoint report records
   88 committed C27A migrations including its closure commit. C27/C28-C40 retain
   their own product and output exit gates.
-- **C28-C40:** incomplete.
+- **C28:** active; its first exit-gate slice is complete: a running app opens
+  the browser Ghost Vault through a typed application controller and the normal
+  Profile → Vault route. The stored-capsule browser journey passes; indexing,
+  Doctor, knowledge-library, and full Vault exit work remain.
+- **C29-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
 

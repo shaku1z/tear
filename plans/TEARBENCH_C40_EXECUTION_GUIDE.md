@@ -988,11 +988,11 @@ portability, concurrent complete worlds, or C27A completion.
 
 ### C28 — Vault, Doctor, knowledge
 
-- [ ] `ghost/capsule-vault` reachable from the running app (not only `live-recorder` internals)
+- [x] `ghost/capsule-vault` reachable from the running app (not only `live-recorder` internals) — `GhostVaultLibraryController` reopens IndexedDB manifests through the browser Vault adapter; the normal Profile → Vault route shows immutable custody metadata. `pnpm check:c28:vault-reachable` passes.
 - [ ] Indexing, retention, integrity checks run on real stored capsules
 - [ ] `ghost/ghost-doctor` diagnoses a real corrupted capsule end to end
 - [ ] `ghost/knowledge-libraries` has a non-test consumer
-- [ ] Browser journey proves a player reaches stored recordings
+- [x] Browser journey proves a player reaches stored recordings — the C28 journey records a real V3 capsule, reloads, follows the normal menu/Profile/Vault controls, and observes the rendered custody row. Playback remains deliberately unavailable until C29.
 
 ### C29 — Replay world, Theater, comparison, practice
 

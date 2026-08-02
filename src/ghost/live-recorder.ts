@@ -8,9 +8,6 @@ import {
   type TearGhostManifest,
   type GhostVaultWrite,
 } from "./capsule-vault";
-import { GhostCapsuleReader, type GhostReadCapsule } from "./capsule-reader";
-import { mapGhostCapsuleToReplayEnvelope, type GhostCapsuleReplayMapping } from "./capsule-replay-envelope";
-import { assessGhostReplayAdmission, type GhostReplayAdmission } from "./replay-admission";
 import { createLiveGhostBootstrapEvent } from "./live-causal-events";
 import { ghostRecordingProfile, type GhostRecordingProfileId } from "./recording-profiles";
 
@@ -268,44 +265,4 @@ export function createBrowserGhostLiveRecorder(
     ...(options.maxPendingWrites === undefined ? {} : { maxPendingWrites: options.maxPendingWrites }),
     ...(worker === undefined ? {} : { worker }),
   });
-}
-
-/** Reopens browser storage instead of trusting an in-memory recorder reference. */
-export async function listBrowserGhostCapsuleManifests(factory: IDBFactory | undefined): Promise<readonly TearGhostManifest[]> {
-  if (factory === undefined) return Object.freeze([]);
-  const vault = new GhostLocalVault(await createIndexedDbGhostVaultBackend(factory));
-  const ids = await vault.backend().keys("manifests");
-  const manifests = await Promise.all(ids.map((id) => vault.getManifest(id)));
-  return Object.freeze(manifests.filter((manifest): manifest is TearGhostManifest => manifest !== undefined));
-}
-
-/** Test and tooling entry point that decodes the persisted capsule through the normal reader. */
-export async function readBrowserGhostCapsule(
-  factory: IDBFactory | undefined,
-  id: string,
-): Promise<GhostReadCapsule | undefined> {
-  if (factory === undefined) return undefined;
-  return new GhostCapsuleReader(new GhostLocalVault(await createIndexedDbGhostVaultBackend(factory))).read(id);
-}
-
-/** Reopens a persisted capsule and maps only strict V3 truth tracks for tooling. */
-export async function readBrowserGhostCapsuleReplay(
-  factory: IDBFactory | undefined,
-  id: string,
-): Promise<GhostCapsuleReplayMapping | undefined> {
-  const capsule = await readBrowserGhostCapsule(factory, id);
-  return capsule === undefined ? undefined : mapGhostCapsuleToReplayEnvelope(capsule);
-}
-
-/**
- * Reopens a persisted capsule and fail-closes replay admission. This only
- * reports matching metadata; it never treats the live app as a detached
- * replay runtime or promotes any V3 truth track to verified.
- */
-export async function readBrowserGhostCapsuleReplayAdmission(
-  factory: IDBFactory | undefined,
-  id: string,
-): Promise<GhostReplayAdmission | undefined> {
-  const capsule = await readBrowserGhostCapsule(factory, id);
-  return capsule === undefined ? undefined : assessGhostReplayAdmission(capsule);
 }
