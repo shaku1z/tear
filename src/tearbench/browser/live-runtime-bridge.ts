@@ -10,8 +10,39 @@ import type {
 import { createLiveTearRuntimeEnvironment } from "../live-runtime-environment";
 import { installGhostLabPanel } from "./ghost-lab-panel";
 import { installLiveStateForgeStudio } from "./live-state-forge-studio-host";
+import type { TearGhostManifest } from "../../ghost/capsule-vault";
+import type { GhostReadCapsule } from "../../ghost/capsule-reader";
+import type { GhostCapsuleReplayMapping } from "../../ghost/capsule-replay-envelope";
+import type { GhostReplayAdmission } from "../../ghost/replay-admission";
 
 type LiveRuntimeBridgeWindow = Window & { __TEAR_RUNTIME_ENVIRONMENT__?: TearRuntimeBridgeFactory };
+
+/** Test-build inspection callbacks supplied by the real live Ghost V3 recorder. */
+export interface GhostV3BrowserInspectorSource {
+  readonly manifest: () => TearGhostManifest | null;
+  readonly manifests: () => Promise<readonly TearGhostManifest[]>;
+  readonly read: (id: string) => Promise<GhostReadCapsule | undefined>;
+  readonly replay: (id: string) => Promise<GhostCapsuleReplayMapping | undefined>;
+  readonly admission: (id: string) => Promise<GhostReplayAdmission | undefined>;
+  readonly active: () => boolean;
+  readonly failure: () => string | null;
+}
+
+/** Browser-only installation for the stable Ghost V3 evidence inspector. */
+export function installGhostV3BrowserInspector(target: Window, source: GhostV3BrowserInspectorSource): void {
+  Object.defineProperty(target, "__TEAR_GHOST_V3__", {
+    configurable: true,
+    value: Object.freeze({
+      manifest: source.manifest,
+      manifests: source.manifests,
+      read: source.read,
+      replay: source.replay,
+      admission: source.admission,
+      active: source.active,
+      failure: source.failure,
+    }),
+  });
+}
 
 /** Browser/test-build installer for the otherwise DOM-free live environment. */
 export function installLiveTearRuntimeBridge(

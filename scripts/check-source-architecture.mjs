@@ -188,6 +188,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live Ghost V3 test inspection must install through the composition-supplied browser window",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /["']__TEAR_GHOST_V3__["']/u,
+    message: "live Ghost V3 test inspection surface must be assembled by the browser adapter",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -393,10 +398,16 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   throw new Error("source architecture composition-owned browser query rule self-test failed");
 }
 if (dependencyErrors("src/app/live-game-runtime.ts",
-  'Object.defineProperty(window, "__TEAR_GHOST_V3__", {});').length !== 1
+  'Object.defineProperty(window, "__TEAR_GHOST_V3__", {});').length !== 2
   || dependencyErrors("src/app/live-game-runtime.ts",
-    'Object.defineProperty(dependencies.browserWindow, "__TEAR_GHOST_V3__", {});').length !== 0) {
+    'Object.defineProperty(dependencies.browserWindow, "__TEAR_GHOST_V3__", {});').length !== 1) {
   throw new Error("source architecture composition-owned Ghost inspector rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  'const inspectorName = "__TEAR_GHOST_V3__";').length !== 1
+  || dependencyErrors("src/tearbench/browser/live-runtime-bridge.ts",
+    'Object.defineProperty(target, "__TEAR_GHOST_V3__", {});').length !== 0) {
+  throw new Error("source architecture Ghost inspector browser-adapter rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",

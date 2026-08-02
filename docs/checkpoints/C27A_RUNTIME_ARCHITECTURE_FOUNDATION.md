@@ -1014,6 +1014,18 @@ of replay, headless execution, or learning portability.
   completion claim. The next boundary is to move the inspector's assembly into
   the browser adapter while preserving its existing interface.
 
+- The fifty-ninth slice moves that assembly into the browser adapter.
+  `installGhostV3BrowserInspector()` now owns the stable test-build surface and
+  accepts only recorder-backed callbacks from the live runtime; source
+  architecture rejects reconstructing the inspector there. A direct adapter
+  unit test and the built live-capture/reload journey prove the interface and
+  post-reload capsule inspection remain unchanged.
+
+  This remains browser-test adapter isolation only, not persistence, quota or
+  device behavior, physical input, concurrent-world, or C27A completion
+  evidence. The next boundary routes the remaining test-build parity-tick hook
+  through the supplied window without changing its test behavior.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap

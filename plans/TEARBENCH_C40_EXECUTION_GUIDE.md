@@ -605,6 +605,18 @@ persistence, durability, quota/device, concurrent-complete-world, or C27A
 completion claim. Next, move inspector assembly into the browser adapter while
 preserving the same test interface.
 
+Slice 59 supplies that browser-adapter assembly boundary.
+`installGhostV3BrowserInspector()` now owns the stable test-build surface and
+accepts recorder-backed callbacks from the live runtime; source architecture
+rejects reconstructing it in the live host. The focused gate passed 7 files /
+23 tests plus architecture, its direct installer unit passes, and built Ghost
+V3 live-capture/reload evidence still reads the completed capsule after reload.
+
+This is browser-test adapter isolation only, not persistence, durability,
+quota/device, concurrent-complete-world, or C27A completion evidence. Next,
+route the remaining test-build parity-tick hook through the supplied window
+without changing its test behavior.
+
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser
 - [ ] Versioned durable capsule contract with provenance, compatibility, integrity

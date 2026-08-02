@@ -636,18 +636,15 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnT
   });
   const { wipe: Wipe, frame: presentationHost, screens: screenComposition } = interfaceComposition;
   const { library: libraryAdapters, replay: replayAdapters, settings: settingsRenameAdapters, modelRenderers: presentationScreenRenderers } = screenComposition;
-  if (__TEAR_TEST_BUILD__ && TEST_MODE) void import("../tearbench/browser/live-runtime-bridge").then(({ installLiveTearRuntimeBridge }) => {
-    Object.defineProperty(browserWindow, "__TEAR_GHOST_V3__", {
-      configurable: true,
-      value: Object.freeze({
-        manifest: () => ghostV3?.lastManifest ?? null,
-        manifests: () => listBrowserGhostCapsuleManifests(browserIndexedDb),
-        read: (id: string) => readBrowserGhostCapsule(browserIndexedDb, id),
-        replay: (id: string) => readBrowserGhostCapsuleReplay(browserIndexedDb, id),
-        admission: (id: string) => readBrowserGhostCapsuleReplayAdmission(browserIndexedDb, id),
-        active: () => ghostV3?.active === true,
-        failure: () => ghostV3?.failure ?? null,
-      }),
+  if (__TEAR_TEST_BUILD__ && TEST_MODE) void import("../tearbench/browser/live-runtime-bridge").then(({ installGhostV3BrowserInspector, installLiveTearRuntimeBridge }) => {
+    installGhostV3BrowserInspector(browserWindow, {
+      manifest: () => ghostV3?.lastManifest ?? null,
+      manifests: () => listBrowserGhostCapsuleManifests(browserIndexedDb),
+      read: (id: string) => readBrowserGhostCapsule(browserIndexedDb, id),
+      replay: (id: string) => readBrowserGhostCapsuleReplay(browserIndexedDb, id),
+      admission: (id: string) => readBrowserGhostCapsuleReplayAdmission(browserIndexedDb, id),
+      active: () => ghostV3?.active === true,
+      failure: () => ghostV3?.failure ?? null,
     });
     const consumedActions: CommandEnvelope<GameAction>[] = [];
     Input.semantic.subscribe((entry) => { consumedActions.push(entry); });

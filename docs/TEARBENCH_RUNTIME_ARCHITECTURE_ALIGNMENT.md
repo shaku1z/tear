@@ -373,6 +373,11 @@ The following C27A foundation slices are complete:
   reload proof still passes. This retains the same test interface and does not
   certify persistence; separating its assembly into the browser adapter is the
   remaining local test-inspection boundary.
+- `installGhostV3BrowserInspector()` now owns that assembly in the browser
+  adapter and receives recorder-backed callbacks from the live runtime. The
+  stable interface remains covered by direct and browser live-capture/reload
+  evidence. The remaining local test-build hook is parity-tick observation,
+  which must use the supplied browser window without changing behavior.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition
