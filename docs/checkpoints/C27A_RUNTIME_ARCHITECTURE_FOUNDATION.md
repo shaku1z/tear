@@ -1162,6 +1162,17 @@ of replay, headless execution, or learning portability.
   behavior, or C27A completion evidence. The next boundary routes live-style
   host generic profile-stat ports through the same adapter.
 
+- The seventy-second slice routes live-style host generic profile-stat ports
+  through that shared composition-owned adapter. Source architecture rejects
+  direct profile-stat access in the host. The focused gate passed 6 files / 11
+  tests, including all three style-runtime profile ports; rebuilt
+  campaign-victory browser proof passes.
+
+  This is one live-style profile-stat handoff only, not durable profile state,
+  migration, quota, crash recovery, cross-device sync, concurrent-world
+  behavior, or C27A completion evidence. The next boundary must isolate one
+  remaining named profile operation without changing its caller behavior.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

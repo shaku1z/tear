@@ -429,11 +429,11 @@ The following C27A foundation slices are complete:
   rebuilt campaign-victory browser proof passes. The next boundary routes the
   generic session and wave profile-stat ports through their shared adapter,
   again without a durable-profile claim.
-- Generic session-economy and wave-clear profile-stat ports now use one shared
-  composition-owned adapter. Their focused adapter/intent gate and rebuilt
-  campaign-victory browser proof pass. The next boundary routes live-style host
-  generic profile-stat ports through that same adapter, without a durable-profile
-  claim.
+- Generic session-economy, wave-clear, and live-style profile-stat ports now
+  use one shared composition-owned adapter. The focused adapter/intent gate and
+  rebuilt campaign-victory browser proof pass. This is still not a
+  durable-profile claim; the next boundary must isolate one remaining named
+  profile operation without changing its caller behavior.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

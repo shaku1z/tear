@@ -258,9 +258,13 @@ const forbiddenDependencyRules = Object.freeze([
     message: "shop purchase persistence must use the composition-owned adapter",
   }),
   Object.freeze({
-    roots: Object.freeze(["src/app/live-session-services-composition.ts", "src/app/live-wave-composition.ts"]),
+    roots: Object.freeze([
+      "src/app/live-session-services-composition.ts",
+      "src/app/live-wave-composition.ts",
+      "src/app/live-style-host.ts",
+    ]),
     pattern: /\bd\.PROFILE\.(?:addStat|maxStat)\(/u,
-    message: "generic session and wave profile stats must use the composition-owned adapter",
+    message: "generic session, wave, and live-style profile stats must use the composition-owned adapter",
   }),
   Object.freeze({
     roots: Object.freeze([
@@ -562,6 +566,12 @@ if (dependencyErrors("src/app/live-wave-composition.ts",
   || dependencyErrors("src/app/live-wave-composition.ts",
     "d.profileStatsPersistence.max(\"waves\", 1);").length !== 0) {
   throw new Error("source architecture composition-owned generic profile stats rule self-test failed");
+}
+if (dependencyErrors("src/app/live-style-host.ts",
+  'd.PROFILE.addStat("tricks", 1);').length !== 1
+  || dependencyErrors("src/app/live-style-host.ts",
+    "d.profileStatsPersistence.add(\"tricks\", 1);").length !== 0) {
+  throw new Error("source architecture composition-owned live-style profile stats rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",

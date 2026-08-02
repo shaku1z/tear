@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** seventy-first C27A foundation slice implemented (shared generic
-profile-stat adapter for session and wave compositions); checkpoint remains open
+**Status:** seventy-second C27A foundation slice implemented (shared generic
+profile-stat adapter now includes the live-style host); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
@@ -722,6 +722,15 @@ caches and transient lights are local to the controller. This is not full
   concurrent-world evidence. The next boundary routes live-style host generic
   profile-stat ports through the same adapter.
 
+  Slice 72 routes live-style host generic profile-stat ports through that shared
+  composition-owned adapter. Source architecture rejects direct profile-stat
+  access in the host. The focused gate passed 6 files / 11 tests, including all
+  three style-runtime profile ports; rebuilt campaign-victory browser proof
+  passes. This is not durable profile state, migration, quota, crash recovery,
+  cross-device sync, or concurrent-world evidence. The next boundary must
+  isolate one remaining named profile operation without changing its caller
+  behavior.
+
 All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
@@ -758,8 +767,8 @@ Slice 41 adds simulation tuning isolation; Slice 42 injects particle policy;
   typed composition-owned adapter; pending-finale profile operations are a
   typed composition-owned adapter; outcome defeat-progress profile stats are a
   typed composition-owned adapter; setup-shop purchase profile stats are a
-  typed composition-owned adapter; generic session and wave profile stats share
-  a typed composition-owned adapter. Remaining persistence adapter
+  typed composition-owned adapter; generic session, wave, and live-style
+  profile stats share a typed composition-owned adapter. Remaining persistence adapter
   isolation still precedes true simultaneous complete worlds.
 Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
@@ -779,12 +788,11 @@ composition with parity evidence.
 
 ## Working-tree safety
 
-- Slice 71 is the next intentional commit on
-  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 4
-  files / 7 tests plus source architecture; rebuilt campaign-victory browser
-  proof passed. The next boundary routes live-style host generic profile-stat
-  ports through the same adapter, still not a durability, physical-device, or
-  second-runtime claim.
+- Slice 72 is the latest intentional commit on
+  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 6
+  files / 11 tests plus source architecture; rebuilt campaign-victory browser
+  proof passed. The next boundary must isolate one remaining named profile
+  operation, still not a durability, physical-device, or second-runtime claim.
 - Slice 48 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
   files / 23 tests plus source architecture; built journeys and six responsive
