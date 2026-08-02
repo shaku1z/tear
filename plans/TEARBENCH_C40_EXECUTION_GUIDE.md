@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 89 update (current)
+#### Slice 90 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -887,6 +887,13 @@ zoom closures. `createLiveInterfaceFrameState` owns that typed frame state while
 the runtime preserves the existing input zoom handoff. The focused presentation
 gate passed 6 files / 11 tests; rebuilt campaign-victory browser proof and the
 full canonical C27A aggregate pass. This is not revive-state ownership,
+full-world portability, or C27A completion.
+
+Slice 90 removes the live host's rewarded-revive countdown closure.
+`createLiveReviveCountdownState` owns that typed outcome state, and source
+architecture rejects restoring the closure. The focused revive gate passed 4
+files / 7 tests; rebuilt campaign-victory browser proof and the canonical C27A
+aggregate pass. This preserves the timeout path only, not outcome persistence,
 full-world portability, or C27A completion.
 
 - [x] V3 recorder ships in the production bundle

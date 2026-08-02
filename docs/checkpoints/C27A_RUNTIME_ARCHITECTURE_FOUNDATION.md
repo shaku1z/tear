@@ -1312,6 +1312,13 @@ of replay, headless execution, or learning portability.
   extraction only, not revive state, full-world portability, or concurrent-live-
   world evidence.
 
+- The ninetieth slice moves the rewarded-revive countdown out of the live
+  runtime closure into `createLiveReviveCountdownState`. Source architecture
+  rejects restoring the closure. The focused gate passed 4 files / 7 tests;
+  rebuilt campaign-victory browser proof and the canonical C27A aggregate pass.
+  This preserves only the existing revive timeout, not outcome persistence,
+  full-world portability, or concurrent-live-world evidence.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

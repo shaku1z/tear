@@ -5,17 +5,16 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** eighty-ninth C27A foundation slice implemented (UI timing, navigation,
-entrance state, and zoom now use a typed presentation-state owner); checkpoint remains open
+**Status:** ninetieth C27A foundation slice implemented (the rewarded-revive
+countdown now uses a typed outcome-state owner); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
-**Latest evidence:** Slice 89 moves UI timing, previous-screen navigation,
-entrance state, and zoom through `createLiveInterfaceFrameState`; source
-architecture rejects restoring the old closures. Its focused 6-file / 11-test
-presentation gate, rebuilt campaign-victory browser proof, and the full canonical
-C27A aggregate pass. This is not revive state, a complete frame/UI, durable-
-storage, or full-production-world portability claim.
+**Latest evidence:** Slice 90 moves the rewarded-revive countdown through
+`createLiveReviveCountdownState`; source architecture rejects restoring the old
+closure. Its focused 4-file / 7-test revive gate, rebuilt campaign-victory browser
+proof, and the canonical C27A aggregate pass. This is not outcome persistence,
+a complete frame/UI, durable-storage, or full-production-world portability claim.
 
 ## Resume protocol (mandatory)
 

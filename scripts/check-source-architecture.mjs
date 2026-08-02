@@ -288,6 +288,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live interface frame state must use the typed presentation-state owner",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /\blet\s+continueT\b/u,
+    message: "live revive countdown must use the typed outcome-state owner",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/app/live-style-host.ts"]),
     pattern: /\bd\.ACH\.check\(\);\s*d\.PROFILE\.save\(\)/u,
     message: "live style achievement persistence must use the composition-owned adapter",
@@ -673,6 +678,12 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/app/live-game-runtime.ts",
     "const interfaceFrame = createLiveInterfaceFrameState(state);").length !== 0) {
   throw new Error("source architecture live interface frame owner rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "let continueT = 0;").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "const reviveCountdown = createLiveReviveCountdownState();").length !== 0) {
+  throw new Error("source architecture live revive countdown owner rule self-test failed");
 }
 if (dependencyErrors("src/app/live-style-host.ts",
   "d.ACH.check(); d.PROFILE.save();").length !== 1

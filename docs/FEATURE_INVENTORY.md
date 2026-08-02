@@ -87,6 +87,9 @@ This is the migration checklist for the architectural redesign. A checked featur
   UI timing, navigation, entrance state, and zoom now use a typed frame-state
   owner, preserving the existing input zoom handoff. This does not complete
   revive state or production-world portability.
+  The rewarded-revive countdown now uses a typed outcome-state owner. This
+  preserves its existing timeout path but does not complete outcome persistence
+  or production-world portability.
   Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,

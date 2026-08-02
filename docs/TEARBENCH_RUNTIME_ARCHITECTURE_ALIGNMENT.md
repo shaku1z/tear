@@ -505,6 +505,11 @@ The following C27A foundation slices are complete:
   typed `createLiveInterfaceFrameState` owner rather than live-runtime closures.
   Focused presentation, rebuilt campaign, and aggregate C27A evidence pass.
   This leaves revive state, production-world portability, and the C27A exit open.
+- The rewarded-revive countdown now uses the typed
+  `createLiveReviveCountdownState` owner rather than a live-runtime closure.
+  Its focused revive gate, rebuilt campaign proof, and the canonical C27A
+  aggregate pass. This leaves the remaining outcome, combat, production-world,
+  and C27A exit work open.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

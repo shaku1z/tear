@@ -197,13 +197,12 @@ Important files:
 
 ### Exact next slice
 
-Slice 89 removes the live host's UI-timing, previous-screen, entrance-state, and
-zoom closures. `createLiveInterfaceFrameState` owns that typed frame state while
-the runtime preserves the existing input zoom handoff; source architecture
-rejects restoring the closures. The focused presentation gate passed 6 files / 11
-tests plus architecture; rebuilt campaign-victory browser proof and the full
-canonical C27A aggregate pass. This does not establish revive-state ownership, a
-complete frame/UI owner, durable storage, a portable full production world, or
+Slice 90 removes the live host's rewarded-revive countdown closure.
+`createLiveReviveCountdownState` owns that typed outcome state, and source
+architecture rejects restoring the closure. The focused revive gate passed 4
+files / 7 tests plus architecture; rebuilt campaign-victory browser proof and
+the canonical C27A aggregate pass. This does not establish outcome persistence,
+a complete frame/UI owner, durable storage, a portable full production world, or
 C27A completion.
 
 All thirteen captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream: 5,732 ticks and 33 native facts, including the three natural-trace enemy defeats now published independently of Ghost 2 sampling. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome/reward/finale controllers, scheduler shape, event bus, and restored actor identity. The natural matrix route clears wave 1, selects a real offered draft card without advancing the fixed scheduler, and reaches a wave-2 spawn. A separate certified route reconstructs the wave-49 frontier, starts production wave 50, applies an explicit Source one-hit State Forge child, and executes real victory; live and detached match all seven finale intent batches and all 22 outward calls after their concrete adapters return, in exact order and with exact arguments. They also match six immutable ring/burst particle-admission receipts, eight logical feel receipts after restoration of the captured pre-finale transient, and the complete 42-entry terminal external-decision transcript (13 initial synchronization terminal decision/request, 22 finale-outward, and 7 cache/terminal). The refreshed browser route explicitly activates audio, then observes 12 executing plus 12 completed dispatch receipts: all seven mixes are logical-target-only and all cues are voice-cap-rejected, so no output is claimed. Slice 40 adds portable `tear-world-simulation-factories.ts` with no app/presentation/browser imports; the app renderer supplies real Canvas ports and detached supplies explicit no-op ports under architecture fences. Next: generic world bootstrap, then configuration isolation, which still blocks truly simultaneous full worlds. This evidence does not claim a naturally played 50-wave campaign, randomized particle parity, rendered-pixel parity, headless/full-world portability, configuration isolation, durable profile/local-storage survival, cloud/replay/analytics completion, successful PCM/audibility or audio graph/device parity, or device vibration.
@@ -345,9 +344,9 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      Slice 89 routes UI timing, navigation, entrance state, and zoom through a typed frame-state owner.
-PROVEN BY:           Focused 6 files / 11 tests and architecture passed; rebuilt campaign-victory browser proof and the full canonical C27A aggregate passed. C27A remains blocking.
-REMAINING HERE:      Extract real production-world construction and remaining revive and combat closure state. Those boundaries still prevent concurrent complete worlds and C27A remains blocking.
+DONE THIS STEP:      Slice 90 routes the rewarded-revive countdown through a typed outcome-state owner.
+PROVEN BY:           Focused 4 files / 7 tests and architecture passed; rebuilt campaign-victory browser proof and the canonical C27A aggregate passed. C27A remains blocking.
+REMAINING HERE:      Extract real production-world construction and remaining outcome and combat closure state. Those boundaries still prevent concurrent complete worlds and C27A remains blocking.
 REMAINING TO C40:    C27 completion, C25 exit, and C28-C40 remain after C27A closes.
 NEXT SLICE:          Select the next bounded frame/UI or combat closure owned by the production host. Do not claim durability/device parity or full live-world concurrency.
 
