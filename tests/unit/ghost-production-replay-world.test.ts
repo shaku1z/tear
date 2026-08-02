@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { GhostProductionReplayWorld, createGhostV3, type GhostReplayTrident } from "../../src/ghost";
 import { CONFIG } from "../../src/config/game-config";
-import { createDetachedCombatSimulation, createDetachedWorld } from "./detached-world-harness";
+import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
+import { createDetachedCombatSimulation } from "./detached-world-harness";
 
 const trident: GhostReplayTrident = {
   command: { kind: "command", status: "verified", available: true, resumable: true, seekable: false, reason: "C29 test" },
@@ -14,7 +15,7 @@ function productionComposition(created: unknown[]) {
   return {
     create(snapshot: undefined) {
       expect(snapshot).toBeUndefined();
-      const detached = createDetachedWorld({
+      const detached = createProductionReplayWorld({
         seed: "c29-production-replay",
         enemies: [{ id: "charger", x: 760, y: CONFIG.world.groundY - CONFIG.enemy.h / 2 }],
       });

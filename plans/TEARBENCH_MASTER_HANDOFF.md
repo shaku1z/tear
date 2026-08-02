@@ -380,11 +380,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C29 replay now advances only a C27A production-composed TearSimulationRuntime.
-PROVEN BY:           `pnpm check:c29:production-replay` passed source traceability, type/lint/architecture, and six focused codec/production replay tests.
+DONE THIS STEP:      C29 now has a source-owned C27A DOM-free production-world factory used by the replay proof.
+PROVEN BY:           Focused production replay/world tests plus type/lint/architecture passed; the replay test constructs that source factory and asserts its supplied runtime identity.
 REMAINING HERE:      Extract the parity harness's production State Forge hydration/combat assembly into a source-owned V3 capsule composition, then compare a captured capsule's authoritative hashes. Theater, seek/fork/practice, and comparison remain open.
 REMAINING TO C40:    C25 and C27 exits, then C29-C40, remain; C27A and C28 are closed.
-NEXT SLICE:          Move the C27A snapshot-hydration production replay adapter out of the parity harness and use it for captured-capsule hash evidence.
+NEXT SLICE:          Move the C27A production combat assembly out of the parity harness, then compose it with snapshot hydration for captured-capsule hash evidence.
 
 All of the following were run from this worktree through C27A slice 36:
 

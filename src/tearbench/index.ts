@@ -4,6 +4,7 @@ export * from "./state-codecs";
 export * from "./live-state-snapshot";
 export * from "./detached-world-hydrator";
 export * from "./detached-world-runtime";
+export * from "./production-world-factory";
 export * from "./state-validity";
 export * from "./state-forge-factories";
 export * from "./progression-ledger";

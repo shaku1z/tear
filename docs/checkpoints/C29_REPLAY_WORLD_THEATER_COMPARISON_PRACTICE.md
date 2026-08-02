@@ -12,12 +12,17 @@ applicable production boundary.
 
 ## Proven foundation
 
+- createProductionReplayWorld is now source-owned. It constructs the C27A
+  DOM-free world through the real bootstrap, factories, live entity factory,
+  world state/services, named RNG, weapon setup, and State Forge-compatible
+  mutable state. Its presentation and outward-device ports are explicit no-ops.
 - GhostProductionReplayWorld accepts an already composed TearSimulationRuntime;
   it does not create a scheduler or gameplay runtime. It replays every fixed
   tick through that supplied runtime, including empty action ticks, and exposes
   the exact active runtime for identity evidence.
 - tests/unit/ghost-production-replay-world.test.ts constructs the C27A
-  production detached combat composition, supplies its actual simulationRuntime,
+  source-owned production world plus the existing detached combat composition,
+  supplies its actual simulationRuntime,
   and proves the replay reaches tick 80 through that same object. A repeated
   seek creates a fresh production world and reproduces the semantic hash.
 
@@ -39,7 +44,9 @@ applicable production boundary.
 This foundation does not turn legacy visual replay into V3 replay, admit an
 incompatible capsule, prove a captured-capsule hash, or expose a player Theater
 screen. It makes the next C29 hash-parity slice use the C27A runtime rather than
-the former synthetic replay test simulation.
+the former synthetic replay test simulation. The production combat assembly is
+still test-owned and must be extracted before it can be the source-owned
+captured-capsule adapter.
 
 ## Evidence
 
