@@ -115,6 +115,17 @@ replay proof no longer imports that test helper. This proves the normal
 test-standalone endless capture only; durable active-chapter-cinematic capture
 remains unfinished.
 
+On 2026-08-02, a focused browser journey confirmed that a campaign world is
+cinematic-active immediately after `environment.reset()`, but its completed V3
+capsule's tick-zero keyframe still contained an inactive director. Moving the
+V3 anchor to immediately after opening-content activation and then after entry
+to the playing state both reproduced that result; the live render/frame path
+creates the chapter transition later than either anchor. Both unproven code
+attempts were reverted. A future C29 slice must model that real initialization
+transition as an explicit durable capture boundary and prove its production
+replay restoration; it must not retry either anchor placement or claim the
+existing endless receipt evidence covers active cinematics.
+
 ## Evidence
 
 pnpm check:c29:production-replay is the named gate. It runs the source

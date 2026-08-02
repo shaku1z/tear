@@ -400,9 +400,9 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 DONE THIS STEP:      C29 now reopens durable V3 capsules, hydrates each recorded State Forge keyframe through source-owned production composition, restores held input, compares captured authoritative receipts, and exposes player-visible semantic Theater, Practice From Here, and side-by-side semantic comparison.
 PROVEN BY:           `pnpm check:c29:production-replay` runs focused receipt/replay/terminal-policy/comparison tests and the rebuilt browser capture; its completed Vault capsules match source replay at ticks 0, 120, and 240. The normal Profile -> Vault route selects nine healthy capsules through scrollable rendered rows, opens `COMPARE 9`, advances to a second repeated semantic occurrence, then opens Theater and restores an explicitly unranked, non-persistent child into real play. Every selected durable source JSON remains unchanged.
-REMAINING HERE:      Active chapter bindings now restore through source composition and focused unit evidence; add their durable-capsule coverage. The verified browser route is normal test-standalone endless only; Theater and comparison are semantic, not pixel/device-fidelity claims.
+REMAINING HERE:      Active chapter bindings now restore through source composition and focused unit evidence; add their durable-capsule coverage. On 2026-08-02, a browser journey found that campaign reset is cinematic-active only after the V3 tick-zero capture boundary: anchors immediately after opening-content activation and after `playing` entry both persisted an inactive director, while the post-reset State Forge snapshot was active. Both unproven anchor moves were reverted under the two-attempt rule. Theater and comparison remain semantic, not pixel/device-fidelity claims.
 REMAINING TO C40:    C25 and C27 exits, then C29-C40, remain; C27A and C28 are closed.
-NEXT SLICE:          Add C29 active-cinematic durable browser evidence; retain its distinct cinematic boundary and do not overclaim device-output fidelity.
+NEXT SLICE:          Start the independent C30 same-composition headless-episode boundary; retain C29's active-cinematic durable-capture finding for a later explicitly designed lifecycle seam, not another anchor-position retry.
 
 All of the following were run from this worktree through C27A slice 36:
 
