@@ -1091,6 +1091,17 @@ of replay, headless execution, or learning portability.
   behavior, or C27A completion evidence. The next boundary isolates live-style
   achievement checking and its profile save.
 
+- The sixty-sixth slice isolates that live-style achievement check/save pair in
+  a composition-owned adapter. Source architecture rejects restoring the direct
+  pair in the style host. The focused gate passed 6 files / 10 tests, including
+  adapter ordering and host usage; rebuilt campaign-victory browser proof
+  passes.
+
+  This is one ordered profile-adapter handoff only, not durable profile state,
+  migration, quota, crash recovery, cross-device sync, concurrent-world
+  behavior, or C27A completion evidence. The next boundary isolates platform
+  bootstrap achievement backfill checking and its profile save.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap

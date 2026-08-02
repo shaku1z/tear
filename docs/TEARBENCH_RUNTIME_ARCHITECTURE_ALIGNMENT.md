@@ -402,6 +402,10 @@ The following C27A foundation slices are complete:
   created at composition. Its focused adapter/controller evidence and rebuilt
   campaign proof pass. The next persistence boundary is live-style achievement
   checking and its profile save, again without a durable-profile claim.
+- Live-style achievement checking now uses a composition-owned check-and-save
+  adapter, with its order proven at adapter and host level. The next persistence
+  boundary is platform bootstrap’s separate achievement backfill check/save
+  path; it also must not imply durable-profile completion.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

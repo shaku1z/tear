@@ -34,6 +34,7 @@ import type { RunRandomService, RunRandomStreams } from "../simulation/run-rando
 import type { PerformanceMonitor } from "../diagnostics/performance-monitor";
 import type { LegacyAppStateController } from "./legacy-state-controller";
 import type { AchievementToastPersistence } from "./live-achievement-toast-persistence";
+import type { StyleAchievementPersistence } from "./live-style-achievement-persistence";
 
 type EnemyTypes = ReturnType<typeof createEnemyTypes>;
 type MirrorTypes = ReturnType<typeof createMirrorTypes>;
@@ -70,6 +71,7 @@ export interface GameRuntimeDependencies {
   readonly REMOTE: typeof REMOTE; readonly Ranged: EnemyTypes["Ranged"];
   readonly ReflectionEnemy: MirrorTypes["ReflectionEnemy"]; readonly SAFE: typeof SAFE; readonly SFX: LegacySynthFacade;
   readonly SHOP: ReturnType<typeof createMetaProgression>["SHOP"]; readonly STAGES: typeof Stages.STAGES;
+  readonly styleAchievementPersistence: StyleAchievementPersistence;
   readonly Source: EnemyTypes["Source"]; readonly Support: EnemyTypes["Support"]; readonly THEME: typeof THEME;
   readonly UI: ReturnType<typeof createUi>; readonly UPGRADES: typeof Upgrades.UPGRADES;
   readonly VAULT: ReplayCompatibility["VAULT"]; readonly VARIANTS: typeof Variants.VARIANTS;

@@ -31,7 +31,7 @@ function isTutorialMark(value: string): value is TutorialMark { return TUTORIAL_
 export function createLiveStyleHost(services: LiveStyleHostServices) {
   const { dependencies: d, state } = services;
   const player = () => required(state.player(), "player");
-  const achievementCheck = () => { d.ACH.check(); d.PROFILE.save(); };
+  const achievementCheck = d.styleAchievementPersistence.checkAndSave;
   return createLiveStyleAchievementRuntime({
     run: () => state.run(), player, enemies: () => state.enemies(),
     moving: () => d.Input.left() || d.Input.right(), tuning: () => d.CONFIG.trick,
