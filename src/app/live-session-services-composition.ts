@@ -32,7 +32,7 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
   const d = options.dependencies;
   const settingsController = new SettingsController({
     config: d.CONFIG, accessibility: d.A11Y, graphics: d.GFX, input: d.Input, gamepad: d.PAD,
-    audio: d.SFX, store: d.CG.store, navigator: d.browserNavigator, matchMedia: (query) => window.matchMedia(query),
+    audio: d.SFX, store: d.CG.store, navigator: d.browserNavigator, matchMedia: (query) => d.browserWindow.matchMedia(query),
   });
   const controllers = new LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>();
   initializeLivePlatformBootstrap(d, settingsController, {

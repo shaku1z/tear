@@ -962,6 +962,20 @@ of replay, headless execution, or learning portability.
   The next boundary is the live runtime's remaining document/pointer-lock
   capability path.
 
+- The fifty-fifth slice makes that document/pointer-lock capability explicit.
+  Composition supplies `browserDocument` and `browserWindow` through
+  `GameRuntimeDependencies`; the live browser host creates its viewport,
+  pointer-lock adapter, fullscreen binding, and install prompt from those ports,
+  while live frame and screen paths receive the supplied document. Source
+  architecture rejects ambient document use in the migrated live paths. The
+  focused slice gate passed 6 files / 23 tests; built browser audio, canonical
+  physical-input traces, journeys, fresh foundation, and campaign-victory pass.
+
+  This is browser document/window capability ownership only. It does not change
+  pointer-lock behavior, input semantics, physical device parity, IndexedDB
+  persistence, independent complete applications, or C27A completion. The next
+  boundary is the Ghost V3 browser recorder's IndexedDB supply.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap

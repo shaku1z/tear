@@ -168,6 +168,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live input and settings coordination must receive browser navigator capability through the composition dependency port",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts", "src/app/live-browser-runtime.ts"]),
+    pattern: /(?<![\w.])document\b(?!\s*:)/u,
+    message: "live browser and pointer-lock coordination must receive document capability through the composition dependency port",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -349,6 +354,16 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/app/live-session-services-composition.ts",
     "const options = { navigator: dependencies.browserNavigator };").length !== 0) {
   throw new Error("source architecture composition-owned browser navigator rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "document.exitPointerLock();").length !== 1
+  || dependencyErrors("src/app/live-browser-runtime.ts",
+    'const canvas = document.getElementById("game");').length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "const context = { document: dependencies.browserDocument };").length !== 0
+  || dependencyErrors("src/app/live-browser-runtime.ts",
+    "const canvas = dependencies.browserDocument.getElementById(\"game\");").length !== 0) {
+  throw new Error("source architecture composition-owned browser document rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",

@@ -5,9 +5,9 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** fifty-fourth C27A foundation slice implemented (composition-owned
-live browser navigator capability); checkpoint remains open
-and blocking pending document/pointer-lock, persistence, remaining
+**Status:** fifty-fifth C27A foundation slice implemented (composition-owned
+live browser document/window capability); checkpoint remains open
+and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
 ## Resume protocol (mandatory)
@@ -452,7 +452,7 @@ All of the following were run from this worktree after the parity-passing slice:
 
 ## Exact next C27A boundary
 
-**Slice 54 supersedes the earlier configuration-isolation wording below.**
+**Slice 55 supersedes the earlier configuration-isolation wording below.**
 `TearWorldConfiguration` now owns one stable mutable config record per
 constructed simulation world, created before constructors capture tuning. It
 validates snapshots before reconciling root/nested references in place; State
@@ -572,6 +572,17 @@ caches and transient lights are local to the controller. This is not full
   parity or a semantic-input claim. The next boundary is document/pointer-lock
   capability ownership in the live runtime.
 
+  Slice 55 supplies that document/window boundary. App composition passes
+  `browserDocument` and `browserWindow` through the runtime dependency contract;
+  the live browser host uses them for canvas lookup, viewport, pointer-lock,
+  fullscreen, install prompt, and browser query setup, while live frame and
+  screen paths receive the supplied document. Source architecture rejects
+  ambient document use in the migrated paths. The focused gate passed 6 files /
+  23 tests, and built browser audio, canonical physical-input traces, journeys,
+  fresh foundation, and campaign victory pass. This preserves current input and
+  pointer-lock behavior; it is not physical-device or persistence evidence. The
+  next boundary supplies the Ghost V3 recorder's IndexedDB capability.
+
 All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
@@ -597,9 +608,9 @@ Slice 41 adds simulation tuning isolation; Slice 42 injects particle policy;
   rendering now has narrow policies for Blade, Mirror, and Projectile; legacy
   enemy rendering has its exact policy; Attract entropy is composition supplied;
   and the first-gesture audio facade, concrete synthesized runtime, browser
-  audio-context handoff, and browser navigator capability are composition-owned.
-  Remaining document/pointer-lock and persistence adapter isolation still
-  precede true simultaneous complete worlds.
+  audio-context handoff, browser navigator capability, and browser document/
+  window capability are composition-owned. Remaining persistence adapter
+  isolation still precedes true simultaneous complete worlds.
 Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
 from the harness — never a tolerance to widen, a scenario to shorten, or a
@@ -618,14 +629,14 @@ composition with parity evidence.
 
 ## Working-tree safety
 
-- Slice 54 is the next intentional commit on
-  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
-  files / 30 tests plus source architecture; built browser audio and journeys passed. Fresh
+- Slice 55 is the next intentional commit on
+  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 6
+  files / 23 tests plus source architecture; built browser audio and journeys passed. Fresh
   foundation passed 36 files / 130 tests, a fresh 13-scenario trace, and 40
   detached comparisons, while campaign victory passed 10 files / 36 tests and
   1,176 transitions. The full `pnpm check:c27a` aggregate passed. The next
-  boundary is the live runtime's document/pointer-lock capability path, still
-  not a physical-device or second-runtime claim.
+  boundary is the Ghost V3 browser recorder's IndexedDB capability, still not a
+  durability, physical-device, or second-runtime claim.
 - Slice 48 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
   files / 23 tests plus source architecture; built journeys and six responsive

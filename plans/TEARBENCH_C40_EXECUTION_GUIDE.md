@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 54 update (current)
+#### Slice 55 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -555,6 +555,20 @@ This is navigator-capability ownership only, not controller/haptic device
 parity, changed semantic input, concurrent complete worlds, or C27A completion.
 Next, make the live runtime's document/pointer-lock capability path explicit at
 composition without changing input behavior.
+
+Slice 55 supplies that document/window capability. App composition supplies
+`browserDocument` and `browserWindow`; the live browser host uses them for its
+viewport, pointer-lock, fullscreen, install, and query adapters, while frame
+and screen paths receive the supplied document. Source architecture rejects
+ambient document use in the migrated live paths. `pnpm check:c27a:slice55`
+passed 6 focused files / 23 tests plus architecture; built audio and journeys,
+canonical physical-input trace, fresh foundation, campaign-victory, and the
+aggregate `pnpm check:c27a` gate passed.
+
+This is browser document/window ownership only, not changed pointer-lock/input
+behavior, physical-device parity, IndexedDB durability, concurrent complete
+worlds, or C27A completion. Next, supply the Ghost V3 browser recorder's
+IndexedDB capability from composition without changing persistence behavior.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

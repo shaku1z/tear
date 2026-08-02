@@ -352,6 +352,11 @@ The following C27A foundation slices are complete:
   semantic buffer remain unchanged, and physical controller/haptic behavior is
   not newly certified. Document/pointer-lock and persistence paths still remain
   app-bound.
+- The live browser document/window capability is also composition-supplied.
+  The browser host creates viewport, pointer-lock, fullscreen, and install
+  adapters from those ports, and live frame/screen paths no longer use an
+  ambient document. This keeps existing pointer-lock and input behavior intact;
+  Ghost V3's IndexedDB persistence input remains the next browser-bound path.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition
