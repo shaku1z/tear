@@ -501,6 +501,10 @@ The following C27A foundation slices are complete:
   live-runtime closures. Focused action-routing, rebuilt campaign, and aggregate
   C27A evidence pass. This leaves UI timing, production-world portability, and
   the C27A exit open.
+- UI timing, previous-screen navigation, entrance state, and zoom now use the
+  typed `createLiveInterfaceFrameState` owner rather than live-runtime closures.
+  Focused presentation, rebuilt campaign, and aggregate C27A evidence pass.
+  This leaves revive state, production-world portability, and the C27A exit open.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

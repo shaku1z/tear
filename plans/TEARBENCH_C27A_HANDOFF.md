@@ -5,17 +5,17 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** eighty-eighth C27A foundation slice implemented (UI controls, focus,
-scroll, and hover animation now use a typed presentation-state owner); checkpoint remains open
+**Status:** eighty-ninth C27A foundation slice implemented (UI timing, navigation,
+entrance state, and zoom now use a typed presentation-state owner); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
-**Latest evidence:** Slice 88 moves UI controls, focus, scroll, and hover
-animation through `createLiveInterfaceInteractionState`; source architecture
-rejects restoring the old closures. Its focused 6-file / 13-test action-routing
-gate, rebuilt campaign-victory browser proof, and the full canonical C27A
-aggregate pass. This is not a complete frame/UI, durable-storage, or
-full-production-world portability claim.
+**Latest evidence:** Slice 89 moves UI timing, previous-screen navigation,
+entrance state, and zoom through `createLiveInterfaceFrameState`; source
+architecture rejects restoring the old closures. Its focused 6-file / 11-test
+presentation gate, rebuilt campaign-victory browser proof, and the full canonical
+C27A aggregate pass. This is not revive state, a complete frame/UI, durable-
+storage, or full-production-world portability claim.
 
 ## Resume protocol (mandatory)
 

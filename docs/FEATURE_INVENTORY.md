@@ -84,6 +84,9 @@ This is the migration checklist for the architectural redesign. A checked featur
   UI controls, focus, scroll, and hover animation now also flow through a typed
   frame-presentation owner, keeping input routing and rendering on one state
   boundary. This does not complete UI timing or production-world portability.
+  UI timing, navigation, entrance state, and zoom now use a typed frame-state
+  owner, preserving the existing input zoom handoff. This does not complete
+  revive state or production-world portability.
   Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,

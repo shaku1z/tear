@@ -18,6 +18,7 @@ import { isMenuScreen, renderRegisteredScreen } from "./screen-registry";
 import { createLiveWorldComposition } from "./live-world-composition";
 import { createLiveWorldSessionState } from "./live-world-session-state";
 import { createLiveHudFeedbackState } from "./live-hud-feedback-state";
+import { createLiveInterfaceFrameState } from "./live-interface-frame-state";
 import { createLiveInterfaceInteractionState } from "./live-interface-interaction-state";
 import { createLiveShopFeedbackState } from "./live-shop-feedback-state";
 import { createLiveCombatWorldState } from "./live-combat-world-state";
@@ -138,7 +139,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     dependencies, run: liveRun, player: livePlayer, blade: liveBlade,
     screen: () => state, setScreen: (screen) => { setState(screen); },
     achievementTracking: () => achTracks(),
-    resetUi: (intent) => { if (intent.enter) enterT = 0; if (intent.focus) interfaceInteraction.setFocus(0); if (intent.scroll) interfaceInteraction.setScroll(0); },
+    resetUi: (intent) => { if (intent.enter) interfaceFrame.setEnterSeconds(0); if (intent.focus) interfaceInteraction.setFocus(0); if (intent.scroll) interfaceInteraction.setScroll(0); },
     requestPointerLock: requestOwnedPointerLock, renamePrompted: () => settingsRenameAdapters.renamePrompted(),
     renameActive: () => settingsRenameAdapters.renameActive(),
     markRenamePrompted: () => { settingsRenameAdapters.markRenamePrompted(); },
@@ -153,6 +154,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const { openDraft: openRewardDraft, openTier: openRewardTier } = rewardRuntime;
   const { read: getBest, record: saveBest } = bestScores.api;
   let state: LegacyAppScreen = APP.screen;
+  const interfaceFrame = createLiveInterfaceFrameState(state);
   function setState(next: LegacyAppScreen, context?: LegacyTransitionContext): LegacyAppScreen {
     const prior = state;
     state = APP.transition(next, context);
@@ -199,9 +201,6 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     if (outcome === null) throw new Error("Outcome screen requires a completed run");
     return outcome;
   };
-  let lastUiState: LegacyAppScreen = state;
-  let uiT = 0, enterT = 0, lastUiDt = 1 / 60, eIn = 1;   // menu ambient clock, time-since-screen-opened, last frame dt, entrance ease
-  let uiZoom = 1;   // overlay zoom for small touch screens (draft/pause/gameover readability)
   const musicDirector = new MusicDirector(SFX);
   let continueT = 0;   // rewarded-revive countdown
   const hudFeedback = createLiveHudFeedbackState();
@@ -522,7 +521,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     autoPauseDisconnect: () => settings.autoPauseDisconnect, requestPointerLock: requestOwnedPointerLock,
     exitReplay: () => { replayAdapters.exit(); },
     advanceClocks: (dt, currentState) => {
-      uiT += dt; enterT += dt; lastUiDt = dt;
+      interfaceFrame.advance(dt);
       session.setWinSeconds(currentState === "win" ? session.winSeconds() + dt : 0);
     },
     advanceContinue: (dt) => {
@@ -617,19 +616,19 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     wipe: { canvas, context: ctx, createCanvas: () => browserDocument.createElement("canvas"), reducedEffects: () => GFX.low, flashScale: () => A11Y.flashScale, random: cosmeticRandom, ease: ez },
     worldSurface: { canvas: ctx, ui: UI, width: W, height: H, get safe() { return { top: SAFE.t, right: SAFE.r, bottom: SAFE.b, left: SAFE.l }; }, get ink() { return THEME.ink; }, get darkTheme() { return THEME.dark; }, get timeSeconds() { return worldContext.services.clock.seconds(); }, get lowGraphics() { return GFX.low; }, get reducedMotion() { return A11Y.reducedMotion; }, get highContrast() { return A11Y.highContrast; } },
     screens: {
-      renderer: { canvas: ctx, ui: UI, width: W, height: H, screenRectangle: screenRect, safeInsets: () => SAFE, time: () => uiT, enterAmount: () => eIn, enterSeconds: () => enterT, deltaSeconds: () => lastUiDt, mouse: () => ({ x: Input.mouseX, y: Input.mouseY }), scroll: interfaceInteraction.scroll, focus: interfaceInteraction.focus, touch: () => Input.touchActive(), reducedMotion: () => A11Y.reducedMotion, enqueue: interfaceInteraction.enqueue },
-      replay: { dependencies, canvas: ctx, width: W, height: H, screenRectangle: screenRect, time: () => uiT, deltaSeconds: () => lastUiDt, fallbackPlayer: livePlayer, bossById, setScreen: (screen, context) => setState(screen, context), formatTime: fmtTime, document: browserDocument },
-      library: { dependencies, canvas: ctx, height: H, time: () => uiT, enterSeconds: () => enterT, scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, clamp, ease: ez, formatTime: fmtTime, getBest },
+      renderer: { canvas: ctx, ui: UI, width: W, height: H, screenRectangle: screenRect, safeInsets: () => SAFE, time: interfaceFrame.seconds, enterAmount: interfaceFrame.enterAmount, enterSeconds: interfaceFrame.enterSeconds, deltaSeconds: interfaceFrame.deltaSeconds, mouse: () => ({ x: Input.mouseX, y: Input.mouseY }), scroll: interfaceInteraction.scroll, focus: interfaceInteraction.focus, touch: () => Input.touchActive(), reducedMotion: () => A11Y.reducedMotion, enqueue: interfaceInteraction.enqueue },
+      replay: { dependencies, canvas: ctx, width: W, height: H, screenRectangle: screenRect, time: interfaceFrame.seconds, deltaSeconds: interfaceFrame.deltaSeconds, fallbackPlayer: livePlayer, bossById, setScreen: (screen, context) => setState(screen, context), formatTime: fmtTime, document: browserDocument },
+      library: { dependencies, canvas: ctx, height: H, time: interfaceFrame.seconds, enterSeconds: interfaceFrame.enterSeconds, scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, clamp, ease: ez, formatTime: fmtTime, getBest },
       settings: { dependencies, document: browserDocument, window: browserWindow, canvas, width: W, overscan: () => OVERSCAN, screen: () => state, setScreen: (screen, context) => setState(screen, context), settingsController, settings, scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, clamp, installPrompt },
       actions: { setScreen: (screen) => { setState(screen); }, resetScroll: () => { interfaceInteraction.setScroll(0); }, setSetupSelection: (kind, id) => { if (kind === "mode" && isRunModeSelection(id)) { session.setSelectedMode(id); if (trainingRunRequiresPreflight(id)) void trainingHost.ensureLoaded(); } else if (kind === "difficulty" && isRunDifficultySelection(id)) session.setSelectedDifficulty(id); else if (kind === "weapon") session.setSelectedWeapon(id); else if (kind === "boss") session.setSelectedBoss(id); }, startSelectedRun: () => { startRunWithPreflight(session.selectedMode(), session.selectedDifficulty()); }, startRun: (mode, difficulty) => { if (isRunModeSelection(mode) && isRunDifficultySelection(difficulty)) startRunWithPreflight(mode, difficulty); }, currentRun: liveRun, resumeFinale: resumeSavedFinale, claimFinale: claimSavedFinale, requestPointer: requestLock, endRun, retryRun, lastReplay: () => session.lastRecording(), campaignDifficulty: () => session.outcome()?.diff ?? "normal", resetSettings: () => { settingsController.reset(); }, signIn: () => { void Cloud.signIn(); }, signOut: () => { void Cloud.signOut(); }, pinReplay: (id, pinned) => VAULT.pin(id, pinned), deleteReplay: (id) => { VAULT.remove(id); }, dispatchPlayground: dispatchPlaygroundAction },
       runState: { screen: () => state, setScreen: (screen) => { setState(screen); }, run: liveRun, player: livePlayer, scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, continueSeconds: () => continueT, setContinueSeconds: (value) => { continueT = value; }, replayAvailable: () => session.lastRecording() !== null, outcome: currentOutcome },
       runServices: { dependencies, reward: rewardRuntime, formatTime: fmtTime, clamp, trickColor, saveBest, awardCoins, cinema: CINEMA, clearFinale: () => { story.finale = null; }, terminateRun: (reason) => { abandonLiveRun(reason); }, addFloater, addShake, addFlash, requestPointer: requestLock },
-      menuState: { selection: () => session.selection(), scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, time: () => uiT, shop: () => shopFeedback.snapshot(), setShop: (value) => { shopFeedback.set(value); } },
+      menuState: { selection: () => session.selection(), scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, time: interfaceFrame.seconds, shop: () => shopFeedback.snapshot(), setShop: (value) => { shopFeedback.set(value); } },
       menuServices: { dependencies, height: H, getBest, formatTime: fmtTime, clamp, checkAchievements: achCheck }, playground: { renderMenu: renderPgMenu, renderLab: renderPgLab },
     },
-    frameState: { screen: () => state, previousScreen: () => lastUiState, setPreviousScreen: (value) => { lastUiState = value; }, uiZoom: () => uiZoom, setUiZoom: (value) => { uiZoom = value; Input.uiZoom = value; }, deltaSeconds: () => lastUiDt, enterSeconds: () => enterT, setEnterSeconds: (value) => { enterT = value; }, enterAmount: () => eIn, setEnterAmount: (value) => { eIn = value; }, scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, focus: interfaceInteraction.focus, setFocus: interfaceInteraction.setFocus, controls: interfaceInteraction.buttons, resetControls: interfaceInteraction.resetButtons, biomeMode, enemies: () => hostState.enemies(), flash: () => feel.flash, bossBeat: () => hostState.bossBeat(), bossIntroActive: () => { const intro = hostState.bossIntro(); return intro !== null && intro.delay <= 0; }, bannerSeconds: () => feel.bannerSeconds, rankPopup: () => ({ seconds: feel.rankPopupSeconds, text: feel.rankPopupText, multiplier: liveRun().mult }), timeSeconds: () => uiT },
+    frameState: { screen: () => state, previousScreen: interfaceFrame.previousScreen, setPreviousScreen: interfaceFrame.setPreviousScreen, uiZoom: interfaceFrame.uiZoom, setUiZoom: (value) => { interfaceFrame.setUiZoom(value); Input.uiZoom = value; }, deltaSeconds: interfaceFrame.deltaSeconds, enterSeconds: interfaceFrame.enterSeconds, setEnterSeconds: interfaceFrame.setEnterSeconds, enterAmount: interfaceFrame.enterAmount, setEnterAmount: interfaceFrame.setEnterAmount, scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, focus: interfaceInteraction.focus, setFocus: interfaceInteraction.setFocus, controls: interfaceInteraction.buttons, resetControls: interfaceInteraction.resetButtons, biomeMode, enemies: () => hostState.enemies(), flash: () => feel.flash, bossBeat: () => hostState.bossBeat(), bossIntroActive: () => { const intro = hostState.bossIntro(); return intro !== null && intro.delay <= 0; }, bannerSeconds: () => feel.bannerSeconds, rankPopup: () => ({ seconds: feel.rankPopupSeconds, text: feel.rankPopupText, multiplier: liveRun().mult }), timeSeconds: interfaceFrame.seconds },
     frameServices: { canvas, context: ctx, width: W, height: H, overscan: () => OVERSCAN, safeTop: () => SAFE.t, viewportScale: () => viewport.cssPerLogicalPixel, resize: resizeCanvas, input: Input, ui: UI, stage: stageRuntime, cinema: CINEMA, reducedMotion: () => A11Y.reducedMotion, flashScale: () => A11Y.flashScale, touchActive: () => Input.touchActive(), controller: () => ({ active: PAD.active, toastSeconds: PAD.toastT, toastText: PAD.toastText }), pointerLocked: () => Input.locked, lockHint, inputHint: hintEl, clamp, ease: ez, blendColor: blendCol, setTheme: (background, playLike) => { THEME.set(playLike && biomeMode() ? background : "#ffffff"); UI.ink = THEME.ink; }, themeInk: () => THEME.ink, backdropPost: (context, stage, camera) => { Backdrop.post(context, stage, camera); }, drawMenuAttract: () => { Attract.draw(ctx); }, renderScreen: (screen) => { renderRegisteredScreen(screen, interfaceComposition.screens.renderers); }, isMenuScreen, playInterfaceSound: () => { SFX.ui(); }, hoverAnimation: interfaceInteraction.hoverAnimations(), trickColor },
-    worldState: { run: liveRun, player: livePlayer, blade: liveBlade, enemies: () => hostState.enemies(), projectiles: () => hostState.projectiles(), floaters: () => hostState.floaters(), slowZones: () => hostState.slowZones(), temporaryWalls: () => hostState.temporaryWalls(), screen: () => state, zoom: () => feel.zoom, shake: () => impact.shake, lastUiDelta: () => lastUiDt, bannerSeconds: () => feel.bannerSeconds, bossIntro: () => hostState.bossIntro(), hud: () => hudFeedback.snapshot(), setHud: (value) => { hudFeedback.set(value); } },
+    worldState: { run: liveRun, player: livePlayer, blade: liveBlade, enemies: () => hostState.enemies(), projectiles: () => hostState.projectiles(), floaters: () => hostState.floaters(), slowZones: () => hostState.slowZones(), temporaryWalls: () => hostState.temporaryWalls(), screen: () => state, zoom: () => feel.zoom, shake: () => impact.shake, lastUiDelta: interfaceFrame.deltaSeconds, bannerSeconds: () => feel.bannerSeconds, bossIntro: () => hostState.bossIntro(), hud: () => hudFeedback.snapshot(), setHud: (value) => { hudFeedback.set(value); } },
     worldServices: { dependencies, canvas: ctx, width: W, height: H, debug: PANTHEON_DEBUG, stage: stageRuntime, tutorial: TUT, finale: () => story.finale, formatTime: fmtTime, trickColor, ease: ez }, onBiomeTransition: (begin) => { Attract.onBiomeChange = begin; },
   });
   const { wipe: Wipe, frame: presentationHost, screens: screenComposition } = interfaceComposition;

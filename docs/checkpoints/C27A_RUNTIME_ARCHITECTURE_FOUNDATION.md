@@ -1304,6 +1304,14 @@ of replay, headless execution, or learning portability.
   canonical C27A aggregate pass. This is UI interaction extraction only, not UI
   timing, full-world portability, or concurrent-live-world evidence.
 
+- The eighty-ninth slice moves UI timing, previous-screen navigation, entrance
+  state, and zoom out of live runtime closures into
+  `createLiveInterfaceFrameState`. Source architecture rejects restoring those
+  closures. The focused gate passed 6 files / 11 tests; rebuilt campaign-victory
+  browser proof and the full canonical C27A aggregate pass. This is frame-state
+  extraction only, not revive state, full-world portability, or concurrent-live-
+  world evidence.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

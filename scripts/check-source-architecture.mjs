@@ -283,6 +283,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live interface interaction state must use the typed presentation-state owner",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /\blet\s+(?:lastUiState|uiT|enterT|lastUiDt|eIn|uiZoom)\b/u,
+    message: "live interface frame state must use the typed presentation-state owner",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/app/live-style-host.ts"]),
     pattern: /\bd\.ACH\.check\(\);\s*d\.PROFILE\.save\(\)/u,
     message: "live style achievement persistence must use the composition-owned adapter",
@@ -662,6 +667,12 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/app/live-game-runtime.ts",
     "const interfaceInteraction = createLiveInterfaceInteractionState();").length !== 0) {
   throw new Error("source architecture live interface interaction owner rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "let uiT = 0;").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "const interfaceFrame = createLiveInterfaceFrameState(state);").length !== 0) {
+  throw new Error("source architecture live interface frame owner rule self-test failed");
 }
 if (dependencyErrors("src/app/live-style-host.ts",
   "d.ACH.check(); d.PROFILE.save();").length !== 1
