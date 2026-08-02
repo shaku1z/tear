@@ -141,7 +141,9 @@ Named status:
   origin before boot, then proves the production version-2 upgrade adds
   `libraries` without losing a legacy record across a second boot. The exact
   active C28 boundary is `docs/checkpoints/C28_DURABLE_GHOST_VAULT_FOUNDATION.md`;
-  quota pressure and interrupted-write recovery still remain.
+  a seventh slice hardens imports: bounded plain data only, preflighted
+  duplicate/colliding custody identities, and one atomic accepted import.
+  Physical quota pressure and interrupted-write recovery still remain.
 - **C29-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.

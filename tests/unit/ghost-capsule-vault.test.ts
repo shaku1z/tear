@@ -9,8 +9,10 @@ import {
   capsuleDebugJson,
   createInlineGhostEncoderWorker,
   createMemoryGhostVaultBackend,
+  ghostRootIntegrity,
   type GhostEncodedChunk,
   type GhostEncoderWorkerPort,
+  type TearGhostChunkIndexEntry,
   type GhostVaultStore,
 } from "../../src/ghost";
 
@@ -186,6 +188,55 @@ describe("Ghost capsule recorder and local Vault", () => {
       maxChunkBytes: 1_000,
       maxExpansionRatio: 10,
     })).rejects.toThrow(/expansion/u);
+  });
+
+  it("rejects hostile imports before they can overwrite original Vault evidence", async () => {
+    const source = new GhostLocalVault(createMemoryGhostVaultBackend());
+    const recorder = new GhostStreamingRecorder({
+      sessionId: "protected-import-source", createdAt: "2026-07-23T00:00:00.000Z",
+      chunkEntries: 1, maxPendingWrites: 1, vault: source,
+    });
+    await recorder.start();
+    await recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } });
+    await recorder.finalize("2026-07-23T00:01:00.000Z");
+    const exported = await source.exportCapsule("protected-import-source");
+    const backend = createMemoryGhostVaultBackend();
+    const destination = new GhostLocalVault(backend);
+    const original = await destination.importCapsule(exported);
+    const originalChunk = original.chunks[0];
+    if (originalChunk === undefined) throw new Error("protected import fixture needs a chunk");
+    const originalBytes = await backend.get("chunks", originalChunk.id);
+
+    const duplicate = JSON.parse(exported) as { manifest: { createdAt: string } };
+    duplicate.manifest.createdAt = "2099-01-01T00:00:00.000Z";
+    await expect(destination.importCapsule(JSON.stringify(duplicate))).rejects.toThrow(/already exists/u);
+
+    const hostile = JSON.parse(exported) as {
+      manifest: { id: string; chunks: { id: string; encoding: string; compressedBytes: number; uncompressedBytes: number; checksum: string }[]; rootIntegrity: string };
+      chunks: Record<string, string>;
+    };
+    const hostileChunk = hostile.manifest.chunks[0];
+    if (hostileChunk === undefined) throw new Error("hostile import fixture needs a chunk");
+    const replacement = await createInlineGhostEncoderWorker().encode([
+      { kind: "commands", tick: 1, value: { action: "hostile-overwrite" } },
+    ], false);
+    hostile.manifest.id = "hostile-collision";
+    hostileChunk.id = originalChunk.id;
+    hostileChunk.encoding = replacement.encoding;
+    hostileChunk.compressedBytes = replacement.compressedBytes;
+    hostileChunk.uncompressedBytes = replacement.uncompressedBytes;
+    hostileChunk.checksum = replacement.checksum;
+    hostile.manifest.rootIntegrity = ghostRootIntegrity(hostile.manifest.chunks as unknown as readonly TearGhostChunkIndexEntry[]);
+    hostile.chunks = { [originalChunk.id]: replacement.encoded };
+    await expect(destination.importCapsule(JSON.stringify(hostile))).rejects.toThrow(/conflicts with stored evidence/u);
+
+    const executableShape = JSON.parse(exported) as { manifest: { id: string; provenance?: Record<string, unknown> } };
+    executableShape.manifest.id = "hostile-provenance";
+    executableShape.manifest.provenance = JSON.parse('{"__proto__":{"polluted":true}}') as Record<string, unknown>;
+    await expect(destination.importCapsule(JSON.stringify(executableShape))).rejects.toThrow(/reserved key/u);
+    expect(({} as { polluted?: boolean }).polluted).toBeUndefined();
+    expect(await destination.getManifest(original.id)).toEqual(original);
+    expect(await backend.get("chunks", originalChunk.id)).toBe(originalBytes);
   });
 
   it("declares fidelity downgrade under worker backpressure and exposes all Vault stores", async () => {

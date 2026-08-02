@@ -27,6 +27,10 @@ not this checkpoint's progress measure.
 - Canon promotion, Frontier novelty triage, and consent/split/deduplicated
   Corpus ingestion use governed versioned durable library entries. Malformed or
   future entries are rejected without being trusted or overwritten.
+- Hostile imports preflight the capsule ID and every chunk before any durable
+  mutation. They accept only bounded recursive plain-data provenance, reject
+  reserved prototype-shaped keys, reject identity/conflicting-chunk overwrites,
+  and atomically commit only validated new content with its manifest.
 - `tests/browser-ghost-vault-schema-migration.js` first creates a real
   version-1 Vault database at the application origin, writes a legacy settings
   record, then drives a normal recorded run. The production adapter upgrades to
@@ -41,8 +45,26 @@ not this checkpoint's progress measure.
 - [ ] Durable records survive the complete browser matrix: restart and version
   migration are proven; real quota pressure and C28-specific interrupted-write
   recovery still need evidence.
-- [ ] Corrupt-import boundary is not closed until hostile inputs are shown not
-  to execute code, exceed configured limits, or overwrite an original.
+- [x] Corrupt imports cannot execute code, exceed configured limits, or
+  overwrite an original. Unit evidence rejects encoded-size and expansion
+  limits, executable/prototype-shaped provenance, duplicate identities, and
+  forged conflicting chunk IDs while preserving the existing manifest and
+  original source bytes.
+
+## Finding — physical quota probe paused after two attempts
+
+The browser harness opened a normal Chrome page and used Chromium's
+origin-level `Storage.overrideQuotaForOrigin` command after it had preserved a
+real completed capsule. A 12-tick run did not emit the coaching profile's
+96-entry chunk; a second 120-tick run crossed that threshold but still did not
+surface a quota failure. The temporary test is intentionally not retained as
+evidence. Per the two-attempt rule, do not try a third timing variation. The
+remaining path is: first read Chromium's post-override storage-quota state in a
+dedicated evidence setup, then select an origin/profile configuration where the
+browser confirms the physical cap before a normal recorder run. That fixture
+must retain a completed source capsule and prove a real IndexedDB rejection;
+the existing application `beforeCommit` hook remains C27 fault-containment
+evidence only and cannot clear this C28 item.
 
 ## Deliberately not claimed
 

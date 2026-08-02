@@ -262,6 +262,27 @@ export function ghostRootIntegrity(chunks: readonly TearGhostChunkIndexEntry[]):
 function dataRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/** Imported provenance must remain recursive plain JSON data across app boundaries. */
+function clonePlainCapsuleData(value: unknown, depth = 0): unknown {
+  if (depth > 32) throw new RangeError("capsule plain data exceeds nesting limit");
+  if (value === null || typeof value === "string" || typeof value === "boolean") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "number") throw new TypeError("capsule plain data contains a non-finite number");
+  if (Array.isArray(value)) return Object.freeze(value.map((entry) => clonePlainCapsuleData(entry, depth + 1)));
+  if (!dataRecord(value)) throw new TypeError("capsule plain data must be JSON-compatible");
+  const copy: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (key === "__proto__" || key === "constructor" || key === "prototype") throw new TypeError(`capsule plain data contains reserved key: ${key}`);
+    copy[key] = clonePlainCapsuleData(entry, depth + 1);
+  }
+  return Object.freeze(copy);
+}
+
+function parseProvenance(value: unknown): Readonly<Record<string, unknown>> | undefined {
+  if (value === undefined) return undefined;
+  if (!dataRecord(value)) throw new TypeError("capsule provenance must be a plain object");
+  return clonePlainCapsuleData(value) as Readonly<Record<string, unknown>>;
+}
 
 function parseChunkIndex(value: unknown): TearGhostChunkIndexEntry {
   if (!dataRecord(value)
@@ -304,6 +325,7 @@ function parseCapsuleManifest(value: unknown): TearGhostManifest {
     || !value.fidelity.downgrades.every((entry) => typeof entry === "string")) {
     throw new TypeError("unsupported capsule manifest");
   }
+  const provenance = parseProvenance(value.provenance);
   const chunks = Object.freeze(value.chunks.map(parseChunkIndex));
   return Object.freeze({
     format: "tearghost-capsule",
@@ -314,9 +336,7 @@ function parseCapsuleManifest(value: unknown): TearGhostManifest {
     recordingProfile: typeof value.recordingProfile === "string" && value.recordingProfile in GHOST_RECORDING_PROFILES
       ? value.recordingProfile as GhostRecordingProfileId
       : "legacy-unknown",
-    ...(dataRecord(value.provenance)
-      ? { provenance: Object.freeze(structuredClone(value.provenance)) }
-      : {}),
+    ...(provenance === undefined ? {} : { provenance }),
     ...(typeof value.completedAt === "string" ? { completedAt: value.completedAt } : {}),
     chunks,
     rootIntegrity: value.rootIntegrity,
@@ -499,6 +519,8 @@ export class GhostLocalVault {
     const chunks = root.chunks;
     if (manifest.chunks.length > limits.maxChunks) throw new RangeError("capsule exceeds chunk-count limit");
     if (ghostRootIntegrity(manifest.chunks) !== manifest.rootIntegrity) throw new TypeError("capsule root integrity mismatch");
+    if (await this.getManifest(manifest.id) !== undefined) throw new RangeError(`capsule already exists: ${manifest.id}`);
+    const writes: GhostVaultWrite[] = [];
     for (const entry of manifest.chunks) {
       const encoded = chunks[entry.id];
       if (typeof encoded !== "string") throw new TypeError(`capsule chunk is missing: ${entry.id}`);
@@ -512,13 +534,13 @@ export class GhostLocalVault {
       // size is also the hard streaming ceiling, so dishonest metadata cannot
       // turn a small compressed import into an unbounded allocation.
       await decodeGhostChunkPayload(entry.encoding, encoded, entry.uncompressedBytes);
+      const existing = await this.#backend.get("chunks", entry.id);
+      if (existing !== undefined && existing !== encoded) {
+        throw new RangeError(`capsule chunk id conflicts with stored evidence: ${entry.id}`);
+      }
+      if (existing === undefined) writes.push({ store: "chunks", key: entry.id, value: encoded });
     }
-    for (const entry of manifest.chunks) {
-      const encoded = chunks[entry.id];
-      if (typeof encoded !== "string") throw new TypeError(`capsule chunk is missing: ${entry.id}`);
-      await this.#backend.put("chunks", entry.id, encoded);
-    }
-    await this.putManifest(manifest);
+    await this.#backend.commit([...writes, ...this.#manifestWrites(manifest)]);
     return manifest;
   }
 
