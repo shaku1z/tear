@@ -50,7 +50,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnT
   let semanticInputAuthority = false; const requestOwnedPointerLock = () => { if (!semanticInputAuthority) requestLock(); };
   const ghostV3 = createBrowserGhostLiveRecorder(
     browserIndexedDb,
-    createGhostV3BrowserTestOptions(TEST_MODE, window.location.search),
+    createGhostV3BrowserTestOptions(TEST_MODE, browserWindow.location.search),
   );
   let ghostV3EventSequence = 0;
   // Keyframes must attest the immutable bootstrap identity the capsule saved

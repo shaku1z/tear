@@ -363,6 +363,11 @@ The following C27A foundation slices are complete:
   architecture rejects restoring direct `window.indexedDB` use there. This is
   an ownership seam, not new durability, quota, device, or concurrent-world
   evidence. Its remaining browser query adapter is the next narrow boundary.
+- That test-only query adapter now uses the supplied `browserWindow` too. The
+  storage-fault journey retains its injected-fault containment and reload
+  recovery behavior, while architecture rejects an ambient query read. This is
+  still not a production URL-control or persistence-completion claim; the
+  test-build inspector global is the next browser-bound ownership seam.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

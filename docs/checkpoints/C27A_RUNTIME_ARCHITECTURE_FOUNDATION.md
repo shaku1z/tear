@@ -990,6 +990,18 @@ of replay, headless execution, or learning portability.
   boundary is Ghost V3's remaining browser test-query input; keep its behavior
   unchanged and do not turn that adapter step into a persistence claim.
 
+- The fifty-seventh slice routes that test-query input through the existing
+  `browserWindow` capability. The test-only Ghost V3 storage-fault option reads
+  the supplied window's search string; source architecture rejects restoring
+  direct `window.location.search` use in the live runtime. The focused gate
+  passed 6 files / 22 tests, and the built browser storage-fault journey proves
+  unchanged injected-fault containment and reload recovery.
+
+  This does not add production URL control, persistence, quota/device, physical
+  input, concurrent-world, or C27A completion evidence. The next boundary is
+  the test-build Ghost V3 inspector-global installation through the supplied
+  window capability; preserve its existing browser-test interface.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap

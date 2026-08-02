@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 56 update (current)
+#### Slice 57 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -581,6 +581,18 @@ This is dependency ownership only, not durability, quota, storage-pressure,
 physical-device, concurrent-complete-world, or C27A completion evidence. Next,
 route Ghost V3's browser test-query input through the already supplied window
 capability without changing behavior or making a persistence claim.
+
+Slice 57 supplies that query boundary. The test-only Ghost V3 storage-fault
+option now reads `browserWindow.location.search`, and source architecture
+rejects direct `window.location.search` use in the live runtime. The focused
+gate passed 6 files / 22 tests plus architecture; the built browser
+storage-fault journey retained injected-fault containment and reload recovery.
+
+This is test-query capability ownership only, not production URL control,
+persistence, durability, quota/device, concurrent-complete-world, or C27A
+completion evidence. Next, move the test-build Ghost V3 inspector-global
+installation through the supplied window capability without changing its
+browser-test interface.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

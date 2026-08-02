@@ -178,6 +178,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live Ghost V3 capture and inspection must receive IndexedDB capability through the composition dependency port",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /\bwindow\.location\.search\b/u,
+    message: "live Ghost V3 test configuration must receive browser query capability through the composition dependency port",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -375,6 +380,12 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/app/live-game-runtime.ts",
     "const database = dependencies.browserIndexedDb;").length !== 0) {
   throw new Error("source architecture composition-owned browser IndexedDB rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "const search = window.location.search;").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "const search = dependencies.browserWindow.location.search;").length !== 0) {
+  throw new Error("source architecture composition-owned browser query rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",
