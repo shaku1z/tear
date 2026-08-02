@@ -37,7 +37,7 @@ function request(value) {
 }
 
 function send(value) {
-  if (typeof process.send === "function") process.send(value);
+  if (typeof process.send === "function") process.send({ ...value, workerPid: process.pid });
 }
 
 async function run(message) {

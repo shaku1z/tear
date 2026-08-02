@@ -111,10 +111,20 @@ operational boundary it proves.
   pre-start cooperative cancellation, a fixed-tick timeout, and a rejected
   surgical-state request. No live world, renderer, DOM object, or browser
   adapter crosses the process boundary.
-- [ ] Parallel worker-process episode stress isolation. The current proof uses
-  one child process at a time. It does not establish multi-worker scheduling,
-  mid-run cancellation delivery, worker failure recovery, or high-concurrency
-  hardware capacity.
+- [x] Bounded two-worker process dispatch. `ProductionHeadlessWorkerDispatcher`
+  sends only versioned scenario/action messages to at most two C30 workers,
+  reuses idle workers, and checks an operating-system child boundary before
+  scheduling a reused slot. Its focused proof runs three real production
+  episodes on exactly two child PIDs, short-circuits a cancelled job before
+  dispatch, replaces an externally exited idle child only when the two-worker
+  capacity needs it, and enforces a per-request parent deadline.
+  A deadline kills the active child, returns an explicit `timed-out` result,
+  and the next request starts on a clean replacement PID. No live world,
+  renderer, DOM object, or browser adapter crosses this boundary.
+- [ ] Worker-failure recovery and scale evidence. An unexpected active-worker
+  exit is reported as a failed request; it is not retried or restored. There is
+  no mid-run cancellation message, checkpoint restore, broad concurrent stress,
+  target-hardware capacity, or long-run leak claim.
 - [x] A sampled natural terminal episode is visibly rerunnable from its
   production artifact. The environment now seals a versioned
   `tearbench-production-headless-terminal` artifact with its exact validated
@@ -141,19 +151,24 @@ retain their respective evidence obligations.
 
 ## Evidence
 
-- `pnpm typecheck` passes.
-- `pnpm exec vitest run tests/unit/tearbench-headless.test.ts tests/unit/production-headless-environment.test.ts tests/unit/ghost-production-replay-world.test.ts tests/unit/production-replay-composition.test.ts` passes: 4 files / 9 tests.
+- `pnpm check:c30:foundation` passes: typecheck, full lint, C30 source
+  architecture fences, five focused Vitest files / 12 tests, three Node worker
+  tests, standalone build, and the Class-A browser terminal rerun.
 - `pnpm exec vitest run tests/unit/production-headless-benchmark.test.ts --disableConsoleIntercept` passes and prints its measured production-pool artifact.
 - `pnpm exec vitest run tests/unit/production-headless-environment.test.ts` passes five focused tests, including the 256-episode / 30,720-tick isolation stress proof.
 - `node --test tests/production-headless-worker.test.mjs` passes the serialized
   child-process completed/cancelled/timed-out/rejected-message matrix.
+- `node --test tests/production-headless-worker-dispatcher.test.mjs` passes the
+  two-PID bounded dispatch, pre-dispatch cancellation, exited-idle-worker
+  replacement, and parent-deadline/replacement matrix.
 - `pnpm build:test:standalone` and `pnpm test:browser:production-headless-terminal` pass. The named route consumes the committed versioned natural-terminal fixture; the browser materializer admits only versioned natural C30 terminal coordinates and proves exact action provenance plus a rendered screenshot.
 - `pnpm check:architecture` passes, including planted C30 forbidden-edge and
   browser-global cases.
 
 ## Next safe boundary
 
-Build a bounded multi-worker C30 dispatcher with a declared worker cap,
-per-request deadline, cooperative cancellation before dispatch, and worker
-replacement after a process failure. Exercise it with independent real episodes
-without transferring a live world or browser adapter.
+Make an active-worker failure explicit as a versioned attempt record, then add
+one bounded retry only for an idempotent serialized C30 request. The retry must
+remain in a fresh worker and preserve the first failure evidence; do not claim
+checkpoint restore, mid-run cancellation, or durable job recovery until those
+separate mechanisms exist.

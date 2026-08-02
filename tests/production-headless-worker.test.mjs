@@ -37,7 +37,10 @@ test("C30 worker process keeps production worlds behind serialized episode messa
   const worker = fork(workerPath, { silent: true });
   context.after(() => { if (worker.connected) worker.disconnect(); });
   const [ready] = await once(worker, "message");
-  assert.deepEqual(ready, { format: "tearbench-production-headless-worker", schemaVersion: 1, kind: "ready" });
+  assert.equal(ready.format, "tearbench-production-headless-worker");
+  assert.equal(ready.schemaVersion, 1);
+  assert.equal(ready.kind, "ready");
+  assert.equal(ready.workerPid, worker.pid);
 
   const execute = async (value) => {
     worker.send(value);
@@ -52,11 +55,13 @@ test("C30 worker process keeps production worlds behind serialized episode messa
   assert.equal(completed.terminal?.actions.length, 3);
 
   const cancelled = await execute(request("cancelled", { cancelled: true }));
-  assert.deepEqual(cancelled, {
-    format: "tearbench-production-headless-worker", schemaVersion: 1,
-    kind: "cancelled", requestId: "cancelled", ticks: 0,
-    semanticHash: cancelled.semanticHash,
-  });
+  assert.equal(cancelled.format, "tearbench-production-headless-worker");
+  assert.equal(cancelled.schemaVersion, 1);
+  assert.equal(cancelled.kind, "cancelled");
+  assert.equal(cancelled.requestId, "cancelled");
+  assert.equal(cancelled.ticks, 0);
+  assert.match(cancelled.semanticHash, /^[a-f0-9]{16}$/u);
+  assert.equal(cancelled.workerPid, worker.pid);
 
   const timedOut = await execute(request("timed-out", { timeoutMilliseconds: 0 }));
   assert.equal(timedOut.kind, "timed-out");

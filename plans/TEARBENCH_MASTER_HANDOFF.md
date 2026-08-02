@@ -180,15 +180,18 @@ Named status:
 - **C30:** active. A DOM-free natural episode now uses the C29 production replay
   world and fixed-step simulation composition. A 120-tick C30-to-C29 semantic
   comparison, fresh-environment isolation, exact bounded batches, cooperative
-  cancellation/timeout, and bounded terminal-artifact retention pass. This is
-  an in-process pool, not worker or throughput evidence. A C30 recorded-origin
+  cancellation/timeout, bounded terminal-artifact retention, measured natural
+  throughput, and a bounded two-child serialized dispatcher pass. The
+  dispatcher proves two independent child PIDs, pre-dispatch cancellation,
+  parent-side deadline termination, and replacement of an externally exited
+  idle child; it does not retry or restore an active-worker failure. A C30 recorded-origin
   attempt reached C27A boss-Aldric tick 35, then diverged at its live wave spawn
   because the C29 source composition lacks the wave/reward lifecycle still held
   by C27A's test-only detached harness; both unproven attempts were reverted.
   The new declared 32x120 natural workload records rate/latency/heap/repeat
   evidence and passed its modest developer-hardware budget on this worktree;
-  it is not worker or training-capacity evidence. Browser-fast corpus parity,
-  worker-process isolation, retries/checkpoint restore, visible **failure**
+  it is not training-capacity evidence. Browser-fast corpus parity,
+  active-worker retry/checkpoint restore, visible **failure**
   reruns, and Academy/Foundry streaming remain open. The current 256-episode /
   30,720-tick in-process stress proof has distinct final state objects and
   hashes, plus separate sampled terminal scenario/action traces; it is not a
@@ -417,11 +420,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C30 now has a real child-worker protocol that executes the production headless environment from serialized scenario/action data and returns only serialized terminal/outcome evidence.
-PROVEN BY:           `pnpm typecheck` and `node --test tests/production-headless-worker.test.mjs` pass. One child process completes the 120-tick production episode and independently returns pre-start cancellation, fixed-tick timeout, and rejected surgical-state outcomes without receiving a live world or browser adapter. The current in-process 256-episode isolation proof remains green.
-REMAINING HERE:      C30 needs C27A-matrix browser-fast parity with event/reward/terminal/cadence comparison; that item is explicitly blocked on promoting the wave/reward lifecycle from C27A's detached test harness into shared C29/C30 source composition. It also needs a bounded multi-worker dispatcher, worker failure/retry/checkpoint restore, target-hardware training-capacity and long-run leak measurements, actual failure reruns, and Academy/Foundry streaming. The one-worker protocol, in-process stress, measured natural workload, and visible truncated sample do not certify those conditions.
+DONE THIS STEP:      C30 now has a bounded two-child dispatcher that sends only serialized scenario/action requests to the real production-headless environment; it reuses live workers and replaces an externally exited idle worker when capacity needs it.
+PROVEN BY:           `pnpm check:c30:foundation` passes. The focused Node matrix proves two independent child PIDs, pre-dispatch cancellation, a parent-side per-request deadline that kills its active child, a clean replacement PID, and a completed 120-tick production episode without transferring a live world or browser adapter. The 256-episode in-process isolation proof remains green.
+REMAINING HERE:      C30 needs C27A-matrix browser-fast parity with event/reward/terminal/cadence comparison; that item is explicitly blocked on promoting the wave/reward lifecycle from C27A's detached test harness into shared C29/C30 source composition. It also needs explicit active-worker attempt/retry evidence, checkpoint restore, target-hardware training-capacity and long-run leak measurements, actual failure reruns, and Academy/Foundry streaming. Bounded dispatch does not certify those conditions.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Build a bounded multi-worker C30 dispatcher with worker replacement after a process failure, per-request deadline, and cooperative pre-dispatch cancellation; prove independent real episodes without transferring worlds or browser adapters.
+NEXT SLICE:          Add an explicit C30 active-worker attempt record and one bounded retry only for idempotent serialized episode input; preserve the failed first attempt, use a fresh worker, and do not claim checkpoint restore or mid-run cancellation.
 
 All of the following were run from this worktree through C27A slice 36:
 

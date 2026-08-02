@@ -1038,7 +1038,7 @@ portability, concurrent complete worlds, or C27A completion.
 
 - [ ] Headless episodes run the same composition, no DOM
 - [ ] Headless↔live parity on the C27A matrix
-- [ ] Resource controls and measured throughput (episodes/minute, recorded)
+- [x] Resource controls and measured throughput (episodes/minute, recorded)
 
 ### C31 — Academy corpus and consent
 

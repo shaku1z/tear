@@ -1,0 +1,70 @@
+import assert from "node:assert/strict";
+import process from "node:process";
+import test from "node:test";
+import { setTimeout as delay } from "node:timers/promises";
+
+import { ProductionHeadlessWorkerDispatcher } from "../scripts/production-headless-worker-dispatcher.mjs";
+
+function request(id, overrides = {}) {
+  return {
+    format: "tearbench-production-headless-worker", schemaVersion: 1,
+    kind: "run", requestId: id,
+    scenario: {
+      format: "tear-contract", kind: "scenario", schemaVersion: 1,
+      id, version: 1, description: "C30 worker-dispatcher episode",
+      stateClass: "recorded-canonical", executionClass: "training",
+      seed: `c30-dispatcher-${id}`,
+      start: { mode: "endless", difficulty: "normal", weapon: "sword" },
+      maxTicks: 120, assertions: ["runtime.finite-state"], tags: ["c30", "worker-dispatcher"],
+    },
+    actions: [{ tick: 1, actions: [{ type: "move", x: 1_000, y: 0 }] }],
+    ...overrides,
+  };
+}
+
+async function waitForExit(pid) {
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    try {
+      process.kill(pid, 0);
+    } catch (error) {
+      if (error?.code === "ESRCH") return;
+      throw error;
+    }
+    await delay(25);
+  }
+  throw new Error(`worker ${String(pid)} did not exit after SIGTERM`);
+}
+
+test("C30 dispatcher bounds real workers, short-circuits cancellation, and replaces an exited child", async (context) => {
+  const dispatcher = new ProductionHeadlessWorkerDispatcher({ maxWorkers: 2, deadlineMilliseconds: 15_000 });
+  context.after(() => dispatcher.dispose());
+  const first = await dispatcher.run([
+    request("first-a"), request("first-b"), request("first-c"), request("cancelled", { cancelled: true }),
+  ]);
+  assert.deepEqual(first.map((entry) => entry.kind), ["completed", "completed", "completed", "cancelled"]);
+  const firstPids = first.slice(0, 3).map((entry) => entry.workerPid);
+  assert.equal(new Set(firstPids).size, 2, "three real episodes stay within the two-worker cap");
+  assert.equal(first[3].dispatch, "pre-dispatch");
+
+  process.kill(firstPids[0], "SIGTERM");
+  await waitForExit(firstPids[0]);
+  const replacement = await dispatcher.run([request("replacement-a"), request("replacement-b")]);
+  assert.deepEqual(replacement.map((entry) => entry.kind), ["completed", "completed"]);
+  const replacementPids = replacement.map((entry) => entry.workerPid);
+  assert.ok(replacementPids.includes(firstPids.find((pid) => pid !== firstPids[0])), "the surviving bounded worker is reused");
+  assert.ok(replacementPids.some((pid) => !firstPids.includes(pid)), "an exited worker is replaced only when capacity requires it");
+}, { timeout: 30_000 });
+
+test("C30 dispatcher enforces a per-request deadline and starts a clean replacement", async (context) => {
+  const dispatcher = new ProductionHeadlessWorkerDispatcher({ maxWorkers: 1, deadlineMilliseconds: 15_000 });
+  context.after(() => dispatcher.dispose());
+  const timedOut = await dispatcher.run([request("deadline", { deadlineMilliseconds: 0 })]);
+  assert.equal(timedOut[0].kind, "timed-out");
+  assert.equal(timedOut[0].requestId, "deadline");
+  assert.match(timedOut[0].error, /dispatcher deadline exceeded/u);
+
+  const replacement = await dispatcher.run([request("deadline-replacement")]);
+  assert.equal(replacement[0].kind, "completed");
+  assert.notEqual(replacement[0].workerPid, timedOut[0].workerPid);
+}, { timeout: 30_000 });
