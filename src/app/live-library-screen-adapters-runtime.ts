@@ -39,6 +39,7 @@ export interface LibraryScreenServices {
   readonly ghostVault: GhostVaultLibraryPort;
   readonly enterReplay: (record: unknown, from: string) => boolean;
   readonly enterGhostTheater: (id: string) => Promise<boolean>;
+  readonly enterGhostComparison: (ids: readonly string[]) => Promise<boolean>;
 }
 
 export interface LibraryScreenAdapters {
@@ -64,6 +65,7 @@ export interface LibraryScreenAdapters {
   readonly selectLeaderboardBoard: (id: string) => void;
   readonly watchReplay: (id: string, from?: "profile" | "leaderboards") => void;
   readonly watchGhostCapsule: (id: string) => void;
+  readonly compareGhostCapsule: (id: string) => void;
   readonly publishReplay: (id: string) => void;
   readonly repairGhostCapsule: (id: string) => void;
 }
@@ -84,7 +86,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
   const replayThumbs: Record<string, HTMLImageElement> = {};
   let codexTab = "abilities", codexFilter = "all", codexSort = "category", bestiaryFilter = "all";
   const codexTierView: Record<string, number> = {};
-  let profileTab = "bests", profileMessage = "", achievementFilter = "all";
+  let profileTab = "bests", profileMessage = "", comparisonAnchor: string | undefined, achievementFilter = "all";
   let leaderboardTab = "global", leaderboardMode = "", leaderboardDifficulty = "normal", leaderboardKey = "";
   let leaderboardData: readonly LeaderboardRowSource[] | null = null, leaderboardLoading = false, leaderboardMessage = "";
   let feedData: readonly LeaderboardRowSource[] | null = null, feedLoading = false;
@@ -189,6 +191,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       available: capsule.healthy && capsule.status === "complete",
       repairable: capsule.repairable,
       timestamp: new Date(capsule.createdAt).toLocaleDateString(),
+      comparisonSelected: capsule.id === comparisonAnchor,
     }));
     if (profileTab === "vault" && ghostVault.message !== undefined) profileMessage = ghostVault.message;
     else if (profileTab === "vault" && ghostVault.status === "loading") profileMessage = "opening Ghost Vault...";
@@ -302,6 +305,24 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       profileMessage = "opening Ghost Theater...";
       void services.enterGhostTheater(id).then((opened) => {
         if (!opened) profileMessage = "This Ghost capsule could not open in Theater.";
+      });
+    },
+    compareGhostCapsule: (id) => {
+      const capsule = services.ghostVault.snapshot().capsules.find((entry) => entry.id === id);
+      if (capsule?.healthy !== true || capsule.status !== "complete") {
+        profileMessage = "Only healthy, complete Ghost capsules can be compared.";
+        return;
+      }
+      if (comparisonAnchor === undefined || comparisonAnchor === id) {
+        comparisonAnchor = id;
+        profileMessage = "Comparison source selected. Choose another healthy Ghost capsule.";
+        return;
+      }
+      const sources = Object.freeze([comparisonAnchor, id]);
+      comparisonAnchor = undefined;
+      profileMessage = "opening semantic comparison...";
+      void services.enterGhostComparison(sources).then((opened) => {
+        if (!opened) profileMessage = "Those Ghost capsules could not open for comparison.";
       });
     },
     publishReplay: (id) => { replayLibrary.publish(id); },

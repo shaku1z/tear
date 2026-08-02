@@ -18,6 +18,8 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
     }
     environment.pause();
     environment.resume();
+    environment.pause();
+    environment.resume();
     environment.terminate();
   });
   await page.waitForFunction(() => window.__TEAR_GHOST_V3__.manifest() !== null
@@ -63,11 +65,38 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   const sourceAfterPractice = JSON.stringify(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id));
   assert.equal(sourceAfterPractice, sourceBeforePractice, "practice fork mutated durable source custody");
   assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
+  await page.evaluate(() => {
+    const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("B");
+    environment.reset({
+      format: "tear-contract", kind: "scenario", schemaVersion: 1,
+      id: "c29-live-comparison", version: 1, description: "C29 V3 comparison proof",
+      stateClass: "recorded-canonical", executionClass: "engineering", seed: "c29-comparison-seed",
+      start: { mode: "endless", difficulty: "normal", weapon: "sword" }, maxTicks: 240,
+      assertions: ["runtime.finite-state"], tags: ["c29", "ghost", "comparison"],
+    });
+    for (let tick = 1; tick <= 240; tick += 1) {
+      environment.step(tick === 1 ? [{ kind: "command", tick, id: 1, command: { type: "move", x: -1000, y: 0 } }]
+        : tick === 25 ? [{ kind: "command", tick, id: 2, command: { type: "dash", x: -1000, y: 0 } }] : []);
+    }
+    environment.pause();
+    environment.resume();
+    environment.pause();
+    environment.resume();
+    environment.terminate();
+  });
+  await page.waitForFunction((sourceId) => window.__TEAR_GHOST_V3__.manifest()?.id !== sourceId
+    || window.__TEAR_GHOST_V3__.failure() !== null, manifest.id, { timeout: 20000 });
+  const comparisonManifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
+  assert.notEqual(comparisonManifest.id, manifest.id, "comparison needs a second durable source capsule");
+  assert.equal(comparisonManifest.status, "complete");
+  const comparisonSourceBeforePractice = JSON.stringify(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), comparisonManifest.id));
   await boot();
   await page.waitForFunction(() => window.__TEAR_GHOST_V3__, undefined, { timeout: 15000 });
   const afterReload = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifests());
   assert.ok(afterReload.some((candidate) => candidate.id === manifest.id && candidate.status === "complete"),
     "completed Ghost V3 capsule was not readable after a browser reload");
+  assert.ok(afterReload.some((candidate) => candidate.id === comparisonManifest.id && candidate.status === "complete"),
+    "second comparison capsule was not readable after a browser reload");
   const reloadedCapsule = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id);
   assert.equal(reloadedCapsule.tracks.results.length > 0, true);
   await page.evaluate(() => {
@@ -83,25 +112,40 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   await waitScreen("profile");
   await page.mouse.click(875, 271); // VAULT tab
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("Ghost V3 - COACHING"), undefined, { timeout: 10000 });
+  await page.mouse.click(1149, 362); // choose one visible healthy capsule as the comparison source
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("SOURCE CHOSEN"), undefined, { timeout: 10000 });
+  await page.mouse.click(1149, 458); // choose the other visible healthy capsule
+  await waitScreen("replay");
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("SEMANTIC COMPARISON"), undefined, { timeout: 10000 });
+  await page.mouse.click(428, 854); // next semantic event through the rendered replay transport
+  await page.mouse.click(428, 854); // a second repeated semantic occurrence
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("OCCURRENCE 2"), undefined, { timeout: 10000 });
+  const comparisonTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
+  assert.ok(comparisonTexts.some((text) => text.includes("SEMANTIC COMPARISON")), "comparison panel did not render");
+  assert.ok(comparisonTexts.filter((text) => text.includes("RUN ")).length >= 2, "comparison did not render both durable sources");
+  await page.keyboard.press("Escape");
+  await waitScreen("profile");
   await page.mouse.click(1023, 362); // The healthy capsule's semantic THEATER control
   await waitScreen("replay");
+  const theaterTextCount = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__?.length ?? 0);
   await page.waitForTimeout(250);
-  const theaterTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
-  assert.ok(theaterTexts.some((text) => text.includes("THEATER")), `Theater header did not render: ${theaterTexts.slice(-80).join(" | ")}`);
   await page.mouse.click(428, 854); // next verified checkpoint through the visible transport
-  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("TICK 120"), undefined, { timeout: 10000 });
+  await page.waitForFunction((count) => window.__TEAR_C29_THEATER_TEXT__?.slice(count).includes("TICK 120"), theaterTextCount, { timeout: 10000 });
+  const theaterTexts = await page.evaluate((count) => (window.__TEAR_C29_THEATER_TEXT__ ?? []).slice(count), theaterTextCount);
+  assert.ok(theaterTexts.some((text) => text.includes("THEATER")), `Theater header did not render: ${theaterTexts.slice(-80).join(" | ")}`);
   assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "replay");
   await page.mouse.click(734, 854); // visible PRACTICE launches the verified checkpoint child
   await waitScreen("playing");
   const launchedPractice = await page.evaluate(() => window.__TEAR_GHOST_V3__.activePractice());
-  assert.equal(launchedPractice.id, `${manifest.id}:practice:120:exact-practice`);
-  assert.equal(launchedPractice.sourceGhostId, manifest.id);
-  assert.equal(launchedPractice.sourceRootHash, practice.sourceRootHash);
+  assert.ok([manifest.id, comparisonManifest.id].includes(launchedPractice.sourceGhostId));
+  assert.equal(launchedPractice.id, `${launchedPractice.sourceGhostId}:practice:120:exact-practice`);
+  assert.equal(typeof launchedPractice.sourceRootHash, "string");
   assert.equal(launchedPractice.forkTick, 120);
   assert.equal(launchedPractice.rankedEligible, false);
   assert.equal(launchedPractice.leaderboardEligible, false);
   assert.equal(launchedPractice.inputLatchPolicy, "release-all");
-  const sourceAfterVisiblePractice = JSON.stringify(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id));
-  assert.equal(sourceAfterVisiblePractice, sourceBeforePractice, "visible practice launch mutated durable source custody");
+  const sourceAfterVisiblePractice = JSON.stringify(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), launchedPractice.sourceGhostId));
+  assert.equal(sourceAfterVisiblePractice, launchedPractice.sourceGhostId === manifest.id ? sourceBeforePractice : comparisonSourceBeforePractice,
+    "visible practice launch mutated durable source custody");
   assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
 });

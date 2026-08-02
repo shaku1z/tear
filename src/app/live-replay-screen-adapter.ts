@@ -2,6 +2,7 @@ import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../presentation/screens/live-screen-renderers";
 import type { LegacyAppScreen } from "./legacy-state-controller";
 import { readBrowserGhostCapsule } from "../ghost/browser-capsule-vault";
+import { createGhostComparisonScreenAdapter } from "./ghost-comparison-screen-adapter";
 import { createGhostTheaterScreenAdapter } from "./ghost-theater-screen-adapter";
 import type { GhostPracticeChild } from "../ghost/replay-world";
 import type { GhostPracticeLaunchResult } from "./ghost-practice-launch";
@@ -27,13 +28,14 @@ export interface ReplayScreenServices {
 export interface ReplayScreenAdapter {
   readonly enter: (data: unknown, from?: LegacyAppScreen) => boolean; readonly exit: () => void; readonly render: () => void;
   readonly enterGhostCapsule: (id: string, from?: LegacyAppScreen) => Promise<boolean>;
+  readonly enterGhostComparison: (ids: readonly string[], from?: LegacyAppScreen) => Promise<boolean>;
   readonly togglePause: () => void; readonly seekBy: (delta: number) => void; readonly seekToFraction: (fraction: number) => void;
   readonly jumpChapter: (direction: number) => void; readonly restart: () => void; readonly toggleInfo: () => void;
   readonly practice: () => void;
   readonly setSpeed: (value: number) => void; readonly status: () => ReplayStatus | null;
 }
 
-type LegacyReplayScreenAdapter = Omit<ReplayScreenAdapter, "enterGhostCapsule" | "practice">;
+type LegacyReplayScreenAdapter = Omit<ReplayScreenAdapter, "enterGhostCapsule" | "enterGhostComparison" | "practice">;
 type DeferredAction = (adapter: LegacyReplayScreenAdapter) => void;
 
 /** Route-triggered replay facade; heavyweight world playback loads only when a replay is opened. */
@@ -42,7 +44,8 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
   let runtime: LegacyReplayScreenAdapter | undefined;
   const theater = createGhostTheaterScreenAdapter({ render: services.renderers.replay, width: () => services.width,
     deltaSeconds: services.deltaSeconds, launchPractice: services.launchGhostPractice });
-  let active: "legacy" | "theater" | undefined;
+  const comparison = createGhostComparisonScreenAdapter({ render: services.renderers.replay });
+  let active: "legacy" | "theater" | "comparison" | undefined;
   let loading: Promise<void> | undefined;
   let pending: Readonly<{ data: unknown; from: LegacyAppScreen }> | undefined;
   const deferred: DeferredAction[] = [];
@@ -62,7 +65,9 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     else { deferred.push(action); ensureLoaded(); }
   }
   function enter(data: unknown, from: LegacyAppScreen = "menu"): boolean {
-    if (active === "theater") { theater.exit(); active = undefined; }
+    if (active === "theater") theater.exit();
+    if (active === "comparison") comparison.exit();
+    if (active === "theater" || active === "comparison") active = undefined;
     if (runtime) { active = "legacy"; return runtime.enter(data, from); }
     const playback = d.GHOST.begin(data);
     if (playback === null) return false;
@@ -84,6 +89,12 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
       services.setScreen(destination);
       return;
     }
+    if (active === "comparison") {
+      const destination = comparison.exit() ?? d.APP.replayReturn;
+      active = undefined;
+      services.setScreen(destination);
+      return;
+    }
     if (active === "legacy" && runtime) { runtime.exit(); active = undefined; return; }
     const destination = pending?.from ?? d.APP.replayReturn;
     pending = undefined;
@@ -97,26 +108,42 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     const capsule = await readBrowserGhostCapsule(services.browserIndexedDb, id).catch(() => undefined);
     if (capsule === undefined || !theater.open(capsule, from)) return false;
     if (active === "legacy" && runtime !== undefined) runtime.exit();
+    if (active === "comparison") comparison.exit();
     pending = undefined;
     active = "theater";
     services.setScreen("replay", { returnTo: from });
     return true;
   }
 
+  async function enterGhostComparison(ids: readonly string[], from: LegacyAppScreen = "profile"): Promise<boolean> {
+    if (ids.length < 2 || new Set(ids).size !== ids.length) return false;
+    const capsules = await Promise.all(ids.map((id) => readBrowserGhostCapsule(services.browserIndexedDb, id).catch(() => undefined)));
+    if (capsules.some((capsule) => capsule === undefined) || !comparison.open(capsules.filter((capsule): capsule is NonNullable<typeof capsule> => capsule !== undefined), from)) {
+      return false;
+    }
+    if (active === "legacy" && runtime !== undefined) runtime.exit();
+    if (active === "theater") theater.exit();
+    pending = undefined;
+    active = "comparison";
+    services.setScreen("replay", { returnTo: from });
+    return true;
+  }
+
   const adapter: ReplayScreenAdapter = {
-    enter, enterGhostCapsule, exit, render: () => {
+    enter, enterGhostCapsule, enterGhostComparison, exit, render: () => {
       if (active === "theater") theater.render();
+      else if (active === "comparison") comparison.render();
       else if (runtime) runtime.render(); else renderLoading();
     },
-    togglePause: () => { if (active === "theater") theater.togglePause(); else invoke((value) => { value.togglePause(); }); },
-    seekBy: (delta) => { if (active === "theater") theater.seekBy(delta); else invoke((value) => { value.seekBy(delta); }); },
-    seekToFraction: (fraction) => { if (active === "theater") theater.seekToFraction(fraction); else invoke((value) => { value.seekToFraction(fraction); }); },
-    jumpChapter: (direction) => { if (active === "theater") theater.jumpCheckpoint(direction); else invoke((value) => { value.jumpChapter(direction); }); },
-    restart: () => { if (active === "theater") theater.restart(); else invoke((value) => { value.restart(); }); },
+    togglePause: () => { if (active === "theater") theater.togglePause(); else if (active !== "comparison") invoke((value) => { value.togglePause(); }); },
+    seekBy: (delta) => { if (active === "theater") theater.seekBy(delta); else if (active !== "comparison") invoke((value) => { value.seekBy(delta); }); },
+    seekToFraction: (fraction) => { if (active === "theater") theater.seekToFraction(fraction); else if (active !== "comparison") invoke((value) => { value.seekToFraction(fraction); }); },
+    jumpChapter: (direction) => { if (active === "theater") theater.jumpCheckpoint(direction); else if (active === "comparison") comparison.stepOccurrence(direction < 0 ? -1 : 1); else invoke((value) => { value.jumpChapter(direction); }); },
+    restart: () => { if (active === "theater") theater.restart(); else if (active === "comparison") comparison.restart(); else invoke((value) => { value.restart(); }); },
     practice: () => { if (active === "theater") theater.practice(); },
-    toggleInfo: () => { if (active === "theater") theater.toggleInfo(); else invoke((value) => { value.toggleInfo(); }); },
-    setSpeed: (speed) => { if (active === "theater") theater.setSpeed(speed); else invoke((value) => { value.setSpeed(speed); }); },
-    status: () => theater.status() ?? runtime?.status() ?? (pending === undefined ? null : {
+    toggleInfo: () => { if (active === "theater") theater.toggleInfo(); else if (active !== "comparison") invoke((value) => { value.toggleInfo(); }); },
+    setSpeed: (speed) => { if (active === "theater") theater.setSpeed(speed); else if (active !== "comparison") invoke((value) => { value.setSpeed(speed); }); },
+    status: () => theater.status() ?? comparison.status() ?? runtime?.status() ?? (pending === undefined ? null : {
       paused: true, speed: 1, infoVisible: false, progress: 0, from: pending.from,
     }),
   };

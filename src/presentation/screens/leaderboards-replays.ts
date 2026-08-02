@@ -135,11 +135,16 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     canvas.textAlign = "left"; canvas.fillStyle = REPLAY_PAPER; canvas.font = ui.font(ui.t.type.lead, true);
     canvas.fillText(view.theater ? "◆ THEATER" : "▶ REPLAY", 40 + safe.l, 36 + safe.t);
     canvas.fillStyle = REPLAY_MUTED; canvas.font = ui.font(ui.t.type.body, false);
+    if (view.comparison) {
+      canvas.fillStyle = REPLAY_DARK; canvas.fillRect(36 + safe.l, 4 + safe.t, 150, 42);
+      canvas.fillStyle = REPLAY_CYAN; canvas.font = ui.font(ui.t.type.lead, true); canvas.fillText("COMPARE", 40 + safe.l, 36 + safe.t);
+      canvas.fillStyle = REPLAY_MUTED; canvas.font = ui.font(ui.t.type.body, false);
+    }
     canvas.fillText(view.title + "   ·   " + view.detail, 200 + safe.l, 36 + safe.t);
     canvas.textAlign = "right"; canvas.fillStyle = REPLAY_CYAN; canvas.font = ui.font(ui.t.type.label, true);
     canvas.fillText(view.score ?? "", width - 36 - safe.r, 36 + safe.t); canvas.restore();
 
-    if (view.theater) theaterState(view);
+    if (view.comparison) comparisonState(view); else if (view.theater) theaterState(view);
 
     const barY = height - 96 - safe.b, barX = 220 + safe.l, barWidth = width - 440 - safe.l - safe.r;
     canvas.save(); canvas.globalAlpha = 0.85; canvas.fillStyle = REPLAY_DARK;
@@ -181,6 +186,28 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
       x + 42, y + 122, panelWidth - 84, 22, ui.t.type.body, "left", ui.t.alpha.soft);
     ui.text(canvas, "USE TRANSPORT TO SEEK  ·  ESC TO RETURN", width / 2, y + panelHeight - 24,
       ui.t.type.micro, "center", ui.t.alpha.muted);
+  }
+
+  function comparisonState(view: ReplayScreenView): void {
+    const comparison = view.comparison;
+    if (comparison === undefined) return;
+    const { canvas, safeInsets: safe } = context;
+    const panelWidth = Math.min(760, width - 80 - safe.l - safe.r), panelHeight = 170 + comparison.runs.length * 30;
+    const x = width / 2 - panelWidth / 2, y = height / 2 - panelHeight / 2 - 20;
+    ui.panel(canvas, x, y, panelWidth, panelHeight);
+    ui.accentStrip(canvas, x, y, panelWidth, REPLAY_CYAN);
+    ui.title(canvas, "SEMANTIC COMPARISON", width / 2, y + 50, ui.t.type.h2);
+    ui.tag(canvas, `EVENT ${comparison.eventType.toUpperCase()} - OCCURRENCE ${String(comparison.occurrence)}`,
+      width / 2, y + 78, REPLAY_CYAN, "center", ui.t.type.label);
+    comparison.runs.forEach((run, index) => {
+      const rowY = y + 108 + index * 30;
+      const source = run.sourceId.length > 28 ? `${run.sourceId.slice(0, 25)}...` : run.sourceId;
+      ui.text(canvas, `RUN ${String(index + 1)}  ${source}`, x + 34, rowY, ui.t.type.caption, "left", ui.t.alpha.soft);
+      ui.tag(canvas, run.tick === null ? "MISSING" : `TICK ${String(run.tick)}`, x + panelWidth - 34, rowY,
+        run.tick === null ? ui.t.color.danger : REPLAY_CYAN, "right", ui.t.type.label);
+    });
+    ui.wrappedText(canvas, "Each row is reconstructed from its own verified source capsule. This compares semantic simulation state only; pixels, PCM, haptics, and device output are not compared here.",
+      x + 34, y + panelHeight - 50, panelWidth - 68, 16, ui.t.type.micro, "left", ui.t.alpha.muted);
   }
 
   function replayInfo(view: ReplayScreenView): void {

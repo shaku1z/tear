@@ -182,7 +182,12 @@ This is the migration checklist for the architectural redesign. A checked featur
   visible `PRACTICE` control restores a real unranked child into live play;
   source custody stays byte-identical and the child blocks durable outcome,
   profile, economy, cloud, and recording effects. Active cinematics,
-  pixel/device output fidelity, and comparison remain C29/C25/C40 work;
+  pixel/device output fidelity remains C25/C40 work. C29 also now exposes
+  player-visible semantic comparison: from Profile -> Vault, select two
+  healthy completed V3 capsules with `COMPARE` to reconstruct and inspect
+  each repeated semantic event occurrence side by side. It is intentionally a
+  semantic source-simulation comparison, not a pixel, PCM, haptic, or device
+  output claim;
   authenticated publication, deployed verification, moderation operations,
   and cloud/player lifecycle flows remain later completion work.
 

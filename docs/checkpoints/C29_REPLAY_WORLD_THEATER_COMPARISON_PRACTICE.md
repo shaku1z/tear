@@ -1,8 +1,8 @@
 # C29 - Replay World, Theater, Comparison, and Practice
 
-**Status:** active - production-runtime replay, semantic Theater, and
-player-visible Practice From Here are proven; comparison and remaining exit
-conditions are not.
+**Status:** active - production-runtime replay, semantic Theater, player-visible
+Practice From Here, and side-by-side semantic comparison are proven; the
+durable active-cinematic exit condition is not.
 
 ## Scope and evidence rule
 
@@ -49,8 +49,8 @@ applicable production boundary.
   seeks from fresh replay worlds and can fork an exact recorded checkpoint into
   an immutable, unranked, non-persistent practice child; it owns no Vault or
   player/profile writes. The browser capture journey proves the durable source
-  capsule is byte-for-byte unchanged after that fork. This is a source/runtime
-  foundation, not yet the player-facing practice flow required by the ledger.
+  capsule is byte-for-byte unchanged after that fork. The player-facing flow
+  built below carries that same child into the real live State Forge world.
 - The normal Profile -> Vault route now exposes a healthy, complete V3 capsule
   as `THEATER`, never as Ghost 2 `WATCH`. It opens only after the validated
   Vault reader and verified production replay session succeed. Its visible
@@ -66,6 +66,15 @@ applicable production boundary.
   recorder embedded in the keyframe is cleared before play, and the active
   child disposition blocks scores, currency, profile/finale persistence, cloud
   writes, and replay recording. A normal new run clears that disposition.
+- The normal Vault now lets the player select two distinct healthy, complete
+  V3 capsules for `COMPARE`. The comparison screen admits both through their
+  independent verified production replay sessions, then displays each semantic
+  event occurrence in order, including repeated occurrences and a deliberate
+  `MISSING` row where a source has no matching occurrence. The player flow
+  selects a pair; the source comparator validates two to nine inputs for
+  engineering consumers. Neither mutates Vault or profile data, and it
+  explicitly compares semantic source-simulation results only—not rendered
+  pixels, PCM, haptics, or device output.
 
 ## Exit-gate ledger
 
@@ -89,8 +98,12 @@ applicable production boundary.
   jumps to its verified tick-120 checkpoint using visible transport, and
   returns to Profile with Escape. The Theater screen is a source-simulation
   semantic view; no pixel, PCM, haptic, or device-output fidelity is claimed.
-- [ ] Side-by-side comparison supports the required runs and repeated semantic
-  occurrences.
+- [x] Side-by-side comparison supports two verified runs and repeated semantic
+  occurrences. The rebuilt browser journey records two real IndexedDB
+  capsules, selects each through the normal Profile -> Vault `COMPARE`
+  controls, opens the visible semantic comparison, and advances to a second
+  repeated semantic occurrence. The focused unit proof additionally asserts a
+  missing second occurrence is represented rather than silently discarded.
 
 ## Deliberately not claimed
 
@@ -99,7 +112,7 @@ incompatible capsule, or replace Ghost 2 playback. The older parity
 harness retains its equivalent helper for its existing C27A suites, but the C29
 replay proof no longer imports that test helper. This proves the normal
 test-standalone endless capture only; durable active-chapter-cinematic capture
-and comparisons remain unfinished.
+remains unfinished.
 
 ## Evidence
 
@@ -110,5 +123,7 @@ compares all captured authoritative receipts through source-owned replay. That
 browser journey additionally follows the player-visible Profile -> Vault ->
 Theater route, seeks tick 120, presses the rendered `PRACTICE` control, and
 enters the live playing state. It confirms the active child and unchanged
-durable source through read-only test diagnostics. It is not a substitute for
-pixel/device output fidelity, active-cinematic capture, or comparison evidence.
+durable source through read-only test diagnostics. The same journey proves
+visible comparison of two durable capsules and a repeated semantic occurrence.
+It is not a substitute for pixel/device output fidelity or active-cinematic
+capture.

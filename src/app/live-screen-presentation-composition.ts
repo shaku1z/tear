@@ -12,7 +12,7 @@ import type { LegacyAppScreen } from "./legacy-state-controller";
 
 type RendererBase = Omit<LiveScreenRendererOptions, "dispatch" | "renderPreview">;
 type ReplayBase = Omit<ReplayScreenServices, "renderers" | "categories" | "fallbackCategory" | "specialColor">;
-type LibraryBase = Omit<LibraryScreenServices, "renderers" | "enterReplay" | "enterGhostTheater">;
+type LibraryBase = Omit<LibraryScreenServices, "renderers" | "enterReplay" | "enterGhostTheater" | "enterGhostComparison">;
 type SettingsBase = Omit<SettingsRenameServices, "renderers" | "setCodexGuide">;
 type RunServicesBase = Omit<RunScreenServices, "renderers" | "categories" | "fallbackCategory" |
   "categoryOrder" | "specialColor" | "abilityBadge">;
@@ -74,6 +74,7 @@ export function createLiveScreenPresentationComposition(
     ...options.library, renderers: renderer,
     enterReplay: (record, from) => replay.enter(record, isLegacyScreen(from) ? from : "profile"),
     enterGhostTheater: (id) => replay.enterGhostCapsule(id, "profile"),
+    enterGhostComparison: (ids) => replay.enterGhostComparison(ids, "profile"),
   });
   const settings: SettingsRenameAdapters = createLiveSettingsRenameAdapters({
     ...options.settings, renderers: renderer,

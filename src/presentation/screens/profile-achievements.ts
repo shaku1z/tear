@@ -34,6 +34,11 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
             label: view.tab === "vault" ? "◆ THEATER" : "▶  WATCH", enabled: replay.available,
             action: view.tab === "vault" ? { type: "profile.watchGhostCapsule", id: replay.id } : { type: "profile.watchReplay", id: replay.id } });
         }
+        if (view.tab === "vault" && !replay.repairable) {
+          context.enqueue({ x: actionsX + 118, y: y + 20, w: 126, h: 40,
+            label: replay.comparisonSelected ? "SOURCE CHOSEN" : "COMPARE", enabled: replay.available,
+            selected: replay.comparisonSelected, action: { type: "profile.compareGhostCapsule", id: replay.id } });
+        }
         if (replay.local) {
           context.enqueue({ x: actionsX + 118, y: y + 20, w: 78, h: 40, label: replay.pinned ? "★" : "PIN", selected: replay.pinned,
             action: { type: "profile.pinReplay", id: replay.id, pinned: !replay.pinned } });

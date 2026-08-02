@@ -15,6 +15,7 @@ export * from "./ghost-doctor";
 export * from "./replay-world";
 export * from "./production-replay-verification";
 export * from "./production-replay-session";
+export * from "./production-replay-comparison";
 export * from "./theater";
 export * from "./knowledge-libraries";
 export * from "./coach";

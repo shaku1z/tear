@@ -97,7 +97,7 @@ export interface CardView extends ChoiceView {
   readonly boss?: boolean;
 }
 export interface StatView { readonly label: string; readonly value: string; readonly detail?: string; readonly glyph?: string; readonly accent?: string }
-export interface ReplayView { readonly id: string; readonly title: string; readonly detail: string; readonly available?: boolean; readonly repairable?: boolean; readonly badge?: string; readonly timestamp?: string; readonly thumbnailId?: string; readonly pinned?: boolean; readonly shared?: boolean; readonly local?: boolean; readonly rank?: number; readonly mine?: boolean; readonly wave?: string; readonly time?: string; readonly score?: string }
+export interface ReplayView { readonly id: string; readonly title: string; readonly detail: string; readonly available?: boolean; readonly repairable?: boolean; readonly comparisonSelected?: boolean; readonly badge?: string; readonly timestamp?: string; readonly thumbnailId?: string; readonly pinned?: boolean; readonly shared?: boolean; readonly local?: boolean; readonly rank?: number; readonly mine?: boolean; readonly wave?: string; readonly time?: string; readonly score?: string }
 export interface ProgressView {
   readonly label: string; readonly current: number; readonly goal: number; readonly detail?: string; readonly done?: boolean;
   /** Section heading the row belongs to on the pause/defeat progress panel (source drawRunProgressPanel). */
@@ -169,6 +169,10 @@ export interface LeaderboardsScreenView {
   readonly ownRank?: string; readonly signInRequired?: boolean; readonly legacyGhostId?: string;
 }
 export interface ReplayChapterView { readonly fraction: number; readonly boss: boolean }
+export interface ReplayComparisonView {
+  readonly eventType: string; readonly occurrence: number; readonly index: number; readonly total: number;
+  readonly runs: readonly Readonly<{ sourceId: string; tick: number | null; semanticHash: string | null }>[];
+}
 export interface ReplayScreenView {
   readonly id: "replay"; readonly title: string; readonly detail: string; readonly paused: boolean;
   readonly speed: number; readonly elapsed: string; readonly duration: string; readonly progress: number;
@@ -179,6 +183,8 @@ export interface ReplayScreenView {
   readonly theater?: boolean;
   /** Only verified recorded checkpoints can begin an unranked practice child. */
   readonly practiceAvailable?: boolean;
+  /** C29 comparison is semantic source-simulation evidence, not output-device fidelity. */
+  readonly comparison?: ReplayComparisonView;
   readonly notice?: string;
 }
 export interface SettingRowView {
