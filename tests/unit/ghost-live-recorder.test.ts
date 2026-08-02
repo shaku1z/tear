@@ -19,6 +19,7 @@ describe("Ghost V3 live recorder sidecar", () => {
       maxPendingWrites: 1,
     });
     recorder.start({ sessionId: "live-sidecar", createdAt: "2026-07-28T00:00:00.000Z", provenance: { seed: "7" } });
+    expect(recorder.activeSessionId).toBe("live-sidecar");
     recorder.record("commands", 3, { command: { type: "dash" } });
     release?.();
     const manifest = await recorder.finish({ outcome: "defeat", finalTick: 3 });
@@ -31,6 +32,7 @@ describe("Ghost V3 live recorder sidecar", () => {
       { kind: "commands", tick: 3, value: { command: { type: "dash" } } },
     ]);
     expect(recorder.active).toBe(false);
+    expect(() => recorder.activeSessionId).toThrow(/no active session/u);
     expect(recorder.failure).toBeNull();
   });
 

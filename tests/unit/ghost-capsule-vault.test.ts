@@ -7,9 +7,12 @@ import {
   GhostLocalVault,
   GhostStreamingRecorder,
   capsuleDebugJson,
+  createGhostCapsuleManifestV2,
   createInlineGhostEncoderWorker,
   createMemoryGhostVaultBackend,
   ghostRootIntegrity,
+  migrateGhostCapsuleManifestV1,
+  parseGhostCapsuleManifest,
   type GhostEncodedChunk,
   type GhostEncoderWorkerPort,
   type TearGhostChunkIndexEntry,
@@ -201,6 +204,9 @@ describe("Ghost capsule recorder and local Vault", () => {
     }
     firstChunk.compressedBytes = 1;
     firstChunk.uncompressedBytes = 10_000;
+    // The v1 reader remains supported; its legacy index has no manifest-wide
+    // declaration hash, so this verifies its pre-existing expansion guard.
+    (bomb as { manifest: { schemaVersion: number } }).manifest.schemaVersion = 1;
     await expect(destination.importCapsule(JSON.stringify(bomb), {
       maxEncodedBytes: 1_000_000,
       maxChunks: 10,
@@ -226,8 +232,7 @@ describe("Ghost capsule recorder and local Vault", () => {
     if (originalChunk === undefined) throw new Error("protected import fixture needs a chunk");
     const originalBytes = await backend.get("chunks", originalChunk.id);
 
-    const duplicate = JSON.parse(exported) as { manifest: { createdAt: string } };
-    duplicate.manifest.createdAt = "2099-01-01T00:00:00.000Z";
+    const duplicate: unknown = JSON.parse(exported);
     await expect(destination.importCapsule(JSON.stringify(duplicate))).rejects.toThrow(/already exists/u);
 
     const hostile = JSON.parse(exported) as {
@@ -247,7 +252,7 @@ describe("Ghost capsule recorder and local Vault", () => {
     hostileChunk.checksum = replacement.checksum;
     hostile.manifest.rootIntegrity = ghostRootIntegrity(hostile.manifest.chunks as unknown as readonly TearGhostChunkIndexEntry[]);
     hostile.chunks = { [originalChunk.id]: replacement.encoded };
-    await expect(destination.importCapsule(JSON.stringify(hostile))).rejects.toThrow(/conflicts with stored evidence/u);
+    await expect(destination.importCapsule(JSON.stringify(hostile))).rejects.toThrow(/manifest integrity mismatch/u);
 
     const executableShape = JSON.parse(exported) as { manifest: { id: string; provenance?: Record<string, unknown> } };
     executableShape.manifest.id = "hostile-provenance";
@@ -256,6 +261,69 @@ describe("Ghost capsule recorder and local Vault", () => {
     expect(({} as { polluted?: boolean }).polluted).toBeUndefined();
     expect(await destination.getManifest(original.id)).toEqual(original);
     expect(await backend.get("chunks", originalChunk.id)).toBe(originalBytes);
+  });
+
+  it("writes a schema-v2 contract that binds declarations to the durable chunk root", async () => {
+    const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
+    const recorder = new GhostStreamingRecorder({
+      sessionId: "contract-v2", createdAt: "2026-08-02T00:00:00.000Z",
+      chunkEntries: 1, maxPendingWrites: 1, vault, recordingProfile: "coaching",
+      provenance: { replayContext: { format: "tear-ghost-replay-context", schemaVersion: 1 } },
+    });
+    await recorder.start();
+    await recorder.append({ kind: "commands", tick: 1, value: { kind: "command", id: 1, tick: 1, command: { type: "jump" } } });
+    const manifest = await recorder.finalize("2026-08-02T00:00:01.000Z");
+
+    expect(manifest).toMatchObject({
+      schemaVersion: 2,
+      contract: {
+        format: "tearghost-capsule-contract", schemaVersion: 1,
+        tracks: { commands: "canonical-action-envelope-v1", keyframes: "tear-snapshot-v1" },
+        quality: { recordingProfile: "coaching", presentation: "full", downgrades: [] },
+      },
+      integrity: { format: "tearghost-capsule-integrity", schemaVersion: 1, rootIntegrity: manifest.rootIntegrity },
+    });
+
+    const tampered = JSON.parse(await vault.exportCapsule("contract-v2")) as {
+      manifest: { provenance: Record<string, unknown> };
+    };
+    tampered.manifest.provenance = { replayContext: { tampered: true } };
+    await expect(new GhostLocalVault(createMemoryGhostVaultBackend()).importCapsule(JSON.stringify(tampered)))
+      .rejects.toThrow(/manifest integrity mismatch/u);
+  });
+
+  it("migrates v1 manifests purely, preserves supported V2 extensions, and rejects future versions without writes", async () => {
+    const legacy = parseGhostCapsuleManifest({
+      format: "tearghost-capsule", schemaVersion: 1, id: "legacy-contract", status: "complete",
+      createdAt: "2026-07-01T00:00:00.000Z", recordingProfile: "legacy-unknown", chunks: [],
+      rootIntegrity: ghostRootIntegrity([]), fidelity: { presentation: "reduced", downgrades: ["legacy capture"] },
+    });
+    if (legacy.schemaVersion !== 1) throw new Error("legacy fixture did not parse as V1");
+    const migrated = migrateGhostCapsuleManifestV1(legacy);
+    expect(migrated).toMatchObject({ schemaVersion: 2, id: "legacy-contract", integrity: { rootIntegrity: legacy.rootIntegrity } });
+    expect(legacy.schemaVersion).toBe(1);
+
+    const source = new GhostLocalVault(createMemoryGhostVaultBackend());
+    const extensible = createGhostCapsuleManifestV2({
+      id: "extension-contract", status: "complete", createdAt: "2026-08-02T00:00:00.000Z",
+      completedAt: "2026-08-02T00:00:01.000Z", recordingProfile: "coaching", chunks: [],
+      rootIntegrity: ghostRootIntegrity([]),
+      fidelity: { presentation: "full", downgrades: [] },
+      extensions: { "com.tear.example": { note: "preserve me" } },
+    });
+    await source.putManifest(extensible);
+    const exported = await source.exportCapsule(extensible.id);
+    const destination = new GhostLocalVault(createMemoryGhostVaultBackend());
+    await destination.importCapsule(exported);
+    const reopened = await destination.getManifest(extensible.id);
+    if (reopened?.schemaVersion !== 2) throw new Error("extension fixture did not reopen as V2");
+    expect(reopened.extensions).toEqual({ "com.tear.example": { note: "preserve me" } });
+
+    const future = JSON.parse(exported) as { manifest: { schemaVersion: number } };
+    future.manifest.schemaVersion = 3;
+    const untouched = new GhostLocalVault(createMemoryGhostVaultBackend());
+    await expect(untouched.importCapsule(JSON.stringify(future))).rejects.toThrow(/schema version/u);
+    expect(await untouched.backend().keys("manifests")).toEqual([]);
   });
 
   it("declares fidelity downgrade under worker backpressure and exposes all Vault stores", async () => {

@@ -81,7 +81,7 @@ withJourney({ name: "C27 Ghost V3 physical live capture", port: 8156 }, async ({
   // The bootstrap can locate a future detached world, but the closure-owned
   // live runtime is deliberately never registered as one. Metadata matching
   // is not replay execution or truth verification.
-  assert.equal(admission.status, "unavailable");
+  assert.equal(admission.status, "unavailable", admission.reason);
   assert.equal(admission.context.format, "tear-ghost-replay-context");
   assert.equal(admission.context.schemaVersion, 1);
   assert.deepEqual(admission.context.run, {

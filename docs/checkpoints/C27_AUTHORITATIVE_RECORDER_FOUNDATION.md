@@ -125,6 +125,22 @@ visual recorder and is not yet a completed, player-visible recorder.
 - Live run provenance is now stored immutably on the durable manifest rather
   than existing only in the bootstrap event. Older schema-v1 manifests remain
   readable with absent provenance instead of receiving invented metadata.
+- New V3 captures now write the schema-v2 capsule envelope. Its versioned V1
+  contract declares the Command/RNG/Event/Result/State/Presentation grammars,
+  replay-context compatibility disposition, recording profile, and
+  quality/degradation; a manifest hash binds all of those declarations to the
+  independently verified chunk-root chain. Schema-v1 capsules remain readable,
+  have a pure V1-to-V2 migration path, and do not receive invented provenance;
+  supported V2 extension namespaces round-trip while future schemas reject
+  before any Vault write. This is integrity linkage, not authenticity or a
+  promotion of declared tracks to verified truth.
+- The live recorder now exposes its active durable session ID to the snapshot
+  seam. Every physical and exact keyframe cites the bootstrap event made from
+  that UUID-bearing ID, rather than a run-ID approximation, so a real reopened
+  physical capture reaches the intended `unavailable` compatibility result
+  until a matching detached runtime is registered. `pnpm check:c27:foundation`
+  passes its requirements/type/lint/architecture checks, 14 focused suites / 74
+  tests, test-standalone build, and seven V3 recorder/recovery browser paths.
 - A normal live V3 capture now additionally persists a versioned
   `replayContext` bootstrap declaration: resolved Ghost 2 run/build/ruleset
   provenance, run mode/difficulty/weapon, fixed 120 Hz clock, the named RNG
@@ -203,38 +219,31 @@ visual recorder and is not yet a completed, player-visible recorder.
 
 ## Remaining C27 implementation
 
-1. Finish and version one durable V3 capsule contract joining provenance,
-   Command/State/Visual tracks, keyframe codecs, result, named RNG state,
-   integrity chain, quality/degradation, and recording profiles. The first
-   V1 replay bootstrap declaration, sealed tick-zero anchor, and fail-closed
-   admission boundary now exist, but they are not a full cross-version capsule
-   contract or a trust/authenticity proof for manifest provenance.
-2. Extend the completed versioned identity/gzip registry with any additional
+1. Extend the completed versioned identity/gzip registry with any additional
    profile-specific codecs only when measured full-run budgets justify them;
    retain the inline encoder only as a test double.
-3. Complete the independent V3 session around the remaining live interruption
+2. Complete the independent V3 session around the remaining live interruption
    and terminal paths (including pending-finale claim/resume and unsupported
    storage), with full stable event/RNG coverage. The normal start, defeat,
    completion, explicit quit, test termination, and replacement boundaries are
    now typed and covered at the appropriate unit or browser level, but this is
    not yet exhaustive all-path or full-run evidence. V3 must remain
    behavior-preserving through the Ghost 2 outward adapter.
-4. Extend the production IndexedDB Vault with browser worker-pressure and
+3. Extend the production IndexedDB Vault with browser worker-pressure and
    fault-injection evidence. Valid interrupted-recording reload recovery,
    deterministic browser-persisted corrupt/quarantine recovery,
    browser-injected chunk-quota containment, and unit worker/quota containment
    now exist; actual device-quota and sustained-pressure evidence remain open.
-5. Supply a compatible detached replay-world runtime, then run mapped capsule
+4. Supply a compatible detached replay-world runtime, then run mapped capsule
    snapshots and commands through it and provide seek, fork, practice,
    export/import, compatible migration paths, and measured CPU, memory, and
    storage budgets on a real full run. The current admission layer is only a
    safe discovery gate: it must remain `unavailable` for live capsules until
    C27A exposes a real isolated factory and execution proves the recorded
    tracks.
-6. Complete C27A before treating C27 as integrated: extract closure-owned
-   full-world construction, compose real detached replay/headless worlds from
-   the existing DOM-free shared tick composition, enforce the intended inward
-   dependency direction, and rerun the affected C22--C27 evidence against that
-   runtime.
+5. C27A is closed: retain C27's use of its one shared production composition
+   while finishing the remaining replay-world, migration, full-run budget, and
+   device-pressure evidence. Do not reopen C27A for durable-output or device
+   fidelity claims owned by C39/C40.
 
 This is not a C27 completion claim.

@@ -16,7 +16,12 @@ This is the migration checklist for the architectural redesign. A checked featur
   foundation evidence, including persisted V3 `run.started`/`run.abandoned`
   causal boundaries from both Class A and physical-input paths, a
   browser-reload recovery proof for a valid interrupted recording, and an
-  injected browser quota-failure containment/recovery proof; C27A now routes
+  injected browser quota-failure containment/recovery proof. New V3 capsules
+  use a versioned schema-v2 contract/integrity envelope that binds declared
+  provenance/track grammar/profile/quality to the verified chunk root, keeps
+  V1 readable through a pure migration, preserves supported extensions, and
+  rejects future schemas without writes; physical keyframes cite the exact
+  UUID-bearing bootstrap event. C27A now routes
   both normal physical frames and exact tooling through one live-consumed
   portable fixed-step core (`check:c27:foundation`,
   `check:c27a:foundation`) and a shared live-world entity-construction catalog

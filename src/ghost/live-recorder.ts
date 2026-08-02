@@ -89,6 +89,10 @@ export class GhostLiveRecorder {
   }
 
   get active(): boolean { return this.#activeSession !== null; }
+  get activeSessionId(): string {
+    if (this.#activeSession === null) throw new Error("Ghost V3 recorder has no active session");
+    return this.#activeSession.id;
+  }
   get keyframeIntervalTicks(): number { return this.#options.keyframeIntervalTicks; }
   get maxStagingEntries(): number { return this.#options.maxStagingEntries; }
   get failure(): string | null { return this.#failure; }

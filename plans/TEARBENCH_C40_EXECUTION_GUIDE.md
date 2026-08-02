@@ -972,7 +972,16 @@ portability, concurrent complete worlds, or C27A completion.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser
-- [ ] Versioned durable capsule contract with provenance, compatibility, integrity
+- [x] Versioned durable capsule contract with provenance, compatibility, and
+  integrity — new captures write schema-v2 manifests whose V1 contract declares
+  Command/RNG/Event/Result/State/Presentation grammars, replay-context
+  compatibility disposition, profile, and quality/degradation. The manifest
+  hash binds those declarations to the independently verified chunk root;
+  supported v1 manifests remain readable and have a pure V1→V2 migration,
+  extensions round-trip, and unsupported future schemas reject without writes.
+  `pnpm check:c27:foundation` passes, including real physical capture where
+  every keyframe cites the UUID-bearing durable bootstrap event. This is an
+  integrity linkage, not provenance authenticity or replay verification.
 - [ ] Measured real codecs and profiles against enforced storage/performance budgets
 - [ ] Real quota/device/storage-pressure evidence (not simulated branches)
 - [ ] Replay execution with seek, fork, practice, export/import, migration

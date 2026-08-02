@@ -1,4 +1,4 @@
-import { ghostRootIntegrity } from "./capsule-vault";
+import { ghostRootIntegrity, reviseGhostCapsuleManifest } from "./capsule-vault";
 import type { GhostLocalVault, TearGhostManifest } from "./capsule-vault";
 
 export interface GhostDoctorReport {
@@ -46,8 +46,7 @@ export class GhostDoctor {
     const excluded = new Set([...report.corruptChunkIds, ...report.missingChunkIds]);
     const repairedAt = this.#now();
     const chunks = Object.freeze(manifest.chunks.filter((chunk) => !excluded.has(chunk.id)));
-    const child: TearGhostManifest = Object.freeze({
-      ...manifest,
+    const child: TearGhostManifest = reviseGhostCapsuleManifest(manifest, {
       id: repairedId,
       status: "repaired",
       createdAt: repairedAt,

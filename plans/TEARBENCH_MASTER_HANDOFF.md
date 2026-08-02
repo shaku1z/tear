@@ -118,7 +118,11 @@ Named status:
 - **C24:** full scripted agent completed its named Class A gate 2026-07-26.
 - **C25:** physical/black-box foundation verified; exit open.
 - **C26:** regression discovery passed `pnpm check:c26` on 2026-07-28.
-- **C27:** recorder/capsule foundation only; checkpoint open.
+- **C27:** versioned durable capsule contract is complete; new V3 captures use
+  a schema-v2 contract/integrity envelope with pure V1 migration, safe future
+  rejection, extension preservation, and UUID-exact keyframe/bootstrap
+  provenance. Codec/profile budgets, actual device pressure, and full C27 exit
+  evidence remain open.
 - **C27A:** closed shared-composition correction; the checkpoint report records
   88 committed C27A migrations including its closure commit. C27/C28-C40 retain
   their own product and output exit gates.

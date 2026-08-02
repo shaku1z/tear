@@ -602,7 +602,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
         seed: String(liveRun().runSeed), stateForge: liveStateForge, rng: worldContext.services.random.snapshot(), registry: ghostSnapshotRegistry,
         observationClass: "structured-state", producer: "ghost-v3-live-recorder", target: replayContext.build.target,
         contentHash: replayContext.build.contentHash, staticBuild: replayContext.build,
-        sourceId: ghostLiveBootstrapEventId(`ghost-v3-${replayContext.run.id}`),
+        sourceId: ghostLiveBootstrapEventId(recorder.activeSessionId),
         visualHash: stableVerificationHash({ tick, player: { x: livePlayer().x, y: livePlayer().y, facing: livePlayer().facing }, blade: { x: liveBlade().x, y: liveBlade().y, state: liveBlade().state } }),
         actor: "human", executionClass: "engineering", trainingConsent: "no-training",
       }));

@@ -1,6 +1,14 @@
 import { stableVerificationHash } from "../replay/hash";
 import { decodeGhostChunkPayload, encodeGhostChunkPayload, type GhostChunkEncoding } from "./capsule-codec";
-import { GHOST_RECORDING_PROFILES, type GhostRecordingProfileId } from "./recording-profiles";
+import {
+  createGhostCapsuleManifestV2,
+  parseGhostCapsuleManifest as parseCapsuleContractManifest,
+  reviseGhostCapsuleManifest,
+  type TearGhostManifest,
+} from "./capsule-contract";
+import type { GhostRecordingProfileId } from "./recording-profiles";
+
+export * from "./capsule-contract";
 
 export const GHOST_VAULT_STORES = Object.freeze([
   "manifests", "chunks", "assets", "indexes", "uploadJobs", "analysis", "lineage", "settings", "journals", "quarantine", "libraries",
@@ -20,26 +28,6 @@ export interface TearGhostChunkIndexEntry {
   readonly compressedBytes: number;
   readonly uncompressedBytes: number;
   readonly checksum: string;
-}
-
-export interface TearGhostManifest {
-  readonly format: "tearghost-capsule";
-  readonly schemaVersion: 1;
-  readonly id: string;
-  readonly status: "recording" | "complete" | "recovered" | "repaired" | "quarantined";
-  readonly createdAt: string;
-  /** Older schema-v1 capsules predate declared profile negotiation. */
-  readonly recordingProfile: GhostRecordingProfileId | "legacy-unknown";
-  /** Immutable run/build/configuration origin; absent only on older schema-v1 capsules. */
-  readonly provenance?: Readonly<Record<string, unknown>>;
-  readonly completedAt?: string;
-  readonly chunks: readonly TearGhostChunkIndexEntry[];
-  readonly rootIntegrity: string;
-  readonly fidelity: Readonly<{
-    presentation: "full" | "reduced" | "dropped";
-    downgrades: readonly string[];
-  }>;
-  readonly lineage?: Readonly<{ parentId: string; relation: "repaired-from" }>;
 }
 
 export interface GhostEncodedChunk {
@@ -220,92 +208,12 @@ export function ghostRootIntegrity(chunks: readonly TearGhostChunkIndexEntry[]):
   })));
 }
 
-/** Imported provenance must remain recursive plain JSON data across app boundaries. */
-function clonePlainCapsuleData(value: unknown, depth = 0): unknown {
-  if (depth > 32) throw new RangeError("capsule plain data exceeds nesting limit");
-  if (value === null || typeof value === "string" || typeof value === "boolean") return value;
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "number") throw new TypeError("capsule plain data contains a non-finite number");
-  if (Array.isArray(value)) return Object.freeze(value.map((entry) => clonePlainCapsuleData(entry, depth + 1)));
-  if (!dataRecord(value)) throw new TypeError("capsule plain data must be JSON-compatible");
-  const copy: Record<string, unknown> = {};
-  for (const [key, entry] of Object.entries(value)) {
-    if (key === "__proto__" || key === "constructor" || key === "prototype") throw new TypeError(`capsule plain data contains reserved key: ${key}`);
-    copy[key] = clonePlainCapsuleData(entry, depth + 1);
+export function parseGhostCapsuleManifest(value: unknown): TearGhostManifest {
+  const manifest = parseCapsuleContractManifest(value);
+  if (manifest.schemaVersion === 2 && ghostRootIntegrity(manifest.chunks) !== manifest.rootIntegrity) {
+    throw new TypeError("capsule manifest integrity mismatch");
   }
-  return Object.freeze(copy);
-}
-
-function parseProvenance(value: unknown): Readonly<Record<string, unknown>> | undefined {
-  if (value === undefined) return undefined;
-  if (!dataRecord(value)) throw new TypeError("capsule provenance must be a plain object");
-  return clonePlainCapsuleData(value) as Readonly<Record<string, unknown>>;
-}
-
-function parseChunkIndex(value: unknown): TearGhostChunkIndexEntry {
-  if (!dataRecord(value)
-    || typeof value.id !== "string"
-    || !["commands", "rng", "events", "results", "keyframes", "presentation"].includes(String(value.kind))
-    || !Number.isSafeInteger(value.sequence)
-    || !Number.isSafeInteger(value.fromTick)
-    || !Number.isSafeInteger(value.toTick)
-    || !isGhostChunkEncoding(value.encoding)
-    || !Number.isSafeInteger(value.compressedBytes)
-    || !Number.isSafeInteger(value.uncompressedBytes)
-    || typeof value.checksum !== "string") {
-    throw new TypeError("capsule contains an invalid chunk index");
-  }
-  return Object.freeze({
-    id: value.id,
-    kind: value.kind as GhostChunkKind,
-    sequence: value.sequence as number,
-    fromTick: value.fromTick as number,
-    toTick: value.toTick as number,
-    encoding: value.encoding,
-    compressedBytes: value.compressedBytes as number,
-    uncompressedBytes: value.uncompressedBytes as number,
-    checksum: value.checksum,
-  });
-}
-function parseCapsuleManifest(value: unknown): TearGhostManifest {
-  if (!dataRecord(value)
-    || value.format !== "tearghost-capsule"
-    || value.schemaVersion !== 1
-    || typeof value.id !== "string"
-    || !["recording", "complete", "recovered", "repaired", "quarantined"].includes(String(value.status))
-    || typeof value.createdAt !== "string"
-    || !Array.isArray(value.chunks)
-    || typeof value.rootIntegrity !== "string"
-    || !dataRecord(value.fidelity)
-    || !["full", "reduced", "dropped"].includes(String(value.fidelity.presentation))
-    || !Array.isArray(value.fidelity.downgrades)
-    || !value.fidelity.downgrades.every((entry) => typeof entry === "string")) {
-    throw new TypeError("unsupported capsule manifest");
-  }
-  const provenance = parseProvenance(value.provenance);
-  const chunks = Object.freeze(value.chunks.map(parseChunkIndex));
-  return Object.freeze({
-    format: "tearghost-capsule",
-    schemaVersion: 1,
-    id: value.id,
-    status: value.status as TearGhostManifest["status"],
-    createdAt: value.createdAt,
-    recordingProfile: typeof value.recordingProfile === "string" && value.recordingProfile in GHOST_RECORDING_PROFILES
-      ? value.recordingProfile as GhostRecordingProfileId
-      : "legacy-unknown",
-    ...(provenance === undefined ? {} : { provenance }),
-    ...(typeof value.completedAt === "string" ? { completedAt: value.completedAt } : {}),
-    chunks,
-    rootIntegrity: value.rootIntegrity,
-    fidelity: Object.freeze({
-      presentation: value.fidelity.presentation as TearGhostManifest["fidelity"]["presentation"],
-      downgrades: Object.freeze(value.fidelity.downgrades),
-    }),
-    ...(dataRecord(value.lineage) && typeof value.lineage.parentId === "string"
-      && value.lineage.relation === "repaired-from"
-      ? { lineage: Object.freeze({ parentId: value.lineage.parentId, relation: "repaired-from" as const }) }
-      : {}),
-  });
+  return manifest;
 }
 
 export class GhostLocalVault {
@@ -318,10 +226,14 @@ export class GhostLocalVault {
   backend(): GhostVaultBackend { return this.#backend; }
 
   #manifestWrites(manifest: TearGhostManifest): readonly GhostVaultWrite[] {
+    // Every schema-v2 write re-validates the hash-bound contract. This guards
+    // against an internal caller spreading a manifest and forgetting to reissue
+    // its integrity record after a legitimate lifecycle transition.
+    const durable = parseGhostCapsuleManifest(manifest);
     return Object.freeze([
-      { store: "manifests", key: manifest.id, value: JSON.stringify(manifest) },
-      { store: "indexes", key: `manifest:${manifest.id}`, value: JSON.stringify({
-        status: manifest.status, createdAt: manifest.createdAt, chunks: manifest.chunks.length,
+      { store: "manifests", key: durable.id, value: JSON.stringify(durable) },
+      { store: "indexes", key: `manifest:${durable.id}`, value: JSON.stringify({
+        status: durable.status, createdAt: durable.createdAt, chunks: durable.chunks.length,
       }) },
     ]);
   }
@@ -367,7 +279,7 @@ export class GhostLocalVault {
 
   async getManifest(id: string): Promise<TearGhostManifest | undefined> {
     const value = await this.#backend.get("manifests", id);
-    return value === undefined ? undefined : parseCapsuleManifest(JSON.parse(value) as unknown);
+    return value === undefined ? undefined : parseGhostCapsuleManifest(JSON.parse(value) as unknown);
   }
 
   async putChunk(sessionId: string, entry: TearGhostChunkIndexEntry, encoded: string): Promise<void> {
@@ -433,7 +345,7 @@ export class GhostLocalVault {
         status = "quarantined";
         reason = error instanceof Error ? error.message : String(error);
       }
-      const next = Object.freeze({ ...manifest, status });
+      const next = reviseGhostCapsuleManifest(manifest, { status });
       await this.#backend.commit([
         ...this.#manifestWrites(next),
         ...(reason === undefined ? [] : [{ store: "quarantine" as const, key: `recovery:${id}`, value: JSON.stringify({
@@ -472,7 +384,7 @@ export class GhostLocalVault {
       throw new TypeError("capsule must contain manifest and chunks");
     }
     const root = parsed as Record<string, unknown>;
-    const manifest = parseCapsuleManifest(root.manifest);
+    const manifest = parseGhostCapsuleManifest(root.manifest);
     if (!dataRecord(root.chunks)) throw new TypeError("capsule chunks must be an object");
     const chunks = root.chunks;
     if (manifest.chunks.length > limits.maxChunks) throw new RangeError("capsule exceeds chunk-count limit");
@@ -634,9 +546,7 @@ export class GhostStreamingRecorder {
   #manifest(status: TearGhostManifest["status"], completedAt?: string,
     chunkOverride?: readonly TearGhostChunkIndexEntry[]): TearGhostManifest {
     const chunks = Object.freeze([...(chunkOverride ?? this.#chunks)]);
-    return Object.freeze({
-      format: "tearghost-capsule",
-      schemaVersion: 1,
+    return createGhostCapsuleManifestV2({
       id: this.#options.sessionId,
       status,
       createdAt: this.#options.createdAt,
