@@ -103,9 +103,9 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
       options.finishRecording(false);
     },
     executeVictoryIntents: options.executeVictory,
-    persistPendingFinale: (record) => { d.PROFILE.setPendingFinale(record); },
-    saveProfile: () => { d.PROFILE.save(); },
-    clearPendingFinale: () => { d.PROFILE.clearPendingFinale(); },
+    persistPendingFinale: d.pendingFinalePersistence.persist,
+    saveProfile: d.pendingFinalePersistence.saveProfile,
+    clearPendingFinale: d.pendingFinalePersistence.clear,
     pushCloud: () => { void d.Cloud.push(); },
     present(outcome, result) {
       options.setOutcome(result);
@@ -119,7 +119,7 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     ...(options.observeOutcomeChronology === undefined
       ? {}
       : { observeOutcomeChronology: options.observeOutcomeChronology }),
-    pendingFinale: () => d.PROFILE.pendingFinale(),
+    pendingFinale: d.pendingFinalePersistence.pending,
     selectedWeapon: options.selectedWeapon,
     selectWeapon: options.selectWeapon,
     startCampaign: (difficulty) => { options.startRun("campaign", difficulty); },

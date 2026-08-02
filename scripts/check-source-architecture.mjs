@@ -243,6 +243,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "platform bootstrap achievement persistence must use the composition-owned adapter",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-outcome-composition.ts"]),
+    pattern: /\bd\.PROFILE\.(?:setPendingFinale|save|clearPendingFinale|pendingFinale)\(/u,
+    message: "live outcome pending-finale persistence must use the composition-owned adapter",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -518,6 +523,12 @@ if (dependencyErrors("src/app/live-platform-bootstrap.ts",
   || dependencyErrors("src/app/live-platform-bootstrap.ts",
     "d.platformBootstrapPersistence.backfillShopProgress();").length !== 0) {
   throw new Error("source architecture composition-owned platform bootstrap achievement rule self-test failed");
+}
+if (dependencyErrors("src/app/live-outcome-composition.ts",
+  "d.PROFILE.setPendingFinale({});").length !== 1
+  || dependencyErrors("src/app/live-outcome-composition.ts",
+    "d.pendingFinalePersistence.persist({});").length !== 0) {
+  throw new Error("source architecture composition-owned pending-finale persistence rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",

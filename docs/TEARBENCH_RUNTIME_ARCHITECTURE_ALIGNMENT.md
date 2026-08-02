@@ -412,6 +412,11 @@ The following C27A foundation slices are complete:
   proof pass. The next persistence boundary is the live outcome host's
   pending-finale profile operation; it likewise must not imply durable-profile
   completion.
+- The live outcome host now receives pending-finale persist/save/clear/read
+  operations through one composition-owned adapter. Its focused adapter/host
+  gate and rebuilt campaign-victory browser proof pass. The next persistence
+  boundary is the outcome composition's defeat-progress profile-stat update;
+  it likewise must not imply durable-profile completion.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

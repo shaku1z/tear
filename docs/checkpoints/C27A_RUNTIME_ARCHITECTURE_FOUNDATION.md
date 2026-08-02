@@ -1115,6 +1115,18 @@ of replay, headless execution, or learning portability.
   outcome host's existing pending-finale profile operation without changing its
   set/save/clear/read contract.
 
+- The sixty-eighth slice isolates the live outcome host's pending-finale
+  persist/save/clear/read operations in one composition-owned adapter. Source
+  architecture rejects direct pending-finale profile access in the outcome
+  composition. The focused gate passed 5 files / 10 tests, including adapter
+  mapping and host delegation; rebuilt campaign-victory browser proof passes.
+
+  This is one pending-finale profile-adapter handoff only, not durable profile
+  state, migration, quota, crash recovery, cross-device sync, concurrent-world
+  behavior, or C27A completion evidence. The next boundary isolates the outcome
+  composition's defeat-progress profile-stat update without changing its Daily,
+  achievement, cloud, or recording behavior.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap

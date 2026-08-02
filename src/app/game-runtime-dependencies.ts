@@ -34,6 +34,7 @@ import type { RunRandomService, RunRandomStreams } from "../simulation/run-rando
 import type { PerformanceMonitor } from "../diagnostics/performance-monitor";
 import type { LegacyAppStateController } from "./legacy-state-controller";
 import type { AchievementToastPersistence } from "./live-achievement-toast-persistence";
+import type { PendingFinalePersistence } from "./live-pending-finale-persistence";
 import type { StyleAchievementPersistence } from "./live-style-achievement-persistence";
 import type { PlatformBootstrapPersistence } from "./live-platform-bootstrap-persistence";
 
@@ -67,6 +68,7 @@ export interface GameRuntimeDependencies {
   readonly META: ReturnType<typeof createMetaProgression>["META"]; readonly Mirror: MirrorTypes["Mirror"];
   readonly MirrorHost: MirrorTypes["MirrorHost"]; readonly OVERSCAN: typeof OVERSCAN;
   readonly PAD: LegacyGamepad; readonly PRESETS: typeof Affixes.PRESETS;
+  readonly pendingFinalePersistence: PendingFinalePersistence;
   readonly platformBootstrapPersistence: PlatformBootstrapPersistence;
   readonly PROFILE: ReturnType<typeof createLegacyProfile>; readonly Player: ReturnType<typeof createPlayer>;
   readonly Projectile: ReturnType<typeof createProjectile>; readonly PwaUpdate: PwaUpdateCapability;

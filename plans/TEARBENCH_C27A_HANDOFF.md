@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** sixty-seventh C27A foundation slice implemented (composition-owned
-platform-bootstrap progression backfill adapter); checkpoint remains open
+**Status:** sixty-eighth C27A foundation slice implemented (composition-owned
+pending-finale profile adapter); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
@@ -684,6 +684,16 @@ caches and transient lights are local to the controller. This is not full
   pending-finale profile operation without changing its set/save/clear/read
   contract.
 
+  Slice 68 isolates the live outcome host's pending-finale persist/save/clear/
+  read operations in one composition-owned adapter. Source architecture rejects
+  direct pending-finale profile access in the outcome composition. The focused
+  gate passed 5 files / 10 tests including adapter mapping and host delegation;
+  rebuilt campaign-victory browser proof passes. This is not durable profile
+  state, migration, quota, crash recovery, cross-device sync, or concurrent-
+  world evidence. The next boundary isolates the outcome composition's defeat-
+  progress profile-stat update without changing its Daily, achievement, cloud,
+  or recording behavior.
+
 All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
@@ -717,6 +727,7 @@ Slice 41 adds simulation tuning isolation; Slice 42 injects particle policy;
   composition-owned port; achievement-toast profile mutation/save is a typed
   composition-owned adapter; live-style achievement persistence is a typed
   composition-owned adapter; platform-bootstrap progression backfill is a
+  typed composition-owned adapter; pending-finale profile operations are a
   typed composition-owned adapter. Remaining persistence adapter
   isolation still precedes true simultaneous complete worlds.
 Any newly found
@@ -737,12 +748,12 @@ composition with parity evidence.
 
 ## Working-tree safety
 
-- Slice 67 is the next intentional commit on
-  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 6
-  files / 12 tests plus source architecture, including adapter ordering and
-  bootstrap-host delegation; rebuilt campaign-victory browser proof passed.
-  The next boundary is the live outcome host's pending-finale profile
-  operation, still not a durability, physical-device, or second-runtime claim.
+- Slice 68 is the next intentional commit on
+  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 5
+  files / 10 tests plus source architecture, including adapter mapping and
+  outcome-host delegation; rebuilt campaign-victory browser proof passed. The
+  next boundary is the outcome composition's defeat-progress profile-stat
+  update, still not a durability, physical-device, or second-runtime claim.
 - Slice 48 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
   files / 23 tests plus source architecture; built journeys and six responsive
