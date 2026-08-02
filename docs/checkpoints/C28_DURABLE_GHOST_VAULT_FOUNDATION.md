@@ -62,14 +62,15 @@ The browser harness opened a normal Chrome page and used Chromium's
 origin-level `Storage.overrideQuotaForOrigin` command after it had preserved a
 real completed capsule. A 12-tick run did not emit the coaching profile's
 96-entry chunk; a second 120-tick run crossed that threshold but still did not
-surface a quota failure. The temporary test is intentionally not retained as
-evidence. Per the two-attempt rule, do not try a third timing variation. The
-remaining path is: first read Chromium's post-override storage-quota state in a
-dedicated evidence setup, then select an origin/profile configuration where the
-browser confirms the physical cap before a normal recorder run. That fixture
-must retain a completed source capsule and prove a real IndexedDB rejection;
-the existing application `beforeCommit` hook remains C27 fault-containment
-evidence only and cannot clear this C28 item.
+surface a quota failure. The follow-up probe verified the browser reports the
+override as active, including a one-byte quota, yet a direct IndexedDB write
+still succeeds. The temporary probe is intentionally not retained as evidence.
+Per the two-attempt rule, do not try a third timing variation or treat this
+DevTools override as physical enforcement. The remaining path needs a browser
+profile/device/storage configuration that demonstrably rejects a real
+IndexedDB write after a completed capsule is retained. The application
+`beforeCommit` hook remains C27 fault-containment evidence only and cannot
+clear this C28 item.
 
 ## Finding — interrupted recovery UI probe scoped out
 
