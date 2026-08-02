@@ -170,7 +170,7 @@ Named status:
   and exits through Escape. Its rendered `PRACTICE` control restores an
   explicitly unranked/non-persistent child into real live play and preserves
   the source capsule byte-for-byte. The normal Vault also supports selecting
-  two verified V3 capsules for semantic comparison, including repeated event
+  two through nine verified V3 capsules for semantic comparison, including repeated event
   occurrences and explicit missing occurrences. Active-cinematic durable
   coverage remains open.
 - **C30-C40:** incomplete.
@@ -395,7 +395,7 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 ### Evidence last verified at this pause
 
 DONE THIS STEP:      C29 now reopens durable V3 capsules, hydrates each recorded State Forge keyframe through source-owned production composition, restores held input, compares captured authoritative receipts, and exposes player-visible semantic Theater, Practice From Here, and side-by-side semantic comparison.
-PROVEN BY:           `pnpm check:c29:production-replay` runs focused receipt/replay/terminal-policy/comparison tests and the rebuilt browser capture; its completed Vault capsules match source replay at ticks 0, 120, and 240. The normal Profile -> Vault route selects two healthy capsules for comparison and advances to a second repeated semantic occurrence, then opens Theater and restores an explicitly unranked, non-persistent child into real play. Every selected durable source JSON remains unchanged.
+PROVEN BY:           `pnpm check:c29:production-replay` runs focused receipt/replay/terminal-policy/comparison tests and the rebuilt browser capture; its completed Vault capsules match source replay at ticks 0, 120, and 240. The normal Profile -> Vault route selects nine healthy capsules through scrollable rendered rows, opens `COMPARE 9`, advances to a second repeated semantic occurrence, then opens Theater and restores an explicitly unranked, non-persistent child into real play. Every selected durable source JSON remains unchanged.
 REMAINING HERE:      Active chapter bindings now restore through source composition and focused unit evidence; add their durable-capsule coverage. The verified browser route is normal test-standalone endless only; Theater and comparison are semantic, not pixel/device-fidelity claims.
 REMAINING TO C40:    C25 and C27 exits, then C29-C40, remain; C27A and C28 are closed.
 NEXT SLICE:          Add C29 active-cinematic durable browser evidence; retain its distinct cinematic boundary and do not overclaim device-output fidelity.

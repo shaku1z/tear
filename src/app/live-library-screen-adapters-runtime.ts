@@ -66,6 +66,7 @@ export interface LibraryScreenAdapters {
   readonly watchReplay: (id: string, from?: "profile" | "leaderboards") => void;
   readonly watchGhostCapsule: (id: string) => void;
   readonly compareGhostCapsule: (id: string) => void;
+  readonly openGhostComparison: () => void;
   readonly publishReplay: (id: string) => void;
   readonly repairGhostCapsule: (id: string) => void;
 }
@@ -86,7 +87,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
   const replayThumbs: Record<string, HTMLImageElement> = {};
   let codexTab = "abilities", codexFilter = "all", codexSort = "category", bestiaryFilter = "all";
   const codexTierView: Record<string, number> = {};
-  let profileTab = "bests", profileMessage = "", comparisonAnchor: string | undefined, achievementFilter = "all";
+  let profileTab = "bests", profileMessage = "", comparisonSources: string[] = [], achievementFilter = "all";
   let leaderboardTab = "global", leaderboardMode = "", leaderboardDifficulty = "normal", leaderboardKey = "";
   let leaderboardData: readonly LeaderboardRowSource[] | null = null, leaderboardLoading = false, leaderboardMessage = "";
   let feedData: readonly LeaderboardRowSource[] | null = null, feedLoading = false;
@@ -183,6 +184,9 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       services.ghostVault.refresh();
       ghostVault = services.ghostVault.snapshot();
     }
+    const healthyCapsuleIds = new Set(ghostVault.capsules.filter((capsule) => capsule.healthy && capsule.status === "complete")
+      .map((capsule) => capsule.id));
+    comparisonSources = comparisonSources.filter((id) => healthyCapsuleIds.has(id));
     const vaultReplays = ghostVault.capsules.map((capsule) => Object.freeze({
       id: capsule.id,
       title: `Ghost V3 - ${capsule.recordingProfile.toUpperCase()}`,
@@ -191,7 +195,8 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       available: capsule.healthy && capsule.status === "complete",
       repairable: capsule.repairable,
       timestamp: new Date(capsule.createdAt).toLocaleDateString(),
-      comparisonSelected: capsule.id === comparisonAnchor,
+      comparisonSelected: comparisonSources.includes(capsule.id),
+      comparisonSourceCount: comparisonSources.length,
     }));
     if (profileTab === "vault" && ghostVault.message !== undefined) profileMessage = ghostVault.message;
     else if (profileTab === "vault" && ghostVault.status === "loading") profileMessage = "opening Ghost Vault...";
@@ -313,16 +318,31 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
         profileMessage = "Only healthy, complete Ghost capsules can be compared.";
         return;
       }
-      if (comparisonAnchor === undefined || comparisonAnchor === id) {
-        comparisonAnchor = id;
-        profileMessage = "Comparison source selected. Choose another healthy Ghost capsule.";
+      if (comparisonSources.includes(id)) {
+        comparisonSources = comparisonSources.filter((source) => source !== id);
+        profileMessage = comparisonSources.length === 0 ? "Comparison selection cleared."
+          : `${String(comparisonSources.length)} comparison source(s) selected.`;
         return;
       }
-      const sources = Object.freeze([comparisonAnchor, id]);
-      comparisonAnchor = undefined;
+      if (comparisonSources.length >= 9) {
+        profileMessage = "A Ghost comparison can include at most nine sources.";
+        return;
+      }
+      comparisonSources = [...comparisonSources, id];
+      profileMessage = comparisonSources.length < 2
+        ? "Comparison source selected. Choose at least one more healthy Ghost capsule."
+        : `${String(comparisonSources.length)} comparison sources selected. Press COMPARE to open them.`;
+    },
+    openGhostComparison: () => {
+      if (comparisonSources.length < 2) {
+        profileMessage = "Choose at least two healthy Ghost capsules to compare.";
+        return;
+      }
+      const sources = Object.freeze([...comparisonSources]);
       profileMessage = "opening semantic comparison...";
       void services.enterGhostComparison(sources).then((opened) => {
-        if (!opened) profileMessage = "Those Ghost capsules could not open for comparison.";
+        if (opened) comparisonSources = [];
+        else profileMessage = "Those Ghost capsules could not open for comparison.";
       });
     },
     publishReplay: (id) => { replayLibrary.publish(id); },

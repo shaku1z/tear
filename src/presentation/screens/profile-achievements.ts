@@ -36,8 +36,12 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
         }
         if (view.tab === "vault" && !replay.repairable) {
           context.enqueue({ x: actionsX + 118, y: y + 20, w: 126, h: 40,
-            label: replay.comparisonSelected ? "SOURCE CHOSEN" : "COMPARE", enabled: replay.available,
+            label: replay.comparisonSelected ? "SELECTED" : "SELECT", enabled: replay.available,
             selected: replay.comparisonSelected, action: { type: "profile.compareGhostCapsule", id: replay.id } });
+          if ((replay.comparisonSourceCount ?? 0) >= 2) {
+            context.enqueue({ x: actionsX + 252, y: y + 20, w: 120, h: 40,
+              label: `COMPARE ${String(replay.comparisonSourceCount)}`, action: { type: "profile.openGhostComparison" } });
+          }
         }
         if (replay.local) {
           context.enqueue({ x: actionsX + 118, y: y + 20, w: 78, h: 40, label: replay.pinned ? "★" : "PIN", selected: replay.pinned,

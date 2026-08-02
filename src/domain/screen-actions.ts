@@ -28,6 +28,7 @@ export type ScreenAction =
   | { readonly type: "profile.watchReplay"; readonly id: string }
   | { readonly type: "profile.watchGhostCapsule"; readonly id: string }
   | { readonly type: "profile.compareGhostCapsule"; readonly id: string }
+  | { readonly type: "profile.openGhostComparison" }
   | { readonly type: "profile.repairGhostCapsule"; readonly id: string }
   | { readonly type: "profile.signIn" }
   | { readonly type: "profile.signOut" }

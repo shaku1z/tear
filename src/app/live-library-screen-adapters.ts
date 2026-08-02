@@ -55,6 +55,7 @@ export interface LibraryScreenAdapters {
   readonly watchReplay: (id: string, from?: "profile" | "leaderboards") => void;
   readonly watchGhostCapsule: (id: string) => void;
   readonly compareGhostCapsule: (id: string) => void;
+  readonly openGhostComparison: () => void;
   readonly publishReplay: (id: string) => void;
   readonly repairGhostCapsule: (id: string) => void;
 }
@@ -110,6 +111,7 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
     watchReplay: (id, from) => { invoke((value) => { value.watchReplay(id, from); }); },
     watchGhostCapsule: (id) => { invoke((value) => { value.watchGhostCapsule(id); }); },
     compareGhostCapsule: (id) => { invoke((value) => { value.compareGhostCapsule(id); }); },
+    openGhostComparison: () => { invoke((value) => { value.openGhostComparison(); }); },
     publishReplay: (id) => { invoke((value) => { value.publishReplay(id); }); },
     repairGhostCapsule: (id) => { invoke((value) => { value.repairGhostCapsule(id); }); },
   };

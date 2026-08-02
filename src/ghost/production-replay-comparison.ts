@@ -35,10 +35,10 @@ interface ComparisonSource {
 
 /**
  * Builds a read-only semantic comparison from independently verified V3
- * capsules. The player Vault selects a pair today, while callers that need a
- * wider engineering comparison can supply up to nine. Each displayed tick is
- * reconstructed through that capsule's own source-owned production
- * composition; this never compares Canvas, PCM, haptic, or device output.
+ * capsules. The player Vault selects from two through nine sources. Each
+ * displayed tick is reconstructed through that capsule's own source-owned
+ * production composition; this never compares Canvas, PCM, haptic, or device
+ * output.
  */
 export function createGhostProductionReplayComparison(
   capsules: readonly GhostReadCapsule[],

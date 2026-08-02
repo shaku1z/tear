@@ -1014,14 +1014,15 @@ portability, concurrent complete worlds, or C27A completion.
   transport, seeks the verified tick-120 checkpoint, and returns with Escape
   in the rebuilt C29 browser journey. This is semantic Theater presentation;
   pixel/device-output fidelity remains C25/C40 scope.
-- [x] Side-by-side comparison of two verified runs — the normal Vault renders
-  `COMPARE` beside each healthy complete V3 capsule. The player selects two
-  sources, and the replay surface reconstructs each event occurrence through
-  its own verified production session; repeated occurrences remain distinct
-  and absent occurrences render as `MISSING`. The rebuilt C29 browser journey
-  records two real IndexedDB capsules, reaches the comparison through normal
-  controls, and advances to a second repeated semantic occurrence. This is a
-  semantic comparison only; pixel, PCM, haptic, and device-output fidelity
+- [x] Side-by-side comparison of two through nine verified runs — the normal
+  Vault renders `SELECT` and `COMPARE N` beside each healthy complete V3
+  capsule. The player selects two through nine sources, and the replay surface
+  reconstructs each event occurrence through its own verified production
+  session; repeated occurrences remain distinct and absent occurrences render
+  as `MISSING`. The rebuilt C29 browser journey records nine real IndexedDB
+  capsules, selects all nine through normal controls including scroll, opens
+  `COMPARE 9`, and advances to a second repeated semantic occurrence. This is
+  a semantic comparison only; pixel, PCM, haptic, and device-output fidelity
   remains C25/C39/C40 scope.
 
 ### C30 — Headless and scalable episodes

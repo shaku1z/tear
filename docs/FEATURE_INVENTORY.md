@@ -184,10 +184,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   profile, economy, cloud, and recording effects. Active cinematics,
   pixel/device output fidelity remains C25/C40 work. C29 also now exposes
   player-visible semantic comparison: from Profile -> Vault, select two
-  healthy completed V3 capsules with `COMPARE` to reconstruct and inspect
-  each repeated semantic event occurrence side by side. It is intentionally a
-  semantic source-simulation comparison, not a pixel, PCM, haptic, or device
-  output claim;
+  through nine healthy completed V3 capsules and use `COMPARE N` to
+  reconstruct and inspect each repeated semantic event occurrence side by
+  side. It is intentionally a semantic source-simulation comparison, not a
+  pixel, PCM, haptic, or device output claim;
   authenticated publication, deployed verification, moderation operations,
   and cloud/player lifecycle flows remain later completion work.
 

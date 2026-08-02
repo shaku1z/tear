@@ -71,10 +71,10 @@ applicable production boundary.
   independent verified production replay sessions, then displays each semantic
   event occurrence in order, including repeated occurrences and a deliberate
   `MISSING` row where a source has no matching occurrence. The player flow
-  selects a pair; the source comparator validates two to nine inputs for
-  engineering consumers. Neither mutates Vault or profile data, and it
-  explicitly compares semantic source-simulation results only—not rendered
-  pixels, PCM, haptics, or device output.
+  selects from two through nine healthy sources. Neither it nor the source
+  comparator mutates Vault or profile data, and it explicitly compares
+  semantic source-simulation results only—not rendered pixels, PCM, haptics,
+  or device output.
 
 ## Exit-gate ledger
 
@@ -98,12 +98,13 @@ applicable production boundary.
   jumps to its verified tick-120 checkpoint using visible transport, and
   returns to Profile with Escape. The Theater screen is a source-simulation
   semantic view; no pixel, PCM, haptic, or device-output fidelity is claimed.
-- [x] Side-by-side comparison supports two verified runs and repeated semantic
-  occurrences. The rebuilt browser journey records two real IndexedDB
-  capsules, selects each through the normal Profile -> Vault `COMPARE`
-  controls, opens the visible semantic comparison, and advances to a second
-  repeated semantic occurrence. The focused unit proof additionally asserts a
-  missing second occurrence is represented rather than silently discarded.
+- [x] Side-by-side comparison supports at least nine verified runs and
+  repeated semantic occurrences. The rebuilt browser journey records nine real
+  IndexedDB capsules, selects all nine through the normal Profile -> Vault
+  `SELECT` controls (including its scrollable rows), opens rendered
+  `COMPARE 9`, and advances to a second repeated semantic occurrence. The
+  focused unit proof additionally asserts a missing second occurrence is
+  represented rather than silently discarded.
 
 ## Deliberately not claimed
 
