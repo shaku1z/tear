@@ -213,6 +213,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "test-build runtime bridge installation must receive its browser window through the composition dependency port",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-cinematic-host.ts"]),
+    pattern: /\blocalStorage\s*\./u,
+    message: "live cinematic persistence must receive storage through the composition dependency port",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -452,6 +457,12 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/app/live-game-runtime.ts",
     "installLiveTearRuntimeBridge({\n  source,\n}, dependencies.browserWindow);").length !== 0) {
   throw new Error("source architecture composition-owned runtime-bridge browser window rule self-test failed");
+}
+if (dependencyErrors("src/app/live-cinematic-host.ts",
+  'localStorage.setItem("tear.cinematic.seen", "1");').length !== 1
+  || dependencyErrors("src/app/live-cinematic-host.ts",
+    'dependencies.browserStorage.setItem("tear.cinematic.seen", "1");').length !== 0) {
+  throw new Error("source architecture composition-owned cinematic persistence rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",

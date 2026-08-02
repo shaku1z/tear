@@ -394,6 +394,10 @@ The following C27A foundation slices are complete:
   window, and the physical canonical-input journey still crosses its unchanged
   bridge contract. The next C27A boundary is a single remaining persistence
   adapter; it must not claim durability or concurrent-world completion.
+- The live cinematic host now receives its seen-marker storage write through a
+  narrow composition port; its host-level and rebuilt campaign evidence pass.
+  The next persistence boundary is the achievement-toast seen-marker profile
+  mutation, which likewise must not imply durable-profile completion.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

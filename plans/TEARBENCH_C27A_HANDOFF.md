@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** sixty-third C27A foundation slice implemented (composition-owned
-test-build runtime-bridge browser window); checkpoint remains open
+**Status:** sixty-fourth C27A foundation slice implemented (composition-owned
+cinematic seen-marker storage write); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
@@ -648,6 +648,14 @@ caches and transient lights are local to the controller. This is not full
   persistence, or concurrent-world claim. The next boundary is one remaining
   persistence adapter.
 
+  Slice 64 isolates that first persistence adapter. Cinematic seen-marker
+  writes receive `browserStorage` from composition, and source architecture
+  rejects direct `localStorage` access in the host. The focused gate passed 6
+  files / 13 tests including a host-level storage-port call; the rebuilt
+  campaign-victory browser proof passes. This is not durability, migration,
+  quota, crash recovery, profile completion, or concurrent-world evidence. The
+  next boundary isolates achievement-toast seen-marker profile mutation and save behavior.
+
 All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
@@ -677,7 +685,8 @@ Slice 41 adds simulation tuning isolation; Slice 42 injects particle policy;
   capability, Ghost V3 IndexedDB capability, Ghost V3 test-query capability,
   Ghost V3 inspector assembly, test-build parity-tick window, live frame-driver
   window, test-build physical-input window, and test-build runtime-bridge window
-  are composition-owned. Remaining persistence adapter
+  are composition-owned; cinematic seen-marker storage is an explicit
+  composition-owned port. Remaining persistence adapter
   isolation still precedes true simultaneous complete worlds.
 Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
@@ -697,11 +706,12 @@ composition with parity evidence.
 
 ## Working-tree safety
 
-- Slice 63 is the next intentional commit on
-  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 5
-  files / 19 tests plus source architecture; the rebuilt physical canonical-input
-  journey still crosses the bridge. The next boundary is one remaining persistence
-  adapter, still not a durability, physical-device, or second-runtime claim.
+- Slice 64 is the next intentional commit on
+  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 6
+  files / 13 tests plus source architecture, including a host-level storage-port
+  call; rebuilt campaign-victory browser proof passed. The next boundary is
+  achievement-toast seen-marker profile mutation and save behavior, still not a
+  durability, physical-device, or second-runtime claim.
 - Slice 48 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
   files / 23 tests plus source architecture; built journeys and six responsive

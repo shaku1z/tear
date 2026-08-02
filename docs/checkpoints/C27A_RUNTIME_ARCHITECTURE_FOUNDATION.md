@@ -1068,6 +1068,17 @@ of replay, headless execution, or learning portability.
   concurrent-world behavior, or C27A completion claim. The next boundary is one
   remaining persistence adapter, preserving its current contract.
 
+- The sixty-fourth slice isolates that first persistence adapter: cinematic
+  seen-marker writes receive `browserStorage` from composition, and source
+  architecture rejects direct `localStorage` access in the host. The focused
+  gate passed 6 files / 13 tests, including a host-level storage-port call; the
+  rebuilt campaign-victory browser proof passes.
+
+  This is a single write-capability handoff, not durability, migration, quota,
+  crash recovery, profile completion, concurrent-world behavior, or C27A
+  completion evidence. The next boundary isolates achievement-toast seen-marker
+  profile mutation and save behavior.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap

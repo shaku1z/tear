@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 63 update (current)
+#### Slice 64 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -658,6 +658,17 @@ This is test-build bridge-target ownership only, not a changed bridge contract,
 canonical input semantics, physical-device behavior, persistence,
 concurrent-complete-world, or C27A completion evidence. Next, isolate one
 remaining persistence adapter while preserving its current contract.
+
+Slice 64 isolates that first persistence adapter. Cinematic seen-marker writes
+receive `browserStorage` from composition, and source architecture rejects
+direct `localStorage` access in the host. The focused gate passed 6 files / 13
+tests plus architecture, including a host-level storage-port call; rebuilt
+campaign-victory browser proof passes.
+
+This is one write-capability handoff only, not durability, migration, quota,
+crash recovery, profile completion, concurrent-complete-world, or C27A
+completion evidence. Next, isolate achievement-toast seen-marker profile
+mutation and save behavior.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

@@ -84,7 +84,7 @@ export function createLiveCinematicHost(context: LiveCinematicHostContext) {
     lerp: d.lerp, clamp: d.clamp, clearBossBeat: context.clearBossBeat,
     setMusicDuck: (amount, duration) => { d.SFX.setMusicDuck(amount, duration); },
     playSound: context.playSound,
-    storeSeen: (key) => { localStorage.setItem(key, "1"); },
+    storeSeen: (key) => { d.browserStorage.setItem(key, "1"); },
     landing: (x, y) => { d.FX.burst(x, y, 0, -1, d.GFX.low ? 5 : 10, context.stage.current.accent); d.SFX.land(); },
     finaleBladeCut: context.finaleBladeCut,
   });
