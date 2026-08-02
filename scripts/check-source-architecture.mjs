@@ -303,6 +303,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "TearBench run-seed overrides must use the typed world-session owner",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /\b(?:let\s+ghostV3EventSequence|let\s+ghostV3ReplayContext|createBrowserGhostLiveRecorder\s*\()/u,
+    message: "Ghost V3 recorder session state must use the typed live recording-session owner",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/app/live-style-host.ts"]),
     pattern: /\bd\.ACH\.check\(\);\s*d\.PROFILE\.save\(\)/u,
     message: "live style achievement persistence must use the composition-owned adapter",
@@ -706,6 +711,12 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/app/live-game-runtime.ts",
     "const seed = session.takeRunSeed();").length !== 0) {
   throw new Error("source architecture TearBench run-seed owner rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "let ghostV3EventSequence = 0; createBrowserGhostLiveRecorder(factory);").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "const session = createLiveGhostRecordingSessionState(factory, {});").length !== 0) {
+  throw new Error("source architecture Ghost V3 recorder-session owner rule self-test failed");
 }
 if (dependencyErrors("src/app/live-style-host.ts",
   "d.ACH.check(); d.PROFILE.save();").length !== 1

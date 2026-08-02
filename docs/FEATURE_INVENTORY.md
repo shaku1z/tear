@@ -98,6 +98,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   owner and is consumed once by the actual run-start path. This preserves
   deterministic injection only; it does not complete replay/headless parity or
   production-world portability.
+  The live Ghost V3 sidecar now owns its browser recorder, causal-event
+  sequence, and replay-bootstrap context through one typed recording-session
+  owner. This preserves capture behavior only; it does not establish V3
+  playback, player-visible replay, or production-world portability.
   Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,

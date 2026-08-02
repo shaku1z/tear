@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 92 update (current)
+#### Slice 93 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -910,6 +910,13 @@ typed value once before falling back to production seed creation, and source
 architecture rejects restoring the host closure. The focused run-seed gate
 passed 5 files / 10 tests and rebuilt campaign-victory browser proof passed.
 This is not replay/headless parity, full-world portability, or C27A completion.
+
+Slice 93 moves live Ghost V3 browser-sidecar construction, causal-event
+sequencing, and replay-bootstrap context into
+`createLiveGhostRecordingSessionState`. Source architecture rejects restoring
+the host-local recorder-session values. The focused recorder gate passed 7
+files / 23 tests and rebuilt campaign-victory browser proof passed. This is not
+V3 playback, replay/headless parity, full-world portability, or C27A completion.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

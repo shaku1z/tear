@@ -5,17 +5,18 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** ninety-second C27A foundation slice implemented (the one-shot
-TearBench run-seed override now belongs to typed world-session state); checkpoint remains open
+**Status:** ninety-third C27A foundation slice implemented (the live Ghost V3
+recorder session now has one typed owner); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
-**Latest evidence:** Slice 92 moves the one-shot TearBench run-seed override
-through `LiveWorldSessionState`; source architecture rejects restoring the
-host-local closure. Its focused 5-file / 10-test run-seed gate and rebuilt
-campaign-victory browser proof pass. This is deterministic live-run injection,
-not replay/headless parity, a full-production-world portability claim, or C27A
-completion.
+**Latest evidence:** Slice 93 routes live Ghost V3 browser-sidecar construction,
+causal event sequencing, and replay-bootstrap context through
+`createLiveGhostRecordingSessionState`; source architecture rejects restoring
+the host-local recorder-session values. Its focused 7-file / 23-test recorder
+gate and rebuilt campaign-victory browser proof pass. This is capture-sidecar
+ownership, not V3 playback, replay/headless parity, a full-production-world
+portability claim, or C27A completion.
 
 ## Resume protocol (mandatory)
 

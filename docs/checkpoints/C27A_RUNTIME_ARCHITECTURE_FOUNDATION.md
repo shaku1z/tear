@@ -1336,6 +1336,14 @@ of replay, headless execution, or learning portability.
   injection only, not replay/headless parity, portable full-world construction,
   or concurrent complete-world evidence.
 
+- The ninety-third slice moves live Ghost V3 browser-sidecar construction,
+  causal-event sequencing, and replay-bootstrap context into one typed
+  recording-session owner. Source architecture rejects restoring the
+  host-local recorder-session values. The focused gate passed 7 files / 23
+  tests and rebuilt campaign-victory browser proof passed. This preserves the
+  existing capture sidecar only, not V3 playback, replay/headless parity,
+  portable full-world construction, or concurrent complete-world evidence.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

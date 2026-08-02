@@ -35,7 +35,7 @@ import { emitLiveTearBenchPhysicalInput } from "../tearbench/browser/live-physic
 import { isCombatPlatform, isDodgeProjectile, isEnemySample, isGameEnemy, isGameFloater, isRitualCue, isWeaponEffect } from "./live-runtime-type-guards";
 import { createLiveStateForgeAdapter } from "./live-state-forge-adapter";
 import { createLiveStateForgeRuntimeBridge } from "./live-state-forge-runtime-bridge";
-import { createBrowserGhostLiveRecorder, listBrowserGhostCapsuleManifests, readBrowserGhostCapsule, readBrowserGhostCapsuleReplay, readBrowserGhostCapsuleReplayAdmission } from "../ghost/live-recorder";
+import { listBrowserGhostCapsuleManifests, readBrowserGhostCapsule, readBrowserGhostCapsuleReplay, readBrowserGhostCapsuleReplayAdmission } from "../ghost/live-recorder";
 import { createLiveGhostCausalEvent, ghostLiveBootstrapEventId } from "../ghost/live-causal-events";
 import { createGhostV3BrowserTestOptions } from "./ghost-v3-browser-test-options";
 import { createGhostReplayRunContext, GHOST_REPLAY_CONTEXT_PROVENANCE_KEY, type GhostReplayRunContextV1 } from "../ghost/replay-admission";
@@ -43,6 +43,7 @@ import { captureLiveStateForgeSnapshot } from "../tearbench/live-runtime-snapsho
 import { createDefaultStateCodecRegistry } from "../tearbench/state-codecs";
 import { ENTITY_KIND_REGISTRY } from "../tearbench/registries";
 import { stableVerificationHash } from "../replay/hash";
+import { createLiveGhostRecordingSessionState } from "./live-ghost-recording-session-state";
 type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick: number): void; after?(tick: number): void } }; export function startLiveGame(dependencies: GameRuntimeDependencies, configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>): void {
   const { A11Y, APP, Attract, Backdrop, browserDocument, browserIndexedDb, browserNavigator, browserWindow, CG, CONFIG, Cloud, DIAG, FX, GAMEPLAY_EVENTS, GFX, GHOST, Input, OVERSCAN, PAD, SAFE, SFX, THEME, UI, VAULT, applyUpgrade, clamp, cosmeticRandom, lerp, weaponCapsuleIntersectsSegment } = dependencies;
 (function () {
@@ -50,19 +51,17 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const { canvas, context: ctx, width: W, height: H, viewport, resizeCanvas, requestPointerLock: requestLock, installPrompt, lockHint, hint: hintEl,
     pantheonDebug: PANTHEON_DEBUG, testMode: TEST_MODE } = browserRuntime;
   let semanticInputAuthority = false; const requestOwnedPointerLock = () => { if (!semanticInputAuthority) requestLock(); };
-  const ghostV3 = createBrowserGhostLiveRecorder(
+  const ghostV3Session = createLiveGhostRecordingSessionState(
     browserIndexedDb,
     createGhostV3BrowserTestOptions(TEST_MODE, browserWindow.location.search),
   );
-  let ghostV3EventSequence = 0;
+  const ghostV3 = ghostV3Session.recorder();
   // Keyframes must attest the immutable bootstrap identity the capsule saved
   // at its recording boundary.  Never rebuild a second, divergent fingerprint
   // later in the live loop.
-  let ghostV3ReplayContext: GhostReplayRunContextV1 | undefined;
   GHOST.setRecordingObserver(ghostV3 === null ? null : {
     started(context) {
-      ghostV3EventSequence = 0;
-      ghostV3ReplayContext = undefined;
+      ghostV3Session.reset();
       let provenance: Readonly<Record<string, unknown>>;
       let replayContext: GhostReplayRunContextV1 | undefined;
       try {
@@ -99,7 +98,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       try {
         ghostV3.start({ sessionId: `ghost-v3-${context.runId}`,
           createdAt: new Date().toISOString(), provenance });
-        ghostV3ReplayContext = replayContext;
+        ghostV3Session.setReplayContext(replayContext);
         if (replayContext !== undefined) {
           // The sealed bootstrap event is queued first by GhostLiveRecorder.
           // Capture its matching state/RNG anchor before any opening-content
@@ -115,12 +114,12 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     // start/stop boundary so non-achievement, tutorial, and playground runs
     // cannot inherit Ghost 2 recording policy.
     stopped(meta) {
-      ghostV3ReplayContext = undefined;
+      ghostV3Session.setReplayContext(undefined);
       void ghostV3.finish(meta);
     },
   });
   GAMEPLAY_EVENTS.subscribe((event) => {
-    ghostV3?.record("events", event.tick, createLiveGhostCausalEvent(event, ++ghostV3EventSequence));
+    ghostV3?.record("events", event.tick, createLiveGhostCausalEvent(event, ghostV3Session.nextEventSequence()));
   });
   function liveRun(): GameRun {
     // Menu services intentionally ask before a run exists and treat the absent
@@ -576,7 +575,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const captureGhostStateSnapshot = (tick: number): void => {
     const recorder = ghostV3;
     if (recorder?.active !== true) return;
-    const replayContext = ghostV3ReplayContext;
+    const replayContext = ghostV3Session.replayContext();
     if (replayContext === undefined) {
       // A keyframe without the immutable bootstrap fingerprint could look
       // replayable while actually describing a different world.  Preserve the

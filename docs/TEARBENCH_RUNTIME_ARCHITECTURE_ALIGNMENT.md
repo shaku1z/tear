@@ -522,6 +522,12 @@ The following C27A foundation slices are complete:
   and source architecture rejects restoring the host closure. This preserves
   deterministic live-run injection only; replay/headless parity, full-world
   portability, and the C27A exit remain open.
+- The live Ghost V3 recorder session now owns browser-sidecar construction,
+  causal-event sequencing, and the immutable replay-bootstrap context in one
+  typed state owner. Source architecture rejects restoring those host-local
+  values. This preserves the existing observational capture sidecar only; it
+  does not establish V3 playback, replay/headless parity, durable product
+  flows, or the C27A exit.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition
