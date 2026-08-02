@@ -81,11 +81,21 @@ operational boundary it proves.
   the live wave/reward lifecycle from the detached test harness into a
   source-owned composition shared by C29 and C30; it must not be bypassed with
   a second headless model.
-- [ ] Resource controls and measured throughput. There are no production worker
-  processes, retries, checkpoint restore, target-hardware throughput, latency,
-  memory, or leak measurements yet. In-process batching, cooperative
-  cancellation/timeout, and bounded terminal-artifact retention are now real
-  controls, but they do not by themselves establish scale or a declared budget.
+- [x] Initial in-process resource controls and measured natural-episode
+  throughput. `measureProductionHeadlessEpisodes` produces the serializable
+  `tearbench-production-headless-benchmark` artifact for a declared 32-episode,
+  120-tick, four-composition-root workload, with a four-action batch and eight
+  retained terminal artifacts. It reports rate, per-episode p95/max latency,
+  repeat hashes, and supplied-host heap before/after/peak values against the
+  modest developer-hardware budget of >=500 episodes/minute, <=1,500 ms p95,
+  and <=64 MiB retained heap. On this worktree it measured 4,651 episodes/minute
+  (first pass), 19.6 ms p95, 42.8 ms max, 15.1 MiB retained heap, eight retained
+  artifacts, and identical 32-hash repeat output; the 4,439-episodes/minute
+  repeat also met the recorded budget. This is one developer-machine natural
+  workload, not BC/DAgger/RL capacity or worker-scale certification.
+- [ ] Production worker processes, retries, checkpoint restore, target-hardware
+  training-capacity, long-run leak, and broad stress evidence. The initial
+  benchmark deliberately remains an in-process natural-opening measurement.
 - [ ] Parallel episode stress isolation. The three fresh environments prove a
   narrow non-sharing property, not a worker or high-concurrency stress run.
 - [ ] Visible rerun of sampled failures and Academy/Foundry streaming with
@@ -103,13 +113,14 @@ retain their respective evidence obligations.
 
 - `pnpm typecheck` passes.
 - `pnpm exec vitest run tests/unit/tearbench-headless.test.ts tests/unit/production-headless-environment.test.ts tests/unit/ghost-production-replay-world.test.ts tests/unit/production-replay-composition.test.ts` passes: 4 files / 9 tests.
+- `pnpm exec vitest run tests/unit/production-headless-benchmark.test.ts --disableConsoleIntercept` passes and prints its measured production-pool artifact.
 - `pnpm check:architecture` passes, including planted C30 forbidden-edge and
   browser-global cases.
 
 ## Next safe boundary
 
-Build the deterministic natural-episode benchmark and measurement artifact for
-the existing production pool: state its workload and developer-hardware budget,
-then measure repeatability, throughput, latency, and retained-memory bounds.
-Do not call it C30 completion and do not use the historical generic scaffold's
-synthetic rate as a result for production worlds.
+Make sampled production failures visibly rerunnable in the browser from their
+terminal artifact, retaining the capsule/action provenance required for a real
+replay. Do not call the current small semantic terminal artifact a rerunnable
+failure, and do not use the historical generic scaffold's synthetic rate as a
+result for production worlds.

@@ -130,10 +130,16 @@ export class BoundedArtifactSampler {
   samples(): readonly TearArtifactSample[] { return Object.freeze([...this.#samples]); }
 }
 
-export interface TearHeadlessPoolRunOptions<TScenario> {
+export interface TearHeadlessPoolRunOptions<TScenario, TObservation> {
   readonly batchSize?: number;
   readonly controlForJob?: (job: TearHeadlessJob<TScenario>) => TearHeadlessExecutionControl | undefined;
   readonly artifactSampler?: BoundedArtifactSampler;
+  readonly now?: () => number;
+  readonly onCompleted?: (
+    job: TearHeadlessJob<TScenario>,
+    episode: TearHeadlessEpisode<TScenario, TObservation>,
+    elapsedMilliseconds: number,
+  ) => void;
 }
 
 export class TearHeadlessEnvironmentPool<TScenario, TObservation, TAction> {
@@ -149,7 +155,7 @@ export class TearHeadlessEnvironmentPool<TScenario, TObservation, TAction> {
   async run(
     jobs: readonly TearHeadlessJob<TScenario>[],
     createPolicy: (job: TearHeadlessJob<TScenario>) => TearHeadlessPolicy<TObservation, TAction>,
-    options: TearHeadlessPoolRunOptions<TScenario> = {},
+    options: TearHeadlessPoolRunOptions<TScenario, TObservation> = {},
   ): Promise<readonly TearHeadlessEpisode<TScenario, TObservation>[]> {
     const results = new Map<number, TearHeadlessEpisode<TScenario, TObservation>>();
     let cursor = 0;
@@ -163,13 +169,16 @@ export class TearHeadlessEnvironmentPool<TScenario, TObservation, TAction> {
         const runner = new TearHeadlessRunner(environment);
         try {
           const control = options.controlForJob?.(job);
-          results.set(index, runner.run(job, createPolicy(job), options.batchSize ?? 8, {
+          const startedAt = (options.now ?? (() => performance.now()))();
+          const episode = runner.run(job, createPolicy(job), options.batchSize ?? 8, {
             ...control,
             onArtifact: (tick, artifact) => {
               control?.onArtifact?.(tick, artifact);
               options.artifactSampler?.consider({ episodeId: job.id, tick, artifact });
             },
-          }));
+          });
+          results.set(index, episode);
+          options.onCompleted?.(job, episode, Math.max(0, (options.now ?? (() => performance.now()))() - startedAt));
         } finally {
           runner.dispose();
         }

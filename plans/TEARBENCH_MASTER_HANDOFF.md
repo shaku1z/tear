@@ -185,9 +185,11 @@ Named status:
   attempt reached C27A boss-Aldric tick 35, then diverged at its live wave spawn
   because the C29 source composition lacks the wave/reward lifecycle still held
   by C27A's test-only detached harness; both unproven attempts were reverted.
-  Browser-fast corpus parity, stress isolation, workers, retries/checkpoint
-  restore, measured throughput, visible failure reruns, and Academy/Foundry
-  streaming remain open.
+  The new declared 32x120 natural workload records rate/latency/heap/repeat
+  evidence and passed its modest developer-hardware budget on this worktree;
+  it is not worker or training-capacity evidence. Browser-fast corpus parity,
+  stress isolation, workers, retries/checkpoint restore, visible failure reruns,
+  and Academy/Foundry streaming remain open.
 - **C31-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -409,11 +411,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C30 now has a bounded production-episode control surface, and its C27A recorded-origin comparison has isolated the first missing shared lifecycle boundary rather than silently substituting a test harness.
-PROVEN BY:           `pnpm typecheck`, the focused 4-file / 9-test generic-headless/C30/C29 replay suite, and `pnpm check:architecture` pass for the retained production pool. The reverted recorded-origin attempt matched boss-Aldric hashes through tick 35 and first diverged at live boss spawn tick 36, where C29 has no source-owned wave/reward lifecycle.
-REMAINING HERE:      C30 needs C27A-matrix browser-fast parity with event/reward/terminal/cadence comparison; that item is explicitly blocked on promoting the wave/reward lifecycle from C27A's detached test harness into shared C29/C30 source composition. It also needs stress-tested parallel production episodes, workers, retries/checkpoint restore, target-hardware throughput/latency/memory/leak measurements, and visible failure reruns/Academy streaming. Current controls only unblock the resource/throughput item.
+DONE THIS STEP:      C30 now records a serializable production-pool measurement artifact for a declared 32x120 natural workload: rate, p95/max episode latency, heap, bounded samples, and repeat semantic hashes are measured rather than inferred.
+PROVEN BY:           `pnpm typecheck`; the focused 5-file / 10-test generic-headless/C30/C29/benchmark suite; and `pnpm check:architecture` pass. The measured worktree run completed 32 real production episodes at 4,651 episodes/minute (4,439 repeat), p95 19.6 ms, max 42.8 ms, 15.1 MiB retained heap, eight retained artifacts, and identical ordered hashes, meeting its declared narrow developer-machine budget.
+REMAINING HERE:      C30 needs C27A-matrix browser-fast parity with event/reward/terminal/cadence comparison; that item is explicitly blocked on promoting the wave/reward lifecycle from C27A's detached test harness into shared C29/C30 source composition. It also needs stress-tested parallel production episodes, workers, retries/checkpoint restore, target-hardware training-capacity and long-run leak measurements, and visible failure reruns/Academy streaming. The measured natural workload does not certify those conditions.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Build a deterministic natural-production-episode benchmark with an explicit workload and developer-hardware budget; measure repeatability, throughput, latency, and retained-memory bounds without treating the historical generic scaffold as production evidence.
+NEXT SLICE:          Make sampled production failures visibly rerunnable in the browser from terminal artifacts with capsule/action provenance; do not call the current small semantic terminal artifact a rerunnable failure.
 
 All of the following were run from this worktree through C27A slice 36:
 
