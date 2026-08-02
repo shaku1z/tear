@@ -406,6 +406,12 @@ The following C27A foundation slices are complete:
   adapter, with its order proven at adapter and host level. The next persistence
   boundary is platform bootstrap’s separate achievement backfill check/save
   path; it also must not imply durable-profile completion.
+- Platform-bootstrap shop-progress backfill now uses one composition-owned
+  operation that preserves its `maxStat` → achievement-check → profile-save
+  order. Its focused adapter/host gate and rebuilt campaign-victory browser
+  proof pass. The next persistence boundary is the live outcome host's
+  pending-finale profile operation; it likewise must not imply durable-profile
+  completion.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

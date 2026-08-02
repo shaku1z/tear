@@ -233,6 +233,16 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live style achievement persistence must use the composition-owned adapter",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-platform-bootstrap.ts"]),
+    pattern: /\bd\.PROFILE\.maxStat\("shopMaxed"/u,
+    message: "platform bootstrap progression backfill must use the composition-owned persistence adapter",
+  }),
+  Object.freeze({
+    roots: Object.freeze(["src/app/live-platform-bootstrap.ts"]),
+    pattern: /\bd\.ACH\.check\(\);\s*d\.PROFILE\.save\(\)/u,
+    message: "platform bootstrap achievement persistence must use the composition-owned adapter",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -496,6 +506,18 @@ if (dependencyErrors("src/app/live-style-host.ts",
   || dependencyErrors("src/app/live-style-host.ts",
     "d.styleAchievementPersistence.checkAndSave();").length !== 0) {
   throw new Error("source architecture composition-owned live-style achievement persistence rule self-test failed");
+}
+if (dependencyErrors("src/app/live-platform-bootstrap.ts",
+  'd.PROFILE.maxStat("shopMaxed", 1);').length !== 1
+  || dependencyErrors("src/app/live-platform-bootstrap.ts",
+    "d.platformBootstrapPersistence.backfillShopProgress();").length !== 0) {
+  throw new Error("source architecture composition-owned platform bootstrap progression rule self-test failed");
+}
+if (dependencyErrors("src/app/live-platform-bootstrap.ts",
+  "d.ACH.check(); d.PROFILE.save();").length !== 1
+  || dependencyErrors("src/app/live-platform-bootstrap.ts",
+    "d.platformBootstrapPersistence.backfillShopProgress();").length !== 0) {
+  throw new Error("source architecture composition-owned platform bootstrap achievement rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",

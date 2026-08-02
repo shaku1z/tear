@@ -1102,6 +1102,19 @@ of replay, headless execution, or learning portability.
   behavior, or C27A completion evidence. The next boundary isolates platform
   bootstrap achievement backfill checking and its profile save.
 
+- The sixty-seventh slice isolates platform-bootstrap shop-progress backfill,
+  achievement checking, and profile save in one composition-owned adapter.
+  Source architecture rejects restoring its direct `shopMaxed` mutation or its
+  direct achievement-check/save pair in the bootstrap host. The focused gate
+  passed 6 files / 12 tests, including adapter ordering and host delegation;
+  rebuilt campaign-victory browser proof passes.
+
+  This is one ordered profile-adapter handoff only, not durable profile state,
+  migration, quota, crash recovery, cross-device sync, concurrent-world
+  behavior, or C27A completion evidence. The next boundary isolates the live
+  outcome host's existing pending-finale profile operation without changing its
+  set/save/clear/read contract.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap
