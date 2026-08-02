@@ -1048,6 +1048,16 @@ of replay, headless execution, or learning portability.
   completion claim. The next boundary supplies the test-build physical-input
   emitter's browser window without changing input semantics.
 
+- The sixty-second slice supplies that physical-input emitter's browser window.
+  It receives `browserWindow`, and source architecture rejects restoring the
+  ambient property shorthand. The focused gate passed 5 files / 19 tests; the
+  rebuilt physical canonical-input journey passes.
+
+  This is test-build input-emitter ownership only, not altered canonical input
+  semantics, physical-device behavior, persistence, concurrent-world behavior,
+  or C27A completion evidence. The next boundary supplies the test-build
+  runtime-bridge installation target without changing its contract.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap

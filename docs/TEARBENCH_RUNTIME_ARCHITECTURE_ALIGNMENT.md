@@ -386,6 +386,10 @@ The following C27A foundation slices are complete:
   the rebuilt browser journeys retain their normal live-loop behavior. The next
   adjacent test-only browser capability is physical-input emission; it must not
   change the canonical input path.
+- That test-only physical-input emitter now receives the supplied browser
+  window; its physical browser journey still seals input through the canonical
+  path. The next adjacent test-only browser capability is runtime-bridge
+  installation; it must not alter the bridge contract.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

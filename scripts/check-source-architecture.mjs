@@ -203,6 +203,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live frame coordination must receive its animation-frame source through the composition dependency port",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /emitLiveTearBenchPhysicalInput\(input,\s*\{\s*window,/u,
+    message: "test-build physical input emission must receive its browser window through the composition dependency port",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -430,6 +435,12 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/app/live-game-runtime.ts",
     "const driver = new RuntimeFrameDriver(dependencies.browserWindow);").length !== 0) {
   throw new Error("source architecture composition-owned frame-driver window rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "emitLiveTearBenchPhysicalInput(input, { window, canvas });").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "emitLiveTearBenchPhysicalInput(input, { window: dependencies.browserWindow, canvas });").length !== 0) {
+  throw new Error("source architecture composition-owned physical-input browser window rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",
