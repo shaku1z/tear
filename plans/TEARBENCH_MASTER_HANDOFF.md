@@ -380,11 +380,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C28 closes its real browser Vault exit gate, including physical IndexedDB quota pressure.
-PROVEN BY:           `pnpm check:c28:vault-reachable` passed source traceability, type/lint/architecture, 34 focused tests, standalone build, and all four named browser journeys.
-REMAINING HERE:      C29 must make captured capsules into a production-composition replay, Theater, comparison, seek, fork, and practice product without mutating source custody or profile state.
+DONE THIS STEP:      C29 replay now advances only a C27A production-composed TearSimulationRuntime.
+PROVEN BY:           `pnpm check:c29:production-replay` passed source traceability, type/lint/architecture, and six focused codec/production replay tests.
+REMAINING HERE:      Extract the parity harness's production State Forge hydration/combat assembly into a source-owned V3 capsule composition, then compare a captured capsule's authoritative hashes. Theater, seek/fork/practice, and comparison remain open.
 REMAINING TO C40:    C25 and C27 exits, then C29-C40, remain; C27A and C28 are closed.
-NEXT SLICE:          Begin C29 with one bounded replay-world checklist item from its completion-plan boundary.
+NEXT SLICE:          Move the C27A snapshot-hydration production replay adapter out of the parity harness and use it for captured-capsule hash evidence.
 
 All of the following were run from this worktree through C27A slice 36:
 
