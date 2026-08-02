@@ -19,6 +19,7 @@ function manifest(id: string, createdAt: string): TearGhostManifest {
 describe("Ghost Vault library controller", () => {
   it("publishes immutable, newest-first custody metadata after a real catalog refresh", async () => {
     const controller = createGhostVaultLibraryController({
+      repair: () => Promise.resolve({ sourceId: "older", childId: "older:repaired:1", reused: false }),
       inspect: () => Promise.resolve({
         manifests: [manifest("older", "2026-08-01T00:00:00.000Z"), manifest("newer", "2026-08-02T00:00:00.000Z")],
         maintenance: { schemaVersion: 1, checkedAt: "2026-08-02T00:00:00.000Z", maximumBytes: 1, evictedCapsuleIds: [], integrity: [{ id: "older", healthy: true }, { id: "newer", healthy: true }], rebuiltIndexes: 2, libraries: { schemaVersion: 1, entries: [{ id: "graveyard:newer", library: "graveyard", ghostId: "newer", rootHash: "root-newer", createdAt: "2026-08-02T00:00:00.000Z", provenance: { source: "ghost-doctor" } }], rejectedEntryKeys: [] } },
@@ -46,6 +47,7 @@ describe("Ghost Vault library controller", () => {
   it("contains failed catalog access without erasing the previous durable listing", async () => {
     let attempt = 0;
     const controller = createGhostVaultLibraryController({
+      repair: () => Promise.resolve({ sourceId: "kept", childId: "kept:repaired:1", reused: false }),
       inspect: () => {
         attempt += 1;
         if (attempt === 1) return Promise.resolve({

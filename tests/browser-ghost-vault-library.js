@@ -49,8 +49,30 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
   const renderedVaultText = await page.evaluate(() => window.__TEAR_C28_VAULT_TEXT__ ?? []);
   assert.ok(renderedVaultText.some((text) => text.includes("NEEDS REPAIR")), `Vault did not render the Doctor health state: ${renderedVaultText.slice(-80).join(" | ")}`);
   assert.ok(renderedVaultText.some((text) => text.includes("GRAVEYARD")), `Vault did not render the governed Ghost library membership: ${renderedVaultText.slice(-80).join(" | ")}`);
+  assert.ok(renderedVaultText.includes("REPAIR"), `Vault did not render the repair control: ${renderedVaultText.slice(-80).join(" | ")}`);
   assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "profile");
-  assert.deepEqual(await page.evaluate(() => window.__TEAR_GHOST_V3__.manifests().then((items) => items.map((item) => item.id))), [manifest.id]);
+  await page.mouse.click(1023, 362); // REPAIR on the real unhealthy Vault row
+  const readPersistedManifests = () => page.evaluate(() => new Promise((resolve, reject) => {
+    const open = window.indexedDB.open("tear-ghost-v3");
+    open.onerror = () => reject(open.error ?? new Error("IndexedDB open failed"));
+    open.onsuccess = () => {
+      const database = open.result;
+      const transaction = database.transaction("manifests", "readonly");
+      const records = transaction.objectStore("manifests").getAll();
+      transaction.oncomplete = () => { database.close(); resolve(records.result.map((entry) => JSON.parse(entry))); };
+      transaction.onerror = () => { database.close(); reject(transaction.error ?? new Error("IndexedDB manifest read failed")); };
+    };
+  }));
+  let persistedManifests = await readPersistedManifests();
+  let repaired = persistedManifests.find((item) => item.lineage?.parentId === manifest.id && item.status === "repaired");
+  for (let attempt = 0; repaired === undefined && attempt < 50; attempt += 1) {
+    await page.waitForTimeout(100);
+    persistedManifests = await readPersistedManifests();
+    repaired = persistedManifests.find((item) => item.lineage?.parentId === manifest.id && item.status === "repaired");
+  }
+  const repairTexts = await page.evaluate(() => window.__TEAR_C28_VAULT_TEXT__?.slice(-120) ?? []);
+  assert.ok(repaired, `player repair did not create a durable child capsule: ${JSON.stringify({ persistedManifests, repairTexts })}`);
+  assert.ok(persistedManifests.some((item) => item.id === manifest.id), "player repair removed the original capsule");
   const maintenance = await page.evaluate((id) => new Promise((resolve, reject) => {
     const open = window.indexedDB.open("tear-ghost-v3");
     open.onerror = () => reject(open.error ?? new Error("IndexedDB open failed"));
@@ -70,5 +92,23 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
   assert.ok(report.integrity.some((entry) => entry.id === manifest.id && entry.healthy === false));
   assert.ok(report.libraries.entries.some((entry) => entry.library === "graveyard" && entry.ghostId === manifest.id));
   assert.equal(JSON.parse(maintenance.graveyard).entry.library, "graveyard");
+  const repairEvidence = await page.evaluate(({ childId, chunkId }) => new Promise((resolve, reject) => {
+    const open = window.indexedDB.open("tear-ghost-v3");
+    open.onerror = () => reject(open.error ?? new Error("IndexedDB open failed"));
+    open.onsuccess = () => {
+      const database = open.result;
+      const transaction = database.transaction(["chunks", "lineage", "manifests", "quarantine"], "readonly");
+      const sourceChunk = transaction.objectStore("chunks").get(chunkId);
+      const child = transaction.objectStore("manifests").get(childId);
+      const lineage = transaction.objectStore("lineage").get(`repair:${childId}`);
+      const quarantine = transaction.objectStore("quarantine").get(`repair:${childId}:${chunkId}`);
+      transaction.oncomplete = () => { database.close(); resolve({ sourceChunk: sourceChunk.result, child: child.result, lineage: lineage.result, quarantine: quarantine.result }); };
+      transaction.onerror = () => { database.close(); reject(transaction.error ?? new Error("IndexedDB repair read failed")); };
+    };
+  }), { childId: repaired.id, chunkId: manifest.chunks[0].id });
+  assert.equal(repairEvidence.sourceChunk, "corrupted-by-c28-doctor", "repair changed the original source bytes");
+  assert.equal(JSON.parse(repairEvidence.child).lineage.parentId, manifest.id);
+  assert.equal(JSON.parse(repairEvidence.lineage).childId, repaired.id);
+  assert.equal(JSON.parse(repairEvidence.quarantine).parentId, manifest.id);
 }).then(() => console.log("browser Ghost Vault player library passed"))
   .catch((error) => { console.error(error); process.exit(1); });

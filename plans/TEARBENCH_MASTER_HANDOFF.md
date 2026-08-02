@@ -134,8 +134,10 @@ Named status:
   the same real Doctor diagnosis adds a validated durable Graveyard entry and
   the player’s custody row renders that membership. Canon, Frontier, and Corpus
   policies now persist with their review, novelty, consent/split, and
-  deduplication constraints; player-initiated repair and the remaining full
-  Vault exit evidence still remain.
+  deduplication constraints. A fifth slice wires the normal player `REPAIR`
+  control through the typed screen action and Vault controller; the browser
+  proves its child, lineage, quarantine copy, and untouched source byte. The
+  remaining full Vault exit evidence still remains.
 - **C29-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.

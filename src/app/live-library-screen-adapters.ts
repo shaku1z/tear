@@ -52,6 +52,7 @@ export interface LibraryScreenAdapters {
   readonly selectLeaderboardBoard: (id: string) => void;
   readonly watchReplay: (id: string, from?: "profile" | "leaderboards") => void;
   readonly publishReplay: (id: string) => void;
+  readonly repairGhostCapsule: (id: string) => void;
 }
 
 type DeferredAction = (adapters: LibraryScreenAdapters) => void;
@@ -104,6 +105,7 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
     selectLeaderboardBoard: (id) => { invoke((value) => { value.selectLeaderboardBoard(id); }); },
     watchReplay: (id, from) => { invoke((value) => { value.watchReplay(id, from); }); },
     publishReplay: (id) => { invoke((value) => { value.publishReplay(id); }); },
+    repairGhostCapsule: (id) => { invoke((value) => { value.repairGhostCapsule(id); }); },
   };
   return Object.freeze(adapters);
 }

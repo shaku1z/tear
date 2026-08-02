@@ -252,6 +252,17 @@ describe("legacy screen renderer registry", () => {
     expect(controls.some((control) => control.action.type === "profile.deleteReplay")).toBe(false);
   });
 
+  it("offers a semantic repair action only for an unhealthy Vault capsule", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.profile({ id: "profile", tab: "vault", tabs: [{ id: "vault", label: "VAULT", selected: true }],
+      name: "Guest", signedIn: false, stats: [], replays: [{ id: "damaged-capsule", title: "Ghost V3 - COACHING",
+        detail: "COMPLETE - 3 CHUNKS - NEEDS REPAIR", available: false, repairable: true, badge: "DURABLE CAPSULE" }] });
+    expect(controls.find((control) => control.action.type === "profile.repairGhostCapsule"))
+      .toMatchObject({ label: "REPAIR", x: 968, y: 342, w: 110, h: 40, action: { type: "profile.repairGhostCapsule", id: "damaged-capsule" } });
+    expect(controls.some((control) => control.action.type === "profile.watchReplay")).toBe(false);
+  });
+
   it("declares every legacy-only parity field needed before old screen ranges can be deleted", () => {
     const contracts = readFileSync(fileURLToPath(new URL("../../src/presentation/screens/contracts.ts", import.meta.url)), "utf8");
     for (const field of [

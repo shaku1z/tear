@@ -1,4 +1,9 @@
-import { inspectBrowserGhostVault, type BrowserGhostVaultCatalog } from "../ghost/browser-capsule-vault";
+import {
+  inspectBrowserGhostVault,
+  repairBrowserGhostCapsule,
+  type BrowserGhostVaultCatalog,
+  type BrowserGhostVaultRepairResult,
+} from "../ghost/browser-capsule-vault";
 import type { TearGhostManifest } from "../ghost/capsule-vault";
 import type { GhostLibraryKind } from "../ghost/knowledge-libraries";
 
@@ -10,6 +15,8 @@ export interface GhostVaultLibraryCapsule {
   readonly chunkCount: number;
   readonly healthy: boolean;
   readonly libraries: readonly GhostLibraryKind[];
+  readonly repairable: boolean;
+  readonly repairChildId?: string;
 }
 
 export interface GhostVaultLibrarySnapshot {
@@ -22,16 +29,19 @@ export interface GhostVaultLibrarySnapshot {
 export interface GhostVaultLibraryPort {
   readonly snapshot: () => GhostVaultLibrarySnapshot;
   readonly refresh: () => void;
+  readonly repair: (id: string) => void;
 }
 
 export interface GhostVaultLibraryControllerOptions {
   readonly inspect: () => Promise<BrowserGhostVaultCatalog>;
+  readonly repair: (id: string) => Promise<BrowserGhostVaultRepairResult>;
 }
 
 function capsuleView(
   manifest: TearGhostManifest,
   healthy: boolean,
   libraries: readonly GhostLibraryKind[],
+  repairChildId?: string,
 ): GhostVaultLibraryCapsule {
   return Object.freeze({
     id: manifest.id,
@@ -41,6 +51,8 @@ function capsuleView(
     chunkCount: manifest.chunks.length,
     healthy,
     libraries: Object.freeze([...libraries].sort()),
+    repairable: !healthy && repairChildId === undefined,
+    ...(repairChildId === undefined ? {} : { repairChildId }),
   });
 }
 
@@ -65,6 +77,23 @@ function frozenSnapshot(
 export function createGhostVaultLibraryController(options: GhostVaultLibraryControllerOptions): GhostVaultLibraryPort {
   let current = frozenSnapshot("idle", []);
   let generation = 0;
+  const catalogSnapshot = (catalog: BrowserGhostVaultCatalog, message?: string): GhostVaultLibrarySnapshot => {
+    const health = new Map(catalog.maintenance.integrity.map((entry) => [entry.id, entry.healthy]));
+    const memberships = new Map<string, GhostLibraryKind[]>();
+    const repairedChildren = new Map<string, string>();
+    for (const entry of catalog.maintenance.libraries.entries) {
+      const membershipsForGhost = memberships.get(entry.ghostId) ?? [];
+      membershipsForGhost.push(entry.library);
+      memberships.set(entry.ghostId, membershipsForGhost);
+    }
+    for (const manifest of catalog.manifests) {
+      if (manifest.lineage?.relation === "repaired-from") repairedChildren.set(manifest.lineage.parentId, manifest.id);
+    }
+    const capsules = catalog.manifests.map((manifest) => capsuleView(manifest, health.get(manifest.id) === true,
+      memberships.get(manifest.id) ?? [], repairedChildren.get(manifest.id)))
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    return frozenSnapshot("ready", capsules, catalog.maintenance.evictedCapsuleIds, message);
+  };
   return Object.freeze({
     snapshot: () => current,
     refresh: () => {
@@ -72,22 +101,32 @@ export function createGhostVaultLibraryController(options: GhostVaultLibraryCont
       current = frozenSnapshot("loading", current.capsules);
       void options.inspect().then((catalog) => {
         if (request !== generation) return;
-        const health = new Map(catalog.maintenance.integrity.map((entry) => [entry.id, entry.healthy]));
-        const memberships = new Map<string, GhostLibraryKind[]>();
-        for (const entry of catalog.maintenance.libraries.entries) {
-          const current = memberships.get(entry.ghostId) ?? [];
-          current.push(entry.library);
-          memberships.set(entry.ghostId, current);
-        }
-        const capsules = catalog.manifests.map((manifest) => capsuleView(manifest, health.get(manifest.id) === true,
-          memberships.get(manifest.id) ?? []))
-          .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
-        current = frozenSnapshot("ready", capsules, catalog.maintenance.evictedCapsuleIds);
+        current = catalogSnapshot(catalog);
       }).catch((error: unknown) => {
         if (request !== generation) return;
         const message = error instanceof Error ? error.message : String(error);
         current = frozenSnapshot("failed", current.capsules, current.evictedCapsuleIds, `Ghost Vault could not open: ${message}`);
       });
+    },
+    repair: (id) => {
+      const source = current.capsules.find((capsule) => capsule.id === id);
+      if (!source?.repairable) {
+        current = frozenSnapshot("failed", current.capsules, current.evictedCapsuleIds, "This Ghost capsule cannot be repaired.");
+        return;
+      }
+      const request = ++generation;
+      current = frozenSnapshot("loading", current.capsules);
+      void options.repair(id).then((repair) => options.inspect().then((catalog) => Object.freeze({ repair, catalog })))
+        .then(({ repair, catalog }) => {
+          if (request !== generation) return;
+          current = catalogSnapshot(catalog, repair.reused
+            ? "A verified repair child is already available."
+            : "Ghost repair child created; the original remains preserved.");
+        }).catch((error: unknown) => {
+          if (request !== generation) return;
+          const message = error instanceof Error ? error.message : String(error);
+          current = frozenSnapshot("failed", current.capsules, current.evictedCapsuleIds, `Ghost repair failed: ${message}`);
+        });
     },
   } satisfies GhostVaultLibraryPort);
 }
@@ -98,7 +137,9 @@ export function createBrowserGhostVaultLibrary(factory: IDBFactory | undefined):
     return Object.freeze({
       snapshot: () => frozenSnapshot("unavailable", [], [], "Ghost Vault is unavailable in this browser."),
       refresh: () => undefined,
+      repair: () => undefined,
     } satisfies GhostVaultLibraryPort);
   }
-  return createGhostVaultLibraryController({ inspect: () => inspectBrowserGhostVault(factory) });
+  return createGhostVaultLibraryController({ inspect: () => inspectBrowserGhostVault(factory),
+    repair: (id) => repairBrowserGhostCapsule(factory, id) });
 }

@@ -27,7 +27,11 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
         if (y + rowHeight < top - 8 || y > bottom + 8) return;
         replayRow(context, replay, listX, y, listWidth, replay.pinned ? "#e0a326" : undefined);
         const actionsX = listX + listWidth - 392;
-        context.enqueue({ x: actionsX, y: y + 20, w: 110, h: 40, label: "▶  WATCH", enabled: replay.available, action: { type: "profile.watchReplay", id: replay.id } });
+        if (view.tab === "vault" && replay.repairable) {
+          context.enqueue({ x: actionsX, y: y + 20, w: 110, h: 40, label: "REPAIR", action: { type: "profile.repairGhostCapsule", id: replay.id } });
+        } else {
+          context.enqueue({ x: actionsX, y: y + 20, w: 110, h: 40, label: "▶  WATCH", enabled: replay.available, action: { type: "profile.watchReplay", id: replay.id } });
+        }
         if (replay.local) {
           context.enqueue({ x: actionsX + 118, y: y + 20, w: 78, h: 40, label: replay.pinned ? "★" : "PIN", selected: replay.pinned,
             action: { type: "profile.pinReplay", id: replay.id, pinned: !replay.pinned } });

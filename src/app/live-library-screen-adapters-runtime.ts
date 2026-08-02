@@ -63,6 +63,7 @@ export interface LibraryScreenAdapters {
   readonly selectLeaderboardBoard: (id: string) => void;
   readonly watchReplay: (id: string, from?: "profile" | "leaderboards") => void;
   readonly publishReplay: (id: string) => void;
+  readonly repairGhostCapsule: (id: string) => void;
 }
 
 export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenServices): LibraryScreenAdapters {
@@ -179,11 +180,12 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       ghostVault = services.ghostVault.snapshot();
     }
     const vaultReplays = ghostVault.capsules.map((capsule) => Object.freeze({
-      id: `capsule:${capsule.id}`,
+      id: capsule.id,
       title: `Ghost V3 - ${capsule.recordingProfile.toUpperCase()}`,
-      detail: `${capsule.status.toUpperCase()} - ${String(capsule.chunkCount)} CHUNKS - ${capsule.healthy ? "HEALTHY" : "NEEDS REPAIR"}${capsule.libraries.length === 0 ? "" : ` - ${capsule.libraries.join(" / ").toUpperCase()}`}`,
+      detail: `${capsule.status.toUpperCase()} - ${String(capsule.chunkCount)} CHUNKS - ${capsule.healthy ? "HEALTHY" : "NEEDS REPAIR"}${capsule.repairChildId === undefined ? "" : " - REPAIRED COPY AVAILABLE"}${capsule.libraries.length === 0 ? "" : ` - ${capsule.libraries.join(" / ").toUpperCase()}`}`,
       badge: "DURABLE CAPSULE",
       available: false,
+      repairable: capsule.repairable,
       timestamp: new Date(capsule.createdAt).toLocaleDateString(),
     }));
     if (profileTab === "vault" && ghostVault.message !== undefined) profileMessage = ghostVault.message;
@@ -294,6 +296,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     selectLeaderboardBoard: (id) => { const [kind, value = ""] = id.split(":"); if (kind === "mode") leaderboardMode = value;
       else if (kind === "difficulty") leaderboardDifficulty = value; services.setScroll(0); leaderboardMessage = ""; },
     watchReplay: (id, from) => { replayLibrary.watch(id, from); }, publishReplay: (id) => { replayLibrary.publish(id); },
+    repairGhostCapsule: (id) => { services.ghostVault.repair(id); },
   };
   return Object.freeze(adapters);
 }
