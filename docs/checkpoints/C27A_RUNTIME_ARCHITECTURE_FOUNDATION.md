@@ -1184,6 +1184,17 @@ of replay, headless execution, or learning portability.
   behavior, or C27A completion evidence. The next boundary isolates the
   campaign-training biome-record operation without changing its behavior.
 
+- The seventy-fourth slice isolates campaign-training biome discovery in a
+  composition-owned operation. It preserves mark-biome, `biomesSeen` maximum,
+  then style achievement-check order; source architecture rejects direct biome
+  progress access in the campaign-training composition. The focused gate passed
+  6 files / 12 tests; rebuilt campaign-victory browser proof passes.
+
+  This is one campaign biome-progress handoff only, not durable profile state,
+  migration, quota, crash recovery, cross-device sync, concurrent-world
+  behavior, or C27A completion evidence. The next boundary routes live
+  combat-action generic stat ports through the shared adapter.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

@@ -248,6 +248,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live outcome pending-finale persistence must use the composition-owned adapter",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-campaign-training-composition.ts"]),
+    pattern: /\bd\.PROFILE\.(?:markBiome|maxStat)\(/u,
+    message: "campaign biome progress must use the composition-owned adapter",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/app/live-outcome-composition.ts"]),
     pattern: /\bd\.PROFILE\.(?:addStat|maxStat)\(/u,
     message: "live outcome defeat-progress persistence must use the composition-owned adapter",
@@ -549,6 +554,12 @@ if (dependencyErrors("src/app/live-outcome-composition.ts",
   || dependencyErrors("src/app/live-outcome-composition.ts",
     "d.pendingFinalePersistence.persist({});").length !== 0) {
   throw new Error("source architecture composition-owned pending-finale persistence rule self-test failed");
+}
+if (dependencyErrors("src/app/live-campaign-training-composition.ts",
+  'd.PROFILE.maxStat("biomesSeen", d.PROFILE.markBiome(name));').length !== 1
+  || dependencyErrors("src/app/live-campaign-training-composition.ts",
+    "d.biomeProgressPersistence.remember(name);").length !== 0) {
+  throw new Error("source architecture composition-owned campaign biome progress rule self-test failed");
 }
 if (dependencyErrors("src/app/live-outcome-composition.ts",
   'd.PROFILE.addStat("runs", 1);').length !== 1

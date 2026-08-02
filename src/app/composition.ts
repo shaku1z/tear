@@ -36,6 +36,7 @@ import { PerformanceMonitor } from "../diagnostics/performance-monitor";
 import { createTearTestEnvironment } from "../tearbench/test-support";
 import { LegacyAppStateController } from "./legacy-state-controller";
 import { createLiveAchievementToastPersistence } from "./live-achievement-toast-persistence";
+import { createLiveBiomeProgressPersistence } from "./live-biome-progress-persistence";
 import { createLivePendingFinalePersistence } from "./live-pending-finale-persistence";
 import { createLiveOutcomeDefeatProgressPersistence } from "./live-outcome-defeat-progress-persistence";
 import { createLiveProfileStatsPersistence } from "./live-profile-stats-persistence";
@@ -176,6 +177,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const APP = new LegacyAppStateController();
   const DIAG = new PerformanceMonitor();
   const achievementToastPersistence = createLiveAchievementToastPersistence(PROFILE);
+  const biomeProgressPersistence = createLiveBiomeProgressPersistence(PROFILE);
   const outcomeDefeatProgressPersistence = createLiveOutcomeDefeatProgressPersistence(PROFILE);
   const pendingFinalePersistence = createLivePendingFinalePersistence(PROFILE);
   const profileStatsPersistence = createLiveProfileStatsPersistence(PROFILE);
@@ -184,7 +186,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const shopPurchaseProgressPersistence = createLiveShopPurchaseProgressPersistence(PROFILE, META, SHOP);
 
   const gameRuntimeDependencies = {
-    A11Y, ACH, AFFIXES, APP, Aldric, Armored, Attract, BOSSFX, Backdrop, Blade, Bomber, Boss, achievementToastPersistence,
+    A11Y, ACH, AFFIXES, APP, Aldric, Armored, Attract, BOSSFX, Backdrop, Blade, biomeProgressPersistence, Bomber, Boss, achievementToastPersistence,
     browserDocument: document, browserIndexedDb: window.indexedDB, browserNavigator: navigator, browserStorage: window.localStorage, browserWindow: window, CG, CLOCK, CONFIG: worldConfig, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, DAILY, DIAG, Echo,
     FX, FirebaseProvider, Flyer, GAMEPLAY_EVENTS, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
     MirrorHost, OVERSCAN, PAD, PRESETS, outcomeDefeatProgressPersistence, pendingFinalePersistence, platformBootstrapPersistence, profileStatsPersistence, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,

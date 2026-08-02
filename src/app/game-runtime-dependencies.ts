@@ -34,6 +34,7 @@ import type { RunRandomService, RunRandomStreams } from "../simulation/run-rando
 import type { PerformanceMonitor } from "../diagnostics/performance-monitor";
 import type { LegacyAppStateController } from "./legacy-state-controller";
 import type { AchievementToastPersistence } from "./live-achievement-toast-persistence";
+import type { BiomeProgressPersistence } from "./live-biome-progress-persistence";
 import type { PendingFinalePersistence } from "./live-pending-finale-persistence";
 import type { OutcomeDefeatProgressPersistence } from "./live-outcome-defeat-progress-persistence";
 import type { ProfileStatsPersistence } from "./live-profile-stats-persistence";
@@ -51,6 +52,7 @@ type ReplayCompatibility = ReturnType<typeof createLegacyReplayCompatibility>;
 export interface GameRuntimeDependencies {
   readonly A11Y: typeof A11Y; readonly ACH: ReturnType<typeof createAchievements>;
   readonly achievementToastPersistence: AchievementToastPersistence;
+  readonly biomeProgressPersistence: BiomeProgressPersistence;
   readonly AFFIXES: typeof Affixes.AFFIXES; readonly APP: LegacyAppStateController;
   readonly Aldric: EnemyTypes["Aldric"]; readonly Armored: EnemyTypes["Armored"];
   readonly Attract: ReturnType<typeof createAttract>; readonly BOSSFX: EnemyTypes["BOSSFX"];

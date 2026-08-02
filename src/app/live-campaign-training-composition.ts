@@ -91,7 +91,7 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
     achievementsEnabled: () => requireStyle().tracks(),
     checkAchievements: () => { requireStyle().check(); },
     resetStageAchievements: () => { requireStyle().achievements.stageReset(); },
-    rememberBiome(name) { d.PROFILE.maxStat("biomesSeen", d.PROFILE.markBiome(name)); requireStyle().check(); },
+    rememberBiome(name) { d.biomeProgressPersistence.remember(name); requireStyle().check(); },
     cinematicPreference: options.applySettingsCinematicPreference,
     addFlash: (amount): FinaleMaximumFeelReceipt => {
       const before = options.getFlash(); options.setFlash(Math.max(before, amount));

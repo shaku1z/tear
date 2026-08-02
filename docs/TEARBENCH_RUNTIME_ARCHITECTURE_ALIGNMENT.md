@@ -431,9 +431,12 @@ The following C27A foundation slices are complete:
   again without a durable-profile claim.
 - Generic session-economy, wave-clear, live-style, and training-host
   profile-stat ports now use one shared composition-owned adapter. The focused
-  adapter/intent gate and rebuilt campaign-victory browser proof pass. This is
-  still not a durable-profile claim; the next boundary isolates the
-  campaign-training biome-record operation without changing its behavior.
+  adapter/intent gate and rebuilt campaign-victory browser proof pass.
+- Campaign-training biome discovery now uses a composition-owned operation that
+  preserves its mark-biome, maximum-stat, then achievement-check ordering. Its
+  focused adapter/composition gate and rebuilt campaign-victory browser proof
+  pass. This is still not a durable-profile claim; the next boundary routes the
+  live combat-action generic stat ports through the shared adapter.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition
