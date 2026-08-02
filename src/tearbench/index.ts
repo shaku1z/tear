@@ -5,6 +5,8 @@ export * from "./live-state-snapshot";
 export * from "./detached-world-hydrator";
 export * from "./detached-world-runtime";
 export * from "./production-world-factory";
+export * from "./production-combat-phases";
+export * from "./production-combat-simulation";
 export * from "./state-validity";
 export * from "./state-forge-factories";
 export * from "./progression-ledger";

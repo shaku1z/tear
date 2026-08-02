@@ -155,10 +155,10 @@ Named status:
   retains a source capsule, then proves a second capture receives Chromium's
   `QuotaExceededError` without halting 1,200 live ticks or mutating the source.
 - **C29:** active; its first checklist item is proven. GhostProductionReplayWorld
-  drives only the TearSimulationRuntime returned by its C27A production
-  composition, and the focused production test proves runtime identity at tick
-  80 plus a repeat-seek semantic hash. Captured-capsule parity, player Theater,
-  practice, and comparison remain open.
+  drives only the TearSimulationRuntime returned by its source-owned C27A
+  production world and combat composition, and the focused production test
+  proves runtime identity at tick 80 plus a repeat-seek semantic hash.
+  Captured-capsule parity, player Theater, practice, and comparison remain open.
 - **C30-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -380,11 +380,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C29 now has a source-owned C27A DOM-free production-world factory used by the replay proof.
-PROVEN BY:           Focused production replay/world tests plus type/lint/architecture passed; the replay test constructs that source factory and asserts its supplied runtime identity.
-REMAINING HERE:      Extract the parity harness's production State Forge hydration/combat assembly into a source-owned V3 capsule composition, then compare a captured capsule's authoritative hashes. Theater, seek/fork/practice, and comparison remain open.
+DONE THIS STEP:      C29 now has a source-owned DOM-free production world, combat phase assembly, and fixed-step combat-simulation wrapper used by the replay proof.
+PROVEN BY:           `pnpm check:c29:production-replay` passed; its focused replay test constructs only those source-owned adapters, asserts supplied-runtime identity at tick 80, and repeats the semantic hash.
+REMAINING HERE:      Compose production State Forge hydration with a durable V3 capsule, then compare its authoritative hashes. Theater, seek/fork/practice, and comparison remain open.
 REMAINING TO C40:    C25 and C27 exits, then C29-C40, remain; C27A and C28 are closed.
-NEXT SLICE:          Move the C27A production combat assembly out of the parity harness, then compose it with snapshot hydration for captured-capsule hash evidence.
+NEXT SLICE:          Compose production State Forge hydration with an actual durable V3 capsule and compare its authoritative hashes through the source-owned replay path.
 
 All of the following were run from this worktree through C27A slice 36:
 

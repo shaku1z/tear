@@ -20,9 +20,12 @@ applicable production boundary.
   it does not create a scheduler or gameplay runtime. It replays every fixed
   tick through that supplied runtime, including empty action ticks, and exposes
   the exact active runtime for identity evidence.
-- tests/unit/ghost-production-replay-world.test.ts constructs the C27A
-  source-owned production world plus the existing detached combat composition,
-  supplies its actual simulationRuntime,
+- createProductionCombatPhases and createProductionCombatSimulation are now
+  source-owned C29 adapters. They assemble the real opening/collision hosts,
+  combat entities, kill runtime, and one fixed-step scheduler over that
+  production world; their outward adapter records semantic intent only.
+- tests/unit/ghost-production-replay-world.test.ts constructs that complete
+  source-owned production replay composition, supplies its actual simulationRuntime,
   and proves the replay reaches tick 80 through that same object. A repeated
   seek creates a fresh production world and reproduces the semantic hash.
 
@@ -43,10 +46,11 @@ applicable production boundary.
 
 This foundation does not turn legacy visual replay into V3 replay, admit an
 incompatible capsule, prove a captured-capsule hash, or expose a player Theater
-screen. It makes the next C29 hash-parity slice use the C27A runtime rather than
-the former synthetic replay test simulation. The production combat assembly is
-still test-owned and must be extracted before it can be the source-owned
-captured-capsule adapter.
+screen. It makes the next C29 hash-parity slice use the production runtime and
+combat composition rather than a synthetic replay simulation. The older parity
+harness retains its equivalent helper for its existing C27A suites, but the C29
+replay proof no longer imports that test helper. State Forge hydration of a
+durable V3 capsule remains the missing source-owned adapter.
 
 ## Evidence
 

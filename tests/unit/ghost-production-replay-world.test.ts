@@ -2,8 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { GhostProductionReplayWorld, createGhostV3, type GhostReplayTrident } from "../../src/ghost";
 import { CONFIG } from "../../src/config/game-config";
-import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
-import { createDetachedCombatSimulation } from "./detached-world-harness";
+import { createProductionCombatSimulation, createProductionReplayWorld } from "../../src/tearbench";
 
 const trident: GhostReplayTrident = {
   command: { kind: "command", status: "verified", available: true, resumable: true, seekable: false, reason: "C29 test" },
@@ -19,7 +18,7 @@ function productionComposition(created: unknown[]) {
         seed: "c29-production-replay",
         enemies: [{ id: "charger", x: 760, y: CONFIG.world.groundY - CONFIG.enemy.h / 2 }],
       });
-      const core = createDetachedCombatSimulation<Record<string, unknown>>(detached, {
+      const core = createProductionCombatSimulation<Record<string, unknown>>(detached, {
         snapshot: (tick) => {
           const player = detached.world.state.player() as never as { x: number; y: number; vx: number; vy: number; hp: number };
           const run = detached.world.state.run() as never as { wave: number; runTime: number };

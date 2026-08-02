@@ -999,7 +999,7 @@ portability, concurrent complete worlds, or C27A completion.
 
 ### C29 — Replay world, Theater, comparison, practice
 
-- [x] Replay executes on the C27A production composition (no second runtime) - GhostProductionReplayWorld accepts and advances only the TearSimulationRuntime supplied by its composition. The C29 production test supplies the real C27A detached combat runtime, asserts runtime identity at tick 80, and repeats the seek with an equal semantic hash. pnpm check:c29:production-replay passes.
+- [x] Replay executes on the C27A production composition (no second runtime) - GhostProductionReplayWorld accepts and advances only the TearSimulationRuntime supplied by its composition. The C29 production test supplies the source-owned C27A production-world/combat composition, asserts runtime identity at tick 80, and repeats the seek with an equal semantic hash. `pnpm check:c29:production-replay` passes.
 - [ ] Replay of a captured capsule reproduces its authoritative hashes
 - [ ] Seek, fork, and practice work from a replay
 - [ ] `ghost/theater` wired and player-visible
