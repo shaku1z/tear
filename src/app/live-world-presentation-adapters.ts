@@ -18,7 +18,7 @@ import { tutorialInputPrompt } from "../presentation/world/tutorial-input-prompt
 
 type Dependencies = Pick<GameRuntimeDependencies,
   "A11Y" | "ACH" | "Backdrop" | "CLOCK" | "CONFIG" | "FX" | "GFX" | "Input" | "PAD" |
-  "PROFILE" | "SAFE" | "STAGES" | "THEME" | "UI" | "UPGRADES" | "achievementToastPersistence" | "cosmeticRandom" |
+  "PROFILE" | "SAFE" | "STAGES" | "THEME" | "UI" | "UPGRADES" | "achievementToastPersistence" | "profileStatsPersistence" | "cosmeticRandom" |
   "drawBossTransformationWorld">;
 type Stage = ReturnType<GameRuntimeDependencies["stageAt"]>;
 type Platforms = ArenaPlatform[];
@@ -215,7 +215,7 @@ export function createLiveWorldPresentationAdapters(
     },
     drawTouchControls(): void {
       const onboarding = services.touchOnboarding.step(state.lastUiDelta(), !!d.PROFILE.stat("touchOnboarded"));
-      if (onboarding.completed) d.PROFILE.addStat("touchOnboarded", 1);
+      if (onboarding.completed) d.profileStatsPersistence.add("touchOnboarded", 1);
       world.touchControls(buildTouchControlsSnapshot({ layout: d.Input.touchLayout(), joystick: d.Input.joy,
         held: Object.fromEntries(Object.entries(d.Input.btnHeld).filter((entry): entry is [string, boolean] => entry[1] !== undefined)),
         ...(d.Input.touchAim && d.Input.stickAim ? { aim: d.Input.stickAim } : {}),

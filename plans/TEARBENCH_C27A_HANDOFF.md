@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** seventy-seventh C27A foundation slice implemented (victory profile
-data records use a composition-owned adapter); checkpoint remains open
+**Status:** seventy-eighth C27A foundation slice implemented (touch onboarding
+uses the shared profile-stat port); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 

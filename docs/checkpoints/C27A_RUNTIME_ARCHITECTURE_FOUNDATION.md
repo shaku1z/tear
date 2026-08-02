@@ -1216,6 +1216,11 @@ of replay, headless execution, or learning portability.
   in the victory host. The focused gate passed 7 files / 13 tests; rebuilt
   campaign-victory browser proof passes.
 
+- The seventy-eighth slice routes touch-onboarding completion through the shared
+  profile-stat port. Source architecture rejects the old direct profile mutation
+  in the presentation adapter. The focused gate passed 4 files / 8 tests;
+  rebuilt campaign-victory browser proof passes.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

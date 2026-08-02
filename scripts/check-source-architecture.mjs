@@ -228,6 +228,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "achievement-toast profile saves must use the composition-owned persistence adapter",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-world-presentation-adapters.ts"]),
+    pattern: /\bd\.PROFILE\.addStat\("touchOnboarded"/u,
+    message: "touch onboarding profile stats must use the composition-owned adapter",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/app/live-style-host.ts"]),
     pattern: /\bd\.ACH\.check\(\);\s*d\.PROFILE\.save\(\)/u,
     message: "live style achievement persistence must use the composition-owned adapter",
@@ -541,6 +546,12 @@ if (dependencyErrors("src/app/live-world-presentation-adapters.ts",
   || dependencyErrors("src/app/live-world-presentation-adapters.ts",
     "d.achievementToastPersistence.save();").length !== 0) {
   throw new Error("source architecture composition-owned achievement save rule self-test failed");
+}
+if (dependencyErrors("src/app/live-world-presentation-adapters.ts",
+  'd.PROFILE.addStat("touchOnboarded", 1);').length !== 1
+  || dependencyErrors("src/app/live-world-presentation-adapters.ts",
+    'd.profileStatsPersistence.add("touchOnboarded", 1);').length !== 0) {
+  throw new Error("source architecture composition-owned touch onboarding profile stats rule self-test failed");
 }
 if (dependencyErrors("src/app/live-style-host.ts",
   "d.ACH.check(); d.PROFILE.save();").length !== 1

@@ -448,6 +448,9 @@ The following C27A foundation slices are complete:
   composition-owned adapter while outcome retains the later save request. Its
   focused adapter/host gate and rebuilt campaign-victory browser proof pass;
   this is not durable-profile completion.
+- Touch-onboarding completion now uses the shared profile-stat port from the
+  live presentation adapter. Its focused gate and rebuilt campaign proof pass;
+  this does not establish broader presentation or persistence completion.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition
