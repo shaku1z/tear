@@ -25,6 +25,8 @@ export interface LiveWorldSessionState extends LiveWorldSessionPort {
   selectedBoss(): string;
   setSelectedBoss(value: string): void;
   selection(): LiveWorldSetupSelection;
+  setRunSeed(value: number): void;
+  takeRunSeed(): number | null;
 }
 
 export function createLiveWorldSessionState(): LiveWorldSessionState {
@@ -36,6 +38,7 @@ export function createLiveWorldSessionState(): LiveWorldSessionState {
   let lastRecording: ReplayPacket = null;
   let lastVaultId: string | null = null;
   let winSeconds = 0;
+  let runSeed: number | null = null;
   return Object.freeze({
     selectedMode: () => mode,
     setSelectedMode: (value) => { mode = value; },
@@ -46,6 +49,8 @@ export function createLiveWorldSessionState(): LiveWorldSessionState {
     selectedBoss: () => boss,
     setSelectedBoss: (value) => { boss = value; },
     selection: () => Object.freeze({ mode, difficulty, weapon, boss }),
+    setRunSeed: (value) => { runSeed = value; },
+    takeRunSeed: () => { const value = runSeed; runSeed = null; return value; },
     outcome: () => outcome,
     setOutcome: (value) => { outcome = value; },
     lastRecording: () => lastRecording,

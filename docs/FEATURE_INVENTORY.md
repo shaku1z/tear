@@ -94,6 +94,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   run, observation, and frame paths share the world's `MusicDirector` rather
   than a host-local instance. This does not establish portable audio/device
   parity or production-world portability.
+  A TearBench-requested live-run seed now flows through the typed world-session
+  owner and is consumed once by the actual run-start path. This preserves
+  deterministic injection only; it does not complete replay/headless parity or
+  production-world portability.
   Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,

@@ -5,16 +5,17 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** ninety-first C27A foundation slice implemented (music direction is
-now owned by each live-world composition); checkpoint remains open
+**Status:** ninety-second C27A foundation slice implemented (the one-shot
+TearBench run-seed override now belongs to typed world-session state); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
-**Latest evidence:** Slice 91 constructs the `MusicDirector` through
-`createLiveWorldComposition`; source architecture rejects restoring host-local
-construction. Its focused 5-file / 18-test composition/music gate and rebuilt
-campaign-victory browser proof pass. This is not portable audio/device parity,
-a full-production-world portability claim, or C27A completion.
+**Latest evidence:** Slice 92 moves the one-shot TearBench run-seed override
+through `LiveWorldSessionState`; source architecture rejects restoring the
+host-local closure. Its focused 5-file / 10-test run-seed gate and rebuilt
+campaign-victory browser proof pass. This is deterministic live-run injection,
+not replay/headless parity, a full-production-world portability claim, or C27A
+completion.
 
 ## Resume protocol (mandatory)
 

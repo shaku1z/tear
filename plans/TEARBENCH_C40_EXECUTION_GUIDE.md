@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 91 update (current)
+#### Slice 92 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -903,6 +903,13 @@ source architecture rejects restoring host-local construction. The focused
 composition/music gate passed 5 files / 18 tests and rebuilt campaign-victory
 browser proof passed. This is not portable audio/device parity, full-world
 portability, or C27A completion.
+
+Slice 92 moves the one-shot TearBench run-seed override into
+`LiveWorldSessionState`. The existing real run-start orchestration consumes the
+typed value once before falling back to production seed creation, and source
+architecture rejects restoring the host closure. The focused run-seed gate
+passed 5 files / 10 tests and rebuilt campaign-victory browser proof passed.
+This is not replay/headless parity, full-world portability, or C27A completion.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

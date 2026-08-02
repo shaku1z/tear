@@ -516,6 +516,12 @@ The following C27A foundation slices are complete:
   rejects restoring host-local construction; the focused composition/music gate
   and rebuilt campaign proof pass. This does not establish portable audio or
   device parity, a portable full production world, or the C27A exit.
+- The one-shot TearBench run-seed override now belongs to the typed
+  `LiveWorldSessionState` owner rather than the live host. The real run
+  orchestrator consumes it once before falling back to production seed creation,
+  and source architecture rejects restoring the host closure. This preserves
+  deterministic live-run injection only; replay/headless parity, full-world
+  portability, and the C27A exit remain open.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

@@ -33,4 +33,13 @@ describe("live world session state", () => {
     expect(session.lastVaultId()).toBe("vault:27");
     expect(session.winSeconds()).toBe(4.5);
   });
+
+  it("consumes each TearBench requested run seed exactly once", () => {
+    const session = createLiveWorldSessionState();
+
+    session.setRunSeed(2701);
+
+    expect(session.takeRunSeed()).toBe(2701);
+    expect(session.takeRunSeed()).toBeNull();
+  });
 });

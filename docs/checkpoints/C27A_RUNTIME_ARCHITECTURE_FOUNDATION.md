@@ -1328,6 +1328,14 @@ of replay, headless execution, or learning portability.
   parity, a portable full production world, or concurrent complete-world
   evidence.
 
+- The ninety-second slice moves the one-shot TearBench run-seed override into
+  `LiveWorldSessionState`; the real run orchestrator consumes that typed value
+  once before using the production seed source. Source architecture rejects
+  restoring the host closure. The focused gate passed 5 files / 10 tests and
+  rebuilt campaign-victory browser proof passed. This is deterministic live-run
+  injection only, not replay/headless parity, portable full-world construction,
+  or concurrent complete-world evidence.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

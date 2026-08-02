@@ -170,7 +170,6 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   // and rank readouts, hit stop, slow motion, shake, the blade-throw cooldown,
   // dash ghosting, and the opening audio cadence are per-world transient
   // records owned by the world context below, not live-host closures.
-  let tearBenchRunSeed: number | null = null;
   const emitRunScreenTransition = (transition: "paused" | "resumed"): void => {
     const lifecycle = RUN_LIFECYCLE.snapshot();
     if (lifecycle.sessionId === null || lifecycle.phase === "terminated") return;
@@ -285,11 +284,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     finishWorldReset: () => { transient.resetFeel(); impact.slowMotion = 0;
       openingCarry.dashGhostTime = 0; openingCarry.throwCooldown = 0; },
     resetAuthoritativeClocks: () => { simulationRuntime.reset(0); }, resetCombatIdentity: () => { combatRuntime.resetIdentity(); },
-    createRunSeed: () => {
-      const seed = tearBenchRunSeed;
-      tearBenchRunSeed = null;
-      return seed ?? dependencies.createRunSeed();
-    },
+    createRunSeed: () => session.takeRunSeed() ?? dependencies.createRunSeed(),
     authoritativeResult: () => authoritativeStep.lastResult,
     setScreen: (screen, detail) => { setState(screen, detail); }, requestPointerLock: requestOwnedPointerLock,
     beginWipe: () => { Wipe.begin(); }, wipeRemainingSeconds: () => Wipe.remainingSeconds,
@@ -656,7 +651,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       choiceIds: () => liveRewardChoiceIds(actionRouting), progression: () => ({ wallet: dependencies.META.coins(), lifetimeEarned: dependencies.META.data.lifetimeEarned, levels: Object.fromEntries(dependencies.SHOP.map((item) => [item.id, dependencies.META.level(item.id)])), shop: dependencies.SHOP.map((item) => ({ id: item.id, level: dependencies.META.level(item.id), maxLevel: item.maxLevel, cost: dependencies.META.cost(item), enabled: dependencies.META.canBuy(item) })) }), outcome: () => session.outcome(), screen: () => state,
       setScreen: (screen) => { setState(screen); }, selectBoss: (bossId) => { session.setSelectedBoss(bossId); },
       selectWeapon: (weaponId) => { hostState.setSelectedWeapon(weaponId); },
-      setRunSeed: (seed) => { tearBenchRunSeed = seed; }, startRun: (mode, difficulty) => { startRunImmediate(mode, difficulty); },
+      setRunSeed: (seed) => { session.setRunSeed(seed); }, startRun: (mode, difficulty) => { startRunImmediate(mode, difficulty); },
       stopFrameLoop: () => { frameDriver.stop(); }, startFrameLoop: () => { frameDriver.start(({ deltaSeconds }) => { combatHost.frameCoordinator.run(deltaSeconds); }); }, pushAction: (action) => { Input.semantic.push(action); },
       setSemanticInputAuthority: (active) => { semanticInputAuthority = active; },
       routeAction: (action) => routeLiveTearBenchAction(actionRouting, action), skipCinematic: () => { CINEMA.requestSkip(); },

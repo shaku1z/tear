@@ -298,6 +298,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live music direction must be constructed by the world composition",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /\blet\s+tearBenchRunSeed\b/u,
+    message: "TearBench run-seed overrides must use the typed world-session owner",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/app/live-style-host.ts"]),
     pattern: /\bd\.ACH\.check\(\);\s*d\.PROFILE\.save\(\)/u,
     message: "live style achievement persistence must use the composition-owned adapter",
@@ -695,6 +700,12 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/app/live-game-runtime.ts",
     "const world = createLiveWorldComposition({});").length !== 0) {
   throw new Error("source architecture live music owner rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "let tearBenchRunSeed = 27;").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "const seed = session.takeRunSeed();").length !== 0) {
+  throw new Error("source architecture TearBench run-seed owner rule self-test failed");
 }
 if (dependencyErrors("src/app/live-style-host.ts",
   "d.ACH.check(); d.PROFILE.save();").length !== 1
