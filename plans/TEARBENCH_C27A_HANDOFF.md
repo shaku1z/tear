@@ -5,18 +5,18 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** ninety-third C27A foundation slice implemented (the live Ghost V3
-recorder session now has one typed owner); checkpoint remains open
+**Status:** ninety-fourth C27A foundation slice implemented (semantic input and
+browser-device authority now have one typed owner); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
-**Latest evidence:** Slice 93 routes live Ghost V3 browser-sidecar construction,
-causal event sequencing, and replay-bootstrap context through
-`createLiveGhostRecordingSessionState`; source architecture rejects restoring
-the host-local recorder-session values. Its focused 7-file / 23-test recorder
-gate and rebuilt campaign-victory browser proof pass. This is capture-sidecar
-ownership, not V3 playback, replay/headless parity, a full-production-world
-portability claim, or C27A completion.
+**Latest evidence:** Slice 94 routes semantic-input authority through
+`createLiveInputAuthorityState`; it prevents automated input from requesting
+pointer lock or capturing device aim, and source architecture rejects restoring
+the host-local flag. Its focused 7-file / 17-test input gate and rebuilt
+campaign-victory browser proof pass. This is browser input-safety ownership, not
+C25 physical-input certification, device parity, full-production-world
+portability, or C27A completion.
 
 ## Resume protocol (mandatory)
 

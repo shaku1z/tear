@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 93 update (current)
+#### Slice 94 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -917,6 +917,13 @@ sequencing, and replay-bootstrap context into
 the host-local recorder-session values. The focused recorder gate passed 7
 files / 23 tests and rebuilt campaign-victory browser proof passed. This is not
 V3 playback, replay/headless parity, full-world portability, or C27A completion.
+
+Slice 94 moves semantic-input authority into `createLiveInputAuthorityState`.
+Automated input cannot request pointer lock or capture device aim, and source
+architecture rejects restoring the host-local flag. The focused input gate
+passed 7 files / 17 tests and rebuilt campaign-victory browser proof passed.
+This is not C25 physical-input certification, device parity, full-world
+portability, or C27A completion.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

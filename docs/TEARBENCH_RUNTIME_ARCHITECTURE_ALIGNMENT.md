@@ -528,6 +528,11 @@ The following C27A foundation slices are complete:
   values. This preserves the existing observational capture sidecar only; it
   does not establish V3 playback, replay/headless parity, durable product
   flows, or the C27A exit.
+- Browser input authority now owns the separation between automated semantic
+  input and device-owned pointer lock/aim capture. Source architecture rejects
+  restoring the host-local authority flag. This preserves the current browser
+  safety boundary only; it does not establish physical-input certification,
+  device parity, full-world portability, or the C27A exit.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

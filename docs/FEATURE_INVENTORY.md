@@ -102,6 +102,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   sequence, and replay-bootstrap context through one typed recording-session
   owner. This preserves capture behavior only; it does not establish V3
   playback, player-visible replay, or production-world portability.
+  Semantic automation authority now prevents pointer-lock requests and device
+  aim capture through one typed browser-input owner. This preserves the current
+  safety behavior only; it does not complete physical-input certification or
+  device parity.
   Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,

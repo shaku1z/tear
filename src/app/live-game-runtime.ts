@@ -44,13 +44,15 @@ import { createDefaultStateCodecRegistry } from "../tearbench/state-codecs";
 import { ENTITY_KIND_REGISTRY } from "../tearbench/registries";
 import { stableVerificationHash } from "../replay/hash";
 import { createLiveGhostRecordingSessionState } from "./live-ghost-recording-session-state";
+import { createLiveInputAuthorityState } from "./live-input-authority-state";
 type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick: number): void; after?(tick: number): void } }; export function startLiveGame(dependencies: GameRuntimeDependencies, configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>): void {
   const { A11Y, APP, Attract, Backdrop, browserDocument, browserIndexedDb, browserNavigator, browserWindow, CG, CONFIG, Cloud, DIAG, FX, GAMEPLAY_EVENTS, GFX, GHOST, Input, OVERSCAN, PAD, SAFE, SFX, THEME, UI, VAULT, applyUpgrade, clamp, cosmeticRandom, lerp, weaponCapsuleIntersectsSegment } = dependencies;
 (function () {
   const browserRuntime = createLiveBrowserRuntime(dependencies);
   const { canvas, context: ctx, width: W, height: H, viewport, resizeCanvas, requestPointerLock: requestLock, installPrompt, lockHint, hint: hintEl,
     pantheonDebug: PANTHEON_DEBUG, testMode: TEST_MODE } = browserRuntime;
-  let semanticInputAuthority = false; const requestOwnedPointerLock = () => { if (!semanticInputAuthority) requestLock(); };
+  const inputAuthority = createLiveInputAuthorityState(requestLock);
+  const requestOwnedPointerLock = inputAuthority.requestPointerLock;
   const ghostV3Session = createLiveGhostRecordingSessionState(
     browserIndexedDb,
     createGhostV3BrowserTestOptions(TEST_MODE, browserWindow.location.search),
@@ -465,7 +467,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       // into the same sealed action stream used by automation and future
       // detached replay hosts.  The canonical action adapter owns the actual
       // player/blade overrides during the resulting simulation tick.
-      if (!semanticInputAuthority) {
+      if (inputAuthority.allowsDeviceAimCapture()) {
         const blade = liveBlade(); const hand = blade.handPos(livePlayer());
         const aim = blade.captureDeviceAim(hand);
         const radius = Math.max(1, CONFIG.blade.aimRadius);
@@ -652,7 +654,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       selectWeapon: (weaponId) => { hostState.setSelectedWeapon(weaponId); },
       setRunSeed: (seed) => { session.setRunSeed(seed); }, startRun: (mode, difficulty) => { startRunImmediate(mode, difficulty); },
       stopFrameLoop: () => { frameDriver.stop(); }, startFrameLoop: () => { frameDriver.start(({ deltaSeconds }) => { combatHost.frameCoordinator.run(deltaSeconds); }); }, pushAction: (action) => { Input.semantic.push(action); },
-      setSemanticInputAuthority: (active) => { semanticInputAuthority = active; },
+      setSemanticInputAuthority: inputAuthority.setSemanticInputAuthority,
       routeAction: (action) => routeLiveTearBenchAction(actionRouting, action), skipCinematic: () => { CINEMA.requestSkip(); },
       activateControl: (action) => { presentationHost.render(); const encoded = JSON.stringify(action); const control = interfaceInteraction.buttons().find((entry) => entry.enabled !== false && JSON.stringify(entry.semanticAction) === encoded); if (control === undefined) return false; screenComposition.dispatch(action); return true; },
       terminateRun: () => { abandonLiveRun("tearbench-terminated", { tearBenchTerminated: true }); setState("paused"); },

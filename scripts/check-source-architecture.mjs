@@ -308,6 +308,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "Ghost V3 recorder session state must use the typed live recording-session owner",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /\blet\s+semanticInputAuthority\b/u,
+    message: "live input authority must use the typed browser-input owner",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/app/live-style-host.ts"]),
     pattern: /\bd\.ACH\.check\(\);\s*d\.PROFILE\.save\(\)/u,
     message: "live style achievement persistence must use the composition-owned adapter",
@@ -717,6 +722,12 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/app/live-game-runtime.ts",
     "const session = createLiveGhostRecordingSessionState(factory, {});").length !== 0) {
   throw new Error("source architecture Ghost V3 recorder-session owner rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "let semanticInputAuthority = true;").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "const authority = createLiveInputAuthorityState(requestLock);").length !== 0) {
+  throw new Error("source architecture live input-authority owner rule self-test failed");
 }
 if (dependencyErrors("src/app/live-style-host.ts",
   "d.ACH.check(); d.PROFILE.save();").length !== 1

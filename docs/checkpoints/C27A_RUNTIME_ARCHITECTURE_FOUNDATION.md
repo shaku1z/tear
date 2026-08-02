@@ -1344,6 +1344,14 @@ of replay, headless execution, or learning portability.
   existing capture sidecar only, not V3 playback, replay/headless parity,
   portable full-world construction, or concurrent complete-world evidence.
 
+- The ninety-fourth slice moves semantic-input authority into one typed
+  browser-input owner. It prevents automated input from requesting pointer lock
+  or capturing device aim, and source architecture rejects restoring the host
+  flag. The focused gate passed 7 files / 17 tests and rebuilt campaign-victory
+  browser proof passed. This preserves current input safety only, not C25
+  physical-input certification, device parity, portable full-world construction,
+  or concurrent complete-world evidence.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.
