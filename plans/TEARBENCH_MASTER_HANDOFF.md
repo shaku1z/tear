@@ -154,7 +154,12 @@ Named status:
   50 KiB IndexedDB quota into the normal application composition, completes and
   retains a source capsule, then proves a second capture receives Chromium's
   `QuotaExceededError` without halting 1,200 live ticks or mutating the source.
-- **C29-C40:** incomplete.
+- **C29:** active; its first checklist item is proven. GhostProductionReplayWorld
+  drives only the TearSimulationRuntime returned by its C27A production
+  composition, and the focused production test proves runtime identity at tick
+  80 plus a repeat-seek semantic hash. Captured-capsule parity, player Theater,
+  practice, and comparison remain open.
+- **C30-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
 
@@ -231,10 +236,10 @@ Important files:
 
 ### Exact next slice
 
-C27A and C28 are closed. Follow the route to **C29**: replay world, Theater,
-comparison, seek, forks, and practice. Start from C29's completion-plan
-boundary; do not reopen C27A for pixels, haptics, durable outcomes, or
-audio/device fidelity, which belong to C25, C39, and C40 respectively.
+C27A and C28 are closed. Continue **C29** with captured-capsule authoritative
+hash parity on its production replay composition. Do not reopen C27A for
+pixels, haptics, durable outcomes, or audio/device fidelity, which belong to
+C25, C39, and C40 respectively.
 
 All thirteen captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream: 5,732 ticks and 33 native facts, including the three natural-trace enemy defeats now published independently of Ghost 2 sampling. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome/reward/finale controllers, scheduler shape, event bus, and restored actor identity. The natural matrix route clears wave 1, selects a real offered draft card without advancing the fixed scheduler, and reaches a wave-2 spawn. A separate certified route reconstructs the wave-49 frontier, starts production wave 50, applies an explicit Source one-hit State Forge child, and executes real victory; live and detached match all seven finale intent batches and all 22 outward calls after their concrete adapters return, in exact order and with exact arguments. They also match six immutable ring/burst particle-admission receipts, eight logical feel receipts after restoration of the captured pre-finale transient, and the complete 42-entry terminal external-decision transcript (13 initial synchronization terminal decision/request, 22 finale-outward, and 7 cache/terminal). The refreshed browser route explicitly activates audio, then observes 12 executing plus 12 completed dispatch receipts: all seven mixes are logical-target-only and all cues are voice-cap-rejected, so no output is claimed. Slice 40 adds portable `tear-world-simulation-factories.ts` with no app/presentation/browser imports; the app renderer supplies real Canvas ports and detached supplies explicit no-op ports under architecture fences. Next: generic world bootstrap, then configuration isolation, which still blocks truly simultaneous full worlds. This evidence does not claim a naturally played 50-wave campaign, randomized particle parity, rendered-pixel parity, headless/full-world portability, configuration isolation, durable profile/local-storage survival, cloud/replay/analytics completion, successful PCM/audibility or audio graph/device parity, or device vibration.
 

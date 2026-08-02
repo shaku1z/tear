@@ -1,5 +1,6 @@
 import type { ReplayActionEnvelope } from "../replay/envelope";
 import { stableVerificationHash } from "../replay/hash";
+import type { TearSimulationRuntime } from "../gameplay/runtime/tear-simulation-runtime";
 import type { TearSnapshotV1 } from "../tearbench/contracts";
 import {
   createDefaultStateCodecRegistry,
@@ -32,6 +33,20 @@ export interface GhostSeekResult {
   readonly usedSnapshotId?: string;
   readonly correction?: GhostSeekCorrection;
   readonly presentationFallback: boolean;
+}
+
+/**
+ * A replay-owned view of a production world. The factory is responsible for
+ * composing and (when supplied) restoring the C27A world; replay owns only
+ * action timing and never constructs a second simulation runtime.
+ */
+export interface GhostProductionReplaySession<State> {
+  readonly simulation: TearSimulationRuntime<State>;
+  semanticProjection(): unknown;
+}
+
+export interface GhostProductionReplayComposition<State> {
+  create(snapshot: TearSnapshotV1 | undefined): GhostProductionReplaySession<State>;
 }
 
 function cloneWorld(world: TearCodecWorld): TearCodecWorld {
@@ -104,6 +119,67 @@ export class GhostReplayWorld {
     return Object.freeze({
       tick: targetTick,
       semanticHash: this.semanticHash(),
+      ...(snapshot === undefined ? {} : { usedSnapshotId: snapshot.id }),
+      ...(correction === undefined ? {} : { correction }),
+      presentationFallback: !this.#ghost.trident.visual.available,
+    });
+  }
+
+  playFull(finalTick: number): GhostSeekResult {
+    return this.seek(finalTick);
+  }
+}
+
+/**
+ * Runs a Ghost through the one simulation runtime created by a production
+ * composition. It is intentionally separate from the codec-only
+ * GhostReplayWorld: that class remains useful for contract-level fallback,
+ * while this class is the C29 path that can make a shared-runtime claim.
+ */
+export class GhostProductionReplayWorld<State> {
+  readonly #ghost: GhostEnvelopeV3;
+  readonly #composition: GhostProductionReplayComposition<State>;
+  #session: GhostProductionReplaySession<State> | null = null;
+  #tick = 0;
+
+  constructor(ghost: GhostEnvelopeV3, composition: GhostProductionReplayComposition<State>) {
+    this.#ghost = ghost;
+    this.#composition = composition;
+  }
+
+  /** Exposes the active production runtime for identity-level evidence only. */
+  simulation(): TearSimulationRuntime<State> | null { return this.#session?.simulation ?? null; }
+  semanticHash(): string {
+    if (this.#session === null) throw new Error("production replay world has not been sought");
+    return stableVerificationHash(this.#session.semanticProjection());
+  }
+
+  seek(targetTick: number): GhostSeekResult {
+    if (!Number.isSafeInteger(targetTick) || targetTick < 0) throw new RangeError("seek tick must be a non-negative integer");
+    const snapshot = [...this.#ghost.snapshots]
+      .filter((candidate) => candidate.tick <= targetTick)
+      .sort((left, right) => right.tick - left.tick)[0];
+    const session = this.#composition.create(snapshot);
+    const startingTick = snapshot?.tick ?? 0;
+    if (session.simulation.scheduler.tick !== startingTick) {
+      throw new TypeError(`production replay composition started at tick ${String(session.simulation.scheduler.tick)}, expected ${String(startingTick)}`);
+    }
+    this.#session = session;
+    this.#tick = startingTick;
+    for (let tick = this.#tick + 1; tick <= targetTick; tick += 1) {
+      const actions = this.#ghost.actions.filter((action) => action.tick === tick);
+      session.simulation.advanceOne(actions);
+    }
+    this.#tick = targetTick;
+    const semanticHash = this.semanticHash();
+    const correction = snapshot?.tick === targetTick && snapshot.hashes.semantic !== semanticHash
+      ? Object.freeze({
+        disclosed: true as const, tick: targetTick,
+        reason: "restored production state did not match declared keyframe semantic hash",
+        beforeHash: semanticHash, afterHash: snapshot.hashes.semantic,
+      }) : undefined;
+    return Object.freeze({
+      tick: targetTick, semanticHash,
       ...(snapshot === undefined ? {} : { usedSnapshotId: snapshot.id }),
       ...(correction === undefined ? {} : { correction }),
       presentationFallback: !this.#ghost.trident.visual.available,
