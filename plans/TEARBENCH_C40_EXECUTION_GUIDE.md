@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 57 update (current)
+#### Slice 58 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -593,6 +593,17 @@ persistence, durability, quota/device, concurrent-complete-world, or C27A
 completion evidence. Next, move the test-build Ghost V3 inspector-global
 installation through the supplied window capability without changing its
 browser-test interface.
+
+Slice 58 supplies that installation boundary. The existing
+`__TEAR_GHOST_V3__` test-build inspector is defined on `browserWindow`, and
+source architecture rejects restoring its direct ambient-window installation.
+The focused gate passed 6 files / 22 tests plus architecture; the built Ghost
+V3 live-capture/reload journey still reads the completed capsule after reload.
+
+This is inspector-installation ownership only, not a browser-test API change,
+persistence, durability, quota/device, concurrent-complete-world, or C27A
+completion claim. Next, move inspector assembly into the browser adapter while
+preserving the same test interface.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

@@ -197,16 +197,15 @@ Important files:
 
 ### Exact next slice
 
-Slice 57 completes the bounded Ghost V3 test-query capability step. The
-test-only storage-fault option now reads `browserWindow.location.search`; source
-architecture rejects direct `window.location.search` use in the live runtime.
-`pnpm check:c27a:slice57` passed (6 files / 22 tests plus architecture), and
-the built browser storage-fault journey preserved injected-fault containment
-and reload recovery. This does not introduce production URL control, change
-persistence semantics, establish durable quota/device behavior, or create
-full-world concurrency. Next, move test-build Ghost V3 inspector-global
-installation through the supplied window capability without changing its
-browser-test interface.
+Slice 58 completes the bounded Ghost V3 inspector-installation step. The
+existing `__TEAR_GHOST_V3__` test-build interface is defined on `browserWindow`;
+source architecture rejects restoring direct ambient-window installation.
+`pnpm check:c27a:slice58` passed (6 files / 22 tests plus architecture), and
+the built Ghost V3 live-capture/reload journey preserved post-reload capsule
+inspection. This does not change the browser-test API, persistence semantics,
+establish durable quota/device behavior, or create full-world concurrency.
+Next, move the inspector's assembly into the browser adapter while preserving
+its existing interface.
 
 All thirteen captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream: 5,732 ticks and 33 native facts, including the three natural-trace enemy defeats now published independently of Ghost 2 sampling. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome/reward/finale controllers, scheduler shape, event bus, and restored actor identity. The natural matrix route clears wave 1, selects a real offered draft card without advancing the fixed scheduler, and reaches a wave-2 spawn. A separate certified route reconstructs the wave-49 frontier, starts production wave 50, applies an explicit Source one-hit State Forge child, and executes real victory; live and detached match all seven finale intent batches and all 22 outward calls after their concrete adapters return, in exact order and with exact arguments. They also match six immutable ring/burst particle-admission receipts, eight logical feel receipts after restoration of the captured pre-finale transient, and the complete 42-entry terminal external-decision transcript (13 initial synchronization terminal decision/request, 22 finale-outward, and 7 cache/terminal). The refreshed browser route explicitly activates audio, then observes 12 executing plus 12 completed dispatch receipts: all seven mixes are logical-target-only and all cues are voice-cap-rejected, so no output is claimed. Slice 40 adds portable `tear-world-simulation-factories.ts` with no app/presentation/browser imports; the app renderer supplies real Canvas ports and detached supplies explicit no-op ports under architecture fences. Next: generic world bootstrap, then configuration isolation, which still blocks truly simultaneous full worlds. This evidence does not claim a naturally played 50-wave campaign, randomized particle parity, rendered-pixel parity, headless/full-world portability, configuration isolation, durable profile/local-storage survival, cloud/replay/analytics completion, successful PCM/audibility or audio graph/device parity, or device vibration.
 
@@ -347,11 +346,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      Slice 57 makes the Ghost V3 test-only storage-fault query read composition-owned browser-window capability.
-PROVEN BY:           `pnpm check:c27a:slice57` passed: 6 focused files / 22 tests and architecture. The built browser storage-fault journey passed with containment and reload recovery. The previous fresh foundation and campaign-victory evidence remains recorded above; C27A remains blocking.
-REMAINING HERE:      Move the Ghost V3 test-build inspector-global installation through the supplied window capability, then isolate remaining persistence adapter dependencies. Those adapters still prevent concurrent complete worlds and C27A remains blocking.
+DONE THIS STEP:      Slice 58 installs the existing Ghost V3 test-build inspector through composition-owned browser-window capability.
+PROVEN BY:           `pnpm check:c27a:slice58` passed: 6 focused files / 22 tests and architecture. The built Ghost V3 live-capture/reload journey preserved post-reload capsule inspection. The previous fresh foundation and campaign-victory evidence remains recorded above; C27A remains blocking.
+REMAINING HERE:      Move the Ghost V3 inspector's assembly into the browser adapter, then isolate remaining persistence adapter dependencies. Those adapters still prevent concurrent complete worlds and C27A remains blocking.
 REMAINING TO C40:    C27 completion, C25 exit, and C28-C40 remain after C27A closes.
-NEXT SLICE:          Move test-build Ghost V3 inspector-global installation through the supplied window capability without changing its browser-test interface. Do not claim persistence, durability/device parity, or full live-world concurrency.
+NEXT SLICE:          Move Ghost V3 test-build inspector assembly into the browser adapter while preserving its existing interface. Do not claim persistence, durability/device parity, or full live-world concurrency.
 
 All of the following were run from this worktree through C27A slice 36:
 

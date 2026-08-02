@@ -637,7 +637,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnT
   const { wipe: Wipe, frame: presentationHost, screens: screenComposition } = interfaceComposition;
   const { library: libraryAdapters, replay: replayAdapters, settings: settingsRenameAdapters, modelRenderers: presentationScreenRenderers } = screenComposition;
   if (__TEAR_TEST_BUILD__ && TEST_MODE) void import("../tearbench/browser/live-runtime-bridge").then(({ installLiveTearRuntimeBridge }) => {
-    Object.defineProperty(window, "__TEAR_GHOST_V3__", {
+    Object.defineProperty(browserWindow, "__TEAR_GHOST_V3__", {
       configurable: true,
       value: Object.freeze({
         manifest: () => ghostV3?.lastManifest ?? null,

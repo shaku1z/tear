@@ -368,6 +368,11 @@ The following C27A foundation slices are complete:
   recovery behavior, while architecture rejects an ambient query read. This is
   still not a production URL-control or persistence-completion claim; the
   test-build inspector global is the next browser-bound ownership seam.
+- The existing test-build `__TEAR_GHOST_V3__` interface is now installed on the
+  supplied window rather than an ambient global. Its browser live-capture and
+  reload proof still passes. This retains the same test interface and does not
+  certify persistence; separating its assembly into the browser adapter is the
+  remaining local test-inspection boundary.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

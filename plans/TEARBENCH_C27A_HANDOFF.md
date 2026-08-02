@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** fifty-seventh C27A foundation slice implemented (composition-owned
-Ghost V3 test-query capability); checkpoint remains open
+**Status:** fifty-eighth C27A foundation slice implemented (composition-owned
+Ghost V3 test-inspector installation); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
@@ -601,6 +601,14 @@ caches and transient lights are local to the controller. This is not full
   evidence. The next boundary is the test-build inspector-global installation
   through the supplied window without changing its browser-test interface.
 
+  Slice 58 supplies that inspector-installation boundary. The existing
+  `__TEAR_GHOST_V3__` interface is defined on `browserWindow`, and source
+  architecture rejects its direct ambient-window installation. The focused gate
+  passed 6 files / 22 tests; built Ghost V3 live-capture/reload evidence still
+  reads a completed capsule after reload. This is not a browser-test API,
+  persistence, quota/device, physical-input, or concurrent-world claim. The
+  next boundary moves inspector assembly into the browser adapter.
+
 All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
@@ -627,8 +635,8 @@ Slice 41 adds simulation tuning isolation; Slice 42 injects particle policy;
   enemy rendering has its exact policy; Attract entropy is composition supplied;
   and the first-gesture audio facade, concrete synthesized runtime, browser
   audio-context handoff, browser navigator capability, browser document/window
-  capability, Ghost V3 IndexedDB capability, and Ghost V3 test-query capability
-  are composition-owned. Remaining persistence adapter
+  capability, Ghost V3 IndexedDB capability, Ghost V3 test-query capability,
+  and Ghost V3 inspector installation are composition-owned. Remaining persistence adapter
   isolation still precedes true simultaneous complete worlds.
 Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
@@ -648,13 +656,12 @@ composition with parity evidence.
 
 ## Working-tree safety
 
-- Slice 57 is the next intentional commit on
+- Slice 58 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 6
-  files / 22 tests plus source architecture; built browser storage-fault
-  evidence passed with containment and reload recovery. The next
-  boundary is Ghost V3 test-build inspector-global installation through the
-  supplied window, still not a persistence, durability, physical-device, or
-  second-runtime claim.
+  files / 22 tests plus source architecture; built Ghost V3 live-capture/reload
+  evidence passed. The next boundary moves Ghost V3 test-build inspector
+  assembly into the browser adapter, still not a persistence, durability,
+  physical-device, or second-runtime claim.
 - Slice 48 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
   files / 23 tests plus source architecture; built journeys and six responsive

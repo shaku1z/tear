@@ -1002,6 +1002,18 @@ of replay, headless execution, or learning portability.
   the test-build Ghost V3 inspector-global installation through the supplied
   window capability; preserve its existing browser-test interface.
 
+- The fifty-eighth slice supplies that inspector-installation boundary. The
+  existing `__TEAR_GHOST_V3__` test-build interface is installed on
+  `browserWindow`, and source architecture rejects restoring its direct ambient
+  window installation. The focused gate passed 6 files / 22 tests; the built
+  browser live-capture/reload journey proves the inspector still exposes a
+  complete capsule after reload.
+
+  This is installation ownership only, not a new browser-test API, persistence,
+  durability, quota/device, physical-input, concurrent-world, or C27A
+  completion claim. The next boundary is to move the inspector's assembly into
+  the browser adapter while preserving its existing interface.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap
