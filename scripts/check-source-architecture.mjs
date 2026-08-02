@@ -13,6 +13,22 @@ const authoredDataExceptions = new Set([
 // the original provisional 500-line cap.
 const MAX_SUBSYSTEM_LINES = 700;
 const errors = [];
+// This is the C27A portable simulation composition, not all gameplay source.
+// Its outward app/device adapters are deliberately supplied through ports.
+const c27aPortableCoreRoots = Object.freeze([
+  "src/gameplay/runtime/tear-simulation-runtime.ts",
+  "src/gameplay/runtime/tear-combat-simulation.ts",
+  "src/gameplay/runtime/gameplay-event-publishers.ts",
+  "src/gameplay/runtime/tear-world-entity-construction.ts",
+  "src/gameplay/runtime/tear-world-legacy-entity-construction.ts",
+  "src/gameplay/runtime/tear-world-context.ts",
+  "src/gameplay/runtime/tear-world-composition.ts",
+  "src/gameplay/runtime/tear-world-simulation-factories.ts",
+  "src/gameplay/runtime/tear-world-bootstrap.ts",
+  "src/gameplay/run/reward-runtime.ts",
+  "src/gameplay/campaign/finale-runtime.ts",
+  "src/gameplay/campaign/finale-outward-call.ts",
+]);
 const forbiddenDependencyRules = Object.freeze([
   Object.freeze({
     roots: Object.freeze(["src/ghost/", "src/agents/", "src/tearbench/"]),
@@ -25,36 +41,12 @@ const forbiddenDependencyRules = Object.freeze([
     message: "portable TearBench modules must consume structural simulation ports, not concrete app world types",
   }),
   Object.freeze({
-    roots: Object.freeze([
-      "src/gameplay/runtime/tear-simulation-runtime.ts",
-      "src/gameplay/runtime/tear-combat-simulation.ts",
-      "src/gameplay/runtime/gameplay-event-publishers.ts",
-      "src/gameplay/runtime/tear-world-entity-construction.ts",
-      "src/gameplay/runtime/tear-world-context.ts",
-      "src/gameplay/runtime/tear-world-composition.ts",
-      "src/gameplay/runtime/tear-world-simulation-factories.ts",
-      "src/gameplay/runtime/tear-world-bootstrap.ts",
-      "src/gameplay/run/reward-runtime.ts",
-      "src/gameplay/campaign/finale-runtime.ts",
-      "src/gameplay/campaign/finale-outward-call.ts",
-    ]),
+    roots: c27aPortableCoreRoots,
     pattern: /(?:from\s+|import\s*\()\s*["'][^"']*(?:app\/|presentation\/|audio\/|persistence\/|platform\/|tearbench\/|replay\/legacy-compat)[^"']*["']/u,
     message: "portable gameplay modules cannot depend on outward app, TearBench, presentation, service, or Ghost 2 adapters",
   }),
   Object.freeze({
-    roots: Object.freeze([
-      "src/gameplay/runtime/tear-simulation-runtime.ts",
-      "src/gameplay/runtime/tear-combat-simulation.ts",
-      "src/gameplay/runtime/gameplay-event-publishers.ts",
-      "src/gameplay/runtime/tear-world-entity-construction.ts",
-      "src/gameplay/runtime/tear-world-context.ts",
-      "src/gameplay/runtime/tear-world-composition.ts",
-      "src/gameplay/runtime/tear-world-simulation-factories.ts",
-      "src/gameplay/runtime/tear-world-bootstrap.ts",
-      "src/gameplay/run/reward-runtime.ts",
-      "src/gameplay/campaign/finale-runtime.ts",
-      "src/gameplay/campaign/finale-outward-call.ts",
-    ]),
+    roots: c27aPortableCoreRoots,
     pattern: /\b(?:window|document|HTMLCanvasElement|CanvasRenderingContext2D)\b/u,
     message: "portable gameplay modules cannot reference browser or Canvas globals",
   }),
@@ -457,6 +449,12 @@ if (dependencyErrors("src/gameplay/runtime/tear-world-entity-construction.ts",
   'import type { GameRuntimeDependencies } from "../../app/game-runtime-dependencies";').length !== 1) {
   throw new Error("source architecture world-construction import-rule self-test failed");
 }
+if (dependencyErrors("src/gameplay/runtime/tear-world-legacy-entity-construction.ts",
+  'import type { GameRuntimeDependencies } from "../../app/game-runtime-dependencies";').length !== 1
+  || dependencyErrors("src/gameplay/runtime/tear-world-legacy-entity-construction.ts",
+    'const canvas: HTMLCanvasElement | null = null;').length !== 1) {
+  throw new Error("source architecture C27A portable-core rule self-test failed");
+}
 if (dependencyErrors("src/config/game-config.ts", "export { A11Y, CLOCK, CONFIG };").length !== 1) {
   throw new Error("source architecture per-world instance rule self-test failed");
 }
@@ -853,6 +851,12 @@ if (dependencyErrors("src/gameplay/runtime/tear-world-bootstrap.ts",
 if (dependencyErrors("src/gameplay/runtime/tear-world-entity-construction.ts",
   'const canvas: HTMLCanvasElement | null = null;').length !== 1) {
   throw new Error("source architecture world-construction browser-rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/runtime/tear-world-legacy-entity-construction.ts",
+  'import { createLiveWorldEntityFactory } from "../../app/live-world-entity-factory";').length !== 1
+  || dependencyErrors("src/gameplay/runtime/tear-world-legacy-entity-construction.ts",
+    'const canvas: HTMLCanvasElement | null = null;').length !== 1) {
+  throw new Error("source architecture portable legacy entity-construction rule self-test failed");
 }
 if (dependencyErrors("src/gameplay/runtime/tear-world-context.ts",
   'import type { GameRuntimeDependencies } from "../../app/game-runtime-dependencies";').length !== 1) {

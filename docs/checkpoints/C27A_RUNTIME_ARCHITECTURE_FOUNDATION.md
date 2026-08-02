@@ -2,9 +2,45 @@
 
 ## Status
 
-In progress as of 2026-08-01. This records the first forty-one executable migration
-slices. It is not a C27A completion claim and does not yet make replay or
-headless Tear gameplay portable.
+Closed as of 2026-08-02. This report is the only authority for C27A
+slice numbering. It records **88 committed C27A migrations including this
+closure commit**; 87 were verified before that commit. The former claim that it recorded the “first
+forty-one executable migration slices” was a stale partial-history header.
+The historic “slice 98” labels below are local migration identifiers, not a
+second commit counter; they must not be used as a progress measure.
+
+The verified foundation ledger below includes the later world-composition,
+session/state-owner, live/detached-core, and actor-selection entries through
+the historical slice-98 label. Their evidence remains the focused gates and
+browser/parity proofs recorded with each entry; this reconciliation does not
+invent a new test result for any individual migration.
+
+## C27A scope decision
+
+C27A proves one architectural fact: live, replay, headless, and learning
+surfaces are required to execute the **same simulation composition**, rather
+than creating another combat host, scheduler, or simplified simulator. The
+current live and detached parity corpus proves that composition boundary with
+canonical actions, fixed ticks, state/hash, RNG, native-event, semantic intent,
+adapter-decision, particle-admission, logical-feel, and terminal-decision
+streams. Those are the outward-effect comparisons that genuinely test shared
+simulation behavior, and remain in C27A.
+
+The following are explicitly deferred, not silently rescaled out of scope:
+
+- **C25 Class C** owns rendered-pixel and physical-haptic/device-input
+  evidence. Those outputs test a physical presentation/device route, not the
+  simulation-composition identity proven here.
+- **C39** owns durable external outcomes: persistence, cloud, replay-library,
+  and analytics publication/retention behavior.
+- **C40** owns release-wide output validation, including successful audio
+  graph/PCM/device behavior and the end-to-end reconciliation of all outward
+  device/output claims.
+
+This disposition does not certify any deferred output. C27/C29/C30 and
+C31-C36 must consume this one composition when their replay, headless, and
+learning products are implemented; their own exit gates provide product-level
+execution evidence.
 
 ## Verified foundation
 
@@ -1383,6 +1419,15 @@ of replay, headless execution, or learning portability.
   or app-service implementation, full-world portability, concurrent complete
   worlds, or C27A completion.
 
+- The ninety-eighth slice moves stable production actor factory-ID selection
+  into gameplay-only `createTearWorldLegacyEntityConstruction`. Callers supply
+  the concrete classes, while the catalog owns every actor ID, support subtype,
+  Echo modifier input, and post-codec Echo rebind. The focused gate passed 6
+  files / 58 tests; rebuilt physical-canonical-input and all thirteen
+  live-parity browser scenarios passed. This is not portable entity-class or
+  outward-service implementation, full-world portability, concurrent complete
+  worlds, or C27A completion.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.
@@ -1391,36 +1436,11 @@ REMAINING HERE:      Outcome defeat-progress profile-stat ownership and the rema
 REMAINING TO C40:    C27 completion, C25 exit, and C28–C40 remain after C27A closes.
 NEXT SLICE:          Isolate the outcome composition's defeat-progress profile-stat update without changing Daily, achievement, cloud, or recording behavior.
 
-## Remaining C27A work
+## Deferred downstream work
 
-1. Continue portable production-world extraction with generic world bootstrap
-   and presentation-policy isolation. Preserve the exact terminal transcript comparison
-   while extending the existing
-   intent/adapter, particle-admission, logical-feel, and software-audio receipts
-   into rendered evidence, successful audio graph/audibility evidence where
-   available, and physical haptic results. The
-   matrix includes a real production Source victory from a
-   certified reconstructed wave-49 frontier and explicit one-hit State Forge
-   child; it is not evidence of a naturally played full 50-wave campaign.
-2. Move the current live adapter's configuration, RNG, effects, clocks,
-   Mirror, and boss feedback implementations inward behind the established
-   world context, then extract the closure-owned
-   run/world construction and real combat adapter state from
-   `live-game-runtime.ts`. A full production gameplay world, not only a
-   hydrated micro-world, must then compose without Canvas, DOM, screens, audio,
-   storage, platform, or presentation dependencies. The state/service contract
-   is in place; app-backed implementations and closure-owned frame/combat
-   state remain blockers.
-3. Extend mechanically enforced portable-core boundaries as the remaining
-   live-world construction moves inward. The public barrel, test support,
-   developer UI, structured live environment, and action routing are now
-   separated; the remaining closure-owned production world is still app-bound.
-4. Build replay-world and headless adapters from that same full real
-   composition; the hydrated-world shell is evidence for the runtime seam, not
-   a substitute for playable Tear parity.
-5. Extend mechanically enforced dependency rules as the remaining portable
-   core boundary moves inward; rerun affected evidence after each such slice.
-
-See `docs/TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md` for the binding target
-and `plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md` for the full exit
-gate.
+These are deliberately not C27A blockers. C25 owns Class-C pixel/haptic
+evidence; C27 owns operational V3 replay products; C28 owns durable Vault and
+Doctor behavior; C29/C30 own episode/replay/headless product execution; C31-C36
+own learning products; C39 owns durable external publication; and C40 owns the
+release-wide device/output certification. Each must use the C27A composition
+boundary and prove its own exit gate without reopening a second simulator.

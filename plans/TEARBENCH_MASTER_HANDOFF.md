@@ -105,7 +105,7 @@ These figures do not mean newer work has no value. They mean most original atomi
 |---|---:|---|---|
 | P7 — Truthful Baseline | C21-C22 | Truth audit and runtime bridge | Passed |
 | P8 — Real Autonomous QA | C23-C26 | State Forge, scripted agent, physical input, regression discovery | C23, C24, C26 passed named gates; C25 exit open |
-| P9 — Operational Ghost 3 | C27-C30 + C27A | Recorder, shared architecture, Vault/Doctor, Theater, scalable episodes | C27 foundation active; C27A blocking/in progress |
+| P9 — Operational Ghost 3 | C27-C30 + C27A | Recorder, shared architecture, Vault/Doctor, Theater, scalable episodes | C27 foundation active; C27A closed |
 | P10 — Autonomous Learning | C31-C36 | Academy, policy runtime, imitation/RL, ladder, Foundry | Not complete |
 | P11 — Player/Cloud Product | C37-C39 | Coach/Studio UX, cloud/privacy, operations/preservation | Not complete |
 | P12 — Final Certification | C40 | Certified end-to-end release | Not started |
@@ -119,7 +119,9 @@ Named status:
 - **C25:** physical/black-box foundation verified; exit open.
 - **C26:** regression discovery passed `pnpm check:c26` on 2026-07-28.
 - **C27:** recorder/capsule foundation only; checkpoint open.
-- **C27A:** forty shared-world architecture slices in this tree; blocking and incomplete.
+- **C27A:** closed shared-composition correction; the checkpoint report records
+  88 committed C27A migrations including its closure commit. C27/C28-C40 retain
+  their own product and output exit gates.
 - **C28-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -197,14 +199,10 @@ Important files:
 
 ### Exact next slice
 
-Slice 97 makes detached portable-core construction explicit. The detached
-harness supplies its live-shaped state, entity, service, and cinema adapters
-directly to `createTearWorldComposition`, retaining the core-owned
-lifecycle/transient record without constructing an unused live music director.
-Its focused gate passed 7 files / 65 tests plus architecture; rebuilt
-physical-canonical-input and all thirteen live parity browser scenarios passed.
-This does not establish portable entity or app-service implementation, a
-portable full production world, concurrent complete worlds, or C27A completion.
+C27A is closed. Follow the route to **C28**: durable Ghost Vault, Doctor, and
+knowledge libraries. Start from C28's completion-plan boundary; do not reopen
+C27A for pixels, haptics, durable outcomes, or audio/device fidelity, which
+belong to C25, C39, and C40 respectively.
 
 All thirteen captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream: 5,732 ticks and 33 native facts, including the three natural-trace enemy defeats now published independently of Ghost 2 sampling. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome/reward/finale controllers, scheduler shape, event bus, and restored actor identity. The natural matrix route clears wave 1, selects a real offered draft card without advancing the fixed scheduler, and reaches a wave-2 spawn. A separate certified route reconstructs the wave-49 frontier, starts production wave 50, applies an explicit Source one-hit State Forge child, and executes real victory; live and detached match all seven finale intent batches and all 22 outward calls after their concrete adapters return, in exact order and with exact arguments. They also match six immutable ring/burst particle-admission receipts, eight logical feel receipts after restoration of the captured pre-finale transient, and the complete 42-entry terminal external-decision transcript (13 initial synchronization terminal decision/request, 22 finale-outward, and 7 cache/terminal). The refreshed browser route explicitly activates audio, then observes 12 executing plus 12 completed dispatch receipts: all seven mixes are logical-target-only and all cues are voice-cap-rejected, so no output is claimed. Slice 40 adds portable `tear-world-simulation-factories.ts` with no app/presentation/browser imports; the app renderer supplies real Canvas ports and detached supplies explicit no-op ports under architecture fences. Next: generic world bootstrap, then configuration isolation, which still blocks truly simultaneous full worlds. This evidence does not claim a naturally played 50-wave campaign, randomized particle parity, rendered-pixel parity, headless/full-world portability, configuration isolation, durable profile/local-storage survival, cloud/replay/analytics completion, successful PCM/audibility or audio graph/device parity, or device vibration.
 
@@ -345,9 +343,9 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      Slice 97 routes detached construction through the portable core without a live music adapter.
-PROVEN BY:           Focused 7 files / 65 tests plus architecture, rebuilt physical-canonical-input proof, and all thirteen live-parity browser scenarios passed. C27A remains blocking.
-REMAINING HERE:      Extract portable entity selection and app-backed services, plus remaining outcome, combat, and audio/device state. Finish C25 physical-input certification, V3 playback, and replay/headless use of the same full world. Those boundaries still prevent concurrent complete worlds and C27A remains blocking.
+DONE THIS STEP:      Slice 98 routes production actor factory-ID selection through a gameplay-only constructor catalog.
+PROVEN BY:           Focused 6 files / 58 tests plus architecture, rebuilt physical-canonical-input proof, and all thirteen live-parity browser scenarios passed. C27A remains blocking.
+REMAINING HERE:      Extract portable entity-class and app-backed service implementations, plus remaining outcome, combat, and audio/device state. Finish C25 physical-input certification, V3 playback, and replay/headless use of the same full world. Those boundaries still prevent concurrent complete worlds and C27A remains blocking.
 REMAINING TO C40:    C27 completion, C25 exit, and C28-C40 remain after C27A closes.
 NEXT SLICE:          Select the next bounded real production-world construction or combat closure. Do not claim durability/device parity or full live-world concurrency.
 

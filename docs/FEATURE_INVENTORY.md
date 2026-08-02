@@ -119,6 +119,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   through the portable world core directly, avoiding an unused live music
   director. It still uses narrow app-backed adapters and is not full-world
   portability.
+  Production actor factory-ID selection now lives in a gameplay-only catalog
+  supplied with concrete constructor ports; the app adapter only binds legacy
+  classes. This preserves Echo modifier rebinding but does not make entity
+  classes or their outward services portable.
   Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,

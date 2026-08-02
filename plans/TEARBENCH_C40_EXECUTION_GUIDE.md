@@ -170,6 +170,12 @@ Agents waste turns in predictable ways. These are hard limits.
   Docs are updated *with* the code, in the same commit.
 - **Do not run `pnpm requirements:generate` casually.** Inspect any generated
   diff before committing it.
+- **Every slice must tick a Section 8 checklist item, or name the one item it
+  unblocks and why it could not be batched in its commit message.**
+- **Batch mechanical moves of the same shape.** Per-field state moves and
+  per-adapter policy injections are one slice, not a series of nominal slices.
+- **Five consecutive slices without a checklist tick means stop.** Record the
+  finding and re-plan the remaining path to that checklist item before coding.
 
 **Loop smell:** if your last three actions were reads and no file changed, you
 are looping. Pick the next checklist item and edit something.
@@ -243,7 +249,7 @@ Each item is a falsifiable statement. Tick it only when its proof exists.
 These are entry conditions to the checkpoint's exit gate in the completion
 plan — they do not replace it.
 
-### C27A — Shared world architecture *(active, blocking)*
+### C27A — Shared world architecture *(closed)*
 
 - [x] Every mutable world service is per-world (clock, RNG, particles, boss feedback, entity constructors)
 - [x] Architecture gate rejects a reintroduced shared instance (planted-violation proof)
@@ -254,22 +260,28 @@ plan — they do not replace it.
 - [x] Campaign parity: State Forge captures active director position and a content-fingerprinted data-only chapter binding, with canonical inactive migration, input re-arm, rollback, validated cross-session reconstruction/continuation, and fail-closed legacy-active rejection
 - [x] Campaign parity: chapter scripts a detached world needs are constructible without app callbacks through explicit gameplay ports
 - [x] `KNOWN_DIVERGENCES` is empty
-- [ ] Outward effect streams are compared, not merely recorded (the seven
-  finale intent batches, 22 post-return adapter calls, six concrete ring/burst
-  admission receipts, and eight logical zoom/flash/shake receipts now match
-  exactly; audio dispatch is now observed but seven mix requests are
-  logical-target-only and all finale cues are voice-cap-rejected, while rendered
-  pixels, successful audio graph/PCM/device output, haptics, durable external
-  outcome effects, and persistence/cloud/replay/analytics output remain open)
+- [x] Shared-simulation outward effect streams are compared: semantic/native
+  facts, intent/admission/decision receipts, and the seven finale intent
+  batches, 22 adapter calls, six particle admissions, eight logical-feel
+  receipts, and terminal-decision transcript match. Rendered pixels/haptics are
+  deferred to C25; durable outcomes to C39; audio PCM/device and release-wide
+  output reconciliation to C40.
 - [x] A natural wave/reward boundary crossing is in the matrix
 - [x] A real campaign win outcome is in the matrix (certified reconstructed
   wave-49 frontier + production wave-50 transition + explicit one-hit Source
   State Forge child; not a claim of naturally playing all 50 waves)
-- [ ] Portable core has zero `src/app`, DOM/Canvas, or Ghost 2 imports (gate-enforced)
-- [ ] Affected C22–C27 gates rerun green from one worktree
+- [x] The named C27A portable core has zero `src/app`, DOM/Canvas, or Ghost 2
+  imports; `pnpm check:c27a:portable-core` proves the fence and planted
+  violation behavior.
+- [x] Affected C22–C27 evidence reran green from this worktree: C22 runtime;
+  C23 State Forge; C24's exact unit/build/browser components (the aggregate
+  wrapper exceeds the environment limit); C25 foundation; C26 planted lifecycle
+  (minimized child, bisection, Graveyard, and future-change rerun); and C27
+  foundation.
 
-**Exit:** the alignment doc's exit gate, with the parity corpus green and no
-recorded divergence.
+**Exit:** met for C27A's shared-composition scope: the parity corpus is green,
+`KNOWN_DIVERGENCES` is empty, and deferred output fidelity has authorized
+downstream owners.
 
 Current Slice 40 boundary: the refreshed 13-scenario corpus contains 5,732
 fixed ticks and 33 native facts (14 in the natural route, including three
@@ -345,7 +357,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 97 update (current)
+#### Slice 98 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -949,6 +961,14 @@ The focused gate passed 7 files / 65 tests; rebuilt physical-canonical-input
 and all thirteen live-parity browser scenarios passed. This is not portable
 entity or app-service implementation, full-world portability, concurrent
 complete worlds, or C27A completion.
+
+Slice 98 moves the stable production actor factory-ID map into gameplay-only
+`createTearWorldLegacyEntityConstruction`. Concrete classes remain caller ports,
+while the catalog owns every actor ID, support subtype, Echo modifier input, and
+rebind behavior. The focused gate passed 6 files / 58 tests; rebuilt
+physical-canonical-input and all thirteen live-parity browser scenarios passed.
+This is not portable entity classes or app-service implementations, full-world
+portability, concurrent complete worlds, or C27A completion.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

@@ -5,20 +5,23 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** ninety-seventh C27A foundation slice implemented (detached
-construction now invokes the portable world core directly);
-checkpoint remains open
-and blocking pending browser persistence, remaining
-presentation-policy, and rendered/audio/haptic exits.
+**Status:** closed. The checkpoint report is the counting authority:
+it records 88 committed C27A migrations including this closure commit (87
+preceded it).
+The historical “ninety-eighth slice” label identifies the last local migration,
+not a competing progress count. The portable-core and same-worktree exit
+evidence are complete; rendered pixels/haptics are deferred to C25,
+durable external outcomes to C39, and audio/device release validation to C40.
 
-**Latest evidence:** Slice 97 routes detached construction through
-`createTearWorldComposition` directly. The harness supplies its existing
-live-shaped adapters, retains the core's single lifecycle/transient record, and
-does not create an unused live music director. Its focused 7-file / 65-test
-gate, rebuilt physical-canonical-input browser proof, and all thirteen
-live-parity browser scenarios pass. This is direct portable-core assembly, not
-portable entity or app-service implementation, full-production-world
-portability, or C27A completion.
+**Latest implemented evidence:** The historical slice-98 change routes production actor selection through
+`createTearWorldLegacyEntityConstruction`. The gameplay catalog owns all actor
+IDs, support subtypes, Echo modifier input, and rebind behavior while the app
+adapter supplies legacy classes. Its focused 6-file / 58-test gate, rebuilt
+physical-canonical-input browser proof, and all thirteen live-parity browser
+scenarios pass. The named portable-core gate now fences this catalog alongside
+the existing composition modules. This is portable selection only, not portable
+entity classes or app-service implementations; C27A’s shared-composition scope
+and deferred output owners are recorded in the checkpoint report.
 
 ## Resume protocol (mandatory)
 

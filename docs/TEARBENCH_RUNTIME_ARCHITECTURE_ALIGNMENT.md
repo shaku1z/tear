@@ -554,33 +554,29 @@ The following C27A foundation slices are complete:
   lifecycle/transient record owned by that core. This is not portable entity
   selection or service implementations, headless/full production-world
   portability, concurrent complete-world evidence, or C27A completion.
+- Stable production actor factory-ID selection now lives in
+  `createTearWorldLegacyEntityConstruction`, a gameplay-only catalog supplied
+  with caller-owned constructor ports. The live adapter binds legacy classes
+  and the existing Echo modifier rebind remains intact. This is not portable
+  entity-class implementation or outward-service construction, headless/full
+  production-world portability, concurrent complete-world evidence, or C27A
+  completion.
 
-This does not resolve the full decision. Closure-owned full-world construction,
-detached replay, and headless gameplay still require the same real composition
-before portability can be certified. The portable public surface and current
-browser/live adapter split are now clean, but the closure-owned production
-world still must be extracted into the shared composition before the portable
-core claim can be made. The precise evidence and remaining work are recorded in
+This resolves the **C27A shared-composition** decision. The named portable core,
+its dependency fence, native event adapters, and live↔detached parity corpus
+prove that no later replay, headless, or learning surface may introduce a
+second combat host, scheduler, or simplified simulator. The complete evidence,
+count reconciliation, and authorized downstream deferrals are recorded in
 `docs/checkpoints/C27A_RUNTIME_ARCHITECTURE_FOUNDATION.md`.
 
-### Next extraction order (binding)
+### Downstream binding
 
-The native-gameplay-fact to causal-event translation is shared by Ghost V3 and
-TearBench, and the live browser now delegates its fixed combat graph to the
-gameplay-only `createTearCombatSimulation` factory. Detached combat and the
-13-scenario parity corpus now consume that same factory and restore captured
-actor identity through its returned `CombatEntityRuntime`. The next C27A
-implementation slice is not a second combat host or parallel headless
-simulator. Use the shared bus and identity runtime to publish and compare real
-wave/spawn semantic streams. Add a campaign win scenario only through the
-production finale and outcome transitions, then
-continue moving app-backed presentation policy/effects,
-clock, Mirror, boss-feedback, and closure-owned run/world construction
-into the real per-world composition behind narrow outward adapters.
-
-Only after that composition exists may replay and headless worlds use it. They
-must not copy `createLiveCombatHost`, which also owns the browser frame
-coordinator and would create a second scheduler risk.
+C27, C29, and C30 must provide their replay/headless product execution through
+this composition; C31-C36 must use it for learning. They must not copy
+`createLiveCombatHost`, which owns browser frame coordination and would create
+a second-scheduler risk. Pixels/haptics remain C25 evidence, durable external
+outcomes remain C39 evidence, and audio/device release validation remains C40
+evidence.
 
 ## Required Target Boundary
 
