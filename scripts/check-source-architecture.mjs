@@ -278,6 +278,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live HUD feedback must use the typed presentation-state owner",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /\b(?:let\s+(?:uiButtons|focus|listScroll)|const\s+hoverAnim)\b/u,
+    message: "live interface interaction state must use the typed presentation-state owner",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/app/live-style-host.ts"]),
     pattern: /\bd\.ACH\.check\(\);\s*d\.PROFILE\.save\(\)/u,
     message: "live style achievement persistence must use the composition-owned adapter",
@@ -651,6 +656,12 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/app/live-game-runtime.ts",
     "const hudFeedback = createLiveHudFeedbackState();").length !== 0) {
   throw new Error("source architecture live HUD feedback owner rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "let uiButtons = [];").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "const interfaceInteraction = createLiveInterfaceInteractionState();").length !== 0) {
+  throw new Error("source architecture live interface interaction owner rule self-test failed");
 }
 if (dependencyErrors("src/app/live-style-host.ts",
   "d.ACH.check(); d.PROFILE.save();").length !== 1

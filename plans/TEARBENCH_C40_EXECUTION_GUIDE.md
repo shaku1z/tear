@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 87 update (current)
+#### Slice 88 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -874,6 +874,13 @@ feedback, and source architecture rejects restoring any of the three closures.
 The focused gate passed 5 files / 14 tests; rebuilt campaign-victory browser
 proof and the full canonical C27A aggregate pass. This is not complete frame/UI
 ownership, full-world portability, or C27A completion.
+
+Slice 88 removes the live host's UI controls, focus, scroll, and hover-animation
+closures. `createLiveInterfaceInteractionState` owns that typed frame-
+presentation interaction state, and source architecture rejects restoring the
+closures. The focused action-routing gate passed 6 files / 13 tests; rebuilt
+campaign-victory browser proof and the full canonical C27A aggregate pass. This
+is not UI-timing ownership, full-world portability, or C27A completion.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

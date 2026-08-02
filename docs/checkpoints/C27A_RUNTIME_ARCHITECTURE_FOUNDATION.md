@@ -1297,6 +1297,13 @@ of replay, headless execution, or learning portability.
   complete frame/UI ownership, full-world portability, or concurrent-live-world
   evidence.
 
+- The eighty-eighth slice moves UI controls, focus, scroll, and hover animation
+  out of the live runtime closures into `createLiveInterfaceInteractionState`.
+  Source architecture rejects restoring those closures. The focused gate passed
+  6 files / 13 tests; rebuilt campaign-victory browser proof and the full
+  canonical C27A aggregate pass. This is UI interaction extraction only, not UI
+  timing, full-world portability, or concurrent-live-world evidence.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.
