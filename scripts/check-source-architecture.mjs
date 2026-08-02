@@ -233,6 +233,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "touch onboarding profile stats must use the composition-owned adapter",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /\blet\s+(?:lastGhost|lastVaultId|overInfo|selMode|selDiff|selWeapon|selBoss)\b/u,
+    message: "live world session values must use the explicit session-state owner",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/app/live-style-host.ts"]),
     pattern: /\bd\.ACH\.check\(\);\s*d\.PROFILE\.save\(\)/u,
     message: "live style achievement persistence must use the composition-owned adapter",
@@ -552,6 +557,12 @@ if (dependencyErrors("src/app/live-world-presentation-adapters.ts",
   || dependencyErrors("src/app/live-world-presentation-adapters.ts",
     'd.profileStatsPersistence.add("touchOnboarded", 1);').length !== 0) {
   throw new Error("source architecture composition-owned touch onboarding profile stats rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "let lastGhost = null;").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "const session = createLiveWorldSessionState();").length !== 0) {
+  throw new Error("source architecture live world session-state owner rule self-test failed");
 }
 if (dependencyErrors("src/app/live-style-host.ts",
   "d.ACH.check(); d.PROFILE.save();").length !== 1

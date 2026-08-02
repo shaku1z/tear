@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 78 update (current)
+#### Slice 79 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -807,6 +807,12 @@ proof passes. This is not durable-profile completion.
 Slice 78 routes touch-onboarding completion through the shared profile-stat
 port. The focused gate passed 4 files / 8 tests; rebuilt campaign-victory browser
 proof passes. This does not establish broader presentation or persistence completion.
+
+Slice 79 moves live setup selection, outcome, replay, vault, and victory-clock
+values into one explicit session-state owner. The portable world still receives
+only its existing session port. The focused gate passed 5 files / 11 tests, and
+rebuilt campaign-victory browser proof plus the full canonical C27A aggregate
+pass. This is not a portable full-production-world or durable-storage claim.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

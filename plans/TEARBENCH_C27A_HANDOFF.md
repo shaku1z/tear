@@ -5,10 +5,16 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** seventy-eighth C27A foundation slice implemented (touch onboarding
-uses the shared profile-stat port); checkpoint remains open
+**Status:** seventy-ninth C27A foundation slice implemented (live cross-world
+session state has an explicit owner); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
+
+**Latest evidence:** Slice 79 preserves setup selection, outcome, replay, vault,
+and victory-clock behavior through an explicit app-session owner. Its focused
+5-file / 11-test gate, rebuilt campaign-victory browser proof, and the full
+canonical C27A aggregate pass. This is not a durable-storage or
+full-production-world portability claim.
 
 ## Resume protocol (mandatory)
 

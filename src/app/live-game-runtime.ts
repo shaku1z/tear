@@ -17,12 +17,12 @@ import { RuntimeFrameDriver } from "./runtime-frame-driver";
 import { createLiveMusicObservation, projectLiveMusicRun } from "./live-music-observation-adapter";
 import { isMenuScreen, renderRegisteredScreen } from "./screen-registry";
 import { createLiveWorldComposition } from "./live-world-composition";
+import { createLiveWorldSessionState } from "./live-world-session-state";
 import { createLiveCombatWorldState } from "./live-combat-world-state";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameBlade, GameEnemy, GameFloater, GamePlayer, GameProjectile, GameRun, GameSlowZone, GameTemporaryWall } from "./game-runtime-state";
 import type { BossBeatState, BossIntroState } from "./live-game-host-state";
 import type { LegacyAppScreen, LegacyTransitionContext } from "./legacy-state-controller";
-import type { RunScreenState } from "./live-run-screen-adapters";
 import type { InteractiveUiButton } from "./ui-runtime-controller";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import { trainingRunRequiresPreflight } from "./live-training-host";
@@ -41,7 +41,7 @@ import { captureLiveStateForgeSnapshot } from "../tearbench/live-runtime-snapsho
 import { createDefaultStateCodecRegistry } from "../tearbench/state-codecs";
 import { ENTITY_KIND_REGISTRY } from "../tearbench/registries";
 import { stableVerificationHash } from "../replay/hash";
-type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnType<RunScreenState["outcome"]>; type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>; type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick: number): void; after?(tick: number): void } }; export function startLiveGame(dependencies: GameRuntimeDependencies, configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>): void {
+type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick: number): void; after?(tick: number): void } }; export function startLiveGame(dependencies: GameRuntimeDependencies, configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>): void {
   const { A11Y, APP, Attract, Backdrop, browserDocument, browserIndexedDb, browserNavigator, browserWindow, CG, CONFIG, Cloud, DIAG, FX, GAMEPLAY_EVENTS, GFX, GHOST, Input, OVERSCAN, PAD, SAFE, SFX, THEME, UI, VAULT, applyUpgrade, clamp, cosmeticRandom, lerp, weaponCapsuleIntersectsSegment } = dependencies;
 (function () {
   const browserRuntime = createLiveBrowserRuntime(dependencies);
@@ -148,6 +148,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnT
     else if (prior === "paused" && state === "playing") emitRunScreenTransition("resumed");
     return state;
   }
+  const session = createLiveWorldSessionState();
   let player: GamePlayer; let blade: GameBlade;
   let enemies: GameEnemy[] = []; let projectiles: GameProjectile[] = []; let floaters: GameFloater[] = [];
   // Time dilation, camera framing (the void run pulls world zoom OUT), banner
@@ -181,17 +182,15 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnT
       Input.stopSemanticRecording();
     }
   };
-  let lastGhost: ReplayPacket | null = null; let lastVaultId: string | null = null;
-  let overInfo: OutcomeInfo | null = null;
-  const currentOutcome = (): OutcomeInfo => {
-    if (overInfo === null) throw new Error("Outcome screen requires a completed run");
-    return overInfo;
+  const currentOutcome = () => {
+    const outcome = session.outcome();
+    if (outcome === null) throw new Error("Outcome screen requires a completed run");
+    return outcome;
   };
-  let selMode: RunMode = "endless", selDiff: RunDifficulty = "normal", selWeapon = "sword", selBoss = "shuffle";
   let uiButtons: UiButton[] = [];
   let focus = -1, lastUiState: LegacyAppScreen = state;
   let listScroll = 0;                   // scroll offset for scrollable screens
-  let uiT = 0, enterT = 0, lastUiDt = 1 / 60, eIn = 1, winT = 0;   // menu ambient clock, time-since-screen-opened, last frame dt, entrance ease, ending cinematic clock
+  let uiT = 0, enterT = 0, lastUiDt = 1 / 60, eIn = 1;   // menu ambient clock, time-since-screen-opened, last frame dt, entrance ease
   let uiZoom = 1;   // overlay zoom for small touch screens (draft/pause/gameover readability)
   let bossIntro: BossIntroState | null = null; let bossBeat: BossBeatState | null = null;
   const musicDirector = new MusicDirector(SFX);
@@ -203,13 +202,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnT
   // hot-path views in step; the world remains the owner.
   const { state: hostState, context: worldContext, entities: worldEntities, lifecycle: RUN_LIFECYCLE } = createLiveWorldComposition({
     dependencies, configuration,
-    session: {
-      selectedWeapon: () => selWeapon, setSelectedWeapon: (value) => { selWeapon = value; },
-      outcome: () => overInfo, setOutcome: (value) => { overInfo = value; },
-      lastRecording: () => lastGhost, setLastRecording: (value) => { lastGhost = value; },
-      lastVaultId: () => lastVaultId, setLastVaultId: (value) => { lastVaultId = value; },
-      winSeconds: () => winT, setWinSeconds: (value) => { winT = value; },
-    },
+    session,
     mirrors: {
       run: (value) => { run = value; }, player: (value) => { player = value; }, blade: (value) => { blade = value; },
       enemies: (value) => { enemies = value; }, projectiles: (value) => { projectiles = value; },
@@ -287,7 +280,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnT
     run: () => run, player: () => player, blade: () => blade, enemies: () => enemies,
     actorId: (enemy) => combatRuntime.id(enemy, "enemy"),
     setEnemies: (value) => { hostState.setEnemies(value); }, setProjectiles: (value) => { hostState.setProjectiles(value); },
-    selectedBoss: () => selBoss, worldServices: worldContext.services, applySettings,
+    selectedBoss: () => session.selectedBoss(), worldServices: worldContext.services, applySettings,
     prepareWorld: () => { if (CINEMA.active) CINEMA.cancel("new-run"); story.resetFinale(); hostState.setBossIntro(null); hostState.setBossBeat(null); },
     resetTransientWorld: () => { impact.hitStop = 0; impact.shake = 0; },
     finishWorldReset: () => { transient.resetFeel(); impact.slowMotion = 0;
@@ -303,8 +296,9 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnT
     beginWipe: () => { Wipe.begin(); }, wipeRemainingSeconds: () => Wipe.remainingSeconds,
     setBannerSeconds: (value) => { feel.bannerSeconds = value; }, openTier: openRewardTier, openDraft: openRewardDraft,
     resetRewards: () => { rewardRuntime.reset(); }, saveBest, getBest, awardCoins, economyTelemetry,
-    setLastRecording: (value) => { lastGhost = value; }, setLastVaultId: (value) => { lastVaultId = value; },
-    setOutcome: (value) => { overInfo = value; }, resetWinSeconds: () => { winT = 0; },
+    setLastRecording: (value) => { session.setLastRecording(value); },
+    setLastVaultId: (value) => { session.setLastVaultId(value); },
+    setOutcome: (value) => { session.setOutcome(value); }, resetWinSeconds: () => { session.setWinSeconds(0); },
     achievementTracking: () => achTracks(), achievementCheck: achCheck, achievementTracker: AT,
     emitMusicOutcome: (outcome) => { liveFrameRuntime.emitMusicEvent(outcome); },
     startRun: (mode, difficulty) => { startRunWithPreflight(mode, difficulty); },
@@ -524,7 +518,8 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnT
     autoPauseDisconnect: () => settings.autoPauseDisconnect, requestPointerLock: requestOwnedPointerLock,
     exitReplay: () => { replayAdapters.exit(); },
     advanceClocks: (dt, currentState) => {
-      uiT += dt; enterT += dt; lastUiDt = dt; if (currentState === "win") winT += dt; else winT = 0;
+      uiT += dt; enterT += dt; lastUiDt = dt;
+      session.setWinSeconds(currentState === "win" ? session.winSeconds() + dt : 0);
     },
     advanceContinue: (dt) => {
       if (state === "continue" && continueT > 0) { continueT -= dt; if (continueT <= 0) endRun(); }
@@ -623,10 +618,10 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnT
       replay: { dependencies, canvas: ctx, width: W, height: H, screenRectangle: screenRect, time: () => uiT, deltaSeconds: () => lastUiDt, fallbackPlayer: () => player, bossById, setScreen: (screen, context) => setState(screen, context), formatTime: fmtTime, document: browserDocument },
       library: { dependencies, canvas: ctx, height: H, time: () => uiT, enterSeconds: () => enterT, scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, clamp, ease: ez, formatTime: fmtTime, getBest },
       settings: { dependencies, document: browserDocument, window: browserWindow, canvas, width: W, overscan: () => OVERSCAN, screen: () => state, setScreen: (screen, context) => setState(screen, context), settingsController, settings, scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, clamp, installPrompt },
-      actions: { setScreen: (screen) => { setState(screen); }, resetScroll: () => { listScroll = 0; }, setSetupSelection: (kind, id) => { if (kind === "mode" && isRunModeSelection(id)) { selMode = id; if (trainingRunRequiresPreflight(id)) void trainingHost.ensureLoaded(); } else if (kind === "difficulty" && isRunDifficultySelection(id)) selDiff = id; else if (kind === "weapon") selWeapon = id; else if (kind === "boss") selBoss = id; }, startSelectedRun: () => { startRunWithPreflight(selMode, selDiff); }, startRun: (mode, difficulty) => { if (isRunModeSelection(mode) && isRunDifficultySelection(difficulty)) startRunWithPreflight(mode, difficulty); }, currentRun: () => run, resumeFinale: resumeSavedFinale, claimFinale: claimSavedFinale, requestPointer: requestLock, endRun, retryRun, lastReplay: () => lastGhost, campaignDifficulty: () => overInfo?.diff ?? "normal", resetSettings: () => { settingsController.reset(); }, signIn: () => { void Cloud.signIn(); }, signOut: () => { void Cloud.signOut(); }, pinReplay: (id, pinned) => VAULT.pin(id, pinned), deleteReplay: (id) => { VAULT.remove(id); }, dispatchPlayground: dispatchPlaygroundAction },
-      runState: { screen: () => state, setScreen: (screen) => { setState(screen); }, run: () => run, player: () => player, scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, continueSeconds: () => continueT, setContinueSeconds: (value) => { continueT = value; }, replayAvailable: () => lastGhost !== null, outcome: currentOutcome },
+      actions: { setScreen: (screen) => { setState(screen); }, resetScroll: () => { listScroll = 0; }, setSetupSelection: (kind, id) => { if (kind === "mode" && isRunModeSelection(id)) { session.setSelectedMode(id); if (trainingRunRequiresPreflight(id)) void trainingHost.ensureLoaded(); } else if (kind === "difficulty" && isRunDifficultySelection(id)) session.setSelectedDifficulty(id); else if (kind === "weapon") session.setSelectedWeapon(id); else if (kind === "boss") session.setSelectedBoss(id); }, startSelectedRun: () => { startRunWithPreflight(session.selectedMode(), session.selectedDifficulty()); }, startRun: (mode, difficulty) => { if (isRunModeSelection(mode) && isRunDifficultySelection(difficulty)) startRunWithPreflight(mode, difficulty); }, currentRun: () => run, resumeFinale: resumeSavedFinale, claimFinale: claimSavedFinale, requestPointer: requestLock, endRun, retryRun, lastReplay: () => session.lastRecording(), campaignDifficulty: () => session.outcome()?.diff ?? "normal", resetSettings: () => { settingsController.reset(); }, signIn: () => { void Cloud.signIn(); }, signOut: () => { void Cloud.signOut(); }, pinReplay: (id, pinned) => VAULT.pin(id, pinned), deleteReplay: (id) => { VAULT.remove(id); }, dispatchPlayground: dispatchPlaygroundAction },
+      runState: { screen: () => state, setScreen: (screen) => { setState(screen); }, run: () => run, player: () => player, scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, continueSeconds: () => continueT, setContinueSeconds: (value) => { continueT = value; }, replayAvailable: () => session.lastRecording() !== null, outcome: currentOutcome },
       runServices: { dependencies, reward: rewardRuntime, formatTime: fmtTime, clamp, trickColor, saveBest, awardCoins, cinema: CINEMA, clearFinale: () => { story.finale = null; }, terminateRun: (reason) => { abandonLiveRun(reason); }, addFloater, addShake, addFlash, requestPointer: requestLock },
-      menuState: { selection: () => ({ mode: selMode, difficulty: selDiff, weapon: selWeapon, boss: selBoss }), scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, time: () => uiT, shop: () => ({ displayedCoins: shopCoinShow, flash: shopFlash }), setShop: (value) => { shopCoinShow = value.displayedCoins; shopFlash = value.flash; } },
+      menuState: { selection: () => session.selection(), scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, time: () => uiT, shop: () => ({ displayedCoins: shopCoinShow, flash: shopFlash }), setShop: (value) => { shopCoinShow = value.displayedCoins; shopFlash = value.flash; } },
       menuServices: { dependencies, height: H, getBest, formatTime: fmtTime, clamp, checkAchievements: achCheck }, playground: { renderMenu: renderPgMenu, renderLab: renderPgLab },
     },
     frameState: { screen: () => state, previousScreen: () => lastUiState, setPreviousScreen: (value) => { lastUiState = value; }, uiZoom: () => uiZoom, setUiZoom: (value) => { uiZoom = value; Input.uiZoom = value; }, deltaSeconds: () => lastUiDt, enterSeconds: () => enterT, setEnterSeconds: (value) => { enterT = value; }, enterAmount: () => eIn, setEnterAmount: (value) => { eIn = value; }, scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, focus: () => focus, setFocus: (value) => { focus = value; }, controls: () => uiButtons, resetControls: () => { uiButtons = []; }, biomeMode, enemies: () => enemies, flash: () => feel.flash, bossBeat: () => bossBeat, bossIntroActive: () => !!bossIntro && bossIntro.delay <= 0, bannerSeconds: () => feel.bannerSeconds, rankPopup: () => ({ seconds: feel.rankPopupSeconds, text: feel.rankPopupText, multiplier: run.mult }), timeSeconds: () => uiT },
@@ -656,9 +651,9 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnT
       width: W, height: H, state: hostState, actorId: (enemy) => combatRuntime.id(enemy, "enemy"), platforms: () => stageRuntime.platforms,
       platformsForStage: (index) => dependencies.stagePlatforms(index, CONFIG),
       stage: () => ({ ...stageRuntime.current, index: stageRuntime.index }), lifecycle: () => RUN_LIFECYCLE.snapshot(), bossIntroActive: () => bossIntro !== null,
-      choiceIds: () => liveRewardChoiceIds(actionRouting), progression: () => ({ wallet: dependencies.META.coins(), lifetimeEarned: dependencies.META.data.lifetimeEarned, levels: Object.fromEntries(dependencies.SHOP.map((item) => [item.id, dependencies.META.level(item.id)])), shop: dependencies.SHOP.map((item) => ({ id: item.id, level: dependencies.META.level(item.id), maxLevel: item.maxLevel, cost: dependencies.META.cost(item), enabled: dependencies.META.canBuy(item) })) }), outcome: () => overInfo, screen: () => state,
-      setScreen: (screen) => { setState(screen); }, selectBoss: (bossId) => { selBoss = bossId; },
-      selectWeapon: (weaponId) => { selWeapon = weaponId; hostState.setSelectedWeapon(weaponId); },
+      choiceIds: () => liveRewardChoiceIds(actionRouting), progression: () => ({ wallet: dependencies.META.coins(), lifetimeEarned: dependencies.META.data.lifetimeEarned, levels: Object.fromEntries(dependencies.SHOP.map((item) => [item.id, dependencies.META.level(item.id)])), shop: dependencies.SHOP.map((item) => ({ id: item.id, level: dependencies.META.level(item.id), maxLevel: item.maxLevel, cost: dependencies.META.cost(item), enabled: dependencies.META.canBuy(item) })) }), outcome: () => session.outcome(), screen: () => state,
+      setScreen: (screen) => { setState(screen); }, selectBoss: (bossId) => { session.setSelectedBoss(bossId); },
+      selectWeapon: (weaponId) => { hostState.setSelectedWeapon(weaponId); },
       setRunSeed: (seed) => { tearBenchRunSeed = seed; }, startRun: (mode, difficulty) => { startRunImmediate(mode, difficulty); },
       stopFrameLoop: () => { frameDriver.stop(); }, startFrameLoop: () => { frameDriver.start(({ deltaSeconds }) => { combatHost.frameCoordinator.run(deltaSeconds); }); }, pushAction: (action) => { Input.semantic.push(action); },
       setSemanticInputAuthority: (active) => { semanticInputAuthority = active; },
@@ -683,11 +678,11 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnT
       startRun: (mode, difficulty) => { startRunWithPreflight(mode, difficulty); }, setScreen: setState, screen: () => state, setContinueSeconds: (value) => { continueT = value; },
       openDraft: openRewardDraft, openTier: openRewardTier, run: () => run, player: () => player, blade: () => blade, applyUpgrade, enterReplay: (record, from) => { replayAdapters.enter(record, from); },
       beginRename: () => { settingsRenameAdapters.beginRename(false, true); }, renameSnapshot: settingsRenameAdapters.renameSnapshot, selectSettingsTab: settingsRenameAdapters.selectSettingsTab,
-      replayStatus: replayAdapters.status, applyOptions: (options) => { Object.assign(settings, options); applySettings(); }, settings, selected: () => ({ mode: selMode, difficulty: selDiff, weapon: selWeapon, boss: selBoss }),
+      replayStatus: replayAdapters.status, applyOptions: (options) => { Object.assign(settings, options); applySettings(); }, settings, selected: () => session.selection(),
       tutorialSnapshot: () => ({ active: TUT.active, lessonIndex: TUT.idx, lessonCount: TUT.steps.length, lesson: TUT.step().t, description: TUT.step().d,
         arena: TUT.step().arena, arenaLabel: TUT.step().arenaLabel, teachingFocus: TUT.step().teachingFocus,
         completionDelay: TUT.doneT, endingTime: TUT.endT, counters: { ...TUT.n } }),
-      selectBoss: (boss) => { selBoss = boss; }, chapterBrief: () => Boolean(story.chapterFlow?.brief), finale: () => story.finale, rewardSnapshot: rewardRuntime.snapshot,
+      selectBoss: (boss) => { session.setSelectedBoss(boss); }, chapterBrief: () => Boolean(story.chapterFlow?.brief), finale: () => story.finale, rewardSnapshot: rewardRuntime.snapshot,
       authoritative: () => authoritativeStep.lastResult, startFinale: startAdventureFinale, severFinale: () => severFinaleAnchor(false),
     });
   });

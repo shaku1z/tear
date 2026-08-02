@@ -39,8 +39,12 @@ This is the migration checklist for the architectural redesign. A checked featur
   controller behavior and stable actor/session identity. The matrix now also
   crosses a naturally earned wave-1 clear, real draft selection, and wave-2
   spawn through the portable reward runtime. This is still not a C27A
-  completion claim: render-frame/outward-effect parity, real campaign victory,
-  and full production-world extraction remain.
+  completion claim: render-frame/outward-effect parity and full
+  production-world extraction remain.
+  The live app's cross-world setup selection, outcome, replay, vault, and
+  victory-clock values now have an explicit session owner; the portable world
+  sees only its narrow session port. Focused unit and rebuilt campaign-victory
+  evidence preserve that handoff, not durable storage or full-world portability.
   Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,

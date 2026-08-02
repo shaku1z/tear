@@ -1221,6 +1221,15 @@ of replay, headless execution, or learning portability.
   in the presentation adapter. The focused gate passed 4 files / 8 tests;
   rebuilt campaign-victory browser proof passes.
 
+- The seventy-ninth slice makes the live runtime's cross-world setup selection,
+  outcome, replay, vault, and victory-clock state an explicit app-session
+  owner. The portable world still receives only its existing session port;
+  source architecture rejects restoring those runtime closures. The focused
+  gate passed 5 files / 11 tests, and rebuilt campaign-victory browser proof
+  passes. The full canonical C27A aggregate also passes. This does not
+  establish a portable full production world, durable storage, or concurrent
+  complete live worlds.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

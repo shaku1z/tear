@@ -451,6 +451,12 @@ The following C27A foundation slices are complete:
 - Touch-onboarding completion now uses the shared profile-stat port from the
   live presentation adapter. Its focused gate and rebuilt campaign proof pass;
   this does not establish broader presentation or persistence completion.
+- The live runtime now creates one explicit session-state owner for setup
+  selection, outcome, replay, vault, and victory-clock values. Its world
+  composition receives the existing narrow session port, source architecture
+  rejects restoring those host closures, and focused plus rebuilt campaign
+  evidence pass. This is app-session ownership only: real production-world
+  construction, durable storage, and full-world portability remain open.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition
