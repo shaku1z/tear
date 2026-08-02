@@ -8,7 +8,6 @@ import type { createBlade } from "../gameplay/entities/blade";
 import type { createPlayer } from "../gameplay/entities/player";
 import type { STAGES as StageValues } from "../gameplay/stages";
 import type { ParticleSystem } from "./particles";
-import { cosmeticRandom } from "./cosmetic-random";
 
 type Stage = (typeof StageValues)[number];
 type PlayerConstructor = ReturnType<typeof createPlayer>;
@@ -27,6 +26,7 @@ export interface AttractVisualPolicy {
   readonly colors: Readonly<Record<FoeKind | "perfect", string>>;
   readonly overscan: Readonly<{ x: number }>;
   readonly lowGraphics: () => boolean;
+  readonly random: () => number;
   readonly theme: Readonly<{
     set(background: string): void;
     readonly dark: boolean;
@@ -80,7 +80,7 @@ interface AttractController {
 
 function createAttract(dependencies: AttractDependencies): AttractController {
   const { Backdrop, Blade, FX, Player, STAGES, clamp, policy } = dependencies;
-  const { blade, colors, lowGraphics, overscan, theme, view, world } = policy;
+  const { blade, colors, lowGraphics, overscan, random, theme, view, world } = policy;
 
 const Attract: AttractController = {
   get W() { return view.w; },
@@ -94,7 +94,7 @@ const Attract: AttractController = {
   _biomes() { const indices: number[] = []; for (let i = 0; i < STAGES.length; i++) if (!STAGES[i]?.dark) indices.push(i); return indices; },
 
   reset() {
-    this.t = 0; this.biomeList = this._biomes(); this.biomePtr = Math.floor(cosmeticRandom() * this.biomeList.length);
+    this.t = 0; this.biomeList = this._biomes(); this.biomePtr = Math.floor(random() * this.biomeList.length);
     this.biomeT = 0; this.fade = 0; this.dashCd = 0; this.jumpCd = 0; this.aimAng = -1; this.target = null;
     this.scroll = 0;   // the stage TRAVELS: a slow constant camera drift (parallax + platform conveyor)
     this.swingT = 0; this.swingDir = 1; this.swingBase = 0;   // deliberate slash rhythm
@@ -156,9 +156,9 @@ const Attract: AttractController = {
       if (adx > 52) { if (dx > 0) ai.right = true; else ai.left = true; }       // pursue, don't camp
       if (tg.flyer && dy < -70 && p.onGround && this.jumpCd <= 0) { ai._jump = true; this.jumpCd = 1.0; }   // hop to a flyer
       // dash to close a gap, or a periodic flourish dash so the hero keeps moving & blinking around
-      if (this.dashCd <= 0 && p.dashCharges > 0 && (adx > 240 || cosmeticRandom() < 0.016)) {
+      if (this.dashCd <= 0 && p.dashCharges > 0 && (adx > 240 || random() < 0.016)) {
         if (dx > 0) ai.right = true; else ai.left = true; if (tg.flyer && dy < -50) ai.up = true;
-        ai._dash = true; this.dashCd = 0.7 + cosmeticRandom() * 0.6;
+        ai._dash = true; this.dashCd = 0.7 + random() * 0.6;
       }
     }
     // dodge a near incoming shot (dash away)
@@ -178,7 +178,7 @@ const Attract: AttractController = {
       const baseAng = tg ? Math.atan2(tg.y - hand.y, tg.x - hand.x) : this.aimAng;
       const reach = tg ? Math.hypot(tg.x - hand.x, tg.y - hand.y) : 9999;
       this.swingT -= dt;
-      if (this.swingT <= -0.10 && reach < 150) { this.swingT = 0.16; this.swingDir = cosmeticRandom() < 0.5 ? -1 : 1; this.swingBase = baseAng; }
+      if (this.swingT <= -0.10 && reach < 150) { this.swingT = 0.16; this.swingDir = random() < 0.5 ? -1 : 1; this.swingBase = baseAng; }
       if (this.swingT > 0) {
         const k = 1 - this.swingT / 0.16;                                  // 0 -> 1 across the slash
         this.aimAng = this.swingBase - this.swingDir * 1.05 + this.swingDir * 2.1 * k;
@@ -214,17 +214,17 @@ const Attract: AttractController = {
   _kill(f, silent) { if (f.dead) return; f.dead = true; try { FX.death(f.x, f.y, 12, f.color); if (!silent) FX.burst(f.x, f.y, 0, -1, 6, colors.perfect); } catch { /* Visual feedback is best-effort. */ } },
 
   _spawn() {
-    const side = cosmeticRandom() < 0.5 ? -1 : 1;
+    const side = random() < 0.5 ? -1 : 1;
     const types: readonly FoeKind[] = ["charger", "ranged", "bomber", "armored", "flyer", "wraith"];
-    const kind = types[(cosmeticRandom() * types.length) | 0] ?? "charger";
+    const kind = types[(random() * types.length) | 0] ?? "charger";
     const flyer = kind === "flyer" || kind === "wraith";
-    this.foes.push({ x: this.W / 2 + side * (600 + cosmeticRandom() * 280), y: flyer ? this.GY - 200 - cosmeticRandom() * 150 : this.GY - 22,
+    this.foes.push({ x: this.W / 2 + side * (600 + random() * 280), y: flyer ? this.GY - 200 - random() * 150 : this.GY - 22,
       vx: 0, vy: 0, onGround: false, kind, color: colors[kind] || "#e23b3b", hw: 17, hh: 22, flyer,
-      fireCd: 1.1 + cosmeticRandom() * 2, spawnT: 0.4, flash: 0, dead: false,
+      fireCd: 1.1 + random() * 2, spawnT: 0.4, flash: 0, dead: false,
       // per-kind behaviour state (walk/windup/charge, orbit/swoop, kite band, blink)
-      st: "walk", stT: cosmeticRandom(), ph: cosmeticRandom() * 6.2832,
-      orbA: cosmeticRandom() * 6.2832, orbW: (0.6 + cosmeticRandom() * 0.5) * (cosmeticRandom() < 0.5 ? -1 : 1),
-      orbR: 220 + cosmeticRandom() * 120, band: 380 + cosmeticRandom() * 180, chVx: 0, swVx: 0, swVy: 0 });
+      st: "walk", stT: random(), ph: random() * 6.2832,
+      orbA: random() * 6.2832, orbW: (0.6 + random() * 0.5) * (random() < 0.5 ? -1 : 1),
+      orbR: 220 + random() * 120, band: 380 + random() * 180, chVx: 0, swVx: 0, swVy: 0 });
   },
   // per-kind AI so foes read like their in-game selves, not homing puppets:
   // chargers strut -> windup -> burst PAST the hero; armored trudge and pause; ranged
@@ -240,14 +240,14 @@ const Attract: AttractController = {
         f.x += (Math.sin(this.t * 0.7 + f.ph) * 40 + dir * 30) * dt;
         f.y += Math.cos(this.t * 0.9 + f.ph) * 26 * dt;
         if (f.stT <= 0) {   // ghostly BLINK across the field
-          f.stT = 2.5 + cosmeticRandom() * 2.5;
-          const nx = clamp(f.x + (cosmeticRandom() * 2 - 1) * 320, 80, this.W - 80);
+          f.stT = 2.5 + random() * 2.5;
+          const nx = clamp(f.x + (random() * 2 - 1) * 320, 80, this.W - 80);
           try { FX.ghost(f.x, f.y, f.hw, f.hh, f.color); FX.burst(nx, f.y, 0, -1, 5, f.color); } catch { /* Visual feedback is best-effort. */ }
           f.x = nx;
         }
       } else if (f.st === "swoop") {
         f.x += f.swVx * dt; f.y += f.swVy * dt; f.swVy += 900 * dt;   // dive arc, then break off
-        if (f.stT <= 0 || f.y > p.y - 10) { f.st = "orbit"; f.stT = 2 + cosmeticRandom() * 2.5; }
+        if (f.stT <= 0 || f.y > p.y - 10) { f.st = "orbit"; f.stT = 2 + random() * 2.5; }
       } else {
         f.orbA += dt * f.orbW;
         const tx = p.x + Math.cos(f.orbA) * f.orbR, ty = p.y - 170 + Math.sin(f.orbA * 1.7) * 46;
@@ -266,10 +266,10 @@ const Attract: AttractController = {
       if (f.onGround) {
         if (f.kind === "charger") {
           if (f.st === "windup") { f.x += Math.sin(this.t * 60) * 1.2; if (f.stT <= 0) { f.st = "charge"; f.stT = 0.5; f.chVx = dir * 640; } }
-          else if (f.st === "charge") { f.x += f.chVx * dt; if (f.stT <= 0) { f.st = "walk"; f.stT = 0.9 + cosmeticRandom(); } }
+          else if (f.st === "charge") { f.x += f.chVx * dt; if (f.stT <= 0) { f.st = "walk"; f.stT = 0.9 + random(); } }
           else { f.x += dir * 95 * dt; if (f.stT <= 0 && adx < 520 && adx > 130) { f.st = "windup"; f.stT = 0.35; } }
         } else if (f.kind === "armored") {
-          if (f.st === "pause") { if (f.stT <= 0) { f.st = "walk"; f.stT = 1.6 + cosmeticRandom(); } }
+          if (f.st === "pause") { if (f.stT <= 0) { f.st = "walk"; f.stT = 1.6 + random(); } }
           else { f.x += dir * 55 * dt; if (f.stT <= 0) { f.st = "pause"; f.stT = 0.7; } }
         } else if (f.kind === "ranged") {
           if (adx < f.band - 40) f.x -= dir * 120 * dt;        // too close: back off
@@ -288,7 +288,7 @@ const Attract: AttractController = {
     }
     f.x = clamp(f.x, 60, this.W - 60);
     f.fireCd -= dt;
-    if (f.fireCd <= 0 && (f.kind === "ranged" || f.kind === "flyer")) { f.fireCd = 1.7 + cosmeticRandom() * 1.6; this._fire(f, p); }
+    if (f.fireCd <= 0 && (f.kind === "ranged" || f.kind === "flyer")) { f.fireCd = 1.7 + random() * 1.6; this._fire(f, p); }
     if (f.kind === "bomber" && f.onGround && adx < 120) { this._explode(f.x, f.y); this._kill(f, true); }
   },
   _fire(f, p) { const dx = p.x - f.x, dy = p.y - f.y, m = Math.hypot(dx, dy) || 1; this.shots.push({ x: f.x, y: f.y - 6, vx: dx / m * 440, vy: dy / m * 440, r: 8, tint: f.color, hist: [], deflected: false, dead: false }); },

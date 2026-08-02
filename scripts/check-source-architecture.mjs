@@ -138,6 +138,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "the Attract renderer must receive visual configuration through an explicit composition policy",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/presentation/attract-runtime.ts"]),
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*cosmetic-random["']/u,
+    message: "the Attract renderer must receive cosmetic entropy through its visual policy",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -282,6 +287,8 @@ if (dependencyErrors("src/presentation/ui-contracts.ts",
 }
 if (dependencyErrors("src/presentation/attract-runtime.ts",
   'import type { CONFIG } from "../config/game-config";').length !== 1
+  || dependencyErrors("src/presentation/attract-runtime.ts",
+    'import { cosmeticRandom } from "./cosmetic-random";').length !== 1
   || dependencyErrors("src/presentation/attract-runtime.ts",
     'export interface AttractVisualPolicy {}').length !== 0) {
   throw new Error("source architecture Attract visual policy rule self-test failed");

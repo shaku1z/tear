@@ -28,10 +28,15 @@ class BladeStub {
   draw(): void { void 0; }
 }
 
-function policy(width: number, height: number, prefix: string): AttractVisualPolicy {
+function policy(
+  width: number,
+  height: number,
+  prefix: string,
+  random: () => number = () => 0.5,
+): AttractVisualPolicy {
   return {
     view: { w: width, h: height }, world: { gravity: 1000, groundY: height - 20 },
-    blade: { aimRadius: 80, minHitSpeed: 900 }, overscan: { x: 9 }, lowGraphics: () => false,
+    blade: { aimRadius: 80, minHitSpeed: 900 }, overscan: { x: 9 }, lowGraphics: () => false, random,
     colors: {
       charger: `${prefix}-charger`, ranged: `${prefix}-ranged`, bomber: `${prefix}-bomber`,
       armored: `${prefix}-armored`, flyer: `${prefix}-flyer`, wraith: `${prefix}-wraith`, perfect: `${prefix}-perfect`,
@@ -76,5 +81,26 @@ describe("attract visual policy", () => {
     expect(second.foes.every((foe) => foe.color.startsWith("second-"))).toBe(true);
     expect(firstEffects).toContainEqual(["explode", "10", "20", "first-bomber", "1.3"]);
     expect(secondEffects).toContainEqual(["explode", "10", "20", "second-bomber", "1.3"]);
+  });
+
+  it("uses the visual policy's local cosmetic entropy", () => {
+    let firstCalls = 0;
+    let secondCalls = 0;
+    const first = createAttract(dependencies(policy(400, 300, "first", () => {
+      firstCalls += 1;
+      return 0.1;
+    }), []));
+    const second = createAttract(dependencies(policy(400, 300, "second", () => {
+      secondCalls += 1;
+      return 0.9;
+    }), []));
+
+    first.reset();
+    second.reset();
+
+    expect(firstCalls).toBeGreaterThan(1);
+    expect(secondCalls).toBeGreaterThan(1);
+    expect(first.foes.every((foe) => foe.kind === "charger")).toBe(true);
+    expect(second.foes.every((foe) => foe.kind === "wraith")).toBe(true);
   });
 });

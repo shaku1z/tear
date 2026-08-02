@@ -880,6 +880,21 @@ of replay, headless execution, or learning portability.
   completion remain open. The next presentation boundary injects Attract's
   cosmetic entropy.
 
+- The fiftieth slice moves Attract's cosmetic entropy through the existing
+  `AttractVisualPolicy`. Composition provides the existing cosmetic generator;
+  the deferred renderer no longer imports the singleton. Two direct
+  controllers with different injected entropy produce their own initial foe
+  populations, and the architecture gate rejects a restored singleton import.
+  The focused slice gate, built navigation/progression/playground/terminal/
+  cinematic-preference journeys, fresh C27A foundation, campaign-victory, and
+  aggregate C27A gates pass.
+
+  This is cosmetic-dependency ownership only, not deterministic visual-sequence
+  or pixel parity, full audio/input/persistence isolation, independent full
+  applications, or C27A completion. The next boundary is the module-global
+  first-gesture audio facade; it must become an explicit composition-owned
+  adapter without creating a second browser audio context.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap

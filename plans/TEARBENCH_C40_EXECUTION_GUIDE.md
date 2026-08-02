@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 49 update (current)
+#### Slice 50 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -479,6 +479,20 @@ journeys, fresh foundation, and campaign-victory gates passed.
 This proves dependency ownership, not pixel parity, complete presentation
 isolation, concurrent full live worlds, or C27A completion. Next, inject
 Attract's module-global cosmetic entropy through its explicit visual policy.
+
+Slice 50 supplies that entropy policy. `AttractVisualPolicy.random` is supplied
+by composition with the existing cosmetic generator, and `attract-runtime` no
+longer imports the singleton. Direct two-controller evidence proves that
+separate injected streams produce separate initial foe populations; source
+architecture rejects a restored singleton import. `pnpm check:c27a:slice50`
+passed 8 focused files / 25 tests plus architecture; built journeys, fresh
+foundation, campaign-victory, and the aggregate `pnpm check:c27a` gate passed.
+
+This is cosmetic dependency ownership, not deterministic visual-sequence or
+pixel parity, complete audio/input/persistence isolation, concurrent full live
+worlds, or C27A completion. Next, make the module-global first-gesture audio
+facade an explicit composition-owned adapter while retaining one browser audio
+context and the existing dispatch-receipt behavior.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

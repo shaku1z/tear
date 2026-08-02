@@ -115,7 +115,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const { Mirror, MirrorHost, ReflectionEnemy } = mirrorTypes;
   const Attract = createAttract({ Backdrop, Blade, FX, Player, STAGES, clamp, policy: {
     view: worldConfig.view, world: worldConfig.world, blade: worldConfig.blade,
-    colors: worldConfig.colors, overscan: OVERSCAN, lowGraphics: () => GFX.low, theme: THEME,
+    colors: worldConfig.colors, overscan: OVERSCAN, lowGraphics: () => GFX.low, random: cosmeticRandom, theme: THEME,
   } });
   const platform = createLegacyPlatformCompatibility({
     target,

@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** forty-ninth C27A foundation slice implemented (exact legacy enemy
-renderer policy); checkpoint remains open
+**Status:** fiftieth C27A foundation slice implemented (Attract cosmetic-entropy
+policy); checkpoint remains open
 and blocking pending generic world bootstrap, presentation-policy isolation,
 and rendered/audio/haptic exits.
 
@@ -452,7 +452,7 @@ All of the following were run from this worktree after the parity-passing slice:
 
 ## Exact next C27A boundary
 
-**Slice 49 supersedes the earlier configuration-isolation wording below.**
+**Slice 50 supersedes the earlier configuration-isolation wording below.**
 `TearWorldConfiguration` now owns one stable mutable config record per
 constructed simulation world, created before constructors capture tuning. It
 validates snapshots before reconciling root/nested references in place; State
@@ -517,6 +517,15 @@ caches and transient lights are local to the controller. This is not full
   source architecture gate rejects the broad type. This does not prove pixel
   parity or eliminate Attract's existing module-global cosmetic entropy.
 
+  Slice 50 makes that entropy an explicit `AttractVisualPolicy.random` port.
+  Composition supplies the existing cosmetic generator, so the deferred
+  renderer no longer imports its singleton. Direct two-controller evidence
+  exercises distinct injected streams, and the architecture gate rejects a
+  restored singleton import. This does not prove a deterministic visual
+  sequence, pixel parity, or full application concurrency. The next boundary
+  is the module-global first-gesture audio facade, which must become a
+  composition-owned adapter while preserving the one browser audio context.
+
 All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
@@ -540,8 +549,9 @@ Slice 41 adds simulation tuning isolation; Slice 42 injects particle policy;
   renderer timing per composition. Slice 46 owns Canvas UI policy per
   composition. Slice 47 owns menu Attract visual policy per composition. Entity
   rendering now has narrow policies for Blade, Mirror, and Projectile; legacy
-  enemy rendering now has its exact policy. Attract entropy and remaining
-  presentation-policy isolation still precede true simultaneous complete worlds.
+  enemy rendering has its exact policy; and Attract entropy is composition
+  supplied. The module-global audio facade and remaining adapter isolation still
+  precede true simultaneous complete worlds.
 Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
 from the harness — never a tolerance to widen, a scenario to shorten, or a
@@ -560,13 +570,14 @@ composition with parity evidence.
 
 ## Working-tree safety
 
-- Slice 49 is the next intentional commit on
+- Slice 50 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
-  files / 24 tests plus source architecture; built journeys passed. Fresh
+  files / 25 tests plus source architecture; built journeys passed. Fresh
   foundation passed 36 files / 130 tests, a fresh 13-scenario trace, and 40
   detached comparisons, while campaign victory passed 10 files / 36 tests and
-  1,176 transitions. The next boundary is Attract's global cosmetic entropy,
-  still not a second runtime.
+  1,176 transitions. The full `pnpm check:c27a` aggregate passed. The next
+  boundary is the module-global first-gesture audio facade, still not a second
+  runtime.
 - Slice 48 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
   files / 23 tests plus source architecture; built journeys and six responsive

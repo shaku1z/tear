@@ -312,6 +312,13 @@ The first thirty-four executable C27A slices are complete:
   pixel parity or isolate the remaining Attract entropy, input, audio, or
   persistence adapters, so complete live applications remain not
   concurrent-world safe.
+- Attract's cosmetic entropy is now an explicit `AttractVisualPolicy` port.
+  Composition supplies the existing cosmetic generator; the deferred menu
+  renderer has no singleton import. Direct two-controller evidence exercises
+  distinct injected streams, and architecture blocks that import from
+  returning. This preserves current menu behavior, but does not prove a
+  deterministic visual sequence or pixel parity, and it leaves the
+  module-global audio facade plus input and persistence adapters app-bound.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition
