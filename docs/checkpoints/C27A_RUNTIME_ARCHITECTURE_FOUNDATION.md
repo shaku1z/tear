@@ -1127,6 +1127,14 @@ of replay, headless execution, or learning portability.
   composition's defeat-progress profile-stat update without changing its Daily,
   achievement, cloud, or recording behavior.
 
+### Three-slice pause — slices 66–68
+
+DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.
+PROVEN BY:           The three focused C27A gates and rebuilt campaign-victory browser proofs passed; `pnpm test` passed 258 files / 1,049 tests.
+REMAINING HERE:      Outcome defeat-progress profile-stat ownership and the remaining app-bound persistence/world construction still block C27A.
+REMAINING TO C40:    C27 completion, C25 exit, and C28–C40 remain after C27A closes.
+NEXT SLICE:          Isolate the outcome composition's defeat-progress profile-stat update without changing Daily, achievement, cloud, or recording behavior.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap
