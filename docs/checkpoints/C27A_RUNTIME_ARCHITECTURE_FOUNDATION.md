@@ -1230,6 +1230,14 @@ of replay, headless execution, or learning portability.
   establish a portable full production world, durable storage, or concurrent
   complete live worlds.
 
+- The eightieth slice removes the live host's mirrors for floaters, slow zones,
+  and temporary walls. State Forge and presentation now read those collections
+  directly from world state, and source architecture rejects restoring the
+  local closures. The focused gate passed 5 files / 14 tests; rebuilt
+  campaign-victory browser proof and the full canonical C27A aggregate pass.
+  This is still incremental production-world extraction, not portable full-world
+  or concurrent-live-world evidence.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

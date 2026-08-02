@@ -457,6 +457,11 @@ The following C27A foundation slices are complete:
   rejects restoring those host closures, and focused plus rebuilt campaign
   evidence pass. This is app-session ownership only: real production-world
   construction, durable storage, and full-world portability remain open.
+- Floaters, slow zones, and temporary walls are now read directly from the
+  world state by the live State Forge and presentation adapters. Source
+  architecture rejects restoring their host mirrors, and focused plus rebuilt
+  campaign evidence pass. The remaining actor, frame, and combat closure state
+  still prevents a portable full production-world claim.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

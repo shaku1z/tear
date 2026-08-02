@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 79 update (current)
+#### Slice 80 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -813,6 +813,13 @@ values into one explicit session-state owner. The portable world still receives
 only its existing session port. The focused gate passed 5 files / 11 tests, and
 rebuilt campaign-victory browser proof plus the full canonical C27A aggregate
 pass. This is not a portable full-production-world or durable-storage claim.
+
+Slice 80 removes the live host's floaters, slow-zones, and temporary-wall
+mirrors. State Forge and presentation read those collections directly from
+world state. The focused gate passed 5 files / 14 tests, and rebuilt
+campaign-victory browser proof plus the full canonical C27A aggregate pass.
+This is still incremental production-world extraction, not full-world
+portability.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

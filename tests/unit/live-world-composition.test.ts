@@ -100,4 +100,19 @@ describe("live world composition", () => {
     expect(first.lifecycle).not.toBe(second.lifecycle);
     expect(first.context.cinema).not.toBe(second.context.cinema);
   });
+
+  it("keeps transient combat collections in world state", () => {
+    const { dependencies } = createWorldDependencies();
+    const world = createLiveWorldComposition({
+      dependencies, session: createSession(), configuration: createConfiguration(),
+    });
+
+    world.state.setFloaters([{ id: "floater" }] as never);
+    world.state.setSlowZones([{ id: "slow-zone" }] as never);
+    world.state.setTemporaryWalls([{ id: "wall" }] as never);
+
+    expect(world.state.floaters()).toEqual([{ id: "floater" }]);
+    expect(world.state.slowZones()).toEqual([{ id: "slow-zone" }]);
+    expect(world.state.temporaryWalls()).toEqual([{ id: "wall" }]);
+  });
 });

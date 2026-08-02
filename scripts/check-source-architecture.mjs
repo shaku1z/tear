@@ -238,6 +238,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live world session values must use the explicit session-state owner",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /\blet\s+(?:floaters|slowZones|tempWalls)\b/u,
+    message: "live transient combat collections must stay in world state",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/app/live-style-host.ts"]),
     pattern: /\bd\.ACH\.check\(\);\s*d\.PROFILE\.save\(\)/u,
     message: "live style achievement persistence must use the composition-owned adapter",
@@ -563,6 +568,12 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/app/live-game-runtime.ts",
     "const session = createLiveWorldSessionState();").length !== 0) {
   throw new Error("source architecture live world session-state owner rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "let floaters = [];").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "const floaters = hostState.floaters();").length !== 0) {
+  throw new Error("source architecture live transient collection owner rule self-test failed");
 }
 if (dependencyErrors("src/app/live-style-host.ts",
   "d.ACH.check(); d.PROFILE.save();").length !== 1

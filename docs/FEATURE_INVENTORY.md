@@ -45,6 +45,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   victory-clock values now have an explicit session owner; the portable world
   sees only its narrow session port. Focused unit and rebuilt campaign-victory
   evidence preserve that handoff, not durable storage or full-world portability.
+  Floaters, slow zones, and temporary walls are also now consumed directly from
+  world state by State Forge and presentation. This preserves the existing live
+  path through focused and rebuilt campaign evidence, but leaves the full
+  production world app-bound.
   Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,
