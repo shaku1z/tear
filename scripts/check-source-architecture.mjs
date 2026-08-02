@@ -218,6 +218,16 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live cinematic persistence must receive storage through the composition dependency port",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-world-presentation-adapters.ts"]),
+    pattern: /\bd\.PROFILE\.data\.seen\s*\[/u,
+    message: "achievement-toast seen markers must use the composition-owned persistence adapter",
+  }),
+  Object.freeze({
+    roots: Object.freeze(["src/app/live-world-presentation-adapters.ts"]),
+    pattern: /\bd\.PROFILE\.save\(\)/u,
+    message: "achievement-toast profile saves must use the composition-owned persistence adapter",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -463,6 +473,18 @@ if (dependencyErrors("src/app/live-cinematic-host.ts",
   || dependencyErrors("src/app/live-cinematic-host.ts",
     'dependencies.browserStorage.setItem("tear.cinematic.seen", "1");').length !== 0) {
   throw new Error("source architecture composition-owned cinematic persistence rule self-test failed");
+}
+if (dependencyErrors("src/app/live-world-presentation-adapters.ts",
+  "d.PROFILE.data.seen[id] = true;").length !== 1
+  || dependencyErrors("src/app/live-world-presentation-adapters.ts",
+    "d.achievementToastPersistence.markSeen(id);").length !== 0) {
+  throw new Error("source architecture composition-owned achievement seen-marker rule self-test failed");
+}
+if (dependencyErrors("src/app/live-world-presentation-adapters.ts",
+  "d.PROFILE.save();").length !== 1
+  || dependencyErrors("src/app/live-world-presentation-adapters.ts",
+    "d.achievementToastPersistence.save();").length !== 0) {
+  throw new Error("source architecture composition-owned achievement save rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",

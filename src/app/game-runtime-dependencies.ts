@@ -33,6 +33,7 @@ import type { createLegacyReplayCompatibility } from "../replay/legacy-compat";
 import type { RunRandomService, RunRandomStreams } from "../simulation/run-random";
 import type { PerformanceMonitor } from "../diagnostics/performance-monitor";
 import type { LegacyAppStateController } from "./legacy-state-controller";
+import type { AchievementToastPersistence } from "./live-achievement-toast-persistence";
 
 type EnemyTypes = ReturnType<typeof createEnemyTypes>;
 type MirrorTypes = ReturnType<typeof createMirrorTypes>;
@@ -43,6 +44,7 @@ type ReplayCompatibility = ReturnType<typeof createLegacyReplayCompatibility>;
 /** Inferred composition contract shared by the strict runtime host and platform composition root. */
 export interface GameRuntimeDependencies {
   readonly A11Y: typeof A11Y; readonly ACH: ReturnType<typeof createAchievements>;
+  readonly achievementToastPersistence: AchievementToastPersistence;
   readonly AFFIXES: typeof Affixes.AFFIXES; readonly APP: LegacyAppStateController;
   readonly Aldric: EnemyTypes["Aldric"]; readonly Armored: EnemyTypes["Armored"];
   readonly Attract: ReturnType<typeof createAttract>; readonly BOSSFX: EnemyTypes["BOSSFX"];

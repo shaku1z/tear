@@ -398,6 +398,10 @@ The following C27A foundation slices are complete:
   narrow composition port; its host-level and rebuilt campaign evidence pass.
   The next persistence boundary is the achievement-toast seen-marker profile
   mutation, which likewise must not imply durable-profile completion.
+- Achievement-toast seen markers and their save now cross a typed live adapter
+  created at composition. Its focused adapter/controller evidence and rebuilt
+  campaign proof pass. The next persistence boundary is live-style achievement
+  checking and its profile save, again without a durable-profile claim.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

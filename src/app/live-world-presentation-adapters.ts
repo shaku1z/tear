@@ -18,7 +18,7 @@ import { tutorialInputPrompt } from "../presentation/world/tutorial-input-prompt
 
 type Dependencies = Pick<GameRuntimeDependencies,
   "A11Y" | "ACH" | "Backdrop" | "CLOCK" | "CONFIG" | "FX" | "GFX" | "Input" | "PAD" |
-  "PROFILE" | "SAFE" | "STAGES" | "THEME" | "UI" | "UPGRADES" | "cosmeticRandom" |
+  "PROFILE" | "SAFE" | "STAGES" | "THEME" | "UI" | "UPGRADES" | "achievementToastPersistence" | "cosmeticRandom" |
   "drawBossTransformationWorld">;
 type Stage = ReturnType<GameRuntimeDependencies["stageAt"]>;
 type Platforms = ArenaPlatform[];
@@ -208,7 +208,7 @@ export function createLiveWorldPresentationAdapters(
     drawAchievementToast(deltaSeconds: number): void {
       const snapshot = services.achievementToast.step(deltaSeconds, { pending: d.ACH.pending, rarities: d.ACH.RARITY,
         commonRarity: d.ACH.RARITY.common, categories: d.ACH.CATS,
-        markSeen: (id) => { d.PROFILE.data.seen[id] = true; }, save: () => { d.PROFILE.save(); },
+        markSeen: d.achievementToastPersistence.markSeen, save: d.achievementToastPersistence.save,
         shardsFor: (achievement) => { const source = d.ACH.byId(achievement.id); return source ? d.ACH.shardsFor(source) : 0; },
         coinsFor: (achievement) => { const source = d.ACH.byId(achievement.id); return source ? d.ACH.coinsFor(source) : 0; } });
       if (snapshot) world.achievementToast(snapshot);

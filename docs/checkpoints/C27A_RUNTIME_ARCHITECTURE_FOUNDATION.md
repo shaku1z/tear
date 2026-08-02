@@ -1079,6 +1079,18 @@ of replay, headless execution, or learning portability.
   completion evidence. The next boundary isolates achievement-toast seen-marker
   profile mutation and save behavior.
 
+- The sixty-fifth slice isolates that achievement-toast profile mutation and
+  save behavior in a typed adapter created by composition. Source architecture
+  rejects restoring the direct profile seen-marker and save calls in world
+  presentation. The focused gate passed 5 files / 9 tests, including the
+  adapter and presentation-controller contracts; rebuilt campaign-victory
+  browser proof passes.
+
+  This is one profile-adapter handoff only, not durable profile state,
+  migration, quota, crash recovery, cross-device sync, concurrent-world
+  behavior, or C27A completion evidence. The next boundary isolates live-style
+  achievement checking and its profile save.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap
