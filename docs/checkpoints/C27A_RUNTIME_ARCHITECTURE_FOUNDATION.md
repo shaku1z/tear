@@ -1173,6 +1173,17 @@ of replay, headless execution, or learning portability.
   behavior, or C27A completion evidence. The next boundary must isolate one
   remaining named profile operation without changing its caller behavior.
 
+- The seventy-third slice routes the training-host tutorial profile-stat port
+  through that shared composition-owned adapter. Source architecture rejects
+  direct profile-stat access in the host. The focused gate passed 6 files / 11
+  tests, including the host-level tutorial-port binding; rebuilt
+  campaign-victory browser proof passes.
+
+  This is one training-host profile-stat handoff only, not durable profile
+  state, migration, quota, crash recovery, cross-device sync, concurrent-world
+  behavior, or C27A completion evidence. The next boundary isolates the
+  campaign-training biome-record operation without changing its behavior.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

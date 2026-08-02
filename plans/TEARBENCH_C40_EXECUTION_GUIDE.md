@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 72 update (current)
+#### Slice 73 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -763,6 +763,16 @@ This is one live-style profile-stat handoff only, not durable profile state,
 migration, quota, crash recovery, cross-device sync, concurrent-complete-world,
 or C27A completion evidence. Next, isolate one remaining named profile operation
 without changing its caller behavior.
+
+Slice 73 routes the training-host tutorial profile-stat port through that shared
+composition-owned adapter. Source architecture rejects direct profile-stat
+access in the host. The focused gate passed 6 files / 11 tests, including the
+host-level tutorial-port binding; rebuilt campaign-victory browser proof passes.
+
+This is one training-host profile-stat handoff only, not durable profile state,
+migration, quota, crash recovery, cross-device sync, concurrent-complete-world,
+or C27A completion evidence. Next, isolate the campaign-training biome-record
+operation without changing its behavior.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

@@ -92,7 +92,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     beginPractice: context.startPractice,
     terminateRun: (reason) => { context.lifecycle.terminate(reason); },
     navigate: (screen) => { context.navigate(screen); }, releasePointer: context.releasePointer,
-    addProfileStat: (stat, amount) => { d.PROFILE.addStat(stat, amount); },
+    addProfileStat: d.profileStatsPersistence.add,
     checkAchievements: () => { d.ACH.check(); }, drawGhost: context.drawGhost,
   });
 

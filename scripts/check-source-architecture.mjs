@@ -262,9 +262,10 @@ const forbiddenDependencyRules = Object.freeze([
       "src/app/live-session-services-composition.ts",
       "src/app/live-wave-composition.ts",
       "src/app/live-style-host.ts",
+      "src/app/live-training-host-runtime.ts",
     ]),
     pattern: /\bd\.PROFILE\.(?:addStat|maxStat)\(/u,
-    message: "generic session, wave, and live-style profile stats must use the composition-owned adapter",
+    message: "generic session, wave, live-style, and training profile stats must use the composition-owned adapter",
   }),
   Object.freeze({
     roots: Object.freeze([
@@ -572,6 +573,12 @@ if (dependencyErrors("src/app/live-style-host.ts",
   || dependencyErrors("src/app/live-style-host.ts",
     "d.profileStatsPersistence.add(\"tricks\", 1);").length !== 0) {
   throw new Error("source architecture composition-owned live-style profile stats rule self-test failed");
+}
+if (dependencyErrors("src/app/live-training-host-runtime.ts",
+  'd.PROFILE.addStat("tutorials", 1);').length !== 1
+  || dependencyErrors("src/app/live-training-host-runtime.ts",
+    "d.profileStatsPersistence.add(\"tutorials\", 1);").length !== 0) {
+  throw new Error("source architecture composition-owned training profile stats rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",
