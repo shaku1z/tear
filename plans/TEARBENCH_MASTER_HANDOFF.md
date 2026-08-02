@@ -126,8 +126,12 @@ Named status:
   the browser Ghost Vault through a typed application controller and the normal
   Profile → Vault route. The stored-capsule browser journey passes. A second
   slice now applies retention, rebuilds indexes, verifies integrity, and writes
-  a durable maintenance receipt against actual IndexedDB capsules; Doctor
-  repair, a knowledge-library consumer, and the full Vault exit work remain.
+  a durable maintenance receipt against actual IndexedDB capsules. A third
+  slice corrupts a persisted browser chunk and proves the normal player Vault
+  renders `NEEDS REPAIR` with a matching durable Doctor receipt. Repair children
+  now preserve originals and atomically store their lineage and forensic
+  quarantine copies; player-initiated repair, a knowledge-library consumer,
+  and the full Vault exit work remain.
 - **C29-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.

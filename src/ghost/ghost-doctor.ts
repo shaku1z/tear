@@ -10,8 +10,12 @@ export interface GhostDoctorReport {
 
 export class GhostDoctor {
   readonly #vault: GhostLocalVault;
+  readonly #now: () => string;
 
-  constructor(vault: GhostLocalVault) { this.#vault = vault; }
+  constructor(vault: GhostLocalVault, now: () => string = () => new Date().toISOString()) {
+    this.#vault = vault;
+    this.#now = now;
+  }
 
   async scan(id: string): Promise<GhostDoctorReport> {
     const manifest = await this.#vault.getManifest(id);
@@ -37,22 +41,22 @@ export class GhostDoctor {
     const manifest = await this.#vault.getManifest(id);
     if (manifest === undefined) throw new RangeError(`manifest does not exist: ${id}`);
     const report = await this.scan(id);
+    if (report.healthy) throw new TypeError(`capsule does not need repair: ${id}`);
+    if (await this.#vault.getManifest(repairedId) !== undefined) throw new RangeError(`repair child already exists: ${repairedId}`);
     const excluded = new Set([...report.corruptChunkIds, ...report.missingChunkIds]);
-    for (const chunkId of report.corruptChunkIds) {
-      const encoded = await this.#vault.backend().get("chunks", chunkId);
-      if (encoded !== undefined) await this.#vault.backend().put("quarantine", chunkId, encoded);
-      await this.#vault.backend().remove("chunks", chunkId);
-    }
+    const repairedAt = this.#now();
     const chunks = Object.freeze(manifest.chunks.filter((chunk) => !excluded.has(chunk.id)));
     const child: TearGhostManifest = Object.freeze({
       ...manifest,
       id: repairedId,
       status: "repaired",
+      createdAt: repairedAt,
+      completedAt: repairedAt,
       chunks,
       rootIntegrity: ghostRootIntegrity(chunks),
       lineage: Object.freeze({ parentId: id, relation: "repaired-from" }),
     });
-    await this.#vault.putManifest(child);
+    await this.#vault.createRepairChild(id, child, report.corruptChunkIds, repairedAt);
     return Object.freeze({ ...report, repairedChildId: repairedId });
   }
 

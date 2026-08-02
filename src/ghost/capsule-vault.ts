@@ -352,6 +352,41 @@ export class GhostLocalVault {
     await this.#backend.commit(this.#manifestWrites(manifest));
   }
 
+  /**
+   * Atomically records a repair child, its immutable parent link, and forensic
+   * copies of the bad source bytes.  The parent manifest and source chunks are
+   * deliberately not changed: a repair is a new custody record, never a
+   * destructive "fix" of the original evidence.
+   */
+  async createRepairChild(
+    parentId: string,
+    child: TearGhostManifest,
+    corruptChunkIds: readonly string[],
+    repairedAt: string,
+  ): Promise<void> {
+    if (await this.getManifest(parentId) === undefined) throw new RangeError(`manifest does not exist: ${parentId}`);
+    if (await this.getManifest(child.id) !== undefined) throw new RangeError(`repair child already exists: ${child.id}`);
+    if (child.lineage?.parentId !== parentId) {
+      throw new TypeError("repair child must declare its repaired-from parent");
+    }
+    const quarantined = await Promise.all(corruptChunkIds.map(async (chunkId) => Object.freeze({
+      chunkId,
+      encoded: await this.#backend.get("chunks", chunkId),
+    })));
+    await this.#backend.commit([
+      ...this.#manifestWrites(child),
+      { store: "lineage", key: `repair:${child.id}`, value: JSON.stringify({
+        format: "tearghost-lineage", schemaVersion: 1, id: `repair:${child.id}`,
+        parentId, childId: child.id, relation: "repair", createdAt: repairedAt,
+      }) },
+      ...quarantined.flatMap(({ chunkId, encoded }) => encoded === undefined ? [] : [{
+        store: "quarantine" as const, key: `repair:${child.id}:${chunkId}`, value: JSON.stringify({
+          parentId, childId: child.id, chunkId, encoded, quarantinedAt: repairedAt,
+        }),
+      }]),
+    ]);
+  }
+
   async getManifest(id: string): Promise<TearGhostManifest | undefined> {
     const value = await this.#backend.get("manifests", id);
     return value === undefined ? undefined : parseCapsuleManifest(JSON.parse(value) as unknown);

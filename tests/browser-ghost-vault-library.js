@@ -18,17 +18,18 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
   await page.waitForFunction(() => window.__TEAR_GHOST_V3__.manifest() !== null, undefined, { timeout: 20000 });
   const manifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
   assert.equal(manifest.status, "complete");
-  await page.evaluate((id) => new Promise((resolve, reject) => {
+  await page.evaluate(({ id, corruptChunkId }) => new Promise((resolve, reject) => {
     const open = window.indexedDB.open("tear-ghost-v3");
     open.onerror = () => reject(open.error ?? new Error("IndexedDB open failed"));
     open.onsuccess = () => {
       const database = open.result;
-      const transaction = database.transaction("indexes", "readwrite");
+      const transaction = database.transaction(["indexes", "chunks"], "readwrite");
       transaction.objectStore("indexes").delete(`manifest:${id}`);
+      transaction.objectStore("chunks").put("corrupted-by-c28-doctor", corruptChunkId);
       transaction.oncomplete = () => { database.close(); resolve(); };
       transaction.onerror = () => { database.close(); reject(transaction.error ?? new Error("IndexedDB index removal failed")); };
     };
-  }), manifest.id);
+  }), { id: manifest.id, corruptChunkId: manifest.chunks[0].id });
 
   await boot();
   await page.evaluate(() => {
@@ -44,6 +45,9 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
   await waitScreen("profile");
   await page.mouse.click(875, 271); // VAULT, the third of four profile tabs
   await page.waitForFunction(() => window.__TEAR_C28_VAULT_TEXT__?.includes("Ghost V3 - COACHING"), undefined, { timeout: 10000 });
+  await page.waitForTimeout(250);
+  const renderedVaultText = await page.evaluate(() => window.__TEAR_C28_VAULT_TEXT__ ?? []);
+  assert.ok(renderedVaultText.some((text) => text.includes("NEEDS REPAIR")), `Vault did not render the Doctor health state: ${renderedVaultText.slice(-80).join(" | ")}`);
   assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "profile");
   assert.deepEqual(await page.evaluate(() => window.__TEAR_GHOST_V3__.manifests().then((items) => items.map((item) => item.id))), [manifest.id]);
   const maintenance = await page.evaluate((id) => new Promise((resolve, reject) => {
@@ -61,6 +65,6 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
   assert.equal(typeof maintenance.index, "string", "opening the player Vault did not rebuild its missing index");
   const report = JSON.parse(maintenance.report);
   assert.equal(report.maximumBytes, 256 * 1024 * 1024);
-  assert.ok(report.integrity.some((entry) => entry.id === manifest.id && entry.healthy === true));
+  assert.ok(report.integrity.some((entry) => entry.id === manifest.id && entry.healthy === false));
 }).then(() => console.log("browser Ghost Vault player library passed"))
   .catch((error) => { console.error(error); process.exit(1); });

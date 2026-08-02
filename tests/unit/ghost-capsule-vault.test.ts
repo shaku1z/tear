@@ -128,14 +128,18 @@ describe("Ghost capsule recorder and local Vault", () => {
     if (corruptId === undefined) throw new Error("fixture chunk is missing");
     await backend.put("chunks", corruptId, "{\"corrupt\":true}");
 
-    const doctor = new GhostDoctor(new GhostLocalVault(backend));
+    const doctor = new GhostDoctor(new GhostLocalVault(backend), () => "2026-07-23T00:02:00.000Z");
     const report = await doctor.scan("corrupt-run");
     expect(report).toMatchObject({ healthy: false, corruptChunkIds: [corruptId] });
     const repaired = await doctor.repairChild("corrupt-run", "corrupt-run-repaired");
     expect(repaired.repairedChildId).toBe("corrupt-run-repaired");
-    expect(await backend.get("quarantine", corruptId)).toContain("corrupt");
+    expect(await backend.get("chunks", corruptId)).toContain("corrupt");
+    expect(await backend.get("quarantine", `repair:corrupt-run-repaired:${corruptId}`)).toContain("corrupt");
+    expect(JSON.parse(await backend.get("lineage", "repair:corrupt-run-repaired") ?? "{}")).toMatchObject({
+      parentId: "corrupt-run", childId: "corrupt-run-repaired", relation: "repair",
+    });
     expect(await vault.getManifest("corrupt-run-repaired")).toMatchObject({
-      status: "repaired", lineage: { parentId: "corrupt-run", relation: "repaired-from" },
+      status: "repaired", createdAt: "2026-07-23T00:02:00.000Z", lineage: { parentId: "corrupt-run", relation: "repaired-from" },
     });
     expect(await doctor.rebuildIndex()).toBe(2);
   });
