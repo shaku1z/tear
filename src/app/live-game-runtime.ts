@@ -98,7 +98,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
           replayContextFailure: error instanceof Error ? error.message : String(error) });
       }
       try {
-        ghostV3.start({ sessionId: `ghost-v3-${context.runId}`,
+        ghostV3.start({ sessionId: `ghost-v3-${context.runId}-${browserWindow.crypto.randomUUID()}`,
           createdAt: new Date().toISOString(), provenance });
         ghostV3Session.setReplayContext(replayContext);
         if (replayContext !== undefined) {

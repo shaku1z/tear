@@ -143,7 +143,14 @@ Named status:
   active C28 boundary is `docs/checkpoints/C28_DURABLE_GHOST_VAULT_FOUNDATION.md`;
   a seventh slice hardens imports: bounded plain data only, preflighted
   duplicate/colliding custody identities, and one atomic accepted import.
-  Physical quota pressure and interrupted-write recovery still remain.
+  An eighth C28 browser journey then proves a real interrupted journal/chunk
+  recovers across restart through the normal recorder path, with a terminal
+  manifest, removed journal, and rebuilt index. The expanded journey exposed a
+  deterministic capture-ID collision after recovery; the ninth slice adds a
+  per-capture UUID and a duplicate-session write guard. It then found an
+  in-flight old-page writer could re-create that journal; the same slice moves
+  IndexedDB persistence into its adapter and fences every recording write with
+  an atomic journal lease check. Physical quota pressure alone remains open.
 - **C29-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.

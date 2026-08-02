@@ -134,6 +134,10 @@ describe("Ghost V3 live recorder sidecar", () => {
         if (operations.some((operation) => operation.store === "chunks")) throw new Error("storage quota exceeded");
         await memory.commit(operations);
       },
+      commitWhileJournalMatches: async (sessionId, leaseId, operations) => {
+        if (operations.some((operation) => operation.store === "chunks")) throw new Error("storage quota exceeded");
+        await memory.commitWhileJournalMatches(sessionId, leaseId, operations);
+      },
     };
     const vault = new GhostLocalVault(quotaBackend);
     const recorder = new GhostLiveRecorder({

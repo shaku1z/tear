@@ -1,6 +1,7 @@
 export * from "./truth-kernel";
 export * from "./recording-profiles";
 export * from "./capsule-vault";
+export * from "./indexeddb-vault-backend";
 export * from "./browser-capsule-vault";
 export * from "./vault-maintenance";
 export * from "./durable-knowledge-libraries";

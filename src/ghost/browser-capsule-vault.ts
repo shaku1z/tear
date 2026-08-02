@@ -1,8 +1,8 @@
 import {
-  createIndexedDbGhostVaultBackend,
   GhostLocalVault,
   type TearGhostManifest,
 } from "./capsule-vault";
+import { createIndexedDbGhostVaultBackend } from "./indexeddb-vault-backend";
 import { GhostCapsuleReader, type GhostReadCapsule } from "./capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope, type GhostCapsuleReplayMapping } from "./capsule-replay-envelope";
 import { assessGhostReplayAdmission, type GhostReplayAdmission } from "./replay-admission";

@@ -62,6 +62,25 @@ describe("Ghost capsule recorder and local Vault", () => {
     expect(recovered).toHaveLength(1);
     expect(recovered[0]).toMatchObject({ id: "crashed-run", status: "recovered", chunks: [{ sequence: 0 }] });
     expect(await backend.keys("journals")).toEqual([]);
+    await recorder.append({ kind: "commands", tick: 3, value: { action: "late-buffered" } });
+    await expect(recorder.append({ kind: "commands", tick: 4, value: { action: "late-write" } })).rejects.toThrow(/no longer active/u);
+    expect(await afterRefresh.getManifest("crashed-run")).toMatchObject({ status: "recovered" });
+    expect(await backend.keys("journals")).toEqual([]);
+  });
+
+  it("refuses a duplicate recording session before it can overwrite durable evidence", async () => {
+    const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
+    const first = new GhostStreamingRecorder({
+      sessionId: "unique-capture", createdAt: "2026-07-23T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault,
+    });
+    await first.start();
+    await first.append({ kind: "commands", tick: 1, value: { action: "jump" } });
+    const original = await vault.getManifest("unique-capture");
+    const duplicate = new GhostStreamingRecorder({
+      sessionId: "unique-capture", createdAt: "2099-01-01T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault,
+    });
+    await expect(duplicate.start()).rejects.toThrow(/already exists/u);
+    expect(await vault.getManifest("unique-capture")).toEqual(original);
   });
 
   it("loads verified named tracks back from a completed capsule", async () => {

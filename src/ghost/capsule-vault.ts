@@ -138,6 +138,7 @@ export interface GhostVaultBackend {
   remove(store: GhostVaultStore, key: string): Promise<void>;
   keys(store: GhostVaultStore): Promise<readonly string[]>;
   commit(operations: readonly GhostVaultWrite[]): Promise<void>;
+  commitWhileJournalMatches(sessionId: string, leaseId: string, operations: readonly GhostVaultWrite[]): Promise<void>;
 }
 
 /** A single durable write used for journals, chunks, manifests, and indexes. */
@@ -145,6 +146,17 @@ export interface GhostVaultWrite {
   readonly store: GhostVaultStore;
   readonly key: string;
   readonly value?: string;
+}
+
+function dataRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function ghostVaultJournalLease(value: string | undefined): string | undefined {
+  try {
+    const parsed: unknown = value === undefined ? undefined : JSON.parse(value);
+    return dataRecord(parsed) && typeof parsed.leaseId === "string" ? parsed.leaseId : undefined;
+  } catch { return undefined; }
 }
 
 export function createMemoryGhostVaultBackend(
@@ -158,84 +170,33 @@ export function createMemoryGhostVaultBackend(
     }
     return values;
   };
-  return {
+  const commit = (operations: readonly GhostVaultWrite[]): Promise<void> => {
+    const copies = new Map<GhostVaultStore, Map<string, string>>();
+    const target = (name: GhostVaultStore): Map<string, string> => {
+      let values = copies.get(name);
+      if (values === undefined) { values = new Map(store(name)); copies.set(name, values); }
+      return values;
+    };
+    for (const operation of operations) {
+      if (operation.value === undefined) target(operation.store).delete(operation.key);
+      else target(operation.store).set(operation.key, operation.value);
+    }
+    for (const [name, values] of copies) stores.set(name, values);
+    return Promise.resolve();
+  };
+  return Object.freeze({
     get(name, key) { return Promise.resolve(store(name).get(key)); },
     put(name, key, value) { store(name).set(key, value); return Promise.resolve(); },
     remove(name, key) { store(name).delete(key); return Promise.resolve(); },
     keys(name) { return Promise.resolve(Object.freeze([...store(name).keys()].sort())); },
-    commit(operations) {
-      const copies = new Map<GhostVaultStore, Map<string, string>>();
-      const target = (name: GhostVaultStore): Map<string, string> => {
-        let values = copies.get(name);
-        if (values === undefined) { values = new Map(store(name)); copies.set(name, values); }
-        return values;
-      };
-      for (const operation of operations) {
-        if (operation.value === undefined) target(operation.store).delete(operation.key);
-        else target(operation.store).set(operation.key, operation.value);
+    commit,
+    commitWhileJournalMatches(sessionId, leaseId, operations) {
+      if (ghostVaultJournalLease(store("journals").get(sessionId)) !== leaseId) {
+        return Promise.reject(new Error(`recording journal is no longer active: ${sessionId}`));
       }
-      for (const [name, values] of copies) stores.set(name, values);
-      return Promise.resolve();
+      return commit(operations);
     },
-  };
-}
-
-export async function createIndexedDbGhostVaultBackend(
-  factory: IDBFactory,
-  databaseName = "tear-ghost-v3",
-): Promise<GhostVaultBackend> {
-  const database = await new Promise<IDBDatabase>((resolve, reject) => {
-    const request = factory.open(databaseName, GHOST_VAULT_DATABASE_VERSION);
-    request.onupgradeneeded = () => {
-      for (const store of GHOST_VAULT_STORES) {
-        if (!request.result.objectStoreNames.contains(store)) request.result.createObjectStore(store);
-      }
-    };
-    request.onsuccess = () => { resolve(request.result); };
-    request.onerror = () => { reject(request.error ?? new Error("IndexedDB open failed")); };
-  });
-  const transaction = <T>(
-    store: GhostVaultStore,
-    mode: IDBTransactionMode,
-    execute: (objectStore: IDBObjectStore) => IDBRequest<T>,
-  ): Promise<T> => new Promise((resolve, reject) => {
-    const tx = database.transaction(store, mode);
-    const request = execute(tx.objectStore(store));
-    request.onsuccess = () => { resolve(request.result); };
-    request.onerror = () => { reject(request.error ?? new Error(`IndexedDB ${mode} failed`)); };
-  });
-  const backend: GhostVaultBackend = {
-    async get(store, key) {
-      const value = await transaction<unknown>(store, "readonly", (objectStore) => objectStore.get(key));
-      return typeof value === "string" ? value : undefined;
-    },
-    async put(store, key, value) {
-      await transaction<IDBValidKey>(store, "readwrite", (objectStore) => objectStore.put(value, key));
-    },
-    async remove(store, key) {
-      await transaction<undefined>(store, "readwrite", (objectStore) => objectStore.delete(key));
-    },
-    async keys(store) {
-      const keys = await transaction<IDBValidKey[]>(store, "readonly", (objectStore) => objectStore.getAllKeys());
-      return Object.freeze(keys.map(String).sort());
-    },
-    commit(operations) {
-      return new Promise<void>((resolve, reject) => {
-        const stores = [...new Set(operations.map((operation) => operation.store))];
-        if (stores.length === 0) { resolve(); return; }
-        const tx = database.transaction(stores, "readwrite");
-        for (const operation of operations) {
-          const objectStore = tx.objectStore(operation.store);
-          if (operation.value === undefined) objectStore.delete(operation.key);
-          else objectStore.put(operation.value, operation.key);
-        }
-        tx.oncomplete = () => { resolve(); };
-        tx.onerror = () => { reject(tx.error ?? new Error("IndexedDB recording commit failed")); };
-        tx.onabort = () => { reject(tx.error ?? new Error("IndexedDB recording commit aborted")); };
-      });
-    },
-  };
-  return Object.freeze(backend);
+  } satisfies GhostVaultBackend);
 }
 
 export interface GhostVaultImportLimits {
@@ -259,9 +220,6 @@ export function ghostRootIntegrity(chunks: readonly TearGhostChunkIndexEntry[]):
   })));
 }
 
-function dataRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 /** Imported provenance must remain recursive plain JSON data across app boundaries. */
 function clonePlainCapsuleData(value: unknown, depth = 0): unknown {
   if (depth > 32) throw new RangeError("capsule plain data exceeds nesting limit");
@@ -309,7 +267,6 @@ function parseChunkIndex(value: unknown): TearGhostChunkIndexEntry {
     checksum: value.checksum,
   });
 }
-
 function parseCapsuleManifest(value: unknown): TearGhostManifest {
   if (!dataRecord(value)
     || value.format !== "tearghost-capsule"
@@ -422,26 +379,27 @@ export class GhostLocalVault {
   }
 
   /** Atomically exposes one newly encoded recording chunk and its recovery state. */
-  async commitRecordingChunk(manifest: TearGhostManifest, entry: TearGhostChunkIndexEntry, encoded: string): Promise<void> {
+  async commitRecordingChunk(manifest: TearGhostManifest, entry: TearGhostChunkIndexEntry, encoded: string, leaseId: string): Promise<void> {
     if (stableVerificationHash(encoded) !== entry.checksum) throw new TypeError(`chunk checksum mismatch before commit: ${entry.id}`);
     if (!manifest.chunks.some((chunk) => chunk.id === entry.id && chunk.checksum === entry.checksum)) {
       throw new TypeError(`recording manifest does not include committed chunk: ${entry.id}`);
     }
-    await this.#backend.commit([
+    await this.#backend.commitWhileJournalMatches(manifest.id, leaseId, [
       { store: "chunks", key: entry.id, value: encoded },
       { store: "journals", key: manifest.id, value: JSON.stringify({
-        sessionId: manifest.id, lastChunkId: entry.id, committedSequence: entry.sequence,
+        sessionId: manifest.id, leaseId, lastChunkId: entry.id, committedSequence: entry.sequence,
       }) },
       ...this.#manifestWrites(manifest),
     ]);
   }
 
   /** Starts a recoverable session without exposing a manifest with no journal. */
-  async beginSession(manifest: TearGhostManifest): Promise<void> {
+  async beginSession(manifest: TearGhostManifest, leaseId: string): Promise<void> {
     if (manifest.status !== "recording") throw new TypeError("only a recording manifest can begin a session");
+    if (await this.getManifest(manifest.id) !== undefined) throw new RangeError(`recording session already exists: ${manifest.id}`);
     await this.#backend.commit([
       ...this.#manifestWrites(manifest),
-      { store: "journals", key: manifest.id, value: JSON.stringify({ sessionId: manifest.id, committedSequence: -1 }) },
+      { store: "journals", key: manifest.id, value: JSON.stringify({ sessionId: manifest.id, leaseId, committedSequence: -1 }) },
     ]);
   }
 
@@ -452,8 +410,8 @@ export class GhostLocalVault {
     return decodeGhostChunkPayload(entry.encoding, encoded, entry.uncompressedBytes);
   }
 
-  async completeSession(manifest: TearGhostManifest): Promise<void> {
-    await this.#backend.commit([
+  async completeSession(manifest: TearGhostManifest, leaseId: string): Promise<void> {
+    await this.#backend.commitWhileJournalMatches(manifest.id, leaseId, [
       ...this.#manifestWrites(manifest),
       { store: "journals", key: manifest.id },
     ]);
@@ -476,17 +434,17 @@ export class GhostLocalVault {
         reason = error instanceof Error ? error.message : String(error);
       }
       const next = Object.freeze({ ...manifest, status });
-      await this.putManifest(next);
-      if (reason !== undefined) {
-        await this.#backend.put("quarantine", `recovery:${id}`, JSON.stringify({
+      await this.#backend.commit([
+        ...this.#manifestWrites(next),
+        ...(reason === undefined ? [] : [{ store: "quarantine" as const, key: `recovery:${id}`, value: JSON.stringify({
           capsuleId: id,
           reason,
           recoveredAt: new Date().toISOString(),
-        }));
-      }
+        }) }]),
       // A recovery attempt has reached a terminal durable state. Keeping the
       // journal would repeatedly mutate the same manifest on every startup.
-      await this.#backend.remove("journals", id);
+        { store: "journals", key: id },
+      ]);
       recovered.push(next);
     }
     return Object.freeze(recovered);
@@ -588,10 +546,12 @@ export interface GhostRecorderOptions {
   readonly worker?: GhostEncoderWorkerPort;
   readonly recordingProfile?: GhostRecordingProfileId;
   readonly provenance?: Readonly<Record<string, unknown>>;
+  readonly leaseId?: string;
 }
 
 export class GhostStreamingRecorder {
   readonly #options: GhostRecorderOptions;
+  readonly #leaseId: string;
   readonly #worker: GhostEncoderWorkerPort;
   readonly #buffer: GhostRecorderEntry[] = [];
   readonly #chunks: TearGhostChunkIndexEntry[] = [];
@@ -603,6 +563,7 @@ export class GhostStreamingRecorder {
   constructor(options: GhostRecorderOptions) {
     if (!Number.isSafeInteger(options.chunkEntries) || options.chunkEntries < 1) throw new RangeError("chunkEntries must be positive");
     this.#options = options;
+    this.#leaseId = options.leaseId ?? stableVerificationHash({ sessionId: options.sessionId, createdAt: options.createdAt });
     this.#worker = options.worker ?? createInlineGhostEncoderWorker();
   }
 
@@ -611,7 +572,7 @@ export class GhostStreamingRecorder {
 
   async start(): Promise<void> {
     const manifest = this.#manifest("recording");
-    await this.#options.vault.beginSession(manifest);
+    await this.#options.vault.beginSession(manifest, this.#leaseId);
   }
 
   async append(entry: GhostRecorderEntry): Promise<void> {
@@ -652,7 +613,7 @@ export class GhostStreamingRecorder {
         checksum: encoded.checksum,
       });
       const nextChunks = Object.freeze([...this.#chunks, index]);
-      await this.#options.vault.commitRecordingChunk(this.#manifest("recording", undefined, nextChunks), index, encoded.encoded);
+      await this.#options.vault.commitRecordingChunk(this.#manifest("recording", undefined, nextChunks), index, encoded.encoded, this.#leaseId);
       this.#chunks.push(index);
       if (encoded.thumbnail !== undefined) {
         await this.#options.vault.backend().put("assets", `${this.#options.sessionId}:thumbnail:${String(sequence)}`, encoded.thumbnail);
@@ -666,7 +627,7 @@ export class GhostStreamingRecorder {
   async finalize(completedAt: string): Promise<TearGhostManifest> {
     await this.flush();
     const manifest = this.#manifest("complete", completedAt);
-    await this.#options.vault.completeSession(manifest);
+    await this.#options.vault.completeSession(manifest, this.#leaseId);
     return manifest;
   }
 
