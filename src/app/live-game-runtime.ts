@@ -18,6 +18,7 @@ import { createLiveMusicObservation, projectLiveMusicRun } from "./live-music-ob
 import { isMenuScreen, renderRegisteredScreen } from "./screen-registry";
 import { createLiveWorldComposition } from "./live-world-composition";
 import { createLiveWorldSessionState } from "./live-world-session-state";
+import { createLiveShopFeedbackState } from "./live-shop-feedback-state";
 import { createLiveCombatWorldState } from "./live-combat-world-state";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "./game-runtime-state";
@@ -207,8 +208,8 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
   let hudHpLag = 1, hudMultPrev = 1, hudMultPop = 0;   // HUD juice: health damage-chip + combo pop
   const hoverAnim: Record<string, number> = {};
   // One call builds this world: replaceable state, entity construction, run
-  // lifecycle, services, and transient records. Player and blade still use
-  // host mirrors; world state is the sole owner of the run.
+  // lifecycle, services, and transient records. World state owns the active
+  // player, blade, actors, and run while the session retains menu-time state.
   const { state: hostState, context: worldContext, entities: worldEntities, lifecycle: RUN_LIFECYCLE } = createLiveWorldComposition({
     dependencies, configuration, session,
   });
@@ -613,8 +614,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
   // must reach the true screen edges (backdrops, dims, vignettes), never for layout.
   const screenRect = () => presentationHost.screenRectangle();
   const biomeMode = () => ["campaign", "endless", "bossonly", "gauntlet", "tutorial", "playground"].includes(liveRun().mode);
-  let shopCoinShow: number | null = null;
-  let shopFlash: Readonly<{ id: string; time: number }> | null = null;
+  const shopFeedback = createLiveShopFeedbackState();
   const interfaceComposition = createLiveInterfaceComposition({
     wipe: { canvas, context: ctx, createCanvas: () => browserDocument.createElement("canvas"), reducedEffects: () => GFX.low, flashScale: () => A11Y.flashScale, random: cosmeticRandom, ease: ez },
     worldSurface: { canvas: ctx, ui: UI, width: W, height: H, get safe() { return { top: SAFE.t, right: SAFE.r, bottom: SAFE.b, left: SAFE.l }; }, get ink() { return THEME.ink; }, get darkTheme() { return THEME.dark; }, get timeSeconds() { return worldContext.services.clock.seconds(); }, get lowGraphics() { return GFX.low; }, get reducedMotion() { return A11Y.reducedMotion; }, get highContrast() { return A11Y.highContrast; } },
@@ -626,7 +626,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
       actions: { setScreen: (screen) => { setState(screen); }, resetScroll: () => { listScroll = 0; }, setSetupSelection: (kind, id) => { if (kind === "mode" && isRunModeSelection(id)) { session.setSelectedMode(id); if (trainingRunRequiresPreflight(id)) void trainingHost.ensureLoaded(); } else if (kind === "difficulty" && isRunDifficultySelection(id)) session.setSelectedDifficulty(id); else if (kind === "weapon") session.setSelectedWeapon(id); else if (kind === "boss") session.setSelectedBoss(id); }, startSelectedRun: () => { startRunWithPreflight(session.selectedMode(), session.selectedDifficulty()); }, startRun: (mode, difficulty) => { if (isRunModeSelection(mode) && isRunDifficultySelection(difficulty)) startRunWithPreflight(mode, difficulty); }, currentRun: liveRun, resumeFinale: resumeSavedFinale, claimFinale: claimSavedFinale, requestPointer: requestLock, endRun, retryRun, lastReplay: () => session.lastRecording(), campaignDifficulty: () => session.outcome()?.diff ?? "normal", resetSettings: () => { settingsController.reset(); }, signIn: () => { void Cloud.signIn(); }, signOut: () => { void Cloud.signOut(); }, pinReplay: (id, pinned) => VAULT.pin(id, pinned), deleteReplay: (id) => { VAULT.remove(id); }, dispatchPlayground: dispatchPlaygroundAction },
       runState: { screen: () => state, setScreen: (screen) => { setState(screen); }, run: liveRun, player: livePlayer, scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, continueSeconds: () => continueT, setContinueSeconds: (value) => { continueT = value; }, replayAvailable: () => session.lastRecording() !== null, outcome: currentOutcome },
       runServices: { dependencies, reward: rewardRuntime, formatTime: fmtTime, clamp, trickColor, saveBest, awardCoins, cinema: CINEMA, clearFinale: () => { story.finale = null; }, terminateRun: (reason) => { abandonLiveRun(reason); }, addFloater, addShake, addFlash, requestPointer: requestLock },
-      menuState: { selection: () => session.selection(), scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, time: () => uiT, shop: () => ({ displayedCoins: shopCoinShow, flash: shopFlash }), setShop: (value) => { shopCoinShow = value.displayedCoins; shopFlash = value.flash; } },
+      menuState: { selection: () => session.selection(), scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, time: () => uiT, shop: () => shopFeedback.snapshot(), setShop: (value) => { shopFeedback.set(value); } },
       menuServices: { dependencies, height: H, getBest, formatTime: fmtTime, clamp, checkAchievements: achCheck }, playground: { renderMenu: renderPgMenu, renderLab: renderPgLab },
     },
     frameState: { screen: () => state, previousScreen: () => lastUiState, setPreviousScreen: (value) => { lastUiState = value; }, uiZoom: () => uiZoom, setUiZoom: (value) => { uiZoom = value; Input.uiZoom = value; }, deltaSeconds: () => lastUiDt, enterSeconds: () => enterT, setEnterSeconds: (value) => { enterT = value; }, enterAmount: () => eIn, setEnterAmount: (value) => { eIn = value; }, scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, focus: () => focus, setFocus: (value) => { focus = value; }, controls: () => uiButtons, resetControls: () => { uiButtons = []; }, biomeMode, enemies: () => hostState.enemies(), flash: () => feel.flash, bossBeat: () => hostState.bossBeat(), bossIntroActive: () => { const intro = hostState.bossIntro(); return intro !== null && intro.delay <= 0; }, bannerSeconds: () => feel.bannerSeconds, rankPopup: () => ({ seconds: feel.rankPopupSeconds, text: feel.rankPopupText, multiplier: liveRun().mult }), timeSeconds: () => uiT },

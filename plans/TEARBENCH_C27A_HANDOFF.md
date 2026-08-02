@@ -5,17 +5,16 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** eighty-fifth C27A foundation slice implemented (the live player now
-stays directly in world state); checkpoint remains open
+**Status:** eighty-sixth C27A foundation slice implemented (shop display and
+purchase-flash feedback now use a typed presentation-state owner); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
-**Latest evidence:** Slice 85 preserves the live player through direct world-state
-ownership across session, campaign/training, combat, input, replay, State Forge,
-and TearBench bridge paths while retaining existing absent-player menu behavior.
-Its focused 5-file / 19-test gate and rebuilt campaign-victory browser proof plus
-the full canonical C27A aggregate pass. This is not a durable-storage or full-
-production-world portability claim.
+**Latest evidence:** Slice 86 moves shop display and purchase-flash feedback
+through `createLiveShopFeedbackState` and source architecture rejects restoring
+the old closures. Its focused 5-file / 8-test gate, rebuilt campaign-victory
+browser proof, and the full canonical C27A aggregate pass. This is not a
+complete frame/UI, durable-storage, or full-production-world portability claim.
 
 ## Resume protocol (mandatory)
 

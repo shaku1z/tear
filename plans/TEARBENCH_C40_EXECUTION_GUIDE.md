@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 85 update (current)
+#### Slice 86 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -860,6 +860,13 @@ and source architecture rejects restoring the host closure. The focused gate
 passed 5 files / 19 tests and rebuilt campaign-victory browser proof plus the
 full canonical C27A aggregate pass. This completes current actor-state mirror
 removal only, not frame/combat construction or full-world portability.
+
+Slice 86 removes the live host's shop coin-display and purchase-flash closures.
+`createLiveShopFeedbackState` owns that typed frame-presentation feedback, and
+source architecture rejects restoring either closure. The focused gate passed 5
+files / 8 tests; rebuilt campaign-victory browser proof and the full canonical
+C27A aggregate pass. This is not complete frame/UI ownership, full-world
+portability, or C27A completion.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

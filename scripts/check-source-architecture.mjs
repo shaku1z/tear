@@ -268,6 +268,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live player state must stay in world state",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /\blet\s+(?:shopCoinShow|shopFlash)\b/u,
+    message: "live shop feedback must use the typed presentation-state owner",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/app/live-style-host.ts"]),
     pattern: /\bd\.ACH\.check\(\);\s*d\.PROFILE\.save\(\)/u,
     message: "live style achievement persistence must use the composition-owned adapter",
@@ -629,6 +634,12 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/app/live-game-runtime.ts",
     "const player = hostState.player();").length !== 0) {
   throw new Error("source architecture live player owner rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "let shopCoinShow = null;").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "const shopFeedback = createLiveShopFeedbackState();").length !== 0) {
+  throw new Error("source architecture live shop feedback owner rule self-test failed");
 }
 if (dependencyErrors("src/app/live-style-host.ts",
   "d.ACH.check(); d.PROFILE.save();").length !== 1

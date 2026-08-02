@@ -486,6 +486,11 @@ The following C27A foundation slices are complete:
   paths. Its getter preserves existing absent-player menu behavior, and source
   architecture rejects restoring a host player closure. Frame and combat
   construction remain app-bound.
+- Shop coin display and purchase-flash feedback now use the typed
+  `createLiveShopFeedbackState` frame-presentation owner instead of live-runtime
+  closures. Focused, rebuilt campaign, and aggregate C27A evidence pass. This
+  extracts shop feedback only; the remaining frame/UI state, production-world
+  portability, and C27A exit remain open.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition
