@@ -15,6 +15,7 @@ import type { GhostReadCapsule } from "../../ghost/capsule-reader";
 import type { GhostCapsuleReplayMapping } from "../../ghost/capsule-replay-envelope";
 import type { GhostReplayAdmission } from "../../ghost/replay-admission";
 import type { GhostProductionReplayVerification } from "../../ghost/production-replay-verification";
+import type { GhostPracticeChild, GhostPracticeMode } from "../../ghost/replay-world";
 
 type LiveRuntimeBridgeWindow = Window & { __TEAR_RUNTIME_ENVIRONMENT__?: TearRuntimeBridgeFactory };
 
@@ -26,6 +27,7 @@ export interface GhostV3BrowserInspectorSource {
   readonly replay: (id: string) => Promise<GhostCapsuleReplayMapping | undefined>;
   readonly admission: (id: string) => Promise<GhostReplayAdmission | undefined>;
   readonly verify: (id: string) => Promise<GhostProductionReplayVerification | undefined>;
+  readonly practice: (id: string, tick: number, mode: GhostPracticeMode) => Promise<GhostPracticeChild | undefined>;
   readonly active: () => boolean;
   readonly failure: () => string | null;
 }
@@ -41,6 +43,7 @@ export function installGhostV3BrowserInspector(target: Window, source: GhostV3Br
       replay: source.replay,
       admission: source.admission,
       verify: source.verify,
+      practice: source.practice,
       active: source.active,
       failure: source.failure,
     }),

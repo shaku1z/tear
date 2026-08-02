@@ -160,8 +160,12 @@ Named status:
   proves runtime identity at tick 80 plus a repeat-seek semantic hash.
   A real completed test-standalone IndexedDB V3 capsule is reopened and its
   tick-0/120/240 State Forge keyframes plus held-input receipts each reproduce
-  their captured authoritative hash through source-owned composition. Player
-  Theater, practice, comparison, and active-cinematic coverage remain open.
+  their captured authoritative hash through source-owned composition. A
+  verified-source replay session now seeks from fresh worlds and forks only a
+  verified keyframe into a non-persistent, unranked child while the browser
+  evidence proves the durable source bytes are unchanged. Player Theater,
+  player-visible practice, comparison, and active-cinematic coverage remain
+  open.
 - **C30-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -383,11 +387,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C29 now reopens a durable V3 capsule, hydrates each recorded State Forge keyframe through source-owned production composition, restores held input, and compares captured authoritative receipts.
-PROVEN BY:           `pnpm check:c29:production-replay` runs focused receipt/replay tests and the rebuilt browser capture; its actual completed Vault capsule matches source replay at ticks 0, 120, and 240.
-REMAINING HERE:      Active chapter bindings now restore through source composition and focused unit evidence; add their durable-capsule coverage, then Theater, seek/fork/practice, and comparison. The verified browser route is normal test-standalone endless only.
+DONE THIS STEP:      C29 now reopens a durable V3 capsule, hydrates each recorded State Forge keyframe through source-owned production composition, restores held input, compares captured authoritative receipts, and safely forks a verified checkpoint into a non-persistent practice child.
+PROVEN BY:           `pnpm check:c29:production-replay` runs focused receipt/replay tests and the rebuilt browser capture; its actual completed Vault capsule matches source replay at ticks 0, 120, and 240, and its tick-120 practice fork leaves the durable source JSON unchanged.
+REMAINING HERE:      Active chapter bindings now restore through source composition and focused unit evidence; add their durable-capsule coverage, then player-visible Theater/practice and comparison. The verified browser route is normal test-standalone endless only.
 REMAINING TO C40:    C25 and C27 exits, then C29-C40, remain; C27A and C28 are closed.
-NEXT SLICE:          Build C29 seek/fork/practice custody behavior on verified replay keyframes; retain the active-cinematic durable browser case as its own evidence slice.
+NEXT SLICE:          Wire the verified C29 replay session into a player-visible Theater path with semantic controls and UI/input evidence; retain the active-cinematic durable browser case as its own evidence slice.
 
 All of the following were run from this worktree through C27A slice 36:
 

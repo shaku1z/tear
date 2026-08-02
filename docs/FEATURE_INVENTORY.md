@@ -173,8 +173,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   replay bootstrap, keyframe-aligned canonical authoritative-hash receipts,
   and fail-closed admission check. C29 now reopens one normal test-standalone
   durable capsule and reproduces all three captured keyframe hashes through
-  source-owned State Forge hydration and production combat composition. Active
-  cinematics, player-visible Theater, fork/practice, and comparison remain C29
+  source-owned State Forge hydration and production combat composition. A
+  verified source replay can now seek and create a non-persistent, unranked
+  practice child at a verified checkpoint without mutating its durable capsule;
+  active cinematics, player-visible Theater/practice, and comparison remain C29
   work;
   authenticated publication, deployed verification, moderation operations,
   and cloud/player lifecycle flows remain later completion work.

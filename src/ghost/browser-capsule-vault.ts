@@ -7,6 +7,8 @@ import { GhostCapsuleReader, type GhostReadCapsule } from "./capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope, type GhostCapsuleReplayMapping } from "./capsule-replay-envelope";
 import { assessGhostReplayAdmission, type GhostReplayAdmission } from "./replay-admission";
 import { verifyGhostCapsuleProductionReplay, type GhostProductionReplayVerification } from "./production-replay-verification";
+import { createGhostProductionReplaySession } from "./production-replay-session";
+import type { GhostPracticeChild, GhostPracticeMode } from "./replay-world";
 import { GhostDoctor } from "./ghost-doctor";
 import { maintainGhostVault, type GhostVaultMaintenanceOptions, type GhostVaultMaintenanceReport } from "./vault-maintenance";
 
@@ -109,4 +111,15 @@ export async function verifyBrowserGhostCapsuleProductionReplay(
 ): Promise<GhostProductionReplayVerification | undefined> {
   const capsule = await readBrowserGhostCapsule(factory, id);
   return capsule === undefined ? undefined : verifyGhostCapsuleProductionReplay(capsule);
+}
+
+/** Creates a non-persistent practice child from a verified durable replay checkpoint. */
+export async function forkBrowserGhostCapsulePractice(
+  factory: IDBFactory | undefined,
+  id: string,
+  tick: number,
+  mode: GhostPracticeMode,
+): Promise<GhostPracticeChild | undefined> {
+  const capsule = await readBrowserGhostCapsule(factory, id);
+  return capsule === undefined ? undefined : createGhostProductionReplaySession(capsule).forkPractice(tick, mode);
 }

@@ -48,6 +48,20 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page }) 
   const verification = await page.evaluate((id) => window.__TEAR_GHOST_V3__.verify(id), manifest.id);
   assert.equal(verification.status, "verified");
   assert.deepEqual(verification.comparisons.map((entry) => [entry.tick, entry.equal]), [[0, true], [120, true], [240, true]]);
+  const sourceBeforePractice = JSON.stringify(capsule);
+  const practice = await page.evaluate((id) => window.__TEAR_GHOST_V3__.practice(id, 120, "exact-practice"), manifest.id);
+  assert.equal(practice.id, `${manifest.id}:practice:120:exact-practice`);
+  assert.equal(practice.sourceGhostId, manifest.id);
+  assert.equal(practice.forkTick, 120);
+  assert.equal(practice.mode, "exact-practice");
+  assert.equal(practice.snapshot.tick, 120);
+  assert.equal(practice.inputLatchPolicy, "release-all");
+  assert.equal(practice.rankedEligible, false);
+  assert.equal(practice.leaderboardEligible, false);
+  assert.deepEqual(practice.lineage, { relation: "forked-at", parentId: manifest.id,
+    parentRootHash: practice.sourceRootHash, forkTick: 120 });
+  const sourceAfterPractice = JSON.stringify(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id));
+  assert.equal(sourceAfterPractice, sourceBeforePractice, "practice fork mutated durable source custody");
   assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__TEAR_GHOST_V3__, undefined, { timeout: 15000 });

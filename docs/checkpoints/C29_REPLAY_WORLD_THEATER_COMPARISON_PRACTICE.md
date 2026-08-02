@@ -43,6 +43,13 @@ applicable production boundary.
   source test proves the restored cinematic completes through the production
   lifecycle and activates its prepared wave; a durable campaign-capsule hash
   comparison is still separate evidence.
+- createGhostProductionReplaySession admits only a capsule whose recorded
+  authoritative receipts already verify through that source composition. It
+  seeks from fresh replay worlds and can fork an exact recorded checkpoint into
+  an immutable, unranked, non-persistent practice child; it owns no Vault or
+  player/profile writes. The browser capture journey proves the durable source
+  capsule is byte-for-byte unchanged after that fork. This is a source/runtime
+  foundation, not yet the player-facing practice flow required by the ledger.
 
 ## Exit-gate ledger
 
@@ -62,17 +69,18 @@ applicable production boundary.
 ## Deliberately not claimed
 
 This foundation does not turn legacy visual replay into V3 replay, admit an
-incompatible capsule, prove a captured-capsule hash, or expose a player Theater
-screen. It makes the next C29 hash-parity slice use the production runtime and
-combat composition rather than a synthetic replay simulation. The older parity
+incompatible capsule, or expose a player Theater screen. The older parity
 harness retains its equivalent helper for its existing C27A suites, but the C29
 replay proof no longer imports that test helper. This proves the normal
 test-standalone endless capture only; durable active-chapter-cinematic capture,
-player Theater, seek/fork/practice flows, and comparisons remain unfinished.
+the player-visible seek/fork/practice flow, and comparisons remain unfinished.
 
 ## Evidence
 
 pnpm check:c29:production-replay is the named gate. It runs the source
 traceability, type/lint/architecture, receipt/production-runtime tests, and a
 rebuilt browser V3 capture that reopens the completed IndexedDB capsule and
-compares all captured authoritative receipts through source-owned replay.
+compares all captured authoritative receipts through source-owned replay. That
+browser journey also forks its verified tick-120 checkpoint through the app
+bridge and proves the returned child is unranked/non-persistent and the durable
+source JSON is unchanged; it is not a substitute for Theater UI evidence.

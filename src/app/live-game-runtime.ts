@@ -34,7 +34,7 @@ import { emitLiveTearBenchPhysicalInput } from "../tearbench/browser/live-physic
 import { isCombatPlatform, isDodgeProjectile, isEnemySample, isGameEnemy, isGameFloater, isRitualCue, isWeaponEffect } from "./live-runtime-type-guards";
 import { createLiveStateForgeAdapter } from "./live-state-forge-adapter";
 import { createLiveStateForgeRuntimeBridge } from "./live-state-forge-runtime-bridge";
-import { listBrowserGhostCapsuleManifests, readBrowserGhostCapsule, readBrowserGhostCapsuleReplay, readBrowserGhostCapsuleReplayAdmission, verifyBrowserGhostCapsuleProductionReplay } from "../ghost/browser-capsule-vault";
+import { forkBrowserGhostCapsulePractice, listBrowserGhostCapsuleManifests, readBrowserGhostCapsule, readBrowserGhostCapsuleReplay, readBrowserGhostCapsuleReplayAdmission, verifyBrowserGhostCapsuleProductionReplay } from "../ghost/browser-capsule-vault";
 import { createLiveGhostCausalEvent, ghostLiveBootstrapEventId } from "../ghost/live-causal-events";
 import { createGhostV3BrowserTestOptions } from "./ghost-v3-browser-test-options";
 import { createGhostReplayRunContext, GHOST_REPLAY_CONTEXT_PROVENANCE_KEY, type GhostReplayRunContextV1 } from "../ghost/replay-admission";
@@ -645,6 +645,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       replay: (id: string) => readBrowserGhostCapsuleReplay(browserIndexedDb, id),
       admission: (id: string) => readBrowserGhostCapsuleReplayAdmission(browserIndexedDb, id),
       verify: (id: string) => verifyBrowserGhostCapsuleProductionReplay(browserIndexedDb, id),
+      practice: (id: string, tick: number, mode) => forkBrowserGhostCapsulePractice(browserIndexedDb, id, tick, mode),
       active: () => ghostV3?.active === true,
       failure: () => ghostV3?.failure ?? null,
     });
