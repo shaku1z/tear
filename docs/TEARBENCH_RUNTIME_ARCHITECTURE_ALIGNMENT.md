@@ -491,6 +491,11 @@ The following C27A foundation slices are complete:
   closures. Focused, rebuilt campaign, and aggregate C27A evidence pass. This
   extracts shop feedback only; the remaining frame/UI state, production-world
   portability, and C27A exit remain open.
+- HUD health smoothing and multiplier-pop feedback now use the typed
+  `createLiveHudFeedbackState` frame-presentation owner instead of live-runtime
+  closures. Focused, rebuilt campaign, and aggregate C27A evidence pass. This
+  extracts HUD feedback only; the remaining frame/UI state, production-world
+  portability, and C27A exit remain open.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

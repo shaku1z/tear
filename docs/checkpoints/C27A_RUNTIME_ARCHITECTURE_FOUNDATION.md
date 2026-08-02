@@ -1289,6 +1289,14 @@ of replay, headless execution, or learning portability.
   C27A aggregate pass. This is shop feedback extraction only, not complete
   frame/UI ownership, full-world portability, or concurrent-live-world evidence.
 
+- The eighty-seventh slice moves HUD health smoothing and multiplier-pop
+  feedback out of the live runtime closure into `createLiveHudFeedbackState`.
+  Source architecture rejects restoring any of the three closures. The focused
+  gate passed 5 files / 14 tests; rebuilt campaign-victory browser proof and the
+  full canonical C27A aggregate pass. This is HUD feedback extraction only, not
+  complete frame/UI ownership, full-world portability, or concurrent-live-world
+  evidence.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

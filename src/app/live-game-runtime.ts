@@ -18,6 +18,7 @@ import { createLiveMusicObservation, projectLiveMusicRun } from "./live-music-ob
 import { isMenuScreen, renderRegisteredScreen } from "./screen-registry";
 import { createLiveWorldComposition } from "./live-world-composition";
 import { createLiveWorldSessionState } from "./live-world-session-state";
+import { createLiveHudFeedbackState } from "./live-hud-feedback-state";
 import { createLiveShopFeedbackState } from "./live-shop-feedback-state";
 import { createLiveCombatWorldState } from "./live-combat-world-state";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
@@ -205,7 +206,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
   let uiZoom = 1;   // overlay zoom for small touch screens (draft/pause/gameover readability)
   const musicDirector = new MusicDirector(SFX);
   let continueT = 0;   // rewarded-revive countdown
-  let hudHpLag = 1, hudMultPrev = 1, hudMultPop = 0;   // HUD juice: health damage-chip + combo pop
+  const hudFeedback = createLiveHudFeedbackState();
   const hoverAnim: Record<string, number> = {};
   // One call builds this world: replaceable state, entity construction, run
   // lifecycle, services, and transient records. World state owns the active
@@ -631,7 +632,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
     },
     frameState: { screen: () => state, previousScreen: () => lastUiState, setPreviousScreen: (value) => { lastUiState = value; }, uiZoom: () => uiZoom, setUiZoom: (value) => { uiZoom = value; Input.uiZoom = value; }, deltaSeconds: () => lastUiDt, enterSeconds: () => enterT, setEnterSeconds: (value) => { enterT = value; }, enterAmount: () => eIn, setEnterAmount: (value) => { eIn = value; }, scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, focus: () => focus, setFocus: (value) => { focus = value; }, controls: () => uiButtons, resetControls: () => { uiButtons = []; }, biomeMode, enemies: () => hostState.enemies(), flash: () => feel.flash, bossBeat: () => hostState.bossBeat(), bossIntroActive: () => { const intro = hostState.bossIntro(); return intro !== null && intro.delay <= 0; }, bannerSeconds: () => feel.bannerSeconds, rankPopup: () => ({ seconds: feel.rankPopupSeconds, text: feel.rankPopupText, multiplier: liveRun().mult }), timeSeconds: () => uiT },
     frameServices: { canvas, context: ctx, width: W, height: H, overscan: () => OVERSCAN, safeTop: () => SAFE.t, viewportScale: () => viewport.cssPerLogicalPixel, resize: resizeCanvas, input: Input, ui: UI, stage: stageRuntime, cinema: CINEMA, reducedMotion: () => A11Y.reducedMotion, flashScale: () => A11Y.flashScale, touchActive: () => Input.touchActive(), controller: () => ({ active: PAD.active, toastSeconds: PAD.toastT, toastText: PAD.toastText }), pointerLocked: () => Input.locked, lockHint, inputHint: hintEl, clamp, ease: ez, blendColor: blendCol, setTheme: (background, playLike) => { THEME.set(playLike && biomeMode() ? background : "#ffffff"); UI.ink = THEME.ink; }, themeInk: () => THEME.ink, backdropPost: (context, stage, camera) => { Backdrop.post(context, stage, camera); }, drawMenuAttract: () => { Attract.draw(ctx); }, renderScreen: (screen) => { renderRegisteredScreen(screen, interfaceComposition.screens.renderers); }, isMenuScreen, playInterfaceSound: () => { SFX.ui(); }, hoverAnimation: hoverAnim, trickColor },
-    worldState: { run: liveRun, player: livePlayer, blade: liveBlade, enemies: () => hostState.enemies(), projectiles: () => hostState.projectiles(), floaters: () => hostState.floaters(), slowZones: () => hostState.slowZones(), temporaryWalls: () => hostState.temporaryWalls(), screen: () => state, zoom: () => feel.zoom, shake: () => impact.shake, lastUiDelta: () => lastUiDt, bannerSeconds: () => feel.bannerSeconds, bossIntro: () => hostState.bossIntro(), hud: () => ({ lagHp: hudHpLag, multiplier: hudMultPrev, multiplierPop: hudMultPop }), setHud(value) { hudHpLag = value.lagHp; hudMultPrev = value.multiplier; hudMultPop = value.multiplierPop; } },
+    worldState: { run: liveRun, player: livePlayer, blade: liveBlade, enemies: () => hostState.enemies(), projectiles: () => hostState.projectiles(), floaters: () => hostState.floaters(), slowZones: () => hostState.slowZones(), temporaryWalls: () => hostState.temporaryWalls(), screen: () => state, zoom: () => feel.zoom, shake: () => impact.shake, lastUiDelta: () => lastUiDt, bannerSeconds: () => feel.bannerSeconds, bossIntro: () => hostState.bossIntro(), hud: () => hudFeedback.snapshot(), setHud: (value) => { hudFeedback.set(value); } },
     worldServices: { dependencies, canvas: ctx, width: W, height: H, debug: PANTHEON_DEBUG, stage: stageRuntime, tutorial: TUT, finale: () => story.finale, formatTime: fmtTime, trickColor, ease: ez }, onBiomeTransition: (begin) => { Attract.onBiomeChange = begin; },
   });
   const { wipe: Wipe, frame: presentationHost, screens: screenComposition } = interfaceComposition;

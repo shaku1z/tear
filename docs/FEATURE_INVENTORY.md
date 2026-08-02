@@ -77,6 +77,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   frame-presentation owner rather than the live runtime closure. This preserves
   the live path through focused and rebuilt campaign evidence, but does not make
   the complete frame/UI or production-world state portable.
+  HUD health smoothing and multiplier-pop feedback now also flow through a typed
+  frame-presentation owner rather than live runtime closures. This preserves the
+  live path through focused and rebuilt campaign evidence, but does not make the
+  complete frame/UI or production-world state portable.
   Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,
