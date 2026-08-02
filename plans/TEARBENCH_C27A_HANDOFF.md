@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** fifty-ninth C27A foundation slice implemented (browser-adapter
-Ghost V3 test-inspector assembly); checkpoint remains open
+**Status:** sixtieth C27A foundation slice implemented (composition-owned
+test-build parity-tick browser window); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
@@ -617,6 +617,14 @@ caches and transient lights are local to the controller. This is not full
   quota/device, physical-input, or concurrent-world evidence. The next boundary
   is the remaining test-build parity-tick hook through the supplied window.
 
+  Slice 60 supplies that parity-tick browser window. Both before- and after-step
+  observations read `browserWindow`, and source architecture rejects their
+  ambient-window form. The focused gate passed 3 files / 6 tests; the built
+  canonical live-parity trace captured all thirteen scenarios unchanged. This
+  is not a scheduler/tick, persistence, device, or concurrent-world claim. The
+  next boundary supplies the existing live frame driver's browser window without
+  creating a second scheduler.
+
 All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
@@ -644,7 +652,8 @@ Slice 41 adds simulation tuning isolation; Slice 42 injects particle policy;
   and the first-gesture audio facade, concrete synthesized runtime, browser
   audio-context handoff, browser navigator capability, browser document/window
   capability, Ghost V3 IndexedDB capability, Ghost V3 test-query capability,
-  and Ghost V3 inspector assembly are composition-owned. Remaining persistence adapter
+  Ghost V3 inspector assembly, and test-build parity-tick window are
+  composition-owned. Remaining persistence adapter
   isolation still precedes true simultaneous complete worlds.
 Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
@@ -664,12 +673,12 @@ composition with parity evidence.
 
 ## Working-tree safety
 
-- Slice 59 is the next intentional commit on
-  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 7
-  files / 23 tests plus source architecture; direct installer and built Ghost
-  V3 live-capture/reload evidence passed. The next boundary moves the remaining
-  test-build parity-tick hook through the supplied window, still not a
-  persistence, durability, physical-device, or second-runtime claim.
+- Slice 60 is the next intentional commit on
+  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 3
+  files / 6 tests plus source architecture; built canonical live-parity trace
+  evidence passed across thirteen scenarios. The next boundary supplies the
+  existing live frame driver's browser window without another scheduler, still
+  not a persistence, durability, physical-device, or second-runtime claim.
 - Slice 48 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
   files / 23 tests plus source architecture; built journeys and six responsive

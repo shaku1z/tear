@@ -378,6 +378,10 @@ The following C27A foundation slices are complete:
   stable interface remains covered by direct and browser live-capture/reload
   evidence. The remaining local test-build hook is parity-tick observation,
   which must use the supplied browser window without changing behavior.
+- That before- and after-step parity-tick observation now reads the supplied
+  browser window, with the canonical thirteen-scenario trace unchanged. The
+  next adjacent browser capability is the existing live frame driver's window;
+  it must not become a second scheduler or timing model.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

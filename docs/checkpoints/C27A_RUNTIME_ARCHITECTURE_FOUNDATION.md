@@ -1026,6 +1026,17 @@ of replay, headless execution, or learning portability.
   evidence. The next boundary routes the remaining test-build parity-tick hook
   through the supplied window without changing its test behavior.
 
+- The sixtieth slice supplies that parity-tick window boundary. Both before- and
+  after-step test observations read the supplied `browserWindow`, and source
+  architecture rejects restoring the ambient-window form. The focused gate
+  passed 3 files / 6 tests; the built canonical live-parity trace captured all
+  thirteen scenarios unchanged.
+
+  This is test-hook browser ownership only, not changed scheduler or tick
+  semantics, persistence, device behavior, concurrent-world, or C27A completion
+  evidence. The next boundary supplies the live frame driver's existing browser
+  window capability without introducing another scheduler.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap

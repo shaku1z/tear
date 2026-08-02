@@ -197,16 +197,14 @@ Important files:
 
 ### Exact next slice
 
-Slice 59 completes the bounded Ghost V3 inspector browser-adapter step.
-`installGhostV3BrowserInspector()` owns the stable test-build interface and
-receives recorder-backed callbacks from the live runtime; source architecture
-rejects rebuilding it in the live host. `pnpm check:c27a:slice59` passed (7
-files / 23 tests plus architecture), its direct installer unit passes, and the
-built Ghost V3 live-capture/reload journey preserved post-reload capsule
-inspection. This does not change the browser-test API, persistence semantics,
-establish durable quota/device behavior, or create full-world concurrency.
-Next, route the remaining test-build parity-tick hook through the supplied
-window without changing its behavior.
+Slice 60 completes the bounded parity-tick window step. Both before- and
+after-step test observations read `browserWindow`; source architecture rejects
+the former ambient-window form. `pnpm check:c27a:slice60` passed (3 files / 6
+tests plus architecture), and the built canonical live-parity trace captured
+all thirteen scenarios unchanged. This does not change scheduler/tick
+semantics, persistence, establish device behavior, or create full-world
+concurrency. Next, supply the existing live frame driver's window capability
+without introducing another scheduler.
 
 All thirteen captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream: 5,732 ticks and 33 native facts, including the three natural-trace enemy defeats now published independently of Ghost 2 sampling. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome/reward/finale controllers, scheduler shape, event bus, and restored actor identity. The natural matrix route clears wave 1, selects a real offered draft card without advancing the fixed scheduler, and reaches a wave-2 spawn. A separate certified route reconstructs the wave-49 frontier, starts production wave 50, applies an explicit Source one-hit State Forge child, and executes real victory; live and detached match all seven finale intent batches and all 22 outward calls after their concrete adapters return, in exact order and with exact arguments. They also match six immutable ring/burst particle-admission receipts, eight logical feel receipts after restoration of the captured pre-finale transient, and the complete 42-entry terminal external-decision transcript (13 initial synchronization terminal decision/request, 22 finale-outward, and 7 cache/terminal). The refreshed browser route explicitly activates audio, then observes 12 executing plus 12 completed dispatch receipts: all seven mixes are logical-target-only and all cues are voice-cap-rejected, so no output is claimed. Slice 40 adds portable `tear-world-simulation-factories.ts` with no app/presentation/browser imports; the app renderer supplies real Canvas ports and detached supplies explicit no-op ports under architecture fences. Next: generic world bootstrap, then configuration isolation, which still blocks truly simultaneous full worlds. This evidence does not claim a naturally played 50-wave campaign, randomized particle parity, rendered-pixel parity, headless/full-world portability, configuration isolation, durable profile/local-storage survival, cloud/replay/analytics completion, successful PCM/audibility or audio graph/device parity, or device vibration.
 
@@ -347,11 +345,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      Slice 59 moves Ghost V3 test-build inspector assembly into the browser adapter while retaining recorder-backed callbacks.
-PROVEN BY:           `pnpm check:c27a:slice59` passed: 7 focused files / 23 tests and architecture; the direct installer unit and built Ghost V3 live-capture/reload journey passed. The previous fresh foundation and campaign-victory evidence remains recorded above; C27A remains blocking.
-REMAINING HERE:      Route the remaining test-build parity-tick hook through the supplied browser window, then isolate remaining persistence adapter dependencies. Those adapters still prevent concurrent complete worlds and C27A remains blocking.
+DONE THIS STEP:      Slice 60 routes both test-build parity-tick observations through composition-owned browser-window capability.
+PROVEN BY:           `pnpm check:c27a:slice60` passed: 3 focused files / 6 tests and architecture; the built canonical live-parity trace captured all thirteen scenarios unchanged. The previous fresh foundation and campaign-victory evidence remains recorded above; C27A remains blocking.
+REMAINING HERE:      Supply the existing live frame driver's browser-window capability, then isolate remaining persistence adapter dependencies. Those adapters still prevent concurrent complete worlds and C27A remains blocking.
 REMAINING TO C40:    C27 completion, C25 exit, and C28-C40 remain after C27A closes.
-NEXT SLICE:          Route the remaining test-build parity-tick hook through the supplied browser window without changing test behavior. Do not claim persistence, durability/device parity, or full live-world concurrency.
+NEXT SLICE:          Supply the existing live frame driver's browser-window capability without creating another scheduler. Do not claim persistence, durability/device parity, or full live-world concurrency.
 
 All of the following were run from this worktree through C27A slice 36:
 

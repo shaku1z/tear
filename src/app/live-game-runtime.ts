@@ -41,7 +41,7 @@ import { captureLiveStateForgeSnapshot } from "../tearbench/live-runtime-snapsho
 import { createDefaultStateCodecRegistry } from "../tearbench/state-codecs";
 import { ENTITY_KIND_REGISTRY } from "../tearbench/registries";
 import { stableVerificationHash } from "../replay/hash";
-type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnType<RunScreenState["outcome"]>; type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>; export function startLiveGame(dependencies: GameRuntimeDependencies, configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>): void {
+type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnType<RunScreenState["outcome"]>; type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>; type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick: number): void; after?(tick: number): void } }; export function startLiveGame(dependencies: GameRuntimeDependencies, configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>): void {
   const { A11Y, APP, Attract, Backdrop, browserDocument, browserIndexedDb, browserNavigator, browserWindow, CG, CONFIG, Cloud, DIAG, FX, GAMEPLAY_EVENTS, GFX, GHOST, Input, OVERSCAN, PAD, SAFE, SFX, THEME, UI, VAULT, applyUpgrade, clamp, cosmeticRandom, lerp, weaponCapsuleIntersectsSegment } = dependencies;
 (function () {
   const browserRuntime = createLiveBrowserRuntime(dependencies);
@@ -485,7 +485,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnT
     recordSealedActions: (_tick, actions) => { for (const action of actions) ghostV3?.record("commands", action.tick, action); },
     ...(__TEAR_TEST_BUILD__ ? {
       beforeSimulationStep: (tick: number) => {
-        const hook = (window as Window & { __TEAR_PARITY_TICK__?: { before?(tick: number): void } }).__TEAR_PARITY_TICK__;
+        const hook = (browserWindow as BrowserParityTickWindow).__TEAR_PARITY_TICK__;
         hook?.before?.(tick);
       },
     } : {}),
@@ -504,7 +504,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnT
         captureGhostStateSnapshot(tick);
       }
       if (__TEAR_TEST_BUILD__) {
-        const hook = (window as Window & { __TEAR_PARITY_TICK__?: { after?(tick: number): void } }).__TEAR_PARITY_TICK__;
+        const hook = (browserWindow as BrowserParityTickWindow).__TEAR_PARITY_TICK__;
         hook?.after?.(tick);
       }
     },

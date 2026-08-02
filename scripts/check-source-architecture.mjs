@@ -193,6 +193,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live Ghost V3 test inspection surface must be assembled by the browser adapter",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /\(\s*window\s+as\s+Window\s*&\s*\{\s*__TEAR_PARITY_TICK__/u,
+    message: "live parity-tick observation must receive the browser window through the composition dependency port",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -408,6 +413,12 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/tearbench/browser/live-runtime-bridge.ts",
     'Object.defineProperty(target, "__TEAR_GHOST_V3__", {});').length !== 0) {
   throw new Error("source architecture Ghost inspector browser-adapter rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "const hook = (window as Window & { __TEAR_PARITY_TICK__: {} }).__TEAR_PARITY_TICK__;").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "const hook = (dependencies.browserWindow as BrowserParityTickWindow).__TEAR_PARITY_TICK__;").length !== 0) {
+  throw new Error("source architecture composition-owned parity-tick browser window rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",

@@ -617,6 +617,17 @@ quota/device, concurrent-complete-world, or C27A completion evidence. Next,
 route the remaining test-build parity-tick hook through the supplied window
 without changing its test behavior.
 
+Slice 60 supplies that parity-tick boundary. Both before- and after-step
+observations now read `browserWindow`, and source architecture rejects their
+ambient-window form. The focused gate passed 3 files / 6 tests plus
+architecture; the built canonical live-parity trace captured all thirteen
+scenarios unchanged.
+
+This is test-hook browser ownership only, not changed scheduler/tick semantics,
+persistence, device behavior, concurrent-complete-world, or C27A completion
+evidence. Next, supply the existing live frame driver's window capability
+without creating another scheduler.
+
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser
 - [ ] Versioned durable capsule contract with provenance, compatibility, integrity
