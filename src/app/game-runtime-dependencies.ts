@@ -36,6 +36,7 @@ import type { LegacyAppStateController } from "./legacy-state-controller";
 import type { AchievementToastPersistence } from "./live-achievement-toast-persistence";
 import type { PendingFinalePersistence } from "./live-pending-finale-persistence";
 import type { OutcomeDefeatProgressPersistence } from "./live-outcome-defeat-progress-persistence";
+import type { ProfileStatsPersistence } from "./live-profile-stats-persistence";
 import type { ShopPurchaseProgressPersistence } from "./live-shop-purchase-progress-persistence";
 import type { StyleAchievementPersistence } from "./live-style-achievement-persistence";
 import type { PlatformBootstrapPersistence } from "./live-platform-bootstrap-persistence";
@@ -73,6 +74,7 @@ export interface GameRuntimeDependencies {
   readonly outcomeDefeatProgressPersistence: OutcomeDefeatProgressPersistence;
   readonly pendingFinalePersistence: PendingFinalePersistence;
   readonly platformBootstrapPersistence: PlatformBootstrapPersistence;
+  readonly profileStatsPersistence: ProfileStatsPersistence;
   readonly PROFILE: ReturnType<typeof createLegacyProfile>; readonly Player: ReturnType<typeof createPlayer>;
   readonly Projectile: ReturnType<typeof createProjectile>; readonly PwaUpdate: PwaUpdateCapability;
   readonly REMOTE: typeof REMOTE; readonly Ranged: EnemyTypes["Ranged"];

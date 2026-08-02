@@ -1152,6 +1152,16 @@ of replay, headless execution, or learning portability.
   session and wave profile-stat ports through their shared adapter without
   changing their callers' behavior.
 
+- The seventy-first slice routes generic session-economy and wave-clear
+  profile-stat ports through one composition-owned adapter. Source architecture
+  rejects direct profile-stat access in both compositions. The focused gate
+  passed 4 files / 7 tests; rebuilt campaign-victory browser proof passes.
+
+  This is a shared profile-stat port handoff only, not durable profile state,
+  migration, quota, crash recovery, cross-device sync, concurrent-world
+  behavior, or C27A completion evidence. The next boundary routes live-style
+  host generic profile-stat ports through the same adapter.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

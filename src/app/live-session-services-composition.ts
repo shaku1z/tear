@@ -42,7 +42,7 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
   const economy = createLiveEconomyRuntime({
     run: options.run, remoteCoinMultiplier: () => d.REMOTE.coinMult, meta: d.META,
     shop: d.SHOP, shopId: (item) => item.id, achievementTracking: options.achievementTracking,
-    addProfileStat: (stat, amount) => { d.PROFILE.addStat(stat, amount); },
+    addProfileStat: d.profileStatsPersistence.add,
   });
   const reward = createRewardRuntime({
     run: options.run,
