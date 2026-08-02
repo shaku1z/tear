@@ -5,19 +5,20 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** ninety-fifth C27A foundation slice implemented (portable world
-assembly now owns one lifecycle and transient record); checkpoint remains open
+**Status:** ninety-sixth C27A foundation slice implemented (the production root
+now owns live session/world construction and config-reference admission);
+checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
-**Latest evidence:** Slice 95 routes every supplied world through portable
-`createTearWorldComposition`, which creates one lifecycle and one transient
-record. Detached combat now receives the exact record State Forge restoration
-uses. Its focused 8-file / 65-test world-assembly gate, rebuilt
-physical-canonical-input browser proof, and all thirteen live-parity browser
-scenarios pass. This is shared-record world assembly, not portable entity or
-app-service construction, full-production-world portability, or C27A
-completion.
+**Latest evidence:** Slice 96 routes live construction through
+`createLiveProductionWorld`. It creates the session/world together and rejects
+a runtime configuration reference that differs from the world-owned value;
+source architecture rejects restoring direct session/world construction. Its
+focused 7-file / 22-test root gate, rebuilt physical-canonical-input browser
+proof, and all thirteen live-parity browser scenarios pass. This prevents split
+configuration authority only; it is not app-service isolation,
+full-production-world portability, or C27A completion.
 
 ## Resume protocol (mandatory)
 

@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 95 update (current)
+#### Slice 96 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -932,6 +932,14 @@ State Forge restoration cannot diverge from its opening or collision phases.
 The focused world-assembly gate passed 8 files / 65 tests; rebuilt physical
 canonical-input and all thirteen live-parity browser scenarios passed. This is
 not portable entity selection, app-service construction, full-world
+portability, concurrent complete worlds, or C27A completion.
+
+Slice 96 adds `createLiveProductionWorld`, which creates the live session and
+world atomically and rejects a runtime configuration reference that differs
+from the world-owned configuration value. Source architecture rejects restoring
+separate direct construction in the live host. The focused root gate passed 7
+files / 22 tests; rebuilt physical-canonical-input and all thirteen live-parity
+browser scenarios passed. This is not app-service isolation, full-world
 portability, concurrent complete worlds, or C27A completion.
 
 - [x] V3 recorder ships in the production bundle

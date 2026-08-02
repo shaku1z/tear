@@ -315,6 +315,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live input authority must use the typed browser-input owner",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /\b(?:createLiveWorldSessionState|createLiveWorldComposition)\b/u,
+    message: "live runtime must construct its session and world through the production-world root",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/app/live-style-host.ts"]),
     pattern: /\bd\.ACH\.check\(\);\s*d\.PROFILE\.save\(\)/u,
     message: "live style achievement persistence must use the composition-owned adapter",
@@ -638,7 +643,7 @@ if (dependencyErrors("src/app/live-world-presentation-adapters.ts",
 if (dependencyErrors("src/app/live-game-runtime.ts",
   "let lastGhost = null;").length !== 1
   || dependencyErrors("src/app/live-game-runtime.ts",
-    "const session = createLiveWorldSessionState();").length !== 0) {
+    "const production = createLiveProductionWorld(options);").length !== 0) {
   throw new Error("source architecture live world session-state owner rule self-test failed");
 }
 if (dependencyErrors("src/app/live-game-runtime.ts",
@@ -710,7 +715,7 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
 if (dependencyErrors("src/app/live-game-runtime.ts",
   "const music = new MusicDirector(SFX);").length !== 1
   || dependencyErrors("src/app/live-game-runtime.ts",
-    "const world = createLiveWorldComposition({});").length !== 0) {
+    "const world = createLiveProductionWorld({});").length !== 0) {
   throw new Error("source architecture live music owner rule self-test failed");
 }
 if (dependencyErrors("src/app/live-game-runtime.ts",
@@ -730,6 +735,12 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/app/live-game-runtime.ts",
     "const authority = createLiveInputAuthorityState(requestLock);").length !== 0) {
   throw new Error("source architecture live input-authority owner rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "const session = createLiveWorldSessionState();").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "const production = createLiveProductionWorld(options);").length !== 0) {
+  throw new Error("source architecture production-world root rule self-test failed");
 }
 if (dependencyErrors("src/app/live-style-host.ts",
   "d.ACH.check(); d.PROFILE.save();").length !== 1

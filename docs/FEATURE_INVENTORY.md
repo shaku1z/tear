@@ -111,6 +111,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   record, so State Forge restoration cannot update a separate harness-local
   record. This does not make entity selection, live services, presentation, or
   a complete production world portable.
+  The live runtime now creates its session and world through one production
+  root that requires its runtime configuration reference to match the
+  world-owned configuration value. This prevents a torn configuration authority
+  but does not isolate remaining app services or enable concurrent full worlds.
   Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,

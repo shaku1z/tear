@@ -541,6 +541,13 @@ The following C27A foundation slices are complete:
   is not portable entity selection or app-service construction, headless/full
   production-world portability, concurrent complete-world evidence, or C27A
   completion.
+- `createLiveProductionWorld` now constructs the live session and its world
+  atomically, requiring `dependencies.CONFIG` to be the exact
+  world-configuration value before any world is returned. Source architecture
+  rejects restoring separate direct construction in the live host. This prevents
+  a split configuration authority only; it does not isolate app-backed
+  services, add a second scheduler, make full worlds concurrent, or complete
+  C27A.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

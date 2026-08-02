@@ -15,8 +15,7 @@ import { commitBossIntroSnapshot } from "./live-frame-runtime";
 import { RuntimeFrameDriver } from "./runtime-frame-driver";
 import { createLiveMusicObservation, projectLiveMusicRun } from "./live-music-observation-adapter";
 import { isMenuScreen, renderRegisteredScreen } from "./screen-registry";
-import { createLiveWorldComposition } from "./live-world-composition";
-import { createLiveWorldSessionState } from "./live-world-session-state";
+import { createLiveProductionWorld } from "./live-production-world";
 import { createLiveHudFeedbackState } from "./live-hud-feedback-state";
 import { createLiveInterfaceFrameState } from "./live-interface-frame-state";
 import { createLiveInterfaceInteractionState } from "./live-interface-interaction-state";
@@ -166,7 +165,6 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     else if (prior === "paused" && state === "playing") emitRunScreenTransition("resumed");
     return state;
   }
-  const session = createLiveWorldSessionState();
   // Time dilation, camera framing (the void run pulls world zoom OUT), banner
   // and rank readouts, hit stop, slow motion, shake, the blade-throw cooldown,
   // dash ghosting, and the opening audio cadence are per-world transient
@@ -207,9 +205,9 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   // One call builds this world: replaceable state, entity construction, run
   // lifecycle, services, and transient records. World state owns the active
   // player, blade, actors, and run while the session retains menu-time state.
-  const { state: hostState, context: worldContext, entities: worldEntities, lifecycle: RUN_LIFECYCLE, music: musicDirector } = createLiveWorldComposition({
-    dependencies, configuration, session,
-  });
+  const productionWorld = createLiveProductionWorld({ dependencies, configuration });
+  const { session, world } = productionWorld;
+  const { state: hostState, context: worldContext, entities: worldEntities, lifecycle: RUN_LIFECYCLE, music: musicDirector } = world;
   // One world owns the transient records read by combat, State Forge, and diagnostics.
   const { transient } = worldContext; const impact = transient.impact; const openingCarry = transient.opening;
   const feel = transient.feel; const finaleIntentBatches: (readonly FinaleIntent[])[] = []; const finaleOutwardCalls: FinaleOutwardCall[] = [];

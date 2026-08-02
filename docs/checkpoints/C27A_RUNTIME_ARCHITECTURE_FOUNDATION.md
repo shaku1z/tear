@@ -1363,6 +1363,16 @@ of replay, headless execution, or learning portability.
   selection, app services, presentation, or the full production world portable;
   it does not establish concurrent complete-world evidence or C27A completion.
 
+- The ninety-sixth slice adds `createLiveProductionWorld`. The live host now
+  receives its session and world from one immutable production root, which
+  rejects a `dependencies.CONFIG` reference that differs from the world-owned
+  configuration before construction. Source architecture rejects reviving
+  separate direct session/world construction. The focused gate passed 7 files /
+  22 tests; rebuilt physical-canonical-input and all thirteen live-parity
+  browser scenarios passed. This prevents split configuration authority only;
+  it does not isolate remaining app services, create concurrent complete worlds,
+  or complete C27A.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.
