@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 58 update (current)
+#### Slice 61 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -627,6 +627,17 @@ This is test-hook browser ownership only, not changed scheduler/tick semantics,
 persistence, device behavior, concurrent-complete-world, or C27A completion
 evidence. Next, supply the existing live frame driver's window capability
 without creating another scheduler.
+
+Slice 61 supplies that frame-driver capability. The one existing
+`RuntimeFrameDriver` receives `browserWindow`, and source architecture rejects
+the ambient constructor argument. The focused gate passed 4 files / 8 tests
+plus architecture; rebuilt browser navigation, progression, playground,
+terminal, and cinematic-preference journeys pass.
+
+This is animation-frame source ownership only, not a new scheduler, changed
+frame/tick semantics, persistence, device behavior, concurrent-complete-world,
+or C27A completion evidence. Next, supply the test-build physical-input
+emitter's browser window without changing input semantics.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

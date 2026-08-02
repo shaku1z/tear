@@ -198,6 +198,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live parity-tick observation must receive the browser window through the composition dependency port",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /new\s+RuntimeFrameDriver\(window\)/u,
+    message: "live frame coordination must receive its animation-frame source through the composition dependency port",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -419,6 +424,12 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/app/live-game-runtime.ts",
     "const hook = (dependencies.browserWindow as BrowserParityTickWindow).__TEAR_PARITY_TICK__;").length !== 0) {
   throw new Error("source architecture composition-owned parity-tick browser window rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "const driver = new RuntimeFrameDriver(window);").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "const driver = new RuntimeFrameDriver(dependencies.browserWindow);").length !== 0) {
+  throw new Error("source architecture composition-owned frame-driver window rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",

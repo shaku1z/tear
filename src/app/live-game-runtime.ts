@@ -310,7 +310,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnT
     startRun: (mode, difficulty) => { startRunWithPreflight(mode, difficulty); },
     ...(outcomeChronology === null ? {} : { observeOutcomeChronology: outcomeChronology.record }),
   });
-  const frameDriver = new RuntimeFrameDriver(window);
+  const frameDriver = new RuntimeFrameDriver(browserWindow);
   type CombatSnapshot = ReturnType<typeof projectCanonicalGameplayState>; type CombatHost = ReturnType<typeof createLiveCombatComposition<CombatSnapshot>>; type CombatCompositionInput = Parameters<typeof createLiveCombatComposition<CombatSnapshot>>[0];
   const isGameProjectile = (value: unknown): value is GameProjectile => value instanceof dependencies.Projectile;
   const isSourceOwner = (value: unknown): value is GameEnemy & Parameters<typeof startVoidDescent>[0] =>

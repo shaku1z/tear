@@ -1037,6 +1037,17 @@ of replay, headless execution, or learning portability.
   evidence. The next boundary supplies the live frame driver's existing browser
   window capability without introducing another scheduler.
 
+- The sixty-first slice supplies that frame-driver window capability. The one
+  existing `RuntimeFrameDriver` receives `browserWindow`, and source
+  architecture rejects restoring the ambient constructor argument. The focused
+  gate passed 4 files / 8 tests; the rebuilt browser navigation, progression,
+  playground, terminal, and cinematic-preference journeys pass.
+
+  This is animation-frame source ownership only, not a new scheduler, altered
+  frame/tick semantics, persistence, device behavior, concurrent-world, or C27A
+  completion claim. The next boundary supplies the test-build physical-input
+  emitter's browser window without changing input semantics.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap

@@ -382,6 +382,10 @@ The following C27A foundation slices are complete:
   browser window, with the canonical thirteen-scenario trace unchanged. The
   next adjacent browser capability is the existing live frame driver's window;
   it must not become a second scheduler or timing model.
+- That one existing frame driver now receives the supplied browser window, and
+  the rebuilt browser journeys retain their normal live-loop behavior. The next
+  adjacent test-only browser capability is physical-input emission; it must not
+  change the canonical input path.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition
