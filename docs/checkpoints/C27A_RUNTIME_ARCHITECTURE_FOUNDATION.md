@@ -1246,6 +1246,15 @@ of replay, headless execution, or learning portability.
   aggregate pass. This remains incremental production-world extraction, not
   full-world or concurrent-live-world evidence.
 
+- The eighty-second slice removes the live host's enemy and projectile array
+  mirrors. World context, music, frame, State Forge, diagnostics, and the
+  TearBench bridge now read those collections directly from world state; source
+  architecture rejects restoring the local arrays. The focused gate passed 5
+  files / 16 tests; rebuilt campaign-victory browser proof and the full
+  canonical C27A aggregate pass. This remains collection ownership extraction,
+  not player/blade/run extraction, full-world portability, or concurrent-live-
+  world evidence.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

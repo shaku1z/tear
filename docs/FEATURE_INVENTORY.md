@@ -53,6 +53,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   live music, frame, State Forge, and presentation paths. This preserves the
   existing live path through focused and rebuilt campaign evidence, but leaves
   actor, frame, and combat ownership app-bound.
+  Enemy and projectile collections also flow directly from world state through
+  the live context, music, frame, State Forge, diagnostics, and TearBench
+  bridge. This preserves the existing live path through focused and rebuilt
+  campaign evidence, but leaves player, blade, run, frame, and combat ownership
+  app-bound.
   Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,

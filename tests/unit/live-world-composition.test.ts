@@ -116,6 +116,19 @@ describe("live world composition", () => {
     expect(world.state.temporaryWalls()).toEqual([{ id: "wall" }]);
   });
 
+  it("keeps actor collections in world state", () => {
+    const { dependencies } = createWorldDependencies();
+    const world = createLiveWorldComposition({
+      dependencies, session: createSession(), configuration: createConfiguration(),
+    });
+
+    world.state.setEnemies([{ id: "enemy" }] as never);
+    world.state.setProjectiles([{ id: "projectile" }] as never);
+
+    expect(world.state.enemies()).toEqual([{ id: "enemy" }]);
+    expect(world.state.projectiles()).toEqual([{ id: "projectile" }]);
+  });
+
   it("keeps boss cinematic state in world state", () => {
     const { dependencies } = createWorldDependencies();
     const world = createLiveWorldComposition({

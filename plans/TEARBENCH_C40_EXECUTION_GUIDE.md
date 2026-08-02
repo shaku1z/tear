@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 81 update (current)
+#### Slice 82 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -828,6 +828,14 @@ cinematic closures. The focused gate passed 5 files / 15 tests and rebuilt
 campaign-victory browser proof plus the full canonical C27A aggregate pass.
 This remains incremental production-world extraction, not full-world
 portability.
+
+Slice 82 removes the live host's enemy and projectile array mirrors. World
+context, music, frame, State Forge, diagnostics, and the TearBench bridge read
+these collections directly from world state, and source architecture rejects
+restoring the local arrays. The focused gate passed 5 files / 16 tests and
+rebuilt campaign-victory browser proof plus the full canonical C27A aggregate
+pass. This remains collection ownership extraction, not player/blade/run
+extraction or full-world portability.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

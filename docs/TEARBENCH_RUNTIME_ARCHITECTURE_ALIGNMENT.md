@@ -467,6 +467,11 @@ The following C27A foundation slices are complete:
   rejects restoring their host mirrors, and focused plus rebuilt campaign
   evidence pass. Actor, frame, and combat state remain app-bound; this does
   not establish full-world or concurrent-live-world portability.
+- Enemy and projectile collections are now read directly from world state by
+  the live context, music, frame, State Forge, diagnostics, and TearBench
+  bridge. Source architecture rejects restoring their host mirrors, and
+  focused plus rebuilt campaign evidence pass. Player, blade, run, frame, and
+  combat ownership remain app-bound.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition
