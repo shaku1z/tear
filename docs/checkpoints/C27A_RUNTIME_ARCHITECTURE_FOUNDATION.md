@@ -1210,6 +1210,12 @@ of replay, headless execution, or learning portability.
   access in that host. The focused gate passed 6 files / 12 tests; rebuilt
   campaign-victory browser proof passes.
 
+- The seventy-seventh slice moves victory weapon, reward, and difficulty
+  profile-data records behind a composition-owned adapter while outcome retains
+  its later save request. Source architecture rejects direct profile-data access
+  in the victory host. The focused gate passed 7 files / 13 tests; rebuilt
+  campaign-victory browser proof passes.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

@@ -444,6 +444,10 @@ The following C27A foundation slices are complete:
   distinct profile-data records remain explicitly local. Its focused host gate
   and rebuilt campaign-victory browser proof pass; this is not durable-profile
   completion.
+- Victory weapon, reward, and difficulty profile-data records now use a
+  composition-owned adapter while outcome retains the later save request. Its
+  focused adapter/host gate and rebuilt campaign-victory browser proof pass;
+  this is not durable-profile completion.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

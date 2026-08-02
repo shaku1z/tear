@@ -41,6 +41,7 @@ import type { ProfileStatsPersistence } from "./live-profile-stats-persistence";
 import type { ShopPurchaseProgressPersistence } from "./live-shop-purchase-progress-persistence";
 import type { StyleAchievementPersistence } from "./live-style-achievement-persistence";
 import type { PlatformBootstrapPersistence } from "./live-platform-bootstrap-persistence";
+import type { VictoryProfileProgressPersistence } from "./live-victory-profile-progress-persistence";
 
 type EnemyTypes = ReturnType<typeof createEnemyTypes>;
 type MirrorTypes = ReturnType<typeof createMirrorTypes>;
@@ -77,6 +78,7 @@ export interface GameRuntimeDependencies {
   readonly pendingFinalePersistence: PendingFinalePersistence;
   readonly platformBootstrapPersistence: PlatformBootstrapPersistence;
   readonly profileStatsPersistence: ProfileStatsPersistence;
+  readonly victoryProfileProgressPersistence: VictoryProfileProgressPersistence;
   readonly PROFILE: ReturnType<typeof createLegacyProfile>; readonly Player: ReturnType<typeof createPlayer>;
   readonly Projectile: ReturnType<typeof createProjectile>; readonly PwaUpdate: PwaUpdateCapability;
   readonly REMOTE: typeof REMOTE; readonly Ranged: EnemyTypes["Ranged"];

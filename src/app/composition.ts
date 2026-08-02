@@ -41,6 +41,7 @@ import { createLivePendingFinalePersistence } from "./live-pending-finale-persis
 import { createLiveOutcomeDefeatProgressPersistence } from "./live-outcome-defeat-progress-persistence";
 import { createLiveProfileStatsPersistence } from "./live-profile-stats-persistence";
 import { createLiveShopPurchaseProgressPersistence } from "./live-shop-purchase-progress-persistence";
+import { createLiveVictoryProfileProgressPersistence } from "./live-victory-profile-progress-persistence";
 import { createLiveStyleAchievementPersistence } from "./live-style-achievement-persistence";
 import { createLivePlatformBootstrapPersistence } from "./live-platform-bootstrap-persistence";
 import { createTearWorldSimulationFactories } from "../gameplay/runtime/tear-world-simulation-factories";
@@ -181,6 +182,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const outcomeDefeatProgressPersistence = createLiveOutcomeDefeatProgressPersistence(PROFILE);
   const pendingFinalePersistence = createLivePendingFinalePersistence(PROFILE);
   const profileStatsPersistence = createLiveProfileStatsPersistence(PROFILE);
+  const victoryProfileProgressPersistence = createLiveVictoryProfileProgressPersistence(PROFILE, profileStatsPersistence);
   const styleAchievementPersistence = createLiveStyleAchievementPersistence(ACH, PROFILE);
   const platformBootstrapPersistence = createLivePlatformBootstrapPersistence(ACH, PROFILE, META, SHOP);
   const shopPurchaseProgressPersistence = createLiveShopPurchaseProgressPersistence(PROFILE, META, SHOP);
@@ -190,7 +192,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     browserDocument: document, browserIndexedDb: window.indexedDB, browserNavigator: navigator, browserStorage: window.localStorage, browserWindow: window, CG, CLOCK, CONFIG: worldConfig, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, DAILY, DIAG, Echo,
     FX, FirebaseProvider, Flyer, GAMEPLAY_EVENTS, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
     MirrorHost, OVERSCAN, PAD, PRESETS, outcomeDefeatProgressPersistence, pendingFinalePersistence, platformBootstrapPersistence, profileStatsPersistence, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
-    Ranged, ReflectionEnemy, SAFE, SFX, SHOP, STAGES, Source, shopPurchaseProgressPersistence, styleAchievementPersistence, Support, THEME, UI, UPGRADES,
+    Ranged, ReflectionEnemy, SAFE, SFX, SHOP, STAGES, Source, shopPurchaseProgressPersistence, styleAchievementPersistence, Support, THEME, UI, UPGRADES, victoryProfileProgressPersistence,
     VAULT, VARIANTS, VoidGen, VoidWisp, WEAPONS, Warden, Wraith,
     aabbOverlap, applyPreset, applyUpgrade, applyVariant, applyWeapon,
     clamp, cosmeticRandom, createRunSeed, drawBossTransformationWorld, len, lerp,

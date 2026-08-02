@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 76 update (current)
+#### Slice 77 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -798,6 +798,11 @@ Slice 76 routes victory-progression generic add/max stat ports through the
 shared adapter while retaining distinct profile-data mutations as explicit local
 scope. The focused gate passed 6 files / 12 tests; rebuilt campaign-victory
 browser proof passes. This is not durable-profile completion.
+
+Slice 77 moves victory weapon, reward, and difficulty profile-data records
+behind a composition-owned adapter while outcome retains the later save request.
+The focused gate passed 7 files / 13 tests; rebuilt campaign-victory browser
+proof passes. This is not durable-profile completion.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

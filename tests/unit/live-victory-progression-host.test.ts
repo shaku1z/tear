@@ -8,10 +8,12 @@ describe("live victory progression host", () => {
     const max = vi.fn();
     const checkAchievements = vi.fn();
     const finishRecording = vi.fn();
-    const profile = { data: {} };
+    const markWeaponWin = vi.fn();
+    const setReward = vi.fn();
+    const markAdventureDifficulty = vi.fn();
     const execute = createLiveVictoryProgressionExecutor({
-      PROFILE: profile,
       profileStatsPersistence: { add, max },
+      victoryProfileProgressPersistence: { markWeaponWin, setReward, markAdventureDifficulty },
       DAILY: { bump: vi.fn() },
       Cloud: { logEvent: vi.fn() },
     } as never, checkAchievements, finishRecording);
@@ -20,14 +22,15 @@ describe("live victory progression host", () => {
       { type: "profile-add", stat: "wins", value: 1 },
       { type: "profile-max", stat: "bestScore", value: 40 },
       { type: "mark-weapon-win", weaponId: "hammer" },
+      { type: "set-profile-reward", reward: "restoredBladeTrail" },
       { type: "mark-adventure-difficulty", difficulty: "hard" },
     ]);
 
     expect(add).toHaveBeenCalledWith("wins", 1);
     expect(max).toHaveBeenNthCalledWith(1, "bestScore", 40);
-    expect(max).toHaveBeenNthCalledWith(2, "distinctWeaponsWon", 1);
-    expect(max).toHaveBeenNthCalledWith(3, "clearAdvAll", 1);
-    expect(profile.data).toEqual({ weaponsWon: { hammer: 1 }, advDiffs: { hard: 1 } });
+    expect(markWeaponWin).toHaveBeenCalledWith("hammer");
+    expect(setReward).toHaveBeenCalledWith("restoredBladeTrail");
+    expect(markAdventureDifficulty).toHaveBeenCalledWith("hard");
     expect(checkAchievements).not.toHaveBeenCalled();
     expect(finishRecording).not.toHaveBeenCalled();
   });
