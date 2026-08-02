@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 74 update (current)
+#### Slice 75 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -784,6 +784,15 @@ This is one campaign biome-progress handoff only, not durable profile state,
 migration, quota, crash recovery, cross-device sync, concurrent-complete-world,
 or C27A completion evidence. Next, route live combat-action generic stat ports
 through the shared adapter.
+
+Slice 75 routes live combat-action generic add/max stat ports through the shared
+composition-owned adapter. Source architecture rejects direct profile-stat
+access in the host. The focused gate passed 6 files / 13 tests; rebuilt
+campaign-victory browser proof passes.
+
+This is one combat stat-port handoff only, not durable profile state,
+full-combat portability, migration, quota, crash recovery, cross-device sync,
+concurrent-complete-world, or C27A completion evidence.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

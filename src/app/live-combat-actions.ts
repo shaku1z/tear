@@ -16,6 +16,7 @@ export function createLiveCombatActions<
 >(context: LiveCombatActionContext<Enemy, Projectile, Floater>): LiveCombatActionAdapters {
   const { dependencies: d, live, ports } = context;
   const f = ports.functions;
+  const profileStats = d.profileStatsPersistence;
   const player = () => live.player(), blade = () => live.blade(), run = () => live.run();
   const enemies = () => live.enemies(), projectiles = () => live.projectiles();
   const entities: CombatEntityRuntimeHooks = {
@@ -25,7 +26,7 @@ export function createLiveCombatActions<
     ring: (...args) => { d.FX.ring(...args); }, burst: (...args) => { d.FX.burst(...args); }, explode: (...args) => { d.FX.explode(...args); },
     fxFlash: (...args) => { d.FX.flash(...args); }, floater: f.addFloater, shake: f.addShake, flash: f.addFlash,
     sound: (cue) => { f.playSound(cue); }, loseStyle: f.loseStyle, shieldAbsorbed: f.onShieldAbsorb, addStyle: f.addStyle,
-    dashDodge: ports.achievement.dashDodge, maxStat: (stat, value) => { d.PROFILE.maxStat(stat, value); },
+    dashDodge: ports.achievement.dashDodge, maxStat: profileStats.max,
     checkAchievements: f.checkAchievements,
     noteFirstDamage: f.entityNoteFirstDamage,
     reflectedHit: (enemy, shot, source) => {
@@ -83,7 +84,7 @@ export function createLiveCombatActions<
     emitThrowResolve: () => { f.emitThrowResolve(null, blade().throwDmg); }, nearestEnemy: () => f.openingNearestEnemy(),
     updateFeedback: (seconds) => { updateRuntimeFeedback(context, seconds); }, consumeThrow: f.consumeThrow, updateWave: f.updateWave,
     startTransformation: f.startTransformation, updateSupports: (seconds) => { updateSupports(context, seconds); },
-    armorBypass() { if (f.achievementsEnabled()) d.PROFILE.maxStat("armorBypassKills", 1); },
+    armorBypass() { if (f.achievementsEnabled()) profileStats.max("armorBypassKills", 1); },
     resolveBossZones: () => { resolveBossZones(context); }, updateBossArenaPlatforms: f.updateBossArenaPlatforms, updateVoidScroll: f.updateVoidScroll,
     unlockWitness() { if (f.achievementsEnabled()) d.ACH.unlock("witness"); },
     startVoidDescent: f.startVoidDescent,
@@ -114,6 +115,7 @@ export function createLiveCombatActions<
 
 function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPhaseHost, "state" | "combat"> {
   const { dependencies: d, live, ports } = context, f = ports.functions;
+  const profileStats = d.profileStatsPersistence;
   return {
     config: d.CONFIG,
     get player() { return live.player(); }, get blade() { return live.blade(); }, get run() { return live.run(); }, width: context.width,
@@ -137,7 +139,7 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
     makeSlamEvent: (enemy) => { f.fireMod(f.modHook("onSlam"), f.makeEvent(enemy.x, enemy.y, enemy)); },
     makeReturnEvent: (enemy, damage) => { f.fireMod(f.modHook("onReturnHit"), f.makeEvent(enemy.x, enemy.y, enemy, "secondary", { type: "returnHit", throwId: live.blade().throwId, weaponId: live.run().weaponId, damageDealt: damage })); },
     makePerfectParryEvent: (shot) => { const event = f.makeEvent(shot.x, shot.y, null, "parry", { type: "perfectParry", sourceEnemy: shot.sourceEnemy ?? shot.owner, projectile: shot, applySever: f.applySever }); f.fireMod(f.modHook("onParry"), event); f.fireMod(f.modHook("onPerfectParry"), event); },
-    profileAdd: (name, value) => { d.PROFILE.addStat(name, value); }, profileMax: (name, value) => { d.PROFILE.maxStat(name, value); },
+    profileAdd: profileStats.add, profileMax: profileStats.max,
     dailyBump: (name, value) => { d.DAILY.bump(name, value); }, achievementsEnabled: f.achievementsEnabled,
     achievement(name, enemy) { if (name === "swing") { if (enemy) ports.achievement.bossHit(enemy, "melee"); else ports.achievement.swung(); }
       else if (name === "throw") { ports.achievement.thrown(); if (enemy) ports.achievement.bossHit(enemy, "throw"); }
@@ -157,14 +159,15 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
 
 function createKill(context: LiveCombatActionContext): LiveKillHost {
   const { dependencies: d, live, ports } = context, f = ports.functions;
+  const profileStats = d.profileStatsPersistence;
   return {
     config: d.CONFIG,
     enemies: () => live.enemies(), projectiles: () => live.projectiles(), run: () => live.run(), player: () => live.player(), now: () => d.CLOCK.sim,
     stageIndex: () => ports.stage.index, finalStageIndex: d.STAGES.length - 1,
     stageAccent: () => ports.stage.current.accent ?? "#ffffff", stageChapterBossOutro: () => ports.stage.current.chapter?.bossOutro ?? null,
     hasStageChapter: () => !!ports.stage.current.chapter, bossRosterSize: context.bossRosterSize, achievementsEnabled: f.achievementsEnabled,
-    addKillScore: f.addKillScore, addStat: (name: string, value: number) => { d.PROFILE.addStat(name, value); },
-    maxStat: (name: string, value: number) => { d.PROFILE.maxStat(name, value); }, bumpDaily: (name: string, value: number) => { d.DAILY.bump(name, value); },
+    addKillScore: f.addKillScore, addStat: profileStats.add,
+    maxStat: profileStats.max, bumpDaily: (name: string, value: number) => { d.DAILY.bump(name, value); },
     bossKillAchievement: (enemy) => { ports.achievement.bossKill(enemy); },
     killAchievement: (enemy) => { ports.achievement.onKill(enemy); }, checkAchievements: f.checkAchievements,
     bossGhostMoment: (enemy) => {

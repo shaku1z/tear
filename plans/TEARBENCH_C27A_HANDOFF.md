@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** seventy-fourth C27A foundation slice implemented (campaign biome
-progress is now a composition-owned operation); checkpoint remains open
+**Status:** seventy-fifth C27A foundation slice implemented (live combat-action
+generic profile stats use the shared adapter); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
@@ -749,6 +749,13 @@ caches and transient lights are local to the controller. This is not full
   concurrent-world evidence. The next boundary routes live combat-action generic
   stat ports through the shared adapter.
 
+  Slice 75 routes live combat-action generic add/max stat ports through the
+  shared composition-owned adapter. Source architecture rejects direct
+  profile-stat access in the host. The focused gate passed 6 files / 13 tests;
+  rebuilt campaign-victory browser proof passes. This is not durable profile
+  state, full-combat portability, migration, quota, crash recovery, cross-device
+  sync, or concurrent-world evidence.
+
 All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
@@ -787,7 +794,8 @@ Slice 41 adds simulation tuning isolation; Slice 42 injects particle policy;
   typed composition-owned adapter; setup-shop purchase profile stats are a
   typed composition-owned adapter; generic session, wave, live-style, and
   training-host profile stats share a typed composition-owned adapter;
-  campaign-biome progress is a typed composition-owned operation. Remaining persistence adapter
+  campaign-biome progress is a typed composition-owned operation; live combat
+  generic stats use the shared adapter. Remaining persistence adapter
   isolation still precedes true simultaneous complete worlds.
 Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
@@ -807,12 +815,11 @@ composition with parity evidence.
 
 ## Working-tree safety
 
-- Slice 74 is the latest intentional commit on
+- Slice 75 is the latest intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 6
-  files / 12 tests plus source architecture; rebuilt campaign-victory browser
-  proof passed. The next boundary routes live combat-action generic stat ports
-  through the shared adapter, still not a durability, physical-device, or
-  second-runtime claim.
+  files / 13 tests plus source architecture; rebuilt campaign-victory browser
+  proof passed. It remains neither a durability, physical-device, full-combat,
+  nor second-runtime claim.
 - Slice 48 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
   files / 23 tests plus source architecture; built journeys and six responsive

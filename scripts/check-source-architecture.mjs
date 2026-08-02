@@ -268,6 +268,7 @@ const forbiddenDependencyRules = Object.freeze([
       "src/app/live-wave-composition.ts",
       "src/app/live-style-host.ts",
       "src/app/live-training-host-runtime.ts",
+      "src/app/live-combat-actions.ts",
     ]),
     pattern: /\bd\.PROFILE\.(?:addStat|maxStat)\(/u,
     message: "generic session, wave, live-style, and training profile stats must use the composition-owned adapter",
@@ -590,6 +591,12 @@ if (dependencyErrors("src/app/live-training-host-runtime.ts",
   || dependencyErrors("src/app/live-training-host-runtime.ts",
     "d.profileStatsPersistence.add(\"tutorials\", 1);").length !== 0) {
   throw new Error("source architecture composition-owned training profile stats rule self-test failed");
+}
+if (dependencyErrors("src/app/live-combat-actions.ts",
+  'd.PROFILE.maxStat("armorBypassKills", 1);').length !== 1
+  || dependencyErrors("src/app/live-combat-actions.ts",
+    "d.profileStatsPersistence.max(\"armorBypassKills\", 1);").length !== 0) {
+  throw new Error("source architecture composition-owned combat profile stats rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",

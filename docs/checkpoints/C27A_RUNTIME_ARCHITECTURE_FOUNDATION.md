@@ -1195,6 +1195,15 @@ of replay, headless execution, or learning portability.
   behavior, or C27A completion evidence. The next boundary routes live
   combat-action generic stat ports through the shared adapter.
 
+- The seventy-fifth slice routes live combat-action generic add/max stat ports
+  through the shared composition-owned adapter. Source architecture rejects
+  direct profile-stat access in the combat-action host. The focused gate passed
+  6 files / 13 tests; rebuilt campaign-victory browser proof passes.
+
+  This is one combat stat-port handoff only, not durable profile state,
+  full-combat portability, migration, quota, crash recovery, cross-device sync,
+  concurrent-world behavior, or C27A completion evidence.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

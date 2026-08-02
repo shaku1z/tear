@@ -437,6 +437,9 @@ The following C27A foundation slices are complete:
   focused adapter/composition gate and rebuilt campaign-victory browser proof
   pass. This is still not a durable-profile claim; the next boundary routes the
   live combat-action generic stat ports through the shared adapter.
+- Live combat-action generic stat ports now use that shared adapter. Its focused
+  combat gate and rebuilt campaign-victory browser proof pass. This is not a
+  durable-profile, full-combat-portability, or concurrent-world claim.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition
