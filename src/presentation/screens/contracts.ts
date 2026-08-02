@@ -177,6 +177,8 @@ export interface ReplayScreenView {
   readonly infoRows?: readonly StatView[]; readonly loadout?: readonly CardView[];
   /** Ghost 3's semantic Theater reuses the mature replay transport chrome. */
   readonly theater?: boolean;
+  /** Only verified recorded checkpoints can begin an unranked practice child. */
+  readonly practiceAvailable?: boolean;
   readonly notice?: string;
 }
 export interface SettingRowView {

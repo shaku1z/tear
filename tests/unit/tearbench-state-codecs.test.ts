@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 
 import {
@@ -234,5 +234,22 @@ describe("TearBench shared state codec registry", () => {
     expect(result).toMatchObject({ ok: false, phase: "commit", rolledBack: true });
     expect(commits).toBe(2);
     expect(active).toEqual(previous.components.get("tear.run.v1"));
+  });
+
+  it("commits a first live world without attempting to capture a nonexistent predecessor", () => {
+    const registry = createDefaultStateCodecRegistry();
+    const snapshot = snapshotFrom(populatedWorld());
+    const capture = vi.fn(() => { throw new Error("no active world"); });
+    const commit = vi.fn();
+    const result = restoreSnapshotIntoLiveWorld(snapshot, registry, factory, {
+      capture,
+      stage: (candidate) => candidate,
+      validate: () => [],
+      commit,
+    }, { capturePrevious: false });
+
+    expect(result.ok).toBe(true);
+    expect(capture).not.toHaveBeenCalled();
+    expect(commit).toHaveBeenCalledOnce();
   });
 });

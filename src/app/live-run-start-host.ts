@@ -79,6 +79,8 @@ interface RunStartHostContext {
   readonly startNextWave: () => void;
   readonly achievementTracking: () => boolean;
   readonly achievementCheck: () => void;
+  /** A new ordinary run must never inherit Ghost practice's non-persistent disposition. */
+  readonly clearPracticeSession?: () => void;
   readonly resetRewards: () => void;
   readonly music: MusicDirector;
   readonly requestPointerLock: () => void;
@@ -116,6 +118,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       finally { Input.stopSemanticRecording(); }
     },
     initializeWorld: (_mode, difficulty) => {
+      context.clearPracticeSession?.();
       context.prepareWorld();
       context.resetCombatIdentity();
       context.lifecycle.reset();

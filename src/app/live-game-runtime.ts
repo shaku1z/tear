@@ -45,7 +45,7 @@ import { ENTITY_KIND_REGISTRY } from "../tearbench/registries";
 import { stableVerificationHash } from "../replay/hash";
 import { createLiveGhostRecordingSessionState } from "./live-ghost-recording-session-state";
 import { createBrowserGhostVaultLibrary } from "./ghost-vault-library-controller";
-import { createLiveInputAuthorityState } from "./live-input-authority-state";
+import { createLiveInputAuthorityState } from "./live-input-authority-state"; import { createLiveGhostPracticeSessionState } from "./live-ghost-practice-session-state"; import { launchGhostPracticeChild } from "./ghost-practice-launch";
 type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick: number): void; after?(tick: number): void } }; export function startLiveGame(dependencies: GameRuntimeDependencies, configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>): void {
   const { A11Y, APP, Attract, Backdrop, browserDocument, browserIndexedDb, browserNavigator, browserWindow, CG, CONFIG, Cloud, DIAG, FX, GAMEPLAY_EVENTS, GFX, GHOST, Input, OVERSCAN, PAD, SAFE, SFX, THEME, UI, VAULT, applyUpgrade, clamp, cosmeticRandom, lerp, weaponCapsuleIntersectsSegment } = dependencies;
 (function () {
@@ -212,7 +212,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const { session, world } = productionWorld;
   const { state: hostState, context: worldContext, entities: worldEntities, lifecycle: RUN_LIFECYCLE, music: musicDirector } = world;
   // One world owns the transient records read by combat, State Forge, and diagnostics.
-  const { transient } = worldContext; const impact = transient.impact; const openingCarry = transient.opening;
+  const { transient } = worldContext; const impact = transient.impact; const openingCarry = transient.opening; const ghostPracticeSession = createLiveGhostPracticeSessionState();
   const feel = transient.feel; const finaleIntentBatches: (readonly FinaleIntent[])[] = []; const finaleOutwardCalls: FinaleOutwardCall[] = [];
   const audioDispatchReceipts: AudioDispatchReceipt[] = []; if (__TEAR_TEST_BUILD__) SFX.observeDispatchReceipts((receipt) => { audioDispatchReceipts.push(receipt); }); const outcomeChronology = __TEAR_TEST_BUILD__ ? createOutcomeChronologyJournal() : null;
   const campaignTraining = createLiveCampaignTrainingComposition({
@@ -295,7 +295,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     setLastRecording: (value) => { session.setLastRecording(value); },
     setLastVaultId: (value) => { session.setLastVaultId(value); },
     setOutcome: (value) => { session.setOutcome(value); }, resetWinSeconds: () => { session.setWinSeconds(0); },
-    achievementTracking: () => achTracks(), achievementCheck: achCheck, achievementTracker: AT,
+    achievementTracking: () => achTracks(), achievementCheck: achCheck, achievementTracker: AT, practiceSession: ghostPracticeSession,
     emitMusicOutcome: (outcome) => { liveFrameRuntime.emitMusicEvent(outcome); },
     startRun: (mode, difficulty) => { startRunWithPreflight(mode, difficulty); },
     ...(outcomeChronology === null ? {} : { observeOutcomeChronology: outcomeChronology.record }),
@@ -574,14 +574,14 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const liveStateForge = createLiveStateForgeAdapter({
     dependencies, entities: worldEntities, worldServices: worldContext.services, state: hostState, actorId: (entity, prefix) => combatRuntime.id(entity, prefix), bindActorId: (entity, id) => { combatRuntime.bindId(entity, id); },
     platforms: () => stageRuntime.platforms, stageIndex: () => stageRuntime.index, restoreStageIndex: (index) => { stageRuntime.restoreIndex(index); }, replacePlatforms: (values) => { stageRuntime.platforms.splice(0, stageRuntime.platforms.length, ...values); }, slowZones: () => hostState.slowZones(), walls: () => hostState.temporaryWalls(),
-    screen: () => state, setScreen: (screen) => { if (!isLegacyScreen(screen)) throw new RangeError(`invalid restored screen: ${screen}`); setState(screen); }, focus: interfaceInteraction.focus, setFocus: interfaceInteraction.setFocus,
+    screen: () => state, setScreen: (screen) => { if (!isLegacyScreen(screen)) throw new RangeError(`invalid restored screen: ${screen}`); if (screen === "playing" && ghostPracticeSession.active() !== null) return; setState(screen); }, focus: interfaceInteraction.focus, setFocus: interfaceInteraction.setFocus,
     tick: () => simulation.tick, setTick: (tick) => { simulationRuntime.reset(tick); }, clearInputProjection: () => { liveInputAdapter.clear(); },
     reward: rewardRuntime.snapshot, restoreReward: rewardRuntime.restore, captureGhost: () => GHOST.captureRuntimeState(), restoreGhost: (snapshot) => { GHOST.restoreRuntimeState(snapshot); }, captureIdentityState: () => combatRuntime.captureIdentityState(), restoreIdentityState: (snapshot) => { combatRuntime.restoreIdentityState(snapshot); },
     runtimeState: stateForgeRuntime.capture, restoreRuntimeState: stateForgeRuntime.restore,
     captureCinema: () => CINEMA.captureState(),
     validateCinema: stateForgeRuntime.validate,
   });
-  const ghostSnapshotRegistry = createDefaultStateCodecRegistry();
+  const ghostSnapshotRegistry = createDefaultStateCodecRegistry(); const launchGhostPractice = (child: Parameters<typeof launchGhostPracticeChild>[0]) => launchGhostPracticeChild(child, { registry: ghostSnapshotRegistry, stateForge: liveStateForge, hasLiveWorld: () => hostState.run() !== null, practice: ghostPracticeSession, clearRestoredRecording: () => { GHOST.restoreRuntimeState({ recording: null }); Input.stopSemanticRecording(); }, setPlaying: () => { setState("playing", { practiceLaunch: true }); }, requestPointer: requestLock });
   const captureGhostStateSnapshot = (tick: number): void => {
     const recorder = ghostV3;
     if (recorder?.active !== true) return;
@@ -621,7 +621,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     worldSurface: { canvas: ctx, ui: UI, width: W, height: H, get safe() { return { top: SAFE.t, right: SAFE.r, bottom: SAFE.b, left: SAFE.l }; }, get ink() { return THEME.ink; }, get darkTheme() { return THEME.dark; }, get timeSeconds() { return worldContext.services.clock.seconds(); }, get lowGraphics() { return GFX.low; }, get reducedMotion() { return A11Y.reducedMotion; }, get highContrast() { return A11Y.highContrast; } },
     screens: {
       renderer: { canvas: ctx, ui: UI, width: W, height: H, screenRectangle: screenRect, safeInsets: () => SAFE, time: interfaceFrame.seconds, enterAmount: interfaceFrame.enterAmount, enterSeconds: interfaceFrame.enterSeconds, deltaSeconds: interfaceFrame.deltaSeconds, mouse: () => ({ x: Input.mouseX, y: Input.mouseY }), scroll: interfaceInteraction.scroll, focus: interfaceInteraction.focus, touch: () => Input.touchActive(), reducedMotion: () => A11Y.reducedMotion, enqueue: interfaceInteraction.enqueue },
-      replay: { dependencies, canvas: ctx, width: W, height: H, screenRectangle: screenRect, time: interfaceFrame.seconds, deltaSeconds: interfaceFrame.deltaSeconds, fallbackPlayer: livePlayer, bossById, setScreen: (screen, context) => setState(screen, context), formatTime: fmtTime, document: browserDocument, browserIndexedDb },
+      replay: { dependencies, canvas: ctx, width: W, height: H, screenRectangle: screenRect, time: interfaceFrame.seconds, deltaSeconds: interfaceFrame.deltaSeconds, fallbackPlayer: livePlayer, bossById, setScreen: (screen, context) => setState(screen, context), formatTime: fmtTime, document: browserDocument, browserIndexedDb, launchGhostPractice },
       library: { dependencies, canvas: ctx, height: H, time: interfaceFrame.seconds, enterSeconds: interfaceFrame.enterSeconds, scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, clamp, ease: ez, formatTime: fmtTime, getBest, ghostVault: createBrowserGhostVaultLibrary(browserIndexedDb) },
       settings: { dependencies, document: browserDocument, window: browserWindow, canvas, width: W, overscan: () => OVERSCAN, screen: () => state, setScreen: (screen, context) => setState(screen, context), settingsController, settings, scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, clamp, installPrompt },
       actions: { setScreen: (screen) => { setState(screen); }, resetScroll: () => { interfaceInteraction.setScroll(0); }, setSetupSelection: (kind, id) => { if (kind === "mode" && isRunModeSelection(id)) { session.setSelectedMode(id); if (trainingRunRequiresPreflight(id)) void trainingHost.ensureLoaded(); } else if (kind === "difficulty" && isRunDifficultySelection(id)) session.setSelectedDifficulty(id); else if (kind === "weapon") session.setSelectedWeapon(id); else if (kind === "boss") session.setSelectedBoss(id); }, startSelectedRun: () => { startRunWithPreflight(session.selectedMode(), session.selectedDifficulty()); }, startRun: (mode, difficulty) => { if (isRunModeSelection(mode) && isRunDifficultySelection(difficulty)) startRunWithPreflight(mode, difficulty); }, currentRun: liveRun, resumeFinale: resumeSavedFinale, claimFinale: claimSavedFinale, requestPointer: requestLock, endRun, retryRun, lastReplay: () => session.lastRecording(), campaignDifficulty: () => session.outcome()?.diff ?? "normal", resetSettings: () => { settingsController.reset(); }, signIn: () => { void Cloud.signIn(); }, signOut: () => { void Cloud.signOut(); }, pinReplay: (id, pinned) => VAULT.pin(id, pinned), deleteReplay: (id) => { VAULT.remove(id); }, dispatchPlayground: dispatchPlaygroundAction },
@@ -646,7 +646,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       admission: (id: string) => readBrowserGhostCapsuleReplayAdmission(browserIndexedDb, id),
       verify: (id: string) => verifyBrowserGhostCapsuleProductionReplay(browserIndexedDb, id),
       practice: (id: string, tick: number, mode) => forkBrowserGhostCapsulePractice(browserIndexedDb, id, tick, mode),
-      active: () => ghostV3?.active === true,
+      active: () => ghostV3?.active === true, activePractice: ghostPracticeSession.active,
       failure: () => ghostV3?.failure ?? null,
     });
     const consumedActions: CommandEnvelope<GameAction>[] = [];

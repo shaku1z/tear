@@ -91,6 +91,17 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   await page.mouse.click(428, 854); // next verified checkpoint through the visible transport
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("TICK 120"), undefined, { timeout: 10000 });
   assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "replay");
-  await page.keyboard.press("Escape");
-  await waitScreen("profile");
+  await page.mouse.click(734, 854); // visible PRACTICE launches the verified checkpoint child
+  await waitScreen("playing");
+  const launchedPractice = await page.evaluate(() => window.__TEAR_GHOST_V3__.activePractice());
+  assert.equal(launchedPractice.id, `${manifest.id}:practice:120:exact-practice`);
+  assert.equal(launchedPractice.sourceGhostId, manifest.id);
+  assert.equal(launchedPractice.sourceRootHash, practice.sourceRootHash);
+  assert.equal(launchedPractice.forkTick, 120);
+  assert.equal(launchedPractice.rankedEligible, false);
+  assert.equal(launchedPractice.leaderboardEligible, false);
+  assert.equal(launchedPractice.inputLatchPolicy, "release-all");
+  const sourceAfterVisiblePractice = JSON.stringify(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id));
+  assert.equal(sourceAfterVisiblePractice, sourceBeforePractice, "visible practice launch mutated durable source custody");
+  assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
 });

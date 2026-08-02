@@ -54,4 +54,35 @@ describe("live outcome composition pending-finale persistence", () => {
     expect(logEvent).toHaveBeenCalledOnce();
     expect(finishRecording).toHaveBeenCalledWith(false);
   });
+
+  it("turns every durable terminal effect into a no-op for an active Ghost practice child", () => {
+    const persist = vi.fn(); const saveProfile = vi.fn(); const clear = vi.fn(); const push = vi.fn();
+    const recordDefeatProgress = vi.fn(); const dailyBump = vi.fn(); const achievementCheck = vi.fn();
+    const logEvent = vi.fn(); const finishRecording = vi.fn(); const executeVictory = vi.fn();
+    createLiveOutcomeComposition({ dependencies: {
+      GAMEPLAY_EVENTS: {}, pendingFinalePersistence: { persist, saveProfile, clear, pending: () => null },
+      outcomeDefeatProgressPersistence: { record: recordDefeatProgress }, DAILY: { bump: dailyBump }, Cloud: { push, logEvent },
+      META: { coins: () => 99 },
+    } as never, achievementCheck, economyTelemetry: () => ({}), finishRecording, executeVictory,
+    saveBest: vi.fn(() => true), awardCoins: vi.fn(() => 12), getBest: vi.fn(() => ({ wave: 0, score: 0, time: 0 })),
+    practiceSession: { active: () => ({ id: "practice" }) },
+    } as never);
+
+    const context = captured.context as unknown as {
+      readonly saveBest: (run: { mode: string; diff: string; wave: number; score: number; runTime: number }) => boolean;
+      readonly awardCoins: (score: number) => number; readonly achievementTracking: () => boolean;
+      readonly recordDefeatProgress: (run: object, earned: number) => void;
+      readonly executeVictoryIntents: (intents: readonly object[]) => void;
+      readonly persistPendingFinale: (record: object) => void; readonly saveProfile: () => void;
+      readonly clearPendingFinale: () => void; readonly pushCloud: () => void;
+    };
+    expect(context.saveBest({ mode: "endless", diff: "normal", wave: 2, score: 100, runTime: 20 })).toBe(false);
+    expect(context.awardCoins(100)).toBe(0);
+    expect(context.achievementTracking()).toBe(false);
+    context.recordDefeatProgress({}, 0); context.executeVictoryIntents([{}]); context.persistPendingFinale({});
+    context.saveProfile(); context.clearPendingFinale(); context.pushCloud();
+
+    for (const effect of [persist, saveProfile, clear, push, recordDefeatProgress, dailyBump,
+      achievementCheck, logEvent, finishRecording, executeVictory]) expect(effect).not.toHaveBeenCalled();
+  });
 });

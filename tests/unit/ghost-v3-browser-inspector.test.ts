@@ -13,6 +13,7 @@ describe("Ghost V3 browser inspector", () => {
       verify: () => Promise.resolve(undefined),
       practice: () => Promise.resolve(undefined),
       active: () => false,
+      activePractice: () => null,
       failure: () => null,
     });
     const inspector = target.__TEAR_GHOST_V3__;
@@ -20,6 +21,7 @@ describe("Ghost V3 browser inspector", () => {
     expect((inspector?.manifest as () => unknown)()).toBeNull();
     await expect((inspector?.manifests as () => Promise<unknown>)()).resolves.toEqual([]);
     expect((inspector?.active as () => unknown)()).toBe(false);
+    expect((inspector?.activePractice as () => unknown)()).toBeNull();
     expect((inspector?.failure as () => unknown)()).toBeNull();
   });
 });

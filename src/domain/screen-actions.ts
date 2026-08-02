@@ -46,6 +46,7 @@ export type ScreenAction =
   | { readonly type: "replay.seekTo"; readonly fraction: number }
   | { readonly type: "replay.jumpChapter"; readonly direction: -1 | 1 }
   | { readonly type: "replay.restart" }
+  | { readonly type: "replay.practice" }
   | { readonly type: "replay.toggleInfo" }
   | { readonly type: "replay.speed"; readonly value: number }
   | { readonly type: "replay.exit" }

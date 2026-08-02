@@ -39,6 +39,17 @@ export interface LiveStateForgeSnapshotCapture {
   readonly trainingConsent?: TearProvenanceV1["trainingConsent"];
 }
 
+/** Shared State Forge decoder factory for privileged live restoration paths. */
+export function createLiveStateForgeRestoreFactory(registry: TearStateCodecRegistry): TearWorldFactory {
+  return Object.freeze({
+    createEmpty: () => ({ components: new Map(), references: new Map(), entityIds: new Set<string>() }),
+    validate: (world: ReturnType<TearWorldFactory["createEmpty"]>) =>
+      registry.list().every((codec) => world.components.has(codec.id))
+        ? []
+        : ["not all live codec components were restored"],
+  });
+}
+
 /** Captures the same fully typed codec world used by State Forge restoration. */
 export function captureLiveStateForgeSnapshot(input: LiveStateForgeSnapshotCapture): TearSnapshotV1 {
   if (!/^[a-z0-9][a-z0-9._-]{0,127}$/u.test(input.id)) throw new TypeError("snapshot id is invalid");
@@ -86,13 +97,7 @@ export function createLiveRuntimeSnapshotController(
   onRestored: (snapshot: TearSnapshotV1, result: Extract<TearLiveRestoreResult, { ok: true }>) => void,
 ): LiveRuntimeSnapshotController {
   const registry = createDefaultStateCodecRegistry();
-  const factory: TearWorldFactory = Object.freeze({
-    createEmpty: () => ({ components: new Map(), references: new Map(), entityIds: new Set<string>() }),
-    validate: (world: ReturnType<TearWorldFactory["createEmpty"]>) =>
-      registry.list().every((codec) => world.components.has(codec.id))
-      ? []
-      : ["not all live codec components were restored"],
-  });
+  const factory = createLiveStateForgeRestoreFactory(registry);
   const controller: LiveRuntimeSnapshotController = {
     capture(id: string, stateClass: TearStateClass = "recorded-canonical") {
       const tick = context.authoritative()?.tick ?? 0;

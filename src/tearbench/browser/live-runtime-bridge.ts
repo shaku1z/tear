@@ -29,6 +29,8 @@ export interface GhostV3BrowserInspectorSource {
   readonly verify: (id: string) => Promise<GhostProductionReplayVerification | undefined>;
   readonly practice: (id: string, tick: number, mode: GhostPracticeMode) => Promise<GhostPracticeChild | undefined>;
   readonly active: () => boolean;
+  /** Read-only test evidence for the player-visible C29 launch path. */
+  readonly activePractice: () => GhostPracticeChild | null;
   readonly failure: () => string | null;
 }
 
@@ -45,6 +47,7 @@ export function installGhostV3BrowserInspector(target: Window, source: GhostV3Br
       verify: source.verify,
       practice: source.practice,
       active: source.active,
+      activePractice: source.activePractice,
       failure: source.failure,
     }),
   });

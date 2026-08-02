@@ -9,6 +9,7 @@ import type { RecordingSummary } from "../gameplay/run/outcome-planner";
 import type { StoredRecordingSummary } from "../gameplay/run/live-recording-controller";
 import { createTearTerminalRunFactPublisher } from "../gameplay/runtime/gameplay-event-publishers";
 import type { OutcomeChronologyEffect } from "../gameplay/run/outcome-chronology-journal";
+import type { LiveGhostPracticeSessionState } from "./live-ghost-practice-session-state";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 
@@ -38,6 +39,8 @@ export interface LiveOutcomeCompositionOptions {
   readonly economyTelemetry: (earned: number) => Readonly<Record<string, unknown>>;
   readonly achievementTracking: () => boolean;
   readonly achievementCheck: () => void;
+  /** Active Ghost practice runs are playable but may not publish durable outcomes. */
+  readonly practiceSession?: Pick<LiveGhostPracticeSessionState, "active">;
   readonly finishRecording: (won: boolean) => void;
   readonly executeVictory: (intents: readonly VictoryProgressionIntent[]) => void;
   readonly emitMusicOutcome: (outcome: "defeat" | "victory") => void;
@@ -54,6 +57,7 @@ export interface LiveOutcomeCompositionOptions {
 export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOptions): void {
   const d = options.dependencies;
   const active = options.run;
+  const practicing = () => options.practiceSession?.active() != null;
   const publishTerminal = createTearTerminalRunFactPublisher(
     d.GAMEPLAY_EVENTS, () => options.lifecycle.snapshot().sessionId,
   );
@@ -86,13 +90,14 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
       finally { d.Input.stopSemanticRecording(); }
     },
     publishTerminal,
-    saveBest: (run) => options.saveBest(run.mode, run.diff, run.wave, run.score, run.runTime),
+    saveBest: (run) => practicing() ? false : options.saveBest(run.mode, run.diff, run.wave, run.score, run.runTime),
     best: (run) => options.getBest(run.mode, run.diff),
-    awardCoins: options.awardCoins,
+    awardCoins: (score) => practicing() ? 0 : options.awardCoins(score),
     coins: () => d.META.coins(),
-    achievementTracking: options.achievementTracking,
+    achievementTracking: () => !practicing() && options.achievementTracking(),
     economyTelemetry: options.economyTelemetry,
     recordDefeatProgress(run, earned) {
+      if (practicing()) return;
       d.outcomeDefeatProgressPersistence.record(run);
       d.DAILY.bump("runs", 1);
       options.achievementCheck();
@@ -101,11 +106,11 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
         time: Math.round(run.runTime), peak: run.wavePeak, died: true, ...options.economyTelemetry(earned) });
       options.finishRecording(false);
     },
-    executeVictoryIntents: options.executeVictory,
-    persistPendingFinale: d.pendingFinalePersistence.persist,
-    saveProfile: d.pendingFinalePersistence.saveProfile,
-    clearPendingFinale: d.pendingFinalePersistence.clear,
-    pushCloud: () => { void d.Cloud.push(); },
+    executeVictoryIntents: (intents) => { if (!practicing()) options.executeVictory(intents); },
+    persistPendingFinale: (record) => { if (!practicing()) d.pendingFinalePersistence.persist(record); },
+    saveProfile: () => { if (!practicing()) d.pendingFinalePersistence.saveProfile(); },
+    clearPendingFinale: () => { if (!practicing()) d.pendingFinalePersistence.clear(); },
+    pushCloud: () => { if (!practicing()) void d.Cloud.push(); },
     present(outcome, result) {
       options.setOutcome(result);
       options.setScreen(outcome === "victory" ? "win" : "gameover");

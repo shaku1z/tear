@@ -63,6 +63,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "replay.togglePause": () => { ports.replay.togglePause(); }, "replay.seek": (action) => { ports.replay.seekBy(action.delta); },
     "replay.seekTo": (action) => { ports.replay.seekToFraction(action.fraction); },
     "replay.jumpChapter": (action) => { ports.replay.jumpChapter(action.direction); }, "replay.restart": () => { ports.replay.restart(); },
+    "replay.practice": () => { ports.replay.practice(); },
     "replay.toggleInfo": () => { ports.replay.toggleInfo(); }, "replay.speed": (action) => { ports.replay.setSpeed(action.value); },
     "replay.exit": () => { ports.replay.exit(); }, "playground.action": (action) => { ports.dispatchPlayground(action.id); },
     "codex.selectTab": (action) => { ports.library.selectCodexTab(action.id); },

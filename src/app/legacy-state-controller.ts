@@ -16,6 +16,8 @@ export interface LegacyAppSnapshot {
 export interface LegacyTransitionContext {
   readonly runId?: string;
   readonly returnTo?: LegacyAppScreen;
+  /** A verified Ghost Theater checkpoint may enter its explicitly unranked child. */
+  readonly practiceLaunch?: boolean;
 }
 
 export const LEGACY_APP_SCREENS = Object.freeze([
@@ -36,7 +38,7 @@ export const LEGAL_LEGACY_TRANSITIONS: Readonly<Record<LegacyAppScreen, readonly
   continue: ["playing", "gameover", "rename"],
   gameover: ["menu", "playing", "replay", "rename"],
   win: ["menu", "playing", "replay", "rename"],
-  replay: ["menu", "profile", "leaderboards", "gameover", "win", "rename"],
+  replay: ["menu", "profile", "leaderboards", "gameover", "win", "playing", "rename"],
   confirmquit: ["paused", "menu", "rename"],
   shop: ["menu", "rename"],
   codex: ["menu", "rename"],
@@ -95,7 +97,8 @@ export class LegacyAppStateController {
     }
     if (to === "replay") replayReturn = ensureScreen(context.returnTo ?? current.screen, "replay return");
     else if (current.screen === "replay" && to !== "rename") {
-      if (to !== replayReturn) throw new IllegalLegacyAppTransitionError(current.screen, to);
+      const practiceLaunch = to === "playing" && context.practiceLaunch === true;
+      if (!practiceLaunch && to !== replayReturn) throw new IllegalLegacyAppTransitionError(current.screen, to);
       replayReturn = "menu";
     }
     const runId = context.runId ?? current.runId;

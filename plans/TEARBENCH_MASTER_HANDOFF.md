@@ -154,7 +154,8 @@ Named status:
   50 KiB IndexedDB quota into the normal application composition, completes and
   retains a source capsule, then proves a second capture receives Chromium's
   `QuotaExceededError` without halting 1,200 live ticks or mutating the source.
-- **C29:** active; its first three checklist items are proven. GhostProductionReplayWorld
+- **C29:** active; production replay, durable receipt parity, semantic Theater,
+  and player-visible practice are proven. GhostProductionReplayWorld
   drives only the TearSimulationRuntime returned by its source-owned C27A
   production world and combat composition, and the focused production test
   proves runtime identity at tick 80 plus a repeat-seek semantic hash.
@@ -166,8 +167,10 @@ Named status:
   evidence proves the durable source bytes are unchanged. The normal player
   Profile -> Vault route now opens a healthy durable V3 capsule in visible
   semantic Ghost Theater, whose transport reaches the verified tick-120 state
-  and exits through Escape. Player-visible practice, comparison, and
-  active-cinematic coverage remain open.
+  and exits through Escape. Its rendered `PRACTICE` control restores an
+  explicitly unranked/non-persistent child into real live play and preserves
+  the source capsule byte-for-byte. Comparison and active-cinematic coverage
+  remain open.
 - **C30-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -245,8 +248,8 @@ Important files:
 
 ### Exact next slice
 
-C27A and C28 are closed. Continue **C29** with captured-capsule authoritative
-hash parity on its production replay composition. Do not reopen C27A for
+C27A and C28 are closed. Continue **C29** with bounded side-by-side comparison
+and active-cinematic durable-capsule evidence. Do not reopen C27A for
 pixels, haptics, durable outcomes, or audio/device fidelity, which belong to
 C25, C39, and C40 respectively.
 
@@ -389,11 +392,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C29 now reopens a durable V3 capsule, hydrates each recorded State Forge keyframe through source-owned production composition, restores held input, compares captured authoritative receipts, safely forks a verified checkpoint into a non-persistent practice child, and exposes a player-visible semantic Theater.
-PROVEN BY:           `pnpm check:c29:production-replay` runs focused receipt/replay tests and the rebuilt browser capture; its actual completed Vault capsule matches source replay at ticks 0, 120, and 240, its tick-120 practice fork leaves the durable source JSON unchanged, and the normal Profile -> Vault Theater control seeks to tick 120 then exits through Escape.
-REMAINING HERE:      Active chapter bindings now restore through source composition and focused unit evidence; add their durable-capsule coverage, then player-visible Practice From Here and comparison. The verified browser route is normal test-standalone endless only; Theater is semantic, not a pixel/device-fidelity claim.
+DONE THIS STEP:      C29 now reopens a durable V3 capsule, hydrates each recorded State Forge keyframe through source-owned production composition, restores held input, compares captured authoritative receipts, and exposes player-visible semantic Theater plus Practice From Here.
+PROVEN BY:           `pnpm check:c29:production-replay` runs focused receipt/replay/terminal-policy tests and the rebuilt browser capture; its completed Vault capsule matches source replay at ticks 0, 120, and 240, and the normal Profile -> Vault Theater control seeks to tick 120 before its rendered PRACTICE control restores an explicitly unranked, non-persistent child into real play. The durable source JSON remains unchanged.
+REMAINING HERE:      Active chapter bindings now restore through source composition and focused unit evidence; add their durable-capsule coverage, then side-by-side comparison. The verified browser route is normal test-standalone endless only; Theater is semantic, not a pixel/device-fidelity claim.
 REMAINING TO C40:    C25 and C27 exits, then C29-C40, remain; C27A and C28 are closed.
-NEXT SLICE:          Wire the verified C29 Theater checkpoint into a player-visible Practice From Here route that launches an explicitly unranked child without mutating source custody; retain the active-cinematic durable browser case as its own evidence slice.
+NEXT SLICE:          Add C29 side-by-side comparison with its own bounded player-visible evidence; retain the active-cinematic durable browser case as a separate evidence slice.
 
 All of the following were run from this worktree through C27A slice 36:
 

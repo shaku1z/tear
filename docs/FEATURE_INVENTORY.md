@@ -178,9 +178,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   practice child at a verified checkpoint without mutating its durable capsule;
   a healthy completed capsule is also playable through the normal Profile ->
   Vault `GHOST THEATER` route, where its visible semantic transport reaches
-  verified checkpoints and returns with Escape. Active cinematics,
-  player-visible Practice From Here, pixel/device output fidelity, and
-  comparison remain C29/C25/C40 work;
+  verified checkpoints and returns with Escape. At a verified checkpoint its
+  visible `PRACTICE` control restores a real unranked child into live play;
+  source custody stays byte-identical and the child blocks durable outcome,
+  profile, economy, cloud, and recording effects. Active cinematics,
+  pixel/device output fidelity, and comparison remain C29/C25/C40 work;
   authenticated publication, deployed verification, moderation operations,
   and cloud/player lifecycle flows remain later completion work.
 

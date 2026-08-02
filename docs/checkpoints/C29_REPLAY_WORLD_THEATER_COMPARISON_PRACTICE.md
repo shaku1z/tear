@@ -1,7 +1,7 @@
 # C29 - Replay World, Theater, Comparison, and Practice
 
-**Status:** active - the production-runtime replay foundation and semantic
-Theater are proven; player Practice From Here, comparison, and remaining exit
+**Status:** active - production-runtime replay, semantic Theater, and
+player-visible Practice From Here are proven; comparison and remaining exit
 conditions are not.
 
 ## Scope and evidence rule
@@ -58,6 +58,14 @@ applicable production boundary.
   checkpoints and uses the established pointer controls and Escape return path.
   This is semantic Theater: rendered gameplay-pixel/device fidelity remains
   C25/C40 work and is not implied by the Theater chrome.
+- At a visible verified checkpoint, Theater now exposes `PRACTICE`. Its normal
+  screen action forks the same admitted source session, validates unranked
+  custody/lineage, and restores the child into the real live State Forge world.
+  A first-world launch has no predecessor to roll back to; restoring over an
+  existing world still retains State Forge rollback. The historical Ghost 2
+  recorder embedded in the keyframe is cleared before play, and the active
+  child disposition blocks scores, currency, profile/finale persistence, cloud
+  writes, and replay recording. A normal new run clears that disposition.
 
 ## Exit-gate ledger
 
@@ -67,8 +75,14 @@ applicable production boundary.
   the production replay composition — the real test-standalone IndexedDB
   capsule at ticks 0, 120, and 240 matches every captured receipt after
   source-owned State Forge hydration and held-input restoration.
-- [ ] Seek, fork, and practice run from an admitted replay without mutating
-  source custody or the production profile.
+- [x] Seek, fork, and practice run from an admitted replay without mutating
+  source custody or the production profile. The rebuilt browser journey reaches
+  Theater through Profile -> Vault, seeks tick 120 with visible transport,
+  presses `PRACTICE`, and reaches the real `playing` state. Its read-only
+  diagnostic confirms the active child is unranked, releases latched input,
+  and retains the expected immutable lineage; the source IndexedDB capsule is
+  byte-identical before and after. Focused outcome evidence proves the active
+  disposition suppresses durable terminal effects.
 - [x] Theater is player-visible and passes applicable accessibility/input UI
   evidence â€” a rebuilt browser route records and reloads a real V3 capsule,
   follows the normal Menu -> Profile -> Vault pointer route, opens `THEATER`,
@@ -84,8 +98,8 @@ This foundation does not turn legacy visual replay into V3 replay, admit an
 incompatible capsule, or replace Ghost 2 playback. The older parity
 harness retains its equivalent helper for its existing C27A suites, but the C29
 replay proof no longer imports that test helper. This proves the normal
-test-standalone endless capture only; durable active-chapter-cinematic capture,
-the player-visible Practice From Here flow, and comparisons remain unfinished.
+test-standalone endless capture only; durable active-chapter-cinematic capture
+and comparisons remain unfinished.
 
 ## Evidence
 
@@ -93,8 +107,8 @@ pnpm check:c29:production-replay is the named gate. It runs the source
 traceability, type/lint/architecture, receipt/production-runtime tests, and a
 rebuilt browser V3 capture that reopens the completed IndexedDB capsule and
 compares all captured authoritative receipts through source-owned replay. That
-browser journey also forks its verified tick-120 checkpoint through the app
-bridge and proves the returned child is unranked/non-persistent and the durable
-source JSON is unchanged. It additionally proves the player-visible semantic
-Theater route and its pointer/Escape transport behavior; it is not a substitute
-for pixel/device output fidelity or player-visible Practice From Here evidence.
+browser journey additionally follows the player-visible Profile -> Vault ->
+Theater route, seeks tick 120, presses the rendered `PRACTICE` control, and
+enters the live playing state. It confirms the active child and unchanged
+durable source through read-only test diagnostics. It is not a substitute for
+pixel/device output fidelity, active-cinematic capture, or comparison evidence.

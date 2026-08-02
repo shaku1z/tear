@@ -161,6 +161,8 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     context.enqueue({ x: 396 + safe.l, y: controlY, w: 64, h: 44, label: "▶|", action: { type: "replay.jumpChapter", direction: 1 } });
     context.enqueue({ x: 468 + safe.l, y: controlY, w: 76, h: 44, label: `${String(view.speed)}×`, action: { type: "replay.speed", value: view.speed >= 4 ? 0.5 : view.speed * 2 } });
     context.enqueue({ x: 552 + safe.l, y: controlY, w: 84, h: 44, label: "↺", action: { type: "replay.restart" } });
+    if (view.theater) context.enqueue({ x: 644 + safe.l, y: controlY, w: 180, h: 44, label: "PRACTICE",
+      enabled: view.practiceAvailable === true, action: { type: "replay.practice" } });
     context.enqueue({ x: width - 420 - safe.r, y: controlY, w: 90, h: 44, label: view.infoVisible ? "HIDE" : "INFO", action: { type: "replay.toggleInfo" } });
     context.enqueue({ x: width - 320 - safe.r, y: controlY, w: 200, h: 44, label: "‹  BACK", action: { type: "replay.exit" } });
     if (view.notice) ui.text(canvas, view.notice, width / 2, barY - 34, ui.t.type.caption, "center", ui.t.alpha.muted);
@@ -175,7 +177,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     ui.accentStrip(canvas, x, y, panelWidth, REPLAY_CYAN);
     ui.title(canvas, "VERIFIED REPLAY STATE", width / 2, y + 56, ui.t.type.h2);
     ui.tag(canvas, `${view.elapsed}  /  ${view.duration}`, width / 2, y + 86, REPLAY_CYAN, "center", ui.t.type.label);
-    ui.wrappedText(canvas, "This Ghost replays the durable capsule through the shared production simulation. Transport moves between recorded verified states; it never changes the source capsule or your profile.",
+    ui.wrappedText(canvas, "This Ghost replays the durable capsule through the shared production simulation. At a verified checkpoint, PRACTICE starts an unranked child without changing the source capsule or your profile.",
       x + 42, y + 122, panelWidth - 84, 22, ui.t.type.body, "left", ui.t.alpha.soft);
     ui.text(canvas, "USE TRANSPORT TO SEEK  ·  ESC TO RETURN", width / 2, y + panelHeight - 24,
       ui.t.type.micro, "center", ui.t.alpha.muted);

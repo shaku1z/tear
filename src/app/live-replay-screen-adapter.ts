@@ -3,6 +3,8 @@ import type { createLiveScreenRenderers } from "../presentation/screens/live-scr
 import type { LegacyAppScreen } from "./legacy-state-controller";
 import { readBrowserGhostCapsule } from "../ghost/browser-capsule-vault";
 import { createGhostTheaterScreenAdapter } from "./ghost-theater-screen-adapter";
+import type { GhostPracticeChild } from "../ghost/replay-world";
+import type { GhostPracticeLaunchResult } from "./ghost-practice-launch";
 
 type Dependencies = Pick<GameRuntimeDependencies, "APP" | "Armored" | "Backdrop" | "Bomber" | "Charger" | "Chimera" |
   "CONFIG" | "FX" | "Flyer" | "GFX" | "GHOST" | "Input" | "Ranged" | "SAFE" | "STAGES" | "Support" | "THEME" |
@@ -20,16 +22,18 @@ export interface ReplayScreenServices {
   readonly fallbackCategory: () => Readonly<{ name: string; color: string }>;
   readonly specialColor: () => string; readonly formatTime: (seconds: number) => string; readonly document: Document;
   readonly browserIndexedDb: IDBFactory | undefined;
+  readonly launchGhostPractice: (child: GhostPracticeChild) => GhostPracticeLaunchResult;
 }
 export interface ReplayScreenAdapter {
   readonly enter: (data: unknown, from?: LegacyAppScreen) => boolean; readonly exit: () => void; readonly render: () => void;
   readonly enterGhostCapsule: (id: string, from?: LegacyAppScreen) => Promise<boolean>;
   readonly togglePause: () => void; readonly seekBy: (delta: number) => void; readonly seekToFraction: (fraction: number) => void;
   readonly jumpChapter: (direction: number) => void; readonly restart: () => void; readonly toggleInfo: () => void;
+  readonly practice: () => void;
   readonly setSpeed: (value: number) => void; readonly status: () => ReplayStatus | null;
 }
 
-type LegacyReplayScreenAdapter = Omit<ReplayScreenAdapter, "enterGhostCapsule">;
+type LegacyReplayScreenAdapter = Omit<ReplayScreenAdapter, "enterGhostCapsule" | "practice">;
 type DeferredAction = (adapter: LegacyReplayScreenAdapter) => void;
 
 /** Route-triggered replay facade; heavyweight world playback loads only when a replay is opened. */
@@ -37,7 +41,7 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
   const d = services.dependencies;
   let runtime: LegacyReplayScreenAdapter | undefined;
   const theater = createGhostTheaterScreenAdapter({ render: services.renderers.replay, width: () => services.width,
-    deltaSeconds: services.deltaSeconds });
+    deltaSeconds: services.deltaSeconds, launchPractice: services.launchGhostPractice });
   let active: "legacy" | "theater" | undefined;
   let loading: Promise<void> | undefined;
   let pending: Readonly<{ data: unknown; from: LegacyAppScreen }> | undefined;
@@ -109,6 +113,7 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     seekToFraction: (fraction) => { if (active === "theater") theater.seekToFraction(fraction); else invoke((value) => { value.seekToFraction(fraction); }); },
     jumpChapter: (direction) => { if (active === "theater") theater.jumpCheckpoint(direction); else invoke((value) => { value.jumpChapter(direction); }); },
     restart: () => { if (active === "theater") theater.restart(); else invoke((value) => { value.restart(); }); },
+    practice: () => { if (active === "theater") theater.practice(); },
     toggleInfo: () => { if (active === "theater") theater.toggleInfo(); else invoke((value) => { value.toggleInfo(); }); },
     setSpeed: (speed) => { if (active === "theater") theater.setSpeed(speed); else invoke((value) => { value.setSpeed(speed); }); },
     status: () => theater.status() ?? runtime?.status() ?? (pending === undefined ? null : {

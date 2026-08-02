@@ -152,6 +152,11 @@ export type TearLiveRestoreResult =
     rolledBack: boolean;
   }>;
 
+/** A first-world restore has no predecessor to capture or roll back to. */
+export interface TearLiveRestoreOptions {
+  readonly capturePrevious?: boolean;
+}
+
 function worldIssue(message: string): TearCodecIssue {
   return Object.freeze({ codecId: "tear.world.v1", path: "$", message });
 }
@@ -186,6 +191,7 @@ export function restoreSnapshotIntoLiveWorld<Candidate>(
   registry: TearStateCodecRegistry,
   factory: TearWorldFactory,
   adapter: TearLiveWorldAdapter<Candidate>,
+  options: TearLiveRestoreOptions = {},
 ): TearLiveRestoreResult {
   let decoded: TearCodecWorld | undefined;
   const decodedResult = restoreSnapshotTransactionally(snapshot, registry, factory, {
@@ -198,23 +204,25 @@ export function restoreSnapshotIntoLiveWorld<Candidate>(
     return Object.freeze({ ok: false, phase: "decode", issues: [worldIssue("decoded world was not produced")], rolledBack: false });
   }
 
-  let previous: TearCodecWorld;
-  try {
-    previous = cloneWorld(adapter.capture());
-  } catch (error) {
-    return Object.freeze({
-      ok: false,
-      phase: "capture",
-      issues: [worldIssue(error instanceof Error ? error.message : String(error))],
-      rolledBack: false,
-    });
+  let previous: TearCodecWorld | undefined;
+  if (options.capturePrevious !== false) {
+    try {
+      previous = cloneWorld(adapter.capture());
+    } catch (error) {
+      return Object.freeze({
+        ok: false,
+        phase: "capture",
+        issues: [worldIssue(error instanceof Error ? error.message : String(error))],
+        rolledBack: false,
+      });
+    }
   }
 
   let candidate: Candidate;
-  let rollbackCandidate: Candidate;
+  let rollbackCandidate: Candidate | undefined;
   try {
     candidate = adapter.stage(decoded, contextFor(decoded));
-    rollbackCandidate = adapter.stage(previous, contextFor(previous));
+    if (previous !== undefined) rollbackCandidate = adapter.stage(previous, contextFor(previous));
   } catch (error) {
     return Object.freeze({
       ok: false,
@@ -236,6 +244,12 @@ export function restoreSnapshotIntoLiveWorld<Candidate>(
   try {
     adapter.commit(candidate);
   } catch (commitError) {
+    if (rollbackCandidate === undefined) return Object.freeze({
+      ok: false,
+      phase: "commit",
+      issues: [worldIssue(commitError instanceof Error ? commitError.message : String(commitError))],
+      rolledBack: false,
+    });
     try {
       adapter.commit(rollbackCandidate);
     } catch (rollbackError) {

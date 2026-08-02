@@ -19,6 +19,7 @@ import { createLiveRunStartHost } from "./live-run-start-host";
 import { createLiveVictoryProgressionExecutor } from "./live-victory-progression-host";
 import { createLiveWaveComposition } from "./live-wave-composition";
 import type { OutcomeChronologyEffect } from "../gameplay/run/outcome-chronology-journal";
+import type { LiveGhostPracticeSessionState } from "./live-ghost-practice-session-state";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 type Controllers = LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
@@ -75,6 +76,7 @@ export interface LiveRunOrchestrationOptions {
   readonly resetWinSeconds: () => void;
   readonly achievementTracking: () => boolean;
   readonly achievementCheck: () => void;
+  readonly practiceSession?: LiveGhostPracticeSessionState;
   readonly achievementTracker: Readonly<{ hordeCleared(seconds: number): void; stageDone(): void }>;
   readonly emitMusicOutcome: (outcome: "defeat" | "victory") => void;
   readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
@@ -118,6 +120,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     trainingPlatforms: () => playgroundRuntime.homePlatforms(), playground: playgroundRuntime, tutorial,
     startNextWave: options.controllers.api.startNextWave,
     achievementTracking: options.achievementTracking, achievementCheck: options.achievementCheck,
+    ...(options.practiceSession === undefined ? {} : { clearPracticeSession: options.practiceSession.clear }),
     resetRewards: options.resetRewards, music: options.music,
     requestPointerLock: options.requestPointerLock, testMode: options.testMode, window,
   });
@@ -158,6 +161,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     setScreen: (screen) => { options.setScreen(screen); }, saveBest: options.saveBest, getBest: options.getBest,
     awardCoins: options.awardCoins, economyTelemetry: options.economyTelemetry,
     achievementTracking: options.achievementTracking, achievementCheck: options.achievementCheck,
+    ...(options.practiceSession === undefined ? {} : { practiceSession: options.practiceSession }),
     finishRecording: options.controllers.api.finishRecording,
     executeVictory, emitMusicOutcome: options.emitMusicOutcome,
     startRun: options.startRun,

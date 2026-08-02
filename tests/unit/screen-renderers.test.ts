@@ -212,11 +212,13 @@ describe("legacy screen renderer registry", () => {
     renderer.replay({ id: "replay", title: "Player · Endless", detail: "wave 20", paused: false, speed: 1,
       elapsed: "01:00", duration: "02:00", progress: 0.5, chapters: [{ fraction: 0.25, boss: true }], infoVisible: true,
       infoRows: [{ label: "SCORE", value: "9000" }], loadout: [{ id: "reach", label: "LONG ARM", footer: "×2" }] });
+    renderer.replay({ id: "replay", title: "GHOST 3 THEATER", detail: "verified", paused: true, speed: 1,
+      elapsed: "TICK 120", duration: "TICK 240", progress: 0.5, theater: true, practiceAvailable: true });
     renderer.settings({ id: "settings", tab: "controls", tabs: [{ id: "controls", label: "CONTROLS" }], returnTo: "menu",
       sections: [{ label: "CONTROLS", rows: [{ key: "padPreset", label: "Controller preset", value: "STANDARD · RECOMMENDED", kind: "cycle", note: "Balanced shoulders" }] }] });
     expect(controls.map((control) => control.action.type)).toEqual(expect.arrayContaining([
       "leaderboards.selectBoard", "leaderboards.watchReplay", "replay.jumpChapter", "replay.togglePause",
-      "replay.restart", "replay.toggleInfo", "replay.exit", "settings.activate",
+      "replay.restart", "replay.practice", "replay.toggleInfo", "replay.exit", "settings.activate",
     ]));
     expect(controls.find((control) => control.action.type === "leaderboards.selectTab"))
       .toMatchObject({ y: 124, h: 34, hiddenBox: true });
@@ -226,6 +228,8 @@ describe("legacy screen renderer registry", () => {
       .toMatchObject({ x: 872, y: 408, w: 48, h: 30 });
     expect(controls.find((control) => control.action.type === "replay.togglePause"))
       .toMatchObject({ x: 292, y: 834, w: 96, h: 44 });
+    expect(controls.find((control) => control.action.type === "replay.practice"))
+      .toMatchObject({ x: 644, y: 834, w: 180, h: 44, enabled: true });
   });
 
   it("uses the oracle replay-vault row geometry and a profile-specific watch intent", () => {

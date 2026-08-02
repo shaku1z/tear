@@ -2,14 +2,16 @@ import type { GhostReadCapsule } from "../ghost/capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope } from "../ghost/capsule-replay-envelope";
 import { createGhostProductionReplaySession, type GhostVerifiedProductionReplaySession } from "../ghost/production-replay-session";
 import { GhostTheaterTransport, type GhostTheaterState } from "../ghost/theater";
-import type { GhostSeekResult } from "../ghost/replay-world";
+import type { GhostPracticeChild, GhostSeekResult } from "../ghost/replay-world";
 import type { ReplayScreenView } from "../presentation/screens/contracts";
 import type { LegacyAppScreen } from "./legacy-state-controller";
+import type { GhostPracticeLaunchResult } from "./ghost-practice-launch";
 
 export interface GhostTheaterScreenServices {
   readonly render: (view: ReplayScreenView) => void;
   readonly width: () => number;
   readonly deltaSeconds: () => number;
+  readonly launchPractice: (child: GhostPracticeChild) => GhostPracticeLaunchResult;
 }
 
 export interface GhostTheaterScreenStatus {
@@ -88,6 +90,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       ]),
       ...(currentContext.message === undefined ? {} : { notice: currentContext.message }),
       theater: true,
+      practiceAvailable: currentContext.checkpoints.includes(current),
     });
   };
 
@@ -151,6 +154,24 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       seek(next);
     },
     restart(): void { seek(0); },
+    practice(): void {
+      if (context === undefined) return;
+      const tick = context.result.tick;
+      if (!context.checkpoints.includes(tick)) {
+        context.message = "Practice requires a verified recorded checkpoint.";
+        return;
+      }
+      try {
+        const child = context.session.forkPractice(tick, "exact-practice");
+        context.transport.pause();
+        const launched = services.launchPractice(child);
+        context.message = launched.ok
+          ? "Practice child launched. This run is unranked and non-persistent."
+          : launched.message;
+      } catch (error) {
+        context.message = `Practice unavailable: ${error instanceof Error ? error.message : String(error)}`;
+      }
+    },
     toggleInfo(): void { if (context !== undefined) context.infoVisible = !context.infoVisible; },
     setSpeed(value: number): void { if (context !== undefined && isSpeed(value)) context.transport.speed(value); },
     status(): GhostTheaterScreenStatus | null {
