@@ -417,6 +417,12 @@ The following C27A foundation slices are complete:
   gate and rebuilt campaign-victory browser proof pass. The next persistence
   boundary is the outcome composition's defeat-progress profile-stat update;
   it likewise must not imply durable-profile completion.
+- Outcome defeat-progress profile stats now use a composition-owned operation
+  that preserves the `runs` increment and floored `longestRun` maximum. Its
+  focused adapter/host gate retains the adjacent Daily, achievement, cloud, and
+  recording behavior; rebuilt campaign-victory browser proof passes. The next
+  persistence boundary is setup-shop purchase profile-stat updates, again
+  without a durable-profile claim.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

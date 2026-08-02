@@ -1127,6 +1127,19 @@ of replay, headless execution, or learning portability.
   composition's defeat-progress profile-stat update without changing its Daily,
   achievement, cloud, or recording behavior.
 
+- The sixty-ninth slice isolates outcome defeat-progress profile-stat updates
+  in a composition-owned adapter. Source architecture rejects direct
+  `runs`/`longestRun` profile-stat access in the outcome composition. The
+  focused gate passed 5 files / 10 tests, including adapter ordering and the
+  retained Daily, achievement, cloud, and recording behavior; rebuilt
+  campaign-victory browser proof passes.
+
+  This is one outcome profile-stat handoff only, not durable profile state,
+  migration, quota, crash recovery, cross-device sync, concurrent-world
+  behavior, or C27A completion evidence. The next boundary isolates setup-shop
+  purchase profile-stat updates without changing purchase, visual feedback, or
+  achievement-check behavior.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

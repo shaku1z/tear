@@ -93,8 +93,7 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     achievementTracking: options.achievementTracking,
     economyTelemetry: options.economyTelemetry,
     recordDefeatProgress(run, earned) {
-      d.PROFILE.addStat("runs", 1);
-      d.PROFILE.maxStat("longestRun", Math.floor(run.runTime));
+      d.outcomeDefeatProgressPersistence.record(run);
       d.DAILY.bump("runs", 1);
       options.achievementCheck();
       void d.Cloud.push();

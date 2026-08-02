@@ -248,6 +248,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live outcome pending-finale persistence must use the composition-owned adapter",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-outcome-composition.ts"]),
+    pattern: /\bd\.PROFILE\.(?:addStat|maxStat)\(/u,
+    message: "live outcome defeat-progress persistence must use the composition-owned adapter",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -529,6 +534,12 @@ if (dependencyErrors("src/app/live-outcome-composition.ts",
   || dependencyErrors("src/app/live-outcome-composition.ts",
     "d.pendingFinalePersistence.persist({});").length !== 0) {
   throw new Error("source architecture composition-owned pending-finale persistence rule self-test failed");
+}
+if (dependencyErrors("src/app/live-outcome-composition.ts",
+  'd.PROFILE.addStat("runs", 1);').length !== 1
+  || dependencyErrors("src/app/live-outcome-composition.ts",
+    "d.outcomeDefeatProgressPersistence.record(run);").length !== 0) {
+  throw new Error("source architecture composition-owned outcome defeat-progress persistence rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",

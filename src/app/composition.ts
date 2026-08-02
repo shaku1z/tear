@@ -37,6 +37,7 @@ import { createTearTestEnvironment } from "../tearbench/test-support";
 import { LegacyAppStateController } from "./legacy-state-controller";
 import { createLiveAchievementToastPersistence } from "./live-achievement-toast-persistence";
 import { createLivePendingFinalePersistence } from "./live-pending-finale-persistence";
+import { createLiveOutcomeDefeatProgressPersistence } from "./live-outcome-defeat-progress-persistence";
 import { createLiveStyleAchievementPersistence } from "./live-style-achievement-persistence";
 import { createLivePlatformBootstrapPersistence } from "./live-platform-bootstrap-persistence";
 import { createTearWorldSimulationFactories } from "../gameplay/runtime/tear-world-simulation-factories";
@@ -173,6 +174,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const APP = new LegacyAppStateController();
   const DIAG = new PerformanceMonitor();
   const achievementToastPersistence = createLiveAchievementToastPersistence(PROFILE);
+  const outcomeDefeatProgressPersistence = createLiveOutcomeDefeatProgressPersistence(PROFILE);
   const pendingFinalePersistence = createLivePendingFinalePersistence(PROFILE);
   const styleAchievementPersistence = createLiveStyleAchievementPersistence(ACH, PROFILE);
   const platformBootstrapPersistence = createLivePlatformBootstrapPersistence(ACH, PROFILE, META, SHOP);
@@ -181,7 +183,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     A11Y, ACH, AFFIXES, APP, Aldric, Armored, Attract, BOSSFX, Backdrop, Blade, Bomber, Boss, achievementToastPersistence,
     browserDocument: document, browserIndexedDb: window.indexedDB, browserNavigator: navigator, browserStorage: window.localStorage, browserWindow: window, CG, CLOCK, CONFIG: worldConfig, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, DAILY, DIAG, Echo,
     FX, FirebaseProvider, Flyer, GAMEPLAY_EVENTS, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
-    MirrorHost, OVERSCAN, PAD, PRESETS, pendingFinalePersistence, platformBootstrapPersistence, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
+    MirrorHost, OVERSCAN, PAD, PRESETS, outcomeDefeatProgressPersistence, pendingFinalePersistence, platformBootstrapPersistence, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
     Ranged, ReflectionEnemy, SAFE, SFX, SHOP, STAGES, Source, styleAchievementPersistence, Support, THEME, UI, UPGRADES,
     VAULT, VARIANTS, VoidGen, VoidWisp, WEAPONS, Warden, Wraith,
     aabbOverlap, applyPreset, applyUpgrade, applyVariant, applyWeapon,

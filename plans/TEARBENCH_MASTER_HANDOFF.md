@@ -197,15 +197,15 @@ Important files:
 
 ### Exact next slice
 
-Slice 68 completes the bounded pending-finale profile-operation step. The
-composition-owned adapter preserves the live outcome host's existing
-persist/save/clear/read contract; source architecture rejects direct profile
-access for those operations in the outcome composition. `pnpm
-check:c27a:slice68` passed (5 files / 10 tests plus architecture), including
-adapter mapping and host delegation, and rebuilt campaign-victory browser proof
-passes. This does not establish durable profile state, migration, quota, crash
-recovery, cross-device sync, or full-world concurrency. Next, isolate the
-defeat-progress profile-stat update in the same outcome composition.
+Slice 69 completes the bounded outcome defeat-progress profile-stat step. The
+composition-owned adapter retains the existing `runs` increment followed by
+the floored `longestRun` maximum; source architecture rejects direct profile
+stat access in the outcome composition. `pnpm check:c27a:slice69` passed (5
+files / 10 tests plus architecture), including adapter ordering and proof that
+Daily, achievement, cloud, and recording behavior remains intact, and rebuilt
+campaign-victory browser proof passes. This does not establish durable profile
+state, migration, quota, crash recovery, cross-device sync, or full-world
+concurrency. Next, isolate setup-shop purchase profile-stat updates.
 
 All thirteen captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream: 5,732 ticks and 33 native facts, including the three natural-trace enemy defeats now published independently of Ghost 2 sampling. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome/reward/finale controllers, scheduler shape, event bus, and restored actor identity. The natural matrix route clears wave 1, selects a real offered draft card without advancing the fixed scheduler, and reaches a wave-2 spawn. A separate certified route reconstructs the wave-49 frontier, starts production wave 50, applies an explicit Source one-hit State Forge child, and executes real victory; live and detached match all seven finale intent batches and all 22 outward calls after their concrete adapters return, in exact order and with exact arguments. They also match six immutable ring/burst particle-admission receipts, eight logical feel receipts after restoration of the captured pre-finale transient, and the complete 42-entry terminal external-decision transcript (13 initial synchronization terminal decision/request, 22 finale-outward, and 7 cache/terminal). The refreshed browser route explicitly activates audio, then observes 12 executing plus 12 completed dispatch receipts: all seven mixes are logical-target-only and all cues are voice-cap-rejected, so no output is claimed. Slice 40 adds portable `tear-world-simulation-factories.ts` with no app/presentation/browser imports; the app renderer supplies real Canvas ports and detached supplies explicit no-op ports under architecture fences. Next: generic world bootstrap, then configuration isolation, which still blocks truly simultaneous full worlds. This evidence does not claim a naturally played 50-wave campaign, randomized particle parity, rendered-pixel parity, headless/full-world portability, configuration isolation, durable profile/local-storage survival, cloud/replay/analytics completion, successful PCM/audibility or audio graph/device parity, or device vibration.
 
@@ -346,11 +346,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      Slice 68 routes the live outcome host's pending-finale profile persist/save/clear/read operations through one composition-owned typed adapter.
-PROVEN BY:           `pnpm check:c27a:slice68` passed: 5 focused files / 10 tests and architecture, including adapter mapping and outcome-host delegation; rebuilt campaign-victory browser proof passed. The previous fresh foundation and campaign-victory evidence remains recorded above; C27A remains blocking.
-REMAINING HERE:      Isolate the outcome defeat-progress profile-stat update, then continue remaining persistence dependencies and real-world extraction. Those boundaries still prevent concurrent complete worlds and C27A remains blocking.
+DONE THIS STEP:      Slice 69 routes outcome defeat-progress profile-stat updates through a composition-owned typed operation while retaining adjacent Daily, achievement, cloud, and recording behavior.
+PROVEN BY:           `pnpm check:c27a:slice69` passed: 5 focused files / 10 tests and architecture, including adapter ordering and the retained outcome behavior; rebuilt campaign-victory browser proof passed. The previous fresh foundation and campaign-victory evidence remains recorded above; C27A remains blocking.
+REMAINING HERE:      Isolate setup-shop purchase profile-stat updates, then continue remaining persistence dependencies and real-world extraction. Those boundaries still prevent concurrent complete worlds and C27A remains blocking.
 REMAINING TO C40:    C27 completion, C25 exit, and C28-C40 remain after C27A closes.
-NEXT SLICE:          Isolate the live outcome composition's defeat-progress profile-stat update without changing Daily, achievement, cloud, or recording behavior. Do not claim durability/device parity or full live-world concurrency.
+NEXT SLICE:          Isolate setup-shop purchase profile-stat updates without changing purchase, visual feedback, or achievement-check behavior. Do not claim durability/device parity or full live-world concurrency.
 
 All of the following were run from this worktree through C27A slice 36:
 

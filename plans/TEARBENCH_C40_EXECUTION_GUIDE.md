@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 68 update (current)
+#### Slice 69 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -717,6 +717,19 @@ state, migration, quota, crash recovery, cross-device sync, concurrent-complete-
 world, or C27A completion evidence. Next, isolate the outcome composition's
 defeat-progress profile-stat update without changing its Daily, achievement,
 cloud, or recording behavior.
+
+Slice 69 isolates outcome defeat-progress profile-stat updates in a composition-
+owned adapter. Source architecture rejects direct `runs`/`longestRun` profile-
+stat access in the outcome composition. The focused gate passed 5 files / 10
+tests plus architecture, including adapter ordering and retained Daily,
+achievement, cloud, and recording behavior; rebuilt campaign-victory browser
+proof passes.
+
+This is one outcome profile-stat handoff only, not durable profile state,
+migration, quota, crash recovery, cross-device sync, concurrent-complete-world,
+or C27A completion evidence. Next, isolate setup-shop purchase profile-stat
+updates without changing purchase, visual feedback, or achievement-check
+behavior.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser
