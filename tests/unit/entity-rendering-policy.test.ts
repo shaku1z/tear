@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { createBladeRenderer } from "../../src/presentation/entities/blade-renderer";
 import { createMirrorRenderer } from "../../src/presentation/entities/mirror-renderer";
 import { createProjectileRenderer } from "../../src/presentation/entities/projectile-renderer";
+import { createEnemyRendererRuntime } from "../../src/presentation/enemies/renderers/enemy-renderer-runtime";
+import type { EnemyPresentationPolicy } from "../../src/presentation/enemies/renderers/enemy-renderer-types";
 
 function canvas(styles: string[]): CanvasRenderingContext2D {
   const target = {
@@ -43,6 +45,32 @@ function renderers(prefix: string) {
   };
 }
 
+function enemyPolicy(prefix: string): EnemyPresentationPolicy {
+  return {
+    view: { w: 1600, h: 900 }, world: { groundY: 800 },
+    colors: {
+      armored: `${prefix}-armored`, armoredShield: `${prefix}-shield`, bladeGlow: `${prefix}-glow`, bladeTrail: `${prefix}-trail`,
+      bomber: `${prefix}-bomber`, boss: `${prefix}-boss`, charger: `${prefix}-charger`, chimera: `${prefix}-chimera`,
+      deflected: `${prefix}-deflected`, enemyShot: `${prefix}-shot`, eye: `${prefix}-eye`, flyer: `${prefix}-flyer`,
+      perfect: `${prefix}-perfect`, ranged: `${prefix}-ranged`, slam: `${prefix}-slam`, sludge: `${prefix}-sludge`,
+    },
+    aldric: { ascendHalfW: 1, chargeWindup: 1, crownfireWindup: 1, overheadRange: 1, overheadWindup: 1, thronefallRise: 1, vaultArc: 1 },
+    bossTheater: { introDur: 1 }, chargedShot: { r: 1 }, exotic: { geoWallH: 1, geoWallW: 1, gravReach: 1 },
+    source: { beamW: 1, beamWarn: 1, collapseWindup: 1, dashWindup: 1, depthHandW: 1, depthMawW: 1, depthRearAlpha: 1, depthRearScale: 1, voidFormScale: 1, voidWispTell: 1 },
+    warden: { batonWindup: 1, lungeWind: 1, lungeWindup: 1, stringWind: 1 },
+  };
+}
+
+function enemyRuntime(prefix: string) {
+  return createEnemyRendererRuntime({
+    A11Y: { highContrast: false, reducedMotion: true }, CLOCK: { sim: 1 }, policy: enemyPolicy(prefix),
+    GFX: { low: true }, THEME: { dark: false, ink: `${prefix}-ink`, rim: `${prefix}-rim` },
+    UI: { font: () => "", tag: () => undefined, t: { type: { caption: 1 } } },
+    clamp: (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value)), len: Math.hypot,
+    lerp: (from, to, amount) => from + (to - from) * amount,
+  });
+}
+
 describe("entity rendering policies", () => {
   it("keeps Blade, Mirror, and Projectile palette choices local to each renderer set", () => {
     const first = renderers("first"), second = renderers("second");
@@ -64,5 +92,16 @@ describe("entity rendering policies", () => {
 
     expect(firstStyles).toEqual(expect.arrayContaining(["first-perfect", "first-eye", "first-bomber"]));
     expect(secondStyles).toEqual(expect.arrayContaining(["second-perfect", "second-eye", "second-bomber"]));
+  });
+
+  it("keeps legacy enemy cinematic palette policy local to each runtime", () => {
+    const firstStyles: string[] = [], secondStyles: string[] = [];
+    const pose = { cinematicPose: "colossusCore", cinematicT: 1, color: "#fff", x: 40, y: 50, hw: 20, hh: 30, facing: 1 };
+
+    enemyRuntime("first").drawBossTransformationWorld(canvas(firstStyles), pose as never);
+    enemyRuntime("second").drawBossTransformationWorld(canvas(secondStyles), pose as never);
+
+    expect(firstStyles).toContain("first-slam");
+    expect(secondStyles).toContain("second-slam");
   });
 });

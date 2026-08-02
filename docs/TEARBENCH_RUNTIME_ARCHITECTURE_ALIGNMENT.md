@@ -304,6 +304,14 @@ The first thirty-four executable C27A slices are complete:
   renderer-policy palettes, and architecture rejects renewed imports. This does
   not isolate the broad legacy enemy renderer family or establish pixel parity,
   so complete live applications remain not concurrent-world safe.
+- The legacy enemy presentation family now receives an exact
+  `EnemyPresentationPolicy`, projecting only its rendered palette, viewport/
+  ground, and authored boss/telegraph values. It no longer imports the broad
+  gameplay configuration type; a direct two-runtime cinematic test proves
+  isolated palette use and architecture blocks regression. This does not prove
+  pixel parity or isolate the remaining Attract entropy, input, audio, or
+  persistence adapters, so complete live applications remain not
+  concurrent-world safe.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

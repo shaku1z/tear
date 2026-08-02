@@ -147,6 +147,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "entity renderers must receive only their narrow rendering policy from presentation composition",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/presentation/enemies/renderers/enemy-renderer-types.ts"]),
+    pattern: /\bGameConfig\b/u,
+    message: "legacy enemy presentation must declare its exact rendering policy instead of importing the broad gameplay configuration",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/gameplay/runtime/tear-world-bootstrap.ts"]),
     pattern: /(?:from\s+|import\s*\()\s*["'][^"']*config\/game-config["']/u,
     message: "the generic world bootstrap must receive base configuration through its explicit caller port",
@@ -292,6 +297,12 @@ for (const moduleName of [
       'export interface RendererPolicy {}').length !== 0) {
     throw new Error("source architecture entity renderer policy rule self-test failed");
   }
+}
+if (dependencyErrors("src/presentation/enemies/renderers/enemy-renderer-types.ts",
+  'import type { GameConfig } from "../../../gameplay/entities/enemy-contracts";').length !== 1
+  || dependencyErrors("src/presentation/enemies/renderers/enemy-renderer-types.ts",
+    'export interface EnemyPresentationPolicy {}').length !== 0) {
+  throw new Error("source architecture legacy enemy presentation policy rule self-test failed");
 }
 if (dependencyErrors("src/gameplay/runtime/tear-world-bootstrap.ts",
   'import { CONFIG } from "../../config/game-config";').length !== 1

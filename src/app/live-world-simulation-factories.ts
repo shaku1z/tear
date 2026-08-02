@@ -18,7 +18,7 @@ export interface LiveWorldSimulationPresentationAdapterOptions {
   readonly ui: EnemyPresentationOptions["UI"];
   readonly configuration: Readonly<{
     accessibility: EnemyPresentationOptions["A11Y"];
-    config: EnemyPresentationOptions["CONFIG"];
+    config: EnemyPresentationOptions["policy"] & Readonly<{ juice: Parameters<typeof createBladeRenderer>[0]["policy"]["juice"] }>;
     graphics: EnemyPresentationOptions["GFX"];
     theme: EnemyPresentationOptions["THEME"];
   }>;
@@ -45,7 +45,7 @@ export function createLiveWorldSimulationPresentationAdapter(
 ): TearWorldEntityPresentationPorts {
   const { clock, effects, ui, configuration, geometry, cosmeticRandom } = options;
   const { accessibility, config, graphics, theme } = configuration;
-  const { colors, juice, world } = config;
+  const { aldric, bossTheater, chargedShot, colors, exotic, juice, source, warden, world, view } = config;
   const playerPresentation = createPlayerRenderer({ colors: config.colors, graphics, theme, clamp: geometry.clamp });
   const bladePresentation = createBladeRenderer({
     clock, policy: { colors, juice }, graphics, theme, clamp: geometry.clamp, len: geometry.len, lerp: geometry.lerp,
@@ -57,7 +57,7 @@ export function createLiveWorldSimulationPresentationAdapter(
     clock, policy: { colors, world }, effects, graphics, theme, clamp: geometry.clamp, cosmeticRandom,
   });
   const enemyPresentation = createLegacyEnemyPresentation({
-    A11Y: accessibility, CLOCK: clock, CONFIG: config, GFX: graphics, THEME: theme, UI: ui,
+    A11Y: accessibility, CLOCK: clock, policy: { aldric, bossTheater, chargedShot, colors, exotic, source, warden, world, view }, GFX: graphics, THEME: theme, UI: ui,
     clamp: geometry.clamp, len: geometry.len, lerp: geometry.lerp,
   });
   return Object.freeze({

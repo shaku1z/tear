@@ -864,6 +864,22 @@ of replay, headless execution, or learning portability.
   headless/replay/learning portability, independent full applications, and C27A
   completion remain open.
 
+- The forty-ninth slice replaces the legacy enemy renderer family's broad
+  `GameConfig` type with an exact `EnemyPresentationPolicy`: view/ground,
+  the rendered palette keys, and only the authored Aldric, Warden, Source,
+  exotic, charged-shot, and boss-timing values used by its six renderer
+  modules. The live presentation adapter projects that policy; no broad
+  gameplay-config type remains in the presentation boundary. Direct runtime
+  evidence renders a Colossus cinematic under two independent policies and
+  confirms each uses its own palette, while architecture blocks regression.
+  Built journeys, fresh foundation, and campaign-victory gates pass.
+
+  This is dependency ownership, not pixel parity. Existing Attract cosmetic
+  entropy remains global; audio, input, persistence, device output,
+  headless/replay/learning portability, independent full applications, and C27A
+  completion remain open. The next presentation boundary injects Attract's
+  cosmetic entropy.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap

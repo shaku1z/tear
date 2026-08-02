@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 48 update (current)
+#### Slice 49 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -467,6 +467,18 @@ This is renderer-policy ownership only, not pixel parity, legacy enemy renderer
 isolation, concurrent complete live worlds, or C27A completion. Next, move the
 legacy enemy renderer family's broad presentation configuration behind a
 structural policy.
+
+Slice 49 supplies that exact legacy enemy policy. `EnemyPresentationPolicy`
+contains only view/ground, rendered palette, and authored boss/telegraph values;
+the live adapter supplies it and no broad gameplay-config type remains in the
+presentation boundary. Direct two-runtime Colossus cinematic evidence proves
+isolated palette use, and source architecture rejects the old broad type. `pnpm
+check:c27a:slice49` passed 8 focused files / 24 tests plus architecture; built
+journeys, fresh foundation, and campaign-victory gates passed.
+
+This proves dependency ownership, not pixel parity, complete presentation
+isolation, concurrent full live worlds, or C27A completion. Next, inject
+Attract's module-global cosmetic entropy through its explicit visual policy.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

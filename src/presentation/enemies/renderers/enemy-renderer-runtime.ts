@@ -1,9 +1,9 @@
 import type { BossPresentationActor, Point, WeaponActor, WeaponPose } from "../../../gameplay/entities/enemy-contracts";
-import type { CrownRenderPose, EnemyPresentationDependencies, RenderInstance } from "./enemy-renderer-types";
+import type { CrownRenderPose, EnemyPresentationDependencies, EnemyRendererColor, RenderInstance } from "./enemy-renderer-types";
 
 export function createEnemyRendererRuntime(dependencies: EnemyPresentationDependencies) {
-  const { A11Y, CLOCK, CONFIG, GFX, THEME, UI, clamp, len, lerp } = dependencies;
-  const CHIMERA_MOVE_COLOR: Record<string, keyof typeof CONFIG.colors> = {
+  const { A11Y, CLOCK, GFX, THEME, UI, clamp, len, lerp, policy: CONFIG } = dependencies;
+  const CHIMERA_MOVE_COLOR: Record<string, EnemyRendererColor> = {
     charger: "charger", brawler: "charger", stalker: "charger",
     ranged: "ranged", flyer: "flyer", bomber: "bomber", armored: "armored",
   };
