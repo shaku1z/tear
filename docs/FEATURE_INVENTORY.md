@@ -176,8 +176,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   source-owned State Forge hydration and production combat composition. A
   verified source replay can now seek and create a non-persistent, unranked
   practice child at a verified checkpoint without mutating its durable capsule;
-  active cinematics, player-visible Theater/practice, and comparison remain C29
-  work;
+  a healthy completed capsule is also playable through the normal Profile ->
+  Vault `GHOST THEATER` route, where its visible semantic transport reaches
+  verified checkpoints and returns with Escape. Active cinematics,
+  player-visible Practice From Here, pixel/device output fidelity, and
+  comparison remain C29/C25/C40 work;
   authenticated publication, deployed verification, moderation operations,
   and cloud/player lifecycle flows remain later completion work.
 

@@ -1,7 +1,7 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 
-withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page }) => {
+withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, boot, waitScreen }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, { timeout: 15000 });
   await page.evaluate(() => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
@@ -63,11 +63,34 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page }) 
   const sourceAfterPractice = JSON.stringify(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id));
   assert.equal(sourceAfterPractice, sourceBeforePractice, "practice fork mutated durable source custody");
   assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await boot();
   await page.waitForFunction(() => window.__TEAR_GHOST_V3__, undefined, { timeout: 15000 });
   const afterReload = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifests());
   assert.ok(afterReload.some((candidate) => candidate.id === manifest.id && candidate.status === "complete"),
     "completed Ghost V3 capsule was not readable after a browser reload");
   const reloadedCapsule = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id);
   assert.equal(reloadedCapsule.tracks.results.length > 0, true);
+  await page.evaluate(() => {
+    const texts = [];
+    const original = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function captureTheaterText(text, ...rest) {
+      texts.push(String(text));
+      return original.call(this, text, ...rest);
+    };
+    window.__TEAR_C29_THEATER_TEXT__ = texts;
+  });
+  await page.mouse.click(260, 266); // PROFILE through the ordinary menu action
+  await waitScreen("profile");
+  await page.mouse.click(875, 271); // VAULT tab
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("Ghost V3 - COACHING"), undefined, { timeout: 10000 });
+  await page.mouse.click(1023, 362); // The healthy capsule's semantic THEATER control
+  await waitScreen("replay");
+  await page.waitForTimeout(250);
+  const theaterTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
+  assert.ok(theaterTexts.some((text) => text.includes("THEATER")), `Theater header did not render: ${theaterTexts.slice(-80).join(" | ")}`);
+  await page.mouse.click(428, 854); // next verified checkpoint through the visible transport
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("TICK 120"), undefined, { timeout: 10000 });
+  assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "replay");
+  await page.keyboard.press("Escape");
+  await waitScreen("profile");
 });

@@ -133,11 +133,13 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     canvas.fillRect(screen.x, screen.y, screen.w, 54 + safe.t); canvas.globalAlpha = 1;
     canvas.fillStyle = REPLAY_CYAN; canvas.fillRect(screen.x, screen.y, screen.w, 3);
     canvas.textAlign = "left"; canvas.fillStyle = REPLAY_PAPER; canvas.font = ui.font(ui.t.type.lead, true);
-    canvas.fillText("▶ REPLAY", 40 + safe.l, 36 + safe.t);
+    canvas.fillText(view.theater ? "◆ THEATER" : "▶ REPLAY", 40 + safe.l, 36 + safe.t);
     canvas.fillStyle = REPLAY_MUTED; canvas.font = ui.font(ui.t.type.body, false);
     canvas.fillText(view.title + "   ·   " + view.detail, 200 + safe.l, 36 + safe.t);
     canvas.textAlign = "right"; canvas.fillStyle = REPLAY_CYAN; canvas.font = ui.font(ui.t.type.label, true);
     canvas.fillText(view.score ?? "", width - 36 - safe.r, 36 + safe.t); canvas.restore();
+
+    if (view.theater) theaterState(view);
 
     const barY = height - 96 - safe.b, barX = 220 + safe.l, barWidth = width - 440 - safe.l - safe.r;
     canvas.save(); canvas.globalAlpha = 0.85; canvas.fillStyle = REPLAY_DARK;
@@ -161,7 +163,22 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     context.enqueue({ x: 552 + safe.l, y: controlY, w: 84, h: 44, label: "↺", action: { type: "replay.restart" } });
     context.enqueue({ x: width - 420 - safe.r, y: controlY, w: 90, h: 44, label: view.infoVisible ? "HIDE" : "INFO", action: { type: "replay.toggleInfo" } });
     context.enqueue({ x: width - 320 - safe.r, y: controlY, w: 200, h: 44, label: "‹  BACK", action: { type: "replay.exit" } });
+    if (view.notice) ui.text(canvas, view.notice, width / 2, barY - 34, ui.t.type.caption, "center", ui.t.alpha.muted);
     if (view.infoVisible) replayInfo(view);
+  }
+
+  function theaterState(view: ReplayScreenView): void {
+    const { canvas, safeInsets: safe } = context;
+    const panelWidth = Math.min(620, width - 80 - safe.l - safe.r), panelHeight = 240;
+    const x = width / 2 - panelWidth / 2, y = height / 2 - panelHeight / 2 - 20;
+    ui.panel(canvas, x, y, panelWidth, panelHeight);
+    ui.accentStrip(canvas, x, y, panelWidth, REPLAY_CYAN);
+    ui.title(canvas, "VERIFIED REPLAY STATE", width / 2, y + 56, ui.t.type.h2);
+    ui.tag(canvas, `${view.elapsed}  /  ${view.duration}`, width / 2, y + 86, REPLAY_CYAN, "center", ui.t.type.label);
+    ui.wrappedText(canvas, "This Ghost replays the durable capsule through the shared production simulation. Transport moves between recorded verified states; it never changes the source capsule or your profile.",
+      x + 42, y + 122, panelWidth - 84, 22, ui.t.type.body, "left", ui.t.alpha.soft);
+    ui.text(canvas, "USE TRANSPORT TO SEEK  ·  ESC TO RETURN", width / 2, y + panelHeight - 24,
+      ui.t.type.micro, "center", ui.t.alpha.muted);
   }
 
   function replayInfo(view: ReplayScreenView): void {

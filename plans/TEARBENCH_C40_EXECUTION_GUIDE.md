@@ -1000,9 +1000,14 @@ portability, concurrent complete worlds, or C27A completion.
 ### C29 — Replay world, Theater, comparison, practice
 
 - [x] Replay executes on the C27A production composition (no second runtime) - GhostProductionReplayWorld accepts and advances only the TearSimulationRuntime supplied by its composition. The C29 production test supplies the source-owned C27A production-world/combat composition, asserts runtime identity at tick 80, and repeats the seek with an equal semantic hash. `pnpm check:c29:production-replay` passes.
-- [x] Replay of a captured capsule reproduces its authoritative hashes — the normal test-standalone browser capture persists State Forge keyframes plus held-input authoritative receipts at ticks 0, 120, and 240; after the completed IndexedDB capsule is reopened, the source-owned production replay composition rehydrates each keyframe and matches every receipt. `pnpm check:c29:production-replay` passes. This does not yet cover active bound cinematics, player Theater, or practice/comparison UX.
+- [x] Replay of a captured capsule reproduces its authoritative hashes — the normal test-standalone browser capture persists State Forge keyframes plus held-input authoritative receipts at ticks 0, 120, and 240; after the completed IndexedDB capsule is reopened, the source-owned production replay composition rehydrates each keyframe and matches every receipt. `pnpm check:c29:production-replay` passes. This does not yet cover active bound cinematics, player Practice From Here, comparison, or pixel/device-output fidelity.
 - [ ] Seek, fork, and practice work from a replay
-- [ ] `ghost/theater` wired and player-visible
+- [x] `ghost/theater` wired and player-visible â€” a normal Profile -> Vault
+  row opens only a healthy completed V3 capsule through its verified
+  source-production replay session, shows the visible `GHOST THEATER`
+  transport, seeks the verified tick-120 checkpoint, and returns with Escape
+  in the rebuilt C29 browser journey. This is semantic Theater presentation;
+  pixel/device-output fidelity remains C25/C40 scope.
 - [ ] Side-by-side comparison of two runs
 
 ### C30 — Headless and scalable episodes

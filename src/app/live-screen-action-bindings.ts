@@ -48,6 +48,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "settings.activate": (action) => { ports.settings.activateSetting(action.key); }, "settings.reset": () => { ports.resetSettings(); },
     "shop.buy": (action) => { ports.buyShopItem(action.id); }, "profile.selectTab": (action) => { ports.library.selectProfileTab(action.id); },
     "profile.watchReplay": (action) => { ports.library.watchReplay(action.id, "profile"); },
+    "profile.watchGhostCapsule": (action) => { ports.library.watchGhostCapsule(action.id); },
     "profile.repairGhostCapsule": (action) => { ports.library.repairGhostCapsule(action.id); },
     "profile.signIn": () => { ports.signIn(); }, "profile.signOut": () => { ports.signOut(); },
     "profile.rename": () => { ports.settings.beginRename(false); },

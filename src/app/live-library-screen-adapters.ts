@@ -27,6 +27,7 @@ export interface LibraryScreenServices {
   readonly getBest: (mode: string, difficulty: string) => Readonly<{ wave: number; score: number; time?: number }>;
   readonly ghostVault: GhostVaultLibraryPort;
   readonly enterReplay: (record: unknown, from: string) => boolean;
+  readonly enterGhostTheater: (id: string) => Promise<boolean>;
 }
 
 export interface LibraryScreenAdapters {
@@ -51,6 +52,7 @@ export interface LibraryScreenAdapters {
   readonly selectLeaderboardTab: (id: string) => void;
   readonly selectLeaderboardBoard: (id: string) => void;
   readonly watchReplay: (id: string, from?: "profile" | "leaderboards") => void;
+  readonly watchGhostCapsule: (id: string) => void;
   readonly publishReplay: (id: string) => void;
   readonly repairGhostCapsule: (id: string) => void;
 }
@@ -104,6 +106,7 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
     selectLeaderboardTab: (id) => { invoke((value) => { value.selectLeaderboardTab(id); }); },
     selectLeaderboardBoard: (id) => { invoke((value) => { value.selectLeaderboardBoard(id); }); },
     watchReplay: (id, from) => { invoke((value) => { value.watchReplay(id, from); }); },
+    watchGhostCapsule: (id) => { invoke((value) => { value.watchGhostCapsule(id); }); },
     publishReplay: (id) => { invoke((value) => { value.publishReplay(id); }); },
     repairGhostCapsule: (id) => { invoke((value) => { value.repairGhostCapsule(id); }); },
   };

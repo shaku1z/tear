@@ -26,6 +26,7 @@ export type ScreenAction =
   | { readonly type: "shop.buy"; readonly id: string }
   | { readonly type: "profile.selectTab"; readonly id: string }
   | { readonly type: "profile.watchReplay"; readonly id: string }
+  | { readonly type: "profile.watchGhostCapsule"; readonly id: string }
   | { readonly type: "profile.repairGhostCapsule"; readonly id: string }
   | { readonly type: "profile.signIn" }
   | { readonly type: "profile.signOut" }

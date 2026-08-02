@@ -1,7 +1,8 @@
 # C29 - Replay World, Theater, Comparison, and Practice
 
-**Status:** active - the production-runtime replay foundation is proven; the
-player product and the remaining exit conditions are not.
+**Status:** active - the production-runtime replay foundation and semantic
+Theater are proven; player Practice From Here, comparison, and remaining exit
+conditions are not.
 
 ## Scope and evidence rule
 
@@ -50,6 +51,13 @@ applicable production boundary.
   player/profile writes. The browser capture journey proves the durable source
   capsule is byte-for-byte unchanged after that fork. This is a source/runtime
   foundation, not yet the player-facing practice flow required by the ledger.
+- The normal Profile -> Vault route now exposes a healthy, complete V3 capsule
+  as `THEATER`, never as Ghost 2 `WATCH`. It opens only after the validated
+  Vault reader and verified production replay session succeed. Its visible
+  transport seeks through fresh source-composition worlds at recorded
+  checkpoints and uses the established pointer controls and Escape return path.
+  This is semantic Theater: rendered gameplay-pixel/device fidelity remains
+  C25/C40 work and is not implied by the Theater chrome.
 
 ## Exit-gate ledger
 
@@ -61,19 +69,23 @@ applicable production boundary.
   source-owned State Forge hydration and held-input restoration.
 - [ ] Seek, fork, and practice run from an admitted replay without mutating
   source custody or the production profile.
-- [ ] Theater is player-visible and passes applicable accessibility/input UI
-  evidence.
+- [x] Theater is player-visible and passes applicable accessibility/input UI
+  evidence â€” a rebuilt browser route records and reloads a real V3 capsule,
+  follows the normal Menu -> Profile -> Vault pointer route, opens `THEATER`,
+  jumps to its verified tick-120 checkpoint using visible transport, and
+  returns to Profile with Escape. The Theater screen is a source-simulation
+  semantic view; no pixel, PCM, haptic, or device-output fidelity is claimed.
 - [ ] Side-by-side comparison supports the required runs and repeated semantic
   occurrences.
 
 ## Deliberately not claimed
 
 This foundation does not turn legacy visual replay into V3 replay, admit an
-incompatible capsule, or expose a player Theater screen. The older parity
+incompatible capsule, or replace Ghost 2 playback. The older parity
 harness retains its equivalent helper for its existing C27A suites, but the C29
 replay proof no longer imports that test helper. This proves the normal
 test-standalone endless capture only; durable active-chapter-cinematic capture,
-the player-visible seek/fork/practice flow, and comparisons remain unfinished.
+the player-visible Practice From Here flow, and comparisons remain unfinished.
 
 ## Evidence
 
@@ -83,4 +95,6 @@ rebuilt browser V3 capture that reopens the completed IndexedDB capsule and
 compares all captured authoritative receipts through source-owned replay. That
 browser journey also forks its verified tick-120 checkpoint through the app
 bridge and proves the returned child is unranked/non-persistent and the durable
-source JSON is unchanged; it is not a substitute for Theater UI evidence.
+source JSON is unchanged. It additionally proves the player-visible semantic
+Theater route and its pointer/Escape transport behavior; it is not a substitute
+for pixel/device output fidelity or player-visible Practice From Here evidence.

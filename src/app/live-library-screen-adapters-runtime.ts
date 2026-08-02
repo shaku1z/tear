@@ -38,6 +38,7 @@ export interface LibraryScreenServices {
   readonly getBest: (mode: string, difficulty: string) => Readonly<{ wave: number; score: number; time?: number }>;
   readonly ghostVault: GhostVaultLibraryPort;
   readonly enterReplay: (record: unknown, from: string) => boolean;
+  readonly enterGhostTheater: (id: string) => Promise<boolean>;
 }
 
 export interface LibraryScreenAdapters {
@@ -62,6 +63,7 @@ export interface LibraryScreenAdapters {
   readonly selectLeaderboardTab: (id: string) => void;
   readonly selectLeaderboardBoard: (id: string) => void;
   readonly watchReplay: (id: string, from?: "profile" | "leaderboards") => void;
+  readonly watchGhostCapsule: (id: string) => void;
   readonly publishReplay: (id: string) => void;
   readonly repairGhostCapsule: (id: string) => void;
 }
@@ -184,7 +186,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       title: `Ghost V3 - ${capsule.recordingProfile.toUpperCase()}`,
       detail: `${capsule.status.toUpperCase()} - ${String(capsule.chunkCount)} CHUNKS - ${capsule.healthy ? "HEALTHY" : "NEEDS REPAIR"}${capsule.repairChildId === undefined ? "" : " - REPAIRED COPY AVAILABLE"}${capsule.libraries.length === 0 ? "" : ` - ${capsule.libraries.join(" / ").toUpperCase()}`}`,
       badge: "DURABLE CAPSULE",
-      available: false,
+      available: capsule.healthy && capsule.status === "complete",
       repairable: capsule.repairable,
       timestamp: new Date(capsule.createdAt).toLocaleDateString(),
     }));
@@ -295,7 +297,14 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     selectLeaderboardTab: (id) => { leaderboardTab = id; services.setScroll(0); leaderboardMessage = ""; },
     selectLeaderboardBoard: (id) => { const [kind, value = ""] = id.split(":"); if (kind === "mode") leaderboardMode = value;
       else if (kind === "difficulty") leaderboardDifficulty = value; services.setScroll(0); leaderboardMessage = ""; },
-    watchReplay: (id, from) => { replayLibrary.watch(id, from); }, publishReplay: (id) => { replayLibrary.publish(id); },
+    watchReplay: (id, from) => { replayLibrary.watch(id, from); },
+    watchGhostCapsule: (id) => {
+      profileMessage = "opening Ghost Theater...";
+      void services.enterGhostTheater(id).then((opened) => {
+        if (!opened) profileMessage = "This Ghost capsule could not open in Theater.";
+      });
+    },
+    publishReplay: (id) => { replayLibrary.publish(id); },
     repairGhostCapsule: (id) => { services.ghostVault.repair(id); },
   };
   return Object.freeze(adapters);

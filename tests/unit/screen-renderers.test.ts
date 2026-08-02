@@ -246,10 +246,20 @@ describe("legacy screen renderer registry", () => {
     renderer.profile({ id: "profile", tab: "vault", tabs: [{ id: "vault", label: "VAULT", selected: true }],
       name: "Guest", signedIn: false, stats: [], replays: [{ id: "capsule:run-1", title: "Ghost V3 - COACHING",
         detail: "COMPLETE - 3 CHUNKS", available: false, badge: "DURABLE CAPSULE" }] });
-    expect(controls.find((control) => control.action.type === "profile.watchReplay"))
-      .toMatchObject({ enabled: false, action: { type: "profile.watchReplay", id: "capsule:run-1" } });
+    expect(controls.find((control) => control.action.type === "profile.watchGhostCapsule"))
+      .toMatchObject({ enabled: false, label: "◆ THEATER", action: { type: "profile.watchGhostCapsule", id: "capsule:run-1" } });
     expect(controls.some((control) => control.action.type === "profile.pinReplay")).toBe(false);
     expect(controls.some((control) => control.action.type === "profile.deleteReplay")).toBe(false);
+  });
+
+  it("routes a healthy Ghost Vault capsule to Theater through a distinct semantic action", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.profile({ id: "profile", tab: "vault", tabs: [{ id: "vault", label: "VAULT", selected: true }],
+      name: "Guest", signedIn: false, stats: [], replays: [{ id: "verified-capsule", title: "Ghost V3 - COACHING",
+        detail: "COMPLETE - 3 CHUNKS - HEALTHY", available: true, badge: "DURABLE CAPSULE" }] });
+    expect(controls.find((control) => control.action.type === "profile.watchGhostCapsule"))
+      .toMatchObject({ enabled: true, label: "◆ THEATER", action: { type: "profile.watchGhostCapsule", id: "verified-capsule" } });
   });
 
   it("offers a semantic repair action only for an unhealthy Vault capsule", () => {

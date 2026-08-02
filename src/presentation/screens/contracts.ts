@@ -175,6 +175,9 @@ export interface ReplayScreenView {
   readonly stage?: string; readonly score?: string;
   readonly chapters?: readonly ReplayChapterView[]; readonly wave?: number; readonly infoVisible?: boolean;
   readonly infoRows?: readonly StatView[]; readonly loadout?: readonly CardView[];
+  /** Ghost 3's semantic Theater reuses the mature replay transport chrome. */
+  readonly theater?: boolean;
+  readonly notice?: string;
 }
 export interface SettingRowView {
   readonly key: string; readonly label: string; readonly value: string; readonly kind: "stepper" | "toggle" | "cycle";
