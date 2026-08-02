@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { resolve } from "node:path";
 import process from "node:process";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
@@ -67,4 +68,32 @@ test("C30 dispatcher enforces a per-request deadline and starts a clean replacem
   const replacement = await dispatcher.run([request("deadline-replacement")]);
   assert.equal(replacement[0].kind, "completed");
   assert.notEqual(replacement[0].workerPid, timedOut[0].workerPid);
+}, { timeout: 30_000 });
+
+test("C30 dispatcher preserves an active-worker failure and retries only opted-in idempotent input", async (context) => {
+  let spawns = 0;
+  const dispatcher = new ProductionHeadlessWorkerDispatcher({
+    maxWorkers: 1,
+    workerPathForSpawn: () => {
+      const crash = spawns < 2;
+      spawns += 1;
+      return crash
+        ? resolve("tests", "fixtures", "c30-production-headless-crash-worker.mjs")
+        : resolve("scripts", "production-headless-worker.mjs");
+    },
+  });
+  context.after(() => dispatcher.dispose());
+
+  const notRetried = await dispatcher.run([request("not-retried")]);
+  assert.equal(notRetried[0].kind, "failed");
+  assert.deepEqual(notRetried[0].attempts.map((entry) => entry.outcome), ["failed"]);
+  assert.equal(notRetried[0].attempts[0].dispatch, "worker-exit");
+  assert.match(notRetried[0].attempts[0].error, /code=42/u);
+
+  const retried = await dispatcher.run([request("retried", { retry: "idempotent-on-worker-exit" })]);
+  assert.equal(retried[0].kind, "completed");
+  assert.deepEqual(retried[0].attempts.map((entry) => entry.outcome), ["failed", "completed"]);
+  assert.equal(retried[0].attempts[0].dispatch, "worker-exit");
+  assert.match(retried[0].attempts[0].error, /code=42/u);
+  assert.notEqual(retried[0].attempts[0].workerPid, retried[0].attempts[1].workerPid);
 }, { timeout: 30_000 });

@@ -121,9 +121,18 @@ operational boundary it proves.
   A deadline kills the active child, returns an explicit `timed-out` result,
   and the next request starts on a clean replacement PID. No live world,
   renderer, DOM object, or browser adapter crosses this boundary.
-- [ ] Worker-failure recovery and scale evidence. An unexpected active-worker
-  exit is reported as a failed request; it is not retried or restored. There is
-  no mid-run cancellation message, checkpoint restore, broad concurrent stress,
+- [x] Bounded idempotent worker-exit retry. Every dispatcher result now carries
+  a versioned attempt record with its ordinal, PID, outcome, and any dispatch
+  disposition/error. A worker-exit failure is retried exactly once only when
+  its caller explicitly declares `retry: "idempotent-on-worker-exit"`; the
+  retry starts in a fresh child and preserves the failed first attempt instead
+  of replacing it. The permanent proof injects a process exit after readiness,
+  verifies that unmarked input remains failed with one attempt, then verifies
+  that explicitly idempotent serialized input retains the exit record and
+  completes in the real production worker on a different PID.
+- [ ] Checkpoint restore and scale evidence. Timeout, validation, and ordinary
+  worker-reported failures are not retried. There is no mid-run cancellation
+  message, checkpoint restore, durable job recovery, broad concurrent stress,
   target-hardware capacity, or long-run leak claim.
 - [x] A sampled natural terminal episode is visibly rerunnable from its
   production artifact. The environment now seals a versioned
@@ -152,7 +161,7 @@ retain their respective evidence obligations.
 ## Evidence
 
 - `pnpm check:c30:foundation` passes: typecheck, full lint, C30 source
-  architecture fences, five focused Vitest files / 12 tests, three Node worker
+  architecture fences, five focused Vitest files / 12 tests, four Node worker
   tests, standalone build, and the Class-A browser terminal rerun.
 - `pnpm exec vitest run tests/unit/production-headless-benchmark.test.ts --disableConsoleIntercept` passes and prints its measured production-pool artifact.
 - `pnpm exec vitest run tests/unit/production-headless-environment.test.ts` passes five focused tests, including the 256-episode / 30,720-tick isolation stress proof.
@@ -160,15 +169,16 @@ retain their respective evidence obligations.
   child-process completed/cancelled/timed-out/rejected-message matrix.
 - `node --test tests/production-headless-worker-dispatcher.test.mjs` passes the
   two-PID bounded dispatch, pre-dispatch cancellation, exited-idle-worker
-  replacement, and parent-deadline/replacement matrix.
+  replacement, parent-deadline/replacement, and one-retry active-exit-attempt
+  matrix.
 - `pnpm build:test:standalone` and `pnpm test:browser:production-headless-terminal` pass. The named route consumes the committed versioned natural-terminal fixture; the browser materializer admits only versioned natural C30 terminal coordinates and proves exact action provenance plus a rendered screenshot.
 - `pnpm check:architecture` passes, including planted C30 forbidden-edge and
   browser-global cases.
 
 ## Next safe boundary
 
-Make an active-worker failure explicit as a versioned attempt record, then add
-one bounded retry only for an idempotent serialized C30 request. The retry must
-remain in a fresh worker and preserve the first failure evidence; do not claim
-checkpoint restore, mid-run cancellation, or durable job recovery until those
-separate mechanisms exist.
+Do not add retries to timeout, validation, or worker-reported failures. The
+next C30 outcome that needs new source work is a sampled **natural failure**
+terminal artifact; it is blocked on promoting the wave/reward lifecycle from
+the C27A detached harness into the shared C29/C30 composition. That promotion
+must remain a C29 source-composition slice, not a C30-specific simulator.

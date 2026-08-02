@@ -184,7 +184,9 @@ Named status:
   throughput, and a bounded two-child serialized dispatcher pass. The
   dispatcher proves two independent child PIDs, pre-dispatch cancellation,
   parent-side deadline termination, and replacement of an externally exited
-  idle child; it does not retry or restore an active-worker failure. A C30 recorded-origin
+  idle child. Explicitly idempotent input retains a versioned active-exit
+  attempt record and retries once on a fresh child; timeout, validation, and
+  worker-reported failures do not retry or restore. A C30 recorded-origin
   attempt reached C27A boss-Aldric tick 35, then diverged at its live wave spawn
   because the C29 source composition lacks the wave/reward lifecycle still held
   by C27A's test-only detached harness; both unproven attempts were reverted.
@@ -420,11 +422,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C30 now has a bounded two-child dispatcher that sends only serialized scenario/action requests to the real production-headless environment; it reuses live workers and replaces an externally exited idle worker when capacity needs it.
-PROVEN BY:           `pnpm check:c30:foundation` passes. The focused Node matrix proves two independent child PIDs, pre-dispatch cancellation, a parent-side per-request deadline that kills its active child, a clean replacement PID, and a completed 120-tick production episode without transferring a live world or browser adapter. The 256-episode in-process isolation proof remains green.
-REMAINING HERE:      C30 needs C27A-matrix browser-fast parity with event/reward/terminal/cadence comparison; that item is explicitly blocked on promoting the wave/reward lifecycle from C27A's detached test harness into shared C29/C30 source composition. It also needs explicit active-worker attempt/retry evidence, checkpoint restore, target-hardware training-capacity and long-run leak measurements, actual failure reruns, and Academy/Foundry streaming. Bounded dispatch does not certify those conditions.
+DONE THIS STEP:      C30 dispatcher results now preserve a versioned attempt ledger. An active worker exit is retried exactly once only after explicit idempotent-input opt-in, in a fresh child, while retaining the failed first exit record.
+PROVEN BY:           `pnpm check:c30:foundation` passes. The focused Node matrix proves the two-worker cap, pre-dispatch cancellation, parent deadline/replacement, and an injected active-child exit: unmarked input has one preserved failed attempt, while opted-in serialized idempotent input records failed then completed attempts on distinct PIDs. The retry uses the real production worker; no live world or browser adapter crosses the boundary.
+REMAINING HERE:      C30 needs C27A-matrix browser-fast parity with event/reward/terminal/cadence comparison; that item is explicitly blocked on promoting the wave/reward lifecycle from C27A's detached test harness into shared C29/C30 source composition. It also needs checkpoint restore, target-hardware training-capacity and long-run leak measurements, actual failure reruns, and Academy/Foundry streaming. Timeout, validation, and worker-reported failures intentionally do not retry.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Add an explicit C30 active-worker attempt record and one bounded retry only for idempotent serialized episode input; preserve the failed first attempt, use a fresh worker, and do not claim checkpoint restore or mid-run cancellation.
+NEXT SLICE:          Take the blocked C29 source-composition boundary: promote the live wave/reward lifecycle out of C27A's detached harness so C29/C30 can create a real natural failure terminal. Do not add a C30-only failure simulator or claim parity before the browser-fast matrix runs.
 
 All of the following were run from this worktree through C27A slice 36:
 
