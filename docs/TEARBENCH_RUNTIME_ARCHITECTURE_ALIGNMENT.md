@@ -462,6 +462,11 @@ The following C27A foundation slices are complete:
   architecture rejects restoring their host mirrors, and focused plus rebuilt
   campaign evidence pass. The remaining actor, frame, and combat closure state
   still prevents a portable full production-world claim.
+- Boss-intro and boss-beat state are now read directly from world state by the
+  live music, frame, State Forge, and presentation paths. Source architecture
+  rejects restoring their host mirrors, and focused plus rebuilt campaign
+  evidence pass. Actor, frame, and combat state remain app-bound; this does
+  not establish full-world or concurrent-live-world portability.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

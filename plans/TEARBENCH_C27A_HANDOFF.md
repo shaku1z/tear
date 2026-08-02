@@ -5,16 +5,16 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** eightieth C27A foundation slice implemented (three transient combat
-collections now stay directly in world state); checkpoint remains open
+**Status:** eighty-first C27A foundation slice implemented (boss cinematic
+state now stays directly in world state); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
-**Latest evidence:** Slice 80 preserves floaters, slow zones, and temporary
-walls through direct world-state ownership. Its focused 5-file / 14-test gate
-and rebuilt campaign-victory browser proof plus the full canonical C27A
-aggregate pass. This is not a durable-storage or full-production-world
-portability claim.
+**Latest evidence:** Slice 81 preserves boss-intro and boss-beat state through
+direct world-state ownership across music, frame, State Forge, and presentation.
+Its focused 5-file / 15-test gate and rebuilt campaign-victory browser proof
+plus the full canonical C27A aggregate pass. This is not a durable-storage or
+full-production-world portability claim.
 
 ## Resume protocol (mandatory)
 

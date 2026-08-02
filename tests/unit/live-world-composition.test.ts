@@ -115,4 +115,19 @@ describe("live world composition", () => {
     expect(world.state.slowZones()).toEqual([{ id: "slow-zone" }]);
     expect(world.state.temporaryWalls()).toEqual([{ id: "wall" }]);
   });
+
+  it("keeps boss cinematic state in world state", () => {
+    const { dependencies } = createWorldDependencies();
+    const world = createLiveWorldComposition({
+      dependencies, session: createSession(), configuration: createConfiguration(),
+    });
+    const intro = { boss: { id: "boss" }, t: 0.2, dur: 1, delay: 0.5 } as never;
+    const beat = { text: "WARDEN", color: "#fff", t: 1, dur: 1 } as never;
+
+    world.state.setBossIntro(intro);
+    world.state.setBossBeat(beat);
+
+    expect(world.state.bossIntro()).toBe(intro);
+    expect(world.state.bossBeat()).toBe(beat);
+  });
 });

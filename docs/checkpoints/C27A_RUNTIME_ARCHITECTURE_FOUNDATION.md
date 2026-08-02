@@ -1238,6 +1238,14 @@ of replay, headless execution, or learning portability.
   This is still incremental production-world extraction, not portable full-world
   or concurrent-live-world evidence.
 
+- The eighty-first slice removes the live host's boss-intro and boss-beat
+  mirrors. Music observation, frame capture/restoration, State Forge, and
+  presentation now read direct world state, while source architecture rejects
+  restoring local cinematic closures. The focused gate passed 5 files / 15
+  tests; rebuilt campaign-victory browser proof and the full canonical C27A
+  aggregate pass. This remains incremental production-world extraction, not
+  full-world or concurrent-live-world evidence.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

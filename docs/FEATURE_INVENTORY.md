@@ -49,6 +49,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   world state by State Forge and presentation. This preserves the existing live
   path through focused and rebuilt campaign evidence, but leaves the full
   production world app-bound.
+  Boss-intro and boss-beat state also flow directly from world state through
+  live music, frame, State Forge, and presentation paths. This preserves the
+  existing live path through focused and rebuilt campaign evidence, but leaves
+  actor, frame, and combat ownership app-bound.
   Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,

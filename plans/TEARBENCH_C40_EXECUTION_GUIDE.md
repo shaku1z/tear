@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 80 update (current)
+#### Slice 81 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -819,6 +819,14 @@ mirrors. State Forge and presentation read those collections directly from
 world state. The focused gate passed 5 files / 14 tests, and rebuilt
 campaign-victory browser proof plus the full canonical C27A aggregate pass.
 This is still incremental production-world extraction, not full-world
+portability.
+
+Slice 81 removes the live host's boss-intro and boss-beat mirrors. Music
+observation, frame capture/restoration, State Forge, and presentation now read
+direct world state, and source architecture rejects restoring the local
+cinematic closures. The focused gate passed 5 files / 15 tests and rebuilt
+campaign-victory browser proof plus the full canonical C27A aggregate pass.
+This remains incremental production-world extraction, not full-world
 portability.
 
 - [x] V3 recorder ships in the production bundle
