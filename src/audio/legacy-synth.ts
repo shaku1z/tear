@@ -2,7 +2,7 @@ import { migrateAudioSettings } from "../persistence/audio-settings";
 import type { MusicContextSnapshot, MusicEvent, MusicRunSessionMetadata } from "./music-contracts";
 import type { LegacySynthRuntime } from "./legacy-synth-runtime";
 import type { TearScoreReplayMetadata } from "../replay/envelope";
-import { captureAudioContextFromUserGesture, capturedAudioContext, disposeCapturedAudioContext } from "./audio-context-handoff";
+import type { BrowserAudioContextHandoff } from "./audio-context-handoff";
 import {
   createAudioDispatchJournal,
   type AudioDispatchExecutionResult,
@@ -16,6 +16,10 @@ type DispatchEntry = ReturnType<ReturnType<typeof createAudioDispatchJournal>["r
 interface QueuedRuntimeAction { readonly action: RuntimeAction; readonly dispatch?: DispatchEntry }
 
 export interface LegacySynthFacadeOptions {
+  /** The composition-owned port that captures and owns its one browser context. */
+  readonly audioContextHandoff: BrowserAudioContextHandoff;
+  /** Optional browser injection for the concrete compatibility adapter. */
+  readonly browserWindow?: Window;
   /** Audio settings are browser-backed even when a test composition uses an isolated general store. */
   readonly readPersistedSettings?: () => Record<string, unknown>;
 }
@@ -36,12 +40,13 @@ function containsAudioSettings(source: Record<string, unknown>): boolean {
 
 /**
  * One composition-owned first-gesture facade. The concrete browser audio runtime
- * remains shared intentionally until its own lifecycle is extracted; this
- * factory only prevents queue, receipt, and activation-facade state from being
- * silently shared by multiple application compositions.
+ * receives its browser context through the composition-owned handoff; this
+ * factory prevents queue, receipt, activation, and concrete runtime state from
+ * being silently shared by multiple application compositions.
  */
-export function createLegacySynthFacade(options: LegacySynthFacadeOptions = {}) {
+export function createLegacySynthFacade(options: LegacySynthFacadeOptions) {
 const readPersistedSettings = options.readPersistedSettings ?? readBrowserAudioSettings;
+const { audioContextHandoff, browserWindow } = options;
 let runtime: RuntimeSfx | undefined;
 let loading: Promise<RuntimeSfx | undefined> | undefined;
 let initialized = false;
@@ -57,26 +62,30 @@ let removeActivationBridge: (() => void) | undefined;
 
 function installActivationBridge(): void {
   if (removeActivationBridge !== undefined) return;
-  const activate = (): void => { captureAudioContextFromUserGesture(); };
-  const pagehide = (event: PageTransitionEvent): void => { if (!event.persisted) disposeCapturedAudioContext(); };
+  const eventWindow = browserWindow ?? window;
+  const activate = (): void => { audioContextHandoff.capture(); };
+  const pagehide = (event: PageTransitionEvent): void => { if (!event.persisted) audioContextHandoff.dispose(); };
   removeActivationBridge = () => {
-    window.removeEventListener("pointerdown", activate);
-    window.removeEventListener("keydown", activate);
-    window.removeEventListener("pagehide", pagehide);
+    eventWindow.removeEventListener("pointerdown", activate);
+    eventWindow.removeEventListener("keydown", activate);
+    eventWindow.removeEventListener("pagehide", pagehide);
     removeActivationBridge = undefined;
   };
-  window.addEventListener("pointerdown", activate);
-  window.addEventListener("keydown", activate);
-  window.addEventListener("pagehide", pagehide);
+  eventWindow.addEventListener("pointerdown", activate);
+  eventWindow.addEventListener("keydown", activate);
+  eventWindow.addEventListener("pagehide", pagehide);
 }
 
 function loadRuntime(): Promise<RuntimeSfx | undefined> {
   loadState = "loading";
   loading ??= import("./legacy-synth-runtime").then((module) => {
-    runtime = module.createLegacySynthRuntime();
+    const runtimeOptions = browserWindow === undefined
+      ? { capturedAudioContext: () => audioContextHandoff.captured() }
+      : { browserWindow, capturedAudioContext: () => audioContextHandoff.captured() };
+    runtime = module.createLegacySynthRuntime(runtimeOptions);
     runtime.init();
     removeActivationBridge?.();
-    if (capturedAudioContext() !== null) runtime.resume();
+    if (audioContextHandoff.captured() !== null) runtime.resume();
     if (pendingSettings !== undefined) runtime.applySettings(pendingSettings);
     if (pendingMusicRun !== undefined) runtime.beginMusicRun(pendingMusicRun);
     if (pendingMusicContext !== undefined) runtime.updateMusicContext(pendingMusicContext);
@@ -90,7 +99,7 @@ function loadRuntime(): Promise<RuntimeSfx | undefined> {
   }).catch((error: unknown) => {
     loadState = "failed";
     removeActivationBridge?.();
-    disposeCapturedAudioContext();
+    audioContextHandoff.dispose();
     for (const entry of queued.splice(0)) if (entry.dispatch !== undefined) dispatchJournal.loadFailed(entry.dispatch);
     console.warn("Tear audio runtime failed to load", error);
     return undefined;

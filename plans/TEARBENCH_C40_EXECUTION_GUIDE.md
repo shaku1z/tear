@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 52 update (current)
+#### Slice 53 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -524,6 +524,22 @@ audibility/device parity, concurrent complete worlds, or C27A completion. Next,
 make the module-global browser audio-context handoff an explicit
 composition-owned port while preserving one browser context and the existing
 dispatch receipts.
+
+Slice 53 supplies that context-handoff port. App composition constructs
+`createBrowserAudioContextHandoff()` and passes it to the required facade
+option; the facade supplies only its captured-context function to the concrete
+live compatibility adapter. Captured state is private to each handoff, and
+direct two-handoff evidence proves releasing one leaves another untouched.
+Architecture rejects restored module-global captured state and a direct handoff
+import in the live adapter. `pnpm check:c27a:slice53` passed 10 focused files /
+28 tests plus architecture; built audio and journeys, fresh foundation,
+campaign-victory, and the aggregate `pnpm check:c27a` gate passed while the
+browser contract retained exactly one context.
+
+This is one composition's context-handoff ownership, not concurrent audio
+graphs, audible/device output, physical-input parity, concurrent complete
+worlds, or C27A completion. Next, make the remaining browser input adapter
+composition-owned without changing semantic input behavior.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

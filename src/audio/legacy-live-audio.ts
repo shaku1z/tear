@@ -23,7 +23,6 @@ import type {
 import { createInstalledPrimaryMusicBackend } from "./music-backend-registry";
 import { migrateAudioSettings } from "../persistence/audio-settings";
 import type { LegacySynthContract } from "./legacy-synth-contracts";
-import { capturedAudioContext } from "./audio-context-handoff";
 
 const LEGACY_SETTINGS_KEY = "tear_settings";
 
@@ -224,11 +223,12 @@ function synchronizeLegacyFields(synth: LegacySynthContract, settings: AudioMixe
 export function createLegacyAudioCompatibility(
   synth: LegacySynthContract,
   browserWindow: Window = window,
+  capturedContext: () => AudioContext | null = () => null,
 ): LegacyAudioCompatibility {
   const storage = resolveStorage(browserWindow);
   const settingsStore = new LegacyAudioSettingsStore(storage);
   const system = new AudioSystem({
-    contextFactory: createBrowserAudioContextFactory(browserWindow, capturedAudioContext),
+    contextFactory: createBrowserAudioContextFactory(browserWindow, capturedContext),
     settingsStore,
     initialSettings: undefined,
     effectsBackend: new LegacySynthEffectsBackend(synth),

@@ -153,6 +153,16 @@ const forbiddenDependencyRules = Object.freeze([
     message: "the concrete synth runtime must be created for its facade instead of exported as a shared instance",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/audio/audio-context-handoff.ts"]),
+    pattern: /(?:^|\n)(?:export\s+)?(?:let|var)\s+captured\b/um,
+    message: "browser audio context state must belong to a constructed composition handoff, not the module",
+  }),
+  Object.freeze({
+    roots: Object.freeze(["src/audio/legacy-live-audio.ts"]),
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*audio-context-handoff["']/u,
+    message: "the live audio adapter must receive the captured browser context through its explicit facade/runtime port",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -314,6 +324,16 @@ if (dependencyErrors("src/audio/legacy-synth-runtime.ts",
   || dependencyErrors("src/audio/legacy-synth-runtime.ts",
     "export function createLegacySynthRuntime() { return {}; }").length !== 0) {
   throw new Error("source architecture composition-owned concrete audio runtime rule self-test failed");
+}
+if (dependencyErrors("src/audio/audio-context-handoff.ts",
+  "let captured = null;").length !== 1
+  || dependencyErrors("src/audio/audio-context-handoff.ts",
+    "export function createBrowserAudioContextHandoff() { let captured = null; return {}; }").length !== 0
+  || dependencyErrors("src/audio/legacy-live-audio.ts",
+    'import { capturedAudioContext } from "./audio-context-handoff";').length !== 1
+  || dependencyErrors("src/audio/legacy-live-audio.ts",
+    "export function createLegacyAudioCompatibility(_synth, _window, _capturedContext) { return {}; }").length !== 0) {
+  throw new Error("source architecture composition-owned browser audio-context handoff rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",

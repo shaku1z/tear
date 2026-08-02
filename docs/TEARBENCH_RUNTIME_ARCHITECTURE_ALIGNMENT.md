@@ -324,17 +324,27 @@ The following C27A foundation slices are complete:
   belong to that created facade; browser-backed audio settings remain truthful
   when a test composition isolates general storage. Direct two-facade evidence,
   architecture fencing, and the built browser audio contract preserve one
-  browser context, persisted mixer settings, and lifecycle behavior. The
-  concrete synthesized runtime and sequencer are still module-global, so this
-  is not per-world audio-engine isolation or an audibility/device claim.
+  browser context, persisted mixer settings, and lifecycle behavior. At that
+  slice the concrete synthesized runtime and sequencer remained module-global,
+  so it was not yet per-world audio-engine isolation or an audibility/device
+  claim.
 - The concrete synthesized runtime is now created for that facade as well.
   `createLegacySynthRuntime()` owns the SFX proxy, voice/mixer state,
   sequencer, and live-audio compatibility state; two constructed runtimes keep
   logical mixer targets independent, and architecture rejects restored shared
   runtime exports. The browser contract still uses one browser audio context.
-  The context handoff itself remains the next explicit composition boundary;
-  this is not a concurrent-audio, audibility, device, or full-application
-  isolation claim.
+  At that slice the context handoff itself remained the next composition
+  boundary; it was not a concurrent-audio, audibility, device, or
+  full-application isolation claim.
+- The browser AudioContext handoff is now explicit at that composition boundary.
+  `createBrowserAudioContextHandoff()` holds captured context state privately;
+  app composition supplies the required port to the facade, and the live
+  compatibility adapter receives only a captured-context supplier. Two
+  independent handoffs capture and release independently, while the built
+  browser contract retains one context for the application. This does not
+  establish concurrent audio graphs, audible/device output, or independent
+  complete applications. Browser input and persistence adapters remain
+  app-bound.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

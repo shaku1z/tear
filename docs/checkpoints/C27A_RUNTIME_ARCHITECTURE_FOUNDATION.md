@@ -929,6 +929,24 @@ of replay, headless execution, or learning portability.
   to make the browser audio-context handoff an explicit composition-supplied
   port while preserving the single-context contract.
 
+- The fifty-third slice makes that browser audio-context handoff
+  composition-owned. `createBrowserAudioContextHandoff()` holds its captured
+  context privately for the application composition that creates it; composition
+  passes the required port to `createLegacySynthFacade()`, and the compatibility
+  adapter receives only the port's captured-context supplier. Direct two-handoff
+  evidence proves each handoff captures one context and releasing one leaves
+  the other untouched. Architecture rejects restored module-level captured
+  state and a direct handoff import by the live adapter. The focused slice gate
+  passed 10 files / 28 tests; the built browser audio contract still observes
+  exactly one context, persisted mixer values, and lifecycle cleanup, while
+  journeys, fresh foundation, and campaign-victory pass.
+
+  This proves one composition owns its browser-context handoff. It does not
+  prove simultaneous audio graphs, audible/device output, physical-input
+  parity, independent complete applications, or C27A completion. The next
+  boundary is the remaining browser input adapter ownership, without changing
+  semantic input behavior or claiming device parity.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap

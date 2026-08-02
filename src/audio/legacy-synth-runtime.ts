@@ -18,7 +18,12 @@ import type { AudioCueSchedulingResult, AudioMixSchedulingResult, FinaleAudioOpe
 
 // ------- synthesized audio: crisp SFX + layered music (Web Audio, no files) -------
 /** One concrete synth runtime for one composition-owned first-gesture facade. */
-export function createLegacySynthRuntime() {
+export interface LegacySynthRuntimeOptions {
+  readonly browserWindow?: Window;
+  readonly capturedAudioContext?: () => AudioContext | null;
+}
+
+export function createLegacySynthRuntime(options: LegacySynthRuntimeOptions = {}) {
 const SYNTH = {
   ctx: null as AudioContext | null,
   effectsGains: {} as Partial<Record<SfxRoute, AudioNode>>,
@@ -532,7 +537,7 @@ const sequencer = new LegacyMusicSequencer({
   noise: (duration, time, options) => { SFX._noise(duration, time, options); },
   trackSource: (source, connectedNodes) => SFX._takeVoice(source, connectedNodes),
 });
-const LIVE_AUDIO = createLegacyAudioCompatibility(SFX);
+const LIVE_AUDIO = createLegacyAudioCompatibility(SFX, options.browserWindow, options.capturedAudioContext);
 return SFX;
 }
 

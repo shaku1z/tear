@@ -5,9 +5,9 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** fifty-second C27A foundation slice implemented (factory-owned
-concrete synthesized runtime and sequencer); checkpoint remains open
-and blocking pending browser-audio-context, input/persistence, remaining
+**Status:** fifty-third C27A foundation slice implemented (composition-owned
+browser AudioContext handoff); checkpoint remains open
+and blocking pending input/persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
 ## Resume protocol (mandatory)
@@ -452,7 +452,7 @@ All of the following were run from this worktree after the parity-passing slice:
 
 ## Exact next C27A boundary
 
-**Slice 52 supersedes the earlier configuration-isolation wording below.**
+**Slice 53 supersedes the earlier configuration-isolation wording below.**
 `TearWorldConfiguration` now owns one stable mutable config record per
 constructed simulation world, created before constructors capture tuning. It
 validates snapshots before reconciling root/nested references in place; State
@@ -548,6 +548,19 @@ caches and transient lights are local to the controller. This is not full
   the browser audio-context handoff itself an explicit composition-owned port
   while retaining the one-context contract.
 
+  Slice 53 supplies that handoff port. App composition constructs
+  `createBrowserAudioContextHandoff()` and supplies it to the required facade
+  option; the facade passes only its captured-context supplier into the concrete
+  live compatibility adapter. Captured state is private to each handoff. Direct
+  two-handoff evidence proves one handoff captures once and its release leaves
+  the other handoff's context intact. Source architecture rejects restored
+  module-level captured state and a direct handoff import in the live adapter.
+  The focused gate passed 10 files / 28 tests; built browser audio retains one
+  context, mixer persistence, and lifecycle cleanup. This is not concurrent
+  audio-graph, audibility, device, or complete-application evidence. The next
+  boundary is the remaining browser input adapter, without changing semantic
+  input behavior or claiming physical-input parity.
+
 All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
@@ -572,9 +585,9 @@ Slice 41 adds simulation tuning isolation; Slice 42 injects particle policy;
   composition. Slice 47 owns menu Attract visual policy per composition. Entity
   rendering now has narrow policies for Blade, Mirror, and Projectile; legacy
   enemy rendering has its exact policy; Attract entropy is composition supplied;
-  and the first-gesture audio facade plus concrete synthesized runtime are
-  composition-owned. The browser audio-context handoff and remaining adapter
-  isolation still precede true simultaneous complete worlds.
+  and the first-gesture audio facade, concrete synthesized runtime, and browser
+  audio-context handoff are composition-owned. Remaining input and persistence
+  adapter isolation still precede true simultaneous complete worlds.
 Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
 from the harness — never a tolerance to widen, a scenario to shorten, or a
@@ -593,14 +606,14 @@ composition with parity evidence.
 
 ## Working-tree safety
 
-- Slice 52 is the next intentional commit on
-  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 9
-  files / 27 tests plus source architecture; built browser audio and journeys passed. Fresh
+- Slice 53 is the next intentional commit on
+  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 10
+  files / 28 tests plus source architecture; built browser audio and journeys passed. Fresh
   foundation passed 36 files / 130 tests, a fresh 13-scenario trace, and 40
   detached comparisons, while campaign victory passed 10 files / 36 tests and
   1,176 transitions. The full `pnpm check:c27a` aggregate passed. The next
-  boundary is the module-global browser audio-context handoff, still preserving
-  one browser context rather than claiming a second active runtime.
+  boundary is the remaining browser input adapter, still not a physical-device
+  or second-runtime claim.
 - Slice 48 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
   files / 23 tests plus source architecture; built journeys and six responsive
