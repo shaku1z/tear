@@ -5,6 +5,8 @@ import { stableVerificationHash } from "../../src/replay/hash";
 import {
   createProductionGhostReplayComposition,
   createProductionHeadlessEnvironment,
+  createProductionHeadlessEpisodePool,
+  BoundedArtifactSampler,
   type TearScenarioV1,
 } from "../../src/tearbench";
 
@@ -72,5 +74,55 @@ describe("C30 production headless environment", () => {
       start: Object.freeze({ ...scenario.start, wave: 2 }),
     }))).toThrow(/natural opening/);
     first.dispose(); second.dispose(); third.dispose();
+  });
+
+  it("runs bounded independent production episodes with sampled terminal artifacts", async () => {
+    const makeJob = (id: string, seed: string): Readonly<{ id: string; scenario: TearScenarioV1; maxTicks: number }> => {
+      const jobScenario = Object.freeze({ ...scenario, id, seed, maxTicks: 24 });
+      return Object.freeze({ id, scenario: jobScenario, maxTicks: 24 });
+    };
+    const jobs = Object.freeze([
+      makeJob("c30-idle", "c30-shared-seed"),
+      makeJob("c30-move", "c30-shared-seed"),
+      makeJob("c30-repeat-move", "c30-shared-seed"),
+      makeJob("c30-cancelled", "c30-cancelled-seed"),
+      makeJob("c30-timed-out", "c30-timeout-seed"),
+    ]);
+    const samples = new BoundedArtifactSampler(2);
+    const pool = createProductionHeadlessEpisodePool(2);
+    const results = await pool.run(jobs, (job) => {
+      let firstBatch = true;
+      return Object.freeze({
+        decide: () => {
+          const firstAction = firstBatch && (job.id === "c30-move" || job.id === "c30-repeat-move")
+            ? Object.freeze([{ type: "move" as const, x: 1_000, y: 0 }]) : Object.freeze([]);
+          firstBatch = false;
+          return Object.freeze([firstAction, Object.freeze([]), Object.freeze([]), Object.freeze([])]);
+        },
+      });
+    }, {
+      batchSize: 4,
+      artifactSampler: samples,
+      controlForJob: (job) => {
+        if (job.id === "c30-cancelled") return Object.freeze({ isCancelled: () => true });
+        if (job.id === "c30-timed-out") {
+          let clock = 0;
+          return Object.freeze({ timeoutMilliseconds: 1, now: () => { clock += 1; return clock; } });
+        }
+        return undefined;
+      },
+    });
+
+    const [idle, moved, repeatedMoved, cancelled, timedOut] = results;
+    expect(idle).toMatchObject({ id: "c30-idle", outcome: "truncated", ticks: 24 });
+    expect(moved).toMatchObject({ id: "c30-move", outcome: "truncated", ticks: 24 });
+    expect(repeatedMoved).toMatchObject({ id: "c30-repeat-move", outcome: "truncated", ticks: 24 });
+    expect(moved?.semanticHash).not.toBe(idle?.semanticHash);
+    expect(repeatedMoved?.semanticHash).toBe(moved?.semanticHash);
+    expect(cancelled).toMatchObject({ id: "c30-cancelled", outcome: "cancelled", ticks: 0 });
+    expect(timedOut).toMatchObject({ id: "c30-timed-out", outcome: "timed-out", ticks: 0 });
+    expect(samples.samples()).toHaveLength(2);
+    expect(samples.samples().every((sample) => sample.artifact instanceof Object
+      && (sample.artifact as { kind?: string }).kind === "production-headless-terminal")).toBe(true);
   });
 });

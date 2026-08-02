@@ -1,11 +1,18 @@
 import type { CommandEnvelope } from "../domain/envelopes";
 import { normalizeGameAction, type GameAction } from "../input/game-action";
 import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
+import { stableVerificationHash } from "../replay/hash";
 import { createProductionCombatSimulation } from "./production-combat-simulation";
 import { projectProductionReplayCanonicalState } from "./production-replay-composition";
 import { createProductionReplayWorld, type ProductionReplayWorld } from "./production-world-factory";
 import type { TearScenarioV1 } from "./contracts";
-import type { TearHeadlessEnvironment, TearHeadlessTransition } from "./headless";
+import {
+  TearHeadlessEnvironmentPool,
+  type TearHeadlessEnvironment,
+  type TearHeadlessEpisode,
+  type TearHeadlessJob,
+  type TearHeadlessTransition,
+} from "./headless";
 import { validateTearContract } from "./validation";
 
 type ProductionHeadlessCore = Readonly<{
@@ -79,14 +86,20 @@ export function createProductionHeadlessEnvironment(): TearHeadlessEnvironment<
       });
       const result = current.simulation.simulationRuntime.advanceOne(envelopes);
       const lifecycle = current.replay.world.lifecycle.snapshot();
+      const terminated = lifecycle.phase === "terminated";
+      const truncated = result.tick >= current.scenario.maxTicks;
       return Object.freeze({
         observation: result.state,
-        terminated: lifecycle.phase === "terminated",
-        truncated: result.tick >= current.scenario.maxTicks,
+        terminated,
+        truncated,
         metrics: Object.freeze({
           tick: result.tick,
           livingEnemies: current.replay.world.state.enemies().filter((enemy) => !enemy.dead).length,
         }),
+        ...(terminated || truncated ? { artifact: Object.freeze({
+          kind: "production-headless-terminal", tick: result.tick,
+          semanticHash: stableVerificationHash(result.state), terminated, truncated,
+        }) } : {}),
       });
     },
     dispose(): void {
@@ -94,4 +107,17 @@ export function createProductionHeadlessEnvironment(): TearHeadlessEnvironment<
       nextCommandId = 0;
     },
   });
+}
+
+export type ProductionHeadlessEpisode = TearHeadlessEpisode<TearScenarioV1, CanonicalGameplayState>;
+export type ProductionHeadlessJob = TearHeadlessJob<TearScenarioV1>;
+
+/**
+ * Fresh production worlds for bounded C30 episode scheduling. This is a pool
+ * of DOM-free composition roots, not a worker-process implementation.
+ */
+export function createProductionHeadlessEpisodePool(
+  size: number,
+): TearHeadlessEnvironmentPool<TearScenarioV1, CanonicalGameplayState, GameAction> {
+  return new TearHeadlessEnvironmentPool(size, createProductionHeadlessEnvironment);
 }

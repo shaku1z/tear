@@ -39,6 +39,18 @@ operational boundary it proves.
   the factory was corrected to initialize its natural run with a deterministic
   seed derived from the supplied episode seed; a fresh unhydrated run otherwise
   had no stable `runSeed` canonical field.
+- `createProductionHeadlessEpisodePool` now schedules fresh production
+  composition roots through the shared headless pool. The runner enforces an
+  exact maximum tick count (including a final partial action batch) and checks
+  injected cooperative cancellation and timeout limits between fixed ticks.
+  It returns explicit `cancelled` and `timed-out` outcomes rather than silently
+  treating a stopped run as a truncated success.
+- Terminal production episodes expose a small semantic terminal artifact. The
+  pool forwards these to `BoundedArtifactSampler`, which clones and retains no
+  more than its configured limit. A focused five-job pool proof runs two
+  same-seed move/idle episodes plus a repeat, cancelled, and timed-out job;
+  the move result differs from idle, repeats exactly, stopped jobs take zero
+  ticks, and only two terminal artifacts are retained.
 - Architecture checks reject direct app, presentation, persistence, platform,
   browser, and Ghost 2 imports plus DOM/Canvas/browser globals in the C30
   adapter. The focused Node test executes it without a DOM.
@@ -54,9 +66,10 @@ operational boundary it proves.
   browser-fast matrix, native-event-order, reward, terminal-condition, or
   cadence corpus is claimed.
 - [ ] Resource controls and measured throughput. There are no production worker
-  processes, batching, cancellation, timeouts, retries, checkpoint restore,
-  bounded artifact sampling, target-hardware throughput, latency, memory, or
-  leak measurements yet.
+  processes, retries, checkpoint restore, target-hardware throughput, latency,
+  memory, or leak measurements yet. In-process batching, cooperative
+  cancellation/timeout, and bounded terminal-artifact retention are now real
+  controls, but they do not by themselves establish scale or a declared budget.
 - [ ] Parallel episode stress isolation. The three fresh environments prove a
   narrow non-sharing property, not a worker or high-concurrency stress run.
 - [ ] Visible rerun of sampled failures and Academy/Foundry streaming with
@@ -73,14 +86,13 @@ retain their respective evidence obligations.
 ## Evidence
 
 - `pnpm typecheck` passes.
-- `pnpm exec vitest run tests/unit/production-headless-environment.test.ts tests/unit/ghost-production-replay-world.test.ts tests/unit/production-replay-composition.test.ts` passes: 3 files / 4 tests.
+- `pnpm exec vitest run tests/unit/tearbench-headless.test.ts tests/unit/production-headless-environment.test.ts tests/unit/ghost-production-replay-world.test.ts tests/unit/production-replay-composition.test.ts` passes: 4 files / 9 tests.
 - `pnpm check:architecture` passes, including planted C30 forbidden-edge and
   browser-global cases.
 
 ## Next safe boundary
 
-Build one batched production episode-pool boundary: independent natural
-environments, bounded cancellation/timeout and sampled-artifact controls, then
-measure it. Do not substitute the historical generic headless scaffold for the
-production composition, and do not report its synthetic scale results as C30
-completion.
+Compare the production headless adapter against the C27A live matrix using the
+same scenarios and action traces. Record any mismatch as a production defect or
+a bounded known divergence; do not replace the live side with the historical
+generic scaffold.

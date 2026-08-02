@@ -178,9 +178,11 @@ Named status:
   occurrences and explicit missing occurrences. Active-cinematic durable
   coverage remains open.
 - **C30:** active. A DOM-free natural episode now uses the C29 production replay
-  world and fixed-step simulation composition; one 120-tick C30-to-C29 semantic
-  comparison and narrow fresh-environment isolation proof pass. Browser-fast
-  corpus parity, stress isolation, workers, resource controls, measured
+  world and fixed-step simulation composition. A 120-tick C30-to-C29 semantic
+  comparison, fresh-environment isolation, exact bounded batches, cooperative
+  cancellation/timeout, and bounded terminal-artifact retention pass. This is
+  an in-process pool, not worker or throughput evidence. Browser-fast corpus
+  parity, stress isolation, workers, retries/checkpoint restore, measured
   throughput, visible failure reruns, and Academy/Foundry streaming remain open.
 - **C31-C40:** incomplete.
 
@@ -403,11 +405,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C30 now runs a natural DOM-free episode through the C29 production replay world and authoritative fixed-step simulation, with the same semantic projection and no second combat model.
-PROVEN BY:           `pnpm typecheck`, the focused 3-file / 4-test C30/C29 replay suite, and `pnpm check:architecture` pass. The 120-tick move/jump/dash command stream has the same semantic hash through fresh C29 replay; fresh same-seed headless worlds reproduce independently and surgical scenarios are rejected.
-REMAINING HERE:      C30 still needs C27A-matrix browser-fast parity, native-event/reward/terminal/cadence comparison, stress-tested parallel production episodes, worker/batch/cancellation/timeout/retry/checkpoint/artifact controls, measured target-hardware throughput, and visible failure reruns/Academy streaming.
+DONE THIS STEP:      C30 now schedules fresh DOM-free production-composition episodes with exact bounded batches, cooperative cancellation/timeout outcomes, and bounded terminal-artifact retention; it still owns no second combat model.
+PROVEN BY:           `pnpm typecheck`, the focused 4-file / 9-test generic-headless/C30/C29 replay suite, and `pnpm check:architecture` pass. The production pool proves same-seed move/idle divergence and replay determinism, zero-tick cancelled/timed-out jobs, and a two-artifact cap.
+REMAINING HERE:      C30 needs C27A-matrix browser-fast parity with event/reward/terminal/cadence comparison, stress-tested parallel production episodes, workers, retries/checkpoint restore, target-hardware throughput/latency/memory/leak measurements, and visible failure reruns/Academy streaming. Current controls unblock but cannot clear the combined resource/throughput item until a declared production budget is measured.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Build a batched C30 production episode-pool boundary with independent natural worlds, bounded cancellation/timeout and sampled-artifact controls, then measure it without substituting the historical generic scaffold.
+NEXT SLICE:          Compare the production headless adapter against the C27A live matrix using the same scenarios and action traces; record a real mismatch instead of substituting the historical generic scaffold.
 
 All of the following were run from this worktree through C27A slice 36:
 
