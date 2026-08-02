@@ -253,6 +253,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live actor collections must stay in world state",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /\blet\s+run\b/u,
+    message: "live run state must stay in world state",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/app/live-style-host.ts"]),
     pattern: /\bd\.ACH\.check\(\);\s*d\.PROFILE\.save\(\)/u,
     message: "live style achievement persistence must use the composition-owned adapter",
@@ -596,6 +601,12 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/app/live-game-runtime.ts",
     "const actors = hostState.enemies();").length !== 0) {
   throw new Error("source architecture live actor collection owner rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "let run = {}; ").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "const run = hostState.run();").length !== 0) {
+  throw new Error("source architecture live run owner rule self-test failed");
 }
 if (dependencyErrors("src/app/live-style-host.ts",
   "d.ACH.check(); d.PROFILE.save();").length !== 1

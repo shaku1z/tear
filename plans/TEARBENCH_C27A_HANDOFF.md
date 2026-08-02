@@ -5,16 +5,17 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** eighty-second C27A foundation slice implemented (enemy and projectile
-collections now stay directly in world state); checkpoint remains open
+**Status:** eighty-third C27A foundation slice implemented (the live run now
+stays directly in world state); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
-**Latest evidence:** Slice 82 preserves enemy and projectile collections through
-direct world-state ownership across context, music, frame, State Forge,
-diagnostics, and the TearBench bridge. Its focused 5-file / 16-test gate and
-rebuilt campaign-victory browser proof plus the full canonical C27A aggregate
-pass. This is not a durable-storage or full-production-world portability claim.
+**Latest evidence:** Slice 83 preserves the live run through direct world-state
+ownership across session services, campaign/training, combat, State Forge, and
+presentation while retaining the existing absent-run menu behavior. Its focused
+5-file / 17-test gate and rebuilt campaign-victory browser proof plus the full
+canonical C27A aggregate pass. This is not a durable-storage or full-production-
+world portability claim.
 
 ## Resume protocol (mandatory)
 

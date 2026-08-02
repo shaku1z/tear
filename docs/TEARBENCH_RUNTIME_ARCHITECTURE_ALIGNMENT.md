@@ -472,6 +472,11 @@ The following C27A foundation slices are complete:
   bridge. Source architecture rejects restoring their host mirrors, and
   focused plus rebuilt campaign evidence pass. Player, blade, run, frame, and
   combat ownership remain app-bound.
+- The live run is now read directly from world state by session services,
+  campaign/training, combat, State Forge, and presentation adapters. Its
+  world-state getter preserves the existing absent-run menu behavior; source
+  architecture rejects restoring a host run closure. Player, blade, frame, and
+  combat ownership remain app-bound.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

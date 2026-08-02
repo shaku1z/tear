@@ -129,6 +129,18 @@ describe("live world composition", () => {
     expect(world.state.projectiles()).toEqual([{ id: "projectile" }]);
   });
 
+  it("keeps the live run in world state", () => {
+    const { dependencies } = createWorldDependencies();
+    const world = createLiveWorldComposition({
+      dependencies, session: createSession(), configuration: createConfiguration(),
+    });
+    const run = { id: "run" } as never;
+
+    world.state.setRun(run);
+
+    expect(world.state.run()).toBe(run);
+  });
+
   it("keeps boss cinematic state in world state", () => {
     const { dependencies } = createWorldDependencies();
     const world = createLiveWorldComposition({

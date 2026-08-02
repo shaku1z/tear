@@ -1255,6 +1255,15 @@ of replay, headless execution, or learning portability.
   not player/blade/run extraction, full-world portability, or concurrent-live-
   world evidence.
 
+- The eighty-third slice removes the live host's run mirror. Session services,
+  campaign/training, combat, State Forge, and presentation adapters now read
+  the run directly from world state; the getter preserves the existing absent-
+  run menu behavior, and source architecture rejects restoring the host
+  closure. The focused gate passed 5 files / 17 tests and rebuilt
+  campaign-victory browser proof plus the full canonical C27A aggregate pass.
+  This remains run ownership extraction, not player/blade extraction, full-
+  world portability, or concurrent-live-world evidence.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

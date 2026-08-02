@@ -71,9 +71,9 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
         replayContext = createGhostReplayRunContext({
           runId: context.runId,
           seed: context.seed,
-          mode: run.mode,
-          difficulty: run.diff,
-          weaponId: run.weaponId,
+          mode: liveRun().mode,
+          difficulty: liveRun().diff,
+          weaponId: liveRun().weaponId,
           ticksPerSecond: context.ticksPerSecond,
           build: {
             version: context.build.version,
@@ -119,8 +119,14 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
   GAMEPLAY_EVENTS.subscribe((event) => {
     ghostV3?.record("events", event.tick, createLiveGhostCausalEvent(event, ++ghostV3EventSequence));
   });
+  function liveRun(): GameRun {
+    // Menu services intentionally ask before a run exists and treat the absent
+    // value as the menu state. Keep that lazy contract while reading the world
+    // state owner rather than reviving a host closure.
+    return hostState.run() as GameRun;
+  }
   const sessionServices = createLiveSessionServices({
-    dependencies, run: () => run, player: () => player, blade: () => blade,
+    dependencies, run: liveRun, player: () => player, blade: () => blade,
     screen: () => state, setScreen: (screen) => { setState(screen); },
     achievementTracking: () => achTracks(),
     resetUi: (intent) => { if (intent.enter) enterT = 0; if (intent.focus) focus = 0; if (intent.scroll) listScroll = 0; },
@@ -153,11 +159,11 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
   // and rank readouts, hit stop, slow motion, shake, the blade-throw cooldown,
   // dash ghosting, and the opening audio cadence are per-world transient
   // records owned by the world context below, not live-host closures.
-  let run: GameRun;
   let tearBenchRunSeed: number | null = null;
   const emitRunScreenTransition = (transition: "paused" | "resumed"): void => {
     const lifecycle = RUN_LIFECYCLE.snapshot();
     if (lifecycle.sessionId === null || lifecycle.phase === "terminated") return;
+    const run = liveRun();
     GAMEPLAY_EVENTS.emit({
       kind: "run", transition, runId: lifecycle.sessionId,
       mode: run.mode, difficulty: run.diff, weaponId: run.weaponId, wave: run.wave, score: run.score,
@@ -169,6 +175,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
     if (lifecycle.sessionId === null || lifecycle.phase === "terminated") return;
     RUN_LIFECYCLE.terminate("quit");
     try {
+      const run = liveRun();
       GAMEPLAY_EVENTS.emit({
         kind: "run", transition: "abandoned", runId: lifecycle.sessionId,
         mode: run.mode, difficulty: run.diff, weaponId: run.weaponId, wave: run.wave, score: run.score,
@@ -194,13 +201,12 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
   let hudHpLag = 1, hudMultPrev = 1, hudMultPop = 0;   // HUD juice: health damage-chip + combo pop
   const hoverAnim: Record<string, number> = {};
   // One call builds this world: replaceable state, entity construction, run
-  // lifecycle, services, and transient records. The mirrors keep the host's
-  // hot-path views in step; the world remains the owner.
+  // lifecycle, services, and transient records. Player and blade still use
+  // host mirrors; world state is the sole owner of the run.
   const { state: hostState, context: worldContext, entities: worldEntities, lifecycle: RUN_LIFECYCLE } = createLiveWorldComposition({
-    dependencies, configuration,
-    session,
+    dependencies, configuration, session,
     mirrors: {
-      run: (value) => { run = value; }, player: (value) => { player = value; }, blade: (value) => { blade = value; },
+      player: (value) => { player = value; }, blade: (value) => { blade = value; },
     },
   });
   // One world owns the transient records read by combat, State Forge, and diagnostics.
@@ -211,7 +217,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
     dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE,
     cinema: worldContext.cinema, controllers: runControllers,
     width: W, height: H, canvas, context: ctx,
-    run: () => run, player: () => player, blade: () => blade, enemies: () => hostState.enemies(),
+    run: liveRun, player: () => player, blade: () => blade, enemies: () => hostState.enemies(),
     projectiles: () => hostState.projectiles(),
     spawn: (kind, hpScale) => { spawnOne({ type: kind, hpScale }); const spawned = hostState.enemies(); return spawned[spawned.length - 1]; },
     resolveKill: (enemy, cause) => { liveKillRuntime.resolve(enemy, cause); },
@@ -269,7 +275,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
     dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE, controllers: runControllers,
     campaign: campaignHost, training: trainingHost, weapon: weaponRuntime, music: musicDirector,
     width: W, height: H, canvas, testMode: TEST_MODE,
-    run: () => run, player: () => player, blade: () => blade, enemies: () => hostState.enemies(),
+    run: liveRun, player: () => player, blade: () => blade, enemies: () => hostState.enemies(),
     actorId: (enemy) => combatRuntime.id(enemy, "enemy"),
     setEnemies: (value) => { hostState.setEnemies(value); }, setProjectiles: (value) => { hostState.setProjectiles(value); },
     selectedBoss: () => session.selectedBoss(), worldServices: worldContext.services, applySettings,
@@ -314,7 +320,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
       "gameover", "win", "replay", "confirmquit", "shop", "codex", "profile", "achievements",
       "leaderboards", "rename", "pgmenu", "pglab"].includes(screen);
   const combatWorldState = createLiveCombatWorldState({
-    player: () => player, blade: () => blade, run: () => run,
+    player: () => player, blade: () => blade, run: liveRun,
     enemies: () => hostState.enemies(), setEnemies: (value) => { hostState.setEnemies(value); },
     projectiles: () => hostState.projectiles(), setProjectiles: (value) => { hostState.setProjectiles(value); },
     floaters: () => hostState.floaters(), setFloaters: (value) => { hostState.setFloaters(value); },
@@ -358,7 +364,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
         applySever: (enemy, tier) => { if (isGameEnemy(enemy)) applySever(enemy, tier); }, fire,
         makeEvent: (x, y, enemy, cause, detail) => makeEv(x, y, isGameEnemy(enemy) ? enemy : null, cause, detail),
         weaponHook: (name, detail) => { const effect = weaponHook(name, { config: CONFIG, ...detail }); return isWeaponEffect(effect) ? effect : null; },
-        modHook: (name) => run.mods[name], fireMod: fire,
+        modHook: (name) => liveRun().mods[name], fireMod: fire,
         logWeaponEvent, weaponWorldImpact: () => { const effect = weaponHook("onWorldImpact",
           { config: CONFIG, blade, player, platforms: stageRuntime.platforms, x: blade.x, y: blade.y });
           return isWeaponEffect(effect) ? effect : null; },
@@ -370,8 +376,8 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
         // input only replays sealed envelopes during verification).
         consumeThrow: () => liveInputAdapter.consumeThrow(() => Input.consumeThrow()),
         weaponSegmentContact: weaponCapsuleIntersectsSegment,
-        createCharger: (x, y) => worldEntities.createEnemy("charger", x, y, run),
-        createReflection: (x, y) => worldEntities.createEnemy("reflection", x, y, run),
+        createCharger: (x, y) => worldEntities.createEnemy("charger", x, y, liveRun()),
+        createReflection: (x, y) => worldEntities.createEnemy("reflection", x, y, liveRun()),
         enemyDefeated: (enemy) => {
           if (isGameEnemy(enemy) && isEnemySample(enemy)) {
             GAMEPLAY_EVENTS.emit({ kind: "death", actorId: combatRuntime.id(enemy, "enemy"), cause: "combat" });
@@ -384,7 +390,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
             ...(enemy._gid === undefined ? {} : { _gid: enemy._gid }),
           }))); },
         restorePlatforms: (platforms) => { stageRuntime.platforms = platforms.filter(isCombatPlatform); },
-        addOverrunStack: () => { addOverrunStack(run.mods); },
+        addOverrunStack: () => { addOverrunStack(liveRun().mods); },
         playSound: (name, argument) => {
           if (name === "swing") SFX.swing(typeof argument === "number" ? argument : 1);
           else if (name === "throwBlade") SFX.throwBlade(); else if (name === "dash") SFX.dash();
@@ -456,7 +462,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
       else if (bossBeat !== null) hostState.setBossBeat({ ...bossBeat, t: frameState.bossBeat.t });
     },
     parrySlowScale: CONFIG.juice.parrySlowScale, cinemaActive: () => CINEMA.active,
-    playgroundSlow: () => run.pg.slow === true, introScale: CONFIG.bossTheater.introScale, lerp, clamp,
+    playgroundSlow: () => liveRun().pg.slow === true, introScale: CONFIG.bossTheater.introScale, lerp, clamp,
     timeScale: () => feel.timeScale, hitStop: () => impact.hitStop, setHitStop: (value) => { impact.hitStop = value; },
     state: () => state,
     drainActions: (tick) => {
@@ -539,7 +545,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
     frame: frameContext, coordinator: coordinatorContext,
     authoritative: {
       actionPort: liveInputAdapter.actionPort,
-      snapshot: (tick, input) => projectCanonicalGameplayState(tick, input.snapshot(), run, player, blade,
+      snapshot: (tick, input) => projectCanonicalGameplayState(tick, input.snapshot(), liveRun(), player, blade,
         hostState.enemies().map((enemy) => ({
           ...(typeof enemy._gid === "number" ? { _gid: enemy._gid } : {}), kind: enemy.kind, bossId: enemy.bossId,
           x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, dead: enemy.dead,
@@ -587,8 +593,8 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
     }
     try {
       recorder.record("keyframes", tick, captureLiveStateForgeSnapshot({
-        id: `ghost-v3-${String(run.runSeed)}-keyframe-${String(tick)}`, tick, stateClass: "recorded-canonical",
-        seed: String(run.runSeed), stateForge: liveStateForge, rng: worldContext.services.random.snapshot(), registry: ghostSnapshotRegistry,
+        id: `ghost-v3-${String(liveRun().runSeed)}-keyframe-${String(tick)}`, tick, stateClass: "recorded-canonical",
+        seed: String(liveRun().runSeed), stateForge: liveStateForge, rng: worldContext.services.random.snapshot(), registry: ghostSnapshotRegistry,
         observationClass: "structured-state", producer: "ghost-v3-live-recorder", target: replayContext.build.target,
         contentHash: replayContext.build.contentHash, staticBuild: replayContext.build,
         sourceId: ghostLiveBootstrapEventId(`ghost-v3-${replayContext.run.id}`),
@@ -603,7 +609,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
   // full-screen rect INCLUDING the fullscreen overscan bleed â€” use for any fill that
   // must reach the true screen edges (backdrops, dims, vignettes), never for layout.
   const screenRect = () => presentationHost.screenRectangle();
-  const biomeMode = () => ["campaign", "endless", "bossonly", "gauntlet", "tutorial", "playground"].includes(run.mode);
+  const biomeMode = () => ["campaign", "endless", "bossonly", "gauntlet", "tutorial", "playground"].includes(liveRun().mode);
   let shopCoinShow: number | null = null;
   let shopFlash: Readonly<{ id: string; time: number }> | null = null;
   const interfaceComposition = createLiveInterfaceComposition({
@@ -614,15 +620,15 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
       replay: { dependencies, canvas: ctx, width: W, height: H, screenRectangle: screenRect, time: () => uiT, deltaSeconds: () => lastUiDt, fallbackPlayer: () => player, bossById, setScreen: (screen, context) => setState(screen, context), formatTime: fmtTime, document: browserDocument },
       library: { dependencies, canvas: ctx, height: H, time: () => uiT, enterSeconds: () => enterT, scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, clamp, ease: ez, formatTime: fmtTime, getBest },
       settings: { dependencies, document: browserDocument, window: browserWindow, canvas, width: W, overscan: () => OVERSCAN, screen: () => state, setScreen: (screen, context) => setState(screen, context), settingsController, settings, scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, clamp, installPrompt },
-      actions: { setScreen: (screen) => { setState(screen); }, resetScroll: () => { listScroll = 0; }, setSetupSelection: (kind, id) => { if (kind === "mode" && isRunModeSelection(id)) { session.setSelectedMode(id); if (trainingRunRequiresPreflight(id)) void trainingHost.ensureLoaded(); } else if (kind === "difficulty" && isRunDifficultySelection(id)) session.setSelectedDifficulty(id); else if (kind === "weapon") session.setSelectedWeapon(id); else if (kind === "boss") session.setSelectedBoss(id); }, startSelectedRun: () => { startRunWithPreflight(session.selectedMode(), session.selectedDifficulty()); }, startRun: (mode, difficulty) => { if (isRunModeSelection(mode) && isRunDifficultySelection(difficulty)) startRunWithPreflight(mode, difficulty); }, currentRun: () => run, resumeFinale: resumeSavedFinale, claimFinale: claimSavedFinale, requestPointer: requestLock, endRun, retryRun, lastReplay: () => session.lastRecording(), campaignDifficulty: () => session.outcome()?.diff ?? "normal", resetSettings: () => { settingsController.reset(); }, signIn: () => { void Cloud.signIn(); }, signOut: () => { void Cloud.signOut(); }, pinReplay: (id, pinned) => VAULT.pin(id, pinned), deleteReplay: (id) => { VAULT.remove(id); }, dispatchPlayground: dispatchPlaygroundAction },
-      runState: { screen: () => state, setScreen: (screen) => { setState(screen); }, run: () => run, player: () => player, scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, continueSeconds: () => continueT, setContinueSeconds: (value) => { continueT = value; }, replayAvailable: () => session.lastRecording() !== null, outcome: currentOutcome },
+      actions: { setScreen: (screen) => { setState(screen); }, resetScroll: () => { listScroll = 0; }, setSetupSelection: (kind, id) => { if (kind === "mode" && isRunModeSelection(id)) { session.setSelectedMode(id); if (trainingRunRequiresPreflight(id)) void trainingHost.ensureLoaded(); } else if (kind === "difficulty" && isRunDifficultySelection(id)) session.setSelectedDifficulty(id); else if (kind === "weapon") session.setSelectedWeapon(id); else if (kind === "boss") session.setSelectedBoss(id); }, startSelectedRun: () => { startRunWithPreflight(session.selectedMode(), session.selectedDifficulty()); }, startRun: (mode, difficulty) => { if (isRunModeSelection(mode) && isRunDifficultySelection(difficulty)) startRunWithPreflight(mode, difficulty); }, currentRun: liveRun, resumeFinale: resumeSavedFinale, claimFinale: claimSavedFinale, requestPointer: requestLock, endRun, retryRun, lastReplay: () => session.lastRecording(), campaignDifficulty: () => session.outcome()?.diff ?? "normal", resetSettings: () => { settingsController.reset(); }, signIn: () => { void Cloud.signIn(); }, signOut: () => { void Cloud.signOut(); }, pinReplay: (id, pinned) => VAULT.pin(id, pinned), deleteReplay: (id) => { VAULT.remove(id); }, dispatchPlayground: dispatchPlaygroundAction },
+      runState: { screen: () => state, setScreen: (screen) => { setState(screen); }, run: liveRun, player: () => player, scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, continueSeconds: () => continueT, setContinueSeconds: (value) => { continueT = value; }, replayAvailable: () => session.lastRecording() !== null, outcome: currentOutcome },
       runServices: { dependencies, reward: rewardRuntime, formatTime: fmtTime, clamp, trickColor, saveBest, awardCoins, cinema: CINEMA, clearFinale: () => { story.finale = null; }, terminateRun: (reason) => { abandonLiveRun(reason); }, addFloater, addShake, addFlash, requestPointer: requestLock },
       menuState: { selection: () => session.selection(), scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, time: () => uiT, shop: () => ({ displayedCoins: shopCoinShow, flash: shopFlash }), setShop: (value) => { shopCoinShow = value.displayedCoins; shopFlash = value.flash; } },
       menuServices: { dependencies, height: H, getBest, formatTime: fmtTime, clamp, checkAchievements: achCheck }, playground: { renderMenu: renderPgMenu, renderLab: renderPgLab },
     },
-    frameState: { screen: () => state, previousScreen: () => lastUiState, setPreviousScreen: (value) => { lastUiState = value; }, uiZoom: () => uiZoom, setUiZoom: (value) => { uiZoom = value; Input.uiZoom = value; }, deltaSeconds: () => lastUiDt, enterSeconds: () => enterT, setEnterSeconds: (value) => { enterT = value; }, enterAmount: () => eIn, setEnterAmount: (value) => { eIn = value; }, scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, focus: () => focus, setFocus: (value) => { focus = value; }, controls: () => uiButtons, resetControls: () => { uiButtons = []; }, biomeMode, enemies: () => hostState.enemies(), flash: () => feel.flash, bossBeat: () => hostState.bossBeat(), bossIntroActive: () => { const intro = hostState.bossIntro(); return intro !== null && intro.delay <= 0; }, bannerSeconds: () => feel.bannerSeconds, rankPopup: () => ({ seconds: feel.rankPopupSeconds, text: feel.rankPopupText, multiplier: run.mult }), timeSeconds: () => uiT },
+    frameState: { screen: () => state, previousScreen: () => lastUiState, setPreviousScreen: (value) => { lastUiState = value; }, uiZoom: () => uiZoom, setUiZoom: (value) => { uiZoom = value; Input.uiZoom = value; }, deltaSeconds: () => lastUiDt, enterSeconds: () => enterT, setEnterSeconds: (value) => { enterT = value; }, enterAmount: () => eIn, setEnterAmount: (value) => { eIn = value; }, scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, focus: () => focus, setFocus: (value) => { focus = value; }, controls: () => uiButtons, resetControls: () => { uiButtons = []; }, biomeMode, enemies: () => hostState.enemies(), flash: () => feel.flash, bossBeat: () => hostState.bossBeat(), bossIntroActive: () => { const intro = hostState.bossIntro(); return intro !== null && intro.delay <= 0; }, bannerSeconds: () => feel.bannerSeconds, rankPopup: () => ({ seconds: feel.rankPopupSeconds, text: feel.rankPopupText, multiplier: liveRun().mult }), timeSeconds: () => uiT },
     frameServices: { canvas, context: ctx, width: W, height: H, overscan: () => OVERSCAN, safeTop: () => SAFE.t, viewportScale: () => viewport.cssPerLogicalPixel, resize: resizeCanvas, input: Input, ui: UI, stage: stageRuntime, cinema: CINEMA, reducedMotion: () => A11Y.reducedMotion, flashScale: () => A11Y.flashScale, touchActive: () => Input.touchActive(), controller: () => ({ active: PAD.active, toastSeconds: PAD.toastT, toastText: PAD.toastText }), pointerLocked: () => Input.locked, lockHint, inputHint: hintEl, clamp, ease: ez, blendColor: blendCol, setTheme: (background, playLike) => { THEME.set(playLike && biomeMode() ? background : "#ffffff"); UI.ink = THEME.ink; }, themeInk: () => THEME.ink, backdropPost: (context, stage, camera) => { Backdrop.post(context, stage, camera); }, drawMenuAttract: () => { Attract.draw(ctx); }, renderScreen: (screen) => { renderRegisteredScreen(screen, interfaceComposition.screens.renderers); }, isMenuScreen, playInterfaceSound: () => { SFX.ui(); }, hoverAnimation: hoverAnim, trickColor },
-    worldState: { run: () => run, player: () => player, blade: () => blade, enemies: () => hostState.enemies(), projectiles: () => hostState.projectiles(), floaters: () => hostState.floaters(), slowZones: () => hostState.slowZones(), temporaryWalls: () => hostState.temporaryWalls(), screen: () => state, zoom: () => feel.zoom, shake: () => impact.shake, lastUiDelta: () => lastUiDt, bannerSeconds: () => feel.bannerSeconds, bossIntro: () => hostState.bossIntro(), hud: () => ({ lagHp: hudHpLag, multiplier: hudMultPrev, multiplierPop: hudMultPop }), setHud(value) { hudHpLag = value.lagHp; hudMultPrev = value.multiplier; hudMultPop = value.multiplierPop; } },
+    worldState: { run: liveRun, player: () => player, blade: () => blade, enemies: () => hostState.enemies(), projectiles: () => hostState.projectiles(), floaters: () => hostState.floaters(), slowZones: () => hostState.slowZones(), temporaryWalls: () => hostState.temporaryWalls(), screen: () => state, zoom: () => feel.zoom, shake: () => impact.shake, lastUiDelta: () => lastUiDt, bannerSeconds: () => feel.bannerSeconds, bossIntro: () => hostState.bossIntro(), hud: () => ({ lagHp: hudHpLag, multiplier: hudMultPrev, multiplierPop: hudMultPop }), setHud(value) { hudHpLag = value.lagHp; hudMultPrev = value.multiplier; hudMultPop = value.multiplierPop; } },
     worldServices: { dependencies, canvas: ctx, width: W, height: H, debug: PANTHEON_DEBUG, stage: stageRuntime, tutorial: TUT, finale: () => story.finale, formatTime: fmtTime, trickColor, ease: ez }, onBiomeTransition: (begin) => { Attract.onBiomeChange = begin; },
   });
   const { wipe: Wipe, frame: presentationHost, screens: screenComposition } = interfaceComposition;
@@ -640,7 +646,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
     const consumedActions: CommandEnvelope<GameAction>[] = [];
     Input.semantic.subscribe((entry) => { consumedActions.push(entry); });
     const actionRouting = { screen: () => state, setScreen: (screen: "playing" | "paused") => { setState(screen); },
-      runMode: () => run.mode, reward: rewardRuntime.snapshot, chooseUpgrade: screenComposition.chooseUpgrade, chooseReserve: screenComposition.chooseReserve,
+      runMode: () => liveRun().mode, reward: rewardRuntime.snapshot, chooseUpgrade: screenComposition.chooseUpgrade, chooseReserve: screenComposition.chooseReserve,
       chooseTier: screenComposition.chooseTier, dispatchPlayground: dispatchPlaygroundAction, renderControls: () => { presentationHost.render(); }, controls: () => uiButtons, focus: () => focus,
     };
     installLiveTearRuntimeBridge({
@@ -665,14 +671,14 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
       drainConsumedActions: () => consumedActions.splice(0, consumedActions.length),
       emitPhysicalInput: (input) => { emitLiveTearBenchPhysicalInput(input, { window: browserWindow, canvas, width: W, height: H }); },
       setTimeEffectsForTest: (effects) => { if (effects.hitStop !== undefined) impact.hitStop = effects.hitStop; if (effects.slowMotion !== undefined) impact.slowMotion = effects.slowMotion; if (effects.timeScale !== undefined) feel.timeScale = effects.timeScale; },
-      stateForge: liveStateForge, replayProgression: (ledger) => replayLiveStateForgeProgression({ dependencies, state: hostState, configuration }, ledger), loadStage: runControllers.api.loadStage, startNextWave: runControllers.api.startNextWave, applyBossFinisher: (bossId, remainingHp) => { const matches = hostState.enemies().filter((enemy) => enemy.isBoss && enemy.bossId === bossId && !enemy.dead && !enemy.dying); if (matches.length !== 1 || matches[0] === undefined) throw new Error(`boss-finisher requires exactly one live ${bossId}`); matches[0].hp = remainingHp; matches[0].hpDisplay = remainingHp; }, captureProgressionRuntime: () => run.mods, restoreProgressionRuntime: (runtime) => { run.mods = runtime as typeof run.mods; }, finaleIntents: () => finaleIntentBatches, finaleOutwardCalls: () => finaleOutwardCalls, audioDispatchReceipts: () => audioDispatchReceipts, outcomeChronology: () => outcomeChronology?.entries() ?? [],
+      stateForge: liveStateForge, replayProgression: (ledger) => replayLiveStateForgeProgression({ dependencies, state: hostState, configuration }, ledger), loadStage: runControllers.api.loadStage, startNextWave: runControllers.api.startNextWave, applyBossFinisher: (bossId, remainingHp) => { const matches = hostState.enemies().filter((enemy) => enemy.isBoss && enemy.bossId === bossId && !enemy.dead && !enemy.dying); if (matches.length !== 1 || matches[0] === undefined) throw new Error(`boss-finisher requires exactly one live ${bossId}`); matches[0].hp = remainingHp; matches[0].hpDisplay = remainingHp; }, captureProgressionRuntime: () => liveRun().mods, restoreProgressionRuntime: (runtime) => { const run = liveRun(); run.mods = runtime as typeof run.mods; }, finaleIntents: () => finaleIntentBatches, finaleOutwardCalls: () => finaleOutwardCalls, audioDispatchReceipts: () => audioDispatchReceipts, outcomeChronology: () => outcomeChronology?.entries() ?? [],
     }, browserWindow);
   });
   if (__TEAR_TEST_BUILD__ && PANTHEON_DEBUG) void import("./live-debug-composition").then(({ installLiveGameDebug }) => {
     installLiveGameDebug({
       enabled: PANTHEON_DEBUG, dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE, cinema: CINEMA, stage: stageRuntime, width: W, height: H,
       startRun: (mode, difficulty) => { startRunWithPreflight(mode, difficulty); }, setScreen: setState, screen: () => state, setContinueSeconds: (value) => { continueT = value; },
-      openDraft: openRewardDraft, openTier: openRewardTier, run: () => run, player: () => player, blade: () => blade, applyUpgrade, enterReplay: (record, from) => { replayAdapters.enter(record, from); },
+      openDraft: openRewardDraft, openTier: openRewardTier, run: liveRun, player: () => player, blade: () => blade, applyUpgrade, enterReplay: (record, from) => { replayAdapters.enter(record, from); },
       beginRename: () => { settingsRenameAdapters.beginRename(false, true); }, renameSnapshot: settingsRenameAdapters.renameSnapshot, selectSettingsTab: settingsRenameAdapters.selectSettingsTab,
       replayStatus: replayAdapters.status, applyOptions: (options) => { Object.assign(settings, options); applySettings(); }, settings, selected: () => session.selection(),
       tutorialSnapshot: () => ({ active: TUT.active, lessonIndex: TUT.idx, lessonCount: TUT.steps.length, lesson: TUT.step().t, description: TUT.step().d,

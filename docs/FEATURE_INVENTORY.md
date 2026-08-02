@@ -58,6 +58,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   bridge. This preserves the existing live path through focused and rebuilt
   campaign evidence, but leaves player, blade, run, frame, and combat ownership
   app-bound.
+  The live run also flows directly from world state through session services,
+  campaign/training, combat, State Forge, and presentation adapters while
+  retaining the existing absent-run menu behavior. This preserves the live path
+  through focused and rebuilt campaign evidence, but leaves player, blade,
+  frame, and combat ownership app-bound.
   Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,
