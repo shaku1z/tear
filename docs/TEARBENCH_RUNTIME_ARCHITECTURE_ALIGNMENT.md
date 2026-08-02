@@ -481,6 +481,11 @@ The following C27A foundation slices are complete:
   input, State Forge, and TearBench bridge paths. Its getter preserves the
   existing absent-blade menu behavior, and source architecture rejects restoring
   a host blade closure. Player, frame, and combat ownership remain app-bound.
+- The live player is now read directly from world state by session,
+  campaign/training, combat, input, replay, State Forge, and TearBench bridge
+  paths. Its getter preserves existing absent-player menu behavior, and source
+  architecture rejects restoring a host player closure. Frame and combat
+  construction remain app-bound.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

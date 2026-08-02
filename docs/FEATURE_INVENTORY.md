@@ -68,6 +68,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   absent-blade menu behavior. This preserves the live path through focused and
   rebuilt campaign evidence, but leaves player, frame, and combat ownership
   app-bound.
+  The live player also flows directly from world state through session,
+  campaign/training, combat, input, replay, State Forge, and TearBench bridge
+  paths while retaining existing absent-player menu behavior. This preserves the
+  live path through focused and rebuilt campaign evidence, but leaves frame and
+  combat construction app-bound.
   Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,

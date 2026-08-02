@@ -153,6 +153,18 @@ describe("live world composition", () => {
     expect(world.state.blade()).toBe(blade);
   });
 
+  it("keeps the live player in world state", () => {
+    const { dependencies } = createWorldDependencies();
+    const world = createLiveWorldComposition({
+      dependencies, session: createSession(), configuration: createConfiguration(),
+    });
+    const player = { id: "player" } as never;
+
+    world.state.setPlayer(player);
+
+    expect(world.state.player()).toBe(player);
+  });
+
   it("keeps boss cinematic state in world state", () => {
     const { dependencies } = createWorldDependencies();
     const world = createLiveWorldComposition({
