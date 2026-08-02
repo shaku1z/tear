@@ -533,6 +533,14 @@ The following C27A foundation slices are complete:
   restoring the host-local authority flag. This preserves the current browser
   safety boundary only; it does not establish physical-input certification,
   device parity, full-world portability, or the C27A exit.
+- `createTearWorldComposition` is now a portable world-assembly core. It owns
+  one `RunLifecycleController` and one transient record while supplied adapters
+  retain their live state, entity, service, and cinema responsibilities. The
+  detached combat host returns that same world-owned transient record, closing
+  the prior split between its combat record and State Forge restoration. This
+  is not portable entity selection or app-service construction, headless/full
+  production-world portability, concurrent complete-world evidence, or C27A
+  completion.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

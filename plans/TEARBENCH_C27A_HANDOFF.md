@@ -5,18 +5,19 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** ninety-fourth C27A foundation slice implemented (semantic input and
-browser-device authority now have one typed owner); checkpoint remains open
+**Status:** ninety-fifth C27A foundation slice implemented (portable world
+assembly now owns one lifecycle and transient record); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
-**Latest evidence:** Slice 94 routes semantic-input authority through
-`createLiveInputAuthorityState`; it prevents automated input from requesting
-pointer lock or capturing device aim, and source architecture rejects restoring
-the host-local flag. Its focused 7-file / 17-test input gate and rebuilt
-campaign-victory browser proof pass. This is browser input-safety ownership, not
-C25 physical-input certification, device parity, full-production-world
-portability, or C27A completion.
+**Latest evidence:** Slice 95 routes every supplied world through portable
+`createTearWorldComposition`, which creates one lifecycle and one transient
+record. Detached combat now receives the exact record State Forge restoration
+uses. Its focused 8-file / 65-test world-assembly gate, rebuilt
+physical-canonical-input browser proof, and all thirteen live-parity browser
+scenarios pass. This is shared-record world assembly, not portable entity or
+app-service construction, full-production-world portability, or C27A
+completion.
 
 ## Resume protocol (mandatory)
 

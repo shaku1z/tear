@@ -57,7 +57,6 @@ import {
 import { createFinaleRuntime, type FinaleRuntimeState } from "../../src/gameplay/campaign/finale-runtime";
 import { createOutcomeChronologyJournal, type OutcomeChronologyJournal } from
   "../../src/gameplay/run/outcome-chronology-journal";
-import { createTearWorldTransientState } from "../../src/gameplay/runtime/tear-world-transient-state";
 import { createTearCombatSimulation } from "../../src/gameplay/runtime/tear-combat-simulation";
 import type { AuthoritativeInputState } from "../../src/gameplay/runtime/authoritative-input";
 import type { TearGameplayEventPort } from "../../src/gameplay/runtime/gameplay-events";
@@ -133,7 +132,6 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
     reducedMotion: () => A11Y.reducedMotion,
     random: cosmeticRandom,
   });
-  const transient = createTearWorldTransientState();
   random.streams.reset(options.seed);
   const factories = createTearWorldSimulationFactories({
     clock, config, graphics: GFX, effects, sound: sink() as Options["sound"],
@@ -162,6 +160,10 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
     winSeconds: () => 0, setWinSeconds: () => undefined,
   };
   const world = createLiveWorldComposition({ dependencies, session, configuration });
+  // Combat, State Forge restoration, and all detached outward adapters must
+  // mutate the one record the constructed world owns. Creating a second local
+  // transient record here would let those paths silently diverge.
+  const transient = world.context.transient;
   world.context.services.random.resetRun(options.seed);
   const run = detachedRun(options.mode);
   world.state.setRun(run as never);

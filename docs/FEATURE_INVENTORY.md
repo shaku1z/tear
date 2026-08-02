@@ -106,6 +106,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   aim capture through one typed browser-input owner. This preserves the current
   safety behavior only; it does not complete physical-input certification or
   device parity.
+  Portable world assembly now creates one lifecycle and one transient record
+  for every supplied world port. Detached combat reads that exact world-owned
+  record, so State Forge restoration cannot update a separate harness-local
+  record. This does not make entity selection, live services, presentation, or
+  a complete production world portable.
   Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,

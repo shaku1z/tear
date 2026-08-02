@@ -1,12 +1,13 @@
-import { RunLifecycleController } from "../gameplay/run/lifecycle";
 import { createTearWorldState, type TearWorldState } from "../gameplay/runtime/tear-world-context";
+import { createTearWorldComposition } from "../gameplay/runtime/tear-world-composition";
+import type { RunLifecycleController } from "../gameplay/run/lifecycle";
 import type { RunResultInfo } from "../gameplay/run/outcome-planner";
 import { MusicDirector } from "../audio/music-director";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameBlade, GameEnemy, GameFloater, GamePlayer, GameProjectile, GameRun,
   GameSlowZone, GameTemporaryWall } from "./game-runtime-state";
 import type { BossBeatState, BossIntroState, LiveGameHostState } from "./live-game-host-state";
-import { createLiveWorldContext, type LiveWorldContext } from "./live-world-context";
+import { createLiveWorldServices, type LiveWorldContext } from "./live-world-context";
 import { createLiveWorldEntityFactory, type LiveWorldEntityConstructionPort } from "./live-world-entity-factory";
 import type { TearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
 
@@ -98,15 +99,17 @@ export function createLiveWorldComposition(options: LiveWorldCompositionOptions)
     winSeconds: () => session.winSeconds(), setWinSeconds: (value) => { session.setWinSeconds(value); },
   } satisfies LiveGameHostState);
   const entities = createLiveWorldEntityFactory(options.dependencies);
-  const lifecycle = new RunLifecycleController();
   const music = new MusicDirector(options.dependencies.SFX);
   // The world owns the simulation timeline. The live factory adds drawing;
   // detached compositions may supply the gameplay-only implementation through
   // the same dependency surface.
   const cinema = new options.dependencies.Cinematics.Director(options.configuration.value);
-  const context = createLiveWorldContext({
-    dependencies: options.dependencies, state, entities, lifecycle, cinema,
+  const world = createTearWorldComposition({
+    state, entities, cinema,
+    services: createLiveWorldServices({
+      dependencies: options.dependencies,
     configuration: options.configuration,
+    }),
   });
-  return Object.freeze({ state, context, entities, lifecycle, music });
+  return Object.freeze({ state, context: world.context, entities, lifecycle: world.lifecycle, music });
 }

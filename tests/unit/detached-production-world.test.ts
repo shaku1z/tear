@@ -117,4 +117,16 @@ describe("detached production world", () => {
     expect(first.world.state.player()).not.toBe(second.world.state.player());
     expect(first.factories.Player).not.toBe(second.factories.Player);
   });
+
+  it("routes detached combat through the transient record owned by its world", () => {
+    const detached = createDetachedWorld({ seed: "world-owned-transient" });
+
+    detached.transient.assignImpact({ hitStop: 0.1, slowMotion: 0.2, shake: 3 });
+    detached.transient.assignOpening({ throwCooldown: 0.4, dashGhostTime: 0.5,
+      landingVelocity: 6, wasDashing: true, wasSwinging: false, wasOnGround: true });
+
+    expect(detached.transient).toBe(detached.world.context.transient);
+    expect(detached.world.context.transient.impact).toEqual({ hitStop: 0.1, slowMotion: 0.2, shake: 3 });
+    expect(detached.world.context.transient.opening.throwCooldown).toBe(0.4);
+  });
 });

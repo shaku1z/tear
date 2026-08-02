@@ -1,14 +1,7 @@
 import type { RandomSource } from "../domain/random";
 import type { RunLifecycleController } from "../gameplay/run/lifecycle";
-import {
-  createTearWorldContext,
-  type TearWorldContext,
-  type TearWorldServices,
-} from "../gameplay/runtime/tear-world-context";
-import {
-  createTearWorldTransientState,
-  type TearWorldTransientState,
-} from "../gameplay/runtime/tear-world-transient-state";
+import type { TearWorldContext, TearWorldServices } from "../gameplay/runtime/tear-world-context";
+import type { TearWorldTransientState } from "../gameplay/runtime/tear-world-transient-state";
 import type { RunRandomStreamName, RunRandomStreamsSnapshot } from "../simulation/run-random";
 import type { LiveGameHostState } from "./live-game-host-state";
 import type { LiveWorldEntityConstructionPort } from "./live-world-entity-factory";
@@ -48,12 +41,8 @@ export type LiveWorldContext = TearWorldContext<
   LiveWorldCinema
 >;
 
-export interface LiveWorldContextOptions {
+export interface LiveWorldServicesOptions {
   readonly dependencies: LiveWorldContextDependencies;
-  readonly state: LiveGameHostState;
-  readonly entities: LiveWorldEntityConstructionPort;
-  readonly lifecycle: RunLifecycleController;
-  readonly cinema: LiveWorldCinema;
   readonly configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>;
 }
 
@@ -62,7 +51,7 @@ export interface LiveWorldContextOptions {
  * current ownership explicit without pretending the legacy constructors are
  * already safe to instantiate as concurrent detached worlds.
  */
-export function createLiveWorldContext(options: LiveWorldContextOptions): LiveWorldContext {
+export function createLiveWorldServices(options: LiveWorldServicesOptions): LiveWorldServices {
   const d = options.dependencies;
   const services: LiveWorldServices = {
     configuration: options.configuration,
@@ -85,8 +74,5 @@ export function createLiveWorldContext(options: LiveWorldContextOptions): LiveWo
     mirror: Object.freeze({ reset: () => { d.Mirror.active = false; d.Mirror.host = null; } }),
     bossFeedback: Object.freeze({ clear: () => { d.BOSSFX.q.length = 0; } }),
   };
-  // The transient opening/impact records are created here so one world owns
-  // them, replacing the former live-runtime closure variables.
-  return createTearWorldContext(options.state, options.entities, options.lifecycle, Object.freeze(services),
-    createTearWorldTransientState(), options.cinema);
+  return Object.freeze(services);
 }

@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  createLiveWorldContext,
+  createLiveWorldServices,
   type LiveWorldContextDependencies,
 } from "../../src/app/live-world-context";
-import type { LiveGameHostState } from "../../src/app/live-game-host-state";
 import { createTearWorldConfiguration } from "../../src/gameplay/runtime/tear-world-configuration";
 import type { GameRuntimeDependencies } from "../../src/app/game-runtime-dependencies";
 
@@ -24,22 +23,20 @@ describe("live world context", () => {
       Mirror: { active: true, host: { id: "mirror" } },
       BOSSFX: { q: [1, 2] },
     };
-    const cinema = { active: false } as never;
-    const context = createLiveWorldContext({
-      dependencies, state: {} as LiveGameHostState, entities: {} as never,
-      lifecycle: {} as never, cinema,
+    const services = createLiveWorldServices({
+      dependencies,
       configuration: createTearWorldConfiguration({} as GameRuntimeDependencies["CONFIG"]),
     });
 
-    context.services.configuration.resetToBase();
-    context.services.random.resetRun(17); context.services.random.restore(context.services.random.snapshot());
-    context.services.clock.advance(0.5); context.services.clock.set(9); context.services.clock.reset();
-    context.services.effects.resetWorld(); context.services.mirror.reset(); context.services.bossFeedback.clear();
+    services.configuration.resetToBase();
+    services.random.resetRun(17); services.random.restore(services.random.snapshot());
+    services.clock.advance(0.5); services.clock.set(9); services.clock.reset();
+    services.effects.resetWorld(); services.mirror.reset(); services.bossFeedback.clear();
 
-    expect(context.services.clock.seconds()).toBe(0);
-    expect(context.services.effects.count()).toBe(2);
-    expect(context.services.random.stream("spawn").next()).toBe(0);
-    expect(context.cinema).toBe(cinema);
+    expect(services.clock.seconds()).toBe(0);
+    expect(services.effects.count()).toBe(2);
+    expect(services.random.stream("spawn").next()).toBe(0);
+    expect(Object.isFrozen(services)).toBe(true);
     expect(dependencies.Mirror).toEqual({ active: false, host: null });
     expect(dependencies.BOSSFX.q).toEqual([]);
     expect(calls).toEqual(["reset:17", "restore", "fx", "backdrop"]);

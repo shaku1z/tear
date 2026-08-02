@@ -31,6 +31,7 @@ const forbiddenDependencyRules = Object.freeze([
       "src/gameplay/runtime/gameplay-event-publishers.ts",
       "src/gameplay/runtime/tear-world-entity-construction.ts",
       "src/gameplay/runtime/tear-world-context.ts",
+      "src/gameplay/runtime/tear-world-composition.ts",
       "src/gameplay/runtime/tear-world-simulation-factories.ts",
       "src/gameplay/runtime/tear-world-bootstrap.ts",
       "src/gameplay/run/reward-runtime.ts",
@@ -47,6 +48,7 @@ const forbiddenDependencyRules = Object.freeze([
       "src/gameplay/runtime/gameplay-event-publishers.ts",
       "src/gameplay/runtime/tear-world-entity-construction.ts",
       "src/gameplay/runtime/tear-world-context.ts",
+      "src/gameplay/runtime/tear-world-composition.ts",
       "src/gameplay/runtime/tear-world-simulation-factories.ts",
       "src/gameplay/runtime/tear-world-bootstrap.ts",
       "src/gameplay/run/reward-runtime.ts",
@@ -848,6 +850,12 @@ if (dependencyErrors("src/gameplay/runtime/tear-world-context.ts",
 if (dependencyErrors("src/gameplay/runtime/tear-world-context.ts",
   'const canvas: HTMLCanvasElement | null = null;').length !== 1) {
   throw new Error("source architecture world-context browser-rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/runtime/tear-world-composition.ts",
+  'import { createLiveWorldComposition } from "../../app/live-world-composition";').length !== 1
+  || dependencyErrors("src/gameplay/runtime/tear-world-composition.ts",
+    'const canvas: HTMLCanvasElement | null = null;').length !== 1) {
+  throw new Error("source architecture portable world-composition rule self-test failed");
 }
 if (dependencyErrors("src/gameplay/runtime/tear-world-simulation-factories.ts",
   'import { createLiveWorldSimulationPresentationAdapter } from "../../app/live-world-simulation-factories";').length !== 1) {

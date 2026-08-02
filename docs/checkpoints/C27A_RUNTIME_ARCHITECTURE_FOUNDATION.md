@@ -1352,6 +1352,17 @@ of replay, headless execution, or learning portability.
   physical-input certification, device parity, portable full-world construction,
   or concurrent complete-world evidence.
 
+- The ninety-fifth slice adds portable `createTearWorldComposition`. It creates
+  exactly one lifecycle and transient record for the supplied state, entities,
+  services, and cinema, while the live adapter remains responsible for its
+  existing app-bound choices. Detached combat now returns the world context's
+  exact transient record, preventing State Forge restoration from diverging
+  from the record its opening and collision phases mutate. The focused gate
+  passed 8 files / 65 tests, and rebuilt physical-canonical-input plus all
+  thirteen live-parity browser scenarios passed. This does not make entity
+  selection, app services, presentation, or the full production world portable;
+  it does not establish concurrent complete-world evidence or C27A completion.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.
