@@ -33,20 +33,19 @@ import {
 } from "../../src/gameplay/run/outcome-planner";
 import { BOSS_ROSTER } from "../../src/gameplay/run/content-director";
 import { createLiveWaveHost } from "../../src/app/live-wave-host";
-import { routeLiveTearBenchAction } from "../../src/tearbench/live-runtime-action-routing";
 import { STAGES, stageAt, stagePlatforms } from "../../src/gameplay/stages";
 import { applyVariant, rollVariant } from "../../src/gameplay/variants";
 import { planBossPlacement } from "../../src/gameplay/run/boss-placement";
 import { beginBossEncounter } from "../../src/gameplay/run/boss-encounter";
 import { createBossArena } from "../../src/gameplay/training/arena-rules";
 import { applyWeapon } from "../../src/gameplay/weapons";
-import { applyUpgrade, newMods, rollUpgrades, tierUp, UPGRADES, type UpgradeDefinition } from
+import { newMods, UPGRADES, type UpgradeDefinition } from
   "../../src/gameplay/upgrades";
-import { createRewardRuntime } from "../../src/gameplay/run/reward-runtime";
 import { eligibleTierChoices } from "../../src/gameplay/run/reward-selection";
+import { createProductionWaveRewardRuntime } from "../../src/tearbench/production-wave-reward-runtime";
+import type { ProductionReplayWorld } from "../../src/tearbench/production-world-factory";
 import { createLiveStyleAchievementRuntime } from "../../src/gameplay/scoring/live-style-achievement-runtime";
 import { tracksAchievements } from "../../src/gameplay/progression/achievement-runtime";
-import type { GameAction } from "../../src/input/game-action";
 import { CinematicTimeline } from "../../src/gameplay/runtime/cinematic-director";
 import { parseCampaignChapterBindingSpec, stageCampaignChapterBinding } from
   "../../src/gameplay/campaign/chapter-cinematic-binding";
@@ -1036,51 +1035,11 @@ export function createDetachedWaveRewardRuntime(
   platforms?: readonly unknown[],
   finale = createDetachedFinaleComposition(detached, events),
 ) {
-  let reward: ReturnType<typeof createRewardRuntime<UpgradeDefinition>> | null = null;
-  let screen = "playing";
-  const outward: string[] = [];
-  const run = () => detached.world.state.run() as never as ReturnType<typeof detachedRun>;
-  const waves = createDetachedWaveRuntime(detached, platforms, { events, actorId }, {
-    openDraft: () => { if (reward === null) throw new Error("detached reward runtime is not installed"); reward.openDraft(); },
-    openTier: (choices) => { if (reward === null) throw new Error("detached reward runtime is not installed"); reward.openTier(choices); },
+  if (platforms !== undefined) detached.stage.platforms = [...platforms];
+  const shared = createProductionWaveRewardRuntime(detached as unknown as ProductionReplayWorld, {
+    gameplayEvents: events,
+    actorId: actorId as (enemy: object & { id?: string }) => string,
     startAdventureFinale: () => { finale.start(); },
   });
-  reward = createRewardRuntime<UpgradeDefinition>({
-    run: () => run() as never,
-    roll: (request) => rollUpgrades(request.count, run().mods, {
-      random: detached.random.streams.stream("draft"), forceSpecial: request.forceSpecial,
-      excludeIds: request.excludeIds,
-    }),
-    transitionPorts: {
-      applyUpgrade: (choice) => { applyUpgrade(choice, { config: detached.configuration.value,
-        player: detached.world.state.player() as never, blade: detached.world.state.blade() as never,
-        mods: run().mods,
-      }); },
-      tierUp: (choice) => { tierUp(choice.id, { config: detached.configuration.value,
-        player: detached.world.state.player() as never, blade: detached.world.state.blade() as never,
-        mods: run().mods,
-      }); },
-      ghostLoadout: (choiceId, tier, wave) => { events.emit({ kind: "loadout", choiceId, tier, wave }); },
-      ghostEvent: (effect) => {
-        const player = detached.world.state.player() as never as { x: number; y: number };
-        events.emit({ kind: "effect", effect, x: player.x, y: player.y });
-      },
-      consumeInput: () => { outward.push("consumeInput"); }, resetUi: () => { outward.push("resetUi"); },
-      setScreen: (next) => { screen = next; }, startNextWave: () => { waves.waves.startNextWave(); },
-      requestPointer: () => { outward.push("requestPointer"); },
-    },
-  });
-  const activeReward = reward;
-  const routing = {
-    screen: () => screen, setScreen: (next: "playing" | "paused") => { screen = next; },
-    runMode: () => run().mode, reward: () => activeReward.snapshot(),
-    chooseUpgrade: (index: number) => { activeReward.selectDraft(index); },
-    chooseReserve: (index: number) => { activeReward.selectReserve(index); },
-    chooseTier: (index: number) => { activeReward.selectTier(index); },
-    dispatchPlayground: () => undefined, renderControls: () => undefined,
-    controls: () => [], focus: () => -1,
-  };
-  return Object.freeze({ ...waves, reward: activeReward, finale,
-    get outward() { return Object.freeze([...waves.outward, ...outward]); },
-    screen: () => screen, routeAction: (action: GameAction) => routeLiveTearBenchAction(routing, action) });
+  return Object.freeze({ ...shared, finale });
 }

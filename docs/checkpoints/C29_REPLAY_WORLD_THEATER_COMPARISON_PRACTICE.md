@@ -25,6 +25,13 @@ applicable production boundary.
   source-owned C29 adapters. They assemble the real opening/collision hosts,
   combat entities, kill runtime, and one fixed-step scheduler over that
   production world; their outward adapter records semantic intent only.
+- C29's complete production composition now owns
+  `ProductionWaveRewardRuntime`: the real wave-plan, spawn, clear, and reward
+  routing executes with the source world and scheduler, and a non-hydrated
+  natural opening starts through that lifecycle. Hydrated capsule worlds retain
+  their captured lifecycle. C30 constructs through this same C29 composition,
+  while the C27A detached host delegates to it; C27A retention evidence does
+  not certify C29's separate active-cinematic durable-capsule gap.
 - tests/unit/ghost-production-replay-world.test.ts constructs that complete
   source-owned production replay composition, supplies its actual simulationRuntime,
   and proves the replay reaches tick 80 through that same object. A repeated

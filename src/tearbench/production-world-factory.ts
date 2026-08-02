@@ -68,7 +68,13 @@ function productionRunSeed(seed: string): number {
 
 export function createProductionReplayRun(mode = "endless", weaponId = "sword", runSeed = 1) {
   return {
-    mode, mods: newMods(), mult: 1, lifestealCd: 0, weaponId, runSeed, wave: 1, score: 0, waveKills: 0, runTime: 0,
+    mode, diff: "normal", diffHp: 1, diffCount: 1, mods: newMods(), mult: 1, lifestealCd: 0,
+    weaponId, runSeed, wave: 1, score: 0, waveKills: 0, wavePeak: 1, waveTime: 0, runTime: 0,
+    spawnQueue: [], spawnTimer: 0, clearTimer: -1, waveLog: [],
+    specialBlock: -1, specialsOffered: 0, reservedUpgrade: null,
+    isBossWave: false, horde: false, miniBoss: null, waveTag: "", waveKinds: [],
+    bossOrder: [], bossIdx: 0, bossesBeaten: 0, curBoss: null, pendingBossOutro: null,
+    _dmgThisWave: false, _dmgThisStage: false,
     weaponStats: { distanceMoved: 0, throws: 0 }, voidScroll: null, bossAdds: [], echoClones: null,
   };
 }

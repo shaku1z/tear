@@ -1,8 +1,9 @@
 # C30 - Real Headless Tear and Scalable Episode Fabric
 
-**Status:** active - the first DOM-free production episode uses the same
-production replay world and fixed-step simulation composition as C29. C30's
-parity corpus, scale, and artifact-streaming exit work remain open.
+**Status:** active - DOM-free episodes now reset through C29's complete
+production replay composition, including the source-owned live wave/reward
+lifecycle. C30's C27A parity corpus, scale, and artifact-streaming exit work
+remain open.
 
 ## Scope and evidence rule
 
@@ -18,11 +19,12 @@ operational boundary it proves.
   `recorded-canonical` natural openings. It refuses a surgical State Forge
   stage, wave, or boss state instead of silently treating it as a production
   training episode.
-- Reset builds `createProductionReplayWorld` and
-  `createProductionCombatSimulation`, the production C29 replay world and one
-  authoritative fixed-step runtime. `step` normalizes the same `GameAction`
-  commands, assigns monotonic command envelopes, and advances that runtime once
-  per tick. It owns no browser scheduler or alternative simulator.
+- Reset calls `createProductionGhostReplayComposition`, the complete C29
+  production composition. Its source-owned world, combat runtime, fixed-step
+  scheduler, and `ProductionWaveRewardRuntime` serve C30 unchanged; `step`
+  normalizes the same `GameAction` commands, assigns monotonic command
+  envelopes, and advances that runtime once per tick. C30 owns no browser
+  scheduler, alternate lifecycle, or alternative simulator.
 - The shared renderer-neutral canonical projection is now exported from the
   production replay composition and is called by both C29 replay and C30
   headless paths. This is a second real caller, rather than a headless-specific
@@ -51,36 +53,39 @@ operational boundary it proves.
   same-seed move/idle episodes plus a repeat, cancelled, and timed-out job;
   the move result differs from idle, repeats exactly, stopped jobs take zero
   ticks, and only two terminal artifacts are retained.
-- **C27A-matrix boundary finding (2026-08-02):** a deliberately separate
+- **C27A-matrix boundary finding and resolution (2026-08-02):** a deliberately separate
   recorded-origin C30 adapter was tried against every fixed-step C27A live
   trace. Captured snapshots use the resolved numeric run seed while their
   scenarios retain the caller seed; treating the snapshot coordinate as
   authoritative fixed that adapter precondition. The first actual simulation
   comparison then matched through boss-Aldric tick 35 and diverged at tick 36,
-  when live spawns Aldric. `createProductionGhostReplayComposition` hydrates
-  the world and combat runtime but has no source-owned wave/reward lifecycle to
-  perform that spawn; the earlier C27A detached proof obtains it from the
-  test-only `createDetachedWaveRewardRuntime` harness. Both unproven adapter
-  attempts were reverted under the two-attempt rule. This is a C29/C30 shared
-  composition gap, not evidence that the generic historical headless scaffold
-  has parity.
+  when live spawns Aldric. The two unproven adapter attempts were reverted
+  under the two-attempt rule. This slice promotes that missing live wave plan,
+  spawn, clear, and reward routing into the source-owned
+  `ProductionWaveRewardRuntime`: C29 creates it, C30 resets through that C29
+  composition, and the C27A detached host delegates to it. This removes the
+  composition absence only. No C30 replay of the 13 C27A traces or
+  browser-fast/native-event/reward/terminal/cadence comparison has run, so it
+  is not parity evidence.
 - Architecture checks reject direct app, presentation, persistence, platform,
   browser, and Ghost 2 imports plus DOM/Canvas/browser globals in the C30
   adapter. The focused Node test executes it without a DOM.
 
 ## Exit-gate ledger
 
-- [x] Headless episodes run the same production composition with no DOM. The
-  focused unit proof runs a natural episode through the C29 production replay
-  world and fixed-step simulation, while source architecture fences the C30
+- [x] Headless episodes run the same production composition with no DOM. C30
+  resets through C29's complete source composition, including its real
+  wave/reward runtime; the C27A detached host now delegates to that same source
+  runtime. Focused unit evidence proves actual wave-1 activation, draft
+  routing, and wave-2 activation, while source architecture fences the C30
   adapter from browser-facing imports and globals.
 - [ ] Headless-to-live parity on the C27A matrix. The current one-episode
   semantic comparison is C30-to-C29 source-composition evidence only; no
   browser-fast matrix, native-event-order, reward, terminal-condition, or
-  cadence corpus is claimed. C27A matrix work is blocked specifically on moving
-  the live wave/reward lifecycle from the detached test harness into a
-  source-owned composition shared by C29 and C30; it must not be bypassed with
-  a second headless model.
+  cadence corpus is claimed. The former source-composition blocker is removed:
+  the shared runtime owns the live lifecycle. The remaining work is a dedicated
+  C30 replay of all 13 C27A traces, followed by the required browser-fast
+  comparison; it must not be bypassed with a second headless model.
 - [x] Initial in-process resource controls and measured natural-episode
   throughput. `measureProductionHeadlessEpisodes` produces the serializable
   `tearbench-production-headless-benchmark` artifact for a declared 32-episode,
@@ -147,9 +152,9 @@ operational boundary it proves.
   rendered gameplay PNG.
 - [ ] Visible rerun of sampled **failures** and Academy/Foundry streaming with
   backpressure. The proven sample is a truncated natural episode, not a failure,
-  and no C30 artifact pipeline or downstream training consumer is claimed. A
-  production failure source remains blocked on the C29/C30 wave/reward lifecycle
-  gap recorded above.
+  and no C30 artifact pipeline or downstream training consumer is claimed. The
+  former lifecycle-composition blocker is removed, but no natural failure has
+  yet been produced or visibly rerun.
 
 ## Deliberately not claimed
 
@@ -161,8 +166,12 @@ retain their respective evidence obligations.
 ## Evidence
 
 - `pnpm check:c30:foundation` passes: typecheck, full lint, C30 source
-  architecture fences, five focused Vitest files / 12 tests, four Node worker
+  architecture fences, six focused Vitest files / 13 tests, four Node worker
   tests, standalone build, and the Class-A browser terminal rerun.
+- `pnpm check:c27a:foundation` passes 36 files / 138 tests after its detached
+  host adopts the shared source runtime; the rebuilt browser corpus and all 40
+  detached comparisons retain C27A evidence. This is retention evidence, not a
+  C30 parity claim.
 - `pnpm exec vitest run tests/unit/production-headless-benchmark.test.ts --disableConsoleIntercept` passes and prints its measured production-pool artifact.
 - `pnpm exec vitest run tests/unit/production-headless-environment.test.ts` passes five focused tests, including the 256-episode / 30,720-tick isolation stress proof.
 - `node --test tests/production-headless-worker.test.mjs` passes the serialized
@@ -177,8 +186,9 @@ retain their respective evidence obligations.
 
 ## Next safe boundary
 
-Do not add retries to timeout, validation, or worker-reported failures. The
-next C30 outcome that needs new source work is a sampled **natural failure**
-terminal artifact; it is blocked on promoting the wave/reward lifecycle from
-the C27A detached harness into the shared C29/C30 composition. That promotion
-must remain a C29 source-composition slice, not a C30-specific simulator.
+Do not add retries to timeout, validation, or worker-reported failures. Build
+one recorded-origin C30 matrix adapter that consumes all 13 C27A artifacts
+through `createProductionGhostReplayComposition`, drives fixed and routed
+segments through that same source runtime, and records exact state/native-stream
+outcomes. It must stop and report errors; it must not add a C30-only simulator
+or claim browser-fast parity until the actual browser comparison runs.

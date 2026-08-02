@@ -1036,7 +1036,10 @@ portability, concurrent complete worlds, or C27A completion.
 
 ### C30 — Headless and scalable episodes
 
-- [ ] Headless episodes run the same composition, no DOM
+- [x] Headless episodes run the same composition, no DOM — C30 resets through
+  the complete C29 source composition, including its portable live wave/reward
+  runtime; C27A's detached host delegates to the same runtime. The named C30
+  gate and C27A retention gate pass. This does not claim C27A matrix parity.
 - [ ] Headless↔live parity on the C27A matrix
 - [x] Resource controls and measured throughput (episodes/minute, recorded)
 

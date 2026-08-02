@@ -190,11 +190,16 @@ This is the migration checklist for the architectural redesign. A checked featur
   pixel/device output fidelity remains C25/C40 work. C29 also now exposes
   player-visible semantic comparison: from Profile -> Vault, select two
   through nine healthy completed V3 capsules and use `COMPARE N` to
-  reconstruct and inspect each repeated semantic event occurrence side by
-  side. It is intentionally a semantic source-simulation comparison, not a
-  pixel, PCM, haptic, or device output claim;
-  authenticated publication, deployed verification, moderation operations,
-  and cloud/player lifecycle flows remain later completion work.
+   reconstruct and inspect each repeated semantic event occurrence side by
+   side. It is intentionally a semantic source-simulation comparison, not a
+   pixel, PCM, haptic, or device output claim;
+   C29/C30 source replay and headless composition now own the same portable live
+   wave, spawn, clear, and reward runtime (including semantic draft routing)
+   used by the C27A detached host. The C27A foundation gate retains its corpus
+   evidence after that delegation, but C30 still needs direct C27A-corpus and
+   browser-fast parity plus a natural failure terminal;
+   authenticated publication, deployed verification, moderation operations,
+   and cloud/player lifecycle flows remain later completion work.
 
 ## Accessibility and settings
 

@@ -8,10 +8,12 @@ import type { TearSnapshotV1 } from "./contracts";
 import { applyTearCodecConfiguration, hydrateTearCodecWorld } from "./detached-world-hydrator";
 import { createProductionCombatSimulation } from "./production-combat-simulation";
 import { createProductionReplayWorld, type ProductionReplayWorld } from "./production-world-factory";
+import { createProductionWaveRewardRuntime, type ProductionWaveRewardRuntime } from "./production-wave-reward-runtime";
 
 export interface ProductionGhostReplayCompositionOptions {
   readonly seed: string;
   readonly mode?: string;
+  readonly weaponId?: string;
   readonly inputSnapshots?: ReadonlyMap<number, AuthoritativeInputSnapshot>;
 }
 
@@ -128,12 +130,19 @@ export function createProductionGhostReplayComposition(
   return Object.freeze({
     create(snapshot: TearSnapshotV1 | undefined) {
       const replay = createProductionReplayWorld({ seed: snapshot?.seed ?? options.seed,
-        ...(options.mode === undefined ? {} : { mode: options.mode }) });
+        ...(options.mode === undefined ? {} : { mode: options.mode }),
+        ...(options.weaponId === undefined ? {} : { weaponId: options.weaponId }) });
       const staged = snapshot === undefined ? undefined : hydrateProductionReplayWorld(replay, snapshot);
+      let waveReward: ProductionWaveRewardRuntime | null = null;
       const core = createProductionCombatSimulation<CanonicalGameplayState>(replay, {
         ...(staged === undefined || staged.platforms.length === 0 ? {} : { platforms: staged.platforms }),
+        updateWave: (seconds) => { waveReward?.update(seconds); },
         snapshot: (tick, input) => projectProductionReplayCanonicalState(replay, tick, input),
       });
+      waveReward = createProductionWaveRewardRuntime(replay, {
+        actorId: (enemy) => core.combatEntityRuntime.id(enemy, "enemy"),
+      });
+      if (staged === undefined) waveReward.startNaturalOpening();
       if (staged !== undefined) {
         core.combatEntityRuntime.restoreIdentityState(staged.identityState as never);
         for (const binding of staged.identityBindings) core.combatEntityRuntime.bindId(binding.entity, binding.id);
@@ -144,7 +153,11 @@ export function createProductionGhostReplayComposition(
         if (input !== undefined) core.simulationRuntime.input.restore(input);
       }
       return Object.freeze({
+        replay,
+        combat: core,
         simulation: core.simulationRuntime,
+        waveReward,
+        routeAction: waveReward.routeAction,
         semanticProjection: () => core.simulationRuntime.lastResult?.state
           ?? projectProductionReplayCanonicalState(replay, core.simulationRuntime.scheduler.tick, core.simulationRuntime.input),
       });

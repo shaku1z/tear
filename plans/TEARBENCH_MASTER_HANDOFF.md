@@ -177,8 +177,10 @@ Named status:
   two through nine verified V3 capsules for semantic comparison, including repeated event
   occurrences and explicit missing occurrences. Active-cinematic durable
   coverage remains open.
-- **C30:** active. A DOM-free natural episode now uses the C29 production replay
-  world and fixed-step simulation composition. A 120-tick C30-to-C29 semantic
+- **C30:** active. A DOM-free natural episode now resets through the complete C29
+  production replay composition, including its source-owned live wave/reward
+  lifecycle; C27A's detached host delegates to that same source runtime. A
+  120-tick C30-to-C29 semantic
   comparison, fresh-environment isolation, exact bounded batches, cooperative
   cancellation/timeout, bounded terminal-artifact retention, measured natural
   throughput, and a bounded two-child serialized dispatcher pass. The
@@ -186,10 +188,11 @@ Named status:
   parent-side deadline termination, and replacement of an externally exited
   idle child. Explicitly idempotent input retains a versioned active-exit
   attempt record and retries once on a fresh child; timeout, validation, and
-  worker-reported failures do not retry or restore. A C30 recorded-origin
+  worker-reported failures do not retry or restore. A prior C30 recorded-origin
   attempt reached C27A boss-Aldric tick 35, then diverged at its live wave spawn
-  because the C29 source composition lacks the wave/reward lifecycle still held
-  by C27A's test-only detached harness; both unproven attempts were reverted.
+  before the lifecycle was source-owned; both unproven attempts were reverted.
+  The former composition gap is now removed, but no replacement 13-trace or
+  browser-fast C30 parity comparison has been run.
   The new declared 32x120 natural workload records rate/latency/heap/repeat
   evidence and passed its modest developer-hardware budget on this worktree;
   it is not training-capacity evidence. Browser-fast corpus parity,
@@ -422,11 +425,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C30 dispatcher results now preserve a versioned attempt ledger. An active worker exit is retried exactly once only after explicit idempotent-input opt-in, in a fresh child, while retaining the failed first exit record.
-PROVEN BY:           `pnpm check:c30:foundation` passes. The focused Node matrix proves the two-worker cap, pre-dispatch cancellation, parent deadline/replacement, and an injected active-child exit: unmarked input has one preserved failed attempt, while opted-in serialized idempotent input records failed then completed attempts on distinct PIDs. The retry uses the real production worker; no live world or browser adapter crosses the boundary.
-REMAINING HERE:      C30 needs C27A-matrix browser-fast parity with event/reward/terminal/cadence comparison; that item is explicitly blocked on promoting the wave/reward lifecycle from C27A's detached test harness into shared C29/C30 source composition. It also needs checkpoint restore, target-hardware training-capacity and long-run leak measurements, actual failure reruns, and Academy/Foundry streaming. Timeout, validation, and worker-reported failures intentionally do not retry.
+DONE THIS STEP:      C29/C30 now own the portable live wave/reward lifecycle: C29 creates it, C30 resets through that exact C29 composition, and C27A's detached host delegates to it. This ticks C30's same-composition/no-DOM item without inventing a second simulator.
+PROVEN BY:           `pnpm check:c30:foundation` passes with six focused Vitest files / 13 tests, four Node worker tests, standalone build, and Class-A browser terminal rerun. `pnpm check:c27a:foundation` passes 36 files / 138 tests, rebuilds all 13 live traces, and passes all 40 detached comparisons after the delegation. These gates retain the C27A evidence; they do not prove C30 live/headless parity.
+REMAINING HERE:      C30 needs a recorded-origin replay of all 13 C27A traces, then browser-fast event/reward/terminal/cadence comparison. It also needs checkpoint restore, target-hardware training-capacity and long-run leak measurements, actual failure reruns, and Academy/Foundry streaming. C29's durable active-cinematic boundary remains separately open. Timeout, validation, and worker-reported failures intentionally do not retry.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Take the blocked C29 source-composition boundary: promote the live wave/reward lifecycle out of C27A's detached harness so C29/C30 can create a real natural failure terminal. Do not add a C30-only failure simulator or claim parity before the browser-fast matrix runs.
+NEXT SLICE:          Build one C30 recorded-origin matrix adapter for all 13 C27A traces through `createProductionGhostReplayComposition`. Drive fixed and routed segments through that shared source runtime, record exact state/native-stream outcomes, and stop/report errors. Do not add a C30-only simulator or claim browser-fast parity before the browser comparison runs.
 
 All of the following were run from this worktree through C27A slice 36:
 

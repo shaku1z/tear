@@ -2,9 +2,9 @@ import type { CommandEnvelope } from "../domain/envelopes";
 import { normalizeGameAction, type GameAction } from "../input/game-action";
 import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import { stableVerificationHash } from "../replay/hash";
-import { createProductionCombatSimulation } from "./production-combat-simulation";
-import { projectProductionReplayCanonicalState } from "./production-replay-composition";
-import { createProductionReplayWorld, type ProductionReplayWorld } from "./production-world-factory";
+import type { createProductionCombatSimulation } from "./production-combat-simulation";
+import { createProductionGhostReplayComposition, projectProductionReplayCanonicalState } from "./production-replay-composition";
+import type { ProductionReplayWorld } from "./production-world-factory";
 import type { TearScenarioV1 } from "./contracts";
 import {
   TearHeadlessEnvironmentPool,
@@ -19,6 +19,7 @@ type ProductionHeadlessCore = Readonly<{
   replay: ProductionReplayWorld;
   simulation: ReturnType<typeof createProductionCombatSimulation<CanonicalGameplayState>>;
   scenario: TearScenarioV1;
+  routeAction: (action: GameAction) => boolean;
 }>;
 
 export interface ProductionHeadlessTerminalArtifact {
@@ -77,16 +78,11 @@ export function createProductionHeadlessEnvironment(): TearHeadlessEnvironment<
           : validated.issues.map((issue) => `${issue.path} ${issue.message}`).join("; ")}`);
       }
       const scenario = requireNaturalScenario(validated.value);
-      const replay = createProductionReplayWorld({
-        seed: scenario.seed,
-        mode: scenario.start.mode,
-        weaponId: scenario.start.weapon,
-      });
-      const simulation = createProductionCombatSimulation<CanonicalGameplayState>(replay, {
-        snapshot: (tick, input) => projectProductionReplayCanonicalState(replay, tick, input),
-      });
-      simulation.simulationRuntime.reset(0);
-      core = Object.freeze({ replay, simulation, scenario });
+      const composed = createProductionGhostReplayComposition({
+        seed: scenario.seed, mode: scenario.start.mode, weaponId: scenario.start.weapon,
+      }).create(undefined);
+      core = Object.freeze({ replay: composed.replay, simulation: composed.combat, scenario,
+        routeAction: composed.routeAction });
       nextCommandId = 0;
       actionTrace = [];
       return observation(core);
@@ -100,7 +96,9 @@ export function createProductionHeadlessEnvironment(): TearHeadlessEnvironment<
         return Object.freeze({ kind: "command" as const, id: ++nextCommandId, tick, command: normalized.action });
       });
       actionTrace.push(...envelopes);
-      const result = current.simulation.simulationRuntime.advanceOne(envelopes);
+      const result = current.simulation.simulationRuntime.advanceOne(envelopes.filter(
+        (entry) => !current.routeAction(entry.command),
+      ));
       const lifecycle = current.replay.world.lifecycle.snapshot();
       const terminated = lifecycle.phase === "terminated";
       const truncated = result.tick >= current.scenario.maxTicks;

@@ -7,6 +7,7 @@ export * from "./detached-world-runtime";
 export * from "./production-world-factory";
 export * from "./production-combat-phases";
 export * from "./production-combat-simulation";
+export * from "./production-wave-reward-runtime";
 export * from "./production-replay-composition";
 export * from "./state-validity";
 export * from "./state-forge-factories";
