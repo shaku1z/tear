@@ -153,4 +153,30 @@ describe("Ghost V3 live recorder sidecar", () => {
     expect(recorder.failure).toContain("storage quota exceeded");
     expect(await vault.getManifest("quota-sidecar")).toMatchObject({ status: "recording" });
   });
+
+  it("retains a browser quota error name when the platform supplies no message", async () => {
+    const memory = createMemoryGhostVaultBackend();
+    const quotaBackend: GhostVaultBackend = {
+      ...memory,
+      commit: async (operations) => {
+        if (operations.some((operation) => operation.store === "chunks")) throw new DOMException("", "QuotaExceededError");
+        await memory.commit(operations);
+      },
+      commitWhileJournalMatches: async (sessionId, leaseId, operations) => {
+        if (operations.some((operation) => operation.store === "chunks")) throw new DOMException("", "QuotaExceededError");
+        await memory.commitWhileJournalMatches(sessionId, leaseId, operations);
+      },
+    };
+    const recorder = new GhostLiveRecorder({
+      createVault: () => Promise.resolve(new GhostLocalVault(quotaBackend)),
+      now: () => "2026-07-30T00:00:01.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+    });
+    recorder.start({ sessionId: "named-quota-sidecar", createdAt: "2026-07-30T00:00:00.000Z", provenance: {} });
+    recorder.record("commands", 1, { command: { type: "dash" } });
+
+    await expect(recorder.finish({ outcome: "interrupted" })).resolves.toBeNull();
+    expect(recorder.failure).toContain("QuotaExceededError");
+  });
 });

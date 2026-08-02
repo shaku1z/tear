@@ -1,6 +1,7 @@
 # C28 — Durable Ghost Vault, Doctor, and Knowledge Libraries
 
-**Status:** active — foundational player, integrity, governance, and browser-migration evidence is present; C28 is not closed.
+**Status:** complete — the named C28 gate proves its full durability, safety,
+Doctor, and governed-library exit conditions.
 
 ## Scope and evidence rule
 
@@ -47,16 +48,29 @@ not this checkpoint's progress measure.
 - [x] Doctor repair creates a lineage-linked child and preserves the original.
 - [x] Canon, Graveyard, Frontier, and Corpus policies are enforced by durable
   storage.
-- [ ] Durable records survive the complete browser matrix: restart, version
-  migration, and C28-specific interrupted-write recovery are proven; real
-  physical quota pressure still needs evidence.
+- [x] Durable records survive the complete browser matrix: the named C28 gate
+  proves browser restart, version migration, C28-specific interrupted-write
+  recovery, and a real browser-enforced IndexedDB quota rejection.
 - [x] Corrupt imports cannot execute code, exceed configured limits, or
   overwrite an original. Unit evidence rejects encoded-size and expansion
   limits, executable/prototype-shaped provenance, duplicate identities, and
   forged conflicting chunk IDs while preserving the existing manifest and
   original source bytes.
 
-## Finding — physical quota probe paused after two attempts
+## Physical quota evidence
+
+`tests/browser-ghost-vault-physical-quota.js` opens an isolated Chromium
+Storage Bucket with a strict 50 KiB quota and passes that bucket's real
+`indexedDB` capability into the normal test-build application composition. It
+does not use C27's `beforeCommit` fault hook. The journey first completes and
+retains a source capsule, verifies it occupies the bucket, then runs a second
+normal live capture until Chromium raises `QuotaExceededError`. It proves the
+live simulation reaches all 1,200 requested ticks and that the completed source
+capsule remains complete. `pnpm check:c28:vault-reachable` passes this journey
+with restart, migration, interrupted-recovery, repair, governance, hostile-
+import, source-architecture, type, lint, and focused-unit evidence.
+
+## Historical finding — DevTools override was not evidence
 
 The browser harness opened a normal Chrome page and used Chromium's
 origin-level `Storage.overrideQuotaForOrigin` command after it had preserved a
@@ -65,12 +79,11 @@ real completed capsule. A 12-tick run did not emit the coaching profile's
 surface a quota failure. The follow-up probe verified the browser reports the
 override as active, including a one-byte quota, yet a direct IndexedDB write
 still succeeds. The temporary probe is intentionally not retained as evidence.
-Per the two-attempt rule, do not try a third timing variation or treat this
-DevTools override as physical enforcement. The remaining path needs a browser
-profile/device/storage configuration that demonstrably rejects a real
-IndexedDB write after a completed capsule is retained. The application
-`beforeCommit` hook remains C27 fault-containment evidence only and cannot
-clear this C28 item.
+Per the two-attempt rule, no third timing variation was tried and the DevTools
+override was never treated as physical enforcement. The later Storage Buckets
+journey above is the separate browser configuration that supplies real
+enforcement; the application `beforeCommit` hook remains C27
+fault-containment evidence only.
 
 ## Finding — interrupted recovery UI probe scoped out
 
@@ -102,18 +115,18 @@ UX, C38 cloud sharing, or C40 release/device-output validation. It also does
 not treat the C27 interrupted-recorder proof as C28 Vault quota or recovery
 proof without a C28 gate that exercises the durable Vault boundary.
 
-## Pause record — after the sixth C28 slice
+## Historical pause record — after the sixth C28 slice
 
 - `pnpm requirements:check` reports `unmappedSourceLines: 0`; that is a source-drop guard, not a progress count.
 - Recent completed C28 slices are `4be0b67`, `b6974a0`, `0b8c083`, `5aea113`, and `57a957f`; this migration slice is pending its green commit.
 - `pnpm test` passed 280 files and 1,090 tests on this worktree.
 - `pnpm check:c28:vault-reachable` passed, including the player Vault repair journey and the version-1 → version-2 migration/restart journey.
-- Next exit-bound slice: prove physical quota pressure at the browser Vault boundary; interrupted-write recovery remains separate and must not be silently claimed.
+- At that time, the next exit-bound slice was physical quota pressure at the browser Vault boundary; interrupted-write recovery remained separate and could not be silently claimed.
 
-## Pause record — after the ninth C28 slice
+## Historical pause record — after the ninth C28 slice
 
 - `pnpm requirements:check` reports `unmappedSourceLines: 0`; it remains a source-drop guard rather than a progress count.
 - `pnpm check:c28:vault-reachable` passed all 33 focused tests and the player repair, schema migration/restart, and interrupted-write browser journeys.
 - The C28 interrupted-write path now includes UUID capture IDs, duplicate-session rejection, atomic recovery terminalization, and transactionally fenced stale writes.
 - The `pnpm test` pause probe passed 279 files / 1,091 tests but failed unrelated `weapon-ability-conformance`; its immediate isolated rerun passed 1 / 1, so no C28 regression is claimed.
-- C28 remains active: hostile imports, repair, policies, restart/migration, and interrupted-write recovery are proven; physical browser quota pressure remains the single open exit condition.
+- At that pause, physical browser quota pressure was the sole open C28 exit condition; the later named physical-quota journey closes it.

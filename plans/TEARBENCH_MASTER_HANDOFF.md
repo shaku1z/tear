@@ -122,7 +122,7 @@ Named status:
 - **C27A:** closed shared-composition correction; the checkpoint report records
   88 committed C27A migrations including its closure commit. C27/C28-C40 retain
   their own product and output exit gates.
-- **C28:** active; its first exit-gate slice is complete: a running app opens
+- **C28:** complete; the running app opens
   the browser Ghost Vault through a typed application controller and the normal
   Profile → Vault route. The stored-capsule browser journey passes. A second
   slice now applies retention, rebuilds indexes, verifies integrity, and writes
@@ -150,7 +150,10 @@ Named status:
   per-capture UUID and a duplicate-session write guard. It then found an
   in-flight old-page writer could re-create that journal; the same slice moves
   IndexedDB persistence into its adapter and fences every recording write with
-  an atomic journal lease check. Physical quota pressure alone remains open.
+  an atomic journal lease check. Its final slice passes a Storage Bucket's real
+  50 KiB IndexedDB quota into the normal application composition, completes and
+  retains a source capsule, then proves a second capture receives Chromium's
+  `QuotaExceededError` without halting 1,200 live ticks or mutating the source.
 - **C29-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -228,10 +231,10 @@ Important files:
 
 ### Exact next slice
 
-C27A is closed. Follow the route to **C28**: durable Ghost Vault, Doctor, and
-knowledge libraries. Start from C28's completion-plan boundary; do not reopen
-C27A for pixels, haptics, durable outcomes, or audio/device fidelity, which
-belong to C25, C39, and C40 respectively.
+C27A and C28 are closed. Follow the route to **C29**: replay world, Theater,
+comparison, seek, forks, and practice. Start from C29's completion-plan
+boundary; do not reopen C27A for pixels, haptics, durable outcomes, or
+audio/device fidelity, which belong to C25, C39, and C40 respectively.
 
 All thirteen captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream: 5,732 ticks and 33 native facts, including the three natural-trace enemy defeats now published independently of Ghost 2 sampling. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome/reward/finale controllers, scheduler shape, event bus, and restored actor identity. The natural matrix route clears wave 1, selects a real offered draft card without advancing the fixed scheduler, and reaches a wave-2 spawn. A separate certified route reconstructs the wave-49 frontier, starts production wave 50, applies an explicit Source one-hit State Forge child, and executes real victory; live and detached match all seven finale intent batches and all 22 outward calls after their concrete adapters return, in exact order and with exact arguments. They also match six immutable ring/burst particle-admission receipts, eight logical feel receipts after restoration of the captured pre-finale transient, and the complete 42-entry terminal external-decision transcript (13 initial synchronization terminal decision/request, 22 finale-outward, and 7 cache/terminal). The refreshed browser route explicitly activates audio, then observes 12 executing plus 12 completed dispatch receipts: all seven mixes are logical-target-only and all cues are voice-cap-rejected, so no output is claimed. Slice 40 adds portable `tear-world-simulation-factories.ts` with no app/presentation/browser imports; the app renderer supplies real Canvas ports and detached supplies explicit no-op ports under architecture fences. Next: generic world bootstrap, then configuration isolation, which still blocks truly simultaneous full worlds. This evidence does not claim a naturally played 50-wave campaign, randomized particle parity, rendered-pixel parity, headless/full-world portability, configuration isolation, durable profile/local-storage survival, cloud/replay/analytics completion, successful PCM/audibility or audio graph/device parity, or device vibration.
 
@@ -372,11 +375,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      Slice 98 routes production actor factory-ID selection through a gameplay-only constructor catalog.
-PROVEN BY:           Focused 6 files / 58 tests plus architecture, rebuilt physical-canonical-input proof, and all thirteen live-parity browser scenarios passed. C27A remains blocking.
-REMAINING HERE:      Extract portable entity-class and app-backed service implementations, plus remaining outcome, combat, and audio/device state. Finish C25 physical-input certification, V3 playback, and replay/headless use of the same full world. Those boundaries still prevent concurrent complete worlds and C27A remains blocking.
-REMAINING TO C40:    C27 completion, C25 exit, and C28-C40 remain after C27A closes.
-NEXT SLICE:          Select the next bounded real production-world construction or combat closure. Do not claim durability/device parity or full live-world concurrency.
+DONE THIS STEP:      C28 closes its real browser Vault exit gate, including physical IndexedDB quota pressure.
+PROVEN BY:           `pnpm check:c28:vault-reachable` passed source traceability, type/lint/architecture, 34 focused tests, standalone build, and all four named browser journeys.
+REMAINING HERE:      C29 must make captured capsules into a production-composition replay, Theater, comparison, seek, fork, and practice product without mutating source custody or profile state.
+REMAINING TO C40:    C25 and C27 exits, then C29-C40, remain; C27A and C28 are closed.
+NEXT SLICE:          Begin C29 with one bounded replay-world checklist item from its completion-plan boundary.
 
 All of the following were run from this worktree through C27A slice 36:
 

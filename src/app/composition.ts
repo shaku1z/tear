@@ -55,6 +55,8 @@ export interface TearCompositionOptions {
   readonly createCrazyGamesServices?: typeof createCrazyGamesPlatformServices;
   readonly createCloud: CloudFactory;
   readonly pwaUpdate: PwaUpdateCapability;
+  /** An explicit browser storage capability is used only by isolated test builds. */
+  readonly browserIndexedDb?: IDBFactory;
 }
 
 interface CompositionWindow extends Window {
@@ -67,7 +69,7 @@ interface CompositionWindow extends Window {
  * entrypoint so standalone builds do not import the CrazyGames implementation.
  */
 export function composeTearApplication(options: TearCompositionOptions): void {
-  const { target, sdk, createCrazyGamesServices, createCloud, pwaUpdate } = options;
+  const { target, sdk, createCrazyGamesServices, createCloud, pwaUpdate, browserIndexedDb = window.indexedDB } = options;
   const compositionWindow = window as CompositionWindow;
   const tearTestMode = __TEAR_TEST_BUILD__ && new URLSearchParams(window.location.search).get("test") === "1";
   const disposableValues = new Map<string, string>();
@@ -189,7 +191,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
 
   const gameRuntimeDependencies = {
     A11Y, ACH, AFFIXES, APP, Aldric, Armored, Attract, BOSSFX, Backdrop, Blade, biomeProgressPersistence, Bomber, Boss, achievementToastPersistence,
-    browserDocument: document, browserIndexedDb: window.indexedDB, browserNavigator: navigator, browserStorage: window.localStorage, browserWindow: window, CG, CLOCK, CONFIG: worldConfig, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, DAILY, DIAG, Echo,
+    browserDocument: document, browserIndexedDb, browserNavigator: navigator, browserStorage: window.localStorage, browserWindow: window, CG, CLOCK, CONFIG: worldConfig, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, DAILY, DIAG, Echo,
     FX, FirebaseProvider, Flyer, GAMEPLAY_EVENTS, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
     MirrorHost, OVERSCAN, PAD, PRESETS, outcomeDefeatProgressPersistence, pendingFinalePersistence, platformBootstrapPersistence, profileStatsPersistence, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
     Ranged, ReflectionEnemy, SAFE, SFX, SHOP, STAGES, Source, shopPurchaseProgressPersistence, styleAchievementPersistence, Support, THEME, UI, UPGRADES, victoryProfileProgressPersistence,

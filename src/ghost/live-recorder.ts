@@ -224,7 +224,10 @@ export class GhostLiveRecorder {
 
   #fail(session: LiveGhostCaptureSession, error: unknown): void {
     if (session.failure !== null) return;
-    session.failure = error instanceof Error ? error.message : String(error);
+    // Browser storage errors such as QuotaExceededError commonly carry an
+    // empty message. Preserve their platform-defined name so a real durable
+    // failure remains actionable instead of surfacing as a blank diagnostic.
+    session.failure = error instanceof Error ? (error.message || error.name) : String(error);
     this.#surfaceFailure(session);
     // The recording journal remains durable and recoverable/quarantinable on
     // the next open, but no later entry may make a failed capture look whole.
