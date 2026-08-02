@@ -13,6 +13,7 @@ export * from "./live-causal-events";
 export * from "./authoritative-receipt";
 export * from "./ghost-doctor";
 export * from "./replay-world";
+export * from "./production-replay-verification";
 export * from "./theater";
 export * from "./knowledge-libraries";
 export * from "./coach";

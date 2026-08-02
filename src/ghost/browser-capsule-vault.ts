@@ -6,6 +6,7 @@ import { createIndexedDbGhostVaultBackend } from "./indexeddb-vault-backend";
 import { GhostCapsuleReader, type GhostReadCapsule } from "./capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope, type GhostCapsuleReplayMapping } from "./capsule-replay-envelope";
 import { assessGhostReplayAdmission, type GhostReplayAdmission } from "./replay-admission";
+import { verifyGhostCapsuleProductionReplay, type GhostProductionReplayVerification } from "./production-replay-verification";
 import { GhostDoctor } from "./ghost-doctor";
 import { maintainGhostVault, type GhostVaultMaintenanceOptions, type GhostVaultMaintenanceReport } from "./vault-maintenance";
 
@@ -99,4 +100,13 @@ export async function readBrowserGhostCapsuleReplayAdmission(
 ): Promise<GhostReplayAdmission | undefined> {
   const capsule = await readBrowserGhostCapsule(factory, id);
   return capsule === undefined ? undefined : assessGhostReplayAdmission(capsule);
+}
+
+/** Reopens a V3 capsule and compares its captured authoritative receipts in the production replay composition. */
+export async function verifyBrowserGhostCapsuleProductionReplay(
+  factory: IDBFactory | undefined,
+  id: string,
+): Promise<GhostProductionReplayVerification | undefined> {
+  const capsule = await readBrowserGhostCapsule(factory, id);
+  return capsule === undefined ? undefined : verifyGhostCapsuleProductionReplay(capsule);
 }

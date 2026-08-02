@@ -34,7 +34,7 @@ import { emitLiveTearBenchPhysicalInput } from "../tearbench/browser/live-physic
 import { isCombatPlatform, isDodgeProjectile, isEnemySample, isGameEnemy, isGameFloater, isRitualCue, isWeaponEffect } from "./live-runtime-type-guards";
 import { createLiveStateForgeAdapter } from "./live-state-forge-adapter";
 import { createLiveStateForgeRuntimeBridge } from "./live-state-forge-runtime-bridge";
-import { listBrowserGhostCapsuleManifests, readBrowserGhostCapsule, readBrowserGhostCapsuleReplay, readBrowserGhostCapsuleReplayAdmission } from "../ghost/browser-capsule-vault";
+import { listBrowserGhostCapsuleManifests, readBrowserGhostCapsule, readBrowserGhostCapsuleReplay, readBrowserGhostCapsuleReplayAdmission, verifyBrowserGhostCapsuleProductionReplay } from "../ghost/browser-capsule-vault";
 import { createLiveGhostCausalEvent, ghostLiveBootstrapEventId } from "../ghost/live-causal-events";
 import { createGhostV3BrowserTestOptions } from "./ghost-v3-browser-test-options";
 import { createGhostReplayRunContext, GHOST_REPLAY_CONTEXT_PROVENANCE_KEY, type GhostReplayRunContextV1 } from "../ghost/replay-admission";
@@ -557,7 +557,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     if (ghostV3?.active !== true) return;
     const result = authoritativeStep.lastResult;
     const stateHash = result?.tick === tick ? result.stateHash : stableVerificationHash(projectCanonicalGameplayState(tick, simulationRuntime.input.snapshot(), liveRun(), livePlayer(), liveBlade(), hostState.enemies().map((enemy) => ({ ...(typeof enemy._gid === "number" ? { _gid: enemy._gid } : {}), kind: enemy.kind, bossId: enemy.bossId, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, dead: enemy.dead }))));
-    ghostV3.record("results", tick, createGhostAuthoritativeReceipt(tick, stateHash));
+    ghostV3.record("results", tick, createGhostAuthoritativeReceipt(tick, stateHash, simulationRuntime.input.snapshot()));
   };
   // Native facts emitted from run/content code predate the simulation runtime
   // composition.  Bind their tick source once the shared runtime exists so all
@@ -644,6 +644,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       read: (id: string) => readBrowserGhostCapsule(browserIndexedDb, id),
       replay: (id: string) => readBrowserGhostCapsuleReplay(browserIndexedDb, id),
       admission: (id: string) => readBrowserGhostCapsuleReplayAdmission(browserIndexedDb, id),
+      verify: (id: string) => verifyBrowserGhostCapsuleProductionReplay(browserIndexedDb, id),
       active: () => ghostV3?.active === true,
       failure: () => ghostV3?.failure ?? null,
     });

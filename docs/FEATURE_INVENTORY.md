@@ -171,11 +171,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   browser-enforced physical quota rejection after retaining a source capsule.
   C27 also includes a real IndexedDB live-capture sidecar plus a persisted V1
   replay bootstrap, keyframe-aligned canonical authoritative-hash receipts,
-  and fail-closed admission check. V3 playback, compatible
-  production-world verification of a durable capsule and a player-facing
-  Theater remain C29 work; C29's source-owned replay world, production combat
-  assembly, and one-scheduler identity proof are present but do not yet provide
-  that durable-capsule verification;
+  and fail-closed admission check. C29 now reopens one normal test-standalone
+  durable capsule and reproduces all three captured keyframe hashes through
+  source-owned State Forge hydration and production combat composition. Active
+  cinematics, player-visible Theater, fork/practice, and comparison remain C29
+  work;
   authenticated publication, deployed verification, moderation operations,
   and cloud/player lifecycle flows remain later completion work.
 

@@ -10,6 +10,7 @@ describe("Ghost V3 browser inspector", () => {
       read: () => Promise.resolve(undefined),
       replay: () => Promise.resolve(undefined),
       admission: () => Promise.resolve(undefined),
+      verify: () => Promise.resolve(undefined),
       active: () => false,
       failure: () => null,
     });

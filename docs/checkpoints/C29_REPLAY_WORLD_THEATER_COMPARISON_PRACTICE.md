@@ -33,13 +33,20 @@ applicable production boundary.
   canonical fixed-step state hash, not a pixel/audio/device claim. The rebuilt
   browser live-capture journey reads ticks 0, 120, and 240 from the actual
   completed IndexedDB Vault capsule.
+- The browser journey reopens that durable capsule through the normal Vault
+  reader, rebuilds each same-tick State Forge keyframe through
+  createProductionGhostReplayComposition, restores its held input snapshot,
+  and compares all three receipts. Every reconstructed authoritative hash
+  equals the captured hash.
 
 ## Exit-gate ledger
 
 - [x] Replay executes on the C27A production composition with no replay-owned
   second runtime.
-- [ ] A captured durable capsule reproduces its authoritative hashes through
-  the production replay composition.
+- [x] A captured durable capsule reproduces its authoritative hashes through
+  the production replay composition — the real test-standalone IndexedDB
+  capsule at ticks 0, 120, and 240 matches every captured receipt after
+  source-owned State Forge hydration and held-input restoration.
 - [ ] Seek, fork, and practice run from an admitted replay without mutating
   source custody or the production profile.
 - [ ] Theater is player-visible and passes applicable accessibility/input UI
@@ -54,12 +61,13 @@ incompatible capsule, prove a captured-capsule hash, or expose a player Theater
 screen. It makes the next C29 hash-parity slice use the production runtime and
 combat composition rather than a synthetic replay simulation. The older parity
 harness retains its equivalent helper for its existing C27A suites, but the C29
-replay proof no longer imports that test helper. State Forge hydration and
-receipt comparison of a durable V3 capsule remain the missing source-owned
-adapter and evidence.
+replay proof no longer imports that test helper. This proves the normal
+test-standalone endless capture only; active chapter-cinematic restoration,
+player Theater, seek/fork/practice flows, and comparisons remain unfinished.
 
 ## Evidence
 
-pnpm check:c29:production-replay is the named foundation gate. It runs the
-source-traceability guard, type/lint/architecture gates, and both codec-level
-and production-runtime Ghost replay tests.
+pnpm check:c29:production-replay is the named gate. It runs the source
+traceability, type/lint/architecture, receipt/production-runtime tests, and a
+rebuilt browser V3 capture that reopens the completed IndexedDB capsule and
+compares all captured authoritative receipts through source-owned replay.

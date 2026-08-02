@@ -56,6 +56,22 @@ export class AuthoritativeInputState {
       moveY: this.#moveY / INPUT_AXIS_SCALE, aimTurn: this.#aimTurn, primaryHeld: this.#primaryHeld });
   }
 
+  /** Restores only durable held-input state; one-tick press edges never cross a keyframe. */
+  restore(snapshot: AuthoritativeInputSnapshot): void {
+    if (!Number.isSafeInteger(snapshot.tick) || snapshot.tick < 0
+      || !Number.isFinite(snapshot.moveX) || !Number.isFinite(snapshot.moveY)
+      || !Number.isFinite(snapshot.aimTurn) || typeof snapshot.primaryHeld !== "boolean") {
+      throw new TypeError("authoritative input snapshot is invalid");
+    }
+    this.#tick = snapshot.tick;
+    this.#moveX = Math.round(snapshot.moveX * INPUT_AXIS_SCALE);
+    this.#moveY = Math.round(snapshot.moveY * INPUT_AXIS_SCALE);
+    this.#aimTurn = Math.round(snapshot.aimTurn);
+    this.#aimMagnitude = AIM_MAGNITUDE_SCALE;
+    this.#primaryHeld = snapshot.primaryHeld;
+    this.#jumpPressed = false; this.#dashPressed = false; this.#dashX = 0; this.#dashY = 0; this.#throwPressed = false;
+  }
+
   reset(): void {
     this.#tick = 0; this.#moveX = 0; this.#moveY = 0; this.#aimTurn = 0;
     this.#aimMagnitude = AIM_MAGNITUDE_SCALE; this.#primaryHeld = false;

@@ -43,6 +43,8 @@ export interface GhostSeekResult {
 export interface GhostProductionReplaySession<State> {
   readonly simulation: TearSimulationRuntime<State>;
   semanticProjection(): unknown;
+  /** Optional State Forge semantic hash, only when its codec projection is available. */
+  snapshotSemanticHash?(): string;
 }
 
 export interface GhostProductionReplayComposition<State> {
@@ -172,11 +174,12 @@ export class GhostProductionReplayWorld<State> {
     }
     this.#tick = targetTick;
     const semanticHash = this.semanticHash();
-    const correction = snapshot?.tick === targetTick && snapshot.hashes.semantic !== semanticHash
+    const snapshotSemanticHash = session.snapshotSemanticHash?.();
+    const correction = snapshot?.tick === targetTick && snapshotSemanticHash !== undefined && snapshot.hashes.semantic !== snapshotSemanticHash
       ? Object.freeze({
         disclosed: true as const, tick: targetTick,
         reason: "restored production state did not match declared keyframe semantic hash",
-        beforeHash: semanticHash, afterHash: snapshot.hashes.semantic,
+        beforeHash: snapshotSemanticHash, afterHash: snapshot.hashes.semantic,
       }) : undefined;
     return Object.freeze({
       tick: targetTick, semanticHash,

@@ -1000,7 +1000,7 @@ portability, concurrent complete worlds, or C27A completion.
 ### C29 — Replay world, Theater, comparison, practice
 
 - [x] Replay executes on the C27A production composition (no second runtime) - GhostProductionReplayWorld accepts and advances only the TearSimulationRuntime supplied by its composition. The C29 production test supplies the source-owned C27A production-world/combat composition, asserts runtime identity at tick 80, and repeats the seek with an equal semantic hash. `pnpm check:c29:production-replay` passes.
-- [ ] Replay of a captured capsule reproduces its authoritative hashes
+- [x] Replay of a captured capsule reproduces its authoritative hashes — the normal test-standalone browser capture persists State Forge keyframes plus held-input authoritative receipts at ticks 0, 120, and 240; after the completed IndexedDB capsule is reopened, the source-owned production replay composition rehydrates each keyframe and matches every receipt. `pnpm check:c29:production-replay` passes. This does not yet cover active bound cinematics, player Theater, or practice/comparison UX.
 - [ ] Seek, fork, and practice work from a replay
 - [ ] `ghost/theater` wired and player-visible
 - [ ] Side-by-side comparison of two runs

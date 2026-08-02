@@ -154,11 +154,14 @@ Named status:
   50 KiB IndexedDB quota into the normal application composition, completes and
   retains a source capsule, then proves a second capture receives Chromium's
   `QuotaExceededError` without halting 1,200 live ticks or mutating the source.
-- **C29:** active; its first checklist item is proven. GhostProductionReplayWorld
+- **C29:** active; its first two checklist items are proven. GhostProductionReplayWorld
   drives only the TearSimulationRuntime returned by its source-owned C27A
   production world and combat composition, and the focused production test
   proves runtime identity at tick 80 plus a repeat-seek semantic hash.
-  Captured-capsule parity, player Theater, practice, and comparison remain open.
+  A real completed test-standalone IndexedDB V3 capsule is reopened and its
+  tick-0/120/240 State Forge keyframes plus held-input receipts each reproduce
+  their captured authoritative hash through source-owned composition. Player
+  Theater, practice, comparison, and active-cinematic coverage remain open.
 - **C30-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -380,11 +383,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C29 also stores a sealed authoritative-state receipt at every live V3 keyframe, including its tick-zero State Forge anchor.
-PROVEN BY:           Focused receipt/recorder tests plus a rebuilt browser live-capture journey passed; the actual completed Vault capsule contains valid receipts at ticks 0, 120, and 240.
-REMAINING HERE:      Compose production State Forge hydration with that durable V3 capsule and compare its receipts. Theater, seek/fork/practice, and comparison remain open.
+DONE THIS STEP:      C29 now reopens a durable V3 capsule, hydrates each recorded State Forge keyframe through source-owned production composition, restores held input, and compares captured authoritative receipts.
+PROVEN BY:           `pnpm check:c29:production-replay` runs focused receipt/replay tests and the rebuilt browser capture; its actual completed Vault capsule matches source replay at ticks 0, 120, and 240.
+REMAINING HERE:      Add active-cinematic coverage, then Theater, seek/fork/practice, and comparison. The verified browser route is normal test-standalone endless only.
 REMAINING TO C40:    C25 and C27 exits, then C29-C40, remain; C27A and C28 are closed.
-NEXT SLICE:          Compose production State Forge hydration with an actual durable V3 capsule and compare its captured receipts through the source-owned replay path.
+NEXT SLICE:          Bound and add the active-cinematic source replay restoration needed before building C29 Theater and seek/fork/practice flows.
 
 All of the following were run from this worktree through C27A slice 36:
 
