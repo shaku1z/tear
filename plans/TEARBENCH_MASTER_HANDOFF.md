@@ -385,9 +385,9 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 DONE THIS STEP:      C29 now reopens a durable V3 capsule, hydrates each recorded State Forge keyframe through source-owned production composition, restores held input, and compares captured authoritative receipts.
 PROVEN BY:           `pnpm check:c29:production-replay` runs focused receipt/replay tests and the rebuilt browser capture; its actual completed Vault capsule matches source replay at ticks 0, 120, and 240.
-REMAINING HERE:      Add active-cinematic coverage, then Theater, seek/fork/practice, and comparison. The verified browser route is normal test-standalone endless only.
+REMAINING HERE:      Active chapter bindings now restore through source composition and focused unit evidence; add their durable-capsule coverage, then Theater, seek/fork/practice, and comparison. The verified browser route is normal test-standalone endless only.
 REMAINING TO C40:    C25 and C27 exits, then C29-C40, remain; C27A and C28 are closed.
-NEXT SLICE:          Bound and add the active-cinematic source replay restoration needed before building C29 Theater and seek/fork/practice flows.
+NEXT SLICE:          Build C29 seek/fork/practice custody behavior on verified replay keyframes; retain the active-cinematic durable browser case as its own evidence slice.
 
 All of the following were run from this worktree through C27A slice 36:
 

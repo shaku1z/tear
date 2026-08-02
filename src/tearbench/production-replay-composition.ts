@@ -1,6 +1,9 @@
 import { applyWeapon } from "../gameplay/weapons";
+import { parseCampaignChapterBindingSpec, stageCampaignChapterBinding } from "../gameplay/campaign/chapter-cinematic-binding";
+import type { ChapterIntent } from "../gameplay/campaign/chapter-controller";
 import { projectCanonicalGameplayState, type CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { AuthoritativeInputSnapshot, AuthoritativeInputState } from "../gameplay/runtime/authoritative-input";
+import { stageAt } from "../gameplay/stages";
 import type { TearSnapshotV1 } from "./contracts";
 import { applyTearCodecConfiguration, hydrateTearCodecWorld } from "./detached-world-hydrator";
 import { createProductionCombatSimulation } from "./production-combat-simulation";
@@ -29,6 +32,39 @@ function canonicalProjection(replay: ProductionReplayWorld, tick: number, input:
       };
     }),
   );
+}
+
+/** Restores a data-bound active chapter without reviving any browser/UI owner. */
+export function restoreProductionReplayChapterBinding(
+  replay: ProductionReplayWorld,
+  runtime: Readonly<Record<string, unknown>>,
+): void {
+  replay.world.lifecycle.restore(runtime.lifecycle as never);
+  const rawSpec = runtime.chapterBinding;
+  if (rawSpec === null || rawSpec === undefined) {
+    replay.world.context.cinema.restoreState(runtime.cinema);
+    return;
+  }
+  const spec = parseCampaignChapterBindingSpec(rawSpec);
+  const dispatch = (intents: readonly ChapterIntent[]): void => {
+    for (const intent of intents) {
+      if (intent.type === "chapter-state") {
+        const run = replay.world.state.run() as never as { chapterState: string };
+        run.chapterState = intent.state;
+      } else if (intent.type === "clear-projectiles") {
+        replay.world.state.setProjectiles([]);
+      } else if (intent.type === "activate-prepared-wave" && replay.world.lifecycle.hasPreparedWave) {
+        replay.world.lifecycle.activateWave();
+      }
+    }
+  };
+  const staged = stageCampaignChapterBinding(spec, stageAt(spec.stageIndex), {
+    dispatch,
+    preparedWave: () => replay.world.lifecycle.hasPreparedWave,
+    activationDeferred: () => replay.world.lifecycle.activationDeferred,
+    clear: () => undefined,
+  });
+  replay.world.context.cinema.restoreState(runtime.cinema, staged.binding);
 }
 
 /** Applies a saved State Forge world to a newly composed production replay world. */
@@ -62,11 +98,7 @@ function hydrateProductionReplayWorld(replay: ProductionReplayWorld, snapshot: T
   replay.world.context.services.random.restore(staged.rng as never);
   replay.stage.index = staged.stageIndex;
   replay.stage.platforms = [...staged.platforms] as unknown[];
-  replay.world.lifecycle.restore(staged.runtime.lifecycle as never);
-  // An inactive cinematic is restored directly. An active script has an
-  // authored binding that must be rebuilt from its data-only chapter contract;
-  // reject it here rather than falsely treating an unbound script as replayed.
-  replay.world.context.cinema.restoreState(staged.runtime.cinema);
+  restoreProductionReplayChapterBinding(replay, staged.runtime);
   const transient = replay.world.context.transient;
   transient.assignImpact({ hitStop: Number(staged.runtime.hitStop), slowMotion: Number(staged.runtime.slowmo), shake: Number(staged.runtime.shake) });
   transient.assignOpening({ throwCooldown: Number(staged.runtime.throwCd), dashGhostTime: Number(staged.runtime.dashGhostT),

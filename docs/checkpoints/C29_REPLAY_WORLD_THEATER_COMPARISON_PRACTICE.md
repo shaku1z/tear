@@ -38,6 +38,11 @@ applicable production boundary.
   createProductionGhostReplayComposition, restores its held input snapshot,
   and compares all three receipts. Every reconstructed authoritative hash
   equals the captured hash.
+- Active campaign cinematics now reconstruct their data-only chapter binding
+  in the source replay composition before restoring the director. The focused
+  source test proves the restored cinematic completes through the production
+  lifecycle and activates its prepared wave; a durable campaign-capsule hash
+  comparison is still separate evidence.
 
 ## Exit-gate ledger
 
@@ -62,7 +67,7 @@ screen. It makes the next C29 hash-parity slice use the production runtime and
 combat composition rather than a synthetic replay simulation. The older parity
 harness retains its equivalent helper for its existing C27A suites, but the C29
 replay proof no longer imports that test helper. This proves the normal
-test-standalone endless capture only; active chapter-cinematic restoration,
+test-standalone endless capture only; durable active-chapter-cinematic capture,
 player Theater, seek/fork/practice flows, and comparisons remain unfinished.
 
 ## Evidence
