@@ -96,8 +96,17 @@ operational boundary it proves.
 - [ ] Production worker processes, retries, checkpoint restore, target-hardware
   training-capacity, long-run leak, and broad stress evidence. The initial
   benchmark deliberately remains an in-process natural-opening measurement.
-- [ ] Parallel episode stress isolation. The three fresh environments prove a
-  narrow non-sharing property, not a worker or high-concurrency stress run.
+- [x] High-count in-process production-pool isolation. The 256-episode,
+  120-tick stress proof runs 30,720 actual production fixed steps through eight
+  fresh composition roots. All 256 final canonical-state objects and semantic
+  hashes are distinct for their distinct seeds; the bounded first 32 terminal
+  samples retain independent scenario and accepted-action-trace objects and
+  each has its own truncated disposition. This proves a substantial fresh-world
+  non-sharing boundary without claiming CPU-parallel execution.
+- [ ] Parallel worker-process episode stress isolation. The current pool has
+  eight in-process scheduling slots but a synchronous fixed-step job does not
+  yield inside its episode. It is not a worker/thread transport, worker failure,
+  or high-concurrency hardware claim.
 - [x] A sampled natural terminal episode is visibly rerunnable from its
   production artifact. The environment now seals a versioned
   `tearbench-production-headless-terminal` artifact with its exact validated
@@ -127,13 +136,13 @@ retain their respective evidence obligations.
 - `pnpm typecheck` passes.
 - `pnpm exec vitest run tests/unit/tearbench-headless.test.ts tests/unit/production-headless-environment.test.ts tests/unit/ghost-production-replay-world.test.ts tests/unit/production-replay-composition.test.ts` passes: 4 files / 9 tests.
 - `pnpm exec vitest run tests/unit/production-headless-benchmark.test.ts --disableConsoleIntercept` passes and prints its measured production-pool artifact.
+- `pnpm exec vitest run tests/unit/production-headless-environment.test.ts` passes five focused tests, including the 256-episode / 30,720-tick isolation stress proof.
 - `pnpm build:test:standalone` and `pnpm test:browser:production-headless-terminal` pass. The named route consumes the committed versioned natural-terminal fixture; the browser materializer admits only versioned natural C30 terminal coordinates and proves exact action provenance plus a rendered screenshot.
 - `pnpm check:architecture` passes, including planted C30 forbidden-edge and
   browser-global cases.
 
 ## Next safe boundary
 
-Stress the current C30 production pool with a declared high-count natural
-workload and prove each environment's state, action trace, and terminal artifact
-are isolated. Keep the result explicitly in-process; worker-process and full
-failure-episode evidence remain separate work.
+Define and exercise a real worker-process episode boundary that sends only
+validated scenario/action/artifact data, returns cancellation/timeout/failure
+states, and never transfers a live production world or a browser adapter.

@@ -129,6 +129,46 @@ describe("C30 production headless environment", () => {
       === "tearbench-production-headless-terminal")).toBe(true);
   });
 
+  it("stress-runs fresh production worlds without sharing state, traces, or terminal artifacts", async () => {
+    const episodeCount = 256;
+    const jobs = Object.freeze(Array.from({ length: episodeCount }, (_, index) => {
+      const id = `c30-stress-${String(index + 1).padStart(3, "0")}`;
+      return Object.freeze({
+        id,
+        scenario: Object.freeze({
+          ...scenario, id, seed: `c30-stress-seed-${String(index + 1)}`, maxTicks: 120,
+        }) satisfies TearScenarioV1,
+        maxTicks: 120,
+      });
+    }));
+    const samples = new BoundedArtifactSampler(32);
+    const results = await createProductionHeadlessEpisodePool(8).run(jobs, (job) => {
+      let tick = 0;
+      const move = Number.parseInt(job.id.slice(-3), 10) % 2 === 0 ? -1_000 : 1_000;
+      return Object.freeze({
+        decide: () => Object.freeze(Array.from({ length: 4 }, () => {
+          tick += 1;
+          if (tick === 1) return Object.freeze([{ type: "move" as const, x: move, y: 0 }]);
+          if (tick === 20) return Object.freeze([{ type: "jump" as const, phase: "pressed" as const }]);
+          if (tick === 40) return Object.freeze([{ type: "dash" as const, x: move, y: 0 }]);
+          return Object.freeze([]);
+        })),
+      });
+    }, { batchSize: 4, artifactSampler: samples });
+
+    expect(results).toHaveLength(episodeCount);
+    expect(results.every((result) => result.outcome === "truncated" && result.ticks === 120)).toBe(true);
+    expect(new Set(results.map((result) => result.semanticHash))).toHaveLength(episodeCount);
+    expect(new Set(results.map((result) => result.observations.at(-1))).size).toBe(episodeCount);
+    expect(samples.samples()).toHaveLength(32);
+    const terminals = samples.samples().map((sample) => sample.artifact as ProductionHeadlessTerminalArtifact);
+    expect(new Set(terminals.map((artifact) => artifact.scenario)).size).toBe(32);
+    expect(new Set(terminals.map((artifact) => artifact.actions)).size).toBe(32);
+    expect(terminals.every((artifact) => artifact.actions.length === 3
+      && artifact.terminal.truncated && !artifact.terminal.terminated)).toBe(true);
+    expect(terminals.map((artifact) => artifact.scenario.id)).toEqual(jobs.slice(0, 32).map((job) => job.id));
+  }, 30_000);
+
   it("retains the exact natural scenario and accepted command trace in a terminal artifact", () => {
     const environment = createProductionHeadlessEnvironment();
     const artifactScenario = Object.freeze({
