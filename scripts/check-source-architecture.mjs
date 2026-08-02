@@ -143,6 +143,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "the Attract renderer must receive cosmetic entropy through its visual policy",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/audio/legacy-synth.ts"]),
+    pattern: /export\s+const\s+SFX\b/u,
+    message: "the first-gesture audio facade must be created by composition instead of exported as a shared instance",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -292,6 +297,12 @@ if (dependencyErrors("src/presentation/attract-runtime.ts",
   || dependencyErrors("src/presentation/attract-runtime.ts",
     'export interface AttractVisualPolicy {}').length !== 0) {
   throw new Error("source architecture Attract visual policy rule self-test failed");
+}
+if (dependencyErrors("src/audio/legacy-synth.ts",
+  "export const SFX = Object.freeze({});").length !== 1
+  || dependencyErrors("src/audio/legacy-synth.ts",
+    "export function createLegacySynthFacade() { return {}; }").length !== 0) {
+  throw new Error("source architecture composition-owned audio facade rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",

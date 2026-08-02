@@ -895,6 +895,23 @@ of replay, headless execution, or learning portability.
   first-gesture audio facade; it must become an explicit composition-owned
   adapter without creating a second browser audio context.
 
+- The fifty-first slice makes that first-gesture audio facade
+  composition-owned. `createLegacySynthFacade()` owns its activation bridge,
+  queue, dispatch receipts, and pending settings per constructed application;
+  composition passes the resulting facade through the existing sound ports.
+  The facade retains browser-backed audio settings when a test composition uses
+  an isolated general store, and the architecture gate rejects a restored
+  exported `SFX` singleton. Direct two-facade tests prove independent receipt
+  identities; the built browser audio contract proves persisted mixer values,
+  one browser context, lifecycle cleanup, and existing dispatch behavior.
+  Focused audio, built journeys, fresh foundation, campaign-victory, and
+  aggregate C27A gates pass.
+
+  This does not isolate the concrete synthesized audio runtime or its sequencer,
+  prove concurrent audio graphs, audibility/device parity, pixel parity,
+  independent full applications, or C27A completion. The next boundary is a
+  factory for that concrete runtime while preserving the one-context constraint.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap

@@ -1,4 +1,4 @@
-import type { SFX } from "../audio/legacy-synth";
+import type { LegacySynthFacade } from "../audio/legacy-synth";
 import type { A11Y, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME } from "../config/game-config";
 import type { TearWorldClock } from "../gameplay/runtime/tear-world-clock";
 import type * as Geometry from "../domain/geometry";
@@ -64,7 +64,7 @@ export interface GameRuntimeDependencies {
   readonly PROFILE: ReturnType<typeof createLegacyProfile>; readonly Player: ReturnType<typeof createPlayer>;
   readonly Projectile: ReturnType<typeof createProjectile>; readonly PwaUpdate: PwaUpdateCapability;
   readonly REMOTE: typeof REMOTE; readonly Ranged: EnemyTypes["Ranged"];
-  readonly ReflectionEnemy: MirrorTypes["ReflectionEnemy"]; readonly SAFE: typeof SAFE; readonly SFX: typeof SFX;
+  readonly ReflectionEnemy: MirrorTypes["ReflectionEnemy"]; readonly SAFE: typeof SAFE; readonly SFX: LegacySynthFacade;
   readonly SHOP: ReturnType<typeof createMetaProgression>["SHOP"]; readonly STAGES: typeof Stages.STAGES;
   readonly Source: EnemyTypes["Source"]; readonly Support: EnemyTypes["Support"]; readonly THEME: typeof THEME;
   readonly UI: ReturnType<typeof createUi>; readonly UPGRADES: typeof Upgrades.UPGRADES;

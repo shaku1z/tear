@@ -1,4 +1,4 @@
-import { SFX } from "../audio/legacy-synth";
+import { createLegacySynthFacade } from "../audio/legacy-synth";
 import { A11Y, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME } from "../config/game-config";
 import { aabbOverlap, clamp, len, lerp, lerpAngle, segCircle, segPointDist, segSegmentDist } from "../domain/geometry";
 import { AFFIXES, PRESETS, applyPreset, rollAffixes } from "../gameplay/affixes";
@@ -74,6 +74,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   // them. The bootstrap deliberately leaves all presentation adapters outside.
   const { configuration: worldConfiguration, clock: CLOCK, random } = createTearWorldBootstrap(CONFIG);
   const worldConfig = worldConfiguration.value;
+  const SFX = createLegacySynthFacade();
   const FX = createParticleSystem({
     effects: worldConfig.effects,
     lowGraphics: () => GFX.low,

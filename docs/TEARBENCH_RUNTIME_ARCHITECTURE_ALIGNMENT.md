@@ -46,7 +46,7 @@ stack fragile or duplicative if left in place.
 
 ## Foundation Progress
 
-The first thirty-four executable C27A slices are complete:
+The following C27A foundation slices are complete:
 
 - Native typed gameplay events, structural observation ports, and stable
   spawn/death IDs are now implemented as described below.
@@ -319,6 +319,14 @@ The first thirty-four executable C27A slices are complete:
   returning. This preserves current menu behavior, but does not prove a
   deterministic visual sequence or pixel parity, and it leaves the
   module-global audio facade plus input and persistence adapters app-bound.
+- The first-gesture audio facade is now created by app composition. Its
+  activation listeners, pre-load queue, dispatch journal, and pending settings
+  belong to that created facade; browser-backed audio settings remain truthful
+  when a test composition isolates general storage. Direct two-facade evidence,
+  architecture fencing, and the built browser audio contract preserve one
+  browser context, persisted mixer settings, and lifecycle behavior. The
+  concrete synthesized runtime and sequencer are still module-global, so this
+  is not per-world audio-engine isolation or an audibility/device claim.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

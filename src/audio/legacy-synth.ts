@@ -15,6 +15,33 @@ type RuntimeAction = (runtime: RuntimeSfx) => void;
 type DispatchEntry = ReturnType<ReturnType<typeof createAudioDispatchJournal>["request"]>;
 interface QueuedRuntimeAction { readonly action: RuntimeAction; readonly dispatch?: DispatchEntry }
 
+export interface LegacySynthFacadeOptions {
+  /** Audio settings are browser-backed even when a test composition uses an isolated general store. */
+  readonly readPersistedSettings?: () => Record<string, unknown>;
+}
+
+function readBrowserAudioSettings(): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(window.localStorage.getItem("tear_settings") ?? "{}");
+    return typeof parsed === "object" && parsed !== null ? parsed as Record<string, unknown> : {};
+  } catch {
+    return {};
+  }
+}
+
+function containsAudioSettings(source: Record<string, unknown>): boolean {
+  return ["audio", "vol", "masterVolume", "music", "musicVolume", "sfxVolume", "interfaceVolume"]
+    .some((key) => Object.hasOwn(source, key));
+}
+
+/**
+ * One composition-owned first-gesture facade. The concrete browser audio runtime
+ * remains shared intentionally until its own lifecycle is extracted; this
+ * factory only prevents queue, receipt, and activation-facade state from being
+ * silently shared by multiple application compositions.
+ */
+export function createLegacySynthFacade(options: LegacySynthFacadeOptions = {}) {
+const readPersistedSettings = options.readPersistedSettings ?? readBrowserAudioSettings;
 let runtime: RuntimeSfx | undefined;
 let loading: Promise<RuntimeSfx | undefined> | undefined;
 let initialized = false;
@@ -112,7 +139,11 @@ function initialize(): void {
 }
 
 function migrate(settings: Record<string, unknown>, audioSource: Record<string, unknown> = settings): Record<string, unknown> {
-  const source = audioSource === settings ? settings : audioSource.audio ?? audioSource;
+  const candidate: unknown = audioSource === settings ? settings : audioSource.audio;
+  const provided = typeof candidate === "object" && candidate !== null
+    ? candidate as Record<string, unknown>
+    : audioSource;
+  const source = containsAudioSettings(provided) ? provided : readPersistedSettings();
   const audio = migrateAudioSettings(source);
   return Object.assign(settings, audio, { vol: audio.masterVolume, music: !audio.musicMuted });
 }
@@ -125,7 +156,7 @@ function apply(settings: Record<string, unknown>): void {
 function cue(action: RuntimeAction): void { invoke(action); }
 
 /** Lightweight first-gesture facade for the concrete synthesized audio runtime. */
-export const SFX = Object.freeze({
+return Object.freeze({
   get ctx(): AudioContext | null { return runtime?.ctx ?? null; },
   get musicFilter(): BiquadFilterNode | null { return runtime?.musicFilter ?? null; },
   get _musicDuck(): number { return runtime?._musicDuck ?? 1; },
@@ -136,7 +167,7 @@ export const SFX = Object.freeze({
   applySettings(settings: Record<string, unknown>) { apply(settings); },
   debugSnapshot() {
     if (runtime) return runtime.debugSnapshot();
-    const settings = migrateAudioSettings(pendingSettings ?? {});
+    const settings = migrateAudioSettings(pendingSettings ?? readPersistedSettings());
     return { state: loadState === "failed" ? "failed" : "awaiting-user-activation", backend: null, settings, runtimeLoadState: loadState,
       score: { scoreVersion: "built-in-scores@0.1.0-alpha.2", run: null, contextSequence: 0, eventSequence: 0 },
       resources: { activeVoices: 0, activeVoiceGraphNodes: 0, voiceCap: 24, noiseBuffers: 0,
@@ -219,3 +250,6 @@ export const SFX = Object.freeze({
   saberBreak(win: boolean) { cue((audio) => { audio.saberBreak(win); }); }, crescent() { cue((audio) => { audio.crescent(); }); },
   wave() { cue((audio) => { audio.wave(); }); }, gameover() { cue((audio) => { audio.gameover(); }); },
 });
+}
+
+export type LegacySynthFacade = ReturnType<typeof createLegacySynthFacade>;

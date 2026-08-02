@@ -197,18 +197,19 @@ Important files:
 
 ### Exact next slice
 
-Slice 50 completes the bounded Attract cosmetic-entropy policy step.
-`AttractVisualPolicy` now receives its `random()` port from composition, so the
-deferred renderer no longer imports the cosmetic-random singleton. Direct
-two-controller evidence proves different injected streams produce separate
-initial foe populations, while source architecture rejects a restored singleton
-import. `pnpm check:c27a:slice50` passed (8 files / 25 tests plus architecture);
-built journeys passed; fresh foundation passed 36 files / 130 tests and campaign
+Slice 51 completes the bounded first-gesture audio-facade ownership step.
+`createLegacySynthFacade()` gives each app composition its own activation bridge,
+queue, receipt journal, and pending settings; the resulting facade flows through
+the existing typed sound ports. It retains browser-backed audio settings when a
+test composition isolates its general store, while source architecture rejects a
+restored exported `SFX` facade. `pnpm check:c27a:slice51` passed (9 files / 26
+tests plus architecture); the built browser audio contract and full built
+journeys passed; fresh foundation passed 36 files / 130 tests and campaign
 victory passed 10 files / 36 tests and 1,176 browser transitions. The complete
-`pnpm check:c27a` aggregate also passed. This is dependency ownership only, not
-deterministic visual-sequence or pixel parity. Next, make the module-global
-first-gesture audio facade an explicit composition-owned adapter without
-creating a second browser audio context or claiming full-world concurrency.
+`pnpm check:c27a` aggregate also passed. This does not isolate the concrete
+synthesized runtime/sequencer or claim audible/device parity. Next, factory-own
+that concrete runtime while preserving a single browser audio context and not
+claiming full-world concurrency.
 
 All thirteen captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream: 5,732 ticks and 33 native facts, including the three natural-trace enemy defeats now published independently of Ghost 2 sampling. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome/reward/finale controllers, scheduler shape, event bus, and restored actor identity. The natural matrix route clears wave 1, selects a real offered draft card without advancing the fixed scheduler, and reaches a wave-2 spawn. A separate certified route reconstructs the wave-49 frontier, starts production wave 50, applies an explicit Source one-hit State Forge child, and executes real victory; live and detached match all seven finale intent batches and all 22 outward calls after their concrete adapters return, in exact order and with exact arguments. They also match six immutable ring/burst particle-admission receipts, eight logical feel receipts after restoration of the captured pre-finale transient, and the complete 42-entry terminal external-decision transcript (13 initial synchronization terminal decision/request, 22 finale-outward, and 7 cache/terminal). The refreshed browser route explicitly activates audio, then observes 12 executing plus 12 completed dispatch receipts: all seven mixes are logical-target-only and all cues are voice-cap-rejected, so no output is claimed. Slice 40 adds portable `tear-world-simulation-factories.ts` with no app/presentation/browser imports; the app renderer supplies real Canvas ports and detached supplies explicit no-op ports under architecture fences. Next: generic world bootstrap, then configuration isolation, which still blocks truly simultaneous full worlds. This evidence does not claim a naturally played 50-wave campaign, randomized particle parity, rendered-pixel parity, headless/full-world portability, configuration isolation, durable profile/local-storage survival, cloud/replay/analytics completion, successful PCM/audibility or audio graph/device parity, or device vibration.
 
@@ -349,11 +350,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      Slice 50 makes Attract cosmetic entropy an explicit composition-supplied visual-policy port.
-PROVEN BY:           `pnpm check:c27a:slice50` passed: 8 focused files / 25 tests and architecture. Built navigation/progression/playground/terminal/cinematic journeys passed. Fresh C27A foundation passed 36 files / 130 tests, 13 live scenarios and 40 detached comparisons; campaign victory passed 10 files / 36 tests and 1,176 transitions; the full `pnpm check:c27a` aggregate passed.
-REMAINING HERE:      Isolate the module-global audio facade, then the remaining input and persistence adapter dependencies. Those adapters still prevent concurrent complete worlds and C27A remains blocking.
+DONE THIS STEP:      Slice 51 makes the first-gesture audio facade composition-owned, with local queue, receipt, activation, and pending-settings state.
+PROVEN BY:           `pnpm check:c27a:slice51` passed: 9 focused files / 26 tests and architecture. Built browser audio and navigation/progression/playground/terminal/cinematic journeys passed. Fresh C27A foundation passed 36 files / 130 tests, 13 live scenarios and 40 detached comparisons; campaign victory passed 10 files / 36 tests and 1,176 transitions; the full `pnpm check:c27a` aggregate passed.
+REMAINING HERE:      Factory-own the concrete synthesized audio runtime and sequencer, then isolate the remaining input and persistence adapter dependencies. Those adapters still prevent concurrent complete worlds and C27A remains blocking.
 REMAINING TO C40:    C27 completion, C25 exit, and C28-C40 remain after C27A closes.
-NEXT SLICE:          Make the first-gesture audio facade composition-owned while preserving its one browser audio-context behavior and dispatch receipts. Do not claim audibility/device parity or full live-world concurrency.
+NEXT SLICE:          Make the concrete synthesized audio runtime and sequencer composition-owned while preserving one browser audio context and dispatch receipts. Do not claim audibility/device parity or full live-world concurrency.
 
 All of the following were run from this worktree through C27A slice 36:
 

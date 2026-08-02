@@ -5,10 +5,10 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** fiftieth C27A foundation slice implemented (Attract cosmetic-entropy
-policy); checkpoint remains open
-and blocking pending generic world bootstrap, presentation-policy isolation,
-and rendered/audio/haptic exits.
+**Status:** fifty-first C27A foundation slice implemented (composition-owned
+first-gesture audio facade); checkpoint remains open
+and blocking pending concrete-audio, input/persistence, remaining
+presentation-policy, and rendered/audio/haptic exits.
 
 ## Resume protocol (mandatory)
 
@@ -452,7 +452,7 @@ All of the following were run from this worktree after the parity-passing slice:
 
 ## Exact next C27A boundary
 
-**Slice 50 supersedes the earlier configuration-isolation wording below.**
+**Slice 51 supersedes the earlier configuration-isolation wording below.**
 `TearWorldConfiguration` now owns one stable mutable config record per
 constructed simulation world, created before constructors capture tuning. It
 validates snapshots before reconciling root/nested references in place; State
@@ -526,6 +526,16 @@ caches and transient lights are local to the controller. This is not full
   is the module-global first-gesture audio facade, which must become a
   composition-owned adapter while preserving the one browser audio context.
 
+  Slice 51 makes that facade a `createLegacySynthFacade()` factory. Its
+  activation bridge, queue, dispatch receipts, and pending settings are local
+  to the composition; browser-backed audio settings remain correct when the
+  test composition isolates general storage. The architecture gate rejects a
+  restored exported facade, and the browser audio contract retains one context,
+  mixer values, and lifecycle behavior. This does not isolate the concrete
+  synthesized runtime or sequencer, prove audio output, or create concurrent
+  applications. The next boundary factories that concrete runtime while keeping
+  the one-context contract.
+
 All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
@@ -549,9 +559,10 @@ Slice 41 adds simulation tuning isolation; Slice 42 injects particle policy;
   renderer timing per composition. Slice 46 owns Canvas UI policy per
   composition. Slice 47 owns menu Attract visual policy per composition. Entity
   rendering now has narrow policies for Blade, Mirror, and Projectile; legacy
-  enemy rendering has its exact policy; and Attract entropy is composition
-  supplied. The module-global audio facade and remaining adapter isolation still
-  precede true simultaneous complete worlds.
+  enemy rendering has its exact policy; Attract entropy is composition supplied;
+  and the first-gesture audio facade is composition-owned. The concrete audio
+  runtime and remaining adapter isolation still precede true simultaneous
+  complete worlds.
 Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
 from the harness — never a tolerance to widen, a scenario to shorten, or a
@@ -570,14 +581,14 @@ composition with parity evidence.
 
 ## Working-tree safety
 
-- Slice 50 is the next intentional commit on
-  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
-  files / 25 tests plus source architecture; built journeys passed. Fresh
+- Slice 51 is the next intentional commit on
+  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 9
+  files / 26 tests plus source architecture; built browser audio and journeys passed. Fresh
   foundation passed 36 files / 130 tests, a fresh 13-scenario trace, and 40
   detached comparisons, while campaign victory passed 10 files / 36 tests and
   1,176 transitions. The full `pnpm check:c27a` aggregate passed. The next
-  boundary is the module-global first-gesture audio facade, still not a second
-  runtime.
+  boundary is the concrete synthesized audio runtime and sequencer, still not a
+  second runtime.
 - Slice 48 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
   files / 23 tests plus source architecture; built journeys and six responsive

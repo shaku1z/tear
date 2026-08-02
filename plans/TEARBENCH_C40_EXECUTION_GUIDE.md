@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 50 update (current)
+#### Slice 51 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -493,6 +493,21 @@ pixel parity, complete audio/input/persistence isolation, concurrent full live
 worlds, or C27A completion. Next, make the module-global first-gesture audio
 facade an explicit composition-owned adapter while retaining one browser audio
 context and the existing dispatch-receipt behavior.
+
+Slice 51 supplies that facade factory. `createLegacySynthFacade()` gives each
+composition an independent activation bridge, queue, receipt journal, and
+pending settings; it preserves browser-backed audio settings when test-only
+general storage is isolated. Architecture rejects an exported facade singleton,
+two-facade evidence proves local receipt identity, and the built browser audio
+contract proves persisted mixer values, one context, and lifecycle behavior.
+`pnpm check:c27a:slice51` passed 9 focused files / 26 tests plus architecture;
+built audio and journeys, fresh foundation, campaign-victory, and the aggregate
+`pnpm check:c27a` gate passed.
+
+This is first-gesture facade ownership, not concrete audio-runtime/sequencer
+isolation, concurrent audio graphs, audibility/device parity, concurrent full
+worlds, or C27A completion. Next, make the concrete synthesized runtime and
+sequencer composition-owned without creating another browser audio context.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

@@ -5,6 +5,7 @@ import {
   type AudioDispatchReceipt,
   type FinaleAudioOperation,
 } from "../../src/audio/audio-dispatch-receipts";
+import { createLegacySynthFacade } from "../../src/audio/legacy-synth";
 
 describe("audio dispatch receipt journal", () => {
   it("keeps one monotonic request identity across queueing and synchronous scheduling", () => {
@@ -65,8 +66,8 @@ describe("audio dispatch receipt journal", () => {
     ]);
   });
 
-  it("publishes truthful facade queue depth and oldest-request eviction before runtime load", async () => {
-    const { SFX } = await import("../../src/audio/legacy-synth");
+  it("publishes truthful facade queue depth and oldest-request eviction before runtime load", () => {
+    const SFX = createLegacySynthFacade();
     const receipts: AudioDispatchReceipt[] = [];
     const stop = SFX.observeDispatchReceipts((receipt) => { receipts.push(receipt); });
     for (let index = 0; index < 65; index++) SFX.finalCut(index);
@@ -80,5 +81,34 @@ describe("audio dispatch receipt journal", () => {
       queueDepth: 63,
     });
     expect(receipts.at(-1)).toMatchObject({ requestId: 65, phase: "queued", queueDepth: 64 });
+  });
+
+  it("keeps first-gesture facade receipts local to each composition", () => {
+    const first = createLegacySynthFacade();
+    const second = createLegacySynthFacade();
+    const firstReceipts: AudioDispatchReceipt[] = [];
+    const secondReceipts: AudioDispatchReceipt[] = [];
+    first.observeDispatchReceipts((receipt) => { firstReceipts.push(receipt); });
+    second.observeDispatchReceipts((receipt) => { secondReceipts.push(receipt); });
+
+    first.finalCut(1);
+    second.finalRelic(2);
+
+    expect(firstReceipts).toMatchObject([{ requestId: 1, request: { operation: "final-cut", arguments: [1] } }]);
+    expect(secondReceipts).toMatchObject([{ requestId: 1, request: { operation: "final-relic", arguments: [2] } }]);
+  });
+
+  it("retains browser-backed audio settings when an isolated general store has none", () => {
+    const SFX = createLegacySynthFacade({ readPersistedSettings: () => ({
+      vol: 0.75, music: true, musicVolume: 0.35, sfxVolume: 0.8, interfaceVolume: 0.45,
+    }) });
+    const settings = SFX.migrateSettings({ masterVolume: 0.6 }, {});
+
+    expect(settings).toMatchObject({
+      masterVolume: 0.75, musicVolume: 0.35, sfxVolume: 0.8, interfaceVolume: 0.45,
+    });
+    expect(SFX.debugSnapshot().settings).toMatchObject({
+      masterVolume: 0.75, musicVolume: 0.35, sfxVolume: 0.8, interfaceVolume: 0.45,
+    });
   });
 });
