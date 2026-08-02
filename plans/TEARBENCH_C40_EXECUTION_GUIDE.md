@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 53 update (current)
+#### Slice 54 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -540,6 +540,21 @@ This is one composition's context-handoff ownership, not concurrent audio
 graphs, audible/device output, physical-input parity, concurrent complete
 worlds, or C27A completion. Next, make the remaining browser input adapter
 composition-owned without changing semantic input behavior.
+
+Slice 54 supplies the narrow live browser-navigator port. App composition
+supplies `browserNavigator` through `GameRuntimeDependencies`; frame
+coordination receives it for cinematic gamepad observation and session settings
+receives it for hardware capability checks. Source architecture rejects direct
+ambient navigator use in both paths, while legacy input/gamepad factories and
+the semantic buffer remain unchanged. `pnpm check:c27a:slice54` passed 8 focused
+files / 30 tests plus architecture; built audio and journeys, canonical
+physical-input trace, fresh foundation, campaign-victory, and the aggregate
+`pnpm check:c27a` gate passed.
+
+This is navigator-capability ownership only, not controller/haptic device
+parity, changed semantic input, concurrent complete worlds, or C27A completion.
+Next, make the live runtime's document/pointer-lock capability path explicit at
+composition without changing input behavior.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

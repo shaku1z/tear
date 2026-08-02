@@ -48,6 +48,7 @@ export interface GameRuntimeDependencies {
   readonly Attract: ReturnType<typeof createAttract>; readonly BOSSFX: EnemyTypes["BOSSFX"];
   readonly Backdrop: BackdropController; readonly Blade: ReturnType<typeof createBlade>;
   readonly Bomber: EnemyTypes["Bomber"]; readonly Boss: EnemyTypes["Boss"];
+  readonly browserNavigator: Pick<Navigator, "getGamepads" | "hardwareConcurrency">;
   readonly CG: PlatformCompatibility["CG"]; readonly CLOCK: TearWorldClock; readonly CONFIG: typeof CONFIG;
   readonly Charger: EnemyTypes["Charger"]; readonly Chimera: EnemyTypes["Chimera"];
   readonly Cinematics: CinematicPresentationRuntime; readonly Clipper: Readonly<{ start(): void; stop(): void }> | undefined;

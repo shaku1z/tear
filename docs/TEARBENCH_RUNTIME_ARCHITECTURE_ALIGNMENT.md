@@ -345,6 +345,13 @@ The following C27A foundation slices are complete:
   establish concurrent audio graphs, audible/device output, or independent
   complete applications. Browser input and persistence adapters remain
   app-bound.
+- The live browser navigator capability is now composition-supplied as well.
+  `GameRuntimeDependencies.browserNavigator` provides gamepad observation to
+  the frame coordinator and hardware capability to settings; those paths no
+  longer reach for the ambient navigator. The existing input factories and
+  semantic buffer remain unchanged, and physical controller/haptic behavior is
+  not newly certified. Document/pointer-lock and persistence paths still remain
+  app-bound.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

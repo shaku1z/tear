@@ -171,7 +171,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
 
   const gameRuntimeDependencies = {
     A11Y, ACH, AFFIXES, APP, Aldric, Armored, Attract, BOSSFX, Backdrop, Blade, Bomber, Boss,
-    CG, CLOCK, CONFIG: worldConfig, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, DAILY, DIAG, Echo,
+    browserNavigator: navigator, CG, CLOCK, CONFIG: worldConfig, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, DAILY, DIAG, Echo,
     FX, FirebaseProvider, Flyer, GAMEPLAY_EVENTS, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
     MirrorHost, OVERSCAN, PAD, PRESETS, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
     Ranged, ReflectionEnemy, SAFE, SFX, SHOP, STAGES, Source, Support, THEME, UI, UPGRADES,

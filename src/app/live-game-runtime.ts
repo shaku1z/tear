@@ -42,7 +42,7 @@ import { createDefaultStateCodecRegistry } from "../tearbench/state-codecs";
 import { ENTITY_KIND_REGISTRY } from "../tearbench/registries";
 import { stableVerificationHash } from "../replay/hash";
 type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnType<RunScreenState["outcome"]>; type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>; export function startLiveGame(dependencies: GameRuntimeDependencies, configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>): void {
-  const { A11Y, APP, Attract, Backdrop, CG, CONFIG, Cloud, DIAG, FX, GAMEPLAY_EVENTS, GFX, GHOST, Input, OVERSCAN, PAD, SAFE, SFX, THEME, UI, VAULT, applyUpgrade, clamp, cosmeticRandom, lerp, weaponCapsuleIntersectsSegment } = dependencies;
+  const { A11Y, APP, Attract, Backdrop, browserNavigator, CG, CONFIG, Cloud, DIAG, FX, GAMEPLAY_EVENTS, GFX, GHOST, Input, OVERSCAN, PAD, SAFE, SFX, THEME, UI, VAULT, applyUpgrade, clamp, cosmeticRandom, lerp, weaponCapsuleIntersectsSegment } = dependencies;
 (function () {
   const browserRuntime = createLiveBrowserRuntime(dependencies);
   const { canvas, context: ctx, width: W, height: H, viewport, resizeCanvas, requestPointerLock: requestLock, installPrompt, lockHint, hint: hintEl,
@@ -519,7 +519,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnT
   const coordinatorContext = {
     now: () => performance.now(), state: () => state,
     setState: (screen) => { if (isLegacyScreen(screen)) setState(screen); },
-    input: Input, pad: typeof PAD === "undefined" ? null : PAD, navigator, document, canvas,
+    input: Input, pad: typeof PAD === "undefined" ? null : PAD, navigator: browserNavigator, document, canvas,
     cinema: CINEMA, clipper: dependencies.Clipper ?? null,
     autoPauseDisconnect: () => settings.autoPauseDisconnect, requestPointerLock: requestOwnedPointerLock,
     exitReplay: () => { replayAdapters.exit(); },

@@ -947,6 +947,21 @@ of replay, headless execution, or learning portability.
   boundary is the remaining browser input adapter ownership, without changing
   semantic input behavior or claiming device parity.
 
+- The fifty-fourth slice makes the live browser navigator capability explicit.
+  Composition supplies `browserNavigator` through `GameRuntimeDependencies`;
+  the frame coordinator receives that port for its cinematic gamepad observation
+  and session settings use the same port for hardware capability checks. Source
+  architecture rejects renewed direct global `navigator` use in those live
+  paths. The focused slice gate passed 8 files / 30 tests; the built browser
+  contract, canonical physical-input trace, journeys, fresh foundation, and
+  campaign-victory route pass unchanged.
+
+  This is browser-navigator ownership only. It does not change input event
+  semantics, pointer-lock/document ownership, gamepad/haptic device behavior,
+  physical-input parity, independent complete applications, or C27A completion.
+  The next boundary is the live runtime's remaining document/pointer-lock
+  capability path.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap

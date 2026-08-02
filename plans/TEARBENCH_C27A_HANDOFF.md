@@ -5,9 +5,9 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** fifty-third C27A foundation slice implemented (composition-owned
-browser AudioContext handoff); checkpoint remains open
-and blocking pending input/persistence, remaining
+**Status:** fifty-fourth C27A foundation slice implemented (composition-owned
+live browser navigator capability); checkpoint remains open
+and blocking pending document/pointer-lock, persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
 ## Resume protocol (mandatory)
@@ -452,7 +452,7 @@ All of the following were run from this worktree after the parity-passing slice:
 
 ## Exact next C27A boundary
 
-**Slice 53 supersedes the earlier configuration-isolation wording below.**
+**Slice 54 supersedes the earlier configuration-isolation wording below.**
 `TearWorldConfiguration` now owns one stable mutable config record per
 constructed simulation world, created before constructors capture tuning. It
 validates snapshots before reconciling root/nested references in place; State
@@ -561,6 +561,17 @@ caches and transient lights are local to the controller. This is not full
   boundary is the remaining browser input adapter, without changing semantic
   input behavior or claiming physical-input parity.
 
+  Slice 54 supplies the narrow remaining browser-navigator boundary. App
+  composition passes `browserNavigator` through `GameRuntimeDependencies`; live
+  frame coordination uses it for cinematic gamepad observation and live session
+  settings use it for hardware capability. Source architecture rejects direct
+  ambient navigator use in both paths. The existing legacy input/gamepad
+  factories and semantic buffer do not change. The focused gate passed 8 files
+  / 30 tests, and built browser audio, physical-input traces, journeys, fresh
+  foundation, and campaign victory pass. This is not controller/haptic device
+  parity or a semantic-input claim. The next boundary is document/pointer-lock
+  capability ownership in the live runtime.
+
 All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
@@ -585,9 +596,10 @@ Slice 41 adds simulation tuning isolation; Slice 42 injects particle policy;
   composition. Slice 47 owns menu Attract visual policy per composition. Entity
   rendering now has narrow policies for Blade, Mirror, and Projectile; legacy
   enemy rendering has its exact policy; Attract entropy is composition supplied;
-  and the first-gesture audio facade, concrete synthesized runtime, and browser
-  audio-context handoff are composition-owned. Remaining input and persistence
-  adapter isolation still precede true simultaneous complete worlds.
+  and the first-gesture audio facade, concrete synthesized runtime, browser
+  audio-context handoff, and browser navigator capability are composition-owned.
+  Remaining document/pointer-lock and persistence adapter isolation still
+  precede true simultaneous complete worlds.
 Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
 from the harness — never a tolerance to widen, a scenario to shorten, or a
@@ -606,14 +618,14 @@ composition with parity evidence.
 
 ## Working-tree safety
 
-- Slice 53 is the next intentional commit on
-  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 10
-  files / 28 tests plus source architecture; built browser audio and journeys passed. Fresh
+- Slice 54 is the next intentional commit on
+  `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
+  files / 30 tests plus source architecture; built browser audio and journeys passed. Fresh
   foundation passed 36 files / 130 tests, a fresh 13-scenario trace, and 40
   detached comparisons, while campaign victory passed 10 files / 36 tests and
   1,176 transitions. The full `pnpm check:c27a` aggregate passed. The next
-  boundary is the remaining browser input adapter, still not a physical-device
-  or second-runtime claim.
+  boundary is the live runtime's document/pointer-lock capability path, still
+  not a physical-device or second-runtime claim.
 - Slice 48 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
   files / 23 tests plus source architecture; built journeys and six responsive

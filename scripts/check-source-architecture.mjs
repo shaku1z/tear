@@ -163,6 +163,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "the live audio adapter must receive the captured browser context through its explicit facade/runtime port",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts", "src/app/live-session-services-composition.ts"]),
+    pattern: /(?<![\w.])navigator\b(?!\s*:)/u,
+    message: "live input and settings coordination must receive browser navigator capability through the composition dependency port",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -334,6 +339,16 @@ if (dependencyErrors("src/audio/audio-context-handoff.ts",
   || dependencyErrors("src/audio/legacy-live-audio.ts",
     "export function createLegacyAudioCompatibility(_synth, _window, _capturedContext) { return {}; }").length !== 0) {
   throw new Error("source architecture composition-owned browser audio-context handoff rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "const gamepad = navigator.getGamepads()[0];").length !== 1
+  || dependencyErrors("src/app/live-session-services-composition.ts",
+    "const cores = navigator.hardwareConcurrency;").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "const context = { navigator: dependencies.browserNavigator };").length !== 0
+  || dependencyErrors("src/app/live-session-services-composition.ts",
+    "const options = { navigator: dependencies.browserNavigator };").length !== 0) {
+  throw new Error("source architecture composition-owned browser navigator rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",
