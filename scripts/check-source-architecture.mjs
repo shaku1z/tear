@@ -148,6 +148,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "the first-gesture audio facade must be created by composition instead of exported as a shared instance",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/audio/legacy-synth-runtime.ts"]),
+    pattern: /export\s+const\s+SFX\b/u,
+    message: "the concrete synth runtime must be created for its facade instead of exported as a shared instance",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -303,6 +308,12 @@ if (dependencyErrors("src/audio/legacy-synth.ts",
   || dependencyErrors("src/audio/legacy-synth.ts",
     "export function createLegacySynthFacade() { return {}; }").length !== 0) {
   throw new Error("source architecture composition-owned audio facade rule self-test failed");
+}
+if (dependencyErrors("src/audio/legacy-synth-runtime.ts",
+  "export const SFX = Object.freeze({});").length !== 1
+  || dependencyErrors("src/audio/legacy-synth-runtime.ts",
+    "export function createLegacySynthRuntime() { return {}; }").length !== 0) {
+  throw new Error("source architecture composition-owned concrete audio runtime rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",

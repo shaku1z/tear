@@ -1,6 +1,6 @@
 import { migrateAudioSettings } from "../persistence/audio-settings";
 import type { MusicContextSnapshot, MusicEvent, MusicRunSessionMetadata } from "./music-contracts";
-import type { SFX as RuntimeSfxValue } from "./legacy-synth-runtime";
+import type { LegacySynthRuntime } from "./legacy-synth-runtime";
 import type { TearScoreReplayMetadata } from "../replay/envelope";
 import { captureAudioContextFromUserGesture, capturedAudioContext, disposeCapturedAudioContext } from "./audio-context-handoff";
 import {
@@ -10,7 +10,7 @@ import {
   type AudioDispatchRequest,
 } from "./audio-dispatch-receipts";
 
-type RuntimeSfx = typeof RuntimeSfxValue;
+type RuntimeSfx = LegacySynthRuntime;
 type RuntimeAction = (runtime: RuntimeSfx) => void;
 type DispatchEntry = ReturnType<ReturnType<typeof createAudioDispatchJournal>["request"]>;
 interface QueuedRuntimeAction { readonly action: RuntimeAction; readonly dispatch?: DispatchEntry }
@@ -73,7 +73,7 @@ function installActivationBridge(): void {
 function loadRuntime(): Promise<RuntimeSfx | undefined> {
   loadState = "loading";
   loading ??= import("./legacy-synth-runtime").then((module) => {
-    runtime = module.SFX;
+    runtime = module.createLegacySynthRuntime();
     runtime.init();
     removeActivationBridge?.();
     if (capturedAudioContext() !== null) runtime.resume();

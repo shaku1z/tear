@@ -327,6 +327,14 @@ The following C27A foundation slices are complete:
   browser context, persisted mixer settings, and lifecycle behavior. The
   concrete synthesized runtime and sequencer are still module-global, so this
   is not per-world audio-engine isolation or an audibility/device claim.
+- The concrete synthesized runtime is now created for that facade as well.
+  `createLegacySynthRuntime()` owns the SFX proxy, voice/mixer state,
+  sequencer, and live-audio compatibility state; two constructed runtimes keep
+  logical mixer targets independent, and architecture rejects restored shared
+  runtime exports. The browser contract still uses one browser audio context.
+  The context handoff itself remains the next explicit composition boundary;
+  this is not a concurrent-audio, audibility, device, or full-application
+  isolation claim.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

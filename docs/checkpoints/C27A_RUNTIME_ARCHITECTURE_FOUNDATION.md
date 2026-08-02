@@ -912,6 +912,23 @@ of replay, headless execution, or learning portability.
   independent full applications, or C27A completion. The next boundary is a
   factory for that concrete runtime while preserving the one-context constraint.
 
+- The fifty-second slice makes that concrete runtime factory-owned too.
+  `createLegacySynthRuntime()` now creates the SFX proxy, synthesized voice and
+  mixer state, `LegacyMusicSequencer`, and live-audio compatibility state for
+  the facade that lazily loads it. The facade and concrete-runtime singleton
+  exports are both architecture-fenced. Direct two-runtime evidence proves
+  logical mixer targets do not bleed between constructed runtimes; the focused
+  slice gate passed 9 files / 27 tests. The built browser audio contract still
+  observes exactly one browser audio context, persisted mixer values, and
+  lifecycle cleanup, while journeys, fresh foundation, campaign-victory, and
+  the aggregate C27A gate pass.
+
+  This is ownership of the logical concrete runtime, not evidence for
+  concurrent active audio graphs, audibility/device output, pixel parity,
+  independent complete applications, or C27A completion. The next boundary is
+  to make the browser audio-context handoff an explicit composition-supplied
+  port while preserving the single-context contract.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap

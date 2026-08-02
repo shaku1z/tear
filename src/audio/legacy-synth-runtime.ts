@@ -16,16 +16,9 @@ import { ScheduledAudioResourceTracker } from "./scheduled-audio-resources";
 import { dialogueVoice, legacyMuteReason, legacyNumberDefault } from "./legacy-synth-utilities";
 import type { AudioCueSchedulingResult, AudioMixSchedulingResult, FinaleAudioOperation } from "./audio-dispatch-receipts";
 
-const sequencer = new LegacyMusicSequencer({
-  context: () => SFX.ctx,
-  output: () => SFX.musicGain,
-  voidMix: () => SFX._voidMix,
-  oscillator: (frequency, duration, time, options) => { SFX._osc(frequency, duration, time, options); },
-  noise: (duration, time, options) => { SFX._noise(duration, time, options); },
-  trackSource: (source, connectedNodes) => SFX._takeVoice(source, connectedNodes),
-});
-
 // ------- synthesized audio: crisp SFX + layered music (Web Audio, no files) -------
+/** One concrete synth runtime for one composition-owned first-gesture facade. */
+export function createLegacySynthRuntime() {
 const SYNTH = {
   ctx: null as AudioContext | null,
   effectsGains: {} as Partial<Record<SfxRoute, AudioNode>>,
@@ -519,7 +512,7 @@ const SYNTH = {
   _startMusic() { sequencer.start(); },
 };
 
-export const SFX: typeof SYNTH = new Proxy(SYNTH, {
+const SFX: typeof SYNTH = new Proxy(SYNTH, {
   get(target, property, receiver) {
     const value: unknown = Reflect.get(target, property, receiver);
     const route = synthesizedSfxRoute(property);
@@ -531,4 +524,16 @@ export const SFX: typeof SYNTH = new Proxy(SYNTH, {
   },
 });
 
+const sequencer = new LegacyMusicSequencer({
+  context: () => SFX.ctx,
+  output: () => SFX.musicGain,
+  voidMix: () => SFX._voidMix,
+  oscillator: (frequency, duration, time, options) => { SFX._osc(frequency, duration, time, options); },
+  noise: (duration, time, options) => { SFX._noise(duration, time, options); },
+  trackSource: (source, connectedNodes) => SFX._takeVoice(source, connectedNodes),
+});
 const LIVE_AUDIO = createLegacyAudioCompatibility(SFX);
+return SFX;
+}
+
+export type LegacySynthRuntime = ReturnType<typeof createLegacySynthRuntime>;

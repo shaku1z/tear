@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 51 update (current)
+#### Slice 52 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -508,6 +508,22 @@ This is first-gesture facade ownership, not concrete audio-runtime/sequencer
 isolation, concurrent audio graphs, audibility/device parity, concurrent full
 worlds, or C27A completion. Next, make the concrete synthesized runtime and
 sequencer composition-owned without creating another browser audio context.
+
+Slice 52 supplies that concrete-runtime factory. `createLegacySynthRuntime()`
+now creates the SFX proxy, synthesized voice/mixer state,
+`LegacyMusicSequencer`, and live-audio compatibility state used by the facade
+that loads it. Architecture rejects restored exported facade and concrete
+runtime singletons, and direct two-runtime evidence proves logical mixer target
+state remains local. `pnpm check:c27a:slice52` passed 9 focused files / 27 tests
+plus architecture; built audio and journeys, fresh foundation,
+campaign-victory, and the aggregate `pnpm check:c27a` gate passed while the
+browser contract retained exactly one context.
+
+This is logical concrete-runtime ownership, not concurrent active audio graphs,
+audibility/device parity, concurrent complete worlds, or C27A completion. Next,
+make the module-global browser audio-context handoff an explicit
+composition-owned port while preserving one browser context and the existing
+dispatch receipts.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

@@ -15,7 +15,8 @@ describe("legacy synth synchronous scheduling receipts", () => {
   afterAll(() => { vi.unstubAllGlobals(); });
 
   it("distinguishes routed finale cue calls from graph scheduling without a context", async () => {
-    const { SFX } = await import("../../src/audio/legacy-synth-runtime");
+    const { createLegacySynthRuntime } = await import("../../src/audio/legacy-synth-runtime");
+    const SFX = createLegacySynthRuntime();
     const operations = ["final-cut", "final-relic", "final-restore", "final-silence"] as const;
     const receipts = operations.map((operation, index) => SFX.dispatchFinaleCueForReceipt(operation, index));
 
@@ -27,7 +28,8 @@ describe("legacy synth synchronous scheduling receipts", () => {
   });
 
   it("reports logical mix targets separately from unavailable graph automation", async () => {
-    const { SFX } = await import("../../src/audio/legacy-synth-runtime");
+    const { createLegacySynthRuntime } = await import("../../src/audio/legacy-synth-runtime");
+    const SFX = createLegacySynthRuntime();
 
     expect(SFX.setVoidDescentForReceipt(2, 0)).toEqual({
       kind: "mix", context: "unbound", logicalBefore: 0, logicalAfter: 1,
@@ -37,5 +39,17 @@ describe("legacy synth synchronous scheduling receipts", () => {
       kind: "mix", context: "unbound", logicalBefore: 1, logicalAfter: 0,
       normalizedDuration: 0.18, scheduling: "logical-target-only",
     });
+  });
+
+  it("keeps logical mixer targets local to each concrete runtime", async () => {
+    const { createLegacySynthRuntime } = await import("../../src/audio/legacy-synth-runtime");
+    const first = createLegacySynthRuntime();
+    const second = createLegacySynthRuntime();
+
+    first.setVoidDescentForReceipt(0.8, 0.2);
+    second.setMusicDuckForReceipt(0.25, 0.2);
+
+    expect(first.setVoidDescentForReceipt(0.8, 0.2)).toMatchObject({ logicalBefore: 0.8, logicalAfter: 0.8 });
+    expect(second.setMusicDuckForReceipt(0.25, 0.2)).toMatchObject({ logicalBefore: 0.25, logicalAfter: 0.25 });
   });
 });
