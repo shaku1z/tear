@@ -477,6 +477,10 @@ The following C27A foundation slices are complete:
   world-state getter preserves the existing absent-run menu behavior; source
   architecture rejects restoring a host run closure. Player, blade, frame, and
   combat ownership remain app-bound.
+- The live blade is now read directly from world state by session, combat,
+  input, State Forge, and TearBench bridge paths. Its getter preserves the
+  existing absent-blade menu behavior, and source architecture rejects restoring
+  a host blade closure. Player, frame, and combat ownership remain app-bound.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

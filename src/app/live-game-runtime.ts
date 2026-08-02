@@ -125,8 +125,12 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
     // state owner rather than reviving a host closure.
     return hostState.run() as GameRun;
   }
+  const preserveLazyValue = <T>(value: T | undefined): T => value as T;
+  function liveBlade(): GameBlade {
+    return preserveLazyValue(hostState.blade());
+  }
   const sessionServices = createLiveSessionServices({
-    dependencies, run: liveRun, player: () => player, blade: () => blade,
+    dependencies, run: liveRun, player: () => player, blade: liveBlade,
     screen: () => state, setScreen: (screen) => { setState(screen); },
     achievementTracking: () => achTracks(),
     resetUi: (intent) => { if (intent.enter) enterT = 0; if (intent.focus) focus = 0; if (intent.scroll) listScroll = 0; },
@@ -154,7 +158,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
     return state;
   }
   const session = createLiveWorldSessionState();
-  let player: GamePlayer; let blade: GameBlade;
+  let player: GamePlayer;
   // Time dilation, camera framing (the void run pulls world zoom OUT), banner
   // and rank readouts, hit stop, slow motion, shake, the blade-throw cooldown,
   // dash ghosting, and the opening audio cadence are per-world transient
@@ -206,7 +210,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
   const { state: hostState, context: worldContext, entities: worldEntities, lifecycle: RUN_LIFECYCLE } = createLiveWorldComposition({
     dependencies, configuration, session,
     mirrors: {
-      player: (value) => { player = value; }, blade: (value) => { blade = value; },
+      player: (value) => { player = value; },
     },
   });
   // One world owns the transient records read by combat, State Forge, and diagnostics.
@@ -217,7 +221,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
     dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE,
     cinema: worldContext.cinema, controllers: runControllers,
     width: W, height: H, canvas, context: ctx,
-    run: liveRun, player: () => player, blade: () => blade, enemies: () => hostState.enemies(),
+    run: liveRun, player: () => player, blade: liveBlade, enemies: () => hostState.enemies(),
     projectiles: () => hostState.projectiles(),
     spawn: (kind, hpScale) => { spawnOne({ type: kind, hpScale }); const spawned = hostState.enemies(); return spawned[spawned.length - 1]; },
     resolveKill: (enemy, cause) => { liveKillRuntime.resolve(enemy, cause); },
@@ -275,7 +279,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
     dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE, controllers: runControllers,
     campaign: campaignHost, training: trainingHost, weapon: weaponRuntime, music: musicDirector,
     width: W, height: H, canvas, testMode: TEST_MODE,
-    run: liveRun, player: () => player, blade: () => blade, enemies: () => hostState.enemies(),
+    run: liveRun, player: () => player, blade: liveBlade, enemies: () => hostState.enemies(),
     actorId: (enemy) => combatRuntime.id(enemy, "enemy"),
     setEnemies: (value) => { hostState.setEnemies(value); }, setProjectiles: (value) => { hostState.setProjectiles(value); },
     selectedBoss: () => session.selectedBoss(), worldServices: worldContext.services, applySettings,
@@ -320,7 +324,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
       "gameover", "win", "replay", "confirmquit", "shop", "codex", "profile", "achievements",
       "leaderboards", "rename", "pgmenu", "pglab"].includes(screen);
   const combatWorldState = createLiveCombatWorldState({
-    player: () => player, blade: () => blade, run: liveRun,
+    player: () => player, blade: liveBlade, run: liveRun,
     enemies: () => hostState.enemies(), setEnemies: (value) => { hostState.setEnemies(value); },
     projectiles: () => hostState.projectiles(), setProjectiles: (value) => { hostState.setProjectiles(value); },
     floaters: () => hostState.floaters(), setFloaters: (value) => { hostState.setFloaters(value); },
@@ -352,7 +356,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
         activateThrowSecondary, updateWave, updateBossArenaPlatforms, updateVoidScroll,
         startVoidDescent: (boss) => isSourceOwner(boss) && startVoidDescent(boss),
         nearestEnemy: (x, y) => { const enemy = nearestEnemy(x, y); return isGameEnemy(enemy) ? enemy : null; },
-        openingNearestEnemy: () => { const enemy = nearestEnemy(blade.x, blade.y); return isGameEnemy(enemy) ? enemy : null; },
+        openingNearestEnemy: () => { const blade = liveBlade(); const enemy = nearestEnemy(blade.x, blade.y); return isGameEnemy(enemy) ? enemy : null; },
         areaDamage: (x, y, radius, damage, playerOwned) =>
           playerOwned === undefined ? dealAoE(x, y, radius, damage) : dealAoE(x, y, radius, damage, { playerOwned }),
         lobExplode, splitProjectile: (projectile) => { if (isGameProjectile(projectile)) spawnSplitShards(projectile); },
@@ -366,7 +370,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
         weaponHook: (name, detail) => { const effect = weaponHook(name, { config: CONFIG, ...detail }); return isWeaponEffect(effect) ? effect : null; },
         modHook: (name) => liveRun().mods[name], fireMod: fire,
         logWeaponEvent, weaponWorldImpact: () => { const effect = weaponHook("onWorldImpact",
-          { config: CONFIG, blade, player, platforms: stageRuntime.platforms, x: blade.x, y: blade.y });
+          { config: CONFIG, blade: liveBlade(), player, platforms: stageRuntime.platforms, x: liveBlade().x, y: liveBlade().y });
           return isWeaponEffect(effect) ? effect : null; },
         startTransformation: (enemy, request) => isRitualOwner(enemy) && isRitualCue(request) &&
           !CINEMA.active && startBossTransformation(enemy, request),
@@ -383,7 +387,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
             GAMEPLAY_EVENTS.emit({ kind: "death", actorId: combatRuntime.id(enemy, "enemy"), cause: "combat" });
           }
         },
-        ghostSample: (seconds, living) => { GHOST.sample(seconds, player, blade,
+        ghostSample: (seconds, living) => { GHOST.sample(seconds, player, liveBlade(),
           living.filter(isGameEnemy).filter(isEnemySample).map((enemy) => ({
             x: enemy.x, y: enemy.y, dead: enemy.dead,
             stableId: combatRuntime.id(enemy, "enemy"),
@@ -433,7 +437,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
   };
   const liveInputAdapter = createLiveAuthoritativeInputAdapter({
     player: () => player,
-    blade: () => blade,
+    blade: liveBlade,
     aimRadius: () => CONFIG.blade.aimRadius,
   });
   // TearScore updates are snapshot-driven at 8 Hz; semantic events are emitted immediately.
@@ -471,7 +475,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
       // detached replay hosts.  The canonical action adapter owns the actual
       // player/blade overrides during the resulting simulation tick.
       if (!semanticInputAuthority) {
-        const hand = blade.handPos(player);
+        const blade = liveBlade(); const hand = blade.handPos(player);
         const aim = blade.captureDeviceAim(hand);
         const radius = Math.max(1, CONFIG.blade.aimRadius);
         Input.semantic.setAimVector(aim.x / radius, aim.y / radius);
@@ -490,7 +494,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
         const random = worldContext.services.random.snapshot();
         ghostV3.record("keyframes", tick, {
           player: { x: player.x, y: player.y, vx: player.vx, vy: player.vy, hp: player.hp, facing: player.facing },
-          blade: { x: blade.x, y: blade.y, vx: blade.vx, vy: blade.vy, state: blade.state },
+          blade: { x: liveBlade().x, y: liveBlade().y, vx: liveBlade().vx, vy: liveBlade().vy, state: liveBlade().state },
           enemies: hostState.enemies().filter((enemy) => !enemy.dead).map((enemy) => ({
             id: enemy._gid, kind: enemy.kind, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp,
           })),
@@ -545,7 +549,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
     frame: frameContext, coordinator: coordinatorContext,
     authoritative: {
       actionPort: liveInputAdapter.actionPort,
-      snapshot: (tick, input) => projectCanonicalGameplayState(tick, input.snapshot(), liveRun(), player, blade,
+      snapshot: (tick, input) => projectCanonicalGameplayState(tick, input.snapshot(), liveRun(), player, liveBlade(),
         hostState.enemies().map((enemy) => ({
           ...(typeof enemy._gid === "number" ? { _gid: enemy._gid } : {}), kind: enemy.kind, bossId: enemy.bossId,
           x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, dead: enemy.dead,
@@ -598,7 +602,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
         observationClass: "structured-state", producer: "ghost-v3-live-recorder", target: replayContext.build.target,
         contentHash: replayContext.build.contentHash, staticBuild: replayContext.build,
         sourceId: ghostLiveBootstrapEventId(`ghost-v3-${replayContext.run.id}`),
-        visualHash: stableVerificationHash({ tick, player: { x: player.x, y: player.y, facing: player.facing }, blade: { x: blade.x, y: blade.y, state: blade.state } }),
+        visualHash: stableVerificationHash({ tick, player: { x: player.x, y: player.y, facing: player.facing }, blade: { x: liveBlade().x, y: liveBlade().y, state: liveBlade().state } }),
         actor: "human", executionClass: "engineering", trainingConsent: "no-training",
       }));
     } catch (error) {
@@ -628,7 +632,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
     },
     frameState: { screen: () => state, previousScreen: () => lastUiState, setPreviousScreen: (value) => { lastUiState = value; }, uiZoom: () => uiZoom, setUiZoom: (value) => { uiZoom = value; Input.uiZoom = value; }, deltaSeconds: () => lastUiDt, enterSeconds: () => enterT, setEnterSeconds: (value) => { enterT = value; }, enterAmount: () => eIn, setEnterAmount: (value) => { eIn = value; }, scroll: () => listScroll, setScroll: (value) => { listScroll = value; }, focus: () => focus, setFocus: (value) => { focus = value; }, controls: () => uiButtons, resetControls: () => { uiButtons = []; }, biomeMode, enemies: () => hostState.enemies(), flash: () => feel.flash, bossBeat: () => hostState.bossBeat(), bossIntroActive: () => { const intro = hostState.bossIntro(); return intro !== null && intro.delay <= 0; }, bannerSeconds: () => feel.bannerSeconds, rankPopup: () => ({ seconds: feel.rankPopupSeconds, text: feel.rankPopupText, multiplier: liveRun().mult }), timeSeconds: () => uiT },
     frameServices: { canvas, context: ctx, width: W, height: H, overscan: () => OVERSCAN, safeTop: () => SAFE.t, viewportScale: () => viewport.cssPerLogicalPixel, resize: resizeCanvas, input: Input, ui: UI, stage: stageRuntime, cinema: CINEMA, reducedMotion: () => A11Y.reducedMotion, flashScale: () => A11Y.flashScale, touchActive: () => Input.touchActive(), controller: () => ({ active: PAD.active, toastSeconds: PAD.toastT, toastText: PAD.toastText }), pointerLocked: () => Input.locked, lockHint, inputHint: hintEl, clamp, ease: ez, blendColor: blendCol, setTheme: (background, playLike) => { THEME.set(playLike && biomeMode() ? background : "#ffffff"); UI.ink = THEME.ink; }, themeInk: () => THEME.ink, backdropPost: (context, stage, camera) => { Backdrop.post(context, stage, camera); }, drawMenuAttract: () => { Attract.draw(ctx); }, renderScreen: (screen) => { renderRegisteredScreen(screen, interfaceComposition.screens.renderers); }, isMenuScreen, playInterfaceSound: () => { SFX.ui(); }, hoverAnimation: hoverAnim, trickColor },
-    worldState: { run: liveRun, player: () => player, blade: () => blade, enemies: () => hostState.enemies(), projectiles: () => hostState.projectiles(), floaters: () => hostState.floaters(), slowZones: () => hostState.slowZones(), temporaryWalls: () => hostState.temporaryWalls(), screen: () => state, zoom: () => feel.zoom, shake: () => impact.shake, lastUiDelta: () => lastUiDt, bannerSeconds: () => feel.bannerSeconds, bossIntro: () => hostState.bossIntro(), hud: () => ({ lagHp: hudHpLag, multiplier: hudMultPrev, multiplierPop: hudMultPop }), setHud(value) { hudHpLag = value.lagHp; hudMultPrev = value.multiplier; hudMultPop = value.multiplierPop; } },
+    worldState: { run: liveRun, player: () => player, blade: liveBlade, enemies: () => hostState.enemies(), projectiles: () => hostState.projectiles(), floaters: () => hostState.floaters(), slowZones: () => hostState.slowZones(), temporaryWalls: () => hostState.temporaryWalls(), screen: () => state, zoom: () => feel.zoom, shake: () => impact.shake, lastUiDelta: () => lastUiDt, bannerSeconds: () => feel.bannerSeconds, bossIntro: () => hostState.bossIntro(), hud: () => ({ lagHp: hudHpLag, multiplier: hudMultPrev, multiplierPop: hudMultPop }), setHud(value) { hudHpLag = value.lagHp; hudMultPrev = value.multiplier; hudMultPop = value.multiplierPop; } },
     worldServices: { dependencies, canvas: ctx, width: W, height: H, debug: PANTHEON_DEBUG, stage: stageRuntime, tutorial: TUT, finale: () => story.finale, formatTime: fmtTime, trickColor, ease: ez }, onBiomeTransition: (begin) => { Attract.onBiomeChange = begin; },
   });
   const { wipe: Wipe, frame: presentationHost, screens: screenComposition } = interfaceComposition;
@@ -678,7 +682,7 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type BrowserParityTickWind
     installLiveGameDebug({
       enabled: PANTHEON_DEBUG, dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE, cinema: CINEMA, stage: stageRuntime, width: W, height: H,
       startRun: (mode, difficulty) => { startRunWithPreflight(mode, difficulty); }, setScreen: setState, screen: () => state, setContinueSeconds: (value) => { continueT = value; },
-      openDraft: openRewardDraft, openTier: openRewardTier, run: liveRun, player: () => player, blade: () => blade, applyUpgrade, enterReplay: (record, from) => { replayAdapters.enter(record, from); },
+      openDraft: openRewardDraft, openTier: openRewardTier, run: liveRun, player: () => player, blade: liveBlade, applyUpgrade, enterReplay: (record, from) => { replayAdapters.enter(record, from); },
       beginRename: () => { settingsRenameAdapters.beginRename(false, true); }, renameSnapshot: settingsRenameAdapters.renameSnapshot, selectSettingsTab: settingsRenameAdapters.selectSettingsTab,
       replayStatus: replayAdapters.status, applyOptions: (options) => { Object.assign(settings, options); applySettings(); }, settings, selected: () => session.selection(),
       tutorialSnapshot: () => ({ active: TUT.active, lessonIndex: TUT.idx, lessonCount: TUT.steps.length, lesson: TUT.step().t, description: TUT.step().d,

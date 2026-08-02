@@ -141,6 +141,18 @@ describe("live world composition", () => {
     expect(world.state.run()).toBe(run);
   });
 
+  it("keeps the live blade in world state", () => {
+    const { dependencies } = createWorldDependencies();
+    const world = createLiveWorldComposition({
+      dependencies, session: createSession(), configuration: createConfiguration(),
+    });
+    const blade = { id: "blade" } as never;
+
+    world.state.setBlade(blade);
+
+    expect(world.state.blade()).toBe(blade);
+  });
+
   it("keeps boss cinematic state in world state", () => {
     const { dependencies } = createWorldDependencies();
     const world = createLiveWorldComposition({

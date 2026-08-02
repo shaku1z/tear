@@ -1264,6 +1264,15 @@ of replay, headless execution, or learning portability.
   This remains run ownership extraction, not player/blade extraction, full-
   world portability, or concurrent-live-world evidence.
 
+- The eighty-fourth slice removes the live host's blade mirror. Session,
+  combat, input, State Forge, and TearBench bridge paths now read the blade
+  directly from world state; the getter preserves existing absent-blade menu
+  behavior, and source architecture rejects restoring the host closure. The
+  focused gate passed 5 files / 18 tests; rebuilt campaign-victory browser proof
+  and the full canonical C27A aggregate pass. This remains blade ownership
+  extraction, not player extraction, full-world portability, or concurrent-live-
+  world evidence.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.
