@@ -103,10 +103,18 @@ operational boundary it proves.
   samples retain independent scenario and accepted-action-trace objects and
   each has its own truncated disposition. This proves a substantial fresh-world
   non-sharing boundary without claiming CPU-parallel execution.
-- [ ] Parallel worker-process episode stress isolation. The current pool has
-  eight in-process scheduling slots but a synchronous fixed-step job does not
-  yield inside its episode. It is not a worker/thread transport, worker failure,
-  or high-concurrency hardware claim.
+- [x] Serialized worker-process episode foundation.
+  `scripts/production-headless-worker.mjs` starts a child process and loads the
+  real C30 production environment through Vite SSR; it accepts only versioned
+  scenario/action batches and returns only serializable outcome/hash/terminal
+  data. Its permanent test exercises a completed 120-tick episode, a
+  pre-start cooperative cancellation, a fixed-tick timeout, and a rejected
+  surgical-state request. No live world, renderer, DOM object, or browser
+  adapter crosses the process boundary.
+- [ ] Parallel worker-process episode stress isolation. The current proof uses
+  one child process at a time. It does not establish multi-worker scheduling,
+  mid-run cancellation delivery, worker failure recovery, or high-concurrency
+  hardware capacity.
 - [x] A sampled natural terminal episode is visibly rerunnable from its
   production artifact. The environment now seals a versioned
   `tearbench-production-headless-terminal` artifact with its exact validated
@@ -137,12 +145,15 @@ retain their respective evidence obligations.
 - `pnpm exec vitest run tests/unit/tearbench-headless.test.ts tests/unit/production-headless-environment.test.ts tests/unit/ghost-production-replay-world.test.ts tests/unit/production-replay-composition.test.ts` passes: 4 files / 9 tests.
 - `pnpm exec vitest run tests/unit/production-headless-benchmark.test.ts --disableConsoleIntercept` passes and prints its measured production-pool artifact.
 - `pnpm exec vitest run tests/unit/production-headless-environment.test.ts` passes five focused tests, including the 256-episode / 30,720-tick isolation stress proof.
+- `node --test tests/production-headless-worker.test.mjs` passes the serialized
+  child-process completed/cancelled/timed-out/rejected-message matrix.
 - `pnpm build:test:standalone` and `pnpm test:browser:production-headless-terminal` pass. The named route consumes the committed versioned natural-terminal fixture; the browser materializer admits only versioned natural C30 terminal coordinates and proves exact action provenance plus a rendered screenshot.
 - `pnpm check:architecture` passes, including planted C30 forbidden-edge and
   browser-global cases.
 
 ## Next safe boundary
 
-Define and exercise a real worker-process episode boundary that sends only
-validated scenario/action/artifact data, returns cancellation/timeout/failure
-states, and never transfers a live production world or a browser adapter.
+Build a bounded multi-worker C30 dispatcher with a declared worker cap,
+per-request deadline, cooperative cancellation before dispatch, and worker
+replacement after a process failure. Exercise it with independent real episodes
+without transferring a live world or browser adapter.
