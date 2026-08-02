@@ -173,6 +173,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live browser and pointer-lock coordination must receive document capability through the composition dependency port",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /\bwindow\.indexedDB\b/u,
+    message: "live Ghost V3 capture and inspection must receive IndexedDB capability through the composition dependency port",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -364,6 +369,12 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/app/live-browser-runtime.ts",
     "const canvas = dependencies.browserDocument.getElementById(\"game\");").length !== 0) {
   throw new Error("source architecture composition-owned browser document rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "const database = window.indexedDB;").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "const database = dependencies.browserIndexedDb;").length !== 0) {
+  throw new Error("source architecture composition-owned browser IndexedDB rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",

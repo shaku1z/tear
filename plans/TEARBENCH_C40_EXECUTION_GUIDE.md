@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 55 update (current)
+#### Slice 56 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -569,6 +569,18 @@ This is browser document/window ownership only, not changed pointer-lock/input
 behavior, physical-device parity, IndexedDB durability, concurrent complete
 worlds, or C27A completion. Next, supply the Ghost V3 browser recorder's
 IndexedDB capability from composition without changing persistence behavior.
+
+Slice 56 supplies that capability. App composition passes `browserIndexedDb`
+through `GameRuntimeDependencies`; live Ghost V3 recording and its test-build
+capsule inspection helpers use the supplied factory. Source architecture
+rejects direct `window.indexedDB` use in the live runtime. The focused gate
+passed 6 files / 22 tests plus architecture; built browser audio and journeys,
+fresh foundation, and campaign-victory gates pass.
+
+This is dependency ownership only, not durability, quota, storage-pressure,
+physical-device, concurrent-complete-world, or C27A completion evidence. Next,
+route Ghost V3's browser test-query input through the already supplied window
+capability without changing behavior or making a persistence claim.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

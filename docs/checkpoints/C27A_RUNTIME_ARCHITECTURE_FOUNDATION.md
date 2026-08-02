@@ -976,6 +976,20 @@ of replay, headless execution, or learning portability.
   persistence, independent complete applications, or C27A completion. The next
   boundary is the Ghost V3 browser recorder's IndexedDB supply.
 
+- The fifty-sixth slice supplies that Ghost V3 IndexedDB capability explicitly.
+  App composition passes `browserIndexedDb` through `GameRuntimeDependencies`;
+  the recorder and test-build capsule inspection helpers receive that same
+  supplied factory. Source architecture rejects direct `window.indexedDB` use
+  in the live runtime, while unsupported-storage behavior remains unchanged.
+  The focused slice gate passed 6 files / 22 tests, and the built browser audio,
+  journeys, fresh foundation, and campaign-victory gates pass.
+
+  This is capability ownership only. It does not prove durable quota or device
+  behavior, storage-pressure recovery beyond existing evidence, physical-device
+  parity, independent complete applications, or C27A completion. The next
+  boundary is Ghost V3's remaining browser test-query input; keep its behavior
+  unchanged and do not turn that adapter step into a persistence claim.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap

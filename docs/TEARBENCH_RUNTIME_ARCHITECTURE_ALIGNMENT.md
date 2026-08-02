@@ -356,7 +356,13 @@ The following C27A foundation slices are complete:
   The browser host creates viewport, pointer-lock, fullscreen, and install
   adapters from those ports, and live frame/screen paths no longer use an
   ambient document. This keeps existing pointer-lock and input behavior intact;
-  Ghost V3's IndexedDB persistence input remains the next browser-bound path.
+  Ghost V3's IndexedDB persistence input remained the next browser-bound path.
+- Ghost V3 now receives its IndexedDB capability from that same composition
+  contract. `browserIndexedDb` is supplied once by app composition to the live
+  runtime, which uses it for recording and test-build capsule inspection;
+  architecture rejects restoring direct `window.indexedDB` use there. This is
+  an ownership seam, not new durability, quota, device, or concurrent-world
+  evidence. Its remaining browser query adapter is the next narrow boundary.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

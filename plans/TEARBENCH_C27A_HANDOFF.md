@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** fifty-fifth C27A foundation slice implemented (composition-owned
-live browser document/window capability); checkpoint remains open
+**Status:** fifty-sixth C27A foundation slice implemented (composition-owned
+Ghost V3 IndexedDB capability); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
@@ -583,6 +583,15 @@ caches and transient lights are local to the controller. This is not full
   pointer-lock behavior; it is not physical-device or persistence evidence. The
   next boundary supplies the Ghost V3 recorder's IndexedDB capability.
 
+  Slice 56 supplies that Ghost V3 IndexedDB capability. App composition passes
+  `browserIndexedDb` through `GameRuntimeDependencies`; the live recorder and
+  test-build capsule readers use the supplied factory, and architecture rejects
+  direct `window.indexedDB` use in the live runtime. The focused gate passed 6
+  files / 22 tests; built browser audio and journeys, fresh foundation, and
+  campaign victory pass. This preserves storage behavior; it is not durability,
+  quota/device, physical-input, or concurrent-full-world evidence. The next
+  boundary is Ghost V3's browser test-query input through the supplied window.
+
 All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
@@ -608,8 +617,8 @@ Slice 41 adds simulation tuning isolation; Slice 42 injects particle policy;
   rendering now has narrow policies for Blade, Mirror, and Projectile; legacy
   enemy rendering has its exact policy; Attract entropy is composition supplied;
   and the first-gesture audio facade, concrete synthesized runtime, browser
-  audio-context handoff, browser navigator capability, and browser document/
-  window capability are composition-owned. Remaining persistence adapter
+  audio-context handoff, browser navigator capability, browser document/window
+  capability, and Ghost V3 IndexedDB capability are composition-owned. Remaining persistence adapter
   isolation still precedes true simultaneous complete worlds.
 Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
@@ -629,14 +638,14 @@ composition with parity evidence.
 
 ## Working-tree safety
 
-- Slice 55 is the next intentional commit on
+- Slice 56 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 6
-  files / 23 tests plus source architecture; built browser audio and journeys passed. Fresh
+  files / 22 tests plus source architecture; built browser audio and journeys passed. Fresh
   foundation passed 36 files / 130 tests, a fresh 13-scenario trace, and 40
   detached comparisons, while campaign victory passed 10 files / 36 tests and
   1,176 transitions. The full `pnpm check:c27a` aggregate passed. The next
-  boundary is the Ghost V3 browser recorder's IndexedDB capability, still not a
-  durability, physical-device, or second-runtime claim.
+  boundary is Ghost V3 browser test-query input through the supplied window,
+  still not a persistence, durability, physical-device, or second-runtime claim.
 - Slice 48 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
   files / 23 tests plus source architecture; built journeys and six responsive

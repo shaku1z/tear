@@ -42,14 +42,14 @@ import { createDefaultStateCodecRegistry } from "../tearbench/state-codecs";
 import { ENTITY_KIND_REGISTRY } from "../tearbench/registries";
 import { stableVerificationHash } from "../replay/hash";
 type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnType<RunScreenState["outcome"]>; type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>; export function startLiveGame(dependencies: GameRuntimeDependencies, configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>): void {
-  const { A11Y, APP, Attract, Backdrop, browserDocument, browserNavigator, browserWindow, CG, CONFIG, Cloud, DIAG, FX, GAMEPLAY_EVENTS, GFX, GHOST, Input, OVERSCAN, PAD, SAFE, SFX, THEME, UI, VAULT, applyUpgrade, clamp, cosmeticRandom, lerp, weaponCapsuleIntersectsSegment } = dependencies;
+  const { A11Y, APP, Attract, Backdrop, browserDocument, browserIndexedDb, browserNavigator, browserWindow, CG, CONFIG, Cloud, DIAG, FX, GAMEPLAY_EVENTS, GFX, GHOST, Input, OVERSCAN, PAD, SAFE, SFX, THEME, UI, VAULT, applyUpgrade, clamp, cosmeticRandom, lerp, weaponCapsuleIntersectsSegment } = dependencies;
 (function () {
   const browserRuntime = createLiveBrowserRuntime(dependencies);
   const { canvas, context: ctx, width: W, height: H, viewport, resizeCanvas, requestPointerLock: requestLock, installPrompt, lockHint, hint: hintEl,
     pantheonDebug: PANTHEON_DEBUG, testMode: TEST_MODE } = browserRuntime;
   let semanticInputAuthority = false; const requestOwnedPointerLock = () => { if (!semanticInputAuthority) requestLock(); };
   const ghostV3 = createBrowserGhostLiveRecorder(
-    window.indexedDB,
+    browserIndexedDb,
     createGhostV3BrowserTestOptions(TEST_MODE, window.location.search),
   );
   let ghostV3EventSequence = 0;
@@ -641,10 +641,10 @@ type UiButton = CanvasUiButton & InteractiveUiButton; type OutcomeInfo = ReturnT
       configurable: true,
       value: Object.freeze({
         manifest: () => ghostV3?.lastManifest ?? null,
-        manifests: () => listBrowserGhostCapsuleManifests(window.indexedDB),
-        read: (id: string) => readBrowserGhostCapsule(window.indexedDB, id),
-        replay: (id: string) => readBrowserGhostCapsuleReplay(window.indexedDB, id),
-        admission: (id: string) => readBrowserGhostCapsuleReplayAdmission(window.indexedDB, id),
+        manifests: () => listBrowserGhostCapsuleManifests(browserIndexedDb),
+        read: (id: string) => readBrowserGhostCapsule(browserIndexedDb, id),
+        replay: (id: string) => readBrowserGhostCapsuleReplay(browserIndexedDb, id),
+        admission: (id: string) => readBrowserGhostCapsuleReplayAdmission(browserIndexedDb, id),
         active: () => ghostV3?.active === true,
         failure: () => ghostV3?.failure ?? null,
       }),

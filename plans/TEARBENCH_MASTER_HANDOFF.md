@@ -197,19 +197,18 @@ Important files:
 
 ### Exact next slice
 
-Slice 55 completes the bounded browser document/window capability step.
-Composition supplies `browserDocument` and `browserWindow` through
-`GameRuntimeDependencies`; the live browser host creates viewport, pointer-lock,
-fullscreen, and install adapters from those ports, while live frame and screen
-paths receive the supplied document. Source architecture rejects ambient
-document use in these migrated paths. `pnpm check:c27a:slice55` passed (6 files
-/ 23 tests plus architecture); the built browser audio contract and full built
-journeys passed; fresh foundation passed 36 files / 130 tests and campaign
-victory passed 10 files / 36 tests and 1,176 browser transitions. The complete
-`pnpm check:c27a` aggregate also passed. This does not change pointer-lock/input
-behavior, establish physical device parity, or create full-world concurrency.
-Next, supply the Ghost V3 browser recorder's IndexedDB capability from
-composition without changing its persistence behavior.
+Slice 56 completes the bounded Ghost V3 IndexedDB-capability step. Composition
+supplies `browserIndexedDb` through `GameRuntimeDependencies`; the live recorder
+and its test-build capsule inspection helpers use that supplied factory. Source
+architecture rejects direct `window.indexedDB` use in the live runtime.
+`pnpm check:c27a:slice56` passed (6 files / 22 tests plus architecture); the
+built browser audio contract and full built journeys passed; fresh foundation
+passed 36 files / 130 tests and campaign victory passed 10 files / 36 tests and
+1,176 browser transitions. The complete `pnpm check:c27a` aggregate also
+passed. This does not establish durable quota/device behavior, change
+persistence semantics, or create full-world concurrency. Next, route Ghost
+V3's remaining browser test-query input through the supplied window capability
+without changing behavior or making a persistence claim.
 
 All thirteen captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream: 5,732 ticks and 33 native facts, including the three natural-trace enemy defeats now published independently of Ghost 2 sampling. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome/reward/finale controllers, scheduler shape, event bus, and restored actor identity. The natural matrix route clears wave 1, selects a real offered draft card without advancing the fixed scheduler, and reaches a wave-2 spawn. A separate certified route reconstructs the wave-49 frontier, starts production wave 50, applies an explicit Source one-hit State Forge child, and executes real victory; live and detached match all seven finale intent batches and all 22 outward calls after their concrete adapters return, in exact order and with exact arguments. They also match six immutable ring/burst particle-admission receipts, eight logical feel receipts after restoration of the captured pre-finale transient, and the complete 42-entry terminal external-decision transcript (13 initial synchronization terminal decision/request, 22 finale-outward, and 7 cache/terminal). The refreshed browser route explicitly activates audio, then observes 12 executing plus 12 completed dispatch receipts: all seven mixes are logical-target-only and all cues are voice-cap-rejected, so no output is claimed. Slice 40 adds portable `tear-world-simulation-factories.ts` with no app/presentation/browser imports; the app renderer supplies real Canvas ports and detached supplies explicit no-op ports under architecture fences. Next: generic world bootstrap, then configuration isolation, which still blocks truly simultaneous full worlds. This evidence does not claim a naturally played 50-wave campaign, randomized particle parity, rendered-pixel parity, headless/full-world portability, configuration isolation, durable profile/local-storage survival, cloud/replay/analytics completion, successful PCM/audibility or audio graph/device parity, or device vibration.
 
@@ -350,11 +349,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      Slice 55 makes live browser document/window capability composition-owned for viewport, pointer-lock, fullscreen, install, frame, and screen paths.
-PROVEN BY:           `pnpm check:c27a:slice55` passed: 6 focused files / 23 tests and architecture. Built browser audio and navigation/progression/playground/terminal/cinematic journeys passed. Fresh C27A foundation passed 36 files / 130 tests, 13 live scenarios and 40 detached comparisons; campaign victory passed 10 files / 36 tests and 1,176 transitions; the full `pnpm check:c27a` aggregate passed.
-REMAINING HERE:      Supply the Ghost V3 browser recorder's IndexedDB capability from composition, then isolate remaining persistence adapter dependencies. Those adapters still prevent concurrent complete worlds and C27A remains blocking.
+DONE THIS STEP:      Slice 56 makes the Ghost V3 recorder and its test-build capsule inspection use a composition-owned IndexedDB capability.
+PROVEN BY:           `pnpm check:c27a:slice56` passed: 6 focused files / 22 tests and architecture. Built browser audio and navigation/progression/playground/terminal/cinematic journeys passed. Fresh C27A foundation passed 36 files / 130 tests, 13 live scenarios and 40 detached comparisons; campaign victory passed 10 files / 36 tests and 1,176 transitions; the full `pnpm check:c27a` aggregate passed.
+REMAINING HERE:      Route Ghost V3's remaining browser test-query input through the supplied window capability, then isolate remaining persistence adapter dependencies. Those adapters still prevent concurrent complete worlds and C27A remains blocking.
 REMAINING TO C40:    C27 completion, C25 exit, and C28-C40 remain after C27A closes.
-NEXT SLICE:          Supply the Ghost V3 browser recorder's IndexedDB capability from composition without changing persistence behavior. Do not claim durability/device parity or full live-world concurrency.
+NEXT SLICE:          Route Ghost V3's remaining browser test-query input through the supplied window capability without changing behavior. Do not claim persistence, durability/device parity, or full live-world concurrency.
 
 All of the following were run from this worktree through C27A slice 36:
 
