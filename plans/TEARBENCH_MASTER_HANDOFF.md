@@ -380,11 +380,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C29 now has a source-owned DOM-free production world, combat phase assembly, and fixed-step combat-simulation wrapper used by the replay proof.
-PROVEN BY:           `pnpm check:c29:production-replay` passed; its focused replay test constructs only those source-owned adapters, asserts supplied-runtime identity at tick 80, and repeats the semantic hash.
-REMAINING HERE:      Compose production State Forge hydration with a durable V3 capsule, then compare its authoritative hashes. Theater, seek/fork/practice, and comparison remain open.
+DONE THIS STEP:      C29 also stores a sealed authoritative-state receipt at every live V3 keyframe, including its tick-zero State Forge anchor.
+PROVEN BY:           Focused receipt/recorder tests plus a rebuilt browser live-capture journey passed; the actual completed Vault capsule contains valid receipts at ticks 0, 120, and 240.
+REMAINING HERE:      Compose production State Forge hydration with that durable V3 capsule and compare its receipts. Theater, seek/fork/practice, and comparison remain open.
 REMAINING TO C40:    C25 and C27 exits, then C29-C40, remain; C27A and C28 are closed.
-NEXT SLICE:          Compose production State Forge hydration with an actual durable V3 capsule and compare its authoritative hashes through the source-owned replay path.
+NEXT SLICE:          Compose production State Forge hydration with an actual durable V3 capsule and compare its captured receipts through the source-owned replay path.
 
 All of the following were run from this worktree through C27A slice 36:
 

@@ -38,6 +38,7 @@ import { listBrowserGhostCapsuleManifests, readBrowserGhostCapsule, readBrowserG
 import { createLiveGhostCausalEvent, ghostLiveBootstrapEventId } from "../ghost/live-causal-events";
 import { createGhostV3BrowserTestOptions } from "./ghost-v3-browser-test-options";
 import { createGhostReplayRunContext, GHOST_REPLAY_CONTEXT_PROVENANCE_KEY, type GhostReplayRunContextV1 } from "../ghost/replay-admission";
+import { createGhostAuthoritativeReceipt } from "../ghost/authoritative-receipt";
 import { captureLiveStateForgeSnapshot } from "../tearbench/live-runtime-snapshots";
 import { createDefaultStateCodecRegistry } from "../tearbench/state-codecs";
 import { ENTITY_KIND_REGISTRY } from "../tearbench/registries";
@@ -106,6 +107,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
           // Capture its matching state/RNG anchor before any opening-content
           // randomness or legal upgrade can mutate the live configuration.
           ghostV3.record("rng", 0, worldContext.services.random.snapshot());
+          captureGhostAuthoritativeReceipt(0);
           captureGhostStateSnapshot(0);
         }
       } catch (error) {
@@ -493,6 +495,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
           random,
         });
         ghostV3.record("rng", tick, random);
+        captureGhostAuthoritativeReceipt(tick);
         captureGhostStateSnapshot(tick);
       }
       if (__TEAR_TEST_BUILD__) {
@@ -550,6 +553,12 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   });
   const { simulationRuntime, simulation, combatEntityRuntime: combatRuntime,
     killRuntime: liveKillRuntime, frameRuntime: liveFrameRuntime, authoritativeStep } = combatHost;
+  const captureGhostAuthoritativeReceipt = (tick: number): void => {
+    if (ghostV3?.active !== true) return;
+    const result = authoritativeStep.lastResult;
+    const stateHash = result?.tick === tick ? result.stateHash : stableVerificationHash(projectCanonicalGameplayState(tick, simulationRuntime.input.snapshot(), liveRun(), livePlayer(), liveBlade(), hostState.enemies().map((enemy) => ({ ...(typeof enemy._gid === "number" ? { _gid: enemy._gid } : {}), kind: enemy.kind, bossId: enemy.bossId, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, dead: enemy.dead }))));
+    ghostV3.record("results", tick, createGhostAuthoritativeReceipt(tick, stateHash));
+  };
   // Native facts emitted from run/content code predate the simulation runtime
   // composition.  Bind their tick source once the shared runtime exists so all
   // live events use the canonical clock rather than input-recorder timing.

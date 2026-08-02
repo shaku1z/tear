@@ -40,6 +40,10 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page }) 
   assert.equal(capsule.tracks.results.length > 0, true);
   assert.ok(manifest.chunks.some((chunk) => chunk.kind === "events"));
   assert.ok(manifest.chunks.some((chunk) => chunk.kind === "results"));
+  const receipts = capsule.tracks.results.filter((entry) => entry.value?.kind === "authoritative-hash");
+  assert.deepEqual(receipts.map((entry) => entry.tick), [0, 120, 240]);
+  assert.ok(receipts.every((entry) => entry.value?.tick === entry.tick
+    && typeof entry.value?.stateHash === "string" && /^[a-f0-9]{16}$/iu.test(entry.value.stateHash)));
   assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__TEAR_GHOST_V3__, undefined, { timeout: 15000 });

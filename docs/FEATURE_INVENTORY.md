@@ -170,7 +170,8 @@ This is the migration checklist for the architectural redesign. A checked featur
   imports, Doctor repair children, governed knowledge libraries, and a
   browser-enforced physical quota rejection after retaining a source capsule.
   C27 also includes a real IndexedDB live-capture sidecar plus a persisted V1
-  replay bootstrap and fail-closed admission check. V3 playback, compatible
+  replay bootstrap, keyframe-aligned canonical authoritative-hash receipts,
+  and fail-closed admission check. V3 playback, compatible
   production-world verification of a durable capsule and a player-facing
   Theater remain C29 work; C29's source-owned replay world, production combat
   assembly, and one-scheduler identity proof are present but do not yet provide

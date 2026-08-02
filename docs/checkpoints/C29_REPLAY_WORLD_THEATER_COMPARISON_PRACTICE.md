@@ -28,6 +28,11 @@ applicable production boundary.
   source-owned production replay composition, supplies its actual simulationRuntime,
   and proves the replay reaches tick 80 through that same object. A repeated
   seek creates a fresh production world and reproduces the semantic hash.
+- Live V3 captures now store a validated authoritative-state receipt at the
+  tick-zero anchor and each recorded keyframe. The receipt is the exact
+  canonical fixed-step state hash, not a pixel/audio/device claim. The rebuilt
+  browser live-capture journey reads ticks 0, 120, and 240 from the actual
+  completed IndexedDB Vault capsule.
 
 ## Exit-gate ledger
 
@@ -49,8 +54,9 @@ incompatible capsule, prove a captured-capsule hash, or expose a player Theater
 screen. It makes the next C29 hash-parity slice use the production runtime and
 combat composition rather than a synthetic replay simulation. The older parity
 harness retains its equivalent helper for its existing C27A suites, but the C29
-replay proof no longer imports that test helper. State Forge hydration of a
-durable V3 capsule remains the missing source-owned adapter.
+replay proof no longer imports that test helper. State Forge hydration and
+receipt comparison of a durable V3 capsule remain the missing source-owned
+adapter and evidence.
 
 ## Evidence
 

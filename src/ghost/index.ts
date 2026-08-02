@@ -10,6 +10,7 @@ export * from "./capsule-replay-envelope";
 export * from "./replay-admission";
 export * from "./live-recorder";
 export * from "./live-causal-events";
+export * from "./authoritative-receipt";
 export * from "./ghost-doctor";
 export * from "./replay-world";
 export * from "./theater";
