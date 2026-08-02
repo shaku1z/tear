@@ -137,7 +137,11 @@ Named status:
   deduplication constraints. A fifth slice wires the normal player `REPAIR`
   control through the typed screen action and Vault controller; the browser
   proves its child, lineage, quarantine copy, and untouched source byte. The
-  remaining full Vault exit evidence still remains.
+  sixth slice creates an actual version-1 Vault database at the app's browser
+  origin before boot, then proves the production version-2 upgrade adds
+  `libraries` without losing a legacy record across a second boot. The exact
+  active C28 boundary is `docs/checkpoints/C28_DURABLE_GHOST_VAULT_FOUNDATION.md`;
+  quota pressure and interrupted-write recovery still remain.
 - **C29-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.

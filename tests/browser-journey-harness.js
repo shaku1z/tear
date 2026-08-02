@@ -21,6 +21,11 @@ async function withJourney(options, run) {
   const baseUrl = `http://127.0.0.1:${String(port)}`;
   const server = http.createServer((request, response) => {
     const pathname = new URL(request.url, baseUrl).pathname;
+    if (pathname === "/__tear_browser_blank_fixture__.html") {
+      response.writeHead(200, { "Content-Type": "text/html" });
+      response.end("<!doctype html><title>Tear browser fixture</title>");
+      return;
+    }
     const relative = pathname === "/" ? "index.html" : pathname.slice(1);
     const file = path.resolve(root, relative);
     if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { response.writeHead(404).end(); return; }
@@ -63,8 +68,11 @@ async function withJourney(options, run) {
       await page.mouse.click(x, y);
       await waitScreen(screen);
     }
-    await boot();
-    await run({ page, errors, boot, waitScreen, clickAndWait });
+    // Migration tests need to create a legacy IndexedDB schema at this exact
+    // HTTP origin before the application opens it. Ordinary journeys retain
+    // their existing eager boot behavior.
+    if (!options.deferBoot) await boot();
+    await run({ page, errors, baseUrl, boot, waitScreen, clickAndWait });
     assert.deepEqual(errors, [], `${options.name} page errors: ${errors.join("\n")}`);
   } finally {
     if (browser) await browser.close();
