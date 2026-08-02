@@ -98,6 +98,9 @@ describe("live world composition", () => {
     expect(second.context.transient.impact.shake).toBe(0);
     expect(first.entities).not.toBe(second.entities);
     expect(first.lifecycle).not.toBe(second.lifecycle);
+    expect(first.music).not.toBe(second.music);
+    expect(first.music.active).toBe(false);
+    expect(second.music.active).toBe(false);
     expect(first.context.cinema).not.toBe(second.context.cinema);
   });
 

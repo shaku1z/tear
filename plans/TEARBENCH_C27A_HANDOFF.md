@@ -5,16 +5,16 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** ninetieth C27A foundation slice implemented (the rewarded-revive
-countdown now uses a typed outcome-state owner); checkpoint remains open
+**Status:** ninety-first C27A foundation slice implemented (music direction is
+now owned by each live-world composition); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
-**Latest evidence:** Slice 90 moves the rewarded-revive countdown through
-`createLiveReviveCountdownState`; source architecture rejects restoring the old
-closure. Its focused 4-file / 7-test revive gate, rebuilt campaign-victory browser
-proof, and the canonical C27A aggregate pass. This is not outcome persistence,
-a complete frame/UI, durable-storage, or full-production-world portability claim.
+**Latest evidence:** Slice 91 constructs the `MusicDirector` through
+`createLiveWorldComposition`; source architecture rejects restoring host-local
+construction. Its focused 5-file / 18-test composition/music gate and rebuilt
+campaign-victory browser proof pass. This is not portable audio/device parity,
+a full-production-world portability claim, or C27A completion.
 
 ## Resume protocol (mandatory)
 

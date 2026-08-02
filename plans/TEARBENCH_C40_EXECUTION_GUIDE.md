@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 90 update (current)
+#### Slice 91 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -895,6 +895,14 @@ architecture rejects restoring the closure. The focused revive gate passed 4
 files / 7 tests; rebuilt campaign-victory browser proof and the canonical C27A
 aggregate pass. This preserves the timeout path only, not outcome persistence,
 full-world portability, or C27A completion.
+
+Slice 91 moves live music-direction construction into
+`createLiveWorldComposition`. Its `MusicDirector` is now an explicit per-world
+member used by the existing run-orchestration, observation, and frame paths;
+source architecture rejects restoring host-local construction. The focused
+composition/music gate passed 5 files / 18 tests and rebuilt campaign-victory
+browser proof passed. This is not portable audio/device parity, full-world
+portability, or C27A completion.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

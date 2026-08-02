@@ -1,6 +1,7 @@
 import { RunLifecycleController } from "../gameplay/run/lifecycle";
 import { createTearWorldState, type TearWorldState } from "../gameplay/runtime/tear-world-context";
 import type { RunResultInfo } from "../gameplay/run/outcome-planner";
+import { MusicDirector } from "../audio/music-director";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameBlade, GameEnemy, GameFloater, GamePlayer, GameProjectile, GameRun,
   GameSlowZone, GameTemporaryWall } from "./game-runtime-state";
@@ -60,6 +61,7 @@ export interface LiveWorldComposition {
   readonly context: LiveWorldContext;
   readonly entities: LiveWorldEntityConstructionPort;
   readonly lifecycle: RunLifecycleController;
+  readonly music: MusicDirector;
 }
 
 /**
@@ -97,6 +99,7 @@ export function createLiveWorldComposition(options: LiveWorldCompositionOptions)
   } satisfies LiveGameHostState);
   const entities = createLiveWorldEntityFactory(options.dependencies);
   const lifecycle = new RunLifecycleController();
+  const music = new MusicDirector(options.dependencies.SFX);
   // The world owns the simulation timeline. The live factory adds drawing;
   // detached compositions may supply the gameplay-only implementation through
   // the same dependency surface.
@@ -105,5 +108,5 @@ export function createLiveWorldComposition(options: LiveWorldCompositionOptions)
     dependencies: options.dependencies, state, entities, lifecycle, cinema,
     configuration: options.configuration,
   });
-  return Object.freeze({ state, context, entities, lifecycle });
+  return Object.freeze({ state, context, entities, lifecycle, music });
 }

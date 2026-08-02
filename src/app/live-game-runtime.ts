@@ -1,4 +1,4 @@
-import { MusicDirector } from "../audio/music-director"; import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call"; import { createOutcomeChronologyJournal } from "../gameplay/run/outcome-chronology-journal"; import { BOSS_ROSTER } from "../gameplay/run/content-director";
+import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call"; import { createOutcomeChronologyJournal } from "../gameplay/run/outcome-chronology-journal"; import { BOSS_ROSTER } from "../gameplay/run/content-director";
 import { projectCanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import { blendHex as blendCol, easeOut as ez } from "../presentation/world/primitives";
 import { createLiveBrowserRuntime } from "./live-browser-runtime";
@@ -202,13 +202,12 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     if (outcome === null) throw new Error("Outcome screen requires a completed run");
     return outcome;
   };
-  const musicDirector = new MusicDirector(SFX);
   const reviveCountdown = createLiveReviveCountdownState();
   const hudFeedback = createLiveHudFeedbackState();
   // One call builds this world: replaceable state, entity construction, run
   // lifecycle, services, and transient records. World state owns the active
   // player, blade, actors, and run while the session retains menu-time state.
-  const { state: hostState, context: worldContext, entities: worldEntities, lifecycle: RUN_LIFECYCLE } = createLiveWorldComposition({
+  const { state: hostState, context: worldContext, entities: worldEntities, lifecycle: RUN_LIFECYCLE, music: musicDirector } = createLiveWorldComposition({
     dependencies, configuration, session,
   });
   // One world owns the transient records read by combat, State Forge, and diagnostics.

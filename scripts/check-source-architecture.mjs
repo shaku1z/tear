@@ -293,6 +293,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live revive countdown must use the typed outcome-state owner",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /\bnew\s+MusicDirector\b/u,
+    message: "live music direction must be constructed by the world composition",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/app/live-style-host.ts"]),
     pattern: /\bd\.ACH\.check\(\);\s*d\.PROFILE\.save\(\)/u,
     message: "live style achievement persistence must use the composition-owned adapter",
@@ -684,6 +689,12 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/app/live-game-runtime.ts",
     "const reviveCountdown = createLiveReviveCountdownState();").length !== 0) {
   throw new Error("source architecture live revive countdown owner rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "const music = new MusicDirector(SFX);").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "const world = createLiveWorldComposition({});").length !== 0) {
+  throw new Error("source architecture live music owner rule self-test failed");
 }
 if (dependencyErrors("src/app/live-style-host.ts",
   "d.ACH.check(); d.PROFILE.save();").length !== 1

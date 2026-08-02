@@ -90,6 +90,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   The rewarded-revive countdown now uses a typed outcome-state owner. This
   preserves its existing timeout path but does not complete outcome persistence
   or production-world portability.
+  Music direction is now owned by each live-world composition, so the existing
+  run, observation, and frame paths share the world's `MusicDirector` rather
+  than a host-local instance. This does not establish portable audio/device
+  parity or production-world portability.
   Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,

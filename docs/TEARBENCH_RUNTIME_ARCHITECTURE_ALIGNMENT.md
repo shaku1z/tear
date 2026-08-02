@@ -510,6 +510,12 @@ The following C27A foundation slices are complete:
   Its focused revive gate, rebuilt campaign proof, and the canonical C27A
   aggregate pass. This leaves the remaining outcome, combat, production-world,
   and C27A exit work open.
+- Music direction is now constructed by `createLiveWorldComposition`, so every
+  live-world composition owns a distinct `MusicDirector` that the host uses for
+  run orchestration, observation, and frame coordination. Source architecture
+  rejects restoring host-local construction; the focused composition/music gate
+  and rebuilt campaign proof pass. This does not establish portable audio or
+  device parity, a portable full production world, or the C27A exit.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

@@ -1319,6 +1319,15 @@ of replay, headless execution, or learning portability.
   This preserves only the existing revive timeout, not outcome persistence,
   full-world portability, or concurrent-live-world evidence.
 
+- The ninety-first slice constructs `MusicDirector` in
+  `createLiveWorldComposition` and routes the existing run-orchestration,
+  observation, and frame consumers through that per-world instance. Source
+  architecture rejects restoring host-local construction. The focused gate
+  passed 5 files / 18 tests and rebuilt campaign-victory browser proof passed.
+  This is per-world music-direction ownership only, not portable audio/device
+  parity, a portable full production world, or concurrent complete-world
+  evidence.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.
