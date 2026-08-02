@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { createGhostV3, GhostProductionReplayWorld, type GhostReplayTrident } from "../../src/ghost";
@@ -7,6 +9,7 @@ import {
   createProductionHeadlessEnvironment,
   createProductionHeadlessEpisodePool,
   BoundedArtifactSampler,
+  type ProductionHeadlessTerminalArtifact,
   type TearScenarioV1,
 } from "../../src/tearbench";
 
@@ -122,7 +125,36 @@ describe("C30 production headless environment", () => {
     expect(cancelled).toMatchObject({ id: "c30-cancelled", outcome: "cancelled", ticks: 0 });
     expect(timedOut).toMatchObject({ id: "c30-timed-out", outcome: "timed-out", ticks: 0 });
     expect(samples.samples()).toHaveLength(2);
-    expect(samples.samples().every((sample) => sample.artifact instanceof Object
-      && (sample.artifact as { kind?: string }).kind === "production-headless-terminal")).toBe(true);
+    expect(samples.samples().every((sample) => (sample.artifact as { format?: string }).format
+      === "tearbench-production-headless-terminal")).toBe(true);
+  });
+
+  it("retains the exact natural scenario and accepted command trace in a terminal artifact", () => {
+    const environment = createProductionHeadlessEnvironment();
+    const artifactScenario = Object.freeze({
+      ...scenario, id: "movement-jump", description: "C30 browser-rerunnable natural terminal",
+      seed: "c30-browser-rerun", maxTicks: 120,
+    }) satisfies TearScenarioV1;
+    let terminal: ProductionHeadlessTerminalArtifact | undefined;
+    environment.reset(artifactScenario);
+    for (let tick = 1; tick <= artifactScenario.maxTicks; tick += 1) {
+      const transition = environment.step(actionsAt(tick));
+      if (transition.artifact !== undefined) terminal = transition.artifact as ProductionHeadlessTerminalArtifact;
+    }
+    environment.dispose();
+
+    expect(terminal).toMatchObject({
+      format: "tearbench-production-headless-terminal", schemaVersion: 1,
+      scenario: { id: "movement-jump", seed: "c30-browser-rerun", maxTicks: 120 },
+      terminal: { tick: 120, terminated: false, truncated: true },
+    });
+    expect(terminal?.actions).toEqual([
+      { kind: "command", id: 1, tick: 1, command: { type: "move", x: 1_000, y: 0 } },
+      { kind: "command", id: 2, tick: 20, command: { type: "jump", phase: "pressed" } },
+      { kind: "command", id: 3, tick: 40, command: { type: "dash", x: 1_000, y: 0 } },
+    ]);
+    expect(terminal?.terminal.semanticHash).toMatch(/^[a-f0-9]{16}$/u);
+    const fixture: unknown = JSON.parse(readFileSync(resolve("tests", "fixtures", "c30-production-headless-terminal-movement-jump.json"), "utf8"));
+    expect(fixture).toEqual(terminal);
   });
 });

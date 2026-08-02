@@ -98,9 +98,22 @@ operational boundary it proves.
   benchmark deliberately remains an in-process natural-opening measurement.
 - [ ] Parallel episode stress isolation. The three fresh environments prove a
   narrow non-sharing property, not a worker or high-concurrency stress run.
-- [ ] Visible rerun of sampled failures and Academy/Foundry streaming with
-  backpressure. No C30 artifact pipeline or downstream training consumer is
-  claimed.
+- [x] A sampled natural terminal episode is visibly rerunnable from its
+  production artifact. The environment now seals a versioned
+  `tearbench-production-headless-terminal` artifact with its exact validated
+  scenario, accepted command envelopes, fixed-tick disposition, and semantic
+  hash. The committed `movement-jump` fixture is asserted against a fresh C30
+  production execution. `pnpm test:browser:production-headless-terminal`
+  builds the test standalone client, admits that artifact without caller
+  overrides, and runs its exact three commands through the real Class-A browser
+  runtime. On this worktree the 120-tick live rerun retained the source terminal
+  provenance, wrote its three-command trace, and captured a 1,244,859-byte
+  rendered gameplay PNG.
+- [ ] Visible rerun of sampled **failures** and Academy/Foundry streaming with
+  backpressure. The proven sample is a truncated natural episode, not a failure,
+  and no C30 artifact pipeline or downstream training consumer is claimed. A
+  production failure source remains blocked on the C29/C30 wave/reward lifecycle
+  gap recorded above.
 
 ## Deliberately not claimed
 
@@ -114,13 +127,13 @@ retain their respective evidence obligations.
 - `pnpm typecheck` passes.
 - `pnpm exec vitest run tests/unit/tearbench-headless.test.ts tests/unit/production-headless-environment.test.ts tests/unit/ghost-production-replay-world.test.ts tests/unit/production-replay-composition.test.ts` passes: 4 files / 9 tests.
 - `pnpm exec vitest run tests/unit/production-headless-benchmark.test.ts --disableConsoleIntercept` passes and prints its measured production-pool artifact.
+- `pnpm build:test:standalone` and `pnpm test:browser:production-headless-terminal` pass. The named route consumes the committed versioned natural-terminal fixture; the browser materializer admits only versioned natural C30 terminal coordinates and proves exact action provenance plus a rendered screenshot.
 - `pnpm check:architecture` passes, including planted C30 forbidden-edge and
   browser-global cases.
 
 ## Next safe boundary
 
-Make sampled production failures visibly rerunnable in the browser from their
-terminal artifact, retaining the capsule/action provenance required for a real
-replay. Do not call the current small semantic terminal artifact a rerunnable
-failure, and do not use the historical generic scaffold's synthetic rate as a
-result for production worlds.
+Stress the current C30 production pool with a declared high-count natural
+workload and prove each environment's state, action trace, and terminal artifact
+are isolated. Keep the result explicitly in-process; worker-process and full
+failure-episode evidence remain separate work.

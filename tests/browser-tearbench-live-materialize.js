@@ -89,17 +89,57 @@ function readActionTrace(file, maxTicks) {
   if (file === undefined) return generatedActions(maxTicks);
   const parsed = JSON.parse(fs.readFileSync(path.resolve(file), "utf8"));
   const actions = Array.isArray(parsed) ? parsed : parsed.actions;
-  if (!Array.isArray(actions)) throw new TypeError("--actions must contain an array or an object with an actions array");
+  return validateActionTrace(actions, maxTicks, "--actions");
+}
+
+function validateActionTrace(actions, maxTicks, source) {
+  if (!Array.isArray(actions)) throw new TypeError(`${source} must contain an array of command envelopes`);
   const normalized = actions.map((entry) => ({ ...entry }));
   let previousId = 0;
   for (const entry of normalized) {
     if (entry?.kind !== "command" || !Number.isSafeInteger(entry.tick) || entry.tick < 1 || entry.tick > maxTicks
       || !Number.isSafeInteger(entry.id) || entry.id <= previousId || entry.command === null || typeof entry.command !== "object") {
-      throw new TypeError("--actions contains an invalid, out-of-range, or non-monotonic command envelope");
+      throw new TypeError(`${source} contains an invalid, out-of-range, or non-monotonic command envelope`);
     }
     previousId = entry.id;
   }
   return normalized;
+}
+
+function readProductionHeadlessTerminal(file) {
+  const parsed = JSON.parse(fs.readFileSync(path.resolve(file), "utf8"));
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)
+    || parsed.format !== "tearbench-production-headless-terminal" || parsed.schemaVersion !== 1) {
+    throw new TypeError("--production-headless-terminal must contain a versioned C30 terminal artifact");
+  }
+  const scenario = parsed.scenario;
+  if (scenario === null || typeof scenario !== "object" || Array.isArray(scenario)
+    || scenario.format !== "tear-contract" || scenario.kind !== "scenario" || scenario.schemaVersion !== 1
+    || typeof scenario.id !== "string" || !Number.isSafeInteger(scenario.version)
+    || typeof scenario.description !== "string" || scenario.stateClass !== "recorded-canonical"
+    || scenario.executionClass !== "training" || typeof scenario.seed !== "string" || !Number.isSafeInteger(scenario.maxTicks)
+    || scenario.maxTicks < 1 || scenario.maxTicks > 720) {
+    throw new TypeError("--production-headless-terminal scenario is not a TearScenarioV1 coordinate");
+  }
+  const start = scenario.start;
+  if (start === null || typeof start !== "object" || Array.isArray(start)
+    || start.mode !== "endless" || start.difficulty !== "normal" || start.weapon !== "sword"
+    || Object.keys(start).some((key) => !["mode", "difficulty", "weapon"].includes(key))) {
+    throw new TypeError("--production-headless-terminal currently admits natural endless/normal/sword runs only");
+  }
+  const terminal = parsed.terminal;
+  if (terminal === null || typeof terminal !== "object" || Array.isArray(terminal)
+    || !Number.isSafeInteger(terminal.tick) || terminal.tick < 1 || terminal.tick > scenario.maxTicks
+    || typeof terminal.semanticHash !== "string" || !/^[a-f0-9]{16}$/u.test(terminal.semanticHash)
+    || typeof terminal.terminated !== "boolean" || typeof terminal.truncated !== "boolean"
+    || terminal.terminated === terminal.truncated) {
+    throw new TypeError("--production-headless-terminal has an invalid terminal disposition");
+  }
+  return Object.freeze({
+    scenario: Object.freeze({ ...scenario, start: Object.freeze({ ...start }) }),
+    actions: Object.freeze(validateActionTrace(parsed.actions, terminal.tick, "--production-headless-terminal actions")),
+    terminal: Object.freeze({ ...terminal }),
+  });
 }
 
 function readJsonOption(name) {
@@ -167,13 +207,20 @@ if (requestedDirectory !== undefined && requestedDirectory !== "test-standalone"
   throw new Error("C26 live materialization only accepts dist/test-standalone; production and non-test builds are forbidden");
 }
 
-const scenarioId = process.argv.includes("--scenario") ? option("--scenario") : process.argv[2];
-if (!scenarioId) throw new TypeError("usage: node tests/browser-tearbench-live-materialize.js <scenario-id> [--seed value] [--max-ticks value] [--actions path] [--snapshot state-forge-snapshot.json] [--presentation inputs.json] [--artifact path]");
+const headlessTerminalPath = option("--production-headless-terminal");
+const headlessTerminal = headlessTerminalPath === undefined ? undefined : readProductionHeadlessTerminal(headlessTerminalPath);
+if (headlessTerminal !== undefined && (process.argv.includes("--scenario") || (process.argv[2] !== undefined && !process.argv[2].startsWith("--"))
+  || option("--seed") !== undefined || option("--max-ticks") !== undefined || option("--actions") !== undefined
+  || option("--snapshot") !== undefined || option("--replay-context") !== undefined)) {
+  throw new TypeError("--production-headless-terminal owns scenario, seed, horizon, actions, and origin; do not override them");
+}
+const scenarioId = headlessTerminal?.scenario.id ?? (process.argv.includes("--scenario") ? option("--scenario") : process.argv[2]);
+if (!scenarioId) throw new TypeError("usage: node tests/browser-tearbench-live-materialize.js <scenario-id> [--seed value] [--max-ticks value] [--actions path] [--snapshot state-forge-snapshot.json] [--presentation inputs.json] [--artifact path] | --production-headless-terminal terminal.json [--artifact path]");
 const catalogEntry = catalog.find((entry) => entry.id === scenarioId);
 if (!catalogEntry) throw new RangeError(`unknown canonical TearBench scenario: ${scenarioId}`);
-const seed = option("--seed", "1001");
-const maxTicks = parseMaxTicks(option("--max-ticks", String(Math.min(catalogEntry.maxTicks, 120))));
-const submittedActions = readActionTrace(option("--actions"), maxTicks);
+const seed = headlessTerminal?.scenario.seed ?? option("--seed", "1001");
+const maxTicks = headlessTerminal?.scenario.maxTicks ?? parseMaxTicks(option("--max-ticks", String(Math.min(catalogEntry.maxTicks, 120))));
+const submittedActions = headlessTerminal?.actions ?? readActionTrace(option("--actions"), maxTicks);
 const replayContextArtifact = readJsonOption("--replay-context");
 if (replayContextArtifact !== undefined && (replayContextArtifact.format !== "tearbench-run" || replayContextArtifact.replayContext === undefined)) {
   throw new TypeError("--replay-context must contain a materialized tearbench-run with persisted replayContext");
@@ -197,11 +244,11 @@ const runtimeScenario = {
   schemaVersion: 1,
   id: catalogEntry.id,
   version: 1,
-  description: catalogEntry.description,
+  description: headlessTerminal?.scenario.description ?? catalogEntry.description,
   // Natural live reset is intentionally restricted to canonical, reachable
   // opening states. Surgical state construction belongs to State Forge.
   stateClass: "recorded-canonical",
-  executionClass: "engineering",
+  executionClass: headlessTerminal?.scenario.executionClass ?? "engineering",
   seed,
   start: { mode: "endless", difficulty: "normal", weapon: "sword" },
   maxTicks,
@@ -210,7 +257,7 @@ const runtimeScenario = {
     "entity.unique-id", "entity.valid-owner", "player.valid-health", "world.legal-bounds",
     "wave.valid-completion", "boss.valid-phase", "ui.valid-focus",
   ],
-  tags: [...catalogEntry.tags, "c26", "live-runtime-materialized"],
+  tags: [...catalogEntry.tags, ...(headlessTerminal === undefined ? ["c26"] : ["c30", "headless-terminal-rerun"]), "live-runtime-materialized"],
 };
 
 async function main() {
@@ -270,6 +317,12 @@ assert.equal(materialized.metrics.fixedTicks, finalObservation.tick, "materializ
 assert.equal(materialized.metrics.acceptedActions, submittedActions.length, "all persisted commands were accepted by the live bridge");
 assert.ok(materialized.events.some((event) => event.type === "run.started"), "live event stream must include run.started");
 assert.match(materialized.screenshot, /^data:image\/png;base64,/u, "live materialization captures a rendered PNG");
+if (headlessTerminal !== undefined) {
+  assert.deepEqual(materialized.submittedActions, headlessTerminal.actions,
+    "the browser rerun must consume the terminal artifact's exact accepted command trace");
+  assert.equal(finalObservation.tick, headlessTerminal.terminal.tick,
+    "the browser rerun must reach the terminal artifact's fixed-tick horizon");
+}
 
 const buildDirectory = path.join(root, "dist", "test-standalone");
 assert.ok(fs.existsSync(path.join(buildDirectory, "index.html")), "dist/test-standalone is required; run pnpm build:test:standalone first");
@@ -338,6 +391,12 @@ const artifact = {
     submittedActions: submittedActions.length,
     transitionHashes: materialized.transitions,
     presentation,
+    ...(headlessTerminal === undefined ? {} : {
+      headlessTerminal: {
+        format: "tearbench-production-headless-terminal", schemaVersion: 1,
+        terminal: headlessTerminal.terminal,
+      },
+    }),
   },
 };
 
@@ -345,7 +404,7 @@ fs.mkdirSync(path.dirname(artifactPath), { recursive: true });
 fs.writeFileSync(actionTracePath, `${JSON.stringify(actionTrace, null, 2)}\n`);
 fs.writeFileSync(screenshotPath, Buffer.from(materialized.screenshot.slice("data:image/png;base64,".length), "base64"));
 fs.writeFileSync(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`);
-console.log(`${artifact.status.toUpperCase()} ${scenarioId} seed=${seed} ticks=${String(artifact.ticks)} class=A live-runtime`);
+console.log(`${artifact.status.toUpperCase()} ${scenarioId} seed=${seed} ticks=${String(artifact.ticks)} class=A live-runtime${headlessTerminal === undefined ? "" : " headless-terminal-rerun"}`);
 console.log(`artifact: ${artifactPath}`);
 }
 

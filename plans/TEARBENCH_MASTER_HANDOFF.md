@@ -188,8 +188,11 @@ Named status:
   The new declared 32x120 natural workload records rate/latency/heap/repeat
   evidence and passed its modest developer-hardware budget on this worktree;
   it is not worker or training-capacity evidence. Browser-fast corpus parity,
-  stress isolation, workers, retries/checkpoint restore, visible failure reruns,
-  and Academy/Foundry streaming remain open.
+  stress isolation, workers, retries/checkpoint restore, visible **failure**
+  reruns, and Academy/Foundry streaming remain open. A source-produced natural
+  terminal artifact is now visibly rerunnable in the Class-A browser runtime
+  with its exact action trace and rendered screenshot; it is intentionally not
+  called a failure or a live/headless semantic-parity result.
 - **C31-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -411,11 +414,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C30 now records a serializable production-pool measurement artifact for a declared 32x120 natural workload: rate, p95/max episode latency, heap, bounded samples, and repeat semantic hashes are measured rather than inferred.
-PROVEN BY:           `pnpm typecheck`; the focused 5-file / 10-test generic-headless/C30/C29/benchmark suite; and `pnpm check:architecture` pass. The measured worktree run completed 32 real production episodes at 4,651 episodes/minute (4,439 repeat), p95 19.6 ms, max 42.8 ms, 15.1 MiB retained heap, eight retained artifacts, and identical ordered hashes, meeting its declared narrow developer-machine budget.
-REMAINING HERE:      C30 needs C27A-matrix browser-fast parity with event/reward/terminal/cadence comparison; that item is explicitly blocked on promoting the wave/reward lifecycle from C27A's detached test harness into shared C29/C30 source composition. It also needs stress-tested parallel production episodes, workers, retries/checkpoint restore, target-hardware training-capacity and long-run leak measurements, and visible failure reruns/Academy streaming. The measured natural workload does not certify those conditions.
+DONE THIS STEP:      C30 now seals a source-produced natural terminal with its exact scenario and accepted action trace, then visibly reruns that artifact in the real Class-A browser client and retains terminal provenance beside the live screenshot/trace.
+PROVEN BY:           `pnpm check:c30:foundation` passes the type/lint/architecture gates, 5 focused files / 11 tests, test-standalone build, and browser terminal-artifact route. The 120-tick rerun accepted all three terminal commands, carried its source hash/tick in the live artifact, and rendered a 1,244,859-byte gameplay PNG. It remains a truncated terminal sample, not a failure or a semantic-hash parity claim.
+REMAINING HERE:      C30 needs C27A-matrix browser-fast parity with event/reward/terminal/cadence comparison; that item is explicitly blocked on promoting the wave/reward lifecycle from C27A's detached test harness into shared C29/C30 source composition. It also needs stress-tested parallel production episodes, workers, retries/checkpoint restore, target-hardware training-capacity and long-run leak measurements, actual failure reruns, and Academy/Foundry streaming. The measured natural workload and visible truncated sample do not certify those conditions.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Make sampled production failures visibly rerunnable in the browser from terminal artifacts with capsule/action provenance; do not call the current small semantic terminal artifact a rerunnable failure.
+NEXT SLICE:          Stress the in-process C30 production pool with a declared high-count natural workload and prove state, action-trace, and terminal-artifact isolation; do not call it worker-process or failure evidence.
 
 All of the following were run from this worktree through C27A slice 36:
 

@@ -21,6 +21,19 @@ type ProductionHeadlessCore = Readonly<{
   scenario: TearScenarioV1;
 }>;
 
+export interface ProductionHeadlessTerminalArtifact {
+  readonly format: "tearbench-production-headless-terminal";
+  readonly schemaVersion: 1;
+  readonly scenario: TearScenarioV1;
+  readonly actions: readonly CommandEnvelope<GameAction>[];
+  readonly terminal: Readonly<{
+    tick: number;
+    semanticHash: string;
+    terminated: boolean;
+    truncated: boolean;
+  }>;
+}
+
 function requireNaturalScenario(value: TearScenarioV1): TearScenarioV1 {
   if (value.stateClass !== "recorded-canonical") {
     throw new RangeError("production headless runs require recorded-canonical natural openings");
@@ -43,6 +56,7 @@ export function createProductionHeadlessEnvironment(): TearHeadlessEnvironment<
 > {
   let core: ProductionHeadlessCore | null = null;
   let nextCommandId = 0;
+  let actionTrace: CommandEnvelope<GameAction>[] = [];
 
   const requireCore = (): ProductionHeadlessCore => {
     if (core === null) throw new Error("production headless environment must be reset before stepping");
@@ -74,6 +88,7 @@ export function createProductionHeadlessEnvironment(): TearHeadlessEnvironment<
       simulation.simulationRuntime.reset(0);
       core = Object.freeze({ replay, simulation, scenario });
       nextCommandId = 0;
+      actionTrace = [];
       return observation(core);
     },
     step(actions: readonly GameAction[]): TearHeadlessTransition<CanonicalGameplayState> {
@@ -84,6 +99,7 @@ export function createProductionHeadlessEnvironment(): TearHeadlessEnvironment<
         if (!normalized.ok) throw new TypeError(`invalid headless action: ${normalized.reason}`);
         return Object.freeze({ kind: "command" as const, id: ++nextCommandId, tick, command: normalized.action });
       });
+      actionTrace.push(...envelopes);
       const result = current.simulation.simulationRuntime.advanceOne(envelopes);
       const lifecycle = current.replay.world.lifecycle.snapshot();
       const terminated = lifecycle.phase === "terminated";
@@ -96,15 +112,19 @@ export function createProductionHeadlessEnvironment(): TearHeadlessEnvironment<
           tick: result.tick,
           livingEnemies: current.replay.world.state.enemies().filter((enemy) => !enemy.dead).length,
         }),
-        ...(terminated || truncated ? { artifact: Object.freeze({
-          kind: "production-headless-terminal", tick: result.tick,
-          semanticHash: stableVerificationHash(result.state), terminated, truncated,
+        ...(terminated || truncated ? { artifact: Object.freeze<ProductionHeadlessTerminalArtifact>({
+          format: "tearbench-production-headless-terminal", schemaVersion: 1,
+          scenario: current.scenario, actions: Object.freeze([...actionTrace]),
+          terminal: Object.freeze({
+            tick: result.tick, semanticHash: stableVerificationHash(result.state), terminated, truncated,
+          }),
         }) } : {}),
       });
     },
     dispose(): void {
       core = null;
       nextCommandId = 0;
+      actionTrace = [];
     },
   });
 }
