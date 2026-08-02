@@ -440,6 +440,10 @@ The following C27A foundation slices are complete:
 - Live combat-action generic stat ports now use that shared adapter. Its focused
   combat gate and rebuilt campaign-victory browser proof pass. This is not a
   durable-profile, full-combat-portability, or concurrent-world claim.
+- Victory-progression generic stat ports now use the shared adapter while its
+  distinct profile-data records remain explicitly local. Its focused host gate
+  and rebuilt campaign-victory browser proof pass; this is not durable-profile
+  completion.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

@@ -1204,6 +1204,12 @@ of replay, headless execution, or learning portability.
   full-combat portability, migration, quota, crash recovery, cross-device sync,
   concurrent-world behavior, or C27A completion evidence.
 
+- The seventy-sixth slice routes victory-progression generic add/max stat ports
+  through the shared adapter while retaining distinct profile-data mutations as
+  explicit local scope. Source architecture rejects direct generic profile-stat
+  access in that host. The focused gate passed 6 files / 12 tests; rebuilt
+  campaign-victory browser proof passes.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

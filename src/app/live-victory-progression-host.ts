@@ -1,7 +1,7 @@
 import { bindVictoryProgressionIntents } from "./live-outcome-intent-coordinator";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 
-type Dependencies = Pick<GameRuntimeDependencies, "Cloud" | "DAILY" | "PROFILE">;
+type Dependencies = Pick<GameRuntimeDependencies, "Cloud" | "DAILY" | "PROFILE" | "profileStatsPersistence">;
 
 export function createLiveVictoryProgressionExecutor(
   d: Dependencies,
@@ -9,12 +9,12 @@ export function createLiveVictoryProgressionExecutor(
   finishRecording: (won: boolean) => void,
 ): ReturnType<typeof bindVictoryProgressionIntents> {
   return bindVictoryProgressionIntents({
-    profileAdd: (stat, value) => { d.PROFILE.addStat(stat, value); },
-    profileMax: (stat, value) => { d.PROFILE.maxStat(stat, value); },
+    profileAdd: d.profileStatsPersistence.add,
+    profileMax: d.profileStatsPersistence.max,
     dailyBump: (challenge, value) => { d.DAILY.bump(challenge, value); },
     markWeaponWin(weaponId) {
       const won = d.PROFILE.data.weaponsWon ?? (d.PROFILE.data.weaponsWon = {});
-      won[weaponId] = 1; d.PROFILE.maxStat("distinctWeaponsWon", Object.keys(won).length);
+      won[weaponId] = 1; d.profileStatsPersistence.max("distinctWeaponsWon", Object.keys(won).length);
     },
     setProfileReward(reward) {
       const rewards = d.PROFILE.data.rewards ?? (d.PROFILE.data.rewards = {});
@@ -22,7 +22,7 @@ export function createLiveVictoryProgressionExecutor(
     },
     markAdventureDifficulty(difficulty) {
       const difficulties = d.PROFILE.data.advDiffs ?? (d.PROFILE.data.advDiffs = {});
-      difficulties[difficulty] = 1; d.PROFILE.maxStat("clearAdvAll", Object.keys(difficulties).length);
+      difficulties[difficulty] = 1; d.profileStatsPersistence.max("clearAdvAll", Object.keys(difficulties).length);
     },
     achievementCheck: checkAchievements,
     cloudLog: (payload) => { d.Cloud.logEvent("run_end", payload); },

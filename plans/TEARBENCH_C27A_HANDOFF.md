@@ -5,7 +5,7 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** seventy-fifth C27A foundation slice implemented (live combat-action
+**Status:** seventy-sixth C27A foundation slice implemented (victory-progression
 generic profile stats use the shared adapter); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.

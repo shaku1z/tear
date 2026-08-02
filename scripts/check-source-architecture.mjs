@@ -253,6 +253,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "campaign biome progress must use the composition-owned adapter",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-victory-progression-host.ts"]),
+    pattern: /\bd\.PROFILE\.(?:addStat|maxStat)\(/u,
+    message: "victory progression generic profile stats must use the composition-owned adapter",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/app/live-outcome-composition.ts"]),
     pattern: /\bd\.PROFILE\.(?:addStat|maxStat)\(/u,
     message: "live outcome defeat-progress persistence must use the composition-owned adapter",
@@ -561,6 +566,12 @@ if (dependencyErrors("src/app/live-campaign-training-composition.ts",
   || dependencyErrors("src/app/live-campaign-training-composition.ts",
     "d.biomeProgressPersistence.remember(name);").length !== 0) {
   throw new Error("source architecture composition-owned campaign biome progress rule self-test failed");
+}
+if (dependencyErrors("src/app/live-victory-progression-host.ts",
+  'd.PROFILE.maxStat("distinctWeaponsWon", 1);').length !== 1
+  || dependencyErrors("src/app/live-victory-progression-host.ts",
+    "d.profileStatsPersistence.max(\"distinctWeaponsWon\", 1);").length !== 0) {
+  throw new Error("source architecture composition-owned victory profile stats rule self-test failed");
 }
 if (dependencyErrors("src/app/live-outcome-composition.ts",
   'd.PROFILE.addStat("runs", 1);').length !== 1
