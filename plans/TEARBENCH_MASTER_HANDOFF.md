@@ -197,13 +197,14 @@ Important files:
 
 ### Exact next slice
 
-Slice 62 completes the bounded physical-input browser-window step. The
-test-build emitter receives `browserWindow`; source architecture rejects the
-ambient property shorthand. `pnpm check:c27a:slice62` passed (5 files / 19
-tests plus architecture), and the rebuilt physical canonical-input journey
-passes. This does not alter canonical input semantics, establish physical-device
-behavior, change persistence, or create full-world concurrency. Next, supply
-the test-build runtime-bridge installation target without changing its contract.
+Slice 63 completes the bounded runtime-bridge browser-window step. The
+test-build installer receives `browserWindow`; source architecture rejects the
+ambient target argument. `pnpm check:c27a:slice63` passed (5 files / 19 tests
+plus architecture), and the rebuilt physical canonical-input journey still
+crosses the bridge. This does not change bridge-contract or canonical-input
+semantics, establish physical-device behavior, change persistence, or create
+full-world concurrency. Next, isolate one remaining persistence adapter while
+preserving its current contract.
 
 All thirteen captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream: 5,732 ticks and 33 native facts, including the three natural-trace enemy defeats now published independently of Ghost 2 sampling. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome/reward/finale controllers, scheduler shape, event bus, and restored actor identity. The natural matrix route clears wave 1, selects a real offered draft card without advancing the fixed scheduler, and reaches a wave-2 spawn. A separate certified route reconstructs the wave-49 frontier, starts production wave 50, applies an explicit Source one-hit State Forge child, and executes real victory; live and detached match all seven finale intent batches and all 22 outward calls after their concrete adapters return, in exact order and with exact arguments. They also match six immutable ring/burst particle-admission receipts, eight logical feel receipts after restoration of the captured pre-finale transient, and the complete 42-entry terminal external-decision transcript (13 initial synchronization terminal decision/request, 22 finale-outward, and 7 cache/terminal). The refreshed browser route explicitly activates audio, then observes 12 executing plus 12 completed dispatch receipts: all seven mixes are logical-target-only and all cues are voice-cap-rejected, so no output is claimed. Slice 40 adds portable `tear-world-simulation-factories.ts` with no app/presentation/browser imports; the app renderer supplies real Canvas ports and detached supplies explicit no-op ports under architecture fences. Next: generic world bootstrap, then configuration isolation, which still blocks truly simultaneous full worlds. This evidence does not claim a naturally played 50-wave campaign, randomized particle parity, rendered-pixel parity, headless/full-world portability, configuration isolation, durable profile/local-storage survival, cloud/replay/analytics completion, successful PCM/audibility or audio graph/device parity, or device vibration.
 
@@ -344,11 +345,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      Slice 62 supplies the test-build physical-input emitter with composition-owned browser-window capability.
-PROVEN BY:           `pnpm check:c27a:slice62` passed: 5 focused files / 19 tests and architecture; the rebuilt physical canonical-input journey passed. The previous fresh foundation and campaign-victory evidence remains recorded above; C27A remains blocking.
-REMAINING HERE:      Supply the test-build runtime-bridge installation target, then isolate remaining persistence adapter dependencies. Those adapters still prevent concurrent complete worlds and C27A remains blocking.
+DONE THIS STEP:      Slice 63 supplies the test-build runtime-bridge installer with composition-owned browser-window capability.
+PROVEN BY:           `pnpm check:c27a:slice63` passed: 5 focused files / 19 tests and architecture; the rebuilt physical canonical-input journey still crosses the bridge. The previous fresh foundation and campaign-victory evidence remains recorded above; C27A remains blocking.
+REMAINING HERE:      Isolate one remaining persistence adapter, then continue remaining persistence dependencies. Those adapters still prevent concurrent complete worlds and C27A remains blocking.
 REMAINING TO C40:    C27 completion, C25 exit, and C28-C40 remain after C27A closes.
-NEXT SLICE:          Supply the test-build runtime-bridge installation target without changing its contract. Do not claim persistence, durability/device parity, or full live-world concurrency.
+NEXT SLICE:          Isolate one remaining persistence adapter while preserving its current contract. Do not claim durability/device parity or full live-world concurrency.
 
 All of the following were run from this worktree through C27A slice 36:
 

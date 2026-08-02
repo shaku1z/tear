@@ -1058,6 +1058,16 @@ of replay, headless execution, or learning portability.
   or C27A completion evidence. The next boundary supplies the test-build
   runtime-bridge installation target without changing its contract.
 
+- The sixty-third slice supplies that runtime-bridge installation target. It
+  receives `browserWindow`, and source architecture rejects restoring the
+  ambient target argument. The focused gate passed 5 files / 19 tests; the
+  rebuilt physical canonical-input journey still crosses the bridge.
+
+  This is test-build bridge-target ownership only, not a changed bridge
+  contract, canonical input semantics, physical-device behavior, persistence,
+  concurrent-world behavior, or C27A completion claim. The next boundary is one
+  remaining persistence adapter, preserving its current contract.
+
 ## Remaining C27A work
 
 1. Continue portable production-world extraction with generic world bootstrap

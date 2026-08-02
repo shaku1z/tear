@@ -208,6 +208,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "test-build physical input emission must receive its browser window through the composition dependency port",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-game-runtime.ts"]),
+    pattern: /installLiveTearRuntimeBridge\(\{[\s\S]*?\}, window\);/u,
+    message: "test-build runtime bridge installation must receive its browser window through the composition dependency port",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -441,6 +446,12 @@ if (dependencyErrors("src/app/live-game-runtime.ts",
   || dependencyErrors("src/app/live-game-runtime.ts",
     "emitLiveTearBenchPhysicalInput(input, { window: dependencies.browserWindow, canvas });").length !== 0) {
   throw new Error("source architecture composition-owned physical-input browser window rule self-test failed");
+}
+if (dependencyErrors("src/app/live-game-runtime.ts",
+  "installLiveTearRuntimeBridge({\n  source,\n}, window);").length !== 1
+  || dependencyErrors("src/app/live-game-runtime.ts",
+    "installLiveTearRuntimeBridge({\n  source,\n}, dependencies.browserWindow);").length !== 0) {
+  throw new Error("source architecture composition-owned runtime-bridge browser window rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",

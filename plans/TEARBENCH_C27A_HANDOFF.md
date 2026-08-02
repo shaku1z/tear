@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** sixty-second C27A foundation slice implemented (composition-owned
-test-build physical-input browser window); checkpoint remains open
+**Status:** sixty-third C27A foundation slice implemented (composition-owned
+test-build runtime-bridge browser window); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
@@ -640,6 +640,14 @@ caches and transient lights are local to the controller. This is not full
   semantics, physical-device behavior, persistence, or concurrent-world claim.
   The next boundary supplies the test-build runtime-bridge installation target.
 
+  Slice 63 supplies that runtime-bridge installation target. It receives
+  `browserWindow`, and source architecture rejects restoring the ambient target
+  argument. The focused gate passed 5 files / 19 tests; the rebuilt physical
+  canonical-input journey still crosses the bridge. This is not a changed
+  bridge contract, canonical input semantics, physical-device behavior,
+  persistence, or concurrent-world claim. The next boundary is one remaining
+  persistence adapter.
+
 All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
@@ -668,7 +676,8 @@ Slice 41 adds simulation tuning isolation; Slice 42 injects particle policy;
   audio-context handoff, browser navigator capability, browser document/window
   capability, Ghost V3 IndexedDB capability, Ghost V3 test-query capability,
   Ghost V3 inspector assembly, test-build parity-tick window, live frame-driver
-  window, and test-build physical-input window are composition-owned. Remaining persistence adapter
+  window, test-build physical-input window, and test-build runtime-bridge window
+  are composition-owned. Remaining persistence adapter
   isolation still precedes true simultaneous complete worlds.
 Any newly found
 divergence is a defect to fix in the composition or a restated rule to delete
@@ -688,11 +697,11 @@ composition with parity evidence.
 
 ## Working-tree safety
 
-- Slice 62 is the next intentional commit on
+- Slice 63 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 5
   files / 19 tests plus source architecture; the rebuilt physical canonical-input
-  journey passed. The next boundary supplies the test-build runtime-bridge installation
-  target, still not a persistence, durability, physical-device, or second-runtime claim.
+  journey still crosses the bridge. The next boundary is one remaining persistence
+  adapter, still not a durability, physical-device, or second-runtime claim.
 - Slice 48 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
   files / 23 tests plus source architecture; built journeys and six responsive

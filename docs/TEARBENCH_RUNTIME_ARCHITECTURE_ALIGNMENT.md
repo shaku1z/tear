@@ -390,6 +390,10 @@ The following C27A foundation slices are complete:
   window; its physical browser journey still seals input through the canonical
   path. The next adjacent test-only browser capability is runtime-bridge
   installation; it must not alter the bridge contract.
+- That test-only runtime-bridge installer now receives the supplied browser
+  window, and the physical canonical-input journey still crosses its unchanged
+  bridge contract. The next C27A boundary is a single remaining persistence
+  adapter; it must not claim durability or concurrent-world completion.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition
