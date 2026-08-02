@@ -2,6 +2,7 @@ export * from "./truth-kernel";
 export * from "./recording-profiles";
 export * from "./capsule-vault";
 export * from "./browser-capsule-vault";
+export * from "./vault-maintenance";
 export * from "./capsule-reader";
 export * from "./capsule-replay-envelope";
 export * from "./replay-admission";

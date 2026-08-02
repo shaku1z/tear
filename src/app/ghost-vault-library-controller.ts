@@ -1,4 +1,4 @@
-import { listBrowserGhostCapsuleManifests } from "../ghost/browser-capsule-vault";
+import { inspectBrowserGhostVault, type BrowserGhostVaultCatalog } from "../ghost/browser-capsule-vault";
 import type { TearGhostManifest } from "../ghost/capsule-vault";
 
 export interface GhostVaultLibraryCapsule {
@@ -7,11 +7,13 @@ export interface GhostVaultLibraryCapsule {
   readonly status: TearGhostManifest["status"];
   readonly recordingProfile: TearGhostManifest["recordingProfile"];
   readonly chunkCount: number;
+  readonly healthy: boolean;
 }
 
 export interface GhostVaultLibrarySnapshot {
   readonly status: "idle" | "loading" | "ready" | "unavailable" | "failed";
   readonly capsules: readonly GhostVaultLibraryCapsule[];
+  readonly evictedCapsuleIds: readonly string[];
   readonly message?: string;
 }
 
@@ -21,27 +23,30 @@ export interface GhostVaultLibraryPort {
 }
 
 export interface GhostVaultLibraryControllerOptions {
-  readonly listManifests: () => Promise<readonly TearGhostManifest[]>;
+  readonly inspect: () => Promise<BrowserGhostVaultCatalog>;
 }
 
-function capsuleView(manifest: TearGhostManifest): GhostVaultLibraryCapsule {
+function capsuleView(manifest: TearGhostManifest, healthy: boolean): GhostVaultLibraryCapsule {
   return Object.freeze({
     id: manifest.id,
     createdAt: manifest.createdAt,
     status: manifest.status,
     recordingProfile: manifest.recordingProfile,
     chunkCount: manifest.chunks.length,
+    healthy,
   });
 }
 
 function frozenSnapshot(
   status: GhostVaultLibrarySnapshot["status"],
   capsules: readonly GhostVaultLibraryCapsule[],
+  evictedCapsuleIds: readonly string[] = [],
   message?: string,
 ): GhostVaultLibrarySnapshot {
   return Object.freeze({
     status,
     capsules: Object.freeze([...capsules]),
+    evictedCapsuleIds: Object.freeze([...evictedCapsuleIds]),
     ...(message === undefined ? {} : { message }),
   });
 }
@@ -58,15 +63,16 @@ export function createGhostVaultLibraryController(options: GhostVaultLibraryCont
     refresh: () => {
       const request = ++generation;
       current = frozenSnapshot("loading", current.capsules);
-      void options.listManifests().then((manifests) => {
+      void options.inspect().then((catalog) => {
         if (request !== generation) return;
-        const capsules = manifests.map(capsuleView)
+        const health = new Map(catalog.maintenance.integrity.map((entry) => [entry.id, entry.healthy]));
+        const capsules = catalog.manifests.map((manifest) => capsuleView(manifest, health.get(manifest.id) === true))
           .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
-        current = frozenSnapshot("ready", capsules);
+        current = frozenSnapshot("ready", capsules, catalog.maintenance.evictedCapsuleIds);
       }).catch((error: unknown) => {
         if (request !== generation) return;
         const message = error instanceof Error ? error.message : String(error);
-        current = frozenSnapshot("failed", current.capsules, `Ghost Vault could not open: ${message}`);
+        current = frozenSnapshot("failed", current.capsules, current.evictedCapsuleIds, `Ghost Vault could not open: ${message}`);
       });
     },
   } satisfies GhostVaultLibraryPort);
@@ -76,9 +82,9 @@ export function createGhostVaultLibraryController(options: GhostVaultLibraryCont
 export function createBrowserGhostVaultLibrary(factory: IDBFactory | undefined): GhostVaultLibraryPort {
   if (factory === undefined) {
     return Object.freeze({
-      snapshot: () => frozenSnapshot("unavailable", [], "Ghost Vault is unavailable in this browser."),
+      snapshot: () => frozenSnapshot("unavailable", [], [], "Ghost Vault is unavailable in this browser."),
       refresh: () => undefined,
     } satisfies GhostVaultLibraryPort);
   }
-  return createGhostVaultLibraryController({ listManifests: () => listBrowserGhostCapsuleManifests(factory) });
+  return createGhostVaultLibraryController({ inspect: () => inspectBrowserGhostVault(factory) });
 }

@@ -181,13 +181,16 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     const vaultReplays = ghostVault.capsules.map((capsule) => Object.freeze({
       id: `capsule:${capsule.id}`,
       title: `Ghost V3 - ${capsule.recordingProfile.toUpperCase()}`,
-      detail: `${capsule.status.toUpperCase()} - ${String(capsule.chunkCount)} CHUNKS`,
+      detail: `${capsule.status.toUpperCase()} - ${String(capsule.chunkCount)} CHUNKS - ${capsule.healthy ? "HEALTHY" : "NEEDS REPAIR"}`,
       badge: "DURABLE CAPSULE",
       available: false,
       timestamp: new Date(capsule.createdAt).toLocaleDateString(),
     }));
     if (profileTab === "vault" && ghostVault.message !== undefined) profileMessage = ghostVault.message;
     else if (profileTab === "vault" && ghostVault.status === "loading") profileMessage = "opening Ghost Vault...";
+    else if (profileTab === "vault" && ghostVault.evictedCapsuleIds.length > 0) {
+      profileMessage = `${String(ghostVault.evictedCapsuleIds.length)} older Ghost capsule(s) were removed by Vault retention.`;
+    }
     else if (profileTab === "vault" && ghostVault.status === "ready" && ghostVault.capsules.length === 0) {
       profileMessage = "No Ghost capsules stored on this device yet.";
     }
