@@ -5,8 +5,8 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** sixty-ninth C27A foundation slice implemented (composition-owned
-outcome defeat-progress profile-stat adapter); checkpoint remains open
+**Status:** seventieth C27A foundation slice implemented (composition-owned
+setup-shop purchase profile-stat adapter); checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
@@ -704,6 +704,16 @@ caches and transient lights are local to the controller. This is not full
   isolates setup-shop purchase profile-stat updates without changing purchase,
   visual feedback, or achievement-check behavior.
 
+  Slice 70 isolates setup-shop purchase profile-stat updates in a composition-
+  owned adapter. Source architecture rejects direct `shopBuys`/`shopMaxed`
+  profile-stat access in the shop renderer. The focused gate passed 5 files / 8
+  tests including adapter ordering and retained purchase, feedback, and
+  achievement-check behavior; rebuilt campaign-victory browser proof passes.
+  This is not durable profile state, migration, quota, crash recovery,
+  cross-device sync, or concurrent-world evidence. The next boundary routes the
+  generic session and wave profile-stat ports through their shared adapter
+  without changing their callers' behavior.
+
 All thirteen captured fixed-tick scenarios now match on every tick and every
 post-origin native semantic gameplay fact. The world owns the
 portable gameplay timeline; chapter bindings reconstruct from data through
@@ -739,6 +749,7 @@ Slice 41 adds simulation tuning isolation; Slice 42 injects particle policy;
   composition-owned adapter; platform-bootstrap progression backfill is a
   typed composition-owned adapter; pending-finale profile operations are a
   typed composition-owned adapter; outcome defeat-progress profile stats are a
+  typed composition-owned adapter; setup-shop purchase profile stats are a
   typed composition-owned adapter. Remaining persistence adapter
   isolation still precedes true simultaneous complete worlds.
 Any newly found
@@ -759,12 +770,13 @@ composition with parity evidence.
 
 ## Working-tree safety
 
-- Slice 69 is the next intentional commit on
+- Slice 70 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 5
-  files / 10 tests plus source architecture, including adapter ordering and the
-  retained outcome behavior; rebuilt campaign-victory browser proof passed. The
-  next boundary is setup-shop purchase profile-stat updates, still not a
-  durability, physical-device, or second-runtime claim.
+  files / 8 tests plus source architecture, including adapter ordering and the
+  retained shop behavior; rebuilt campaign-victory browser proof passed. The
+  next boundary routes generic session and wave profile-stat ports through their
+  shared adapter, still not a durability, physical-device, or second-runtime
+  claim.
 - Slice 48 is the next intentional commit on
   `origin/codex/ghost3-autonomous-completion-plan`. Its focused gate passed 8
   files / 23 tests plus source architecture; built journeys and six responsive

@@ -423,6 +423,12 @@ The following C27A foundation slices are complete:
   recording behavior; rebuilt campaign-victory browser proof passes. The next
   persistence boundary is setup-shop purchase profile-stat updates, again
   without a durable-profile claim.
+- Setup-shop purchase profile stats now use a composition-owned operation that
+  preserves the `shopBuys` increment and maxed-shop count. Its focused
+  adapter/renderer gate retains purchase, feedback, and achievement behavior;
+  rebuilt campaign-victory browser proof passes. The next boundary routes the
+  generic session and wave profile-stat ports through their shared adapter,
+  again without a durable-profile claim.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition

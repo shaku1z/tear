@@ -253,6 +253,11 @@ const forbiddenDependencyRules = Object.freeze([
     message: "live outcome defeat-progress persistence must use the composition-owned adapter",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/app/live-setup-shop-renderers.ts"]),
+    pattern: /\bd\.PROFILE\.(?:addStat|maxStat)\(/u,
+    message: "shop purchase persistence must use the composition-owned adapter",
+  }),
+  Object.freeze({
     roots: Object.freeze([
       "src/presentation/entities/blade-renderer.ts",
       "src/presentation/entities/mirror-renderer.ts",
@@ -540,6 +545,12 @@ if (dependencyErrors("src/app/live-outcome-composition.ts",
   || dependencyErrors("src/app/live-outcome-composition.ts",
     "d.outcomeDefeatProgressPersistence.record(run);").length !== 0) {
   throw new Error("source architecture composition-owned outcome defeat-progress persistence rule self-test failed");
+}
+if (dependencyErrors("src/app/live-setup-shop-renderers.ts",
+  'd.PROFILE.addStat("shopBuys", 1);').length !== 1
+  || dependencyErrors("src/app/live-setup-shop-renderers.ts",
+    "d.shopPurchaseProgressPersistence.recordPurchase();").length !== 0) {
+  throw new Error("source architecture composition-owned shop purchase persistence rule self-test failed");
 }
 for (const moduleName of [
   "src/presentation/entities/blade-renderer.ts",

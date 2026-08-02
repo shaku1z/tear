@@ -36,6 +36,7 @@ import type { LegacyAppStateController } from "./legacy-state-controller";
 import type { AchievementToastPersistence } from "./live-achievement-toast-persistence";
 import type { PendingFinalePersistence } from "./live-pending-finale-persistence";
 import type { OutcomeDefeatProgressPersistence } from "./live-outcome-defeat-progress-persistence";
+import type { ShopPurchaseProgressPersistence } from "./live-shop-purchase-progress-persistence";
 import type { StyleAchievementPersistence } from "./live-style-achievement-persistence";
 import type { PlatformBootstrapPersistence } from "./live-platform-bootstrap-persistence";
 
@@ -77,6 +78,7 @@ export interface GameRuntimeDependencies {
   readonly REMOTE: typeof REMOTE; readonly Ranged: EnemyTypes["Ranged"];
   readonly ReflectionEnemy: MirrorTypes["ReflectionEnemy"]; readonly SAFE: typeof SAFE; readonly SFX: LegacySynthFacade;
   readonly SHOP: ReturnType<typeof createMetaProgression>["SHOP"]; readonly STAGES: typeof Stages.STAGES;
+  readonly shopPurchaseProgressPersistence: ShopPurchaseProgressPersistence;
   readonly styleAchievementPersistence: StyleAchievementPersistence;
   readonly Source: EnemyTypes["Source"]; readonly Support: EnemyTypes["Support"]; readonly THEME: typeof THEME;
   readonly UI: ReturnType<typeof createUi>; readonly UPGRADES: typeof Upgrades.UPGRADES;

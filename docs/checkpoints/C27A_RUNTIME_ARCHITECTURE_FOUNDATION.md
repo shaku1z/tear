@@ -1140,6 +1140,18 @@ of replay, headless execution, or learning portability.
   purchase profile-stat updates without changing purchase, visual feedback, or
   achievement-check behavior.
 
+- The seventieth slice isolates setup-shop purchase profile-stat updates in a
+  composition-owned adapter. Source architecture rejects direct `shopBuys`/
+  `shopMaxed` profile-stat access in the shop renderer. The focused gate passed
+  5 files / 8 tests, including adapter ordering and retained purchase, feedback,
+  and achievement-check behavior; rebuilt campaign-victory browser proof passes.
+
+  This is one shop profile-stat handoff only, not durable profile state,
+  migration, quota, crash recovery, cross-device sync, concurrent-world
+  behavior, or C27A completion evidence. The next boundary routes the generic
+  session and wave profile-stat ports through their shared adapter without
+  changing their callers' behavior.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.
