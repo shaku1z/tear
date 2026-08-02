@@ -164,15 +164,16 @@ This is the migration checklist for the architectural redesign. A checked featur
 - [x] Leaderboard submission, identity and failure/offline behavior — `platform-shared-cloud.test.ts`, `platform-cloud.test.ts`, `platform-browser.test.ts`, and `platform-firebase-cloud.test.ts`.
 - [x] Replay recording, vault, publication, loading and legacy migration — replay visual/vault/envelope suites, `replay-round-trip.test.ts`, platform publication contracts, and the replay browser journey.
 - [x] Deterministic replay verification across render rates — `authoritative-replay.test.ts` verifies JSON-round-tripped actions at 30/60/144 Hz; replay hash/envelope/round-trip suites cover verification and serialization.
-- [ ] Ghost 3.0 durable Vault and governed cloud publication — current
-  capsule/Vault, Doctor, Theater, knowledge, coaching, player-experience, and
-  cloud-publication code proves contracts and pure behavior. C27 now includes
-  a real IndexedDB live-capture sidecar plus a persisted V1 replay bootstrap
-  and fail-closed admission check; a physical browser run proves that context
-  is durable while correctly reporting no compatible detached runtime. It is
-  not yet V3 playback, verification, or a player-facing Theater. Durable
-  cross-session storage, authenticated publication, deployed verification,
-  moderation operations, and player-visible flows remain completion work.
+- [ ] Ghost 3.0 durable Vault and governed cloud publication — C28's named
+  gate now proves real IndexedDB Vault storage across browser restart,
+  version-1-to-version-2 migration, interrupted-write recovery, hostile
+  imports, Doctor repair children, governed knowledge libraries, and a
+  browser-enforced physical quota rejection after retaining a source capsule.
+  C27 also includes a real IndexedDB live-capture sidecar plus a persisted V1
+  replay bootstrap and fail-closed admission check. V3 playback, compatible
+  production-world verification, and a player-facing Theater remain C29 work;
+  authenticated publication, deployed verification, moderation operations,
+  and cloud/player lifecycle flows remain later completion work.
 
 ## Accessibility and settings
 
