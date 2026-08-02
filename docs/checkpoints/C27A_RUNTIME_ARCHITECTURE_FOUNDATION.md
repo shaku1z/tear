@@ -1373,6 +1373,16 @@ of replay, headless execution, or learning portability.
   it does not isolate remaining app services, create concurrent complete worlds,
   or complete C27A.
 
+- The ninety-seventh slice moves the detached harness onto
+  `createTearWorldComposition` directly. It supplies its existing live-shaped
+  state, entity, service, and cinematic adapters to the portable core, which
+  retains the one lifecycle and transient record; detached construction no
+  longer instantiates an unused live music director. The focused gate passed 7
+  files / 65 tests; rebuilt physical-canonical-input and all thirteen
+  live-parity browser scenarios passed. This is not portable entity selection
+  or app-service implementation, full-world portability, concurrent complete
+  worlds, or C27A completion.
+
 ### Three-slice pause — slices 66–68
 
 DONE THIS STEP:      Slices 66–68 moved live-style achievement persistence, platform-bootstrap progress backfill, and outcome pending-finale profile operations behind composition-owned adapters.

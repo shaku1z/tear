@@ -345,7 +345,7 @@ simultaneous full worlds.
 
 ### C27 — Authoritative recorder and capsule
 
-#### Slice 96 update (current)
+#### Slice 97 update (current)
 
 Slice 41 completes the bounded **simulation tuning isolation** step. Before any
 world consumer captures configuration, the composition root creates one stable
@@ -941,6 +941,14 @@ separate direct construction in the live host. The focused root gate passed 7
 files / 22 tests; rebuilt physical-canonical-input and all thirteen live-parity
 browser scenarios passed. This is not app-service isolation, full-world
 portability, concurrent complete worlds, or C27A completion.
+
+Slice 97 routes detached construction directly through
+`createTearWorldComposition`, supplying the current live-shaped state, entity,
+service, and cinema adapters without creating an unused live music director.
+The focused gate passed 7 files / 65 tests; rebuilt physical-canonical-input
+and all thirteen live-parity browser scenarios passed. This is not portable
+entity or app-service implementation, full-world portability, concurrent
+complete worlds, or C27A completion.
 
 - [x] V3 recorder ships in the production bundle
 - [x] Interruption, crash, corrupt-journal, storage-fault recovery proven in browser

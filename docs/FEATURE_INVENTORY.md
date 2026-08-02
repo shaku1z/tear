@@ -115,6 +115,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   root that requires its runtime configuration reference to match the
   world-owned configuration value. This prevents a torn configuration authority
   but does not isolate remaining app services or enable concurrent full worlds.
+  Detached construction now joins its state, entity, service, and cinema ports
+  through the portable world core directly, avoiding an unused live music
+  director. It still uses narrow app-backed adapters and is not full-world
+  portability.
   Real
   full-world portability, durable
   Ghost/Academy storage, genuine learned policies,

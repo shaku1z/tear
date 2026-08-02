@@ -118,6 +118,13 @@ describe("detached production world", () => {
     expect(first.factories.Player).not.toBe(second.factories.Player);
   });
 
+  it("builds detached worlds through the portable core without a live audio director", () => {
+    const detached = createDetachedWorld({ seed: "portable-detached-core" });
+
+    expect(detached.world.context.lifecycle).toBe(detached.world.lifecycle);
+    expect("music" in detached.world).toBe(false);
+  });
+
   it("routes detached combat through the transient record owned by its world", () => {
     const detached = createDetachedWorld({ seed: "world-owned-transient" });
 

@@ -65,21 +65,16 @@ export interface LiveWorldComposition {
   readonly music: MusicDirector;
 }
 
-/**
- * Builds one live world: its replaceable state, entity construction adapter,
- * run lifecycle, and world context (services plus transient records).
- *
- * This is deliberately world-only. The combat host, frame coordinator, input,
- * and presentation stay outward in the host that drives the world, so the same
- * composition can build a world the live host does not own.
- */
-export function createLiveWorldComposition(options: LiveWorldCompositionOptions): LiveWorldComposition {
-  const { session, mirrors = {} } = options;
+/** Builds the live host-shaped state around a session without constructing adapters. */
+export function createLiveWorldState(
+  session: LiveWorldSessionPort,
+  mirrors: LiveWorldMirrors = {},
+): LiveGameHostState {
   const portable: PortableWorldState = createTearWorldState<
     WorldRun, GamePlayer, GameBlade, GameEnemy, GameProjectile, GameFloater,
     GameSlowZone, GameTemporaryWall, BossIntroState, BossBeatState
   >();
-  const state: LiveGameHostState = Object.freeze({
+  return Object.freeze({
     // A null run or undefined actor would be a torn world, not a reset one;
     // the live application replaces them together at run start.
     run: () => portable.run(), setRun: (value) => { if (value !== null) { portable.setRun(value); mirrors.run?.(value); } },
@@ -98,6 +93,19 @@ export function createLiveWorldComposition(options: LiveWorldCompositionOptions)
     lastVaultId: () => session.lastVaultId(), setLastVaultId: (value) => { session.setLastVaultId(value); },
     winSeconds: () => session.winSeconds(), setWinSeconds: (value) => { session.setWinSeconds(value); },
   } satisfies LiveGameHostState);
+}
+
+/**
+ * Builds one live world: its replaceable state, entity construction adapter,
+ * run lifecycle, and world context (services plus transient records).
+ *
+ * This is deliberately world-only. The combat host, frame coordinator, input,
+ * and presentation stay outward in the host that drives the world, so the same
+ * composition can build a world the live host does not own.
+ */
+export function createLiveWorldComposition(options: LiveWorldCompositionOptions): LiveWorldComposition {
+  const { session, mirrors = {} } = options;
+  const state = createLiveWorldState(session, mirrors);
   const entities = createLiveWorldEntityFactory(options.dependencies);
   const music = new MusicDirector(options.dependencies.SFX);
   // The world owns the simulation timeline. The live factory adds drawing;

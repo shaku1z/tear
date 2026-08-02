@@ -5,20 +5,20 @@
 > is the detailed appendix for the current C27A boundary, not the complete
 > TearBench roadmap.
 
-**Status:** ninety-sixth C27A foundation slice implemented (the production root
-now owns live session/world construction and config-reference admission);
+**Status:** ninety-seventh C27A foundation slice implemented (detached
+construction now invokes the portable world core directly);
 checkpoint remains open
 and blocking pending browser persistence, remaining
 presentation-policy, and rendered/audio/haptic exits.
 
-**Latest evidence:** Slice 96 routes live construction through
-`createLiveProductionWorld`. It creates the session/world together and rejects
-a runtime configuration reference that differs from the world-owned value;
-source architecture rejects restoring direct session/world construction. Its
-focused 7-file / 22-test root gate, rebuilt physical-canonical-input browser
-proof, and all thirteen live-parity browser scenarios pass. This prevents split
-configuration authority only; it is not app-service isolation,
-full-production-world portability, or C27A completion.
+**Latest evidence:** Slice 97 routes detached construction through
+`createTearWorldComposition` directly. The harness supplies its existing
+live-shaped adapters, retains the core's single lifecycle/transient record, and
+does not create an unused live music director. Its focused 7-file / 65-test
+gate, rebuilt physical-canonical-input browser proof, and all thirteen
+live-parity browser scenarios pass. This is direct portable-core assembly, not
+portable entity or app-service implementation, full-production-world
+portability, or C27A completion.
 
 ## Resume protocol (mandatory)
 

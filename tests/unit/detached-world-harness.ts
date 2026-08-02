@@ -1,7 +1,10 @@
 import { A11Y, CONFIG, GFX } from "../../src/config/game-config";
 import { createLiveAuthoritativeInputAdapter } from "../../src/app/live-authoritative-input-adapter";
 import { createTearWorldBootstrap } from "../../src/gameplay/runtime/tear-world-bootstrap";
-import { createLiveWorldComposition, type LiveWorldSessionPort } from "../../src/app/live-world-composition";
+import { createLiveWorldState, type LiveWorldSessionPort } from "../../src/app/live-world-composition";
+import { createLiveWorldServices } from "../../src/app/live-world-context";
+import { createLiveWorldEntityFactory } from "../../src/app/live-world-entity-factory";
+import { createTearWorldComposition } from "../../src/gameplay/runtime/tear-world-composition";
 import {
   createTearWorldSimulationFactories,
   type TearWorldEntityPresentationPorts,
@@ -159,10 +162,15 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
     lastVaultId: () => null, setLastVaultId: () => undefined,
     winSeconds: () => 0, setWinSeconds: () => undefined,
   };
-  const world = createLiveWorldComposition({ dependencies, session, configuration });
-  // Combat, State Forge restoration, and all detached outward adapters must
-  // mutate the one record the constructed world owns. Creating a second local
-  // transient record here would let those paths silently diverge.
+  const state = createLiveWorldState(session);
+  const entities = createLiveWorldEntityFactory(dependencies);
+  const world = createTearWorldComposition({
+    state, entities,
+    services: createLiveWorldServices({ dependencies, configuration }),
+    cinema: new CinematicTimeline.Director(config),
+  });
+  // Combat, State Forge restoration, and all detached outward adapters mutate
+  // the one record the portable world core owns.
   const transient = world.context.transient;
   world.context.services.random.resetRun(options.seed);
   const run = detachedRun(options.mode);

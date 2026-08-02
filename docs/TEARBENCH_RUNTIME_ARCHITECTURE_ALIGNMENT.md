@@ -548,6 +548,12 @@ The following C27A foundation slices are complete:
   a split configuration authority only; it does not isolate app-backed
   services, add a second scheduler, make full worlds concurrent, or complete
   C27A.
+- Detached construction now supplies its existing state, entity, live-service,
+  and cinematic adapters directly to the portable world core. It consequently
+  does not create an unused `MusicDirector`, while retaining the same one
+  lifecycle/transient record owned by that core. This is not portable entity
+  selection or service implementations, headless/full production-world
+  portability, concurrent complete-world evidence, or C27A completion.
 
 This does not resolve the full decision. Closure-owned full-world construction,
 detached replay, and headless gameplay still require the same real composition
