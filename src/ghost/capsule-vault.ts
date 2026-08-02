@@ -3,9 +3,10 @@ import { decodeGhostChunkPayload, encodeGhostChunkPayload, type GhostChunkEncodi
 import { GHOST_RECORDING_PROFILES, type GhostRecordingProfileId } from "./recording-profiles";
 
 export const GHOST_VAULT_STORES = Object.freeze([
-  "manifests", "chunks", "assets", "indexes", "uploadJobs", "analysis", "lineage", "settings", "journals", "quarantine",
+  "manifests", "chunks", "assets", "indexes", "uploadJobs", "analysis", "lineage", "settings", "journals", "quarantine", "libraries",
 ] as const);
 export type GhostVaultStore = typeof GHOST_VAULT_STORES[number];
+export const GHOST_VAULT_DATABASE_VERSION = 2;
 
 export type GhostChunkKind = "commands" | "rng" | "events" | "results" | "keyframes" | "presentation";
 
@@ -184,7 +185,7 @@ export async function createIndexedDbGhostVaultBackend(
   databaseName = "tear-ghost-v3",
 ): Promise<GhostVaultBackend> {
   const database = await new Promise<IDBDatabase>((resolve, reject) => {
-    const request = factory.open(databaseName, 1);
+    const request = factory.open(databaseName, GHOST_VAULT_DATABASE_VERSION);
     request.onupgradeneeded = () => {
       for (const store of GHOST_VAULT_STORES) {
         if (!request.result.objectStoreNames.contains(store)) request.result.createObjectStore(store);

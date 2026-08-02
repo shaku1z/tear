@@ -48,6 +48,7 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
   await page.waitForTimeout(250);
   const renderedVaultText = await page.evaluate(() => window.__TEAR_C28_VAULT_TEXT__ ?? []);
   assert.ok(renderedVaultText.some((text) => text.includes("NEEDS REPAIR")), `Vault did not render the Doctor health state: ${renderedVaultText.slice(-80).join(" | ")}`);
+  assert.ok(renderedVaultText.some((text) => text.includes("GRAVEYARD")), `Vault did not render the governed Ghost library membership: ${renderedVaultText.slice(-80).join(" | ")}`);
   assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "profile");
   assert.deepEqual(await page.evaluate(() => window.__TEAR_GHOST_V3__.manifests().then((items) => items.map((item) => item.id))), [manifest.id]);
   const maintenance = await page.evaluate((id) => new Promise((resolve, reject) => {
@@ -55,10 +56,11 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
     open.onerror = () => reject(open.error ?? new Error("IndexedDB open failed"));
     open.onsuccess = () => {
       const database = open.result;
-      const transaction = database.transaction(["indexes", "analysis"], "readonly");
+      const transaction = database.transaction(["indexes", "analysis", "libraries"], "readonly");
       const index = transaction.objectStore("indexes").get(`manifest:${id}`);
       const report = transaction.objectStore("analysis").get("vault-maintenance:v1");
-      transaction.oncomplete = () => { database.close(); resolve({ index: index.result, report: report.result }); };
+      const graveyard = transaction.objectStore("libraries").get(`entry:graveyard:graveyard:${id}`);
+      transaction.oncomplete = () => { database.close(); resolve({ index: index.result, report: report.result, graveyard: graveyard.result }); };
       transaction.onerror = () => { database.close(); reject(transaction.error ?? new Error("IndexedDB maintenance read failed")); };
     };
   }), manifest.id);
@@ -66,5 +68,7 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
   const report = JSON.parse(maintenance.report);
   assert.equal(report.maximumBytes, 256 * 1024 * 1024);
   assert.ok(report.integrity.some((entry) => entry.id === manifest.id && entry.healthy === false));
+  assert.ok(report.libraries.entries.some((entry) => entry.library === "graveyard" && entry.ghostId === manifest.id));
+  assert.equal(JSON.parse(maintenance.graveyard).entry.library, "graveyard");
 }).then(() => console.log("browser Ghost Vault player library passed"))
   .catch((error) => { console.error(error); process.exit(1); });

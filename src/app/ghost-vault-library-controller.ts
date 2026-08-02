@@ -1,5 +1,6 @@
 import { inspectBrowserGhostVault, type BrowserGhostVaultCatalog } from "../ghost/browser-capsule-vault";
 import type { TearGhostManifest } from "../ghost/capsule-vault";
+import type { GhostLibraryKind } from "../ghost/knowledge-libraries";
 
 export interface GhostVaultLibraryCapsule {
   readonly id: string;
@@ -8,6 +9,7 @@ export interface GhostVaultLibraryCapsule {
   readonly recordingProfile: TearGhostManifest["recordingProfile"];
   readonly chunkCount: number;
   readonly healthy: boolean;
+  readonly libraries: readonly GhostLibraryKind[];
 }
 
 export interface GhostVaultLibrarySnapshot {
@@ -26,7 +28,11 @@ export interface GhostVaultLibraryControllerOptions {
   readonly inspect: () => Promise<BrowserGhostVaultCatalog>;
 }
 
-function capsuleView(manifest: TearGhostManifest, healthy: boolean): GhostVaultLibraryCapsule {
+function capsuleView(
+  manifest: TearGhostManifest,
+  healthy: boolean,
+  libraries: readonly GhostLibraryKind[],
+): GhostVaultLibraryCapsule {
   return Object.freeze({
     id: manifest.id,
     createdAt: manifest.createdAt,
@@ -34,6 +40,7 @@ function capsuleView(manifest: TearGhostManifest, healthy: boolean): GhostVaultL
     recordingProfile: manifest.recordingProfile,
     chunkCount: manifest.chunks.length,
     healthy,
+    libraries: Object.freeze([...libraries].sort()),
   });
 }
 
@@ -66,7 +73,14 @@ export function createGhostVaultLibraryController(options: GhostVaultLibraryCont
       void options.inspect().then((catalog) => {
         if (request !== generation) return;
         const health = new Map(catalog.maintenance.integrity.map((entry) => [entry.id, entry.healthy]));
-        const capsules = catalog.manifests.map((manifest) => capsuleView(manifest, health.get(manifest.id) === true))
+        const memberships = new Map<string, GhostLibraryKind[]>();
+        for (const entry of catalog.maintenance.libraries.entries) {
+          const current = memberships.get(entry.ghostId) ?? [];
+          current.push(entry.library);
+          memberships.set(entry.ghostId, current);
+        }
+        const capsules = catalog.manifests.map((manifest) => capsuleView(manifest, health.get(manifest.id) === true,
+          memberships.get(manifest.id) ?? []))
           .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
         current = frozenSnapshot("ready", capsules, catalog.maintenance.evictedCapsuleIds);
       }).catch((error: unknown) => {

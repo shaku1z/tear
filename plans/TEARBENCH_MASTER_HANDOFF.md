@@ -130,8 +130,12 @@ Named status:
   slice corrupts a persisted browser chunk and proves the normal player Vault
   renders `NEEDS REPAIR` with a matching durable Doctor receipt. Repair children
   now preserve originals and atomically store their lineage and forensic
-  quarantine copies; player-initiated repair, a knowledge-library consumer,
-  and the full Vault exit work remain.
+  quarantine copies. A fourth slice adds the version-2 dedicated library store:
+  the same real Doctor diagnosis adds a validated durable Graveyard entry and
+  the player’s custody row renders that membership. Canon, Frontier, and Corpus
+  policies now persist with their review, novelty, consent/split, and
+  deduplication constraints; player-initiated repair and the remaining full
+  Vault exit evidence still remain.
 - **C29-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.

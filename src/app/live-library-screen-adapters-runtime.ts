@@ -181,7 +181,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     const vaultReplays = ghostVault.capsules.map((capsule) => Object.freeze({
       id: `capsule:${capsule.id}`,
       title: `Ghost V3 - ${capsule.recordingProfile.toUpperCase()}`,
-      detail: `${capsule.status.toUpperCase()} - ${String(capsule.chunkCount)} CHUNKS - ${capsule.healthy ? "HEALTHY" : "NEEDS REPAIR"}`,
+      detail: `${capsule.status.toUpperCase()} - ${String(capsule.chunkCount)} CHUNKS - ${capsule.healthy ? "HEALTHY" : "NEEDS REPAIR"}${capsule.libraries.length === 0 ? "" : ` - ${capsule.libraries.join(" / ").toUpperCase()}`}`,
       badge: "DURABLE CAPSULE",
       available: false,
       timestamp: new Date(capsule.createdAt).toLocaleDateString(),

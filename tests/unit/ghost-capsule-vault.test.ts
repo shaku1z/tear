@@ -216,7 +216,7 @@ describe("Ghost capsule recorder and local Vault", () => {
     expect(manifest.fidelity.downgrades).toContain("presentation dropped under encoder backpressure");
     expect(GHOST_VAULT_STORES).toEqual([
       "manifests", "chunks", "assets", "indexes", "uploadJobs",
-      "analysis", "lineage", "settings", "journals", "quarantine",
+      "analysis", "lineage", "settings", "journals", "quarantine", "libraries",
     ]);
   });
 });

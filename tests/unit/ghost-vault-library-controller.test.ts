@@ -21,7 +21,7 @@ describe("Ghost Vault library controller", () => {
     const controller = createGhostVaultLibraryController({
       inspect: () => Promise.resolve({
         manifests: [manifest("older", "2026-08-01T00:00:00.000Z"), manifest("newer", "2026-08-02T00:00:00.000Z")],
-        maintenance: { schemaVersion: 1, checkedAt: "2026-08-02T00:00:00.000Z", maximumBytes: 1, evictedCapsuleIds: [], integrity: [{ id: "older", healthy: true }, { id: "newer", healthy: true }], rebuiltIndexes: 2 },
+        maintenance: { schemaVersion: 1, checkedAt: "2026-08-02T00:00:00.000Z", maximumBytes: 1, evictedCapsuleIds: [], integrity: [{ id: "older", healthy: true }, { id: "newer", healthy: true }], rebuiltIndexes: 2, libraries: { schemaVersion: 1, entries: [{ id: "graveyard:newer", library: "graveyard", ghostId: "newer", rootHash: "root-newer", createdAt: "2026-08-02T00:00:00.000Z", provenance: { source: "ghost-doctor" } }], rejectedEntryKeys: [] } },
       }),
     });
 
@@ -35,7 +35,7 @@ describe("Ghost Vault library controller", () => {
     expect(snapshot).toMatchObject({
       status: "ready",
       capsules: [
-        { id: "newer", status: "complete", recordingProfile: "coaching", chunkCount: 0, healthy: true },
+        { id: "newer", status: "complete", recordingProfile: "coaching", chunkCount: 0, healthy: true, libraries: ["graveyard"] },
         { id: "older", status: "complete", recordingProfile: "coaching", chunkCount: 0, healthy: true },
       ],
     });
@@ -50,7 +50,7 @@ describe("Ghost Vault library controller", () => {
         attempt += 1;
         if (attempt === 1) return Promise.resolve({
           manifests: [manifest("kept", "2026-08-02T00:00:00.000Z")],
-          maintenance: { schemaVersion: 1, checkedAt: "2026-08-02T00:00:00.000Z", maximumBytes: 1, evictedCapsuleIds: [], integrity: [{ id: "kept", healthy: true }], rebuiltIndexes: 1 },
+          maintenance: { schemaVersion: 1, checkedAt: "2026-08-02T00:00:00.000Z", maximumBytes: 1, evictedCapsuleIds: [], integrity: [{ id: "kept", healthy: true }], rebuiltIndexes: 1, libraries: { schemaVersion: 1, entries: [], rejectedEntryKeys: [] } },
         });
         return Promise.reject(new Error("IndexedDB blocked"));
       },

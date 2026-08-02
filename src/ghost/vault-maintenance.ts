@@ -1,4 +1,5 @@
 import { GhostDoctor } from "./ghost-doctor";
+import { GhostVaultKnowledgeLibraries, type GhostVaultKnowledgeLibraryInventory } from "./durable-knowledge-libraries";
 import type { GhostLocalVault, TearGhostManifest } from "./capsule-vault";
 
 export type GhostVaultRetentionTier = "pinned" | "standard" | "temporary";
@@ -22,6 +23,7 @@ export interface GhostVaultMaintenanceReport {
   readonly evictedCapsuleIds: readonly string[];
   readonly integrity: readonly GhostVaultIntegrityEntry[];
   readonly rebuiltIndexes: number;
+  readonly libraries: GhostVaultKnowledgeLibraryInventory;
 }
 
 export const DEFAULT_GHOST_VAULT_MAXIMUM_BYTES = 256 * 1024 * 1024;
@@ -52,18 +54,27 @@ export async function maintainGhostVault(
   const evictedCapsuleIds = await vault.enforceQuota(maximumBytes, options.retention ?? {});
   const remaining = await manifests(vault);
   const doctor = new GhostDoctor(vault);
-  const integrity = Object.freeze(await Promise.all(remaining.map(async (manifest) => {
-    const report = await doctor.scan(manifest.id);
-    return Object.freeze({ id: manifest.id, healthy: report.healthy });
+  const checkedAt = (options.now ?? (() => new Date().toISOString()))();
+  const scans = await Promise.all(remaining.map(async (manifest) => Object.freeze({
+    manifest,
+    report: await doctor.scan(manifest.id),
   })));
+  const integrity = Object.freeze(scans.map(({ manifest, report }) => Object.freeze({
+    id: manifest.id, healthy: report.healthy,
+  })));
+  const libraries = new GhostVaultKnowledgeLibraries(vault.backend());
+  for (const { manifest, report } of scans) {
+    if (!report.healthy) await libraries.recordCorruptCapsule(manifest, report, checkedAt);
+  }
   const rebuiltIndexes = await doctor.rebuildIndex();
   const report = Object.freeze({
     schemaVersion: 1 as const,
-    checkedAt: (options.now ?? (() => new Date().toISOString()))(),
+    checkedAt,
     maximumBytes,
     evictedCapsuleIds: sortedIds(evictedCapsuleIds),
     integrity: Object.freeze([...integrity].sort((left, right) => left.id.localeCompare(right.id))),
     rebuiltIndexes,
+    libraries: await libraries.inventory(),
   });
   await vault.backend().put("analysis", GHOST_VAULT_MAINTENANCE_KEY, JSON.stringify(report));
   return report;
