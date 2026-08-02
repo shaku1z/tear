@@ -61,6 +61,16 @@ const forbiddenDependencyRules = Object.freeze([
     message: "detached TearBench world modules cannot reference browser or Canvas globals",
   }),
   Object.freeze({
+    roots: Object.freeze(["src/tearbench/production-headless-environment.ts"]),
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*(?:app\/|presentation\/|audio\/|persistence\/|platform\/|browser\/|replay\/legacy-compat)[^"']*["']/u,
+    message: "production headless entry cannot import browser or outward adapters directly",
+  }),
+  Object.freeze({
+    roots: Object.freeze(["src/tearbench/production-headless-environment.ts"]),
+    pattern: /\b(?:window|document|HTMLElement|HTML\w*Element|Canvas\w*|KeyboardEvent|PointerEvent|MouseEvent|Gamepad)\b/u,
+    message: "production headless entry cannot reference browser or Canvas globals",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/tearbench/live-runtime-environment.ts", "src/tearbench/live-runtime-action-routing.ts"]),
     pattern: /(?:from\s+|import\s*\()\s*["'][^"']*(?:app\/|presentation\/|audio\/|persistence\/|platform\/|replay\/legacy-compat|browser\/)[^"']*["']/u,
     message: "portable live TearBench modules cannot depend on browser or outward adapters",
@@ -923,6 +933,14 @@ if (dependencyErrors("src/tearbench/detached-world-runtime.ts",
 if (dependencyErrors("src/tearbench/detached-world-runtime.ts",
   'const canvas: HTMLCanvasElement | null = null;').length !== 1) {
   throw new Error("source architecture detached runtime browser-rule self-test failed");
+}
+if (dependencyErrors("src/tearbench/production-headless-environment.ts",
+  'import { startLiveGame } from "../app/live-game-runtime";').length !== 1) {
+  throw new Error("source architecture production headless import-rule self-test failed");
+}
+if (dependencyErrors("src/tearbench/production-headless-environment.ts",
+  'const canvas: HTMLCanvasElement | null = null;').length !== 1) {
+  throw new Error("source architecture production headless browser-rule self-test failed");
 }
 if (dependencyErrors("src/tearbench/live-runtime-environment.ts",
   'import { installGhostLabPanel } from "./browser/ghost-lab-panel";').length !== 1) {

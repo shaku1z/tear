@@ -105,7 +105,7 @@ These figures do not mean newer work has no value. They mean most original atomi
 |---|---:|---|---|
 | P7 — Truthful Baseline | C21-C22 | Truth audit and runtime bridge | Passed |
 | P8 — Real Autonomous QA | C23-C26 | State Forge, scripted agent, physical input, regression discovery | C23, C24, C26 passed named gates; C25 exit open |
-| P9 — Operational Ghost 3 | C27-C30 + C27A | Recorder, shared architecture, Vault/Doctor, Theater, scalable episodes | C27 foundation active; C27A closed |
+| P9 — Operational Ghost 3 | C27-C30 + C27A | Recorder, shared architecture, Vault/Doctor, Theater, scalable episodes | C27 and C29 active; C27A and C28 closed; C30 initial production headless evidence active |
 | P10 — Autonomous Learning | C31-C36 | Academy, policy runtime, imitation/RL, ladder, Foundry | Not complete |
 | P11 — Player/Cloud Product | C37-C39 | Coach/Studio UX, cloud/privacy, operations/preservation | Not complete |
 | P12 — Final Certification | C40 | Certified end-to-end release | Not started |
@@ -177,7 +177,12 @@ Named status:
   two through nine verified V3 capsules for semantic comparison, including repeated event
   occurrences and explicit missing occurrences. Active-cinematic durable
   coverage remains open.
-- **C30-C40:** incomplete.
+- **C30:** active. A DOM-free natural episode now uses the C29 production replay
+  world and fixed-step simulation composition; one 120-tick C30-to-C29 semantic
+  comparison and narrow fresh-environment isolation proof pass. Browser-fast
+  corpus parity, stress isolation, workers, resource controls, measured
+  throughput, visible failure reruns, and Academy/Foundry streaming remain open.
+- **C31-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
 
@@ -398,11 +403,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C29 now reopens durable V3 capsules, hydrates each recorded State Forge keyframe through source-owned production composition, restores held input, compares captured authoritative receipts, and exposes player-visible semantic Theater, Practice From Here, and side-by-side semantic comparison.
-PROVEN BY:           `pnpm check:c29:production-replay` runs focused receipt/replay/terminal-policy/comparison tests and the rebuilt browser capture; its completed Vault capsules match source replay at ticks 0, 120, and 240. The normal Profile -> Vault route selects nine healthy capsules through scrollable rendered rows, opens `COMPARE 9`, advances to a second repeated semantic occurrence, then opens Theater and restores an explicitly unranked, non-persistent child into real play. Every selected durable source JSON remains unchanged.
-REMAINING HERE:      Active chapter bindings now restore through source composition and focused unit evidence; add their durable-capsule coverage. On 2026-08-02, a browser journey found that campaign reset is cinematic-active only after the V3 tick-zero capture boundary: anchors immediately after opening-content activation and after `playing` entry both persisted an inactive director, while the post-reset State Forge snapshot was active. Both unproven anchor moves were reverted under the two-attempt rule. Theater and comparison remain semantic, not pixel/device-fidelity claims.
-REMAINING TO C40:    C25 and C27 exits, then C29-C40, remain; C27A and C28 are closed.
-NEXT SLICE:          Start the independent C30 same-composition headless-episode boundary; retain C29's active-cinematic durable-capture finding for a later explicitly designed lifecycle seam, not another anchor-position retry.
+DONE THIS STEP:      C30 now runs a natural DOM-free episode through the C29 production replay world and authoritative fixed-step simulation, with the same semantic projection and no second combat model.
+PROVEN BY:           `pnpm typecheck`, the focused 3-file / 4-test C30/C29 replay suite, and `pnpm check:architecture` pass. The 120-tick move/jump/dash command stream has the same semantic hash through fresh C29 replay; fresh same-seed headless worlds reproduce independently and surgical scenarios are rejected.
+REMAINING HERE:      C30 still needs C27A-matrix browser-fast parity, native-event/reward/terminal/cadence comparison, stress-tested parallel production episodes, worker/batch/cancellation/timeout/retry/checkpoint/artifact controls, measured target-hardware throughput, and visible failure reruns/Academy streaming.
+REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
+NEXT SLICE:          Build a batched C30 production episode-pool boundary with independent natural worlds, bounded cancellation/timeout and sampled-artifact controls, then measure it without substituting the historical generic scaffold.
 
 All of the following were run from this worktree through C27A slice 36:
 

@@ -25,6 +25,7 @@ export interface ProductionReplayWorldOptions {
   readonly seed: string;
   readonly enemies?: readonly Readonly<{ id: string; x: number; y: number }>[];
   readonly mode?: string;
+  readonly weaponId?: string;
 }
 
 /** Ground plus a one-way ledge, owned by each detached production world. */
@@ -56,9 +57,18 @@ function noOpPresentationPorts(): TearWorldEntityPresentationPorts {
 }
 
 /** The minimal legal run shape used before a captured State Forge snapshot replaces it. */
-export function createProductionReplayRun(mode = "endless") {
+function productionRunSeed(seed: string): number {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0) || 1;
+}
+
+export function createProductionReplayRun(mode = "endless", weaponId = "sword", runSeed = 1) {
   return {
-    mode, mods: newMods(), mult: 1, lifestealCd: 0, weaponId: "sword", wave: 1, score: 0, waveKills: 0, runTime: 0,
+    mode, mods: newMods(), mult: 1, lifestealCd: 0, weaponId, runSeed, wave: 1, score: 0, waveKills: 0, runTime: 0,
     weaponStats: { distanceMoved: 0, throws: 0 }, voidScroll: null, bossAdds: [], echoClones: null,
   };
 }
@@ -107,7 +117,7 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     cinema: new CinematicTimeline.Director(config),
   });
   world.context.services.random.resetRun(options.seed);
-  const run = createProductionReplayRun(options.mode);
+  const run = createProductionReplayRun(options.mode, options.weaponId, productionRunSeed(options.seed));
   world.state.setRun(run as never);
   world.state.setPlayer(world.entities.createPlayer(400, config.world.groundY - 80));
   const blade = world.entities.createBlade() as { weapon?: unknown; model?: unknown };

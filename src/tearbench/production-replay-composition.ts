@@ -15,7 +15,12 @@ export interface ProductionGhostReplayCompositionOptions {
   readonly inputSnapshots?: ReadonlyMap<number, AuthoritativeInputSnapshot>;
 }
 
-function canonicalProjection(replay: ProductionReplayWorld, tick: number, input: AuthoritativeInputState) {
+/** Shared renderer-neutral projection for production replay and headless worlds. */
+export function projectProductionReplayCanonicalState(
+  replay: ProductionReplayWorld,
+  tick: number,
+  input: AuthoritativeInputState,
+) {
   return projectCanonicalGameplayState(
     tick,
     input.snapshot(),
@@ -127,7 +132,7 @@ export function createProductionGhostReplayComposition(
       const staged = snapshot === undefined ? undefined : hydrateProductionReplayWorld(replay, snapshot);
       const core = createProductionCombatSimulation<CanonicalGameplayState>(replay, {
         ...(staged === undefined || staged.platforms.length === 0 ? {} : { platforms: staged.platforms }),
-        snapshot: (tick, input) => canonicalProjection(replay, tick, input),
+        snapshot: (tick, input) => projectProductionReplayCanonicalState(replay, tick, input),
       });
       if (staged !== undefined) {
         core.combatEntityRuntime.restoreIdentityState(staged.identityState as never);
@@ -141,7 +146,7 @@ export function createProductionGhostReplayComposition(
       return Object.freeze({
         simulation: core.simulationRuntime,
         semanticProjection: () => core.simulationRuntime.lastResult?.state
-          ?? canonicalProjection(replay, core.simulationRuntime.scheduler.tick, core.simulationRuntime.input),
+          ?? projectProductionReplayCanonicalState(replay, core.simulationRuntime.scheduler.tick, core.simulationRuntime.input),
       });
     },
   });

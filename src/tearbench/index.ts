@@ -21,6 +21,7 @@ export * from "./bisection";
 export * from "./regression-minimization";
 export * from "./graveyard";
 export * from "./headless";
+export * from "./production-headless-environment";
 export * from "./contracts";
 export * from "./invariants";
 export * from "./registries";
