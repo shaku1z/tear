@@ -276,7 +276,8 @@ Named status:
   artifact-bound reproducible report. The data-only table runtime enforces
   static payload/work/action limits and elapsed fallback containment; real-game
   outcomes, cancellable external inference, and broader
-  player-facing Watch evidence remain open.
+  player-facing Watch evidence remain open. Unactivated leaf artifacts now have
+  an atomic receipt-backed retention path that protects active/rollback lineage.
 - **C33-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -530,11 +531,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C32 now has browser-persisted bounded decision journaling, deterministic conformance reports, and data-only runtime containment: payload/table/action limits plus elapsed-budget fallback before semantic routing. It does not execute arbitrary code or claim cancellable external inference.
-PROVEN BY:           Requirements/type/lint/architecture checks, eight focused C32 registry/runtime/journal/evaluation tests including static and elapsed budget failures, a test-standalone build, and the browser-seeded real IndexedDB journey that reloads an active artifact and reads its persisted decision receipt back from Vault analysis storage.
-REMAINING HERE:      C32 needs real-game outcome evaluation, cancellable external-inference budgets, retention policy, and player-facing Watch controls. C31 separately needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
+DONE THIS STEP:      C32 now has browser-persisted decision journaling, deterministic conformance reports, local runtime containment, and atomic unactivated-leaf retention receipts. Active, rollback, and lineage artifacts are explicitly non-evictable.
+PROVEN BY:           Requirements/type/lint/architecture checks, ten focused C32 registry/runtime/journal/evaluation tests including retention preservation, a test-standalone build, and the browser-seeded real IndexedDB journey that reloads an active artifact and reads its persisted decision receipt back from Vault analysis storage.
+REMAINING HERE:      C32 needs source-owned real-game outcome evaluation with durable evidence, cancellable external-inference budgets, and player-facing Watch controls. C31 separately needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C32-C40 product evidence remain; C27A and C28 are closed.
-NEXT SLICE:          Add bounded C32 active-artifact retention and eviction receipts in Vault analysis storage. Preserve rollback history and later-promotion evidence; keep C31 corpus work separate.
+NEXT SLICE:          Evaluate an active C32 artifact against source-owned production scenarios and retain that evidence. Do not call it training or promotion; keep C31 corpus work separate.
 
 All of the following were run from this worktree through C27A slice 36:
 

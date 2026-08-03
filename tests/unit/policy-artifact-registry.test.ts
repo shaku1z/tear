@@ -56,4 +56,22 @@ describe("C32 durable policy artifact registry", () => {
     expect(await backend.keys("quarantine")).toContain("policy-artifact:v1:policy-incompatible");
     await expect(registry.activate("policy-corrupt", "2026-08-03T14:02:00.000Z")).rejects.toThrow(/unavailable/u);
   });
+
+  it("retains active rollback lineage and only evicts excess unactivated leaf artifacts with an integrity receipt", async () => {
+    const backend = createMemoryGhostVaultBackend(), registry = new TearPolicyArtifactRegistry(backend, compatibility);
+    const first = artifact("retained-a"), second = artifact("retained-b", first.id);
+    const stagedParent = artifact("staged-parent"), stagedLeaf = artifact("staged-leaf", stagedParent.id);
+    await registry.register(first); await registry.register(second); await registry.register(stagedParent); await registry.register(stagedLeaf);
+    await registry.activate(first.id, "2026-08-03T14:01:00.000Z");
+    await registry.activate(second.id, "2026-08-03T14:02:00.000Z");
+    const receipt = await registry.retainUnactivated(0, "2026-08-03T14:03:00.000Z");
+
+    expect(receipt).toMatchObject({ format: "tear-policy-retention-receipt", revision: 1, removedArtifactIds: [stagedLeaf.id] });
+    expect(receipt.protectedArtifactIds).toEqual(expect.arrayContaining([first.id, second.id, stagedParent.id]));
+    expect(await registry.get(first.id)).toEqual(first);
+    expect(await registry.get(second.id)).toEqual(second);
+    expect(await registry.get(stagedParent.id)).toEqual(stagedParent);
+    expect(await registry.get(stagedLeaf.id)).toBeUndefined();
+    expect(await registry.retentionHistory()).toEqual([receipt]);
+  });
 });

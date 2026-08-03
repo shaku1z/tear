@@ -5,6 +5,7 @@ import type { TearBuildIdentityV1, TearObservationClass } from "../tearbench/con
 const ARTIFACT_KEY = "policy-artifact:v1:";
 const ACTIVE_KEY = "policy-active:v1";
 const ACTIVATION_KEY = "policy-activation:v1:";
+const RETENTION_KEY = "policy-retention:v1:";
 const HASH = /^[a-f0-9]{16}$/u;
 
 export interface TearPolicyRuntimeCompatibility {
@@ -51,6 +52,17 @@ export interface TearPolicyActivationV1 {
   readonly activationHash: string;
 }
 
+export interface TearPolicyRetentionReceiptV1 {
+  readonly format: "tear-policy-retention-receipt";
+  readonly schemaVersion: 1;
+  readonly revision: number;
+  readonly retainedAt: string;
+  readonly maxUnactivated: number;
+  readonly removedArtifactIds: readonly string[];
+  readonly protectedArtifactIds: readonly string[];
+  readonly receiptHash: string;
+}
+
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -63,6 +75,7 @@ function finiteMetrics(value: unknown): value is Readonly<Record<string, number>
 }
 function artifactKey(id: string): string { return `${ARTIFACT_KEY}${id}`; }
 function activationKey(revision: number): string { return `${ACTIVATION_KEY}${String(revision).padStart(12, "0")}`; }
+function retentionKey(revision: number): string { return `${RETENTION_KEY}${String(revision).padStart(12, "0")}`; }
 
 function freezeCompatibility(value: TearPolicyRuntimeCompatibility): TearPolicyRuntimeCompatibility {
   return Object.freeze({ ...value, modelFormats: Object.freeze([...value.modelFormats]) });
@@ -76,6 +89,7 @@ function validCompatibility(value: unknown): value is TearPolicyRuntimeCompatibi
 }
 function artifactHash(value: Omit<TearPolicyArtifactV1, "artifactHash">): string { return stableVerificationHash(value); }
 function activationHash(value: Omit<TearPolicyActivationV1, "activationHash">): string { return stableVerificationHash(value); }
+function retentionHash(value: Omit<TearPolicyRetentionReceiptV1, "receiptHash">): string { return stableVerificationHash(value); }
 
 function validBuild(value: unknown): value is TearBuildIdentityV1 {
   return record(value) && ["version", "revision", "target", "rulesetVersion", "contentHash", "configHash"].every((key) => text(value[key]));
@@ -132,6 +146,19 @@ function parseActivation(value: unknown): TearPolicyActivationV1 {
   const { activationHash: recorded, ...draft } = typed;
   if (recorded !== activationHash(draft)) throw new TypeError("policy activation integrity mismatch");
   return Object.freeze({ ...draft, activationHash: recorded });
+}
+
+function parseRetentionReceipt(value: unknown): TearPolicyRetentionReceiptV1 {
+  if (!record(value) || value.format !== "tear-policy-retention-receipt" || value.schemaVersion !== 1 || !integer(value.revision)
+    || value.revision < 1 || !timestamp(value.retainedAt) || !integer(value.maxUnactivated) || value.maxUnactivated < 0
+    || !Array.isArray(value.removedArtifactIds) || !value.removedArtifactIds.every(text)
+    || !Array.isArray(value.protectedArtifactIds) || !value.protectedArtifactIds.every(text) || !hashes(value.receiptHash)) {
+    throw new TypeError("invalid policy retention receipt");
+  }
+  const { receiptHash: recorded, ...draft } = value as unknown as Omit<TearPolicyRetentionReceiptV1, "receiptHash"> & { receiptHash: string };
+  if (recorded !== retentionHash(draft)) throw new TypeError("policy retention receipt integrity mismatch");
+  return Object.freeze({ ...draft, removedArtifactIds: Object.freeze([...draft.removedArtifactIds]),
+    protectedArtifactIds: Object.freeze([...draft.protectedArtifactIds]), receiptHash: recorded });
 }
 
 function compatible(artifact: TearPolicyArtifactV1, runtime: TearPolicyRuntimeCompatibility): boolean {
@@ -203,6 +230,10 @@ export class TearPolicyArtifactRegistry {
     return (await this.#backend.keys("indexes")).filter((key) => key.startsWith(ACTIVATION_KEY)).length + 1;
   }
 
+  async #nextRetentionRevision(): Promise<number> {
+    return (await this.#backend.keys("indexes")).filter((key) => key.startsWith(RETENTION_KEY)).length + 1;
+  }
+
   async activate(id: string, activatedAt: string): Promise<TearPolicyActivationV1> {
     if (!timestamp(activatedAt)) throw new TypeError("policy activation timestamp is invalid");
     const artifact = await this.get(id);
@@ -230,6 +261,51 @@ export class TearPolicyArtifactRegistry {
     const entries: TearPolicyActivationV1[] = [];
     for (const { key, raw } of values) {
       try { if (raw !== undefined) entries.push(parseActivation(JSON.parse(raw))); }
+      catch (error) { await this.#quarantine(key, raw, error instanceof Error ? error.message : String(error)); }
+    }
+    return Object.freeze(entries.sort((left, right) => left.revision - right.revision));
+  }
+
+  /**
+   * Retains every active/rollback-referenced artifact and every lineage parent.
+   * Only unactivated leaf artifacts are eligible, so retention cannot make a
+   * recorded activation or rollback target unavailable.
+   */
+  async retainUnactivated(maxUnactivated: number, retainedAt: string): Promise<TearPolicyRetentionReceiptV1> {
+    if (!integer(maxUnactivated) || maxUnactivated < 0 || !timestamp(retainedAt)) throw new TypeError("invalid policy retention request");
+    const artifacts: TearPolicyArtifactV1[] = [];
+    for (const key of (await this.#backend.keys("analysis")).filter((entry) => entry.startsWith(ARTIFACT_KEY))) {
+      const id = key.slice(ARTIFACT_KEY.length), artifact = await this.get(id);
+      if (artifact !== undefined) artifacts.push(artifact);
+    }
+    const protectedIds = new Set<string>((await this.history()).map((entry) => entry.artifactId));
+    const active = await this.active();
+    if (active !== undefined) protectedIds.add(active.artifactId);
+    for (const artifact of artifacts) {
+      if (artifact.lineage.parentArtifactId !== undefined) protectedIds.add(artifact.lineage.parentArtifactId);
+    }
+    const unactivatedLeaves = artifacts.filter((artifact) => !protectedIds.has(artifact.id))
+      .sort((left, right) => left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
+    const removedArtifactIds = unactivatedLeaves.slice(0, Math.max(0, unactivatedLeaves.length - maxUnactivated)).map((artifact) => artifact.id);
+    const draft = { format: "tear-policy-retention-receipt" as const, schemaVersion: 1 as const,
+      revision: await this.#nextRetentionRevision(), retainedAt, maxUnactivated,
+      removedArtifactIds: Object.freeze(removedArtifactIds), protectedArtifactIds: Object.freeze([...protectedIds].sort()) };
+    const receipt = Object.freeze({ ...draft, receiptHash: retentionHash(draft) });
+    await this.#backend.commit(Object.freeze([
+      ...removedArtifactIds.flatMap((id) => [
+        { store: "analysis" as const, key: artifactKey(id) }, { store: "indexes" as const, key: `policy-artifact:${id}` },
+      ]),
+      { store: "analysis" as const, key: retentionKey(receipt.revision), value: JSON.stringify(receipt) },
+      { store: "indexes" as const, key: retentionKey(receipt.revision), value: JSON.stringify(receipt) },
+    ]));
+    return receipt;
+  }
+
+  async retentionHistory(): Promise<readonly TearPolicyRetentionReceiptV1[]> {
+    const entries: TearPolicyRetentionReceiptV1[] = [];
+    for (const key of (await this.#backend.keys("indexes")).filter((entry) => entry.startsWith(RETENTION_KEY))) {
+      const raw = await this.#backend.get("indexes", key);
+      try { if (raw !== undefined) entries.push(parseRetentionReceipt(JSON.parse(raw))); }
       catch (error) { await this.#quarantine(key, raw, error instanceof Error ? error.message : String(error)); }
     }
     return Object.freeze(entries.sort((left, right) => left.revision - right.revision));

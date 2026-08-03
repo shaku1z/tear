@@ -54,6 +54,11 @@ executed, trained, or been promoted by an evaluation result.
   scripted fallback. Because no arbitrary code or external process executes in
   this backend, this is bounded local containment, not a claim of preemptive
   cancellation for future inference engines.
+- `retainUnactivated` atomically removes only excess unactivated leaf artifacts
+  and writes an integrity-checked retention receipt. It protects the current
+  active pointer, every recorded activation/rollback target, and every lineage
+  parent, so retention cannot make a rollback target unavailable. Evaluation
+  reports are not yet durable artifacts and are therefore not claimed retained.
 
 ## Exit-gate status
 
@@ -73,8 +78,10 @@ executed, trained, or been promoted by an evaluation result.
 - [x] The bounded local table runtime has payload/work/action limits and an
   elapsed-decision fallback. Invalid budget configuration and oversized payloads
   fail closed before routing an artifact action.
+- [x] Excess unactivated leaf artifacts have a bounded, auditable retention
+  path that preserves active and rollback lineage.
 - [ ] Real-game outcome evaluation, cancellable external-inference budgets,
-  retention policy, and player-visible Watch Agent integration.
+  evaluation-artifact retention, and player-visible Watch Agent integration.
 
 ## Evidence
 
@@ -87,7 +94,8 @@ legal action decode, deterministic structured encoding, scripted fallback,
 bounded decision-journal retention/integrity/quarantine, frozen-suite
 decision-conformance reports (including reproducible failures), payload and
 elapsed-budget containment, and normal browser Vault-to-Watch composition with
-persisted receipt readback.
+persisted receipt readback. Registry tests also prove safe leaf-only retention,
+active/rollback/lineage preservation, and retained-receipt readback.
 
 ## Deliberately not claimed
 
@@ -98,8 +106,8 @@ cloud publication, or wire player-facing Watch Agent controls. The decision
 journal is diagnostic Class-A analysis evidence, not a causal capsule, replay,
 pixel/audio/device-output trace, or player-visible policy explanation.
 
-DONE THIS STEP:      The C32 table runtime now enforces static payload/work/action limits plus elapsed-decision containment, with every invalid or over-budget artifact result falling back to scripted control before semantic routing.
-PROVEN BY:           C32 targeted requirements/type/lint/architecture checks, eight permanent registry/runtime/journal/evaluation tests (including static and elapsed budget failures), and the browser-seeded real-IndexedDB Watch readback journey.
-REMAINING HERE:      Real-game outcome evaluation, cancellable external-inference budgets, retention policy, and player-visible Watch Agent controls.
+DONE THIS STEP:      C32 now has bounded, atomic retention for unactivated leaf artifacts with an immutable receipt; active, rollback, and lineage artifacts remain protected.
+PROVEN BY:           C32 targeted requirements/type/lint/architecture checks, ten permanent registry/runtime/journal/evaluation tests (including retention safety), and the browser-seeded real-IndexedDB Watch readback journey.
+REMAINING HERE:      Real-game outcome evaluation, cancellable external-inference budgets, durable evaluation evidence retention, and player-visible Watch Agent controls.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C32-C40 product evidence.
-NEXT SLICE:          Add bounded active-artifact retention and eviction receipts in Vault analysis storage; preserve active-pointer rollback history and do not delete evaluation evidence needed for later promotion.
+NEXT SLICE:          Run active-artifact evaluation against source-owned production scenarios and retain its evidence; do not call the result training or promotion.
