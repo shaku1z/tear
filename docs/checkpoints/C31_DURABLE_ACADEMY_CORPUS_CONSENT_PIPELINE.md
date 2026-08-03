@@ -157,9 +157,10 @@ is trained on.
   manifest, split assignment, or trainer-visible artifact.
 - [ ] Immutable lineage-bound train/validation/calibration/test/hidden-exam
   splits, durable manifests, and the Academy interface.
-- [ ] A persisted reviewed sample tied to an exact capsule range; revoked data
-  absent from future manifests; hidden exams unreadable by ordinary trainer
-  code.
+- [x] A persisted reviewed sample is tied to its exact capsule range and full
+  verified tracks. When its model-training consent is revoked, a new chained
+  manifest omits it; ordinary trainer manifests cannot enumerate hidden-exam
+  entries while the separate examiner view can.
 
 ## Deliberately not claimed
 
@@ -214,7 +215,8 @@ artifact loading, C33 behavior cloning, or C36 Foundry automation.
   without version 1's exact manifest hash, and persists the valid chained
   version 2. It then materializes a durable reviewed sample and reloads it,
   proving its exact capsule range, hidden-exam split, and verified actions are
-  retained.
+  retained. After model-training revocation, a new chained examiner manifest
+  contains no entry for that still-auditable sample.
 - That same custody proof rejects a foreign Vault for deletion, atomically
   removes the actual materialized source capsule only from its matching Vault,
   and retains the durable `deleted` tombstone outside future held queries.
@@ -232,6 +234,6 @@ artifact loading, C33 behavior cloning, or C36 Foundry automation.
 
 ## Next safe boundary
 
-Prove a revocation-safe rebuilt trainer manifest after a reviewed sample's
-custody is revoked, then implement the inspectable Academy interface rather
-than treating the legacy in-memory corpus as the product surface.
+Implement the inspectable Academy interface over the durable C31 stores—lesson
+status, recordings, review/corrections, consent, split manifests, and storage—
+rather than treating the legacy in-memory corpus as the product surface.

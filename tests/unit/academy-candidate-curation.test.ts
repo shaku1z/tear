@@ -119,6 +119,13 @@ describe("C31 held Academy candidate curation", () => {
     expect(sample).toMatchObject({ split: "hidden-release-exam", source: { capsuleId: "c31-curation-source", fromTick: 0 } });
     expect(sample.tracks?.actions).toEqual(input.declaration.trackBundle?.actions);
     expect(await samples.get(sample.candidateHash)).toEqual(sample);
+    const revokedConsent = Object.freeze({ ...input.declaration.consent, revision: "c31-sample-consent-2",
+      decidedAt: "2026-08-03T00:07:00.000Z", modelTraining: "no-training" as const });
+    await input.custody.revoke({ candidateHash: sample.candidateHash, scope: "model-training", consent: revokedConsent,
+      decidedAt: "2026-08-03T00:07:00.000Z", actor: "player", reason: "withdrawn after review" });
+    const rebuilt = await splits.publishManifest({ id: "release", version: 3, createdAt: "2026-08-03T00:08:00.000Z",
+      reader: { kind: "examiner", id: "release" }, previousManifestHash: second.manifestHash });
+    expect(rebuilt.entries).toEqual([]);
   });
 
   it("rejects unauthorized, duplicate, or revoked review decisions and keeps correction requests immutable", async () => {
