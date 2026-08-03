@@ -1061,10 +1061,15 @@ portability, concurrent complete worlds, or C27A completion.
 
 ### C32 — Policy runtime and artifact registry
 
-- [ ] Versioned policy artifacts with compatibility metadata
+- [x] Versioned policy artifacts with compatibility metadata — opaque local
+  artifacts are content-addressed in the Vault and fail closed on malformed,
+  corrupt, future, key/id-mismatched, or incompatible bytes.
 - [ ] Reproducible evaluation of an artifact
-- [ ] Promotion and rollback both exercised
-- [ ] Safety controls reject an unsafe artifact in a test
+- [x] Promotion and rollback both exercised — active-pointer changes and
+  immutable activation history commit together; rollback re-activates the
+  verified predecessor.
+- [x] Safety controls reject an unsafe artifact in a test — corrupt and
+  incompatible records are quarantined and cannot replace the active policy.
 
 ### C33 — Behavior cloning and DAgger
 

@@ -264,7 +264,12 @@ Named status:
   manifests; trainer readers exclude hidden exams and revocation removes a
   source from future manifests. C31 still does not authenticate account/cloud
   identity, delete account/cloud data, or train a policy.
-- **C32-C40:** incomplete.
+- **C32:** active. Local opaque policy artifacts now have a versioned,
+  content-addressed Vault registry with runtime compatibility validation,
+  corruption/incompatibility quarantine, atomic active-policy switching, and
+  rollback history. No artifact executes yet; C32 evaluation, inference budget,
+  fallback, Ghost decision traces, and Watch Agent integration remain open.
+- **C33-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
 
@@ -521,7 +526,7 @@ DONE THIS STEP:      C31 reconstructs a sealed C30 terminal through the shared p
 PROVEN BY:           `pnpm check:c31:foundation` passes typecheck/lint/architecture plus thirteen focused Vitest suites / forty-four tests, a test-standalone build, and the normal pointer-driven `ACADEMY` menu route/BACK browser journey. `pnpm check:c28:vault-reachable` passes six focused Vault suites / thirty-eight tests plus browser library, migration, interrupted-recovery, and physical-quota journeys. `pnpm check:c30:foundation` also passes its shared-composition units, six bounded worker proofs, both browser terminal reruns, and the 13-scenario C27A parity capture. Tampered terminal hashes, missing bundle metadata, `no-training`, invalid consent, consent/provenance mismatch, a missing bootstrap, a missing terminal anchor, malformed custody/quality/curation bytes, a non-held declaration, revoked consent, expired retention, an undeclared actor, a foreign Vault, duplicate assessment, or a mismatched source all reject or remain absent from future held-candidate use.
 REMAINING HERE:      C31 still needs complete record browsing, durable lesson status, and only authorized record actions; population balance and style/skill interpretation; and account/cloud identity/deletion ownership. The durable corpus is not a C32 trainer or trained policy. C30 target-host capacity remains external; C29's durable active-cinematic boundary remains separately open.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Start C32's versioned policy artifact/runtime boundary before wiring a trainer to the durable corpus. In C31, separately add complete pagination-safe record browsing and only authorized durable lesson status/actions. Keep subject identity, raw tracks, trainer payloads, and the legacy in-memory corpus out of the player surface.
+NEXT SLICE:          Add C32's runtime adapter over a verified active artifact: reset, structured observation encoding, legal-action decode, deterministic decision budget, safe scripted fallback, and Ghost decision trace. Do not execute opaque payloads or connect a trainer until that runtime contract is proven. In C31, separately add complete pagination-safe record browsing and only authorized durable lesson status/actions.
 
 All of the following were run from this worktree through C27A slice 36:
 

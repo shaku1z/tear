@@ -256,12 +256,14 @@ This is the migration checklist for the architectural redesign. A checked featur
    runtime-owned aggregate plus a bounded privacy-safe record/manifest inspection
    of durable held, reviewed, curated, consent, retention, split, and revision
    state, including an explicit storage-unavailable state; it is not a trainer
-   input or full Academy workspace. Account/cloud identity and deletion,
-   A reviewed governed source can now become a durable Academy corpus entry with
+   input or full Academy workspace. A reviewed governed source can now become a durable Academy corpus entry with
    a versioned reader-scoped manifest; trainer views exclude hidden exams and
-   revocation removes entries from future manifests. C32 trainer integration and
-   policy training remain absent;
-   authenticated publication, deployed verification, moderation operations,
+   revocation removes entries from future manifests. C32 now has a local,
+   Vault-backed versioned policy-artifact registry: it validates content hashes
+   and runtime compatibility, quarantines corrupt/incompatible bytes, and makes
+   activation plus rollback pointer history atomic. It does not execute model
+   payloads, train from Academy data, or expose a Watch Agent policy. Account/
+   cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 
 ## Accessibility and settings
