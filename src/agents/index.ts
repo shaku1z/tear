@@ -16,6 +16,7 @@ export * from "./academy-candidate-quality";
 export * from "./academy-candidate-curation";
 export * from "./academy-candidate-splits";
 export * from "./academy-reviewed-sample";
+export * from "./academy-inspector";
 export * from "./ladder-foundry";
 export * from "./live-watch-agent-host";
 export * from "./hierarchical-policy-adapter";

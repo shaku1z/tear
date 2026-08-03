@@ -5,6 +5,7 @@ import {
   TearAcademyCandidateCustodyStore,
   TearAcademyCandidateQualityStore,
   TearAcademyReviewedSampleStore,
+  inspectAcademy,
   TearAcademyCandidateSplitStore,
   captureAcademyCandidateTracks,
   materializeAcademyCandidateCapsule,
@@ -126,6 +127,8 @@ describe("C31 held Academy candidate curation", () => {
     const rebuilt = await splits.publishManifest({ id: "release", version: 3, createdAt: "2026-08-03T00:08:00.000Z",
       reader: { kind: "examiner", id: "release" }, previousManifestHash: second.manifestHash });
     expect(rebuilt.entries).toEqual([]);
+    const inspection = await inspectAcademy({ custody: input.custody, quality: input.quality, curation, splits, samples }, "2026-08-03T00:08:00.000Z");
+    expect(inspection).toMatchObject({ custody: { revoked: 1 }, quality: { reviewRequired: 1 }, curation: { approved: 1 }, splits: { "hidden-release-exam": 1 }, reviewedSamples: 1 });
   });
 
   it("rejects unauthorized, duplicate, or revoked review decisions and keeps correction requests immutable", async () => {

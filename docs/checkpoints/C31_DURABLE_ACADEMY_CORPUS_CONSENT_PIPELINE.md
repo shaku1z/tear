@@ -104,6 +104,10 @@ is trained on.
   `review-required` quality assessment, `curation-approved` decision, and split
   assignment. It persists the full verified track bundle and exact C27 capsule
   range with every governing hash. It is not yet exposed as a trainer corpus.
+- `inspectAcademy` now provides the runtime-owned immutable read model for the
+  eventual Academy surface. It aggregates durable custody, quality, curation,
+  split, and reviewed-sample state without giving presentation access to Vault
+  stores; audit-retained revoked samples remain visible as revoked, not usable.
 
 ## Exit-gate ledger
 
@@ -216,7 +220,9 @@ artifact loading, C33 behavior cloning, or C36 Foundry automation.
   version 2. It then materializes a durable reviewed sample and reloads it,
   proving its exact capsule range, hidden-exam split, and verified actions are
   retained. After model-training revocation, a new chained examiner manifest
-  contains no entry for that still-auditable sample.
+  contains no entry for that still-auditable sample. The Academy inspection
+  snapshot reports that real custody as revoked while retaining its reviewed
+  sample count for audit visibility.
 - That same custody proof rejects a foreign Vault for deletion, atomically
   removes the actual materialized source capsule only from its matching Vault,
   and retains the durable `deleted` tombstone outside future held queries.
