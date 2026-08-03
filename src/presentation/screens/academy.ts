@@ -15,25 +15,37 @@ export function createAcademyRenderers(context: ScreenRenderContext) {
       else {
         view.rows.forEach((row) => { ui.text(canvas, row.label, width / 2 - 288, y, ui.t.type.body, "left"); ui.displayText(canvas, row.value, width / 2 + 288, y, ui.t.type.body, "right"); y += 34; });
         const recordY = 332;
-        const recordHeight = Math.max(84, 46 + view.records.length * 52);
+        const recordPageSize = 4;
+        const recordOffset = Math.max(0, Math.min(Math.max(0, view.records.length - recordPageSize), Math.floor(context.scroll / 52)));
+        const visibleRecords = view.records.slice(recordOffset, recordOffset + recordPageSize);
+        const recordHeight = Math.max(84, 46 + visibleRecords.length * 52);
         ui.panel(canvas, panelX, recordY, 640, recordHeight);
-        ui.sectionLabel(canvas, "DURABLE RECORDS", panelX + 24, recordY + 30, 592);
+        ui.sectionLabel(canvas, `DURABLE RECORDS ${String(recordOffset + 1)}-${String(recordOffset + visibleRecords.length)} / ${String(view.records.length)}`, panelX + 24, recordY + 30, 592);
         if (view.records.length === 0) ui.text(canvas, "No governed records are stored in this Academy.", panelX + 24, recordY + 64, ui.t.type.caption, "left", ui.t.alpha.muted);
-        else view.records.forEach((record, index) => {
+        else visibleRecords.forEach((record, index) => {
           const recordTop = recordY + 52 + index * 52;
           ui.displayText(canvas, record.id, panelX + 24, recordTop, ui.t.type.label, "left");
           ui.text(canvas, record.state.toUpperCase(), panelX + 592, recordTop, ui.t.type.caption, "right", ui.t.alpha.soft);
           ui.text(canvas, record.detail, panelX + 24, recordTop + 20, ui.t.type.caption, "left", ui.t.alpha.muted);
         });
         const manifestY = recordY + recordHeight + 20;
-        ui.panel(canvas, panelX, manifestY, 640, Math.max(84, 46 + view.manifests.length * 36));
-        ui.sectionLabel(canvas, "MANIFEST REVISIONS", panelX + 24, manifestY + 30, 592);
+        const manifestPageSize = 3;
+        const manifestOffset = Math.max(0, Math.min(Math.max(0, view.manifests.length - manifestPageSize), Math.floor(context.scroll / 52)));
+        const visibleManifests = view.manifests.slice(manifestOffset, manifestOffset + manifestPageSize);
+        ui.panel(canvas, panelX, manifestY, 640, Math.max(84, 46 + visibleManifests.length * 36));
+        ui.sectionLabel(canvas, `MANIFEST REVISIONS ${String(manifestOffset + 1)}-${String(manifestOffset + visibleManifests.length)} / ${String(view.manifests.length)}`, panelX + 24, manifestY + 30, 592);
         if (view.manifests.length === 0) ui.text(canvas, "No durable manifest revisions are stored.", panelX + 24, manifestY + 64, ui.t.type.caption, "left", ui.t.alpha.muted);
-        else view.manifests.forEach((manifest, index) => {
+        else visibleManifests.forEach((manifest, index) => {
           const manifestTop = manifestY + 52 + index * 36;
           ui.displayText(canvas, manifest.id, panelX + 24, manifestTop, ui.t.type.label, "left");
           ui.text(canvas, manifest.detail, panelX + 592, manifestTop, ui.t.type.caption, "right", ui.t.alpha.muted);
         });
+        const canScrollDown = recordOffset < Math.max(0, view.records.length - recordPageSize)
+          || manifestOffset < Math.max(0, view.manifests.length - manifestPageSize);
+        if (recordOffset > 0 || manifestOffset > 0 || canScrollDown) {
+          ui.scrollHint(canvas, width / 2, manifestY + Math.max(84, 46 + visibleManifests.length * 36) + 16,
+            recordOffset > 0 || manifestOffset > 0, canScrollDown);
+        }
       }
       backControl(context);
     },

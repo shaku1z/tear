@@ -244,6 +244,17 @@ describe("legacy screen renderer registry", () => {
       .toMatchObject({ label: "‹  BACK" });
   });
 
+  it("pages complete privacy-safe Academy records and manifests through screen scroll", () => {
+    const controls: ScreenControl[] = [];
+    const context = createRenderContext(controls);
+    const renderer = createLegacyScreenRenderers({ ...context, scroll: 52 });
+    expect(() => { renderer.academy({ id: "academy", status: "ready", subtitle: "durable training custody", rows: [],
+      records: Array.from({ length: 5 }, (_, index) => ({ id: `RECORD-${String(index + 1)}`, state: "held", detail: "anonymous" })),
+      manifests: Array.from({ length: 4 }, (_, index) => ({ id: `MANIFEST V${String(index + 1)}`, detail: "governed" })),
+    }); }).not.toThrow();
+    expect(controls.some((control) => control.action.type === "navigate" && control.action.to === "menu")).toBe(true);
+  });
+
   it("uses the oracle replay-vault row geometry and a profile-specific watch intent", () => {
     const controls: ScreenControl[] = [];
     const renderer = createLegacyScreenRenderers(createRenderContext(controls));

@@ -20,12 +20,12 @@ export function createLiveAcademyScreen(factory: IDBFactory | undefined): Readon
           { label: "TRAINING SPLIT", value: String(inspection.snapshot.splits.training ?? 0) },
           { label: "CORPUS", value: String(inspection.snapshot.corpusEntries) },
         ],
-        records: inspection.snapshot.records.slice(0, 4).map((record) => ({
+        records: inspection.snapshot.records.map((record) => ({
           id: record.candidateHash.slice(0, 8).toUpperCase(),
           state: [record.custody, record.reviewed ? "reviewed" : "unreviewed", record.inCorpus ? "corpus" : "not in corpus", record.split ?? "unassigned"].join(" · "),
           detail: [record.modelTrainingConsent, record.retention === "until" ? `retains to ${record.expiresAt?.slice(0, 10) ?? "unknown"}` : "indefinite retention", record.curation ?? record.quality ?? "unassessed", record.correctionCount > 0 ? `${String(record.correctionCount)} correction${record.correctionCount === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · "),
         })),
-        manifests: inspection.snapshot.manifests.slice(-3).reverse().map((manifest) => ({
+        manifests: inspection.snapshot.manifests.slice().reverse().map((manifest) => ({
           id: `${manifest.id.toUpperCase()} V${String(manifest.version)}`,
           detail: `${String(manifest.entries)} governed entr${manifest.entries === 1 ? "y" : "ies"} · root ${manifest.rootHash.slice(0, 8).toUpperCase()}`,
         })),
