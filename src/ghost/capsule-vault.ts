@@ -282,6 +282,34 @@ export class GhostLocalVault {
     return value === undefined ? undefined : parseGhostCapsuleManifest(JSON.parse(value) as unknown);
   }
 
+  /**
+   * Prepares one atomic source-capsule removal. A caller may append its own
+   * durable tombstone to these writes, so source deletion and its authorization
+   * record cannot diverge. Repair children prevent destructive parent removal.
+   */
+  async capsuleRemovalWrites(id: string): Promise<readonly GhostVaultWrite[]> {
+    const manifest = await this.getManifest(id);
+    if (manifest === undefined) throw new RangeError(`manifest does not exist: ${id}`);
+    const manifests = await Promise.all((await this.#backend.keys("manifests"))
+      .filter((candidate) => candidate !== id)
+      .map((candidate) => this.getManifest(candidate)));
+    if (manifests.some((candidate) => candidate?.lineage?.parentId === id)) {
+      throw new RangeError("cannot remove a capsule with retained repair children");
+    }
+    const assetKeys = (await this.#backend.keys("assets")).filter((key) => key.startsWith(`${id}:`));
+    return Object.freeze([
+      ...manifest.chunks.map((chunk) => Object.freeze({ store: "chunks" as const, key: chunk.id })),
+      Object.freeze({ store: "manifests" as const, key: id }),
+      Object.freeze({ store: "indexes" as const, key: `manifest:${id}` }),
+      Object.freeze({ store: "journals" as const, key: id }),
+      ...assetKeys.map((key) => Object.freeze({ store: "assets" as const, key })),
+    ]);
+  }
+
+  async removeCapsule(id: string): Promise<void> {
+    await this.#backend.commit(await this.capsuleRemovalWrites(id));
+  }
+
   async putChunk(sessionId: string, entry: TearGhostChunkIndexEntry, encoded: string): Promise<void> {
     if (stableVerificationHash(encoded) !== entry.checksum) throw new TypeError(`chunk checksum mismatch before commit: ${entry.id}`);
     await this.#backend.commit([

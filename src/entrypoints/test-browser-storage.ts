@@ -16,7 +16,7 @@ interface StorageBucketNavigator extends Navigator {
 }
 
 const PHYSICAL_QUOTA_BUCKET = "tear-c28-physical-quota";
-const PHYSICAL_QUOTA_BYTES = 50 * 1024;
+const PHYSICAL_QUOTA_BYTES = 256 * 1024;
 
 /**
  * Opens a deliberately small, browser-enforced bucket only for the C28

@@ -60,7 +60,7 @@ not this checkpoint's progress measure.
 ## Physical quota evidence
 
 `tests/browser-ghost-vault-physical-quota.js` opens an isolated Chromium
-Storage Bucket with a strict 50 KiB quota and passes that bucket's real
+Storage Bucket with a strict 256 KiB quota and passes that bucket's real
 `indexedDB` capability into the normal test-build application composition. It
 does not use C27's `beforeCommit` fault hook. The journey first completes and
 retains a source capsule, verifies it occupies the bucket, then runs a second
@@ -83,7 +83,13 @@ Per the two-attempt rule, no third timing variation was tried and the DevTools
 override was never treated as physical enforcement. The later Storage Buckets
 journey above is the separate browser configuration that supplies real
 enforcement; the application `beforeCommit` hook remains C27
-fault-containment evidence only.
+fault-containment evidence only. The current Chromium IndexedDB metadata alone
+exceeds the former 50 KiB threshold before the required one-tick control source
+can be retained, so the test-only bucket is calibrated to 256 KiB. Its 1,200-
+tick pressure capture still produces the browser's real quota rejection after
+the retained source. The recovery journey also waits for the raw
+manifest/index/journal transaction it asserts, rather than sampling a race
+between the public catalog and IndexedDB visibility.
 
 ## Finding — interrupted recovery UI probe scoped out
 

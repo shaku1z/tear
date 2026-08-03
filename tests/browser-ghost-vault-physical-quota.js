@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 
 const QUOTA_BUCKET = "tear-c28-physical-quota";
-const QUOTA_BYTES = 50 * 1024;
+const QUOTA_BYTES = 256 * 1024;
 
 function scenario(id, seed, maxTicks) {
   return {
@@ -42,7 +42,7 @@ withJourney({
   assert.equal(source.status, "complete", "the retained source capsule did not complete before storage pressure");
 
   const sourceBucket = await page.evaluate(async () => {
-    const bucket = await navigator.storageBuckets.open("tear-c28-physical-quota", { quota: 50 * 1024, durability: "strict" });
+    const bucket = await navigator.storageBuckets.open("tear-c28-physical-quota", { quota: 256 * 1024, durability: "strict" });
     return bucket.estimate();
   });
   assert.equal(sourceBucket.quota, QUOTA_BYTES, "the journey did not receive the configured physical storage bucket");
@@ -61,7 +61,7 @@ withJourney({
   const outcome = await page.evaluate(async (sourceId) => ({
     ticks: window.__C28_PHYSICAL_QUOTA_ENVIRONMENT__.observe().run.elapsedTicks,
     manifests: await window.__TEAR_GHOST_V3__.manifests(),
-    bucket: await (await navigator.storageBuckets.open("tear-c28-physical-quota", { quota: 50 * 1024, durability: "strict" })).estimate(),
+    bucket: await (await navigator.storageBuckets.open("tear-c28-physical-quota", { quota: 256 * 1024, durability: "strict" })).estimate(),
     sourceId,
   }), source.id);
   assert.equal(outcome.ticks, 1_200, "physical Ghost Vault pressure halted the live simulation");

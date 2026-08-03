@@ -73,7 +73,7 @@ async function prepared() {
     vault, capsuleId: "c31-custody-source",
     createdAt: "2026-08-02T00:00:00.000Z", completedAt: "2026-08-02T00:00:01.000Z",
   });
-  return Object.freeze({ backend, source, materialized, declaration: declaration(source, materialized) });
+  return Object.freeze({ backend, vault, source, materialized, declaration: declaration(source, materialized) });
 }
 
 describe("C31 Academy candidate custody", () => {
@@ -137,5 +137,27 @@ describe("C31 Academy candidate custody", () => {
     const inventory = await store.inventory();
     expect(inventory.records).toHaveLength(1);
     expect(inventory.rejectedKeys).toEqual(["academy-candidate-custody:v1:bad"]);
+  });
+
+  it("atomically deletes only its exact attested source while retaining a non-training custody tombstone", async () => {
+    const input = await prepared();
+    const store = new TearAcademyCandidateCustodyStore(input.backend);
+    const custody = await store.accept({
+      declaration: input.declaration, materialization: input.materialized,
+      retention: Object.freeze({ mode: "indefinite" as const }),
+      decidedAt: "2026-08-02T00:01:00.000Z", actor: "academy-curator", reason: "verified source held for review",
+    });
+    await expect(store.delete({
+      candidateHash: custody.candidateHash, decidedAt: "2026-08-02T00:02:00.000Z", actor: "player", reason: "erase source",
+      vault: new GhostLocalVault(createMemoryGhostVaultBackend()),
+    })).rejects.toThrow(/invalid/u);
+    const deleted = await store.delete({
+      candidateHash: custody.candidateHash, decidedAt: "2026-08-02T00:02:00.000Z", actor: "player", reason: "erase source",
+      vault: input.vault,
+    });
+    expect(deleted).toMatchObject({ status: "deleted", events: [{ kind: "held" }, { kind: "deleted" }] });
+    expect(await input.vault.getManifest(input.materialized.capsuleId)).toBeUndefined();
+    expect(await store.get(custody.candidateHash)).toEqual(deleted);
+    expect(await store.held("2026-08-02T00:03:00.000Z")).toEqual([]);
   });
 });

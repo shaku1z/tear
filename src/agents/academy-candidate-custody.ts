@@ -1,5 +1,5 @@
 import { stableVerificationHash } from "../replay/hash";
-import type { GhostVaultBackend } from "../ghost";
+import type { GhostLocalVault, GhostVaultBackend } from "../ghost";
 import {
   assessAcademyCandidateEligibility,
   type TearAcademyCandidateDeclarationV1,
@@ -10,7 +10,7 @@ import type { TearAcademyCandidateSourceAttestationV1 } from "./academy-candidat
 
 const CUSTODY_KEY_PREFIX = "academy-candidate-custody:v1:";
 
-export type TearAcademyCandidateCustodyStatus = "held" | "revoked" | "expired";
+export type TearAcademyCandidateCustodyStatus = "held" | "revoked" | "expired" | "deleted";
 export type TearAcademyCandidateRevocationScope = "local-recording" | "cloud-publication" | "analytics" | "model-training" | "all";
 
 export interface TearAcademyCandidateRetentionPolicyV1 {
@@ -62,6 +62,15 @@ export interface TearAcademyCandidateCustodyRevocation {
   readonly decidedAt: string;
   readonly actor: string;
   readonly reason: string;
+}
+
+export interface TearAcademyCandidateCustodyDeletion {
+  readonly candidateHash: string;
+  readonly decidedAt: string;
+  readonly actor: string;
+  readonly reason: string;
+  /** Must own the same durable backend as this custody ledger for one atomic commit. */
+  readonly vault: GhostLocalVault;
 }
 
 export interface TearAcademyCandidateCustodyInventoryV1 {
@@ -156,7 +165,7 @@ function validEvent(
 ): value is TearAcademyCandidateCustodyEventV1 {
   const source = record(value);
   if (source?.sequence !== expectedSequence) return false;
-  if (!["held", "revoked", "expired"].includes(String(source.kind))
+  if (!["held", "revoked", "expired", "deleted"].includes(String(source.kind))
     || !timestamp(source.decidedAt) || !nonEmpty(source.actor) || !nonEmpty(source.reason)
     || !/^[a-f0-9]{16}$/u.test(String(source.consentHash)) || !nonEmpty(source.eventHash)
     || source.previousEventHash !== expectedPreviousHash) return false;
@@ -196,7 +205,7 @@ function parseRecord(value: string): TearAcademyCandidateCustodyRecordV1 {
   const candidateHash = source?.candidateHash;
   if (source?.format !== "tear-academy-candidate-custody" || source.schemaVersion !== 1
     || !nonEmpty(candidateId) || typeof candidateHash !== "string" || !/^[a-f0-9]{16}$/u.test(candidateHash)
-    || !["held", "revoked", "expired"].includes(String(source.status)) || !validConsent(source.consent)
+    || !["held", "revoked", "expired", "deleted"].includes(String(source.status)) || !validConsent(source.consent)
     || policy === undefined || !Array.isArray(source.events) || source.events.length === 0
     || !nonEmpty(source.admissionHash) || !nonEmpty(source.declarationHash) || !nonEmpty(source.recordHash)) {
     throw new TypeError("invalid Academy candidate custody record");
@@ -274,7 +283,7 @@ function assertRevocation(input: TearAcademyCandidateCustodyRevocation, current:
 /**
  * Durable, append-only custody for an eligible C31 source. It stores neither a
  * reviewed sample nor a training manifest; consumers must use `held()` so
- * revoked and expired candidates cannot enter future Academy work.
+ * revoked, expired, and deleted candidates cannot enter future Academy work.
  */
 export class TearAcademyCandidateCustodyStore {
   readonly #backend: GhostVaultBackend;
@@ -344,6 +353,41 @@ export class TearAcademyCandidateCustodyStore {
     const revised = freezeRecord({ ...prior, status: "expired", events: Object.freeze([...current.events, event]) });
     await this.#backend.commit([Object.freeze({ store: "analysis", key: custodyKey(revised.candidateHash), value: JSON.stringify(revised) })]);
     return revised;
+  }
+
+  /**
+   * Atomically removes the exact attested source capsule and retains this
+   * non-training custody tombstone. A shared live source or a foreign Vault is
+   * refused instead of risking another record's evidence.
+   */
+  async delete(input: TearAcademyCandidateCustodyDeletion): Promise<TearAcademyCandidateCustodyRecordV1> {
+    const current = await this.get(input.candidateHash);
+    if (current === undefined || current.status === "deleted" || !timestamp(input.decidedAt)
+      || !nonEmpty(input.actor) || !nonEmpty(input.reason) || input.vault.backend() !== this.#backend) {
+      throw new TypeError("invalid C31 candidate source deletion");
+    }
+    const capsuleId = current.source.capsuleRange.capsuleId;
+    const manifest = await input.vault.getManifest(capsuleId);
+    if (manifest?.rootIntegrity !== current.source.capsuleRange.rootIntegrity) {
+      throw new RangeError("C31 source deletion requires its exact attested capsule");
+    }
+    const inventory = await this.inventory();
+    if (inventory.records.some((entry) => entry.candidateHash !== current.candidateHash
+      && entry.status !== "deleted" && entry.source.capsuleRange.capsuleId === capsuleId)) {
+      throw new RangeError("C31 source capsule is still referenced by another custody record");
+    }
+    const event = appendEvent(current.events, {
+      kind: "deleted", decidedAt: input.decidedAt, actor: input.actor, reason: input.reason,
+      consentHash: stableVerificationHash(current.consent),
+    });
+    const { recordHash: ignoredRecordHash, ...prior } = current;
+    void ignoredRecordHash;
+    const tombstone = freezeRecord({ ...prior, status: "deleted", events: Object.freeze([...current.events, event]) });
+    await this.#backend.commit([
+      ...(await input.vault.capsuleRemovalWrites(capsuleId)),
+      Object.freeze({ store: "analysis", key: custodyKey(tombstone.candidateHash), value: JSON.stringify(tombstone) }),
+    ]);
+    return tombstone;
   }
 
   async held(at: string): Promise<readonly TearAcademyCandidateCustodyRecordV1[]> {

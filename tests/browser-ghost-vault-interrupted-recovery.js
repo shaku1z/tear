@@ -55,6 +55,28 @@ withJourney({ name: "C28 Ghost Vault interrupted-write recovery", port: 8165 }, 
   }, scenario("c28-vault-recovery-trigger", "c28-vault-recovery-trigger-seed"));
   await page.waitForFunction(async (id) => (await window.__TEAR_GHOST_V3__.manifests())
     .some((manifest) => manifest.id === id && manifest.status === "recovered"), interruptedId, { timeout: 20000 });
+  // The public Vault catalog has observed recovery, but the final assertion is
+  // about raw durable stores. Wait for the IndexedDB transaction itself rather
+  // than sampling it in the small visibility window between those observers.
+  await page.waitForFunction((id) => new Promise((resolve, reject) => {
+    const open = window.indexedDB.open("tear-ghost-v3");
+    open.onerror = () => reject(open.error ?? new Error("IndexedDB open failed"));
+    open.onsuccess = () => {
+      const database = open.result;
+      const transaction = database.transaction(["manifests", "journals", "indexes"], "readonly");
+      const manifest = transaction.objectStore("manifests").get(id);
+      const journal = transaction.objectStore("journals").get(id);
+      const index = transaction.objectStore("indexes").get(`manifest:${id}`);
+      transaction.oncomplete = () => {
+        database.close();
+        try {
+          resolve(manifest.result !== undefined && JSON.parse(manifest.result).status === "recovered"
+            && journal.result === undefined && typeof index.result === "string");
+        } catch { resolve(false); }
+      };
+      transaction.onerror = () => { database.close(); reject(transaction.error ?? new Error("IndexedDB recovery read failed")); };
+    };
+  }), interruptedId, { timeout: 20000 });
 
   const persisted = await readRecoveryStores(page, interruptedId);
   const manifest = JSON.parse(persisted.manifest);

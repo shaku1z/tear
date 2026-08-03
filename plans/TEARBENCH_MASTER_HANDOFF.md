@@ -249,9 +249,10 @@ Named status:
   unavailable and rejected. An eligible materialized source may now be held in
   a durable, hash-chained pre-corpus custody ledger with independent consent
   and retention decisions; revoked or expired records are excluded from future
-  held-candidate queries without erasing their audit history. C31 does not
-  persist/review a corpus sample, delete the source capsule, create manifests,
-  or train a policy.
+  held-candidate queries without erasing their audit history. An authorized
+  C31 deletion atomically removes the exact source capsule with an audit-only
+  tombstone. C31 does not persist/review a corpus sample, delete account/cloud
+  data, create manifests, or train a policy.
 - **C32-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -330,10 +331,10 @@ Important files:
 ### Exact next slice
 
 C27A and C28 are closed. C29's durable active-cinematic capsule boundary remains
-open, but the current worktree's exact slice is **C31 source-capsule deletion
-propagation and identity/retention policy around the verified pre-corpus custody
-ledger**. Do not reopen C27A for pixels, haptics, durable outcomes, or
-audio/device fidelity; C25, C39, and C40 own those separate output claims.
+open, but the current worktree's exact slice is **C31 identity/privacy retention
+policy around the verified pre-corpus custody ledger**. Do not reopen C27A for
+pixels, haptics, durable outcomes, or audio/device fidelity; C25, C39, and C40
+own those separate output claims.
 
 C30 has already proven an in-memory restore of an active, non-draft natural
 episode: its source snapshot, held input, accepted commands, and semantic hash
@@ -355,10 +356,10 @@ and can explicitly drain a pulled candidate into a matching C27 Vault source
 capsule before attesting its exact build and range. An eligible source can now
 enter a durable C31 pre-corpus record that preserves acceptance, revocation, or
 retention-expiry history and excludes revoked/expired records from future
-consumers. Keep that asynchronous custody step out of C30's synchronous
-callback. The next slice must propagate a deletion decision to the source
-capsule and define identity/retention ownership rather than treating the source
-as a reviewed corpus sample.
+consumers; an authorized deletion removes that exact source capsule atomically
+with its non-training tombstone. Keep that asynchronous custody step out of
+C30's synchronous callback. The next slice must define identity/privacy
+retention ownership rather than treating the source as a reviewed corpus sample.
 
 Preserve:
 
@@ -499,11 +500,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C31 reconstructs a sealed C30 terminal through the shared production composition, captures its canonical/native/reward/intent evidence, explicitly drains a pulled bounded candidate into a complete C27 Vault source capsule, and can hold only an eligible materialized source in a durable hash-chained pre-corpus custody ledger. Model-training revocation and retention expiry exclude that record from future held-candidate consumers while retaining audit history. The C30 callback remains storage-free.
-PROVEN BY:           `pnpm check:c31:foundation` passes typecheck/lint/architecture plus seven focused Vitest suites / seventeen tests. `pnpm check:c30:foundation` also passes its shared-composition units, six bounded worker proofs, both browser terminal reruns, and the 13-scenario C27A parity capture. Tampered terminal hashes, missing bundle metadata, `no-training`, invalid consent, consent/provenance mismatch, a missing bootstrap, a missing terminal anchor, malformed custody bytes, revoked consent, and expired retention all reject or remain absent from future held-candidate use.
-REMAINING HERE:      C31 still needs source/capsule deletion propagation, identity and privacy retention policy, quality/review/curation, lineage-bound immutable splits/manifests, an inspectable corpus/UI, and any trainer integration. A source Vault capsule and pre-corpus custody record are not a reviewed corpus sample. C30 target-host capacity remains external; C29's durable active-cinematic boundary remains separately open.
+DONE THIS STEP:      C31 reconstructs a sealed C30 terminal through the shared production composition, captures its canonical/native/reward/intent evidence, explicitly drains a pulled bounded candidate into a complete C27 Vault source capsule, and can hold only an eligible materialized source in a durable hash-chained pre-corpus custody ledger. Model-training revocation and retention expiry exclude that record from future held-candidate consumers while retaining audit history; an authorized deletion atomically removes the exact source capsule and leaves a non-training tombstone. The C30 callback remains storage-free.
+PROVEN BY:           `pnpm check:c31:foundation` passes typecheck/lint/architecture plus seven focused Vitest suites / eighteen tests. `pnpm check:c28:vault-reachable` passes six focused Vault suites / thirty-eight tests plus browser library, migration, interrupted-recovery, and physical-quota journeys. `pnpm check:c30:foundation` also passes its shared-composition units, six bounded worker proofs, both browser terminal reruns, and the 13-scenario C27A parity capture. Tampered terminal hashes, missing bundle metadata, `no-training`, invalid consent, consent/provenance mismatch, a missing bootstrap, a missing terminal anchor, malformed custody bytes, revoked consent, expired retention, a foreign Vault, or a mismatched source all reject or remain absent from future held-candidate use.
+REMAINING HERE:      C31 still needs identity and privacy retention policy, quality/review/curation, lineage-bound immutable splits/manifests, an inspectable corpus/UI, and any trainer integration. A source Vault capsule and pre-corpus custody record are not a reviewed corpus sample. C30 target-host capacity remains external; C29's durable active-cinematic boundary remains separately open.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Propagate an explicit C31 deletion decision from an eligible custody record to its source capsule, with a retained non-training audit tombstone and defined identity/retention ownership; preserve the fail-closed admission boundary and do not write from the C30 callback.
+NEXT SLICE:          Define C31 identity/privacy retention ownership around the durable custody ledger, then add quality/deduplication work without admitting any non-held candidate into a corpus path; preserve the fail-closed admission boundary and do not write from the C30 callback.
 
 All of the following were run from this worktree through C27A slice 36:
 

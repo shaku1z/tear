@@ -59,8 +59,11 @@ is trained on.
   acceptance/revocation/expiry events, rejects malformed persisted bytes, and
   exposes only `held` records to later consumers. A model-training revocation
   or retention expiry therefore excludes that candidate from every future held
-  query without erasing its audit history. This is not deletion propagation:
-  the source capsule and its eventual physical deletion remain separate work.
+  query without erasing its audit history. `delete()` verifies that the exact
+  attested source capsule shares the custody Vault, refuses a still-shared
+  source, then atomically removes its manifest, chunks, indexes, journal, and
+  owned assets while committing a non-training `deleted` tombstone. Account or
+  cloud deletion propagation remains separate work.
 
 ## Exit-gate ledger
 
@@ -90,9 +93,14 @@ is trained on.
   their hash-chained history; model-training revocation and retention expiry are
   excluded from `held()` before any Academy consumer can use them. Malformed
   custody bytes remain rejected and untouched. This is a local Vault custody
-  gate, not physical capsule deletion, a reviewed sample, or a manifest.
+  gate, not a reviewed sample or a manifest.
+- [x] A C31 deletion decision removes only its exact attested C27 source capsule
+  and writes its `deleted` custody tombstone in the same Vault commit. Foreign
+  Vaults, root mismatches, retained repair children, and a source still held by
+  another non-deleted custody record fail closed. The tombstone is audit-only
+  and cannot appear in future held-candidate queries.
 - [ ] Revocation, deletion propagation, privacy retention, pseudonymous
-  identity lifecycle, quality scoring, deduplication, outliers, source/capsule
+  identity lifecycle, quality scoring, deduplication, outliers, account/cloud
   deletion, style/skill metadata, and population balance.
 - [ ] Review, correction, curation, immutable lineage-bound train/validation/
   calibration/test/hidden-exam splits, durable manifests, and the Academy
@@ -105,14 +113,14 @@ is trained on.
 
 This checkpoint does not claim that C30 terminal artifacts contain a complete
 learning record, that any candidate has entered `TearDemonstrationCorpus`, or
-that a policy has trained. It does not implement a reviewed sample, source or
-cloud deletion, cloud publication, review, C32 artifact loading, C33 behavior
-cloning, or C36 Foundry automation.
+that a policy has trained. It does not implement a reviewed sample,
+account/cloud deletion, cloud publication, review, C32 artifact loading, C33
+behavior cloning, or C36 Foundry automation.
 
 ## Evidence
 
 - `pnpm check:c31:foundation` passes: typecheck, full lint, architecture
-  checks, and seven focused Vitest suites / seventeen tests.
+  checks, and seven focused Vitest suites / eighteen tests.
 - `academy-candidate-admission.test.ts` generates a real C30 terminal through
   the bounded production pool and candidate intake. It asserts that the current
   verified-but-incomplete track bundle remains rejected, plus the pre-corpus
@@ -135,6 +143,15 @@ cloning, or C36 Foundry automation.
   proves model-training revocation and retention expiry disappear from the
   future held-candidate view while their decision history remains, and excludes
   malformed stored custody bytes without rewriting them.
+- That same custody proof rejects a foreign Vault for deletion, atomically
+  removes the actual materialized source capsule only from its matching Vault,
+  and retains the durable `deleted` tombstone outside future held queries.
+- `pnpm check:c28:vault-reachable` passes after the shared Vault removal
+  primitive: six focused suites / thirty-eight tests; browser library,
+  migration, interrupted-recovery, and physical-quota journeys. The physical
+  bucket is a test-only 256 KiB quota because the current browser's IndexedDB
+  metadata exceeds the former 50 KiB before the required control source can be
+  retained; the 1,200-tick pressure run still receives a real quota rejection.
 - `agent-academy.test.ts` and
   `production-headless-academy-intake.test.ts` remain green in the same gate.
 - `pnpm check:c30:foundation` also passes after the opt-in observer addition:
@@ -143,9 +160,8 @@ cloning, or C36 Foundry automation.
 
 ## Next safe boundary
 
-Define C31 source-capsule deletion propagation and identity/retention policy
-around the custody ledger, then add quality, deduplication, and review without
-allowing any non-held candidate into a corpus manifest. Do not move Vault writes
-into the C30 worker callback, replace verified custody tracks with caller
-declarations, or promote a source capsule into a corpus sample without the
-separate governance and review gates.
+Define C31 identity/privacy retention policy around the custody ledger, then
+add quality, deduplication, and review without allowing any non-held candidate
+into a corpus manifest. Do not move Vault writes into the C30 worker callback,
+replace verified custody tracks with caller declarations, or promote a source
+capsule into a corpus sample without the separate governance and review gates.

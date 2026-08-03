@@ -110,6 +110,24 @@ describe("Ghost capsule recorder and local Vault", () => {
     expect(capsule.tracks.results).toEqual([{ kind: "results", tick: 4, value: { outcome: "defeat" } }]);
   });
 
+  it("removes a complete capsule, its chunks, indexes, journal, and owned assets in one Vault commit", async () => {
+    const backend = createMemoryGhostVaultBackend();
+    const vault = new GhostLocalVault(backend);
+    const recorder = new GhostStreamingRecorder({
+      sessionId: "deletion-source", createdAt: "2026-08-02T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault,
+    });
+    await recorder.start();
+    await recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } });
+    const manifest = await recorder.finalize("2026-08-02T00:00:01.000Z");
+    await backend.put("assets", "deletion-source:thumbnail:0", "owned-thumbnail");
+    await vault.removeCapsule("deletion-source");
+    expect(await vault.getManifest("deletion-source")).toBeUndefined();
+    expect(await backend.get("indexes", "manifest:deletion-source")).toBeUndefined();
+    expect(await backend.get("journals", "deletion-source")).toBeUndefined();
+    expect(await backend.get("assets", "deletion-source:thumbnail:0")).toBeUndefined();
+    expect(await Promise.all(manifest.chunks.map((chunk) => backend.get("chunks", chunk.id)))).toEqual([undefined]);
+  });
+
   it("quarantines an interrupted recording whose committed evidence no longer validates", async () => {
     const stores = new Map<GhostVaultStore, Map<string, string>>();
     const backend = createMemoryGhostVaultBackend(stores);

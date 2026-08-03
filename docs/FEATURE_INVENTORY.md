@@ -238,8 +238,10 @@ This is the migration checklist for the architectural redesign. A checked featur
    custody only: an eligible materialized source may now enter a durable,
    hash-chained C31 pre-corpus ledger with explicit retention and consent
    decisions. Revoked or expired records are excluded from future held-candidate
-   queries without erasing their audit history, but the source capsule is not
-   physically deleted and no C31 corpus sample or policy training exists;
+   queries without erasing their audit history. An authorized C31 deletion
+   removes the exact attested source capsule atomically with a non-training
+   tombstone, but account/cloud deletion, C31 corpus samples, and policy
+   training remain absent;
    authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 
