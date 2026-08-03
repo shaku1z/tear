@@ -93,14 +93,22 @@ returns no report and creates a quarantine record. This is local forensic
 custody only: no cloud/provider adapter, player-facing history, or promotion
 consumer is added.
 
+`captureTearDaggerCorrections` now drives the active C33 artifact and the
+existing scripted teacher over the same fresh C29/C30 production world. It
+advances only the challenger, records bounded action disagreements with
+before/after state hashes and teacher intent context, and preserves the exact
+artifact/scenario/terminal lineage. This is a correction proposal capture, not
+review, ingestion, retraining, cancellation/recovery, a quality result, or
+promotion.
+
 ## Deliberately not claimed
 
 This is not a sequence/recurrent policy, a meaningful quality score, a
-comparison against the scripted policy, DAgger, promotion, or automatic
-player-facing training. Those remain C33 work.
+reviewed/ingested/retrained DAgger loop, promotion, or automatic player-facing
+training. Those remain C33 work.
 
-DONE THIS STEP:      Held-out C33 reports now have immutable idempotent local custody and corrupt-byte quarantine; they remain non-promoting offline action-conformance evidence.
-PROVEN BY:           Focused C30-to-C27/C31-to-C33 source/custody/corpus/training/held-out-report Vault test plus targeted no-emit TypeScript and targeted ESLint.
-REMAINING HERE:      Temporal/sequence policy, intermediate/resumable training checkpoints, DAgger, cancellation/recovery, and meaningful real-game quality evidence.
+DONE THIS STEP:      C33 can capture bounded challenger-versus-scripted-teacher action disagreements from a fresh shared production world without a second simulation or a promotion path.
+PROVEN BY:           Focused C33 real source-world capture test plus targeted no-emit TypeScript and targeted ESLint.
+REMAINING HERE:      Review, governed ingestion, deterministic retraining/comparison, cancellation/recovery, temporal policy, intermediate checkpoints, and meaningful real-game quality evidence.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Define a bounded DAgger correction record from a source-world disagreement without creating a promotion path; batch correction capture, review, and retraining as one C33 item.
+NEXT SLICE:          Add durable reviewer decisions to these immutable correction proposals before any correction can enter a retraining input; no automatic promotion.

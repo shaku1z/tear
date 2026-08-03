@@ -11,6 +11,7 @@ import {
   createTearBehaviorCloningNormalization,
   evaluateTearBehaviorCloningPolicy,
   TearBehaviorCloningEvaluationVault,
+  captureTearDaggerCorrections,
   trainTearBehaviorCloningPolicy,
   TearAcademyTrainingDatasetLoader,
   TearBehaviorCloningTrainingVault,
@@ -237,6 +238,11 @@ describe("C31 held Academy candidate curation", () => {
     expect(artifact.model).toMatchObject({ format: "linear-policy-v1" });
     const registry = new TearPolicyArtifactRegistry(input.backend, artifact.compatibility);
     await registry.register(artifact); await registry.activate(artifact.id, "2026-08-03T00:09:00.000Z");
+    const corrections = await captureTearDaggerCorrections(registry, scenario(), { maxCorrections: 2 });
+    expect(corrections).toMatchObject({ format: "tear-dagger-correction-capture", artifact: { id: artifact.id }, terminal: { truncated: true } });
+    expect(corrections.corrections).not.toEqual([]);
+    expect(corrections.corrections.every((entry) => entry.challengerReceipt.source === "artifact"
+      && entry.challengerActions !== entry.teacherActions)).toBe(true);
     const environment = createProductionHeadlessEnvironment(), runtime = new TearActivePolicyRuntime(registry);
     try {
       environment.reset(scenario()); await runtime.reset();

@@ -293,8 +293,13 @@ This is the migration checklist for the architectural redesign. A checked featur
    governed validation split can produce a reproducible offline exact-action-
    conformance report only from a persisted fit; it rejects the training split
    and provides no quality threshold or promotion path. Those reports have
-   idempotent corruption-safe local custody only. Held-out quality,
-   promotion, and DAgger remain absent. Account/
+   idempotent corruption-safe local custody only.
+   C33 also captures bounded active-artifact versus scripted-teacher action
+   disagreements from the shared production headless world, preserving
+   artifact/scenario/context lineage while applying only challenger actions.
+   Those are unreviewed correction proposals, not corpus input or promotion.
+   Meaningful held-out quality, a reviewed/ingested DAgger loop, and promotion
+   remain absent. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

@@ -537,11 +537,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C33 now persists each bounded held-out evaluation report in immutable idempotent local Ghost Vault custody; malformed report bytes quarantine safely and no report can promote a policy.
-PROVEN BY:           Focused real C30→C27/C31→C33 source/custody/corpus/training/held-out-report Vault test plus targeted no-emit TypeScript and targeted ESLint.
-REMAINING HERE:      C33 needs temporal/sequence policy capability, intermediate/resumable checkpoints, DAgger correction/retraining, cancellation/recovery, and meaningful real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
+DONE THIS STEP:      C33 can capture bounded active-artifact versus scripted-teacher action disagreements from a fresh shared C29/C30 production world; only challenger actions advance the source world and no capture promotes a policy.
+PROVEN BY:           Focused real C33 source-world disagreement capture test plus targeted no-emit TypeScript and targeted ESLint.
+REMAINING HERE:      C33 needs reviewer decisions, governed correction ingestion/retraining/comparison, temporal/sequence policy capability, intermediate/resumable checkpoints, cancellation/recovery, and meaningful real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C33-C40 product evidence remain; C27A, C28, and C32 are closed.
-NEXT SLICE:          C33: define bounded DAgger correction capture, review, and retraining from a source-world disagreement as one checklist item; do not create a promotion path.
+NEXT SLICE:          C33: add durable reviewer decisions to immutable source-world correction proposals before allowing governed retraining input; do not create a promotion path.
 
 All of the following were run from this worktree through C27A slice 36:
 
