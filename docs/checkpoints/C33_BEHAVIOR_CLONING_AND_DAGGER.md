@@ -152,7 +152,8 @@ training sequence. A temporal fit retains the hashes of its training scenarios,
 and `compareTemporalPolicyAgainstScriptedBaselineInProduction` refuses any
 comparison suite that overlaps them. It runs fresh source-world episodes for
 the temporal artifact and the named scripted profile and records only terminal,
-truncation, and decision-count deltas. The permanent two-tick fixture has zero
+truncation, decision-count, source-native `run.completed`/`run.defeated`, and
+`player.revived` deltas. The permanent two-tick fixture has zero
 delta; that verifies deterministic, non-overlapping measurement plumbing, not
 a win. No C33 §8 baseline item is ticked until a meaningful unseen suite and a
 real artifact advantage are both evidenced.

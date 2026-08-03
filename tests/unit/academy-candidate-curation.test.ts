@@ -308,7 +308,8 @@ describe("C31 held Academy candidate curation", () => {
     expect(await compareTemporalPolicyAgainstScriptedBaselineInProduction(temporalRegistry, unseenSuite)).toEqual(comparison);
     expect(comparison.artifact).toMatchObject({ id: temporalArtifact.id, trainingHash: temporal.trainingHash });
     expect(comparison.suite).toMatchObject({ id: unseenSuite.id });
-    expect(comparison.metrics).toEqual({ terminatedScenarioDelta: 0, truncatedScenarioDelta: 0, executedDecisionDelta: 0 });
+    expect(comparison.metrics).toEqual({ terminatedScenarioDelta: 0, truncatedScenarioDelta: 0, executedDecisionDelta: 0,
+      completedScenarioDelta: 0, defeatedScenarioDelta: 0, revivalEventDelta: 0 });
     await expect(compareTemporalPolicyAgainstScriptedBaselineInProduction(temporalRegistry, Object.freeze({ ...unseenSuite,
       id: "c33-temporal-overlap", scenarios: Object.freeze([input.declaration.candidate.artifact.scenario]) }))).rejects.toThrow(/overlaps/u);
     await input.backend.put("analysis", `behavior-cloning-training:v1:${training.trainingHash}`, "not-json");

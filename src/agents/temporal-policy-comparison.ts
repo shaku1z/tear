@@ -1,5 +1,6 @@
 import { stableVerificationHash } from "../replay/hash";
 import { createProductionHeadlessEnvironment } from "../tearbench";
+import { mapGameplayEventToCausalEvent } from "../tearbench/gameplay-causal-events";
 import type { TearAgentProfileId } from "./contracts";
 import type { TearPolicyArtifactRegistry } from "./policy-artifact-registry";
 import { evaluateActiveTearPolicyOutcomeSuiteInProduction, validateTearProductionPolicyEvaluationSuite } from "./production-policy-evaluation";
@@ -8,7 +9,7 @@ import { TearAgentOrchestrator } from "./scripted-policy";
 
 export interface TearTemporalPolicyScriptedBaselineReportV1 {
   readonly profile: TearAgentProfileId;
-  readonly outcomes: Readonly<{ scenarioCount: number; terminatedScenarios: number; truncatedScenarios: number; executedDecisions: number }>;
+  readonly outcomes: Readonly<{ scenarioCount: number; terminatedScenarios: number; truncatedScenarios: number; executedDecisions: number; completedScenarios: number; defeatedScenarios: number; revivalEvents: number }>;
   readonly reportHash: string;
 }
 
@@ -20,7 +21,7 @@ export interface TearTemporalPolicyBaselineComparisonV1 {
   readonly artifactReport: TearProductionPolicyOutcomeSuiteReportV1;
   readonly scriptedBaseline: TearTemporalPolicyScriptedBaselineReportV1;
   /** Observed deltas only; they deliberately do not declare a win or promotion. */
-  readonly metrics: Readonly<{ terminatedScenarioDelta: number; truncatedScenarioDelta: number; executedDecisionDelta: number }>;
+  readonly metrics: Readonly<{ terminatedScenarioDelta: number; truncatedScenarioDelta: number; executedDecisionDelta: number; completedScenarioDelta: number; defeatedScenarioDelta: number; revivalEventDelta: number }>;
   readonly comparisonHash: string;
 }
 
@@ -39,9 +40,9 @@ function provenance(registry: TearPolicyArtifactRegistry, id: string) {
 }
 
 function scriptedBaseline(suite: TearProductionPolicyEvaluationSuiteV1, profile: TearAgentProfileId): TearTemporalPolicyScriptedBaselineReportV1 {
-  let terminatedScenarios = 0, truncatedScenarios = 0, executedDecisions = 0;
+  let terminatedScenarios = 0, truncatedScenarios = 0, executedDecisions = 0, completedScenarios = 0, defeatedScenarios = 0, revivalEvents = 0;
   for (const scenario of suite.scenarios) {
-    const environment = createProductionHeadlessEnvironment(), policy = new TearAgentOrchestrator(profile);
+    const environment = createProductionHeadlessEnvironment({ captureSourceTracks: true }), policy = new TearAgentOrchestrator(profile);
     try {
       let terminal = environment.reset(scenario), terminated = false, truncated = false;
       while (!terminated && !truncated && terminal.tick < scenario.maxTicks) {
@@ -51,9 +52,13 @@ function scriptedBaseline(suite: TearProductionPolicyEvaluationSuiteV1, profile:
         executedDecisions += 1;
       }
       terminatedScenarios += Number(terminated); truncatedScenarios += Number(truncated);
+      const events = environment.sourceTracks().nativeEvents.map(mapGameplayEventToCausalEvent);
+      const completed = events.some((event) => event.type === "run.completed"), defeated = events.some((event) => event.type === "run.defeated");
+      if (completed && defeated) throw new Error("scripted baseline observed contradictory terminal facts");
+      completedScenarios += Number(completed); defeatedScenarios += Number(defeated); revivalEvents += events.filter((event) => event.type === "player.revived").length;
     } finally { environment.dispose(); }
   }
-  const outcomes = Object.freeze({ scenarioCount: suite.scenarios.length, terminatedScenarios, truncatedScenarios, executedDecisions });
+  const outcomes = Object.freeze({ scenarioCount: suite.scenarios.length, terminatedScenarios, truncatedScenarios, executedDecisions, completedScenarios, defeatedScenarios, revivalEvents });
   const draft = { profile, outcomes };
   return Object.freeze({ ...draft, reportHash: stableVerificationHash(draft) });
 }
@@ -76,7 +81,10 @@ export async function compareTemporalPolicyAgainstScriptedBaselineInProduction(r
   const artifactReport = await evaluateActiveTearPolicyOutcomeSuiteInProduction(registry, suite);
   const metrics = Object.freeze({ terminatedScenarioDelta: artifactReport.outcomes.terminatedScenarios - baseline.outcomes.terminatedScenarios,
     truncatedScenarioDelta: artifactReport.outcomes.truncatedScenarios - baseline.outcomes.truncatedScenarios,
-    executedDecisionDelta: artifactReport.outcomes.executedDecisions - baseline.outcomes.executedDecisions });
+    executedDecisionDelta: artifactReport.outcomes.executedDecisions - baseline.outcomes.executedDecisions,
+    completedScenarioDelta: artifactReport.outcomes.completedScenarios - baseline.outcomes.completedScenarios,
+    defeatedScenarioDelta: artifactReport.outcomes.defeatedScenarios - baseline.outcomes.defeatedScenarios,
+    revivalEventDelta: artifactReport.outcomes.revivalEvents - baseline.outcomes.revivalEvents });
   const draft = { format: "tear-temporal-policy-baseline-comparison" as const, schemaVersion: 1 as const,
     artifact: Object.freeze({ id: active.artifactId, hash: active.artifactHash, trainingHash: source.trainingHash, trainingScenarioHashes: source.trainingScenarioHashes }),
     suite: Object.freeze({ id: suite.id, version: suite.version, hash: stableVerificationHash(suite) }), artifactReport, scriptedBaseline: baseline, metrics };

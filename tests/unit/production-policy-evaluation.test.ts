@@ -67,7 +67,7 @@ describe("C32 production policy evaluation", () => {
     expect(first).toEqual(second);
     expect(first).toMatchObject({ format: "tear-production-policy-outcome-suite", artifactId: "production-policy",
       suite: { id: suite.id, version: 1 }, outcomes: { scenarioCount: 2, terminatedScenarios: 0, truncatedScenarios: 2,
-        executedDecisions: 21, artifactDecisions: 21, fallbackDecisions: 0 } });
+        executedDecisions: 21, artifactDecisions: 21, fallbackDecisions: 0, completedScenarios: 0, defeatedScenarios: 0, revivalEvents: 0 } });
     expect(first.reports.map((report) => report.scenario.id)).toEqual(suite.scenarios.map((entry) => entry.id));
   });
 

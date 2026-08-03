@@ -1,6 +1,7 @@
 import { stableVerificationHash } from "../replay/hash";
 import type { GhostVaultBackend } from "../ghost";
 import { createProductionHeadlessEnvironment, type TearScenarioV1 } from "../tearbench";
+import { mapGameplayEventToCausalEvent } from "../tearbench/gameplay-causal-events";
 import type { TearPolicyArtifactRegistry } from "./policy-artifact-registry";
 import { TearActivePolicyRuntime, type TearPolicyDecisionReceipt } from "./policy-runtime";
 
@@ -18,7 +19,7 @@ export interface TearProductionPolicyEvaluationReportV1 {
   readonly artifactHash: string;
   readonly scenario: Readonly<{ id: string; version: number; seed: string; hash: string }>;
   readonly decisions: readonly TearProductionPolicyEvaluationDecisionV1[];
-  readonly terminal: Readonly<{ tick: number; semanticHash: string; terminated: boolean; truncated: boolean }>;
+  readonly terminal: Readonly<{ tick: number; semanticHash: string; terminated: boolean; truncated: boolean; outcome: "completed" | "defeated" | "none"; revivals: number }>;
   readonly reportHash: string;
 }
 
@@ -37,6 +38,9 @@ export interface TearProductionPolicyOutcomeSummaryV1 {
   readonly executedDecisions: number;
   readonly artifactDecisions: number;
   readonly fallbackDecisions: number;
+  readonly completedScenarios: number;
+  readonly defeatedScenarios: number;
+  readonly revivalEvents: number;
 }
 
 /**
@@ -104,7 +108,7 @@ function parseReport(value: unknown): TearProductionPolicyEvaluationReportV1 {
     || !Number.isSafeInteger(value.scenario.version) || !text(value.scenario.seed) || typeof value.scenario.hash !== "string" || !HASH.test(value.scenario.hash)
     || !Array.isArray(value.decisions) || value.decisions.length > 20_000 || !value.decisions.every(validDecision) || !record(value.terminal) || !Number.isSafeInteger(value.terminal.tick)
     || typeof value.terminal.semanticHash !== "string" || !HASH.test(value.terminal.semanticHash) || typeof value.terminal.terminated !== "boolean"
-    || typeof value.terminal.truncated !== "boolean" || typeof value.reportHash !== "string" || !HASH.test(value.reportHash)) throw new TypeError("invalid production policy evaluation report");
+    || typeof value.terminal.truncated !== "boolean" || !["completed", "defeated", "none"].includes(String(value.terminal.outcome)) || !integer(value.terminal.revivals) || value.terminal.revivals < 0 || typeof value.reportHash !== "string" || !HASH.test(value.reportHash)) throw new TypeError("invalid production policy evaluation report");
   const { reportHash, ...draft } = value as unknown as TearProductionPolicyEvaluationReportV1;
   if (reportHash !== stableVerificationHash(draft)) throw new TypeError("production policy evaluation integrity mismatch");
   return Object.freeze({ ...draft, scenario: Object.freeze({ ...draft.scenario }), decisions: Object.freeze(draft.decisions.map((entry) => Object.freeze(structuredClone(entry)))), terminal: Object.freeze({ ...draft.terminal }), reportHash });
@@ -117,7 +121,8 @@ function summarizeReports(reports: readonly TearProductionPolicyEvaluationReport
     executedDecisions: summary.executedDecisions + report.decisions.length,
     artifactDecisions: summary.artifactDecisions + report.decisions.filter((entry) => entry.receipt.source === "artifact").length,
     fallbackDecisions: summary.fallbackDecisions + report.decisions.filter((entry) => entry.receipt.source === "scripted-fallback").length,
-  }), Object.freeze({ scenarioCount: 0, terminatedScenarios: 0, truncatedScenarios: 0, executedDecisions: 0, artifactDecisions: 0, fallbackDecisions: 0 }));
+    completedScenarios: summary.completedScenarios + Number(report.terminal.outcome === "completed"), defeatedScenarios: summary.defeatedScenarios + Number(report.terminal.outcome === "defeated"), revivalEvents: summary.revivalEvents + report.terminal.revivals,
+  }), Object.freeze({ scenarioCount: 0, terminatedScenarios: 0, truncatedScenarios: 0, executedDecisions: 0, artifactDecisions: 0, fallbackDecisions: 0, completedScenarios: 0, defeatedScenarios: 0, revivalEvents: 0 }));
 }
 function parseOutcomeSuiteReport(value: unknown): TearProductionPolicyOutcomeSuiteReportV1 {
   if (!record(value) || value.format !== "tear-production-policy-outcome-suite" || value.schemaVersion !== 1 || !text(value.artifactId)
@@ -262,7 +267,7 @@ export async function evaluateActiveTearPolicyInProduction(
   if (active === undefined) throw new RangeError("production policy evaluation requires an active verified artifact");
   const runtime = new TearActivePolicyRuntime(registry);
   await runtime.reset();
-  const environment = createProductionHeadlessEnvironment();
+  const environment = createProductionHeadlessEnvironment({ captureSourceTracks: true });
   const decisions: TearProductionPolicyEvaluationDecisionV1[] = [];
   try {
     let terminal = environment.reset(scenario);
@@ -274,10 +279,14 @@ export async function evaluateActiveTearPolicyInProduction(
       const transition = environment.step(decision.actions);
       terminal = transition.observation; terminated = transition.terminated; truncated = transition.truncated;
     }
+    const events = environment.sourceTracks().nativeEvents.map(mapGameplayEventToCausalEvent);
+    const completed = events.some((event) => event.type === "run.completed"), defeated = events.some((event) => event.type === "run.defeated");
+    if (completed && defeated) throw new Error("production evaluation observed contradictory terminal facts");
     const report = { format: "tear-production-policy-evaluation" as const, schemaVersion: 1 as const,
       artifactId: active.artifactId, artifactHash: active.artifactHash,
       scenario: Object.freeze({ id: scenario.id, version: scenario.version, seed: scenario.seed, hash: stableVerificationHash(scenario) }),
-      decisions: Object.freeze(decisions), terminal: Object.freeze({ tick: terminal.tick, semanticHash: stableVerificationHash(terminal), terminated, truncated }) };
+      decisions: Object.freeze(decisions), terminal: Object.freeze({ tick: terminal.tick, semanticHash: stableVerificationHash(terminal), terminated, truncated,
+        outcome: completed ? "completed" as const : defeated ? "defeated" as const : "none" as const, revivals: events.filter((event) => event.type === "player.revived").length }) };
     return Object.freeze({ ...report, reportHash: stableVerificationHash(report) });
   } finally { environment.dispose(); }
 }
