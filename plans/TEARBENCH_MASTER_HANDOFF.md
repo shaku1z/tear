@@ -234,7 +234,13 @@ Named status:
   Class-A browser runtime with its exact action trace and rendered screenshot;
   the separate one-hit sample proves a natural failure, but neither sample is a
   durable outcome or training-stream result.
-- **C31-C40:** incomplete.
+- **C31:** active. A real C30 terminal candidate now receives a versioned,
+  fail-closed eligibility receipt before any corpus action: separate
+  local/cloud/analytics/model consent, privacy, structured-training provenance,
+  build identity, and synchronized-track declarations must agree. This does
+  not yet capture raw tracks, persist/review a sample, create manifests, or
+  train a policy.
+- **C32-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
 
@@ -312,8 +318,8 @@ Important files:
 ### Exact next slice
 
 C27A and C28 are closed. C29's durable active-cinematic capsule boundary remains
-open, but the current worktree's exact slice is **C31 Academy eligibility,
-consent, and provenance before corpus ingestion**. Do not reopen C27A for pixels, haptics,
+open, but the current worktree's exact slice is **C31 actual synchronized track
+capture from the shared C30/C29 production composition**. Do not reopen C27A for pixels, haptics,
 durable outcomes, or audio/device fidelity; C25, C39, and C40 own those
 separate output claims.
 
@@ -331,8 +337,9 @@ pressure; the existing dispatcher now has an eight-PID, 32-episode bounded
 stress proof and first-source-tick mid-run cancellation without recovery.
 Neither may be turned into storage, durable job recovery, a C31 corpus, or a
 second simulation model. Because no target profile is declared, leave that C30
-capacity claim open and begin C31 by enforcing eligibility, consent, and
-provenance before any candidate is accepted into a corpus.
+capacity claim open. C31 now rejects invalid candidate metadata before corpus
+action; next capture the actual C31 track bundle rather than accepting declared
+track flags as data.
 
 Preserve:
 
@@ -473,11 +480,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C30 cancels an active process only after its first actual source tick, returns one serializable `cancelled` result, and runs the next job on a fresh PID without a checkpoint, retry, or recovery record.
-PROVEN BY:           `pnpm check:c30:foundation` passes seven focused Vitest files / 18 tests, six worker proofs including the one-tick source-start/mid-run-cancel/fresh-PID matrix, the standalone build, both terminal reruns, fresh 13-scenario / 5,732-tick browser capture, and the 14-test source matrix.
-REMAINING HERE:      C30 still needs capacity evidence on a caller-declared target host; durable job recovery remains unclaimed. Begin C31 without accepting a candidate into a corpus before eligibility, consent, and provenance are enforced. The candidate stream is not C31 curation, corpus, Foundry training, storage, draft/reward-route checkpointing, or recovery. C29's durable active-cinematic boundary remains separately open.
+DONE THIS STEP:      C31 makes a real C30 terminal candidate pass a versioned eligibility, separately scoped consent, privacy, provenance, and synchronized-track declaration gate before any corpus action.
+PROVEN BY:           `pnpm check:c31:foundation` passes typecheck/lint/architecture plus three focused Vitest suites / eight tests. A real C30 terminal has an eligible receipt only with complete anonymous scripted-bot metadata; missing tracks, `no-training`, and consent/provenance mismatch are rejected.
+REMAINING HERE:      C31 still needs actual synchronized tracks, durable consent/revocation/deletion, quality/review/curation, lineage-bound immutable splits/manifests, an inspectable corpus/UI, and any trainer integration. C30 target-host capacity remains external; C29's durable active-cinematic boundary remains separately open.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Give the C31 candidate boundary an eligibility, consent, and provenance gate that rejects missing or incompatible metadata before any corpus/curriculum action, without weakening C30's bounded stream or declaring C31 complete.
+NEXT SLICE:          Capture an actual versioned C31 synchronized track bundle from the shared C30/C29 production composition, validate it against the terminal candidate, and keep it ephemeral until C31 review/retention rules exist.
 
 All of the following were run from this worktree through C27A slice 36:
 

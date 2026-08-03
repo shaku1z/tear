@@ -222,6 +222,11 @@ This is the migration checklist for the architectural redesign. A checked featur
    one active source worker only after its first fixed tick; that child is
    terminated and the next episode gets a fresh PID, with no checkpoint,
    restoration, retry, or durable job claim;
+   C31 now places a fail-closed Academy admission decision in front of that
+   candidate stream. It separately checks local/cloud/analytics/model consent,
+   privacy, structured-training provenance, build identity, and synchronized
+   track declarations against a real C30 terminal before any corpus action. It
+   does not yet capture the raw tracks, persist a sample, or train a policy;
    authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 
