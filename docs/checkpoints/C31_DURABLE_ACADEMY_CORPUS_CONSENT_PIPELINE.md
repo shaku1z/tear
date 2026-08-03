@@ -64,6 +64,12 @@ is trained on.
   source, then atomically removes its manifest, chunks, indexes, journal, and
   owned assets while committing a non-training `deleted` tombstone. Account or
   cloud deletion propagation remains separate work.
+- Every custody record now also carries a versioned privacy-retention policy
+  that must match the candidate's declared anonymous, pseudonymous, or personal
+  classification. Non-anonymous records require a declared data-subject ID;
+  every policy carries its local authorized-actor set. Revocation, expiry, and
+  deletion reject an undeclared actor. This is a local declared-authority check,
+  not account authentication or cloud identity.
 
 ## Exit-gate ledger
 
@@ -94,14 +100,19 @@ is trained on.
   excluded from `held()` before any Academy consumer can use them. Malformed
   custody bytes remain rejected and untouched. This is a local Vault custody
   gate, not a reviewed sample or a manifest.
+- [x] Privacy/retention ownership is bound to durable pre-corpus custody. The
+  stored policy must match the declaration's privacy class, requires a subject
+  for personal/pseudonymous records, is preserved across reload, and rejects an
+  undeclared actor from revocation, expiry, or deletion. It is intentionally not
+  a claim of authenticated accounts, cross-device identity, or cloud authority.
 - [x] A C31 deletion decision removes only its exact attested C27 source capsule
   and writes its `deleted` custody tombstone in the same Vault commit. Foreign
   Vaults, root mismatches, retained repair children, and a source still held by
   another non-deleted custody record fail closed. The tombstone is audit-only
   and cannot appear in future held-candidate queries.
-- [ ] Revocation, deletion propagation, privacy retention, pseudonymous
-  identity lifecycle, quality scoring, deduplication, outliers, account/cloud
-  deletion, style/skill metadata, and population balance.
+- [ ] Account/cloud revocation and deletion propagation, cross-device identity
+  lifecycle, quality scoring, deduplication, outliers, style/skill metadata,
+  and population balance.
 - [ ] Review, correction, curation, immutable lineage-bound train/validation/
   calibration/test/hidden-exam splits, durable manifests, and the Academy
   interface.
@@ -142,7 +153,9 @@ behavior cloning, or C36 Foundry automation.
   source into a durable C28 Vault record and proves it reloads exactly. It
   proves model-training revocation and retention expiry disappear from the
   future held-candidate view while their decision history remains, and excludes
-  malformed stored custody bytes without rewriting them.
+  malformed stored custody bytes without rewriting them. It also rejects a
+  privacy policy that does not match the declared classification and an actor
+  outside the durable policy's local authority set.
 - That same custody proof rejects a foreign Vault for deletion, atomically
   removes the actual materialized source capsule only from its matching Vault,
   and retains the durable `deleted` tombstone outside future held queries.
@@ -160,8 +173,8 @@ behavior cloning, or C36 Foundry automation.
 
 ## Next safe boundary
 
-Define C31 identity/privacy retention policy around the custody ledger, then
-add quality, deduplication, and review without allowing any non-held candidate
-into a corpus manifest. Do not move Vault writes into the C30 worker callback,
-replace verified custody tracks with caller declarations, or promote a source
-capsule into a corpus sample without the separate governance and review gates.
+Add quality, deduplication, corruption/outlier checks, and source metadata
+around held custody without allowing any non-held candidate into a corpus
+manifest. Do not move Vault writes into the C30 worker callback, replace
+verified custody tracks with caller declarations, or promote a source capsule
+into a corpus sample without the separate governance and review gates.

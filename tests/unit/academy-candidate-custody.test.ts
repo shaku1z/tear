@@ -65,6 +65,14 @@ function declaration(
   });
 }
 
+function privacyRetention() {
+  return Object.freeze({
+    classification: "anonymous" as const, revision: "c31-custody-privacy-1",
+    declaredAt: "2026-08-02T00:00:00.000Z",
+    authorizedActorIds: Object.freeze(["academy-curator", "player", "retention-worker"]),
+  });
+}
+
 async function prepared() {
   const backend = createMemoryGhostVaultBackend();
   const vault = new GhostLocalVault(backend);
@@ -80,8 +88,18 @@ describe("C31 Academy candidate custody", () => {
   it("persists only an eligible materialized source and preserves its custody evidence across reload", async () => {
     const input = await prepared();
     const store = new TearAcademyCandidateCustodyStore(input.backend);
+    await expect(store.accept({
+      declaration: input.declaration, materialization: input.materialized,
+      privacyRetention: Object.freeze({
+        classification: "personal" as const, dataSubjectId: "player-1", revision: "wrong-classification",
+        declaredAt: "2026-08-02T00:00:00.000Z", authorizedActorIds: Object.freeze(["player-1"]),
+      }),
+      retention: Object.freeze({ mode: "indefinite" as const }),
+      decidedAt: "2026-08-02T00:01:00.000Z", actor: "academy-curator", reason: "wrong privacy class",
+    })).rejects.toThrow(/retention decision/u);
     const custody = await store.accept({
       declaration: input.declaration, materialization: input.materialized,
+      privacyRetention: privacyRetention(),
       retention: Object.freeze({ mode: "indefinite" as const }),
       decidedAt: "2026-08-02T00:01:00.000Z", actor: "academy-curator", reason: "verified source held for review",
     });
@@ -89,10 +107,12 @@ describe("C31 Academy candidate custody", () => {
     expect(custody).toMatchObject({
       format: "tear-academy-candidate-custody", status: "held",
       source: { capsuleRange: { capsuleId: input.materialized.capsuleId } },
+      privacyRetention: { classification: "anonymous", authorizedActorIds: ["academy-curator", "player", "retention-worker"] },
     });
     expect(reloaded).toEqual(custody);
     await expect(store.accept({
       declaration: input.declaration, materialization: input.materialized,
+      privacyRetention: privacyRetention(),
       retention: Object.freeze({ mode: "indefinite" as const }),
       decidedAt: "2026-08-02T00:01:00.000Z", actor: "academy-curator", reason: "duplicate",
     })).rejects.toThrow(/already exists/u);
@@ -103,11 +123,16 @@ describe("C31 Academy candidate custody", () => {
     const store = new TearAcademyCandidateCustodyStore(input.backend);
     const custody = await store.accept({
       declaration: input.declaration, materialization: input.materialized,
+      privacyRetention: privacyRetention(),
       retention: Object.freeze({ mode: "indefinite" as const }),
       decidedAt: "2026-08-02T00:01:00.000Z", actor: "academy-curator", reason: "verified source held for review",
     });
     const revokedConsent = Object.freeze({ ...input.declaration.consent, revision: "c31-custody-consent-2",
       decidedAt: "2026-08-02T00:02:00.000Z", modelTraining: "no-training" as const });
+    await expect(store.revoke({
+      candidateHash: custody.candidateHash, scope: "model-training", consent: revokedConsent,
+      decidedAt: "2026-08-02T00:02:00.000Z", actor: "untrusted", reason: "not authorized",
+    })).rejects.toThrow(/invalid/u);
     const revoked = await store.revoke({
       candidateHash: custody.candidateHash, scope: "model-training", consent: revokedConsent,
       decidedAt: "2026-08-02T00:02:00.000Z", actor: "player", reason: "withdrawn training consent",
@@ -126,6 +151,7 @@ describe("C31 Academy candidate custody", () => {
     const store = new TearAcademyCandidateCustodyStore(input.backend);
     const custody = await store.accept({
       declaration: input.declaration, materialization: input.materialized,
+      privacyRetention: privacyRetention(),
       retention: Object.freeze({ mode: "until" as const, expiresAt: "2026-08-02T00:02:00.000Z" }),
       decidedAt: "2026-08-02T00:01:00.000Z", actor: "academy-curator", reason: "short review retention",
     });
@@ -144,6 +170,7 @@ describe("C31 Academy candidate custody", () => {
     const store = new TearAcademyCandidateCustodyStore(input.backend);
     const custody = await store.accept({
       declaration: input.declaration, materialization: input.materialized,
+      privacyRetention: privacyRetention(),
       retention: Object.freeze({ mode: "indefinite" as const }),
       decidedAt: "2026-08-02T00:01:00.000Z", actor: "academy-curator", reason: "verified source held for review",
     });

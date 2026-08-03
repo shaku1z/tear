@@ -240,8 +240,10 @@ This is the migration checklist for the architectural redesign. A checked featur
    decisions. Revoked or expired records are excluded from future held-candidate
    queries without erasing their audit history. An authorized C31 deletion
    removes the exact attested source capsule atomically with a non-training
-   tombstone, but account/cloud deletion, C31 corpus samples, and policy
-   training remain absent;
+   tombstone. Each custody record also persists a privacy-class-matched,
+   versioned local authority policy; undeclared actors cannot revoke, expire, or
+   delete it. Account/cloud identity and deletion, C31 corpus samples, and
+   policy training remain absent;
    authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

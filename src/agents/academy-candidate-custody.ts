@@ -18,6 +18,15 @@ export interface TearAcademyCandidateRetentionPolicyV1 {
   readonly expiresAt?: string;
 }
 
+/** Declared local custody authority; external account authentication remains C38 work. */
+export interface TearAcademyCandidatePrivacyRetentionPolicyV1 {
+  readonly classification: "personal" | "pseudonymous" | "anonymous";
+  readonly dataSubjectId?: string;
+  readonly authorizedActorIds: readonly string[];
+  readonly revision: string;
+  readonly declaredAt: string;
+}
+
 export interface TearAcademyCandidateCustodyEventV1 {
   readonly sequence: number;
   readonly kind: TearAcademyCandidateCustodyStatus;
@@ -41,6 +50,7 @@ export interface TearAcademyCandidateCustodyRecordV1 {
   readonly admissionHash: string;
   readonly declarationHash: string;
   readonly consent: TearAcademyConsentRecordV1;
+  readonly privacyRetention: TearAcademyCandidatePrivacyRetentionPolicyV1;
   readonly retention: TearAcademyCandidateRetentionPolicyV1;
   readonly events: readonly TearAcademyCandidateCustodyEventV1[];
   readonly recordHash: string;
@@ -49,6 +59,7 @@ export interface TearAcademyCandidateCustodyRecordV1 {
 export interface TearAcademyCandidateCustodyAcceptance {
   readonly declaration: TearAcademyCandidateDeclarationV1;
   readonly materialization: TearAcademyCandidateCapsuleMaterializationReceiptV1;
+  readonly privacyRetention: TearAcademyCandidatePrivacyRetentionPolicyV1;
   readonly retention: TearAcademyCandidateRetentionPolicyV1;
   readonly decidedAt: string;
   readonly actor: string;
@@ -123,6 +134,42 @@ function retention(value: unknown): TearAcademyCandidateRetentionPolicyV1 | unde
   return Object.freeze({ mode: "until", expiresAt: source.expiresAt });
 }
 
+function privacyRetention(value: unknown): TearAcademyCandidatePrivacyRetentionPolicyV1 | undefined {
+  const source = record(value);
+  if (source === undefined || !["personal", "pseudonymous", "anonymous"].includes(String(source.classification))
+    || !nonEmpty(source.revision) || !timestamp(source.declaredAt) || !Array.isArray(source.authorizedActorIds)
+    || source.authorizedActorIds.length === 0 || !source.authorizedActorIds.every(nonEmpty)
+    || new Set(source.authorizedActorIds).size !== source.authorizedActorIds.length) return undefined;
+  const dataSubjectId = source.dataSubjectId;
+  if (source.classification === "anonymous") {
+    if (dataSubjectId !== undefined) return undefined;
+    return Object.freeze({
+      classification: "anonymous", revision: source.revision, declaredAt: source.declaredAt,
+      authorizedActorIds: Object.freeze([...source.authorizedActorIds]),
+    });
+  }
+  if (!nonEmpty(dataSubjectId) || !source.authorizedActorIds.includes(dataSubjectId)) return undefined;
+  return Object.freeze({
+    classification: source.classification as "personal" | "pseudonymous", dataSubjectId,
+    revision: source.revision, declaredAt: source.declaredAt,
+    authorizedActorIds: Object.freeze([...source.authorizedActorIds]),
+  });
+}
+
+function copyPrivacyRetention(value: TearAcademyCandidatePrivacyRetentionPolicyV1): TearAcademyCandidatePrivacyRetentionPolicyV1 {
+  return Object.freeze({ ...value, authorizedActorIds: Object.freeze([...value.authorizedActorIds]) });
+}
+
+function matchesDeclarationPolicy(
+  policy: TearAcademyCandidatePrivacyRetentionPolicyV1,
+  declaration: TearAcademyCandidateDeclarationV1,
+): boolean {
+  if (policy.classification !== declaration.privacy.classification) return false;
+  if (policy.classification === "anonymous") return policy.dataSubjectId === undefined;
+  if (policy.classification === "pseudonymous") return policy.dataSubjectId === declaration.privacy.pseudonymousActorId;
+  return policy.dataSubjectId !== undefined;
+}
+
 function sourceAttestation(value: unknown): TearAcademyCandidateSourceAttestationV1 | undefined {
   const source = record(value);
   const build = source === undefined ? undefined : record(source.build);
@@ -192,7 +239,8 @@ function freezeRecord(value: Omit<TearAcademyCandidateCustodyRecordV1, "recordHa
   return Object.freeze({
     ...value,
     source: Object.freeze(structuredClone(value.source)),
-    consent: copyConsent(value.consent), retention: Object.freeze({ ...value.retention }),
+    consent: copyConsent(value.consent), privacyRetention: copyPrivacyRetention(value.privacyRetention),
+    retention: Object.freeze({ ...value.retention }),
     events: Object.freeze(value.events.map(copyEvent)),
     recordHash: recordHash(value),
   });
@@ -201,12 +249,13 @@ function freezeRecord(value: Omit<TearAcademyCandidateCustodyRecordV1, "recordHa
 function parseRecord(value: string): TearAcademyCandidateCustodyRecordV1 {
   const source = record(JSON.parse(value) as unknown);
   const policy = source === undefined ? undefined : retention(source.retention);
+  const privacy = source === undefined ? undefined : privacyRetention(source.privacyRetention);
   const candidateId = source?.candidateId;
   const candidateHash = source?.candidateHash;
   if (source?.format !== "tear-academy-candidate-custody" || source.schemaVersion !== 1
     || !nonEmpty(candidateId) || typeof candidateHash !== "string" || !/^[a-f0-9]{16}$/u.test(candidateHash)
     || !["held", "revoked", "expired", "deleted"].includes(String(source.status)) || !validConsent(source.consent)
-    || policy === undefined || !Array.isArray(source.events) || source.events.length === 0
+    || policy === undefined || privacy === undefined || !Array.isArray(source.events) || source.events.length === 0
     || !nonEmpty(source.admissionHash) || !nonEmpty(source.declarationHash) || !nonEmpty(source.recordHash)) {
     throw new TypeError("invalid Academy candidate custody record");
   }
@@ -231,7 +280,7 @@ function parseRecord(value: string): TearAcademyCandidateCustodyRecordV1 {
     format: "tear-academy-candidate-custody" as const, schemaVersion: 1 as const,
     candidateId, candidateHash, status: source.status as TearAcademyCandidateCustodyStatus,
     source: attestation, admissionHash: source.admissionHash,
-    declarationHash: source.declarationHash, consent: copyConsent(source.consent), retention: policy,
+    declarationHash: source.declarationHash, consent: copyConsent(source.consent), privacyRetention: privacy, retention: policy,
     events: Object.freeze(eventCopies),
   };
   if (source.recordHash !== recordHash(draft)) throw new TypeError("Academy candidate custody record integrity mismatch");
@@ -251,7 +300,9 @@ function assertEligible(input: TearAcademyCandidateCustodyAcceptance): void {
     throw new RangeError("C31 custody requires an eligible candidate with its materialized source attestation");
   }
   const policy = retention(input.retention);
-  if (policy === undefined || !timestamp(input.decidedAt) || !nonEmpty(input.actor) || !nonEmpty(input.reason)) {
+  const privacy = privacyRetention(input.privacyRetention);
+  if (policy === undefined || privacy === undefined || !matchesDeclarationPolicy(privacy, input.declaration)
+    || !timestamp(input.decidedAt) || !nonEmpty(input.actor) || !nonEmpty(input.reason)) {
     throw new TypeError("C31 custody requires a valid retention decision");
   }
   if (policy.mode === "until" && (policy.expiresAt === undefined || Date.parse(policy.expiresAt) <= Date.parse(input.decidedAt))) {
@@ -259,11 +310,15 @@ function assertEligible(input: TearAcademyCandidateCustodyAcceptance): void {
   }
 }
 
+function authorized(record: TearAcademyCandidateCustodyRecordV1, actor: string): boolean {
+  return nonEmpty(actor) && record.privacyRetention.authorizedActorIds.includes(actor);
+}
+
 function assertRevocation(input: TearAcademyCandidateCustodyRevocation, current: TearAcademyCandidateCustodyRecordV1): void {
   if (!/^[a-f0-9]{16}$/u.test(input.candidateHash) || current.status !== "held"
     || !timestamp(input.decidedAt) || !nonEmpty(input.actor) || !nonEmpty(input.reason) || !validConsent(input.consent)
     || !["local-recording", "cloud-publication", "analytics", "model-training", "all"].includes(input.scope)
-    || input.consent.revision === current.consent.revision) {
+    || input.consent.revision === current.consent.revision || !authorized(current, input.actor)) {
     throw new TypeError("invalid C31 candidate revocation");
   }
   const revoked = (scope: TearAcademyCandidateRevocationScope): boolean => {
@@ -300,7 +355,10 @@ export class TearAcademyCandidateCustodyStore {
     const admission = assessAcademyCandidateEligibility(input.declaration);
     const consent = copyConsent(input.declaration.consent);
     const policy = retention(input.retention);
-    if (policy === undefined || admission.candidateHash === null) throw new Error("eligible C31 custody input became invalid");
+    const privacy = privacyRetention(input.privacyRetention);
+    if (policy === undefined || privacy === undefined || admission.candidateHash === null) {
+      throw new Error("eligible C31 custody input became invalid");
+    }
     const initial = appendEvent([], {
       kind: "held", decidedAt: input.decidedAt, actor: input.actor, reason: input.reason,
       consentHash: stableVerificationHash(consent),
@@ -310,7 +368,7 @@ export class TearAcademyCandidateCustodyStore {
       candidateId: input.materialization.candidateId, candidateHash, status: "held",
       source: input.materialization.attestation,
       admissionHash: stableVerificationHash(admission), declarationHash: stableVerificationHash(input.declaration),
-      consent, retention: policy, events: Object.freeze([initial]),
+      consent, privacyRetention: privacy, retention: policy, events: Object.freeze([initial]),
     });
     await this.#backend.commit([Object.freeze({ store: "analysis", key, value: JSON.stringify(durable) })]);
     return durable;
@@ -341,7 +399,7 @@ export class TearAcademyCandidateCustodyStore {
     const current = await this.get(candidateHash);
     const expiresAt = current?.retention.expiresAt;
     if (current?.status !== "held" || current.retention.mode !== "until" || expiresAt === undefined
-      || !timestamp(decidedAt) || !nonEmpty(actor) || Date.parse(decidedAt) < Date.parse(expiresAt)) {
+      || !timestamp(decidedAt) || !authorized(current, actor) || Date.parse(decidedAt) < Date.parse(expiresAt)) {
       throw new RangeError("Academy candidate custody is not ready to expire");
     }
     const event = appendEvent(current.events, {
@@ -363,7 +421,7 @@ export class TearAcademyCandidateCustodyStore {
   async delete(input: TearAcademyCandidateCustodyDeletion): Promise<TearAcademyCandidateCustodyRecordV1> {
     const current = await this.get(input.candidateHash);
     if (current === undefined || current.status === "deleted" || !timestamp(input.decidedAt)
-      || !nonEmpty(input.actor) || !nonEmpty(input.reason) || input.vault.backend() !== this.#backend) {
+      || !authorized(current, input.actor) || !nonEmpty(input.reason) || input.vault.backend() !== this.#backend) {
       throw new TypeError("invalid C31 candidate source deletion");
     }
     const capsuleId = current.source.capsuleRange.capsuleId;
