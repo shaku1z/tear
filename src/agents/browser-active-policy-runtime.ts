@@ -7,7 +7,7 @@ export const DEFAULT_TEAR_POLICY_RUNTIME_COMPATIBILITY: TearPolicyRuntimeCompati
   runtime: "tear-policy-runtime.v1",
   observationClass: "structured-state",
   actionSchema: "tear-game-action-command-envelope.v1",
-  modelFormats: Object.freeze(["table-policy-v1"]),
+  modelFormats: Object.freeze(["table-policy-v1", "linear-policy-v1"]),
 });
 
 export interface BrowserActivePolicyRuntimeComposition {

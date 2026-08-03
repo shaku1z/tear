@@ -2,12 +2,13 @@ import { describe, expect, it } from "vitest";
 import { createMemoryGhostVaultBackend } from "../../src/ghost";
 import {
   TearActivePolicyRuntime, TearPolicyArtifactRegistry, createTearPolicyArtifact,
-  encodeTearPolicyObservation,
+  encodeTearPolicyObservation, TEAR_POLICY_FEATURE_SCHEMA_HASH_V1, TEAR_POLICY_FEATURE_WIDTH_V1,
 } from "../../src/agents";
 import type { TearAgentObservation } from "../../src/agents";
 
 const compatibility = Object.freeze({ runtime: "tear-policy-runtime.v1" as const, observationClass: "structured-state" as const,
   actionSchema: "tear-game-action-command-envelope.v1" as const, modelFormats: Object.freeze(["table-policy-v1"]) });
+const linearCompatibility = Object.freeze({ ...compatibility, modelFormats: Object.freeze(["linear-policy-v1"]) });
 
 function observation(): TearAgentObservation {
   return { state: { format: "tear-contract", kind: "observation", schemaVersion: 1, tick: 8, observationClass: "structured-state",
@@ -70,5 +71,21 @@ describe("C32 active policy runtime", () => {
 
     expect(() => new TearActivePolicyRuntime(registry, "competent", { limits: { maxTableEntries: 0 } }))
       .toThrow(/invalid policy runtime limits/u);
+  });
+
+  it("executes a bounded trained-linear policy against the same live structured feature contract", async () => {
+    const input = observation(), registry = new TearPolicyArtifactRegistry(createMemoryGhostVaultBackend(), linearCompatibility);
+    const template = artifact("*", []);
+    const stored = createTearPolicyArtifact({ ...template, id: "linear-v1", compatibility: linearCompatibility,
+      model: { format: "linear-policy-v1", payload: JSON.stringify({ format: "tear-linear-policy-model", schemaVersion: 1,
+        featureSchemaHash: TEAR_POLICY_FEATURE_SCHEMA_HASH_V1, mean: Array(TEAR_POLICY_FEATURE_WIDTH_V1).fill(0),
+        scale: Array(TEAR_POLICY_FEATURE_WIDTH_V1).fill(1), classes: [{ actions: [{ type: "move", x: 1_000, y: 0 }] }],
+        weights: [Array(TEAR_POLICY_FEATURE_WIDTH_V1).fill(0)], biases: [0] }) },
+    });
+    await registry.register(stored); await registry.activate(stored.id, "2026-08-03T15:01:00.000Z");
+    const runtime = new TearActivePolicyRuntime(registry, "competent");
+    await runtime.reset();
+    expect(runtime.decide(input).receipt).toMatchObject({ source: "artifact", artifactId: "linear-v1" });
+    expect(runtime.decide(input).actions).toEqual([{ type: "move", x: 1_000, y: 0 }]);
   });
 });

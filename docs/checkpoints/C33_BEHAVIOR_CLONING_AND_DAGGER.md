@@ -1,7 +1,8 @@
 # C33 - Behavior Cloning and DAgger
 
-**Status:** active. C33 has an immutable governed dataset-loading boundary; it
-has not trained, evaluated, or promoted a policy.
+**Status:** active. C33 can deterministically fit and execute an initial
+governed behavior-cloning artifact, but has not established held-out quality,
+promotion eligibility, or DAgger improvement.
 
 ## Proven foundation
 
@@ -17,12 +18,19 @@ has not trained, evaluated, or promoted a policy.
 - Results are content-addressed, immutable sequences ordered by candidate hash.
   The loader bounds sequence, observation, and action counts before returning a
   dataset. It does not construct a model, calculate loss, or write an artifact.
-- `createTearBehaviorCloningNormalization` derives a fixed 22-feature numeric
+- `createTearBehaviorCloningNormalization` derives a fixed 17-feature numeric
   normalization from the `training` split only. Stable batches normalize each
   canonical observation with those training-only statistics and attach only the
   semantic actions for its next authoritative tick. Validation, calibration,
   and test splits never contribute to normalization and fail visibly when no
   examples exist instead of being silently folded into training.
+- `trainTearBehaviorCloningPolicy` deterministically fits a bounded multiclass
+  perceptron over those batches and records its dataset, normalization, config,
+  classes, update count, training accuracy, and content hash. Its
+  `linear-policy-v1` output shares a 17-feature projection with C32's real
+  structured runtime; `createTearBehaviorCloningArtifact` binds that result to
+  C32's versioned artifact envelope and rejects incompatible lineage/runtime
+  declarations. It is a real executable artifact, not a promotion decision.
 
 ## Exit-gate status
 
@@ -30,7 +38,9 @@ has not trained, evaluated, or promoted a policy.
   track sequences with hidden exams excluded.
 - [x] Deterministic training-only normalization and split-preserving batches
   exist over those immutable sequences; no held-out split is mixed into fit.
-- [ ] A trainable sequence policy is reproducibly produced from that dataset.
+- [x] An initial deterministic trained policy artifact is reproducibly produced
+  from that dataset and executes a C29/C30 source-world observation through the
+  C32 runtime. This is training-fit evidence only, not held-out quality.
 - [ ] DAgger correction capture, review, ingestion, retraining, comparison,
   cancellation, and recovery are implemented with credible real-game evidence.
 
@@ -42,16 +52,18 @@ persisted trainer manifest. Two loads produce byte-identical dataset evidence;
 an unaddressed trainer reader cannot load the manifest. Repeated normalization
 and batches are byte-identical; an empty validation split fails rather than
 leaking into fit. Existing C31 manifest tests separately prove a
-hidden-release-exam entry is absent from a trainer manifest.
+hidden-release-exam entry is absent from a trainer manifest. The same test
+repeats the linear fit, emits a compatible C32 artifact, activates it, and
+proves its artifact receipt against a fresh source-owned production world.
 
 ## Deliberately not claimed
 
-This is not behavior-cloning training, DAgger, an optimization loop, a policy
-artifact, a score, a comparison against the scripted policy, or automatic
+This is not a sequence/recurrent policy, held-out evaluation, a quality score,
+a comparison against the scripted policy, DAgger, promotion, or automatic
 player-facing training. Those remain C33 work.
 
-DONE THIS STEP:      C33 can deterministically normalize and batch immutable governed C31 sequences using training-only statistics, preserving explicit held-out split boundaries without producing an artifact.
-PROVEN BY:           Focused C31-to-C33 source/custody/corpus/batching test plus strict TypeScript, lint, and architecture checks.
-REMAINING HERE:      Trainable sequence policy, reproducible optimization/checkpoints, populated held-out evaluation, DAgger, cancellation/recovery, and real-game visible policy evidence.
+DONE THIS STEP:      C33 deterministically fits a bounded multiclass behavior-cloning policy from a governed C31 dataset, emits a versioned compatible C32 artifact, and executes it over a fresh source-owned production-world observation without a promotion decision.
+PROVEN BY:           Focused C30-to-C27/C31-to-C33 source/custody/corpus/training/runtime test plus strict TypeScript, lint, and architecture checks.
+REMAINING HERE:      Temporal/sequence policy, durable reproducible training checkpoints, populated held-out evaluation, DAgger, cancellation/recovery, and real-game visible quality evidence.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Materialize a deterministic trainable behavior-cloning policy from a governed batch contract, with reproducible checkpoint/metric evidence and no promotion decision.
+NEXT SLICE:          Add durable reproducible behavior-cloning training-run/checkpoint custody and a populated held-out dataset evaluation; do not convert fit accuracy into promotion.

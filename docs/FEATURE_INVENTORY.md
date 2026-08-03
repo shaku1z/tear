@@ -286,8 +286,11 @@ This is the migration checklist for the architectural redesign. A checked featur
    order, never an outcome-derived ranking. C33 now loads bounded immutable
    track sequences only through a named C31 trainer manifest, rechecking every
    custody/curation/split/track hash and excluding hidden exams; it does not yet
-   train or produce a policy artifact. Its fixed 22-feature normalization fits
-   only the training split and batches held-out splits separately. Account/
+   train or produce a policy artifact. Its fixed 17-feature normalization fits
+   only the training split and batches held-out splits separately. It now also
+   deterministically fits a bounded linear artifact and executes it through the
+   C32 runtime against a source-owned production observation; held-out quality,
+   promotion, and DAgger remain absent. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

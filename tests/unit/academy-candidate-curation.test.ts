@@ -4,10 +4,14 @@ import {
   TearAcademyCandidateCurationStore,
   TearAcademyCandidateCustodyStore,
   TearAcademyCandidateQualityStore,
+  TearActivePolicyRuntime,
   TearAcademyCorpusStore,
+  createTearBehaviorCloningArtifact,
   createTearBehaviorCloningBatches,
   createTearBehaviorCloningNormalization,
+  trainTearBehaviorCloningPolicy,
   TearAcademyTrainingDatasetLoader,
+  TearPolicyArtifactRegistry,
   TearAcademyReviewedSampleStore,
   inspectAcademy,
   TearAcademyCandidateSplitStore,
@@ -19,6 +23,7 @@ import {
 import { GhostLocalVault, createMemoryGhostVaultBackend } from "../../src/ghost";
 import {
   ProductionHeadlessAcademyIntake,
+  createProductionHeadlessEnvironment,
   createProductionHeadlessEpisodePool,
   type ProductionHeadlessAcademyIntakeItem,
   type TearScenarioV1,
@@ -40,7 +45,7 @@ async function prepare() {
   const intake = new ProductionHeadlessAcademyIntake(1);
   await createProductionHeadlessEpisodePool(1).run([
     Object.freeze({ id: "c31-curation", scenario: scenario(), maxTicks: 2 }),
-  ], () => Object.freeze({ decide: () => Object.freeze([Object.freeze([])]) }), {
+  ], () => Object.freeze({ decide: () => Object.freeze([Object.freeze([{ type: "move" as const, x: 1_000, y: 0 }])]) }), {
     batchSize: 1, artifactConsumer: (sample) => { intake.offer(sample); },
   });
   const source = intake.take()[0];
@@ -201,7 +206,30 @@ describe("C31 held Academy candidate curation", () => {
     const batches = createTearBehaviorCloningBatches(first, normalization, { split: "training", batchSize: 2 });
     expect(createTearBehaviorCloningNormalization(second)).toEqual(normalization);
     expect(createTearBehaviorCloningBatches(second, normalization, { split: "training", batchSize: 2 })).toEqual(batches);
-    expect(batches.flatMap((batch) => batch.examples).every((example) => example.features.length === 22)).toBe(true);
+    expect(batches.flatMap((batch) => batch.examples).every((example) => example.features.length === 17)).toBe(true);
     expect(() => createTearBehaviorCloningBatches(first, normalization, { split: "validation", batchSize: 2 })).toThrow(/no examples/u);
+    const config = Object.freeze({ seed: 7, epochs: 3, learningRate: 0.25, batchSize: 2 });
+    const training = trainTearBehaviorCloningPolicy(first, normalization, config);
+    expect(trainTearBehaviorCloningPolicy(second, normalization, config)).toEqual(training);
+    expect(training.metrics.examples).toBe(3);
+    expect(training.metrics.classes).toBe(2);
+    expect(training.metrics.trainingAccuracy).toBe(1);
+    const artifact = createTearBehaviorCloningArtifact(training, {
+      id: "c33-linear-policy", createdAt: "2026-08-03T00:08:00.000Z", encoder: { id: "tear-policy-features.v1", schemaVersion: 1,
+        observationClass: "structured-state", normalizationHash: normalization.normalizationHash }, actionSchema: "tear-game-action-command-envelope.v1",
+      recurrentState: { kind: "none", schemaVersion: 1 }, trainingManifest: { id: manifest.id, version: manifest.version, rootHash: manifest.rootHash },
+      rewardVersion: "tear-reward.v1", build: { version: "test", revision: "c33", target: "unit", rulesetVersion: "rules-1", contentHash: "content-1", configHash: "config-1" },
+      metrics: {}, levelTarget: "class-a", lineage: { trainingRunId: training.trainingHash }, signature: { kind: "local-unsigned", keyId: "development" },
+      compatibility: { runtime: "tear-policy-runtime.v1", observationClass: "structured-state", actionSchema: "tear-game-action-command-envelope.v1", modelFormats: ["linear-policy-v1"] },
+    });
+    expect(artifact.model).toMatchObject({ format: "linear-policy-v1" });
+    const registry = new TearPolicyArtifactRegistry(input.backend, artifact.compatibility);
+    await registry.register(artifact); await registry.activate(artifact.id, "2026-08-03T00:09:00.000Z");
+    const environment = createProductionHeadlessEnvironment(), runtime = new TearActivePolicyRuntime(registry);
+    try {
+      environment.reset(scenario()); await runtime.reset();
+      expect(runtime.decide({ state: environment.policyObservation(), ui: { screen: "playing" } }).receipt)
+        .toMatchObject({ source: "artifact", artifactId: artifact.id });
+    } finally { environment.dispose(); }
   });
 });

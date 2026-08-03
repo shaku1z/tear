@@ -2,6 +2,7 @@ import { normalizeGameAction, type GameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearAgentDecision, TearAgentObservation, TearAgentProfileId } from "./contracts";
 import type { TearPolicyArtifactRegistry, TearPolicyArtifactV1 } from "./policy-artifact-registry";
+import { TEAR_POLICY_FEATURE_SCHEMA_HASH_V1, TEAR_POLICY_FEATURE_WIDTH_V1, projectStructuredPolicyFeatures } from "./policy-feature-vector";
 import { TearAgentOrchestrator } from "./scripted-policy";
 
 interface TablePolicyModel {
@@ -9,6 +10,19 @@ interface TablePolicyModel {
   readonly schemaVersion: 1;
   readonly actionsByObservationHash: Readonly<Record<string, readonly unknown[]>>;
 }
+
+interface LinearPolicyModel {
+  readonly format: "tear-linear-policy-model";
+  readonly schemaVersion: 1;
+  readonly featureSchemaHash: string;
+  readonly mean: readonly number[];
+  readonly scale: readonly number[];
+  readonly classes: readonly Readonly<{ actions: readonly unknown[] }> [];
+  readonly weights: readonly (readonly number[])[];
+  readonly biases: readonly number[];
+}
+
+type RuntimePolicyModel = TablePolicyModel | LinearPolicyModel;
 
 export interface TearPolicyRuntimeLimits {
   /** Opaque table payloads are data-only and bounded before JSON parsing. */
@@ -88,6 +102,40 @@ function parseTableModel(artifact: TearPolicyArtifactV1, runtimeLimits: TearPoli
   } catch { return undefined; }
 }
 
+function finiteNumbers(value: unknown, length: number): value is readonly number[] {
+  return Array.isArray(value) && value.length === length && value.every((entry) => typeof entry === "number" && Number.isFinite(entry));
+}
+function parseLinearModel(artifact: TearPolicyArtifactV1, runtimeLimits: TearPolicyRuntimeLimits): LinearPolicyModel | undefined {
+  if (artifact.model.format !== "linear-policy-v1" || new TextEncoder().encode(artifact.model.payload).byteLength > runtimeLimits.maxPayloadBytes) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(artifact.model.payload), width = TEAR_POLICY_FEATURE_WIDTH_V1;
+    if (!record(parsed) || parsed.format !== "tear-linear-policy-model" || parsed.schemaVersion !== 1 || parsed.featureSchemaHash !== TEAR_POLICY_FEATURE_SCHEMA_HASH_V1
+      || !finiteNumbers(parsed.mean, width) || !finiteNumbers(parsed.scale, width) || parsed.scale.some((entry) => entry <= 0)
+      || !Array.isArray(parsed.classes) || parsed.classes.length < 1 || parsed.classes.length > runtimeLimits.maxTableEntries
+      || !parsed.classes.every((entry) => record(entry) && Array.isArray(entry.actions)) || !Array.isArray(parsed.weights)
+      || parsed.weights.length !== parsed.classes.length || !parsed.weights.every((entry) => finiteNumbers(entry, width))
+      || !finiteNumbers(parsed.biases, parsed.classes.length)) return undefined;
+    return Object.freeze({ format: "tear-linear-policy-model", schemaVersion: 1, featureSchemaHash: parsed.featureSchemaHash,
+      mean: Object.freeze([...parsed.mean]), scale: Object.freeze([...parsed.scale]),
+      classes: Object.freeze(parsed.classes.map((entry) => Object.freeze({ actions: Object.freeze([...(entry as { actions: unknown[] }).actions]) }))),
+      weights: Object.freeze(parsed.weights.map((entry) => Object.freeze([...entry]))), biases: Object.freeze([...parsed.biases]) });
+  } catch { return undefined; }
+}
+function parseModel(artifact: TearPolicyArtifactV1, runtimeLimits: TearPolicyRuntimeLimits): RuntimePolicyModel | undefined {
+  return parseTableModel(artifact, runtimeLimits) ?? parseLinearModel(artifact, runtimeLimits);
+}
+function linearActions(model: LinearPolicyModel, observation: TearAgentObservation): readonly unknown[] {
+  const features = projectStructuredPolicyFeatures(observation);
+  let selected = 0, best = Number.NEGATIVE_INFINITY;
+  for (let index = 0; index < model.classes.length; index += 1) {
+    const row = model.weights[index], bias = model.biases[index];
+    if (row === undefined || bias === undefined) throw new Error("validated linear policy changed during decision");
+    const score = row.reduce((total, weight, featureIndex) => total + weight * ((features[featureIndex] ?? 0) - (model.mean[featureIndex] ?? 0)) / (model.scale[featureIndex] ?? 1), bias);
+    if (score > best) { best = score; selected = index; }
+  }
+  return model.classes[selected]?.actions ?? [];
+}
+
 /**
  * Typed C32 execution boundary for the active local artifact. Table models are
  * data, not executable code; any unavailable, malformed, or illegal result
@@ -99,7 +147,7 @@ export class TearActivePolicyRuntime {
   readonly #limits: TearPolicyRuntimeLimits;
   readonly #now: () => number;
   #artifact: TearPolicyArtifactV1 | undefined;
-  #model: TablePolicyModel | undefined;
+  #model: RuntimePolicyModel | undefined;
 
   constructor(registry: TearPolicyArtifactRegistry, profile: TearAgentProfileId = "competent", options: TearPolicyRuntimeOptions = {}) {
     this.#registry = registry; this.#fallback = new TearAgentOrchestrator(profile); this.#limits = limits(options);
@@ -112,7 +160,7 @@ export class TearActivePolicyRuntime {
     if (active === undefined) return;
     const artifact = await this.#registry.get(active.artifactId);
     if (artifact?.artifactHash !== active.artifactHash) return;
-    this.#artifact = artifact; this.#model = parseTableModel(artifact, this.#limits);
+    this.#artifact = artifact; this.#model = parseModel(artifact, this.#limits);
   }
 
   decide(observation: TearAgentObservation): TearActivePolicyDecision {
@@ -125,7 +173,9 @@ export class TearActivePolicyRuntime {
     };
     if (this.#artifact === undefined) return fallback("no-active-artifact");
     if (this.#model === undefined) return fallback("invalid-model");
-    const candidate = this.#model.actionsByObservationHash[observationHash] ?? this.#model.actionsByObservationHash["*"];
+    const candidate = this.#model.format === "tear-table-policy-model"
+      ? this.#model.actionsByObservationHash[observationHash] ?? this.#model.actionsByObservationHash["*"]
+      : linearActions(this.#model, observation);
     if (candidate === undefined) return fallback("missing-decision");
     if (candidate.length > this.#limits.maxActionsPerDecision) return fallback("invalid-action");
     const actions: GameAction[] = [];

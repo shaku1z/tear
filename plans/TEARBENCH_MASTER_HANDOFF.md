@@ -537,11 +537,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C33 now deterministically normalizes and batches immutable C31 sequences with training-only fit statistics and split-preserving target actions. Empty held-out data fails visibly rather than leaking into training; this is still not optimization or artifact production.
+DONE THIS STEP:      C33 now deterministically fits a bounded multiclass linear behavior-cloning policy from a governed C31 dataset, emits a compatible versioned C32 artifact, and executes it on a fresh source-owned production-world observation. This is fit evidence only, never promotion.
 PROVEN BY:           Focused real C30→C27/C31→C33 source/custody/corpus test, strict TypeScript, lint, and architecture checks.
-REMAINING HERE:      C33 needs a genuine trainable sequence policy, reproducible checkpoints/metrics, populated held-out evaluation, DAgger correction/retraining, cancellation/recovery, and visible real-game evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
+REMAINING HERE:      C33 needs temporal/sequence policy capability, durable reproducible training checkpoints/metrics, populated held-out evaluation, DAgger correction/retraining, cancellation/recovery, and visible real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C33-C40 product evidence remain; C27A, C28, and C32 are closed.
-NEXT SLICE:          C33: materialize a deterministic trainable behavior-cloning policy from governed batches, with reproducible checkpoint/metric evidence and no promotion decision.
+NEXT SLICE:          C33: add durable reproducible behavior-cloning training-run/checkpoint custody and a populated held-out dataset evaluation. Do not convert fit accuracy into promotion.
 
 All of the following were run from this worktree through C27A slice 36:
 
