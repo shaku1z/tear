@@ -264,7 +264,8 @@ Named status:
   manifests; trainer readers exclude hidden exams and revocation removes a
   source from future manifests. C31 still does not authenticate account/cloud
   identity, delete account/cloud data, or train a policy.
-- **C32:** active. Local opaque policy artifacts now have a versioned,
+- **C32:** closed against its completion-plan exit gate. Local opaque policy
+  artifacts have a versioned,
   content-addressed Vault registry with runtime compatibility validation,
   corruption/incompatibility quarantine, atomic active-policy switching, and
   rollback history. A resettable table-policy runtime now encodes structured
@@ -274,14 +275,15 @@ Named status:
   reads back its bounded integrity-checked Ghost Vault analysis decision trace.
   A frozen structured decision-conformance suite also emits an exact
   artifact-bound reproducible report. The data-only table runtime enforces
-  static payload/work/action limits and elapsed fallback containment; real-game
-  outcomes, cancellable external inference, and broader
-  player-facing Watch evidence remain open. Unactivated leaf artifacts now have
+  static payload/work/action limits and elapsed fallback containment.
+  Unactivated leaf artifacts now have
   an atomic receipt-backed retention path that protects active/rollback lineage.
   The active runtime now also runs through the actual C29/C30 production world
   with source-projected structured observations and repeatable terminal results;
   its bounded hash-checked report now has idempotent local Vault custody and
-  corrupt-byte quarantine.
+  corrupt-byte quarantine. Wider policy quality/ladder evaluation, external
+  inference cancellation, and normal-build Watch navigation are authorized C33/
+  C35/C37 work, not grounds to keep C32 open.
 - **C33-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -535,11 +537,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C32 fixed-suite source-world outcome reports now have integrity-checked idempotent local custody and bounded, receipt-backed retention by content-hash order. That order is explicitly not a quality ranking, and the reports remain neither training nor promotion inputs.
+DONE THIS STEP:      C32 is closed against its actual completion-plan exit: browser-seeded clean-process artifact reload, real semantic action and Ghost decision trace, corruption-safe fallback, and atomic activation/rollback all have permanent evidence. The fixed-suite custody work remains diagnostic, never training or promotion.
 PROVEN BY:           Requirements/type/lint/architecture checks, twenty-two focused C32 registry/runtime/journal/evaluation/production tests, a test-standalone build, and the browser-seeded real IndexedDB journey that reloads an active artifact and reads its persisted decision receipt back from Vault analysis storage.
-REMAINING HERE:      C32 needs broader outcome coverage, cancellable external-inference budgets, and player-facing Watch controls. C31 separately needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
-REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C32-C40 product evidence remain; C27A and C28 are closed.
-NEXT SLICE:          Define broader C32 source-owned production outcome coverage with explicit scenario provenance. Keep it diagnostic; do not make it a training or promotion gate or expand into C31 corpus work.
+REMAINING HERE:      C33 owns immutable-manifest dataset loading and the first actual produced artifact; C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
+REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C33-C40 product evidence remain; C27A, C28, and C32 are closed.
+NEXT SLICE:          C33: introduce a bounded deterministic loader from an immutable C31 trainer manifest to training examples. Do not call it training or fabricate an artifact; preserve hidden-exam exclusion.
 
 All of the following were run from this worktree through C27A slice 36:
 

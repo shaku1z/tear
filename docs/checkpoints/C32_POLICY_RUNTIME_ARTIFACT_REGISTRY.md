@@ -1,7 +1,8 @@
 # C32 - Policy Runtime and Artifact Registry
 
-**Status:** active. C32 has a durable local artifact registry, but no model has
-executed, trained, or been promoted by an evaluation result.
+**Status:** closed against the C32 completion-plan exit gate. The initial
+data-only table backend executes validated artifacts, but this is not a claim
+that a learned model has been trained or promoted by any evaluation result.
 
 ## Proven foundation
 
@@ -113,8 +114,28 @@ executed, trained, or been promoted by an evaluation result.
   promotion threshold.
 - [x] Fixed-suite reports have bounded, corruption-safe local custody and an
   auditable non-ranking retention policy.
-- [ ] Real-game outcome evaluation, cancellable external-inference budgets,
-  evaluation-artifact retention, and player-visible Watch Agent integration.
+- [deferred] Broader outcome coverage and measured policy quality belong to C33
+  and C35; the C32 outcome reports establish shared-composition execution, not
+  a training or ladder metric.
+- [deferred] Cancellable external-engine inference belongs to C33/C34 when an
+  actual external backend exists. The current data-only table interpreter has
+  no arbitrary executable work to preempt and already fails closed on its local
+  payload/work/action/elapsed bounds.
+- [deferred] A normally reachable player Watch Agent surface belongs to C37.
+  C32 proves the existing `watchagent=1` browser composition and its real
+  semantic-action path; it does not mislabel that engineering panel as C37 UI.
+
+## Closure against the completion-plan exit gate
+
+The C32 exit requires a persisted artifact to survive restart, load in a clean
+process, execute real gameplay observations, produce legal actions, and create
+a Ghost decision trace; corrupt/incompatible artifacts must not break gameplay;
+and active switching must be atomic and rollback-safe. The browser-seeded
+IndexedDB Watch journey proves the first group, registry/runtime contracts prove
+the corruption and atomicity groups, and the C29/C30 evaluation proves the same
+active runtime can operate over the source-owned production world. No C32 exit
+criterion requires a learned policy, a quality score, an external inference
+engine, or C37 normal-build navigation.
 
 ## Evidence
 
@@ -148,6 +169,6 @@ pixel/audio/device-output trace, or player-visible policy explanation.
 
 DONE THIS STEP:      C32 has durable, bounded custody and auditable non-ranking retention for its fixed multi-scenario source-world outcome reports; retained reports protect their cited artifact without interpreting outcomes as quality, training, or promotion.
 PROVEN BY:           C32 targeted requirements/type/lint/architecture checks, twenty-two permanent registry/runtime/journal/evaluation/production tests, and the browser-seeded real-IndexedDB Watch readback journey.
-REMAINING HERE:      Broader real-game outcome coverage, cancellable external-inference budgets, and player-visible Watch Agent controls.
-REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C32-C40 product evidence.
-NEXT SLICE:          Define broader source-owned production outcome coverage with explicit scenario provenance; keep it diagnostic rather than a training or promotion gate.
+REMAINING HERE:      None for the C32 exit gate; authorized downstream work is owned by C33/C34/C35/C37 as stated above.
+REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
+NEXT SLICE:          C33: consume an immutable governed C31 trainer manifest through a bounded deterministic dataset-loading contract; do not claim training until an actual artifact is produced.
