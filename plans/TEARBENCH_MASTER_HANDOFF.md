@@ -221,7 +221,10 @@ Named status:
   an eight-item ephemeral Academy candidate intake: five long-run cycles
   accepted 40 and explicitly backpressured 120 while all source episodes
   completed. It carries no consent/provenance/corpus or Foundry decision.
-  Declared-target capacity and broad worker-scale stress remain open. The current 256-episode / 30,720-tick in-process
+  A permanent eight-worker stress proof now completes 32 independent 120-tick
+  source episodes and reuses those exact child processes for a following batch;
+  it is bounded process-scale evidence only. Declared-target capacity remains
+  open. The current 256-episode / 30,720-tick in-process
   stress proof has distinct final state objects and hashes, plus separate
   sampled terminal scenario/action traces; it is not a worker claim. A
   source-produced natural terminal artifact is visibly rerunnable in the
@@ -306,8 +309,8 @@ Important files:
 ### Exact next slice
 
 C27A and C28 are closed. C29's durable active-cinematic capsule boundary remains
-open, but the current worktree's exact slice is **C30 broad concurrent
-worker-scale stress**. Do not reopen C27A for pixels, haptics,
+open, but the current worktree's exact slice is **C30 mid-run worker
+cancellation without durable recovery**. Do not reopen C27A for pixels, haptics,
 durable outcomes, or audio/device fidelity; C25, C39, and C40 own those
 separate output claims.
 
@@ -321,9 +324,11 @@ available in this repository; the local run observed bounded forced-GC heap
 retention and met its modest developer throughput budget on the recorded run.
 Do not promote that observation to a target claim. A bounded terminal-artifact
 stream now attaches to the Academy candidate intake and explicitly reports
-pressure; it must not be turned into storage, durable job recovery, a worker
-retry, a C31 corpus, or a second simulation model. The next slice should stress
-the existing serialized process dispatcher at a broader bounded concurrency.
+pressure; the existing dispatcher now has an eight-PID, 32-episode bounded
+stress proof. Neither may be turned into storage, durable job recovery, a C31
+corpus, or a second simulation model. The next slice should add explicit
+mid-run cancellation to the existing process dispatcher without implying job
+recovery.
 
 Preserve:
 
@@ -464,11 +469,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C30 streams real versioned terminal artifacts to a bounded in-memory Academy candidate intake: capacity pressure is explicit (40 accepted / 120 backpressured across five 32-episode cycles) and never stops or retries a production episode.
-PROVEN BY:           `pnpm measure:c30:long-run` completed all 160 episodes deterministically with 317.9 ms p95, 2.4 MiB retained heap, and 610.4 episodes/minute on the declared developer host; focused intake and benchmark tests pass. `pnpm check:c30:foundation` now covers seven focused Vitest files / 18 tests plus the existing source-matrix, worker, standalone, and browser proof.
-REMAINING HERE:      C30 still needs capacity evidence on a caller-declared target host and broad worker-scale stress. This stream is not C31 consent, provenance, curation, corpus, Foundry training, storage, draft/reward-route checkpointing, durable job recovery, or mid-run worker cancellation. C29's durable active-cinematic boundary remains separately open. Timeout, validation, and worker-reported failures intentionally do not retry.
+DONE THIS STEP:      C30 executes 32 independent natural 120-tick source episodes through exactly eight bounded operating-system workers, then reuses that pool for another batch without a ninth process.
+PROVEN BY:           `node --test tests/production-headless-worker.test.mjs tests/production-headless-worker-dispatcher.test.mjs` passes five worker proofs, including the 32-episode / eight-PID stress. `pnpm check:c30:foundation` retains seven focused Vitest files / 18 tests plus its source-matrix, worker, standalone, and browser proof.
+REMAINING HERE:      C30 still needs capacity evidence on a caller-declared target host, plus explicit mid-run cancellation without durable recovery. The candidate stream is not C31 consent, provenance, curation, corpus, Foundry training, storage, draft/reward-route checkpointing, or durable job recovery. C29's durable active-cinematic boundary remains separately open. Timeout, validation, and worker-reported failures intentionally do not retry.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Stress the existing serialized C30 process dispatcher at broader bounded concurrency, retaining only serializable results and leaving target capacity, storage, recovery, retries, and C31 corpus policy unchanged.
+NEXT SLICE:          Add explicit mid-run cancellation to the existing C30 process dispatcher, returning a serializable cancelled result while retaining no durable job-recovery, retry, or checkpoint claim.
 
 All of the following were run from this worktree through C27A slice 36:
 

@@ -101,3 +101,20 @@ test("C30 dispatcher preserves an active-worker failure and retries only opted-i
   assert.match(retried[0].attempts[0].error, /code=42/u);
   assert.notEqual(retried[0].attempts[0].workerPid, retried[0].attempts[1].workerPid);
 }, { timeout: 30_000 });
+
+test("C30 dispatcher stress-runs 32 independent source episodes through exactly eight bounded workers", async (context) => {
+  const dispatcher = new ProductionHeadlessWorkerDispatcher({
+    maxWorkers: 8, deadlineMilliseconds: 30_000, startupDeadlineMilliseconds: 60_000,
+  });
+  context.after(() => dispatcher.dispose());
+  const jobs = Array.from({ length: 32 }, (_, index) => request(`worker-scale-${String(index + 1).padStart(2, "0")}`));
+  const results = await dispatcher.run(jobs);
+  assert.equal(results.length, jobs.length);
+  assert.ok(results.every((entry) => entry.kind === "completed" && entry.ticks === 120
+    && entry.terminal?.format === "tearbench-production-headless-terminal"));
+  const workerPids = results.map((entry) => entry.workerPid);
+  assert.equal(new Set(workerPids).size, 8, "the bounded dispatcher uses all eight real child processes");
+
+  const reuse = await dispatcher.run([request("worker-scale-reuse-a"), request("worker-scale-reuse-b")]);
+  assert.ok(reuse.every((entry) => entry.kind === "completed" && workerPids.includes(entry.workerPid)));
+}, { timeout: 120_000 });

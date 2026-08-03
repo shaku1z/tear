@@ -215,7 +215,10 @@ This is the migration checklist for the architectural redesign. A checked featur
    artifacts: each cycle retains eight, explicitly reports pressure for the
    remaining 24 (40 accepted / 120 backpressured across the run), and never
    stops an episode. It is neither a target-hardware capacity pass nor a
-   worker-scale, consent, corpus, or training claim;
+   consent, corpus, or training claim. C30 also exercises its existing
+   serialized dispatcher with 32 independent source episodes across exactly
+   eight operating-system workers, then reuses that bounded pool; it is not an
+   unbounded fleet or target-throughput certification;
    authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

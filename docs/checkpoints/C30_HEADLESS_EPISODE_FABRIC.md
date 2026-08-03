@@ -121,9 +121,16 @@ operational boundary it proves.
   leak observation, not a target-capacity pass. The command
   requires `--expose-gc`; the optional `--target-id` and `--declared-by` flags
   are both required before it will label any run `target`.
-- [ ] Declared-target training-capacity and broad worker-scale stress evidence.
-  No target-hardware profile is declared in this repository, so the current
-  developer-host observation cannot satisfy that target claim.
+- [x] Bounded eight-worker production stress. The permanent dispatcher proof
+  starts exactly eight operating-system children and runs 32 independent,
+  natural 120-tick source episodes (3,840 actual production fixed steps), then
+  proves that a following two-episode batch reuses those children instead of
+  spawning a ninth. Every result includes only serializable terminal data, and
+  all 32 stress episodes complete. This is a real bounded process-scale proof,
+  not target-hardware throughput or unbounded fleet certification.
+- [ ] Declared-target training-capacity evidence. No target-hardware profile is
+  declared in this repository, so the current developer-host observation cannot
+  satisfy that target claim.
 - [x] High-count in-process production-pool isolation. The 256-episode,
   120-tick stress proof runs 30,720 actual production fixed steps through eight
   fresh composition roots. All 256 final canonical-state objects and semantic
@@ -174,9 +181,9 @@ operational boundary it proves.
   be checkpointed.
 - [ ] Remaining scale and recovery evidence. Timeout, validation, and ordinary
   worker-reported failures are not retried. There is no mid-run worker
-  cancellation message, durable job recovery, broad concurrent stress, or
-  declared-target capacity claim. The bounded developer-host long-run
-  observation above does not close any of those items.
+  cancellation message, durable job recovery, or declared-target capacity
+  claim. The bounded developer-host long-run and eight-worker observations
+  above do not close any of those remaining items.
 - [x] A sampled natural terminal episode is visibly rerunnable from its
   production artifact. The environment now seals a versioned
   `tearbench-production-headless-terminal` artifact with its exact validated
@@ -247,9 +254,11 @@ C31-C36, C39, and C40 retain their respective evidence obligations.
   child-process completed/cancelled/timed-out/rejected-message matrix.
 - `node --test tests/production-headless-worker-dispatcher.test.mjs` passes the
   two-PID bounded dispatch, pre-dispatch cancellation, exited-idle-worker
-  replacement, parent-deadline/replacement, and one-retry active-exit-attempt
-  matrix. Its cold-worker readiness allowance is separately bounded at 30
-  seconds and never changes the asserted request deadline.
+  replacement, parent-deadline/replacement, one-retry active-exit-attempt, and
+  a 32-episode / exactly-eight-PID source stress matrix. Its cold-worker
+  readiness allowance is separately bounded at 30 seconds (60 seconds for the
+  explicit eight-worker stress) and never changes the asserted request
+  deadline.
 - `pnpm build:test:standalone`, `pnpm test:browser:production-headless-terminal`, and `pnpm test:browser:production-headless-failure-terminal` pass. The browser materializer admits only versioned natural C30 terminal coordinates, proves exact action provenance plus a rendered screenshot, and checks that the live terminal tick/disposition match the failure artifact.
 - `pnpm check:architecture` passes, including planted C30 forbidden-edge and
   browser-global cases.
@@ -258,8 +267,8 @@ C31-C36, C39, and C40 retain their respective evidence obligations.
 
 Do not add retries to timeout, validation, or worker-reported failures. A
 declared target host remains an external prerequisite for the separate capacity
-claim; do not call the local developer machine target hardware. The next
-implementable C30 boundary is broad concurrent worker-scale stress; keep the
-completed checkpoint boundary restricted to active, non-draft natural episodes:
-it must not become a new simulator, storage format, or durable job-recovery
-claim.
+claim; do not call the local developer machine target hardware. C30's remaining
+internal control boundary is mid-run cancellation without durable recovery;
+keep the completed checkpoint boundary restricted to active, non-draft natural
+episodes: it must not become a new simulator, storage format, or durable
+job-recovery claim.
