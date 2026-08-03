@@ -35,6 +35,7 @@ import {
   type TearAcademyCandidateDeclarationV1,
 } from "../../src/agents";
 import { GhostLocalVault, createMemoryGhostVaultBackend } from "../../src/ghost";
+import { TEAR_POLICY_CONDITION_SCHEMA_HASH_V1, TEAR_POLICY_CONDITION_WIDTH_V1 } from "../../src/agents/policy-condition-vector";
 import {
   ProductionHeadlessAcademyIntake,
   createProductionHeadlessEnvironment,
@@ -282,7 +283,8 @@ describe("C31 held Academy candidate curation", () => {
       expect(runtime.decide({ state: environment.policyObservation(), ui: { screen: "playing" } }).receipt)
         .toMatchObject({ source: "artifact", artifactId: artifact.id });
     } finally { environment.dispose(); }
-    const temporalConfig = Object.freeze({ ...config, window: 2 });
+    const temporalConfig = Object.freeze({ ...config, window: 2,
+      conditionSchemaHash: TEAR_POLICY_CONDITION_SCHEMA_HASH_V1, conditionWidth: TEAR_POLICY_CONDITION_WIDTH_V1 });
     const temporal = trainTearTemporalWindowPolicy(first, normalization, temporalConfig);
     expect(trainTearTemporalWindowPolicy(second, normalization, temporalConfig)).toEqual(temporal);
     expect(temporal.model).toMatchObject({ format: "tear-temporal-window-linear-policy-model", window: 2 });

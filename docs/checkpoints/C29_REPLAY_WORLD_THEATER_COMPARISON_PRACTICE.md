@@ -1,8 +1,8 @@
 # C29 - Replay World, Theater, Comparison, and Practice
 
-**Status:** active - production-runtime replay, semantic Theater, player-visible
-Practice From Here, and side-by-side semantic comparison are proven; the
-durable active-cinematic exit condition is not.
+**Status:** complete - production-runtime replay, semantic Theater,
+player-visible Practice From Here, side-by-side semantic comparison, and
+durable active-campaign-cinematic restoration are proven by the named gate.
 
 ## Scope and evidence rule
 
@@ -122,26 +122,23 @@ applicable production boundary.
   `COMPARE 9`, and advances to a second repeated semantic occurrence. The
   focused unit proof additionally asserts a missing second occurrence is
   represented rather than silently discarded.
+- [x] A durable active campaign cinematic restores through production replay.
+  Live run start now opens the V3 recorder only after the synchronous opening
+  transaction has installed the campaign chapter binding; the explicit
+  `opening-initialized` tick-zero context and State Forge anchor therefore
+  describe the same RNG/world boundary. The rebuilt browser journey captures a
+  real campaign capsule whose `tear.cinematic.v1` director is active and whose
+  tick-zero authoritative receipt matches after fresh production-composition
+  restoration.
 
 ## Deliberately not claimed
 
 This foundation does not turn legacy visual replay into V3 replay, admit an
-incompatible capsule, or replace Ghost 2 playback. The older parity
-harness retains its equivalent helper for its existing C27A suites, but the C29
-replay proof no longer imports that test helper. This proves the normal
-test-standalone endless capture only; durable active-chapter-cinematic capture
-remains unfinished.
-
-On 2026-08-02, a focused browser journey confirmed that a campaign world is
-cinematic-active immediately after `environment.reset()`, but its completed V3
-capsule's tick-zero keyframe still contained an inactive director. Moving the
-V3 anchor to immediately after opening-content activation and then after entry
-to the playing state both reproduced that result; the live render/frame path
-creates the chapter transition later than either anchor. Both unproven code
-attempts were reverted. A future C29 slice must model that real initialization
-transition as an explicit durable capture boundary and prove its production
-replay restoration; it must not retry either anchor placement or claim the
-existing endless receipt evidence covers active cinematics.
+incompatible capsule, or replace Ghost 2 playback. The older parity harness
+retains its equivalent helper for its existing C27A suites, but the C29 replay
+proof no longer imports that test helper. It establishes semantic simulation
+restoration only; rendered pixels, PCM, haptics, and device-output fidelity
+remain C25/C39/C40 work.
 
 ## Evidence
 
@@ -154,5 +151,6 @@ Theater route, seeks tick 120, presses the rendered `PRACTICE` control, and
 enters the live playing state. It confirms the active child and unchanged
 durable source through read-only test diagnostics. The same journey proves
 visible comparison of two durable capsules and a repeated semantic occurrence.
-It is not a substitute for pixel/device output fidelity or active-cinematic
-capture.
+`test:browser:c29-active-campaign-cinematic` adds the settled-boundary campaign
+capture and same-tick production replay comparison. Neither is a substitute
+for pixel/device-output fidelity.

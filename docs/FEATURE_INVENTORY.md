@@ -186,8 +186,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   verified checkpoints and returns with Escape. At a verified checkpoint its
   visible `PRACTICE` control restores a real unranked child into live play;
   source custody stays byte-identical and the child blocks durable outcome,
-  profile, economy, cloud, and recording effects. Active cinematics,
-  pixel/device output fidelity remains C25/C40 work. C29 also now exposes
+  profile, economy, cloud, and recording effects. A dedicated built-browser
+  campaign capture now preserves an active chapter director at the explicit
+  `opening-initialized` tick-zero boundary and reproduces its receipt through
+  production replay. Pixel/device output fidelity remains C25/C40 work. C29
+  also now exposes
   player-visible semantic comparison: from Profile -> Vault, select two
   through nine healthy completed V3 capsules and use `COMPARE N` to
    reconstruct and inspect each repeated semantic event occurrence side by

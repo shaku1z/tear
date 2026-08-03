@@ -39,7 +39,7 @@ describe("LiveRunStartController", () => {
     expect(session.voidSeed).toBeGreaterThan(0);
     expect(events).toEqual([
       "replace", "world", "clocks", "random", "install", "finish-world", "lifecycle:run-9ix", "debug",
-      "progression", "recording", "event:started", "mode", "meta", "content", "playing", "music", "lock",
+      "progression", "mode", "meta", "content", "recording", "event:started", "playing", "music", "lock",
     ]);
   });
 });

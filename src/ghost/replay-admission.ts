@@ -37,7 +37,7 @@ export interface GhostReplayRunContextV1 {
   }>;
   readonly simulation: Readonly<{
     ticksPerSecond: 120;
-    initialState: "seeded-run-start";
+    initialState: "seeded-run-start" | "opening-initialized";
   }>;
   readonly build: GhostReplayBuildFingerprint;
   /** Named stream states at tick zero, before gameplay consumes any random values. */
@@ -58,6 +58,8 @@ export interface GhostReplayRunContextInput {
     state: string | number;
     cursor?: number;
   }>>>;
+  /** Defaults to the current live durable-capture boundary. */
+  readonly initialState?: GhostReplayRunContextV1["simulation"]["initialState"];
 }
 
 export interface GhostReplayRuntimeDescriptor {
@@ -132,7 +134,9 @@ function normalizeContext(value: unknown, label: string): GhostReplayRunContextV
   const simulation = record(candidate.simulation);
   if (run === undefined || simulation === undefined) throw new TypeError(`${label} requires run and simulation metadata`);
   if (simulation.ticksPerSecond !== 120) throw new TypeError(`${label}.simulation.ticksPerSecond must be 120`);
-  if (simulation.initialState !== "seeded-run-start") throw new TypeError(`${label}.simulation.initialState is unsupported`);
+  if (simulation.initialState !== "seeded-run-start" && simulation.initialState !== "opening-initialized") {
+    throw new TypeError(`${label}.simulation.initialState is unsupported`);
+  }
   return Object.freeze({
     format: GHOST_REPLAY_CONTEXT_FORMAT,
     schemaVersion: GHOST_REPLAY_CONTEXT_SCHEMA_VERSION,
@@ -143,7 +147,7 @@ function normalizeContext(value: unknown, label: string): GhostReplayRunContextV
       difficulty: nonEmptyString(run.difficulty, `${label}.run.difficulty`),
       weaponId: nonEmptyString(run.weaponId, `${label}.run.weaponId`),
     }),
-    simulation: Object.freeze({ ticksPerSecond: 120, initialState: "seeded-run-start" }),
+    simulation: Object.freeze({ ticksPerSecond: 120, initialState: simulation.initialState }),
     build: fingerprint(candidate.build, `${label}.build`),
     rng: normalizeRng(candidate.rng, `${label}.rng`),
   });
@@ -155,7 +159,7 @@ export function createGhostReplayRunContext(input: GhostReplayRunContextInput): 
     format: GHOST_REPLAY_CONTEXT_FORMAT,
     schemaVersion: GHOST_REPLAY_CONTEXT_SCHEMA_VERSION,
     run: { id: input.runId, seed: input.seed, mode: input.mode, difficulty: input.difficulty, weaponId: input.weaponId },
-    simulation: { ticksPerSecond: input.ticksPerSecond, initialState: "seeded-run-start" },
+    simulation: { ticksPerSecond: input.ticksPerSecond, initialState: input.initialState ?? "opening-initialized" },
     build: input.build,
     rng: input.rng,
   }, "replay context");

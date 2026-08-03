@@ -64,11 +64,16 @@ export class LiveRunStartController<TMods extends { weaponId?: string }> {
     this.#port.startLifecycle(sessionId);
     this.#port.exposeDebugState();
     this.#port.updateProgressionTracking(mode);
-    this.#port.startRecording(sessionId, runSeed);
-    this.#port.publishRunStarted(session, sessionId);
     this.#port.configureMode(mode);
     this.#port.applyMetaProgression();
     this.#port.activateOpeningContent(mode);
+    // A native V3 sidecar needs one durable capture boundary that describes
+    // the world it will actually replay. Opening campaign content installs its
+    // chapter binding synchronously, so start recording only once that
+    // initialization transaction has settled. No simulation frame can run in
+    // between these calls, and input still begins before `playing` is exposed.
+    this.#port.startRecording(sessionId, runSeed);
+    this.#port.publishRunStarted(session, sessionId);
     this.#port.enterPlayingState(sessionId);
     this.#port.beginMusic(sessionId, runSeed);
     this.#port.requestPointerLock();

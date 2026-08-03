@@ -43,7 +43,9 @@ function validConfig(config: TearTemporalPolicyTrainingConfigV1): boolean {
   return Number.isSafeInteger(config.seed) && config.seed >= 0 && Number.isSafeInteger(config.epochs) && config.epochs >= 1 && config.epochs <= 128
     && Number.isFinite(config.learningRate) && config.learningRate > 0 && config.learningRate <= 1
     && Number.isSafeInteger(config.batchSize) && config.batchSize >= 1 && config.batchSize <= 256
-    && Number.isSafeInteger(config.window) && config.window >= 1 && config.window <= 64;
+    && Number.isSafeInteger(config.window) && config.window >= 1 && config.window <= 64
+    && config.conditionSchemaHash === TEAR_POLICY_CONDITION_SCHEMA_HASH_V1
+    && config.conditionWidth === TEAR_POLICY_CONDITION_WIDTH_V1;
 }
 function actionKey(actions: readonly GameAction[]): string { return stableVerificationHash(actions); }
 function trainingScenarioHashes(dataset: TearAcademyTrainingDatasetV1): readonly string[] {

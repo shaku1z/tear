@@ -67,9 +67,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       let provenance: Readonly<Record<string, unknown>>;
       let replayContext: GhostReplayRunContextV1 | undefined;
       try {
-        // Keep the replay bootstrap configuration projection identical to the
-        // State Forge snapshot contract.  This executes after run installation
-        // and RNG reset, but before opening-content RNG consumption.
+        // Context and tick-zero keyframe share the settled opening-initialized boundary.
         const configuration = liveStateForge.capture().components.get("tear.configuration.v1");
         if (configuration === undefined) throw new Error("Ghost V3 replay bootstrap lacks a configuration projection");
         replayContext = createGhostReplayRunContext({

@@ -132,7 +132,7 @@ describe("Ghost V3 replay admission", () => {
       run: {
         id: "replay-admission-run", seed: "42", mode: "endless", difficulty: "normal", weaponId: "sword",
       },
-      simulation: { ticksPerSecond: 120, initialState: "seeded-run-start" },
+      simulation: { ticksPerSecond: 120, initialState: "opening-initialized" },
       build: BUILD,
       rng: {
         encounter: { algorithm: "xoroshiro128", state: "17", cursor: 3 },
@@ -151,6 +151,8 @@ describe("Ghost V3 replay admission", () => {
   it("reads only a complete valid context from the reserved provenance field", () => {
     const context = createGhostReplayRunContext(replayContextInput());
     expect(readGhostReplayRunContext({ [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: context })).toEqual(context);
+    const legacyBoundary = { ...context, simulation: { ...context.simulation, initialState: "seeded-run-start" as const } };
+    expect(readGhostReplayRunContext({ [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: legacyBoundary })).toEqual(legacyBoundary);
     expect(readGhostReplayRunContext({ seed: "legacy-seed", mode: "endless" })).toBeUndefined();
     expect(readGhostReplayRunContext({
       [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: { ...context, schemaVersion: 2 },

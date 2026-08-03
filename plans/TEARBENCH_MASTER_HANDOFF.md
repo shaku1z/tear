@@ -158,7 +158,7 @@ Named status:
   50 KiB IndexedDB quota into the normal application composition, completes and
   retains a source capsule, then proves a second capture receives Chromium's
   `QuotaExceededError` without halting 1,200 live ticks or mutating the source.
-- **C29:** active; production replay, durable receipt parity, semantic Theater,
+- **C29:** complete; production replay, durable receipt parity, semantic Theater,
   player-visible practice, and semantic comparison are proven. GhostProductionReplayWorld
   drives only the TearSimulationRuntime returned by its source-owned C27A
   production world and combat composition, and the focused production test
@@ -175,8 +175,10 @@ Named status:
   explicitly unranked/non-persistent child into real live play and preserves
   the source capsule byte-for-byte. The normal Vault also supports selecting
   two through nine verified V3 capsules for semantic comparison, including repeated event
-  occurrences and explicit missing occurrences. Active-cinematic durable
-  coverage remains open.
+  occurrences and explicit missing occurrences. Its dedicated campaign browser
+  journey records the settled `opening-initialized` tick-zero boundary with an
+  active chapter director and matches its receipt through fresh production
+  replay. Pixels and device output remain C25/C39/C40 work.
 - **C30:** active. A DOM-free natural episode now resets through the complete C29
   production replay composition, including its source-owned live wave/reward
   lifecycle; C27A's detached host delegates to that same source runtime. A
@@ -361,8 +363,8 @@ Important files:
 
 ### Exact next slice
 
-C27A and C28 are closed. C29's durable active-cinematic capsule boundary remains
-open, but the current worktree's completed C31 slice is **durable Academy
+C27A, C28, and C29 are closed. C30's remaining target-capacity and episode-fabric
+work is active, while the current worktree's completed C31 slice is **durable Academy
 corpus admission and privacy-safe inspection over reviewed samples, corrections,
 retention, and manifests**. The next C31 product slice is complete record
 browsing with only authorized durable lesson status/actions; start C32's policy

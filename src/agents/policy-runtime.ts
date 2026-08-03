@@ -133,12 +133,15 @@ function parseTemporalWindowLinearModel(artifact: TearPolicyArtifactV1, runtimeL
   if (artifact.model.format !== "temporal-window-linear-policy-v1" || new TextEncoder().encode(artifact.model.payload).byteLength > runtimeLimits.maxPayloadBytes) return undefined;
   try {
     const parsed: unknown = JSON.parse(artifact.model.payload), width = TEAR_POLICY_FEATURE_WIDTH_V1;
-    if (!record(parsed) || parsed.format !== "tear-temporal-window-linear-policy-model" || parsed.schemaVersion !== 1 || parsed.featureSchemaHash !== TEAR_POLICY_FEATURE_SCHEMA_HASH_V1
-      || !Number.isSafeInteger(parsed.window) || parsed.window < 1 || parsed.window > 64 || parsed.conditionSchemaHash !== TEAR_POLICY_CONDITION_SCHEMA_HASH_V1 || parsed.conditionWidth !== TEAR_POLICY_CONDITION_WIDTH_V1 || !finiteNumbers(parsed.mean, width) || !finiteNumbers(parsed.scale, width) || parsed.scale.some((entry) => entry <= 0)
+    if (!record(parsed)) return undefined;
+    const candidateWindow = parsed.window;
+    if (parsed.format !== "tear-temporal-window-linear-policy-model" || parsed.schemaVersion !== 1 || parsed.featureSchemaHash !== TEAR_POLICY_FEATURE_SCHEMA_HASH_V1
+      || typeof candidateWindow !== "number" || !Number.isSafeInteger(candidateWindow) || candidateWindow < 1 || candidateWindow > 64 || parsed.conditionSchemaHash !== TEAR_POLICY_CONDITION_SCHEMA_HASH_V1 || parsed.conditionWidth !== TEAR_POLICY_CONDITION_WIDTH_V1 || !finiteNumbers(parsed.mean, width) || !finiteNumbers(parsed.scale, width) || parsed.scale.some((entry) => entry <= 0)
       || !Array.isArray(parsed.classes) || parsed.classes.length < 1 || parsed.classes.length > runtimeLimits.maxTableEntries || !parsed.classes.every((entry) => record(entry) && Array.isArray(entry.actions))
-      || !Array.isArray(parsed.weights) || parsed.weights.length !== parsed.classes.length || !parsed.weights.every((entry) => finiteNumbers(entry, parsed.window * width + TEAR_POLICY_CONDITION_WIDTH_V1))
+      || !Array.isArray(parsed.weights) || parsed.weights.length !== parsed.classes.length || !parsed.weights.every((entry) => finiteNumbers(entry, candidateWindow * width + TEAR_POLICY_CONDITION_WIDTH_V1))
       || !finiteNumbers(parsed.biases, parsed.classes.length)) return undefined;
-    return Object.freeze({ format: "tear-temporal-window-linear-policy-model", schemaVersion: 1, featureSchemaHash: parsed.featureSchemaHash, window: parsed.window, conditionSchemaHash: TEAR_POLICY_CONDITION_SCHEMA_HASH_V1, conditionWidth: TEAR_POLICY_CONDITION_WIDTH_V1,
+    const window = candidateWindow;
+    return Object.freeze({ format: "tear-temporal-window-linear-policy-model", schemaVersion: 1, featureSchemaHash: parsed.featureSchemaHash, window, conditionSchemaHash: TEAR_POLICY_CONDITION_SCHEMA_HASH_V1, conditionWidth: TEAR_POLICY_CONDITION_WIDTH_V1,
       mean: Object.freeze([...parsed.mean]), scale: Object.freeze([...parsed.scale]), classes: Object.freeze(parsed.classes.map((entry) => Object.freeze({ actions: Object.freeze([...(entry as { actions: unknown[] }).actions]) }))),
       weights: Object.freeze(parsed.weights.map((entry) => Object.freeze([...entry]))), biases: Object.freeze([...parsed.biases]) });
   } catch { return undefined; }
