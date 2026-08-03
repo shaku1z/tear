@@ -75,6 +75,13 @@ executed, trained, or been promoted by an evaluation result.
   termination/truncation, executed-decision, and artifact/fallback counts. It
   deliberately defines neither a score nor a pass threshold, so it cannot be
   mistaken for a quality, training, or promotion result.
+- `TearProductionPolicyOutcomeSuiteVault` gives those suite reports separate,
+  versioned local Vault custody. It validates each embedded report and the
+  aggregate facts before exposure, is idempotent by content hash, quarantines
+  corrupt bytes, and retains a configured maximum by deterministic report-hash
+  order with an integrity-checked receipt. The order is deliberately unrelated
+  to outcome facts; reports retained in Vault also protect their cited artifact
+  from artifact pruning.
 
 ## Exit-gate status
 
@@ -104,6 +111,8 @@ executed, trained, or been promoted by an evaluation result.
 - [x] A fixed multi-scenario production suite produces reproducible observed
   outcome facts from fresh source-owned worlds, without a quality score or
   promotion threshold.
+- [x] Fixed-suite reports have bounded, corruption-safe local custody and an
+  auditable non-ranking retention policy.
 - [ ] Real-game outcome evaluation, cancellable external-inference budgets,
   evaluation-artifact retention, and player-visible Watch Agent integration.
 
@@ -124,7 +133,9 @@ Production-headless tests additionally prove the structured policy projection
 comes from the source world, that an active artifact produces identical
 terminal evidence across two fresh C29/C30 production compositions, and that a
 fixed two-scenario suite records repeatable terminal/truncation and
-artifact/fallback decision facts without treating them as performance.
+artifact/fallback decision facts without treating them as performance. Suite
+Vault tests prove idempotent custody, corrupt-byte quarantine, and a retained
+hash-order receipt that removes no more reports than its declared bound.
 
 ## Deliberately not claimed
 
@@ -135,8 +146,8 @@ cloud publication, or wire player-facing Watch Agent controls. The decision
 journal is diagnostic Class-A analysis evidence, not a causal capsule, replay,
 pixel/audio/device-output trace, or player-visible policy explanation.
 
-DONE THIS STEP:      C32 has a fixed, bounded, multi-scenario source-world outcome suite whose repeatable report records only terminal/truncation and artifact/fallback execution facts—never a score, training result, or promotion threshold.
-PROVEN BY:           C32 targeted requirements/type/lint/architecture checks, twenty-one permanent registry/runtime/journal/evaluation/production tests, and the browser-seeded real-IndexedDB Watch readback journey.
-REMAINING HERE:      Broader real-game outcome coverage, cancellable external-inference budgets, evaluation-report retention policy, and player-visible Watch Agent controls.
+DONE THIS STEP:      C32 has durable, bounded custody and auditable non-ranking retention for its fixed multi-scenario source-world outcome reports; retained reports protect their cited artifact without interpreting outcomes as quality, training, or promotion.
+PROVEN BY:           C32 targeted requirements/type/lint/architecture checks, twenty-two permanent registry/runtime/journal/evaluation/production tests, and the browser-seeded real-IndexedDB Watch readback journey.
+REMAINING HERE:      Broader real-game outcome coverage, cancellable external-inference budgets, and player-visible Watch Agent controls.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C32-C40 product evidence.
-NEXT SLICE:          Give fixed production-suite reports durable, bounded custody and an explicit retention policy; keep outcome facts separate from training or promotion.
+NEXT SLICE:          Define broader source-owned production outcome coverage with explicit scenario provenance; keep it diagnostic rather than a training or promotion gate.

@@ -7,6 +7,7 @@ const ACTIVE_KEY = "policy-active:v1";
 const ACTIVATION_KEY = "policy-activation:v1:";
 const RETENTION_KEY = "policy-retention:v1:";
 const PRODUCTION_EVALUATION_KEY = "policy-production-evaluation:v1:";
+const PRODUCTION_OUTCOME_SUITE_KEY = "policy-production-outcome-suite:v1:";
 const HASH = /^[a-f0-9]{16}$/u;
 
 export interface TearPolicyRuntimeCompatibility {
@@ -288,6 +289,16 @@ export class TearPolicyArtifactRegistry {
         const report: unknown = raw === undefined ? undefined : JSON.parse(raw);
         if (!record(report) || report.format !== "tear-production-policy-evaluation" || !text(report.artifactId) || !hashes(report.artifactHash)) {
           throw new TypeError("invalid production policy evaluation reference");
+        }
+        protectedIds.add(report.artifactId);
+      } catch (error) { await this.#quarantine(key, raw, error instanceof Error ? error.message : String(error)); }
+    }
+    for (const key of (await this.#backend.keys("analysis")).filter((entry) => entry.startsWith(PRODUCTION_OUTCOME_SUITE_KEY))) {
+      const raw = await this.#backend.get("analysis", key);
+      try {
+        const report: unknown = raw === undefined ? undefined : JSON.parse(raw);
+        if (!record(report) || report.format !== "tear-production-policy-outcome-suite" || !text(report.artifactId) || !hashes(report.artifactHash)) {
+          throw new TypeError("invalid production policy outcome suite reference");
         }
         protectedIds.add(report.artifactId);
       } catch (error) { await this.#quarantine(key, raw, error instanceof Error ? error.message : String(error)); }

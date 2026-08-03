@@ -281,7 +281,9 @@ This is the migration checklist for the architectural redesign. A checked featur
    with corrupt-byte quarantine. A fixed, bounded multi-scenario production
    suite also records only observed terminal/truncation and artifact/fallback
    execution facts; it defines no quality score, training result, or promotion
-   threshold. Account/
+   threshold. Those suite reports now have idempotent, corruption-safe local
+   Vault custody and bounded auditable retention by deterministic content-hash
+   order, never an outcome-derived ranking. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

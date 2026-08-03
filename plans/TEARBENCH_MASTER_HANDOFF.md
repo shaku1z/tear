@@ -535,11 +535,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C32 now has a fixed bounded multi-scenario evaluation against fresh source-owned production worlds. Its reproducible report records terminal/truncation and artifact/fallback execution facts only—no score, training result, or promotion threshold.
-PROVEN BY:           Requirements/type/lint/architecture checks, twenty-one focused C32 registry/runtime/journal/evaluation/production tests, a test-standalone build, and the browser-seeded real IndexedDB journey that reloads an active artifact and reads its persisted decision receipt back from Vault analysis storage.
-REMAINING HERE:      C32 needs durable fixed-suite report custody/retention, cancellable external-inference budgets, broader outcome coverage, and player-facing Watch controls. C31 separately needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
+DONE THIS STEP:      C32 fixed-suite source-world outcome reports now have integrity-checked idempotent local custody and bounded, receipt-backed retention by content-hash order. That order is explicitly not a quality ranking, and the reports remain neither training nor promotion inputs.
+PROVEN BY:           Requirements/type/lint/architecture checks, twenty-two focused C32 registry/runtime/journal/evaluation/production tests, a test-standalone build, and the browser-seeded real IndexedDB journey that reloads an active artifact and reads its persisted decision receipt back from Vault analysis storage.
+REMAINING HERE:      C32 needs broader outcome coverage, cancellable external-inference budgets, and player-facing Watch controls. C31 separately needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C32-C40 product evidence remain; C27A and C28 are closed.
-NEXT SLICE:          Give fixed multi-scenario C32 reports bounded local custody and a retention policy. Keep outcome facts separate from training or promotion; do not expand into C31 corpus work.
+NEXT SLICE:          Define broader C32 source-owned production outcome coverage with explicit scenario provenance. Keep it diagnostic; do not make it a training or promotion gate or expand into C31 corpus work.
 
 All of the following were run from this worktree through C27A slice 36:
 

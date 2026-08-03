@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createMemoryGhostVaultBackend } from "../../src/ghost";
 import {
   TearPolicyArtifactRegistry, TearProductionPolicyEvaluationVault, createTearPolicyArtifact, evaluateActiveTearPolicyInProduction,
-  evaluateActiveTearPolicyOutcomeSuiteInProduction, type TearProductionPolicyEvaluationSuiteV1,
+  evaluateActiveTearPolicyOutcomeSuiteInProduction, TearProductionPolicyOutcomeSuiteVault, type TearProductionPolicyEvaluationSuiteV1,
 } from "../../src/agents";
 import type { TearScenarioV1 } from "../../src/tearbench";
 
@@ -69,5 +69,26 @@ describe("C32 production policy evaluation", () => {
       suite: { id: suite.id, version: 1 }, outcomes: { scenarioCount: 2, terminatedScenarios: 0, truncatedScenarios: 2,
         executedDecisions: 21, artifactDecisions: 21, fallbackDecisions: 0 } });
     expect(first.reports.map((report) => report.scenario.id)).toEqual(suite.scenarios.map((entry) => entry.id));
+  });
+
+  it("keeps fixed-suite reports in bounded local custody with deterministic non-ranking retention", async () => {
+    const value = await registry(), first = await evaluateActiveTearPolicyOutcomeSuiteInProduction(value, suite);
+    const second = await evaluateActiveTearPolicyOutcomeSuiteInProduction(value, Object.freeze({ ...suite, id: "c32-production-outcome-suite-alt" }));
+    const backend = createMemoryGhostVaultBackend(), vault = new TearProductionPolicyOutcomeSuiteVault(backend);
+    expect(await vault.persist(first)).toEqual(first);
+    expect(await vault.persist(first)).toEqual(first);
+    await vault.persist(second);
+    const receipt = await vault.retain(1, "2026-08-03T18:02:00.000Z");
+    expect(receipt.maxReports).toBe(1);
+    expect(receipt.removedReportHashes).toHaveLength(1);
+    expect(receipt.retainedReportHashes).toHaveLength(1);
+    const removedReportHash = receipt.removedReportHashes[0], retainedReportHash = receipt.retainedReportHashes[0];
+    if (removedReportHash === undefined || retainedReportHash === undefined) throw new Error("retention receipt is unexpectedly empty");
+    expect(await vault.get(removedReportHash)).toBeUndefined();
+    expect(await vault.get(retainedReportHash)).toBeDefined();
+    expect(await vault.retentionHistory()).toEqual([receipt]);
+    await backend.put("analysis", `policy-production-outcome-suite:v1:${second.reportHash}`, "not-json");
+    expect(await vault.get(second.reportHash)).toBeUndefined();
+    expect((await backend.keys("quarantine")).some((key) => key.endsWith(second.reportHash))).toBe(true);
   });
 });

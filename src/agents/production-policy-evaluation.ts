@@ -55,10 +55,27 @@ export interface TearProductionPolicyOutcomeSuiteReportV1 {
 }
 
 const VAULT_KEY = "policy-production-evaluation:v1:";
+const OUTCOME_SUITE_KEY = "policy-production-outcome-suite:v1:";
+const OUTCOME_SUITE_RETENTION_KEY = "policy-production-outcome-suite-retention:v1:";
 const HASH = /^[a-f0-9]{16}$/u;
+
+export interface TearProductionPolicyOutcomeSuiteRetentionReceiptV1 {
+  readonly format: "tear-production-policy-outcome-suite-retention";
+  readonly schemaVersion: 1;
+  readonly revision: number;
+  readonly retainedAt: string;
+  readonly maxReports: number;
+  readonly removedReportHashes: readonly string[];
+  readonly retainedReportHashes: readonly string[];
+  readonly receiptHash: string;
+}
 
 function record(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
 function text(value: unknown): value is string { return typeof value === "string" && value.trim().length > 0; }
+function integer(value: unknown): value is number { return Number.isSafeInteger(value); }
+function timestamp(value: unknown): value is string { return text(value) && Number.isFinite(Date.parse(value)); }
+function hashes(value: unknown): value is string { return typeof value === "string" && HASH.test(value); }
+function suiteRetentionHash(value: Omit<TearProductionPolicyOutcomeSuiteRetentionReceiptV1, "receiptHash">): string { return stableVerificationHash(value); }
 function validateSuite(suite: TearProductionPolicyEvaluationSuiteV1): void {
   if (!text(suite.id) || !Number.isSafeInteger(suite.version) || suite.version < 1 || !text(suite.description)
     || suite.scenarios.length < 1 || suite.scenarios.length > 32) throw new TypeError("invalid production policy evaluation suite");
@@ -71,16 +88,64 @@ function validateSuite(suite: TearProductionPolicyEvaluationSuiteV1): void {
     identities.add(identity);
   }
 }
+function validDecision(value: unknown): value is TearProductionPolicyEvaluationDecisionV1 {
+  if (!record(value) || !integer(value.tick) || value.tick < 0 || !hashes(value.observationHash) || !hashes(value.actionHash) || !record(value.receipt)
+    || !hashes(value.receipt.observationHash) || value.receipt.observationHash !== value.observationHash
+    || (value.receipt.source !== "artifact" && value.receipt.source !== "scripted-fallback")) return false;
+  const hasArtifactId = value.receipt.artifactId !== undefined, hasArtifactHash = value.receipt.artifactHash !== undefined;
+  if (hasArtifactId !== hasArtifactHash || (hasArtifactId && (!text(value.receipt.artifactId) || !hashes(value.receipt.artifactHash)))) return false;
+  if (value.receipt.source === "artifact") return hasArtifactId && value.receipt.reason === undefined;
+  return value.receipt.reason === "no-active-artifact" || value.receipt.reason === "invalid-model"
+    || value.receipt.reason === "missing-decision" || value.receipt.reason === "invalid-action" || value.receipt.reason === "decision-budget-exceeded";
+}
 function parseReport(value: unknown): TearProductionPolicyEvaluationReportV1 {
   if (!record(value) || value.format !== "tear-production-policy-evaluation" || value.schemaVersion !== 1 || !text(value.artifactId)
     || typeof value.artifactHash !== "string" || !HASH.test(value.artifactHash) || !record(value.scenario) || !text(value.scenario.id)
     || !Number.isSafeInteger(value.scenario.version) || !text(value.scenario.seed) || typeof value.scenario.hash !== "string" || !HASH.test(value.scenario.hash)
-    || !Array.isArray(value.decisions) || value.decisions.length > 20_000 || !record(value.terminal) || !Number.isSafeInteger(value.terminal.tick)
+    || !Array.isArray(value.decisions) || value.decisions.length > 20_000 || !value.decisions.every(validDecision) || !record(value.terminal) || !Number.isSafeInteger(value.terminal.tick)
     || typeof value.terminal.semanticHash !== "string" || !HASH.test(value.terminal.semanticHash) || typeof value.terminal.terminated !== "boolean"
     || typeof value.terminal.truncated !== "boolean" || typeof value.reportHash !== "string" || !HASH.test(value.reportHash)) throw new TypeError("invalid production policy evaluation report");
   const { reportHash, ...draft } = value as unknown as TearProductionPolicyEvaluationReportV1;
   if (reportHash !== stableVerificationHash(draft)) throw new TypeError("production policy evaluation integrity mismatch");
   return Object.freeze({ ...draft, scenario: Object.freeze({ ...draft.scenario }), decisions: Object.freeze(draft.decisions.map((entry) => Object.freeze(structuredClone(entry)))), terminal: Object.freeze({ ...draft.terminal }), reportHash });
+}
+function summarizeReports(reports: readonly TearProductionPolicyEvaluationReportV1[]): TearProductionPolicyOutcomeSummaryV1 {
+  return reports.reduce<TearProductionPolicyOutcomeSummaryV1>((summary, report) => Object.freeze({
+    scenarioCount: summary.scenarioCount + 1,
+    terminatedScenarios: summary.terminatedScenarios + Number(report.terminal.terminated),
+    truncatedScenarios: summary.truncatedScenarios + Number(report.terminal.truncated),
+    executedDecisions: summary.executedDecisions + report.decisions.length,
+    artifactDecisions: summary.artifactDecisions + report.decisions.filter((entry) => entry.receipt.source === "artifact").length,
+    fallbackDecisions: summary.fallbackDecisions + report.decisions.filter((entry) => entry.receipt.source === "scripted-fallback").length,
+  }), Object.freeze({ scenarioCount: 0, terminatedScenarios: 0, truncatedScenarios: 0, executedDecisions: 0, artifactDecisions: 0, fallbackDecisions: 0 }));
+}
+function parseOutcomeSuiteReport(value: unknown): TearProductionPolicyOutcomeSuiteReportV1 {
+  if (!record(value) || value.format !== "tear-production-policy-outcome-suite" || value.schemaVersion !== 1 || !text(value.artifactId)
+    || !hashes(value.artifactHash) || !record(value.suite) || !text(value.suite.id) || !integer(value.suite.version) || value.suite.version < 1
+    || !hashes(value.suite.hash) || !Array.isArray(value.reports) || value.reports.length < 1 || value.reports.length > 32
+    || !record(value.outcomes) || !hashes(value.reportHash)) throw new TypeError("invalid production policy outcome suite report");
+  const reports = Object.freeze(value.reports.map(parseReport));
+  if (reports.some((report) => report.artifactId !== value.artifactId || report.artifactHash !== value.artifactHash)
+    || new Set(reports.map((report) => `${report.scenario.id}:${String(report.scenario.version)}:${report.scenario.seed}`)).size !== reports.length) {
+    throw new TypeError("invalid production policy outcome suite report members");
+  }
+  const outcomes = summarizeReports(reports);
+  if (stableVerificationHash(outcomes) !== stableVerificationHash(value.outcomes)) throw new TypeError("production policy outcome summary mismatch");
+  const { reportHash, ...draft } = value as unknown as TearProductionPolicyOutcomeSuiteReportV1;
+  if (reportHash !== stableVerificationHash(draft)) throw new TypeError("production policy outcome suite integrity mismatch");
+  return Object.freeze({ ...draft, suite: Object.freeze({ ...draft.suite }), reports, outcomes: Object.freeze({ ...outcomes }), reportHash });
+}
+function parseSuiteRetentionReceipt(value: unknown): TearProductionPolicyOutcomeSuiteRetentionReceiptV1 {
+  if (!record(value) || value.format !== "tear-production-policy-outcome-suite-retention" || value.schemaVersion !== 1 || !integer(value.revision)
+    || value.revision < 1 || !timestamp(value.retainedAt) || !integer(value.maxReports) || value.maxReports < 0
+    || !Array.isArray(value.removedReportHashes) || !value.removedReportHashes.every(hashes)
+    || !Array.isArray(value.retainedReportHashes) || !value.retainedReportHashes.every(hashes) || !hashes(value.receiptHash)) {
+    throw new TypeError("invalid production policy outcome suite retention receipt");
+  }
+  const { receiptHash, ...draft } = value as unknown as Omit<TearProductionPolicyOutcomeSuiteRetentionReceiptV1, "receiptHash"> & { receiptHash: string };
+  if (receiptHash !== suiteRetentionHash(draft)) throw new TypeError("production policy outcome suite retention integrity mismatch");
+  return Object.freeze({ ...draft, removedReportHashes: Object.freeze([...draft.removedReportHashes]),
+    retainedReportHashes: Object.freeze([...draft.retainedReportHashes]), receiptHash });
 }
 
 /** Local Vault custody for bounded source-world evaluation evidence. No promotion semantics are implied. */
@@ -107,6 +172,80 @@ export class TearProductionPolicyEvaluationVault {
       await this.#backend.put("quarantine", key, JSON.stringify(Object.freeze({ format: "policy-production-evaluation-quarantine", schemaVersion: 1, key, raw, reason: error instanceof Error ? error.message : String(error) })));
       return undefined;
     }
+  }
+}
+
+/**
+ * Local custody for bounded fixed-suite outcome evidence. Retention is by
+ * deterministic report-hash order, never by an outcome-derived ranking.
+ */
+export class TearProductionPolicyOutcomeSuiteVault {
+  readonly #backend: GhostVaultBackend;
+  constructor(backend: GhostVaultBackend) { this.#backend = backend; }
+
+  async persist(input: TearProductionPolicyOutcomeSuiteReportV1): Promise<TearProductionPolicyOutcomeSuiteReportV1> {
+    const report = parseOutcomeSuiteReport(input), key = `${OUTCOME_SUITE_KEY}${report.reportHash}`;
+    const existing = await this.#backend.get("analysis", key);
+    if (existing !== undefined) return parseOutcomeSuiteReport(JSON.parse(existing));
+    await this.#backend.commit(Object.freeze([
+      { store: "analysis", key, value: JSON.stringify(report) },
+      { store: "indexes", key: `policy-production-outcome-suite:${report.artifactId}:${report.reportHash}`,
+        value: JSON.stringify({ artifactHash: report.artifactHash, suiteHash: report.suite.hash }) },
+    ]));
+    return report;
+  }
+
+  async get(reportHash: string): Promise<TearProductionPolicyOutcomeSuiteReportV1 | undefined> {
+    if (!hashes(reportHash)) throw new TypeError("production policy outcome suite hash is invalid");
+    const key = `${OUTCOME_SUITE_KEY}${reportHash}`, raw = await this.#backend.get("analysis", key);
+    if (raw === undefined) return undefined;
+    try { return parseOutcomeSuiteReport(JSON.parse(raw)); }
+    catch (error) {
+      await this.#backend.put("quarantine", key, JSON.stringify(Object.freeze({ format: "policy-production-outcome-suite-quarantine",
+        schemaVersion: 1, key, raw, reason: error instanceof Error ? error.message : String(error) })));
+      return undefined;
+    }
+  }
+
+  async #nextRetentionRevision(): Promise<number> {
+    return (await this.#backend.keys("indexes")).filter((key) => key.startsWith(OUTCOME_SUITE_RETENTION_KEY)).length + 1;
+  }
+
+  async retain(maxReports: number, retainedAt: string): Promise<TearProductionPolicyOutcomeSuiteRetentionReceiptV1> {
+    if (!integer(maxReports) || maxReports < 0 || !timestamp(retainedAt)) throw new TypeError("invalid production policy outcome suite retention request");
+    const reports: TearProductionPolicyOutcomeSuiteReportV1[] = [];
+    for (const key of (await this.#backend.keys("analysis")).filter((entry) => entry.startsWith(OUTCOME_SUITE_KEY))) {
+      const report = await this.get(key.slice(OUTCOME_SUITE_KEY.length));
+      if (report !== undefined) reports.push(report);
+    }
+    const ordered = reports.sort((left, right) => left.reportHash.localeCompare(right.reportHash));
+    const removedReports = ordered.slice(0, Math.max(0, ordered.length - maxReports));
+    const retainedReports = ordered.slice(Math.max(0, ordered.length - maxReports));
+    const removedReportHashes = removedReports.map((report) => report.reportHash);
+    const retainedReportHashes = retainedReports.map((report) => report.reportHash);
+    const draft = { format: "tear-production-policy-outcome-suite-retention" as const, schemaVersion: 1 as const,
+      revision: await this.#nextRetentionRevision(), retainedAt, maxReports, removedReportHashes: Object.freeze(removedReportHashes),
+      retainedReportHashes: Object.freeze(retainedReportHashes) };
+    const receipt = Object.freeze({ ...draft, receiptHash: suiteRetentionHash(draft) });
+    await this.#backend.commit(Object.freeze([
+      ...removedReports.flatMap((report) => [
+        { store: "analysis" as const, key: `${OUTCOME_SUITE_KEY}${report.reportHash}` },
+        { store: "indexes" as const, key: `policy-production-outcome-suite:${report.artifactId}:${report.reportHash}` },
+      ]),
+      { store: "analysis" as const, key: `${OUTCOME_SUITE_RETENTION_KEY}${String(receipt.revision).padStart(12, "0")}`, value: JSON.stringify(receipt) },
+      { store: "indexes" as const, key: `${OUTCOME_SUITE_RETENTION_KEY}${String(receipt.revision).padStart(12, "0")}`, value: JSON.stringify(receipt) },
+    ]));
+    return receipt;
+  }
+
+  async retentionHistory(): Promise<readonly TearProductionPolicyOutcomeSuiteRetentionReceiptV1[]> {
+    const receipts: TearProductionPolicyOutcomeSuiteRetentionReceiptV1[] = [];
+    for (const key of (await this.#backend.keys("indexes")).filter((entry) => entry.startsWith(OUTCOME_SUITE_RETENTION_KEY))) {
+      const raw = await this.#backend.get("indexes", key);
+      try { if (raw !== undefined) receipts.push(parseSuiteRetentionReceipt(JSON.parse(raw))); }
+      catch (error) { await this.#backend.put("quarantine", key, JSON.stringify(Object.freeze({ format: "policy-production-outcome-suite-retention-quarantine", schemaVersion: 1, key, raw, reason: error instanceof Error ? error.message : String(error) }))); }
+    }
+    return Object.freeze(receipts.sort((left, right) => left.revision - right.revision));
   }
 }
 
@@ -161,14 +300,7 @@ export async function evaluateActiveTearPolicyOutcomeSuiteInProduction(
   if (reports.some((report) => report.artifactId !== first.artifactId || report.artifactHash !== first.artifactHash)) {
     throw new Error("active policy changed during production outcome suite evaluation");
   }
-  const outcomes = reports.reduce<TearProductionPolicyOutcomeSummaryV1>((summary, report) => Object.freeze({
-    scenarioCount: summary.scenarioCount + 1,
-    terminatedScenarios: summary.terminatedScenarios + Number(report.terminal.terminated),
-    truncatedScenarios: summary.truncatedScenarios + Number(report.terminal.truncated),
-    executedDecisions: summary.executedDecisions + report.decisions.length,
-    artifactDecisions: summary.artifactDecisions + report.decisions.filter((entry) => entry.receipt.source === "artifact").length,
-    fallbackDecisions: summary.fallbackDecisions + report.decisions.filter((entry) => entry.receipt.source === "scripted-fallback").length,
-  }), Object.freeze({ scenarioCount: 0, terminatedScenarios: 0, truncatedScenarios: 0, executedDecisions: 0, artifactDecisions: 0, fallbackDecisions: 0 }));
+  const outcomes = summarizeReports(reports);
   const draft = { format: "tear-production-policy-outcome-suite" as const, schemaVersion: 1 as const,
     artifactId: first.artifactId, artifactHash: first.artifactHash,
     suite: Object.freeze({ id: suite.id, version: suite.version, hash: stableVerificationHash(suite) }), reports, outcomes };
