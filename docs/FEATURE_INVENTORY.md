@@ -209,11 +209,13 @@ This is the migration checklist for the architectural redesign. A checked featur
    and snapshot/scenario mismatches fail closed. This is not persistence,
    worker-job recovery, or a draft/reward-route checkpoint claim. C30 also has
    a versioned, forced-GC five-cycle developer-host observation: 160 natural
-   600-tick episodes / 96,000 fixed steps completed with identical repeat hashes
-   and 2.4 MiB retained heap on the declared local host. Its 462.5
-   episodes/minute observation was below the modest 500 developer budget, so it
-   is neither a target-hardware capacity pass nor a worker-scale or training
-   claim;
+   600-tick episodes / 96,000 fixed steps completed with identical repeat hashes,
+   2.4 MiB retained heap, and 610.4 episodes/minute on the declared local host.
+   A bounded C30 Academy-candidate intake also receives those real terminal
+   artifacts: each cycle retains eight, explicitly reports pressure for the
+   remaining 24 (40 accepted / 120 backpressured across the run), and never
+   stops an episode. It is neither a target-hardware capacity pass nor a
+   worker-scale, consent, corpus, or training claim;
    authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

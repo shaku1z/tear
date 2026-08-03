@@ -25,6 +25,17 @@ describe("C30 production headless benchmark", () => {
     expect(benchmark.firstPass.episodesPerMinute).toBeGreaterThan(0);
     expect(benchmark.firstPass.p95EpisodeMilliseconds).toBeGreaterThanOrEqual(0);
     expect(benchmark.firstPass.semanticHashes).toEqual(benchmark.repeat.semanticHashes);
+    expect(benchmark.firstPass.academyIntake).toMatchObject({
+      capacity: C30_NATURAL_EPISODE_BENCHMARK_PROFILE.artifactSampleLimit,
+      accepted: C30_NATURAL_EPISODE_BENCHMARK_PROFILE.artifactSampleLimit,
+      backpressured: C30_NATURAL_EPISODE_BENCHMARK_PROFILE.episodes
+        - C30_NATURAL_EPISODE_BENCHMARK_PROFILE.artifactSampleLimit,
+      queued: C30_NATURAL_EPISODE_BENCHMARK_PROFILE.artifactSampleLimit,
+    });
+    expect(benchmark.repeat.academyIntake.backpressured).toBe(
+      C30_NATURAL_EPISODE_BENCHMARK_PROFILE.episodes
+        - C30_NATURAL_EPISODE_BENCHMARK_PROFILE.artifactSampleLimit,
+    );
     expect(benchmark.heap.beforeBytes).toBeGreaterThan(0);
     expect(benchmark.heap.afterBytes).toBeGreaterThan(0);
     expect(benchmark.heap.peakBytes).toBeGreaterThan(0);
@@ -73,6 +84,13 @@ describe("C30 production headless benchmark", () => {
       C30_LONG_RUN_LEAK_PROFILE.cycles * C30_LONG_RUN_LEAK_PROFILE.episodesPerCycle,
     );
     expect(artifact.aggregate.sampledArtifacts).toBe(C30_LONG_RUN_LEAK_PROFILE.artifactSampleLimit);
+    expect(artifact.aggregate.academyIntake).toEqual({
+      accepted: C30_LONG_RUN_LEAK_PROFILE.cycles * C30_LONG_RUN_LEAK_PROFILE.artifactSampleLimit,
+      backpressured: C30_LONG_RUN_LEAK_PROFILE.cycles
+        * (C30_LONG_RUN_LEAK_PROFILE.episodesPerCycle - C30_LONG_RUN_LEAK_PROFILE.artifactSampleLimit),
+      closed: 0,
+      maximumQueued: C30_LONG_RUN_LEAK_PROFILE.artifactSampleLimit,
+    });
     expect(artifact.heap.beforeBytes).toBeGreaterThan(0);
     expect(artifact.heap.afterBytes).toBeGreaterThan(0);
     expect(artifact.budget.retainedHeap).not.toBe("not-measured");

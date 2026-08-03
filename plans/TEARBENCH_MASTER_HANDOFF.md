@@ -214,11 +214,14 @@ Named status:
   A versioned five-cycle, forced-GC developer-host observation now completes
   160 natural 600-tick episodes / 96,000 fixed steps with repeat-hash parity
   and a 2.4 MiB retained heap. The declared Windows 11 / Intel Core Ultra 9
-  288V / 31.5 GiB host observed 462.5 episodes/minute, below the modest 500
-  developer budget; it is not a target-hardware capacity pass. The runner will
+  288V / 31.5 GiB host observed 610.4 episodes/minute, meeting the modest 500
+  developer budget on that run; it is not a target-hardware capacity pass. The runner will
   classify a host as target only when both a caller-supplied target ID and
-  declarant are present. Declared-target capacity, broad worker-scale stress,
-  and Academy/Foundry streaming remain open. The current 256-episode / 30,720-tick in-process
+  declarant are present. C30 now also streams each real terminal artifact into
+  an eight-item ephemeral Academy candidate intake: five long-run cycles
+  accepted 40 and explicitly backpressured 120 while all source episodes
+  completed. It carries no consent/provenance/corpus or Foundry decision.
+  Declared-target capacity and broad worker-scale stress remain open. The current 256-episode / 30,720-tick in-process
   stress proof has distinct final state objects and hashes, plus separate
   sampled terminal scenario/action traces; it is not a worker claim. A
   source-produced natural terminal artifact is visibly rerunnable in the
@@ -303,8 +306,8 @@ Important files:
 ### Exact next slice
 
 C27A and C28 are closed. C29's durable active-cinematic capsule boundary remains
-open, but the current worktree's exact slice is **C30 Academy/Foundry artifact
-streaming with bounded backpressure**. Do not reopen C27A for pixels, haptics,
+open, but the current worktree's exact slice is **C30 broad concurrent
+worker-scale stress**. Do not reopen C27A for pixels, haptics,
 durable outcomes, or audio/device fidelity; C25, C39, and C40 own those
 separate output claims.
 
@@ -315,11 +318,12 @@ same suffix reaches the exactly equal terminal artifact. Keep that boundary
 in-process and caller-retained. A five-cycle long-run runner now records an
 explicit developer or caller-declared target profile, but no target profile is
 available in this repository; the local run observed bounded forced-GC heap
-retention while missing its developer throughput budget. Do not promote that
-observation to a target claim. The next slice should attach a bounded terminal
-artifact stream to the Academy intake with explicit backpressure; it must not
-turn C30 into storage, durable job recovery, a worker retry, or a second
-simulation model.
+retention and met its modest developer throughput budget on the recorded run.
+Do not promote that observation to a target claim. A bounded terminal-artifact
+stream now attaches to the Academy candidate intake and explicitly reports
+pressure; it must not be turned into storage, durable job recovery, a worker
+retry, a C31 corpus, or a second simulation model. The next slice should stress
+the existing serialized process dispatcher at a broader bounded concurrency.
 
 Preserve:
 
@@ -460,11 +464,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C30 records a versioned, forced-GC five-cycle developer-host observation: 160 natural 600-tick production episodes / 96,000 fixed steps, explicit host declaration, bounded artifacts, repeat-hash parity, and retained-heap evidence.
-PROVEN BY:           `pnpm measure:c30:long-run` completed all 160 episodes deterministically with 315.6 ms p95 and 2.4 MiB retained heap. The current declared developer host measured 462.5 episodes/minute, below the modest 500 developer budget; `pnpm check:c30:foundation` now covers six focused Vitest files / 16 tests plus the existing source-matrix, worker, standalone, and browser proof.
-REMAINING HERE:      C30 still needs capacity evidence on a caller-declared target host, broad worker-scale stress, and Academy/Foundry streaming with backpressure. Draft/reward-route checkpointing, durable job recovery, and mid-run worker cancellation remain unclaimed. C29's durable active-cinematic boundary remains separately open. Timeout, validation, and worker-reported failures intentionally do not retry.
+DONE THIS STEP:      C30 streams real versioned terminal artifacts to a bounded in-memory Academy candidate intake: capacity pressure is explicit (40 accepted / 120 backpressured across five 32-episode cycles) and never stops or retries a production episode.
+PROVEN BY:           `pnpm measure:c30:long-run` completed all 160 episodes deterministically with 317.9 ms p95, 2.4 MiB retained heap, and 610.4 episodes/minute on the declared developer host; focused intake and benchmark tests pass. `pnpm check:c30:foundation` now covers seven focused Vitest files / 18 tests plus the existing source-matrix, worker, standalone, and browser proof.
+REMAINING HERE:      C30 still needs capacity evidence on a caller-declared target host and broad worker-scale stress. This stream is not C31 consent, provenance, curation, corpus, Foundry training, storage, draft/reward-route checkpointing, durable job recovery, or mid-run worker cancellation. C29's durable active-cinematic boundary remains separately open. Timeout, validation, and worker-reported failures intentionally do not retry.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Wire bounded C30 terminal artifacts into an Academy intake with explicit backpressure, preserving source composition and without adding storage, recovery, retries, or a second simulation.
+NEXT SLICE:          Stress the existing serialized C30 process dispatcher at broader bounded concurrency, retaining only serializable results and leaving target capacity, storage, recovery, retries, and C31 corpus policy unchanged.
 
 All of the following were run from this worktree through C27A slice 36:
 

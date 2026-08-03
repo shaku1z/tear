@@ -3,7 +3,8 @@
 **Status:** active - DOM-free episodes now reset through C29's complete
 production replay composition, including the source-owned live wave/reward and
 terminal-outcome lifecycles. The fresh C27A browser corpus matches that source
-composition; C30's scale and artifact-streaming exit work remain open.
+composition; declared-target capacity and broad worker-scale exit work remain
+open.
 
 ## Scope and evidence rule
 
@@ -115,9 +116,9 @@ operational boundary it proves.
   aggregate rate, and forced-GC heap samples. On 2026-08-02 the declared
   `developer-iu5bi1m7n72c2` Windows 11 / Intel Core Ultra 9 288V / 31.5 GiB
   developer host completed all 160 episodes with identical repeat hashes,
-  315.6 ms p95, and 2.4 MiB retained heap. Its observed 462.5
-  episodes/minute was below the modest 500 episodes/minute developer budget,
-  so this records a bounded leak observation, not a capacity pass. The command
+  317.9 ms p95, 2.4 MiB retained heap, and 610.4 episodes/minute, meeting the
+  modest developer budget on this observation. This still records a bounded
+  leak observation, not a target-capacity pass. The command
   requires `--expose-gc`; the optional `--target-id` and `--declared-by` flags
   are both required before it will label any run `target`.
 - [ ] Declared-target training-capacity and broad worker-scale stress evidence.
@@ -194,9 +195,18 @@ operational boundary it proves.
   exact artifact without overrides, reaches the same terminal tick and
   disposition, and captures its rendered PNG. It is neither a durable outcome
   nor a training-stream claim.
-- [ ] Academy/Foundry streaming with backpressure. C30 now has one retained,
-  visibly rerun failure but no artifact pipeline or downstream training
-  consumer is claimed.
+- [x] Bounded terminal-artifact stream to the Academy candidate intake. The
+  production pool passes each actual terminal through an in-memory
+  `ProductionHeadlessAcademyIntake`, which accepts only versioned C30 terminal
+  artifacts, retains at most 1–1,024 cloned candidates, and returns
+  `accepted`, `backpressured`, or `closed` to the producer. Capacity pressure
+  neither aborts nor retries a production episode, and rejected artifacts are
+  not cloned or retained. The five-cycle workload attaches one eight-item
+  intake per cycle: its fresh measurement accepted 40 candidates and reported
+  120 backpressured artifacts while all 160 source episodes completed. This is
+  an ephemeral C30 handoff, not Academy corpus ingestion: C31 still owns
+  eligibility, consent, provenance, curation, retention, and every training or
+  Foundry decision.
 
 ## Deliberately not claimed
 
@@ -208,7 +218,7 @@ C31-C36, C39, and C40 retain their respective evidence obligations.
 ## Evidence
 
 - `pnpm check:c30:foundation` passes: typecheck, full lint, C30 source
-  architecture fences, six focused Vitest files / 16 tests, four Node worker
+  architecture fences, seven focused Vitest files / 18 tests, four Node worker
   tests, standalone build, Class-A truncated and natural-failure terminal
   reruns, a fresh C27A 13-scenario browser capture, and the 14-test exact
   source-matrix comparison.
@@ -222,8 +232,14 @@ C31-C36, C39, and C40 retain their respective evidence obligations.
   `artifacts/tearbench/c30/production-headless-long-run.json`, and records the
   exact host classification rather than inferring target hardware. The current
   developer-host observation completed deterministically with a retained-heap
-  pass but a below-budget 462.5 episodes/minute rate; it is evidence of this
-  bounded run only.
+  and modest developer-throughput pass (610.4 episodes/minute); it is evidence
+  of this bounded run only, never a target-capacity certification.
+- `pnpm exec vitest run tests/unit/production-headless-academy-intake.test.ts`
+  passes two direct production-pool proofs: a capacity-one intake accepts a
+  real terminal, reports the next as backpressured while that episode still
+  completes, admits another after a consumer takes the candidate, and reports
+  a closed intake without retaining an artifact. The benchmark proof asserts
+  the five-cycle 40-accepted / 120-backpressured accounting.
 - `pnpm exec vitest run tests/unit/production-headless-environment.test.ts`
   passes seven focused tests, including the 256-episode / 30,720-tick isolation
   stress proof and the fresh-composition tick-60 checkpoint restore proof.
@@ -243,7 +259,7 @@ C31-C36, C39, and C40 retain their respective evidence obligations.
 Do not add retries to timeout, validation, or worker-reported failures. A
 declared target host remains an external prerequisite for the separate capacity
 claim; do not call the local developer machine target hardware. The next
-implementable C30 boundary is Academy/Foundry artifact streaming with bounded
-backpressure. Keep the completed checkpoint boundary restricted to active,
-non-draft natural episodes: it must not become a new simulator, storage format,
-or durable job-recovery claim.
+implementable C30 boundary is broad concurrent worker-scale stress; keep the
+completed checkpoint boundary restricted to active, non-draft natural episodes:
+it must not become a new simulator, storage format, or durable job-recovery
+claim.

@@ -5,6 +5,10 @@ import {
   createProductionHeadlessEpisodePool,
   type ProductionHeadlessJob,
 } from "./production-headless-environment";
+import {
+  ProductionHeadlessAcademyIntake,
+  type ProductionHeadlessAcademyIntakeSnapshot,
+} from "./production-headless-academy-intake";
 
 export const C30_NATURAL_EPISODE_BENCHMARK_PROFILE = Object.freeze({
   id: "c30-natural-opening-v1",
@@ -71,11 +75,13 @@ export interface ProductionHeadlessBenchmarkArtifact {
     maxEpisodeMilliseconds: number;
     semanticHashes: readonly string[];
     sampledArtifacts: number;
+    academyIntake: ProductionHeadlessAcademyIntakeSnapshot;
   }>;
   readonly repeat: Readonly<{
     elapsedMilliseconds: number;
     episodesPerMinute: number;
     semanticHashes: readonly string[];
+    academyIntake: ProductionHeadlessAcademyIntakeSnapshot;
   }>;
   readonly deterministic: boolean;
   readonly budget: Readonly<{
@@ -106,6 +112,7 @@ export interface ProductionHeadlessLongRunArtifact {
     maxEpisodeMilliseconds: number;
     semanticHashes: readonly string[];
     sampledArtifacts: number;
+    academyIntake: ProductionHeadlessAcademyIntakeSnapshot;
   }>[];
   readonly deterministic: boolean;
   readonly aggregate: Readonly<{
@@ -116,6 +123,12 @@ export interface ProductionHeadlessLongRunArtifact {
     p95EpisodeMilliseconds: number;
     maxEpisodeMilliseconds: number;
     sampledArtifacts: number;
+    academyIntake: Readonly<{
+      accepted: number;
+      backpressured: number;
+      closed: number;
+      maximumQueued: number;
+    }>;
   }>;
   readonly budget: Readonly<{
     episodesPerMinute: "met" | "below";
@@ -207,6 +220,7 @@ async function runProductionWorkload(
   now: () => number,
   sampleMemory: () => void,
   retainArtifacts: boolean,
+  academyIntake: ProductionHeadlessAcademyIntake,
   cycle?: number,
 ) {
   const sampler = new BoundedArtifactSampler(profile.artifactSampleLimit);
@@ -219,13 +233,17 @@ async function runProductionWorkload(
       batchSize: profile.batchSize,
       now,
       ...(retainArtifacts ? { artifactSampler: sampler } : {}),
+      artifactConsumer: (sample) => { academyIntake.offer(sample); },
       onCompleted: (_job, _episode, elapsedMilliseconds) => {
         latencies.push(elapsedMilliseconds);
         sampleMemory();
       },
     },
   );
-  return summarize(episodes, Math.max(0, now() - startedAt), latencies, sampler.samples().length);
+  return Object.freeze({
+    ...summarize(episodes, Math.max(0, now() - startedAt), latencies, sampler.samples().length),
+    academyIntake: academyIntake.snapshot(),
+  });
 }
 
 function hardwareProfile(value: ProductionHeadlessHardwareProfile): ProductionHeadlessHardwareProfile {
@@ -253,6 +271,7 @@ export async function measureProductionHeadlessEpisodes(
   sampleMemory();
   const execute = (retainArtifacts: boolean) => runProductionWorkload(
     C30_NATURAL_EPISODE_BENCHMARK_PROFILE, now, sampleMemory, retainArtifacts,
+    new ProductionHeadlessAcademyIntake(C30_NATURAL_EPISODE_BENCHMARK_PROFILE.artifactSampleLimit),
   );
   const firstPass = await execute(true);
   const repeat = await execute(false);
@@ -269,6 +288,7 @@ export async function measureProductionHeadlessEpisodes(
       elapsedMilliseconds: repeat.elapsedMilliseconds,
       episodesPerMinute: repeat.episodesPerMinute,
       semanticHashes: repeat.semanticHashes,
+      academyIntake: repeat.academyIntake,
     }),
     deterministic: firstPass.semanticHashes.every((hash, index) => hash === repeat.semanticHashes[index]),
     budget: Object.freeze({
@@ -315,7 +335,10 @@ export async function measureProductionHeadlessLongRun(
   });
   const cycles = [] as Awaited<ReturnType<typeof runProductionWorkload>>[];
   for (let index = 1; index <= C30_LONG_RUN_LEAK_PROFILE.cycles; index += 1) {
-    cycles.push(await runProductionWorkload(workload, now, sampleMemory, index === 1, index));
+    cycles.push(await runProductionWorkload(
+      workload, now, sampleMemory, index === 1,
+      new ProductionHeadlessAcademyIntake(C30_LONG_RUN_LEAK_PROFILE.artifactSampleLimit), index,
+    ));
     options.collectGarbage?.();
     sampleMemory();
   }
@@ -342,6 +365,12 @@ export async function measureProductionHeadlessLongRun(
       p95EpisodeMilliseconds: percentile(latencies, 0.95),
       maxEpisodeMilliseconds: Math.max(0, ...latencies),
       sampledArtifacts: cycles.reduce((total, cycle) => total + cycle.sampledArtifacts, 0),
+      academyIntake: Object.freeze({
+        accepted: cycles.reduce((total, cycle) => total + cycle.academyIntake.accepted, 0),
+        backpressured: cycles.reduce((total, cycle) => total + cycle.academyIntake.backpressured, 0),
+        closed: cycles.reduce((total, cycle) => total + cycle.academyIntake.closed, 0),
+        maximumQueued: Math.max(0, ...cycles.map((cycle) => cycle.academyIntake.queued)),
+      }),
     }),
     budget: Object.freeze({
       episodesPerMinute: episodes / Math.max(0.001, elapsedMilliseconds) * 60_000 >= budget.minimumEpisodesPerMinute

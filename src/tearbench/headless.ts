@@ -134,6 +134,8 @@ export interface TearHeadlessPoolRunOptions<TScenario, TObservation> {
   readonly batchSize?: number;
   readonly controlForJob?: (job: TearHeadlessJob<TScenario>) => TearHeadlessExecutionControl | undefined;
   readonly artifactSampler?: BoundedArtifactSampler;
+  /** Synchronous bounded consumer; it must report/drop pressure without retaining an unbounded queue. */
+  readonly artifactConsumer?: (sample: TearArtifactSample) => void;
   readonly now?: () => number;
   readonly onCompleted?: (
     job: TearHeadlessJob<TScenario>,
@@ -174,7 +176,9 @@ export class TearHeadlessEnvironmentPool<TScenario, TObservation, TAction> {
             ...control,
             onArtifact: (tick, artifact) => {
               control?.onArtifact?.(tick, artifact);
-              options.artifactSampler?.consider({ episodeId: job.id, tick, artifact });
+              const sample = Object.freeze({ episodeId: job.id, tick, artifact });
+              options.artifactSampler?.consider(sample);
+              options.artifactConsumer?.(sample);
             },
           });
           results.set(index, episode);
