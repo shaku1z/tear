@@ -31,6 +31,11 @@ promotion eligibility, or DAgger improvement.
   structured runtime; `createTearBehaviorCloningArtifact` binds that result to
   C32's versioned artifact envelope and rejects incompatible lineage/runtime
   declarations. It is a real executable artifact, not a promotion decision.
+- `TearBehaviorCloningTrainingVault` gives each final deterministic fit a
+  versioned Ghost Vault `analysis` record keyed by its training hash. It
+  revalidates model, metrics, and final checkpoint hashes before exposure,
+  writes idempotently, and quarantines corrupt bytes rather than returning a
+  partial training record.
 
 ## Exit-gate status
 
@@ -41,6 +46,8 @@ promotion eligibility, or DAgger improvement.
 - [x] An initial deterministic trained policy artifact is reproducibly produced
   from that dataset and executes a C29/C30 source-world observation through the
   C32 runtime. This is training-fit evidence only, not held-out quality.
+- [x] The initial fit and its final checkpoint have durable corruption-safe
+  local custody with idempotent readback.
 - [ ] DAgger correction capture, review, ingestion, retraining, comparison,
   cancellation, and recovery are implemented with credible real-game evidence.
 
@@ -54,7 +61,9 @@ and batches are byte-identical; an empty validation split fails rather than
 leaking into fit. Existing C31 manifest tests separately prove a
 hidden-release-exam entry is absent from a trainer manifest. The same test
 repeats the linear fit, emits a compatible C32 artifact, activates it, and
-proves its artifact receipt against a fresh source-owned production world.
+proves its artifact receipt against a fresh source-owned production world. Its
+training record round-trips idempotently through Vault analysis storage and a
+corrupt replacement quarantines safely.
 
 ## Deliberately not claimed
 
@@ -62,8 +71,8 @@ This is not a sequence/recurrent policy, held-out evaluation, a quality score,
 a comparison against the scripted policy, DAgger, promotion, or automatic
 player-facing training. Those remain C33 work.
 
-DONE THIS STEP:      C33 deterministically fits a bounded multiclass behavior-cloning policy from a governed C31 dataset, emits a versioned compatible C32 artifact, and executes it over a fresh source-owned production-world observation without a promotion decision.
-PROVEN BY:           Focused C30-to-C27/C31-to-C33 source/custody/corpus/training/runtime test plus strict TypeScript, lint, and architecture checks.
-REMAINING HERE:      Temporal/sequence policy, durable reproducible training checkpoints, populated held-out evaluation, DAgger, cancellation/recovery, and real-game visible quality evidence.
+DONE THIS STEP:      C33 persists its deterministic behavior-cloning fit and final checkpoint in corruption-safe idempotent Vault custody, then emits and executes a compatible C32 artifact over a source-owned production-world observation without a promotion decision.
+PROVEN BY:           Focused C30-to-C27/C31-to-C33 source/custody/corpus/training/Vault/runtime test plus strict TypeScript, lint, and architecture checks.
+REMAINING HERE:      Temporal/sequence policy, intermediate/resumable training checkpoints, populated held-out evaluation, DAgger, cancellation/recovery, and real-game visible quality evidence.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Add durable reproducible behavior-cloning training-run/checkpoint custody and a populated held-out dataset evaluation; do not convert fit accuracy into promotion.
+NEXT SLICE:          Build a populated governed held-out manifest/evaluation path for the persisted artifact; do not convert measured results into promotion.

@@ -1,4 +1,6 @@
 import type { GameAction } from "../input/game-action";
+import { normalizeGameAction } from "../input/game-action";
+import type { GhostVaultBackend } from "../ghost";
 import { stableVerificationHash } from "../replay/hash";
 import { createTearBehaviorCloningBatches, type TearBehaviorCloningNormalizationV1 } from "./academy-behavior-cloning-batches";
 import type { TearAcademyTrainingDatasetV1 } from "./academy-training-dataset";
@@ -31,8 +33,12 @@ export interface TearBehaviorCloningTrainingResultV1 {
   readonly config: TearBehaviorCloningTrainingConfigV1;
   readonly model: TearBehaviorCloningLinearModelV1;
   readonly metrics: Readonly<{ examples: number; classes: number; updates: number; trainingAccuracy: number }>;
+  readonly checkpoint: Readonly<{ epoch: number; modelHash: string; metricsHash: string }>;
   readonly trainingHash: string;
 }
+
+const TRAINING_KEY = "behavior-cloning-training:v1:";
+const HASH = /^[a-f0-9]{16}$/u;
 
 function validConfig(value: TearBehaviorCloningTrainingConfigV1): boolean {
   return Number.isSafeInteger(value.seed) && value.seed >= 0 && Number.isSafeInteger(value.epochs) && value.epochs >= 1 && value.epochs <= 128
@@ -40,6 +46,9 @@ function validConfig(value: TearBehaviorCloningTrainingConfigV1): boolean {
     && Number.isSafeInteger(value.batchSize) && value.batchSize >= 1 && value.batchSize <= 256;
 }
 function actionKey(actions: readonly GameAction[]): string { return stableVerificationHash(actions); }
+function record(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
+function hashes(value: unknown): value is string { return typeof value === "string" && HASH.test(value); }
+function integerAtLeast(value: unknown, minimum: number): boolean { return Number.isSafeInteger(value) && Number(value) >= minimum; }
 function predict(weights: readonly (readonly number[])[], biases: readonly number[], features: readonly number[]): number {
   let selected = 0, best = Number.NEGATIVE_INFINITY;
   for (let index = 0; index < weights.length; index += 1) {
@@ -95,9 +104,63 @@ export function trainTearBehaviorCloningPolicy(
     weights: Object.freeze(weights.map((entry) => Object.freeze([...entry]))), biases: Object.freeze([...biases]) });
   const metrics = Object.freeze({ examples: examples.length, classes: classes.length, updates,
     trainingAccuracy: examples.length === 0 ? 0 : correct / examples.length });
+  const checkpoint = Object.freeze({ epoch: config.epochs, modelHash: stableVerificationHash(model), metricsHash: stableVerificationHash(metrics) });
   const draft = { format: "tear-behavior-cloning-training" as const, schemaVersion: 1 as const, datasetHash: dataset.datasetHash,
-    normalizationHash: normalization.normalizationHash, config: Object.freeze({ ...config }), model, metrics };
+    normalizationHash: normalization.normalizationHash, config: Object.freeze({ ...config }), model, metrics, checkpoint };
   return Object.freeze({ ...draft, trainingHash: stableVerificationHash(draft) });
+}
+
+function parseTraining(value: unknown): TearBehaviorCloningTrainingResultV1 {
+  if (!record(value)) throw new TypeError("invalid behavior cloning training record");
+  const config = value.config, model = value.model, metrics = value.metrics, checkpoint = value.checkpoint;
+  if (value.format !== "tear-behavior-cloning-training" || value.schemaVersion !== 1 || !hashes(value.datasetHash)
+    || !hashes(value.normalizationHash) || !record(config) || !validConfig(config as unknown as TearBehaviorCloningTrainingConfigV1)
+    || !record(model) || model.format !== "tear-linear-policy-model" || model.schemaVersion !== 1 || !hashes(model.featureSchemaHash)
+    || !Array.isArray(model.mean) || !Array.isArray(model.scale) || model.mean.length < 1 || model.mean.length !== model.scale.length
+    || !model.mean.every((entry) => typeof entry === "number" && Number.isFinite(entry)) || !model.scale.every((entry) => typeof entry === "number" && Number.isFinite(entry) && entry > 0)
+    || !Array.isArray(model.classes) || model.classes.length < 1 || model.classes.length > 16_384
+    || !model.classes.every((entry) => record(entry) && Array.isArray(entry.actions) && entry.actions.every((action) => normalizeGameAction(action).ok))
+    || !Array.isArray(model.weights) || model.weights.length !== model.classes.length || !model.weights.every((entry) => Array.isArray(entry) && entry.length === (Array.isArray(model.mean) ? model.mean.length : -1) && entry.every((weight) => typeof weight === "number" && Number.isFinite(weight)))
+    || !Array.isArray(model.biases) || model.biases.length !== model.classes.length || !model.biases.every((entry) => typeof entry === "number" && Number.isFinite(entry))
+    || !record(metrics) || !integerAtLeast(metrics.examples, 1) || !integerAtLeast(metrics.classes, 0)
+    || metrics.classes !== model.classes.length || !integerAtLeast(metrics.updates, 0)
+    || typeof metrics.trainingAccuracy !== "number" || metrics.trainingAccuracy < 0 || metrics.trainingAccuracy > 1
+    || !record(checkpoint) || !integerAtLeast(checkpoint.epoch, 1) || checkpoint.epoch !== config.epochs
+    || !hashes(checkpoint.modelHash) || !hashes(checkpoint.metricsHash) || !hashes(value.trainingHash)) throw new TypeError("invalid behavior cloning training record");
+  const typed = value as unknown as Omit<TearBehaviorCloningTrainingResultV1, "trainingHash"> & { trainingHash: string };
+  if (typed.checkpoint.modelHash !== stableVerificationHash(typed.model) || typed.checkpoint.metricsHash !== stableVerificationHash(typed.metrics)) throw new TypeError("behavior cloning checkpoint integrity mismatch");
+  const { trainingHash, ...draft } = typed;
+  if (trainingHash !== stableVerificationHash(draft)) throw new TypeError("behavior cloning training integrity mismatch");
+  return Object.freeze(structuredClone(typed));
+}
+
+/** Durable local custody for reproducible C33 fits and their final checkpoint. */
+export class TearBehaviorCloningTrainingVault {
+  readonly #backend: GhostVaultBackend;
+  constructor(backend: GhostVaultBackend) { this.#backend = backend; }
+
+  async persist(input: TearBehaviorCloningTrainingResultV1): Promise<TearBehaviorCloningTrainingResultV1> {
+    const training = parseTraining(input), key = `${TRAINING_KEY}${training.trainingHash}`, existing = await this.#backend.get("analysis", key);
+    if (existing !== undefined) return parseTraining(JSON.parse(existing));
+    await this.#backend.commit(Object.freeze([
+      { store: "analysis", key, value: JSON.stringify(training) },
+      { store: "indexes", key: `behavior-cloning-training:${training.datasetHash}:${training.trainingHash}`,
+        value: JSON.stringify({ normalizationHash: training.normalizationHash, modelHash: training.checkpoint.modelHash }) },
+    ]));
+    return training;
+  }
+
+  async get(trainingHash: string): Promise<TearBehaviorCloningTrainingResultV1 | undefined> {
+    if (!hashes(trainingHash)) throw new TypeError("behavior cloning training hash is invalid");
+    const key = `${TRAINING_KEY}${trainingHash}`, raw = await this.#backend.get("analysis", key);
+    if (raw === undefined) return undefined;
+    try { return parseTraining(JSON.parse(raw)); }
+    catch (error) {
+      await this.#backend.put("quarantine", key, JSON.stringify(Object.freeze({ format: "behavior-cloning-training-quarantine", schemaVersion: 1,
+        key, raw, reason: error instanceof Error ? error.message : String(error) })));
+      return undefined;
+    }
+  }
 }
 
 /** Wraps a reproducible C33 fit in C32's versioned, compatible artifact envelope. */

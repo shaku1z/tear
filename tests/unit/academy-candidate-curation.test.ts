@@ -11,6 +11,7 @@ import {
   createTearBehaviorCloningNormalization,
   trainTearBehaviorCloningPolicy,
   TearAcademyTrainingDatasetLoader,
+  TearBehaviorCloningTrainingVault,
   TearPolicyArtifactRegistry,
   TearAcademyReviewedSampleStore,
   inspectAcademy,
@@ -214,6 +215,10 @@ describe("C31 held Academy candidate curation", () => {
     expect(training.metrics.examples).toBe(3);
     expect(training.metrics.classes).toBe(2);
     expect(training.metrics.trainingAccuracy).toBe(1);
+    const trainingVault = new TearBehaviorCloningTrainingVault(input.backend);
+    expect(await trainingVault.persist(training)).toEqual(training);
+    expect(await trainingVault.persist(training)).toEqual(training);
+    expect(await trainingVault.get(training.trainingHash)).toEqual(training);
     const artifact = createTearBehaviorCloningArtifact(training, {
       id: "c33-linear-policy", createdAt: "2026-08-03T00:08:00.000Z", encoder: { id: "tear-policy-features.v1", schemaVersion: 1,
         observationClass: "structured-state", normalizationHash: normalization.normalizationHash }, actionSchema: "tear-game-action-command-envelope.v1",
@@ -231,5 +236,8 @@ describe("C31 held Academy candidate curation", () => {
       expect(runtime.decide({ state: environment.policyObservation(), ui: { screen: "playing" } }).receipt)
         .toMatchObject({ source: "artifact", artifactId: artifact.id });
     } finally { environment.dispose(); }
+    await input.backend.put("analysis", `behavior-cloning-training:v1:${training.trainingHash}`, "not-json");
+    expect(await trainingVault.get(training.trainingHash)).toBeUndefined();
+    expect((await input.backend.keys("quarantine")).some((key) => key.endsWith(training.trainingHash))).toBe(true);
   });
 });
