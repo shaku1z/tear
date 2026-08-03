@@ -21,6 +21,7 @@ export * from "./academy-training-dataset";
 export * from "./academy-behavior-cloning-batches";
 export * from "./policy-feature-vector";
 export * from "./behavior-cloning-trainer";
+export * from "./behavior-cloning-evaluation";
 export * from "./policy-artifact-registry";
 export * from "./policy-runtime";
 export * from "./policy-decision-journal";

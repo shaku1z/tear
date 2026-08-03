@@ -36,6 +36,11 @@ promotion eligibility, or DAgger improvement.
   revalidates model, metrics, and final checkpoint hashes before exposure,
   writes idempotently, and quarantines corrupt bytes rather than returning a
   partial training record.
+- `evaluateTearBehaviorCloningPolicy` evaluates only an explicit governed
+  `validation`, `calibration`, or `test` split against a lineage-matching,
+  persisted fit. It reports deterministic exact next-action conformance and a
+  content hash. It rejects the training split and does not define a threshold,
+  quality rating, eligibility result, promotion, or real-game performance.
 
 ## Exit-gate status
 
@@ -48,6 +53,9 @@ promotion eligibility, or DAgger improvement.
   C32 runtime. This is training-fit evidence only, not held-out quality.
 - [x] The initial fit and its final checkpoint have durable corruption-safe
   local custody with idempotent readback.
+- [x] A separately governed populated validation split produces a reproducible
+  action-conformance report from the persisted fit; training-split evaluation
+  is rejected and the result is not used for promotion.
 - [ ] DAgger correction capture, review, ingestion, retraining, comparison,
   cancellation, and recovery are implemented with credible real-game evidence.
 
@@ -65,14 +73,22 @@ proves its artifact receipt against a fresh source-owned production world. Its
 training record round-trips idempotently through Vault analysis storage and a
 corrupt replacement quarantines safely.
 
+A second governed C31 fixture materializes two distinct source episodes in one
+trainer manifest, assigning one to `training` and one to `validation`. After
+persisting the deterministic fit, two held-out evaluations yield identical
+report hashes, bounded action-conformance values, and positive validation
+examples; the evaluator explicitly rejects a training-split request. This is
+only offline demonstration agreement over a tiny test fixture, not a claim of
+generalization, gameplay quality, or promotion safety.
+
 ## Deliberately not claimed
 
-This is not a sequence/recurrent policy, held-out evaluation, a quality score,
-a comparison against the scripted policy, DAgger, promotion, or automatic
+This is not a sequence/recurrent policy, a meaningful quality score, a
+comparison against the scripted policy, DAgger, promotion, or automatic
 player-facing training. Those remain C33 work.
 
-DONE THIS STEP:      C33 persists its deterministic behavior-cloning fit and final checkpoint in corruption-safe idempotent Vault custody, then emits and executes a compatible C32 artifact over a source-owned production-world observation without a promotion decision.
-PROVEN BY:           Focused C30-to-C27/C31-to-C33 source/custody/corpus/training/Vault/runtime test plus strict TypeScript, lint, and architecture checks.
-REMAINING HERE:      Temporal/sequence policy, intermediate/resumable training checkpoints, populated held-out evaluation, DAgger, cancellation/recovery, and real-game visible quality evidence.
+DONE THIS STEP:      A separately governed C31 validation source now produces a reproducible held-out action-conformance report from the persisted C33 fit; training-split scoring fails closed and no result promotes a policy.
+PROVEN BY:           Focused C30-to-C27/C31-to-C33 source/custody/corpus/training/Vault/held-out evaluation test; targeted no-emit TypeScript, targeted ESLint, requirements guard, architecture gate, and diff check pass. The named C33 foundation wrapper timed out without a result.
+REMAINING HERE:      Temporal/sequence policy, intermediate/resumable training checkpoints, DAgger, cancellation/recovery, and meaningful real-game quality evidence.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Build a populated governed held-out manifest/evaluation path for the persisted artifact; do not convert measured results into promotion.
+NEXT SLICE:          Persist bounded held-out evaluation reports with corruption-safe custody and no promotion path; do not convert measured results into promotion.

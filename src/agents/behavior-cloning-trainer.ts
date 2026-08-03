@@ -60,6 +60,18 @@ function predict(weights: readonly (readonly number[])[], biases: readonly numbe
   return selected;
 }
 
+/** Uses the same deterministic class selection as C33 fitting on a complete linear model. */
+export function predictTearBehaviorCloningClass(
+  model: TearBehaviorCloningLinearModelV1,
+  features: readonly number[],
+): number {
+  if (features.length !== model.mean.length || model.weights.length !== model.classes.length || model.biases.length !== model.classes.length
+    || model.weights.some((row) => row.length !== features.length) || features.some((value) => !Number.isFinite(value))) {
+    throw new TypeError("behavior cloning prediction shape is invalid");
+  }
+  return predict(model.weights, model.biases, features);
+}
+
 /** Deterministic multiclass perceptron fit over C33's governed training split. */
 export function trainTearBehaviorCloningPolicy(
   dataset: TearAcademyTrainingDatasetV1,

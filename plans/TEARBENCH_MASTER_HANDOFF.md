@@ -537,11 +537,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C33 now persists its deterministic behavior-cloning fit and final checkpoint in corruption-safe idempotent Vault custody, emits a compatible versioned C32 artifact, and executes it on a fresh source-owned production-world observation. This is fit evidence only, never promotion.
-PROVEN BY:           Focused real C30→C27/C31→C33 source/custody/corpus test, strict TypeScript, lint, and architecture checks.
-REMAINING HERE:      C33 needs temporal/sequence policy capability, intermediate/resumable checkpoints, populated held-out evaluation, DAgger correction/retraining, cancellation/recovery, and visible real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
+DONE THIS STEP:      C33 now evaluates a persisted deterministic behavior-cloning fit over an explicitly separate governed validation source, yielding a reproducible offline exact-action-conformance report; training-split scoring fails closed and no report can promote a policy.
+PROVEN BY:           Focused real C30→C27/C31→C33 source/custody/corpus/training/Vault/held-out evaluation test; targeted no-emit TypeScript, targeted ESLint, requirements guard, architecture gate, and diff check pass. The named C33 foundation wrapper timed out without a result.
+REMAINING HERE:      C33 needs temporal/sequence policy capability, intermediate/resumable checkpoints, durable held-out report custody, DAgger correction/retraining, cancellation/recovery, and meaningful real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C33-C40 product evidence remain; C27A, C28, and C32 are closed.
-NEXT SLICE:          C33: build a populated governed held-out manifest/evaluation path for the persisted artifact. Do not convert measured results into promotion.
+NEXT SLICE:          C33: persist bounded held-out evaluation reports with corruption-safe custody and no promotion path. Do not convert measured results into promotion.
 
 All of the following were run from this worktree through C27A slice 36:
 

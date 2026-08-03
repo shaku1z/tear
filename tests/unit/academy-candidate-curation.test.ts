@@ -9,6 +9,7 @@ import {
   createTearBehaviorCloningArtifact,
   createTearBehaviorCloningBatches,
   createTearBehaviorCloningNormalization,
+  evaluateTearBehaviorCloningPolicy,
   trainTearBehaviorCloningPolicy,
   TearAcademyTrainingDatasetLoader,
   TearBehaviorCloningTrainingVault,
@@ -30,32 +31,38 @@ import {
   type TearScenarioV1,
 } from "../../src/tearbench";
 
-function scenario(): TearScenarioV1 {
+function scenario(id = "c31-curation", seed = "c31-curation-seed"): TearScenarioV1 {
   return Object.freeze({
     format: "tear-contract", kind: "scenario", schemaVersion: 1,
-    id: "c31-curation", version: 1, description: "C31 curation evidence",
-    stateClass: "recorded-canonical", executionClass: "training", seed: "c31-curation-seed",
+    id, version: 1, description: "C31 curation evidence",
+    stateClass: "recorded-canonical", executionClass: "training", seed,
     start: Object.freeze({ mode: "endless", difficulty: "normal", weapon: "sword" }), maxTicks: 2,
     assertions: Object.freeze(["runtime.finite-state"] as const), tags: Object.freeze(["c31", "curation"] as const),
   });
 }
 
-async function prepare() {
+function createAcademyHarness() {
   const backend = createMemoryGhostVaultBackend();
   const vault = new GhostLocalVault(backend);
+  const custody = new TearAcademyCandidateCustodyStore(backend);
+  const quality = new TearAcademyCandidateQualityStore(backend, custody);
+  return Object.freeze({ backend, vault, custody, quality });
+}
+
+async function prepare(harness = createAcademyHarness(), fixtureId = "c31-curation") {
+  const { backend, vault, custody, quality } = harness;
   const intake = new ProductionHeadlessAcademyIntake(1);
   await createProductionHeadlessEpisodePool(1).run([
-    Object.freeze({ id: "c31-curation", scenario: scenario(), maxTicks: 2 }),
+    Object.freeze({ id: fixtureId, scenario: scenario(fixtureId, `${fixtureId}-seed`), maxTicks: 2 }),
   ], () => Object.freeze({ decide: () => Object.freeze([Object.freeze([{ type: "move" as const, x: 1_000, y: 0 }])]) }), {
     batchSize: 1, artifactConsumer: (sample) => { intake.offer(sample); },
   });
   const source = intake.take()[0];
   if (source === undefined) throw new Error("C30 source episode did not yield a candidate");
   const materialized = await materializeAcademyCandidateCapsule(source, {
-    vault, capsuleId: "c31-curation-source", createdAt: "2026-08-03T00:00:00.000Z", completedAt: "2026-08-03T00:00:01.000Z",
+    vault, capsuleId: `${fixtureId}-source`, createdAt: "2026-08-03T00:00:00.000Z", completedAt: "2026-08-03T00:00:01.000Z",
   });
   const declaration = candidateDeclaration(source, materialized);
-  const custody = new TearAcademyCandidateCustodyStore(backend);
   await custody.accept({
     declaration, materialization: materialized,
     privacyRetention: Object.freeze({ classification: "anonymous" as const, revision: "c31-curation-privacy-1",
@@ -63,7 +70,6 @@ async function prepare() {
     retention: Object.freeze({ mode: "indefinite" as const }),
     decidedAt: "2026-08-03T00:01:00.000Z", actor: "academy-curator", reason: "held for curation",
   });
-  const quality = new TearAcademyCandidateQualityStore(backend, custody);
   const assessment = await quality.assess({ declaration, assessedAt: "2026-08-03T00:02:00.000Z", actor: "academy-curator" });
   return Object.freeze({ backend, custody, quality, assessment, declaration });
 }
@@ -239,5 +245,38 @@ describe("C31 held Academy candidate curation", () => {
     await input.backend.put("analysis", `behavior-cloning-training:v1:${training.trainingHash}`, "not-json");
     expect(await trainingVault.get(training.trainingHash)).toBeUndefined();
     expect((await input.backend.keys("quarantine")).some((key) => key.endsWith(training.trainingHash))).toBe(true);
+  });
+
+  it("builds separately governed training and validation sequences in one immutable trainer manifest", async () => {
+    const harness = createAcademyHarness();
+    const training = await prepare(harness, "c33-training"), validation = await prepare(harness, "c33-validation");
+    const curation = new TearAcademyCandidateCurationStore(harness.backend, harness.custody, harness.quality);
+    for (const input of [training, validation]) await curation.decide({ candidateHash: input.assessment.candidateHash,
+      assessmentHash: input.assessment.assessmentHash, disposition: "curation-approved", reviewer: "academy-curator",
+      reviewedAt: "2026-08-03T00:03:00.000Z", rationale: "separate C33 split source", tags: Object.freeze(["c33"]), corrections: Object.freeze([]) });
+    const splits = new TearAcademyCandidateSplitStore(harness.backend, harness.custody, harness.quality, curation);
+    await splits.assign({ candidateHash: training.assessment.candidateHash, split: "training", assignedAt: "2026-08-03T00:04:00.000Z", actor: "academy-curator" });
+    await splits.assign({ candidateHash: validation.assessment.candidateHash, split: "validation", assignedAt: "2026-08-03T00:04:00.000Z", actor: "academy-curator" });
+    const samples = new TearAcademyReviewedSampleStore(harness.backend, harness.custody, harness.quality, curation, splits);
+    const [trainingSample, validationSample] = await Promise.all([
+      samples.materialize(training.declaration, "2026-08-03T00:05:00.000Z", "academy-curator"),
+      samples.materialize(validation.declaration, "2026-08-03T00:05:00.000Z", "academy-curator"),
+    ]);
+    const corpus = new TearAcademyCorpusStore(harness.backend, harness.custody, curation, splits, samples);
+    for (const sample of [trainingSample, validationSample]) await corpus.admit({ candidateHash: sample.candidateHash,
+      lessonId: "movement-foundations", segmentKind: "demonstration", tags: Object.freeze(["c33"]), admittedAt: "2026-08-03T00:06:00.000Z", actor: "academy-curator" });
+    const manifest = await corpus.publishManifest({ id: "c33-heldout", reader: { kind: "trainer", id: "c33-local" }, version: 1, createdAt: "2026-08-03T00:07:00.000Z" });
+    const dataset = await new TearAcademyTrainingDatasetLoader(corpus, samples).load({ manifestId: manifest.id, trainerId: "c33-local", version: 1 });
+    const normalization = createTearBehaviorCloningNormalization(dataset);
+    expect(dataset.sequences.map((entry) => entry.split).sort()).toEqual(["training", "validation"]);
+    const fit = trainTearBehaviorCloningPolicy(dataset, normalization, Object.freeze({ seed: 7, epochs: 3, learningRate: 0.25, batchSize: 2 }));
+    const persisted = await new TearBehaviorCloningTrainingVault(harness.backend).persist(fit);
+    const first = evaluateTearBehaviorCloningPolicy(persisted, dataset, normalization, { split: "validation", batchSize: 2 });
+    const second = evaluateTearBehaviorCloningPolicy(persisted, dataset, normalization, { split: "validation", batchSize: 2 });
+    expect(first).toEqual(second);
+    expect(first).toMatchObject({ split: "validation", examples: 3, batchCount: 2 });
+    expect(first.actionConformance).toBeGreaterThanOrEqual(0);
+    expect(first.actionConformance).toBeLessThanOrEqual(1);
+    expect(() => evaluateTearBehaviorCloningPolicy(fit, dataset, normalization, { split: "training", batchSize: 2 } as never)).toThrow(/held-out/u);
   });
 });

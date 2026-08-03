@@ -289,7 +289,10 @@ This is the migration checklist for the architectural redesign. A checked featur
    train or produce a policy artifact. Its fixed 17-feature normalization fits
    only the training split and batches held-out splits separately. It now also
    deterministically fits a bounded linear artifact and executes it through the
-   C32 runtime against a source-owned production observation; held-out quality,
+   C32 runtime against a source-owned production observation. A separately
+   governed validation split can produce a reproducible offline exact-action-
+   conformance report only from a persisted fit; it rejects the training split
+   and provides no quality threshold or promotion path. Held-out quality,
    promotion, and DAgger remain absent. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
