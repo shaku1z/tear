@@ -6,6 +6,7 @@ import { projectLiveTearObservation } from "../tearbench/live-runtime-environmen
 import type { TearStructuredAgentIntent } from "../tearbench/scripted-agent-hierarchy";
 import { TearLiveHierarchicalPolicy } from "./hierarchical-policy-adapter";
 import type { TearAgentIntentTrace, TearAgentProfileId } from "./contracts";
+import type { TearActivePolicyRuntime, TearPolicyDecisionReceipt } from "./policy-runtime";
 import { buildWatchChoiceScore } from "./watch-build-choice";
 import { installLiveWatchAgentPanel } from "./live-watch-agent-panel";
 import {
@@ -75,6 +76,7 @@ export interface TearWatchAgentSnapshot {
   readonly draftPicks: readonly Readonly<{ tick: number; offered: readonly string[]; selected: string }>[];
   readonly lastTrace?: TearAgentIntentTrace;
   readonly structuredIntent?: TearStructuredAgentIntent;
+  readonly policyReceipt?: TearPolicyDecisionReceipt;
   readonly watchdogs: TearWatchdogSnapshot;
   readonly debugTransitions: 0;
   readonly executionClass: "engineering";
@@ -111,12 +113,14 @@ interface MutableState {
   draftPicks: { tick: number; offered: readonly string[]; selected: string }[];
   lastTrace?: TearAgentIntentTrace;
   structuredIntent?: TearStructuredAgentIntent;
+  policyReceipt?: TearPolicyDecisionReceipt;
   lastScreen: string;
   noProgressTicks: number;
   progressSignature: string;
   setupStep: number;
   options: Required<TearWatchAgentOptions>;
   policy: TearLiveHierarchicalPolicy;
+  artifactRuntime?: TearActivePolicyRuntime;
   director?: C24LongitudinalJourneyDirector;
 }
 
@@ -181,6 +185,7 @@ function immutableSnapshot(context: LiveTearRuntimeEnvironmentContext, state: Mu
     draftPicks: Object.freeze(state.draftPicks.map((entry) => Object.freeze({ ...entry }))),
     ...(state.lastTrace === undefined ? {} : { lastTrace: state.lastTrace }),
     ...(state.structuredIntent === undefined ? {} : { structuredIntent: state.structuredIntent }),
+    ...(state.policyReceipt === undefined ? {} : { policyReceipt: state.policyReceipt }),
     watchdogs: Object.freeze({
       noProgressTicks: state.noProgressTicks,
       noProgressLimit: NO_PROGRESS_LIMIT,
@@ -205,7 +210,7 @@ function activateRequired(
   if (!context.activateControl(action)) throw new Error(`Watch Agent could not activate ${label}`);
 }
 
-export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentContext): TearWatchAgentApi {
+export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentContext, artifactRuntime?: TearActivePolicyRuntime): TearWatchAgentApi {
   let state: MutableState = {
     status: "idle", decisions: 0, fixedTicks: 0, transitions: [], mechanics: new Set(),
     bladeStates: new Set(), bladeStateTransitions: [], tetherMinimum: Number.POSITIVE_INFINITY,
@@ -213,6 +218,7 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
     lastScreen: context.screen(), noProgressTicks: 0, progressSignature: "",
     setupStep: 0,
     options: DEFAULTS, policy: new TearLiveHierarchicalPolicy(DEFAULTS.profile),
+    ...(artifactRuntime === undefined ? {} : { artifactRuntime }),
   };
   context.subscribeEngineEvent((event) => {
     if (state.status === "running" && state.engineEvents.length < 4_096) {
@@ -265,6 +271,7 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
       lastScreen: "menu", noProgressTicks: 0, progressSignature: "",
       setupStep: 0,
       options: resolved, policy: new TearLiveHierarchicalPolicy(resolved.profile),
+      ...(artifactRuntime === undefined ? {} : { artifactRuntime }),
       ...(director === undefined ? {} : { director }),
     };
     activateRequired(context, { type: "navigate", to: "setup" }, "PLAY");
@@ -355,16 +362,23 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
         context.authoritative()?.tick ?? state.fixedTicks,
         "A",
       );
-      const decision = state.policy.decide({
+      const agentObservation = {
         state: observation,
         ui: { screen, choices: context.choiceIds().map((id) => ({
           id, score: buildWatchChoiceScore(id, state.options.weapon),
         })) },
         ...(observation.diagnostics?.boss === undefined ? {} : { boss: observation.diagnostics.boss }),
-      });
+      };
+      const hierarchy = state.policy.decide(agentObservation);
+      const artifact = state.artifactRuntime?.decide(agentObservation);
+      const decision = artifact?.receipt.source === "artifact"
+        ? Object.freeze({ ...hierarchy, actions: artifact.actions, policyReceipt: artifact.receipt })
+        : Object.freeze({ ...hierarchy, ...(artifact === undefined ? {} : { policyReceipt: artifact.receipt }) });
       state.decisions += 1;
       state.lastTrace = decision.trace;
       state.structuredIntent = decision.structuredIntent;
+      if (decision.policyReceipt === undefined) delete state.policyReceipt;
+      else state.policyReceipt = decision.policyReceipt;
       state.mechanics.add(decision.trace.maneuver);
       captureBlade();
       const draft = decision.actions.find((action) => action.type === "draft-choice");
@@ -441,8 +455,9 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
 export function installLiveWatchAgentHost(
   context: LiveTearRuntimeEnvironmentContext,
   target: Window & { __TEAR_WATCH_AGENT__?: TearWatchAgentApi },
+  artifactRuntime?: TearActivePolicyRuntime,
 ): void {
-  const api = createLiveWatchAgentHost(context);
+  const api = createLiveWatchAgentHost(context, artifactRuntime);
   Object.defineProperty(target, "__TEAR_WATCH_AGENT__", {
     configurable: false, writable: false, value: api,
   });

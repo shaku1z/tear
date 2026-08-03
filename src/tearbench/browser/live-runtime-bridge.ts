@@ -82,8 +82,11 @@ export function installLiveTearRuntimeBridge(
   installGhostLabPanel(factory);
   installLiveStateForgeStudio(factory);
   if (new URLSearchParams(target.location.search).get("watchagent") === "1") {
-    void import("../../agents/live-watch-agent-host").then(({ installLiveWatchAgentHost }) => {
-      installLiveWatchAgentHost(context, target);
+    void Promise.all([
+      import("../../agents/live-watch-agent-host"),
+      import("../../agents/browser-active-policy-runtime"),
+    ]).then(async ([{ installLiveWatchAgentHost }, { createBrowserActivePolicyRuntime }]) => {
+      installLiveWatchAgentHost(context, target, await createBrowserActivePolicyRuntime(target.indexedDB));
     });
   }
 }
