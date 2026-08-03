@@ -106,9 +106,9 @@ operational boundary it proves.
   artifacts, and identical 32-hash repeat output; the 4,439-episodes/minute
   repeat also met the recorded budget. This is one developer-machine natural
   workload, not BC/DAgger/RL capacity or worker-scale certification.
-- [ ] Production worker processes, retries, checkpoint restore, target-hardware
-  training-capacity, long-run leak, and broad stress evidence. The initial
-  benchmark deliberately remains an in-process natural-opening measurement.
+- [ ] Target-hardware training-capacity, long-run leak, and broad worker-scale
+  stress evidence. The initial benchmark deliberately remains an in-process
+  natural-opening measurement.
 - [x] High-count in-process production-pool isolation. The 256-episode,
   120-tick stress proof runs 30,720 actual production fixed steps through eight
   fresh composition roots. All 256 final canonical-state objects and semantic
@@ -143,10 +143,21 @@ operational boundary it proves.
   verifies that unmarked input remains failed with one attempt, then verifies
   that explicitly idempotent serialized input retains the exit record and
   completes in the real production worker on a different PID.
-- [ ] Checkpoint restore and scale evidence. Timeout, validation, and ordinary
-  worker-reported failures are not retried. There is no mid-run cancellation
-  message, checkpoint restore, durable job recovery, broad concurrent stress,
-  target-hardware capacity, or long-run leak claim.
+- [x] In-memory active-episode checkpoint restore. A C30 environment captures
+  only an active, non-draft natural episode through the existing State Forge
+  codec boundary, including its source snapshot, durable held-input state,
+  accepted command envelopes, and canonical hash. A fresh C29 production
+  composition restores the keyframe and must reproduce the captured canonical
+  state before it is accepted; the permanent tick-60 movement/jump/dash proof
+  then reaches an exactly equal tick-120 terminal artifact. Malformed command
+  traces, surgical snapshots, and snapshot/scenario mismatches fail closed.
+  This is caller-retained, in-process custody only — not storage, a worker
+  message, durable job recovery, or a claim that a draft/reward route can yet
+  be checkpointed.
+- [ ] Scale evidence. Timeout, validation, and ordinary worker-reported
+  failures are not retried. There is no mid-run worker cancellation message,
+  durable job recovery, broad concurrent stress, target-hardware capacity, or
+  long-run leak claim.
 - [x] A sampled natural terminal episode is visibly rerunnable from its
   production artifact. The environment now seals a versioned
   `tearbench-production-headless-terminal` artifact with its exact validated
@@ -179,7 +190,7 @@ retain their respective evidence obligations.
 ## Evidence
 
 - `pnpm check:c30:foundation` passes: typecheck, full lint, C30 source
-  architecture fences, six focused Vitest files / 14 tests, four Node worker
+  architecture fences, six focused Vitest files / 15 tests, four Node worker
   tests, standalone build, Class-A truncated and natural-failure terminal
   reruns, a fresh C27A 13-scenario browser capture, and the 14-test exact
   source-matrix comparison.
@@ -188,7 +199,9 @@ retain their respective evidence obligations.
   detached comparisons retain C27A evidence. C30 separately proves the source
   matrix above through its own ordered gate.
 - `pnpm exec vitest run tests/unit/production-headless-benchmark.test.ts --disableConsoleIntercept` passes and prints its measured production-pool artifact.
-- `pnpm exec vitest run tests/unit/production-headless-environment.test.ts` passes five focused tests, including the 256-episode / 30,720-tick isolation stress proof.
+- `pnpm exec vitest run tests/unit/production-headless-environment.test.ts`
+  passes seven focused tests, including the 256-episode / 30,720-tick isolation
+  stress proof and the fresh-composition tick-60 checkpoint restore proof.
 - `node --test tests/production-headless-worker.test.mjs` passes the serialized
   child-process completed/cancelled/timed-out/rejected-message matrix.
 - `node --test tests/production-headless-worker-dispatcher.test.mjs` passes the
@@ -202,7 +215,7 @@ retain their respective evidence obligations.
 ## Next safe boundary
 
 Do not add retries to timeout, validation, or worker-reported failures. The
-next C30 boundary is checkpoint restore for interrupted production episodes,
-followed by target-hardware capacity and long-run leak evidence. A restored run
-must resume through the same source composition, preserve its terminal/action
-evidence, and not become a new simulator or durable job-recovery claim.
+next C30 boundary is target-hardware capacity and long-run leak evidence. The
+completed checkpoint boundary remains restricted to active, non-draft natural
+episodes and must not become a new simulator, storage format, or durable
+job-recovery claim. Academy/Foundry streaming stays downstream.

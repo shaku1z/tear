@@ -168,7 +168,8 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   });
   const stage: { index: number; platforms: unknown[] } = { index: 0, platforms: stagePlatforms(0, config) };
   return Object.freeze({
-    world, configuration, clock, effects, random, factories, transient: world.context.transient, input, run, stage,
+    dependencies, world, configuration, clock, effects, random, factories,
+    transient: world.context.transient, input, run, stage,
   });
 }
 

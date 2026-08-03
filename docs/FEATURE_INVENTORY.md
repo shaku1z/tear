@@ -201,7 +201,13 @@ This is the migration checklist for the architectural redesign. A checked featur
    fact. An untouched one-hit source opening also reaches a real tick-222
    failure, retained as an immutable terminal artifact and visibly rerun at the
    same terminal tick/disposition in the Class-A browser; it is not durable or
-   training-stream output;
+   training-stream output. An active, non-draft C30 episode can also carry an
+   in-memory State Forge source keyframe, held-input state, accepted command
+   envelopes, and canonical hash into a fresh C29 production composition. The
+   tick-60 movement/jump/dash proof restores that exact source state and reaches
+   an exactly equal tick-120 terminal artifact; malformed traces, surgical state,
+   and snapshot/scenario mismatches fail closed. This is not persistence,
+   worker-job recovery, or a draft/reward-route checkpoint claim;
    authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

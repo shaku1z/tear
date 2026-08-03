@@ -79,6 +79,49 @@ describe("C30 production headless environment", () => {
     first.dispose(); second.dispose(); third.dispose();
   });
 
+  it("restores an interrupted natural episode through a fresh source composition", () => {
+    const original = createProductionHeadlessEnvironment();
+    let originAtCheckpoint = original.reset(scenario);
+    for (let tick = 1; tick <= 60; tick += 1) originAtCheckpoint = original.step(actionsAt(tick)).observation;
+    const checkpoint = original.captureCheckpoint();
+    expect(checkpoint).toMatchObject({
+      format: "tearbench-production-headless-checkpoint", schemaVersion: 1,
+      checkpoint: { tick: 60, nextCommandId: 3, semanticHash: stableVerificationHash(originAtCheckpoint) },
+      snapshot: { kind: "snapshot", stateClass: "recorded-canonical", tick: 60 },
+      input: { tick: 60 },
+    });
+
+    let originalTerminal: ProductionHeadlessTerminalArtifact | undefined;
+    for (let tick = 61; tick <= scenario.maxTicks; tick += 1) {
+      const transition = original.step(actionsAt(tick));
+      if (transition.artifact !== undefined) originalTerminal = transition.artifact as ProductionHeadlessTerminalArtifact;
+    }
+
+    const restored = createProductionHeadlessEnvironment();
+    const restoredAtCheckpoint = restored.restoreCheckpoint(checkpoint);
+    expect(restoredAtCheckpoint).toEqual(originAtCheckpoint);
+    let restoredTerminal: ProductionHeadlessTerminalArtifact | undefined;
+    for (let tick = 61; tick <= scenario.maxTicks; tick += 1) {
+      const transition = restored.step(actionsAt(tick));
+      if (transition.artifact !== undefined) restoredTerminal = transition.artifact as ProductionHeadlessTerminalArtifact;
+    }
+    expect(restoredTerminal).toEqual(originalTerminal);
+    expect(restoredTerminal?.actions).toHaveLength(3);
+
+    const surgical = Object.freeze({ ...checkpoint,
+      snapshot: Object.freeze({ ...checkpoint.snapshot, stateClass: "surgical-valid" as const }),
+    });
+    const foreign = Object.freeze({ ...checkpoint,
+      scenario: Object.freeze({ ...checkpoint.scenario,
+        start: Object.freeze({ ...checkpoint.scenario.start, weapon: "hammer" as const }),
+      }),
+    });
+    const rejected = createProductionHeadlessEnvironment();
+    expect(() => rejected.restoreCheckpoint(surgical)).toThrow(/recorded-canonical/);
+    expect(() => rejected.restoreCheckpoint(foreign)).toThrow(/does not match/);
+    original.dispose(); restored.dispose(); rejected.dispose();
+  });
+
   it("runs bounded independent production episodes with sampled terminal artifacts", async () => {
     const makeJob = (id: string, seed: string): Readonly<{ id: string; scenario: TearScenarioV1; maxTicks: number }> => {
       const jobScenario = Object.freeze({ ...scenario, id, seed, maxTicks: 24 });

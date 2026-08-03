@@ -202,14 +202,21 @@ Named status:
   it is not training-capacity evidence. Browser-fast corpus parity and a
   visible **failure** rerun now pass: the immutable no-input one-hit source
   opening naturally terminates at tick 222, and the Class-A browser rerun
-  reaches the same tick and terminal disposition. Active-worker retry/checkpoint
-  restore and Academy/Foundry streaming remain open. The current 256-episode /
-  30,720-tick in-process stress proof has distinct final state objects and
-  hashes, plus separate sampled terminal scenario/action traces; it is not a
-  worker claim. A source-produced natural terminal artifact is visibly
-  rerunnable in the Class-A browser runtime with its exact action trace and
-  rendered screenshot; the separate one-hit sample proves a natural failure,
-  but neither sample is a durable outcome or training-stream result.
+  reaches the same tick and terminal disposition. An active, non-draft C30
+  episode now captures an in-memory State Forge source keyframe, held input,
+  accepted command trace, and canonical hash; a fresh C29 source composition
+  restores its tick-60 movement/jump/dash keyframe and reaches the exactly equal
+  tick-120 terminal artifact. It fails closed for malformed traces, surgical
+  state, and scenario/snapshot mismatches. This is neither persistence nor
+  worker-job recovery, and it does not checkpoint a reward/draft route.
+  Target-hardware capacity, long-run leak evidence, and Academy/Foundry
+  streaming remain open. The current 256-episode / 30,720-tick in-process
+  stress proof has distinct final state objects and hashes, plus separate
+  sampled terminal scenario/action traces; it is not a worker claim. A
+  source-produced natural terminal artifact is visibly rerunnable in the
+  Class-A browser runtime with its exact action trace and rendered screenshot;
+  the separate one-hit sample proves a natural failure, but neither sample is a
+  durable outcome or training-stream result.
 - **C31-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -287,12 +294,20 @@ Important files:
 
 ### Exact next slice
 
-C27A and C28 are closed. Continue **C29** with active-cinematic
-durable-capsule evidence. Do not reopen C27A for
-pixels, haptics, durable outcomes, or audio/device fidelity, which belong to
-C25, C39, and C40 respectively.
+C27A and C28 are closed. C29's durable active-cinematic capsule boundary remains
+open, but the current worktree's exact slice is **C30 target-hardware capacity
+and bounded long-run leak evidence**. Do not reopen C27A for pixels, haptics,
+durable outcomes, or audio/device fidelity; C25, C39, and C40 own those
+separate output claims.
 
-All thirteen captured fixed-tick parity scenarios match the live authoritative hash and complete post-origin native semantic stream: 5,732 ticks and 33 native facts, including the three natural-trace enemy defeats now published independently of Ghost 2 sampling. The timeline is gameplay-owned, one director belongs to each world, and a content-fingerprinted data-only chapter binding reconstructs an active brief. Ghost V3 and TearBench share the semantic adapter; live and detached use the same combat assembly, spawn/wave/terminal publishers, outcome/reward/finale controllers, scheduler shape, event bus, and restored actor identity. The natural matrix route clears wave 1, selects a real offered draft card without advancing the fixed scheduler, and reaches a wave-2 spawn. A separate certified route reconstructs the wave-49 frontier, starts production wave 50, applies an explicit Source one-hit State Forge child, and executes real victory; live and detached match all seven finale intent batches and all 22 outward calls after their concrete adapters return, in exact order and with exact arguments. They also match six immutable ring/burst particle-admission receipts, eight logical feel receipts after restoration of the captured pre-finale transient, and the complete 42-entry terminal external-decision transcript (13 initial synchronization terminal decision/request, 22 finale-outward, and 7 cache/terminal). The refreshed browser route explicitly activates audio, then observes 12 executing plus 12 completed dispatch receipts: all seven mixes are logical-target-only and all cues are voice-cap-rejected, so no output is claimed. Slice 40 adds portable `tear-world-simulation-factories.ts` with no app/presentation/browser imports; the app renderer supplies real Canvas ports and detached supplies explicit no-op ports under architecture fences. Next: generic world bootstrap, then configuration isolation, which still blocks truly simultaneous full worlds. This evidence does not claim a naturally played 50-wave campaign, randomized particle parity, rendered-pixel parity, headless/full-world portability, configuration isolation, durable profile/local-storage survival, cloud/replay/analytics completion, successful PCM/audibility or audio graph/device parity, or device vibration.
+C30 has already proven an in-memory restore of an active, non-draft natural
+episode: its source snapshot, held input, accepted commands, and semantic hash
+are reconstructed only through a fresh C29 production composition, then the
+same suffix reaches the exactly equal terminal artifact. Keep that boundary
+in-process and caller-retained. The next slice measures a declared workload on
+target hardware and uses a bounded duration/leak protocol; it must not turn the
+checkpoint into storage, durable job recovery, a worker retry, or a second
+simulation model. Academy/Foundry streaming follows that scale evidence.
 
 Preserve:
 
@@ -302,7 +317,9 @@ Preserve:
 - focused unit/architecture proof;
 - alignment and checkpoint documentation in the same slice.
 
-Then migrate app-backed configuration, RNG, effects, clocks, Mirror/boss feedback, and remaining frame/combat closures into explicit per-world ports/state. Complete replay/headless only by consuming that same full production composition—not by copying the live host.
+Complete replay/headless only by consuming that same full production
+composition—not by copying the live host. Preserve the explicit C29/C30 output,
+durability, and device-fidelity deferrals while gathering scale evidence.
 
 ### Other known C27A boundary debt
 
@@ -431,11 +448,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C30 fresh natural openings now use live seed/difficulty/spawn initialization. An untouched one-hit run naturally terminates at tick 222 and is sealed as an immutable terminal artifact; the Class-A browser rerun reaches the same tick and terminal disposition.
-PROVEN BY:           `pnpm check:c30:foundation` passes: six focused Vitest files / 14 tests, four Node worker tests, standalone build, Class-A truncated and natural-failure terminal reruns, fresh 13-scenario / 5,732-tick C27A browser capture, then a 14-test source matrix. The browser failure uses no commands and reports `PASSED` after its real game-over boundary.
-REMAINING HERE:      C30 still needs checkpoint restore, target-hardware training-capacity and long-run leak measurements, and Academy/Foundry streaming. C29's durable active-cinematic boundary remains separately open. Timeout, validation, and worker-reported failures intentionally do not retry.
+DONE THIS STEP:      C30 restores an active non-draft natural episode through a fresh source composition. Its tick-60 movement/jump/dash keyframe reproduces the captured canonical state and the exactly equal tick-120 terminal artifact without storage or worker recovery.
+PROVEN BY:           `pnpm check:c30:foundation` passes: six focused Vitest files / 15 tests, four Node worker tests, standalone build, Class-A truncated and natural-failure terminal reruns, fresh 13-scenario / 5,732-tick C27A browser capture, then a 14-test source matrix. The focused environment/replay-composition subset also passes 8 tests; the build retains only its existing >500 kB chunk warning.
+REMAINING HERE:      C30 still needs target-hardware training-capacity and long-run leak measurements, then Academy/Foundry streaming. Draft/reward-route checkpointing, durable job recovery, and mid-run worker cancellation remain unclaimed. C29's durable active-cinematic boundary remains separately open. Timeout, validation, and worker-reported failures intentionally do not retry.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Add production checkpoint restore for an interrupted C30 episode. Resume through the same source composition, retain action/terminal evidence, and prove that no persistence or job recovery is implied. Do not add retries to timeout, validation, or ordinary worker-reported failures.
+NEXT SLICE:          Measure declared C30 capacity on target hardware and run a bounded long-run leak protocol; keep source-composition, timeout, retry, and checkpoint custody boundaries unchanged.
 
 All of the following were run from this worktree through C27A slice 36:
 

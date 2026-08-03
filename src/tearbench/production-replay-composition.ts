@@ -1,17 +1,23 @@
 import { applyWeapon } from "../gameplay/weapons";
 import { parseCampaignChapterBindingSpec, stageCampaignChapterBinding } from "../gameplay/campaign/chapter-cinematic-binding";
 import type { ChapterIntent } from "../gameplay/campaign/chapter-controller";
+import { createLiveStateForgeAdapter } from "../app/live-state-forge-adapter";
+import { createLiveStateForgeRuntimeBridge } from "../app/live-state-forge-runtime-bridge";
 import type { RunDifficulty } from "../gameplay/run/session";
 import { projectCanonicalGameplayState, type CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { AuthoritativeInputSnapshot, AuthoritativeInputState } from "../gameplay/runtime/authoritative-input";
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
 import { stageAt } from "../gameplay/stages";
+import { stableVerificationHash } from "../replay/hash";
 import type { TearSnapshotV1 } from "./contracts";
 import { applyTearCodecConfiguration, hydrateTearCodecWorld } from "./detached-world-hydrator";
+import { captureLiveStateForgeSnapshot } from "./live-runtime-snapshots";
 import { createProductionCombatSimulation } from "./production-combat-simulation";
 import { createProductionRunOutcomeRuntime, type ProductionRunOutcomeRuntime } from "./production-run-outcome-runtime";
 import { createProductionReplayWorld, type ProductionReplayWorld } from "./production-world-factory";
 import { createProductionWaveRewardRuntime, type ProductionWaveRewardRuntime } from "./production-wave-reward-runtime";
+import { ENTITY_KIND_REGISTRY } from "./registries";
+import { createDefaultStateCodecRegistry } from "./state-codecs";
 
 export interface ProductionGhostReplayCompositionOptions {
   readonly seed: string;
@@ -23,6 +29,12 @@ export interface ProductionGhostReplayCompositionOptions {
   readonly gameplayEvents?: TearGameplayEventPort;
   /** Optional portable terminal endpoint; device/persistence behavior stays outside this composition. */
   readonly endRun?: () => void;
+}
+
+export interface ProductionReplayCheckpointCapture {
+  readonly snapshot: TearSnapshotV1;
+  readonly input: AuthoritativeInputSnapshot;
+  readonly semanticHash: string;
 }
 
 /** Shared renderer-neutral projection for production replay and headless worlds. */
@@ -80,6 +92,104 @@ export function restoreProductionReplayChapterBinding(
     clear: () => undefined,
   });
   replay.world.context.cinema.restoreState(runtime.cinema, staged.binding);
+}
+
+function productionRuntimeState(replay: ProductionReplayWorld) {
+  const transient = replay.world.context.transient;
+  return createLiveStateForgeRuntimeBridge({
+    captureTransient: () => Object.freeze({
+      hitStop: transient.impact.hitStop, shake: transient.impact.shake,
+      timeScale: transient.feel.timeScale, slowmo: transient.impact.slowMotion,
+      zoom: transient.feel.zoom, flash: transient.feel.flash,
+      bannerT: transient.feel.bannerSeconds, dashGhostT: transient.opening.dashGhostTime,
+      landingV: transient.opening.landingVelocity, wasDashing: transient.opening.wasDashing,
+      wasSwinging: transient.opening.wasSwinging, wasOnGround: transient.opening.wasOnGround,
+      worldZoom: transient.feel.worldZoom, worldZoomTarget: transient.feel.worldZoomTarget,
+      throwCd: transient.opening.throwCooldown, rankPopT: transient.feel.rankPopupSeconds,
+      rankPopText: transient.feel.rankPopupText,
+    }),
+    restoreTransient: (state) => {
+      transient.assignImpact({ hitStop: Number(state.hitStop), slowMotion: Number(state.slowmo), shake: Number(state.shake) });
+      transient.assignOpening({ throwCooldown: Number(state.throwCd), dashGhostTime: Number(state.dashGhostT),
+        landingVelocity: Number(state.landingV), wasDashing: Boolean(state.wasDashing),
+        wasSwinging: Boolean(state.wasSwinging), wasOnGround: Boolean(state.wasOnGround) });
+      Object.assign(transient.feel, { timeScale: Number(state.timeScale), zoom: Number(state.zoom), flash: Number(state.flash),
+        bannerSeconds: Number(state.bannerT), worldZoom: Number(state.worldZoom), worldZoomTarget: Number(state.worldZoomTarget),
+        rankPopupSeconds: Number(state.rankPopT), rankPopupText: String(state.rankPopText) });
+    },
+    captureLifecycle: replay.world.lifecycle.snapshot.bind(replay.world.lifecycle),
+    restoreLifecycle: replay.world.lifecycle.restore.bind(replay.world.lifecycle),
+    captureChapterBinding: () => null,
+    stageChapterBinding: () => null,
+    installChapterBinding: () => undefined,
+    captureCinemaProtection: () => Object.freeze({ ...transient.protection }),
+    restoreCinemaProtection: transient.assignProtection.bind(transient),
+    captureStageBanner: () => Object.freeze({ name: "", seconds: transient.feel.bannerSeconds }),
+    restoreStageBanner: (_name, seconds) => { transient.feel.bannerSeconds = seconds; },
+    cinema: replay.world.context.cinema,
+  });
+}
+
+/**
+ * Captures a natural C30 keyframe from the production replay composition.
+ * It reuses the State Forge codec boundary; custody stays with its caller, so
+ * this creates neither durable storage nor worker/job recovery behavior.
+ */
+export function captureProductionReplayCheckpoint(
+  replay: ProductionReplayWorld,
+  simulation: ReturnType<typeof createProductionCombatSimulation<CanonicalGameplayState>>,
+  waveReward: ProductionWaveRewardRuntime,
+  id: string,
+): ProductionReplayCheckpointCapture {
+  const runtime = productionRuntimeState(replay);
+  const stateForge = createLiveStateForgeAdapter({
+    dependencies: replay.dependencies,
+    entities: replay.world.entities,
+    worldServices: replay.world.context.services,
+    state: replay.world.state,
+    actorId: (entity, prefix) => simulation.combatEntityRuntime.id(entity, prefix),
+    bindActorId: (entity, actorId) => { simulation.combatEntityRuntime.bindId(entity, actorId); },
+    platforms: () => replay.stage.platforms as never,
+    stageIndex: () => replay.stage.index,
+    restoreStageIndex: (index) => { replay.stage.index = index; },
+    replacePlatforms: (platforms) => { replay.stage.platforms = platforms; },
+    slowZones: () => replay.world.state.slowZones(),
+    walls: () => replay.world.state.temporaryWalls(),
+    screen: waveReward.screen,
+    // C30 captures only an active non-draft screen; fresh source composition
+    // therefore restores the canonical `playing` screen without a UI route.
+    setScreen: () => undefined,
+    focus: () => -1,
+    setFocus: () => undefined,
+    tick: () => simulation.simulationRuntime.scheduler.tick,
+    setTick: (tick) => { simulation.simulationRuntime.reset(tick); },
+    clearInputProjection: replay.input.clear.bind(replay.input),
+    reward: waveReward.reward.snapshot.bind(waveReward.reward),
+    restoreReward: waveReward.reward.restore.bind(waveReward.reward),
+    captureGhost: () => Object.freeze({ recording: null }),
+    restoreGhost: () => undefined,
+    captureIdentityState: simulation.combatEntityRuntime.captureIdentityState.bind(simulation.combatEntityRuntime),
+    restoreIdentityState: simulation.combatEntityRuntime.restoreIdentityState.bind(simulation.combatEntityRuntime),
+    runtimeState: runtime.capture,
+    restoreRuntimeState: runtime.restore,
+    captureCinema: replay.world.context.cinema.captureState.bind(replay.world.context.cinema),
+    validateCinema: runtime.validate,
+  });
+  const tick = simulation.simulationRuntime.scheduler.tick;
+  const snapshot = captureLiveStateForgeSnapshot({
+    id, tick, stateClass: "recorded-canonical", seed: String(replay.world.state.run()?.runSeed ?? "unknown"),
+    stateForge, world: stateForge.capture(), rng: replay.world.context.services.random.snapshot(),
+    registry: createDefaultStateCodecRegistry(),
+    observationClass: "structured-state", producer: "production-headless-checkpoint", target: "headless",
+    contentHash: stableVerificationHash(ENTITY_KIND_REGISTRY.ids),
+    // A required contract hash that explicitly denotes absence of a pixel capture;
+    // it is not rendered-output evidence.
+    visualHash: stableVerificationHash("not-captured"),
+    executionClass: "engineering",
+  });
+  const state = projectProductionReplayCanonicalState(replay, tick, simulation.simulationRuntime.input);
+  return Object.freeze({ snapshot, input: simulation.simulationRuntime.input.snapshot(),
+    semanticHash: stableVerificationHash(state) });
 }
 
 /** Applies a saved State Forge world to a newly composed production replay world. */
