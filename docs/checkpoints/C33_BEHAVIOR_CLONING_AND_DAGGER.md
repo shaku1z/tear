@@ -159,3 +159,15 @@ The remaining path is one integrated C33 completion candidate:
    equivalence in one permanent test before deciding whether the C33 checklist
    item can truthfully tick. Temporal/recurrent policy and meaningful quality
    evidence still require separate work even after that candidate.
+
+## Checkpointed fit evidence
+
+The deterministic fit now has a content-addressed epoch checkpoint carrying
+only exact input lineage, model state, epoch, and update count. A bounded run
+returns that incomplete checkpoint rather than an artifact; resume validates
+the complete input/class/shape hash before advancing. One epoch plus resume to
+completion produces the exact same canonical training result as a one-shot
+fit. Local checkpoint custody is idempotent and malformed bytes quarantine
+instead of resuming. This is bounded cancellation/recovery evidence only: it
+does not activate, promote, or establish a temporal/recurrent policy or real
+game quality.

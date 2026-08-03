@@ -552,6 +552,13 @@ lineage validation, corrupt-checkpoint quarantine, source-world correction
 evidence, and held-out parent/resumed observation. No artifact activation or
 promotion is authorized by that work.
 
+The integrated checkpointed-fit portion now exists: a bounded epoch checkpoint
+preserves exact lineage/model state, corrupt bytes quarantine, and an
+interrupted epoch plus resume is exactly equivalent to the one-shot fit. It
+does not emit an artifact while incomplete. Remaining C33 work is still
+temporal policy and credible real-game quality evidence; do not turn this
+recovery proof into promotion.
+
 All of the following were run from this worktree through C27A slice 36:
 
 - `pnpm check:c27a` passed after the certified Source-victory slice: foundation

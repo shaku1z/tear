@@ -15,6 +15,10 @@ import {
   TearDaggerCorrectionReviewStore,
   createTearDaggerRetrainingInput,
   trainTearBehaviorCloningPolicy,
+  createTearBehaviorCloningCheckpoint,
+  advanceTearBehaviorCloningCheckpoint,
+  completeTearBehaviorCloningCheckpoint,
+  TearBehaviorCloningCheckpointVault,
   TearAcademyTrainingDatasetLoader,
   TearBehaviorCloningTrainingVault,
   TearPolicyArtifactRegistry,
@@ -222,6 +226,15 @@ describe("C31 held Academy candidate curation", () => {
     const config = Object.freeze({ seed: 7, epochs: 3, learningRate: 0.25, batchSize: 2 });
     const training = trainTearBehaviorCloningPolicy(first, normalization, config);
     expect(trainTearBehaviorCloningPolicy(second, normalization, config)).toEqual(training);
+    const partial = advanceTearBehaviorCloningCheckpoint(createTearBehaviorCloningCheckpoint(first, normalization, config), first, normalization, config, 1);
+    const checkpointVault = new TearBehaviorCloningCheckpointVault(input.backend);
+    expect(await checkpointVault.persist(partial)).toEqual(partial);
+    expect(await checkpointVault.get(partial.checkpointHash)).toEqual(partial);
+    await input.backend.put("analysis", `behavior-cloning-checkpoint:v1:${partial.checkpointHash}`, "not-json");
+    expect(await checkpointVault.get(partial.checkpointHash)).toBeUndefined();
+    expect((await input.backend.keys("quarantine")).some((key) => key.endsWith(partial.checkpointHash))).toBe(true);
+    const resumed = advanceTearBehaviorCloningCheckpoint(partial, first, normalization, config, config.epochs);
+    expect(completeTearBehaviorCloningCheckpoint(resumed, first, normalization, config)).toEqual(training);
     expect(training.metrics.examples).toBe(3);
     expect(training.metrics.classes).toBe(2);
     expect(training.metrics.trainingAccuracy).toBe(1);
@@ -240,7 +253,7 @@ describe("C31 held Academy candidate curation", () => {
     expect(artifact.model).toMatchObject({ format: "linear-policy-v1" });
     const registry = new TearPolicyArtifactRegistry(input.backend, artifact.compatibility);
     await registry.register(artifact); await registry.activate(artifact.id, "2026-08-03T00:09:00.000Z");
-    const corrections = await captureTearDaggerCorrections(registry, scenario(), { maxCorrections: 2 });
+    const corrections = await captureTearDaggerCorrections(registry, scenario(), { maxCorrections: 2, teacherProfile: "chaos" });
     expect(corrections).toMatchObject({ format: "tear-dagger-correction-capture", artifact: { id: artifact.id }, terminal: { truncated: true } });
     expect(corrections.corrections).not.toEqual([]);
     expect(corrections.corrections.every((entry) => entry.challengerReceipt.source === "artifact"

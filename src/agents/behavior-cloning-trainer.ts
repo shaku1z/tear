@@ -39,7 +39,15 @@ export interface TearBehaviorCloningTrainingResultV1 {
   readonly trainingHash: string;
 }
 
+export interface TearBehaviorCloningCheckpointV1 {
+  readonly format: "tear-behavior-cloning-checkpoint"; readonly schemaVersion: 1;
+  readonly inputHash: string; readonly epoch: number; readonly updates: number;
+  readonly classes: readonly Readonly<{ actions: readonly GameAction[] }>[];
+  readonly weights: readonly (readonly number[])[]; readonly biases: readonly number[]; readonly checkpointHash: string;
+}
+
 const TRAINING_KEY = "behavior-cloning-training:v1:";
+const CHECKPOINT_KEY = "behavior-cloning-checkpoint:v1:";
 const HASH = /^[a-f0-9]{16}$/u;
 
 function validConfig(value: TearBehaviorCloningTrainingConfigV1): boolean {
@@ -60,6 +68,85 @@ function predict(weights: readonly (readonly number[])[], biases: readonly numbe
     if (score > best) { best = score; selected = index; }
   }
   return selected;
+}
+function trainingExamples(dataset: TearAcademyTrainingDatasetV1, normalization: TearBehaviorCloningNormalizationV1, config: TearBehaviorCloningTrainingConfigV1, augmentation?: TearDaggerRetrainingInputV1) {
+  if (!validConfig(config)) throw new TypeError("invalid behavior cloning training configuration");
+  if (augmentation !== undefined && (augmentation.datasetHash !== dataset.datasetHash || augmentation.normalizationHash !== normalization.normalizationHash || augmentation.examples.length < 1)) throw new TypeError("invalid DAgger retraining augmentation");
+  return Object.freeze([...createTearBehaviorCloningBatches(dataset, normalization, { split: "training", batchSize: config.batchSize }).flatMap((batch) => batch.examples), ...(augmentation?.examples ?? [])]);
+}
+function inputHash(dataset: TearAcademyTrainingDatasetV1, normalization: TearBehaviorCloningNormalizationV1, config: TearBehaviorCloningTrainingConfigV1, augmentation?: TearDaggerRetrainingInputV1): string { return stableVerificationHash({ datasetHash: dataset.datasetHash, normalizationHash: normalization.normalizationHash, config, augmentationHash: augmentation?.inputHash ?? null }); }
+
+export function createTearBehaviorCloningCheckpoint(dataset: TearAcademyTrainingDatasetV1, normalization: TearBehaviorCloningNormalizationV1, config: TearBehaviorCloningTrainingConfigV1, augmentation?: TearDaggerRetrainingInputV1): TearBehaviorCloningCheckpointV1 {
+  const examples = trainingExamples(dataset, normalization, config, augmentation), actionClasses = new Map<string, readonly GameAction[]>();
+  for (const example of examples) actionClasses.set(actionKey(example.targetActions), Object.freeze(structuredClone(example.targetActions)));
+  const classes = Object.freeze([...actionClasses.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, actions]) => Object.freeze({ actions })));
+  const draft = { format: "tear-behavior-cloning-checkpoint" as const, schemaVersion: 1 as const, inputHash: inputHash(dataset, normalization, config, augmentation), epoch: 0, updates: 0, classes, weights: Object.freeze(classes.map(() => Object.freeze(Array.from({ length: normalization.mean.length }, () => 0)))), biases: Object.freeze(classes.map(() => 0)) };
+  return Object.freeze({ ...draft, checkpointHash: stableVerificationHash(draft) });
+}
+
+/** Advances whole deterministic epochs and returns a content-addressed resumable state. */
+export function advanceTearBehaviorCloningCheckpoint(checkpoint: TearBehaviorCloningCheckpointV1, dataset: TearAcademyTrainingDatasetV1, normalization: TearBehaviorCloningNormalizationV1, config: TearBehaviorCloningTrainingConfigV1, epochs: number, augmentation?: TearDaggerRetrainingInputV1): TearBehaviorCloningCheckpointV1 {
+  if (!Number.isSafeInteger(epochs) || epochs < 0 || !validConfig(config)) throw new TypeError("invalid behavior cloning checkpoint advance");
+  const initial = createTearBehaviorCloningCheckpoint(dataset, normalization, config, augmentation);
+  const { checkpointHash, ...current } = checkpoint;
+  if (checkpointHash !== stableVerificationHash(current) || checkpoint.inputHash !== initial.inputHash || checkpoint.epoch < 0 || checkpoint.epoch > config.epochs
+    || stableVerificationHash(checkpoint.classes) !== stableVerificationHash(initial.classes) || checkpoint.weights.length !== checkpoint.classes.length
+    || checkpoint.biases.length !== checkpoint.classes.length || checkpoint.weights.some((row) => row.length !== normalization.mean.length)) throw new RangeError("behavior cloning checkpoint lineage is invalid");
+  const examples = trainingExamples(dataset, normalization, config, augmentation), classes = checkpoint.classes, classByAction = new Map(classes.map((entry, index) => [actionKey(entry.actions), index]));
+  const weights = checkpoint.weights.map((row) => [...row]), biases = [...checkpoint.biases]; let updates = checkpoint.updates;
+  const targetEpoch = Math.min(config.epochs, checkpoint.epoch + epochs);
+  for (let epoch = checkpoint.epoch; epoch < targetEpoch; epoch += 1) for (const example of examples) {
+    const expected = classByAction.get(actionKey(example.targetActions)), actual = predict(weights, biases, example.features);
+    if (expected === undefined || actual === expected) continue;
+    const target = weights[expected], predicted = weights[actual]; if (target === undefined || predicted === undefined) throw new Error("behavior cloning checkpoint class is unavailable");
+    for (let index = 0; index < example.features.length; index += 1) { const value = example.features[index] ?? 0; target[index] = (target[index] ?? 0) + config.learningRate * value; predicted[index] = (predicted[index] ?? 0) - config.learningRate * value; }
+    biases[expected] = (biases[expected] ?? 0) + config.learningRate; biases[actual] = (biases[actual] ?? 0) - config.learningRate; updates += 1;
+  }
+  const draft = { format: "tear-behavior-cloning-checkpoint" as const, schemaVersion: 1 as const, inputHash: checkpoint.inputHash, epoch: targetEpoch, updates,
+    classes: Object.freeze(classes.map((entry) => Object.freeze({ actions: Object.freeze(structuredClone(entry.actions)) }))), weights: Object.freeze(weights.map((row) => Object.freeze([...row]))), biases: Object.freeze([...biases]) };
+  return Object.freeze({ ...draft, checkpointHash: stableVerificationHash(draft) });
+}
+
+/** Projects only a fully completed, lineage-matching checkpoint into a C33 fit result. */
+export function completeTearBehaviorCloningCheckpoint(checkpoint: TearBehaviorCloningCheckpointV1, dataset: TearAcademyTrainingDatasetV1, normalization: TearBehaviorCloningNormalizationV1, config: TearBehaviorCloningTrainingConfigV1, augmentation?: TearDaggerRetrainingInputV1): TearBehaviorCloningTrainingResultV1 {
+  const completed = advanceTearBehaviorCloningCheckpoint(checkpoint, dataset, normalization, config, 0, augmentation);
+  if (completed.epoch !== config.epochs) throw new RangeError("behavior cloning checkpoint is not complete");
+  const examples = trainingExamples(dataset, normalization, config, augmentation), classByAction = new Map(completed.classes.map((entry, index) => [actionKey(entry.actions), index]));
+  const correct = examples.filter((example) => classByAction.get(actionKey(example.targetActions)) === predict(completed.weights, completed.biases, example.features)).length;
+  const model = Object.freeze({ format: "tear-linear-policy-model" as const, schemaVersion: 1 as const, featureSchemaHash: TEAR_POLICY_FEATURE_SCHEMA_HASH_V1,
+    mean: Object.freeze([...normalization.mean]), scale: Object.freeze([...normalization.scale]), classes: completed.classes,
+    weights: completed.weights, biases: completed.biases });
+  const metrics = Object.freeze({ examples: examples.length, classes: completed.classes.length, updates: completed.updates, trainingAccuracy: correct / examples.length });
+  const resultCheckpoint = Object.freeze({ epoch: completed.epoch, modelHash: stableVerificationHash(model), metricsHash: stableVerificationHash(metrics) });
+  const draft = { format: "tear-behavior-cloning-training" as const, schemaVersion: 1 as const, datasetHash: dataset.datasetHash, normalizationHash: normalization.normalizationHash,
+    ...(augmentation === undefined ? {} : { augmentationHash: augmentation.inputHash }), config: Object.freeze({ ...config }), model, metrics, checkpoint: resultCheckpoint };
+  return Object.freeze({ ...draft, trainingHash: stableVerificationHash(draft) });
+}
+
+function parseCheckpoint(value: unknown): TearBehaviorCloningCheckpointV1 {
+  if (!record(value) || value.format !== "tear-behavior-cloning-checkpoint" || value.schemaVersion !== 1 || !hashes(value.inputHash)
+    || !integerAtLeast(value.epoch, 0) || !integerAtLeast(value.updates, 0) || !Array.isArray(value.classes) || !Array.isArray(value.weights)
+    || !Array.isArray(value.biases) || !hashes(value.checkpointHash)) throw new TypeError("invalid behavior cloning checkpoint");
+  const typed = value as unknown as TearBehaviorCloningCheckpointV1, { checkpointHash, ...draft } = typed;
+  if (checkpointHash !== stableVerificationHash(draft)) throw new TypeError("behavior cloning checkpoint integrity mismatch");
+  return Object.freeze(structuredClone(typed));
+}
+
+/** Local custody for cancelled/resumable deterministic fit state; it never activates an artifact. */
+export class TearBehaviorCloningCheckpointVault {
+  readonly #backend: GhostVaultBackend;
+  constructor(backend: GhostVaultBackend) { this.#backend = backend; }
+  async persist(input: TearBehaviorCloningCheckpointV1): Promise<TearBehaviorCloningCheckpointV1> {
+    const checkpoint = parseCheckpoint(input), key = `${CHECKPOINT_KEY}${checkpoint.checkpointHash}`, existing = await this.#backend.get("analysis", key);
+    if (existing !== undefined) return parseCheckpoint(JSON.parse(existing));
+    await this.#backend.commit(Object.freeze([{ store: "analysis", key, value: JSON.stringify(checkpoint) }, { store: "indexes", key: `behavior-cloning-checkpoint:${checkpoint.inputHash}:${checkpoint.checkpointHash}`, value: JSON.stringify({ epoch: checkpoint.epoch }) }]));
+    return checkpoint;
+  }
+  async get(checkpointHash: string): Promise<TearBehaviorCloningCheckpointV1 | undefined> {
+    if (!hashes(checkpointHash)) throw new TypeError("behavior cloning checkpoint hash is invalid");
+    const key = `${CHECKPOINT_KEY}${checkpointHash}`, raw = await this.#backend.get("analysis", key); if (raw === undefined) return undefined;
+    try { return parseCheckpoint(JSON.parse(raw)); } catch (error) { await this.#backend.put("quarantine", key, JSON.stringify(Object.freeze({ format: "behavior-cloning-checkpoint-quarantine", schemaVersion: 1, key, raw, reason: error instanceof Error ? error.message : String(error) }))); return undefined; }
+  }
 }
 
 /** Uses the same deterministic class selection as C33 fitting on a complete linear model. */
