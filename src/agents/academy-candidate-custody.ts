@@ -345,6 +345,9 @@ export class TearAcademyCandidateCustodyStore {
 
   constructor(backend: GhostVaultBackend) { this.#backend = backend; }
 
+  /** Shared only with adjacent C31 pre-corpus ledgers; no gameplay consumer receives this backend. */
+  backend(): GhostVaultBackend { return this.#backend; }
+
   async accept(input: TearAcademyCandidateCustodyAcceptance): Promise<TearAcademyCandidateCustodyRecordV1> {
     assertEligible(input);
     const candidateHash = input.materialization.attestation.candidateHash;

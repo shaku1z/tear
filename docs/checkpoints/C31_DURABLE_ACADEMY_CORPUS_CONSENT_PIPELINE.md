@@ -70,6 +70,15 @@ is trained on.
   every policy carries its local authorized-actor set. Revocation, expiry, and
   deletion reject an undeclared actor. This is a local declared-authority check,
   not account authentication or cloud identity.
+- `TearAcademyCandidateQualityStore` now assesses only the exact declaration
+  behind an unexpired `held` custody record. It independently repeats the
+  admission verification, binds custody/declaration/track-bundle hashes, and
+  persists derived source metadata, transparent track-density score components,
+  and explicit short/truncated/dense-action outlier flags. Its content hash
+  deliberately excludes episode labels so equivalent captured content is
+  recorded as a duplicate. Malformed assessment bytes are excluded from both
+  inventory and deduplication. An assessment is `review-required` or
+  `duplicate`, never an approval, corpus sample, manifest, or trainer input.
 
 ## Exit-gate ledger
 
@@ -110,9 +119,12 @@ is trained on.
   Vaults, root mismatches, retained repair children, and a source still held by
   another non-deleted custody record fail closed. The tombstone is audit-only
   and cannot appear in future held-candidate queries.
+- [x] Held-custody quality, duplicate, corruption, outlier, and source-metadata
+  assessment is durable and fail-closed. It derives the assessment from the
+  verified raw tracks, not caller-provided quality declarations, and does not
+  promote any candidate to a corpus path.
 - [ ] Account/cloud revocation and deletion propagation, cross-device identity
-  lifecycle, quality scoring, deduplication, outliers, style/skill metadata,
-  and population balance.
+  lifecycle, style/skill interpretation, and population balance.
 - [ ] Review, correction, curation, immutable lineage-bound train/validation/
   calibration/test/hidden-exam splits, durable manifests, and the Academy
   interface.
@@ -156,6 +168,11 @@ behavior cloning, or C36 Foundry automation.
   malformed stored custody bytes without rewriting them. It also rejects a
   privacy policy that does not match the declared classification and an actor
   outside the durable policy's local authority set.
+- `academy-candidate-quality.test.ts` assesses only held, verified declarations,
+  reloads the durable result, records the same content under a distinct C30
+  coordinate as a duplicate, and rejects both non-held and tampered source
+  declarations. Malformed assessment bytes remain quarantined rather than
+  influencing deduplication.
 - That same custody proof rejects a foreign Vault for deletion, atomically
   removes the actual materialized source capsule only from its matching Vault,
   and retains the durable `deleted` tombstone outside future held queries.
@@ -173,8 +190,7 @@ behavior cloning, or C36 Foundry automation.
 
 ## Next safe boundary
 
-Add quality, deduplication, corruption/outlier checks, and source metadata
-around held custody without allowing any non-held candidate into a corpus
-manifest. Do not move Vault writes into the C30 worker callback, replace
-verified custody tracks with caller declarations, or promote a source capsule
-into a corpus sample without the separate governance and review gates.
+Add the human review/correction and curation decision layer on top of durable
+held-source assessments. It must not turn an assessment into a sample or
+manifest without explicit governance/review evidence, and must preserve the
+same custody/revocation boundary.

@@ -242,8 +242,13 @@ This is the migration checklist for the architectural redesign. A checked featur
    removes the exact attested source capsule atomically with a non-training
    tombstone. Each custody record also persists a privacy-class-matched,
    versioned local authority policy; undeclared actors cannot revoke, expire, or
-   delete it. Account/cloud identity and deletion, C31 corpus samples, and
-   policy training remain absent;
+   delete it. Held sources can now receive a durable, fail-closed quality
+   assessment derived from their verified raw tracks: transparent coverage and
+   density components, source metadata, explicit outlier flags, and a content
+   hash that recognizes equivalent captures as duplicates. That assessment is
+   still only `review-required` or `duplicate`, never a reviewed sample,
+   manifest, or trainer input. Account/cloud identity and deletion, C31 corpus
+   samples, and policy training remain absent;
    authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 
