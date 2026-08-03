@@ -537,11 +537,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C33 correction proposals now retain only the shared bounded C32/C33 feature vector needed for later approved-only retraining, alongside immutable named-reviewer decisions; no proposal is yet corpus input or promotion.
-PROVEN BY:           Focused real C33 source-world correction capture/reviewer authorization test plus targeted no-emit TypeScript and targeted ESLint.
+DONE THIS STEP:      C33 now constructs an immutable content-addressed approved-only correction augmentation using the base normalization; it leaves C31 manifests untouched and does not yet claim retraining or promotion.
+PROVEN BY:           Focused real C33 source-world correction capture/review/approved-augmentation test plus targeted no-emit TypeScript and targeted ESLint.
 REMAINING HERE:      C33 needs governed correction ingestion/retraining/comparison, temporal/sequence policy capability, intermediate/resumable checkpoints, cancellation/recovery, and meaningful real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C33-C40 product evidence remain; C27A, C28, and C32 are closed.
-NEXT SLICE:          C33: build a deterministic approved-correction training input and retrain/comparison lineage without mutating the immutable source manifest or creating a promotion path.
+NEXT SLICE:          C33: make the deterministic trainer consume approved-only augmentation and record parent/augmentation comparison lineage without promotion.
 
 All of the following were run from this worktree through C27A slice 36:
 

@@ -13,6 +13,7 @@ import {
   TearBehaviorCloningEvaluationVault,
   captureTearDaggerCorrections,
   TearDaggerCorrectionReviewStore,
+  createTearDaggerRetrainingInput,
   trainTearBehaviorCloningPolicy,
   TearAcademyTrainingDatasetLoader,
   TearBehaviorCloningTrainingVault,
@@ -252,6 +253,8 @@ describe("C31 held Academy candidate curation", () => {
     const review = await reviews.decide({ capture: corrections, correctionHash: proposed.correctionHash, reviewer: "academy-curator",
       reviewedAt: "2026-08-03T00:09:30.000Z", disposition: "accepted", rationale: "teacher action verified" });
     expect(await reviews.get(corrections.captureHash, proposed.correctionHash)).toEqual(review);
+    const augmentation = createTearDaggerRetrainingInput(first, normalization, corrections, [review]);
+    expect(augmentation).toMatchObject({ datasetHash: first.datasetHash, captureHash: corrections.captureHash, examples: [{ correctionHash: proposed.correctionHash }] });
     const environment = createProductionHeadlessEnvironment(), runtime = new TearActivePolicyRuntime(registry);
     try {
       environment.reset(scenario()); await runtime.reset();
