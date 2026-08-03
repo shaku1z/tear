@@ -537,11 +537,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C32 is closed against its actual completion-plan exit: browser-seeded clean-process artifact reload, real semantic action and Ghost decision trace, corruption-safe fallback, and atomic activation/rollback all have permanent evidence. The fixed-suite custody work remains diagnostic, never training or promotion.
-PROVEN BY:           Requirements/type/lint/architecture checks, twenty-two focused C32 registry/runtime/journal/evaluation/production tests, a test-standalone build, and the browser-seeded real IndexedDB journey that reloads an active artifact and reads its persisted decision receipt back from Vault analysis storage.
-REMAINING HERE:      C33 owns immutable-manifest dataset loading and the first actual produced artifact; C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
+DONE THIS STEP:      C33 now loads a bounded deterministic track dataset only through an immutable named C31 trainer manifest. Every source is rechecked against reviewed custody, curation, split, and root hashes; hidden exams remain unavailable. This is data loading, not training or artifact production.
+PROVEN BY:           Focused real C30→C27/C31→C33 source/custody/corpus test, strict TypeScript, lint, and architecture checks.
+REMAINING HERE:      C33 needs deterministic batching/normalization, a genuine trainable sequence policy, reproducible checkpoints/metrics, held-out evaluation, DAgger correction/retraining, cancellation/recovery, and visible real-game evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C33-C40 product evidence remain; C27A, C28, and C32 are closed.
-NEXT SLICE:          C33: introduce a bounded deterministic loader from an immutable C31 trainer manifest to training examples. Do not call it training or fabricate an artifact; preserve hidden-exam exclusion.
+NEXT SLICE:          C33: define deterministic batching and normalization over immutable C33 datasets, including an explicit held-out split boundary. Do not produce or promote an artifact yet.
 
 All of the following were run from this worktree through C27A slice 36:
 

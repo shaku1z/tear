@@ -283,7 +283,10 @@ This is the migration checklist for the architectural redesign. A checked featur
    execution facts; it defines no quality score, training result, or promotion
    threshold. Those suite reports now have idempotent, corruption-safe local
    Vault custody and bounded auditable retention by deterministic content-hash
-   order, never an outcome-derived ranking. Account/
+   order, never an outcome-derived ranking. C33 now loads bounded immutable
+   track sequences only through a named C31 trainer manifest, rechecking every
+   custody/curation/split/track hash and excluding hidden exams; it does not yet
+   train or produce a policy artifact. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

@@ -5,6 +5,7 @@ import {
   TearAcademyCandidateCustodyStore,
   TearAcademyCandidateQualityStore,
   TearAcademyCorpusStore,
+  TearAcademyTrainingDatasetLoader,
   TearAcademyReviewedSampleStore,
   inspectAcademy,
   TearAcademyCandidateSplitStore,
@@ -169,5 +170,30 @@ describe("C31 held Academy candidate curation", () => {
     await input.custody.revoke({ candidateHash: input.assessment.candidateHash, scope: "model-training", consent: revokedConsent,
       decidedAt: "2026-08-03T00:04:00.000Z", actor: "player", reason: "withdrawn training consent" });
     expect(await curation.active("2026-08-03T00:05:00.000Z")).toEqual([]);
+  });
+
+  it("loads one immutable trainer manifest deterministically without exposing hidden exams or producing a policy", async () => {
+    const input = await prepare();
+    const curation = new TearAcademyCandidateCurationStore(input.backend, input.custody, input.quality);
+    await curation.decide({ candidateHash: input.assessment.candidateHash, assessmentHash: input.assessment.assessmentHash,
+      disposition: "curation-approved", reviewer: "academy-curator", reviewedAt: "2026-08-03T00:03:00.000Z",
+      rationale: "approved C33 trainer source", tags: Object.freeze(["baseline"]), corrections: Object.freeze([]) });
+    const splits = new TearAcademyCandidateSplitStore(input.backend, input.custody, input.quality, curation);
+    await splits.assign({ candidateHash: input.assessment.candidateHash, split: "training", assignedAt: "2026-08-03T00:04:00.000Z", actor: "academy-curator" });
+    const samples = new TearAcademyReviewedSampleStore(input.backend, input.custody, input.quality, curation, splits);
+    const sample = await samples.materialize(input.declaration, "2026-08-03T00:05:00.000Z", "academy-curator");
+    const corpus = new TearAcademyCorpusStore(input.backend, input.custody, curation, splits, samples);
+    await corpus.admit({ candidateHash: sample.candidateHash, lessonId: "movement-foundations", segmentKind: "demonstration",
+      tags: Object.freeze(["baseline"]), admittedAt: "2026-08-03T00:06:00.000Z", actor: "academy-curator" });
+    const manifest = await corpus.publishManifest({ id: "c33-bc", reader: { kind: "trainer", id: "c33-local" }, version: 1,
+      createdAt: "2026-08-03T00:07:00.000Z" });
+    const loader = new TearAcademyTrainingDatasetLoader(corpus, samples);
+    const first = await loader.load({ manifestId: manifest.id, trainerId: "c33-local", version: 1 });
+    const second = await loader.load({ manifestId: manifest.id, trainerId: "c33-local", version: 1 });
+    expect(first).toEqual(second);
+    expect(first).toMatchObject({ format: "tear-academy-training-dataset", manifest: { manifestHash: manifest.manifestHash },
+      sequences: [{ candidateHash: sample.candidateHash, lessonId: "movement-foundations" }] });
+    expect(first.sequences.every((entry) => entry.tracks.candidateHash === entry.candidateHash)).toBe(true);
+    await expect(loader.load({ manifestId: manifest.id, trainerId: "other-trainer", version: 1 })).rejects.toThrow(/unavailable/u);
   });
 });
