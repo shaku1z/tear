@@ -29,10 +29,13 @@ candidate; no current C30 bundle is eligible, persisted, or trained on.
 - The admission gate requires both a synchronized-track declaration and a
   content-verified raw bundle tied to the same candidate. A declaration alone
   never qualifies. The current bundle reconstructs the sealed C30 terminal
-  through the shared production composition and records its real canonical
-  observations/actions/timing; it explicitly names native events,
-  reward-components, intents, and build/device/provenance as unavailable. That
-  makes the current candidate ineligible rather than fabricating those tracks.
+  through an opt-in instrumented shared production composition, terminal-checks
+  it against the source artifact, and records real canonical observations,
+  actions, native gameplay facts, reward snapshots, and wave planner intents.
+  It records the source device accurately as semantic. The C30 terminal still
+  carries no attested build/provenance coordinate or Ghost-capsule range, so
+  those two tracks are explicitly unavailable and the candidate stays
+  ineligible rather than fabricating them.
 - Provenance must be a structured-state training source with a non-empty
   producer and complete build identity. Personal data may use only
   `private-personalization-only`; pseudonymous data must carry a pseudonymous
@@ -44,14 +47,16 @@ candidate; no current C30 bundle is eligible, persisted, or trained on.
 - [x] Eligibility, consent, and provenance are enforced before C30 candidate
   admission. The permanent proof carries a real two-tick production terminal
   through the bounded C30 intake and rejects it before a corpus action because
-  its verified raw bundle still declares unavailable native tracks. It also
-  rejects missing synchronized metadata, `no-training`, invalid consent, and
-  consent/provenance mismatch.
+  its verified raw bundle still declares unavailable build/provenance and
+  capsule-range tracks. It also rejects missing synchronized metadata,
+  `no-training`, invalid consent, and consent/provenance mismatch.
 - [x] Real bounded canonical observation/action/timing tracks are captured from
   the shared production composition. The permanent proof reconstructs a real
   C30 terminal, records ticks zero through terminal plus its exact action
-  envelopes, and rejects a tampered terminal hash. Native event, reward,
-  intent, build/device/provenance, and capsule-range tracks remain open.
+  envelopes, native facts, one reward snapshot per observation, and ordered
+  wave-plan/clear intents, then rejects a tampered terminal hash. The source
+  device is semantic; attested build/provenance and capsule-range tracks remain
+  open.
 - [ ] Revocation, deletion propagation, privacy retention, pseudonymous
   identity lifecycle, quality scoring, deduplication, outliers, corruption,
   style/skill metadata, and population balance.
@@ -79,13 +84,17 @@ Foundry automation.
   verified-but-incomplete track bundle remains rejected, plus the pre-corpus
   consent/provenance paths.
 - `academy-candidate-tracks.test.ts` reconstructs a real C30 terminal through
-  the source composition and rejects a tampered terminal hash.
+  the source composition, proves aligned native/reward/intent streams, and
+  rejects a tampered terminal hash.
 - `agent-academy.test.ts` and
   `production-headless-academy-intake.test.ts` remain green in the same gate.
+- `pnpm check:c30:foundation` also passes after the opt-in observer addition:
+  seven focused Vitest files / eighteen tests, six bounded worker proofs, both
+  browser terminal reruns, and the 13-scenario C27A parity capture.
 
 ## Next safe boundary
 
-Wire the native event, reward-component, intent, build/device/provenance, and
-capsule-range tracks from the shared C30/C29 composition into that bounded raw
-bundle before accepting any candidate into review or a corpus. Do not create
-placeholder tracks, and do not weaken the C30 stream's bounded custody.
+Bind an attested source build/provenance identity and an exact, integrity-read
+Ghost-capsule range to the same C30 candidate before accepting it into review
+or a corpus. Do not replace the unavailable markers with caller declarations,
+and do not weaken the C30 stream's bounded custody.

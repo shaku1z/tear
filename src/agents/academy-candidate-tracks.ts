@@ -1,12 +1,16 @@
 import type { CommandEnvelope } from "../domain/envelopes";
 import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
+import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import type { GameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
+import type { ProductionWaveRewardIntent } from "../tearbench";
 import {
   createProductionHeadlessEnvironment,
   type ProductionHeadlessAcademyIntakeItem,
   type ProductionHeadlessTerminalArtifact,
 } from "../tearbench";
+
+export type TearAcademyCandidateUnavailableTrack = "build-device-provenance" | "capsule-range";
 
 export interface TearAcademyCandidateTrackBundleV1 {
   readonly format: "tear-academy-candidate-tracks";
@@ -16,8 +20,17 @@ export interface TearAcademyCandidateTrackBundleV1 {
   readonly captureClass: "c30-terminal-reconstruction";
   readonly observations: readonly CanonicalGameplayState[];
   readonly actions: readonly CommandEnvelope<GameAction>[];
+  readonly nativeEvents: readonly TearGameplayEvent[];
+  readonly rewardComponents: readonly Readonly<{ tick: number; value: unknown }>[];
+  readonly intents: readonly ProductionWaveRewardIntent[];
+  readonly source: Readonly<{
+    execution: "production-headless";
+    device: "semantic";
+    buildProvenance: Readonly<{ status: "unavailable"; reason: string }>;
+    capsuleRange: Readonly<{ status: "unavailable"; reason: string }>;
+  }>;
   readonly terminal: ProductionHeadlessTerminalArtifact["terminal"];
-  readonly unavailableTracks: readonly ("native-events" | "reward-components" | "intents" | "build-device-provenance")[];
+  readonly unavailableTracks: readonly TearAcademyCandidateUnavailableTrack[];
   readonly bundleHash: string;
 }
 
@@ -49,8 +62,11 @@ function candidateTerminal(value: unknown): ProductionHeadlessTerminalArtifact {
 
 /**
  * Reconstructs one bounded C30 terminal through the shared production
- * composition. This preserves real canonical observations/actions/timing but
- * intentionally does not invent native event, reward, intent, or device tracks.
+ * composition. Native gameplay facts, reward snapshots, and planner intents
+ * come from an instrumented production composition and must still reconstruct
+ * the sealed C30 terminal exactly. The C30 terminal itself carries neither an
+ * attested build/provenance identity nor a Ghost capsule range, so both remain
+ * explicitly unavailable and fail closed at admission.
  */
 export function captureAcademyCandidateTracks(candidate: ProductionHeadlessAcademyIntakeItem): TearAcademyCandidateTrackBundleV1 {
   const artifact = candidateTerminal(candidate);
@@ -60,7 +76,7 @@ export function captureAcademyCandidateTracks(candidate: ProductionHeadlessAcade
     actions.push(envelope.command);
     actionsByTick.set(envelope.tick, actions);
   }
-  const environment = createProductionHeadlessEnvironment();
+  const environment = createProductionHeadlessEnvironment({ captureSourceTracks: true });
   try {
     const observations: CanonicalGameplayState[] = [environment.reset(artifact.scenario)];
     let terminal: ProductionHeadlessTerminalArtifact["terminal"] | undefined;
@@ -76,21 +92,37 @@ export function captureAcademyCandidateTracks(candidate: ProductionHeadlessAcade
       || terminal.terminated !== artifact.terminal.terminated || terminal.truncated !== artifact.terminal.truncated) {
       throw new RangeError("C30 candidate reconstruction does not match its terminal artifact");
     }
+    const sourceTracks = environment.sourceTracks();
     const actions = Object.freeze(artifact.actions.map((entry) => Object.freeze({
       kind: entry.kind, id: entry.id, tick: entry.tick, command: Object.freeze({ ...entry.command }),
     })));
-    const unavailableTracks = Object.freeze([
-      "native-events", "reward-components", "intents", "build-device-provenance",
-    ] as const);
+    if (sourceTracks.rewardComponents.length !== observations.length
+      || sourceTracks.rewardComponents.some((entry, index) => entry.tick !== observations[index]?.tick)) {
+      throw new RangeError("C31 reward source track does not cover each reconstructed observation");
+    }
+    const source = Object.freeze({
+      execution: "production-headless" as const,
+      device: sourceTracks.device,
+      buildProvenance: Object.freeze({ status: "unavailable" as const,
+        reason: "C30 terminal intake has no attested build or provenance coordinate" }),
+      capsuleRange: Object.freeze({ status: "unavailable" as const,
+        reason: "C30 terminal intake has no source Ghost capsule coordinate or tick range" }),
+    });
+    const unavailableTracks = Object.freeze(["build-device-provenance", "capsule-range"] as const);
     const candidateHash = stableVerificationHash({
       sequence: candidate.sequence, episodeId: candidate.episodeId, tick: candidate.tick,
       scenario: artifact.scenario, actions, terminal: artifact.terminal,
     });
-    const bundleHash = stableVerificationHash({ candidateHash, observations, actions, terminal, unavailableTracks });
+    const bundleHash = stableVerificationHash({
+      candidateHash, observations, actions, nativeEvents: sourceTracks.nativeEvents,
+      rewardComponents: sourceTracks.rewardComponents, intents: sourceTracks.intents, source, terminal, unavailableTracks,
+    });
     return Object.freeze({
       format: "tear-academy-candidate-tracks", schemaVersion: 1,
       candidateId: candidate.episodeId, candidateHash, captureClass: "c30-terminal-reconstruction",
-      observations: Object.freeze(observations), actions, terminal: Object.freeze({ ...terminal }), unavailableTracks, bundleHash,
+      observations: Object.freeze(observations), actions,
+      nativeEvents: sourceTracks.nativeEvents, rewardComponents: sourceTracks.rewardComponents,
+      intents: sourceTracks.intents, source, terminal: Object.freeze({ ...terminal }), unavailableTracks, bundleHash,
     });
   } finally {
     environment.dispose();

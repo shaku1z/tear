@@ -226,9 +226,11 @@ This is the migration checklist for the architectural redesign. A checked featur
    candidate stream. It separately checks local/cloud/analytics/model consent,
    privacy, structured-training provenance, build identity, and a verified raw
    track bundle against a real C30 terminal before any corpus action. That
-   bundle now reconstructs actual canonical observations/actions/timing and
-   refuses its still-unavailable native event/reward/intent/device tracks; it
-   does not persist a sample or train a policy;
+   bundle now reconstructs actual canonical observations/actions/timing plus
+   native facts, reward snapshots, and ordered planner intents through the
+   shared composition. It accurately identifies the semantic source device but
+   refuses the still-unattested build/provenance and Ghost-capsule-range tracks;
+   it does not persist a sample or train a policy;
    authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

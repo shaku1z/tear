@@ -70,6 +70,21 @@ function nonEmpty(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function record(value: unknown): value is Readonly<Record<string, unknown>> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasExpectedTick(value: unknown, expected: number): boolean {
+  return record(value) && value.tick === expected;
+}
+
+function validC30SourceTracks(value: unknown): boolean {
+  if (!record(value) || value.execution !== "production-headless" || value.device !== "semantic") return false;
+  const build = value.buildProvenance;
+  const capsule = value.capsuleRange;
+  return record(build) && build.status === "unavailable" && record(capsule) && capsule.status === "unavailable";
+}
+
 function validTimestamp(value: unknown): value is string {
   return nonEmpty(value) && Number.isFinite(Date.parse(value));
 }
@@ -112,17 +127,23 @@ function candidateHash(candidate: ProductionHeadlessAcademyIntakeItem): string {
 function validTrackBundle(value: unknown, candidate: ProductionHeadlessAcademyIntakeItem): boolean {
   if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
   const bundle = value as Partial<TearAcademyCandidateTrackBundleV1>;
+  if (!Array.isArray(bundle.observations)) return false;
+  const observations = bundle.observations;
   if (bundle.format !== "tear-academy-candidate-tracks" || bundle.schemaVersion !== 1
     || bundle.candidateId !== candidate.episodeId || bundle.candidateHash !== candidateHash(candidate)
-    || bundle.captureClass !== "c30-terminal-reconstruction" || !Array.isArray(bundle.observations)
-    || bundle.observations.length < 2 || !Array.isArray(bundle.actions)
+    || bundle.captureClass !== "c30-terminal-reconstruction" || observations.length < 2 || !Array.isArray(bundle.actions)
     || bundle.actions.length !== candidate.artifact.actions.length || bundle.terminal?.tick !== candidate.tick
     || bundle.terminal.semanticHash !== candidate.artifact.terminal.semanticHash
+    || !Array.isArray(bundle.nativeEvents) || !Array.isArray(bundle.rewardComponents)
+    || bundle.rewardComponents.length !== observations.length
+    || bundle.rewardComponents.some((entry, index) => !hasExpectedTick(entry, index))
+    || !Array.isArray(bundle.intents) || !validC30SourceTracks(bundle.source)
     || !Array.isArray(bundle.unavailableTracks) || bundle.unavailableTracks.length !== 0
     || !nonEmpty(bundle.bundleHash)) return false;
   return stableVerificationHash({
     candidateHash: bundle.candidateHash, observations: bundle.observations, actions: bundle.actions,
-    terminal: bundle.terminal, unavailableTracks: bundle.unavailableTracks,
+    nativeEvents: bundle.nativeEvents, rewardComponents: bundle.rewardComponents, intents: bundle.intents,
+    source: bundle.source, terminal: bundle.terminal, unavailableTracks: bundle.unavailableTracks,
   }) === bundle.bundleHash;
 }
 

@@ -1,6 +1,8 @@
 import { createTearSpawnFactPublisher, createTearWaveFactPublisher } from "../gameplay/runtime/gameplay-event-publishers";
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
 import { dispatchWaveClearIntents, dispatchWavePlanIntents } from "../gameplay/run/wave-intent-dispatcher";
+import type { WaveClearIntent } from "../gameplay/run/wave-clear-planner";
+import type { WavePlanIntent } from "../gameplay/run/wave-planner";
 import { LiveWaveController } from "../gameplay/run/live-wave-controller";
 import { createLiveContentRuntime } from "../gameplay/run/live-content-runtime";
 import { planBossPlacement } from "../gameplay/run/boss-placement";
@@ -21,7 +23,19 @@ export interface ProductionWaveRewardRuntimeOptions {
   readonly actorId?: (enemy: object & { id?: string }) => string;
   readonly startAdventureFinale?: () => void;
   readonly winRun?: () => void;
+  /** Optional source-owned observer for the exact planner intents being applied. */
+  readonly recordIntent?: (entry: ProductionWaveRewardIntent) => void;
+  /** The authoritative scheduler tick when an intent is applied. */
+  readonly currentTick?: () => number;
 }
+
+/**
+ * A bounded record of a real wave planner decision at the production-composition
+ * boundary. It is an observation hook only: dispatch remains the sole effect.
+ */
+export type ProductionWaveRewardIntent =
+  | Readonly<{ sequence: number; tick: number; channel: "plan"; intent: WavePlanIntent }>
+  | Readonly<{ sequence: number; tick: number; channel: "clear"; intent: WaveClearIntent }>;
 
 export interface ProductionWaveRewardRuntime {
   readonly waves: LiveWaveController;
@@ -65,6 +79,22 @@ export function createProductionWaveRewardRuntime(
   const config = replay.configuration.value;
   const outward: string[] = [];
   const note = (name: string) => () => { outward.push(name); };
+  let intentSequence = 0;
+  const recordIntents = (
+    channel: "plan" | "clear",
+    intents: readonly (WavePlanIntent | WaveClearIntent)[],
+  ): void => {
+    for (const intent of intents) {
+      const copied = Object.freeze(structuredClone(intent));
+      const tick = options.currentTick?.() ?? 0;
+      if (!Number.isSafeInteger(tick) || tick < 0) throw new RangeError("production intent observer requires a non-negative scheduler tick");
+      if (channel === "plan") {
+        options.recordIntent?.(Object.freeze({ sequence: ++intentSequence, tick, channel, intent: copied as WavePlanIntent }));
+      } else {
+        options.recordIntent?.(Object.freeze({ sequence: ++intentSequence, tick, channel, intent: copied as WaveClearIntent }));
+      }
+    }
+  };
   const run = () => world.state.run() as never as ProductionRun;
   const actorId = options.actorId;
   const publishSpawn = options.gameplayEvents === undefined || actorId === undefined
@@ -140,7 +170,7 @@ export function createProductionWaveRewardRuntime(
       isWaveActive: () => world.lifecycle.isWaveActive,
       pendingReward: () => world.lifecycle.reward,
     },
-    executePlanIntents: (intents) => { dispatchWavePlanIntents(intents, {
+    executePlanIntents: (intents) => { recordIntents("plan", intents); dispatchWavePlanIntents(intents, {
       beginWipe: note("beginWipe"),
       loadStage: (index) => { stage.index = index; stage.platforms = stagePlatforms(index, config); },
       setStageBanner: note("setStageBanner"),
@@ -152,7 +182,7 @@ export function createProductionWaveRewardRuntime(
       showWaveBanner: note("showWaveBanner"),
       playWaveSound: note("playWaveSound"),
     }); },
-    executeClearIntents: (intents) => { dispatchWaveClearIntents(intents, {
+    executeClearIntents: (intents) => { recordIntents("clear", intents); dispatchWaveClearIntents(intents, {
       clearWave: () => { world.lifecycle.clearWave(); },
       bloom: note("bloom"),
       recordWave: publishWave,

@@ -238,10 +238,12 @@ Named status:
   fail-closed eligibility receipt before any corpus action: separate
   local/cloud/analytics/model consent, privacy, structured-training provenance,
   build identity, and a verified raw track bundle must agree. That bundle now
-  reconstructs exact C30 canonical observations/actions/timing but explicitly
-  leaves native event/reward/intent/device tracks unavailable, so no candidate
-  is currently eligible. It does not persist/review a sample, create manifests,
-  or train a policy.
+  reconstructs exact C30 canonical observations/actions/timing, native facts,
+  reward snapshots, and ordered planner intents through the shared composition.
+  It records the source device as semantic, but leaves attested build/provenance
+  and Ghost-capsule-range tracks unavailable, so no candidate is currently
+  eligible. It does not persist/review a sample, create manifests, or train a
+  policy.
 - **C32-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -340,8 +342,9 @@ stress proof and first-source-tick mid-run cancellation without recovery.
 Neither may be turned into storage, durable job recovery, a C31 corpus, or a
 second simulation model. Because no target profile is declared, leave that C30
 capacity claim open. C31 now rejects invalid candidate metadata and verifies a
-real canonical observation/action/timing bundle before corpus action; next wire
-its explicitly unavailable native tracks rather than inventing them.
+real canonical/native-event/reward/planner-intent bundle before corpus action;
+next bind an attested source identity and integrity-read Ghost capsule range
+rather than inventing either missing coordinate.
 
 Preserve:
 

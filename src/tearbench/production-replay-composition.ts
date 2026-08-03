@@ -15,7 +15,11 @@ import { captureLiveStateForgeSnapshot } from "./live-runtime-snapshots";
 import { createProductionCombatSimulation } from "./production-combat-simulation";
 import { createProductionRunOutcomeRuntime, type ProductionRunOutcomeRuntime } from "./production-run-outcome-runtime";
 import { createProductionReplayWorld, type ProductionReplayWorld } from "./production-world-factory";
-import { createProductionWaveRewardRuntime, type ProductionWaveRewardRuntime } from "./production-wave-reward-runtime";
+import {
+  createProductionWaveRewardRuntime,
+  type ProductionWaveRewardIntent,
+  type ProductionWaveRewardRuntime,
+} from "./production-wave-reward-runtime";
 import { ENTITY_KIND_REGISTRY } from "./registries";
 import { createDefaultStateCodecRegistry } from "./state-codecs";
 
@@ -27,6 +31,8 @@ export interface ProductionGhostReplayCompositionOptions {
   readonly inputSnapshots?: ReadonlyMap<number, AuthoritativeInputSnapshot>;
   /** Optional portable fact sink for a host that compares source replay output. */
   readonly gameplayEvents?: TearGameplayEventPort;
+  /** Optional observer for source planner intents applied by this composition. */
+  readonly recordWaveIntent?: (entry: ProductionWaveRewardIntent) => void;
   /** Optional portable terminal endpoint; device/persistence behavior stays outside this composition. */
   readonly endRun?: () => void;
 }
@@ -264,6 +270,8 @@ export function createProductionGhostReplayComposition(
       outcome = createProductionRunOutcomeRuntime(replay, options.gameplayEvents);
       waveReward = createProductionWaveRewardRuntime(replay, {
         ...(options.gameplayEvents === undefined ? {} : { gameplayEvents: options.gameplayEvents }),
+        ...(options.recordWaveIntent === undefined ? {} : { recordIntent: options.recordWaveIntent }),
+        currentTick: () => core.simulationRuntime.scheduler.tick,
         actorId: (enemy) => core.combatEntityRuntime.id(enemy, "enemy"),
       });
       if (staged === undefined) waveReward.startNaturalOpening();

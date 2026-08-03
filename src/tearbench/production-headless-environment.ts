@@ -2,6 +2,7 @@ import type { CommandEnvelope } from "../domain/envelopes";
 import { normalizeGameAction, type GameAction } from "../input/game-action";
 import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
+import { TearGameplayEventBus, type TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import { stableVerificationHash } from "../replay/hash";
 import type { createProductionCombatSimulation } from "./production-combat-simulation";
 import {
@@ -11,6 +12,7 @@ import {
 } from "./production-replay-composition";
 import type { ProductionReplayWorld } from "./production-world-factory";
 import type { ProductionWaveRewardRuntime } from "./production-wave-reward-runtime";
+import type { ProductionWaveRewardIntent } from "./production-wave-reward-runtime";
 import type { TearScenarioV1, TearSnapshotV1 } from "./contracts";
 import {
   TearHeadlessEnvironmentPool,
@@ -27,7 +29,32 @@ type ProductionHeadlessCore = Readonly<{
   waveReward: ProductionWaveRewardRuntime;
   scenario: TearScenarioV1;
   routeAction: (action: GameAction) => boolean;
+  sourceTracks?: ProductionHeadlessSourceTrackState;
 }>;
+
+interface ProductionHeadlessSourceTrackState {
+  readonly nativeEvents: TearGameplayEvent[];
+  readonly rewardComponents: Readonly<{ tick: number; value: unknown }>[];
+  readonly intents: ProductionWaveRewardIntent[];
+}
+
+/** Opt-in raw observation streams captured from a fresh shared composition. */
+export interface ProductionHeadlessSourceTracks {
+  readonly nativeEvents: readonly TearGameplayEvent[];
+  readonly rewardComponents: readonly Readonly<{ tick: number; value: unknown }>[];
+  readonly intents: readonly ProductionWaveRewardIntent[];
+  /** Headless runs have no hardware input surface; their source device is semantic. */
+  readonly device: "semantic";
+}
+
+export interface ProductionHeadlessEnvironmentOptions {
+  /**
+   * Reconstruct through an event-enabled production composition and expose
+   * its native facts, reward state, and planner-intent streams. Callers must
+   * still prove the terminal agrees with their sealed source artifact.
+   */
+  readonly captureSourceTracks?: boolean;
+}
 
 export interface ProductionHeadlessTerminalArtifact {
   readonly format: "tearbench-production-headless-terminal";
@@ -68,6 +95,8 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
 > {
   captureCheckpoint(): ProductionHeadlessCheckpoint;
   restoreCheckpoint(checkpoint: ProductionHeadlessCheckpoint): CanonicalGameplayState;
+  /** Available only when the environment was explicitly created for source-track capture. */
+  sourceTracks(): ProductionHeadlessSourceTracks;
 }
 
 function requireNaturalScenario(value: TearScenarioV1): TearScenarioV1 {
@@ -182,7 +211,9 @@ function validateCheckpoint(value: unknown): ProductionHeadlessCheckpoint {
  * DOM-free C30 adapter over the same production world/combat composition used
  * by C29 replay. It owns neither a browser scheduler nor an alternate model.
  */
-export function createProductionHeadlessEnvironment(): ProductionHeadlessEnvironment {
+export function createProductionHeadlessEnvironment(
+  options: ProductionHeadlessEnvironmentOptions = {},
+): ProductionHeadlessEnvironment {
   let core: ProductionHeadlessCore | null = null;
   let nextCommandId = 0;
   let actionTrace: CommandEnvelope<GameAction>[] = [];
@@ -202,15 +233,28 @@ export function createProductionHeadlessEnvironment(): ProductionHeadlessEnviron
     snapshot?: TearSnapshotV1,
     input?: AuthoritativeInputSnapshot,
   ): ProductionHeadlessCore => {
+    const sourceTracks: ProductionHeadlessSourceTrackState | undefined = options.captureSourceTracks === true
+      ? { nativeEvents: [], rewardComponents: [], intents: [] }
+      : undefined;
+    const gameplayEvents = sourceTracks === undefined ? undefined : new TearGameplayEventBus(() => snapshot?.tick ?? 0);
+    gameplayEvents?.subscribe((event) => { sourceTracks?.nativeEvents.push(event); });
     const composed = createProductionGhostReplayComposition({
       seed: snapshot?.seed ?? scenario.seed,
       mode: scenario.start.mode,
       weaponId: scenario.start.weapon,
       difficulty: scenario.start.difficulty,
       ...(snapshot === undefined || input === undefined ? {} : { inputSnapshots: new Map([[snapshot.tick, input]]) }),
+      ...(gameplayEvents === undefined ? {} : { gameplayEvents }),
+      ...(sourceTracks === undefined ? {} : { recordWaveIntent: (entry) => { sourceTracks.intents.push(entry); } }),
     }).create(snapshot);
-    return Object.freeze({ replay: composed.replay, simulation: composed.combat, waveReward: composed.waveReward,
-      scenario, routeAction: composed.routeAction });
+    gameplayEvents?.setTickSource(() => composed.simulation.scheduler.tick);
+    const core = Object.freeze({ replay: composed.replay, simulation: composed.combat, waveReward: composed.waveReward,
+      scenario, routeAction: composed.routeAction, ...(sourceTracks === undefined ? {} : { sourceTracks }) });
+    if (sourceTracks !== undefined) {
+      sourceTracks.rewardComponents.push(Object.freeze({ tick: composed.simulation.scheduler.tick,
+        value: structuredClone(composed.waveReward.reward.snapshot()) }));
+    }
+    return core;
   };
 
   return Object.freeze({
@@ -233,6 +277,10 @@ export function createProductionHeadlessEnvironment(): ProductionHeadlessEnviron
       const result = current.simulation.simulationRuntime.advanceOne(envelopes.filter(
         (entry) => !current.routeAction(entry.command),
       ));
+      if (current.sourceTracks !== undefined) {
+        current.sourceTracks.rewardComponents.push(Object.freeze({ tick: result.tick,
+          value: structuredClone(current.waveReward.reward.snapshot()) }));
+      }
       const lifecycle = current.replay.world.lifecycle.snapshot();
       const terminated = lifecycle.phase === "terminated";
       const truncated = result.tick >= current.scenario.maxTicks;
@@ -282,6 +330,16 @@ export function createProductionHeadlessEnvironment(): ProductionHeadlessEnviron
       nextCommandId = checkpoint.checkpoint.nextCommandId;
       actionTrace = [...checkpoint.actions];
       return restoredObservation;
+    },
+    sourceTracks(): ProductionHeadlessSourceTracks {
+      const tracks = requireCore().sourceTracks;
+      if (tracks === undefined) throw new Error("production headless source tracks were not requested");
+      return Object.freeze({
+        nativeEvents: Object.freeze(tracks.nativeEvents.map((event) => Object.freeze(structuredClone(event)))),
+        rewardComponents: Object.freeze(tracks.rewardComponents.map((entry) => Object.freeze(structuredClone(entry)))),
+        intents: Object.freeze(tracks.intents.map((entry) => Object.freeze(structuredClone(entry)) as ProductionWaveRewardIntent)),
+        device: "semantic",
+      });
     },
     dispose(): void {
       core = null;

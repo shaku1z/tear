@@ -46,9 +46,13 @@ describe("C31 Academy candidate track capture", () => {
     expect(bundle.observations.map((entry) => entry.tick)).toEqual([0, 1, 2, 3]);
     expect(bundle.actions).toEqual(source.artifact.actions);
     expect(bundle.bundleHash).toMatch(/^[a-f0-9]{16}$/u);
-    expect(bundle.unavailableTracks).toEqual([
-      "native-events", "reward-components", "intents", "build-device-provenance",
-    ]);
+    expect(bundle.rewardComponents.map((entry) => entry.tick)).toEqual([0, 1, 2, 3]);
+    expect(bundle.intents.some((entry) => entry.channel === "plan" && entry.tick === 0
+      && entry.intent.type === "prepare-wave")).toBe(true);
+    expect(bundle.nativeEvents.some((entry) => entry.kind === "wave" && entry.tick === 0)).toBe(true);
+    expect(bundle.source).toMatchObject({ execution: "production-headless", device: "semantic",
+      buildProvenance: { status: "unavailable" }, capsuleRange: { status: "unavailable" } });
+    expect(bundle.unavailableTracks).toEqual(["build-device-provenance", "capsule-range"]);
   });
 
   it("fails closed when a candidate terminal hash cannot be reconstructed", async () => {
