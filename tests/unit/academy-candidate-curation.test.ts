@@ -255,6 +255,9 @@ describe("C31 held Academy candidate curation", () => {
     expect(await reviews.get(corrections.captureHash, proposed.correctionHash)).toEqual(review);
     const augmentation = createTearDaggerRetrainingInput(first, normalization, corrections, [review]);
     expect(augmentation).toMatchObject({ datasetHash: first.datasetHash, captureHash: corrections.captureHash, examples: [{ correctionHash: proposed.correctionHash }] });
+    const retrained = trainTearBehaviorCloningPolicy(first, normalization, config, augmentation);
+    expect(retrained).toMatchObject({ datasetHash: first.datasetHash, augmentationHash: augmentation.inputHash });
+    expect(retrained.metrics.examples).toBeGreaterThan(training.metrics.examples);
     const environment = createProductionHeadlessEnvironment(), runtime = new TearActivePolicyRuntime(registry);
     try {
       environment.reset(scenario()); await runtime.reset();

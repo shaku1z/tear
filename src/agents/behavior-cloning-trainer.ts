@@ -6,6 +6,7 @@ import { createTearBehaviorCloningBatches, type TearBehaviorCloningNormalization
 import type { TearAcademyTrainingDatasetV1 } from "./academy-training-dataset";
 import { createTearPolicyArtifact, type TearPolicyArtifactDraft, type TearPolicyArtifactV1 } from "./policy-artifact-registry";
 import { TEAR_POLICY_FEATURE_SCHEMA_HASH_V1 } from "./policy-feature-vector";
+import type { TearDaggerRetrainingInputV1 } from "./dagger-retraining-input";
 
 export interface TearBehaviorCloningTrainingConfigV1 {
   readonly seed: number;
@@ -30,6 +31,7 @@ export interface TearBehaviorCloningTrainingResultV1 {
   readonly schemaVersion: 1;
   readonly datasetHash: string;
   readonly normalizationHash: string;
+  readonly augmentationHash?: string;
   readonly config: TearBehaviorCloningTrainingConfigV1;
   readonly model: TearBehaviorCloningLinearModelV1;
   readonly metrics: Readonly<{ examples: number; classes: number; updates: number; trainingAccuracy: number }>;
@@ -77,10 +79,17 @@ export function trainTearBehaviorCloningPolicy(
   dataset: TearAcademyTrainingDatasetV1,
   normalization: TearBehaviorCloningNormalizationV1,
   config: TearBehaviorCloningTrainingConfigV1,
+  augmentation?: TearDaggerRetrainingInputV1,
 ): TearBehaviorCloningTrainingResultV1 {
   if (!validConfig(config)) throw new TypeError("invalid behavior cloning training configuration");
-  const examples = createTearBehaviorCloningBatches(dataset, normalization, { split: "training", batchSize: config.batchSize })
-    .flatMap((batch) => batch.examples);
+  if (augmentation !== undefined && (augmentation.datasetHash !== dataset.datasetHash || augmentation.normalizationHash !== normalization.normalizationHash
+    || augmentation.examples.length < 1 || augmentation.inputHash !== stableVerificationHash({ format: augmentation.format, schemaVersion: augmentation.schemaVersion,
+      datasetHash: augmentation.datasetHash, normalizationHash: augmentation.normalizationHash, captureHash: augmentation.captureHash,
+      acceptedReviewHashes: augmentation.acceptedReviewHashes, examples: augmentation.examples }))) throw new TypeError("invalid DAgger retraining augmentation");
+  const examples = Object.freeze([
+    ...createTearBehaviorCloningBatches(dataset, normalization, { split: "training", batchSize: config.batchSize }).flatMap((batch) => batch.examples),
+    ...(augmentation?.examples ?? []),
+  ]);
   const actionClasses = new Map<string, readonly GameAction[]>();
   for (const example of examples) actionClasses.set(actionKey(example.targetActions), Object.freeze(structuredClone(example.targetActions)));
   const classes = Object.freeze([...actionClasses.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, actions]) => Object.freeze({ actions })));
@@ -118,7 +127,8 @@ export function trainTearBehaviorCloningPolicy(
     trainingAccuracy: examples.length === 0 ? 0 : correct / examples.length });
   const checkpoint = Object.freeze({ epoch: config.epochs, modelHash: stableVerificationHash(model), metricsHash: stableVerificationHash(metrics) });
   const draft = { format: "tear-behavior-cloning-training" as const, schemaVersion: 1 as const, datasetHash: dataset.datasetHash,
-    normalizationHash: normalization.normalizationHash, config: Object.freeze({ ...config }), model, metrics, checkpoint };
+    normalizationHash: normalization.normalizationHash, ...(augmentation === undefined ? {} : { augmentationHash: augmentation.inputHash }),
+    config: Object.freeze({ ...config }), model, metrics, checkpoint };
   return Object.freeze({ ...draft, trainingHash: stableVerificationHash(draft) });
 }
 
@@ -126,7 +136,7 @@ function parseTraining(value: unknown): TearBehaviorCloningTrainingResultV1 {
   if (!record(value)) throw new TypeError("invalid behavior cloning training record");
   const config = value.config, model = value.model, metrics = value.metrics, checkpoint = value.checkpoint;
   if (value.format !== "tear-behavior-cloning-training" || value.schemaVersion !== 1 || !hashes(value.datasetHash)
-    || !hashes(value.normalizationHash) || !record(config) || !validConfig(config as unknown as TearBehaviorCloningTrainingConfigV1)
+    || !hashes(value.normalizationHash) || (value.augmentationHash !== undefined && !hashes(value.augmentationHash)) || !record(config) || !validConfig(config as unknown as TearBehaviorCloningTrainingConfigV1)
     || !record(model) || model.format !== "tear-linear-policy-model" || model.schemaVersion !== 1 || !hashes(model.featureSchemaHash)
     || !Array.isArray(model.mean) || !Array.isArray(model.scale) || model.mean.length < 1 || model.mean.length !== model.scale.length
     || !model.mean.every((entry) => typeof entry === "number" && Number.isFinite(entry)) || !model.scale.every((entry) => typeof entry === "number" && Number.isFinite(entry) && entry > 0)
