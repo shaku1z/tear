@@ -108,6 +108,10 @@ is trained on.
   eventual Academy surface. It aggregates durable custody, quality, curation,
   split, and reviewed-sample state without giving presentation access to Vault
   stores; audit-retained revoked samples remain visible as revoked, not usable.
+- `TearAcademyInspectionController` supplies the asynchronous persistence
+  boundary for that read model. Presentation receives an immutable `loading`,
+  `ready`, or explicit `unavailable` snapshot, never an IndexedDB or Vault
+  handle.
 
 ## Exit-gate ledger
 
@@ -177,7 +181,7 @@ artifact loading, C33 behavior cloning, or C36 Foundry automation.
 ## Evidence
 
 - `pnpm check:c31:foundation` passes: typecheck, full lint, architecture
-  checks, and nine focused Vitest suites / twenty-three tests.
+  checks, and ten focused Vitest suites / twenty-four tests.
 - `academy-candidate-admission.test.ts` generates a real C30 terminal through
   the bounded production pool and candidate intake. It asserts that the current
   verified-but-incomplete track bundle remains rejected, plus the pre-corpus
@@ -223,6 +227,8 @@ artifact loading, C33 behavior cloning, or C36 Foundry automation.
   contains no entry for that still-auditable sample. The Academy inspection
   snapshot reports that real custody as revoked while retaining its reviewed
   sample count for audit visibility.
+- `academy-inspection-controller.test.ts` proves an unsupported runtime reports
+  an explicit, stable unavailable state rather than a misleading empty Academy.
 - That same custody proof rejects a foreign Vault for deletion, atomically
   removes the actual materialized source capsule only from its matching Vault,
   and retains the durable `deleted` tombstone outside future held queries.
