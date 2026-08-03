@@ -19,6 +19,7 @@ export * from "./academy-reviewed-sample";
 export * from "./academy-corpus";
 export * from "./policy-artifact-registry";
 export * from "./policy-runtime";
+export * from "./policy-decision-journal";
 export * from "./browser-active-policy-runtime";
 export * from "./academy-inspector";
 export * from "./academy-inspection-controller";

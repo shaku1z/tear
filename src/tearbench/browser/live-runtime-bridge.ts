@@ -86,7 +86,8 @@ export function installLiveTearRuntimeBridge(
       import("../../agents/live-watch-agent-host"),
       import("../../agents/browser-active-policy-runtime"),
     ]).then(async ([{ installLiveWatchAgentHost }, { createBrowserActivePolicyRuntime }]) => {
-      installLiveWatchAgentHost(context, target, await createBrowserActivePolicyRuntime(target.indexedDB));
+      const policy = await createBrowserActivePolicyRuntime(target.indexedDB);
+      installLiveWatchAgentHost(context, target, policy?.runtime, policy?.decisionJournal);
     });
   }
 }

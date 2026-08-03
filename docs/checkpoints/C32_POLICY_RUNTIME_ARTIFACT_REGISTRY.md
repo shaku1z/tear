@@ -32,6 +32,15 @@ executed, trained, or been promoted by an evaluation result.
   local IndexedDB Vault before reload, then proves the normal `watchagent=1`
   route reports the artifact receipt and runs the artifact's canonical move
   action through its existing semantic input path.
+- The same browser composition gives the Watch host a separate bounded Ghost
+  Vault `analysis` journal. Each artifact or scripted-fallback receipt queues
+  the actual submitted canonical action batch, structured observation hash, and
+  hierarchy intent trace in a versioned, hash-chained record. The journal is
+  capped at 256 retained entries, preserves a dropped-entry count, validates
+  every stored action/hash on read, and quarantines malformed bytes before a
+  fresh record is written. Its queued local-storage failure is inspectable in
+  the Class-A snapshot and never changes simulation or semantic input routing.
+  It is deliberately not a Ghost causal gameplay capsule stream.
 
 ## Exit-gate status
 
@@ -40,33 +49,36 @@ executed, trained, or been promoted by an evaluation result.
 - [x] Promotion and rollback pointer mechanics are permanently exercised.
 - [x] Corrupt and incompatible artifacts are rejected and quarantined without
   replacing a known active artifact.
-- [ ] A clean-process runtime loads an active artifact, observes real gameplay,
-  returns legal actions, and records a Ghost decision trace. The first three
-  are now proved by the browser-seeded Watch journey; Ghost decision tracing is
-  still open.
-- [ ] Reproducible artifact evaluation, inference timeouts/budgets, scripted
-  fallback, retention, and player-visible Watch Agent integration.
+- [x] A clean-process runtime loads an active artifact, observes real gameplay,
+  returns legal actions, and records a bounded Ghost Vault decision trace. The
+  browser-seeded Watch journey reloads a real IndexedDB artifact, observes real
+  gameplay, submits its legal semantic action, then reads back the persisted
+  artifact receipt, action hash, and Class-A intent trace.
+- [ ] Reproducible artifact evaluation, inference timeouts/budgets, retention
+  policy, and player-visible Watch Agent integration.
 
 ## Evidence
 
-`pnpm check:c32:foundation` passes requirements traceability, strict type and
-lint checks, architecture boundaries, durable registry/runtime tests, a
-test-standalone build, and the browser-seeded active-artifact Watch journey. The
-tests prove round trip, atomic activation, rollback, history, corruption
-quarantine, incompatibility rejection, active-policy preservation, legal action
-decode, deterministic structured encoding, scripted fallback, and normal
-browser Vault-to-Watch composition.
+The C32 foundation components pass requirements traceability, strict type and
+lint checks, architecture boundaries, six durable registry/runtime/journal
+contract tests, a test-standalone build, and the browser-seeded active-artifact
+Watch journey. The tests prove round trip, atomic activation, rollback, history,
+corruption quarantine, incompatibility rejection, active-policy preservation,
+legal action decode, deterministic structured encoding, scripted fallback,
+bounded decision-journal retention/integrity/quarantine, and normal browser
+Vault-to-Watch composition with persisted receipt readback.
 
 ## Deliberately not claimed
 
 Only the bounded `table-policy-v1` data format is interpreted; arbitrary opaque
 payloads are not executable code. This does not train from C31, establish model
-quality, evaluate a policy, record a Ghost decision trace, claim an artifact is
-safe for a player, provide cloud publication, or wire the Watch Agent UI.
-Those require the remaining C32 exit evidence and later checkpoints.
+quality, evaluate a policy, claim an artifact is safe for a player, provide
+cloud publication, or wire player-facing Watch Agent controls. The decision
+journal is diagnostic Class-A analysis evidence, not a causal capsule, replay,
+pixel/audio/device-output trace, or player-visible policy explanation.
 
-DONE THIS STEP:      The C32 registry now also has a resettable active-artifact runtime with deterministic structured encoding, canonical action decode, and scripted fallback.
-PROVEN BY:           `pnpm check:c32:foundation` and its four permanent registry/runtime contract tests.
-REMAINING HERE:      Bounded Ghost decision tracing, evaluation, inference budgets/retention, and further Watch Agent evidence.
+DONE THIS STEP:      The C32 Watch path now persists bounded, integrity-checked Ghost Vault analysis receipts for active-artifact or scripted-fallback decisions without altering the causal recorder or semantic action route.
+PROVEN BY:           C32 targeted requirements/type/lint/architecture checks, six permanent registry/runtime/journal contract tests, and the browser-seeded real-IndexedDB Watch readback journey.
+REMAINING HERE:      Reproducible evaluation, inference budgets/timeouts, retention policy, and player-visible Watch Agent controls.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C32-C40 product evidence.
-NEXT SLICE:          Record bounded Ghost decision receipts from the active-artifact Watch path without widening the Class-A observation or bypassing semantic input.
+NEXT SLICE:          Define a bounded reproducible evaluation contract for the active artifact against a fixed source-owned scenario set; do not call it training or promotion.

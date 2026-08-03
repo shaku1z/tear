@@ -62,4 +62,23 @@ withJourney({ name: "C32 active artifact Watch Agent", port: 8162, deferBoot: tr
   assert.equal(snapshot.policyReceipt?.artifactId, "browser-c32-table");
   assert.equal(snapshot.lastTrace?.observationClass, "privileged-diagnostic");
   assert.equal(snapshot.status, "running");
+  assert.ok(snapshot.policyDecisionTrace?.id, JSON.stringify(snapshot));
+  await page.waitForFunction(() => {
+    const trace = window.__TEAR_WATCH_AGENT__.snapshot().policyDecisionTrace;
+    return trace && trace.pending === 0 && trace.committed > 0;
+  }, undefined, { timeout: 10_000 });
+  const journal = await page.evaluate(async (id) => new Promise((resolve, reject) => {
+    const request = indexedDB.open("tear-ghost-v3", 2);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const transaction = request.result.transaction("analysis", "readonly");
+      const read = transaction.objectStore("analysis").get(`policy-decision-journal:v1:${id}`);
+      read.onerror = () => reject(read.error);
+      read.onsuccess = () => { request.result.close(); resolve(read.result === undefined ? undefined : JSON.parse(read.result)); };
+    };
+  }), snapshot.policyDecisionTrace.id);
+  assert.equal(journal.format, "tear-policy-decision-journal");
+  assert.equal(journal.entries.at(-1).receipt.source, "artifact");
+  assert.equal(journal.entries.at(-1).receipt.artifactId, "browser-c32-table");
+  assert.equal(journal.entries.at(-1).trace.observationClass, "privileged-diagnostic");
 });

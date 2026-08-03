@@ -265,8 +265,11 @@ This is the migration checklist for the architectural redesign. A checked featur
    payloads, train from Academy data, or expose a Watch Agent policy. A
    browser-seeded IndexedDB artifact now survives reload into the normal Class-A
    Watch Agent route and its validated canonical action is submitted through
-   semantic input with an inspectable receipt. Ghost decision traces, policy
-   evaluation, and player-facing policy controls remain absent. Account/
+   semantic input with an inspectable receipt. That normal route also writes a
+   bounded integrity-checked Ghost Vault analysis decision journal containing
+   the real canonical action batch, observation hash, artifact receipt, and
+   Class-A hierarchy trace; it is explicitly separate from causal capsule
+   recording. Policy evaluation and player-facing policy controls remain absent. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

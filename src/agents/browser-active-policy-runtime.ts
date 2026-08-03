@@ -1,4 +1,5 @@
 import { createIndexedDbGhostVaultBackend } from "../ghost";
+import { TearPolicyDecisionJournal } from "./policy-decision-journal";
 import { TearActivePolicyRuntime } from "./policy-runtime";
 import { TearPolicyArtifactRegistry, type TearPolicyRuntimeCompatibility } from "./policy-artifact-registry";
 
@@ -9,11 +10,17 @@ export const DEFAULT_TEAR_POLICY_RUNTIME_COMPATIBILITY: TearPolicyRuntimeCompati
   modelFormats: Object.freeze(["table-policy-v1"]),
 });
 
+export interface BrowserActivePolicyRuntimeComposition {
+  readonly runtime: TearActivePolicyRuntime;
+  readonly decisionJournal: TearPolicyDecisionJournal;
+}
+
 /** Browser composition only: open the local Vault and reset the policy before a controller can consume it. */
-export async function createBrowserActivePolicyRuntime(factory: IDBFactory | undefined): Promise<TearActivePolicyRuntime | undefined> {
+export async function createBrowserActivePolicyRuntime(factory: IDBFactory | undefined): Promise<BrowserActivePolicyRuntimeComposition | undefined> {
   if (factory === undefined) return undefined;
-  const registry = new TearPolicyArtifactRegistry(await createIndexedDbGhostVaultBackend(factory), DEFAULT_TEAR_POLICY_RUNTIME_COMPATIBILITY);
+  const backend = await createIndexedDbGhostVaultBackend(factory);
+  const registry = new TearPolicyArtifactRegistry(backend, DEFAULT_TEAR_POLICY_RUNTIME_COMPATIBILITY);
   const runtime = new TearActivePolicyRuntime(registry);
   await runtime.reset();
-  return runtime;
+  return Object.freeze({ runtime, decisionJournal: new TearPolicyDecisionJournal(backend) });
 }
