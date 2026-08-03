@@ -3,7 +3,7 @@ import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import type { GameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
-import type { TearBuildIdentityV1 } from "../tearbench/contracts";
+import type { TearBuildIdentityV1, TearScenarioV1 } from "../tearbench/contracts";
 import type { ProductionWaveRewardIntent } from "../tearbench";
 import {
   createProductionHeadlessEnvironment,
@@ -41,6 +41,8 @@ export interface TearAcademyCandidateTrackBundleV1 {
   readonly nativeEvents: readonly TearGameplayEvent[];
   readonly rewardComponents: readonly Readonly<{ tick: number; value: unknown }>[];
   readonly intents: readonly ProductionWaveRewardIntent[];
+  /** Optional on legacy evidence; newly captured tracks bind their source episode identity. */
+  readonly sourceScenario?: TearScenarioV1;
   readonly source: Readonly<{
     execution: "production-headless";
     device: "semantic";
@@ -180,7 +182,7 @@ export function captureAcademyCandidateTracks(
       : Object.freeze([] as const);
     const candidateHash = academyCandidateHash(candidate);
     const bundleHash = stableVerificationHash({
-      candidateHash, observations, actions, nativeEvents: sourceTracks.nativeEvents,
+      candidateHash, observations, actions, nativeEvents: sourceTracks.nativeEvents, sourceScenario: artifact.scenario,
       rewardComponents: sourceTracks.rewardComponents, intents: sourceTracks.intents, source, terminal, unavailableTracks,
     });
     return Object.freeze({
@@ -188,7 +190,8 @@ export function captureAcademyCandidateTracks(
       candidateId: candidate.episodeId, candidateHash, captureClass: "c30-terminal-reconstruction",
       observations: Object.freeze(observations), actions,
       nativeEvents: sourceTracks.nativeEvents, rewardComponents: sourceTracks.rewardComponents,
-      intents: sourceTracks.intents, source, terminal: Object.freeze({ ...terminal }), unavailableTracks, bundleHash,
+      intents: sourceTracks.intents, sourceScenario: Object.freeze(structuredClone(artifact.scenario)),
+      source, terminal: Object.freeze({ ...terminal }), unavailableTracks, bundleHash,
     });
   } finally {
     environment.dispose();

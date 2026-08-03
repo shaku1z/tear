@@ -28,6 +28,8 @@ export interface TearTemporalPolicyTrainingResultV1 {
   readonly schemaVersion: 1;
   readonly datasetHash: string;
   readonly normalizationHash: string;
+  /** Exact governed training episode identities; later unseen-seed evaluation rejects overlap. */
+  readonly trainingScenarioHashes: readonly string[];
   readonly config: TearTemporalPolicyTrainingConfigV1;
   readonly model: TearTemporalWindowLinearModelV1;
   readonly metrics: Readonly<{ examples: number; classes: number; updates: number; trainingAccuracy: number }>;
@@ -41,6 +43,13 @@ function validConfig(config: TearTemporalPolicyTrainingConfigV1): boolean {
     && Number.isSafeInteger(config.window) && config.window >= 1 && config.window <= 64;
 }
 function actionKey(actions: readonly GameAction[]): string { return stableVerificationHash(actions); }
+function trainingScenarioHashes(dataset: TearAcademyTrainingDatasetV1): readonly string[] {
+  const hashes = dataset.sequences.filter((entry) => entry.split === "training").map((entry) => {
+    if (entry.sourceScenario === undefined) throw new RangeError("temporal policy training requires source scenario identity");
+    return stableVerificationHash(entry.sourceScenario);
+  });
+  return Object.freeze([...new Set(hashes)].sort());
+}
 function predict(weights: readonly (readonly number[])[], biases: readonly number[], features: readonly number[]): number {
   let selected = 0, best = Number.NEGATIVE_INFINITY;
   for (let index = 0; index < weights.length; index += 1) {
@@ -66,6 +75,7 @@ function examples(dataset: TearAcademyTrainingDatasetV1, normalization: TearBeha
 export function trainTearTemporalWindowPolicy(dataset: TearAcademyTrainingDatasetV1, normalization: TearBehaviorCloningNormalizationV1,
   config: TearTemporalPolicyTrainingConfigV1): TearTemporalPolicyTrainingResultV1 {
   const training = examples(dataset, normalization, config); if (training.length < 1) throw new RangeError("temporal policy training requires examples");
+  const sourceHashes = trainingScenarioHashes(dataset);
   const byAction = new Map<string, readonly GameAction[]>(); for (const example of training) byAction.set(actionKey(example.targetActions), example.targetActions);
   const classes = Object.freeze([...byAction.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, actions]) => Object.freeze({ actions: Object.freeze(structuredClone(actions)) })));
   const classByAction = new Map(classes.map((entry, index) => [actionKey(entry.actions), index]));
@@ -84,7 +94,7 @@ export function trainTearTemporalWindowPolicy(dataset: TearAcademyTrainingDatase
     weights: Object.freeze(weights.map((row) => Object.freeze([...row]))), biases: Object.freeze([...biases]) });
   const metrics = Object.freeze({ examples: training.length, classes: classes.length, updates, trainingAccuracy: correct / training.length });
   const draft = { format: "tear-temporal-policy-training" as const, schemaVersion: 1 as const, datasetHash: dataset.datasetHash,
-    normalizationHash: normalization.normalizationHash, config: Object.freeze({ ...config }), model, metrics };
+    normalizationHash: normalization.normalizationHash, trainingScenarioHashes: sourceHashes, config: Object.freeze({ ...config }), model, metrics };
   return Object.freeze({ ...draft, trainingHash: stableVerificationHash(draft) });
 }
 
@@ -95,5 +105,7 @@ export function createTearTemporalWindowPolicyArtifact(training: TearTemporalPol
     throw new RangeError("temporal policy artifact must declare its training result and temporal runtime compatibility");
   }
   return createTearPolicyArtifact({ ...artifact, model: { format: "temporal-window-linear-policy-v1", payload: JSON.stringify(training.model) },
-    metrics: Object.freeze({ ...artifact.metrics, trainingAccuracy: training.metrics.trainingAccuracy, trainingExamples: training.metrics.examples }), });
+    metrics: Object.freeze({ ...artifact.metrics, trainingAccuracy: training.metrics.trainingAccuracy, trainingExamples: training.metrics.examples }),
+    extensions: Object.freeze({ ...artifact.extensions, temporalPolicyTraining: Object.freeze({ format: "tear-temporal-policy-training-provenance", schemaVersion: 1,
+      trainingHash: training.trainingHash, trainingScenarioHashes: training.trainingScenarioHashes }) }), });
 }

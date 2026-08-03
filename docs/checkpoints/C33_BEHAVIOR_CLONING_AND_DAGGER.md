@@ -140,17 +140,28 @@ is a temporal-window perceptron—not a recurrent/GRU/LSTM architecture—and it
 does not establish unseen-seed quality, a baseline comparison, promotion, or
 player-facing training.
 
+New C31 captures also bind the exact source scenario identity into the governed
+training sequence. A temporal fit retains the hashes of its training scenarios,
+and `compareTemporalPolicyAgainstScriptedBaselineInProduction` refuses any
+comparison suite that overlaps them. It runs fresh source-world episodes for
+the temporal artifact and the named scripted profile and records only terminal,
+truncation, and decision-count deltas. The permanent two-tick fixture has zero
+delta; that verifies deterministic, non-overlapping measurement plumbing, not
+a win. No C33 §8 baseline item is ticked until a meaningful unseen suite and a
+real artifact advantage are both evidenced.
+
 ## Deliberately not claimed
 
 This is not a recurrent/GRU/LSTM policy, a meaningful quality score, a
-scripted-baseline comparison, promotion, or automatic player-facing training.
+measured artifact win over the scripted baseline, promotion, or automatic
+player-facing training.
 Those remain C33 work.
 
-DONE THIS STEP:      C33 has a deterministic finite temporal-window artifact from governed tracks that executes in the C32 source-world runtime; C33 §8's measured scripted-baseline item is now unblocked, not ticked.
-PROVEN BY:           Focused C33 and C32 runtime tests: 2 files / 10 tests, plus targeted ESLint, TypeScript, requirements, and architecture gates.
-REMAINING HERE:      Measured unseen-seed baseline comparison, conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence.
+DONE THIS STEP:      C33 now preserves training-scenario provenance and records a fail-closed non-overlapping source-world temporal-versus-scripted comparison; it reports no win on the deliberately tiny fixture, so C33 §8 remains unticked.
+PROVEN BY:           Focused C31/C32/C33 track, admission, curation, and production-evaluator tests: 4 files / 13 tests, plus targeted ESLint, TypeScript, requirements, and architecture gates.
+REMAINING HERE:      Meaningful unseen-seed baseline win evidence, conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Add a bounded source-world unseen-seed outcome comparison between this temporal artifact and the scripted baseline; tick C33 §8 only if the metric is real and the artifact actually wins.
+NEXT SLICE:          Define a meaningful bounded recovery/lesson evaluation suite and outcome semantics, then run the temporal artifact against the scripted baseline; tick C33 §8 only for a real measured advantage.
 
 ## Slice pacing finding — 2026-08-03
 

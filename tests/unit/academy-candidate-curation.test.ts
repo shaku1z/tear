@@ -22,6 +22,7 @@ import {
   createTearTemporalPolicyContexts,
   trainTearTemporalWindowPolicy,
   createTearTemporalWindowPolicyArtifact,
+  compareTemporalPolicyAgainstScriptedBaselineInProduction,
   TearAcademyTrainingDatasetLoader,
   TearBehaviorCloningTrainingVault,
   TearPolicyArtifactRegistry,
@@ -301,6 +302,15 @@ describe("C31 held Academy candidate curation", () => {
       expect(temporalRuntime.decide({ state: temporalEnvironment.policyObservation(), ui: { screen: "playing" } }).receipt)
         .toMatchObject({ source: "artifact", artifactId: temporalArtifact.id });
     } finally { temporalEnvironment.dispose(); }
+    const unseenSuite = Object.freeze({ id: "c33-temporal-unseen", version: 1, description: "C33 source-world unseen-seed observation",
+      scenarios: Object.freeze([scenario("c33-temporal-unseen", "c33-temporal-unseen-seed")]) });
+    const comparison = await compareTemporalPolicyAgainstScriptedBaselineInProduction(temporalRegistry, unseenSuite);
+    expect(await compareTemporalPolicyAgainstScriptedBaselineInProduction(temporalRegistry, unseenSuite)).toEqual(comparison);
+    expect(comparison.artifact).toMatchObject({ id: temporalArtifact.id, trainingHash: temporal.trainingHash });
+    expect(comparison.suite).toMatchObject({ id: unseenSuite.id });
+    expect(comparison.metrics).toEqual({ terminatedScenarioDelta: 0, truncatedScenarioDelta: 0, executedDecisionDelta: 0 });
+    await expect(compareTemporalPolicyAgainstScriptedBaselineInProduction(temporalRegistry, Object.freeze({ ...unseenSuite,
+      id: "c33-temporal-overlap", scenarios: Object.freeze([input.declaration.candidate.artifact.scenario]) }))).rejects.toThrow(/overlaps/u);
     await input.backend.put("analysis", `behavior-cloning-training:v1:${training.trainingHash}`, "not-json");
     expect(await trainingVault.get(training.trainingHash)).toBeUndefined();
     expect((await input.backend.keys("quarantine")).some((key) => key.endsWith(training.trainingHash))).toBe(true);

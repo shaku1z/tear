@@ -1,4 +1,5 @@
 import { stableVerificationHash } from "../replay/hash";
+import type { TearScenarioV1 } from "../tearbench/contracts";
 import type { TearAcademyCandidateTrackBundleV1 } from "./academy-candidate-tracks";
 import type { TearAcademyCorpusEntryV1, TearAcademyCorpusManifestV1, TearAcademyCorpusStore } from "./academy-corpus";
 import type { TearAcademyReviewedSampleStore } from "./academy-reviewed-sample";
@@ -15,6 +16,8 @@ export interface TearAcademyTrainingSequenceV1 {
   readonly lessonId: string;
   readonly segmentKind: TearAcademyCorpusEntryV1["segmentKind"];
   readonly tags: readonly string[];
+  /** Source episode identity enables later fail-closed unseen-seed evaluation. */
+  readonly sourceScenario?: TearScenarioV1;
   readonly tracks: TearAcademyCandidateTrackBundleV1;
   readonly sequenceHash: string;
 }
@@ -58,7 +61,8 @@ function sequenceHash(entry: TearAcademyCorpusEntryV1, tracks: TearAcademyCandid
 function freezeSequence(entry: TearAcademyCorpusEntryV1, tracks: TearAcademyCandidateTrackBundleV1): TearAcademyTrainingSequenceV1 {
   if (entry.split === "hidden-release-exam") throw new RangeError("Academy training datasets exclude hidden release exams");
   return Object.freeze({ candidateHash: entry.candidateHash, split: entry.split, lessonId: entry.lessonId, segmentKind: entry.segmentKind,
-    tags: Object.freeze([...entry.tags]), tracks: Object.freeze(structuredClone(tracks)), sequenceHash: sequenceHash(entry, tracks) });
+    tags: Object.freeze([...entry.tags]), ...(tracks.sourceScenario === undefined ? {} : { sourceScenario: Object.freeze(structuredClone(tracks.sourceScenario)) }),
+    tracks: Object.freeze(structuredClone(tracks)), sequenceHash: sequenceHash(entry, tracks) });
 }
 
 /**

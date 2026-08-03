@@ -76,7 +76,7 @@ function integer(value: unknown): value is number { return Number.isSafeInteger(
 function timestamp(value: unknown): value is string { return text(value) && Number.isFinite(Date.parse(value)); }
 function hashes(value: unknown): value is string { return typeof value === "string" && HASH.test(value); }
 function suiteRetentionHash(value: Omit<TearProductionPolicyOutcomeSuiteRetentionReceiptV1, "receiptHash">): string { return stableVerificationHash(value); }
-function validateSuite(suite: TearProductionPolicyEvaluationSuiteV1): void {
+export function validateTearProductionPolicyEvaluationSuite(suite: TearProductionPolicyEvaluationSuiteV1): void {
   if (!text(suite.id) || !Number.isSafeInteger(suite.version) || suite.version < 1 || !text(suite.description)
     || suite.scenarios.length < 1 || suite.scenarios.length > 32) throw new TypeError("invalid production policy evaluation suite");
   const identities = new Set<string>();
@@ -291,7 +291,7 @@ export async function evaluateActiveTearPolicyOutcomeSuiteInProduction(
   registry: TearPolicyArtifactRegistry,
   suite: TearProductionPolicyEvaluationSuiteV1,
 ): Promise<TearProductionPolicyOutcomeSuiteReportV1> {
-  validateSuite(suite);
+  validateTearProductionPolicyEvaluationSuite(suite);
   const mutableReports: TearProductionPolicyEvaluationReportV1[] = [];
   for (const scenario of suite.scenarios) mutableReports.push(await evaluateActiveTearPolicyInProduction(registry, scenario));
   const reports = Object.freeze(mutableReports);

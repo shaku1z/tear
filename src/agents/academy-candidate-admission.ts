@@ -181,11 +181,14 @@ function validTrackBundle(value: unknown, candidate: ProductionHeadlessAcademyIn
     || !Array.isArray(bundle.intents) || !Array.isArray(bundle.unavailableTracks)
     || !validC30SourceTracks(bundle.source, bundle.unavailableTracks, candidate)
     || !nonEmpty(bundle.bundleHash)) return false;
-  return stableVerificationHash({
+  const draft = {
     candidateHash: bundle.candidateHash, observations: bundle.observations, actions: bundle.actions,
     nativeEvents: bundle.nativeEvents, rewardComponents: bundle.rewardComponents, intents: bundle.intents,
+    ...(bundle.sourceScenario === undefined ? {} : { sourceScenario: bundle.sourceScenario }),
     source: bundle.source, terminal: bundle.terminal, unavailableTracks: bundle.unavailableTracks,
-  }) === bundle.bundleHash;
+  };
+  return (bundle.sourceScenario === undefined || stableVerificationHash(bundle.sourceScenario) === stableVerificationHash(candidate.artifact.scenario))
+    && stableVerificationHash(draft) === bundle.bundleHash;
 }
 
 function consentReason(value: unknown, provenance: unknown, privacy: unknown): TearAcademyCandidateRejection | undefined {

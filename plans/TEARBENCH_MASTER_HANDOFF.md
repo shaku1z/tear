@@ -537,11 +537,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C33 now has a deterministic bounded temporal-window artifact from governed tracks, executing through C32's source-world runtime; it is not a quality, activation, or promotion result.
-PROVEN BY:           Focused C33/C32 temporal source-world tests (2 files / 10 tests), targeted ESLint, TypeScript, requirements, and architecture gates.
-REMAINING HERE:      C33 needs a measured unseen-seed scripted-baseline comparison, conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
+DONE THIS STEP:      C33 now preserves governed training-scenario provenance and has a fail-closed source-world temporal-versus-scripted comparator. The tiny fixture has zero delta, so this is measurement plumbing, not a quality or promotion result.
+PROVEN BY:           Focused C31/C32/C33 track, admission, curation, and production-evaluator tests: 4 files / 13 tests, plus targeted ESLint, TypeScript, requirements, and architecture gates.
+REMAINING HERE:      C33 needs meaningful unseen-seed baseline-win evidence, conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C33-C40 product evidence remain; C27A, C28, and C32 are closed.
-NEXT SLICE:          C33: compare the temporal artifact and scripted baseline on bounded unseen source-world seeds; tick C33 §8 only when a real measured artifact win exists.
+NEXT SLICE:          C33: define a meaningful bounded recovery/lesson outcome suite, then compare temporal and scripted policies; tick C33 §8 only for a real measured advantage.
 
 ### C33 pacing finding
 

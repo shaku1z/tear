@@ -305,7 +305,10 @@ This is the migration checklist for the architectural redesign. A checked featur
    governed tracks and executes its data-only artifact through the same C32
    source-world runtime; it has no future frames and clears its bounded history
    on reset. It is not a GRU/LSTM, quality result, baseline comparison, or
-   promotion path. Meaningful held-out quality, a reviewed/ingested DAgger loop,
+   promotion path. New temporal fits retain governed training-scenario hashes;
+   a source-world temporal-versus-scripted comparison fails closed on overlap
+   and records observed deltas only. Meaningful held-out quality, a
+   reviewed/ingested DAgger loop,
    and promotion remain absent. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
