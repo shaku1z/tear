@@ -39,6 +39,8 @@ export interface TearHeadlessExecutionControl {
   readonly now?: () => number;
   readonly timeoutMilliseconds?: number;
   readonly isCancelled?: () => boolean;
+  /** Observes a completed source tick; it cannot alter simulation control flow. */
+  readonly onStep?: (tick: number) => void;
   readonly onArtifact?: (tick: number, artifact: unknown) => void;
 }
 
@@ -83,6 +85,7 @@ export class TearHeadlessRunner<TScenario, TObservation, TAction> {
         steps += 1;
         observations.push(transition.observation);
         metrics = transition.metrics ?? metrics;
+        control.onStep?.(steps);
         if (transition.artifact !== undefined) control.onArtifact?.(steps, transition.artifact);
         if (transition.terminated) { outcome = "terminated"; break; }
         if (transition.truncated) { outcome = "truncated"; break; }

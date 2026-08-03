@@ -47,6 +47,7 @@ async function run(message) {
     const environment = createProductionHeadlessEnvironment();
     const runner = new TearHeadlessRunner(environment);
     let terminal;
+    let started = false;
     try {
       const episode = runner.run({
         id: parsed.requestId,
@@ -60,6 +61,13 @@ async function run(message) {
       }, 1, {
         ...(parsed.timeoutMilliseconds === undefined ? {} : { timeoutMilliseconds: parsed.timeoutMilliseconds }),
         isCancelled: () => parsed.cancelled,
+        onStep: (tick) => {
+          if (!started && tick === 1) {
+            started = true;
+            send({ format: "tearbench-production-headless-worker", schemaVersion: 1,
+              kind: "started", requestId: parsed.requestId, ticks: tick });
+          }
+        },
         onArtifact: (_tick, artifact) => { terminal = artifact; },
       });
       const kind = episode.outcome === "cancelled" || episode.outcome === "timed-out"

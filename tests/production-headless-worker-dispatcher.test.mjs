@@ -118,3 +118,29 @@ test("C30 dispatcher stress-runs 32 independent source episodes through exactly 
   const reuse = await dispatcher.run([request("worker-scale-reuse-a"), request("worker-scale-reuse-b")]);
   assert.ok(reuse.every((entry) => entry.kind === "completed" && workerPids.includes(entry.workerPid)));
 }, { timeout: 120_000 });
+
+test("C30 dispatcher cancels only after a real source tick and starts a clean replacement without recovery", async (context) => {
+  const dispatcher = new ProductionHeadlessWorkerDispatcher({
+    maxWorkers: 1, deadlineMilliseconds: 30_000, startupDeadlineMilliseconds: 30_000,
+  });
+  context.after(() => dispatcher.dispose());
+  const warm = await dispatcher.run([request("mid-run-warm")]);
+
+  const longScenario = {
+    ...request("mid-run-cancel").scenario,
+    id: "mid-run-cancel", seed: "c30-mid-run-cancel", maxTicks: 1_000_000,
+    start: { mode: "playground", difficulty: "normal", weapon: "sword" },
+  };
+  const running = dispatcher.run([request("mid-run-cancel", { scenario: longScenario })]);
+  assert.equal(await dispatcher.cancel("mid-run-cancel"), true, "cancellation waits for the worker's first source tick");
+  const cancelled = await running;
+  assert.deepEqual(cancelled.map((entry) => entry.kind), ["cancelled"]);
+  assert.equal(cancelled[0].dispatch, "mid-run");
+  assert.equal(cancelled[0].ticks, 1);
+  assert.equal(cancelled[0].attempts.length, 1, "cancellation does not imply retry or recovery");
+
+  const replacement = await dispatcher.run([request("mid-run-replacement")]);
+  assert.equal(replacement[0].kind, "completed");
+  assert.notEqual(replacement[0].workerPid, warm[0].workerPid);
+  assert.notEqual(replacement[0].workerPid, cancelled[0].workerPid);
+}, { timeout: 60_000 });

@@ -117,6 +117,25 @@ export class ProductionHeadlessWorkerDispatcher {
     return Object.freeze(results);
   }
 
+  /**
+   * Stops only an already-started request. It returns no recoverable job state:
+   * callers receive a serializable cancellation result and must submit a new
+   * request if they later choose to run another source episode.
+   */
+  cancel(requestId) {
+    if (typeof requestId !== "string" || requestId.length === 0) throw new TypeError("cancel requestId must be non-empty");
+    for (const slot of this.#workers) {
+      const active = slot.active;
+      if (active?.requestId !== requestId || active.cancelRequested) continue;
+      active.cancelRequested = true;
+      return new Promise((resolve) => {
+        active.cancelResolve = resolve;
+        if (active.started) this.#cancelActive(slot, active);
+      });
+    }
+    return Promise.resolve(false);
+  }
+
   dispose() {
     this.#closed = true;
     for (const slot of this.#workers) {
@@ -138,6 +157,7 @@ export class ProductionHeadlessWorkerDispatcher {
     child.on("exit", (code, signal) => {
       slot.alive = false;
       this.#workers.delete(slot);
+      slot.active?.cancelResolve?.(false);
       slot.active?.resolve(Object.freeze({
         format: workerFormat, schemaVersion: 1,
         kind: "failed", requestId: slot.active.requestId,
@@ -155,6 +175,19 @@ export class ProductionHeadlessWorkerDispatcher {
       child.once("error", rejectReady);
     });
     return ready;
+  }
+
+  #cancelActive(slot, active) {
+    if (slot.active !== active || !active.started) return false;
+    slot.alive = false;
+    slot.child.kill();
+    active.resolve(Object.freeze({
+      format: workerFormat, schemaVersion: 1,
+      kind: "cancelled", requestId: active.requestId, ticks: 1,
+      workerPid: slot.child.pid, dispatch: "mid-run",
+    }));
+    active.cancelResolve?.(true);
+    return true;
   }
 
   async #runWithAttempts(slot, request, deadlineMilliseconds) {
@@ -182,6 +215,14 @@ export class ProductionHeadlessWorkerDispatcher {
       };
       const onMessage = (message) => {
         if (message?.format !== workerFormat || message.requestId !== id || message.kind === "ready") return;
+        if (message.kind === "started") {
+          const active = slot.active;
+          if (active?.requestId === id) {
+            active.started = true;
+            if (active.cancelRequested) this.#cancelActive(slot, active);
+          }
+          return;
+        }
         settle(Object.freeze({ ...message, workerPid: slot.child.pid }));
       };
       const timer = setTimeout(() => {
@@ -193,7 +234,7 @@ export class ProductionHeadlessWorkerDispatcher {
           error: `dispatcher deadline exceeded after ${String(deadlineMilliseconds)}ms`, workerPid: slot.child.pid,
         }));
       }, deadlineMilliseconds);
-      slot.active = { requestId: id, resolve: settle };
+      slot.active = { requestId: id, resolve: settle, started: false, cancelRequested: false, cancelResolve: undefined };
       slot.child.on("message", onMessage);
       slot.child.send(request);
     });

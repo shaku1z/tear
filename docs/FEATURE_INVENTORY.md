@@ -218,7 +218,10 @@ This is the migration checklist for the architectural redesign. A checked featur
    consent, corpus, or training claim. C30 also exercises its existing
    serialized dispatcher with 32 independent source episodes across exactly
    eight operating-system workers, then reuses that bounded pool; it is not an
-   unbounded fleet or target-throughput certification;
+   unbounded fleet or target-throughput certification. A parent can also cancel
+   one active source worker only after its first fixed tick; that child is
+   terminated and the next episode gets a fresh PID, with no checkpoint,
+   restoration, retry, or durable job claim;
    authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

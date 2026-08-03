@@ -42,19 +42,31 @@ test("C30 worker process keeps production worlds behind serialized episode messa
   assert.equal(ready.kind, "ready");
   assert.equal(ready.workerPid, worker.pid);
 
-  const execute = async (value) => {
+  const execute = (value) => new Promise((resolveReply) => {
+    const started = [];
+    const onMessage = (reply) => {
+      if (reply?.requestId !== value.requestId) return;
+      if (reply.kind === "started") {
+        started.push(reply);
+        return;
+      }
+      worker.off("message", onMessage);
+      resolveReply({ reply, started });
+    };
+    worker.on("message", onMessage);
     worker.send(value);
-    const [reply] = await once(worker, "message");
-    return reply;
-  };
-  const completed = await execute(request("completed"));
+  });
+  const completedResult = await execute(request("completed"));
+  const completed = completedResult.reply;
   assert.equal(completed.kind, "completed");
   assert.equal(completed.ticks, 120);
   assert.match(completed.semanticHash, /^[a-f0-9]{16}$/u);
   assert.deepEqual(completed.terminal?.scenario.id, "completed");
   assert.equal(completed.terminal?.actions.length, 3);
+  assert.deepEqual(completedResult.started.map((entry) => entry.ticks), [1]);
 
-  const cancelled = await execute(request("cancelled", { cancelled: true }));
+  const cancelledResult = await execute(request("cancelled", { cancelled: true }));
+  const cancelled = cancelledResult.reply;
   assert.equal(cancelled.format, "tearbench-production-headless-worker");
   assert.equal(cancelled.schemaVersion, 1);
   assert.equal(cancelled.kind, "cancelled");
@@ -62,13 +74,17 @@ test("C30 worker process keeps production worlds behind serialized episode messa
   assert.equal(cancelled.ticks, 0);
   assert.match(cancelled.semanticHash, /^[a-f0-9]{16}$/u);
   assert.equal(cancelled.workerPid, worker.pid);
+  assert.deepEqual(cancelledResult.started, []);
 
-  const timedOut = await execute(request("timed-out", { timeoutMilliseconds: 0 }));
+  const timedOutResult = await execute(request("timed-out", { timeoutMilliseconds: 0 }));
+  const timedOut = timedOutResult.reply;
   assert.equal(timedOut.kind, "timed-out");
   assert.equal(timedOut.ticks, 0);
   assert.equal(timedOut.terminal, undefined);
+  assert.deepEqual(timedOutResult.started, []);
 
-  const rejected = await execute(request("rejected", { scenario: { start: { mode: "endless", difficulty: "normal", weapon: "sword", wave: 2 } } }));
+  const rejectedResult = await execute(request("rejected", { scenario: { start: { mode: "endless", difficulty: "normal", weapon: "sword", wave: 2 } } }));
+  const rejected = rejectedResult.reply;
   assert.equal(rejected.kind, "failed");
   assert.match(rejected.error, /natural opening/u);
 }, { timeout: 30_000 });

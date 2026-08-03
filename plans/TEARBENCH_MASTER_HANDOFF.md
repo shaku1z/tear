@@ -224,7 +224,10 @@ Named status:
   A permanent eight-worker stress proof now completes 32 independent 120-tick
   source episodes and reuses those exact child processes for a following batch;
   it is bounded process-scale evidence only. Declared-target capacity remains
-  open. The current 256-episode / 30,720-tick in-process
+  open. A parent can now cancel a known active child only after the worker has
+  emitted its first actual source tick; it returns a serializable mid-run
+  cancellation, kills that PID, and the next job starts fresh. This is not a
+  checkpoint, recovery, or retry. The current 256-episode / 30,720-tick in-process
   stress proof has distinct final state objects and hashes, plus separate
   sampled terminal scenario/action traces; it is not a worker claim. A
   source-produced natural terminal artifact is visibly rerunnable in the
@@ -309,8 +312,8 @@ Important files:
 ### Exact next slice
 
 C27A and C28 are closed. C29's durable active-cinematic capsule boundary remains
-open, but the current worktree's exact slice is **C30 mid-run worker
-cancellation without durable recovery**. Do not reopen C27A for pixels, haptics,
+open, but the current worktree's exact slice is **C31 Academy eligibility,
+consent, and provenance before corpus ingestion**. Do not reopen C27A for pixels, haptics,
 durable outcomes, or audio/device fidelity; C25, C39, and C40 own those
 separate output claims.
 
@@ -325,10 +328,11 @@ retention and met its modest developer throughput budget on the recorded run.
 Do not promote that observation to a target claim. A bounded terminal-artifact
 stream now attaches to the Academy candidate intake and explicitly reports
 pressure; the existing dispatcher now has an eight-PID, 32-episode bounded
-stress proof. Neither may be turned into storage, durable job recovery, a C31
-corpus, or a second simulation model. The next slice should add explicit
-mid-run cancellation to the existing process dispatcher without implying job
-recovery.
+stress proof and first-source-tick mid-run cancellation without recovery.
+Neither may be turned into storage, durable job recovery, a C31 corpus, or a
+second simulation model. Because no target profile is declared, leave that C30
+capacity claim open and begin C31 by enforcing eligibility, consent, and
+provenance before any candidate is accepted into a corpus.
 
 Preserve:
 
@@ -469,11 +473,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C30 executes 32 independent natural 120-tick source episodes through exactly eight bounded operating-system workers, then reuses that pool for another batch without a ninth process.
-PROVEN BY:           `node --test tests/production-headless-worker.test.mjs tests/production-headless-worker-dispatcher.test.mjs` passes five worker proofs, including the 32-episode / eight-PID stress. `pnpm check:c30:foundation` retains seven focused Vitest files / 18 tests plus its source-matrix, worker, standalone, and browser proof.
-REMAINING HERE:      C30 still needs capacity evidence on a caller-declared target host, plus explicit mid-run cancellation without durable recovery. The candidate stream is not C31 consent, provenance, curation, corpus, Foundry training, storage, draft/reward-route checkpointing, or durable job recovery. C29's durable active-cinematic boundary remains separately open. Timeout, validation, and worker-reported failures intentionally do not retry.
+DONE THIS STEP:      C30 cancels an active process only after its first actual source tick, returns one serializable `cancelled` result, and runs the next job on a fresh PID without a checkpoint, retry, or recovery record.
+PROVEN BY:           `pnpm check:c30:foundation` passes seven focused Vitest files / 18 tests, six worker proofs including the one-tick source-start/mid-run-cancel/fresh-PID matrix, the standalone build, both terminal reruns, fresh 13-scenario / 5,732-tick browser capture, and the 14-test source matrix.
+REMAINING HERE:      C30 still needs capacity evidence on a caller-declared target host; durable job recovery remains unclaimed. Begin C31 without accepting a candidate into a corpus before eligibility, consent, and provenance are enforced. The candidate stream is not C31 curation, corpus, Foundry training, storage, draft/reward-route checkpointing, or recovery. C29's durable active-cinematic boundary remains separately open.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Add explicit mid-run cancellation to the existing C30 process dispatcher, returning a serializable cancelled result while retaining no durable job-recovery, retry, or checkpoint claim.
+NEXT SLICE:          Give the C31 candidate boundary an eligibility, consent, and provenance gate that rejects missing or incompatible metadata before any corpus/curriculum action, without weakening C30's bounded stream or declaring C31 complete.
 
 All of the following were run from this worktree through C27A slice 36:
 

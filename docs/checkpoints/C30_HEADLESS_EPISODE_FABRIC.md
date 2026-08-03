@@ -179,11 +179,16 @@ operational boundary it proves.
   This is caller-retained, in-process custody only — not storage, a worker
   message, durable job recovery, or a claim that a draft/reward route can yet
   be checkpointed.
-- [ ] Remaining scale and recovery evidence. Timeout, validation, and ordinary
-  worker-reported failures are not retried. There is no mid-run worker
-  cancellation message, durable job recovery, or declared-target capacity
-  claim. The bounded developer-host long-run and eight-worker observations
-  above do not close any of those remaining items.
+- [x] Explicit mid-run process cancellation. A worker reports `started` only
+  after its first actual source fixed tick. `cancel(requestId)` waits for that
+  signal, terminates only that active child, and returns one serializable
+  `cancelled` result with `dispatch: "mid-run"` and `ticks: 1`. The permanent
+  proof warms a real worker, cancels a million-tick playground episode after
+  that source-tick signal, then completes the next job on a fresh PID. It
+  creates no checkpoint, retry, restoration, or durable job state.
+- [ ] Declared-target capacity and durable recovery evidence. Timeout,
+  validation, and ordinary worker-reported failures are not retried. No target
+  host is declared in this repository, and no durable job recovery is claimed.
 - [x] A sampled natural terminal episode is visibly rerunnable from its
   production artifact. The environment now seals a versioned
   `tearbench-production-headless-terminal` artifact with its exact validated
@@ -225,7 +230,7 @@ C31-C36, C39, and C40 retain their respective evidence obligations.
 ## Evidence
 
 - `pnpm check:c30:foundation` passes: typecheck, full lint, C30 source
-  architecture fences, seven focused Vitest files / 18 tests, four Node worker
+  architecture fences, seven focused Vitest files / 18 tests, six Node worker
   tests, standalone build, Class-A truncated and natural-failure terminal
   reruns, a fresh C27A 13-scenario browser capture, and the 14-test exact
   source-matrix comparison.
@@ -255,10 +260,10 @@ C31-C36, C39, and C40 retain their respective evidence obligations.
 - `node --test tests/production-headless-worker-dispatcher.test.mjs` passes the
   two-PID bounded dispatch, pre-dispatch cancellation, exited-idle-worker
   replacement, parent-deadline/replacement, one-retry active-exit-attempt, and
-  a 32-episode / exactly-eight-PID source stress matrix. Its cold-worker
-  readiness allowance is separately bounded at 30 seconds (60 seconds for the
-  explicit eight-worker stress) and never changes the asserted request
-  deadline.
+  a 32-episode / exactly-eight-PID source stress matrix, plus the one-tick
+  source-start/mid-run-cancel/fresh-PID matrix. Its cold-worker readiness
+  allowance is separately bounded at 30 seconds (60 seconds for the explicit
+  eight-worker stress) and never changes the asserted request deadline.
 - `pnpm build:test:standalone`, `pnpm test:browser:production-headless-terminal`, and `pnpm test:browser:production-headless-failure-terminal` pass. The browser materializer admits only versioned natural C30 terminal coordinates, proves exact action provenance plus a rendered screenshot, and checks that the live terminal tick/disposition match the failure artifact.
 - `pnpm check:architecture` passes, including planted C30 forbidden-edge and
   browser-global cases.
@@ -268,7 +273,8 @@ C31-C36, C39, and C40 retain their respective evidence obligations.
 Do not add retries to timeout, validation, or worker-reported failures. A
 declared target host remains an external prerequisite for the separate capacity
 claim; do not call the local developer machine target hardware. C30's remaining
-internal control boundary is mid-run cancellation without durable recovery;
-keep the completed checkpoint boundary restricted to active, non-draft natural
-episodes: it must not become a new simulator, storage format, or durable
-job-recovery claim.
+unproven capacity claim therefore needs an externally declared profile. While
+that waits, the next implementation boundary is C31 eligibility, consent, and
+provenance before its Academy candidate intake can become a corpus. Keep all
+completed C30 boundaries restricted to active, non-draft natural episodes: they
+must not become a new simulator, storage format, or durable job-recovery claim.
