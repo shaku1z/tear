@@ -40,10 +40,20 @@ export function createAcademyRenderers(context: ScreenRenderContext) {
           ui.displayText(canvas, manifest.id, panelX + 24, manifestTop, ui.t.type.label, "left");
           ui.text(canvas, manifest.detail, panelX + 592, manifestTop, ui.t.type.caption, "right", ui.t.alpha.muted);
         });
+        const lessonY = manifestY + Math.max(84, 46 + visibleManifests.length * 36) + 20;
+        const lessons = view.lessons ?? [];
+        ui.panel(canvas, panelX, lessonY, 640, Math.max(84, 46 + lessons.length * 34));
+        ui.sectionLabel(canvas, "GOVERNED LESSON STATUS", panelX + 24, lessonY + 30, 592);
+        lessons.forEach((lesson, index) => {
+          const lessonTop = lessonY + 52 + index * 34;
+          ui.displayText(canvas, lesson.id, panelX + 24, lessonTop, ui.t.type.label, "left");
+          ui.text(canvas, lesson.state, panelX + 592, lessonTop, ui.t.type.caption, "right", ui.t.alpha.soft);
+          ui.text(canvas, lesson.detail, panelX + 24, lessonTop + 16, ui.t.type.micro, "left", ui.t.alpha.muted);
+        });
         const canScrollDown = recordOffset < Math.max(0, view.records.length - recordPageSize)
           || manifestOffset < Math.max(0, view.manifests.length - manifestPageSize);
         if (recordOffset > 0 || manifestOffset > 0 || canScrollDown) {
-          ui.scrollHint(canvas, width / 2, manifestY + Math.max(84, 46 + visibleManifests.length * 36) + 16,
+          ui.scrollHint(canvas, width / 2, lessonY + Math.max(84, 46 + lessons.length * 34) + 16,
             recordOffset > 0 || manifestOffset > 0, canScrollDown);
         }
       }

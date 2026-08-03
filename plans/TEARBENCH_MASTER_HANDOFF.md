@@ -364,11 +364,13 @@ Important files:
 ### Exact next slice
 
 C27A, C28, and C29 are closed. C30's remaining target-capacity and episode-fabric
-work is active, while the current worktree's completed C31 slice is **durable Academy
-corpus admission and privacy-safe inspection over reviewed samples, corrections,
-retention, and manifests**. The next C31 product slice is complete record
-browsing with only authorized durable lesson status/actions; start C32's policy
-artifact/runtime boundary before wiring any trainer to this corpus.
+work is active, while the current worktree's C31 slice adds **durable
+Academy lesson-status coverage** to the existing corpus inspection. It derives
+only active-custody `unrepresented`, `governed`, and recovery-required
+`recovery-evidenced` labels from durable governed corpus entries; it does not
+claim completion, quality, or a policy result. The next C31 product slice is
+authorized record actions and unavailable/error recovery guidance; start C32's
+policy artifact/runtime boundary before wiring any trainer to this corpus.
 Do not reopen C27A for pixels, haptics, durable outcomes, or audio/device
 fidelity; C25, C39, and C40 own those separate output claims.
 

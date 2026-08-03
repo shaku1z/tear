@@ -159,6 +159,10 @@ describe("C31 held Academy candidate curation", () => {
       createdAt: "2026-08-03T00:06:30.000Z" });
     expect(corpusFirst.entries).toEqual([corpusEntry]);
     expect(await corpus.getManifest("exam", { kind: "examiner", id: "release" }, 1)).toEqual(corpusFirst);
+    const activeInspection = await inspectAcademy({ custody: input.custody, quality: input.quality, curation, splits, samples, corpus }, "2026-08-03T00:06:45.000Z");
+    expect(activeInspection.lessons).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "movement-foundations", governedEntries: 1, recoveryEntries: 0, status: "governed" }),
+    ]));
     const revokedConsent = Object.freeze({ ...input.declaration.consent, revision: "c31-sample-consent-2",
       decidedAt: "2026-08-03T00:07:00.000Z", modelTraining: "no-training" as const });
     await input.custody.revoke({ candidateHash: sample.candidateHash, scope: "model-training", consent: revokedConsent,
@@ -171,6 +175,10 @@ describe("C31 held Academy candidate curation", () => {
     expect(corpusSecond.entries).toEqual([]);
     const inspection = await inspectAcademy({ custody: input.custody, quality: input.quality, curation, splits, samples, corpus }, "2026-08-03T00:08:00.000Z");
     expect(inspection).toMatchObject({ custody: { revoked: 1 }, quality: { reviewRequired: 1 }, curation: { approved: 1 }, splits: { "hidden-release-exam": 1 }, reviewedSamples: 1, corpusEntries: 1 });
+    expect(inspection.lessons).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "movement-foundations", governedEntries: 0, recoveryEntries: 0, status: "unrepresented" }),
+      expect.objectContaining({ id: "defense-parry", governedEntries: 0, recoveryEntries: 0, status: "unrepresented" }),
+    ]));
     expect(inspection.records).toMatchObject([{
       candidateHash: sample.candidateHash, custody: "revoked", modelTrainingConsent: "no-training",
       retention: "indefinite", privacyClass: "anonymous", quality: "review-required",

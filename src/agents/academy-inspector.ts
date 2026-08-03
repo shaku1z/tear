@@ -4,6 +4,7 @@ import type { TearAcademyCandidateQualityStore } from "./academy-candidate-quali
 import type { TearAcademyCandidateSplitStore } from "./academy-candidate-splits";
 import type { TearAcademyReviewedSampleStore } from "./academy-reviewed-sample";
 import type { TearAcademyCorpusStore } from "./academy-corpus";
+import { CANONICAL_ACADEMY_LESSONS } from "./academy";
 
 /** Immutable C31 product read model; renderers receive this rather than Vault stores. */
 export interface TearAcademyInspectionSnapshotV1 {
@@ -16,6 +17,14 @@ export interface TearAcademyInspectionSnapshotV1 {
   readonly splits: Readonly<Record<string, number>>;
   readonly reviewedSamples: number;
   readonly corpusEntries: number;
+  /** Read-only lesson coverage derived only from governed durable corpus entries. */
+  readonly lessons: readonly (Readonly<{
+    id: string;
+    domain: string;
+    governedEntries: number;
+    recoveryEntries: number;
+    status: "unrepresented" | "governed" | "recovery-evidenced";
+  }>)[];
   readonly manifests: readonly (Readonly<{ id: string; version: number; entries: number; rootHash: string }>)[];
   /** Privacy-safe, immutable governance state for the player-visible Academy. */
   readonly records: readonly (Readonly<{
@@ -55,6 +64,17 @@ export async function inspectAcademy(stores: TearAcademyInspectionStores, observ
   const splitByCandidate = new Map(splits.map((entry) => [entry.candidateHash, entry]));
   const sampleByCandidate = new Set(samples.filter((entry) => entry !== undefined).map((entry) => entry.candidateHash));
   const corpusByCandidate = new Set(corpus.map((entry) => entry.candidateHash));
+  const activeCandidateHashes = new Set(custody.records.filter((entry) => entry.status === "held"
+    && (entry.retention.mode === "indefinite" || (entry.retention.expiresAt !== undefined
+      && Date.parse(entry.retention.expiresAt) > Date.parse(observedAt))))
+    .map((entry) => entry.candidateHash));
+  const lessons = Object.freeze(CANONICAL_ACADEMY_LESSONS.map((lesson) => {
+    const entries = corpus.filter((entry) => entry.lessonId === lesson.id && activeCandidateHashes.has(entry.candidateHash));
+    const recoveryEntries = entries.filter((entry) => entry.segmentKind === "recovery").length;
+    const status = entries.length === 0 ? "unrepresented"
+      : lesson.recoveryRequired && recoveryEntries > 0 ? "recovery-evidenced" : "governed";
+    return Object.freeze({ id: lesson.id, domain: lesson.domain, governedEntries: entries.length, recoveryEntries, status });
+  }));
   const records = Object.freeze(custody.records.map((entry) => {
     const assessment = assessmentByCandidate.get(entry.candidateHash);
     const decision = curationByCandidate.get(entry.candidateHash);
@@ -76,7 +96,7 @@ export async function inspectAcademy(stores: TearAcademyInspectionStores, observ
     curation: Object.freeze({ approved: count(curation.decisions, (entry) => entry.disposition === "curation-approved"), corrections: count(curation.decisions, (entry) => entry.disposition === "needs-correction"), rejected: count(curation.decisions, (entry) => entry.disposition === "rejected"), rejectedBytes: curation.rejectedKeys.length }),
     splits: Object.freeze(Object.fromEntries(["training", "validation", "calibration", "test", "hidden-release-exam"].map((split) => [split, count(splits, (entry) => entry.split === split)]))),
     reviewedSamples: samples.filter((entry) => entry !== undefined).length,
-    corpusEntries: corpus.length,
+    corpusEntries: corpus.length, lessons,
     records,
     manifests: Object.freeze(manifests.map((entry) => Object.freeze({ id: entry.id, version: entry.version, entries: entry.entries.length, rootHash: entry.rootHash }))),
   });

@@ -193,12 +193,15 @@ is trained on.
   displayed record joins custody, training consent, retention, privacy class,
   quality, curation/correction, split, and reviewed state without exposing a
   subject identifier, raw recording, or trainer payload.
-- [ ] Durable lesson status, authorized record actions, and unavailable/error
-  recovery guidance remain open. Full privacy-safe record and manifest browsing
-  is now bounded-page rendering: the live adapter retains every inspection row
-  instead of truncating to four records / three manifests, while the Academy
-  renderer exposes scroll pages and page ranges without receiving source tracks,
-  subject identity, or a persistence handle.
+- [ ] Authorized record actions and unavailable/error recovery guidance remain
+  open. Durable lesson status now derives only from active governed durable corpus
+  entries: `unrepresented`, `governed`, or (for a recovery-required lesson with
+  governed recovery material) `recovery-evidenced`. It reports coverage, never
+  lesson completion, quality, or a policy result. Full privacy-safe record and
+  manifest browsing is bounded-page rendering: the live adapter retains every
+  inspection row instead of truncating to four records / three manifests, while
+  the Academy renderer exposes scroll pages and page ranges without receiving
+  source tracks, subject identity, or a persistence handle.
 - [x] A persisted reviewed sample is tied to its exact capsule range and full
   verified tracks. When its model-training consent is revoked, a new chained
   manifest omits it; ordinary trainer manifests cannot enumerate hidden-exam

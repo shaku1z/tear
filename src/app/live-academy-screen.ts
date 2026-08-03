@@ -20,6 +20,10 @@ export function createLiveAcademyScreen(factory: IDBFactory | undefined): Readon
           { label: "TRAINING SPLIT", value: String(inspection.snapshot.splits.training ?? 0) },
           { label: "CORPUS", value: String(inspection.snapshot.corpusEntries) },
         ],
+        lessons: inspection.snapshot.lessons.map((lesson) => ({
+          id: lesson.id.replaceAll("-", " ").toUpperCase(), state: lesson.status.replaceAll("-", " ").toUpperCase(),
+          detail: `${String(lesson.governedEntries)} governed ${lesson.governedEntries === 1 ? "entry" : "entries"} Â· ${lesson.domain.toUpperCase()}${lesson.recoveryEntries > 0 ? ` Â· ${String(lesson.recoveryEntries)} recovery` : ""}`,
+        })),
         records: inspection.snapshot.records.map((record) => ({
           id: record.candidateHash.slice(0, 8).toUpperCase(),
           state: [record.custody, record.reviewed ? "reviewed" : "unreviewed", record.inCorpus ? "corpus" : "not in corpus", record.split ?? "unassigned"].join(" · "),

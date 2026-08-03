@@ -258,8 +258,10 @@ This is the migration checklist for the architectural redesign. A checked featur
    omit hidden exams. The normal main-menu `ACADEMY` screen presents a read-only
    runtime-owned aggregate plus a bounded privacy-safe record/manifest inspection
    of durable held, reviewed, curated, consent, retention, split, and revision
-   state, including an explicit storage-unavailable state; it is not a trainer
-   input or full Academy workspace. A reviewed governed source can now become a durable Academy corpus entry with
+   state, including an explicit storage-unavailable state. Its lesson labels
+   report only active governed corpus coverage (`unrepresented`, `governed`, or
+   `recovery-evidenced`), never a lesson pass or policy quality; it is not a
+   trainer input or full Academy workspace. A reviewed governed source can now become a durable Academy corpus entry with
    a versioned reader-scoped manifest; trainer views exclude hidden exams and
    revocation removes entries from future manifests. C32 now has a local,
    Vault-backed versioned policy-artifact registry: it validates content hashes
