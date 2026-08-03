@@ -196,6 +196,9 @@ export class TearAcademyCandidateQualityStore {
     this.#custody = custody;
   }
 
+  /** Shared only with the adjacent C31 review ledger for one local Vault boundary. */
+  backend(): GhostVaultBackend { return this.#backend; }
+
   async assess(input: TearAcademyCandidateQualityAssessmentRequest): Promise<TearAcademyCandidateQualityAssessmentV1> {
     if (!timestamp(input.assessedAt) || !nonEmpty(input.actor)) throw new TypeError("C31 quality requires an assessment decision");
     const admission = assessAcademyCandidateEligibility(input.declaration);

@@ -79,6 +79,13 @@ is trained on.
   recorded as a duplicate. Malformed assessment bytes are excluded from both
   inventory and deduplication. An assessment is `review-required` or
   `duplicate`, never an approval, corpus sample, manifest, or trainer input.
+- `TearAcademyCandidateCurationStore` now records one immutable, locally
+  authorized human decision over an exact held `review-required` assessment.
+  A decision can approve only later curation consideration, reject, or request
+  immutable metadata/label/quality corrections; it cannot rewrite source
+  evidence. Its `active()` view rechecks custody, so revoked or expired sources
+  disappear before a later manifest consumer can see them. It neither creates a
+  corpus sample nor assigns a split or exposes anything to trainer code.
 
 ## Exit-gate ledger
 
@@ -125,9 +132,13 @@ is trained on.
   promote any candidate to a corpus path.
 - [ ] Account/cloud revocation and deletion propagation, cross-device identity
   lifecycle, style/skill interpretation, and population balance.
-- [ ] Review, correction, curation, immutable lineage-bound train/validation/
-  calibration/test/hidden-exam splits, durable manifests, and the Academy
-  interface.
+- [x] Durable human review/correction/curation decisions remain bound to the
+  exact held custody record and assessed source. An undeclared reviewer,
+  duplicate assessment, malformed decision, or revoked source cannot enter the
+  active curation view. A curation approval is deliberately not a sample,
+  manifest, split assignment, or trainer-visible artifact.
+- [ ] Immutable lineage-bound train/validation/calibration/test/hidden-exam
+  splits, durable manifests, and the Academy interface.
 - [ ] A persisted reviewed sample tied to an exact capsule range; revoked data
   absent from future manifests; hidden exams unreadable by ordinary trainer
   code.
@@ -136,14 +147,14 @@ is trained on.
 
 This checkpoint does not claim that C30 terminal artifacts contain a complete
 learning record, that any candidate has entered `TearDemonstrationCorpus`, or
-that a policy has trained. It does not implement a reviewed sample,
-account/cloud deletion, cloud publication, review, C32 artifact loading, C33
-behavior cloning, or C36 Foundry automation.
+that a policy has trained. It does not implement a reviewed *sample*,
+account/cloud deletion, cloud publication, immutable manifests/splits, C32
+artifact loading, C33 behavior cloning, or C36 Foundry automation.
 
 ## Evidence
 
 - `pnpm check:c31:foundation` passes: typecheck, full lint, architecture
-  checks, and eight focused Vitest suites / twenty tests.
+  checks, and nine focused Vitest suites / twenty-two tests.
 - `academy-candidate-admission.test.ts` generates a real C30 terminal through
   the bounded production pool and candidate intake. It asserts that the current
   verified-but-incomplete track bundle remains rejected, plus the pre-corpus
@@ -173,6 +184,11 @@ behavior cloning, or C36 Foundry automation.
   coordinate as a duplicate, and rejects both non-held and tampered source
   declarations. Malformed assessment bytes remain quarantined rather than
   influencing deduplication.
+- `academy-candidate-curation.test.ts` records an authorized human curation
+  decision over a held assessment without creating a corpus key, rejects an
+  undeclared reviewer and repeat decision, retains immutable correction
+  requests, and proves a later model-training revocation removes that decision
+  from the active curation view.
 - That same custody proof rejects a foreign Vault for deletion, atomically
   removes the actual materialized source capsule only from its matching Vault,
   and retains the durable `deleted` tombstone outside future held queries.
@@ -190,7 +206,7 @@ behavior cloning, or C36 Foundry automation.
 
 ## Next safe boundary
 
-Add the human review/correction and curation decision layer on top of durable
-held-source assessments. It must not turn an assessment into a sample or
-manifest without explicit governance/review evidence, and must preserve the
-same custody/revocation boundary.
+Add immutable lineage-bound split assignment and durable pre-corpus manifests
+only for active, explicitly curated held sources. Hidden release-exam data must
+remain unreadable by ordinary trainer code; no source may reach a corpus sample
+without that separate governance boundary.
