@@ -165,11 +165,11 @@ measured artifact win over the scripted baseline, promotion, or automatic
 player-facing training.
 Those remain C33 work.
 
-DONE THIS STEP:      C33 now preserves training-scenario provenance and records a fail-closed non-overlapping source-world temporal-versus-scripted comparison; it reports no win on the deliberately tiny fixture, so C33 §8 remains unticked.
+DONE THIS STEP:      C33 now has governed temporal fit, run-context conditioning, source-world baseline execution, provenance rejection, and native completed/defeated/revival measurements; none establishes a quality win, so C33 §8 remains unticked.
 PROVEN BY:           Focused C31/C32/C33 track, admission, curation, and production-evaluator tests: 4 files / 13 tests, plus targeted ESLint, TypeScript, requirements, and architecture gates.
-REMAINING HERE:      Meaningful unseen-seed baseline win evidence, lesson/persona/style conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence.
+REMAINING HERE:      A predeclared nontrivial held-out recovery/lesson corpus and outcome suite, a measured artifact advantage, lesson/persona/style conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Define a meaningful bounded recovery/lesson evaluation suite and outcome semantics, then run the temporal artifact against the scripted baseline; tick C33 §8 only for a real measured advantage.
+NEXT SLICE:          Build one integrated governed nontrivial held-out recovery/lesson corpus-and-evaluation slice; it must bind source scenarios, designated outcome facts, and artifact/baseline results before any C33 §8 quality tick.
 
 ## Slice pacing finding — 2026-08-03
 
@@ -206,3 +206,22 @@ fit. Local checkpoint custody is idempotent and malformed bytes quarantine
 instead of resuming. This is bounded cancellation/recovery evidence only: it
 does not activate, promote, or establish a temporal/recurrent policy or real
 game quality.
+
+## Slice pacing finding — quality path
+
+Five further C33 commits (`0e2cc67` through `bdd663d`) added temporal context,
+an executable artifact, overlap-safe comparison, run-context conditioning, and
+native outcome facts without ticking C33 §8. Those were necessary foundations,
+but continuing per-field or per-metric work would violate the C40 sizing rule.
+
+The next C33 slice is therefore one integrated quality candidate:
+
+1. Materialize a governed corpus with nontrivial recovery/lesson episodes and
+   source scenario identities; the current two-tick fixture is not quality evidence.
+2. Publish a predeclared held-out suite absent from training provenance and use
+   native `run.completed`/`run.defeated`/`player.revived` facts as its outcome data.
+3. Train, execute, and retain parent and approved-correction temporal artifact
+   reports against the scripted baseline in fresh C29/C30 worlds. A quality tick
+   requires a real declared-metric advantage; a tie or loss is observation only.
+4. Repeat that suite after checkpoint recovery and an automated DAgger round
+   before deciding whether the C33 reproducibility and DAgger items clear.
