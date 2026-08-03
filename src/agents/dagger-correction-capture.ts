@@ -4,6 +4,7 @@ import { createProductionHeadlessEnvironment, type TearScenarioV1 } from "../tea
 import type { TearAgentIntentTrace, TearAgentProfileId } from "./contracts";
 import type { TearPolicyArtifactRegistry } from "./policy-artifact-registry";
 import { TearActivePolicyRuntime, type TearPolicyDecisionReceipt } from "./policy-runtime";
+import { projectStructuredPolicyFeatures } from "./policy-feature-vector";
 import { TearAgentOrchestrator } from "./scripted-policy";
 
 export interface TearDaggerCorrectionCaptureOptionsV1 {
@@ -15,6 +16,8 @@ export interface TearDaggerCorrectionCandidateV1 {
   readonly tick: number;
   readonly beforeObservationHash: string;
   readonly afterStateHash: string;
+  /** Shared C32/C33 numeric observation contract, retained for later approved-only training. */
+  readonly features: readonly number[];
   readonly challengerActions: readonly GameAction[];
   readonly challengerReceipt: TearPolicyDecisionReceipt;
   readonly teacherActions: readonly GameAction[];
@@ -68,6 +71,7 @@ export async function captureTearDaggerCorrections(
       if (corrections.length < maxCorrections && actionHash(challengerDecision.actions) !== actionHash(teacherDecision.actions)) {
         const draft = {
           tick: observation.tick, beforeObservationHash, afterStateHash: stableVerificationHash(transition.observation),
+          features: Object.freeze([...projectStructuredPolicyFeatures({ state: observation, ui: { screen: "playing" } })]),
           challengerActions: Object.freeze(structuredClone(challengerDecision.actions)),
           challengerReceipt: Object.freeze(structuredClone(challengerDecision.receipt)),
           teacherActions: Object.freeze(structuredClone(teacherDecision.actions)),

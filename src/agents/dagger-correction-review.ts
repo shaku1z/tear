@@ -1,6 +1,7 @@
 import { stableVerificationHash } from "../replay/hash";
 import type { GhostVaultBackend } from "../ghost";
 import type { TearDaggerCorrectionCaptureV1 } from "./dagger-correction-capture";
+import { TEAR_POLICY_FEATURE_WIDTH_V1 } from "./policy-feature-vector";
 
 const REVIEW_KEY = "dagger-correction-review:v1:";
 const HASH = /^[a-f0-9]{16}$/u;
@@ -37,7 +38,8 @@ function captureValid(capture: TearDaggerCorrectionCaptureV1): boolean {
   return HASH.test(captureHash) && captureHash === stableVerificationHash(draft)
     && capture.corrections.every((correction) => {
       const { correctionHash, ...candidate } = correction;
-      return HASH.test(correctionHash) && correctionHash === stableVerificationHash(candidate);
+      return HASH.test(correctionHash) && correctionHash === stableVerificationHash(candidate)
+        && correction.features.length === TEAR_POLICY_FEATURE_WIDTH_V1 && correction.features.every(Number.isFinite);
     });
 }
 function parse(value: unknown): TearDaggerCorrectionReviewV1 {

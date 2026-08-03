@@ -299,7 +299,8 @@ This is the migration checklist for the architectural redesign. A checked featur
    artifact/scenario/context lineage while applying only challenger actions.
    Named local reviewers can make immutable accept/reject decisions on those
    proposals; neither unreviewed nor rejected proposals are corpus input or
-   promotion.
+   promotion. Each proposal retains only the shared bounded training feature
+   vector needed for later approved-only retraining.
    Meaningful held-out quality, a reviewed/ingested DAgger loop, and promotion
    remain absent. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,

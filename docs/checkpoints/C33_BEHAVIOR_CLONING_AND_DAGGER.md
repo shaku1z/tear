@@ -107,14 +107,19 @@ the entire capture and correction lineage, writes idempotently, and keeps an
 unreviewed proposal unavailable to every training path. This is review only:
 no correction has been added to a corpus or retrained model.
 
+Each proposal retains only the bounded shared 17-feature C32/C33 observation
+vector needed for an approved-only future retraining input, alongside its
+action/context hashes. It does not retain a second mutable world or change the
+immutable trainer manifest.
+
 ## Deliberately not claimed
 
 This is not a sequence/recurrent policy, a meaningful quality score, a
 ingested/retrained DAgger loop, promotion, or automatic player-facing training.
 Those remain C33 work.
 
-DONE THIS STEP:      C33 now records immutable authorized accept/reject review over source-world correction proposals; unreviewed proposals remain excluded from all training paths.
-PROVEN BY:           Focused C33 source-world capture/reviewer authorization test, targeted no-emit TypeScript, targeted ESLint, and architecture gate.
+DONE THIS STEP:      C33 correction proposals now retain the bounded shared training feature vector required for a future approved-only retraining input, while review remains immutable and manifest-independent.
+PROVEN BY:           Focused C33 source-world capture/reviewer authorization test plus targeted no-emit TypeScript and targeted ESLint.
 REMAINING HERE:      Governed ingestion, deterministic retraining/comparison, cancellation/recovery, temporal policy, intermediate checkpoints, and meaningful real-game quality evidence.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
 NEXT SLICE:          Build a deterministic approved-correction training input and retrain/comparison lineage; do not mutate the immutable source manifest or add promotion.
