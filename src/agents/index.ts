@@ -8,6 +8,7 @@ export * from "./pixel-visual-comparison";
 export * from "./black-box-policy";
 export * from "./academy";
 export * from "./academy-candidate-admission";
+export * from "./academy-candidate-tracks";
 export * from "./ladder-foundry";
 export * from "./live-watch-agent-host";
 export * from "./hierarchical-policy-adapter";

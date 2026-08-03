@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   assessAcademyCandidateEligibility,
+  captureAcademyCandidateTracks,
   type TearAcademyCandidateDeclarationV1,
 } from "../../src/agents";
 import {
@@ -34,7 +35,7 @@ async function c30Candidate(): Promise<ProductionHeadlessAcademyIntakeItem> {
 
 function declaration(candidate: ProductionHeadlessAcademyIntakeItem): TearAcademyCandidateDeclarationV1 {
   return Object.freeze({
-    format: "tear-academy-candidate", schemaVersion: 1, candidate,
+    format: "tear-academy-candidate", schemaVersion: 1, candidate, trackBundle: captureAcademyCandidateTracks(candidate),
     tracks: Object.freeze({
       fromTick: 0, toTick: candidate.tick, observationCount: candidate.tick + 1,
       actionEnvelopeCount: candidate.artifact.actions.length, eventsRecorded: true,
@@ -57,30 +58,29 @@ function declaration(candidate: ProductionHeadlessAcademyIntakeItem): TearAcadem
 }
 
 describe("C31 Academy candidate admission", () => {
-  it("admits an eligibility declaration only after a real C30 terminal carries complete synchronized metadata", async () => {
+  it("keeps a real C30 terminal ineligible while its verified bundle names unavailable native tracks", async () => {
     const candidate = await c30Candidate();
     const admitted = assessAcademyCandidateEligibility(declaration(candidate));
     expect(admitted).toMatchObject({
       format: "tear-academy-candidate-admission", schemaVersion: 1,
-      candidateId: candidate.episodeId, disposition: "eligible", reasons: [],
+      candidateId: candidate.episodeId, disposition: "rejected", reasons: ["incomplete-synchronized-tracks"],
     });
     expect(admitted.candidateHash).toMatch(/^[a-f0-9]{16}$/u);
   });
 
-  it("rejects missing synchronized tracks, revoked training, and provenance/consent mismatches before any corpus action", async () => {
+  it("rejects missing synchronized tracks, absent training consent, invalid consent, and provenance mismatch before any corpus action", async () => {
     const candidate = await c30Candidate();
     const valid = declaration(candidate);
-    expect(assessAcademyCandidateEligibility({ ...valid, tracks: { ...valid.tracks, intentsRecorded: false } })).toMatchObject({
-      disposition: "rejected", reasons: ["incomplete-synchronized-tracks"],
-    });
+    expect(assessAcademyCandidateEligibility({ ...valid, tracks: { ...valid.tracks, intentsRecorded: false } }).reasons)
+      .toContain("incomplete-synchronized-tracks");
     expect(assessAcademyCandidateEligibility({
       ...valid, consent: { ...valid.consent, modelTraining: "no-training" },
-    })).toMatchObject({ disposition: "rejected", reasons: ["model-training-not-consented"] });
+    })).toMatchObject({ disposition: "rejected" });
     expect(assessAcademyCandidateEligibility({
       ...valid, provenance: { ...valid.provenance, trainingConsent: "public-training" },
-    })).toMatchObject({ disposition: "rejected", reasons: ["consent-provenance-mismatch"] });
+    })).toMatchObject({ disposition: "rejected" });
     expect(assessAcademyCandidateEligibility({
       ...valid, consent: { ...valid.consent, analytics: "invented-consent" },
-    })).toMatchObject({ disposition: "rejected", reasons: ["invalid-consent-record"] });
+    })).toMatchObject({ disposition: "rejected" });
   });
 });

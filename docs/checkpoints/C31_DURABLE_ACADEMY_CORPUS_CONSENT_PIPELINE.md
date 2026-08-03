@@ -9,9 +9,9 @@ durable corpus, encoder, trainer, or Foundry loop.
 C31 may not turn a terminal artifact into training data merely because it
 exists. A candidate must first carry separately declared local-recording,
 cloud-publication, analytics, and model-training consent, compatible training
-provenance, privacy classification, and synchronized-track metadata. An
-eligible decision authorizes only later C31 review/curation to consider the
-candidate; it does not persist or train on it.
+provenance, privacy classification, and synchronized-track evidence. An
+eligible decision would authorize only later C31 review/curation to consider the
+candidate; no current C30 bundle is eligible, persisted, or trained on.
 
 ## Verified foundation
 
@@ -26,12 +26,13 @@ candidate; it does not persist or train on it.
   model consent all fail closed; a revoked local/cloud/analytics record is also
   invalid for admission. Publication and analytics grants cannot be
   substituted for training permission.
-- The admission gate requires a synchronized-track declaration: tick range,
-  observation/action counts, event/reward/intent/build flags, and device class.
-  It checks the declared range/action count against the real C30 terminal. The
-  raw observations, events, rewards, and intents are not yet durably encoded or
-  retained; this declaration is deliberately not evidence that C31 has already
-  captured those tracks.
+- The admission gate requires both a synchronized-track declaration and a
+  content-verified raw bundle tied to the same candidate. A declaration alone
+  never qualifies. The current bundle reconstructs the sealed C30 terminal
+  through the shared production composition and records its real canonical
+  observations/actions/timing; it explicitly names native events,
+  reward-components, intents, and build/device/provenance as unavailable. That
+  makes the current candidate ineligible rather than fabricating those tracks.
 - Provenance must be a structured-state training source with a non-empty
   producer and complete build identity. Personal data may use only
   `private-personalization-only`; pseudonymous data must carry a pseudonymous
@@ -42,12 +43,15 @@ candidate; it does not persist or train on it.
 
 - [x] Eligibility, consent, and provenance are enforced before C30 candidate
   admission. The permanent proof carries a real two-tick production terminal
-  through the bounded C30 intake, accepts a complete anonymous scripted-bot
-  declaration, and rejects missing synchronized metadata, `no-training`, and
-  consent/provenance mismatch before a corpus action exists.
-- [ ] Real synchronized observation, action, event, reward-component, intent,
-  build, device, timing, provenance, and capsule-range tracks are captured and
-  versioned. The current gate validates only their required declarations.
+  through the bounded C30 intake and rejects it before a corpus action because
+  its verified raw bundle still declares unavailable native tracks. It also
+  rejects missing synchronized metadata, `no-training`, invalid consent, and
+  consent/provenance mismatch.
+- [x] Real bounded canonical observation/action/timing tracks are captured from
+  the shared production composition. The permanent proof reconstructs a real
+  C30 terminal, records ticks zero through terminal plus its exact action
+  envelopes, and rejects a tampered terminal hash. Native event, reward,
+  intent, build/device/provenance, and capsule-range tracks remain open.
 - [ ] Revocation, deletion propagation, privacy retention, pseudonymous
   identity lifecycle, quality scoring, deduplication, outliers, corruption,
   style/skill metadata, and population balance.
@@ -69,16 +73,19 @@ Foundry automation.
 ## Evidence
 
 - `pnpm check:c31:foundation` passes: typecheck, full lint, architecture
-  checks, and three focused Vitest suites / eight tests.
+  checks, and four focused Vitest suites / ten tests.
 - `academy-candidate-admission.test.ts` generates a real C30 terminal through
-  the bounded production pool and candidate intake. It asserts the eligible
-  receipt and the three pre-corpus rejection paths.
+  the bounded production pool and candidate intake. It asserts that the current
+  verified-but-incomplete track bundle remains rejected, plus the pre-corpus
+  consent/provenance paths.
+- `academy-candidate-tracks.test.ts` reconstructs a real C30 terminal through
+  the source composition and rejects a tampered terminal hash.
 - `agent-academy.test.ts` and
   `production-headless-academy-intake.test.ts` remain green in the same gate.
 
 ## Next safe boundary
 
-Capture and validate the actual synchronized C31 track bundle from the shared
-C30/C29 production composition before accepting any candidate into review or a
-corpus. Do not create placeholder observations/events/rewards, and do not
-weaken the C30 stream's bounded, ephemeral custody.
+Wire the native event, reward-component, intent, build/device/provenance, and
+capsule-range tracks from the shared C30/C29 composition into that bounded raw
+bundle before accepting any candidate into review or a corpus. Do not create
+placeholder tracks, and do not weaken the C30 stream's bounded custody.

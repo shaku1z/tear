@@ -1,6 +1,7 @@
 import { stableVerificationHash } from "../replay/hash";
 import type { TearProvenanceV1 } from "../tearbench/contracts";
 import type { ProductionHeadlessAcademyIntakeItem } from "../tearbench/production-headless-academy-intake";
+import type { TearAcademyCandidateTrackBundleV1 } from "./academy-candidate-tracks";
 
 export type TearConsentDisposition = "granted" | "denied" | "revoked";
 export type TearAcademyModelTrainingConsent = TearProvenanceV1["trainingConsent"];
@@ -39,6 +40,8 @@ export interface TearAcademyCandidateDeclarationV1 {
   readonly schemaVersion: 1;
   readonly candidate: ProductionHeadlessAcademyIntakeItem;
   readonly tracks: TearAcademySynchronizedTrackDeclarationV1;
+  /** Raw track evidence must corroborate this declaration before it can be eligible. */
+  readonly trackBundle?: TearAcademyCandidateTrackBundleV1;
   readonly consent: TearAcademyConsentRecordV1;
   readonly privacy: TearAcademyPrivacyRecordV1;
   readonly provenance: TearProvenanceV1;
@@ -99,6 +102,30 @@ function validTracks(value: unknown, candidate: ProductionHeadlessAcademyIntakeI
     && ["keyboard-mouse", "controller", "touch", "semantic"].includes(tracks.device ?? "");
 }
 
+function candidateHash(candidate: ProductionHeadlessAcademyIntakeItem): string {
+  return stableVerificationHash({
+    sequence: candidate.sequence, episodeId: candidate.episodeId, tick: candidate.tick,
+    scenario: candidate.artifact.scenario, actions: candidate.artifact.actions, terminal: candidate.artifact.terminal,
+  });
+}
+
+function validTrackBundle(value: unknown, candidate: ProductionHeadlessAcademyIntakeItem): boolean {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  const bundle = value as Partial<TearAcademyCandidateTrackBundleV1>;
+  if (bundle.format !== "tear-academy-candidate-tracks" || bundle.schemaVersion !== 1
+    || bundle.candidateId !== candidate.episodeId || bundle.candidateHash !== candidateHash(candidate)
+    || bundle.captureClass !== "c30-terminal-reconstruction" || !Array.isArray(bundle.observations)
+    || bundle.observations.length < 2 || !Array.isArray(bundle.actions)
+    || bundle.actions.length !== candidate.artifact.actions.length || bundle.terminal?.tick !== candidate.tick
+    || bundle.terminal.semanticHash !== candidate.artifact.terminal.semanticHash
+    || !Array.isArray(bundle.unavailableTracks) || bundle.unavailableTracks.length !== 0
+    || !nonEmpty(bundle.bundleHash)) return false;
+  return stableVerificationHash({
+    candidateHash: bundle.candidateHash, observations: bundle.observations, actions: bundle.actions,
+    terminal: bundle.terminal, unavailableTracks: bundle.unavailableTracks,
+  }) === bundle.bundleHash;
+}
+
 function consentReason(value: unknown, provenance: unknown, privacy: unknown): TearAcademyCandidateRejection | undefined {
   if (value === null || typeof value !== "object" || Array.isArray(value)) return "model-training-not-consented";
   const consent = value as Partial<TearAcademyConsentRecordV1>;
@@ -152,16 +179,15 @@ export function assessAcademyCandidateEligibility(value: unknown): TearAcademyCa
     });
   }
   const reasons: TearAcademyCandidateRejection[] = [];
-  if (!validTracks(input.tracks, candidate)) reasons.push("incomplete-synchronized-tracks");
+  if (!validTracks(input.tracks, candidate) || !validTrackBundle(input.trackBundle, candidate)) {
+    reasons.push("incomplete-synchronized-tracks");
+  }
   const consent = consentReason(input.consent, input.provenance, input.privacy);
   if (consent !== undefined) reasons.push(consent);
-  const candidateHash = stableVerificationHash({
-    sequence: candidate.sequence, episodeId: candidate.episodeId, tick: candidate.tick,
-    scenario: candidate.artifact.scenario, actions: candidate.artifact.actions, terminal: candidate.artifact.terminal,
-  });
+  const verifiedCandidateHash = candidateHash(candidate);
   return Object.freeze({
     format: "tear-academy-candidate-admission", schemaVersion: 1,
-    candidateId: candidate.episodeId, candidateHash,
+    candidateId: candidate.episodeId, candidateHash: verifiedCandidateHash,
     disposition: reasons.length === 0 ? "eligible" : "rejected", reasons: Object.freeze(reasons),
   });
 }
