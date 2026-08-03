@@ -87,7 +87,7 @@ describe("legacy screen renderer registry", () => {
     expectTypeOf<ReturnType<typeof createUi>>().toExtend<ScreenUiPort>();
     const registry = createLegacyScreenRenderers(createControlContext([]));
     expect(Object.keys(registry).sort()).toEqual([
-      "achievements", "codex", "confirmquit", "continue", "draft", "gameover", "leaderboards",
+      "academy", "achievements", "codex", "confirmquit", "continue", "draft", "gameover", "leaderboards",
       "menu", "paused", "pglab", "pgmenu", "playing", "profile", "rename", "replay", "reserve",
       "settings", "setup", "shop", "tierup", "win",
     ]);
@@ -230,6 +230,17 @@ describe("legacy screen renderer registry", () => {
       .toMatchObject({ x: 292, y: 834, w: 96, h: 44 });
     expect(controls.find((control) => control.action.type === "replay.practice"))
       .toMatchObject({ x: 644, y: 834, w: 180, h: 44, enabled: true });
+  });
+
+  it("renders durable Academy custody through a typed view with a semantic return", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    expect(() => { renderer.academy({ id: "academy", status: "ready", subtitle: "durable training custody", rows: [
+      { label: "HELD", value: "3" }, { label: "REVIEWED", value: "2" },
+      { label: "CURATED", value: "1" }, { label: "TRAINING SPLIT", value: "1" },
+    ] }); }).not.toThrow();
+    expect(controls.find((control) => control.action.type === "navigate" && control.action.to === "menu"))
+      .toMatchObject({ label: "‹  BACK" });
   });
 
   it("uses the oracle replay-vault row geometry and a profile-specific watch intent", () => {

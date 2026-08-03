@@ -18,6 +18,7 @@ export * from "./academy-candidate-splits";
 export * from "./academy-reviewed-sample";
 export * from "./academy-inspector";
 export * from "./academy-inspection-controller";
+export * from "./browser-academy-inspection";
 export * from "./ladder-foundry";
 export * from "./live-watch-agent-host";
 export * from "./hierarchical-policy-adapter";

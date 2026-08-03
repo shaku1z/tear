@@ -18,6 +18,7 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
     { point: [260, 574], screen: "leaderboards" },
     { point: [260, 635], screen: "codex" },
     { point: [260, 696], screen: "settings" },
+    { point: [260, 757], screen: "academy" },
   ];
   for (const route of hubRoutes) {
     await boot();

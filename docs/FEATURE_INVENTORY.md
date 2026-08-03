@@ -246,13 +246,17 @@ This is the migration checklist for the architectural redesign. A checked featur
    assessment derived from their verified raw tracks: transparent coverage and
    density components, source metadata, explicit outlier flags, and a content
    hash that recognizes equivalent captures as duplicates. That assessment is
-   still only `review-required` or `duplicate`, never a reviewed sample,
-   manifest, or trainer input. An authorized human can now record one immutable
-   curation decision or correction request against an exact held assessment;
-   a future active-candidate view removes it after custody revocation/expiry.
-   This remains distinct from a reviewed sample, manifest, split, or trainer
-   input. Account/cloud identity and deletion, C31 corpus samples, and policy
-   training remain absent;
+   still only `review-required` or `duplicate`, never trainer input. An
+   authorized human can record one immutable curation decision or correction
+   request against an exact held assessment; a future active-candidate view
+   removes it after custody revocation/expiry. An approved source can then enter
+   a lineage-bound durable pre-corpus split/manifest and materialize a reviewed
+   sample retaining its exact Vault range and verified tracks. Trainer manifests
+   omit hidden exams. The normal main-menu `ACADEMY` screen presents a read-only
+   runtime-owned aggregate of durable held, reviewed, curated, and training-split
+   state, including an explicit storage-unavailable state; it is not a trainer
+   input or detailed Academy workspace. Account/cloud identity and deletion,
+   trainer integration, and policy training remain absent;
    authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

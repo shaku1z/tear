@@ -230,12 +230,13 @@ export interface PlaygroundScreenView {
   readonly sections: readonly { readonly label: string; readonly choices: readonly ChoiceView[] }[];
   readonly canScrollUp?: boolean; readonly canScrollDown?: boolean;
 }
+export interface AcademyScreenView { readonly id: "academy"; readonly status: "loading" | "ready" | "unavailable"; readonly subtitle: string; readonly rows: readonly Readonly<{ readonly label: string; readonly value: string }>[]; }
 
 export type LegacyScreenView = MenuScreenView | SetupScreenView | PlayingScreenView | CodexScreenView
   | ShopScreenView | ProfileScreenView | AchievementsScreenView | LeaderboardsScreenView
   | ReplayScreenView | SettingsScreenView | RenameScreenView | DraftScreenView | ReserveScreenView
   | TierUpScreenView | PausedScreenView | ConfirmQuitScreenView | ContinueScreenView
-  | GameoverScreenView | WinScreenView | PlaygroundScreenView;
+  | GameoverScreenView | WinScreenView | PlaygroundScreenView | AcademyScreenView;
 
 export type ScreenViewById<Id extends LegacyScreenId, View = LegacyScreenView> =
   View extends Readonly<{ id: infer ViewId }> ? Id extends ViewId ? View : never : never;

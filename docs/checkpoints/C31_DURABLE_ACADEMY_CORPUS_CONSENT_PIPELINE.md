@@ -111,7 +111,10 @@ is trained on.
 - `TearAcademyInspectionController` supplies the asynchronous persistence
   boundary for that read model. Presentation receives an immutable `loading`,
   `ready`, or explicit `unavailable` snapshot, never an IndexedDB or Vault
-  handle.
+  handle. The normal main-menu `ACADEMY` route renders this read model through
+  typed screen state and refreshes it on entry; it currently exposes durable
+  held, reviewed, curated, and training-split counts, including the explicit
+  unavailable state when browser storage is absent.
 
 ## Exit-gate ledger
 
@@ -163,8 +166,17 @@ is trained on.
   duplicate assessment, malformed decision, or revoked source cannot enter the
   active curation view. A curation approval is deliberately not a sample,
   manifest, split assignment, or trainer-visible artifact.
-- [ ] Immutable lineage-bound train/validation/calibration/test/hidden-exam
-  splits, durable manifests, and the Academy interface.
+- [x] Immutable lineage-bound train/validation/calibration/test/hidden-exam
+  splits and durable pre-corpus manifests are bound to active reviewed custody.
+  Trainer manifests omit hidden-exam assignments; examiner manifests retain
+  them. This is not a trainer corpus.
+- [x] The normal main-menu `ACADEMY` route exposes a read-only, runtime-owned
+  durable custody inspection state. Its renderer receives only typed
+  loading/ready/unavailable views and semantic BACK navigation; browser evidence
+  exercises the real pointer route and return on the built test artifact.
+- [ ] Detailed Academy inspection for individual recordings, review/corrections,
+  consent, retention, manifest revisions, lesson status, and unavailable/error
+  recovery remains open.
 - [x] A persisted reviewed sample is tied to its exact capsule range and full
   verified tracks. When its model-training consent is revoked, a new chained
   manifest omits it; ordinary trainer manifests cannot enumerate hidden-exam
@@ -173,15 +185,16 @@ is trained on.
 ## Deliberately not claimed
 
 This checkpoint does not claim that C30 terminal artifacts contain a complete
-learning record, that any candidate has entered `TearDemonstrationCorpus`, or
-that a policy has trained. It does not implement a reviewed *sample*,
-account/cloud deletion, cloud publication, immutable manifests/splits, C32
-artifact loading, C33 behavior cloning, or C36 Foundry automation.
+learning record, that any reviewed sample has entered `TearDemonstrationCorpus`,
+or that a policy has trained. It does not implement account/cloud deletion,
+cloud publication, a trainer-consumable corpus, C32 artifact loading, C33
+behavior cloning, or C36 Foundry automation.
 
 ## Evidence
 
 - `pnpm check:c31:foundation` passes: typecheck, full lint, architecture
-  checks, and ten focused Vitest suites / twenty-four tests.
+  checks, thirteen focused Vitest suites / forty-four tests, a test-standalone
+  build, and the real-pointer browser navigation journey.
 - `academy-candidate-admission.test.ts` generates a real C30 terminal through
   the bounded production pool and candidate intake. It asserts that the current
   verified-but-incomplete track bundle remains rejected, plus the pre-corpus
@@ -229,6 +242,11 @@ artifact loading, C33 behavior cloning, or C36 Foundry automation.
   sample count for audit visibility.
 - `academy-inspection-controller.test.ts` proves an unsupported runtime reports
   an explicit, stable unavailable state rather than a misleading empty Academy.
+- `browser-academy-inspection.test.ts`, `app-legacy-state-controller.test.ts`,
+  and `screen-renderers.test.ts` prove the browser composition's unavailable
+  state, legal typed route, and semantic BACK control. The built navigation
+  journey uses the ordinary menu `ACADEMY` control and returns through the
+  normal Back control, without a debug-only screen transition.
 - That same custody proof rejects a foreign Vault for deletion, atomically
   removes the actual materialized source capsule only from its matching Vault,
   and retains the durable `deleted` tombstone outside future held queries.
@@ -246,6 +264,7 @@ artifact loading, C33 behavior cloning, or C36 Foundry automation.
 
 ## Next safe boundary
 
-Implement the inspectable Academy interface over the durable C31 stores—lesson
-status, recordings, review/corrections, consent, split manifests, and storage—
-rather than treating the legacy in-memory corpus as the product surface.
+Extend the player-visible Academy inspection from aggregate counts to durable
+recording/review/correction, consent/retention, and manifest details, while
+keeping lesson-status claims separate until their source is actually durable.
+Do not treat the legacy in-memory corpus as the product surface.
