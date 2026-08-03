@@ -11,6 +11,7 @@ export interface TearAcademyTrainingDatasetRequestV1 {
 
 export interface TearAcademyTrainingSequenceV1 {
   readonly candidateHash: string;
+  readonly split: Exclude<TearAcademyCorpusEntryV1["split"], "hidden-release-exam">;
   readonly lessonId: string;
   readonly segmentKind: TearAcademyCorpusEntryV1["segmentKind"];
   readonly tags: readonly string[];
@@ -55,7 +56,8 @@ function sequenceHash(entry: TearAcademyCorpusEntryV1, tracks: TearAcademyCandid
     segmentKind: entry.segmentKind, tags: entry.tags, trackRoot: tracks.bundleHash });
 }
 function freezeSequence(entry: TearAcademyCorpusEntryV1, tracks: TearAcademyCandidateTrackBundleV1): TearAcademyTrainingSequenceV1 {
-  return Object.freeze({ candidateHash: entry.candidateHash, lessonId: entry.lessonId, segmentKind: entry.segmentKind,
+  if (entry.split === "hidden-release-exam") throw new RangeError("Academy training datasets exclude hidden release exams");
+  return Object.freeze({ candidateHash: entry.candidateHash, split: entry.split, lessonId: entry.lessonId, segmentKind: entry.segmentKind,
     tags: Object.freeze([...entry.tags]), tracks: Object.freeze(structuredClone(tracks)), sequenceHash: sequenceHash(entry, tracks) });
 }
 

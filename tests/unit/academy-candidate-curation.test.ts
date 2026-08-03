@@ -5,6 +5,8 @@ import {
   TearAcademyCandidateCustodyStore,
   TearAcademyCandidateQualityStore,
   TearAcademyCorpusStore,
+  createTearBehaviorCloningBatches,
+  createTearBehaviorCloningNormalization,
   TearAcademyTrainingDatasetLoader,
   TearAcademyReviewedSampleStore,
   inspectAcademy,
@@ -195,5 +197,11 @@ describe("C31 held Academy candidate curation", () => {
       sequences: [{ candidateHash: sample.candidateHash, lessonId: "movement-foundations" }] });
     expect(first.sequences.every((entry) => entry.tracks.candidateHash === entry.candidateHash)).toBe(true);
     await expect(loader.load({ manifestId: manifest.id, trainerId: "other-trainer", version: 1 })).rejects.toThrow(/unavailable/u);
+    const normalization = createTearBehaviorCloningNormalization(first);
+    const batches = createTearBehaviorCloningBatches(first, normalization, { split: "training", batchSize: 2 });
+    expect(createTearBehaviorCloningNormalization(second)).toEqual(normalization);
+    expect(createTearBehaviorCloningBatches(second, normalization, { split: "training", batchSize: 2 })).toEqual(batches);
+    expect(batches.flatMap((batch) => batch.examples).every((example) => example.features.length === 22)).toBe(true);
+    expect(() => createTearBehaviorCloningBatches(first, normalization, { split: "validation", batchSize: 2 })).toThrow(/no examples/u);
   });
 });
