@@ -3,6 +3,8 @@ import { createMemoryGhostVaultBackend } from "../../src/ghost";
 import {
   TearActivePolicyRuntime, TearPolicyArtifactRegistry, createTearPolicyArtifact,
   encodeTearPolicyObservation, TEAR_POLICY_FEATURE_SCHEMA_HASH_V1, TEAR_POLICY_FEATURE_WIDTH_V1,
+  TEAR_POLICY_CONDITION_IDS_V1, TEAR_POLICY_CONDITION_SCHEMA_HASH_V1, TEAR_POLICY_CONDITION_WIDTH_V1,
+  projectStructuredPolicyCondition,
 } from "../../src/agents";
 import type { TearAgentObservation } from "../../src/agents";
 
@@ -95,18 +97,24 @@ describe("C32 active policy runtime", () => {
     const registry = new TearPolicyArtifactRegistry(createMemoryGhostVaultBackend(), temporalCompatibility);
     const template = artifact("*", []);
     const width = TEAR_POLICY_FEATURE_WIDTH_V1;
-    const temporalWeights = Array<number>(width * 2).fill(0); temporalWeights[0] = 1;
+    const temporalWeights = Array<number>(width * 2 + TEAR_POLICY_CONDITION_WIDTH_V1).fill(0);
+    const easyConditionIndex = TEAR_POLICY_CONDITION_IDS_V1.indexOf("difficulty:easy");
+    if (easyConditionIndex < 0) throw new Error("easy condition is unavailable");
+    temporalWeights[0] = 1; temporalWeights[width * 2 + easyConditionIndex] = 100;
     const stored = createTearPolicyArtifact({ ...template, id: "temporal-v1", compatibility: temporalCompatibility,
       model: { format: "temporal-window-linear-policy-v1", payload: JSON.stringify({ format: "tear-temporal-window-linear-policy-model", schemaVersion: 1,
-        featureSchemaHash: TEAR_POLICY_FEATURE_SCHEMA_HASH_V1, window: 2, mean: Array(width).fill(0), scale: Array(width).fill(1),
+        featureSchemaHash: TEAR_POLICY_FEATURE_SCHEMA_HASH_V1, window: 2, conditionSchemaHash: TEAR_POLICY_CONDITION_SCHEMA_HASH_V1,
+        conditionWidth: TEAR_POLICY_CONDITION_WIDTH_V1, mean: Array(width).fill(0), scale: Array(width).fill(1),
         classes: [{ actions: [{ type: "move", x: 1_000, y: 0 }] }, { actions: [{ type: "jump", phase: "pressed" }] }],
-        weights: [Array<number>(width * 2).fill(0), temporalWeights], biases: [0, 0] }) },
+        weights: [Array<number>(width * 2 + TEAR_POLICY_CONDITION_WIDTH_V1).fill(0), temporalWeights], biases: [0, 0] }) },
     });
     await registry.register(stored); await registry.activate(stored.id, "2026-08-03T15:01:00.000Z");
     const runtime = new TearActivePolicyRuntime(registry, "competent"); await runtime.reset();
-    expect(runtime.decide(first).actions).toEqual([{ type: "move", x: 1_000, y: 0 }]);
+    expect(projectStructuredPolicyCondition(first)[easyConditionIndex]).toBe(1);
+    expect(runtime.decide(first).actions).toEqual([{ type: "jump", phase: "pressed" }]);
     expect(runtime.decide(second).actions).toEqual([{ type: "jump", phase: "pressed" }]);
     await runtime.reset();
-    expect(runtime.decide(first).actions).toEqual([{ type: "move", x: 1_000, y: 0 }]);
+    const hard: TearAgentObservation = Object.freeze({ ...first, state: Object.freeze({ ...first.state, run: Object.freeze({ ...first.state.run, difficulty: "hard" }) }) });
+    expect(runtime.decide(hard).actions).toEqual([{ type: "move", x: 1_000, y: 0 }]);
   });
 });

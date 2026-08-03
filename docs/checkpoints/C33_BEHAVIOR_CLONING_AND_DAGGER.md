@@ -140,6 +140,13 @@ is a temporal-window perceptron—not a recurrent/GRU/LSTM architecture—and it
 does not establish unseen-seed quality, a baseline comparison, promotion, or
 player-facing training.
 
+The temporal artifact now conditions each causal window on the source-owned
+mode, difficulty, and weapon one-hot contract. The same bounded condition is
+projected from C32's live structured observation, so training and inference use
+one feature layout; temporal frames are normalized exactly once. Lesson,
+persona, and style conditioning remain absent because those values are not yet
+owned by the live policy observation contract.
+
 New C31 captures also bind the exact source scenario identity into the governed
 training sequence. A temporal fit retains the hashes of its training scenarios,
 and `compareTemporalPolicyAgainstScriptedBaselineInProduction` refuses any
@@ -159,7 +166,7 @@ Those remain C33 work.
 
 DONE THIS STEP:      C33 now preserves training-scenario provenance and records a fail-closed non-overlapping source-world temporal-versus-scripted comparison; it reports no win on the deliberately tiny fixture, so C33 §8 remains unticked.
 PROVEN BY:           Focused C31/C32/C33 track, admission, curation, and production-evaluator tests: 4 files / 13 tests, plus targeted ESLint, TypeScript, requirements, and architecture gates.
-REMAINING HERE:      Meaningful unseen-seed baseline win evidence, conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence.
+REMAINING HERE:      Meaningful unseen-seed baseline win evidence, lesson/persona/style conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
 NEXT SLICE:          Define a meaningful bounded recovery/lesson evaluation suite and outcome semantics, then run the temporal artifact against the scripted baseline; tick C33 §8 only for a real measured advantage.
 

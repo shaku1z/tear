@@ -1,5 +1,6 @@
 import { stableVerificationHash } from "../replay/hash";
 import type { GameAction } from "../input/game-action";
+import { projectScenarioPolicyCondition } from "./policy-condition-vector";
 import type { TearAcademyTrainingDatasetV1 } from "./academy-training-dataset";
 import { projectCanonicalPolicyFeatures, TEAR_POLICY_FEATURE_WIDTH_V1 } from "./policy-feature-vector";
 
@@ -9,6 +10,7 @@ export interface TearTemporalPolicyContextV1 {
   readonly featureFrames: readonly (readonly number[])[];
   /** The next authoritative action batch for the final, causal frame. */
   readonly targetActions: readonly GameAction[];
+  readonly condition: readonly number[];
   readonly contextHash: string;
 }
 
@@ -24,7 +26,9 @@ export function createTearTemporalPolicyContexts(dataset: TearAcademyTrainingDat
       const tick = sequence.tracks.observations[index]?.tick ?? 0;
       const targetActions = Object.freeze(sequence.tracks.actions.filter((entry) => entry.tick === tick + 1)
         .map((entry) => Object.freeze(structuredClone(entry.command))));
-      const draft = { candidateHash: sequence.candidateHash, tick, featureFrames, targetActions };
+      if (sequence.sourceScenario === undefined) throw new RangeError("temporal policy context requires source scenario identity");
+      const condition = projectScenarioPolicyCondition(sequence.sourceScenario);
+      const draft = { candidateHash: sequence.candidateHash, tick, featureFrames, targetActions, condition };
       contexts.push(Object.freeze({ ...draft, contextHash: stableVerificationHash(draft) }));
     }
   }
