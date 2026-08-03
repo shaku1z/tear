@@ -292,7 +292,8 @@ This is the migration checklist for the architectural redesign. A checked featur
    C32 runtime against a source-owned production observation. A separately
    governed validation split can produce a reproducible offline exact-action-
    conformance report only from a persisted fit; it rejects the training split
-   and provides no quality threshold or promotion path. Held-out quality,
+   and provides no quality threshold or promotion path. Those reports have
+   idempotent corruption-safe local custody only. Held-out quality,
    promotion, and DAgger remain absent. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.

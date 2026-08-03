@@ -41,6 +41,10 @@ promotion eligibility, or DAgger improvement.
   persisted fit. It reports deterministic exact next-action conformance and a
   content hash. It rejects the training split and does not define a threshold,
   quality rating, eligibility result, promotion, or real-game performance.
+- `TearBehaviorCloningEvaluationVault` keeps those immutable reports in the
+  local Ghost Vault `analysis` store under their content hash. Write/read is
+  idempotent, the index is lineage-scoped, and malformed bytes are quarantined
+  instead of becoming a partial report.
 
 ## Exit-gate status
 
@@ -56,6 +60,8 @@ promotion eligibility, or DAgger improvement.
 - [x] A separately governed populated validation split produces a reproducible
   action-conformance report from the persisted fit; training-split evaluation
   is rejected and the result is not used for promotion.
+- [x] Held-out reports have idempotent, corruption-safe local custody with no
+  player, cloud, or promotion consumer.
 - [ ] DAgger correction capture, review, ingestion, retraining, comparison,
   cancellation, and recovery are implemented with credible real-game evidence.
 
@@ -81,14 +87,20 @@ examples; the evaluator explicitly rejects a training-split request. This is
 only offline demonstration agreement over a tiny test fixture, not a claim of
 generalization, gameplay quality, or promotion safety.
 
+That report now round-trips idempotently through a dedicated local analysis
+record keyed by its content hash. Replacing its bytes with malformed content
+returns no report and creates a quarantine record. This is local forensic
+custody only: no cloud/provider adapter, player-facing history, or promotion
+consumer is added.
+
 ## Deliberately not claimed
 
 This is not a sequence/recurrent policy, a meaningful quality score, a
 comparison against the scripted policy, DAgger, promotion, or automatic
 player-facing training. Those remain C33 work.
 
-DONE THIS STEP:      A separately governed C31 validation source now produces a reproducible held-out action-conformance report from the persisted C33 fit; training-split scoring fails closed and no result promotes a policy.
-PROVEN BY:           Focused C30-to-C27/C31-to-C33 source/custody/corpus/training/Vault/held-out evaluation test; targeted no-emit TypeScript, targeted ESLint, requirements guard, architecture gate, and diff check pass. The named C33 foundation wrapper timed out without a result.
+DONE THIS STEP:      Held-out C33 reports now have immutable idempotent local custody and corrupt-byte quarantine; they remain non-promoting offline action-conformance evidence.
+PROVEN BY:           Focused C30-to-C27/C31-to-C33 source/custody/corpus/training/held-out-report Vault test plus targeted no-emit TypeScript and targeted ESLint.
 REMAINING HERE:      Temporal/sequence policy, intermediate/resumable training checkpoints, DAgger, cancellation/recovery, and meaningful real-game quality evidence.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Persist bounded held-out evaluation reports with corruption-safe custody and no promotion path; do not convert measured results into promotion.
+NEXT SLICE:          Define a bounded DAgger correction record from a source-world disagreement without creating a promotion path; batch correction capture, review, and retraining as one C33 item.

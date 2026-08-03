@@ -10,6 +10,7 @@ import {
   createTearBehaviorCloningBatches,
   createTearBehaviorCloningNormalization,
   evaluateTearBehaviorCloningPolicy,
+  TearBehaviorCloningEvaluationVault,
   trainTearBehaviorCloningPolicy,
   TearAcademyTrainingDatasetLoader,
   TearBehaviorCloningTrainingVault,
@@ -274,9 +275,16 @@ describe("C31 held Academy candidate curation", () => {
     const first = evaluateTearBehaviorCloningPolicy(persisted, dataset, normalization, { split: "validation", batchSize: 2 });
     const second = evaluateTearBehaviorCloningPolicy(persisted, dataset, normalization, { split: "validation", batchSize: 2 });
     expect(first).toEqual(second);
+    const evaluationVault = new TearBehaviorCloningEvaluationVault(harness.backend);
+    expect(await evaluationVault.persist(first)).toEqual(first);
+    expect(await evaluationVault.persist(first)).toEqual(first);
+    expect(await evaluationVault.get(first.reportHash)).toEqual(first);
     expect(first).toMatchObject({ split: "validation", examples: 3, batchCount: 2 });
     expect(first.actionConformance).toBeGreaterThanOrEqual(0);
     expect(first.actionConformance).toBeLessThanOrEqual(1);
     expect(() => evaluateTearBehaviorCloningPolicy(fit, dataset, normalization, { split: "training", batchSize: 2 } as never)).toThrow(/held-out/u);
+    await harness.backend.put("analysis", `behavior-cloning-evaluation:v1:${first.reportHash}`, "not-json");
+    expect(await evaluationVault.get(first.reportHash)).toBeUndefined();
+    expect((await harness.backend.keys("quarantine")).some((key) => key.endsWith(first.reportHash))).toBe(true);
   });
 });
