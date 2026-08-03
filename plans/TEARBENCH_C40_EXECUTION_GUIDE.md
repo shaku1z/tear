@@ -1064,7 +1064,10 @@ portability, concurrent complete worlds, or C27A completion.
 - [x] Versioned policy artifacts with compatibility metadata — opaque local
   artifacts are content-addressed in the Vault and fail closed on malformed,
   corrupt, future, key/id-mismatched, or incompatible bytes.
-- [ ] Reproducible evaluation of an artifact
+- [x] Reproducible artifact decision-conformance evaluation — a bounded frozen
+  structured suite produces a hash-bound report from the exact active
+  artifact, expected action hashes, and declared scenario identity. This is not
+  real-game performance, training, or a promotion decision.
 - [x] Promotion and rollback both exercised — active-pointer changes and
   immutable activation history commit together; rollback re-activates the
   verified predecessor.
