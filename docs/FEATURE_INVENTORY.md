@@ -195,9 +195,10 @@ This is the migration checklist for the architectural redesign. A checked featur
    pixel, PCM, haptic, or device output claim;
    C29/C30 source replay and headless composition now own the same portable live
    wave, spawn, clear, and reward runtime (including semantic draft routing)
-   used by the C27A detached host. The C27A foundation gate retains its corpus
-   evidence after that delegation, but C30 still needs direct C27A-corpus and
-   browser-fast parity plus a natural failure terminal;
+   used by the C27A detached host, plus the portable terminal-outcome runtime.
+   C30's ordered gate rebuilds the 13 live browser traces and matches all 5,732
+   source-composition hashes, native streams, the natural route, and terminal
+   fact. A headless natural-failure terminal is still not produced or rerun;
    authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

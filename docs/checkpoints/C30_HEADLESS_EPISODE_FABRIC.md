@@ -1,9 +1,9 @@
 # C30 - Real Headless Tear and Scalable Episode Fabric
 
 **Status:** active - DOM-free episodes now reset through C29's complete
-production replay composition, including the source-owned live wave/reward
-lifecycle. C30's C27A parity corpus, scale, and artifact-streaming exit work
-remain open.
+production replay composition, including the source-owned live wave/reward and
+terminal-outcome lifecycles. The fresh C27A browser corpus matches that source
+composition; C30's scale and artifact-streaming exit work remain open.
 
 ## Scope and evidence rule
 
@@ -64,9 +64,12 @@ operational boundary it proves.
   spawn, clear, and reward routing into the source-owned
   `ProductionWaveRewardRuntime`: C29 creates it, C30 resets through that C29
   composition, and the C27A detached host delegates to it. This removes the
-  composition absence only. No C30 replay of the 13 C27A traces or
-  browser-fast/native-event/reward/terminal/cadence comparison has run, so it
-  is not parity evidence.
+  composition absence only. The ordered C30 gate now rebuilds all 13 C27A
+  browser traces and then runs each recorded origin through that exact C29
+  composition. All 5,732 fixed-tick hashes, native streams, the natural
+  wave/reward route boundary, and the terminal `run.defeated` event match.
+  This is source-composition parity against freshly captured browser evidence;
+  it is not a pixel, PCM/device, haptic, or durable-output claim.
 - Architecture checks reject direct app, presentation, persistence, platform,
   browser, and Ghost 2 imports plus DOM/Canvas/browser globals in the C30
   adapter. The focused Node test executes it without a DOM.
@@ -79,13 +82,13 @@ operational boundary it proves.
   runtime. Focused unit evidence proves actual wave-1 activation, draft
   routing, and wave-2 activation, while source architecture fences the C30
   adapter from browser-facing imports and globals.
-- [ ] Headless-to-live parity on the C27A matrix. The current one-episode
-  semantic comparison is C30-to-C29 source-composition evidence only; no
-  browser-fast matrix, native-event-order, reward, terminal-condition, or
-  cadence corpus is claimed. The former source-composition blocker is removed:
-  the shared runtime owns the live lifecycle. The remaining work is a dedicated
-  C30 replay of all 13 C27A traces, followed by the required browser-fast
-  comparison; it must not be bypassed with a second headless model.
+- [x] Headless-to-live parity on the C27A matrix. The ordered C30 gate first
+  regenerates the 13-scenario / 5,732-tick C27A browser corpus, then its
+  production matrix adapter hydrates every captured origin through the exact
+  C29 composition that C30 resets. It matches every authoritative hash and
+  native gameplay stream, the natural draft route boundary, and the terminal
+  `run.defeated` event. The adapter records/rejects a malformed trace instead
+  of substituting another simulator.
 - [x] Initial in-process resource controls and measured natural-episode
   throughput. `measureProductionHeadlessEpisodes` produces the serializable
   `tearbench-production-headless-benchmark` artifact for a declared 32-episode,
@@ -167,11 +170,12 @@ retain their respective evidence obligations.
 
 - `pnpm check:c30:foundation` passes: typecheck, full lint, C30 source
   architecture fences, six focused Vitest files / 13 tests, four Node worker
-  tests, standalone build, and the Class-A browser terminal rerun.
+  tests, standalone build, the Class-A browser terminal rerun, a fresh C27A
+  13-scenario browser capture, and the 14-test exact source-matrix comparison.
 - `pnpm check:c27a:foundation` passes 36 files / 138 tests after its detached
   host adopts the shared source runtime; the rebuilt browser corpus and all 40
-  detached comparisons retain C27A evidence. This is retention evidence, not a
-  C30 parity claim.
+  detached comparisons retain C27A evidence. C30 separately proves the source
+  matrix above through its own ordered gate.
 - `pnpm exec vitest run tests/unit/production-headless-benchmark.test.ts --disableConsoleIntercept` passes and prints its measured production-pool artifact.
 - `pnpm exec vitest run tests/unit/production-headless-environment.test.ts` passes five focused tests, including the 256-episode / 30,720-tick isolation stress proof.
 - `node --test tests/production-headless-worker.test.mjs` passes the serialized
@@ -186,9 +190,8 @@ retain their respective evidence obligations.
 
 ## Next safe boundary
 
-Do not add retries to timeout, validation, or worker-reported failures. Build
-one recorded-origin C30 matrix adapter that consumes all 13 C27A artifacts
-through `createProductionGhostReplayComposition`, drives fixed and routed
-segments through that same source runtime, and records exact state/native-stream
-outcomes. It must stop and report errors; it must not add a C30-only simulator
-or claim browser-fast parity until the actual browser comparison runs.
+Do not add retries to timeout, validation, or worker-reported failures. The
+next C30 boundary is a sampled **natural failure** terminal artifact that is
+visibly rerunnable through the browser path. The source outcome lifecycle now
+exists and the C27A terminal trace matches, but no headless natural failure has
+yet been produced, retained, or visibly rerun; do not simulate one.

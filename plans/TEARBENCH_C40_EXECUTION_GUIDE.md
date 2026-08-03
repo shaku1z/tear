@@ -1040,7 +1040,11 @@ portability, concurrent complete worlds, or C27A completion.
   the complete C29 source composition, including its portable live wave/reward
   runtime; C27A's detached host delegates to the same runtime. The named C30
   gate and C27A retention gate pass. This does not claim C27A matrix parity.
-- [ ] Headless↔live parity on the C27A matrix
+- [x] Headless↔live parity on the C27A matrix — `pnpm check:c30:foundation`
+  rebuilds the standalone app, regenerates all 13 C27A browser traces, and
+  runs the C30 source-matrix adapter against them. All 5,732 authoritative
+  fixed-tick hashes, native streams, the natural draft route, and terminal
+  `run.defeated` fact match; no C30-only simulator participates.
 - [x] Resource controls and measured throughput (episodes/minute, recorded)
 
 ### C31 — Academy corpus and consent

@@ -3,10 +3,12 @@ import { parseCampaignChapterBindingSpec, stageCampaignChapterBinding } from "..
 import type { ChapterIntent } from "../gameplay/campaign/chapter-controller";
 import { projectCanonicalGameplayState, type CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { AuthoritativeInputSnapshot, AuthoritativeInputState } from "../gameplay/runtime/authoritative-input";
+import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
 import { stageAt } from "../gameplay/stages";
 import type { TearSnapshotV1 } from "./contracts";
 import { applyTearCodecConfiguration, hydrateTearCodecWorld } from "./detached-world-hydrator";
 import { createProductionCombatSimulation } from "./production-combat-simulation";
+import { createProductionRunOutcomeRuntime, type ProductionRunOutcomeRuntime } from "./production-run-outcome-runtime";
 import { createProductionReplayWorld, type ProductionReplayWorld } from "./production-world-factory";
 import { createProductionWaveRewardRuntime, type ProductionWaveRewardRuntime } from "./production-wave-reward-runtime";
 
@@ -15,6 +17,10 @@ export interface ProductionGhostReplayCompositionOptions {
   readonly mode?: string;
   readonly weaponId?: string;
   readonly inputSnapshots?: ReadonlyMap<number, AuthoritativeInputSnapshot>;
+  /** Optional portable fact sink for a host that compares source replay output. */
+  readonly gameplayEvents?: TearGameplayEventPort;
+  /** Optional portable terminal endpoint; device/persistence behavior stays outside this composition. */
+  readonly endRun?: () => void;
 }
 
 /** Shared renderer-neutral projection for production replay and headless worlds. */
@@ -134,12 +140,17 @@ export function createProductionGhostReplayComposition(
         ...(options.weaponId === undefined ? {} : { weaponId: options.weaponId }) });
       const staged = snapshot === undefined ? undefined : hydrateProductionReplayWorld(replay, snapshot);
       let waveReward: ProductionWaveRewardRuntime | null = null;
+      let outcome: ProductionRunOutcomeRuntime | null = null;
       const core = createProductionCombatSimulation<CanonicalGameplayState>(replay, {
         ...(staged === undefined || staged.platforms.length === 0 ? {} : { platforms: staged.platforms }),
         updateWave: (seconds) => { waveReward?.update(seconds); },
+        ...(options.gameplayEvents === undefined ? {} : { gameplayEvents: options.gameplayEvents }),
+        endRun: () => { options.endRun?.(); outcome?.controller.defeat(); },
         snapshot: (tick, input) => projectProductionReplayCanonicalState(replay, tick, input),
       });
+      outcome = createProductionRunOutcomeRuntime(replay, options.gameplayEvents);
       waveReward = createProductionWaveRewardRuntime(replay, {
+        ...(options.gameplayEvents === undefined ? {} : { gameplayEvents: options.gameplayEvents }),
         actorId: (enemy) => core.combatEntityRuntime.id(enemy, "enemy"),
       });
       if (staged === undefined) waveReward.startNaturalOpening();
@@ -156,6 +167,7 @@ export function createProductionGhostReplayComposition(
         replay,
         combat: core,
         simulation: core.simulationRuntime,
+        outcome,
         waveReward,
         routeAction: waveReward.routeAction,
         semanticProjection: () => core.simulationRuntime.lastResult?.state

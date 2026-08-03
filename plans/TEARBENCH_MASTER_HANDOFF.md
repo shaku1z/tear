@@ -188,11 +188,13 @@ Named status:
   parent-side deadline termination, and replacement of an externally exited
   idle child. Explicitly idempotent input retains a versioned active-exit
   attempt record and retries once on a fresh child; timeout, validation, and
-  worker-reported failures do not retry or restore. A prior C30 recorded-origin
-  attempt reached C27A boss-Aldric tick 35, then diverged at its live wave spawn
-  before the lifecycle was source-owned; both unproven attempts were reverted.
-  The former composition gap is now removed, but no replacement 13-trace or
-  browser-fast C30 parity comparison has been run.
+  worker-reported failures do not retry or restore. The former C30
+  recorded-origin gap was resolved by source-owned wave/reward and terminal
+  outcome lifecycles. The ordered C30 gate rebuilds all 13 browser live traces
+  and runs their captured origins through the same C29 composition C30 resets:
+  all 5,732 authoritative hashes, native streams, the natural draft route, and
+  the terminal `run.defeated` fact match. This is not a pixel/device or durable
+  external-output claim.
   The new declared 32x120 natural workload records rate/latency/heap/repeat
   evidence and passed its modest developer-hardware budget on this worktree;
   it is not training-capacity evidence. Browser-fast corpus parity,
@@ -425,11 +427,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C29/C30 now own the portable live wave/reward lifecycle: C29 creates it, C30 resets through that exact C29 composition, and C27A's detached host delegates to it. This ticks C30's same-composition/no-DOM item without inventing a second simulator.
-PROVEN BY:           `pnpm check:c30:foundation` passes with six focused Vitest files / 13 tests, four Node worker tests, standalone build, and Class-A browser terminal rerun. `pnpm check:c27a:foundation` passes 36 files / 138 tests, rebuilds all 13 live traces, and passes all 40 detached comparisons after the delegation. These gates retain the C27A evidence; they do not prove C30 live/headless parity.
-REMAINING HERE:      C30 needs a recorded-origin replay of all 13 C27A traces, then browser-fast event/reward/terminal/cadence comparison. It also needs checkpoint restore, target-hardware training-capacity and long-run leak measurements, actual failure reruns, and Academy/Foundry streaming. C29's durable active-cinematic boundary remains separately open. Timeout, validation, and worker-reported failures intentionally do not retry.
+DONE THIS STEP:      C30 now replays every freshly captured C27A origin through C29's exact source composition, including portable wave/reward and terminal-outcome lifecycles. All 13 trace receipts match; this ticks C30's C27A-matrix parity item without a second simulator.
+PROVEN BY:           `pnpm check:c30:foundation` passes: six focused Vitest files / 13 tests, four Node worker tests, standalone build, Class-A browser terminal rerun, fresh 13-scenario / 5,732-tick C27A browser capture, then a 14-test source matrix. Every authoritative hash, native stream, natural draft route, and terminal `run.defeated` fact matches.
+REMAINING HERE:      C30 still needs checkpoint restore, target-hardware training-capacity and long-run leak measurements, a real headless natural-failure artifact and visible rerun, and Academy/Foundry streaming. C29's durable active-cinematic boundary remains separately open. Timeout, validation, and worker-reported failures intentionally do not retry.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Build one C30 recorded-origin matrix adapter for all 13 C27A traces through `createProductionGhostReplayComposition`. Drive fixed and routed segments through that shared source runtime, record exact state/native-stream outcomes, and stop/report errors. Do not add a C30-only simulator or claim browser-fast parity before the browser comparison runs.
+NEXT SLICE:          Produce one real headless natural-failure terminal artifact through the shared source lifecycle and visibly rerun it in the browser path. Do not simulate failure, call it a durable outcome, or add a training-stream consumer.
 
 All of the following were run from this worktree through C27A slice 36:
 

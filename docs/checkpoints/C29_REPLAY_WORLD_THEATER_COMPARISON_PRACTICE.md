@@ -32,6 +32,11 @@ applicable production boundary.
   their captured lifecycle. C30 constructs through this same C29 composition,
   while the C27A detached host delegates to it; C27A retention evidence does
   not certify C29's separate active-cinematic durable-capsule gap.
+- The same composition now owns a portable terminal outcome runtime. It uses
+  the live outcome controller and native terminal-fact publisher while leaving
+  presentation, persistence, cloud, and device work as semantic requests. The
+  fresh C30 matrix matches the real terminal `run.defeated` fact; that does not
+  make any durable output or active-cinematic claim.
 - tests/unit/ghost-production-replay-world.test.ts constructs that complete
   source-owned production replay composition, supplies its actual simulationRuntime,
   and proves the replay reaches tick 80 through that same object. A repeated
