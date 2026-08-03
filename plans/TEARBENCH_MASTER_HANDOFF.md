@@ -242,10 +242,11 @@ Named status:
   reward snapshots, and ordered planner intents through the shared composition.
   It records the source device as semantic. A C31 source-attestation reader can
   bind a complete C27 Vault capsule only when its sealed bootstrap, every
-  command, exact range, and copied C30 terminal anchor agree; its build and
-  range then let a candidate reach an `eligible` pre-corpus receipt. The normal
-  C30 stream does not create that source yet, so its default candidates remain
-  unavailable and rejected. C31 does not persist/review a sample, create
+  command, exact range, and copied C30 terminal anchor agree. An explicit C31
+  post-intake materializer now produces and reads back that source capsule, so
+  the resulting candidate can reach an `eligible` pre-corpus receipt. The C30
+  callback remains storage-free and an unmaterialized intake item is still
+  unavailable and rejected. C31 does not persist/review a corpus sample, create
   manifests, or train a policy.
 - **C32-C40:** incomplete.
 
@@ -325,10 +326,10 @@ Important files:
 ### Exact next slice
 
 C27A and C28 are closed. C29's durable active-cinematic capsule boundary remains
-open, but the current worktree's exact slice is **C31 native event, reward,
-intent, build/device/provenance, and capsule-range tracks**. Do not reopen C27A for pixels, haptics,
-durable outcomes, or audio/device fidelity; C25, C39, and C40 own those
-separate output claims.
+open, but the current worktree's exact slice is **C31 durable consent,
+revocation, retention, and candidate custody around the verified post-intake
+source materializer**. Do not reopen C27A for pixels, haptics, durable outcomes,
+or audio/device fidelity; C25, C39, and C40 own those separate output claims.
 
 C30 has already proven an in-memory restore of an active, non-draft natural
 episode: its source snapshot, held input, accepted commands, and semantic hash
@@ -344,11 +345,13 @@ pressure; the existing dispatcher now has an eight-PID, 32-episode bounded
 stress proof and first-source-tick mid-run cancellation without recovery.
 Neither may be turned into storage, durable job recovery, a C31 corpus, or a
 second simulation model. Because no target profile is declared, leave that C30
-capacity claim open. C31 now rejects invalid candidate metadata and verifies a
-real canonical/native-event/reward/planner-intent bundle before corpus action.
-Its Vault reader can bind a matching source identity and integrity-read Ghost
-capsule range, but the next slice must materialize that source alongside the
-C30 candidate rather than leaving the normal stream unavailable.
+capacity claim open. C31 now rejects invalid candidate metadata, verifies a
+real canonical/native-event/reward/planner-intent bundle before corpus action,
+and can explicitly drain a pulled candidate into a matching C27 Vault source
+capsule before attesting its exact build and range. Keep that asynchronous
+custody step out of C30's synchronous callback. The next slice must add C31
+governance records around the verified source rather than treating it as a
+reviewed corpus sample.
 
 Preserve:
 
@@ -489,11 +492,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C31 reconstructs a sealed C30 terminal through the shared production composition and records exact canonical observations/actions/timing, but keeps the candidate rejected while native event/reward/intent/device tracks are unavailable.
-PROVEN BY:           `pnpm check:c31:foundation` passes typecheck/lint/architecture plus four focused Vitest suites / ten tests. The terminal track bundle has ticks zero through terminal and exact actions; a tampered terminal hash, missing bundle metadata, `no-training`, invalid consent, and consent/provenance mismatch all reject.
-REMAINING HERE:      C31 still needs native event/reward/intent/build/device/provenance/capsule-range tracks, durable consent/revocation/deletion, quality/review/curation, lineage-bound immutable splits/manifests, an inspectable corpus/UI, and any trainer integration. C30 target-host capacity remains external; C29's durable active-cinematic boundary remains separately open.
+DONE THIS STEP:      C31 reconstructs a sealed C30 terminal through the shared production composition, captures its canonical/native/reward/intent evidence, and explicitly drains a pulled bounded candidate into a complete C27 Vault source capsule before reading back its exact bootstrap, command range, terminal anchor, and integrity-root attestation. The C30 callback remains storage-free.
+PROVEN BY:           `pnpm check:c31:foundation` passes typecheck/lint/architecture plus six focused Vitest suites / fourteen tests. `pnpm check:c30:foundation` also passes its shared-composition units, six bounded worker proofs, both browser terminal reruns, and the 13-scenario C27A parity capture. Tampered terminal hashes, missing bundle metadata, `no-training`, invalid consent, consent/provenance mismatch, a missing bootstrap, and a missing terminal anchor all reject.
+REMAINING HERE:      C31 still needs durable consent/revocation/deletion and retention custody, quality/review/curation, lineage-bound immutable splits/manifests, an inspectable corpus/UI, and any trainer integration. A source Vault capsule is not a reviewed corpus sample. C30 target-host capacity remains external; C29's durable active-cinematic boundary remains separately open.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Wire native event, reward, intent, build/device/provenance, and capsule-range tracks into the bounded C31 source bundle, rejecting the candidate until each has actual shared-composition evidence.
+NEXT SLICE:          Add a durable C31 candidate-custody record with independent consent/revocation/retention decisions around the explicit post-intake source materializer; preserve its fail-closed admission boundary and do not write from the C30 callback.
 
 All of the following were run from this worktree through C27A slice 36:
 

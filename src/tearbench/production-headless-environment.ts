@@ -9,11 +9,13 @@ import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,
   projectProductionReplayCanonicalState,
+  type ProductionReplayBootstrap,
 } from "./production-replay-composition";
 import type { ProductionReplayWorld } from "./production-world-factory";
 import type { ProductionWaveRewardRuntime } from "./production-wave-reward-runtime";
 import type { ProductionWaveRewardIntent } from "./production-wave-reward-runtime";
 import type { TearScenarioV1, TearSnapshotV1 } from "./contracts";
+import { RUN_RANDOM_STREAM_NAMES } from "../simulation/run-random";
 import {
   TearHeadlessEnvironmentPool,
   type TearHeadlessEnvironment,
@@ -27,6 +29,7 @@ type ProductionHeadlessCore = Readonly<{
   replay: ProductionReplayWorld;
   simulation: ReturnType<typeof createProductionCombatSimulation<CanonicalGameplayState>>;
   waveReward: ProductionWaveRewardRuntime;
+  bootstrap: ProductionReplayBootstrap;
   scenario: TearScenarioV1;
   routeAction: (action: GameAction) => boolean;
   sourceTracks?: ProductionHeadlessSourceTrackState;
@@ -60,6 +63,8 @@ export interface ProductionHeadlessTerminalArtifact {
   readonly format: "tearbench-production-headless-terminal";
   readonly schemaVersion: 1;
   readonly scenario: TearScenarioV1;
+  /** Source-owned run-start identity before natural opening content consumes RNG. */
+  readonly bootstrap: ProductionReplayBootstrap;
   readonly actions: readonly CommandEnvelope<GameAction>[];
   readonly terminal: Readonly<{
     tick: number;
@@ -78,6 +83,8 @@ export interface ProductionHeadlessCheckpoint {
   readonly format: "tearbench-production-headless-checkpoint";
   readonly schemaVersion: 1;
   readonly scenario: TearScenarioV1;
+  /** Original run-start identity, retained so restored artifacts attest the same source run. */
+  readonly bootstrap: ProductionReplayBootstrap;
   readonly checkpoint: Readonly<{
     tick: number;
     semanticHash: string;
@@ -129,11 +136,41 @@ function record(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function requireBootstrap(value: unknown): ProductionReplayBootstrap {
+  if (!record(value) || !record(value.build) || !record(value.rng)) {
+    throw new TypeError("production headless checkpoint bootstrap is invalid");
+  }
+  const build = value.build;
+  const buildKeys = ["version", "revision", "target", "rulesetVersion", "contentHash", "configHash"] as const;
+  if (buildKeys.some((key) => typeof build[key] !== "string" || build[key].length === 0)) {
+    throw new TypeError("production headless checkpoint build identity is invalid");
+  }
+  const streams: Record<string, Readonly<{ algorithm: "mulberry32"; seed: number; state: number; cursor: number }>> = {};
+  for (const name of RUN_RANDOM_STREAM_NAMES) {
+    const stream = value.rng[name];
+    if (!record(stream) || stream.algorithm !== "mulberry32"
+      || typeof stream.seed !== "number" || !Number.isSafeInteger(stream.seed) || stream.seed < 0
+      || typeof stream.state !== "number" || !Number.isSafeInteger(stream.state) || stream.state < 0
+      || typeof stream.cursor !== "number" || !Number.isSafeInteger(stream.cursor) || stream.cursor < 0) {
+      throw new TypeError("production headless checkpoint random bootstrap is invalid");
+    }
+    streams[name] = Object.freeze({ algorithm: "mulberry32", seed: stream.seed, state: stream.state, cursor: stream.cursor });
+  }
+  return Object.freeze({
+    build: Object.freeze({
+      version: build.version as string, revision: build.revision as string, target: build.target as string,
+      rulesetVersion: build.rulesetVersion as string, contentHash: build.contentHash as string, configHash: build.configHash as string,
+    }),
+    rng: Object.freeze(streams),
+  });
+}
+
 function validateCheckpoint(value: unknown): ProductionHeadlessCheckpoint {
   if (!record(value) || value.format !== "tearbench-production-headless-checkpoint" || value.schemaVersion !== 1) {
     throw new TypeError("production headless checkpoint format is invalid");
   }
   const scenario = requireScenario(value.scenario);
+  const bootstrap = requireBootstrap(value.bootstrap);
   const snapshot = validateTearContract(value.snapshot);
   if (!snapshot.ok || snapshot.value.kind !== "snapshot") {
     throw new TypeError(`invalid production headless checkpoint snapshot: ${snapshot.ok ? "wrong contract kind"
@@ -201,6 +238,7 @@ function validateCheckpoint(value: unknown): ProductionHeadlessCheckpoint {
   }
   return Object.freeze({
     format: "tearbench-production-headless-checkpoint", schemaVersion: 1, scenario, snapshot: snapshot.value,
+    bootstrap,
     input: validInput,
     checkpoint: validCheckpoint,
     actions: cloneActions(actions),
@@ -232,6 +270,7 @@ export function createProductionHeadlessEnvironment(
     scenario: TearScenarioV1,
     snapshot?: TearSnapshotV1,
     input?: AuthoritativeInputSnapshot,
+    bootstrap?: ProductionReplayBootstrap,
   ): ProductionHeadlessCore => {
     const sourceTracks: ProductionHeadlessSourceTrackState | undefined = options.captureSourceTracks === true
       ? { nativeEvents: [], rewardComponents: [], intents: [] }
@@ -249,6 +288,7 @@ export function createProductionHeadlessEnvironment(
     }).create(snapshot);
     gameplayEvents?.setTickSource(() => composed.simulation.scheduler.tick);
     const core = Object.freeze({ replay: composed.replay, simulation: composed.combat, waveReward: composed.waveReward,
+      bootstrap: bootstrap ?? composed.bootstrap,
       scenario, routeAction: composed.routeAction, ...(sourceTracks === undefined ? {} : { sourceTracks }) });
     if (sourceTracks !== undefined) {
       sourceTracks.rewardComponents.push(Object.freeze({ tick: composed.simulation.scheduler.tick,
@@ -294,7 +334,7 @@ export function createProductionHeadlessEnvironment(
         }),
         ...(terminated || truncated ? { artifact: Object.freeze<ProductionHeadlessTerminalArtifact>({
           format: "tearbench-production-headless-terminal", schemaVersion: 1,
-          scenario: current.scenario, actions: Object.freeze([...actionTrace]),
+          scenario: current.scenario, bootstrap: current.bootstrap, actions: Object.freeze([...actionTrace]),
           terminal: Object.freeze({
             tick: result.tick, semanticHash: stableVerificationHash(result.state), terminated, truncated,
           }),
@@ -314,14 +354,14 @@ export function createProductionHeadlessEnvironment(
       );
       return Object.freeze({
         format: "tearbench-production-headless-checkpoint", schemaVersion: 1,
-        scenario: current.scenario,
+        scenario: current.scenario, bootstrap: current.bootstrap,
         checkpoint: Object.freeze({ tick, semanticHash: captured.semanticHash, nextCommandId }),
         snapshot: captured.snapshot, input: Object.freeze({ ...captured.input }), actions: cloneActions(actionTrace),
       });
     },
     restoreCheckpoint(value: ProductionHeadlessCheckpoint): CanonicalGameplayState {
       const checkpoint = validateCheckpoint(value);
-      const restored = compose(checkpoint.scenario, checkpoint.snapshot, checkpoint.input);
+      const restored = compose(checkpoint.scenario, checkpoint.snapshot, checkpoint.input, checkpoint.bootstrap);
       const restoredObservation = observation(restored);
       if (stableVerificationHash(restoredObservation) !== checkpoint.checkpoint.semanticHash) {
         throw new RangeError("production headless checkpoint semantic state does not restore exactly");

@@ -1,6 +1,26 @@
 {
   "format": "tearbench-production-headless-terminal",
   "schemaVersion": 1,
+  "bootstrap": {
+    "build": {
+      "version": "0.1.0",
+      "revision": "working-tree",
+      "target": "production-headless",
+      "rulesetVersion": "live",
+      "contentHash": "3d711c1f79f15517",
+      "configHash": "02d89f46848d4bf8"
+    },
+    "rng": {
+      "legacy": { "algorithm": "mulberry32", "seed": 596074587, "state": 596074587, "cursor": 0 },
+      "combat": { "algorithm": "mulberry32", "seed": 3976961368, "state": 3976961368, "cursor": 0 },
+      "enemy-ai": { "algorithm": "mulberry32", "seed": 4284298997, "state": 4284298997, "cursor": 0 },
+      "spawn": { "algorithm": "mulberry32", "seed": 1069258935, "state": 1069258935, "cursor": 0 },
+      "draft": { "algorithm": "mulberry32", "seed": 2532995547, "state": 2532995547, "cursor": 0 },
+      "boss": { "algorithm": "mulberry32", "seed": 1819168057, "state": 1819168057, "cursor": 0 },
+      "world": { "algorithm": "mulberry32", "seed": 1439366908, "state": 1439366908, "cursor": 0 },
+      "cosmetic": { "algorithm": "mulberry32", "seed": 1171569879, "state": 1171569879, "cursor": 0 }
+    }
+  },
   "scenario": {
     "format": "tear-contract",
     "kind": "scenario",

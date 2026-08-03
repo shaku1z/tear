@@ -10,6 +10,7 @@ export * from "./academy";
 export * from "./academy-candidate-admission";
 export * from "./academy-candidate-tracks";
 export * from "./academy-candidate-source-attestation";
+export * from "./academy-candidate-capsule-materializer";
 export * from "./ladder-foundry";
 export * from "./live-watch-agent-host";
 export * from "./hierarchical-policy-adapter";

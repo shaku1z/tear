@@ -4,12 +4,13 @@ import type { ChapterIntent } from "../gameplay/campaign/chapter-controller";
 import { createLiveStateForgeAdapter } from "../app/live-state-forge-adapter";
 import { createLiveStateForgeRuntimeBridge } from "../app/live-state-forge-runtime-bridge";
 import type { RunDifficulty } from "../gameplay/run/session";
+import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
 import { projectCanonicalGameplayState, type CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { AuthoritativeInputSnapshot, AuthoritativeInputState } from "../gameplay/runtime/authoritative-input";
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
 import { stageAt } from "../gameplay/stages";
 import { stableVerificationHash } from "../replay/hash";
-import type { TearSnapshotV1 } from "./contracts";
+import type { TearBuildIdentityV1, TearSnapshotV1 } from "./contracts";
 import { applyTearCodecConfiguration, hydrateTearCodecWorld } from "./detached-world-hydrator";
 import { captureLiveStateForgeSnapshot } from "./live-runtime-snapshots";
 import { createProductionCombatSimulation } from "./production-combat-simulation";
@@ -41,6 +42,12 @@ export interface ProductionReplayCheckpointCapture {
   readonly snapshot: TearSnapshotV1;
   readonly input: AuthoritativeInputSnapshot;
   readonly semanticHash: string;
+}
+
+/** Immutable run-start facts captured before natural opening content consumes RNG. */
+export interface ProductionReplayBootstrap {
+  readonly build: TearBuildIdentityV1;
+  readonly rng: RunRandomStreamsSnapshot;
 }
 
 /** Shared renderer-neutral projection for production replay and headless worlds. */
@@ -257,6 +264,14 @@ export function createProductionGhostReplayComposition(
         ...(options.mode === undefined ? {} : { mode: options.mode }),
         ...(options.weaponId === undefined ? {} : { weaponId: options.weaponId }),
         ...(options.difficulty === undefined ? {} : { difficulty: options.difficulty }) });
+      const bootstrap = Object.freeze({
+        build: Object.freeze({
+          version: "0.1.0", revision: "working-tree", target: "production-headless",
+          rulesetVersion: "live", contentHash: stableVerificationHash(ENTITY_KIND_REGISTRY.ids),
+          configHash: stableVerificationHash(replay.configuration.value),
+        }),
+        rng: replay.world.context.services.random.snapshot(),
+      } satisfies ProductionReplayBootstrap);
       const staged = snapshot === undefined ? undefined : hydrateProductionReplayWorld(replay, snapshot);
       let waveReward: ProductionWaveRewardRuntime | null = null;
       let outcome: ProductionRunOutcomeRuntime | null = null;
@@ -286,6 +301,7 @@ export function createProductionGhostReplayComposition(
       }
       return Object.freeze({
         replay,
+        bootstrap,
         combat: core,
         simulation: core.simulationRuntime,
         outcome,

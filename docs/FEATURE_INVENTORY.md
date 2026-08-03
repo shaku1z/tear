@@ -231,9 +231,11 @@ This is the migration checklist for the architectural redesign. A checked featur
    shared composition. It accurately identifies the semantic source device. A
    separate C31 Vault reader can bind an integrity-checked C27 capsule only
    when its replay bootstrap, commands, terminal range, and C30 terminal anchor
-   all agree; the normal C30 stream does not yet materialize that source, so it
-   still refuses build/provenance and capsule-range tracks by default. It does
-   not persist a sample or train a policy;
+   all agree. A C31-only, explicit post-intake materializer now writes that
+   exact source capsule and reads back its attestation; the synchronous C30
+   stream itself remains storage-free, and an unmaterialized intake item still
+   refuses build/provenance and capsule-range tracks by default. This is source
+   custody only: it does not persist a C31 corpus sample or train a policy;
    authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

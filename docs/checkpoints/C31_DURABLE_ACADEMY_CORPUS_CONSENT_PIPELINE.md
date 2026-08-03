@@ -38,9 +38,14 @@ candidate; no current C30 bundle is eligible, persisted, or trained on.
   complete schema-v2 C27 Vault capsule, requires its sealed replay bootstrap,
   every canonical command envelope, exact zero-to-terminal range, and a copied
   C30 terminal anchor to agree, then binds its build fingerprint and capsule
-  integrity root into the raw bundle. The normal C30 intake does not yet create
-  that capsule/anchor, so its default candidates remain explicitly unavailable
-  and ineligible rather than fabricating either coordinate.
+  integrity root into the raw bundle. `materializeAcademyCandidateCapsule`
+  now performs that C31 custody step only after a bounded candidate has been
+  pulled from the C30 intake: it writes the actual command trace, reconstructed
+  native facts, sealed run-start bootstrap, and copied terminal anchor to a
+  complete C27 Vault capsule, then reads it back through the attestation
+  contract. The synchronous C30 worker callback remains storage-free, and an
+  unmaterialized default intake item remains explicitly unavailable and
+  ineligible rather than fabricating either coordinate.
 - Provenance must be a structured-state training source with a non-empty
   producer and complete build identity. Personal data may use only
   `private-personalization-only`; pseudonymous data must carry a pseudonymous
@@ -55,7 +60,9 @@ candidate; no current C30 bundle is eligible, persisted, or trained on.
   its verified raw bundle still declares unavailable build/provenance and
   capsule-range tracks. A separate permanent C30/C27 Vault proof can now bind
   a complete capsule's exact source range and build to that same terminal and
-  reach only an `eligible` pre-corpus receipt. It also rejects missing
+  reach only an `eligible` pre-corpus receipt. The permanent materializer proof
+  drains a real bounded C30 item into that exact source capsule before reaching
+  the same receipt. It also rejects missing
   synchronized metadata, `no-training`, invalid consent, provenance mismatch,
   malformed source bootstrap, non-matching commands, and a missing terminal
   anchor.
@@ -65,8 +72,9 @@ candidate; no current C30 bundle is eligible, persisted, or trained on.
   envelopes, native facts, one reward snapshot per observation, and ordered
   wave-plan/clear intents, then rejects a tampered terminal hash. The source
   device is semantic. Build/provenance and an exact capsule range can be
-  captured only through the Vault-bound source-attestation contract; automatic
-  C30-to-capsule collection remains open.
+  captured only through the Vault-bound source-attestation contract; the
+  explicit post-intake C31 materializer is the verified custody path, while
+  automatic storage in the C30 callback remains deliberately excluded.
 - [ ] Revocation, deletion propagation, privacy retention, pseudonymous
   identity lifecycle, quality scoring, deduplication, outliers, corruption,
   style/skill metadata, and population balance.
@@ -88,7 +96,7 @@ Foundry automation.
 ## Evidence
 
 - `pnpm check:c31:foundation` passes: typecheck, full lint, architecture
-  checks, and five focused Vitest suites / twelve tests.
+  checks, and six focused Vitest suites / fourteen tests.
 - `academy-candidate-admission.test.ts` generates a real C30 terminal through
   the bounded production pool and candidate intake. It asserts that the current
   verified-but-incomplete track bundle remains rejected, plus the pre-corpus
@@ -101,6 +109,11 @@ Foundry automation.
   and proves that only a matching replay context, complete command range, and
   exact C30 terminal anchor unlock a pre-corpus receipt. It rejects a capsule
   without that anchor.
+- `academy-candidate-capsule-materializer.test.ts` pulls a real bounded C30
+  candidate, materializes its actual commands/native facts/bootstrap/terminal
+  anchor into a complete memory-Vault capsule, reads it back, and proves the
+  resulting source bundle has no unavailable custody tracks. A legacy terminal
+  without its immutable bootstrap is rejected.
 - `agent-academy.test.ts` and
   `production-headless-academy-intake.test.ts` remain green in the same gate.
 - `pnpm check:c30:foundation` also passes after the opt-in observer addition:
@@ -109,8 +122,8 @@ Foundry automation.
 
 ## Next safe boundary
 
-Have the C30 candidate producer materialize the matching C27 capsule and
-terminal anchor at collection time, then feed the resulting source attestation
-through the existing bounded intake before review. Do not replace the current
-unavailable markers with caller declarations, and do not weaken the C30
-stream's bounded custody.
+Add durable C31 consent, revocation, retention, and candidate-custody records
+around this explicit post-intake materializer before review. Do not move Vault
+writes into the C30 worker callback, replace verified custody tracks with
+caller declarations, or promote a source capsule into a corpus sample without
+the separate governance and review gates.
