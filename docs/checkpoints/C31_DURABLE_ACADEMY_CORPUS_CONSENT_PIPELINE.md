@@ -143,7 +143,7 @@ behavior cloning, or C36 Foundry automation.
 ## Evidence
 
 - `pnpm check:c31:foundation` passes: typecheck, full lint, architecture
-  checks, and seven focused Vitest suites / eighteen tests.
+  checks, and eight focused Vitest suites / twenty tests.
 - `academy-candidate-admission.test.ts` generates a real C30 terminal through
   the bounded production pool and candidate intake. It asserts that the current
   verified-but-incomplete track bundle remains rejected, plus the pre-corpus
