@@ -21,10 +21,15 @@ operational boundary it proves.
   training episode.
 - Reset calls `createProductionGhostReplayComposition`, the complete C29
   production composition. Its source-owned world, combat runtime, fixed-step
-  scheduler, and `ProductionWaveRewardRuntime` serve C30 unchanged; `step`
-  normalizes the same `GameAction` commands, assigns monotonic command
-  envelopes, and advances that runtime once per tick. C30 owns no browser
-  scheduler, alternate lifecycle, or alternative simulator.
+  scheduler, `ProductionWaveRewardRuntime`, and terminal-outcome runtime serve
+  C30 unchanged; `step` normalizes the same `GameAction` commands, assigns
+  monotonic command envelopes, and advances that runtime once per tick. C30
+  owns no browser scheduler, alternate lifecycle, or alternative simulator.
+- Fresh source roots now derive the same deterministic numeric run seed and
+  run-start difficulty plan as live. They use live's centered ground-relative
+  player spawn, apply the requested one-hit/difficulty scaling before creating
+  the player, and derive the live session ID; a source natural terminal can
+  therefore be compared to a browser opening without a forged origin snapshot.
 - The shared renderer-neutral canonical projection is now exported from the
   production replay composition and is called by both C29 replay and C30
   headless paths. This is a second real caller, rather than a headless-specific
@@ -153,11 +158,16 @@ operational boundary it proves.
   runtime. On this worktree the 120-tick live rerun retained the source terminal
   provenance, wrote its three-command trace, and captured a 1,244,859-byte
   rendered gameplay PNG.
-- [ ] Visible rerun of sampled **failures** and Academy/Foundry streaming with
-  backpressure. The proven sample is a truncated natural episode, not a failure,
-  and no C30 artifact pipeline or downstream training consumer is claimed. The
-  former lifecycle-composition blocker is removed, but no natural failure has
-  yet been produced or visibly rerun.
+- [x] A sampled natural **failure** is visibly rerunnable. The immutable
+  one-hit `movement-jump` fixture supplies only a natural endless opening and
+  no commands; the shared source lifecycle reaches real defeat at tick 222 and
+  seals a terminal artifact. The Class-A browser materializer admits that
+  exact artifact without overrides, reaches the same terminal tick and
+  disposition, and captures its rendered PNG. It is neither a durable outcome
+  nor a training-stream claim.
+- [ ] Academy/Foundry streaming with backpressure. C30 now has one retained,
+  visibly rerun failure but no artifact pipeline or downstream training
+  consumer is claimed.
 
 ## Deliberately not claimed
 
@@ -169,9 +179,10 @@ retain their respective evidence obligations.
 ## Evidence
 
 - `pnpm check:c30:foundation` passes: typecheck, full lint, C30 source
-  architecture fences, six focused Vitest files / 13 tests, four Node worker
-  tests, standalone build, the Class-A browser terminal rerun, a fresh C27A
-  13-scenario browser capture, and the 14-test exact source-matrix comparison.
+  architecture fences, six focused Vitest files / 14 tests, four Node worker
+  tests, standalone build, Class-A truncated and natural-failure terminal
+  reruns, a fresh C27A 13-scenario browser capture, and the 14-test exact
+  source-matrix comparison.
 - `pnpm check:c27a:foundation` passes 36 files / 138 tests after its detached
   host adopts the shared source runtime; the rebuilt browser corpus and all 40
   detached comparisons retain C27A evidence. C30 separately proves the source
@@ -184,14 +195,14 @@ retain their respective evidence obligations.
   two-PID bounded dispatch, pre-dispatch cancellation, exited-idle-worker
   replacement, parent-deadline/replacement, and one-retry active-exit-attempt
   matrix.
-- `pnpm build:test:standalone` and `pnpm test:browser:production-headless-terminal` pass. The named route consumes the committed versioned natural-terminal fixture; the browser materializer admits only versioned natural C30 terminal coordinates and proves exact action provenance plus a rendered screenshot.
+- `pnpm build:test:standalone`, `pnpm test:browser:production-headless-terminal`, and `pnpm test:browser:production-headless-failure-terminal` pass. The browser materializer admits only versioned natural C30 terminal coordinates, proves exact action provenance plus a rendered screenshot, and checks that the live terminal tick/disposition match the failure artifact.
 - `pnpm check:architecture` passes, including planted C30 forbidden-edge and
   browser-global cases.
 
 ## Next safe boundary
 
 Do not add retries to timeout, validation, or worker-reported failures. The
-next C30 boundary is a sampled **natural failure** terminal artifact that is
-visibly rerunnable through the browser path. The source outcome lifecycle now
-exists and the C27A terminal trace matches, but no headless natural failure has
-yet been produced, retained, or visibly rerun; do not simulate one.
+next C30 boundary is checkpoint restore for interrupted production episodes,
+followed by target-hardware capacity and long-run leak evidence. A restored run
+must resume through the same source composition, preserve its terminal/action
+evidence, and not become a new simulator or durable job-recovery claim.

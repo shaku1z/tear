@@ -197,4 +197,28 @@ describe("C30 production headless environment", () => {
     const fixture: unknown = JSON.parse(readFileSync(resolve("tests", "fixtures", "c30-production-headless-terminal-movement-jump.json"), "utf8"));
     expect(fixture).toEqual(terminal);
   });
+
+  it("produces a real natural one-hit failure through the shared source lifecycle", () => {
+    const environment = createProductionHeadlessEnvironment();
+    const failureScenario = Object.freeze({
+      ...scenario, id: "movement-jump", description: "C30 natural one-hit failure candidate",
+      seed: "c30-onehit-natural-failure",
+      start: Object.freeze({ mode: "endless", difficulty: "onehit", weapon: "sword" }),
+      maxTicks: 720, tags: Object.freeze(["c30", "headless", "natural-failure"]),
+    }) satisfies TearScenarioV1;
+    let terminal: ProductionHeadlessTerminalArtifact | undefined;
+    environment.reset(failureScenario);
+    for (let tick = 1; tick <= failureScenario.maxTicks; tick += 1) {
+      const transition = environment.step([]);
+      if (transition.artifact !== undefined) { terminal = transition.artifact as ProductionHeadlessTerminalArtifact; break; }
+    }
+    environment.dispose();
+
+    const fixture: unknown = JSON.parse(readFileSync(resolve("tests", "fixtures", "c30-production-headless-terminal-onehit-failure.json"), "utf8"));
+    expect(terminal).toEqual(fixture);
+    expect(terminal?.terminal).toEqual({
+      tick: 222, semanticHash: "ba084c59f720cab1", terminated: true, truncated: false,
+    });
+    expect(terminal?.actions).toEqual([]);
+  });
 });

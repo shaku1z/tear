@@ -1,0 +1,36 @@
+{
+  "format": "tearbench-production-headless-terminal",
+  "schemaVersion": 1,
+  "scenario": {
+    "format": "tear-contract",
+    "kind": "scenario",
+    "schemaVersion": 1,
+    "id": "movement-jump",
+    "version": 1,
+    "description": "C30 natural one-hit failure candidate",
+    "stateClass": "recorded-canonical",
+    "executionClass": "training",
+    "seed": "c30-onehit-natural-failure",
+    "start": {
+      "mode": "endless",
+      "difficulty": "onehit",
+      "weapon": "sword"
+    },
+    "maxTicks": 720,
+    "assertions": [
+      "runtime.finite-state"
+    ],
+    "tags": [
+      "c30",
+      "headless",
+      "natural-failure"
+    ]
+  },
+  "actions": [],
+  "terminal": {
+    "tick": 222,
+    "semanticHash": "ba084c59f720cab1",
+    "terminated": true,
+    "truncated": false
+  }
+}

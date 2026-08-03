@@ -123,9 +123,9 @@ function readProductionHeadlessTerminal(file) {
   }
   const start = scenario.start;
   if (start === null || typeof start !== "object" || Array.isArray(start)
-    || start.mode !== "endless" || start.difficulty !== "normal" || start.weapon !== "sword"
+    || start.mode !== "endless" || !["normal", "onehit"].includes(start.difficulty) || start.weapon !== "sword"
     || Object.keys(start).some((key) => !["mode", "difficulty", "weapon"].includes(key))) {
-    throw new TypeError("--production-headless-terminal currently admits natural endless/normal/sword runs only");
+    throw new TypeError("--production-headless-terminal currently admits natural endless/normal-or-onehit/sword runs only");
   }
   const terminal = parsed.terminal;
   if (terminal === null || typeof terminal !== "object" || Array.isArray(terminal)
@@ -250,7 +250,7 @@ const runtimeScenario = {
   stateClass: "recorded-canonical",
   executionClass: headlessTerminal?.scenario.executionClass ?? "engineering",
   seed,
-  start: { mode: "endless", difficulty: "normal", weapon: "sword" },
+  start: headlessTerminal?.scenario.start ?? { mode: "endless", difficulty: "normal", weapon: "sword" },
   maxTicks,
   assertions: [
     "runtime.finite-state", "player.finite-transform", "blade.finite-transform",
@@ -313,6 +313,7 @@ assert.equal(materialized.accessClass, "A", "C26 materializer must use the privi
 assert.equal(materialized.observations[0]?.tick, 0, "live trace starts at fixed tick zero");
 assert.ok(materialized.observations.length >= 2, "live trace must contain an actual stepped observation");
 const finalObservation = materialized.observations.at(-1);
+const terminalTransition = materialized.transitions.at(-1);
 assert.equal(materialized.metrics.fixedTicks, finalObservation.tick, "materialized ticks come from the live fixed-step scheduler");
 assert.equal(materialized.metrics.acceptedActions, submittedActions.length, "all persisted commands were accepted by the live bridge");
 assert.ok(materialized.events.some((event) => event.type === "run.started"), "live event stream must include run.started");
@@ -322,6 +323,10 @@ if (headlessTerminal !== undefined) {
     "the browser rerun must consume the terminal artifact's exact accepted command trace");
   assert.equal(finalObservation.tick, headlessTerminal.terminal.tick,
     "the browser rerun must reach the terminal artifact's fixed-tick horizon");
+  assert.equal(terminalTransition?.terminated, headlessTerminal.terminal.terminated,
+    "the browser rerun must retain the terminal disposition");
+  assert.equal(terminalTransition?.truncated, headlessTerminal.terminal.truncated,
+    "the browser rerun must retain the terminal truncation disposition");
 }
 
 const buildDirectory = path.join(root, "dist", "test-standalone");
@@ -348,7 +353,6 @@ const actionTrace = {
   actions: submittedActions,
   actionsHash: sha256(canonicalJson(submittedActions)),
 };
-const terminalTransition = materialized.transitions.at(-1);
 const failures = await validateLiveObservations(materialized.observations, runtimeScenario.assertions);
 const artifact = {
   format: "tearbench-run",

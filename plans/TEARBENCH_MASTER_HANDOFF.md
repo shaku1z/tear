@@ -183,7 +183,9 @@ Named status:
   120-tick C30-to-C29 semantic
   comparison, fresh-environment isolation, exact bounded batches, cooperative
   cancellation/timeout, bounded terminal-artifact retention, measured natural
-  throughput, and a bounded two-child serialized dispatcher pass. The
+  throughput, and a bounded two-child serialized dispatcher pass. Fresh source
+  openings now use the live deterministic run seed, difficulty plan, and
+  centered spawn rather than detached defaults. The
   dispatcher proves two independent child PIDs, pre-dispatch cancellation,
   parent-side deadline termination, and replacement of an externally exited
   idle child. Explicitly idempotent input retains a versioned active-exit
@@ -197,15 +199,17 @@ Named status:
   external-output claim.
   The new declared 32x120 natural workload records rate/latency/heap/repeat
   evidence and passed its modest developer-hardware budget on this worktree;
-  it is not training-capacity evidence. Browser-fast corpus parity,
-  active-worker retry/checkpoint restore, visible **failure**
-  reruns, and Academy/Foundry streaming remain open. The current 256-episode /
+  it is not training-capacity evidence. Browser-fast corpus parity and a
+  visible **failure** rerun now pass: the immutable no-input one-hit source
+  opening naturally terminates at tick 222, and the Class-A browser rerun
+  reaches the same tick and terminal disposition. Active-worker retry/checkpoint
+  restore and Academy/Foundry streaming remain open. The current 256-episode /
   30,720-tick in-process stress proof has distinct final state objects and
   hashes, plus separate sampled terminal scenario/action traces; it is not a
   worker claim. A source-produced natural terminal artifact is visibly
   rerunnable in the Class-A browser runtime with its exact action trace and
-  rendered screenshot; it is intentionally not called a failure or a
-  live/headless semantic-parity result.
+  rendered screenshot; the separate one-hit sample proves a natural failure,
+  but neither sample is a durable outcome or training-stream result.
 - **C31-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -427,11 +431,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C30 now replays every freshly captured C27A origin through C29's exact source composition, including portable wave/reward and terminal-outcome lifecycles. All 13 trace receipts match; this ticks C30's C27A-matrix parity item without a second simulator.
-PROVEN BY:           `pnpm check:c30:foundation` passes: six focused Vitest files / 13 tests, four Node worker tests, standalone build, Class-A browser terminal rerun, fresh 13-scenario / 5,732-tick C27A browser capture, then a 14-test source matrix. Every authoritative hash, native stream, natural draft route, and terminal `run.defeated` fact matches.
-REMAINING HERE:      C30 still needs checkpoint restore, target-hardware training-capacity and long-run leak measurements, a real headless natural-failure artifact and visible rerun, and Academy/Foundry streaming. C29's durable active-cinematic boundary remains separately open. Timeout, validation, and worker-reported failures intentionally do not retry.
+DONE THIS STEP:      C30 fresh natural openings now use live seed/difficulty/spawn initialization. An untouched one-hit run naturally terminates at tick 222 and is sealed as an immutable terminal artifact; the Class-A browser rerun reaches the same tick and terminal disposition.
+PROVEN BY:           `pnpm check:c30:foundation` passes: six focused Vitest files / 14 tests, four Node worker tests, standalone build, Class-A truncated and natural-failure terminal reruns, fresh 13-scenario / 5,732-tick C27A browser capture, then a 14-test source matrix. The browser failure uses no commands and reports `PASSED` after its real game-over boundary.
+REMAINING HERE:      C30 still needs checkpoint restore, target-hardware training-capacity and long-run leak measurements, and Academy/Foundry streaming. C29's durable active-cinematic boundary remains separately open. Timeout, validation, and worker-reported failures intentionally do not retry.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Produce one real headless natural-failure terminal artifact through the shared source lifecycle and visibly rerun it in the browser path. Do not simulate failure, call it a durable outcome, or add a training-stream consumer.
+NEXT SLICE:          Add production checkpoint restore for an interrupted C30 episode. Resume through the same source composition, retain action/terminal evidence, and prove that no persistence or job recovery is implied. Do not add retries to timeout, validation, or ordinary worker-reported failures.
 
 All of the following were run from this worktree through C27A slice 36:
 

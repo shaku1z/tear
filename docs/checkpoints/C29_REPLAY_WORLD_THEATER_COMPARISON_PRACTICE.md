@@ -37,6 +37,11 @@ applicable production boundary.
   presentation, persistence, cloud, and device work as semantic requests. The
   fresh C30 matrix matches the real terminal `run.defeated` fact; that does not
   make any durable output or active-cinematic claim.
+- A fresh non-hydrated composition follows the live deterministic run-seed and
+  run-start difficulty plan, including its centered ground-relative player
+  spawn. C30's unmodified one-hit opening now reaches the same tick-222 browser
+  defeat through that source root; it is a terminal-rerun boundary, not C29
+  durable-capsule or cinematic evidence.
 - tests/unit/ghost-production-replay-world.test.ts constructs that complete
   source-owned production replay composition, supplies its actual simulationRuntime,
   and proves the replay reaches tick 80 through that same object. A repeated

@@ -1,4 +1,4 @@
-import { A11Y, CONFIG, GFX } from "../config/game-config";
+import { A11Y, CONFIG, GFX, REMOTE } from "../config/game-config";
 import { createLiveAuthoritativeInputAdapter } from "../app/live-authoritative-input-adapter";
 import { createLiveWorldState, type LiveWorldSessionPort } from "../app/live-world-composition";
 import { createLiveWorldServices } from "../app/live-world-context";
@@ -15,6 +15,8 @@ import {
   type TearWorldSimulationFactoryOptions,
 } from "../gameplay/runtime/tear-world-simulation-factories";
 import { newMods } from "../gameplay/upgrades";
+import { planRunStart } from "../gameplay/run/run-start-plan";
+import type { RunDifficulty } from "../gameplay/run/session";
 import { stagePlatforms } from "../gameplay/stages";
 import { cosmeticRandom } from "../presentation/cosmetic-random";
 import { createParticleSystem } from "../presentation/particles";
@@ -26,6 +28,7 @@ export interface ProductionReplayWorldOptions {
   readonly enemies?: readonly Readonly<{ id: string; x: number; y: number }>[];
   readonly mode?: string;
   readonly weaponId?: string;
+  readonly difficulty?: RunDifficulty;
 }
 
 /** Ground plus a one-way ledge, owned by each detached production world. */
@@ -66,9 +69,26 @@ function productionRunSeed(seed: string): number {
   return (hash >>> 0) || 1;
 }
 
-export function createProductionReplayRun(mode = "endless", weaponId = "sword", runSeed = 1) {
+function productionDifficultyPlan(difficulty: RunDifficulty) {
+  return planRunStart(difficulty, CONFIG.difficulties.map((definition) => ({
+    id: definition.id as RunDifficulty,
+    ...(definition.oneHit === undefined ? {} : { oneHit: definition.oneHit }),
+    mods: definition.mods,
+  })), REMOTE);
+}
+
+export function createProductionReplayRun(
+  mode = "endless",
+  weaponId = "sword",
+  runSeed = 1,
+  difficulty: RunDifficulty = "normal",
+) {
+  const plan = productionDifficultyPlan(difficulty);
   return {
-    mode, diff: "normal", diffHp: 1, diffCount: 1, mods: newMods(), mult: 1, lifestealCd: 0,
+    mode, diff: plan.difficulty, diffDmg: plan.playerDamageMultiplier,
+    diffHp: plan.scaling.enemyHp, diffCount: plan.scaling.enemyCount,
+    coinMod: plan.scaling.coin, scoreMod: plan.scaling.score,
+    mods: newMods(), mult: 1, lifestealCd: 0,
     weaponId, runSeed, wave: 1, score: 0, waveKills: 0, wavePeak: 1, waveTime: 0, runTime: 0,
     spawnQueue: [], spawnTimer: 0, clearTimer: -1, waveLog: [],
     specialBlock: -1, specialsOffered: 0, reservedUpgrade: null,
@@ -87,11 +107,12 @@ export function createProductionReplayRun(mode = "endless", weaponId = "sword", 
 export function createProductionReplayWorld(options: ProductionReplayWorldOptions) {
   const { configuration, clock, random } = createTearWorldBootstrap(CONFIG);
   const config = configuration.value;
+  const runSeed = productionRunSeed(options.seed);
   const effects = createParticleSystem({
     effects: config.effects, lowGraphics: () => GFX.low,
     reducedMotion: () => A11Y.reducedMotion, random: cosmeticRandom,
   });
-  random.streams.reset(options.seed);
+  random.streams.reset(runSeed);
   const factories = createTearWorldSimulationFactories({
     clock, config, graphics: GFX, effects, sound: unavailableOutwardPort() as FactoryOptions["sound"],
     input: idleInputPort() as FactoryOptions["input"], presentation: noOpPresentationPorts(),
@@ -122,12 +143,20 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     state, entities, services: createLiveWorldServices({ dependencies, configuration }),
     cinema: new CinematicTimeline.Director(config),
   });
-  world.context.services.random.resetRun(options.seed);
-  const run = createProductionReplayRun(options.mode, options.weaponId, productionRunSeed(options.seed));
+  world.context.services.random.resetRun(runSeed);
+  const difficulty = options.difficulty ?? "normal";
+  const difficultyPlan = productionDifficultyPlan(difficulty);
+  const run = createProductionReplayRun(options.mode, options.weaponId, runSeed, difficulty);
   world.state.setRun(run as never);
-  world.state.setPlayer(world.entities.createPlayer(400, config.world.groundY - 80));
-  const blade = world.entities.createBlade() as { weapon?: unknown; model?: unknown };
   configuration.resetToBase();
+  config.player.dmgTakenMult *= difficultyPlan.playerDamageMultiplier;
+  // Match the live run-start host: source replay/headless natural openings
+  // begin at the centered, ground-relative player coordinate, not a detached
+  // harness convenience position.
+  const player = world.entities.createPlayer(config.view.w * 0.5, config.world.groundY - 60) as { oneHit: boolean };
+  player.oneHit = difficultyPlan.oneHit;
+  world.state.setPlayer(player as never);
+  const blade = world.entities.createBlade() as { weapon?: unknown; model?: unknown };
   const weapon = applyWeapon(config, run.weaponId);
   blade.weapon = weapon; blade.model = weapon.model;
   world.state.setBlade(blade as never);

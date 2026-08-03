@@ -1,6 +1,7 @@
 import { applyWeapon } from "../gameplay/weapons";
 import { parseCampaignChapterBindingSpec, stageCampaignChapterBinding } from "../gameplay/campaign/chapter-cinematic-binding";
 import type { ChapterIntent } from "../gameplay/campaign/chapter-controller";
+import type { RunDifficulty } from "../gameplay/run/session";
 import { projectCanonicalGameplayState, type CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { AuthoritativeInputSnapshot, AuthoritativeInputState } from "../gameplay/runtime/authoritative-input";
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
@@ -16,6 +17,7 @@ export interface ProductionGhostReplayCompositionOptions {
   readonly seed: string;
   readonly mode?: string;
   readonly weaponId?: string;
+  readonly difficulty?: RunDifficulty;
   readonly inputSnapshots?: ReadonlyMap<number, AuthoritativeInputSnapshot>;
   /** Optional portable fact sink for a host that compares source replay output. */
   readonly gameplayEvents?: TearGameplayEventPort;
@@ -137,7 +139,8 @@ export function createProductionGhostReplayComposition(
     create(snapshot: TearSnapshotV1 | undefined) {
       const replay = createProductionReplayWorld({ seed: snapshot?.seed ?? options.seed,
         ...(options.mode === undefined ? {} : { mode: options.mode }),
-        ...(options.weaponId === undefined ? {} : { weaponId: options.weaponId }) });
+        ...(options.weaponId === undefined ? {} : { weaponId: options.weaponId }),
+        ...(options.difficulty === undefined ? {} : { difficulty: options.difficulty }) });
       const staged = snapshot === undefined ? undefined : hydrateProductionReplayWorld(replay, snapshot);
       let waveReward: ProductionWaveRewardRuntime | null = null;
       let outcome: ProductionRunOutcomeRuntime | null = null;

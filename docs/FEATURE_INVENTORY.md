@@ -198,7 +198,10 @@ This is the migration checklist for the architectural redesign. A checked featur
    used by the C27A detached host, plus the portable terminal-outcome runtime.
    C30's ordered gate rebuilds the 13 live browser traces and matches all 5,732
    source-composition hashes, native streams, the natural route, and terminal
-   fact. A headless natural-failure terminal is still not produced or rerun;
+   fact. An untouched one-hit source opening also reaches a real tick-222
+   failure, retained as an immutable terminal artifact and visibly rerun at the
+   same terminal tick/disposition in the Class-A browser; it is not durable or
+   training-stream output;
    authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

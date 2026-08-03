@@ -222,7 +222,7 @@ export function createProductionWaveRewardRuntime(
   const startNaturalOpening = () => {
     if (world.lifecycle.phase !== "idle") throw new Error("production wave runtime cannot restart an active lifecycle");
     run().wave = 0;
-    world.lifecycle.start(`production-${String(run().runSeed)}`);
+    world.lifecycle.start(`run-${run().runSeed.toString(36)}`);
     waves.startNextWave();
   };
   return Object.freeze({

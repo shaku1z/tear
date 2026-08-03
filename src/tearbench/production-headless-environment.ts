@@ -80,6 +80,7 @@ export function createProductionHeadlessEnvironment(): TearHeadlessEnvironment<
       const scenario = requireNaturalScenario(validated.value);
       const composed = createProductionGhostReplayComposition({
         seed: scenario.seed, mode: scenario.start.mode, weaponId: scenario.start.weapon,
+        difficulty: scenario.start.difficulty,
       }).create(undefined);
       core = Object.freeze({ replay: composed.replay, simulation: composed.combat, scenario,
         routeAction: composed.routeAction });
