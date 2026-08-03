@@ -33,9 +33,14 @@ candidate; no current C30 bundle is eligible, persisted, or trained on.
   it against the source artifact, and records real canonical observations,
   actions, native gameplay facts, reward snapshots, and wave planner intents.
   It records the source device accurately as semantic. The C30 terminal still
-  carries no attested build/provenance coordinate or Ghost-capsule range, so
-  those two tracks are explicitly unavailable and the candidate stays
-  ineligible rather than fabricating them.
+  carries no embedded build/provenance coordinate or Ghost-capsule range. C31
+  can now add those only through `attestAcademyCandidateSource`: it reads a
+  complete schema-v2 C27 Vault capsule, requires its sealed replay bootstrap,
+  every canonical command envelope, exact zero-to-terminal range, and a copied
+  C30 terminal anchor to agree, then binds its build fingerprint and capsule
+  integrity root into the raw bundle. The normal C30 intake does not yet create
+  that capsule/anchor, so its default candidates remain explicitly unavailable
+  and ineligible rather than fabricating either coordinate.
 - Provenance must be a structured-state training source with a non-empty
   producer and complete build identity. Personal data may use only
   `private-personalization-only`; pseudonymous data must carry a pseudonymous
@@ -48,15 +53,20 @@ candidate; no current C30 bundle is eligible, persisted, or trained on.
   admission. The permanent proof carries a real two-tick production terminal
   through the bounded C30 intake and rejects it before a corpus action because
   its verified raw bundle still declares unavailable build/provenance and
-  capsule-range tracks. It also rejects missing synchronized metadata,
-  `no-training`, invalid consent, and consent/provenance mismatch.
+  capsule-range tracks. A separate permanent C30/C27 Vault proof can now bind
+  a complete capsule's exact source range and build to that same terminal and
+  reach only an `eligible` pre-corpus receipt. It also rejects missing
+  synchronized metadata, `no-training`, invalid consent, provenance mismatch,
+  malformed source bootstrap, non-matching commands, and a missing terminal
+  anchor.
 - [x] Real bounded canonical observation/action/timing tracks are captured from
   the shared production composition. The permanent proof reconstructs a real
   C30 terminal, records ticks zero through terminal plus its exact action
   envelopes, native facts, one reward snapshot per observation, and ordered
   wave-plan/clear intents, then rejects a tampered terminal hash. The source
-  device is semantic; attested build/provenance and capsule-range tracks remain
-  open.
+  device is semantic. Build/provenance and an exact capsule range can be
+  captured only through the Vault-bound source-attestation contract; automatic
+  C30-to-capsule collection remains open.
 - [ ] Revocation, deletion propagation, privacy retention, pseudonymous
   identity lifecycle, quality scoring, deduplication, outliers, corruption,
   style/skill metadata, and population balance.
@@ -78,7 +88,7 @@ Foundry automation.
 ## Evidence
 
 - `pnpm check:c31:foundation` passes: typecheck, full lint, architecture
-  checks, and four focused Vitest suites / ten tests.
+  checks, and five focused Vitest suites / twelve tests.
 - `academy-candidate-admission.test.ts` generates a real C30 terminal through
   the bounded production pool and candidate intake. It asserts that the current
   verified-but-incomplete track bundle remains rejected, plus the pre-corpus
@@ -86,6 +96,11 @@ Foundry automation.
 - `academy-candidate-tracks.test.ts` reconstructs a real C30 terminal through
   the source composition, proves aligned native/reward/intent streams, and
   rejects a tampered terminal hash.
+- `academy-candidate-source-attestation.test.ts` records a C27-style source
+  capsule into a real memory Vault, reads it back through `GhostCapsuleReader`,
+  and proves that only a matching replay context, complete command range, and
+  exact C30 terminal anchor unlock a pre-corpus receipt. It rejects a capsule
+  without that anchor.
 - `agent-academy.test.ts` and
   `production-headless-academy-intake.test.ts` remain green in the same gate.
 - `pnpm check:c30:foundation` also passes after the opt-in observer addition:
@@ -94,7 +109,8 @@ Foundry automation.
 
 ## Next safe boundary
 
-Bind an attested source build/provenance identity and an exact, integrity-read
-Ghost-capsule range to the same C30 candidate before accepting it into review
-or a corpus. Do not replace the unavailable markers with caller declarations,
-and do not weaken the C30 stream's bounded custody.
+Have the C30 candidate producer materialize the matching C27 capsule and
+terminal anchor at collection time, then feed the resulting source attestation
+through the existing bounded intake before review. Do not replace the current
+unavailable markers with caller declarations, and do not weaken the C30
+stream's bounded custody.

@@ -3,14 +3,32 @@ import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import type { GameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
+import type { TearBuildIdentityV1 } from "../tearbench/contracts";
 import type { ProductionWaveRewardIntent } from "../tearbench";
 import {
   createProductionHeadlessEnvironment,
   type ProductionHeadlessAcademyIntakeItem,
   type ProductionHeadlessTerminalArtifact,
 } from "../tearbench";
+import type { TearAcademyCandidateSourceAttestationV1 } from "./academy-candidate-source-attestation";
 
 export type TearAcademyCandidateUnavailableTrack = "build-device-provenance" | "capsule-range";
+
+type TearAcademyCandidateBuildTrack =
+  | Readonly<{ status: "unavailable"; reason: string }>
+  | Readonly<{ status: "captured"; build: TearBuildIdentityV1; replayContextHash: string; attestationHash: string }>;
+
+type TearAcademyCandidateCapsuleRangeTrack =
+  | Readonly<{ status: "unavailable"; reason: string }>
+  | Readonly<{
+    status: "captured";
+    capsuleId: string;
+    rootIntegrity: string;
+    fromTick: 0;
+    toTick: number;
+    actionHash: string;
+    terminalAnchorHash: string;
+  }>;
 
 export interface TearAcademyCandidateTrackBundleV1 {
   readonly format: "tear-academy-candidate-tracks";
@@ -26,8 +44,8 @@ export interface TearAcademyCandidateTrackBundleV1 {
   readonly source: Readonly<{
     execution: "production-headless";
     device: "semantic";
-    buildProvenance: Readonly<{ status: "unavailable"; reason: string }>;
-    capsuleRange: Readonly<{ status: "unavailable"; reason: string }>;
+    buildProvenance: TearAcademyCandidateBuildTrack;
+    capsuleRange: TearAcademyCandidateCapsuleRangeTrack;
   }>;
   readonly terminal: ProductionHeadlessTerminalArtifact["terminal"];
   readonly unavailableTracks: readonly TearAcademyCandidateUnavailableTrack[];
@@ -60,6 +78,43 @@ function candidateTerminal(value: unknown): ProductionHeadlessTerminalArtifact {
   return terminalArtifact as unknown as ProductionHeadlessTerminalArtifact;
 }
 
+function sourceRecord(value: unknown): Readonly<Record<string, unknown>> | undefined {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as Readonly<Record<string, unknown>>
+    : undefined;
+}
+
+/** Stable coordinate shared by candidate capture and a C27 source attestation. */
+export function academyCandidateHash(candidate: ProductionHeadlessAcademyIntakeItem): string {
+  return stableVerificationHash({
+    sequence: candidate.sequence, episodeId: candidate.episodeId, tick: candidate.tick,
+    scenario: candidate.artifact.scenario, actions: candidate.artifact.actions, terminal: candidate.artifact.terminal,
+  });
+}
+
+function verifiedAttestation(
+  candidate: ProductionHeadlessAcademyIntakeItem,
+  value: unknown,
+): TearAcademyCandidateSourceAttestationV1 {
+  const raw = sourceRecord(value);
+  if (raw === undefined) throw new TypeError("C31 source attestation must be an object");
+  const attestation = raw;
+  const capsuleRange = sourceRecord(attestation.capsuleRange);
+  const expectedCandidateHash = academyCandidateHash(candidate);
+  if (attestation.format !== "tear-academy-candidate-source-attestation" || attestation.schemaVersion !== 1
+    || attestation.candidateId !== candidate.episodeId || attestation.candidateHash !== expectedCandidateHash
+    || attestation.device !== "semantic" || capsuleRange?.fromTick !== 0
+    || capsuleRange.toTick !== candidate.tick) {
+    throw new RangeError("C31 source attestation does not match the C30 candidate coordinate");
+  }
+  const expectedHash = stableVerificationHash({
+    candidateId: attestation.candidateId, candidateHash: attestation.candidateHash, device: attestation.device,
+    build: attestation.build, replayContextHash: attestation.replayContextHash, capsuleRange,
+  });
+  if (attestation.attestationHash !== expectedHash) throw new TypeError("C31 source attestation integrity mismatch");
+  return attestation as unknown as TearAcademyCandidateSourceAttestationV1;
+}
+
 /**
  * Reconstructs one bounded C30 terminal through the shared production
  * composition. Native gameplay facts, reward snapshots, and planner intents
@@ -68,7 +123,10 @@ function candidateTerminal(value: unknown): ProductionHeadlessTerminalArtifact {
  * attested build/provenance identity nor a Ghost capsule range, so both remain
  * explicitly unavailable and fail closed at admission.
  */
-export function captureAcademyCandidateTracks(candidate: ProductionHeadlessAcademyIntakeItem): TearAcademyCandidateTrackBundleV1 {
+export function captureAcademyCandidateTracks(
+  candidate: ProductionHeadlessAcademyIntakeItem,
+  sourceAttestation?: unknown,
+): TearAcademyCandidateTrackBundleV1 {
   const artifact = candidateTerminal(candidate);
   const actionsByTick = new Map<number, GameAction[]>();
   for (const envelope of artifact.actions) {
@@ -100,19 +158,27 @@ export function captureAcademyCandidateTracks(candidate: ProductionHeadlessAcade
       || sourceTracks.rewardComponents.some((entry, index) => entry.tick !== observations[index]?.tick)) {
       throw new RangeError("C31 reward source track does not cover each reconstructed observation");
     }
+    const attestation = sourceAttestation === undefined ? undefined : verifiedAttestation(candidate, sourceAttestation);
     const source = Object.freeze({
       execution: "production-headless" as const,
       device: sourceTracks.device,
-      buildProvenance: Object.freeze({ status: "unavailable" as const,
-        reason: "C30 terminal intake has no attested build or provenance coordinate" }),
-      capsuleRange: Object.freeze({ status: "unavailable" as const,
-        reason: "C30 terminal intake has no source Ghost capsule coordinate or tick range" }),
+      buildProvenance: attestation === undefined
+        ? Object.freeze({ status: "unavailable" as const,
+          reason: "C30 terminal intake has no attested build or provenance coordinate" })
+        : Object.freeze({ status: "captured" as const, build: Object.freeze({ ...attestation.build }),
+          replayContextHash: attestation.replayContextHash, attestationHash: attestation.attestationHash }),
+      capsuleRange: attestation === undefined
+        ? Object.freeze({ status: "unavailable" as const,
+          reason: "C30 terminal intake has no source Ghost capsule coordinate or tick range" })
+        : Object.freeze({ status: "captured" as const, capsuleId: attestation.capsuleRange.capsuleId,
+          rootIntegrity: attestation.capsuleRange.rootIntegrity, fromTick: 0 as const,
+          toTick: attestation.capsuleRange.toTick, actionHash: attestation.capsuleRange.actionHash,
+          terminalAnchorHash: attestation.capsuleRange.terminalAnchorHash }),
     });
-    const unavailableTracks = Object.freeze(["build-device-provenance", "capsule-range"] as const);
-    const candidateHash = stableVerificationHash({
-      sequence: candidate.sequence, episodeId: candidate.episodeId, tick: candidate.tick,
-      scenario: artifact.scenario, actions, terminal: artifact.terminal,
-    });
+    const unavailableTracks = attestation === undefined
+      ? Object.freeze(["build-device-provenance", "capsule-range"] as const)
+      : Object.freeze([] as const);
+    const candidateHash = academyCandidateHash(candidate);
     const bundleHash = stableVerificationHash({
       candidateHash, observations, actions, nativeEvents: sourceTracks.nativeEvents,
       rewardComponents: sourceTracks.rewardComponents, intents: sourceTracks.intents, source, terminal, unavailableTracks,

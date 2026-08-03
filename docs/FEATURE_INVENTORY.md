@@ -228,9 +228,12 @@ This is the migration checklist for the architectural redesign. A checked featur
    track bundle against a real C30 terminal before any corpus action. That
    bundle now reconstructs actual canonical observations/actions/timing plus
    native facts, reward snapshots, and ordered planner intents through the
-   shared composition. It accurately identifies the semantic source device but
-   refuses the still-unattested build/provenance and Ghost-capsule-range tracks;
-   it does not persist a sample or train a policy;
+   shared composition. It accurately identifies the semantic source device. A
+   separate C31 Vault reader can bind an integrity-checked C27 capsule only
+   when its replay bootstrap, commands, terminal range, and C30 terminal anchor
+   all agree; the normal C30 stream does not yet materialize that source, so it
+   still refuses build/provenance and capsule-range tracks by default. It does
+   not persist a sample or train a policy;
    authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

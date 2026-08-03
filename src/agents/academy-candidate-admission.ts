@@ -1,7 +1,7 @@
 import { stableVerificationHash } from "../replay/hash";
 import type { TearProvenanceV1 } from "../tearbench/contracts";
 import type { ProductionHeadlessAcademyIntakeItem } from "../tearbench/production-headless-academy-intake";
-import type { TearAcademyCandidateTrackBundleV1 } from "./academy-candidate-tracks";
+import { academyCandidateHash, type TearAcademyCandidateTrackBundleV1 } from "./academy-candidate-tracks";
 
 export type TearConsentDisposition = "granted" | "denied" | "revoked";
 export type TearAcademyModelTrainingConsent = TearProvenanceV1["trainingConsent"];
@@ -78,11 +78,59 @@ function hasExpectedTick(value: unknown, expected: number): boolean {
   return record(value) && value.tick === expected;
 }
 
-function validC30SourceTracks(value: unknown): boolean {
+function hasUnavailableTracks(value: unknown, expected: readonly string[]): boolean {
+  return Array.isArray(value) && value.length === expected.length
+    && value.every((entry, index) => entry === expected[index]);
+}
+
+function capturedSourceTracks(
+  source: Readonly<Record<string, unknown>>,
+  candidate: ProductionHeadlessAcademyIntakeItem,
+): boolean {
+  const buildTrack = source.buildProvenance;
+  const capsuleTrack = source.capsuleRange;
+  if (!record(buildTrack) || buildTrack.status !== "captured" || !record(buildTrack.build)
+    || !nonEmpty(buildTrack.replayContextHash) || !nonEmpty(buildTrack.attestationHash)
+    || !record(capsuleTrack) || capsuleTrack.status !== "captured" || !nonEmpty(capsuleTrack.capsuleId)
+    || !nonEmpty(capsuleTrack.rootIntegrity) || capsuleTrack.fromTick !== 0 || capsuleTrack.toTick !== candidate.tick
+    || !nonEmpty(capsuleTrack.actionHash) || !nonEmpty(capsuleTrack.terminalAnchorHash)) return false;
+  const build = buildTrack.build;
+  if (!nonEmpty(build.version) || !nonEmpty(build.revision) || !nonEmpty(build.target)
+    || !nonEmpty(build.rulesetVersion) || !nonEmpty(build.contentHash) || !nonEmpty(build.configHash)
+    || capsuleTrack.actionHash !== stableVerificationHash(candidate.artifact.actions)) return false;
+  return buildTrack.attestationHash === stableVerificationHash({
+    candidateId: candidate.episodeId, candidateHash: academyCandidateHash(candidate), device: "semantic",
+    build, replayContextHash: buildTrack.replayContextHash,
+    capsuleRange: Object.freeze({
+      capsuleId: capsuleTrack.capsuleId, rootIntegrity: capsuleTrack.rootIntegrity, fromTick: 0,
+      toTick: candidate.tick, actionHash: capsuleTrack.actionHash, terminalAnchorHash: capsuleTrack.terminalAnchorHash,
+    }),
+  });
+}
+
+function validC30SourceTracks(
+  value: unknown,
+  unavailableTracks: unknown,
+  candidate: ProductionHeadlessAcademyIntakeItem,
+): boolean {
   if (!record(value) || value.execution !== "production-headless" || value.device !== "semantic") return false;
   const build = value.buildProvenance;
   const capsule = value.capsuleRange;
-  return record(build) && build.status === "unavailable" && record(capsule) && capsule.status === "unavailable";
+  if (record(build) && build.status === "unavailable" && record(capsule) && capsule.status === "unavailable") {
+    return nonEmpty(build.reason) && nonEmpty(capsule.reason)
+      && hasUnavailableTracks(unavailableTracks, ["build-device-provenance", "capsule-range"]);
+  }
+  return capturedSourceTracks(value, candidate) && hasUnavailableTracks(unavailableTracks, []);
+}
+
+function sourceBuildMatchesProvenance(value: unknown, provenance: unknown): boolean {
+  if (!record(value) || !record(value.buildProvenance) || value.buildProvenance.status !== "captured"
+    || !record(value.buildProvenance.build) || !record(provenance) || !record(provenance.build)) return false;
+  const source = value.buildProvenance.build;
+  const declared = provenance.build;
+  return source.version === declared.version && source.revision === declared.revision && source.target === declared.target
+    && source.rulesetVersion === declared.rulesetVersion && source.contentHash === declared.contentHash
+    && source.configHash === declared.configHash;
 }
 
 function validTimestamp(value: unknown): value is string {
@@ -117,28 +165,21 @@ function validTracks(value: unknown, candidate: ProductionHeadlessAcademyIntakeI
     && ["keyboard-mouse", "controller", "touch", "semantic"].includes(tracks.device ?? "");
 }
 
-function candidateHash(candidate: ProductionHeadlessAcademyIntakeItem): string {
-  return stableVerificationHash({
-    sequence: candidate.sequence, episodeId: candidate.episodeId, tick: candidate.tick,
-    scenario: candidate.artifact.scenario, actions: candidate.artifact.actions, terminal: candidate.artifact.terminal,
-  });
-}
-
 function validTrackBundle(value: unknown, candidate: ProductionHeadlessAcademyIntakeItem): boolean {
   if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
   const bundle = value as Partial<TearAcademyCandidateTrackBundleV1>;
   if (!Array.isArray(bundle.observations)) return false;
   const observations = bundle.observations;
   if (bundle.format !== "tear-academy-candidate-tracks" || bundle.schemaVersion !== 1
-    || bundle.candidateId !== candidate.episodeId || bundle.candidateHash !== candidateHash(candidate)
+    || bundle.candidateId !== candidate.episodeId || bundle.candidateHash !== academyCandidateHash(candidate)
     || bundle.captureClass !== "c30-terminal-reconstruction" || observations.length < 2 || !Array.isArray(bundle.actions)
     || bundle.actions.length !== candidate.artifact.actions.length || bundle.terminal?.tick !== candidate.tick
     || bundle.terminal.semanticHash !== candidate.artifact.terminal.semanticHash
     || !Array.isArray(bundle.nativeEvents) || !Array.isArray(bundle.rewardComponents)
     || bundle.rewardComponents.length !== observations.length
     || bundle.rewardComponents.some((entry, index) => !hasExpectedTick(entry, index))
-    || !Array.isArray(bundle.intents) || !validC30SourceTracks(bundle.source)
-    || !Array.isArray(bundle.unavailableTracks) || bundle.unavailableTracks.length !== 0
+    || !Array.isArray(bundle.intents) || !Array.isArray(bundle.unavailableTracks)
+    || !validC30SourceTracks(bundle.source, bundle.unavailableTracks, candidate)
     || !nonEmpty(bundle.bundleHash)) return false;
   return stableVerificationHash({
     candidateHash: bundle.candidateHash, observations: bundle.observations, actions: bundle.actions,
@@ -200,12 +241,13 @@ export function assessAcademyCandidateEligibility(value: unknown): TearAcademyCa
     });
   }
   const reasons: TearAcademyCandidateRejection[] = [];
-  if (!validTracks(input.tracks, candidate) || !validTrackBundle(input.trackBundle, candidate)) {
+  if (!validTracks(input.tracks, candidate) || !validTrackBundle(input.trackBundle, candidate)
+    || !sourceBuildMatchesProvenance(input.trackBundle?.source, input.provenance)) {
     reasons.push("incomplete-synchronized-tracks");
   }
   const consent = consentReason(input.consent, input.provenance, input.privacy);
   if (consent !== undefined) reasons.push(consent);
-  const verifiedCandidateHash = candidateHash(candidate);
+  const verifiedCandidateHash = academyCandidateHash(candidate);
   return Object.freeze({
     format: "tear-academy-candidate-admission", schemaVersion: 1,
     candidateId: candidate.episodeId, candidateHash: verifiedCandidateHash,
