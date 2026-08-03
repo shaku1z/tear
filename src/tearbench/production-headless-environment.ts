@@ -14,7 +14,7 @@ import {
 import type { ProductionReplayWorld } from "./production-world-factory";
 import type { ProductionWaveRewardRuntime } from "./production-wave-reward-runtime";
 import type { ProductionWaveRewardIntent } from "./production-wave-reward-runtime";
-import type { TearScenarioV1, TearSnapshotV1 } from "./contracts";
+import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION, type TearObservationV1, type TearScenarioV1, type TearSnapshotV1 } from "./contracts";
 import { RUN_RANDOM_STREAM_NAMES } from "../simulation/run-random";
 import {
   TearHeadlessEnvironmentPool,
@@ -24,6 +24,7 @@ import {
   type TearHeadlessTransition,
 } from "./headless";
 import { validateTearContract } from "./validation";
+import { ENTITY_KIND_REGISTRY } from "./registries";
 
 type ProductionHeadlessCore = Readonly<{
   replay: ProductionReplayWorld;
@@ -100,6 +101,8 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
   CanonicalGameplayState,
   GameAction
 > {
+  /** Structured policy projection from this exact source-owned production world. */
+  policyObservation(): TearObservationV1;
   captureCheckpoint(): ProductionHeadlessCheckpoint;
   restoreCheckpoint(checkpoint: ProductionHeadlessCheckpoint): CanonicalGameplayState;
   /** Available only when the environment was explicitly created for source-track capture. */
@@ -266,6 +269,26 @@ export function createProductionHeadlessEnvironment(
       value.simulation.simulationRuntime.scheduler.tick,
       value.simulation.simulationRuntime.input,
     );
+  const policyObservation = (value: ProductionHeadlessCore): TearObservationV1 => {
+    const run = value.replay.world.state.run() as unknown as { mode: TearObservationV1["run"]["mode"]; diff: TearObservationV1["run"]["difficulty"]; weaponId: TearObservationV1["run"]["weapon"]; wave: number; score: number } | null;
+    const player = value.replay.world.state.player() as unknown as { x: number; y: number; vx: number; vy: number; hp: number; maxHp: number; facing?: number; onGround?: boolean; dashCharges?: number } | undefined;
+    const blade = value.replay.world.state.blade() as unknown as { x: number; y: number; tipX: number; tipY: number; vx: number; vy: number; tipSpeed: number; state: string } | undefined;
+    if (run === null || player === undefined || blade === undefined) throw new Error("production policy observation requires an active source world");
+    const tick = value.simulation.simulationRuntime.scheduler.tick;
+    return Object.freeze({ format: TEAR_CONTRACT_FORMAT, kind: "observation", schemaVersion: TEAR_CONTRACT_VERSION, tick,
+      observationClass: "structured-state", player: Object.freeze({ x: player.x, y: player.y, vx: player.vx, vy: player.vy,
+        hp: player.hp, maxHp: player.maxHp, facing: player.facing === undefined || player.facing >= 0 ? 1 : -1,
+        grounded: player.onGround ?? false, dashCharges: player.dashCharges ?? 0 }),
+      blade: Object.freeze({ handX: blade.x, handY: blade.y, tipX: blade.tipX, tipY: blade.tipY, vx: blade.vx, vy: blade.vy,
+        tipSpeed: blade.tipSpeed, state: blade.state }),
+      entities: Object.freeze(value.replay.world.state.enemies().filter((enemy: { dead?: boolean }) => !enemy.dead).map((enemy, index) => {
+        const value = enemy as unknown as { _gid?: number; kind?: string; x: number; y: number; vx: number; vy: number; hp: number; maxHp?: number; state?: string };
+        return Object.freeze({ id: `production:${String(value._gid ?? index + 1)}`, kind: ENTITY_KIND_REGISTRY.assert(value.kind ?? ""), x: value.x, y: value.y,
+          vx: value.vx, vy: value.vy, hpRatio: value.maxHp === undefined || value.maxHp <= 0 ? 1 : value.hp / value.maxHp, state: value.state ?? "active" });
+      })), run: Object.freeze({ mode: run.mode, difficulty: run.diff, weapon: run.weaponId, stage: `stage-${String(value.replay.stage.index)}`,
+        wave: run.wave, score: run.score, elapsedTicks: tick }), availableActions: Object.freeze(["move", "aim", "weapon", "jump", "dash"] as const),
+    });
+  };
   const compose = (
     scenario: TearScenarioV1,
     snapshot?: TearSnapshotV1,
@@ -305,6 +328,7 @@ export function createProductionHeadlessEnvironment(
       actionTrace = [];
       return observation(core);
     },
+    policyObservation: () => policyObservation(requireCore()),
     step(actions: readonly GameAction[]): TearHeadlessTransition<CanonicalGameplayState> {
       const current = requireCore();
       const tick = current.simulation.simulationRuntime.scheduler.tick + 1;

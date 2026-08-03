@@ -59,6 +59,11 @@ executed, trained, or been promoted by an evaluation result.
   active pointer, every recorded activation/rollback target, and every lineage
   parent, so retention cannot make a rollback target unavailable. Evaluation
   reports are not yet durable artifacts and are therefore not claimed retained.
+- `evaluateActiveTearPolicyInProduction` now drives the active runtime through
+  the exact C29/C30 source-owned production headless composition. Its structured
+  observation is projected from that live world before every fixed step, and it
+  retains terminal semantic evidence in its returned report. The current report
+  is caller-retained/in-memory, not a durable evaluation artifact.
 
 ## Exit-gate status
 
@@ -80,6 +85,9 @@ executed, trained, or been promoted by an evaluation result.
   fail closed before routing an artifact action.
 - [x] Excess unactivated leaf artifacts have a bounded, auditable retention
   path that preserves active and rollback lineage.
+- [x] The active runtime has a reproducible source-owned production-world
+  evaluation path. It is shared-composition terminal evidence, not a quality or
+  promotion result, and its report is not yet durable.
 - [ ] Real-game outcome evaluation, cancellable external-inference budgets,
   evaluation-artifact retention, and player-visible Watch Agent integration.
 
@@ -96,6 +104,9 @@ decision-conformance reports (including reproducible failures), payload and
 elapsed-budget containment, and normal browser Vault-to-Watch composition with
 persisted receipt readback. Registry tests also prove safe leaf-only retention,
 active/rollback/lineage preservation, and retained-receipt readback.
+Production-headless tests additionally prove the structured policy projection
+comes from the source world and that an active artifact produces identical
+terminal evidence across two fresh C29/C30 production compositions.
 
 ## Deliberately not claimed
 
@@ -106,8 +117,8 @@ cloud publication, or wire player-facing Watch Agent controls. The decision
 journal is diagnostic Class-A analysis evidence, not a causal capsule, replay,
 pixel/audio/device-output trace, or player-visible policy explanation.
 
-DONE THIS STEP:      C32 now has bounded, atomic retention for unactivated leaf artifacts with an immutable receipt; active, rollback, and lineage artifacts remain protected.
-PROVEN BY:           C32 targeted requirements/type/lint/architecture checks, ten permanent registry/runtime/journal/evaluation tests (including retention safety), and the browser-seeded real-IndexedDB Watch readback journey.
-REMAINING HERE:      Real-game outcome evaluation, cancellable external-inference budgets, durable evaluation evidence retention, and player-visible Watch Agent controls.
+DONE THIS STEP:      C32's active table artifact now runs reproducibly through the C29/C30 source-owned production world and returns matching terminal evidence across fresh compositions; that report remains in-memory.
+PROVEN BY:           C32 targeted requirements/type/lint/architecture checks, nineteen permanent registry/runtime/journal/evaluation/production tests, and the browser-seeded real-IndexedDB Watch readback journey.
+REMAINING HERE:      Durable production-evaluation evidence, real-game outcome evaluation, cancellable external-inference budgets, and player-visible Watch Agent controls.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C32-C40 product evidence.
-NEXT SLICE:          Run active-artifact evaluation against source-owned production scenarios and retain its evidence; do not call the result training or promotion.
+NEXT SLICE:          Persist a bounded integrity-checked production-evaluation report in Vault analysis storage, then prove readback without calling it training or promotion.

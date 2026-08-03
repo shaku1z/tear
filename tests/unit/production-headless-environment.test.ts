@@ -38,6 +38,21 @@ function actionsAt(tick: number) {
 }
 
 describe("C30 production headless environment", () => {
+  it("projects structured agent observations from the same source-owned production world", () => {
+    const environment = createProductionHeadlessEnvironment();
+    environment.reset(scenario);
+    const opening = environment.policyObservation();
+    environment.step(actionsAt(1));
+    const advanced = environment.policyObservation();
+    environment.dispose();
+
+    expect(opening).toMatchObject({ kind: "observation", observationClass: "structured-state", tick: 0,
+      run: { mode: scenario.start.mode, difficulty: scenario.start.difficulty, weapon: scenario.start.weapon } });
+    expect(advanced.tick).toBe(1);
+    expect(advanced.player.x).not.toBe(opening.player.x);
+    expect(advanced.availableActions).toContain("weapon");
+  });
+
   it("runs a DOM-free episode through the same production replay composition", () => {
     const environment = createProductionHeadlessEnvironment();
     let final = environment.reset(scenario);

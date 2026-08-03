@@ -275,7 +275,9 @@ This is the migration checklist for the architectural redesign. A checked featur
    payload/work/action limits and elapsed fallback containment, but no external
    inference backend. Only unactivated leaf artifacts may be evicted, with
    receipt-backed preservation of active/rollback lineage. Player-facing policy
-   controls remain absent. Account/
+   controls remain absent. The active table artifact can also run against the
+   C29/C30 source-owned production world and return repeatable in-memory
+   terminal evidence; durable evaluation records remain absent. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 
