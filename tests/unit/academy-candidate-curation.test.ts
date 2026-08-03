@@ -108,6 +108,11 @@ describe("C31 held Academy candidate curation", () => {
       assignedAt: "2026-08-03T00:05:00.000Z", actor: "academy-curator" })).rejects.toThrow(/already exists/u);
     expect((await splits.manifest("trainer", "2026-08-03T00:05:00.000Z", { kind: "trainer", id: "bc" })).entries).toEqual([]);
     expect((await splits.manifest("exam", "2026-08-03T00:05:00.000Z", { kind: "examiner", id: "release" })).entries).toEqual([assignment]);
+    const first = await splits.publishManifest({ id: "release", version: 1, createdAt: "2026-08-03T00:05:00.000Z", reader: { kind: "examiner", id: "release" } });
+    expect(await splits.getManifest("release", 1)).toEqual(first);
+    await expect(splits.publishManifest({ id: "release", version: 2, createdAt: "2026-08-03T00:06:00.000Z", reader: { kind: "examiner", id: "release" } })).rejects.toThrow(/predecessor/u);
+    const second = await splits.publishManifest({ id: "release", version: 2, createdAt: "2026-08-03T00:06:00.000Z", reader: { kind: "examiner", id: "release" }, previousManifestHash: first.manifestHash });
+    expect(second.previousManifestHash).toBe(first.manifestHash);
   });
 
   it("rejects unauthorized, duplicate, or revoked review decisions and keeps correction requests immutable", async () => {

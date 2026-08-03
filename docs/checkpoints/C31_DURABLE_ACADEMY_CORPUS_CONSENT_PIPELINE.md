@@ -94,6 +94,11 @@ is trained on.
   view can enumerate them. This remains a partial split/manifests foundation:
   it is not a reviewed corpus sample, versioned corpus manifest, or C32 trainer
   integration.
+- The same split store now persists immutable versioned *pre-corpus* manifests
+  in the shared Vault analysis namespace. A revision must name the exact prior
+  manifest hash; a deleted or revoked custody source is omitted whenever a new
+  manifest is rebuilt. The stored manifest is integrity-hashed, but this is
+  still not a corpus manifest or trainer-consumable sample.
 
 ## Exit-gate ledger
 
@@ -200,7 +205,9 @@ artifact loading, C33 behavior cloning, or C36 Foundry automation.
 - That same curation proof assigns only an active approved source to one
   immutable hidden-exam split, rejects a second assignment, and proves the
   trainer manifest cannot enumerate the hidden assignment while the separate
-  examiner view can.
+  examiner view can. It also persists manifest version 1, rejects version 2
+  without version 1's exact manifest hash, and persists the valid chained
+  version 2.
 - That same custody proof rejects a foreign Vault for deletion, atomically
   removes the actual materialized source capsule only from its matching Vault,
   and retains the durable `deleted` tombstone outside future held queries.
@@ -218,7 +225,7 @@ artifact loading, C33 behavior cloning, or C36 Foundry automation.
 
 ## Next safe boundary
 
-Extend the split ledger into immutable versioned pre-corpus manifests with
-complete player/session/seed lineage handling and revocation-safe manifest
-rebuilds. Preserve hidden-release-exam isolation and do not create a reviewed
-corpus sample until that separate governance boundary is implemented.
+Add the governed reviewed-sample boundary: materialize an explicitly curated,
+active source as a persisted sample tied to its exact capsule range while
+ensuring revoked custody is absent from every newly rebuilt corpus manifest.
+Keep hidden-release-exam data unreadable by ordinary trainer code.
