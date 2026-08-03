@@ -86,6 +86,14 @@ is trained on.
   evidence. Its `active()` view rechecks custody, so revoked or expired sources
   disappear before a later manifest consumer can see them. It neither creates a
   corpus sample nor assigns a split or exposes anything to trainer code.
+- `TearAcademyCandidateSplitStore` now binds one durable pre-corpus assignment
+  to the exact active custody, quality assessment, and curation hashes. It
+  prevents a verified session/seed lineage from crossing split partitions and
+  derives its coordinate from the retained source evidence. Trainer manifests
+  exclude hidden-release-exam assignments; only the separate examiner manifest
+  view can enumerate them. This remains a partial split/manifests foundation:
+  it is not a reviewed corpus sample, versioned corpus manifest, or C32 trainer
+  integration.
 
 ## Exit-gate ledger
 
@@ -154,7 +162,7 @@ artifact loading, C33 behavior cloning, or C36 Foundry automation.
 ## Evidence
 
 - `pnpm check:c31:foundation` passes: typecheck, full lint, architecture
-  checks, and nine focused Vitest suites / twenty-two tests.
+  checks, and nine focused Vitest suites / twenty-three tests.
 - `academy-candidate-admission.test.ts` generates a real C30 terminal through
   the bounded production pool and candidate intake. It asserts that the current
   verified-but-incomplete track bundle remains rejected, plus the pre-corpus
@@ -189,6 +197,10 @@ artifact loading, C33 behavior cloning, or C36 Foundry automation.
   undeclared reviewer and repeat decision, retains immutable correction
   requests, and proves a later model-training revocation removes that decision
   from the active curation view.
+- That same curation proof assigns only an active approved source to one
+  immutable hidden-exam split, rejects a second assignment, and proves the
+  trainer manifest cannot enumerate the hidden assignment while the separate
+  examiner view can.
 - That same custody proof rejects a foreign Vault for deletion, atomically
   removes the actual materialized source capsule only from its matching Vault,
   and retains the durable `deleted` tombstone outside future held queries.
@@ -206,7 +218,7 @@ artifact loading, C33 behavior cloning, or C36 Foundry automation.
 
 ## Next safe boundary
 
-Add immutable lineage-bound split assignment and durable pre-corpus manifests
-only for active, explicitly curated held sources. Hidden release-exam data must
-remain unreadable by ordinary trainer code; no source may reach a corpus sample
-without that separate governance boundary.
+Extend the split ledger into immutable versioned pre-corpus manifests with
+complete player/session/seed lineage handling and revocation-safe manifest
+rebuilds. Preserve hidden-release-exam isolation and do not create a reviewed
+corpus sample until that separate governance boundary is implemented.

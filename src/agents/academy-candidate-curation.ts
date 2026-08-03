@@ -125,6 +125,9 @@ export class TearAcademyCandidateCurationStore {
     this.#quality = quality;
   }
 
+  /** Shared only with adjacent C31 split/manifests for the same local Vault boundary. */
+  backend(): GhostVaultBackend { return this.#backend; }
+
   async decide(input: TearAcademyCandidateCurationRequest): Promise<TearAcademyCandidateCurationDecisionV1> {
     if (!/^[a-f0-9]{16}$/u.test(input.candidateHash) || !/^[a-f0-9]{16}$/u.test(input.assessmentHash)
       || !["curation-approved", "needs-correction", "rejected"].includes(input.disposition)

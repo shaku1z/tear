@@ -4,6 +4,7 @@ import {
   TearAcademyCandidateCurationStore,
   TearAcademyCandidateCustodyStore,
   TearAcademyCandidateQualityStore,
+  TearAcademyCandidateSplitStore,
   captureAcademyCandidateTracks,
   materializeAcademyCandidateCapsule,
   type TearAcademyCandidateCapsuleMaterializationReceiptV1,
@@ -88,6 +89,25 @@ describe("C31 held Academy candidate curation", () => {
     expect(decision).toMatchObject({ disposition: "curation-approved", tags: ["baseline"] });
     expect(await curation.active("2026-08-03T00:04:00.000Z")).toEqual([decision]);
     expect(await input.backend.keys("analysis")).not.toContain("academy-demonstration-corpus");
+  });
+
+  it("assigns only an active approved source to one immutable split and hides exam assignments from a trainer manifest", async () => {
+    const input = await prepare();
+    const curation = new TearAcademyCandidateCurationStore(input.backend, input.custody, input.quality);
+    const decision = await curation.decide({
+      candidateHash: input.assessment.candidateHash, assessmentHash: input.assessment.assessmentHash,
+      disposition: "curation-approved", reviewer: "academy-curator", reviewedAt: "2026-08-03T00:03:00.000Z",
+      rationale: "ready for governed split", tags: Object.freeze(["baseline"]), corrections: Object.freeze([]),
+    });
+    expect(decision.disposition).toBe("curation-approved");
+    const splits = new TearAcademyCandidateSplitStore(input.backend, input.custody, input.quality, curation);
+    const assignment = await splits.assign({ candidateHash: input.assessment.candidateHash, split: "hidden-release-exam",
+      assignedAt: "2026-08-03T00:04:00.000Z", actor: "academy-curator" });
+    expect(assignment.lineage).toMatchObject({ session: input.declaration.candidate.episodeId, seed: "c31-curation-seed" });
+    await expect(splits.assign({ candidateHash: input.assessment.candidateHash, split: "training",
+      assignedAt: "2026-08-03T00:05:00.000Z", actor: "academy-curator" })).rejects.toThrow(/already exists/u);
+    expect((await splits.manifest("trainer", "2026-08-03T00:05:00.000Z", { kind: "trainer", id: "bc" })).entries).toEqual([]);
+    expect((await splits.manifest("exam", "2026-08-03T00:05:00.000Z", { kind: "examiner", id: "release" })).entries).toEqual([assignment]);
   });
 
   it("rejects unauthorized, duplicate, or revoked review decisions and keeps correction requests immutable", async () => {

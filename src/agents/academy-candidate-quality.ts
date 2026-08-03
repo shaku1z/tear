@@ -22,6 +22,8 @@ export interface TearAcademyCandidateSourceMetadataV1 {
   readonly mode: string;
   readonly difficulty: string;
   readonly weapon: string;
+  /** Scenario seed is retained only as an opaque lineage coordinate for C31 split isolation. */
+  readonly seed: string;
   readonly terminalTick: number;
   readonly terminalKind: "terminated" | "truncated";
   readonly actionTypes: readonly string[];
@@ -171,6 +173,7 @@ function derive(
       mode: declaration.candidate.artifact.scenario.start.mode,
       difficulty: declaration.candidate.artifact.scenario.start.difficulty,
       weapon: declaration.candidate.artifact.scenario.start.weapon,
+      seed: declaration.candidate.artifact.scenario.seed,
       terminalTick: tick, terminalKind: bundle.terminal.truncated ? "truncated" : "terminated",
       actionTypes: Object.freeze(actionTypes), observationCount: bundle.observations.length,
       nativeEventCount: bundle.nativeEvents.length, rewardComponentCount: bundle.rewardComponents.length,

@@ -14,6 +14,7 @@ export * from "./academy-candidate-capsule-materializer";
 export * from "./academy-candidate-custody";
 export * from "./academy-candidate-quality";
 export * from "./academy-candidate-curation";
+export * from "./academy-candidate-splits";
 export * from "./ladder-foundry";
 export * from "./live-watch-agent-host";
 export * from "./hierarchical-policy-adapter";
