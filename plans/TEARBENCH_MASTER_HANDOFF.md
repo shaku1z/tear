@@ -537,11 +537,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C33 now evaluates a parent fit and its approved-correction retrain on the unchanged separately governed validation split, recording only their distinct lineage and equal held-out scope—not quality, activation, or promotion.
-PROVEN BY:           Focused real C33 source-world correction capture/review/augmentation/retraining/held-out comparison test; targeted gates pending this slice.
-REMAINING HERE:      C33 needs cancellation/recovery, temporal/sequence policy capability, intermediate/resumable checkpoints, and meaningful real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
+DONE THIS STEP:      C33 now has bounded source-world correction capture/review/augmentation/retraining, held-out observation, and exact checkpoint cancellation/resume with corrupt-byte quarantine; none is quality, activation, or promotion.
+PROVEN BY:           Focused real C33 capture/review/augmentation/retraining/held-out comparison/checkpoint recovery test plus targeted TypeScript and ESLint.
+REMAINING HERE:      C33 needs temporal/sequence policy capability, conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C33-C40 product evidence remain; C27A, C28, and C32 are closed.
-NEXT SLICE:          C33: add bounded cancellation and resumable checkpoint evidence for deterministic DAgger fitting without promotion.
+NEXT SLICE:          C33: define and execute a bounded temporal-policy artifact over governed sequences, then prove source-world behavior without a quality/promotion claim.
 
 ### C33 pacing finding
 

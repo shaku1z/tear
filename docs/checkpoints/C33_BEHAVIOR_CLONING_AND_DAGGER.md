@@ -130,11 +130,11 @@ This is not a sequence/recurrent policy, a meaningful quality score, a
 ingested/retrained DAgger loop, promotion, or automatic player-facing training.
 Those remain C33 work.
 
-DONE THIS STEP:      C33 records an observed parent-versus-approved-correction retrain comparison on the separately governed validation split, without interpreting it as quality or promotion.
-PROVEN BY:           Focused C33 source-world capture/review/augmentation/retraining/held-out comparison test; targeted gates pending this slice.
-REMAINING HERE:      Cancellation/recovery, temporal policy, intermediate checkpoints, and meaningful real-game quality evidence.
+DONE THIS STEP:      C33 has bounded source-world correction capture/review/augmentation/retraining, held-out observation, and exact checkpoint cancellation/resume with corrupt-byte quarantine; none is interpreted as quality or promotion.
+PROVEN BY:           Focused C33 source-world capture/review/augmentation/retraining/held-out comparison/checkpoint recovery test plus targeted TypeScript and ESLint.
+REMAINING HERE:      Sequence/temporal policy, conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Add bounded cancellation and resumable checkpoint evidence for the deterministic DAgger fit; no promotion.
+NEXT SLICE:          Define and execute a bounded temporal-policy artifact over governed sequences, then prove its real-game source-world behavior without a quality/promotion claim.
 
 ## Slice pacing finding — 2026-08-03
 
