@@ -4,6 +4,7 @@ import {
   TearAcademyCandidateCurationStore,
   TearAcademyCandidateCustodyStore,
   TearAcademyCandidateQualityStore,
+  TearAcademyCorpusStore,
   TearAcademyReviewedSampleStore,
   inspectAcademy,
   TearAcademyCandidateSplitStore,
@@ -120,6 +121,16 @@ describe("C31 held Academy candidate curation", () => {
     expect(sample).toMatchObject({ split: "hidden-release-exam", source: { capsuleId: "c31-curation-source", fromTick: 0 } });
     expect(sample.tracks?.actions).toEqual(input.declaration.trackBundle?.actions);
     expect(await samples.get(sample.candidateHash)).toEqual(sample);
+    const corpus = new TearAcademyCorpusStore(input.backend, input.custody, curation, splits, samples);
+    const corpusEntry = await corpus.admit({ candidateHash: sample.candidateHash, lessonId: "movement-foundations",
+      segmentKind: "demonstration", tags: Object.freeze(["baseline"]), admittedAt: "2026-08-03T00:06:30.000Z", actor: "academy-curator" });
+    expect(await corpus.get(sample.candidateHash)).toEqual(corpusEntry);
+    expect((await corpus.manifest({ id: "trainer", reader: { kind: "trainer", id: "bc" }, version: 1,
+      createdAt: "2026-08-03T00:06:30.000Z" })).entries).toEqual([]);
+    const corpusFirst = await corpus.publishManifest({ id: "exam", reader: { kind: "examiner", id: "release" }, version: 1,
+      createdAt: "2026-08-03T00:06:30.000Z" });
+    expect(corpusFirst.entries).toEqual([corpusEntry]);
+    expect(await corpus.getManifest("exam", { kind: "examiner", id: "release" }, 1)).toEqual(corpusFirst);
     const revokedConsent = Object.freeze({ ...input.declaration.consent, revision: "c31-sample-consent-2",
       decidedAt: "2026-08-03T00:07:00.000Z", modelTraining: "no-training" as const });
     await input.custody.revoke({ candidateHash: sample.candidateHash, scope: "model-training", consent: revokedConsent,
@@ -127,12 +138,15 @@ describe("C31 held Academy candidate curation", () => {
     const rebuilt = await splits.publishManifest({ id: "release", version: 3, createdAt: "2026-08-03T00:08:00.000Z",
       reader: { kind: "examiner", id: "release" }, previousManifestHash: second.manifestHash });
     expect(rebuilt.entries).toEqual([]);
-    const inspection = await inspectAcademy({ custody: input.custody, quality: input.quality, curation, splits, samples }, "2026-08-03T00:08:00.000Z");
-    expect(inspection).toMatchObject({ custody: { revoked: 1 }, quality: { reviewRequired: 1 }, curation: { approved: 1 }, splits: { "hidden-release-exam": 1 }, reviewedSamples: 1 });
+    const corpusSecond = await corpus.publishManifest({ id: "exam", reader: { kind: "examiner", id: "release" }, version: 2,
+      createdAt: "2026-08-03T00:08:00.000Z", previousManifestHash: corpusFirst.manifestHash });
+    expect(corpusSecond.entries).toEqual([]);
+    const inspection = await inspectAcademy({ custody: input.custody, quality: input.quality, curation, splits, samples, corpus }, "2026-08-03T00:08:00.000Z");
+    expect(inspection).toMatchObject({ custody: { revoked: 1 }, quality: { reviewRequired: 1 }, curation: { approved: 1 }, splits: { "hidden-release-exam": 1 }, reviewedSamples: 1, corpusEntries: 1 });
     expect(inspection.records).toMatchObject([{
       candidateHash: sample.candidateHash, custody: "revoked", modelTrainingConsent: "no-training",
       retention: "indefinite", privacyClass: "anonymous", quality: "review-required",
-      curation: "curation-approved", correctionCount: 0, split: "hidden-release-exam", reviewed: true,
+      curation: "curation-approved", correctionCount: 0, split: "hidden-release-exam", reviewed: true, inCorpus: true,
     }]);
     expect(inspection.manifests).toMatchObject([
       { id: "release", version: 1, entries: 1 }, { id: "release", version: 2, entries: 1 }, { id: "release", version: 3, entries: 0 },

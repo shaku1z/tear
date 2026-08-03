@@ -1049,10 +1049,15 @@ portability, concurrent complete worlds, or C27A completion.
 
 ### C31 — Academy corpus and consent
 
-- [ ] Eligibility, consent, and provenance enforced before ingestion
-- [ ] Curation and retention run on real recorded episodes
-- [ ] `agents/academy` has a non-test consumer
-- [ ] A corpus exists and is inspectable
+- [x] Eligibility, consent, and provenance enforced before ingestion — C31's
+  real C30-to-C27 materialization path fails closed before custody or corpus.
+- [x] Curation and retention run on real recorded episodes — durable C31 custody,
+  quality, immutable curation, reviewed samples, and revocation proofs.
+- [x] `agents/academy` has a non-test consumer — the browser Academy inspection
+  composes `TearAcademyCorpusStore` over the durable Vault graph.
+- [x] A corpus exists and is inspectable — reviewed governed entries and
+  reader-scoped versioned manifests persist in the Vault; Academy exposes safe
+  membership/count state. This is not C32 trainer execution.
 
 ### C32 — Policy runtime and artifact registry
 

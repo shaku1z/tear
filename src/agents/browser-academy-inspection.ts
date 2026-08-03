@@ -5,6 +5,7 @@ import { TearAcademyCandidateQualityStore } from "./academy-candidate-quality";
 import { TearAcademyCandidateSplitStore } from "./academy-candidate-splits";
 import { TearAcademyInspectionController } from "./academy-inspection-controller";
 import { TearAcademyReviewedSampleStore } from "./academy-reviewed-sample";
+import { TearAcademyCorpusStore } from "./academy-corpus";
 
 /** Browser composition root for the durable C31 Academy inspection graph. */
 export async function createBrowserAcademyInspectionController(factory: IDBFactory | undefined): Promise<TearAcademyInspectionController> {
@@ -15,5 +16,6 @@ export async function createBrowserAcademyInspectionController(factory: IDBFacto
   const curation = new TearAcademyCandidateCurationStore(backend, custody, quality);
   const splits = new TearAcademyCandidateSplitStore(backend, custody, quality, curation);
   const samples = new TearAcademyReviewedSampleStore(backend, custody, quality, curation, splits);
-  return new TearAcademyInspectionController({ custody, quality, curation, splits, samples });
+  const corpus = new TearAcademyCorpusStore(backend, custody, curation, splits, samples);
+  return new TearAcademyInspectionController({ custody, quality, curation, splits, samples, corpus });
 }

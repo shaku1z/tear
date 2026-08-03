@@ -257,7 +257,10 @@ This is the migration checklist for the architectural redesign. A checked featur
    of durable held, reviewed, curated, consent, retention, split, and revision
    state, including an explicit storage-unavailable state; it is not a trainer
    input or full Academy workspace. Account/cloud identity and deletion,
-   trainer integration, and policy training remain absent;
+   A reviewed governed source can now become a durable Academy corpus entry with
+   a versioned reader-scoped manifest; trainer views exclude hidden exams and
+   revocation removes entries from future manifests. C32 trainer integration and
+   policy training remain absent;
    authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

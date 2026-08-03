@@ -259,9 +259,11 @@ Named status:
   only dispositions are `review-required` and `duplicate`. A local authorized
   human can now record one immutable curation approval/rejection/correction
   decision against a `review-required` source; its active view rechecks custody
-  so revoked data vanishes before future manifest use. C31 does not yet persist
-  a reviewed corpus sample, authenticate account/cloud identity, delete
-  account/cloud data, create manifests/splits, or train a policy.
+  so revoked data vanishes before future manifest use. An approved reviewed
+  sample now enters a durable, integrity-bound C31 corpus with reader-scoped
+  manifests; trainer readers exclude hidden exams and revocation removes a
+  source from future manifests. C31 still does not authenticate account/cloud
+  identity, delete account/cloud data, or train a policy.
 - **C32-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -340,8 +342,11 @@ Important files:
 ### Exact next slice
 
 C27A and C28 are closed. C29's durable active-cinematic capsule boundary remains
-open, but the current worktree's exact slice is **C31 detailed durable Academy
-inspection over its reviewed samples, corrections, retention, and manifests**.
+open, but the current worktree's completed C31 slice is **durable Academy
+corpus admission and privacy-safe inspection over reviewed samples, corrections,
+retention, and manifests**. The next C31 product slice is complete record
+browsing with only authorized durable lesson status/actions; start C32's policy
+artifact/runtime boundary before wiring any trainer to this corpus.
 Do not reopen C27A for pixels, haptics, durable outcomes, or audio/device
 fidelity; C25, C39, and C40 own those separate output claims.
 
@@ -357,8 +362,8 @@ Do not promote that observation to a target claim. A bounded terminal-artifact
 stream now attaches to the Academy candidate intake and explicitly reports
 pressure; the existing dispatcher now has an eight-PID, 32-episode bounded
 stress proof and first-source-tick mid-run cancellation without recovery.
-Neither may be turned into storage, durable job recovery, a C31 corpus, or a
-second simulation model. Because no target profile is declared, leave that C30
+Neither may be turned into C30-owned storage, durable job recovery, or a second
+simulation model. Because no target profile is declared, leave that C30
 capacity claim open. C31 now rejects invalid candidate metadata, verifies a
 real canonical/native-event/reward/planner-intent bundle before corpus action,
 and can explicitly drain a pulled candidate into a matching C27 Vault source
@@ -368,9 +373,10 @@ retention-expiry history and excludes revoked/expired records from future
 consumers; an authorized deletion removes that exact source capsule atomically
 with its non-training tombstone. Keep that asynchronous custody step out of
 C30's synchronous callback. Custody now binds a matching privacy class and
-local declared authority before an actor can revoke, expire, or delete. The next
-slice must add quality/deduplication evidence around held sources rather than
-treating them as reviewed corpus samples.
+local declared authority before an actor can revoke, expire, or delete. Quality,
+deduplication, curation, reviewed samples, corpus admission, and reader-scoped
+manifest evidence are now durable C31 capabilities; do not mislabel them as a
+C32 trainer or policy.
 
 Preserve:
 
@@ -511,11 +517,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C31 reconstructs a sealed C30 terminal through the shared production composition, captures its canonical/native/reward/intent evidence, explicitly drains a pulled bounded candidate into a complete C27 Vault source capsule, and can hold only an eligible materialized source in a durable hash-chained pre-corpus custody ledger. Model-training revocation and retention expiry exclude that record from future held-candidate consumers while retaining audit history; an authorized deletion atomically removes the exact source capsule and leaves a non-training tombstone. Every custody record now also carries a privacy-class-matched, versioned local authority policy that rejects undeclared actors. Exact held declarations can receive a durable quality assessment with derived metadata, transparent coverage/density components, explicit outlier flags, and content deduplication. An authorized human can record one immutable curation approval/rejection/correction decision, bind it to a lineage-safe durable pre-corpus split/manifest, and materialize a reviewed sample with the exact C27 range. The normal main-menu `ACADEMY` route now exposes a runtime-owned read-only inspection of aggregate custody plus a bounded privacy-safe set of joined custody/consent/retention/quality/curation/split/reviewed records and durable manifest revisions; it refreshes on entry and has an explicit unavailable state. The C30 callback remains storage-free.
+DONE THIS STEP:      C31 reconstructs a sealed C30 terminal through the shared production composition, captures its canonical/native/reward/intent evidence, explicitly drains a pulled bounded candidate into a complete C27 Vault source capsule, and can hold only an eligible materialized source in a durable hash-chained pre-corpus custody ledger. Model-training revocation and retention expiry exclude that record from future held-candidate consumers while retaining audit history; an authorized deletion atomically removes the exact source capsule and leaves a non-training tombstone. Every custody record now also carries a privacy-class-matched, versioned local authority policy that rejects undeclared actors. Exact held declarations can receive a durable quality assessment with derived metadata, transparent coverage/density components, explicit outlier flags, and content deduplication. An authorized human can record one immutable curation approval/rejection/correction decision, bind it to a lineage-safe durable pre-corpus split/manifest, and materialize a reviewed sample with the exact C27 range. An active reviewed sample can now enter a durable Academy corpus entry with reader-scoped versioned corpus manifests: trainer views exclude hidden exams and model-training revocation removes sources from future manifests. The normal main-menu `ACADEMY` route composes that real corpus inventory and exposes runtime-owned aggregate custody plus a bounded privacy-safe set of joined custody/consent/retention/quality/curation/split/reviewed records and durable manifest revisions; it refreshes on entry and has an explicit unavailable state. The C30 callback remains storage-free.
 PROVEN BY:           `pnpm check:c31:foundation` passes typecheck/lint/architecture plus thirteen focused Vitest suites / forty-four tests, a test-standalone build, and the normal pointer-driven `ACADEMY` menu route/BACK browser journey. `pnpm check:c28:vault-reachable` passes six focused Vault suites / thirty-eight tests plus browser library, migration, interrupted-recovery, and physical-quota journeys. `pnpm check:c30:foundation` also passes its shared-composition units, six bounded worker proofs, both browser terminal reruns, and the 13-scenario C27A parity capture. Tampered terminal hashes, missing bundle metadata, `no-training`, invalid consent, consent/provenance mismatch, a missing bootstrap, a missing terminal anchor, malformed custody/quality/curation bytes, a non-held declaration, revoked consent, expired retention, an undeclared actor, a foreign Vault, duplicate assessment, or a mismatched source all reject or remain absent from future held-candidate use.
-REMAINING HERE:      C31 still needs complete record browsing, durable lesson status, and only authorized record actions; trainer integration; population balance and style/skill interpretation; and account/cloud identity/deletion ownership. A reviewed sample and bounded inspection are not a trainer corpus or trained policy. C30 target-host capacity remains external; C29's durable active-cinematic boundary remains separately open.
+REMAINING HERE:      C31 still needs complete record browsing, durable lesson status, and only authorized record actions; population balance and style/skill interpretation; and account/cloud identity/deletion ownership. The durable corpus is not a C32 trainer or trained policy. C30 target-host capacity remains external; C29's durable active-cinematic boundary remains separately open.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Add complete pagination-safe Academy record browsing and only durable lesson status or actions that have an authorized product boundary. Keep subject identity, raw tracks, trainer payloads, and the legacy in-memory corpus out of the player surface.
+NEXT SLICE:          Start C32's versioned policy artifact/runtime boundary before wiring a trainer to the durable corpus. In C31, separately add complete pagination-safe record browsing and only authorized durable lesson status/actions. Keep subject identity, raw tracks, trainer payloads, and the legacy in-memory corpus out of the player surface.
 
 All of the following were run from this worktree through C27A slice 36:
 

@@ -18,10 +18,11 @@ export function createLiveAcademyScreen(factory: IDBFactory | undefined): Readon
           { label: "REVIEWED", value: String(inspection.snapshot.reviewedSamples) },
           { label: "CURATED", value: String(inspection.snapshot.curation.approved) },
           { label: "TRAINING SPLIT", value: String(inspection.snapshot.splits.training ?? 0) },
+          { label: "CORPUS", value: String(inspection.snapshot.corpusEntries) },
         ],
         records: inspection.snapshot.records.slice(0, 4).map((record) => ({
           id: record.candidateHash.slice(0, 8).toUpperCase(),
-          state: [record.custody, record.reviewed ? "reviewed" : "unreviewed", record.split ?? "unassigned"].join(" · "),
+          state: [record.custody, record.reviewed ? "reviewed" : "unreviewed", record.inCorpus ? "corpus" : "not in corpus", record.split ?? "unassigned"].join(" · "),
           detail: [record.modelTrainingConsent, record.retention === "until" ? `retains to ${record.expiresAt?.slice(0, 10) ?? "unknown"}` : "indefinite retention", record.curation ?? record.quality ?? "unassessed", record.correctionCount > 0 ? `${String(record.correctionCount)} correction${record.correctionCount === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · "),
         })),
         manifests: inspection.snapshot.manifests.slice(-3).reverse().map((manifest) => ({

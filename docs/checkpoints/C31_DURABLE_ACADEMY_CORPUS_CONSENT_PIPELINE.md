@@ -1,8 +1,9 @@
 # C31 - Durable Academy Corpus and Consent Pipeline
 
-**Status:** active - C31 now has a real C30-candidate admission decision before
-any corpus or curriculum action. It is a fail-closed foundation, not yet a
-durable corpus, encoder, trainer, or Foundry loop.
+**Status:** active - C31 now admits reviewed, governed C30-derived samples into
+a durable corpus with reader-scoped manifests and privacy-safe inspection. It
+is not yet a trainer, encoder, policy runtime, account/cloud identity flow, or
+Foundry loop.
 
 ## Scope and evidence rule
 
@@ -104,6 +105,13 @@ is trained on.
   `review-required` quality assessment, `curation-approved` decision, and split
   assignment. It persists the full verified track bundle and exact C27 capsule
   range with every governing hash. It is not yet exposed as a trainer corpus.
+- `TearAcademyCorpusStore` now makes an approved reviewed sample a durable
+  corpus entry only while its exact custody, curation, split, and sample hashes
+  remain active. It uses the canonical Academy lesson and segment contracts,
+  carries versioned canonical-state/action-envelope source schemas, and creates
+  immutable reader-scoped manifests. Trainer manifests exclude hidden exams;
+  examiner manifests may include them. Revocation leaves the entry auditable but
+  removes it from every newly built corpus manifest.
 - `inspectAcademy` now provides the runtime-owned immutable read model for the
   eventual Academy surface. It aggregates durable custody, quality, curation,
   split, and reviewed-sample state without giving presentation access to Vault
@@ -191,13 +199,17 @@ is trained on.
   verified tracks. When its model-training consent is revoked, a new chained
   manifest omits it; ordinary trainer manifests cannot enumerate hidden-exam
   entries while the separate examiner view can.
+- [x] A durable corpus entry and versioned corpus manifest are built only from
+  active reviewed governed custody. The browser Academy inspection is a real
+  non-test consumer of this corpus inventory; it presents corpus membership but
+  cannot inspect raw tracks or act as trainer code.
 
 ## Deliberately not claimed
 
 This checkpoint does not claim that C30 terminal artifacts contain a complete
-learning record, that any reviewed sample has entered `TearDemonstrationCorpus`,
-or that a policy has trained. It does not implement account/cloud deletion,
-cloud publication, a trainer-consumable corpus, C32 artifact loading, C33
+learning record, or that a policy has trained. It does not implement account/
+cloud deletion, cloud publication, a C32 trainer integration or artifact
+loading, C33
 behavior cloning, or C36 Foundry automation.
 
 ## Evidence
@@ -260,6 +272,9 @@ behavior cloning, or C36 Foundry automation.
 - `academy-candidate-curation.test.ts` proves that the inspection read model
   joins a revoked reviewed source with its no-training consent, exact
   quality/curation/split status, and chained persisted manifest revisions.
+- That same real C30/C27/C31 chain materializes a durable corpus entry, reloads
+  its first examiner manifest exactly, excludes its hidden exam from a trainer
+  view, and publishes an empty successor after model-training revocation.
 - That same custody proof rejects a foreign Vault for deletion, atomically
   removes the actual materialized source capsule only from its matching Vault,
   and retains the durable `deleted` tombstone outside future held queries.
@@ -277,7 +292,8 @@ behavior cloning, or C36 Foundry automation.
 
 ## Next safe boundary
 
-Add complete, pagination-safe record browsing and only durable lesson status or
-record actions that have an authorized product boundary. Keep subject identity,
-raw tracks, trainer payloads, and the legacy in-memory corpus out of the player
-surface.
+Wire the durable corpus manifest into a C32 trainer only after its policy
+artifact and evaluation boundary exists. In C31, add complete pagination-safe
+record browsing and only durable lesson status or record actions that have an
+authorized product boundary. Keep subject identity, raw tracks, trainer payloads,
+and the legacy in-memory corpus out of the player surface.
