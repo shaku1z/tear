@@ -262,7 +262,11 @@ This is the migration checklist for the architectural redesign. A checked featur
    Vault-backed versioned policy-artifact registry: it validates content hashes
    and runtime compatibility, quarantines corrupt/incompatible bytes, and makes
    activation plus rollback pointer history atomic. It does not execute model
-   payloads, train from Academy data, or expose a Watch Agent policy. Account/
+   payloads, train from Academy data, or expose a Watch Agent policy. A
+   browser-seeded IndexedDB artifact now survives reload into the normal Class-A
+   Watch Agent route and its validated canonical action is submitted through
+   semantic input with an inspectable receipt. Ghost decision traces, policy
+   evaluation, and player-facing policy controls remain absent. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

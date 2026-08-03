@@ -84,7 +84,7 @@ export class TearActivePolicyRuntime {
     };
     if (this.#artifact === undefined) return fallback("no-active-artifact");
     if (this.#model === undefined) return fallback("invalid-model");
-    const candidate = this.#model.actionsByObservationHash[observationHash];
+    const candidate = this.#model.actionsByObservationHash[observationHash] ?? this.#model.actionsByObservationHash["*"];
     if (candidate === undefined) return fallback("missing-decision");
     if (candidate.length > 16) return fallback("invalid-action");
     const actions: GameAction[] = [];

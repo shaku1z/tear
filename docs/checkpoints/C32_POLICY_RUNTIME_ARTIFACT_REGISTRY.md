@@ -28,6 +28,10 @@ executed, trained, or been promoted by an evaluation result.
   synchronous Class-A Watch Agent API. The Watch host retains hierarchy intent
   and guardrails, replacing only the semantic action batch when the validated
   artifact returns one; its normal no-artifact path remains scripted fallback.
+  The permanent browser journey writes a valid active artifact into the real
+  local IndexedDB Vault before reload, then proves the normal `watchagent=1`
+  route reports the artifact receipt and runs the artifact's canonical move
+  action through its existing semantic input path.
 
 ## Exit-gate status
 
@@ -37,17 +41,21 @@ executed, trained, or been promoted by an evaluation result.
 - [x] Corrupt and incompatible artifacts are rejected and quarantined without
   replacing a known active artifact.
 - [ ] A clean-process runtime loads an active artifact, observes real gameplay,
-  returns legal actions, and records a Ghost decision trace.
+  returns legal actions, and records a Ghost decision trace. The first three
+  are now proved by the browser-seeded Watch journey; Ghost decision tracing is
+  still open.
 - [ ] Reproducible artifact evaluation, inference timeouts/budgets, scripted
   fallback, retention, and player-visible Watch Agent integration.
 
 ## Evidence
 
 `pnpm check:c32:foundation` passes requirements traceability, strict type and
-lint checks, architecture boundaries, and durable registry/runtime tests. The
+lint checks, architecture boundaries, durable registry/runtime tests, a
+test-standalone build, and the browser-seeded active-artifact Watch journey. The
 tests prove round trip, atomic activation, rollback, history, corruption
 quarantine, incompatibility rejection, active-policy preservation, legal action
-decode, deterministic structured encoding, and scripted fallback.
+decode, deterministic structured encoding, scripted fallback, and normal
+browser Vault-to-Watch composition.
 
 ## Deliberately not claimed
 
@@ -59,6 +67,6 @@ Those require the remaining C32 exit evidence and later checkpoints.
 
 DONE THIS STEP:      The C32 registry now also has a resettable active-artifact runtime with deterministic structured encoding, canonical action decode, and scripted fallback.
 PROVEN BY:           `pnpm check:c32:foundation` and its four permanent registry/runtime contract tests.
-REMAINING HERE:      A browser-seeded active-artifact Watch proof and bounded decision trace, evaluation, inference budgets/retention, and Watch Agent wiring.
+REMAINING HERE:      Bounded Ghost decision tracing, evaluation, inference budgets/retention, and further Watch Agent evidence.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C32-C40 product evidence.
-NEXT SLICE:          Seed a real browser Vault artifact, prove the Class-A Watch path emits its receipt/action through semantic input, and record bounded decision evidence.
+NEXT SLICE:          Record bounded Ghost decision receipts from the active-artifact Watch path without widening the Class-A observation or bypassing semantic input.
