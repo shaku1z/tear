@@ -101,14 +101,20 @@ artifact/scenario/terminal lineage. This is a correction proposal capture, not
 review, ingestion, retraining, cancellation/recovery, a quality result, or
 promotion.
 
+`TearDaggerCorrectionReviewStore` now requires a named local reviewer to make
+one immutable accept/reject decision over a captured correction. It validates
+the entire capture and correction lineage, writes idempotently, and keeps an
+unreviewed proposal unavailable to every training path. This is review only:
+no correction has been added to a corpus or retrained model.
+
 ## Deliberately not claimed
 
 This is not a sequence/recurrent policy, a meaningful quality score, a
-reviewed/ingested/retrained DAgger loop, promotion, or automatic player-facing
-training. Those remain C33 work.
+ingested/retrained DAgger loop, promotion, or automatic player-facing training.
+Those remain C33 work.
 
-DONE THIS STEP:      C33 can capture bounded challenger-versus-scripted-teacher action disagreements from a fresh shared production world without a second simulation or a promotion path.
-PROVEN BY:           Focused C33 real source-world capture test plus targeted no-emit TypeScript and targeted ESLint.
-REMAINING HERE:      Review, governed ingestion, deterministic retraining/comparison, cancellation/recovery, temporal policy, intermediate checkpoints, and meaningful real-game quality evidence.
+DONE THIS STEP:      C33 now records immutable authorized accept/reject review over source-world correction proposals; unreviewed proposals remain excluded from all training paths.
+PROVEN BY:           Focused C33 source-world capture/reviewer authorization test, targeted no-emit TypeScript, targeted ESLint, and architecture gate.
+REMAINING HERE:      Governed ingestion, deterministic retraining/comparison, cancellation/recovery, temporal policy, intermediate checkpoints, and meaningful real-game quality evidence.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Add durable reviewer decisions to these immutable correction proposals before any correction can enter a retraining input; no automatic promotion.
+NEXT SLICE:          Build a deterministic approved-correction training input and retrain/comparison lineage; do not mutate the immutable source manifest or add promotion.

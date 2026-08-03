@@ -297,7 +297,9 @@ This is the migration checklist for the architectural redesign. A checked featur
    C33 also captures bounded active-artifact versus scripted-teacher action
    disagreements from the shared production headless world, preserving
    artifact/scenario/context lineage while applying only challenger actions.
-   Those are unreviewed correction proposals, not corpus input or promotion.
+   Named local reviewers can make immutable accept/reject decisions on those
+   proposals; neither unreviewed nor rejected proposals are corpus input or
+   promotion.
    Meaningful held-out quality, a reviewed/ingested DAgger loop, and promotion
    remain absent. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,

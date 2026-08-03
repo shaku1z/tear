@@ -12,6 +12,7 @@ import {
   evaluateTearBehaviorCloningPolicy,
   TearBehaviorCloningEvaluationVault,
   captureTearDaggerCorrections,
+  TearDaggerCorrectionReviewStore,
   trainTearBehaviorCloningPolicy,
   TearAcademyTrainingDatasetLoader,
   TearBehaviorCloningTrainingVault,
@@ -243,6 +244,14 @@ describe("C31 held Academy candidate curation", () => {
     expect(corrections.corrections).not.toEqual([]);
     expect(corrections.corrections.every((entry) => entry.challengerReceipt.source === "artifact"
       && entry.challengerActions !== entry.teacherActions)).toBe(true);
+    const proposed = corrections.corrections[0];
+    if (proposed === undefined) throw new Error("expected a DAgger correction proposal");
+    const reviews = new TearDaggerCorrectionReviewStore(input.backend, ["academy-curator"]);
+    await expect(reviews.decide({ capture: corrections, correctionHash: proposed.correctionHash, reviewer: "untrusted",
+      reviewedAt: "2026-08-03T00:09:30.000Z", disposition: "accepted", rationale: "invalid actor" })).rejects.toThrow(/invalid/u);
+    const review = await reviews.decide({ capture: corrections, correctionHash: proposed.correctionHash, reviewer: "academy-curator",
+      reviewedAt: "2026-08-03T00:09:30.000Z", disposition: "accepted", rationale: "teacher action verified" });
+    expect(await reviews.get(corrections.captureHash, proposed.correctionHash)).toEqual(review);
     const environment = createProductionHeadlessEnvironment(), runtime = new TearActivePolicyRuntime(registry);
     try {
       environment.reset(scenario()); await runtime.reset();
