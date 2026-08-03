@@ -235,7 +235,11 @@ This is the migration checklist for the architectural redesign. A checked featur
    exact source capsule and reads back its attestation; the synchronous C30
    stream itself remains storage-free, and an unmaterialized intake item still
    refuses build/provenance and capsule-range tracks by default. This is source
-   custody only: it does not persist a C31 corpus sample or train a policy;
+   custody only: an eligible materialized source may now enter a durable,
+   hash-chained C31 pre-corpus ledger with explicit retention and consent
+   decisions. Revoked or expired records are excluded from future held-candidate
+   queries without erasing their audit history, but the source capsule is not
+   physically deleted and no C31 corpus sample or policy training exists;
    authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 
