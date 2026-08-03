@@ -99,6 +99,11 @@ is trained on.
   manifest hash; a deleted or revoked custody source is omitted whenever a new
   manifest is rebuilt. The stored manifest is integrity-hashed, but this is
   still not a corpus manifest or trainer-consumable sample.
+- `TearAcademyReviewedSampleStore` now materializes a durable reviewed sample
+  only from the exact eligible declaration behind held custody, a
+  `review-required` quality assessment, `curation-approved` decision, and split
+  assignment. It persists the full verified track bundle and exact C27 capsule
+  range with every governing hash. It is not yet exposed as a trainer corpus.
 
 ## Exit-gate ledger
 
@@ -207,7 +212,9 @@ artifact loading, C33 behavior cloning, or C36 Foundry automation.
   trainer manifest cannot enumerate the hidden assignment while the separate
   examiner view can. It also persists manifest version 1, rejects version 2
   without version 1's exact manifest hash, and persists the valid chained
-  version 2.
+  version 2. It then materializes a durable reviewed sample and reloads it,
+  proving its exact capsule range, hidden-exam split, and verified actions are
+  retained.
 - That same custody proof rejects a foreign Vault for deletion, atomically
   removes the actual materialized source capsule only from its matching Vault,
   and retains the durable `deleted` tombstone outside future held queries.
@@ -225,7 +232,6 @@ artifact loading, C33 behavior cloning, or C36 Foundry automation.
 
 ## Next safe boundary
 
-Add the governed reviewed-sample boundary: materialize an explicitly curated,
-active source as a persisted sample tied to its exact capsule range while
-ensuring revoked custody is absent from every newly rebuilt corpus manifest.
-Keep hidden-release-exam data unreadable by ordinary trainer code.
+Prove a revocation-safe rebuilt trainer manifest after a reviewed sample's
+custody is revoked, then implement the inspectable Academy interface rather
+than treating the legacy in-memory corpus as the product surface.

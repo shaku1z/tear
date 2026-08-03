@@ -4,6 +4,7 @@ import {
   TearAcademyCandidateCurationStore,
   TearAcademyCandidateCustodyStore,
   TearAcademyCandidateQualityStore,
+  TearAcademyReviewedSampleStore,
   TearAcademyCandidateSplitStore,
   captureAcademyCandidateTracks,
   materializeAcademyCandidateCapsule,
@@ -113,6 +114,11 @@ describe("C31 held Academy candidate curation", () => {
     await expect(splits.publishManifest({ id: "release", version: 2, createdAt: "2026-08-03T00:06:00.000Z", reader: { kind: "examiner", id: "release" } })).rejects.toThrow(/predecessor/u);
     const second = await splits.publishManifest({ id: "release", version: 2, createdAt: "2026-08-03T00:06:00.000Z", reader: { kind: "examiner", id: "release" }, previousManifestHash: first.manifestHash });
     expect(second.previousManifestHash).toBe(first.manifestHash);
+    const samples = new TearAcademyReviewedSampleStore(input.backend, input.custody, input.quality, curation, splits);
+    const sample = await samples.materialize(input.declaration, "2026-08-03T00:06:00.000Z", "academy-curator");
+    expect(sample).toMatchObject({ split: "hidden-release-exam", source: { capsuleId: "c31-curation-source", fromTick: 0 } });
+    expect(sample.tracks?.actions).toEqual(input.declaration.trackBundle?.actions);
+    expect(await samples.get(sample.candidateHash)).toEqual(sample);
   });
 
   it("rejects unauthorized, duplicate, or revoked review decisions and keeps correction requests immutable", async () => {
