@@ -537,11 +537,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C33 deterministically consumes exactly an approved normalized correction augmentation and records its hash alongside immutable base-dataset lineage; it leaves C31 manifests untouched and makes no quality or promotion claim.
-PROVEN BY:           Focused real C33 source-world correction capture/review/approved-augmentation/retraining test plus targeted no-emit TypeScript and targeted ESLint.
-REMAINING HERE:      C33 needs governed correction ingestion/retraining/comparison, temporal/sequence policy capability, intermediate/resumable checkpoints, cancellation/recovery, and meaningful real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
+DONE THIS STEP:      C33 now evaluates a parent fit and its approved-correction retrain on the unchanged separately governed validation split, recording only their distinct lineage and equal held-out scope—not quality, activation, or promotion.
+PROVEN BY:           Focused real C33 source-world correction capture/review/augmentation/retraining/held-out comparison test; targeted gates pending this slice.
+REMAINING HERE:      C33 needs cancellation/recovery, temporal/sequence policy capability, intermediate/resumable checkpoints, and meaningful real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C33-C40 product evidence remain; C27A, C28, and C32 are closed.
-NEXT SLICE:          C33: compare parent and augmented fits on the governed held-out split, storing only observed differences without a threshold or promotion.
+NEXT SLICE:          C33: add bounded cancellation and resumable checkpoint evidence for deterministic DAgger fitting without promotion.
 
 All of the following were run from this worktree through C27A slice 36:
 

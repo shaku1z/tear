@@ -119,14 +119,19 @@ unreviewed, mismatched, or empty input. The deterministic trainer consumes that
 input only when its dataset/normalization/hash integrity match, and records the
 augmentation hash alongside the unchanged base dataset lineage.
 
+The governed two-source fixture now evaluates both the parent and its
+accepted-correction retrain on the unchanged validation split. It records
+separate training hashes and identical held-out scope only; no delta is treated
+as improvement, a threshold, activation, or promotion.
+
 ## Deliberately not claimed
 
 This is not a sequence/recurrent policy, a meaningful quality score, a
 ingested/retrained DAgger loop, promotion, or automatic player-facing training.
 Those remain C33 work.
 
-DONE THIS STEP:      C33 deterministically retrains from exactly the approved normalized correction augmentation while retaining explicit immutable base-dataset and augmentation lineage; no quality or promotion claim is made.
-PROVEN BY:           Focused C33 source-world capture/review/augmentation/retraining test plus targeted no-emit TypeScript and targeted ESLint.
-REMAINING HERE:      Retraining comparison, cancellation/recovery, temporal policy, intermediate checkpoints, and meaningful real-game quality evidence.
+DONE THIS STEP:      C33 records an observed parent-versus-approved-correction retrain comparison on the separately governed validation split, without interpreting it as quality or promotion.
+PROVEN BY:           Focused C33 source-world capture/review/augmentation/retraining/held-out comparison test; targeted gates pending this slice.
+REMAINING HERE:      Cancellation/recovery, temporal policy, intermediate checkpoints, and meaningful real-game quality evidence.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Compare parent and augmented fits on the held-out governed split, storing only observed differences with no threshold or promotion.
+NEXT SLICE:          Add bounded cancellation and resumable checkpoint evidence for the deterministic DAgger fit; no promotion.

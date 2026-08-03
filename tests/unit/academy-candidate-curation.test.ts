@@ -291,7 +291,20 @@ describe("C31 held Academy candidate curation", () => {
     const dataset = await new TearAcademyTrainingDatasetLoader(corpus, samples).load({ manifestId: manifest.id, trainerId: "c33-local", version: 1 });
     const normalization = createTearBehaviorCloningNormalization(dataset);
     expect(dataset.sequences.map((entry) => entry.split).sort()).toEqual(["training", "validation"]);
-    const fit = trainTearBehaviorCloningPolicy(dataset, normalization, Object.freeze({ seed: 7, epochs: 3, learningRate: 0.25, batchSize: 2 }));
+    const config = Object.freeze({ seed: 7, epochs: 3, learningRate: 0.25, batchSize: 2 });
+    const fit = trainTearBehaviorCloningPolicy(dataset, normalization, config);
+    const artifact = createTearBehaviorCloningArtifact(fit, { id: "c33-heldout-parent", createdAt: "2026-08-03T00:08:00.000Z",
+      encoder: { id: "tear-policy-features.v1", schemaVersion: 1, observationClass: "structured-state", normalizationHash: normalization.normalizationHash }, actionSchema: "tear-game-action-command-envelope.v1",
+      recurrentState: { kind: "none", schemaVersion: 1 }, trainingManifest: { id: manifest.id, version: manifest.version, rootHash: manifest.rootHash }, rewardVersion: "tear-reward.v1",
+      build: { version: "test", revision: "c33", target: "unit", rulesetVersion: "rules-1", contentHash: "content-1", configHash: "config-1" }, metrics: {}, levelTarget: "class-a",
+      lineage: { trainingRunId: fit.trainingHash }, signature: { kind: "local-unsigned", keyId: "development" }, compatibility: { runtime: "tear-policy-runtime.v1", observationClass: "structured-state", actionSchema: "tear-game-action-command-envelope.v1", modelFormats: ["linear-policy-v1"] } });
+    const registry = new TearPolicyArtifactRegistry(harness.backend, artifact.compatibility);
+    await registry.register(artifact); await registry.activate(artifact.id, "2026-08-03T00:08:30.000Z");
+    const capture = await captureTearDaggerCorrections(registry, scenario("c33-heldout-dagger", "c33-heldout-dagger-seed"), { maxCorrections: 1 });
+    const correction = capture.corrections[0]; if (correction === undefined) throw new Error("expected held-out DAgger proposal");
+    const review = await new TearDaggerCorrectionReviewStore(harness.backend, ["academy-curator"]).decide({ capture, correctionHash: correction.correctionHash,
+      reviewer: "academy-curator", reviewedAt: "2026-08-03T00:08:45.000Z", disposition: "accepted", rationale: "C33 comparison evidence" });
+    const retrained = trainTearBehaviorCloningPolicy(dataset, normalization, config, createTearDaggerRetrainingInput(dataset, normalization, capture, [review]));
     const persisted = await new TearBehaviorCloningTrainingVault(harness.backend).persist(fit);
     const first = evaluateTearBehaviorCloningPolicy(persisted, dataset, normalization, { split: "validation", batchSize: 2 });
     const second = evaluateTearBehaviorCloningPolicy(persisted, dataset, normalization, { split: "validation", batchSize: 2 });
@@ -301,6 +314,9 @@ describe("C31 held Academy candidate curation", () => {
     expect(await evaluationVault.persist(first)).toEqual(first);
     expect(await evaluationVault.get(first.reportHash)).toEqual(first);
     expect(first).toMatchObject({ split: "validation", examples: 3, batchCount: 2 });
+    const retrainedReport = evaluateTearBehaviorCloningPolicy(retrained, dataset, normalization, { split: "validation", batchSize: 2 });
+    expect(retrainedReport).toMatchObject({ split: "validation", examples: first.examples });
+    expect(retrainedReport.trainingHash).not.toBe(first.trainingHash);
     expect(first.actionConformance).toBeGreaterThanOrEqual(0);
     expect(first.actionConformance).toBeLessThanOrEqual(1);
     expect(() => evaluateTearBehaviorCloningPolicy(fit, dataset, normalization, { split: "training", batchSize: 2 } as never)).toThrow(/held-out/u);
