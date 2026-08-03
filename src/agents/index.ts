@@ -25,6 +25,7 @@ export * from "./behavior-cloning-evaluation";
 export * from "./dagger-correction-capture";
 export * from "./dagger-correction-review";
 export * from "./dagger-retraining-input";
+export * from "./temporal-policy-context";
 export * from "./policy-artifact-registry";
 export * from "./policy-runtime";
 export * from "./policy-decision-journal";

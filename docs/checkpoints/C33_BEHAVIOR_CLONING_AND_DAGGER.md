@@ -124,6 +124,11 @@ accepted-correction retrain on the unchanged validation split. It records
 separate training hashes and identical held-out scope only; no delta is treated
 as improvement, a threshold, activation, or promotion.
 
+`createTearTemporalPolicyContexts` now builds bounded causal feature windows
+from immutable governed training tracks under the same 17-feature contract.
+This is the data boundary for a future temporal policy only; no recurrent
+model, temporal runtime, or quality claim exists yet.
+
 ## Deliberately not claimed
 
 This is not a sequence/recurrent policy, a meaningful quality score, a
@@ -134,7 +139,7 @@ DONE THIS STEP:      C33 has bounded source-world correction capture/review/augm
 PROVEN BY:           Focused C33 source-world capture/review/augmentation/retraining/held-out comparison/checkpoint recovery test plus targeted TypeScript and ESLint.
 REMAINING HERE:      Sequence/temporal policy, conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Define and execute a bounded temporal-policy artifact over governed sequences, then prove its real-game source-world behavior without a quality/promotion claim.
+NEXT SLICE:          Define and execute a bounded temporal-policy artifact over these governed contexts, then prove source-world behavior without a quality/promotion claim.
 
 ## Slice pacing finding — 2026-08-03
 

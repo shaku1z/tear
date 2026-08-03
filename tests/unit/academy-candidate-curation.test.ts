@@ -19,6 +19,7 @@ import {
   advanceTearBehaviorCloningCheckpoint,
   completeTearBehaviorCloningCheckpoint,
   TearBehaviorCloningCheckpointVault,
+  createTearTemporalPolicyContexts,
   TearAcademyTrainingDatasetLoader,
   TearBehaviorCloningTrainingVault,
   TearPolicyArtifactRegistry,
@@ -222,6 +223,7 @@ describe("C31 held Academy candidate curation", () => {
     expect(createTearBehaviorCloningNormalization(second)).toEqual(normalization);
     expect(createTearBehaviorCloningBatches(second, normalization, { split: "training", batchSize: 2 })).toEqual(batches);
     expect(batches.flatMap((batch) => batch.examples).every((example) => example.features.length === 17)).toBe(true);
+    expect(createTearTemporalPolicyContexts(first, 2).every((context) => context.featureFrames.length >= 1 && context.featureFrames.length <= 2)).toBe(true);
     expect(() => createTearBehaviorCloningBatches(first, normalization, { split: "validation", batchSize: 2 })).toThrow(/no examples/u);
     const config = Object.freeze({ seed: 7, epochs: 3, learningRate: 0.25, batchSize: 2 });
     const training = trainTearBehaviorCloningPolicy(first, normalization, config);

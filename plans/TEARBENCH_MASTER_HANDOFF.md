@@ -541,7 +541,7 @@ DONE THIS STEP:      C33 now has bounded source-world correction capture/review/
 PROVEN BY:           Focused real C33 capture/review/augmentation/retraining/held-out comparison/checkpoint recovery test plus targeted TypeScript and ESLint.
 REMAINING HERE:      C33 needs temporal/sequence policy capability, conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C33-C40 product evidence remain; C27A, C28, and C32 are closed.
-NEXT SLICE:          C33: define and execute a bounded temporal-policy artifact over governed sequences, then prove source-world behavior without a quality/promotion claim.
+NEXT SLICE:          C33: define and execute a bounded temporal-policy artifact over the governed causal contexts, then prove source-world behavior without a quality/promotion claim.
 
 ### C33 pacing finding
 
