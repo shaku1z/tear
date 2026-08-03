@@ -280,7 +280,8 @@ Named status:
   an atomic receipt-backed retention path that protects active/rollback lineage.
   The active runtime now also runs through the actual C29/C30 production world
   with source-projected structured observations and repeatable terminal results;
-  its evaluation report is still in-memory.
+  its bounded hash-checked report now has idempotent local Vault custody and
+  corrupt-byte quarantine.
 - **C33-C40:** incomplete.
 
 C0-C20 reports contain valuable scaffolds, contracts, and prototypes. They are historical and are not operational completion proof; C21-C40 replaces those broad claims with production evidence.
@@ -534,11 +535,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C32's active artifact now evaluates through the same C29/C30 source-owned production composition used by replay/headless, using its structured world projection every fixed tick and returning repeatable terminal evidence. The report remains caller-retained/in-memory.
-PROVEN BY:           Requirements/type/lint/architecture checks, nineteen focused C32 registry/runtime/journal/evaluation/production tests, a test-standalone build, and the browser-seeded real IndexedDB journey that reloads an active artifact and reads its persisted decision receipt back from Vault analysis storage.
-REMAINING HERE:      C32 needs durable production-evaluation evidence, real-game outcome evaluation, cancellable external-inference budgets, and player-facing Watch controls. C31 separately needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
+DONE THIS STEP:      C32's source-world evaluation now writes a bounded integrity-checked report into local Vault analysis storage. It is idempotent by content hash, quarantines corrupt bytes, and artifact retention protects valid cited artifacts; it remains evidence custody, not training or promotion.
+PROVEN BY:           Requirements/type/lint/architecture checks, twenty focused C32 registry/runtime/journal/evaluation/production tests, a test-standalone build, and the browser-seeded real IndexedDB journey that reloads an active artifact and reads its persisted decision receipt back from Vault analysis storage.
+REMAINING HERE:      C32 needs fixed multi-scenario outcome evaluation, cancellable external-inference budgets, evaluation-report retention policy, and player-facing Watch controls. C31 separately needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C32-C40 product evidence remain; C27A and C28 are closed.
-NEXT SLICE:          Persist a bounded integrity-checked C32 production-evaluation report in Vault analysis storage and prove readback. Do not call it training or promotion; keep C31 corpus work separate.
+NEXT SLICE:          Define fixed multi-scenario C32 outcome evaluation from source-owned production runs. Do not call it training or promotion; keep C31 corpus work separate.
 
 All of the following were run from this worktree through C27A slice 36:
 

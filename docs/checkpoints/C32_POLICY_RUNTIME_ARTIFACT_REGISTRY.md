@@ -64,6 +64,11 @@ executed, trained, or been promoted by an evaluation result.
   observation is projected from that live world before every fixed step, and it
   retains terminal semantic evidence in its returned report. The current report
   is caller-retained/in-memory, not a durable evaluation artifact.
+- `TearProductionPolicyEvaluationVault` now stores bounded (at most 20,000
+  decisions) integrity-checked production reports in Ghost Vault `analysis`.
+  Writes are idempotent by report hash, corrupt reads quarantine safely, and
+  artifact retention treats every valid durable report reference as protected.
+  This is evidence custody only, not an evaluation score, training, or promotion.
 
 ## Exit-gate status
 
@@ -88,6 +93,8 @@ executed, trained, or been promoted by an evaluation result.
 - [x] The active runtime has a reproducible source-owned production-world
   evaluation path. It is shared-composition terminal evidence, not a quality or
   promotion result, and its report is not yet durable.
+- [x] Production-world evaluation reports have bounded, hash-checked local Vault
+  custody with idempotent readback and corrupt-byte quarantine.
 - [ ] Real-game outcome evaluation, cancellable external-inference budgets,
   evaluation-artifact retention, and player-visible Watch Agent integration.
 
@@ -117,8 +124,8 @@ cloud publication, or wire player-facing Watch Agent controls. The decision
 journal is diagnostic Class-A analysis evidence, not a causal capsule, replay,
 pixel/audio/device-output trace, or player-visible policy explanation.
 
-DONE THIS STEP:      C32's active table artifact now runs reproducibly through the C29/C30 source-owned production world and returns matching terminal evidence across fresh compositions; that report remains in-memory.
-PROVEN BY:           C32 targeted requirements/type/lint/architecture checks, nineteen permanent registry/runtime/journal/evaluation/production tests, and the browser-seeded real-IndexedDB Watch readback journey.
-REMAINING HERE:      Durable production-evaluation evidence, real-game outcome evaluation, cancellable external-inference budgets, and player-visible Watch Agent controls.
+DONE THIS STEP:      C32 production-world evaluation reports now have bounded, integrity-checked local Vault custody with idempotent readback and corrupt-byte quarantine; retained artifacts cannot be pruned while a valid report cites them.
+PROVEN BY:           C32 targeted requirements/type/lint/architecture checks, twenty permanent registry/runtime/journal/evaluation/production tests, and the browser-seeded real-IndexedDB Watch readback journey.
+REMAINING HERE:      Real-game outcome evaluation, cancellable external-inference budgets, evaluation-report retention policy, and player-visible Watch Agent controls.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C32-C40 product evidence.
-NEXT SLICE:          Persist a bounded integrity-checked production-evaluation report in Vault analysis storage, then prove readback without calling it training or promotion.
+NEXT SLICE:          Define outcome metrics and a fixed multi-scenario production evaluation suite; do not call it training or promotion.

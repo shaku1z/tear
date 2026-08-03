@@ -6,6 +6,7 @@ const ARTIFACT_KEY = "policy-artifact:v1:";
 const ACTIVE_KEY = "policy-active:v1";
 const ACTIVATION_KEY = "policy-activation:v1:";
 const RETENTION_KEY = "policy-retention:v1:";
+const PRODUCTION_EVALUATION_KEY = "policy-production-evaluation:v1:";
 const HASH = /^[a-f0-9]{16}$/u;
 
 export interface TearPolicyRuntimeCompatibility {
@@ -281,6 +282,16 @@ export class TearPolicyArtifactRegistry {
     const protectedIds = new Set<string>((await this.history()).map((entry) => entry.artifactId));
     const active = await this.active();
     if (active !== undefined) protectedIds.add(active.artifactId);
+    for (const key of (await this.#backend.keys("analysis")).filter((entry) => entry.startsWith(PRODUCTION_EVALUATION_KEY))) {
+      const raw = await this.#backend.get("analysis", key);
+      try {
+        const report: unknown = raw === undefined ? undefined : JSON.parse(raw);
+        if (!record(report) || report.format !== "tear-production-policy-evaluation" || !text(report.artifactId) || !hashes(report.artifactHash)) {
+          throw new TypeError("invalid production policy evaluation reference");
+        }
+        protectedIds.add(report.artifactId);
+      } catch (error) { await this.#quarantine(key, raw, error instanceof Error ? error.message : String(error)); }
+    }
     for (const artifact of artifacts) {
       if (artifact.lineage.parentArtifactId !== undefined) protectedIds.add(artifact.lineage.parentArtifactId);
     }

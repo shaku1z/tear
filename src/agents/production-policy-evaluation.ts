@@ -1,4 +1,5 @@
 import { stableVerificationHash } from "../replay/hash";
+import type { GhostVaultBackend } from "../ghost";
 import { createProductionHeadlessEnvironment, type TearScenarioV1 } from "../tearbench";
 import type { TearPolicyArtifactRegistry } from "./policy-artifact-registry";
 import { TearActivePolicyRuntime, type TearPolicyDecisionReceipt } from "./policy-runtime";
@@ -19,6 +20,50 @@ export interface TearProductionPolicyEvaluationReportV1 {
   readonly decisions: readonly TearProductionPolicyEvaluationDecisionV1[];
   readonly terminal: Readonly<{ tick: number; semanticHash: string; terminated: boolean; truncated: boolean }>;
   readonly reportHash: string;
+}
+
+const VAULT_KEY = "policy-production-evaluation:v1:";
+const HASH = /^[a-f0-9]{16}$/u;
+
+function record(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
+function text(value: unknown): value is string { return typeof value === "string" && value.trim().length > 0; }
+function parseReport(value: unknown): TearProductionPolicyEvaluationReportV1 {
+  if (!record(value) || value.format !== "tear-production-policy-evaluation" || value.schemaVersion !== 1 || !text(value.artifactId)
+    || typeof value.artifactHash !== "string" || !HASH.test(value.artifactHash) || !record(value.scenario) || !text(value.scenario.id)
+    || !Number.isSafeInteger(value.scenario.version) || !text(value.scenario.seed) || typeof value.scenario.hash !== "string" || !HASH.test(value.scenario.hash)
+    || !Array.isArray(value.decisions) || value.decisions.length > 20_000 || !record(value.terminal) || !Number.isSafeInteger(value.terminal.tick)
+    || typeof value.terminal.semanticHash !== "string" || !HASH.test(value.terminal.semanticHash) || typeof value.terminal.terminated !== "boolean"
+    || typeof value.terminal.truncated !== "boolean" || typeof value.reportHash !== "string" || !HASH.test(value.reportHash)) throw new TypeError("invalid production policy evaluation report");
+  const { reportHash, ...draft } = value as unknown as TearProductionPolicyEvaluationReportV1;
+  if (reportHash !== stableVerificationHash(draft)) throw new TypeError("production policy evaluation integrity mismatch");
+  return Object.freeze({ ...draft, scenario: Object.freeze({ ...draft.scenario }), decisions: Object.freeze(draft.decisions.map((entry) => Object.freeze(structuredClone(entry)))), terminal: Object.freeze({ ...draft.terminal }), reportHash });
+}
+
+/** Local Vault custody for bounded source-world evaluation evidence. No promotion semantics are implied. */
+export class TearProductionPolicyEvaluationVault {
+  readonly #backend: GhostVaultBackend;
+  constructor(backend: GhostVaultBackend) { this.#backend = backend; }
+
+  async persist(input: TearProductionPolicyEvaluationReportV1): Promise<TearProductionPolicyEvaluationReportV1> {
+    const report = parseReport(input), key = `${VAULT_KEY}${report.reportHash}`, existing = await this.#backend.get("analysis", key);
+    if (existing !== undefined) return parseReport(JSON.parse(existing));
+    await this.#backend.commit(Object.freeze([
+      { store: "analysis", key, value: JSON.stringify(report) },
+      { store: "indexes", key: `policy-production-evaluation:${report.artifactId}:${report.reportHash}`, value: JSON.stringify({ artifactHash: report.artifactHash, scenarioHash: report.scenario.hash }) },
+    ]));
+    return report;
+  }
+
+  async get(reportHash: string): Promise<TearProductionPolicyEvaluationReportV1 | undefined> {
+    if (!HASH.test(reportHash)) throw new TypeError("production policy evaluation hash is invalid");
+    const key = `${VAULT_KEY}${reportHash}`, raw = await this.#backend.get("analysis", key);
+    if (raw === undefined) return undefined;
+    try { return parseReport(JSON.parse(raw)); }
+    catch (error) {
+      await this.#backend.put("quarantine", key, JSON.stringify(Object.freeze({ format: "policy-production-evaluation-quarantine", schemaVersion: 1, key, raw, reason: error instanceof Error ? error.message : String(error) })));
+      return undefined;
+    }
+  }
 }
 
 /**

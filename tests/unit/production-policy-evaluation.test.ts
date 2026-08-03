@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createMemoryGhostVaultBackend } from "../../src/ghost";
 import {
-  TearPolicyArtifactRegistry, createTearPolicyArtifact, evaluateActiveTearPolicyInProduction,
+  TearPolicyArtifactRegistry, TearProductionPolicyEvaluationVault, createTearPolicyArtifact, evaluateActiveTearPolicyInProduction,
 } from "../../src/agents";
 import type { TearScenarioV1 } from "../../src/tearbench";
 
@@ -38,5 +38,16 @@ describe("C32 production policy evaluation", () => {
       terminal: { tick: scenario.maxTicks, truncated: true, terminated: false } });
     expect(first.decisions).toHaveLength(scenario.maxTicks);
     expect(first.decisions.every((entry) => entry.receipt.source === "artifact")).toBe(true);
+  });
+
+  it("round-trips a bounded production report through Vault analysis storage and quarantines corrupt bytes", async () => {
+    const report = await evaluateActiveTearPolicyInProduction(await registry(), scenario);
+    const backend = createMemoryGhostVaultBackend(), vault = new TearProductionPolicyEvaluationVault(backend);
+    await vault.persist(report);
+    expect(await vault.persist(report)).toEqual(report);
+    expect(await vault.get(report.reportHash)).toEqual(report);
+    await backend.put("analysis", `policy-production-evaluation:v1:${report.reportHash}`, "not-json");
+    expect(await vault.get(report.reportHash)).toBeUndefined();
+    expect((await backend.keys("quarantine")).some((key) => key.endsWith(report.reportHash))).toBe(true);
   });
 });
