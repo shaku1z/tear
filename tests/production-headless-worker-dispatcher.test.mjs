@@ -38,7 +38,9 @@ async function waitForExit(pid) {
 }
 
 test("C30 dispatcher bounds real workers, short-circuits cancellation, and replaces an exited child", async (context) => {
-  const dispatcher = new ProductionHeadlessWorkerDispatcher({ maxWorkers: 2, deadlineMilliseconds: 15_000 });
+  const dispatcher = new ProductionHeadlessWorkerDispatcher({
+    maxWorkers: 2, deadlineMilliseconds: 15_000, startupDeadlineMilliseconds: 30_000,
+  });
   context.after(() => dispatcher.dispose());
   const first = await dispatcher.run([
     request("first-a"), request("first-b"), request("first-c"), request("cancelled", { cancelled: true }),
@@ -58,7 +60,9 @@ test("C30 dispatcher bounds real workers, short-circuits cancellation, and repla
 }, { timeout: 30_000 });
 
 test("C30 dispatcher enforces a per-request deadline and starts a clean replacement", async (context) => {
-  const dispatcher = new ProductionHeadlessWorkerDispatcher({ maxWorkers: 1, deadlineMilliseconds: 15_000 });
+  const dispatcher = new ProductionHeadlessWorkerDispatcher({
+    maxWorkers: 1, deadlineMilliseconds: 15_000, startupDeadlineMilliseconds: 30_000,
+  });
   context.after(() => dispatcher.dispose());
   const timedOut = await dispatcher.run([request("deadline", { deadlineMilliseconds: 0 })]);
   assert.equal(timedOut[0].kind, "timed-out");

@@ -55,6 +55,7 @@ function available(slot) {
 export class ProductionHeadlessWorkerDispatcher {
   #maxWorkers;
   #deadlineMilliseconds;
+  #startupDeadlineMilliseconds;
   #workerPathForSpawn;
   #spawnCount = 0;
   #workers = new Set();
@@ -63,11 +64,19 @@ export class ProductionHeadlessWorkerDispatcher {
   constructor(options = {}) {
     this.#maxWorkers = options.maxWorkers ?? 2;
     this.#deadlineMilliseconds = options.deadlineMilliseconds ?? 30_000;
+    // A cold worker has to load Vite and the source composition before it can
+    // receive any request. Keep that bounded independently so a valid
+    // per-request deadline does not turn concurrent cold starts into failures.
+    this.#startupDeadlineMilliseconds = options.startupDeadlineMilliseconds
+      ?? Math.max(this.#deadlineMilliseconds, 30_000);
     const workerPath = options.workerPath ?? defaultWorkerPath;
     this.#workerPathForSpawn = options.workerPathForSpawn ?? (() => workerPath);
     if (!Number.isSafeInteger(this.#maxWorkers) || this.#maxWorkers < 1) throw new RangeError("dispatcher maxWorkers must be positive");
     if (!Number.isFinite(this.#deadlineMilliseconds) || this.#deadlineMilliseconds < 0) {
       throw new RangeError("dispatcher deadlineMilliseconds must be non-negative");
+    }
+    if (!Number.isFinite(this.#startupDeadlineMilliseconds) || this.#startupDeadlineMilliseconds < 0) {
+      throw new RangeError("dispatcher startupDeadlineMilliseconds must be non-negative");
     }
     if (typeof this.#workerPathForSpawn !== "function") throw new TypeError("dispatcher workerPathForSpawn must be a function");
   }
@@ -137,7 +146,7 @@ export class ProductionHeadlessWorkerDispatcher {
       }));
     });
     const ready = await new Promise((resolveReady, rejectReady) => {
-      const timer = setTimeout(() => rejectReady(new Error("worker did not become ready before dispatcher deadline")), this.#deadlineMilliseconds);
+      const timer = setTimeout(() => rejectReady(new Error("worker did not become ready before dispatcher startup deadline")), this.#startupDeadlineMilliseconds);
       child.once("message", (message) => {
         clearTimeout(timer);
         if (message?.format === workerFormat && message.kind === "ready") resolveReady(slot);

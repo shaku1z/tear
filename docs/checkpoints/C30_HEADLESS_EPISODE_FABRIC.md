@@ -106,9 +106,23 @@ operational boundary it proves.
   artifacts, and identical 32-hash repeat output; the 4,439-episodes/minute
   repeat also met the recorded budget. This is one developer-machine natural
   workload, not BC/DAgger/RL capacity or worker-scale certification.
-- [ ] Target-hardware training-capacity, long-run leak, and broad worker-scale
-  stress evidence. The initial benchmark deliberately remains an in-process
-  natural-opening measurement.
+- [x] Bounded developer-host long-run observation. `pnpm measure:c30:long-run`
+  runs five fresh four-root production-pool cycles of 32 natural 600-tick
+  episodes (160 episodes / 96,000 fixed steps total), retaining only eight
+  first-cycle terminal samples. The versioned
+  `tearbench-production-headless-long-run` artifact includes the caller-declared
+  host identity, OS, processor, physical memory, per-cycle hashes/latencies,
+  aggregate rate, and forced-GC heap samples. On 2026-08-02 the declared
+  `developer-iu5bi1m7n72c2` Windows 11 / Intel Core Ultra 9 288V / 31.5 GiB
+  developer host completed all 160 episodes with identical repeat hashes,
+  315.6 ms p95, and 2.4 MiB retained heap. Its observed 462.5
+  episodes/minute was below the modest 500 episodes/minute developer budget,
+  so this records a bounded leak observation, not a capacity pass. The command
+  requires `--expose-gc`; the optional `--target-id` and `--declared-by` flags
+  are both required before it will label any run `target`.
+- [ ] Declared-target training-capacity and broad worker-scale stress evidence.
+  No target-hardware profile is declared in this repository, so the current
+  developer-host observation cannot satisfy that target claim.
 - [x] High-count in-process production-pool isolation. The 256-episode,
   120-tick stress proof runs 30,720 actual production fixed steps through eight
   fresh composition roots. All 256 final canonical-state objects and semantic
@@ -134,6 +148,9 @@ operational boundary it proves.
   A deadline kills the active child, returns an explicit `timed-out` result,
   and the next request starts on a clean replacement PID. No live world,
   renderer, DOM object, or browser adapter crosses this boundary.
+  Cold worker readiness has a separately bounded 30-second startup allowance,
+  because loading Vite and the production source composition precedes every
+  request; it does not extend the caller's per-request deadline.
 - [x] Bounded idempotent worker-exit retry. Every dispatcher result now carries
   a versioned attempt record with its ordinal, PID, outcome, and any dispatch
   disposition/error. A worker-exit failure is retried exactly once only when
@@ -154,10 +171,11 @@ operational boundary it proves.
   This is caller-retained, in-process custody only — not storage, a worker
   message, durable job recovery, or a claim that a draft/reward route can yet
   be checkpointed.
-- [ ] Scale evidence. Timeout, validation, and ordinary worker-reported
-  failures are not retried. There is no mid-run worker cancellation message,
-  durable job recovery, broad concurrent stress, target-hardware capacity, or
-  long-run leak claim.
+- [ ] Remaining scale and recovery evidence. Timeout, validation, and ordinary
+  worker-reported failures are not retried. There is no mid-run worker
+  cancellation message, durable job recovery, broad concurrent stress, or
+  declared-target capacity claim. The bounded developer-host long-run
+  observation above does not close any of those items.
 - [x] A sampled natural terminal episode is visibly rerunnable from its
   production artifact. The environment now seals a versioned
   `tearbench-production-headless-terminal` artifact with its exact validated
@@ -182,15 +200,15 @@ operational boundary it proves.
 
 ## Deliberately not claimed
 
-This first foundation does not certify browser pixels, audio PCM/device output,
+This foundation does not certify browser pixels, audio PCM/device output,
 haptics, full campaign or State Forge episodes, replay-capsule persistence,
-workers, scalable throughput, or training. C25, C27-C29, C31-C36, C39, and C40
-retain their respective evidence obligations.
+declared-target capacity, broad worker scale, or training. C25, C27-C29,
+C31-C36, C39, and C40 retain their respective evidence obligations.
 
 ## Evidence
 
 - `pnpm check:c30:foundation` passes: typecheck, full lint, C30 source
-  architecture fences, six focused Vitest files / 15 tests, four Node worker
+  architecture fences, six focused Vitest files / 16 tests, four Node worker
   tests, standalone build, Class-A truncated and natural-failure terminal
   reruns, a fresh C27A 13-scenario browser capture, and the 14-test exact
   source-matrix comparison.
@@ -199,6 +217,13 @@ retain their respective evidence obligations.
   detached comparisons retain C27A evidence. C30 separately proves the source
   matrix above through its own ordered gate.
 - `pnpm exec vitest run tests/unit/production-headless-benchmark.test.ts --disableConsoleIntercept` passes and prints its measured production-pool artifact.
+- `pnpm measure:c30:long-run` invokes Node with `--expose-gc`, writes the
+  versioned bounded long-run artifact to
+  `artifacts/tearbench/c30/production-headless-long-run.json`, and records the
+  exact host classification rather than inferring target hardware. The current
+  developer-host observation completed deterministically with a retained-heap
+  pass but a below-budget 462.5 episodes/minute rate; it is evidence of this
+  bounded run only.
 - `pnpm exec vitest run tests/unit/production-headless-environment.test.ts`
   passes seven focused tests, including the 256-episode / 30,720-tick isolation
   stress proof and the fresh-composition tick-60 checkpoint restore proof.
@@ -207,15 +232,18 @@ retain their respective evidence obligations.
 - `node --test tests/production-headless-worker-dispatcher.test.mjs` passes the
   two-PID bounded dispatch, pre-dispatch cancellation, exited-idle-worker
   replacement, parent-deadline/replacement, and one-retry active-exit-attempt
-  matrix.
+  matrix. Its cold-worker readiness allowance is separately bounded at 30
+  seconds and never changes the asserted request deadline.
 - `pnpm build:test:standalone`, `pnpm test:browser:production-headless-terminal`, and `pnpm test:browser:production-headless-failure-terminal` pass. The browser materializer admits only versioned natural C30 terminal coordinates, proves exact action provenance plus a rendered screenshot, and checks that the live terminal tick/disposition match the failure artifact.
 - `pnpm check:architecture` passes, including planted C30 forbidden-edge and
   browser-global cases.
 
 ## Next safe boundary
 
-Do not add retries to timeout, validation, or worker-reported failures. The
-next C30 boundary is target-hardware capacity and long-run leak evidence. The
-completed checkpoint boundary remains restricted to active, non-draft natural
-episodes and must not become a new simulator, storage format, or durable
-job-recovery claim. Academy/Foundry streaming stays downstream.
+Do not add retries to timeout, validation, or worker-reported failures. A
+declared target host remains an external prerequisite for the separate capacity
+claim; do not call the local developer machine target hardware. The next
+implementable C30 boundary is Academy/Foundry artifact streaming with bounded
+backpressure. Keep the completed checkpoint boundary restricted to active,
+non-draft natural episodes: it must not become a new simulator, storage format,
+or durable job-recovery claim.

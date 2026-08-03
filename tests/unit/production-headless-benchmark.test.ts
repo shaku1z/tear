@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  C30_LONG_RUN_LEAK_PROFILE,
   C30_NATURAL_EPISODE_BENCHMARK_PROFILE,
   measureProductionHeadlessEpisodes,
+  measureProductionHeadlessLongRun,
 } from "../../src/tearbench";
 
 describe("C30 production headless benchmark", () => {
@@ -48,4 +50,34 @@ describe("C30 production headless benchmark", () => {
       heap: benchmark.heap,
     }));
   }, 30_000);
+
+  it("records a bounded five-cycle developer-host leak observation without claiming target hardware", async () => {
+    const artifact = await measureProductionHeadlessLongRun({
+      hardware: Object.freeze({
+        id: "developer-unit-host", classification: "developer" as const, declaredBy: "unit-test",
+        operatingSystem: process.platform, processor: process.arch, physicalMemoryBytes: 1_024 * 1_024 * 1_024,
+      }),
+      heapUsedBytes: () => process.memoryUsage().heapUsed,
+      collectGarbage: () => undefined,
+    });
+    expect(artifact).toMatchObject({
+      format: "tearbench-production-headless-long-run", schemaVersion: 1,
+      profile: C30_LONG_RUN_LEAK_PROFILE,
+      hardware: { id: "developer-unit-host", classification: "developer" },
+      deterministic: true,
+    });
+    expect(artifact.cycles).toHaveLength(C30_LONG_RUN_LEAK_PROFILE.cycles);
+    expect(artifact.cycles.every((cycle) => cycle.episodes === C30_LONG_RUN_LEAK_PROFILE.episodesPerCycle
+      && cycle.completed === C30_LONG_RUN_LEAK_PROFILE.episodesPerCycle)).toBe(true);
+    expect(artifact.aggregate.episodes).toBe(
+      C30_LONG_RUN_LEAK_PROFILE.cycles * C30_LONG_RUN_LEAK_PROFILE.episodesPerCycle,
+    );
+    expect(artifact.aggregate.sampledArtifacts).toBe(C30_LONG_RUN_LEAK_PROFILE.artifactSampleLimit);
+    expect(artifact.heap.beforeBytes).toBeGreaterThan(0);
+    expect(artifact.heap.afterBytes).toBeGreaterThan(0);
+    expect(artifact.budget.retainedHeap).not.toBe("not-measured");
+    console.info("C30 production headless long run", JSON.stringify({
+      hardware: artifact.hardware, aggregate: artifact.aggregate, budget: artifact.budget, heap: artifact.heap,
+    }));
+  }, 120_000);
 });

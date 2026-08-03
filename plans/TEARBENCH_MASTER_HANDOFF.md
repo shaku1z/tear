@@ -188,7 +188,9 @@ Named status:
   centered spawn rather than detached defaults. The
   dispatcher proves two independent child PIDs, pre-dispatch cancellation,
   parent-side deadline termination, and replacement of an externally exited
-  idle child. Explicitly idempotent input retains a versioned active-exit
+  idle child. Its separately bounded 30-second cold-start allowance covers the
+  Vite/source-composition load and never extends a per-request deadline.
+  Explicitly idempotent input retains a versioned active-exit
   attempt record and retries once on a fresh child; timeout, validation, and
   worker-reported failures do not retry or restore. The former C30
   recorded-origin gap was resolved by source-owned wave/reward and terminal
@@ -209,8 +211,14 @@ Named status:
   tick-120 terminal artifact. It fails closed for malformed traces, surgical
   state, and scenario/snapshot mismatches. This is neither persistence nor
   worker-job recovery, and it does not checkpoint a reward/draft route.
-  Target-hardware capacity, long-run leak evidence, and Academy/Foundry
-  streaming remain open. The current 256-episode / 30,720-tick in-process
+  A versioned five-cycle, forced-GC developer-host observation now completes
+  160 natural 600-tick episodes / 96,000 fixed steps with repeat-hash parity
+  and a 2.4 MiB retained heap. The declared Windows 11 / Intel Core Ultra 9
+  288V / 31.5 GiB host observed 462.5 episodes/minute, below the modest 500
+  developer budget; it is not a target-hardware capacity pass. The runner will
+  classify a host as target only when both a caller-supplied target ID and
+  declarant are present. Declared-target capacity, broad worker-scale stress,
+  and Academy/Foundry streaming remain open. The current 256-episode / 30,720-tick in-process
   stress proof has distinct final state objects and hashes, plus separate
   sampled terminal scenario/action traces; it is not a worker claim. A
   source-produced natural terminal artifact is visibly rerunnable in the
@@ -295,8 +303,8 @@ Important files:
 ### Exact next slice
 
 C27A and C28 are closed. C29's durable active-cinematic capsule boundary remains
-open, but the current worktree's exact slice is **C30 target-hardware capacity
-and bounded long-run leak evidence**. Do not reopen C27A for pixels, haptics,
+open, but the current worktree's exact slice is **C30 Academy/Foundry artifact
+streaming with bounded backpressure**. Do not reopen C27A for pixels, haptics,
 durable outcomes, or audio/device fidelity; C25, C39, and C40 own those
 separate output claims.
 
@@ -304,10 +312,14 @@ C30 has already proven an in-memory restore of an active, non-draft natural
 episode: its source snapshot, held input, accepted commands, and semantic hash
 are reconstructed only through a fresh C29 production composition, then the
 same suffix reaches the exactly equal terminal artifact. Keep that boundary
-in-process and caller-retained. The next slice measures a declared workload on
-target hardware and uses a bounded duration/leak protocol; it must not turn the
-checkpoint into storage, durable job recovery, a worker retry, or a second
-simulation model. Academy/Foundry streaming follows that scale evidence.
+in-process and caller-retained. A five-cycle long-run runner now records an
+explicit developer or caller-declared target profile, but no target profile is
+available in this repository; the local run observed bounded forced-GC heap
+retention while missing its developer throughput budget. Do not promote that
+observation to a target claim. The next slice should attach a bounded terminal
+artifact stream to the Academy intake with explicit backpressure; it must not
+turn C30 into storage, durable job recovery, a worker retry, or a second
+simulation model.
 
 Preserve:
 
@@ -448,11 +460,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C30 restores an active non-draft natural episode through a fresh source composition. Its tick-60 movement/jump/dash keyframe reproduces the captured canonical state and the exactly equal tick-120 terminal artifact without storage or worker recovery.
-PROVEN BY:           `pnpm check:c30:foundation` passes: six focused Vitest files / 15 tests, four Node worker tests, standalone build, Class-A truncated and natural-failure terminal reruns, fresh 13-scenario / 5,732-tick C27A browser capture, then a 14-test source matrix. The focused environment/replay-composition subset also passes 8 tests; the build retains only its existing >500 kB chunk warning.
-REMAINING HERE:      C30 still needs target-hardware training-capacity and long-run leak measurements, then Academy/Foundry streaming. Draft/reward-route checkpointing, durable job recovery, and mid-run worker cancellation remain unclaimed. C29's durable active-cinematic boundary remains separately open. Timeout, validation, and worker-reported failures intentionally do not retry.
+DONE THIS STEP:      C30 records a versioned, forced-GC five-cycle developer-host observation: 160 natural 600-tick production episodes / 96,000 fixed steps, explicit host declaration, bounded artifacts, repeat-hash parity, and retained-heap evidence.
+PROVEN BY:           `pnpm measure:c30:long-run` completed all 160 episodes deterministically with 315.6 ms p95 and 2.4 MiB retained heap. The current declared developer host measured 462.5 episodes/minute, below the modest 500 developer budget; `pnpm check:c30:foundation` now covers six focused Vitest files / 16 tests plus the existing source-matrix, worker, standalone, and browser proof.
+REMAINING HERE:      C30 still needs capacity evidence on a caller-declared target host, broad worker-scale stress, and Academy/Foundry streaming with backpressure. Draft/reward-route checkpointing, durable job recovery, and mid-run worker cancellation remain unclaimed. C29's durable active-cinematic boundary remains separately open. Timeout, validation, and worker-reported failures intentionally do not retry.
 REMAINING TO C40:    C25 and C27 exits, C29 durable active-cinematic evidence, remaining C30 items, and C31-C40 remain; C27A and C28 are closed.
-NEXT SLICE:          Measure declared C30 capacity on target hardware and run a bounded long-run leak protocol; keep source-composition, timeout, retry, and checkpoint custody boundaries unchanged.
+NEXT SLICE:          Wire bounded C30 terminal artifacts into an Academy intake with explicit backpressure, preserving source composition and without adding storage, recovery, retries, or a second simulation.
 
 All of the following were run from this worktree through C27A slice 36:
 

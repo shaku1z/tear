@@ -207,7 +207,13 @@ This is the migration checklist for the architectural redesign. A checked featur
    tick-60 movement/jump/dash proof restores that exact source state and reaches
    an exactly equal tick-120 terminal artifact; malformed traces, surgical state,
    and snapshot/scenario mismatches fail closed. This is not persistence,
-   worker-job recovery, or a draft/reward-route checkpoint claim;
+   worker-job recovery, or a draft/reward-route checkpoint claim. C30 also has
+   a versioned, forced-GC five-cycle developer-host observation: 160 natural
+   600-tick episodes / 96,000 fixed steps completed with identical repeat hashes
+   and 2.4 MiB retained heap on the declared local host. Its 462.5
+   episodes/minute observation was below the modest 500 developer budget, so it
+   is neither a target-hardware capacity pass nor a worker-scale or training
+   claim;
    authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 
