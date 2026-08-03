@@ -62,6 +62,9 @@ promotion eligibility, or DAgger improvement.
   is rejected and the result is not used for promotion.
 - [x] Held-out reports have idempotent, corruption-safe local custody with no
   player, cloud, or promotion consumer.
+- [x] A bounded causal-window policy fits only governed training tracks and
+  executes through the existing C32 runtime. It is a temporal-window
+  perceptron, not a recurrent/GRU/LSTM claim and not quality evidence.
 - [ ] DAgger correction capture, review, ingestion, retraining, comparison,
   cancellation, and recovery are implemented with credible real-game evidence.
 
@@ -124,22 +127,30 @@ accepted-correction retrain on the unchanged validation split. It records
 separate training hashes and identical held-out scope only; no delta is treated
 as improvement, a threshold, activation, or promotion.
 
-`createTearTemporalPolicyContexts` now builds bounded causal feature windows
-from immutable governed training tracks under the same 17-feature contract.
-This is the data boundary for a future temporal policy only; no recurrent
-model, temporal runtime, or quality claim exists yet.
+`createTearTemporalPolicyContexts` now drives a deterministic bounded
+`temporal-window-linear-policy-v1` fit over immutable governed training tracks.
+Its finite 1–64 frame history is normalized only with the base training split,
+left-padded without future observations, and serialized into the existing C32
+data-only artifact envelope. The active C32 runtime retains only that bounded
+structured-observation history, clears it on reset, and executes the artifact
+through the same source-owned production world. Focused tests prove both that a
+previous frame can alter a later action and that a real trained temporal
+artifact returns an artifact receipt from a production-world observation. This
+is a temporal-window perceptron—not a recurrent/GRU/LSTM architecture—and it
+does not establish unseen-seed quality, a baseline comparison, promotion, or
+player-facing training.
 
 ## Deliberately not claimed
 
-This is not a sequence/recurrent policy, a meaningful quality score, a
-ingested/retrained DAgger loop, promotion, or automatic player-facing training.
+This is not a recurrent/GRU/LSTM policy, a meaningful quality score, a
+scripted-baseline comparison, promotion, or automatic player-facing training.
 Those remain C33 work.
 
-DONE THIS STEP:      C33 has bounded source-world correction capture/review/augmentation/retraining, held-out observation, and exact checkpoint cancellation/resume with corrupt-byte quarantine; none is interpreted as quality or promotion.
-PROVEN BY:           Focused C33 source-world capture/review/augmentation/retraining/held-out comparison/checkpoint recovery test plus targeted TypeScript and ESLint.
-REMAINING HERE:      Sequence/temporal policy, conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence.
+DONE THIS STEP:      C33 has a deterministic finite temporal-window artifact from governed tracks that executes in the C32 source-world runtime; C33 §8's measured scripted-baseline item is now unblocked, not ticked.
+PROVEN BY:           Focused C33 and C32 runtime tests: 2 files / 10 tests, plus targeted ESLint, TypeScript, requirements, and architecture gates.
+REMAINING HERE:      Measured unseen-seed baseline comparison, conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Define and execute a bounded temporal-policy artifact over these governed contexts, then prove source-world behavior without a quality/promotion claim.
+NEXT SLICE:          Add a bounded source-world unseen-seed outcome comparison between this temporal artifact and the scripted baseline; tick C33 §8 only if the metric is real and the artifact actually wins.
 
 ## Slice pacing finding — 2026-08-03
 

@@ -20,6 +20,8 @@ import {
   completeTearBehaviorCloningCheckpoint,
   TearBehaviorCloningCheckpointVault,
   createTearTemporalPolicyContexts,
+  trainTearTemporalWindowPolicy,
+  createTearTemporalWindowPolicyArtifact,
   TearAcademyTrainingDatasetLoader,
   TearBehaviorCloningTrainingVault,
   TearPolicyArtifactRegistry,
@@ -279,6 +281,26 @@ describe("C31 held Academy candidate curation", () => {
       expect(runtime.decide({ state: environment.policyObservation(), ui: { screen: "playing" } }).receipt)
         .toMatchObject({ source: "artifact", artifactId: artifact.id });
     } finally { environment.dispose(); }
+    const temporalConfig = Object.freeze({ ...config, window: 2 });
+    const temporal = trainTearTemporalWindowPolicy(first, normalization, temporalConfig);
+    expect(trainTearTemporalWindowPolicy(second, normalization, temporalConfig)).toEqual(temporal);
+    expect(temporal.model).toMatchObject({ format: "tear-temporal-window-linear-policy-model", window: 2 });
+    const temporalArtifact = createTearTemporalWindowPolicyArtifact(temporal, {
+      id: "c33-temporal-policy", createdAt: "2026-08-03T00:10:00.000Z", encoder: { id: "tear-policy-features.v1", schemaVersion: 1,
+        observationClass: "structured-state", normalizationHash: normalization.normalizationHash }, actionSchema: "tear-game-action-command-envelope.v1",
+      recurrentState: { kind: "none", schemaVersion: 1 }, trainingManifest: { id: manifest.id, version: manifest.version, rootHash: manifest.rootHash },
+      rewardVersion: "tear-reward.v1", build: { version: "test", revision: "c33", target: "unit", rulesetVersion: "rules-1", contentHash: "content-1", configHash: "config-1" },
+      metrics: {}, levelTarget: "class-a", lineage: { trainingRunId: temporal.trainingHash }, signature: { kind: "local-unsigned", keyId: "development" },
+      compatibility: { runtime: "tear-policy-runtime.v1", observationClass: "structured-state", actionSchema: "tear-game-action-command-envelope.v1", modelFormats: ["temporal-window-linear-policy-v1"] },
+    });
+    const temporalRegistry = new TearPolicyArtifactRegistry(input.backend, temporalArtifact.compatibility);
+    await temporalRegistry.register(temporalArtifact); await temporalRegistry.activate(temporalArtifact.id, "2026-08-03T00:10:30.000Z");
+    const temporalEnvironment = createProductionHeadlessEnvironment(), temporalRuntime = new TearActivePolicyRuntime(temporalRegistry);
+    try {
+      temporalEnvironment.reset(scenario()); await temporalRuntime.reset();
+      expect(temporalRuntime.decide({ state: temporalEnvironment.policyObservation(), ui: { screen: "playing" } }).receipt)
+        .toMatchObject({ source: "artifact", artifactId: temporalArtifact.id });
+    } finally { temporalEnvironment.dispose(); }
     await input.backend.put("analysis", `behavior-cloning-training:v1:${training.trainingHash}`, "not-json");
     expect(await trainingVault.get(training.trainingHash)).toBeUndefined();
     expect((await input.backend.keys("quarantine")).some((key) => key.endsWith(training.trainingHash))).toBe(true);

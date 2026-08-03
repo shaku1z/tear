@@ -1,4 +1,5 @@
 import { stableVerificationHash } from "../replay/hash";
+import type { GameAction } from "../input/game-action";
 import type { TearAcademyTrainingDatasetV1 } from "./academy-training-dataset";
 import { projectCanonicalPolicyFeatures, TEAR_POLICY_FEATURE_WIDTH_V1 } from "./policy-feature-vector";
 
@@ -6,6 +7,8 @@ export interface TearTemporalPolicyContextV1 {
   readonly candidateHash: string;
   readonly tick: number;
   readonly featureFrames: readonly (readonly number[])[];
+  /** The next authoritative action batch for the final, causal frame. */
+  readonly targetActions: readonly GameAction[];
   readonly contextHash: string;
 }
 
@@ -18,7 +21,10 @@ export function createTearTemporalPolicyContexts(dataset: TearAcademyTrainingDat
     for (let index = 0; index < frames.length; index += 1) {
       const featureFrames = Object.freeze(frames.slice(Math.max(0, index - window + 1), index + 1));
       if (featureFrames.some((frame) => frame.length !== TEAR_POLICY_FEATURE_WIDTH_V1)) throw new Error("temporal policy feature width changed");
-      const draft = { candidateHash: sequence.candidateHash, tick: sequence.tracks.observations[index]?.tick ?? 0, featureFrames };
+      const tick = sequence.tracks.observations[index]?.tick ?? 0;
+      const targetActions = Object.freeze(sequence.tracks.actions.filter((entry) => entry.tick === tick + 1)
+        .map((entry) => Object.freeze(structuredClone(entry.command))));
+      const draft = { candidateHash: sequence.candidateHash, tick, featureFrames, targetActions };
       contexts.push(Object.freeze({ ...draft, contextHash: stableVerificationHash(draft) }));
     }
   }

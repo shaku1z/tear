@@ -9,6 +9,7 @@ import type { TearAgentObservation } from "../../src/agents";
 const compatibility = Object.freeze({ runtime: "tear-policy-runtime.v1" as const, observationClass: "structured-state" as const,
   actionSchema: "tear-game-action-command-envelope.v1" as const, modelFormats: Object.freeze(["table-policy-v1"]) });
 const linearCompatibility = Object.freeze({ ...compatibility, modelFormats: Object.freeze(["linear-policy-v1"]) });
+const temporalCompatibility = Object.freeze({ ...compatibility, modelFormats: Object.freeze(["temporal-window-linear-policy-v1"]) });
 
 function observation(): TearAgentObservation {
   return { state: { format: "tear-contract", kind: "observation", schemaVersion: 1, tick: 8, observationClass: "structured-state",
@@ -87,5 +88,25 @@ describe("C32 active policy runtime", () => {
     await runtime.reset();
     expect(runtime.decide(input).receipt).toMatchObject({ source: "artifact", artifactId: "linear-v1" });
     expect(runtime.decide(input).actions).toEqual([{ type: "move", x: 1_000, y: 0 }]);
+  });
+
+  it("executes a bounded causal temporal-window artifact without a second simulation host", async () => {
+    const first = observation(), second: TearAgentObservation = Object.freeze({ ...observation(), state: Object.freeze({ ...observation().state, tick: first.state.tick + 1 }) });
+    const registry = new TearPolicyArtifactRegistry(createMemoryGhostVaultBackend(), temporalCompatibility);
+    const template = artifact("*", []);
+    const width = TEAR_POLICY_FEATURE_WIDTH_V1;
+    const temporalWeights = Array<number>(width * 2).fill(0); temporalWeights[0] = 1;
+    const stored = createTearPolicyArtifact({ ...template, id: "temporal-v1", compatibility: temporalCompatibility,
+      model: { format: "temporal-window-linear-policy-v1", payload: JSON.stringify({ format: "tear-temporal-window-linear-policy-model", schemaVersion: 1,
+        featureSchemaHash: TEAR_POLICY_FEATURE_SCHEMA_HASH_V1, window: 2, mean: Array(width).fill(0), scale: Array(width).fill(1),
+        classes: [{ actions: [{ type: "move", x: 1_000, y: 0 }] }, { actions: [{ type: "jump", phase: "pressed" }] }],
+        weights: [Array<number>(width * 2).fill(0), temporalWeights], biases: [0, 0] }) },
+    });
+    await registry.register(stored); await registry.activate(stored.id, "2026-08-03T15:01:00.000Z");
+    const runtime = new TearActivePolicyRuntime(registry, "competent"); await runtime.reset();
+    expect(runtime.decide(first).actions).toEqual([{ type: "move", x: 1_000, y: 0 }]);
+    expect(runtime.decide(second).actions).toEqual([{ type: "jump", phase: "pressed" }]);
+    await runtime.reset();
+    expect(runtime.decide(first).actions).toEqual([{ type: "move", x: 1_000, y: 0 }]);
   });
 });

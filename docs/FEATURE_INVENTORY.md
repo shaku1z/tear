@@ -301,8 +301,12 @@ This is the migration checklist for the architectural redesign. A checked featur
    proposals; neither unreviewed nor rejected proposals are corpus input or
    promotion. Each proposal retains only the shared bounded training feature
    vector needed for later approved-only retraining.
-   Meaningful held-out quality, a reviewed/ingested DAgger loop, and promotion
-   remain absent. Account/
+   C33 now also fits a bounded causal temporal-window perceptron from those
+   governed tracks and executes its data-only artifact through the same C32
+   source-world runtime; it has no future frames and clears its bounded history
+   on reset. It is not a GRU/LSTM, quality result, baseline comparison, or
+   promotion path. Meaningful held-out quality, a reviewed/ingested DAgger loop,
+   and promotion remain absent. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 
