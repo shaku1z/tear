@@ -52,4 +52,23 @@ describe("C32 active policy runtime", () => {
     expect(decision.receipt.reason).toMatch(/invalid-action/u);
     expect(decision.actions.every((action) => action.type !== "move" || Number.isFinite(action.x))).toBe(true);
   });
+
+  it("contains table-runtime work with static bounds and an elapsed decision budget before falling back", async () => {
+    const input = observation(), registry = new TearPolicyArtifactRegistry(createMemoryGhostVaultBackend(), compatibility);
+    const stored = artifact("*", [{ type: "move", x: 1_000, y: 0 }]);
+    await registry.register(stored); await registry.activate(stored.id, "2026-08-03T15:01:00.000Z");
+    let clock = 0;
+    const timed = new TearActivePolicyRuntime(registry, "competent", {
+      limits: { maxDecisionMilliseconds: 0 }, now: () => { clock += 1; return clock; },
+    });
+    await timed.reset();
+    expect(timed.decide(input).receipt).toMatchObject({ source: "scripted-fallback", reason: "decision-budget-exceeded" });
+
+    const payloadBounded = new TearActivePolicyRuntime(registry, "competent", { limits: { maxPayloadBytes: 1 } });
+    await payloadBounded.reset();
+    expect(payloadBounded.decide(input).receipt).toMatchObject({ source: "scripted-fallback", reason: "invalid-model" });
+
+    expect(() => new TearActivePolicyRuntime(registry, "competent", { limits: { maxTableEntries: 0 } }))
+      .toThrow(/invalid policy runtime limits/u);
+  });
 });

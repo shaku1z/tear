@@ -67,7 +67,7 @@ function journalKey(id: string): string { return `${JOURNAL_PREFIX}${id}`; }
 function freezeReceipt(value: TearPolicyDecisionReceipt): TearPolicyDecisionReceipt {
   if (!hash(value.observationHash) || (value.artifactId !== undefined && !text(value.artifactId))
     || (value.artifactHash !== undefined && !hash(value.artifactHash))
-    || (value.reason !== undefined && !["no-active-artifact", "invalid-model", "missing-decision", "invalid-action"].includes(value.reason))
+    || (value.reason !== undefined && !["no-active-artifact", "invalid-model", "missing-decision", "invalid-action", "decision-budget-exceeded"].includes(value.reason))
     || (value.source === "artifact" && (value.artifactId === undefined || value.artifactHash === undefined || value.reason !== undefined))) {
     throw new TypeError("invalid policy decision receipt");
   }

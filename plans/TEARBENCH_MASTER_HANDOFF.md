@@ -273,7 +273,9 @@ Named status:
   route consumes an active artifact receipt/action through semantic input and
   reads back its bounded integrity-checked Ghost Vault analysis decision trace.
   A frozen structured decision-conformance suite also emits an exact
-  artifact-bound reproducible report; real-game outcomes and broader
+  artifact-bound reproducible report. The data-only table runtime enforces
+  static payload/work/action limits and elapsed fallback containment; real-game
+  outcomes, cancellable external inference, and broader
   player-facing Watch evidence remain open.
 - **C33-C40:** incomplete.
 
@@ -528,11 +530,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C32 now has both the browser-persisted bounded decision journal and a deterministic active-artifact decision-conformance evaluator. Its report binds the frozen structured suite, declared scenarios, exact artifact, expected action hashes, sources, and aggregate result; a mismatch fails without training or promotion.
-PROVEN BY:           Requirements/type/lint/architecture checks, eight focused C32 registry/runtime/journal/evaluation tests, a test-standalone build, and the browser-seeded real IndexedDB journey that reloads an active artifact and reads its persisted decision receipt back from Vault analysis storage.
-REMAINING HERE:      C32 needs real-game outcome evaluation, inference budgets/timeouts, retention policy, and player-facing Watch controls. C31 separately needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
+DONE THIS STEP:      C32 now has browser-persisted bounded decision journaling, deterministic conformance reports, and data-only runtime containment: payload/table/action limits plus elapsed-budget fallback before semantic routing. It does not execute arbitrary code or claim cancellable external inference.
+PROVEN BY:           Requirements/type/lint/architecture checks, eight focused C32 registry/runtime/journal/evaluation tests including static and elapsed budget failures, a test-standalone build, and the browser-seeded real IndexedDB journey that reloads an active artifact and reads its persisted decision receipt back from Vault analysis storage.
+REMAINING HERE:      C32 needs real-game outcome evaluation, cancellable external-inference budgets, retention policy, and player-facing Watch controls. C31 separately needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C32-C40 product evidence remain; C27A and C28 are closed.
-NEXT SLICE:          Add bounded inference budgets and timeout containment around active-artifact decisions without changing simulation timing, semantic routing, or the scripted fallback. Keep C31 corpus work separate.
+NEXT SLICE:          Add bounded C32 active-artifact retention and eviction receipts in Vault analysis storage. Preserve rollback history and later-promotion evidence; keep C31 corpus work separate.
 
 All of the following were run from this worktree through C27A slice 36:
 

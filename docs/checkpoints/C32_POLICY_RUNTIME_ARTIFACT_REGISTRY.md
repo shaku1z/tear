@@ -47,6 +47,13 @@ executed, trained, or been promoted by an evaluation result.
   sources, aggregate counts, and content hash. This is a decision-conformance
   evaluation only: its observations are suite inputs, not a claim of real-game
   success, learner quality, or promotion eligibility.
+- The data-only table backend now enforces a maximum payload byte size, table
+  entry count, semantic actions per decision, and elapsed decision budget. A
+  payload over the static bound is unavailable before JSON parsing; a decision
+  that crosses its elapsed budget discards the artifact result and uses the
+  scripted fallback. Because no arbitrary code or external process executes in
+  this backend, this is bounded local containment, not a claim of preemptive
+  cancellation for future inference engines.
 
 ## Exit-gate status
 
@@ -63,8 +70,11 @@ executed, trained, or been promoted by an evaluation result.
 - [x] A fixed artifact decision-conformance evaluation is reproducible from its
   exact active artifact and frozen structured suite. It reports failures rather
   than turning them into a promotion decision.
-- [ ] Real-game outcome evaluation, inference timeouts/budgets, retention
-  policy, and player-visible Watch Agent integration.
+- [x] The bounded local table runtime has payload/work/action limits and an
+  elapsed-decision fallback. Invalid budget configuration and oversized payloads
+  fail closed before routing an artifact action.
+- [ ] Real-game outcome evaluation, cancellable external-inference budgets,
+  retention policy, and player-visible Watch Agent integration.
 
 ## Evidence
 
@@ -75,8 +85,9 @@ Watch journey. The tests prove round trip, atomic activation, rollback, history,
 corruption quarantine, incompatibility rejection, active-policy preservation,
 legal action decode, deterministic structured encoding, scripted fallback,
 bounded decision-journal retention/integrity/quarantine, frozen-suite
-decision-conformance reports (including reproducible failures), and normal
-browser Vault-to-Watch composition with persisted receipt readback.
+decision-conformance reports (including reproducible failures), payload and
+elapsed-budget containment, and normal browser Vault-to-Watch composition with
+persisted receipt readback.
 
 ## Deliberately not claimed
 
@@ -87,8 +98,8 @@ cloud publication, or wire player-facing Watch Agent controls. The decision
 journal is diagnostic Class-A analysis evidence, not a causal capsule, replay,
 pixel/audio/device-output trace, or player-visible policy explanation.
 
-DONE THIS STEP:      The C32 runtime now also produces reproducible hash-bound decision-conformance reports from an exact active artifact and bounded frozen suite; a mismatch remains a failed report, not a promotion decision.
-PROVEN BY:           C32 targeted requirements/type/lint/architecture checks, eight permanent registry/runtime/journal/evaluation tests, and the browser-seeded real-IndexedDB Watch readback journey.
-REMAINING HERE:      Real-game outcome evaluation, inference budgets/timeouts, retention policy, and player-visible Watch Agent controls.
+DONE THIS STEP:      The C32 table runtime now enforces static payload/work/action limits plus elapsed-decision containment, with every invalid or over-budget artifact result falling back to scripted control before semantic routing.
+PROVEN BY:           C32 targeted requirements/type/lint/architecture checks, eight permanent registry/runtime/journal/evaluation tests (including static and elapsed budget failures), and the browser-seeded real-IndexedDB Watch readback journey.
+REMAINING HERE:      Real-game outcome evaluation, cancellable external-inference budgets, retention policy, and player-visible Watch Agent controls.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C32-C40 product evidence.
-NEXT SLICE:          Add bounded inference budgets and timeout containment around active-artifact decisions; preserve the scripted fallback and never alter simulation timing.
+NEXT SLICE:          Add bounded active-artifact retention and eviction receipts in Vault analysis storage; preserve active-pointer rollback history and do not delete evaluation evidence needed for later promotion.

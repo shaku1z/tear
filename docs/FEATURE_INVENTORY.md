@@ -271,7 +271,9 @@ This is the migration checklist for the architectural redesign. A checked featur
    Class-A hierarchy trace; it is explicitly separate from causal capsule
    recording. A bounded frozen structured suite now also produces a reproducible
    active-artifact decision-conformance report, but does not establish real-game
-   performance or promotion safety. Player-facing policy controls remain absent. Account/
+   performance or promotion safety. The data-only table runtime has static
+   payload/work/action limits and elapsed fallback containment, but no external
+   inference backend. Player-facing policy controls remain absent. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 
