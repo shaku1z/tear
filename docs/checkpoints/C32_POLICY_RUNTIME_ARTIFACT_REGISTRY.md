@@ -19,6 +19,11 @@ executed, trained, or been promoted by an evaluation result.
 - Activation persists the active pointer and its immutable revision receipt in
   one Vault commit. Rollback verifies and reactivates the predecessor rather
   than restoring an untrusted pointer.
+- `TearActivePolicyRuntime` resets from that active pointer, deterministically
+  encodes only typed structured observations, reads a bounded data-only table
+  decision, canonicalizes every returned action, and uses the existing scripted
+  policy as a safe fallback for no active artifact, malformed model, missing
+  decision, or invalid action.
 
 ## Exit-gate status
 
@@ -35,19 +40,21 @@ executed, trained, or been promoted by an evaluation result.
 ## Evidence
 
 `pnpm check:c32:foundation` passes requirements traceability, strict type and
-lint checks, architecture boundaries, and the durable artifact registry test.
-The test proves round trip, atomic activation, rollback, history, corruption
-quarantine, incompatibility rejection, and active-policy preservation.
+lint checks, architecture boundaries, and durable registry/runtime tests. The
+tests prove round trip, atomic activation, rollback, history, corruption
+quarantine, incompatibility rejection, active-policy preservation, legal action
+decode, deterministic structured encoding, and scripted fallback.
 
 ## Deliberately not claimed
 
-This registry stores opaque payloads and does not invoke an inference backend.
-It does not train from C31, establish model quality, evaluate a policy, claim
-an artifact is safe for a player, provide cloud publication, or wire the Watch
-Agent UI. Those require the remaining C32 exit evidence and later checkpoints.
+Only the bounded `table-policy-v1` data format is interpreted; arbitrary opaque
+payloads are not executable code. This does not train from C31, establish model
+quality, evaluate a policy, record a Ghost decision trace, claim an artifact is
+safe for a player, provide cloud publication, or wire the Watch Agent UI.
+Those require the remaining C32 exit evidence and later checkpoints.
 
-DONE THIS STEP:      A validated local C32 artifact registry now supports durable registration, active-pointer switching, rollback, and quarantine.
-PROVEN BY:           `pnpm check:c32:foundation` and its two permanent registry contract tests.
-REMAINING HERE:      Runtime loading/encoding/decoding, budgets/fallback, decision traces, evaluation, retention, and Watch Agent wiring.
+DONE THIS STEP:      The C32 registry now also has a resettable active-artifact runtime with deterministic structured encoding, canonical action decode, and scripted fallback.
+PROVEN BY:           `pnpm check:c32:foundation` and its four permanent registry/runtime contract tests.
+REMAINING HERE:      Real runtime composition, decision traces, evaluation, inference budgets/retention, and Watch Agent wiring.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C32-C40 product evidence.
-NEXT SLICE:          Build the typed active-artifact runtime contract over structured observations without executing untrusted opaque payloads.
+NEXT SLICE:          Compose the active-artifact runtime into the real Class-A Watch Agent path and record bounded Ghost decision receipts without bypassing semantic input.

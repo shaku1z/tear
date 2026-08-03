@@ -18,6 +18,7 @@ export * from "./academy-candidate-splits";
 export * from "./academy-reviewed-sample";
 export * from "./academy-corpus";
 export * from "./policy-artifact-registry";
+export * from "./policy-runtime";
 export * from "./academy-inspector";
 export * from "./academy-inspection-controller";
 export * from "./browser-academy-inspection";
