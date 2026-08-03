@@ -543,6 +543,15 @@ REMAINING HERE:      C33 needs cancellation/recovery, temporal/sequence policy c
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C33-C40 product evidence remain; C27A, C28, and C32 are closed.
 NEXT SLICE:          C33: add bounded cancellation and resumable checkpoint evidence for deterministic DAgger fitting without promotion.
 
+### C33 pacing finding
+
+Five consecutive C33 slices have unblocked, but not cleared, the one remaining
+DAgger checklist item. Do not continue field-sized changes. The next C33 work
+must be one integrated epoch-step/checkpoint/cancel/resume slice with exact
+lineage validation, corrupt-checkpoint quarantine, source-world correction
+evidence, and held-out parent/resumed observation. No artifact activation or
+promotion is authorized by that work.
+
 All of the following were run from this worktree through C27A slice 36:
 
 - `pnpm check:c27a` passed after the certified Source-victory slice: foundation

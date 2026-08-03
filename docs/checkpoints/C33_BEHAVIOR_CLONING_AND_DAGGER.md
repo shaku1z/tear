@@ -135,3 +135,27 @@ PROVEN BY:           Focused C33 source-world capture/review/augmentation/retrai
 REMAINING HERE:      Cancellation/recovery, temporal policy, intermediate checkpoints, and meaningful real-game quality evidence.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
 NEXT SLICE:          Add bounded cancellation and resumable checkpoint evidence for the deterministic DAgger fit; no promotion.
+
+## Slice pacing finding — 2026-08-03
+
+Five consecutive C33 slices since the last checklist tick established bounded
+source-world capture, immutable review, approved-only augmentation, augmented
+fitting, and held-out observation. They correctly unblock the remaining DAgger
+item, but do **not** clear it: cancellation/recovery, a resumable intermediate
+checkpoint, and credible real-game quality evidence remain absent. Per the C40
+guide, stop adding isolated sub-slices here.
+
+The remaining path is one integrated C33 completion candidate:
+
+1. Refactor the deterministic fit into a bounded epoch-step state machine with
+   a validated intermediate checkpoint and an exact resume route.
+2. Make cancellation return that checkpoint without emitting an artifact or
+   activation, then resume it only with matching dataset, normalization,
+   augmentation, config, and model-state hashes.
+3. Run a real source-world DAgger correction round through that route, compare
+   parent/resumed augmented fits on the governed validation split, and record
+   observed execution facts without a quality threshold or promotion.
+4. Exercise cancellation, corrupt checkpoint quarantine, and resumed-result
+   equivalence in one permanent test before deciding whether the C33 checklist
+   item can truthfully tick. Temporal/recurrent policy and meaningful quality
+   evidence still require separate work even after that candidate.
