@@ -115,6 +115,12 @@ is trained on.
   typed screen state and refreshes it on entry; it currently exposes durable
   held, reviewed, curated, and training-split counts, including the explicit
   unavailable state when browser storage is absent.
+- The same inspection snapshot now supplies privacy-safe individual governance
+  rows. Each row joins its durable custody status, model-training consent,
+  retention, privacy class, quality disposition, immutable curation/correction
+  state, split assignment, and reviewed-sample presence. It does not disclose a
+  data subject, raw tracks, or a source payload. Persisted pre-corpus manifest
+  revisions are surfaced with their id, version, entry count, and root prefix.
 
 ## Exit-gate ledger
 
@@ -174,9 +180,13 @@ is trained on.
   durable custody inspection state. Its renderer receives only typed
   loading/ready/unavailable views and semantic BACK navigation; browser evidence
   exercises the real pointer route and return on the built test artifact.
-- [ ] Detailed Academy inspection for individual recordings, review/corrections,
-  consent, retention, manifest revisions, lesson status, and unavailable/error
-  recovery remains open.
+- [x] The Academy renders a privacy-safe bounded set of individual durable
+  governance records plus the most recent persisted manifest revisions. Each
+  displayed record joins custody, training consent, retention, privacy class,
+  quality, curation/correction, split, and reviewed state without exposing a
+  subject identifier, raw recording, or trainer payload.
+- [ ] Full record browsing/pagination, durable lesson status, record actions,
+  and unavailable/error recovery guidance remain open.
 - [x] A persisted reviewed sample is tied to its exact capsule range and full
   verified tracks. When its model-training consent is revoked, a new chained
   manifest omits it; ordinary trainer manifests cannot enumerate hidden-exam
@@ -247,6 +257,9 @@ behavior cloning, or C36 Foundry automation.
   state, legal typed route, and semantic BACK control. The built navigation
   journey uses the ordinary menu `ACADEMY` control and returns through the
   normal Back control, without a debug-only screen transition.
+- `academy-candidate-curation.test.ts` proves that the inspection read model
+  joins a revoked reviewed source with its no-training consent, exact
+  quality/curation/split status, and chained persisted manifest revisions.
 - That same custody proof rejects a foreign Vault for deletion, atomically
   removes the actual materialized source capsule only from its matching Vault,
   and retains the durable `deleted` tombstone outside future held queries.
@@ -264,7 +277,7 @@ behavior cloning, or C36 Foundry automation.
 
 ## Next safe boundary
 
-Extend the player-visible Academy inspection from aggregate counts to durable
-recording/review/correction, consent/retention, and manifest details, while
-keeping lesson-status claims separate until their source is actually durable.
-Do not treat the legacy in-memory corpus as the product surface.
+Add complete, pagination-safe record browsing and only durable lesson status or
+record actions that have an authorized product boundary. Keep subject identity,
+raw tracks, trainer payloads, and the legacy in-memory corpus out of the player
+surface.

@@ -253,9 +253,10 @@ This is the migration checklist for the architectural redesign. A checked featur
    a lineage-bound durable pre-corpus split/manifest and materialize a reviewed
    sample retaining its exact Vault range and verified tracks. Trainer manifests
    omit hidden exams. The normal main-menu `ACADEMY` screen presents a read-only
-   runtime-owned aggregate of durable held, reviewed, curated, and training-split
+   runtime-owned aggregate plus a bounded privacy-safe record/manifest inspection
+   of durable held, reviewed, curated, consent, retention, split, and revision
    state, including an explicit storage-unavailable state; it is not a trainer
-   input or detailed Academy workspace. Account/cloud identity and deletion,
+   input or full Academy workspace. Account/cloud identity and deletion,
    trainer integration, and policy training remain absent;
    authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.

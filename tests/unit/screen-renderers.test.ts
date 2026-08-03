@@ -238,7 +238,8 @@ describe("legacy screen renderer registry", () => {
     expect(() => { renderer.academy({ id: "academy", status: "ready", subtitle: "durable training custody", rows: [
       { label: "HELD", value: "3" }, { label: "REVIEWED", value: "2" },
       { label: "CURATED", value: "1" }, { label: "TRAINING SPLIT", value: "1" },
-    ] }); }).not.toThrow();
+    ], records: [{ id: "A1B2C3D4", state: "held · reviewed · training", detail: "anonymous-improvement · indefinite retention · curation-approved" }],
+    manifests: [{ id: "RELEASE V2", detail: "1 governed entry · root BEEFCAFE" }] }); }).not.toThrow();
     expect(controls.find((control) => control.action.type === "navigate" && control.action.to === "menu"))
       .toMatchObject({ label: "‹  BACK" });
   });

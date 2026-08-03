@@ -31,6 +31,20 @@ function parse(value: string): TearAcademyCandidateSplitAssignmentV1 {
   const typed = entry as unknown as Omit<TearAcademyCandidateSplitAssignmentV1, "assignmentHash"> & { assignmentHash: string }; const { assignmentHash, ...draft } = typed;
   if (assignmentHash !== hash(draft)) throw new TypeError("Academy split assignment integrity mismatch"); return freeze(draft);
 }
+function parseManifest(value: string): TearAcademyPreCorpusManifestV1 {
+  const raw: unknown = JSON.parse(value);
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) throw new TypeError("invalid Academy manifest");
+  const entry = raw as Record<string, unknown>;
+  if (entry.format !== "tear-academy-pre-corpus-manifest" || entry.schemaVersion !== 1 || !ne(entry.id)
+    || !Number.isSafeInteger(entry.version) || Number(entry.version) < 1 || !time(entry.createdAt)
+    || !Array.isArray(entry.entries) || !ne(entry.rootHash) || !ne(entry.manifestHash)) {
+    throw new TypeError("Academy manifest integrity mismatch");
+  }
+  const typed = entry as unknown as TearAcademyPreCorpusManifestV1;
+  const { manifestHash, ...draft } = typed;
+  if (manifestHash !== stableVerificationHash(draft)) throw new TypeError("Academy manifest integrity mismatch");
+  return Object.freeze({ ...typed, entries: Object.freeze(typed.entries.map((item) => Object.freeze({ ...item }))) });
+}
 /** Immutable C31 pre-corpus split ledger; it cannot construct a corpus sample. */
 export class TearAcademyCandidateSplitStore {
   readonly #backend: GhostVaultBackend; readonly #custody: TearAcademyCandidateCustodyStore; readonly #quality: TearAcademyCandidateQualityStore; readonly #curation: TearAcademyCandidateCurationStore;
@@ -54,15 +68,17 @@ export class TearAcademyCandidateSplitStore {
   async getManifest(id: string, version: number): Promise<TearAcademyPreCorpusManifestV1 | undefined> {
     const value = await this.#backend.get("analysis", manifestKey(id, version));
     if (value === undefined) return undefined;
-    const raw: unknown = JSON.parse(value);
-    if (raw === null || typeof raw !== "object" || Array.isArray(raw)) throw new TypeError("invalid Academy manifest");
-    const entry = raw as Record<string, unknown>;
-    if (entry.id !== id || entry.version !== version || !Array.isArray(entry.entries) || !ne(entry.manifestHash)) {
-      throw new TypeError("Academy manifest integrity mismatch");
+    const manifest = parseManifest(value);
+    if (manifest.id !== id || manifest.version !== version) throw new TypeError("Academy manifest integrity mismatch");
+    return manifest;
+  }
+  async manifestInventory(): Promise<readonly TearAcademyPreCorpusManifestV1[]> {
+    const manifests: TearAcademyPreCorpusManifestV1[] = [];
+    for (const name of await this.#backend.keys("analysis")) {
+      if (!name.startsWith(MANIFEST_KEY)) continue;
+      const value = await this.#backend.get("analysis", name);
+      if (value !== undefined) manifests.push(parseManifest(value));
     }
-    const typed = entry as unknown as TearAcademyPreCorpusManifestV1;
-    const { manifestHash, ...draft } = typed;
-    if (manifestHash !== stableVerificationHash(draft)) throw new TypeError("Academy manifest integrity mismatch");
-    return Object.freeze({ ...typed, entries: Object.freeze(typed.entries.map((entry) => entry)) });
+    return Object.freeze(manifests.sort((left, right) => left.id.localeCompare(right.id) || left.version - right.version));
   }
 }
