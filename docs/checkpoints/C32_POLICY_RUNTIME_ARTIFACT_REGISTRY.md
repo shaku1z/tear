@@ -69,6 +69,12 @@ executed, trained, or been promoted by an evaluation result.
   Writes are idempotent by report hash, corrupt reads quarantine safely, and
   artifact retention treats every valid durable report reference as protected.
   This is evidence custody only, not an evaluation score, training, or promotion.
+- `evaluateActiveTearPolicyOutcomeSuiteInProduction` runs a fixed, bounded
+  set of source-owned C29/C30 scenarios in fresh production compositions. Its
+  reproducible report binds each terminal report and records only observed
+  termination/truncation, executed-decision, and artifact/fallback counts. It
+  deliberately defines neither a score nor a pass threshold, so it cannot be
+  mistaken for a quality, training, or promotion result.
 
 ## Exit-gate status
 
@@ -95,6 +101,9 @@ executed, trained, or been promoted by an evaluation result.
   promotion result, and its report is not yet durable.
 - [x] Production-world evaluation reports have bounded, hash-checked local Vault
   custody with idempotent readback and corrupt-byte quarantine.
+- [x] A fixed multi-scenario production suite produces reproducible observed
+  outcome facts from fresh source-owned worlds, without a quality score or
+  promotion threshold.
 - [ ] Real-game outcome evaluation, cancellable external-inference budgets,
   evaluation-artifact retention, and player-visible Watch Agent integration.
 
@@ -112,8 +121,10 @@ elapsed-budget containment, and normal browser Vault-to-Watch composition with
 persisted receipt readback. Registry tests also prove safe leaf-only retention,
 active/rollback/lineage preservation, and retained-receipt readback.
 Production-headless tests additionally prove the structured policy projection
-comes from the source world and that an active artifact produces identical
-terminal evidence across two fresh C29/C30 production compositions.
+comes from the source world, that an active artifact produces identical
+terminal evidence across two fresh C29/C30 production compositions, and that a
+fixed two-scenario suite records repeatable terminal/truncation and
+artifact/fallback decision facts without treating them as performance.
 
 ## Deliberately not claimed
 
@@ -124,8 +135,8 @@ cloud publication, or wire player-facing Watch Agent controls. The decision
 journal is diagnostic Class-A analysis evidence, not a causal capsule, replay,
 pixel/audio/device-output trace, or player-visible policy explanation.
 
-DONE THIS STEP:      C32 production-world evaluation reports now have bounded, integrity-checked local Vault custody with idempotent readback and corrupt-byte quarantine; retained artifacts cannot be pruned while a valid report cites them.
-PROVEN BY:           C32 targeted requirements/type/lint/architecture checks, twenty permanent registry/runtime/journal/evaluation/production tests, and the browser-seeded real-IndexedDB Watch readback journey.
-REMAINING HERE:      Real-game outcome evaluation, cancellable external-inference budgets, evaluation-report retention policy, and player-visible Watch Agent controls.
+DONE THIS STEP:      C32 has a fixed, bounded, multi-scenario source-world outcome suite whose repeatable report records only terminal/truncation and artifact/fallback execution facts—never a score, training result, or promotion threshold.
+PROVEN BY:           C32 targeted requirements/type/lint/architecture checks, twenty-one permanent registry/runtime/journal/evaluation/production tests, and the browser-seeded real-IndexedDB Watch readback journey.
+REMAINING HERE:      Broader real-game outcome coverage, cancellable external-inference budgets, evaluation-report retention policy, and player-visible Watch Agent controls.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C32-C40 product evidence.
-NEXT SLICE:          Define outcome metrics and a fixed multi-scenario production evaluation suite; do not call it training or promotion.
+NEXT SLICE:          Give fixed production-suite reports durable, bounded custody and an explicit retention policy; keep outcome facts separate from training or promotion.

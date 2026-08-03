@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createMemoryGhostVaultBackend } from "../../src/ghost";
 import {
   TearPolicyArtifactRegistry, TearProductionPolicyEvaluationVault, createTearPolicyArtifact, evaluateActiveTearPolicyInProduction,
+  evaluateActiveTearPolicyOutcomeSuiteInProduction, type TearProductionPolicyEvaluationSuiteV1,
 } from "../../src/agents";
 import type { TearScenarioV1 } from "../../src/tearbench";
 
@@ -12,6 +13,14 @@ const scenario = Object.freeze({ format: "tear-contract", kind: "scenario", sche
   seed: "c32-production-policy-seed", start: Object.freeze({ mode: "endless", difficulty: "normal", weapon: "sword" }),
   maxTicks: 12, assertions: Object.freeze(["runtime.finite-state"] as const), tags: Object.freeze(["c32", "production-evaluation"] as const),
 }) satisfies TearScenarioV1;
+
+const suite = Object.freeze({ id: "c32-production-outcome-suite", version: 1,
+  description: "Fixed source-owned C32 production outcome observations", scenarios: Object.freeze([
+    scenario,
+    Object.freeze({ ...scenario, id: "c32-production-policy-hard", seed: "c32-production-policy-hard-seed",
+      start: Object.freeze({ mode: "endless", difficulty: "hard", weapon: "sword" }), maxTicks: 9 }),
+  ]),
+}) satisfies TearProductionPolicyEvaluationSuiteV1;
 
 async function registry(): Promise<TearPolicyArtifactRegistry> {
   const value = new TearPolicyArtifactRegistry(createMemoryGhostVaultBackend(), compatibility);
@@ -49,5 +58,16 @@ describe("C32 production policy evaluation", () => {
     await backend.put("analysis", `policy-production-evaluation:v1:${report.reportHash}`, "not-json");
     expect(await vault.get(report.reportHash)).toBeUndefined();
     expect((await backend.keys("quarantine")).some((key) => key.endsWith(report.reportHash))).toBe(true);
+  });
+
+  it("reports repeatable, fixed-suite production outcomes without interpreting them as a score", async () => {
+    const value = await registry();
+    const first = await evaluateActiveTearPolicyOutcomeSuiteInProduction(value, suite);
+    const second = await evaluateActiveTearPolicyOutcomeSuiteInProduction(value, suite);
+    expect(first).toEqual(second);
+    expect(first).toMatchObject({ format: "tear-production-policy-outcome-suite", artifactId: "production-policy",
+      suite: { id: suite.id, version: 1 }, outcomes: { scenarioCount: 2, terminatedScenarios: 0, truncatedScenarios: 2,
+        executedDecisions: 21, artifactDecisions: 21, fallbackDecisions: 0 } });
+    expect(first.reports.map((report) => report.scenario.id)).toEqual(suite.scenarios.map((entry) => entry.id));
   });
 });

@@ -535,11 +535,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C32's source-world evaluation now writes a bounded integrity-checked report into local Vault analysis storage. It is idempotent by content hash, quarantines corrupt bytes, and artifact retention protects valid cited artifacts; it remains evidence custody, not training or promotion.
-PROVEN BY:           Requirements/type/lint/architecture checks, twenty focused C32 registry/runtime/journal/evaluation/production tests, a test-standalone build, and the browser-seeded real IndexedDB journey that reloads an active artifact and reads its persisted decision receipt back from Vault analysis storage.
-REMAINING HERE:      C32 needs fixed multi-scenario outcome evaluation, cancellable external-inference budgets, evaluation-report retention policy, and player-facing Watch controls. C31 separately needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
+DONE THIS STEP:      C32 now has a fixed bounded multi-scenario evaluation against fresh source-owned production worlds. Its reproducible report records terminal/truncation and artifact/fallback execution facts only—no score, training result, or promotion threshold.
+PROVEN BY:           Requirements/type/lint/architecture checks, twenty-one focused C32 registry/runtime/journal/evaluation/production tests, a test-standalone build, and the browser-seeded real IndexedDB journey that reloads an active artifact and reads its persisted decision receipt back from Vault analysis storage.
+REMAINING HERE:      C32 needs durable fixed-suite report custody/retention, cancellable external-inference budgets, broader outcome coverage, and player-facing Watch controls. C31 separately needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C32-C40 product evidence remain; C27A and C28 are closed.
-NEXT SLICE:          Define fixed multi-scenario C32 outcome evaluation from source-owned production runs. Do not call it training or promotion; keep C31 corpus work separate.
+NEXT SLICE:          Give fixed multi-scenario C32 reports bounded local custody and a retention policy. Keep outcome facts separate from training or promotion; do not expand into C31 corpus work.
 
 All of the following were run from this worktree through C27A slice 36:
 
