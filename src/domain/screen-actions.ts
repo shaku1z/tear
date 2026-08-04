@@ -57,6 +57,7 @@ export type ScreenAction =
   | { readonly type: "settings.toggle"; readonly key: string }
   | { readonly type: "settings.activate"; readonly key: string }
   | { readonly type: "settings.reset" }
+  | { readonly type: "academy.retry" }
   | { readonly type: "rename.submit" }
   | { readonly type: "rename.cancel" }
   | { readonly type: "draft.choose"; readonly index: number }

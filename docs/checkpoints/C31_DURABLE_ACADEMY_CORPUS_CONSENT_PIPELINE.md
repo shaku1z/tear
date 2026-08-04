@@ -193,8 +193,12 @@ is trained on.
   displayed record joins custody, training consent, retention, privacy class,
   quality, curation/correction, split, and reviewed state without exposing a
   subject identifier, raw recording, or trainer payload.
-- [ ] Authorized record actions and unavailable/error recovery guidance remain
-  open. Durable lesson status now derives only from active governed durable corpus
+- [ ] Authorized record actions remain open because the normal player surface
+  has no product identity/authority boundary from which to act on a custody
+  record. Unavailable/error recovery guidance is complete: the Academy explains
+  that browser-storage permissions must be checked and exposes a semantic retry
+  that refreshes the existing inspection controller without creating or mutating
+  any record. Durable lesson status derives only from active governed durable corpus
   entries: `unrepresented`, `governed`, or (for a recovery-required lesson with
   governed recovery material) `recovery-evidenced`. It reports coverage, never
   lesson completion, quality, or a policy result. Full privacy-safe record and

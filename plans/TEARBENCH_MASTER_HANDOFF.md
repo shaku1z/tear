@@ -368,9 +368,12 @@ work is active, while the current worktree's C31 slice adds **durable
 Academy lesson-status coverage** to the existing corpus inspection. It derives
 only active-custody `unrepresented`, `governed`, and recovery-required
 `recovery-evidenced` labels from durable governed corpus entries; it does not
-claim completion, quality, or a policy result. The next C31 product slice is
-authorized record actions and unavailable/error recovery guidance; start C32's
-policy artifact/runtime boundary before wiring any trainer to this corpus.
+claim completion, quality, or a policy result. The unavailable Academy view now
+explains the browser-storage recovery step and offers a semantic retry through
+the existing controller; it still creates no record action. The next C31 product
+slice is authorized record actions, but only after a product identity/authority
+boundary exists; start C32's policy artifact/runtime boundary before wiring any
+trainer to this corpus.
 Do not reopen C27A for pixels, haptics, durable outcomes, or audio/device
 fidelity; C25, C39, and C40 own those separate output claims.
 

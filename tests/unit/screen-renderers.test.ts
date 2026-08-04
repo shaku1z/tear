@@ -244,6 +244,14 @@ describe("legacy screen renderer registry", () => {
       .toMatchObject({ label: "‹  BACK" });
   });
 
+  it("offers a semantic retry with storage guidance when Academy inspection is unavailable", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.academy({ id: "academy", status: "unavailable", subtitle: "Academy storage is unavailable", rows: [], records: [], manifests: [] });
+    expect(controls.find((control) => control.action.type === "academy.retry"))
+      .toMatchObject({ label: "TRY AGAIN", x: 690, w: 220, h: 46 });
+  });
+
   it("pages complete privacy-safe Academy records and manifests through screen scroll", () => {
     const controls: ScreenControl[] = [];
     const context = createRenderContext(controls);

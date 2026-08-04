@@ -11,7 +11,11 @@ export function createAcademyRenderers(context: ScreenRenderContext) {
       ui.panel(canvas, panelX, y, 640, Math.max(160, 56 + view.rows.length * 34));
       y += 38;
       if (view.status === "loading") ui.text(canvas, "Reading Academy custody...", width / 2, y, ui.t.type.body, "center", ui.t.alpha.muted);
-      else if (view.status === "unavailable") ui.text(canvas, view.subtitle, width / 2, y, ui.t.type.body, "center", ui.t.alpha.muted);
+      else if (view.status === "unavailable") {
+        ui.text(canvas, view.subtitle, width / 2, y, ui.t.type.body, "center", ui.t.alpha.muted);
+        ui.text(canvas, "Check browser storage permissions, then try again.", width / 2, y + 34, ui.t.type.caption, "center", ui.t.alpha.muted);
+        context.enqueue({ x: width / 2 - 110, y: y + 62, w: 220, h: 46, label: "TRY AGAIN", action: { type: "academy.retry" } });
+      }
       else {
         view.rows.forEach((row) => { ui.text(canvas, row.label, width / 2 - 288, y, ui.t.type.body, "left"); ui.displayText(canvas, row.value, width / 2 + 288, y, ui.t.type.body, "right"); y += 34; });
         const recordY = 332;
