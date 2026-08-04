@@ -192,20 +192,18 @@ measured artifact win over the scripted baseline, promotion, automated repeated
 DAgger, or automatic player-facing training.
 Those remain C33 work.
 
-DONE THIS STEP:      C33 now has governed temporal fit, run-context conditioning, source-world baseline execution, provenance rejection, and native completed/defeated/revival measurements; none establishes a quality win, so C33 §8 remains unticked.
-PROVEN BY:           Focused C31/C32/C33 track, admission, curation, and production-evaluator tests: 4 files / 13 tests, plus targeted ESLint, TypeScript, requirements, and architecture gates.
-REMAINING HERE:      A predeclared nontrivial held-out recovery/lesson corpus and outcome suite, a measured artifact advantage, lesson/persona/style conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence.
+DONE THIS STEP:      C33 now retains governed temporal parent/corrected DAgger observations over a predeclared three-scenario, 60-tick-each source-world suite. Correction-source identity joins retraining lineage and is rejected from the corrected artifact's held-out suite; native outcome facts, bounded artifact outcome reports, and corruption-safe baseline-comparison custody are retained. No observed delta is interpreted as quality, activation, or promotion.
+PROVEN BY:           Focused C31/C32/C33 track, admission, curation, and production-evaluator tests: 2 files / 10 tests, plus targeted ESLint, TypeScript, requirements, and architecture gates.
+REMAINING HERE:      Meaningful unseen-seed baseline-win evidence, lesson/persona/style conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Build one integrated governed nontrivial held-out recovery/lesson corpus-and-evaluation slice; it must bind source scenarios, designated outcome facts, and artifact/baseline results before any C33 §8 quality tick.
+NEXT SLICE:          Establish the missing lesson/persona/style policy-conditioning ownership contract before any repeated DAgger or quality claim; do not add a fourth unscoped comparison fixture.
 
 ## Slice pacing finding — 2026-08-03
 
-Five consecutive C33 slices since the last checklist tick established bounded
-source-world capture, immutable review, approved-only augmentation, augmented
-fitting, and held-out observation. They correctly unblock the remaining DAgger
-item, but do **not** clear it: cancellation/recovery, a resumable intermediate
-checkpoint, and credible real-game quality evidence remain absent. Per the C40
-guide, stop adding isolated sub-slices here.
+The integrated linear checkpoint/recovery and temporal held-out evidence routes
+now exist, but C33 remains open: conditioning, repeat-round automation,
+visible training operations, and meaningful quality are not implemented. Per
+the C40 guide, do not resume field-sized training edits.
 
 The remaining path is one integrated C33 completion candidate:
 
@@ -214,13 +212,11 @@ The remaining path is one integrated C33 completion candidate:
 2. Make cancellation return that checkpoint without emitting an artifact or
    activation, then resume it only with matching dataset, normalization,
    augmentation, config, and model-state hashes.
-3. Run a real source-world DAgger correction round through that route, compare
-   parent/resumed augmented fits on the governed validation split, and record
-   observed execution facts without a quality threshold or promotion.
-4. Exercise cancellation, corrupt checkpoint quarantine, and resumed-result
-   equivalence in one permanent test before deciding whether the C33 checklist
-   item can truthfully tick. Temporal/recurrent policy and meaningful quality
-   evidence still require separate work even after that candidate.
+3. Bind lesson/persona/style context into both the governed training sequences
+   and the runtime call contract without pretending that a corpus tag is a live
+   player setting.
+4. Only then build repeatable DAgger orchestration and visible operation
+   evidence; no checklist tick is authorized by the currently observed ties.
 
 ## Checkpointed fit evidence
 
@@ -236,19 +232,17 @@ game quality.
 
 ## Slice pacing finding — quality path
 
-Five further C33 commits (`0e2cc67` through `bdd663d`) added temporal context,
-an executable artifact, overlap-safe comparison, run-context conditioning, and
-native outcome facts without ticking C33 §8. Those were necessary foundations,
-but continuing per-field or per-metric work would violate the C40 sizing rule.
+The later temporal foundation commits, followed by held-out parent/corrected
+source-world report custody, deliberately leave C33 §8 unticked. They are
+necessary provenance and observation foundations, not a quality conclusion.
 
 The next C33 slice is therefore one integrated quality candidate:
 
-1. Materialize a governed corpus with nontrivial recovery/lesson episodes and
-   source scenario identities; the current two-tick fixture is not quality evidence.
-2. Publish a predeclared held-out suite absent from training provenance and use
-   native `run.completed`/`run.defeated`/`player.revived` facts as its outcome data.
-3. Train, execute, and retain parent and approved-correction temporal artifact
-   reports against the scripted baseline in fresh C29/C30 worlds. A quality tick
-   requires a real declared-metric advantage; a tie or loss is observation only.
-4. Repeat that suite after checkpoint recovery and an automated DAgger round
-   before deciding whether the C33 reproducibility and DAgger items clear.
+1. Define the source-owned lesson/persona/style context schema and exact caller
+   authority for training, DAgger, evaluation, and live runtime execution.
+2. Carry the immutable context through temporal fit and artifact compatibility;
+   reject mismatched or undeclared context rather than silently defaulting it.
+3. Build repeated DAgger orchestration and retained progress/error/curriculum
+   records only after that contract exists.
+4. A quality tick still requires a declared-metric advantage on genuinely
+   unseen lesson/recovery seeds; a tie or loss remains observation only.
