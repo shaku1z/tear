@@ -544,11 +544,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C33 now retains governed temporal parent/corrected DAgger observations over a predeclared three-scenario, 60-tick-each source-world suite. Correction-source identity joins the retraining lineage and is rejected from the corrected artifact's held-out suite; native outcome facts, bounded artifact outcome reports, and corruption-safe baseline-comparison custody are retained. No observed delta is interpreted as quality, activation, or promotion.
+DONE THIS STEP:      C33 now retains governed temporal parent/corrected DAgger observations over a predeclared three-scenario, 60-tick-each source-world suite, and supports a versioned V2 lesson/persona/style condition contract. Governed sequences supply immutable lesson/tag provenance; runtime and DAgger calls require their own explicit context, while V1 artifacts remain compatible. No observed delta is interpreted as quality, activation, or promotion.
 PROVEN BY:           Focused C31/C32/C33 track, admission, curation, and production-evaluator tests: 2 files / 10 tests, plus targeted ESLint, TypeScript, requirements, and architecture gates.
-REMAINING HERE:      C33 still needs meaningful unseen-seed baseline-win evidence, lesson/persona/style conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
+REMAINING HERE:      C33 still needs caller-owned live context selection, meaningful unseen-seed baseline-win evidence, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C33-C40 product evidence remain; C27A, C28, and C32 are closed.
-NEXT SLICE:          C33: establish the missing lesson/persona/style policy-conditioning ownership contract before any repeated DAgger or quality claim; do not add a fourth unscoped comparison fixture.
+NEXT SLICE:          C33: add one authorized live-context selection path and visible truth surface before automated repeated DAgger or quality claims; do not derive player context from Academy corpus tags.
 
 ### C33 pacing finding
 

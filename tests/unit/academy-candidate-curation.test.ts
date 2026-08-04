@@ -38,7 +38,7 @@ import {
   type TearAcademyCandidateDeclarationV1,
 } from "../../src/agents";
 import { GhostLocalVault, createMemoryGhostVaultBackend } from "../../src/ghost";
-import { TEAR_POLICY_CONDITION_SCHEMA_HASH_V1, TEAR_POLICY_CONDITION_WIDTH_V1 } from "../../src/agents/policy-condition-vector";
+import { TEAR_POLICY_CONDITION_SCHEMA_HASH_V2, TEAR_POLICY_CONDITION_WIDTH_V2 } from "../../src/agents/policy-condition-vector";
 import {
   ProductionHeadlessAcademyIntake,
   createProductionHeadlessEnvironment,
@@ -295,7 +295,7 @@ describe("C31 held Academy candidate curation", () => {
         .toMatchObject({ source: "artifact", artifactId: artifact.id });
     } finally { environment.dispose(); }
     const temporalConfig = Object.freeze({ ...config, window: 2,
-      conditionSchemaHash: TEAR_POLICY_CONDITION_SCHEMA_HASH_V1, conditionWidth: TEAR_POLICY_CONDITION_WIDTH_V1 });
+      conditionSchemaHash: TEAR_POLICY_CONDITION_SCHEMA_HASH_V2, conditionWidth: TEAR_POLICY_CONDITION_WIDTH_V2 });
     const temporal = trainTearTemporalWindowPolicy(first, normalization, temporalConfig);
     expect(trainTearTemporalWindowPolicy(second, normalization, temporalConfig)).toEqual(temporal);
     expect(temporal.model).toMatchObject({ format: "tear-temporal-window-linear-policy-model", window: 2 });
@@ -313,7 +313,7 @@ describe("C31 held Academy candidate curation", () => {
     const temporalCorrection = temporalCapture.corrections[0];
     if (temporalCorrection === undefined) throw new Error("expected temporal DAgger correction proposal");
     expect(temporalCorrection.temporal.featureFrames.length).toBeGreaterThan(0);
-    expect(temporalCorrection.temporal.condition.length).toBe(TEAR_POLICY_CONDITION_WIDTH_V1);
+    expect(temporalCorrection.temporal.condition.length).toBe(TEAR_POLICY_CONDITION_WIDTH_V2);
     const temporalReview = await reviews.decide({ capture: temporalCapture, correctionHash: temporalCorrection.correctionHash,
       reviewer: "academy-curator", reviewedAt: "2026-08-03T00:10:45.000Z", disposition: "accepted", rationale: "temporal teacher action verified" });
     const temporalAugmentation = createTearTemporalDaggerRetrainingInput(first, normalization, temporalConfig, temporalCapture, [temporalReview]);
@@ -397,7 +397,7 @@ describe("C31 held Academy candidate curation", () => {
     expect(() => evaluateTearBehaviorCloningPolicy(fit, dataset, normalization, { split: "training", batchSize: 2 } as never)).toThrow(/held-out/u);
 
     const temporalConfig = Object.freeze({ ...config, window: 4,
-      conditionSchemaHash: TEAR_POLICY_CONDITION_SCHEMA_HASH_V1, conditionWidth: TEAR_POLICY_CONDITION_WIDTH_V1 });
+      conditionSchemaHash: TEAR_POLICY_CONDITION_SCHEMA_HASH_V2, conditionWidth: TEAR_POLICY_CONDITION_WIDTH_V2 });
     const temporalParent = trainTearTemporalWindowPolicy(dataset, normalization, temporalConfig);
     const temporalParentArtifact = createTearTemporalWindowPolicyArtifact(temporalParent, {
       id: "c33-heldout-temporal-parent", createdAt: "2026-08-03T00:09:00.000Z",

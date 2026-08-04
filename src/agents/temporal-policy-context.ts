@@ -1,6 +1,7 @@
 import { stableVerificationHash } from "../replay/hash";
 import type { GameAction } from "../input/game-action";
-import { projectScenarioPolicyCondition } from "./policy-condition-vector";
+import { projectScenarioPolicyConditionV2, type TearPolicyConditioningV2 } from "./policy-condition-vector";
+import type { TearAgentProfileId } from "./contracts";
 import type { TearAcademyTrainingDatasetV1 } from "./academy-training-dataset";
 import { projectCanonicalPolicyFeatures, TEAR_POLICY_FEATURE_WIDTH_V1 } from "./policy-feature-vector";
 
@@ -11,7 +12,15 @@ export interface TearTemporalPolicyContextV1 {
   /** The next authoritative action batch for the final, causal frame. */
   readonly targetActions: readonly GameAction[];
   readonly condition: readonly number[];
+  readonly conditioning: TearPolicyConditioningV2;
   readonly contextHash: string;
+}
+
+function conditioning(sequence: TearAcademyTrainingDatasetV1["sequences"][number]): TearPolicyConditioningV2 {
+  const persona = sequence.tags.find((tag) => tag.startsWith("persona:"))?.slice("persona:".length);
+  const style = sequence.tags.find((tag) => tag.startsWith("style:"))?.slice("style:".length);
+  return Object.freeze({ lessonId: sequence.lessonId, ...(persona === undefined ? {} : { personaId: persona as TearAgentProfileId }),
+    ...(style === undefined ? {} : { styleId: style }) });
 }
 
 /** Builds causal, fixed-width context windows from immutable governed tracks. */
@@ -27,8 +36,8 @@ export function createTearTemporalPolicyContexts(dataset: TearAcademyTrainingDat
       const targetActions = Object.freeze(sequence.tracks.actions.filter((entry) => entry.tick === tick + 1)
         .map((entry) => Object.freeze(structuredClone(entry.command))));
       if (sequence.sourceScenario === undefined) throw new RangeError("temporal policy context requires source scenario identity");
-      const condition = projectScenarioPolicyCondition(sequence.sourceScenario);
-      const draft = { candidateHash: sequence.candidateHash, tick, featureFrames, targetActions, condition };
+      const sourceConditioning = conditioning(sequence), condition = projectScenarioPolicyConditionV2(sequence.sourceScenario, sourceConditioning);
+      const draft = { candidateHash: sequence.candidateHash, tick, featureFrames, targetActions, condition, conditioning: sourceConditioning };
       contexts.push(Object.freeze({ ...draft, contextHash: stableVerificationHash(draft) }));
     }
   }

@@ -4,7 +4,8 @@ import {
   TearActivePolicyRuntime, TearPolicyArtifactRegistry, createTearPolicyArtifact,
   encodeTearPolicyObservation, TEAR_POLICY_FEATURE_SCHEMA_HASH_V1, TEAR_POLICY_FEATURE_WIDTH_V1,
   TEAR_POLICY_CONDITION_IDS_V1, TEAR_POLICY_CONDITION_SCHEMA_HASH_V1, TEAR_POLICY_CONDITION_WIDTH_V1,
-  projectStructuredPolicyCondition,
+  TEAR_POLICY_CONDITION_IDS_V2, TEAR_POLICY_CONDITION_SCHEMA_HASH_V2, TEAR_POLICY_CONDITION_WIDTH_V2,
+  projectStructuredPolicyCondition, projectStructuredPolicyConditionV2,
 } from "../../src/agents";
 import type { TearAgentObservation } from "../../src/agents";
 
@@ -116,5 +117,27 @@ describe("C32 active policy runtime", () => {
     await runtime.reset();
     const hard: TearAgentObservation = Object.freeze({ ...first, state: Object.freeze({ ...first.state, run: Object.freeze({ ...first.state.run, difficulty: "hard" }) }) });
     expect(runtime.decide(hard).actions).toEqual([{ type: "move", x: 1_000, y: 0 }]);
+  });
+
+  it("uses explicit V2 lesson/persona/style context while preserving V1 artifact compatibility", async () => {
+    const input = observation(), registry = new TearPolicyArtifactRegistry(createMemoryGhostVaultBackend(), temporalCompatibility);
+    const template = artifact("*", []), width = TEAR_POLICY_FEATURE_WIDTH_V1;
+    const weights = Array<number>(width + TEAR_POLICY_CONDITION_WIDTH_V2).fill(0);
+    const personaIndex = TEAR_POLICY_CONDITION_IDS_V2.indexOf("persona:style"), styleIndex = TEAR_POLICY_CONDITION_IDS_V2.indexOf("style:expressive");
+    if (personaIndex < 0 || styleIndex < 0) throw new Error("V2 policy context is unavailable");
+    weights[width + personaIndex] = 10; weights[width + styleIndex] = 10;
+    const stored = createTearPolicyArtifact({ ...template, id: "temporal-v2", compatibility: temporalCompatibility,
+      model: { format: "temporal-window-linear-policy-v1", payload: JSON.stringify({ format: "tear-temporal-window-linear-policy-model", schemaVersion: 1,
+        featureSchemaHash: TEAR_POLICY_FEATURE_SCHEMA_HASH_V1, window: 1, conditionSchemaHash: TEAR_POLICY_CONDITION_SCHEMA_HASH_V2, conditionWidth: TEAR_POLICY_CONDITION_WIDTH_V2,
+        mean: Array(width).fill(0), scale: Array(width).fill(1), classes: [{ actions: [{ type: "move", x: 1_000, y: 0 }] }, { actions: [{ type: "jump", phase: "pressed" }] }],
+        weights: [Array<number>(width + TEAR_POLICY_CONDITION_WIDTH_V2).fill(0), weights], biases: [0, 0] }) },
+    });
+    await registry.register(stored); await registry.activate(stored.id, "2026-08-03T15:02:00.000Z");
+    const styled = new TearActivePolicyRuntime(registry, "competent", { conditioning: { lessonId: "movement-foundations", personaId: "style", styleId: "expressive" } });
+    await styled.reset();
+    expect(projectStructuredPolicyConditionV2(input, { lessonId: "movement-foundations", personaId: "style", styleId: "expressive" })[personaIndex]).toBe(1);
+    expect(styled.decide(input).actions).toEqual([{ type: "jump", phase: "pressed" }]);
+    const defaulted = new TearActivePolicyRuntime(registry, "competent"); await defaulted.reset();
+    expect(defaulted.decide(input).actions).toEqual([{ type: "move", x: 1_000, y: 0 }]);
   });
 });

@@ -140,12 +140,16 @@ is a temporal-window perceptron—not a recurrent/GRU/LSTM architecture—and it
 does not establish unseen-seed quality, a baseline comparison, promotion, or
 player-facing training.
 
-The temporal artifact now conditions each causal window on the source-owned
-mode, difficulty, and weapon one-hot contract. The same bounded condition is
-projected from C32's live structured observation, so training and inference use
-one feature layout; temporal frames are normalized exactly once. Lesson,
-persona, and style conditioning remain absent because those values are not yet
-owned by the live policy observation contract.
+The temporal artifact retains V1 mode/difficulty/weapon artifacts unchanged and
+now emits V2 causal conditions for new fits. V2 adds a bounded lesson identity
+fingerprint plus explicit persona and style categories. Academy contexts derive
+lesson and declared `persona:`/`style:` tags only from immutable governed
+sequences; invalid values fail closed. Live and DAgger execution receive a
+separate caller-owned context rather than inheriting Academy metadata. The V2
+runtime validates that context and uses it only for V2 artifacts, while V1
+artifacts continue to use their original feature layout. This is a source and
+compatibility contract, not evidence that any player UI selects a lesson,
+persona, or style.
 
 New C31 captures also bind the exact source scenario identity into the governed
 training sequence. A temporal fit retains the hashes of its training scenarios,
@@ -192,16 +196,16 @@ measured artifact win over the scripted baseline, promotion, automated repeated
 DAgger, or automatic player-facing training.
 Those remain C33 work.
 
-DONE THIS STEP:      C33 now retains governed temporal parent/corrected DAgger observations over a predeclared three-scenario, 60-tick-each source-world suite. Correction-source identity joins retraining lineage and is rejected from the corrected artifact's held-out suite; native outcome facts, bounded artifact outcome reports, and corruption-safe baseline-comparison custody are retained. No observed delta is interpreted as quality, activation, or promotion.
+DONE THIS STEP:      C33 now retains governed temporal parent/corrected DAgger observations over a predeclared three-scenario, 60-tick-each source-world suite and supports versioned V2 lesson/persona/style conditioning. Governed sequence metadata and caller-owned runtime context remain separate; V1 artifacts stay compatible. No observed delta is interpreted as quality, activation, or promotion.
 PROVEN BY:           Focused C31/C32/C33 track, admission, curation, and production-evaluator tests: 2 files / 10 tests, plus targeted ESLint, TypeScript, requirements, and architecture gates.
-REMAINING HERE:      Meaningful unseen-seed baseline-win evidence, lesson/persona/style conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence.
+REMAINING HERE:      An authorized live-context selection path, meaningful unseen-seed baseline-win evidence, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Establish the missing lesson/persona/style policy-conditioning ownership contract before any repeated DAgger or quality claim; do not add a fourth unscoped comparison fixture.
+NEXT SLICE:          Add one authorized live-context selection path and visible truth surface before automated repeated DAgger or quality claims; do not derive player context from Academy corpus tags.
 
 ## Slice pacing finding — 2026-08-03
 
 The integrated linear checkpoint/recovery and temporal held-out evidence routes
-now exist, but C33 remains open: conditioning, repeat-round automation,
+now exist, but C33 remains open: live context selection, repeat-round automation,
 visible training operations, and meaningful quality are not implemented. Per
 the C40 guide, do not resume field-sized training edits.
 

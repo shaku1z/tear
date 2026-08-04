@@ -5,12 +5,14 @@ import type { TearAgentIntentTrace, TearAgentProfileId } from "./contracts";
 import type { TearPolicyArtifactRegistry } from "./policy-artifact-registry";
 import { TearActivePolicyRuntime, type TearPolicyDecisionReceipt } from "./policy-runtime";
 import { projectStructuredPolicyFeatures } from "./policy-feature-vector";
-import { projectScenarioPolicyCondition } from "./policy-condition-vector";
+import { createTearPolicyConditioningV2, projectScenarioPolicyConditionV2, type TearPolicyConditioningV2 } from "./policy-condition-vector";
 import { TearAgentOrchestrator } from "./scripted-policy";
 
 export interface TearDaggerCorrectionCaptureOptionsV1 {
   readonly maxCorrections?: number;
   readonly teacherProfile?: TearAgentProfileId;
+  /** Explicit execution context, supplied by the caller rather than inferred from corpus tags. */
+  readonly conditioning?: TearPolicyConditioningV2;
 }
 
 export interface TearDaggerCorrectionCandidateV1 {
@@ -57,7 +59,8 @@ export async function captureTearDaggerCorrections(
   if (!validLimit(maxCorrections)) throw new TypeError("DAgger correction capture requires a bounded correction limit");
   const active = await registry.active();
   if (active === undefined) throw new RangeError("DAgger correction capture requires an active verified artifact");
-  const challenger = new TearActivePolicyRuntime(registry, options.teacherProfile ?? "competent");
+  const conditioning = createTearPolicyConditioningV2(options.conditioning ?? { personaId: options.teacherProfile ?? "competent" });
+  const challenger = new TearActivePolicyRuntime(registry, options.teacherProfile ?? "competent", { conditioning });
   const teacher = new TearAgentOrchestrator(options.teacherProfile ?? "competent");
   await challenger.reset();
   const environment = createProductionHeadlessEnvironment();
@@ -65,7 +68,7 @@ export async function captureTearDaggerCorrections(
     let terminal = environment.reset(scenario), terminated = false, truncated = false;
     const corrections: TearDaggerCorrectionCandidateV1[] = [];
     const featureHistory: number[][] = [];
-    const condition = Object.freeze([...projectScenarioPolicyCondition(scenario)]);
+    const condition = Object.freeze([...projectScenarioPolicyConditionV2(scenario, conditioning)]);
     while (!terminated && !truncated && terminal.tick < scenario.maxTicks) {
       const observation = environment.policyObservation();
       const features = Object.freeze([...projectStructuredPolicyFeatures({ state: observation, ui: { screen: "playing" } })]);

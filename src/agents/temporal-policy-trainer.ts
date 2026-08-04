@@ -6,7 +6,7 @@ import type { TearBehaviorCloningTrainingConfigV1 } from "./behavior-cloning-tra
 import { createTearPolicyArtifact, type TearPolicyArtifactDraft, type TearPolicyArtifactV1 } from "./policy-artifact-registry";
 import { TEAR_POLICY_FEATURE_SCHEMA_HASH_V1, TEAR_POLICY_FEATURE_WIDTH_V1 } from "./policy-feature-vector";
 import { createTearTemporalPolicyContexts } from "./temporal-policy-context";
-import { TEAR_POLICY_CONDITION_SCHEMA_HASH_V1, TEAR_POLICY_CONDITION_WIDTH_V1 } from "./policy-condition-vector";
+import { TEAR_POLICY_CONDITION_SCHEMA_HASH_V2, TEAR_POLICY_CONDITION_WIDTH_V2 } from "./policy-condition-vector";
 import type { TearDaggerCorrectionCaptureV1 } from "./dagger-correction-capture";
 import type { TearDaggerCorrectionReviewV1 } from "./dagger-correction-review";
 
@@ -61,8 +61,8 @@ function validConfig(config: TearTemporalPolicyTrainingConfigV1): boolean {
     && Number.isFinite(config.learningRate) && config.learningRate > 0 && config.learningRate <= 1
     && Number.isSafeInteger(config.batchSize) && config.batchSize >= 1 && config.batchSize <= 256
     && Number.isSafeInteger(config.window) && config.window >= 1 && config.window <= 64
-    && config.conditionSchemaHash === TEAR_POLICY_CONDITION_SCHEMA_HASH_V1
-    && config.conditionWidth === TEAR_POLICY_CONDITION_WIDTH_V1;
+    && config.conditionSchemaHash === TEAR_POLICY_CONDITION_SCHEMA_HASH_V2
+    && config.conditionWidth === TEAR_POLICY_CONDITION_WIDTH_V2;
 }
 function actionKey(actions: readonly GameAction[]): string { return stableVerificationHash(actions); }
 function trainingScenarioHashes(dataset: TearAcademyTrainingDatasetV1, augmentation?: TearTemporalDaggerRetrainingInputV1): readonly string[] {
@@ -100,7 +100,7 @@ export function createTearTemporalDaggerRetrainingInput(dataset: TearAcademyTrai
   const examples = capture.corrections.filter((correction) => approved.has(correction.correctionHash)).map((correction) => {
     if (correction.temporal.featureFrames.length < 1 || correction.temporal.featureFrames.length > 64
       || correction.temporal.featureFrames.some((frame) => frame.length !== TEAR_POLICY_FEATURE_WIDTH_V1 || frame.some((value) => !Number.isFinite(value)))
-      || correction.temporal.condition.length !== TEAR_POLICY_CONDITION_WIDTH_V1 || correction.temporal.condition.some((value) => !Number.isFinite(value))) {
+      || correction.temporal.condition.length !== TEAR_POLICY_CONDITION_WIDTH_V2 || correction.temporal.condition.some((value) => !Number.isFinite(value))) {
       throw new TypeError("temporal DAgger correction has invalid causal context");
     }
     return Object.freeze({ correctionHash: correction.correctionHash,
@@ -127,7 +127,7 @@ function examples(dataset: TearAcademyTrainingDatasetV1, normalization: TearBeha
       datasetHash: augmentation.datasetHash, normalizationHash: augmentation.normalizationHash, captureHash: augmentation.captureHash,
       sourceScenarioHashes: augmentation.sourceScenarioHashes, window: augmentation.window,
       acceptedReviewHashes: augmentation.acceptedReviewHashes, examples: augmentation.examples })
-    || augmentation.examples.some((entry) => entry.features.length !== config.window * TEAR_POLICY_FEATURE_WIDTH_V1 + TEAR_POLICY_CONDITION_WIDTH_V1
+    || augmentation.examples.some((entry) => entry.features.length !== config.window * TEAR_POLICY_FEATURE_WIDTH_V1 + TEAR_POLICY_CONDITION_WIDTH_V2
       || entry.features.some((value) => !Number.isFinite(value))))) {
     throw new TypeError("invalid temporal DAgger retraining augmentation");
   }
@@ -136,7 +136,7 @@ function examples(dataset: TearAcademyTrainingDatasetV1, normalization: TearBeha
     const features: number[] = [];
     for (let index = 0; index < config.window - frames.length; index += 1) features.push(...Array<number>(TEAR_POLICY_FEATURE_WIDTH_V1).fill(0));
     for (const frame of frames) features.push(...frame);
-    if (context.condition.length !== TEAR_POLICY_CONDITION_WIDTH_V1) throw new Error("temporal policy condition width changed");
+    if (context.condition.length !== TEAR_POLICY_CONDITION_WIDTH_V2) throw new Error("temporal policy condition width changed");
     return Object.freeze({ features: Object.freeze([...features, ...context.condition]), targetActions: context.targetActions });
   }), ...(augmentation?.examples ?? [])]);
 }
@@ -149,7 +149,7 @@ export function trainTearTemporalWindowPolicy(dataset: TearAcademyTrainingDatase
   const byAction = new Map<string, readonly GameAction[]>(); for (const example of training) byAction.set(actionKey(example.targetActions), example.targetActions);
   const classes = Object.freeze([...byAction.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, actions]) => Object.freeze({ actions: Object.freeze(structuredClone(actions)) })));
   const classByAction = new Map(classes.map((entry, index) => [actionKey(entry.actions), index]));
-  const width = config.window * TEAR_POLICY_FEATURE_WIDTH_V1 + TEAR_POLICY_CONDITION_WIDTH_V1, weights = classes.map(() => Array<number>(width).fill(0)), biases = classes.map(() => 0); let updates = 0;
+  const width = config.window * TEAR_POLICY_FEATURE_WIDTH_V1 + TEAR_POLICY_CONDITION_WIDTH_V2, weights = classes.map(() => Array<number>(width).fill(0)), biases = classes.map(() => 0); let updates = 0;
   for (let epoch = 0; epoch < config.epochs; epoch += 1) for (const example of training) {
     const expected = classByAction.get(actionKey(example.targetActions)), actual = predict(weights, biases, example.features);
     if (expected === undefined) throw new Error("temporal policy action class is unavailable");
@@ -160,7 +160,7 @@ export function trainTearTemporalWindowPolicy(dataset: TearAcademyTrainingDatase
   }
   const correct = training.filter((example) => classByAction.get(actionKey(example.targetActions)) === predict(weights, biases, example.features)).length;
   const model = Object.freeze({ format: "tear-temporal-window-linear-policy-model" as const, schemaVersion: 1 as const, featureSchemaHash: TEAR_POLICY_FEATURE_SCHEMA_HASH_V1,
-    window: config.window, conditionSchemaHash: TEAR_POLICY_CONDITION_SCHEMA_HASH_V1, conditionWidth: TEAR_POLICY_CONDITION_WIDTH_V1,
+    window: config.window, conditionSchemaHash: TEAR_POLICY_CONDITION_SCHEMA_HASH_V2, conditionWidth: TEAR_POLICY_CONDITION_WIDTH_V2,
     mean: Object.freeze([...normalization.mean]), scale: Object.freeze([...normalization.scale]), classes,
     weights: Object.freeze(weights.map((row) => Object.freeze([...row]))), biases: Object.freeze([...biases]) });
   const metrics = Object.freeze({ examples: training.length, classes: classes.length, updates, trainingAccuracy: correct / training.length });
