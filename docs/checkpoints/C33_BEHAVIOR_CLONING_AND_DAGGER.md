@@ -194,6 +194,16 @@ The next C33 implementation must be one bounded round-program slice:
    permanent test. Candidate registration, promotion, quality thresholds, and
    normal-build Foundry UI remain their respective later boundaries.
 
+`TearTemporalDaggerProgramController` now implements that bounded program
+state. A named round persists capture, authorized accepted reviews, augmentation,
+checkpoint, cancellation, and completed-fit status in local Vault analysis
+storage. A fresh controller resumes a cancelled checkpoint; the permanent test
+completes one recovered round then a second round on a distinct source scenario,
+and rejects reuse of that scenario. The controller can neither accept a review
+it did not read from the authorized ledger nor register, activate, overwrite,
+or promote an artifact. It is local operational evidence only: no scheduler,
+player Foundry view, quality threshold, or learned-policy publication exists.
+
 New C31 captures also bind the exact source scenario identity into the governed
 training sequence. A temporal fit retains the hashes of its training scenarios,
 and `compareTemporalPolicyAgainstScriptedBaselineInProduction` refuses any

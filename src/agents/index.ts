@@ -29,6 +29,7 @@ export * from "./dagger-retraining-input";
 export * from "./temporal-policy-context";
 export * from "./temporal-policy-trainer";
 export * from "./temporal-policy-comparison";
+export * from "./temporal-dagger-program";
 export * from "./policy-artifact-registry";
 export * from "./policy-runtime";
 export * from "./policy-decision-journal";

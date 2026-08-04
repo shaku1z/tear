@@ -25,6 +25,7 @@ import {
   advanceTearTemporalPolicyCheckpoint,
   completeTearTemporalPolicyCheckpoint,
   TearTemporalPolicyCheckpointVault,
+  TearTemporalDaggerProgramController,
   createTearTemporalDaggerRetrainingInput,
   createTearTemporalWindowPolicyArtifact,
   compareTemporalPolicyAgainstScriptedBaselineInProduction,
@@ -353,6 +354,22 @@ describe("C31 held Academy candidate curation", () => {
       completedScenarioDelta: 0, defeatedScenarioDelta: 0, revivalEventDelta: 0 });
     await expect(compareTemporalPolicyAgainstScriptedBaselineInProduction(temporalRegistry, Object.freeze({ ...unseenSuite,
       id: "c33-temporal-overlap", scenarios: Object.freeze([input.declaration.candidate.artifact.scenario]) }))).rejects.toThrow(/overlaps/u);
+    const program = new TearTemporalDaggerProgramController(input.backend, first, normalization, temporalConfig, temporalRegistry, reviews);
+    const firstRound = await program.start("c33-repeat-program", scenario("c33-repeat-one", "c33-repeat-one-seed", 8), { maxCorrections: 1 });
+    const firstProposal = firstRound.capture.corrections[0]; if (firstProposal === undefined) throw new Error("expected first repeat-round proposal");
+    const firstReview = await reviews.decide({ capture: firstRound.capture, correctionHash: firstProposal.correctionHash, reviewer: "academy-curator", reviewedAt: "2026-08-03T00:11:00.000Z", disposition: "accepted", rationale: "first bounded program review" });
+    const firstCheckpointed = await program.acceptReviews(firstRound.id, [firstReview]);
+    expect(firstCheckpointed.status).toBe("checkpointed");
+    expect((await program.cancel(firstRound.id)).status).toBe("cancelled");
+    const resumedProgram = new TearTemporalDaggerProgramController(input.backend, first, normalization, temporalConfig, temporalRegistry, reviews);
+    const resumedRound = await resumedProgram.advance(firstRound.id, temporalConfig.epochs);
+    expect(resumedRound.status).toBe("completed");
+    const secondRound = await resumedProgram.start(firstRound.id, scenario("c33-repeat-two", "c33-repeat-two-seed", 8), { maxCorrections: 1 });
+    const secondProposal = secondRound.capture.corrections[0]; if (secondProposal === undefined) throw new Error("expected second repeat-round proposal");
+    const secondReview = await reviews.decide({ capture: secondRound.capture, correctionHash: secondProposal.correctionHash, reviewer: "academy-curator", reviewedAt: "2026-08-03T00:11:01.000Z", disposition: "accepted", rationale: "second bounded program review" });
+    await resumedProgram.acceptReviews(secondRound.id, [secondReview]);
+    expect((await resumedProgram.advance(secondRound.id, temporalConfig.epochs)).rounds).toHaveLength(2);
+    await expect(resumedProgram.start(secondRound.id, scenario("c33-repeat-two", "c33-repeat-two-seed", 8))).rejects.toThrow(/repeats/u);
     await input.backend.put("analysis", `behavior-cloning-training:v1:${training.trainingHash}`, "not-json");
     expect(await trainingVault.get(training.trainingHash)).toBeUndefined();
     expect((await input.backend.keys("quarantine")).some((key) => key.endsWith(training.trainingHash))).toBe(true);
