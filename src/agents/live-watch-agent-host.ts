@@ -286,6 +286,7 @@ export function createLiveWatchAgentHost(
       ...(decisionJournal === undefined ? {} : { decisionJournal }),
       ...(director === undefined ? {} : { director }),
     };
+    state.artifactRuntime?.setConditioning({ personaId: resolved.profile });
     if (state.decisionJournal !== undefined) {
       const run = decisionJournalRuns;
       decisionJournalRuns += 1;

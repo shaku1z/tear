@@ -193,7 +193,7 @@ export class TearActivePolicyRuntime {
   readonly #fallback: TearAgentOrchestrator;
   readonly #limits: TearPolicyRuntimeLimits;
   readonly #now: () => number;
-  readonly #conditioning: TearPolicyConditioningV2;
+  #conditioning: TearPolicyConditioningV2;
   #artifact: TearPolicyArtifactV1 | undefined;
   #model: RuntimePolicyModel | undefined;
   #temporalHistory: readonly (readonly number[])[] = Object.freeze([]);
@@ -210,6 +210,12 @@ export class TearActivePolicyRuntime {
     const artifact = await this.#registry.get(active.artifactId);
     if (artifact?.artifactHash !== active.artifactHash) return;
     this.#artifact = artifact; this.#model = parseModel(artifact, this.#limits);
+  }
+
+  /** Changes only caller-owned V2 execution context and clears temporal history. */
+  setConditioning(conditioning: TearPolicyConditioningV2): void {
+    this.#conditioning = createTearPolicyConditioningV2(conditioning);
+    this.#temporalHistory = Object.freeze([]);
   }
 
   decide(observation: TearAgentObservation): TearActivePolicyDecision {

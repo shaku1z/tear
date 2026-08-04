@@ -142,6 +142,8 @@ describe("C32 active policy runtime", () => {
     await styled.reset();
     expect(projectStructuredPolicyConditionV2(input, { lessonId: "movement-foundations", personaId: "style", styleId: "expressive" })[personaIndex]).toBe(1);
     expect(styled.decide(input).actions).toEqual([{ type: "jump", phase: "pressed" }]);
+    styled.setConditioning({ personaId: "competent" });
+    expect(styled.decide(input).actions).toEqual([{ type: "move", x: 1_000, y: 0 }]);
     const defaulted = new TearActivePolicyRuntime(registry, "competent"); await defaulted.reset();
     expect(defaulted.decide(input).actions).toEqual([{ type: "move", x: 1_000, y: 0 }]);
   });

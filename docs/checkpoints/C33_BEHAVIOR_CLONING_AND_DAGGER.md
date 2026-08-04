@@ -156,6 +156,13 @@ local artifact registry, matching the C32 runtime parser. This makes a valid
 stored temporal artifact eligible for the existing browser composition; it does
 not add a player-facing context selector or establish visible policy quality.
 
+The existing diagnostic Watch Agent profile selector now explicitly resets the
+active temporal runtime to that selected persona at run start and clears any
+prior temporal history. It does not choose lesson or style, and it never reads
+Academy tags; those remain governed-training provenance rather than player
+settings. This is visible engineering context truth, not C37's normal-build
+Watch Agent navigation or C33 quality evidence.
+
 New C31 captures also bind the exact source scenario identity into the governed
 training sequence. A temporal fit retains the hashes of its training scenarios,
 and `compareTemporalPolicyAgainstScriptedBaselineInProduction` refuses any
