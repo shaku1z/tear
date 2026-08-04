@@ -21,6 +21,10 @@ import {
   TearBehaviorCloningCheckpointVault,
   createTearTemporalPolicyContexts,
   trainTearTemporalWindowPolicy,
+  createTearTemporalPolicyCheckpoint,
+  advanceTearTemporalPolicyCheckpoint,
+  completeTearTemporalPolicyCheckpoint,
+  TearTemporalPolicyCheckpointVault,
   createTearTemporalDaggerRetrainingInput,
   createTearTemporalWindowPolicyArtifact,
   compareTemporalPolicyAgainstScriptedBaselineInProduction,
@@ -298,6 +302,15 @@ describe("C31 held Academy candidate curation", () => {
       conditionSchemaHash: TEAR_POLICY_CONDITION_SCHEMA_HASH_V2, conditionWidth: TEAR_POLICY_CONDITION_WIDTH_V2 });
     const temporal = trainTearTemporalWindowPolicy(first, normalization, temporalConfig);
     expect(trainTearTemporalWindowPolicy(second, normalization, temporalConfig)).toEqual(temporal);
+    const temporalPartial = advanceTearTemporalPolicyCheckpoint(createTearTemporalPolicyCheckpoint(first, normalization, temporalConfig), first, normalization, temporalConfig, 1);
+    const temporalCheckpointVault = new TearTemporalPolicyCheckpointVault(input.backend);
+    expect(await temporalCheckpointVault.persist(temporalPartial)).toEqual(temporalPartial);
+    expect(await temporalCheckpointVault.get(temporalPartial.checkpointHash)).toEqual(temporalPartial);
+    const temporalResumed = advanceTearTemporalPolicyCheckpoint(temporalPartial, first, normalization, temporalConfig, temporalConfig.epochs);
+    expect(completeTearTemporalPolicyCheckpoint(temporalResumed, first, normalization, temporalConfig)).toEqual(temporal);
+    await input.backend.put("analysis", `temporal-policy-checkpoint:v1:${temporalPartial.checkpointHash}`, "not-json");
+    expect(await temporalCheckpointVault.get(temporalPartial.checkpointHash)).toBeUndefined();
+    expect((await input.backend.keys("quarantine")).some((key) => key.endsWith(temporalPartial.checkpointHash))).toBe(true);
     expect(temporal.model).toMatchObject({ format: "tear-temporal-window-linear-policy-model", window: 2 });
     const temporalArtifact = createTearTemporalWindowPolicyArtifact(temporal, {
       id: "c33-temporal-policy", createdAt: "2026-08-03T00:10:00.000Z", encoder: { id: "tear-policy-features.v1", schemaVersion: 1,

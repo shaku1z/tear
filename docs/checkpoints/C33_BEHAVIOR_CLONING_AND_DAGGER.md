@@ -156,6 +156,14 @@ local artifact registry, matching the C32 runtime parser. This makes a valid
 stored temporal artifact eligible for the existing browser composition; it does
 not add a player-facing context selector or establish visible policy quality.
 
+Temporal fitting now has its own content-addressed epoch checkpoint, carrying
+the exact governed dataset, normalization, V2 condition schema, augmentation,
+class, model-state, epoch, and update lineage through its input hash. A resumed
+fit is exactly equal to the one-shot temporal result; incomplete checkpoints
+cannot emit an artifact. Local checkpoint custody is idempotent and corrupt
+bytes quarantine instead of resuming. This closes the temporal recovery
+mechanism only, not repeated DAgger scheduling, promotion, or quality.
+
 The existing diagnostic Watch Agent profile selector now explicitly resets the
 active temporal runtime to that selected persona at run start and clears any
 prior temporal history. It does not choose lesson or style, and it never reads

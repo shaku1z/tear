@@ -1,4 +1,5 @@
 import type { GameAction } from "../input/game-action";
+import type { GhostVaultBackend } from "../ghost";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearBehaviorCloningNormalizationV1 } from "./academy-behavior-cloning-batches";
 import type { TearAcademyTrainingDatasetV1 } from "./academy-training-dataset";
@@ -56,6 +57,21 @@ export interface TearTemporalDaggerRetrainingInputV1 {
   readonly inputHash: string;
 }
 
+export interface TearTemporalPolicyCheckpointV1 {
+  readonly format: "tear-temporal-policy-checkpoint";
+  readonly schemaVersion: 1;
+  readonly inputHash: string;
+  readonly epoch: number;
+  readonly updates: number;
+  readonly classes: readonly Readonly<{ actions: readonly GameAction[] }>[];
+  readonly weights: readonly (readonly number[])[];
+  readonly biases: readonly number[];
+  readonly checkpointHash: string;
+}
+
+const CHECKPOINT_KEY = "temporal-policy-checkpoint:v1:";
+const HASH = /^[a-f0-9]{16}$/u;
+
 function validConfig(config: TearTemporalPolicyTrainingConfigV1): boolean {
   return Number.isSafeInteger(config.seed) && config.seed >= 0 && Number.isSafeInteger(config.epochs) && config.epochs >= 1 && config.epochs <= 128
     && Number.isFinite(config.learningRate) && config.learningRate > 0 && config.learningRate <= 1
@@ -65,6 +81,9 @@ function validConfig(config: TearTemporalPolicyTrainingConfigV1): boolean {
     && config.conditionWidth === TEAR_POLICY_CONDITION_WIDTH_V2;
 }
 function actionKey(actions: readonly GameAction[]): string { return stableVerificationHash(actions); }
+function inputHash(dataset: TearAcademyTrainingDatasetV1, normalization: TearBehaviorCloningNormalizationV1, config: TearTemporalPolicyTrainingConfigV1, augmentation?: TearTemporalDaggerRetrainingInputV1): string {
+  return stableVerificationHash({ datasetHash: dataset.datasetHash, normalizationHash: normalization.normalizationHash, config, augmentationHash: augmentation?.inputHash ?? null });
+}
 function trainingScenarioHashes(dataset: TearAcademyTrainingDatasetV1, augmentation?: TearTemporalDaggerRetrainingInputV1): readonly string[] {
   const hashes = dataset.sequences.filter((entry) => entry.split === "training").map((entry) => {
     if (entry.sourceScenario === undefined) throw new RangeError("temporal policy training requires source scenario identity");
@@ -139,6 +158,83 @@ function examples(dataset: TearAcademyTrainingDatasetV1, normalization: TearBeha
     if (context.condition.length !== TEAR_POLICY_CONDITION_WIDTH_V2) throw new Error("temporal policy condition width changed");
     return Object.freeze({ features: Object.freeze([...features, ...context.condition]), targetActions: context.targetActions });
   }), ...(augmentation?.examples ?? [])]);
+}
+
+export function createTearTemporalPolicyCheckpoint(dataset: TearAcademyTrainingDatasetV1, normalization: TearBehaviorCloningNormalizationV1,
+  config: TearTemporalPolicyTrainingConfigV1, augmentation?: TearTemporalDaggerRetrainingInputV1): TearTemporalPolicyCheckpointV1 {
+  const training = examples(dataset, normalization, config, augmentation), actions = new Map<string, readonly GameAction[]>();
+  for (const entry of training) actions.set(actionKey(entry.targetActions), Object.freeze(structuredClone(entry.targetActions)));
+  const classes = Object.freeze([...actions.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, value]) => Object.freeze({ actions: value })));
+  const width = config.window * TEAR_POLICY_FEATURE_WIDTH_V1 + TEAR_POLICY_CONDITION_WIDTH_V2;
+  const draft = { format: "tear-temporal-policy-checkpoint" as const, schemaVersion: 1 as const, inputHash: inputHash(dataset, normalization, config, augmentation), epoch: 0, updates: 0,
+    classes, weights: Object.freeze(classes.map(() => Object.freeze(Array<number>(width).fill(0)))), biases: Object.freeze(classes.map(() => 0)) };
+  return Object.freeze({ ...draft, checkpointHash: stableVerificationHash(draft) });
+}
+
+export function advanceTearTemporalPolicyCheckpoint(checkpoint: TearTemporalPolicyCheckpointV1, dataset: TearAcademyTrainingDatasetV1,
+  normalization: TearBehaviorCloningNormalizationV1, config: TearTemporalPolicyTrainingConfigV1, epochs: number, augmentation?: TearTemporalDaggerRetrainingInputV1): TearTemporalPolicyCheckpointV1 {
+  if (!Number.isSafeInteger(epochs) || epochs < 0 || !validConfig(config)) throw new TypeError("invalid temporal policy checkpoint advance");
+  const initial = createTearTemporalPolicyCheckpoint(dataset, normalization, config, augmentation), { checkpointHash, ...current } = checkpoint;
+  const width = config.window * TEAR_POLICY_FEATURE_WIDTH_V1 + TEAR_POLICY_CONDITION_WIDTH_V2;
+  if (checkpointHash !== stableVerificationHash(current) || checkpoint.inputHash !== initial.inputHash || checkpoint.epoch < 0 || checkpoint.epoch > config.epochs
+    || stableVerificationHash(checkpoint.classes) !== stableVerificationHash(initial.classes) || checkpoint.weights.length !== checkpoint.classes.length
+    || checkpoint.biases.length !== checkpoint.classes.length || checkpoint.weights.some((row) => row.length !== width)) throw new RangeError("temporal policy checkpoint lineage is invalid");
+  const training = examples(dataset, normalization, config, augmentation), classes = checkpoint.classes, classByAction = new Map(classes.map((entry, index) => [actionKey(entry.actions), index]));
+  const weights = checkpoint.weights.map((row) => [...row]), biases = [...checkpoint.biases]; let updates = checkpoint.updates;
+  const targetEpoch = Math.min(config.epochs, checkpoint.epoch + epochs);
+  for (let epoch = checkpoint.epoch; epoch < targetEpoch; epoch += 1) for (const entry of training) {
+    const expected = classByAction.get(actionKey(entry.targetActions)), actual = predict(weights, biases, entry.features);
+    if (expected === undefined || actual === expected) continue;
+    const target = weights[expected], predicted = weights[actual]; if (target === undefined || predicted === undefined) throw new Error("temporal policy checkpoint class is unavailable");
+    for (let index = 0; index < width; index += 1) { const value = entry.features[index] ?? 0; target[index] = (target[index] ?? 0) + config.learningRate * value; predicted[index] = (predicted[index] ?? 0) - config.learningRate * value; }
+    biases[expected] = (biases[expected] ?? 0) + config.learningRate; biases[actual] = (biases[actual] ?? 0) - config.learningRate; updates += 1;
+  }
+  const draft = { format: "tear-temporal-policy-checkpoint" as const, schemaVersion: 1 as const, inputHash: checkpoint.inputHash, epoch: targetEpoch, updates,
+    classes: Object.freeze(classes.map((entry) => Object.freeze({ actions: Object.freeze(structuredClone(entry.actions)) }))), weights: Object.freeze(weights.map((row) => Object.freeze([...row]))), biases: Object.freeze([...biases]) };
+  return Object.freeze({ ...draft, checkpointHash: stableVerificationHash(draft) });
+}
+
+export function completeTearTemporalPolicyCheckpoint(checkpoint: TearTemporalPolicyCheckpointV1, dataset: TearAcademyTrainingDatasetV1,
+  normalization: TearBehaviorCloningNormalizationV1, config: TearTemporalPolicyTrainingConfigV1, augmentation?: TearTemporalDaggerRetrainingInputV1): TearTemporalPolicyTrainingResultV1 {
+  const completed = advanceTearTemporalPolicyCheckpoint(checkpoint, dataset, normalization, config, 0, augmentation);
+  if (completed.epoch !== config.epochs) throw new RangeError("temporal policy checkpoint is not complete");
+  const training = examples(dataset, normalization, config, augmentation), classes = completed.classes, classByAction = new Map(classes.map((entry, index) => [actionKey(entry.actions), index]));
+  const model = Object.freeze({ format: "tear-temporal-window-linear-policy-model" as const, schemaVersion: 1 as const, featureSchemaHash: TEAR_POLICY_FEATURE_SCHEMA_HASH_V1,
+    window: config.window, conditionSchemaHash: TEAR_POLICY_CONDITION_SCHEMA_HASH_V2, conditionWidth: TEAR_POLICY_CONDITION_WIDTH_V2, mean: Object.freeze([...normalization.mean]), scale: Object.freeze([...normalization.scale]), classes, weights: completed.weights, biases: completed.biases });
+  const metrics = Object.freeze({ examples: training.length, classes: classes.length, updates: completed.updates, trainingAccuracy: training.filter((entry) => classByAction.get(actionKey(entry.targetActions)) === predict(completed.weights, completed.biases, entry.features)).length / training.length });
+  const draft = { format: "tear-temporal-policy-training" as const, schemaVersion: 1 as const, datasetHash: dataset.datasetHash, normalizationHash: normalization.normalizationHash,
+    ...(augmentation === undefined ? {} : { augmentationHash: augmentation.inputHash }), trainingScenarioHashes: trainingScenarioHashes(dataset, augmentation), config: Object.freeze({ ...config }), model, metrics };
+  return Object.freeze({ ...draft, trainingHash: stableVerificationHash(draft) });
+}
+
+function parseCheckpoint(value: unknown): TearTemporalPolicyCheckpointV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("invalid temporal policy checkpoint");
+  const raw = value as Record<string, unknown>;
+  if (raw.format !== "tear-temporal-policy-checkpoint" || raw.schemaVersion !== 1) throw new TypeError("invalid temporal policy checkpoint");
+  const typed = value as TearTemporalPolicyCheckpointV1, { checkpointHash, ...draft } = typed;
+  if (!HASH.test(typed.inputHash) || !Number.isSafeInteger(typed.epoch) || typed.epoch < 0
+    || !Number.isSafeInteger(typed.updates) || typed.updates < 0 || !Array.isArray(typed.classes) || !Array.isArray(typed.weights) || !Array.isArray(typed.biases) || !HASH.test(checkpointHash)
+    || checkpointHash !== stableVerificationHash(draft)) throw new TypeError("invalid temporal policy checkpoint");
+  return Object.freeze(structuredClone(typed));
+}
+
+/** Local custody for cancelled/resumable temporal fitting; checkpoints never activate an artifact. */
+export class TearTemporalPolicyCheckpointVault {
+  readonly #backend: GhostVaultBackend;
+  constructor(backend: GhostVaultBackend) { this.#backend = backend; }
+  async persist(input: TearTemporalPolicyCheckpointV1): Promise<TearTemporalPolicyCheckpointV1> {
+    const checkpoint = parseCheckpoint(input), key = `${CHECKPOINT_KEY}${checkpoint.checkpointHash}`, existing = await this.#backend.get("analysis", key);
+    if (existing !== undefined) return parseCheckpoint(JSON.parse(existing));
+    await this.#backend.commit(Object.freeze([{ store: "analysis", key, value: JSON.stringify(checkpoint) },
+      { store: "indexes", key: `temporal-policy-checkpoint:${checkpoint.inputHash}:${checkpoint.checkpointHash}`, value: JSON.stringify({ epoch: checkpoint.epoch }) }]));
+    return checkpoint;
+  }
+  async get(checkpointHash: string): Promise<TearTemporalPolicyCheckpointV1 | undefined> {
+    if (!HASH.test(checkpointHash)) throw new TypeError("temporal policy checkpoint hash is invalid");
+    const key = `${CHECKPOINT_KEY}${checkpointHash}`, raw = await this.#backend.get("analysis", key); if (raw === undefined) return undefined;
+    try { return parseCheckpoint(JSON.parse(raw)); }
+    catch (error) { await this.#backend.put("quarantine", key, JSON.stringify(Object.freeze({ format: "temporal-policy-checkpoint-quarantine", schemaVersion: 1, key, raw, reason: error instanceof Error ? error.message : String(error) }))); return undefined; }
+  }
 }
 
 /** Fits a bounded causal-window perceptron. It is temporal, but deliberately not a GRU/LSTM claim. */
