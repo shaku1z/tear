@@ -1,4 +1,4 @@
-import type { GameAction } from "../input/game-action";
+import { normalizeGameAction, type GameAction } from "../input/game-action";
 import type { GhostVaultBackend } from "../ghost";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearBehaviorCloningNormalizationV1 } from "./academy-behavior-cloning-batches";
@@ -81,6 +81,10 @@ function validConfig(config: TearTemporalPolicyTrainingConfigV1): boolean {
     && config.conditionWidth === TEAR_POLICY_CONDITION_WIDTH_V2;
 }
 function actionKey(actions: readonly GameAction[]): string { return stableVerificationHash(actions); }
+function validActionClass(value: unknown): value is Readonly<{ actions: readonly unknown[] }> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    && "actions" in value && Array.isArray(value.actions) && value.actions.every((action) => normalizeGameAction(action).ok);
+}
 function inputHash(dataset: TearAcademyTrainingDatasetV1, normalization: TearBehaviorCloningNormalizationV1, config: TearTemporalPolicyTrainingConfigV1, augmentation?: TearTemporalDaggerRetrainingInputV1): string {
   return stableVerificationHash({ datasetHash: dataset.datasetHash, normalizationHash: normalization.normalizationHash, config, augmentationHash: augmentation?.inputHash ?? null });
 }
@@ -214,6 +218,10 @@ function parseCheckpoint(value: unknown): TearTemporalPolicyCheckpointV1 {
   const typed = value as TearTemporalPolicyCheckpointV1, { checkpointHash, ...draft } = typed;
   if (!HASH.test(typed.inputHash) || !Number.isSafeInteger(typed.epoch) || typed.epoch < 0
     || !Number.isSafeInteger(typed.updates) || typed.updates < 0 || !Array.isArray(typed.classes) || !Array.isArray(typed.weights) || !Array.isArray(typed.biases) || !HASH.test(checkpointHash)
+    || typed.classes.length < 1 || typed.classes.length !== typed.weights.length || typed.classes.length !== typed.biases.length
+    || !typed.classes.every(validActionClass)
+    || !typed.weights.every((row) => Array.isArray(row) && row.length > 0 && row.every((value) => typeof value === "number" && Number.isFinite(value)))
+    || !typed.biases.every((value) => typeof value === "number" && Number.isFinite(value))
     || checkpointHash !== stableVerificationHash(draft)) throw new TypeError("invalid temporal policy checkpoint");
   return Object.freeze(structuredClone(typed));
 }

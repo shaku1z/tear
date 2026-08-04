@@ -310,6 +310,8 @@ describe("C31 held Academy candidate curation", () => {
     expect(completeTearTemporalPolicyCheckpoint(temporalResumed, first, normalization, temporalConfig)).toEqual(temporal);
     await input.backend.put("analysis", `temporal-policy-checkpoint:v1:${temporalPartial.checkpointHash}`, "not-json");
     expect(await temporalCheckpointVault.get(temporalPartial.checkpointHash)).toBeUndefined();
+    await input.backend.put("analysis", `temporal-policy-checkpoint:v1:${temporalPartial.checkpointHash}`, JSON.stringify({ ...temporalPartial, weights: [] }));
+    expect(await temporalCheckpointVault.get(temporalPartial.checkpointHash)).toBeUndefined();
     expect((await input.backend.keys("quarantine")).some((key) => key.endsWith(temporalPartial.checkpointHash))).toBe(true);
     expect(temporal.model).toMatchObject({ format: "tear-temporal-window-linear-policy-model", window: 2 });
     const temporalArtifact = createTearTemporalWindowPolicyArtifact(temporal, {
