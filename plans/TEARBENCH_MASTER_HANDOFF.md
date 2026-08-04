@@ -544,11 +544,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C33 now has governed temporal fit, run-context conditioning, source-world baseline execution, provenance rejection, native completed/defeated/revival measurements, reviewed causal temporal-DAgger augmentation, and separate 60-tick governed training/validation lesson episodes with a distinct 60-tick correction route. Existing outcome comparison has zero delta, so this is measurement plumbing, not a quality or promotion result.
-PROVEN BY:           Focused C31/C32/C33 track, admission, curation, and production-evaluator tests: 4 files / 13 tests, plus targeted ESLint, TypeScript, requirements, and architecture gates.
-REMAINING HERE:      C33 needs one integrated nontrivial held-out recovery/lesson corpus-and-evaluation slice, meaningful unseen-seed baseline-win evidence, lesson/persona/style conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
+DONE THIS STEP:      C33 now retains governed temporal parent/corrected DAgger observations over a predeclared three-scenario, 60-tick-each source-world suite. Correction-source identity joins the retraining lineage and is rejected from the corrected artifact's held-out suite; native outcome facts, bounded artifact outcome reports, and corruption-safe baseline-comparison custody are retained. No observed delta is interpreted as quality, activation, or promotion.
+PROVEN BY:           Focused C31/C32/C33 track, admission, curation, and production-evaluator tests: 2 files / 10 tests, plus targeted ESLint, TypeScript, requirements, and architecture gates.
+REMAINING HERE:      C33 still needs meaningful unseen-seed baseline-win evidence, lesson/persona/style conditioning, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C33-C40 product evidence remain; C27A, C28, and C32 are closed.
-NEXT SLICE:          C33: build one governed nontrivial held-out recovery/lesson corpus-and-evaluation slice, including source scenario identity, native outcome facts, and retained artifact/baseline reports.
+NEXT SLICE:          C33: establish the missing lesson/persona/style policy-conditioning ownership contract before any repeated DAgger or quality claim; do not add a fourth unscoped comparison fixture.
 
 ### C33 pacing finding
 
@@ -559,12 +559,14 @@ lineage validation, corrupt-checkpoint quarantine, source-world correction
 evidence, and held-out parent/resumed observation. No artifact activation or
 promotion is authorized by that work.
 
-The integrated checkpointed-fit portion now exists: a bounded epoch checkpoint
+The integrated linear checkpointed-fit portion now exists: a bounded epoch checkpoint
 preserves exact lineage/model state, corrupt bytes quarantine, and an
 interrupted epoch plus resume is exactly equivalent to the one-shot fit. It
 does not emit an artifact while incomplete. Remaining C33 work is still
 temporal policy and credible real-game quality evidence; do not turn this
-recovery proof into promotion.
+recovery proof into promotion. The temporal DAgger path now separately proves
+correction-source exclusion and paired parent/corrected source-world report
+custody, but it does not yet make temporal fitting resumable.
 
 All of the following were run from this worktree through C27A slice 36:
 

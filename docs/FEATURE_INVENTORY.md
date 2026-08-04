@@ -317,9 +317,13 @@ This is the migration checklist for the architectural redesign. A checked featur
    and records observed deltas only. Approved temporal DAgger corrections now
    retain causal frames and run condition before they can become normalized,
    hash-bound temporal augmentation. The governed lesson fixture now has
-   separate 60-tick production-world training and validation episodes, a
-   61-example held-out split, and a distinct 60-tick eight-proposal correction
-   capture; meaningful held-out quality and an
+    separate 60-tick production-world training and validation episodes, a
+    61-example held-out split, and a distinct 60-tick eight-proposal correction
+    capture. Temporal correction-source identity now joins the retraining
+    lineage and is refused from held-out evaluation; paired parent/corrected
+    three-scenario source-world reports and baseline comparisons have bounded,
+    corruption-safe local custody. This remains observed measurement, not a
+    quality result, activation, or promotion. Meaningful held-out quality and an
    automated repeated DAgger loop,
    and promotion remain absent. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,

@@ -1,10 +1,11 @@
 import { stableVerificationHash } from "../replay/hash";
+import type { GhostVaultBackend } from "../ghost";
 import { createProductionHeadlessEnvironment } from "../tearbench";
 import { mapGameplayEventToCausalEvent } from "../tearbench/gameplay-causal-events";
 import type { TearAgentProfileId } from "./contracts";
 import type { TearPolicyArtifactRegistry } from "./policy-artifact-registry";
 import { evaluateActiveTearPolicyOutcomeSuiteInProduction, validateTearProductionPolicyEvaluationSuite } from "./production-policy-evaluation";
-import type { TearProductionPolicyEvaluationSuiteV1, TearProductionPolicyOutcomeSuiteReportV1 } from "./production-policy-evaluation";
+import { parseTearProductionPolicyOutcomeSuiteReport, type TearProductionPolicyEvaluationSuiteV1, type TearProductionPolicyOutcomeSuiteReportV1 } from "./production-policy-evaluation";
 import { TearAgentOrchestrator } from "./scripted-policy";
 
 export interface TearTemporalPolicyScriptedBaselineReportV1 {
@@ -23,6 +24,69 @@ export interface TearTemporalPolicyBaselineComparisonV1 {
   /** Observed deltas only; they deliberately do not declare a win or promotion. */
   readonly metrics: Readonly<{ terminatedScenarioDelta: number; truncatedScenarioDelta: number; executedDecisionDelta: number; completedScenarioDelta: number; defeatedScenarioDelta: number; revivalEventDelta: number }>;
   readonly comparisonHash: string;
+}
+
+const VAULT_KEY = "temporal-policy-baseline-comparison:v1:";
+
+function nonnegativeInteger(value: unknown): value is number { return Number.isSafeInteger(value) && Number(value) >= 0; }
+function validOutcomeSummary(value: unknown): boolean {
+  return record(value) && ["scenarioCount", "terminatedScenarios", "truncatedScenarios", "executedDecisions", "completedScenarios", "defeatedScenarios", "revivalEvents"].every((key) => nonnegativeInteger(value[key]));
+}
+
+/** Validates retained comparison evidence, including its deterministic observed deltas. */
+export function parseTearTemporalPolicyBaselineComparison(value: unknown): TearTemporalPolicyBaselineComparisonV1 {
+  if (!record(value) || value.format !== "tear-temporal-policy-baseline-comparison" || value.schemaVersion !== 1 || !record(value.artifact)
+    || typeof value.artifact.id !== "string" || !hashes(value.artifact.hash) || !hashes(value.artifact.trainingHash)
+    || !Array.isArray(value.artifact.trainingScenarioHashes) || value.artifact.trainingScenarioHashes.length < 1 || !value.artifact.trainingScenarioHashes.every(hashes)
+    || !record(value.suite) || typeof value.suite.id !== "string" || !nonnegativeInteger(value.suite.version) || value.suite.version < 1 || !hashes(value.suite.hash)
+    || !record(value.scriptedBaseline) || typeof value.scriptedBaseline.profile !== "string" || !validOutcomeSummary(value.scriptedBaseline.outcomes)
+    || !hashes(value.scriptedBaseline.reportHash) || !record(value.metrics) || !hashes(value.comparisonHash)) {
+    throw new TypeError("invalid temporal policy baseline comparison");
+  }
+  const artifactReport = parseTearProductionPolicyOutcomeSuiteReport(value.artifactReport);
+  if (artifactReport.artifactId !== value.artifact.id || artifactReport.artifactHash !== value.artifact.hash || artifactReport.suite.hash !== value.suite.hash) {
+    throw new TypeError("temporal policy baseline comparison lineage mismatch");
+  }
+  const baseline = value.scriptedBaseline.outcomes as TearTemporalPolicyScriptedBaselineReportV1["outcomes"], observed = artifactReport.outcomes;
+  const metrics = Object.freeze({ terminatedScenarioDelta: observed.terminatedScenarios - baseline.terminatedScenarios,
+    truncatedScenarioDelta: observed.truncatedScenarios - baseline.truncatedScenarios, executedDecisionDelta: observed.executedDecisions - baseline.executedDecisions,
+    completedScenarioDelta: observed.completedScenarios - baseline.completedScenarios, defeatedScenarioDelta: observed.defeatedScenarios - baseline.defeatedScenarios,
+    revivalEventDelta: observed.revivalEvents - baseline.revivalEvents });
+  if (stableVerificationHash(metrics) !== stableVerificationHash(value.metrics)) throw new TypeError("temporal policy baseline comparison metrics mismatch");
+  const typed = value as unknown as TearTemporalPolicyBaselineComparisonV1, { comparisonHash, ...draft } = typed;
+  if (comparisonHash !== stableVerificationHash(draft)) throw new TypeError("temporal policy baseline comparison integrity mismatch");
+  return Object.freeze({ ...draft, artifact: Object.freeze({ ...draft.artifact, trainingScenarioHashes: Object.freeze([...draft.artifact.trainingScenarioHashes]) }),
+    suite: Object.freeze({ ...draft.suite }), artifactReport, scriptedBaseline: Object.freeze({ ...draft.scriptedBaseline, outcomes: Object.freeze({ ...draft.scriptedBaseline.outcomes }) }), metrics, comparisonHash });
+}
+
+/** Local, idempotent custody for source-world temporal-artifact versus scripted-baseline observations. */
+export class TearTemporalPolicyBaselineComparisonVault {
+  readonly #backend: GhostVaultBackend;
+  constructor(backend: GhostVaultBackend) { this.#backend = backend; }
+
+  async persist(input: TearTemporalPolicyBaselineComparisonV1): Promise<TearTemporalPolicyBaselineComparisonV1> {
+    const comparison = parseTearTemporalPolicyBaselineComparison(input), key = `${VAULT_KEY}${comparison.comparisonHash}`;
+    const existing = await this.#backend.get("analysis", key);
+    if (existing !== undefined) return parseTearTemporalPolicyBaselineComparison(JSON.parse(existing));
+    await this.#backend.commit(Object.freeze([
+      { store: "analysis", key, value: JSON.stringify(comparison) },
+      { store: "indexes", key: `temporal-policy-baseline-comparison:${comparison.artifact.id}:${comparison.comparisonHash}`,
+        value: JSON.stringify({ artifactHash: comparison.artifact.hash, suiteHash: comparison.suite.hash }) },
+    ]));
+    return comparison;
+  }
+
+  async get(comparisonHash: string): Promise<TearTemporalPolicyBaselineComparisonV1 | undefined> {
+    if (!hashes(comparisonHash)) throw new TypeError("temporal policy baseline comparison hash is invalid");
+    const key = `${VAULT_KEY}${comparisonHash}`, raw = await this.#backend.get("analysis", key);
+    if (raw === undefined) return undefined;
+    try { return parseTearTemporalPolicyBaselineComparison(JSON.parse(raw)); }
+    catch (error) {
+      await this.#backend.put("quarantine", key, JSON.stringify(Object.freeze({ format: "temporal-policy-baseline-comparison-quarantine", schemaVersion: 1,
+        key, raw, reason: error instanceof Error ? error.message : String(error) })));
+      return undefined;
+    }
+  }
 }
 
 function record(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
@@ -88,5 +152,5 @@ export async function compareTemporalPolicyAgainstScriptedBaselineInProduction(r
   const draft = { format: "tear-temporal-policy-baseline-comparison" as const, schemaVersion: 1 as const,
     artifact: Object.freeze({ id: active.artifactId, hash: active.artifactHash, trainingHash: source.trainingHash, trainingScenarioHashes: source.trainingScenarioHashes }),
     suite: Object.freeze({ id: suite.id, version: suite.version, hash: stableVerificationHash(suite) }), artifactReport, scriptedBaseline: baseline, metrics };
-  return Object.freeze({ ...draft, comparisonHash: stableVerificationHash(draft) });
+  return parseTearTemporalPolicyBaselineComparison({ ...draft, comparisonHash: stableVerificationHash(draft) });
 }

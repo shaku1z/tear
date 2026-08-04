@@ -171,11 +171,25 @@ examples), and captures up to eight correction proposals across a distinct
 60-tick source scenario. Those episode identities remain disjoint in the
 manifest and are still not a declared outcome-quality advantage.
 
+That temporal correction scenario is now part of the retraining input's
+content-addressed source-scenario lineage, rather than merely capture metadata.
+The corrected temporal artifact consequently refuses it as an evaluation case,
+alongside every governed base-training scenario. The permanent integration test
+then evaluates both the parent and corrected temporal artifacts against the
+same named scripted profile over a predeclared three-scenario, 60-tick-each
+source-world suite whose identities are disjoint from both inputs. Each report
+retains source scenario identity plus native completed/defeated/revival facts.
+The paired artifact outcome reports have bounded local Vault custody, while
+each artifact-versus-baseline observation has idempotent, corruption-safe local
+custody keyed by its comparison hash. Corrupt comparison bytes quarantine. This
+is repeatable held-out observation and provenance enforcement, not an observed
+quality advantage, activation outside the test-local registry, or promotion.
+
 ## Deliberately not claimed
 
 This is not a recurrent/GRU/LSTM policy, a meaningful quality score, a
-measured artifact win over the scripted baseline, promotion, or automatic
-player-facing training.
+measured artifact win over the scripted baseline, promotion, automated repeated
+DAgger, or automatic player-facing training.
 Those remain C33 work.
 
 DONE THIS STEP:      C33 now has governed temporal fit, run-context conditioning, source-world baseline execution, provenance rejection, and native completed/defeated/revival measurements; none establishes a quality win, so C33 §8 remains unticked.

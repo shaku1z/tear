@@ -24,6 +24,8 @@ import {
   createTearTemporalDaggerRetrainingInput,
   createTearTemporalWindowPolicyArtifact,
   compareTemporalPolicyAgainstScriptedBaselineInProduction,
+  TearTemporalPolicyBaselineComparisonVault,
+  TearProductionPolicyOutcomeSuiteVault,
   TearAcademyTrainingDatasetLoader,
   TearBehaviorCloningTrainingVault,
   TearPolicyArtifactRegistry,
@@ -393,6 +395,65 @@ describe("C31 held Academy candidate curation", () => {
     expect(first.actionConformance).toBeGreaterThanOrEqual(0);
     expect(first.actionConformance).toBeLessThanOrEqual(1);
     expect(() => evaluateTearBehaviorCloningPolicy(fit, dataset, normalization, { split: "training", batchSize: 2 } as never)).toThrow(/held-out/u);
+
+    const temporalConfig = Object.freeze({ ...config, window: 4,
+      conditionSchemaHash: TEAR_POLICY_CONDITION_SCHEMA_HASH_V1, conditionWidth: TEAR_POLICY_CONDITION_WIDTH_V1 });
+    const temporalParent = trainTearTemporalWindowPolicy(dataset, normalization, temporalConfig);
+    const temporalParentArtifact = createTearTemporalWindowPolicyArtifact(temporalParent, {
+      id: "c33-heldout-temporal-parent", createdAt: "2026-08-03T00:09:00.000Z",
+      encoder: { id: "tear-policy-features.v1", schemaVersion: 1, observationClass: "structured-state", normalizationHash: normalization.normalizationHash },
+      actionSchema: "tear-game-action-command-envelope.v1", recurrentState: { kind: "none", schemaVersion: 1 },
+      trainingManifest: { id: manifest.id, version: manifest.version, rootHash: manifest.rootHash }, rewardVersion: "tear-reward.v1",
+      build: { version: "test", revision: "c33", target: "unit", rulesetVersion: "rules-1", contentHash: "content-1", configHash: "config-1" }, metrics: {},
+      levelTarget: "class-a", lineage: { trainingRunId: temporalParent.trainingHash }, signature: { kind: "local-unsigned", keyId: "development" },
+      compatibility: { runtime: "tear-policy-runtime.v1", observationClass: "structured-state", actionSchema: "tear-game-action-command-envelope.v1", modelFormats: ["temporal-window-linear-policy-v1"] },
+    });
+    const temporalRegistry = new TearPolicyArtifactRegistry(harness.backend, temporalParentArtifact.compatibility);
+    await temporalRegistry.register(temporalParentArtifact); await temporalRegistry.activate(temporalParentArtifact.id, "2026-08-03T00:09:15.000Z");
+    const temporalDaggerScenario = scenario("c33-temporal-dagger-heldout", "c33-temporal-dagger-heldout-seed", 60);
+    const temporalCapture = await captureTearDaggerCorrections(temporalRegistry, temporalDaggerScenario, { maxCorrections: 8 });
+    expect(temporalCapture.corrections).toHaveLength(8);
+    const temporalReviews = await Promise.all(temporalCapture.corrections.map((entry, index) => new TearDaggerCorrectionReviewStore(harness.backend, ["academy-curator"]).decide({
+      capture: temporalCapture, correctionHash: entry.correctionHash, reviewer: "academy-curator", reviewedAt: `2026-08-03T00:09:${String(20 + index).padStart(2, "0")}.000Z`,
+      disposition: "accepted", rationale: "C33 temporal correction evidence",
+    })));
+    const temporalAugmentation = createTearTemporalDaggerRetrainingInput(dataset, normalization, temporalConfig, temporalCapture, temporalReviews);
+    expect(temporalAugmentation.sourceScenarioHashes).toEqual([temporalCapture.scenario.hash]);
+    const temporalCorrected = trainTearTemporalWindowPolicy(dataset, normalization, temporalConfig, temporalAugmentation);
+    expect(temporalCorrected.trainingScenarioHashes).toContain(temporalCapture.scenario.hash);
+    const temporalCorrectedArtifact = createTearTemporalWindowPolicyArtifact(temporalCorrected, {
+      id: "c33-heldout-temporal-corrected", createdAt: "2026-08-03T00:09:40.000Z",
+      encoder: temporalParentArtifact.encoder, actionSchema: temporalParentArtifact.actionSchema, recurrentState: temporalParentArtifact.recurrentState,
+      trainingManifest: temporalParentArtifact.trainingManifest, rewardVersion: temporalParentArtifact.rewardVersion, build: temporalParentArtifact.build, metrics: {},
+      levelTarget: "class-a", lineage: { trainingRunId: temporalCorrected.trainingHash, parentArtifactId: temporalParentArtifact.id },
+      signature: temporalParentArtifact.signature, compatibility: temporalParentArtifact.compatibility,
+    });
+    await temporalRegistry.register(temporalCorrectedArtifact);
+    const unseenTemporalSuite = Object.freeze({ id: "c33-temporal-heldout-suite", version: 1,
+      description: "Predeclared C33 source-world temporal DAgger observation suite", scenarios: Object.freeze([
+        scenario("c33-temporal-heldout-a", "c33-temporal-heldout-a-seed", 60),
+        scenario("c33-temporal-heldout-b", "c33-temporal-heldout-b-seed", 60),
+        scenario("c33-temporal-heldout-c", "c33-temporal-heldout-c-seed", 60),
+      ]) });
+    const parentComparison = await compareTemporalPolicyAgainstScriptedBaselineInProduction(temporalRegistry, unseenTemporalSuite);
+    await temporalRegistry.activate(temporalCorrectedArtifact.id, "2026-08-03T00:10:00.000Z");
+    const correctedComparison = await compareTemporalPolicyAgainstScriptedBaselineInProduction(temporalRegistry, unseenTemporalSuite);
+    expect(parentComparison.artifactReport.outcomes.scenarioCount).toBe(3);
+    expect(correctedComparison.artifact).toMatchObject({ id: temporalCorrectedArtifact.id, trainingHash: temporalCorrected.trainingHash });
+    expect(correctedComparison.artifact.trainingScenarioHashes).toContain(temporalCapture.scenario.hash);
+    const outcomeVault = new TearProductionPolicyOutcomeSuiteVault(harness.backend);
+    expect(await outcomeVault.persist(parentComparison.artifactReport)).toEqual(parentComparison.artifactReport);
+    expect(await outcomeVault.persist(correctedComparison.artifactReport)).toEqual(correctedComparison.artifactReport);
+    expect((await outcomeVault.retain(2, "2026-08-03T00:10:15.000Z")).retainedReportHashes).toHaveLength(2);
+    const comparisonVault = new TearTemporalPolicyBaselineComparisonVault(harness.backend);
+    expect(await comparisonVault.persist(parentComparison)).toEqual(parentComparison);
+    expect(await comparisonVault.persist(correctedComparison)).toEqual(correctedComparison);
+    expect(await comparisonVault.get(correctedComparison.comparisonHash)).toEqual(correctedComparison);
+    await expect(compareTemporalPolicyAgainstScriptedBaselineInProduction(temporalRegistry, Object.freeze({ ...unseenTemporalSuite,
+      id: "c33-temporal-dagger-overlap", scenarios: Object.freeze([temporalDaggerScenario]) }))).rejects.toThrow(/overlaps/u);
+    await harness.backend.put("analysis", `temporal-policy-baseline-comparison:v1:${correctedComparison.comparisonHash}`, "not-json");
+    expect(await comparisonVault.get(correctedComparison.comparisonHash)).toBeUndefined();
+    expect((await harness.backend.keys("quarantine")).some((key) => key.endsWith(correctedComparison.comparisonHash))).toBe(true);
     await harness.backend.put("analysis", `behavior-cloning-evaluation:v1:${first.reportHash}`, "not-json");
     expect(await evaluationVault.get(first.reportHash)).toBeUndefined();
     expect((await harness.backend.keys("quarantine")).some((key) => key.endsWith(first.reportHash))).toBe(true);

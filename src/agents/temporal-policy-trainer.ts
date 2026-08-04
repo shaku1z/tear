@@ -48,6 +48,8 @@ export interface TearTemporalDaggerRetrainingInputV1 {
   readonly datasetHash: string;
   readonly normalizationHash: string;
   readonly captureHash: string;
+  /** Source-world scenarios whose corrections become fit input and must stay held out of evaluation. */
+  readonly sourceScenarioHashes: readonly string[];
   readonly window: number;
   readonly acceptedReviewHashes: readonly string[];
   readonly examples: readonly Readonly<{ correctionHash: string; features: readonly number[]; targetActions: readonly GameAction[] }>[];
@@ -63,12 +65,12 @@ function validConfig(config: TearTemporalPolicyTrainingConfigV1): boolean {
     && config.conditionWidth === TEAR_POLICY_CONDITION_WIDTH_V1;
 }
 function actionKey(actions: readonly GameAction[]): string { return stableVerificationHash(actions); }
-function trainingScenarioHashes(dataset: TearAcademyTrainingDatasetV1): readonly string[] {
+function trainingScenarioHashes(dataset: TearAcademyTrainingDatasetV1, augmentation?: TearTemporalDaggerRetrainingInputV1): readonly string[] {
   const hashes = dataset.sequences.filter((entry) => entry.split === "training").map((entry) => {
     if (entry.sourceScenario === undefined) throw new RangeError("temporal policy training requires source scenario identity");
     return stableVerificationHash(entry.sourceScenario);
   });
-  return Object.freeze([...new Set(hashes)].sort());
+  return Object.freeze([...new Set([...hashes, ...(augmentation?.sourceScenarioHashes ?? [])])].sort());
 }
 function predict(weights: readonly (readonly number[])[], biases: readonly number[], features: readonly number[]): number {
   let selected = 0, best = Number.NEGATIVE_INFINITY;
@@ -108,7 +110,8 @@ export function createTearTemporalDaggerRetrainingInput(dataset: TearAcademyTrai
   if (examples.length < 1 || examples.length > 256) throw new RangeError("temporal DAgger retraining requires bounded approved corrections");
   const draft = { format: "tear-temporal-dagger-retraining-input" as const, schemaVersion: 1 as const,
     datasetHash: dataset.datasetHash, normalizationHash: normalization.normalizationHash, captureHash: capture.captureHash,
-    window: config.window, acceptedReviewHashes: Object.freeze(reviews.map((review) => review.reviewHash).sort()), examples: Object.freeze(examples) };
+    sourceScenarioHashes: Object.freeze([capture.scenario.hash]), window: config.window,
+    acceptedReviewHashes: Object.freeze(reviews.map((review) => review.reviewHash).sort()), examples: Object.freeze(examples) };
   return Object.freeze({ ...draft, inputHash: stableVerificationHash(draft) });
 }
 
@@ -118,10 +121,12 @@ function examples(dataset: TearAcademyTrainingDatasetV1, normalization: TearBeha
     || normalization.mean.length !== TEAR_POLICY_FEATURE_WIDTH_V1 || normalization.scale.length !== TEAR_POLICY_FEATURE_WIDTH_V1
     || normalization.scale.some((value) => !Number.isFinite(value) || value <= 0)) throw new TypeError("invalid temporal policy training input");
   if (augmentation !== undefined && (augmentation.datasetHash !== dataset.datasetHash || augmentation.normalizationHash !== normalization.normalizationHash
-    || augmentation.window !== config.window || augmentation.examples.length < 1
+    || augmentation.window !== config.window || augmentation.sourceScenarioHashes.length < 1
+    || augmentation.sourceScenarioHashes.some((hash) => !/^[a-f0-9]{16}$/u.test(hash)) || augmentation.examples.length < 1
     || augmentation.inputHash !== stableVerificationHash({ format: augmentation.format, schemaVersion: augmentation.schemaVersion,
       datasetHash: augmentation.datasetHash, normalizationHash: augmentation.normalizationHash, captureHash: augmentation.captureHash,
-      window: augmentation.window, acceptedReviewHashes: augmentation.acceptedReviewHashes, examples: augmentation.examples })
+      sourceScenarioHashes: augmentation.sourceScenarioHashes, window: augmentation.window,
+      acceptedReviewHashes: augmentation.acceptedReviewHashes, examples: augmentation.examples })
     || augmentation.examples.some((entry) => entry.features.length !== config.window * TEAR_POLICY_FEATURE_WIDTH_V1 + TEAR_POLICY_CONDITION_WIDTH_V1
       || entry.features.some((value) => !Number.isFinite(value))))) {
     throw new TypeError("invalid temporal DAgger retraining augmentation");
@@ -140,7 +145,7 @@ function examples(dataset: TearAcademyTrainingDatasetV1, normalization: TearBeha
 export function trainTearTemporalWindowPolicy(dataset: TearAcademyTrainingDatasetV1, normalization: TearBehaviorCloningNormalizationV1,
   config: TearTemporalPolicyTrainingConfigV1, augmentation?: TearTemporalDaggerRetrainingInputV1): TearTemporalPolicyTrainingResultV1 {
   const training = examples(dataset, normalization, config, augmentation); if (training.length < 1) throw new RangeError("temporal policy training requires examples");
-  const sourceHashes = trainingScenarioHashes(dataset);
+  const sourceHashes = trainingScenarioHashes(dataset, augmentation);
   const byAction = new Map<string, readonly GameAction[]>(); for (const example of training) byAction.set(actionKey(example.targetActions), example.targetActions);
   const classes = Object.freeze([...byAction.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, actions]) => Object.freeze({ actions: Object.freeze(structuredClone(actions)) })));
   const classByAction = new Map(classes.map((entry, index) => [actionKey(entry.actions), index]));

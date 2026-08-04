@@ -124,7 +124,7 @@ function summarizeReports(reports: readonly TearProductionPolicyEvaluationReport
     completedScenarios: summary.completedScenarios + Number(report.terminal.outcome === "completed"), defeatedScenarios: summary.defeatedScenarios + Number(report.terminal.outcome === "defeated"), revivalEvents: summary.revivalEvents + report.terminal.revivals,
   }), Object.freeze({ scenarioCount: 0, terminatedScenarios: 0, truncatedScenarios: 0, executedDecisions: 0, artifactDecisions: 0, fallbackDecisions: 0, completedScenarios: 0, defeatedScenarios: 0, revivalEvents: 0 }));
 }
-function parseOutcomeSuiteReport(value: unknown): TearProductionPolicyOutcomeSuiteReportV1 {
+export function parseTearProductionPolicyOutcomeSuiteReport(value: unknown): TearProductionPolicyOutcomeSuiteReportV1 {
   if (!record(value) || value.format !== "tear-production-policy-outcome-suite" || value.schemaVersion !== 1 || !text(value.artifactId)
     || !hashes(value.artifactHash) || !record(value.suite) || !text(value.suite.id) || !integer(value.suite.version) || value.suite.version < 1
     || !hashes(value.suite.hash) || !Array.isArray(value.reports) || value.reports.length < 1 || value.reports.length > 32
@@ -189,9 +189,9 @@ export class TearProductionPolicyOutcomeSuiteVault {
   constructor(backend: GhostVaultBackend) { this.#backend = backend; }
 
   async persist(input: TearProductionPolicyOutcomeSuiteReportV1): Promise<TearProductionPolicyOutcomeSuiteReportV1> {
-    const report = parseOutcomeSuiteReport(input), key = `${OUTCOME_SUITE_KEY}${report.reportHash}`;
+    const report = parseTearProductionPolicyOutcomeSuiteReport(input), key = `${OUTCOME_SUITE_KEY}${report.reportHash}`;
     const existing = await this.#backend.get("analysis", key);
-    if (existing !== undefined) return parseOutcomeSuiteReport(JSON.parse(existing));
+    if (existing !== undefined) return parseTearProductionPolicyOutcomeSuiteReport(JSON.parse(existing));
     await this.#backend.commit(Object.freeze([
       { store: "analysis", key, value: JSON.stringify(report) },
       { store: "indexes", key: `policy-production-outcome-suite:${report.artifactId}:${report.reportHash}`,
@@ -204,7 +204,7 @@ export class TearProductionPolicyOutcomeSuiteVault {
     if (!hashes(reportHash)) throw new TypeError("production policy outcome suite hash is invalid");
     const key = `${OUTCOME_SUITE_KEY}${reportHash}`, raw = await this.#backend.get("analysis", key);
     if (raw === undefined) return undefined;
-    try { return parseOutcomeSuiteReport(JSON.parse(raw)); }
+    try { return parseTearProductionPolicyOutcomeSuiteReport(JSON.parse(raw)); }
     catch (error) {
       await this.#backend.put("quarantine", key, JSON.stringify(Object.freeze({ format: "policy-production-outcome-suite-quarantine",
         schemaVersion: 1, key, raw, reason: error instanceof Error ? error.message : String(error) })));
