@@ -151,6 +151,11 @@ artifacts continue to use their original feature layout. This is a source and
 compatibility contract, not evidence that any player UI selects a lesson,
 persona, or style.
 
+The browser Watch Agent composition now admits the temporal model format in its
+local artifact registry, matching the C32 runtime parser. This makes a valid
+stored temporal artifact eligible for the existing browser composition; it does
+not add a player-facing context selector or establish visible policy quality.
+
 New C31 captures also bind the exact source scenario identity into the governed
 training sequence. A temporal fit retains the hashes of its training scenarios,
 and `compareTemporalPolicyAgainstScriptedBaselineInProduction` refuses any

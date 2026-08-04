@@ -6,6 +6,7 @@ import {
   TEAR_POLICY_CONDITION_IDS_V1, TEAR_POLICY_CONDITION_SCHEMA_HASH_V1, TEAR_POLICY_CONDITION_WIDTH_V1,
   TEAR_POLICY_CONDITION_IDS_V2, TEAR_POLICY_CONDITION_SCHEMA_HASH_V2, TEAR_POLICY_CONDITION_WIDTH_V2,
   projectStructuredPolicyCondition, projectStructuredPolicyConditionV2,
+  DEFAULT_TEAR_POLICY_RUNTIME_COMPATIBILITY,
 } from "../../src/agents";
 import type { TearAgentObservation } from "../../src/agents";
 
@@ -34,6 +35,10 @@ function artifact(feature: string, actions: unknown): ReturnType<typeof createTe
 }
 
 describe("C32 active policy runtime", () => {
+  it("admits temporal artifacts in the browser runtime compatibility contract", () => {
+    expect(DEFAULT_TEAR_POLICY_RUNTIME_COMPATIBILITY.modelFormats).toContain("temporal-window-linear-policy-v1");
+  });
+
   it("loads the active table artifact, encodes structured observations, and emits canonical legal actions with a decision receipt", async () => {
     const input = observation(), registry = new TearPolicyArtifactRegistry(createMemoryGhostVaultBackend(), compatibility);
     const feature = encodeTearPolicyObservation(input);
