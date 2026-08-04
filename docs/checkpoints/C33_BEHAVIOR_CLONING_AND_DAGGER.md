@@ -171,6 +171,29 @@ Academy tags; those remain governed-training provenance rather than player
 settings. This is visible engineering context truth, not C37's normal-build
 Watch Agent navigation or C33 quality evidence.
 
+## Pacing finding — repeat-round boundary
+
+Five consecutive C33 slices since the last checklist tick have completed V2
+conditioning, browser temporal-artifact admission, Watch Agent persona binding,
+temporal checkpoint/resume, and deep checkpoint quarantine. They are necessary
+but do not individually satisfy the remaining DAgger item. Per the C40 sizing
+rule, do not add another field, vault, or one-off evaluation fixture here.
+
+The next C33 implementation must be one bounded round-program slice:
+
+1. Persist a named program/round record with capture, review, augmentation,
+   temporal checkpoint, cancellation, and progress states; it must survive a
+   fresh controller and quarantine malformed state.
+2. Capture only through the active verified artifact and stop at named review.
+   A program may request or receive authorized reviews but must never silently
+   accept a correction.
+3. Advance only whole deterministic epochs from the existing temporal
+   checkpoint and record an incomplete/cancelled or completed-fit outcome. It
+   must not activate, register, promote, or overwrite an artifact.
+4. Repeat at least two rounds against declared distinct source scenarios in one
+   permanent test. Candidate registration, promotion, quality thresholds, and
+   normal-build Foundry UI remain their respective later boundaries.
+
 New C31 captures also bind the exact source scenario identity into the governed
 training sequence. A temporal fit retains the hashes of its training scenarios,
 and `compareTemporalPolicyAgainstScriptedBaselineInProduction` refuses any

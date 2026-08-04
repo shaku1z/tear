@@ -548,7 +548,17 @@ DONE THIS STEP:      C33 now retains governed temporal parent/corrected DAgger o
 PROVEN BY:           Focused C31/C32/C33 track, admission, curation, and production-evaluator tests: 2 files / 10 tests, plus targeted ESLint, TypeScript, requirements, and architecture gates.
 REMAINING HERE:      C33 still needs automated repeated DAgger rounds, progress/error/curriculum views, meaningful unseen-seed baseline-win evidence, and credible visible real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C33-C40 product evidence remain; C27A, C28, and C32 are closed.
-NEXT SLICE:          C33: build a bounded repeat-round DAgger program with durable status/progress and cancellation that resumes from the temporal checkpoint; do not activate or promote its output.
+NEXT SLICE:          C33: execute the documented bounded round-program slice — durable capture/review/augmentation/checkpoint/cancel progress, fresh-controller recovery, and two distinct source rounds — without accepting reviews or activating/promoting artifacts automatically.
+
+### C33 pacing finding — repeat-round boundary
+
+Five consecutive non-ticking C33 slices completed conditioning compatibility,
+Watch-Agent context binding, temporal recovery, and parser hardening. Stop
+field-sized work. The next work must be the single bounded round-program slice
+documented in `docs/checkpoints/C33_BEHAVIOR_CLONING_AND_DAGGER.md`: durable
+program state, authorized-review boundary, checkpointed cancellation/resume,
+and two distinct source rounds. It must not become a second simulator, an
+automatic review/promotion path, or a registry-count claim.
 
 ### C33 pacing finding
 
