@@ -165,6 +165,12 @@ normalized, window-shaped temporal augmentation; the retrained result carries
 its augmentation hash. This proves correction lineage for the temporal model,
 not quality improvement, automation, activation, or promotion.
 
+The governed held-out lesson fixture now materializes separate 60-tick
+production-world training and validation episodes (61 held-out validation
+examples), and captures up to eight correction proposals across a distinct
+60-tick source scenario. Those episode identities remain disjoint in the
+manifest and are still not a declared outcome-quality advantage.
+
 ## Deliberately not claimed
 
 This is not a recurrent/GRU/LSTM policy, a meaningful quality score, a

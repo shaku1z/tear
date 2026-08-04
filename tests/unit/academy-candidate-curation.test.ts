@@ -45,12 +45,12 @@ import {
   type TearScenarioV1,
 } from "../../src/tearbench";
 
-function scenario(id = "c31-curation", seed = "c31-curation-seed"): TearScenarioV1 {
+function scenario(id = "c31-curation", seed = "c31-curation-seed", maxTicks = 2): TearScenarioV1 {
   return Object.freeze({
     format: "tear-contract", kind: "scenario", schemaVersion: 1,
     id, version: 1, description: "C31 curation evidence",
     stateClass: "recorded-canonical", executionClass: "training", seed,
-    start: Object.freeze({ mode: "endless", difficulty: "normal", weapon: "sword" }), maxTicks: 2,
+    start: Object.freeze({ mode: "endless", difficulty: "normal", weapon: "sword" }), maxTicks,
     assertions: Object.freeze(["runtime.finite-state"] as const), tags: Object.freeze(["c31", "curation"] as const),
   });
 }
@@ -63,11 +63,11 @@ function createAcademyHarness() {
   return Object.freeze({ backend, vault, custody, quality });
 }
 
-async function prepare(harness = createAcademyHarness(), fixtureId = "c31-curation") {
+async function prepare(harness = createAcademyHarness(), fixtureId = "c31-curation", maxTicks = 2) {
   const { backend, vault, custody, quality } = harness;
   const intake = new ProductionHeadlessAcademyIntake(1);
   await createProductionHeadlessEpisodePool(1).run([
-    Object.freeze({ id: fixtureId, scenario: scenario(fixtureId, `${fixtureId}-seed`), maxTicks: 2 }),
+    Object.freeze({ id: fixtureId, scenario: scenario(fixtureId, `${fixtureId}-seed`, maxTicks), maxTicks }),
   ], () => Object.freeze({ decide: () => Object.freeze([Object.freeze([{ type: "move" as const, x: 1_000, y: 0 }])]) }), {
     batchSize: 1, artifactConsumer: (sample) => { intake.offer(sample); },
   });
@@ -343,7 +343,7 @@ describe("C31 held Academy candidate curation", () => {
 
   it("builds separately governed training and validation sequences in one immutable trainer manifest", async () => {
     const harness = createAcademyHarness();
-    const training = await prepare(harness, "c33-training"), validation = await prepare(harness, "c33-validation");
+    const training = await prepare(harness, "c33-training", 60), validation = await prepare(harness, "c33-validation", 60);
     const curation = new TearAcademyCandidateCurationStore(harness.backend, harness.custody, harness.quality);
     for (const input of [training, validation]) await curation.decide({ candidateHash: input.assessment.candidateHash,
       assessmentHash: input.assessment.assessmentHash, disposition: "curation-approved", reviewer: "academy-curator",
@@ -372,7 +372,8 @@ describe("C31 held Academy candidate curation", () => {
       lineage: { trainingRunId: fit.trainingHash }, signature: { kind: "local-unsigned", keyId: "development" }, compatibility: { runtime: "tear-policy-runtime.v1", observationClass: "structured-state", actionSchema: "tear-game-action-command-envelope.v1", modelFormats: ["linear-policy-v1"] } });
     const registry = new TearPolicyArtifactRegistry(harness.backend, artifact.compatibility);
     await registry.register(artifact); await registry.activate(artifact.id, "2026-08-03T00:08:30.000Z");
-    const capture = await captureTearDaggerCorrections(registry, scenario("c33-heldout-dagger", "c33-heldout-dagger-seed"), { maxCorrections: 1 });
+    const capture = await captureTearDaggerCorrections(registry, scenario("c33-heldout-dagger", "c33-heldout-dagger-seed", 60), { maxCorrections: 8 });
+    expect(capture.corrections).toHaveLength(8);
     const correction = capture.corrections[0]; if (correction === undefined) throw new Error("expected held-out DAgger proposal");
     const review = await new TearDaggerCorrectionReviewStore(harness.backend, ["academy-curator"]).decide({ capture, correctionHash: correction.correctionHash,
       reviewer: "academy-curator", reviewedAt: "2026-08-03T00:08:45.000Z", disposition: "accepted", rationale: "C33 comparison evidence" });
@@ -385,7 +386,7 @@ describe("C31 held Academy candidate curation", () => {
     expect(await evaluationVault.persist(first)).toEqual(first);
     expect(await evaluationVault.persist(first)).toEqual(first);
     expect(await evaluationVault.get(first.reportHash)).toEqual(first);
-    expect(first).toMatchObject({ split: "validation", examples: 3, batchCount: 2 });
+    expect(first).toMatchObject({ split: "validation", examples: 61, batchCount: 31 });
     const retrainedReport = evaluateTearBehaviorCloningPolicy(retrained, dataset, normalization, { split: "validation", batchSize: 2 });
     expect(retrainedReport).toMatchObject({ split: "validation", examples: first.examples });
     expect(retrainedReport.trainingHash).not.toBe(first.trainingHash);
