@@ -314,8 +314,10 @@ This is the migration checklist for the architectural redesign. A checked featur
    on reset. It is not a GRU/LSTM, quality result, baseline comparison, or
    promotion path. New temporal fits retain governed training-scenario hashes;
    a source-world temporal-versus-scripted comparison fails closed on overlap
-   and records observed deltas only. Meaningful held-out quality, a
-   reviewed/ingested DAgger loop,
+   and records observed deltas only. Approved temporal DAgger corrections now
+   retain causal frames and run condition before they can become normalized,
+   hash-bound temporal augmentation; meaningful held-out quality and an
+   automated repeated DAgger loop,
    and promotion remain absent. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.

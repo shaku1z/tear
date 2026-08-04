@@ -5,6 +5,7 @@ import type { TearAgentIntentTrace, TearAgentProfileId } from "./contracts";
 import type { TearPolicyArtifactRegistry } from "./policy-artifact-registry";
 import { TearActivePolicyRuntime, type TearPolicyDecisionReceipt } from "./policy-runtime";
 import { projectStructuredPolicyFeatures } from "./policy-feature-vector";
+import { projectScenarioPolicyCondition } from "./policy-condition-vector";
 import { TearAgentOrchestrator } from "./scripted-policy";
 
 export interface TearDaggerCorrectionCaptureOptionsV1 {
@@ -18,6 +19,8 @@ export interface TearDaggerCorrectionCandidateV1 {
   readonly afterStateHash: string;
   /** Shared C32/C33 numeric observation contract, retained for later approved-only training. */
   readonly features: readonly number[];
+  /** Causal context retained for temporal C33 retraining; never includes future frames. */
+  readonly temporal: Readonly<{ featureFrames: readonly (readonly number[])[]; condition: readonly number[] }>;
   readonly challengerActions: readonly GameAction[];
   readonly challengerReceipt: TearPolicyDecisionReceipt;
   readonly teacherActions: readonly GameAction[];
@@ -61,8 +64,12 @@ export async function captureTearDaggerCorrections(
   try {
     let terminal = environment.reset(scenario), terminated = false, truncated = false;
     const corrections: TearDaggerCorrectionCandidateV1[] = [];
+    const featureHistory: number[][] = [];
+    const condition = Object.freeze([...projectScenarioPolicyCondition(scenario)]);
     while (!terminated && !truncated && terminal.tick < scenario.maxTicks) {
       const observation = environment.policyObservation();
+      const features = Object.freeze([...projectStructuredPolicyFeatures({ state: observation, ui: { screen: "playing" } })]);
+      featureHistory.push([...features]); if (featureHistory.length > 64) featureHistory.shift();
       const challengerDecision = challenger.decide({ state: observation, ui: { screen: "playing" } });
       const teacherDecision = teacher.decide({ state: observation, ui: { screen: "playing" } });
       const beforeObservationHash = stableVerificationHash(observation);
@@ -71,7 +78,8 @@ export async function captureTearDaggerCorrections(
       if (corrections.length < maxCorrections && actionHash(challengerDecision.actions) !== actionHash(teacherDecision.actions)) {
         const draft = {
           tick: observation.tick, beforeObservationHash, afterStateHash: stableVerificationHash(transition.observation),
-          features: Object.freeze([...projectStructuredPolicyFeatures({ state: observation, ui: { screen: "playing" } })]),
+          features,
+          temporal: Object.freeze({ featureFrames: Object.freeze(featureHistory.map((frame) => Object.freeze([...frame]))), condition }),
           challengerActions: Object.freeze(structuredClone(challengerDecision.actions)),
           challengerReceipt: Object.freeze(structuredClone(challengerDecision.receipt)),
           teacherActions: Object.freeze(structuredClone(teacherDecision.actions)),

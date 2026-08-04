@@ -158,6 +158,13 @@ delta; that verifies deterministic, non-overlapping measurement plumbing, not
 a win. No C33 §8 baseline item is ticked until a meaningful unseen suite and a
 real artifact advantage are both evidenced.
 
+Temporal DAgger corrections now retain the causal structured-observation history
+(bounded to 64 frames) and the same source-scenario condition used by temporal
+inference. Only a hash-bound accepted review can convert that context into a
+normalized, window-shaped temporal augmentation; the retrained result carries
+its augmentation hash. This proves correction lineage for the temporal model,
+not quality improvement, automation, activation, or promotion.
+
 ## Deliberately not claimed
 
 This is not a recurrent/GRU/LSTM policy, a meaningful quality score, a

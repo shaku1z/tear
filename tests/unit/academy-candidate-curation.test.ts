@@ -21,6 +21,7 @@ import {
   TearBehaviorCloningCheckpointVault,
   createTearTemporalPolicyContexts,
   trainTearTemporalWindowPolicy,
+  createTearTemporalDaggerRetrainingInput,
   createTearTemporalWindowPolicyArtifact,
   compareTemporalPolicyAgainstScriptedBaselineInProduction,
   TearAcademyTrainingDatasetLoader,
@@ -306,6 +307,19 @@ describe("C31 held Academy candidate curation", () => {
     });
     const temporalRegistry = new TearPolicyArtifactRegistry(input.backend, temporalArtifact.compatibility);
     await temporalRegistry.register(temporalArtifact); await temporalRegistry.activate(temporalArtifact.id, "2026-08-03T00:10:30.000Z");
+    const temporalCapture = await captureTearDaggerCorrections(temporalRegistry, scenario("c33-temporal-dagger", "c33-temporal-dagger-seed"), { maxCorrections: 2, teacherProfile: "chaos" });
+    const temporalCorrection = temporalCapture.corrections[0];
+    if (temporalCorrection === undefined) throw new Error("expected temporal DAgger correction proposal");
+    expect(temporalCorrection.temporal.featureFrames.length).toBeGreaterThan(0);
+    expect(temporalCorrection.temporal.condition.length).toBe(TEAR_POLICY_CONDITION_WIDTH_V1);
+    const temporalReview = await reviews.decide({ capture: temporalCapture, correctionHash: temporalCorrection.correctionHash,
+      reviewer: "academy-curator", reviewedAt: "2026-08-03T00:10:45.000Z", disposition: "accepted", rationale: "temporal teacher action verified" });
+    const temporalAugmentation = createTearTemporalDaggerRetrainingInput(first, normalization, temporalConfig, temporalCapture, [temporalReview]);
+    const temporalRetrained = trainTearTemporalWindowPolicy(first, normalization, temporalConfig, temporalAugmentation);
+    expect(temporalRetrained).toMatchObject({ datasetHash: temporal.datasetHash, augmentationHash: temporalAugmentation.inputHash });
+    expect(temporalRetrained.metrics.examples).toBeGreaterThan(temporal.metrics.examples);
+    expect(() => trainTearTemporalWindowPolicy(first, normalization, temporalConfig,
+      Object.freeze({ ...temporalAugmentation, inputHash: "0000000000000000" }))).toThrow(/augmentation/u);
     const temporalEnvironment = createProductionHeadlessEnvironment(), temporalRuntime = new TearActivePolicyRuntime(temporalRegistry);
     try {
       temporalEnvironment.reset(scenario()); await temporalRuntime.reset();

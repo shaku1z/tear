@@ -2,6 +2,7 @@ import { stableVerificationHash } from "../replay/hash";
 import type { GhostVaultBackend } from "../ghost";
 import type { TearDaggerCorrectionCaptureV1 } from "./dagger-correction-capture";
 import { TEAR_POLICY_FEATURE_WIDTH_V1 } from "./policy-feature-vector";
+import { TEAR_POLICY_CONDITION_WIDTH_V1 } from "./policy-condition-vector";
 
 const REVIEW_KEY = "dagger-correction-review:v1:";
 const HASH = /^[a-f0-9]{16}$/u;
@@ -39,7 +40,10 @@ function captureValid(capture: TearDaggerCorrectionCaptureV1): boolean {
     && capture.corrections.every((correction) => {
       const { correctionHash, ...candidate } = correction;
       return HASH.test(correctionHash) && correctionHash === stableVerificationHash(candidate)
-        && correction.features.length === TEAR_POLICY_FEATURE_WIDTH_V1 && correction.features.every(Number.isFinite);
+        && correction.features.length === TEAR_POLICY_FEATURE_WIDTH_V1 && correction.features.every(Number.isFinite)
+        && correction.temporal.featureFrames.length >= 1 && correction.temporal.featureFrames.length <= 64
+        && correction.temporal.featureFrames.every((frame) => frame.length === TEAR_POLICY_FEATURE_WIDTH_V1 && frame.every(Number.isFinite))
+        && correction.temporal.condition.length === TEAR_POLICY_CONDITION_WIDTH_V1 && correction.temporal.condition.every(Number.isFinite);
     });
 }
 function parse(value: unknown): TearDaggerCorrectionReviewV1 {
