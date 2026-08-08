@@ -69,6 +69,7 @@ export * from "./foundry-job-recovery";
 export * from "./foundry-job-schedule";
 export * from "./foundry-job-execution-binding";
 export * from "./foundry-job-successor-binding-material";
+export * from "./foundry-job-bound-continuation";
 export * from "./foundry-job-due-dispatcher";
 export * from "./tearbot-ladder-evaluation";
 export * from "./tearbot-human-calibration-source";
