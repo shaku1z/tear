@@ -261,6 +261,14 @@ same plan id. This is an evidence protocol, not a quality result: the existing
 source-world evaluator cannot yet execute a State Forge recovery frontier, so
 no plan has produced a pass/fail claim or C40 checklist tick.
 
+The C30 production-headless environment can now hydrate a State Forge recovery
+frontier only through `restoreStateForgeEvaluation`: it requires a natural
+source checkpoint, the exact State Forge producer/actor, intact parent root and
+tick lineage, and the forged codec-state hash. Ordinary checkpoint restoration
+still rejects surgical state. This establishes bounded shared-composition
+execution, but the codec payload hash and projected canonical observation are
+different representations; it is not yet an evaluated quality result.
+
 New C31 captures also bind the exact source scenario identity into the governed
 training sequence. A temporal fit retains the hashes of its training scenarios,
 and `compareTemporalPolicyAgainstScriptedBaselineInProduction` refuses any

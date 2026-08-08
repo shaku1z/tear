@@ -9,7 +9,9 @@ import {
   createProductionHeadlessEnvironment,
   createProductionHeadlessEpisodePool,
   BoundedArtifactSampler,
+  createOneFrameBoundaryLaunchMatrix,
   type ProductionHeadlessTerminalArtifact,
+  forgeExitLaunchSnapshot,
   type TearScenarioV1,
 } from "../../src/tearbench";
 
@@ -135,6 +137,19 @@ describe("C30 production headless environment", () => {
     expect(() => rejected.restoreCheckpoint(surgical)).toThrow(/recorded-canonical/);
     expect(() => rejected.restoreCheckpoint(foreign)).toThrow(/does not match/);
     original.dispose(); restored.dispose(); rejected.dispose();
+  });
+
+  it("restores only a lineage-bound State Forge recovery frontier through the shared production composition", () => {
+    const original = createProductionHeadlessEnvironment();
+    original.reset(scenario);
+    for (let tick = 1; tick <= 60; tick += 1) original.step(actionsAt(tick));
+    const source = original.captureCheckpoint();
+    const forgedSnapshot = forgeExitLaunchSnapshot(source.snapshot, createOneFrameBoundaryLaunchMatrix()[0]!);
+    const restored = createProductionHeadlessEnvironment();
+    expect(restored.restoreStateForgeEvaluation({ source, forgedSnapshot })).toMatchObject({ tick: source.checkpoint.tick });
+    const forgedWrongParent = Object.freeze({ ...forgedSnapshot, lineage: Object.freeze({ ...forgedSnapshot.lineage!, parentId: "foreign" }) });
+    expect(() => restored.restoreStateForgeEvaluation({ source, forgedSnapshot: forgedWrongParent })).toThrow(/lineage-bound/u);
+    original.dispose(); restored.dispose();
   });
 
   it("runs bounded independent production episodes with sampled terminal artifacts", async () => {

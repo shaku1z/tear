@@ -13,6 +13,7 @@ export * from "./production-replay-composition";
 export * from "./production-c27a-matrix";
 export * from "./state-validity";
 export * from "./state-forge-factories";
+export * from "./state-forge-exit-gate";
 export * from "./progression-ledger";
 export * from "./progression-replay";
 export * from "./tearsdl";
