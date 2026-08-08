@@ -33,6 +33,12 @@ function freeze(draft: Omit<TearFoundryEvaluationReadinessReceiptV1, "receiptHas
   const value = Object.freeze({ ...draft, job: Object.freeze({ ...draft.job }) });
   return Object.freeze({ ...value, receiptHashValue: stableVerificationHash(value) });
 }
+export function parseTearFoundryEvaluationReadinessReceipt(value: unknown): TearFoundryEvaluationReadinessReceiptV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("invalid Foundry evaluation-readiness receipt");
+  const typed = value as TearFoundryEvaluationReadinessReceiptV1, { receiptHashValue, ...draft } = typed, parsed = freeze(draft);
+  if (receiptHashValue !== parsed.receiptHashValue) throw new TypeError("Foundry evaluation-readiness receipt integrity mismatch");
+  return parsed;
+}
 
 /**
  * Finalizes only an exact, terminal C34 checkpoint. A completed result becomes

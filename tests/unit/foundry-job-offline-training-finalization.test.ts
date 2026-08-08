@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createMemoryGhostVaultBackend } from "../../src/ghost";
 import { stableVerificationHash } from "../../src/replay/hash";
 import {
-  TearFoundryJobVault, TearFoundryOfflineTrainingExecutor, TearFoundryOfflineTrainingFinalizationExecutor,
+  TearFoundryJobVault, TearFoundryOfflineTrainingExecutor, TearFoundryOfflineTrainingFinalizationExecutor, TearFoundryOnlineTrainingLaunchExecutor,
   TearOfflineRlTrainingVault, createTearFoundryJob, createTearOfflineRlPlan, transitionTearFoundryJob,
   type TearAcademyCandidateCustodyStore, type TearAcademyCorpusStore, type TearAcademyTrainingDatasetLoader, type TearAcademyTrainingDatasetV1,
 } from "../../src/agents";
@@ -53,6 +53,16 @@ describe("C36 offline training terminalization", () => {
     expect(first).toMatchObject({ job: { phase: "evaluating" }, receipt: { disposition: "evaluation-ready" }, training: { disposition: "completed" } });
     expect(again).toEqual(first);
     await expect(executor.finalize(setupResult.launched.job, "0".repeat(16), "2026-08-08T00:02:00.000Z")).rejects.toThrow(/lineage/u);
+    expect((await setupResult.backend.keys("analysis")).some((key) => key.startsWith("policy-"))).toBe(false);
+  });
+
+  it("binds only exact completed readiness to a persisted but unrun C30 online checkpoint", async () => {
+    const setupResult = await setup({ epochs: 1, maxMeanAbsoluteTdError: 10, maxConsecutiveDivergentEpochs: 2 });
+    const finalized = await new TearFoundryOfflineTrainingFinalizationExecutor(setupResult.vault, setupResult.custody, setupResult.corpus, setupResult.loader).finalize(setupResult.launched.job, setupResult.launched.launch.launchHash, "2026-08-08T00:02:00.000Z");
+    const executor = new TearFoundryOnlineTrainingLaunchExecutor(setupResult.vault, setupResult.custody, setupResult.corpus, setupResult.loader);
+    const request = { curriculum: { id: "foundry-online", stages: [{ id: "movement", lessonId: "movement-foundations", scenarios: [scenario], episodeBudget: 1 }], exploration: { seed: 1, initialNumerator: 0, minimumNumerator: 0, denominator: 1, decrementEveryEpisodes: 1, decrementBy: 1 }, budgets: { maxEpisodes: 1, maxTicksPerEpisode: 4, maxTotalTicks: 4, maxTotalDecisions: 4, maxTotalAbsoluteReward: 100 } }, config: { learningRate: 0.5, gamma: 0.9, maxStateActionEntries: 10, maxAbsoluteQ: 10, maxTotalUpdates: 4, maxConsecutiveDivergentUpdates: 2 } };
+    const result = await executor.launch(finalized.job, finalized.receipt, request, "2026-08-08T00:03:00.000Z");
+    expect(result).toMatchObject({ checkpoint: { status: "running", episodeCursor: 0 }, launch: { jobHash: finalized.job.jobHash, offlineTrainingHash: finalized.training.trainingHash } });
     expect((await setupResult.backend.keys("analysis")).some((key) => key.startsWith("policy-"))).toBe(false);
   });
 });

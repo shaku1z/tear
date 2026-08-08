@@ -71,6 +71,15 @@ persists its local C34 result and transitions to `evaluating` with an immutable
 evaluation-readiness receipt. The receipt records no score, source-world run,
 quality verdict, artifact, registry pointer, activation, or promotion.
 
+## Frozen C30 online-Q launch readiness
+
+An exact completed evaluation-readiness receipt can now bind the same governed
+C31 dataset, held custody, frozen offline plan/receipt, and completed C34
+training result to one persisted, initially `running` C30 online-Q checkpoint.
+The durable launch retains the full curriculum and online configuration. It
+does not advance that checkpoint, execute a source-world case, produce a score,
+create an artifact, activate, promote, self-play, schedule, or show UI.
+
 V2 offline-training launches retain the complete immutable C34 plan and
 configuration. V1 launches fail closed because hashes alone cannot recreate
 their training inputs. A V2 resume rechecks launch, dataset, trainer manifest,

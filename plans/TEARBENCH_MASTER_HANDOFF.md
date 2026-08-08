@@ -929,6 +929,18 @@ NEXT SLICE: Bind an exact completed C34 result to the existing frozen C30
 online-Q curriculum/checkpoint route before using the source-world evaluator;
 do not treat an offline-Q result as a C32 artifact or C35 ladder policy.
 
+### C36 frozen C30 online-Q launch readiness
+
+DONE THIS STEP: An exact completed C34 result now binds to a persisted but
+unrun C30 online-Q checkpoint only after the same C31 manifest/custody/dataset,
+offline launch, receipt, and result lineages revalidate. The immutable launch
+stores the online curriculum/configuration and checkpoint identity.
+REMAINING HERE: This launches neither an online epoch nor source-world
+evaluation, and makes no score, artifact, registry, activation, promotion,
+self-play, scheduler, or UI claim. C36 remains open.
+NEXT SLICE: Advance only that exact bounded online checkpoint with C30 lineage
+and retain stopped/incomplete outcomes before source-world evaluation.
+
 DONE THIS STEP:      Foundry V2 launches retain actual C34 plan/configuration
 bytes, while historical V1 launch bytes are explicitly non-resumable. A V2
 resume rechecks all stored lineage and advances one epoch with a durable
