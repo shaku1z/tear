@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createMemoryGhostVaultBackend } from "../../src/ghost";
 import {
   TearFoundryJobVault,
+  TearFoundryRecoveryController,
   createTearFoundryJob,
   createTearFoundryJobV2,
   parseTearFoundryJob,
@@ -55,5 +56,11 @@ describe("C36 Foundry job ledger", () => {
     await backend.put("analysis", "foundry-job:v1:broken", "{not json");
     await expect(vault.get("broken")).resolves.toBeUndefined();
     expect(await backend.get("quarantine", "foundry-job:v1:broken")).toContain("foundry-job-quarantine");
+  });
+
+  it("projects only hashes and the legal manual restart phase", async () => {
+    const backend = createMemoryGhostVaultBackend(), vault = new TearFoundryJobVault(backend), original = job(); await vault.persist(original);
+    await expect(new TearFoundryRecoveryController(vault).project(original.id)).resolves.toMatchObject({ phase: "created", nextManualPhase: "created", privacy: "hashes-only", provenance: { eventCount: 1 } });
+    await backend.put("analysis", "foundry-job:v1:corrupt-recovery", "{bad"); await expect(new TearFoundryRecoveryController(vault).project("corrupt-recovery")).resolves.toBeUndefined();
   });
 });
