@@ -205,8 +205,13 @@ placement, or later-phase dispatch.
 The same explicit dispatcher can now perform exactly one additional legal
 successor: a lease-claimed `collecting` head may admit its declared immutable
 C31 trainer manifest through the existing executor. It rechecks the schedule,
-job head, budgets, stop identity, held custody, and lease; it neither curates
-new data nor starts training, evaluation, promotion, cloud work, or timers.
+job head, budgets, stop identity, due projection, held custody, and lease. Its
+claim condition also pins every named custody record's current Vault bytes, so
+a stale schedule, competing claimant, or concurrent custody revision cannot
+advance the job twice. Exact retries return the durable attempt receipt;
+absent/mismatched manifests produce the existing safe terminal result, and
+revoked custody refuses before C31 is mutated. It neither curates new data nor
+starts training, evaluation, promotion, cloud work, or timers.
 
 ## Browser conditional-commit evidence
 

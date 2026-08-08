@@ -1068,7 +1068,10 @@ activation, placement, or curation/training/evaluation dispatch exists.
 
 DONE THIS STEP: The explicit lease dispatcher can advance only a valid
 `collecting` Foundry head through existing immutable trainer-manifest admission
-to `curating`, with custody, schedule, job, budget, stop, and lease checks.
+to `curating`, with custody, schedule, job, budget, stop, due, and lease
+checks. Its conditional claim pins each named C31 custody byte; exact retry
+returns the durable receipt, while early/stale/concurrent, absent/mismatched,
+revoked, or budget-invalid work fails closed.
 REMAINING HERE: No corpus mutation, dataset load, training, evaluation,
 promotion, timer, or cloud work exists.
 

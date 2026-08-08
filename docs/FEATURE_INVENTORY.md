@@ -421,6 +421,16 @@ This is the migration checklist for the architectural redesign. A checked featur
   No timer, worker, workflow execution, cloud call, activation, or promotion
   exists; the visible status calls this configuration only.
 
+- [ ] C36 lease-bound collection and manifest dispatch — an explicit local
+  caller can claim a due schedule with a sixty-second conditional Vault lease,
+  collect only held C31 custody, or advance one `collecting` job through an
+  already-published exact trainer manifest. The manifest claim pins the current
+  schedule, job, every named custody byte, and prior lease; stale, early,
+  concurrent, revoked, mismatched, absent, and budget-invalid work fails
+  closed. Receipts make exact retries idempotent. No timer, C31 mutation,
+  dataset load, training, evaluation, activation, promotion, or cloud work is
+  introduced.
+
 - [ ] V2 Foundry source-evaluation derivation — V2 requests freeze an
   identifier/threshold protocol before a challenger exists, retain its content
   hash, and can derive (but not execute) one C34 paired source-evaluation plan
