@@ -414,6 +414,12 @@ This is the migration checklist for the architectural redesign. A checked featur
   ineligible for source evaluation. No scoring, artifact creation, activation,
   promotion, scheduling, or UI occurs here.
 
+- [ ] V2 Foundry source-evaluation execution — only a persisted V2 derivation
+  with unchanged live C31/C34 lineage can run the existing C34 evaluator and
+  move from evaluating to deciding. Its Foundry receipt retains a result hash,
+  not a score or winner; failed/invalid runs reject without metrics. No artifact,
+  registry, activation, promotion, scheduler, or UI path exists.
+
 ## Remaining proof gaps
 
 No feature-preservation evidence gaps remain in this inventory. Release readiness still requires the full clean-commit gate described above.

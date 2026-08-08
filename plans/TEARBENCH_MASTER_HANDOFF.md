@@ -996,3 +996,17 @@ show UI. C36 remains fully open.
 NEXT SLICE: Execute only this exact persisted C34 source-evaluation plan and
 retain non-promotional result custody; reject changed protocol, plan, lineage,
 or custody.
+
+### C36 V2 source-evaluation execution
+
+DONE THIS STEP: C36 can call the existing C34 paired source evaluator exactly
+once from a persisted V2 derivation. It rechecks current job/protocol/plan,
+offline and online results/checkpoints, C31 manifest/dataset, and live held
+custody. A completed execution retains only a content-addressed result hash and
+legally moves `evaluating -> deciding`; the C36 receipt has no copied metric or
+winner claim. Invalid lineage or evaluator failure instead rejects with a
+metric-free receipt.
+REMAINING HERE: No Foundry decision rule, candidate selection, artifact,
+registry, activation, promotion, self-play, scheduler, or UI exists.
+NEXT SLICE: Define a separately governed, non-promotional decision review
+boundary; do not derive a winner from the retained result by implication.

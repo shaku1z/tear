@@ -121,6 +121,20 @@ Focused tests prove V2 normal derivation and idempotency, V1 refusal, protocol
 and derived-plan tamper rejection, changed-current-job refusal, and revoked
 custody refusal.
 
+## V2 source-evaluation execution
+
+Only the exact current V2 job, its persisted derived-plan receipt, completed
+online readiness, and unchanged C31/C34 lineage may call the existing C34
+source evaluator. The Foundry rechecks protocol, plan, current snapshot,
+offline and online result/checkpoint, manifest/dataset, and held custody before
+execution. A completed evaluator run persists a content-addressed C36 receipt
+containing only the retained C34 result hash and makes the legal
+`evaluating -> deciding` transition. It does not copy or interpret the result
+metrics as a Foundry verdict. Invalid lineage or evaluator failure rejects the
+current job with a metric-free refusal receipt. This remains neither a winner
+selection nor a C32 artifact, registry, activation, promotion, self-play,
+scheduler, or UI route.
+
 V2 offline-training launches retain the complete immutable C34 plan and
 configuration. V1 launches fail closed because hashes alone cannot recreate
 their training inputs. A V2 resume rechecks launch, dataset, trainer manifest,
