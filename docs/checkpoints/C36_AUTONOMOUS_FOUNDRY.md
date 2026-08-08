@@ -38,6 +38,18 @@ can show configured/disabled/due state and toggle a pre-existing opaque
 schedule, but says no worker/timer/workflow is running. It cannot configure a
 job, execute any phase, call cloud, activate, or promote.
 
+A separate explicit rebind commits one due nonterminal successor and its
+schedule revision in the same conditional Vault transaction. It accepts only
+the exact immutable next event, rechecks the predecessor is still the durable
+job head, and asks action-time authority to confirm every named C31 corpus
+record remains held. It pins both current raw bytes, preserves cadence and all
+compute/storage/stop identities, records the old/new schedule lineage, and
+makes the exact retry idempotent. A stale/forked/terminal successor, changed
+inputs or stop identity, revoked custody, early cadence, corrupt receipt, or a
+competing writer fails closed. This is a state transition primitive only: it
+does not execute training, resume a checkpoint, schedule a timer, or contact a
+service.
+
 ## Proven foundation
 
 - `foundry-job-state.ts` defines a content-addressed, immutable Foundry job

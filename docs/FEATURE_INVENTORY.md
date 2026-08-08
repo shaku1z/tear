@@ -418,6 +418,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   can enable or disable a pre-existing job's fixed-cadence due discovery and
   binds compute/storage/stop identities. Due discovery is restart-safe and
   blocks corrupt, stale, terminal, stop-mismatched, or revoked-custody records.
+  Its explicit rebind advances only an exact, nonterminal immutable successor
+  together with the schedule under conditional current schedule/job-head and
+  action-time held-custody checks; retry is idempotent and concurrency has one
+  winner. It is not a worker or action executor.
   No timer, worker, workflow execution, cloud call, activation, or promotion
   exists; the visible status calls this configuration only.
 

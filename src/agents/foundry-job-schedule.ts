@@ -1,6 +1,6 @@
 import { stableVerificationHash } from "../replay/hash";
 import type { GhostVaultBackend } from "../ghost";
-import type { TearFoundryJobV1 } from "./foundry-job-state";
+import { parseTearFoundryJob, type TearFoundryJobV1 } from "./foundry-job-state";
 import type { TearFoundryJobVault } from "./foundry-job-vault";
 
 const KEY = "foundry-job-schedule:v1:";
@@ -18,6 +18,7 @@ export interface TearFoundryScheduleProjectionV1 {
   readonly scheduleHash: string; readonly jobHash: string; readonly state: ScheduleState; readonly disposition: TearFoundryScheduleDisposition;
   readonly dueAt: string | null; readonly intervalMs: number; readonly revision: number;
 }
+/** Implementations must recheck every `job.inputs.corpusRecordHashes` at `at`; a cached permission is not authority. */
 export interface TearFoundryScheduleAuthority { held(job: TearFoundryJobV1, at: string): Promise<boolean>; }
 function text(value: unknown): value is string { return typeof value === "string" && value.trim().length > 0; }
 function hash(value: unknown): value is string { return typeof value === "string" && HASH.test(value); }
@@ -51,6 +52,15 @@ export function setTearFoundryJobScheduleEnabled(input: TearFoundryJobScheduleV1
     storageBudgetHash: current.storageBudgetHash, stopConditionsHash: current.stopConditionsHash, state: enabled ? "enabled" : "disabled", configuredAt: current.configuredAt,
     ...(enabled ? { enabledAt: at } : {}), revision: current.revision + 1 });
 }
+/** Rebinds cadence only to the exact next immutable job head; it never executes that head. */
+export function rebindTearFoundryJobSchedule(input: TearFoundryJobScheduleV1, previous: TearFoundryJobV1, next: TearFoundryJobV1, at: string): TearFoundryJobScheduleV1 {
+  const current = parseTearFoundryJobSchedule(input), prior = parseTearFoundryJob(previous), successor = parseTearFoundryJob(next);
+  if (!time(at) || terminal(prior.phase) || current.jobId !== prior.id || current.jobHash !== prior.jobHash || successor.id !== prior.id
+    || JSON.stringify(successor.inputs) !== JSON.stringify(prior.inputs) || successor.events.length !== prior.events.length + 1
+    || successor.events.slice(0, prior.events.length).some((event, index) => event.eventHash !== prior.events[index]?.eventHash)
+    || terminal(successor.phase) || prior.inputs.stopConditionsHash !== current.stopConditionsHash) throw new RangeError("Foundry schedule rebind requires its exact legal successor");
+  return draft({ id: current.id, jobId: successor.id, jobHash: successor.jobHash, intervalMs: current.intervalMs, computeBudgetHash: current.computeBudgetHash, storageBudgetHash: current.storageBudgetHash, stopConditionsHash: current.stopConditionsHash, state: current.state, configuredAt: current.configuredAt, ...(current.state === "enabled" ? { enabledAt: at } : {}), revision: current.revision + 1 });
+}
 export function dueAtFoundryJobSchedule(input: TearFoundryJobScheduleV1): string | null {
   const schedule = parseTearFoundryJobSchedule(input); return schedule.state === "enabled" && schedule.enabledAt !== undefined ? new Date(Date.parse(schedule.enabledAt) + schedule.intervalMs).toISOString() : null;
 }
@@ -67,6 +77,38 @@ export class TearFoundryJobScheduleVault {
     if (!hash(scheduleHash)) throw new TypeError("Foundry schedule hash is required"); const current = (await this.list()).find((schedule) => schedule.scheduleHash === scheduleHash); if (current === undefined) return undefined;
     const next = setTearFoundryJobScheduleEnabled(current, enabled, at); if (next.scheduleHash === current.scheduleHash) return current;
     await this.#backend.commit(Object.freeze([{ store: "analysis", key: `${KEY}${next.id}`, value: JSON.stringify(next) }, { store: "indexes", key: `foundry-job-schedule:${next.id}:${next.scheduleHash}`, value: JSON.stringify(Object.freeze({ state: next.state, jobHash: next.jobHash })) }])); return next;
+  }
+  /** Atomically advances the durable job head and its cadence binding. It cannot execute either head. */
+  async rebind(scheduleHash: string, previousInput: TearFoundryJobV1, nextInput: TearFoundryJobV1, at: string, authority: TearFoundryScheduleAuthority, jobs: TearFoundryJobVault): Promise<TearFoundryJobScheduleV1> {
+    if (!hash(scheduleHash) || !time(at) || jobs.backend() !== this.#backend) throw new TypeError("invalid Foundry schedule rebind request");
+    const previous = parseTearFoundryJob(previousInput), next = parseTearFoundryJob(nextInput);
+    const receiptKey = `foundry-job-schedule-rebind:v1:${stableVerificationHash({ scheduleHash, previousJobHash: previous.jobHash, nextJobHash: next.jobHash })}`;
+    const priorReceipt = await this.#backend.get("analysis", receiptKey);
+    if (priorReceipt !== undefined) {
+      try { const record = JSON.parse(priorReceipt) as Readonly<{ id: string; scheduleHash: string; nextScheduleHash: string; nextJobHash: string }>;
+        const rebound = await this.get(record.id);
+        if (record.scheduleHash === scheduleHash && record.nextJobHash === next.jobHash && rebound?.scheduleHash === record.nextScheduleHash) return rebound;
+      } catch { await this.#backend.put("quarantine", receiptKey, priorReceipt); }
+      throw new RangeError("Foundry schedule rebind receipt is invalid");
+    }
+    const current = (await this.list()).find((entry) => entry.scheduleHash === scheduleHash);
+    if (current === undefined) throw new RangeError("Foundry schedule rebind is unavailable");
+    if (current.state !== "enabled" || Date.parse(dueAtFoundryJobSchedule(current) ?? at) > Date.parse(at) || !(await authority.held(previous, at))) throw new RangeError("Foundry schedule rebind is not due or custody is unavailable");
+    const rebound = rebindTearFoundryJobSchedule(current, previous, next, at), scheduleKey = `${KEY}${current.id}`, jobKey = `foundry-job:v1:${previous.id}`;
+    const [scheduleRaw, jobRaw] = await Promise.all([this.#backend.get("analysis", scheduleKey), this.#backend.get("analysis", jobKey)]);
+    if (scheduleRaw === undefined || jobRaw === undefined) throw new RangeError("Foundry schedule or job disappeared");
+    let durable: TearFoundryJobV1; try { durable = parseTearFoundryJob(JSON.parse(jobRaw)); } catch { throw new RangeError("Foundry durable job is invalid"); }
+    if (durable.jobHash !== previous.jobHash) throw new RangeError("Foundry schedule rebind predecessor is not the durable current head");
+    const event = next.events.at(-1); if (event === undefined) throw new RangeError("Foundry successor event disappeared");
+    try { await this.#backend.commitIfMatches(Object.freeze([{ store: "analysis", key: scheduleKey, expected: scheduleRaw }, { store: "analysis", key: jobKey, expected: jobRaw }]), Object.freeze([
+      { store: "analysis", key: scheduleKey, value: JSON.stringify(rebound) },
+      { store: "indexes", key: `foundry-job-schedule:${rebound.id}:${rebound.scheduleHash}`, value: JSON.stringify(Object.freeze({ state: rebound.state, jobHash: rebound.jobHash, previousScheduleHash: current.scheduleHash })) },
+      { store: "analysis", key: jobKey, value: JSON.stringify(next) },
+      { store: "analysis", key: `foundry-job-event:v1:${next.id}:${String(event.sequence)}:${event.eventHash}`, value: JSON.stringify(event) },
+      { store: "indexes", key: `foundry-job-current:${next.id}`, value: JSON.stringify(Object.freeze({ jobHash: next.jobHash, phase: next.phase })) },
+      { store: "analysis", key: receiptKey, value: JSON.stringify(Object.freeze({ format: "foundry-job-schedule-rebind", schemaVersion: 1, id: current.id, scheduleHash, nextScheduleHash: rebound.scheduleHash, nextJobHash: next.jobHash })) },
+    ])); } catch { throw new RangeError("Foundry schedule rebind lost its current schedule or job head"); }
+    return rebound;
   }
   async #read(key: string, raw: string): Promise<TearFoundryJobScheduleV1 | undefined> { try { return parseTearFoundryJobSchedule(JSON.parse(raw)); } catch (error) { await this.#backend.put("quarantine", key, JSON.stringify(Object.freeze({ format: "foundry-job-schedule-quarantine", schemaVersion: 1, key, raw, reason: error instanceof Error ? error.message : String(error) }))); return undefined; } }
 }

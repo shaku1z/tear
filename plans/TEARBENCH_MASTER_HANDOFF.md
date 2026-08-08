@@ -1084,6 +1084,18 @@ before the executor may transition to `training`; exact retries return the
 stored action receipt. No online execution, final result, evaluation, artifact,
 activation, promotion, timer, or cloud behavior is added.
 
+### C36 atomic schedule successor rebind
+
+DONE THIS STEP: A due enabled schedule can atomically advance its exact
+nonterminal Foundry successor and bind cadence to that durable new head. The
+transaction pins current schedule and job bytes, rechecks all named C31 custody
+through action-time authority, preserves immutable inputs/configuration, and
+retains old/new schedule lineage. Exact retry returns the rebind result; stale,
+forked, terminal, changed-stop, revoked, early, corrupt, or concurrent work
+fails closed. This changes neither training nor evaluation execution.
+REMAINING HERE: Wire this prerequisite into the next bounded checkpoint-resume
+dispatcher; do not represent rebinding alone as an unattended scheduler.
+
 ### C36 IndexedDB conditional-commit browser evidence
 
 DONE THIS STEP: Test-standalone Chromium directly exercises the production
