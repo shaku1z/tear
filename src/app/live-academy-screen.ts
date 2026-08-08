@@ -1,24 +1,30 @@
-import { createBrowserAcademyInspectionController, createBrowserTemporalDaggerProgramInspectionController, createBrowserTemporalDaggerProgramRuntime,
+import { createBrowserAcademyInspectionController, createBrowserAcademyCustodyActionRuntime, createBrowserTemporalDaggerProgramInspectionController, createBrowserTemporalDaggerProgramRuntime,
   type TearAcademyInspectionController, type TearTemporalDaggerProgramInspectionController } from "../agents";
 import type { AcademyScreenView } from "../presentation/screens/contracts";
 
 /** Keeps Academy persistence composition outside the frame-sized live runtime. */
-export function createLiveAcademyScreen(factory: IDBFactory | undefined, currentReviewer: () => string | undefined = () => undefined): Readonly<{ snapshot: () => AcademyScreenView; refresh: () => void; advance: (id: string) => void; review: (id: string, correctionHash: string, disposition: "accepted" | "rejected") => void }> {
+export function createLiveAcademyScreen(factory: IDBFactory | undefined, currentSignedInActor: () => string | undefined = () => undefined): Readonly<{ snapshot: () => AcademyScreenView; refresh: () => void; advance: (id: string) => void; review: (id: string, correctionHash: string, disposition: "accepted" | "rejected") => void; withdrawModelTraining: (candidateHash: string) => void }> {
   let controller: TearAcademyInspectionController | undefined;
   let daggerPrograms: TearTemporalDaggerProgramInspectionController | undefined;
   let daggerRuntime: Awaited<ReturnType<typeof createBrowserTemporalDaggerProgramRuntime>>;
+  let custodyActions: Awaited<ReturnType<typeof createBrowserAcademyCustodyActionRuntime>>;
   const refresh = (): void => {
-    if (controller) void controller.refresh(new Date().toISOString());
+    if (controller) void controller.refresh(new Date().toISOString(), currentSignedInActor());
     if (daggerPrograms) void daggerPrograms.refresh();
   };
   const advance = (id: string): void => { if (daggerRuntime !== undefined) void daggerRuntime.runtime.advance(id).then(() => { refresh(); }); };
   const review = (id: string, correctionHash: string, disposition: "accepted" | "rejected"): void => {
-    const reviewer = currentReviewer();
+    const reviewer = currentSignedInActor();
     if (daggerRuntime !== undefined && reviewer !== undefined) void daggerRuntime.runtime.review(id, correctionHash, disposition, reviewer, new Date().toISOString(),
       `Authorized signed-in Academy reviewer ${disposition} this immutable DAgger correction.`).then(() => { refresh(); }).catch(() => { refresh(); });
   };
-  void Promise.all([createBrowserAcademyInspectionController(factory), createBrowserTemporalDaggerProgramInspectionController(factory), createBrowserTemporalDaggerProgramRuntime(factory)]).then(([academy, dagger, runtime]) => {
+  const withdrawModelTraining = (candidateHash: string): void => {
+    const actor = currentSignedInActor();
+    if (custodyActions !== undefined && actor !== undefined) void custodyActions.withdrawModelTraining(candidateHash, actor, new Date().toISOString()).then(() => { refresh(); }).catch(() => { refresh(); });
+  };
+  void Promise.all([createBrowserAcademyInspectionController(factory), createBrowserAcademyCustodyActionRuntime(factory), createBrowserTemporalDaggerProgramInspectionController(factory), createBrowserTemporalDaggerProgramRuntime(factory)]).then(([academy, actions, dagger, runtime]) => {
     controller = academy;
+    custodyActions = actions;
     daggerPrograms = dagger;
     daggerRuntime = runtime;
     refresh();
@@ -51,6 +57,7 @@ export function createLiveAcademyScreen(factory: IDBFactory | undefined, current
           id: record.candidateHash.slice(0, 8).toUpperCase(),
           state: [record.custody, record.reviewed ? "reviewed" : "unreviewed", record.inCorpus ? "corpus" : "not in corpus", record.split ?? "unassigned"].join(" · "),
           detail: [record.modelTrainingConsent, record.retention === "until" ? `retains to ${record.expiresAt?.slice(0, 10) ?? "unknown"}` : "indefinite retention", record.curation ?? record.quality ?? "unassessed", record.correctionCount > 0 ? `${String(record.correctionCount)} correction${record.correctionCount === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · "),
+          candidateHash: record.candidateHash, canWithdrawModelTraining: record.canWithdrawModelTraining,
         })),
         manifests: inspection.snapshot.manifests.slice().reverse().map((manifest) => ({
           id: `${manifest.id.toUpperCase()} V${String(manifest.version)}`,
@@ -72,7 +79,7 @@ export function createLiveAcademyScreen(factory: IDBFactory | undefined, current
             canAdvance: programs.plannedProgramIds.includes(program.id) && program.status !== "review-required" };
           if (program.status !== "review-required") return [parent];
           const plan = programs.plans.find((entry) => entry.id === program.id);
-          const reviewer = currentReviewer();
+          const reviewer = currentSignedInActor();
           const canReview = reviewer !== undefined && plan?.authorizedReviewers.includes(reviewer) === true;
           const decisions = programs.reviews.find((entry) => entry.programId === program.id)?.reviews ?? [];
           return [parent, ...program.capture.corrections.map((correction) => {
@@ -89,6 +96,6 @@ export function createLiveAcademyScreen(factory: IDBFactory | undefined, current
         ],
       };
     },
-    refresh, advance, review,
+    refresh, advance, review, withdrawModelTraining,
   });
 }

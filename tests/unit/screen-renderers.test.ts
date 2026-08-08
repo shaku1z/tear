@@ -255,7 +255,7 @@ describe("legacy screen renderer registry", () => {
   it("renders durable DAgger status and exposes only a persisted-plan advance action", () => {
     const controls: ScreenControl[] = [];
     const renderer = createLegacyScreenRenderers(createRenderContext(controls));
-    expect(() => { renderer.academy({ id: "academy", status: "ready", subtitle: "durable training custody", rows: [], records: [], manifests: [],
+    expect(() => { renderer.academy({ id: "academy", status: "ready", subtitle: "durable training custody", rows: [], records: [{ id: "A1", state: "HELD", detail: "anonymous improvement", candidateHash: "a".repeat(16), canWithdrawModelTraining: true }], manifests: [],
       daggerPrograms: [
         { id: "DAGGER ALPHA", state: "REVIEW REQUIRED", detail: "round 1 · awaiting an authorized review" },
         { id: "CORRECTION 12345678", programId: "dagger-alpha", state: "AWAITING DECISION", detail: "tick 3 - challenger: primary - teacher: guard", correctionHash: "a".repeat(16), canReview: true },
@@ -266,6 +266,8 @@ describe("legacy screen renderer registry", () => {
       .toMatchObject({ label: "ADVANCE PLAN", action: { id: "dagger-beta" } });
     expect(controls.find((control) => control.action.type === "academy.dagger.review"))
       .toMatchObject({ label: "ACCEPT", action: { id: "dagger-alpha", disposition: "accepted" } });
+    expect(controls.find((control) => control.action.type === "academy.record.withdrawModelTraining"))
+      .toMatchObject({ label: "WITHDRAW TRAINING CONSENT", action: { candidateHash: "a".repeat(16) } });
   });
 
   it("pages complete privacy-safe Academy records and manifests through screen scroll", () => {

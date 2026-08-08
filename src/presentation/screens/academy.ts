@@ -20,17 +20,18 @@ export function createAcademyRenderers(context: ScreenRenderContext) {
         view.rows.forEach((row) => { ui.text(canvas, row.label, width / 2 - 288, y, ui.t.type.body, "left"); ui.displayText(canvas, row.value, width / 2 + 288, y, ui.t.type.body, "right"); y += 34; });
         const recordY = 332;
         const recordPageSize = 4;
-        const recordOffset = Math.max(0, Math.min(Math.max(0, view.records.length - recordPageSize), Math.floor(context.scroll / 52)));
+        const recordOffset = Math.max(0, Math.min(Math.max(0, view.records.length - recordPageSize), Math.floor(context.scroll / 74)));
         const visibleRecords = view.records.slice(recordOffset, recordOffset + recordPageSize);
-        const recordHeight = Math.max(84, 46 + visibleRecords.length * 52);
+        const recordHeight = Math.max(84, 46 + visibleRecords.length * 74);
         ui.panel(canvas, panelX, recordY, 640, recordHeight);
         ui.sectionLabel(canvas, `DURABLE RECORDS ${String(recordOffset + 1)}-${String(recordOffset + visibleRecords.length)} / ${String(view.records.length)}`, panelX + 24, recordY + 30, 592);
         if (view.records.length === 0) ui.text(canvas, "No governed records are stored in this Academy.", panelX + 24, recordY + 64, ui.t.type.caption, "left", ui.t.alpha.muted);
         else visibleRecords.forEach((record, index) => {
-          const recordTop = recordY + 52 + index * 52;
+          const recordTop = recordY + 52 + index * 74;
           ui.displayText(canvas, record.id, panelX + 24, recordTop, ui.t.type.label, "left");
           ui.text(canvas, record.state.toUpperCase(), panelX + 592, recordTop, ui.t.type.caption, "right", ui.t.alpha.soft);
           ui.text(canvas, record.detail, panelX + 24, recordTop + 20, ui.t.type.caption, "left", ui.t.alpha.muted);
+          if (record.canWithdrawModelTraining && record.candidateHash !== undefined) context.enqueue({ x: panelX + 332, y: recordTop + 30, w: 260, h: 36, label: "WITHDRAW TRAINING CONSENT", action: { type: "academy.record.withdrawModelTraining", candidateHash: record.candidateHash } });
         });
         const manifestY = recordY + recordHeight + 20;
         const manifestPageSize = 3;

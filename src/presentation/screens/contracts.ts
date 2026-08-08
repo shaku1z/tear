@@ -235,7 +235,7 @@ export interface AcademyScreenView {
   readonly status: "loading" | "ready" | "unavailable";
   readonly subtitle: string;
   readonly rows: readonly Readonly<{ readonly label: string; readonly value: string }>[];
-  readonly records: readonly (Readonly<{ readonly id: string; readonly state: string; readonly detail: string }>)[];
+  readonly records: readonly (Readonly<{ readonly id: string; readonly state: string; readonly detail: string; readonly candidateHash?: string; readonly canWithdrawModelTraining?: boolean }>)[];
   readonly manifests: readonly (Readonly<{ readonly id: string; readonly detail: string }>)[];
   readonly lessons?: readonly (Readonly<{ readonly id: string; readonly state: string; readonly detail: string }>)[];
   /** C33 exposes immutable plan progress and only session-gated decisions authorized by that plan; it cannot activate or promote a policy. */

@@ -23,4 +23,11 @@ describe("live screen action bindings", () => {
     dispatch({ type: "academy.dagger.review", id: "plan-42", correctionHash: "a".repeat(16), disposition: "accepted" });
     expect(reviewAcademyDagger).toHaveBeenCalledWith("plan-42", "a".repeat(16), "accepted");
   });
+
+  it("routes an Academy training-consent withdrawal without allowing a renderer to supply an actor", () => {
+    const withdrawAcademyModelTraining = vi.fn();
+    const dispatch = createLiveScreenActionBindings({ withdrawAcademyModelTraining } as unknown as ScreenActionBindingPorts);
+    dispatch({ type: "academy.record.withdrawModelTraining", candidateHash: "a".repeat(16) });
+    expect(withdrawAcademyModelTraining).toHaveBeenCalledWith("a".repeat(16));
+  });
 });

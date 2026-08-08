@@ -12,6 +12,8 @@ export * from "./academy-candidate-tracks";
 export * from "./academy-candidate-source-attestation";
 export * from "./academy-candidate-capsule-materializer";
 export * from "./academy-candidate-custody";
+export * from "./academy-custody-actions";
+export * from "./browser-academy-custody-actions";
 export * from "./academy-candidate-quality";
 export * from "./academy-candidate-curation";
 export * from "./academy-candidate-splits";

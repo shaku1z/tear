@@ -265,7 +265,10 @@ This is the migration checklist for the architectural redesign. A checked featur
    `recovery-evidenced`), never a lesson pass or policy quality; it is not a
    trainer input or full Academy workspace. A reviewed governed source can now become a durable Academy corpus entry with
    a versioned reader-scoped manifest; trainer views exclude hidden exams and
-   revocation removes entries from future manifests. C32 now has a local,
+   revocation removes entries from future manifests. In the normal Academy, a
+   signed-in ID named by a held record can withdraw only model-training consent;
+   the action is re-authorized at execution and preserves the local audit
+   history. It is not cloud-account deletion or cross-device authority. C32 now has a local,
    Vault-backed versioned policy-artifact registry: it validates content hashes
    and runtime compatibility, quarantines corrupt/incompatible bytes, and makes
    activation plus rollback pointer history atomic. It does not execute model

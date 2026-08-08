@@ -193,9 +193,14 @@ is trained on.
   displayed record joins custody, training consent, retention, privacy class,
   quality, curation/correction, split, and reviewed state without exposing a
   subject identifier, raw recording, or trainer payload.
-- [ ] Authorized record actions remain open because the normal player surface
-  has no product identity/authority boundary from which to act on a custody
-  record. Unavailable/error recovery guidance is complete: the Academy explains
+- [x] A signed-in, declared local authority can withdraw model-training consent
+  for one held record from the normal Academy. The semantic action carries only
+  its opaque candidate hash; the screen derives the actor at action time and
+  both its read model and mutation runtime fail closed unless that ID is named
+  by the record. The append-only revocation removes the candidate from future
+  held/corpus work but does not delete its audit history or touch local
+  recording, analytics, cloud publication, or source capsules. This is not an
+  account/cloud authorization claim; C38 still owns that lifecycle. Unavailable/error recovery guidance is complete: the Academy explains
   that browser-storage permissions must be checked and exposes a semantic retry
   that refreshes the existing inspection controller without creating or mutating
   any record. Durable lesson status derives only from active governed durable corpus

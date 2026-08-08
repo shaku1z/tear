@@ -31,6 +31,7 @@ export interface TearAcademyInspectionSnapshotV1 {
     candidateHash: string;
     custody: "held" | "revoked" | "expired" | "deleted";
     modelTrainingConsent: string;
+    canWithdrawModelTraining: boolean;
     retention: "indefinite" | "until";
     expiresAt?: string;
     privacyClass: "anonymous" | "pseudonymous" | "personal";
@@ -52,7 +53,7 @@ export interface TearAcademyInspectionStores {
   readonly corpus: TearAcademyCorpusStore;
 }
 
-export async function inspectAcademy(stores: TearAcademyInspectionStores, observedAt: string): Promise<TearAcademyInspectionSnapshotV1> {
+export async function inspectAcademy(stores: TearAcademyInspectionStores, observedAt: string, actionActor?: string): Promise<TearAcademyInspectionSnapshotV1> {
   if (!Number.isFinite(Date.parse(observedAt))) throw new TypeError("Academy inspection requires a timestamp");
   const [custody, quality, curation, splits, manifests, corpus] = await Promise.all([
     stores.custody.inventory(), stores.quality.inventory(), stores.curation.inventory(), stores.splits.inventory(), stores.splits.manifestInventory(), stores.corpus.inventory(),
@@ -81,6 +82,7 @@ export async function inspectAcademy(stores: TearAcademyInspectionStores, observ
     const split = splitByCandidate.get(entry.candidateHash);
     return Object.freeze({ candidateHash: entry.candidateHash, custody: entry.status,
       modelTrainingConsent: entry.consent.modelTraining, retention: entry.retention.mode,
+      canWithdrawModelTraining: entry.status === "held" && entry.consent.modelTraining !== "no-training" && actionActor !== undefined && entry.privacyRetention.authorizedActorIds.includes(actionActor),
       ...(entry.retention.mode === "until" ? { expiresAt: entry.retention.expiresAt } : {}),
       privacyClass: entry.privacyRetention.classification,
       ...(assessment === undefined ? {} : { quality: assessment.disposition }),

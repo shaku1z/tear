@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   TearAcademyCandidateCustodyStore,
+  TearAcademyCustodyActionRuntime,
   captureAcademyCandidateTracks,
   materializeAcademyCandidateCapsule,
   type TearAcademyCandidateCapsuleMaterializationReceiptV1,
@@ -144,6 +145,20 @@ describe("C31 Academy candidate custody", () => {
       candidateHash: custody.candidateHash, scope: "model-training", consent: revokedConsent,
       decidedAt: "2026-08-02T00:03:00.000Z", actor: "player", reason: "repeat",
     })).rejects.toThrow(/invalid|not/u);
+  });
+
+  it("allows only a declared local authority to withdraw model-training consent through the narrow Academy action runtime", async () => {
+    const input = await prepared();
+    const store = new TearAcademyCandidateCustodyStore(input.backend);
+    const custody = await store.accept({ declaration: input.declaration, materialization: input.materialized,
+      privacyRetention: privacyRetention(), retention: Object.freeze({ mode: "indefinite" as const }),
+      decidedAt: "2026-08-02T00:01:00.000Z", actor: "academy-curator", reason: "verified source held for review" });
+    const actions = new TearAcademyCustodyActionRuntime(store);
+    await expect(actions.withdrawModelTraining(custody.candidateHash, "guest", "2026-08-02T00:02:00.000Z")).rejects.toThrow(/authorized/u);
+    const revoked = await actions.withdrawModelTraining(custody.candidateHash, "player", "2026-08-02T00:02:00.000Z");
+    expect(revoked).toMatchObject({ status: "revoked", consent: { modelTraining: "no-training" }, events: [{ kind: "held" }, { kind: "revoked", actor: "player", revocationScope: "model-training" }] });
+    expect(await store.held("2026-08-02T00:03:00.000Z")).toEqual([]);
+    await expect(actions.withdrawModelTraining(custody.candidateHash, "player", "2026-08-02T00:03:00.000Z")).rejects.toThrow(/authorized/u);
   });
 
   it("enforces retention expiry and quarantines malformed custody bytes from consumers", async () => {

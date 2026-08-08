@@ -18,10 +18,10 @@ export class TearAcademyInspectionController {
 
   snapshot(): TearAcademyInspectionState { return this.#state; }
 
-  refresh(observedAt: string): Promise<TearAcademyInspectionState> {
+  refresh(observedAt: string, actionActor?: string): Promise<TearAcademyInspectionState> {
     if (this.#stores === undefined) return Promise.resolve(this.#state);
     this.#state = Object.freeze({ status: "loading" });
-    this.#loading ??= inspectAcademy(this.#stores, observedAt).then((snapshot) => {
+    this.#loading ??= inspectAcademy(this.#stores, observedAt, actionActor).then((snapshot) => {
       this.#state = Object.freeze({ status: "ready", snapshot });
       this.#loading = undefined;
       return this.#state;
