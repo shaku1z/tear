@@ -75,6 +75,13 @@ challenger.
   semantic trace, terminal hash, reward total, and cancellation/budget outcome.
   Their commands never share a world or player slot. This is a controlled
   comparison, explicitly not self-play.
+- A separate source-evaluation plan binds one completed offline-Q baseline,
+  one completed online-Q checkpoint, the immutable curriculum, receipt, and
+  every paired C30 case before execution. Baseline and challenger run the same
+  cases in separately reset source worlds, retaining semantic action provenance,
+  native-event hashes, terminal hashes, and reward totals. Its explicit reward
+  and completion thresholds produced a failing permanent fixture, which remains
+  recorded as `passed: false`; it neither promotes a challenger nor clears C34.
 
 ## Exit-gate status
 

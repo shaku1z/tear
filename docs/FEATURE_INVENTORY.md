@@ -368,7 +368,10 @@ This is the migration checklist for the architectural redesign. A checked featur
    evaluated/published policy quality. C34 can also retain a deterministic
    challenger/defender paired tournament over the same frozen C30 cases, but it
    deliberately creates independent worlds and never co-mingles actions; it is
-   comparison evidence, not simultaneous self-play or quality certification.
+   comparison evidence, not simultaneous self-play or quality certification. A
+   separate immutable source-evaluation receipt pairs the retained online-Q
+   checkpoint against its frozen offline baseline on those same fresh C30 cases;
+   the permanent thresholded fixture fails and is retained without promotion.
    Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.

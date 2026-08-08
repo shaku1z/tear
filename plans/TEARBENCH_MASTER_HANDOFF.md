@@ -630,6 +630,24 @@ NEXT SLICE:          Build a declared fresh-C30 quality evaluation for the
 retained online-Q challenger; do not substitute tournament traces for quality
 or self-play evidence.
 
+### C34 immutable online-Q source evaluation
+
+DONE THIS STEP:      C34 now binds a completed offline-Q baseline and completed
+online-Q checkpoint to one immutable curriculum/receipt and complete paired
+case list before starting. Both selectors run the same cases only through
+separately reset fresh C30 worlds. The receipt retains semantic-action source,
+native-event and terminal hashes, rewards, declared threshold results, and local
+hash custody. It has no registry, activation, promotion, or self-play path.
+PROVEN BY:           `tests/unit/online-rl-source-evaluation.test.ts` alongside
+the online-Q training test, TypeScript, targeted ESLint, and architecture gate.
+REMAINING HERE:      The permanent fixture does not clear its declared positive
+reward margin, so it retains `passed: false`. Do not tick C34 or claim quality
+improvement; a meaningful held-out evaluation and actual multi-actor contract
+remain future work.
+NEXT SLICE:          Expand only with a governed held-out C30 evaluation corpus
+and explicit quality margin; do not re-label this paired source evidence as
+self-play or add activation/promotion.
+
 ### C33 pacing finding — repeat-round boundary
 
 Five consecutive non-ticking C33 slices completed conditioning compatibility,
