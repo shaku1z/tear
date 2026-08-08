@@ -1,10 +1,22 @@
 import type { GhostVaultBackend } from "../ghost";
 import { inspectTearTemporalDaggerPrograms, type TearTemporalDaggerProgramV1 } from "./temporal-dagger-program";
 import { TearTemporalDaggerProgramPlanVault } from "./temporal-dagger-program-runtime";
+import { TearDaggerCorrectionReviewStore, type TearDaggerCorrectionReviewV1 } from "./dagger-correction-review";
+
+export interface TearTemporalDaggerProgramPlanInspectionV1 {
+  readonly id: string;
+  readonly authorizedReviewers: readonly string[];
+}
+
+export interface TearTemporalDaggerProgramReviewInspectionV1 {
+  readonly programId: string;
+  readonly reviews: readonly TearDaggerCorrectionReviewV1[];
+}
 
 export type TearTemporalDaggerProgramInspectionState =
   | Readonly<{ status: "loading" }>
-  | Readonly<{ status: "ready"; programs: readonly TearTemporalDaggerProgramV1[]; plannedProgramIds: readonly string[] }>
+  | Readonly<{ status: "ready"; programs: readonly TearTemporalDaggerProgramV1[]; plannedProgramIds: readonly string[];
+    plans: readonly TearTemporalDaggerProgramPlanInspectionV1[]; reviews: readonly TearTemporalDaggerProgramReviewInspectionV1[] }>
   | Readonly<{ status: "unavailable"; reason: string }>;
 
 /** Async Vault boundary for the synchronous Academy status renderer. */
@@ -25,8 +37,15 @@ export class TearTemporalDaggerProgramInspectionController {
     if (backend === undefined) return Promise.resolve(this.#state);
     this.#state = Object.freeze({ status: "loading" });
     this.#loading ??= inspectTearTemporalDaggerPrograms(backend).then(async (programs) => {
-      const plannedProgramIds = (await new TearTemporalDaggerProgramPlanVault(backend).list()).map((plan) => plan.id);
-      this.#state = Object.freeze({ status: "ready", programs, plannedProgramIds: Object.freeze(plannedProgramIds) });
+      const plans = await new TearTemporalDaggerProgramPlanVault(backend).list();
+      const plannedProgramIds = plans.map((plan) => plan.id);
+      const reviews = await Promise.all(programs.filter((program) => program.status === "review-required").map(async (program) => {
+        const plan = plans.find((entry) => entry.id === program.id);
+        return Object.freeze({ programId: program.id,
+          reviews: plan === undefined ? Object.freeze([]) : await new TearDaggerCorrectionReviewStore(backend, plan.authorizedReviewers).list(program.capture.captureHash) });
+      }));
+      this.#state = Object.freeze({ status: "ready", programs, plannedProgramIds: Object.freeze(plannedProgramIds),
+        plans: Object.freeze(plans.map((plan) => Object.freeze({ id: plan.id, authorizedReviewers: Object.freeze([...plan.authorizedReviewers]) }))), reviews: Object.freeze(reviews) });
       this.#loading = undefined;
       return this.#state;
     }).catch((error: unknown) => {

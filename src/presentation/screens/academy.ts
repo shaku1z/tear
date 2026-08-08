@@ -69,6 +69,10 @@ export function createAcademyRenderers(context: ScreenRenderContext) {
           ui.text(canvas, program.state, panelX + 592, programTop, ui.t.type.caption, "right", ui.t.alpha.soft);
           ui.text(canvas, program.detail, panelX + 24, programTop + 20, ui.t.type.caption, "left", ui.t.alpha.muted);
           if (program.canAdvance) context.enqueue({ x: panelX + 392, y: programTop + 28, w: 200, h: 40, label: "ADVANCE PLAN", action: { type: "academy.dagger.advance", id: program.programId ?? program.id } });
+          if (program.canReview && program.correctionHash !== undefined) {
+            context.enqueue({ x: panelX + 392, y: programTop + 28, w: 94, h: 40, label: "ACCEPT", action: { type: "academy.dagger.review", id: program.programId ?? program.id, correctionHash: program.correctionHash, disposition: "accepted" } });
+            context.enqueue({ x: panelX + 498, y: programTop + 28, w: 94, h: 40, label: "REJECT", action: { type: "academy.dagger.review", id: program.programId ?? program.id, correctionHash: program.correctionHash, disposition: "rejected" } });
+          }
         });
         const canScrollDown = recordOffset < Math.max(0, view.records.length - recordPageSize)
           || manifestOffset < Math.max(0, view.manifests.length - manifestPageSize)

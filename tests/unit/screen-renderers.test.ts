@@ -258,11 +258,14 @@ describe("legacy screen renderer registry", () => {
     expect(() => { renderer.academy({ id: "academy", status: "ready", subtitle: "durable training custody", rows: [], records: [], manifests: [],
       daggerPrograms: [
         { id: "DAGGER ALPHA", state: "REVIEW REQUIRED", detail: "round 1 · awaiting an authorized review" },
+        { id: "CORRECTION 12345678", programId: "dagger-alpha", state: "AWAITING DECISION", detail: "tick 3 - challenger: primary - teacher: guard", correctionHash: "a".repeat(16), canReview: true },
         { id: "DAGGER BETA", programId: "dagger-beta", state: "COMPLETED", detail: "fit retained; not activated or promoted", canAdvance: true },
       ],
     }); }).not.toThrow();
     expect(controls.find((control) => control.action.type === "academy.dagger.advance"))
       .toMatchObject({ label: "ADVANCE PLAN", action: { id: "dagger-beta" } });
+    expect(controls.find((control) => control.action.type === "academy.dagger.review"))
+      .toMatchObject({ label: "ACCEPT", action: { id: "dagger-alpha", disposition: "accepted" } });
   });
 
   it("pages complete privacy-safe Academy records and manifests through screen scroll", () => {

@@ -238,8 +238,9 @@ export interface AcademyScreenView {
   readonly records: readonly (Readonly<{ readonly id: string; readonly state: string; readonly detail: string }>)[];
   readonly manifests: readonly (Readonly<{ readonly id: string; readonly detail: string }>)[];
   readonly lessons?: readonly (Readonly<{ readonly id: string; readonly state: string; readonly detail: string }>)[];
-  /** C33 can only explicitly resume an already-persisted plan; review, activation, and promotion remain unavailable here. */
-  readonly daggerPrograms?: readonly (Readonly<{ readonly id: string; readonly state: string; readonly detail: string; readonly programId?: string; readonly canAdvance?: boolean }>)[];
+  /** C33 exposes immutable plan progress and only session-gated decisions authorized by that plan; it cannot activate or promote a policy. */
+  readonly daggerPrograms?: readonly (Readonly<{ readonly id: string; readonly state: string; readonly detail: string; readonly programId?: string; readonly canAdvance?: boolean;
+    readonly correctionHash?: string; readonly canReview?: boolean }>)[];
 }
 
 export type LegacyScreenView = MenuScreenView | SetupScreenView | PlayingScreenView | CodexScreenView

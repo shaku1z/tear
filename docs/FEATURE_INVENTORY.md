@@ -330,8 +330,11 @@ This is the migration checklist for the architectural redesign. A checked featur
    reviewer authority, and distinct source-world rounds; its explicit process
    owner resumes accepted corrections only from those durable inputs and stops
    at human review. Academy now exposes that persisted plan as an explicit
-   start/resume control, never an automatic review, activation, promotion, or
-   quality result. Account/
+   start/resume control and projects action-divergence decisions only to a
+   signed-in session whose exact ID is named in the immutable plan. It never
+   infers an actor from the renderer, accepts a guest/local/unauthorized
+   session, activates, promotes, or declares a quality result. This is local
+   plan authority, not account/cloud authorization. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

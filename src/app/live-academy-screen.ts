@@ -3,7 +3,7 @@ import { createBrowserAcademyInspectionController, createBrowserTemporalDaggerPr
 import type { AcademyScreenView } from "../presentation/screens/contracts";
 
 /** Keeps Academy persistence composition outside the frame-sized live runtime. */
-export function createLiveAcademyScreen(factory: IDBFactory | undefined): Readonly<{ snapshot: () => AcademyScreenView; refresh: () => void; advance: (id: string) => void }> {
+export function createLiveAcademyScreen(factory: IDBFactory | undefined, currentReviewer: () => string | undefined = () => undefined): Readonly<{ snapshot: () => AcademyScreenView; refresh: () => void; advance: (id: string) => void; review: (id: string, correctionHash: string, disposition: "accepted" | "rejected") => void }> {
   let controller: TearAcademyInspectionController | undefined;
   let daggerPrograms: TearTemporalDaggerProgramInspectionController | undefined;
   let daggerRuntime: Awaited<ReturnType<typeof createBrowserTemporalDaggerProgramRuntime>>;
@@ -12,6 +12,11 @@ export function createLiveAcademyScreen(factory: IDBFactory | undefined): Readon
     if (daggerPrograms) void daggerPrograms.refresh();
   };
   const advance = (id: string): void => { if (daggerRuntime !== undefined) void daggerRuntime.runtime.advance(id).then(() => { refresh(); }); };
+  const review = (id: string, correctionHash: string, disposition: "accepted" | "rejected"): void => {
+    const reviewer = currentReviewer();
+    if (daggerRuntime !== undefined && reviewer !== undefined) void daggerRuntime.runtime.review(id, correctionHash, disposition, reviewer, new Date().toISOString(),
+      `Authorized signed-in Academy reviewer ${disposition} this immutable DAgger correction.`).then(() => { refresh(); }).catch(() => { refresh(); });
+  };
   void Promise.all([createBrowserAcademyInspectionController(factory), createBrowserTemporalDaggerProgramInspectionController(factory), createBrowserTemporalDaggerProgramRuntime(factory)]).then(([academy, dagger, runtime]) => {
     controller = academy;
     daggerPrograms = dagger;
@@ -55,7 +60,7 @@ export function createLiveAcademyScreen(factory: IDBFactory | undefined): Readon
           ...programs.plannedProgramIds.filter((id) => !programs.programs.some((program) => program.id === id)).map((id) => ({
             id: id.replaceAll("-", " ").toUpperCase(), programId: id, state: "READY", detail: "persisted plan - ready to start its declared first round", canAdvance: true,
           })),
-          ...programs.programs.map((program) => {
+          ...programs.programs.flatMap((program) => {
           const round = program.rounds.length;
           const checkpoint = program.checkpoint;
           const state = program.status.replaceAll("-", " ").toUpperCase();
@@ -63,12 +68,27 @@ export function createLiveAcademyScreen(factory: IDBFactory | undefined): Readon
             : program.status === "cancelled" ? `round ${String(round)} - cancelled at epoch ${String(checkpoint?.epoch ?? 0)}; safe to resume`
               : program.status === "checkpointed" ? `round ${String(round)} - checkpoint epoch ${String(checkpoint?.epoch ?? 0)}`
                 : `round ${String(round)} - fit retained; not activated or promoted`;
-          return { id: program.id.replaceAll("-", " ").toUpperCase(), programId: program.id, state, detail,
+          const parent = { id: program.id.replaceAll("-", " ").toUpperCase(), programId: program.id, state, detail,
             canAdvance: programs.plannedProgramIds.includes(program.id) && program.status !== "review-required" };
+          if (program.status !== "review-required") return [parent];
+          const plan = programs.plans.find((entry) => entry.id === program.id);
+          const reviewer = currentReviewer();
+          const canReview = reviewer !== undefined && plan?.authorizedReviewers.includes(reviewer) === true;
+          const decisions = programs.reviews.find((entry) => entry.programId === program.id)?.reviews ?? [];
+          return [parent, ...program.capture.corrections.map((correction) => {
+            const decision = decisions.find((entry) => entry.correctionHash === correction.correctionHash);
+            const actionNames = (actions: readonly { readonly type: string }[]) => actions.map((action) => action.type).join(", ") || "no action";
+            return {
+              id: `CORRECTION ${correction.correctionHash.slice(0, 8).toUpperCase()}`, programId: program.id,
+              correctionHash: correction.correctionHash, state: decision?.disposition?.toUpperCase() ?? (canReview ? "AWAITING DECISION" : reviewer === undefined ? "SIGN-IN REQUIRED" : "NOT AUTHORIZED"),
+              detail: `tick ${String(correction.tick)} - challenger: ${actionNames(correction.challengerActions)} - teacher: ${actionNames(correction.teacherActions)}`,
+              canReview: decision === undefined && canReview,
+            };
+          })];
           }),
         ],
       };
     },
-    refresh, advance,
+    refresh, advance, review,
   });
 }

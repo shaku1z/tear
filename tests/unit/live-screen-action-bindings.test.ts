@@ -16,4 +16,11 @@ describe("live screen action bindings", () => {
     dispatch({ type: "academy.dagger.advance", id: "plan-42" });
     expect(advanceAcademyDagger).toHaveBeenCalledWith("plan-42");
   });
+
+  it("routes a DAgger decision without allowing a renderer to supply an actor", () => {
+    const reviewAcademyDagger = vi.fn();
+    const dispatch = createLiveScreenActionBindings({ reviewAcademyDagger } as unknown as ScreenActionBindingPorts);
+    dispatch({ type: "academy.dagger.review", id: "plan-42", correctionHash: "a".repeat(16), disposition: "accepted" });
+    expect(reviewAcademyDagger).toHaveBeenCalledWith("plan-42", "a".repeat(16), "accepted");
+  });
 });
