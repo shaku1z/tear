@@ -1,11 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 import { stableVerificationHash } from "../../src/replay/hash";
+import { createMemoryGhostVaultBackend } from "../../src/ghost";
 import {
+  advanceTearOfflineRlCheckpoint,
+  completeTearOfflineRlCheckpoint,
+  createTearOfflineRlCheckpoint,
   createTearOfflineRlPlan,
   extractTearOfflineRlTrajectories,
   parseTearOfflineRlPlan,
+  TearOfflineRlCheckpointVault,
+  TearOfflineRlTrainingVault,
+  TearOfflineRlTrajectoryVault,
   type TearAcademyTrainingDatasetV1,
+  type TearOfflineRlTrainingConfigV1,
   type TearOfflineRlPlanRequestV1,
 } from "../../src/agents";
 import type { CanonicalGameplayState } from "../../src/gameplay/runtime/canonical-state";
@@ -31,6 +39,9 @@ const request: TearOfflineRlPlanRequestV1 = Object.freeze({ id: "c34-offline-fix
     Object.freeze({ id: "score", source: "score.delta" as const, weight: 0.1, maximumSourceValue: 20, perTransitionCap: 2 }),
   ]), totalMinimum: -10, totalMaximum: 10 }),
   limits: Object.freeze({ maxTransitions: 20, maxEventsPerTransition: 4, maxRewardViolations: 0 as const }) });
+
+const trainingConfig: TearOfflineRlTrainingConfigV1 = Object.freeze({ epochs: 2, learningRate: 0.5, gamma: 0.9,
+  maxStateActionEntries: 8, maxAbsoluteQ: 100, maxMeanAbsoluteTdError: 100, maxConsecutiveDivergentEpochs: 2 });
 
 function dataset(options: Readonly<{ split?: "training" | "validation"; duplicateCompletion?: boolean; invalidActionTick?: boolean; scenarioId?: string }> = {}): TearAcademyTrainingDatasetV1 {
   const states = [state(0, 0), state(1, 4), state(2, 6)];
@@ -80,5 +91,44 @@ describe("C34 offline RL training input", () => {
   it("rejects an action trace that leaves its sealed source episode", () => {
     const governed = dataset({ invalidActionTick: true }), plan = createTearOfflineRlPlan(governed, request);
     expect(() => extractTearOfflineRlTrajectories(governed, plan)).toThrow(/action trace/u);
+  });
+
+  it("performs real deterministic fitted-Q updates and a resumed checkpoint equals a one-shot completed result", () => {
+    const governed = dataset(), receipt = extractTearOfflineRlTrajectories(governed, createTearOfflineRlPlan(governed, request));
+    const initial = createTearOfflineRlCheckpoint(receipt, trainingConfig);
+    const oneShot = completeTearOfflineRlCheckpoint(advanceTearOfflineRlCheckpoint(initial, receipt, trainingConfig, 2), receipt, trainingConfig);
+    const resumed = completeTearOfflineRlCheckpoint(advanceTearOfflineRlCheckpoint(
+      advanceTearOfflineRlCheckpoint(initial, receipt, trainingConfig, 1), receipt, trainingConfig, 1,
+    ), receipt, trainingConfig);
+    expect(resumed).toEqual(oneShot);
+    expect(oneShot).toMatchObject({ disposition: "completed", model: { format: "tear-offline-tabular-q-model" } });
+    expect(oneShot.model?.entries.some((entry) => entry.value !== 0)).toBe(true);
+  });
+
+  it("stops a diverging run before a completed model exists", () => {
+    const governed = dataset(), receipt = extractTearOfflineRlTrajectories(governed, createTearOfflineRlPlan(governed, request));
+    const guard = Object.freeze({ ...trainingConfig, maxAbsoluteQ: 0.01 });
+    const stopped = advanceTearOfflineRlCheckpoint(createTearOfflineRlCheckpoint(receipt, guard), receipt, guard, 2);
+    const result = completeTearOfflineRlCheckpoint(stopped, receipt, guard);
+    expect(stopped.status).toBe("stopped-divergence");
+    expect(result).toMatchObject({ disposition: "stopped-divergence" });
+    expect(result.model).toBeUndefined();
+  });
+
+  it("retains trajectory, checkpoint, and result custody without registering or activating a policy, and quarantines corrupt result bytes", async () => {
+    const backend = createMemoryGhostVaultBackend(), governed = dataset();
+    const receipt = extractTearOfflineRlTrajectories(governed, createTearOfflineRlPlan(governed, request));
+    const checkpoint = advanceTearOfflineRlCheckpoint(createTearOfflineRlCheckpoint(receipt, trainingConfig), receipt, trainingConfig, 2);
+    const result = completeTearOfflineRlCheckpoint(checkpoint, receipt, trainingConfig);
+    const trajectories = new TearOfflineRlTrajectoryVault(backend), checkpoints = new TearOfflineRlCheckpointVault(backend), training = new TearOfflineRlTrainingVault(backend);
+    expect(await trajectories.persist(receipt)).toEqual(receipt);
+    expect(await trajectories.persist(receipt)).toEqual(receipt);
+    expect(await checkpoints.persist(checkpoint)).toEqual(checkpoint);
+    expect(await training.persist(result)).toEqual(result);
+    expect(await training.get(result.trainingHash)).toEqual(result);
+    expect((await backend.keys("analysis")).some((key) => key.startsWith("policy-artifact:v1:") || key === "policy-active:v1")).toBe(false);
+    await backend.put("analysis", `offline-rl-training:v1:${result.trainingHash}`, "not-json");
+    expect(await training.get(result.trainingHash)).toBeUndefined();
+    expect((await backend.keys("quarantine")).some((key) => key.endsWith(result.trainingHash))).toBe(true);
   });
 });

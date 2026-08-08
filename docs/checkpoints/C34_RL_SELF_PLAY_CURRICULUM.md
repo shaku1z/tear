@@ -1,8 +1,9 @@
 # C34 - Offline RL, Online RL, Self-Play, and Curriculum
 
-**Status:** active. C34 now has a governed, immutable source-world offline-RL
-input boundary. It does not yet train a policy, explore online, self-play,
-activate an artifact, or promote a challenger.
+**Status:** active. C34 now performs bounded fitted tabular-Q offline training
+from a governed immutable source-world receipt. It does not expose a runtime
+policy artifact, explore online, self-play, activate an artifact, or promote a
+challenger.
 
 ## Proven foundation
 
@@ -28,27 +29,39 @@ activate an artifact, or promote a challenger.
 - The result is a content-addressed trajectory receipt with observable reward
   component totals. It is optimizer input only; no policy registry, activation,
   quality result, or Foundry decision is reachable from this module.
+- A fixed-Q learner iterates the retained `(state, semantic action batch, next
+  state, reward, terminal)` records in deterministic order. Its checkpoint and
+  final result bind the exact receipt, plan, reward, and trainer config hashes.
+  A one-epoch resume produces exactly the same nonzero Q model and result as a
+  one-shot run.
+- Trajectory, checkpoint, and final-result Vault records are idempotent and
+  quarantine malformed bytes. The Q learner stops before completing a model on
+  non-finite/out-of-bound values or a configured consecutive TD-error breach;
+  stopped results contain no model. These C34 stores never import or write the
+  C32 artifact registry or active-policy pointer.
 
 ## Exit-gate status
 
-- [ ] Offline RL trains from the corpus. This slice establishes the only
-  admissible corpus/reward input; a bounded offline optimizer plus retained
-  checkpoints/results is still required.
+- [x] Offline RL trains from the corpus. A bounded deterministic fitted-Q run
+  executes the governed C31/C30 receipt and retains its result/checkpoint
+  lineage. This is not an evaluated, deployable, or promoted policy.
 - [ ] Online RL / self-play runs on headless episodes. C30 remains the required
   production-headless executor; no online exploration or second simulator was
   added.
 - [ ] Curriculum and exploration controls are configurable and bounded. The
   immutable source curriculum and fixed extraction/reward bounds exist; online
   exploration controls remain absent.
-- [ ] Safeguards stop a diverging run. Input reward/source violations fail
-  closed; trainer cancellation/divergence controls remain future work.
+- [x] Safeguards stop a diverging offline run. Reward/source extraction fails
+  closed and Q/TD guard trips return a stopped result before any model exists.
+  Cancellation and online-run safeguards remain future work.
 
-DONE THIS STEP:      C34 has an immutable training-only trajectory and reward
-boundary derived from C31/C30 source-world evidence.
-PROVEN BY:           `tests/unit/offline-rl-training.test.ts` (4 tests),
+DONE THIS STEP:      C34 trains and retains a bounded fitted-Q result from an
+immutable C31/C30 trajectory receipt, with deterministic resume and a real
+divergence stop.
+PROVEN BY:           `tests/unit/offline-rl-training.test.ts` (7 tests),
 `pnpm typecheck`, targeted ESLint, and `pnpm check:architecture`.
-REMAINING HERE:      Bounded offline optimization/checkpoint custody, then
-headless online RL, self-play, curriculum expansion, and run safeguards.
+REMAINING HERE:      Source-world evaluation/quality for the offline challenger,
+then headless online RL, self-play, curriculum expansion, and run safeguards.
 REMAINING TO C40:    C25/C27/C29/C30/C31/C33 exits and C34-C40 product evidence.
-NEXT SLICE:          Fit a bounded offline learner only from a retained C34
-trajectory receipt, with immutable plan/reward lineage and resumable custody.
+NEXT SLICE:          Evaluate a retained offline-Q challenger through a declared
+source-world protocol; do not construct a runtime artifact or activation path.

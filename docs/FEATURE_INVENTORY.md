@@ -345,12 +345,15 @@ This is the migration checklist for the architectural redesign. A checked featur
    only an exact lineage-bound State Forge frontier, and its local hash-bound
    pass/fail custody has no registry activation or promotion route. The
    permanent short fixture fails, so a meaningful held-out pass still remains.
-   C34 now has a hash-bound, training-split-only offline-RL trajectory input
-   plan over those governed C31/C30 source tracks. It exposes only declared,
-   capped source-fact reward components and rejects altered plans, held-out
-   data, trace misalignment, off-episode actions, and a planted duplicate
-   terminal reward fact. Its trajectory receipt is not an optimizer result,
-   policy artifact, activation, promotion, online exploration, or self-play.
+   C34 now has a hash-bound, training-split-only offline-RL trajectory plan
+   over those governed C31/C30 source tracks and a deterministic bounded
+   fitted-Q trainer over that receipt. It exposes only declared, capped
+   source-fact reward components and rejects altered plans, held-out data,
+   trace misalignment, off-episode actions, and a planted duplicate terminal
+   reward fact. Checkpoint/result custody is idempotent and quarantines corrupt
+   bytes; Q/TD divergence stops before a model is emitted. Its retained Q model
+   is not a C32 runtime artifact, activation, promotion, online exploration,
+   or self-play result.
    Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.

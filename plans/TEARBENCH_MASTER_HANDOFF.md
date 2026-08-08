@@ -554,19 +554,23 @@ NEXT SLICE:          C33: run a meaningful governed unseen/recovery suite throug
 
 DONE THIS STEP:      C34 now binds one immutable C31 training split to its C30
 source-world curriculum, fixed reward definition, extraction budgets, and a
-content-addressed transition receipt. Its components are named native/canonical
+content-addressed transition receipt, then performs real deterministic bounded
+fitted-Q updates over that receipt. Its components are named native/canonical
 facts with source and reward caps; Academy reward snapshots remain observations,
-not invented RL returns.
+not invented RL returns. Checkpoints/results preserve exact receipt/plan/reward
+lineage and no C32 runtime artifact, registry write, activation, or promotion.
 PROVEN BY:           `tests/unit/offline-rl-training.test.ts` exercises stable
 re-extraction plus held-out exclusion, plan alteration, terminal-reward hack,
-and off-episode-action rejection. `pnpm typecheck`, targeted ESLint, and
-`pnpm check:architecture` pass for this slice.
-REMAINING HERE:      A bounded optimizer/checkpoint vault, then online
-production-headless episodes, self-play, expanded curriculum, and cancellation/
-divergence safeguards. No C34 checklist item is ticked by input plumbing.
+off-episode-action rejection, one-shot/resume equality, live nonzero Q updates,
+Vault corruption quarantine, and divergence stop before model emission.
+`pnpm typecheck`, targeted ESLint, and `pnpm check:architecture` pass.
+REMAINING HERE:      Offline challenger source-world evaluation/quality, then
+online production-headless episodes, self-play, expanded curriculum, and
+cancellation/online-run safeguards. C34 offline-corpus training and offline
+divergence-stop checklist items are now truthfully ticked; no quality claim.
 REMAINING TO C40:    C25/C27/C29/C30/C31/C33 exits and C34-C40 product evidence.
-NEXT SLICE:          Implement a bounded offline learner that accepts only this
-receipt and retains immutable plan/reward/checkpoint lineage without activation.
+NEXT SLICE:          Evaluate a retained offline-Q challenger through a declared
+source-world protocol; do not construct a runtime artifact or activation path.
 
 ### C33 pacing finding — repeat-round boundary
 
