@@ -145,6 +145,14 @@ becomes only `monitoring-ready`; a failed result is `rejected`. Neither outcome
 creates a C32 artifact, changes an active policy, promotes, schedules, or
 renders a Foundry surface.
 
+## V2 monitoring entry
+
+A verified `monitoring-ready` V2 job can retain one local health observation
+that binds its decision/evaluation lineage and frozen rollback/stop-condition
+identity. It rechecks current job and action-time C31 custody. The only health
+claim is `evidence-retained`; it does not activate traffic, place a policy,
+contact cloud, schedule a loop, or claim a rollout.
+
 V2 offline-training launches retain the complete immutable C34 plan and
 configuration. V1 launches fail closed because hashes alone cannot recreate
 their training inputs. A V2 resume rechecks launch, dataset, trainer manifest,

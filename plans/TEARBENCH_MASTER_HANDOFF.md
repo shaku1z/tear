@@ -1020,3 +1020,11 @@ A pass is `monitoring-ready` only; a failure rejects. No score is invented and
 neither route creates/artifacts/registers/activates/promotes a policy.
 NEXT SLICE: Implement only the separately authorized monitoring boundary; do
 not treat monitoring-ready as activation or promotion.
+
+### C36 V2 monitoring entry
+
+DONE THIS STEP: A current monitoring-ready V2 job can retain a local immutable
+health entry that binds decision/evaluation lineage and frozen stop-condition
+hash after action-time custody revalidation. It reports only evidence-retained;
+there is no runtime traffic, rollout, activation, placement, cloud, schedule,
+or UI behavior.

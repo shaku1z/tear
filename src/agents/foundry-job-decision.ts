@@ -12,6 +12,7 @@ export interface TearFoundryDecisionReceiptV1 { readonly format: "tear-foundry-d
 function hash(value: unknown): value is string { return typeof value === "string" && HASH.test(value); }
 function time(value: unknown): value is string { return typeof value === "string" && value.trim().length > 0 && Number.isFinite(Date.parse(value)); }
 function receipt(draft: Omit<TearFoundryDecisionReceiptV1, "receiptHash">): TearFoundryDecisionReceiptV1 { if (![draft.job.sourceJobHash, draft.job.resultJobHash, draft.evaluationReceiptHash, draft.evaluationResultHash].every(hash) || !time(draft.decidedAt)) throw new TypeError("invalid Foundry decision receipt"); const value = Object.freeze({ ...draft, job: Object.freeze({ ...draft.job }) }); return Object.freeze({ ...value, receiptHash: stableVerificationHash(value) }); }
+export function parseTearFoundryDecisionReceipt(value: unknown): TearFoundryDecisionReceiptV1 { if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("invalid Foundry decision receipt"); const typed = value as TearFoundryDecisionReceiptV1, { receiptHash, ...draft } = typed, parsed = receipt(draft); if (!hash(receiptHash) || receiptHash !== parsed.receiptHash) throw new TypeError("Foundry decision receipt integrity mismatch"); return parsed; }
 
 /** Applies only the V2 protocol's already-frozen C34 pass/fail result. It never creates or promotes a policy. */
 export class TearFoundryDecisionExecutor {
