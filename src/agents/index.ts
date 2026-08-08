@@ -55,6 +55,7 @@ export * from "./academy-inspection-controller";
 export * from "./browser-academy-inspection";
 export * from "./ladder-foundry";
 export * from "./tearbot-ladder-evaluation";
+export * from "./tearbot-human-calibration-source";
 export * from "./live-watch-agent-host";
 export * from "./hierarchical-policy-adapter";
 export * from "./persona-contracts";

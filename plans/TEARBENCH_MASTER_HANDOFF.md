@@ -665,6 +665,19 @@ NEXT SLICE:          Define a custody-backed human trace feature/metric contract
 before using any human-likeness calibration result; do not replace it with
 caller-supplied anchors or score dictionaries.
 
+### C35 human calibration source admission
+
+DONE THIS STEP:      C35 admits only a complete exact Ghost V3 command range
+with a separately consented, pseudonymous, issuer/device-bound attestation and
+derives bounded aggregate cadence features. It rejects C30 semantic evidence,
+private/no-training consent, altered capsule/range/action custody, and duplicate
+participant/capsule records.
+REMAINING HERE:      Normal live capture does not yet issue the required typed
+physical-input attestation; no human source has been inferred or admitted, and
+there is no calibration or level-certification claim.
+NEXT SLICE:          Integrate attestation issuance at the real physical Ghost
+capture boundary before deriving a participant-balanced calibration distribution.
+
 ### C33 pacing finding — repeat-round boundary
 
 Five consecutive non-ticking C33 slices completed conditioning compatibility,

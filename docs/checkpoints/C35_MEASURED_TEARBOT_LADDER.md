@@ -19,6 +19,13 @@
   firewall. Omega remains privileged/non-public and is explicitly excluded
   from human-facing comparisons. This executor cannot register, activate, or
   promote a policy.
+- `tearbot-human-calibration-source.ts` can admit one complete verified Ghost
+  V3 capsule only when a separately supplied, hash-bound pseudonymous consent
+  attestation names its exact root, range, command hash, physical device, and
+  issuer. It derives bounded aggregate command-cadence features and refuses
+  semantic/C30 evidence, private/no-training consent, mismatches, and repeats.
+  The current live recorder does not issue those attestations, so this is a
+  fail-closed source boundary, not a claim of admitted human evidence.
 
 ## Exit-gate status
 
