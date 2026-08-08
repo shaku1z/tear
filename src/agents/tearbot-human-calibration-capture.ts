@@ -4,8 +4,11 @@ import { stableVerificationHash } from "../replay/hash";
 import { createTearHumanCalibrationConsentAttestation, parseTearHumanCalibrationConsentAttestation, type TearHumanCalibrationConsentAttestationV1, type TearHumanCalibrationConsentLedger } from "./tearbot-human-calibration-source";
 
 const KEY = "tearbot-human-calibration-pending:v1:";
-export interface TearHumanCalibrationPendingAttestationStore {
+export interface TearHumanCalibrationPendingAttestationSink {
   persist(attestation: TearHumanCalibrationConsentAttestationV1): Promise<void>;
+}
+export interface TearHumanCalibrationPendingAttestationStore extends TearHumanCalibrationPendingAttestationSink {
+  read(attestationHash: string): Promise<TearHumanCalibrationConsentAttestationV1 | undefined>;
 }
 
 /** Local-only pending custody. A later explicit Academy process decides whether to admit it; this code never trains, uploads, or admits. */
@@ -15,6 +18,11 @@ export class TearHumanCalibrationLocalPendingAttestationStore implements TearHum
   async persist(attestation: TearHumanCalibrationConsentAttestationV1): Promise<void> {
     const parsed = parseTearHumanCalibrationConsentAttestation(attestation);
     await this.#backend.put("analysis", `${KEY}${parsed.attestationHash}`, JSON.stringify(parsed));
+  }
+  async read(attestationHash: string): Promise<TearHumanCalibrationConsentAttestationV1 | undefined> {
+    const raw = await this.#backend.get("analysis", `${KEY}${attestationHash}`);
+    if (raw === undefined) return undefined;
+    try { return parseTearHumanCalibrationConsentAttestation(JSON.parse(raw)); } catch { return undefined; }
   }
 }
 
@@ -28,7 +36,7 @@ export interface TearHumanCalibrationCaptureOptions {
   readonly currentSignedInActor: () => string | undefined;
   readonly trustedInputDevice: () => "keyboard-mouse" | "controller" | "touch" | undefined;
   readonly ledger: TearHumanCalibrationConsentLedger;
-  readonly pending: TearHumanCalibrationPendingAttestationStore;
+  readonly pending: TearHumanCalibrationPendingAttestationSink;
   readonly now: () => string;
 }
 

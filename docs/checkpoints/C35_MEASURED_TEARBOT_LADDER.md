@@ -30,6 +30,12 @@
   still hold at finalization, and the capsule root/range/command track verifies.
   It does not automatically admit, train on, upload, or reclassify a capture;
   synthetic browser events produce no attestation.
+- A separate explicit local pending-admission controller rechecks the current
+  consent revision through the existing source store before custody admission.
+  The participant-balanced distribution requires at least 30 distinct
+  pseudonymous participants, takes an equal deterministic number of receipts
+  per participant, and retains only hash-bound trace/cadence aggregates. It
+  does not call synthetic anchor APIs or certify a level placement.
 
 ## Exit-gate status
 
@@ -37,8 +43,9 @@
   The permanent fixture exercises only two scripted bindings and is not a real
   policy population or a level certification.
 - [ ] Human-likeness calibration against real human traces. No separately
-  consented human trace distribution or calibration metric is present. Pending
-  local attestations are source candidates, not admitted calibration evidence.
+  calibrated human-likeness comparison against a level policy is present. A
+  source-only participant-balanced trace/cadence distribution now exists, but
+  it is not a placement or level-certification result.
 - [ ] Ladder placement is reproducible. Hash-bound execution is reproducible;
   placement, adjacent-level discrimination, and drift invalidation remain open.
 

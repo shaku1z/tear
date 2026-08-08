@@ -680,6 +680,21 @@ certification claim.
 NEXT SLICE:          Add explicit Academy admission/curation and a participant-
 balanced calibration metric; do not treat pending attestations as evidence.
 
+### C35 explicit admission and balanced trace distribution
+
+DONE THIS STEP:      A pending attestation remains inert until the narrow local
+admission controller is explicitly invoked; the existing source store then
+rechecks current consent/revision and exact capsule custody. A reproducible
+distribution needs 30 distinct pseudonymous participants and deterministically
+balances their admitted receipts before deriving hash-bound trace/cadence
+aggregates.
+REMAINING HERE:      Connect an authorized Academy curation path without an
+automatic admission action, define a human-likeness comparison against real
+level policies, then establish placement and drift evidence. The distribution
+does not train, upload, replace synthetic anchors, or certify a level.
+NEXT SLICE:          Define the held-out human-likeness comparison protocol;
+keep calibration data source-only and participant-balanced.
+
 ### C33 pacing finding — repeat-round boundary
 
 Five consecutive non-ticking C33 slices completed conditioning compatibility,
