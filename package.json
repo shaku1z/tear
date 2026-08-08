@@ -47,6 +47,7 @@
     "test:browser:ghost-v3-corrupt-recovery": "node tests/browser-ghost-v3-corrupt-recovery.js",
     "test:browser:ghost-v3-storage-fault": "node tests/browser-ghost-v3-storage-fault.js",
     "test:browser:ghost-vault-library": "node tests/browser-ghost-vault-library.js",
+    "test:browser:ghost-vault-conditional-commit": "node tests/browser-ghost-vault-conditional-commit.js",
     "test:browser:ghost-vault-interrupted-recovery": "node tests/browser-ghost-vault-interrupted-recovery.js",
     "test:browser:ghost-vault-physical-quota": "node tests/browser-ghost-vault-physical-quota.js",
     "test:browser:ghost-vault-schema-migration": "node tests/browser-ghost-vault-schema-migration.js",

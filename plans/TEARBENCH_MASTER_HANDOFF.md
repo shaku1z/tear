@@ -1063,3 +1063,10 @@ closed; expired claims are reclaimable. Schedule, job, custody, budget, stop,
 and due identities are checked before the claim.
 REMAINING HERE: No timer, worker, unattended loop, cloud route, promotion,
 activation, placement, or curation/training/evaluation dispatch exists.
+
+### C36 IndexedDB conditional-commit browser evidence
+
+DONE THIS STEP: Test-standalone Chromium directly exercises the production
+IndexedDB `commitIfMatches` adapter: expected-absence grouped success, stale
+guard refusal/no partial writes, and fresh-adapter readback. This closes the
+adapter-evidence gap for the C36 lease primitive, not a Foundry workflow step.

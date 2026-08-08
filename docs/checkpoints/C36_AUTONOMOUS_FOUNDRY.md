@@ -200,6 +200,16 @@ conditionally releases the lease. Concurrent/stale claims fail closed and an
 expired claim may be reclaimed. There is no timer, cloud, promotion, activation,
 placement, or later-phase dispatch.
 
+## Browser conditional-commit evidence
+
+The test-standalone browser now invokes the production IndexedDB backend's
+generic conditional-write primitive directly. It proves an expected-absence
+grouped write across two stores, then changes the guard and proves a stale
+competitor is refused without either stale write becoming visible. A fresh
+backend instance reads the original grouped writes and unchanged guard back
+from IndexedDB. This is Vault atomicity evidence only; it does not advance any
+Foundry phase.
+
 V2 offline-training launches retain the complete immutable C34 plan and
 configuration. V1 launches fail closed because hashes alone cannot recreate
 their training inputs. A V2 resume rechecks launch, dataset, trainer manifest,

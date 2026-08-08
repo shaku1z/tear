@@ -634,10 +634,9 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     frameServices: { canvas, context: ctx, width: W, height: H, overscan: () => OVERSCAN, safeTop: () => SAFE.t, viewportScale: () => viewport.cssPerLogicalPixel, resize: resizeCanvas, input: Input, ui: UI, stage: stageRuntime, cinema: CINEMA, reducedMotion: () => A11Y.reducedMotion, flashScale: () => A11Y.flashScale, touchActive: () => Input.touchActive(), controller: () => ({ active: PAD.active, toastSeconds: PAD.toastT, toastText: PAD.toastText }), pointerLocked: () => Input.locked, lockHint, inputHint: hintEl, clamp, ease: ez, blendColor: blendCol, setTheme: (background, playLike) => { THEME.set(playLike && biomeMode() ? background : "#ffffff"); UI.ink = THEME.ink; }, themeInk: () => THEME.ink, backdropPost: (context, stage, camera) => { Backdrop.post(context, stage, camera); }, drawMenuAttract: () => { Attract.draw(ctx); }, renderScreen: (screen) => { renderRegisteredScreen(screen, interfaceComposition.screens.renderers); }, isMenuScreen, playInterfaceSound: () => { SFX.ui(); }, hoverAnimation: interfaceInteraction.hoverAnimations(), trickColor },
     worldState: { run: liveRun, player: livePlayer, blade: liveBlade, enemies: () => hostState.enemies(), projectiles: () => hostState.projectiles(), floaters: () => hostState.floaters(), slowZones: () => hostState.slowZones(), temporaryWalls: () => hostState.temporaryWalls(), screen: () => state, zoom: () => feel.zoom, shake: () => impact.shake, lastUiDelta: interfaceFrame.deltaSeconds, bannerSeconds: () => feel.bannerSeconds, bossIntro: () => hostState.bossIntro(), hud: () => hudFeedback.snapshot(), setHud: (value) => { hudFeedback.set(value); } },
     worldServices: { dependencies, canvas: ctx, width: W, height: H, debug: PANTHEON_DEBUG, stage: stageRuntime, tutorial: TUT, finale: () => story.finale, formatTime: fmtTime, trickColor, ease: ez }, onBiomeTransition: (begin) => { Attract.onBiomeChange = begin; },
-  });
-  const { wipe: Wipe, frame: presentationHost, screens: screenComposition } = interfaceComposition;
+  }); const { wipe: Wipe, frame: presentationHost, screens: screenComposition } = interfaceComposition;
   const { library: libraryAdapters, replay: replayAdapters, settings: settingsRenameAdapters, modelRenderers: presentationScreenRenderers } = screenComposition;
-  if (__TEAR_TEST_BUILD__ && TEST_MODE) void import("../tearbench/browser/live-runtime-bridge").then(({ installGhostV3BrowserInspector, installLiveTearRuntimeBridge }) => {
+  if (__TEAR_TEST_BUILD__ && TEST_MODE) void import("../tearbench/browser/live-runtime-bridge").then(({ installGhostV3BrowserInspector, installGhostVaultConditionalCommitInspector, installLiveTearRuntimeBridge }) => {
     installGhostV3BrowserInspector(browserWindow, {
       manifest: () => ghostV3?.lastManifest ?? null,
       manifests: () => listBrowserGhostCapsuleManifests(browserIndexedDb),
@@ -649,6 +648,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       active: () => ghostV3?.active === true, activePractice: ghostPracticeSession.active,
       failure: () => ghostV3?.failure ?? null,
     });
+    installGhostVaultConditionalCommitInspector(browserWindow);
     const consumedActions: CommandEnvelope<GameAction>[] = [];
     Input.semantic.subscribe((entry) => { consumedActions.push(entry); });
     const actionRouting = { screen: () => state, setScreen: (screen: "playing" | "paused") => { setState(screen); },

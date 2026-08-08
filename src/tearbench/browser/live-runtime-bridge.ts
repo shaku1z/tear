@@ -16,8 +16,24 @@ import type { GhostCapsuleReplayMapping } from "../../ghost/capsule-replay-envel
 import type { GhostReplayAdmission } from "../../ghost/replay-admission";
 import type { GhostProductionReplayVerification } from "../../ghost/production-replay-verification";
 import type { GhostPracticeChild, GhostPracticeMode } from "../../ghost/replay-world";
+import { createIndexedDbGhostVaultBackend } from "../../ghost/indexeddb-vault-backend";
 
 type LiveRuntimeBridgeWindow = Window & { __TEAR_RUNTIME_ENVIRONMENT__?: TearRuntimeBridgeFactory };
+
+/** Narrow test-build probe for the generic Vault conditional-write primitive. */
+export function installGhostVaultConditionalCommitInspector(target: Window): void {
+  Object.defineProperty(target, "__TEAR_GHOST_VAULT_CONDITIONAL__", { configurable: true, value: Object.freeze({
+    exercise: async (databaseName: string) => {
+      const backend = await createIndexedDbGhostVaultBackend(target.indexedDB, databaseName);
+      await backend.put("analysis", "guard", "before");
+      await backend.commitIfMatches([{ store: "analysis", key: "missing" }], [{ store: "analysis", key: "first", value: "one" }, { store: "indexes", key: "second", value: "two" }]);
+      await backend.put("analysis", "guard", "after"); let staleRefused = false;
+      try { await backend.commitIfMatches([{ store: "analysis", key: "guard", expected: "before" }], [{ store: "analysis", key: "first", value: "overwritten" }, { store: "indexes", key: "stale", value: "must-not-write" }]); } catch { staleRefused = true; }
+      const refreshed = await createIndexedDbGhostVaultBackend(target.indexedDB, databaseName);
+      return Object.freeze({ staleRefused, guard: await refreshed.get("analysis", "guard"), first: await refreshed.get("analysis", "first"), second: await refreshed.get("indexes", "second"), stale: await refreshed.get("indexes", "stale") });
+    },
+  }) });
+}
 
 /** Test-build inspection callbacks supplied by the real live Ghost V3 recorder. */
 export interface GhostV3BrowserInspectorSource {
