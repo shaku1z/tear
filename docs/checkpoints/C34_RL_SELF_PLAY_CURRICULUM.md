@@ -175,3 +175,12 @@ actions, and uses the shared deterministic tie-break. Malformed, legacy,
 tampered, unpassed, or incompatible candidates refuse before runtime fallback.
 The candidate registry is inactive-only and quarantines corrupt reads; it never
 writes C32's active pointer.
+
+### C36 V3 monitoring eligibility bridge
+
+An explicit C36 boundary can now cite a completed/passed V3 offline, online,
+and source evaluation lineage only while retaining a separate immutable
+monitoring bridge to an already-inactive C32 candidate. It never converts V2
+learning evidence into V3, changes a V3 result, or makes a quality/promotion
+claim. Mismatched adapter, vocabulary, plan, checkpoint, evaluation, candidate,
+V2 decision/monitoring, current-head, or custody identity refuses.

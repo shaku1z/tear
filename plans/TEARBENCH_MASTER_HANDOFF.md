@@ -1231,6 +1231,21 @@ REMAINING HERE: No current C32 active runtime or browser composition consumes
 this format. Do not activate, promote, place, bind it to Foundry, or add UI
 without a separately authorized rollout boundary.
 
+### C36 V3 monitoring eligibility bridge
+
+DONE THIS STEP: An exact current V2 `monitoring` job can retain a separate,
+content-addressed bridge to one already-inactive C34 V3/C32 candidate only
+after it revalidates V2 decision/monitor receipts, frozen protocol/stop identity,
+action-time C31 custody, and every offline/online/evaluation/candidate lineage
+identity. V1 Foundry jobs and legacy/V2 learning input refuse; corrupt retained
+bridge bytes quarantine. `tests/unit/foundry-job-v3-monitoring-bridge.test.ts`
+covers successful/idempotent retention, V1/V2 refusal, identity mismatch,
+candidate-only refusal, stale current head, revoked custody, and corruption.
+REMAINING HERE: This is provenance only. A later, explicitly authorized
+candidate evaluation/rejection/rollout boundary must not infer activation,
+placement, promotion, runtime traffic, UI, timer, worker, or cloud behavior
+from a bridge.
+
 ### C34 V3 canonical-compatible offline training custody
 
 DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,

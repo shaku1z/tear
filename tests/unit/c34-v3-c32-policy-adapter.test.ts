@@ -51,7 +51,7 @@ describe("C34 V3 to C32 canonical policy candidate", () => {
   it("refuses legacy, tampered, and unevaluated provenance instead of falling back", () => {
     const { offline, training, online, checkpoint, evaluation, candidate } = fixture();
     expect(() => createTearC34V3C32PolicyCandidate(offline, training, online, checkpoint, { ...evaluation, metrics: { ...evaluation.metrics, passed: false } }, { ...candidate.artifact, id: "rejected" })).toThrow(/integrity|passed/u);
-    const altered = structuredClone(candidate.artifact); altered.model.payload = "{}";
+    const altered = { ...candidate.artifact, model: { ...candidate.artifact.model, payload: "{}" } };
     expect(() => parseTearC34V3C32PolicyCandidate(altered)).toThrow(/invalid|integrity/u);
     expect(() => new TearC34V3C32PolicyRuntime(altered, () => [])).toThrow();
   });

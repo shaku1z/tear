@@ -9,6 +9,7 @@ export interface TearFoundryMonitoringEntryReceiptV1 { readonly format: "tear-fo
 function hash(v: unknown): v is string { return typeof v === "string" && HASH.test(v); }
 function time(v: unknown): v is string { return typeof v === "string" && v.trim().length > 0 && Number.isFinite(Date.parse(v)); }
 function receipt(d: Omit<TearFoundryMonitoringEntryReceiptV1, "receiptHash">): TearFoundryMonitoringEntryReceiptV1 { if (![d.jobHash, d.decisionReceiptHash, d.evaluationResultHash, d.stopConditionsHash].every(hash) || !time(d.observedAt)) throw new TypeError("invalid Foundry monitoring entry"); const value = Object.freeze({ ...d }); return Object.freeze({ ...value, receiptHash: stableVerificationHash(value) }); }
+export function parseTearFoundryMonitoringEntryReceipt(value: unknown): TearFoundryMonitoringEntryReceiptV1 { if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("invalid Foundry monitoring entry"); const typed = value as TearFoundryMonitoringEntryReceiptV1, { receiptHash, ...draft } = typed, parsed = receipt(draft); if (!hash(receiptHash) || receiptHash !== parsed.receiptHash) throw new TypeError("Foundry monitoring entry integrity mismatch"); return parsed; }
 /** Retains a verified monitoring entry only. It changes no traffic, runtime policy, cloud state, or schedule. */
 export class TearFoundryMonitoringEntryExecutor {
   readonly #jobs: TearFoundryJobVault; readonly #custody: TearAcademyCandidateCustodyStore;

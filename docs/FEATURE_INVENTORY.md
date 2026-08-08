@@ -512,4 +512,9 @@ masked, deterministic, integrity-checked, and corruption-quarantined, but has
 no C32 active-pointer, normal runtime, UI, Foundry, placement, or promotion
 path.
 
+The C36 V3 monitoring bridge can retain exact V2 monitoring plus C31 custody
+and completed V3 candidate lineage as a quarantined, inactive-only evidence
+record. It cannot activate, route, place, promote, roll back, schedule, or
+surface that candidate to players.
+
 The inventory is reviewed at every phase gate. New features added during the redesign must be appended here and implemented through the target boundaries; they may not add new shared globals or direct platform dependencies to domain code.

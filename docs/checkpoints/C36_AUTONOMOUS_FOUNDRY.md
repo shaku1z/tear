@@ -377,3 +377,19 @@ records have no C36 job/event/binding/lease reference, so the existing Foundry
 scheduler cannot discover, resume, evaluate, decide, bind, or promote them by
 implication. Any later C36 use must freeze and validate exact V3 lineage in a
 new authorized boundary.
+
+## V3 monitoring eligibility bridge
+
+The Foundry now has one deliberately narrow V3-to-monitoring evidence bridge.
+Only an exact current V2 `monitoring` job with a persisted `monitoring-ready`
+decision and `evidence-retained` monitoring receipt can retain it. It pins the
+V2 protocol/stop/custody evidence to an independently completed and passed C34
+V3 offline/online/source-evaluation lineage and an already-inactive C32
+candidate artifact. All identities are content-addressed; V1 Foundry jobs,
+legacy/V2 C34 inputs, candidate-only violations, changed heads, revoked
+custody, and corrupt bytes fail closed (stored bridge corruption quarantines).
+
+This bridge is not a Foundry decision, quality certification, active-policy
+pointer, runtime selection, traffic change, UI, placement, promotion, rollback,
+timer, worker, or cloud route. It is solely the provenance prerequisite that a
+future authorized rollout/rejection boundary must consume explicitly.

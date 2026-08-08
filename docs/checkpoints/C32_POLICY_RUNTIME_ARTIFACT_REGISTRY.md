@@ -206,3 +206,14 @@ tampered provenance refuses rather than becoming scripted fallback; fallback is
 reserved for an absent candidate or no legal action after availability masking.
 No normal-build composition, player UI, promotion, placement, or Foundry route
 has been added.
+
+### C36 V3 monitoring eligibility bridge
+
+A current V2 Foundry `monitoring` head may now retain a separate, immutable
+bridge to one already-inactive C34 V3/C32 candidate. The bridge revalidates the
+V2 decision and monitoring receipts, frozen protocol and stop identity,
+action-time held C31 custody, and every offline/online/evaluation/candidate
+lineage hash. V1 Foundry jobs and V2 C34 evidence cannot claim V3 eligibility;
+corrupt bridge bytes quarantine. This is evidence retention only: it does not
+write C32's active pointer, select traffic, expose UI, place, promote, or roll
+out a policy.
