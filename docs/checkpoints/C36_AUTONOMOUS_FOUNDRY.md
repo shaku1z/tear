@@ -9,7 +9,21 @@ for an existing durable job: validated current phase, legal next manual phase,
 and event-hash/count provenance only. Missing or corrupt bytes produce no
 projection through Vault quarantine. It never resumes training/evaluation,
 exposes custody/tracks, activates/promotes, contacts cloud, schedules work, or
-renders UI.
+  renders UI.
+
+## Normal-build status and recovery surface
+
+The normal standalone menu now exposes a distinct `FOUNDRY STATUS` route. Its
+typed controller reads validated local Vault job heads and projects only phase,
+legal next manual phase, resumability, event count, and truncated integrity
+hashes. The screen explicitly states that automation is unavailable/not
+running, provides refresh and back, and contains no job creation, execution,
+evaluation, scheduling, cloud, activation, promotion, custody-track, or model
+action. Invalid durable bytes remain quarantined through the existing Vault
+read path and are absent from the projection.
+
+Evidence: `tests/unit/live-foundry-screen.test.ts`, renderer/action-routing
+tests, and the built `browser-navigation-journeys.js` route proof.
 
 ## Proven foundation
 

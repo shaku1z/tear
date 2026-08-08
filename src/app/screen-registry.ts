@@ -5,7 +5,7 @@ export type ScreenRendererRegistry = Readonly<Record<LegacyAppScreen, ScreenRend
 
 const menuScreens: ReadonlySet<LegacyAppScreen> = new Set([
   "menu", "shop", "codex", "setup", "profile", "settings", "achievements",
-  "leaderboards", "rename",
+  "leaderboards", "rename", "academy", "foundry",
 ]);
 
 const worldScreens: ReadonlySet<LegacyAppScreen> = new Set([

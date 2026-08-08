@@ -87,7 +87,7 @@ describe("legacy screen renderer registry", () => {
     expectTypeOf<ReturnType<typeof createUi>>().toExtend<ScreenUiPort>();
     const registry = createLegacyScreenRenderers(createControlContext([]));
     expect(Object.keys(registry).sort()).toEqual([
-      "academy", "achievements", "codex", "confirmquit", "continue", "draft", "gameover", "leaderboards",
+      "academy", "achievements", "codex", "confirmquit", "continue", "draft", "foundry", "gameover", "leaderboards",
       "menu", "paused", "pglab", "pgmenu", "playing", "profile", "rename", "replay", "reserve",
       "settings", "setup", "shop", "tierup", "win",
     ]);
@@ -250,6 +250,17 @@ describe("legacy screen renderer registry", () => {
     renderer.academy({ id: "academy", status: "unavailable", subtitle: "Academy storage is unavailable", rows: [], records: [], manifests: [] });
     expect(controls.find((control) => control.action.type === "academy.retry"))
       .toMatchObject({ label: "TRY AGAIN", x: 690, w: 220, h: 46 });
+  });
+
+  it("renders the hashes-only Foundry status with refresh and return, but no workflow action", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.foundry({ id: "foundry", status: "ready", subtitle: "local recovery", automation: "unavailable", jobs: [{
+      jobHash: "a".repeat(16), phase: "collecting", nextManualPhase: "curating", resumable: true, eventCount: 2,
+      lastEventHash: "b".repeat(16), projectionHash: "c".repeat(16),
+    }] });
+    expect(controls.map((control) => control.action.type)).toEqual(expect.arrayContaining(["foundry.refresh", "navigate"]));
+    expect(controls.some((control) => control.action.type !== "foundry.refresh" && control.action.type !== "navigate")).toBe(false);
   });
 
   it("renders durable DAgger status and exposes only a persisted-plan advance action", () => {

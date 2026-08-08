@@ -1,6 +1,7 @@
 import type {
   AchievementsScreenView,
   AcademyScreenView,
+  FoundryScreenView,
   CodexScreenView,
   LeaderboardsScreenView,
   LegacyScreenRendererRegistry,
@@ -100,6 +101,7 @@ function createColdScreenBoundary(context: ScreenRenderContext): ColdScreenRende
     pgmenu(view: PlaygroundScreenView) { if (renderers) renderers.pgmenu(view); else loadingFrame(); },
     pglab(view: PlaygroundScreenView) { if (renderers) renderers.pglab(view); else loadingFrame(); },
     academy(view: AcademyScreenView) { if (renderers) renderers.academy(view); else loadingFrame(); },
+    foundry(view: FoundryScreenView) { if (renderers) renderers.foundry(view); else loadingFrame(); },
     settings(view: SettingsScreenView) { if (renderers) renderers.settings(view); else loadingFrame(); },
     rename(view: RenameScreenView) { if (renderers) renderers.rename(view); else loadingFrame(); },
   });

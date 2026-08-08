@@ -10,6 +10,7 @@ import { createLiveSettingsRenameAdapters, type SettingsRenameAdapters,
   type SettingsRenameServices } from "./live-settings-rename-adapters";
 import type { LegacyAppScreen } from "./legacy-state-controller";
 import type { AcademyScreenView } from "../presentation/screens/contracts";
+import type { FoundryScreenView } from "../presentation/screens/contracts";
 
 type RendererBase = Omit<LiveScreenRendererOptions, "dispatch" | "renderPreview">;
 type ReplayBase = Omit<ReplayScreenServices, "renderers" | "categories" | "fallbackCategory" | "specialColor">;
@@ -33,6 +34,7 @@ export interface LiveScreenPresentationOptions {
   readonly menuServices: MenuServicesBase;
   readonly playground: Readonly<{ renderMenu: () => void; renderLab: () => void }>;
   readonly academy: () => AcademyScreenView;
+  readonly foundry: () => FoundryScreenView;
 }
 
 export interface LiveScreenPresentationComposition {
@@ -51,7 +53,7 @@ export interface LiveScreenPresentationComposition {
 function isLegacyScreen(value: string): value is LegacyAppScreen {
   return ["menu", "setup", "playing", "paused", "draft", "reserve", "tierup", "settings",
     "continue", "gameover", "win", "replay", "confirmquit", "shop", "codex", "profile",
-    "achievements", "leaderboards", "rename", "pgmenu", "pglab", "academy"].includes(value);
+    "achievements", "leaderboards", "rename", "pgmenu", "pglab", "academy", "foundry"].includes(value);
 }
 
 /** Resolves the deliberately lazy screen-adapter cycle behind one strict composition boundary. */
@@ -107,6 +109,7 @@ export function createLiveScreenPresentationComposition(
       leaderboards: library.renderLeaderboards, rename: settings.renderRename,
       pgmenu: options.playground.renderMenu, pglab: options.playground.renderLab,
       academy: () => { renderer.academy(options.academy()); },
+      foundry: () => { renderer.foundry(options.foundry()); },
     }),
     chooseUpgrade: run.chooseUpgrade, chooseReserve: run.chooseReserve, chooseTier: run.chooseTierUp,
     rerollDraft: run.rerollDraft, dispatch,

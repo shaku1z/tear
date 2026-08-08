@@ -13,6 +13,7 @@ import { AchievementToastController } from "./achievement-toast-controller";
 import { TouchOnboardingController } from "./touch-onboarding-controller";
 
 export { createLiveAcademyScreen } from "./live-academy-screen";
+export { createLiveFoundryScreen } from "./live-foundry-screen";
 
 type SurfaceOptions = Parameters<typeof createLivePresentationSurface>[0];
 type SurfaceWorld = Omit<SurfaceOptions["world"], "screen">;

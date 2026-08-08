@@ -408,8 +408,11 @@ This is the migration checklist for the architectural redesign. A checked featur
 
 - [ ] C36 restart recovery projection — validated Foundry jobs can be projected
   as hashes-only current phase and legal manual restart state; corrupt/missing
-  custody is refused through local Vault quarantine. This is read-only and does
-  not execute, schedule, activate, promote, contact cloud, or expose UI.
+  custody is refused through local Vault quarantine. The normal standalone
+  `FOUNDRY STATUS` route visibly renders only those hashes/counts, phase, legal
+  next manual phase, and explicit unavailable/not-running automation state;
+  refresh/back have built navigation evidence. This remains read-only and does
+  not execute, schedule, activate, promote, or contact cloud.
 
 - [ ] V2 Foundry source-evaluation derivation — V2 requests freeze an
   identifier/threshold protocol before a challenger exists, retain its content

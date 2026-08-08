@@ -8,7 +8,7 @@ export type LegacyScreenId =
   | "menu" | "setup" | "playing" | "paused" | "draft" | "reserve" | "tierup"
   | "settings" | "continue" | "gameover" | "win" | "replay" | "confirmquit"
   | "shop" | "codex" | "profile" | "achievements" | "leaderboards" | "rename"
-  | "pgmenu" | "pglab" | "academy";
+  | "pgmenu" | "pglab" | "academy" | "foundry";
 
 export type ScreenAction =
   | { readonly type: "navigate"; readonly to: LegacyScreenId; readonly resetScroll?: boolean; readonly tab?: string }
@@ -63,6 +63,7 @@ export type ScreenAction =
   | { readonly type: "academy.record.withdrawModelTraining"; readonly candidateHash: string }
   | { readonly type: "academy.humanCalibration.optIn"; readonly consent: "anonymous-improvement" | "public-training" }
   | { readonly type: "academy.humanCalibration.revoke" }
+  | { readonly type: "foundry.refresh" }
   | { readonly type: "rename.submit" }
   | { readonly type: "rename.cancel" }
   | { readonly type: "draft.choose"; readonly index: number }

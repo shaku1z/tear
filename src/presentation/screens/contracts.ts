@@ -246,11 +246,21 @@ export interface AcademyScreenView {
     readonly canOptIn: boolean; readonly canRevoke: boolean }>;
 }
 
+/** Read-only C36 local recovery projection. It deliberately contains no custody or model data. */
+export interface FoundryScreenView {
+  readonly id: "foundry";
+  readonly status: "loading" | "unavailable" | "ready";
+  readonly subtitle: string;
+  readonly automation: "unavailable";
+  readonly jobs: readonly Readonly<{ readonly jobHash: string; readonly phase: string; readonly nextManualPhase: string | null;
+    readonly resumable: boolean; readonly eventCount: number; readonly lastEventHash: string; readonly projectionHash: string; }>[];
+}
+
 export type LegacyScreenView = MenuScreenView | SetupScreenView | PlayingScreenView | CodexScreenView
   | ShopScreenView | ProfileScreenView | AchievementsScreenView | LeaderboardsScreenView
   | ReplayScreenView | SettingsScreenView | RenameScreenView | DraftScreenView | ReserveScreenView
   | TierUpScreenView | PausedScreenView | ConfirmQuitScreenView | ContinueScreenView
-  | GameoverScreenView | WinScreenView | PlaygroundScreenView | AcademyScreenView;
+  | GameoverScreenView | WinScreenView | PlaygroundScreenView | AcademyScreenView | FoundryScreenView;
 
 export type ScreenViewById<Id extends LegacyScreenId, View = LegacyScreenView> =
   View extends Readonly<{ id: infer ViewId }> ? Id extends ViewId ? View : never : never;

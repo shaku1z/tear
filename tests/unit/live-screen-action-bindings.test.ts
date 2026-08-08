@@ -10,6 +10,13 @@ describe("live screen action bindings", () => {
     expect(refreshAcademy).toHaveBeenCalledOnce();
   });
 
+  it("routes Foundry refresh only to its read-only recovery projection", () => {
+    const refreshFoundry = vi.fn();
+    const dispatch = createLiveScreenActionBindings({ refreshFoundry } as unknown as ScreenActionBindingPorts);
+    dispatch({ type: "foundry.refresh" });
+    expect(refreshFoundry).toHaveBeenCalledOnce();
+  });
+
   it("routes only an explicit persisted DAgger plan advance through the Academy port", () => {
     const advanceAcademyDagger = vi.fn();
     const dispatch = createLiveScreenActionBindings({ advanceAcademyDagger } as unknown as ScreenActionBindingPorts);

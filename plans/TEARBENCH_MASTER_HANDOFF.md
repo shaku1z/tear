@@ -839,6 +839,14 @@ TearBench is complete only when:
 
 ### C36 restart recovery projection
 
+DONE THIS STEP: The normal standalone menu has a typed `FOUNDRY STATUS` route.
+It renders only validated hashes/counts, current phase, legal next manual
+phase, and explicit automation-unavailable/not-running state from local C36
+recovery projections. Refresh and Back use semantic actions. It cannot create,
+train, evaluate, schedule, use cloud, expose custody tracks, activate, or
+promote. PROVEN BY: `tests/unit/live-foundry-screen.test.ts`, screen/action
+tests, and the built browser navigation journey.
+
 DONE THIS STEP: `TearFoundryRecoveryController` reads a validated durable job
 and returns only its current legal manual/resumable phase plus hashes-only event
 provenance. Corrupt or missing bytes produce no projection through Vault

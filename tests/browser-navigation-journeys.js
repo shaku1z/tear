@@ -19,10 +19,12 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
     { point: [260, 635], screen: "codex" },
     { point: [260, 696], screen: "settings" },
     { point: [260, 757], screen: "academy" },
+    { point: [530, 757], screen: "foundry" },
   ];
   for (const route of hubRoutes) {
     await boot();
     await clickAndWait(route.point[0], route.point[1], route.screen);
+    if (route.screen === "foundry") await clickAndWait(800, 380, "foundry");
     await clickAndWait(800, 850, "menu");
   }
 

@@ -61,4 +61,11 @@ export class TearFoundryJobVault {
       return undefined;
     }
   }
+
+  /** Lists only validated local job heads. Invalid bytes are quarantined by get(). */
+  async list(): Promise<readonly TearFoundryJobV1[]> {
+    const ids = (await this.#backend.keys("analysis")).filter((key) => key.startsWith(KEY)).map((key) => key.slice(KEY.length));
+    const values = await Promise.all(ids.map((id) => this.get(id)));
+    return Object.freeze(values.filter((value): value is TearFoundryJobV1 => value !== undefined).sort((left, right) => left.id.localeCompare(right.id)));
+  }
 }
