@@ -60,6 +60,17 @@ survives interruption, and presents progress without a terminal command.
 
 ## V2 checkpoint recovery foundation
 
+## Terminal training and evaluation readiness
+
+The Foundry can now finalize only the current exact V2 checkpoint after it
+rechecks its C31 trainer manifest, held custody, dataset, C34 plan/reward,
+receipt, configuration, and checkpoint lineage. A running checkpoint remains
+`training` and has no successor. A stopped-divergence checkpoint persists its
+non-model C34 result and transitions to `rejected`; a completed checkpoint
+persists its local C34 result and transitions to `evaluating` with an immutable
+evaluation-readiness receipt. The receipt records no score, source-world run,
+quality verdict, artifact, registry pointer, activation, or promotion.
+
 V2 offline-training launches retain the complete immutable C34 plan and
 configuration. V1 launches fail closed because hashes alone cannot recreate
 their training inputs. A V2 resume rechecks launch, dataset, trainer manifest,

@@ -911,6 +911,24 @@ evaluation; fail closed on every changed or revoked input.
 
 ### C36 V2 checkpoint recovery
 
+### C36 terminalization and evaluation readiness
+
+DONE THIS STEP: C36 now finalizes only a terminal exact V2 C34 checkpoint after
+rechecking the trainer manifest, action-time held custody, dataset, plan/reward,
+receipt, configuration, and checkpoint lineage. A running checkpoint stays in
+`training`; stopped divergence persists a non-model result and becomes
+`rejected`; a completed result becomes `evaluating` with immutable local
+readiness evidence. Repeated identical recovery is idempotent.
+PROVEN BY: `tests/unit/foundry-job-offline-training-finalization.test.ts` plus
+the C36 ledger/offline training tests, TypeScript, targeted ESLint, architecture,
+and requirements checks.
+REMAINING HERE: Evaluation readiness is not a source-world evaluation. It has
+no score, policy artifact/registry path, activation, promotion, scheduler, or
+UI. C36 remains open.
+NEXT SLICE: Bind an exact completed C34 result to the existing frozen C30
+online-Q curriculum/checkpoint route before using the source-world evaluator;
+do not treat an offline-Q result as a C32 artifact or C35 ladder policy.
+
 DONE THIS STEP:      Foundry V2 launches retain actual C34 plan/configuration
 bytes, while historical V1 launch bytes are explicitly non-resumable. A V2
 resume rechecks all stored lineage and advances one epoch with a durable

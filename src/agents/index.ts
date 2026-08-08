@@ -59,6 +59,7 @@ export * from "./foundry-job-vault";
 export * from "./foundry-job-collection";
 export * from "./foundry-job-curation";
 export * from "./foundry-job-offline-training";
+export * from "./foundry-job-offline-training-finalization";
 export * from "./tearbot-ladder-evaluation";
 export * from "./tearbot-human-calibration-source";
 export * from "./tearbot-human-calibration-consent-ledger";
