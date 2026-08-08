@@ -495,5 +495,8 @@ The future learned-Q runtime has a separate versioned C34/C32 canonical-source
 compatibility identity. It proves common C30 source-state encoding and canonical
 action selection mechanics only; legacy C34 results refuse the path, and it
 does not create a policy artifact, activation, promotion, or player feature.
+Its separate V3 bounded offline trainer now preserves receipt/configuration/
+vocabulary lineage and corruption-safe local custody, still without registry,
+activation, promotion, or player runtime integration.
 
 The inventory is reviewed at every phase gate. New features added during the redesign must be appended here and implemented through the target boundaries; they may not add new shared globals or direct platform dependencies to domain code.

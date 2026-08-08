@@ -1204,3 +1204,17 @@ legacy refusal.
 REMAINING HERE: No C34 result has been converted; no C32 artifact, registry,
 activation, promotion, Foundry decision, or UI exists. Future model training
 must emit the explicit envelope before it can request any C32 learned-Q route.
+
+### C34 V3 canonical-compatible offline training custody
+
+DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,
+canonical-source adapter, action vocabulary, and bounded Q configuration. Its
+separate checkpoint/result custody is deterministic across resume, stops before
+model emission on divergence, validates tampering, and returns only the explicit
+C34/C32 model envelope after completion.
+PROVEN BY: `tests/unit/offline-rl-v3-training.test.ts` covers one-shot/resume,
+legacy refusal, runtime action compatibility, plan/checkpoint tamper refusal,
+divergence, custody, and corrupt-byte quarantine.
+REMAINING HERE: The result is not a C32 artifact and is not wired to registry,
+activation, promotion, Foundry, self-play, or UI. A later slice must establish
+an authorized, evaluated C32 adapter acceptance path without converting V2.

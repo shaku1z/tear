@@ -127,3 +127,16 @@ and equal-Q tie-break are pure and deterministic. Existing V2 C34 result bytes
 have no such declaration and explicitly refuse this path. This is compatibility
 infrastructure only: it does not convert a result, create a C32 artifact,
 register, activate, promote, or claim a deployable learned policy.
+
+### C34 V3 canonical-compatible offline custody
+
+`tear-offline-rl-v3-plan` freezes an exact governed C31/C30 receipt lineage,
+the canonical-source adapter identity, a one-to-sixteen canonical action
+vocabulary, and bounded Q configuration. Its separate V3 checkpoint/result
+custody updates only one-action decision transitions using the shared source
+encoder; empty source transitions are not silently converted into a runtime
+action. Resume is deterministic, changed plans/checkpoints/results fail
+integrity checks, and divergence yields no model. A completed result contains
+only the explicit C34/C32 model envelope and exact adapter/vocabulary/lineage
+hashes. It neither changes V2 data nor creates a C32 registry artifact,
+activation, promotion, Foundry decision, or UI surface.

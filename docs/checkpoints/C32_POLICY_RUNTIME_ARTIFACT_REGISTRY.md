@@ -183,3 +183,8 @@ action vocabulary, masks it against source-advertised action types, and breaks
 equal Q values by semantic-action hash. Legacy V2 C34 results are deliberately
 rejected because they do not declare that identity. Nothing here registers,
 activates, or changes the existing Watch runtime.
+
+A separate C34 V3 trainer can now emit that explicit envelope under frozen
+receipt/configuration/vocabulary lineage. This does not make it an accepted
+current C32 artifact format: registry admission, activation, and player-facing
+execution remain intentionally unchanged until a later authorized adapter slice.

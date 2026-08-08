@@ -24,6 +24,7 @@ export * from "./academy-behavior-cloning-batches";
 export * from "./academy-policy-evaluation";
 export * from "./academy-policy-evaluation-executor";
 export * from "./offline-rl-training";
+export * from "./offline-rl-v3-training";
 export * from "./online-rl-headless-executor";
 export * from "./online-rl-curriculum";
 export * from "./online-rl-training";

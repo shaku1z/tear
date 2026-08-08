@@ -366,3 +366,7 @@ an existing C34 V2 result as a C32 artifact. That pure identity binds C30/C34
 and future C32 execution to one canonical source-state hash and one masked,
 deterministically tie-broken semantic action vocabulary. It is not a Foundry
 decision, artifact, registry write, activation, promotion, or schedule action.
+
+The V3 trainer's checkpoint and result custody are likewise separate from C36
+job execution. A future Foundry binding must explicitly name its V3 plan/result
+hashes; current Foundry flows cannot infer, convert, or promote them.
