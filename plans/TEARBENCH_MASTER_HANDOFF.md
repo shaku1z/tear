@@ -908,3 +908,11 @@ or UI. C36 remains fully open.
 NEXT SLICE:          Resume only the retained bounded checkpoint under the same
 dataset/manifest/custody/plan lineage, then bind an immutable source-world
 evaluation; fail closed on every changed or revoked input.
+
+### C36 V2 checkpoint recovery
+
+DONE THIS STEP:      Foundry V2 launches retain actual C34 plan/configuration
+bytes, while historical V1 launch bytes are explicitly non-resumable. A V2
+resume rechecks all stored lineage and advances one epoch with a durable
+`training → training` successor. No completed result/model, registry,
+activation, promotion, or evaluation is produced.

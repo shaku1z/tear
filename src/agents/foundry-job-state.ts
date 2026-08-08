@@ -58,7 +58,7 @@ const NEXT: Readonly<Record<TearFoundryJobPhase, readonly TearFoundryJobPhase[]>
   created: ["collecting", "cancelled", "failed"],
   collecting: ["curating", "cancelled", "failed"],
   curating: ["training", "rejected", "cancelled", "failed"],
-  training: ["evaluating", "cancelled", "failed"],
+  training: ["training", "evaluating", "cancelled", "failed"],
   evaluating: ["deciding", "rejected", "cancelled", "failed"],
   deciding: ["monitoring", "rejected", "cancelled", "failed"],
   monitoring: ["completed", "rolled-back", "cancelled", "failed"],

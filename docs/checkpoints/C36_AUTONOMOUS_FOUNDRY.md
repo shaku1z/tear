@@ -57,3 +57,11 @@ C36 remains open until an unattended authorized corpus cycle genuinely
 collects, curates, trains, evaluates through frozen gates,
 rejects/promotes/version-places a policy, detects regression, rolls back,
 survives interruption, and presents progress without a terminal command.
+
+## V2 checkpoint recovery foundation
+
+V2 offline-training launches retain the complete immutable C34 plan and
+configuration. V1 launches fail closed because hashes alone cannot recreate
+their training inputs. A V2 resume rechecks launch, dataset, trainer manifest,
+live held custody, receipt, and checkpoint before persisting one legal
+`training → training` successor. It does not finalize a C34 model or reach C32.
