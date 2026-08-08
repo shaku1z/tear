@@ -1111,6 +1111,19 @@ not eligible for another due resume until a future explicit atomic
 schedule/launch coordination slice provides a current-head binding; do not
 imply that this single action creates an unattended loop.
 
+### C36 bounded schedule continuation coordinator
+
+DONE THIS STEP: After a successful retained due-dispatch receipt, the local
+control plane can conditionally rebind the same due schedule to the already
+durable exact nonterminal successor. It guards schedule/job/attempt bytes,
+fixed budget/stop identities, and action-time held custody, with a durable
+idempotent continuation receipt. Terminal, stale, early, revoked,
+budget-invalid, corrupt, and competing requests refuse. It invokes no
+executor, timer, worker, cloud operation, evaluation, finalization, artifact,
+activation, or promotion.
+REMAINING HERE: This schedules no future automatic work; later phase dispatch
+must still claim a due schedule and independently revalidate its own lineage.
+
 ### C36 IndexedDB conditional-commit browser evidence
 
 DONE THIS STEP: Test-standalone Chromium directly exercises the production

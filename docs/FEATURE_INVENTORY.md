@@ -472,6 +472,15 @@ This is the migration checklist for the architectural redesign. A checked featur
   only, with no terminalization, evaluation, artifact, activation, promotion,
   timer, or cloud behavior.
 
+- [ ] C36 bounded schedule continuation coordinator — after one successful
+  lease-backed dispatch, a receipt-bound control-plane action can rebind only
+  the same due schedule to its already-current exact nonterminal successor.
+  It conditionally guards schedule/job/receipt bytes, fixed budgets/stop and
+  action-time held custody; terminal, stale, early, revoked, budget-invalid,
+  corrupt, and competing work fails closed, and retry is idempotent. It runs no
+  phase and has no timer, worker, cloud, evaluation, artifact, activation, or
+  promotion behavior.
+
 ## Remaining proof gaps
 
 No feature-preservation evidence gaps remain in this inventory. Release readiness still requires the full clean-commit gate described above.

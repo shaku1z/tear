@@ -10,7 +10,7 @@ async function setup(held = true) {
   const schedule = createTearFoundryJobSchedule({ id: "due-schedule", jobId: job.id, jobHash: job.jobHash, intervalMs: 60_000, computeBudgetHash: h.compute, storageBudgetHash: h.storage, stopConditionsHash: h.stop, state: "enabled", configuredAt: "2026-08-08T00:00:00.000Z" }); await schedules.persist(schedule);
   const records = held ? [{ candidateHash: h.candidate, recordHash: h.corpus }] : [];
   const custody = { backend: () => backend, held: () => Promise.resolve(records), inventory: () => Promise.resolve({ records, rejectedKeys: [] }) } as unknown as TearAcademyCandidateCustodyStore;
-  return { backend, jobs, schedule, dispatcher: new TearFoundryDueDispatcher(jobs, schedules, custody) };
+  return { backend, jobs, schedules, job, schedule, dispatcher: new TearFoundryDueDispatcher(jobs, schedules, custody) };
 }
 const at = "2026-08-08T00:01:00.000Z", budgets = Object.freeze({ computeBudgetHash: h.compute, storageBudgetHash: h.storage });
 async function manifestSetup(input: Readonly<{ held?: boolean; entries?: readonly string[]; available?: boolean }> = {}) {
@@ -45,6 +45,40 @@ describe("C36 lease-backed collection-only due dispatch", () => {
     const held = await setup(true);
     const notDue = await held.dispatcher.runDueOnce(held.schedule.scheduleHash, "2026-08-08T00:00:30.000Z", budgets, "early"); expect(notDue.disposition).toBe("not-due");
     const blocked = await held.dispatcher.runDueOnce(held.schedule.scheduleHash, at, { ...budgets, computeBudgetHash: "5".repeat(16) }, "budget"); expect(blocked.disposition).toBe("blocked");
+  });
+});
+
+describe("C36 bounded schedule continuation coordinator", () => {
+  async function collected(input: Readonly<{ held?: boolean }> = {}) {
+    const fixture = await setup(input), receipt = await fixture.dispatcher.runDueOnce(fixture.schedule.scheduleHash, at, budgets, "collect"), next = await fixture.jobs.get("due-job");
+    if (next === undefined) throw new Error("collection successor missing");
+    return { ...fixture, receipt, next };
+  }
+  const authority = { held: () => Promise.resolve(true) };
+  it("rebinds one successful due collection to its current successor and retries the continuation receipt", async () => {
+    const fixture = await collected();
+    const rebound = await fixture.schedules.continueAfterAttempt(fixture.schedule.scheduleHash, fixture.job, fixture.next, fixture.receipt, at, budgets, authority, fixture.jobs);
+    expect(rebound).toMatchObject({ jobHash: fixture.next.jobHash, revision: 2 }); await expect(fixture.jobs.get("due-job")).resolves.toEqual(fixture.next);
+    await expect(fixture.schedules.continueAfterAttempt(fixture.schedule.scheduleHash, fixture.job, fixture.next, fixture.receipt, at, budgets, authority, fixture.jobs)).resolves.toEqual(rebound);
+  });
+  it("refuses terminal, stale, revoked, budget-invalid, and early continuation without moving the schedule", async () => {
+    const terminal = await collected(), cancelled = transitionTearFoundryJob(terminal.next, "cancelled", "2026-08-08T00:01:01.000Z", "operator stop"); await terminal.jobs.persistSuccessor(terminal.next, cancelled);
+    await expect(terminal.schedules.continueAfterAttempt(terminal.schedule.scheduleHash, terminal.job, cancelled, terminal.receipt, "2026-08-08T00:02:00.000Z", budgets, authority, terminal.jobs)).rejects.toThrow(/successor|lineage/u);
+    const stale = await collected();
+    await expect(stale.schedules.continueAfterAttempt(stale.schedule.scheduleHash, stale.job, stale.next, stale.receipt, "2026-08-08T00:00:30.000Z", budgets, authority, stale.jobs)).rejects.toThrow(/due/u);
+    const revoked = await collected();
+    await expect(revoked.schedules.continueAfterAttempt(revoked.schedule.scheduleHash, revoked.job, revoked.next, revoked.receipt, at, budgets, { held: () => Promise.resolve(false) }, revoked.jobs)).rejects.toThrow(/authorized/u);
+    const budget = await collected();
+    await expect(budget.schedules.continueAfterAttempt(budget.schedule.scheduleHash, budget.job, budget.next, budget.receipt, at, { ...budgets, computeBudgetHash: "5".repeat(16) }, authority, budget.jobs)).rejects.toThrow(/authorized/u);
+  });
+  it("allows one concurrent continuation claimant and refuses a source receipt from another schedule", async () => {
+    const fixture = await collected(), calls = await Promise.allSettled([
+      fixture.schedules.continueAfterAttempt(fixture.schedule.scheduleHash, fixture.job, fixture.next, fixture.receipt, at, budgets, authority, fixture.jobs),
+      fixture.schedules.continueAfterAttempt(fixture.schedule.scheduleHash, fixture.job, fixture.next, fixture.receipt, at, budgets, authority, fixture.jobs),
+    ]);
+    expect(calls.filter((entry) => entry.status === "fulfilled")).toHaveLength(1);
+    const invalid = await collected();
+    await expect(invalid.schedules.continueAfterAttempt("f".repeat(16), invalid.job, invalid.next, invalid.receipt, at, budgets, authority, invalid.jobs)).rejects.toThrow(/source attempt/u);
   });
 });
 

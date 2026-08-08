@@ -2,6 +2,7 @@ import { stableVerificationHash } from "../replay/hash";
 import type { GhostVaultBackend } from "../ghost";
 import { parseTearFoundryJob, type TearFoundryJobV1 } from "./foundry-job-state";
 import type { TearFoundryJobVault } from "./foundry-job-vault";
+import type { TearFoundryDueAttemptReceiptV1 } from "./foundry-job-due-dispatcher";
 
 const KEY = "foundry-job-schedule:v1:";
 const HASH = /^[a-f0-9]{16}$/u;
@@ -20,10 +21,25 @@ export interface TearFoundryScheduleProjectionV1 {
 }
 /** Implementations must recheck every `job.inputs.corpusRecordHashes` at `at`; a cached permission is not authority. */
 export interface TearFoundryScheduleAuthority { held(job: TearFoundryJobV1, at: string): Promise<boolean>; }
+export interface TearFoundryScheduleContinuationReceiptV1 {
+  readonly format: "tear-foundry-schedule-continuation"; readonly schemaVersion: 1;
+  readonly sourceScheduleHash: string; readonly previousJobHash: string; readonly nextJobHash: string;
+  readonly attemptReceiptHash: string; readonly continuedAt: string; readonly continuationHash: string;
+}
 function text(value: unknown): value is string { return typeof value === "string" && value.trim().length > 0; }
 function hash(value: unknown): value is string { return typeof value === "string" && HASH.test(value); }
 function time(value: unknown): value is string { return text(value) && Number.isFinite(Date.parse(value)); }
 function terminal(phase: TearFoundryJobV1["phase"]): boolean { return ["rejected", "rolled-back", "completed", "cancelled", "failed"].includes(phase); }
+function continuation(draft: Omit<TearFoundryScheduleContinuationReceiptV1, "continuationHash">): TearFoundryScheduleContinuationReceiptV1 {
+  if (!HASH.test(draft.sourceScheduleHash) || !HASH.test(draft.previousJobHash) || !HASH.test(draft.nextJobHash) || !HASH.test(draft.attemptReceiptHash) || !time(draft.continuedAt)) throw new TypeError("invalid Foundry schedule continuation receipt");
+  return Object.freeze({ ...draft, continuationHash: stableVerificationHash(draft) });
+}
+function parseAttempt(raw: string): TearFoundryDueAttemptReceiptV1 {
+  const source = JSON.parse(raw) as Record<string, unknown>;
+  const draft = { format: source.format, schemaVersion: source.schemaVersion, scheduleHash: source.scheduleHash, jobHash: source.jobHash, attemptedAt: source.attemptedAt, leaseId: source.leaseId, actionHash: source.actionHash, disposition: source.disposition };
+  if (source.format !== "tear-foundry-due-attempt" || source.schemaVersion !== 1 || source.receiptHash !== stableVerificationHash(draft)) throw new TypeError("invalid Foundry due attempt receipt");
+  return source as unknown as TearFoundryDueAttemptReceiptV1;
+}
 function draft(value: Omit<TearFoundryJobScheduleV1, "format" | "schemaVersion" | "scheduleHash">): TearFoundryJobScheduleV1 {
   if (!text(value.id) || !text(value.jobId) || !hash(value.jobHash) || !Number.isSafeInteger(value.intervalMs) || value.intervalMs < 60_000 || value.intervalMs > 2_592_000_000
     || ![value.computeBudgetHash, value.storageBudgetHash, value.stopConditionsHash].every(hash) || !["enabled", "disabled"].includes(value.state)
@@ -108,6 +124,37 @@ export class TearFoundryJobScheduleVault {
       { store: "indexes", key: `foundry-job-current:${next.id}`, value: JSON.stringify(Object.freeze({ jobHash: next.jobHash, phase: next.phase })) },
       { store: "analysis", key: receiptKey, value: JSON.stringify(Object.freeze({ format: "foundry-job-schedule-rebind", schemaVersion: 1, id: current.id, scheduleHash, nextScheduleHash: rebound.scheduleHash, nextJobHash: next.jobHash })) },
     ])); } catch { throw new RangeError("Foundry schedule rebind lost its current schedule or job head"); }
+    return rebound;
+  }
+  /** Advances only an already-persisted legal successor's cadence binding; it cannot invoke a Foundry executor. */
+  async continueAfterAttempt(scheduleHash: string, previousInput: TearFoundryJobV1, nextInput: TearFoundryJobV1, attemptInput: TearFoundryDueAttemptReceiptV1, at: string, budgets: Readonly<{ computeBudgetHash: string; storageBudgetHash: string }>, authority: TearFoundryScheduleAuthority, jobs: TearFoundryJobVault): Promise<TearFoundryJobScheduleV1> {
+    if (!hash(scheduleHash) || !time(at) || !hash(budgets.computeBudgetHash) || !hash(budgets.storageBudgetHash) || jobs.backend() !== this.#backend) throw new TypeError("invalid Foundry schedule continuation request");
+    const previous = parseTearFoundryJob(previousInput), next = parseTearFoundryJob(nextInput), attempt = attemptInput;
+    if (attempt.disposition !== "collected" || attempt.scheduleHash !== scheduleHash || attempt.jobHash !== previous.jobHash) throw new RangeError("Foundry schedule continuation requires its successful source attempt");
+    const receiptKey = `foundry-job-schedule-continuation:v1:${stableVerificationHash({ scheduleHash, previousJobHash: previous.jobHash, nextJobHash: next.jobHash, attemptReceiptHash: attempt.receiptHash })}`;
+    const oldContinuation = await this.#backend.get("analysis", receiptKey);
+    if (oldContinuation !== undefined) {
+      try { const record = continuation(JSON.parse(oldContinuation) as Omit<TearFoundryScheduleContinuationReceiptV1, "continuationHash">);
+        const current = (await this.list()).find((entry) => entry.jobHash === next.jobHash);
+        if (record.sourceScheduleHash === scheduleHash && record.previousJobHash === previous.jobHash && record.nextJobHash === next.jobHash && record.attemptReceiptHash === attempt.receiptHash && current?.jobHash === next.jobHash) return current;
+      } catch { await this.#backend.put("quarantine", receiptKey, oldContinuation); }
+      throw new RangeError("Foundry schedule continuation receipt is invalid");
+    }
+    const current = (await this.list()).find((entry) => entry.scheduleHash === scheduleHash);
+    if (current === undefined) throw new RangeError("Foundry schedule continuation is unavailable");
+    if (current.state !== "enabled" || Date.parse(dueAtFoundryJobSchedule(current) ?? at) > Date.parse(at) || current.computeBudgetHash !== budgets.computeBudgetHash || current.storageBudgetHash !== budgets.storageBudgetHash || !(await authority.held(next, at))) throw new RangeError("Foundry schedule continuation is not due or authorized");
+    const rebound = rebindTearFoundryJobSchedule(current, previous, next, at), scheduleKey = `${KEY}${current.id}`, jobKey = `foundry-job:v1:${next.id}`, attemptKey = `foundry-job-due-attempt:v1:${attempt.actionHash}`;
+    const [scheduleRaw, jobRaw, attemptRaw] = await Promise.all([this.#backend.get("analysis", scheduleKey), this.#backend.get("analysis", jobKey), this.#backend.get("analysis", attemptKey)]);
+    if (scheduleRaw === undefined || jobRaw === undefined || attemptRaw === undefined) throw new RangeError("Foundry schedule continuation state disappeared");
+    let durable: TearFoundryJobV1; let durableAttempt: TearFoundryDueAttemptReceiptV1;
+    try { durable = parseTearFoundryJob(JSON.parse(jobRaw)); durableAttempt = parseAttempt(attemptRaw); } catch { throw new RangeError("Foundry schedule continuation durable evidence is invalid"); }
+    if (durable.jobHash !== next.jobHash || durableAttempt.receiptHash !== attempt.receiptHash || durableAttempt.scheduleHash !== scheduleHash || durableAttempt.jobHash !== previous.jobHash || durableAttempt.disposition !== "collected") throw new RangeError("Foundry schedule continuation current lineage changed");
+    const record = continuation({ format: "tear-foundry-schedule-continuation", schemaVersion: 1, sourceScheduleHash: scheduleHash, previousJobHash: previous.jobHash, nextJobHash: next.jobHash, attemptReceiptHash: attempt.receiptHash, continuedAt: at });
+    try { await this.#backend.commitIfMatches(Object.freeze([{ store: "analysis", key: scheduleKey, expected: scheduleRaw }, { store: "analysis", key: jobKey, expected: jobRaw }, { store: "analysis", key: attemptKey, expected: attemptRaw }]), Object.freeze([
+      { store: "analysis", key: scheduleKey, value: JSON.stringify(rebound) },
+      { store: "indexes", key: `foundry-job-schedule:${rebound.id}:${rebound.scheduleHash}`, value: JSON.stringify(Object.freeze({ state: rebound.state, jobHash: rebound.jobHash, previousScheduleHash: current.scheduleHash })) },
+      { store: "analysis", key: receiptKey, value: JSON.stringify(record) },
+    ])); } catch { throw new RangeError("Foundry schedule continuation lost its current schedule, job, or attempt evidence"); }
     return rebound;
   }
   async #read(key: string, raw: string): Promise<TearFoundryJobScheduleV1 | undefined> { try { return parseTearFoundryJobSchedule(JSON.parse(raw)); } catch (error) { await this.#backend.put("quarantine", key, JSON.stringify(Object.freeze({ format: "foundry-job-schedule-quarantine", schemaVersion: 1, key, raw, reason: error instanceof Error ? error.message : String(error) }))); return undefined; } }

@@ -238,6 +238,19 @@ revoked, budget-invalid, early, or lineage-changed requests do not advance the
 job. This is neither an online run nor a final result, evaluation, artifact,
 activation, promotion, timer, or cloud operation.
 
+## Bounded schedule continuation coordinator
+
+After a dispatcher has already retained a successful due-attempt receipt and
+the corresponding legal nonterminal successor is the current durable job head,
+the schedule vault can rebind the same schedule without invoking an executor.
+It validates the source receipt, old schedule due time, fixed compute/storage
+and stop identities, action-time held C31 custody, current successor job bytes,
+and prior schedule bytes in one conditional commit. A content-addressed
+continuation receipt makes exact retry idempotent. Terminal/forked/stale,
+early, revoked, budget-changed, missing/corrupt-receipt, and competing requests
+fail closed. It starts no timer or worker and never runs another Foundry phase,
+trains, evaluates, finalizes, activates, promotes, or contacts cloud.
+
 ## Browser conditional-commit evidence
 
 The test-standalone browser now invokes the production IndexedDB backend's
