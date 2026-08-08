@@ -307,6 +307,18 @@ custody keyed by its comparison hash. Corrupt comparison bytes quarantine. This
 is repeatable held-out observation and provenance enforcement, not an observed
 quality advantage, activation outside the test-local registry, or promotion.
 
+`TearAcademyPolicyEvaluationExecutor` now executes a persisted immutable plan
+through one fresh-production-world case runner for both the supplied candidate
+and its named scripted baseline. A recovery case must supply the exact natural
+source checkpoint and the lineage-bound State Forge snapshot accepted by the
+C30 production adapter; an ordinary scenario cannot stand in for that recovery
+frontier. The candidate is parsed directly into an evaluation-only runtime, so
+the executor never registers or activates it. It retains an idempotent,
+content-addressed local pass/fail record containing both runs, terminal facts,
+and predeclared lesson/margin verdicts; corrupt result bytes quarantine. The
+permanent fixture honestly records a failing short case, proving the executor
+and custody rather than a quality win or C40 checklist tick.
+
 ## Deliberately not claimed
 
 This is not a recurrent/GRU/LSTM policy, a meaningful quality score, a
@@ -314,11 +326,11 @@ measured artifact win over the scripted baseline, promotion, automated repeated
 DAgger, or automatic player-facing training.
 Those remain C33 work.
 
-DONE THIS STEP:      C33 now has durable plan custody, an explicit process owner, a narrow visible review flow, and an immutable unseen/recovery evaluation protocol. It reconstructs its governed manifest, C32 registry, reviewer authority, and declared schedule from one Vault, then stops at human review between source-world rounds; an explicit decision reloads and validates that same plan/capture authority before ledger write. Academy accepts/rejects a projected correction only for a current signed-in, plan-named reviewer. The evaluation plan freezes lesson seeds/thresholds, baseline/margin, and all governed exclusions before execution. It cannot fabricate review, register, activate, promote, or claim quality.
-PROVEN BY:           Focused C33/runtime, evaluation-plan, screen-action, and renderer tests; TypeScript, ESLint, and architecture gate. The prior Academy status build evidence remains valid; the canonical navigation journey still has no result because it hung in this environment.
-REMAINING HERE:      A State Forge recovery execution adapter, curriculum/error detail beyond action divergence, meaningful unseen-seed baseline-win evidence, and credible visible real-game quality evidence. The visible decision flow is a local authenticated-session gate over named plan authority, not account/cloud authorization. The Academy cannot activate or promote, and the C40 recorded-improvement item remains unticked.
+DONE THIS STEP:      C33 now has durable plan custody, an explicit process owner, a narrow visible review flow, and an executable immutable unseen/recovery evaluation protocol. It reconstructs its governed manifest, C32 registry, reviewer authority, and declared schedule from one Vault, then stops at human review between source-world rounds; an explicit decision reloads and validates that same plan/capture authority before ledger write. Academy accepts/rejects a projected correction only for a current signed-in, plan-named reviewer. The evaluator runs candidate and named scripted baseline through the same fresh production case runner, requires an exact lineage-bound State Forge recovery frontier, and persists a hash-bound pass/fail result without registry activation or promotion.
+PROVEN BY:           Focused C33/runtime, evaluation-plan/executor, screen-action, and renderer tests; TypeScript, ESLint, and architecture gate. The executor fixture truthfully fails its short protocol; it is plumbing/custody proof only. The prior Academy status build evidence remains valid; the canonical navigation journey still has no result because it hung in this environment.
+REMAINING HERE:      Curriculum/error detail beyond action divergence, meaningful unseen-seed baseline-win evidence, and credible visible real-game quality evidence. The visible decision flow is a local authenticated-session gate over named plan authority, not account/cloud authorization. The Academy cannot activate or promote, and the C40 recorded-improvement item remains unticked.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Execute a persisted immutable evaluation plan through shared source-world and recovery composition, retaining an honest pass/fail result without activation or promotion.
+NEXT SLICE:          Materialize a meaningful governed unseen/recovery suite and real candidate result through the executor; only a measured predeclared advantage may affect the C33 quality evidence boundary.
 
 ## Slice pacing finding — 2026-08-03
 

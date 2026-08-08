@@ -1,7 +1,7 @@
 import { normalizeGameAction, type GameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearAgentDecision, TearAgentObservation, TearAgentProfileId } from "./contracts";
-import type { TearPolicyArtifactRegistry, TearPolicyArtifactV1 } from "./policy-artifact-registry";
+import { parseTearPolicyArtifact, type TearPolicyArtifactRegistry, type TearPolicyArtifactV1 } from "./policy-artifact-registry";
 import { TEAR_POLICY_FEATURE_SCHEMA_HASH_V1, TEAR_POLICY_FEATURE_WIDTH_V1, projectStructuredPolicyFeatures } from "./policy-feature-vector";
 import { TEAR_POLICY_CONDITION_SCHEMA_HASH_V1, TEAR_POLICY_CONDITION_SCHEMA_HASH_V2, TEAR_POLICY_CONDITION_WIDTH_V1, TEAR_POLICY_CONDITION_WIDTH_V2, createTearPolicyConditioningV2, projectStructuredPolicyCondition, projectStructuredPolicyConditionV2, type TearPolicyConditioningV2 } from "./policy-condition-vector";
 import { TearAgentOrchestrator } from "./scripted-policy";
@@ -189,7 +189,8 @@ function temporalActions(model: TemporalWindowLinearPolicyModel, features: reado
  * delegates to the proven scripted policy.
  */
 export class TearActivePolicyRuntime {
-  readonly #registry: TearPolicyArtifactRegistry;
+  readonly #registry: TearPolicyArtifactRegistry | undefined;
+  readonly #directArtifact: TearPolicyArtifactV1 | undefined;
   readonly #fallback: TearAgentOrchestrator;
   readonly #limits: TearPolicyRuntimeLimits;
   readonly #now: () => number;
@@ -198,13 +199,24 @@ export class TearActivePolicyRuntime {
   #model: RuntimePolicyModel | undefined;
   #temporalHistory: readonly (readonly number[])[] = Object.freeze([]);
 
-  constructor(registry: TearPolicyArtifactRegistry, profile: TearAgentProfileId = "competent", options: TearPolicyRuntimeOptions = {}) {
-    this.#registry = registry; this.#fallback = new TearAgentOrchestrator(profile); this.#limits = limits(options);
+  /**
+   * A direct artifact is evaluation-only: it is parsed locally and never
+   * registered or activated. Normal live callers continue to supply a registry.
+  */
+  constructor(registry: TearPolicyArtifactRegistry | TearPolicyArtifactV1, profile: TearAgentProfileId = "competent", options: TearPolicyRuntimeOptions = {}) {
+    this.#directArtifact = "artifactHash" in registry ? parseTearPolicyArtifact(registry) : undefined;
+    this.#registry = this.#directArtifact === undefined ? registry as TearPolicyArtifactRegistry : undefined;
+    this.#fallback = new TearAgentOrchestrator(profile); this.#limits = limits(options);
     this.#now = options.now ?? (() => performance.now()); this.#conditioning = createTearPolicyConditioningV2(options.conditioning ?? { personaId: profile });
   }
 
   async reset(): Promise<void> {
     this.#artifact = undefined; this.#model = undefined; this.#temporalHistory = Object.freeze([]);
+    if (this.#directArtifact !== undefined) {
+      this.#artifact = this.#directArtifact; this.#model = parseModel(this.#directArtifact, this.#limits);
+      return;
+    }
+    if (this.#registry === undefined) return;
     const active = await this.#registry.active();
     if (active === undefined) return;
     const artifact = await this.#registry.get(active.artifactId);

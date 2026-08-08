@@ -340,9 +340,11 @@ This is the migration checklist for the architectural redesign. A checked featur
    plan authority, not account/cloud authorization. A second immutable Academy
    evaluation plan now freezes canonical unseen seeds and lesson thresholds,
    recovery coverage, an explicit scripted baseline/margin, and full
-   dataset/DAgger exclusions before execution. It is only an evidence protocol:
-   executing State Forge recovery through the production composition and a
-   meaningful held-out pass still remain. Account/
+   dataset/DAgger exclusions before execution. Its executor runs candidate and
+   baseline through the same fresh source-world case runner; recovery accepts
+   only an exact lineage-bound State Forge frontier, and its local hash-bound
+   pass/fail custody has no registry activation or promotion route. The
+   permanent short fixture fails, so a meaningful held-out pass still remains. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 
