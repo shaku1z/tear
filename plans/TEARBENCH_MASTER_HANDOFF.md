@@ -548,7 +548,7 @@ DONE THIS STEP:      C33 now has durable immutable plan custody, an explicit pro
 PROVEN BY:           Focused C33/runtime, evaluation-plan/executor, screen-action, and renderer tests; TypeScript, ESLint, and architecture gate. The executor's short permanent fixture truthfully fails, so it proves execution/custody rather than quality. The previous Academy status evidence remains; the narrowed canonical navigation journey still has no result because it hung in this environment.
 REMAINING HERE:      C33 needs curriculum/error detail beyond action divergence, meaningful unseen-seed baseline-win evidence, and credible visible real-game quality evidence. The review flow is a local authenticated-session gate over named plan authority, not C31 account ownership or C38 cloud authorization. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C33-C40 product evidence remain; C27A, C28, and C32 are closed.
-NEXT SLICE:          C33: run a meaningful governed unseen/recovery suite through the executor and retain real candidate/baseline evidence; no quality or promotion claim is authorized without the predeclared measured advantage.
+NEXT SLICE:          C34: expand the bounded online-rollout evidence into update/checkpoint recovery only after preserving its immutable offline/C30 lineage and non-trainable safeguard outcomes.
 
 ### C34 first foundation — governed offline-RL input
 

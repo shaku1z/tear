@@ -74,6 +74,11 @@ export interface TearOfflineRlTransitionRewardV1 {
   readonly value: number;
 }
 
+export interface TearOfflineRlRewardEvaluationV1 {
+  readonly components: readonly TearOfflineRlTransitionRewardV1[];
+  readonly total: number;
+}
+
 export interface TearOfflineRlTransitionV1 {
   readonly candidateHash: string;
   readonly sequenceHash: string;
@@ -268,7 +273,9 @@ function sourceValue(source: TearOfflineRlRewardSourceV1, from: CanonicalGamepla
   }
 }
 
-function rewardForTransition(plan: TearOfflineRlPlanV1, from: CanonicalGameplayState, to: CanonicalGameplayState, events: readonly TearGameplayEvent[]) {
+export function evaluateTearOfflineRlRewardTransition(planInput: TearOfflineRlPlanV1, from: CanonicalGameplayState, to: CanonicalGameplayState,
+  events: readonly TearGameplayEvent[]): TearOfflineRlRewardEvaluationV1 {
+  const plan = parseTearOfflineRlPlan(planInput);
   if (events.length > plan.limits.maxEventsPerTransition) throw new RangeError("offline RL transition exceeds event budget");
   const components = plan.reward.components.map((definition) => {
     const observed = sourceValue(definition.source, from, to, events);
@@ -314,7 +321,7 @@ export function extractTearOfflineRlTrajectories(dataset: TearAcademyTrainingDat
       if (from === undefined || to === undefined) throw new Error("offline RL observation disappeared during extraction");
       const actions = sequence.tracks.actions.filter((entry) => entry.tick === to.tick);
       const events = sequence.tracks.nativeEvents.filter((entry) => entry.tick === to.tick);
-      const reward = rewardForTransition(plan, from, to, events);
+      const reward = evaluateTearOfflineRlRewardTransition(plan, from, to, events);
       for (const component of reward.components) componentTotals[component.id] = (componentTotals[component.id] ?? 0) + component.value;
       const draft = { candidateHash: sequence.candidateHash, sequenceHash: sequence.sequenceHash, lessonId: sequence.lessonId,
         scenarioHash: selected.scenarioHash, from: cloneState(from), actions: Object.freeze(actions.map((entry) => Object.freeze(structuredClone(entry)))),

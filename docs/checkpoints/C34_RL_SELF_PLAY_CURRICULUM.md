@@ -45,9 +45,12 @@ challenger.
 - [x] Offline RL trains from the corpus. A bounded deterministic fitted-Q run
   executes the governed C31/C30 receipt and retains its result/checkpoint
   lineage. This is not an evaluated, deployable, or promoted policy.
-- [ ] Online RL / self-play runs on headless episodes. C30 remains the required
-  production-headless executor; no online exploration or second simulator was
-  added.
+- [ ] Online RL / self-play runs on headless episodes. The first bounded
+  rollout executor creates a fresh C30 production-headless world per declared
+  episode, binds a completed offline result/receipt/reward plan, and retains
+  seeded semantic-action traces, terminal hashes, reward totals, and
+  cancellation/timeout/divergence outcomes. It is non-trainable and has no
+  self-play, registry, activation, promotion, or Q-model action-selection path.
 - [ ] Curriculum and exploration controls are configurable and bounded. The
   immutable source curriculum and fixed extraction/reward bounds exist; online
   exploration controls remain absent.
