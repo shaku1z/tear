@@ -2,6 +2,15 @@
 
 **Status:** open C36.
 
+## Restart recovery projection
+
+`foundry-job-recovery.ts` provides a fail-closed, read-only recovery projection
+for an existing durable job: validated current phase, legal next manual phase,
+and event-hash/count provenance only. Missing or corrupt bytes produce no
+projection through Vault quarantine. It never resumes training/evaluation,
+exposes custody/tracks, activates/promotes, contacts cloud, schedules work, or
+renders UI.
+
 ## Proven foundation
 
 - `foundry-job-state.ts` defines a content-addressed, immutable Foundry job

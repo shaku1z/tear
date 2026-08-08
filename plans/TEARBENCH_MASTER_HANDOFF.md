@@ -837,6 +837,16 @@ TearBench is complete only when:
 
 ## C36 durable Foundry job foundation
 
+### C36 restart recovery projection
+
+DONE THIS STEP: `TearFoundryRecoveryController` reads a validated durable job
+and returns only its current legal manual/resumable phase plus hashes-only event
+provenance. Corrupt or missing bytes produce no projection through Vault
+quarantine. It does not resume or execute a Foundry action, expose raw custody,
+schedule, contact cloud, activate, promote, or render UI.
+PROVEN BY: `tests/unit/foundry-job-state.test.ts` projection and corrupt-byte
+fixtures; targeted type and lint checks.
+
 DONE THIS STEP:      C36 now has a content-addressed local Foundry job ledger.
 Each job freezes its champion artifact, held-corpus record, evaluation-plan,
 reward, invariant, budget, and stop-condition identities. Its reducer permits
