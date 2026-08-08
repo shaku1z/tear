@@ -834,3 +834,21 @@ TearBench is complete only when:
 - The final full canonical `pnpm check` passes.
 - Dashboard/catalog/checkpoint reports match repository reality.
 - Final Git state is clean, intentional, and documented.
+
+## C36 durable Foundry job foundation
+
+DONE THIS STEP:      C36 now has a content-addressed local Foundry job ledger.
+Each job freezes its champion artifact, held-corpus record, evaluation-plan,
+reward, invariant, budget, and stop-condition identities. Its reducer permits
+only the declared collection-to-monitoring workflow and explicit terminal
+outcomes; its restart report resumes the current phase only. Ghost Vault custody
+is idempotent and quarantines corrupt stored job bytes.
+PROVEN BY:           `tests/unit/foundry-job-state.test.ts`, TypeScript, targeted
+ESLint, architecture, and requirement checks.
+REMAINING HERE:      This has no intake drain, curation executor, trainer,
+source-world evaluator, policy artifact decision, scheduler, interruption
+execution, or UI. It does not create, activate, promote, reject on quality, or
+roll back a policy. C36 remains fully open.
+NEXT SLICE:          Bind an authorized held C31-custody query to a C36
+`collecting` job attempt with deterministic receipt and explicit no-data stop;
+do not invoke a trainer or infer a challenger from a score dictionary.

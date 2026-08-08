@@ -54,6 +54,8 @@ export * from "./academy-inspector";
 export * from "./academy-inspection-controller";
 export * from "./browser-academy-inspection";
 export * from "./ladder-foundry";
+export * from "./foundry-job-state";
+export * from "./foundry-job-vault";
 export * from "./tearbot-ladder-evaluation";
 export * from "./tearbot-human-calibration-source";
 export * from "./tearbot-human-calibration-consent-ledger";
