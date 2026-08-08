@@ -20,6 +20,17 @@ function hash(value: unknown): value is string { return typeof value === "string
 function exact(expected: readonly string[], actual: readonly string[]): boolean { return expected.length === actual.length && new Set(actual).size === actual.length && actual.every((value) => expected.includes(value)); }
 function freeze(draft: Omit<TearFoundryOnlineTrainingLaunchV1, "launchHash">): TearFoundryOnlineTrainingLaunchV1 { const curriculum = parseTearOnlineRlCurriculumPlan(draft.curriculum); if (!hash(draft.jobHash) || !hash(draft.readinessReceiptHash) || !hash(draft.offlineTrainingHash) || !hash(draft.checkpointHash) || (draft.previousLaunchHash !== undefined && !hash(draft.previousLaunchHash))) throw new TypeError("invalid Foundry online training launch"); const value = Object.freeze({ ...draft, curriculum, config: Object.freeze({ ...draft.config }) }); return Object.freeze({ ...value, launchHash: stableVerificationHash(value) }); }
 export function parseTearFoundryOnlineTrainingLaunch(value: unknown): TearFoundryOnlineTrainingLaunchV1 { if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("invalid Foundry online training launch"); const typed = value as TearFoundryOnlineTrainingLaunchV1, { launchHash, ...draft } = typed, parsed = freeze(draft); if (!hash(launchHash) || launchHash !== parsed.launchHash) throw new TypeError("Foundry online training launch integrity mismatch"); return parsed; }
+export function parseTearFoundryPairedEvaluationReadinessReceipt(value: unknown): TearFoundryPairedEvaluationReadinessReceiptV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("invalid Foundry paired-evaluation readiness");
+  const source = value as Record<string, unknown>, job = source.job;
+  if (source.format !== "tear-foundry-paired-evaluation-readiness" || source.schemaVersion !== 1 || typeof job !== "object" || job === null || Array.isArray(job)) throw new TypeError("invalid Foundry paired-evaluation readiness");
+  const jobHashes = job as Record<string, unknown>;
+  if (![jobHashes.sourceJobHash, jobHashes.resultJobHash, source.launchHash, source.checkpointHash, source.onlineResultHash, source.evaluationPlanHash, source.receiptHash].every(hash) || (source.disposition !== "ready" && source.disposition !== "online-training-stopped") || typeof source.finalizedAt !== "string" || !Number.isFinite(Date.parse(source.finalizedAt))) throw new TypeError("invalid Foundry paired-evaluation readiness");
+  const draft = { format: source.format, schemaVersion: source.schemaVersion, job: Object.freeze({ sourceJobHash: jobHashes.sourceJobHash, resultJobHash: jobHashes.resultJobHash }), launchHash: source.launchHash, checkpointHash: source.checkpointHash, onlineResultHash: source.onlineResultHash, evaluationPlanHash: source.evaluationPlanHash, disposition: source.disposition, finalizedAt: source.finalizedAt } as TearFoundryPairedEvaluationReadinessReceiptV1;
+  const parsed = Object.freeze({ ...draft, receiptHash: stableVerificationHash(draft) });
+  if (source.receiptHash !== parsed.receiptHash) throw new TypeError("Foundry paired-evaluation readiness integrity mismatch");
+  return parsed;
+}
 
 /** Binds a completed C34 result to one persisted, still-unrun C30 online-Q checkpoint; it does not evaluate or publish a policy. */
 export class TearFoundryOnlineTrainingLaunchExecutor {

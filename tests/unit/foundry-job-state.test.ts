@@ -4,7 +4,9 @@ import { createMemoryGhostVaultBackend } from "../../src/ghost";
 import {
   TearFoundryJobVault,
   createTearFoundryJob,
+  createTearFoundryJobV2,
   parseTearFoundryJob,
+  requireTearFoundryEvaluationProtocol,
   reportTearFoundryJob,
   transitionTearFoundryJob,
 } from "../../src/agents";
@@ -36,6 +38,13 @@ describe("C36 Foundry job ledger", () => {
     if (first === undefined) throw new Error("fixture has no Foundry event");
     expect(() => parseTearFoundryJob({ ...original, inputs: { ...original.inputs, rewardDefinitionHash: hashes.stops } })).toThrow(/integrity/u);
     expect(() => parseTearFoundryJob({ ...original, events: [{ ...first, reason: "altered" }] })).toThrow(/history|integrity/u);
+  });
+
+  it("keeps V1 final-plan identities ineligible while freezing a V2 pre-challenger protocol", () => {
+    const legacy = job(); expect(() => requireTearFoundryEvaluationProtocol(legacy)).toThrow(/V1/u);
+    const v2 = createTearFoundryJobV2({ id: "foundry-job-v2", createdAt: "2026-08-08T00:00:00.000Z", reason: "protocol frozen", inputs: { ...legacy.inputs, evaluationProtocol: { version: 1, id: "frozen-c30-paired", thresholds: { minimumRewardGain: 0, requireCompletionRateNotLower: true, maxTicksPerCase: 4, maxAbsoluteRewardPerCase: 100 } } } });
+    expect(requireTearFoundryEvaluationProtocol(v2)).toMatchObject({ version: 1, id: "frozen-c30-paired", thresholds: { maxTicksPerCase: 4 } });
+    expect(() => createTearFoundryJobV2({ id: "bad", createdAt: "2026-08-08T00:00:00.000Z", reason: "bad", inputs: { ...legacy.inputs, evaluationProtocol: { version: 1, id: "bad", thresholds: { minimumRewardGain: -1, requireCompletionRateNotLower: true, maxTicksPerCase: 4, maxAbsoluteRewardPerCase: 100 } } } })).toThrow(/protocol/u);
   });
 
   it("persists idempotently, quarantines corrupt restart bytes, and never fabricates a next phase", async () => {

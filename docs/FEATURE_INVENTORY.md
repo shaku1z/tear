@@ -404,6 +404,16 @@ This is the migration checklist for the architectural redesign. A checked featur
 - [x] Legacy music as exclusive initialization/runtime fallback — `audio-system.test.ts` and the blocked-TearScore branch in `browser-audio.js` prove disposal and exclusive `legacy-synth` selection.
 - [x] Ad, portal, visibility, suspension and repeated-run leak tests — `audio-system.test.ts` and `browser-audio.js` account for contexts, mixer/backend/voice nodes, lifecycle listeners and fallback timers through repeated runs and disposal; CI runs a real headed hidden/visible tab transition under Xvfb while local headless runs retain an explicitly labeled simulation.
 
+## C36 Foundry status
+
+- [ ] V2 Foundry source-evaluation derivation — V2 requests freeze an
+  identifier/threshold protocol before a challenger exists, retain its content
+  hash, and can derive (but not execute) one C34 paired source-evaluation plan
+  only after current job, completed lineage, C31 dataset, and action-time held
+  custody revalidate. Historical V1 jobs remain recoverable but are expressly
+  ineligible for source evaluation. No scoring, artifact creation, activation,
+  promotion, scheduling, or UI occurs here.
+
 ## Remaining proof gaps
 
 No feature-preservation evidence gaps remain in this inventory. Release readiness still requires the full clean-commit gate described above.

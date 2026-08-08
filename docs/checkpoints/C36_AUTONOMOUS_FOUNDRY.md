@@ -102,6 +102,25 @@ Focused evidence covers incomplete refusal, cancelled safeguard rejection with
 no model, complete readiness, tampered launch rejection, and repeated exact
 terminalization recovery.
 
+## V2 source-evaluation plan derivation
+
+V1 Foundry jobs remain parseable and recoverable for their existing workflow,
+but explicitly cannot enter C36 source evaluation: their historical final-plan
+hash does not preserve a pre-challenger protocol. A new V2 job instead freezes
+an immutable protocol identifier and thresholds, plus an integrity hash, at
+creation. Only after the exact current V2 job has a completed online checkpoint
+and paired-readiness receipt can C36 derive and persist the existing C34 paired
+source-evaluation plan. The derived plan binds that frozen protocol to the
+current offline, curriculum, receipt, and challenger lineage without making a
+circular hash claim. It rechecks the durable current job, C31 manifest/dataset,
+and action-time held custody. This slice derives only; it does not run the
+evaluator, score a candidate, create an artifact, register, activate, promote,
+self-play, schedule, or expose UI.
+
+Focused tests prove V2 normal derivation and idempotency, V1 refusal, protocol
+and derived-plan tamper rejection, changed-current-job refusal, and revoked
+custody refusal.
+
 V2 offline-training launches retain the complete immutable C34 plan and
 configuration. V1 launches fail closed because hashes alone cannot recreate
 their training inputs. A V2 resume rechecks launch, dataset, trainer manifest,

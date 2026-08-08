@@ -974,3 +974,25 @@ bytes, while historical V1 launch bytes are explicitly non-resumable. A V2
 resume rechecks all stored lineage and advances one epoch with a durable
 `training → training` successor. No completed result/model, registry,
 activation, promotion, or evaluation is produced.
+
+### C36 V2 source-evaluation derivation
+
+DONE THIS STEP: A V2 Foundry request freezes the actual pre-challenger paired
+evaluation protocol (identifier and thresholds) with a content hash. Historical
+V1 request bytes remain parseable and recoverable, but cannot source-evaluate
+because their old final-plan hash cannot reconstruct a protocol. After an exact
+current V2 job has completed online-Q terminalization, the bridge derives and
+persists the existing C34 source-evaluation plan from that frozen protocol plus
+the verified offline/curriculum/receipt/checkpoint lineage. It rechecks current
+job, C31 manifest/dataset, and action-time held custody. The derived plan does
+not contain its receipt, so the hash chain is non-circular.
+PROVEN BY: V2 normal/idempotent derivation, V1 refusal, protocol and derived
+plan tamper refusal, changed-current-job refusal, and revoked-custody refusal
+in `tests/unit/foundry-job-state.test.ts` and
+`tests/unit/foundry-job-offline-training-finalization.test.ts`.
+REMAINING HERE: This does not execute evaluation, interpret a score, create a
+policy artifact, decide, register, activate, promote, schedule, self-play, or
+show UI. C36 remains fully open.
+NEXT SLICE: Execute only this exact persisted C34 source-evaluation plan and
+retain non-promotional result custody; reject changed protocol, plan, lineage,
+or custody.
