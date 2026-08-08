@@ -422,8 +422,14 @@ This is the migration checklist for the architectural redesign. A checked featur
   together with the schedule under conditional current schedule/job-head and
   action-time held-custody checks; retry is idempotent and concurrency has one
   winner. It is not a worker or action executor.
-  No timer, worker, workflow execution, cloud call, activation, or promotion
-  exists; the visible status calls this configuration only.
+
+- [ ] C36 app-owned bounded local scheduler — after browser IndexedDB is
+  available, an app-edge lifecycle service rediscovers enabled schedules and
+  sends at most one due, V3-bound opaque schedule hash to the existing executor
+  per serialized sixty-second wake. It exposes disabled/configured/due/running/
+  blocked/error state on the normal Foundry screen and survives reload through
+  Vault rediscovery. It has no worker, network, cloud call, generic phase
+  command, active-policy/artifact route, activation, placement, or promotion.
 
 - [ ] C36 lease-bound collection and manifest dispatch — an explicit local
   caller can claim a due schedule with a sixty-second conditional Vault lease,

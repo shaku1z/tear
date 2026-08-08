@@ -1178,3 +1178,16 @@ DONE THIS STEP: Test-standalone Chromium directly exercises the production
 IndexedDB `commitIfMatches` adapter: expected-absence grouped success, stale
 guard refusal/no partial writes, and fresh-adapter readback. This closes the
 adapter-evidence gap for the C36 lease primitive, not a Foundry workflow step.
+
+### C36 app-owned bounded local scheduler
+
+DONE THIS STEP: The browser app now owns a narrow local lifecycle scheduler
+after IndexedDB becomes available. It rediscovers durable enabled schedules on
+each wake and calls the existing V3 `runScheduledOnce` executor for at most one
+due schedule, with a serialized guard and a fixed sixty-second next wake.
+Disabled, stale, terminal, stop-mismatched, revoked-custody, and failed work is
+projected truthfully without an alternate action. Restart is durable rediscovery
+only. The Foundry screen displays disabled/configured/due/running/blocked/error
+and retains only refresh plus opaque enable/disable actions. No worker, cloud,
+network, generic phase command, policy artifact, activation, placement, or
+promotion was added. C36 remains open.

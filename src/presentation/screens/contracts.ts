@@ -251,12 +251,14 @@ export interface FoundryScreenView {
   readonly id: "foundry";
   readonly status: "loading" | "unavailable" | "ready";
   readonly subtitle: string;
-  readonly automation: "unavailable";
+  /** Local lifecycle scheduler state; it never implies a worker, cloud task, policy activation, or promotion. */
+  readonly automation: "unavailable" | "local";
   readonly jobs: readonly Readonly<{ readonly jobHash: string; readonly phase: string; readonly nextManualPhase: string | null;
     readonly resumable: boolean; readonly eventCount: number; readonly lastEventHash: string; readonly projectionHash: string; }>[];
   /** Configured local scheduling intent only; it does not imply an installed worker or execution. */
   readonly schedules: readonly Readonly<{ readonly scheduleHash: string; readonly jobHash: string; readonly state: "enabled" | "disabled";
-    readonly disposition: string; readonly dueAt: string | null; readonly intervalMs: number; readonly revision: number; }>[];
+    readonly disposition: string; readonly dueAt: string | null; readonly intervalMs: number; readonly revision: number;
+    readonly runtimeStatus: "disabled" | "configured" | "due" | "running" | "blocked" | "error"; }>[];
 }
 
 export type LegacyScreenView = MenuScreenView | SetupScreenView | PlayingScreenView | CodexScreenView

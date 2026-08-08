@@ -338,3 +338,22 @@ have one winner. V1, early, revoked, budget-changed, or altered-lineage input
 fails closed. The action retains one `training → training` successor only: it
 does not terminalize, finalize, evaluate, create an artifact, activate,
 promote, run online learning, start a timer, or use cloud.
+
+## App-owned bounded local scheduler
+
+The normal browser composition now starts a local lifecycle scheduler only after
+the IndexedDB Vault is available. Each wake rediscovers durable enabled
+schedules, projects disabled/configured/due/blocked state, and invokes at most
+one already-V3-bound `runScheduledOnce` action through the existing executor.
+The scheduler serializes overlapping wakes, waits sixty seconds before its next
+local wake, and rediscovery after reload is its only recovery mechanism. It has
+no worker, network, cloud, generic phase argument, artifact/active-policy
+access, activation, placement, or promotion route. Execution failures remain a
+visible local `error` state; they do not cause a same-wake fallback schedule.
+
+The Foundry screen now truthfully distinguishes disabled, configured, due,
+running, blocked, and error scheduling state, while preserving only refresh and
+the existing opaque enable/disable actions. It does not add a direct execution
+control. Focused scheduler, screen, action, and renderer evidence covers
+start/stop, one-due-at-a-time serialization, restart rediscovery, disabled and
+blocked refusal, execution failure, and visible state projection.

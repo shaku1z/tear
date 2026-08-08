@@ -2,6 +2,8 @@ import { TearAcademyCandidateCustodyStore, TearFoundryJobScheduleVault, TearFoun
 import type { GhostVaultBackend } from "../ghost";
 import { createIndexedDbGhostVaultBackend } from "../ghost";
 import type { FoundryScreenView } from "../presentation/screens/contracts";
+import type { LiveFoundryScheduleStatus } from "./live-foundry-scheduler";
+import { createLiveFoundryScheduler, type LiveFoundryScheduler } from "./live-foundry-scheduler";
 
 type FoundrySnapshot = FoundryScreenView;
 
@@ -10,7 +12,9 @@ export class LiveFoundryScreenController {
   #snapshot: FoundrySnapshot = Object.freeze({ id: "foundry", status: "loading", subtitle: "reading local Foundry recovery projections", automation: "unavailable", jobs: [], schedules: [] });
   readonly #backend: GhostVaultBackend | undefined;
 
-  constructor(backend: GhostVaultBackend | undefined) { this.#backend = backend; }
+  readonly #scheduleStatus: (scheduleHash: string) => LiveFoundryScheduleStatus | undefined;
+  readonly #schedulerOwned: boolean;
+  constructor(backend: GhostVaultBackend | undefined, scheduleStatus: (scheduleHash: string) => LiveFoundryScheduleStatus | undefined = () => undefined, schedulerOwned = false) { this.#backend = backend; this.#scheduleStatus = scheduleStatus; this.#schedulerOwned = schedulerOwned; }
   snapshot(): FoundrySnapshot { return this.#snapshot; }
 
   async refresh(): Promise<FoundrySnapshot> {
@@ -21,10 +25,10 @@ export class LiveFoundryScreenController {
       const scheduleProjections = await new TearFoundryScheduleController(vault, schedules, { held: async (job, at) => {
         const held = await custody.held(at); return job.inputs.corpusRecordHashes.every((hash) => held.some((record) => record.candidateHash === hash));
       } }).discoverDue(new Date().toISOString());
-      return this.#set({ id: "foundry", status: "ready", subtitle: "local, hashes-only restart recovery", automation: "unavailable", jobs: projections.map((projection) => Object.freeze({
+      return this.#set({ id: "foundry", status: "ready", subtitle: "local, hashes-only restart recovery", automation: this.#schedulerOwned ? "local" : "unavailable", jobs: projections.map((projection) => Object.freeze({
         jobHash: projection.jobHash, phase: projection.phase, nextManualPhase: projection.nextManualPhase, resumable: projection.resumable,
         eventCount: projection.provenance.eventCount, lastEventHash: projection.provenance.lastEventHash, projectionHash: projection.projectionHash,
-      })), schedules: scheduleProjections });
+      })), schedules: scheduleProjections.map((schedule) => Object.freeze({ ...schedule, runtimeStatus: this.#scheduleStatus(schedule.scheduleHash) ?? (schedule.state === "disabled" ? "disabled" : schedule.disposition === "due" ? "due" : schedule.disposition.startsWith("blocked-") ? "blocked" : "configured") })) });
     } catch { return this.#set({ id: "foundry", status: "unavailable", subtitle: "Foundry recovery projections could not be read", automation: "unavailable", jobs: [], schedules: [] }); }
   }
 
@@ -38,6 +42,11 @@ export function createLiveFoundryScreen(factory: IDBFactory | undefined): Readon
   // The delayed browser backend needs one stable controller instance, not a replacement captured by the renderer.
   let active = controller;
   if (factory === undefined) void active.refresh();
-  else void createIndexedDbGhostVaultBackend(factory).then((backend) => { active = new LiveFoundryScreenController(backend); return active.refresh(); }).catch(() => { void active.refresh(); });
+  else void createIndexedDbGhostVaultBackend(factory).then((backend) => {
+    const scheduler = { value: undefined as LiveFoundryScheduler | undefined };
+    active = new LiveFoundryScreenController(backend, (scheduleHash) => scheduler.value?.status(scheduleHash), true);
+    scheduler.value = createLiveFoundryScheduler(backend, () => { void active.refresh(); });
+    scheduler.value.start(); return active.refresh();
+  }).catch(() => { void active.refresh(); });
   return Object.freeze({ snapshot: () => active.snapshot(), refresh: () => { void active.refresh(); }, setScheduleEnabled: (scheduleHash, enabled) => { void active.setScheduleEnabled(scheduleHash, enabled); } });
 }
