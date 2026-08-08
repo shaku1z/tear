@@ -964,6 +964,11 @@ REMAINING HERE: It does not execute the evaluator, compare a candidate, score,
 create an artifact, register, activate, promote, self-play, schedule, or show
 UI.
 
+PROVEN BY: focused C36 terminalization tests cover incomplete refusal,
+cancelled rejection/no-model, completed readiness, tampered lineage refusal,
+and idempotent retry; targeted lint, architecture, requirements, and diff gates
+passed.
+
 DONE THIS STEP:      Foundry V2 launches retain actual C34 plan/configuration
 bytes, while historical V1 launch bytes are explicitly non-resumable. A V2
 resume rechecks all stored lineage and advances one epoch with a durable

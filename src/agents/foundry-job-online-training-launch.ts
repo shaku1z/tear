@@ -73,7 +73,7 @@ export class TearFoundryOnlineTrainingFinalizationExecutor {
   constructor(jobs: TearFoundryJobVault) { this.#jobs = jobs; }
   async finalize(jobInput: TearFoundryJobV1, readinessInput: TearFoundryEvaluationReadinessReceiptV1, launchHash: string, finalizedAt: string): Promise<Readonly<{ job: TearFoundryJobV1; receipt: TearFoundryPairedEvaluationReadinessReceiptV1 }>> {
     const job = parseTearFoundryJob(jobInput), readiness = parseTearFoundryEvaluationReadinessReceipt(readinessInput), backend = this.#jobs.backend();
-    if (job.phase !== "evaluating" || !hash(launchHash) || !Number.isFinite(Date.parse(finalizedAt)) || (await this.#jobs.get(job.id))?.jobHash !== job.jobHash) throw new RangeError("Foundry online finalization requires exact evaluating readiness");
+    if (job.phase !== "evaluating" || !hash(launchHash) || !Number.isFinite(Date.parse(finalizedAt))) throw new RangeError("Foundry online finalization requires exact evaluating readiness");
     const raw = await backend.get("analysis", `${KEY}${launchHash}`), launch = raw === undefined ? undefined : parseTearFoundryOnlineTrainingLaunch(JSON.parse(raw));
     if (launch?.jobHash !== job.jobHash || launch.readinessReceiptHash !== readiness.receiptHashValue || launch.offlineTrainingHash !== readiness.trainingHash) throw new RangeError("Foundry online finalization lineage is unavailable");
     const checkpoint = await new TearOnlineRlCheckpointVault(backend).get(launch.checkpointHash);

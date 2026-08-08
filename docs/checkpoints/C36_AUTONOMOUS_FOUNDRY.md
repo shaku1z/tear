@@ -98,6 +98,10 @@ checkpoint may become immutable paired-evaluation readiness. This invokes no
 paired evaluator and creates no artifact, score, activation, promotion,
 self-play, scheduler, or UI output.
 
+Focused evidence covers incomplete refusal, cancelled safeguard rejection with
+no model, complete readiness, tampered launch rejection, and repeated exact
+terminalization recovery.
+
 V2 offline-training launches retain the complete immutable C34 plan and
 configuration. V1 launches fail closed because hashes alone cannot recreate
 their training inputs. A V2 resume rechecks launch, dataset, trainer manifest,
