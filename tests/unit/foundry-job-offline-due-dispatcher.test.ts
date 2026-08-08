@@ -37,7 +37,7 @@ async function resumeSetup() {
 describe("C36 lease-backed offline-Q due dispatch", () => {
   it("starts precisely one bounded C34 epoch and retries its durable lease receipt", async () => {
     const fixture = await setup(); expect(fixture.schedule).toMatchObject({ computeBudgetHash: budgets.computeBudgetHash, storageBudgetHash: budgets.storageBudgetHash, stopConditionsHash: h.stop }); await expect(fixture.jobs.get("offline-due-job")).resolves.toMatchObject({ phase: "curating", inputs: { stopConditionsHash: h.stop } }); const receipt = await fixture.dispatcher.runOfflineTrainingDueOnce(fixture.schedule.scheduleHash, dueRequest, at, budgets, "offline");
-    expect(receipt).toMatchObject({ disposition: "collected", leaseId: "offline" }); await expect(fixture.jobs.get("offline-due-job")).resolves.toMatchObject({ phase: "training", events: [{ sequence: 1 }, { sequence: 2 }, { sequence: 3 }, { sequence: 4 }] });
+    expect(receipt).toMatchObject({ disposition: "collected", leaseId: "offline", successorExecutionBindingMaterialRequired: true }); const material = receipt.successorExecutionBindingMaterial; expect(material).toMatchObject({ attemptReceiptHash: receipt.receiptHash, sourceJobHash: fixture.schedule.jobHash, successor: { id: "offline-due-job", phase: "training" }, payload: { kind: "offline-resume" } }); if (material?.payload.kind !== "offline-resume") throw new Error("offline launch material missing exact resume payload"); expect(material.payload.launchHash).toMatch(/^[a-f0-9]{16}$/u); await expect(fixture.jobs.get("offline-due-job")).resolves.toMatchObject({ phase: "training", events: [{ sequence: 1 }, { sequence: 2 }, { sequence: 3 }, { sequence: 4 }] });
     await expect(fixture.dispatcher.runOfflineTrainingDueOnce(fixture.schedule.scheduleHash, dueRequest, at, budgets, "offline")).resolves.toEqual(receipt);
     expect(await fixture.backend.get("analysis", `foundry-job-due-lease:v1:${fixture.schedule.scheduleHash}`)).toBeUndefined(); expect((await fixture.backend.keys("analysis")).some((key) => key.startsWith("policy-"))).toBe(false);
   });
@@ -53,6 +53,13 @@ describe("C36 lease-backed offline-Q due dispatch", () => {
     const fixture = await setup(), results = await Promise.allSettled([fixture.dispatcher.runOfflineTrainingDueOnce(fixture.schedule.scheduleHash, dueRequest, at, budgets, "first"), fixture.dispatcher.runOfflineTrainingDueOnce(fixture.schedule.scheduleHash, dueRequest, at, budgets, "second")]);
     expect(results.filter((entry) => entry.status === "fulfilled")).toHaveLength(1); await expect(fixture.jobs.get("offline-due-job")).resolves.toMatchObject({ phase: "training", events: [{ sequence: 1 }, { sequence: 2 }, { sequence: 3 }, { sequence: 4 }] });
   });
+
+  it("quarantines a tampered required successor material instead of silently retrying without provenance", async () => {
+    const fixture = await setup(), receipt = await fixture.dispatcher.runOfflineTrainingDueOnce(fixture.schedule.scheduleHash, dueRequest, at, budgets, "tamper"), key = `foundry-job-successor-binding-material:v1:${receipt.receiptHash}`;
+    await fixture.backend.put("analysis", key, "not-json");
+    await expect(fixture.dispatcher.runOfflineTrainingDueOnce(fixture.schedule.scheduleHash, dueRequest, at, budgets, "tamper")).rejects.toThrow(/material.*unavailable|material.*corrupt/u);
+    expect(await fixture.backend.get("quarantine", key)).toBe("not-json");
+  });
 });
 
 describe("C36 lease-backed offline-Q checkpoint resume dispatch", () => {
@@ -60,7 +67,7 @@ describe("C36 lease-backed offline-Q checkpoint resume dispatch", () => {
     const fixture = await resumeSetup();
     await expect(fixture.dispatcher.runOfflineResumeDueOnce(fixture.schedule.scheduleHash, fixture.launchHash, at, budgets, "old")).rejects.toThrow(/not due|authorized/u);
     const receipt = await fixture.dispatcher.runOfflineResumeDueOnce(fixture.resumeSchedule.scheduleHash, fixture.launchHash, at, budgets, "resume");
-    expect(receipt).toMatchObject({ disposition: "collected", leaseId: "resume", jobHash: fixture.training.jobHash });
+    expect(receipt).toMatchObject({ disposition: "collected", leaseId: "resume", jobHash: fixture.training.jobHash, successorExecutionBindingMaterialRequired: true }); const material = receipt.successorExecutionBindingMaterial; expect(material).toMatchObject({ attemptReceiptHash: receipt.receiptHash, sourceJobHash: fixture.training.jobHash, successor: { id: "offline-due-job", phase: "training" }, payload: { kind: "offline-resume" } }); if (material?.payload.kind !== "offline-resume") throw new Error("offline resume material missing exact resume payload"); expect(material.payload.launchHash).toMatch(/^[a-f0-9]{16}$/u);
     await expect(fixture.jobs.get("offline-due-job")).resolves.toMatchObject({ phase: "training", events: [{ sequence: 1 }, { sequence: 2 }, { sequence: 3 }, { sequence: 4 }, { sequence: 5 }] });
     await expect(fixture.dispatcher.runOfflineResumeDueOnce(fixture.resumeSchedule.scheduleHash, fixture.launchHash, at, budgets, "resume")).resolves.toEqual(receipt);
     expect(await fixture.backend.get("analysis", `foundry-job-due-lease:v1:${fixture.resumeSchedule.scheduleHash}`)).toBeUndefined();

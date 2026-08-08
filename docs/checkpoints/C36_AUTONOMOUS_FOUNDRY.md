@@ -286,6 +286,21 @@ custody, evaluate, register, activate, or promote a policy.
 
 ## Lease-bound bounded offline resume
 
+## Receipt-bound successor binding material
+
+Successful `curating → training` offline launches and `training → training`
+V2 resumes now retain a separate, content-addressed material record keyed by
+their immutable due-attempt receipt hash. Each record binds the source job
+head, exact durable successor head and phase, and the sole knowable successor
+payload: the newly persisted V2 `offline-resume` launch hash. The attempt
+receipt itself records that this material is required, so an exact retry
+returns it or fails closed after corrupt bytes are quarantined; it never
+silently retries without provenance. Collection and manifest-admission results
+retain no material, because their next phase payload is not knowable from
+those results. Terminal/refused work retains none. This material neither
+rebinds a schedule nor executes, schedules, trains, evaluates, activates,
+promotes, or contacts cloud.
+
 The explicit due dispatcher can now invoke that existing resume exactly once,
 but only from a due schedule whose bound hash is the durable current `training`
 head. A pre-launch or otherwise stale schedule is refused. Before its

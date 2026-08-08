@@ -1098,6 +1098,19 @@ dispatcher; do not represent rebinding alone as an unattended scheduler.
 
 ### C36 lease-bound offline-Q checkpoint resume
 
+### C36 receipt-bound successor binding material
+
+DONE THIS STEP: Successful bounded offline launch and resume receipts now
+require a separately persisted, content-addressed provenance record that
+binds their receipt hash, source/successor heads, successor phase, and exact
+new V2 resume-launch payload. Retried corrupt material quarantines and refuses
+rather than claiming a provenance-free retry. Collection, manifest, terminal,
+and refusal results correctly retain none because an exact next payload is not
+knowable.
+REMAINING HERE: Material is only a receipt-bound input to a future explicit
+coordinator; it does not bind/rebind any schedule, execute another phase, or
+start any timer or worker.
+
 DONE THIS STEP: A due schedule already bound to the durable current V2
 `training` head can run exactly one existing offline checkpoint epoch. It pins
 schedule/job/custody/lease and revalidates the launch's full immutable C34

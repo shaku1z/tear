@@ -30,7 +30,7 @@ describe("C36 lease-backed collection-only due dispatch", () => {
     const values = await Promise.allSettled([dispatcher.runDueOnce(schedule.scheduleHash, at, budgets, "first"), dispatcher.runDueOnce(schedule.scheduleHash, at, budgets, "second")]);
     expect(values.filter((entry) => entry.status === "fulfilled")).toHaveLength(1);
     const winner = values.find((entry): entry is PromiseFulfilledResult<Awaited<ReturnType<typeof dispatcher.runDueOnce>>> => entry.status === "fulfilled")?.value;
-    expect(winner?.disposition).toBe("collected"); expect(winner?.leaseId).toBe("first"); expect(winner?.actionHash).toMatch(/^[a-f0-9]{16}$/u);
+    expect(winner?.disposition).toBe("collected"); expect(winner?.leaseId).toBe("first"); expect(winner?.actionHash).toMatch(/^[a-f0-9]{16}$/u); expect(winner?.successorExecutionBindingMaterial).toBeUndefined();
     await expect(dispatcher.runDueOnce(schedule.scheduleHash, at, budgets, winner?.leaseId ?? "")).resolves.toEqual(winner);
     await expect(jobs.get("due-job")).resolves.toMatchObject({ phase: "collecting", events: [{ sequence: 1 }, { sequence: 2 }] });
     expect(await backend.get("analysis", `foundry-job-due-lease:v1:${schedule.scheduleHash}`)).toBeUndefined();
@@ -86,7 +86,7 @@ describe("C36 lease-backed curated-manifest due dispatch", () => {
   it("admits only the exact published manifest once, then refuses stale/retry work", async () => {
     const { jobs, schedule, dispatcher, request } = await manifestSetup();
     const receipt = await dispatcher.runManifestAdmissionDueOnce(schedule.scheduleHash, request, at, budgets, "manifest");
-    expect(receipt.disposition).toBe("collected"); await expect(jobs.get("manifest-job")).resolves.toMatchObject({ phase: "curating" });
+    expect(receipt.disposition).toBe("collected"); expect(receipt.successorExecutionBindingMaterial).toBeUndefined(); await expect(jobs.get("manifest-job")).resolves.toMatchObject({ phase: "curating" });
     await expect(dispatcher.runManifestAdmissionDueOnce(schedule.scheduleHash, request, at, budgets, "manifest")).resolves.toEqual(receipt);
     await expect(dispatcher.runManifestAdmissionDueOnce(schedule.scheduleHash, request, at, { ...budgets, storageBudgetHash: "8".repeat(16) }, "bad-budget")).rejects.toThrow(/not authorized/u);
   });
