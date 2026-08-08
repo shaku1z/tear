@@ -393,3 +393,15 @@ This bridge is not a Foundry decision, quality certification, active-policy
 pointer, runtime selection, traffic change, UI, placement, promotion, rollback,
 timer, worker, or cloud route. It is solely the provenance prerequisite that a
 future authorized rollout/rejection boundary must consume explicitly.
+
+## V3 promotion approval package
+
+An exact bridge may now be revalidated into a content-addressed, deterministic
+approval package with no human approver field. It retains only current V2
+monitoring evidence, action-time held C31 custody, the still-inactive candidate
+registry value, canonical adapter/vocabulary and complete/passed V3 lineage,
+and a valid previous active-policy identity when one exists. Stale bridge/job,
+decision, monitoring, candidate, active baseline, custody, or corrupt package
+bytes fail closed and quarantine on read. This package does not register,
+activate, promote, place, roll out, or render a policy; it is the sole intended
+authority for a later separately authorized atomic promotion boundary.

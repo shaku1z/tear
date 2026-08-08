@@ -217,3 +217,13 @@ lineage hash. V1 Foundry jobs and V2 C34 evidence cannot claim V3 eligibility;
 corrupt bridge bytes quarantine. This is evidence retention only: it does not
 write C32's active pointer, select traffic, expose UI, place, promote, or roll
 out a policy.
+
+### C36 V3 promotion approval package
+
+The Foundry can now retain an approver-free immutable approval package from an
+exact eligible V3 monitoring bridge. It freezes the current V2 monitoring head,
+decision/monitor receipts, C31 custody, candidate registry artifact, canonical
+adapter/vocabulary/evaluation lineage, protocol/stop identity, and any valid
+prior active-policy rollback baseline. It is not registry admission, activation,
+promotion, UI, placement, or runtime routing; a later atomic operation must
+consume this exact package explicitly.

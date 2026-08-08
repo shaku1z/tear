@@ -8,7 +8,7 @@ import {
   createTearPolicyArtifact,
   createTearOfflineRlV3Checkpoint, createTearOfflineRlV3Plan, createTearOnlineRlV3Checkpoint,
   createTearOnlineRlV3Plan, evaluateTearOnlineRlV3InSource, extractTearOfflineRlTrajectories,
-  TearC34V3C32CandidateRegistry, TearFoundryJobVault, TearFoundryV3MonitoringBridgeExecutor,
+  TearC34V3C32CandidateRegistry, TearFoundryJobVault, TearFoundryV3MonitoringBridgeExecutor, TearFoundryV3PromotionApprovalExecutor, TearPolicyArtifactRegistry,
   transitionTearFoundryJob, type TearAcademyCandidateCustodyStore, type TearAcademyTrainingDatasetV1,
 } from "../../src/agents";
 
@@ -74,5 +74,17 @@ describe("C36 V3 monitoring bridge", () => {
     const executor = new TearFoundryV3MonitoringBridgeExecutor(context.vault, context.custody), result = await executor.bridge(context.job, { decisionReceiptHash: context.decision.receiptHash, monitoringReceiptHash: context.monitoring.receiptHash, offline: v3.offline, training: v3.training, online: v3.online, checkpoint: v3.checkpoint, evaluation: v3.evaluation, candidateArtifactId: v3.candidate.artifact.id, bridgedAt: "2026-08-08T00:01:00.000Z" });
     const key = `foundry-job-v3-monitoring-bridge:v1:${result.bridgeHash}`; await context.backend.put("analysis", key, "corrupt");
     await expect(executor.get(result.bridgeHash)).resolves.toBeUndefined(); expect(await context.backend.get("quarantine", key)).toBe("corrupt");
+  });
+
+  it("freezes exact approval evidence and rejects changed custody, baseline, or stored bytes", async () => {
+    const context = await setup(), v3 = v3Fixture(), candidates = new TearC34V3C32CandidateRegistry(context.backend); await candidates.register(v3.candidate.artifact);
+    const bridge = await new TearFoundryV3MonitoringBridgeExecutor(context.vault, context.custody).bridge(context.job, { decisionReceiptHash: context.decision.receiptHash, monitoringReceiptHash: context.monitoring.receiptHash, offline: v3.offline, training: v3.training, online: v3.online, checkpoint: v3.checkpoint, evaluation: v3.evaluation, candidateArtifactId: v3.candidate.artifact.id, bridgedAt: "2026-08-08T00:01:00.000Z" });
+    const compatibility = Object.freeze({ runtime: "tear-policy-runtime.v1" as const, observationClass: "structured-state" as const, actionSchema: "tear-game-action-command-envelope.v1" as const, modelFormats: Object.freeze(["table-policy-v1"]) }), baseline = createTearPolicyArtifact({ id: "rollback-baseline", createdAt: "2026-08-08T00:00:00.000Z", model: { format: "table-policy-v1", payload: "{}" }, encoder: { id: "baseline", schemaVersion: 1, observationClass: "structured-state", normalizationHash: "a".repeat(16) }, actionSchema: "tear-game-action-command-envelope.v1", recurrentState: { kind: "none", schemaVersion: 1 }, trainingManifest: { id: "baseline", version: 1, rootHash: "b".repeat(16) }, rewardVersion: "baseline", build: { version: "test", revision: "baseline", target: "unit", rulesetVersion: "r", contentHash: "c", configHash: "d" }, metrics: {}, levelTarget: "class-a", lineage: { trainingRunId: "baseline" }, signature: { kind: "local-unsigned", keyId: "development" }, compatibility });
+    const policies = new TearPolicyArtifactRegistry(context.backend, compatibility); await policies.register(baseline); await policies.activate(baseline.id, "2026-08-08T00:01:01.000Z");
+    const approval = new TearFoundryV3PromotionApprovalExecutor(context.vault, context.custody), first = await approval.approve(context.job, bridge.bridgeHash, "2026-08-08T00:02:00.000Z"), again = await approval.approve(context.job, bridge.bridgeHash, "2026-08-08T00:02:00.000Z");
+    expect(again).toEqual(first); expect(first.rollbackBaseline).toMatchObject({ artifactId: baseline.id, artifactHash: baseline.artifactHash }); expect(await context.backend.get("analysis", "policy-active:v1")).toBeDefined();
+    const approvalKey = `foundry-job-v3-promotion-approval:v1:${first.approvalHash}`; await context.backend.put("analysis", approvalKey, "corrupt"); expect(await approval.get(first.approvalHash)).toBeUndefined(); expect(await context.backend.get("quarantine", approvalKey)).toBe("corrupt");
+    const revoked = await setup(), revokedV3 = v3Fixture(), revokedCandidates = new TearC34V3C32CandidateRegistry(revoked.backend); await revokedCandidates.register(revokedV3.candidate.artifact); const revokedBridge = await new TearFoundryV3MonitoringBridgeExecutor(revoked.vault, revoked.custody).bridge(revoked.job, { decisionReceiptHash: revoked.decision.receiptHash, monitoringReceiptHash: revoked.monitoring.receiptHash, offline: revokedV3.offline, training: revokedV3.training, online: revokedV3.online, checkpoint: revokedV3.checkpoint, evaluation: revokedV3.evaluation, candidateArtifactId: revokedV3.candidate.artifact.id, bridgedAt: "2026-08-08T00:01:00.000Z" });
+    (revoked.custody as unknown as { held: () => Promise<readonly unknown[]> }).held = () => Promise.resolve([]); await expect(new TearFoundryV3PromotionApprovalExecutor(revoked.vault, revoked.custody).approve(revoked.job, revokedBridge.bridgeHash, "2026-08-08T00:02:00.000Z")).rejects.toThrow(/custody|lineage/u);
   });
 });

@@ -140,7 +140,7 @@ export function parseTearPolicyArtifact(value: unknown): TearPolicyArtifactV1 {
   return freezeArtifact(draft);
 }
 
-function parseActivation(value: unknown): TearPolicyActivationV1 {
+export function parseTearPolicyActivation(value: unknown): TearPolicyActivationV1 {
   if (!record(value) || value.format !== "tear-policy-activation" || value.schemaVersion !== 1 || !integer(value.revision)
     || value.revision < 1 || !text(value.artifactId) || !hashes(value.artifactHash) || !timestamp(value.activatedAt)
     || (value.previousArtifactId !== undefined && !text(value.previousArtifactId)) || !hashes(value.activationHash)) throw new TypeError("invalid policy activation");
@@ -218,7 +218,7 @@ export class TearPolicyArtifactRegistry {
     const raw = await this.#backend.get("analysis", ACTIVE_KEY);
     if (raw === undefined) return undefined;
     try {
-      const activation = parseActivation(JSON.parse(raw));
+      const activation = parseTearPolicyActivation(JSON.parse(raw));
       const artifact = await this.get(activation.artifactId);
       if (artifact?.artifactHash !== activation.artifactHash) throw new TypeError("active policy artifact is unavailable");
       return activation;
@@ -262,7 +262,7 @@ export class TearPolicyArtifactRegistry {
       .map(async (key) => ({ key, raw: await this.#backend.get("indexes", key) })));
     const entries: TearPolicyActivationV1[] = [];
     for (const { key, raw } of values) {
-      try { if (raw !== undefined) entries.push(parseActivation(JSON.parse(raw))); }
+      try { if (raw !== undefined) entries.push(parseTearPolicyActivation(JSON.parse(raw))); }
       catch (error) { await this.#quarantine(key, raw, error instanceof Error ? error.message : String(error)); }
     }
     return Object.freeze(entries.sort((left, right) => left.revision - right.revision));

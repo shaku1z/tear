@@ -1246,6 +1246,18 @@ candidate evaluation/rejection/rollout boundary must not infer activation,
 placement, promotion, runtime traffic, UI, timer, worker, or cloud behavior
 from a bridge.
 
+### C36 V3 promotion approval package
+
+DONE THIS STEP: An exact current V2 monitoring bridge can be frozen into one
+idempotent, approver-free approval package only after rechecking its decision,
+monitor, held C31 custody, inactive candidate registry bytes, canonical V3
+adapter/vocabulary/evaluation lineage, protocol/stop identity, and a valid
+prior active-policy rollback identity when available. Corrupt package bytes
+quarantine; stale/revoked/tampered evidence refuses.
+REMAINING HERE: This package is durable authorization evidence only. A future
+atomic registry operation must consume it explicitly; do not register,
+activate, promote, place, route, schedule, or render a candidate here.
+
 ### C34 V3 canonical-compatible offline training custody
 
 DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,

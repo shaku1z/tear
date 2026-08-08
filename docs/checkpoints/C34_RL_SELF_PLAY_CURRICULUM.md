@@ -184,3 +184,8 @@ monitoring bridge to an already-inactive C32 candidate. It never converts V2
 learning evidence into V3, changes a V3 result, or makes a quality/promotion
 claim. Mismatched adapter, vocabulary, plan, checkpoint, evaluation, candidate,
 V2 decision/monitoring, current-head, or custody identity refuses.
+
+The resulting V3 candidate may be named by a C36 approval package only after
+the exact completed/passed evidence and candidate-only registry bytes still
+match. The package is non-promotional custody, not a C34 quality result or
+runtime rollout.

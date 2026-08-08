@@ -28,6 +28,7 @@ export * from "./offline-rl-v3-training";
 export * from "./online-rl-v3-training";
 export * from "./c34-v3-c32-policy-adapter";
 export * from "./foundry-job-v3-monitoring-bridge";
+export * from "./foundry-job-v3-promotion-approval";
 export * from "./online-rl-headless-executor";
 export * from "./online-rl-curriculum";
 export * from "./online-rl-training";
