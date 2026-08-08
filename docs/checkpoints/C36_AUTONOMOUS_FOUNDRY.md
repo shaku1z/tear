@@ -17,17 +17,26 @@
 - `foundry-job-vault.ts` stores jobs idempotently in Ghost Vault analysis plus
   indexes, rejects conflicting same-ID bytes, and quarantines malformed stored
   bytes. This is local C36 custody, not a scheduler or training runtime.
+- A legal successor now atomically replaces only the durable current snapshot
+  while retaining an immutable event row. It must have the exact prior history
+  and frozen inputs; rewrites and branches fail closed. The collection executor
+  shares its Vault with C31 custody and checks every named custody record through `held(at)` at action time. It
+  records either an exact authorized collection receipt and `collecting`, or a
+  terminal `no-authorized-corpus` failure. Revoked, expired, and missing records
+  therefore cannot reach a later C36 phase.
 
 ## Evidence
 
 `tests/unit/foundry-job-state.test.ts` verifies legal and illegal transitions,
 frozen-input/history tamper rejection, idempotent storage, corrupt-byte
-quarantine, and safe restart reporting. Targeted type, lint, architecture, and
-requirement checks are recorded with the implementation commit.
+quarantine, and safe restart reporting. `tests/unit/foundry-job-collection.test.ts`
+verifies authorized collection, no-data failure, idempotent recovery, and
+branch/rewrite rejection. Targeted type, lint, architecture, and requirement
+checks are recorded with the implementation commit.
 
 ## Remaining exit gate
 
-The durable ledger has no trainer invocation, source-world evaluation,
+The durable ledger/collection boundary has no curation executor, trainer invocation, source-world evaluation,
 registry activation, promotion, scheduler, UI, or notifications. C36 remains
 open until an unattended authorized corpus cycle genuinely collects, curates,
 trains, evaluates through frozen gates, rejects/promotes/version-places a

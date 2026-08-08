@@ -852,3 +852,23 @@ roll back a policy. C36 remains fully open.
 NEXT SLICE:          Bind an authorized held C31-custody query to a C36
 `collecting` job attempt with deterministic receipt and explicit no-data stop;
 do not invoke a trainer or infer a challenger from a score dictionary.
+
+### C36 action-time authorized collection
+
+DONE THIS STEP:      C36 successor persistence now accepts only the exact next
+event over the durable current job snapshot; it atomically records the successor
+and immutable event row. The first executor checks each frozen C31 custody
+record through `held(at)` at action time. Exact held records produce a durable
+collection receipt and `collecting`; any missing, revoked, or expired source
+ends the job in `failed` with `no-authorized-corpus`. Repeating an identical
+interrupted action is idempotent; history branches and frozen-input rewrites are
+refused.
+PROVEN BY:           `tests/unit/foundry-job-state.test.ts` and
+`tests/unit/foundry-job-collection.test.ts`, TypeScript, targeted ESLint,
+architecture, and requirements checks.
+REMAINING HERE:      Collection does not curate, construct a C31 manifest,
+train, evaluate, choose a challenger, activate, promote, schedule, or expose
+UI. C36 remains fully open.
+NEXT SLICE:          Bind `collecting` only to an immutable authorized C31
+curation/manifest boundary; retain a no-eligible-data terminal result and do
+not send raw held records to C33/C34 training.
