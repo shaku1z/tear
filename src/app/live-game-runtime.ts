@@ -44,6 +44,7 @@ import { createDefaultStateCodecRegistry } from "../tearbench/state-codecs";
 import { ENTITY_KIND_REGISTRY } from "../tearbench/registries";
 import { stableVerificationHash } from "../replay/hash";
 import { createLiveGhostRecordingSessionState } from "./live-ghost-recording-session-state";
+import { createLiveHumanCalibrationCaptureComposition } from "./live-human-calibration-capture-composition";
 import { createBrowserGhostVaultLibrary } from "./ghost-vault-library-controller";
 import { createLiveInputAuthorityState } from "./live-input-authority-state"; import { createLiveGhostPracticeSessionState } from "./live-ghost-practice-session-state"; import { launchGhostPracticeChild } from "./ghost-practice-launch";
 type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick: number): void; after?(tick: number): void } }; export function startLiveGame(dependencies: GameRuntimeDependencies, configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>): void {
@@ -52,18 +53,19 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const browserRuntime = createLiveBrowserRuntime(dependencies);
   const { canvas, context: ctx, width: W, height: H, viewport, resizeCanvas, requestPointerLock: requestLock, installPrompt, lockHint, hint: hintEl,
     pantheonDebug: PANTHEON_DEBUG, testMode: TEST_MODE } = browserRuntime;
-  const inputAuthority = createLiveInputAuthorityState(requestLock);
-  const requestOwnedPointerLock = inputAuthority.requestPointerLock;
-  const ghostV3Session = createLiveGhostRecordingSessionState(
-    browserIndexedDb,
-    createGhostV3BrowserTestOptions(TEST_MODE, browserWindow.location.search),
-  );
+  const inputAuthority = createLiveInputAuthorityState(requestLock), requestOwnedPointerLock = inputAuthority.requestPointerLock;
+  const currentSignedInActor = (): string | undefined => Cloud.loggedIn() && Cloud.user !== null && !Cloud.user.guest ? Cloud.user.id : undefined, humanCalibration = createLiveHumanCalibrationCaptureComposition(browserIndexedDb, browserWindow, currentSignedInActor);
+  const ghostV3Options = createGhostV3BrowserTestOptions(TEST_MODE, browserWindow.location.search) ?? {};
+  const ghostV3Session = createLiveGhostRecordingSessionState(browserIndexedDb,
+    { ...ghostV3Options, onFinalized: async (manifest, vault) => { await ghostV3Options.onFinalized?.(manifest, vault); await humanCalibration.capture?.finalized(manifest, vault); } });
   const ghostV3 = ghostV3Session.recorder();
-  const academyScreen = createLiveAcademyScreen(browserIndexedDb, () => Cloud.loggedIn() && Cloud.user !== null && !Cloud.user.guest ? Cloud.user.id : undefined);
+  const academyScreen = createLiveAcademyScreen(browserIndexedDb, currentSignedInActor);
   // Keyframes attest the immutable bootstrap identity saved at recording boundary; never rebuild a divergent fingerprint later in the live loop.
   GHOST.setRecordingObserver(ghostV3 === null ? null : {
     started(context) {
       ghostV3Session.reset();
+      humanCalibration.input.reset();
+      humanCalibration.capture?.started();
       let provenance: Readonly<Record<string, unknown>>;
       let replayContext: GhostReplayRunContextV1 | undefined;
       try {
@@ -621,7 +623,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       replay: { dependencies, canvas: ctx, width: W, height: H, screenRectangle: screenRect, time: interfaceFrame.seconds, deltaSeconds: interfaceFrame.deltaSeconds, fallbackPlayer: livePlayer, bossById, setScreen: (screen, context) => setState(screen, context), formatTime: fmtTime, document: browserDocument, browserIndexedDb, launchGhostPractice },
       library: { dependencies, canvas: ctx, height: H, time: interfaceFrame.seconds, enterSeconds: interfaceFrame.enterSeconds, scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, clamp, ease: ez, formatTime: fmtTime, getBest, ghostVault: createBrowserGhostVaultLibrary(browserIndexedDb) },
       settings: { dependencies, document: browserDocument, window: browserWindow, canvas, width: W, overscan: () => OVERSCAN, screen: () => state, setScreen: (screen, context) => setState(screen, context), settingsController, settings, scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, clamp, installPrompt },
-      actions: { setScreen: (screen) => { if (screen === "academy") academyScreen.refresh(); setState(screen); }, resetScroll: () => { interfaceInteraction.setScroll(0); }, setSetupSelection: (kind, id) => { if (kind === "mode" && isRunModeSelection(id)) { session.setSelectedMode(id); if (trainingRunRequiresPreflight(id)) void trainingHost.ensureLoaded(); } else if (kind === "difficulty" && isRunDifficultySelection(id)) session.setSelectedDifficulty(id); else if (kind === "weapon") session.setSelectedWeapon(id); else if (kind === "boss") session.setSelectedBoss(id); }, startSelectedRun: () => { startRunWithPreflight(session.selectedMode(), session.selectedDifficulty()); }, startRun: (mode, difficulty) => { if (isRunModeSelection(mode) && isRunDifficultySelection(difficulty)) startRunWithPreflight(mode, difficulty); }, currentRun: liveRun, resumeFinale: resumeSavedFinale, claimFinale: claimSavedFinale, requestPointer: requestLock, endRun, retryRun, lastReplay: () => session.lastRecording(), campaignDifficulty: () => session.outcome()?.diff ?? "normal", resetSettings: () => { settingsController.reset(); }, refreshAcademy: academyScreen.refresh, advanceAcademyDagger: academyScreen.advance, reviewAcademyDagger: academyScreen.review, withdrawAcademyModelTraining: academyScreen.withdrawModelTraining, signIn: () => { void Cloud.signIn(); }, signOut: () => { void Cloud.signOut(); }, pinReplay: (id, pinned) => VAULT.pin(id, pinned), deleteReplay: (id) => { VAULT.remove(id); }, dispatchPlayground: dispatchPlaygroundAction },
+      actions: { setScreen: (screen) => { if (screen === "academy") academyScreen.refresh(); setState(screen); }, resetScroll: () => { interfaceInteraction.setScroll(0); }, setSetupSelection: (kind, id) => { if (kind === "mode" && isRunModeSelection(id)) { session.setSelectedMode(id); if (trainingRunRequiresPreflight(id)) void trainingHost.ensureLoaded(); } else if (kind === "difficulty" && isRunDifficultySelection(id)) session.setSelectedDifficulty(id); else if (kind === "weapon") session.setSelectedWeapon(id); else if (kind === "boss") session.setSelectedBoss(id); }, startSelectedRun: () => { startRunWithPreflight(session.selectedMode(), session.selectedDifficulty()); }, startRun: (mode, difficulty) => { if (isRunModeSelection(mode) && isRunDifficultySelection(difficulty)) startRunWithPreflight(mode, difficulty); }, currentRun: liveRun, resumeFinale: resumeSavedFinale, claimFinale: claimSavedFinale, requestPointer: requestLock, endRun, retryRun, lastReplay: () => session.lastRecording(), campaignDifficulty: () => session.outcome()?.diff ?? "normal", resetSettings: () => { settingsController.reset(); }, refreshAcademy: academyScreen.refresh, advanceAcademyDagger: academyScreen.advance, reviewAcademyDagger: academyScreen.review, withdrawAcademyModelTraining: academyScreen.withdrawModelTraining, optInHumanCalibration: (consent) => { academyScreen.setHumanCalibrationConsent(consent); }, revokeHumanCalibration: () => { academyScreen.setHumanCalibrationConsent("revoked"); }, signIn: () => { void Cloud.signIn(); }, signOut: () => { void Cloud.signOut(); }, pinReplay: (id, pinned) => VAULT.pin(id, pinned), deleteReplay: (id) => { VAULT.remove(id); }, dispatchPlayground: dispatchPlaygroundAction },
       runState: { screen: () => state, setScreen: (screen) => { setState(screen); }, run: liveRun, player: livePlayer, scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, continueSeconds: reviveCountdown.seconds, setContinueSeconds: reviveCountdown.setSeconds, replayAvailable: () => session.lastRecording() !== null, outcome: currentOutcome },
       runServices: { dependencies, reward: rewardRuntime, formatTime: fmtTime, clamp, trickColor, saveBest, awardCoins, cinema: CINEMA, clearFinale: () => { story.finale = null; }, terminateRun: (reason) => { abandonLiveRun(reason); }, addFloater, addShake, addFlash, requestPointer: requestLock },
       menuState: { selection: () => session.selection(), scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, time: interfaceFrame.seconds, shop: () => shopFeedback.snapshot(), setShop: (value) => { shopFeedback.set(value); } },

@@ -24,8 +24,12 @@
   attestation names its exact root, range, command hash, physical device, and
   issuer. It derives bounded aggregate command-cadence features and refuses
   semantic/C30 evidence, private/no-training consent, mismatches, and repeats.
-  The current live recorder does not issue those attestations, so this is a
-  fail-closed source boundary, not a claim of admitted human evidence.
+- The live Ghost V3 finalized boundary now creates a *local pending*
+  attestation only when the exact completed capsule has a browser-trusted input
+  edge, the same signed-in actor and consent revision observed at capture start
+  still hold at finalization, and the capsule root/range/command track verifies.
+  It does not automatically admit, train on, upload, or reclassify a capture;
+  synthetic browser events produce no attestation.
 
 ## Exit-gate status
 
@@ -33,7 +37,8 @@
   The permanent fixture exercises only two scripted bindings and is not a real
   policy population or a level certification.
 - [ ] Human-likeness calibration against real human traces. No separately
-  consented human trace distribution or calibration metric is present.
+  consented human trace distribution or calibration metric is present. Pending
+  local attestations are source candidates, not admitted calibration evidence.
 - [ ] Ladder placement is reproducible. Hash-bound execution is reproducible;
   placement, adjacent-level discrimination, and drift invalidation remain open.
 
@@ -42,4 +47,6 @@ fresh C30 worlds and records truthful distribution inputs.
 PROVEN BY:           `tests/unit/tearbot-ladder-execution.test.ts`, typecheck,
 targeted lint, architecture check, and requirements check.
 REMAINING HERE:      real learned policy population, benchmark families,
-human-trace calibration, placement/discrimination, and drift invalidation.
+explicit Academy admission/curation of pending human candidates, participant-
+balanced human-trace calibration, placement/discrimination, and drift
+invalidation.

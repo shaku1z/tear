@@ -55,7 +55,18 @@ export function createAcademyRenderers(context: ScreenRenderContext) {
           ui.text(canvas, lesson.state, panelX + 592, lessonTop, ui.t.type.caption, "right", ui.t.alpha.soft);
           ui.text(canvas, lesson.detail, panelX + 24, lessonTop + 16, ui.t.type.micro, "left", ui.t.alpha.muted);
         });
-        const programY = lessonY + Math.max(84, 46 + lessons.length * 34) + 20;
+        const consentY = lessonY + Math.max(84, 46 + lessons.length * 34) + 20;
+        const calibration = view.humanCalibrationConsent;
+        const consentHeight = calibration === undefined ? 0 : 112;
+        if (calibration !== undefined) {
+          ui.panel(canvas, panelX, consentY, 640, consentHeight);
+          ui.sectionLabel(canvas, "HUMAN CALIBRATION CONSENT", panelX + 24, consentY + 30, 592);
+          ui.displayText(canvas, calibration.state.replaceAll("-", " ").toUpperCase(), panelX + 24, consentY + 56, ui.t.type.label, "left");
+          ui.text(canvas, calibration.detail, panelX + 24, consentY + 78, ui.t.type.caption, "left", ui.t.alpha.muted);
+          if (calibration.canOptIn) context.enqueue({ x: panelX + 332, y: consentY + 52, w: 260, h: 40, label: "ALLOW ANONYMOUS CALIBRATION", action: { type: "academy.humanCalibration.optIn", consent: "anonymous-improvement" } });
+          if (calibration.canRevoke) context.enqueue({ x: panelX + 392, y: consentY + 52, w: 200, h: 40, label: "REVOKE CONSENT", action: { type: "academy.humanCalibration.revoke" } });
+        }
+        const programY = consentY + consentHeight + (calibration === undefined ? 0 : 20);
         const programs = view.daggerPrograms ?? [];
         const programPageSize = 3;
         const programOffset = Math.max(0, Math.min(Math.max(0, programs.length - programPageSize), Math.floor(context.scroll / 52)));

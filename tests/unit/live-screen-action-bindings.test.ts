@@ -30,4 +30,13 @@ describe("live screen action bindings", () => {
     dispatch({ type: "academy.record.withdrawModelTraining", candidateHash: "a".repeat(16) });
     expect(withdrawAcademyModelTraining).toHaveBeenCalledWith("a".repeat(16));
   });
+
+  it("routes human-calibration consent decisions without allowing a renderer to supply an actor", () => {
+    const optInHumanCalibration = vi.fn(), revokeHumanCalibration = vi.fn();
+    const dispatch = createLiveScreenActionBindings({ optInHumanCalibration, revokeHumanCalibration } as unknown as ScreenActionBindingPorts);
+    dispatch({ type: "academy.humanCalibration.optIn", consent: "anonymous-improvement" });
+    dispatch({ type: "academy.humanCalibration.revoke" });
+    expect(optInHumanCalibration).toHaveBeenCalledWith("anonymous-improvement");
+    expect(revokeHumanCalibration).toHaveBeenCalledOnce();
+  });
 });

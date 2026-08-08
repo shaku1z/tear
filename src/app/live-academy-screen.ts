@@ -1,16 +1,32 @@
 import { createBrowserAcademyInspectionController, createBrowserAcademyCustodyActionRuntime, createBrowserTemporalDaggerProgramInspectionController, createBrowserTemporalDaggerProgramRuntime,
-  type TearAcademyInspectionController, type TearTemporalDaggerProgramInspectionController } from "../agents";
+  TearHumanCalibrationLocalConsentLedger, type TearAcademyInspectionController, type TearTemporalDaggerProgramInspectionController } from "../agents";
+import { createIndexedDbGhostVaultBackend } from "../ghost";
 import type { AcademyScreenView } from "../presentation/screens/contracts";
 
 /** Keeps Academy persistence composition outside the frame-sized live runtime. */
-export function createLiveAcademyScreen(factory: IDBFactory | undefined, currentSignedInActor: () => string | undefined = () => undefined): Readonly<{ snapshot: () => AcademyScreenView; refresh: () => void; advance: (id: string) => void; review: (id: string, correctionHash: string, disposition: "accepted" | "rejected") => void; withdrawModelTraining: (candidateHash: string) => void }> {
+export function createLiveAcademyScreen(factory: IDBFactory | undefined, currentSignedInActor: () => string | undefined = () => undefined): Readonly<{ snapshot: () => AcademyScreenView; refresh: () => void; advance: (id: string) => void; review: (id: string, correctionHash: string, disposition: "accepted" | "rejected") => void; withdrawModelTraining: (candidateHash: string) => void; setHumanCalibrationConsent: (consent: "anonymous-improvement" | "public-training" | "revoked") => void }> {
   let controller: TearAcademyInspectionController | undefined;
   let daggerPrograms: TearTemporalDaggerProgramInspectionController | undefined;
   let daggerRuntime: Awaited<ReturnType<typeof createBrowserTemporalDaggerProgramRuntime>>;
   let custodyActions: Awaited<ReturnType<typeof createBrowserAcademyCustodyActionRuntime>>;
+  let calibrationLedger: TearHumanCalibrationLocalConsentLedger | undefined;
+  let calibration: NonNullable<AcademyScreenView["humanCalibrationConsent"]> = Object.freeze({ state: "loading", detail: "Reading your local consent decision.", canOptIn: false, canRevoke: false });
+  const refreshCalibration = (): void => {
+    const actor = currentSignedInActor();
+    if (calibrationLedger === undefined) { calibration = Object.freeze({ state: "unavailable", detail: "Human calibration consent is unavailable in this runtime.", canOptIn: false, canRevoke: false }); return; }
+    if (actor === undefined) { calibration = Object.freeze({ state: "not-enrolled", detail: "Sign in to make a personal human-calibration decision.", canOptIn: false, canRevoke: false }); return; }
+    calibration = Object.freeze({ state: "loading", detail: "Reading your local consent decision.", canOptIn: false, canRevoke: false });
+    void calibrationLedger.read(actor).then((record) => {
+      if (currentSignedInActor() !== actor) return;
+      calibration = record === undefined ? Object.freeze({ state: "not-enrolled" as const, detail: "No human-calibration consent has been recorded.", canOptIn: true, canRevoke: false })
+        : record.consent === "revoked" ? Object.freeze({ state: "revoked" as const, detail: "Human-calibration consent is revoked. Existing recordings are not reclassified by this decision.", canOptIn: true, canRevoke: false })
+          : Object.freeze({ state: "enabled" as const, detail: `Recorded ${record.consent.replaceAll("-", " ")} consent. You can revoke it at any time.`, canOptIn: false, canRevoke: true });
+    }).catch(() => { if (currentSignedInActor() === actor) calibration = Object.freeze({ state: "unavailable", detail: "Human calibration consent could not be read.", canOptIn: false, canRevoke: false }); });
+  };
   const refresh = (): void => {
     if (controller) void controller.refresh(new Date().toISOString(), currentSignedInActor());
     if (daggerPrograms) void daggerPrograms.refresh();
+    refreshCalibration();
   };
   const advance = (id: string): void => { if (daggerRuntime !== undefined) void daggerRuntime.runtime.advance(id).then(() => { refresh(); }); };
   const review = (id: string, correctionHash: string, disposition: "accepted" | "rejected"): void => {
@@ -22,11 +38,19 @@ export function createLiveAcademyScreen(factory: IDBFactory | undefined, current
     const actor = currentSignedInActor();
     if (custodyActions !== undefined && actor !== undefined) void custodyActions.withdrawModelTraining(candidateHash, actor, new Date().toISOString()).then(() => { refresh(); }).catch(() => { refresh(); });
   };
-  void Promise.all([createBrowserAcademyInspectionController(factory), createBrowserAcademyCustodyActionRuntime(factory), createBrowserTemporalDaggerProgramInspectionController(factory), createBrowserTemporalDaggerProgramRuntime(factory)]).then(([academy, actions, dagger, runtime]) => {
+  const setHumanCalibrationConsent = (consent: "anonymous-improvement" | "public-training" | "revoked"): void => {
+    const actor = currentSignedInActor();
+    if (calibrationLedger === undefined || actor === undefined) return;
+    const decidedAt = new Date().toISOString();
+    void calibrationLedger.set(actor, consent, `academy-human-calibration:${consent}:${decidedAt}`).then(refresh).catch(refresh);
+  };
+  void Promise.all([createBrowserAcademyInspectionController(factory), createBrowserAcademyCustodyActionRuntime(factory), createBrowserTemporalDaggerProgramInspectionController(factory), createBrowserTemporalDaggerProgramRuntime(factory),
+    factory === undefined ? Promise.resolve(undefined) : createIndexedDbGhostVaultBackend(factory).then((backend) => new TearHumanCalibrationLocalConsentLedger(backend))]).then(([academy, actions, dagger, runtime, ledger]) => {
     controller = academy;
     custodyActions = actions;
     daggerPrograms = dagger;
     daggerRuntime = runtime;
+    calibrationLedger = ledger;
     refresh();
   });
   return Object.freeze({
@@ -36,10 +60,10 @@ export function createLiveAcademyScreen(factory: IDBFactory | undefined, current
       if (inspection.status === "unavailable" || programs.status === "unavailable") return {
         id: "academy", status: "unavailable", subtitle: inspection.status === "unavailable" ? inspection.reason
           : programs.status === "unavailable" ? programs.reason : "Academy storage could not be read",
-        rows: [], records: [], manifests: [], daggerPrograms: [],
+        rows: [], records: [], manifests: [], daggerPrograms: [], humanCalibrationConsent: calibration,
       };
       if (inspection.status === "loading" || programs.status === "loading") return {
-        id: "academy", status: "loading", subtitle: "reading durable Academy custody", rows: [], records: [], manifests: [], daggerPrograms: [],
+        id: "academy", status: "loading", subtitle: "reading durable Academy custody", rows: [], records: [], manifests: [], daggerPrograms: [], humanCalibrationConsent: calibration,
       };
       return {
         id: "academy", status: "ready", subtitle: "durable training custody", rows: [
@@ -87,15 +111,16 @@ export function createLiveAcademyScreen(factory: IDBFactory | undefined, current
             const actionNames = (actions: readonly { readonly type: string }[]) => actions.map((action) => action.type).join(", ") || "no action";
             return {
               id: `CORRECTION ${correction.correctionHash.slice(0, 8).toUpperCase()}`, programId: program.id,
-              correctionHash: correction.correctionHash, state: decision?.disposition?.toUpperCase() ?? (canReview ? "AWAITING DECISION" : reviewer === undefined ? "SIGN-IN REQUIRED" : "NOT AUTHORIZED"),
+              correctionHash: correction.correctionHash, state: decision?.disposition.toUpperCase() ?? (canReview ? "AWAITING DECISION" : reviewer === undefined ? "SIGN-IN REQUIRED" : "NOT AUTHORIZED"),
               detail: `tick ${String(correction.tick)} - challenger: ${actionNames(correction.challengerActions)} - teacher: ${actionNames(correction.teacherActions)}`,
               canReview: decision === undefined && canReview,
             };
           })];
           }),
         ],
+        humanCalibrationConsent: calibration,
       };
     },
-    refresh, advance, review, withdrawModelTraining,
+    refresh, advance, review, withdrawModelTraining, setHumanCalibrationConsent,
   });
 }

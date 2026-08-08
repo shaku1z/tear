@@ -241,6 +241,9 @@ export interface AcademyScreenView {
   /** C33 exposes immutable plan progress and only session-gated decisions authorized by that plan; it cannot activate or promote a policy. */
   readonly daggerPrograms?: readonly (Readonly<{ readonly id: string; readonly state: string; readonly detail: string; readonly programId?: string; readonly canAdvance?: boolean;
     readonly correctionHash?: string; readonly canReview?: boolean }>)[];
+  /** C35 local, signed-in consent decision. It is never inferred from a recording or ordinary Academy custody. */
+  readonly humanCalibrationConsent?: Readonly<{ readonly state: "loading" | "unavailable" | "not-enrolled" | "enabled" | "revoked"; readonly detail: string;
+    readonly canOptIn: boolean; readonly canRevoke: boolean }>;
 }
 
 export type LegacyScreenView = MenuScreenView | SetupScreenView | PlayingScreenView | CodexScreenView

@@ -672,11 +672,13 @@ with a separately consented, pseudonymous, issuer/device-bound attestation and
 derives bounded aggregate cadence features. It rejects C30 semantic evidence,
 private/no-training consent, altered capsule/range/action custody, and duplicate
 participant/capsule records.
-REMAINING HERE:      Normal live capture does not yet issue the required typed
-physical-input attestation; no human source has been inferred or admitted, and
-there is no calibration or level-certification claim.
-NEXT SLICE:          Integrate attestation issuance at the real physical Ghost
-capture boundary before deriving a participant-balanced calibration distribution.
+REMAINING HERE:      The real physical Ghost boundary now creates only a local
+pending attestation after trusted input plus unchanged signed-in actor/consent
+and exact capsule custody all verify. No candidate is automatically admitted,
+trained on, uploaded, or used for calibration, and there is no level-
+certification claim.
+NEXT SLICE:          Add explicit Academy admission/curation and a participant-
+balanced calibration metric; do not treat pending attestations as evidence.
 
 ### C33 pacing finding — repeat-round boundary
 

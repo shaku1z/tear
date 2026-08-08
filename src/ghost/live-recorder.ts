@@ -26,6 +26,8 @@ export interface GhostLiveRecorderOptions {
   readonly maxStagingEntries?: number;
   readonly worker?: GhostEncoderWorkerPort;
   readonly recordingProfile?: GhostRecordingProfileId;
+  /** Local post-finalize observer. Failures are isolated from the completed capture. */
+  readonly onFinalized?: (manifest: TearGhostManifest, vault: GhostLocalVault) => void | Promise<void>;
 }
 
 /**
@@ -37,6 +39,7 @@ export interface BrowserGhostLiveRecorderOptions {
   readonly chunkEntries?: number;
   readonly maxPendingWrites?: number;
   readonly beforeCommit?: (operations: readonly GhostVaultWrite[]) => void | Promise<void>;
+  readonly onFinalized?: GhostLiveRecorderOptions["onFinalized"];
 }
 
 interface LiveGhostCaptureSession {
@@ -60,7 +63,7 @@ interface LiveGhostCaptureSession {
 export class GhostLiveRecorder {
   readonly #options: Required<Pick<GhostLiveRecorderOptions, "now">>
     & Readonly<Pick<GhostLiveRecorderOptions, "createVault">>
-    & Readonly<{ chunkEntries: number; maxPendingWrites: number; maxStagingEntries: number; keyframeIntervalTicks: number; worker?: GhostEncoderWorkerPort; recordingProfile: GhostRecordingProfileId }>;
+    & Readonly<{ chunkEntries: number; maxPendingWrites: number; maxStagingEntries: number; keyframeIntervalTicks: number; worker?: GhostEncoderWorkerPort; recordingProfile: GhostRecordingProfileId; onFinalized?: GhostLiveRecorderOptions["onFinalized"] }>;
   #activeSession: LiveGhostCaptureSession | null = null;
   #failure: string | null = null;
   #lastManifest: TearGhostManifest | null = null;
@@ -84,6 +87,7 @@ export class GhostLiveRecorder {
       maxStagingEntries,
       keyframeIntervalTicks: profile.keyframeIntervalTicks,
       recordingProfile: profile.id as GhostRecordingProfileId,
+      ...(options.onFinalized === undefined ? {} : { onFinalized: options.onFinalized }),
       ...(options.worker === undefined ? {} : { worker: options.worker }),
     });
   }
@@ -158,6 +162,8 @@ export class GhostLiveRecorder {
       if (manifest !== null && session.sequence >= this.#lastCompletedSequence) {
         this.#lastCompletedSequence = session.sequence;
         this.#lastManifest = manifest;
+        try { await this.#options.onFinalized?.(manifest, await this.#openRecoveredVault()); }
+        catch (error) { console.warn("Ghost V3 finalized observer failed; capture remains complete", error); }
       }
       return manifest;
     } finally {
@@ -274,6 +280,7 @@ export function createBrowserGhostLiveRecorder(
     now: () => new Date().toISOString(),
     ...(options.chunkEntries === undefined ? {} : { chunkEntries: options.chunkEntries }),
     ...(options.maxPendingWrites === undefined ? {} : { maxPendingWrites: options.maxPendingWrites }),
+    ...(options.onFinalized === undefined ? {} : { onFinalized: options.onFinalized }),
     ...(worker === undefined ? {} : { worker }),
   });
 }

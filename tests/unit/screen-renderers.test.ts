@@ -270,6 +270,16 @@ describe("legacy screen renderer registry", () => {
       .toMatchObject({ label: "WITHDRAW TRAINING CONSENT", action: { candidateHash: "a".repeat(16) } });
   });
 
+  it("projects only an explicit human-calibration consent control", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.academy({ id: "academy", status: "ready", subtitle: "durable training custody", rows: [], records: [], manifests: [],
+      humanCalibrationConsent: { state: "not-enrolled", detail: "no recorded consent", canOptIn: true, canRevoke: false } });
+    expect(controls.find((control) => control.action.type === "academy.humanCalibration.optIn"))
+      .toMatchObject({ label: "ALLOW ANONYMOUS CALIBRATION", action: { consent: "anonymous-improvement" } });
+    expect(controls.some((control) => control.action.type === "academy.humanCalibration.revoke")).toBe(false);
+  });
+
   it("pages complete privacy-safe Academy records and manifests through screen scroll", () => {
     const controls: ScreenControl[] = [];
     const context = createRenderContext(controls);
