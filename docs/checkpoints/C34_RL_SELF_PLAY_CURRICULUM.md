@@ -1,9 +1,10 @@
 # C34 - Offline RL, Online RL, Self-Play, and Curriculum
 
 **Status:** active. C34 now performs bounded fitted tabular-Q offline training
-from a governed immutable source-world receipt. It does not expose a runtime
-policy artifact, explore online, self-play, activate an artifact, or promote a
-challenger.
+from a governed immutable source-world receipt and can execute a bounded,
+receipt-derived C30 curriculum as non-trainable evidence. It does not expose a
+runtime policy artifact, select actions from the Q model, update online,
+self-play, activate an artifact, or promote a challenger.
 
 ## Proven foundation
 
@@ -39,6 +40,20 @@ challenger.
   non-finite/out-of-bound values or a configured consecutive TD-error breach;
   stopped results contain no model. These C34 stores never import or write the
   C32 artifact registry or active-policy pointer.
+- `createTearOnlineRlCurriculumPlan` admits only complete source-owned C30
+  training scenarios already bound by that same offline plan and their declared
+  Academy lessons. It derives (rather than accepts) a normalized, sorted action
+  vocabulary from the immutable trajectory receipt; forged source scenarios,
+  lesson mismatches, and empty/oversized vocabularies fail closed.
+- Curriculum stages execute in supplied deterministic order with per-stage
+  episode limits and global episode, tick, decision, reward, and exact
+  integer-epsilon-decay bounds. The executor routes each declared episode to a
+  fresh existing production-headless C30 world. Its non-exploration branch is a
+  fixed governed vocabulary fallback, not Q/model action selection.
+- Curriculum receipts are idempotently retained as `trainable: false`.
+  Cancellation, timeout, divergence, and budget stops remain terminal evidence
+  and cannot be mistaken for a model update, registry entry, activation, or
+  promotion.
 
 ## Exit-gate status
 
@@ -51,9 +66,11 @@ challenger.
   seeded semantic-action traces, terminal hashes, reward totals, and
   cancellation/timeout/divergence outcomes. It is non-trainable and has no
   self-play, registry, activation, promotion, or Q-model action-selection path.
-- [ ] Curriculum and exploration controls are configurable and bounded. The
-  immutable source curriculum and fixed extraction/reward bounds exist; online
-  exploration controls remain absent.
+- [x] Curriculum and exploration controls are configurable and bounded. The
+  immutable source curriculum, deterministic ordered stages, integer epsilon
+  bounds/decay, governed normalized vocabulary, and C30 execution route now
+  exist. This narrow scheduler is not online Q action selection, online model
+  updating, self-play, or quality evidence.
 - [x] Safeguards stop a diverging offline run. Reward/source extraction fails
   closed and Q/TD guard trips return a stopped result before any model exists.
   Cancellation and online-run safeguards remain future work.
@@ -64,7 +81,8 @@ divergence stop.
 PROVEN BY:           `tests/unit/offline-rl-training.test.ts` (7 tests),
 `pnpm typecheck`, targeted ESLint, and `pnpm check:architecture`.
 REMAINING HERE:      Source-world evaluation/quality for the offline challenger,
-then headless online RL, self-play, curriculum expansion, and run safeguards.
+online model action selection/update with checkpoint recovery, self-play,
+curriculum expansion, and run safeguards.
 REMAINING TO C40:    C25/C27/C29/C30/C31/C33 exits and C34-C40 product evidence.
 NEXT SLICE:          Evaluate a retained offline-Q challenger through a declared
 source-world protocol; do not construct a runtime artifact or activation path.

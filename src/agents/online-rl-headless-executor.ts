@@ -82,8 +82,13 @@ export class TearOnlineRlHeadlessExecutor {
         while (current.tick < Math.min(scenario.maxTicks, plan.budgets.maxTicksPerEpisode) && totalTicks < plan.budgets.maxTotalTicks) {
           if (control.isCancelled?.() === true) { episodeStatus = "cancelled"; break; }
           if (control.timeoutMilliseconds !== undefined && now() - started >= control.timeoutMilliseconds) { episodeStatus = "timed-out"; break; }
-          const chosen = rng() * plan.exploration.denominator < plan.exploration.numerator ? plan.exploration.actions[Math.floor(rng() * plan.exploration.actions.length)] : undefined;
-          if (chosen === undefined) { episodeStatus = "stopped-divergence"; break; }
+          // The non-exploration branch is deliberately a fixed governed action,
+          // not Q/model selection. That lets bounded epsilon schedules execute
+          // without falsely treating every decay step as a divergence.
+          const chosen = rng() * plan.exploration.denominator < plan.exploration.numerator
+            ? plan.exploration.actions[Math.floor(rng() * plan.exploration.actions.length)]
+            : plan.exploration.actions[0];
+          if (chosen === undefined) throw new Error("validated exploration vocabulary disappeared");
           const batch = [chosen] as GameAction[]; actions.push(batch); const transition = environment.step(batch); totalTicks += 1;
           const tracks = environment.sourceTracks(), events = tracks.nativeEvents.slice(eventCursor); eventCursor = tracks.nativeEvents.length;
           rewardTotal += evaluateTearOfflineRlRewardTransition(offline, previous, transition.observation, events).total;

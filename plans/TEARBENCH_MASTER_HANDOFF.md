@@ -572,6 +572,27 @@ REMAINING TO C40:    C25/C27/C29/C30/C31/C33 exits and C34-C40 product evidence.
 NEXT SLICE:          Evaluate a retained offline-Q challenger through a declared
 source-world protocol; do not construct a runtime artifact or activation path.
 
+### C34 bounded curriculum/exploration contract
+
+DONE THIS STEP:      C34 now compiles deterministic ordered curriculum stages
+from complete governed C30 training scenarios and their declared Academy
+lessons. It derives a strict normalized action vocabulary from the immutable
+offline receipt, applies exact bounded epsilon decay plus episode/tick/decision/
+reward caps, routes every episode through the existing fresh production-headless
+executor, and idempotently retains only non-trainable outcome evidence. A
+cancelled, timed-out, divergent, or exhausted execution is retained as stopped,
+not interpreted as an update or model result.
+PROVEN BY:           `tests/unit/online-rl-curriculum.test.ts` and
+`tests/unit/online-rl-headless-executor.test.ts`, then TypeScript, targeted
+ESLint, and architecture checks.
+REMAINING HERE:      This is a controlled action scheduler. It has no Q-model
+action selection or online update/checkpoint recovery, no self-play/opponent
+contract, no artifact registry/activation/promotion route, and no challenger
+quality evidence. Do not tick C34 online/self-play on this evidence.
+NEXT SLICE:          Add source-world evaluation for the retained offline-Q
+challenger, or—only with explicit Q-action/update design—extend the bounded
+rollout without bypassing its C30 lineage and stopped-result custody.
+
 ### C33 pacing finding — repeat-round boundary
 
 Five consecutive non-ticking C33 slices completed conditioning compatibility,

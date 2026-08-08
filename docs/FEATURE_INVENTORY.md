@@ -353,7 +353,13 @@ This is the migration checklist for the architectural redesign. A checked featur
    reward fact. Checkpoint/result custody is idempotent and quarantines corrupt
    bytes; Q/TD divergence stops before a model is emitted. Its retained Q model
    is not a C32 runtime artifact, activation, promotion, online exploration,
-   or self-play result.
+   or self-play result. C34 also has a narrow ordered curriculum scheduler that
+   accepts only the already-governed full C30 training scenarios/lessons,
+   derives its normalized semantic vocabulary from that receipt, and retains
+   bounded fresh-headless rollout evidence with integer epsilon decay. The
+   fallback action is fixed and governed, not a Q-model decision; those results
+   are non-trainable and cannot update, register, activate, promote, or prove
+   online RL/self-play quality.
    Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
