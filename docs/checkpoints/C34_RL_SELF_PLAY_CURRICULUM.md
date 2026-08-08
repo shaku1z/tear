@@ -140,3 +140,26 @@ integrity checks, and divergence yields no model. A completed result contains
 only the explicit C34/C32 model envelope and exact adapter/vocabulary/lineage
 hashes. It neither changes V2 data nor creates a C32 registry artifact,
 activation, promotion, Foundry decision, or UI surface.
+
+### C34 V3 online source-world checkpointing
+
+`tear-online-rl-v3-plan` admits only one completed exact V3 offline result,
+its governed reward plan, canonical adapter identity, vocabulary, and bounded
+natural C30 scenarios. It advances Q values only after a fresh production
+headless C30 transition and retains a source checkpoint after every
+nonterminal tick. A bounded interruption resumes from that checkpoint with the
+same result as an uninterrupted run. Cancellation, timeout, update-budget and
+Q-bound stops are terminal non-promotional evidence. A completed challenger
+may be compared with its V3 baseline over freshly reset identical C30 cases,
+retaining deterministic rewards and terminal hashes plus a pass/fail fact.
+
+V3 checkpoint and evaluation custody is separate in Ghost Vault `analysis`;
+reads parse and quarantine corrupt bytes. Checkpoint/plan/result/evaluation
+integrity, duplicate state/action values, and mismatched resume cursor fail
+closed. This is not self-play, C32 registry admission, activation, promotion,
+Foundry execution, or player-facing runtime wiring.
+
+Evidence: `tests/unit/online-rl-v3-training.test.ts` proves fresh C30 source
+worlds, one-shot/resume equality, cancellation/timeout/budget stops,
+non-promotional paired evaluation, Vault readback, corrupt evaluation
+quarantine, and resume provenance refusal.

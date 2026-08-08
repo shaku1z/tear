@@ -1205,6 +1205,20 @@ REMAINING HERE: No C34 result has been converted; no C32 artifact, registry,
 activation, promotion, Foundry decision, or UI exists. Future model training
 must emit the explicit envelope before it can request any C32 learned-Q route.
 
+### C34 V3 online source-world checkpointing
+
+DONE THIS STEP: A completed exact V3 offline baseline can now train through
+fresh bounded C30 worlds, retaining exact source checkpoints for interruption
+resume. One-shot and resumed results are identical; cancellation, timeout,
+update budget, Q divergence, bad values, bad resume provenance, and corrupt
+custody fail closed. Completed baseline/challenger runs retain a
+non-promotional paired source-world evaluation only.
+PROVEN BY: `tests/unit/online-rl-v3-training.test.ts`, alongside V3 offline
+and common-runtime compatibility tests.
+REMAINING HERE: True multi-actor self-play, measured quality, authorized C32
+artifact admission, and an explicit C36 V3 binding remain separate work. Do
+not infer any of them from this custody/evaluation path.
+
 ### C34 V3 canonical-compatible offline training custody
 
 DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,

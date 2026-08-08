@@ -370,3 +370,10 @@ decision, artifact, registry write, activation, promotion, or schedule action.
 The V3 trainer's checkpoint and result custody are likewise separate from C36
 job execution. A future Foundry binding must explicitly name its V3 plan/result
 hashes; current Foundry flows cannot infer, convert, or promote them.
+
+The separate C34 V3 online trainer retains resumable source-world checkpoints
+and non-promotional paired evaluations under its own analysis keys. Those
+records have no C36 job/event/binding/lease reference, so the existing Foundry
+scheduler cannot discover, resume, evaluate, decide, bind, or promote them by
+implication. Any later C36 use must freeze and validate exact V3 lineage in a
+new authorized boundary.

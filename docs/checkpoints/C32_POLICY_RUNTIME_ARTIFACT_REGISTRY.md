@@ -188,3 +188,9 @@ A separate C34 V3 trainer can now emit that explicit envelope under frozen
 receipt/configuration/vocabulary lineage. This does not make it an accepted
 current C32 artifact format: registry admission, activation, and player-facing
 execution remain intentionally unchanged until a later authorized adapter slice.
+
+The C34 V3 online checkpoint/evaluation path uses the same canonical source
+identity only as a compatibility prerequisite. Its challenger and pass/fail
+source-world evaluation are not C32 artifacts; it adds no registry reader or
+writer, active pointer, runtime adapter, activation, rollback, promotion, or
+player control.
