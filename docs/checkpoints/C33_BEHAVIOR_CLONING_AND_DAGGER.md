@@ -212,6 +212,14 @@ spelled out in the screen. Invalid program bytes quarantine during inspection.
 This is deliberately a read-only status/progress surface: it cannot review a
 correction, start a fit, activate an artifact, or promote one.
 
+`TearTemporalDaggerProgramScheduler` now accepts only a bounded,
+content-addressed declaration of distinct source scenarios. When invoked it
+starts at most the next undeclared capture; if any round is awaiting review,
+checkpointed, or cancelled, it returns that durable state unchanged. It cannot
+create an acceptance, advance fitting, activate, or promote. This is the
+repeat-round scheduling primitive, not a background worker claim: no normal
+player runtime invokes it yet.
+
 New C31 captures also bind the exact source scenario identity into the governed
 training sequence. A temporal fit retains the hashes of its training scenarios,
 and `compareTemporalPolicyAgainstScriptedBaselineInProduction` refuses any
@@ -257,11 +265,11 @@ measured artifact win over the scripted baseline, promotion, automated repeated
 DAgger, or automatic player-facing training.
 Those remain C33 work.
 
-DONE THIS STEP:      C33 now has a durable, read-only Academy status projection for the bounded two-round DAgger program. It exposes review-required, checkpointed, cancelled/resumable, and completed-fit truth without giving the screen review, training, activation, or promotion powers.
-PROVEN BY:           Focused C33/Academy renderer and browser-composition tests, targeted ESLint and TypeScript, and a successful production test-standalone build. The canonical Academy navigation journey reached its campaign branch but hung in this environment before a result; it is not counted as browser proof.
-REMAINING HERE:      Scheduler-owned automatic repeated rounds, curriculum/error detail beyond program state, meaningful unseen-seed baseline-win evidence, and credible visible real-game quality evidence. The C40 recorded-improvement item remains unticked.
+DONE THIS STEP:      C33 now has a hash-validated bounded source-round scheduler. It advances only from no program or a completed round into the next distinct capture, then stops at review-required; it cannot accept, fit, activate, or promote.
+PROVEN BY:           Focused C33 test plus targeted ESLint and TypeScript. The prior Academy status build evidence remains valid; the canonical navigation journey still has no result because it hung in this environment.
+REMAINING HERE:      A durable scheduler owner/invocation route, curriculum/error detail beyond program state, meaningful unseen-seed baseline-win evidence, and credible visible real-game quality evidence. The C40 recorded-improvement item remains unticked.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Verify the Academy program-status surface in the built artifact, then add one bounded scheduler-owned repeat-round route that stops at authorized review and cannot activate or promote an artifact.
+NEXT SLICE:          Give the bounded scheduler a durable owner and invocation route, retaining its stop-at-review invariant; do not turn it into automatic review, fitting, activation, or promotion.
 
 ## Slice pacing finding — 2026-08-03
 

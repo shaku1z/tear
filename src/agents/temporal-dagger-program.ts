@@ -40,6 +40,14 @@ export interface TearTemporalDaggerProgramV1 {
   readonly programHash: string;
 }
 
+export interface TearTemporalDaggerProgramScheduleV1 {
+  readonly format: "tear-temporal-dagger-program-schedule";
+  readonly schemaVersion: 1;
+  readonly programId: string;
+  readonly rounds: readonly Readonly<{ scenario: TearScenarioV1; options?: TearDaggerCorrectionCaptureOptionsV1 }> [];
+  readonly scheduleHash: string;
+}
+
 function text(value: unknown): value is string { return typeof value === "string" && value.trim().length > 0; }
 function record(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
 function freeze(value: Omit<TearTemporalDaggerProgramV1, "programHash">): TearTemporalDaggerProgramV1 {
@@ -55,6 +63,21 @@ function parse(value: unknown): TearTemporalDaggerProgramV1 {
   const typed = value as unknown as TearTemporalDaggerProgramV1, { programHash, ...draft } = typed;
   if (programHash !== stableVerificationHash(draft)) throw new TypeError("temporal DAgger program integrity mismatch");
   return freeze(draft);
+}
+
+/** Declares bounded source-world rounds; it does not authorize their reviews. */
+export function createTearTemporalDaggerProgramSchedule(programId: string, rounds: readonly Readonly<{ scenario: TearScenarioV1; options?: TearDaggerCorrectionCaptureOptionsV1 }>[]): TearTemporalDaggerProgramScheduleV1 {
+  if (!text(programId) || rounds.length < 1 || rounds.length > 32) throw new TypeError("temporal DAgger schedule requires one to 32 rounds");
+  const sourceHashes = rounds.map((round) => stableVerificationHash(round.scenario));
+  if (new Set(sourceHashes).size !== sourceHashes.length) throw new TypeError("temporal DAgger schedule repeats a source scenario");
+  const draft = { format: "tear-temporal-dagger-program-schedule" as const, schemaVersion: 1 as const, programId,
+    rounds: Object.freeze(rounds.map((round) => Object.freeze({ scenario: Object.freeze(structuredClone(round.scenario)), ...(round.options === undefined ? {} : { options: Object.freeze(structuredClone(round.options)) }) }))), };
+  return Object.freeze({ ...draft, scheduleHash: stableVerificationHash(draft) });
+}
+function validSchedule(value: TearTemporalDaggerProgramScheduleV1): boolean {
+  const { scheduleHash, ...draft } = value;
+  try { return scheduleHash === createTearTemporalDaggerProgramSchedule(value.programId, value.rounds).scheduleHash && scheduleHash === stableVerificationHash(draft); }
+  catch { return false; }
 }
 
 /**
@@ -142,5 +165,24 @@ export class TearTemporalDaggerProgramController {
     const current = await this.get(id); if (current?.status !== "checkpointed" || current.checkpoint === undefined) throw new RangeError("temporal DAgger program cannot cancel");
     const rounds = [...current.rounds.slice(0, -1), receipt(current.capture, "cancelled", current.reviews, current.checkpoint)];
     return this.#persist(freeze({ ...current, status: "cancelled", rounds }));
+  }
+}
+
+/**
+ * Advances only a declared source-round queue. A run can create one capture
+ * and then returns at review-required; authorized review stays outside this
+ * scheduler, and it can never register, activate, or promote a policy.
+ */
+export class TearTemporalDaggerProgramScheduler {
+  readonly #programs: TearTemporalDaggerProgramController;
+  constructor(programs: TearTemporalDaggerProgramController) { this.#programs = programs; }
+
+  async run(schedule: TearTemporalDaggerProgramScheduleV1): Promise<TearTemporalDaggerProgramV1 | undefined> {
+    if (!validSchedule(schedule)) throw new TypeError("temporal DAgger schedule integrity is invalid");
+    const current = await this.#programs.get(schedule.programId);
+    if (current !== undefined && current.status !== "completed") return current;
+    const completed = new Set(current?.rounds.map((round) => round.scenarioHash) ?? []);
+    const next = schedule.rounds.find((round) => !completed.has(stableVerificationHash(round.scenario)));
+    return next === undefined ? current : this.#programs.start(schedule.programId, next.scenario, next.options);
   }
 }

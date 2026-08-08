@@ -26,6 +26,8 @@ import {
   completeTearTemporalPolicyCheckpoint,
   TearTemporalPolicyCheckpointVault,
   TearTemporalDaggerProgramController,
+  TearTemporalDaggerProgramScheduler,
+  createTearTemporalDaggerProgramSchedule,
   inspectTearTemporalDaggerPrograms,
   createTearTemporalDaggerRetrainingInput,
   createTearTemporalWindowPolicyArtifact,
@@ -371,8 +373,15 @@ describe("C31 held Academy candidate curation", () => {
     await resumedProgram.acceptReviews(secondRound.id, [secondReview]);
     expect((await resumedProgram.advance(secondRound.id, temporalConfig.epochs)).rounds).toHaveLength(2);
     await expect(resumedProgram.start(secondRound.id, scenario("c33-repeat-two", "c33-repeat-two-seed", 8))).rejects.toThrow(/repeats/u);
+    const scheduler = new TearTemporalDaggerProgramScheduler(resumedProgram);
+    const schedule = createTearTemporalDaggerProgramSchedule(secondRound.id, [{
+      scenario: scenario("c33-repeat-three", "c33-repeat-three-seed", 8), options: { maxCorrections: 1 },
+    }]);
+    expect((await scheduler.run(schedule))?.status).toBe("review-required");
+    expect((await scheduler.run(schedule))?.rounds).toHaveLength(3);
+    await expect(scheduler.run(Object.freeze({ ...schedule, scheduleHash: "0000000000000000" }))).rejects.toThrow(/integrity/u);
     const listedPrograms = await inspectTearTemporalDaggerPrograms(input.backend);
-    expect(listedPrograms).toMatchObject([{ id: "c33-repeat-program", status: "completed" }]);
+    expect(listedPrograms).toMatchObject([{ id: "c33-repeat-program", status: "review-required" }]);
     await input.backend.put("analysis", "temporal-dagger-program:v1:corrupt", "not-json");
     expect(await inspectTearTemporalDaggerPrograms(input.backend)).toHaveLength(1);
     expect((await input.backend.keys("quarantine")).some((key) => key.endsWith(":corrupt"))).toBe(true);
