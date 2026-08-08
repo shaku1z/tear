@@ -3,8 +3,8 @@
 **Status:** active. C34 now performs bounded fitted tabular-Q offline training
 from a governed immutable source-world receipt and can execute a bounded,
 receipt-derived C30 curriculum as non-trainable evidence. It does not expose a
-runtime policy artifact, select actions from the Q model, update online,
-self-play, activate an artifact, or promote a challenger.
+runtime policy artifact, self-play, activate an artifact, or promote a
+challenger.
 
 ## Proven foundation
 
@@ -54,6 +54,21 @@ self-play, activate an artifact, or promote a challenger.
   Cancellation, timeout, divergence, and budget stops remain terminal evidence
   and cannot be mistaken for a model update, registry entry, activation, or
   promotion.
+- Online-Q execution now requires the V2 semantic-action offline model; V1
+  envelope-only model bytes fail closed. Its selector admits only canonical
+  receipt-derived actions whose types are advertised by the current C30 policy
+  observation. It uses exact integer epsilon selection or deterministic
+  Q-value/fallback selection; it cannot inject an adapter command.
+- Each Q update is calculated only after one valid fresh-C30 transition using
+  the frozen source-world reward definition. The online checkpoint binds the
+  curriculum, offline plan/receipt/training result, and trainer config; it
+  captures a C30 source checkpoint after every nonterminal tick. Interrupted
+  advancement resumes from that same production checkpoint and is exactly
+  equivalent to the uninterrupted result in the permanent fixture.
+- Update, Q-value, C30 tick, action-space, cancellation, timeout, and malformed
+  lineage guards fail closed. Terminal stopped results contain no online model;
+  completed local custody is still non-promotional and has no C32 registry,
+  activation, promotion, or self-play route.
 
 ## Exit-gate status
 
@@ -66,6 +81,9 @@ self-play, activate an artifact, or promote a challenger.
   seeded semantic-action traces, terminal hashes, reward totals, and
   cancellation/timeout/divergence outcomes. It is non-trainable and has no
   self-play, registry, activation, promotion, or Q-model action-selection path.
+  A separate bounded online-Q checkpoint runner now makes real post-C30-tick
+  updates with V2 semantic action selection and exact source-checkpoint resume,
+  but self-play is absent, so this combined item remains open.
 - [x] Curriculum and exploration controls are configurable and bounded. The
   immutable source curriculum, deterministic ordered stages, integer epsilon
   bounds/decay, governed normalized vocabulary, and C30 execution route now

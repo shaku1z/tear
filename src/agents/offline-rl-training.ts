@@ -355,6 +355,8 @@ export type TearOfflineRlTrainingStatusV1 = "running" | "stopped-divergence" | "
 
 export interface TearOfflineRlQValueV1 {
   readonly stateHash: string;
+  /** V2 canonical action identity; V1 envelope-only values are not online-executable. */
+  readonly semanticActionHash: string;
   readonly actionHash: string;
   readonly value: number;
 }
@@ -382,7 +384,7 @@ export interface TearOfflineRlTrainingResultV1 {
   readonly checkpoint: Readonly<{ checkpointHash: string; epoch: number; updates: number }>;
   readonly metrics: Readonly<{ lastMeanAbsoluteTdError: number; maximumAbsoluteQ: number; stateActionEntries: number }>;
   /** Present only after all planned bounded epochs completed without a guard trip. */
-  readonly model?: Readonly<{ format: "tear-offline-tabular-q-model"; entries: readonly TearOfflineRlQValueV1[]; modelHash: string }>;
+  readonly model?: Readonly<{ format: "tear-offline-tabular-q-model-v2"; entries: readonly TearOfflineRlQValueV1[]; modelHash: string }>;
   readonly trainingHash: string;
 }
 
@@ -396,7 +398,7 @@ function inputHash(receipt: TearOfflineRlTrajectoryReceiptV1, config: TearOfflin
   return stableVerificationHash({ receiptHash: receipt.receiptHash, planHash: receipt.plan.planHash, rewardHash: receipt.plan.rewardHash, config });
 }
 
-function qKey(stateHash: string, actionHash: string): string { return `${stateHash}:${actionHash}`; }
+function qKey(stateHash: string, semanticActionHash: string): string { return `${stateHash}:${semanticActionHash}`; }
 function orderedQValues(values: ReadonlyMap<string, TearOfflineRlQValueV1>): readonly TearOfflineRlQValueV1[] {
   return Object.freeze([...values.values()].sort((left, right) => left.stateHash.localeCompare(right.stateHash) || left.actionHash.localeCompare(right.actionHash))
     .map((entry) => Object.freeze({ ...entry })));
@@ -435,10 +437,10 @@ function freezeCheckpoint(draft: Omit<TearOfflineRlCheckpointV1, "checkpointHash
     || !Number.isSafeInteger(draft.consecutiveDivergentEpochs) || draft.consecutiveDivergentEpochs < 0
     || !["running", "stopped-divergence", "complete"].includes(draft.status) || !Number.isFinite(draft.metrics.lastMeanAbsoluteTdError)
     || draft.metrics.lastMeanAbsoluteTdError < 0 || !Number.isFinite(draft.metrics.maximumAbsoluteQ) || draft.metrics.maximumAbsoluteQ < 0
-    || draft.qValues.some((entry) => !hash(entry.stateHash) || !hash(entry.actionHash) || !Number.isFinite(entry.value))) {
+    || draft.qValues.some((entry) => !hash(entry.stateHash) || !hash(entry.semanticActionHash) || !hash(entry.actionHash) || !Number.isFinite(entry.value))) {
     throw new TypeError("invalid offline RL checkpoint");
   }
-  const values = orderedQValues(new Map(draft.qValues.map((entry) => [qKey(entry.stateHash, entry.actionHash), entry])));
+  const values = orderedQValues(new Map(draft.qValues.map((entry) => [qKey(entry.stateHash, entry.semanticActionHash), entry])));
   if (values.length !== draft.qValues.length) throw new TypeError("offline RL checkpoint repeats a state/action value");
   const value = { format: "tear-offline-rl-checkpoint" as const, schemaVersion: 1 as const, inputHash: draft.inputHash, epoch: draft.epoch,
     updates: draft.updates, consecutiveDivergentEpochs: draft.consecutiveDivergentEpochs, status: draft.status,
@@ -457,11 +459,14 @@ function parseCheckpoint(value: unknown): TearOfflineRlCheckpointV1 {
 
 function stateHash(state: CanonicalGameplayState): string { return stableVerificationHash(state); }
 function actionHash(actions: readonly CommandEnvelope<GameAction>[]): string { return stableVerificationHash(actions); }
+/** Stable action identity deliberately excludes source envelope ids/ticks. */
+export function tearSemanticActionBatchHash(actions: readonly GameAction[]): string { return stableVerificationHash(actions); }
+function semanticActionHash(actions: readonly CommandEnvelope<GameAction>[]): string { return tearSemanticActionBatchHash(actions.map((entry) => entry.command)); }
 function initialValues(receipt: TearOfflineRlTrajectoryReceiptV1, maximum: number): Map<string, TearOfflineRlQValueV1> {
   const values = new Map<string, TearOfflineRlQValueV1>();
   for (const transition of receiptTransitions(receipt)) {
-    const state = stateHash(transition.from), action = actionHash(transition.actions), key = qKey(state, action);
-    if (!values.has(key)) values.set(key, Object.freeze({ stateHash: state, actionHash: action, value: 0 }));
+    const state = stateHash(transition.from), action = actionHash(transition.actions), semantic = semanticActionHash(transition.actions), key = qKey(state, semantic);
+    if (!values.has(key)) values.set(key, Object.freeze({ stateHash: state, semanticActionHash: semantic, actionHash: action, value: 0 }));
     if (values.size > maximum) throw new RangeError("offline RL state/action budget exceeded");
   }
   return values;
@@ -494,7 +499,7 @@ export function advanceTearOfflineRlCheckpoint(checkpointInput: TearOfflineRlChe
     throw new RangeError("offline RL checkpoint lineage is invalid");
   }
   if (checkpoint.status !== "running" || epochs === 0) return checkpoint;
-  const values = new Map(checkpoint.qValues.map((entry) => [qKey(entry.stateHash, entry.actionHash), entry]));
+  const values = new Map(checkpoint.qValues.map((entry) => [qKey(entry.stateHash, entry.semanticActionHash), entry]));
   let epoch = checkpoint.epoch, updates = checkpoint.updates, divergent = checkpoint.consecutiveDivergentEpochs;
   let status: TearOfflineRlTrainingStatusV1 = "running";
   let lastMeanAbsoluteTdError = checkpoint.metrics.lastMeanAbsoluteTdError, maximumAbsoluteQ = checkpoint.metrics.maximumAbsoluteQ;
@@ -502,13 +507,13 @@ export function advanceTearOfflineRlCheckpoint(checkpointInput: TearOfflineRlChe
   while (epoch < targetEpoch && status === "running") {
     let totalAbsoluteTdError = 0, epochUpdates = 0;
     for (const transition of receiptTransitions(receipt)) {
-      const state = stateHash(transition.from), action = actionHash(transition.actions), key = qKey(state, action);
+      const state = stateHash(transition.from), semantic = semanticActionHash(transition.actions), key = qKey(state, semantic);
       const current = values.get(key);
       if (current === undefined) throw new Error("offline RL checkpoint lost a governed state/action value");
       const target = transition.reward.total + (transition.terminal ? 0 : config.gamma * maximumQ(values, stateHash(transition.to)));
       const tdError = target - current.value, next = current.value + config.learningRate * tdError;
       if (!Number.isFinite(next) || Math.abs(next) > config.maxAbsoluteQ) { status = "stopped-divergence"; break; }
-      values.set(key, Object.freeze({ stateHash: state, actionHash: action, value: next }));
+      values.set(key, Object.freeze({ stateHash: state, semanticActionHash: semantic, actionHash: actionHash(transition.actions), value: next }));
       totalAbsoluteTdError += Math.abs(tdError); epochUpdates += 1; updates += 1; maximumAbsoluteQ = Math.max(maximumAbsoluteQ, Math.abs(next));
     }
     if (status !== "running") break;
@@ -532,7 +537,7 @@ export function completeTearOfflineRlCheckpoint(checkpointInput: TearOfflineRlCh
   const metrics = Object.freeze({ lastMeanAbsoluteTdError: checkpoint.metrics.lastMeanAbsoluteTdError,
     maximumAbsoluteQ: checkpoint.metrics.maximumAbsoluteQ, stateActionEntries: checkpoint.qValues.length });
   const model = disposition === "completed" ? (() => {
-    const entries = checkpoint.qValues, draft = { format: "tear-offline-tabular-q-model" as const, entries };
+    const entries = checkpoint.qValues, draft = { format: "tear-offline-tabular-q-model-v2" as const, entries };
     return Object.freeze({ ...draft, modelHash: stableVerificationHash(draft) });
   })() : undefined;
   const draft = { format: "tear-offline-rl-training" as const, schemaVersion: 1 as const,
@@ -550,7 +555,14 @@ function parseTraining(value: unknown): TearOfflineRlTrainingResultV1 {
     throw new TypeError("invalid offline RL training result");
   }
   const typed = value as unknown as Omit<TearOfflineRlTrainingResultV1, "trainingHash"> & { trainingHash: string };
-  if (typed.disposition === "completed" && typed.model === undefined) throw new TypeError("completed offline RL result has no model");
+  const model = typed.model, rawModel = model as unknown;
+  const validModel = record(rawModel) && rawModel.format === "tear-offline-tabular-q-model-v2" && hash(rawModel.modelHash)
+    && Array.isArray(rawModel.entries) && rawModel.entries.length > 0 && rawModel.entries.every((entry) => record(entry)
+      && hash(entry.stateHash) && hash(entry.semanticActionHash) && hash(entry.actionHash) && Number.isFinite(entry.value));
+  if (validModel && rawModel.modelHash !== stableVerificationHash({ format: "tear-offline-tabular-q-model-v2", entries: rawModel.entries })) {
+    throw new TypeError("offline RL V2 model integrity mismatch");
+  }
+  if (typed.disposition === "completed" && !validModel) throw new TypeError("completed offline RL result requires a V2 semantic-action model");
   if (typed.disposition === "stopped-divergence" && typed.model !== undefined) throw new TypeError("stopped offline RL result cannot expose a model");
   const { trainingHash, ...draft } = typed;
   if (trainingHash !== stableVerificationHash(draft)) throw new TypeError("offline RL training integrity mismatch");

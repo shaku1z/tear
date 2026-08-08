@@ -101,7 +101,7 @@ describe("C34 offline RL training input", () => {
       advanceTearOfflineRlCheckpoint(initial, receipt, trainingConfig, 1), receipt, trainingConfig, 1,
     ), receipt, trainingConfig);
     expect(resumed).toEqual(oneShot);
-    expect(oneShot).toMatchObject({ disposition: "completed", model: { format: "tear-offline-tabular-q-model" } });
+    expect(oneShot).toMatchObject({ disposition: "completed", model: { format: "tear-offline-tabular-q-model-v2" } });
     expect(oneShot.model?.entries.some((entry) => entry.value !== 0)).toBe(true);
   });
 

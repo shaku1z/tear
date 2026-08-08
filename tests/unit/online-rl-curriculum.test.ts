@@ -45,7 +45,7 @@ describe("C34 bounded online curriculum", () => {
   });
 
   it("does not admit a self-hashed plan with noncanonical or duplicate semantic actions", () => {
-    const { plan: curriculum } = plan(), { planHash: _planHash, ...draft } = curriculum;
+    const { plan: curriculum } = plan(), { planHash, ...draft } = curriculum; void planHash;
     const noncanonical = { ...draft, actionVocabulary: [{ type: "move", x: 1_000, y: 0, adapterOnly: true }] };
     expect(() => parseTearOnlineRlCurriculumPlan({ ...noncanonical, planHash: stableVerificationHash(noncanonical) })).toThrow(/canonical normalized/u);
     const duplicate = { ...draft, actionVocabulary: [curriculum.actionVocabulary[0], curriculum.actionVocabulary[0]] };

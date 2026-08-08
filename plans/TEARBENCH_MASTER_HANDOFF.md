@@ -593,6 +593,26 @@ NEXT SLICE:          Add source-world evaluation for the retained offline-Q
 challenger, or—only with explicit Q-action/update design—extend the bounded
 rollout without bypassing its C30 lineage and stopped-result custody.
 
+### C34 online-Q update/checkpoint foundation
+
+DONE THIS STEP:      C34 now requires the semantic-action V2 offline model for
+online use, selects only canonical vocabulary actions advertised by the current
+C30 observation, and computes TD updates only after valid fresh production-
+headless transitions. Its hash-bound checkpoint captures the exact C30 source
+frontier after every nonterminal tick; a one-tick interruption then resume is
+identical to the uninterrupted fixture. It retains cancellation, timeout,
+budget, Q-bound, and malformed-lineage terminal outcomes with no model.
+PROVEN BY:           `tests/unit/online-rl-training.test.ts` together with
+offline-RL, online-rollout, and curriculum focused tests; TypeScript, targeted
+ESLint, and architecture checks.
+REMAINING HERE:      There is no opponent slot or simultaneous self-play in the
+single-player C30 environment. This local online-Q model is not a C32 artifact,
+registry entry, activation, promotion, or quality result. Keep the combined
+online-RL/self-play exit item open.
+NEXT SLICE:          Evaluate the retained online-Q challenger with a declared
+fresh C30 source-world protocol; do not call independent paired runs self-play
+and do not add a second simulator.
+
 ### C33 pacing finding — repeat-round boundary
 
 Five consecutive non-ticking C33 slices completed conditioning compatibility,

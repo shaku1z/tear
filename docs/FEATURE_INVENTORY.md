@@ -359,7 +359,13 @@ This is the migration checklist for the architectural redesign. A checked featur
    bounded fresh-headless rollout evidence with integer epsilon decay. The
    fallback action is fixed and governed, not a Q-model decision; those results
    are non-trainable and cannot update, register, activate, promote, or prove
-   online RL/self-play quality.
+   online RL/self-play quality. A V2-only online-Q runner now selects from that
+   governed vocabulary, applies TD updates only after valid fresh C30 ticks,
+   and preserves a source-world checkpoint after each nonterminal transition.
+   Cancellation, timeout, budget, malformed-lineage, and Q-value guards retain
+   non-promotional stopped custody; the resume fixture equals one uninterrupted
+   source-world update run. This remains local online-Q work, not self-play or
+   evaluated/published policy quality.
    Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.

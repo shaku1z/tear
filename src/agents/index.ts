@@ -26,6 +26,7 @@ export * from "./academy-policy-evaluation-executor";
 export * from "./offline-rl-training";
 export * from "./online-rl-headless-executor";
 export * from "./online-rl-curriculum";
+export * from "./online-rl-training";
 export * from "./policy-feature-vector";
 export * from "./policy-condition-vector";
 export * from "./behavior-cloning-trainer";
