@@ -58,6 +58,7 @@ export type ScreenAction =
   | { readonly type: "settings.activate"; readonly key: string }
   | { readonly type: "settings.reset" }
   | { readonly type: "academy.retry" }
+  | { readonly type: "academy.dagger.advance"; readonly id: string }
   | { readonly type: "rename.submit" }
   | { readonly type: "rename.cancel" }
   | { readonly type: "draft.choose"; readonly index: number }

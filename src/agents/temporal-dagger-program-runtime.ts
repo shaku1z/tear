@@ -103,6 +103,16 @@ export class TearTemporalDaggerProgramPlanVault {
       return undefined;
     }
   }
+
+  async list(): Promise<readonly TearTemporalDaggerProgramPlanV1[]> {
+    const plans: TearTemporalDaggerProgramPlanV1[] = [];
+    for (const key of await this.#backend.keys("analysis")) {
+      if (!key.startsWith(PLAN_KEY)) continue;
+      const plan = await this.get(key.slice(PLAN_KEY.length));
+      if (plan !== undefined) plans.push(plan);
+    }
+    return Object.freeze(plans.sort((left, right) => left.id.localeCompare(right.id)));
+  }
 }
 
 /**

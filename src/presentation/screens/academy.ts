@@ -59,15 +59,16 @@ export function createAcademyRenderers(context: ScreenRenderContext) {
         const programPageSize = 3;
         const programOffset = Math.max(0, Math.min(Math.max(0, programs.length - programPageSize), Math.floor(context.scroll / 52)));
         const visiblePrograms = programs.slice(programOffset, programOffset + programPageSize);
-        const programHeight = Math.max(84, 46 + visiblePrograms.length * 52);
+        const programHeight = Math.max(84, 46 + visiblePrograms.length * 74);
         ui.panel(canvas, panelX, programY, 640, programHeight);
         ui.sectionLabel(canvas, `DAGGER PROGRAMS ${String(programOffset + 1)}-${String(programOffset + visiblePrograms.length)} / ${String(programs.length)}`, panelX + 24, programY + 30, 592);
         if (programs.length === 0) ui.text(canvas, "No DAgger programs are stored in this Academy.", panelX + 24, programY + 64, ui.t.type.caption, "left", ui.t.alpha.muted);
         else visiblePrograms.forEach((program, index) => {
-          const programTop = programY + 52 + index * 52;
+          const programTop = programY + 52 + index * 74;
           ui.displayText(canvas, program.id, panelX + 24, programTop, ui.t.type.label, "left");
           ui.text(canvas, program.state, panelX + 592, programTop, ui.t.type.caption, "right", ui.t.alpha.soft);
           ui.text(canvas, program.detail, panelX + 24, programTop + 20, ui.t.type.caption, "left", ui.t.alpha.muted);
+          if (program.canAdvance) context.enqueue({ x: panelX + 392, y: programTop + 28, w: 200, h: 40, label: "ADVANCE PLAN", action: { type: "academy.dagger.advance", id: program.programId ?? program.id } });
         });
         const canScrollDown = recordOffset < Math.max(0, view.records.length - recordPageSize)
           || manifestOffset < Math.max(0, view.manifests.length - manifestPageSize)

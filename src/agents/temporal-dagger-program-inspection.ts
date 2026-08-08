@@ -1,9 +1,10 @@
 import type { GhostVaultBackend } from "../ghost";
 import { inspectTearTemporalDaggerPrograms, type TearTemporalDaggerProgramV1 } from "./temporal-dagger-program";
+import { TearTemporalDaggerProgramPlanVault } from "./temporal-dagger-program-runtime";
 
 export type TearTemporalDaggerProgramInspectionState =
   | Readonly<{ status: "loading" }>
-  | Readonly<{ status: "ready"; programs: readonly TearTemporalDaggerProgramV1[] }>
+  | Readonly<{ status: "ready"; programs: readonly TearTemporalDaggerProgramV1[]; plannedProgramIds: readonly string[] }>
   | Readonly<{ status: "unavailable"; reason: string }>;
 
 /** Async Vault boundary for the synchronous Academy status renderer. */
@@ -20,10 +21,12 @@ export class TearTemporalDaggerProgramInspectionController {
   snapshot(): TearTemporalDaggerProgramInspectionState { return this.#state; }
 
   refresh(): Promise<TearTemporalDaggerProgramInspectionState> {
-    if (this.#backend === undefined) return Promise.resolve(this.#state);
+    const backend = this.#backend;
+    if (backend === undefined) return Promise.resolve(this.#state);
     this.#state = Object.freeze({ status: "loading" });
-    this.#loading ??= inspectTearTemporalDaggerPrograms(this.#backend).then((programs) => {
-      this.#state = Object.freeze({ status: "ready", programs });
+    this.#loading ??= inspectTearTemporalDaggerPrograms(backend).then(async (programs) => {
+      const plannedProgramIds = (await new TearTemporalDaggerProgramPlanVault(backend).list()).map((plan) => plan.id);
+      this.#state = Object.freeze({ status: "ready", programs, plannedProgramIds: Object.freeze(plannedProgramIds) });
       this.#loading = undefined;
       return this.#state;
     }).catch((error: unknown) => {

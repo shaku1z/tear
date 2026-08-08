@@ -9,4 +9,11 @@ describe("live screen action bindings", () => {
     dispatch({ type: "academy.retry" });
     expect(refreshAcademy).toHaveBeenCalledOnce();
   });
+
+  it("routes only an explicit persisted DAgger plan advance through the Academy port", () => {
+    const advanceAcademyDagger = vi.fn();
+    const dispatch = createLiveScreenActionBindings({ advanceAcademyDagger } as unknown as ScreenActionBindingPorts);
+    dispatch({ type: "academy.dagger.advance", id: "plan-42" });
+    expect(advanceAcademyDagger).toHaveBeenCalledWith("plan-42");
+  });
 });

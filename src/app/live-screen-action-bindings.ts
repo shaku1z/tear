@@ -17,6 +17,7 @@ export interface ScreenActionBindingPorts {
   readonly endRun: () => void; readonly retryRun: () => void; readonly lastReplay: () => unknown;
   readonly campaignDifficulty: () => RunDifficulty; readonly resetSettings: () => void; readonly buyShopItem: (id: string) => void;
   readonly refreshAcademy: () => void;
+  readonly advanceAcademyDagger: (id: string) => void;
   readonly signIn: () => void; readonly signOut: () => void; readonly pinReplay: (id: string, pinned: boolean) => boolean;
   readonly deleteReplay: (id: string) => void; readonly dispatchPlayground: (id: string) => void;
   readonly library: LibraryScreenAdapters; readonly replay: ReplayScreenAdapter; readonly settings: SettingsRenameAdapters;
@@ -48,6 +49,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "settings.toggle": (action) => { ports.settings.toggleSetting(action.key); },
     "settings.activate": (action) => { ports.settings.activateSetting(action.key); }, "settings.reset": () => { ports.resetSettings(); },
     "academy.retry": () => { ports.refreshAcademy(); },
+    "academy.dagger.advance": (action) => { ports.advanceAcademyDagger(action.id); },
     "shop.buy": (action) => { ports.buyShopItem(action.id); }, "profile.selectTab": (action) => { ports.library.selectProfileTab(action.id); },
     "profile.watchReplay": (action) => { ports.library.watchReplay(action.id, "profile"); },
     "profile.watchGhostCapsule": (action) => { ports.library.watchGhostCapsule(action.id); },

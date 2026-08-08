@@ -1,18 +1,21 @@
-import { createBrowserAcademyInspectionController, createBrowserTemporalDaggerProgramInspectionController,
+import { createBrowserAcademyInspectionController, createBrowserTemporalDaggerProgramInspectionController, createBrowserTemporalDaggerProgramRuntime,
   type TearAcademyInspectionController, type TearTemporalDaggerProgramInspectionController } from "../agents";
 import type { AcademyScreenView } from "../presentation/screens/contracts";
 
 /** Keeps Academy persistence composition outside the frame-sized live runtime. */
-export function createLiveAcademyScreen(factory: IDBFactory | undefined): Readonly<{ snapshot: () => AcademyScreenView; refresh: () => void }> {
+export function createLiveAcademyScreen(factory: IDBFactory | undefined): Readonly<{ snapshot: () => AcademyScreenView; refresh: () => void; advance: (id: string) => void }> {
   let controller: TearAcademyInspectionController | undefined;
   let daggerPrograms: TearTemporalDaggerProgramInspectionController | undefined;
+  let daggerRuntime: Awaited<ReturnType<typeof createBrowserTemporalDaggerProgramRuntime>>;
   const refresh = (): void => {
     if (controller) void controller.refresh(new Date().toISOString());
     if (daggerPrograms) void daggerPrograms.refresh();
   };
-  void Promise.all([createBrowserAcademyInspectionController(factory), createBrowserTemporalDaggerProgramInspectionController(factory)]).then(([academy, dagger]) => {
+  const advance = (id: string): void => { if (daggerRuntime !== undefined) void daggerRuntime.runtime.advance(id).then(() => { refresh(); }); };
+  void Promise.all([createBrowserAcademyInspectionController(factory), createBrowserTemporalDaggerProgramInspectionController(factory), createBrowserTemporalDaggerProgramRuntime(factory)]).then(([academy, dagger, runtime]) => {
     controller = academy;
     daggerPrograms = dagger;
+    daggerRuntime = runtime;
     refresh();
   });
   return Object.freeze({
@@ -48,7 +51,11 @@ export function createLiveAcademyScreen(factory: IDBFactory | undefined): Readon
           id: `${manifest.id.toUpperCase()} V${String(manifest.version)}`,
           detail: `${String(manifest.entries)} governed entr${manifest.entries === 1 ? "y" : "ies"} · root ${manifest.rootHash.slice(0, 8).toUpperCase()}`,
         })),
-        daggerPrograms: programs.programs.map((program) => {
+        daggerPrograms: [
+          ...programs.plannedProgramIds.filter((id) => !programs.programs.some((program) => program.id === id)).map((id) => ({
+            id: id.replaceAll("-", " ").toUpperCase(), programId: id, state: "READY", detail: "persisted plan - ready to start its declared first round", canAdvance: true,
+          })),
+          ...programs.programs.map((program) => {
           const round = program.rounds.length;
           const checkpoint = program.checkpoint;
           const state = program.status.replaceAll("-", " ").toUpperCase();
@@ -56,10 +63,12 @@ export function createLiveAcademyScreen(factory: IDBFactory | undefined): Readon
             : program.status === "cancelled" ? `round ${String(round)} - cancelled at epoch ${String(checkpoint?.epoch ?? 0)}; safe to resume`
               : program.status === "checkpointed" ? `round ${String(round)} - checkpoint epoch ${String(checkpoint?.epoch ?? 0)}`
                 : `round ${String(round)} - fit retained; not activated or promoted`;
-          return { id: program.id.replaceAll("-", " ").toUpperCase(), state, detail };
-        }),
+          return { id: program.id.replaceAll("-", " ").toUpperCase(), programId: program.id, state, detail,
+            canAdvance: programs.plannedProgramIds.includes(program.id) && program.status !== "review-required" };
+          }),
+        ],
       };
     },
-    refresh,
+    refresh, advance,
   });
 }

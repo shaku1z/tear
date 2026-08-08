@@ -252,16 +252,17 @@ describe("legacy screen renderer registry", () => {
       .toMatchObject({ label: "TRY AGAIN", x: 690, w: 220, h: 46 });
   });
 
-  it("renders durable DAgger status as read-only Academy information", () => {
+  it("renders durable DAgger status and exposes only a persisted-plan advance action", () => {
     const controls: ScreenControl[] = [];
     const renderer = createLegacyScreenRenderers(createRenderContext(controls));
     expect(() => { renderer.academy({ id: "academy", status: "ready", subtitle: "durable training custody", rows: [], records: [], manifests: [],
       daggerPrograms: [
         { id: "DAGGER ALPHA", state: "REVIEW REQUIRED", detail: "round 1 · awaiting an authorized review" },
-        { id: "DAGGER BETA", state: "COMPLETED", detail: "fit retained; not activated or promoted" },
+        { id: "DAGGER BETA", programId: "dagger-beta", state: "COMPLETED", detail: "fit retained; not activated or promoted", canAdvance: true },
       ],
     }); }).not.toThrow();
-    expect(controls.every((control) => !control.action.type.startsWith("dagger."))).toBe(true);
+    expect(controls.find((control) => control.action.type === "academy.dagger.advance"))
+      .toMatchObject({ label: "ADVANCE PLAN", action: { id: "dagger-beta" } });
   });
 
   it("pages complete privacy-safe Academy records and manifests through screen scroll", () => {

@@ -31,6 +31,7 @@ export * from "./temporal-policy-trainer";
 export * from "./temporal-policy-comparison";
 export * from "./temporal-dagger-program";
 export * from "./temporal-dagger-program-runtime";
+export * from "./browser-temporal-dagger-program-runtime";
 export * from "./temporal-dagger-program-inspection";
 export * from "./browser-temporal-dagger-program-inspection";
 export * from "./policy-artifact-registry";

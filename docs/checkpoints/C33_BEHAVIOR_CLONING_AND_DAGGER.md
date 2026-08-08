@@ -284,9 +284,9 @@ Those remain C33 work.
 
 DONE THIS STEP:      C33 now has durable plan custody and an explicit process owner. It reconstructs its governed manifest, C32 registry, reviewer authority, and declared schedule from one Vault, then stops at human review between source-world rounds; it cannot fabricate review, register, activate, or promote.
 PROVEN BY:           Focused C33 test (two accepted human-reviewed rounds through persisted plan recovery), targeted ESLint, TypeScript, and architecture gate. The prior Academy status build evidence remains valid; the canonical navigation journey still has no result because it hung in this environment.
-REMAINING HERE:      A product-owned opt-in command/review experience, curriculum/error detail beyond program state, meaningful unseen-seed baseline-win evidence, and credible visible real-game quality evidence. The C40 recorded-improvement item remains unticked.
+REMAINING HERE:      An authorized review experience, curriculum/error detail beyond program state, meaningful unseen-seed baseline-win evidence, and credible visible real-game quality evidence. The Academy now exposes only explicit persisted-plan start/resume; it cannot decide a review, activate, or promote. The C40 recorded-improvement item remains unticked.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Compose the persisted C33 program runtime behind an explicit product command without ambient background execution; do not turn it into automatic review, activation, or promotion.
+NEXT SLICE:          Define the authorized review experience and retained curriculum/error progress without automatic review, activation, or promotion.
 
 ## Slice pacing finding — 2026-08-03
 
