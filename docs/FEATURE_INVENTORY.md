@@ -462,6 +462,16 @@ This is the migration checklist for the architectural redesign. A checked featur
   Monitoring-ready is not activation or promotion, and produces no C32 artifact
   or player-visible change.
 
+- [ ] C36 lease-bound bounded offline-Q resume — only a due schedule bound to
+  the current V2 `training` head may resume exactly one existing C34 offline
+  checkpoint after rechecking launch/plan/configuration, trainer manifest,
+  dataset, receipt/checkpoint, current schedule/job, every named C31 custody
+  byte, budgets, stop identity, and lease. Old schedules, V1 launches,
+  altered/revoked/early/budget-invalid lineage, and competing claims fail
+  closed; exact retry returns its receipt. It remains `training → training`
+  only, with no terminalization, evaluation, artifact, activation, promotion,
+  timer, or cloud behavior.
+
 ## Remaining proof gaps
 
 No feature-preservation evidence gaps remain in this inventory. Release readiness still requires the full clean-commit gate described above.

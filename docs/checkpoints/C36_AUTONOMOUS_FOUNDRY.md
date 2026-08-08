@@ -253,3 +253,17 @@ configuration. V1 launches fail closed because hashes alone cannot recreate
 their training inputs. A V2 resume rechecks launch, dataset, trainer manifest,
 live held custody, receipt, and checkpoint before persisting one legal
 `training → training` successor. It does not finalize a C34 model or reach C32.
+
+## Lease-bound bounded offline resume
+
+The explicit due dispatcher can now invoke that existing resume exactly once,
+but only from a due schedule whose bound hash is the durable current `training`
+head. A pre-launch or otherwise stale schedule is refused. Before its
+sixty-second conditional lease, it checks schedule/job bytes, schedule budgets
+and stop identity, every named C31 custody record, the V2 launch, its complete
+plan/configuration, manifest/root/dataset, receipt, and checkpoint. Exact
+retries return the receipt before attempting lineage again; competing callers
+have one winner. V1, early, revoked, budget-changed, or altered-lineage input
+fails closed. The action retains one `training → training` successor only: it
+does not terminalize, finalize, evaluate, create an artifact, activate,
+promote, run online learning, start a timer, or use cloud.

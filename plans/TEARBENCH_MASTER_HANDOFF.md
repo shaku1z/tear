@@ -1096,6 +1096,21 @@ fails closed. This changes neither training nor evaluation execution.
 REMAINING HERE: Wire this prerequisite into the next bounded checkpoint-resume
 dispatcher; do not represent rebinding alone as an unattended scheduler.
 
+### C36 lease-bound offline-Q checkpoint resume
+
+DONE THIS STEP: A due schedule already bound to the durable current V2
+`training` head can run exactly one existing offline checkpoint epoch. It pins
+schedule/job/custody/lease and revalidates the launch's full immutable C34
+plan/configuration plus C31 manifest/dataset/receipt/checkpoint lineage. The
+old pre-rebind schedule refuses, V1 launch bytes fail closed, exact retry reads
+its durable receipt first, and concurrent claimers have one winner. The only
+new job state is `training → training`; no terminalization, evaluation,
+artifact, activation, promotion, timer, or cloud operation occurs.
+REMAINING HERE: The executor's resulting new training head is deliberately
+not eligible for another due resume until a future explicit atomic
+schedule/launch coordination slice provides a current-head binding; do not
+imply that this single action creates an unattended loop.
+
 ### C36 IndexedDB conditional-commit browser evidence
 
 DONE THIS STEP: Test-standalone Chromium directly exercises the production
