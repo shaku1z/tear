@@ -119,6 +119,8 @@ export class TearAcademyCorpusStore {
     if (backend !== custody.backend() || backend !== curation.backend()) throw new TypeError("C31 corpus stores must share one Vault backend");
     this.#backend = backend; this.#custody = custody; this.#curation = curation; this.#splits = splits; this.#samples = samples;
   }
+  /** C36 may read published manifests only when it shares this custody boundary. */
+  backend(): GhostVaultBackend { return this.#backend; }
 
   async admit(input: TearAcademyCorpusAdmissionRequest): Promise<TearAcademyCorpusEntryV1> {
     if (!/^[a-f0-9]{16}$/u.test(input.candidateHash) || !lessonExists(input.lessonId) || !["demonstration", "recovery", "human-takeover", "policy-correction"].includes(input.segmentKind) || !validTags(input.tags) || !timestamp(input.admittedAt) || !text(input.actor)) throw new TypeError("invalid Academy corpus admission");

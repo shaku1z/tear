@@ -872,3 +872,21 @@ UI. C36 remains fully open.
 NEXT SLICE:          Bind `collecting` only to an immutable authorized C31
 curation/manifest boundary; retain a no-eligible-data terminal result and do
 not send raw held records to C33/C34 training.
+
+### C36 curated-manifest admission
+
+DONE THIS STEP:      C36 can now consume one already-published C31 trainer
+corpus manifest only when its custody-record set exactly matches the job's
+frozen collected set and every record remains held at the admission time. The
+receipt binds the immutable manifest/root/entry identities. Missing, overbroad,
+changed, or revoked inputs terminate as `no-eligible-curated-manifest`; Foundry
+does not make any C31 review, split, sample, corpus, or manifest mutation.
+PROVEN BY:           `tests/unit/foundry-job-curation.test.ts` with the preceding
+C36 ledger/collection tests, TypeScript, targeted ESLint, architecture, and
+requirements checks.
+REMAINING HERE:      This neither loads a dataset nor invokes C33/C34 training,
+evaluation, artifact creation, policy decision, scheduling, or UI. C36 remains
+fully open.
+NEXT SLICE:          Bind `curating` to a declared immutable trainer invocation
+contract that can only accept this retained receipt; do not call an existing
+trainer until its bounded configuration and stopped-result custody are frozen.

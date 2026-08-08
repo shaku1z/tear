@@ -24,6 +24,11 @@
   records either an exact authorized collection receipt and `collecting`, or a
   terminal `no-authorized-corpus` failure. Revoked, expired, and missing records
   therefore cannot reach a later C36 phase.
+- The next boundary consumes, but never creates, an already-published C31
+  trainer corpus manifest. Its entries must be an exact set match for the
+  job's frozen custody records and must still be held at admission time. A
+  missing, changed, overbroad, or no-longer-authorized manifest becomes the
+  terminal `no-eligible-curated-manifest` result rather than training input.
 
 ## Evidence
 
@@ -36,7 +41,9 @@ checks are recorded with the implementation commit.
 
 ## Remaining exit gate
 
-The durable ledger/collection boundary has no curation executor, trainer invocation, source-world evaluation,
+`tests/unit/foundry-job-curation.test.ts` verifies exact published-manifest
+admission and action-time custody rejection. The durable boundary has no C31
+curation mutation, manifest publication, dataset loader, trainer invocation, source-world evaluation,
 registry activation, promotion, scheduler, UI, or notifications. C36 remains
 open until an unattended authorized corpus cycle genuinely collects, curates,
 trains, evaluates through frozen gates, rejects/promotes/version-places a
