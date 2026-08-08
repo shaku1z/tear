@@ -1124,6 +1124,20 @@ activation, or promotion.
 REMAINING HERE: This schedules no future automatic work; later phase dispatch
 must still claim a due schedule and independently revalidate its own lineage.
 
+### C36 immutable execution bindings
+
+DONE THIS STEP: A content-addressed V1 binding freezes the exact schedule
+identity/revision, durable job head, phase, and phase-specific immutable
+payload. Created work binds `none`; collection binds the declared trainer
+manifest identity; curation binds the complete offline request's derived
+identities; training names an exact V2 launch without scanning. Corrupt,
+stale, and phase-mismatched bindings refuse or quarantine. A disabled schedule
+can be atomically enabled only alongside its new revision's binding. This
+invokes no executor or scheduler loop.
+REMAINING HERE: Require these bindings at each existing phase dispatcher and
+carry a freshly derived binding across a legal successor in a separately
+atomic coordinator; do not add timers or generic dispatch.
+
 ### C36 IndexedDB conditional-commit browser evidence
 
 DONE THIS STEP: Test-standalone Chromium directly exercises the production

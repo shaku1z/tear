@@ -50,7 +50,7 @@ describe("C36 lease-backed collection-only due dispatch", () => {
 
 describe("C36 bounded schedule continuation coordinator", () => {
   async function collected(input: Readonly<{ held?: boolean }> = {}) {
-    const fixture = await setup(input), receipt = await fixture.dispatcher.runDueOnce(fixture.schedule.scheduleHash, at, budgets, "collect"), next = await fixture.jobs.get("due-job");
+    const fixture = await setup(input.held), receipt = await fixture.dispatcher.runDueOnce(fixture.schedule.scheduleHash, at, budgets, "collect"), next = await fixture.jobs.get("due-job");
     if (next === undefined) throw new Error("collection successor missing");
     return { ...fixture, receipt, next };
   }

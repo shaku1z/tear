@@ -267,6 +267,23 @@ their training inputs. A V2 resume rechecks launch, dataset, trainer manifest,
 live held custody, receipt, and checkpoint before persisting one legal
 `training → training` successor. It does not finalize a C34 model or reach C32.
 
+## Immutable execution bindings
+
+The Foundry now has a content-addressed `TearFoundryExecutionBindingV1` that
+freezes one schedule identity (ID, revision, and hash), exact durable job head,
+declared phase, and only that phase's inputs: `none` for `created`, a precise
+trainer-manifest identity for `collecting`, the complete manifest plus derived
+offline plan/configuration hashes for `curating`, or one named V2 launch hash
+for `training`. It parses and quarantines corrupt bytes, is idempotent by
+binding hash, refuses stale heads and phase/payload mismatches, and looks up a
+resume launch only by its supplied hash (never by scanning for one).
+
+`bindAndEnable` conditionally commits a disabled schedule's next enabled
+revision and its binding together, so it cannot return an enabled revision
+without matching immutable intent. This is a control-plane contract only: it
+does not dispatch a phase, create a timer, start a worker, call cloud, alter
+custody, evaluate, register, activate, or promote a policy.
+
 ## Lease-bound bounded offline resume
 
 The explicit due dispatcher can now invoke that existing resume exactly once,
