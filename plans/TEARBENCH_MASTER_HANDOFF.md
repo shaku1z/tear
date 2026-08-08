@@ -648,6 +648,23 @@ NEXT SLICE:          Expand only with a governed held-out C30 evaluation corpus
 and explicit quality margin; do not re-label this paired source evidence as
 self-play or add activation/promotion.
 
+### C35 executed ladder-evaluation foundation
+
+DONE THIS STEP:      C35 can freeze benchmark scenarios, policy lineage
+bindings, and bounded-rationality profiles, execute each declared pairing in a
+fresh C30 production-headless world, and retain semantic decision, native-event,
+and terminal evidence with derived distributions. C33 artifacts have a direct
+runtime adapter; C34 Q checkpoints remain unavailable until a truthful runtime
+adapter exists. The executor cannot activate or promote a policy.
+PROVEN BY:           `tests/unit/tearbot-ladder-execution.test.ts`, TypeScript,
+targeted ESLint, architecture, and requirements checks.
+REMAINING HERE:      The fixture contains scripted bootstrap bindings only: it
+does not establish a real learned population, level placement, adjacent-level
+separation, human-trace calibration, or drift invalidation. C35 remains open.
+NEXT SLICE:          Define a custody-backed human trace feature/metric contract
+before using any human-likeness calibration result; do not replace it with
+caller-supplied anchors or score dictionaries.
+
 ### C33 pacing finding — repeat-round boundary
 
 Five consecutive non-ticking C33 slices completed conditioning compatibility,
