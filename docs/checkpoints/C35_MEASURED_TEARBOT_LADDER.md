@@ -36,6 +36,16 @@
   pseudonymous participants, takes an equal deterministic number of receipts
   per participant, and retains only hash-bound trace/cadence aggregates. It
   does not call synthetic anchor APIs or certify a level placement.
+- `tearbot-v3-canonical-evaluation.ts` now separately evaluates one *already
+  C36-promoted* C34 V3 canonical candidate. Its frozen plan names the exact
+  approval, artifact, and C32 activation identities; execution revalidates the
+  retained promotion receipt and current active head before every fresh C30
+  source-world case. Decisions pass only through the strict C32 canonical
+  runtime—there is no formula table, scripted profile, or fallback route.
+  The report retains candidate/promotion/activation provenance, canonical
+  decision hashes, terminal/event hashes, fresh-world ordinals, and a bounded
+  derived distribution. It explicitly records `placement: unassigned` and
+  `humanCalibration: not-compared`.
 
 ## Exit-gate status
 
@@ -50,9 +60,12 @@
   placement, adjacent-level discrimination, and drift invalidation remain open.
 
 DONE THIS STEP:      C35 executes immutable policy/benchmark bindings through
-fresh C30 worlds and records truthful distribution inputs.
-PROVEN BY:           `tests/unit/tearbot-ladder-execution.test.ts`, typecheck,
-targeted lint, architecture check, and requirements check.
+fresh C30 worlds and can additionally measure one exact promoted C34 V3
+canonical candidate through the strict C32 source-state route, without
+converting that measurement into placement.
+PROVEN BY:           `tests/unit/tearbot-ladder-execution.test.ts` and
+`tests/unit/tearbot-v3-canonical-evaluation.test.ts`, typecheck, targeted
+lint, architecture check, and requirements check.
 REMAINING HERE:      real learned policy population, benchmark families,
 explicit Academy admission/curation of pending human candidates, participant-
 balanced human-trace calibration, placement/discrimination, and drift

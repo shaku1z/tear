@@ -523,6 +523,15 @@ active pointer/history plus a promotion receipt together, or writes none of
 them. This is not a player control, traffic placement, monitoring loop,
 rollback operation, scheduler, or cloud capability.
 
+A separate C35 evaluator can measure only the exact C36-promoted active C34 V3
+canonical candidate across its declared bounded C30 cases. It verifies the
+promotion receipt, candidate bytes, and active C32 head before executing each
+fresh world through the strict canonical source-state runtime, then retains
+provenance-bound semantic/terminal/event distributions. The report is
+explicitly unassigned and not human-compared: it performs no level placement,
+calibration, activation/pointer mutation, traffic selection, rollback, UI,
+schedule, or cloud action.
+
 The C36 V3 monitoring bridge can retain exact V2 monitoring plus C31 custody
 and completed V3 candidate lineage as a quarantined, inactive-only evidence
 record. It cannot activate, route, place, promote, roll back, schedule, or

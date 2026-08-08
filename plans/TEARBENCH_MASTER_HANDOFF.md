@@ -1260,6 +1260,21 @@ artifact write.
 REMAINING HERE: No placement, traffic monitoring, rollback execution, player
 UI, scheduler, cloud route, or general activation bypass exists.
 
+### C35 strict promoted V3 canonical candidate measurement
+
+DONE THIS STEP: C35 can now execute an already C36-promoted C34 V3 canonical
+candidate only when its exact approval, promotion receipt, artifact, and C32
+active activation still agree. Every declared bounded case starts a fresh C30
+world and takes decisions only from the strict C32 canonical source-state
+runtime. The retained report preserves candidate/promotion/activation lineage,
+semantic decisions, terminal/event hashes, fresh-world identity, and derived
+distribution.
+PROVEN BY: `tests/unit/tearbot-v3-canonical-evaluation.test.ts`.
+REMAINING HERE: This report deliberately has `placement: unassigned` and
+`humanCalibration: not-compared`. It does not establish levels 1–9/Omega,
+adjacent-level separation, real human calibration, drift invalidation, traffic
+placement, or rollback evidence.
+
 ### C36 V3 monitoring eligibility bridge
 
 DONE THIS STEP: An exact current V2 `monitoring` job can retain a separate,

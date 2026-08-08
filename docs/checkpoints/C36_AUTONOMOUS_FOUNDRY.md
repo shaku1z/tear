@@ -424,3 +424,18 @@ that receipt idempotently. Missing/corrupt/reused approval, changed candidate,
 revocation, or active-baseline drift writes no candidate pointer or artifact.
 There is no generic Foundry activation bypass, placement, traffic monitoring,
 rollback, UI, scheduler, cloud, or quality claim.
+
+## Strict promoted-candidate C35 measurement
+
+The promotion receipt is now consumable as an exact provenance prerequisite for
+a separate C35 evaluator. It rechecks that the receipt's approval, artifact,
+and activation identities still equal the C32 active head and that the bytes
+remain a parseable C34 V3 canonical candidate, then evaluates declared bounded
+cases in fresh C30 worlds through the strict C32 source-state runtime. The
+retained report binds the candidate, approval, promotion receipt, activation,
+semantic decisions, terminal/event traces, and distribution together.
+
+This is post-promotion executable measurement only. It neither changes the
+pointer nor assigns a ladder level, selects traffic, compares human traces,
+claims calibration/separation, rolls back, schedules, exposes UI, or contacts
+cloud.

@@ -81,6 +81,7 @@ export * from "./foundry-job-bound-continuation";
 export * from "./foundry-job-scheduled-execution";
 export * from "./foundry-job-due-dispatcher";
 export * from "./tearbot-ladder-evaluation";
+export * from "./tearbot-v3-canonical-evaluation";
 export * from "./tearbot-human-calibration-source";
 export * from "./tearbot-human-calibration-consent-ledger";
 export * from "./tearbot-human-calibration-capture";
