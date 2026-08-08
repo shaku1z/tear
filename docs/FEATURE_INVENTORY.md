@@ -431,6 +431,14 @@ This is the migration checklist for the architectural redesign. A checked featur
   dataset load, training, evaluation, activation, promotion, or cloud work is
   introduced.
 
+- [ ] C36 lease-bound bounded offline-Q launch — a due `curating` job may call
+  the existing one-epoch C34 offline executor only after immutable
+  manifest/root/dataset/plan/configuration/reward identities, schedule/job,
+  and every named C31 custody byte revalidate. Its conditional lease supports
+  exact retry and rejects stale, concurrent, revoked, early, budget-invalid,
+  or changed-lineage work. It emits no online run, final result, artifact,
+  evaluation, activation, promotion, timer, or cloud operation.
+
 - [ ] V2 Foundry source-evaluation derivation — V2 requests freeze an
   identifier/threshold protocol before a challenger exists, retain its content
   hash, and can derive (but not execute) one C34 paired source-evaluation plan

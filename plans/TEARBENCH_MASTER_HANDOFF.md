@@ -1075,6 +1075,15 @@ revoked, or budget-invalid work fails closed.
 REMAINING HERE: No corpus mutation, dataset load, training, evaluation,
 promotion, timer, or cloud work exists.
 
+### C36 lease-bound bounded offline-Q launch
+
+DONE THIS STEP: A due lease can invoke only the existing one-epoch offline-Q
+launch from a current `curating` head. It pins schedule/job/custody and checks
+immutable C31 manifest/root/dataset plus C34 plan/configuration/reward hashes
+before the executor may transition to `training`; exact retries return the
+stored action receipt. No online execution, final result, evaluation, artifact,
+activation, promotion, timer, or cloud behavior is added.
+
 ### C36 IndexedDB conditional-commit browser evidence
 
 DONE THIS STEP: Test-standalone Chromium directly exercises the production

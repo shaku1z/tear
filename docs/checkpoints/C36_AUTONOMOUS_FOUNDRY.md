@@ -213,6 +213,19 @@ absent/mismatched manifests produce the existing safe terminal result, and
 revoked custody refuses before C31 is mutated. It neither curates new data nor
 starts training, evaluation, promotion, cloud work, or timers.
 
+## Lease-bound bounded offline launch
+
+A separate due dispatcher action can now invoke exactly the existing
+`curating → training` offline-Q launch, which retains one bounded C34 epoch.
+Before claiming its short local lease, it pins the current schedule, job head,
+every named custody byte, and due state. It also requires caller-declared
+immutable C31 manifest/root/dataset and C34 plan/configuration/reward hashes,
+then rederives and compares them from the current trainer read boundary before
+the executor runs. Exact retries return the durable receipt; stale, concurrent,
+revoked, budget-invalid, early, or lineage-changed requests do not advance the
+job. This is neither an online run nor a final result, evaluation, artifact,
+activation, promotion, timer, or cloud operation.
+
 ## Browser conditional-commit evidence
 
 The test-standalone browser now invokes the production IndexedDB backend's
