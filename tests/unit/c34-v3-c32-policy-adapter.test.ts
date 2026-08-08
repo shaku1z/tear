@@ -8,7 +8,7 @@ import {
   createTearC32CanonicalSourceObservation, createTearC34V3C32PolicyCandidate, createTearOfflineRlV3Checkpoint,
   createTearOfflineRlV3Plan, createTearOfflineRlPlan, createTearOnlineRlV3Checkpoint, createTearOnlineRlV3Plan,
   evaluateTearOnlineRlV3InSource, parseTearC34V3C32PolicyCandidate, TearC34V3C32PolicyRuntime,
-  TearC34V3C32CandidateRegistry, extractTearOfflineRlTrajectories,
+  TearC34V3C32CandidateRegistry, TearC32CanonicalActivePolicyRuntime, TearPolicyArtifactRegistry, TEAR_C34_V3_C32_POLICY_RUNTIME_COMPATIBILITY, extractTearOfflineRlTrajectories,
   type TearAcademyTrainingDatasetV1,
 } from "../../src/agents";
 
@@ -63,5 +63,12 @@ describe("C34 V3 to C32 canonical policy candidate", () => {
     expect(await registry.get(candidate.artifact.id)).toBeUndefined();
     expect((await backend.keys("quarantine")).some((key) => key === `policy-artifact:v1:${candidate.artifact.id}`)).toBe(true);
     expect(await backend.get("analysis", "policy-active:v1")).toBeUndefined();
+  });
+
+  it("executes an active exact V3 envelope against a real C30 canonical state", async () => {
+    const { candidate } = fixture(), backend = createMemoryGhostVaultBackend(), candidates = new TearC34V3C32CandidateRegistry(backend); await candidates.register(candidate.artifact);
+    const registry = new TearPolicyArtifactRegistry(backend, TEAR_C34_V3_C32_POLICY_RUNTIME_COMPATIBILITY); await registry.activate(candidate.artifact.id, "2026-08-08T00:01:00.000Z");
+    const runtime = new TearC32CanonicalActivePolicyRuntime(backend, () => [{ type: "jump", phase: "pressed" }]); await runtime.reset(); const environment = createProductionHeadlessEnvironment();
+    try { const state = environment.reset(scenario), decision = runtime.decide(state, ["move"]); expect(decision).toMatchObject({ source: "artifact", artifactId: candidate.artifact.id, actions: [{ type: "move", x: 1_000, y: 0 }] }); expect(environment.step(decision.actions).observation.tick).toBe(1); } finally { environment.dispose(); }
   });
 });
