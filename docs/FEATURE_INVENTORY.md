@@ -420,6 +420,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   not a score or winner; failed/invalid runs reject without metrics. No artifact,
   registry, activation, promotion, scheduler, or UI path exists.
 
+- [ ] V2 Foundry frozen decision boundary — the predeclared C34 result is
+  revalidated and yields only a monitoring-ready challenger or rejection.
+  Monitoring-ready is not activation or promotion, and produces no C32 artifact
+  or player-visible change.
+
 ## Remaining proof gaps
 
 No feature-preservation evidence gaps remain in this inventory. Release readiness still requires the full clean-commit gate described above.

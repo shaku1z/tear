@@ -93,6 +93,11 @@ function runCase(side: Side, values: readonly TearOfflineRlQValueV1[], plan: Tea
   } finally { environment.dispose(); }
 }
 function result(draft: Omit<TearOnlineRlSourceEvaluationResultV1, "resultHash">): TearOnlineRlSourceEvaluationResultV1 { const value = Object.freeze({ ...draft, traces: Object.freeze(draft.traces.map(freeze)), metrics: Object.freeze({ ...draft.metrics }) }); return Object.freeze({ ...value, resultHash: stableVerificationHash(value) }); }
+export function parseTearOnlineRlSourceEvaluationResult(value: unknown): TearOnlineRlSourceEvaluationResultV1 {
+  if (!record(value) || value.format !== "tear-online-rl-source-evaluation" || value.schemaVersion !== 1 || !hash(value.resultHash)) throw new TypeError("invalid online RL source evaluation result");
+  const typed = value as unknown as TearOnlineRlSourceEvaluationResultV1, { resultHash, ...draft } = typed, parsed = result(draft);
+  if (resultHash !== parsed.resultHash) throw new TypeError("online RL source evaluation result integrity mismatch"); return parsed;
+}
 
 /** Runs baseline and retained challenger over the same freshly reset C30 cases. It has no registry or promotion dependency. */
 export class TearOnlineRlSourceEvaluationExecutor {

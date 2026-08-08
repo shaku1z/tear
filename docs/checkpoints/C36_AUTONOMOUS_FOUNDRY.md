@@ -135,6 +135,16 @@ current job with a metric-free refusal receipt. This remains neither a winner
 selection nor a C32 artifact, registry, activation, promotion, self-play,
 scheduler, or UI route.
 
+## V2 frozen decision boundary
+
+The V2 protocol already freezes the C34 evaluator's reward-gain and completion
+criteria, so no Foundry threshold is inferred or added at decision time. A
+current `deciding` V2 job can revalidate its immutable execution receipt,
+result, plan, protocol, and challenger/baseline lineage. A passed frozen result
+becomes only `monitoring-ready`; a failed result is `rejected`. Neither outcome
+creates a C32 artifact, changes an active policy, promotes, schedules, or
+renders a Foundry surface.
+
 V2 offline-training launches retain the complete immutable C34 plan and
 configuration. V1 launches fail closed because hashes alone cannot recreate
 their training inputs. A V2 resume rechecks launch, dataset, trainer manifest,

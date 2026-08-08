@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createMemoryGhostVaultBackend } from "../../src/ghost";
 import { stableVerificationHash } from "../../src/replay/hash";
 import {
-  TearFoundryJobVault, TearFoundryOfflineTrainingExecutor, TearFoundryOfflineTrainingFinalizationExecutor, TearFoundryOnlineTrainingExecutionExecutor, TearFoundryOnlineTrainingFinalizationExecutor as TearFoundryOnlineTerminalizationExecutor, TearFoundryOnlineTrainingLaunchExecutor, TearFoundrySourceEvaluationPlanExecutor, TearFoundrySourceEvaluationExecutionExecutor,
+  TearFoundryJobVault, TearFoundryOfflineTrainingExecutor, TearFoundryOfflineTrainingFinalizationExecutor, TearFoundryOnlineTrainingExecutionExecutor, TearFoundryOnlineTrainingFinalizationExecutor as TearFoundryOnlineTerminalizationExecutor, TearFoundryOnlineTrainingLaunchExecutor, TearFoundrySourceEvaluationPlanExecutor, TearFoundrySourceEvaluationExecutionExecutor, TearFoundryDecisionExecutor,
   TearOfflineRlTrainingVault, createTearFoundryJob, createTearFoundryJobV2, createTearOfflineRlPlan, parseTearFoundryJob, parseTearOnlineRlSourceEvaluationPlan, transitionTearFoundryJob,
   type TearAcademyCandidateCustodyStore, type TearAcademyCorpusStore, type TearAcademyTrainingDatasetLoader, type TearAcademyTrainingDatasetV1,
 } from "../../src/agents";
@@ -97,6 +97,8 @@ describe("C36 offline training terminalization", () => {
     mutableCustody.held = () => Promise.resolve([{ recordHash: h.corpus }]);
     const execution = await new TearFoundrySourceEvaluationExecutionExecutor(setupResult.vault, setupResult.custody, setupResult.corpus, setupResult.loader).execute(paired.job, offline.receipt, paired.receipt, first.receipt, "2026-08-08T00:08:00.000Z");
     expect(execution).toMatchObject({ job: { phase: "deciding" }, receipt: { disposition: "executed", planHash: first.plan.planHash } }); expect(execution.receipt.resultHash).toMatch(/^[a-f0-9]{16}$/u);
+    const decision = await new TearFoundryDecisionExecutor(setupResult.vault).decide(execution.job, execution.receipt.receiptHash, "2026-08-08T00:08:30.000Z");
+    expect(decision).toMatchObject({ job: { phase: "monitoring" }, receipt: { disposition: "monitoring-ready", evaluationResultHash: execution.receipt.resultHash } });
     await expect(executor.derive(paired.job, offline.receipt, paired.receipt, "2026-08-08T00:09:00.000Z")).rejects.toThrow(/current/u);
     expect((await setupResult.backend.keys("analysis")).some((key) => key.startsWith("online-rl-source-evaluation:v1:"))).toBe(true);
     expect((await setupResult.backend.keys("analysis")).some((key) => key.startsWith("policy-"))).toBe(false);

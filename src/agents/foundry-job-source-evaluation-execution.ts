@@ -37,6 +37,11 @@ function receipt(draft: Omit<TearFoundrySourceEvaluationReceiptV1, "receiptHash"
   if (![draft.job.sourceJobHash, draft.job.resultJobHash, draft.planReceiptHash, draft.planHash].every(hash) || !time(draft.executedAt) || (draft.resultHash !== undefined && !hash(draft.resultHash))) throw new TypeError("invalid Foundry source-evaluation receipt");
   const value = Object.freeze({ ...draft, job: Object.freeze({ ...draft.job }) }); return Object.freeze({ ...value, receiptHash: stableVerificationHash(value) });
 }
+export function parseTearFoundrySourceEvaluationReceipt(value: unknown): TearFoundrySourceEvaluationReceiptV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("invalid Foundry source-evaluation receipt");
+  const typed = value as TearFoundrySourceEvaluationReceiptV1, { receiptHash, ...draft } = typed, parsed = receipt(draft);
+  if (!hash(receiptHash) || receiptHash !== parsed.receiptHash) throw new TypeError("Foundry source-evaluation receipt integrity mismatch"); return parsed;
+}
 
 /** Executes one already-derived V2 plan and records factual custody only; no result metric becomes a Foundry decision. */
 export class TearFoundrySourceEvaluationExecutionExecutor {

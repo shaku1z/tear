@@ -1010,3 +1010,13 @@ REMAINING HERE: No Foundry decision rule, candidate selection, artifact,
 registry, activation, promotion, self-play, scheduler, or UI exists.
 NEXT SLICE: Define a separately governed, non-promotional decision review
 boundary; do not derive a winner from the retained result by implication.
+
+### C36 V2 frozen decision boundary
+
+DONE THIS STEP: The existing V2 protocol already carries the exact C34
+pass/fail criteria, so C36 now applies only that persisted result after
+revalidating current job, execution receipt, plan, protocol, and model lineage.
+A pass is `monitoring-ready` only; a failure rejects. No score is invented and
+neither route creates/artifacts/registers/activates/promotes a policy.
+NEXT SLICE: Implement only the separately authorized monitoring boundary; do
+not treat monitoring-ready as activation or promotion.
