@@ -204,6 +204,14 @@ it did not read from the authorized ledger nor register, activate, overwrite,
 or promote an artifact. It is local operational evidence only: no scheduler,
 player Foundry view, quality threshold, or learned-policy publication exists.
 
+The Academy now reads those durable program records through a separate,
+integrity-checking inspection controller. It exposes each program's current
+round and one of `review-required`, `checkpointed`, `cancelled`, or `completed`
+status, with the pending-review, resumable-checkpoint, and non-activation facts
+spelled out in the screen. Invalid program bytes quarantine during inspection.
+This is deliberately a read-only status/progress surface: it cannot review a
+correction, start a fit, activate an artifact, or promote one.
+
 New C31 captures also bind the exact source scenario identity into the governed
 training sequence. A temporal fit retains the hashes of its training scenarios,
 and `compareTemporalPolicyAgainstScriptedBaselineInProduction` refuses any
@@ -249,11 +257,11 @@ measured artifact win over the scripted baseline, promotion, automated repeated
 DAgger, or automatic player-facing training.
 Those remain C33 work.
 
-DONE THIS STEP:      C33 now retains governed temporal parent/corrected DAgger observations over a predeclared three-scenario, 60-tick-each source-world suite and supports versioned V2 lesson/persona/style conditioning. Governed sequence metadata and caller-owned runtime context remain separate; V1 artifacts stay compatible. No observed delta is interpreted as quality, activation, or promotion.
-PROVEN BY:           Focused C31/C32/C33 track, admission, curation, and production-evaluator tests: 2 files / 10 tests, plus targeted ESLint, TypeScript, requirements, and architecture gates.
-REMAINING HERE:      An authorized live-context selection path, meaningful unseen-seed baseline-win evidence, automated repeated DAgger rounds, progress/error/curriculum views, and credible visible real-game quality evidence.
+DONE THIS STEP:      C33 now has a durable, read-only Academy status projection for the bounded two-round DAgger program. It exposes review-required, checkpointed, cancelled/resumable, and completed-fit truth without giving the screen review, training, activation, or promotion powers.
+PROVEN BY:           Focused C33/Academy renderer and browser-composition tests, targeted ESLint and TypeScript, and a successful production test-standalone build. The canonical Academy navigation journey reached its campaign branch but hung in this environment before a result; it is not counted as browser proof.
+REMAINING HERE:      Scheduler-owned automatic repeated rounds, curriculum/error detail beyond program state, meaningful unseen-seed baseline-win evidence, and credible visible real-game quality evidence. The C40 recorded-improvement item remains unticked.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Add one authorized live-context selection path and visible truth surface before automated repeated DAgger or quality claims; do not derive player context from Academy corpus tags.
+NEXT SLICE:          Verify the Academy program-status surface in the built artifact, then add one bounded scheduler-owned repeat-round route that stops at authorized review and cannot activate or promote an artifact.
 
 ## Slice pacing finding — 2026-08-03
 

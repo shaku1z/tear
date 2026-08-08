@@ -56,6 +56,27 @@ function parse(value: unknown): TearTemporalDaggerProgramV1 {
   if (programHash !== stableVerificationHash(draft)) throw new TypeError("temporal DAgger program integrity mismatch");
   return freeze(draft);
 }
+
+/**
+ * Read-only local status projection for Academy. Invalid durable bytes are
+ * quarantined instead of becoming a plausible training-progress claim.
+ */
+export async function inspectTearTemporalDaggerPrograms(backend: GhostVaultBackend): Promise<readonly TearTemporalDaggerProgramV1[]> {
+  const programs: TearTemporalDaggerProgramV1[] = [];
+  for (const key of await backend.keys("analysis")) {
+    if (!key.startsWith(KEY)) continue;
+    const raw = await backend.get("analysis", key);
+    if (raw === undefined) continue;
+    try { programs.push(parse(JSON.parse(raw))); }
+    catch (error) {
+      await backend.put("quarantine", key, JSON.stringify(Object.freeze({
+        format: "temporal-dagger-program-quarantine", schemaVersion: 1, key, raw,
+        reason: error instanceof Error ? error.message : String(error),
+      })));
+    }
+  }
+  return Object.freeze(programs.sort((left, right) => left.id.localeCompare(right.id)));
+}
 function receipt(capture: TearDaggerCorrectionCaptureV1, status: TearTemporalDaggerProgramStatus, reviews: readonly TearDaggerCorrectionReviewV1[], checkpoint?: TearTemporalPolicyCheckpointV1, training?: TearTemporalPolicyTrainingResultV1): TearTemporalDaggerRoundReceiptV1 {
   return Object.freeze({ captureHash: capture.captureHash, scenarioHash: capture.scenario.hash, status, acceptedReviewHashes: Object.freeze(reviews.filter((entry) => entry.disposition === "accepted").map((entry) => entry.reviewHash).sort()), ...(checkpoint === undefined ? {} : { checkpointHash: checkpoint.checkpointHash }), ...(training === undefined ? {} : { trainingHash: training.trainingHash }) });
 }

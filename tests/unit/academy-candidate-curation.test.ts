@@ -26,6 +26,7 @@ import {
   completeTearTemporalPolicyCheckpoint,
   TearTemporalPolicyCheckpointVault,
   TearTemporalDaggerProgramController,
+  inspectTearTemporalDaggerPrograms,
   createTearTemporalDaggerRetrainingInput,
   createTearTemporalWindowPolicyArtifact,
   compareTemporalPolicyAgainstScriptedBaselineInProduction,
@@ -370,6 +371,11 @@ describe("C31 held Academy candidate curation", () => {
     await resumedProgram.acceptReviews(secondRound.id, [secondReview]);
     expect((await resumedProgram.advance(secondRound.id, temporalConfig.epochs)).rounds).toHaveLength(2);
     await expect(resumedProgram.start(secondRound.id, scenario("c33-repeat-two", "c33-repeat-two-seed", 8))).rejects.toThrow(/repeats/u);
+    const listedPrograms = await inspectTearTemporalDaggerPrograms(input.backend);
+    expect(listedPrograms).toMatchObject([{ id: "c33-repeat-program", status: "completed" }]);
+    await input.backend.put("analysis", "temporal-dagger-program:v1:corrupt", "not-json");
+    expect(await inspectTearTemporalDaggerPrograms(input.backend)).toHaveLength(1);
+    expect((await input.backend.keys("quarantine")).some((key) => key.endsWith(":corrupt"))).toBe(true);
     await input.backend.put("analysis", `behavior-cloning-training:v1:${training.trainingHash}`, "not-json");
     expect(await trainingVault.get(training.trainingHash)).toBeUndefined();
     expect((await input.backend.keys("quarantine")).some((key) => key.endsWith(training.trainingHash))).toBe(true);

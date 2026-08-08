@@ -54,11 +54,27 @@ export function createAcademyRenderers(context: ScreenRenderContext) {
           ui.text(canvas, lesson.state, panelX + 592, lessonTop, ui.t.type.caption, "right", ui.t.alpha.soft);
           ui.text(canvas, lesson.detail, panelX + 24, lessonTop + 16, ui.t.type.micro, "left", ui.t.alpha.muted);
         });
+        const programY = lessonY + Math.max(84, 46 + lessons.length * 34) + 20;
+        const programs = view.daggerPrograms ?? [];
+        const programPageSize = 3;
+        const programOffset = Math.max(0, Math.min(Math.max(0, programs.length - programPageSize), Math.floor(context.scroll / 52)));
+        const visiblePrograms = programs.slice(programOffset, programOffset + programPageSize);
+        const programHeight = Math.max(84, 46 + visiblePrograms.length * 52);
+        ui.panel(canvas, panelX, programY, 640, programHeight);
+        ui.sectionLabel(canvas, `DAGGER PROGRAMS ${String(programOffset + 1)}-${String(programOffset + visiblePrograms.length)} / ${String(programs.length)}`, panelX + 24, programY + 30, 592);
+        if (programs.length === 0) ui.text(canvas, "No DAgger programs are stored in this Academy.", panelX + 24, programY + 64, ui.t.type.caption, "left", ui.t.alpha.muted);
+        else visiblePrograms.forEach((program, index) => {
+          const programTop = programY + 52 + index * 52;
+          ui.displayText(canvas, program.id, panelX + 24, programTop, ui.t.type.label, "left");
+          ui.text(canvas, program.state, panelX + 592, programTop, ui.t.type.caption, "right", ui.t.alpha.soft);
+          ui.text(canvas, program.detail, panelX + 24, programTop + 20, ui.t.type.caption, "left", ui.t.alpha.muted);
+        });
         const canScrollDown = recordOffset < Math.max(0, view.records.length - recordPageSize)
-          || manifestOffset < Math.max(0, view.manifests.length - manifestPageSize);
-        if (recordOffset > 0 || manifestOffset > 0 || canScrollDown) {
-          ui.scrollHint(canvas, width / 2, lessonY + Math.max(84, 46 + lessons.length * 34) + 16,
-            recordOffset > 0 || manifestOffset > 0, canScrollDown);
+          || manifestOffset < Math.max(0, view.manifests.length - manifestPageSize)
+          || programOffset < Math.max(0, programs.length - programPageSize);
+        if (recordOffset > 0 || manifestOffset > 0 || programOffset > 0 || canScrollDown) {
+          ui.scrollHint(canvas, width / 2, programY + programHeight + 16,
+            recordOffset > 0 || manifestOffset > 0 || programOffset > 0, canScrollDown);
         }
       }
       backControl(context);

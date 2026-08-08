@@ -252,6 +252,18 @@ describe("legacy screen renderer registry", () => {
       .toMatchObject({ label: "TRY AGAIN", x: 690, w: 220, h: 46 });
   });
 
+  it("renders durable DAgger status as read-only Academy information", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    expect(() => { renderer.academy({ id: "academy", status: "ready", subtitle: "durable training custody", rows: [], records: [], manifests: [],
+      daggerPrograms: [
+        { id: "DAGGER ALPHA", state: "REVIEW REQUIRED", detail: "round 1 · awaiting an authorized review" },
+        { id: "DAGGER BETA", state: "COMPLETED", detail: "fit retained; not activated or promoted" },
+      ],
+    }); }).not.toThrow();
+    expect(controls.every((control) => !control.action.type.startsWith("dagger."))).toBe(true);
+  });
+
   it("pages complete privacy-safe Academy records and manifests through screen scroll", () => {
     const controls: ScreenControl[] = [];
     const context = createRenderContext(controls);

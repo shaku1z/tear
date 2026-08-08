@@ -1,18 +1,33 @@
-import { createBrowserAcademyInspectionController, type TearAcademyInspectionController } from "../agents";
+import { createBrowserAcademyInspectionController, createBrowserTemporalDaggerProgramInspectionController,
+  type TearAcademyInspectionController, type TearTemporalDaggerProgramInspectionController } from "../agents";
 import type { AcademyScreenView } from "../presentation/screens/contracts";
 
 /** Keeps Academy persistence composition outside the frame-sized live runtime. */
 export function createLiveAcademyScreen(factory: IDBFactory | undefined): Readonly<{ snapshot: () => AcademyScreenView; refresh: () => void }> {
   let controller: TearAcademyInspectionController | undefined;
-  const refresh = (): void => { if (controller) void controller.refresh(new Date().toISOString()); };
-  void createBrowserAcademyInspectionController(factory).then((value) => {
-    controller = value;
+  let daggerPrograms: TearTemporalDaggerProgramInspectionController | undefined;
+  const refresh = (): void => {
+    if (controller) void controller.refresh(new Date().toISOString());
+    if (daggerPrograms) void daggerPrograms.refresh();
+  };
+  void Promise.all([createBrowserAcademyInspectionController(factory), createBrowserTemporalDaggerProgramInspectionController(factory)]).then(([academy, dagger]) => {
+    controller = academy;
+    daggerPrograms = dagger;
     refresh();
   });
   return Object.freeze({
     snapshot: (): AcademyScreenView => {
       const inspection = controller?.snapshot() ?? { status: "loading" as const };
-      if (inspection.status === "ready") return {
+      const programs = daggerPrograms?.snapshot() ?? { status: "loading" as const };
+      if (inspection.status === "unavailable" || programs.status === "unavailable") return {
+        id: "academy", status: "unavailable", subtitle: inspection.status === "unavailable" ? inspection.reason
+          : programs.status === "unavailable" ? programs.reason : "Academy storage could not be read",
+        rows: [], records: [], manifests: [], daggerPrograms: [],
+      };
+      if (inspection.status === "loading" || programs.status === "loading") return {
+        id: "academy", status: "loading", subtitle: "reading durable Academy custody", rows: [], records: [], manifests: [], daggerPrograms: [],
+      };
+      return {
         id: "academy", status: "ready", subtitle: "durable training custody", rows: [
           { label: "HELD", value: String(inspection.snapshot.custody.held) },
           { label: "REVIEWED", value: String(inspection.snapshot.reviewedSamples) },
@@ -33,8 +48,17 @@ export function createLiveAcademyScreen(factory: IDBFactory | undefined): Readon
           id: `${manifest.id.toUpperCase()} V${String(manifest.version)}`,
           detail: `${String(manifest.entries)} governed entr${manifest.entries === 1 ? "y" : "ies"} · root ${manifest.rootHash.slice(0, 8).toUpperCase()}`,
         })),
+        daggerPrograms: programs.programs.map((program) => {
+          const round = program.rounds.length;
+          const checkpoint = program.checkpoint;
+          const state = program.status.replaceAll("-", " ").toUpperCase();
+          const detail = program.status === "review-required" ? `round ${String(round)} - awaiting an authorized review`
+            : program.status === "cancelled" ? `round ${String(round)} - cancelled at epoch ${String(checkpoint?.epoch ?? 0)}; safe to resume`
+              : program.status === "checkpointed" ? `round ${String(round)} - checkpoint epoch ${String(checkpoint?.epoch ?? 0)}`
+                : `round ${String(round)} - fit retained; not activated or promoted`;
+          return { id: program.id.replaceAll("-", " ").toUpperCase(), state, detail };
+        }),
       };
-      return { id: "academy", status: inspection.status, subtitle: inspection.status === "unavailable" ? inspection.reason : "reading durable Academy custody", rows: [], records: [], manifests: [] };
     },
     refresh,
   });

@@ -238,6 +238,8 @@ export interface AcademyScreenView {
   readonly records: readonly (Readonly<{ readonly id: string; readonly state: string; readonly detail: string }>)[];
   readonly manifests: readonly (Readonly<{ readonly id: string; readonly detail: string }>)[];
   readonly lessons?: readonly (Readonly<{ readonly id: string; readonly state: string; readonly detail: string }>)[];
+  /** Read-only C33 status: it exposes no review, activation, or promotion command. */
+  readonly daggerPrograms?: readonly (Readonly<{ readonly id: string; readonly state: string; readonly detail: string }>)[];
 }
 
 export type LegacyScreenView = MenuScreenView | SetupScreenView | PlayingScreenView | CodexScreenView
