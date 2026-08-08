@@ -550,6 +550,24 @@ REMAINING HERE:      C33 needs curriculum/error detail beyond action divergence,
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C33-C40 product evidence remain; C27A, C28, and C32 are closed.
 NEXT SLICE:          C33: run a meaningful governed unseen/recovery suite through the executor and retain real candidate/baseline evidence; no quality or promotion claim is authorized without the predeclared measured advantage.
 
+### C34 first foundation — governed offline-RL input
+
+DONE THIS STEP:      C34 now binds one immutable C31 training split to its C30
+source-world curriculum, fixed reward definition, extraction budgets, and a
+content-addressed transition receipt. Its components are named native/canonical
+facts with source and reward caps; Academy reward snapshots remain observations,
+not invented RL returns.
+PROVEN BY:           `tests/unit/offline-rl-training.test.ts` exercises stable
+re-extraction plus held-out exclusion, plan alteration, terminal-reward hack,
+and off-episode-action rejection. `pnpm typecheck`, targeted ESLint, and
+`pnpm check:architecture` pass for this slice.
+REMAINING HERE:      A bounded optimizer/checkpoint vault, then online
+production-headless episodes, self-play, expanded curriculum, and cancellation/
+divergence safeguards. No C34 checklist item is ticked by input plumbing.
+REMAINING TO C40:    C25/C27/C29/C30/C31/C33 exits and C34-C40 product evidence.
+NEXT SLICE:          Implement a bounded offline learner that accepts only this
+receipt and retains immutable plan/reward/checkpoint lineage without activation.
+
 ### C33 pacing finding — repeat-round boundary
 
 Five consecutive non-ticking C33 slices completed conditioning compatibility,
