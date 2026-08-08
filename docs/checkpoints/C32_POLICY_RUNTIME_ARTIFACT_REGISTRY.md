@@ -194,3 +194,15 @@ identity only as a compatibility prerequisite. Its challenger and pass/fail
 source-world evaluation are not C32 artifacts; it adds no registry reader or
 writer, active pointer, runtime adapter, activation, rollback, promotion, or
 player control.
+
+### Inactive C34 V3 canonical candidates
+
+`c34-v3-c32-tabular-q-policy-v1` is a separate, bounded candidate format, not
+an extension of the current active table runtime. It accepts only a completed
+and passed exact C34 V3 lineage and executes only from the real canonical C30/
+C32 source state. Its candidate-only registry uses a dedicated compatibility
+contract and never calls `activate` or writes the active pointer. Bad/legacy/
+tampered provenance refuses rather than becoming scripted fallback; fallback is
+reserved for an absent candidate or no legal action after availability masking.
+No normal-build composition, player UI, promotion, placement, or Foundry route
+has been added.

@@ -1219,6 +1219,18 @@ REMAINING HERE: True multi-actor self-play, measured quality, authorized C32
 artifact admission, and an explicit C36 V3 binding remain separate work. Do
 not infer any of them from this custody/evaluation path.
 
+### C32 inactive C34 V3 canonical candidate adapter
+
+DONE THIS STEP: A dedicated candidate-only C32 adapter now accepts only a
+completed/passed exact V3 online evaluation lineage, freezes all shared
+canonical protocol and lineage hashes, and executes against a real canonical
+C30/C32 source state with shared masking/tie-break behavior. Its dedicated
+registry can register/read inactive candidates and quarantines corrupt bytes;
+it never writes the active pointer.
+REMAINING HERE: No current C32 active runtime or browser composition consumes
+this format. Do not activate, promote, place, bind it to Foundry, or add UI
+without a separately authorized rollout boundary.
+
 ### C34 V3 canonical-compatible offline training custody
 
 DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,

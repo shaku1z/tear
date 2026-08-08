@@ -506,4 +506,10 @@ divergence stops are explicit terminal evidence. The V3 model is still not a
 C32 registry artifact, active runtime, Foundry input, self-play population, or
 player-facing feature.
 
+An inactive-only C34 V3 canonical-Q candidate can now execute the real C30/C32
+source-state adapter after a completed passed V3 evaluation. It is bounded,
+masked, deterministic, integrity-checked, and corruption-quarantined, but has
+no C32 active-pointer, normal runtime, UI, Foundry, placement, or promotion
+path.
+
 The inventory is reviewed at every phase gate. New features added during the redesign must be appended here and implemented through the target boundaries; they may not add new shared globals or direct platform dependencies to domain code.

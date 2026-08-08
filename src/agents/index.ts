@@ -26,6 +26,7 @@ export * from "./academy-policy-evaluation-executor";
 export * from "./offline-rl-training";
 export * from "./offline-rl-v3-training";
 export * from "./online-rl-v3-training";
+export * from "./c34-v3-c32-policy-adapter";
 export * from "./online-rl-headless-executor";
 export * from "./online-rl-curriculum";
 export * from "./online-rl-training";

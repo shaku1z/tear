@@ -163,3 +163,15 @@ Evidence: `tests/unit/online-rl-v3-training.test.ts` proves fresh C30 source
 worlds, one-shot/resume equality, cancellation/timeout/budget stops,
 non-promotional paired evaluation, Vault readback, corrupt evaluation
 quarantine, and resume provenance refusal.
+
+### C34 V3 candidate-only C32 adapter
+
+Only a completed V3 offline model, completed V3 online checkpoint, and passed
+exact V3 source-world evaluation can form the explicit
+`c34-v3-c32-tabular-q-policy-v1` candidate payload. It freezes shared canonical
+state/action/protocol identities and all offline/online/evaluation hashes. Its
+runtime receives the exact C30/C32 canonical source state, masks unavailable
+actions, and uses the shared deterministic tie-break. Malformed, legacy,
+tampered, unpassed, or incompatible candidates refuse before runtime fallback.
+The candidate registry is inactive-only and quarantines corrupt reads; it never
+writes C32's active pointer.
