@@ -90,6 +90,14 @@ cancelled, timed-out, divergence, budget, or complete stops. It still performs
 no candidate comparison, score decision, artifact creation, activation,
 promotion, self-play, scheduling, or UI work.
 
+## Online terminalization and paired-evaluation readiness
+
+An incomplete online checkpoint cannot advance. Safeguarded terminal stops are
+persisted then rejected without a quality conclusion; only a completed retained
+checkpoint may become immutable paired-evaluation readiness. This invokes no
+paired evaluator and creates no artifact, score, activation, promotion,
+self-play, scheduler, or UI output.
+
 V2 offline-training launches retain the complete immutable C34 plan and
 configuration. V1 launches fail closed because hashes alone cannot recreate
 their training inputs. A V2 resume rechecks launch, dataset, trainer manifest,

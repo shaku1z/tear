@@ -954,6 +954,16 @@ NEXT SLICE: Only after a completed retained online checkpoint, bind the
 existing non-promotional source-world evaluation plan; keep stopped outcomes
 out of evaluation.
 
+### C36 online terminalization readiness
+
+DONE THIS STEP: A current evaluating job now fails closed on an incomplete
+online checkpoint, rejects preserved safeguard stops, and makes only a complete
+persisted checkpoint ready for the future frozen paired evaluator. The bridge
+persists the existing C34 online result and immutable readiness receipt.
+REMAINING HERE: It does not execute the evaluator, compare a candidate, score,
+create an artifact, register, activate, promote, self-play, schedule, or show
+UI.
+
 DONE THIS STEP:      Foundry V2 launches retain actual C34 plan/configuration
 bytes, while historical V1 launch bytes are explicitly non-resumable. A V2
 resume rechecks all stored lineage and advances one epoch with a durable

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createMemoryGhostVaultBackend } from "../../src/ghost";
 import { stableVerificationHash } from "../../src/replay/hash";
 import {
-  TearFoundryJobVault, TearFoundryOfflineTrainingExecutor, TearFoundryOfflineTrainingFinalizationExecutor, TearFoundryOnlineTrainingExecutionExecutor, TearFoundryOnlineTrainingLaunchExecutor,
+  TearFoundryJobVault, TearFoundryOfflineTrainingExecutor, TearFoundryOfflineTrainingFinalizationExecutor, TearFoundryOnlineTrainingExecutionExecutor, TearFoundryOnlineTrainingFinalizationExecutor as TearFoundryOnlineTerminalizationExecutor, TearFoundryOnlineTrainingLaunchExecutor,
   TearOfflineRlTrainingVault, createTearFoundryJob, createTearOfflineRlPlan, transitionTearFoundryJob,
   type TearAcademyCandidateCustodyStore, type TearAcademyCorpusStore, type TearAcademyTrainingDatasetLoader, type TearAcademyTrainingDatasetV1,
 } from "../../src/agents";
@@ -65,6 +65,7 @@ describe("C36 offline training terminalization", () => {
     expect(result).toMatchObject({ checkpoint: { status: "running", episodeCursor: 0 }, launch: { jobHash: finalized.job.jobHash, offlineTrainingHash: finalized.training.trainingHash } });
     const advanced = await new TearFoundryOnlineTrainingExecutionExecutor(setupResult.vault, setupResult.custody, setupResult.corpus, setupResult.loader).execute(finalized.job, finalized.receipt, result.launch.launchHash, "2026-08-08T00:04:00.000Z", { maxTicks: 1 });
     expect(advanced).toMatchObject({ job: { phase: "evaluating" }, receipt: { status: "running" }, launch: { previousLaunchHash: result.launch.launchHash } });
+    await expect(new TearFoundryOnlineTerminalizationExecutor(setupResult.vault).finalize(advanced.job, finalized.receipt, advanced.launch.launchHash, "2026-08-08T00:05:00.000Z")).rejects.toThrow(/incomplete/u);
     expect((await setupResult.backend.keys("analysis")).some((key) => key.startsWith("policy-"))).toBe(false);
   });
 });

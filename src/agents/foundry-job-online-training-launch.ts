@@ -8,13 +8,14 @@ import { parseTearFoundryJob, transitionTearFoundryJob, type TearFoundryJobV1 } 
 import type { TearFoundryJobVault } from "./foundry-job-vault";
 import { TearOfflineRlTrainingVault, TearOfflineRlTrajectoryVault } from "./offline-rl-training";
 import { createTearOnlineRlCurriculumPlan, parseTearOnlineRlCurriculumPlan, type TearOnlineRlCurriculumPlanV1 } from "./online-rl-curriculum";
-import { advanceTearOnlineRlCheckpoint, createTearOnlineRlCheckpoint, TearOnlineRlCheckpointVault, type TearOnlineRlAdvanceControl, type TearOnlineRlCheckpointV1, type TearOnlineRlTrainingConfigV1 } from "./online-rl-training";
+import { advanceTearOnlineRlCheckpoint, createTearOnlineRlCheckpoint, TearOnlineRlCheckpointVault, TearOnlineRlTrainingVault, type TearOnlineRlAdvanceControl, type TearOnlineRlCheckpointV1, type TearOnlineRlTrainingConfigV1 } from "./online-rl-training";
 
 const KEY = "foundry-job-online-training-launch:v1:";
 const HASH = /^[a-f0-9]{16}$/u;
 export interface TearFoundryOnlineTrainingRequestV1 { readonly curriculum: Omit<TearOnlineRlCurriculumPlanV1, "format" | "schemaVersion" | "planHash" | "offline" | "actionVocabulary">; readonly config: TearOnlineRlTrainingConfigV1; }
 export interface TearFoundryOnlineTrainingLaunchV1 { readonly format: "tear-foundry-online-training-launch"; readonly schemaVersion: 1; readonly jobHash: string; readonly readinessReceiptHash: string; readonly offlineTrainingHash: string; readonly curriculum: TearOnlineRlCurriculumPlanV1; readonly config: TearOnlineRlTrainingConfigV1; readonly checkpointHash: string; readonly previousLaunchHash?: string; readonly launchHash: string; }
 export interface TearFoundryOnlineTrainingExecutionReceiptV1 { readonly format: "tear-foundry-online-training-execution"; readonly schemaVersion: 1; readonly job: Readonly<{ sourceJobHash: string; resultJobHash: string }>; readonly launchHash: string; readonly nextLaunchHash: string; readonly checkpointHash: string; readonly status: TearOnlineRlCheckpointV1["status"]; readonly executedAt: string; readonly receiptHash: string; }
+export interface TearFoundryPairedEvaluationReadinessReceiptV1 { readonly format: "tear-foundry-paired-evaluation-readiness"; readonly schemaVersion: 1; readonly job: Readonly<{ sourceJobHash: string; resultJobHash: string }>; readonly launchHash: string; readonly checkpointHash: string; readonly onlineResultHash: string; readonly evaluationPlanHash: string; readonly disposition: "ready" | "online-training-stopped"; readonly finalizedAt: string; readonly receiptHash: string; }
 function hash(value: unknown): value is string { return typeof value === "string" && HASH.test(value); }
 function exact(expected: readonly string[], actual: readonly string[]): boolean { return expected.length === actual.length && new Set(actual).size === actual.length && actual.every((value) => expected.includes(value)); }
 function freeze(draft: Omit<TearFoundryOnlineTrainingLaunchV1, "launchHash">): TearFoundryOnlineTrainingLaunchV1 { const curriculum = parseTearOnlineRlCurriculumPlan(draft.curriculum); if (!hash(draft.jobHash) || !hash(draft.readinessReceiptHash) || !hash(draft.offlineTrainingHash) || !hash(draft.checkpointHash) || (draft.previousLaunchHash !== undefined && !hash(draft.previousLaunchHash))) throw new TypeError("invalid Foundry online training launch"); const value = Object.freeze({ ...draft, curriculum, config: Object.freeze({ ...draft.config }) }); return Object.freeze({ ...value, launchHash: stableVerificationHash(value) }); }
@@ -49,7 +50,7 @@ export class TearFoundryOnlineTrainingExecutionExecutor {
   constructor(jobs: TearFoundryJobVault, custody: TearAcademyCandidateCustodyStore, corpus: TearAcademyCorpusStore, loader: TearAcademyTrainingDatasetLoader) { if (jobs.backend() !== custody.backend() || jobs.backend() !== corpus.backend()) throw new TypeError("Foundry online execution must share the C31 Vault boundary"); this.#jobs = jobs; this.#custody = custody; this.#corpus = corpus; this.#loader = loader; }
   async execute(jobInput: TearFoundryJobV1, readinessInput: TearFoundryEvaluationReadinessReceiptV1, launchHash: string, executedAt: string, control: TearOnlineRlAdvanceControl = {}): Promise<Readonly<{ job: TearFoundryJobV1; launch: TearFoundryOnlineTrainingLaunchV1; receipt: TearFoundryOnlineTrainingExecutionReceiptV1 }>> {
     const job = parseTearFoundryJob(jobInput), readiness = parseTearFoundryEvaluationReadinessReceipt(readinessInput), backend = this.#jobs.backend();
-    if (job.phase !== "evaluating" || readiness.job.resultJobHash !== job.jobHash || !hash(launchHash) || !Number.isFinite(Date.parse(executedAt))) throw new RangeError("Foundry online execution requires exact evaluating readiness");
+    if (job.phase !== "evaluating" || !hash(launchHash) || !Number.isFinite(Date.parse(executedAt))) throw new RangeError("Foundry online execution requires exact evaluating readiness");
     const raw = await backend.get("analysis", `${KEY}${launchHash}`), launch = raw === undefined ? undefined : parseTearFoundryOnlineTrainingLaunch(JSON.parse(raw));
     if (launch?.jobHash !== job.jobHash || launch.readinessReceiptHash !== readiness.receiptHashValue || launch.offlineTrainingHash !== readiness.trainingHash || (await this.#jobs.get(job.id))?.jobHash !== job.jobHash) throw new RangeError("Foundry online execution launch lineage is unavailable");
     const offlineLaunch = await new TearFoundryOfflineTrainingLaunchVault(backend).get(readiness.launchHash), training = await new TearOfflineRlTrainingVault(backend).get(readiness.trainingHash);
@@ -63,5 +64,24 @@ export class TearFoundryOnlineTrainingExecutionExecutor {
     await new TearOnlineRlCheckpointVault(backend).persist(advanced);
     await this.#jobs.persistSuccessor(job, next, Object.freeze([{ store: "analysis", key: `${KEY}${nextLaunch.launchHash}`, value: JSON.stringify(nextLaunch) }, { store: "analysis", key: `foundry-job-online-training-execution:v1:${receipt.receiptHash}`, value: JSON.stringify(receipt) }, { store: "indexes", key: `foundry-job-online-training-execution:${job.id}:${receipt.receiptHash}`, value: JSON.stringify(Object.freeze({ status: advanced.status, checkpointHash: advanced.checkpointHash })) }]));
     return Object.freeze({ job: next, launch: nextLaunch, receipt });
+  }
+}
+
+/** Finalizes a retained online checkpoint into non-promotional paired-evaluation readiness only. */
+export class TearFoundryOnlineTrainingFinalizationExecutor {
+  readonly #jobs: TearFoundryJobVault;
+  constructor(jobs: TearFoundryJobVault) { this.#jobs = jobs; }
+  async finalize(jobInput: TearFoundryJobV1, readinessInput: TearFoundryEvaluationReadinessReceiptV1, launchHash: string, finalizedAt: string): Promise<Readonly<{ job: TearFoundryJobV1; receipt: TearFoundryPairedEvaluationReadinessReceiptV1 }>> {
+    const job = parseTearFoundryJob(jobInput), readiness = parseTearFoundryEvaluationReadinessReceipt(readinessInput), backend = this.#jobs.backend();
+    if (job.phase !== "evaluating" || !hash(launchHash) || !Number.isFinite(Date.parse(finalizedAt)) || (await this.#jobs.get(job.id))?.jobHash !== job.jobHash) throw new RangeError("Foundry online finalization requires exact evaluating readiness");
+    const raw = await backend.get("analysis", `${KEY}${launchHash}`), launch = raw === undefined ? undefined : parseTearFoundryOnlineTrainingLaunch(JSON.parse(raw));
+    if (launch?.jobHash !== job.jobHash || launch.readinessReceiptHash !== readiness.receiptHashValue || launch.offlineTrainingHash !== readiness.trainingHash) throw new RangeError("Foundry online finalization lineage is unavailable");
+    const checkpoint = await new TearOnlineRlCheckpointVault(backend).get(launch.checkpointHash);
+    if (checkpoint?.input.curriculumPlanHash !== launch.curriculum.planHash || checkpoint.input.trainingHash !== readiness.trainingHash || checkpoint.status === "running") throw new RangeError("Foundry online checkpoint is incomplete or changed");
+    const result = await new TearOnlineRlTrainingVault(backend).persist(checkpoint), ready = checkpoint.status === "complete", next = transitionTearFoundryJob(job, ready ? "evaluating" : "rejected", finalizedAt, ready ? "online C30 checkpoint is paired-evaluation-ready" : `online C30 checkpoint stopped: ${checkpoint.status}`);
+    const draft = { format: "tear-foundry-paired-evaluation-readiness" as const, schemaVersion: 1 as const, job: Object.freeze({ sourceJobHash: job.jobHash, resultJobHash: next.jobHash }), launchHash, checkpointHash: checkpoint.checkpointHash, onlineResultHash: result.resultHash, evaluationPlanHash: job.inputs.evaluationPlanHash, disposition: ready ? "ready" as const : "online-training-stopped" as const, finalizedAt };
+    const receipt = Object.freeze({ ...draft, receiptHash: stableVerificationHash(draft) });
+    await this.#jobs.persistSuccessor(job, next, Object.freeze([{ store: "analysis", key: `foundry-job-paired-evaluation-ready:v1:${receipt.receiptHash}`, value: JSON.stringify(receipt) }, { store: "indexes", key: `foundry-job-paired-evaluation-ready:${job.id}:${receipt.receiptHash}`, value: JSON.stringify(Object.freeze({ disposition: receipt.disposition, checkpointHash: checkpoint.checkpointHash })) }]));
+    return Object.freeze({ job: next, receipt });
   }
 }
