@@ -1247,6 +1247,19 @@ REMAINING HERE: This is runtime consumption of an already active pointer only.
 No player UI, Foundry activation, promotion, placement, traffic rollout,
 quality claim, cloud route, or normal-build navigation has been added.
 
+### C36 atomic approved V3 promotion
+
+DONE THIS STEP: A dedicated C36 executor consumes one exact unused V3 approval
+only after revalidating its current monitoring head, protocol, bridge,
+decision/monitor receipts, held C31 custody, candidate bytes, canonical
+adapter/vocabulary/evaluation lineage, and frozen rollback baseline. One
+conditional Vault commit writes the active pointer/history together with an
+idempotent promotion receipt. Missing/corrupt/reused approval, changed
+candidate, custody revocation, or baseline drift leaves no new pointer or
+artifact write.
+REMAINING HERE: No placement, traffic monitoring, rollback execution, player
+UI, scheduler, cloud route, or general activation bypass exists.
+
 ### C36 V3 monitoring eligibility bridge
 
 DONE THIS STEP: An exact current V2 `monitoring` job can retain a separate,

@@ -225,6 +225,12 @@ bounded decision journal. This is execution wiring only: no player-facing
 activation control, Foundry promotion, traffic placement, cloud route, or
 quality claim is added.
 
+The V3 active pointer is now writable only by C36's approval-bound atomic
+promotion executor. Its transaction consumes exact frozen monitoring/custody/
+candidate lineage and retains a promotion receipt; ordinary candidate handling
+and the Watch runtime cannot activate a policy. Placement, traffic rollout,
+monitoring, and rollback remain outside this boundary.
+
 ### C36 V3 monitoring eligibility bridge
 
 A current V2 Foundry `monitoring` head may now retain a separate, immutable

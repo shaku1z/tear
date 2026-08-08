@@ -517,6 +517,12 @@ instead of falling through to legacy inference. Legacy artifacts remain on the
 existing structured route. There is still no player activation UI, Foundry
 activation/promotion, placement, or traffic-control path.
 
+A Foundry V3 approval can now be consumed by one narrow atomic local promotion
+transaction: it revalidates the frozen C31/C34/C36 lineage and writes the C32
+active pointer/history plus a promotion receipt together, or writes none of
+them. This is not a player control, traffic placement, monitoring loop,
+rollback operation, scheduler, or cloud capability.
+
 The C36 V3 monitoring bridge can retain exact V2 monitoring plus C31 custody
 and completed V3 candidate lineage as a quarantined, inactive-only evidence
 record. It cannot activate, route, place, promote, roll back, schedule, or

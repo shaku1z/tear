@@ -8,7 +8,7 @@ import {
   createTearPolicyArtifact,
   createTearOfflineRlV3Checkpoint, createTearOfflineRlV3Plan, createTearOnlineRlV3Checkpoint,
   createTearOnlineRlV3Plan, evaluateTearOnlineRlV3InSource, extractTearOfflineRlTrajectories,
-  TearC34V3C32CandidateRegistry, TearFoundryJobVault, TearFoundryV3MonitoringBridgeExecutor, TearFoundryV3PromotionApprovalExecutor, TearPolicyArtifactRegistry,
+  TearC34V3C32CandidateRegistry, TearFoundryJobVault, TearFoundryV3MonitoringBridgeExecutor, TearFoundryV3PromotionApprovalExecutor, TearFoundryV3PromotionExecutor, TearPolicyArtifactRegistry,
   transitionTearFoundryJob, type TearAcademyCandidateCustodyStore, type TearAcademyTrainingDatasetV1,
 } from "../../src/agents";
 
@@ -86,5 +86,29 @@ describe("C36 V3 monitoring bridge", () => {
     const approvalKey = `foundry-job-v3-promotion-approval:v1:${first.approvalHash}`; await context.backend.put("analysis", approvalKey, "corrupt"); expect(await approval.get(first.approvalHash)).toBeUndefined(); expect(await context.backend.get("quarantine", approvalKey)).toBe("corrupt");
     const revoked = await setup(), revokedV3 = v3Fixture(), revokedCandidates = new TearC34V3C32CandidateRegistry(revoked.backend); await revokedCandidates.register(revokedV3.candidate.artifact); const revokedBridge = await new TearFoundryV3MonitoringBridgeExecutor(revoked.vault, revoked.custody).bridge(revoked.job, { decisionReceiptHash: revoked.decision.receiptHash, monitoringReceiptHash: revoked.monitoring.receiptHash, offline: revokedV3.offline, training: revokedV3.training, online: revokedV3.online, checkpoint: revokedV3.checkpoint, evaluation: revokedV3.evaluation, candidateArtifactId: revokedV3.candidate.artifact.id, bridgedAt: "2026-08-08T00:01:00.000Z" });
     (revoked.custody as unknown as { held: () => Promise<readonly unknown[]> }).held = () => Promise.resolve([]); await expect(new TearFoundryV3PromotionApprovalExecutor(revoked.vault, revoked.custody).approve(revoked.job, revokedBridge.bridgeHash, "2026-08-08T00:02:00.000Z")).rejects.toThrow(/custody|lineage/u);
+  });
+
+  it("atomically consumes one exact approval into a V3 active pointer and is retry-idempotent", async () => {
+    const context = await setup(), v3 = v3Fixture(), candidates = new TearC34V3C32CandidateRegistry(context.backend);
+    await candidates.register(v3.candidate.artifact);
+    const bridge = await new TearFoundryV3MonitoringBridgeExecutor(context.vault, context.custody).bridge(context.job, { decisionReceiptHash: context.decision.receiptHash, monitoringReceiptHash: context.monitoring.receiptHash, offline: v3.offline, training: v3.training, online: v3.online, checkpoint: v3.checkpoint, evaluation: v3.evaluation, candidateArtifactId: v3.candidate.artifact.id, bridgedAt: "2026-08-08T00:01:00.000Z" });
+    const approval = await new TearFoundryV3PromotionApprovalExecutor(context.vault, context.custody).approve(context.job, bridge.bridgeHash, "2026-08-08T00:02:00.000Z"), executor = new TearFoundryV3PromotionExecutor(context.vault, context.custody);
+    const first = await executor.promote(approval.approvalHash, "2026-08-08T00:03:00.000Z"), retry = await executor.promote(approval.approvalHash, "2026-08-08T00:03:00.000Z");
+    expect(retry).toEqual(first); expect(first.artifactHash).toBe(v3.candidate.artifact.artifactHash);
+    expect(JSON.parse((await context.backend.get("analysis", "policy-active:v1")) ?? "null")).toMatchObject({ artifactId: v3.candidate.artifact.id, artifactHash: v3.candidate.artifact.artifactHash, activationHash: first.activationHash });
+  });
+
+  it("refuses missing or changed approval evidence without creating a candidate active pointer", async () => {
+    const empty = await setup(), emptyExecutor = new TearFoundryV3PromotionExecutor(empty.vault, empty.custody);
+    await expect(emptyExecutor.promote("0".repeat(16), "2026-08-08T00:03:00.000Z")).rejects.toThrow(/approval/u);
+    expect(await empty.backend.get("analysis", "policy-active:v1")).toBeUndefined();
+
+    const context = await setup(), v3 = v3Fixture(), candidates = new TearC34V3C32CandidateRegistry(context.backend); await candidates.register(v3.candidate.artifact);
+    const bridge = await new TearFoundryV3MonitoringBridgeExecutor(context.vault, context.custody).bridge(context.job, { decisionReceiptHash: context.decision.receiptHash, monitoringReceiptHash: context.monitoring.receiptHash, offline: v3.offline, training: v3.training, online: v3.online, checkpoint: v3.checkpoint, evaluation: v3.evaluation, candidateArtifactId: v3.candidate.artifact.id, bridgedAt: "2026-08-08T00:01:00.000Z" });
+    const approval = await new TearFoundryV3PromotionApprovalExecutor(context.vault, context.custody).approve(context.job, bridge.bridgeHash, "2026-08-08T00:02:00.000Z");
+    await context.backend.put("analysis", `policy-artifact:v1:${v3.candidate.artifact.id}`, "corrupt");
+    await expect(new TearFoundryV3PromotionExecutor(context.vault, context.custody).promote(approval.approvalHash, "2026-08-08T00:03:00.000Z")).rejects.toThrow(/candidate/u);
+    expect(await context.backend.get("analysis", "policy-active:v1")).toBeUndefined();
+    expect(await context.backend.get("analysis", `foundry-job-v3-promotion-receipt:v1:${approval.approvalHash}`)).toBeUndefined();
   });
 });

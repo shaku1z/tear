@@ -30,6 +30,7 @@ export * from "./c34-v3-c32-policy-adapter";
 export * from "./c32-canonical-active-policy-runtime";
 export * from "./foundry-job-v3-monitoring-bridge";
 export * from "./foundry-job-v3-promotion-approval";
+export * from "./foundry-job-v3-promotion";
 export * from "./online-rl-headless-executor";
 export * from "./online-rl-curriculum";
 export * from "./online-rl-training";

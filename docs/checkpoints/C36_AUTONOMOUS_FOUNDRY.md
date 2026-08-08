@@ -411,3 +411,16 @@ authorized boundary has already installed a valid active pointer. It consumes
 the live canonical C30/C27A source receipt and fails closed on incompatible
 V3 provenance. The Foundry has no code path to create that pointer, invoke the
 runtime, alter traffic, or treat its execution as monitoring or promotion.
+
+## Atomic approved V3 promotion
+
+One dedicated Foundry executor may now consume an exact unused V3 approval.
+Before its single conditional Vault commit it repeats the approval's current
+V2 monitoring head/protocol, bridge, decision/monitor receipts, action-time
+C31 custody, candidate bytes, canonical adapter/vocabulary/evaluation lineage,
+and rollback baseline checks. The one all-or-nothing commit writes only the
+active pointer/history and an immutable promotion receipt/index; retries read
+that receipt idempotently. Missing/corrupt/reused approval, changed candidate,
+revocation, or active-baseline drift writes no candidate pointer or artifact.
+There is no generic Foundry activation bypass, placement, traffic monitoring,
+rollback, UI, scheduler, cloud, or quality claim.
