@@ -8,7 +8,7 @@ import { TearAcademyCorpusStore } from "./academy-corpus";
 import { TearAcademyReviewedSampleStore } from "./academy-reviewed-sample";
 import { createTearBehaviorCloningNormalization } from "./academy-behavior-cloning-batches";
 import { TearAcademyTrainingDatasetLoader, type TearAcademyTrainingDatasetRequestV1 } from "./academy-training-dataset";
-import { TearDaggerCorrectionReviewStore } from "./dagger-correction-review";
+import { TearDaggerCorrectionReviewStore, type TearDaggerCorrectionDisposition, type TearDaggerCorrectionReviewV1 } from "./dagger-correction-review";
 import { DEFAULT_TEAR_POLICY_RUNTIME_COMPATIBILITY } from "./browser-active-policy-runtime";
 import { TearPolicyArtifactRegistry } from "./policy-artifact-registry";
 import { TEAR_POLICY_CONDITION_SCHEMA_HASH_V2, TEAR_POLICY_CONDITION_WIDTH_V2 } from "./policy-condition-vector";
@@ -127,16 +127,36 @@ export class TearTemporalDaggerProgramRuntime {
     this.#backend = backend; this.#plans = plans;
   }
 
-  async advance(id: string): Promise<TearTemporalDaggerProgramV1 | undefined> {
-    const plan = await this.#plans.get(id);
-    if (plan === undefined) return undefined;
+  /** Records one explicit reviewer decision against the current immutable capture. */
+  async review(programId: string, correctionHash: string, disposition: TearDaggerCorrectionDisposition,
+    reviewer: string, reviewedAt: string, rationale: string): Promise<TearDaggerCorrectionReviewV1> {
+    const plan = await this.#plans.get(programId);
+    if (plan === undefined) throw new RangeError("temporal DAgger program plan is unavailable");
+    const program = await new TearTemporalDaggerProgramController(this.#backend,
+      await this.#dataset(plan), await this.#normalization(plan), plan.config,
+      new TearPolicyArtifactRegistry(this.#backend, DEFAULT_TEAR_POLICY_RUNTIME_COMPATIBILITY),
+      new TearDaggerCorrectionReviewStore(this.#backend, plan.authorizedReviewers)).get(programId);
+    if (program?.status !== "review-required") throw new RangeError("temporal DAgger program is not awaiting review");
+    return new TearDaggerCorrectionReviewStore(this.#backend, plan.authorizedReviewers).decide({
+      capture: program.capture, correctionHash, reviewer, reviewedAt, disposition, rationale,
+    });
+  }
+
+  async #dataset(plan: TearTemporalDaggerProgramPlanV1) {
     const custody = new TearAcademyCandidateCustodyStore(this.#backend);
     const quality = new TearAcademyCandidateQualityStore(this.#backend, custody);
     const curation = new TearAcademyCandidateCurationStore(this.#backend, custody, quality);
     const splits = new TearAcademyCandidateSplitStore(this.#backend, custody, quality, curation);
     const samples = new TearAcademyReviewedSampleStore(this.#backend, custody, quality, curation, splits);
     const corpus = new TearAcademyCorpusStore(this.#backend, custody, curation, splits, samples);
-    const dataset = await new TearAcademyTrainingDatasetLoader(corpus, samples).load(plan.dataset);
+    return new TearAcademyTrainingDatasetLoader(corpus, samples).load(plan.dataset);
+  }
+  async #normalization(plan: TearTemporalDaggerProgramPlanV1) { return createTearBehaviorCloningNormalization(await this.#dataset(plan)); }
+
+  async advance(id: string): Promise<TearTemporalDaggerProgramV1 | undefined> {
+    const plan = await this.#plans.get(id);
+    if (plan === undefined) return undefined;
+    const dataset = await this.#dataset(plan);
     const normalization = createTearBehaviorCloningNormalization(dataset);
     const registry = new TearPolicyArtifactRegistry(this.#backend, DEFAULT_TEAR_POLICY_RUNTIME_COMPATIBILITY);
     const reviews = new TearDaggerCorrectionReviewStore(this.#backend, plan.authorizedReviewers);

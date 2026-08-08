@@ -234,8 +234,16 @@ explicit advance: it captures the next declared round, waits if no accepted
 human review exists, otherwise fits the reviewed round and advances to the
 next declared capture. A corrupt plan quarantines; changed plans are rejected.
 It does not synthesize review, register/activate the resulting fit, claim its
-quality, or run from Academy refresh. This is a durable process owner, not yet
-a player-facing command or a completed DAgger-improvement claim.
+quality, or run from Academy refresh. Academy exposes only an explicit plan
+start/resume command; that remains a completed DAgger-improvement claim.
+
+The process owner now also accepts an explicit decision only after reloading
+the plan, its governed dataset, and the current review-required capture. It
+then passes the exact correction, timestamp, named reviewer, disposition, and
+rationale to the immutable review ledger. This makes an eventual signed-in
+Academy review control use the same durable authority path as recovery, but it
+does not yet expose any review button or treat a local/guest identity as an
+authorized reviewer.
 
 New C31 captures also bind the exact source scenario identity into the governed
 training sequence. A temporal fit retains the hashes of its training scenarios,
@@ -282,8 +290,8 @@ measured artifact win over the scripted baseline, promotion, automated repeated
 DAgger, or automatic player-facing training.
 Those remain C33 work.
 
-DONE THIS STEP:      C33 now has durable plan custody and an explicit process owner. It reconstructs its governed manifest, C32 registry, reviewer authority, and declared schedule from one Vault, then stops at human review between source-world rounds; it cannot fabricate review, register, activate, or promote.
-PROVEN BY:           Focused C33 test (two accepted human-reviewed rounds through persisted plan recovery), targeted ESLint, TypeScript, and architecture gate. The prior Academy status build evidence remains valid; the canonical navigation journey still has no result because it hung in this environment.
+DONE THIS STEP:      C33 now has durable plan custody and an explicit process owner. It reconstructs its governed manifest, C32 registry, reviewer authority, and declared schedule from one Vault, then stops at human review between source-world rounds; an explicit decision reloads and validates that same plan/capture authority before ledger write. It cannot fabricate review, register, activate, or promote.
+PROVEN BY:           Focused C33 test (two accepted human-reviewed rounds through persisted plan recovery and runtime-owned review), targeted ESLint, TypeScript, and architecture gate. The prior Academy status build evidence remains valid; the canonical navigation journey still has no result because it hung in this environment.
 REMAINING HERE:      An authorized review experience, curriculum/error detail beyond program state, meaningful unseen-seed baseline-win evidence, and credible visible real-game quality evidence. The Academy now exposes only explicit persisted-plan start/resume; it cannot decide a review, activate, or promote. The C40 recorded-improvement item remains unticked.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
 NEXT SLICE:          Define the authorized review experience and retained curriculum/error progress without automatic review, activation, or promotion.

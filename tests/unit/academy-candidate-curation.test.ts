@@ -402,13 +402,13 @@ describe("C31 held Academy candidate curation", () => {
     const runtimeFirst = await plannedRuntime.advance(runtimePlan.id);
     expect(runtimeFirst).toMatchObject({ status: "review-required", rounds: [{ status: "review-required" }] });
     const runtimeFirstCorrection = runtimeFirst?.capture.corrections[0]; if (runtimeFirstCorrection === undefined) throw new Error("expected runtime program correction");
-    await reviews.decide({ capture: runtimeFirst.capture, correctionHash: runtimeFirstCorrection.correctionHash, reviewer: "academy-curator",
-      reviewedAt: "2026-08-03T00:11:02.000Z", disposition: "accepted", rationale: "runtime first review" });
+    await plannedRuntime.review(runtimePlan.id, runtimeFirstCorrection.correctionHash, "accepted", "academy-curator",
+      "2026-08-03T00:11:02.000Z", "runtime first review");
     const runtimeSecond = await plannedRuntime.advance(runtimePlan.id);
     expect(runtimeSecond).toMatchObject({ status: "review-required", rounds: [{ status: "completed" }, { status: "review-required" }] });
     const runtimeSecondCorrection = runtimeSecond?.capture.corrections[0]; if (runtimeSecondCorrection === undefined) throw new Error("expected runtime second correction");
-    await reviews.decide({ capture: runtimeSecond.capture, correctionHash: runtimeSecondCorrection.correctionHash, reviewer: "academy-curator",
-      reviewedAt: "2026-08-03T00:11:03.000Z", disposition: "accepted", rationale: "runtime second review" });
+    await plannedRuntime.review(runtimePlan.id, runtimeSecondCorrection.correctionHash, "accepted", "academy-curator",
+      "2026-08-03T00:11:03.000Z", "runtime second review");
     expect(await plannedRuntime.advance(runtimePlan.id)).toMatchObject({ status: "completed", rounds: [{ status: "completed" }, { status: "completed" }] });
     await input.backend.put("analysis", `temporal-dagger-program-plan:v1:${runtimePlan.id}`, "not-json");
     expect(await plans.get(runtimePlan.id)).toBeUndefined();
