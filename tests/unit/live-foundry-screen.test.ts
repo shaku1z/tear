@@ -17,6 +17,6 @@ describe("C36 live Foundry recovery screen controller", () => {
   });
 
   it("fails closed when browser persistence is unavailable", async () => {
-    await expect(new LiveFoundryScreenController(undefined).refresh()).resolves.toEqual({ id: "foundry", status: "unavailable", subtitle: "Foundry storage is unavailable in this runtime", automation: "unavailable", jobs: [] });
+    await expect(new LiveFoundryScreenController(undefined).refresh()).resolves.toEqual({ id: "foundry", status: "unavailable", subtitle: "Foundry storage is unavailable in this runtime", automation: "unavailable", jobs: [], schedules: [] });
   });
 });

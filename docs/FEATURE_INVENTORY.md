@@ -414,6 +414,13 @@ This is the migration checklist for the architectural redesign. A checked featur
   refresh/back have built navigation evidence. This remains read-only and does
   not execute, schedule, activate, promote, or contact cloud.
 
+- [ ] C36 controlled local schedule intent â€” a content-addressed local record
+  can enable or disable a pre-existing job's fixed-cadence due discovery and
+  binds compute/storage/stop identities. Due discovery is restart-safe and
+  blocks corrupt, stale, terminal, stop-mismatched, or revoked-custody records.
+  No timer, worker, workflow execution, cloud call, activation, or promotion
+  exists; the visible status calls this configuration only.
+
 - [ ] V2 Foundry source-evaluation derivation — V2 requests freeze an
   identifier/threshold protocol before a challenger exists, retain its content
   hash, and can derive (but not execute) one C34 paired source-evaluation plan

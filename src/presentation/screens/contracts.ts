@@ -254,6 +254,9 @@ export interface FoundryScreenView {
   readonly automation: "unavailable";
   readonly jobs: readonly Readonly<{ readonly jobHash: string; readonly phase: string; readonly nextManualPhase: string | null;
     readonly resumable: boolean; readonly eventCount: number; readonly lastEventHash: string; readonly projectionHash: string; }>[];
+  /** Configured local scheduling intent only; it does not imply an installed worker or execution. */
+  readonly schedules: readonly Readonly<{ readonly scheduleHash: string; readonly jobHash: string; readonly state: "enabled" | "disabled";
+    readonly disposition: string; readonly dueAt: string | null; readonly intervalMs: number; readonly revision: number; }>[];
 }
 
 export type LegacyScreenView = MenuScreenView | SetupScreenView | PlayingScreenView | CodexScreenView

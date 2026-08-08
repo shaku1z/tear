@@ -11,13 +11,17 @@ export function createFoundryRenderers(context: ScreenRenderContext) {
       ui.panel(canvas, panelX, 120, 640, 112);
       ui.sectionLabel(canvas, "AUTOMATION", panelX + 24, 150, 592);
       ui.displayText(canvas, "UNAVAILABLE / NOT RUNNING", panelX + 24, 178, ui.t.type.label, "left");
-      ui.text(canvas, "Foundry jobs require an explicit authorized manual phase. This screen never starts, schedules, evaluates, activates, or promotes work.", panelX + 24, 202, ui.t.type.caption, "left", ui.t.alpha.muted);
+      ui.text(canvas, "Local schedules are configuration only; no worker, timer, or workflow is running.", panelX + 24, 202, ui.t.type.caption, "left", ui.t.alpha.muted);
       if (view.status !== "ready") {
         ui.panel(canvas, panelX, 252, 640, 116);
         ui.text(canvas, view.status === "loading" ? "Reading local Foundry recovery projections..." : view.subtitle, width / 2, 286, ui.t.type.body, "center", ui.t.alpha.muted);
         if (view.status === "unavailable") ui.text(canvas, "Check browser storage permissions, then refresh.", width / 2, 316, ui.t.type.caption, "center", ui.t.alpha.muted);
         context.enqueue({ x: width / 2 - 110, y: 328, w: 220, h: 40, label: "REFRESH", action: { type: "foundry.refresh" } });
       } else {
+        const schedule = view.schedules[0];
+        ui.text(canvas, schedule === undefined ? "SCHEDULE: NOT CONFIGURED" : `SCHEDULE: ${schedule.state.toUpperCase()} / ${schedule.disposition.replaceAll("-", " ").toUpperCase()}`, panelX + 24, 244, ui.t.type.caption, "left", ui.t.alpha.muted);
+        if (schedule !== undefined) context.enqueue({ x: panelX + 420, y: 218, w: 172, h: 34, label: schedule.state === "enabled" ? "DISABLE SCHEDULE" : "ENABLE SCHEDULE",
+          action: schedule.state === "enabled" ? { type: "foundry.schedule.disable", scheduleHash: schedule.scheduleHash } : { type: "foundry.schedule.enable", scheduleHash: schedule.scheduleHash } });
         const pageSize = 4;
         const offset = Math.max(0, Math.min(Math.max(0, view.jobs.length - pageSize), Math.floor(context.scroll / 100)));
         const jobs = view.jobs.slice(offset, offset + pageSize);

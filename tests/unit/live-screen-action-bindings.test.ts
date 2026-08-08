@@ -17,6 +17,14 @@ describe("live screen action bindings", () => {
     expect(refreshFoundry).toHaveBeenCalledOnce();
   });
 
+  it("routes only an opaque Foundry schedule toggle through the composed local controller", () => {
+    const setFoundryScheduleEnabled = vi.fn(), dispatch = createLiveScreenActionBindings({ setFoundryScheduleEnabled } as unknown as ScreenActionBindingPorts);
+    dispatch({ type: "foundry.schedule.enable", scheduleHash: "a".repeat(16) });
+    dispatch({ type: "foundry.schedule.disable", scheduleHash: "b".repeat(16) });
+    expect(setFoundryScheduleEnabled).toHaveBeenNthCalledWith(1, "a".repeat(16), true);
+    expect(setFoundryScheduleEnabled).toHaveBeenNthCalledWith(2, "b".repeat(16), false);
+  });
+
   it("routes only an explicit persisted DAgger plan advance through the Academy port", () => {
     const advanceAcademyDagger = vi.fn();
     const dispatch = createLiveScreenActionBindings({ advanceAcademyDagger } as unknown as ScreenActionBindingPorts);

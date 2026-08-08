@@ -847,6 +847,13 @@ train, evaluate, schedule, use cloud, expose custody tracks, activate, or
 promote. PROVEN BY: `tests/unit/live-foundry-screen.test.ts`, screen/action
 tests, and the built browser navigation journey.
 
+DONE THIS STEP: C36 has durable local-only schedule intent, deterministic due
+calculation, restart-safe discovery, and opaque enable/disable controls. Its
+record freezes compute/storage/stop identities and blocks corrupt, stale,
+terminal, stop-mismatched, or revoked-custody jobs. No timer, worker, workflow
+execution, cloud request, activation, or promotion was introduced; the UI says
+configured state is not running autonomy.
+
 DONE THIS STEP: `TearFoundryRecoveryController` reads a validated durable job
 and returns only its current legal manual/resumable phase plus hashes-only event
 provenance. Corrupt or missing bytes produce no projection through Vault

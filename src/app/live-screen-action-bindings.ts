@@ -23,6 +23,7 @@ export interface ScreenActionBindingPorts {
   readonly optInHumanCalibration: (consent: "anonymous-improvement" | "public-training") => void;
   readonly revokeHumanCalibration: () => void;
   readonly refreshFoundry: () => void;
+  readonly setFoundryScheduleEnabled: (scheduleHash: string, enabled: boolean) => void;
   readonly signIn: () => void; readonly signOut: () => void; readonly pinReplay: (id: string, pinned: boolean) => boolean;
   readonly deleteReplay: (id: string) => void; readonly dispatchPlayground: (id: string) => void;
   readonly library: LibraryScreenAdapters; readonly replay: ReplayScreenAdapter; readonly settings: SettingsRenameAdapters;
@@ -60,6 +61,8 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "academy.humanCalibration.optIn": (action) => { ports.optInHumanCalibration(action.consent); },
     "academy.humanCalibration.revoke": () => { ports.revokeHumanCalibration(); },
     "foundry.refresh": () => { ports.refreshFoundry(); },
+    "foundry.schedule.enable": (action) => { ports.setFoundryScheduleEnabled(action.scheduleHash, true); },
+    "foundry.schedule.disable": (action) => { ports.setFoundryScheduleEnabled(action.scheduleHash, false); },
     "shop.buy": (action) => { ports.buyShopItem(action.id); }, "profile.selectTab": (action) => { ports.library.selectProfileTab(action.id); },
     "profile.watchReplay": (action) => { ports.library.watchReplay(action.id, "profile"); },
     "profile.watchGhostCapsule": (action) => { ports.library.watchGhostCapsule(action.id); },

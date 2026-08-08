@@ -64,6 +64,8 @@ export type ScreenAction =
   | { readonly type: "academy.humanCalibration.optIn"; readonly consent: "anonymous-improvement" | "public-training" }
   | { readonly type: "academy.humanCalibration.revoke" }
   | { readonly type: "foundry.refresh" }
+  | { readonly type: "foundry.schedule.enable"; readonly scheduleHash: string }
+  | { readonly type: "foundry.schedule.disable"; readonly scheduleHash: string }
   | { readonly type: "rename.submit" }
   | { readonly type: "rename.cancel" }
   | { readonly type: "draft.choose"; readonly index: number }

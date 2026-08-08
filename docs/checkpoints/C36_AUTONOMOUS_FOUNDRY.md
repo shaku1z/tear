@@ -25,6 +25,19 @@ read path and are absent from the projection.
 Evidence: `tests/unit/live-foundry-screen.test.ts`, renderer/action-routing
 tests, and the built `browser-navigation-journeys.js` route proof.
 
+## Controlled local scheduling intent
+
+`foundry-job-schedule.ts` now retains a versioned, content-addressed local
+schedule record that binds a job head to fixed cadence plus compute, storage,
+and stop-condition budget identities. Enable/disable creates a new immutable
+revision; due time is derived only from the persisted enabled anchor and
+interval. Restart discovery is read-only: it returns `disabled`, `waiting`, or
+`due`, and blocks stale job heads, terminal jobs, changed stop identity, or
+revoked C31 custody. Corrupt records are quarantined. The normal Foundry screen
+can show configured/disabled/due state and toggle a pre-existing opaque
+schedule, but says no worker/timer/workflow is running. It cannot configure a
+job, execute any phase, call cloud, activate, or promote.
+
 ## Proven foundation
 
 - `foundry-job-state.ts` defines a content-addressed, immutable Foundry job

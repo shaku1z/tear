@@ -258,7 +258,7 @@ describe("legacy screen renderer registry", () => {
     renderer.foundry({ id: "foundry", status: "ready", subtitle: "local recovery", automation: "unavailable", jobs: [{
       jobHash: "a".repeat(16), phase: "collecting", nextManualPhase: "curating", resumable: true, eventCount: 2,
       lastEventHash: "b".repeat(16), projectionHash: "c".repeat(16),
-    }] });
+    }], schedules: [] });
     expect(controls.map((control) => control.action.type)).toEqual(expect.arrayContaining(["foundry.refresh", "navigate"]));
     expect(controls.some((control) => control.action.type !== "foundry.refresh" && control.action.type !== "navigate")).toBe(false);
   });
