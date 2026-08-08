@@ -30,6 +30,9 @@ import {
   TearTemporalDaggerProgramScheduleVault,
   TearTemporalDaggerProgramOrchestrator,
   createTearTemporalDaggerProgramSchedule,
+  createTearTemporalDaggerProgramPlan,
+  TearTemporalDaggerProgramPlanVault,
+  TearTemporalDaggerProgramRuntime,
   inspectTearTemporalDaggerPrograms,
   createTearTemporalDaggerRetrainingInput,
   createTearTemporalWindowPolicyArtifact,
@@ -386,10 +389,37 @@ describe("C31 held Academy candidate curation", () => {
     expect((await orchestrator.run(secondRound.id))?.rounds).toHaveLength(3);
     await expect(schedules.persist(createTearTemporalDaggerProgramSchedule(secondRound.id, [{ scenario: scenario("c33-repeat-four", "c33-repeat-four-seed", 8) }]))).rejects.toThrow(/already exists/u);
     await expect(scheduler.run(Object.freeze({ ...schedule, scheduleHash: "0000000000000000" }))).rejects.toThrow(/integrity/u);
+    const runtimePlan = createTearTemporalDaggerProgramPlan({
+      id: "c33-runtime-program", dataset: { manifestId: manifest.id, trainerId: "c33-local", version: manifest.version }, config: temporalConfig,
+      authorizedReviewers: ["academy-curator"], schedule: createTearTemporalDaggerProgramSchedule("c33-runtime-program", [
+        { scenario: scenario("c33-runtime-one", "c33-runtime-one-seed", 8), options: { maxCorrections: 1 } },
+        { scenario: scenario("c33-runtime-two", "c33-runtime-two-seed", 8), options: { maxCorrections: 1 } },
+      ]),
+    });
+    const plans = new TearTemporalDaggerProgramPlanVault(input.backend);
+    expect(await plans.persist(runtimePlan)).toEqual(runtimePlan);
+    const plannedRuntime = new TearTemporalDaggerProgramRuntime(input.backend, plans);
+    const runtimeFirst = await plannedRuntime.advance(runtimePlan.id);
+    expect(runtimeFirst).toMatchObject({ status: "review-required", rounds: [{ status: "review-required" }] });
+    const runtimeFirstCorrection = runtimeFirst?.capture.corrections[0]; if (runtimeFirstCorrection === undefined) throw new Error("expected runtime program correction");
+    await reviews.decide({ capture: runtimeFirst.capture, correctionHash: runtimeFirstCorrection.correctionHash, reviewer: "academy-curator",
+      reviewedAt: "2026-08-03T00:11:02.000Z", disposition: "accepted", rationale: "runtime first review" });
+    const runtimeSecond = await plannedRuntime.advance(runtimePlan.id);
+    expect(runtimeSecond).toMatchObject({ status: "review-required", rounds: [{ status: "completed" }, { status: "review-required" }] });
+    const runtimeSecondCorrection = runtimeSecond?.capture.corrections[0]; if (runtimeSecondCorrection === undefined) throw new Error("expected runtime second correction");
+    await reviews.decide({ capture: runtimeSecond.capture, correctionHash: runtimeSecondCorrection.correctionHash, reviewer: "academy-curator",
+      reviewedAt: "2026-08-03T00:11:03.000Z", disposition: "accepted", rationale: "runtime second review" });
+    expect(await plannedRuntime.advance(runtimePlan.id)).toMatchObject({ status: "completed", rounds: [{ status: "completed" }, { status: "completed" }] });
+    await input.backend.put("analysis", `temporal-dagger-program-plan:v1:${runtimePlan.id}`, "not-json");
+    expect(await plans.get(runtimePlan.id)).toBeUndefined();
+    expect((await input.backend.keys("quarantine")).some((key) => key.endsWith(runtimePlan.id))).toBe(true);
     const listedPrograms = await inspectTearTemporalDaggerPrograms(input.backend);
-    expect(listedPrograms).toMatchObject([{ id: "c33-repeat-program", status: "review-required" }]);
+    expect(listedPrograms.map((entry) => ({ id: entry.id, status: entry.status }))).toEqual([
+      { id: "c33-repeat-program", status: "review-required" },
+      { id: "c33-runtime-program", status: "completed" },
+    ]);
     await input.backend.put("analysis", "temporal-dagger-program:v1:corrupt", "not-json");
-    expect(await inspectTearTemporalDaggerPrograms(input.backend)).toHaveLength(1);
+    expect(await inspectTearTemporalDaggerPrograms(input.backend)).toHaveLength(2);
     expect((await input.backend.keys("quarantine")).some((key) => key.endsWith(":corrupt"))).toBe(true);
     await input.backend.put("analysis", `behavior-cloning-training:v1:${training.trainingHash}`, "not-json");
     expect(await trainingVault.get(training.trainingHash)).toBeUndefined();

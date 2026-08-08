@@ -101,4 +101,17 @@ export class TearDaggerCorrectionReviewStore {
       return undefined;
     }
   }
+
+  /** Lists only integrity-checked decisions for one immutable capture. */
+  async list(captureHash: string): Promise<readonly TearDaggerCorrectionReviewV1[]> {
+    if (!HASH.test(captureHash)) throw new TypeError("DAgger correction capture hash is invalid");
+    const prefix = `${REVIEW_KEY}${captureHash}:`;
+    const reviews: TearDaggerCorrectionReviewV1[] = [];
+    for (const key of await this.#backend.keys("analysis")) {
+      if (!key.startsWith(prefix)) continue;
+      const correctionHash = key.slice(prefix.length), review = await this.get(captureHash, correctionHash);
+      if (review !== undefined) reviews.push(review);
+    }
+    return Object.freeze(reviews.sort((left, right) => left.correctionHash.localeCompare(right.correctionHash)));
+  }
 }

@@ -226,6 +226,17 @@ durable invocation boundary: it loads that stored declaration and delegates to
 the scheduler. A changed declaration is rejected, corrupt bytes quarantine,
 and an absent schedule is a no-op. It still stops at review-required.
 
+`TearTemporalDaggerProgramPlanVault` now persists one immutable C33 plan that
+binds the named C31 trainer manifest, temporal fit configuration, authorized
+reviewer identities, and a declared source-world schedule. Its runtime rebuilds
+the governed Academy reader and C32 registry from the same Vault on each
+explicit advance: it captures the next declared round, waits if no accepted
+human review exists, otherwise fits the reviewed round and advances to the
+next declared capture. A corrupt plan quarantines; changed plans are rejected.
+It does not synthesize review, register/activate the resulting fit, claim its
+quality, or run from Academy refresh. This is a durable process owner, not yet
+a player-facing command or a completed DAgger-improvement claim.
+
 New C31 captures also bind the exact source scenario identity into the governed
 training sequence. A temporal fit retains the hashes of its training scenarios,
 and `compareTemporalPolicyAgainstScriptedBaselineInProduction` refuses any
@@ -271,11 +282,11 @@ measured artifact win over the scripted baseline, promotion, automated repeated
 DAgger, or automatic player-facing training.
 Those remain C33 work.
 
-DONE THIS STEP:      C33 now has durable schedule custody and an explicit orchestrator invocation route. It runs only the stored immutable source-round declaration and retains the stop-at-review invariant; it cannot accept, fit, activate, or promote.
-PROVEN BY:           Focused C33 test plus targeted ESLint, TypeScript, and architecture gate. The prior Academy status build evidence remains valid; the canonical navigation journey still has no result because it hung in this environment.
-REMAINING HERE:      A normal-runtime owner for explicit opt-in invocation, curriculum/error detail beyond program state, meaningful unseen-seed baseline-win evidence, and credible visible real-game quality evidence. The C40 recorded-improvement item remains unticked.
+DONE THIS STEP:      C33 now has durable plan custody and an explicit process owner. It reconstructs its governed manifest, C32 registry, reviewer authority, and declared schedule from one Vault, then stops at human review between source-world rounds; it cannot fabricate review, register, activate, or promote.
+PROVEN BY:           Focused C33 test (two accepted human-reviewed rounds through persisted plan recovery), targeted ESLint, TypeScript, and architecture gate. The prior Academy status build evidence remains valid; the canonical navigation journey still has no result because it hung in this environment.
+REMAINING HERE:      A product-owned opt-in command/review experience, curriculum/error detail beyond program state, meaningful unseen-seed baseline-win evidence, and credible visible real-game quality evidence. The C40 recorded-improvement item remains unticked.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Define the normal-runtime opt-in owner for the durable orchestrator without ambient background execution; do not turn it into automatic review, fitting, activation, or promotion.
+NEXT SLICE:          Compose the persisted C33 program runtime behind an explicit product command without ambient background execution; do not turn it into automatic review, activation, or promotion.
 
 ## Slice pacing finding — 2026-08-03
 

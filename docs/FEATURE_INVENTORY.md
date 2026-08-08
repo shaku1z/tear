@@ -325,7 +325,12 @@ This is the migration checklist for the architectural redesign. A checked featur
     corruption-safe local custody. This remains observed measurement, not a
     quality result, activation, or promotion. Meaningful held-out quality and an
    automated repeated DAgger loop,
-   and promotion remain absent. Account/
+   and promotion remain absent. C33 now has an immutable Vault-backed program
+   plan that binds a governed trainer manifest, temporal configuration, named
+   reviewer authority, and distinct source-world rounds; its explicit process
+   owner resumes accepted corrections only from those durable inputs and stops
+   at human review. It is not yet a player command, automatic review,
+   activation, promotion, or quality result. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 
