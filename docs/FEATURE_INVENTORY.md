@@ -334,7 +334,12 @@ This is the migration checklist for the architectural redesign. A checked featur
    signed-in session whose exact ID is named in the immutable plan. It never
    infers an actor from the renderer, accepts a guest/local/unauthorized
    session, activates, promotes, or declares a quality result. This is local
-   plan authority, not account/cloud authorization. Account/
+   plan authority, not account/cloud authorization. A second immutable Academy
+   evaluation plan now freezes canonical unseen seeds and lesson thresholds,
+   recovery coverage, an explicit scripted baseline/margin, and full
+   dataset/DAgger exclusions before execution. It is only an evidence protocol:
+   executing State Forge recovery through the production composition and a
+   meaningful held-out pass still remain. Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.
 

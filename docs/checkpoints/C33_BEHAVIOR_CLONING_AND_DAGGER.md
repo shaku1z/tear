@@ -251,6 +251,16 @@ at decision time before the runtime reloads the plan and ledger authority.
 This is an authenticated local-session gate over local plan authority, not C31
 account ownership or C38 cloud authorization.
 
+C33 now also has immutable custody for an Academy policy-evaluation plan. A
+plan derives every selected lesson's canonical unseen seeds and thresholds,
+requires a recovery case wherever that lesson requires recovery, names the
+scripted baseline and a positive predeclared margin, and captures all governed
+dataset and accepted-DAgger source scenario hashes as exclusions before any
+candidate executes. It is corruption-safe and cannot be replaced under the
+same plan id. This is an evidence protocol, not a quality result: the existing
+source-world evaluator cannot yet execute a State Forge recovery frontier, so
+no plan has produced a pass/fail claim or C40 checklist tick.
+
 New C31 captures also bind the exact source scenario identity into the governed
 training sequence. A temporal fit retains the hashes of its training scenarios,
 and `compareTemporalPolicyAgainstScriptedBaselineInProduction` refuses any
@@ -296,11 +306,11 @@ measured artifact win over the scripted baseline, promotion, automated repeated
 DAgger, or automatic player-facing training.
 Those remain C33 work.
 
-DONE THIS STEP:      C33 now has durable plan custody, an explicit process owner, and a narrow visible review flow. It reconstructs its governed manifest, C32 registry, reviewer authority, and declared schedule from one Vault, then stops at human review between source-world rounds; an explicit decision reloads and validates that same plan/capture authority before ledger write. Academy accepts/rejects a projected correction only for a current signed-in, plan-named reviewer. It cannot fabricate review, register, activate, or promote.
-PROVEN BY:           Focused C33/runtime, screen-action, and renderer tests; TypeScript. The prior Academy status build evidence remains valid; the canonical navigation journey still has no result because it hung in this environment.
-REMAINING HERE:      Curriculum/error detail beyond action divergence, meaningful unseen-seed baseline-win evidence, and credible visible real-game quality evidence. The visible decision flow is a local authenticated-session gate over named plan authority, not account/cloud authorization. The Academy cannot activate or promote, and the C40 recorded-improvement item remains unticked.
+DONE THIS STEP:      C33 now has durable plan custody, an explicit process owner, a narrow visible review flow, and an immutable unseen/recovery evaluation protocol. It reconstructs its governed manifest, C32 registry, reviewer authority, and declared schedule from one Vault, then stops at human review between source-world rounds; an explicit decision reloads and validates that same plan/capture authority before ledger write. Academy accepts/rejects a projected correction only for a current signed-in, plan-named reviewer. The evaluation plan freezes lesson seeds/thresholds, baseline/margin, and all governed exclusions before execution. It cannot fabricate review, register, activate, promote, or claim quality.
+PROVEN BY:           Focused C33/runtime, evaluation-plan, screen-action, and renderer tests; TypeScript, ESLint, and architecture gate. The prior Academy status build evidence remains valid; the canonical navigation journey still has no result because it hung in this environment.
+REMAINING HERE:      A State Forge recovery execution adapter, curriculum/error detail beyond action divergence, meaningful unseen-seed baseline-win evidence, and credible visible real-game quality evidence. The visible decision flow is a local authenticated-session gate over named plan authority, not account/cloud authorization. The Academy cannot activate or promote, and the C40 recorded-improvement item remains unticked.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Define an immutable lesson-bound unseen/recovery evaluation plan and retain curriculum/error progress without claiming quality, activation, or promotion.
+NEXT SLICE:          Execute a persisted immutable evaluation plan through shared source-world and recovery composition, retaining an honest pass/fail result without activation or promotion.
 
 ## Slice pacing finding — 2026-08-03
 

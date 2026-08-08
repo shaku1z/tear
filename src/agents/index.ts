@@ -19,6 +19,7 @@ export * from "./academy-reviewed-sample";
 export * from "./academy-corpus";
 export * from "./academy-training-dataset";
 export * from "./academy-behavior-cloning-batches";
+export * from "./academy-policy-evaluation";
 export * from "./policy-feature-vector";
 export * from "./policy-condition-vector";
 export * from "./behavior-cloning-trainer";
