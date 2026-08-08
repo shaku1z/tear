@@ -2,6 +2,17 @@ import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state
 import type { GameAction } from "../input/game-action";
 import { BoundedArtifactSampler, type TearHeadlessEpisode } from "./headless";
 import {
+  parseC30TrainingCapacityDeclaration,
+  type C30TrainingCapacityBudget,
+  type C30TrainingCapacityDeclarationV1,
+  type C30TrainingCapacityWorkload,
+  type ProductionHeadlessHardwareProfile,
+} from "./production-headless-capacity-declaration";
+export {
+  createC30TrainingCapacityDeclaration,
+  parseC30TrainingCapacityDeclaration,
+} from "./production-headless-capacity-declaration";
+import {
   createProductionHeadlessEpisodePool,
   type ProductionHeadlessJob,
 } from "./production-headless-environment";
@@ -38,16 +49,7 @@ export const C30_LONG_RUN_LEAK_PROFILE = Object.freeze({
     maximumRetainedHeapBytes: 64 * 1024 * 1024,
   }),
 });
-
-export interface ProductionHeadlessHardwareProfile {
-  /** Caller-declared label; this portable module cannot prove physical hardware identity. */
-  readonly id: string;
-  readonly classification: "developer" | "target";
-  readonly declaredBy: string;
-  readonly operatingSystem: string;
-  readonly processor: string;
-  readonly physicalMemoryBytes: number;
-}
+export type { ProductionHeadlessHardwareProfile } from "./production-headless-capacity-declaration";
 
 export interface ProductionHeadlessBenchmarkOptions {
   readonly now?: () => number;
@@ -59,6 +61,13 @@ export interface ProductionHeadlessLongRunOptions extends ProductionHeadlessBenc
   /** A host declaration is recorded, not inferred by the simulation. */
   readonly hardware: ProductionHeadlessHardwareProfile;
   /** Optional host-side collection boundary; required before interpreting heap retention as a leak signal. */
+  readonly collectGarbage?: () => void;
+}
+
+export interface ProductionHeadlessTrainingCapacityOptions extends ProductionHeadlessBenchmarkOptions {
+  /** Must be an externally supplied, self-hashed declaration for a target host. */
+  readonly declaration: C30TrainingCapacityDeclarationV1;
+  /** Needed before a retained-heap verdict can be observed. */
   readonly collectGarbage?: () => void;
 }
 
@@ -141,6 +150,50 @@ export interface ProductionHeadlessLongRunArtifact {
     peakBytes?: number;
     retainedDeltaBytes?: number;
   }>;
+}
+
+export interface ProductionHeadlessTrainingCapacityWorkloadArtifact {
+  readonly kind: C30TrainingCapacityWorkload["kind"];
+  readonly workload: C30TrainingCapacityWorkload;
+  readonly firstPass: Readonly<{
+    episodes: number;
+    completed: number;
+    elapsedMilliseconds: number;
+    episodesPerMinute: number;
+    p95EpisodeMilliseconds: number;
+    maxEpisodeMilliseconds: number;
+    semanticHashes: readonly string[];
+    sampledArtifacts: number;
+    academyIntake: ProductionHeadlessAcademyIntakeSnapshot;
+  }>;
+  readonly repeat: Readonly<{
+    elapsedMilliseconds: number;
+    episodesPerMinute: number;
+    semanticHashes: readonly string[];
+    academyIntake: ProductionHeadlessAcademyIntakeSnapshot;
+  }>;
+  readonly deterministic: boolean;
+  readonly budget: Readonly<{
+    episodesPerMinute: "met" | "below";
+    p95EpisodeLatency: "met" | "above";
+    retainedHeap: "met" | "above" | "not-measured";
+  }>;
+  readonly heap: Readonly<{
+    beforeBytes?: number;
+    afterBytes?: number;
+    peakBytes?: number;
+    retainedDeltaBytes?: number;
+  }>;
+}
+
+export interface ProductionHeadlessTrainingCapacityArtifact {
+  readonly format: "tearbench-production-training-capacity";
+  readonly schemaVersion: 1;
+  /** This is a declared-host observation, not a C30 exit certification. */
+  readonly observation: "declared-target-episode-fabric";
+  readonly declaration: C30TrainingCapacityDeclarationV1;
+  readonly workloads: readonly ProductionHeadlessTrainingCapacityWorkloadArtifact[];
+  readonly allDeclaredBudgetsMet: boolean;
 }
 
 function percentile(values: readonly number[], fraction: number): number {
@@ -385,5 +438,100 @@ export async function measureProductionHeadlessLongRun(
       ...(peakBytes === undefined ? {} : { peakBytes }),
       ...(retainedDeltaBytes === undefined ? {} : { retainedDeltaBytes }),
     }),
+  });
+}
+
+function declaredWorkloadProfile(
+  declaration: C30TrainingCapacityDeclarationV1,
+  workload: C30TrainingCapacityWorkload,
+): ProductionHeadlessWorkload {
+  return Object.freeze({
+    id: `${declaration.id}-${workload.kind}`,
+    episodes: workload.episodes,
+    maxTicks: workload.maxTicks,
+    poolSize: workload.poolSize,
+    batchSize: workload.batchSize,
+    artifactSampleLimit: workload.artifactSampleLimit,
+  });
+}
+
+function capacityBudget(
+  firstPass: Awaited<ReturnType<typeof runProductionWorkload>>,
+  budget: C30TrainingCapacityBudget,
+  retainedDeltaBytes: number | undefined,
+  heapMeasured: boolean,
+) {
+  return Object.freeze({
+    episodesPerMinute: firstPass.episodesPerMinute >= budget.minimumEpisodesPerMinute ? "met" as const : "below" as const,
+    p95EpisodeLatency: firstPass.p95EpisodeMilliseconds <= budget.maximumP95EpisodeMilliseconds ? "met" as const : "above" as const,
+    retainedHeap: !heapMeasured || retainedDeltaBytes === undefined ? "not-measured" as const
+      : retainedDeltaBytes <= budget.maximumRetainedHeapBytes ? "met" as const : "above" as const,
+  });
+}
+
+/**
+ * Measures all three externally declared episode-fabric budgets on a declared
+ * target host. It intentionally does not run BC fitting, DAgger review, or RL
+ * optimization: C30 can prove simulation capacity, while those checkpoints own
+ * their respective learning outcomes.
+ */
+export async function measureProductionHeadlessTrainingCapacity(
+  options: ProductionHeadlessTrainingCapacityOptions,
+): Promise<ProductionHeadlessTrainingCapacityArtifact> {
+  const declaration = parseC30TrainingCapacityDeclaration(options.declaration);
+  const now = options.now ?? (() => performance.now());
+  const results: ProductionHeadlessTrainingCapacityWorkloadArtifact[] = [];
+  for (const workload of declaration.workloads) {
+    const samples: number[] = [];
+    const sampleMemory = (): void => {
+      const value = options.heapUsedBytes?.();
+      if (value !== undefined && Number.isFinite(value) && value >= 0) samples.push(value);
+    };
+    options.collectGarbage?.();
+    sampleMemory();
+    const profile = declaredWorkloadProfile(declaration, workload);
+    const firstPass = await runProductionWorkload(
+      profile, now, sampleMemory, true,
+      new ProductionHeadlessAcademyIntake(workload.artifactSampleLimit),
+    );
+    const repeat = await runProductionWorkload(
+      profile, now, sampleMemory, false,
+      new ProductionHeadlessAcademyIntake(workload.artifactSampleLimit),
+    );
+    options.collectGarbage?.();
+    sampleMemory();
+    const beforeBytes = samples[0];
+    const afterBytes = samples.at(-1);
+    const peakBytes = samples.length === 0 ? undefined : Math.max(...samples);
+    const retainedDeltaBytes = beforeBytes === undefined || afterBytes === undefined
+      ? undefined : afterBytes - beforeBytes;
+    const deterministic = firstPass.semanticHashes.every((hash, index) => hash === repeat.semanticHashes[index]);
+    results.push(Object.freeze({
+      kind: workload.kind, workload, firstPass,
+      repeat: Object.freeze({
+        elapsedMilliseconds: repeat.elapsedMilliseconds,
+        episodesPerMinute: repeat.episodesPerMinute,
+        semanticHashes: repeat.semanticHashes,
+        academyIntake: repeat.academyIntake,
+      }),
+      deterministic,
+      budget: capacityBudget(firstPass, workload.budget, retainedDeltaBytes, options.collectGarbage !== undefined),
+      heap: Object.freeze({
+        ...(beforeBytes === undefined ? {} : { beforeBytes }),
+        ...(afterBytes === undefined ? {} : { afterBytes }),
+        ...(peakBytes === undefined ? {} : { peakBytes }),
+        ...(retainedDeltaBytes === undefined ? {} : { retainedDeltaBytes }),
+      }),
+    }));
+  }
+  const frozenResults = Object.freeze(results);
+  return Object.freeze({
+    format: "tearbench-production-training-capacity", schemaVersion: 1,
+    observation: "declared-target-episode-fabric", declaration, workloads: frozenResults,
+    allDeclaredBudgetsMet: frozenResults.every((result) => result.deterministic
+      && result.firstPass.completed === result.firstPass.episodes
+      && result.budget.episodesPerMinute === "met"
+      && result.budget.p95EpisodeLatency === "met"
+      && result.budget.retainedHeap === "met"),
   });
 }

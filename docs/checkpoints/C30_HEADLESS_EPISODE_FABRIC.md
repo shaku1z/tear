@@ -118,9 +118,21 @@ operational boundary it proves.
   developer host completed all 160 episodes with identical repeat hashes,
   317.9 ms p95, 2.4 MiB retained heap, and 610.4 episodes/minute, meeting the
   modest developer budget on this observation. This still records a bounded
-  leak observation, not a target-capacity pass. The command
-  requires `--expose-gc`; the optional `--target-id` and `--declared-by` flags
-  are both required before it will label any run `target`.
+  leak observation, not a target-capacity pass. The command requires
+  `--expose-gc` and always records this path as a developer observation.
+- [x] Target-capacity declaration contract, not target-capacity evidence.
+  `createC30TrainingCapacityDeclaration` accepts a self-hashed, caller-supplied
+  target-host declaration with one exact natural-episode workload each for BC,
+  DAgger, and RL. Each workload declares its episode/tick/pool/batch/artifact
+  bounds plus throughput, p95-latency, and retained-heap budgets. The target
+  runner executes each declared production-pool workload twice, preserves the
+  declaration and its integrity hash in a
+  `tearbench-production-training-capacity` artifact, and reports each observed
+  budget verdict. It deliberately measures episode-fabric capacity only: it
+  does not claim BC fitting, DAgger review, RL optimization, policy quality, or
+  checkpoint completion. `pnpm measure:c30:long-run -- --capacity-declaration
+  <file>` is the only target-measurement route; the former bare `--target-id`
+  / `--declared-by` pair now rejects rather than relabeling a developer budget.
 - [x] Bounded eight-worker production stress. The permanent dispatcher proof
   starts exactly eight operating-system children and runs 32 independent,
   natural 120-tick source episodes (3,840 actual production fixed steps), then
@@ -128,9 +140,10 @@ operational boundary it proves.
   spawning a ninth. Every result includes only serializable terminal data, and
   all 32 stress episodes complete. This is a real bounded process-scale proof,
   not target-hardware throughput or unbounded fleet certification.
-- [ ] Declared-target training-capacity evidence. No target-hardware profile is
-  declared in this repository, so the current developer-host observation cannot
-  satisfy that target claim.
+- [ ] Declared-target training-capacity evidence. The measurement contract now
+  prevents a bare host label from becoming a target verdict, but no externally
+  declared target-host profile or target-host artifact is committed in this
+  repository. The current developer-host observation cannot satisfy that claim.
 - [x] High-count in-process production-pool isolation. The 256-episode,
   120-tick stress proof runs 30,720 actual production fixed steps through eight
   fresh composition roots. All 256 final canonical-state objects and semantic
@@ -238,7 +251,7 @@ C31-C36, C39, and C40 retain their respective evidence obligations.
   host adopts the shared source runtime; the rebuilt browser corpus and all 40
   detached comparisons retain C27A evidence. C30 separately proves the source
   matrix above through its own ordered gate.
-- `pnpm exec vitest run tests/unit/production-headless-benchmark.test.ts --disableConsoleIntercept` passes and prints its measured production-pool artifact.
+- `pnpm exec vitest run tests/unit/production-headless-benchmark.test.ts --disableConsoleIntercept` passes the developer observation plus target-declaration integrity and three-workload artifact tests. A declared target artifact remains an observation, not certification.
 - `pnpm measure:c30:long-run` invokes Node with `--expose-gc`, writes the
   versioned bounded long-run artifact to
   `artifacts/tearbench/c30/production-headless-long-run.json`, and records the
@@ -272,9 +285,11 @@ C31-C36, C39, and C40 retain their respective evidence obligations.
 
 Do not add retries to timeout, validation, or worker-reported failures. A
 declared target host remains an external prerequisite for the separate capacity
-claim; do not call the local developer machine target hardware. C30's remaining
-unproven capacity claim therefore needs an externally declared profile. While
-that waits, the next implementation boundary is C31 eligibility, consent, and
-provenance before its Academy candidate intake can become a corpus. Keep all
-completed C30 boundaries restricted to active, non-draft natural episodes: they
-must not become a new simulator, storage format, or durable job-recovery claim.
+claim; do not call the local developer machine target hardware. An operator
+must now supply the self-hashed C30 declaration with actual BC/DAgger/RL
+episode-fabric budgets, then run it on that declared target host and retain the
+artifact before capacity can be assessed. While that waits, the next
+implementation boundary is C31 eligibility, consent, and provenance before its
+Academy candidate intake can become a corpus. Keep all completed C30 boundaries
+restricted to active, non-draft natural episodes: they must not become a new
+simulator, storage format, or durable job-recovery claim.

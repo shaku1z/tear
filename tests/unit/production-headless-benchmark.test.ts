@@ -3,9 +3,29 @@ import { describe, expect, it } from "vitest";
 import {
   C30_LONG_RUN_LEAK_PROFILE,
   C30_NATURAL_EPISODE_BENCHMARK_PROFILE,
+  createC30TrainingCapacityDeclaration,
   measureProductionHeadlessEpisodes,
   measureProductionHeadlessLongRun,
+  measureProductionHeadlessTrainingCapacity,
+  parseC30TrainingCapacityDeclaration,
 } from "../../src/tearbench";
+
+function targetCapacityDeclaration() {
+  return createC30TrainingCapacityDeclaration({
+    format: "tearbench-production-training-capacity-declaration", schemaVersion: 1,
+    id: "c30-unit-target-capacity", declaredAt: "2026-08-08T00:00:00.000Z",
+    hardware: Object.freeze({
+      id: "target-unit-host", classification: "target" as const, declaredBy: "unit-test",
+      operatingSystem: process.platform, processor: process.arch, physicalMemoryBytes: 1_024 * 1_024 * 1_024,
+    }),
+    workloads: Object.freeze((["bc", "dagger", "rl"] as const).map((kind) => Object.freeze({
+      kind, episodes: 1, maxTicks: 1, poolSize: 1, batchSize: 1, artifactSampleLimit: 1,
+      budget: Object.freeze({
+        minimumEpisodesPerMinute: 1, maximumP95EpisodeMilliseconds: 3_600_000, maximumRetainedHeapBytes: 0,
+      }),
+    }))),
+  });
+}
 
 describe("C30 production headless benchmark", () => {
   it("records deterministic production-pool rate, latency, heap, and bounded artifacts", async () => {
@@ -98,4 +118,39 @@ describe("C30 production headless benchmark", () => {
       hardware: artifact.hardware, aggregate: artifact.aggregate, budget: artifact.budget, heap: artifact.heap,
     }));
   }, 120_000);
+
+  it("requires an integrity-checked target declaration with exact BC, DAgger, and RL workloads", () => {
+    const declaration = targetCapacityDeclaration();
+    expect(parseC30TrainingCapacityDeclaration(JSON.parse(JSON.stringify(declaration)))).toEqual(declaration);
+    expect(() => parseC30TrainingCapacityDeclaration({
+      ...declaration, id: "altered-target-capacity",
+    })).toThrow("integrity mismatch");
+    expect(() => createC30TrainingCapacityDeclaration({
+      ...declaration,
+      hardware: { ...declaration.hardware, classification: "developer" },
+    })).toThrow("hardware profile is invalid");
+    expect(() => createC30TrainingCapacityDeclaration({
+      ...declaration,
+      workloads: declaration.workloads.filter((workload) => workload.kind !== "rl"),
+    })).toThrow("exactly BC, DAgger, and RL");
+  });
+
+  it("records all declared target workload verdicts without certifying a learning outcome", async () => {
+    const artifact = await measureProductionHeadlessTrainingCapacity({
+      declaration: targetCapacityDeclaration(),
+      heapUsedBytes: () => 1_024,
+      collectGarbage: () => undefined,
+    });
+    expect(artifact).toMatchObject({
+      format: "tearbench-production-training-capacity", schemaVersion: 1,
+      observation: "declared-target-episode-fabric", allDeclaredBudgetsMet: true,
+      declaration: { hardware: { classification: "target" } },
+    });
+    expect(artifact.workloads.map((workload) => workload.kind)).toEqual(["bc", "dagger", "rl"]);
+    expect(artifact.workloads.every((workload) => workload.deterministic
+      && workload.firstPass.completed === 1
+      && workload.budget.episodesPerMinute === "met"
+      && workload.budget.p95EpisodeLatency === "met"
+      && workload.budget.retainedHeap === "met")).toBe(true);
+  }, 30_000);
 });
