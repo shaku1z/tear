@@ -890,3 +890,21 @@ fully open.
 NEXT SLICE:          Bind `curating` to a declared immutable trainer invocation
 contract that can only accept this retained receipt; do not call an existing
 trainer until its bounded configuration and stopped-result custody are frozen.
+
+### C36 bounded offline-Q training launch
+
+DONE THIS STEP:      C36 now rechecks the exact published C31 trainer manifest
+and held custody at launch time, loads only the matching immutable Academy
+dataset, freezes the C34 offline-Q reward/configuration/receipt identities, and
+persists at most one offline-Q checkpoint before the legal `training`
+transition. The launch receipt binds the source/result job hashes, dataset and
+manifest identities, plan/reward/configuration/receipt hashes, and checkpoint.
+PROVEN BY:           `tests/unit/foundry-job-offline-training.test.ts` with the
+preceding C36 custody/manifest tests, TypeScript, targeted ESLint, architecture,
+and requirements checks.
+REMAINING HERE:      This creates no completed C34 model/result, C32 artifact,
+source-world evaluation, policy decision, activation, promotion, scheduling,
+or UI. C36 remains fully open.
+NEXT SLICE:          Resume only the retained bounded checkpoint under the same
+dataset/manifest/custody/plan lineage, then bind an immutable source-world
+evaluation; fail closed on every changed or revoked input.

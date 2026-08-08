@@ -29,6 +29,12 @@
   job's frozen custody records and must still be held at admission time. A
   missing, changed, overbroad, or no-longer-authorized manifest becomes the
   terminal `no-eligible-curated-manifest` result rather than training input.
+- A `curating` job can now load only that exact immutable trainer manifest
+  through the existing Academy dataset loader, recheck held custody, freeze a
+  C34 offline-Q plan/reward/configuration, and persist its trajectory receipt
+  plus at most one checkpoint epoch before the legal `training` transition.
+  It never emits a final model/result, C32 artifact, activation, promotion, or
+  quality decision.
 
 ## Evidence
 
@@ -42,10 +48,12 @@ checks are recorded with the implementation commit.
 ## Remaining exit gate
 
 `tests/unit/foundry-job-curation.test.ts` verifies exact published-manifest
-admission and action-time custody rejection. The durable boundary has no C31
-curation mutation, manifest publication, dataset loader, trainer invocation, source-world evaluation,
-registry activation, promotion, scheduler, UI, or notifications. C36 remains
-open until an unattended authorized corpus cycle genuinely collects, curates,
-trains, evaluates through frozen gates, rejects/promotes/version-places a
-policy, detects regression, rolls back, survives interruption, and presents
-progress without a terminal command.
+admission and action-time custody rejection. `tests/unit/foundry-job-offline-training.test.ts`
+verifies that C36 retains one bounded C34 checkpoint only after the dataset,
+manifest, custody, plan, and reward identities all match. The durable boundary
+has no C31 curation mutation, final trained model, source-world quality
+evaluation, registry activation, promotion, scheduler, UI, or notifications.
+C36 remains open until an unattended authorized corpus cycle genuinely
+collects, curates, trains, evaluates through frozen gates,
+rejects/promotes/version-places a policy, detects regression, rolls back,
+survives interruption, and presents progress without a terminal command.
