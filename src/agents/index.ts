@@ -67,6 +67,7 @@ export * from "./foundry-job-decision";
 export * from "./foundry-job-monitoring";
 export * from "./foundry-job-recovery";
 export * from "./foundry-job-schedule";
+export * from "./foundry-job-due-dispatcher";
 export * from "./tearbot-ladder-evaluation";
 export * from "./tearbot-human-calibration-source";
 export * from "./tearbot-human-calibration-consent-ledger";

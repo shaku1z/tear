@@ -1,0 +1,45 @@
+import { stableVerificationHash } from "../replay/hash";
+import type { GhostVaultBackend } from "../ghost";
+import { TearAcademyCandidateCustodyStore } from "./academy-candidate-custody";
+import { TearFoundryCollectionExecutor } from "./foundry-job-collection";
+import { TearFoundryJobScheduleVault, TearFoundryScheduleController } from "./foundry-job-schedule";
+import type { TearFoundryJobVault } from "./foundry-job-vault";
+
+const ATTEMPT_KEY = "foundry-job-due-attempt:v1:"; const LEASE_KEY = "foundry-job-due-lease:v1:"; const SCHEDULE_KEY = "foundry-job-schedule:v1:"; const JOB_KEY = "foundry-job:v1:"; const HASH = /^[a-f0-9]{16}$/u;
+const LEASE_MS = 60_000;
+export interface TearFoundryDueLeaseV1 { readonly format: "tear-foundry-due-lease"; readonly schemaVersion: 1; readonly scheduleHash: string; readonly jobHash: string; readonly leaseId: string; readonly actionHash: string; readonly claimedAt: string; readonly expiresAt: string; readonly leaseHash: string; }
+export interface TearFoundryDueAttemptReceiptV1 { readonly format: "tear-foundry-due-attempt"; readonly schemaVersion: 1; readonly scheduleHash: string; readonly jobHash: string; readonly attemptedAt: string; readonly leaseId: string; readonly actionHash: string; readonly disposition: "collected" | "no-authorized-corpus" | "not-due" | "blocked"; readonly receiptHash: string; }
+function time(value: string): boolean { return Number.isFinite(Date.parse(value)); }
+function text(value: unknown): value is string { return typeof value === "string" && value.trim().length > 0; }
+function guard(key: string, expected: string | undefined): Readonly<{ store: "analysis"; key: string; expected?: string }> { return Object.freeze({ store: "analysis" as const, key, ...(expected === undefined ? {} : { expected }) }); }
+function lease(draft: Omit<TearFoundryDueLeaseV1, "leaseHash">): TearFoundryDueLeaseV1 { if (!HASH.test(draft.scheduleHash) || !HASH.test(draft.jobHash) || !text(draft.leaseId) || !HASH.test(draft.actionHash) || !time(draft.claimedAt) || !time(draft.expiresAt) || Date.parse(draft.expiresAt) <= Date.parse(draft.claimedAt)) throw new TypeError("invalid Foundry due lease"); return Object.freeze({ ...draft, leaseHash: stableVerificationHash(draft) }); }
+function parseLease(value: string): TearFoundryDueLeaseV1 { const source = JSON.parse(value) as TearFoundryDueLeaseV1; const parsed = lease({ format: source.format, schemaVersion: source.schemaVersion, scheduleHash: source.scheduleHash, jobHash: source.jobHash, leaseId: source.leaseId, actionHash: source.actionHash, claimedAt: source.claimedAt, expiresAt: source.expiresAt }); if (source.leaseHash !== parsed.leaseHash) throw new TypeError("Foundry due lease integrity mismatch"); return parsed; }
+function freeze(draft: Omit<TearFoundryDueAttemptReceiptV1, "receiptHash">): TearFoundryDueAttemptReceiptV1 { if (!HASH.test(draft.scheduleHash) || !HASH.test(draft.jobHash) || !time(draft.attemptedAt) || !text(draft.leaseId) || !HASH.test(draft.actionHash) || !["collected", "no-authorized-corpus", "not-due", "blocked"].includes(draft.disposition)) throw new TypeError("invalid Foundry due attempt"); return Object.freeze({ ...draft, receiptHash: stableVerificationHash(draft) }); }
+/** Explicit local dispatcher. It has no timer/worker; callers invoke one bounded attempt themselves. */
+export class TearFoundryDueDispatcher {
+  readonly #backend: GhostVaultBackend; readonly #jobs: TearFoundryJobVault; readonly #schedules: TearFoundryJobScheduleVault; readonly #custody: TearAcademyCandidateCustodyStore;
+  constructor(jobs: TearFoundryJobVault, schedules: TearFoundryJobScheduleVault, custody: TearAcademyCandidateCustodyStore) { if (jobs.backend() !== custody.backend()) throw new TypeError("Foundry due dispatch must share C31 Vault custody"); this.#backend = jobs.backend(); this.#jobs = jobs; this.#schedules = schedules; this.#custody = custody; }
+  async runDueOnce(scheduleHash: string, at: string, budgets: Readonly<{ computeBudgetHash: string; storageBudgetHash: string }>, leaseId: string): Promise<TearFoundryDueAttemptReceiptV1> {
+    if (!HASH.test(scheduleHash) || !HASH.test(budgets.computeBudgetHash) || !HASH.test(budgets.storageBudgetHash) || !time(at) || !leaseId) throw new TypeError("invalid Foundry due dispatch request");
+    const schedule = (await this.#schedules.list()).find((entry) => entry.scheduleHash === scheduleHash); if (schedule === undefined) throw new RangeError("Foundry schedule is unavailable");
+    const actionHash = stableVerificationHash(Object.freeze({ scheduleHash, jobHash: schedule.jobHash, attemptedAt: at, leaseId, budgets })); const attemptKey = `${ATTEMPT_KEY}${actionHash}`;
+    const existing = await this.#backend.get("analysis", attemptKey); if (existing !== undefined) { try { const receipt = JSON.parse(existing) as TearFoundryDueAttemptReceiptV1; if (receipt.receiptHash === stableVerificationHash({ format: receipt.format, schemaVersion: receipt.schemaVersion, scheduleHash: receipt.scheduleHash, jobHash: receipt.jobHash, attemptedAt: receipt.attemptedAt, leaseId: receipt.leaseId, actionHash: receipt.actionHash, disposition: receipt.disposition })) return receipt; } catch { await this.#backend.put("quarantine", attemptKey, existing); } }
+    const job = await this.#jobs.get(schedule.jobId); const controller = new TearFoundryScheduleController(this.#jobs, this.#schedules, { held: async (candidate, when) => {
+      const held = await this.#custody.held(when); return candidate.inputs.corpusRecordHashes.every((hash) => held.some((record) => record.recordHash === hash));
+    } }); const projection = (await controller.discoverDue(at)).find((entry) => entry.scheduleHash === scheduleHash);
+    if (job === undefined) throw new RangeError("Foundry scheduled job is unavailable");
+    const scheduleRaw = await this.#backend.get("analysis", `${SCHEDULE_KEY}${schedule.id}`), jobRaw = await this.#backend.get("analysis", `${JOB_KEY}${job.id}`); if (scheduleRaw === undefined || jobRaw === undefined) throw new RangeError("Foundry schedule or job disappeared before claim");
+    const custodyGuards = await Promise.all((await this.#custody.inventory()).records.filter((record) => job.inputs.corpusRecordHashes.includes(record.recordHash)).map(async (record) => guard(`academy-candidate-custody:v1:${record.candidateHash}`, await this.#backend.get("analysis", `academy-candidate-custody:v1:${record.candidateHash}`))));
+    const leaseKey = `${LEASE_KEY}${scheduleHash}`, priorRaw = await this.#backend.get("analysis", leaseKey); let prior: TearFoundryDueLeaseV1 | undefined;
+    if (priorRaw !== undefined) { try { prior = parseLease(priorRaw); } catch { await this.#backend.put("quarantine", leaseKey, priorRaw); throw new RangeError("Foundry due lease is corrupt"); } }
+    if (prior !== undefined && Date.parse(prior.expiresAt) > Date.parse(at)) throw new RangeError("Foundry due dispatch is already leased");
+    const claimed = lease({ format: "tear-foundry-due-lease", schemaVersion: 1, scheduleHash, jobHash: job.jobHash, leaseId, actionHash, claimedAt: at, expiresAt: new Date(Date.parse(at) + LEASE_MS).toISOString() }); const claimedRaw = JSON.stringify(claimed);
+    try { await this.#backend.commitIfMatches(Object.freeze([guard(`${SCHEDULE_KEY}${schedule.id}`, scheduleRaw), guard(`${JOB_KEY}${job.id}`, jobRaw), ...custodyGuards, guard(leaseKey, priorRaw)]), Object.freeze([{ store: "analysis", key: leaseKey, value: claimedRaw }])); } catch { throw new RangeError("Foundry due claim lost its current schedule, job, custody, or lease"); }
+    let receipt: TearFoundryDueAttemptReceiptV1;
+    try {
+      if (schedule.computeBudgetHash !== budgets.computeBudgetHash || schedule.storageBudgetHash !== budgets.storageBudgetHash || projection?.disposition !== "due" || job.phase !== "created") receipt = freeze({ format: "tear-foundry-due-attempt", schemaVersion: 1, scheduleHash, jobHash: job.jobHash, attemptedAt: at, leaseId, actionHash, disposition: projection?.disposition === "due" ? "blocked" : "not-due" });
+      else { const result = await new TearFoundryCollectionExecutor(this.#jobs, this.#custody).collect(job, at); receipt = freeze({ format: "tear-foundry-due-attempt", schemaVersion: 1, scheduleHash, jobHash: job.jobHash, attemptedAt: at, leaseId, actionHash, disposition: result.receipt.disposition === "authorized" ? "collected" : "no-authorized-corpus" }); }
+    } catch (error) { await this.#backend.commitIfMatches(Object.freeze([guard(leaseKey, claimedRaw)]), Object.freeze([{ store: "analysis", key: leaseKey }])); throw error; }
+    await this.#backend.commitIfMatches(Object.freeze([guard(leaseKey, claimedRaw)]), Object.freeze([{ store: "analysis", key: attemptKey, value: JSON.stringify(receipt) }, { store: "indexes", key: `foundry-job-due-attempt:${scheduleHash}:${receipt.receiptHash}`, value: JSON.stringify(Object.freeze({ disposition: receipt.disposition, leaseId, actionHash })) }, { store: "analysis", key: leaseKey }])); return receipt;
+  }
+}

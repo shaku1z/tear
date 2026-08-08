@@ -126,6 +126,8 @@ export interface GhostVaultBackend {
   remove(store: GhostVaultStore, key: string): Promise<void>;
   keys(store: GhostVaultStore): Promise<readonly string[]>;
   commit(operations: readonly GhostVaultWrite[]): Promise<void>;
+  /** Generic optimistic concurrency guard for non-recording durable workflows. */
+  commitIfMatches(guards: readonly Readonly<{ store: GhostVaultStore; key: string; expected?: string }>[], operations: readonly GhostVaultWrite[]): Promise<void>;
   commitWhileJournalMatches(sessionId: string, leaseId: string, operations: readonly GhostVaultWrite[]): Promise<void>;
 }
 
@@ -178,6 +180,10 @@ export function createMemoryGhostVaultBackend(
     remove(name, key) { store(name).delete(key); return Promise.resolve(); },
     keys(name) { return Promise.resolve(Object.freeze([...store(name).keys()].sort())); },
     commit,
+    commitIfMatches(guards, operations) {
+      if (guards.some((guard) => store(guard.store).get(guard.key) !== guard.expected)) return Promise.reject(new Error("Vault conditional write no longer matches"));
+      return commit(operations);
+    },
     commitWhileJournalMatches(sessionId, leaseId, operations) {
       if (ghostVaultJournalLease(store("journals").get(sessionId)) !== leaseId) {
         return Promise.reject(new Error(`recording journal is no longer active: ${sessionId}`));

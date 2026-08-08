@@ -60,6 +60,16 @@ export async function createIndexedDbGhostVaultBackend(
       return Object.freeze(keys.map(String).sort());
     },
     commit,
+    commitIfMatches(guards, operations) {
+      return new Promise<void>((resolve, reject) => {
+        const stores = [...new Set([...guards.map((guard) => guard.store), ...operations.map((operation) => operation.store)])];
+        const tx = database.transaction(stores, "readwrite"); let error: Error | undefined; let remaining = guards.length;
+        const apply = (): void => { if (remaining !== 0) return; applyWrites(tx, operations); };
+        if (guards.length === 0) apply();
+        for (const guard of guards) { const request = tx.objectStore(guard.store).get(guard.key); request.onerror = () => { error = request.error ?? new Error("Vault conditional read failed"); tx.abort(); }; request.onsuccess = () => { if ((typeof request.result === "string" ? request.result : undefined) !== guard.expected) { error = new Error("Vault conditional write no longer matches"); tx.abort(); return; } remaining -= 1; apply(); }; }
+        tx.oncomplete = () => resolve(); tx.onerror = () => reject(error ?? tx.error ?? new Error("Vault conditional write failed")); tx.onabort = () => reject(error ?? tx.error ?? new Error("Vault conditional write aborted"));
+      });
+    },
     commitWhileJournalMatches(sessionId, leaseId, operations) {
       return new Promise<void>((resolve, reject) => {
         const stores = [...new Set(["journals" as const, ...operations.map((operation) => operation.store)])];

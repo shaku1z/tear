@@ -189,6 +189,17 @@ identity. It rechecks current job and action-time C31 custody. The only health
 claim is `evidence-retained`; it does not activate traffic, place a policy,
 contact cloud, schedule a loop, or claim a rollout.
 
+## Controlled collection dispatch lease
+
+The explicit local Foundry dispatcher can atomically claim one due schedule for
+at most sixty seconds, checking the exact durable schedule, job, relevant C31
+custody, budget identities, stop identity, due disposition, and prior lease in
+one conditional Vault commit. It invokes only the existing collection executor.
+The final content-addressed receipt binds schedule, action, and lease, then
+conditionally releases the lease. Concurrent/stale claims fail closed and an
+expired claim may be reclaimed. There is no timer, cloud, promotion, activation,
+placement, or later-phase dispatch.
+
 V2 offline-training launches retain the complete immutable C34 plan and
 configuration. V1 launches fail closed because hashes alone cannot recreate
 their training inputs. A V2 resume rechecks launch, dataset, trainer manifest,

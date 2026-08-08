@@ -41,7 +41,7 @@ export class TearFoundryJobVault {
     if (current?.jobHash === next.jobHash) return current;
     if (current?.jobHash !== previous.jobHash) throw new RangeError("Foundry job successor does not match durable current state");
     const event = next.events.at(-1); if (event === undefined) throw new Error("Foundry job successor event disappeared");
-    await this.#backend.commit(Object.freeze([
+    await this.#backend.commitIfMatches(Object.freeze([{ store: "analysis", key: `${KEY}${previous.id}`, expected: JSON.stringify(previous) }]), Object.freeze([
       { store: "analysis", key: `${KEY}${next.id}`, value: JSON.stringify(next) },
       { store: "analysis", key: `foundry-job-event:v1:${next.id}:${String(event.sequence)}:${event.eventHash}`, value: JSON.stringify(event) },
       { store: "indexes", key: `foundry-job-current:${next.id}`, value: JSON.stringify(Object.freeze({ jobHash: next.jobHash, phase: next.phase })) },

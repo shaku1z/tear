@@ -1053,3 +1053,13 @@ health entry that binds decision/evaluation lineage and frozen stop-condition
 hash after action-time custody revalidation. It reports only evidence-retained;
 there is no runtime traffic, rollout, activation, placement, cloud, schedule,
 or UI behavior.
+
+### C36 controlled collection dispatch lease
+
+DONE THIS STEP: An explicit caller can claim one due Foundry schedule through a
+durable conditional lease, run only C31-authorized collection, retain an
+action/lease-bound receipt, and release the lease. Concurrent claims fail
+closed; expired claims are reclaimable. Schedule, job, custody, budget, stop,
+and due identities are checked before the claim.
+REMAINING HERE: No timer, worker, unattended loop, cloud route, promotion,
+activation, placement, or curation/training/evaluation dispatch exists.
