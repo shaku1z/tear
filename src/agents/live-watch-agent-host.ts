@@ -8,6 +8,7 @@ import { TearLiveHierarchicalPolicy } from "./hierarchical-policy-adapter";
 import type { TearAgentIntentTrace, TearAgentProfileId } from "./contracts";
 import type { TearPolicyDecisionJournal, TearPolicyDecisionJournalSnapshot } from "./policy-decision-journal";
 import type { TearActivePolicyRuntime, TearPolicyDecisionReceipt } from "./policy-runtime";
+import type { TearC32CanonicalActivePolicyRuntime } from "./c32-canonical-active-policy-runtime";
 import { buildWatchChoiceScore } from "./watch-build-choice";
 import { installLiveWatchAgentPanel } from "./live-watch-agent-panel";
 import {
@@ -123,6 +124,7 @@ interface MutableState {
   options: Required<TearWatchAgentOptions>;
   policy: TearLiveHierarchicalPolicy;
   artifactRuntime?: TearActivePolicyRuntime;
+  canonicalRuntime?: TearC32CanonicalActivePolicyRuntime;
   decisionJournal?: TearPolicyDecisionJournal;
   director?: C24LongitudinalJourneyDirector;
 }
@@ -219,6 +221,7 @@ export function createLiveWatchAgentHost(
   context: LiveTearRuntimeEnvironmentContext,
   artifactRuntime?: TearActivePolicyRuntime,
   decisionJournal?: TearPolicyDecisionJournal,
+  canonicalRuntime?: TearC32CanonicalActivePolicyRuntime,
 ): TearWatchAgentApi {
   let decisionJournalRuns = 0;
   let state: MutableState = {
@@ -229,6 +232,7 @@ export function createLiveWatchAgentHost(
     setupStep: 0,
     options: DEFAULTS, policy: new TearLiveHierarchicalPolicy(DEFAULTS.profile),
     ...(artifactRuntime === undefined ? {} : { artifactRuntime }),
+    ...(canonicalRuntime === undefined ? {} : { canonicalRuntime }),
     ...(decisionJournal === undefined ? {} : { decisionJournal }),
   };
   context.subscribeEngineEvent((event) => {
@@ -283,6 +287,7 @@ export function createLiveWatchAgentHost(
       setupStep: 0,
       options: resolved, policy: new TearLiveHierarchicalPolicy(resolved.profile),
       ...(artifactRuntime === undefined ? {} : { artifactRuntime }),
+      ...(canonicalRuntime === undefined ? {} : { canonicalRuntime }),
       ...(decisionJournal === undefined ? {} : { decisionJournal }),
       ...(director === undefined ? {} : { director }),
     };
@@ -377,6 +382,15 @@ export function createLiveWatchAgentHost(
         continue;
       }
       if (state.options.skipCinematics) context.skipCinematic();
+      // A new production run has no post-step receipt until C30 advances its
+      // first fixed tick.  Establish that receipt through the real empty-input
+      // frame before asking a strict V3 policy for its first source action.
+      if (state.canonicalRuntime !== undefined && context.canonicalGameplayState() === null) {
+        const beforeTick = context.authoritative()?.tick ?? 0;
+        context.advanceApplicationFrame(1 / 120);
+        state.fixedTicks += Math.max(0, (context.authoritative()?.tick ?? beforeTick) - beforeTick);
+        captureBlade();
+      }
       const observation = projectLiveTearObservation(
         context,
         context.authoritative()?.tick ?? state.fixedTicks,
@@ -391,9 +405,34 @@ export function createLiveWatchAgentHost(
       };
       const hierarchy = state.policy.decide(agentObservation);
       const artifact = state.artifactRuntime?.decide(agentObservation);
-      const decision = artifact?.receipt.source === "artifact"
-        ? Object.freeze({ ...hierarchy, actions: artifact.actions, policyReceipt: artifact.receipt })
-        : Object.freeze({ ...hierarchy, ...(artifact === undefined ? {} : { policyReceipt: artifact.receipt }) });
+      const sourceState = state.canonicalRuntime === undefined ? undefined : context.canonicalGameplayState();
+      if (state.canonicalRuntime !== undefined && sourceState === null) {
+        state.policyReceipt = Object.freeze({ observationHash: "0000000000000000", source: "refused", reason: "canonical-source-unavailable" });
+        fail("canonical-policy-refused:canonical-source-unavailable");
+        break;
+      }
+      const canonical = sourceState === undefined || sourceState === null
+        ? undefined : state.canonicalRuntime?.decide(sourceState, context.availableGameActions());
+      const canonicalReceipt: TearPolicyDecisionReceipt | undefined = canonical === undefined ? undefined : Object.freeze({
+        observationHash: canonical.stateHash, source: canonical.source,
+        ...(canonical.reason === undefined ? {} : { reason: canonical.reason }),
+        ...(canonical.artifactId === undefined ? {} : { artifactId: canonical.artifactId }),
+        ...(canonical.artifactHash === undefined ? {} : { artifactHash: canonical.artifactHash }),
+        ...(canonical.activationHash === undefined ? {} : { activationHash: canonical.activationHash }),
+      });
+      if (canonical?.source === "refused") {
+        if (canonicalReceipt !== undefined) {
+          state.policyReceipt = canonicalReceipt;
+          if (state.decisionJournal !== undefined) state.decisionJournal.append({ tick: observation.tick, receipt: canonicalReceipt, actions: [], trace: hierarchy.trace });
+        }
+        fail(`canonical-policy-refused:${canonical.reason ?? "invalid-active-artifact"}`);
+        break;
+      }
+      const decision = canonical?.source === "artifact"
+        ? Object.freeze({ ...hierarchy, actions: canonical.actions, policyReceipt: canonicalReceipt })
+        : artifact?.receipt.source === "artifact"
+          ? Object.freeze({ ...hierarchy, actions: artifact.actions, policyReceipt: artifact.receipt })
+          : Object.freeze({ ...hierarchy, ...(canonicalReceipt === undefined ? (artifact === undefined ? {} : { policyReceipt: artifact.receipt }) : { policyReceipt: canonicalReceipt }) });
       state.decisions += 1;
       state.lastTrace = decision.trace;
       state.structuredIntent = decision.structuredIntent;
@@ -480,8 +519,9 @@ export function installLiveWatchAgentHost(
   target: Window & { __TEAR_WATCH_AGENT__?: TearWatchAgentApi },
   artifactRuntime?: TearActivePolicyRuntime,
   decisionJournal?: TearPolicyDecisionJournal,
+  canonicalRuntime?: TearC32CanonicalActivePolicyRuntime,
 ): void {
-  const api = createLiveWatchAgentHost(context, artifactRuntime, decisionJournal);
+  const api = createLiveWatchAgentHost(context, artifactRuntime, decisionJournal, canonicalRuntime);
   Object.defineProperty(target, "__TEAR_WATCH_AGENT__", {
     configurable: false, writable: false, value: api,
   });

@@ -176,6 +176,13 @@ tampered, unpassed, or incompatible candidates refuse before runtime fallback.
 The candidate registry is inactive-only and quarantines corrupt reads; it never
 writes C32's active pointer.
 
+The separately authorized C32 execution adapter can now consume a strict V3
+active pointer only from the exact production C30/C27A canonical post-step
+state and live advertised action kinds. This does not make C34 training,
+evaluation, candidate creation, or Foundry evidence a promotion authority:
+only a pre-existing active pointer can select it, and malformed V3 provenance
+is refused/quarantined rather than routed through legacy inference.
+
 ### C36 V3 monitoring eligibility bridge
 
 An explicit C36 boundary can now cite a completed/passed V3 offline, online,

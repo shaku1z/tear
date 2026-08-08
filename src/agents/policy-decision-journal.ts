@@ -67,8 +67,10 @@ function journalKey(id: string): string { return `${JOURNAL_PREFIX}${id}`; }
 function freezeReceipt(value: TearPolicyDecisionReceipt): TearPolicyDecisionReceipt {
   if (!hash(value.observationHash) || (value.artifactId !== undefined && !text(value.artifactId))
     || (value.artifactHash !== undefined && !hash(value.artifactHash))
-    || (value.reason !== undefined && !["no-active-artifact", "invalid-model", "missing-decision", "invalid-action", "decision-budget-exceeded"].includes(value.reason))
-    || (value.source === "artifact" && (value.artifactId === undefined || value.artifactHash === undefined || value.reason !== undefined))) {
+    || (value.reason !== undefined && !["no-active-artifact", "invalid-model", "missing-decision", "invalid-action", "decision-budget-exceeded", "invalid-active-artifact", "canonical-source-unavailable", "no-legal-action"].includes(value.reason))
+    || (value.activationHash !== undefined && !hash(value.activationHash))
+    || (value.source === "artifact" && (value.artifactId === undefined || value.artifactHash === undefined || value.reason !== undefined))
+    || (value.source === "refused" && (value.reason !== "invalid-active-artifact" && value.reason !== "canonical-source-unavailable"))) {
     throw new TypeError("invalid policy decision receipt");
   }
   return Object.freeze({ ...value });

@@ -509,8 +509,13 @@ player-facing feature.
 An inactive-only C34 V3 canonical-Q candidate can now execute the real C30/C32
 source-state adapter after a completed passed V3 evaluation. It is bounded,
 masked, deterministic, integrity-checked, and corruption-quarantined, but has
-no C32 active-pointer, normal runtime, UI, Foundry, placement, or promotion
-path.
+a strict C32 active Watch route now consumes it only when an already-installed
+V3 active pointer validates. That route receives the actual post-step C30/C27A
+canonical state and production-advertised action kinds rather than rebuilding
+them from a TearBench observation; incompatible V3 bytes quarantine and refuse
+instead of falling through to legacy inference. Legacy artifacts remain on the
+existing structured route. There is still no player activation UI, Foundry
+activation/promotion, placement, or traffic-control path.
 
 The C36 V3 monitoring bridge can retain exact V2 monitoring plus C31 custody
 and completed V3 candidate lineage as a quarantined, inactive-only evidence

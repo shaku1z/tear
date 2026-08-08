@@ -4,6 +4,7 @@ import type { GameAction } from "../input/game-action";
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import type { TearSemanticEngineEventV1 } from "./gameplay-causal-events";
 import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
+import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { TearCausalEventV1, TearObservationV1, TearScenarioV1 } from "./contracts";
 import type { TearSnapshotV1, TearStateClass } from "./contracts";
 import type { TearScenarioTransition } from "./runner";
@@ -178,6 +179,14 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly advanceApplicationFrame: (deltaSeconds: number) => void;
   readonly advanceRenderFrame: (deltaSeconds: number) => number;
   readonly authoritative: () => Readonly<{ tick: number; stateHash: string; state?: unknown }> | null;
+  /**
+   * Exact post-step state from the C30/C27A authoritative composition.  This
+   * is deliberately separate from TearBench's projected observation: a C32
+   * V3 policy must never reconstruct its model input from an observation.
+   */
+  readonly canonicalGameplayState: () => CanonicalGameplayState | null;
+  /** Legal semantic action kinds advertised by the same live world/router. */
+  readonly availableGameActions: () => readonly GameAction["type"][];
   readonly random: () => RunRandomStreamsSnapshot;
   readonly render: () => void;
   readonly screenshot: () => string;

@@ -42,7 +42,7 @@ import { createGhostAuthoritativeReceipt } from "../ghost/authoritative-receipt"
 import { captureLiveStateForgeSnapshot } from "../tearbench/live-runtime-snapshots";
 import { createDefaultStateCodecRegistry } from "../tearbench/state-codecs";
 import { ENTITY_KIND_REGISTRY } from "../tearbench/registries";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../replay/hash"; import { createLiveCanonicalWatchComposition } from "./live-canonical-watch-composition";
 import { createLiveGhostRecordingSessionState } from "./live-ghost-recording-session-state";
 import { createLiveHumanCalibrationCaptureComposition } from "./live-human-calibration-capture-composition";
 import { createBrowserGhostVaultLibrary } from "./ghost-vault-library-controller";
@@ -664,14 +664,14 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       selectWeapon: (weaponId) => { hostState.setSelectedWeapon(weaponId); },
       setRunSeed: (seed) => { session.setRunSeed(seed); }, startRun: (mode, difficulty) => { startRunImmediate(mode, difficulty); },
       stopFrameLoop: () => { frameDriver.stop(); }, startFrameLoop: () => { frameDriver.start(({ deltaSeconds }) => { combatHost.frameCoordinator.run(deltaSeconds); }); }, pushAction: (action) => { Input.semantic.push(action); },
-      setSemanticInputAuthority: inputAuthority.setSemanticInputAuthority,
-      routeAction: (action) => routeLiveTearBenchAction(actionRouting, action), skipCinematic: () => { CINEMA.requestSkip(); },
+      setSemanticInputAuthority: inputAuthority.setSemanticInputAuthority, routeAction: (action) => routeLiveTearBenchAction(actionRouting, action), skipCinematic: () => { CINEMA.requestSkip(); },
       activateControl: (action) => { presentationHost.render(); const encoded = JSON.stringify(action); const control = interfaceInteraction.buttons().find((entry) => entry.enabled !== false && JSON.stringify(entry.semanticAction) === encoded); if (control === undefined) return false; screenComposition.dispatch(action); return true; },
       terminateRun: () => { abandonLiveRun("tearbench-terminated", { tearBenchTerminated: true }); setState("paused"); },
       resetSemanticInput: () => { Input.startSemanticRecording(); },
       advanceFixedTick: () => liveFrameRuntime.advanceExactSimulation(),
       advanceRenderFrame: (deltaSeconds) => liveFrameRuntime.advanceSimulation(deltaSeconds), advanceApplicationFrame: (deltaSeconds) => { combatHost.frameCoordinator.run(deltaSeconds); },
-      authoritative: () => authoritativeStep.lastResult, random: () => worldContext.services.random.snapshot(),
+      authoritative: () => authoritativeStep.lastResult, ...createLiveCanonicalWatchComposition({ state: hostState, screen: () => state, canonicalGameplayState: () => authoritativeStep.lastResult?.state ?? null }),
+      random: () => worldContext.services.random.snapshot(),
       render: () => { presentationHost.render(); }, screenshot: () => canvas.toDataURL("image/png"),
       subscribeEngineEvent: (listener) => GAMEPLAY_EVENTS.subscribe(listener),
       drainConsumedActions: () => consumedActions.splice(0, consumedActions.length),

@@ -207,6 +207,24 @@ reserved for an absent candidate or no legal action after availability masking.
 No normal-build composition, player UI, promotion, placement, or Foundry route
 has been added.
 
+### Strict active V3 canonical Watch route
+
+The normal test-build Watch composition now selects a strict V3 active pointer
+only through `TearC32CanonicalActivePolicyRuntime`. Its model input is the
+typed post-step `CanonicalGameplayState` owned by the live C30/C27A combat
+composition, plus action kinds advertised by that same live router; it does
+not reconstruct either value from `TearObservation`. Legacy active artifacts
+retain the prior structured-observation runtime. A V3-looking pointer whose
+candidate bytes/provenance cannot pass the V3 boundary is quarantined and the
+Watch run records an explicit refused provenance state; it never falls through
+to legacy inference or a scripted action. A fresh run advances one real empty
+authoritative frame only when needed to obtain its first post-step source
+receipt. Browser evidence seeds an active V3 candidate, observes its source
+`move` action, and reads its artifact/activation provenance back from the
+bounded decision journal. This is execution wiring only: no player-facing
+activation control, Foundry promotion, traffic placement, cloud route, or
+quality claim is added.
+
 ### C36 V3 monitoring eligibility bridge
 
 A current V2 Foundry `monitoring` head may now retain a separate, immutable

@@ -405,3 +405,9 @@ decision, monitoring, candidate, active baseline, custody, or corrupt package
 bytes fail closed and quarantine on read. This package does not register,
 activate, promote, place, roll out, or render a policy; it is the sole intended
 authority for a later separately authorized atomic promotion boundary.
+
+The C32 Watch runtime can now execute a V3 artifact only when some separate
+authorized boundary has already installed a valid active pointer. It consumes
+the live canonical C30/C27A source receipt and fails closed on incompatible
+V3 provenance. The Foundry has no code path to create that pointer, invoke the
+runtime, alter traffic, or treat its execution as monitoring or promotion.

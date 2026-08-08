@@ -62,12 +62,14 @@ export interface TearPolicyDecisionReceipt {
   readonly artifactId?: string;
   readonly artifactHash?: string;
   readonly observationHash: string;
-  readonly source: "artifact" | "scripted-fallback";
-  readonly reason?: "no-active-artifact" | "invalid-model" | "missing-decision" | "invalid-action" | "decision-budget-exceeded";
+  readonly source: "artifact" | "scripted-fallback" | "refused";
+  readonly reason?: "no-active-artifact" | "invalid-model" | "missing-decision" | "invalid-action" | "decision-budget-exceeded" | "invalid-active-artifact" | "canonical-source-unavailable" | "no-legal-action";
+  /** V3 activation lineage is retained when canonical execution is selected. */
+  readonly activationHash?: string;
 }
 
 export interface TearActivePolicyDecision extends TearAgentDecision {
-  readonly receipt: TearPolicyDecisionReceipt;
+  readonly receipt: TearPolicyDecisionReceipt & Readonly<{ source: "artifact" | "scripted-fallback" }>;
 }
 
 function record(value: unknown): value is Record<string, unknown> {

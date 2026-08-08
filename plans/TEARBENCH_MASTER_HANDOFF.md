@@ -1227,9 +1227,25 @@ canonical protocol and lineage hashes, and executes against a real canonical
 C30/C32 source state with shared masking/tie-break behavior. Its dedicated
 registry can register/read inactive candidates and quarantines corrupt bytes;
 it never writes the active pointer.
-REMAINING HERE: No current C32 active runtime or browser composition consumes
-this format. Do not activate, promote, place, bind it to Foundry, or add UI
-without a separately authorized rollout boundary.
+REMAINING HERE: Candidate creation remains non-promotional. Do not let its
+existence imply activation, placement, Foundry binding, UI, or rollout
+authority.
+
+### C32 strict active V3 canonical Watch composition
+
+DONE THIS STEP: The test-build normal Watch composition now routes an existing
+active V3 candidate only through `TearC32CanonicalActivePolicyRuntime`. The
+adapter receives the C30/C27A-owned typed post-step `CanonicalGameplayState`
+and production router's advertised legal action kinds, not a reconstruction
+from `TearObservation`. Legacy active artifacts preserve the existing
+structured route. A V3-looking active pointer with invalid candidate
+provenance is quarantined and recorded as refused; it cannot fall back into
+legacy or scripted execution. `tests/browser-c32-active-policy.js` seeds an
+active V3 candidate and proves a source action plus activation/artifact journal
+provenance after a built test-standalone journey.
+REMAINING HERE: This is runtime consumption of an already active pointer only.
+No player UI, Foundry activation, promotion, placement, traffic rollout,
+quality claim, cloud route, or normal-build navigation has been added.
 
 ### C36 V3 monitoring eligibility bridge
 
