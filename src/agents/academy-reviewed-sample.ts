@@ -18,6 +18,7 @@ function sampleHash(value: Omit<TearAcademyReviewedSampleV1, "sampleHash">): str
 export class TearAcademyReviewedSampleStore {
   readonly #backend: GhostVaultBackend; readonly #custody: TearAcademyCandidateCustodyStore; readonly #quality: TearAcademyCandidateQualityStore; readonly #curation: TearAcademyCandidateCurationStore; readonly #splits: TearAcademyCandidateSplitStore;
   constructor(backend: GhostVaultBackend, custody: TearAcademyCandidateCustodyStore, quality: TearAcademyCandidateQualityStore, curation: TearAcademyCandidateCurationStore, splits: TearAcademyCandidateSplitStore) { this.#backend = backend; this.#custody = custody; this.#quality = quality; this.#curation = curation; this.#splits = splits; }
+  backend(): GhostVaultBackend { return this.#backend; }
   async materialize(declaration: TearAcademyCandidateDeclarationV1, recordedAt: string, actor: string): Promise<TearAcademyReviewedSampleV1> {
     const admission = assessAcademyCandidateEligibility(declaration); const tracks = declaration.trackBundle;
     if (admission.disposition !== "eligible" || admission.candidateHash === null || tracks === undefined || !time(recordedAt) || !ne(actor)) throw new RangeError("C31 reviewed sample requires an eligible verified declaration");
