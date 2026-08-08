@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createMemoryGhostVaultBackend } from "../../src/ghost";
 import { stableVerificationHash } from "../../src/replay/hash";
 import {
-  TearFoundryJobVault, TearFoundryOfflineTrainingExecutor, TearFoundryOfflineTrainingFinalizationExecutor, TearFoundryOnlineTrainingLaunchExecutor,
+  TearFoundryJobVault, TearFoundryOfflineTrainingExecutor, TearFoundryOfflineTrainingFinalizationExecutor, TearFoundryOnlineTrainingExecutionExecutor, TearFoundryOnlineTrainingLaunchExecutor,
   TearOfflineRlTrainingVault, createTearFoundryJob, createTearOfflineRlPlan, transitionTearFoundryJob,
   type TearAcademyCandidateCustodyStore, type TearAcademyCorpusStore, type TearAcademyTrainingDatasetLoader, type TearAcademyTrainingDatasetV1,
 } from "../../src/agents";
@@ -63,6 +63,8 @@ describe("C36 offline training terminalization", () => {
     const request = { curriculum: { id: "foundry-online", stages: [{ id: "movement", lessonId: "movement-foundations", scenarios: [scenario], episodeBudget: 1 }], exploration: { seed: 1, initialNumerator: 0, minimumNumerator: 0, denominator: 1, decrementEveryEpisodes: 1, decrementBy: 1 }, budgets: { maxEpisodes: 1, maxTicksPerEpisode: 4, maxTotalTicks: 4, maxTotalDecisions: 4, maxTotalAbsoluteReward: 100 } }, config: { learningRate: 0.5, gamma: 0.9, maxStateActionEntries: 10, maxAbsoluteQ: 10, maxTotalUpdates: 4, maxConsecutiveDivergentUpdates: 2 } };
     const result = await executor.launch(finalized.job, finalized.receipt, request, "2026-08-08T00:03:00.000Z");
     expect(result).toMatchObject({ checkpoint: { status: "running", episodeCursor: 0 }, launch: { jobHash: finalized.job.jobHash, offlineTrainingHash: finalized.training.trainingHash } });
+    const advanced = await new TearFoundryOnlineTrainingExecutionExecutor(setupResult.vault, setupResult.custody, setupResult.corpus, setupResult.loader).execute(finalized.job, finalized.receipt, result.launch.launchHash, "2026-08-08T00:04:00.000Z", { maxTicks: 1 });
+    expect(advanced).toMatchObject({ job: { phase: "evaluating" }, receipt: { status: "running" }, launch: { previousLaunchHash: result.launch.launchHash } });
     expect((await setupResult.backend.keys("analysis")).some((key) => key.startsWith("policy-"))).toBe(false);
   });
 });

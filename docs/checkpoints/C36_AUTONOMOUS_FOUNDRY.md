@@ -80,6 +80,16 @@ The durable launch retains the full curriculum and online configuration. It
 does not advance that checkpoint, execute a source-world case, produce a score,
 create an artifact, activate, promote, self-play, schedule, or show UI.
 
+## Bounded C30 online-Q execution
+
+The current evaluating job can advance exactly its persisted online-Q checkpoint
+through the existing C30 production-headless route after all frozen Foundry,
+C31, C34, curriculum, and checkpoint identities revalidate. It retains the
+next checkpoint, same-phase successor, and execution receipt for running,
+cancelled, timed-out, divergence, budget, or complete stops. It still performs
+no candidate comparison, score decision, artifact creation, activation,
+promotion, self-play, scheduling, or UI work.
+
 V2 offline-training launches retain the complete immutable C34 plan and
 configuration. V1 launches fail closed because hashes alone cannot recreate
 their training inputs. A V2 resume rechecks launch, dataset, trainer manifest,

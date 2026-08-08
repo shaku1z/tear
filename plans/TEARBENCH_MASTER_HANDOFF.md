@@ -941,6 +941,19 @@ self-play, scheduler, or UI claim. C36 remains open.
 NEXT SLICE: Advance only that exact bounded online checkpoint with C30 lineage
 and retain stopped/incomplete outcomes before source-world evaluation.
 
+### C36 bounded C30 online-Q execution
+
+DONE THIS STEP: C36 can now advance one exact persisted online-Q checkpoint
+through the real C30 production-headless route, rechecking current job,
+readiness, offline/online launch, custody, dataset, receipt, curriculum, and
+checkpoint lineage. It retains every returned C30 stop state in a durable
+same-phase successor and immutable execution receipt.
+REMAINING HERE: This has no baseline/challenger comparison, score, artifact,
+registry, activation, promotion, self-play, scheduler, or UI claim.
+NEXT SLICE: Only after a completed retained online checkpoint, bind the
+existing non-promotional source-world evaluation plan; keep stopped outcomes
+out of evaluation.
+
 DONE THIS STEP:      Foundry V2 launches retain actual C34 plan/configuration
 bytes, while historical V1 launch bytes are explicitly non-resumable. A V2
 resume rechecks all stored lineage and advances one epoch with a durable
