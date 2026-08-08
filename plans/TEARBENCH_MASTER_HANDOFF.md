@@ -544,11 +544,11 @@ Do not run `pnpm requirements:generate` casually; inspect any generated diff car
 
 ### Evidence last verified at this pause
 
-DONE THIS STEP:      C33 now has a bounded source-round scheduler: a hash-validated declaration of distinct source scenarios may start the next capture only after the prior round completes, and it stops at review-required. It cannot accept a review, fit, activate, or promote an artifact. No observed delta is interpreted as quality, activation, or promotion.
-PROVEN BY:           Focused C33 test (5 tests), targeted ESLint and TypeScript. The previous Academy status evidence remains; the narrowed canonical navigation journey still has no result because it hung in this environment.
-REMAINING HERE:      C33 still needs a durable scheduler owner/invocation route, curriculum/error detail beyond durable status, meaningful unseen-seed baseline-win evidence, and credible visible real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
+DONE THIS STEP:      C33 now has durable immutable schedule custody and an explicit orchestrator route. It loads only the persisted declaration, rejects changed schedules, returns no-op for none, and stops at authorized review. It cannot accept a review, fit, activate, or promote an artifact. No observed delta is interpreted as quality, activation, or promotion.
+PROVEN BY:           Focused C33 test (5 tests), targeted ESLint, TypeScript, and architecture gate. The previous Academy status evidence remains; the narrowed canonical navigation journey still has no result because it hung in this environment.
+REMAINING HERE:      C33 still needs an explicit normal-runtime opt-in owner, curriculum/error detail beyond durable status, meaningful unseen-seed baseline-win evidence, and credible visible real-game quality evidence. C34 owns external inference/RL cancellation when such engines exist; C35 owns measured quality/ladder evidence; C37 owns normal-build player Watch navigation. C31 separately still needs record browsing, authorized lesson status/actions, population/style interpretation, and identity/deletion ownership.
 REMAINING TO C40:    C25/C27 exits, C29 active-cinematic durability, C30 target capacity, remaining C31 work, and C33-C40 product evidence remain; C27A, C28, and C32 are closed.
-NEXT SLICE:          C33: give the bounded scheduler a durable owner/invocation route that preserves its stop-at-review invariant; do not turn it into automatic review, fitting, activation, or promotion.
+NEXT SLICE:          C33: define the normal-runtime opt-in owner for the durable orchestrator without ambient background execution; do not turn it into automatic review, fitting, activation, or promotion.
 
 ### C33 pacing finding — repeat-round boundary
 

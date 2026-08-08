@@ -10,6 +10,7 @@ import { advanceTearTemporalPolicyCheckpoint, completeTearTemporalPolicyCheckpoi
 import type { TearTemporalDaggerRetrainingInputV1, TearTemporalPolicyCheckpointV1, TearTemporalPolicyTrainingConfigV1, TearTemporalPolicyTrainingResultV1 } from "./temporal-policy-trainer";
 
 const KEY = "temporal-dagger-program:v1:";
+const SCHEDULE_KEY = "temporal-dagger-program-schedule:v1:";
 const HASH = /^[a-f0-9]{16}$/u;
 
 export type TearTemporalDaggerProgramStatus = "review-required" | "checkpointed" | "cancelled" | "completed";
@@ -78,6 +79,16 @@ function validSchedule(value: TearTemporalDaggerProgramScheduleV1): boolean {
   const { scheduleHash, ...draft } = value;
   try { return scheduleHash === createTearTemporalDaggerProgramSchedule(value.programId, value.rounds).scheduleHash && scheduleHash === stableVerificationHash(draft); }
   catch { return false; }
+}
+
+function parseSchedule(value: unknown): TearTemporalDaggerProgramScheduleV1 {
+  if (!record(value) || value.format !== "tear-temporal-dagger-program-schedule" || value.schemaVersion !== 1
+    || !text(value.programId) || !Array.isArray(value.rounds) || !HASH.test(String(value.scheduleHash))) {
+    throw new TypeError("invalid temporal DAgger schedule");
+  }
+  const typed = value as unknown as TearTemporalDaggerProgramScheduleV1;
+  if (!validSchedule(typed)) throw new TypeError("temporal DAgger schedule integrity is invalid");
+  return createTearTemporalDaggerProgramSchedule(typed.programId, typed.rounds);
 }
 
 /**
@@ -184,5 +195,51 @@ export class TearTemporalDaggerProgramScheduler {
     const completed = new Set(current?.rounds.map((round) => round.scenarioHash) ?? []);
     const next = schedule.rounds.find((round) => !completed.has(stableVerificationHash(round.scenario)));
     return next === undefined ? current : this.#programs.start(schedule.programId, next.scenario, next.options);
+  }
+}
+
+/** Durable custody for the one declared source-round queue a scheduler may run. */
+export class TearTemporalDaggerProgramScheduleVault {
+  readonly #backend: GhostVaultBackend;
+  constructor(backend: GhostVaultBackend) { this.#backend = backend; }
+
+  async persist(input: TearTemporalDaggerProgramScheduleV1): Promise<TearTemporalDaggerProgramScheduleV1> {
+    const schedule = parseSchedule(input), key = `${SCHEDULE_KEY}${schedule.programId}`;
+    const existing = await this.#backend.get("analysis", key);
+    if (existing !== undefined) {
+      const parsed = parseSchedule(JSON.parse(existing));
+      if (parsed.scheduleHash !== schedule.scheduleHash) throw new RangeError("temporal DAgger schedule already exists for program");
+      return parsed;
+    }
+    await this.#backend.commit(Object.freeze([
+      { store: "analysis", key, value: JSON.stringify(schedule) },
+      { store: "indexes", key: `temporal-dagger-program-schedule:${schedule.programId}:${schedule.scheduleHash}`, value: JSON.stringify({ rounds: schedule.rounds.length }) },
+    ]));
+    return schedule;
+  }
+
+  async get(programId: string): Promise<TearTemporalDaggerProgramScheduleV1 | undefined> {
+    if (!text(programId)) throw new TypeError("temporal DAgger program id is required");
+    const key = `${SCHEDULE_KEY}${programId}`, raw = await this.#backend.get("analysis", key);
+    if (raw === undefined) return undefined;
+    try { return parseSchedule(JSON.parse(raw)); }
+    catch (error) {
+      await this.#backend.put("quarantine", key, JSON.stringify(Object.freeze({ format: "temporal-dagger-schedule-quarantine", schemaVersion: 1, key, raw, reason: error instanceof Error ? error.message : String(error) })));
+      return undefined;
+    }
+  }
+}
+
+/** Explicit durable invocation boundary; it can run only a persisted schedule. */
+export class TearTemporalDaggerProgramOrchestrator {
+  readonly #schedules: TearTemporalDaggerProgramScheduleVault;
+  readonly #scheduler: TearTemporalDaggerProgramScheduler;
+  constructor(schedules: TearTemporalDaggerProgramScheduleVault, scheduler: TearTemporalDaggerProgramScheduler) {
+    this.#schedules = schedules; this.#scheduler = scheduler;
+  }
+  async run(programId: string): Promise<TearTemporalDaggerProgramV1 | undefined> {
+    const schedule = await this.#schedules.get(programId);
+    if (schedule === undefined) return undefined;
+    return this.#scheduler.run(schedule);
   }
 }

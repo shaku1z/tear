@@ -27,6 +27,8 @@ import {
   TearTemporalPolicyCheckpointVault,
   TearTemporalDaggerProgramController,
   TearTemporalDaggerProgramScheduler,
+  TearTemporalDaggerProgramScheduleVault,
+  TearTemporalDaggerProgramOrchestrator,
   createTearTemporalDaggerProgramSchedule,
   inspectTearTemporalDaggerPrograms,
   createTearTemporalDaggerRetrainingInput,
@@ -377,8 +379,12 @@ describe("C31 held Academy candidate curation", () => {
     const schedule = createTearTemporalDaggerProgramSchedule(secondRound.id, [{
       scenario: scenario("c33-repeat-three", "c33-repeat-three-seed", 8), options: { maxCorrections: 1 },
     }]);
-    expect((await scheduler.run(schedule))?.status).toBe("review-required");
-    expect((await scheduler.run(schedule))?.rounds).toHaveLength(3);
+    const schedules = new TearTemporalDaggerProgramScheduleVault(input.backend);
+    await schedules.persist(schedule);
+    const orchestrator = new TearTemporalDaggerProgramOrchestrator(schedules, scheduler);
+    expect((await orchestrator.run(secondRound.id))?.status).toBe("review-required");
+    expect((await orchestrator.run(secondRound.id))?.rounds).toHaveLength(3);
+    await expect(schedules.persist(createTearTemporalDaggerProgramSchedule(secondRound.id, [{ scenario: scenario("c33-repeat-four", "c33-repeat-four-seed", 8) }]))).rejects.toThrow(/already exists/u);
     await expect(scheduler.run(Object.freeze({ ...schedule, scheduleHash: "0000000000000000" }))).rejects.toThrow(/integrity/u);
     const listedPrograms = await inspectTearTemporalDaggerPrograms(input.backend);
     expect(listedPrograms).toMatchObject([{ id: "c33-repeat-program", status: "review-required" }]);

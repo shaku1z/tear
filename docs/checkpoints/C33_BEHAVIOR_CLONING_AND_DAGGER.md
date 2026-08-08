@@ -220,6 +220,12 @@ create an acceptance, advance fitting, activate, or promote. This is the
 repeat-round scheduling primitive, not a background worker claim: no normal
 player runtime invokes it yet.
 
+The declared schedule now has idempotent local Vault custody keyed by program
+id and schedule hash. `TearTemporalDaggerProgramOrchestrator` is the only
+durable invocation boundary: it loads that stored declaration and delegates to
+the scheduler. A changed declaration is rejected, corrupt bytes quarantine,
+and an absent schedule is a no-op. It still stops at review-required.
+
 New C31 captures also bind the exact source scenario identity into the governed
 training sequence. A temporal fit retains the hashes of its training scenarios,
 and `compareTemporalPolicyAgainstScriptedBaselineInProduction` refuses any
@@ -265,11 +271,11 @@ measured artifact win over the scripted baseline, promotion, automated repeated
 DAgger, or automatic player-facing training.
 Those remain C33 work.
 
-DONE THIS STEP:      C33 now has a hash-validated bounded source-round scheduler. It advances only from no program or a completed round into the next distinct capture, then stops at review-required; it cannot accept, fit, activate, or promote.
-PROVEN BY:           Focused C33 test plus targeted ESLint and TypeScript. The prior Academy status build evidence remains valid; the canonical navigation journey still has no result because it hung in this environment.
-REMAINING HERE:      A durable scheduler owner/invocation route, curriculum/error detail beyond program state, meaningful unseen-seed baseline-win evidence, and credible visible real-game quality evidence. The C40 recorded-improvement item remains unticked.
+DONE THIS STEP:      C33 now has durable schedule custody and an explicit orchestrator invocation route. It runs only the stored immutable source-round declaration and retains the stop-at-review invariant; it cannot accept, fit, activate, or promote.
+PROVEN BY:           Focused C33 test plus targeted ESLint, TypeScript, and architecture gate. The prior Academy status build evidence remains valid; the canonical navigation journey still has no result because it hung in this environment.
+REMAINING HERE:      A normal-runtime owner for explicit opt-in invocation, curriculum/error detail beyond program state, meaningful unseen-seed baseline-win evidence, and credible visible real-game quality evidence. The C40 recorded-improvement item remains unticked.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
-NEXT SLICE:          Give the bounded scheduler a durable owner and invocation route, retaining its stop-at-review invariant; do not turn it into automatic review, fitting, activation, or promotion.
+NEXT SLICE:          Define the normal-runtime opt-in owner for the durable orchestrator without ambient background execution; do not turn it into automatic review, fitting, activation, or promotion.
 
 ## Slice pacing finding — 2026-08-03
 
