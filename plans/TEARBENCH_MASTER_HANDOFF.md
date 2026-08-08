@@ -1064,6 +1064,14 @@ and due identities are checked before the claim.
 REMAINING HERE: No timer, worker, unattended loop, cloud route, promotion,
 activation, placement, or curation/training/evaluation dispatch exists.
 
+### C36 lease-bound manifest admission
+
+DONE THIS STEP: The explicit lease dispatcher can advance only a valid
+`collecting` Foundry head through existing immutable trainer-manifest admission
+to `curating`, with custody, schedule, job, budget, stop, and lease checks.
+REMAINING HERE: No corpus mutation, dataset load, training, evaluation,
+promotion, timer, or cloud work exists.
+
 ### C36 IndexedDB conditional-commit browser evidence
 
 DONE THIS STEP: Test-standalone Chromium directly exercises the production

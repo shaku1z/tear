@@ -200,6 +200,14 @@ conditionally releases the lease. Concurrent/stale claims fail closed and an
 expired claim may be reclaimed. There is no timer, cloud, promotion, activation,
 placement, or later-phase dispatch.
 
+## Lease-bound manifest admission
+
+The same explicit dispatcher can now perform exactly one additional legal
+successor: a lease-claimed `collecting` head may admit its declared immutable
+C31 trainer manifest through the existing executor. It rechecks the schedule,
+job head, budgets, stop identity, held custody, and lease; it neither curates
+new data nor starts training, evaluation, promotion, cloud work, or timers.
+
 ## Browser conditional-commit evidence
 
 The test-standalone browser now invokes the production IndexedDB backend's

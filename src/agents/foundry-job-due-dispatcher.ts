@@ -1,8 +1,11 @@
 import { stableVerificationHash } from "../replay/hash";
 import type { GhostVaultBackend } from "../ghost";
-import { TearAcademyCandidateCustodyStore } from "./academy-candidate-custody";
+import type { TearAcademyCandidateCustodyStore } from "./academy-candidate-custody";
 import { TearFoundryCollectionExecutor } from "./foundry-job-collection";
-import { TearFoundryJobScheduleVault, TearFoundryScheduleController } from "./foundry-job-schedule";
+import { TearFoundryCuratedManifestExecutor, type TearFoundryCuratedManifestRequestV1 } from "./foundry-job-curation";
+import type { TearAcademyCorpusStore } from "./academy-corpus";
+import { TearFoundryScheduleController } from "./foundry-job-schedule";
+import type { TearFoundryJobScheduleVault } from "./foundry-job-schedule";
 import type { TearFoundryJobVault } from "./foundry-job-vault";
 
 const ATTEMPT_KEY = "foundry-job-due-attempt:v1:"; const LEASE_KEY = "foundry-job-due-lease:v1:"; const SCHEDULE_KEY = "foundry-job-schedule:v1:"; const JOB_KEY = "foundry-job:v1:"; const HASH = /^[a-f0-9]{16}$/u;
@@ -17,8 +20,8 @@ function parseLease(value: string): TearFoundryDueLeaseV1 { const source = JSON.
 function freeze(draft: Omit<TearFoundryDueAttemptReceiptV1, "receiptHash">): TearFoundryDueAttemptReceiptV1 { if (!HASH.test(draft.scheduleHash) || !HASH.test(draft.jobHash) || !time(draft.attemptedAt) || !text(draft.leaseId) || !HASH.test(draft.actionHash) || !["collected", "no-authorized-corpus", "not-due", "blocked"].includes(draft.disposition)) throw new TypeError("invalid Foundry due attempt"); return Object.freeze({ ...draft, receiptHash: stableVerificationHash(draft) }); }
 /** Explicit local dispatcher. It has no timer/worker; callers invoke one bounded attempt themselves. */
 export class TearFoundryDueDispatcher {
-  readonly #backend: GhostVaultBackend; readonly #jobs: TearFoundryJobVault; readonly #schedules: TearFoundryJobScheduleVault; readonly #custody: TearAcademyCandidateCustodyStore;
-  constructor(jobs: TearFoundryJobVault, schedules: TearFoundryJobScheduleVault, custody: TearAcademyCandidateCustodyStore) { if (jobs.backend() !== custody.backend()) throw new TypeError("Foundry due dispatch must share C31 Vault custody"); this.#backend = jobs.backend(); this.#jobs = jobs; this.#schedules = schedules; this.#custody = custody; }
+  readonly #backend: GhostVaultBackend; readonly #jobs: TearFoundryJobVault; readonly #schedules: TearFoundryJobScheduleVault; readonly #custody: TearAcademyCandidateCustodyStore; readonly #corpus: TearAcademyCorpusStore | undefined;
+  constructor(jobs: TearFoundryJobVault, schedules: TearFoundryJobScheduleVault, custody: TearAcademyCandidateCustodyStore, corpus?: TearAcademyCorpusStore) { if (jobs.backend() !== custody.backend() || (corpus !== undefined && jobs.backend() !== corpus.backend())) throw new TypeError("Foundry due dispatch must share C31 Vault custody"); this.#backend = jobs.backend(); this.#jobs = jobs; this.#schedules = schedules; this.#custody = custody; this.#corpus = corpus; }
   async runDueOnce(scheduleHash: string, at: string, budgets: Readonly<{ computeBudgetHash: string; storageBudgetHash: string }>, leaseId: string): Promise<TearFoundryDueAttemptReceiptV1> {
     if (!HASH.test(scheduleHash) || !HASH.test(budgets.computeBudgetHash) || !HASH.test(budgets.storageBudgetHash) || !time(at) || !leaseId) throw new TypeError("invalid Foundry due dispatch request");
     const schedule = (await this.#schedules.list()).find((entry) => entry.scheduleHash === scheduleHash); if (schedule === undefined) throw new RangeError("Foundry schedule is unavailable");
@@ -41,5 +44,20 @@ export class TearFoundryDueDispatcher {
       else { const result = await new TearFoundryCollectionExecutor(this.#jobs, this.#custody).collect(job, at); receipt = freeze({ format: "tear-foundry-due-attempt", schemaVersion: 1, scheduleHash, jobHash: job.jobHash, attemptedAt: at, leaseId, actionHash, disposition: result.receipt.disposition === "authorized" ? "collected" : "no-authorized-corpus" }); }
     } catch (error) { await this.#backend.commitIfMatches(Object.freeze([guard(leaseKey, claimedRaw)]), Object.freeze([{ store: "analysis", key: leaseKey }])); throw error; }
     await this.#backend.commitIfMatches(Object.freeze([guard(leaseKey, claimedRaw)]), Object.freeze([{ store: "analysis", key: attemptKey, value: JSON.stringify(receipt) }, { store: "indexes", key: `foundry-job-due-attempt:${scheduleHash}:${receipt.receiptHash}`, value: JSON.stringify(Object.freeze({ disposition: receipt.disposition, leaseId, actionHash })) }, { store: "analysis", key: leaseKey }])); return receipt;
+  }
+  /** One separate, lease-bound legal successor: a collecting head may only admit its declared trainer manifest. */
+  async runManifestAdmissionDueOnce(scheduleHash: string, request: TearFoundryCuratedManifestRequestV1, at: string, budgets: Readonly<{ computeBudgetHash: string; storageBudgetHash: string }>, leaseId: string): Promise<TearFoundryDueAttemptReceiptV1> {
+    const corpus = this.#corpus; if (corpus === undefined) throw new TypeError("Foundry manifest dispatch requires a shared C31 corpus store"); const corpusStore: TearAcademyCorpusStore = corpus;
+    const schedule = (await this.#schedules.list()).find((entry) => entry.scheduleHash === scheduleHash); if (schedule === undefined || !time(at) || !text(leaseId)) throw new RangeError("Foundry manifest schedule is unavailable");
+    const job = await this.#jobs.get(schedule.jobId); if (job === undefined) throw new RangeError("Foundry manifest dispatch is not authorized");
+    const actionHash = stableVerificationHash(Object.freeze({ kind: "manifest-admission", scheduleHash, jobHash: schedule.jobHash, request, attemptedAt: at, leaseId, budgets })), attemptKey = `${ATTEMPT_KEY}${actionHash}`, leaseKey = `${LEASE_KEY}${scheduleHash}`;
+    const old = await this.#backend.get("analysis", attemptKey); if (old !== undefined) { const receipt = JSON.parse(old) as TearFoundryDueAttemptReceiptV1; if (receipt.actionHash === actionHash) return receipt; }
+    if (job.phase !== "collecting" || schedule.computeBudgetHash !== budgets.computeBudgetHash || schedule.storageBudgetHash !== budgets.storageBudgetHash || schedule.stopConditionsHash !== job.inputs.stopConditionsHash) throw new RangeError("Foundry manifest dispatch is not authorized");
+    const scheduleRaw = await this.#backend.get("analysis", `${SCHEDULE_KEY}${schedule.id}`), jobRaw = await this.#backend.get("analysis", `${JOB_KEY}${job.id}`), priorRaw = await this.#backend.get("analysis", leaseKey); if (scheduleRaw === undefined || jobRaw === undefined) throw new RangeError("Foundry manifest state disappeared");
+    if (priorRaw !== undefined && Date.parse(parseLease(priorRaw).expiresAt) > Date.parse(at)) throw new RangeError("Foundry manifest dispatch is already leased");
+    const held = await this.#custody.held(at); if (!job.inputs.corpusRecordHashes.every((hash) => held.some((record) => record.recordHash === hash))) throw new RangeError("Foundry manifest custody is revoked");
+    const claimed = lease({ format: "tear-foundry-due-lease", schemaVersion: 1, scheduleHash, jobHash: job.jobHash, leaseId, actionHash, claimedAt: at, expiresAt: new Date(Date.parse(at) + LEASE_MS).toISOString() }), claimedRaw = JSON.stringify(claimed);
+    await this.#backend.commitIfMatches(Object.freeze([guard(`${SCHEDULE_KEY}${schedule.id}`, scheduleRaw), guard(`${JOB_KEY}${job.id}`, jobRaw), guard(leaseKey, priorRaw)]), Object.freeze([{ store: "analysis", key: leaseKey, value: claimedRaw }]));
+    try { const result = await new TearFoundryCuratedManifestExecutor(this.#jobs, this.#custody, corpusStore).admit(job, request, at), receipt = freeze({ format: "tear-foundry-due-attempt", schemaVersion: 1, scheduleHash, jobHash: job.jobHash, attemptedAt: at, leaseId, actionHash, disposition: result.receipt.disposition === "authorized" ? "collected" : "no-authorized-corpus" }); await this.#backend.commitIfMatches(Object.freeze([guard(leaseKey, claimedRaw)]), Object.freeze([{ store: "analysis", key: attemptKey, value: JSON.stringify(receipt) }, { store: "analysis", key: leaseKey }])); return receipt; } catch (error) { await this.#backend.commitIfMatches(Object.freeze([guard(leaseKey, claimedRaw)]), Object.freeze([{ store: "analysis", key: leaseKey }])); throw error; }
   }
 }
