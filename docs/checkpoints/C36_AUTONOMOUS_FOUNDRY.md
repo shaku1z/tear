@@ -357,3 +357,12 @@ the existing opaque enable/disable actions. It does not add a direct execution
 control. Focused scheduler, screen, action, and renderer evidence covers
 start/stop, one-due-at-a-time serialization, restart rediscovery, disabled and
 blocked refusal, execution failure, and visible state projection.
+
+## C34/C32 learned-runtime compatibility prerequisite
+
+The future Foundry decision/promotion route must require an explicit
+`tear-c34-c32-canonical-source-state.v1` model declaration rather than treating
+an existing C34 V2 result as a C32 artifact. That pure identity binds C30/C34
+and future C32 execution to one canonical source-state hash and one masked,
+deterministically tie-broken semantic action vocabulary. It is not a Foundry
+decision, artifact, registry write, activation, promotion, or schedule action.

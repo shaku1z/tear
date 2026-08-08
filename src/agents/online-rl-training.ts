@@ -1,6 +1,6 @@
 import type { GhostVaultBackend } from "../ghost";
 import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
-import { normalizeGameAction, type GameAction } from "../input/game-action";
+import type { GameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
 import { createProductionHeadlessEnvironment, type ProductionHeadlessCheckpoint } from "../tearbench";
 import {
@@ -15,6 +15,7 @@ import {
 } from "./offline-rl-training";
 import { compileTearOnlineRlCurriculum, parseTearOnlineRlCurriculumPlan, type TearOnlineRlCurriculumPlanV1 } from "./online-rl-curriculum";
 import type { TearOnlineRlRolloutControl } from "./online-rl-headless-executor";
+import { encodeTearC34C32SourceState, maskTearC34C32Actions, tearC34C32SemanticActionHash } from "./c34-c32-runtime-compatibility";
 
 const CHECKPOINT_KEY = "online-rl-checkpoint:v1:";
 const RESULT_KEY = "online-rl-training:v1:";
@@ -60,7 +61,8 @@ function record(value: unknown): value is Record<string, unknown> { return typeo
 function hash(value: unknown): value is string { return typeof value === "string" && HASH.test(value); }
 function positive(value: unknown, maximum: number): value is number { return typeof value === "number" && Number.isSafeInteger(value) && value > 0 && value <= maximum; }
 function finite(value: unknown, min: number, max: number): value is number { return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max; }
-function stateHash(state: CanonicalGameplayState): string { return stableVerificationHash(state); }
+/** Existing V2 keys remain byte-identical, while future V3 work has one named source-state encoder. */
+function stateHash(state: CanonicalGameplayState): string { return encodeTearC34C32SourceState(state).stateHash; }
 function key(state: string, action: string): string { return `${state}:${action}`; }
 function ordered(values: ReadonlyMap<string, TearOfflineRlQValueV1>): readonly TearOfflineRlQValueV1[] { return Object.freeze([...values.values()].sort((a, b) => a.stateHash.localeCompare(b.stateHash) || a.semanticActionHash.localeCompare(b.semanticActionHash)).map((entry) => Object.freeze({ ...entry }))); }
 function configHash(config: TearOnlineRlTrainingConfigV1): string { return stableVerificationHash(config); }
@@ -68,18 +70,14 @@ function validConfig(value: TearOnlineRlTrainingConfigV1): boolean { return fini
 function freeze<T>(value: T): T { return Object.freeze(structuredClone(value)); }
 
 function seeded(seed: number): () => number { let state = seed >>> 0; return () => { state = (state + 0x6d2b79f5) >>> 0; let value = state; value = Math.imul(value ^ value >>> 15, value | 1); value ^= value + Math.imul(value ^ value >>> 7, value | 61); return ((value ^ value >>> 14) >>> 0) / 4_294_967_296; }; }
-function vocabulary(actions: readonly GameAction[], allowed: readonly GameAction["type"][]): readonly GameAction[] {
-  const output: GameAction[] = []; const seen = new Set<string>();
-  for (const candidate of actions) { const normalized = normalizeGameAction(candidate); if (!normalized.ok || stableVerificationHash(candidate) !== stableVerificationHash(normalized.action)) throw new TypeError("online RL vocabulary is not canonical"); if (!allowed.includes(normalized.action.type)) continue; const identity = stableVerificationHash(normalized.action); if (!seen.has(identity)) { seen.add(identity); output.push(normalized.action); } }
-  return Object.freeze(output);
-}
+function vocabulary(actions: readonly GameAction[], allowed: readonly GameAction["type"][]): readonly GameAction[] { return maskTearC34C32Actions(actions, allowed); }
 /** Selects only a normalized, currently-advertised governed action. Unknown states use a deterministic safe fallback. */
 export function selectTearOnlineRlAction(qValues: readonly TearOfflineRlQValueV1[], state: CanonicalGameplayState, actions: readonly GameAction[], available: readonly GameAction["type"][], epsilonNumerator: number, epsilonDenominator: number, random: () => number): TearOnlineRlActionSelectionV1 | undefined {
   if (!positive(epsilonDenominator, 1_000_000) || !Number.isSafeInteger(epsilonNumerator) || epsilonNumerator < 0 || epsilonNumerator > epsilonDenominator) throw new TypeError("invalid online RL epsilon");
   const legal = vocabulary(actions, available); if (legal.length === 0) return undefined;
   if (random() * epsilonDenominator < epsilonNumerator) { const action = legal[Math.floor(random() * legal.length)]; if (action === undefined) throw new Error("online RL vocabulary disappeared"); return Object.freeze({ actions: Object.freeze([action]), semanticActionHash: tearSemanticActionBatchHash([action]), source: "epsilon" }); }
   const current = stateHash(state); let best: Readonly<{ action: GameAction; semantic: string; value: number }> | undefined;
-  for (const action of legal) { const semantic = tearSemanticActionBatchHash([action]), value = qValues.find((entry) => entry.stateHash === current && entry.semanticActionHash === semantic)?.value ?? 0; if (best === undefined || value > best.value || value === best.value && semantic.localeCompare(best.semantic) < 0) best = { action, semantic, value }; }
+  for (const action of legal) { const semantic = tearC34C32SemanticActionHash([action]), value = qValues.find((entry) => entry.stateHash === current && entry.semanticActionHash === semantic)?.value ?? 0; if (best === undefined || value > best.value || value === best.value && semantic.localeCompare(best.semantic) < 0) best = { action, semantic, value }; }
   if (best === undefined) return undefined;
   return Object.freeze({ actions: Object.freeze([best.action]), semanticActionHash: best.semantic, source: best.value === 0 ? "fallback" : "q" });
 }

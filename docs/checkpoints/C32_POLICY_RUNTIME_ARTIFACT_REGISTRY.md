@@ -172,3 +172,14 @@ PROVEN BY:           C32 targeted requirements/type/lint/architecture checks, tw
 REMAINING HERE:      None for the C32 exit gate; authorized downstream work is owned by C33/C34/C35/C37 as stated above.
 REMAINING TO C40:    C25/C27 exits, open C29/C30/C31 work, and C33-C40 product evidence.
 NEXT SLICE:          C33: consume an immutable governed C31 trainer manifest through a bounded deterministic dataset-loading contract; do not claim training until an actual artifact is produced.
+
+### C34 canonical-source compatibility boundary
+
+Future C34 Q execution cannot reuse the current table/linear/temporal artifact
+formats by implication. `tear-c34-c32-canonical-source-state.v1` is a separate
+data-only identity for a future explicit model envelope: it consumes the same
+production canonical source state as C30/C34, validates a normalized semantic
+action vocabulary, masks it against source-advertised action types, and breaks
+equal Q values by semantic-action hash. Legacy V2 C34 results are deliberately
+rejected because they do not declare that identity. Nothing here registers,
+activates, or changes the existing Watch runtime.

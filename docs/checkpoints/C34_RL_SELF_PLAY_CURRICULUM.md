@@ -117,3 +117,13 @@ curriculum expansion, and run safeguards.
 REMAINING TO C40:    C25/C27/C29/C30/C31/C33 exits and C34-C40 product evidence.
 NEXT SLICE:          Evaluate a retained offline-Q challenger through a declared
 source-world protocol; do not construct a runtime artifact or activation path.
+
+### C34/C32 canonical learned-runtime compatibility prerequisite
+
+`tear-c34-c32-canonical-source-state.v1` now names the future learned-Q runtime
+boundary. C30, C34 training, and a future C32 adapter hash the same production
+`CanonicalGameplayState`; normalized semantic vocabulary, availability masking,
+and equal-Q tie-break are pure and deterministic. Existing V2 C34 result bytes
+have no such declaration and explicitly refuse this path. This is compatibility
+infrastructure only: it does not convert a result, create a C32 artifact,
+register, activate, promote, or claim a deployable learned policy.

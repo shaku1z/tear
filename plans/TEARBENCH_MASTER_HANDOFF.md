@@ -1191,3 +1191,16 @@ only. The Foundry screen displays disabled/configured/due/running/blocked/error
 and retains only refresh plus opaque enable/disable actions. No worker, cloud,
 network, generic phase command, policy artifact, activation, placement, or
 promotion was added. C36 remains open.
+
+### C34/C32 canonical learned-runtime compatibility prerequisite
+
+DONE THIS STEP: A versioned data-only adapter identity now requires C30, C34,
+and a future C32 learned-Q runtime to encode the same production canonical
+source state and use one normalized/masked deterministic semantic vocabulary.
+Legacy V2 C34 results reject this path because they do not declare its identity.
+PROVEN BY: `tests/unit/c34-c32-runtime-compatibility.test.ts` drives a real C30
+source world and covers projection equality, vocabulary/masking/tie-break, and
+legacy refusal.
+REMAINING HERE: No C34 result has been converted; no C32 artifact, registry,
+activation, promotion, Foundry decision, or UI exists. Future model training
+must emit the explicit envelope before it can request any C32 learned-Q route.

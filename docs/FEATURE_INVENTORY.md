@@ -491,4 +491,9 @@ This is the migration checklist for the architectural redesign. A checked featur
 
 No feature-preservation evidence gaps remain in this inventory. Release readiness still requires the full clean-commit gate described above.
 
+The future learned-Q runtime has a separate versioned C34/C32 canonical-source
+compatibility identity. It proves common C30 source-state encoding and canonical
+action selection mechanics only; legacy C34 results refuse the path, and it
+does not create a policy artifact, activation, promotion, or player feature.
+
 The inventory is reviewed at every phase gate. New features added during the redesign must be appended here and implemented through the target boundaries; they may not add new shared globals or direct platform dependencies to domain code.

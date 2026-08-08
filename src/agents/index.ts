@@ -30,6 +30,7 @@ export * from "./online-rl-training";
 export * from "./online-rl-source-evaluation";
 export * from "./online-rl-tournament";
 export * from "./policy-feature-vector";
+export * from "./c34-c32-runtime-compatibility";
 export * from "./policy-condition-vector";
 export * from "./behavior-cloning-trainer";
 export * from "./behavior-cloning-evaluation";
