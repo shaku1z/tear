@@ -613,6 +613,23 @@ NEXT SLICE:          Evaluate the retained online-Q challenger with a declared
 fresh C30 source-world protocol; do not call independent paired runs self-play
 and do not add a second simulator.
 
+### C34 paired fresh-world tournament
+
+DONE THIS STEP:      C34 can now compare two distinct completed online-Q
+checkpoints through identical frozen C30 curriculum cases in deterministic
+challenger-then-defender order. Each participant runs independently in a fresh
+production-headless world and retains its own semantic action trace, terminal
+hash, reward total, and cancellation/budget stop result. This has no registry,
+activation, promotion, update, or shared-player path.
+PROVEN BY:           `tests/unit/online-rl-tournament.test.ts` plus C34 online
+Q/curriculum/offline focused tests, TypeScript, targeted ESLint, and architecture.
+REMAINING HERE:      It is explicitly not self-play: C30 has one player/action
+route, and creating simultaneous adversaries needs a later multi-actor gameplay
+contract. Keep C34’s combined online-RL/self-play exit open.
+NEXT SLICE:          Build a declared fresh-C30 quality evaluation for the
+retained online-Q challenger; do not substitute tournament traces for quality
+or self-play evidence.
+
 ### C33 pacing finding — repeat-round boundary
 
 Five consecutive non-ticking C33 slices completed conditioning compatibility,

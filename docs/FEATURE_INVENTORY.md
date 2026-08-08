@@ -365,7 +365,10 @@ This is the migration checklist for the architectural redesign. A checked featur
    Cancellation, timeout, budget, malformed-lineage, and Q-value guards retain
    non-promotional stopped custody; the resume fixture equals one uninterrupted
    source-world update run. This remains local online-Q work, not self-play or
-   evaluated/published policy quality.
+   evaluated/published policy quality. C34 can also retain a deterministic
+   challenger/defender paired tournament over the same frozen C30 cases, but it
+   deliberately creates independent worlds and never co-mingles actions; it is
+   comparison evidence, not simultaneous self-play or quality certification.
    Account/
    cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work.

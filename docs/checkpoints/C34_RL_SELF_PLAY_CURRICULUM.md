@@ -69,6 +69,12 @@ challenger.
   lineage guards fail closed. Terminal stopped results contain no online model;
   completed local custody is still non-promotional and has no C32 registry,
   activation, promotion, or self-play route.
+- A paired tournament can now compare two distinct completed online-Q
+  checkpoints through the same frozen curriculum cases in deterministic
+  challenger-then-defender order. Each contender gets its own fresh C30 world,
+  semantic trace, terminal hash, reward total, and cancellation/budget outcome.
+  Their commands never share a world or player slot. This is a controlled
+  comparison, explicitly not self-play.
 
 ## Exit-gate status
 
