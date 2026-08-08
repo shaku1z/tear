@@ -284,7 +284,33 @@ without matching immutable intent. This is a control-plane contract only: it
 does not dispatch a phase, create a timer, start a worker, call cloud, alter
 custody, evaluate, register, activate, or promote a policy.
 
+## Bound local one-shot execution
+
+`runScheduledOnce(scheduleHash, at, leaseId)` accepts no caller phase request.
+It resolves the current enabled schedule and its exact binding, confirms the
+durable head and binding phase still agree, then delegates exactly one action
+to the existing lease-bound executor. It retains an idempotent local attempt
+receipt. A successor intentionally leaves the old schedule stale unless a
+future atomic coordinator can derive and commit its successor binding; this
+slice never invents continuation intent, starts a timer, or runs a worker.
+
 ## Lease-bound bounded offline resume
+
+## V3 receipt-bound schedule continuation
+
+Execution binding V3 retains V1/V2 recovery readability but only V3 may run.
+Its constrained nested successor declaration freezes `created → collecting`
+trainer-manifest and `collecting → curating` offline-launch intent; `curating`
+accepts only receipt-emitted V2 training material, while `training` repeats its
+current exact V2 launch without a callback or scan. The one-shot executor has
+no caller payload or phase selection and invokes a legal existing dispatcher
+once. The bounded
+coordinator atomically pins the enabled source schedule, V2 pointer and bytes,
+successful due receipt, durable successor, budgets, stop identity, and
+action-time custody before it writes the successor schedule, V2 binding
+pointer/index, and idempotent continuation receipt. It executes no phase and
+creates no timer, worker, cloud request, policy artifact, activation, or
+promotion. There is no timer, worker, cloud route, UI, or autonomous loop.
 
 ## Receipt-bound successor binding material
 

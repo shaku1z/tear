@@ -1151,6 +1151,27 @@ REMAINING HERE: Require these bindings at each existing phase dispatcher and
 carry a freshly derived binding across a legal successor in a separately
 atomic coordinator; do not add timers or generic dispatch.
 
+### C36 bound local one-shot execution
+
+DONE THIS STEP: One explicit local call consumes only the current enabled
+schedule's immutable binding and delegates one existing lease-bound executor.
+It takes no phase request, retains an idempotent attempt, and refuses absent or
+stale bindings. A legal successor deliberately leaves the prior schedule stale
+unless a later atomic continuation can derive its new binding. No loop, worker,
+cloud, activation, or promotion was added.
+
+### C36 V3 receipt-bound schedule continuation
+
+DONE THIS STEP: V3 execution bindings carry a constrained chained successor
+declaration, while historical V1/V2 bytes remain recovery-readable but cannot
+run or continue. One explicit caller uses only the durable V3 phase intent and
+then an atomic coordinator verifies current schedule/binding
+pointer, successful receipt, durable successor, budgets, stop identity, and
+action-time held custody, and commits the successor schedule plus V2
+binding-pointer/index and idempotent receipt together. It does not execute any
+work, start a timer/worker, contact cloud, create an artifact, activate, or
+promote. No timer, worker, cloud, UI, or automatic loop was added.
+
 ### C36 IndexedDB conditional-commit browser evidence
 
 DONE THIS STEP: Test-standalone Chromium directly exercises the production
