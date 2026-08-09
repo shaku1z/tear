@@ -660,6 +660,15 @@ capsule-bound local consent/custody and queues a local job; it does not acquire
 a bearer, contact a Worker, invoke transport, or start a timer. This is not
 configured cloud-publication evidence.
 
+When that same review has a valid standalone capability and queued local job,
+the player may press **RUN UPLOAD ONCE** or **CANCEL PUBLICATION**. Each is a
+separate foreground action: it reconstructs custody, obtains a fresh bearer
+only for that action, and renders durable attempt/retry/terminal state. Opening
+or refreshing the screen never runs transport. Missing endpoint, unsupported
+target, anonymous account, unhealthy/revoked custody, or a missing job leaves
+both actions unavailable. This remains local browser wiring, not deployed or
+cross-device publication evidence.
+
 ### C36 approval-bound post-promotion monitor
 
 An active C36-promoted V3 Watch run can retain one aggregate-only terminal health record after exact active pointer, promotion/approval, frozen protocol, and complete real Watch journal revalidation. It freezes the prior thresholds and `classify-only-no-rollback`; it cannot retain raw actions/states, mutate the pointer, roll back, schedule, place traffic, or render UI.

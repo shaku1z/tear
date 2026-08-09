@@ -313,10 +313,11 @@ export interface BotEvidenceScreenView {
 
 /** C38 review is a local authority-and-intent screen, never a transport status. */
 export interface GhostPublicationScreenView {
-  readonly id: "ghostpublication"; readonly status: "unavailable" | "ready" | "queued";
+  readonly id: "ghostpublication"; readonly status: "unavailable" | "ready" | "queued" | "uploading" | "terminal";
   readonly detail: string; readonly capsuleId?: string; readonly rootIntegrity?: string;
   readonly capability: string; readonly privacy: "pseudonymous"; readonly visibility: "private";
-  readonly training: "no-training"; readonly canGrant: boolean;
+  readonly training: "no-training"; readonly canGrant: boolean; readonly canRun?: boolean; readonly canCancel?: boolean;
+  readonly attempts?: number; readonly retryAt?: string; readonly terminal?: string;
 }
 
 export type LegacyScreenView = MenuScreenView | SetupScreenView | PlayingScreenView | CodexScreenView

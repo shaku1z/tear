@@ -60,7 +60,7 @@ export function createGhostLabRenderers(context: ScreenRenderContext) {
           `MEAN TICKS / ${report.meanTicks.toFixed(1)}    CAP / ${String(report.maxTicksPerCase)}`,
           "PLACEMENT / UNASSIGNED    HUMAN CALIBRATION / NOT COMPARED    CERTIFICATION / NOT CERTIFIED",
         ];
-        rows.forEach((row, index) => ui.text(canvas, row, left + 24, top + 114 + index * 31, index < 8 ? ui.t.type.micro : ui.t.type.caption, "left", index === 10 ? ui.t.alpha.full : ui.t.alpha.soft));
+      rows.forEach((row, index) => { ui.text(canvas, row, left + 24, top + 114 + index * 31, index < 8 ? ui.t.type.micro : ui.t.type.caption, "left", index === 10 ? ui.t.alpha.full : ui.t.alpha.soft); });
       }
       ui.wrappedText(canvas, "Read-only evidence projection. It does not evaluate, score, level, activate, promote, route traffic, or compare human data.", width / 2, 742, 790, 20, ui.t.type.caption, "center", ui.t.alpha.muted);
       backControl(context);
@@ -68,16 +68,18 @@ export function createGhostLabRenderers(context: ScreenRenderContext) {
     ghostpublication(view: GhostPublicationScreenView): void {
       const { canvas, ui, width } = context, left = 244, top = 182, panelWidth = 792;
       ui.header(canvas, "GHOST PUBLICATION", "review local custody before any foreground upload", context.enterAmount, ui.t.color.accent);
-      ui.sectionLabel(canvas, "LOCAL REVIEW", left, top - 26, panelWidth); ui.card(canvas, left, top, panelWidth, 430);
+      ui.sectionLabel(canvas, "LOCAL REVIEW", left, top - 26, panelWidth); ui.card(canvas, left, top, panelWidth, 470);
       ui.text(canvas, `STATUS / ${view.status.toUpperCase()}`, left + 24, top + 36, ui.t.type.label, "left", view.status === "ready" ? ui.t.alpha.full : ui.t.alpha.muted);
       ui.wrappedText(canvas, view.detail, left + 24, top + 64, panelWidth - 48, 20, ui.t.type.caption, "left", ui.t.alpha.soft);
       const rows = [
         `CAPSULE / ${view.capsuleId ?? "UNAVAILABLE"}`, `SOURCE ROOT / ${view.rootIntegrity ?? "UNAVAILABLE"}`,
         `CAPABILITY / ${view.capability}`, "PRIVACY / PSEUDONYMOUS    VISIBILITY / PRIVATE", "TRAINING / NO-TRAINING (NOT COLLECTED OR GRANTED)",
       ];
-      rows.forEach((row, index) => ui.text(canvas, row, left + 24, top + 136 + index * 34, ui.t.type.caption, "left", ui.t.alpha.soft));
-      context.enqueue({ x: left + 24, y: top + 332, w: 360, h: 46, label: view.status === "queued" ? "LOCAL JOB QUEUED" : "GRANT LOCAL PUBLICATION", enabled: view.canGrant, action: { type: "ghostpublication.grant" } });
-      ui.wrappedText(canvas, "Granting records capsule-bound local consent and queues intent only. It does not contact a server, start a timer, or upload this capsule.", width / 2, 666, 760, 19, ui.t.type.caption, "center", ui.t.alpha.muted);
+      rows.forEach((row, index) => { ui.text(canvas, row, left + 24, top + 136 + index * 34, ui.t.type.caption, "left", ui.t.alpha.soft); });
+      if (view.attempts !== undefined) ui.text(canvas, `ATTEMPTS / ${String(view.attempts)}${view.retryAt === undefined ? "" : `    RETRY AFTER / ${view.retryAt}`}${view.terminal === undefined ? "" : `    TERMINAL / ${view.terminal.toUpperCase()}`}`, left + 24, top + 306, ui.t.type.micro, "left", ui.t.alpha.soft);
+      context.enqueue({ x: left + 24, y: top + 332, w: 360, h: 46, label: view.status === "queued" ? "RUN UPLOAD ONCE" : "GRANT LOCAL PUBLICATION", enabled: view.status === "queued" ? view.canRun : view.canGrant, action: view.status === "queued" ? { type: "ghostpublication.runOnce" } : { type: "ghostpublication.grant" } });
+      context.enqueue({ x: left + 408, y: top + 332, w: 360, h: 46, label: "CANCEL PUBLICATION", enabled: view.canCancel, action: { type: "ghostpublication.cancel" } });
+      ui.wrappedText(canvas, "Granting records capsule-bound local consent and queues intent only. RUN UPLOAD ONCE is foreground-only: no timer, reload action, or background scan can upload this capsule.", width / 2, 706, 760, 19, ui.t.type.caption, "center", ui.t.alpha.muted);
       backControl(context);
     },
   });

@@ -26,7 +26,7 @@ export interface ScreenActionBindingPorts {
   readonly bootstrapFoundry: (profileId: string) => void;
   readonly setFoundryScheduleEnabled: (scheduleHash: string, enabled: boolean) => void;
   readonly openGhostLab: (destination: "academy" | "foundry" | "vault" | "watch" | "botevidence") => void;
-  readonly openGhostPublication: (id: string) => void; readonly grantGhostPublication: () => void;
+  readonly openGhostPublication: (id: string) => void; readonly grantGhostPublication: () => void; readonly runGhostPublicationOnce: () => void; readonly cancelGhostPublication: () => void;
   readonly controlGhostLabWatch: (command: "start" | "pause" | "resume" | "stop") => void;
   readonly signIn: () => void; readonly signOut: () => void; readonly pinReplay: (id: string, pinned: boolean) => boolean;
   readonly deleteReplay: (id: string) => void; readonly dispatchPlayground: (id: string) => void;
@@ -78,6 +78,8 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "profile.repairGhostCapsule": (action) => { ports.library.repairGhostCapsule(action.id); },
     "profile.openGhostPublication": (action) => { ports.openGhostPublication(action.id); },
     "ghostpublication.grant": () => { ports.grantGhostPublication(); },
+    "ghostpublication.runOnce": () => { ports.runGhostPublicationOnce(); },
+    "ghostpublication.cancel": () => { ports.cancelGhostPublication(); },
     "profile.signIn": () => { ports.signIn(); }, "profile.signOut": () => { ports.signOut(); },
     "profile.rename": () => { ports.settings.beginRename(false); },
     "profile.openAchievements": () => { ports.setScreen("achievements"); ports.resetScroll(); }, "profile.play": () => { ports.setScreen("setup"); },

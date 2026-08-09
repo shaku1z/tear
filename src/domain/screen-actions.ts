@@ -78,6 +78,8 @@ export type ScreenAction =
   | { readonly type: "ghostlab.open"; readonly destination: "academy" | "foundry" | "vault" | "watch" | "botevidence" }
   | { readonly type: "ghostlab.watch"; readonly command: "start" | "pause" | "resume" | "stop" }
   | { readonly type: "ghostpublication.grant" }
+  | { readonly type: "ghostpublication.runOnce" }
+  | { readonly type: "ghostpublication.cancel" }
   | { readonly type: "rename.submit" }
   | { readonly type: "rename.cancel" }
   | { readonly type: "draft.choose"; readonly index: number }
