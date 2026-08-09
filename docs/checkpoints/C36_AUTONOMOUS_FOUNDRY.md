@@ -734,3 +734,19 @@ UI, or contact cloud. PROVEN BY:
 `tests/unit/foundry-job-offline-training-finalization.test.ts`.
 REMAINING HERE: candidate/bridge/promotion and monitored product lifecycle
 integration remain separate; C36 remains open.
+
+## V4 external V3 monitoring-evidence declaration
+
+The concluded V4 monitoring terminal can admit separately produced complete V3
+offline plan/result, online plan/completed checkpoint, passed source evaluation,
+and inactive C32 candidate as immutable evidence. It retains parsed V3 bytes,
+the exact V2 decision/monitoring receipts, frozen protocol/stop identity,
+concluded schedule/pointer, C31 custody bytes, and time. The bridge receipt,
+declaration, and `v3-monitoring-bridge-ready { declarationHash }` pointer are
+one conditional Vault commit. Failed/incomplete V3 evidence, active/tampered
+candidates, changed custody/terminal, and commit loss fail closed; exact retry
+returns the retained declaration. It does not train, convert, register,
+activate, approve, promote, schedule, place, monitor traffic, or execute.
+PROVEN BY: `tests/unit/foundry-job-v3-monitoring-bridge.test.ts`.
+REMAINING HERE: candidate/promotion and monitored product lifecycle integration
+remain separate; C36 remains open.

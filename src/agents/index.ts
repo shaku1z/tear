@@ -29,6 +29,7 @@ export * from "./online-rl-v3-training";
 export * from "./c34-v3-c32-policy-adapter";
 export * from "./c32-canonical-active-policy-runtime";
 export * from "./foundry-job-v3-monitoring-bridge";
+export * from "./foundry-job-v4-v3-monitoring-bridge";
 export * from "./foundry-job-v3-promotion-approval";
 export * from "./foundry-job-v3-promotion";
 export * from "./foundry-job-v3-post-promotion-monitor";

@@ -1469,6 +1469,22 @@ REMAINING HERE: This does not build a bridge, candidate, policy, traffic
 placement, promotion, rollback, UI, cloud action, or unattended lifecycle.
 C36 remains open.
 
+### C36 V4 external V3 monitoring evidence
+
+DONE THIS STEP: A concluded V4 monitoring terminal can atomically retain one
+full, separately-produced V3 offline/online/evaluation evidence package and
+an inactive C32 candidate. The declaration contains parsed evidence bytes and
+is bound to the exact V2 decision/monitoring facts, frozen protocol/stop
+identity, terminal schedule/pointer, and live C31 custody. Its one guarded
+commit also replaces the terminal pointer with
+`v3-monitoring-bridge-ready { declarationHash }`.
+PROVEN BY: `tests/unit/foundry-job-v3-monitoring-bridge.test.ts` covers real
+V2/C31/V4-compatible declaration, full V3 bytes, inactive-only candidate,
+and exact retry. No training, conversion, registry admission, activation,
+approval, promotion, schedule, traffic, or policy execution is reached.
+REMAINING HERE: later candidate/promotion and monitored product lifecycle
+work remain separate; C36 remains open.
+
 ### C34 V3 canonical-compatible offline training custody
 
 DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,

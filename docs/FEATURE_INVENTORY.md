@@ -572,6 +572,11 @@ and completed V3 candidate lineage as a quarantined, inactive-only evidence
 record. It cannot activate, route, place, promote, roll back, schedule, or
 surface that candidate to players.
 
+The V4 terminal can additionally retain complete separately-produced V3
+evidence bytes through one atomic, inactive-only bridge declaration. It is a
+durable handoff pointer, not a scheduler, runtime route, registry, activation,
+approval, promotion, placement, or traffic feature.
+
 Eligible V3 monitoring evidence can also be frozen in an approver-free C36
 promotion-approval package, including any valid prior active-policy rollback
 identity. It is still only durable evidence: no registry admission, activation,
