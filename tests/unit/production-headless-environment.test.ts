@@ -144,10 +144,14 @@ describe("C30 production headless environment", () => {
     original.reset(scenario);
     for (let tick = 1; tick <= 60; tick += 1) original.step(actionsAt(tick));
     const source = original.captureCheckpoint();
-    const forgedSnapshot = forgeExitLaunchSnapshot(source.snapshot, createOneFrameBoundaryLaunchMatrix()[0]!);
+    const launch = createOneFrameBoundaryLaunchMatrix()[0];
+    if (launch === undefined) throw new Error("State Forge fixture launch missing");
+    const forgedSnapshot = forgeExitLaunchSnapshot(source.snapshot, launch);
     const restored = createProductionHeadlessEnvironment();
     expect(restored.restoreStateForgeEvaluation({ source, forgedSnapshot })).toMatchObject({ tick: source.checkpoint.tick });
-    const forgedWrongParent = Object.freeze({ ...forgedSnapshot, lineage: Object.freeze({ ...forgedSnapshot.lineage!, parentId: "foreign" }) });
+    const lineage = forgedSnapshot.lineage;
+    if (lineage === undefined) throw new Error("State Forge fixture lineage missing");
+    const forgedWrongParent = Object.freeze({ ...forgedSnapshot, lineage: Object.freeze({ ...lineage, parentId: "foreign" }) });
     expect(() => restored.restoreStateForgeEvaluation({ source, forgedSnapshot: forgedWrongParent })).toThrow(/lineage-bound/u);
     original.dispose(); restored.dispose();
   });

@@ -34,7 +34,7 @@ export class TearFoundryV4SourceEvaluationPlanScheduler {
         return Object.freeze([{ store: "analysis" as const, key: `${BINDING}${next.bindingHash}`, value: JSON.stringify(next) }, { store: "analysis" as const, key: checked.pointerKey, value: next.bindingHash }, { store: "indexes" as const, key: `foundry-job-v4-source-evaluation-plan:${checked.job.id}:${derived.receipt.receiptHash}`, value: JSON.stringify(Object.freeze({ authorityHash: payload.authorityHash, pairedReadinessHash: payload.pairedReadinessHash, planHash: derived.plan.planHash, bindingHash: next.bindingHash })) }]);
       },
     });
-    if (next === undefined || next.payload.kind !== "source-evaluation-execution-ready" || next.payload.planReceiptHash !== output.receipt.receiptHash) throw new Error("Foundry V4 source-evaluation plan continuation was not retained");
+    if (next?.payload.kind !== "source-evaluation-execution-ready" || next.payload.planReceiptHash !== output.receipt.receiptHash) throw new Error("Foundry V4 source-evaluation plan continuation was not retained");
     return next;
   }
   async #validate(schedule: TearFoundryJobScheduleV1, source: TearFoundryExecutionBindingV4, at: string): Promise<Validated> {

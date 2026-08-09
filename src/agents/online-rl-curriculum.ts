@@ -119,7 +119,7 @@ export function createTearOnlineRlCurriculumPlan(dataset: TearAcademyTrainingDat
   const offline = parseTearOfflineRlPlan(offlineInput), receipt = parseTearOfflineRlTrajectoryReceipt(receiptInput);
   if (!hash(input.trainingHash) || offline.dataset.datasetHash !== dataset.datasetHash || receipt.plan.planHash !== offline.planHash || receipt.plan.rewardHash !== offline.reward.rewardHash) throw new RangeError("curriculum lineage is unavailable or changed");
   const governed = new Map(dataset.sequences.filter((sequence) => sequence.split === "training" && sequence.sourceScenario !== undefined)
-    .map((sequence) => [scenarioHash(sequence.sourceScenario!), sequence]));
+    .map((sequence) => [scenarioHash(sequence.sourceScenario ?? (() => { throw new Error("curriculum source scenario disappeared"); })()), sequence]));
   if (governed.size !== offline.environment.scenarioHashes.length) throw new RangeError("curriculum source scenarios no longer match the offline plan");
   for (const stage of input.stages) for (const scenario of stage.scenarios) {
     const sequence = governed.get(scenarioHash(scenario));

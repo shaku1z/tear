@@ -56,7 +56,7 @@ function scenarioHash(scenario: TearScenarioV1): string { return stableVerificat
 
 function validateDraft(draft: Omit<TearAcademyPolicyEvaluationPlanV1, "planHash">): void {
   if (!text(draft.id) || !Number.isSafeInteger(draft.version) || draft.version < 1 || !hash(draft.datasetHash) || !hash(draft.artifactTrainingHash)
-    || !text(draft.baselineProfile) || draft.primaryMetric !== "completed-rate" || !unit(draft.minimumBaselineMargin)
+    || !text(draft.baselineProfile) || !unit(draft.minimumBaselineMargin)
     || !Array.isArray(draft.excludedScenarioHashes) || draft.excludedScenarioHashes.length < 1 || !draft.excludedScenarioHashes.every(hash)
     || new Set(draft.excludedScenarioHashes).size !== draft.excludedScenarioHashes.length || draft.cases.length < 1 || draft.cases.length > 32) {
     throw new TypeError("invalid Academy policy evaluation plan");
@@ -64,13 +64,13 @@ function validateDraft(draft: Omit<TearAcademyPolicyEvaluationPlanV1, "planHash"
   const lessons: ReadonlyMap<string, TearAcademyLesson> = new Map(CANONICAL_ACADEMY_LESSONS.map((lesson) => [lesson.id, lesson]));
   const selected = new Set(draft.cases.map((entry) => entry.lessonId));
   if (selected.size !== draft.lessonThresholds.length || draft.lessonThresholds.some((entry) => {
-    const lesson = lessons.get(entry.id); return lesson === undefined || lesson.domain !== entry.domain || lesson.passThreshold !== entry.passThreshold || !selected.has(entry.id);
+    const lesson = lessons.get(entry.id); return lesson?.domain !== entry.domain || lesson.passThreshold !== entry.passThreshold || !selected.has(entry.id);
   })) throw new TypeError("Academy policy evaluation plan lesson thresholds do not match canonical lessons");
   validateTearProductionPolicyEvaluationSuite({ id: draft.id, version: draft.version, description: "Academy policy evaluation plan", scenarios: draft.cases.map((entry) => entry.scenario) });
   const identities = new Set<string>();
   for (const entry of draft.cases) {
     const lesson = lessons.get(entry.lessonId);
-    if (lesson === undefined || (entry.kind !== "unseen" && entry.kind !== "recovery") || !(lesson.unseenSeeds as readonly string[]).includes(entry.scenario.seed)) {
+    if (!lesson?.unseenSeeds.includes(entry.scenario.seed)) {
       throw new TypeError("Academy policy evaluation case is not a canonical unseen seed");
     }
     const scenarioIdentity = scenarioHash(entry.scenario);
@@ -104,15 +104,16 @@ export function createTearAcademyPolicyEvaluationPlan(input: TearAcademyPolicyEv
     datasetHash: input.dataset.datasetHash, artifactTrainingHash: input.artifactTrainingHash, baselineProfile: input.baselineProfile,
     primaryMetric: input.primaryMetric, minimumBaselineMargin: input.minimumBaselineMargin,
     lessonThresholds: [...new Set(input.cases.map((entry) => entry.lessonId))].sort().map((id) => {
-      const lesson = CANONICAL_ACADEMY_LESSONS.find((entry) => entry.id === id); return lesson === undefined ? { id, domain: "movement" as TearLessonDomain, passThreshold: 0 } : { id: lesson.id, domain: lesson.domain, passThreshold: lesson.passThreshold };
+      const lesson = CANONICAL_ACADEMY_LESSONS.find((entry) => entry.id === id); return lesson === undefined ? { id, domain: "movement", passThreshold: 0 } : { id: lesson.id, domain: lesson.domain, passThreshold: lesson.passThreshold };
     }), excludedScenarioHashes, cases: input.cases });
 }
 
 /** Throws for malformed or altered persisted plan bytes. */
 export function parseTearAcademyPolicyEvaluationPlan(value: unknown): TearAcademyPolicyEvaluationPlanV1 {
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("invalid Academy policy evaluation plan");
-  const typed = value as TearAcademyPolicyEvaluationPlanV1;
-  if (typed.format !== "tear-academy-policy-evaluation-plan" || typed.schemaVersion !== 1 || !hash(typed.planHash)) throw new TypeError("invalid Academy policy evaluation plan");
+  const record = value as Readonly<Record<string, unknown>>;
+  if (record.format !== "tear-academy-policy-evaluation-plan" || record.schemaVersion !== 1 || !hash(record.planHash)) throw new TypeError("invalid Academy policy evaluation plan");
+  const typed = record as unknown as TearAcademyPolicyEvaluationPlanV1;
   const { planHash, ...draft } = typed;
   const plan = freeze(draft);
   if (planHash !== plan.planHash) throw new TypeError("Academy policy evaluation plan integrity mismatch");

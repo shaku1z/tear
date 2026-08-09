@@ -33,10 +33,6 @@ interface JwtClaims {
   readonly sub: string;
 }
 
-interface FirebaseJwks {
-  readonly keys: readonly JsonWebKey[];
-}
-
 interface CachedKeys {
   readonly expiresAt: number;
   readonly keys: ReadonlyMap<string, JsonWebKey>;
@@ -58,9 +54,9 @@ function decodeBase64Url(value: string): Uint8Array {
   }
 }
 
-function parseJson<T>(bytes: Uint8Array): T {
+function parseJson(bytes: Uint8Array): unknown {
   try {
-    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as T;
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as unknown;
   } catch {
     throw new FirebaseAuthenticationError();
   }
@@ -70,8 +66,8 @@ function parseJwt(token: string): Readonly<{ header: JwtHeader; claims: JwtClaim
   const pieces = token.split(".");
   if (pieces.length !== 3 || pieces.some((piece) => piece.length === 0)) throw new FirebaseAuthenticationError();
   const [headerPart, claimsPart, signaturePart] = pieces as [string, string, string];
-  const header = parseJson<JwtHeader>(decodeBase64Url(headerPart));
-  const claims = parseJson<JwtClaims>(decodeBase64Url(claimsPart));
+  const header = parseJson(decodeBase64Url(headerPart)) as JwtHeader;
+  const claims = parseJson(decodeBase64Url(claimsPart)) as JwtClaims;
   if (header.alg !== "RS256" || typeof header.kid !== "string" || header.kid.length === 0 || header.kid.length > 256) {
     throw new FirebaseAuthenticationError();
   }
@@ -99,17 +95,21 @@ async function loadKeys(fetcher: typeof fetch): Promise<ReadonlyMap<string, Json
     throw new FirebaseAuthenticationError();
   }
   if (!response.ok) throw new FirebaseAuthenticationError();
-  let body: FirebaseJwks;
+  let body: unknown;
   try {
-    body = await response.json() as FirebaseJwks;
+    body = await response.json();
   } catch {
     throw new FirebaseAuthenticationError();
   }
-  if (!Array.isArray(body.keys)) throw new FirebaseAuthenticationError();
+  if (body === null || typeof body !== "object" || !Array.isArray((body as Readonly<Record<string, unknown>>).keys)) throw new FirebaseAuthenticationError();
+  const keysValue = (body as Readonly<Record<string, unknown>>).keys as readonly unknown[];
   const keys = new Map<string, JsonWebKey>();
-  for (const key of body.keys) {
-    if (key.kid !== undefined && typeof key.kid === "string" && key.kty === "RSA" && key.n !== undefined && key.e !== undefined) {
-      keys.set(key.kid, key);
+  for (const candidate of keysValue) {
+    if (candidate !== null && typeof candidate === "object") {
+      const key = candidate as Readonly<Record<string, unknown>>;
+      if (typeof key.kid === "string" && key.kty === "RSA" && typeof key.n === "string" && typeof key.e === "string") {
+        keys.set(key.kid, key);
+      }
     }
   }
   if (keys.size === 0) throw new FirebaseAuthenticationError();

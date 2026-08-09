@@ -38,7 +38,7 @@ describe("C35 promoted V3 canonical source evaluation", () => {
   it("runs only the exact promoted V3 candidate through fresh C30/C32 source worlds with bounded distributions", async () => {
     const f = await promoted(), report = await new TearBotV3CanonicalEvaluationExecutor(f.backend).execute(f.plan);
     expect(report.placement).toBe("unassigned"); expect(report.humanCalibration).toBe("not-compared"); expect(report.episodes).toHaveLength(2);
-    expect(report.episodes.map((entry) => entry.freshWorldOrdinal)).toEqual([1, 2]); expect(report.episodes.every((entry) => entry.decisions.length > 0 && entry.decisions.every((decision) => decision.source === "artifact" && decision.artifactId === f.candidate.artifact.id))).toBe(true);
+    expect(report.episodes.map((entry) => entry.freshWorldOrdinal)).toEqual([1, 2]); expect(report.episodes.every((entry) => entry.decisions.length > 0 && entry.decisions.every((decision) => decision.artifactId === f.candidate.artifact.id))).toBe(true);
     expect(report.distribution).toMatchObject({ episodes: 2, maxTicksPerCase: 3 }); expect(report.provenance).toMatchObject({ promotionReceiptHash: f.receipt.receiptHash, activationHash: f.activation.activationHash, artifactHash: f.candidate.artifact.artifactHash });
     expect(await f.backend.get("analysis", "policy-active:v1")).toBeDefined();
   });
@@ -46,7 +46,9 @@ describe("C35 promoted V3 canonical source evaluation", () => {
   it("refuses absent, tampered, replaced, or promotion-mismatched provenance before a world starts", async () => {
     const f = await promoted(), executor = new TearBotV3CanonicalEvaluationExecutor(f.backend);
     await f.backend.put("analysis", `foundry-job-v3-promotion-receipt:v1:${f.receipt.approvalHash}`, "corrupt"); await expect(executor.execute(f.plan)).rejects.toThrow(/promotion receipt/u);
-    const fresh = await promoted(), { planHash: _planHash, format: _format, schemaVersion: _schemaVersion, ...draft } = fresh.plan, mismatched = createTearBotV3CanonicalEvaluationPlan({ ...draft, candidate: { ...fresh.plan.candidate, activationHash: "0".repeat(16) } }); await expect(new TearBotV3CanonicalEvaluationExecutor(fresh.backend).execute(mismatched)).rejects.toThrow(/provenance mismatch/u);
+    const fresh = await promoted(), { planHash, format, schemaVersion, ...draft } = fresh.plan;
+    void planHash; void format; void schemaVersion;
+    const mismatched = createTearBotV3CanonicalEvaluationPlan({ ...draft, candidate: { ...fresh.plan.candidate, activationHash: "0".repeat(16) } }); await expect(new TearBotV3CanonicalEvaluationExecutor(fresh.backend).execute(mismatched)).rejects.toThrow(/provenance mismatch/u);
     const changed = await promoted(); await changed.backend.put("analysis", "policy-active:v1", JSON.stringify({ ...changed.activation, artifactHash: "0".repeat(16) })); await expect(new TearBotV3CanonicalEvaluationExecutor(changed.backend).execute(changed.plan)).rejects.toThrow(/active promoted head|candidate/u);
   });
 

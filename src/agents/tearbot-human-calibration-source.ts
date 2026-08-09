@@ -32,7 +32,7 @@ export class TearHumanCalibrationSourceStore {
   async admit(input: TearHumanCalibrationConsentAttestationV1): Promise<TearHumanCalibrationSourceReceiptV1> {
     const attestation = parseTearHumanCalibrationConsentAttestation(input), capsule = await new GhostCapsuleReader(this.#vault).read(attestation.capsuleId);
     const current = this.#ledger === undefined ? undefined : await this.#ledger.current(attestation.participantId);
-    if (this.#ledger !== undefined && (current === undefined || current.revisionHash !== attestation.consentRevisionHash || current.consent !== attestation.consent)) throw new RangeError("human calibration consent is unavailable, changed, or revoked");
+    if (this.#ledger !== undefined && (current?.revisionHash !== attestation.consentRevisionHash || current.consent !== attestation.consent)) throw new RangeError("human calibration consent is unavailable, changed, or revoked");
     if (capsule.manifest.schemaVersion !== 2 || capsule.manifest.status !== "complete" || capsule.manifest.integrity.rootIntegrity !== attestation.rootIntegrity || capsule.maxTick !== attestation.toTick || attestation.fromTick !== 0) throw new RangeError("human calibration requires one complete exact Ghost V3 capsule range");
     const context = readGhostReplayRunContext(capsule.manifest.provenance); const mapped = mapGhostCapsuleToReplayEnvelope(capsule);
     if (context === undefined || mapped.issues.length > 0 || mapped.accepted.commands !== capsule.tracks.commands.length) throw new RangeError("human calibration requires a valid replay context and complete canonical command track");

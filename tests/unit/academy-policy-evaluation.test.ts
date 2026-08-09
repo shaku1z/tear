@@ -44,15 +44,19 @@ describe("Academy policy evaluation plan", () => {
 
   it("rejects missing canonical unseen/recovery coverage, duplicate cases, and governed overlap", () => {
     const input = planInput();
+    const [firstCase, secondCase] = input.cases;
+    if (firstCase === undefined || secondCase === undefined) throw new Error("evaluation fixture cases missing");
     expect(() => createTearAcademyPolicyEvaluationPlan({ ...input, cases: input.cases.slice(0, 1) })).toThrow(/cover/u);
-    expect(() => createTearAcademyPolicyEvaluationPlan({ ...input, cases: Object.freeze([input.cases[0]!, input.cases[0]!, input.cases[1]!]) })).toThrow(/suite repeats/u);
-    expect(() => createTearAcademyPolicyEvaluationPlan({ ...input, dataset: dataset(input.cases[0]!.scenario) })).toThrow(/overlaps/u);
+    expect(() => createTearAcademyPolicyEvaluationPlan({ ...input, cases: Object.freeze([firstCase, firstCase, secondCase]) })).toThrow(/suite repeats/u);
+    expect(() => createTearAcademyPolicyEvaluationPlan({ ...input, dataset: dataset(firstCase.scenario) })).toThrow(/overlaps/u);
     expect(() => createTearAcademyPolicyEvaluationPlan({ ...input, cases: Object.freeze([
-      Object.freeze({ ...input.cases[0]!, scenario: scenario("movement-invalid", "not-a-canonical-seed") }), input.cases[1]!,
+      Object.freeze({ ...firstCase, scenario: scenario("movement-invalid", "not-a-canonical-seed") }), secondCase,
     ]) })).toThrow(/canonical unseen/u);
     expect(() => createTearAcademyPolicyEvaluationPlan({ ...input, minimumBaselineMargin: 0 })).toThrow(/invalid/u);
-    const sourceSequence = input.dataset.sequences[0]!;
-    const { sourceScenario: _sourceScenario, ...sequenceWithoutSource } = sourceSequence;
+    const sourceSequence = input.dataset.sequences[0];
+    if (sourceSequence === undefined) throw new Error("evaluation fixture sequence missing");
+    const { sourceScenario, ...sequenceWithoutSource } = sourceSequence;
+    void sourceScenario;
     expect(() => createTearAcademyPolicyEvaluationPlan({ ...input, dataset: Object.freeze({ ...input.dataset,
       sequences: Object.freeze([Object.freeze(sequenceWithoutSource)]) }) })).toThrow(/source scenario/u);
   });
