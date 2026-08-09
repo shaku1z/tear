@@ -807,3 +807,17 @@ promotion-to-arm lineage and exact retry, including the retained restricted
 scope/policy and disabled schedule. This is an authority declaration only;
 actual bounded Watch execution and monitor consumption remain separate, and
 C36 remains open.
+
+## V4 named post-promotion Watch terminal
+
+Only a current disabled `v3-post-promotion-watch-ready` head may consume a
+named, already-retained V3 aggregate monitor record. The terminal executor
+reads that record by its exact hash (it never scans monitor or promotion
+records), revalidates the retained authority, declaration, approval, promotion,
+active artifact, V2 protocol/stop conditions, and action-time C31 raw custody,
+then atomically retains a terminal declaration and
+`v3-post-promotion-monitor-terminal { declarationHash, monitorHash }` head.
+Completed Watch evidence is an observation; a threshold breach retains only
+`rollback-ready-not-invoked` provenance. It does not invoke the rollback
+executor, enable the schedule, dispatch work, change traffic, or add UI/cloud
+behavior.
