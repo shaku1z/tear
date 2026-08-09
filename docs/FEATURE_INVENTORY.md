@@ -406,6 +406,14 @@ This is the migration checklist for the architectural redesign. A checked featur
 
 ## C36 Foundry status
 
+- [ ] C36 V2-to-V3 local bootstrap admission — one fail-closed local boundary
+  can atomically admit an already-frozen V2 `created` request into its enabled
+  schedule revision and exact V3 execution binding, after rechecking a
+  pre-published exact C31 trainer manifest/root and action-time held custody.
+  It guards all authority bytes with the same Vault transaction and retains an
+  idempotency receipt; it does not curate, execute, train, evaluate, activate,
+  promote, roll back, schedule a worker, render UI, or contact cloud.
+
 - [ ] C36 restart recovery projection — validated Foundry jobs can be projected
   as hashes-only current phase and legal manual restart state; corrupt/missing
   custody is refused through local Vault quarantine. The normal standalone

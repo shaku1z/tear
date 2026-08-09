@@ -447,3 +447,23 @@ The strict production C30/C32 Watch composition now queues a terminal aggregate 
 ## Approval-bound post-promotion rollback
 
 One dedicated C36 executor can now consume only a retained `threshold-breach` monitor record. It rechecks the exact current promoted activation, promotion receipt, approval, V2 monitoring job/protocol/thresholds/stop identity, action-time held C31 custody, and the approval's immutable historical baseline activation and artifact. One conditional Vault commit replaces the active pointer with a new baseline activation, appends its history entry, and retains a content-addressed rollback receipt. It does not call the generic registry rollback path. Completed/unknown monitor records, corrupted/tampered provenance, missing baselines, revocation, or a stale competing pointer fail before any pointer/history/receipt write. No placement, traffic, UI, cloud, schedule, or additional promotion behavior exists.
+
+## V2-to-V3 local bootstrap admission
+
+`foundry-job-bootstrap.ts` now admits one already-frozen V2 `created` Foundry
+request into an enabled local cadence and its V3 execution binding in a single
+conditional Vault transaction. The caller supplies a pre-existing disabled
+schedule configuration, an exact already-published C31 trainer-manifest
+identity, and the V3 successor declaration. Before the commit, bootstrap
+rechecks the exact manifest/root and custody-record set, action-time held C31
+custody, the V2 job shape, and every raw authority byte it will guard. It then
+writes the new job (when absent), enabled schedule revision, V3 binding/current
+pointer, indexes, and an idempotency receipt together. A changed manifest,
+revoked/missing custody, stale/duplicate job or schedule, corrupt/mismatched
+retry receipt, competing writer, or failed conditional commit writes no partial
+Foundry state.
+
+This is admission only: it neither creates C31 curation/manifests, executes a
+phase, starts a timer or worker, trains/evaluates a candidate, touches a policy
+pointer, promotes/rolls back, exposes UI, or contacts cloud. It is not the
+unattended Foundry completion proof.

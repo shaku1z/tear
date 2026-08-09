@@ -1314,6 +1314,24 @@ DONE THIS STEP: An exact retained breach record can atomically restore only its 
 PROVEN BY: `tests/unit/foundry-job-v3-post-promotion-rollback.test.ts`.
 REMAINING HERE: There is no generic rollback trigger, placement, traffic controller, UI, cloud, or scheduler route.
 
+### C36 V2-to-V3 local bootstrap admission
+
+DONE THIS STEP: A new local-only bootstrap boundary atomically creates an
+already-frozen V2 `created` job (if absent), enables its configured cadence,
+and persists the exact V3 binding/current pointer and receipt. It consumes only
+an already-published C31 trainer-manifest identity and action-time held custody;
+the manifest/root, custody-record set, job/schedule bytes, and every authority
+byte are revalidated/conditionally guarded at commit time. Exact retry returns
+the same receipt. Changed or missing manifest/custody, stale/duplicate job or
+schedule, corrupted receipt, and conditional-commit loss fail closed without a
+partial job, schedule, binding, or receipt.
+PROVEN BY: `tests/unit/foundry-job-bootstrap.test.ts` covers successful
+admission, exact retry, stale duplicate head, manifest mismatch, custody
+revocation, and transaction atomicity.
+REMAINING HERE: This does not curate/publish C31 data, execute any phase, wake
+a timer/worker, train/evaluate, activate/promote/roll back, render UI, or prove
+an unattended cycle. C36 remains open.
+
 ### C34 V3 canonical-compatible offline training custody
 
 DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,
