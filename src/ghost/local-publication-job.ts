@@ -1,5 +1,4 @@
 import { stableVerificationHash } from "../replay/hash";
-import type { TearAcademyConsentRecordV1 } from "../agents/academy-candidate-admission";
 import { parseGhostCapsuleManifest, type GhostLocalVault, type GhostVaultBackend, type TearGhostManifest } from "./capsule-vault";
 import { ghostSha256, type GhostPrivacyClass, type GhostRunEligibilityInput, type GhostVisibility } from "./cloud-publication";
 import { parseGhostPublicationConsentRecord, type GhostPublicationConsentRecordV1, type GhostPublicationConsentValidator } from "./publication-consent-ledger";
@@ -11,13 +10,35 @@ export interface GhostPublicationCustodyV1 {
   readonly format: "tear-ghost-publication-custody";
   readonly schemaVersion: 1;
   readonly capsuleId: string;
-  readonly consent: TearAcademyConsentRecordV1;
+  readonly sourceConsent: GhostPlayerPublicationSourceConsentV1;
   readonly publicationConsent: GhostPublicationConsentRecordV1;
   readonly privacy: GhostPrivacyClass;
   readonly visibility: GhostVisibility;
   readonly eligibility: GhostRunEligibilityInput;
   readonly decidedAt: string;
   readonly custodyHash: string;
+}
+
+/** Player-owned, capsule-bound C38 authority; never an Academy training record. */
+export interface GhostPlayerPublicationSourceConsentV1 {
+  readonly format: "tear-ghost-player-publication-source-consent"; readonly schemaVersion: 1;
+  readonly actorHash: string; readonly revision: number; readonly capsuleId: string; readonly rootIntegrity: string;
+  readonly localRecording: "granted"; readonly cloudPublication: "granted"; readonly trainingConsent: false;
+  readonly decidedAt: string; readonly recordHash: string;
+}
+
+/**
+ * Produces the immutable, capsule-bound C38 source authority from an already
+ * accepted publication-consent revision.  It is deliberately a value factory:
+ * it does not write a second ledger record, retain an account subject, or
+ * broaden consent to training.
+ */
+export function createGhostPlayerPublicationSourceConsent(input: Omit<GhostPlayerPublicationSourceConsentV1, "format" | "schemaVersion" | "localRecording" | "cloudPublication" | "trainingConsent" | "recordHash">): GhostPlayerPublicationSourceConsentV1 {
+  const draft = { format: "tear-ghost-player-publication-source-consent" as const, schemaVersion: 1 as const,
+    actorHash: input.actorHash, revision: input.revision, capsuleId: input.capsuleId, rootIntegrity: input.rootIntegrity,
+    localRecording: "granted" as const, cloudPublication: "granted" as const, trainingConsent: false as const, decidedAt: input.decidedAt };
+  if (!validSourceConsent({ ...draft, recordHash: hash16(draft) })) throw new TypeError("invalid ghost publication source consent");
+  return Object.freeze({ ...draft, recordHash: hash16(draft) });
 }
 
 export interface GhostLocalPublicationJobV1 {
@@ -53,32 +74,29 @@ function validEligibility(value: unknown): value is GhostRunEligibilityInput {
   return source !== undefined && ["resumed", "modded", "coached", "ghostAssisted", "bot", "debug", "stateForge"].every((key) => typeof source[key] === "boolean");
 }
 
-function validConsent(value: unknown): value is TearAcademyConsentRecordV1 {
+function validSourceConsent(value: unknown): value is GhostPlayerPublicationSourceConsentV1 {
   const source = object(value);
-  return source?.format === "tear-academy-consent" && source.schemaVersion === 1 && nonEmpty(source.revision) && time(source.decidedAt)
-    && ["granted", "denied", "revoked"].includes(String(source.localRecording))
-    && ["granted", "denied", "revoked"].includes(String(source.cloudPublication))
-    && ["granted", "denied", "revoked"].includes(String(source.analytics))
-    && ["no-training", "private-personalization-only", "anonymous-improvement", "public-training"].includes(String(source.modelTraining));
+  if (source?.format !== "tear-ghost-player-publication-source-consent" || source.schemaVersion !== 1 || !nonEmpty(source.actorHash) || !Number.isSafeInteger(source.revision) || (source.revision as number) < 1 || !nonEmpty(source.capsuleId) || !nonEmpty(source.rootIntegrity) || source.localRecording !== "granted" || source.cloudPublication !== "granted" || source.trainingConsent !== false || !time(source.decidedAt) || !nonEmpty(source.recordHash)) return false;
+  return source.recordHash === hash16({ format: source.format, schemaVersion: source.schemaVersion, actorHash: source.actorHash, revision: source.revision, capsuleId: source.capsuleId, rootIntegrity: source.rootIntegrity, localRecording: "granted", cloudPublication: "granted", trainingConsent: false, decidedAt: source.decidedAt });
 }
 
 function freezeCustody(draft: Omit<GhostPublicationCustodyV1, "custodyHash">): GhostPublicationCustodyV1 {
-  const copy = Object.freeze({ ...draft, consent: Object.freeze({ ...draft.consent }), publicationConsent: Object.freeze({ ...draft.publicationConsent }), eligibility: Object.freeze({ ...draft.eligibility }) });
+  const copy = Object.freeze({ ...draft, sourceConsent: Object.freeze({ ...draft.sourceConsent }), publicationConsent: Object.freeze({ ...draft.publicationConsent }), eligibility: Object.freeze({ ...draft.eligibility }) });
   return Object.freeze({ ...copy, custodyHash: hash16(copy) });
 }
 
 function parseCustody(bytes: string): GhostPublicationCustodyV1 {
   const source = object(JSON.parse(bytes) as unknown);
   if (source?.format !== "tear-ghost-publication-custody" || source.schemaVersion !== 1 || !nonEmpty(source.capsuleId)
-    || !validConsent(source.consent) || source.consent.cloudPublication !== "granted" || !["public", "pseudonymous", "private", "sensitive"].includes(String(source.privacy))
+    || !validSourceConsent(source.sourceConsent) || !["public", "pseudonymous", "private", "sensitive"].includes(String(source.privacy))
     || !["private", "unlisted", "public"].includes(String(source.visibility)) || !validEligibility(source.eligibility) || !time(source.decidedAt) || !nonEmpty(source.custodyHash)) {
     throw new TypeError("invalid local publication custody");
   }
   let publicationConsent: GhostPublicationConsentRecordV1;
   try { publicationConsent = parseGhostPublicationConsentRecord(source.publicationConsent); } catch { throw new TypeError("invalid local publication custody"); }
-  if (publicationConsent.cloudPublication !== "granted" || publicationConsent.privacy !== source.privacy || publicationConsent.visibility !== source.visibility) throw new TypeError("invalid local publication custody");
+  if (publicationConsent.cloudPublication !== "granted" || publicationConsent.privacy !== source.privacy || publicationConsent.visibility !== source.visibility || source.sourceConsent.capsuleId !== source.capsuleId) throw new TypeError("invalid local publication custody");
   const draft = { format: "tear-ghost-publication-custody" as const, schemaVersion: 1 as const, capsuleId: source.capsuleId,
-    consent: Object.freeze({ ...source.consent }) as TearAcademyConsentRecordV1, publicationConsent, privacy: source.privacy as GhostPrivacyClass,
+    sourceConsent: Object.freeze({ ...source.sourceConsent }) as GhostPlayerPublicationSourceConsentV1, publicationConsent, privacy: source.privacy as GhostPrivacyClass,
     visibility: source.visibility as GhostVisibility, eligibility: Object.freeze({ ...source.eligibility }) as GhostRunEligibilityInput, decidedAt: source.decidedAt };
   const result = freezeCustody(draft);
   if (result.custodyHash !== source.custodyHash) throw new TypeError("local publication custody integrity mismatch");
@@ -132,6 +150,7 @@ export class GhostLocalPublicationJobs {
 
   async enqueue(input: GhostLocalPublicationEnqueueInput): Promise<GhostLocalPublicationJobV1> {
     if (!nonEmpty(input.capsuleId) || !time(input.createdAt)) throw new TypeError("publication enqueue requires a capsule and timestamp");
+    if (!validSourceConsent(input.custody.sourceConsent)) throw new TypeError("invalid ghost publication source consent");
     let manifest: TearGhostManifest | undefined;
     try { manifest = await this.#vault.getManifest(input.capsuleId); } catch { throw new RangeError("publication requires a complete healthy capsule"); }
     if (manifest?.status !== "complete") throw new RangeError("publication requires a complete healthy capsule");
@@ -142,9 +161,9 @@ export class GhostLocalPublicationJobs {
     if (chunks === undefined || Object.keys(chunks).length !== manifest.chunks.length || exportedManifest.rootIntegrity !== manifest.rootIntegrity) throw new TypeError("publication export is incomplete or malformed");
     for (const chunk of manifest.chunks) if (typeof chunks[chunk.id] !== "string") throw new TypeError("publication export is missing a source chunk");
     const publicationConsent = await this.#publicationConsent.acceptForJob(input.custody.publicationConsent);
-    const custody = freezeCustody({ format: "tear-ghost-publication-custody", schemaVersion: 1, capsuleId: input.capsuleId, consent: input.custody.consent, publicationConsent,
+    const custody = freezeCustody({ format: "tear-ghost-publication-custody", schemaVersion: 1, capsuleId: input.capsuleId, sourceConsent: input.custody.sourceConsent, publicationConsent,
       privacy: input.custody.privacy, visibility: input.custody.visibility, eligibility: input.custody.eligibility, decidedAt: input.custody.decidedAt });
-    if (custody.consent.cloudPublication !== "granted") throw new RangeError("cloud publication custody is not granted");
+    if (custody.sourceConsent.capsuleId !== manifest.id || custody.sourceConsent.rootIntegrity !== manifest.rootIntegrity || custody.sourceConsent.actorHash !== publicationConsent.actorHash || custody.sourceConsent.revision !== publicationConsent.revision || custody.sourceConsent.decidedAt !== publicationConsent.decidedAt) throw new RangeError("publication source consent does not match current capsule authority");
     const source = sourceBinding(manifest, exported), transfer = await parts(exported, input.partBytes);
     const workerManifest = Object.freeze({ schemaVersion: 1, byteLength: source.byteLength, contentSha256: await ghostSha256(exported), partCount: transfer.chunkCount, topologySha256: await ghostSha256(JSON.stringify(transfer.parts)) });
     const id = hash16({ source, custodyHash: custody.custodyHash, workerManifest });
@@ -163,7 +182,7 @@ export class GhostLocalPublicationJobs {
     const job = parseJob(raw); if (job.status === "cancelled") return job;
     const [manifestRaw, custodyRaw] = await Promise.all([this.#backend.get("manifests", job.source.capsuleId), this.#backend.get("analysis", custodyKey(job.source.capsuleId))]);
     let current: boolean;
-    try { const manifest = manifestRaw === undefined ? undefined : parseGhostCapsuleManifest(JSON.parse(manifestRaw)); const custody = custodyRaw === undefined ? undefined : parseCustody(custodyRaw); if (custody === undefined) throw new TypeError("publication custody is unavailable"); await this.#publicationConsent.acceptForJob(custody.publicationConsent); current = manifest?.status === "complete" && custody.custodyHash === job.custodyHash && custody.consent.cloudPublication === "granted" && manifest.rootIntegrity === job.source.rootIntegrity && hash16(manifest) === job.source.manifestHash && hash16(await this.#vault.exportCapsule(job.source.capsuleId)) === job.source.exportHash; } catch { current = false; }
+    try { const manifest = manifestRaw === undefined ? undefined : parseGhostCapsuleManifest(JSON.parse(manifestRaw)); const custody = custodyRaw === undefined ? undefined : parseCustody(custodyRaw); if (custody === undefined) throw new TypeError("publication custody is unavailable"); const consent = await this.#publicationConsent.acceptForJob(custody.publicationConsent); current = manifest?.status === "complete" && custody.custodyHash === job.custodyHash && custody.sourceConsent.capsuleId === manifest.id && custody.sourceConsent.rootIntegrity === manifest.rootIntegrity && custody.sourceConsent.actorHash === consent.actorHash && custody.sourceConsent.revision === consent.revision && custody.sourceConsent.decidedAt === consent.decidedAt && manifest.rootIntegrity === job.source.rootIntegrity && hash16(manifest) === job.source.manifestHash && hash16(await this.#vault.exportCapsule(job.source.capsuleId)) === job.source.exportHash; } catch { current = false; }
     if (current) return job;
     const { jobHash: ignoredJobHash, ...prior } = job; void ignoredJobHash;
     const cancelled = freezeJob({ ...prior, status: "cancelled", cancellationReason: "source-or-custody-changed" });
