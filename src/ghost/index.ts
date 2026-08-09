@@ -19,5 +19,6 @@ export * from "./production-replay-comparison";
 export * from "./theater";
 export * from "./knowledge-libraries";
 export * from "./coach";
+export * from "./coach-practice";
 export * from "./player-experiences";
 export * from "./cloud-publication";
