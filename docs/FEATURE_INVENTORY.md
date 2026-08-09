@@ -629,3 +629,15 @@ traffic, placement, UI, or cloud behavior. Exact retry requires both the
 terminal pointer and its retained promotion receipt to agree. The V4 test
 proves declaration/approval/bridge/candidate/pointer/custody/baseline refusal
 and planted commit-loss recovery; it is not a completed unattended lifecycle.
+
+### C36 V4 post-promotion Watch authority
+
+Only a current disabled V4 promotion terminal can atomically declare one opaque
+aggregate-only Watch head. The immutable authority pins its source declaration,
+approval/promotion receipt, current C32 active artifact and activation, V2
+protocol/stop conditions, and action-time C31 raw-custody hashes. It freezes
+`local-watch-agent-terminal-aggregate-only` plus
+`classify-only-no-rollback`; it cannot execute or consume Watch, schedule,
+place traffic, expose UI, invoke cloud services, activate, promote, or roll
+back. The V4 test proves a real promotion-to-arm path, disabled schedule, and
+idempotent retry. Watch execution and monitor consumption remain open.

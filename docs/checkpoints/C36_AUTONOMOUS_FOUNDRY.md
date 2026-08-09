@@ -788,3 +788,22 @@ bridge, candidate, current pointer, custody, and active baseline evidence.
 It also plants a promotion commit loss and proves no partial write before exact
 recovery. C36 remains open: terminal promotion alone is not a complete
 unattended lifecycle or release certification.
+
+## V4 post-promotion Watch authority
+
+Only a current, disabled `v3-promotion-terminal` V4 head may arm one immutable
+`v3-post-promotion-watch-ready { authorityHash }` successor. The declaration
+pins the source binding and V4 declaration, approval and promotion receipt,
+current active C32 artifact/activation, exact V2 protocol and stop conditions,
+and action-time C31 custody raw-byte hashes. Its scope is explicitly
+`local-watch-agent-terminal-aggregate-only` and its regression policy is
+`classify-only-no-rollback`. The atomic write retains the authority and new
+head while leaving the schedule disabled. It cannot consume Watch output,
+dispatch, enable schedules, change traffic, render UI, use cloud services,
+promote, activate, or roll back.
+
+`tests/unit/foundry-job-v3-monitoring-bridge.test.ts` proves a real V4
+promotion-to-arm lineage and exact retry, including the retained restricted
+scope/policy and disabled schedule. This is an authority declaration only;
+actual bounded Watch execution and monitor consumption remain separate, and
+C36 remains open.
