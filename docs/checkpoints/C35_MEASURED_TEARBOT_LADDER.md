@@ -46,16 +46,26 @@
   decision hashes, terminal/event hashes, fresh-world ordinals, and a bounded
   derived distribution. It explicitly records `placement: unassigned` and
   `humanCalibration: not-compared`.
+- `tearbot-human-likeness-comparison.ts` is a separate held-out aggregate
+  comparison protocol. It accepts only a self-verifying 30+ participant human
+  calibration distribution, one hash-verifying C36-promoted V3 canonical
+  evaluation report, and immutable hash-bound tolerance thresholds. It derives
+  command-count and cadence differences from the report's canonical decisions.
+  Its only outcomes are `insufficient-evidence` and
+  `compared-not-certified`; even a within-threshold comparison has no level,
+  certification, promotion, active-policy, or persistence side effect. Omega
+  cannot enter the protocol and is reported as excluded.
 
 ## Exit-gate status
 
 - [ ] Levels 1-9 and Omega exist as measured, distinguishable policies.
   The permanent fixture exercises only two scripted bindings and is not a real
   policy population or a level certification.
-- [ ] Human-likeness calibration against real human traces. No separately
-  calibrated human-likeness comparison against a level policy is present. A
-  source-only participant-balanced trace/cadence distribution now exists, but
-  it is not a placement or level-certification result.
+- [ ] Human-likeness calibration against real human traces. A held-out,
+  hash-bound non-certifying comparison now exists for a promoted canonical V3
+  evaluation and a 30+ participant source distribution. Real consented capture
+  population, calibration governance, level policy population, and any
+  certification rule remain deliberately absent.
 - [ ] Ladder placement is reproducible. Hash-bound execution is reproducible;
   placement, adjacent-level discrimination, and drift invalidation remain open.
 
@@ -63,8 +73,9 @@ DONE THIS STEP:      C35 executes immutable policy/benchmark bindings through
 fresh C30 worlds and can additionally measure one exact promoted C34 V3
 canonical candidate through the strict C32 source-state route, without
 converting that measurement into placement.
-PROVEN BY:           `tests/unit/tearbot-ladder-execution.test.ts` and
-`tests/unit/tearbot-v3-canonical-evaluation.test.ts`, typecheck, targeted
+PROVEN BY:           `tests/unit/tearbot-ladder-execution.test.ts`,
+`tests/unit/tearbot-v3-canonical-evaluation.test.ts`, and
+`tests/unit/tearbot-human-likeness-comparison.test.ts`, typecheck, targeted
 lint, architecture check, and requirements check.
 REMAINING HERE:      real learned policy population, benchmark families,
 explicit Academy admission/curation of pending human candidates, participant-
