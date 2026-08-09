@@ -15,6 +15,10 @@ function controllerAt(screen: LegacyAppScreen): LegacyAppStateController {
       reserve: ["playing", "draft", "reserve"], tierup: ["playing", "tierup"], continue: ["playing", "continue"],
       gameover: ["playing", "gameover"], win: ["playing", "win"], confirmquit: ["playing", "paused", "confirmquit"],
       pgmenu: ["playing", "pgmenu"], pglab: ["playing", "pglab"],
+      // Bot Evidence is a read-only Ghost Lab child, not a menu destination.
+      botevidence: ["ghostlab", "botevidence"],
+      // Publication and Support are selected from a Vault row in Profile.
+      ghostpublication: ["profile", "ghostpublication"], ghostsupport: ["profile", "ghostsupport"],
       replay: ["replay"],
     };
     for (const next of path[screen] ?? [screen]) controller.transition(next, next === "replay" ? { returnTo: "menu" } : {});
@@ -23,6 +27,13 @@ function controllerAt(screen: LegacyAppScreen): LegacyAppStateController {
 }
 
 describe("LegacyAppStateController transition matrix", () => {
+  it("keeps Bot Evidence behind the normal Ghost Lab route", () => {
+    const controller = new LegacyAppStateController();
+    expect(() => controller.transition("botevidence")).toThrow(IllegalLegacyAppTransitionError);
+    controller.transition("ghostlab");
+    expect(controller.transition("botevidence")).toBe("botevidence");
+  });
+
   it("accepts every declared legal edge", () => {
     for (const from of LEGACY_APP_SCREENS) {
       for (const to of LEGAL_LEGACY_TRANSITIONS[from]) {
