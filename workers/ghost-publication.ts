@@ -60,6 +60,14 @@ interface TrustedVerdict {
   issuedAt: string;
 }
 
+interface ModerationHold {
+  capsule_id: string;
+  source_verdict_id: string;
+  original_visibility: "unlisted" | "public";
+  state: "held";
+  held_decision_id: string;
+}
+
 const REPORT_REASONS = new Set(["exploit", "privacy", "abuse", "copyright", "other"]);
 
 const MAX_JSON_BYTES = 32 * 1024;
@@ -91,6 +99,7 @@ function corsPolicy(request: Request): CorsPolicy | undefined {
   if (parts[1] === "uploads" && parts[3] === "abort" && parts.length === 4) return Object.freeze({ methods: ["POST"], headers: ["authorization"] });
   if (parts[1] === "capsules" && parts[3] === "object" && parts.length === 4) return Object.freeze({ methods: ["GET"], headers: ["authorization", "range"] });
   if (parts[1] === "capsules" && parts[3] === "reports" && parts.length === 4) return Object.freeze({ methods: ["POST"], headers: ["authorization", "content-type"] });
+  if (parts[1] === "reviewer" && parts[2] === "capsules" && parts[4] === "moderation" && parts.length === 5) return Object.freeze({ methods: ["PATCH"], headers: ["authorization", "content-type"] });
   if (parts[1] === "capsules" && parts.length === 3) return Object.freeze({ methods: ["DELETE"], headers: ["authorization"] });
   if (parts[1] === "capsules" && (parts[3] === "visibility" || parts[3] === "consent") && parts.length === 4) return Object.freeze({ methods: ["PATCH"], headers: ["authorization", "content-type"] });
   return undefined;
@@ -273,7 +282,7 @@ async function loadUpload(env: Env, capsuleId: string): Promise<UploadRow | null
   ).bind(capsuleId).first<UploadRow>();
 }
 
-async function verifiedCleared(env: Env, row: UploadRow): Promise<boolean> {
+async function verifiedCleared(env: Env, row: UploadRow, requireUnheld = true): Promise<boolean> {
   if (row.status !== "finalized" || row.active_verdict_id === null || row.verdict_json === null) return false;
   try {
     const receipt = await env.GHOST_METADATA.prepare(
@@ -281,7 +290,12 @@ async function verifiedCleared(env: Env, row: UploadRow): Promise<boolean> {
     ).bind(row.active_verdict_id, row.capsule_id).first<Readonly<{ verdict_json: string }>>();
     if (receipt?.verdict_json !== row.verdict_json) return false;
     const verdict = parseTrustedVerdict(JSON.parse(row.verdict_json), row);
-    return verdict.status === "verified" && verdict.moderation === "cleared";
+    if (verdict.status !== "verified" || verdict.moderation !== "cleared") return false;
+    if (!requireUnheld) return true;
+    const moderation = await env.GHOST_METADATA.prepare(
+      "SELECT capsule_id, source_verdict_id, original_visibility, state, held_decision_id FROM ghost_moderation_state WHERE capsule_id = ? AND state = 'held'",
+    ).bind(row.capsule_id).first<ModerationHold>();
+    return moderation?.state !== "held";
   } catch { return false; }
 }
 
@@ -505,6 +519,7 @@ async function listMetadata(request: Request, env: Env, verifier: FirebaseIdToke
      WHERE status = 'finalized' AND visibility = 'public'
        AND privacy_class = 'pseudonymous'
        AND active_verdict_id IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM ghost_moderation_state hold WHERE hold.capsule_id = ghost_uploads.capsule_id AND hold.state = 'held')
        AND EXISTS (SELECT 1 FROM ghost_verdict_receipts receipt WHERE receipt.verdict_id = ghost_uploads.active_verdict_id AND receipt.capsule_id = ghost_uploads.capsule_id AND receipt.verdict_json = ghost_uploads.verdict_json)
        AND verdict_json LIKE '%"status":"verified"%'
        AND verdict_json LIKE '%"moderation":"cleared"%'
@@ -601,6 +616,92 @@ async function reportCapsule(request: Request, env: Env, capsuleId: string, veri
   return json({ capsuleId, reported: true }, 201);
 }
 
+function parseReviewerAction(value: unknown): "hold" | "release" {
+  if (!isRecord(value) || Object.keys(value).length !== 1 || (value.action !== "hold" && value.action !== "release")) {
+    throw new TypeError("invalid reviewer moderation action");
+  }
+  return value.action;
+}
+
+async function loadModerationHold(env: Env, capsuleId: string): Promise<ModerationHold | null> {
+  return env.GHOST_METADATA.prepare(
+    "SELECT capsule_id, source_verdict_id, original_visibility, state, held_decision_id FROM ghost_moderation_state WHERE capsule_id = ? AND state = 'held'",
+  ).bind(capsuleId).first<ModerationHold>();
+}
+
+/**
+ * This queue is intentionally authority-minimal: the configured immutable
+ * subject allowlist chooses who may freeze or restore an already-cleared
+ * capsule. It cannot alter verifier facts, privacy, reporter data, or the
+ * visibility selected by the player.
+ */
+async function reviewModeration(request: Request, env: Env, capsuleId: string, verifier: FirebaseIdTokenVerifier, reviewers: ReadonlySet<string>): Promise<Response> {
+  const actor = await owner(request, verifier);
+  if (!reviewers.has(actor)) return json({ error: "not found" }, 404);
+  const action = parseReviewerAction(await boundedJson(request));
+  const row = await loadUpload(env, capsuleId);
+  if (row === null) return json({ error: "not found" }, 404);
+  const now = new Date().toISOString();
+  if (action === "hold") {
+    if (row.status !== "finalized" || row.privacy_class !== "pseudonymous"
+      || (row.visibility !== "public" && row.visibility !== "unlisted") || !await verifiedCleared(env, row)
+      || row.active_verdict_id === null) return json({ error: "not found" }, 404);
+    const decisionId = crypto.randomUUID();
+    const policy = JSON.stringify(Object.freeze({ version: 1, effect: "hold-private", source: "verified-cleared-pseudonymous-publication" }));
+    // Both state creation and visibility CAS are in one D1 batch.  The state
+    // row pins the only verdict/visibility that a later release may restore.
+    try {
+      await env.GHOST_METADATA.batch([
+        env.GHOST_METADATA.prepare(
+          `INSERT INTO ghost_moderation_state (capsule_id, source_verdict_id, original_visibility, state, held_decision_id, held_at)
+           SELECT capsule_id, active_verdict_id, visibility, 'held', ?, ? FROM ghost_uploads
+           WHERE capsule_id = ? AND status = 'finalized' AND privacy_class = 'pseudonymous'
+             AND visibility IN ('public', 'unlisted') AND active_verdict_id = ?
+             AND NOT EXISTS (SELECT 1 FROM ghost_moderation_state WHERE capsule_id = ?)`,
+        ).bind(decisionId, now, capsuleId, row.active_verdict_id, capsuleId),
+        env.GHOST_METADATA.prepare(
+          `UPDATE ghost_uploads SET visibility = 'private', updated_at = ? WHERE capsule_id = ? AND status = 'finalized' AND visibility = ? AND active_verdict_id = ?
+           AND EXISTS (SELECT 1 FROM ghost_moderation_state WHERE capsule_id = ? AND held_decision_id = ? AND state = 'held')`,
+        ).bind(now, capsuleId, row.visibility, row.active_verdict_id, capsuleId, decisionId),
+        env.GHOST_METADATA.prepare(
+          `INSERT INTO ghost_moderation_decisions (decision_id, capsule_id, reviewer_id, action, source_verdict_id, policy_json, created_at)
+           SELECT ?, ?, ?, 'hold', ?, ?, ? WHERE EXISTS (SELECT 1 FROM ghost_moderation_state WHERE capsule_id = ? AND held_decision_id = ? AND state = 'held')`,
+        ).bind(decisionId, capsuleId, actor, row.active_verdict_id, policy, now, capsuleId, decisionId),
+        env.GHOST_METADATA.prepare(
+          `INSERT INTO ghost_audit (actor_id, action, capsule_id, detail, created_at)
+           SELECT ?, 'capsule.moderation.hold', ?, ?, ? WHERE EXISTS (SELECT 1 FROM ghost_moderation_state WHERE capsule_id = ? AND held_decision_id = ? AND state = 'held')`,
+        ).bind(actor, capsuleId, decisionId, now, capsuleId, decisionId),
+      ]);
+    } catch { return json({ error: "moderation conflict" }, 409); }
+    const held = await loadModerationHold(env, capsuleId);
+    if (held?.held_decision_id !== decisionId) return json({ error: "moderation conflict" }, 409);
+    return json({ capsuleId, moderation: "held", effectiveVisibility: "private" });
+  }
+  const held = await loadModerationHold(env, capsuleId);
+  if (held === null || row.status !== "finalized" || row.visibility !== "private"
+    || row.privacy_class !== "pseudonymous" || row.active_verdict_id !== held.source_verdict_id
+    || !await verifiedCleared(env, row, false)) return json({ error: "not found" }, 404);
+  const decisionId = crypto.randomUUID();
+  const policy = JSON.stringify(Object.freeze({ version: 1, effect: "restore-pinned-intended-visibility", sourceVerdictId: held.source_verdict_id, visibility: held.original_visibility }));
+  try {
+    await env.GHOST_METADATA.batch([
+      env.GHOST_METADATA.prepare(
+        "UPDATE ghost_uploads SET visibility = ?, updated_at = ? WHERE capsule_id = ? AND status = 'finalized' AND visibility = 'private' AND active_verdict_id = ?",
+      ).bind(held.original_visibility, now, capsuleId, held.source_verdict_id),
+      env.GHOST_METADATA.prepare(
+        "DELETE FROM ghost_moderation_state WHERE capsule_id = ? AND state = 'held' AND source_verdict_id = ? AND original_visibility = ?",
+      ).bind(capsuleId, held.source_verdict_id, held.original_visibility),
+      env.GHOST_METADATA.prepare(
+        "INSERT INTO ghost_moderation_decisions (decision_id, capsule_id, reviewer_id, action, source_verdict_id, policy_json, created_at) VALUES (?, ?, ?, 'release', ?, ?, ?)",
+      ).bind(decisionId, capsuleId, actor, held.source_verdict_id, policy, now),
+      env.GHOST_METADATA.prepare(
+        "INSERT INTO ghost_audit (actor_id, action, capsule_id, detail, created_at) VALUES (?, 'capsule.moderation.release', ?, ?, ?)",
+      ).bind(actor, capsuleId, decisionId, now),
+    ]);
+  } catch { return json({ error: "moderation conflict" }, 409); }
+  return json({ capsuleId, moderation: "cleared", effectiveVisibility: held.original_visibility });
+}
+
 /**
  * Makes remote deletion durable before touching R2.  A Worker may be evicted
  * between the two stores, so `deleting` is deliberately a terminally private
@@ -666,11 +767,14 @@ async function abortUpload(request: Request, env: Env, capsuleId: string, verifi
   return json({ capsuleId, status: "deleted", aborted: true, localRetentionUnaffected: true });
 }
 
-async function route(request: Request, env: Env, verifier: FirebaseIdTokenVerifier): Promise<Response> {
+async function route(request: Request, env: Env, verifier: FirebaseIdTokenVerifier, reviewers: ReadonlySet<string>): Promise<Response> {
   const url = new URL(request.url);
   const parts = url.pathname.split("/").filter(Boolean);
   if (request.method === "POST" && url.pathname === "/v1/uploads") return begin(request, env, verifier);
   if (request.method === "GET" && url.pathname === "/v1/capsules") return listMetadata(request, env, verifier);
+  if (request.method === "PATCH" && parts[0] === "v1" && parts[1] === "reviewer" && parts[2] === "capsules" && parts[3] !== undefined && parts[4] === "moderation" && parts.length === 5) {
+    return reviewModeration(request, env, parts[3], verifier, reviewers);
+  }
   if (parts[0] !== "v1" || (parts[1] !== "uploads" && parts[1] !== "capsules") || parts[2] === undefined) {
     return json({ error: "not found" }, 404);
   }
@@ -699,15 +803,16 @@ async function route(request: Request, env: Env, verifier: FirebaseIdTokenVerifi
   return json({ error: "not found" }, 404);
 }
 
-export function createGhostPublicationHandler(options: Readonly<{ verifier?: FirebaseIdTokenVerifier; allowedOrigins?: readonly string[] }> = {}): ExportedHandler<Env> {
+export function createGhostPublicationHandler(options: Readonly<{ verifier?: FirebaseIdTokenVerifier; allowedOrigins?: readonly string[]; reviewerSubjects?: readonly string[] }> = {}): ExportedHandler<Env> {
   const origins = configuredOrigins(options.allowedOrigins);
+  const reviewers = new Set(options.reviewerSubjects ?? []);
   return {
   async fetch(request: Request, env: Env): Promise<Response> {
     const preflightResponse = preflight(request, origins);
     if (preflightResponse !== undefined) return preflightResponse;
     try {
       const verifier = options.verifier ?? createFirebaseIdTokenVerifier({ projectId: env.FIREBASE_PROJECT_ID });
-      const response = await route(request, env, verifier);
+      const response = await route(request, env, verifier, reviewers);
       console.log(JSON.stringify({ message: "ghost publication request", method: request.method, path: new URL(request.url).pathname, status: response.status }));
       return withCors(request, response, origins);
     } catch (error) {

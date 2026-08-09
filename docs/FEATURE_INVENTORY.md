@@ -396,7 +396,15 @@ This is the migration checklist for the architectural redesign. A checked featur
    unless the active receipt is verified and moderation-cleared. One
    authenticated non-owner fixed-enum report per verified cleared public or
    unlisted pseudonymous capsule is atomically audited, without auto-hold.
-   This remains intake plumbing, not deployed moderation, appeals, RBAC, or UI.
+   A Worker-only reviewer queue can now place an exact verified-cleared
+   pseudonymous public/unlisted capsule on a durable effective-private hold and
+   later restore only the visibility pinned at hold time. Reviewer authority is
+   an injected immutable Firebase-subject allowlist (empty by default); it
+   never trusts request headers, body, or JWT custom claims. Holds are separate
+   immutable moderation decisions/state, never fabricated verifier receipts,
+   and serving/discovery deny held capsules immediately. This remains bounded
+   moderation plumbing, not deployed moderation, appeals, RBAC administration,
+   reporter review, or player UI.
 
 ## Accessibility and settings
 

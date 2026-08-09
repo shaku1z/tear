@@ -168,6 +168,33 @@ function deletionEnvironment(input: Readonly<{ readonly failuresBeforePurge?: nu
   return { env, statements, audits, deleteCalls: () => calls };
 }
 
+function reviewerEnvironment(): { readonly env: Env; readonly row: () => Record<string, unknown>; readonly held: () => boolean; readonly audits: readonly string[]; readonly reads: () => number } {
+  let row = uploadRow({ status: "finalized", visibility: "public", privacy_class: "pseudonymous", verdict_json: "{\"status\":\"verified\"}" });
+  let held: Record<string, unknown> | null = null, reads = 0;
+  const audits: string[] = [];
+  const statement = (sql: string) => ({ bind: (...values: unknown[]) => {
+    const execute = () => {
+      if (sql.includes("INSERT INTO ghost_moderation_state")) {
+        if (held !== null || row.visibility !== "public") throw new Error("hold conflict");
+        held = { capsule_id: row.capsule_id, source_verdict_id: row.active_verdict_id, original_visibility: row.visibility, state: "held", held_decision_id: values[0] };
+      }
+      if (sql.includes("UPDATE ghost_uploads SET visibility = 'private'")) row = { ...row, visibility: "private" };
+      if (sql.includes("UPDATE ghost_uploads SET visibility = ?")) row = { ...row, visibility: values[0] };
+      if (sql.includes("DELETE FROM ghost_moderation_state")) held = null;
+      if (sql.includes("INSERT INTO ghost_audit")) audits.push(/'((?:capsule|upload)\.[^']+)'/u.exec(sql)?.[1] ?? "unknown");
+    };
+    return {
+      first: () => Promise.resolve(sql.includes("ghost_moderation_state") ? held : sql.includes("ghost_verdict_receipts") ? { verdict_json: row.verdict_json } : row),
+      all: () => Promise.resolve({ results: [] }), run: () => { execute(); return Promise.resolve({ success: true }); }, execute, sql,
+    };
+  } });
+  const env = {
+    FIREBASE_PROJECT_ID: "tear-682cf", GHOST_METADATA: { prepare: statement, batch: (entries: readonly { execute?: () => void }[]) => { entries.forEach((entry) => entry.execute?.()); return Promise.resolve([]); } } as unknown as D1Database,
+    GHOST_CAPSULES: { get: () => { reads += 1; return Promise.resolve(null); } } as unknown as R2Bucket, GHOST_VERIFIER: {} as Fetcher,
+  } as Env;
+  return { env, row: () => row, held: () => held !== null, audits, reads: () => reads };
+}
+
 function base64Url(bytes: Uint8Array): string {
   return btoa(String.fromCharCode(...bytes)).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/=+$/u, "");
 }
@@ -508,5 +535,38 @@ describe("Ghost publication Worker Firebase owner authentication", () => {
     expect(f.audits).toEqual(expect.arrayContaining(["capsule.delete.requested", "capsule.delete.pending", "capsule.delete.purged"]));
     const foreign = await handler.fetch(new Request("https://publication.test/v1/capsules/capsule-1", { method: "DELETE", headers: { authorization: "Bearer valid-b.token.signature" } }), f.env, context());
     expect(foreign.status).toBe(404); expect(await foreign.json()).toEqual({ error: "not found" });
+  });
+
+  it("admits only configured verified reviewer subjects and freezes/restores the pinned intended visibility", async () => {
+    const f = reviewerEnvironment();
+    const handler = createGhostPublicationHandler({ verifier: verifier(), reviewerSubjects: [uidB], allowedOrigins: ["https://game.tear.test"] });
+    const reviewerRequest = (body: unknown, token = "valid-b.token.signature") => new Request("https://publication.test/v1/reviewer/capsules/capsule-1/moderation", {
+      method: "PATCH", headers: { authorization: `Bearer ${token}`, "content-type": "application/json", origin: "https://game.tear.test", "x-tear-owner": uidB }, body: JSON.stringify(body),
+    });
+    const denied = await handler.fetch(reviewerRequest({ action: "hold" }, "valid-a.token.signature"), f.env, context());
+    expect(denied.status).toBe(404); expect(f.held()).toBe(false);
+    const held = await handler.fetch(reviewerRequest({ action: "hold" }), f.env, context());
+    expect(held.status).toBe(200); expect(await held.json()).toEqual({ capsuleId: "capsule-1", moderation: "held", effectiveVisibility: "private" });
+    expect(f.row().visibility).toBe("private"); expect(f.held()).toBe(true);
+    const blocked = await handler.fetch(new Request("https://publication.test/v1/capsules/capsule-1/object"), f.env, context());
+    expect(blocked.status).toBe(404); expect(f.reads()).toBe(0);
+    const released = await handler.fetch(reviewerRequest({ action: "release" }), f.env, context());
+    expect(released.status).toBe(200); expect(await released.json()).toEqual({ capsuleId: "capsule-1", moderation: "cleared", effectiveVisibility: "public" });
+    expect(f.row().visibility).toBe("public"); expect(f.held()).toBe(false);
+    expect(f.audits).toEqual(expect.arrayContaining(["capsule.moderation.hold", "capsule.moderation.release"]));
+  });
+
+  it("fails reviewer privilege, malformed actions, and CORS overreach closed without report data", async () => {
+    const f = reviewerEnvironment();
+    const empty = createGhostPublicationHandler({ verifier: verifier() });
+    const bodyPrivilege = new Request("https://publication.test/v1/reviewer/capsules/capsule-1/moderation", { method: "PATCH", headers: { authorization: "Bearer valid-b.token.signature", "content-type": "application/json" }, body: JSON.stringify({ action: "hold", reviewer: uidB }) });
+    expect((await empty.fetch(bodyPrivilege, f.env, context())).status).toBe(404);
+    const handler = createGhostPublicationHandler({ verifier: verifier(), reviewerSubjects: [uidB], allowedOrigins: ["https://game.tear.test"] });
+    const malformed = await handler.fetch(new Request("https://publication.test/v1/reviewer/capsules/capsule-1/moderation", { method: "PATCH", headers: { authorization: "Bearer valid-b.token.signature", "content-type": "application/json" }, body: JSON.stringify({ action: "hold", reason: "leak" }) }), f.env, context());
+    expect(malformed.status).toBe(400);
+    const preflight = await handler.fetch(new Request("https://publication.test/v1/reviewer/capsules/capsule-1/moderation", { method: "OPTIONS", headers: { origin: "https://game.tear.test", "access-control-request-method": "PATCH", "access-control-request-headers": "authorization, content-type" } }), f.env, context());
+    expect(preflight.status).toBe(204);
+    const overreach = await handler.fetch(new Request("https://publication.test/v1/reviewer/capsules/capsule-1/moderation", { method: "OPTIONS", headers: { origin: "https://game.tear.test", "access-control-request-method": "PATCH", "access-control-request-headers": "authorization, content-type, x-tear-owner" } }), f.env, context());
+    expect(overreach.status).toBe(403); expect(f.held()).toBe(false);
   });
 });
