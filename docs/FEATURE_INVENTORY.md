@@ -193,6 +193,19 @@ This is the migration checklist for the architectural redesign. A checked featur
   non-certifying; it is neither general Ringblade coverage nor C40
   certification.
 
+- [x] Narrow Sword Seam/Crosscut forensic replay evidence —
+  `browser-c40-sword-crosscut-ghost-seek.js` begins one normal Class-A State
+  Forge Sword/charger encounter using bounded authored-arena placement, then
+  issues only semantic aim, throw, and recall. It records a real outgoing Seam
+  followed by the retraced native Crosscut; this normal charger is defeated by
+  Crosscut, so the post-Crosscut receipt proves no live Seam remains before the
+  ordinary catch. The sealed verified V3 capsule retains generic native
+  `blade.thrown`/`blade.caught` transport facts and three fresh C29 seeks
+  reproduce the retained prethrow, Seam, retraced-Crosscut, and postcatch
+  hashes. `sword-seam-crosscut-catch-seek` is engineering-only and
+  non-certifying; it is neither comprehensive Sword coverage nor C40
+  certification.
+
 ## Game flow and modes
 
 - [x] Main menu, setup/war table and tutorial — `browser-navigation-journeys.js`, `browser-feature-matrix.js`, `browser-tutorial-journey.js`, and `training-controllers.test.ts`; setup preserves the oracle risk pips, weapon identity/rating strip, and hero START treatment through the typed live-renderer boundary while placing all public choices on one aligned row grid. The fourteen-block Cutting Room resets its task arena/state per block and never applies shop/meta upgrades. Read the Charge teaches the defensive read; Field Test then states and validates one two-step route—evade, then punish recovery—before handing off to no-wave practice. Prompts adapt to keyboard/mouse, configured controller glyphs, and touch; the browser journey completes the whole course through real semantic gameplay input.

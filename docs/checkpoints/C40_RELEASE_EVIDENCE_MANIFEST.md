@@ -83,3 +83,16 @@ three fresh C29 production seek worlds at each retained prethrow, Circuit,
 steer-bounce, and postcatch receipt. This is narrow engineering evidence: it
 does not establish every Ringblade interaction, all weapons, all input devices,
 a normal-player journey, a graveyard case, or certification.
+
+## Additional C40 engineering proof: Sword Seam/Crosscut seek
+
+`tests/browser-c40-sword-crosscut-ghost-seek.js` creates one Class-A State
+Forge normal Sword/charger state with bounded authored-arena placement for the
+real charger. After the normal tether settles, it drives only semantic aim,
+throw, and recall commands. The outgoing throw applies the native Seam; the
+retraced return records native Crosscut, consumes that Seam, and defeats this
+normal low-HP charger before the ordinary catch. It seals and verifies a
+forensic V3 capsule, then opens three fresh C29 production seek worlds at the
+retained prethrow, Seam, retraced-Crosscut, and postcatch receipts. This is
+narrow engineering evidence: it does not establish all Sword interactions, all
+input devices, a normal-player journey, a graveyard case, or certification.
