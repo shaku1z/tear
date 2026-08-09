@@ -141,6 +141,14 @@ This is the migration checklist for the architectural redesign. A checked featur
   diffs, fork and transactionally watch a checkpoint, import/export TearSDL,
   and fail closed on malformed editor input.
 
+- [x] Class-A semantic cinematic advancement — `live-runtime-application-frame.test.ts`
+  exposes one test-build-only authored director beat through the typed live
+  runtime, without a debug global, renderer clock, or synthetic fixed tick.
+  `browser-c40-state-forge-source-void.js` proves a resolved Source phase-two
+  State Forge launch enters collapse, then reaches live void hazard/navigation
+  state through bounded semantic beats and real authoritative application
+  frames. This is a replay-seek foundation, not C40 certification.
+
 ## Game flow and modes
 
 - [x] Main menu, setup/war table and tutorial — `browser-navigation-journeys.js`, `browser-feature-matrix.js`, `browser-tutorial-journey.js`, and `training-controllers.test.ts`; setup preserves the oracle risk pips, weapon identity/rating strip, and hero START treatment through the typed live-renderer boundary while placing all public choices on one aligned row grid. The fourteen-block Cutting Room resets its task arena/state per block and never applies shop/meta upgrades. Read the Charge teaches the defensive read; Field Test then states and validates one two-step route—evade, then punish recovery—before handing off to no-wave practice. Prompts adapt to keyboard/mouse, configured controller glyphs, and touch; the browser journey completes the whole course through real semantic gameplay input.

@@ -6,7 +6,7 @@ import { createLiveAuthoritativeInputAdapter } from "./live-authoritative-input-
 import { createLiveAcademyScreen, createLiveFoundryScreen, createLiveGhostLabHome, createLiveInterfaceComposition, LiveBotEvidenceController, isRunDifficultySelection, isRunModeSelection } from "./live-interface-composition";
 import { createLiveRunOrchestration } from "./live-run-orchestration-composition";
 import { createLiveSessionServices } from "./live-session-services-composition";
-import { replayLiveStateForgeProgression } from "./live-state-forge-progression";
+import { replayLiveStateForgeProgression } from "./live-state-forge-progression"; import { createLiveStateForgeCinematicAdvance } from "./live-state-forge-cinematic-advance";
 import type { TearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
 import { commitBossIntroSnapshot } from "./live-frame-runtime";
 import { RuntimeFrameDriver } from "./runtime-frame-driver";
@@ -667,9 +667,9 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       setSemanticInputAuthority: inputAuthority.setSemanticInputAuthority, routeAction: (action) => routeLiveTearBenchAction(actionRouting, action), skipCinematic: () => { CINEMA.requestSkip(); },
       activateControl: (action) => { presentationHost.render(); const encoded = JSON.stringify(action); const control = interfaceInteraction.buttons().find((entry) => entry.enabled !== false && JSON.stringify(entry.semanticAction) === encoded); if (control === undefined) return false; screenComposition.dispatch(action); return true; },
       terminateRun: () => { abandonLiveRun("tearbench-terminated", { tearBenchTerminated: true }); setState("paused"); },
-      resetSemanticInput: () => { Input.startSemanticRecording(); },
-      advanceFixedTick: () => liveFrameRuntime.advanceExactSimulation(),
+      resetSemanticInput: () => { Input.startSemanticRecording(); }, advanceFixedTick: () => liveFrameRuntime.advanceExactSimulation(),
       advanceRenderFrame: (deltaSeconds) => liveFrameRuntime.advanceSimulation(deltaSeconds), advanceApplicationFrame: (deltaSeconds) => { combatHost.frameCoordinator.run(deltaSeconds); },
+      advanceStateForgeCinematicBeat: createLiveStateForgeCinematicAdvance(CINEMA),
       authoritative: () => authoritativeStep.lastResult, ...createLiveCanonicalWatchComposition({ state: hostState, screen: () => state, canonicalGameplayState: () => authoritativeStep.lastResult?.state ?? null }),
       random: () => worldContext.services.random.snapshot(),
       render: () => { presentationHost.render(); }, screenshot: () => canvas.toDataURL("image/png"),

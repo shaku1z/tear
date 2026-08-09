@@ -71,6 +71,7 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean }> = {}) 
     routeAction: () => false,
     activateControl: () => false,
     skipCinematic: () => { calls.push("skip"); },
+    advanceStateForgeCinematicBeat: () => { calls.push("semantic-cinema"); return true; },
     resetSemanticInput: () => undefined,
     advanceFixedTick: () => 1,
     advanceApplicationFrame: () => {
@@ -126,8 +127,21 @@ describe("Class-A live application-frame surface", () => {
 
     const structured = createLiveTearRuntimeEnvironment(contextFixture().context, "B");
     expect("advanceApplicationFrame" in structured).toBe(false);
+    expect("advanceStateForgeCinematicBeat" in structured).toBe(false);
     expect("finaleOutwardProjection" in structured).toBe(false);
     expect("audioDispatchProjection" in structured).toBe(false);
+  });
+
+  it("advances one semantic cinematic beat without inventing a renderer clock or fixed tick", () => {
+    const fixture = contextFixture();
+    const environment = createLiveTearRuntimeEnvironment(fixture.context, "A");
+    environment.reset(SCENARIO);
+    fixture.calls.length = 0;
+
+    expect(environment.advanceStateForgeCinematicBeat()).toEqual({ advanced: true, tick: 0 });
+    expect(fixture.calls).toEqual(["semantic-cinema", "render"]);
+    expect(environment.metrics().fixedTicks).toBe(0);
+    expect(environment.observe().tick).toBe(0);
   });
 
   it("projects only successful outward calls recorded after the current reset", () => {

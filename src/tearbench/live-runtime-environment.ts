@@ -461,6 +461,22 @@ export function createLiveTearRuntimeEnvironment(
       context.render();
       return Object.freeze({ beforeTick, afterTick, fixedTickDelta });
     },
+    advanceStateForgeCinematicBeat: () => {
+      if (scenario === null || observation === null) {
+        throw new Error("Tear runtime must be reset before cinematic advancement");
+      }
+      if (paused || terminated) {
+        throw new Error("cinematic advancement requires a running Tear runtime");
+      }
+      const advanced = context.advanceStateForgeCinematicBeat();
+      const tick = context.authoritative()?.tick ?? observation.tick;
+      if (!Number.isSafeInteger(tick) || tick < observation.tick) {
+        throw new Error("cinematic advancement produced an invalid authoritative tick");
+      }
+      observation = projectLiveTearObservation(context, tick, accessClass);
+      context.render();
+      return Object.freeze({ advanced, tick });
+    },
     canonicalState: () => context.authoritative()?.state ?? null,
     engineEventProjection: () => Object.freeze(nativeEventLog.map(projectGameplayEventForParity)),
     finaleIntentProjection: () => Object.freeze(context.finaleIntents().slice(finaleIntentStart)),

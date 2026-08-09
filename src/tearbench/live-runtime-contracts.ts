@@ -88,6 +88,12 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
     options?: Readonly<{ skipCinematic?: boolean }>,
   ): Readonly<{ beforeTick: number; afterTick: number; fixedTickDelta: number }>;
   /**
+   * Advances exactly one authored cinematic beat through the live director.
+   * This Class-A test-build capability is deliberately semantic: it never
+   * drives a renderer clock or substitutes a simulation tick.
+   */
+  advanceStateForgeCinematicBeat(): Readonly<{ advanced: boolean; tick: number }>;
+  /**
    * The authoritative canonical verification state of the last executed tick.
    * Class A is privileged diagnostics: this observes what the production step
    * already hashed, and is never an alternative source of truth for it.
@@ -174,6 +180,8 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly routeAction: (action: GameAction) => boolean;
   readonly activateControl: (action: ScreenAction) => boolean;
   readonly skipCinematic: () => void;
+  /** Test-build/Class-A bridge to one real cinematic-director transition. */
+  readonly advanceStateForgeCinematicBeat: () => boolean;
   readonly resetSemanticInput: () => void;
   readonly advanceFixedTick: () => number;
   readonly advanceApplicationFrame: (deltaSeconds: number) => void;
