@@ -23,3 +23,4 @@ export * from "./coach-practice";
 export * from "./player-experiences";
 export * from "./cloud-publication";
 export * from "./local-publication-job";
+export * from "./publication-transport";

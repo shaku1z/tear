@@ -102,10 +102,10 @@ function freezeJob(draft: Omit<GhostLocalPublicationJobV1, "jobHash">): GhostLoc
 }
 
 function parseJob(bytes: string): GhostLocalPublicationJobV1 {
-  const source = object(JSON.parse(bytes) as unknown), binding = source === undefined ? undefined : object(source.source), workerManifest = source === undefined ? undefined : object(source.workerManifest), transfer = source === undefined ? undefined : object(source.transfer);
+  const source = object(JSON.parse(bytes) as unknown), binding = object(source?.source), workerManifest = object(source?.workerManifest), transfer = object(source?.transfer);
   if (source?.format !== "tear-ghost-local-publication-job" || source.schemaVersion !== 1 || !nonEmpty(source.id) || !["queued", "cancelled"].includes(String(source.status))
     || binding === undefined || !nonEmpty(binding.capsuleId) || !nonEmpty(binding.manifestHash) || !nonEmpty(binding.rootIntegrity) || !nonEmpty(binding.exportHash)
-    || !Number.isSafeInteger(binding.byteLength) || (binding.byteLength as number) < 1 || workerManifest === undefined || workerManifest.schemaVersion !== 1 || !Number.isSafeInteger(workerManifest.byteLength) || !nonEmpty(workerManifest.contentSha256) || !Number.isSafeInteger(workerManifest.partCount) || !nonEmpty(workerManifest.topologySha256) || transfer === undefined || !Number.isSafeInteger(transfer.chunkCount)
+    || !Number.isSafeInteger(binding.byteLength) || (binding.byteLength as number) < 1 || workerManifest?.schemaVersion !== 1 || !Number.isSafeInteger(workerManifest.byteLength) || !nonEmpty(workerManifest.contentSha256) || !Number.isSafeInteger(workerManifest.partCount) || !nonEmpty(workerManifest.topologySha256) || !Number.isSafeInteger(transfer?.chunkCount)
     || !Array.isArray(transfer.parts) || transfer.parts.length !== transfer.chunkCount || !nonEmpty(source.custodyHash) || !time(source.createdAt) || !nonEmpty(source.jobHash)
     || (source.status === "cancelled" && !["cancelled-by-player", "source-or-custody-changed"].includes(String(source.cancellationReason)))) throw new TypeError("invalid local publication job");
   const job = freezeJob({ format: "tear-ghost-local-publication-job", schemaVersion: 1, id: source.id, status: source.status as "queued" | "cancelled",
@@ -161,6 +161,13 @@ export class GhostLocalPublicationJobs {
     const cancelled = freezeJob({ ...prior, status: "cancelled", cancellationReason: "source-or-custody-changed" });
     await this.#backend.commitIfMatches([{ store: "uploadJobs", key: jobKey(id), expected: raw }], [{ store: "uploadJobs", key: jobKey(id), value: JSON.stringify(cancelled) }]);
     return cancelled;
+  }
+
+  /** Returns only currently valid, granted custody; callers never receive raw storage bytes. */
+  async readCustody(capsuleId: string): Promise<GhostPublicationCustodyV1 | undefined> {
+    const raw = await this.#backend.get("analysis", custodyKey(capsuleId));
+    if (raw === undefined) return undefined;
+    return parseCustody(raw);
   }
 
   async cancel(id: string): Promise<GhostLocalPublicationJobV1> {
