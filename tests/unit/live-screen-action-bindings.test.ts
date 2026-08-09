@@ -69,4 +69,13 @@ describe("live screen action bindings", () => {
     expect(optInHumanCalibration).toHaveBeenCalledWith("anonymous-improvement");
     expect(revokeHumanCalibration).toHaveBeenCalledOnce();
   });
+
+  it("routes support review and creation only through explicit semantic actions", () => {
+    const openGhostSupport = vi.fn(), createGhostSupport = vi.fn();
+    const dispatch = createLiveScreenActionBindings({ openGhostSupport, createGhostSupport } as unknown as ScreenActionBindingPorts);
+    dispatch({ type: "profile.openGhostSupport", id: "capsule-1" });
+    dispatch({ type: "ghostsupport.create" });
+    expect(openGhostSupport).toHaveBeenCalledWith("capsule-1");
+    expect(createGhostSupport).toHaveBeenCalledOnce();
+  });
 });

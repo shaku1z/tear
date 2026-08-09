@@ -767,3 +767,14 @@ publication/transport state, and it neither persists, displays, nor submits
 anything. `ghost-sanitized-support-bundle.test.ts` covers determinism,
 approval, tampering, and hostile-input refusal. This is a local support
 artifact foundation, not a submitted support case or C39 operations claim.
+
+### C39 normal local support-bundle review
+
+Healthy complete V3 Ghost Vault rows now expose **SUPPORT**. The normal review
+projects only exact capsule/root/build provenance and bounded tick/track scope.
+Its separate **CREATE LOCAL BUNDLE** action makes the existing sanitized bundle
+only in memory and projects its hash. It has no Vault write, network,
+submission, account lookup, raw replay/action view, consent/training change,
+publication, or transport path; unhealthy sources are unavailable. The screen
+explicitly names its excluded data and no-training/no-cloud/no-submission
+boundary. Focused unit and renderer evidence preserve this local UI boundary.

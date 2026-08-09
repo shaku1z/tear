@@ -2,7 +2,7 @@ export type LegacyAppScreen =
   | "menu" | "setup" | "playing" | "paused" | "draft" | "reserve" | "tierup"
   | "settings" | "continue" | "gameover" | "win" | "replay" | "confirmquit"
   | "shop" | "codex" | "profile" | "achievements" | "leaderboards" | "rename"
-  | "pgmenu" | "pglab" | "academy" | "foundry" | "ghostlab" | "botevidence" | "ghostpublication";
+  | "pgmenu" | "pglab" | "academy" | "foundry" | "ghostlab" | "botevidence" | "ghostpublication" | "ghostsupport";
 
 export interface LegacyAppSnapshot {
   readonly screen: LegacyAppScreen;
@@ -23,7 +23,7 @@ export interface LegacyTransitionContext {
 export const LEGACY_APP_SCREENS = Object.freeze([
   "menu", "setup", "playing", "paused", "draft", "reserve", "tierup", "settings", "continue",
   "gameover", "win", "replay", "confirmquit", "shop", "codex", "profile", "achievements",
-  "leaderboards", "rename", "pgmenu", "pglab", "academy", "foundry", "ghostlab", "botevidence", "ghostpublication",
+  "leaderboards", "rename", "pgmenu", "pglab", "academy", "foundry", "ghostlab", "botevidence", "ghostpublication", "ghostsupport",
 ] as const satisfies readonly LegacyAppScreen[]);
 
 export const LEGAL_LEGACY_TRANSITIONS: Readonly<Record<LegacyAppScreen, readonly LegacyAppScreen[]>> = Object.freeze({
@@ -42,7 +42,7 @@ export const LEGAL_LEGACY_TRANSITIONS: Readonly<Record<LegacyAppScreen, readonly
   confirmquit: ["paused", "menu", "rename"],
   shop: ["menu", "rename"],
   codex: ["menu", "rename"],
-  profile: ["menu", "setup", "achievements", "replay", "rename", "ghostpublication"],
+  profile: ["menu", "setup", "achievements", "replay", "rename", "ghostpublication", "ghostsupport"],
   achievements: ["menu", "rename"],
   leaderboards: ["menu", "profile", "replay", "rename"],
   rename: LEGACY_APP_SCREENS.filter((screen) => screen !== "rename"),
@@ -56,6 +56,7 @@ export const LEGAL_LEGACY_TRANSITIONS: Readonly<Record<LegacyAppScreen, readonly
   ghostlab: ["menu", "playing", "academy", "foundry", "profile", "botevidence", "rename"],
   botevidence: ["menu", "rename"],
   ghostpublication: ["profile", "menu", "rename"],
+  ghostsupport: ["profile", "menu", "rename"],
 });
 
 export class IllegalLegacyAppTransitionError extends Error {

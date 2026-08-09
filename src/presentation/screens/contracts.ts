@@ -320,11 +320,18 @@ export interface GhostPublicationScreenView {
   readonly attempts?: number; readonly retryAt?: string; readonly terminal?: string;
 }
 
+/** C39 creates only an ephemeral, sanitized support description after player approval. */
+export interface GhostSupportScreenView {
+  readonly id: "ghostsupport"; readonly status: "unavailable" | "ready" | "created"; readonly detail: string;
+  readonly capsuleId?: string; readonly rootIntegrity?: string; readonly build?: string; readonly range?: string; readonly segments?: string;
+  readonly bundleHash?: string; readonly canCreate: boolean;
+}
+
 export type LegacyScreenView = MenuScreenView | SetupScreenView | PlayingScreenView | CodexScreenView
   | ShopScreenView | ProfileScreenView | AchievementsScreenView | LeaderboardsScreenView
   | ReplayScreenView | SettingsScreenView | RenameScreenView | DraftScreenView | ReserveScreenView
   | TierUpScreenView | PausedScreenView | ConfirmQuitScreenView | ContinueScreenView
-  | GameoverScreenView | WinScreenView | PlaygroundScreenView | AcademyScreenView | FoundryScreenView | GhostLabScreenView | BotEvidenceScreenView | GhostPublicationScreenView;
+  | GameoverScreenView | WinScreenView | PlaygroundScreenView | AcademyScreenView | FoundryScreenView | GhostLabScreenView | BotEvidenceScreenView | GhostPublicationScreenView | GhostSupportScreenView;
 
 export type ScreenViewById<Id extends LegacyScreenId, View = LegacyScreenView> =
   View extends Readonly<{ id: infer ViewId }> ? Id extends ViewId ? View : never : never;

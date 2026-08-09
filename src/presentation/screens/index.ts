@@ -57,5 +57,6 @@ export function createLegacyScreenRenderers(context: ScreenRenderContext): Legac
     ghostlab: ghostLab.ghostlab,
     botevidence: ghostLab.botevidence,
     ghostpublication: ghostLab.ghostpublication,
+    ghostsupport: ghostLab.ghostsupport,
   };
 }

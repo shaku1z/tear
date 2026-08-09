@@ -44,6 +44,8 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
           }
           context.enqueue({ x: actionsX + 252, y: y + 62, w: 120, h: 28, label: "PUBLISH", enabled: replay.available,
             action: { type: "profile.openGhostPublication", id: replay.id } });
+          context.enqueue({ x: actionsX + 124, y: y + 62, w: 120, h: 28, label: "SUPPORT", enabled: replay.available,
+            action: { type: "profile.openGhostSupport", id: replay.id } });
         }
         if (replay.local) {
           context.enqueue({ x: actionsX + 118, y: y + 20, w: 78, h: 40, label: replay.pinned ? "★" : "PIN", selected: replay.pinned,

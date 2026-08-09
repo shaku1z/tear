@@ -87,7 +87,7 @@ describe("legacy screen renderer registry", () => {
     expectTypeOf<ReturnType<typeof createUi>>().toExtend<ScreenUiPort>();
     const registry = createLegacyScreenRenderers(createControlContext([]));
     expect(Object.keys(registry).sort()).toEqual([
-      "academy", "achievements", "botevidence", "codex", "confirmquit", "continue", "draft", "foundry", "gameover", "ghostlab", "ghostpublication", "leaderboards",
+      "academy", "achievements", "botevidence", "codex", "confirmquit", "continue", "draft", "foundry", "gameover", "ghostlab", "ghostpublication", "ghostsupport", "leaderboards",
       "menu", "paused", "pglab", "pgmenu", "playing", "profile", "rename", "replay", "reserve",
       "settings", "setup", "shop", "tierup", "win",
     ]);

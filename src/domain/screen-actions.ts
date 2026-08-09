@@ -8,7 +8,7 @@ export type LegacyScreenId =
   | "menu" | "setup" | "playing" | "paused" | "draft" | "reserve" | "tierup"
   | "settings" | "continue" | "gameover" | "win" | "replay" | "confirmquit"
   | "shop" | "codex" | "profile" | "achievements" | "leaderboards" | "rename"
-  | "pgmenu" | "pglab" | "academy" | "foundry" | "ghostlab" | "botevidence" | "ghostpublication";
+  | "pgmenu" | "pglab" | "academy" | "foundry" | "ghostlab" | "botevidence" | "ghostpublication" | "ghostsupport";
 
 export type ScreenAction =
   | { readonly type: "navigate"; readonly to: LegacyScreenId; readonly resetScroll?: boolean; readonly tab?: string }
@@ -31,6 +31,7 @@ export type ScreenAction =
   | { readonly type: "profile.openGhostComparison" }
   | { readonly type: "profile.repairGhostCapsule"; readonly id: string }
   | { readonly type: "profile.openGhostPublication"; readonly id: string }
+  | { readonly type: "profile.openGhostSupport"; readonly id: string }
   | { readonly type: "profile.signIn" }
   | { readonly type: "profile.signOut" }
   | { readonly type: "profile.rename" }
@@ -80,6 +81,7 @@ export type ScreenAction =
   | { readonly type: "ghostpublication.grant" }
   | { readonly type: "ghostpublication.runOnce" }
   | { readonly type: "ghostpublication.cancel" }
+  | { readonly type: "ghostsupport.create" }
   | { readonly type: "rename.submit" }
   | { readonly type: "rename.cancel" }
   | { readonly type: "draft.choose"; readonly index: number }

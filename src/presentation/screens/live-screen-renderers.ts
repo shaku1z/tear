@@ -5,6 +5,7 @@ import type {
   GhostLabScreenView,
   BotEvidenceScreenView,
   GhostPublicationScreenView,
+  GhostSupportScreenView,
   CodexScreenView,
   LeaderboardsScreenView,
   LegacyScreenRendererRegistry,
@@ -108,6 +109,7 @@ function createColdScreenBoundary(context: ScreenRenderContext): ColdScreenRende
     ghostlab(view: GhostLabScreenView) { if (renderers) renderers.ghostlab(view); else loadingFrame(); },
     botevidence(view: BotEvidenceScreenView) { if (renderers) renderers.botevidence(view); else loadingFrame(); },
     ghostpublication(view: GhostPublicationScreenView) { if (renderers) renderers.ghostpublication(view); else loadingFrame(); },
+    ghostsupport(view: GhostSupportScreenView) { if (renderers) renderers.ghostsupport(view); else loadingFrame(); },
     settings(view: SettingsScreenView) { if (renderers) renderers.settings(view); else loadingFrame(); },
     rename(view: RenameScreenView) { if (renderers) renderers.rename(view); else loadingFrame(); },
   });
