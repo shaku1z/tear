@@ -1,0 +1,1 @@
+{"format":"tear-preservation-corpus","schemaVersion":1,"cases":[{"id":"v2-exact","expected":"exact"},{"id":"v1-migrated","expected":"migrated"},{"id":"v1-visual-only","expected":"visual-only"},{"id":"future-unsupported","expected":"unsupported"},{"id":"corrupt-rejected","expected":"rejected"}]}

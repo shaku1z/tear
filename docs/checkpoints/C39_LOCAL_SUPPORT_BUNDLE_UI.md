@@ -15,3 +15,16 @@ The screen explicitly declares excluded replay bytes/actions, account
 identifiers, credentials, publication/consent/training/moderation/transport
 state, and no training/cloud/submission. This is a local support-artifact UI,
 not a support case or C39 operational-completion claim.
+
+## Local preservation corpus
+
+`tests/fixtures/c39-preservation-corpus.json` and
+`src/ghost/preservation-corpus.ts` add a versioned deterministic local audit
+fixture. The runner materializes source exports, records hashes, proves a
+V1-to-V2 manifest migration is pure, and reopens readable cases through the
+production Vault, Reader, replay mapper, and admission boundary. It reports
+only `exact`, `migrated`, `visual-only`, `unsupported`, and `rejected`;
+admission is detail, never replay truth. Run `pnpm test:preservation-corpus`.
+
+This is not remote cold storage, a historical-runtime package, or C39
+certification.
