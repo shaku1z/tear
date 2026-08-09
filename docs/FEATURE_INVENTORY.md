@@ -649,6 +649,17 @@ Vault write, source mutation, State Forge, fork, trace, cloud, or mutable-edit
 tool. The surface is explicitly `LOCAL EDL ONLY` and `MEDIA EXPORT
 UNAVAILABLE`: no production media renderer is connected.
 
+### C38 local publication review
+
+Healthy complete Ghost Vault rows now expose a normal local publication-review
+route. It fails closed when standalone publication capability is unconfigured,
+the account is anonymous, browser Vault storage is absent, or the source is
+unhealthy. The screen shows only capsule/root custody, fixed pseudonymous and
+private constraints, and no-training disclosure. Explicit grant writes the
+capsule-bound local consent/custody and queues a local job; it does not acquire
+a bearer, contact a Worker, invoke transport, or start a timer. This is not
+configured cloud-publication evidence.
+
 ### C36 approval-bound post-promotion monitor
 
 An active C36-promoted V3 Watch run can retain one aggregate-only terminal health record after exact active pointer, promotion/approval, frozen protocol, and complete real Watch journal revalidation. It freezes the prior thresholds and `classify-only-no-rollback`; it cannot retain raw actions/states, mutate the pointer, roll back, schedule, place traffic, or render UI.

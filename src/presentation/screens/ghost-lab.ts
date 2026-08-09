@@ -1,4 +1,4 @@
-import type { BotEvidenceScreenView, GhostLabScreenView, ScreenRenderContext } from "./contracts";
+import type { BotEvidenceScreenView, GhostLabScreenView, GhostPublicationScreenView, ScreenRenderContext } from "./contracts";
 import { backControl } from "./screen-primitives";
 
 /** Presentation-only normal Ghost Lab home. No diagnostic/test-only state crosses this boundary. */
@@ -63,6 +63,21 @@ export function createGhostLabRenderers(context: ScreenRenderContext) {
         rows.forEach((row, index) => ui.text(canvas, row, left + 24, top + 114 + index * 31, index < 8 ? ui.t.type.micro : ui.t.type.caption, "left", index === 10 ? ui.t.alpha.full : ui.t.alpha.soft));
       }
       ui.wrappedText(canvas, "Read-only evidence projection. It does not evaluate, score, level, activate, promote, route traffic, or compare human data.", width / 2, 742, 790, 20, ui.t.type.caption, "center", ui.t.alpha.muted);
+      backControl(context);
+    },
+    ghostpublication(view: GhostPublicationScreenView): void {
+      const { canvas, ui, width } = context, left = 244, top = 182, panelWidth = 792;
+      ui.header(canvas, "GHOST PUBLICATION", "review local custody before any foreground upload", context.enterAmount, ui.t.color.accent);
+      ui.sectionLabel(canvas, "LOCAL REVIEW", left, top - 26, panelWidth); ui.card(canvas, left, top, panelWidth, 430);
+      ui.text(canvas, `STATUS / ${view.status.toUpperCase()}`, left + 24, top + 36, ui.t.type.label, "left", view.status === "ready" ? ui.t.alpha.full : ui.t.alpha.muted);
+      ui.wrappedText(canvas, view.detail, left + 24, top + 64, panelWidth - 48, 20, ui.t.type.caption, "left", ui.t.alpha.soft);
+      const rows = [
+        `CAPSULE / ${view.capsuleId ?? "UNAVAILABLE"}`, `SOURCE ROOT / ${view.rootIntegrity ?? "UNAVAILABLE"}`,
+        `CAPABILITY / ${view.capability}`, "PRIVACY / PSEUDONYMOUS    VISIBILITY / PRIVATE", "TRAINING / NO-TRAINING (NOT COLLECTED OR GRANTED)",
+      ];
+      rows.forEach((row, index) => ui.text(canvas, row, left + 24, top + 136 + index * 34, ui.t.type.caption, "left", ui.t.alpha.soft));
+      context.enqueue({ x: left + 24, y: top + 332, w: 360, h: 46, label: view.status === "queued" ? "LOCAL JOB QUEUED" : "GRANT LOCAL PUBLICATION", enabled: view.canGrant, action: { type: "ghostpublication.grant" } });
+      ui.wrappedText(canvas, "Granting records capsule-bound local consent and queues intent only. It does not contact a server, start a timer, or upload this capsule.", width / 2, 666, 760, 19, ui.t.type.caption, "center", ui.t.alpha.muted);
       backControl(context);
     },
   });

@@ -8,7 +8,7 @@ export type LegacyScreenId =
   | "menu" | "setup" | "playing" | "paused" | "draft" | "reserve" | "tierup"
   | "settings" | "continue" | "gameover" | "win" | "replay" | "confirmquit"
   | "shop" | "codex" | "profile" | "achievements" | "leaderboards" | "rename"
-  | "pgmenu" | "pglab" | "academy" | "foundry" | "ghostlab" | "botevidence";
+  | "pgmenu" | "pglab" | "academy" | "foundry" | "ghostlab" | "botevidence" | "ghostpublication";
 
 export type ScreenAction =
   | { readonly type: "navigate"; readonly to: LegacyScreenId; readonly resetScroll?: boolean; readonly tab?: string }
@@ -30,6 +30,7 @@ export type ScreenAction =
   | { readonly type: "profile.compareGhostCapsule"; readonly id: string }
   | { readonly type: "profile.openGhostComparison" }
   | { readonly type: "profile.repairGhostCapsule"; readonly id: string }
+  | { readonly type: "profile.openGhostPublication"; readonly id: string }
   | { readonly type: "profile.signIn" }
   | { readonly type: "profile.signOut" }
   | { readonly type: "profile.rename" }
@@ -76,6 +77,7 @@ export type ScreenAction =
   /** Ghost Lab only names already-safe normal routes; it never enables lab operations. */
   | { readonly type: "ghostlab.open"; readonly destination: "academy" | "foundry" | "vault" | "watch" | "botevidence" }
   | { readonly type: "ghostlab.watch"; readonly command: "start" | "pause" | "resume" | "stop" }
+  | { readonly type: "ghostpublication.grant" }
   | { readonly type: "rename.submit" }
   | { readonly type: "rename.cancel" }
   | { readonly type: "draft.choose"; readonly index: number }

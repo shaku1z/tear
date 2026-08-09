@@ -311,11 +311,19 @@ export interface BotEvidenceScreenView {
   }>;
 }
 
+/** C38 review is a local authority-and-intent screen, never a transport status. */
+export interface GhostPublicationScreenView {
+  readonly id: "ghostpublication"; readonly status: "unavailable" | "ready" | "queued";
+  readonly detail: string; readonly capsuleId?: string; readonly rootIntegrity?: string;
+  readonly capability: string; readonly privacy: "pseudonymous"; readonly visibility: "private";
+  readonly training: "no-training"; readonly canGrant: boolean;
+}
+
 export type LegacyScreenView = MenuScreenView | SetupScreenView | PlayingScreenView | CodexScreenView
   | ShopScreenView | ProfileScreenView | AchievementsScreenView | LeaderboardsScreenView
   | ReplayScreenView | SettingsScreenView | RenameScreenView | DraftScreenView | ReserveScreenView
   | TierUpScreenView | PausedScreenView | ConfirmQuitScreenView | ContinueScreenView
-  | GameoverScreenView | WinScreenView | PlaygroundScreenView | AcademyScreenView | FoundryScreenView | GhostLabScreenView | BotEvidenceScreenView;
+  | GameoverScreenView | WinScreenView | PlaygroundScreenView | AcademyScreenView | FoundryScreenView | GhostLabScreenView | BotEvidenceScreenView | GhostPublicationScreenView;
 
 export type ScreenViewById<Id extends LegacyScreenId, View = LegacyScreenView> =
   View extends Readonly<{ id: infer ViewId }> ? Id extends ViewId ? View : never : never;

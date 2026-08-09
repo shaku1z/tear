@@ -23,6 +23,7 @@ import type { CloudFactory } from "../platform/cloud-factory";
 import type { createLegacyPlatformCompatibility } from "../platform/legacy-compat";
 import type { createRunSeed } from "../platform/run-seed";
 import type { PwaUpdateCapability } from "../platform/pwa-update";
+import type { GhostPublicationRuntime } from "../platform/ghost-publication-runtime";
 import type { createAttract } from "../presentation/attract";
 import type { BackdropController } from "../presentation/backdrop";
 import type { CinematicPresentationRuntime } from "../presentation/cinematics";
@@ -64,7 +65,7 @@ export interface GameRuntimeDependencies {
   readonly CG: PlatformCompatibility["CG"]; readonly CLOCK: TearWorldClock; readonly CONFIG: typeof CONFIG;
   readonly Charger: EnemyTypes["Charger"]; readonly Chimera: EnemyTypes["Chimera"];
   readonly Cinematics: CinematicPresentationRuntime; readonly Clipper: Readonly<{ start(): void; stop(): void }> | undefined;
-  readonly Cloud: Cloud["Cloud"]; readonly Colossus: EnemyTypes["Colossus"];
+  readonly Cloud: Cloud["Cloud"]; readonly Colossus: EnemyTypes["Colossus"]; readonly ghostPublication: GhostPublicationRuntime;
   readonly DAILY: ReturnType<typeof createDailyChallenges>; readonly DIAG: PerformanceMonitor;
   readonly Echo: EnemyTypes["Echo"]; readonly FX: ParticleSystem; readonly FirebaseProvider: Cloud["FirebaseProvider"];
   readonly Flyer: EnemyTypes["Flyer"]; readonly GAMEPLAY_EVENTS: TearGameplayEventBus;
