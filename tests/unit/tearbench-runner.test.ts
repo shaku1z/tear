@@ -53,10 +53,11 @@ class FixtureRuntime implements TearScenarioRuntime {
 }
 
 describe("TearBench engineering runner", () => {
-  it("registers the seven canonical engineering scenarios", () => {
+  it("registers the canonical engineering scenarios", () => {
     const registry = createCanonicalScenarioRegistry();
-    expect(registry.list()).toHaveLength(7);
+    expect(registry.list()).toHaveLength(8);
     expect(registry.get("projectile-parry-basic").tags).toContain("parry");
+    expect(registry.get("source-void-hazard-seek").tags).toEqual(expect.arrayContaining(["source", "void", "hazard", "seek"]));
     const firstScenario = registry.get(CANONICAL_ENGINEERING_SCENARIOS[0]?.id ?? "");
     expect(() => { registry.register(firstScenario); }).toThrow(/version/u);
   });

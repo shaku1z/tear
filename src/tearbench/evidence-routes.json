@@ -61,5 +61,14 @@
     "journeyCheckpoint": "menu-to-menu-smoke",
     "baseComparison": "main-base",
     "interactionMatrices": ["browser", "input", "platform", "viewport", "frame-rate", "network", "interruption", "performance", "long-run"]
+  },
+  {
+    "id": "source-void-replay",
+    "prefixes": ["src/gameplay/campaign/source-void-", "src/app/live-source-void-", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-c40-source-void-ghost-seek.js", "tests/browser-c40-state-forge-source-void.js", "tests/unit/c40-source-void-evidence-registry.test.ts"],
+    "scenarios": ["source-void-hazard-seek"],
+    "graveyardCases": [],
+    "journeyCheckpoint": "source-void-hazard-seek-engineering-proof",
+    "baseComparison": "not-run-by-this-scenario",
+    "interactionMatrices": ["browser"]
   }
 ]

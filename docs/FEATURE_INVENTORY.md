@@ -161,6 +161,12 @@ This is the migration checklist for the architectural redesign. A checked featur
   fresh C29 production compositions at tick 120 with the original authoritative
   hash. This is a narrow Source scenario proof, not broad boss or C40
   certification.
+  It is registered as `source-void-hazard-seek` in the canonical TearBench
+  scenario and diff-evidence registries. The registry records the exact browser command and its
+  ephemeral verified-capsule/seek-receipt evidence; it deliberately does not
+  create a retained release artifact or claim coverage beyond this Source
+  handoff. The derived C40 requirement mapping remains intentionally pending
+  an approved requirement-registry regeneration.
 
 ## Game flow and modes
 
