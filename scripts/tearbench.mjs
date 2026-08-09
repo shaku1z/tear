@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createReleaseCertificate, verifyReleaseEvidenceManifest } from "./tearbench-release-evidence-verifier.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const catalogPath = resolve(root, "src", "tearbench", "canonical-scenarios.json");
@@ -106,39 +107,34 @@ function canonicalJson(value) {
 }
 
 async function writeReleaseCertificate() {
-  if (option("--full-check") !== "passed") throw new Error("certification requires --full-check passed after the canonical gate");
-  const commit = option("--commit");
-  if (!commit) throw new Error("certification requires --commit <revision>");
-  const preservation = JSON.parse(await readFile(resolve(root, "preservation", "ghost-runtime-manifest.json"), "utf8"));
-  const evidence = [
-    ["full-check", "pnpm check"],
-    ["deterministic-scenarios", "artifacts/tearbench"],
-    ["graveyard", "tests/unit/tearbench-regression-intelligence.test.ts"],
-    ["browser-journeys", "pnpm test:browser:journeys"],
-    ["base-comparison", "tests/unit/tearbench-regression-intelligence.test.ts"],
-    ["historical-replays", "preservation/ghost-runtime-manifest.json"],
-    ["interaction-matrices", "docs/RELEASE_MATRIX.md"],
-  ].map(([id, artifact]) => ({ id, status: "passed", artifact }));
-  const unsigned = {
-    format: "tear-release-certificate",
-    schemaVersion: 1,
-    commit,
-    status: "certified",
-    evidence,
-    affectedArbitraryStatesCovered: true,
-    fullJourneysCovered: true,
-    preservationManifestHash: createHash("sha256").update(canonicalJson(preservation)).digest("hex"),
-    generatedAt: new Date().toISOString(),
-  };
-  const certificate = {
-    ...unsigned,
-    certificateHash: createHash("sha256").update(canonicalJson(unsigned)).digest("hex"),
-  };
+  const manifestOption = option("--manifest");
   const artifactPath = resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "release-certificate.json")));
+  const manifestPath = manifestOption === undefined ? undefined : workspaceRelativePath(resolve(manifestOption));
+  let verification;
+  try {
+    if (option("--full-check") !== undefined || option("--commit") !== undefined) throw new Error("certification accepts only an immutable --manifest; --full-check and --commit assertions are forbidden");
+    if (manifestOption === undefined) throw new TypeError("usage: pnpm tearbench certify --manifest <release-evidence.json> [--artifact path]");
+    const manifest = JSON.parse(await readFile(resolve(manifestOption), "utf8"));
+    verification = await verifyReleaseEvidenceManifest(manifest, {
+      root,
+      git: async (argumentsList) => {
+        const result = spawnSync("git", argumentsList, { cwd: root, encoding: "utf8" });
+        if (result.status !== 0) throw new Error(result.stderr || `git ${argumentsList.join(" ")} failed`);
+        return result.stdout;
+      },
+      readFile,
+    });
+  } catch (error) {
+    const headResult = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" });
+    const statusResult = spawnSync("git", ["status", "--porcelain=v1", "-z"], { cwd: root, encoding: "utf8" });
+    verification = { verified: false, errors: [error instanceof Error ? error.message : String(error)], head: headResult.stdout.trim(), worktreeFingerprint: createHash("sha256").update(statusResult.stdout).digest("hex") };
+  }
+  const certificate = createReleaseCertificate({ manifestPath: manifestPath ?? "<missing>", verification, generatedAt: new Date().toISOString() });
   await mkdir(dirname(artifactPath), { recursive: true });
   await writeFile(artifactPath, `${JSON.stringify(certificate, null, 2)}\n`, "utf8");
-  console.log(`CERTIFIED ${commit}`);
+  console.log(`${certificate.status.toUpperCase()} ${certificate.commit}`);
   console.log(`artifact: ${artifactPath}`);
+  if (!verification.verified) process.exitCode = 1;
 }
 
 async function executeRun(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath) {
@@ -596,7 +592,7 @@ try {
   } else if (command === "certify") {
     await writeReleaseCertificate();
   } else {
-    console.log("TearBench CLI\n  list\n  run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]\n  rerun --artifact <run.json>\n  investigate --base <tearbench-run.json> --candidate <tearbench-run.json> [--artifact path]\n  failure --base <run.json> --candidate <run.json> [--investigation <investigation.json>] [--artifact path]\n  minimize --base <run.json> --candidate <run.json> --base-workspace <clean-worktree> --candidate-workspace <clean-worktree> [--repetitions 3] [--max-pairs 48] [--artifact path]\n  bisect --good <ancestor-revision> --bad <known-bad-revision> --scenario <canonical-id> [--seed value] [--actions trace.json] [--repetitions 3] [--max-revisions 24]\n  graveyard register --id <slug> --signature <signature> --original <failed-artifact.json> --minimal <failed-artifact.json> --minimal-replay <candidate-run.json> --fix-commit <revision> --fix-base <run.json> --fix-candidate <run.json> --invariant <id> --selectors comma,list --owner <owner> [--hints comma,list] [--registry path]\n  graveyard list [--registry path]\n  graveyard reopen --id <slug> --reason <reason> [--registry path]\n  graveyard run --cases <selector,selector> [--registry path] [--artifact path]\n  forge wave99 [--artifact path]\n  select [--files comma,list | --files-from path] [--artifact path]\n  ci [--files comma,list | --files-from path] [--registry path] [--artifact path]\n  certify --commit <revision> --full-check passed [--artifact path]");
+    console.log("TearBench CLI\n  list\n  run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]\n  rerun --artifact <run.json>\n  investigate --base <tearbench-run.json> --candidate <tearbench-run.json> [--artifact path]\n  failure --base <run.json> --candidate <run.json> [--investigation <investigation.json>] [--artifact path]\n  minimize --base <run.json> --candidate <run.json> --base-workspace <clean-worktree> --candidate-workspace <clean-worktree> [--repetitions 3] [--max-pairs 48] [--artifact path]\n  bisect --good <ancestor-revision> --bad <known-bad-revision> --scenario <canonical-id> [--seed value] [--actions trace.json] [--repetitions 3] [--max-revisions 24]\n  graveyard register --id <slug> --signature <signature> --original <failed-artifact.json> --minimal <failed-artifact.json> --minimal-replay <candidate-run.json> --fix-commit <revision> --fix-base <run.json> --fix-candidate <run.json> --invariant <id> --selectors comma,list --owner <owner> [--hints comma,list] [--registry path]\n  graveyard list [--registry path]\n  graveyard reopen --id <slug> --reason <reason> [--registry path]\n  graveyard run --cases <selector,selector> [--registry path] [--artifact path]\n  forge wave99 [--artifact path]\n  select [--files comma,list | --files-from path] [--artifact path]\n  ci [--files comma,list | --files-from path] [--registry path] [--artifact path]\n  certify --manifest <release-evidence.json> [--artifact path]");
   }
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));

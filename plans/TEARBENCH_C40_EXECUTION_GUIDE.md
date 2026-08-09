@@ -16,8 +16,9 @@ nothing calls?**
 
 ## 1. The goal, stated so it can fail
 
-> `pnpm check` passes on a clean tree, `pnpm tearbench certify --commit <sha>
-> --full-check passed` produces a certification artifact, and every required
+> `pnpm check` passes on a clean tree, `pnpm tearbench certify --manifest
+> <immutable-release-evidence.json>` verifies the exact clean HEAD and produces
+> a certification artifact, and every required
 > atomic requirement in the registry carries evidence at or above the level its
 > checkpoint demands — or an explicit, authorized `deferred`/`rejected`
 > disposition with a reason.
