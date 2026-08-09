@@ -75,10 +75,20 @@ export function createLiveCombatActions<
     },
     fireDashContact(enemy) { f.fireMod(f.modHook("onDashContact"), f.makeEvent(enemy.x, enemy.y, enemy, "dash",
       { type: "dashContact", dx: player().dashX, dy: player().dashY })); },
-    fireWeaponCatch() { f.fireMod(f.modHook("onWeaponCatch"), f.makeEvent(player().x, player().y, null, "catch",
-      { type: "weaponCatch", throwId: blade().throwId, weaponId: run().weaponId })); },
-    fireThrowLaunch(throwId) { f.fireMod(f.modHook("onThrowLaunch"), f.makeEvent(blade().x, blade().y, null, "throw",
-      { type: "throwLaunch", throwId, weaponId: run().weaponId })); },
+    fireWeaponCatch() {
+      const activeBlade = blade(), activeRun = run();
+      d.GAMEPLAY_EVENTS.emit({ kind: "weapon", event: "catch", weaponId: activeRun.weaponId,
+        throwId: activeBlade.throwId, x: player().x, y: player().y });
+      f.fireMod(f.modHook("onWeaponCatch"), f.makeEvent(player().x, player().y, null, "catch",
+        { type: "weaponCatch", throwId: activeBlade.throwId, weaponId: activeRun.weaponId }));
+    },
+    fireThrowLaunch(throwId) {
+      const activeBlade = blade(), activeRun = run();
+      d.GAMEPLAY_EVENTS.emit({ kind: "weapon", event: "throw-launch", weaponId: activeRun.weaponId,
+        throwId, x: activeBlade.x, y: activeBlade.y });
+      f.fireMod(f.modHook("onThrowLaunch"), f.makeEvent(activeBlade.x, activeBlade.y, null, "throw",
+        { type: "throwLaunch", throwId, weaponId: activeRun.weaponId }));
+    },
     logThrowLaunch: (throwId) => { f.logWeaponEvent("throwLaunch", { throwId }); },
     weaponWorldImpact: f.weaponWorldImpact, lobExplode: () => { f.lobExplode(blade().x, blade().y); },
     emitThrowResolve: () => { f.emitThrowResolve(null, blade().throwDmg); }, nearestEnemy: () => f.openingNearestEnemy(),

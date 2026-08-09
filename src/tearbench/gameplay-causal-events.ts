@@ -64,6 +64,15 @@ export function mapGameplayEventToCausalEvent(event: TearGameplayEvent): MappedG
       phase: "wave-draft-and-state-transitions",
       payload: Object.freeze({ choiceId: event.choiceId, tier: event.tier, wave: event.wave }),
     };
+    case "weapon": return {
+      type: event.event === "throw-launch" ? "blade.thrown"
+        : event.event === "catch" ? "blade.caught" : "blade.throw-resolved",
+      phase: event.event === "throw-launch" ? "player-and-blade" : "post-simulation-commit",
+      payload: Object.freeze({
+        weaponId: event.weaponId, throwId: event.throwId, x: event.x, y: event.y,
+        ...(event.damage === undefined ? {} : { damage: event.damage }),
+      }),
+    };
     case "world": return {
       type: "world.void-rescue", phase: "post-simulation-commit",
       payload: Object.freeze({ x: event.x, y: event.y, lane: event.lane, hp: event.hp }),

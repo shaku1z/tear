@@ -40,7 +40,10 @@ function patchEnemyComposition(snapshot: TearSnapshotV1, composition: unknown): 
       throw new RangeError("enemy composition count must be an integer from 0 through 200");
     }
     for (let index = 0; index < count; index += 1) {
-      payloads.push(enemyPayload(kind, `enemy:forge:${kind}:${String(payloads.length)}`, payloads.length));
+      // The live combat identity owner accepts its canonical numeric namespace
+      // only.  State Forge must stage real actors through that same namespace,
+      // rather than smuggling descriptive test IDs into production restore.
+      payloads.push(enemyPayload(kind, `enemy:${String(payloads.length + 1)}`, payloads.length));
     }
   }
   (snapshot.state as MutableRecord)["tear.enemy.v1"] = Object.freeze(payloads);

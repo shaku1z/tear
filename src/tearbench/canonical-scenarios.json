@@ -61,5 +61,19 @@
       "executionClass": "engineering",
       "certification": "non-certifying"
     }
+  },
+  {
+    "id": "chainblade-bind-yank-catch-seek",
+    "description": "Forge one normal Chainblade/charger encounter, prove the real Bind to Yank to catch lifecycle, seal it, and verify fresh production seeks at the retained lifecycle receipts.",
+    "tags": ["chainblade", "throw", "bind", "yank", "catch", "ghost", "seek", "c40"],
+    "maxTicks": 720,
+    "testFiles": ["tests/unit/c40-chainblade-evidence-registry.test.ts"],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-c40-chainblade-bind-yank-ghost-seek.js",
+      "artifact": "An ephemeral sealed and verified Ghost V3 capsule with semantic aim/throw/recall commands, generic native weapon transport facts, and three fresh C29 production-world seek receipts at each retained prethrow, Bind, Yank, and postcatch state.",
+      "artifactRetention": "The browser proof verifies its capsule in an isolated test profile; it does not retain a checked-in release artifact.",
+      "executionClass": "engineering",
+      "certification": "non-certifying"
+    }
   }
 ]

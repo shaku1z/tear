@@ -208,7 +208,7 @@ export class LegacyGhostEngine {
         ? base
         : { ...base, ...(event.variantName === undefined ? {} : { vn: event.variantName }),
           ...(event.bossId === undefined ? {} : { b: event.bossId }) });
-    } else {
+    } else if (event.kind === "death") {
       const visualId = this.#visualIds.get(event.actorId);
       if (visualId !== undefined) this.rec?.deaths.push({ t: this.#time(), id: visualId, c: event.cause });
     }

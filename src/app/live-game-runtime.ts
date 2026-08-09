@@ -350,7 +350,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
         lobExplode, splitProjectile: (projectile) => { if (isGameProjectile(projectile)) spawnSplitShards(projectile); },
         triggerSlowMotion: triggerSlowmo,
         logWeapon: logWeaponEvent,
-        emitThrowResolve: (enemy, damage) => { emitThrowResolve(isGameEnemy(enemy) ? enemy : null, damage); },
+        emitThrowResolve: (enemy, damage) => { const activeBlade = liveBlade(); GAMEPLAY_EVENTS.emit({ kind: "weapon", event: "throw-resolved", weaponId: liveRun().weaponId, throwId: activeBlade.throwId, x: activeBlade.x, y: activeBlade.y, damage }); emitThrowResolve(isGameEnemy(enemy) ? enemy : null, damage); },
         updateTrick, updatePlayground: stepPlayground,
         endRun, checkAchievements: achCheck, addKillScore,
         applySever: (enemy, tier) => { if (isGameEnemy(enemy)) applySever(enemy, tier); }, fire,

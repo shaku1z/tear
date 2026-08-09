@@ -70,5 +70,14 @@
     "journeyCheckpoint": "source-void-low-hp-rescue-seek-engineering-proof",
     "baseComparison": "not-run-by-this-scenario",
     "interactionMatrices": ["browser"]
+  },
+  {
+    "id": "chainblade-bind-yank-replay",
+    "prefixes": ["src/gameplay/combat/live-opening-phase.ts", "src/gameplay/combat/live-weapon-runtime.ts", "src/gameplay/combat/weapon-secondary-runtime.ts", "src/gameplay/entities/blade.ts", "src/gameplay/runtime/gameplay-events.ts", "src/app/live-combat-actions.ts", "src/app/live-game-runtime.ts", "src/tearbench/gameplay-causal-events.ts", "src/tearbench/state-forge-live-compiler.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-c40-chainblade-bind-yank-ghost-seek.js", "tests/unit/c40-chainblade-evidence-registry.test.ts"],
+    "scenarios": ["chainblade-bind-yank-catch-seek"],
+    "graveyardCases": [],
+    "journeyCheckpoint": "chainblade-bind-yank-catch-seek-engineering-proof",
+    "baseComparison": "not-run-by-this-scenario",
+    "interactionMatrices": ["browser"]
   }
 ]

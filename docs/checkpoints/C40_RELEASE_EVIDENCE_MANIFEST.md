@@ -49,3 +49,13 @@ composes a partial manifest, and verifies that the verifier emits a schema-2
 `rejected` certificate. That expected rejection keeps the workflow green while
 proving no partial evidence was promoted to a release decision. The uploaded
 artifact is provenance for review, not a release certificate or deployment.
+
+## Additional C40 engineering proof: Chainblade transport seek
+
+`tests/browser-c40-chainblade-bind-yank-ghost-seek.js` creates one Class-A
+State Forge normal Chainblade/charger state, drives only semantic aim, throw,
+and recall commands, and observes the native Bind, Yank, and catch lifecycle.
+It seals and verifies a forensic V3 capsule, then opens three fresh C29
+production seek worlds at each retained prethrow, Bind, Yank, and postcatch
+receipt. This is narrow engineering evidence: it does not establish all weapons,
+all input devices, a normal-player journey, a graveyard case, or certification.

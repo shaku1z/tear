@@ -17,6 +17,13 @@ export type TearGameplayEvent =
   }>
   | Readonly<{ kind: "death"; tick: number; actorId: string; cause: string }>
   | Readonly<{ kind: "loadout"; tick: number; choiceId: string; tier: number; wave: number }>
+  /** Generic weapon transport facts.  Weapon-specific mechanics remain in the
+   * authoritative state; this port records only the shared launch/resolve/catch
+   * lifecycle that every production host already owns. */
+  | Readonly<{
+    kind: "weapon"; tick: number; event: "throw-launch" | "throw-resolved" | "catch";
+    weaponId: string; throwId: number; x: number; y: number; damage?: number;
+  }>
   /** A source-owned world transition.  It is intentionally separate from
    * presentation effects so replay consumers can retain causal custody. */
   | Readonly<{ kind: "world"; tick: number; event: "void-rescue"; x: number; y: number; lane: "lower" | "upper" | null; hp: number }>

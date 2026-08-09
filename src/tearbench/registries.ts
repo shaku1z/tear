@@ -35,7 +35,7 @@ export const EVENT_IDS = Object.freeze([
   "player.jump-started", "player.dash-started", "player.damaged", "player.healed",
   "player.shield-absorbed", "player.revived", "player.fell-out",
   "blade.swing-committed", "blade.hit", "blade.launch", "blade.slam", "blade.power-slam",
-  "blade.thrown", "blade.embedded", "blade.recalled", "blade.caught", "blade.stolen",
+  "blade.thrown", "blade.throw-resolved", "blade.embedded", "blade.recalled", "blade.caught", "blade.stolen",
   "combat.deflect", "combat.perfect-parry", "combat.kill", "combat.multikill", "combat.style-rank-changed",
   "projectile.spawned", "projectile.deflected", "projectile.owner-changed", "projectile.hit", "projectile.expired",
   "enemy.spawned", "enemy.attack-started", "enemy.status-changed", "enemy.defeated",

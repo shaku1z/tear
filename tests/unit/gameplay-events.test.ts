@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
 import { LegacyGhostEngine } from "../../src/replay/legacy-compat";
+import { mapGameplayEventToCausalEvent } from "../../src/tearbench/gameplay-causal-events";
 
 describe("native gameplay event bus", () => {
   it("publishes one frozen authoritative event to independent adapters", () => {
@@ -40,6 +41,15 @@ describe("native gameplay event bus", () => {
     bus.emit({ kind: "stage", stage: 3 });
 
     expect(observedTicks).toEqual([3, 41, 41]);
+  });
+
+  it("maps generic production weapon transport facts without inventing weapon-specific ontology", () => {
+    expect(mapGameplayEventToCausalEvent({ kind: "weapon", tick: 12, event: "throw-launch", weaponId: "chainblade", throwId: 7, x: 4, y: 8 }))
+      .toMatchObject({ type: "blade.thrown", phase: "player-and-blade", payload: { weaponId: "chainblade", throwId: 7 } });
+    expect(mapGameplayEventToCausalEvent({ kind: "weapon", tick: 13, event: "throw-resolved", weaponId: "chainblade", throwId: 7, x: 6, y: 8, damage: 12 }))
+      .toMatchObject({ type: "blade.throw-resolved", payload: { damage: 12 } });
+    expect(mapGameplayEventToCausalEvent({ kind: "weapon", tick: 14, event: "catch", weaponId: "chainblade", throwId: 7, x: 8, y: 8 }))
+      .toMatchObject({ type: "blade.caught" });
   });
 
   it("lets the Ghost 2 adapter publish without owning Ghost 3 subscriptions", () => {
