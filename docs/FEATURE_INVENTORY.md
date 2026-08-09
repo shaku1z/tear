@@ -382,7 +382,11 @@ This is the migration checklist for the architectural redesign. A checked featur
    owner-only status and abort/reset that clears its multipart ledger, and makes
    only verified public/pseudonymous capsules discoverable. This is still not a
    client transport, background sync, player UI, deployed Worker, or cloud
-   completion claim.
+   completion claim. The standalone composition now carries only an optional
+   HTTPS-configured C38 capability whose bearer is acquired at a later explicit
+   foreground action; missing/invalid endpoints and CrazyGames are visibly
+   unavailable. It does not route through, change, or invoke the legacy
+   Firestore replay APIs, transport, queue, UI, or deployment.
 
 ## Accessibility and settings
 
