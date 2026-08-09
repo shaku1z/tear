@@ -81,7 +81,7 @@ function corsPolicy(request: Request): CorsPolicy | undefined {
   if (parts[1] === "uploads" && parts[3] === "parts" && parts[4] !== undefined && parts.length === 5) return Object.freeze({ methods: ["PUT"], headers: ["authorization", "content-type"] });
   if (parts[1] === "uploads" && parts[3] === "complete" && parts.length === 4) return Object.freeze({ methods: ["POST"], headers: ["authorization", "content-type"] });
   if (parts[1] === "uploads" && parts[3] === "abort" && parts.length === 4) return Object.freeze({ methods: ["POST"], headers: ["authorization"] });
-  if (parts[1] === "capsules" && parts[3] === "object" && parts.length === 4) return Object.freeze({ methods: ["GET"], headers: ["range"] });
+  if (parts[1] === "capsules" && parts[3] === "object" && parts.length === 4) return Object.freeze({ methods: ["GET"], headers: ["authorization", "range"] });
   if (parts[1] === "capsules" && parts.length === 3) return Object.freeze({ methods: ["DELETE"], headers: ["authorization"] });
   if (parts[1] === "capsules" && (parts[3] === "visibility" || parts[3] === "consent") && parts.length === 4) return Object.freeze({ methods: ["PATCH"], headers: ["authorization", "content-type"] });
   return undefined;
@@ -446,16 +446,26 @@ async function listMetadata(request: Request, env: Env, verifier: FirebaseIdToke
   return json({ capsules: result.results });
 }
 
-async function download(request: Request, env: Env, capsuleId: string): Promise<Response> {
+async function download(request: Request, env: Env, capsuleId: string, verifier: FirebaseIdTokenVerifier): Promise<Response> {
   const row = await loadUpload(env, capsuleId);
-  if (row?.status !== "finalized" || row.visibility === "private" || !["public", "pseudonymous"].includes(row.privacy_class)
-    || !row.verdict_json?.includes('"status":"verified"')) return json({ error: "not found" }, 404);
+  if (row?.status !== "finalized" || !row.verdict_json?.includes('"status":"verified"')) return json({ error: "not found" }, 404);
+  if (row.visibility === "private") {
+    // This is intentionally opaque: a missing, invalid, or foreign bearer must
+    // not distinguish a private capsule from a missing one, and must never read R2.
+    try {
+      if (await owner(request, verifier) !== row.owner_id) return json({ error: "not found" }, 404);
+    } catch (error) {
+      if (error instanceof FirebaseAuthenticationError) return json({ error: "not found" }, 404);
+      throw error;
+    }
+  } else if (!["public", "pseudonymous"].includes(row.privacy_class)) return json({ error: "not found" }, 404);
   const object = await env.GHOST_CAPSULES.get(row.object_key, { range: request.headers });
   if (object === null) return json({ error: "not found" }, 404);
   const headers = new Headers();
   object.writeHttpMetadata(headers);
   headers.set("etag", object.httpEtag);
   headers.set("accept-ranges", "bytes");
+  headers.set("cache-control", "no-store");
   headers.set("x-content-type-options", "nosniff");
   if (object.range !== undefined) {
     const offset = "suffix" in object.range ? Math.max(0, object.size - object.range.suffix) : object.range.offset ?? 0;
@@ -536,7 +546,7 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, verifier
     return abortUpload(request, env, capsuleId, verifier);
   }
   if (request.method === "GET" && parts[1] === "capsules" && parts[3] === "object") {
-    return download(request, env, capsuleId);
+    return download(request, env, capsuleId, verifier);
   }
   if (request.method === "DELETE" && parts[1] === "capsules") return mutate(request, env, capsuleId, "delete", ctx, verifier);
   if (request.method === "PATCH" && parts[1] === "capsules" && parts[3] !== undefined) {

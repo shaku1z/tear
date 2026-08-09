@@ -45,6 +45,7 @@ function environment(input: Readonly<{
   readonly onBatch?: (statements: readonly unknown[]) => void;
   readonly onCreate?: () => void;
   readonly onAbort?: () => void;
+  readonly onGet?: () => void;
 }> = {}): Env {
   const statement = (sql: string) => ({
     bind: (...values: unknown[]) => ({
@@ -74,6 +75,14 @@ function environment(input: Readonly<{
         };
       },
       resumeMultipartUpload: () => ({ complete: () => Promise.resolve({ size: 8, httpEtag: "etag" }), abort: () => { input.onAbort?.(); return Promise.resolve(); } }),
+      get: () => {
+        input.onGet?.();
+        return Promise.resolve({
+          body: new Blob([Uint8Array.of(1, 2, 3)]).stream(), size: 3, httpEtag: "private-etag",
+          range: { offset: 1, length: 2 },
+          writeHttpMetadata(headers: Headers) { headers.set("content-type", "application/vnd.tear.ghost+binary"); },
+        });
+      },
     } as unknown as R2Bucket,
     GHOST_VERIFIER: {} as Fetcher,
   };
@@ -218,6 +227,64 @@ describe("Ghost publication Worker Firebase owner authentication", () => {
     const foreign = await handler.fetch(request("/v1/uploads/capsule-1"), environment({ row: uploadRow({ owner_id: uidB }) }), context());
     expect(absent.status).toBe(404); expect(await absent.json()).toEqual({ error: "not found" });
     expect(foreign.status).toBe(404); expect(await foreign.json()).toEqual({ error: "not found" });
+  });
+
+  it("allows only the exact verified owner to retrieve a finalized private object", async () => {
+    let reads = 0;
+    const handler = createGhostPublicationHandler({ verifier: verifier(), allowedOrigins: ["https://game.tear.test"] });
+    const response = await handler.fetch(request("/v1/capsules/capsule-1/object", {
+      headers: { origin: "https://game.tear.test", range: "bytes=1-2" },
+    }), environment({ row: uploadRow({ status: "finalized", verdict_json: '{"status":"verified"}' }), onGet: () => { reads += 1; } }), context());
+    expect(response.status).toBe(206); expect(reads).toBe(1);
+    expect(response.headers.get("etag")).toBe("private-etag");
+    expect(response.headers.get("content-range")).toBe("bytes 1-2/3");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("access-control-allow-origin")).toBe("https://game.tear.test");
+  });
+
+  it("keeps absent, anonymous, invalid, and foreign private retrieval opaque without reading R2", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier() });
+    const privateRow = uploadRow({ status: "finalized", verdict_json: '{"status":"verified"}' });
+    const responses: Response[] = [];
+    let reads = 0;
+    responses.push(await handler.fetch(new Request("https://publication.test/v1/capsules/capsule-1/object"), environment({ row: privateRow, onGet: () => { reads += 1; } }), context()));
+    responses.push(await handler.fetch(new Request("https://publication.test/v1/capsules/capsule-1/object", { headers: { authorization: "Bearer forged.token.signature" } }), environment({ row: privateRow, onGet: () => { reads += 1; } }), context()));
+    responses.push(await handler.fetch(new Request("https://publication.test/v1/capsules/capsule-1/object", { headers: { authorization: "Bearer valid-b.token.signature" } }), environment({ row: privateRow, onGet: () => { reads += 1; } }), context()));
+    responses.push(await handler.fetch(request("/v1/capsules/capsule-1/object"), environment({ onGet: () => { reads += 1; } }), context()));
+    for (const response of responses) {
+      expect(response.status).toBe(404); expect(await response.json()).toEqual({ error: "not found" });
+    }
+    expect(reads).toBe(0);
+  });
+
+  it("keeps verified public and unlisted reads anonymous, but never serves non-finalized terminal states", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier() });
+    let reads = 0;
+    for (const visibility of ["public", "unlisted"] as const) {
+      const response = await handler.fetch(new Request("https://publication.test/v1/capsules/capsule-1/object"), environment({
+        row: uploadRow({ status: "finalized", visibility, privacy_class: "pseudonymous", verdict_json: '{"status":"verified"}' }), onGet: () => { reads += 1; },
+      }), context());
+      expect(response.status).toBe(206);
+    }
+    for (const status of ["uploading", "quarantined", "deleted"] as const) {
+      const response = await handler.fetch(request("/v1/capsules/capsule-1/object"), environment({
+        row: uploadRow({ status, verdict_json: '{"status":"verified"}' }), onGet: () => { reads += 1; },
+      }), context());
+      expect(response.status).toBe(404);
+    }
+    expect(reads).toBe(2);
+  });
+
+  it("allows only authorization and range for private object CORS preflight", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier(), allowedOrigins: ["https://game.tear.test"] });
+    const allowed = await handler.fetch(new Request("https://publication.test/v1/capsules/capsule-1/object", { method: "OPTIONS", headers: {
+      origin: "https://game.tear.test", "access-control-request-method": "GET", "access-control-request-headers": "authorization, range",
+    } }), environment(), context());
+    const denied = await handler.fetch(new Request("https://publication.test/v1/capsules/capsule-1/object", { method: "OPTIONS", headers: {
+      origin: "https://game.tear.test", "access-control-request-method": "GET", "access-control-request-headers": "authorization, range, x-tear-owner",
+    } }), environment(), context());
+    expect(allowed.status).toBe(204); expect(allowed.headers.get("access-control-allow-headers")).toBe("authorization, range");
+    expect(denied.status).toBe(403);
   });
 
   it("resumes only an exact same-owner immutable uploading manifest without creating another multipart upload", async () => {
