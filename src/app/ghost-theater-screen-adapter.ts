@@ -10,6 +10,7 @@ import { projectGhostCoachPractice, type GhostCoachPracticeProjection } from "..
 import { projectGhostRunDnaTheater } from "../ghost/run-dna-theater";
 import { createGhostStudioCutListFromTheater } from "../ghost/studio-cut-list-theater";
 import type { GhostStudioEditDecisionList } from "../ghost/player-experiences";
+import { refuseGhostTheater, type GhostTheaterOpenResult } from "../ghost/theater-open-result";
 
 export interface GhostTheaterScreenServices {
   readonly render: (view: ReplayScreenView) => void;
@@ -137,10 +138,20 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
   };
 
   return Object.freeze({
-    open(capsule: GhostReadCapsule, from: LegacyAppScreen): boolean {
+    open(capsule: GhostReadCapsule, from: LegacyAppScreen): GhostTheaterOpenResult {
+      let mapped: ReturnType<typeof mapGhostCapsuleToReplayEnvelope>;
+      try { mapped = mapGhostCapsuleToReplayEnvelope(capsule); }
+      catch {
+        context = undefined;
+        return refuseGhostTheater("source-invalid", capsule.manifest.rootIntegrity);
+      }
+      const codecFailure = mapped.issues.find((entry) => entry.track === "keyframes" && entry.reason.includes("isolated codec preflight"));
+      if (codecFailure !== undefined) {
+        context = undefined;
+        return refuseGhostTheater("codec-preflight", capsule.manifest.rootIntegrity, codecFailure.tick);
+      }
       try {
         const session = createGhostProductionReplaySession(capsule);
-        const mapped = mapGhostCapsuleToReplayEnvelope(capsule);
         const transport = new GhostTheaterTransport(mapped.ghost.events, services.width());
         const result = session.seek(0);
         context = {
@@ -159,10 +170,10 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
           studioOpen: false,
           studioCutList: undefined,
         };
-        return true;
+        return Object.freeze({ kind: "opened", root: capsule.manifest.rootIntegrity, tick: 0 });
       } catch {
         context = undefined;
-        return false;
+        return refuseGhostTheater("source-verification", capsule.manifest.rootIntegrity);
       }
     },
     render(): void {

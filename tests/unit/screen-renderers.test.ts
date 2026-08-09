@@ -381,6 +381,17 @@ describe("legacy screen renderer registry", () => {
       .toMatchObject({ enabled: true, label: "◆ THEATER", action: { type: "profile.watchGhostCapsule", id: "verified-capsule" } });
   });
 
+  it("renders a refused Ghost Theater route as disabled without exposing decoder detail", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.profile({ id: "profile", tab: "vault", tabs: [{ id: "vault", label: "VAULT", selected: true }],
+      name: "Guest", signedIn: false, stats: [], replays: [{ id: "refused-capsule", title: "Ghost V3 - COACHING",
+        detail: "COMPLETE - 3 CHUNKS - HEALTHY", available: false, theaterUnavailable: true, badge: "DURABLE CAPSULE" }] });
+    expect(controls.find((control) => control.action.type === "profile.watchGhostCapsule"))
+      .toMatchObject({ label: "THEATER UNAVAILABLE", enabled: false });
+    expect(JSON.stringify(controls)).not.toContain("codec restore rejected");
+  });
+
   it("offers a semantic repair action only for an unhealthy Vault capsule", () => {
     const controls: ScreenControl[] = [];
     const renderer = createLegacyScreenRenderers(createRenderContext(controls));

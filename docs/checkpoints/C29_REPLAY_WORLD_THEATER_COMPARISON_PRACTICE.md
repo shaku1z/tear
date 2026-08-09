@@ -75,6 +75,13 @@ applicable production boundary.
   checkpoints and uses the established pointer controls and Escape return path.
   This is semantic Theater: rendered gameplay-pixel/device fidelity remains
   C25/C40 work and is not implied by the Theater chrome.
+- Theater admission is now a typed, bounded `opened` or `refused` result. A
+  recorded-canonical keyframe that fails isolated codec preflight is refused
+  before a production session or transport exists. The normal Vault remains on
+  the Profile screen, visibly reports `THEATER UNAVAILABLE`, and disables that
+  source's Theater eligibility in memory. The refusal carries only a stable
+  category, player-safe detail, tick, and root identity; it never exposes a
+  decoder exception or mutates the durable capsule.
 - At a visible verified checkpoint, Theater now exposes `PRACTICE`. Its normal
   screen action forks the same admitted source session, validates unranked
   custody/lineage, and restores the child into the real live State Forge world.

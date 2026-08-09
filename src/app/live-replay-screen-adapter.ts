@@ -6,6 +6,7 @@ import { createGhostComparisonScreenAdapter } from "./ghost-comparison-screen-ad
 import { createGhostTheaterScreenAdapter } from "./ghost-theater-screen-adapter";
 import type { GhostPracticeChild } from "../ghost/replay-world";
 import type { GhostPracticeLaunchResult } from "./ghost-practice-launch";
+import { refuseGhostTheater, type GhostTheaterOpenResult } from "../ghost/theater-open-result";
 
 type Dependencies = Pick<GameRuntimeDependencies, "APP" | "Armored" | "Backdrop" | "Bomber" | "Charger" | "Chimera" |
   "CONFIG" | "FX" | "Flyer" | "GFX" | "GHOST" | "Input" | "Ranged" | "SAFE" | "STAGES" | "Support" | "THEME" |
@@ -27,7 +28,7 @@ export interface ReplayScreenServices {
 }
 export interface ReplayScreenAdapter {
   readonly enter: (data: unknown, from?: LegacyAppScreen) => boolean; readonly exit: () => void; readonly render: () => void;
-  readonly enterGhostCapsule: (id: string, from?: LegacyAppScreen) => Promise<boolean>;
+  readonly enterGhostCapsule: (id: string, from?: LegacyAppScreen) => Promise<GhostTheaterOpenResult>;
   readonly enterGhostComparison: (ids: readonly string[], from?: LegacyAppScreen) => Promise<boolean>;
   readonly togglePause: () => void; readonly seekBy: (delta: number) => void; readonly seekToFraction: (fraction: number) => void;
   readonly jumpChapter: (direction: number) => void; readonly restart: () => void; readonly toggleInfo: () => void;
@@ -114,15 +115,17 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     services.setScreen(destination);
   }
 
-  async function enterGhostCapsule(id: string, from: LegacyAppScreen = "profile"): Promise<boolean> {
+  async function enterGhostCapsule(id: string, from: LegacyAppScreen = "profile"): Promise<GhostTheaterOpenResult> {
     const capsule = await readBrowserGhostCapsule(services.browserIndexedDb, id).catch(() => undefined);
-    if (capsule === undefined || !theater.open(capsule, from)) return false;
+    if (capsule === undefined) return refuseGhostTheater("capsule-unavailable");
+    const opened = theater.open(capsule, from);
+    if (opened.kind === "refused") return opened;
     if (active === "legacy" && runtime !== undefined) runtime.exit();
     if (active === "comparison") comparison.exit();
     pending = undefined;
     active = "theater";
     services.setScreen("replay", { returnTo: from });
-    return true;
+    return opened;
   }
 
   async function enterGhostComparison(ids: readonly string[], from: LegacyAppScreen = "profile"): Promise<boolean> {

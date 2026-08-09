@@ -32,6 +32,7 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
         } else {
           context.enqueue({ x: actionsX, y: y + 20, w: 110, h: 40,
             label: view.tab === "vault" ? "◆ THEATER" : "▶  WATCH", enabled: replay.available,
+            ...(view.tab === "vault" && replay.theaterUnavailable ? { label: "THEATER UNAVAILABLE" } : {}),
             action: view.tab === "vault" ? { type: "profile.watchGhostCapsule", id: replay.id } : { type: "profile.watchReplay", id: replay.id } });
         }
         if (view.tab === "vault" && !replay.repairable) {

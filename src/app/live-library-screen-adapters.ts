@@ -3,6 +3,7 @@ import type { createLiveScreenRenderers } from "../presentation/screens/live-scr
 import type { LegacyGamepad } from "../input/legacy-input-contracts";
 import { ABILITY_CATEGORY_ORDER, SPECIAL_ABILITY_COLOR, abilityBadge } from "../presentation/codex-snapshots";
 import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
+import type { GhostTheaterOpenResult } from "../ghost/theater-open-result";
 
 type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "AFFIXES" | "Aldric" | "Armored" | "Bomber" | "Charger" |
   "Chimera" | "Colossus" | "Echo" | "Flyer" | "Ranged" | "Support" | "VARIANTS" | "Warden" | "Wraith" | "applyVariant" |
@@ -27,7 +28,7 @@ export interface LibraryScreenServices {
   readonly getBest: (mode: string, difficulty: string) => Readonly<{ wave: number; score: number; time?: number }>;
   readonly ghostVault: GhostVaultLibraryPort;
   readonly enterReplay: (record: unknown, from: string) => boolean;
-  readonly enterGhostTheater: (id: string) => Promise<boolean>;
+  readonly enterGhostTheater: (id: string) => Promise<GhostTheaterOpenResult>;
   readonly enterGhostComparison: (ids: readonly string[]) => Promise<boolean>;
 }
 

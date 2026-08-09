@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createGhostVaultLibraryController } from "../../src/app/ghost-vault-library-controller";
 import type { TearGhostManifest } from "../../src/ghost/capsule-vault";
+import { refuseGhostTheater } from "../../src/ghost/theater-open-result";
 
 function manifest(id: string, createdAt: string): TearGhostManifest {
   return Object.freeze({
@@ -70,5 +71,23 @@ describe("Ghost Vault library controller", () => {
       capsules: [{ id: "kept" }],
       message: "Ghost Vault could not open: IndexedDB blocked",
     });
+  });
+
+  it("keeps custody intact while making a refused Theater source visibly ineligible", async () => {
+    const catalog = {
+      manifests: [manifest("hostile", "2026-08-02T00:00:00.000Z")],
+      maintenance: { schemaVersion: 1 as const, checkedAt: "2026-08-02T00:00:00.000Z", maximumBytes: 1, evictedCapsuleIds: [],
+        integrity: [{ id: "hostile", healthy: true }], rebuiltIndexes: 1, libraries: { schemaVersion: 1 as const, entries: [], rejectedEntryKeys: [] } },
+    };
+    const controller = createGhostVaultLibraryController({ inspect: () => Promise.resolve(catalog),
+      repair: () => Promise.resolve({ sourceId: "hostile", childId: "unused", reused: true }) });
+    controller.refresh();
+    await Promise.resolve(); await Promise.resolve();
+    const before = controller.snapshot().capsules[0];
+    controller.setTheaterEligibility("hostile", refuseGhostTheater("codec-preflight", "root-hostile", 12));
+    const after = controller.snapshot().capsules[0];
+    expect(after).toMatchObject({ id: "hostile", healthy: true, theaterEligible: false,
+      theaterRefusal: { kind: "refused", category: "codec-preflight", tick: 12, root: "root-hostile" } });
+    expect(after).toMatchObject({ createdAt: before?.createdAt, chunkCount: before?.chunkCount, libraries: before?.libraries });
   });
 });

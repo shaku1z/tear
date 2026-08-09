@@ -14,6 +14,7 @@ import { buildLeaderboardRow, buildProfileRecords, buildProfileReplays, buildPro
 import { ReplayLibraryController } from "./replay-library-controller";
 import { renderReplayThumbnail } from "../presentation/replay-thumbnail";
 import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
+import type { GhostTheaterOpenResult } from "../ghost/theater-open-result";
 
 type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "AFFIXES" | "Aldric" | "Armored" | "Bomber" | "Charger" |
   "Chimera" | "Cloud" | "Colossus" | "CONFIG" | "DAILY" | "Echo" | "FirebaseProvider" | "Flyer" |
@@ -38,7 +39,7 @@ export interface LibraryScreenServices {
   readonly getBest: (mode: string, difficulty: string) => Readonly<{ wave: number; score: number; time?: number }>;
   readonly ghostVault: GhostVaultLibraryPort;
   readonly enterReplay: (record: unknown, from: string) => boolean;
-  readonly enterGhostTheater: (id: string) => Promise<boolean>;
+  readonly enterGhostTheater: (id: string) => Promise<GhostTheaterOpenResult>;
   readonly enterGhostComparison: (ids: readonly string[]) => Promise<boolean>;
 }
 
@@ -192,7 +193,8 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       title: `Ghost V3 - ${capsule.recordingProfile.toUpperCase()}`,
       detail: `${capsule.status.toUpperCase()} - ${String(capsule.chunkCount)} CHUNKS - ${capsule.healthy ? "HEALTHY" : "NEEDS REPAIR"}${capsule.repairChildId === undefined ? "" : " - REPAIRED COPY AVAILABLE"}${capsule.libraries.length === 0 ? "" : ` - ${capsule.libraries.join(" / ").toUpperCase()}`}`,
       badge: "DURABLE CAPSULE",
-      available: capsule.healthy && capsule.status === "complete",
+      available: capsule.healthy && capsule.status === "complete" && capsule.theaterEligible,
+      theaterUnavailable: !capsule.theaterEligible,
       repairable: capsule.repairable,
       timestamp: new Date(capsule.createdAt).toLocaleDateString(),
       comparisonSelected: comparisonSources.includes(capsule.id),
@@ -308,13 +310,16 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     watchReplay: (id, from) => { replayLibrary.watch(id, from); },
     watchGhostCapsule: (id) => {
       profileMessage = "opening Ghost Theater...";
-      void services.enterGhostTheater(id).then((opened) => {
-        if (!opened) profileMessage = "This Ghost capsule could not open in Theater.";
+      void services.enterGhostTheater(id).then((result) => {
+        if (result.kind === "refused") {
+          services.ghostVault.setTheaterEligibility(id, result);
+          profileMessage = `THEATER UNAVAILABLE · ${result.detail}`;
+        }
       });
     },
     compareGhostCapsule: (id) => {
       const capsule = services.ghostVault.snapshot().capsules.find((entry) => entry.id === id);
-      if (capsule?.healthy !== true || capsule.status !== "complete") {
+      if (capsule?.healthy !== true || capsule.status !== "complete" || !capsule.theaterEligible) {
         profileMessage = "Only healthy, complete Ghost capsules can be compared.";
         return;
       }
