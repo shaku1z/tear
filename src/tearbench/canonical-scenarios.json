@@ -77,6 +77,20 @@
     }
   },
   {
+    "id": "hammer-meteor-terrain-catch-seek",
+    "description": "Forge one normal Hammer state, throw down onto authored terrain, prove the real Meteor resolve and catch lifecycle, seal it, and verify fresh production seeks at each retained receipt.",
+    "tags": ["hammer", "throw", "meteor", "terrain", "catch", "ghost", "seek", "c40"],
+    "maxTicks": 720,
+    "testFiles": ["tests/unit/c40-hammer-evidence-registry.test.ts"],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-c40-hammer-meteor-ghost-seek.js",
+      "artifact": "An ephemeral sealed and verified Ghost V3 capsule with semantic down-aim/throw/recall commands, generic native launch/terrain-resolve/catch facts, and three fresh C29 production-world seek receipts at each retained prethrow, embedded-resolve, and postcatch state.",
+      "artifactRetention": "The browser proof verifies its capsule in an isolated test profile; it does not retain a checked-in release artifact.",
+      "executionClass": "engineering",
+      "certification": "non-certifying"
+    }
+  },
+  {
     "id": "spear-anchor-reel-catch-seek",
     "description": "Forge one normal Spear/charger encounter, queue the real flying recall into Anchor to Reel to catch, seal it, and verify fresh production seeks at each retained lifecycle receipt.",
     "tags": ["spear", "throw", "anchor", "reel", "catch", "ghost", "seek", "c40"],

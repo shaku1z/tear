@@ -59,3 +59,15 @@ It seals and verifies a forensic V3 capsule, then opens three fresh C29
 production seek worlds at each retained prethrow, Bind, Yank, and postcatch
 receipt. This is narrow engineering evidence: it does not establish all weapons,
 all input devices, a normal-player journey, a graveyard case, or certification.
+
+## Additional C40 engineering proof: Hammer terrain Meteor seek
+
+`tests/browser-c40-hammer-meteor-ghost-seek.js` forges one Class-A State Forge
+normal Hammer state and drives only semantic down-aim, throw, and recall
+commands. It observes the live ballistic blade embedding through authored
+terrain before ordinary throw expiry, the shared native Meteor resolve, and the
+return catch. It seals and verifies a forensic V3 capsule, then opens three
+fresh C29 production seek worlds at each retained prethrow, embedded-resolve,
+and postcatch receipt. This is narrow engineering evidence: it does not
+establish every Hammer interaction, every weapon, all input devices, a
+normal-player journey, a graveyard case, or certification.
