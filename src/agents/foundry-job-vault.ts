@@ -1,4 +1,4 @@
-import type { GhostVaultBackend, GhostVaultWrite } from "../ghost";
+import type { GhostVaultBackend, GhostVaultWrite, GhostVaultStore } from "../ghost";
 import { parseTearFoundryJob, type TearFoundryJobV1 } from "./foundry-job-state";
 
 const KEY = "foundry-job:v1:";
@@ -26,7 +26,9 @@ export class TearFoundryJobVault {
   }
 
   /** Atomically checkpoints one exact legal successor; it refuses job-history rewrites or forks. */
-  async persistSuccessor(previousInput: TearFoundryJobV1, nextInput: TearFoundryJobV1, extra: readonly GhostVaultWrite[] = []): Promise<TearFoundryJobV1> {
+  async persistSuccessor(previousInput: TearFoundryJobV1, nextInput: TearFoundryJobV1, extra: readonly GhostVaultWrite[] = []): Promise<TearFoundryJobV1> { return this.persistSuccessorIfMatches(previousInput, nextInput, Object.freeze([]), extra); }
+  /** Extends one exact job head while pinning the caller's retained authority in the same Vault transaction. */
+  async persistSuccessorIfMatches(previousInput: TearFoundryJobV1, nextInput: TearFoundryJobV1, guards: readonly Readonly<{ store: GhostVaultStore; key: string; expected?: string }>[], extra: readonly GhostVaultWrite[] = []): Promise<TearFoundryJobV1> {
     const previous = parseTearFoundryJob(previousInput), next = parseTearFoundryJob(nextInput);
     if (previous.id !== next.id || JSON.stringify(previous.inputs) !== JSON.stringify(next.inputs)
       || next.events.length !== previous.events.length + 1
@@ -41,7 +43,7 @@ export class TearFoundryJobVault {
     if (current?.jobHash === next.jobHash) return current;
     if (current?.jobHash !== previous.jobHash) throw new RangeError("Foundry job successor does not match durable current state");
     const event = next.events.at(-1); if (event === undefined) throw new Error("Foundry job successor event disappeared");
-    await this.#backend.commitIfMatches(Object.freeze([{ store: "analysis", key: `${KEY}${previous.id}`, expected: JSON.stringify(previous) }]), Object.freeze([
+    await this.#backend.commitIfMatches(Object.freeze([{ store: "analysis", key: `${KEY}${previous.id}`, expected: JSON.stringify(previous) }, ...guards]), Object.freeze([
       { store: "analysis", key: `${KEY}${next.id}`, value: JSON.stringify(next) },
       { store: "analysis", key: `foundry-job-event:v1:${next.id}:${String(event.sequence)}:${event.eventHash}`, value: JSON.stringify(event) },
       { store: "indexes", key: `foundry-job-current:${next.id}`, value: JSON.stringify(Object.freeze({ jobHash: next.jobHash, phase: next.phase })) },

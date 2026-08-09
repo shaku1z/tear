@@ -588,3 +588,32 @@ normal scheduled entry point. It proves an altered launch profile and revoked
 custody both leave the `online-launch-ready` pointer unchanged, while the
 restored exact authority produces one claimed unrun launch and an idempotent
 `online-resume` retry.
+
+## V4 claimed online-Q execution
+
+The one-shot scheduler now consumes only the current opaque `online-resume`
+binding. It retrieves the named persisted C30 launch directly; it does not
+scan for a latest checkpoint or accept a request. Before invoking the real C30
+advance executor, it revalidates and conditionally claims the exact
+authority/handoff, declared evaluation-ready source, current schedule/job and
+V4 pointer, launch-profile/bootstrap/readiness bytes, and action-time C31
+custody records. The claim is keyed by the immutable authority and exact launch
+identity, so a restart can identify precisely the owned bounded advance.
+
+One real executor call retains a direct successor launch and execution receipt.
+Its existing exact-successor transaction now also includes the checkpoint,
+rebound cadence, and next V4 `online-resume` pointer, guarded by the claim and
+every retained authority byte. Therefore a post-executor competing commit
+cannot persist a new job/checkpoint without its matching schedule and current
+binding. Running and terminal C30 checkpoint statuses are both retained as
+execution state; this boundary does not terminalize either status, derive paired
+evaluation, create a candidate/artifact, touch a policy, activate/promote, or
+contact cloud.
+
+The focused real-lineage schedule test proves a pre-execution C31 revocation
+leaves the old head unchanged; with restored custody one scheduled wake invokes
+C30, retains the exact successor and receipt, and advances the schedule/V4
+pointer. A planted post-executor conditional-commit loss leaves no new job or
+checkpoint, and a reconstructed scheduler retries the same claimed launch.
+It also proves the normal no-policy boundary. Online terminalization and all
+subsequent evaluation/policy work remain separate work.

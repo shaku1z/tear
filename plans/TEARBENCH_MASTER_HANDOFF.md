@@ -1367,6 +1367,27 @@ governed-port double, not browser capture evidence. The scheduler remains
 local-only and neither curates/publishes, evaluates, chooses a challenger,
 activates/promotes, rolls back, or proves a full unattended Foundry cycle.
 
+### C36 V4 claimed C30 online-Q execution
+
+DONE THIS STEP: The normal local one-shot scheduler now consumes only a current
+opaque V4 `online-resume` binding. It reloads the exact retained launch,
+authority/handoff, declared source, profile/bootstrap/readiness, schedule/job,
+and action-time C31 custody; it writes a separate pre-execution claim before
+one real C30 advance. The successor launch and its receipt directly determine
+the next V4 binding; no latest-checkpoint search or raw request is accepted.
+The exact-successor transaction atomically includes the C30 checkpoint/job,
+launch/receipt, cadence rebind, and new current V4 pointer, retaining both
+running and terminal statuses as C30 execution state.
+PROVEN BY: `tests/unit/foundry-job-offline-training-finalization.test.ts`
+composes real offline completion, authority/claimed launch, a revoked-custody
+refusal with unchanged head, one real scheduled C30 advance/rebind with no
+policy artifact, and a planted post-executor commit race that leaves no partial
+checkpoint/job and restarts through the same claimed launch.
+REMAINING HERE: This does not terminalize a C30 checkpoint, derive or execute
+paired evaluation, build/admit a C32 candidate, route/activate/promote a
+policy, contact cloud, or prove an unattended cycle. The test remains a
+governed C31-port integration fixture, not browser capture evidence.
+
 ### C34 V3 canonical-compatible offline training custody
 
 DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,
