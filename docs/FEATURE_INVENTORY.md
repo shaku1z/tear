@@ -584,13 +584,20 @@ promotion, placement, runtime traffic, or player surface is reachable.
 
 ### C37 normal Ghost Lab home
 
-The normal main-menu `GHOST LAB` route is a local, typed home with exactly
-three enabled destinations: Academy, Foundry Status, and Ghost Vault. Vault
-remains the existing capsule-gated entry to Theater and Coach. Watch, State
-Forge, Bot Ladder, and Studio are visible unavailable declarations; this home
-does not expose test-only controls, cloud, traffic, placement, promotion, or
-rollout. `tests/browser-ghost-lab-home.js` proves main menu -> Ghost Lab and
-each available result state in the built standalone artifact.
+The normal main-menu `GHOST LAB` route is a local, typed home with Academy,
+Foundry Status, Ghost Vault, and a conditional local Watch route. Vault remains
+the existing capsule-gated entry to Theater and Coach. Watch reads the exact
+raw active pointer and artifact bytes, validates their hashes, and then admits
+only the strict C32 canonical V3 runtime; absent, malformed, mismatched, or
+non-V3 bytes remain visibly unavailable and never fall back to a scripted or
+legacy policy. Its normal-speed start/pause/resume/stop control reports local
+aggregate decision health only and restores native input on pause, refusal, or
+stop. It has no decision journal, C36 monitoring/promotion/rollback, schedule,
+traffic, cloud, placement, or test-only host/panel path. State Forge, Bot
+Ladder, and Studio remain visible unavailable declarations. Unit controller and
+screen-action evidence plus `tests/browser-ghost-lab-home.js` cover the normal
+unavailable browser route; the seeded C32 artifact journey remains engineering
+coverage and is not represented as player certification.
 
 ### C37 verified Run DNA Theater projection
 

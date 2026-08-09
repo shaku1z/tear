@@ -72,7 +72,8 @@ export type ScreenAction =
   | { readonly type: "foundry.schedule.enable"; readonly scheduleHash: string }
   | { readonly type: "foundry.schedule.disable"; readonly scheduleHash: string }
   /** Ghost Lab only names already-safe normal routes; it never enables lab operations. */
-  | { readonly type: "ghostlab.open"; readonly destination: "academy" | "foundry" | "vault" }
+  | { readonly type: "ghostlab.open"; readonly destination: "academy" | "foundry" | "vault" | "watch" }
+  | { readonly type: "ghostlab.watch"; readonly command: "start" | "pause" | "resume" | "stop" }
   | { readonly type: "rename.submit" }
   | { readonly type: "rename.cancel" }
   | { readonly type: "draft.choose"; readonly index: number }

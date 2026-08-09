@@ -251,11 +251,14 @@ describe("legacy screen renderer registry", () => {
       { id: "academy", label: "ACADEMY", detail: "local custody" },
       { id: "foundry", label: "FOUNDRY STATUS", detail: "local recovery" },
       { id: "vault", label: "GHOST VAULT", detail: "capsule gated Theater" },
+      { id: "watch", label: "WATCH", detail: "canonical V3 locally available" },
     ], unavailable: [
       { label: "WATCH", detail: "not player-safe" }, { label: "STATE FORGE", detail: "engineering only" },
-    ] });
+    ], watch: { status: "ready", detail: "canonical V3 locally available", decisions: 0 } });
     expect(controls.filter((control) => control.action.type === "ghostlab.open").map((control) => control.action))
-      .toEqual([{ type: "ghostlab.open", destination: "academy" }, { type: "ghostlab.open", destination: "foundry" }, { type: "ghostlab.open", destination: "vault" }]);
+      .toEqual([{ type: "ghostlab.open", destination: "academy" }, { type: "ghostlab.open", destination: "foundry" }, { type: "ghostlab.open", destination: "vault" }, { type: "ghostlab.open", destination: "watch" }]);
+    expect(controls.find((control) => control.action.type === "ghostlab.watch"))
+      .toMatchObject({ label: "START WATCH", action: { type: "ghostlab.watch", command: "start" } });
     expect(controls.some((control) => control.action.type === "navigate" && control.action.to === "menu")).toBe(true);
   });
 

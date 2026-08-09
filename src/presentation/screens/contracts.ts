@@ -281,11 +281,12 @@ export interface GhostLabScreenView {
   readonly id: "ghostlab";
   readonly subtitle: string;
   readonly routes: readonly Readonly<{
-    readonly id: "academy" | "foundry" | "vault";
+    readonly id: "academy" | "foundry" | "vault" | "watch";
     readonly label: string;
     readonly detail: string;
   }>[];
   readonly unavailable: readonly Readonly<{ readonly label: string; readonly detail: string }>[];
+  readonly watch: Readonly<{ readonly status: "checking" | "unavailable" | "ready" | "starting" | "running" | "paused" | "stopped"; readonly detail: string; readonly decisions: number }>;
 }
 
 export type LegacyScreenView = MenuScreenView | SetupScreenView | PlayingScreenView | CodexScreenView
