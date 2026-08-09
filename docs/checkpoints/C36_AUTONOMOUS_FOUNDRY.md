@@ -467,3 +467,17 @@ This is admission only: it neither creates C31 curation/manifests, executes a
 phase, starts a timer or worker, trains/evaluates a candidate, touches a policy
 pointer, promotes/rolls back, exposes UI, or contacts cloud. It is not the
 unattended Foundry completion proof.
+
+## Immutable launch-profile authority
+
+`foundry-launch-profile.ts` stores a product-owned immutable declaration of
+V2 evaluation/budget/stop inputs, C31 trainer-manifest identity, local cadence,
+and V3 successor intent. It derives a champion only from the current C32 active
+pointer and strict canonical V3 artifact, then rechecks the exact published
+trainer manifest and action-time held C31 custody. Callers receive only an
+`eligible`/`blocked` projection or a derived bootstrap request; malformed,
+missing, incompatible, revoked, or corrupt authority fails closed.
+
+This is authority admission only: it does not curate C31 data, execute work,
+start a scheduler, train/evaluate, mutate a C32 policy, promote/roll back, or
+expose UI. It is not unattended-cycle evidence.

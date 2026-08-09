@@ -1332,6 +1332,20 @@ REMAINING HERE: This does not curate/publish C31 data, execute any phase, wake
 a timer/worker, train/evaluate, activate/promote/roll back, render UI, or prove
 an unattended cycle. C36 remains open.
 
+### C36 immutable launch-profile authority
+
+DONE THIS STEP: A durable product-owned profile now freezes the V2 job
+evaluation/budget/stop inputs, exact C31 trainer-manifest identity, schedule,
+and V3 successor declaration. It derives the champion only from the current
+strict C32 active V3 artifact and corpus records only from the exact manifest
+whose custody remains held at action time. It returns only opaque
+eligible/blocked state or an internally-derived bootstrap request.
+PROVEN BY: `tests/unit/foundry-launch-profile.test.ts` covers immutable retry,
+opaque blocked state, corrupted-profile quarantine, and no-authority refusal.
+REMAINING HERE: No screen/action invokes this profile and it neither curates,
+executes, schedules, trains, evaluates, promotes, rolls back, nor proves an
+unattended cycle.
+
 ### C34 V3 canonical-compatible offline training custody
 
 DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,
