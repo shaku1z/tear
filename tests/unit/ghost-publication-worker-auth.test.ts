@@ -11,10 +11,10 @@ const uidB = "firebase-uid-b";
 
 function verifier(): FirebaseIdTokenVerifier {
   return Object.freeze({
-    async verifyIdToken(token: string) {
-      if (token === "valid-a.token.signature") return Object.freeze({ uid: uidA });
-      if (token === "valid-b.token.signature") return Object.freeze({ uid: uidB });
-      throw new FirebaseAuthenticationError();
+    verifyIdToken(token: string) {
+      if (token === "valid-a.token.signature") return Promise.resolve(Object.freeze({ uid: uidA }));
+      if (token === "valid-b.token.signature") return Promise.resolve(Object.freeze({ uid: uidB }));
+      return Promise.reject(new FirebaseAuthenticationError());
     },
   });
 }
@@ -27,15 +27,29 @@ function request(path: string, init: RequestInit = {}): Request {
 }
 
 function context(): ExecutionContext {
-  return { waitUntil() {}, passThroughOnException() {} };
+  return { waitUntil() { return undefined; }, passThroughOnException() { return undefined; } } as ExecutionContext;
 }
 
-function environment(input: Readonly<{ readonly row?: Record<string, unknown> | null; readonly onBatch?: (statements: readonly unknown[]) => void }> = {}): Env {
+function uploadRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    capsule_id: "capsule-1", upload_id: "upload-1", object_key: "capsules/capsule-1.ghost", owner_id: uidA,
+    status: "uploading", visibility: "private", byte_length: 8, build_id: "tear-1", content_hash: "content-hash", result_hash: "result-hash",
+    schema_version: 1, title: "A run", tags_json: "[]", privacy_class: "private", eligibility_json: "{}", training_consent: 0,
+    ...overrides,
+  };
+}
+
+function environment(input: Readonly<{
+  readonly row?: Record<string, unknown> | null;
+  readonly parts?: readonly Record<string, unknown>[];
+  readonly onBatch?: (statements: readonly unknown[]) => void;
+  readonly onCreate?: () => void;
+}> = {}): Env {
   const statement = (sql: string) => ({
     bind: (...values: unknown[]) => ({
-      first: async () => input.row ?? null,
-      all: async () => ({ results: [] }),
-      run: async () => ({ success: true }),
+      first: () => Promise.resolve(input.row ?? null),
+      all: () => Promise.resolve({ results: sql.includes("ghost_upload_parts") ? input.parts ?? [] : [] }),
+      run: () => Promise.resolve({ success: true }),
       sql,
       values,
     }),
@@ -44,13 +58,21 @@ function environment(input: Readonly<{ readonly row?: Record<string, unknown> | 
     FIREBASE_PROJECT_ID: "tear-682cf",
     GHOST_METADATA: {
       prepare: statement,
-      batch: async (statements: readonly unknown[]) => {
+      batch: (statements: readonly unknown[]) => {
         input.onBatch?.(statements);
-        return [];
+        return Promise.resolve([]);
       },
     } as unknown as D1Database,
     GHOST_CAPSULES: {
-      createMultipartUpload: async () => ({ uploadId: "upload-1", abort: async () => {} }),
+      createMultipartUpload: () => {
+        input.onCreate?.();
+        return {
+          uploadId: "upload-1", abort: () => Promise.resolve(),
+          complete: () => Promise.resolve({ size: 8, httpEtag: "etag" }),
+          resumeMultipartUpload: undefined,
+        };
+      },
+      resumeMultipartUpload: () => ({ complete: () => Promise.resolve({ size: 8, httpEtag: "etag" }) }),
     } as unknown as R2Bucket,
     GHOST_VERIFIER: {} as Fetcher,
   };
@@ -84,7 +106,7 @@ describe("Ghost publication Worker Firebase owner authentication", () => {
     const jwk = await crypto.subtle.exportKey("jwk", keys.publicKey);
     const verify = createFirebaseIdTokenVerifier({
       projectId: "tear-682cf",
-      fetcher: async () => new Response(JSON.stringify({ keys: [{ ...jwk, kid: "test-key" }] }), { headers: { "cache-control": "max-age=0" } }),
+      fetcher: () => Promise.resolve(new Response(JSON.stringify({ keys: [{ ...jwk, kid: "test-key" }] }), { headers: { "cache-control": "max-age=0" } })),
       nowSeconds: () => 1_900_000_000,
     });
     await expect(verify.verifyIdToken(await signedToken({ privateKey: keys.privateKey }))).resolves.toEqual({ uid: uidA });
@@ -119,11 +141,63 @@ describe("Ghost publication Worker Firebase owner authentication", () => {
     const handler = createGhostPublicationHandler({ verifier: verifier() });
     const response = await handler.fetch(request("/v1/uploads/capsule-1/parts/1", {
       method: "PUT", body: Uint8Array.of(1),
-    }), environment({ row: {
-      capsule_id: "capsule-1", upload_id: "upload-1", object_key: "capsules/capsule-1.ghost", owner_id: uidB,
-      status: "uploading", visibility: "private", byte_length: 1, build_id: "tear-1", content_hash: "x", result_hash: "y",
-    } }), context());
+    }), environment({ row: uploadRow({ owner_id: uidB, byte_length: 1, content_hash: "x", result_hash: "y" }) }), context());
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({ error: "upload owner mismatch" });
+  });
+
+  it("returns an authenticated same-owner upload status with a sorted durable part ledger", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier() });
+    const response = await handler.fetch(request("/v1/uploads/capsule-1"), environment({
+      row: uploadRow(), parts: [{ part_number: 1, etag: "one" }, { part_number: 4, etag: "four" }],
+    }), context());
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toEqual({ capsuleId: "capsule-1", status: "uploading", byteLength: 8,
+      parts: [{ partNumber: 1, etag: "one" }, { partNumber: 4, etag: "four" }] });
+  });
+
+  it("makes upload absence and non-owner status indistinguishable", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier() });
+    const absent = await handler.fetch(request("/v1/uploads/capsule-1"), environment(), context());
+    const foreign = await handler.fetch(request("/v1/uploads/capsule-1"), environment({ row: uploadRow({ owner_id: uidB }) }), context());
+    expect(absent.status).toBe(404); expect(await absent.json()).toEqual({ error: "not found" });
+    expect(foreign.status).toBe(404); expect(await foreign.json()).toEqual({ error: "not found" });
+  });
+
+  it("resumes only an exact same-owner immutable uploading manifest without creating another multipart upload", async () => {
+    let creates = 0;
+    const handler = createGhostPublicationHandler({ verifier: verifier() });
+    const response = await handler.fetch(request("/v1/uploads", { method: "POST", body: manifest() }), environment({
+      row: uploadRow(), onCreate: () => { creates += 1; },
+    }), context());
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ capsuleId: "capsule-1", uploadId: "upload-1", status: "uploading", resumed: true });
+    expect(creates).toBe(0);
+  });
+
+  it("rejects begin collisions when immutable manifest data differs or the upload is terminal", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier() });
+    const changed = await handler.fetch(request("/v1/uploads", { method: "POST", body: manifest().replace("content-hash", "other-hash") }), environment({ row: uploadRow() }), context());
+    const terminal = await handler.fetch(request("/v1/uploads", { method: "POST", body: manifest() }), environment({ row: uploadRow({ status: "finalized" }) }), context());
+    expect(changed.status).toBe(409); expect(terminal.status).toBe(409);
+  });
+
+  it("refuses completion unless submitted parts exactly equal the durable ledger", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier() });
+    const body = JSON.stringify({ parts: [{ partNumber: 1, etag: "one" }, { partNumber: 2, etag: "wrong" }] });
+    const response = await handler.fetch(request("/v1/uploads/capsule-1/complete", { method: "POST", body }), environment({
+      row: uploadRow(), parts: [{ part_number: 1, etag: "one" }, { part_number: 2, etag: "two" }],
+    }), context());
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: "completion parts do not exactly match durable upload ledger" });
+  });
+
+  it("rejects duplicate completion part numbers before any R2 completion", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier() });
+    const response = await handler.fetch(request("/v1/uploads/capsule-1/complete", { method: "POST", body: JSON.stringify({
+      parts: [{ partNumber: 1, etag: "one" }, { partNumber: 1, etag: "one" }],
+    }) }), environment({ row: uploadRow(), parts: [{ part_number: 1, etag: "one" }] }), context());
+    expect(response.status).toBe(400);
   });
 });

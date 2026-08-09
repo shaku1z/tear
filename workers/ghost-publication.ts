@@ -16,6 +16,12 @@ interface UploadRow {
   build_id: string;
   content_hash: string;
   result_hash: string;
+  schema_version: number;
+  title: string;
+  tags_json: string;
+  privacy_class: "public" | "pseudonymous" | "private" | "sensitive";
+  eligibility_json: string;
+  training_consent: number;
 }
 
 interface BeginBody {
@@ -137,6 +143,9 @@ function parseComplete(value: unknown): CompleteBody {
     }
     return { partNumber: Number(part.partNumber), etag: part.etag };
   });
+  if (new Set(parts.map((part) => part.partNumber)).size !== parts.length) {
+    throw new TypeError("completion parts must not contain duplicates");
+  }
   return { parts };
 }
 
@@ -164,7 +173,8 @@ function parseTrustedVerdict(value: unknown, row: UploadRow): TrustedVerdict {
 async function loadUpload(env: Env, capsuleId: string): Promise<UploadRow | null> {
   return env.GHOST_METADATA.prepare(
     `SELECT capsule_id, upload_id, object_key, owner_id, status, visibility, byte_length,
-      build_id, content_hash, result_hash FROM ghost_uploads WHERE capsule_id = ?`,
+      build_id, content_hash, result_hash, schema_version, title, tags_json, privacy_class,
+      eligibility_json, training_consent FROM ghost_uploads WHERE capsule_id = ?`,
   ).bind(capsuleId).first<UploadRow>();
 }
 
@@ -174,9 +184,35 @@ function assertOwner(row: UploadRow | null, actor: string): UploadRow {
   return row;
 }
 
+function immutableManifestMatches(row: UploadRow, body: BeginBody): boolean {
+  return row.capsule_id === body.capsuleId
+    && row.build_id === body.buildId
+    && row.schema_version === body.schemaVersion
+    && row.byte_length === body.byteLength
+    && row.content_hash === body.contentHash
+    && row.result_hash === body.resultHash
+    && row.title === body.title
+    && row.tags_json === JSON.stringify(body.tags)
+    && row.privacy_class === body.privacy
+    && row.eligibility_json === JSON.stringify(body.eligibility)
+    && row.visibility === body.visibility
+    && row.training_consent === (body.trainingConsent ? 1 : 0);
+}
+
+function resumedBegin(row: UploadRow): Response {
+  return json({ capsuleId: row.capsule_id, uploadId: row.upload_id, status: "uploading", resumed: true });
+}
+
 async function begin(request: Request, env: Env, verifier: FirebaseIdTokenVerifier): Promise<Response> {
   const actor = await owner(request, verifier);
   const body = parseBegin(await boundedJson(request));
+  const existing = await loadUpload(env, body.capsuleId);
+  if (existing !== null) {
+    if (existing.owner_id === actor && existing.status === "uploading" && immutableManifestMatches(existing, body)) {
+      return resumedBegin(existing);
+    }
+    throw new Error("upload manifest conflict");
+  }
   const objectKey = `capsules/${body.capsuleId}.ghost`;
   const multipart = await env.GHOST_CAPSULES.createMultipartUpload(objectKey, {
     httpMetadata: { contentType: "application/vnd.tear.ghost+binary" },
@@ -203,9 +239,48 @@ async function begin(request: Request, env: Env, verifier: FirebaseIdTokenVerifi
     ]);
   } catch (error) {
     await multipart.abort();
+    // A concurrent begin may have won the durable D1 insert after our initial
+    // read. Refetch only after aborting this orphaned R2 multipart handle.
+    const concurrent = await loadUpload(env, body.capsuleId);
+    if (concurrent !== null && concurrent.owner_id === actor && concurrent.status === "uploading"
+      && immutableManifestMatches(concurrent, body)) {
+      return resumedBegin(concurrent);
+    }
     throw error;
   }
   return json({ capsuleId: body.capsuleId, uploadId: multipart.uploadId, status: "uploading" }, 201);
+}
+
+async function uploadStatus(request: Request, env: Env, capsuleId: string, verifier: FirebaseIdTokenVerifier): Promise<Response> {
+  const actor = await owner(request, verifier);
+  const row = await loadUpload(env, capsuleId);
+  // Deliberately make absence and non-ownership indistinguishable.
+  if (row?.owner_id !== actor) return json({ error: "not found" }, 404);
+  const result = await env.GHOST_METADATA.prepare(
+    "SELECT part_number, etag FROM ghost_upload_parts WHERE capsule_id = ? ORDER BY part_number ASC",
+  ).bind(capsuleId).all<Readonly<{ part_number: number; etag: string }>>();
+  const parts = result.results.map((part) => ({ partNumber: part.part_number, etag: part.etag }));
+  return json({ capsuleId: row.capsule_id, status: row.status, byteLength: row.byte_length, parts });
+}
+
+function assertExactPartLedger(submitted: readonly R2UploadedPart[], ledger: readonly Readonly<{ part_number: number; etag: string }>[]): void {
+  const submittedByNumber = new Map<number, string>();
+  for (const part of submitted) {
+    if (submittedByNumber.has(part.partNumber)) throw new TypeError("completion parts must not contain duplicates");
+    submittedByNumber.set(part.partNumber, part.etag);
+  }
+  const ledgerByNumber = new Map<number, string>();
+  for (const part of ledger) {
+    if (!Number.isSafeInteger(part.part_number) || part.part_number < 1 || typeof part.etag !== "string"
+      || ledgerByNumber.has(part.part_number)) {
+      throw new Error("durable upload part ledger is invalid");
+    }
+    ledgerByNumber.set(part.part_number, part.etag);
+  }
+  if (submittedByNumber.size !== ledgerByNumber.size) throw new Error("completion parts do not exactly match durable upload ledger");
+  for (const [partNumber, etag] of submittedByNumber) {
+    if (ledgerByNumber.get(partNumber) !== etag) throw new Error("completion parts do not exactly match durable upload ledger");
+  }
 }
 
 async function uploadPart(request: Request, env: Env, capsuleId: string, partNumber: number, verifier: FirebaseIdTokenVerifier): Promise<Response> {
@@ -229,6 +304,10 @@ async function complete(request: Request, env: Env, capsuleId: string, verifier:
   const row = assertOwner(await loadUpload(env, capsuleId), actor);
   if (row.status !== "uploading") throw new Error("upload cannot be completed");
   const body = parseComplete(await boundedJson(request));
+  const ledger = await env.GHOST_METADATA.prepare(
+    "SELECT part_number, etag FROM ghost_upload_parts WHERE capsule_id = ? ORDER BY part_number ASC",
+  ).bind(capsuleId).all<Readonly<{ part_number: number; etag: string }>>();
+  assertExactPartLedger(body.parts, ledger.results);
   const multipart = env.GHOST_CAPSULES.resumeMultipartUpload(row.object_key, row.upload_id);
   const object = await multipart.complete(body.parts);
   if (object.size !== row.byte_length) {
@@ -343,6 +422,9 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, verifier
     return json({ error: "not found" }, 404);
   }
   const capsuleId = parts[2];
+  if (request.method === "GET" && parts[1] === "uploads" && parts.length === 3) {
+    return uploadStatus(request, env, capsuleId, verifier);
+  }
   if (request.method === "PUT" && parts[1] === "uploads" && parts[3] === "parts" && parts[4] !== undefined) {
     return uploadPart(request, env, capsuleId, Number(parts[4]), verifier);
   }
