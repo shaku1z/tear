@@ -31,11 +31,18 @@ function context(): ExecutionContext {
 }
 
 function uploadRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  const requestedVerdict = overrides.verdict_json;
+  const capsuleId = typeof overrides.capsule_id === "string" ? overrides.capsule_id : "capsule-1";
+  const verdictJson = requestedVerdict === '{"status":"verified"}'
+    ? JSON.stringify({ status: "verified", capsuleId, buildId: "tear-1", contentHash: "content-hash", resultHash: "result-hash", signature: "signature", verifierId: "tear-verifier", verificationVersion: "v1", moderation: "cleared", issuedAt: "2026-01-01T00:00:00.000Z" })
+    : requestedVerdict;
   return {
     capsule_id: "capsule-1", upload_id: "upload-1", object_key: "capsules/capsule-1.ghost", owner_id: uidA,
     status: "uploading", visibility: "private", byte_length: 8, build_id: "tear-1", content_hash: "content-hash", result_hash: "result-hash",
-    schema_version: 1, title: "A run", tags_json: "[]", privacy_class: "private", eligibility_json: "{}", training_consent: 0, part_count: 1, verdict_json: null,
+    schema_version: 1, title: "A run", tags_json: "[]", privacy_class: "private", eligibility_json: "{}", training_consent: 0, part_count: 1, verdict_json: null, active_verdict_id: null,
     ...overrides,
+    verdict_json: verdictJson ?? null,
+    active_verdict_id: verdictJson === undefined || verdictJson === null ? null : "verdict-1",
   };
 }
 
@@ -107,7 +114,7 @@ function discoveryEnvironment(input: Readonly<{
       return Promise.resolve({
         results: isCanonicalDiscovery
           ? input.rows.filter((row) => row.status === "finalized" && row.visibility === "public"
-            && row.privacy_class === "pseudonymous" && row.verdict_json === '{"status":"verified"}')
+            && row.privacy_class === "pseudonymous" && typeof row.verdict_json === "string" && row.verdict_json.includes('"status":"verified"') && row.verdict_json.includes('"moderation":"cleared"'))
           : [],
       });
     },
@@ -375,6 +382,58 @@ describe("Ghost publication Worker Firebase owner authentication", () => {
     } }), environment(), context());
     expect(allowed.status).toBe(204); expect(allowed.headers.get("access-control-allow-headers")).toBe("authorization, range");
     expect(denied.status).toBe(403);
+  });
+
+  it("fails closed for legacy, held, unsupported, and malformed active verdicts before R2 serving", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier() });
+    let reads = 0;
+    const cases = [
+      { verdict_json: '{"status":"verified","legacy":true}', active_verdict_id: "legacy" },
+      { verdict_json: JSON.stringify({ status: "verified", capsuleId: "capsule-1", buildId: "tear-1", contentHash: "content-hash", resultHash: "result-hash", signature: "s", verifierId: "v", verificationVersion: "v1", moderation: "held", issuedAt: "2026-01-01T00:00:00.000Z" }), active_verdict_id: "held" },
+      { verdict_json: JSON.stringify({ status: "unsupported", capsuleId: "capsule-1", buildId: "tear-1", contentHash: "content-hash", resultHash: "result-hash", signature: "s", verifierId: "v", verificationVersion: "v1", moderation: "cleared", issuedAt: "2026-01-01T00:00:00.000Z" }), active_verdict_id: "unsupported" },
+    ];
+    for (const input of cases) {
+      const response = await handler.fetch(new Request("https://publication.test/v1/capsules/capsule-1/object"), environment({
+        row: uploadRow({ status: "finalized", visibility: "public", privacy_class: "pseudonymous", ...input }), onGet: () => { reads += 1; },
+      }), context());
+      expect(response.status).toBe(404);
+    }
+    expect(reads).toBe(0);
+  });
+
+  it("moves a completed R2 upload into durable verifying and keeps verifier outages owner-retryable", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier() });
+    const batches: unknown[][] = [];
+    const response = await handler.fetch(request("/v1/uploads/capsule-1/complete", { method: "POST", body: JSON.stringify({ parts: [{ partNumber: 1, etag: "one" }] }) }), environment({
+      row: uploadRow(), parts: [{ part_number: 1, etag: "one" }], onBatch: (entries) => { batches.push([...entries]); },
+    }), context());
+    expect(response.status).toBe(202);
+    expect(await response.json()).toEqual({ capsuleId: "capsule-1", status: "verifying", retryable: true });
+    expect(batches).toHaveLength(1);
+  });
+
+  it("accepts one bounded authenticated report only for a non-owner verified cleared pseudonymous public capsule", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier(), allowedOrigins: ["https://game.tear.test"] });
+    let batches = 0;
+    const publicRow = uploadRow({ status: "finalized", visibility: "public", privacy_class: "pseudonymous", verdict_json: '{"status":"verified"}' });
+    const accepted = await handler.fetch(new Request("https://publication.test/v1/capsules/capsule-1/reports", {
+      method: "POST", headers: { authorization: "Bearer valid-b.token.signature", "content-type": "application/json", origin: "https://game.tear.test" }, body: JSON.stringify({ reason: "exploit" }),
+    }), environment({ row: publicRow, onBatch: () => { batches += 1; } }), context());
+    expect(accepted.status).toBe(201); expect(await accepted.json()).toEqual({ capsuleId: "capsule-1", reported: true }); expect(batches).toBe(1);
+    const malformed = await handler.fetch(new Request("https://publication.test/v1/capsules/capsule-1/reports", {
+      method: "POST", headers: { authorization: "Bearer valid-b.token.signature", "content-type": "application/json" }, body: JSON.stringify({ reason: "exploit", text: "no free text" }),
+    }), environment({ row: publicRow }), context());
+    expect(malformed.status).toBe(400);
+    const owner = await handler.fetch(request("/v1/capsules/capsule-1/reports", { method: "POST", body: JSON.stringify({ reason: "exploit" }) }), environment({ row: publicRow }), context());
+    expect(owner.status).toBe(404);
+    let reportWrites = 0;
+    const duplicateEnv = environment({ row: publicRow, onBatch: () => { reportWrites += 1; if (reportWrites > 1) throw new Error("unique reporter/capsule"); } });
+    const reportRequest = () => new Request("https://publication.test/v1/capsules/capsule-1/reports", {
+      method: "POST", headers: { authorization: "Bearer valid-b.token.signature", "content-type": "application/json" }, body: JSON.stringify({ reason: "privacy" }),
+    });
+    expect((await handler.fetch(reportRequest(), duplicateEnv, context())).status).toBe(201);
+    const duplicate = await handler.fetch(reportRequest(), duplicateEnv, context());
+    expect(duplicate.status).toBe(409); expect(await duplicate.json()).toEqual({ error: "already reported" });
   });
 
   it("resumes only an exact same-owner immutable uploading manifest without creating another multipart upload", async () => {

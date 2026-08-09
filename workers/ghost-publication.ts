@@ -10,7 +10,7 @@ interface UploadRow {
   upload_id: string;
   object_key: string;
   owner_id: string;
-  status: "uploading" | "finalized" | "deleting" | "deleted" | "quarantined";
+  status: "uploading" | "verifying" | "finalized" | "deleting" | "deleted" | "quarantined";
   visibility: "private" | "unlisted" | "public";
   byte_length: number;
   build_id: string;
@@ -24,6 +24,7 @@ interface UploadRow {
   training_consent: number;
   part_count: number;
   verdict_json: string | null;
+  active_verdict_id: string | null;
 }
 
 interface BeginBody {
@@ -53,7 +54,13 @@ interface TrustedVerdict {
   contentHash: string;
   resultHash: string;
   signature: string;
+  verifierId: string;
+  verificationVersion: string;
+  moderation: "cleared" | "held" | "rejected" | "unsupported" | "quarantined";
+  issuedAt: string;
 }
+
+const REPORT_REASONS = new Set(["exploit", "privacy", "abuse", "copyright", "other"]);
 
 const MAX_JSON_BYTES = 32 * 1024;
 const MAX_CAPSULE_BYTES = 512 * 1024 * 1024;
@@ -80,8 +87,10 @@ function corsPolicy(request: Request): CorsPolicy | undefined {
   if (parts[1] === "uploads" && parts.length === 3) return Object.freeze({ methods: ["GET"], headers: ["authorization"] });
   if (parts[1] === "uploads" && parts[3] === "parts" && parts[4] !== undefined && parts.length === 5) return Object.freeze({ methods: ["PUT"], headers: ["authorization", "content-type"] });
   if (parts[1] === "uploads" && parts[3] === "complete" && parts.length === 4) return Object.freeze({ methods: ["POST"], headers: ["authorization", "content-type"] });
+  if (parts[1] === "uploads" && parts[3] === "verify" && parts.length === 4) return Object.freeze({ methods: ["POST"], headers: ["authorization"] });
   if (parts[1] === "uploads" && parts[3] === "abort" && parts.length === 4) return Object.freeze({ methods: ["POST"], headers: ["authorization"] });
   if (parts[1] === "capsules" && parts[3] === "object" && parts.length === 4) return Object.freeze({ methods: ["GET"], headers: ["authorization", "range"] });
+  if (parts[1] === "capsules" && parts[3] === "reports" && parts.length === 4) return Object.freeze({ methods: ["POST"], headers: ["authorization", "content-type"] });
   if (parts[1] === "capsules" && parts.length === 3) return Object.freeze({ methods: ["DELETE"], headers: ["authorization"] });
   if (parts[1] === "capsules" && (parts[3] === "visibility" || parts[3] === "consent") && parts.length === 4) return Object.freeze({ methods: ["PATCH"], headers: ["authorization", "content-type"] });
   return undefined;
@@ -231,6 +240,12 @@ function parseTrustedVerdict(value: unknown, row: UploadRow): TrustedVerdict {
   if (status !== "verified" && status !== "rejected" && status !== "unsupported" && status !== "quarantined") {
     throw new TypeError("trusted verifier returned an invalid status");
   }
+  const moderation = value.moderation;
+  if (moderation !== "cleared" && moderation !== "held" && moderation !== "rejected" && moderation !== "unsupported" && moderation !== "quarantined") {
+    throw new TypeError("trusted verifier returned an invalid moderation state");
+  }
+  const issuedAt = stringField(value, "issuedAt", 64);
+  if (!Number.isFinite(Date.parse(issuedAt))) throw new TypeError("trusted verifier returned an invalid issuedAt");
   const verdict: TrustedVerdict = {
     status,
     capsuleId: stringField(value, "capsuleId", 128),
@@ -238,6 +253,10 @@ function parseTrustedVerdict(value: unknown, row: UploadRow): TrustedVerdict {
     contentHash: stringField(value, "contentHash", 128),
     resultHash: stringField(value, "resultHash", 128),
     signature: stringField(value, "signature", 512),
+    verifierId: stringField(value, "verifierId", 128),
+    verificationVersion: stringField(value, "verificationVersion", 64),
+    moderation,
+    issuedAt,
   };
   if (verdict.capsuleId !== row.capsule_id || verdict.buildId !== row.build_id
     || verdict.contentHash !== row.content_hash || verdict.resultHash !== row.result_hash) {
@@ -250,8 +269,20 @@ async function loadUpload(env: Env, capsuleId: string): Promise<UploadRow | null
   return env.GHOST_METADATA.prepare(
     `SELECT capsule_id, upload_id, object_key, owner_id, status, visibility, byte_length,
       build_id, content_hash, result_hash, schema_version, title, tags_json, privacy_class,
-      eligibility_json, training_consent, part_count, verdict_json FROM ghost_uploads WHERE capsule_id = ?`,
+      eligibility_json, training_consent, part_count, verdict_json, active_verdict_id FROM ghost_uploads WHERE capsule_id = ?`,
   ).bind(capsuleId).first<UploadRow>();
+}
+
+async function verifiedCleared(env: Env, row: UploadRow): Promise<boolean> {
+  if (row.status !== "finalized" || row.active_verdict_id === null || row.verdict_json === null) return false;
+  try {
+    const receipt = await env.GHOST_METADATA.prepare(
+      "SELECT verdict_json FROM ghost_verdict_receipts WHERE verdict_id = ? AND capsule_id = ?",
+    ).bind(row.active_verdict_id, row.capsule_id).first<Readonly<{ verdict_json: string }>>();
+    if (receipt?.verdict_json !== row.verdict_json) return false;
+    const verdict = parseTrustedVerdict(JSON.parse(row.verdict_json), row);
+    return verdict.status === "verified" && verdict.moderation === "cleared";
+  } catch { return false; }
 }
 
 function assertOwner(row: UploadRow | null, actor: string): UploadRow {
@@ -379,6 +410,7 @@ async function uploadPart(request: Request, env: Env, capsuleId: string, partNum
 async function complete(request: Request, env: Env, capsuleId: string, verifier: FirebaseIdTokenVerifier): Promise<Response> {
   const actor = await owner(request, verifier);
   const row = assertOwner(await loadUpload(env, capsuleId), actor);
+  if (row.status === "verifying") return verifyCompleted(env, row, actor);
   if (row.status !== "uploading") throw new Error("upload cannot be completed");
   const body = parseComplete(await boundedJson(request));
   if (body.parts.length !== row.part_count || body.parts.some((part) => part.partNumber > row.part_count)) {
@@ -394,7 +426,23 @@ async function complete(request: Request, env: Env, capsuleId: string, verifier:
     await env.GHOST_CAPSULES.delete(row.object_key);
     throw new Error("completed object length differs from manifest");
   }
-  const verificationResponse = await env.GHOST_VERIFIER.fetch("https://verifier.internal/v1/verify", {
+  // R2 completion is an irreversible boundary.  Persist `verifying` before
+  // contacting the verifier so a transient verifier outage cannot strand a
+  // finalized object behind an `uploading` multipart session.
+  const now = new Date().toISOString();
+  await env.GHOST_METADATA.batch([
+    env.GHOST_METADATA.prepare("UPDATE ghost_uploads SET status = 'verifying', visibility = 'private', updated_at = ? WHERE capsule_id = ? AND status = 'uploading'").bind(now, capsuleId),
+    env.GHOST_METADATA.prepare("INSERT INTO ghost_audit (actor_id, action, capsule_id, detail, created_at) VALUES (?, 'upload.verifying', ?, 'r2-complete-awaiting-verdict', ?)").bind(actor, capsuleId, now),
+  ]);
+  return verifyCompleted(env, { ...row, status: "verifying", visibility: "private" }, actor, object.httpEtag);
+}
+
+async function verifyCompleted(env: Env, row: UploadRow, actor: string, completedEtag?: string): Promise<Response> {
+  if (row.status !== "verifying") throw new Error("upload is not awaiting verification");
+  const capsuleId = row.capsule_id;
+  let verificationResponse: Response;
+  try {
+    verificationResponse = await env.GHOST_VERIFIER.fetch("https://verifier.internal/v1/verify", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -404,24 +452,40 @@ async function complete(request: Request, env: Env, capsuleId: string, verifier:
       contentHash: row.content_hash,
       resultHash: row.result_hash,
     }),
-  });
-  if (!verificationResponse.ok) {
-    throw new Error(`trusted verifier failed with ${String(verificationResponse.status)}`);
+    });
+  } catch { return json({ capsuleId, status: "verifying", retryable: true }, 202); }
+  if (!verificationResponse.ok) return json({ capsuleId, status: "verifying", retryable: true }, 202);
+  let verdict: TrustedVerdict;
+  try { verdict = parseTrustedVerdict(await verificationResponse.json(), row); }
+  catch {
+    const badAt = new Date().toISOString();
+    await env.GHOST_METADATA.batch([
+      env.GHOST_METADATA.prepare("UPDATE ghost_uploads SET status = 'quarantined', visibility = 'private', updated_at = ? WHERE capsule_id = ? AND status = 'verifying'").bind(badAt, capsuleId),
+      env.GHOST_METADATA.prepare("INSERT INTO ghost_audit (actor_id, action, capsule_id, detail, created_at) VALUES (?, 'upload.verdict.quarantined', ?, 'malformed-trusted-verdict', ?)").bind(actor, capsuleId, badAt),
+    ]);
+    return json({ capsuleId, status: "quarantined", verification: "quarantined" });
   }
-  const verdict = parseTrustedVerdict(await verificationResponse.json(), row);
-  const publicationStatus = verdict.status === "verified" || verdict.status === "unsupported"
-    ? "finalized"
-    : "quarantined";
+  const publicationStatus = verdict.status === "verified" && verdict.moderation === "cleared" ? "finalized" : "quarantined";
+  const verdictId = crypto.randomUUID();
   const now = new Date().toISOString();
   await env.GHOST_METADATA.batch([
     env.GHOST_METADATA.prepare(
-      "UPDATE ghost_uploads SET status = ?, verdict_json = ?, updated_at = ? WHERE capsule_id = ? AND status = 'uploading'",
-    ).bind(publicationStatus, JSON.stringify(verdict), now, capsuleId),
+      "INSERT INTO ghost_verdict_receipts (verdict_id, capsule_id, verifier_id, verification_version, issued_at, verdict_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    ).bind(verdictId, capsuleId, verdict.verifierId, verdict.verificationVersion, verdict.issuedAt, JSON.stringify(verdict), now),
+    env.GHOST_METADATA.prepare(
+      "UPDATE ghost_uploads SET status = ?, visibility = CASE WHEN ? = 'finalized' THEN visibility ELSE 'private' END, verdict_json = ?, active_verdict_id = ?, updated_at = ? WHERE capsule_id = ? AND status = 'verifying'",
+    ).bind(publicationStatus, publicationStatus, JSON.stringify(verdict), verdictId, now, capsuleId),
     env.GHOST_METADATA.prepare(
       "INSERT INTO ghost_audit (actor_id, action, capsule_id, detail, created_at) VALUES (?, 'upload.finalize', ?, ?, ?)",
     ).bind(actor, capsuleId, verdict.status, now),
   ]);
-  return json({ capsuleId, status: publicationStatus, verification: verdict.status, etag: object.httpEtag });
+  return json({ capsuleId, status: publicationStatus, verification: verdict.status, etag: completedEtag ?? null });
+}
+
+async function verifyOwnerRetry(request: Request, env: Env, capsuleId: string, verifier: FirebaseIdTokenVerifier): Promise<Response> {
+  const actor = await owner(request, verifier);
+  const row = assertOwner(await loadUpload(env, capsuleId), actor);
+  return verifyCompleted(env, row, actor);
 }
 
 async function listMetadata(request: Request, env: Env, verifier: FirebaseIdTokenVerifier): Promise<Response> {
@@ -440,7 +504,10 @@ async function listMetadata(request: Request, env: Env, verifier: FirebaseIdToke
      FROM ghost_uploads
      WHERE status = 'finalized' AND visibility = 'public'
        AND privacy_class = 'pseudonymous'
+       AND active_verdict_id IS NOT NULL
+       AND EXISTS (SELECT 1 FROM ghost_verdict_receipts receipt WHERE receipt.verdict_id = ghost_uploads.active_verdict_id AND receipt.capsule_id = ghost_uploads.capsule_id AND receipt.verdict_json = ghost_uploads.verdict_json)
        AND verdict_json LIKE '%"status":"verified"%'
+       AND verdict_json LIKE '%"moderation":"cleared"%'
      ORDER BY updated_at DESC LIMIT 100`,
   ).all();
   return json({ capsules: result.results });
@@ -448,7 +515,7 @@ async function listMetadata(request: Request, env: Env, verifier: FirebaseIdToke
 
 async function download(request: Request, env: Env, capsuleId: string, verifier: FirebaseIdTokenVerifier): Promise<Response> {
   const row = await loadUpload(env, capsuleId);
-  if (row?.status !== "finalized" || !row.verdict_json?.includes('"status":"verified"')) return json({ error: "not found" }, 404);
+  if (row === null || !await verifiedCleared(env, row)) return json({ error: "not found" }, 404);
   if (row.visibility === "private") {
     // This is intentionally opaque: a missing, invalid, or foreign bearer must
     // not distinguish a private capsule from a missing one, and must never read R2.
@@ -491,7 +558,7 @@ async function mutate(request: Request, env: Env, capsuleId: string, action: str
     if (row.status === "deleting" || row.status === "deleted") throw new Error("capsule is deleting");
     const visibility = body.visibility;
     if (visibility !== "private" && visibility !== "unlisted" && visibility !== "public") throw new TypeError("invalid visibility");
-    if (visibility !== "private" && (row.privacy_class === "private" || row.privacy_class === "sensitive" || !row.verdict_json?.includes('"status":"verified"'))) {
+    if (visibility !== "private" && (row.privacy_class === "private" || row.privacy_class === "sensitive" || !await verifiedCleared(env, row))) {
       throw new RangeError("only verified public or pseudonymous capsules can become discoverable");
     }
     await env.GHOST_METADATA.prepare(
@@ -508,6 +575,30 @@ async function mutate(request: Request, env: Env, capsuleId: string, action: str
     return json({ capsuleId, trainingConsent: body.trainingConsent });
   }
   return json({ error: "not found" }, 404);
+}
+
+function parseReport(value: unknown): string {
+  if (!isRecord(value) || Object.keys(value).length !== 1 || typeof value.reason !== "string" || !REPORT_REASONS.has(value.reason)) {
+    throw new TypeError("invalid report reason");
+  }
+  return value.reason;
+}
+
+async function reportCapsule(request: Request, env: Env, capsuleId: string, verifier: FirebaseIdTokenVerifier): Promise<Response> {
+  const actor = await owner(request, verifier);
+  const reason = parseReport(await boundedJson(request));
+  const row = await loadUpload(env, capsuleId);
+  if (row === null || row.owner_id === actor || row.visibility === "private" || !["public", "unlisted"].includes(row.visibility) || row.privacy_class !== "pseudonymous" || !await verifiedCleared(env, row)) {
+    return json({ error: "not found" }, 404);
+  }
+  const now = new Date().toISOString();
+  try {
+    await env.GHOST_METADATA.batch([
+      env.GHOST_METADATA.prepare("INSERT INTO ghost_capsule_reports (capsule_id, reporter_id, reason, created_at) VALUES (?, ?, ?, ?)").bind(capsuleId, actor, reason, now),
+      env.GHOST_METADATA.prepare("INSERT INTO ghost_audit (actor_id, action, capsule_id, detail, created_at) VALUES (?, 'capsule.reported', ?, ?, ?)").bind(actor, capsuleId, reason, now),
+    ]);
+  } catch { return json({ error: "already reported" }, 409); }
+  return json({ capsuleId, reported: true }, 201);
 }
 
 /**
@@ -593,12 +684,14 @@ async function route(request: Request, env: Env, verifier: FirebaseIdTokenVerifi
   if (request.method === "POST" && parts[1] === "uploads" && parts[3] === "complete") {
     return complete(request, env, capsuleId, verifier);
   }
+  if (request.method === "POST" && parts[1] === "uploads" && parts[3] === "verify") return verifyOwnerRetry(request, env, capsuleId, verifier);
   if (request.method === "POST" && parts[1] === "uploads" && parts[3] === "abort") {
     return abortUpload(request, env, capsuleId, verifier);
   }
   if (request.method === "GET" && parts[1] === "capsules" && parts[3] === "object") {
     return download(request, env, capsuleId, verifier);
   }
+  if (request.method === "POST" && parts[1] === "capsules" && parts[3] === "reports") return reportCapsule(request, env, capsuleId, verifier);
   if (request.method === "DELETE" && parts[1] === "capsules") return mutate(request, env, capsuleId, "delete", verifier);
   if (request.method === "PATCH" && parts[1] === "capsules" && parts[3] !== undefined) {
     return mutate(request, env, capsuleId, parts[3], verifier);

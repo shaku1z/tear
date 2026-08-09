@@ -389,6 +389,14 @@ This is the migration checklist for the architectural redesign. A checked featur
    foreground action; missing/invalid endpoints and CrazyGames are visibly
    unavailable. It does not route through, change, or invoke the legacy
    Firestore replay APIs, transport, queue, UI, or deployment.
+   A strict versioned verdict receipt is now created only after R2 completion:
+   it binds verifier identity, verification version, issuance time, and capsule
+   identity. Transient verifier failure stays durably `verifying` for an exact
+   owner retry; malformed replies quarantine. Serving and discovery fail closed
+   unless the active receipt is verified and moderation-cleared. One
+   authenticated non-owner fixed-enum report per verified cleared public or
+   unlisted pseudonymous capsule is atomically audited, without auto-hold.
+   This remains intake plumbing, not deployed moderation, appeals, RBAC, or UI.
 
 ## Accessibility and settings
 
