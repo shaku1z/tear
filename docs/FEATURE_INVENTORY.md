@@ -593,3 +593,12 @@ monitoring-ready or rejected successor, the matching cadence state, and a
 receipt-bound terminal V4 head. It does not construct candidates, mutate C32,
 or expose player traffic; `tests/unit/foundry-job-offline-training-finalization.test.ts`
 proves real lineage, tamper/custody refusal, and commit-loss recovery.
+
+### C36 V4 monitoring-entry terminal
+
+Only a current `monitoring` decision terminal with a retained
+`monitoring-ready` decision can write one factual monitoring receipt. The
+receipt, disabled schedule, and terminal pointer are atomic under exact V4,
+decision, and C31 custody bytes; rejected terminals create no receipt. This
+does not bridge, activate, promote, place traffic, roll back, or provide a
+complete unattended lifecycle.

@@ -36,6 +36,18 @@ describe("C36 offline training terminalization", () => {
     await expect(setupResult.vault.get(setupResult.launched.job.id)).resolves.toMatchObject({ phase: "training", jobHash: setupResult.launched.job.jobHash });
   });
 
+  it("never creates a monitoring entry from a rejected V4 decision terminal", async () => {
+    const setupResult = await setup({ epochs: 2, maxMeanAbsoluteTdError: 10, maxConsecutiveDivergentEpochs: 2 }, 2);
+    const rejected = transitionTearFoundryJob(setupResult.launched.job, "rejected", "2026-08-08T00:02:00.000Z", "frozen decision rejected"), decisionDraft = { format: "tear-foundry-decision-receipt" as const, schemaVersion: 1 as const, job: { sourceJobHash: setupResult.launched.job.jobHash, resultJobHash: rejected.jobHash }, evaluationReceiptHash: "1".repeat(16), evaluationResultHash: "2".repeat(16), disposition: "rejected" as const, decidedAt: "2026-08-08T00:02:00.000Z" }, decision = { ...decisionDraft, receiptHash: stableVerificationHash(decisionDraft) };
+    await setupResult.vault.persistSuccessor(setupResult.launched.job, rejected, Object.freeze([{ store: "analysis", key: `foundry-job-decision:v1:${decision.receiptHash}`, value: JSON.stringify(decision) }]));
+    const schedule = createTearFoundryJobSchedule({ id: "rejected-monitoring", jobId: rejected.id, jobHash: rejected.jobHash, intervalMs: 60_000, computeBudgetHash: h.budget, storageBudgetHash: h.budget, stopConditionsHash: h.stop, state: "enabled", configuredAt: "2026-08-08T00:02:00.000Z" });
+    await new TearFoundryJobScheduleVault(setupResult.backend).persist(schedule);
+    await new TearFoundryExecutionBindingV4Vault(setupResult.vault).bind(schedule, rejected, { kind: "decision-terminal", decisionReceiptHash: decision.receiptHash });
+    const scheduled = new TearFoundryScheduledExecution(setupResult.vault, new TearFoundryJobScheduleVault(setupResult.backend), setupResult.custody, setupResult.corpus, setupResult.loader);
+    await expect(scheduled.runScheduledOnce(schedule.scheduleHash, "2026-08-08T00:03:00.000Z", "rejected-monitoring")).rejects.toThrow(/rejected decision/u);
+    expect((await setupResult.backend.keys("analysis")).some((key) => key.startsWith("foundry-job-monitoring-entry:v1:"))).toBe(false);
+  });
+
   it("persists a stopped result and rejects a diverged training lineage", async () => {
     const setupResult = await setup({ epochs: 2, maxMeanAbsoluteTdError: 0.000001, maxConsecutiveDivergentEpochs: 1 });
     const executor = new TearFoundryOfflineTrainingFinalizationExecutor(setupResult.vault, setupResult.custody, setupResult.corpus, setupResult.loader);
@@ -196,6 +208,25 @@ describe("C36 offline training terminalization", () => {
     const decided = await racedDecision.runScheduledOnce(decisionSchedule.scheduleHash, "2026-08-08T00:11:00.000Z", "decision-retry"), monitoringSchedule = await new TearFoundryJobScheduleVault(setupResult.backend).get(schedule.id);
     expect(decided.dueReceiptHash).toMatch(/^[a-f0-9]{16}$/u); expect((await setupResult.vault.get(next.job.id))?.phase).toBe("monitoring"); expect(monitoringSchedule?.state).toBe("enabled"); expect((monitoringSchedule === undefined ? undefined : await new TearFoundryExecutionBindingV4Vault(setupResult.vault).current(monitoringSchedule))?.payload).toMatchObject({ kind: "decision-terminal" });
     await expect(racedDecision.runScheduledOnce(decisionSchedule.scheduleHash, "2026-08-08T00:11:00.000Z", "decision-retry")).resolves.toEqual(decided);
+    if (monitoringSchedule === undefined) throw new Error("monitoring schedule disappeared");
+    const monitoringBinding = await new TearFoundryExecutionBindingV4Vault(setupResult.vault).current(monitoringSchedule);
+    if (monitoringBinding?.payload.kind !== "decision-terminal") throw new Error("monitoring decision terminal disappeared");
+    const decisionKey = `foundry-job-decision:v1:${monitoringBinding.payload.decisionReceiptHash}`, decisionRaw = await setupResult.backend.get("analysis", decisionKey);
+    if (decisionRaw === undefined) throw new Error("monitoring decision receipt disappeared");
+    await setupResult.backend.put("analysis", decisionKey, "tampered");
+    await expect(racedDecision.runScheduledOnce(monitoringSchedule.scheduleHash, "2026-08-08T00:12:00.000Z", "tampered-monitoring")).rejects.toThrow(/invalid|evidence/u);
+    expect((await new TearFoundryExecutionBindingV4Vault(setupResult.vault).current(monitoringSchedule))?.bindingHash).toBe(monitoringBinding.bindingHash);
+    await setupResult.backend.put("analysis", decisionKey, decisionRaw);
+    const revokedMonitoring = new TearFoundryScheduledExecution(new TearFoundryJobVault(decisionRaceBackend), new TearFoundryJobScheduleVault(decisionRaceBackend), { ...(setupResult.custody as unknown as Record<string, unknown>), backend: () => decisionRaceBackend, held: () => Promise.resolve([]) } as unknown as TearAcademyCandidateCustodyStore, { ...(setupResult.corpus as unknown as Record<string, unknown>), backend: () => decisionRaceBackend } as unknown as TearAcademyCorpusStore, setupResult.loader);
+    await expect(revokedMonitoring.runScheduledOnce(monitoringSchedule.scheduleHash, "2026-08-08T00:12:00.000Z", "revoked-monitoring")).rejects.toThrow(/custody/u);
+    let loseMonitoringCommit = true;
+    const monitoringRaceBackend = { get: setupResult.backend.get.bind(setupResult.backend), put: setupResult.backend.put.bind(setupResult.backend), remove: setupResult.backend.remove.bind(setupResult.backend), keys: setupResult.backend.keys.bind(setupResult.backend), commit: setupResult.backend.commit.bind(setupResult.backend), commitWhileJournalMatches: setupResult.backend.commitWhileJournalMatches.bind(setupResult.backend), commitIfMatches: async (guards: Parameters<typeof setupResult.backend.commitIfMatches>[0], operations: Parameters<typeof setupResult.backend.commitIfMatches>[1]) => { if (loseMonitoringCommit && operations.some((write) => write.key.startsWith("foundry-job-monitoring-entry:v1:"))) { loseMonitoringCommit = false; throw new Error("planted monitoring commit loss"); } return setupResult.backend.commitIfMatches(guards, operations); } };
+    const racedMonitoring = new TearFoundryScheduledExecution(new TearFoundryJobVault(monitoringRaceBackend), new TearFoundryJobScheduleVault(monitoringRaceBackend), { ...(setupResult.custody as unknown as Record<string, unknown>), backend: () => monitoringRaceBackend } as unknown as TearAcademyCandidateCustodyStore, { ...(setupResult.corpus as unknown as Record<string, unknown>), backend: () => monitoringRaceBackend } as unknown as TearAcademyCorpusStore, setupResult.loader);
+    await expect(racedMonitoring.runScheduledOnce(monitoringSchedule.scheduleHash, "2026-08-08T00:12:00.000Z", "monitoring-loss")).rejects.toThrow(/loss/u);
+    expect((await new TearFoundryExecutionBindingV4Vault(setupResult.vault).current(monitoringSchedule))?.bindingHash).toBe(monitoringBinding.bindingHash); expect((await setupResult.backend.keys("analysis")).some((key) => key.startsWith("foundry-job-monitoring-entry:v1:"))).toBe(false);
+    const entered = await racedMonitoring.runScheduledOnce(monitoringSchedule.scheduleHash, "2026-08-08T00:12:00.000Z", "monitoring-retry"), concludedSchedule = await new TearFoundryJobScheduleVault(setupResult.backend).get(schedule.id);
+    expect(entered.dueReceiptHash).toMatch(/^[a-f0-9]{16}$/u); expect(concludedSchedule?.state).toBe("disabled"); expect((concludedSchedule === undefined ? undefined : await new TearFoundryExecutionBindingV4Vault(setupResult.vault).current(concludedSchedule))?.payload).toMatchObject({ kind: "monitoring-entry-terminal" });
+    await expect(racedMonitoring.runScheduledOnce(monitoringSchedule.scheduleHash, "2026-08-08T00:12:00.000Z", "monitoring-retry")).resolves.toEqual(entered);
   });
 
   it("rejects cancelled C30 training without a model and refuses tampered online lineage", async () => {

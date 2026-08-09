@@ -1455,6 +1455,20 @@ planted decision-commit loss without partial writes, and exact recovery.
 REMAINING HERE: monitoring entry and all candidate/policy/release work remain
 separate; C36 remains open.
 
+### C36 V4 monitoring-entry terminal
+
+DONE THIS STEP: Only an exact current `monitoring` V4 `decision-terminal` with
+a retained `monitoring-ready` decision can retain one factual monitoring entry.
+The entry receipt, disabled schedule, and `monitoring-entry-terminal` pointer
+are one guarded commit over the exact schedule/job/source-pointer/decision and
+C31 custody bytes. A rejected terminal cannot create monitoring evidence.
+PROVEN BY: `tests/unit/foundry-job-offline-training-finalization.test.ts` drives
+the real V2/C31/V4 lineage, rejects tampered decision and revoked custody,
+injects a no-partial-write receipt commit loss, and recovers exactly.
+REMAINING HERE: This does not build a bridge, candidate, policy, traffic
+placement, promotion, rollback, UI, cloud action, or unattended lifecycle.
+C36 remains open.
+
 ### C34 V3 canonical-compatible offline training custody
 
 DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,

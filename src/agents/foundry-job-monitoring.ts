@@ -10,17 +10,27 @@ function hash(v: unknown): v is string { return typeof v === "string" && HASH.te
 function time(v: unknown): v is string { return typeof v === "string" && v.trim().length > 0 && Number.isFinite(Date.parse(v)); }
 function receipt(d: Omit<TearFoundryMonitoringEntryReceiptV1, "receiptHash">): TearFoundryMonitoringEntryReceiptV1 { if (![d.jobHash, d.decisionReceiptHash, d.evaluationResultHash, d.stopConditionsHash].every(hash) || !time(d.observedAt)) throw new TypeError("invalid Foundry monitoring entry"); const value = Object.freeze({ ...d }); return Object.freeze({ ...value, receiptHash: stableVerificationHash(value) }); }
 export function parseTearFoundryMonitoringEntryReceipt(value: unknown): TearFoundryMonitoringEntryReceiptV1 { if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("invalid Foundry monitoring entry"); const typed = value as TearFoundryMonitoringEntryReceiptV1, { receiptHash, ...draft } = typed, parsed = receipt(draft); if (!hash(receiptHash) || receiptHash !== parsed.receiptHash) throw new TypeError("Foundry monitoring entry integrity mismatch"); return parsed; }
+export interface TearFoundryMonitoringEntryContinuationV1 {
+  readonly guards: (receipt: TearFoundryMonitoringEntryReceiptV1) => readonly Readonly<{ store: "analysis"; key: string; expected?: string }>[];
+  readonly writes: (receipt: TearFoundryMonitoringEntryReceiptV1) => readonly Readonly<{ store: "analysis" | "indexes"; key: string; value: string }>[];
+}
 /** Retains a verified monitoring entry only. It changes no traffic, runtime policy, cloud state, or schedule. */
 export class TearFoundryMonitoringEntryExecutor {
   readonly #jobs: TearFoundryJobVault; readonly #custody: TearAcademyCandidateCustodyStore;
   constructor(jobs: TearFoundryJobVault, custody: TearAcademyCandidateCustodyStore) { if (jobs.backend() !== custody.backend()) throw new TypeError("Foundry monitoring must share C31 Vault custody"); this.#jobs = jobs; this.#custody = custody; }
-  async enter(jobInput: TearFoundryJobV1, decisionReceiptHash: string, observedAt: string): Promise<TearFoundryMonitoringEntryReceiptV1> {
+  async enter(jobInput: TearFoundryJobV1, decisionReceiptHash: string, observedAt: string, continuation?: TearFoundryMonitoringEntryContinuationV1): Promise<TearFoundryMonitoringEntryReceiptV1> {
     const job = parseTearFoundryJob(jobInput), protocol = requireTearFoundryEvaluationProtocol(job), backend = this.#jobs.backend();
     if (job.phase !== "monitoring" || !hash(decisionReceiptHash) || !time(observedAt) || (await this.#jobs.get(job.id))?.jobHash !== job.jobHash) throw new RangeError("Foundry monitoring requires exact current V2 monitoring job");
     const raw = await backend.get("analysis", `foundry-job-decision:v1:${decisionReceiptHash}`), decision = raw === undefined ? undefined : parseTearFoundryDecisionReceipt(JSON.parse(raw)), held = await this.#custody.held(observedAt);
     if (decision?.disposition !== "monitoring-ready" || decision.job.resultJobHash !== job.jobHash || !job.inputs.corpusRecordHashes.every((entry) => held.some((record) => record.recordHash === entry))) throw new RangeError("Foundry monitoring lineage or custody changed");
     const output = receipt({ format: "tear-foundry-monitoring-entry", schemaVersion: 1, jobHash: job.jobHash, decisionReceiptHash, evaluationResultHash: decision.evaluationResultHash, stopConditionsHash: job.inputs.stopConditionsHash, observedAt, health: "evidence-retained" });
-    const key = `foundry-job-monitoring-entry:v1:${output.receiptHash}`, existing = await backend.get("analysis", key); if (existing !== undefined) return JSON.parse(existing) as TearFoundryMonitoringEntryReceiptV1;
-    await backend.commit(Object.freeze([{ store: "analysis", key, value: JSON.stringify(output) }, { store: "indexes", key: `foundry-job-monitoring:${job.id}:${output.receiptHash}`, value: JSON.stringify(Object.freeze({ health: output.health, protocolHash: protocol.protocolHash, promotional: false })) }])); return output;
+    const key = `foundry-job-monitoring-entry:v1:${output.receiptHash}`, existing = await backend.get("analysis", key); if (existing !== undefined) return parseTearFoundryMonitoringEntryReceipt(JSON.parse(existing));
+    if (continuation === undefined) await backend.commit(Object.freeze([{ store: "analysis" as const, key, value: JSON.stringify(output) }, { store: "indexes" as const, key: `foundry-job-monitoring:${job.id}:${output.receiptHash}`, value: JSON.stringify(Object.freeze({ health: output.health, protocolHash: protocol.protocolHash, promotional: false })) }]));
+    else {
+      const guards = Object.freeze([{ store: "analysis" as const, key }, ...continuation.guards(output)]);
+      const writes = Object.freeze([{ store: "analysis" as const, key, value: JSON.stringify(output) }, { store: "indexes" as const, key: `foundry-job-monitoring:${job.id}:${output.receiptHash}`, value: JSON.stringify(Object.freeze({ health: output.health, protocolHash: protocol.protocolHash, promotional: false })) }, ...continuation.writes(output)]);
+      await backend.commitIfMatches(guards, writes);
+    }
+    return output;
   }
 }

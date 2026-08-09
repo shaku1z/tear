@@ -12,6 +12,7 @@ import { TearFoundryV4OnlineTerminalScheduler } from "./foundry-job-v4-online-te
 import { TearFoundryV4SourceEvaluationPlanScheduler } from "./foundry-job-v4-source-evaluation-plan";
 import { TearFoundryV4SourceEvaluationExecutionScheduler } from "./foundry-job-v4-source-evaluation-execution";
 import { TearFoundryV4DecisionScheduler } from "./foundry-job-v4-decision";
+import { TearFoundryV4MonitoringEntryScheduler } from "./foundry-job-v4-monitoring-entry";
 import { parseTearFoundryOfflineTrainingLaunch, TearFoundryOfflineTrainingLaunchVault } from "./foundry-job-offline-training";
 import { TearOfflineRlCheckpointVault } from "./offline-rl-training";
 import type { TearFoundryJobScheduleVault } from "./foundry-job-schedule";
@@ -70,6 +71,12 @@ export class TearFoundryScheduledExecution {
       if (v4.payload.kind === "source-evaluation-decision-ready") {
         const next = await new TearFoundryV4DecisionScheduler(this.#jobs, this.#custody).decide(schedule, v4, at);
         const output = freeze({ format: "tear-foundry-scheduled-attempt", schemaVersion: 1, scheduleHash, bindingHash: next.bindingHash, attemptedAt: at, leaseId, phase: next.job.phase, dueReceiptHash: stableVerificationHash({ kind: "v4-source-evaluation-decision", sourceBindingHash: v4.bindingHash, decisionReceiptHash: next.payload.kind === "decision-terminal" ? next.payload.decisionReceiptHash : null, at }) });
+        await this.#jobs.backend().commit(Object.freeze([{ store: "analysis", key, value: JSON.stringify(output) }])); return output;
+      }
+      if (v4.payload.kind === "decision-terminal") {
+        if (v4.job.phase === "rejected") throw new RangeError("Foundry V4 rejected decision has no monitoring entry");
+        const next = await new TearFoundryV4MonitoringEntryScheduler(this.#jobs, this.#custody).enter(schedule, v4, at);
+        const output = freeze({ format: "tear-foundry-scheduled-attempt", schemaVersion: 1, scheduleHash, bindingHash: next.bindingHash, attemptedAt: at, leaseId, phase: next.job.phase, dueReceiptHash: stableVerificationHash({ kind: "v4-monitoring-entry", sourceBindingHash: v4.bindingHash, monitoringReceiptHash: next.payload.kind === "monitoring-entry-terminal" ? next.payload.monitoringReceiptHash : null, at }) });
         await this.#jobs.backend().commit(Object.freeze([{ store: "analysis", key, value: JSON.stringify(output) }])); return output;
       }
       const corpus = this.#corpus, loader = this.#loader; if (corpus === undefined || loader === undefined) throw new TypeError("Foundry V4 terminal execution requires shared C31 corpus and dataset loader");

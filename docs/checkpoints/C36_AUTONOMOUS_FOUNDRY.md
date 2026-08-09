@@ -716,3 +716,21 @@ PROVEN BY: `tests/unit/foundry-job-offline-training-finalization.test.ts`.
 REMAINING HERE: monitoring entry, candidate compatibility/admission,
 promotion/placement/monitoring/rollback integration, browser evidence, and an
 unattended complete product lifecycle remain separate; C36 remains open.
+
+## V4 monitoring-entry terminal
+
+Only an exact current `monitoring` V4 `decision-terminal` whose retained
+decision is `monitoring-ready` can retain the factual monitoring-entry
+receipt. The entry rechecks the schedule, V2 job, V4 source/pointer, exact
+decision bytes, and action-time C31 held custody bytes. Receipt, disabled
+schedule, and receipt-bound `monitoring-entry-terminal` V4 pointer commit
+together; a rejected terminal refuses before any monitoring receipt exists.
+
+The real V2/C31/V4 lineage test proves corrupt decision and revoked custody
+refuse, a planted receipt-commit loss leaves no receipt/pointer/schedule
+change, and restart retry succeeds exactly. This records evidence only: it
+does not bridge, create a candidate, place traffic, promote, roll back, render
+UI, or contact cloud. PROVEN BY:
+`tests/unit/foundry-job-offline-training-finalization.test.ts`.
+REMAINING HERE: candidate/bridge/promotion and monitored product lifecycle
+integration remain separate; C36 remains open.
