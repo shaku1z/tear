@@ -561,3 +561,30 @@ execution remains explicitly open for a later authorized slice.
 `tests/unit/foundry-job-v4-online-launch-authority.test.ts` proves atomic
 handoff, exact retry, opaque scheduled retention, no online-launch artifact,
 and refusal after changed custody/profile/readiness/source-binding authority.
+
+## V4 claimed online-launch handoff
+
+The one-shot scheduler may now consume only an exact `online-launch-ready` V4
+binding. It receives no online request: it reloads the retained authority and
+handoff, pins its exact current V4 source, schedule/job head, immutable launch
+profile, bootstrap/readiness receipts, and action-time C31 custody bytes in a
+conditional `online-launch-claim` before it invokes the existing unrun C30
+launch executor. That claim is the durable recovery owner of any launch that
+is written. A second conditional commit then replaces only that exact current
+V4 pointer with `online-resume { authorityHash, handoffReceiptHash, launchHash
+}`. Thus a competing/stale final pointer write cannot leave an unclaimed
+online checkpoint: recovery can retry only the same claimed authority and
+launch identity.
+
+Changed/revoked authority after a claim cannot advance the V4 pointer; it
+leaves the source binding unchanged. The scheduler still does not advance
+online Q, finalize/evaluate a candidate, create a C32 artifact, activate,
+promote, or contact cloud. `online-resume` is deliberately a later bounded
+execution boundary, not an implicit continuation.
+
+`tests/unit/foundry-job-offline-training-finalization.test.ts` composes this
+through a real V2 offline completion, C31 corpus/loader, V4 authority, and the
+normal scheduled entry point. It proves an altered launch profile and revoked
+custody both leave the `online-launch-ready` pointer unchanged, while the
+restored exact authority produces one claimed unrun launch and an idempotent
+`online-resume` retry.

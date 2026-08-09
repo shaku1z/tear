@@ -26,8 +26,10 @@ describe("C36 V4 online-launch authority", () => {
   it("atomically hands exact evaluation readiness to an opaque no-execution V4 payload and retries itself", async () => {
     const f = await fixture(), executor = new TearFoundryV4OnlineLaunchAuthorityExecutor(f.jobs, f.custody), first = await executor.declare(f.input), retry = await executor.declare(f.input);
     expect(first.binding.payload).toMatchObject({ kind: "online-launch-ready", authorityHash: first.authority.authorityHash, handoffReceiptHash: first.receipt.receiptHash }); expect(retry).toEqual(first);
+    // The opaque handoff itself remains only an authority record.  Actual
+    // scheduled execution requires the governed C31 corpus/loader boundary.
     const scheduled = new TearFoundryScheduledExecution(f.jobs, { list: () => Promise.resolve([f.input.schedule]) } as never, f.custody);
-    await expect(scheduled.runScheduledOnce(f.input.schedule.scheduleHash, "2026-08-08T00:01:00.000Z", "retain-only")).resolves.toMatchObject({ bindingHash: first.binding.bindingHash }); expect((await f.backend.keys("analysis")).some((key) => key.startsWith("foundry-job-online-training-launch:v1:"))).toBe(false);
+    await expect(scheduled.runScheduledOnce(f.input.schedule.scheduleHash, "2026-08-08T00:01:00.000Z", "retain-only")).rejects.toThrow(/corpus|loader/u); expect((await f.backend.keys("analysis")).some((key) => key.startsWith("foundry-job-online-training-launch:v1:"))).toBe(false);
   });
   it("fails closed when custody, profile, readiness, or current V4 source authority changes", async () => {
     const cases = ["custody", "profile", "readiness", "source"] as const;
