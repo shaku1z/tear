@@ -1441,6 +1441,20 @@ then recovers exactly to a retained decision-ready head.
 REMAINING HERE: This does not interpret the frozen result, create a candidate,
 activate, promote, roll back, or contact cloud. C36 remains open.
 
+### C36 V4 frozen source-evaluation decision
+
+DONE THIS STEP: The exact decision-ready V4 pointer now consumes the immutable
+C34 result through the existing frozen V2 decision executor. It guards every
+named authority, receipt, result, profile/bootstrap, and action-time C31
+custody byte; one conditional commit retains the monitoring/rejected successor,
+cadence rebind or terminal disabled schedule, and receipt-bound terminal V4
+head. No candidate, C32 mutation, promotion, rollback, UI, or cloud action is
+reachable. PROVEN BY: `tests/unit/foundry-job-offline-training-finalization.test.ts`
+drives the real lineage and proves corrupted-result/revoked-custody refusal,
+planted decision-commit loss without partial writes, and exact recovery.
+REMAINING HERE: monitoring entry and all candidate/policy/release work remain
+separate; C36 remains open.
+
 ### C34 V3 canonical-compatible offline training custody
 
 DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,

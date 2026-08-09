@@ -77,6 +77,16 @@ export function rebindTearFoundryJobSchedule(input: TearFoundryJobScheduleV1, pr
     || terminal(successor.phase) || prior.inputs.stopConditionsHash !== current.stopConditionsHash) throw new RangeError("Foundry schedule rebind requires its exact legal successor");
   return draft({ id: current.id, jobId: successor.id, jobHash: successor.jobHash, intervalMs: current.intervalMs, computeBudgetHash: current.computeBudgetHash, storageBudgetHash: current.storageBudgetHash, stopConditionsHash: current.stopConditionsHash, state: current.state, configuredAt: current.configuredAt, ...(current.state === "enabled" ? { enabledAt: at } : {}), revision: current.revision + 1 });
 }
+/** Concludes the exact current cadence at a terminal successor; it never executes that successor. */
+export function concludeTearFoundryJobSchedule(input: TearFoundryJobScheduleV1, previous: TearFoundryJobV1, next: TearFoundryJobV1): TearFoundryJobScheduleV1 {
+  const current = parseTearFoundryJobSchedule(input), prior = parseTearFoundryJob(previous), successor = parseTearFoundryJob(next);
+  if (current.jobId !== prior.id || current.jobHash !== prior.jobHash || successor.id !== prior.id || !terminal(successor.phase)
+    || JSON.stringify(successor.inputs) !== JSON.stringify(prior.inputs) || successor.events.length !== prior.events.length + 1
+    || successor.events.slice(0, prior.events.length).some((event, index) => event.eventHash !== prior.events[index]?.eventHash)
+    || prior.inputs.stopConditionsHash !== current.stopConditionsHash) throw new RangeError("Foundry schedule conclusion requires its exact terminal successor");
+  return draft({ id: current.id, jobId: successor.id, jobHash: successor.jobHash, intervalMs: current.intervalMs, computeBudgetHash: current.computeBudgetHash,
+    storageBudgetHash: current.storageBudgetHash, stopConditionsHash: current.stopConditionsHash, state: "disabled", configuredAt: current.configuredAt, revision: current.revision + 1 });
+}
 export function dueAtFoundryJobSchedule(input: TearFoundryJobScheduleV1): string | null {
   const schedule = parseTearFoundryJobSchedule(input); return schedule.state === "enabled" && schedule.enabledAt !== undefined ? new Date(Date.parse(schedule.enabledAt) + schedule.intervalMs).toISOString() : null;
 }

@@ -584,3 +584,12 @@ The inventory is reviewed at every phase gate. New features added during the red
 An active C36-promoted V3 Watch run can retain one aggregate-only terminal health record after exact active pointer, promotion/approval, frozen protocol, and complete real Watch journal revalidation. It freezes the prior thresholds and `classify-only-no-rollback`; it cannot retain raw actions/states, mutate the pointer, roll back, schedule, place traffic, or render UI.
 
 An exact C36 `threshold-breach` record can now authorize one atomic restoration of its frozen pre-promotion baseline. The dedicated boundary rechecks provenance, V2 policy, custody, and baseline bytes and retains a rollback receipt; generic registry rollback remains unreachable from Foundry.
+
+### C36 V4 frozen decision lifecycle
+
+The scheduled V4 Foundry head can now consume only an exact retained C34
+source-evaluation result under its frozen V2 protocol. It atomically retains a
+monitoring-ready or rejected successor, the matching cadence state, and a
+receipt-bound terminal V4 head. It does not construct candidates, mutate C32,
+or expose player traffic; `tests/unit/foundry-job-offline-training-finalization.test.ts`
+proves real lineage, tamper/custody refusal, and commit-loss recovery.

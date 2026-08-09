@@ -694,3 +694,25 @@ activate, promote, roll back, render UI, or contact cloud.
 PROVEN BY: `tests/unit/foundry-job-offline-training-finalization.test.ts`.
 REMAINING HERE: frozen-protocol decision and all subsequent candidate/promotion
 work are separate slices; C36 remains open.
+
+## V4 frozen source-evaluation decision
+
+Only a current `source-evaluation-decision-ready` V4 head can consume the
+already-retained C34 result. It reloads the exact schedule/job/pointer/binding,
+authority/handoff/source, launch/readiness/paired/plan/evaluation-result
+receipts, profile/bootstrap bytes, and action-time C31 custody. The existing
+immutable V2 protocol alone determines `monitoring-ready` or `rejected`; no
+new threshold, candidate, artifact, policy, activation, promotion, rollback,
+UI, or cloud path is introduced. The job successor, appropriate cadence
+rebind (or disabled terminal rejection cadence), and a receipt-bound
+`decision-terminal` V4 head are one conditional commit.
+
+The real V2/C31/V4 lineage test proves corrupted result and revoked custody
+fail closed, a planted decision commit loss writes no successor/schedule/
+pointer/receipt, and exact retry retains only the monitoring terminal head.
+The existing decision executor also routes frozen failed metrics to rejection;
+this scheduler makes no policy decision beyond that frozen result.
+PROVEN BY: `tests/unit/foundry-job-offline-training-finalization.test.ts`.
+REMAINING HERE: monitoring entry, candidate compatibility/admission,
+promotion/placement/monitoring/rollback integration, browser evidence, and an
+unattended complete product lifecycle remain separate; C36 remains open.
