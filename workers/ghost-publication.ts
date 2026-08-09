@@ -1,3 +1,10 @@
+import {
+  FirebaseAuthenticationError,
+  authenticateFirebaseRequest,
+  createFirebaseIdTokenVerifier,
+  type FirebaseIdTokenVerifier,
+} from "./firebase-auth";
+
 interface UploadRow {
   capsule_id: string;
   upload_id: string;
@@ -53,10 +60,8 @@ function json(value: unknown, status = 200): Response {
   });
 }
 
-function owner(request: Request): string {
-  const value = request.headers.get("x-tear-owner");
-  if (value === null || !/^[A-Za-z0-9_-]{8,128}$/u.test(value)) throw new Error("missing or invalid owner identity");
-  return value;
+async function owner(request: Request, verifier: FirebaseIdTokenVerifier): Promise<string> {
+  return authenticateFirebaseRequest(request, verifier);
 }
 
 async function boundedJson(request: Request): Promise<unknown> {
@@ -169,8 +174,8 @@ function assertOwner(row: UploadRow | null, actor: string): UploadRow {
   return row;
 }
 
-async function begin(request: Request, env: Env): Promise<Response> {
-  const actor = owner(request);
+async function begin(request: Request, env: Env, verifier: FirebaseIdTokenVerifier): Promise<Response> {
+  const actor = await owner(request, verifier);
   const body = parseBegin(await boundedJson(request));
   const objectKey = `capsules/${body.capsuleId}.ghost`;
   const multipart = await env.GHOST_CAPSULES.createMultipartUpload(objectKey, {
@@ -203,8 +208,8 @@ async function begin(request: Request, env: Env): Promise<Response> {
   return json({ capsuleId: body.capsuleId, uploadId: multipart.uploadId, status: "uploading" }, 201);
 }
 
-async function uploadPart(request: Request, env: Env, capsuleId: string, partNumber: number): Promise<Response> {
-  const actor = owner(request);
+async function uploadPart(request: Request, env: Env, capsuleId: string, partNumber: number, verifier: FirebaseIdTokenVerifier): Promise<Response> {
+  const actor = await owner(request, verifier);
   const row = assertOwner(await loadUpload(env, capsuleId), actor);
   if (row.status !== "uploading") throw new Error("upload is not accepting parts");
   if (!Number.isSafeInteger(partNumber) || partNumber < 1 || partNumber > MAX_PARTS || request.body === null) {
@@ -219,8 +224,8 @@ async function uploadPart(request: Request, env: Env, capsuleId: string, partNum
   return json(uploaded, 201);
 }
 
-async function complete(request: Request, env: Env, capsuleId: string): Promise<Response> {
-  const actor = owner(request);
+async function complete(request: Request, env: Env, capsuleId: string, verifier: FirebaseIdTokenVerifier): Promise<Response> {
+  const actor = await owner(request, verifier);
   const row = assertOwner(await loadUpload(env, capsuleId), actor);
   if (row.status !== "uploading") throw new Error("upload cannot be completed");
   const body = parseComplete(await boundedJson(request));
@@ -260,11 +265,11 @@ async function complete(request: Request, env: Env, capsuleId: string): Promise<
   return json({ capsuleId, status: publicationStatus, verification: verdict.status, etag: object.httpEtag });
 }
 
-async function listMetadata(request: Request, env: Env): Promise<Response> {
+async function listMetadata(request: Request, env: Env, verifier: FirebaseIdTokenVerifier): Promise<Response> {
   const url = new URL(request.url);
   const own = url.searchParams.get("scope") === "own";
   if (own) {
-    const actor = owner(request);
+    const actor = await owner(request, verifier);
     const result = await env.GHOST_METADATA.prepare(
       `SELECT capsule_id, build_id, title, tags_json, visibility, status, verdict_json, updated_at
        FROM ghost_uploads WHERE owner_id = ? ORDER BY updated_at DESC LIMIT 100`,
@@ -298,8 +303,8 @@ async function download(request: Request, env: Env, capsuleId: string): Promise<
   return new Response(object.body, { status: object.range === undefined ? 200 : 206, headers });
 }
 
-async function mutate(request: Request, env: Env, capsuleId: string, action: string, ctx: ExecutionContext): Promise<Response> {
-  const actor = owner(request);
+async function mutate(request: Request, env: Env, capsuleId: string, action: string, ctx: ExecutionContext, verifier: FirebaseIdTokenVerifier): Promise<Response> {
+  const actor = await owner(request, verifier);
   const row = assertOwner(await loadUpload(env, capsuleId), actor);
   const now = new Date().toISOString();
   if (action === "delete") {
@@ -329,42 +334,47 @@ async function mutate(request: Request, env: Env, capsuleId: string, action: str
   return json({ error: "not found" }, 404);
 }
 
-async function route(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+async function route(request: Request, env: Env, ctx: ExecutionContext, verifier: FirebaseIdTokenVerifier): Promise<Response> {
   const url = new URL(request.url);
   const parts = url.pathname.split("/").filter(Boolean);
-  if (request.method === "POST" && url.pathname === "/v1/uploads") return begin(request, env);
-  if (request.method === "GET" && url.pathname === "/v1/capsules") return listMetadata(request, env);
+  if (request.method === "POST" && url.pathname === "/v1/uploads") return begin(request, env, verifier);
+  if (request.method === "GET" && url.pathname === "/v1/capsules") return listMetadata(request, env, verifier);
   if (parts[0] !== "v1" || (parts[1] !== "uploads" && parts[1] !== "capsules") || parts[2] === undefined) {
     return json({ error: "not found" }, 404);
   }
   const capsuleId = parts[2];
   if (request.method === "PUT" && parts[1] === "uploads" && parts[3] === "parts" && parts[4] !== undefined) {
-    return uploadPart(request, env, capsuleId, Number(parts[4]));
+    return uploadPart(request, env, capsuleId, Number(parts[4]), verifier);
   }
   if (request.method === "POST" && parts[1] === "uploads" && parts[3] === "complete") {
-    return complete(request, env, capsuleId);
+    return complete(request, env, capsuleId, verifier);
   }
   if (request.method === "GET" && parts[1] === "capsules" && parts[3] === "object") {
     return download(request, env, capsuleId);
   }
-  if (request.method === "DELETE" && parts[1] === "capsules") return mutate(request, env, capsuleId, "delete", ctx);
+  if (request.method === "DELETE" && parts[1] === "capsules") return mutate(request, env, capsuleId, "delete", ctx, verifier);
   if (request.method === "PATCH" && parts[1] === "capsules" && parts[3] !== undefined) {
-    return mutate(request, env, capsuleId, parts[3], ctx);
+    return mutate(request, env, capsuleId, parts[3], ctx, verifier);
   }
   return json({ error: "not found" }, 404);
 }
 
-export default {
+export function createGhostPublicationHandler(options: Readonly<{ verifier?: FirebaseIdTokenVerifier }> = {}): ExportedHandler<Env> {
+  return {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     try {
-      const response = await route(request, env, ctx);
+      const verifier = options.verifier ?? createFirebaseIdTokenVerifier({ projectId: env.FIREBASE_PROJECT_ID });
+      const response = await route(request, env, ctx, verifier);
       console.log(JSON.stringify({ message: "ghost publication request", method: request.method, path: new URL(request.url).pathname, status: response.status }));
       return response;
     } catch (error) {
       const message = error instanceof Error ? error.message : "unknown error";
       console.error(JSON.stringify({ message: "ghost publication failure", error: message, path: new URL(request.url).pathname }));
-      const status = error instanceof RangeError || error instanceof TypeError ? 400 : 409;
+      const status = error instanceof FirebaseAuthenticationError ? 401 : error instanceof RangeError || error instanceof TypeError ? 400 : 409;
       return json({ error: message }, status);
     }
   },
-} satisfies ExportedHandler<Env>;
+  };
+}
+
+export default createGhostPublicationHandler();
