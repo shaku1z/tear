@@ -48,6 +48,7 @@
     "test:browser:ghost-v3-storage-fault": "node tests/browser-ghost-v3-storage-fault.js",
     "test:browser:ghost-vault-library": "node tests/browser-ghost-vault-library.js",
     "test:browser:ghost-lab-home": "node tests/browser-ghost-lab-home.js",
+    "test:browser:c37-player-watch": "node tests/browser-c37-player-watch.js",
     "test:browser:ghost-vault-conditional-commit": "node tests/browser-ghost-vault-conditional-commit.js",
     "test:browser:ghost-vault-interrupted-recovery": "node tests/browser-ghost-vault-interrupted-recovery.js",
     "test:browser:ghost-vault-physical-quota": "node tests/browser-ghost-vault-physical-quota.js",

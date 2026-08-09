@@ -224,6 +224,8 @@ export interface TierUpScreenView {
 }
 export interface PausedScreenView {
   readonly id: "paused"; readonly runSummary?: string; readonly abilities: readonly CardView[]; readonly progress: readonly ProgressView[];
+  /** Present only for a locally running Player Watch; never a Foundry operation. */
+  readonly playerWatch?: Readonly<{ readonly status: "running" | "paused"; readonly decisions: number }>;
 }
 export interface ConfirmQuitScreenView { readonly id: "confirmquit" }
 export interface ContinueScreenView { readonly id: "continue"; readonly seconds: number; readonly requesting: boolean }

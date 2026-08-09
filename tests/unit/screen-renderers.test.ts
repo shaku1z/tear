@@ -262,6 +262,20 @@ describe("legacy screen renderer registry", () => {
     expect(controls.some((control) => control.action.type === "navigate" && control.action.to === "menu")).toBe(true);
   });
 
+  it("projects a running Player Watch into the paused screen with semantic pause and stop controls", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.paused({ id: "paused", abilities: [], progress: [],
+      playerWatch: { status: "running", decisions: 7 } });
+    expect(controls.filter((control) => control.action.type === "ghostlab.watch").map((control) => control.action))
+      .toEqual([
+        { type: "ghostlab.watch", command: "pause" },
+        { type: "ghostlab.watch", command: "stop" },
+      ]);
+    expect(controls.find((control) => control.action.type === "ghostlab.watch" && control.action.command === "pause"))
+      .toMatchObject({ label: "PAUSE PLAYER WATCH", x: 80, y: 426, w: 280, h: 42 });
+  });
+
   it("offers a semantic retry with storage guidance when Academy inspection is unavailable", () => {
     const controls: ScreenControl[] = [];
     const renderer = createLegacyScreenRenderers(createRenderContext(controls));

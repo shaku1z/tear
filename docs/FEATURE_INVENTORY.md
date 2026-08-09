@@ -596,8 +596,11 @@ stop. It has no decision journal, C36 monitoring/promotion/rollback, schedule,
 traffic, cloud, placement, or test-only host/panel path. State Forge, Bot
 Ladder, and Studio remain visible unavailable declarations. Unit controller and
 screen-action evidence plus `tests/browser-ghost-lab-home.js` cover the normal
-unavailable browser route; the seeded C32 artifact journey remains engineering
-coverage and is not represented as player certification.
+unavailable browser route. `tests/browser-c37-player-watch.js` seeds an exact
+C32 V3 candidate and activation in the ordinary IndexedDB store, then proves
+the no-`watchagent` normal-build Watch control visibly enables, advances,
+pauses without new decisions, resumes, and stops. This remains engineering
+evidence only and is not represented as player certification.
 
 ### C37 verified Run DNA Theater projection
 

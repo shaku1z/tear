@@ -50,7 +50,10 @@ export const LEGAL_LEGACY_TRANSITIONS: Readonly<Record<LegacyAppScreen, readonly
   pglab: ["playing", "pgmenu", "rename"],
   academy: ["menu", "rename"],
   foundry: ["menu", "rename"],
-  ghostlab: ["menu", "academy", "foundry", "profile", "rename"],
+  // A locally validated Player Watch starts a normal run directly from its
+  // dedicated home. The route remains local-only; this edge does not grant
+  // any Foundry, traffic, or operational transition.
+  ghostlab: ["menu", "playing", "academy", "foundry", "profile", "rename"],
 });
 
 export class IllegalLegacyAppTransitionError extends Error {

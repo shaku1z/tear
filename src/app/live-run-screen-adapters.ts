@@ -52,6 +52,7 @@ export interface RunScreenServices {
   readonly addShake: (amount: number) => void;
   readonly addFlash: (amount: number) => void;
   readonly requestPointer: () => void;
+  readonly playerWatch: () => Readonly<{ readonly status: string; readonly decisions: number }>;
 }
 
 export interface LiveRunScreenAdapters {
@@ -124,9 +125,13 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
     },
     renderPaused(): void {
       const run = state.run();
-      renderers.paused(buildPausedSnapshot({ summary: (run.isBossWave ? "BOSS" : "WAVE " + String(run.wave)) +
+      const playerWatch = services.playerWatch();
+      renderers.paused({ ...buildPausedSnapshot({ summary: (run.isBossWave ? "BOSS" : "WAVE " + String(run.wave)) +
         "   ·   " + String(run.score) + " pts   ·   " + services.formatTime(run.runTime),
-        abilities: abilityCards(), progress: progressRows() }));
+        abilities: abilityCards(), progress: progressRows() }),
+      ...(playerWatch.status === "running" || playerWatch.status === "paused"
+        ? { playerWatch: { status: playerWatch.status, decisions: playerWatch.decisions } as const }
+        : {}) });
     },
     renderConfirmQuit(): void { renderers.confirmquit({ id: "confirmquit" }); },
     renderContinue(): void {
