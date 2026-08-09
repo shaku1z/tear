@@ -38,3 +38,14 @@ retaining real C39 preservation-corpus Vitest JSON and the C40 Source-void
 browser engineering proof, but it contains no fabricated coverage and must be
 rejected by `tearbench certify` until every required evidence and matrix proof
 exists. Source-void evidence remains engineering/non-certifying.
+
+## Scheduled evidence program
+
+`.github/workflows/tearbench-program.yml` retains three non-release profiles:
+nightly diff-aware TearBench selection plus source checks, weekly endurance
+evidence, and an explicit evidence-review profile. Evidence review records the
+preservation corpus and Source-void engineering receipts at a clean `HEAD`,
+composes a partial manifest, and verifies that the verifier emits a schema-2
+`rejected` certificate. That expected rejection keeps the workflow green while
+proving no partial evidence was promoted to a release decision. The uploaded
+artifact is provenance for review, not a release certificate or deployment.
