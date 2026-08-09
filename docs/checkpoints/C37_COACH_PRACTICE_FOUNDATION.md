@@ -50,8 +50,14 @@ practice child path.
 ### Normal Ghost Lab home
 
 The normal standalone main menu now exposes `GHOST LAB` as a bounded local
-home. Its only enabled routes are Academy, Foundry Status, and Ghost Vault;
-the Vault remains the existing capsule-gated path to Theater and Coach. Watch,
-State Forge, Bot Ladder, and Studio render as explicit unavailable/not-yet-
-player-safe declarations. This creates no cloud, traffic, promotion, rollout,
-or test-query route and does not claim a forensic developer Ghost Lab.
+home. Academy, Foundry Status, Ghost Vault, local Watch, and read-only Bot
+Evidence are normal routes; the Vault remains the existing capsule-gated path
+to Theater and Coach. Bot Evidence only asks the immutable C35 evidence vault
+for one exact supplied report hash. A missing, stale, or integrity-invalid
+report is visibly unavailable; a valid report renders its immutable provenance,
+episode distribution, and the explicit `unassigned`, `not compared`, and `not
+certified` declarations. It cannot launch evaluation, calculate score or
+placement, compare humans, activate/promote a policy, or route traffic. State
+Forge, certified Bot Ladder placement, and Studio control remain unavailable.
+This creates no cloud, promotion, rollout, or test-query route and does not
+claim a forensic developer Ghost Lab.

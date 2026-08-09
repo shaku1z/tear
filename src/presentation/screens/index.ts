@@ -55,5 +55,6 @@ export function createLegacyScreenRenderers(context: ScreenRenderContext): Legac
     academy: academy.academy,
     foundry: foundry.foundry,
     ghostlab: ghostLab.ghostlab,
+    botevidence: ghostLab.botevidence,
   };
 }

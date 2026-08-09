@@ -2,7 +2,7 @@ export type LegacyAppScreen =
   | "menu" | "setup" | "playing" | "paused" | "draft" | "reserve" | "tierup"
   | "settings" | "continue" | "gameover" | "win" | "replay" | "confirmquit"
   | "shop" | "codex" | "profile" | "achievements" | "leaderboards" | "rename"
-  | "pgmenu" | "pglab" | "academy" | "foundry" | "ghostlab";
+  | "pgmenu" | "pglab" | "academy" | "foundry" | "ghostlab" | "botevidence";
 
 export interface LegacyAppSnapshot {
   readonly screen: LegacyAppScreen;
@@ -23,7 +23,7 @@ export interface LegacyTransitionContext {
 export const LEGACY_APP_SCREENS = Object.freeze([
   "menu", "setup", "playing", "paused", "draft", "reserve", "tierup", "settings", "continue",
   "gameover", "win", "replay", "confirmquit", "shop", "codex", "profile", "achievements",
-  "leaderboards", "rename", "pgmenu", "pglab", "academy", "foundry", "ghostlab",
+  "leaderboards", "rename", "pgmenu", "pglab", "academy", "foundry", "ghostlab", "botevidence",
 ] as const satisfies readonly LegacyAppScreen[]);
 
 export const LEGAL_LEGACY_TRANSITIONS: Readonly<Record<LegacyAppScreen, readonly LegacyAppScreen[]>> = Object.freeze({
@@ -53,7 +53,8 @@ export const LEGAL_LEGACY_TRANSITIONS: Readonly<Record<LegacyAppScreen, readonly
   // A locally validated Player Watch starts a normal run directly from its
   // dedicated home. The route remains local-only; this edge does not grant
   // any Foundry, traffic, or operational transition.
-  ghostlab: ["menu", "playing", "academy", "foundry", "profile", "rename"],
+  ghostlab: ["menu", "playing", "academy", "foundry", "profile", "botevidence", "rename"],
+  botevidence: ["menu", "rename"],
 });
 
 export class IllegalLegacyAppTransitionError extends Error {

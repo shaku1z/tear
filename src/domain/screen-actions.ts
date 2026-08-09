@@ -8,7 +8,7 @@ export type LegacyScreenId =
   | "menu" | "setup" | "playing" | "paused" | "draft" | "reserve" | "tierup"
   | "settings" | "continue" | "gameover" | "win" | "replay" | "confirmquit"
   | "shop" | "codex" | "profile" | "achievements" | "leaderboards" | "rename"
-  | "pgmenu" | "pglab" | "academy" | "foundry" | "ghostlab";
+  | "pgmenu" | "pglab" | "academy" | "foundry" | "ghostlab" | "botevidence";
 
 export type ScreenAction =
   | { readonly type: "navigate"; readonly to: LegacyScreenId; readonly resetScroll?: boolean; readonly tab?: string }
@@ -74,7 +74,7 @@ export type ScreenAction =
   | { readonly type: "foundry.schedule.enable"; readonly scheduleHash: string }
   | { readonly type: "foundry.schedule.disable"; readonly scheduleHash: string }
   /** Ghost Lab only names already-safe normal routes; it never enables lab operations. */
-  | { readonly type: "ghostlab.open"; readonly destination: "academy" | "foundry" | "vault" | "watch" }
+  | { readonly type: "ghostlab.open"; readonly destination: "academy" | "foundry" | "vault" | "watch" | "botevidence" }
   | { readonly type: "ghostlab.watch"; readonly command: "start" | "pause" | "resume" | "stop" }
   | { readonly type: "rename.submit" }
   | { readonly type: "rename.cancel" }

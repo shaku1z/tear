@@ -25,7 +25,7 @@ export interface ScreenActionBindingPorts {
   readonly refreshFoundry: () => void;
   readonly bootstrapFoundry: (profileId: string) => void;
   readonly setFoundryScheduleEnabled: (scheduleHash: string, enabled: boolean) => void;
-  readonly openGhostLab: (destination: "academy" | "foundry" | "vault" | "watch") => void;
+  readonly openGhostLab: (destination: "academy" | "foundry" | "vault" | "watch" | "botevidence") => void;
   readonly controlGhostLabWatch: (command: "start" | "pause" | "resume" | "stop") => void;
   readonly signIn: () => void; readonly signOut: () => void; readonly pinReplay: (id: string, pinned: boolean) => boolean;
   readonly deleteReplay: (id: string) => void; readonly dispatchPlayground: (id: string) => void;

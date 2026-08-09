@@ -6,10 +6,11 @@ import {
   advanceTearOfflineRlV3Checkpoint, advanceTearOnlineRlV3Checkpoint, completeTearOfflineRlV3Checkpoint,
   createTearBotV3CanonicalEvaluationPlan, createTearC34V3C32PolicyCandidate, createTearOfflineRlPlan,
   createTearOfflineRlV3Checkpoint, createTearOfflineRlV3Plan, createTearOnlineRlV3Checkpoint, createTearOnlineRlV3Plan,
-  evaluateTearOnlineRlV3InSource, extractTearOfflineRlTrajectories, TearBotV3CanonicalEvaluationExecutor,
+  evaluateTearOnlineRlV3InSource, extractTearOfflineRlTrajectories, TearBotV3CanonicalEvaluationExecutor, TearBotV3CanonicalEvidenceVault,
   TearC34V3C32CandidateRegistry, TearPolicyArtifactRegistry, TEAR_C34_V3_C32_POLICY_RUNTIME_COMPATIBILITY,
   type TearAcademyTrainingDatasetV1,
 } from "../../src/agents";
+import { LiveBotEvidenceController } from "../../src/app/live-bot-evidence-controller";
 import type { TearScenarioV1 } from "../../src/tearbench";
 
 const scenario: TearScenarioV1 = Object.freeze({ format: "tear-contract" as const, kind: "scenario" as const, schemaVersion: 1 as const, id: "c35-v3-canonical", version: 1, description: "C35 C32 canonical source-world fixture", stateClass: "recorded-canonical" as const, executionClass: "training" as const, seed: "c35-v3-canonical", start: Object.freeze({ mode: "endless" as const, difficulty: "normal" as const, weapon: "sword" as const }), maxTicks: 3, assertions: Object.freeze(["runtime.finite-state"] as const), tags: Object.freeze(["c35", "c36"] as const) });
@@ -47,5 +48,15 @@ describe("C35 promoted V3 canonical source evaluation", () => {
     await f.backend.put("analysis", `foundry-job-v3-promotion-receipt:v1:${f.receipt.approvalHash}`, "corrupt"); await expect(executor.execute(f.plan)).rejects.toThrow(/promotion receipt/u);
     const fresh = await promoted(), { planHash: _planHash, format: _format, schemaVersion: _schemaVersion, ...draft } = fresh.plan, mismatched = createTearBotV3CanonicalEvaluationPlan({ ...draft, candidate: { ...fresh.plan.candidate, activationHash: "0".repeat(16) } }); await expect(new TearBotV3CanonicalEvaluationExecutor(fresh.backend).execute(mismatched)).rejects.toThrow(/provenance mismatch/u);
     const changed = await promoted(); await changed.backend.put("analysis", "policy-active:v1", JSON.stringify({ ...changed.activation, artifactHash: "0".repeat(16) })); await expect(new TearBotV3CanonicalEvaluationExecutor(changed.backend).execute(changed.plan)).rejects.toThrow(/active promoted head|candidate/u);
+  });
+
+  it("projects only an exact retained parsed report and visibly refuses a tampered record", async () => {
+    const f = await promoted(), report = await new TearBotV3CanonicalEvaluationExecutor(f.backend).execute(f.plan);
+    const vault = new TearBotV3CanonicalEvidenceVault(f.backend); await vault.retain(f.plan, report);
+    const controller = new LiveBotEvidenceController(undefined, () => report.reportHash, async () => vault.get(report.reportHash));
+    await controller.refresh();
+    expect(controller.snapshot()).toMatchObject({ status: "ready", report: { reportHash: report.reportHash, episodes: 2, placement: "unassigned", humanCalibration: "not-compared", certification: "not-certified" } });
+    await f.backend.put("analysis", `tearbot-v3-canonical-evidence:v1:${report.reportHash}`, "tampered");
+    await controller.refresh(); expect(controller.snapshot()).toMatchObject({ status: "unavailable" });
   });
 });

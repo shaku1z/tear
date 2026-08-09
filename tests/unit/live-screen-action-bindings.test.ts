@@ -22,6 +22,8 @@ describe("live screen action bindings", () => {
     const dispatch = createLiveScreenActionBindings({ openGhostLab } as unknown as ScreenActionBindingPorts);
     dispatch({ type: "ghostlab.open", destination: "vault" });
     expect(openGhostLab).toHaveBeenCalledWith("vault");
+    dispatch({ type: "ghostlab.open", destination: "botevidence" });
+    expect(openGhostLab).toHaveBeenLastCalledWith("botevidence");
   });
 
   it("routes only an opaque Foundry schedule toggle through the composed local controller", () => {

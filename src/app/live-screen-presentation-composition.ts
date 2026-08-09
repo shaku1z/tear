@@ -12,6 +12,7 @@ import type { LegacyAppScreen } from "./legacy-state-controller";
 import type { AcademyScreenView } from "../presentation/screens/contracts";
 import type { FoundryScreenView } from "../presentation/screens/contracts";
 import type { GhostLabScreenView } from "../presentation/screens/contracts";
+import type { BotEvidenceScreenView } from "../presentation/screens/contracts";
 
 type RendererBase = Omit<LiveScreenRendererOptions, "dispatch" | "renderPreview">;
 type ReplayBase = Omit<ReplayScreenServices, "renderers" | "categories" | "fallbackCategory" | "specialColor">;
@@ -37,6 +38,7 @@ export interface LiveScreenPresentationOptions {
   readonly academy: () => AcademyScreenView;
   readonly foundry: () => FoundryScreenView;
   readonly ghostLab: () => GhostLabScreenView;
+  readonly botEvidence: () => BotEvidenceScreenView;
 }
 
 export interface LiveScreenPresentationComposition {
@@ -55,7 +57,7 @@ export interface LiveScreenPresentationComposition {
 function isLegacyScreen(value: string): value is LegacyAppScreen {
   return ["menu", "setup", "playing", "paused", "draft", "reserve", "tierup", "settings",
     "continue", "gameover", "win", "replay", "confirmquit", "shop", "codex", "profile",
-    "achievements", "leaderboards", "rename", "pgmenu", "pglab", "academy", "foundry", "ghostlab"].includes(value);
+    "achievements", "leaderboards", "rename", "pgmenu", "pglab", "academy", "foundry", "ghostlab", "botevidence"].includes(value);
 }
 
 /** Resolves the deliberately lazy screen-adapter cycle behind one strict composition boundary. */
@@ -113,6 +115,7 @@ export function createLiveScreenPresentationComposition(
       academy: () => { renderer.academy(options.academy()); },
       foundry: () => { renderer.foundry(options.foundry()); },
       ghostlab: () => { renderer.ghostlab(options.ghostLab()); },
+      botevidence: () => { renderer.botevidence(options.botEvidence()); },
     }),
     chooseUpgrade: run.chooseUpgrade, chooseReserve: run.chooseReserve, chooseTier: run.chooseTierUp,
     rerollDraft: run.rerollDraft, dispatch,

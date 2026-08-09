@@ -602,6 +602,18 @@ the no-`watchagent` normal-build Watch control visibly enables, advances,
 pauses without new decisions, resumes, and stops. This remains engineering
 evidence only and is not represented as player certification.
 
+### C37 Bot Evidence read-only projection
+
+The normal Ghost Lab also exposes `BOT EVIDENCE`. It projects at most one
+explicitly supplied exact report hash through `TearBotV3CanonicalEvidenceVault`.
+It never lists, scans, executes, scores, places, calibrates, activates,
+promotes, or changes traffic. Missing, stale, and malformed retained bytes are
+unavailable; an exact parsed report visibly renders its C36/C32 provenance,
+distribution, `unassigned` placement, `not compared` human calibration, and
+`not certified` status. `tests/unit/tearbot-v3-canonical-evaluation.test.ts`
+uses a genuinely executed and retained C35 report to prove the projection and
+tamper refusal; renderer and semantic-route tests protect the normal surface.
+
 ### C37 verified Run DNA Theater projection
 
 The normal C29 Theater exposes a `RUN DNA` panel only as an immutable

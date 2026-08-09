@@ -3,6 +3,7 @@ import type {
   AcademyScreenView,
   FoundryScreenView,
   GhostLabScreenView,
+  BotEvidenceScreenView,
   CodexScreenView,
   LeaderboardsScreenView,
   LegacyScreenRendererRegistry,
@@ -104,6 +105,7 @@ function createColdScreenBoundary(context: ScreenRenderContext): ColdScreenRende
     academy(view: AcademyScreenView) { if (renderers) renderers.academy(view); else loadingFrame(); },
     foundry(view: FoundryScreenView) { if (renderers) renderers.foundry(view); else loadingFrame(); },
     ghostlab(view: GhostLabScreenView) { if (renderers) renderers.ghostlab(view); else loadingFrame(); },
+    botevidence(view: BotEvidenceScreenView) { if (renderers) renderers.botevidence(view); else loadingFrame(); },
     settings(view: SettingsScreenView) { if (renderers) renderers.settings(view); else loadingFrame(); },
     rename(view: RenameScreenView) { if (renderers) renderers.rename(view); else loadingFrame(); },
   });

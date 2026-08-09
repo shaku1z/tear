@@ -288,7 +288,7 @@ export interface GhostLabScreenView {
   readonly id: "ghostlab";
   readonly subtitle: string;
   readonly routes: readonly Readonly<{
-    readonly id: "academy" | "foundry" | "vault" | "watch";
+    readonly id: "academy" | "foundry" | "vault" | "watch" | "botevidence";
     readonly label: string;
     readonly detail: string;
   }>[];
@@ -296,11 +296,26 @@ export interface GhostLabScreenView {
   readonly watch: Readonly<{ readonly status: "checking" | "unavailable" | "ready" | "starting" | "running" | "paused" | "stopped"; readonly detail: string; readonly decisions: number }>;
 }
 
+/** A read-only projection of exactly one retained C35 canonical report. */
+export interface BotEvidenceScreenView {
+  readonly id: "botevidence";
+  readonly status: "unavailable" | "ready";
+  readonly subtitle: string;
+  readonly detail: string;
+  readonly report?: Readonly<{
+    readonly reportHash: string; readonly planHash: string; readonly artifactId: string;
+    readonly approvalHash: string; readonly promotionReceiptHash: string; readonly artifactHash: string;
+    readonly activationHash: string; readonly candidatePayloadHash: string;
+    readonly episodes: number; readonly completionRate: number; readonly meanTicks: number; readonly maxTicksPerCase: number;
+    readonly placement: "unassigned"; readonly humanCalibration: "not-compared"; readonly certification: "not-certified";
+  }>;
+}
+
 export type LegacyScreenView = MenuScreenView | SetupScreenView | PlayingScreenView | CodexScreenView
   | ShopScreenView | ProfileScreenView | AchievementsScreenView | LeaderboardsScreenView
   | ReplayScreenView | SettingsScreenView | RenameScreenView | DraftScreenView | ReserveScreenView
   | TierUpScreenView | PausedScreenView | ConfirmQuitScreenView | ContinueScreenView
-  | GameoverScreenView | WinScreenView | PlaygroundScreenView | AcademyScreenView | FoundryScreenView | GhostLabScreenView;
+  | GameoverScreenView | WinScreenView | PlaygroundScreenView | AcademyScreenView | FoundryScreenView | GhostLabScreenView | BotEvidenceScreenView;
 
 export type ScreenViewById<Id extends LegacyScreenId, View = LegacyScreenView> =
   View extends Readonly<{ id: infer ViewId }> ? Id extends ViewId ? View : never : never;
