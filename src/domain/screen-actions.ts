@@ -52,6 +52,7 @@ export type ScreenAction =
   | { readonly type: "replay.coach.open" }
   | { readonly type: "replay.coach.selectBaseline"; readonly id: string }
   | { readonly type: "replay.coach.practice"; readonly findingId: string }
+  | { readonly type: "replay.runDna.toggle" }
   | { readonly type: "replay.toggleInfo" }
   | { readonly type: "replay.speed"; readonly value: number }
   | { readonly type: "replay.exit" }

@@ -7,6 +7,7 @@ import type { ReplayScreenView } from "../presentation/screens/contracts";
 import type { LegacyAppScreen } from "./legacy-state-controller";
 import type { GhostPracticeLaunchResult } from "./ghost-practice-launch";
 import { projectGhostCoachPractice, type GhostCoachPracticeProjection } from "../ghost/coach-practice";
+import { projectGhostRunDnaTheater } from "../ghost/run-dna-theater";
 
 export interface GhostTheaterScreenServices {
   readonly render: (view: ReplayScreenView) => void;
@@ -37,6 +38,7 @@ interface GhostTheaterContext {
   coachOpen: boolean;
   coachCandidates: readonly GhostReadCapsule[];
   coach: GhostCoachPracticeProjection | undefined;
+  runDnaOpen: boolean;
 }
 
 const TICKS_PER_SECOND = 120;
@@ -107,6 +109,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
           practiceAvailable: currentContext.checkpoints.includes(current),
         })), unavailable: currentContext.coach?.unavailable ?? Object.freeze(["select one distinct healthy same-build baseline"]),
       }) } : {}),
+      ...(currentContext.runDnaOpen ? { runDna: projectGhostRunDnaTheater(currentContext.capsule) } : {}),
     });
   };
 
@@ -142,6 +145,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
           coachOpen: false,
           coachCandidates: Object.freeze([]),
           coach: undefined,
+          runDnaOpen: false,
         };
         return true;
       } catch {
@@ -200,14 +204,14 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       }).catch(() => { if (context !== undefined) context.message = "Coach baseline list is unavailable in this browser."; });
     },
     selectCoachBaseline(id: string): void {
-      if (context === undefined || !context.coachOpen) return;
+      if (!context?.coachOpen) return;
       const baseline = context.coachCandidates.find((candidate) => candidate.manifest.id === id);
       if (baseline === undefined) { context.message = "Coach baseline is not available."; return; }
       try { context.coach = projectGhostCoachPractice(context.capsule, baseline); context.message = "Coach findings use only the selected verified same-build pair."; }
       catch (error) { context.coach = undefined; context.message = `Coach unavailable: ${error instanceof Error ? error.message : String(error)}`; }
     },
     practiceCoachFinding(findingId: string): void {
-      if (context === undefined || context.coach === undefined) return;
+      if (context?.coach === undefined) return;
       const finding = context.coach.findings.find((candidate) => candidate.id === findingId);
       if (finding === undefined) return;
       const tick = context.result.tick;
@@ -219,6 +223,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
         context.message = launched.ok ? `Coach practice launched for ${finding.domain}; it is unranked and non-persistent.` : launched.message;
       } catch (error) { context.message = `Coach practice unavailable: ${error instanceof Error ? error.message : String(error)}`; }
     },
+    toggleRunDna(): void { if (context !== undefined) context.runDnaOpen = !context.runDnaOpen; },
     toggleInfo(): void { if (context !== undefined) context.infoVisible = !context.infoVisible; },
     setSpeed(value: number): void { if (context !== undefined && isSpeed(value)) context.transport.speed(value); },
     status(): GhostTheaterScreenStatus | null {

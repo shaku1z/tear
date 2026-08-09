@@ -24,6 +24,22 @@ remains immutable through the existing C29 child-launch boundary.
 This does not claim aggregate/peer/TearBot/expert coaching, counterfactual
 draft or run-management evidence, ranking, persistence, cloud work, or C38.
 
+### Verified Run DNA Theater panel
+
+The normal Theater now has a `RUN DNA` control with a read-only capsule
+projection. It calculates `run-dna-v1` only when the verified durable capsule
+contains exactly one complete declared `run-dna-metrics-v1` result. The panel
+shows that formula version, the capsule custody label, every source metric,
+and the five derived dimensions. Missing fields, no declaration, and duplicate
+declarations remain visibly unavailable; Theater never substitutes hidden
+events, profile/career state, challenge history, exports, or inferred values.
+
+This is a single-run transparent projection, not a career archive, ranking,
+recommendation, clustering, challenge, export, persistence, or player-behavior
+claim. `tests/unit/ghost-run-dna-theater.test.ts` proves complete-only and
+ambiguous/absent refusal; the screen renderer contract retains the semantic
+toggle without renderer-owned side effects.
+
 Evidence: `tests/unit/ghost-coach-practice.test.ts` covers distinct-source
 rejection and selected same-build provenance projection. The C27/C29 browser
 journey now creates durable local V3 capsules, opens the ordinary Theater,

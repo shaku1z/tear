@@ -582,6 +582,16 @@ promotion-approval package, including any valid prior active-policy rollback
 identity. It is still only durable evidence: no registry admission, activation,
 promotion, placement, runtime traffic, or player surface is reachable.
 
+### C37 verified Run DNA Theater projection
+
+The normal C29 Theater exposes a `RUN DNA` panel only as an immutable
+projection of its already-verified durable capsule. `run-dna-v1` is calculated
+only from exactly one complete declared `run-dna-metrics-v1` result; absent,
+incomplete, or ambiguous metrics render as unavailable. The visible panel
+names the formula, custody label, source metrics, and dimensions. It neither
+writes storage nor draws from profile/career/challenge/export state, hidden
+events, or player-behavior inference.
+
 The inventory is reviewed at every phase gate. New features added during the redesign must be appended here and implemented through the target boundaries; they may not add new shared globals or direct platform dependencies to domain code.
 
 ### C36 approval-bound post-promotion monitor

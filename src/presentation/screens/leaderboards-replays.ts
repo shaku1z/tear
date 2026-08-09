@@ -170,11 +170,14 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
       enabled: view.practiceAvailable === true, action: { type: "replay.practice" } });
     if (view.theater) context.enqueue({ x: 832 + safe.l, y: controlY, w: 120, h: 44, label: "COACH",
       action: { type: "replay.coach.open" } });
+    if (view.theater) context.enqueue({ x: 960 + safe.l, y: controlY, w: 120, h: 44, label: "RUN DNA",
+      action: { type: "replay.runDna.toggle" } });
     context.enqueue({ x: width - 420 - safe.r, y: controlY, w: 90, h: 44, label: view.infoVisible ? "HIDE" : "INFO", action: { type: "replay.toggleInfo" } });
     context.enqueue({ x: width - 320 - safe.r, y: controlY, w: 200, h: 44, label: "‹  BACK", action: { type: "replay.exit" } });
     if (view.notice) ui.text(canvas, view.notice, width / 2, barY - 34, ui.t.type.caption, "center", ui.t.alpha.muted);
     if (view.infoVisible) replayInfo(view);
     if (view.coach) coachState(view);
+    if (view.runDna) runDnaState(view);
   }
 
   function theaterState(view: ReplayScreenView): void {
@@ -223,16 +226,34 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     ui.title(canvas, "COACH · SELECTED VERIFIED PAIR", width / 2, y + 38, ui.t.type.lead);
     ui.text(canvas, `TARGET ${coach.targetId}  ·  BASELINE ${coach.baselineId ?? "SELECT ONE"}`, x + 24, y + 68, ui.t.type.micro, "left", ui.t.alpha.soft);
     if (coach.buildId) ui.text(canvas, `BUILD ${coach.buildId}  ·  PROVENANCE ${coach.provenanceHash}`, x + 24, y + 88, ui.t.type.micro, "left", ui.t.alpha.muted);
-    coach.candidates.slice(0, 3).forEach((candidate, index) => context.enqueue({ x: x + 24 + index * 270, y: y + 106, w: 252, h: 34,
+    coach.candidates.slice(0, 3).forEach((candidate, index) => { context.enqueue({ x: x + 24 + index * 270, y: y + 106, w: 252, h: 34,
       label: `BASELINE ${candidate.id}`, enabled: candidate.enabled, selected: candidate.id === coach.baselineId,
-      action: { type: "replay.coach.selectBaseline", id: candidate.id } }));
+      action: { type: "replay.coach.selectBaseline", id: candidate.id } }); });
     coach.findings.slice(0, 2).forEach((finding, index) => {
       const rowY = y + 164 + index * 54;
       ui.text(canvas, `${finding.domain.toUpperCase()} · ${finding.detail}`, x + 24, rowY + 18, ui.t.type.caption, "left", ui.t.alpha.soft);
       context.enqueue({ x: x + panelWidth - 188, y: rowY - 4, w: 164, h: 34, label: "PRACTICE FINDING",
         enabled: finding.practiceAvailable, action: { type: "replay.coach.practice", findingId: finding.id } });
     });
-    coach.unavailable.slice(0, 2).forEach((entry, index) => ui.text(canvas, `UNAVAILABLE · ${entry}`, x + 24, y + 286 + index * 18, ui.t.type.micro, "left", ui.t.alpha.muted));
+    coach.unavailable.slice(0, 2).forEach((entry, index) => { ui.text(canvas, `UNAVAILABLE · ${entry}`, x + 24, y + 286 + index * 18, ui.t.type.micro, "left", ui.t.alpha.muted); });
+  }
+
+  function runDnaState(view: ReplayScreenView): void {
+    const dna = view.runDna;
+    if (dna === undefined) return;
+    const { canvas, safeInsets: safe } = context;
+    const panelWidth = Math.min(860, width - 80 - safe.l - safe.r), panelHeight = 330;
+    const x = width / 2 - panelWidth / 2, y = 90 + safe.t;
+    ui.panel(canvas, x, y, panelWidth, panelHeight); ui.accentStrip(canvas, x, y, panelWidth, REPLAY_CYAN);
+    ui.title(canvas, "RUN DNA · VERIFIED METRICS", width / 2, y + 38, ui.t.type.lead);
+    ui.text(canvas, `FORMULA ${dna.formulaVersion} · EVIDENCE ${dna.evidenceCustody}`, x + 24, y + 64, ui.t.type.micro, "left", ui.t.alpha.muted);
+    Object.entries(dna.sourceMetrics).forEach(([name, value], index) => { ui.text(canvas,
+      `${name.toUpperCase()} · ${value === undefined ? "UNAVAILABLE" : String(value)}`, x + 24 + (index % 2) * 390, y + 94 + Math.floor(index / 2) * 22,
+      ui.t.type.caption, "left", value === undefined ? ui.t.alpha.muted : ui.t.alpha.soft); });
+    if (dna.dimensions) Object.entries(dna.dimensions).forEach(([name, value], index) => { ui.text(canvas,
+      `${name.toUpperCase()} ${Math.round(value * 100)}%`, x + 24 + (index % 3) * 265, y + 198 + Math.floor(index / 3) * 24, ui.t.type.caption, "left", ui.t.alpha.soft); });
+    if (!dna.available) dna.unavailable.slice(0, 3).forEach((entry, index) => { ui.text(canvas, `UNAVAILABLE · ${entry}`, x + 24, y + 250 + index * 18, ui.t.type.micro, "left", ui.t.alpha.muted); });
+    else ui.text(canvas, "Derived only from the declared durable capsule metrics; no hidden events or profile data.", x + 24, y + 286, ui.t.type.micro, "left", ui.t.alpha.muted);
   }
 
   function replayInfo(view: ReplayScreenView): void {

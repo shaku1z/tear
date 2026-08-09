@@ -218,7 +218,7 @@ describe("legacy screen renderer registry", () => {
       sections: [{ label: "CONTROLS", rows: [{ key: "padPreset", label: "Controller preset", value: "STANDARD · RECOMMENDED", kind: "cycle", note: "Balanced shoulders" }] }] });
     expect(controls.map((control) => control.action.type)).toEqual(expect.arrayContaining([
       "leaderboards.selectBoard", "leaderboards.watchReplay", "replay.jumpChapter", "replay.togglePause",
-      "replay.restart", "replay.practice", "replay.toggleInfo", "replay.exit", "settings.activate",
+      "replay.restart", "replay.practice", "replay.runDna.toggle", "replay.toggleInfo", "replay.exit", "settings.activate",
     ]));
     expect(controls.find((control) => control.action.type === "leaderboards.selectTab"))
       .toMatchObject({ y: 124, h: 34, hiddenBox: true });

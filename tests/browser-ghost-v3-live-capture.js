@@ -173,6 +173,13 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   const theaterTexts = await page.evaluate((count) => (window.__TEAR_C29_THEATER_TEXT__ ?? []).slice(count), theaterTextCount);
   assert.ok(theaterTexts.some((text) => text.includes("THEATER")), `Theater header did not render: ${theaterTexts.slice(-80).join(" | ")}`);
   assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "replay");
+  await page.mouse.click(1020, 854); // rendered C37 RUN DNA control; it projects only declared capsule metrics
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("RUN DNA · VERIFIED METRICS"), undefined, { timeout: 10000 });
+  const dnaTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
+  assert.ok(dnaTexts.some((text) => String(text).includes("FORMULA run-dna-v1 · EVIDENCE verified capsule")),
+    "Run DNA did not visibly identify its formula and verified capsule custody");
+  assert.ok(dnaTexts.some((text) => String(text).includes("UNAVAILABLE · no declared run-dna-metrics-v1 result")),
+    "Run DNA inferred metrics instead of exposing the actual capsule declaration gap");
   await page.mouse.click(892, 854); // rendered C37 COACH control; it has no implicit baseline
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("COACH · SELECTED VERIFIED PAIR"), undefined, { timeout: 10000 });
   await page.waitForTimeout(180); // local Vault candidates arrive through the normal browser reader

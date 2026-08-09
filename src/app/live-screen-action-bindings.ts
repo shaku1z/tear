@@ -88,6 +88,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "replay.coach.open": () => { ports.replay.openCoach(); },
     "replay.coach.selectBaseline": (action) => { ports.replay.selectCoachBaseline(action.id); },
     "replay.coach.practice": (action) => { ports.replay.practiceCoachFinding(action.findingId); },
+    "replay.runDna.toggle": () => { ports.replay.toggleRunDna(); },
     "replay.toggleInfo": () => { ports.replay.toggleInfo(); }, "replay.speed": (action) => { ports.replay.setSpeed(action.value); },
     "replay.exit": () => { ports.replay.exit(); }, "playground.action": (action) => { ports.dispatchPlayground(action.id); },
     "codex.selectTab": (action) => { ports.library.selectCodexTab(action.id); },

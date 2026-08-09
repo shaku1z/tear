@@ -193,6 +193,12 @@ export interface ReplayScreenView {
     readonly findings: readonly Readonly<{ id: string; domain: string; detail: string; practiceAvailable: boolean }>[];
     readonly unavailable: readonly string[];
   }>;
+  /** C37 verified, immutable Run DNA projection; absent metrics remain explicitly unavailable. */
+  readonly runDna?: Readonly<{
+    readonly available: boolean; readonly formulaVersion: string; readonly evidenceCustody: string;
+    readonly sourceMetrics: Readonly<Record<string, number | undefined>>;
+    readonly dimensions?: Readonly<Record<string, number>>; readonly unavailable: readonly string[];
+  }>;
 }
 export interface SettingRowView {
   readonly key: string; readonly label: string; readonly value: string; readonly kind: "stepper" | "toggle" | "cycle";
