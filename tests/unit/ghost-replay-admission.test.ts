@@ -7,6 +7,10 @@ import {
   createLiveGhostBootstrapEvent,
   createMemoryGhostVaultBackend,
   ghostLiveBootstrapEventId,
+  mapGhostCapsuleToReplayEnvelope,
+  preflightGhostRecordedCanonicalSnapshot,
+  verifyGhostCapsuleProductionReplay,
+  createGhostProductionReplaySession,
 } from "../../src/ghost";
 import { stableVerificationHash } from "../../src/replay/hash";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
@@ -19,6 +23,8 @@ import {
   type TearCausalEventV1,
   type TearCodecWorld,
   type TearSnapshotV1,
+  createProductionHeadlessEnvironment,
+  type TearScenarioV1,
   validateTearContract,
 } from "../../src/tearbench";
 import {
@@ -296,5 +302,55 @@ describe("Ghost V3 replay admission", () => {
     });
     expect(staleConfigHash).toMatchObject({ status: "rejected" });
     if (staleConfigHash.status === "rejected") expect(staleConfigHash.reason).toMatch(/configuration hash/u);
+  });
+
+  it("preflights every recorded canonical keyframe in an isolated codec world before state seeking", () => {
+    const environment = createProductionHeadlessEnvironment();
+    const scenario = Object.freeze({
+      format: "tear-contract", kind: "scenario", schemaVersion: 1,
+      id: "c40-codec-preflight", version: 1, description: "real C30 checkpoint",
+      stateClass: "recorded-canonical", executionClass: "training", seed: "c40-codec-preflight-seed",
+      start: Object.freeze({ mode: "endless", difficulty: "normal", weapon: "sword" }), maxTicks: 12,
+      assertions: Object.freeze(["runtime.finite-state"] as const), tags: Object.freeze(["c30", "c40"] as const),
+    } as const) satisfies TearScenarioV1;
+    environment.reset(scenario);
+    environment.step([]);
+    const snapshot = environment.captureCheckpoint().snapshot;
+    environment.dispose();
+
+    const valid = preflightGhostRecordedCanonicalSnapshot(snapshot);
+    if (!valid.ok) throw new Error(valid.reason);
+    expect(valid).toMatchObject({ ok: true, exactHash: snapshot.hashes.exact, semanticHash: snapshot.hashes.semantic });
+
+    // The preflight accepts only data that a fresh versioned registry can
+    // restore. A hostile prototype never reaches a production composition.
+    const hostile = {
+      ...snapshot,
+      state: { ...snapshot.state, "tear.world.v1": new Date("2026-01-01T00:00:00.000Z") },
+    } as unknown as TearSnapshotV1;
+    expect(preflightGhostRecordedCanonicalSnapshot(hostile)).toMatchObject({ ok: false });
+
+    // Reference graph failures are caught from the disposable staging world.
+    const danglingReference = {
+      ...snapshot,
+      state: { ...snapshot.state, "tear.world.v1": { targetId: "not-an-entity" } },
+    } as unknown as TearSnapshotV1;
+    expect(preflightGhostRecordedCanonicalSnapshot(danglingReference)).toMatchObject({ ok: false });
+
+    const mapped = mapGhostCapsuleToReplayEnvelope({
+      manifest: { id: "hostile-preflight" },
+      tracks: { commands: [], rng: [], events: [], results: [], keyframes: [{ kind: "keyframes", tick: snapshot.tick, value: hostile }], presentation: [] },
+      maxTick: snapshot.tick,
+    } as never);
+    expect(mapped.accepted.snapshots).toBe(0);
+    expect(mapped.ghost.trident.state).toMatchObject({ available: false, seekable: false });
+    expect(mapped.issues).toContainEqual(expect.objectContaining({ track: "keyframes" }));
+    const hostileCapsule = {
+      manifest: { id: "hostile-preflight" },
+      tracks: { commands: [], rng: [], events: [], results: [{ kind: "results", tick: snapshot.tick, value: { nope: true } }], keyframes: [{ kind: "keyframes", tick: snapshot.tick, value: hostile }], presentation: [] },
+      maxTick: snapshot.tick,
+    } as never;
+    expect(verifyGhostCapsuleProductionReplay(hostileCapsule)).toMatchObject({ status: "unavailable" });
+    expect(() => createGhostProductionReplaySession(hostileCapsule)).toThrow(/requires verified authoritative receipts \(unavailable\)/u);
   });
 });

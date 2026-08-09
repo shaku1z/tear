@@ -211,6 +211,15 @@ This is the migration checklist for the architectural redesign. A checked featur
    an exactly equal tick-120 terminal artifact; malformed traces, surgical state,
    and snapshot/scenario mismatches fail closed. This is not persistence,
    worker-job recovery, or a draft/reward-route checkpoint claim. C30 also has
+   Every recorded-canonical keyframe now additionally passes an all-or-nothing
+   isolated versioned-codec restore and declared exact/semantic-hash preflight
+   before C29 can treat its state track as seekable. The preflight has no
+   production-world composition or hydration; hostile codec values, prototypes,
+   references, and hash mismatches make the entire state track unavailable, so
+   production verification/session opening refuses before source-world work.
+   The real C30 checkpoint remains an equal-hash restore proof. This is a
+   pre-admission hardening boundary, not C40 certification or browser evidence.
+   C30 also has
    a versioned, forced-GC five-cycle developer-host observation: 160 natural
    600-tick episodes / 96,000 fixed steps completed with identical repeat hashes,
    2.4 MiB retained heap, and 610.4 episodes/minute on the declared local host.

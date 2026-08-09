@@ -2,6 +2,13 @@ import { hasMonotonicEnvelopes } from "../domain/envelopes";
 import { normalizeGameAction } from "../input/game-action";
 import type { ReplayActionEnvelope } from "../replay/envelope";
 import type { TearCausalEventV1, TearSnapshotV1 } from "../tearbench/contracts";
+import {
+  createDefaultStateCodecRegistry,
+  restoreSnapshotTransactionally,
+  type TearCodecIssue,
+  type TearCodecWorld,
+  type TearWorldFactory,
+} from "../tearbench/state-codecs";
 import { validateTearContract } from "../tearbench/validation";
 import type { GhostCapsuleEntry, GhostReadCapsule } from "./capsule-reader";
 import { createGhostV3, GhostTimeline, type GhostEnvelopeV3, type GhostReplayTrident } from "./truth-kernel";
@@ -65,23 +72,78 @@ function recordedCanonicalSnapshot(value: unknown): TearSnapshotV1 | undefined {
   return contract.value;
 }
 
+function isolatedCodecFactory(): TearWorldFactory {
+  return Object.freeze({
+    createEmpty: (): TearCodecWorld => ({ components: new Map(), references: new Map(), entityIds: new Set() }),
+    // This boundary intentionally validates only the versioned State Forge
+    // contract. Production hydration has host-owned constructors and must not
+    // be used to decide whether untrusted capsule bytes are admissible.
+    validate: () => [],
+  });
+}
+
+function issueText(issues: readonly TearCodecIssue[]): string {
+  return issues
+    .map((entry) => `${entry.codecId}:${entry.path}: ${entry.message}`)
+    .sort((left, right) => left.localeCompare(right))
+    .join("; ");
+}
+
+/**
+ * Replays use an all-or-nothing state-track policy: every declared canonical
+ * keyframe is restored through the versioned codec registry in a disposable
+ * data-only world before it can become seekable. This has no production-world
+ * composition, hydration, or mutation side effect. A bad keyframe makes the
+ * entire state track unavailable rather than silently seeking through a
+ * selectively trusted subset.
+ */
+export function preflightGhostRecordedCanonicalSnapshot(snapshot: TearSnapshotV1):
+  | Readonly<{ ok: true; exactHash: string; semanticHash: string }>
+  | Readonly<{ ok: false; reason: string }> {
+  const registry = createDefaultStateCodecRegistry();
+  let staged: TearCodecWorld | undefined;
+  const result = restoreSnapshotTransactionally(snapshot, registry, isolatedCodecFactory(), {
+    replace(world) { staged = world; },
+  });
+  if (!result.ok) return Object.freeze({ ok: false, reason: `codec restore rejected: ${issueText(result.issues)}` });
+  // `staged` is deliberately local. Keep this assertion explicit so future
+  // refactors cannot turn this preflight into a hidden production commit.
+  if (staged === undefined) return Object.freeze({ ok: false, reason: "codec restore made no isolated staging world" });
+  if (result.exactHash !== snapshot.hashes.exact) {
+    return Object.freeze({ ok: false, reason: "isolated codec exact hash does not match the declared keyframe hash" });
+  }
+  if (result.semanticHash !== snapshot.hashes.semantic) {
+    return Object.freeze({ ok: false, reason: "isolated codec semantic hash does not match the declared keyframe hash" });
+  }
+  return Object.freeze({ ok: true, exactHash: result.exactHash, semanticHash: result.semanticHash });
+}
+
 function snapshots(entries: readonly GhostCapsuleEntry[], issues: GhostCapsuleReplayIssue[]): readonly TearSnapshotV1[] {
   const result: TearSnapshotV1[] = [];
   const ids = new Set<string>();
+  let rejected = false;
   for (const entry of entries) {
     const snapshot = recordedCanonicalSnapshot(entry.value);
     if (snapshot === undefined) {
       issue(issues, "keyframes", entry.tick, "entry is not a unique recorded-canonical snapshot contract");
+      rejected = true;
       continue;
     }
     if (snapshot.tick !== entry.tick || ids.has(snapshot.id)) {
       issue(issues, "keyframes", entry.tick, "entry is not a unique recorded-canonical snapshot contract");
+      rejected = true;
+      continue;
+    }
+    const preflight = preflightGhostRecordedCanonicalSnapshot(snapshot);
+    if (!preflight.ok) {
+      issue(issues, "keyframes", entry.tick, `recorded-canonical keyframe failed isolated codec preflight: ${preflight.reason}`);
+      rejected = true;
       continue;
     }
     ids.add(snapshot.id);
     result.push(snapshot);
   }
-  return Object.freeze(result.sort((left, right) => left.tick - right.tick || left.id.localeCompare(right.id)));
+  return Object.freeze((rejected ? [] : result).sort((left, right) => left.tick - right.tick || left.id.localeCompare(right.id)));
 }
 
 function events(entries: readonly GhostCapsuleEntry[], issues: GhostCapsuleReplayIssue[]): readonly TearCausalEventV1[] {
@@ -138,7 +200,10 @@ export function mapGhostCapsuleToReplayEnvelope(capsule: GhostReadCapsule): Ghos
     state: Object.freeze({
       kind: "state", status: snapshotTrack.length > 0 ? "declared-unverified" : "absent", available: snapshotTrack.length > 0,
       resumable: false, seekable: snapshotTrack.length > 0,
-      reason: snapshotTrack.length > 0 ? "recorded V3 keyframes require compatible-runtime replay restoration and verification" : "no recorded-canonical keyframe contract",
+      reason: snapshotTrack.length > 0 ? "recorded V3 keyframes passed isolated codec preflight and require compatible-runtime replay restoration and verification"
+        : issues.some((entry) => entry.track === "keyframes" && entry.reason.includes("isolated codec preflight"))
+          ? "recorded V3 state track is unavailable because at least one keyframe failed isolated codec preflight"
+          : "no recorded-canonical keyframe contract",
     }),
     visual: Object.freeze({
       kind: "visual", status: visualTrack.length > 0 ? "declared-unverified" : "absent", available: visualTrack.length > 0,
