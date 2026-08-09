@@ -7,6 +7,7 @@ import type { LiveCollisionPhaseHost } from "../gameplay/combat/live-collision-p
 import type { LiveKillHost } from "../gameplay/combat/live-kill-runtime";
 import type { LiveCombatActionAdapters, LiveCombatActionContext, CombatEnemy, CombatProjectile } from "./live-combat-action-context";
 import type { LiveCollisionPhaseState } from "../gameplay/combat/live-collision-phase";
+import type { ParryProjectile } from "../gameplay/combat/blade-parry-runtime";
 
 /** Builds the detailed legacy effect/event adapters outside the application composition root. */
 export function createLiveCombatActions<
@@ -127,7 +128,7 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
   const { dependencies: d, live, ports } = context, f = ports.functions;
   const profileStats = d.profileStatsPersistence;
   const seenProjectiles = new WeakSet(), terminalProjectiles = new WeakSet();
-  const emitProjectile = (event: "spawned" | "deflected" | "owner-changed" | "hit" | "expired", shot: CombatProjectile,
+  const emitProjectile = (event: "spawned" | "deflected" | "owner-changed" | "hit" | "expired", shot: ParryProjectile,
     target?: LiveCollisionPhaseState["enemies"][number]): void => {
     if (event === "expired") {
       if (terminalProjectiles.has(shot)) return;

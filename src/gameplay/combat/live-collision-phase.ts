@@ -50,7 +50,7 @@ export interface LiveCollisionPhaseHost {
   lobExplode: (x: number, y: number) => void; splitProjectile: (projectile: ParryProjectile) => void; triggerSlowMotion: () => void;
   emitPerfectParry: () => void; makeHitEvent: (enemy: LiveEnemy, x: number, y: number) => void;
   observeProjectile(projectile: LiveProjectile): void;
-  projectileDeflected(projectile: LiveProjectile): void;
+  projectileDeflected(projectile: ParryProjectile): void;
   projectileHit(projectile: LiveProjectile, enemy: LiveEnemy): void;
   projectileExpired(projectile: LiveProjectile): void;
   makeSwingEvent: (enemy: LiveEnemy, x: number, y: number, damage: number, quality: number, mechanic?: string) => void;
