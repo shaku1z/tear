@@ -616,3 +616,16 @@ approval-ready handoff. It pins the declared bridge, decision/monitoring facts,
 inactive candidate, active rollback baseline if any, and C31 custody, and
 refuses a candidate that becomes active. It cannot promote, activate, place
 traffic, resume the schedule, or surface a policy to players.
+
+### C36 V4 atomic V3 promotion terminal
+
+Only the current disabled `v3-promotion-approval-ready` V4 head may invoke the
+existing V3 promotion boundary. Its continuation makes the active C32 pointer,
+activation history, promotion receipt/index, and a
+`v3-promotion-terminal { declarationHash, approvalHash, promotionReceiptHash }`
+binding/index one conditional commit, or writes none. The schedule remains
+disabled and this direct terminal has no scheduled-execution branch, timer,
+traffic, placement, UI, or cloud behavior. Exact retry requires both the
+terminal pointer and its retained promotion receipt to agree. The V4 test
+proves declaration/approval/bridge/candidate/pointer/custody/baseline refusal
+and planted commit-loss recovery; it is not a completed unattended lifecycle.

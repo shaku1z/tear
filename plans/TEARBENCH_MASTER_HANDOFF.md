@@ -1501,6 +1501,16 @@ approval nor successor binding/pointer before exact retry.
 REMAINING HERE: This remains a non-promotional handoff. It does not promote,
 activate, alter placement/traffic, reopen cadence, render UI, or complete C36.
 
+### V4 promotion terminal
+
+`TearFoundryV4V3PromotionExecutor` consumes only the current disabled
+approval-ready binding and invokes the established V3 promotion executor with
+an atomic continuation. Active policy/history, promotion receipt/index, and
+the `v3-promotion-terminal` V4 pointer/index commit together or not at all;
+the schedule remains disabled. This is direct terminalization, not a scheduler
+route or traffic/placement/UI/cloud capability. The binding test covers full
+lineage, refusal, commit loss, and exact retry. C36 remains open.
+
 ### C34 V3 canonical-compatible offline training custody
 
 DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,

@@ -25,6 +25,10 @@ export interface TearFoundryV3PromotionReceiptV1 {
   readonly promotedAt: string;
   readonly receiptHash: string;
 }
+export interface TearFoundryV3PromotionContinuationV1 {
+  readonly guards: (receipt: TearFoundryV3PromotionReceiptV1) => readonly Readonly<{ store: "analysis"; key: string; expected?: string }>[];
+  readonly writes: (receipt: TearFoundryV3PromotionReceiptV1) => readonly Readonly<{ store: "analysis" | "indexes"; key: string; value: string }>[];
+}
 
 function hash(value: unknown): value is string { return typeof value === "string" && HASH.test(value); }
 function timestamp(value: string): boolean { return value.trim().length > 0 && Number.isFinite(Date.parse(value)); }
@@ -54,7 +58,7 @@ export class TearFoundryV3PromotionExecutor {
     this.#jobs = jobs; this.#custody = custody;
   }
 
-  async promote(approvalHash: string, promotedAt: string): Promise<TearFoundryV3PromotionReceiptV1> {
+  async promote(approvalHash: string, promotedAt: string, continuation?: TearFoundryV3PromotionContinuationV1): Promise<TearFoundryV3PromotionReceiptV1> {
     if (!hash(approvalHash) || !timestamp(promotedAt)) throw new TypeError("Foundry V3 promotion input is invalid");
     const backend = this.#jobs.backend(), receiptKey = `${RECEIPT}${approvalHash}`, existing = await backend.get("analysis", receiptKey);
     if (existing !== undefined) {
@@ -93,9 +97,11 @@ export class TearFoundryV3PromotionExecutor {
       await backend.commitIfMatches(Object.freeze([
         guard(approvalKey, approvalRaw), guard(`foundry-job:v1:${job.id}`, jobRaw),
         guard(`foundry-job-v3-monitoring-bridge:v1:${approval.bridge.bridgeHash}`, bridgeRaw), guard(`foundry-job-decision:v1:${approval.bridge.decisionReceiptHash}`, decisionRaw), guard(`foundry-job-monitoring-entry:v1:${approval.bridge.monitoringReceiptHash}`, monitoringRaw), guard(`policy-artifact:v1:${candidate.id}`, candidateRaw), guard(ACTIVE, activeRaw), guard(receiptKey, undefined), ...custodyGuards,
+        ...(continuation?.guards(output) ?? []),
       ]), Object.freeze([
         { store: "analysis", key: ACTIVE, value: JSON.stringify(activation) }, { store: "indexes", key: `policy-activation:v1:${String(revision).padStart(12, "0")}`, value: JSON.stringify(activation) },
         { store: "analysis", key: receiptKey, value: JSON.stringify(output) }, { store: "indexes", key: `foundry-job-v3-promotion:${approvalHash}`, value: JSON.stringify(Object.freeze({ artifactHash: candidate.artifactHash, activationHash: activation.activationHash, promoted: true })) },
+        ...(continuation?.writes(output) ?? []),
       ]));
     } catch { throw new RangeError("Foundry V3 promotion lost approved current evidence"); }
     return output;

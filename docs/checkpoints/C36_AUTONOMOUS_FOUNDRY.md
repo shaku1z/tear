@@ -769,3 +769,22 @@ custody and active-candidate-baseline refusal, and a planted conditional commit
 loss with no approval or successor binding/pointer before exact retry. This is
 only an atomic evidence handoff, not a completed unattended lifecycle; C36
 remains open.
+
+## V4 atomic V3 promotion terminal
+
+The only V4 promotion path consumes a current disabled
+`v3-promotion-approval-ready` head directly. It passes the exact approved V3
+package to the dedicated promotion executor with a continuation that writes the
+C32 active pointer/history, V3 promotion receipt/index, and
+`v3-promotion-terminal { declarationHash, approvalHash, promotionReceiptHash }`
+binding/index in the same conditional Vault transaction. Thus a lost commit
+retains neither an active policy nor receipt, terminal pointer, or terminal
+index. The schedule remains disabled; this does not add scheduled execution,
+timers, traffic, placement, UI, cloud, or post-promotion monitoring work.
+
+`tests/unit/foundry-job-v3-monitoring-bridge.test.ts` proves real V2/C31/V4
+lineage success and exact retry, then rejects tampered declaration, approval,
+bridge, candidate, current pointer, custody, and active baseline evidence.
+It also plants a promotion commit loss and proves no partial write before exact
+recovery. C36 remains open: terminal promotion alone is not a complete
+unattended lifecycle or release certification.
