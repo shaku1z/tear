@@ -28,7 +28,10 @@ Complete. TearBench and Ghost 3.0 are now governed development and player infras
 - Alias cycles, tombstone reuse, unsupported builds, incomplete health metrics, and incomplete release evidence were rejected.
 - Ten thousand deterministic headless episodes completed with unique isolated semantic results.
 - Skill structural validation passed.
-- `artifacts/tearbench/release-certificate.json` records the certified hashed working-tree identity and preservation manifest hash.
+- Historical C20 certification evidence was recorded before C40's immutable
+  manifest verifier existed. It is not retained as a current certificate;
+  current release verdicts are generated from a validated evidence manifest and
+  remain untracked evidence output.
 - The canonical `pnpm check` passed from the intended worktree: 156 test files and 560 tests, production/test builds, reproducibility, packaging, test isolation, all browser journeys, agent engineering journey, input, responsive, performance, audio, standalone/CrazyGames, iframe, PWA, and both Cloudflare dry-runs.
 - A release-gate rerun exposed an intermittent prepared-wave journey race; the hook now performs the legal prepared → active → cleared lifecycle, has a permanent regression test, and passed five consecutive built-artifact journeys.
 

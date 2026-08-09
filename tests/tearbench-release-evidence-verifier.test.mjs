@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { describe, it } from "node:test";
 import { resolve } from "node:path";
-import { REQUIRED_RELEASE_EVIDENCE_IDS, REQUIRED_RELEASE_MATRIX_IDS, verifyReleaseEvidenceManifest } from "../scripts/tearbench-release-evidence-verifier.mjs";
+import { REQUIRED_RELEASE_EVIDENCE_IDS, REQUIRED_RELEASE_MATRIX_IDS, createReleaseCertificate, verifyReleaseEvidenceManifest } from "../scripts/tearbench-release-evidence-verifier.mjs";
 
 const sha = (value) => createHash("sha256").update(value).digest("hex");
 const head = "a".repeat(40);
@@ -58,5 +58,26 @@ describe("C40 immutable release evidence verifier", () => {
     const result = await verifyReleaseEvidenceManifest(manifest, runtime);
     assert.deepEqual(result.errors, []);
     assert.equal(result.verified, true);
+  });
+
+  it("emits only a schema-2 manifest-bound certificate verdict", async () => {
+    const { manifest, runtime } = fixture();
+    const verification = await verifyReleaseEvidenceManifest(manifest, runtime);
+    const certificate = createReleaseCertificate({
+      manifestPath: "artifacts/tearbench/generated/release-evidence.json",
+      verification,
+      generatedAt: "2026-01-01T00:00:00.000Z",
+    });
+    assert.deepEqual(certificate, {
+      format: "tear-release-certificate",
+      schemaVersion: 2,
+      status: "certified",
+      commit: head,
+      evidenceManifest: "artifacts/tearbench/generated/release-evidence.json",
+      worktreeFingerprint: clean,
+      errors: [],
+      generatedAt: "2026-01-01T00:00:00.000Z",
+      certificateHash: certificate.certificateHash,
+    });
   });
 });

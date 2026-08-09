@@ -108,7 +108,11 @@ function canonicalJson(value) {
 
 async function writeReleaseCertificate() {
   const manifestOption = option("--manifest");
-  const artifactPath = resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "release-certificate.json")));
+  // A certificate is a point-in-time verdict over a clean HEAD, never a
+  // repository fixture. Keep the default under generated evidence so a stale
+  // checked-in "certified" JSON object cannot be mistaken for current release
+  // approval.
+  const artifactPath = resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "release-certificate.json")));
   const manifestPath = manifestOption === undefined ? undefined : workspaceRelativePath(resolve(manifestOption));
   let verification;
   try {
