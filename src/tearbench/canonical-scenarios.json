@@ -103,5 +103,19 @@
       "executionClass": "engineering",
       "certification": "non-certifying"
     }
+  },
+  {
+    "id": "ringblade-circuit-bounce-catch-seek",
+    "description": "Forge one normal Ringblade state, build live Orbit, steer Circuit into a real world-edge bounce, return it, and verify fresh Ghost V3 production seeks at each retained receipt.",
+    "tags": ["ringblade", "throw", "circuit", "steer", "bounce", "catch", "ghost", "seek", "c40"],
+    "maxTicks": 720,
+    "testFiles": ["tests/unit/c40-ringblade-evidence-registry.test.ts"],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-c40-ringblade-circuit-ghost-seek.js",
+      "artifact": "An ephemeral sealed and verified Ghost V3 capsule with semantic Orbit-building aim/throw/remote-steer/recall commands, generic native weapon transport facts, and three fresh C29 production-world seek receipts at each retained prethrow, Circuit, steer-bounce, and postcatch state.",
+      "artifactRetention": "The browser proof verifies its capsule in an isolated test profile; it does not retain a checked-in release artifact.",
+      "executionClass": "engineering",
+      "certification": "non-certifying"
+    }
   }
 ]

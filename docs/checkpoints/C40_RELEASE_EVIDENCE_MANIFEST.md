@@ -71,3 +71,15 @@ fresh C29 production seek worlds at each retained prethrow, embedded-resolve,
 and postcatch receipt. This is narrow engineering evidence: it does not
 establish every Hammer interaction, every weapon, all input devices, a
 normal-player journey, a graveyard case, or certification.
+
+## Additional C40 engineering proof: Ringblade Circuit seek
+
+`tests/browser-c40-ringblade-circuit-ghost-seek.js` creates one Class-A State
+Forge normal Ringblade state, builds live Orbit through semantic aim movement,
+then uses semantic throw, remote steer, and recall. It observes real finite
+Circuit energy and a live native world-edge bounce before returning and
+catching the blade. It seals and verifies a forensic V3 capsule, then opens
+three fresh C29 production seek worlds at each retained prethrow, Circuit,
+steer-bounce, and postcatch receipt. This is narrow engineering evidence: it
+does not establish every Ringblade interaction, all weapons, all input devices,
+a normal-player journey, a graveyard case, or certification.

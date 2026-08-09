@@ -182,6 +182,17 @@ This is the migration checklist for the architectural redesign. A checked featur
   `spear-anchor-reel-catch-seek` remains engineering-only and non-certifying;
   it is not C40 certification or a complete weapon-coverage claim.
 
+- [x] Narrow Ringblade Circuit forensic replay evidence —
+  `browser-c40-ringblade-circuit-ghost-seek.js` starts one normal Class-A State
+  Forge Ringblade state, builds Orbit through semantic aim movement, launches
+  the real Circuit, then remotely steers it into a native world-edge bounce
+  before an explicit recall and catch. The sealed verified V3 capsule retains
+  generic native `blade.thrown`/`blade.caught` transport facts and three fresh
+  C29 seeks reproduce retained prethrow, Circuit, steer-bounce, and postcatch
+  hashes. `ringblade-circuit-bounce-catch-seek` is engineering-only and
+  non-certifying; it is neither general Ringblade coverage nor C40
+  certification.
+
 ## Game flow and modes
 
 - [x] Main menu, setup/war table and tutorial — `browser-navigation-journeys.js`, `browser-feature-matrix.js`, `browser-tutorial-journey.js`, and `training-controllers.test.ts`; setup preserves the oracle risk pips, weapon identity/rating strip, and hero START treatment through the typed live-renderer boundary while placing all public choices on one aligned row grid. The fourteen-block Cutting Room resets its task arena/state per block and never applies shop/meta upgrades. Read the Charge teaches the defensive read; Field Test then states and validates one two-step route—evade, then punish recovery—before handing off to no-wave practice. Prompts adapt to keyboard/mouse, configured controller glyphs, and touch; the browser journey completes the whole course through real semantic gameplay input.
