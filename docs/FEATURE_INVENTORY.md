@@ -380,7 +380,9 @@ This is the migration checklist for the architectural redesign. A checked featur
    it intentionally persists neither export bytes nor Firebase bearer/UID.
    The authenticated Worker rejects retry drift and out-of-topology parts, has
    owner-only status and abort/reset that clears its multipart ledger, and makes
-   only verified public/pseudonymous capsules discoverable. This is still not a
+   only finalized, verified, public pseudonymous capsules discoverable. Verified
+   unlisted capsules remain direct-ID readable but never listable/searchable.
+   This is still not a
    client transport, background sync, player UI, deployed Worker, or cloud
    completion claim. The standalone composition now carries only an optional
    HTTPS-configured C38 capability whose bearer is acquired at a later explicit

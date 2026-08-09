@@ -88,6 +88,38 @@ function environment(input: Readonly<{
   };
 }
 
+function discoveryEnvironment(input: Readonly<{
+  readonly rows: readonly Record<string, unknown>[];
+  readonly onDiscoveryQuery?: (sql: string) => void;
+}>): Env {
+  const statement = (sql: string) => ({
+    bind: () => ({
+      first: () => Promise.resolve(null),
+      all: () => Promise.resolve({ results: [] }),
+      run: () => Promise.resolve({ success: true }),
+    }),
+    all: () => {
+      input.onDiscoveryQuery?.(sql);
+      const isCanonicalDiscovery = sql.includes("status = 'finalized'")
+        && sql.includes("visibility = 'public'")
+        && sql.includes("privacy_class = 'pseudonymous'")
+        && sql.includes("verdict_json LIKE '%\"status\":\"verified\"%'");
+      return Promise.resolve({
+        results: isCanonicalDiscovery
+          ? input.rows.filter((row) => row.status === "finalized" && row.visibility === "public"
+            && row.privacy_class === "pseudonymous" && row.verdict_json === '{"status":"verified"}')
+          : [],
+      });
+    },
+  });
+  return {
+    FIREBASE_PROJECT_ID: "tear-682cf",
+    GHOST_METADATA: { prepare: statement, batch: () => Promise.resolve([]) } as unknown as D1Database,
+    GHOST_CAPSULES: {} as R2Bucket,
+    GHOST_VERIFIER: {} as Fetcher,
+  };
+}
+
 function manifest(): string {
   return JSON.stringify({
     capsuleId: "capsule-1", buildId: "tear-1", schemaVersion: 1, byteLength: 8,
@@ -273,6 +305,31 @@ describe("Ghost publication Worker Firebase owner authentication", () => {
       expect(response.status).toBe(404);
     }
     expect(reads).toBe(2);
+  });
+
+  it("keeps an unlisted verified capsule direct-ID readable but excludes it and every noncanonical state from discovery", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier() });
+    const unlisted = uploadRow({ capsule_id: "unlisted", status: "finalized", visibility: "unlisted", privacy_class: "pseudonymous", verdict_json: '{"status":"verified"}' });
+    const direct = await handler.fetch(new Request("https://publication.test/v1/capsules/unlisted/object"), environment({ row: unlisted }), context());
+    expect(direct.status).toBe(206);
+
+    let query = "";
+    const listed = await handler.fetch(new Request("https://publication.test/v1/capsules"), discoveryEnvironment({
+      rows: [
+        uploadRow({ capsule_id: "listed", status: "finalized", visibility: "public", privacy_class: "pseudonymous", verdict_json: '{"status":"verified"}' }),
+        unlisted,
+        uploadRow({ capsule_id: "private", status: "finalized", visibility: "private", privacy_class: "pseudonymous", verdict_json: '{"status":"verified"}' }),
+        uploadRow({ capsule_id: "sensitive", status: "finalized", visibility: "public", privacy_class: "sensitive", verdict_json: '{"status":"verified"}' }),
+        uploadRow({ capsule_id: "unsupported", status: "finalized", visibility: "public", privacy_class: "pseudonymous", verdict_json: '{"status":"unsupported"}' }),
+        uploadRow({ capsule_id: "uploading", status: "uploading", visibility: "public", privacy_class: "pseudonymous", verdict_json: '{"status":"verified"}' }),
+      ],
+      onDiscoveryQuery: (sql) => { query = sql; },
+    }), context());
+    expect(listed.status).toBe(200);
+    expect(await listed.json()).toEqual({ capsules: [expect.objectContaining({ capsule_id: "listed" })] });
+    expect(query).toContain("visibility = 'public'");
+    expect(query).toContain("privacy_class = 'pseudonymous'");
+    expect(query).not.toContain("'unlisted'");
   });
 
   it("allows only authorization and range for private object CORS preflight", async () => {

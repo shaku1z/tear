@@ -438,8 +438,8 @@ async function listMetadata(request: Request, env: Env, verifier: FirebaseIdToke
   const result = await env.GHOST_METADATA.prepare(
     `SELECT capsule_id, build_id, title, tags_json, visibility, verdict_json, updated_at
      FROM ghost_uploads
-     WHERE status = 'finalized' AND visibility IN ('public', 'unlisted')
-       AND privacy_class IN ('public', 'pseudonymous')
+     WHERE status = 'finalized' AND visibility = 'public'
+       AND privacy_class = 'pseudonymous'
        AND verdict_json LIKE '%"status":"verified"%'
      ORDER BY updated_at DESC LIMIT 100`,
   ).all();
