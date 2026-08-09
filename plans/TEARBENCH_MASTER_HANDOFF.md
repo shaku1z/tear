@@ -1349,6 +1349,24 @@ executor, then refreshes; no profile configuration, hashes, champion, or
 custody reaches the renderer. This neither curates, trains, evaluates,
 promotes, rolls back, nor proves an unattended cycle.
 
+### C36 browser C31 scheduler composition and V3 phase continuation
+
+DONE THIS STEP: The app-owned local scheduler now constructs the governed C31
+corpus/dataset read boundary and supplies it to the existing V3-bound executor.
+It can consequently execute a profile-declared collecting, exact
+trainer-manifest admission, bounded offline-Q launch, and one bounded resume
+without accepting raw UI input or a generic phase command. Every successful
+state-changing nonterminal action atomically rebinds the declared V3 successor;
+terminal work has no continuation.
+PROVEN BY: `tests/unit/foundry-job-scheduled-execution.test.ts` covers the
+real V3 binding/dispatcher/continuation chain
+`created -> collecting -> curating -> training -> training`, a reconstructed
+execution owner, and action-time custody revocation before manifest dispatch.
+REMAINING HERE: The C31 source in this focused lifecycle fixture is a
+governed-port double, not browser capture evidence. The scheduler remains
+local-only and neither curates/publishes, evaluates, chooses a challenger,
+activates/promotes, rolls back, or proves a full unattended Foundry cycle.
+
 ### C34 V3 canonical-compatible offline training custody
 
 DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,

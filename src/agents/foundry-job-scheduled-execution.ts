@@ -12,6 +12,7 @@ const KEY = "foundry-job-scheduled-attempt:v1:"; const HASH = /^[a-f0-9]{16}$/u;
 export interface TearFoundryScheduledAttemptV1 { readonly format: "tear-foundry-scheduled-attempt"; readonly schemaVersion: 1; readonly scheduleHash: string; readonly bindingHash: string; readonly attemptedAt: string; readonly leaseId: string; readonly phase: TearFoundryExecutionBindingV3["job"]["phase"]; readonly dueReceiptHash: string; readonly attemptHash: string; }
 function text(value: unknown): value is string { return typeof value === "string" && value.trim().length > 0; }
 function time(value: unknown): value is string { return text(value) && Number.isFinite(Date.parse(value)); }
+function nonterminal(phase: TearFoundryExecutionBindingV3["job"]["phase"]): boolean { return !["rejected", "rolled-back", "completed", "cancelled", "failed"].includes(phase); }
 function freeze(draft: Omit<TearFoundryScheduledAttemptV1, "attemptHash">): TearFoundryScheduledAttemptV1 { if (!HASH.test(draft.scheduleHash) || !HASH.test(draft.bindingHash) || !time(draft.attemptedAt) || !text(draft.leaseId) || !HASH.test(draft.dueReceiptHash)) throw new TypeError("invalid Foundry scheduled attempt"); const value = Object.freeze({ ...draft }); return Object.freeze({ ...value, attemptHash: stableVerificationHash(value) }); }
 function parse(value: unknown): TearFoundryScheduledAttemptV1 { if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("invalid Foundry scheduled attempt"); const source = value as TearFoundryScheduledAttemptV1, { attemptHash, ...draft } = source, parsed = freeze(draft); if (attemptHash !== parsed.attemptHash) throw new TypeError("Foundry scheduled attempt integrity mismatch"); return parsed; }
 /** Explicit local one-shot composition. It owns no loop: callers must invoke one exact bound phase themselves. */
@@ -30,7 +31,12 @@ export class TearFoundryScheduledExecution {
     else if (binding.payload.kind === "trainer-manifest") due = await this.#dispatcher.runManifestAdmissionDueOnce(scheduleHash, binding.payload.manifest, at, budgets, leaseId);
     else if (binding.payload.kind === "offline-launch") { const offline = binding.payload.offline; due = await this.#dispatcher.runOfflineTrainingDueOnce(scheduleHash, Object.freeze({ training: offline.training, manifestHash: offline.manifestHash, manifestRootHash: offline.manifestRootHash, datasetHash: offline.datasetHash, planHash: offline.planHash, configurationHash: offline.configurationHash, rewardHash: offline.rewardHash }), at, budgets, leaseId); }
     else due = await this.#dispatcher.runOfflineResumeDueOnce(scheduleHash, binding.payload.launchHash, at, budgets, leaseId);
-    const next = await this.#jobs.get(schedule.jobId); if (due.disposition === "collected") { if (next === undefined || next.jobHash === schedule.jobHash) throw new RangeError("Foundry scheduled execution retained no successor"); await this.#continuation.continueBoundAttempt(scheduleHash, binding.bindingHash, job, next, due, at, budgets); }
+    const next = await this.#jobs.get(schedule.jobId);
+    // Only a successful, state-changing nonterminal action has an exact V3
+    // successor to rebind. A terminal or no-op receipt must not invent one.
+    if (due.disposition === "collected" && next !== undefined && next.jobHash !== job.jobHash && nonterminal(next.phase)) {
+      await this.#continuation.continueBoundAttempt(scheduleHash, binding.bindingHash, job, next, due, at, budgets);
+    }
     const output = freeze({ format: "tear-foundry-scheduled-attempt", schemaVersion: 1, scheduleHash, bindingHash: binding.bindingHash, attemptedAt: at, leaseId, phase: binding.job.phase, dueReceiptHash: due.receiptHash });
     await this.#jobs.backend().commit(Object.freeze([{ store: "analysis", key, value: JSON.stringify(output) }, { store: "indexes", key: `foundry-job-scheduled-attempt:${scheduleHash}:${output.attemptHash}`, value: JSON.stringify(Object.freeze({ bindingHash: binding.bindingHash, phase: binding.job.phase, dueReceiptHash: due.receiptHash })) }])); return output;
   }

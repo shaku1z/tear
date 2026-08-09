@@ -488,3 +488,26 @@ or custody data; blocked profiles have no enabled launch control.
 This remains authority admission only: it does not curate C31 data, execute
 work beyond bootstrap, train/evaluate, mutate a C32 policy, promote/roll back,
 or prove an unattended cycle.
+
+## Browser C31 scheduler composition and phase continuation
+
+The app-owned local scheduler now constructs the same governed C31 read
+boundary as the Foundry launch screen: custody, quality, curation, split,
+reviewed-sample, published corpus, and `TearAcademyTrainingDatasetLoader`. It
+passes that boundary to `TearFoundryScheduledExecution`; a declared immutable
+V3 binding may therefore lawfully dispatch its already-authorized collecting,
+trainer-manifest admission, bounded offline launch, and one checkpoint-resume
+phase. The scheduler still cannot curate or publish C31 material, alter a
+launch profile/binding, contact cloud, or activate/promote a policy.
+
+After every successful state-changing nonterminal phase, scheduled execution
+atomically continues the exact V3 binding to its declared successor. This
+includes manifest admission, offline launch, and each bounded training resume,
+not only collection. A terminal result has no continuation. The focused V3
+fixture now proves `created -> collecting -> curating -> training -> training`
+through separately reconstructed execution owners; an action-time custody
+revocation after that restart is blocked before manifest dispatch and leaves
+the durable collecting head unchanged. The fixture uses a governed-port test
+double for its pre-published C31 bytes, so it is integration evidence for the
+real scheduler/binding/dispatcher path, not a claim of browser IndexedDB C31
+capture or of a complete unattended cycle.
