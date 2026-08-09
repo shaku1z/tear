@@ -537,3 +537,27 @@ revocation before finalization leaves both the training head and source
 schedule unchanged. `tests/unit/foundry-job-offline-training-finalization.test.ts`
 proves a stopped-divergence finalizes only to `rejected`, with no model or
 evaluation/online binding.
+
+## V4 online-launch authority (retained, not executed)
+
+The V4 `evaluation-ready` binding can now be replaced only by a separate
+immutable online-launch authority. It carries the complete typed
+`TearFoundryOnlineTrainingRequestV1`, but that request never enters a
+scheduled wake. Declaration pins the exact persisted launch-profile bytes,
+bootstrap receipt, post-bootstrap evaluating job, cadence revision, source V4
+binding, evaluation-readiness receipt, and action-time C31 custody bytes in
+one conditional Vault transaction. It produces an immutable handoff receipt
+and an opaque `online-launch-ready` V4 payload containing only the authority
+and receipt hashes.
+
+Historical jobs/profiles without that authority, changed profile/bootstrap/
+readiness/custody bytes, a stale source binding, or a malformed record fail
+closed. An exact retry returns the same retained authority and handoff. A
+scheduled wake can record the no-execution state, but cannot accept a raw
+request, create a C30 online-Q checkpoint, advance online training, evaluate
+a candidate, alter the registry, or promote a policy. Actual online-Q
+execution remains explicitly open for a later authorized slice.
+
+`tests/unit/foundry-job-v4-online-launch-authority.test.ts` proves atomic
+handoff, exact retry, opaque scheduled retention, no online-launch artifact,
+and refusal after changed custody/profile/readiness/source-binding authority.

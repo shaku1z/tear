@@ -34,6 +34,13 @@ function receipt(draft: Omit<TearFoundryBootstrapReceiptV1, "receiptHash">): Tea
   if (![draft.jobHash, draft.manifestHash, draft.manifestRootHash, draft.scheduleHash, draft.bindingHash].every(hash) || !time(draft.bootstrappedAt)) throw new TypeError("invalid Foundry bootstrap receipt");
   return Object.freeze({ ...draft, receiptHash: stableVerificationHash(draft) });
 }
+/** Parses an immutable bootstrap receipt before a later phase may bind to it. */
+export function parseTearFoundryBootstrapReceipt(value: unknown): TearFoundryBootstrapReceiptV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("invalid Foundry bootstrap receipt");
+  const source = value as TearFoundryBootstrapReceiptV1, { receiptHash, ...draft } = source, parsed = receipt(draft);
+  if (receiptHash !== parsed.receiptHash) throw new TypeError("Foundry bootstrap receipt integrity mismatch");
+  return parsed;
+}
 function exactManifest(manifest: TearAcademyCorpusManifestV1 | undefined, request: TearFoundryBootstrapRequestV1, job: TearFoundryJobV1): boolean {
   if (manifest?.id !== request.manifest.id || manifest.reader.kind !== "trainer" || manifest.reader.id !== request.manifest.trainerId || manifest.version !== request.manifest.version
     || manifest.manifestHash !== request.manifest.manifestHash || manifest.rootHash !== request.manifest.rootHash || manifest.entries.length < 1

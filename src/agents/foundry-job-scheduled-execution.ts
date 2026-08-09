@@ -32,6 +32,10 @@ export class TearFoundryScheduledExecution {
     // a later scheduler knows about V4.
     const v4 = await new TearFoundryExecutionBindingV4Vault(this.#jobs).current(schedule);
     if (v4 !== undefined) {
+      if (v4.payload.kind === "online-launch-ready") {
+        const output = freeze({ format: "tear-foundry-scheduled-attempt", schemaVersion: 1, scheduleHash, bindingHash: v4.bindingHash, attemptedAt: at, leaseId, phase: v4.job.phase, dueReceiptHash: stableVerificationHash({ kind: "v4-online-launch-ready-no-execution", authorityHash: v4.payload.authorityHash, handoffReceiptHash: v4.payload.handoffReceiptHash, at }) });
+        await this.#jobs.backend().commit(Object.freeze([{ store: "analysis", key, value: JSON.stringify(output) }])); return output;
+      }
       const corpus = this.#corpus, loader = this.#loader; if (corpus === undefined || loader === undefined) throw new TypeError("Foundry V4 terminal execution requires shared C31 corpus and dataset loader");
       const terminal = new TearFoundryV4OfflineTerminalScheduler(this.#jobs, this.#schedules, this.#custody, corpus, loader);
       const next = v4.payload.kind === "offline-resume" ? await terminal.detect(schedule, v4) : v4.payload.kind === "offline-finalization" ? await terminal.finalize(schedule, v4, at) : undefined;
