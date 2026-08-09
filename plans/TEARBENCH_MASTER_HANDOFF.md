@@ -1388,6 +1388,27 @@ paired evaluation, build/admit a C32 candidate, route/activate/promote a
 policy, contact cloud, or prove an unattended cycle. The test remains a
 governed C31-port integration fixture, not browser capture evidence.
 
+### C36 V4 online terminalization
+
+DONE THIS STEP: A current V4 `online-resume` binding now admits terminalization
+only for its named retained C30 launch/checkpoint. Running leaves the V4 head
+unchanged and cannot execute C30. A terminal checkpoint first becomes an
+opaque `online-finalization` binding; on the next wake the guarded finalizer
+atomically retains C30 result + paired-readiness receipt + successor + cadence
+and, for completion only, a new `evaluation-ready` V4 pointer. Stopped C30
+terminalization atomically rejects and disables cadence without emitting an
+evaluation pointer. All root authority/handoff/source/profile/bootstrap/
+readiness/launch/checkpoint/custody bytes are conditionally guarded.
+PROVEN BY: `tests/unit/foundry-job-offline-training-finalization.test.ts` uses
+the full offline-to-V4 authority/launch/C30/terminal path for both complete and
+stopped results; terminal detection does not run a second C30 advance, a
+planted finalization loss leaves no partial result/job, exact recovery either
+retains a stopped result/rejects/disables with no pointer or writes a completed
+result and exact paired-readiness V4 pointer/rebound cadence.
+REMAINING HERE: No paired source evaluation, candidate creation, promotion,
+rollback, cloud contact, human calibration, or unattended product loop is
+claimed by this slice.
+
 ### C34 V3 canonical-compatible offline training custody
 
 DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,

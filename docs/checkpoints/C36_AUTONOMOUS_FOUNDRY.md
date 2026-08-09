@@ -617,3 +617,36 @@ pointer. A planted post-executor conditional-commit loss leaves no new job or
 checkpoint, and a reconstructed scheduler retries the same claimed launch.
 It also proves the normal no-policy boundary. Online terminalization and all
 subsequent evaluation/policy work remain separate work.
+
+## V4 online terminalization
+
+`online-resume` now names one retained C30 launch and checkpoint. A scheduler
+wake first revalidates the exact authority/handoff, original declared
+evaluation-ready source, current successor job/pointer, immutable profile,
+bootstrap and readiness receipts, persisted launch/checkpoint bytes, and
+action-time C31 custody. A running checkpoint leaves that head untouched and
+does not invoke C30. A terminal checkpoint alone may be replaced by an opaque
+`online-finalization` binding that repeats those guards on the later wake.
+
+That later wake extends the online finalization executor with a guarded
+continuation: the terminal C30 result, paired-readiness receipt, job successor,
+cadence rebind, and (only for completion) new `evaluation-ready` V4 pointer
+are committed in one conditional transaction. A stopped C30 result instead
+creates the rejected successor and disables the schedule in that same
+transaction; it writes no evaluation-ready binding. A lost pre-finalization
+guard writes neither the result nor successor/pointer, so restarting cannot
+mistake a partial result for readiness. This boundary cannot execute paired
+evaluation, construct/admit a candidate, activate/promote/rollback a policy,
+or contact cloud.
+
+The real-lineage schedule tests now prove both terminal dispositions through
+V4 launch: terminal detection never advances C30 again; a planted guarded-
+transaction loss leaves no partial result/job; then exact recovery either
+retains the stopped C30 result, rejects/disables cadence with no V4 evaluation
+pointer, or retains the completed C30 result, rebinding cadence to an exact
+`evaluation-ready` V4 pointer. They also preserve the planted execution-race/
+no-policy evidence.
+PROVEN BY: `tests/unit/foundry-job-offline-training-finalization.test.ts`.
+REMAINING HERE: the focused custody port is still a governed integration double,
+not browser capture evidence. This does not prove paired source evaluation,
+candidate admission, promotion, cloud behavior, or a fully unattended cycle.

@@ -87,6 +87,7 @@ export * from "./foundry-job-v4-offline-terminal";
 export * from "./foundry-job-v4-online-launch-authority";
 export * from "./foundry-job-v4-online-launch-scheduler";
 export * from "./foundry-job-v4-online-execution-scheduler";
+export * from "./foundry-job-v4-online-terminal";
 export * from "./foundry-job-due-dispatcher";
 export * from "./tearbot-ladder-evaluation";
 export * from "./tearbot-v3-canonical-evaluation";
