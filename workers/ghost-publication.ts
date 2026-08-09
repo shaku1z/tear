@@ -508,8 +508,12 @@ async function listMetadata(request: Request, env: Env, verifier: FirebaseIdToke
   if (own) {
     const actor = await owner(request, verifier);
     const result = await env.GHOST_METADATA.prepare(
-      `SELECT capsule_id, build_id, title, tags_json, visibility, status, verdict_json, updated_at
-       FROM ghost_uploads WHERE owner_id = ? ORDER BY updated_at DESC LIMIT 100`,
+      // This is deliberately custody metadata, not an object listing.  It is
+      // sufficient for an explicit foreground owner recovery to bind the one
+      // download it intends to import, while omitting deleting/deleted rows.
+      `SELECT capsule_id, build_id, schema_version, byte_length, content_hash, result_hash,
+        title, tags_json, visibility, privacy_class, status, verdict_json, active_verdict_id, updated_at
+       FROM ghost_uploads WHERE owner_id = ? AND status NOT IN ('deleting', 'deleted') ORDER BY updated_at DESC LIMIT 100`,
     ).bind(actor).all();
     return json({ capsules: result.results });
   }

@@ -814,3 +814,16 @@ submission, account lookup, raw replay/action view, consent/training change,
 publication, or transport path; unhealthy sources are unavailable. The screen
 explicitly names its excluded data and no-training/no-cloud/no-submission
 boundary. Focused unit and renderer evidence preserve this local UI boundary.
+
+### C38 explicit foreground owner recovery
+
+The authenticated own-capsule catalog now carries immutable recovery custody
+metadata while excluding deleting/deleted rows. A separate foreground-only
+owner-recovery service obtains a fresh bearer for each catalog/object request,
+admits only finalized verified-cleared exact verdict metadata, requires one
+full 200 object response (never a range), bounds bytes, verifies SHA-256 and
+strict UTF-8, and imports/reopens only through the local Vault's existing
+schema/root validation. Exact existing custody is idempotent; absent cloud
+records are explicit and conflicting local custody refuses. It retains no
+cloud catalog metadata or object bytes outside Vault and creates no scan,
+timer, autosync, normal UI, deploy, or account-lifecycle behavior.

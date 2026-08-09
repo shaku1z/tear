@@ -53,11 +53,13 @@ function environment(input: Readonly<{
   readonly onCreate?: () => void;
   readonly onAbort?: () => void;
   readonly onGet?: () => void;
+  readonly catalogRows?: readonly Record<string, unknown>[];
+  readonly onCatalogQuery?: (sql: string) => void;
 }> = {}): Env {
   const statement = (sql: string) => ({
     bind: (...values: unknown[]) => ({
       first: () => Promise.resolve(input.row ?? null),
-      all: () => Promise.resolve({ results: sql.includes("ghost_upload_parts") ? input.parts ?? [] : [] }),
+      all: () => { if (sql.includes("FROM ghost_uploads WHERE owner_id")) { input.onCatalogQuery?.(sql); return Promise.resolve({ results: input.catalogRows ?? [] }); } return Promise.resolve({ results: sql.includes("ghost_upload_parts") ? input.parts ?? [] : [] }); },
       run: () => Promise.resolve({ success: true }),
       sql,
       values,
@@ -318,6 +320,18 @@ describe("Ghost publication Worker Firebase owner authentication", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(await response.json()).toEqual({ capsuleId: "capsule-1", status: "uploading", byteLength: 8, partCount: 1,
       parts: [{ partNumber: 1, etag: "one" }, { partNumber: 4, etag: "four" }] });
+  });
+
+  it("returns authenticated own recovery custody metadata but excludes deleting and deleted rows in SQL", async () => {
+    let query = "";
+    const handler = createGhostPublicationHandler({ verifier: verifier() });
+    const response = await handler.fetch(request("/v1/capsules?scope=own"), environment({
+      catalogRows: [uploadRow({ status: "finalized", verdict_json: "{\"status\":\"verified\"}" })], onCatalogQuery: (sql) => { query = sql; },
+    }), context());
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ capsules: [expect.objectContaining({ capsule_id: "capsule-1", schema_version: 1, byte_length: 8, content_hash: "content-hash", result_hash: "result-hash" })] });
+    expect(query).toContain("status NOT IN ('deleting', 'deleted')");
+    expect(query).toContain("active_verdict_id");
   });
 
   it("makes upload absence and non-owner status indistinguishable", async () => {
