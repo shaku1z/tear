@@ -10,6 +10,7 @@ import { TearPolicyArtifactRegistry } from "./policy-artifact-registry";
 
 const HASH = /^[a-f0-9]{16}$/u;
 const PROMOTION_KEY = "foundry-job-v3-promotion-receipt:v1:";
+const EVIDENCE_KEY = "tearbot-v3-canonical-evidence:v1:";
 
 export interface TearBotV3CanonicalEvaluationCaseV1 { readonly id: string; readonly scenario: TearScenarioV1; readonly scenarioHash: string; }
 export interface TearBotV3CanonicalEvaluationPlanV1 {
@@ -56,6 +57,41 @@ export function parseTearBotV3CanonicalEvaluationPlan(value: unknown): TearBotV3
   if (planHash !== parsed.planHash) throw new TypeError("C35 V3 canonical evaluation plan integrity mismatch"); return parsed;
 }
 
+/** Parses only a complete, self-verifying canonical report.  This is deliberately
+ * separate from execution: a player projection must never become an evaluator. */
+export function parseTearBotV3CanonicalEvaluationReport(value: unknown): TearBotV3CanonicalEvaluationReportV1 {
+  if (!record(value) || value.format !== "tearbot-v3-canonical-evaluation-report" || value.schemaVersion !== 1 || !hash(value.reportHash)
+    || !hash(value.planHash) || value.placement !== "unassigned" || value.humanCalibration !== "not-compared" || !record(value.provenance)
+    || !hash(value.provenance.approvalHash) || !hash(value.provenance.promotionReceiptHash) || !text(value.provenance.artifactId)
+    || !hash(value.provenance.artifactHash) || !hash(value.provenance.activationHash) || !hash(value.provenance.candidatePayloadHash)
+    || !Array.isArray(value.episodes) || value.episodes.length < 1 || !record(value.distribution)) throw new TypeError("invalid C35 V3 canonical evaluation report");
+  const typed = value as unknown as TearBotV3CanonicalEvaluationReportV1, { reportHash, ...draft } = typed;
+  if (stableVerificationHash(draft) !== reportHash) throw new TypeError("C35 V3 canonical evaluation report integrity mismatch");
+  return freeze(typed);
+}
+
+/** Immutable local evidence vault. It admits no report until its exact C36
+ * promotion and current C32 activation still agree, and exposes no evaluator. */
+export class TearBotV3CanonicalEvidenceVault {
+  readonly #backend: GhostVaultBackend;
+  constructor(backend: GhostVaultBackend) { this.#backend = backend; }
+  async retain(planInput: TearBotV3CanonicalEvaluationPlanV1, reportInput: TearBotV3CanonicalEvaluationReportV1): Promise<TearBotV3CanonicalEvaluationReportV1> {
+    const plan = parseTearBotV3CanonicalEvaluationPlan(planInput), report = parseTearBotV3CanonicalEvaluationReport(reportInput);
+    if (report.planHash !== plan.planHash || report.provenance.approvalHash !== plan.candidate.approvalHash || report.provenance.artifactId !== plan.candidate.artifactId || report.provenance.artifactHash !== plan.candidate.artifactHash || report.provenance.activationHash !== plan.candidate.activationHash) throw new RangeError("C35 Bot Evidence plan/report provenance mismatch");
+    const proven = await provenCandidate(this.#backend, plan);
+    if (proven.promotionReceiptHash !== report.provenance.promotionReceiptHash || proven.candidatePayloadHash !== report.provenance.candidatePayloadHash) throw new RangeError("C35 Bot Evidence current canonical provenance mismatch");
+    const key = `${EVIDENCE_KEY}${report.reportHash}`, encoded = JSON.stringify(report), existing = await this.#backend.get("analysis", key);
+    if (existing !== undefined && existing !== encoded) throw new RangeError("C35 Bot Evidence immutable collision");
+    if (existing === undefined) await this.#backend.put("analysis", key, encoded);
+    return report;
+  }
+  async get(reportHash: string): Promise<TearBotV3CanonicalEvaluationReportV1 | undefined> {
+    if (!hash(reportHash)) throw new TypeError("C35 Bot Evidence report hash is invalid");
+    const raw = await this.#backend.get("analysis", `${EVIDENCE_KEY}${reportHash}`); if (raw === undefined) return undefined;
+    try { return parseTearBotV3CanonicalEvaluationReport(JSON.parse(raw)); } catch { await this.#backend.put("quarantine", `${EVIDENCE_KEY}${reportHash}`, raw); return undefined; }
+  }
+}
+
 async function provenCandidate(backend: GhostVaultBackend, planInput: TearBotV3CanonicalEvaluationPlanV1): Promise<Readonly<{ artifactId: string; artifactHash: string; activationHash: string; approvalHash: string; promotionReceiptHash: string; candidatePayloadHash: string }>> {
   const plan = parseTearBotV3CanonicalEvaluationPlan(planInput), raw = await backend.get("analysis", `${PROMOTION_KEY}${plan.candidate.approvalHash}`);
   if (raw === undefined) throw new RangeError("C35 V3 canonical evaluation requires an exact retained C36 promotion receipt");
@@ -78,7 +114,7 @@ async function executeCase(backend: GhostVaultBackend, entry: TearBotV3Canonical
     while (!terminated && !truncated && state.tick < Math.min(entry.scenario.maxTicks, maximum)) {
       const decision = runtime.decide(state, environment.policyObservation().availableActions);
       if (decision.source !== "artifact" || decision.artifactId !== provenance.artifactId || decision.artifactHash !== provenance.artifactHash || decision.activationHash !== provenance.activationHash) throw new RangeError("C35 V3 canonical evaluation refused a non-artifact decision");
-      const actions = decision.actions as readonly GameAction[], transition = environment.step(actions);
+      const actions: readonly GameAction[] = decision.actions, transition = environment.step(actions);
       decisions.push(freeze({ tick: state.tick, stateHash: decision.stateHash, semanticActionHash: stableVerificationHash(actions), actionCount: actions.length, source: "artifact" as const, artifactId: decision.artifactId, artifactHash: decision.artifactHash, activationHash: decision.activationHash }));
       state = transition.observation; terminated = transition.terminated; truncated = transition.truncated;
     }
