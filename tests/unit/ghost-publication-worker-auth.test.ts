@@ -102,6 +102,60 @@ async function signedToken(input: Readonly<{ readonly privateKey: CryptoKey; rea
 }
 
 describe("Ghost publication Worker Firebase owner authentication", () => {
+  it("handles only allowlisted endpoint-specific preflight without authentication or storage access", async () => {
+    let verified = 0, creates = 0, batches = 0;
+    const handler = createGhostPublicationHandler({
+      allowedOrigins: ["https://game.tear.test"],
+      verifier: { verifyIdToken() { verified += 1; return Promise.resolve({ uid: uidA }); } },
+    });
+    const response = await handler.fetch(new Request("https://publication.test/v1/uploads", {
+      method: "OPTIONS",
+      headers: {
+        origin: "https://game.tear.test",
+        "access-control-request-method": "POST",
+        "access-control-request-headers": "authorization, content-type",
+      },
+    }), environment({ onCreate: () => { creates += 1; }, onBatch: () => { batches += 1; } }), context());
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-origin")).toBe("https://game.tear.test");
+    expect(response.headers.get("access-control-allow-methods")).toBe("POST");
+    expect(response.headers.get("access-control-allow-headers")).toBe("authorization, content-type");
+    expect(response.headers.get("access-control-allow-credentials")).toBeNull();
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("vary")).toBe("Origin, Access-Control-Request-Method, Access-Control-Request-Headers");
+    expect(verified).toBe(0); expect(creates).toBe(0); expect(batches).toBe(0);
+  });
+
+  it("denies null, unknown, and overbroad CORS preflight requests", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier(), allowedOrigins: ["https://game.tear.test"] });
+    for (const input of [
+      { origin: "null", method: "POST", headers: "authorization" },
+      { origin: "https://elsewhere.test", method: "POST", headers: "authorization" },
+      { origin: "https://game.tear.test", method: "DELETE", headers: "authorization" },
+      { origin: "https://game.tear.test", method: "POST", headers: "authorization, x-tear-owner" },
+    ]) {
+      const response = await handler.fetch(new Request("https://publication.test/v1/uploads", { method: "OPTIONS", headers: {
+        origin: input.origin, "access-control-request-method": input.method, "access-control-request-headers": input.headers,
+      } }), environment(), context());
+      expect(response.status).toBe(403);
+      expect(response.headers.get("access-control-allow-origin")).toBe(input.origin === "https://game.tear.test" ? input.origin : null);
+      expect(response.headers.get("access-control-allow-credentials")).toBeNull();
+    }
+  });
+
+  it("adds CORS only to an allowed actual origin, including an auth failure", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier(), allowedOrigins: ["https://game.tear.test"] });
+    const denied = await handler.fetch(new Request("https://publication.test/v1/uploads", { method: "POST", headers: { origin: "https://elsewhere.test" }, body: manifest() }), environment(), context());
+    expect(denied.status).toBe(401);
+    expect(denied.headers.get("access-control-allow-origin")).toBeNull();
+    const allowed = await handler.fetch(new Request("https://publication.test/v1/uploads", { method: "POST", headers: { origin: "https://game.tear.test" }, body: manifest() }), environment(), context());
+    expect(allowed.status).toBe(401);
+    expect(allowed.headers.get("access-control-allow-origin")).toBe("https://game.tear.test");
+    expect(allowed.headers.get("cache-control")).toBe("no-store");
+    expect(allowed.headers.get("vary")).toBe("Origin");
+    expect(allowed.headers.get("access-control-allow-credentials")).toBeNull();
+  });
+
   it("verifies Firebase JWKS signatures, issuer, audience, expiry, and opaque subject", async () => {
     const keys = await crypto.subtle.generateKey({ name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: Uint8Array.of(1, 0, 1), hash: "SHA-256" }, true, ["sign", "verify"]);
     const jwk = await crypto.subtle.exportKey("jwk", keys.publicKey);

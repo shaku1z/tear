@@ -59,6 +59,76 @@ const MAX_JSON_BYTES = 32 * 1024;
 const MAX_CAPSULE_BYTES = 512 * 1024 * 1024;
 const MAX_PARTS = 10_000;
 
+type CorsPolicy = Readonly<{ readonly methods: readonly string[]; readonly headers: readonly string[] }>;
+
+function configuredOrigins(origins: readonly string[] | undefined): ReadonlySet<string> {
+  const values = origins ?? [];
+  for (const origin of values) {
+    let parsed: URL;
+    try { parsed = new URL(origin); } catch { throw new TypeError("CORS origin must be an absolute origin"); }
+    if (parsed.origin !== origin || parsed.origin === "null") throw new TypeError("CORS origin must be an absolute origin");
+  }
+  return new Set(values);
+}
+
+function corsPolicy(request: Request): CorsPolicy | undefined {
+  const url = new URL(request.url);
+  const parts = url.pathname.split("/").filter(Boolean);
+  if (url.pathname === "/v1/uploads") return Object.freeze({ methods: ["POST"], headers: ["authorization", "content-type"] });
+  if (url.pathname === "/v1/capsules") return Object.freeze({ methods: ["GET"], headers: ["authorization"] });
+  if (parts[0] !== "v1" || parts[2] === undefined) return undefined;
+  if (parts[1] === "uploads" && parts.length === 3) return Object.freeze({ methods: ["GET"], headers: ["authorization"] });
+  if (parts[1] === "uploads" && parts[3] === "parts" && parts[4] !== undefined && parts.length === 5) return Object.freeze({ methods: ["PUT"], headers: ["authorization", "content-type"] });
+  if (parts[1] === "uploads" && parts[3] === "complete" && parts.length === 4) return Object.freeze({ methods: ["POST"], headers: ["authorization", "content-type"] });
+  if (parts[1] === "uploads" && parts[3] === "abort" && parts.length === 4) return Object.freeze({ methods: ["POST"], headers: ["authorization"] });
+  if (parts[1] === "capsules" && parts[3] === "object" && parts.length === 4) return Object.freeze({ methods: ["GET"], headers: ["range"] });
+  if (parts[1] === "capsules" && parts.length === 3) return Object.freeze({ methods: ["DELETE"], headers: ["authorization"] });
+  if (parts[1] === "capsules" && (parts[3] === "visibility" || parts[3] === "consent") && parts.length === 4) return Object.freeze({ methods: ["PATCH"], headers: ["authorization", "content-type"] });
+  return undefined;
+}
+
+function requestedHeaders(request: Request): readonly string[] | undefined {
+  const raw = request.headers.get("access-control-request-headers");
+  if (raw === null || raw.trim() === "") return [];
+  const headers = raw.split(",").map((value) => value.trim().toLowerCase());
+  return headers.some((header) => header.length === 0 || !/^[!#$%&'*+.^_`|~0-9a-z-]+$/u.test(header)) ? undefined : headers;
+}
+
+function corsHeaders(origin: string, vary: string): Headers {
+  return new Headers({
+    "access-control-allow-origin": origin,
+    "cache-control": "no-store",
+    vary,
+  });
+}
+
+function preflight(request: Request, origins: ReadonlySet<string>): Response | undefined {
+  if (request.method !== "OPTIONS" || request.headers.get("access-control-request-method") === null) return undefined;
+  const origin = request.headers.get("origin");
+  if (origin === null || origin === "null" || !origins.has(origin)) return new Response(null, { status: 403, headers: { "cache-control": "no-store", vary: "Origin" } });
+  const policy = corsPolicy(request);
+  const requestedMethod = request.headers.get("access-control-request-method")?.toUpperCase();
+  const headers = requestedHeaders(request);
+  if (policy === undefined || requestedMethod === undefined || !policy.methods.includes(requestedMethod) || headers === undefined || headers.some((header) => !policy.headers.includes(header))) {
+    return new Response(null, { status: 403, headers: corsHeaders(origin, "Origin, Access-Control-Request-Method, Access-Control-Request-Headers") });
+  }
+  const responseHeaders = corsHeaders(origin, "Origin, Access-Control-Request-Method, Access-Control-Request-Headers");
+  responseHeaders.set("access-control-allow-methods", requestedMethod);
+  if (headers.length > 0) responseHeaders.set("access-control-allow-headers", headers.join(", "));
+  responseHeaders.set("access-control-max-age", "600");
+  return new Response(null, { status: 204, headers: responseHeaders });
+}
+
+function withCors(request: Request, response: Response, origins: ReadonlySet<string>): Response {
+  const origin = request.headers.get("origin");
+  if (origin === null || origin === "null" || !origins.has(origin)) return response;
+  const headers = new Headers(response.headers);
+  headers.set("access-control-allow-origin", origin);
+  headers.set("cache-control", "no-store");
+  headers.set("vary", "Origin");
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
 function json(value: unknown, status = 200): Response {
   return Response.json(value, {
     status,
@@ -370,7 +440,7 @@ async function listMetadata(request: Request, env: Env, verifier: FirebaseIdToke
      FROM ghost_uploads
      WHERE status = 'finalized' AND visibility IN ('public', 'unlisted')
        AND privacy_class IN ('public', 'pseudonymous')
-       AND verdict_json LIKE '%\"status\":\"verified\"%'
+       AND verdict_json LIKE '%"status":"verified"%'
      ORDER BY updated_at DESC LIMIT 100`,
   ).all();
   return json({ capsules: result.results });
@@ -475,19 +545,22 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, verifier
   return json({ error: "not found" }, 404);
 }
 
-export function createGhostPublicationHandler(options: Readonly<{ verifier?: FirebaseIdTokenVerifier }> = {}): ExportedHandler<Env> {
+export function createGhostPublicationHandler(options: Readonly<{ verifier?: FirebaseIdTokenVerifier; allowedOrigins?: readonly string[] }> = {}): ExportedHandler<Env> {
+  const origins = configuredOrigins(options.allowedOrigins);
   return {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const preflightResponse = preflight(request, origins);
+    if (preflightResponse !== undefined) return preflightResponse;
     try {
       const verifier = options.verifier ?? createFirebaseIdTokenVerifier({ projectId: env.FIREBASE_PROJECT_ID });
       const response = await route(request, env, ctx, verifier);
       console.log(JSON.stringify({ message: "ghost publication request", method: request.method, path: new URL(request.url).pathname, status: response.status }));
-      return response;
+      return withCors(request, response, origins);
     } catch (error) {
       const message = error instanceof Error ? error.message : "unknown error";
       console.error(JSON.stringify({ message: "ghost publication failure", error: message, path: new URL(request.url).pathname }));
       const status = error instanceof FirebaseAuthenticationError ? 401 : error instanceof RangeError || error instanceof TypeError ? 400 : 409;
-      return json({ error: message }, status);
+      return withCors(request, json({ error: message }, status), origins);
     }
   },
   };
