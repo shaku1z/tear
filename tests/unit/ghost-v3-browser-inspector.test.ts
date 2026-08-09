@@ -11,6 +11,7 @@ describe("Ghost V3 browser inspector", () => {
       replay: () => Promise.resolve(undefined),
       admission: () => Promise.resolve(undefined),
       verify: () => Promise.resolve(undefined),
+      seek: () => Promise.resolve(undefined),
       practice: () => Promise.resolve(undefined),
       active: () => false,
       activePractice: () => null,
@@ -20,6 +21,7 @@ describe("Ghost V3 browser inspector", () => {
     expect(inspector).toBeDefined();
     expect((inspector?.manifest as () => unknown)()).toBeNull();
     await expect((inspector?.manifests as () => Promise<unknown>)()).resolves.toEqual([]);
+    await expect((inspector?.seek as () => Promise<unknown>)()).resolves.toBeUndefined();
     expect((inspector?.active as () => unknown)()).toBe(false);
     expect((inspector?.activePractice as () => unknown)()).toBeNull();
     expect((inspector?.failure as () => unknown)()).toBeNull();

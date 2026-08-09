@@ -2,8 +2,7 @@ import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; im
 import { projectCanonicalGameplayState } from "../gameplay/runtime/canonical-state"; import { blendHex as blendCol, easeOut as ez } from "../presentation/world/primitives";
 import { createLiveBrowserRuntime } from "./live-browser-runtime"; import { createLiveCampaignTrainingComposition } from "./live-campaign-training-composition"; import { createLiveCombatActions } from "./live-combat-actions";
 import { createLiveCombatComposition } from "./live-combat-composition";
-import { createLiveAuthoritativeInputAdapter } from "./live-authoritative-input-adapter";
-import { createLiveAcademyScreen, createLiveFoundryScreen, createLiveGhostLabHome, createLiveInterfaceComposition, LiveBotEvidenceController, isRunDifficultySelection, isRunModeSelection } from "./live-interface-composition";
+import { createLiveAuthoritativeInputAdapter } from "./live-authoritative-input-adapter"; import { createLiveAcademyScreen, createLiveFoundryScreen, createLiveGhostLabHome, createLiveInterfaceComposition, LiveBotEvidenceController, isRunDifficultySelection, isRunModeSelection } from "./live-interface-composition";
 import { createLiveRunOrchestration } from "./live-run-orchestration-composition";
 import { createLiveSessionServices } from "./live-session-services-composition";
 import { replayLiveStateForgeProgression } from "./live-state-forge-progression"; import { createLiveStateForgeCinematicAdvance } from "./live-state-forge-cinematic-advance";
@@ -31,7 +30,7 @@ import { emitLiveTearBenchPhysicalInput } from "../tearbench/browser/live-physic
 import { isCombatPlatform, isDodgeProjectile, isEnemySample, isGameEnemy, isGameFloater, isRitualCue, isWeaponEffect } from "./live-runtime-type-guards";
 import { createLiveStateForgeAdapter } from "./live-state-forge-adapter";
 import { createLiveStateForgeRuntimeBridge } from "./live-state-forge-runtime-bridge";
-import { forkBrowserGhostCapsulePractice, listBrowserGhostCapsuleManifests, readBrowserGhostCapsule, readBrowserGhostCapsuleReplay, readBrowserGhostCapsuleReplayAdmission, verifyBrowserGhostCapsuleProductionReplay } from "../ghost/browser-capsule-vault";
+import { forkBrowserGhostCapsulePractice, listBrowserGhostCapsuleManifests, readBrowserGhostCapsule, readBrowserGhostCapsuleReplay, readBrowserGhostCapsuleReplayAdmission, seekBrowserGhostCapsuleProductionReplay, verifyBrowserGhostCapsuleProductionReplay } from "../ghost/browser-capsule-vault";
 import { createLiveGhostCausalEvent, ghostLiveBootstrapEventId } from "../ghost/live-causal-events";
 import { createGhostV3BrowserTestOptions } from "./ghost-v3-browser-test-options";
 import { createGhostReplayRunContext, GHOST_REPLAY_CONTEXT_PROVENANCE_KEY, type GhostReplayRunContextV1 } from "../ghost/replay-admission";
@@ -644,6 +643,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       replay: (id: string) => readBrowserGhostCapsuleReplay(browserIndexedDb, id),
       admission: (id: string) => readBrowserGhostCapsuleReplayAdmission(browserIndexedDb, id),
       verify: (id: string) => verifyBrowserGhostCapsuleProductionReplay(browserIndexedDb, id),
+      seek: (id: string, tick: number) => seekBrowserGhostCapsuleProductionReplay(browserIndexedDb, id, tick),
       practice: (id: string, tick: number, mode) => forkBrowserGhostCapsulePractice(browserIndexedDb, id, tick, mode),
       active: () => ghostV3?.active === true, activePractice: ghostPracticeSession.active,
       failure: () => ghostV3?.failure ?? null,

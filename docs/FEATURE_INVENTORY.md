@@ -149,6 +149,19 @@ This is the migration checklist for the architectural redesign. A checked featur
   state through bounded semantic beats and real authoritative application
   frames. This is a replay-seek foundation, not C40 certification.
 
+- [x] Source void codec ownership and forensic replay evidence — canonical
+  identity indexing now declares only constructor-owning actor records;
+  run-owned void graph nodes plus nested Source/player platform pointers remain
+  aliases of `tear.platform.v1`, while duplicate top-level actor ids still fail
+  closed. `tearbench-state-codecs.test.ts` preserves both cases.
+  `browser-c40-source-void-ghost-seek.js` uses the explicit test-build
+  `forensic-qa` recorder cadence to seal a real State Forge Source
+  collapse-to-void run with 60-tick V3 canonical keyframes, an input action,
+  and native causal event evidence; it verifies the capsule and reopens three
+  fresh C29 production compositions at tick 120 with the original authoritative
+  hash. This is a narrow Source scenario proof, not broad boss or C40
+  certification.
+
 ## Game flow and modes
 
 - [x] Main menu, setup/war table and tutorial — `browser-navigation-journeys.js`, `browser-feature-matrix.js`, `browser-tutorial-journey.js`, and `training-controllers.test.ts`; setup preserves the oracle risk pips, weapon identity/rating strip, and hero START treatment through the typed live-renderer boundary while placing all public choices on one aligned row grid. The fourteen-block Cutting Room resets its task arena/state per block and never applies shop/meta upgrades. Read the Charge teaches the defensive read; Field Test then states and validates one two-step route—evade, then punish recovery—before handing off to no-wave practice. Prompts adapt to keyboard/mouse, configured controller glyphs, and touch; the browser journey completes the whole course through real semantic gameplay input.

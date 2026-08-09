@@ -74,12 +74,22 @@ export const TEAR_REFERENCE_KEYS = Object.freeze([
 ] as const);
 const referenceKeys = new Set<string>(TEAR_REFERENCE_KEYS);
 
-function declaresIdentity(codecId: TearCodecId, key: string): boolean {
-  return key === "id" || (codecId === "tear.platform.v1" && key === "platformId");
+function declaresIdentity(codecId: TearCodecId, key: string, ownerPath: string): boolean {
+  // Stable identities are declared only by the root actor records that the
+  // hydrator constructs. Nested records (Source `campPlat`, player support
+  // platforms, and the run-owned void graph) retain ids as aliases to those
+  // canonical platform actors. Indexing every `id` recursively falsely turns
+  // a valid captured void world into hostile duplicate constructors.
+  const rootActor = ownerPath === "$" && (codecId === "tear.player.v1" || codecId === "tear.blade.v1");
+  const collectionActor = /^\$\[\d+\]$/u.test(ownerPath)
+    && (codecId === "tear.enemy.v1" || codecId === "tear.boss.v1"
+      || codecId === "tear.projectile.v1" || codecId === "tear.platform.v1");
+  return (key === "id" && (rootActor || collectionActor))
+    || (codecId === "tear.platform.v1" && key === "platformId" && collectionActor);
 }
 
-function declaresReference(codecId: TearCodecId, key: string): boolean {
-  return referenceKeys.has(key) && !declaresIdentity(codecId, key);
+function declaresReference(codecId: TearCodecId, key: string, ownerPath: string): boolean {
+  return referenceKeys.has(key) && !declaresIdentity(codecId, key, ownerPath);
 }
 
 function indexIdentitiesAndReferences(
@@ -97,8 +107,8 @@ function indexIdentitiesAndReferences(
   }
   if (value === null || typeof value !== "object") return;
   for (const [key, entry] of Object.entries(value)) {
-    if (declaresIdentity(codecId, key) && typeof entry === "string") world.entityIds.add(entry);
-    if (declaresReference(codecId, key) && typeof entry === "string") {
+    if (declaresIdentity(codecId, key, path) && typeof entry === "string") world.entityIds.add(entry);
+    if (declaresReference(codecId, key, path) && typeof entry === "string") {
       world.references.set(`${codecId}:${path}.${key}`, entry);
     }
     indexIdentitiesAndReferences(world, codecId, entry, `${path}.${key}`);
@@ -177,7 +187,7 @@ export function buildTearIdentityGraph(world: TearCodecWorld): TearIdentityGraph
     if (value === null || typeof value !== "object") return;
     for (const [key, entry] of Object.entries(value)) {
       const entryPath = `${path}.${key}`;
-      if (declaresIdentity(codecId, key) && typeof entry === "string") {
+      if (declaresIdentity(codecId, key, path) && typeof entry === "string") {
         const previous = identities.get(entry);
         if (previous === undefined) identities.set(entry, Object.freeze({ codecId, path: entryPath }));
         else if (codecId === "tear.platform.v1" && key === "platformId") {
@@ -189,7 +199,7 @@ export function buildTearIdentityGraph(world: TearCodecWorld): TearIdentityGraph
           message: `duplicate entity id ${entry}; first declared at ${previous.codecId}:${previous.path}`,
         });
       }
-      if (declaresReference(codecId, key) && typeof entry === "string") {
+      if (declaresReference(codecId, key, path) && typeof entry === "string") {
         references.set(`${codecId}:${entryPath}`, entry);
       }
       visit(codecId, entry, entryPath);

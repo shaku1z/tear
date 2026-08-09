@@ -16,6 +16,7 @@ import type { GhostCapsuleReplayMapping } from "../../ghost/capsule-replay-envel
 import type { GhostReplayAdmission } from "../../ghost/replay-admission";
 import type { GhostProductionReplayVerification } from "../../ghost/production-replay-verification";
 import type { GhostPracticeChild, GhostPracticeMode } from "../../ghost/replay-world";
+import type { GhostSeekResult } from "../../ghost/replay-world";
 import { createIndexedDbGhostVaultBackend } from "../../ghost/indexeddb-vault-backend";
 
 type LiveRuntimeBridgeWindow = Window & { __TEAR_RUNTIME_ENVIRONMENT__?: TearRuntimeBridgeFactory };
@@ -43,6 +44,7 @@ export interface GhostV3BrowserInspectorSource {
   readonly replay: (id: string) => Promise<GhostCapsuleReplayMapping | undefined>;
   readonly admission: (id: string) => Promise<GhostReplayAdmission | undefined>;
   readonly verify: (id: string) => Promise<GhostProductionReplayVerification | undefined>;
+  readonly seek: (id: string, tick: number) => Promise<GhostSeekResult | undefined>;
   readonly practice: (id: string, tick: number, mode: GhostPracticeMode) => Promise<GhostPracticeChild | undefined>;
   readonly active: () => boolean;
   /** Read-only test evidence for the player-visible C29 launch path. */
@@ -61,6 +63,7 @@ export function installGhostV3BrowserInspector(target: Window, source: GhostV3Br
       replay: source.replay,
       admission: source.admission,
       verify: source.verify,
+      seek: source.seek,
       practice: source.practice,
       active: source.active,
       activePractice: source.activePractice,

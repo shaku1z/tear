@@ -113,6 +113,16 @@ export async function verifyBrowserGhostCapsuleProductionReplay(
   return capsule === undefined ? undefined : verifyGhostCapsuleProductionReplay(capsule);
 }
 
+/** Test/build evidence reopens a fresh source-owned production composition for one seek. */
+export async function seekBrowserGhostCapsuleProductionReplay(
+  factory: IDBFactory | undefined,
+  id: string,
+  tick: number,
+): Promise<ReturnType<ReturnType<typeof createGhostProductionReplaySession>["seek"]> | undefined> {
+  const capsule = await readBrowserGhostCapsule(factory, id);
+  return capsule === undefined ? undefined : createGhostProductionReplaySession(capsule).seek(tick);
+}
+
 /** Creates a non-persistent practice child from a verified durable replay checkpoint. */
 export async function forkBrowserGhostCapsulePractice(
   factory: IDBFactory | undefined,

@@ -209,6 +209,24 @@ describe("TearBench shared state codec registry", () => {
     if (!result.ok) expect(result.issues.some((issue) => issue.message.includes("duplicate entity id enemy-1"))).toBe(true);
   });
 
+  it("treats run-owned void graph ids as aliases rather than duplicate entity declarations", () => {
+    const registry = createDefaultStateCodecRegistry();
+    const snapshot = snapshotFrom(populatedWorld());
+    const valid: TearSnapshotV1 = {
+      ...structuredClone(snapshot),
+      state: {
+        ...snapshot.state,
+        "tear.platform.v1": [{ id: "void-platform-1", platformId: "void-platform-1", x: 0, y: 0, w: 20, h: 10 }],
+        "tear.run.v1": {
+          ...(snapshot.state["tear.run.v1"] as Record<string, unknown>),
+          voidScroll: { chunks: [{ id: "void-chunk-1", platforms: [{ id: "void-platform-1" }] }] },
+        },
+      },
+    };
+    const result = restoreSnapshotTransactionally(valid, registry, factory, { replace() { /* expected */ } });
+    expect(result.ok).toBe(true);
+  });
+
   it("stages constructor/reference rebuilding off-run and rolls back a failed live commit", () => {
     const registry = createDefaultStateCodecRegistry();
     const original = populatedWorld();

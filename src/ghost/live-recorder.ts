@@ -38,6 +38,8 @@ export interface GhostLiveRecorderOptions {
 export interface BrowserGhostLiveRecorderOptions {
   readonly chunkEntries?: number;
   readonly maxPendingWrites?: number;
+  /** Test-build evidence may select an existing capture profile; production never reads this option. */
+  readonly recordingProfile?: GhostRecordingProfileId;
   readonly beforeCommit?: (operations: readonly GhostVaultWrite[]) => void | Promise<void>;
   readonly onFinalized?: GhostLiveRecorderOptions["onFinalized"];
 }
@@ -280,6 +282,7 @@ export function createBrowserGhostLiveRecorder(
     now: () => new Date().toISOString(),
     ...(options.chunkEntries === undefined ? {} : { chunkEntries: options.chunkEntries }),
     ...(options.maxPendingWrites === undefined ? {} : { maxPendingWrites: options.maxPendingWrites }),
+    ...(options.recordingProfile === undefined ? {} : { recordingProfile: options.recordingProfile }),
     ...(options.onFinalized === undefined ? {} : { onFinalized: options.onFinalized }),
     ...(worker === undefined ? {} : { worker }),
   });
