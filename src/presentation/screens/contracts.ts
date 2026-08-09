@@ -276,11 +276,23 @@ export interface FoundryScreenView {
     readonly runtimeStatus: "disabled" | "configured" | "due" | "running" | "blocked" | "error"; }>[];
 }
 
+/** Normal-build C37 hub. It projects only player-safe local routes and explicit gaps. */
+export interface GhostLabScreenView {
+  readonly id: "ghostlab";
+  readonly subtitle: string;
+  readonly routes: readonly Readonly<{
+    readonly id: "academy" | "foundry" | "vault";
+    readonly label: string;
+    readonly detail: string;
+  }>[];
+  readonly unavailable: readonly Readonly<{ readonly label: string; readonly detail: string }>[];
+}
+
 export type LegacyScreenView = MenuScreenView | SetupScreenView | PlayingScreenView | CodexScreenView
   | ShopScreenView | ProfileScreenView | AchievementsScreenView | LeaderboardsScreenView
   | ReplayScreenView | SettingsScreenView | RenameScreenView | DraftScreenView | ReserveScreenView
   | TierUpScreenView | PausedScreenView | ConfirmQuitScreenView | ContinueScreenView
-  | GameoverScreenView | WinScreenView | PlaygroundScreenView | AcademyScreenView | FoundryScreenView;
+  | GameoverScreenView | WinScreenView | PlaygroundScreenView | AcademyScreenView | FoundryScreenView | GhostLabScreenView;
 
 export type ScreenViewById<Id extends LegacyScreenId, View = LegacyScreenView> =
   View extends Readonly<{ id: infer ViewId }> ? Id extends ViewId ? View : never : never;

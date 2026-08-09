@@ -17,6 +17,13 @@ describe("live screen action bindings", () => {
     expect(refreshFoundry).toHaveBeenCalledOnce();
   });
 
+  it("opens only the declared safe Ghost Lab destinations", () => {
+    const openGhostLab = vi.fn();
+    const dispatch = createLiveScreenActionBindings({ openGhostLab } as unknown as ScreenActionBindingPorts);
+    dispatch({ type: "ghostlab.open", destination: "vault" });
+    expect(openGhostLab).toHaveBeenCalledWith("vault");
+  });
+
   it("routes only an opaque Foundry schedule toggle through the composed local controller", () => {
     const setFoundryScheduleEnabled = vi.fn(), dispatch = createLiveScreenActionBindings({ setFoundryScheduleEnabled } as unknown as ScreenActionBindingPorts);
     dispatch({ type: "foundry.schedule.enable", scheduleHash: "a".repeat(16) });

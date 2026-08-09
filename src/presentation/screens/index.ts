@@ -9,6 +9,7 @@ import { createProfileAchievementRenderers } from "./profile-achievements";
 import { createSettingsRenameRenderers } from "./settings-rename";
 import { createAcademyRenderers } from "./academy";
 import { createFoundryRenderers } from "./foundry";
+import { createGhostLabRenderers } from "./ghost-lab";
 
 export type * from "./contracts";
 
@@ -27,6 +28,7 @@ export function createLegacyScreenRenderers(context: ScreenRenderContext): Legac
   const playground = createPlaygroundRenderers(context);
   const academy = createAcademyRenderers(context);
   const foundry = createFoundryRenderers(context);
+  const ghostLab = createGhostLabRenderers(context);
 
   return {
     menu: menuSetup.menu,
@@ -52,5 +54,6 @@ export function createLegacyScreenRenderers(context: ScreenRenderContext): Legac
     pglab: playground.pglab,
     academy: academy.academy,
     foundry: foundry.foundry,
+    ghostlab: ghostLab.ghostlab,
   };
 }

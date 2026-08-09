@@ -46,3 +46,12 @@ journey now creates durable local V3 capsules, opens the ordinary Theater,
 uses its visible Coach control, explicitly chooses a rendered baseline, and
 asserts visible selected source IDs before exercising the existing immutable
 practice child path.
+
+### Normal Ghost Lab home
+
+The normal standalone main menu now exposes `GHOST LAB` as a bounded local
+home. Its only enabled routes are Academy, Foundry Status, and Ghost Vault;
+the Vault remains the existing capsule-gated path to Theater and Coach. Watch,
+State Forge, Bot Ladder, and Studio render as explicit unavailable/not-yet-
+player-safe declarations. This creates no cloud, traffic, promotion, rollout,
+or test-query route and does not claim a forensic developer Ghost Lab.

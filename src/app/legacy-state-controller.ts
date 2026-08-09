@@ -2,7 +2,7 @@ export type LegacyAppScreen =
   | "menu" | "setup" | "playing" | "paused" | "draft" | "reserve" | "tierup"
   | "settings" | "continue" | "gameover" | "win" | "replay" | "confirmquit"
   | "shop" | "codex" | "profile" | "achievements" | "leaderboards" | "rename"
-  | "pgmenu" | "pglab" | "academy" | "foundry";
+  | "pgmenu" | "pglab" | "academy" | "foundry" | "ghostlab";
 
 export interface LegacyAppSnapshot {
   readonly screen: LegacyAppScreen;
@@ -23,11 +23,11 @@ export interface LegacyTransitionContext {
 export const LEGACY_APP_SCREENS = Object.freeze([
   "menu", "setup", "playing", "paused", "draft", "reserve", "tierup", "settings", "continue",
   "gameover", "win", "replay", "confirmquit", "shop", "codex", "profile", "achievements",
-  "leaderboards", "rename", "pgmenu", "pglab", "academy", "foundry",
+  "leaderboards", "rename", "pgmenu", "pglab", "academy", "foundry", "ghostlab",
 ] as const satisfies readonly LegacyAppScreen[]);
 
 export const LEGAL_LEGACY_TRANSITIONS: Readonly<Record<LegacyAppScreen, readonly LegacyAppScreen[]>> = Object.freeze({
-  menu: ["setup", "playing", "profile", "shop", "achievements", "leaderboards", "codex", "settings", "rename", "replay", "academy", "foundry"],
+  menu: ["setup", "playing", "profile", "shop", "achievements", "leaderboards", "codex", "settings", "rename", "replay", "academy", "foundry", "ghostlab"],
   setup: ["menu", "playing", "rename"],
   playing: ["menu", "paused", "draft", "reserve", "tierup", "continue", "gameover", "win", "pgmenu", "pglab", "rename"],
   paused: ["playing", "settings", "confirmquit", "rename"],
@@ -50,6 +50,7 @@ export const LEGAL_LEGACY_TRANSITIONS: Readonly<Record<LegacyAppScreen, readonly
   pglab: ["playing", "pgmenu", "rename"],
   academy: ["menu", "rename"],
   foundry: ["menu", "rename"],
+  ghostlab: ["menu", "academy", "foundry", "profile", "rename"],
 });
 
 export class IllegalLegacyAppTransitionError extends Error {

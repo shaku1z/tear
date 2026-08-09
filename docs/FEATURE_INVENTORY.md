@@ -582,6 +582,16 @@ promotion-approval package, including any valid prior active-policy rollback
 identity. It is still only durable evidence: no registry admission, activation,
 promotion, placement, runtime traffic, or player surface is reachable.
 
+### C37 normal Ghost Lab home
+
+The normal main-menu `GHOST LAB` route is a local, typed home with exactly
+three enabled destinations: Academy, Foundry Status, and Ghost Vault. Vault
+remains the existing capsule-gated entry to Theater and Coach. Watch, State
+Forge, Bot Ladder, and Studio are visible unavailable declarations; this home
+does not expose test-only controls, cloud, traffic, placement, promotion, or
+rollout. `tests/browser-ghost-lab-home.js` proves main menu -> Ghost Lab and
+each available result state in the built standalone artifact.
+
 ### C37 verified Run DNA Theater projection
 
 The normal C29 Theater exposes a `RUN DNA` panel only as an immutable

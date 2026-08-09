@@ -14,6 +14,7 @@ import { TouchOnboardingController } from "./touch-onboarding-controller";
 
 export { createLiveAcademyScreen } from "./live-academy-screen";
 export { createLiveFoundryScreen } from "./live-foundry-screen";
+export { createLiveGhostLabHome } from "./live-ghost-lab-home";
 
 type SurfaceOptions = Parameters<typeof createLivePresentationSurface>[0];
 type SurfaceWorld = Omit<SurfaceOptions["world"], "screen">;

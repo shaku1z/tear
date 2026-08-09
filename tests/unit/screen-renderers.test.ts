@@ -87,7 +87,7 @@ describe("legacy screen renderer registry", () => {
     expectTypeOf<ReturnType<typeof createUi>>().toExtend<ScreenUiPort>();
     const registry = createLegacyScreenRenderers(createControlContext([]));
     expect(Object.keys(registry).sort()).toEqual([
-      "academy", "achievements", "codex", "confirmquit", "continue", "draft", "foundry", "gameover", "leaderboards",
+      "academy", "achievements", "codex", "confirmquit", "continue", "draft", "foundry", "gameover", "ghostlab", "leaderboards",
       "menu", "paused", "pglab", "pgmenu", "playing", "profile", "rename", "replay", "reserve",
       "settings", "setup", "shop", "tierup", "win",
     ]);
@@ -242,6 +242,21 @@ describe("legacy screen renderer registry", () => {
     manifests: [{ id: "RELEASE V2", detail: "1 governed entry · root BEEFCAFE" }] }); }).not.toThrow();
     expect(controls.find((control) => control.action.type === "navigate" && control.action.to === "menu"))
       .toMatchObject({ label: "‹  BACK" });
+  });
+
+  it("renders Ghost Lab as safe local routes and explicit unavailable operations", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.ghostlab({ id: "ghostlab", subtitle: "local routes", routes: [
+      { id: "academy", label: "ACADEMY", detail: "local custody" },
+      { id: "foundry", label: "FOUNDRY STATUS", detail: "local recovery" },
+      { id: "vault", label: "GHOST VAULT", detail: "capsule gated Theater" },
+    ], unavailable: [
+      { label: "WATCH", detail: "not player-safe" }, { label: "STATE FORGE", detail: "engineering only" },
+    ] });
+    expect(controls.filter((control) => control.action.type === "ghostlab.open").map((control) => control.action))
+      .toEqual([{ type: "ghostlab.open", destination: "academy" }, { type: "ghostlab.open", destination: "foundry" }, { type: "ghostlab.open", destination: "vault" }]);
+    expect(controls.some((control) => control.action.type === "navigate" && control.action.to === "menu")).toBe(true);
   });
 
   it("offers a semantic retry with storage guidance when Academy inspection is unavailable", () => {
