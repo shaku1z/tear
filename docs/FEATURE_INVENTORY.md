@@ -372,9 +372,17 @@ This is the migration checklist for the architectural redesign. A checked featur
    separate immutable source-evaluation receipt pairs the retained online-Q
    checkpoint against its frozen offline baseline on those same fresh C30 cases;
    the permanent thresholded fixture fails and is retained without promotion.
-   Account/
-   cloud identity and deletion, authenticated publication, deployed verification, moderation operations,
-   and cloud/player lifecycle flows remain later completion work.
+   Account/cloud identity and deletion, deployed verification, moderation operations,
+   and cloud/player lifecycle flows remain later completion work. C38 now has a
+   local-only immutable publication declaration: it binds a healthy complete
+   Vault export, manifest/root integrity, export SHA-256, exact deterministic
+   part topology SHA-256, consent/custody, and a Worker V2 part-count manifest;
+   it intentionally persists neither export bytes nor Firebase bearer/UID.
+   The authenticated Worker rejects retry drift and out-of-topology parts, has
+   owner-only status and abort/reset that clears its multipart ledger, and makes
+   only verified public/pseudonymous capsules discoverable. This is still not a
+   client transport, background sync, player UI, deployed Worker, or cloud
+   completion claim.
 
 ## Accessibility and settings
 

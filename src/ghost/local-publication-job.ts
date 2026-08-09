@@ -1,7 +1,7 @@
 import { stableVerificationHash } from "../replay/hash";
 import type { TearAcademyConsentRecordV1 } from "../agents/academy-candidate-admission";
 import { parseGhostCapsuleManifest, type GhostLocalVault, type GhostVaultBackend, type TearGhostManifest } from "./capsule-vault";
-import type { GhostPrivacyClass, GhostRunEligibilityInput, GhostVisibility } from "./cloud-publication";
+import { ghostSha256, type GhostPrivacyClass, type GhostRunEligibilityInput, type GhostVisibility } from "./cloud-publication";
 
 const JOB_PREFIX = "ghost-publication-job:v1:";
 const CUSTODY_PREFIX = "ghost-publication-custody:v1:";
@@ -24,6 +24,7 @@ export interface GhostLocalPublicationJobV1 {
   readonly id: string;
   readonly status: "queued" | "cancelled";
   readonly source: Readonly<{ capsuleId: string; manifestHash: string; rootIntegrity: string; exportHash: string; byteLength: number }>;
+  readonly workerManifest: Readonly<{ schemaVersion: number; byteLength: number; contentSha256: string; partCount: number; topologySha256: string }>;
   readonly transfer: Readonly<{ chunkCount: number; parts: readonly Readonly<{ partNumber: number; fromByte: number; toByte: number; hash: string }>[] }>;
   readonly custodyHash: string;
   readonly createdAt: string;
@@ -84,31 +85,31 @@ function sourceBinding(manifest: TearGhostManifest, exported: string): GhostLoca
     exportHash: hash16(exported), byteLength: new TextEncoder().encode(exported).byteLength });
 }
 
-function parts(exported: string, partBytes: number): GhostLocalPublicationJobV1["transfer"] {
+async function parts(exported: string, partBytes: number): Promise<GhostLocalPublicationJobV1["transfer"]> {
   if (!Number.isSafeInteger(partBytes) || partBytes < 1 || partBytes > 8 * 1024 * 1024) throw new RangeError("publication partBytes is outside local bounds");
   const bytes = new TextEncoder().encode(exported);
   const list = [] as { partNumber: number; fromByte: number; toByte: number; hash: string }[];
   for (let fromByte = 0, partNumber = 1; fromByte < bytes.byteLength; fromByte += partBytes, partNumber += 1) {
     const toByte = Math.min(bytes.byteLength, fromByte + partBytes);
-    list.push(Object.freeze({ partNumber, fromByte, toByte, hash: hash16(bytes.slice(fromByte, toByte)) }));
+    list.push(Object.freeze({ partNumber, fromByte, toByte, hash: await ghostSha256(bytes.slice(fromByte, toByte)) }));
   }
   return Object.freeze({ chunkCount: list.length, parts: Object.freeze(list) });
 }
 
 function freezeJob(draft: Omit<GhostLocalPublicationJobV1, "jobHash">): GhostLocalPublicationJobV1 {
-  const copy = Object.freeze({ ...draft, source: Object.freeze({ ...draft.source }), transfer: Object.freeze({ ...draft.transfer, parts: Object.freeze(draft.transfer.parts.map((part) => Object.freeze({ ...part }))) }) });
+  const copy = Object.freeze({ ...draft, source: Object.freeze({ ...draft.source }), workerManifest: Object.freeze({ ...draft.workerManifest }), transfer: Object.freeze({ ...draft.transfer, parts: Object.freeze(draft.transfer.parts.map((part) => Object.freeze({ ...part }))) }) });
   return Object.freeze({ ...copy, jobHash: hash16(copy) });
 }
 
 function parseJob(bytes: string): GhostLocalPublicationJobV1 {
-  const source = object(JSON.parse(bytes) as unknown), binding = source === undefined ? undefined : object(source.source), transfer = source === undefined ? undefined : object(source.transfer);
+  const source = object(JSON.parse(bytes) as unknown), binding = source === undefined ? undefined : object(source.source), workerManifest = source === undefined ? undefined : object(source.workerManifest), transfer = source === undefined ? undefined : object(source.transfer);
   if (source?.format !== "tear-ghost-local-publication-job" || source.schemaVersion !== 1 || !nonEmpty(source.id) || !["queued", "cancelled"].includes(String(source.status))
     || binding === undefined || !nonEmpty(binding.capsuleId) || !nonEmpty(binding.manifestHash) || !nonEmpty(binding.rootIntegrity) || !nonEmpty(binding.exportHash)
-    || !Number.isSafeInteger(binding.byteLength) || (binding.byteLength as number) < 1 || transfer === undefined || !Number.isSafeInteger(transfer.chunkCount)
+    || !Number.isSafeInteger(binding.byteLength) || (binding.byteLength as number) < 1 || workerManifest === undefined || workerManifest.schemaVersion !== 1 || !Number.isSafeInteger(workerManifest.byteLength) || !nonEmpty(workerManifest.contentSha256) || !Number.isSafeInteger(workerManifest.partCount) || !nonEmpty(workerManifest.topologySha256) || transfer === undefined || !Number.isSafeInteger(transfer.chunkCount)
     || !Array.isArray(transfer.parts) || transfer.parts.length !== transfer.chunkCount || !nonEmpty(source.custodyHash) || !time(source.createdAt) || !nonEmpty(source.jobHash)
     || (source.status === "cancelled" && !["cancelled-by-player", "source-or-custody-changed"].includes(String(source.cancellationReason)))) throw new TypeError("invalid local publication job");
   const job = freezeJob({ format: "tear-ghost-local-publication-job", schemaVersion: 1, id: source.id, status: source.status as "queued" | "cancelled",
-    source: Object.freeze({ capsuleId: binding.capsuleId, manifestHash: binding.manifestHash, rootIntegrity: binding.rootIntegrity, exportHash: binding.exportHash, byteLength: binding.byteLength as number }),
+    source: Object.freeze({ capsuleId: binding.capsuleId, manifestHash: binding.manifestHash, rootIntegrity: binding.rootIntegrity, exportHash: binding.exportHash, byteLength: binding.byteLength as number }), workerManifest: Object.freeze({ schemaVersion: 1, byteLength: workerManifest.byteLength as number, contentSha256: workerManifest.contentSha256, partCount: workerManifest.partCount as number, topologySha256: workerManifest.topologySha256 }),
     transfer: Object.freeze({ chunkCount: transfer.chunkCount, parts: Object.freeze(transfer.parts.map((part) => { const p = object(part); if (p === undefined || !Number.isSafeInteger(p.partNumber) || !Number.isSafeInteger(p.fromByte) || !Number.isSafeInteger(p.toByte) || !nonEmpty(p.hash) || (p.fromByte as number) < 0 || (p.toByte as number) <= (p.fromByte as number)) throw new TypeError("invalid local publication part"); return Object.freeze({ partNumber: p.partNumber as number, fromByte: p.fromByte as number, toByte: p.toByte as number, hash: p.hash }); })) }),
     custodyHash: source.custodyHash, createdAt: source.createdAt,
     ...(source.status === "cancelled" ? { cancellationReason: source.cancellationReason as "cancelled-by-player" | "source-or-custody-changed" } : {}) });
@@ -136,8 +137,10 @@ export class GhostLocalPublicationJobs {
     const custody = freezeCustody({ format: "tear-ghost-publication-custody", schemaVersion: 1, capsuleId: input.capsuleId, consent: input.custody.consent,
       privacy: input.custody.privacy, visibility: input.custody.visibility, eligibility: input.custody.eligibility, decidedAt: input.custody.decidedAt });
     if (custody.consent.cloudPublication !== "granted") throw new RangeError("cloud publication custody is not granted");
-    const source = sourceBinding(manifest, exported), id = hash16({ source, custodyHash: custody.custodyHash });
-    const job = freezeJob({ format: "tear-ghost-local-publication-job", schemaVersion: 1, id, status: "queued", source, transfer: parts(exported, input.partBytes), custodyHash: custody.custodyHash, createdAt: input.createdAt });
+    const source = sourceBinding(manifest, exported), transfer = await parts(exported, input.partBytes);
+    const workerManifest = Object.freeze({ schemaVersion: 1, byteLength: source.byteLength, contentSha256: await ghostSha256(exported), partCount: transfer.chunkCount, topologySha256: await ghostSha256(JSON.stringify(transfer.parts)) });
+    const id = hash16({ source, custodyHash: custody.custodyHash, workerManifest });
+    const job = freezeJob({ format: "tear-ghost-local-publication-job", schemaVersion: 1, id, status: "queued", source, workerManifest, transfer, custodyHash: custody.custodyHash, createdAt: input.createdAt });
     const oldJob = await this.#backend.get("uploadJobs", jobKey(id)), oldCustody = await this.#backend.get("analysis", custodyKey(input.capsuleId));
     if (oldJob !== undefined) { const existing = parseJob(oldJob); if (existing.jobHash === job.jobHash) return existing; throw new TypeError("publication job id conflicts with different durable bytes"); }
     if (oldCustody !== undefined) { const existing = parseCustody(oldCustody); if (existing.custodyHash !== custody.custodyHash) throw new RangeError("publication custody has changed; create a new explicit job after review"); }

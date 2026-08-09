@@ -14,6 +14,7 @@ describe("C38 local immutable publication jobs", () => {
   it("binds a complete healthy Vault export and is idempotent without persisting raw export or identity", async () => {
     const f = await fixture(), first = await f.jobs.enqueue(input(f.capsuleId)), retry = await f.jobs.enqueue(input(f.capsuleId));
     expect(retry).toEqual(first); expect(first.status).toBe("queued"); expect(first.transfer.parts.length).toBeGreaterThan(1);
+    expect(first.workerManifest.partCount).toBe(first.transfer.parts.length); expect(first.workerManifest.contentSha256).toMatch(/^[a-f0-9]{64}$/u);
     const stored = await f.backend.get("uploadJobs", `ghost-publication-job:v1:${first.id}`);
     expect(stored).not.toContain("commands"); expect(stored).not.toContain("bearer"); expect(stored).not.toContain("uid");
   });

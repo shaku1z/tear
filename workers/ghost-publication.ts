@@ -22,6 +22,8 @@ interface UploadRow {
   privacy_class: "public" | "pseudonymous" | "private" | "sensitive";
   eligibility_json: string;
   training_consent: number;
+  part_count: number;
+  verdict_json: string | null;
 }
 
 interface BeginBody {
@@ -37,6 +39,7 @@ interface BeginBody {
   visibility: "private" | "unlisted" | "public";
   trainingConsent: boolean;
   eligibility: Record<string, boolean>;
+  partCount: number;
 }
 
 interface CompleteBody {
@@ -97,10 +100,12 @@ function parseBegin(value: unknown): BeginBody {
   const eligibility = value.eligibility;
   const visibility = value.visibility;
   const privacy = value.privacy;
+  const partCount = value.partCount;
   if (!Number.isSafeInteger(schemaVersion) || Number(schemaVersion) < 1) throw new TypeError("invalid schemaVersion");
   if (!Number.isSafeInteger(byteLength) || Number(byteLength) < 1 || Number(byteLength) > MAX_CAPSULE_BYTES) {
     throw new TypeError("invalid byteLength");
   }
+  if (!Number.isSafeInteger(partCount) || Number(partCount) < 1 || Number(partCount) > MAX_PARTS) throw new TypeError("invalid partCount");
   if (!Array.isArray(tags) || tags.length > 12
     || tags.some((tag: unknown) => typeof tag !== "string" || tag.length > 24)) {
     throw new TypeError("invalid tags");
@@ -128,6 +133,7 @@ function parseBegin(value: unknown): BeginBody {
     visibility,
     trainingConsent,
     eligibility: Object.fromEntries(Object.entries(eligibility).map(([key, flag]) => [key, Boolean(flag)])),
+    partCount: Number(partCount),
   };
 }
 
@@ -174,7 +180,7 @@ async function loadUpload(env: Env, capsuleId: string): Promise<UploadRow | null
   return env.GHOST_METADATA.prepare(
     `SELECT capsule_id, upload_id, object_key, owner_id, status, visibility, byte_length,
       build_id, content_hash, result_hash, schema_version, title, tags_json, privacy_class,
-      eligibility_json, training_consent FROM ghost_uploads WHERE capsule_id = ?`,
+      eligibility_json, training_consent, part_count, verdict_json FROM ghost_uploads WHERE capsule_id = ?`,
   ).bind(capsuleId).first<UploadRow>();
 }
 
@@ -196,7 +202,8 @@ function immutableManifestMatches(row: UploadRow, body: BeginBody): boolean {
     && row.privacy_class === body.privacy
     && row.eligibility_json === JSON.stringify(body.eligibility)
     && row.visibility === body.visibility
-    && row.training_consent === (body.trainingConsent ? 1 : 0);
+    && row.training_consent === (body.trainingConsent ? 1 : 0)
+    && row.part_count === body.partCount;
 }
 
 function resumedBegin(row: UploadRow): Response {
@@ -225,12 +232,12 @@ async function begin(request: Request, env: Env, verifier: FirebaseIdTokenVerifi
         `INSERT INTO ghost_uploads (
           capsule_id, upload_id, object_key, owner_id, build_id, schema_version, byte_length,
           content_hash, result_hash, title, tags_json, privacy_class, eligibility_json,
-          visibility, training_consent, status, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'uploading', ?, ?)`,
+          visibility, training_consent, part_count, status, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'uploading', ?, ?)`,
       ).bind(
         body.capsuleId, multipart.uploadId, objectKey, actor, body.buildId, body.schemaVersion,
         body.byteLength, body.contentHash, body.resultHash, body.title, JSON.stringify(body.tags),
-        body.privacy, JSON.stringify(body.eligibility), body.visibility, body.trainingConsent ? 1 : 0,
+        body.privacy, JSON.stringify(body.eligibility), body.visibility, body.trainingConsent ? 1 : 0, body.partCount,
         now, now,
       ),
       env.GHOST_METADATA.prepare(
@@ -260,7 +267,7 @@ async function uploadStatus(request: Request, env: Env, capsuleId: string, verif
     "SELECT part_number, etag FROM ghost_upload_parts WHERE capsule_id = ? ORDER BY part_number ASC",
   ).bind(capsuleId).all<Readonly<{ part_number: number; etag: string }>>();
   const parts = result.results.map((part) => ({ partNumber: part.part_number, etag: part.etag }));
-  return json({ capsuleId: row.capsule_id, status: row.status, byteLength: row.byte_length, parts });
+  return json({ capsuleId: row.capsule_id, status: row.status, byteLength: row.byte_length, partCount: row.part_count, parts });
 }
 
 function assertExactPartLedger(submitted: readonly R2UploadedPart[], ledger: readonly Readonly<{ part_number: number; etag: string }>[]): void {
@@ -287,7 +294,7 @@ async function uploadPart(request: Request, env: Env, capsuleId: string, partNum
   const actor = await owner(request, verifier);
   const row = assertOwner(await loadUpload(env, capsuleId), actor);
   if (row.status !== "uploading") throw new Error("upload is not accepting parts");
-  if (!Number.isSafeInteger(partNumber) || partNumber < 1 || partNumber > MAX_PARTS || request.body === null) {
+  if (!Number.isSafeInteger(partNumber) || partNumber < 1 || partNumber > row.part_count || request.body === null) {
     throw new RangeError("invalid upload part");
   }
   const multipart = env.GHOST_CAPSULES.resumeMultipartUpload(row.object_key, row.upload_id);
@@ -304,6 +311,9 @@ async function complete(request: Request, env: Env, capsuleId: string, verifier:
   const row = assertOwner(await loadUpload(env, capsuleId), actor);
   if (row.status !== "uploading") throw new Error("upload cannot be completed");
   const body = parseComplete(await boundedJson(request));
+  if (body.parts.length !== row.part_count || body.parts.some((part) => part.partNumber > row.part_count)) {
+    throw new RangeError("completion parts do not match immutable upload topology");
+  }
   const ledger = await env.GHOST_METADATA.prepare(
     "SELECT part_number, etag FROM ghost_upload_parts WHERE capsule_id = ? ORDER BY part_number ASC",
   ).bind(capsuleId).all<Readonly<{ part_number: number; etag: string }>>();
@@ -359,6 +369,8 @@ async function listMetadata(request: Request, env: Env, verifier: FirebaseIdToke
     `SELECT capsule_id, build_id, title, tags_json, visibility, verdict_json, updated_at
      FROM ghost_uploads
      WHERE status = 'finalized' AND visibility IN ('public', 'unlisted')
+       AND privacy_class IN ('public', 'pseudonymous')
+       AND verdict_json LIKE '%\"status\":\"verified\"%'
      ORDER BY updated_at DESC LIMIT 100`,
   ).all();
   return json({ capsules: result.results });
@@ -366,7 +378,8 @@ async function listMetadata(request: Request, env: Env, verifier: FirebaseIdToke
 
 async function download(request: Request, env: Env, capsuleId: string): Promise<Response> {
   const row = await loadUpload(env, capsuleId);
-  if (row?.status !== "finalized" || row.visibility === "private") return json({ error: "not found" }, 404);
+  if (row?.status !== "finalized" || row.visibility === "private" || !["public", "pseudonymous"].includes(row.privacy_class)
+    || !row.verdict_json?.includes('"status":"verified"')) return json({ error: "not found" }, 404);
   const object = await env.GHOST_CAPSULES.get(row.object_key, { range: request.headers });
   if (object === null) return json({ error: "not found" }, 404);
   const headers = new Headers();
@@ -398,6 +411,9 @@ async function mutate(request: Request, env: Env, capsuleId: string, action: str
   if (action === "visibility") {
     const visibility = body.visibility;
     if (visibility !== "private" && visibility !== "unlisted" && visibility !== "public") throw new TypeError("invalid visibility");
+    if (visibility !== "private" && (row.privacy_class === "private" || row.privacy_class === "sensitive" || !row.verdict_json?.includes('"status":"verified"'))) {
+      throw new RangeError("only verified public or pseudonymous capsules can become discoverable");
+    }
     await env.GHOST_METADATA.prepare(
       "UPDATE ghost_uploads SET visibility = ?, updated_at = ? WHERE capsule_id = ?",
     ).bind(visibility, now, capsuleId).run();
@@ -411,6 +427,21 @@ async function mutate(request: Request, env: Env, capsuleId: string, action: str
     return json({ capsuleId, trainingConsent: body.trainingConsent });
   }
   return json({ error: "not found" }, 404);
+}
+
+/** Cancels only an in-progress multipart session. Terminal uploads are immutable. */
+async function abortUpload(request: Request, env: Env, capsuleId: string, verifier: FirebaseIdTokenVerifier): Promise<Response> {
+  const actor = await owner(request, verifier);
+  const row = assertOwner(await loadUpload(env, capsuleId), actor);
+  if (row.status !== "uploading") throw new Error("only an uploading session can be aborted");
+  await env.GHOST_CAPSULES.resumeMultipartUpload(row.object_key, row.upload_id).abort();
+  const now = new Date().toISOString();
+  await env.GHOST_METADATA.batch([
+    env.GHOST_METADATA.prepare("DELETE FROM ghost_upload_parts WHERE capsule_id = ?").bind(capsuleId),
+    env.GHOST_METADATA.prepare("UPDATE ghost_uploads SET status = 'deleted', visibility = 'private', updated_at = ? WHERE capsule_id = ? AND status = 'uploading'").bind(now, capsuleId),
+    env.GHOST_METADATA.prepare("INSERT INTO ghost_audit (actor_id, action, capsule_id, detail, created_at) VALUES (?, 'upload.abort', ?, 'multipart-aborted', ?)").bind(actor, capsuleId, now),
+  ]);
+  return json({ capsuleId, status: "deleted", aborted: true, localRetentionUnaffected: true });
 }
 
 async function route(request: Request, env: Env, ctx: ExecutionContext, verifier: FirebaseIdTokenVerifier): Promise<Response> {
@@ -430,6 +461,9 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, verifier
   }
   if (request.method === "POST" && parts[1] === "uploads" && parts[3] === "complete") {
     return complete(request, env, capsuleId, verifier);
+  }
+  if (request.method === "POST" && parts[1] === "uploads" && parts[3] === "abort") {
+    return abortUpload(request, env, capsuleId, verifier);
   }
   if (request.method === "GET" && parts[1] === "capsules" && parts[3] === "object") {
     return download(request, env, capsuleId);

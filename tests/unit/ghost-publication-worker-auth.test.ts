@@ -34,7 +34,7 @@ function uploadRow(overrides: Record<string, unknown> = {}): Record<string, unkn
   return {
     capsule_id: "capsule-1", upload_id: "upload-1", object_key: "capsules/capsule-1.ghost", owner_id: uidA,
     status: "uploading", visibility: "private", byte_length: 8, build_id: "tear-1", content_hash: "content-hash", result_hash: "result-hash",
-    schema_version: 1, title: "A run", tags_json: "[]", privacy_class: "private", eligibility_json: "{}", training_consent: 0,
+    schema_version: 1, title: "A run", tags_json: "[]", privacy_class: "private", eligibility_json: "{}", training_consent: 0, part_count: 1, verdict_json: null,
     ...overrides,
   };
 }
@@ -44,6 +44,7 @@ function environment(input: Readonly<{
   readonly parts?: readonly Record<string, unknown>[];
   readonly onBatch?: (statements: readonly unknown[]) => void;
   readonly onCreate?: () => void;
+  readonly onAbort?: () => void;
 }> = {}): Env {
   const statement = (sql: string) => ({
     bind: (...values: unknown[]) => ({
@@ -72,7 +73,7 @@ function environment(input: Readonly<{
           resumeMultipartUpload: undefined,
         };
       },
-      resumeMultipartUpload: () => ({ complete: () => Promise.resolve({ size: 8, httpEtag: "etag" }) }),
+      resumeMultipartUpload: () => ({ complete: () => Promise.resolve({ size: 8, httpEtag: "etag" }), abort: () => { input.onAbort?.(); return Promise.resolve(); } }),
     } as unknown as R2Bucket,
     GHOST_VERIFIER: {} as Fetcher,
   };
@@ -82,7 +83,7 @@ function manifest(): string {
   return JSON.stringify({
     capsuleId: "capsule-1", buildId: "tear-1", schemaVersion: 1, byteLength: 8,
     contentHash: "content-hash", resultHash: "result-hash", title: "A run", tags: [],
-    privacy: "private", visibility: "private", trainingConsent: false, eligibility: {},
+    privacy: "private", visibility: "private", trainingConsent: false, eligibility: {}, partCount: 1,
   });
 }
 
@@ -153,7 +154,7 @@ describe("Ghost publication Worker Firebase owner authentication", () => {
     }), context());
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(await response.json()).toEqual({ capsuleId: "capsule-1", status: "uploading", byteLength: 8,
+    expect(await response.json()).toEqual({ capsuleId: "capsule-1", status: "uploading", byteLength: 8, partCount: 1,
       parts: [{ partNumber: 1, etag: "one" }, { partNumber: 4, etag: "four" }] });
   });
 
@@ -187,7 +188,7 @@ describe("Ghost publication Worker Firebase owner authentication", () => {
     const handler = createGhostPublicationHandler({ verifier: verifier() });
     const body = JSON.stringify({ parts: [{ partNumber: 1, etag: "one" }, { partNumber: 2, etag: "wrong" }] });
     const response = await handler.fetch(request("/v1/uploads/capsule-1/complete", { method: "POST", body }), environment({
-      row: uploadRow(), parts: [{ part_number: 1, etag: "one" }, { part_number: 2, etag: "two" }],
+      row: uploadRow({ part_count: 2 }), parts: [{ part_number: 1, etag: "one" }, { part_number: 2, etag: "two" }],
     }), context());
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({ error: "completion parts do not exactly match durable upload ledger" });
@@ -199,5 +200,15 @@ describe("Ghost publication Worker Firebase owner authentication", () => {
       parts: [{ partNumber: 1, etag: "one" }, { partNumber: 1, etag: "one" }],
     }) }), environment({ row: uploadRow(), parts: [{ part_number: 1, etag: "one" }] }), context());
     expect(response.status).toBe(400);
+  });
+
+  it("rejects topology overflow and owner-aborts only an active multipart session", async () => {
+    let aborts = 0, batches = 0;
+    const handler = createGhostPublicationHandler({ verifier: verifier() });
+    const env = environment({ row: uploadRow(), onAbort: () => { aborts += 1; }, onBatch: () => { batches += 1; } });
+    const overflow = await handler.fetch(request("/v1/uploads/capsule-1/parts/2", { method: "PUT", body: Uint8Array.of(1) }), env, context());
+    expect(overflow.status).toBe(400);
+    const aborted = await handler.fetch(request("/v1/uploads/capsule-1/abort", { method: "POST" }), env, context());
+    expect(aborted.status).toBe(200); expect(aborts).toBe(1); expect(batches).toBe(1);
   });
 });
