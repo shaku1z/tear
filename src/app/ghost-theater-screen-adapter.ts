@@ -6,12 +6,14 @@ import type { GhostPracticeChild, GhostSeekResult } from "../ghost/replay-world"
 import type { ReplayScreenView } from "../presentation/screens/contracts";
 import type { LegacyAppScreen } from "./legacy-state-controller";
 import type { GhostPracticeLaunchResult } from "./ghost-practice-launch";
+import { projectGhostCoachPractice, type GhostCoachPracticeProjection } from "../ghost/coach-practice";
 
 export interface GhostTheaterScreenServices {
   readonly render: (view: ReplayScreenView) => void;
   readonly width: () => number;
   readonly deltaSeconds: () => number;
   readonly launchPractice: (child: GhostPracticeChild) => GhostPracticeLaunchResult;
+  readonly loadCoachCandidates: () => Promise<readonly GhostReadCapsule[]>;
 }
 
 export interface GhostTheaterScreenStatus {
@@ -32,6 +34,9 @@ interface GhostTheaterContext {
   infoVisible: boolean;
   fractionalTicks: number;
   message?: string;
+  coachOpen: boolean;
+  coachCandidates: readonly GhostReadCapsule[];
+  coach: GhostCoachPracticeProjection | undefined;
 }
 
 const TICKS_PER_SECOND = 120;
@@ -91,6 +96,17 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       ...(currentContext.message === undefined ? {} : { notice: currentContext.message }),
       theater: true,
       practiceAvailable: currentContext.checkpoints.includes(current),
+      ...(currentContext.coachOpen ? { coach: Object.freeze({
+        targetId: currentContext.capsule.manifest.id,
+        ...(currentContext.coach === undefined ? {} : { baselineId: currentContext.coach.baselineId, buildId: currentContext.coach.buildId, provenanceHash: currentContext.coach.provenanceHash }),
+        candidates: currentContext.coachCandidates.filter((candidate) => candidate.manifest.id !== currentContext.capsule.manifest.id).map((candidate) => Object.freeze({
+          id: candidate.manifest.id, enabled: true, detail: candidate.manifest.recordingProfile.toUpperCase(),
+        })),
+        findings: (currentContext.coach?.findings ?? []).map((finding) => Object.freeze({ id: finding.id, domain: finding.domain,
+          detail: `${finding.suggestedDrill.title} · TICK ${String(finding.range.fromTick)}–${String(finding.range.toTick)}`,
+          practiceAvailable: currentContext.checkpoints.includes(current),
+        })), unavailable: currentContext.coach?.unavailable ?? Object.freeze(["select one distinct healthy same-build baseline"]),
+      }) } : {}),
     });
   };
 
@@ -123,6 +139,9 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
           result,
           infoVisible: false,
           fractionalTicks: 0,
+          coachOpen: false,
+          coachCandidates: Object.freeze([]),
+          coach: undefined,
         };
         return true;
       } catch {
@@ -171,6 +190,34 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       } catch (error) {
         context.message = `Practice unavailable: ${error instanceof Error ? error.message : String(error)}`;
       }
+    },
+    openCoach(): void {
+      if (context === undefined) return;
+      context.coachOpen = true;
+      context.message = "Coach: select a distinct healthy local baseline.";
+      void services.loadCoachCandidates().then((candidates) => {
+        if (context !== undefined) context.coachCandidates = candidates;
+      }).catch(() => { if (context !== undefined) context.message = "Coach baseline list is unavailable in this browser."; });
+    },
+    selectCoachBaseline(id: string): void {
+      if (context === undefined || !context.coachOpen) return;
+      const baseline = context.coachCandidates.find((candidate) => candidate.manifest.id === id);
+      if (baseline === undefined) { context.message = "Coach baseline is not available."; return; }
+      try { context.coach = projectGhostCoachPractice(context.capsule, baseline); context.message = "Coach findings use only the selected verified same-build pair."; }
+      catch (error) { context.coach = undefined; context.message = `Coach unavailable: ${error instanceof Error ? error.message : String(error)}`; }
+    },
+    practiceCoachFinding(findingId: string): void {
+      if (context === undefined || context.coach === undefined) return;
+      const finding = context.coach.findings.find((candidate) => candidate.id === findingId);
+      if (finding === undefined) return;
+      const tick = context.result.tick;
+      if (!context.checkpoints.includes(tick)) { context.message = "Coach practice requires the current verified checkpoint."; return; }
+      try {
+        const child = context.session.forkPractice(tick, "coach-assisted");
+        context.transport.pause();
+        const launched = services.launchPractice(child);
+        context.message = launched.ok ? `Coach practice launched for ${finding.domain}; it is unranked and non-persistent.` : launched.message;
+      } catch (error) { context.message = `Coach practice unavailable: ${error instanceof Error ? error.message : String(error)}`; }
     },
     toggleInfo(): void { if (context !== undefined) context.infoVisible = !context.infoVisible; },
     setSpeed(value: number): void { if (context !== undefined && isSpeed(value)) context.transport.speed(value); },

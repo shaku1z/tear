@@ -186,6 +186,13 @@ export interface ReplayScreenView {
   /** C29 comparison is semantic source-simulation evidence, not output-device fidelity. */
   readonly comparison?: ReplayComparisonView;
   readonly notice?: string;
+  /** C37 Coach is an explicit, local same-build comparison; missing domains stay unavailable. */
+  readonly coach?: Readonly<{
+    readonly targetId: string; readonly baselineId?: string; readonly buildId?: string; readonly provenanceHash?: string;
+    readonly candidates: readonly Readonly<{ id: string; enabled: boolean; detail: string }>[];
+    readonly findings: readonly Readonly<{ id: string; domain: string; detail: string; practiceAvailable: boolean }>[];
+    readonly unavailable: readonly string[];
+  }>;
 }
 export interface SettingRowView {
   readonly key: string; readonly label: string; readonly value: string; readonly kind: "stepper" | "toggle" | "cycle";

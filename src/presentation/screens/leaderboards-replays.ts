@@ -168,10 +168,13 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     context.enqueue({ x: 552 + safe.l, y: controlY, w: 84, h: 44, label: "↺", action: { type: "replay.restart" } });
     if (view.theater) context.enqueue({ x: 644 + safe.l, y: controlY, w: 180, h: 44, label: "PRACTICE",
       enabled: view.practiceAvailable === true, action: { type: "replay.practice" } });
+    if (view.theater) context.enqueue({ x: 832 + safe.l, y: controlY, w: 120, h: 44, label: "COACH",
+      action: { type: "replay.coach.open" } });
     context.enqueue({ x: width - 420 - safe.r, y: controlY, w: 90, h: 44, label: view.infoVisible ? "HIDE" : "INFO", action: { type: "replay.toggleInfo" } });
     context.enqueue({ x: width - 320 - safe.r, y: controlY, w: 200, h: 44, label: "‹  BACK", action: { type: "replay.exit" } });
     if (view.notice) ui.text(canvas, view.notice, width / 2, barY - 34, ui.t.type.caption, "center", ui.t.alpha.muted);
     if (view.infoVisible) replayInfo(view);
+    if (view.coach) coachState(view);
   }
 
   function theaterState(view: ReplayScreenView): void {
@@ -208,6 +211,28 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     });
     ui.wrappedText(canvas, "Each row is reconstructed from its own verified source capsule. This compares semantic simulation state only; pixels, PCM, haptics, and device output are not compared here.",
       x + 34, y + panelHeight - 50, panelWidth - 68, 16, ui.t.type.micro, "left", ui.t.alpha.muted);
+  }
+
+  function coachState(view: ReplayScreenView): void {
+    const coach = view.coach;
+    if (coach === undefined) return;
+    const { canvas, safeInsets: safe } = context;
+    const panelWidth = Math.min(860, width - 80 - safe.l - safe.r), panelHeight = 340;
+    const x = width / 2 - panelWidth / 2, y = 90 + safe.t;
+    ui.panel(canvas, x, y, panelWidth, panelHeight); ui.accentStrip(canvas, x, y, panelWidth, REPLAY_CYAN);
+    ui.title(canvas, "COACH · SELECTED VERIFIED PAIR", width / 2, y + 38, ui.t.type.lead);
+    ui.text(canvas, `TARGET ${coach.targetId}  ·  BASELINE ${coach.baselineId ?? "SELECT ONE"}`, x + 24, y + 68, ui.t.type.micro, "left", ui.t.alpha.soft);
+    if (coach.buildId) ui.text(canvas, `BUILD ${coach.buildId}  ·  PROVENANCE ${coach.provenanceHash}`, x + 24, y + 88, ui.t.type.micro, "left", ui.t.alpha.muted);
+    coach.candidates.slice(0, 3).forEach((candidate, index) => context.enqueue({ x: x + 24 + index * 270, y: y + 106, w: 252, h: 34,
+      label: `BASELINE ${candidate.id}`, enabled: candidate.enabled, selected: candidate.id === coach.baselineId,
+      action: { type: "replay.coach.selectBaseline", id: candidate.id } }));
+    coach.findings.slice(0, 2).forEach((finding, index) => {
+      const rowY = y + 164 + index * 54;
+      ui.text(canvas, `${finding.domain.toUpperCase()} · ${finding.detail}`, x + 24, rowY + 18, ui.t.type.caption, "left", ui.t.alpha.soft);
+      context.enqueue({ x: x + panelWidth - 188, y: rowY - 4, w: 164, h: 34, label: "PRACTICE FINDING",
+        enabled: finding.practiceAvailable, action: { type: "replay.coach.practice", findingId: finding.id } });
+    });
+    coach.unavailable.slice(0, 2).forEach((entry, index) => ui.text(canvas, `UNAVAILABLE · ${entry}`, x + 24, y + 286 + index * 18, ui.t.type.micro, "left", ui.t.alpha.muted));
   }
 
   function replayInfo(view: ReplayScreenView): void {

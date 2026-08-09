@@ -173,6 +173,16 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   const theaterTexts = await page.evaluate((count) => (window.__TEAR_C29_THEATER_TEXT__ ?? []).slice(count), theaterTextCount);
   assert.ok(theaterTexts.some((text) => text.includes("THEATER")), `Theater header did not render: ${theaterTexts.slice(-80).join(" | ")}`);
   assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "replay");
+  await page.mouse.click(892, 854); // rendered C37 COACH control; it has no implicit baseline
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("COACH · SELECTED VERIFIED PAIR"), undefined, { timeout: 10000 });
+  await page.waitForTimeout(180); // local Vault candidates arrive through the normal browser reader
+  await page.mouse.click(250, 212); // explicitly select the first displayed distinct local baseline
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).startsWith("TARGET ") && String(text).includes("BASELINE ")),
+    undefined, { timeout: 10000 });
+  const coachTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
+  assert.ok(coachTexts.some((text) => String(text).includes("COACH · SELECTED VERIFIED PAIR")), "Coach panel did not render through Theater");
+  assert.ok(coachTexts.some((text) => String(text).startsWith("TARGET ") && String(text).includes("BASELINE ")),
+    "Coach did not surface its selected source IDs");
   await page.mouse.click(734, 854); // visible PRACTICE launches the verified checkpoint child
   await waitScreen("playing");
   const launchedPractice = await page.evaluate(() => window.__TEAR_GHOST_V3__.activePractice());
