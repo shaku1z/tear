@@ -2,6 +2,7 @@ import { stableVerificationHash } from "../replay/hash";
 import type { TearAcademyConsentRecordV1 } from "../agents/academy-candidate-admission";
 import { parseGhostCapsuleManifest, type GhostLocalVault, type GhostVaultBackend, type TearGhostManifest } from "./capsule-vault";
 import { ghostSha256, type GhostPrivacyClass, type GhostRunEligibilityInput, type GhostVisibility } from "./cloud-publication";
+import { parseGhostPublicationConsentRecord, type GhostPublicationConsentRecordV1, type GhostPublicationConsentValidator } from "./publication-consent-ledger";
 
 const JOB_PREFIX = "ghost-publication-job:v1:";
 const CUSTODY_PREFIX = "ghost-publication-custody:v1:";
@@ -11,6 +12,7 @@ export interface GhostPublicationCustodyV1 {
   readonly schemaVersion: 1;
   readonly capsuleId: string;
   readonly consent: TearAcademyConsentRecordV1;
+  readonly publicationConsent: GhostPublicationConsentRecordV1;
   readonly privacy: GhostPrivacyClass;
   readonly visibility: GhostVisibility;
   readonly eligibility: GhostRunEligibilityInput;
@@ -61,7 +63,7 @@ function validConsent(value: unknown): value is TearAcademyConsentRecordV1 {
 }
 
 function freezeCustody(draft: Omit<GhostPublicationCustodyV1, "custodyHash">): GhostPublicationCustodyV1 {
-  const copy = Object.freeze({ ...draft, consent: Object.freeze({ ...draft.consent }), eligibility: Object.freeze({ ...draft.eligibility }) });
+  const copy = Object.freeze({ ...draft, consent: Object.freeze({ ...draft.consent }), publicationConsent: Object.freeze({ ...draft.publicationConsent }), eligibility: Object.freeze({ ...draft.eligibility }) });
   return Object.freeze({ ...copy, custodyHash: hash16(copy) });
 }
 
@@ -72,8 +74,11 @@ function parseCustody(bytes: string): GhostPublicationCustodyV1 {
     || !["private", "unlisted", "public"].includes(String(source.visibility)) || !validEligibility(source.eligibility) || !time(source.decidedAt) || !nonEmpty(source.custodyHash)) {
     throw new TypeError("invalid local publication custody");
   }
+  let publicationConsent: GhostPublicationConsentRecordV1;
+  try { publicationConsent = parseGhostPublicationConsentRecord(source.publicationConsent); } catch { throw new TypeError("invalid local publication custody"); }
+  if (publicationConsent.cloudPublication !== "granted" || publicationConsent.privacy !== source.privacy || publicationConsent.visibility !== source.visibility) throw new TypeError("invalid local publication custody");
   const draft = { format: "tear-ghost-publication-custody" as const, schemaVersion: 1 as const, capsuleId: source.capsuleId,
-    consent: Object.freeze({ ...source.consent }) as TearAcademyConsentRecordV1, privacy: source.privacy as GhostPrivacyClass,
+    consent: Object.freeze({ ...source.consent }) as TearAcademyConsentRecordV1, publicationConsent, privacy: source.privacy as GhostPrivacyClass,
     visibility: source.visibility as GhostVisibility, eligibility: Object.freeze({ ...source.eligibility }) as GhostRunEligibilityInput, decidedAt: source.decidedAt };
   const result = freezeCustody(draft);
   if (result.custodyHash !== source.custodyHash) throw new TypeError("local publication custody integrity mismatch");
@@ -103,9 +108,10 @@ function freezeJob(draft: Omit<GhostLocalPublicationJobV1, "jobHash">): GhostLoc
 
 function parseJob(bytes: string): GhostLocalPublicationJobV1 {
   const source = object(JSON.parse(bytes) as unknown), binding = object(source?.source), workerManifest = object(source?.workerManifest), transfer = object(source?.transfer);
+  if (transfer === undefined) throw new TypeError("invalid local publication job");
   if (source?.format !== "tear-ghost-local-publication-job" || source.schemaVersion !== 1 || !nonEmpty(source.id) || !["queued", "cancelled"].includes(String(source.status))
     || binding === undefined || !nonEmpty(binding.capsuleId) || !nonEmpty(binding.manifestHash) || !nonEmpty(binding.rootIntegrity) || !nonEmpty(binding.exportHash)
-    || !Number.isSafeInteger(binding.byteLength) || (binding.byteLength as number) < 1 || workerManifest?.schemaVersion !== 1 || !Number.isSafeInteger(workerManifest.byteLength) || !nonEmpty(workerManifest.contentSha256) || !Number.isSafeInteger(workerManifest.partCount) || !nonEmpty(workerManifest.topologySha256) || !Number.isSafeInteger(transfer?.chunkCount)
+    || !Number.isSafeInteger(binding.byteLength) || (binding.byteLength as number) < 1 || workerManifest?.schemaVersion !== 1 || !Number.isSafeInteger(workerManifest.byteLength) || !nonEmpty(workerManifest.contentSha256) || !Number.isSafeInteger(workerManifest.partCount) || !nonEmpty(workerManifest.topologySha256) || !Number.isSafeInteger(transfer.chunkCount)
     || !Array.isArray(transfer.parts) || transfer.parts.length !== transfer.chunkCount || !nonEmpty(source.custodyHash) || !time(source.createdAt) || !nonEmpty(source.jobHash)
     || (source.status === "cancelled" && !["cancelled-by-player", "source-or-custody-changed"].includes(String(source.cancellationReason)))) throw new TypeError("invalid local publication job");
   const job = freezeJob({ format: "tear-ghost-local-publication-job", schemaVersion: 1, id: source.id, status: source.status as "queued" | "cancelled",
@@ -121,7 +127,8 @@ function parseJob(bytes: string): GhostLocalPublicationJobV1 {
 export class GhostLocalPublicationJobs {
   readonly #vault: GhostLocalVault;
   readonly #backend: GhostVaultBackend;
-  constructor(vault: GhostLocalVault) { this.#vault = vault; this.#backend = vault.backend(); }
+  readonly #publicationConsent: GhostPublicationConsentValidator;
+  constructor(vault: GhostLocalVault, publicationConsent: GhostPublicationConsentValidator) { this.#vault = vault; this.#backend = vault.backend(); this.#publicationConsent = publicationConsent; }
 
   async enqueue(input: GhostLocalPublicationEnqueueInput): Promise<GhostLocalPublicationJobV1> {
     if (!nonEmpty(input.capsuleId) || !time(input.createdAt)) throw new TypeError("publication enqueue requires a capsule and timestamp");
@@ -134,7 +141,8 @@ export class GhostLocalPublicationJobs {
     try { exportedManifest = parsed === undefined ? (() => { throw new TypeError("missing export"); })() : parseGhostCapsuleManifest(parsed.manifest); } catch { throw new TypeError("publication export is incomplete or malformed"); }
     if (chunks === undefined || Object.keys(chunks).length !== manifest.chunks.length || exportedManifest.rootIntegrity !== manifest.rootIntegrity) throw new TypeError("publication export is incomplete or malformed");
     for (const chunk of manifest.chunks) if (typeof chunks[chunk.id] !== "string") throw new TypeError("publication export is missing a source chunk");
-    const custody = freezeCustody({ format: "tear-ghost-publication-custody", schemaVersion: 1, capsuleId: input.capsuleId, consent: input.custody.consent,
+    const publicationConsent = await this.#publicationConsent.acceptForJob(input.custody.publicationConsent);
+    const custody = freezeCustody({ format: "tear-ghost-publication-custody", schemaVersion: 1, capsuleId: input.capsuleId, consent: input.custody.consent, publicationConsent,
       privacy: input.custody.privacy, visibility: input.custody.visibility, eligibility: input.custody.eligibility, decidedAt: input.custody.decidedAt });
     if (custody.consent.cloudPublication !== "granted") throw new RangeError("cloud publication custody is not granted");
     const source = sourceBinding(manifest, exported), transfer = await parts(exported, input.partBytes);
@@ -155,7 +163,7 @@ export class GhostLocalPublicationJobs {
     const job = parseJob(raw); if (job.status === "cancelled") return job;
     const [manifestRaw, custodyRaw] = await Promise.all([this.#backend.get("manifests", job.source.capsuleId), this.#backend.get("analysis", custodyKey(job.source.capsuleId))]);
     let current: boolean;
-    try { const manifest = manifestRaw === undefined ? undefined : parseGhostCapsuleManifest(JSON.parse(manifestRaw)); const custody = custodyRaw === undefined ? undefined : parseCustody(custodyRaw); current = manifest?.status === "complete" && custody?.custodyHash === job.custodyHash && custody.consent.cloudPublication === "granted" && manifest.rootIntegrity === job.source.rootIntegrity && hash16(manifest) === job.source.manifestHash && hash16(await this.#vault.exportCapsule(job.source.capsuleId)) === job.source.exportHash; } catch { current = false; }
+    try { const manifest = manifestRaw === undefined ? undefined : parseGhostCapsuleManifest(JSON.parse(manifestRaw)); const custody = custodyRaw === undefined ? undefined : parseCustody(custodyRaw); if (custody === undefined) throw new TypeError("publication custody is unavailable"); await this.#publicationConsent.acceptForJob(custody.publicationConsent); current = manifest?.status === "complete" && custody.custodyHash === job.custodyHash && custody.consent.cloudPublication === "granted" && manifest.rootIntegrity === job.source.rootIntegrity && hash16(manifest) === job.source.manifestHash && hash16(await this.#vault.exportCapsule(job.source.capsuleId)) === job.source.exportHash; } catch { current = false; }
     if (current) return job;
     const { jobHash: ignoredJobHash, ...prior } = job; void ignoredJobHash;
     const cancelled = freezeJob({ ...prior, status: "cancelled", cancellationReason: "source-or-custody-changed" });
