@@ -83,6 +83,7 @@ export * from "./foundry-job-bound-continuation";
 export * from "./foundry-job-bootstrap";
 export * from "./foundry-launch-profile";
 export * from "./foundry-job-scheduled-execution";
+export * from "./foundry-job-v4-offline-terminal";
 export * from "./foundry-job-due-dispatcher";
 export * from "./tearbot-ladder-evaluation";
 export * from "./tearbot-v3-canonical-evaluation";

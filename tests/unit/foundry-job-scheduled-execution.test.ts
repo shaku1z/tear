@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createMemoryGhostVaultBackend } from "../../src/ghost";
 import { stableVerificationHash } from "../../src/replay/hash";
-import { TearFoundryExecutionBindingVault, TearFoundryJobScheduleVault, TearFoundryJobVault, TearFoundryScheduledExecution, createTearFoundryJob, createTearFoundryJobSchedule, createTearOfflineRlPlan, type TearAcademyCandidateCustodyStore, type TearAcademyCorpusStore, type TearAcademyTrainingDatasetLoader, type TearAcademyTrainingDatasetV1 } from "../../src/agents";
+import { TearFoundryExecutionBindingV4Vault, TearFoundryExecutionBindingVault, TearFoundryJobScheduleVault, TearFoundryJobVault, TearFoundryScheduledExecution, createTearFoundryJob, createTearFoundryJobSchedule, createTearOfflineRlPlan, type TearAcademyCandidateCustodyStore, type TearAcademyCorpusStore, type TearAcademyTrainingDatasetLoader, type TearAcademyTrainingDatasetV1 } from "../../src/agents";
 
 const h = Object.freeze({ artifact: "a".repeat(16), corpus: "b".repeat(16), candidate: "c".repeat(16), evaluation: "d".repeat(16), reward: "e".repeat(16), invariant: "f".repeat(16), budget: "1".repeat(16), stop: "2".repeat(16), compute: "3".repeat(16), storage: "4".repeat(16) });
 async function fixture(held = true) { const backend = createMemoryGhostVaultBackend(), jobs = new TearFoundryJobVault(backend), schedules = new TearFoundryJobScheduleVault(backend), job = createTearFoundryJob({ id: "scheduled-job", createdAt: "2026-08-08T00:00:00.000Z", reason: "authorized", inputs: { champion: { id: "champion", artifactHash: h.artifact }, corpusRecordHashes: [h.corpus], evaluationPlanHash: h.evaluation, rewardDefinitionHash: h.reward, invariantSetHash: h.invariant, budgetHash: h.budget, stopConditionsHash: h.stop } }); await jobs.persist(job); const enabled = createTearFoundryJobSchedule({ id: "scheduled", jobId: job.id, jobHash: job.jobHash, intervalMs: 60_000, computeBudgetHash: h.compute, storageBudgetHash: h.storage, stopConditionsHash: h.stop, state: "enabled", configuredAt: "2026-08-08T00:00:00.000Z" }); await schedules.persist(enabled); const custody = { backend: () => backend, held: () => Promise.resolve(held ? [{ candidateHash: h.candidate, recordHash: h.corpus }] : []), inventory: () => Promise.resolve({ records: [{ candidateHash: h.candidate, recordHash: h.corpus }], rejectedKeys: [] }) } as unknown as TearAcademyCandidateCustodyStore; const bindings = new TearFoundryExecutionBindingVault(jobs); await bindings.bindV3(enabled, job, { payload: { kind: "none" }, successorDeclaration: { kind: "exact-phase-payload", payload: { kind: "trainer-manifest", manifest: { id: "published", trainerId: "c36", version: 1 } }, nextDeclaration: { kind: "exact-phase-payload", payload: { kind: "offline-launch", offline: { training: { manifestId: "published", trainerId: "c36", manifestVersion: 1, plan: { id: "x", version: 1, seed: 1, reward: { components: [{ id: "score", source: "score.delta" as const, weight: 1, maximumSourceValue: 1, perTransitionCap: 1 }], totalMinimum: -1, totalMaximum: 1 }, limits: { maxTransitions: 1, maxEventsPerTransition: 1, maxRewardViolations: 0 } }, config: { epochs: 1, learningRate: .5, gamma: .5, maxStateActionEntries: 1, maxAbsoluteQ: 1, maxMeanAbsoluteTdError: 1, maxConsecutiveDivergentEpochs: 1 } }, manifest: { id: "published", trainerId: "c36", version: 1 }, manifestHash: "5".repeat(16), manifestRootHash: "6".repeat(16), datasetHash: "7".repeat(16), planHash: "8".repeat(16), configurationHash: "9".repeat(16), rewardHash: h.reward } }, nextDeclaration: { kind: "emitted-v2-training", nextDeclaration: { kind: "repeat-v2-training" } } } } }); return { backend, jobs, enabled: { schedule: enabled }, execution: new TearFoundryScheduledExecution(jobs, schedules, custody) }; }
@@ -42,6 +42,25 @@ describe("C36 bound one-shot scheduled execution", () => {
     const trainingSchedule = await current();
     await expect(execute().runScheduledOnce(trainingSchedule.scheduleHash, at(4), "resume")).resolves.toMatchObject({ phase: "training" });
     const resumed = await jobs.get(job.id); expect(resumed).toMatchObject({ phase: "training" }); expect(resumed?.events).toHaveLength(5);
+    // The V3 resume's own checkpoint is now terminal. V4 may bind only that
+    // exact persisted terminal and finalizes it on a separate scheduled wake.
+    if (resumed === undefined) throw new Error("resumed training head disappeared");
+    const terminalSchedule = await current();
+    const detector = execute();
+    await expect(detector.runScheduledOnce(terminalSchedule.scheduleHash, at(5), "detect-terminal")).resolves.toMatchObject({ phase: "training" });
+    const terminalBinding = await new TearFoundryExecutionBindingV4Vault(jobs).current(terminalSchedule);
+    expect(terminalBinding?.payload).toMatchObject({ kind: "offline-finalization" });
+    await expect(new TearFoundryExecutionBindingV4Vault(jobs).bind(terminalSchedule, resumed, { kind: "offline-resume", launchHash: "0".repeat(16) })).rejects.toThrow(/head/u);
+    held = false;
+    await expect(detector.runScheduledOnce(terminalSchedule.scheduleHash, at(6), "revoked-finalization")).rejects.toThrow(/custody|lineage/u);
+    expect(await jobs.get(job.id)).toMatchObject({ jobHash: resumed.jobHash, phase: "training" });
+    expect((await current()).scheduleHash).toBe(terminalSchedule.scheduleHash);
+    held = true;
+    await expect(detector.runScheduledOnce(terminalSchedule.scheduleHash, at(6), "finalize-terminal")).resolves.toMatchObject({ phase: "training" });
+    const evaluating = await jobs.get(job.id), evaluationSchedule = await current();
+    expect(evaluating).toMatchObject({ phase: "evaluating" });
+    expect(evaluationSchedule.jobHash).toBe(evaluating?.jobHash);
+    await expect(detector.runScheduledOnce(terminalSchedule.scheduleHash, at(6), "finalize-terminal")).resolves.toMatchObject({ phase: "training" });
     expect((await backend.keys("analysis")).some((key) => key.startsWith("policy-"))).toBe(false);
   });
 });

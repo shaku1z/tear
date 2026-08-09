@@ -511,3 +511,29 @@ the durable collecting head unchanged. The fixture uses a governed-port test
 double for its pre-published C31 bytes, so it is integration evidence for the
 real scheduler/binding/dispatcher path, not a claim of browser IndexedDB C31
 capture or of a complete unattended cycle.
+
+## V4 offline terminal scheduling
+
+V1--V3 bindings remain recovery-readable. V4 is an explicit terminal-only
+addition: a V3 repeat-resume may inspect only the immutable V2 launch it
+already names and its one direct persisted successor for the current job head.
+If that exact checkpoint is terminal, it emits a V4 `offline-finalization`
+binding; it never guesses from a global latest checkpoint. A later V4 wake
+dispatches the existing offline finalization executor. A completed result
+atomically rebinds cadence and an `evaluation-ready` V4 binding; a stopped
+divergence reaches the existing rejected job and creates no online or
+evaluation binding.
+
+Both V4 admission and its completed continuation pin durable schedule/job and
+binding bytes. The latter also pins action-time C31 custody records before its
+conditional Vault commit. Stale, competing, corrupt, or revoked inputs fail
+closed. This slice does not create an online launch, evaluate a candidate,
+activate/promote a policy, mutate C31, expose a UI payload, or add implicit
+terminalization intent to launch profiles.
+
+`tests/unit/foundry-job-scheduled-execution.test.ts` proves the V3-to-V4
+completed path, V4 exact retry, a competing replacement refusal, and custody
+revocation before finalization leaves both the training head and source
+schedule unchanged. `tests/unit/foundry-job-offline-training-finalization.test.ts`
+proves a stopped-divergence finalizes only to `rejected`, with no model or
+evaluation/online binding.
