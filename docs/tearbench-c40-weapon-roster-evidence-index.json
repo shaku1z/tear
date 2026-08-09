@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "kind": "tearbench-c40-weapon-roster-engineering-index",
+  "status": "engineering-non-certifying",
+  "scope": "One deliberately narrow, real-production-path Ghost V3 capture and fresh C29 seek proof for each named weapon action family.",
+  "nonClaims": [
+    "This index is not a C40 completion, release, performance, parity, accessibility, or gameplay-quality certification.",
+    "It does not prove every mechanic, target, difficulty, input modality, persistence path, rendering path, or platform for any weapon.",
+    "Its browser receipts are ephemeral isolated-test-profile artifacts and are not checked-in release artifacts.",
+    "It does not add a generated evidence-catalog rule or change the generated C40 dashboard."
+  ],
+  "proofs": [
+    {
+      "weapon": "sword",
+      "actionFamily": "seam-crosscut",
+      "scenarioId": "sword-seam-crosscut-catch-seek",
+      "routeId": "sword-seam-crosscut-replay",
+      "command": "pnpm build:test:standalone && node tests/browser-c40-sword-crosscut-ghost-seek.js",
+      "receiptLabels": ["prethrow", "Seam", "retraced Crosscut", "postcatch"]
+    },
+    {
+      "weapon": "hammer",
+      "actionFamily": "meteor",
+      "scenarioId": "hammer-meteor-terrain-catch-seek",
+      "routeId": "hammer-meteor-terrain-replay",
+      "command": "pnpm build:test:standalone && node tests/browser-c40-hammer-meteor-ghost-seek.js",
+      "receiptLabels": ["prethrow", "embedded-resolve", "postcatch"]
+    },
+    {
+      "weapon": "spear",
+      "actionFamily": "anchor-reel",
+      "scenarioId": "spear-anchor-reel-catch-seek",
+      "routeId": "spear-anchor-reel-replay",
+      "command": "pnpm build:test:standalone && node tests/browser-c40-spear-anchor-reel-ghost-seek.js",
+      "receiptLabels": ["prethrow", "Anchor", "Reel", "postcatch"]
+    },
+    {
+      "weapon": "chainblade",
+      "actionFamily": "bind-yank",
+      "scenarioId": "chainblade-bind-yank-catch-seek",
+      "routeId": "chainblade-bind-yank-replay",
+      "command": "pnpm build:test:standalone && node tests/browser-c40-chainblade-bind-yank-ghost-seek.js",
+      "receiptLabels": ["prethrow", "Bind", "Yank", "postcatch"]
+    },
+    {
+      "weapon": "ringblade",
+      "actionFamily": "circuit-bounce",
+      "scenarioId": "ringblade-circuit-bounce-catch-seek",
+      "routeId": "ringblade-circuit-bounce-replay",
+      "command": "pnpm build:test:standalone && node tests/browser-c40-ringblade-circuit-ghost-seek.js",
+      "receiptLabels": ["prethrow", "Circuit", "steer-bounce", "postcatch"]
+    }
+  ]
+}
