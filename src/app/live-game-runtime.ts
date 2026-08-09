@@ -481,11 +481,11 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     afterSimulationStep: (tick: number) => {
       if (ghostV3?.active === true && tick % ghostV3.keyframeIntervalTicks === 0) {
         const random = worldContext.services.random.snapshot();
-        ghostV3.record("keyframes", tick, {
+        ghostV3.record("presentation", tick, {
           player: { x: livePlayer().x, y: livePlayer().y, vx: livePlayer().vx, vy: livePlayer().vy, hp: livePlayer().hp, facing: livePlayer().facing },
           blade: { x: liveBlade().x, y: liveBlade().y, vx: liveBlade().vx, vy: liveBlade().vy, state: liveBlade().state },
           enemies: hostState.enemies().filter((enemy) => !enemy.dead).map((enemy) => ({
-            id: enemy._gid, kind: enemy.kind, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp,
+            ...(typeof enemy._gid === "number" ? { id: enemy._gid } : {}), kind: enemy.kind, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp,
           })),
           random,
         });
