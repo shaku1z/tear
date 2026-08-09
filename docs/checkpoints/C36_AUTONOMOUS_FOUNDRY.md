@@ -630,10 +630,13 @@ does not invoke C30. A terminal checkpoint alone may be replaced by an opaque
 
 That later wake extends the online finalization executor with a guarded
 continuation: the terminal C30 result, paired-readiness receipt, job successor,
-cadence rebind, and (only for completion) new `evaluation-ready` V4 pointer
-are committed in one conditional transaction. A stopped C30 result instead
+cadence rebind, and (only for completion) a named
+`source-evaluation-plan-ready` V4 pointer are committed in one conditional
+transaction. That pointer carries the exact V4 authority, handoff, launch, and
+paired-readiness receipt hashes; it is neither a generic evaluation-ready head
+nor permission to derive or execute an evaluation. A stopped C30 result instead
 creates the rejected successor and disables the schedule in that same
-transaction; it writes no evaluation-ready binding. A lost pre-finalization
+transaction; it writes no source-evaluation-plan-ready binding. A lost pre-finalization
 guard writes neither the result nor successor/pointer, so restarting cannot
 mistake a partial result for readiness. This boundary cannot execute paired
 evaluation, construct/admit a candidate, activate/promote/rollback a policy,
@@ -644,7 +647,8 @@ V4 launch: terminal detection never advances C30 again; a planted guarded-
 transaction loss leaves no partial result/job; then exact recovery either
 retains the stopped C30 result, rejects/disables cadence with no V4 evaluation
 pointer, or retains the completed C30 result, rebinding cadence to an exact
-`evaluation-ready` V4 pointer. They also preserve the planted execution-race/
+paired-receipt-bound `source-evaluation-plan-ready` V4 pointer. They also
+preserve the planted execution-race/
 no-policy evidence.
 PROVEN BY: `tests/unit/foundry-job-offline-training-finalization.test.ts`.
 REMAINING HERE: the focused custody port is still a governed integration double,

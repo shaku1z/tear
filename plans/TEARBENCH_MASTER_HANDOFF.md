@@ -1395,7 +1395,9 @@ only for its named retained C30 launch/checkpoint. Running leaves the V4 head
 unchanged and cannot execute C30. A terminal checkpoint first becomes an
 opaque `online-finalization` binding; on the next wake the guarded finalizer
 atomically retains C30 result + paired-readiness receipt + successor + cadence
-and, for completion only, a new `evaluation-ready` V4 pointer. Stopped C30
+and, for completion only, a new `source-evaluation-plan-ready` V4 pointer
+whose payload names the exact authority/handoff/launch/paired-readiness hashes.
+It does not derive or execute evaluation. Stopped C30
 terminalization atomically rejects and disables cadence without emitting an
 evaluation pointer. All root authority/handoff/source/profile/bootstrap/
 readiness/launch/checkpoint/custody bytes are conditionally guarded.
@@ -1404,7 +1406,7 @@ the full offline-to-V4 authority/launch/C30/terminal path for both complete and
 stopped results; terminal detection does not run a second C30 advance, a
 planted finalization loss leaves no partial result/job, exact recovery either
 retains a stopped result/rejects/disables with no pointer or writes a completed
-result and exact paired-readiness V4 pointer/rebound cadence.
+result and exact paired-receipt-bound V4 pointer/rebound cadence.
 REMAINING HERE: No paired source evaluation, candidate creation, promotion,
 rollback, cloud contact, human calibration, or unattended product loop is
 claimed by this slice.
