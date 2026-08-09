@@ -641,3 +641,13 @@ protocol/stop conditions, and action-time C31 raw-custody hashes. It freezes
 place traffic, expose UI, invoke cloud services, activate, promote, or roll
 back. The V4 test proves a real promotion-to-arm path, disabled schedule, and
 idempotent retry. Watch execution and monitor consumption remain open.
+
+### C36 V4 direct rollback terminal
+
+Only a caller holding the current disabled V4 named Watch terminal may consume
+an exact `threshold-breach` with `rollback-ready-not-invoked`. Its guarded V3
+continuation restores the already-frozen baseline, activation history, and V3
+rollback receipt together with one opaque V4 rollback-terminal binding. It
+revalidates the terminal, Watch authority, declaration, approval, promotion,
+active artifact, baseline, and action-time C31 custody bytes. It has no
+dispatcher, timer, automatic trigger, traffic, placement, UI, or cloud path.

@@ -94,6 +94,7 @@ export * from "./foundry-job-v4-online-execution-scheduler";
 export * from "./foundry-job-v4-online-terminal";
 export * from "./foundry-job-v4-source-evaluation-plan";
 export * from "./foundry-job-v4-post-promotion-monitor-terminal";
+export * from "./foundry-job-v4-post-promotion-rollback";
 export * from "./foundry-job-v4-source-evaluation-execution";
 export * from "./foundry-job-v4-decision";
 export * from "./foundry-job-v4-monitoring-entry";
