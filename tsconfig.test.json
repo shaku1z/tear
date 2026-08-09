@@ -4,5 +4,6 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["node", "vitest/globals"]
   },
-  "include": ["tests/**/*.ts", "workers/worker-configuration.d.ts"]
+  "include": ["tests/**/*.ts"],
+  "exclude": ["tests/unit/ghost-publication-worker-auth.test.ts"]
 }

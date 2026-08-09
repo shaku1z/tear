@@ -803,7 +803,11 @@ async function route(request: Request, env: Env, verifier: FirebaseIdTokenVerifi
   return json({ error: "not found" }, 404);
 }
 
-export function createGhostPublicationHandler(options: Readonly<{ verifier?: FirebaseIdTokenVerifier; allowedOrigins?: readonly string[]; reviewerSubjects?: readonly string[] }> = {}): ExportedHandler<Env> {
+export interface GhostPublicationHandler extends ExportedHandler<Env> {
+  fetch(request: Request, env: Env, context?: ExecutionContext): Promise<Response>;
+}
+
+export function createGhostPublicationHandler(options: Readonly<{ verifier?: FirebaseIdTokenVerifier; allowedOrigins?: readonly string[]; reviewerSubjects?: readonly string[] }> = {}): GhostPublicationHandler {
   const origins = configuredOrigins(options.allowedOrigins);
   const reviewers = new Set(options.reviewerSubjects ?? []);
   return {

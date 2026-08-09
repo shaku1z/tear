@@ -27,7 +27,7 @@ function request(path: string, init: RequestInit = {}): Request {
 }
 
 function context(): ExecutionContext {
-  return { waitUntil() { return undefined; }, passThroughOnException() { return undefined; } } as ExecutionContext;
+  return { waitUntil() { return undefined; }, passThroughOnException() { return undefined; } } as unknown as ExecutionContext;
 }
 
 function uploadRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -39,7 +39,7 @@ function uploadRow(overrides: Record<string, unknown> = {}): Record<string, unkn
   return {
     capsule_id: "capsule-1", upload_id: "upload-1", object_key: "capsules/capsule-1.ghost", owner_id: uidA,
     status: "uploading", visibility: "private", byte_length: 8, build_id: "tear-1", content_hash: "content-hash", result_hash: "result-hash",
-    schema_version: 1, title: "A run", tags_json: "[]", privacy_class: "private", eligibility_json: "{}", training_consent: 0, part_count: 1, verdict_json: null, active_verdict_id: null,
+    schema_version: 1, title: "A run", tags_json: "[]", privacy_class: "private", eligibility_json: "{}", training_consent: 0, part_count: 1,
     ...overrides,
     verdict_json: verdictJson ?? null,
     active_verdict_id: verdictJson === undefined || verdictJson === null ? null : "verdict-1",
