@@ -10,7 +10,7 @@ interface UploadRow {
   upload_id: string;
   object_key: string;
   owner_id: string;
-  status: "uploading" | "finalized" | "deleted" | "quarantined";
+  status: "uploading" | "finalized" | "deleting" | "deleted" | "quarantined";
   visibility: "private" | "unlisted" | "public";
   byte_length: number;
   build_id: string;
@@ -332,7 +332,7 @@ async function uploadStatus(request: Request, env: Env, capsuleId: string, verif
   const actor = await owner(request, verifier);
   const row = await loadUpload(env, capsuleId);
   // Deliberately make absence and non-ownership indistinguishable.
-  if (row?.owner_id !== actor) return json({ error: "not found" }, 404);
+  if (row?.owner_id !== actor || row.status === "deleting" || row.status === "deleted") return json({ error: "not found" }, 404);
   const result = await env.GHOST_METADATA.prepare(
     "SELECT part_number, etag FROM ghost_upload_parts WHERE capsule_id = ? ORDER BY part_number ASC",
   ).bind(capsuleId).all<Readonly<{ part_number: number; etag: string }>>();
@@ -475,20 +475,20 @@ async function download(request: Request, env: Env, capsuleId: string, verifier:
   return new Response(object.body, { status: object.range === undefined ? 200 : 206, headers });
 }
 
-async function mutate(request: Request, env: Env, capsuleId: string, action: string, ctx: ExecutionContext, verifier: FirebaseIdTokenVerifier): Promise<Response> {
+async function mutate(request: Request, env: Env, capsuleId: string, action: string, verifier: FirebaseIdTokenVerifier): Promise<Response> {
   const actor = await owner(request, verifier);
-  const row = assertOwner(await loadUpload(env, capsuleId), actor);
+  const loaded = await loadUpload(env, capsuleId);
+  // A deletion request must not disclose whether another owner has this id.
+  if (action === "delete" && loaded?.owner_id !== actor) return json({ error: "not found" }, 404);
+  const row = assertOwner(loaded, actor);
   const now = new Date().toISOString();
   if (action === "delete") {
-    await env.GHOST_METADATA.prepare(
-      "UPDATE ghost_uploads SET status = 'deleted', visibility = 'private', updated_at = ? WHERE capsule_id = ?",
-    ).bind(now, capsuleId).run();
-    ctx.waitUntil(env.GHOST_CAPSULES.delete(row.object_key));
-    return json({ capsuleId, status: "deleted", localRetentionUnaffected: true });
+    return deleteCapsule(env, row, actor, now);
   }
   const body = await boundedJson(request);
   if (!isRecord(body)) throw new TypeError("mutation body must be an object");
   if (action === "visibility") {
+    if (row.status === "deleting" || row.status === "deleted") throw new Error("capsule is deleting");
     const visibility = body.visibility;
     if (visibility !== "private" && visibility !== "unlisted" && visibility !== "public") throw new TypeError("invalid visibility");
     if (visibility !== "private" && (row.privacy_class === "private" || row.privacy_class === "sensitive" || !row.verdict_json?.includes('"status":"verified"'))) {
@@ -500,6 +500,7 @@ async function mutate(request: Request, env: Env, capsuleId: string, action: str
     return json({ capsuleId, visibility });
   }
   if (action === "consent") {
+    if (row.status === "deleting" || row.status === "deleted") throw new Error("capsule is deleting");
     if (typeof body.trainingConsent !== "boolean") throw new TypeError("invalid consent");
     await env.GHOST_METADATA.prepare(
       "UPDATE ghost_uploads SET training_consent = ?, updated_at = ? WHERE capsule_id = ?",
@@ -507,6 +508,56 @@ async function mutate(request: Request, env: Env, capsuleId: string, action: str
     return json({ capsuleId, trainingConsent: body.trainingConsent });
   }
   return json({ error: "not found" }, 404);
+}
+
+/**
+ * Makes remote deletion durable before touching R2.  A Worker may be evicted
+ * between the two stores, so `deleting` is deliberately a terminally private
+ * deny state rather than a claim that the object has already been purged.
+ */
+async function deleteCapsule(env: Env, row: UploadRow, actor: string, now: string): Promise<Response> {
+  if (row.status === "uploading") throw new Error("uploading capsule must be aborted before deletion");
+  if (row.status === "deleted") return json({ capsuleId: row.capsule_id, status: "deleted", purge: "purged", localRetentionUnaffected: true });
+  await env.GHOST_METADATA.batch([
+    env.GHOST_METADATA.prepare(
+      "UPDATE ghost_uploads SET status = 'deleting', visibility = 'private', updated_at = ? WHERE capsule_id = ? AND owner_id = ? AND status IN ('finalized', 'quarantined', 'deleting')",
+    ).bind(now, row.capsule_id, actor),
+    env.GHOST_METADATA.prepare(
+      `INSERT INTO ghost_capsule_deletions (capsule_id, owner_id, state, attempts, requested_at, updated_at)
+       VALUES (?, ?, 'pending', 0, ?, ?)
+       ON CONFLICT(capsule_id) DO UPDATE SET updated_at = excluded.updated_at`,
+    ).bind(row.capsule_id, actor, now, now),
+    env.GHOST_METADATA.prepare(
+      "INSERT INTO ghost_audit (actor_id, action, capsule_id, detail, created_at) VALUES (?, 'capsule.delete.requested', ?, 'deleting-private-before-r2', ?)",
+    ).bind(actor, row.capsule_id, now),
+  ]);
+  try {
+    await env.GHOST_CAPSULES.delete(row.object_key);
+  } catch {
+    const failedAt = new Date().toISOString();
+    await env.GHOST_METADATA.batch([
+      env.GHOST_METADATA.prepare(
+        "UPDATE ghost_capsule_deletions SET state = 'pending', attempts = attempts + 1, updated_at = ? WHERE capsule_id = ? AND owner_id = ?",
+      ).bind(failedAt, row.capsule_id, actor),
+      env.GHOST_METADATA.prepare(
+        "INSERT INTO ghost_audit (actor_id, action, capsule_id, detail, created_at) VALUES (?, 'capsule.delete.pending', ?, 'r2-delete-failed-retryable', ?)",
+      ).bind(actor, row.capsule_id, failedAt),
+    ]);
+    return json({ capsuleId: row.capsule_id, status: "deleting", purge: "pending", retryable: true, localRetentionUnaffected: true }, 202);
+  }
+  const purgedAt = new Date().toISOString();
+  await env.GHOST_METADATA.batch([
+    env.GHOST_METADATA.prepare(
+      "UPDATE ghost_uploads SET status = 'deleted', visibility = 'private', updated_at = ? WHERE capsule_id = ? AND owner_id = ? AND status = 'deleting'",
+    ).bind(purgedAt, row.capsule_id, actor),
+    env.GHOST_METADATA.prepare(
+      "UPDATE ghost_capsule_deletions SET state = 'purged', attempts = attempts + 1, purged_at = ?, updated_at = ? WHERE capsule_id = ? AND owner_id = ?",
+    ).bind(purgedAt, purgedAt, row.capsule_id, actor),
+    env.GHOST_METADATA.prepare(
+      "INSERT INTO ghost_audit (actor_id, action, capsule_id, detail, created_at) VALUES (?, 'capsule.delete.purged', ?, 'r2-delete-succeeded', ?)",
+    ).bind(actor, row.capsule_id, purgedAt),
+  ]);
+  return json({ capsuleId: row.capsule_id, status: "deleted", purge: "purged", localRetentionUnaffected: true });
 }
 
 /** Cancels only an in-progress multipart session. Terminal uploads are immutable. */
@@ -524,7 +575,7 @@ async function abortUpload(request: Request, env: Env, capsuleId: string, verifi
   return json({ capsuleId, status: "deleted", aborted: true, localRetentionUnaffected: true });
 }
 
-async function route(request: Request, env: Env, ctx: ExecutionContext, verifier: FirebaseIdTokenVerifier): Promise<Response> {
+async function route(request: Request, env: Env, verifier: FirebaseIdTokenVerifier): Promise<Response> {
   const url = new URL(request.url);
   const parts = url.pathname.split("/").filter(Boolean);
   if (request.method === "POST" && url.pathname === "/v1/uploads") return begin(request, env, verifier);
@@ -548,9 +599,9 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, verifier
   if (request.method === "GET" && parts[1] === "capsules" && parts[3] === "object") {
     return download(request, env, capsuleId, verifier);
   }
-  if (request.method === "DELETE" && parts[1] === "capsules") return mutate(request, env, capsuleId, "delete", ctx, verifier);
+  if (request.method === "DELETE" && parts[1] === "capsules") return mutate(request, env, capsuleId, "delete", verifier);
   if (request.method === "PATCH" && parts[1] === "capsules" && parts[3] !== undefined) {
-    return mutate(request, env, capsuleId, parts[3], ctx, verifier);
+    return mutate(request, env, capsuleId, parts[3], verifier);
   }
   return json({ error: "not found" }, 404);
 }
@@ -558,12 +609,12 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, verifier
 export function createGhostPublicationHandler(options: Readonly<{ verifier?: FirebaseIdTokenVerifier; allowedOrigins?: readonly string[] }> = {}): ExportedHandler<Env> {
   const origins = configuredOrigins(options.allowedOrigins);
   return {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: Env): Promise<Response> {
     const preflightResponse = preflight(request, origins);
     if (preflightResponse !== undefined) return preflightResponse;
     try {
       const verifier = options.verifier ?? createFirebaseIdTokenVerifier({ projectId: env.FIREBASE_PROJECT_ID });
-      const response = await route(request, env, ctx, verifier);
+      const response = await route(request, env, verifier);
       console.log(JSON.stringify({ message: "ghost publication request", method: request.method, path: new URL(request.url).pathname, status: response.status }));
       return withCors(request, response, origins);
     } catch (error) {

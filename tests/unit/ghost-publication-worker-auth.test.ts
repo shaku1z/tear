@@ -128,6 +128,39 @@ function manifest(): string {
   });
 }
 
+function deletionEnvironment(input: Readonly<{ readonly failuresBeforePurge?: number }> = {}): { readonly env: Env; readonly statements: string[]; readonly audits: string[]; readonly deleteCalls: () => number } {
+  let row: Record<string, unknown> | null = uploadRow({ status: "finalized", visibility: "public", privacy_class: "pseudonymous", verdict_json: '{"status":"verified"}' });
+  let failures = input.failuresBeforePurge ?? 0, calls = 0;
+  const statements: string[] = [], audits: string[] = [];
+  const statement = (sql: string) => ({
+    bind: (...values: unknown[]) => {
+      const execute = () => {
+        statements.push(sql);
+        if (sql.includes("SET status = 'deleting'")) row = row === null ? null : { ...row, status: "deleting", visibility: "private" };
+        if (sql.includes("SET status = 'deleted'")) row = row === null ? null : { ...row, status: "deleted", visibility: "private" };
+        if (sql.includes("INSERT INTO ghost_audit")) audits.push(/'((?:capsule|upload)\.[^']+)'/u.exec(sql)?.[1] ?? "unknown");
+      };
+      return {
+        first: () => Promise.resolve(row), all: () => Promise.resolve({ results: [] }), run: () => { execute(); return Promise.resolve({ success: true }); },
+        sql, values, execute,
+      };
+    },
+  });
+  const env = {
+    FIREBASE_PROJECT_ID: "tear-682cf",
+    GHOST_METADATA: {
+      prepare: statement,
+      batch: (queued: readonly { execute?: () => void }[]) => { queued.forEach((entry) => entry.execute?.()); return Promise.resolve([]); },
+    } as unknown as D1Database,
+    GHOST_CAPSULES: {
+      delete: () => { calls += 1; if (failures > 0) { failures -= 1; return Promise.reject(new Error("R2 unavailable")); } return Promise.resolve(); },
+      get: () => Promise.resolve(null),
+    } as unknown as R2Bucket,
+    GHOST_VERIFIER: {} as Fetcher,
+  } as Env;
+  return { env, statements, audits, deleteCalls: () => calls };
+}
+
 function base64Url(bytes: Uint8Array): string {
   return btoa(String.fromCharCode(...bytes)).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/=+$/u, "");
 }
@@ -388,5 +421,33 @@ describe("Ghost publication Worker Firebase owner authentication", () => {
     expect(overflow.status).toBe(400);
     const aborted = await handler.fetch(request("/v1/uploads/capsule-1/abort", { method: "POST" }), env, context());
     expect(aborted.status).toBe(200); expect(aborts).toBe(1); expect(batches).toBe(1);
+  });
+
+  it("durably privatizes a capsule and audits its deletion request before R2, then returns truthful retryable pending state", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier() }), f = deletionEnvironment({ failuresBeforePurge: 1 });
+    const pending = await handler.fetch(request("/v1/capsules/capsule-1", { method: "DELETE" }), f.env, context());
+    expect(pending.status).toBe(202);
+    expect(await pending.json()).toMatchObject({ capsuleId: "capsule-1", status: "deleting", purge: "pending", retryable: true, localRetentionUnaffected: true });
+    expect(f.deleteCalls()).toBe(1);
+    const requestIndex = f.statements.findIndex((sql) => sql.includes("SET status = 'deleting'"));
+    const auditIndex = f.audits.indexOf("capsule.delete.requested");
+    expect(requestIndex).toBeGreaterThanOrEqual(0);
+    expect(auditIndex).toBeGreaterThanOrEqual(0);
+    const denied = await handler.fetch(request("/v1/capsules/capsule-1/object"), f.env, context());
+    expect(denied.status).toBe(404);
+    const hiddenStatus = await handler.fetch(request("/v1/uploads/capsule-1"), f.env, context());
+    expect(hiddenStatus.status).toBe(404);
+  });
+
+  it("retries only the exact owner deletion request and terminally records R2 purge without local-vault semantics", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier() }), f = deletionEnvironment({ failuresBeforePurge: 1 });
+    await handler.fetch(request("/v1/capsules/capsule-1", { method: "DELETE" }), f.env, context());
+    const purged = await handler.fetch(request("/v1/capsules/capsule-1", { method: "DELETE" }), f.env, context());
+    expect(purged.status).toBe(200);
+    expect(await purged.json()).toEqual({ capsuleId: "capsule-1", status: "deleted", purge: "purged", localRetentionUnaffected: true });
+    expect(f.deleteCalls()).toBe(2);
+    expect(f.audits).toEqual(expect.arrayContaining(["capsule.delete.requested", "capsule.delete.pending", "capsule.delete.purged"]));
+    const foreign = await handler.fetch(new Request("https://publication.test/v1/capsules/capsule-1", { method: "DELETE", headers: { authorization: "Bearer valid-b.token.signature" } }), f.env, context());
+    expect(foreign.status).toBe(404); expect(await foreign.json()).toEqual({ error: "not found" });
   });
 });
