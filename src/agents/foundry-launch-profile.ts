@@ -18,7 +18,7 @@ export interface TearFoundryLaunchProfileV1 {
   readonly format: "tear-foundry-launch-profile"; readonly schemaVersion: 1;
   readonly id: string; readonly jobId: string; readonly reason: string; readonly declaredAt: string;
   readonly manifest: ManifestIdentity; readonly schedule: Schedule;
-  readonly inputs: Omit<TearFoundryFrozenInputsV1, "champion" | "corpusRecordHashes"> & Readonly<{ evaluationProtocol: TearFoundryEvaluationProtocolInputV1 }>;
+  readonly inputs: Omit<TearFoundryFrozenInputsV1, "champion" | "corpusRecordHashes" | "evaluationProtocol"> & Readonly<{ evaluationProtocol: TearFoundryEvaluationProtocolInputV1 }>;
   readonly successorDeclaration: TearFoundryExecutionSuccessorDeclarationV3; readonly profileHash: string;
 }
 export interface TearFoundryLaunchProfileProjectionV1 { readonly profileId: string; readonly disposition: "eligible" | "blocked"; }
@@ -32,16 +32,19 @@ function freeze(input: Omit<TearFoundryLaunchProfileV1, "format" | "schemaVersio
   // The existing job/binding constructors are the authoritative schema validators.
   const probe = createTearFoundryJobV2({ id: input.jobId, createdAt: input.declaredAt, reason: input.reason, inputs: { champion: { id: "profile-probe", artifactHash: "0".repeat(16) }, corpusRecordHashes: ["1".repeat(16)], ...input.inputs } });
   createTearFoundryExecutionBindingV3({ schedule: { id: input.schedule.id, revision: 2, scheduleHash: "2".repeat(16) }, job: { id: probe.id, jobHash: probe.jobHash, phase: "created" }, payload: { kind: "none" }, successorDeclaration: input.successorDeclaration });
-  const { champion: _champion, corpusRecordHashes: _records, ...validatedInputs } = probe.inputs;
+  const protocol = probe.inputs.evaluationProtocol;
+  if (protocol === undefined) throw new TypeError("Foundry launch profile probe lost its evaluation protocol");
+  const validatedInputs: TearFoundryLaunchProfileV1["inputs"] = Object.freeze({ evaluationPlanHash: probe.inputs.evaluationPlanHash, rewardDefinitionHash: probe.inputs.rewardDefinitionHash,
+    invariantSetHash: probe.inputs.invariantSetHash, budgetHash: probe.inputs.budgetHash, stopConditionsHash: probe.inputs.stopConditionsHash, evaluationProtocol: protocol });
   const draft = Object.freeze({ format: "tear-foundry-launch-profile" as const, schemaVersion: 1 as const, id: input.id, jobId: input.jobId, reason: input.reason, declaredAt: input.declaredAt,
-    manifest: Object.freeze({ ...input.manifest }), schedule: Object.freeze({ ...input.schedule }), inputs: Object.freeze(validatedInputs) as TearFoundryLaunchProfileV1["inputs"], successorDeclaration: structuredClone(input.successorDeclaration) });
+    manifest: Object.freeze({ ...input.manifest }), schedule: Object.freeze({ ...input.schedule }), inputs: Object.freeze(validatedInputs), successorDeclaration: structuredClone(input.successorDeclaration) });
   return Object.freeze({ ...draft, profileHash: stableVerificationHash(draft) });
 }
 export function createTearFoundryLaunchProfile(input: Omit<TearFoundryLaunchProfileV1, "format" | "schemaVersion" | "profileHash">): TearFoundryLaunchProfileV1 { return freeze(input); }
 export function parseTearFoundryLaunchProfile(value: unknown): TearFoundryLaunchProfileV1 {
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("invalid Foundry launch profile");
-  const typed = value as TearFoundryLaunchProfileV1; if (typed.format !== "tear-foundry-launch-profile" || typed.schemaVersion !== 1 || !hash(typed.profileHash)) throw new TypeError("invalid Foundry launch profile");
-  const { format: _format, schemaVersion: _schema, profileHash, ...draft } = typed, parsed = freeze(draft);
+  const source = value as Record<string, unknown>; if (source.format !== "tear-foundry-launch-profile" || source.schemaVersion !== 1 || !hash(source.profileHash)) throw new TypeError("invalid Foundry launch profile");
+  const typed = value as unknown as TearFoundryLaunchProfileV1, { format, schemaVersion, profileHash, ...draft } = typed; void format; void schemaVersion; const parsed = freeze(draft);
   if (profileHash !== parsed.profileHash) throw new TypeError("Foundry launch profile integrity mismatch"); return parsed;
 }
 function exactManifest(manifest: TearAcademyCorpusManifestV1 | undefined, profile: TearFoundryLaunchProfileV1, held: readonly { recordHash: string }[]): readonly string[] | undefined {
@@ -69,7 +72,7 @@ export class TearFoundryLaunchProfileAuthority {
     try {
       if (activeRaw === undefined) return undefined; const active = parseTearPolicyActivation(JSON.parse(activeRaw));
       const champion = await new TearC34V3C32CandidateRegistry(this.#backend).get(active.artifactId);
-      const records = exactManifest(manifest, profile, held); if (champion === undefined || champion.artifactHash !== active.artifactHash || records === undefined) return undefined;
+      const records = exactManifest(manifest, profile, held); if (champion?.artifactHash !== active.artifactHash || records === undefined) return undefined;
       const job = createTearFoundryJobV2({ id: profile.jobId, createdAt: at, reason: profile.reason, inputs: { ...profile.inputs, champion: { id: champion.id, artifactHash: champion.artifactHash }, corpusRecordHashes: records } });
       return Object.freeze({ job, manifest: profile.manifest, schedule: { ...profile.schedule, stopConditionsHash: profile.inputs.stopConditionsHash, configuredAt: at }, successorDeclaration: structuredClone(profile.successorDeclaration), bootstrappedAt: at });
     } catch { return undefined; }
