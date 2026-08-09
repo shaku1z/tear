@@ -170,6 +170,18 @@ This is the migration checklist for the architectural redesign. A checked featur
   handoff. The derived C40 requirement mapping remains intentionally pending
   an approved requirement-registry regeneration.
 
+- [x] Narrow Spear Anchor/Reel forensic replay evidence â€”
+  `browser-c40-spear-anchor-reel-ghost-seek.js` starts one real normal
+  State Forge Spear/charger encounter, captures the native anchored target
+  identity, then performs the actual Reel pull and catch. It seals and verifies
+  the V3 capsule, retaining only generic native `blade.thrown`/`blade.caught`
+  transport facts, and proves three fresh C29 production seeks at the retained
+  prethrow, Anchor, Reel, and postcatch receipts. A separate post-seal mechanic
+  probe confirms Spear recall queues during flight; it does not add a second
+  capsule or make a general weapon claim. The registry entry
+  `spear-anchor-reel-catch-seek` remains engineering-only and non-certifying;
+  it is not C40 certification or a complete weapon-coverage claim.
+
 ## Game flow and modes
 
 - [x] Main menu, setup/war table and tutorial — `browser-navigation-journeys.js`, `browser-feature-matrix.js`, `browser-tutorial-journey.js`, and `training-controllers.test.ts`; setup preserves the oracle risk pips, weapon identity/rating strip, and hero START treatment through the typed live-renderer boundary while placing all public choices on one aligned row grid. The fourteen-block Cutting Room resets its task arena/state per block and never applies shop/meta upgrades. Read the Charge teaches the defensive read; Field Test then states and validates one two-step route—evade, then punish recovery—before handing off to no-wave practice. Prompts adapt to keyboard/mouse, configured controller glyphs, and touch; the browser journey completes the whole course through real semantic gameplay input.
