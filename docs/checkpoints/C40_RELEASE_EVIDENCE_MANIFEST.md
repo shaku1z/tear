@@ -4,8 +4,9 @@
 passed` flag. It accepts only `--manifest <path>` and independently verifies:
 
 - exact `HEAD`, clean-worktree fingerprint, and per-command clean-HEAD binding;
-- passed command, timestamp, retained artifact path, and SHA-256 for every
-  required proof;
+- a retained receipt for every proof: exact command, captured stdout/stderr,
+  exit status, timestamp, clean-HEAD binding, and subject artifact path,
+  SHA-256, and byte size;
 - named arbitrary-state, normal-journey, and full release matrix coverage;
 - retained preservation runtime-manifest and preservation-corpus hashes.
 
@@ -22,3 +23,18 @@ ignored by Git. A certificate is meaningful only when its schema is `2`, its
 `evidenceManifest` is present, and the verifier accepted that manifest against
 the exact clean `HEAD` named in the certificate. Schema-1 certificate-shaped
 files are historical data and must not be consumed as release evidence.
+
+## Receipt producer (engineering foundation)
+
+`pnpm tearbench evidence record --id <id> --subject <generated-artifact> --
+<explicit command>` runs an explicitly named command only when the tracked
+worktree is clean at `HEAD`. It checks that condition again afterwards, then
+writes an ignored receipt under `artifacts/tearbench/receipts/`. A failed
+command still receives a failed receipt, but cannot satisfy the verifier.
+
+`pnpm tearbench evidence partial-manifest --receipts <receipt,...>` composes
+those receipts into an intentionally incomplete manifest. It is useful for
+retaining real C39 preservation-corpus Vitest JSON and the C40 Source-void
+browser engineering proof, but it contains no fabricated coverage and must be
+rejected by `tearbench certify` until every required evidence and matrix proof
+exists. Source-void evidence remains engineering/non-certifying.

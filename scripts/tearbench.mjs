@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createReleaseCertificate, verifyReleaseEvidenceManifest } from "./tearbench-release-evidence-verifier.mjs";
@@ -104,6 +104,74 @@ function canonicalJson(value) {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
+}
+
+function gitCleanHead() {
+  const head = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" });
+  const status = spawnSync("git", ["status", "--porcelain=v1", "-z"], { cwd: root, encoding: "utf8" });
+  if (head.status !== 0 || status.status !== 0) throw new Error(`could not inspect clean HEAD: ${head.stderr || status.stderr}`);
+  if (status.stdout !== "") throw new TypeError("evidence recording requires a clean tracked worktree at HEAD");
+  return { commit: head.stdout.trim(), worktreeFingerprint: createHash("sha256").update(status.stdout).digest("hex") };
+}
+
+function receiptPathFor(id) {
+  if (!/^[a-z0-9][a-z0-9._-]*$/iu.test(id)) throw new TypeError("evidence receipt ID must be a safe non-empty slug");
+  return resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "receipts", `${id}.json`)));
+}
+
+async function recordEvidenceReceipt() {
+  const usage = "usage: pnpm tearbench evidence record --id <id> --subject <generated-artifact> -- <explicit command>";
+  const id = requiredOption("--id", usage);
+  const subjectPath = workspaceRelativePath(resolve(requiredOption("--subject", usage)));
+  const separator = process.argv.indexOf("--");
+  // pnpm consumes the conventional `--` separator before Node receives argv.
+  // Accept the remaining positional arguments after --subject as the explicit
+  // command in that launcher case, while retaining direct-node support.
+  const commandParts = separator >= 0
+    ? process.argv.slice(separator + 1)
+    : process.argv.slice(process.argv.indexOf("--subject") + 2);
+  if (commandParts.length === 0) throw new TypeError(usage);
+  const command = commandParts.join(" ");
+  const before = gitCleanHead();
+  const result = spawnSync(command, { cwd: root, encoding: "utf8", shell: true });
+  const after = gitCleanHead();
+  if (after.commit !== before.commit || after.worktreeFingerprint !== before.worktreeFingerprint) throw new Error("evidence command changed the tracked worktree");
+  let subject;
+  try {
+    const contents = await readFile(resolve(root, subjectPath));
+    subject = { path: subjectPath, sha256: createHash("sha256").update(contents).digest("hex"), size: (await stat(resolve(root, subjectPath))).size };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    const receipt = { format: "tearbench-evidence-receipt", schemaVersion: 1, id, command, timestamp: new Date().toISOString(), ...before, status: "failed", exitCode: result.status ?? 1, stdout: result.stdout ?? "", stderr: `${result.stderr ?? ""}\nsubject unavailable: ${detail}` };
+    const path = receiptPathFor(id); await mkdir(dirname(path), { recursive: true }); await writeFile(path, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+    console.log(`FAIL ${id}`); console.log(`receipt: ${path}`); process.exitCode = 1; return;
+  }
+  const receipt = { format: "tearbench-evidence-receipt", schemaVersion: 1, id, command, timestamp: new Date().toISOString(), ...before, status: result.status === 0 ? "passed" : "failed", exitCode: result.status ?? 1, stdout: result.stdout ?? "", stderr: result.stderr ?? "", subject };
+  const path = receiptPathFor(id); await mkdir(dirname(path), { recursive: true }); await writeFile(path, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+  console.log(`${receipt.status === "passed" ? "PASS" : "FAIL"} ${id}`); console.log(`receipt: ${path}`);
+  if (receipt.status !== "passed") process.exitCode = 1;
+}
+
+async function composePartialEvidenceManifest() {
+  const usage = "usage: pnpm tearbench evidence partial-manifest --receipts <receipt.json,receipt.json> [--artifact path]";
+  // pnpm may normalize commas in a single argument to spaces on Windows.
+  const values = requiredOption("--receipts", usage).split(/[\s,]+/u).map((value) => value.trim()).filter(Boolean);
+  if (values.length === 0) throw new TypeError(usage);
+  const binding = gitCleanHead();
+  const evidence = [];
+  for (const input of values) {
+    const receiptPath = workspaceRelativePath(resolve(input));
+    const contents = await readFile(resolve(root, receiptPath), "utf8");
+    const receipt = JSON.parse(contents);
+    if (receipt?.format !== "tearbench-evidence-receipt" || receipt?.schemaVersion !== 1) throw new TypeError(`invalid evidence receipt: ${receiptPath}`);
+    evidence.push({ id: receipt.id, status: receipt.status, command: receipt.command, timestamp: receipt.timestamp, commit: receipt.commit, worktreeFingerprint: receipt.worktreeFingerprint, artifactPath: receipt.subject?.path, artifactSha256: receipt.subject?.sha256, artifactSize: receipt.subject?.size, receiptPath, receiptSha256: createHash("sha256").update(contents).digest("hex") });
+  }
+  const ids = evidence.map((entry) => entry.id);
+  if (new Set(ids).size !== ids.length) throw new TypeError("partial manifest receipts must have unique IDs");
+  const manifest = { format: "tearbench-release-evidence-manifest", schemaVersion: 1, ...binding, evidence, coverage: { arbitraryStates: [], journeys: [], matrices: [] }, preservation: {} };
+  const path = resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "partial-release-evidence.json")));
+  await mkdir(dirname(path), { recursive: true }); await writeFile(path, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  console.log(`PARTIAL ${evidence.length} receipt(s)`); console.log(`artifact: ${path}`);
 }
 
 async function writeReleaseCertificate() {
@@ -567,6 +635,10 @@ try {
     console.log(`${passed ? "PASS" : "FAIL"} hard-endless-wave-99-hammer`);
     console.log(`artifact: ${artifactPath}`);
     if (!passed) process.exitCode = 1;
+  } else if (command === "evidence" && process.argv[3] === "record") {
+    await recordEvidenceReceipt();
+  } else if (command === "evidence" && process.argv[3] === "partial-manifest") {
+    await composePartialEvidenceManifest();
   } else if (command === "select") {
     await writeSelection(evidenceForDiff(await changedFiles()));
   } else if (command === "ci") {
@@ -596,7 +668,7 @@ try {
   } else if (command === "certify") {
     await writeReleaseCertificate();
   } else {
-    console.log("TearBench CLI\n  list\n  run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]\n  rerun --artifact <run.json>\n  investigate --base <tearbench-run.json> --candidate <tearbench-run.json> [--artifact path]\n  failure --base <run.json> --candidate <run.json> [--investigation <investigation.json>] [--artifact path]\n  minimize --base <run.json> --candidate <run.json> --base-workspace <clean-worktree> --candidate-workspace <clean-worktree> [--repetitions 3] [--max-pairs 48] [--artifact path]\n  bisect --good <ancestor-revision> --bad <known-bad-revision> --scenario <canonical-id> [--seed value] [--actions trace.json] [--repetitions 3] [--max-revisions 24]\n  graveyard register --id <slug> --signature <signature> --original <failed-artifact.json> --minimal <failed-artifact.json> --minimal-replay <candidate-run.json> --fix-commit <revision> --fix-base <run.json> --fix-candidate <run.json> --invariant <id> --selectors comma,list --owner <owner> [--hints comma,list] [--registry path]\n  graveyard list [--registry path]\n  graveyard reopen --id <slug> --reason <reason> [--registry path]\n  graveyard run --cases <selector,selector> [--registry path] [--artifact path]\n  forge wave99 [--artifact path]\n  select [--files comma,list | --files-from path] [--artifact path]\n  ci [--files comma,list | --files-from path] [--registry path] [--artifact path]\n  certify --manifest <release-evidence.json> [--artifact path]");
+    console.log("TearBench CLI\n  list\n  run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]\n  rerun --artifact <run.json>\n  investigate --base <tearbench-run.json> --candidate <tearbench-run.json> [--artifact path]\n  failure --base <run.json> --candidate <run.json> [--investigation <investigation.json>] [--artifact path]\n  minimize --base <run.json> --candidate <run.json> --base-workspace <clean-worktree> --candidate-workspace <clean-worktree> [--repetitions 3] [--max-pairs 48] [--artifact path]\n  bisect --good <ancestor-revision> --bad <known-bad-revision> --scenario <canonical-id> [--seed value] [--actions trace.json] [--repetitions 3] [--max-revisions 24]\n  graveyard register --id <slug> --signature <signature> --original <failed-artifact.json> --minimal <failed-artifact.json> --minimal-replay <candidate-run.json> --fix-commit <revision> --fix-base <run.json> --fix-candidate <run.json> --invariant <id> --selectors comma,list --owner <owner> [--hints comma,list] [--registry path]\n  graveyard list [--registry path]\n  graveyard reopen --id <slug> --reason <reason> [--registry path]\n  graveyard run --cases <selector,selector> [--registry path] [--artifact path]\n  forge wave99 [--artifact path]\n  evidence record --id <id> --subject <generated-artifact> -- <explicit command>\n  evidence partial-manifest --receipts <receipt.json,receipt.json> [--artifact path]\n  select [--files comma,list | --files-from path] [--artifact path]\n  ci [--files comma,list | --files-from path] [--registry path] [--artifact path]\n  certify --manifest <release-evidence.json> [--artifact path]");
   }
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));

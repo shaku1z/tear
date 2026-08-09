@@ -39,6 +39,33 @@ function namedEntries(value, label, errors) {
   return value;
 }
 
+function receiptEntry(entry, root, head, worktreeFingerprint, runtime, errors) {
+  const receipt = insideWorkspace(root, entry?.receiptPath);
+  if (!receipt || !isSha256(entry?.receiptSha256)) {
+    errors.push(`evidence ${String(entry?.id)} has an invalid receipt reference`);
+    return undefined;
+  }
+  return runtime.readFile(receipt.absolute).then((contents) => {
+    if (sha256(contents) !== entry.receiptSha256) {
+      errors.push(`evidence ${entry.id} receipt hash mismatch`);
+      return undefined;
+    }
+    let record;
+    try { record = JSON.parse(contents); } catch { errors.push(`evidence ${entry.id} receipt is not valid JSON`); return undefined; }
+    if (record?.format !== "tearbench-evidence-receipt" || record?.schemaVersion !== 1) errors.push(`evidence ${entry.id} receipt format is invalid`);
+    if (record?.id !== entry.id) errors.push(`evidence ${entry.id} receipt ID mismatch`);
+    if (record?.status !== "passed" || record?.exitCode !== 0) errors.push(`evidence ${entry.id} receipt did not pass`);
+    if (record?.commit !== head || record?.worktreeFingerprint !== worktreeFingerprint) errors.push(`evidence ${entry.id} receipt is not bound to this exact clean HEAD`);
+    if (record?.command !== entry.command) errors.push(`evidence ${entry.id} receipt command mismatch`);
+    if (typeof record?.timestamp !== "string" || Number.isNaN(Date.parse(record.timestamp))) errors.push(`evidence ${entry.id} receipt has no valid timestamp`);
+    if (typeof record?.stdout !== "string" || typeof record?.stderr !== "string") errors.push(`evidence ${entry.id} receipt lacks captured command output`);
+    if (record?.subject?.path !== entry.artifactPath || record?.subject?.sha256 !== entry.artifactSha256 || record?.subject?.size !== entry.artifactSize) {
+      errors.push(`evidence ${entry.id} receipt subject does not match manifest`);
+    }
+    return record;
+  }).catch(() => { errors.push(`evidence ${entry.id} receipt is missing`); return undefined; });
+}
+
 /**
  * Verify immutable release evidence.  This deliberately accepts its process
  * boundary as an adapter so unit tests can prove rejection behaviour without
@@ -66,10 +93,13 @@ export async function verifyReleaseEvidenceManifest(manifest, runtime) {
     if (typeof entry.command !== "string" || entry.command.trim() === "") errors.push(`evidence ${entry.id} has no recorded command`);
     if (typeof entry.timestamp !== "string" || Number.isNaN(Date.parse(entry.timestamp))) errors.push(`evidence ${entry.id} has no valid timestamp`);
     const artifact = insideWorkspace(root, entry.artifactPath);
-    if (!artifact || !isSha256(entry.artifactSha256)) { errors.push(`evidence ${entry.id} has an invalid artifact reference`); continue; }
+    if (!artifact || !isSha256(entry.artifactSha256) || !Number.isSafeInteger(entry.artifactSize) || entry.artifactSize < 0) { errors.push(`evidence ${entry.id} has an invalid artifact reference`); continue; }
     try {
-      if (sha256(await runtime.readFile(artifact.absolute)) !== entry.artifactSha256) errors.push(`evidence ${entry.id} artifact hash mismatch`);
+      const contents = await runtime.readFile(artifact.absolute);
+      if (sha256(contents) !== entry.artifactSha256) errors.push(`evidence ${entry.id} artifact hash mismatch`);
+      if (Buffer.byteLength(contents) !== entry.artifactSize) errors.push(`evidence ${entry.id} artifact size mismatch`);
     } catch { errors.push(`evidence ${entry.id} artifact is missing`); }
+    await receiptEntry(entry, root, head, worktreeFingerprint, runtime, errors);
   }
   for (const id of REQUIRED_RELEASE_EVIDENCE_IDS) if (!evidenceById.has(id)) errors.push(`required evidence is missing: ${id}`);
 
