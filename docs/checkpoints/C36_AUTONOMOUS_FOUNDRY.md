@@ -654,3 +654,23 @@ PROVEN BY: `tests/unit/foundry-job-offline-training-finalization.test.ts`.
 REMAINING HERE: the focused custody port is still a governed integration double,
 not browser capture evidence. This does not prove paired source evaluation,
 candidate admission, promotion, cloud behavior, or a fully unattended cycle.
+
+## V4 source-evaluation plan derivation
+
+The paired-ready V4 head now has one scheduled consumer. It revalidates the
+exact current schedule/job/pointer/source bytes, retained authority and handoff,
+named launch/readiness/paired receipts, original declared V4 source,
+launch-profile bytes, and action-time C31 custody. It derives only the frozen
+C34 plan. The plan bytes, plan receipt, index, next
+`source-evaluation-execution-ready` V4 binding, and current pointer are one
+conditional transaction; a rejected guard writes none of them. The next
+payload preserves authority, handoff, launch, paired-readiness, and plan-receipt
+hashes. It does not execute the evaluator, decide, construct a candidate, or
+promote/activate/roll back a policy.
+
+The real V2-to-C31-to-V4 lineage test proves tampered paired-readiness refusal,
+revoked custody refusal, a planted plan-commit loss with neither plan nor
+pointer write, and exact recovery. V1--V4 parse and recovery remain readable.
+PROVEN BY: `tests/unit/foundry-job-offline-training-finalization.test.ts`.
+REMAINING HERE: no source-evaluation execution or decision has been scheduled;
+this is durable plan derivation only, not unattended-cycle or browser evidence.

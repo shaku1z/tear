@@ -129,10 +129,32 @@ describe("C36 offline training terminalization", () => {
     }
     expect((await setupResult.backend.keys("analysis")).some((key) => key.startsWith("foundry-job-paired-evaluation-ready:v1:"))).toBe(true); expect((await setupResult.backend.keys("analysis")).some((key) => key.startsWith("online-rl-training:v1:"))).toBe(true);
     expect((await setupResult.backend.keys("analysis")).some((key) => key.startsWith("policy-"))).toBe(false);
+    return stopped ? undefined : Object.freeze({ setupResult, authority, run: restarted, schedule: pairedSchedule!, binding: pairedBinding!, mutableCustody, continued });
   }
 
   it("terminalizes a governed V4 online lineage atomically and disables stopped work", async () => { await exerciseV4OnlineTerminal(1, true); });
   it("terminalizes a governed V4 completed lineage to paired-evaluation readiness", async () => { await exerciseV4OnlineTerminal(4, false); });
+
+  it("derives the paired V4 source plan atomically, refuses changed authority, and recovers exactly", async () => {
+    const lineage = await exerciseV4OnlineTerminal(4, false); if (lineage === undefined || lineage.binding.payload.kind !== "source-evaluation-plan-ready") throw new Error("completed V4 lineage disappeared");
+    const { setupResult, authority, schedule, binding, mutableCustody } = lineage, pairedKey = `foundry-job-paired-evaluation-ready:v1:${binding.payload.pairedReadinessHash}`, pairedRaw = await setupResult.backend.get("analysis", pairedKey);
+    if (pairedRaw === undefined) throw new Error("paired readiness receipt disappeared");
+    await setupResult.backend.put("analysis", pairedKey, "tampered");
+    await expect(lineage.run.runScheduledOnce(schedule.scheduleHash, "2026-08-08T00:09:00.000Z", "tampered-paired-plan")).rejects.toThrow(/authority|invalid/u);
+    expect((await new TearFoundryExecutionBindingV4Vault(setupResult.vault).current(schedule))?.bindingHash).toBe(binding.bindingHash); expect((await setupResult.backend.keys("analysis")).some((key) => key.startsWith("foundry-job-source-evaluation-plan:v1:"))).toBe(false);
+    await setupResult.backend.put("analysis", pairedKey, pairedRaw); mutableCustody.held = () => Promise.resolve([]);
+    const revoked = new TearFoundryScheduledExecution(setupResult.vault, new TearFoundryJobScheduleVault(setupResult.backend), { ...(setupResult.custody as unknown as Record<string, unknown>), held: () => Promise.resolve([]) } as TearAcademyCandidateCustodyStore, setupResult.corpus, setupResult.loader);
+    await expect(revoked.runScheduledOnce(schedule.scheduleHash, "2026-08-08T00:09:00.000Z", "revoked-paired-plan")).rejects.toThrow(/custody/u);
+    expect((await new TearFoundryExecutionBindingV4Vault(setupResult.vault).current(schedule))?.bindingHash).toBe(binding.bindingHash); mutableCustody.held = () => Promise.resolve([{ candidateHash: "foundry-final-candidate", recordHash: h.corpus }]);
+    let losePlanCommit = true;
+    const raceBackend = { get: setupResult.backend.get.bind(setupResult.backend), put: setupResult.backend.put.bind(setupResult.backend), remove: setupResult.backend.remove.bind(setupResult.backend), keys: setupResult.backend.keys.bind(setupResult.backend), commit: setupResult.backend.commit.bind(setupResult.backend), commitWhileJournalMatches: setupResult.backend.commitWhileJournalMatches.bind(setupResult.backend), commitIfMatches: async (guards: Parameters<typeof setupResult.backend.commitIfMatches>[0], operations: Parameters<typeof setupResult.backend.commitIfMatches>[1]) => { if (losePlanCommit && operations.some((write) => write.key.startsWith("foundry-job-source-evaluation-plan:v1:"))) { losePlanCommit = false; throw new Error("planted source-plan commit loss"); } return setupResult.backend.commitIfMatches(guards, operations); } };
+    const raced = new TearFoundryScheduledExecution(new TearFoundryJobVault(raceBackend), new TearFoundryJobScheduleVault(raceBackend), { ...(setupResult.custody as unknown as Record<string, unknown>), backend: () => raceBackend } as TearAcademyCandidateCustodyStore, { ...(setupResult.corpus as unknown as Record<string, unknown>), backend: () => raceBackend } as TearAcademyCorpusStore, setupResult.loader);
+    await expect(raced.runScheduledOnce(schedule.scheduleHash, "2026-08-08T00:09:00.000Z", "source-plan-loss")).rejects.toThrow(/atomic plan authority/u);
+    expect((await new TearFoundryExecutionBindingV4Vault(setupResult.vault).current(schedule))?.bindingHash).toBe(binding.bindingHash); expect((await setupResult.backend.keys("analysis")).some((key) => key.startsWith("foundry-job-source-evaluation-plan:v1:"))).toBe(false);
+    const first = await raced.runScheduledOnce(schedule.scheduleHash, "2026-08-08T00:09:00.000Z", "source-plan-retry"), next = await new TearFoundryExecutionBindingV4Vault(setupResult.vault).current(schedule);
+    expect(first.dueReceiptHash).toMatch(/^[a-f0-9]{16}$/u); expect(next?.payload).toMatchObject({ kind: "source-evaluation-execution-ready", authorityHash: authority.authority.authorityHash, pairedReadinessHash: binding.payload.pairedReadinessHash }); expect((await setupResult.backend.keys("analysis")).filter((key) => key.startsWith("foundry-job-source-evaluation-plan:v1:")).length).toBe(2);
+    await expect(raced.runScheduledOnce(schedule.scheduleHash, "2026-08-08T00:09:00.000Z", "source-plan-retry")).resolves.toEqual(first);
+  });
 
   it("rejects cancelled C30 training without a model and refuses tampered online lineage", async () => {
     const setupResult = await setup({ epochs: 1, maxMeanAbsoluteTdError: 10, maxConsecutiveDivergentEpochs: 2 }), offline = await new TearFoundryOfflineTrainingFinalizationExecutor(setupResult.vault, setupResult.custody, setupResult.corpus, setupResult.loader).finalize(setupResult.launched.job, setupResult.launched.launch.launchHash, "2026-08-08T00:02:00.000Z");

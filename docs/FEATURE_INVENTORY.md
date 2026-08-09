@@ -480,6 +480,15 @@ This is the migration checklist for the architectural redesign. A checked featur
   not a score or winner; failed/invalid runs reject without metrics. No artifact,
   registry, activation, promotion, scheduler, or UI path exists.
 
+- [ ] C36 V4 source-evaluation plan binding — the scheduled V4 paired-ready
+  head revalidates exact authority/handoff/launch/readiness/paired-receipt,
+  original source, current schedule/job/pointer, launch-profile and C31 custody
+  bytes before it derives only the frozen V2/C34 plan. Plan/receipt/index and
+  the next receipt-bound V4 pointer are one conditional commit, so a lost
+  commit writes neither plan bytes nor a new current head. It cannot execute
+  evaluation, decide, create/admit a candidate, activate, promote, roll back,
+  schedule additional work, render UI, or contact cloud.
+
 - [ ] V2 Foundry frozen decision boundary — the predeclared C34 result is
   revalidated and yields only a monitoring-ready challenger or rejection.
   Monitoring-ready is not activation or promotion, and produces no C32 artifact

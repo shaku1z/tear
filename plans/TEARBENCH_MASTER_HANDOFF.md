@@ -1411,6 +1411,21 @@ REMAINING HERE: No paired source evaluation, candidate creation, promotion,
 rollback, cloud contact, human calibration, or unattended product loop is
 claimed by this slice.
 
+### C36 V4 source-evaluation plan binding
+
+DONE THIS STEP: The paired-receipt-bound V4 head now derives only the existing
+frozen C34 source-evaluation plan, retaining plan bytes/receipt and advancing
+to an opaque `source-evaluation-execution-ready` pointer in one guarded commit.
+Its pointer preserves exact authority, handoff, launch, paired-readiness and
+plan-receipt hashes. All currently named source authority bytes and C31 custody
+bytes are rechecked; it never scans for a latest artifact.
+PROVEN BY: `tests/unit/foundry-job-offline-training-finalization.test.ts` drives
+a real V2/C31/V4 lineage and proves tampered paired receipt, revoked custody,
+planted commit loss with no plan/pointer write, then exact recovery.
+REMAINING HERE: This does not execute C34 evaluation, render a verdict, create
+or promote a candidate, call cloud, or establish unattended automation. C36
+remains open.
+
 ### C34 V3 canonical-compatible offline training custody
 
 DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,

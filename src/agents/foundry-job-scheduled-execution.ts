@@ -9,6 +9,7 @@ import { TearFoundryExecutionBindingV4Vault, TearFoundryV4OfflineTerminalSchedul
 import { TearFoundryV4OnlineLaunchScheduler } from "./foundry-job-v4-online-launch-scheduler";
 import { TearFoundryV4OnlineExecutionScheduler } from "./foundry-job-v4-online-execution-scheduler";
 import { TearFoundryV4OnlineTerminalScheduler } from "./foundry-job-v4-online-terminal";
+import { TearFoundryV4SourceEvaluationPlanScheduler } from "./foundry-job-v4-source-evaluation-plan";
 import { parseTearFoundryOfflineTrainingLaunch, TearFoundryOfflineTrainingLaunchVault } from "./foundry-job-offline-training";
 import { TearOfflineRlCheckpointVault } from "./offline-rl-training";
 import type { TearFoundryJobScheduleVault } from "./foundry-job-schedule";
@@ -51,6 +52,12 @@ export class TearFoundryScheduledExecution {
       }
       if (v4.payload.kind === "online-finalization") {
         const next = await new TearFoundryV4OnlineTerminalScheduler(this.#jobs, this.#custody).finalize(schedule, v4, at), output = freeze({ format: "tear-foundry-scheduled-attempt", schemaVersion: 1, scheduleHash, bindingHash: v4.bindingHash, attemptedAt: at, leaseId, phase: v4.job.phase, dueReceiptHash: stableVerificationHash({ kind: "v4-online-terminal-finalization", bindingHash: v4.bindingHash, nextBindingHash: next?.bindingHash ?? null, at }) }); await this.#jobs.backend().commit(Object.freeze([{ store: "analysis", key, value: JSON.stringify(output) }])); return output;
+      }
+      if (v4.payload.kind === "source-evaluation-plan-ready") {
+        const corpus = this.#corpus, loader = this.#loader; if (corpus === undefined || loader === undefined) throw new TypeError("Foundry V4 source-evaluation plan requires shared C31 corpus and dataset loader");
+        const next = await new TearFoundryV4SourceEvaluationPlanScheduler(this.#jobs, this.#custody, corpus, loader).derive(schedule, v4, at);
+        const output = freeze({ format: "tear-foundry-scheduled-attempt", schemaVersion: 1, scheduleHash, bindingHash: next.bindingHash, attemptedAt: at, leaseId, phase: next.job.phase, dueReceiptHash: stableVerificationHash({ kind: "v4-source-evaluation-plan", sourceBindingHash: v4.bindingHash, planReceiptHash: next.payload.kind === "source-evaluation-execution-ready" ? next.payload.planReceiptHash : null, at }) });
+        await this.#jobs.backend().commit(Object.freeze([{ store: "analysis", key, value: JSON.stringify(output) }])); return output;
       }
       const corpus = this.#corpus, loader = this.#loader; if (corpus === undefined || loader === undefined) throw new TypeError("Foundry V4 terminal execution requires shared C31 corpus and dataset loader");
       const terminal = new TearFoundryV4OfflineTerminalScheduler(this.#jobs, this.#schedules, this.#custody, corpus, loader);
