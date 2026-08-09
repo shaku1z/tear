@@ -821,3 +821,17 @@ Completed Watch evidence is an observation; a threshold breach retains only
 `rollback-ready-not-invoked` provenance. It does not invoke the rollback
 executor, enable the schedule, dispatch work, change traffic, or add UI/cloud
 behavior.
+
+## V4 direct rollback terminal
+
+Only a direct caller holding that current disabled named Watch terminal can
+consume its exact `threshold-breach` record. The V4 boundary passes guarded
+continuation writes into the dedicated V3 rollback transaction, so restoring
+the frozen baseline activation/history and retaining the V3 receipt occur with
+the opaque `v3-post-promotion-rollback-terminal` head or not at all. The
+end-to-end fixture in `foundry-job-v3-monitoring-bridge.test.ts` proves a real
+baseline -> V4 promotion -> aggregate Watch breach -> rollback path, exact
+retry, retained source/schedule/job/pointer/terminal/authority/declaration/
+approval/promotion/active/artifact refusal, held and raw C31-custody refusal,
+and planted conditional-commit loss recovery. It has no timer, dispatcher,
+automatic invocation, traffic, placement, UI, or cloud behavior.
