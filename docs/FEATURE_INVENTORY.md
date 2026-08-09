@@ -156,12 +156,14 @@ This is the migration checklist for the architectural redesign. A checked featur
   closed. `tearbench-state-codecs.test.ts` preserves both cases.
   `browser-c40-source-void-ghost-seek.js` uses the explicit test-build
   `forensic-qa` recorder cadence to seal a real State Forge Source
-  collapse-to-void run with 60-tick V3 canonical keyframes, an input action,
-  and native causal event evidence; it verifies the capsule and reopens three
-  fresh C29 production compositions at tick 120 with the original authoritative
-  hash. This is a narrow Source scenario proof, not broad boss or C40
-  certification.
-  It is registered as `source-void-hazard-seek` in the canonical TearBench
+  collapse-to-void run at one HP. A post-handoff semantic movement command
+  causes the production void-fall rescue; the run retains the native
+  `world.void-rescue` fact, valid rescue lane/platform relocation, HP clamp,
+  slow and transfer grace, and continued simulation. It verifies the capsule
+  and reopens three fresh C29 production compositions both before and after
+  rescue with the original authoritative hashes. This is a narrow Source
+  scenario proof, not broad boss or C40 certification.
+  It is registered as `source-void-low-hp-rescue-seek` in the canonical TearBench
   scenario and diff-evidence registries. The registry records the exact browser command and its
   ephemeral verified-capsule/seek-receipt evidence; it deliberately does not
   create a retained release artifact or claim coverage beyond this Source

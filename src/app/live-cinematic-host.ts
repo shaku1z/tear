@@ -63,6 +63,7 @@ export function createLiveCinematicHost(context: LiveCinematicHostContext) {
     sound: (cue) => { if (cue === "source-dialogue") d.SFX.dialogueTone("source"); else d.SFX.voidGroundTear(); },
     voidTransfer: () => { d.SFX.voidTransfer(); },
     onDamageResult: (result) => { if (result === "hit") { context.loseStyle(); d.SFX.hurt(); } else if (result === "absorbed") context.shieldAbsorb(); },
+    onVoidRescue: (rescue) => { d.GAMEPLAY_EVENTS.emit({ kind: "world", event: "void-rescue", ...rescue }); },
     floater: context.addFloater,
   });
 

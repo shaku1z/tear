@@ -89,6 +89,12 @@ function declaresIdentity(codecId: TearCodecId, key: string, ownerPath: string):
 }
 
 function declaresReference(codecId: TearCodecId, key: string, ownerPath: string): boolean {
+  // The Source stream retains its generated ingress record as historical
+  // generator/cinematic metadata after that platform has been recycled.  Its
+  // embedded platformId is an alias, not a live cross-codec ownership edge.
+  // Treating it as an entity reference makes valid long void runs impossible
+  // to seal once the conveyor correctly retires the ingress platform.
+  if (codecId === "tear.run.v1" && key === "platformId" && ownerPath === "$.voidScroll.ingress") return false;
   return referenceKeys.has(key) && !declaresIdentity(codecId, key, ownerPath);
 }
 

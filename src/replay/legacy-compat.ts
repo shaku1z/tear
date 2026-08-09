@@ -179,9 +179,10 @@ export class LegacyGhostEngine {
   }
 
   #recordGameplayEvent(event: TearGameplayEvent): void {
-    if (event.kind === "run") {
+    if (event.kind === "run" || event.kind === "world") {
       // Run lifecycle truth is a V3 causal concern. Ghost 2's visual packet
-      // has no compatible track for it and must remain byte-compatible.
+      // (Likewise, world-rescue facts are causal-only.)  Its visual packet has
+      // no compatible track for either and must remain byte-compatible.
       return;
     }
     if (event.kind === "stage") {

@@ -57,7 +57,7 @@ describe("TearBench engineering runner", () => {
     const registry = createCanonicalScenarioRegistry();
     expect(registry.list()).toHaveLength(8);
     expect(registry.get("projectile-parry-basic").tags).toContain("parry");
-    expect(registry.get("source-void-hazard-seek").tags).toEqual(expect.arrayContaining(["source", "void", "hazard", "seek"]));
+    expect(registry.get("source-void-low-hp-rescue-seek").tags).toEqual(expect.arrayContaining(["source", "void", "hazard", "rescue", "seek"]));
     const firstScenario = registry.get(CANONICAL_ENGINEERING_SCENARIOS[0]?.id ?? "");
     expect(() => { registry.register(firstScenario); }).toThrow(/version/u);
   });

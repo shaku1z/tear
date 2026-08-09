@@ -49,14 +49,14 @@
     "testFiles": ["tests/unit/reward-selection.test.ts", "tests/unit/reward-transition-adapter.test.ts"]
   },
   {
-    "id": "source-void-hazard-seek",
-    "description": "Capture the Source collapse-to-void handoff, then verify fresh Ghost V3 production seeks at tick 120.",
-    "tags": ["source", "boss", "void", "hazard", "ghost", "seek", "c40"],
-    "maxTicks": 720,
+    "id": "source-void-low-hp-rescue-seek",
+    "description": "At one HP, trigger the real Source void-fall rescue through semantic movement, seal it, and verify fresh pre/post-rescue Ghost V3 production seeks.",
+    "tags": ["source", "boss", "void", "hazard", "rescue", "one-hit", "ghost", "seek", "c40"],
+    "maxTicks": 1200,
     "testFiles": ["tests/unit/c40-source-void-evidence-registry.test.ts"],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-c40-source-void-ghost-seek.js",
-      "artifact": "An ephemeral sealed and verified Ghost V3 capsule, including 60-tick canonical keyframes, a post-handoff semantic action, native causal events, and three fresh production-world seek receipts at tick 120.",
+      "artifact": "An ephemeral sealed and verified Ghost V3 capsule, including 60-tick canonical keyframes, a one-HP semantic void-fall rescue, its native world.void-rescue fact, and three fresh production-world seek receipts both before and after rescue.",
       "artifactRetention": "The browser proof verifies the capsule and receipts in its isolated test profile; it does not retain a checked-in release artifact.",
       "executionClass": "engineering",
       "certification": "non-certifying"

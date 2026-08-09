@@ -5,13 +5,13 @@ import { describe, expect, it } from "vitest";
 const root = resolve(import.meta.dirname, "..", "..");
 const readJson = (relativePath: string): unknown => JSON.parse(readFileSync(resolve(root, relativePath), "utf8"));
 
-describe("C40 Source void hazard seek evidence registry", () => {
+describe("C40 Source one-HP void rescue seek evidence registry", () => {
   it("names the narrow browser proof and its non-retained engineering artifact", () => {
     const catalog = readJson("src/tearbench/canonical-scenarios.json") as readonly Record<string, unknown>[];
-    const scenario = catalog.find((entry) => entry.id === "source-void-hazard-seek");
+    const scenario = catalog.find((entry) => entry.id === "source-void-low-hp-rescue-seek");
     expect(scenario).toMatchObject({
-      id: "source-void-hazard-seek",
-      maxTicks: 720,
+      id: "source-void-low-hp-rescue-seek",
+      maxTicks: 1200,
       testFiles: ["tests/unit/c40-source-void-evidence-registry.test.ts"],
       evidence: {
         command: "pnpm build:test:standalone && node tests/browser-c40-source-void-ghost-seek.js",
@@ -19,7 +19,7 @@ describe("C40 Source void hazard seek evidence registry", () => {
         certification: "non-certifying",
       },
     });
-    expect(String((scenario?.evidence as Record<string, unknown>).artifact)).toMatch(/verified Ghost V3 capsule.*three fresh production-world seek receipts/iu);
+    expect(String((scenario?.evidence as Record<string, unknown>).artifact)).toMatch(/one-HP semantic void-fall rescue.*world\.void-rescue.*before and after rescue/iu);
     expect(String((scenario?.evidence as Record<string, unknown>).artifactRetention)).toMatch(/does not retain a checked-in release artifact/iu);
   });
 
@@ -28,10 +28,10 @@ describe("C40 Source void hazard seek evidence registry", () => {
     const route = routes.find((entry) => entry.id === "source-void-replay");
     expect(route).toEqual({
       id: "source-void-replay",
-      prefixes: ["src/gameplay/campaign/source-void-", "src/app/live-source-void-", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-c40-source-void-ghost-seek.js", "tests/browser-c40-state-forge-source-void.js", "tests/unit/c40-source-void-evidence-registry.test.ts"],
-      scenarios: ["source-void-hazard-seek"],
+      prefixes: ["src/gameplay/campaign/source-void-", "src/gameplay/runtime/gameplay-events.ts", "src/app/live-source-void-", "src/tearbench/gameplay-causal-events.ts", "src/tearbench/state-codecs.ts", "src/replay/legacy-compat.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-c40-source-void-ghost-seek.js", "tests/browser-c40-state-forge-source-void.js", "tests/unit/c40-source-void-evidence-registry.test.ts"],
+      scenarios: ["source-void-low-hp-rescue-seek"],
       graveyardCases: [],
-      journeyCheckpoint: "source-void-hazard-seek-engineering-proof",
+      journeyCheckpoint: "source-void-low-hp-rescue-seek-engineering-proof",
       baseComparison: "not-run-by-this-scenario",
       interactionMatrices: ["browser"],
     });

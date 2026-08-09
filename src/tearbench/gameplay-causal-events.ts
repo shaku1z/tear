@@ -64,6 +64,10 @@ export function mapGameplayEventToCausalEvent(event: TearGameplayEvent): MappedG
       phase: "wave-draft-and-state-transitions",
       payload: Object.freeze({ choiceId: event.choiceId, tier: event.tier, wave: event.wave }),
     };
+    case "world": return {
+      type: "world.void-rescue", phase: "post-simulation-commit",
+      payload: Object.freeze({ x: event.x, y: event.y, lane: event.lane, hp: event.hp }),
+    };
     case "effect": return {
       type: event.effect === "stolenBlade" ? "blade.stolen" : event.effect === "revive" ? "player.revived"
         : event.effect === "bossKill" ? "boss.defeated" : event.effect.includes("parry") ? "combat.perfect-parry"
