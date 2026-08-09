@@ -607,3 +607,12 @@ receipt, disabled schedule, and terminal pointer are atomic under exact V4,
 decision, and C31 custody bytes; rejected terminals create no receipt. This
 does not bridge, activate, promote, place traffic, roll back, or provide a
 complete unattended lifecycle.
+
+### C36 V4 promotion-approval handoff
+
+A current disabled V4 V3-monitoring declaration can now atomically freeze an
+approver-free approval package and replace only that V4 pointer with an opaque
+approval-ready handoff. It pins the declared bridge, decision/monitoring facts,
+inactive candidate, active rollback baseline if any, and C31 custody, and
+refuses a candidate that becomes active. It cannot promote, activate, place
+traffic, resume the schedule, or surface a policy to players.

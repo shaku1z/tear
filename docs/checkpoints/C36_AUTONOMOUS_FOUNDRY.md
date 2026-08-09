@@ -750,3 +750,22 @@ activate, approve, promote, schedule, place, monitor traffic, or execute.
 PROVEN BY: `tests/unit/foundry-job-v3-monitoring-bridge.test.ts`.
 REMAINING HERE: candidate/promotion and monitored product lifecycle integration
 remain separate; C36 remains open.
+
+## V4 promotion-approval handoff
+
+Only a current, disabled V4 `v3-monitoring-bridge-ready` head can freeze the
+existing V3 approval package and replace that head with
+`v3-promotion-approval-ready { declarationHash, approvalHash }`. The one
+conditional commit pins the schedule, monitoring job, V4 source/current pointer,
+immutable declaration, V3 bridge, decision, monitoring receipt, inactive C32
+candidate, active rollback-baseline bytes when present, and action-time C31
+custody. It refuses a candidate that became active after declaration; the
+package remains approver-free and cannot promote, activate, place traffic, or
+reopen the disabled schedule.
+
+`tests/unit/foundry-job-v3-monitoring-bridge.test.ts` directly proves tampered
+declaration/bridge/candidate/source-binding/current-pointer refusal, revoked
+custody and active-candidate-baseline refusal, and a planted conditional commit
+loss with no approval or successor binding/pointer before exact retry. This is
+only an atomic evidence handoff, not a completed unattended lifecycle; C36
+remains open.

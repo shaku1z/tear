@@ -1485,6 +1485,22 @@ approval, promotion, schedule, traffic, or policy execution is reached.
 REMAINING HERE: later candidate/promotion and monitored product lifecycle
 work remain separate; C36 remains open.
 
+### C36 V4 promotion-approval handoff
+
+DONE THIS STEP: A current disabled V4 `v3-monitoring-bridge-ready` head can
+atomically consume only its exact retained declaration into the existing
+approver-free V3 approval package and a
+`v3-promotion-approval-ready { declarationHash, approvalHash }` pointer. The
+conditional transaction pins schedule/job/source/current pointer, declaration,
+V3 bridge, decision/monitoring evidence, inactive candidate, active baseline
+when present, and C31 custody; a candidate that becomes active is refused.
+PROVEN BY: `tests/unit/foundry-job-v3-monitoring-bridge.test.ts` directly
+rejects tampered declaration/bridge/candidate/source/current-pointer and
+custody/baseline changes, then proves planted commit loss creates neither
+approval nor successor binding/pointer before exact retry.
+REMAINING HERE: This remains a non-promotional handoff. It does not promote,
+activate, alter placement/traffic, reopen cadence, render UI, or complete C36.
+
 ### C34 V3 canonical-compatible offline training custody
 
 DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,
