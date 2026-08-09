@@ -754,3 +754,16 @@ rollback receipt together with one opaque V4 rollback-terminal binding. It
 revalidates the terminal, Watch authority, declaration, approval, promotion,
 active artifact, baseline, and action-time C31 custody bytes. It has no
 dispatcher, timer, automatic trigger, traffic, placement, UI, or cloud path.
+
+### C39 local sanitized Ghost support bundle
+
+A player-approved local support bundle can describe one exact healthy,
+complete V3 Ghost capsule and bounded requested tick/track scope. It validates
+every stored chunk and binds declared build/schema/root/repair lineage plus a
+strictly sanitized settings, platform, diagnostics, last-state-hash, and
+optional note record into one immutable hash. It contains no replay bytes,
+actions, identity, credentials, consent/training/moderation or
+publication/transport state, and it neither persists, displays, nor submits
+anything. `ghost-sanitized-support-bundle.test.ts` covers determinism,
+approval, tampering, and hostile-input refusal. This is a local support
+artifact foundation, not a submitted support case or C39 operations claim.

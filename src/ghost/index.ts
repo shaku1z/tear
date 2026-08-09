@@ -25,3 +25,4 @@ export * from "./cloud-publication";
 export * from "./local-publication-job";
 export * from "./publication-consent-ledger";
 export * from "./publication-transport";
+export * from "./sanitized-support-bundle";
