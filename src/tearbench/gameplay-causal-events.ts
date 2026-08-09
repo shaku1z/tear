@@ -73,6 +73,21 @@ export function mapGameplayEventToCausalEvent(event: TearGameplayEvent): MappedG
         ...(event.damage === undefined ? {} : { damage: event.damage }),
       }),
     };
+    case "projectile": return {
+      type: event.event === "spawned" ? "projectile.spawned"
+        : event.event === "deflected" ? "projectile.deflected"
+          : event.event === "owner-changed" ? "projectile.owner-changed"
+            : event.event === "hit" ? "projectile.hit" : "projectile.expired",
+      phase: event.event === "spawned" ? "wave-draft-and-state-transitions"
+        : event.event === "hit" || event.event === "expired" ? "deaths-and-rewards" : "player-and-blade",
+      actorId: event.projectileId,
+      payload: Object.freeze({
+        x: event.x, y: event.y, vx: event.vx, vy: event.vy, owner: event.owner,
+        ...(event.sourceEnemyId === undefined ? {} : { sourceEnemyId: event.sourceEnemyId }),
+        ...(event.targetEnemyId === undefined ? {} : { targetEnemyId: event.targetEnemyId }),
+        ...(event.perfect === undefined ? {} : { perfect: event.perfect }),
+      }),
+    };
     case "world": return {
       type: "world.void-rescue", phase: "post-simulation-commit",
       payload: Object.freeze({ x: event.x, y: event.y, lane: event.lane, hp: event.hp }),

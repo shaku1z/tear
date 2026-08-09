@@ -48,6 +48,7 @@ export interface CombatEntityRuntimeHooks {
   noteFirstDamage(enemy: LiveCombatEntity, first: boolean): void; reflectedHit(enemy: LiveCombatEntity,
     projectile: LiveCombatEntity | null, source: LiveCombatEntity | null): void; bossHit(enemy: LiveCombatEntity): void;
   onKill(enemy: LiveCombatEntity, cause: string): void;
+  projectileHit?(projectile: LiveCombatEntity, enemy: LiveCombatEntity): void;
   areaDamage(x: number, y: number, radius: number, damage: number, playerOwned: boolean): number;
 }
 
@@ -304,6 +305,7 @@ export class CombatEntityRuntime {
     const first = enemy.firstPlayerDamageAt == null; enemy.hit(intent.damage, intent.dx, intent.dy);
     this.#hooks.noteFirstDamage(enemy, first);
     this.#hooks.reflectedHit(enemy, projectile, intent.sourceId ? objects.get(intent.sourceId) ?? null : null);
+    if (projectile) this.#hooks.projectileHit?.(projectile, enemy);
     if (intent.achievementTracking) this.#hooks.bossHit(enemy);
     if (intent.parryStun > 0 && !enemy.isBoss) enemy.stun = Math.max(enemy.stun ?? 0, intent.parryStun);
     if (isDead(enemy)) { this.#hooks.onKill(enemy, intent.perfect ? "skill" : ""); if (intent.perfect && intent.aegisParry) { const player = this.#hooks.player(); player.shield = Math.min(player.shield + 1, player.maxShield); } }

@@ -26,6 +26,11 @@ describe("native gameplay causal-event adapter", () => {
       { kind: "death", tick: 7, actorId: "enemy:4", cause: "blade" },
       { kind: "loadout", tick: 7, choiceId: "dash", tier: 1, wave: 4 },
       { kind: "loadout", tick: 7, choiceId: "dash-plus", tier: 2, wave: 4 },
+      { kind: "projectile", tick: 7, event: "spawned", projectileId: "projectile:8", x: 10, y: 20, vx: -300, vy: 0, owner: "enemy", sourceEnemyId: "enemy:4" },
+      { kind: "projectile", tick: 7, event: "deflected", projectileId: "projectile:8", x: 11, y: 20, vx: 500, vy: 0, owner: "player", sourceEnemyId: "enemy:4", perfect: true },
+      { kind: "projectile", tick: 7, event: "owner-changed", projectileId: "projectile:8", x: 11, y: 20, vx: 500, vy: 0, owner: "player", sourceEnemyId: "enemy:4", perfect: true },
+      { kind: "projectile", tick: 7, event: "hit", projectileId: "projectile:8", x: 20, y: 20, vx: 500, vy: 0, owner: "player", sourceEnemyId: "enemy:4", targetEnemyId: "enemy:4", perfect: true },
+      { kind: "projectile", tick: 7, event: "expired", projectileId: "projectile:8", x: 20, y: 20, vx: 500, vy: 0, owner: "player", sourceEnemyId: "enemy:4", perfect: true },
       { kind: "world", tick: 7, event: "void-rescue", x: 640, y: 420, lane: "lower", hp: 1 },
       { kind: "effect", tick: 7, effect: "perfect-parry", x: 1, y: 2 },
       { kind: "effect", tick: 7, effect: "blade-throw", x: 1, y: 2 },
@@ -38,7 +43,7 @@ describe("native gameplay causal-event adapter", () => {
     ];
     const expected = [
       "run.completed", "stage.entered", "wave.started", "wave.cleared", "wave.spawn-completed", "wave.spawn-completed",
-      "enemy.spawned", "enemy.defeated", "draft.selected", "tier.selected", "world.void-rescue", "combat.perfect-parry",
+      "enemy.spawned", "enemy.defeated", "draft.selected", "tier.selected", "projectile.spawned", "projectile.deflected", "projectile.owner-changed", "projectile.hit", "projectile.expired", "world.void-rescue", "combat.perfect-parry",
       "blade.thrown", "blade.recalled", "player.dash-started", "blade.stolen", "player.revived",
       "boss.defeated", "system.checkpoint",
     ];
@@ -49,7 +54,7 @@ describe("native gameplay causal-event adapter", () => {
     expect(events[6]).toMatchObject({ actorId: "enemy:4", payload: {
       actorKind: "warden", x: 11.25, y: 22.5, variantName: "frenzied", bossId: "warden",
     } });
-    expect(events[10]).toMatchObject({ type: "world.void-rescue", phase: "post-simulation-commit",
+    expect(events[15]).toMatchObject({ type: "world.void-rescue", phase: "post-simulation-commit",
       payload: { x: 640, y: 420, lane: "lower", hp: 1 } });
     expect(events[0]).toMatchObject({ phase: "post-simulation-commit", payload: {
       runId: "run-a", mode: "campaign", difficulty: "hard", weapon: "hammer", reason: "victory",

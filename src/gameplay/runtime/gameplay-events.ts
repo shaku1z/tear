@@ -24,6 +24,13 @@ export type TearGameplayEvent =
     kind: "weapon"; tick: number; event: "throw-launch" | "throw-resolved" | "catch";
     weaponId: string; throwId: number; x: number; y: number; damage?: number;
   }>
+  /** Authoritative projectile lifecycle facts. These are emitted by the live
+   * combat phase as it consumes real projectile state, never by replay tools. */
+  | Readonly<{
+    kind: "projectile"; tick: number; event: "spawned" | "deflected" | "owner-changed" | "hit" | "expired";
+    projectileId: string; x: number; y: number; vx: number; vy: number;
+    owner: "enemy" | "player"; sourceEnemyId?: string; targetEnemyId?: string; perfect?: boolean;
+  }>
   /** A source-owned world transition.  It is intentionally separate from
    * presentation effects so replay consumers can retain causal custody. */
   | Readonly<{ kind: "world"; tick: number; event: "void-rescue"; x: number; y: number; lane: "lower" | "upper" | null; hp: number }>

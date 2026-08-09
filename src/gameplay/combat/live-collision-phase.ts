@@ -49,6 +49,10 @@ export interface LiveCollisionPhaseHost {
   nearestEnemy: (x: number, y: number) => { x: number; y: number } | null; areaDamage: (x: number, y: number, radius: number, damage: number) => number;
   lobExplode: (x: number, y: number) => void; splitProjectile: (projectile: ParryProjectile) => void; triggerSlowMotion: () => void;
   emitPerfectParry: () => void; makeHitEvent: (enemy: LiveEnemy, x: number, y: number) => void;
+  observeProjectile(projectile: LiveProjectile): void;
+  projectileDeflected(projectile: LiveProjectile): void;
+  projectileHit(projectile: LiveProjectile, enemy: LiveEnemy): void;
+  projectileExpired(projectile: LiveProjectile): void;
   makeSwingEvent: (enemy: LiveEnemy, x: number, y: number, damage: number, quality: number, mechanic?: string) => void;
   makeSlamEvent: (enemy: LiveEnemy) => void; makeReturnEvent: (enemy: LiveEnemy, damage: number) => void;
   makePerfectParryEvent: (projectile: ParryProjectile) => void;
@@ -66,6 +70,7 @@ export interface LiveCollisionPhaseHost {
 /** Runs the collision-to-death half of a fixed combat tick as one typed phase. */
 export function runLiveCollisionPhase(host: LiveCollisionPhaseHost, dt: number): void {
   const { player, blade, run, state, config } = host;
+  for (const projectile of state.projectiles) host.observeProjectile(projectile);
   const held = blade.heldCollisionSegment(player);
   state.hitStop = resolveHeldBladeEnemyCollisions({ player, blade, enemies: state.enemies, run, segment: held,
     currentHitStop: state.hitStop, tuning: heldTuning(config, host.width, host.run.mode === "tutorial"),
@@ -81,6 +86,7 @@ export function runLiveCollisionPhase(host: LiveCollisionPhaseHost, dt: number):
     onHit: () => { host.loseStyle(); host.sound("hurt"); }, onAbsorbed: host.onShieldAbsorb,
     onHostileBladeResolved: (target, weapon) => { host.effects.burst(target.x, target.y, weapon.vx, weapon.vy, 8, config.colors.perfect); } });
   markFallenEnemies(state.enemies, config.view.h + 40); host.combat.resolveBomberDeaths(projectileTuning(host));
+  for (const projectile of state.projectiles) if (projectile.dead) host.projectileExpired(projectile);
   const tail = finalizeCombatTick({ dt, enemies: state.enemies, projectiles: state.projectiles, floaters: state.floaters,
     shake: state.shake, shakeDecay: config.juice.shakeDecay, player, run, hooks: tailHooks(host) });
   state.enemies = tail.enemies as LiveEnemy[]; state.projectiles = tail.projectiles as LiveProjectile[];
@@ -162,6 +168,7 @@ function runParries(host: LiveCollisionPhaseHost, held: HeldBladeCollisionInput[
     slowMotion: host.triggerSlowMotion, extendSlowMotion: (scale) => { state.slowMotion = Math.max(state.slowMotion, config.juice.parrySlowmo * scale); },
     style: host.addStyle, sound: (name) => { host.sound(name); }, achievementParry: () => { host.achievement("parry"); },
     logPerfectParry: (source) => { host.logWeapon("perfectParry", { source: source && typeof source === "object" && "kind" in source ? Reflect.get(source, "kind") : undefined }); },
+    projectileDeflected: (projectile) => { host.projectileDeflected(projectile); },
     emitPerfectParry: host.emitPerfectParry, firePerfectParry: host.makePerfectParryEvent });
 }
 

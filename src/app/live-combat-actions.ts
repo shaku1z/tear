@@ -126,6 +126,22 @@ export function createLiveCombatActions<
 function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPhaseHost, "state" | "combat"> {
   const { dependencies: d, live, ports } = context, f = ports.functions;
   const profileStats = d.profileStatsPersistence;
+  const seenProjectiles = new WeakSet(), terminalProjectiles = new WeakSet();
+  const emitProjectile = (event: "spawned" | "deflected" | "owner-changed" | "hit" | "expired", shot: CombatProjectile,
+    target?: LiveCollisionPhaseState["enemies"][number]): void => {
+    if (event === "expired") {
+      if (terminalProjectiles.has(shot)) return;
+      terminalProjectiles.add(shot);
+    }
+    const runtime = context.combatRuntime();
+    const source = shot.sourceEnemy ?? shot.owner;
+    d.GAMEPLAY_EVENTS.emit({ kind: "projectile", event, projectileId: runtime.id(shot, "projectile"),
+      x: shot.x, y: shot.y, vx: shot.vx, vy: shot.vy, owner: shot.deflected ? "player" : "enemy",
+      ...(source && typeof source === "object" ? { sourceEnemyId: runtime.id(source, "enemy") } : {}),
+      ...(target ? { targetEnemyId: runtime.id(target, "enemy") } : {}),
+      ...(shot.deflected ? { perfect: !!Reflect.get(shot, "perfect") } : {}),
+    });
+  };
   return {
     config: d.CONFIG,
     get player() { return live.player(); }, get blade() { return live.blade(); }, get run() { return live.run(); }, width: context.width,
@@ -144,6 +160,13 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
     distance: d.len, clamp: d.clamp, lerp: d.lerp, nearestEnemy: f.nearestEnemy, areaDamage: f.areaDamage,
     lobExplode: f.lobExplode, splitProjectile: f.splitProjectile, triggerSlowMotion: f.triggerSlowMotion,
     emitPerfectParry: () => { context.emitMusicEvent("perfect-parry", { weaponId: live.run().weaponId }); },
+    observeProjectile: (shot) => {
+      if (seenProjectiles.has(shot)) return;
+      seenProjectiles.add(shot); emitProjectile("spawned", shot);
+    },
+    projectileDeflected: (shot) => { emitProjectile("deflected", shot); emitProjectile("owner-changed", shot); },
+    projectileHit: (shot, enemy) => { emitProjectile("hit", shot, enemy); },
+    projectileExpired: (shot) => { emitProjectile("expired", shot); },
     makeHitEvent: (enemy, x, y) => { f.fireMod(f.modHook("onHit"), f.makeEvent(x, y, enemy)); },
     makeSwingEvent: (enemy, x, y, damage, quality, mechanic) => { f.fireMod(f.modHook("onSwingHit"), f.makeEvent(x, y, enemy, "swing", { type: "swingHit", damageDealt: damage, quality, mechanic })); },
     makeSlamEvent: (enemy) => { f.fireMod(f.modHook("onSlam"), f.makeEvent(enemy.x, enemy.y, enemy)); },

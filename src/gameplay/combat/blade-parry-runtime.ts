@@ -32,6 +32,7 @@ export interface BladeParryHooks {
   extendSlowMotion(scale: number): void;
   style(name: string): void; sound(name: "boom" | "counter" | "parry" | "deflect"): void; achievementParry(): void;
   logPerfectParry(source: unknown): void; emitPerfectParry(): void; firePerfectParry(projectile: ParryProjectile): void;
+  projectileDeflected?(projectile: ParryProjectile): void;
 }
 
 /** Resolves held-blade counters in projectile array order before projectile-vs-actor collision. */
@@ -90,6 +91,7 @@ function resolveOrdinary(shot: ParryProjectile, blade: ParryBlade, player: Parry
   let vx = blade.tipVX, vy = blade.tipVY; const target = perfect ? hooks.nearestEnemy(shot.x, shot.y) : null;
   if (target) { vx = target.x - shot.x; vy = target.y - shot.y; }
   shot.deflect(vx, vy, blade.tipSpeed, perfect);
+  hooks.projectileDeflected?.(shot);
   if (run.mods.deflectPierce) { shot.pierce = true; shot.pierced = new Set(); }
   if (perfect && run.mods.deflectSplit) hooks.split(shot);
   const color = perfect ? t.colors.perfect : t.colors.deflected; hooks.burst(shot.x, shot.y, vx, vy, perfect ? 12 : 5, color);
