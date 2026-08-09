@@ -20,7 +20,9 @@ not a support case or C39 operational-completion claim.
 
 `tests/fixtures/c39-preservation-corpus.json` and
 `src/ghost/preservation-corpus.ts` add a versioned deterministic local audit
-fixture. The runner materializes source exports, records hashes, proves a
+fixture. Each local source has a committed hash-and-byte descriptor. The runner
+materializes its deterministic source exports, verifies every descriptor before
+any Vault import, records the source hashes, proves a
 V1-to-V2 manifest migration is pure, and reopens readable cases through the
 production Vault, Reader, replay mapper, and admission boundary. It reports
 only `exact`, `migrated`, `visual-only`, `unsupported`, and `rejected`;
