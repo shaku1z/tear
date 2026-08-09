@@ -439,3 +439,7 @@ This is post-promotion executable measurement only. It neither changes the
 pointer nor assigns a ladder level, selects traffic, compares human traces,
 claims calibration/separation, rolls back, schedules, exposes UI, or contacts
 cloud.
+
+## Approval-bound post-promotion Watch observation
+
+The strict production C30/C32 Watch composition now queues a terminal aggregate observation only after its actual bounded decision journal flushes. The durable C36 monitor revalidates the current active pointer, exactly one matching promotion receipt and approval, and the original V2 job protocol and stop-condition identity. It accepts only a complete `watch-policy:v1` journal whose every decision receipt names that exact active V3 artifact and activation. It stores aggregate decision counts, journal/entry/terminal hashes and a completed-or-breach classification; no raw state, actions, custody, pixels, or audio are copied. The original protocol thresholds and an explicit `classify-only-no-rollback` policy are frozen in the record. It cannot roll back, promote, activate, schedule, change traffic, or expose UI.

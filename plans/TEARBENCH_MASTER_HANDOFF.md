@@ -1302,6 +1302,12 @@ REMAINING HERE: This package is durable authorization evidence only. A future
 atomic registry operation must consume it explicitly; do not register,
 activate, promote, place, route, schedule, or render a candidate here.
 
+### C36 post-promotion aggregate observation
+
+DONE THIS STEP: Strict active V3 Watch terminal evidence can now enter a content-addressed C36 aggregate-only monitor only after the current active pointer, exact promotion receipt/approval, frozen V2 protocol and stop identity, and a complete matching `watch-policy:v1` journal all revalidate. The record stores hashes/counts/status only and freezes `classify-only-no-rollback`.
+PROVEN BY: `tests/unit/foundry-job-v3-post-promotion-monitor.test.ts`.
+REMAINING HERE: Actual rollback/rejection authority, traffic/placement, and a user-visible monitoring surface remain deliberately absent.
+
 ### C34 V3 canonical-compatible offline training custody
 
 DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,

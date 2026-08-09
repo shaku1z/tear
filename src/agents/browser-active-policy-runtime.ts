@@ -3,6 +3,7 @@ import { TearPolicyDecisionJournal } from "./policy-decision-journal";
 import { TearActivePolicyRuntime } from "./policy-runtime";
 import { TearPolicyArtifactRegistry, parseTearPolicyActivation, parseTearPolicyArtifact, type TearPolicyRuntimeCompatibility } from "./policy-artifact-registry";
 import { TearC32CanonicalActivePolicyRuntime } from "./c32-canonical-active-policy-runtime";
+import { TearFoundryV3PostPromotionMonitor } from "./foundry-job-v3-post-promotion-monitor";
 import { TEAR_C34_V3_C32_POLICY_FORMAT_V1 } from "./c34-v3-c32-policy-adapter";
 
 export const DEFAULT_TEAR_POLICY_RUNTIME_COMPATIBILITY: TearPolicyRuntimeCompatibility = Object.freeze({
@@ -17,6 +18,8 @@ export interface BrowserActivePolicyRuntimeComposition {
   readonly runtime?: TearActivePolicyRuntime;
   /** Strict V3 candidates execute only through the exact canonical C30 state route. */
   readonly canonicalRuntime?: TearC32CanonicalActivePolicyRuntime;
+  /** Strict V3 runs may retain aggregate terminal health evidence only. */
+  readonly postPromotionMonitor?: TearFoundryV3PostPromotionMonitor;
   readonly decisionJournal: TearPolicyDecisionJournal;
 }
 
@@ -46,7 +49,7 @@ export async function createBrowserActivePolicyRuntime(factory: IDBFactory | und
   if (strictV3) {
     const runtime = new TearC32CanonicalActivePolicyRuntime(backend, () => [], true);
     await runtime.reset();
-    return Object.freeze({ canonicalRuntime: runtime, decisionJournal: new TearPolicyDecisionJournal(backend) });
+    return Object.freeze({ canonicalRuntime: runtime, decisionJournal: new TearPolicyDecisionJournal(backend), postPromotionMonitor: new TearFoundryV3PostPromotionMonitor(backend) });
   }
   const registry = new TearPolicyArtifactRegistry(backend, DEFAULT_TEAR_POLICY_RUNTIME_COMPATIBILITY);
   const runtime = new TearActivePolicyRuntime(registry);

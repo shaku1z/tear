@@ -231,6 +231,8 @@ candidate lineage and retains a promotion receipt; ordinary candidate handling
 and the Watch runtime cannot activate a policy. Placement, traffic rollout,
 monitoring, and rollback remain outside this boundary.
 
+The normal strict V3 Watch route now has an optional asynchronous terminal handoff to C36. It flushes the real production decision journal before the monitor may consume aggregate hashes. The handoff is analysis-only and has no impact on C30 simulation, input routing, terminal status, or policy pointer.
+
 ### C36 V3 monitoring eligibility bridge
 
 A current V2 Foundry `monitoring` head may now retain a separate, immutable

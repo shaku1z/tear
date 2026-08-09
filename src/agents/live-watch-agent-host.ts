@@ -9,6 +9,8 @@ import type { TearAgentIntentTrace, TearAgentProfileId } from "./contracts";
 import type { TearPolicyDecisionJournal, TearPolicyDecisionJournalSnapshot } from "./policy-decision-journal";
 import type { TearActivePolicyRuntime, TearPolicyDecisionReceipt } from "./policy-runtime";
 import type { TearC32CanonicalActivePolicyRuntime } from "./c32-canonical-active-policy-runtime";
+import { createTearFoundryV3PostPromotionTerminalReceipt, type TearFoundryV3PostPromotionMonitor } from "./foundry-job-v3-post-promotion-monitor";
+import { stableVerificationHash } from "../replay/hash";
 import { buildWatchChoiceScore } from "./watch-build-choice";
 import { installLiveWatchAgentPanel } from "./live-watch-agent-panel";
 import {
@@ -126,6 +128,8 @@ interface MutableState {
   artifactRuntime?: TearActivePolicyRuntime;
   canonicalRuntime?: TearC32CanonicalActivePolicyRuntime;
   decisionJournal?: TearPolicyDecisionJournal;
+  postPromotionMonitor?: TearFoundryV3PostPromotionMonitor;
+  monitorTerminalQueued?: true;
   director?: C24LongitudinalJourneyDirector;
 }
 
@@ -222,6 +226,7 @@ export function createLiveWatchAgentHost(
   artifactRuntime?: TearActivePolicyRuntime,
   decisionJournal?: TearPolicyDecisionJournal,
   canonicalRuntime?: TearC32CanonicalActivePolicyRuntime,
+  postPromotionMonitor?: TearFoundryV3PostPromotionMonitor,
 ): TearWatchAgentApi {
   let decisionJournalRuns = 0;
   let state: MutableState = {
@@ -234,6 +239,7 @@ export function createLiveWatchAgentHost(
     ...(artifactRuntime === undefined ? {} : { artifactRuntime }),
     ...(canonicalRuntime === undefined ? {} : { canonicalRuntime }),
     ...(decisionJournal === undefined ? {} : { decisionJournal }),
+    ...(postPromotionMonitor === undefined ? {} : { postPromotionMonitor }),
   };
   context.subscribeEngineEvent((event) => {
     if (state.status === "running" && state.engineEvents.length < 4_096) {
@@ -251,6 +257,17 @@ export function createLiveWatchAgentHost(
     state.status = "failed";
     state.terminalReason = reason;
     context.setSemanticInputAuthority(false);
+  };
+  // This is an after-the-fact analysis handoff.  It is intentionally not
+  // awaited by the simulation loop and any refusal remains observational.
+  const retainTerminalMonitor = (): void => {
+    if (state.monitorTerminalQueued === true || state.postPromotionMonitor === undefined || state.decisionJournal === undefined || !["completed", "failed", "stopped"].includes(state.status)) return;
+    state.monitorTerminalQueued = true;
+    const journal = state.decisionJournal, terminal = Object.freeze({ status: state.status as "completed" | "failed" | "stopped", tick: context.authoritative()?.tick ?? state.fixedTicks, ...(state.terminalReason === undefined ? {} : { reasonHash: stableVerificationHash(state.terminalReason) }) });
+    void journal.flush().then(async () => {
+      const persisted = await journal.read(journal.snapshot().id); if (persisted === undefined) return;
+      await state.postPromotionMonitor?.retain(createTearFoundryV3PostPromotionTerminalReceipt({ journalId: persisted.id, journalHash: persisted.journalHash, terminal }), new Date().toISOString());
+    }).catch(() => undefined);
   };
   const captureBlade = (): void => {
     const blade = context.state.blade();
@@ -289,6 +306,7 @@ export function createLiveWatchAgentHost(
       ...(artifactRuntime === undefined ? {} : { artifactRuntime }),
       ...(canonicalRuntime === undefined ? {} : { canonicalRuntime }),
       ...(decisionJournal === undefined ? {} : { decisionJournal }),
+      ...(postPromotionMonitor === undefined ? {} : { postPromotionMonitor }),
       ...(director === undefined ? {} : { director }),
     };
     state.artifactRuntime?.setConditioning({ personaId: resolved.profile });
@@ -475,6 +493,7 @@ export function createLiveWatchAgentHost(
         break;
       }
     }
+    retainTerminalMonitor();
     context.render();
     return immutableSnapshot(context, state);
   };
@@ -493,6 +512,7 @@ export function createLiveWatchAgentHost(
       if (state.status === "running" || state.status === "paused") state.status = "stopped";
       context.setSemanticInputAuthority(false);
       context.startFrameLoop();
+      retainTerminalMonitor();
       return immutableSnapshot(context, state);
     },
     activatePlaygroundAction(id: string) {
@@ -520,8 +540,9 @@ export function installLiveWatchAgentHost(
   artifactRuntime?: TearActivePolicyRuntime,
   decisionJournal?: TearPolicyDecisionJournal,
   canonicalRuntime?: TearC32CanonicalActivePolicyRuntime,
+  postPromotionMonitor?: TearFoundryV3PostPromotionMonitor,
 ): void {
-  const api = createLiveWatchAgentHost(context, artifactRuntime, decisionJournal, canonicalRuntime);
+  const api = createLiveWatchAgentHost(context, artifactRuntime, decisionJournal, canonicalRuntime, postPromotionMonitor);
   Object.defineProperty(target, "__TEAR_WATCH_AGENT__", {
     configurable: false, writable: false, value: api,
   });

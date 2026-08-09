@@ -543,3 +543,7 @@ identity. It is still only durable evidence: no registry admission, activation,
 promotion, placement, runtime traffic, or player surface is reachable.
 
 The inventory is reviewed at every phase gate. New features added during the redesign must be appended here and implemented through the target boundaries; they may not add new shared globals or direct platform dependencies to domain code.
+
+### C36 approval-bound post-promotion monitor
+
+An active C36-promoted V3 Watch run can retain one aggregate-only terminal health record after exact active pointer, promotion/approval, frozen protocol, and complete real Watch journal revalidation. It freezes the prior thresholds and `classify-only-no-rollback`; it cannot retain raw actions/states, mutate the pointer, roll back, schedule, place traffic, or render UI.
