@@ -547,3 +547,5 @@ The inventory is reviewed at every phase gate. New features added during the red
 ### C36 approval-bound post-promotion monitor
 
 An active C36-promoted V3 Watch run can retain one aggregate-only terminal health record after exact active pointer, promotion/approval, frozen protocol, and complete real Watch journal revalidation. It freezes the prior thresholds and `classify-only-no-rollback`; it cannot retain raw actions/states, mutate the pointer, roll back, schedule, place traffic, or render UI.
+
+An exact C36 `threshold-breach` record can now authorize one atomic restoration of its frozen pre-promotion baseline. The dedicated boundary rechecks provenance, V2 policy, custody, and baseline bytes and retains a rollback receipt; generic registry rollback remains unreachable from Foundry.

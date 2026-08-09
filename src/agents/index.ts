@@ -32,6 +32,7 @@ export * from "./foundry-job-v3-monitoring-bridge";
 export * from "./foundry-job-v3-promotion-approval";
 export * from "./foundry-job-v3-promotion";
 export * from "./foundry-job-v3-post-promotion-monitor";
+export * from "./foundry-job-v3-post-promotion-rollback";
 export * from "./online-rl-headless-executor";
 export * from "./online-rl-curriculum";
 export * from "./online-rl-training";

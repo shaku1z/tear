@@ -1308,6 +1308,12 @@ DONE THIS STEP: Strict active V3 Watch terminal evidence can now enter a content
 PROVEN BY: `tests/unit/foundry-job-v3-post-promotion-monitor.test.ts`.
 REMAINING HERE: Actual rollback/rejection authority, traffic/placement, and a user-visible monitoring surface remain deliberately absent.
 
+### C36 approval-bound post-promotion rollback
+
+DONE THIS STEP: An exact retained breach record can atomically restore only its approval-frozen baseline after revalidating current promoted pointer, approval/promotion receipts, current V2 protocol/threshold/stop identity, held C31 custody, and historical baseline bytes. The commit writes new active/history plus a hash-bound rollback receipt or writes none.
+PROVEN BY: `tests/unit/foundry-job-v3-post-promotion-rollback.test.ts`.
+REMAINING HERE: There is no generic rollback trigger, placement, traffic controller, UI, cloud, or scheduler route.
+
 ### C34 V3 canonical-compatible offline training custody
 
 DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,
