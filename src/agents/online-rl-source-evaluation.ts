@@ -44,6 +44,10 @@ export interface TearOnlineRlSourceEvaluationResultV1 {
   /** A pass is only retained evaluation evidence. This module cannot promote or activate anything. */
   readonly promotional: false; readonly resultHash: string;
 }
+/** Lets a governed caller retain the factual result in its own atomic commit. */
+export interface TearOnlineRlSourceEvaluationContinuationV1 {
+  readonly commit: (result: TearOnlineRlSourceEvaluationResultV1) => Promise<void>;
+}
 
 function record(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
 function text(value: unknown): value is string { return typeof value === "string" && value.trim().length > 0; }
@@ -102,14 +106,16 @@ export function parseTearOnlineRlSourceEvaluationResult(value: unknown): TearOnl
 /** Runs baseline and retained challenger over the same freshly reset C30 cases. It has no registry or promotion dependency. */
 export class TearOnlineRlSourceEvaluationExecutor {
   readonly #backend: GhostVaultBackend; constructor(backend: GhostVaultBackend) { this.#backend = backend; }
-  async execute(planInput: TearOnlineRlSourceEvaluationPlanV1, curriculumInput: TearOnlineRlCurriculumPlanV1, offlineInput: TearOfflineRlPlanV1, receipt: TearOfflineRlTrajectoryReceiptV1, challengerInput: TearOnlineRlCheckpointV1): Promise<TearOnlineRlSourceEvaluationResultV1> {
+  async execute(planInput: TearOnlineRlSourceEvaluationPlanV1, curriculumInput: TearOnlineRlCurriculumPlanV1, offlineInput: TearOfflineRlPlanV1, receipt: TearOfflineRlTrajectoryReceiptV1, challengerInput: TearOnlineRlCheckpointV1, continuation?: TearOnlineRlSourceEvaluationContinuationV1): Promise<TearOnlineRlSourceEvaluationResultV1> {
     const plan = parseTearOnlineRlSourceEvaluationPlan(planInput), curriculum = parseTearOnlineRlCurriculumPlan(curriculumInput), offline = parseTearOfflineRlPlan(offlineInput), challenger = parseTearOnlineRlCheckpoint(challengerInput), baseline = await new TearOfflineRlTrainingVault(this.#backend).get(plan.lineage.baselineTrainingHash);
     if (baseline?.model === undefined || baseline.trainingHash !== plan.lineage.baselineTrainingHash || challenger.status !== "complete" || plan.lineage.curriculumPlanHash !== curriculum.planHash || plan.lineage.offlinePlanHash !== offline.planHash || plan.lineage.receiptHash !== receipt.receiptHash || plan.lineage.challengerCheckpointHash !== challenger.checkpointHash || challenger.input.trainingHash !== baseline.trainingHash) throw new RangeError("source evaluation custody or lineage is unavailable or changed");
     const traces: TearOnlineRlSourceEvaluationTraceV1[] = [];
     for (const entry of plan.cases) { traces.push(runCase("baseline", baseline.model.entries, plan, curriculum, offline, entry)); traces.push(runCase("challenger", challenger.qValues, plan, curriculum, offline, entry)); }
     const baselineTraces = traces.filter((entry) => entry.side === "baseline"), challengerTraces = traces.filter((entry) => entry.side === "challenger"), baselineReward = baselineTraces.reduce((total, entry) => total + entry.rewardTotal, 0), challengerReward = challengerTraces.reduce((total, entry) => total + entry.rewardTotal, 0), baselineCompletions = baselineTraces.filter((entry) => entry.terminal.terminated).length, challengerCompletions = challengerTraces.filter((entry) => entry.terminal.terminated).length;
     const passed = challengerReward >= baselineReward + plan.thresholds.minimumRewardGain && (!plan.thresholds.requireCompletionRateNotLower || challengerCompletions >= baselineCompletions);
-    return new TearOnlineRlSourceEvaluationVault(this.#backend).persist(result({ format: "tear-online-rl-source-evaluation", schemaVersion: 1, planHash: plan.planHash, baselineTrainingHash: baseline.trainingHash, challengerCheckpointHash: challenger.checkpointHash, traces, metrics: { baselineReward, challengerReward, baselineCompletions, challengerCompletions, passed }, promotional: false }));
+    const output = result({ format: "tear-online-rl-source-evaluation", schemaVersion: 1, planHash: plan.planHash, baselineTrainingHash: baseline.trainingHash, challengerCheckpointHash: challenger.checkpointHash, traces, metrics: { baselineReward, challengerReward, baselineCompletions, challengerCompletions, passed }, promotional: false });
+    if (continuation !== undefined) { await continuation.commit(output); return output; }
+    return new TearOnlineRlSourceEvaluationVault(this.#backend).persist(output);
   }
 }
 export class TearOnlineRlSourceEvaluationVault { readonly #backend: GhostVaultBackend; constructor(backend: GhostVaultBackend) { this.#backend = backend; } async persist(value: TearOnlineRlSourceEvaluationResultV1): Promise<TearOnlineRlSourceEvaluationResultV1> { const key = `${KEY}${value.resultHash}`, existing = await this.#backend.get("analysis", key); if (existing !== undefined) return JSON.parse(existing) as TearOnlineRlSourceEvaluationResultV1; await this.#backend.commit(Object.freeze([{ store: "analysis", key, value: JSON.stringify(value) }, { store: "indexes", key: `online-rl-source-evaluation:${value.planHash}:${value.resultHash}`, value: JSON.stringify({ passed: value.metrics.passed, promotional: false }) }])); return value; } }

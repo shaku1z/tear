@@ -674,3 +674,23 @@ pointer write, and exact recovery. V1--V4 parse and recovery remain readable.
 PROVEN BY: `tests/unit/foundry-job-offline-training-finalization.test.ts`.
 REMAINING HERE: no source-evaluation execution or decision has been scheduled;
 this is durable plan derivation only, not unattended-cycle or browser evidence.
+
+## V4 source-evaluation execution
+
+Only a current `source-evaluation-execution-ready` V4 binding may invoke the
+already-derived paired C34 evaluator. It reloads and revalidates the exact
+schedule/job/pointer/binding, authority/handoff, declared source, online launch,
+offline readiness, paired receipt, plan receipt, profile, bootstrap, and
+action-time held C31 custody. The factual evaluator result, `evaluating` to
+`deciding` job successor, cadence rebind, and receipt-bound
+`source-evaluation-decision-ready` pointer are retained in one guarded
+transaction. No result or pointer is retained when a guard loses.
+
+The real V2/C31/V4 lineage test proves a corrupted retained plan and revoked
+custody fail closed, then injects the result-commit loss to prove no partial
+result/job/pointer exists before an exact retry succeeds. The resulting head is
+only decision-ready: it does not interpret thresholds, create/admit a candidate,
+activate, promote, roll back, render UI, or contact cloud.
+PROVEN BY: `tests/unit/foundry-job-offline-training-finalization.test.ts`.
+REMAINING HERE: frozen-protocol decision and all subsequent candidate/promotion
+work are separate slices; C36 remains open.

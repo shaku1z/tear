@@ -489,6 +489,15 @@ This is the migration checklist for the architectural redesign. A checked featur
   evaluation, decide, create/admit a candidate, activate, promote, roll back,
   schedule additional work, render UI, or contact cloud.
 
+- [ ] C36 V4 source-evaluation execution binding — only the exact retained
+  V4 plan receipt may run the existing paired C34 evaluator. The factual
+  result, `evaluating -> deciding` job successor, schedule rebind, and
+  receipt-bound decision-ready pointer are one guarded transaction over the
+  retained authority/handoff/launch/readiness/plan/profile/bootstrap and held
+  C31 custody bytes. A corrupt plan, revoked custody, or lost transaction
+  leaves no result or successor pointer; this is not a decision, candidate,
+  activation, promotion, rollback, or cloud capability.
+
 - [ ] V2 Foundry frozen decision boundary — the predeclared C34 result is
   revalidated and yields only a monitoring-ready challenger or rejection.
   Monitoring-ready is not activation or promotion, and produces no C32 artifact

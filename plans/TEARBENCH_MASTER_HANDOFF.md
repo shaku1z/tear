@@ -1426,6 +1426,21 @@ REMAINING HERE: This does not execute C34 evaluation, render a verdict, create
 or promote a candidate, call cloud, or establish unattended automation. C36
 remains open.
 
+### C36 V4 source-evaluation execution binding
+
+DONE THIS STEP: Only the exact `source-evaluation-execution-ready` V4 head may
+execute the frozen paired C34 evaluator. Its factual result, `evaluating` to
+`deciding` successor, rebound schedule, and exact decision-ready pointer are
+retained in one guarded transaction over the named authority, handoff, launch,
+readiness, paired receipt, plan receipt, profile, bootstrap, and live C31
+custody bytes.
+PROVEN BY: `tests/unit/foundry-job-offline-training-finalization.test.ts`
+exercises the real V2/C31/V4 chain, rejects a corrupted retained plan and
+revoked custody, proves a planted result-commit loss leaves no result/job/pointer,
+then recovers exactly to a retained decision-ready head.
+REMAINING HERE: This does not interpret the frozen result, create a candidate,
+activate, promote, roll back, or contact cloud. C36 remains open.
+
 ### C34 V3 canonical-compatible offline training custody
 
 DONE THIS STEP: A frozen V3 C34 plan now binds an immutable governed receipt,
