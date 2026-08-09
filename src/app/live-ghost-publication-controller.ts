@@ -13,10 +13,10 @@ export class LiveGhostPublicationController {
   async open(capsuleId: string): Promise<void> {
     this.#capsuleId = capsuleId; this.#jobId = undefined;
     if (this.#factory === undefined) { this.#set("Ghost Vault is unavailable in this browser."); return; }
-    if (!this.#runtime.available) { this.#set(`Publication unavailable: ${this.#runtime.reason ?? "capability unavailable"}.`); return; }
-    const actor = this.#actor(); if (actor === undefined) { this.#set("Publication requires a signed-in nonanonymous account."); return; }
     try { const vault = new GhostLocalVault(await createIndexedDbGhostVaultBackend(this.#factory)); const manifest = await vault.getManifest(capsuleId);
       if (manifest?.status !== "complete") { this.#set("Only a healthy complete Ghost Vault capsule can be reviewed."); return; }
+      if (!this.#runtime.available) { this.#set(`Publication unavailable: ${this.#runtime.reason ?? "capability unavailable"}.`, capsuleId, manifest.rootIntegrity); return; }
+      const actor = this.#actor(); if (actor === undefined) { this.#set("Publication requires a signed-in nonanonymous account.", capsuleId, manifest.rootIntegrity); return; }
       this.#view = Object.freeze({ id: "ghostpublication", status: "ready", detail: "Review the fixed pseudonymous/private and no-training constraints before explicitly granting local publication custody.", capsuleId, rootIntegrity: manifest.rootIntegrity, capability: "standalone foreground capability ready", privacy: "pseudonymous", visibility: "private", training: "no-training", canGrant: true });
     } catch { this.#set("This Ghost capsule is unhealthy or unavailable."); }
   }
@@ -47,5 +47,5 @@ export class LiveGhostPublicationController {
   #apply(state: GhostPublicationTransportStateV1): void { const terminal = state.terminal;
     this.#view = Object.freeze({ ...this.#view, status: terminal === undefined ? "queued" : "terminal", detail: terminal === undefined ? "Foreground upload paused; press RUN UPLOAD ONCE to try again after the shown retry time." : `Publication ${terminal}.`, canRun: terminal === undefined, canCancel: terminal === undefined, attempts: state.attempts, ...(state.retryAt === undefined ? {} : { retryAt: state.retryAt }), ...(terminal === undefined ? {} : { terminal }) });
   }
-  #set(detail: string): void { this.#view = Object.freeze({ id: "ghostpublication", status: "unavailable", detail, capability: this.#runtime.reason ?? "unavailable", privacy: "pseudonymous", visibility: "private", training: "no-training", canGrant: false }); }
+  #set(detail: string, capsuleId?: string, rootIntegrity?: string): void { this.#view = Object.freeze({ id: "ghostpublication", status: "unavailable", detail, capability: this.#runtime.reason ?? "unavailable", privacy: "pseudonymous", visibility: "private", training: "no-training", canGrant: false, ...(capsuleId === undefined ? {} : { capsuleId }), ...(rootIntegrity === undefined ? {} : { rootIntegrity }) }); }
 }

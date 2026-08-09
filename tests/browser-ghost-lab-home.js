@@ -15,7 +15,7 @@ withJourney({ name: "C37 normal Ghost Lab home", port: 8179 }, async ({ page, wa
   await page.mouse.click(780, 757); // normal main-menu GHOST LAB control
   await waitScreen("ghostlab");
   const labText = await page.evaluate(() => window.__TEAR_C37_GHOST_LAB_TEXT__);
-  for (const expected of ["GHOST LAB", "AVAILABLE LOCALLY", "NOT YET PLAYER-SAFE", "UNAVAILABLE · WATCH", "UNAVAILABLE · STATE FORGE", "UNAVAILABLE · BOT LADDER", "UNAVAILABLE · STUDIO"]) {
+  for (const expected of ["GHOST LAB", "AVAILABLE LOCALLY", "NOT YET PLAYER-SAFE", "UNAVAILABLE / WATCH", "UNAVAILABLE / STATE FORGE", "UNAVAILABLE / BOT LADDER", "UNAVAILABLE / STUDIO"]) {
     assert.ok(labText.includes(expected), `Ghost Lab did not visibly render ${expected}: ${labText.slice(-80).join(" | ")}`);
   }
   await page.mouse.click(475, 224); // Academy
