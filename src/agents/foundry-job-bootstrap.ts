@@ -64,8 +64,9 @@ export class TearFoundryBootstrapExecutor {
     const binding = createTearFoundryExecutionBindingV3({ schedule: { id: enabled.id, revision: enabled.revision, scheduleHash: enabled.scheduleHash }, job: { id: job.id, jobHash: job.jobHash, phase: job.phase }, payload: { kind: "none" }, successorDeclaration: input.successorDeclaration });
     const manifest = await this.#corpus.getManifest(input.manifest.id, { kind: "trainer", id: input.manifest.trainerId }, input.manifest.version);
     if (!exactManifest(manifest, input, job)) throw new RangeError("Foundry bootstrap manifest is not the exact frozen C31 trainer manifest");
-    const held = await this.#custody.held(input.bootstrappedAt), live = new Map(held.map((entry) => [entry.recordHash, entry])), custodyRecords = job.inputs.corpusRecordHashes.map((recordHash) => live.get(recordHash));
-    if (custodyRecords.some((entry) => entry === undefined)) throw new RangeError("Foundry bootstrap C31 custody is no longer held");
+    const held = await this.#custody.held(input.bootstrappedAt), live = new Map(held.map((entry) => [entry.recordHash, entry])), custodyCandidates = job.inputs.corpusRecordHashes.map((recordHash) => live.get(recordHash));
+    if (custodyCandidates.some((entry) => entry === undefined)) throw new RangeError("Foundry bootstrap C31 custody is no longer held");
+    const custodyRecords = custodyCandidates.filter((entry): entry is NonNullable<typeof entry> => entry !== undefined);
     const receiptKey = `foundry-job-bootstrap:v1:${stableVerificationHash({ jobHash: job.jobHash, manifestHash: input.manifest.manifestHash, scheduleHash: enabled.scheduleHash, bindingHash: binding.bindingHash })}`;
     const [currentJob, currentSchedule, priorReceipt, bindingRaw, manifestRaw, ...custodyRaw] = await Promise.all([
       this.#backend.get("analysis", jobKey(job.id)), this.#backend.get("analysis", scheduleKey(enabled.id)), this.#backend.get("analysis", receiptKey),
@@ -92,7 +93,11 @@ export class TearFoundryBootstrapExecutor {
       { store: "analysis", key: jobKey(job.id), ...(currentJob === undefined ? {} : { expected: currentJob }) },
       { store: "analysis", key: scheduleKey(enabled.id), ...(currentSchedule === undefined ? {} : { expected: currentSchedule }) },
       { store: "analysis", key: receiptKey }, { store: "analysis", key: bindingKey(binding.bindingHash) }, { store: "analysis", key: manifestKey(input.manifest.id, input.manifest.trainerId, input.manifest.version), expected: manifestRaw },
-      ...custodyRecords.map((entry, index) => Object.freeze({ store: "analysis" as const, key: custodyKey(entry.candidateHash), expected: custodyRaw[index] })),
+       ...custodyRecords.map((entry, index) => {
+         const expected = custodyRaw[index];
+         if (expected === undefined) throw new RangeError("Foundry bootstrap custody authority bytes disappeared");
+         return Object.freeze({ store: "analysis" as const, key: custodyKey(entry.candidateHash), expected });
+       }),
     ]), Object.freeze([
       ...(currentJob === undefined ? [{ store: "analysis" as const, key: jobKey(job.id), value: JSON.stringify(job) }, { store: "indexes" as const, key: `foundry-job:${job.id}:${job.jobHash}`, value: JSON.stringify(Object.freeze({ phase: job.phase, championArtifactHash: job.inputs.champion.artifactHash, evaluationPlanHash: job.inputs.evaluationPlanHash })) }] : []),
       { store: "analysis", key: scheduleKey(enabled.id), value: JSON.stringify(enabled) },
