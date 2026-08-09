@@ -252,15 +252,21 @@ describe("legacy screen renderer registry", () => {
       .toMatchObject({ label: "TRY AGAIN", x: 690, w: 220, h: 46 });
   });
 
-  it("renders the hashes-only Foundry status with refresh and return, but no workflow action", () => {
+  it("renders opaque Foundry launch eligibility and only an eligible semantic bootstrap", () => {
     const controls: ScreenControl[] = [];
     const renderer = createLegacyScreenRenderers(createRenderContext(controls));
-    renderer.foundry({ id: "foundry", status: "ready", subtitle: "local recovery", automation: "unavailable", jobs: [{
+    renderer.foundry({ id: "foundry", status: "ready", subtitle: "local recovery", automation: "unavailable", launchProfiles: [
+      { profileId: "eligible-local-cycle", disposition: "eligible" }, { profileId: "blocked-local-cycle", disposition: "blocked" },
+    ], jobs: [{
       jobHash: "a".repeat(16), phase: "collecting", nextManualPhase: "curating", resumable: true, eventCount: 2,
       lastEventHash: "b".repeat(16), projectionHash: "c".repeat(16),
     }], schedules: [] });
-    expect(controls.map((control) => control.action.type)).toEqual(expect.arrayContaining(["foundry.refresh", "navigate"]));
-    expect(controls.some((control) => control.action.type !== "foundry.refresh" && control.action.type !== "navigate")).toBe(false);
+    expect(controls.find((control) => control.action.type === "foundry.bootstrap"))
+      .toMatchObject({ label: "START LOCAL CYCLE", action: { profileId: "eligible-local-cycle" }, enabled: true });
+    expect(controls.find((control) => control.action.type === "foundry.bootstrap" && control.action.profileId === "blocked-local-cycle"))
+      .toMatchObject({ label: "BLOCKED", enabled: false });
+    expect(JSON.stringify(controls)).not.toContain("artifactHash");
+    expect(JSON.stringify(controls)).not.toContain("custody");
   });
 
   it("renders durable DAgger status and exposes only a persisted-plan advance action", () => {

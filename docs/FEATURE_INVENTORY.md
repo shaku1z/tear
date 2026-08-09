@@ -408,6 +408,13 @@ This is the migration checklist for the architectural redesign. A checked featur
 
 ## C36 Foundry status
 
+- [ ] C36 launch-profile screen action — the standard Foundry renderer receives
+  only an opaque profile ID and `eligible`/`blocked` disposition. Its one
+  semantic `foundry.bootstrap { profileId }` command rechecks the profile at
+  action time, delegates the derived request to the bootstrap executor, and
+  refreshes the view. It exposes no configuration, hashes, champion identity,
+  or C31 custody, and it is not autonomous-cycle evidence.
+
 - [ ] C36 V2-to-V3 local bootstrap admission — one fail-closed local boundary
   can atomically admit an already-frozen V2 `created` request into its enabled
   schedule revision and exact V3 execution binding, after rechecking a

@@ -1342,9 +1342,12 @@ whose custody remains held at action time. It returns only opaque
 eligible/blocked state or an internally-derived bootstrap request.
 PROVEN BY: `tests/unit/foundry-launch-profile.test.ts` covers immutable retry,
 opaque blocked state, corrupted-profile quarantine, and no-authority refusal.
-REMAINING HERE: No screen/action invokes this profile and it neither curates,
-executes, schedules, trains, evaluates, promotes, rolls back, nor proves an
-unattended cycle.
+REMAINING HERE: The normal Foundry screen now projects only opaque profile IDs
+and eligible/blocked disposition. Its single `foundry.bootstrap { profileId }`
+action rechecks authority at action time, calls the dedicated bootstrap
+executor, then refreshes; no profile configuration, hashes, champion, or
+custody reaches the renderer. This neither curates, trains, evaluates,
+promotes, rolls back, nor proves an unattended cycle.
 
 ### C34 V3 canonical-compatible offline training custody
 

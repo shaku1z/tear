@@ -478,6 +478,13 @@ trainer manifest and action-time held C31 custody. Callers receive only an
 `eligible`/`blocked` projection or a derived bootstrap request; malformed,
 missing, incompatible, revoked, or corrupt authority fails closed.
 
-This is authority admission only: it does not curate C31 data, execute work,
-start a scheduler, train/evaluate, mutate a C32 policy, promote/roll back, or
-expose UI. It is not unattended-cycle evidence.
+The normal Foundry screen now reads only its opaque profile ID and
+`eligible`/`blocked` disposition. Its single `foundry.bootstrap { profileId }`
+semantic action reaches this authority at action time, derives the request, and
+passes it to the dedicated bootstrap executor before refreshing the projection.
+The renderer never receives profile configuration, hashes, champion identity,
+or custody data; blocked profiles have no enabled launch control.
+
+This remains authority admission only: it does not curate C31 data, execute
+work beyond bootstrap, train/evaluate, mutate a C32 policy, promote/roll back,
+or prove an unattended cycle.

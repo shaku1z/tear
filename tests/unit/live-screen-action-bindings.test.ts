@@ -25,6 +25,12 @@ describe("live screen action bindings", () => {
     expect(setFoundryScheduleEnabled).toHaveBeenNthCalledWith(2, "b".repeat(16), false);
   });
 
+  it("routes a Foundry bootstrap by profile identity only", () => {
+    const bootstrapFoundry = vi.fn(), dispatch = createLiveScreenActionBindings({ bootstrapFoundry } as unknown as ScreenActionBindingPorts);
+    dispatch({ type: "foundry.bootstrap", profileId: "local-cycle" });
+    expect(bootstrapFoundry).toHaveBeenCalledWith("local-cycle");
+  });
+
   it("routes only an explicit persisted DAgger plan advance through the Academy port", () => {
     const advanceAcademyDagger = vi.fn();
     const dispatch = createLiveScreenActionBindings({ advanceAcademyDagger } as unknown as ScreenActionBindingPorts);

@@ -253,6 +253,8 @@ export interface FoundryScreenView {
   readonly subtitle: string;
   /** Local lifecycle scheduler state; it never implies a worker, cloud task, policy activation, or promotion. */
   readonly automation: "unavailable" | "local";
+  /** Opaque launch-authority state only. No profile inputs, hashes, or custody cross into presentation. */
+  readonly launchProfiles: readonly Readonly<{ readonly profileId: string; readonly disposition: "eligible" | "blocked"; }>[];
   readonly jobs: readonly Readonly<{ readonly jobHash: string; readonly phase: string; readonly nextManualPhase: string | null;
     readonly resumable: boolean; readonly eventCount: number; readonly lastEventHash: string; readonly projectionHash: string; }>[];
   /** Configured local scheduling intent only; it does not imply an installed worker or execution. */
