@@ -35,10 +35,11 @@ export interface ReplayScreenAdapter {
   readonly openCoach: () => void; readonly selectCoachBaseline: (id: string) => void;
   readonly practiceCoachFinding: (findingId: string) => void;
   readonly toggleRunDna: () => void;
+  readonly toggleStudio: () => void; readonly createStudioCutList: () => void;
   readonly setSpeed: (value: number) => void; readonly status: () => ReplayStatus | null;
 }
 
-type LegacyReplayScreenAdapter = Omit<ReplayScreenAdapter, "enterGhostCapsule" | "enterGhostComparison" | "practice" | "openCoach" | "selectCoachBaseline" | "practiceCoachFinding" | "toggleRunDna">;
+type LegacyReplayScreenAdapter = Omit<ReplayScreenAdapter, "enterGhostCapsule" | "enterGhostComparison" | "practice" | "openCoach" | "selectCoachBaseline" | "practiceCoachFinding" | "toggleRunDna" | "toggleStudio" | "createStudioCutList">;
 type DeferredAction = (adapter: LegacyReplayScreenAdapter) => void;
 
 /** Route-triggered replay facade; heavyweight world playback loads only when a replay is opened. */
@@ -154,6 +155,8 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     selectCoachBaseline: (id) => { if (active === "theater") theater.selectCoachBaseline(id); },
     practiceCoachFinding: (findingId) => { if (active === "theater") theater.practiceCoachFinding(findingId); },
     toggleRunDna: () => { if (active === "theater") theater.toggleRunDna(); },
+    toggleStudio: () => { if (active === "theater") theater.toggleStudio(); },
+    createStudioCutList: () => { if (active === "theater") theater.createStudioCutList(); },
     toggleInfo: () => { if (active === "theater") theater.toggleInfo(); else if (active !== "comparison") invoke((value) => { value.toggleInfo(); }); },
     setSpeed: (speed) => { if (active === "theater") theater.setSpeed(speed); else if (active !== "comparison") invoke((value) => { value.setSpeed(speed); }); },
     status: () => theater.status() ?? comparison.status() ?? runtime?.status() ?? (pending === undefined ? null : {

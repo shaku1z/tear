@@ -614,6 +614,17 @@ events, or player-behavior inference.
 
 The inventory is reviewed at every phase gate. New features added during the redesign must be appended here and implemented through the target boundaries; they may not add new shared globals or direct platform dependencies to domain code.
 
+### C37 verified Theater Studio Cut List
+
+The normal verified C29 Theater exposes a separate `STUDIO CUT LIST` surface
+only for a complete schema-v2 V3 capsule at the current verified receipt
+checkpoint. It creates one immutable in-memory `ghost-studio-edl` from the
+exact Theater source identity, durable root, and previous-to-current verified
+tick window, then visibly names source, root, range, and EDL hash. It has no
+Vault write, source mutation, State Forge, fork, trace, cloud, or mutable-edit
+tool. The surface is explicitly `LOCAL EDL ONLY` and `MEDIA EXPORT
+UNAVAILABLE`: no production media renderer is connected.
+
 ### C36 approval-bound post-promotion monitor
 
 An active C36-promoted V3 Watch run can retain one aggregate-only terminal health record after exact active pointer, promotion/approval, frozen protocol, and complete real Watch journal revalidation. It freezes the prior thresholds and `classify-only-no-rollback`; it cannot retain raw actions/states, mutate the pointer, roll back, schedule, place traffic, or render UI.

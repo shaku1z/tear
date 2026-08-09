@@ -199,6 +199,11 @@ export interface ReplayScreenView {
     readonly sourceMetrics: Readonly<Record<string, number | undefined>>;
     readonly dimensions?: Readonly<Record<string, number>>; readonly unavailable: readonly string[];
   }>;
+  /** C37 local-only immutable Studio decision list; no media renderer is wired. */
+  readonly studioCutList?: Readonly<{
+    readonly available: boolean; readonly sourceGhostId?: string; readonly sourceRootHash?: string;
+    readonly fromTick?: number; readonly toTick?: number; readonly edlHash?: string; readonly unavailable?: string;
+  }>;
 }
 export interface SettingRowView {
   readonly key: string; readonly label: string; readonly value: string; readonly kind: "stepper" | "toggle" | "cycle";

@@ -7,6 +7,8 @@ import { createPracticeFromHere, GhostProductionReplayWorld, type GhostPracticeC
 
 export interface GhostVerifiedProductionReplaySession {
   readonly sourceId: string;
+  /** Immutable Vault manifest identity observed when this session was opened. */
+  readonly sourceCapsuleRootIntegrity: string;
   readonly sourceRootHash: string;
   readonly verifiedReceiptTicks: readonly number[];
   seek(tick: number): GhostSeekResult;
@@ -40,6 +42,7 @@ export function createGhostProductionReplaySession(
   const seek = (tick: number): GhostSeekResult => new GhostProductionReplayWorld(mapped.ghost, composition).seek(tick);
   return Object.freeze({
     sourceId: mapped.ghost.id,
+    sourceCapsuleRootIntegrity: capsule.manifest.rootIntegrity,
     sourceRootHash: mapped.ghost.rootHash,
     verifiedReceiptTicks: Object.freeze([...verifiedReceiptTicks].sort((left, right) => left - right)),
     seek,

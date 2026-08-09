@@ -8,6 +8,8 @@ import type { LegacyAppScreen } from "./legacy-state-controller";
 import type { GhostPracticeLaunchResult } from "./ghost-practice-launch";
 import { projectGhostCoachPractice, type GhostCoachPracticeProjection } from "../ghost/coach-practice";
 import { projectGhostRunDnaTheater } from "../ghost/run-dna-theater";
+import { createGhostStudioCutListFromTheater } from "../ghost/studio-cut-list-theater";
+import type { GhostStudioEditDecisionList } from "../ghost/player-experiences";
 
 export interface GhostTheaterScreenServices {
   readonly render: (view: ReplayScreenView) => void;
@@ -39,6 +41,8 @@ interface GhostTheaterContext {
   coachCandidates: readonly GhostReadCapsule[];
   coach: GhostCoachPracticeProjection | undefined;
   runDnaOpen: boolean;
+  studioOpen: boolean;
+  studioCutList: GhostStudioEditDecisionList | undefined;
 }
 
 const TICKS_PER_SECOND = 120;
@@ -110,6 +114,12 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
         })), unavailable: currentContext.coach?.unavailable ?? Object.freeze(["select one distinct healthy same-build baseline"]),
       }) } : {}),
       ...(currentContext.runDnaOpen ? { runDna: projectGhostRunDnaTheater(currentContext.capsule) } : {}),
+      ...(currentContext.studioOpen ? { studioCutList: currentContext.studioCutList === undefined
+        ? Object.freeze({ available: context.checkpoints.includes(current), ...(context.checkpoints.includes(current)
+          ? {} : { unavailable: "Studio requires the current verified replay checkpoint." }) })
+        : Object.freeze({ available: true, sourceGhostId: currentContext.studioCutList.sourceGhostId,
+          sourceRootHash: currentContext.studioCutList.sourceRootHash, fromTick: currentContext.studioCutList.clips[0]?.sourceFromTick ?? 0,
+          toTick: currentContext.studioCutList.clips[0]?.sourceToTick ?? 0, edlHash: currentContext.studioCutList.edlHash }) } : {}),
     });
   };
 
@@ -146,6 +156,8 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
           coachCandidates: Object.freeze([]),
           coach: undefined,
           runDnaOpen: false,
+          studioOpen: false,
+          studioCutList: undefined,
         };
         return true;
       } catch {
@@ -224,6 +236,14 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       } catch (error) { context.message = `Coach practice unavailable: ${error instanceof Error ? error.message : String(error)}`; }
     },
     toggleRunDna(): void { if (context !== undefined) context.runDnaOpen = !context.runDnaOpen; },
+    toggleStudio(): void { if (context !== undefined) context.studioOpen = !context.studioOpen; },
+    createStudioCutList(): void {
+      if (context === undefined) return;
+      const projected = createGhostStudioCutListFromTheater(context.capsule, context.session, context.result.tick);
+      if (projected.edl === undefined) { context.message = projected.unavailable ?? "Studio Cut List is unavailable."; return; }
+      context.studioCutList = projected.edl;
+      context.message = "Local immutable Cut List created. Media export is unavailable in this build.";
+    },
     toggleInfo(): void { if (context !== undefined) context.infoVisible = !context.infoVisible; },
     setSpeed(value: number): void { if (context !== undefined && isSpeed(value)) context.transport.speed(value); },
     status(): GhostTheaterScreenStatus | null {

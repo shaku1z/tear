@@ -173,6 +173,19 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   const theaterTexts = await page.evaluate((count) => (window.__TEAR_C29_THEATER_TEXT__ ?? []).slice(count), theaterTextCount);
   assert.ok(theaterTexts.some((text) => text.includes("THEATER")), `Theater header did not render: ${theaterTexts.slice(-80).join(" | ")}`);
   assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "replay");
+  const studioSourceBefore = JSON.stringify(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id));
+  await page.mouse.click(800, 509); // visible Theater-only Studio Cut List control
+  await page.waitForTimeout(250);
+  const studioBefore = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
+  assert.ok(studioBefore.includes("MEDIA EXPORT UNAVAILABLE"), "Studio did not disclose that production media export is unavailable");
+  await page.mouse.click(800, 280); // CREATE LOCAL EDL through the normal canvas semantic action
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).startsWith("EDL ")), undefined, { timeout: 10000 });
+  const studioTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
+  assert.ok(studioTexts.some((text) => String(text).startsWith("SOURCE ")), "Studio did not show source identity");
+  assert.ok(studioTexts.some((text) => String(text).startsWith("ROOT ")), "Studio did not show source root");
+  assert.ok(studioTexts.some((text) => String(text).startsWith("VERIFIED RANGE TICK ")), "Studio did not show its verified tick range");
+  const studioSourceAfter = JSON.stringify(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id));
+  assert.equal(studioSourceAfter, studioSourceBefore, "visible Studio Cut List changed its durable source capsule");
   await page.mouse.click(1020, 854); // rendered C37 RUN DNA control; it projects only declared capsule metrics
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("RUN DNA · VERIFIED METRICS"), undefined, { timeout: 10000 });
   const dnaTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
