@@ -21,7 +21,7 @@
     "typecheck": "tsc -b",
     "lint": "eslint src workers scripts tests/**/*.ts vite.config.ts vitest.config.ts vitest.endurance.config.ts",
     "test": "vitest run",
-    "test:unit:without-preservation-corpus": "pnpm exec vitest run --exclude '**/ghost-preservation-corpus.test.ts'",
+    "test:unit:without-preservation-corpus": "pnpm exec vitest run --exclude '**/ghost-preservation-corpus.test.ts' --no-file-parallelism",
     "test:endurance": "vitest run --config vitest.endurance.config.ts",
     "tearbench": "node scripts/tearbench.mjs",
     "requirements:generate": "node scripts/tearbench-requirements.mjs generate",
