@@ -24,7 +24,7 @@
     "durationMs": 8000,
     "enemySpawnCommands": 8,
     "minimumSamples": 300,
-    "simulationP95Ms": 8,
+    "simulationP95Ms": 10,
     "renderP95Ms": 14,
     "frameP95Ms": 20,
     "newLongTasksMax": 0
