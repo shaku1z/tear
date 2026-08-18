@@ -20,13 +20,23 @@ function finite(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
-function enemyPayload(kind: string, id: string, index: number): Readonly<Record<string, unknown>> {
+function enemyPayload(kind: string, id: string, index: number, position?: Readonly<{ x: number; y: number }>): Readonly<Record<string, unknown>> {
   return Object.freeze({
     id,
     factoryId: kind,
-    x: 260 + (index % 8) * 130,
-    y: 620 - Math.floor(index / 8) * 80,
+    x: position?.x ?? 260 + (index % 8) * 130,
+    y: position?.y ?? 620 - Math.floor(index / 8) * 80,
   });
+}
+
+function compositionPosition(spec: MutableRecord, count: number): Readonly<{ x: number; y: number }> | undefined {
+  const x = spec.x, y = spec.y;
+  if (x === undefined && y === undefined) return undefined;
+  if (count !== 1 || typeof x !== "number" || !Number.isFinite(x) || typeof y !== "number" || !Number.isFinite(y)
+    || x < 0 || x > 1600 || y < 0 || y > 800) {
+    throw new RangeError("positioned enemy composition requires exactly one finite actor within the authored 1600x800 arena");
+  }
+  return Object.freeze({ x, y });
 }
 
 function patchEnemyComposition(snapshot: TearSnapshotV1, composition: unknown): void {
@@ -39,8 +49,12 @@ function patchEnemyComposition(snapshot: TearSnapshotV1, composition: unknown): 
     if (!Number.isSafeInteger(count) || count < 0 || count > 200) {
       throw new RangeError("enemy composition count must be an integer from 0 through 200");
     }
+    const position = compositionPosition(spec, count);
     for (let index = 0; index < count; index += 1) {
-      payloads.push(enemyPayload(kind, `enemy:forge:${kind}:${String(payloads.length)}`, payloads.length));
+      // The live combat identity owner accepts its canonical numeric namespace
+      // only.  State Forge must stage real actors through that same namespace,
+      // rather than smuggling descriptive test IDs into production restore.
+      payloads.push(enemyPayload(kind, `enemy:${String(payloads.length + 1)}`, payloads.length, position));
     }
   }
   (snapshot.state as MutableRecord)["tear.enemy.v1"] = Object.freeze(payloads);

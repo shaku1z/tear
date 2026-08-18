@@ -7,6 +7,9 @@ import type { LiveRunControllerRegistry } from "./live-run-controller-api";
 import { createLiveRunOutcomeHost } from "./live-run-outcome-host";
 import type { RecordingSummary } from "../gameplay/run/outcome-planner";
 import type { StoredRecordingSummary } from "../gameplay/run/live-recording-controller";
+import { createTearTerminalRunFactPublisher } from "../gameplay/runtime/gameplay-event-publishers";
+import type { OutcomeChronologyEffect } from "../gameplay/run/outcome-chronology-journal";
+import type { LiveGhostPracticeSessionState } from "./live-ghost-practice-session-state";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 
@@ -36,6 +39,8 @@ export interface LiveOutcomeCompositionOptions {
   readonly economyTelemetry: (earned: number) => Readonly<Record<string, unknown>>;
   readonly achievementTracking: () => boolean;
   readonly achievementCheck: () => void;
+  /** Active Ghost practice runs are playable but may not publish durable outcomes. */
+  readonly practiceSession?: Pick<LiveGhostPracticeSessionState, "active">;
   readonly finishRecording: (won: boolean) => void;
   readonly executeVictory: (intents: readonly VictoryProgressionIntent[]) => void;
   readonly emitMusicOutcome: (outcome: "defeat" | "victory") => void;
@@ -44,12 +49,18 @@ export interface LiveOutcomeCompositionOptions {
   readonly cinema: Readonly<{ active: boolean; cancel(reason: string): void }>;
   readonly width: number;
   readonly height: number;
+  /** Test-only synchronous terminal receipt sink. */
+  readonly observeOutcomeChronology?: (effect: OutcomeChronologyEffect) => void;
 }
 
 /** Owns replay packaging, terminal progression, and pending-finale recovery wiring. */
 export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOptions): void {
   const d = options.dependencies;
   const active = options.run;
+  const practicing = () => options.practiceSession?.active() != null;
+  const publishTerminal = createTearTerminalRunFactPublisher(
+    d.GAMEPLAY_EVENTS, () => options.lifecycle.snapshot().sessionId,
+  );
   createLiveRunOutcomeHost<ReplayPacket>({
     snapshot: () => snapshotOutcomeRun(active()),
     displayName: () => d.Cloud.displayName(),
@@ -58,7 +69,10 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
       id: ability.id, tier: active().mods.tier[ability.id] ?? 1, count: active().mods.owned[ability.id] ?? 1,
     })),
     authoritativeResult: options.authoritativeResult,
-    stopRecording: (summary) => d.GHOST.stopRec(recordingMetadata(summary)),
+    stopRecording: (summary) => {
+      try { return d.GHOST.stopRec(recordingMetadata(summary)); }
+      finally { d.Input.stopSemanticRecording(); }
+    },
     storeReplay: (recording, summary) => d.VAULT.add(recording, storedRecordingMetadata(summary)),
     setLastRecording: options.setLastRecording,
     setLastVaultId: options.setLastVaultId,
@@ -71,16 +85,20 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     preparedVictory: () => active()._victoryPrepared ?? null,
     storePreparedVictory: (prepared) => { active()._victoryPrepared = prepared; },
     stopClipper: () => { d.Clipper?.stop(); },
-    terminate: (outcome) => { options.lifecycle.terminate(outcome); },
-    saveBest: (run) => options.saveBest(run.mode, run.diff, run.wave, run.score, run.runTime),
+    terminate: (outcome) => {
+      try { options.lifecycle.terminate(outcome); }
+      finally { d.Input.stopSemanticRecording(); }
+    },
+    publishTerminal,
+    saveBest: (run) => practicing() ? false : options.saveBest(run.mode, run.diff, run.wave, run.score, run.runTime),
     best: (run) => options.getBest(run.mode, run.diff),
-    awardCoins: options.awardCoins,
+    awardCoins: (score) => practicing() ? 0 : options.awardCoins(score),
     coins: () => d.META.coins(),
-    achievementTracking: options.achievementTracking,
+    achievementTracking: () => !practicing() && options.achievementTracking(),
     economyTelemetry: options.economyTelemetry,
     recordDefeatProgress(run, earned) {
-      d.PROFILE.addStat("runs", 1);
-      d.PROFILE.maxStat("longestRun", Math.floor(run.runTime));
+      if (practicing()) return;
+      d.outcomeDefeatProgressPersistence.record(run);
       d.DAILY.bump("runs", 1);
       options.achievementCheck();
       void d.Cloud.push();
@@ -88,11 +106,11 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
         time: Math.round(run.runTime), peak: run.wavePeak, died: true, ...options.economyTelemetry(earned) });
       options.finishRecording(false);
     },
-    executeVictoryIntents: options.executeVictory,
-    persistPendingFinale: (record) => { d.PROFILE.setPendingFinale(record); },
-    saveProfile: () => { d.PROFILE.save(); },
-    clearPendingFinale: () => { d.PROFILE.clearPendingFinale(); },
-    pushCloud: () => { void d.Cloud.push(); },
+    executeVictoryIntents: (intents) => { if (!practicing()) options.executeVictory(intents); },
+    persistPendingFinale: (record) => { if (!practicing()) d.pendingFinalePersistence.persist(record); },
+    saveProfile: () => { if (!practicing()) d.pendingFinalePersistence.saveProfile(); },
+    clearPendingFinale: () => { if (!practicing()) d.pendingFinalePersistence.clear(); },
+    pushCloud: () => { if (!practicing()) void d.Cloud.push(); },
     present(outcome, result) {
       options.setOutcome(result);
       options.setScreen(outcome === "victory" ? "win" : "gameover");
@@ -102,7 +120,10 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     },
     midgame: (callback) => { d.CG.midgame(callback); },
     restartCurrentRun: () => { options.startRun(active().mode, active().diff); },
-    pendingFinale: () => d.PROFILE.pendingFinale(),
+    ...(options.observeOutcomeChronology === undefined
+      ? {}
+      : { observeOutcomeChronology: options.observeOutcomeChronology }),
+    pendingFinale: d.pendingFinalePersistence.pending,
     selectedWeapon: options.selectedWeapon,
     selectWeapon: options.selectWeapon,
     startCampaign: (difficulty) => { options.startRun("campaign", difficulty); },
@@ -115,7 +136,10 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     groundY: () => d.CONFIG.world.groundY,
     viewport: () => ({ width: options.width, height: options.height }),
     isRecording: () => d.GHOST.recording(),
-    stopInterruptedRecording: (reason) => { d.GHOST.stopRec({ [reason]: true }); },
+    stopInterruptedRecording: (reason) => {
+      try { d.GHOST.stopRec({ [reason]: true }); }
+      finally { d.Input.stopSemanticRecording(); }
+    },
     presentClaimed(result) { options.setOutcome(result); options.setScreen("win"); options.resetWinSeconds(); d.SFX.wave(); d.CG.happytime(); },
     launchFinale: (death, recovered) => { options.startFinale(death, recovered); },
     installRecording: (controller) => { options.controllers.installRecording(controller); },

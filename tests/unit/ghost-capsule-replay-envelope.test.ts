@@ -8,6 +8,7 @@ import {
   mapGhostCapsuleToReplayEnvelope,
 } from "../../src/ghost";
 import { stableVerificationHash } from "../../src/replay/hash";
+import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 import {
   CODEC_REGISTRY,
   captureCodecState,
@@ -21,6 +22,7 @@ function world(): TearCodecWorld {
   for (const id of CODEC_REGISTRY.ids) result.components.set(id, {});
   result.components.set("tear.player.v1", { id: "player", x: 5, y: 0 });
   result.components.set("tear.run.v1", { elapsedTicks: 5 });
+  result.components.set("tear.cinematic.v1", INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 as never);
   return result;
 }
 
@@ -66,16 +68,18 @@ describe("Ghost capsule replay mapping", () => {
 
     const capsule = await new GhostCapsuleReader(vault).read("capsule-replay");
     const mapped = mapGhostCapsuleToReplayEnvelope(capsule);
-    expect(mapped.accepted).toEqual({ commands: 1, events: 1, snapshots: 1, visualSamples: 2 });
-    expect(mapped.ghost.rulesetVersion).toBe("rules-unit");
+    // The deliberately skeletal fixture is still contract-shaped but cannot
+    // be restored by the live codec registry, so the whole state track is
+    // unavailable rather than selectively trusted.
+    expect(mapped.accepted).toEqual({ commands: 1, events: 1, snapshots: 0, visualSamples: 2 });
+    expect(mapped.ghost.rulesetVersion).toBe("live-capsule-v1");
     expect(mapped.ghost.trident).toMatchObject({
       command: { status: "declared-unverified", available: true, resumable: false },
-      state: { status: "declared-unverified", available: true, seekable: true, resumable: false },
+      state: { status: "absent", available: false, seekable: false, resumable: false },
       visual: { status: "declared-unverified", available: true, seekable: true },
     });
-    expect(mapped.ghost.snapshots[0]).toMatchObject({ id: "capsule-keyframe-5", tick: 5 });
-    expect(mapped.issues).toHaveLength(1);
-    expect(mapped.issues[0]).toMatchObject({ track: "keyframes", tick: 5 });
+    expect(mapped.ghost.snapshots).toEqual([]);
+    expect(mapped.issues.some((entry) => entry.track === "keyframes" && entry.reason.includes("isolated codec preflight"))).toBe(true);
   });
 
   it("fails closed for a malformed command track while retaining independently restorable state", () => {
@@ -97,7 +101,7 @@ describe("Ghost capsule replay mapping", () => {
     });
     expect(mapped.ghost.actions).toEqual([]);
     expect(mapped.ghost.trident.command).toMatchObject({ status: "absent", available: false });
-    expect(mapped.ghost.trident.state).toMatchObject({ available: true, seekable: true });
+    expect(mapped.ghost.trident.state).toMatchObject({ available: false, seekable: false });
     expect(mapped.issues.some((entry) => entry.track === "commands")).toBe(true);
   });
 });

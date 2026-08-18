@@ -1,14 +1,12 @@
-import { SFX } from "../audio/legacy-synth";
-import { A11Y, CLOCK, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME } from "../config/game-config";
+import { createLegacySynthFacade } from "../audio/legacy-synth";
+import { createBrowserAudioContextHandoff } from "../audio/audio-context-handoff";
+import { A11Y, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME } from "../config/game-config";
 import { aabbOverlap, clamp, len, lerp, lerpAngle, segCircle, segPointDist, segSegmentDist } from "../domain/geometry";
 import { AFFIXES, PRESETS, applyPreset, rollAffixes } from "../gameplay/affixes";
-import { createBlade } from "../gameplay/entities/blade";
-import { createEnemyTypes } from "../gameplay/entities/enemies";
-import { createMirrorTypes } from "../gameplay/entities/mirror";
-import { createPlayer } from "../gameplay/entities/player";
-import { createProjectile } from "../gameplay/entities/projectile";
 import { createAchievements } from "../gameplay/progression/achievements";
 import { createDailyChallenges, localCalendarClock } from "../gameplay/progression/challenges";
+import { TearGameplayEventBus } from "../gameplay/runtime/gameplay-events";
+import { createTearWorldBootstrap } from "../gameplay/runtime/tear-world-bootstrap";
 import { createMetaProgression, type ProgressionApplyContext } from "../gameplay/progression/meta";
 import { STAGES, stageAt, stagePlatforms } from "../gameplay/stages";
 import {
@@ -28,21 +26,26 @@ import { createLegacyPlatformCompatibility } from "../platform/legacy-compat";
 import { createRunSeed } from "../platform/run-seed";
 import type { PwaUpdateCapability } from "../platform/pwa-update";
 import { createAttract } from "../presentation/attract";
-import { Backdrop } from "../presentation/backdrop";
-import { Cinematics } from "../presentation/cinematics";
+import { createBackdrop } from "../presentation/backdrop";
+import { createCinematics } from "../presentation/cinematics";
 import { cosmeticRandom } from "../presentation/cosmetic-random";
-import { createLegacyEnemyPresentation } from "../presentation/enemies/legacy-enemy-renderers";
-import { FX } from "../presentation/particles";
-import { createBladeRenderer } from "../presentation/entities/blade-renderer";
-import { createMirrorRenderer } from "../presentation/entities/mirror-renderer";
-import { createPlayerRenderer } from "../presentation/entities/player-renderer";
-import { createProjectileRenderer } from "../presentation/entities/projectile-renderer";
+import { createParticleSystem } from "../presentation/particles";
 import { createUi } from "../presentation/ui";
 import { createLegacyReplayCompatibility } from "../replay/legacy-compat";
-import { GAME_RANDOM, GAME_RANDOM_STREAMS } from "../simulation/run-random";
 import { PerformanceMonitor } from "../diagnostics/performance-monitor";
-import { createTearTestEnvironment } from "../tearbench/test-environment";
+import { createTearTestEnvironment } from "../tearbench/test-support";
 import { LegacyAppStateController } from "./legacy-state-controller";
+import { createLiveAchievementToastPersistence } from "./live-achievement-toast-persistence";
+import { createLiveBiomeProgressPersistence } from "./live-biome-progress-persistence";
+import { createLivePendingFinalePersistence } from "./live-pending-finale-persistence";
+import { createLiveOutcomeDefeatProgressPersistence } from "./live-outcome-defeat-progress-persistence";
+import { createLiveProfileStatsPersistence } from "./live-profile-stats-persistence";
+import { createLiveShopPurchaseProgressPersistence } from "./live-shop-purchase-progress-persistence";
+import { createLiveVictoryProfileProgressPersistence } from "./live-victory-profile-progress-persistence";
+import { createLiveStyleAchievementPersistence } from "./live-style-achievement-persistence";
+import { createLivePlatformBootstrapPersistence } from "./live-platform-bootstrap-persistence";
+import { createTearWorldSimulationFactories } from "../gameplay/runtime/tear-world-simulation-factories";
+import { createLiveWorldSimulationPresentationAdapter } from "./live-world-simulation-factories";
 import { startLiveGame } from "./live-game-runtime";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 
@@ -52,6 +55,8 @@ export interface TearCompositionOptions {
   readonly createCrazyGamesServices?: typeof createCrazyGamesPlatformServices;
   readonly createCloud: CloudFactory;
   readonly pwaUpdate: PwaUpdateCapability;
+  /** An explicit browser storage capability is used only by isolated test builds. */
+  readonly browserIndexedDb?: IDBFactory;
 }
 
 interface CompositionWindow extends Window {
@@ -65,7 +70,7 @@ interface CompositionWindow extends Window {
  * entrypoint so standalone builds do not import the CrazyGames implementation.
  */
 export function composeTearApplication(options: TearCompositionOptions): void {
-  const { target, sdk, createCrazyGamesServices, createCloud, pwaUpdate } = options;
+  const { target, sdk, createCrazyGamesServices, createCloud, pwaUpdate, browserIndexedDb = window.indexedDB } = options;
   const compositionWindow = window as CompositionWindow;
   const tearTestMode = __TEAR_TEST_BUILD__ && new URLSearchParams(window.location.search).get("test") === "1";
   // Test pages may seed the isolated adapter before composition. Production never
@@ -82,41 +87,55 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   // Optional capture tooling is a development adapter, never a production
   // gameplay dependency or shared writable global.
   const clipper = import.meta.env.DEV ? compositionWindow.Clipper : undefined;
+  // These data-only services are created before any world constructor captures
+  // them. The bootstrap deliberately leaves all presentation adapters outside.
+  const { configuration: worldConfiguration, clock: CLOCK, random } = createTearWorldBootstrap(CONFIG);
+  const worldConfig = worldConfiguration.value;
+  const audioContextHandoff = createBrowserAudioContextHandoff();
+  const SFX = createLegacySynthFacade({ audioContextHandoff });
+  const FX = createParticleSystem({
+    effects: worldConfig.effects,
+    lowGraphics: () => GFX.low,
+    reducedMotion: () => A11Y.reducedMotion,
+    random: cosmeticRandom,
+  });
+  const Backdrop = createBackdrop({
+    clock: CLOCK, config: worldConfig, graphics: GFX, accessibility: A11Y,
+    overscan: OVERSCAN, theme: THEME, createCanvas: () => document.createElement("canvas"), performance,
+  });
+  const Cinematics = createCinematics({ presentation: worldConfig.presentation });
+  const { streams: GAME_RANDOM_STREAMS, service: GAME_RANDOM } = random;
   const { Input, PAD } = createLegacyInputCompatibility(
-    { config: CONFIG, safeArea: SAFE, overscan: OVERSCAN, window, document, navigator, performance },
+    { config: worldConfig, safeArea: SAFE, overscan: OVERSCAN, window, document, navigator, performance },
     { createInput: createLegacyInput, createGamepad: createLegacyGamepad },
   );
-  const UI = createUi({ CLOCK, CONFIG, Input, OVERSCAN, clamp,
+  const UI = createUi({ CLOCK, presentation: { view: worldConfig.view, colors: worldConfig.colors, overscan: OVERSCAN }, Input, clamp,
     controllerGlyph: (buttonIndex) => PAD.glyph(buttonIndex) });
-  const playerPresentation = createPlayerRenderer({ colors: CONFIG.colors, graphics: GFX, theme: THEME, clamp });
-  const bladePresentation = createBladeRenderer({ clock: CLOCK, config: CONFIG, graphics: GFX, theme: THEME, clamp, len, lerp });
-  const projectilePresentation = createProjectileRenderer({ clock: CLOCK, config: CONFIG, graphics: GFX, theme: THEME, clamp });
-  const mirrorPresentation = createMirrorRenderer({
-    clock: CLOCK, config: CONFIG, effects: FX, graphics: GFX, theme: THEME, clamp, cosmeticRandom,
+  // One world's entity constructors. The factory takes the mutable world
+  // services explicitly, so a second world can be built without a second
+  // composition root; the live application still builds exactly one.
+  const presentation = createLiveWorldSimulationPresentationAdapter({
+    clock: CLOCK, effects: FX, ui: UI,
+    configuration: { accessibility: A11Y, config: worldConfig, graphics: GFX, theme: THEME },
+    geometry: { clamp, len, lerp }, cosmeticRandom,
   });
-  const Blade = createBlade({ CLOCK, CONFIG, Input, presentation: bladePresentation, clamp, len, lerp, lerpAngle });
-  const Player = createPlayer({ CONFIG, FX, GFX, Input, presentation: playerPresentation, aabbOverlap, clamp, len });
-  const Projectile = createProjectile({ CLOCK, CONFIG, FX, SFX, presentation: projectilePresentation, clamp, len, lerp });
-  const enemyPresentation = createLegacyEnemyPresentation({
-    A11Y, CLOCK, CONFIG, GFX, THEME, UI, clamp, len, lerp,
+  const { Blade, Player, Projectile, enemyTypes, mirrorTypes } = createTearWorldSimulationFactories({
+    clock: CLOCK, config: worldConfig, graphics: GFX, effects: FX, sound: SFX, input: Input,
+    random: { enemyAi: GAME_RANDOM_STREAMS.stream("enemy-ai"), boss: GAME_RANDOM_STREAMS.stream("boss") },
+    presentation, geometry: { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist },
+    cosmeticRandom, getWeapon,
+    ...(clipper === undefined ? {} : { clipper }),
   });
-  const enemyTypes = createEnemyTypes({
-    CLOCK, CONFIG, ...(clipper === undefined ? {} : { Clipper: clipper }),
-    FX, GAME_RANDOM: GAME_RANDOM_STREAMS.stream("enemy-ai"), Projectile, SFX,
-    presentation: enemyPresentation,
-    aabbOverlap, clamp, cosmeticRandom, len, lerp, segPointDist, segSegmentDist,
-  });
-  enemyPresentation.install(enemyTypes);
   const {
-    Aldric, Armored, BOSSFX, Bomber, Boss, Charger, Chimera, Colossus, Echo, Enemy,
+    Aldric, Armored, BOSSFX, Bomber, Boss, Charger, Chimera, Colossus, Echo,
     Flyer, Ranged, Source, Support, VoidWisp, Warden, Wraith,
     drawBossTransformationWorld, weaponCapsuleIntersectsSegment,
   } = enemyTypes;
-  const { Mirror, MirrorHost, ReflectionEnemy } = createMirrorTypes({
-    Blade, CLOCK, CONFIG, Enemy, FX, GAME_RANDOM: GAME_RANDOM_STREAMS.stream("boss"), Player, Projectile, SFX, presentation: mirrorPresentation,
-    clamp, getWeapon, lerp, lerpAngle,
-  });
-  const Attract = createAttract({ Backdrop, Blade, CONFIG, FX, GFX, OVERSCAN, Player, STAGES, THEME, clamp });
+  const { Mirror, MirrorHost, ReflectionEnemy } = mirrorTypes;
+  const Attract = createAttract({ Backdrop, Blade, FX, Player, STAGES, clamp, policy: {
+    view: worldConfig.view, world: worldConfig.world, blade: worldConfig.blade,
+    colors: worldConfig.colors, overscan: OVERSCAN, lowGraphics: () => GFX.low, random: cosmeticRandom, theme: THEME,
+  } });
   const platform = createLegacyPlatformCompatibility({
     target,
     ...(sdk === undefined ? {} : { sdk }),
@@ -133,15 +152,17 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     writerId: () => CG.live ? "crazygames" : "browser",
     log: (message) => { console.log(message); },
   });
+  const GAMEPLAY_EVENTS = new TearGameplayEventBus(() => Input.semantic.lastSealedTick);
   const { GHOST, VAULT } = createLegacyReplayCompatibility({
     store: CG.store,
     document,
     now: () => Date.now(),
     random: () => Math.random(),
     semanticInput: Input.semantic,
-    // ee5e931 visual ghosts only sampled the completed world. Keep the command
-    // recorder available to explicit deterministic tooling, never live play.
+    // Ghost 2 remains a visual compatibility recorder. The live runtime owns
+    // the shared canonical input stream; Ghost 2 does not capture commands.
     captureSemanticActions: false,
+    gameplayEvents: GAMEPLAY_EVENTS,
     defaults: {
       rulesetVersion: "tear-rules-2026.07",
       build: { version: "0.1.0", revision: import.meta.env.MODE, target },
@@ -151,34 +172,43 @@ export function composeTearApplication(options: TearCompositionOptions): void {
       tearScore: () => SFX.musicReplayMetadata(),
     },
   });
-  const { Cloud, FirebaseProvider } = createCloud({
+  const { Cloud, FirebaseProvider, ghostPublication } = createCloud({
     target,
     getPlatform: () => platform.services,
     getProfile: () => PROFILE,
     getMeta: () => META,
   });
   const { META, SHOP } = createMetaProgression<UpgradeDefinition, UpgradeApplyContext & ProgressionApplyContext>({
-    store: CG.store, config: CONFIG, cloud: Cloud, random: GAME_RANDOM_STREAMS.stream("draft"), upgrades: UPGRADES,
+    store: CG.store, config: worldConfig, cloud: Cloud, random: GAME_RANDOM_STREAMS.stream("draft"), upgrades: UPGRADES,
     applyUpgrade: (upgrade, context) => { applyUpgrade(upgrade, context); },
   });
   const ACH = createAchievements({ meta: META, profile: PROFILE, audio: SFX, shop: SHOP, clamp });
   const DAILY = createDailyChallenges({ achievements: ACH, profile: PROFILE, clock: localCalendarClock() });
   const APP = new LegacyAppStateController();
   const DIAG = new PerformanceMonitor();
+  const achievementToastPersistence = createLiveAchievementToastPersistence(PROFILE);
+  const biomeProgressPersistence = createLiveBiomeProgressPersistence(PROFILE);
+  const outcomeDefeatProgressPersistence = createLiveOutcomeDefeatProgressPersistence(PROFILE);
+  const pendingFinalePersistence = createLivePendingFinalePersistence(PROFILE);
+  const profileStatsPersistence = createLiveProfileStatsPersistence(PROFILE);
+  const victoryProfileProgressPersistence = createLiveVictoryProfileProgressPersistence(PROFILE, profileStatsPersistence);
+  const styleAchievementPersistence = createLiveStyleAchievementPersistence(ACH, PROFILE);
+  const platformBootstrapPersistence = createLivePlatformBootstrapPersistence(ACH, PROFILE, META, SHOP);
+  const shopPurchaseProgressPersistence = createLiveShopPurchaseProgressPersistence(PROFILE, META, SHOP);
 
   const gameRuntimeDependencies = {
-    A11Y, ACH, AFFIXES, APP, Aldric, Armored, Attract, BOSSFX, Backdrop, Blade, Bomber, Boss,
-    CG, CLOCK, CONFIG, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, DAILY, DIAG, Echo,
-    FX, FirebaseProvider, Flyer, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
-    MirrorHost, OVERSCAN, PAD, PRESETS, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
-    Ranged, ReflectionEnemy, SAFE, SFX, SHOP, STAGES, Source, Support, THEME, UI, UPGRADES,
+    A11Y, ACH, AFFIXES, APP, Aldric, Armored, Attract, BOSSFX, Backdrop, Blade, biomeProgressPersistence, Bomber, Boss, achievementToastPersistence,
+    browserDocument: document, browserIndexedDb, browserNavigator: navigator, browserStorage: window.localStorage, browserWindow: window, CG, CLOCK, CONFIG: worldConfig, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, ghostPublication, DAILY, DIAG, Echo,
+    FX, FirebaseProvider, Flyer, GAMEPLAY_EVENTS, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
+    MirrorHost, OVERSCAN, PAD, PRESETS, outcomeDefeatProgressPersistence, pendingFinalePersistence, platformBootstrapPersistence, profileStatsPersistence, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
+    Ranged, ReflectionEnemy, SAFE, SFX, SHOP, STAGES, Source, shopPurchaseProgressPersistence, styleAchievementPersistence, Support, THEME, UI, UPGRADES, victoryProfileProgressPersistence,
     VAULT, VARIANTS, VoidGen, VoidWisp, WEAPONS, Warden, Wraith,
     aabbOverlap, applyPreset, applyUpgrade, applyVariant, applyWeapon,
     clamp, cosmeticRandom, createRunSeed, drawBossTransformationWorld, len, lerp,
     newMods, nextTierDesc, rollAffixes, rollUpgrades, rollVariant, segCircle,
     segPointDist, stageAt, stagePlatforms, tierUp, weaponCapsuleIntersectsSegment,
   } satisfies GameRuntimeDependencies;
-  startLiveGame(gameRuntimeDependencies);
+  startLiveGame(gameRuntimeDependencies, worldConfiguration);
 
   if (tearTestMode) {
     const observedSemanticActions: ReturnType<typeof Input.drainSemanticActions>[number][] = [];
@@ -225,7 +255,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
         const canvas = document.querySelector<HTMLCanvasElement>("#game");
         const rect = canvas?.getBoundingClientRect();
         return {
-          logical: { width: CONFIG.view.w, height: CONFIG.view.h },
+          logical: { width: worldConfig.view.w, height: worldConfig.view.h },
           css: { width: rect?.width ?? 0, height: rect?.height ?? 0 },
           backing: { width: canvas?.width ?? 0, height: canvas?.height ?? 0 },
           overscan: { x: OVERSCAN.x, y: OVERSCAN.y },

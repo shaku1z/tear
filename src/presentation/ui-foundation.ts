@@ -13,7 +13,7 @@ function fitLine(context: CanvasRenderingContext2D, value: string, maximumWidth:
 }
 
 export function createUiFoundation(dependencies: UiDependencies) {
-  const { CONFIG, Input, OVERSCAN } = dependencies;
+  const { Input, presentation: { overscan, view } } = dependencies;
   const controllerGlyph = dependencies.controllerGlyph ??
     ((index: number) => index === 4 ? "L1" : index === 5 ? "R1" : `#${String(index)}`);
   return {
@@ -48,14 +48,14 @@ font(this: UiRuntime, size: number, bold?: boolean) {
         // one side of the screen, replacing the old full-screen dim. `side` is where
         // the text lives (and where the wash is densest).
         chapterWash(this: UiRuntime, ctx: CanvasRenderingContext2D, side: string, washKind: string | undefined, amount: number) {
-            const t = this.t, vw = CONFIG.view.w, vh = CONFIG.view.h, k = Math.max(0, Math.min(amount, 1));
+            const t = this.t, vw = view.w, vh = view.h, k = Math.max(0, Math.min(amount, 1));
             const dense = washKind === "light" ? t.chapter.washLight : t.chapter.washDark;
             const span = vw * t.chapter.washSpan;
             ctx.save();
             // a whole-screen breath of dim first (only ~26%, biome stays legible)
             ctx.globalAlpha = k * t.chapter.washDim;
             ctx.fillStyle = washKind === "light" ? "#f8f7f4" : "#06070c";
-            ctx.fillRect(-OVERSCAN.x, -OVERSCAN.y, vw + OVERSCAN.x * 2, vh + OVERSCAN.y * 2);
+            ctx.fillRect(-overscan.x, -overscan.y, vw + overscan.x * 2, vh + overscan.y * 2);
             ctx.globalAlpha = k;
             const g = side === "right"
                 ? ctx.createLinearGradient(vw, 0, vw - span, 0)
@@ -64,9 +64,9 @@ font(this: UiRuntime, size: number, bold?: boolean) {
             g.addColorStop(1, washKind === "light" ? "rgba(248,247,244,0)" : "rgba(6,7,12,0)");
             ctx.fillStyle = g;
             if (side === "right")
-                ctx.fillRect(vw - span, -OVERSCAN.y, span + OVERSCAN.x, vh + OVERSCAN.y * 2);
+                ctx.fillRect(vw - span, -overscan.y, span + overscan.x, vh + overscan.y * 2);
             else
-                ctx.fillRect(-OVERSCAN.x, -OVERSCAN.y, span + OVERSCAN.x, vh + OVERSCAN.y * 2);
+                ctx.fillRect(-overscan.x, -overscan.y, span + overscan.x, vh + overscan.y * 2);
             ctx.restore();
             return washKind === "light" ? "#12131a" : "#f1eff9"; // the ink color that reads on this wash
         },
@@ -175,7 +175,7 @@ font(this: UiRuntime, size: number, bold?: boolean) {
         // Returns the y just below the header so callers can flow content under it.
         screenHeader(this: UiRuntime, ctx: CanvasRenderingContext2D, title: string, subtitle?: string, y?: number, big?: boolean) {
             const ty = y ?? 70;
-            const cx = CONFIG.view.w / 2;
+            const cx = view.w / 2;
             this.title(ctx, title, cx, ty, big ? this.t.type.h1 : this.t.type.h2);
             if (subtitle)
                 this.text(ctx, subtitle, cx, ty + 28, this.t.type.caption, "center", this.t.alpha.muted);
@@ -418,7 +418,7 @@ font(this: UiRuntime, size: number, bold?: boolean) {
         // marking the active view. `push` receives one hitbox per tab (b._tab = index).
         _tabAnim: {} as Record<string, number>,
         tabs(this: UiRuntime, ctx: CanvasRenderingContext2D, id: string, labels: string[], active: number, y: number, push?: (button: ButtonSpec) => void) {
-            const t = this.t, cx = CONFIG.view.w / 2, h = 34;
+            const t = this.t, cx = view.w / 2, h = 34;
             ctx.font = this.font(t.type.label, true);
             let segW = 150;
             for (const l of labels)

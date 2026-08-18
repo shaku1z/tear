@@ -7,7 +7,7 @@
 // Backgrounds are kept light-ish on purpose for now so the black player + HUD stay
 // readable; dramatic inversions (e.g. a true dark Voidspire) are a later polish pass.
 
-import { CONFIG } from "../config/game-config";
+import type { CONFIG as GAME_CONFIG } from "../config/game-config";
 import type { EnemyKind } from "./run/content-director";
 
 const enemyPool = (...entries: readonly (readonly [EnemyKind, number, number?])[]) => entries;
@@ -134,13 +134,13 @@ const STAGES = [
 
 // build a fresh platforms array (floor + the stage's one-way platforms, cloned so
 // temporary Geomancer walls never pollute the source layout)
-function stagePlatforms(i: number) {
+function stagePlatforms(i: number, config: typeof GAME_CONFIG) {
   const s = stageAt(i);
-  const authoredView = CONFIG.view as typeof CONFIG.view & { designW?: number; designH?: number };
+  const authoredView = config.view as typeof config.view & { designW?: number; designH?: number };
   const DW = authoredView.designW ?? 1600, DH = authoredView.designH ?? 900;
-  const vw = CONFIG.view.w, vh = CONFIG.view.h;
+  const vw = config.view.w, vh = config.view.h;
   // Floor spans the full dynamic viewport
-  const floor = { x: 0, y: CONFIG.world.groundY, w: vw, h: vh - CONFIG.world.groundY, floor: true };
+  const floor = { x: 0, y: config.world.groundY, w: vw, h: vh - config.world.groundY, floor: true };
   // Platforms are authored for 1600×900 — center them in the dynamic viewport
   const ox = (vw - DW) / 2;
   const oy = (vh - DH) / 2;

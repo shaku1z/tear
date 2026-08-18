@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 
 import {
   CODEC_REGISTRY,
@@ -50,6 +51,7 @@ function populatedWorld(): TearCodecWorld {
   candidate.components.set("tear.reward.v1", { selection: null });
   candidate.components.set("tear.configuration.v1", { rulesetVersion: "test", values: {} });
   candidate.components.set("tear.rng.v1", { combat: { algorithm: "mulberry32", state: 42 } });
+  candidate.components.set("tear.cinematic.v1", INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 as never);
   return candidate;
 }
 
@@ -105,6 +107,40 @@ function advance(candidate: TearCodecWorld, direction: -1 | 1): void {
 }
 
 describe("TearBench shared state codec registry", () => {
+  it("migrates pre-cinematic v1 snapshots to the canonical inactive component", () => {
+    const registry = createDefaultStateCodecRegistry();
+    const base = structuredClone(snapshotFrom(populatedWorld()));
+    const codecs: Record<string, number> = { ...base.codecs };
+    const state: Record<string, unknown> = { ...base.state };
+    delete codecs["tear.cinematic.v1"];
+    delete state["tear.cinematic.v1"];
+    const snapshot = { ...base, codecs, state } as TearSnapshotV1;
+    let restored = world();
+
+    const result = restoreSnapshotTransactionally(snapshot, registry, factory, {
+      replace(candidate) { restored = candidate; },
+    });
+
+    expect(result.ok).toBe(true);
+    expect(restored.components.get("tear.cinematic.v1")).toEqual(INACTIVE_CINEMATIC_DIRECTOR_STATE_V1);
+  });
+
+  it("rejects noncanonical inactive cinematic state during decode", () => {
+    const snapshot = structuredClone(snapshotFrom(populatedWorld()));
+    const hostile = { ...snapshot, state: { ...snapshot.state, "tear.cinematic.v1": {
+      ...INACTIVE_CINEMATIC_DIRECTOR_STATE_V1,
+      elapsedSeconds: 1,
+      totalElapsedSeconds: 1,
+    } } } as TearSnapshotV1;
+
+    const result = restoreSnapshotTransactionally(hostile, createDefaultStateCodecRegistry(), factory, {
+      replace() { throw new Error("invalid snapshot must not commit"); },
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues.some((entry) => entry.message.includes("canonical idle"))).toBe(true);
+  });
+
   it("captures, restores into a fresh world, and reproduces the next 600 ticks", () => {
     const registry = createDefaultStateCodecRegistry();
     const original = populatedWorld();
@@ -173,6 +209,24 @@ describe("TearBench shared state codec registry", () => {
     if (!result.ok) expect(result.issues.some((issue) => issue.message.includes("duplicate entity id enemy-1"))).toBe(true);
   });
 
+  it("treats run-owned void graph ids as aliases rather than duplicate entity declarations", () => {
+    const registry = createDefaultStateCodecRegistry();
+    const snapshot = snapshotFrom(populatedWorld());
+    const valid: TearSnapshotV1 = {
+      ...structuredClone(snapshot),
+      state: {
+        ...snapshot.state,
+        "tear.platform.v1": [{ id: "void-platform-1", platformId: "void-platform-1", x: 0, y: 0, w: 20, h: 10 }],
+        "tear.run.v1": {
+          ...(snapshot.state["tear.run.v1"] as Record<string, unknown>),
+          voidScroll: { chunks: [{ id: "void-chunk-1", platforms: [{ id: "void-platform-1" }] }] },
+        },
+      },
+    };
+    const result = restoreSnapshotTransactionally(valid, registry, factory, { replace() { /* expected */ } });
+    expect(result.ok).toBe(true);
+  });
+
   it("stages constructor/reference rebuilding off-run and rolls back a failed live commit", () => {
     const registry = createDefaultStateCodecRegistry();
     const original = populatedWorld();
@@ -198,5 +252,22 @@ describe("TearBench shared state codec registry", () => {
     expect(result).toMatchObject({ ok: false, phase: "commit", rolledBack: true });
     expect(commits).toBe(2);
     expect(active).toEqual(previous.components.get("tear.run.v1"));
+  });
+
+  it("commits a first live world without attempting to capture a nonexistent predecessor", () => {
+    const registry = createDefaultStateCodecRegistry();
+    const snapshot = snapshotFrom(populatedWorld());
+    const capture = vi.fn(() => { throw new Error("no active world"); });
+    const commit = vi.fn();
+    const result = restoreSnapshotIntoLiveWorld(snapshot, registry, factory, {
+      capture,
+      stage: (candidate) => candidate,
+      validate: () => [],
+      commit,
+    }, { capturePrevious: false });
+
+    expect(result.ok).toBe(true);
+    expect(capture).not.toHaveBeenCalled();
+    expect(commit).toHaveBeenCalledOnce();
   });
 });

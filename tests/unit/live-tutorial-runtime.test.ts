@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { CONFIG } from "../../src/config/game-config";
 import { createLiveTutorialRuntime } from "../../src/gameplay/training/live-tutorial-runtime";
 
 describe("live tutorial runtime", () => {
@@ -9,7 +10,7 @@ describe("live tutorial runtime", () => {
     if (tutorialEnemy === undefined) throw new Error("tutorial fixture missing enemy");
     const drawGhost = vi.fn();
     const runtime = createLiveTutorialRuntime({
-      viewportWidth: 1600, groundY: () => 700, skipPressed: () => false,
+      config: CONFIG, viewportWidth: 1600, groundY: () => 700, skipPressed: () => false,
       movingLeft: () => false, movingRight: () => false,
       player: () => ({ onGround: true, vy: 0, dashTimer: 0, x: 400, facing: 1 }),
       bladeState: () => "held", enemies: () => enemies, playSound: vi.fn(),
@@ -39,7 +40,7 @@ describe("live tutorial runtime", () => {
       stun: 0, x: 0, y: 0, hh: 20, contactDmg: 5 };
     const spawn = vi.fn(() => { enemies.push(spawned); return spawned; });
     const runtime = createLiveTutorialRuntime({
-      viewportWidth: 1600, groundY: () => 700, skipPressed: () => false,
+      config: CONFIG, viewportWidth: 1600, groundY: () => 700, skipPressed: () => false,
       movingLeft: () => false, movingRight: () => false,
       player: () => ({ onGround: true, vy: 0, dashTimer: 0, x: 400, facing: 1 }),
       bladeState: () => "held", enemies: () => enemies, playSound: vi.fn(), spawn,
@@ -62,7 +63,7 @@ describe("live tutorial runtime", () => {
       stun: 0, x: 900, y: 300, vx: 80, vy: -600, onGround: false, hitCd: 1, hh: 20,
       affixCount: 0, contactDmg: 0 };
     const runtime = createLiveTutorialRuntime({
-      viewportWidth: 1600, groundY: () => 700, skipPressed: () => false,
+      config: CONFIG, viewportWidth: 1600, groundY: () => 700, skipPressed: () => false,
       movingLeft: () => false, movingRight: () => false,
       player: () => ({ onGround: true, vy: 0, dashTimer: 0, x: 400, facing: 1 }),
       bladeState: () => "held", enemies: () => [enemy], playSound: vi.fn(),

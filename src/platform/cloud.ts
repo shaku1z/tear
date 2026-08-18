@@ -1,4 +1,5 @@
 import type { IdentityService, PlatformServices, Unsubscribe } from "./contracts";
+import { createStandaloneGhostPublicationRuntime, type GhostPublicationRuntime } from "./ghost-publication-runtime";
 
 export type CloudStatus = "local" | "guest" | "signedin";
 
@@ -74,6 +75,7 @@ export interface CloudCompatibilityOptions {
   readonly firebaseAccount?: AccountProvider;
   readonly shared: SharedCloudService;
   readonly now?: () => number;
+  readonly ghostPublication?: GhostPublicationRuntime;
 }
 
 export interface LegacyCloudFacade {
@@ -114,6 +116,7 @@ export interface CloudCompatibility {
   readonly CrazyProvider: AccountProvider;
   readonly FirebaseProvider: AccountProvider;
   readonly Passport: SharedCloudService;
+  readonly ghostPublication: GhostPublicationRuntime;
 }
 
 interface CloudController extends LegacyCloudFacade, AccountContext {
@@ -306,5 +309,10 @@ export function createCloudCompatibility(options: CloudCompatibilityOptions): Cl
     CrazyProvider: crazyProvider,
     FirebaseProvider: firebaseProvider,
     Passport: options.shared,
+    ghostPublication: options.ghostPublication ?? createStandaloneGhostPublicationRuntime({
+      target: options.target,
+      endpoint: undefined,
+      loadBearer: () => Promise.reject(new Error("ghost publication is unavailable")),
+    }),
   });
 }

@@ -11,6 +11,13 @@ import type { CinematicPreference } from "./cinematic-preference";
 import type { CampaignCinematicBeat, CampaignCinematicDirector, CampaignCinematicScript } from "./live-campaign-sequences";
 import type { CinematicBeat, CinematicScript } from "../presentation/cinematics";
 import type { ArenaPlatform } from "../gameplay/training/arena-rules";
+import type { FinaleIntent } from "../gameplay/campaign/finale-controller";
+import {
+  observeFinaleOutwardCall,
+  type FinaleMaximumFeelReceipt,
+  type FinaleOutwardCallObserver,
+  type FinaleWorldZoomReceipt,
+} from "../gameplay/campaign/finale-outward-call";
 
 type Stage = ReturnType<GameRuntimeDependencies["stageAt"]>;
 type Platforms = ArenaPlatform[];
@@ -19,6 +26,7 @@ type Cinema = InstanceType<GameRuntimeDependencies["Cinematics"]["Director"]>;
 export interface CampaignHostServices {
   readonly dependencies: GameRuntimeDependencies;
   readonly state: LiveGameHostState;
+  readonly cinema: Cinema;
   readonly installStage: (controller: Readonly<{ load(index: number): void }>) => void;
   readonly lifecycle: RunLifecycleController;
   readonly activatePreparedWave: () => void;
@@ -29,12 +37,14 @@ export interface CampaignHostServices {
   readonly resetStageAchievements: () => void;
   readonly rememberBiome: (name: string) => void;
   readonly cinematicPreference: () => CinematicPreference;
-  readonly addFlash: (amount: number) => void;
-  readonly addShake: (amount: number) => void;
+  readonly addFlash: (amount: number) => FinaleMaximumFeelReceipt;
+  readonly addShake: (amount: number) => FinaleMaximumFeelReceipt;
   readonly formatTime: (seconds: number) => string;
-  readonly setWorldZoom: (value: number) => void;
+  readonly setWorldZoom: (value: number) => FinaleWorldZoomReceipt;
   readonly width: number;
   readonly height: number;
+  readonly observeFinaleIntents?: (intents: readonly FinaleIntent[]) => void;
+  readonly observeFinaleOutwardCall?: FinaleOutwardCallObserver;
 }
 
 export interface LiveCampaignHost {
@@ -46,9 +56,9 @@ export interface LiveCampaignHost {
 
 export function createLiveCampaignHost(services: CampaignHostServices): LiveCampaignHost {
   const { dependencies: d, state, lifecycle } = services;
-  const cinema = new d.Cinematics.Director();
+  const cinema = services.cinema;
   const stage = new StageRuntimeState<Stage, Platforms>(d.stageAt,
-    (index) => d.stagePlatforms(index).map((platform) => ({ ...platform })));
+    (index) => d.stagePlatforms(index, d.CONFIG).map((platform) => ({ ...platform })));
   const run = () => required(state.run(), "run");
   const player = () => required(state.player(), "player");
   const blade = () => required(state.blade(), "blade");
@@ -64,10 +74,13 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
     rememberBiome: (name) => { services.rememberBiome(name); },
     resetStageAchievements: () => { services.resetStageAchievements(); },
     resetPlayerStagePassives: () => { state.player()?.resetStagePassives(); },
-    recordReplayStage: (index) => { d.GHOST.stage(index); },
+    recordReplayStage: (index) => { d.GAMEPLAY_EVENTS.emit({ kind: "stage", stage: index }); },
   }));
   const runtime = createLiveCampaignRuntime({ runtime: story,
-    cinema: { start: (script, context) => { cinema.start(adaptCinematicScript(script, context), {}); } },
+    cinema: {
+      start: (script, context) => { cinema.start(adaptCinematicScript(script, context), {}); },
+      startBinding: (binding) => { cinema.start(binding.script, binding.context); },
+    },
     run: () => state.run(), player, blade, stageAt: (index) => d.stageAt(index),
     preference: () => services.cinematicPreference(),
     preparedWave: () => lifecycle.hasPreparedWave, activationDeferred: () => lifecycle.activationDeferred,
@@ -92,7 +105,10 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
         if (activeRun.voidScroll) { activeRun.voidScroll.active = false; activeRun.voidScroll.frozen = true; }
         activeRun.voidDescent = null;
       },
-      worldZoom: services.setWorldZoom,
+      worldZoom(value) {
+        const receipt = services.setWorldZoom(value);
+        observeFinaleOutwardCall(services.observeFinaleOutwardCall, { type: "world-zoom", value, receipt });
+      },
       finalBlade(active, restoredTrail) {
         const weapon = blade();
         weapon.finalFree = active; if (restoredTrail) weapon.restoredTrail = true;
@@ -100,25 +116,52 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
         weapon.hostile = false; weapon.stolenBy = null; weapon.state = "held";
         const hand = weapon.handPos(player()); weapon.x = hand.x; weapon.y = hand.y; weapon.vx = 0; weapon.vy = 0;
       },
-      ring: (x, y, radius, color) => { d.FX.ring(x, y, radius, color); },
-      burst: (x, y, dx, dy, count, color) => { d.FX.burst(x, y, dx, dy, count, color); },
-      flash: services.addFlash, shake: services.addShake, vibrate: (pattern) => { d.Input.buzz([...pattern]); },
+      ring(x, y, radius, color) {
+        const receipt = d.FX.ring(x, y, radius, color);
+        observeFinaleOutwardCall(services.observeFinaleOutwardCall, { type: "ring", x, y, radius, color, receipt });
+      },
+      burst(x, y, dx, dy, count, color) {
+        const receipt = d.FX.burst(x, y, dx, dy, count, color);
+        observeFinaleOutwardCall(services.observeFinaleOutwardCall,
+          { type: "burst", x, y, dx, dy, count, color, receipt });
+      },
+      flash(amount) {
+        const receipt = services.addFlash(amount);
+        observeFinaleOutwardCall(services.observeFinaleOutwardCall, { type: "flash", amount, receipt });
+      },
+      shake(amount) {
+        const receipt = services.addShake(amount);
+        observeFinaleOutwardCall(services.observeFinaleOutwardCall, { type: "shake", amount, receipt });
+      },
+      vibrate(pattern) {
+        d.Input.buzz([...pattern]);
+        observeFinaleOutwardCall(services.observeFinaleOutwardCall, { type: "vibrate", pattern });
+      },
       sound(cue, index) {
         if (cue === "final-cut") d.SFX.finalCut(index);
         else if (cue === "final-relic") d.SFX.finalRelic(index);
         else if (cue === "final-restore") d.SFX.finalRestore(); else d.SFX.finalSilence();
+        observeFinaleOutwardCall(services.observeFinaleOutwardCall, { type: "sound", cue, index });
       },
       restoreStageZero() { stage.load(0); state.setSlowZones([]); state.setTemporaryWalls([]); state.setProjectiles([]); state.setEnemies([]); },
       restorePlayer(xMin, xMax, yMax, vy) {
         const actor = player(); actor.x = d.clamp(actor.x, actor.hw + xMin, xMax - actor.hw);
         actor.y = Math.min(actor.y, yMax); actor.vx = 0; actor.vy = vy; actor.onGround = false;
       },
-      voidMix: (amount, duration) => { d.SFX.setVoidDescent(amount, duration); },
-      musicDuck: (amount, duration) => { d.SFX.setMusicDuck(amount, duration); }, win: services.win,
+      voidMix(amount, duration) {
+        d.SFX.setVoidDescent(amount, duration);
+        observeFinaleOutwardCall(services.observeFinaleOutwardCall, { type: "void-mix", amount, duration });
+      },
+      musicDuck(amount, duration) {
+        d.SFX.setMusicDuck(amount, duration);
+        observeFinaleOutwardCall(services.observeFinaleOutwardCall, { type: "music-duck", amount, duration });
+      },
+      win: services.win,
     },
     clearBossBeat: () => { state.setBossBeat(null); }, prepareVictory: services.prepareVictory, win: services.win,
     formatTime: services.formatTime, viewport: { width: services.width, height: services.height },
     perfectColor: () => d.CONFIG.colors.perfect, reducedMotion: () => d.A11Y.reducedMotion, lowGraphics: () => d.GFX.low,
+    ...(services.observeFinaleIntents === undefined ? {} : { observeFinaleIntents: services.observeFinaleIntents }),
   });
   return Object.freeze({ cinema, stage, story, runtime });
 }

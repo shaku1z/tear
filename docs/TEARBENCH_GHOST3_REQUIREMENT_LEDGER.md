@@ -36,7 +36,7 @@ checkpoint-specific fixtures and reviews.
 | Named independent RNG streams | existing | `src/simulation/run-random.ts`, composition routing, isolation tests |
 | Versioned within-tick causal phases | existing | `src/tearbench/registries.ts` |
 | Stable event/entity registries | existing | `src/tearbench/registries.ts` |
-| Test-only isolated composition | existing | `src/tearbench/test-environment.ts`, instrumented Vite targets |
+| Test-only isolated composition | existing | `src/tearbench/test-support/test-environment.ts`, instrumented Vite targets |
 | Production absence of test bridge | existing | `check:test-isolation`, separate `dist/test-*` artifacts |
 
 ## TearBench

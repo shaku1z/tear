@@ -86,6 +86,51 @@ export function validateLiveCodecPayload(
     if (typeof payload.rulesetVersion !== "string" || !record(payload.values)) {
       issues.push(issue(codecId, "$", "configuration codec requires rulesetVersion and values"));
     }
+  } else if (codecId === "tear.cinematic.v1") {
+    if (payload.format !== "tear.cinematic-director" || payload.schemaVersion !== 1) {
+      issues.push(issue(codecId, "$", "cinematic codec requires the v1 director format"));
+    }
+    const active = payload.active === true;
+    const nullableIdentity = (key: "scriptId" | "scriptRevision" | "beatId") =>
+      payload[key] === null || typeof payload[key] === "string";
+    for (const key of ["scriptId", "scriptRevision", "beatId"] as const) {
+      if (!nullableIdentity(key)) issues.push(issue(codecId, `$.${key}`, `${key} must be string or null`));
+    }
+    for (const key of ["elapsedSeconds", "revealElapsedSeconds", "fullyVisibleElapsedSeconds", "totalElapsedSeconds"] as const) {
+      issues.push(...finiteField(codecId, payload, key));
+      if (typeof payload[key] === "number" && payload[key] < 0) {
+        issues.push(issue(codecId, `$.${key}`, `${key} cannot be negative`));
+      }
+    }
+    if (!Number.isSafeInteger(payload.beatIndex)) issues.push(issue(codecId, "$.beatIndex", "beatIndex must be a safe integer"));
+    for (const key of ["active", "fullyVisible", "skipping", "finished"] as const) {
+      if (typeof payload[key] !== "boolean") issues.push(issue(codecId, `$.${key}`, `${key} must be boolean`));
+    }
+    if (active && (typeof payload.scriptId !== "string" || payload.scriptId.length === 0 ||
+      typeof payload.scriptRevision !== "string" || payload.scriptRevision.length === 0 ||
+      typeof payload.beatId !== "string" || payload.beatId.length === 0 ||
+      !Number.isSafeInteger(payload.beatIndex) || Number(payload.beatIndex) < 0 || payload.finished === true)) {
+      issues.push(issue(codecId, "$", "active cinematic requires a revisioned script, beat, and unfinished state"));
+    }
+    if (!active && (payload.scriptId !== null || payload.scriptRevision !== null || payload.beatId !== null ||
+      payload.beatIndex !== -1 || payload.skipping !== false)) {
+      issues.push(issue(codecId, "$", "inactive cinematic cannot retain an active script, beat, or skip state"));
+    }
+    if (typeof payload.totalElapsedSeconds === "number" && typeof payload.elapsedSeconds === "number" &&
+      payload.totalElapsedSeconds < payload.elapsedSeconds) {
+      issues.push(issue(codecId, "$.totalElapsedSeconds", "total elapsed cannot precede beat elapsed"));
+    }
+    const elapsedSeconds = payload.elapsedSeconds;
+    if (typeof elapsedSeconds === "number" &&
+      ([payload.revealElapsedSeconds, payload.fullyVisibleElapsedSeconds]
+        .some((value) => typeof value === "number" && value > elapsedSeconds))) {
+      issues.push(issue(codecId, "$", "reveal timing cannot exceed beat elapsed"));
+    }
+    if (!active && (payload.elapsedSeconds !== 0 || payload.revealElapsedSeconds !== 0 ||
+      payload.fullyVisibleElapsedSeconds !== 0 || payload.totalElapsedSeconds !== 0 ||
+      payload.fullyVisible !== true || payload.finished !== false)) {
+      issues.push(issue(codecId, "$", "inactive cinematic must use the canonical idle position"));
+    }
   } else if (Object.keys(payload).length === 0) {
     issues.push(issue(codecId, "$", "RNG codec requires at least one named stream"));
   }

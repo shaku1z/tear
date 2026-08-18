@@ -1,8 +1,9 @@
 import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
+import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import { normalizeGameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
-import type { GameEnemy } from "../app/game-runtime-state";
+import type { TearSimulationEnemyView } from "../simulation/runtime-world-port";
 import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
 import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1,
   TearStateClass } from "./contracts";
@@ -11,17 +12,17 @@ import { DIFFICULTY_REGISTRY, ENTITY_KIND_REGISTRY, RUN_MODE_REGISTRY, WEAPON_RE
   type TearEntityKindId } from "./registries";
 import type { TearScenarioTransition } from "./runner";
 import { validateTearContract } from "./validation";
-import { installGhostLabPanel } from "./ghost-lab-panel"; import { installLiveStateForgeStudio } from "./live-state-forge-studio-host";
 import { createLiveRuntimeSnapshotController } from "./live-runtime-snapshots"; import { projectLiveNavigationObservation } from "./live-observation-navigation";
 import { projectLiveProjectiles } from "./live-observation-projectiles"; import { launchResolvedLiveState } from "./live-state-forge-scenario-launch";
 import { projectLiveActorMechanics, projectLiveBehaviorMode, projectLiveBladeMechanics, projectLivePlayerMechanics } from "./live-observation-actors";
 import { certifyWave99HammerProgression, createCanonicalWave99HammerProgression, createWave99HistoricalRunState,
   forgeExitLaunchSnapshot } from "./state-forge-exit-gate";
+import { createCampaignVictoryOrigin, createCampaignWave49RewardFrontier } from "./campaign-victory-origin";
+import { createGameplayCausalEvent, projectGameplayEventForParity } from "./gameplay-causal-events";
 import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
 import type { LiveTearRuntimeEnvironmentContext, TearClassARuntimeEnvironment,
-  TearClassBRuntimeEnvironment, TearClassCRuntimeEnvironment, TearPhysicalInput,
-  TearRuntimeAccessClass, TearRuntimeBridgeFactory, TearRuntimeEnvironment,
-  TearRuntimeEnvironmentMetrics, TearStructuredRuntimeEnvironment } from "./live-runtime-contracts";
+  TearClassBRuntimeEnvironment, TearRuntimeAccessClass, TearRuntimeEnvironmentMetrics,
+  TearStructuredRuntimeEnvironment } from "./live-runtime-contracts";
 export type * from "./live-runtime-contracts";
 function availableActions(screen: string, runMode: string): readonly GameAction["type"][] {
   if (screen === "playing") return Object.freeze([
@@ -43,7 +44,7 @@ function numericSeed(seed: string): number {
   return (hash >>> 0) || 1;
 }
 
-function entityKind(enemy: GameEnemy): TearEntityKindId {
+function entityKind(enemy: TearSimulationEnemyView): TearEntityKindId {
   let raw = enemy.kind;
   if (typeof enemy.bossId === "string" && enemy.bossId.length > 0) raw = enemy.bossId;
   else if (enemy.kind === "support" && "supportType" in enemy && typeof enemy.supportType === "string") {
@@ -115,7 +116,7 @@ export function projectLiveTearObservation(
         livingWaveEnemies: livingEnemies.length,
         ...(boss === undefined ? {} : {
           boss: Object.freeze({
-            id: boss.bossId || boss.kind || "boss",
+            id: boss.bossId ?? boss.kind,
             phase: "phase" in boss && (typeof boss.phase === "string" || typeof boss.phase === "number")
               ? String(boss.phase)
               : ("state" in boss && typeof boss.state === "string" ? boss.state : "active"),
@@ -152,6 +153,14 @@ function requireStructured(accessClass: TearRuntimeAccessClass, operation: strin
 /** Creates the test-build-only controller for the actual browser gameplay host. */
 export function createLiveTearRuntimeEnvironment(
   context: LiveTearRuntimeEnvironmentContext,
+  accessClass: "A",
+): TearClassARuntimeEnvironment;
+export function createLiveTearRuntimeEnvironment(
+  context: LiveTearRuntimeEnvironmentContext,
+  accessClass: "B",
+): TearClassBRuntimeEnvironment;
+export function createLiveTearRuntimeEnvironment(
+  context: LiveTearRuntimeEnvironmentContext,
   accessClass: "A" | "B",
 ): TearClassARuntimeEnvironment | TearClassBRuntimeEnvironment {
   let scenario: TearScenarioV1 | null = null;
@@ -164,20 +173,16 @@ export function createLiveTearRuntimeEnvironment(
   let acceptedActions = 0;
   let screenshotCount = 0;
   let lastCallerEnvelopeId = 0;
+  let finaleIntentStart = 0;
+  let finaleOutwardStart = 0;
+  let audioDispatchStart = 0;
+  let outcomeChronologyStart = 0;
   const eventLog: TearCausalEventV1[] = [];
+  const nativeEventLog: TearGameplayEvent[] = [];
   context.subscribeEngineEvent((event) => {
     if (scenario === null) return;
-    let type: TearCausalEventV1["type"];
-    if (event.kind === "stage") type = "stage.entered";
-    else if (event.kind === "wave") type = event.event === "clear" ? "wave.cleared" : "wave.started";
-    else if (event.kind === "spawn") type = "enemy.spawned";
-    else if (event.kind === "death") type = "enemy.defeated";
-    else if (event.effect.includes("parry")) type = "combat.perfect-parry";
-    else if (event.effect.includes("throw")) type = "blade.thrown";
-    else if (/recall|catch/u.test(event.effect)) type = "blade.recalled";
-    else if (event.effect.includes("dash")) type = "player.dash-started";
-    else type = "system.checkpoint";
-    eventLog.push(createEvent(sequence++, event.tick, type, { ...event }, "engine"));
+    nativeEventLog.push(event);
+    eventLog.push(createGameplayCausalEvent(event, sequence, `live:${String(event.tick)}:${String(sequence++)}`));
   });
 
   const observe = (): TearObservationV1 => {
@@ -222,7 +227,10 @@ export function createLiveTearRuntimeEnvironment(
         context.selectBoss(nextScenario.start.boss);
       }
       context.stopFrameLoop();
-      context.resetEntityIdentities();
+      // Structured TearBench runs own the canonical action source for their
+      // lifetime. Physical pointer sampling remains available only to the
+      // visible Class-C/manual route.
+      context.setSemanticInputAuthority(true);
       context.setRunSeed(numericSeed(nextScenario.seed));
       context.selectWeapon(nextScenario.start.weapon);
       context.startRun(nextScenario.start.mode, nextScenario.start.difficulty);
@@ -236,6 +244,11 @@ export function createLiveTearRuntimeEnvironment(
       lastCallerEnvelopeId = 0;
       context.drainConsumedActions();
       eventLog.length = 0;
+      nativeEventLog.length = 0;
+      finaleIntentStart = context.finaleIntents().length;
+      finaleOutwardStart = context.finaleOutwardCalls().length;
+      audioDispatchStart = context.audioDispatchReceipts?.().length ?? 0;
+      outcomeChronologyStart = context.outcomeChronology?.().length ?? 0;
       resets += 1;
       observation = projectLiveTearObservation(context, 0, accessClass);
       eventLog.push(createEvent(sequence++, 0, "run.started", {
@@ -377,7 +390,6 @@ export function createLiveTearRuntimeEnvironment(
         paused = true;
         context.setScreen("paused");
         if (observation !== null) observation = projectLiveTearObservation(context, observation.tick, accessClass);
-        eventLog.push(createEvent(sequence++, observation?.tick ?? 0, "run.paused", {}));
       }
     },
     resume() {
@@ -386,12 +398,12 @@ export function createLiveTearRuntimeEnvironment(
         paused = false;
         context.setScreen("playing");
         if (observation !== null) observation = projectLiveTearObservation(context, observation.tick, accessClass);
-        eventLog.push(createEvent(sequence++, observation?.tick ?? 0, "run.resumed", {}));
       }
     },
     terminate() {
       requireStructured(accessClass, "programmatic termination");
       context.terminateRun();
+      context.setSemanticInputAuthority(false);
       terminated = true;
       if (observation !== null) observation = projectLiveTearObservation(context, observation.tick, accessClass);
       eventLog.push(createEvent(sequence++, observation?.tick ?? 0, "run.abandoned", {}));
@@ -424,13 +436,81 @@ export function createLiveTearRuntimeEnvironment(
     ...environment,
     accessClass: "A" as const,
     rng: () => context.random(),
+    advanceApplicationFrame: (
+      deltaSeconds: number,
+      options: Readonly<{ skipCinematic?: boolean }> = {},
+    ) => {
+      if (!(deltaSeconds > 0) || !Number.isFinite(deltaSeconds)) {
+        throw new RangeError("application-frame delta must be finite and positive");
+      }
+      if (scenario === null || observation === null) {
+        throw new Error("Tear runtime must be reset before stepping");
+      }
+      if (paused || terminated) throw new Error("application-frame stepping requires a running Tear runtime");
+      const beforeTick = context.authoritative()?.tick ?? observation.tick;
+      if (options.skipCinematic === true) context.skipCinematic();
+      context.advanceApplicationFrame(deltaSeconds);
+      const afterTick = context.authoritative()?.tick ?? beforeTick;
+      if (!Number.isSafeInteger(beforeTick) || !Number.isSafeInteger(afterTick) || afterTick < beforeTick) {
+        throw new Error("application frame produced an invalid authoritative tick delta");
+      }
+      const fixedTickDelta = afterTick - beforeTick;
+      fixedTicks += fixedTickDelta;
+      observation = projectLiveTearObservation(context, afterTick, accessClass);
+      terminated = context.screen() === "gameover" || context.screen() === "win";
+      context.render();
+      return Object.freeze({ beforeTick, afterTick, fixedTickDelta });
+    },
+    advanceStateForgeCinematicBeat: () => {
+      if (scenario === null || observation === null) {
+        throw new Error("Tear runtime must be reset before cinematic advancement");
+      }
+      if (paused || terminated) {
+        throw new Error("cinematic advancement requires a running Tear runtime");
+      }
+      const advanced = context.advanceStateForgeCinematicBeat();
+      const tick = context.authoritative()?.tick ?? observation.tick;
+      if (!Number.isSafeInteger(tick) || tick < observation.tick) {
+        throw new Error("cinematic advancement produced an invalid authoritative tick");
+      }
+      observation = projectLiveTearObservation(context, tick, accessClass);
+      context.render();
+      return Object.freeze({ advanced, tick });
+    },
+    canonicalState: () => context.authoritative()?.state ?? null,
+    engineEventProjection: () => Object.freeze(nativeEventLog.map(projectGameplayEventForParity)),
+    finaleIntentProjection: () => Object.freeze(context.finaleIntents().slice(finaleIntentStart)),
+    finaleOutwardProjection: () => Object.freeze(context.finaleOutwardCalls().slice(finaleOutwardStart)),
+    audioDispatchProjection: () => Object.freeze((context.audioDispatchReceipts?.() ?? []).slice(audioDispatchStart)),
+    outcomeChronologyProjection: () => Object.freeze((context.outcomeChronology?.() ?? []).slice(outcomeChronologyStart)),
     setTimeEffectsForTest: (effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>) => {
       context.setTimeEffectsForTest(effects);
     },
     captureSnapshot: (id: string, stateClass?: TearStateClass) => snapshots.capture(id, stateClass),
     restoreSnapshot: (snapshot: TearSnapshotV1) => snapshots.restore(snapshot),
-    forgeExitLaunch: (launch: StateForgeExitLaunch) =>
-      snapshots.restore(forgeExitLaunchSnapshot(snapshots.capture(`source-${launch.id}`), launch)),
+    forgeExitLaunch: (launch: StateForgeExitLaunch) => {
+      if (launch.kind === "boss-finisher" && context.bossIntroActive()) {
+        throw new Error("boss-finisher origin requires the production boss introduction to be complete");
+      }
+      const original = snapshots.capture(`source-${launch.id}`);
+      const forged = forgeExitLaunchSnapshot(original, launch);
+      if (launch.kind !== "boss-finisher") return snapshots.restore(forged);
+      const progressionRuntime = context.captureProgressionRuntime();
+      try {
+        context.applyBossFinisher(launch.boss, launch.remainingHp);
+        const committed = snapshots.capture(launch.id, "surgical-valid");
+        if (committed.hashes.exact !== forged.hashes.exact) {
+          throw new Error("boss-finisher surgical commit changed fields outside its declared health pair");
+        }
+        return Object.freeze({ ok: true as const, exactHash: committed.hashes.exact,
+          semanticHash: committed.hashes.semantic });
+      } catch (error) {
+        const rollback = snapshots.restore(original);
+        context.restoreProgressionRuntime(progressionRuntime);
+        if (!rollback.ok) throw new Error("boss-finisher rollback failed", { cause: error });
+        throw error;
+      }
+    },
     forgeWave99Hammer: () => {
       const progression = createCanonicalWave99HammerProgression();
       const replay = context.replayProgression(progression.ledger);
@@ -442,6 +522,45 @@ export function createLiveTearRuntimeEnvironment(
       Reflect.set(run, "stateForgeEvidence", { ...certificate, liveReplay: replay, ledger: progression.ledger });
       const forged = snapshots.capture("wave99-start", "reconstructed-reachable");
       return Object.freeze({ ok: true as const, exactHash: forged.hashes.exact, semanticHash: forged.hashes.semantic });
+    },
+    forgeCampaignFinalWave: () => {
+      const certificate = createCampaignVictoryOrigin();
+      const original = snapshots.capture("campaign-wave-49-original");
+      const originalProgressionRuntime = context.captureProgressionRuntime();
+      try {
+        const replay = context.replayProgression(certificate.ledger);
+        context.loadStage(4);
+        const frontier = createCampaignWave49RewardFrontier(
+          snapshots.capture("campaign-wave-49-source", "reconstructed-reachable"), certificate,
+          context.platformsForStage,
+        );
+        const progressionRuntime = context.captureProgressionRuntime();
+        const restored = snapshots.restore(frontier);
+        context.restoreProgressionRuntime(progressionRuntime);
+        if (!restored.ok) {
+          const rollback = snapshots.restore(original);
+          context.restoreProgressionRuntime(originalProgressionRuntime);
+          if (!rollback.ok) throw new Error("campaign final-wave rollback failed");
+          return Object.freeze({ ...restored, rolledBack: true });
+        }
+        const run = context.state.run();
+        if (run === null) throw new Error("campaign final-wave forge requires an active live run");
+        Reflect.set(run, "stateForgeEvidence", Object.freeze({
+          certificateId: certificate.id, currentWave: certificate.currentWave, nextWave: certificate.nextWave,
+          terminal: certificate.terminal, progressionHash: certificate.ledger.progressionHash,
+          configurationHash: certificate.configurationHash, provenanceKind: certificate.provenance.kind,
+          liveReplay: replay,
+        }));
+        context.startNextWave();
+        context.setScreen("playing");
+        const started = snapshots.capture("campaign-wave-50-start", "reconstructed-reachable");
+        return Object.freeze({ ok: true as const, exactHash: started.hashes.exact, semanticHash: started.hashes.semantic });
+      } catch (error) {
+        const rollback = snapshots.restore(original);
+        context.restoreProgressionRuntime(originalProgressionRuntime);
+        if (!rollback.ok) throw new Error("campaign final-wave rollback failed", { cause: error });
+        throw error;
+      }
     },
     forgeResolvedScenario: (resolved: Parameters<TearClassARuntimeEnvironment["forgeResolvedScenario"]>[0]) => launchResolvedLiveState(resolved, environment, snapshots, context),
   });
@@ -464,37 +583,4 @@ export function createLiveTearRuntimeEnvironment(
     stateHash: () => environment.stateHash(),
     screenshot: () => environment.screenshot(),
   });
-}
-/*
-
-  title.textContent = "Ghost Lab · Live Disposable Runtime";
-*/
-/** Installs an immutable factory; each access-class adapter owns isolated control state. */
-export function installLiveTearRuntimeBridge(
-  context: LiveTearRuntimeEnvironmentContext,
-  target: Window & { __TEAR_RUNTIME_ENVIRONMENT__?: TearRuntimeBridgeFactory },
-): void {
-  function createAdapter(accessClass: "A"): TearClassARuntimeEnvironment;
-  function createAdapter(accessClass: "B"): TearClassBRuntimeEnvironment;
-  function createAdapter(accessClass: "C"): TearClassCRuntimeEnvironment;
-  function createAdapter(accessClass: string): TearRuntimeEnvironment {
-    if (accessClass === "A") return createLiveTearRuntimeEnvironment(context, "A");
-    if (accessClass === "B") return createLiveTearRuntimeEnvironment(context, "B");
-    if (accessClass === "C") {
-      return Object.freeze({
-        accessClass: "C" as const,
-        screenshot: () => { context.render(); return context.screenshot(); },
-        physicalInput: (input: TearPhysicalInput) => { context.emitPhysicalInput(input); },
-      });
-    }
-    throw new RangeError(`unknown Tear runtime access class: ${accessClass}`);
-  }
-  const factory: TearRuntimeBridgeFactory = Object.freeze({ create: createAdapter });
-  Object.defineProperty(target, "__TEAR_RUNTIME_ENVIRONMENT__", {
-    configurable: false,
-    writable: false,
-    value: factory,
-  });
-  installGhostLabPanel(factory); installLiveStateForgeStudio(factory);
-  if (new URLSearchParams(window.location.search).get("watchagent") === "1") void import("../agents/live-watch-agent-host").then(({ installLiveWatchAgentHost }) => { installLiveWatchAgentHost(context, target); });
 }

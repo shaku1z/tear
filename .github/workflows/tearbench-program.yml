@@ -1,4 +1,4 @@
-name: TearBench Program
+name: TearBench Evidence Program
 
 on:
   schedule:
@@ -7,14 +7,14 @@ on:
   workflow_dispatch:
     inputs:
       profile:
-        description: Evidence profile
+        description: Evidence profile (none of these profiles certifies a release)
         required: true
         default: nightly
         type: choice
         options:
           - nightly
           - weekly-endurance
-          - release-candidate
+          - evidence-review
 
 permissions:
   contents: read
@@ -25,11 +25,13 @@ concurrency:
 
 jobs:
   nightly:
-    if: github.event_name == 'schedule' && github.event.schedule == '17 6 * * *' || inputs.profile == 'nightly'
+    if: (github.event_name == 'schedule' && github.event.schedule == '17 6 * * *') || inputs.profile == 'nightly'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - uses: pnpm/action-setup@v4
         with:
           version: 11.15.0
@@ -39,16 +41,32 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      - run: xvfb-run -a pnpm check
-        env:
-          TEAR_HEADED_VISIBILITY: "1"
+      - name: Select and run HEAD diff evidence
+        shell: bash
+        run: |
+          mkdir -p artifacts/tearbench
+          git diff --name-only HEAD^ HEAD > artifacts/tearbench/changed-files.txt
+          pnpm tearbench select --files-from artifacts/tearbench/changed-files.txt --artifact artifacts/tearbench/nightly-selection.json
+          pnpm tearbench ci --files-from artifacts/tearbench/changed-files.txt --artifact artifacts/tearbench/nightly-ci-selection.json
+      - run: pnpm requirements:check
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm check:architecture
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tearbench-nightly-${{ github.sha }}
+          path: artifacts/tearbench
+          if-no-files-found: error
+          retention-days: 14
 
   weekly-endurance:
-    if: github.event_name == 'schedule' && github.event.schedule == '23 8 * * 0' || inputs.profile == 'weekly-endurance'
+    if: (github.event_name == 'schedule' && github.event.schedule == '23 8 * * 0') || inputs.profile == 'weekly-endurance'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - uses: pnpm/action-setup@v4
         with:
           version: 11.15.0
@@ -57,14 +75,29 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm check:weekly
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Run retained endurance evidence
+        shell: bash
+        run: |
+          mkdir -p artifacts/tearbench
+          git diff --name-only HEAD^ HEAD > artifacts/tearbench/changed-files.txt
+          pnpm tearbench ci --files-from artifacts/tearbench/changed-files.txt --artifact artifacts/tearbench/weekly-ci-selection.json
+          pnpm check:weekly
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tearbench-weekly-${{ github.sha }}
+          path: artifacts/tearbench
+          if-no-files-found: error
+          retention-days: 30
 
-  release-candidate:
-    if: inputs.profile == 'release-candidate'
+  evidence-review:
+    if: inputs.profile == 'evidence-review'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - uses: pnpm/action-setup@v4
         with:
           version: 11.15.0
@@ -74,14 +107,34 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      - run: xvfb-run -a pnpm check
-        env:
-          TEAR_HEADED_VISIBILITY: "1"
-      - run: pnpm test:endurance
-      - run: pnpm tearbench certify --commit "${{ github.sha }}" --full-check passed
+      - name: Record preservation-corpus receipt at clean HEAD
+        run: pnpm tearbench evidence record --id preservation-corpus --subject artifacts/tearbench/c39/preservation-corpus-vitest.json -- pnpm test:preservation-corpus
+      - name: Record Source-void engineering receipt at clean HEAD
+        shell: bash
+        run: >-
+          pnpm tearbench evidence record --id source-void-hazard-seek
+          --subject artifacts/tearbench/c40/source-void-hazard-seek.log --
+          "pnpm build:test:standalone && node tests/browser-c40-source-void-ghost-seek.js > artifacts/tearbench/c40/source-void-hazard-seek.log 2>&1"
+      - name: Compose intentionally partial evidence manifest
+        run: >-
+          pnpm tearbench evidence partial-manifest
+          --receipts artifacts/tearbench/receipts/preservation-corpus.json,artifacts/tearbench/receipts/source-void-hazard-seek.json
+          --artifact artifacts/tearbench/generated/partial-release-evidence.json
+      - name: Confirm the incomplete manifest is rejected (not a release decision)
+        shell: bash
+        run: |
+          set +e
+          pnpm tearbench certify --manifest artifacts/tearbench/generated/partial-release-evidence.json --artifact artifacts/tearbench/generated/partial-release-certificate.json
+          status=$?
+          set -e
+          if [[ "$status" -eq 0 ]]; then
+            echo "Expected the deliberately partial manifest to be rejected."
+            exit 1
+          fi
+          node --input-type=module -e 'import { readFile } from "node:fs/promises"; const certificate = JSON.parse(await readFile("artifacts/tearbench/generated/partial-release-certificate.json", "utf8")); if (certificate.schemaVersion !== 2 || certificate.status !== "rejected") throw new Error("partial evidence did not produce the expected rejected certificate");'
       - uses: actions/upload-artifact@v4
         with:
-          name: tear-release-certificate
-          path: artifacts/tearbench/release-certificate.json
+          name: tearbench-partial-evidence-${{ github.sha }}
+          path: artifacts/tearbench
           if-no-files-found: error
           retention-days: 90

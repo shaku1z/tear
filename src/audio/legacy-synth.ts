@@ -1,12 +1,52 @@
 import { migrateAudioSettings } from "../persistence/audio-settings";
 import type { MusicContextSnapshot, MusicEvent, MusicRunSessionMetadata } from "./music-contracts";
-import type { SFX as RuntimeSfxValue } from "./legacy-synth-runtime";
+import type { LegacySynthRuntime } from "./legacy-synth-runtime";
 import type { TearScoreReplayMetadata } from "../replay/envelope";
-import { captureAudioContextFromUserGesture, capturedAudioContext, disposeCapturedAudioContext } from "./audio-context-handoff";
+import type { BrowserAudioContextHandoff } from "./audio-context-handoff";
+import {
+  createAudioDispatchJournal,
+  type AudioDispatchExecutionResult,
+  type AudioDispatchReceiptObserver,
+  type AudioDispatchRequest,
+} from "./audio-dispatch-receipts";
 
-type RuntimeSfx = typeof RuntimeSfxValue;
+type RuntimeSfx = LegacySynthRuntime;
 type RuntimeAction = (runtime: RuntimeSfx) => void;
+type DispatchEntry = ReturnType<ReturnType<typeof createAudioDispatchJournal>["request"]>;
+interface QueuedRuntimeAction { readonly action: RuntimeAction; readonly dispatch?: DispatchEntry }
 
+export interface LegacySynthFacadeOptions {
+  /** The composition-owned port that captures and owns its one browser context. */
+  readonly audioContextHandoff: BrowserAudioContextHandoff;
+  /** Optional browser injection for the concrete compatibility adapter. */
+  readonly browserWindow?: Window;
+  /** Audio settings are browser-backed even when a test composition uses an isolated general store. */
+  readonly readPersistedSettings?: () => Record<string, unknown>;
+}
+
+function readBrowserAudioSettings(): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(window.localStorage.getItem("tear_settings") ?? "{}");
+    return typeof parsed === "object" && parsed !== null ? parsed as Record<string, unknown> : {};
+  } catch {
+    return {};
+  }
+}
+
+function containsAudioSettings(source: Record<string, unknown>): boolean {
+  return ["audio", "vol", "masterVolume", "music", "musicVolume", "sfxVolume", "interfaceVolume"]
+    .some((key) => Object.hasOwn(source, key));
+}
+
+/**
+ * One composition-owned first-gesture facade. The concrete browser audio runtime
+ * receives its browser context through the composition-owned handoff; this
+ * factory prevents queue, receipt, activation, and concrete runtime state from
+ * being silently shared by multiple application compositions.
+ */
+export function createLegacySynthFacade(options: LegacySynthFacadeOptions) {
+const readPersistedSettings = options.readPersistedSettings ?? readBrowserAudioSettings;
+const { audioContextHandoff, browserWindow } = options;
 let runtime: RuntimeSfx | undefined;
 let loading: Promise<RuntimeSfx | undefined> | undefined;
 let initialized = false;
@@ -16,31 +56,36 @@ let pendingMusicRun: MusicRunSessionMetadata | undefined;
 let pendingMusicContext: MusicContextSnapshot | undefined;
 let pendingMusicEnd = false;
 const pendingMusicEvents: MusicEvent[] = [];
-const queued: RuntimeAction[] = [];
+const queued: QueuedRuntimeAction[] = [];
+const dispatchJournal = createAudioDispatchJournal();
 let removeActivationBridge: (() => void) | undefined;
 
 function installActivationBridge(): void {
   if (removeActivationBridge !== undefined) return;
-  const activate = (): void => { captureAudioContextFromUserGesture(); };
-  const pagehide = (event: PageTransitionEvent): void => { if (!event.persisted) disposeCapturedAudioContext(); };
+  const eventWindow = browserWindow ?? window;
+  const activate = (): void => { audioContextHandoff.capture(); };
+  const pagehide = (event: PageTransitionEvent): void => { if (!event.persisted) audioContextHandoff.dispose(); };
   removeActivationBridge = () => {
-    window.removeEventListener("pointerdown", activate);
-    window.removeEventListener("keydown", activate);
-    window.removeEventListener("pagehide", pagehide);
+    eventWindow.removeEventListener("pointerdown", activate);
+    eventWindow.removeEventListener("keydown", activate);
+    eventWindow.removeEventListener("pagehide", pagehide);
     removeActivationBridge = undefined;
   };
-  window.addEventListener("pointerdown", activate);
-  window.addEventListener("keydown", activate);
-  window.addEventListener("pagehide", pagehide);
+  eventWindow.addEventListener("pointerdown", activate);
+  eventWindow.addEventListener("keydown", activate);
+  eventWindow.addEventListener("pagehide", pagehide);
 }
 
 function loadRuntime(): Promise<RuntimeSfx | undefined> {
   loadState = "loading";
   loading ??= import("./legacy-synth-runtime").then((module) => {
-    runtime = module.SFX;
+    const runtimeOptions = browserWindow === undefined
+      ? { capturedAudioContext: () => audioContextHandoff.captured() }
+      : { browserWindow, capturedAudioContext: () => audioContextHandoff.captured() };
+    runtime = module.createLegacySynthRuntime(runtimeOptions);
     runtime.init();
     removeActivationBridge?.();
-    if (capturedAudioContext() !== null) runtime.resume();
+    if (audioContextHandoff.captured() !== null) runtime.resume();
     if (pendingSettings !== undefined) runtime.applySettings(pendingSettings);
     if (pendingMusicRun !== undefined) runtime.beginMusicRun(pendingMusicRun);
     if (pendingMusicContext !== undefined) runtime.updateMusicContext(pendingMusicContext);
@@ -49,13 +94,13 @@ function loadRuntime(): Promise<RuntimeSfx | undefined> {
     pendingMusicRun = undefined;
     pendingMusicContext = undefined;
     pendingMusicEnd = false;
-    for (const action of queued.splice(0)) action(runtime);
+    for (const entry of queued.splice(0)) entry.action(runtime);
     return runtime;
   }).catch((error: unknown) => {
     loadState = "failed";
     removeActivationBridge?.();
-    disposeCapturedAudioContext();
-    queued.splice(0);
+    audioContextHandoff.dispose();
+    for (const entry of queued.splice(0)) if (entry.dispatch !== undefined) dispatchJournal.loadFailed(entry.dispatch);
     console.warn("Tear audio runtime failed to load", error);
     return undefined;
   });
@@ -65,8 +110,33 @@ function loadRuntime(): Promise<RuntimeSfx | undefined> {
 function invoke(action: RuntimeAction): void {
   if (runtime) action(runtime);
   else if (loadState !== "failed") {
-    if (queued.length >= 64) queued.shift();
-    queued.push(action);
+    if (queued.length >= 64) {
+      const evicted = queued.shift();
+      if (evicted?.dispatch !== undefined) dispatchJournal.evicted(evicted.dispatch, queued.length);
+    }
+    queued.push({ action });
+  }
+}
+
+function invokeObserved(
+  request: AudioDispatchRequest,
+  action: (audio: RuntimeSfx) => AudioDispatchExecutionResult,
+): void {
+  const dispatch = dispatchJournal.request(request);
+  const execute: RuntimeAction = (audio) => {
+    dispatchJournal.executing(dispatch);
+    try { dispatchJournal.completed(dispatch, action(audio)); }
+    catch (error) { dispatchJournal.executionFailed(dispatch, error); }
+  };
+  if (runtime) execute(runtime);
+  else if (loadState === "failed") dispatchJournal.loadFailed(dispatch);
+  else {
+    if (queued.length >= 64) {
+      const evicted = queued.shift();
+      if (evicted?.dispatch !== undefined) dispatchJournal.evicted(evicted.dispatch, queued.length);
+    }
+    queued.push({ action: execute, dispatch });
+    dispatchJournal.queued(dispatch, queued.length);
   }
 }
 
@@ -78,7 +148,11 @@ function initialize(): void {
 }
 
 function migrate(settings: Record<string, unknown>, audioSource: Record<string, unknown> = settings): Record<string, unknown> {
-  const source = audioSource === settings ? settings : audioSource.audio ?? audioSource;
+  const candidate: unknown = audioSource === settings ? settings : audioSource.audio;
+  const provided = typeof candidate === "object" && candidate !== null
+    ? candidate as Record<string, unknown>
+    : audioSource;
+  const source = containsAudioSettings(provided) ? provided : readPersistedSettings();
   const audio = migrateAudioSettings(source);
   return Object.assign(settings, audio, { vol: audio.masterVolume, music: !audio.musicMuted });
 }
@@ -91,17 +165,18 @@ function apply(settings: Record<string, unknown>): void {
 function cue(action: RuntimeAction): void { invoke(action); }
 
 /** Lightweight first-gesture facade for the concrete synthesized audio runtime. */
-export const SFX = Object.freeze({
+return Object.freeze({
   get ctx(): AudioContext | null { return runtime?.ctx ?? null; },
   get musicFilter(): BiquadFilterNode | null { return runtime?.musicFilter ?? null; },
   get _musicDuck(): number { return runtime?._musicDuck ?? 1; },
   get _voidMix(): number { return runtime?._voidMix ?? 0; },
+  observeDispatchReceipts(observer: AudioDispatchReceiptObserver) { return dispatchJournal.observe(observer); },
   init() { initialize(); }, resume() { if (runtime) runtime.resume(); else void loadRuntime(); },
   migrateSettings(settings: Record<string, unknown>, audioSource?: Record<string, unknown>) { return migrate(settings, audioSource); },
   applySettings(settings: Record<string, unknown>) { apply(settings); },
   debugSnapshot() {
     if (runtime) return runtime.debugSnapshot();
-    const settings = migrateAudioSettings(pendingSettings ?? {});
+    const settings = migrateAudioSettings(pendingSettings ?? readPersistedSettings());
     return { state: loadState === "failed" ? "failed" : "awaiting-user-activation", backend: null, settings, runtimeLoadState: loadState,
       score: { scoreVersion: "built-in-scores@0.1.0-alpha.2", run: null, contextSequence: 0, eventSequence: 0 },
       resources: { activeVoices: 0, activeVoiceGraphNodes: 0, voiceCap: 24, noiseBuffers: 0,
@@ -129,8 +204,14 @@ export const SFX = Object.freeze({
   setSfxMuted(on: boolean) { invoke((audio) => { audio.setSfxMuted(on); }); },
   setInterfaceMuted(on: boolean) { invoke((audio) => { audio.setInterfaceMuted(on); }); },
   setMusic(on: boolean) { invoke((audio) => { audio.setMusic(on); }); },
-  setMusicDuck(amount: number | null | undefined, seconds?: number) { invoke((audio) => { audio.setMusicDuck(amount, seconds); }); },
-  setVoidDescent(amount: number, seconds?: number) { invoke((audio) => { audio.setVoidDescent(amount, seconds); }); },
+  setMusicDuck(amount: number | null | undefined, seconds?: number) {
+    invokeObserved({ operation: "music-duck", arguments: [amount ?? 1, seconds ?? 0.18] },
+      (audio) => audio.setMusicDuckForReceipt(amount, seconds));
+  },
+  setVoidDescent(amount: number, seconds?: number) {
+    invokeObserved({ operation: "void-mix", arguments: [amount, seconds ?? 0.22] },
+      (audio) => audio.setVoidDescentForReceipt(amount, seconds));
+  },
   mute(on: boolean, reason?: string) { invoke((audio) => { audio.mute(on, reason); }); },
   setMusicTheme(name: string, boss: boolean) { invoke((audio) => { audio.setMusicTheme(name, boss); }); },
   swing(speed: number) { cue((audio) => { audio.swing(speed); }); },
@@ -156,9 +237,16 @@ export const SFX = Object.freeze({
   dialogueTone(identity: string | null | undefined) { cue((audio) => { audio.dialogueTone(identity); }); },
   voidGroundTear() { cue((audio) => { audio.voidGroundTear(); }); },
   sourceDepthPrepare(kind: string) { cue((audio) => { audio.sourceDepthPrepare(kind); }); }, sourceDepthSnap(kind: string) { cue((audio) => { audio.sourceDepthSnap(kind); }); },
-  aldricCrownFall() { cue((audio) => { audio.aldricCrownFall(); }); }, finalSilence() { cue((audio) => { audio.finalSilence(); }); },
-  finalRelic(step: number) { cue((audio) => { audio.finalRelic(step); }); }, finalCut(step: number) { cue((audio) => { audio.finalCut(step); }); },
-  finalRestore() { cue((audio) => { audio.finalRestore(); }); }, voidTransfer() { cue((audio) => { audio.voidTransfer(); }); },
+  aldricCrownFall() { cue((audio) => { audio.aldricCrownFall(); }); },
+  finalSilence() { invokeObserved({ operation: "final-silence", arguments: [] },
+    (audio) => audio.dispatchFinaleCueForReceipt("final-silence")); },
+  finalRelic(step: number) { invokeObserved({ operation: "final-relic", arguments: [step] },
+    (audio) => audio.dispatchFinaleCueForReceipt("final-relic", step)); },
+  finalCut(step: number) { invokeObserved({ operation: "final-cut", arguments: [step] },
+    (audio) => audio.dispatchFinaleCueForReceipt("final-cut", step)); },
+  finalRestore() { invokeObserved({ operation: "final-restore", arguments: [] },
+    (audio) => audio.dispatchFinaleCueForReceipt("final-restore")); },
+  voidTransfer() { cue((audio) => { audio.voidTransfer(); }); },
   echoResonance() { cue((audio) => { audio.echoResonance(); }); }, platformRebuild() { cue((audio) => { audio.platformRebuild(); }); },
   bossDeathWarden() { cue((audio) => { audio.bossDeathWarden(); }); }, bossDeathColossus() { cue((audio) => { audio.bossDeathColossus(); }); },
   bossDeathAldric() { cue((audio) => { audio.bossDeathAldric(); }); }, bossDeathEcho() { cue((audio) => { audio.bossDeathEcho(); }); },
@@ -171,3 +259,6 @@ export const SFX = Object.freeze({
   saberBreak(win: boolean) { cue((audio) => { audio.saberBreak(win); }); }, crescent() { cue((audio) => { audio.crescent(); }); },
   wave() { cue((audio) => { audio.wave(); }); }, gameover() { cue((audio) => { audio.gameover(); }); },
 });
+}
+
+export type LegacySynthFacade = ReturnType<typeof createLegacySynthFacade>;

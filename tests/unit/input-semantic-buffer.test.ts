@@ -35,7 +35,7 @@ describe("SemanticInputBuffer", () => {
     ]);
   });
 
-  it("does not accumulate live browser events until replay capture is enabled", () => {
+  it("does not accumulate device events until a canonical input session begins", () => {
     const buffer = new SemanticInputBuffer();
     buffer.setMovement(1, 0);
     buffer.push({ type: "pause" });
@@ -57,5 +57,28 @@ describe("SemanticInputBuffer", () => {
     buffer.startRecording();
     buffer.push({ type: "confirm" });
     expect(buffer.drain(1)[0]?.id).toBe(1);
+  });
+
+  it("drops paused one-shot edges while preserving envelope monotonicity and current controls", () => {
+    const buffer = new SemanticInputBuffer();
+    buffer.startRecording();
+    buffer.setMovement(1, 0);
+    buffer.push({ type: "jump", phase: "pressed" });
+    expect(buffer.drain(7).map((entry) => entry.id)).toEqual([1, 2]);
+
+    // These actions occurred while gameplay was inactive. Keep the current
+    // level controls for resume, but never replay the old one-shot edges.
+    buffer.setMovement(-1, 0);
+    buffer.setAimVector(0, 1);
+    buffer.push({ type: "dash", x: -1_000, y: 0 });
+    buffer.push({ type: "weapon", intent: "throw", phase: "pressed" });
+    buffer.discardUnsealed();
+
+    const resumed = buffer.drain(8);
+    expect(resumed).toEqual([
+      { kind: "command", id: 3, tick: 8, command: { type: "move", x: -1_000, y: 0 } },
+      { kind: "command", id: 4, tick: 8, command: { type: "aim", turn: 250_000, magnitude: 1_000 } },
+    ]);
+    expect(buffer.lastSealedTick).toBe(8);
   });
 });

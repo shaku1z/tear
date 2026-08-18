@@ -16,6 +16,19 @@ export interface ScreenActionBindingPorts {
   readonly requestPointer: () => void; readonly quitRun: () => void; readonly revive: () => void;
   readonly endRun: () => void; readonly retryRun: () => void; readonly lastReplay: () => unknown;
   readonly campaignDifficulty: () => RunDifficulty; readonly resetSettings: () => void; readonly buyShopItem: (id: string) => void;
+  readonly refreshAcademy: () => void;
+  readonly advanceAcademyDagger: (id: string) => void;
+  readonly reviewAcademyDagger: (id: string, correctionHash: string, disposition: "accepted" | "rejected") => void;
+  readonly withdrawAcademyModelTraining: (candidateHash: string) => void;
+  readonly optInHumanCalibration: (consent: "anonymous-improvement" | "public-training") => void;
+  readonly revokeHumanCalibration: () => void;
+  readonly refreshFoundry: () => void;
+  readonly bootstrapFoundry: (profileId: string) => void;
+  readonly setFoundryScheduleEnabled: (scheduleHash: string, enabled: boolean) => void;
+  readonly openGhostLab: (destination: "academy" | "foundry" | "vault" | "watch" | "botevidence") => void;
+  readonly openGhostPublication: (id: string) => void; readonly grantGhostPublication: () => void; readonly runGhostPublicationOnce: () => void; readonly cancelGhostPublication: () => void;
+  readonly openGhostSupport: (id: string) => void; readonly createGhostSupport: () => void;
+  readonly controlGhostLabWatch: (command: "start" | "pause" | "resume" | "stop") => void;
   readonly signIn: () => void; readonly signOut: () => void; readonly pinReplay: (id: string, pinned: boolean) => boolean;
   readonly deleteReplay: (id: string) => void; readonly dispatchPlayground: (id: string) => void;
   readonly library: LibraryScreenAdapters; readonly replay: ReplayScreenAdapter; readonly settings: SettingsRenameAdapters;
@@ -46,8 +59,30 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "settings.step": (action) => { ports.settings.stepSetting(action.key, action.delta); },
     "settings.toggle": (action) => { ports.settings.toggleSetting(action.key); },
     "settings.activate": (action) => { ports.settings.activateSetting(action.key); }, "settings.reset": () => { ports.resetSettings(); },
+    "academy.retry": () => { ports.refreshAcademy(); },
+    "academy.dagger.advance": (action) => { ports.advanceAcademyDagger(action.id); },
+    "academy.dagger.review": (action) => { ports.reviewAcademyDagger(action.id, action.correctionHash, action.disposition); },
+    "academy.record.withdrawModelTraining": (action) => { ports.withdrawAcademyModelTraining(action.candidateHash); },
+    "academy.humanCalibration.optIn": (action) => { ports.optInHumanCalibration(action.consent); },
+    "academy.humanCalibration.revoke": () => { ports.revokeHumanCalibration(); },
+    "foundry.refresh": () => { ports.refreshFoundry(); },
+    "foundry.bootstrap": (action) => { ports.bootstrapFoundry(action.profileId); },
+    "foundry.schedule.enable": (action) => { ports.setFoundryScheduleEnabled(action.scheduleHash, true); },
+    "foundry.schedule.disable": (action) => { ports.setFoundryScheduleEnabled(action.scheduleHash, false); },
+    "ghostlab.open": (action) => { ports.openGhostLab(action.destination); },
+    "ghostlab.watch": (action) => { ports.controlGhostLabWatch(action.command); },
     "shop.buy": (action) => { ports.buyShopItem(action.id); }, "profile.selectTab": (action) => { ports.library.selectProfileTab(action.id); },
     "profile.watchReplay": (action) => { ports.library.watchReplay(action.id, "profile"); },
+    "profile.watchGhostCapsule": (action) => { ports.library.watchGhostCapsule(action.id); },
+    "profile.compareGhostCapsule": (action) => { ports.library.compareGhostCapsule(action.id); },
+    "profile.openGhostComparison": () => { ports.library.openGhostComparison(); },
+    "profile.repairGhostCapsule": (action) => { ports.library.repairGhostCapsule(action.id); },
+    "profile.openGhostPublication": (action) => { ports.openGhostPublication(action.id); },
+    "profile.openGhostSupport": (action) => { ports.openGhostSupport(action.id); },
+    "ghostpublication.grant": () => { ports.grantGhostPublication(); },
+    "ghostpublication.runOnce": () => { ports.runGhostPublicationOnce(); },
+    "ghostpublication.cancel": () => { ports.cancelGhostPublication(); },
+    "ghostsupport.create": () => { ports.createGhostSupport(); },
     "profile.signIn": () => { ports.signIn(); }, "profile.signOut": () => { ports.signOut(); },
     "profile.rename": () => { ports.settings.beginRename(false); },
     "profile.openAchievements": () => { ports.setScreen("achievements"); ports.resetScroll(); }, "profile.play": () => { ports.setScreen("setup"); },
@@ -61,6 +96,13 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "replay.togglePause": () => { ports.replay.togglePause(); }, "replay.seek": (action) => { ports.replay.seekBy(action.delta); },
     "replay.seekTo": (action) => { ports.replay.seekToFraction(action.fraction); },
     "replay.jumpChapter": (action) => { ports.replay.jumpChapter(action.direction); }, "replay.restart": () => { ports.replay.restart(); },
+    "replay.practice": () => { ports.replay.practice(); },
+    "replay.coach.open": () => { ports.replay.openCoach(); },
+    "replay.coach.selectBaseline": (action) => { ports.replay.selectCoachBaseline(action.id); },
+    "replay.coach.practice": (action) => { ports.replay.practiceCoachFinding(action.findingId); },
+    "replay.runDna.toggle": () => { ports.replay.toggleRunDna(); },
+    "replay.studio.toggle": () => { ports.replay.toggleStudio(); },
+    "replay.studio.createCutList": () => { ports.replay.createStudioCutList(); },
     "replay.toggleInfo": () => { ports.replay.toggleInfo(); }, "replay.speed": (action) => { ports.replay.setSpeed(action.value); },
     "replay.exit": () => { ports.replay.exit(); }, "playground.action": (action) => { ports.dispatchPlayground(action.id); },
     "codex.selectTab": (action) => { ports.library.selectCodexTab(action.id); },

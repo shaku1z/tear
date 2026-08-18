@@ -1,5 +1,6 @@
 import { LiveRecordingController, type RecordedReplay, type StoredRecordingSummary } from "../gameplay/run/live-recording-controller";
 import { LiveRunOutcomeController } from "../gameplay/run/live-outcome-controller";
+import type { OutcomeChronologyEffect } from "../gameplay/run/outcome-chronology-journal";
 import type { OutcomeRunState, PreparedVictory, RecordingSummary, RunResultInfo, VictoryProgressionIntent } from "../gameplay/run/outcome-planner";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import { LivePendingFinaleController, type PendingFinalePlayer, type PendingFinaleRecord,
@@ -28,6 +29,7 @@ export interface LiveRunOutcomeHostContext<TReplay extends RecordedReplay> {
   readonly storePreparedVictory: (prepared: PreparedVictory) => void;
   readonly stopClipper: () => void;
   readonly terminate: (outcome: "defeat" | "victory") => void;
+  readonly publishTerminal: (outcome: "defeat" | "victory", run: OutcomeRunState) => void;
   readonly saveBest: (run: OutcomeRunState) => boolean;
   readonly best: (run: OutcomeRunState) => BestRecord;
   readonly awardCoins: (score: number) => number;
@@ -43,6 +45,7 @@ export interface LiveRunOutcomeHostContext<TReplay extends RecordedReplay> {
   readonly present: (outcome: "defeat" | "victory", result: RunResultInfo) => void;
   readonly midgame: (callback: () => void) => void;
   readonly restartCurrentRun: () => void;
+  readonly observeOutcomeChronology?: (effect: OutcomeChronologyEffect) => void;
   readonly pendingFinale: () => PendingFinaleRecord | null;
   readonly selectedWeapon: () => string;
   readonly selectWeapon: (weapon: string) => void;
@@ -93,6 +96,7 @@ export function createLiveRunOutcomeHost<TReplay extends RecordedReplay>(
     storePreparedVictory: context.storePreparedVictory,
     stopClipper: context.stopClipper,
     terminate: context.terminate,
+    publishTerminal: context.publishTerminal,
     saveBest: context.saveBest,
     best: context.best,
     awardCoins: context.awardCoins,
@@ -108,6 +112,9 @@ export function createLiveRunOutcomeHost<TReplay extends RecordedReplay>(
     present: context.present,
     midgame: context.midgame,
     restartCurrentRun: context.restartCurrentRun,
+    ...(context.observeOutcomeChronology === undefined
+      ? {}
+      : { observeOutcomeChronology: context.observeOutcomeChronology }),
   });
   context.installOutcome(outcome);
 

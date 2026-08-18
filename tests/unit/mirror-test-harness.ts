@@ -1,4 +1,7 @@
-import { CLOCK, CONFIG } from "../../src/config/game-config";
+import { CONFIG } from "../../src/config/game-config";
+import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
+
+const CLOCK = createTearWorldClock();
 import { aabbOverlap, clamp, len, lerp } from "../../src/domain/geometry";
 import type { BladeActionResult, BladePoint } from "../../src/gameplay/entities/blade";
 import { createMirrorTypes } from "../../src/gameplay/entities/mirror";

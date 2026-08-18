@@ -1,10 +1,30 @@
 import type { EnemyTypes } from "../../../gameplay/entities/enemies";
-import type { GameConfig, Point } from "../../../gameplay/entities/enemy-contracts";
+import type { Point } from "../../../gameplay/entities/enemy-contracts";
+
+export type EnemyRendererColor = "armored" | "armoredShield" | "bladeGlow" | "bladeTrail" | "bomber" | "boss"
+  | "charger" | "chimera" | "deflected" | "enemyShot" | "eye" | "flyer" | "perfect" | "ranged" | "slam" | "sludge";
+export interface EnemyPresentationPolicy {
+  readonly view: Readonly<{ w: number; h: number }>;
+  readonly world: Readonly<{ groundY: number }>;
+  readonly colors: Readonly<Record<EnemyRendererColor, string>>;
+  readonly aldric: Readonly<{
+    ascendHalfW: number; chargeWindup: number; crownfireWindup: number; overheadRange: number;
+    overheadWindup: number; thronefallRise: number; vaultArc: number;
+  }>;
+  readonly bossTheater: Readonly<{ introDur: number }>;
+  readonly chargedShot: Readonly<{ r: number }>;
+  readonly exotic: Readonly<{ geoWallH: number; geoWallW: number; gravReach: number }>;
+  readonly source: Readonly<{
+    beamW: number; beamWarn: number; collapseWindup: number; dashWindup: number; depthHandW: number;
+    depthMawW: number; depthRearAlpha: number; depthRearScale: number; voidFormScale: number; voidWispTell: number;
+  }>;
+  readonly warden: Readonly<{ batonWindup: number; lungeWind: number; lungeWindup: number; stringWind: number }>;
+}
 
 export interface EnemyPresentationDependencies {
   A11Y: { highContrast: boolean; reducedMotion: boolean };
   CLOCK: { sim: number };
-  CONFIG: GameConfig;
+  policy: EnemyPresentationPolicy;
   GFX: { low: boolean };
   THEME: { dark: boolean; ink: string; rim: string };
   UI: {

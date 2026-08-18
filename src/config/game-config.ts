@@ -571,9 +571,6 @@ const GFX = { low: false };
 // reads these values; only screen flash, camera/particle displacement, and the
 // geometry-first telegraph renderer do.
 const A11Y = { flashScale: 1, motionScale: 1, reducedMotion: false, highContrast: false };
-// Physical animation time advances only with fixed simulation steps, so hit-stop
-// freezes tells, weapons, projectiles, and world dressing. UI retains wall time.
-const CLOCK = { sim: 0 };
 
 // fullscreen overscan (logical px of scene BLEED per side). The gameplay arena is a
 // fixed 1600x900 for every player; on displays that aren't 16:9 the backing store fills
@@ -616,4 +613,4 @@ const THEME = {
   },
 };
 
-export { A11Y, CLOCK, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME, _relLum };
+export { A11Y, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME, _relLum };

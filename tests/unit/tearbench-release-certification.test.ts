@@ -2,12 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   OPERATIONAL_METRICS,
   buildOperationalDashboard,
-  certifyTearRelease,
   createPreservationManifest,
   resolvePreservedRuntime,
   selectDiffAwareEvidence,
   type EvidenceRoute,
-  type ReleaseEvidenceResult,
 } from "../../src/tearbench/release-certification";
 
 function preservation() {
@@ -95,25 +93,4 @@ describe("TearBench release certification", () => {
     });
   });
 
-  it("certifies only complete journey, arbitrary-state, preservation, and named evidence", () => {
-    const ids = [
-      "full-check", "deterministic-scenarios", "graveyard", "browser-journeys",
-      "base-comparison", "historical-replays", "interaction-matrices",
-    ];
-    const evidence: ReleaseEvidenceResult[] = ids.map((id) => ({ id, status: "passed", artifact: `artifacts/${id}.json` }));
-    expect(certifyTearRelease({
-      commit: "abc123",
-      evidence,
-      affectedArbitraryStatesCovered: true,
-      fullJourneysCovered: true,
-      preservation: preservation(),
-    }).status).toBe("certified");
-    expect(certifyTearRelease({
-      commit: "abc123",
-      evidence: evidence.filter((entry) => entry.id !== "graveyard"),
-      affectedArbitraryStatesCovered: true,
-      fullJourneysCovered: true,
-      preservation: preservation(),
-    }).status).toBe("rejected");
-  });
 });

@@ -5,6 +5,7 @@ import {
   RUN_PHASES,
   RunLifecycleController,
   transitionRunLifecycle,
+  validateRunLifecycleSnapshot,
   type RunLifecycleEvent,
   type RunLifecycleSnapshot,
   type RunPhase,
@@ -36,6 +37,13 @@ function snapshotAt(phase: RunPhase): RunLifecycleSnapshot {
 }
 
 describe("run lifecycle transition contract", () => {
+  it("resets the run-scoped revision and session namespace", () => {
+    const lifecycle = new RunLifecycleController();
+    lifecycle.start("first"); lifecycle.prepareWave(1, false, false); lifecycle.activateWave();
+    expect(lifecycle.snapshot().revision).toBeGreaterThan(0);
+    expect(lifecycle.reset()).toMatchObject({ phase: "idle", sessionId: null, revision: 0 });
+    expect(lifecycle.start("second").revision).toBe(1);
+  });
   it("exhaustively accepts declared events and rejects every undeclared event", () => {
     for (const phase of RUN_PHASES) {
       for (const event of EVENTS) {
@@ -84,5 +92,15 @@ describe("run lifecycle transition contract", () => {
     lifecycle.activateWave();
     lifecycle.beginFinale();
     expect(lifecycle.phase).toBe("finale");
+  });
+
+  it("rejects serialized lifecycle states that cannot legally continue", () => {
+    expect(() => { validateRunLifecycleSnapshot({ ...snapshotAt("wave-prepared"), sessionId: null }); })
+      .toThrow(/inconsistent/);
+    expect(() => { validateRunLifecycleSnapshot({ ...snapshotAt("wave-active"), activationDeferred: true }); })
+      .toThrow(/inconsistent/);
+    expect(() => { validateRunLifecycleSnapshot({ ...snapshotAt("reward-pending"), reward: null }); })
+      .toThrow(/inconsistent/);
+    expect(validateRunLifecycleSnapshot(snapshotAt("wave-prepared"))).toEqual(snapshotAt("wave-prepared"));
   });
 });

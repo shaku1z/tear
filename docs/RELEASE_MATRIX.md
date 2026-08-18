@@ -18,7 +18,7 @@ This matrix is the release evidence checklist. A target is not ready because it 
 
 - Every published mode starts, pauses, resumes, exits, and creates the correct run lifecycle.
 - Every screen and return route works with pointer, keyboard navigation, touch, and controller where applicable.
-- Sword, hammer, spear, chainblade, and ringblade pass action, ability, throw/recall, and reset conformance.
+- Sword, hammer, greatsword, chainblade, and riftlock pass action, ability, throw/recall, and reset conformance.
 - Every standard enemy, variant, affix, support, boss, boss phase, arena mutation, projectile, zone, wall, and hazard has characterization coverage.
 - Draft, reroll, reserve, tier-up, rewards, economy, achievements, profile, leaderboard, replay, victory, defeat, continue, tutorial, cinematics, and finale retain their behavior.
 - Settings and historical saves/replays migrate; malformed/unavailable services degrade to a playable state.

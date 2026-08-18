@@ -21,6 +21,11 @@ async function withJourney(options, run) {
   const baseUrl = `http://127.0.0.1:${String(port)}`;
   const server = http.createServer((request, response) => {
     const pathname = new URL(request.url, baseUrl).pathname;
+    if (pathname === "/__tear_browser_blank_fixture__.html") {
+      response.writeHead(200, { "Content-Type": "text/html" });
+      response.end("<!doctype html><title>Tear browser fixture</title>");
+      return;
+    }
     const relative = pathname === "/" ? "index.html" : pathname.slice(1);
     const file = path.resolve(root, relative);
     if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { response.writeHead(404).end(); return; }
@@ -40,10 +45,15 @@ async function withJourney(options, run) {
     page.on("pageerror", (error) => errors.push(error.stack || error.message));
     await page.route("**/*", (route) => route.request().url().startsWith(`${baseUrl}/`) ? route.continue() : route.abort());
 
-    async function boot() {
-      await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, { waitUntil: "domcontentloaded", timeout: 30000 });
-      await page.waitForFunction(() => window.__PANTHEON_TEST && window.__TEAR_CATALOG_DEBUG__, undefined, { timeout: 15000 });
-      await page.waitForFunction(() => window.__TEAR_DIAGNOSTICS__?.snapshot().frame.samples > 0, undefined, { timeout: 15000 });
+    const initialQuery = { test: "1", bossdebug: "1", ...(options.query || {}) };
+    async function boot(query = initialQuery) {
+      await page.goto(`${baseUrl}/index.html?${new URLSearchParams(query).toString()}`, { waitUntil: "domcontentloaded", timeout: 30000 });
+      try {
+        await page.waitForFunction(() => window.__PANTHEON_TEST && window.__TEAR_CATALOG_DEBUG__, undefined, { timeout: 15000 });
+        await page.waitForFunction(() => window.__TEAR_DIAGNOSTICS__?.snapshot().frame.samples > 0, undefined, { timeout: 15000 });
+      } catch (error) {
+        throw new Error(`Tear browser boot unavailable: ${errors.join("\n") || "no page error was emitted"}`, { cause: error });
+      }
       await page.mouse.click(10, 10);
     }
     async function waitScreen(screen) {
@@ -58,8 +68,11 @@ async function withJourney(options, run) {
       await page.mouse.click(x, y);
       await waitScreen(screen);
     }
-    await boot();
-    await run({ page, errors, boot, waitScreen, clickAndWait });
+    // Migration tests need to create a legacy IndexedDB schema at this exact
+    // HTTP origin before the application opens it. Ordinary journeys retain
+    // their existing eager boot behavior.
+    if (!options.deferBoot) await boot();
+    await run({ page, errors, baseUrl, boot, waitScreen, clickAndWait });
     assert.deepEqual(errors, [], `${options.name} page errors: ${errors.join("\n")}`);
   } finally {
     if (browser) await browser.close();

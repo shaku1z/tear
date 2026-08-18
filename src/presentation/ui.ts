@@ -16,7 +16,7 @@ type TearUi = ReturnType<typeof createUiState>
 
 function createUi(dependencies: UiDependencies): TearUi {
   const ui: TearUi = {
-    ...createUiState(dependencies.CONFIG),
+    ...createUiState(dependencies.presentation.colors),
     ...createUiFoundation(dependencies),
     ...createUiLedger(dependencies),
     ...createUiCinematic(dependencies),

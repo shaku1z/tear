@@ -2,6 +2,8 @@ import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../presentation/screens/live-screen-renderers";
 import type { LegacyGamepad } from "../input/legacy-input-contracts";
 import { ABILITY_CATEGORY_ORDER, SPECIAL_ABILITY_COLOR, abilityBadge } from "../presentation/codex-snapshots";
+import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
+import type { GhostTheaterOpenResult } from "../ghost/theater-open-result";
 
 type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "AFFIXES" | "Aldric" | "Armored" | "Bomber" | "Charger" |
   "Chimera" | "Colossus" | "Echo" | "Flyer" | "Ranged" | "Support" | "VARIANTS" | "Warden" | "Wraith" | "applyVariant" |
@@ -24,7 +26,10 @@ export interface LibraryScreenServices {
   readonly ease: (value: number) => number;
   readonly formatTime: (seconds: number) => string;
   readonly getBest: (mode: string, difficulty: string) => Readonly<{ wave: number; score: number; time?: number }>;
+  readonly ghostVault: GhostVaultLibraryPort;
   readonly enterReplay: (record: unknown, from: string) => boolean;
+  readonly enterGhostTheater: (id: string) => Promise<GhostTheaterOpenResult>;
+  readonly enterGhostComparison: (ids: readonly string[]) => Promise<boolean>;
 }
 
 export interface LibraryScreenAdapters {
@@ -49,7 +54,11 @@ export interface LibraryScreenAdapters {
   readonly selectLeaderboardTab: (id: string) => void;
   readonly selectLeaderboardBoard: (id: string) => void;
   readonly watchReplay: (id: string, from?: "profile" | "leaderboards") => void;
+  readonly watchGhostCapsule: (id: string) => void;
+  readonly compareGhostCapsule: (id: string) => void;
+  readonly openGhostComparison: () => void;
   readonly publishReplay: (id: string) => void;
+  readonly repairGhostCapsule: (id: string) => void;
 }
 
 type DeferredAction = (adapters: LibraryScreenAdapters) => void;
@@ -101,7 +110,11 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
     selectLeaderboardTab: (id) => { invoke((value) => { value.selectLeaderboardTab(id); }); },
     selectLeaderboardBoard: (id) => { invoke((value) => { value.selectLeaderboardBoard(id); }); },
     watchReplay: (id, from) => { invoke((value) => { value.watchReplay(id, from); }); },
+    watchGhostCapsule: (id) => { invoke((value) => { value.watchGhostCapsule(id); }); },
+    compareGhostCapsule: (id) => { invoke((value) => { value.compareGhostCapsule(id); }); },
+    openGhostComparison: () => { invoke((value) => { value.openGhostComparison(); }); },
     publishReplay: (id) => { invoke((value) => { value.publishReplay(id); }); },
+    repairGhostCapsule: (id) => { invoke((value) => { value.repairGhostCapsule(id); }); },
   };
   return Object.freeze(adapters);
 }

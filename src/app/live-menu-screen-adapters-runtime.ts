@@ -5,7 +5,7 @@ import { buildMenuSnapshot } from "../presentation/menu-setup-snapshots";
 import type { createLiveSetupShopRenderers } from "./live-setup-shop-renderers";
 
 type Dependencies = Pick<GameRuntimeDependencies, "Attract" | "CG" | "Cloud" | "CONFIG" | "DAILY" | "META" |
-  "PROFILE" | "SFX" | "SHOP" | "UI" | "WEAPONS"> & Readonly<{ PAD: LegacyGamepad }>;
+  "PROFILE" | "SFX" | "SHOP" | "shopPurchaseProgressPersistence" | "UI" | "WEAPONS"> & Readonly<{ PAD: LegacyGamepad }>;
 type ScreenRenderers = ReturnType<typeof createLiveScreenRenderers>;
 type BestScore = Readonly<{ wave: number; score: number; time?: number }>;
 

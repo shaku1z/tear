@@ -2,6 +2,7 @@ import { stableVerificationHash } from "../replay/hash";
 import type { TearSnapshotV1 } from "./contracts";
 import { CODEC_REGISTRY, type TearCodecId } from "./registries";
 import { validateLiveCodecPayload } from "./live-codec-validation";
+import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../gameplay/runtime/cinematic-director";
 
 export type TearCodecValue =
   | null | boolean | number | string
@@ -73,12 +74,28 @@ export const TEAR_REFERENCE_KEYS = Object.freeze([
 ] as const);
 const referenceKeys = new Set<string>(TEAR_REFERENCE_KEYS);
 
-function declaresIdentity(codecId: TearCodecId, key: string): boolean {
-  return key === "id" || (codecId === "tear.platform.v1" && key === "platformId");
+function declaresIdentity(codecId: TearCodecId, key: string, ownerPath: string): boolean {
+  // Stable identities are declared only by the root actor records that the
+  // hydrator constructs. Nested records (Source `campPlat`, player support
+  // platforms, and the run-owned void graph) retain ids as aliases to those
+  // canonical platform actors. Indexing every `id` recursively falsely turns
+  // a valid captured void world into hostile duplicate constructors.
+  const rootActor = ownerPath === "$" && (codecId === "tear.player.v1" || codecId === "tear.blade.v1");
+  const collectionActor = /^\$\[\d+\]$/u.test(ownerPath)
+    && (codecId === "tear.enemy.v1" || codecId === "tear.boss.v1"
+      || codecId === "tear.projectile.v1" || codecId === "tear.platform.v1");
+  return (key === "id" && (rootActor || collectionActor))
+    || (codecId === "tear.platform.v1" && key === "platformId" && collectionActor);
 }
 
-function declaresReference(codecId: TearCodecId, key: string): boolean {
-  return referenceKeys.has(key) && !declaresIdentity(codecId, key);
+function declaresReference(codecId: TearCodecId, key: string, ownerPath: string): boolean {
+  // The Source stream retains its generated ingress record as historical
+  // generator/cinematic metadata after that platform has been recycled.  Its
+  // embedded platformId is an alias, not a live cross-codec ownership edge.
+  // Treating it as an entity reference makes valid long void runs impossible
+  // to seal once the conveyor correctly retires the ingress platform.
+  if (codecId === "tear.run.v1" && key === "platformId" && ownerPath === "$.voidScroll.ingress") return false;
+  return referenceKeys.has(key) && !declaresIdentity(codecId, key, ownerPath);
 }
 
 function indexIdentitiesAndReferences(
@@ -96,8 +113,8 @@ function indexIdentitiesAndReferences(
   }
   if (value === null || typeof value !== "object") return;
   for (const [key, entry] of Object.entries(value)) {
-    if (declaresIdentity(codecId, key) && typeof entry === "string") world.entityIds.add(entry);
-    if (declaresReference(codecId, key) && typeof entry === "string") {
+    if (declaresIdentity(codecId, key, path) && typeof entry === "string") world.entityIds.add(entry);
+    if (declaresReference(codecId, key, path) && typeof entry === "string") {
       world.references.set(`${codecId}:${path}.${key}`, entry);
     }
     indexIdentitiesAndReferences(world, codecId, entry, `${path}.${key}`);
@@ -176,7 +193,7 @@ export function buildTearIdentityGraph(world: TearCodecWorld): TearIdentityGraph
     if (value === null || typeof value !== "object") return;
     for (const [key, entry] of Object.entries(value)) {
       const entryPath = `${path}.${key}`;
-      if (declaresIdentity(codecId, key) && typeof entry === "string") {
+      if (declaresIdentity(codecId, key, path) && typeof entry === "string") {
         const previous = identities.get(entry);
         if (previous === undefined) identities.set(entry, Object.freeze({ codecId, path: entryPath }));
         else if (codecId === "tear.platform.v1" && key === "platformId") {
@@ -188,7 +205,7 @@ export function buildTearIdentityGraph(world: TearCodecWorld): TearIdentityGraph
           message: `duplicate entity id ${entry}; first declared at ${previous.codecId}:${previous.path}`,
         });
       }
-      if (declaresReference(codecId, key) && typeof entry === "string") {
+      if (declaresReference(codecId, key, path) && typeof entry === "string") {
         references.set(`${codecId}:${entryPath}`, entry);
       }
       visit(codecId, entry, entryPath);
@@ -263,8 +280,10 @@ export function restoreSnapshotTransactionally(
   const temporary = factory.createEmpty();
   const issues: TearCodecIssue[] = [];
   for (const codec of registry.list()) {
-    const encodedVersion = snapshot.codecs[codec.id];
-    const raw = payloadFor(snapshot, codec.id);
+    const isLegacyCinema = codec.id === "tear.cinematic.v1"
+      && snapshot.codecs[codec.id] === undefined && payloadFor(snapshot, codec.id) === undefined;
+    const encodedVersion = isLegacyCinema ? 1 : snapshot.codecs[codec.id];
+    const raw = isLegacyCinema ? INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 : payloadFor(snapshot, codec.id);
     if (encodedVersion === undefined || raw === undefined) {
       issues.push({ codecId: codec.id, path: `state.${codec.id}`, message: "required codec payload is missing" });
       continue;

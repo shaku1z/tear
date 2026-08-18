@@ -1,4 +1,4 @@
-import { CONFIG } from "../../config/game-config";
+import type { CONFIG as GameConfiguration } from "../../config/game-config";
 import { resolveEnemyKill, type KillEnemy, type KillPlayer, type KillProjectile, type KillRun,
   type KillRuntimeOptions } from "./kill-runtime";
 
@@ -9,6 +9,8 @@ type KillCallbacks = Pick<KillRuntimeOptions,
   "happyTime" | "bossPresentation" | "releaseStolenBlade">;
 
 export interface LiveKillHost extends KillCallbacks {
+  /** The owning world's mutable configuration, captured before any actors. */
+  readonly config: typeof GameConfiguration;
   enemies(): readonly KillEnemy[];
   projectiles(): readonly KillProjectile[];
   run(): KillRun;
@@ -36,9 +38,9 @@ export class LiveKillRuntime {
       finalStageIndex: host.finalStageIndex, stageAccent: host.stageAccent(),
       stageChapterBossOutro: host.stageChapterBossOutro(), hasStageChapter: host.hasStageChapter(),
       bossRosterSize: host.bossRosterSize,
-      scoring: { scorePerKill: CONFIG.run.scorePerKill, cleanWindow: CONFIG.overrun.cleanWindow },
-      colors: { charger: CONFIG.colors.charger, slam: CONFIG.colors.slam },
-      deathShards: CONFIG.juice.deathShards, severPulseRadius: CONFIG.sever.pulseRadius,
+      scoring: { scorePerKill: host.config.run.scorePerKill, cleanWindow: host.config.overrun.cleanWindow },
+      colors: { charger: host.config.colors.charger, slam: host.config.colors.slam },
+      deathShards: host.config.juice.deathShards, severPulseRadius: host.config.sever.pulseRadius,
       achievementsEnabled: host.achievementsEnabled(), addKillScore: host.addKillScore,
       addStat: host.addStat, maxStat: host.maxStat, bumpDaily: host.bumpDaily,
       bossKillAchievement: host.bossKillAchievement, killAchievement: host.killAchievement,

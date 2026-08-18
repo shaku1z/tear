@@ -2,11 +2,13 @@ import type { BossId } from "../gameplay/run/content-director";
 import type { PreparedVictory } from "../gameplay/run/outcome-planner";
 import type { RunLifecycleController } from "../gameplay/run/lifecycle";
 import { eligibleTierChoices } from "../gameplay/run/reward-selection";
+import { createTearWaveFactPublisher } from "../gameplay/runtime/gameplay-event-publishers";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameBlade, GameEnemy, GamePlayer, GameRun } from "./game-runtime-state";
 import type { createLiveCampaignHost } from "./live-campaign-host";
 import type { createLiveContentComposition } from "./live-content-composition";
 import type { LiveRunControllerRegistry } from "./live-run-controller-api";
+import type { LiveWorldServices } from "./live-world-context";
 import { createLiveWaveHost } from "./live-wave-host";
 import type { WavePlanIntentPort } from "./live-wave-intent-coordinator";
 
@@ -25,6 +27,7 @@ export interface LiveWaveCompositionOptions {
   readonly controllers: LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
   readonly stage: CampaignHost["stage"];
   readonly story: CampaignHost["story"];
+  readonly worldServices: Pick<LiveWorldServices, "random">;
   readonly run: () => GameRun;
   readonly player: () => GamePlayer;
   readonly blade: () => GameBlade;
@@ -51,12 +54,13 @@ export interface LiveWaveCompositionOptions {
 /** Composes wave planning, presentation intents, rewards, and clear progression. */
 export function createLiveWaveComposition(options: LiveWaveCompositionOptions): void {
   const d = options.dependencies;
+  const publishWave = createTearWaveFactPublisher(d.GAMEPLAY_EVENTS);
   createLiveWaveHost({
     run: options.run,
     tuning: () => d.CONFIG.run,
     stages: d.STAGES.map((stage) => ({ ...stage, boss: bossId(stage.boss) })),
     presets: d.PRESETS,
-    random: d.GAME_RANDOM_STREAMS.stream("world"),
+    random: options.worldServices.random.stream("world"),
     modeDefinition: (mode) => d.CONFIG.modes.find((candidate) => candidate.id === mode) ?? {},
     currentStage: () => ({ index: options.stage.index, accent: options.stage.current.accent }),
     stageHasChapter: () => true,
@@ -71,7 +75,7 @@ export function createLiveWaveComposition(options: LiveWaveCompositionOptions): 
       loadStage: options.loadStage,
       setStageBanner: (name, duration) => { options.stage.setBanner(name, duration); },
       beginCampaignChapter: options.beginCampaignChapter,
-      recordWave: (wave, marker) => { d.GHOST.wave(wave, marker); },
+      recordWave: publishWave,
       snapshotReplay: (slot) => { d.GHOST.snapshot(options.canvas, slot); },
       prepareWave: (wave, boss, deferred) => {
         const weapon = d.WEAPONS.find((candidate) => candidate.id === options.run().weaponId);
@@ -85,9 +89,9 @@ export function createLiveWaveComposition(options: LiveWaveCompositionOptions): 
     clearIntents: {
       clearWave: () => { options.lifecycle.clearWave(); },
       bloom: (color, strength, duration) => { d.Backdrop.bloom(color, strength, duration); },
-      recordWave: (wave, marker) => { d.GHOST.wave(wave, marker); },
-      profileMax: (stat, value) => { d.PROFILE.maxStat(stat, value); },
-      profileAdd: (stat, value) => { d.PROFILE.addStat(stat, value); },
+      recordWave: publishWave,
+      profileMax: d.profileStatsPersistence.max,
+      profileAdd: d.profileStatsPersistence.add,
       dailyBump: (challenge, value, operation) => { d.DAILY.bump(challenge, value, operation); },
       hordeCleared: (seconds) => { options.achievementTracker.hordeCleared(seconds); },
       achievementCheck: options.achievementCheck,

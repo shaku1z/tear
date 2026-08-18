@@ -5,7 +5,7 @@
 //   Backdrop.post(...)      — screen space, AFTER the world, BEFORE the HUD (vignette + grain)
 // Phase 2 ships a strong generic treatment driven by each stage's palette; Phase 3 layers in
 // per-biome art (silhouettes, biome particles, set dressing) on top of this engine.
-import { A11Y, CLOCK, CONFIG, GFX, OVERSCAN, THEME, _relLum } from "../config/game-config";
+import type { TearWorldClock } from "../gameplay/runtime/tear-world-clock";
 import type { STAGES as StageValues } from "../gameplay/stages";
 import { BIOME_ART } from "./backdrop-biomes";
 import { clamp, lerp } from "../domain/geometry";
@@ -20,6 +20,16 @@ function truthyString(value: string | undefined, fallback: string): string {
 function truthyNumber(value: number | undefined, fallback: number): number {
   if (value) return value;
   return fallback;
+}
+
+function relativeLuminance(hex: string): number {
+  const normalized = (hex || "#fff").replace("#", "");
+  const expanded = normalized.length === 3
+    ? normalized.split("").map((value) => value + value).join("") : normalized;
+  const red = parseInt(expanded.slice(0, 2), 16) / 255;
+  const green = parseInt(expanded.slice(2, 4), 16) / 255;
+  const blue = parseInt(expanded.slice(4, 6), 16) / 255;
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
 }
 
 export type Stage = (typeof StageValues)[number];
@@ -39,6 +49,7 @@ interface ScreenBloom { screen: true; col: string; strength: number; life: numbe
 type BackdropEffect = LocalFlare | ScreenBloom;
 export interface BackdropController {
   readonly W: number; readonly H: number; readonly PX: number; readonly PY: number;
+  lowGraphics(): boolean;
   _cache: Record<string, BackdropCache>; _fx: BackdropEffect[];
   fillFull(context: CanvasRenderingContext2D, view?: ViewRect): void; resetFx(): void;
   _rgb(hex?: string): [number, number, number]; _mix(a: string, b: string, amount: number): string;
@@ -58,19 +69,49 @@ export interface BackdropController {
   drawFx(context: CanvasRenderingContext2D, camera?: CameraPort): void;
   post(context: CanvasRenderingContext2D, stage: Stage, camera?: CameraPort): void;
 }
+
+/** Outward rendering adapters supplied by the composition that owns a world. */
+export interface BackdropPolicy {
+  readonly clock: TearWorldClock;
+  readonly config: Readonly<{
+    view: Readonly<{ w: number; h: number }>;
+    world: Readonly<{ groundY: number }>;
+    source: Readonly<{ voidCrumbleStand: number }>;
+    bossArena: Readonly<{
+      standBeforeWarn: number;
+      crackWarn: number;
+      brokenDuration: number;
+      reformWarn: number;
+    }>;
+  }>;
+  readonly graphics: Readonly<{ low: boolean }>;
+  readonly accessibility: Readonly<{ highContrast: boolean; flashScale: number }>;
+  readonly overscan: Readonly<{ x: number; y: number }>;
+  readonly theme: Readonly<{ dark: boolean }>;
+  readonly createCanvas: () => HTMLCanvasElement;
+  readonly performance: Pick<Performance, "now">;
+}
 export interface BiomeArt {
   sky(backdrop: BackdropController, context: CanvasRenderingContext2D, stage: Stage, cache: BackdropCache, time: number, groundY: number, view?: ViewRect): void;
   far(backdrop: BackdropController, context: CanvasRenderingContext2D, stage: Stage, cache: BackdropCache, time: number, playerX: number, groundY: number, view?: ViewRect): void;
   motes(backdrop: BackdropController, context: CanvasRenderingContext2D, stage: Stage, cache: BackdropCache, time: number, playerX: number, view?: ViewRect): void;
 }
 
-const Backdrop: BackdropController = {
-  get W() { return CONFIG.view.w; },
-  get H() { return CONFIG.view.h; },
+/**
+ * Creates one world's Canvas backdrop controller. It owns only presentation
+ * caches and transient lights; all mutable simulation and preference inputs
+ * remain explicit policy ports supplied by composition.
+ */
+export function createBackdrop(policy: BackdropPolicy): BackdropController {
+  const { accessibility, clock, config, createCanvas, graphics, overscan, performance, theme } = policy;
+  return {
+  get W() { return config.view.w; },
+  get H() { return config.view.h; },
   // fullscreen overscan bleed (logical px per side) — scene fills extend this far
   // beyond the arena so true fullscreen never letterboxes
-  get PX() { return (typeof OVERSCAN !== "undefined") ? OVERSCAN.x : 0; },
-  get PY() { return (typeof OVERSCAN !== "undefined") ? OVERSCAN.y : 0; },
+  get PX() { return overscan.x; },
+  get PY() { return overscan.y; },
+  lowGraphics() { return graphics.low; },
   // World-camera draws may reveal more than fullscreen OVERSCAN when the camera
   // pulls out.  Callers pass that inverse-camera rectangle through `view`; screen-
   // space callers (post/Fx/replays) keep the original fullscreen bounds.
@@ -99,10 +140,10 @@ const Backdrop: BackdropController = {
   },
 
   _build(stage) {
-    const dark = _relLum(stage.bg) < 0.5;
+    const dark = relativeLuminance(stage.bg) < 0.5;
     // bake the EXPENSIVE bits once: vignette + film grain (half-res; scaled on blit)
     const lw = Math.round(this.W / 2), lh = Math.round(this.H / 2);
-    const vign = globalThis.document.createElement("canvas"); vign.width = lw; vign.height = lh;
+    const vign = createCanvas(); vign.width = lw; vign.height = lh;
     const v = vign.getContext("2d");
     if (!v) throw new Error("Backdrop canvas 2D context is unavailable");
     const vg = v.createRadialGradient(lw / 2, lh * 0.46, lh * 0.32, lw / 2, lh * 0.5, lw * 0.72);
@@ -126,7 +167,7 @@ const Backdrop: BackdropController = {
   // === sky + parallax + motes (inside world camera, before platforms) ===
   // dispatches to per-biome art (BIOME_ART), falling back to the generic treatment.
   draw(ctx, stage, t, playerX, view) {
-    const c = this._get(stage), gy = CONFIG.world.groundY;
+    const c = this._get(stage), gy = config.world.groundY;
     const px = (playerX - this.W / 2) / (this.W / 2);   // -1..1, drives parallax
     const art = BIOME_ART[stage.name] ?? BIOME_ART._default;
     if (!art) throw new Error("Backdrop default biome art is unavailable");
@@ -170,7 +211,7 @@ const Backdrop: BackdropController = {
     const Wp = vr - vl, Hp = vb - vt + 80;
     const rgb = truthyString(s.rgb, c.dark ? "236,235,246" : "20,20,30");
     const dir = s.dir ?? 1, drift = s.drift ?? 14, aMul = s.aMul ?? 1;
-    if (GFX.low) return;   // skip ambient motes on low-end
+    if (graphics.low) return;   // skip ambient motes on low-end
     ctx.save();
     if (s.glow) { ctx.shadowColor = `rgba(${rgb},0.9)`; ctx.shadowBlur = 8; }
     for (const p of c.parts) {
@@ -189,7 +230,7 @@ const Backdrop: BackdropController = {
   // Native Void ruin: the collision body stays a reliable rectangle, while the
   // art reads as a torn piece of the biome rather than a lane-coded game tile.
   voidPlatform(ctx, p, stage) {
-    const now = CLOCK.sim * 1000, low = GFX.low;
+    const now = clock.sim * 1000, low = graphics.low;
     const forming = p.materializationState === "forming", alpha = forming ? 0.55 : 1;
     const seed = (p.hazardSeed ?? 0) >>> 0, chipL = 5 + seed % 11, chipR = 7 + (seed >>> 5) % 13;
     const mineral = stage.plat;
@@ -219,7 +260,7 @@ const Backdrop: BackdropController = {
 
     if (p.voidType === "crumble") {
       const touchTime = p.touchT ?? -1;
-      const k = touchTime < 0 ? 0 : 1 - clamp(touchTime / CONFIG.source.voidCrumbleStand, 0, 1);
+      const k = touchTime < 0 ? 0 : 1 - clamp(touchTime / config.source.voidCrumbleStand, 0, 1);
       ctx.strokeStyle = "#fff"; ctx.globalAlpha = alpha * (0.34 + 0.62 * k); ctx.lineWidth = 1.5 + k * 1.5;
       const cracks = 2 + Math.floor(k * 4);
       ctx.beginPath();
@@ -231,8 +272,8 @@ const Backdrop: BackdropController = {
     } else if (p.voidType === "fire") {
       if (p.fireState === "arming") {
         const pulse = 0.55 + 0.45 * Math.sin(now / 85);
-        const high = A11Y.highContrast;
-        ctx.globalAlpha = alpha * (0.62 + pulse * 0.28); ctx.strokeStyle = high ? (THEME.dark ? "#fff36b" : "#4b00d1") : "#ffad35"; ctx.lineWidth = high ? 7 : 5;
+        const high = accessibility.highContrast;
+        ctx.globalAlpha = alpha * (0.62 + pulse * 0.28); ctx.strokeStyle = high ? (theme.dark ? "#fff36b" : "#4b00d1") : "#ffad35"; ctx.lineWidth = high ? 7 : 5;
         ctx.beginPath(); ctx.moveTo(p.x, p.y - 3); ctx.lineTo(p.x + p.w, p.y - 3); ctx.stroke();
         if (high) for (let x = p.x + 18; x < p.x + p.w - 8; x += 34) { ctx.beginPath(); ctx.moveTo(x - 7, p.y - 18); ctx.lineTo(x, p.y - 9); ctx.lineTo(x + 7, p.y - 18); ctx.stroke(); }
         ctx.globalAlpha = alpha;
@@ -260,7 +301,7 @@ const Backdrop: BackdropController = {
   // Living boss terrain. The same arenaState that controls collision also owns
   // every warning, fragment, and reform silhouette drawn here.
   arenaPlatform(ctx, p) {
-    const A = CONFIG.bossArena, state = truthyString(p.arenaState, "stable");
+    const A = config.bossArena, state = truthyString(p.arenaState, "stable");
     const mat = truthyString(p.arenaMaterial, truthyString(p.material, "arena"));
     const stressK = clamp((p.stress ?? 0) / A.standBeforeWarn, 0, 1);
     const warnK = state === "warning" ? 1 - clamp((p.crackWarn ?? 0) / A.crackWarn, 0, 1) : 0;
@@ -282,7 +323,7 @@ const Backdrop: BackdropController = {
         for (const x of [p.x + 10, p.x + p.w - 26]) {
           ctx.save(); ctx.translate(x, p.y + fallK * 74); ctx.rotate(fallK * 0.8); ctx.fillRect(0, 0, 16, 7); ctx.restore();
         }
-      } else if (mat === "colossusGantry" && !GFX.low) {
+      } else if (mat === "colossusGantry" && !graphics.low) {
         ctx.fillStyle = "#d7d2c8";
         for (let i = 0; i < 3; i++) {
           ctx.globalAlpha = (1 - fallK) * (0.22 + i * 0.1);
@@ -340,7 +381,7 @@ const Backdrop: BackdropController = {
       g.addColorStop(0, heat > 0.55 ? "#574a46" : "#81766c"); g.addColorStop(1, "#4b4647");
       ctx.fillStyle = g; ctx.fillRect(p.x, p.y, p.w, p.h);
       ctx.fillStyle = "#c9a950"; ctx.fillRect(p.x, p.y, p.w, 3);
-      if (!GFX.low) {
+      if (!graphics.low) {
         ctx.globalAlpha = 0.34; ctx.strokeStyle = "#d4bd7a"; ctx.lineWidth = 1;
         for (let x = p.x + 24; x < p.x + p.w - 18; x += 58) ctx.strokeRect(x, p.y + 7, 27, 8);
       }
@@ -351,10 +392,10 @@ const Backdrop: BackdropController = {
       ctx.fillRect(p.x, p.y, p.w, p.h);
     }
     if (state === "warning") {
-      const high = A11Y.highContrast;
-      const pulse = 0.62 + 0.38 * Math.sin(CLOCK.sim * 1000 / Math.max(28, 76 - warnK * 42));
+      const high = accessibility.highContrast;
+      const pulse = 0.62 + 0.38 * Math.sin(clock.sim * 1000 / Math.max(28, 76 - warnK * 42));
       ctx.globalAlpha = (0.52 + warnK * 0.4) * pulse;
-      ctx.strokeStyle = high ? (THEME.dark ? "#fff36b" : "#4b00d1") : (mat === "aldricStone" ? "#f0c85a" : (mat === "colossusGantry" ? "#ff8a2c" : "#e5c34f"));
+      ctx.strokeStyle = high ? (theme.dark ? "#fff36b" : "#4b00d1") : (mat === "aldricStone" ? "#f0c85a" : (mat === "colossusGantry" ? "#ff8a2c" : "#e5c34f"));
       ctx.lineWidth = (high ? 4.2 : 2.4) + warnK * 1.8; ctx.beginPath();
       const teeth = mat === "aldricStone" ? 5 : 7;
       for (let i = 0; i < teeth; i++) {
@@ -408,19 +449,19 @@ const Backdrop: BackdropController = {
 
   // === reactive lighting: combat events bleed light into the backdrop ===
   // time-based so undrawn events (arcade modes / paused) simply expire, never pile up.
-  flare(x, y, col, r, life) { this._fx.push({ x, y, col, r, life, end: CLOCK.sim + life, screen: false }); if (this._fx.length > 16) this._fx.shift(); },
+  flare(x, y, col, r, life) { this._fx.push({ x, y, col, r, life, end: clock.sim + life, screen: false }); if (this._fx.length > 16) this._fx.shift(); },
   // A bloom is screen chrome rather than world geometry, so it deliberately
   // keeps UI wall time while local flares freeze with hit-stop simulation time.
-  bloom(col, strength, life) { this._fx.push({ col, strength, life, end: globalThis.performance.now() / 1000 + life, screen: true }); if (this._fx.length > 16) this._fx.shift(); },
+  bloom(col, strength, life) { this._fx.push({ col, strength, life, end: performance.now() / 1000 + life, screen: true }); if (this._fx.length > 16) this._fx.shift(); },
   drawFx(ctx, camera) {
     if (!this._fx.length) return;
-    const simNow = CLOCK.sim, uiNow = globalThis.performance.now() / 1000;
+    const simNow = clock.sim, uiNow = performance.now() / 1000;
     // additive light has little headroom on a bright background -> attenuate hard on light biomes
-    const atten = (typeof THEME !== "undefined" && !THEME.dark) ? 0.3 : 1;
+    const atten = !theme.dark ? 0.3 : 1;
     ctx.save(); ctx.globalCompositeOperation = "lighter";
     for (const f of this._fx) {
       const k = clamp((f.end - (f.screen ? uiNow : simNow)) / f.life, 0, 1); if (k <= 0) continue;
-      if (f.screen) { ctx.globalAlpha = k * f.strength * atten * A11Y.flashScale; ctx.fillStyle = f.col; this.fillFull(ctx); }
+      if (f.screen) { ctx.globalAlpha = k * f.strength * atten * accessibility.flashScale; ctx.fillStyle = f.col; this.fillFull(ctx); }
       else {
         // Local flares are recorded in world coordinates but composited after the
         // world, in screen space. Map their centre and radius through the exact
@@ -449,6 +490,5 @@ const Backdrop: BackdropController = {
     ctx.drawImage(c.vign, -this.PX, -this.PY, this.W + this.PX * 2, this.H + this.PY * 2);
     this.drawFx(ctx, camera);   // combat light glows over the vignette
   },
-};
-
-export { Backdrop };
+  } satisfies BackdropController;
+}

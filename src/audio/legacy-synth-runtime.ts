@@ -14,17 +14,16 @@ import { SYNTHESIZED_SFX_CUE_ROUTES, synthesizedSfxRoute } from "./synth-cue-rou
 import { installLegacyAudioLifecycle, type LegacyAudioLifecycle } from "./legacy-audio-lifecycle";
 import { ScheduledAudioResourceTracker } from "./scheduled-audio-resources";
 import { dialogueVoice, legacyMuteReason, legacyNumberDefault } from "./legacy-synth-utilities";
-
-const sequencer = new LegacyMusicSequencer({
-  context: () => SFX.ctx,
-  output: () => SFX.musicGain,
-  voidMix: () => SFX._voidMix,
-  oscillator: (frequency, duration, time, options) => { SFX._osc(frequency, duration, time, options); },
-  noise: (duration, time, options) => { SFX._noise(duration, time, options); },
-  trackSource: (source, connectedNodes) => SFX._takeVoice(source, connectedNodes),
-});
+import type { AudioCueSchedulingResult, AudioMixSchedulingResult, FinaleAudioOperation } from "./audio-dispatch-receipts";
 
 // ------- synthesized audio: crisp SFX + layered music (Web Audio, no files) -------
+/** One concrete synth runtime for one composition-owned first-gesture facade. */
+export interface LegacySynthRuntimeOptions {
+  readonly browserWindow?: Window;
+  readonly capturedAudioContext?: () => AudioContext | null;
+}
+
+export function createLegacySynthRuntime(options: LegacySynthRuntimeOptions = {}) {
 const SYNTH = {
   ctx: null as AudioContext | null,
   effectsGains: {} as Partial<Record<SfxRoute, AudioNode>>,
@@ -39,6 +38,8 @@ const SYNTH = {
   _lifecycle: null as LegacyAudioLifecycle | null,
   _activeSfxRoute: "environment" as SfxRoute,
   _routeDispatches: { weapons: 0, enemies: 0, player: 0, environment: 0 } as Record<SfxRoute, number>,
+  _scheduleAttempts: 0,
+  _scheduleAccepted: 0,
 
   _context(): AudioContext {
     if (this.ctx === null) throw new Error("Legacy audio context is not bound");
@@ -117,6 +118,13 @@ const SYNTH = {
     this.musicGain.gain.setValueAtTime(Math.max(0.0001, this.musicGain.gain.value), now);
     this.musicGain.gain.linearRampToValueAtTime(target, now + dur);
   },
+  setMusicDuckForReceipt(mult: number | null | undefined, seconds?: number): AudioMixSchedulingResult {
+    const logicalBefore = this._musicDuck;
+    this.setMusicDuck(mult, seconds);
+    return Object.freeze({ kind: "mix", context: this.ctx?.state ?? "unbound", logicalBefore,
+      logicalAfter: this._musicDuck, normalizedDuration: Math.max(0.01, legacyNumberDefault(seconds, 0.18)),
+      scheduling: this.musicGain !== null && this.ctx !== null ? "scheduled-automation" : "logical-target-only" });
+  },
   setVoidDescent(amount: number, seconds?: number) {
     this._voidMix = clamp(legacyNumberDefault(amount, 0), 0, 1);
     if (this.musicFilter === null || this.ctx === null) return;
@@ -125,6 +133,13 @@ const SYNTH = {
     this.musicFilter.frequency.cancelScheduledValues(now);
     this.musicFilter.frequency.setValueAtTime(Math.max(850, this.musicFilter.frequency.value), now);
     this.musicFilter.frequency.exponentialRampToValueAtTime(target, now + dur);
+  },
+  setVoidDescentForReceipt(amount: number, seconds?: number): AudioMixSchedulingResult {
+    const logicalBefore = this._voidMix;
+    this.setVoidDescent(amount, seconds);
+    return Object.freeze({ kind: "mix", context: this.ctx?.state ?? "unbound", logicalBefore,
+      logicalAfter: this._voidMix, normalizedDuration: Math.max(0.01, legacyNumberDefault(seconds, 0.22)),
+      scheduling: this.musicFilter !== null && this.ctx !== null ? "scheduled-automation" : "logical-target-only" });
   },
   // mute by reason — any active reason silences everything. Backward compatible:
   // mute(true)/mute(false) use the "default" reason. CrazyGames passes "cg"/"ad".
@@ -172,6 +187,23 @@ const SYNTH = {
     }
   },
 
+  dispatchFinaleCueForReceipt(operation: FinaleAudioOperation, index = 0): AudioCueSchedulingResult {
+    const route = "environment" as const;
+    const attemptedBefore = this._scheduleAttempts, acceptedBefore = this._scheduleAccepted;
+    const context = this.ctx?.state ?? "unbound";
+    this._withSfxRoute(route, () => {
+      if (operation === "final-cut") SYNTH.finalCut(index);
+      else if (operation === "final-relic") SYNTH.finalRelic(index);
+      else if (operation === "final-restore") SYNTH.finalRestore();
+      else if (operation === "final-silence") SYNTH.finalSilence();
+      else throw new TypeError(`unsupported finale cue operation: ${operation}`);
+    });
+    const attempted = this._scheduleAttempts - attemptedBefore, accepted = this._scheduleAccepted - acceptedBefore;
+    const scheduling = context === "unbound" ? "no-context"
+      : accepted > 0 ? "scheduled-to-audio-graph" : attempted > 0 ? "voice-cap-rejected" : "no-schedule";
+    return Object.freeze({ kind: "cue", route, context, scheduling, attempted, accepted });
+  },
+
   // ---- primitives (absolute-time scheduled) ----
   _noiseBuffer(dur: number) {
     const context = this._context();
@@ -182,7 +214,10 @@ const SYNTH = {
     this._noiseCache[key] = buf; return buf;
   },
   _takeVoice(node: AudioScheduledSourceNode, connectedNodes: readonly AudioNode[] = []) {
-    return this._voices.track(node, connectedNodes);
+    this._scheduleAttempts++;
+    const accepted = this._voices.track(node, connectedNodes);
+    if (accepted) this._scheduleAccepted++;
+    return accepted;
   },
   _osc(freq: number, dur: number, t: number, o: LegacyOscillatorOptions = {}) {
     const context = this._context();
@@ -482,7 +517,7 @@ const SYNTH = {
   _startMusic() { sequencer.start(); },
 };
 
-export const SFX: typeof SYNTH = new Proxy(SYNTH, {
+const SFX: typeof SYNTH = new Proxy(SYNTH, {
   get(target, property, receiver) {
     const value: unknown = Reflect.get(target, property, receiver);
     const route = synthesizedSfxRoute(property);
@@ -494,4 +529,16 @@ export const SFX: typeof SYNTH = new Proxy(SYNTH, {
   },
 });
 
-const LIVE_AUDIO = createLegacyAudioCompatibility(SFX);
+const sequencer = new LegacyMusicSequencer({
+  context: () => SFX.ctx,
+  output: () => SFX.musicGain,
+  voidMix: () => SFX._voidMix,
+  oscillator: (frequency, duration, time, options) => { SFX._osc(frequency, duration, time, options); },
+  noise: (duration, time, options) => { SFX._noise(duration, time, options); },
+  trackSource: (source, connectedNodes) => SFX._takeVoice(source, connectedNodes),
+});
+const LIVE_AUDIO = createLegacyAudioCompatibility(SFX, options.browserWindow, options.capturedAudioContext);
+return SFX;
+}
+
+export type LegacySynthRuntime = ReturnType<typeof createLegacySynthRuntime>;

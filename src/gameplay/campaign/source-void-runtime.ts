@@ -46,6 +46,8 @@ export interface SourceVoidRuntimeDependencies<TProjectile extends SourceRuntime
   sound(cue: "source-dialogue" | "void-ground-tear"): void;
   voidTransfer(): void;
   onDamageResult(result: string): void;
+  /** Native causal publication at the exact production rescue application. */
+  onVoidRescue?(details: Readonly<{ x: number; y: number; lane: VoidLane | null; hp: number }>): void;
   floater(x: number, y: number, text: string, emphasis: boolean, color: string): void;
 }
 
@@ -101,6 +103,8 @@ export function createSourceVoidRuntimeBridge<TProjectile extends SourceRuntimeP
         dependencies.player.voidTransferT = Math.max(dependencies.player.voidTransferT, intent.transferGrace);
         dependencies.player.dashCharges = dependencies.player.maxDashCharges;
         if (intent.lane) { dependencies.player.voidLane = intent.lane; if (dependencies.state) dependencies.state.playerLane = intent.lane; }
+        dependencies.onVoidRescue?.({ x: dependencies.player.x, y: dependencies.player.y,
+          lane: intent.lane, hp: dependencies.player.hp });
         const fed = owner.startVoidSiphon?.(dependencies.player) ?? 0;
         dependencies.shockwave(dependencies.player.x, dependencies.player.y + 150, 12, dependencies.perfectColor, 210, 5);
         dependencies.burst(dependencies.player.x, dependencies.player.y + 120, 0, -1, 16, dependencies.perfectColor);

@@ -1,11 +1,16 @@
 import type { ScreenAction } from "../presentation/screens/contracts";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
-import type { LiveGhostEngineEvent } from "../replay/legacy-compat";
+import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import type { LiveTearRuntimeEnvironmentContext } from "../tearbench/live-runtime-contracts";
 import { projectLiveTearObservation } from "../tearbench/live-runtime-environment";
 import type { TearStructuredAgentIntent } from "../tearbench/scripted-agent-hierarchy";
 import { TearLiveHierarchicalPolicy } from "./hierarchical-policy-adapter";
 import type { TearAgentIntentTrace, TearAgentProfileId } from "./contracts";
+import type { TearPolicyDecisionJournal, TearPolicyDecisionJournalSnapshot } from "./policy-decision-journal";
+import type { TearActivePolicyRuntime, TearPolicyDecisionReceipt } from "./policy-runtime";
+import type { TearC32CanonicalActivePolicyRuntime } from "./c32-canonical-active-policy-runtime";
+import { createTearFoundryV3PostPromotionTerminalReceipt, type TearFoundryV3PostPromotionMonitor } from "./foundry-job-v3-post-promotion-monitor";
+import { stableVerificationHash } from "../replay/hash";
 import { buildWatchChoiceScore } from "./watch-build-choice";
 import { installLiveWatchAgentPanel } from "./live-watch-agent-panel";
 import {
@@ -67,7 +72,7 @@ export interface TearWatchAgentSnapshot {
     tick: number; state: string; hostile: boolean; stolen: boolean;
   }>[];
   readonly bladeTether: Readonly<{ minimum: number; maximum: number; contracted: boolean }>;
-  readonly engineEvents: readonly LiveGhostEngineEvent[];
+  readonly engineEvents: readonly TearGameplayEvent[];
   readonly weaponEvents: readonly unknown[];
   readonly weaponStats?: Readonly<{
     heldHits: number; reversals: number; throws: number; throwHits: number; perfectParries: number;
@@ -75,6 +80,8 @@ export interface TearWatchAgentSnapshot {
   readonly draftPicks: readonly Readonly<{ tick: number; offered: readonly string[]; selected: string }>[];
   readonly lastTrace?: TearAgentIntentTrace;
   readonly structuredIntent?: TearStructuredAgentIntent;
+  readonly policyReceipt?: TearPolicyDecisionReceipt;
+  readonly policyDecisionTrace?: TearPolicyDecisionJournalSnapshot;
   readonly watchdogs: TearWatchdogSnapshot;
   readonly debugTransitions: 0;
   readonly executionClass: "engineering";
@@ -107,16 +114,22 @@ interface MutableState {
   lastBladeSignature?: string;
   tetherMinimum: number;
   tetherMaximum: number;
-  engineEvents: LiveGhostEngineEvent[];
+  engineEvents: TearGameplayEvent[];
   draftPicks: { tick: number; offered: readonly string[]; selected: string }[];
   lastTrace?: TearAgentIntentTrace;
   structuredIntent?: TearStructuredAgentIntent;
+  policyReceipt?: TearPolicyDecisionReceipt;
   lastScreen: string;
   noProgressTicks: number;
   progressSignature: string;
   setupStep: number;
   options: Required<TearWatchAgentOptions>;
   policy: TearLiveHierarchicalPolicy;
+  artifactRuntime?: TearActivePolicyRuntime;
+  canonicalRuntime?: TearC32CanonicalActivePolicyRuntime;
+  decisionJournal?: TearPolicyDecisionJournal;
+  postPromotionMonitor?: TearFoundryV3PostPromotionMonitor;
+  monitorTerminalQueued?: true;
   director?: C24LongitudinalJourneyDirector;
 }
 
@@ -140,6 +153,7 @@ function modeAction(mode: Required<TearWatchAgentOptions>["mode"]): ScreenAction
 
 function immutableSnapshot(context: LiveTearRuntimeEnvironmentContext, state: MutableState): TearWatchAgentSnapshot {
   const tick = context.authoritative()?.tick ?? 0;
+  const policyDecisionTrace = state.decisionJournal?.current();
   // The menu exists before the legacy host installs its first run object even
   // though the historical port type predates that transient undefined state.
   const run = context.state.run() as ReturnType<typeof context.state.run> | undefined;
@@ -174,13 +188,15 @@ function immutableSnapshot(context: LiveTearRuntimeEnvironmentContext, state: Mu
     weaponEvents: Object.freeze((run === null || run === undefined ? [] : run.weaponLog).map((event) =>
       event && typeof event === "object" ? Object.freeze({ ...event }) : event)),
     ...(run === null || run === undefined ? {} : { weaponStats: Object.freeze({
-      heldHits: run.weaponStats.heldHits, reversals: run.weaponStats.reversals,
+      heldHits: run.weaponStats.heldHits, reversals: run.weaponStats.reversals ?? run.weaponStats.trueCuts,
       throws: run.weaponStats.throws, throwHits: run.weaponStats.throwHits,
       perfectParries: run.weaponStats.perfectParries,
     }) }),
     draftPicks: Object.freeze(state.draftPicks.map((entry) => Object.freeze({ ...entry }))),
     ...(state.lastTrace === undefined ? {} : { lastTrace: state.lastTrace }),
     ...(state.structuredIntent === undefined ? {} : { structuredIntent: state.structuredIntent }),
+    ...(state.policyReceipt === undefined ? {} : { policyReceipt: state.policyReceipt }),
+    ...(policyDecisionTrace === undefined ? {} : { policyDecisionTrace }),
     watchdogs: Object.freeze({
       noProgressTicks: state.noProgressTicks,
       noProgressLimit: NO_PROGRESS_LIMIT,
@@ -205,7 +221,14 @@ function activateRequired(
   if (!context.activateControl(action)) throw new Error(`Watch Agent could not activate ${label}`);
 }
 
-export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentContext): TearWatchAgentApi {
+export function createLiveWatchAgentHost(
+  context: LiveTearRuntimeEnvironmentContext,
+  artifactRuntime?: TearActivePolicyRuntime,
+  decisionJournal?: TearPolicyDecisionJournal,
+  canonicalRuntime?: TearC32CanonicalActivePolicyRuntime,
+  postPromotionMonitor?: TearFoundryV3PostPromotionMonitor,
+): TearWatchAgentApi {
+  let decisionJournalRuns = 0;
   let state: MutableState = {
     status: "idle", decisions: 0, fixedTicks: 0, transitions: [], mechanics: new Set(),
     bladeStates: new Set(), bladeStateTransitions: [], tetherMinimum: Number.POSITIVE_INFINITY,
@@ -213,6 +236,10 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
     lastScreen: context.screen(), noProgressTicks: 0, progressSignature: "",
     setupStep: 0,
     options: DEFAULTS, policy: new TearLiveHierarchicalPolicy(DEFAULTS.profile),
+    ...(artifactRuntime === undefined ? {} : { artifactRuntime }),
+    ...(canonicalRuntime === undefined ? {} : { canonicalRuntime }),
+    ...(decisionJournal === undefined ? {} : { decisionJournal }),
+    ...(postPromotionMonitor === undefined ? {} : { postPromotionMonitor }),
   };
   context.subscribeEngineEvent((event) => {
     if (state.status === "running" && state.engineEvents.length < 4_096) {
@@ -230,6 +257,17 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
     state.status = "failed";
     state.terminalReason = reason;
     context.setSemanticInputAuthority(false);
+  };
+  // This is an after-the-fact analysis handoff.  It is intentionally not
+  // awaited by the simulation loop and any refusal remains observational.
+  const retainTerminalMonitor = (): void => {
+    if (state.monitorTerminalQueued === true || state.postPromotionMonitor === undefined || state.decisionJournal === undefined || !["completed", "failed", "stopped"].includes(state.status)) return;
+    state.monitorTerminalQueued = true;
+    const journal = state.decisionJournal, terminal = Object.freeze({ status: state.status as "completed" | "failed" | "stopped", tick: context.authoritative()?.tick ?? state.fixedTicks, ...(state.terminalReason === undefined ? {} : { reasonHash: stableVerificationHash(state.terminalReason) }) });
+    void journal.flush().then(async () => {
+      const persisted = await journal.read(journal.snapshot().id); if (persisted === undefined) return;
+      await state.postPromotionMonitor?.retain(createTearFoundryV3PostPromotionTerminalReceipt({ journalId: persisted.id, journalHash: persisted.journalHash, terminal }), new Date().toISOString());
+    }).catch(() => undefined);
   };
   const captureBlade = (): void => {
     const blade = context.state.blade();
@@ -265,8 +303,20 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
       lastScreen: "menu", noProgressTicks: 0, progressSignature: "",
       setupStep: 0,
       options: resolved, policy: new TearLiveHierarchicalPolicy(resolved.profile),
+      ...(artifactRuntime === undefined ? {} : { artifactRuntime }),
+      ...(canonicalRuntime === undefined ? {} : { canonicalRuntime }),
+      ...(decisionJournal === undefined ? {} : { decisionJournal }),
+      ...(postPromotionMonitor === undefined ? {} : { postPromotionMonitor }),
       ...(director === undefined ? {} : { director }),
     };
+    state.artifactRuntime?.setConditioning({ personaId: resolved.profile });
+    if (state.decisionJournal !== undefined) {
+      const run = decisionJournalRuns;
+      decisionJournalRuns += 1;
+      // This is diagnostic persistence identity only; it must not affect the
+      // deterministic simulation seed, action stream, or policy observation.
+      state.decisionJournal.begin(`watch-policy:v1:${Date.now().toString(36)}:${String(run)}`);
+    }
     activateRequired(context, { type: "navigate", to: "setup" }, "PLAY");
     transition();
     return immutableSnapshot(context, state);
@@ -350,21 +400,65 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
         continue;
       }
       if (state.options.skipCinematics) context.skipCinematic();
+      // A new production run has no post-step receipt until C30 advances its
+      // first fixed tick.  Establish that receipt through the real empty-input
+      // frame before asking a strict V3 policy for its first source action.
+      if (state.canonicalRuntime !== undefined && context.canonicalGameplayState() === null) {
+        const beforeTick = context.authoritative()?.tick ?? 0;
+        context.advanceApplicationFrame(1 / 120);
+        state.fixedTicks += Math.max(0, (context.authoritative()?.tick ?? beforeTick) - beforeTick);
+        captureBlade();
+      }
       const observation = projectLiveTearObservation(
         context,
         context.authoritative()?.tick ?? state.fixedTicks,
         "A",
       );
-      const decision = state.policy.decide({
+      const agentObservation = {
         state: observation,
         ui: { screen, choices: context.choiceIds().map((id) => ({
           id, score: buildWatchChoiceScore(id, state.options.weapon),
         })) },
         ...(observation.diagnostics?.boss === undefined ? {} : { boss: observation.diagnostics.boss }),
+      };
+      const hierarchy = state.policy.decide(agentObservation);
+      const artifact = state.artifactRuntime?.decide(agentObservation);
+      const sourceState = state.canonicalRuntime === undefined ? undefined : context.canonicalGameplayState();
+      if (state.canonicalRuntime !== undefined && sourceState === null) {
+        state.policyReceipt = Object.freeze({ observationHash: "0000000000000000", source: "refused", reason: "canonical-source-unavailable" });
+        fail("canonical-policy-refused:canonical-source-unavailable");
+        break;
+      }
+      const canonical = sourceState === undefined || sourceState === null
+        ? undefined : state.canonicalRuntime?.decide(sourceState, context.availableGameActions());
+      const canonicalReceipt: TearPolicyDecisionReceipt | undefined = canonical === undefined ? undefined : Object.freeze({
+        observationHash: canonical.stateHash, source: canonical.source,
+        ...(canonical.reason === undefined ? {} : { reason: canonical.reason }),
+        ...(canonical.artifactId === undefined ? {} : { artifactId: canonical.artifactId }),
+        ...(canonical.artifactHash === undefined ? {} : { artifactHash: canonical.artifactHash }),
+        ...(canonical.activationHash === undefined ? {} : { activationHash: canonical.activationHash }),
       });
+      if (canonical?.source === "refused") {
+        if (canonicalReceipt !== undefined) {
+          state.policyReceipt = canonicalReceipt;
+          if (state.decisionJournal !== undefined) state.decisionJournal.append({ tick: observation.tick, receipt: canonicalReceipt, actions: [], trace: hierarchy.trace });
+        }
+        fail(`canonical-policy-refused:${canonical.reason ?? "invalid-active-artifact"}`);
+        break;
+      }
+      const decision = canonical?.source === "artifact"
+        ? Object.freeze({ ...hierarchy, actions: canonical.actions, policyReceipt: canonicalReceipt })
+        : artifact?.receipt.source === "artifact"
+          ? Object.freeze({ ...hierarchy, actions: artifact.actions, policyReceipt: artifact.receipt })
+          : Object.freeze({ ...hierarchy, ...(canonicalReceipt === undefined ? (artifact === undefined ? {} : { policyReceipt: artifact.receipt }) : { policyReceipt: canonicalReceipt }) });
       state.decisions += 1;
       state.lastTrace = decision.trace;
       state.structuredIntent = decision.structuredIntent;
+      if (decision.policyReceipt === undefined) delete state.policyReceipt;
+      else state.policyReceipt = decision.policyReceipt;
+      if (decision.policyReceipt !== undefined && state.decisionJournal !== undefined) {
+        state.decisionJournal.append({ tick: observation.tick, receipt: decision.policyReceipt, actions: decision.actions, trace: decision.trace });
+      }
       state.mechanics.add(decision.trace.maneuver);
       captureBlade();
       const draft = decision.actions.find((action) => action.type === "draft-choice");
@@ -399,6 +493,7 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
         break;
       }
     }
+    retainTerminalMonitor();
     context.render();
     return immutableSnapshot(context, state);
   };
@@ -417,6 +512,7 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
       if (state.status === "running" || state.status === "paused") state.status = "stopped";
       context.setSemanticInputAuthority(false);
       context.startFrameLoop();
+      retainTerminalMonitor();
       return immutableSnapshot(context, state);
     },
     activatePlaygroundAction(id: string) {
@@ -441,8 +537,12 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
 export function installLiveWatchAgentHost(
   context: LiveTearRuntimeEnvironmentContext,
   target: Window & { __TEAR_WATCH_AGENT__?: TearWatchAgentApi },
+  artifactRuntime?: TearActivePolicyRuntime,
+  decisionJournal?: TearPolicyDecisionJournal,
+  canonicalRuntime?: TearC32CanonicalActivePolicyRuntime,
+  postPromotionMonitor?: TearFoundryV3PostPromotionMonitor,
 ): void {
-  const api = createLiveWatchAgentHost(context);
+  const api = createLiveWatchAgentHost(context, artifactRuntime, decisionJournal, canonicalRuntime, postPromotionMonitor);
   Object.defineProperty(target, "__TEAR_WATCH_AGENT__", {
     configurable: false, writable: false, value: api,
   });

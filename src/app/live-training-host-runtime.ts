@@ -59,7 +59,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     return value;
   };
   const tutorial = createLiveTutorialRuntime({
-    viewportWidth: context.width, groundY: () => d.CONFIG.world.groundY,
+    config: d.CONFIG, viewportWidth: context.width, groundY: () => d.CONFIG.world.groundY,
     skipPressed: () => d.Input.pressed.has("KeyN"), movingLeft: () => d.Input.left(), movingRight: () => d.Input.right(),
     player, bladeState: () => state.blade()?.state ?? "held", bladeTipVY: () => state.blade()?.tipVY ?? 0, enemies: () => state.enemies(),
     playSound: (cue) => { if (cue === "rankup") d.SFX.rankup(); else d.SFX.ui(); },
@@ -92,7 +92,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     beginPractice: context.startPractice,
     terminateRun: (reason) => { context.lifecycle.terminate(reason); },
     navigate: (screen) => { context.navigate(screen); }, releasePointer: context.releasePointer,
-    addProfileStat: (stat, amount) => { d.PROFILE.addStat(stat, amount); },
+    addProfileStat: d.profileStatsPersistence.add,
     checkAchievements: () => { d.ACH.check(); }, drawGhost: context.drawGhost,
   });
 
@@ -111,8 +111,8 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     dismissMirror: () => { d.Mirror.active = false; },
     selectArena: (arena) => { if (arena === -1) { context.selectStage(0); context.stage.platforms = runtime.homePlatforms(); } else context.selectStage(arena); },
     wipe: context.wipe, resetRun: () => { context.resetRun(requireRun(state).diff); },
-    applyUpgrade: (id) => { const upgrade = d.UPGRADES.find((entry) => entry.id === id); if (upgrade !== undefined) d.applyUpgrade(upgrade, trainingActors(state)); },
-    tierUp: (id) => { d.tierUp(id, trainingActors(state)); },
+    applyUpgrade: (id) => { const upgrade = d.UPGRADES.find((entry) => entry.id === id); if (upgrade !== undefined) d.applyUpgrade(upgrade, { config: d.CONFIG, ...trainingActors(state) }); },
+    tierUp: (id) => { d.tierUp(id, { config: d.CONFIG, ...trainingActors(state) }); },
     actions: {
       selectWeapon: context.selectWeapon, restartWithWeapon: () => { context.resetRun(requireRun(state).diff); },
       resetAtDifficulty: () => { context.resetRun(requireRun(state).diff); },

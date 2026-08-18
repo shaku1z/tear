@@ -26,6 +26,16 @@ export interface StateForgeBossPhaseLaunch {
   readonly attackFrame: 0;
 }
 
+/** The only HP value admitted by the surgical boss-finisher exit. */
+export const STATE_FORGE_BOSS_FINISHER_HP = 1 as const;
+
+export interface StateForgeBossFinisherLaunch {
+  readonly id: string;
+  readonly kind: "boss-finisher";
+  readonly boss: TearBossId;
+  readonly remainingHp: typeof STATE_FORGE_BOSS_FINISHER_HP;
+}
+
 export interface StateForgeBoundaryLaunch {
   readonly id: string;
   readonly kind: "one-frame-boundary";
@@ -34,7 +44,8 @@ export interface StateForgeBoundaryLaunch {
   readonly ticks: number;
 }
 
-export type StateForgeExitLaunch = StateForgeBossPhaseLaunch | StateForgeBoundaryLaunch;
+export type StateForgeExitLaunch = StateForgeBossPhaseLaunch | StateForgeBossFinisherLaunch
+  | StateForgeBoundaryLaunch;
 
 export interface Wave99HammerExitCertificate {
   readonly id: "hard-endless-wave-99-hammer";
@@ -197,6 +208,51 @@ function patchBoss(snapshot: TearSnapshotV1, launch: StateForgeBossPhaseLaunch):
   boss.hp = maxHp * ({ 1: 0.9, 2: 0.5, 3: 0.15 } as const)[launch.phase];
 }
 
+function patchBossFinisher(snapshot: TearSnapshotV1, launch: StateForgeBossFinisherLaunch): void {
+  const remainingHp: unknown = launch.remainingHp;
+  if (remainingHp !== STATE_FORGE_BOSS_FINISHER_HP) {
+    throw new TypeError(`${launch.id} remaining HP must be exactly ${String(STATE_FORGE_BOSS_FINISHER_HP)}`);
+  }
+  const bosses = snapshot.state["tear.boss.v1"];
+  if (!Array.isArray(bosses) || bosses.length !== 1) {
+    throw new TypeError(`${launch.id} requires exactly one matching live boss in the source snapshot`);
+  }
+  const boss = mutableRecord(bosses[0], "boss codec");
+  if (boss.factoryId !== launch.boss) {
+    throw new TypeError(`${launch.id} source boss is ${String(boss.factoryId)}`);
+  }
+  if (boss.dead === true || boss.dying === true || boss.mode === "downed"
+    || typeof boss.hp !== "number" || !(boss.hp > 0)) {
+    throw new TypeError(`${launch.id} requires ${launch.boss} to be live`);
+  }
+  if (typeof boss.maxHp !== "number" || !Number.isFinite(boss.maxHp)
+    || boss.maxHp < STATE_FORGE_BOSS_FINISHER_HP) {
+    throw new TypeError(`${launch.id} source boss maximum HP is invalid`);
+  }
+  const run = mutableRecord(snapshot.state["tear.run.v1"], "run codec");
+  const world = mutableRecord(snapshot.state["tear.world.v1"], "world codec");
+  const runtime = mutableRecord(world.runtime, "world runtime");
+  const lifecycle = mutableRecord(runtime.lifecycle, "run lifecycle");
+  const cinema = mutableRecord(snapshot.state["tear.cinematic.v1"], "cinematic codec");
+  const ui = mutableRecord(snapshot.state["tear.ui.v1"], "ui codec");
+  if (lifecycle.phase !== "wave-active" || lifecycle.bossWave !== true || lifecycle.reward !== null
+    || ui.screen !== "playing" || cinema.active !== false
+    || !Array.isArray(run.spawnQueue) || run.spawnQueue.length !== 0) {
+    throw new TypeError(`${launch.id} requires an active, unobstructed production boss frontier`);
+  }
+  if (launch.boss === "source" && (run.mode !== "campaign" || run.wave !== 50 || run.stage !== 4
+    || run._biomeIdx !== 4 || run.chapterState !== "WAVE_LIVE" || lifecycle.wave !== 50)) {
+    throw new TypeError(`${launch.id} requires the final campaign Source frontier`);
+  }
+  if (typeof boss.hpDisplay !== "number" || !Number.isFinite(boss.hpDisplay)) {
+    throw new TypeError(`${launch.id} source boss displayed HP is invalid`);
+  }
+  // Preserve the production-constructed actor and its codec identity. Only
+  // the explicitly declared surgical-valid health pair is changed.
+  boss.hp = launch.remainingHp;
+  boss.hpDisplay = launch.remainingHp;
+}
+
 function patchBoundary(snapshot: TearSnapshotV1, launch: StateForgeBoundaryLaunch): void {
   const seconds = launch.ticks / 120;
   const player = mutableRecord(snapshot.state["tear.player.v1"], "player codec");
@@ -252,7 +308,14 @@ export function forgeExitLaunchSnapshot(
   const forged = structuredClone(source);
   (forged as { id: string }).id = launch.id;
   (forged as { stateClass: TearSnapshotV1["stateClass"] }).stateClass = "surgical-valid";
+  (forged as { provenance: TearSnapshotV1["provenance"] }).provenance = Object.freeze({
+    ...source.provenance, actor: "state-forge", producer: "forgeExitLaunchSnapshot", sourceId: source.id,
+  });
+  (forged as { lineage: NonNullable<TearSnapshotV1["lineage"]> }).lineage = Object.freeze({
+    parentId: source.id, relation: "forked-at", parentRootHash: source.hashes.exact, forkTick: source.tick,
+  });
   if (launch.kind === "boss-phase") patchBoss(forged, launch);
+  else if (launch.kind === "boss-finisher") patchBossFinisher(forged, launch);
   else patchBoundary(forged, launch);
   const mutableHashes = forged.hashes as unknown as MutableRecord;
   mutableHashes.exact = stableVerificationHash(forged.state);

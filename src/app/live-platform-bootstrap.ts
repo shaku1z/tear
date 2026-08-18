@@ -3,7 +3,7 @@ import type { SettingsController } from "./settings-controller";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 
 type Dependencies = Pick<GameRuntimeDependencies,
-  "ACH" | "CG" | "Cloud" | "FirebaseProvider" | "META" | "PROFILE" | "SFX" | "SHOP">;
+  "ACH" | "CG" | "Cloud" | "FirebaseProvider" | "META" | "platformBootstrapPersistence" | "PROFILE" | "SFX">;
 
 export interface PlatformRenamePort {
   readonly screen: () => string;
@@ -21,8 +21,7 @@ export function initializeLivePlatformBootstrap(
   initializePlatformServices({ audio: d.SFX, meta: d.META, profile: d.PROFILE, settings,
     portal: d.CG, cloud: d.Cloud,
     backfillProgress() {
-      d.PROFILE.maxStat("shopMaxed", d.SHOP.filter((item) => d.META.level(item.id) >= item.maxLevel).length);
-      d.ACH.check(); d.PROFILE.save();
+      d.platformBootstrapPersistence.backfillShopProgress();
     },
     onCloudChange(user, state) {
       try { d.ACH.check(); } catch { /* optional achievement migration */ }

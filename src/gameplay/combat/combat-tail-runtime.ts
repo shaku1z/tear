@@ -1,5 +1,7 @@
 export interface TailEnemy {
-  dead: boolean; y: number; _gid?: unknown; bleedStacks: number; burnT: number;
+  dead: boolean; y: number; bleedStacks: number; burnT: number;
+  /** Native defeat facts are published at cleanup, exactly once per actor. */
+  nativeDefeatPublished?: boolean;
 }
 export interface TailProjectile { dead: boolean; update(dt: number): void }
 export interface TailFloater { y: number; life: number }
@@ -12,7 +14,8 @@ export interface TailRun {
   _updraftChain?: number; _achTick?: number; _dmgThisWave?: boolean; _dmgThisRun?: boolean; _dmgThisStage?: boolean;
 }
 export interface CombatCleanupHooks {
-  ghostRecording(): boolean; ghostDeath(enemy: TailEnemy): void; ghostSample(dt: number, enemies: readonly TailEnemy[]): void;
+  enemyDefeated(enemy: TailEnemy): void;
+  ghostRecording(): boolean; ghostSample(dt: number, enemies: readonly TailEnemy[]): void;
   updateTrick(dt: number): void; breakStreak(): void; jumped(): void; achievementTick(dt: number): void;
   maxStat(name: string, value: number): void; checkAchievements(): void; achievementsEnabled(): boolean;
 }
@@ -45,7 +48,13 @@ export function markFallenEnemies(enemies: readonly TailEnemy[], worldBottom: nu
 /** Finalizes one simulation tick after collision side effects have settled. */
 export function finalizeCombatTick(input: CombatCleanupInput): CombatCleanupResult {
   const { dt, player, run, hooks } = input;
-  if (hooks.ghostRecording()) for (const enemy of input.enemies) if (enemy.dead && enemy._gid) hooks.ghostDeath(enemy);
+  for (const enemy of input.enemies) {
+    if (!enemy.dead || enemy.nativeDefeatPublished === true) continue;
+    // This is a native gameplay fact, not a Ghost 2 visual-recording concern.
+    // Mark before publishing so a re-entrant or repeated cleanup cannot emit it twice.
+    enemy.nativeDefeatPublished = true;
+    hooks.enemyDefeated(enemy);
+  }
   const enemies = input.enemies.filter((enemy) => !enemy.dead);
   const projectiles = input.projectiles.filter((projectile) => !projectile.dead);
   for (const projectile of projectiles) projectile.update(dt);
@@ -54,7 +63,7 @@ export function finalizeCombatTick(input: CombatCleanupInput): CombatCleanupResu
   const shake = input.shake > 0 ? Math.max(0, input.shake - input.shakeDecay * dt) : input.shake;
   run.runTime += dt; run.waveTime += dt; hooks.updateTrick(dt);
   if (player.tookHit) { player.tookHit = false; run._dmgThisWave = true; run._dmgThisRun = true; run._dmgThisStage = true; hooks.breakStreak(); }
-  hooks.ghostSample(dt, enemies);
+  if (hooks.ghostRecording()) hooks.ghostSample(dt, enemies);
   if (run._prevGround && !player.onGround && player.vy < -100) hooks.jumped();
   run._prevGround = player.onGround;
   if (player.onGround) { run._airT = 0; run._updraftChain = 0; } else run._airT = (run._airT ?? 0) + dt;

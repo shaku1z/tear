@@ -1,5 +1,6 @@
 import type { TutorialArenaId } from "./tutorial-arenas";
 import { productionGhostPath, type TutorialGhostFrame } from "./tutorial-production-ghost";
+import type { CONFIG as GameConfiguration } from "../../config/game-config";
 
 export type TutorialMark =
   | "airHit" | "dash" | "deflect" | "jump" | "launch" | "moveL" | "moveR"
@@ -139,21 +140,23 @@ const CUTTING_ROOM_LESSONS: readonly TutorialLesson[] = Object.freeze<TutorialLe
 
 export const TUTORIAL_LESSONS: readonly TutorialLesson[] = CUTTING_ROOM_LESSONS;
 
-const PRODUCTION_GHOST_TRACES: Readonly<Record<string, GhostScript>> = Object.freeze({
-  MOVE: { length: 3, path: productionGhostPath("MOVE", 3) },
-  JUMP: { length: 3, path: productionGhostPath("JUMP", 3) },
-  DASH: { length: 3, path: productionGhostPath("DASH", 3), dashes: [[0.52, 0.72], [1.94, 2.14]] },
-  CUT: { length: 3, path: productionGhostPath("CUT", 3), swings: [[0.5, 0.68, -0.9, 0.7], [1.3, 1.48, 0.7, -0.9], [2.1, 2.28, -0.9, 0.7]], hits: [0.6, 1.4, 2.2] },
-  LAUNCH: { length: 3.2, path: productionGhostPath("LAUNCH", 3.2), swings: [[0.8, 1, 0.8, -1.9]], hits: [0.92], target: [[0, 0, 0], [0.9, 0, 0], [1.3, 0, -170], [1.8, 0, -50], [2.2, 0, 0]] },
-  JUGGLE: { length: 3.4, path: productionGhostPath("JUGGLE", 3.4), swings: [[0.5, 0.7, 0.8, -1.9], [1.25, 1.42, -0.5, -2.1], [1.95, 2.12, -2.1, -0.5]], hits: [0.62, 1.33, 2.03], target: [[0, 0, 0], [0.6, 0, 0], [1, 0, -160], [1.35, 0, -110], [1.7, 0, -170], [2.05, 0, -120], [2.6, 0, 0]] },
-  SLAM: { length: 3.2, path: productionGhostPath("SLAM", 3.2), swings: [[0.95, 1.15, -0.6, 2.2]], hits: [1.08], target: [[0, 80, 0]] },
-  "POWER SLAM": { length: 3.4, path: productionGhostPath("POWER SLAM", 3.4), dashes: [[0.82, 1.02]], swings: [[1.05, 1.25, -0.5, 2.3]], hits: [1.18], target: [[0, 85, 0]] },
-  UPDRAFT: { length: 3, path: productionGhostPath("UPDRAFT", 3), swings: [[0.62, 0.82, 1, -2]], hits: [0.74], target: [[0, 60, 0], [0.7, 60, 0], [1.1, 60, -190], [1.6, 60, -60], [2, 60, 0]] },
-  THROW: { length: 3.4, path: productionGhostPath("THROW", 3.4), throwWindow: [0.6, 1.9], hits: [1.1] },
-  PARRY: { length: 3, path: productionGhostPath("PARRY", 3), swings: [[0.78, 0.94, 0.9, -1.2]], shot: { start: 0.3, hit: 0.86, end: 1.6 } },
-  "READ THE CHARGE": { length: 2.4, path: productionGhostPath("READ THE CHARGE", 2.4), dashes: [[0.72, 0.92]] },
-  "FIELD TEST": { length: 2.5, path: productionGhostPath("FIELD TEST", 2.5), dashes: [[0.62, 0.82]], swings: [[1.52, 1.7, 0.9, -0.8]], hits: [1.62] },
-});
+function productionGhostTraces(config: typeof GameConfiguration): Readonly<Record<string, GhostScript>> {
+  return Object.freeze({
+  MOVE: { length: 3, path: productionGhostPath(config, "MOVE", 3) },
+  JUMP: { length: 3, path: productionGhostPath(config, "JUMP", 3) },
+  DASH: { length: 3, path: productionGhostPath(config, "DASH", 3), dashes: [[0.52, 0.72], [1.94, 2.14]] },
+  CUT: { length: 3, path: productionGhostPath(config, "CUT", 3), swings: [[0.5, 0.68, -0.9, 0.7], [1.3, 1.48, 0.7, -0.9], [2.1, 2.28, -0.9, 0.7]], hits: [0.6, 1.4, 2.2] },
+  LAUNCH: { length: 3.2, path: productionGhostPath(config, "LAUNCH", 3.2), swings: [[0.8, 1, 0.8, -1.9]], hits: [0.92], target: [[0, 0, 0], [0.9, 0, 0], [1.3, 0, -170], [1.8, 0, -50], [2.2, 0, 0]] },
+  JUGGLE: { length: 3.4, path: productionGhostPath(config, "JUGGLE", 3.4), swings: [[0.5, 0.7, 0.8, -1.9], [1.25, 1.42, -0.5, -2.1], [1.95, 2.12, -2.1, -0.5]], hits: [0.62, 1.33, 2.03], target: [[0, 0, 0], [0.6, 0, 0], [1, 0, -160], [1.35, 0, -110], [1.7, 0, -170], [2.05, 0, -120], [2.6, 0, 0]] },
+  SLAM: { length: 3.2, path: productionGhostPath(config, "SLAM", 3.2), swings: [[0.95, 1.15, -0.6, 2.2]], hits: [1.08], target: [[0, 80, 0]] },
+  "POWER SLAM": { length: 3.4, path: productionGhostPath(config, "POWER SLAM", 3.4), dashes: [[0.82, 1.02]], swings: [[1.05, 1.25, -0.5, 2.3]], hits: [1.18], target: [[0, 85, 0]] },
+  UPDRAFT: { length: 3, path: productionGhostPath(config, "UPDRAFT", 3), swings: [[0.62, 0.82, 1, -2]], hits: [0.74], target: [[0, 60, 0], [0.7, 60, 0], [1.1, 60, -190], [1.6, 60, -60], [2, 60, 0]] },
+  THROW: { length: 3.4, path: productionGhostPath(config, "THROW", 3.4), throwWindow: [0.6, 1.9], hits: [1.1] },
+  PARRY: { length: 3, path: productionGhostPath(config, "PARRY", 3), swings: [[0.78, 0.94, 0.9, -1.2]], shot: { start: 0.3, hit: 0.86, end: 1.6 } },
+  "READ THE CHARGE": { length: 2.4, path: productionGhostPath(config, "READ THE CHARGE", 2.4), dashes: [[0.72, 0.92]] },
+  "FIELD TEST": { length: 2.5, path: productionGhostPath(config, "FIELD TEST", 2.5), dashes: [[0.62, 0.82]], swings: [[1.52, 1.7, 0.9, -0.8]], hits: [1.62] },
+  });
+}
 
 function interpolate(frames: readonly TutorialGhostFrame[], time: number): Readonly<{ x: number; y: number }> {
   const first = frames[0];
@@ -172,6 +175,7 @@ function interpolate(frames: readonly TutorialGhostFrame[], time: number): Reado
 }
 
 export class TutorialController {
+  private readonly ghostTraces: Readonly<Record<string, GhostScript>>;
   counters: Partial<Record<TutorialMark, number>> = {};
   active = false;
   lessonIndex = 0;
@@ -194,6 +198,10 @@ export class TutorialController {
   private previousBladeState = "held";
   private dashLatched = false;
   private previousPlayerX: number | undefined;
+
+  constructor(config: typeof GameConfiguration) {
+    this.ghostTraces = productionGhostTraces(config);
+  }
 
   start(viewportWidth: number): void {
     this.active = true; this.lessonIndex = 0; this.completionDelay = 0; this.endingTime = 0;
@@ -330,7 +338,7 @@ export class TutorialController {
   }
 
   ghostSnapshot(groundY: number): TutorialGhostSnapshot {
-    const lesson = this.step(), script = PRODUCTION_GHOST_TRACES[lesson.title];
+    const lesson = this.step(), script = this.ghostTraces[lesson.title];
     const hidden: TutorialGhostSnapshot = { visible: false, demonstrating: false, lesson: lesson.title, time: 0, actor: { x: 0, y: 0, facing: 1, dashAfterimages: [] }, target: { visible: false, x: 0, y: 0, hit: false }, blade: { x: 0, y: 0, angle: 0.25, swinging: false, thrown: false, hit: false }, shot: { visible: false, x: 0, y: 0, deflected: false } };
     if (lesson.final || !script || this.coachDemoTime <= 0) return hidden;
     const time = this.ghostTime % script.length, position = interpolate(script.path, time);

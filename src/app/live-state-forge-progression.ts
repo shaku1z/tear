@@ -8,11 +8,12 @@ import type { TearProgressionLedger } from "../tearbench/progression-ledger";
 import { PRODUCTION_CONFIGURATION_REVISION } from "../tearbench/progression-synthesis-policy";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { LiveGameHostState } from "./live-game-host-state";
+import type { TearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
 
 export interface LiveStateForgeProgressionOptions {
   readonly dependencies: GameRuntimeDependencies;
   readonly state: LiveGameHostState;
-  readonly restoreConfiguration: () => void;
+  readonly configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>;
 }
 
 /** Applies a canonical ledger through the same production mutation functions used by live rewards. */
@@ -32,7 +33,7 @@ export function replayLiveStateForgeProgression(
       if (revision !== PRODUCTION_CONFIGURATION_REVISION) {
         throw new TypeError("progression ledger configuration revision is not current");
       }
-      options.restoreConfiguration();
+      options.configuration.resetToBase();
     },
     setupRun(mode, difficulty) {
       if (run.mode !== mode) throw new TypeError(`active mode ${run.mode} does not match ledger mode ${mode}`);
@@ -51,12 +52,11 @@ export function replayLiveStateForgeProgression(
       d.CONFIG.player.dmgTakenMult *= plan.playerDamageMultiplier;
     },
     selectWeapon(weaponId) {
-      const weapon = d.applyWeapon(weaponId);
-        run.weaponId = weapon.id;
-        blade.weapon = weapon;
-        blade.model = weapon.model;
-        weapon.onReset?.({ blade });
-      },
+      const weapon = d.applyWeapon(options.configuration.value, weaponId);
+      run.weaponId = weapon.id;
+      blade.weapon = weapon;
+      blade.model = weapon.model;
+    },
     applyMeta(id, value) {
       if (value !== 0) throw new TypeError(`live State Forge does not invent unsupported meta mutation ${id}`);
     },
@@ -66,11 +66,11 @@ export function replayLiveStateForgeProgression(
       if ((run.mods.owned[id] ?? 0) + 1 !== occurrence) {
         throw new TypeError(`live occurrence for ${id} does not match canonical ledger`);
       }
-      d.applyUpgrade(upgrade, { player, blade, mods: run.mods });
+      d.applyUpgrade(upgrade, { config: options.configuration.value, player, blade, mods: run.mods });
     },
     applyTier(id, tier) {
       const before = run.mods.tier[id] ?? 1;
-      d.tierUp(id, { player, blade, mods: run.mods });
+      d.tierUp(id, { config: options.configuration.value, player, blade, mods: run.mods });
       if (run.mods.tier[id] !== tier || tier !== before + 1) {
         throw new TypeError(`live tier transition for ${id} did not reach tier ${String(tier)}`);
       }

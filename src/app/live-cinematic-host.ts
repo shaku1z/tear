@@ -63,6 +63,7 @@ export function createLiveCinematicHost(context: LiveCinematicHostContext) {
     sound: (cue) => { if (cue === "source-dialogue") d.SFX.dialogueTone("source"); else d.SFX.voidGroundTear(); },
     voidTransfer: () => { d.SFX.voidTransfer(); },
     onDamageResult: (result) => { if (result === "hit") { context.loseStyle(); d.SFX.hurt(); } else if (result === "absorbed") context.shieldAbsorb(); },
+    onVoidRescue: (rescue) => { d.GAMEPLAY_EVENTS.emit({ kind: "world", event: "void-rescue", ...rescue }); },
     floater: context.addFloater,
   });
 
@@ -84,7 +85,7 @@ export function createLiveCinematicHost(context: LiveCinematicHostContext) {
     lerp: d.lerp, clamp: d.clamp, clearBossBeat: context.clearBossBeat,
     setMusicDuck: (amount, duration) => { d.SFX.setMusicDuck(amount, duration); },
     playSound: context.playSound,
-    storeSeen: (key) => { localStorage.setItem(key, "1"); },
+    storeSeen: (key) => { d.browserStorage.setItem(key, "1"); },
     landing: (x, y) => { d.FX.burst(x, y, 0, -1, d.GFX.low ? 5 : 10, context.stage.current.accent); d.SFX.land(); },
     finaleBladeCut: context.finaleBladeCut,
   });

@@ -1,11 +1,13 @@
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { LiveGameHostState } from "./live-game-host-state";
+import type { LiveWorldEntityConstructionPort } from "./live-world-entity-factory";
 import type { LiveTutorialRuntime } from "../gameplay/training/live-tutorial-runtime";
 import { createLiveStyleAchievementRuntime } from "../gameplay/scoring/live-style-achievement-runtime";
 import type { TutorialMark } from "../gameplay/training/tutorial-controller";
 
 export interface LiveStyleHostServices {
   readonly dependencies: GameRuntimeDependencies;
+  readonly entities: Pick<LiveWorldEntityConstructionPort, "createProjectile">;
   readonly state: LiveGameHostState;
   readonly tutorial: LiveTutorialRuntime;
   readonly captureGhost: (trick: string, x: number, y: number, importance: 1 | 2 | 3) => void;
@@ -29,7 +31,7 @@ function isTutorialMark(value: string): value is TutorialMark { return TUTORIAL_
 export function createLiveStyleHost(services: LiveStyleHostServices) {
   const { dependencies: d, state } = services;
   const player = () => required(state.player(), "player");
-  const achievementCheck = () => { d.ACH.check(); d.PROFILE.save(); };
+  const achievementCheck = d.styleAchievementPersistence.checkAndSave;
   return createLiveStyleAchievementRuntime({
     run: () => state.run(), player, enemies: () => state.enemies(),
     moving: () => d.Input.left() || d.Input.right(), tuning: () => d.CONFIG.trick,
@@ -40,13 +42,13 @@ export function createLiveStyleHost(services: LiveStyleHostServices) {
       playerTrick: (trick, at) => { player().lastTrickKind = trick; player().lastTrickT = at; },
       rankUp: services.rankUp, musicRankChanged: services.musicRankChanged,
       haptic: (pattern) => { d.Input.buzz(typeof pattern === "number" ? pattern : [...pattern]); },
-      profileAdd: (stat, amount) => { d.PROFILE.addStat(stat, amount); },
+      profileAdd: d.profileStatsPersistence.add,
       dailyBump: (stat, amount) => { d.DAILY.bump(stat, amount); },
-      profileMax: (stat, value) => { d.PROFILE.maxStat(stat, value); }, achievementCheck,
+      profileMax: d.profileStatsPersistence.max, achievementCheck,
     },
-    profileMax: (stat, value) => { d.PROFILE.maxStat(stat, value); }, achievementCheck,
+    profileMax: d.profileStatsPersistence.max, achievementCheck,
     metaLevel: (id) => d.META.level(id), projectileSpeed: () => d.CONFIG.proj.speed,
-    createProjectile: (x, y, vx, vy) => new d.Projectile(x, y, vx, vy),
+    createProjectile: services.entities.createProjectile,
     addProjectile: services.addProjectile,
   });
 }

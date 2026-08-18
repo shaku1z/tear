@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { executeRewardTransition } from "../../src/app/reward-transition-adapter";
+import { executeRewardTransition } from "../../src/gameplay/run/reward-runtime";
 import type { RewardSelectionTransition } from "../../src/gameplay/run/reward-selection";
 
-describe("legacy reward transition adapter", () => {
+describe("portable reward transition executor", () => {
   it("synchronizes the run ledger before dispatching ordered semantic intents", () => {
     const choice = { id: "power" };
     const transition = {

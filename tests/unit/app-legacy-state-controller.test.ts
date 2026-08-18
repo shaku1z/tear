@@ -15,6 +15,10 @@ function controllerAt(screen: LegacyAppScreen): LegacyAppStateController {
       reserve: ["playing", "draft", "reserve"], tierup: ["playing", "tierup"], continue: ["playing", "continue"],
       gameover: ["playing", "gameover"], win: ["playing", "win"], confirmquit: ["playing", "paused", "confirmquit"],
       pgmenu: ["playing", "pgmenu"], pglab: ["playing", "pglab"],
+      // Bot Evidence is a read-only Ghost Lab child, not a menu destination.
+      botevidence: ["ghostlab", "botevidence"],
+      // Publication and Support are selected from a Vault row in Profile.
+      ghostpublication: ["profile", "ghostpublication"], ghostsupport: ["profile", "ghostsupport"],
       replay: ["replay"],
     };
     for (const next of path[screen] ?? [screen]) controller.transition(next, next === "replay" ? { returnTo: "menu" } : {});
@@ -23,12 +27,21 @@ function controllerAt(screen: LegacyAppScreen): LegacyAppStateController {
 }
 
 describe("LegacyAppStateController transition matrix", () => {
+  it("keeps Bot Evidence behind the normal Ghost Lab route", () => {
+    const controller = new LegacyAppStateController();
+    expect(() => controller.transition("botevidence")).toThrow(IllegalLegacyAppTransitionError);
+    controller.transition("ghostlab");
+    expect(controller.transition("botevidence")).toBe("botevidence");
+  });
+
   it("accepts every declared legal edge", () => {
     for (const from of LEGACY_APP_SCREENS) {
       for (const to of LEGAL_LEGACY_TRANSITIONS[from]) {
-        const controller = from === "replay" ? controllerAt(to) : controllerAt(from);
+        const controller = from === "replay" && to === "playing" ? controllerAt("menu")
+          : from === "replay" ? controllerAt(to) : controllerAt(from);
         if (from === "replay") controller.transition("replay", { returnTo: to });
-        const context = to === "replay" ? { returnTo: from } as const : {};
+        const context = to === "replay" ? { returnTo: from } as const
+          : from === "replay" && to === "playing" ? { practiceLaunch: true } as const : {};
         expect(controller.transition(to, context), `${from} -> ${to}`).toBe(to);
       }
     }
@@ -64,5 +77,12 @@ describe("LegacyAppStateController transition matrix", () => {
     controller.transition("replay", { returnTo: "profile" });
     expect(() => controller.transition("menu")).toThrow(IllegalLegacyAppTransitionError);
     expect(controller.transition("profile")).toBe("profile");
+  });
+
+  it("admits a replay-to-playing transition only for a verified practice launch", () => {
+    const controller = new LegacyAppStateController();
+    controller.transition("profile"); controller.transition("replay", { returnTo: "profile" });
+    expect(() => controller.transition("playing")).toThrow(IllegalLegacyAppTransitionError);
+    expect(controller.transition("playing", { practiceLaunch: true, runId: "practice-child" })).toBe("playing");
   });
 });

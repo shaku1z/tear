@@ -22,6 +22,8 @@ export interface CreateRunSessionOptions<TMods> {
 export interface RunWeaponStats {
   heldHits: number;
   reversals: number;
+  /** Canonical Ghost3 projection name; final-five gameplay records reversals. */
+  trueCuts: number;
   throws: number;
   throwHits: number;
   perfectParries: number;
@@ -130,7 +132,7 @@ export function createRunSession<TMods extends { weaponId?: string }>(
     _dmgThisStage: false,
     _achSnap: [...options.achievementSnapshot],
     weaponId,
-    weaponStats: { heldHits: 0, reversals: 0, throws: 0, throwHits: 0, perfectParries: 0, breakTriggers: 0, distanceMoved: 0 },
+    weaponStats: { heldHits: 0, reversals: 0, trueCuts: 0, throws: 0, throwHits: 0, perfectParries: 0, breakTriggers: 0, distanceMoved: 0 },
     weaponLog: [],
     biomeState: { swung: false, thrown: false, jumped: false },
     _staticParry: 0,

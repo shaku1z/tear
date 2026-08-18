@@ -1,12 +1,16 @@
-import type { CONFIG as GAME_CONFIG } from "../../config/game-config";
 import type { ProjectilePresentationPort, ProjectileRenderSnapshot } from "../../gameplay/entities/projectile";
 import { isCanvasSurface } from "./canvas-surface";
 
-type GameConfig = typeof GAME_CONFIG;
-
+export interface ProjectileRendererPolicy {
+  readonly world: Readonly<{ groundY: number }>;
+  readonly colors: Readonly<{
+    bomber: string; charger: string; deflected: string; enemyShot: string;
+    perfect: string; slam: string; sludge: string;
+  }>;
+}
 export interface ProjectileRendererDependencies {
   readonly clock: { readonly sim: number };
-  readonly config: GameConfig;
+  readonly policy: ProjectileRendererPolicy;
   readonly graphics: { readonly low: boolean };
   readonly theme: { readonly dark: boolean; readonly ink: string };
   readonly clamp: (value: number, min: number, max: number) => number;
@@ -31,13 +35,13 @@ function drawTrail(context: CanvasRenderingContext2D, projectile: ProjectileRend
 }
 
 export function createProjectileRenderer({
-  clock, config, graphics, theme, clamp,
+  clock, policy, graphics, theme, clamp,
 }: ProjectileRendererDependencies): ProjectilePresentationPort {
   return {
     draw(surface: unknown, projectile: ProjectileRenderSnapshot): void {
       if (!isCanvasSurface(surface)) return;
       const context = surface;
-      const colors = config.colors;
+      const { colors } = policy;
       const ink = theme.ink;
       const dark = theme.dark;
       const lowGraphics = graphics.low;
@@ -216,7 +220,7 @@ export function createProjectileRenderer({
       }
 
       if (projectile.bomb && !projectile.deflected) {
-        const groundY = config.world.groundY;
+        const groundY = policy.world.groundY;
         const fall = clamp(1 - (groundY - projectile.y) / 460, 0.25, 1);
         context.save(); context.globalAlpha = 0.16; context.fillStyle = "#000";
         context.beginPath(); context.ellipse(projectile.x, groundY - 3, 24 * fall, 6 * fall, 0, 0, Math.PI * 2); context.fill(); context.restore();

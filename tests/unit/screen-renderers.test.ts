@@ -87,7 +87,7 @@ describe("legacy screen renderer registry", () => {
     expectTypeOf<ReturnType<typeof createUi>>().toExtend<ScreenUiPort>();
     const registry = createLegacyScreenRenderers(createControlContext([]));
     expect(Object.keys(registry).sort()).toEqual([
-      "achievements", "codex", "confirmquit", "continue", "draft", "gameover", "leaderboards",
+      "academy", "achievements", "botevidence", "codex", "confirmquit", "continue", "draft", "foundry", "gameover", "ghostlab", "ghostpublication", "ghostsupport", "leaderboards",
       "menu", "paused", "pglab", "pgmenu", "playing", "profile", "rename", "replay", "reserve",
       "settings", "setup", "shop", "tierup", "win",
     ]);
@@ -212,11 +212,13 @@ describe("legacy screen renderer registry", () => {
     renderer.replay({ id: "replay", title: "Player · Endless", detail: "wave 20", paused: false, speed: 1,
       elapsed: "01:00", duration: "02:00", progress: 0.5, chapters: [{ fraction: 0.25, boss: true }], infoVisible: true,
       infoRows: [{ label: "SCORE", value: "9000" }], loadout: [{ id: "reach", label: "LONG ARM", footer: "×2" }] });
+    renderer.replay({ id: "replay", title: "GHOST 3 THEATER", detail: "verified", paused: true, speed: 1,
+      elapsed: "TICK 120", duration: "TICK 240", progress: 0.5, theater: true, practiceAvailable: true });
     renderer.settings({ id: "settings", tab: "controls", tabs: [{ id: "controls", label: "CONTROLS" }], returnTo: "menu",
       sections: [{ label: "CONTROLS", rows: [{ key: "padPreset", label: "Controller preset", value: "STANDARD · RECOMMENDED", kind: "cycle", note: "Balanced shoulders" }] }] });
     expect(controls.map((control) => control.action.type)).toEqual(expect.arrayContaining([
       "leaderboards.selectBoard", "leaderboards.watchReplay", "replay.jumpChapter", "replay.togglePause",
-      "replay.restart", "replay.toggleInfo", "replay.exit", "settings.activate",
+      "replay.restart", "replay.practice", "replay.runDna.toggle", "replay.toggleInfo", "replay.exit", "settings.activate",
     ]));
     expect(controls.find((control) => control.action.type === "leaderboards.selectTab"))
       .toMatchObject({ y: 124, h: 34, hiddenBox: true });
@@ -226,6 +228,123 @@ describe("legacy screen renderer registry", () => {
       .toMatchObject({ x: 872, y: 408, w: 48, h: 30 });
     expect(controls.find((control) => control.action.type === "replay.togglePause"))
       .toMatchObject({ x: 292, y: 834, w: 96, h: 44 });
+    expect(controls.find((control) => control.action.type === "replay.practice"))
+      .toMatchObject({ x: 644, y: 834, w: 180, h: 44, enabled: true });
+  });
+
+  it("renders durable Academy custody through a typed view with a semantic return", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    expect(() => { renderer.academy({ id: "academy", status: "ready", subtitle: "durable training custody", rows: [
+      { label: "HELD", value: "3" }, { label: "REVIEWED", value: "2" },
+      { label: "CURATED", value: "1" }, { label: "TRAINING SPLIT", value: "1" },
+    ], records: [{ id: "A1B2C3D4", state: "held · reviewed · training", detail: "anonymous-improvement · indefinite retention · curation-approved" }],
+    manifests: [{ id: "RELEASE V2", detail: "1 governed entry · root BEEFCAFE" }] }); }).not.toThrow();
+    expect(controls.find((control) => control.action.type === "navigate" && control.action.to === "menu"))
+      .toMatchObject({ label: "‹  BACK" });
+  });
+
+  it("renders Ghost Lab as safe local routes and explicit unavailable operations", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.ghostlab({ id: "ghostlab", subtitle: "local routes", routes: [
+      { id: "academy", label: "ACADEMY", detail: "local custody" },
+      { id: "foundry", label: "FOUNDRY STATUS", detail: "local recovery" },
+      { id: "vault", label: "GHOST VAULT", detail: "capsule gated Theater" },
+      { id: "botevidence", label: "BOT EVIDENCE", detail: "exact retained report" },
+      { id: "watch", label: "WATCH", detail: "canonical V3 locally available" },
+    ], unavailable: [
+      { label: "WATCH", detail: "not player-safe" }, { label: "STATE FORGE", detail: "engineering only" },
+    ], watch: { status: "ready", detail: "canonical V3 locally available", decisions: 0 } });
+    expect(controls.filter((control) => control.action.type === "ghostlab.open").map((control) => control.action))
+      .toEqual([{ type: "ghostlab.open", destination: "academy" }, { type: "ghostlab.open", destination: "foundry" }, { type: "ghostlab.open", destination: "vault" }, { type: "ghostlab.open", destination: "botevidence" }, { type: "ghostlab.open", destination: "watch" }]);
+    expect(controls.find((control) => control.action.type === "ghostlab.watch"))
+      .toMatchObject({ label: "START WATCH", action: { type: "ghostlab.watch", command: "start" } });
+    expect(controls.some((control) => control.action.type === "navigate" && control.action.to === "menu")).toBe(true);
+  });
+
+  it("renders Bot Evidence as a read-only unavailable or exact-report projection", () => {
+    const controls: ScreenControl[] = [], renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    expect(() => { renderer.botevidence({ id: "botevidence", status: "unavailable", subtitle: "exact local evidence", detail: "missing or stale" }); }).not.toThrow();
+    expect(controls.find((control) => control.action.type === "navigate" && control.action.to === "menu")).toMatchObject({ label: "‹  BACK" });
+  });
+
+  it("projects a running Player Watch into the paused screen with semantic pause and stop controls", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.paused({ id: "paused", abilities: [], progress: [],
+      playerWatch: { status: "running", decisions: 7 } });
+    expect(controls.filter((control) => control.action.type === "ghostlab.watch").map((control) => control.action))
+      .toEqual([
+        { type: "ghostlab.watch", command: "pause" },
+        { type: "ghostlab.watch", command: "stop" },
+      ]);
+    expect(controls.find((control) => control.action.type === "ghostlab.watch" && control.action.command === "pause"))
+      .toMatchObject({ label: "PAUSE PLAYER WATCH", x: 80, y: 426, w: 280, h: 42 });
+  });
+
+  it("offers a semantic retry with storage guidance when Academy inspection is unavailable", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.academy({ id: "academy", status: "unavailable", subtitle: "Academy storage is unavailable", rows: [], records: [], manifests: [] });
+    expect(controls.find((control) => control.action.type === "academy.retry"))
+      .toMatchObject({ label: "TRY AGAIN", x: 690, w: 220, h: 46 });
+  });
+
+  it("renders opaque Foundry launch eligibility and only an eligible semantic bootstrap", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.foundry({ id: "foundry", status: "ready", subtitle: "local recovery", automation: "unavailable", launchProfiles: [
+      { profileId: "eligible-local-cycle", disposition: "eligible" }, { profileId: "blocked-local-cycle", disposition: "blocked" },
+    ], jobs: [{
+      jobHash: "a".repeat(16), phase: "collecting", nextManualPhase: "curating", resumable: true, eventCount: 2,
+      lastEventHash: "b".repeat(16), projectionHash: "c".repeat(16),
+    }], schedules: [] });
+    expect(controls.find((control) => control.action.type === "foundry.bootstrap"))
+      .toMatchObject({ label: "START LOCAL CYCLE", action: { profileId: "eligible-local-cycle" }, enabled: true });
+    expect(controls.find((control) => control.action.type === "foundry.bootstrap" && control.action.profileId === "blocked-local-cycle"))
+      .toMatchObject({ label: "BLOCKED", enabled: false });
+    expect(JSON.stringify(controls)).not.toContain("artifactHash");
+    expect(JSON.stringify(controls)).not.toContain("custody");
+  });
+
+  it("renders durable DAgger status and exposes only a persisted-plan advance action", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    expect(() => { renderer.academy({ id: "academy", status: "ready", subtitle: "durable training custody", rows: [], records: [{ id: "A1", state: "HELD", detail: "anonymous improvement", candidateHash: "a".repeat(16), canWithdrawModelTraining: true }], manifests: [],
+      daggerPrograms: [
+        { id: "DAGGER ALPHA", state: "REVIEW REQUIRED", detail: "round 1 · awaiting an authorized review" },
+        { id: "CORRECTION 12345678", programId: "dagger-alpha", state: "AWAITING DECISION", detail: "tick 3 - challenger: primary - teacher: guard", correctionHash: "a".repeat(16), canReview: true },
+        { id: "DAGGER BETA", programId: "dagger-beta", state: "COMPLETED", detail: "fit retained; not activated or promoted", canAdvance: true },
+      ],
+    }); }).not.toThrow();
+    expect(controls.find((control) => control.action.type === "academy.dagger.advance"))
+      .toMatchObject({ label: "ADVANCE PLAN", action: { id: "dagger-beta" } });
+    expect(controls.find((control) => control.action.type === "academy.dagger.review"))
+      .toMatchObject({ label: "ACCEPT", action: { id: "dagger-alpha", disposition: "accepted" } });
+    expect(controls.find((control) => control.action.type === "academy.record.withdrawModelTraining"))
+      .toMatchObject({ label: "WITHDRAW TRAINING CONSENT", action: { candidateHash: "a".repeat(16) } });
+  });
+
+  it("projects only an explicit human-calibration consent control", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.academy({ id: "academy", status: "ready", subtitle: "durable training custody", rows: [], records: [], manifests: [],
+      humanCalibrationConsent: { state: "not-enrolled", detail: "no recorded consent", canOptIn: true, canRevoke: false } });
+    expect(controls.find((control) => control.action.type === "academy.humanCalibration.optIn"))
+      .toMatchObject({ label: "ALLOW ANONYMOUS CALIBRATION", action: { consent: "anonymous-improvement" } });
+    expect(controls.some((control) => control.action.type === "academy.humanCalibration.revoke")).toBe(false);
+  });
+
+  it("pages complete privacy-safe Academy records and manifests through screen scroll", () => {
+    const controls: ScreenControl[] = [];
+    const context = createRenderContext(controls);
+    const renderer = createLegacyScreenRenderers({ ...context, scroll: 52 });
+    expect(() => { renderer.academy({ id: "academy", status: "ready", subtitle: "durable training custody", rows: [],
+      records: Array.from({ length: 5 }, (_, index) => ({ id: `RECORD-${String(index + 1)}`, state: "held", detail: "anonymous" })),
+      manifests: Array.from({ length: 4 }, (_, index) => ({ id: `MANIFEST V${String(index + 1)}`, detail: "governed" })),
+    }); }).not.toThrow();
+    expect(controls.some((control) => control.action.type === "navigate" && control.action.to === "menu")).toBe(true);
   });
 
   it("uses the oracle replay-vault row geometry and a profile-specific watch intent", () => {
@@ -238,6 +357,50 @@ describe("legacy screen renderer registry", () => {
       .toMatchObject({ x: 968, y: 342, w: 110, h: 40 });
     expect(controls.find((control) => control.action.type === "profile.pinReplay"))
       .toMatchObject({ x: 1086, y: 342, w: 78, h: 40 });
+  });
+
+  it("renders Ghost Vault custody rows without exposing legacy replay mutations", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.profile({ id: "profile", tab: "vault", tabs: [{ id: "vault", label: "VAULT", selected: true }],
+      name: "Guest", signedIn: false, stats: [], replays: [{ id: "capsule:run-1", title: "Ghost V3 - COACHING",
+        detail: "COMPLETE - 3 CHUNKS", available: false, badge: "DURABLE CAPSULE" }] });
+    expect(controls.find((control) => control.action.type === "profile.watchGhostCapsule"))
+      .toMatchObject({ enabled: false, label: "◆ THEATER", action: { type: "profile.watchGhostCapsule", id: "capsule:run-1" } });
+    expect(controls.some((control) => control.action.type === "profile.pinReplay")).toBe(false);
+    expect(controls.some((control) => control.action.type === "profile.deleteReplay")).toBe(false);
+  });
+
+  it("routes a healthy Ghost Vault capsule to Theater through a distinct semantic action", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.profile({ id: "profile", tab: "vault", tabs: [{ id: "vault", label: "VAULT", selected: true }],
+      name: "Guest", signedIn: false, stats: [], replays: [{ id: "verified-capsule", title: "Ghost V3 - COACHING",
+        detail: "COMPLETE - 3 CHUNKS - HEALTHY", available: true, badge: "DURABLE CAPSULE" }] });
+    expect(controls.find((control) => control.action.type === "profile.watchGhostCapsule"))
+      .toMatchObject({ enabled: true, label: "◆ THEATER", action: { type: "profile.watchGhostCapsule", id: "verified-capsule" } });
+  });
+
+  it("renders a refused Ghost Theater route as disabled without exposing decoder detail", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.profile({ id: "profile", tab: "vault", tabs: [{ id: "vault", label: "VAULT", selected: true }],
+      name: "Guest", signedIn: false, stats: [], replays: [{ id: "refused-capsule", title: "Ghost V3 - COACHING",
+        detail: "COMPLETE - 3 CHUNKS - HEALTHY", available: false, theaterUnavailable: true, badge: "DURABLE CAPSULE" }] });
+    expect(controls.find((control) => control.action.type === "profile.watchGhostCapsule"))
+      .toMatchObject({ label: "THEATER UNAVAILABLE", enabled: false });
+    expect(JSON.stringify(controls)).not.toContain("codec restore rejected");
+  });
+
+  it("offers a semantic repair action only for an unhealthy Vault capsule", () => {
+    const controls: ScreenControl[] = [];
+    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.profile({ id: "profile", tab: "vault", tabs: [{ id: "vault", label: "VAULT", selected: true }],
+      name: "Guest", signedIn: false, stats: [], replays: [{ id: "damaged-capsule", title: "Ghost V3 - COACHING",
+        detail: "COMPLETE - 3 CHUNKS - NEEDS REPAIR", available: false, repairable: true, badge: "DURABLE CAPSULE" }] });
+    expect(controls.find((control) => control.action.type === "profile.repairGhostCapsule"))
+      .toMatchObject({ label: "REPAIR", x: 968, y: 342, w: 110, h: 40, action: { type: "profile.repairGhostCapsule", id: "damaged-capsule" } });
+    expect(controls.some((control) => control.action.type === "profile.watchReplay")).toBe(false);
   });
 
   it("declares every legacy-only parity field needed before old screen ranges can be deleted", () => {

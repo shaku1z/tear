@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import type { CommandEnvelope } from "../../src/domain/envelopes";
+import type { GameAction } from "../../src/input/game-action";
+import type { TearSimulationAdvanceLifecycle } from "../../src/gameplay/runtime/tear-simulation-runtime";
 import { advanceFixedSimulation, advanceFramePrelude, commitBossIntroSnapshot, emitLiveMusicEvent, syncMusicTheme,
   type MutableFramePreludeState } from "../../src/app/live-frame-runtime";
 
@@ -27,36 +30,76 @@ describe("live frame runtime", () => {
     expect(boss.introT).toBe(0);
   });
 
-  it("keeps the visual ghost out of the raw live input step", () => {
-    const order: string[] = []; const gauge = vi.fn();
-    const simulation = { tick: 0, advance: (_ms: number, step: (seconds: number, tick: number) => void) => {
-      step(1 / 60, 4); return { tick: 4, steps: 1, droppedMilliseconds: 0 };
-    } };
-    const result = advanceFixedSimulation({ dt: 1 / 60, timeScale: 1, hitStop: 0, state: () => "playing", simulation,
-      semanticInputAuthority: () => false, drainActions: () => { order.push("drain"); return []; },
+  it("delegates normal fixed ticks through the shared canonical simulation exactly once", () => {
+    const order: string[] = []; const gauge = vi.fn(); const advances: number[] = [];
+    const sealedByTick = new Map<number, readonly CommandEnvelope<GameAction>[]>();
+    const simulation = {
+      advance(milliseconds: number, actionsForTick: (tick: number) => readonly CommandEnvelope<GameAction>[],
+        lifecycle?: TearSimulationAdvanceLifecycle) {
+        advances.push(milliseconds);
+        if (lifecycle === undefined) throw new Error("canonical lifecycle is required for the live frame path");
+        const activeLifecycle = lifecycle;
+        for (const tick of [4, 5]) {
+          if (activeLifecycle.shouldStep?.(tick) === false) continue;
+          try {
+            activeLifecycle.beforeStep?.(tick);
+            const actions = actionsForTick(tick);
+            order.push(`canonical-step:${String(tick)}:${String(actions.length)}`);
+            activeLifecycle.afterStep?.(tick);
+          } finally {
+            activeLifecycle.cleanupStep?.(tick);
+          }
+        }
+        return { tick: 5, steps: 2, droppedMilliseconds: 0 };
+      },
+    };
+    const state = vi.fn(() => "playing");
+    const result = advanceFixedSimulation({ dt: 1 / 60, timeScale: 1, hitStop: 0, state, simulation,
+      drainActions: (tick) => {
+        const actions = Object.freeze([{ kind: "command" as const, id: tick, tick,
+          command: { type: "move" as const, x: 1_000, y: 0 } }]);
+        sealedByTick.set(tick, actions); order.push(`drain:${String(tick)}`); return actions;
+      },
+      recordSealedActions: (tick, actions) => {
+        expect(actions).toBe(sealedByTick.get(tick)); order.push(`record:${String(tick)}`);
+      },
       beforeStep: (tick) => order.push(`before:${String(tick)}`),
       afterStep: (tick) => order.push(`after:${String(tick)}`),
-      authoritativeStep: () => order.push("authoritative"),
-      clearOverrides: () => order.push("clear"), step: () => order.push("step"), gauge });
-    expect(order).toEqual(["before:4", "drain", "clear", "step", "after:4"]);
+      clearSimulationInput: () => order.push("clear"), gauge });
+    expect(advances).toEqual([1_000 / 60]);
+    expect(state).toHaveBeenCalledTimes(2);
+    expect(order).toEqual([
+      "before:4", "drain:4", "record:4", "canonical-step:4:1", "after:4", "clear",
+      "before:5", "drain:5", "record:5", "canonical-step:5:1", "after:5", "clear",
+    ]);
     expect(gauge).toHaveBeenCalledTimes(3);
-    expect(result).toEqual({ hitStop: 0, steps: 1 });
+    expect(result).toEqual({ hitStop: 0, steps: 2 });
   });
 
-  it("preserves queued semantic aim when an external policy owns input", () => {
-    const order: string[] = [];
-    const simulation = { tick: 0, advance: (_ms: number, step: (seconds: number, tick: number) => void) => {
-      step(1 / 120, 9); return { tick: 9, steps: 1, droppedMilliseconds: 0 };
-    } };
-    advanceFixedSimulation({
-      dt: 1 / 120, timeScale: 1, hitStop: 0, state: () => "playing", simulation,
-      semanticInputAuthority: () => true,
-      drainActions: () => { order.push("drain-semantic"); return []; },
-      authoritativeStep: () => { order.push("authoritative"); },
-      clearOverrides: () => { order.push("clear"); }, step: () => { order.push("step"); },
-      gauge: () => { return; },
+  it("does not drain or clear commands when the canonical runtime declines a non-playing tick", () => {
+    const drainActions = vi.fn(() => []); const recordSealedActions = vi.fn(); const clearSimulationInput = vi.fn();
+    const beforeStep = vi.fn(); const afterStep = vi.fn(); const simulation = {
+      advance(_milliseconds: number, actionsForTick: (tick: number) => readonly CommandEnvelope<GameAction>[],
+        lifecycle?: TearSimulationAdvanceLifecycle) {
+        if (lifecycle === undefined) throw new Error("canonical lifecycle is required for the live frame path");
+        const activeLifecycle = lifecycle;
+        if (activeLifecycle.shouldStep?.(9) !== false) {
+          try {
+            activeLifecycle.beforeStep?.(9); actionsForTick(9); activeLifecycle.afterStep?.(9);
+          } finally {
+            activeLifecycle.cleanupStep?.(9);
+          }
+        }
+        return { tick: 9, steps: 0, droppedMilliseconds: 0 };
+      },
+    };
+    const result = advanceFixedSimulation({
+      dt: 1 / 120, timeScale: 1, hitStop: 0, state: () => "paused", simulation, drainActions,
+      recordSealedActions, beforeStep, afterStep, clearSimulationInput, gauge: () => { return; },
     });
-    expect(order).toEqual(["drain-semantic", "clear", "authoritative"]);
+    expect(drainActions).not.toHaveBeenCalled(); expect(recordSealedActions).not.toHaveBeenCalled();
+    expect(beforeStep).not.toHaveBeenCalled(); expect(afterStep).not.toHaveBeenCalled();
+    expect(clearSimulationInput).not.toHaveBeenCalled(); expect(result).toEqual({ hitStop: 0, steps: 0 });
   });
 
   it("selects menu, boss and fallback music themes without platform globals", () => {

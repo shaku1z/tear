@@ -6,9 +6,9 @@ Tear’s five weapons share the same jump, dash, coyote time, gravity, health, c
 |---|---|---|---|---|---|
 | Sword | Perpendicular, committed cuts | True Edge applies Seam | Crosscut retraces the throw and consumes Seam | Precision, parries, sustained pressure | Burst, armor, wide control |
 | Hammer | High-speed committed impacts | Break pressure | Meteor arcs and erupts on first impact | Burst, stagger, armor, crowd interruption | Response, range, reactive defense |
-| Spear | Axial thrusts at long range | Drive | Anchor Cast reels a light enemy or pulls the player to terrain/heavy targets | Reach, pursuit, traversal | Broad coverage, close safety, slams |
+| Greatsword | Broad, committed edge arcs | Cleaving Momentum | Wheel Cut spins around its center and returns edge-first | Reach, formation cleaves, momentum | Slow, weak near hilt, commitment |
 | Chainblade | Extended, high-speed arcs | Tension and Drag | Bind / Yank relocates targets and causes collision damage | Clustering, repositioning, arena control | Reversals, cramped spaces, boss damage |
-| Ringblade | Sustained one-direction rotation | Orbit | Circuit steers, ricochets, loses energy, and returns automatically | Ranged uptime, mobile targets, flow | Single-hit power, armor, knockback |
+| Riftlock | Precise ranged sidearm fire | Recoil Cut and chambered Bayonet | Loose Cannon captures a target; Backblast fires while recalling | Ranged pressure, recoil routes, resource control | Four chambers, precise fire, narrow control |
 
 ## Universal throw abilities
 
@@ -29,10 +29,10 @@ The persistent upgrade IDs are unchanged so existing saves remain compatible; th
 
 ## Control and boss rules
 
-- Spear pulls the player toward bosses instead of moving them.
+- Greatsword carries momentum through light foes while retaining reduced transfer against heavy targets and bosses.
 - Chainblade applies a capped tug and short link to bosses; it cannot immobilize them.
 - Hammer Break uses a higher threshold and shorter stagger on bosses.
-- Ringblade repeated overlap is rate-limited and diminished.
+- Riftlock capture applies mass-scaled recoil and does not immobilize bosses.
 - Scripted invulnerability and phase boundaries remain owned by the boss damage gates.
 
 ## Input support
@@ -47,4 +47,4 @@ Glacial Wake and the Discord/Frenzy ability concept are not part of this overhau
 
 Playground mode shows live weapon hit/throw/parry/Break counters. `window.TEAR_WEAPON_DEBUG()` returns the full per-run counter snapshot and the most recent normalized weapon event log.
 
-Automated coverage lives in `tests/weapon-overhaul.test.js` and `tests/browser-smoke.js`.
+Automated coverage lives in `tests/unit/final-five-weapon-roster.test.ts`, the weapon conformance suites, and the canonical browser journeys.

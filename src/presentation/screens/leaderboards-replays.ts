@@ -133,11 +133,18 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     canvas.fillRect(screen.x, screen.y, screen.w, 54 + safe.t); canvas.globalAlpha = 1;
     canvas.fillStyle = REPLAY_CYAN; canvas.fillRect(screen.x, screen.y, screen.w, 3);
     canvas.textAlign = "left"; canvas.fillStyle = REPLAY_PAPER; canvas.font = ui.font(ui.t.type.lead, true);
-    canvas.fillText("▶ REPLAY", 40 + safe.l, 36 + safe.t);
+    canvas.fillText(view.theater ? "◆ THEATER" : "▶ REPLAY", 40 + safe.l, 36 + safe.t);
     canvas.fillStyle = REPLAY_MUTED; canvas.font = ui.font(ui.t.type.body, false);
+    if (view.comparison) {
+      canvas.fillStyle = REPLAY_DARK; canvas.fillRect(36 + safe.l, 4 + safe.t, 150, 42);
+      canvas.fillStyle = REPLAY_CYAN; canvas.font = ui.font(ui.t.type.lead, true); canvas.fillText("COMPARE", 40 + safe.l, 36 + safe.t);
+      canvas.fillStyle = REPLAY_MUTED; canvas.font = ui.font(ui.t.type.body, false);
+    }
     canvas.fillText(view.title + "   ·   " + view.detail, 200 + safe.l, 36 + safe.t);
     canvas.textAlign = "right"; canvas.fillStyle = REPLAY_CYAN; canvas.font = ui.font(ui.t.type.label, true);
     canvas.fillText(view.score ?? "", width - 36 - safe.r, 36 + safe.t); canvas.restore();
+
+    if (view.comparison) comparisonState(view); else if (view.theater) theaterState(view);
 
     const barY = height - 96 - safe.b, barX = 220 + safe.l, barWidth = width - 440 - safe.l - safe.r;
     canvas.save(); canvas.globalAlpha = 0.85; canvas.fillStyle = REPLAY_DARK;
@@ -159,9 +166,126 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     context.enqueue({ x: 396 + safe.l, y: controlY, w: 64, h: 44, label: "▶|", action: { type: "replay.jumpChapter", direction: 1 } });
     context.enqueue({ x: 468 + safe.l, y: controlY, w: 76, h: 44, label: `${String(view.speed)}×`, action: { type: "replay.speed", value: view.speed >= 4 ? 0.5 : view.speed * 2 } });
     context.enqueue({ x: 552 + safe.l, y: controlY, w: 84, h: 44, label: "↺", action: { type: "replay.restart" } });
+    if (view.theater) context.enqueue({ x: 644 + safe.l, y: controlY, w: 180, h: 44, label: "PRACTICE",
+      enabled: view.practiceAvailable === true, action: { type: "replay.practice" } });
+    if (view.theater) context.enqueue({ x: 832 + safe.l, y: controlY, w: 120, h: 44, label: "COACH",
+      action: { type: "replay.coach.open" } });
+    if (view.theater) context.enqueue({ x: 960 + safe.l, y: controlY, w: 120, h: 44, label: "RUN DNA",
+      action: { type: "replay.runDna.toggle" } });
     context.enqueue({ x: width - 420 - safe.r, y: controlY, w: 90, h: 44, label: view.infoVisible ? "HIDE" : "INFO", action: { type: "replay.toggleInfo" } });
     context.enqueue({ x: width - 320 - safe.r, y: controlY, w: 200, h: 44, label: "‹  BACK", action: { type: "replay.exit" } });
+    if (view.notice) ui.text(canvas, view.notice, width / 2, barY - 34, ui.t.type.caption, "center", ui.t.alpha.muted);
     if (view.infoVisible) replayInfo(view);
+    if (view.coach) coachState(view);
+    if (view.runDna) runDnaState(view);
+    if (view.studioCutList) studioCutListState(view);
+  }
+
+  function theaterState(view: ReplayScreenView): void {
+    const { canvas, safeInsets: safe } = context;
+    const panelWidth = Math.min(620, width - 80 - safe.l - safe.r), panelHeight = 240;
+    const x = width / 2 - panelWidth / 2, y = height / 2 - panelHeight / 2 - 20;
+    ui.panel(canvas, x, y, panelWidth, panelHeight);
+    ui.accentStrip(canvas, x, y, panelWidth, REPLAY_CYAN);
+    ui.title(canvas, "VERIFIED REPLAY STATE", width / 2, y + 56, ui.t.type.h2);
+    ui.tag(canvas, `${view.elapsed}  /  ${view.duration}`, width / 2, y + 86, REPLAY_CYAN, "center", ui.t.type.label);
+    ui.wrappedText(canvas, "This Ghost replays the durable capsule through the shared production simulation. At a verified checkpoint, PRACTICE starts an unranked child without changing the source capsule or your profile.",
+      x + 42, y + 122, panelWidth - 84, 22, ui.t.type.body, "left", ui.t.alpha.soft);
+    context.enqueue({ x: width / 2 - 110, y: y + panelHeight - 58, w: 220, h: 34, label: "STUDIO CUT LIST",
+      action: { type: "replay.studio.toggle" } });
+    ui.text(canvas, "USE TRANSPORT TO SEEK  ·  ESC TO RETURN", width / 2, y + panelHeight - 24,
+      ui.t.type.micro, "center", ui.t.alpha.muted);
+  }
+
+  function studioCutListState(view: ReplayScreenView): void {
+    const cut = view.studioCutList;
+    if (cut === undefined) return;
+    const { canvas, safeInsets: safe } = context;
+    const panelWidth = Math.min(820, width - 80 - safe.l - safe.r), panelHeight = 270;
+    const x = width / 2 - panelWidth / 2, y = 78 + safe.t;
+    ui.panel(canvas, x, y, panelWidth, panelHeight); ui.accentStrip(canvas, x, y, panelWidth, REPLAY_CYAN);
+    ui.title(canvas, "STUDIO CUT LIST · LOCAL EDL ONLY", width / 2, y + 40, ui.t.type.lead);
+    ui.tag(canvas, "MEDIA EXPORT UNAVAILABLE", width / 2, y + 64, ui.t.color.danger, "center", ui.t.type.label);
+    if (!cut.available) {
+      ui.wrappedText(canvas, `UNAVAILABLE · ${cut.unavailable ?? "current Theater source is not eligible"}`,
+        x + 28, y + 104, panelWidth - 56, 20, ui.t.type.body, "left", ui.t.alpha.muted);
+      return;
+    }
+    if (cut.edlHash === undefined) {
+      ui.wrappedText(canvas, "Create one immutable local decision list from this exact verified checkpoint window. It records only supported EDL fields and never changes the source capsule.",
+        x + 28, y + 102, panelWidth - 56, 20, ui.t.type.body, "left", ui.t.alpha.soft);
+      context.enqueue({ x: width / 2 - 150, y: y + 184, w: 300, h: 38, label: "CREATE LOCAL EDL",
+        action: { type: "replay.studio.createCutList" } });
+      return;
+    }
+    ui.text(canvas, `SOURCE ${cut.sourceGhostId ?? "UNAVAILABLE"}`, x + 28, y + 100, ui.t.type.caption, "left", ui.t.alpha.soft);
+    ui.text(canvas, `ROOT ${cut.sourceRootHash ?? "UNAVAILABLE"}`, x + 28, y + 124, ui.t.type.caption, "left", ui.t.alpha.soft);
+    ui.text(canvas, `VERIFIED RANGE TICK ${String(cut.fromTick)}–${String(cut.toTick)}`, x + 28, y + 148, ui.t.type.caption, "left", ui.t.alpha.soft);
+    ui.text(canvas, `EDL ${cut.edlHash}`, x + 28, y + 172, ui.t.type.caption, "left", ui.t.alpha.soft);
+    ui.wrappedText(canvas, "Immutable local decision list created. No production media renderer is connected, so export remains unavailable.",
+      x + 28, y + 214, panelWidth - 56, 18, ui.t.type.micro, "left", ui.t.alpha.muted);
+  }
+
+  function comparisonState(view: ReplayScreenView): void {
+    const comparison = view.comparison;
+    if (comparison === undefined) return;
+    const { canvas, safeInsets: safe } = context;
+    const panelWidth = Math.min(760, width - 80 - safe.l - safe.r), panelHeight = 170 + comparison.runs.length * 30;
+    const x = width / 2 - panelWidth / 2, y = height / 2 - panelHeight / 2 - 20;
+    ui.panel(canvas, x, y, panelWidth, panelHeight);
+    ui.accentStrip(canvas, x, y, panelWidth, REPLAY_CYAN);
+    ui.title(canvas, "SEMANTIC COMPARISON", width / 2, y + 50, ui.t.type.h2);
+    ui.tag(canvas, `EVENT ${comparison.eventType.toUpperCase()} - OCCURRENCE ${String(comparison.occurrence)}`,
+      width / 2, y + 78, REPLAY_CYAN, "center", ui.t.type.label);
+    comparison.runs.forEach((run, index) => {
+      const rowY = y + 108 + index * 30;
+      const source = run.sourceId.length > 28 ? `${run.sourceId.slice(0, 25)}...` : run.sourceId;
+      ui.text(canvas, `RUN ${String(index + 1)}  ${source}`, x + 34, rowY, ui.t.type.caption, "left", ui.t.alpha.soft);
+      ui.tag(canvas, run.tick === null ? "MISSING" : `TICK ${String(run.tick)}`, x + panelWidth - 34, rowY,
+        run.tick === null ? ui.t.color.danger : REPLAY_CYAN, "right", ui.t.type.label);
+    });
+    ui.wrappedText(canvas, "Each row is reconstructed from its own verified source capsule. This compares semantic simulation state only; pixels, PCM, haptics, and device output are not compared here.",
+      x + 34, y + panelHeight - 50, panelWidth - 68, 16, ui.t.type.micro, "left", ui.t.alpha.muted);
+  }
+
+  function coachState(view: ReplayScreenView): void {
+    const coach = view.coach;
+    if (coach === undefined) return;
+    const { canvas, safeInsets: safe } = context;
+    const panelWidth = Math.min(860, width - 80 - safe.l - safe.r), panelHeight = 340;
+    const x = width / 2 - panelWidth / 2, y = 90 + safe.t;
+    ui.panel(canvas, x, y, panelWidth, panelHeight); ui.accentStrip(canvas, x, y, panelWidth, REPLAY_CYAN);
+    ui.title(canvas, "COACH · SELECTED VERIFIED PAIR", width / 2, y + 38, ui.t.type.lead);
+    ui.text(canvas, `TARGET ${coach.targetId}  ·  BASELINE ${coach.baselineId ?? "SELECT ONE"}`, x + 24, y + 68, ui.t.type.micro, "left", ui.t.alpha.soft);
+    if (coach.buildId) ui.text(canvas, `BUILD ${coach.buildId}  ·  PROVENANCE ${coach.provenanceHash ?? "UNAVAILABLE"}`, x + 24, y + 88, ui.t.type.micro, "left", ui.t.alpha.muted);
+    coach.candidates.slice(0, 3).forEach((candidate, index) => { context.enqueue({ x: x + 24 + index * 270, y: y + 106, w: 252, h: 34,
+      label: `BASELINE ${candidate.id}`, enabled: candidate.enabled, selected: candidate.id === coach.baselineId,
+      action: { type: "replay.coach.selectBaseline", id: candidate.id } }); });
+    coach.findings.slice(0, 2).forEach((finding, index) => {
+      const rowY = y + 164 + index * 54;
+      ui.text(canvas, `${finding.domain.toUpperCase()} · ${finding.detail}`, x + 24, rowY + 18, ui.t.type.caption, "left", ui.t.alpha.soft);
+      context.enqueue({ x: x + panelWidth - 188, y: rowY - 4, w: 164, h: 34, label: "PRACTICE FINDING",
+        enabled: finding.practiceAvailable, action: { type: "replay.coach.practice", findingId: finding.id } });
+    });
+    coach.unavailable.slice(0, 2).forEach((entry, index) => { ui.text(canvas, `UNAVAILABLE · ${entry}`, x + 24, y + 286 + index * 18, ui.t.type.micro, "left", ui.t.alpha.muted); });
+  }
+
+  function runDnaState(view: ReplayScreenView): void {
+    const dna = view.runDna;
+    if (dna === undefined) return;
+    const { canvas, safeInsets: safe } = context;
+    const panelWidth = Math.min(860, width - 80 - safe.l - safe.r), panelHeight = 330;
+    const x = width / 2 - panelWidth / 2, y = 90 + safe.t;
+    ui.panel(canvas, x, y, panelWidth, panelHeight); ui.accentStrip(canvas, x, y, panelWidth, REPLAY_CYAN);
+    ui.title(canvas, "RUN DNA · VERIFIED METRICS", width / 2, y + 38, ui.t.type.lead);
+    ui.text(canvas, `FORMULA ${dna.formulaVersion} · EVIDENCE ${dna.evidenceCustody}`, x + 24, y + 64, ui.t.type.micro, "left", ui.t.alpha.muted);
+    Object.entries(dna.sourceMetrics).forEach(([name, value], index) => { ui.text(canvas,
+      `${name.toUpperCase()} · ${value === undefined ? "UNAVAILABLE" : String(value)}`, x + 24 + (index % 2) * 390, y + 94 + Math.floor(index / 2) * 22,
+      ui.t.type.caption, "left", value === undefined ? ui.t.alpha.muted : ui.t.alpha.soft); });
+    if (dna.dimensions) Object.entries(dna.dimensions).forEach(([name, value], index) => { ui.text(canvas,
+      `${name.toUpperCase()} ${String(Math.round(value * 100))}%`, x + 24 + (index % 3) * 265, y + 198 + Math.floor(index / 3) * 24, ui.t.type.caption, "left", ui.t.alpha.soft); });
+    if (!dna.available) dna.unavailable.slice(0, 3).forEach((entry, index) => { ui.text(canvas, `UNAVAILABLE · ${entry}`, x + 24, y + 250 + index * 18, ui.t.type.micro, "left", ui.t.alpha.muted); });
+    else ui.text(canvas, "Derived only from the declared durable capsule metrics; no hidden events or profile data.", x + 24, y + 286, ui.t.type.micro, "left", ui.t.alpha.muted);
   }
 
   function replayInfo(view: ReplayScreenView): void {

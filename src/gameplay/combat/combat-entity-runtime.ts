@@ -53,6 +53,7 @@ export interface CombatEntityRuntimeHooks {
   weaponProjectileHit?(projectile: LiveCombatEntity, enemy: LiveCombatEntity,
     hit: Readonly<{ damage: number; dx: number; dy: number; weaponId: string; attackId: number;
       throwId: number; remote: boolean; secondary: boolean }>): void;
+  projectileHit?(projectile: LiveCombatEntity, enemy: LiveCombatEntity): void;
   areaDamage(x: number, y: number, radius: number, damage: number, playerOwned: boolean): number;
 }
 
@@ -81,13 +82,22 @@ function isDead(entity: LiveCombatEntity): boolean { return entity.dead; }
 
 export class CombatEntityRuntime {
   readonly #hooks: CombatEntityRuntimeHooks;
-  readonly #ids = new WeakMap<object, string>();
+  #ids = new WeakMap<object, string>();
   readonly #claimedIds = new Set<string>();
   #nextEntityId = 1; #nextWallSequence = 1; #nextSlowZoneSequence = 1;
 
   constructor(hooks: CombatEntityRuntimeHooks) { this.#hooks = hooks; }
   get nextSlowZoneSequence(): number { return this.#nextSlowZoneSequence; }
   set nextSlowZoneSequence(value: number) { this.#nextSlowZoneSequence = value; }
+
+  /** Starts a new run with a fresh deterministic actor-identity namespace. */
+  resetIdentity(): void {
+    this.#ids = new WeakMap<object, string>();
+    this.#claimedIds.clear();
+    this.#nextEntityId = 1;
+    this.#nextWallSequence = 1;
+    this.#nextSlowZoneSequence = 1;
+  }
 
   captureIdentityState(): CombatEntityIdentityState {
     return Object.freeze({
@@ -310,6 +320,7 @@ export class CombatEntityRuntime {
     const first = enemy.firstPlayerDamageAt == null; enemy.hit(intent.damage, intent.dx, intent.dy);
     this.#hooks.noteFirstDamage(enemy, first);
     this.#hooks.reflectedHit(enemy, projectile, intent.sourceId ? objects.get(intent.sourceId) ?? null : null);
+    if (projectile) this.#hooks.projectileHit?.(projectile, enemy);
     if (intent.achievementTracking) this.#hooks.bossHit(enemy);
     if (intent.parryStun > 0 && !enemy.isBoss) enemy.stun = Math.max(enemy.stun ?? 0, intent.parryStun);
     if (isDead(enemy)) { this.#hooks.onKill(enemy, intent.perfect ? "skill" : ""); if (intent.perfect && intent.aegisParry) { const player = this.#hooks.player(); player.shield = Math.min(player.shield + 1, player.maxShield); } }

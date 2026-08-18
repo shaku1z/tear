@@ -1,66 +1,5 @@
-export type LegacyScreenId =
-  | "menu" | "setup" | "playing" | "paused" | "draft" | "reserve" | "tierup"
-  | "settings" | "continue" | "gameover" | "win" | "replay" | "confirmquit"
-  | "shop" | "codex" | "profile" | "achievements" | "leaderboards" | "rename"
-  | "pgmenu" | "pglab";
-
-export type ScreenAction =
-  | { readonly type: "navigate"; readonly to: LegacyScreenId; readonly resetScroll?: boolean; readonly tab?: string }
-  | { readonly type: "menu.resumeFinale" }
-  | { readonly type: "menu.claimFinale" }
-  | { readonly type: "setup.selectMode"; readonly id: string }
-  | { readonly type: "setup.selectDifficulty"; readonly id: string }
-  | { readonly type: "setup.selectWeapon"; readonly id: string }
-  | { readonly type: "setup.selectBoss"; readonly id: string }
-  | { readonly type: "setup.start" }
-  | { readonly type: "codex.selectTab"; readonly id: string }
-  | { readonly type: "codex.selectFilter"; readonly id: string }
-  | { readonly type: "codex.cycleSort" }
-  | { readonly type: "codex.inspect"; readonly id: string }
-  | { readonly type: "shop.buy"; readonly id: string }
-  | { readonly type: "profile.selectTab"; readonly id: string }
-  | { readonly type: "profile.watchReplay"; readonly id: string }
-  | { readonly type: "profile.signIn" }
-  | { readonly type: "profile.signOut" }
-  | { readonly type: "profile.rename" }
-  | { readonly type: "profile.openAchievements" }
-  | { readonly type: "profile.play" }
-  | { readonly type: "profile.pinReplay"; readonly id: string; readonly pinned: boolean }
-  | { readonly type: "profile.publishReplay"; readonly id: string }
-  | { readonly type: "profile.deleteReplay"; readonly id: string }
-  | { readonly type: "achievements.selectCategory"; readonly id: string }
-  | { readonly type: "achievements.inspect"; readonly id: string }
-  | { readonly type: "leaderboards.selectTab"; readonly id: string }
-  | { readonly type: "leaderboards.selectBoard"; readonly id: string }
-  | { readonly type: "leaderboards.watchReplay"; readonly id: string }
-  | { readonly type: "replay.togglePause" }
-  | { readonly type: "replay.seek"; readonly delta: number }
-  | { readonly type: "replay.seekTo"; readonly fraction: number }
-  | { readonly type: "replay.jumpChapter"; readonly direction: -1 | 1 }
-  | { readonly type: "replay.restart" }
-  | { readonly type: "replay.toggleInfo" }
-  | { readonly type: "replay.speed"; readonly value: number }
-  | { readonly type: "replay.exit" }
-  | { readonly type: "settings.selectTab"; readonly id: string }
-  | { readonly type: "settings.step"; readonly key: string; readonly delta: number }
-  | { readonly type: "settings.toggle"; readonly key: string }
-  | { readonly type: "settings.activate"; readonly key: string }
-  | { readonly type: "settings.reset" }
-  | { readonly type: "rename.submit" }
-  | { readonly type: "rename.cancel" }
-  | { readonly type: "draft.choose"; readonly index: number }
-  | { readonly type: "draft.reroll" }
-  | { readonly type: "reserve.choose"; readonly index: number }
-  | { readonly type: "tierup.choose"; readonly index: number }
-  | { readonly type: "run.resume" }
-  | { readonly type: "run.restart" }
-  | { readonly type: "run.quit" }
-  | { readonly type: "continue.revive" }
-  | { readonly type: "continue.giveUp" }
-  | { readonly type: "results.retry" }
-  | { readonly type: "results.watchReplay" }
-  | { readonly type: "results.descendAgain" }
-  | { readonly type: "playground.action"; readonly id: string };
+import type { LegacyScreenId, ScreenAction } from "../../domain/screen-actions";
+export type { LegacyScreenId, ScreenAction } from "../../domain/screen-actions";
 
 export interface ScreenControl {
   readonly x: number; readonly y: number; readonly w: number; readonly h: number;
@@ -158,7 +97,7 @@ export interface CardView extends ChoiceView {
   readonly boss?: boolean;
 }
 export interface StatView { readonly label: string; readonly value: string; readonly detail?: string; readonly glyph?: string; readonly accent?: string }
-export interface ReplayView { readonly id: string; readonly title: string; readonly detail: string; readonly available?: boolean; readonly badge?: string; readonly timestamp?: string; readonly thumbnailId?: string; readonly pinned?: boolean; readonly shared?: boolean; readonly local?: boolean; readonly rank?: number; readonly mine?: boolean; readonly wave?: string; readonly time?: string; readonly score?: string }
+export interface ReplayView { readonly id: string; readonly title: string; readonly detail: string; readonly available?: boolean; readonly repairable?: boolean; readonly theaterUnavailable?: boolean; readonly comparisonSelected?: boolean; readonly comparisonSourceCount?: number; readonly badge?: string; readonly timestamp?: string; readonly thumbnailId?: string; readonly pinned?: boolean; readonly shared?: boolean; readonly local?: boolean; readonly rank?: number; readonly mine?: boolean; readonly wave?: string; readonly time?: string; readonly score?: string }
 export interface ProgressView {
   readonly label: string; readonly current: number; readonly goal: number; readonly detail?: string; readonly done?: boolean;
   /** Section heading the row belongs to on the pause/defeat progress panel (source drawRunProgressPanel). */
@@ -230,12 +169,41 @@ export interface LeaderboardsScreenView {
   readonly ownRank?: string; readonly signInRequired?: boolean; readonly legacyGhostId?: string;
 }
 export interface ReplayChapterView { readonly fraction: number; readonly boss: boolean }
+export interface ReplayComparisonView {
+  readonly eventType: string; readonly occurrence: number; readonly index: number; readonly total: number;
+  readonly runs: readonly Readonly<{ sourceId: string; tick: number | null; semanticHash: string | null }>[];
+}
 export interface ReplayScreenView {
   readonly id: "replay"; readonly title: string; readonly detail: string; readonly paused: boolean;
   readonly speed: number; readonly elapsed: string; readonly duration: string; readonly progress: number;
   readonly stage?: string; readonly score?: string;
   readonly chapters?: readonly ReplayChapterView[]; readonly wave?: number; readonly infoVisible?: boolean;
   readonly infoRows?: readonly StatView[]; readonly loadout?: readonly CardView[];
+  /** Ghost 3's semantic Theater reuses the mature replay transport chrome. */
+  readonly theater?: boolean;
+  /** Only verified recorded checkpoints can begin an unranked practice child. */
+  readonly practiceAvailable?: boolean;
+  /** C29 comparison is semantic source-simulation evidence, not output-device fidelity. */
+  readonly comparison?: ReplayComparisonView;
+  readonly notice?: string;
+  /** C37 Coach is an explicit, local same-build comparison; missing domains stay unavailable. */
+  readonly coach?: Readonly<{
+    readonly targetId: string; readonly baselineId?: string; readonly buildId?: string; readonly provenanceHash?: string;
+    readonly candidates: readonly Readonly<{ id: string; enabled: boolean; detail: string }>[];
+    readonly findings: readonly Readonly<{ id: string; domain: string; detail: string; practiceAvailable: boolean }>[];
+    readonly unavailable: readonly string[];
+  }>;
+  /** C37 verified, immutable Run DNA projection; absent metrics remain explicitly unavailable. */
+  readonly runDna?: Readonly<{
+    readonly available: boolean; readonly formulaVersion: string; readonly evidenceCustody: string;
+    readonly sourceMetrics: Readonly<Record<string, number | undefined>>;
+    readonly dimensions?: Readonly<Record<string, number>>; readonly unavailable: readonly string[];
+  }>;
+  /** C37 local-only immutable Studio decision list; no media renderer is wired. */
+  readonly studioCutList?: Readonly<{
+    readonly available: boolean; readonly sourceGhostId?: string; readonly sourceRootHash?: string;
+    readonly fromTick?: number; readonly toTick?: number; readonly edlHash?: string; readonly unavailable?: string;
+  }>;
 }
 export interface SettingRowView {
   readonly key: string; readonly label: string; readonly value: string; readonly kind: "stepper" | "toggle" | "cycle";
@@ -261,6 +229,8 @@ export interface TierUpScreenView {
 }
 export interface PausedScreenView {
   readonly id: "paused"; readonly runSummary?: string; readonly abilities: readonly CardView[]; readonly progress: readonly ProgressView[];
+  /** Present only for a locally running Player Watch; never a Foundry operation. */
+  readonly playerWatch?: Readonly<{ readonly status: "running" | "paused"; readonly decisions: number }>;
 }
 export interface ConfirmQuitScreenView { readonly id: "confirmquit" }
 export interface ContinueScreenView { readonly id: "continue"; readonly seconds: number; readonly requesting: boolean }
@@ -280,12 +250,88 @@ export interface PlaygroundScreenView {
   readonly sections: readonly { readonly label: string; readonly choices: readonly ChoiceView[] }[];
   readonly canScrollUp?: boolean; readonly canScrollDown?: boolean;
 }
+export interface AcademyScreenView {
+  readonly id: "academy";
+  readonly status: "loading" | "ready" | "unavailable";
+  readonly subtitle: string;
+  readonly rows: readonly Readonly<{ readonly label: string; readonly value: string }>[];
+  readonly records: readonly (Readonly<{ readonly id: string; readonly state: string; readonly detail: string; readonly candidateHash?: string; readonly canWithdrawModelTraining?: boolean }>)[];
+  readonly manifests: readonly (Readonly<{ readonly id: string; readonly detail: string }>)[];
+  readonly lessons?: readonly (Readonly<{ readonly id: string; readonly state: string; readonly detail: string }>)[];
+  /** C33 exposes immutable plan progress and only session-gated decisions authorized by that plan; it cannot activate or promote a policy. */
+  readonly daggerPrograms?: readonly (Readonly<{ readonly id: string; readonly state: string; readonly detail: string; readonly programId?: string; readonly canAdvance?: boolean;
+    readonly correctionHash?: string; readonly canReview?: boolean }>)[];
+  /** C35 local, signed-in consent decision. It is never inferred from a recording or ordinary Academy custody. */
+  readonly humanCalibrationConsent?: Readonly<{ readonly state: "loading" | "unavailable" | "not-enrolled" | "enabled" | "revoked"; readonly detail: string;
+    readonly canOptIn: boolean; readonly canRevoke: boolean }>;
+}
+
+/** Read-only C36 local recovery projection. It deliberately contains no custody or model data. */
+export interface FoundryScreenView {
+  readonly id: "foundry";
+  readonly status: "loading" | "unavailable" | "ready";
+  readonly subtitle: string;
+  /** Local lifecycle scheduler state; it never implies a worker, cloud task, policy activation, or promotion. */
+  readonly automation: "unavailable" | "local";
+  /** Opaque launch-authority state only. No profile inputs, hashes, or custody cross into presentation. */
+  readonly launchProfiles: readonly Readonly<{ readonly profileId: string; readonly disposition: "eligible" | "blocked"; }>[];
+  readonly jobs: readonly Readonly<{ readonly jobHash: string; readonly phase: string; readonly nextManualPhase: string | null;
+    readonly resumable: boolean; readonly eventCount: number; readonly lastEventHash: string; readonly projectionHash: string; }>[];
+  /** Configured local scheduling intent only; it does not imply an installed worker or execution. */
+  readonly schedules: readonly Readonly<{ readonly scheduleHash: string; readonly jobHash: string; readonly state: "enabled" | "disabled";
+    readonly disposition: string; readonly dueAt: string | null; readonly intervalMs: number; readonly revision: number;
+    readonly runtimeStatus: "disabled" | "configured" | "due" | "running" | "blocked" | "error"; }>[];
+}
+
+/** Normal-build C37 hub. It projects only player-safe local routes and explicit gaps. */
+export interface GhostLabScreenView {
+  readonly id: "ghostlab";
+  readonly subtitle: string;
+  readonly routes: readonly Readonly<{
+    readonly id: "academy" | "foundry" | "vault" | "watch" | "botevidence";
+    readonly label: string;
+    readonly detail: string;
+  }>[];
+  readonly unavailable: readonly Readonly<{ readonly label: string; readonly detail: string }>[];
+  readonly watch: Readonly<{ readonly status: "checking" | "unavailable" | "ready" | "starting" | "running" | "paused" | "stopped"; readonly detail: string; readonly decisions: number }>;
+}
+
+/** A read-only projection of exactly one retained C35 canonical report. */
+export interface BotEvidenceScreenView {
+  readonly id: "botevidence";
+  readonly status: "unavailable" | "ready";
+  readonly subtitle: string;
+  readonly detail: string;
+  readonly report?: Readonly<{
+    readonly reportHash: string; readonly planHash: string; readonly artifactId: string;
+    readonly approvalHash: string; readonly promotionReceiptHash: string; readonly artifactHash: string;
+    readonly activationHash: string; readonly candidatePayloadHash: string;
+    readonly episodes: number; readonly completionRate: number; readonly meanTicks: number; readonly maxTicksPerCase: number;
+    readonly placement: "unassigned"; readonly humanCalibration: "not-compared"; readonly certification: "not-certified";
+  }>;
+}
+
+/** C38 review is a local authority-and-intent screen, never a transport status. */
+export interface GhostPublicationScreenView {
+  readonly id: "ghostpublication"; readonly status: "unavailable" | "ready" | "queued" | "uploading" | "terminal";
+  readonly detail: string; readonly capsuleId?: string; readonly rootIntegrity?: string;
+  readonly capability: string; readonly privacy: "pseudonymous"; readonly visibility: "private";
+  readonly training: "no-training"; readonly canGrant: boolean; readonly canRun?: boolean; readonly canCancel?: boolean;
+  readonly attempts?: number; readonly retryAt?: string; readonly terminal?: string;
+}
+
+/** C39 creates only an ephemeral, sanitized support description after player approval. */
+export interface GhostSupportScreenView {
+  readonly id: "ghostsupport"; readonly status: "unavailable" | "ready" | "created"; readonly detail: string;
+  readonly capsuleId?: string; readonly rootIntegrity?: string; readonly build?: string; readonly range?: string; readonly segments?: string;
+  readonly bundleHash?: string; readonly canCreate: boolean;
+}
 
 export type LegacyScreenView = MenuScreenView | SetupScreenView | PlayingScreenView | CodexScreenView
   | ShopScreenView | ProfileScreenView | AchievementsScreenView | LeaderboardsScreenView
   | ReplayScreenView | SettingsScreenView | RenameScreenView | DraftScreenView | ReserveScreenView
   | TierUpScreenView | PausedScreenView | ConfirmQuitScreenView | ContinueScreenView
-  | GameoverScreenView | WinScreenView | PlaygroundScreenView;
+  | GameoverScreenView | WinScreenView | PlaygroundScreenView | AcademyScreenView | FoundryScreenView | GhostLabScreenView | BotEvidenceScreenView | GhostPublicationScreenView | GhostSupportScreenView;
 
 export type ScreenViewById<Id extends LegacyScreenId, View = LegacyScreenView> =
   View extends Readonly<{ id: infer ViewId }> ? Id extends ViewId ? View : never : never;

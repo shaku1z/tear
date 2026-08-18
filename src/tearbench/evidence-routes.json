@@ -61,5 +61,59 @@
     "journeyCheckpoint": "menu-to-menu-smoke",
     "baseComparison": "main-base",
     "interactionMatrices": ["browser", "input", "platform", "viewport", "frame-rate", "network", "interruption", "performance", "long-run"]
+  },
+  {
+    "id": "source-void-replay",
+    "prefixes": ["src/gameplay/campaign/source-void-", "src/gameplay/runtime/gameplay-events.ts", "src/app/live-source-void-", "src/tearbench/gameplay-causal-events.ts", "src/tearbench/state-codecs.ts", "src/replay/legacy-compat.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-c40-source-void-ghost-seek.js", "tests/browser-c40-state-forge-source-void.js", "tests/unit/c40-source-void-evidence-registry.test.ts"],
+    "scenarios": ["source-void-low-hp-rescue-seek"],
+    "graveyardCases": [],
+    "journeyCheckpoint": "source-void-low-hp-rescue-seek-engineering-proof",
+    "baseComparison": "not-run-by-this-scenario",
+    "interactionMatrices": ["browser"]
+  },
+  {
+    "id": "chainblade-bind-yank-replay",
+    "prefixes": ["src/gameplay/combat/live-opening-phase.ts", "src/gameplay/combat/live-weapon-runtime.ts", "src/gameplay/combat/weapon-secondary-runtime.ts", "src/gameplay/entities/blade.ts", "src/gameplay/runtime/gameplay-events.ts", "src/app/live-combat-actions.ts", "src/app/live-game-runtime.ts", "src/tearbench/gameplay-causal-events.ts", "src/tearbench/state-forge-live-compiler.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-c40-chainblade-bind-yank-ghost-seek.js", "tests/unit/c40-chainblade-evidence-registry.test.ts"],
+    "scenarios": ["chainblade-bind-yank-catch-seek"],
+    "graveyardCases": [],
+    "journeyCheckpoint": "chainblade-bind-yank-catch-seek-engineering-proof",
+    "baseComparison": "not-run-by-this-scenario",
+    "interactionMatrices": ["browser"]
+  },
+  {
+    "id": "hammer-meteor-terrain-replay",
+    "prefixes": ["src/gameplay/combat/live-opening-phase.ts", "src/gameplay/combat/weapon-secondary-runtime.ts", "src/gameplay/entities/blade.ts", "src/gameplay/runtime/gameplay-events.ts", "src/app/live-combat-actions.ts", "src/app/live-game-runtime.ts", "src/tearbench/gameplay-causal-events.ts", "src/tearbench/state-forge-live-compiler.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-c40-hammer-meteor-ghost-seek.js", "tests/unit/c40-hammer-evidence-registry.test.ts"],
+    "scenarios": ["hammer-meteor-terrain-catch-seek"],
+    "graveyardCases": [],
+    "journeyCheckpoint": "hammer-meteor-terrain-catch-seek-engineering-proof",
+    "baseComparison": "not-run-by-this-scenario",
+    "interactionMatrices": ["browser"]
+  },
+  {
+    "id": "greatsword-wheelcut-replay",
+    "prefixes": ["src/gameplay/combat/live-opening-phase.ts", "src/gameplay/combat/weapon-secondary-runtime.ts", "src/gameplay/entities/blade.ts", "src/gameplay/runtime/gameplay-events.ts", "src/app/live-combat-actions.ts", "src/app/live-game-runtime.ts", "src/tearbench/gameplay-causal-events.ts", "src/tearbench/state-forge-live-compiler.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-c40-greatsword-wheelcut-ghost-seek.js", "tests/unit/c40-greatsword-evidence-registry.test.ts"],
+    "scenarios": ["greatsword-wheelcut-catch-seek"],
+    "graveyardCases": [],
+    "journeyCheckpoint": "greatsword-wheelcut-catch-seek-engineering-proof",
+    "baseComparison": "not-run-by-this-scenario",
+    "interactionMatrices": ["browser"]
+  },
+  {
+    "id": "sword-seam-crosscut-replay",
+    "prefixes": ["src/gameplay/combat/live-opening-phase.ts", "src/gameplay/combat/live-weapon-runtime.ts", "src/gameplay/combat/weapon-secondary-runtime.ts", "src/gameplay/entities/blade.ts", "src/gameplay/runtime/gameplay-events.ts", "src/app/live-combat-actions.ts", "src/app/live-game-runtime.ts", "src/tearbench/gameplay-causal-events.ts", "src/tearbench/state-forge-live-compiler.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-c40-sword-crosscut-ghost-seek.js", "tests/unit/c40-sword-evidence-registry.test.ts"],
+    "scenarios": ["sword-seam-crosscut-catch-seek"],
+    "graveyardCases": [],
+    "journeyCheckpoint": "sword-seam-crosscut-catch-seek-engineering-proof",
+    "baseComparison": "not-run-by-this-scenario",
+    "interactionMatrices": ["browser"]
+  },
+  {
+    "id": "riftlock-loose-cannon-replay",
+    "prefixes": ["src/gameplay/combat/live-opening-phase.ts", "src/gameplay/combat/weapon-secondary-runtime.ts", "src/gameplay/entities/blade.ts", "src/gameplay/runtime/gameplay-events.ts", "src/app/live-combat-actions.ts", "src/app/live-game-runtime.ts", "src/tearbench/gameplay-causal-events.ts", "src/tearbench/state-forge-live-compiler.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-c40-riftlock-loose-cannon-ghost-seek.js", "tests/unit/c40-riftlock-evidence-registry.test.ts"],
+    "scenarios": ["riftlock-loose-cannon-catch-seek"],
+    "graveyardCases": [],
+    "journeyCheckpoint": "riftlock-loose-cannon-catch-seek-engineering-proof",
+    "baseComparison": "not-run-by-this-scenario",
+    "interactionMatrices": ["browser"]
   }
 ]

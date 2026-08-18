@@ -6,6 +6,8 @@ import type { RunLifecycleController } from "../gameplay/run/lifecycle";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "./game-runtime-state";
 import type { LiveGameHostState } from "./live-game-host-state";
+import type { LiveWorldEntityConstructionPort } from "./live-world-entity-factory";
+import type { LiveWorldServices } from "./live-world-context";
 import type { LegacyAppScreen, LegacyTransitionContext } from "./legacy-state-controller";
 import type { LiveRunControllerRegistry } from "./live-run-controller-api";
 import type { createLiveCampaignHost } from "./live-campaign-host";
@@ -16,6 +18,8 @@ import { createLiveOutcomeComposition } from "./live-outcome-composition";
 import { createLiveRunStartHost } from "./live-run-start-host";
 import { createLiveVictoryProgressionExecutor } from "./live-victory-progression-host";
 import { createLiveWaveComposition } from "./live-wave-composition";
+import type { OutcomeChronologyEffect } from "../gameplay/run/outcome-chronology-journal";
+import type { LiveGhostPracticeSessionState } from "./live-ghost-practice-session-state";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 type Controllers = LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
@@ -25,6 +29,7 @@ type WeaponRuntime = ReturnType<typeof createLiveWeaponRuntime<GameEnemy>>;
 
 export interface LiveRunOrchestrationOptions {
   readonly dependencies: GameRuntimeDependencies;
+  readonly entities: LiveWorldEntityConstructionPort;
   readonly state: LiveGameHostState;
   readonly lifecycle: RunLifecycleController;
   readonly controllers: Controllers;
@@ -40,15 +45,17 @@ export interface LiveRunOrchestrationOptions {
   readonly player: () => GamePlayer;
   readonly blade: () => GameBlade;
   readonly enemies: () => GameEnemy[];
+  readonly actorId: (enemy: GameEnemy) => string;
   readonly setEnemies: (value: GameEnemy[]) => void;
   readonly setProjectiles: (value: GameProjectile[]) => void;
   readonly selectedBoss: () => string;
-  readonly restoreConfig: () => void;
+  readonly worldServices: Pick<LiveWorldServices, "configuration" | "random" | "clock" | "effects" | "mirror" | "bossFeedback">;
   readonly applySettings: () => void;
   readonly prepareWorld: () => void;
   readonly resetTransientWorld: () => void;
   readonly finishWorldReset: () => void;
   readonly resetAuthoritativeClocks: () => void;
+  readonly resetCombatIdentity: () => void;
   readonly createRunSeed?: () => number;
   readonly authoritativeResult: () => Readonly<{ tick: number; stateHash: string }> | null;
   readonly setScreen: (screen: LegacyAppScreen, context?: LegacyTransitionContext) => void;
@@ -69,9 +76,12 @@ export interface LiveRunOrchestrationOptions {
   readonly resetWinSeconds: () => void;
   readonly achievementTracking: () => boolean;
   readonly achievementCheck: () => void;
+  readonly practiceSession?: LiveGhostPracticeSessionState;
   readonly achievementTracker: Readonly<{ hordeCleared(seconds: number): void; stageDone(): void }>;
   readonly emitMusicOutcome: (outcome: "defeat" | "victory") => void;
   readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
+  /** Test-only synchronous terminal receipt sink. */
+  readonly observeOutcomeChronology?: (effect: OutcomeChronologyEffect) => void;
 }
 
 /** Installs the run transaction, content, wave, terminal, and victory controllers. */
@@ -83,8 +93,8 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
   const addZoom = (amount: number): void => { options.weapon.addZoom(amount); };
   const dealArea: LiveRunOrchestrationOptions["weapon"]["dealArea"] = (...args) => options.weapon.dealArea(...args);
   const content = createLiveContentComposition({
-    dependencies: d, state: options.state, stage, width: options.width, height: options.height,
-    run: options.run, player: options.player, enemies: options.enemies,
+    dependencies: d, entities: options.entities, state: options.state, worldServices: options.worldServices, stage, width: options.width, height: options.height,
+    run: options.run, player: options.player, enemies: options.enemies, actorId: options.actorId,
     wipeRemainingSeconds: options.wipeRemainingSeconds,
     setBossIntro: (enemy, duration, delay) => { options.state.setBossIntro({ boss: enemy, t: 0, dur: duration, delay }); },
     clearBossBeat: () => { options.state.setBossBeat(null); },
@@ -92,16 +102,16 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
   });
 
   createLiveRunStartHost({
-    dependencies: d, state: options.state, width: options.width, restoreConfig: options.restoreConfig,
+    dependencies: d, state: options.state, width: options.width, services: options.worldServices,
     prepareWorld: options.prepareWorld, applySettings: options.applySettings,
     configureBlade: (blade, weaponId) => {
-      const weapon = d.applyWeapon(weaponId); blade.weapon = weapon; blade.model = weapon.model;
-      weapon.onReset?.({ blade });
+      const weapon = d.applyWeapon(d.CONFIG, weaponId); blade.weapon = weapon; blade.model = weapon.model;
     },
-    createPlayer: (x, y) => new d.Player(x, y), createBlade: () => new d.Blade(),
+    createPlayer: (x, y) => options.entities.createPlayer(x, y), createBlade: () => options.entities.createBlade(),
     installRun: (session) => { options.state.setRun(session); },
     world: { resetTransient: options.resetTransientWorld, finishReset: options.finishWorldReset },
     resetAuthoritativeClocks: options.resetAuthoritativeClocks,
+    resetCombatIdentity: options.resetCombatIdentity,
     ...(options.createRunSeed === undefined ? {} : { createRunSeed: options.createRunSeed }),
     loadStage: options.controllers.api.loadStage, stage, story, lifecycle: options.lifecycle,
     install: (controller) => { options.controllers.installRunStart(controller); },
@@ -110,6 +120,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     trainingPlatforms: () => playgroundRuntime.homePlatforms(), playground: playgroundRuntime, tutorial,
     startNextWave: options.controllers.api.startNextWave,
     achievementTracking: options.achievementTracking, achievementCheck: options.achievementCheck,
+    ...(options.practiceSession === undefined ? {} : { clearPracticeSession: options.practiceSession.clear }),
     resetRewards: options.resetRewards, music: options.music,
     requestPointerLock: options.requestPointerLock, testMode: options.testMode, window,
   });
@@ -125,7 +136,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
 
   createLiveWaveComposition({
     dependencies: d, lifecycle: options.lifecycle, controllers: options.controllers,
-    stage, story, run: options.run, player: options.player, blade: options.blade, enemies: options.enemies, spawn: content.spawn,
+    stage, story, worldServices: options.worldServices, run: options.run, player: options.player, blade: options.blade, enemies: options.enemies, spawn: content.spawn,
     loreBusy: campaignRuntime.loreBusy, achievementTracking: options.achievementTracking,
     achievementCheck: options.achievementCheck, achievementTracker: options.achievementTracker,
     beginWipe: options.beginWipe, loadStage: options.controllers.api.loadStage,
@@ -150,11 +161,15 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     setScreen: (screen) => { options.setScreen(screen); }, saveBest: options.saveBest, getBest: options.getBest,
     awardCoins: options.awardCoins, economyTelemetry: options.economyTelemetry,
     achievementTracking: options.achievementTracking, achievementCheck: options.achievementCheck,
+    ...(options.practiceSession === undefined ? {} : { practiceSession: options.practiceSession }),
     finishRecording: options.controllers.api.finishRecording,
     executeVictory, emitMusicOutcome: options.emitMusicOutcome,
     startRun: options.startRun,
     startFinale: (witnessed) => { campaignRuntime.startAdventureFinale(witnessed); }, cinema,
     width: options.width, height: options.height,
+    ...(options.observeOutcomeChronology === undefined
+      ? {}
+      : { observeOutcomeChronology: options.observeOutcomeChronology }),
   });
   return Object.freeze({ ...content, lobExplode });
 }

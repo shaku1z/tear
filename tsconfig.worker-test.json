@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.worker.json",
+  "compilerOptions": {
+    "types": ["vitest/globals"]
+  },
+  "include": [
+    "workers/**/*.ts",
+    "workers/worker-configuration.d.ts",
+    "tests/unit/ghost-publication-worker-auth.test.ts"
+  ]
+}

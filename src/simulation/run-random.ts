@@ -80,5 +80,19 @@ class RunRandomService implements RandomSource {
   }
 }
 
-export const GAME_RANDOM_STREAMS = new RunRandomStreams();
-export const GAME_RANDOM = new RunRandomService(GAME_RANDOM_STREAMS);
+export type { RunRandomService };
+
+/** One world's named random streams plus its legacy single-stream view. */
+export interface RunRandom {
+  readonly streams: RunRandomStreams;
+  readonly service: RunRandomService;
+}
+
+/**
+ * Creates one world's random state. There is deliberately no module-level
+ * instance: a second world must not inherit the live world's stream cursors.
+ */
+export function createRunRandom(): RunRandom {
+  const streams = new RunRandomStreams();
+  return Object.freeze({ streams, service: new RunRandomService(streams) });
+}

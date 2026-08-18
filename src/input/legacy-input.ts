@@ -64,6 +64,7 @@ const Input: LegacyInput = {
   },
   startSemanticRecording() { this.semantic.startRecording(); },
   stopSemanticRecording() { this.semantic.stopRecording(); },
+  discardSemanticInput() { this.semantic.discardUnsealed(); this.syncSemanticMovement(); },
   drainSemanticActions(tick, aimTurn) {
     if (aimTurn != null) this.semantic.push({ type: "aim", turn: aimTurn });
     return this.semantic.drain(tick);

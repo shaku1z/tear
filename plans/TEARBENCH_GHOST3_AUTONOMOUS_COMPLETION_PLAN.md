@@ -1,12 +1,28 @@
 # TearBench, TearBot, State Forge, and Ghost 3.0 Autonomous Completion Plan
 
-**Status:** In progress; paused after C24 at the user's requested boundary
+**Status:** In progress during C27/C27A
 **Created:** 2026-07-23
 **Source authority:** `TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN(3).md`, version 0.6, SHA-256 `007BE22193F5369B8450AAB33B95C6D3080176E6B2F91A1D504B545CA7FC7DDE`
 **Supersedes for completion claims:** `plans/TEARBENCH_GHOST3_ACTION_PLAN.md`
 **Purpose:** Convert every remaining part of the original vision into executable work, with gates that require real integration and user-visible outcomes.
-**Current progress:** C21-C24 passed; C25 is in progress. Its implementation
-foundation is verified, but its Class C exit gate remains open.
+**Current progress:** C21-C24 and C26 passed. C25's implementation foundation is
+verified, but its Class C exit gate remains open. C27 implementation is active;
+C27A is a blocking runtime-architecture correction before replay-world,
+headless, or learning completion claims. Forty executable slices now
+include shared world construction, exact 13-scenario state/native-event parity
+(5,732 ticks / 33 native facts), portable combat/outcome/reward/finale paths, a
+natural wave/reward crossing, and a real Source victory from a certified
+reconstructed wave-49 frontier plus explicit one-hit State Forge child. Live
+and detached match the finale's seven exact intent batches and all 22
+post-return outward-adapter calls in exact order and arguments. Six concrete
+particle-admission receipts and eight logical feel receipts now also compare
+exactly. Software audio dispatch and an in-memory outcome chronology are now
+observable, and the captured terminal external-decision journal matches live to
+detached exactly. The real Source run still contains only logical-target mix
+changes and voice-cap cue rejections, not output. This remains deliberately
+narrower than randomized particle internals, pixels, durable profile/cloud/
+replay/analytics effects, audible audio, or device haptics. The work does not
+yet provide a portable full-world runtime or a naturally played 50-wave campaign.
 
 ### Execution record through C24
 
@@ -222,7 +238,7 @@ for CI, debugging, reproducibility, and expert automation.
 |---|---|---|
 | P7 — Truthful Baseline | C21-C22 | All prior claims are audited; contracts are wired to the real runtime. |
 | P8 — Real Autonomous QA | C23-C26 | State Forge, scripted autonomy, and regression intelligence operate on real Tear gameplay. |
-| P9 — Operational Ghost 3.0 | C27-C30 | Real runs record, persist, replay, seek, fork, compare, and survive restarts. |
+| P9 — Operational Ghost 3.0 | C27-C30, including C27A | Real runs record, persist, replay, seek, fork, compare, and survive restarts through the redesigned typed runtime boundary. |
 | P10 — Autonomous Learning | C31-C36 | Real data trains real policies; Foundry improves them automatically and visibly. |
 | P11 — Player and Cloud Product | C37-C39 | Coach, challenges, Studio, publication, verification, privacy, and operations are usable. |
 | P12 — Final Certification | C40 | The entire original vision has traceable evidence and an honest final release certificate. |
@@ -517,6 +533,119 @@ physical controls available to a person.
 - Record-to-replay, seek, fork, practice, export/import, and migration
   round-trip invariants pass on real capsules.
 - V1/V2 playback remains unchanged and is never relabeled as exact V3 truth.
+
+---
+
+## C27A — Runtime Architecture Alignment
+
+**Goal:** Ensure TearBench, Ghost 3.0, replay, headless execution, and learning
+use the redesigned typed Tear architecture rather than cementing transitional
+live-runtime internals into a second platform.
+
+**Authority**
+
+- `docs/TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md`
+- Architecture decision D14 in
+  `docs/TEARBENCH_GHOST3_ARCHITECTURE_DECISIONS.md`
+
+**Deliverables**
+
+- Define narrow inward-facing fixed-step, canonical-action,
+  structural-observation, state-codec, RNG, lifecycle, and typed-event ports.
+- Move concrete app-world projection behind adapters.
+- Add native gameplay event ownership and independent Ghost 2/Ghost 3 adapters.
+- Replace direct TearBench manipulation of AI/blade override fields with a
+  gameplay input adapter.
+- Extract one reusable deterministic simulation composition without DOM,
+  Canvas, screens, audio, persistence, or platform dependencies.
+- Separate portable TearBench core, browser adapters, simulation adapters, and
+  development UI through enforceable dependency rules.
+- Extend the architecture gate to reject forbidden imports and prove it catches
+  a planted violation.
+- Rerun architecture-dependent C22-C27 evidence after migration.
+
+**Current Slice 40 evidence boundary**
+
+- Native defeat publication is gameplay-owned and no longer depends on the
+  legacy Ghost 2 `_gid` recording path; the refreshed fixed-tick corpus has 33
+  native facts, including 14 in the natural trace and its three defeats.
+- The live browser reconstructs canonical nonterminal wave-49 progress, crosses
+  the real reward/wave transition, and executes authored Source death and
+  campaign victory after a narrowly validated State Forge boss finisher.
+- Live and detached hosts share the portable finale runtime and application-
+  frame advancement, and match all seven pre-adapter finale intent batches.
+- A portable immutable `FinaleOutwardCall` journal records only after each
+  concrete live/detached adapter returns. Both hosts match all 22 calls in exact
+  order and with exact arguments across world zoom, FX requests, feel/haptic
+  requests, sound cues, and mixer requests. Live collection is test-build-only
+  and exposed only through Class A. Detached combat clear now also matches live
+  by clearing `bossIntro` and `bossBeat`, with planted coverage.
+- Slice 37 adds immutable `ParticleEmissionReceipt` results to the concrete
+  ring/burst adapter boundary: admission, requested/emitted counts, separate
+  cull and budget rejection counts, and list delta. All six ring/burst calls in
+  the 1,176-transition real Source victory match exactly between live and
+  detached. These are renderer-independent admission results, not randomized
+  particle internals or pixel evidence. The detached pre-finale origin restores
+  captured feel/impact transient state; both zoom and all six flash/shake logical
+  receipts match exactly, including zoom before/after state and flash/shake
+  maximum aggregation. This proves logical feel state rather than pixels,
+  audible PCM/audio graph/device output, or physical vibration.
+- The complete `pnpm check:c27a` gate passes through Slice 40: foundation 36
+  files / 128 tests, 13 browser scenarios / 5,732 ticks / 33 native facts, 40
+  detached comparator tests, campaign victory 10 files / 36 tests, a
+  1,176-transition real browser route, and one detached finale-parity test;
+  Slice 37 adds 1 file / 5 tests, Slice 38 adds 7 files / 18 tests, and Slice 39
+  adds 4 files / 10 tests. Its C22 live-runtime proof and C23 through C27 package
+  gates pass in the same worktree. Slice 39 commit `30c4877` is pushed to
+  `origin/codex/ghost3-autonomous-completion-plan`; Slice 40 is ready to commit
+  and not yet pushed.
+- Slice 38 captures 12 `executing` and 12 matching `completed` audio-dispatch
+  receipts in the refreshed 1,176-transition browser route after explicit audio
+  context activation. All seven finale mix requests are `logical-target-only`
+  under the active primary TearScore backend. Environment-route cues run under a
+  running context but are all `voice-cap-rejected`: silence 1 attempted / 0
+  accepted, each of three cuts 3 / 0, and restore 4 / 0. This is no successful
+  graph schedule, no PCM/audibility/speaker/device claim, and no production
+  output claim. The typed in-memory outcome chronology records ordering on the
+  live test bridge and detached host, but cannot yet compare them exactly while
+  external adapter inputs and return values are unmodeled.
+- Slice 39 captures that terminal external-decision transcript exactly: 42
+  monotonic browser-artifact entries (13 initial synchronization terminal
+  decision/request, 22 finale-outward, and 7 cache/terminal). Detached consumes
+  captured synchronous score-newness, award/wallet, consistent achievement
+  policy, telemetry, victory intents, best, pending-finale request, and
+  presentation inputs, then matches the full journal exactly. This is not
+  durable profile/local-storage, cloud/replay/analytics, pixel, audio-device, or
+  platform-device evidence.
+- Slice 40 extracts portable
+  `src/gameplay/runtime/tear-world-simulation-factories.ts` with no app,
+  presentation, or browser imports; architecture checks fence violations. The
+  app renderer adapter supplies real Canvas ports and detached composition
+  explicit no-op ports. This is not a pixel, headless, full-world, or
+  configuration-isolation claim. Next: generic world bootstrap, then
+  configuration isolation, which still blocks truly simultaneous full worlds.
+- This preserves real victory-outcome execution plus intent, adapter-dispatch,
+  renderer-independent particle-admission, logical-feel, and terminal
+  external-decision transcript parity. It is not proof of randomized particle
+  state, rendered pixels, durable profile/local-storage survival, cloud/replay/
+  analytics completion, PCM output/audibility, successful audio graph/device
+  output, or physical vibration.
+
+**Exit gate**
+
+- Portable TearBench core has no dependency on `src/app`, DOM/Canvas UI, or
+  Ghost 2 legacy compatibility types.
+- Live, replay, and headless environments execute the same simulation
+  implementation and agree on action/event order, RNG, snapshots, and semantic
+  hashes for the parity corpus.
+- Ghost 2 remains compatible through its own outward adapter; Ghost 3 records
+  native typed event truth through a separate adapter.
+- The automated architecture check rejects planted forbidden dependency edges.
+- A same-worktree rerun of affected C22-C27 gates passes.
+
+C27A does not renumber or remove any original checkpoint. It is a blocking
+correction discovered during implementation. C29, C30, and C31-C36 may be
+developed provisionally but cannot pass until C27A passes.
 
 ---
 

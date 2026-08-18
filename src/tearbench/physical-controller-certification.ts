@@ -15,8 +15,19 @@ export type ControllerOriginDisposition = "manual-attestation-required" | "rejec
 export type ControllerSessionReviewDisposition = "manual-review-required" | "accepted" | "rejected";
 export type ControllerConnectionEventKind = "connected" | "disconnected" | "reconnected" | "remap-applied";
 
+export interface BrowserGamepadView {
+  readonly index: number;
+  readonly id: string;
+  readonly mapping: string;
+  readonly connected: boolean;
+  readonly timestamp: number;
+  readonly buttons: readonly unknown[];
+  readonly axes: readonly number[];
+}
+
+/** Browser adapter capability, expressed structurally so portable evidence has no DOM type dependency. */
 export interface BrowserGamepadPort {
-  getGamepads(): readonly (Gamepad | null)[];
+  getGamepads(): readonly (BrowserGamepadView | null)[];
 }
 
 /** A copy of the browser-visible subset used to identify an observed pad. */

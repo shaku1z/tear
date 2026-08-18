@@ -4,6 +4,9 @@
   "main": "workers/ghost-publication.ts",
   "compatibility_date": "2026-07-23",
   "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "FIREBASE_PROJECT_ID": "tear-682cf"
+  },
   "observability": {
     "enabled": true,
     "logs": { "head_sampling_rate": 1 },

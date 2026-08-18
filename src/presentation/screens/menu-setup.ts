@@ -38,9 +38,15 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
       x: railX, y: 426 + index * 61, w: railWidth, h: 52, glyph, label, ghost: true,
       action: { type: "navigate", to, resetScroll: to !== "settings" },
     }); });
+    context.enqueue({ x: railX, y: 426 + rail.length * 61, w: railWidth, h: 52, glyph: "◇", label: "ACADEMY", ghost: true,
+      action: { type: "navigate", to: "academy", resetScroll: true } });
+    context.enqueue({ x: railX + railWidth + 18, y: 426 + rail.length * 61, w: 220, h: 52, glyph: "F", label: "FOUNDRY STATUS", ghost: true,
+      action: { type: "navigate", to: "foundry", resetScroll: true } });
+    context.enqueue({ x: railX + railWidth + 250, y: 426 + rail.length * 61, w: 220, h: 52, glyph: "◇", label: "GHOST LAB", ghost: true,
+      sub: "LOCAL ROUTES", action: { type: "navigate", to: "ghostlab", resetScroll: true } });
     if (view.nowPlaying) {
       context.enqueue({
-        x: railX, y: 426 + rail.length * 61 + 10, w: railWidth, h: 46, glyph: "♪", ghost: true,
+        x: railX, y: 426 + (rail.length + 1) * 61 + 10, w: railWidth, h: 46, glyph: "♪", ghost: true,
         label: view.nowPlaying.label, sub: view.nowPlaying.detail,
         action: { type: "navigate", to: "settings", tab: "signal" },
       });

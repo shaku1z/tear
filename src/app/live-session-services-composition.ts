@@ -5,7 +5,7 @@ import type { GameBlade, GamePlayer, GameRun } from "./game-runtime-state";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { LegacyAppScreen } from "./legacy-state-controller";
 import { initializeLivePlatformBootstrap } from "./live-platform-bootstrap";
-import { createLiveRewardRuntime } from "./live-reward-runtime";
+import { createRewardRuntime } from "../gameplay/run/reward-runtime";
 import { LiveRunControllerRegistry } from "./live-run-controller-api";
 import { SettingsController } from "./settings-controller";
 
@@ -32,7 +32,7 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
   const d = options.dependencies;
   const settingsController = new SettingsController({
     config: d.CONFIG, accessibility: d.A11Y, graphics: d.GFX, input: d.Input, gamepad: d.PAD,
-    audio: d.SFX, store: d.CG.store, navigator, matchMedia: (query) => window.matchMedia(query),
+    audio: d.SFX, store: d.CG.store, navigator: d.browserNavigator, matchMedia: (query) => d.browserWindow.matchMedia(query),
   });
   const controllers = new LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>();
   initializeLivePlatformBootstrap(d, settingsController, {
@@ -42,22 +42,28 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
   const economy = createLiveEconomyRuntime({
     run: options.run, remoteCoinMultiplier: () => d.REMOTE.coinMult, meta: d.META,
     shop: d.SHOP, shopId: (item) => item.id, achievementTracking: options.achievementTracking,
-    addProfileStat: (stat, amount) => { d.PROFILE.addStat(stat, amount); },
+    addProfileStat: d.profileStatsPersistence.add,
   });
-  const reward = createLiveRewardRuntime({
+  const reward = createRewardRuntime({
     run: options.run,
     roll: (request) => d.rollUpgrades(request.count, options.run().mods, {
       random: d.GAME_RANDOM_STREAMS.stream("draft"), forceSpecial: request.forceSpecial, excludeIds: request.excludeIds,
     }),
     transitionPorts: {
-      applyUpgrade: (choice) => { d.applyUpgrade(choice, {
+      applyUpgrade: (choice) => { d.applyUpgrade(choice, { config: d.CONFIG,
         player: options.player(), blade: options.blade(), mods: options.run().mods,
       }); },
-      tierUp: (choice) => { d.tierUp(choice.id, {
+      tierUp: (choice) => { d.tierUp(choice.id, { config: d.CONFIG,
         player: options.player(), blade: options.blade(), mods: options.run().mods,
       }); },
-      ghostLoadout: (choiceId, tier, wave) => { d.GHOST.loadoutPick(choiceId, tier, wave); },
-      ghostEvent: (event) => { d.GHOST.event(event, options.player().x, options.player().y); },
+      ghostLoadout: (choiceId, tier, wave) => {
+        d.GAMEPLAY_EVENTS.emit({ kind: "loadout", choiceId, tier, wave });
+      },
+      ghostEvent: (event) => {
+        d.GAMEPLAY_EVENTS.emit({
+          kind: "effect", effect: event, x: options.player().x, y: options.player().y,
+        });
+      },
       consumeInput: () => { d.Input.consumeDelta(); }, resetUi: options.resetUi,
       setScreen: options.setScreen, startNextWave: controllers.api.startNextWave,
       requestPointer: options.requestPointerLock,

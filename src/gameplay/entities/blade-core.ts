@@ -1,12 +1,13 @@
 import type {
   BladeDependencies, BladeEnemyPort, BladePlatformPort, BladePlayerPort, BladePoint, BladeThreadcutWaypoint,
-  BladeWeaponEvent, BladeWeaponPort, BladeChannels,
+  BladeWeaponEvent, BladeWeaponPort, BladeChannels, GameConfig,
 } from "./blade-contracts";
 
 export function createBladeCore(dependencies: BladeDependencies) {
   const { CONFIG, Input, clamp, len, lerp, lerpAngle } = dependencies;
 
 abstract class BladeCore {
+  readonly config: GameConfig;
   x: number; y: number; vx: number; vy: number; angle: number;
   tipX: number; tipY: number; prevTipX: number; prevTipY: number;
   tipSpeed: number; tipVX: number; tipVY: number; glowV: number; tetherFactor: number;
@@ -40,6 +41,7 @@ abstract class BladeCore {
   slingWorldCooldown: number;
 
   constructor() {
+    this.config = CONFIG;
     this.x = CONFIG.view.w * 0.5;
     this.y = CONFIG.view.h * 0.5;
     this.vx = 0;

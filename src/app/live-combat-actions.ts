@@ -1,3 +1,4 @@
+import { updateMirrorCombat } from "../gameplay/combat/mirror-combat-feedback";
 import { overrunMovementMultiplier } from "../gameplay/combat/overrun";
 import { applyCombatFeedback, type CombatFeedbackEvent } from "../gameplay/combat/combat-feedback-runtime";
 import type { CombatEntityRuntimeHooks } from "../gameplay/combat/combat-entity-runtime";
@@ -6,6 +7,7 @@ import type { LiveCollisionPhaseHost } from "../gameplay/combat/live-collision-p
 import type { LiveKillHost } from "../gameplay/combat/live-kill-runtime";
 import type { LiveCombatActionAdapters, LiveCombatActionContext, CombatEnemy, CombatProjectile } from "./live-combat-action-context";
 import type { LiveCollisionPhaseState } from "../gameplay/combat/live-collision-phase";
+import type { ParryProjectile } from "../gameplay/combat/blade-parry-runtime";
 
 /** Builds the detailed legacy effect/event adapters outside the application composition root. */
 export function createLiveCombatActions<
@@ -15,6 +17,7 @@ export function createLiveCombatActions<
 >(context: LiveCombatActionContext<Enemy, Projectile, Floater>): LiveCombatActionAdapters {
   const { dependencies: d, live, ports } = context;
   const f = ports.functions;
+  const profileStats = d.profileStatsPersistence;
   const player = () => live.player(), blade = () => live.blade(), run = () => live.run();
   const enemies = () => live.enemies(), projectiles = () => live.projectiles();
   const entities: CombatEntityRuntimeHooks = {
@@ -24,7 +27,7 @@ export function createLiveCombatActions<
     ring: (...args) => { d.FX.ring(...args); }, burst: (...args) => { d.FX.burst(...args); }, explode: (...args) => { d.FX.explode(...args); },
     fxFlash: (...args) => { d.FX.flash(...args); }, floater: f.addFloater, shake: f.addShake, flash: f.addFlash,
     sound: (cue) => { f.playSound(cue); }, loseStyle: f.loseStyle, shieldAbsorbed: f.onShieldAbsorb, addStyle: f.addStyle,
-    dashDodge: ports.achievement.dashDodge, maxStat: (stat, value) => { d.PROFILE.maxStat(stat, value); },
+    dashDodge: ports.achievement.dashDodge, maxStat: profileStats.max,
     checkAchievements: f.checkAchievements,
     noteFirstDamage: f.entityNoteFirstDamage,
     reflectedHit: (enemy, shot, source) => {
@@ -70,6 +73,7 @@ export function createLiveCombatActions<
     areaDamage: (x, y, radius, damage, playerOwned) => f.areaDamage(x, y, radius, damage, playerOwned),
   };
   const opening: Omit<LiveOpeningPhaseHost, "state"> = {
+    config: d.CONFIG,
     get player() { return player(); }, get blade() { return blade(); }, get run() { return run(); },
     get enemies() { return enemies(); }, get projectiles() { return projectiles(); },
     get platforms() { return ports.stage.platforms; }, width: context.width,
@@ -121,16 +125,26 @@ export function createLiveCombatActions<
     },
     fireDashContact(enemy) { f.fireMod(f.modHook("onDashContact"), f.makeEvent(enemy.x, enemy.y, enemy, "dash",
       { type: "dashContact", dx: player().dashX, dy: player().dashY })); },
-    fireWeaponCatch() { f.fireMod(f.modHook("onWeaponCatch"), f.makeEvent(player().x, player().y, null, "catch",
-      { type: "weaponCatch", throwId: blade().throwId, weaponId: run().weaponId })); },
-    fireThrowLaunch(throwId) { f.fireMod(f.modHook("onThrowLaunch"), f.makeEvent(blade().x, blade().y, null, "throw",
-      { type: "throwLaunch", throwId, weaponId: run().weaponId, attackId: blade().attackId })); },
+    fireWeaponCatch() {
+      const activeBlade = blade(), activeRun = run();
+      d.GAMEPLAY_EVENTS.emit({ kind: "weapon", event: "catch", weaponId: activeRun.weaponId,
+        throwId: activeBlade.throwId, x: player().x, y: player().y });
+      f.fireMod(f.modHook("onWeaponCatch"), f.makeEvent(player().x, player().y, null, "catch",
+        { type: "weaponCatch", throwId: activeBlade.throwId, weaponId: activeRun.weaponId }));
+    },
+    fireThrowLaunch(throwId) {
+      const activeBlade = blade(), activeRun = run();
+      d.GAMEPLAY_EVENTS.emit({ kind: "weapon", event: "throw-launch", weaponId: activeRun.weaponId,
+        throwId, x: activeBlade.x, y: activeBlade.y });
+      f.fireMod(f.modHook("onThrowLaunch"), f.makeEvent(activeBlade.x, activeBlade.y, null, "throw",
+        { type: "throwLaunch", throwId, weaponId: activeRun.weaponId, attackId: activeBlade.attackId }));
+    },
     logThrowLaunch: (throwId) => { f.logWeaponEvent("throwLaunch", { throwId }); },
     weaponWorldImpact: f.weaponWorldImpact, lobExplode: () => { f.lobExplode(blade().x, blade().y); },
     emitThrowResolve: () => { f.emitThrowResolve(null, blade().throwDmg); }, nearestEnemy: () => f.openingNearestEnemy(),
     updateFeedback: (seconds) => { updateRuntimeFeedback(context, seconds); }, consumeThrow: f.consumeThrow, updateWave: f.updateWave,
     startTransformation: f.startTransformation, updateSupports: (seconds) => { updateSupports(context, seconds); },
-    armorBypass() { if (f.achievementsEnabled()) d.PROFILE.maxStat("armorBypassKills", 1); },
+    armorBypass() { if (f.achievementsEnabled()) profileStats.max("armorBypassKills", 1); },
     resolveBossZones: () => { resolveBossZones(context); }, updateBossArenaPlatforms: f.updateBossArenaPlatforms, updateVoidScroll: f.updateVoidScroll,
     unlockWitness() { if (f.achievementsEnabled()) d.ACH.unlock("witness"); },
     startVoidDescent: f.startVoidDescent,
@@ -152,7 +166,7 @@ export function createLiveCombatActions<
     dramaticBeat() { f.addShake(d.CONFIG.juice.shakeBig); f.addFlash(d.CONFIG.juice.flashParry); },
     onBladeStolen(enemy) {
       f.logWeaponEvent("stolenBlade", { enemyKind: enemy.kind });
-      d.GHOST.event("stolenBlade", enemy.x, enemy.y);
+      d.GAMEPLAY_EVENTS.emit({ kind: "effect", effect: "stolenBlade", x: enemy.x, y: enemy.y });
     },
     updateEffects: (seconds) => { d.FX.update(seconds); }, random: d.cosmeticRandom,
   };
@@ -161,10 +175,28 @@ export function createLiveCombatActions<
 
 function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPhaseHost, "state" | "combat"> {
   const { dependencies: d, live, ports } = context, f = ports.functions;
+  const profileStats = d.profileStatsPersistence;
+  const seenProjectiles = new WeakSet(), terminalProjectiles = new WeakSet();
+  const emitProjectile = (event: "spawned" | "deflected" | "owner-changed" | "hit" | "expired", shot: ParryProjectile,
+    target?: LiveCollisionPhaseState["enemies"][number]): void => {
+    if (event === "expired") {
+      if (terminalProjectiles.has(shot)) return;
+      terminalProjectiles.add(shot);
+    }
+    const runtime = context.combatRuntime();
+    const source = shot.sourceEnemy ?? shot.owner;
+    d.GAMEPLAY_EVENTS.emit({ kind: "projectile", event, projectileId: runtime.id(shot, "projectile"),
+      x: shot.x, y: shot.y, vx: shot.vx, vy: shot.vy, owner: shot.deflected ? "player" : "enemy",
+      ...(source && typeof source === "object" ? { sourceEnemyId: runtime.id(source, "enemy") } : {}),
+      ...(target ? { targetEnemyId: runtime.id(target, "enemy") } : {}),
+      ...(shot.deflected ? { perfect: !!Reflect.get(shot, "perfect") } : {}),
+    });
+  };
   return {
+    config: d.CONFIG,
     get player() { return live.player(); }, get blade() { return live.blade(); }, get run() { return live.run(); }, width: context.width,
-    weaponHit: (enemy, quality, damage, slam, launch, empowered) => f.weaponHook("onHeldHit", { blade: live.blade(), player: live.player(), enemy, quality, damage, isSlam: slam, isLaunch: launch, empowered }),
-    throwHit: (enemy, secondary, throwId) => f.weaponHook("onThrowHit", { blade: live.blade(), player: live.player(), enemy, secondary, throwId }),
+    weaponHit: (enemy, quality, damage, slam, launch, empowered) => f.weaponHook("onHeldHit", { config: d.CONFIG, blade: live.blade(), player: live.player(), enemy, quality, damage, isSlam: slam, isLaunch: launch, empowered }),
+    throwHit: (enemy, secondary, throwId) => f.weaponHook("onThrowHit", { config: d.CONFIG, blade: live.blade(), player: live.player(), enemy, secondary, throwId }),
     runDamageMultiplier: f.runDamageMultiplier, noteFirstDamage: f.noteFirstDamage, logWeapon: f.logWeapon,
     emitThrowResolve: f.emitThrowResolve, onKill: context.resolveKill,
     addFloater: f.addFloater, addShake: f.addShake, addZoom: f.addZoom, addFlash: f.addFlash, addStyle: f.addStyle,
@@ -185,21 +217,30 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
       type: "swingHit", damageDealt: damage, quality, mechanic, weaponId: live.run().weaponId,
       swingId: live.blade().swingId, attackId: live.blade().attackId, throwId: live.blade().throwId,
     })); },
+    observeProjectile: (shot) => {
+      if (seenProjectiles.has(shot)) return;
+      seenProjectiles.add(shot); emitProjectile("spawned", shot);
+    },
+    projectileDeflected: (shot) => { emitProjectile("deflected", shot); emitProjectile("owner-changed", shot); },
+    projectileHit: (shot, enemy) => { emitProjectile("hit", shot, enemy); },
+    projectileExpired: (shot) => { emitProjectile("expired", shot); },
     makeSlamEvent: (enemy) => { f.fireMod(f.modHook("onSlam"), f.makeEvent(enemy.x, enemy.y, enemy)); },
     makeReturnEvent: (enemy, damage) => { f.fireMod(f.modHook("onReturnHit"), f.makeEvent(enemy.x, enemy.y, enemy, "secondary", {
       type: "returnHit", throwId: live.blade().throwId, weaponId: live.run().weaponId,
       attackId: live.blade().attackId, damageDealt: damage,
     })); },
     makePerfectParryEvent: (shot) => { const event = f.makeEvent(shot.x, shot.y, null, "parry", { type: "perfectParry", sourceEnemy: shot.sourceEnemy ?? shot.owner, projectile: shot, applySever: f.applySever }); f.fireMod(f.modHook("onParry"), event); f.fireMod(f.modHook("onPerfectParry"), event); },
-    profileAdd: (name, value) => { d.PROFILE.addStat(name, value); }, profileMax: (name, value) => { d.PROFILE.maxStat(name, value); },
+    profileAdd: profileStats.add, profileMax: profileStats.max,
     dailyBump: (name, value) => { d.DAILY.bump(name, value); }, achievementsEnabled: f.achievementsEnabled,
     achievement(name, enemy) { if (name === "swing") { if (enemy) ports.achievement.bossHit(enemy, "melee"); else ports.achievement.swung(); }
       else if (name === "throw") { ports.achievement.thrown(); if (enemy) ports.achievement.bossHit(enemy, "throw"); }
       else if (name === "parry") ports.achievement.parry(); else if (name === "break") ports.achievement.breakStreak();
       else if (name === "jump") ports.achievement.jumped(); else ports.achievement.revived(); },
     checkAchievements: f.checkAchievements, tutorialMark: (name) => { ports.tutorial.mark(name); },
-    ghostRecording: () => d.GHOST.recording(), ghostDeath: f.ghostDeath, ghostSample: f.ghostSample,
-    ghostRevive: () => { d.GHOST.event("revive", live.player().x, live.player().y); }, updateTrick: f.updateTrick,
+    enemyDefeated: f.enemyDefeated, ghostRecording: () => d.GHOST.recording(), ghostSample: f.ghostSample,
+    ghostRevive: () => {
+      d.GAMEPLAY_EVENTS.emit({ kind: "effect", effect: "revive", x: live.player().x, y: live.player().y });
+    }, updateTrick: f.updateTrick,
     achievementTick: (seconds) => { ports.achievement.tick(seconds); }, updateTutorial: (seconds) => { ports.tutorial.update(seconds); },
     updatePlayground: f.updatePlayground, overlap: d.aabbOverlap, onShieldAbsorb: f.onShieldAbsorb,
     loseStyle: f.loseStyle, buzz: (milliseconds) => { d.Input.buzz(milliseconds); }, requestAdContinue: context.requestContinue,
@@ -209,16 +250,21 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
 
 function createKill(context: LiveCombatActionContext): LiveKillHost {
   const { dependencies: d, live, ports } = context, f = ports.functions;
+  const profileStats = d.profileStatsPersistence;
   return {
+    config: d.CONFIG,
     enemies: () => live.enemies(), projectiles: () => live.projectiles(), run: () => live.run(), player: () => live.player(), now: () => d.CLOCK.sim,
     stageIndex: () => ports.stage.index, finalStageIndex: d.STAGES.length - 1,
     stageAccent: () => ports.stage.current.accent ?? "#ffffff", stageChapterBossOutro: () => ports.stage.current.chapter?.bossOutro ?? null,
     hasStageChapter: () => !!ports.stage.current.chapter, bossRosterSize: context.bossRosterSize, achievementsEnabled: f.achievementsEnabled,
-    addKillScore: f.addKillScore, addStat: (name: string, value: number) => { d.PROFILE.addStat(name, value); },
-    maxStat: (name: string, value: number) => { d.PROFILE.maxStat(name, value); }, bumpDaily: (name: string, value: number) => { d.DAILY.bump(name, value); },
+    addKillScore: f.addKillScore, addStat: profileStats.add,
+    maxStat: profileStats.max, bumpDaily: (name: string, value: number) => { d.DAILY.bump(name, value); },
     bossKillAchievement: (enemy) => { ports.achievement.bossKill(enemy); },
     killAchievement: (enemy) => { ports.achievement.onKill(enemy); }, checkAchievements: f.checkAchievements,
-    bossGhostMoment: (enemy) => { d.GHOST.event("bossKill", enemy.x, enemy.y); d.GHOST.snapshot(context.canvas, 4); },
+    bossGhostMoment: (enemy) => {
+      d.GAMEPLAY_EVENTS.emit({ kind: "effect", effect: "bossKill", x: enemy.x, y: enemy.y });
+      d.GHOST.snapshot(context.canvas, 4);
+    },
     deathEffect: (enemy, shards) => { d.FX.death(enemy.x, enemy.y, shards, enemy.color); }, deathSound: () => { f.playSound("death"); },
     makeDeathEvent: (enemy, cause, clean) => f.makeEvent(enemy.x, enemy.y, enemy, cause,
       { cleanElimination: clean, addOverrunStack: f.addOverrunStack }),
@@ -240,9 +286,9 @@ function resolveColor(d: LiveCombatActionContext["dependencies"], color?: string
 function updateRuntimeFeedback(context: LiveCombatActionContext, seconds: number): void {
   const { dependencies: d, live, ports } = context, f = ports.functions, target = live.player();
   if (d.Mirror.active) {
-    d.Mirror.updateCombat(seconds, target, live.blade());
-    if (d.Mirror.host?.dead) {
-      d.Mirror.active = false;
+    // The combat read itself is shared simulation; the floater and the queued
+    // effect flush below are this host's presentation.
+    if (updateMirrorCombat(d.Mirror, seconds, target, live.blade())) {
       f.addFloater(target.x, target.y - 70, "REFLECTION SHATTERED", true, d.Mirror.color);
     }
     applyFeedback(context, d.Mirror.fxq.splice(0), { x: target.x, y: target.y - 70, color: d.Mirror.color }, true);

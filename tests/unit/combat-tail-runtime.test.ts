@@ -5,11 +5,39 @@ const player = (): TailPlayer => ({ x: 0, y: 0, vy: -200, hp: 10, maxHp: 100, if
   tookHit: true, shopRevives: 0, abilityRevives: 0, oneHit: false });
 const run = (): TailRun => ({ mode: "campaign", runTime: 0, waveTime: 0, _prevGround: true });
 function cleanupHooks(): CombatCleanupHooks {
-  return { ghostRecording: () => false, ghostDeath: vi.fn(), ghostSample: vi.fn(), updateTrick: vi.fn(),
+  return { enemyDefeated: vi.fn(), ghostRecording: () => false, ghostSample: vi.fn(), updateTrick: vi.fn(),
     breakStreak: vi.fn(), jumped: vi.fn(), achievementTick: vi.fn(), maxStat: vi.fn(), checkAchievements: vi.fn(),
     achievementsEnabled: () => true };
 }
 describe("combat tick tail", () => {
+  it("publishes a native defeat once without Ghost 2 recording or a legacy visual id", () => {
+    const dead = { dead: true, y: 0, bleedStacks: 0, burnT: 0 };
+    const hooks = cleanupHooks();
+    const enemyDefeated = vi.fn(); const ghostSample = vi.fn();
+    hooks.enemyDefeated = enemyDefeated; hooks.ghostSample = ghostSample;
+    const input = { dt: 0.25, enemies: [dead], projectiles: [], floaters: [], shake: 0,
+      shakeDecay: 4, player: player(), run: run(), hooks };
+
+    finalizeCombatTick(input);
+    finalizeCombatTick(input);
+
+    expect(enemyDefeated).toHaveBeenCalledTimes(1);
+    expect(enemyDefeated).toHaveBeenCalledWith(dead);
+    expect(ghostSample).not.toHaveBeenCalled();
+  });
+  it("samples living enemies only while Ghost 2 recording is active", () => {
+    const alive = { dead: false, y: 0, bleedStacks: 0, burnT: 0 };
+    const hooks = cleanupHooks();
+    const enemyDefeated = vi.fn(); const ghostSample = vi.fn();
+    hooks.enemyDefeated = enemyDefeated; hooks.ghostSample = ghostSample;
+    hooks.ghostRecording = () => true;
+
+    finalizeCombatTick({ dt: 0.25, enemies: [alive], projectiles: [], floaters: [], shake: 0,
+      shakeDecay: 4, player: player(), run: run(), hooks });
+
+    expect(ghostSample).toHaveBeenCalledWith(0.25, [alive]);
+    expect(enemyDefeated).not.toHaveBeenCalled();
+  });
   it("filters before updating survivors and records hit/air achievement state", () => {
     const alive = { dead: false, y: 0, bleedStacks: 3, burnT: 1 }; const dead = { dead: true, y: 0, bleedStacks: 9, burnT: 1 };
     const update = vi.fn(); const p = player(); const r = run(); const hooks = cleanupHooks();

@@ -1,0 +1,54 @@
+{
+  "format": "tearbench-production-headless-terminal",
+  "schemaVersion": 1,
+  "bootstrap": {
+    "build": {
+      "version": "0.1.0",
+      "revision": "working-tree",
+      "target": "production-headless",
+      "rulesetVersion": "live",
+      "contentHash": "3d711c1f79f15517",
+      "configHash": "bf272a683496cb61"
+    },
+    "rng": {
+      "legacy": { "algorithm": "mulberry32", "seed": 596074587, "state": 596074587, "cursor": 0 },
+      "combat": { "algorithm": "mulberry32", "seed": 3976961368, "state": 3976961368, "cursor": 0 },
+      "enemy-ai": { "algorithm": "mulberry32", "seed": 4284298997, "state": 4284298997, "cursor": 0 },
+      "spawn": { "algorithm": "mulberry32", "seed": 1069258935, "state": 1069258935, "cursor": 0 },
+      "draft": { "algorithm": "mulberry32", "seed": 2532995547, "state": 2532995547, "cursor": 0 },
+      "boss": { "algorithm": "mulberry32", "seed": 1819168057, "state": 1819168057, "cursor": 0 },
+      "world": { "algorithm": "mulberry32", "seed": 1439366908, "state": 1439366908, "cursor": 0 },
+      "cosmetic": { "algorithm": "mulberry32", "seed": 1171569879, "state": 1171569879, "cursor": 0 }
+    }
+  },
+  "scenario": {
+    "format": "tear-contract",
+    "kind": "scenario",
+    "schemaVersion": 1,
+    "id": "movement-jump",
+    "version": 1,
+    "description": "C30 browser-rerunnable natural terminal",
+    "stateClass": "recorded-canonical",
+    "executionClass": "training",
+    "seed": "c30-browser-rerun",
+    "start": {
+      "mode": "endless",
+      "difficulty": "normal",
+      "weapon": "sword"
+    },
+    "maxTicks": 120,
+    "assertions": ["runtime.finite-state"],
+    "tags": ["c30", "headless", "production-composition"]
+  },
+  "actions": [
+    { "kind": "command", "id": 1, "tick": 1, "command": { "type": "move", "x": 1000, "y": 0 } },
+    { "kind": "command", "id": 2, "tick": 20, "command": { "type": "jump", "phase": "pressed" } },
+    { "kind": "command", "id": 3, "tick": 40, "command": { "type": "dash", "x": 1000, "y": 0 } }
+  ],
+  "terminal": {
+    "tick": 120,
+    "semanticHash": "daf87e2508cf1308",
+    "terminated": false,
+    "truncated": true
+  }
+}

@@ -35,8 +35,7 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
       if (!item || !d.META.buy(item)) return;
       d.SFX.ui();
       state.setShop({ displayedCoins: state.shop().displayedCoins, flash: { id: item.id, time: state.time() } });
-      d.PROFILE.addStat("shopBuys", 1);
-      d.PROFILE.maxStat("shopMaxed", d.SHOP.filter((entry) => d.META.level(entry.id) >= entry.maxLevel).length);
+      d.shopPurchaseProgressPersistence.recordPurchase();
       services.checkAchievements();
     },
   });

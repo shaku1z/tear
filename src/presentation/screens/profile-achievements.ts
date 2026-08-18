@@ -13,11 +13,13 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
     tabs(context, view.tabs, (id) => ({ type: "profile.selectTab", id }), 252);
     const panelX = context.width / 2 - 460;
     if (view.message) ui.text(canvas, view.message, context.width / 2, 296, ui.t.type.caption, "center", ui.t.alpha.muted);
-    if (view.tab === "replays" && view.replays) {
+    if ((view.tab === "replays" || view.tab === "vault") && view.replays) {
       const top = 322, bottom = context.height - 110, rowHeight = 96, listX = context.width / 2 - 560, listWidth = 1120;
       if (view.replays.length === 0 && view.emptyMessage) {
         ui.text(canvas, view.emptyMessage, context.width / 2, top + 140, ui.t.type.body, "center", ui.t.alpha.muted);
-        context.enqueue({ x: context.width / 2 - 130, y: top + 168, w: 260, h: 46, label: "PLAY A RUN", action: { type: "profile.play" } });
+        if (view.tab === "replays") {
+          context.enqueue({ x: context.width / 2 - 130, y: top + 168, w: 260, h: 46, label: "PLAY A RUN", action: { type: "profile.play" } });
+        }
       }
       canvas.save(); canvas.beginPath(); canvas.rect(0, top - 8, context.width, bottom - top + 16); canvas.clip();
       view.replays.forEach((replay, index) => {
@@ -25,7 +27,27 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
         if (y + rowHeight < top - 8 || y > bottom + 8) return;
         replayRow(context, replay, listX, y, listWidth, replay.pinned ? "#e0a326" : undefined);
         const actionsX = listX + listWidth - 392;
-        context.enqueue({ x: actionsX, y: y + 20, w: 110, h: 40, label: "▶  WATCH", enabled: replay.available, action: { type: "profile.watchReplay", id: replay.id } });
+        if (view.tab === "vault" && replay.repairable) {
+          context.enqueue({ x: actionsX, y: y + 20, w: 110, h: 40, label: "REPAIR", action: { type: "profile.repairGhostCapsule", id: replay.id } });
+        } else {
+          context.enqueue({ x: actionsX, y: y + 20, w: 110, h: 40,
+            label: view.tab === "vault" ? "◆ THEATER" : "▶  WATCH", enabled: replay.available,
+            ...(view.tab === "vault" && replay.theaterUnavailable ? { label: "THEATER UNAVAILABLE" } : {}),
+            action: view.tab === "vault" ? { type: "profile.watchGhostCapsule", id: replay.id } : { type: "profile.watchReplay", id: replay.id } });
+        }
+        if (view.tab === "vault" && !replay.repairable) {
+          context.enqueue({ x: actionsX + 118, y: y + 20, w: 126, h: 40,
+            label: replay.comparisonSelected ? "SELECTED" : "SELECT", enabled: replay.available,
+            selected: replay.comparisonSelected, action: { type: "profile.compareGhostCapsule", id: replay.id } });
+          if ((replay.comparisonSourceCount ?? 0) >= 2) {
+            context.enqueue({ x: actionsX + 252, y: y + 20, w: 120, h: 40,
+              label: `COMPARE ${String(replay.comparisonSourceCount)}`, action: { type: "profile.openGhostComparison" } });
+          }
+          context.enqueue({ x: actionsX + 252, y: y + 62, w: 120, h: 28, label: "PUBLISH", enabled: replay.available,
+            action: { type: "profile.openGhostPublication", id: replay.id } });
+          context.enqueue({ x: actionsX + 124, y: y + 62, w: 120, h: 28, label: "SUPPORT", enabled: replay.available,
+            action: { type: "profile.openGhostSupport", id: replay.id } });
+        }
         if (replay.local) {
           context.enqueue({ x: actionsX + 118, y: y + 20, w: 78, h: 40, label: replay.pinned ? "★" : "PIN", selected: replay.pinned,
             action: { type: "profile.pinReplay", id: replay.id, pinned: !replay.pinned } });

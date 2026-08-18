@@ -12,6 +12,11 @@ import type { LivePresentationHost } from "./live-presentation-host";
 import { AchievementToastController } from "./achievement-toast-controller";
 import { TouchOnboardingController } from "./touch-onboarding-controller";
 
+export { createLiveAcademyScreen } from "./live-academy-screen";
+export { createLiveFoundryScreen } from "./live-foundry-screen";
+export { createLiveGhostLabHome } from "./live-ghost-lab-home";
+export { LiveBotEvidenceController } from "./live-bot-evidence-controller";
+
 type SurfaceOptions = Parameters<typeof createLivePresentationSurface>[0];
 type SurfaceWorld = Omit<SurfaceOptions["world"], "screen">;
 type ScreenOptions = Omit<LiveScreenPresentationOptions, "library" | "settings"> & Readonly<{

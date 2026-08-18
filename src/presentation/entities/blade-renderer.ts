@@ -1,4 +1,3 @@
-import type { CONFIG as GAME_CONFIG } from "../../config/game-config";
 import type {
   BladePlayerPort,
   BladePresentationPort,
@@ -6,11 +5,16 @@ import type {
 } from "../../gameplay/entities/blade";
 import { isCanvasSurface } from "./canvas-surface";
 
-type GameConfig = typeof GAME_CONFIG;
+export interface BladeRendererPolicy {
+  readonly colors: Readonly<{ bladeGlow: string; bladeTrail: string; perfect: string }>;
+  readonly juice: Readonly<{ trailAlpha: number }>;
+  readonly chainSegments?: number;
+  readonly chamberCount?: number;
+}
 
 export interface BladeRendererDependencies {
   readonly clock: { readonly sim: number };
-  readonly config: GameConfig;
+  readonly policy: BladeRendererPolicy;
   readonly graphics: { readonly low: boolean };
   readonly theme: { readonly dark: boolean; readonly ink: string; readonly rim: string };
   readonly clamp: (value: number, min: number, max: number) => number;
@@ -19,8 +23,12 @@ export interface BladeRendererDependencies {
 }
 
 export function createBladeRenderer({
-  config, graphics, theme, clamp, len, lerp,
+  policy, graphics, theme, clamp, len, lerp,
 }: BladeRendererDependencies): BladePresentationPort {
+  const colors = policy.colors;
+  const trailAlpha = policy.juice.trailAlpha;
+  const chainSegments = policy.chainSegments ?? 14;
+  const chamberCount = policy.chamberCount ?? 4;
   function drawBody(context: CanvasRenderingContext2D, blade: BladeRenderSnapshot): void {
     const scale = blade.state === "held" ? 1 : blade.throwSizeMult;
     if (!graphics.low) { context.shadowColor = theme.rim; context.shadowBlur = 6; }
@@ -76,11 +84,14 @@ export function createBladeRenderer({
 
     if (blade.model === "chainblade") {
       const hand = blade.lastHand() ?? { x: blade.x, y: blade.y };
-      const chainColor = blade.tension > 0.7 ? config.colors.perfect : theme.ink;
-      const segments = config.weapons.chainblade.linkSegments;
-      const simulated = blade.chainPoints.length === segments + 1 ? blade.chainPoints : null;
+      const chainColor = blade.tension > 0.7 ? colors.perfect : theme.ink;
+      const segments = chainSegments;
+      // Detached renderer fixtures from before the chain-point contract may not
+      // carry the optional simulation detail; production snapshots do.
+      const chainPoints = (Reflect.get(blade, "chainPoints") as readonly { x: number; y: number }[] | undefined) ?? [];
+      const simulated = chainPoints.length === segments + 1 ? chainPoints : null;
       const sagAmount = (1 - blade.tension) * Math.min(42, len(blade.tipX - hand.x, blade.tipY - hand.y) * 0.16);
-      const points: { x: number; y: number }[] = simulated ? blade.chainPoints.slice() : [];
+      const points: { x: number; y: number }[] = simulated ? chainPoints.slice() : [];
       if (!simulated) for (let index = 0; index <= segments; index++) {
         const amount = index / segments;
         points.push({
@@ -137,9 +148,9 @@ export function createBladeRenderer({
       context.beginPath(); context.ellipse(28 * scale, 8 * scale, 10 * scale, 7 * scale, 0, 0, Math.PI * 2); context.stroke();
       context.beginPath(); context.moveTo(27 * scale, 3 * scale); context.lineTo(24 * scale, 10 * scale); context.stroke();
 
-      const chambers = clamp(Math.floor(blade.riftChambers), 0, 4);
-      for (let index = 0; index < 4; index++) {
-        context.fillStyle = index < chambers ? config.colors.bladeGlow : (theme.dark ? "#1b2130" : "#747983");
+      const chambers = clamp(Math.floor(blade.riftChambers), 0, chamberCount);
+      for (let index = 0; index < chamberCount; index++) {
+        context.fillStyle = index < chambers ? colors.bladeGlow : (theme.dark ? "#1b2130" : "#747983");
         context.fillRect(length * (0.13 + index * 0.085), -8 * scale, 4 * scale, 6 * scale);
       }
       context.fillStyle = theme.ink;
@@ -164,7 +175,7 @@ export function createBladeRenderer({
     const trail = blade.trail;
     const glow = theme.dark;
     if (glow) { context.save(); context.globalCompositeOperation = "lighter"; }
-    context.fillStyle = blade.trailColor ?? config.colors.bladeTrail;
+    context.fillStyle = blade.trailColor ?? colors.bladeTrail;
     const restored = ["#13c4d6", "#e0a326", "#b06cff", "#2f9e6b", "#eafcff"];
     for (let index = 1; index < trail.length; index++) {
       const previous = trail[index - 1];
@@ -172,7 +183,7 @@ export function createBladeRenderer({
       if (!previous || !current) continue;
       const segment = len(current.tx - previous.tx, current.ty - previous.ty);
       const speedAlpha = clamp((segment - 1) / 22, 0, 1);
-      const alpha = (index / trail.length) * (config.juice.trailAlpha + 0.3) * speedAlpha;
+      const alpha = (index / trail.length) * (trailAlpha + 0.3) * speedAlpha;
       if (alpha <= 0.002) continue;
       if (blade.restoredTrail) context.fillStyle = restored[index % restored.length] ?? restored[0] ?? "#13c4d6";
       context.globalAlpha = alpha;
@@ -188,7 +199,7 @@ export function createBladeRenderer({
     const glow = theme.dark;
     if (glow) { context.save(); context.globalCompositeOperation = "lighter"; }
     context.globalAlpha = 0.2 + blade.glowV * 0.5;
-    context.fillStyle = blade.glowColor ?? config.colors.bladeGlow;
+    context.fillStyle = blade.glowColor ?? colors.bladeGlow;
     context.beginPath(); context.arc(blade.tipX, blade.tipY, 4 + blade.glowV * 13, 0, Math.PI * 2); context.fill();
     context.globalAlpha = 1;
     if (glow) context.restore();
@@ -196,7 +207,7 @@ export function createBladeRenderer({
 
   function drawReversalMarks(context: CanvasRenderingContext2D, blade: BladeRenderSnapshot): void {
     if (blade.model !== "sword") return;
-    context.strokeStyle = config.colors.perfect;
+    context.strokeStyle = colors.perfect;
     context.lineWidth = 2;
     for (const mark of blade.reversals) {
       const requiredX = -mark.directionX, requiredY = -mark.directionY;

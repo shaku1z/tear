@@ -85,8 +85,9 @@ export interface CampaignChapterTiming {
 export class CampaignChapterController {
   flow: CampaignChapterFlow | null = null;
   prologueShown = false;
+  readonly timing: CampaignChapterTiming;
 
-  constructor(private readonly timing: CampaignChapterTiming) {}
+  constructor(timing: CampaignChapterTiming) { this.timing = Object.freeze({ ...timing }); }
 
   begin(stageIndex: number, stage: CampaignStage, priorOutro: ChapterPage | null, brief: boolean): Readonly<{ flow: CampaignChapterFlow; sequence: CampaignChapterSequence; intents: readonly ChapterIntent[] }> {
     const pages: ChapterPage[] = [];

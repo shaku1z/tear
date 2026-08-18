@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { GhostLiveRecorder, GhostLocalVault, GhostStreamingRecorder, createMemoryGhostVaultBackend } from "../../src/ghost";
+import {
+  GhostLiveRecorder,
+  GhostLocalVault,
+  GhostStreamingRecorder,
+  createMemoryGhostVaultBackend,
+  type GhostVaultBackend,
+} from "../../src/ghost";
 
 describe("Ghost V3 live recorder sidecar", () => {
   it("buffers live observations until durable storage opens, then finalizes an independent capsule", async () => {
@@ -13,6 +19,7 @@ describe("Ghost V3 live recorder sidecar", () => {
       maxPendingWrites: 1,
     });
     recorder.start({ sessionId: "live-sidecar", createdAt: "2026-07-28T00:00:00.000Z", provenance: { seed: "7" } });
+    expect(recorder.activeSessionId).toBe("live-sidecar");
     recorder.record("commands", 3, { command: { type: "dash" } });
     release?.();
     const manifest = await recorder.finish({ outcome: "defeat", finalTick: 3 });
@@ -25,6 +32,7 @@ describe("Ghost V3 live recorder sidecar", () => {
       { kind: "commands", tick: 3, value: { command: { type: "dash" } } },
     ]);
     expect(recorder.active).toBe(false);
+    expect(() => recorder.activeSessionId).toThrow(/no active session/u);
     expect(recorder.failure).toBeNull();
   });
 
@@ -75,5 +83,102 @@ describe("Ghost V3 live recorder sidecar", () => {
       now: () => "2026-07-28T00:00:00.000Z", recordingProfile: "forensic-qa",
     });
     expect(recorder.keyframeIntervalTicks).toBe(60);
+    expect(recorder.maxStagingEntries).toBeGreaterThan(0);
+  });
+
+  it("bounds asynchronous startup staging and converts exhaustion into an explicit incomplete recording", async () => {
+    const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
+    let release: (() => void) | undefined;
+    const recorder = new GhostLiveRecorder({
+      createVault: async () => new Promise<GhostLocalVault>((resolve) => { release = () => { resolve(vault); }; }),
+      now: () => "2026-07-30T00:00:01.000Z", chunkEntries: 1, maxPendingWrites: 1, maxStagingEntries: 2,
+    });
+    recorder.start({ sessionId: "bounded-staging", createdAt: "2026-07-30T00:00:00.000Z", provenance: {} });
+    recorder.record("commands", 1, { command: { type: "jump", phase: "pressed" } });
+    recorder.record("rng", 2, { state: "would-overflow" });
+    expect(recorder.failure).toContain("staging capacity exceeded");
+    release?.();
+
+    await expect(recorder.finish({ outcome: "interrupted" })).resolves.toBeNull();
+    expect(recorder.failure).toContain("staging capacity exceeded");
+    expect(await vault.getManifest("bounded-staging")).toMatchObject({ status: "recording" });
+    expect(await vault.recoverIncompleteSessions()).toMatchObject([
+      { id: "bounded-staging", status: "recovered" },
+    ]);
+  });
+
+  it("contains asynchronous worker failure, preserves the incomplete journal, and never returns a false completion", async () => {
+    const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
+    const recorder = new GhostLiveRecorder({
+      createVault: () => Promise.resolve(vault),
+      now: () => "2026-07-30T00:00:01.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+      worker: { encode: () => Promise.reject(new Error("encoder unavailable")) },
+    });
+    recorder.start({ sessionId: "failed-sidecar", createdAt: "2026-07-30T00:00:00.000Z", provenance: {} });
+    recorder.record("commands", 1, { command: { type: "jump", phase: "pressed" } });
+
+    await expect(recorder.finish({ outcome: "interrupted" })).resolves.toBeNull();
+    expect(recorder.active).toBe(false);
+    expect(recorder.failure).toContain("encoder unavailable");
+    expect(await vault.getManifest("failed-sidecar")).toMatchObject({ status: "recording" });
+    expect(await vault.recoverIncompleteSessions()).toMatchObject([
+      { id: "failed-sidecar", status: "recovered" },
+    ]);
+  });
+
+  it("contains storage quota failure and leaves the capsule explicitly recoverable instead of complete", async () => {
+    const memory = createMemoryGhostVaultBackend();
+    const quotaBackend: GhostVaultBackend = {
+      ...memory,
+      commit: async (operations) => {
+        if (operations.some((operation) => operation.store === "chunks")) throw new Error("storage quota exceeded");
+        await memory.commit(operations);
+      },
+      commitWhileJournalMatches: async (sessionId, leaseId, operations) => {
+        if (operations.some((operation) => operation.store === "chunks")) throw new Error("storage quota exceeded");
+        await memory.commitWhileJournalMatches(sessionId, leaseId, operations);
+      },
+    };
+    const vault = new GhostLocalVault(quotaBackend);
+    const recorder = new GhostLiveRecorder({
+      createVault: () => Promise.resolve(vault),
+      now: () => "2026-07-30T00:00:01.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+    });
+    recorder.start({ sessionId: "quota-sidecar", createdAt: "2026-07-30T00:00:00.000Z", provenance: {} });
+    recorder.record("commands", 1, { command: { type: "dash" } });
+
+    await expect(recorder.finish({ outcome: "interrupted" })).resolves.toBeNull();
+    expect(recorder.failure).toContain("storage quota exceeded");
+    expect(await vault.getManifest("quota-sidecar")).toMatchObject({ status: "recording" });
+  });
+
+  it("retains a browser quota error name when the platform supplies no message", async () => {
+    const memory = createMemoryGhostVaultBackend();
+    const quotaBackend: GhostVaultBackend = {
+      ...memory,
+      commit: async (operations) => {
+        if (operations.some((operation) => operation.store === "chunks")) throw new DOMException("", "QuotaExceededError");
+        await memory.commit(operations);
+      },
+      commitWhileJournalMatches: async (sessionId, leaseId, operations) => {
+        if (operations.some((operation) => operation.store === "chunks")) throw new DOMException("", "QuotaExceededError");
+        await memory.commitWhileJournalMatches(sessionId, leaseId, operations);
+      },
+    };
+    const recorder = new GhostLiveRecorder({
+      createVault: () => Promise.resolve(new GhostLocalVault(quotaBackend)),
+      now: () => "2026-07-30T00:00:01.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+    });
+    recorder.start({ sessionId: "named-quota-sidecar", createdAt: "2026-07-30T00:00:00.000Z", provenance: {} });
+    recorder.record("commands", 1, { command: { type: "dash" } });
+
+    await expect(recorder.finish({ outcome: "interrupted" })).resolves.toBeNull();
+    expect(recorder.failure).toContain("QuotaExceededError");
   });
 });

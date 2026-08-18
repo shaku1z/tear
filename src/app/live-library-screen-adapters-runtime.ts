@@ -13,6 +13,8 @@ import { buildLeaderboardRow, buildProfileRecords, buildProfileReplays, buildPro
   type LeaderboardRowSource } from "../presentation/profile-snapshots";
 import { ReplayLibraryController } from "./replay-library-controller";
 import { renderReplayThumbnail } from "../presentation/replay-thumbnail";
+import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
+import type { GhostTheaterOpenResult } from "../ghost/theater-open-result";
 
 type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "AFFIXES" | "Aldric" | "Armored" | "Bomber" | "Charger" |
   "Chimera" | "Cloud" | "Colossus" | "CONFIG" | "DAILY" | "Echo" | "FirebaseProvider" | "Flyer" |
@@ -35,7 +37,10 @@ export interface LibraryScreenServices {
   readonly ease: (value: number) => number;
   readonly formatTime: (seconds: number) => string;
   readonly getBest: (mode: string, difficulty: string) => Readonly<{ wave: number; score: number; time?: number }>;
+  readonly ghostVault: GhostVaultLibraryPort;
   readonly enterReplay: (record: unknown, from: string) => boolean;
+  readonly enterGhostTheater: (id: string) => Promise<GhostTheaterOpenResult>;
+  readonly enterGhostComparison: (ids: readonly string[]) => Promise<boolean>;
 }
 
 export interface LibraryScreenAdapters {
@@ -60,7 +65,11 @@ export interface LibraryScreenAdapters {
   readonly selectLeaderboardTab: (id: string) => void;
   readonly selectLeaderboardBoard: (id: string) => void;
   readonly watchReplay: (id: string, from?: "profile" | "leaderboards") => void;
+  readonly watchGhostCapsule: (id: string) => void;
+  readonly compareGhostCapsule: (id: string) => void;
+  readonly openGhostComparison: () => void;
   readonly publishReplay: (id: string) => void;
+  readonly repairGhostCapsule: (id: string) => void;
 }
 
 export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenServices): LibraryScreenAdapters {
@@ -71,7 +80,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     resilience: { name: "RESILIENCE", color: colors.deflected }, utility: { name: "UTILITY", color: colors.armored },
   });
   const fallbackCategory = categories.utility ?? { name: "UTILITY", color: colors.armored };
-  const profileTabs = [["bests", "BESTS"], ["replays", "REPLAYS"], ["stats", "STATS"]] as const;
+  const profileTabs = [["bests", "BESTS"], ["replays", "REPLAYS"], ["vault", "VAULT"], ["stats", "STATS"]] as const;
   const leaderboardTabs = [["global", "GLOBAL"], ["feed", "FEED"]] as const;
   const difficultyHeat: Readonly<Record<string, string | null>> = {
     easy: "#2f9e6b", normal: "#13c4d6", hard: "#e0a326", extreme: null, onehit: "#b06cff",
@@ -79,7 +88,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
   const replayThumbs: Record<string, HTMLImageElement> = {};
   let codexTab = "abilities", codexFilter = "all", codexSort = "category", bestiaryFilter = "all";
   const codexTierView: Record<string, number> = {};
-  let profileTab = "bests", profileMessage = "", achievementFilter = "all";
+  let profileTab = "bests", profileMessage = "", comparisonSources: string[] = [], achievementFilter = "all";
   let leaderboardTab = "global", leaderboardMode = "", leaderboardDifficulty = "normal", leaderboardKey = "";
   let leaderboardData: readonly LeaderboardRowSource[] | null = null, leaderboardLoading = false, leaderboardMessage = "";
   let feedData: readonly LeaderboardRowSource[] | null = null, feedLoading = false;
@@ -171,6 +180,34 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
   };
   const renderProfile = (): void => {
     profileTab = services.stepTab(profileTabs, profileTab, () => { services.setScroll(0); profileMessage = ""; });
+    let ghostVault = services.ghostVault.snapshot();
+    if (profileTab === "vault" && ghostVault.status === "idle") {
+      services.ghostVault.refresh();
+      ghostVault = services.ghostVault.snapshot();
+    }
+    const healthyCapsuleIds = new Set(ghostVault.capsules.filter((capsule) => capsule.healthy && capsule.status === "complete")
+      .map((capsule) => capsule.id));
+    comparisonSources = comparisonSources.filter((id) => healthyCapsuleIds.has(id));
+    const vaultReplays = ghostVault.capsules.map((capsule) => Object.freeze({
+      id: capsule.id,
+      title: `Ghost V3 - ${capsule.recordingProfile.toUpperCase()}`,
+      detail: `${capsule.status.toUpperCase()} - ${String(capsule.chunkCount)} CHUNKS - ${capsule.healthy ? "HEALTHY" : "NEEDS REPAIR"}${capsule.repairChildId === undefined ? "" : " - REPAIRED COPY AVAILABLE"}${capsule.libraries.length === 0 ? "" : ` - ${capsule.libraries.join(" / ").toUpperCase()}`}`,
+      badge: "DURABLE CAPSULE",
+      available: capsule.healthy && capsule.status === "complete" && capsule.theaterEligible,
+      theaterUnavailable: !capsule.theaterEligible,
+      repairable: capsule.repairable,
+      timestamp: new Date(capsule.createdAt).toLocaleDateString(),
+      comparisonSelected: comparisonSources.includes(capsule.id),
+      comparisonSourceCount: comparisonSources.length,
+    }));
+    if (profileTab === "vault" && ghostVault.message !== undefined) profileMessage = ghostVault.message;
+    else if (profileTab === "vault" && ghostVault.status === "loading") profileMessage = "opening Ghost Vault...";
+    else if (profileTab === "vault" && ghostVault.evictedCapsuleIds.length > 0) {
+      profileMessage = `${String(ghostVault.evictedCapsuleIds.length)} older Ghost capsule(s) were removed by Vault retention.`;
+    }
+    else if (profileTab === "vault" && ghostVault.status === "ready" && ghostVault.capsules.length === 0) {
+      profileMessage = "No Ghost capsules stored on this device yet.";
+    }
     const signedIn = d.Cloud.loggedIn(), canSignIn = d.Cloud.canSignIn();
     const records = buildProfileRecords(d.CONFIG.modes, d.CONFIG.difficulties, services.getBest);
     const stats = profileTab === "stats" ? buildProfileStats((key) => d.PROFILE.stat(key),
@@ -185,7 +222,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       records, replays: profileTab === "replays" ? buildProfileReplays(d.VAULT.index().map((entry) => ({
         id: entry.id, ts: entry.ts, pin: entry.pin, sum: entry.sum,
         ...(typeof entry.shareId === "string" ? { shareId: entry.shareId } : {}),
-      })), d.CONFIG.modes) : [], stats,
+      })), d.CONFIG.modes) : (profileTab === "vault" ? vaultReplays : []), stats,
       message: profileMessage, height: services.height, scroll: services.scroll(), achievements: d.ACH.list,
       unlocked: (id) => d.PROFILE.unlocked(id), categoryIcon: (category) => Object.entries(d.ACH.CATS).find(([id]) => id === category)?.[1].icon ?? "★",
       rarityColor: (rarity) => (Object.entries(d.ACH.RARITY).find(([id]) => id === rarity)?.[1] ?? d.ACH.RARITY.common).color, stages: d.STAGES, bosses: BOSS_ROSTER,
@@ -270,7 +307,51 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     selectLeaderboardTab: (id) => { leaderboardTab = id; services.setScroll(0); leaderboardMessage = ""; },
     selectLeaderboardBoard: (id) => { const [kind, value = ""] = id.split(":"); if (kind === "mode") leaderboardMode = value;
       else if (kind === "difficulty") leaderboardDifficulty = value; services.setScroll(0); leaderboardMessage = ""; },
-    watchReplay: (id, from) => { replayLibrary.watch(id, from); }, publishReplay: (id) => { replayLibrary.publish(id); },
+    watchReplay: (id, from) => { replayLibrary.watch(id, from); },
+    watchGhostCapsule: (id) => {
+      profileMessage = "opening Ghost Theater...";
+      void services.enterGhostTheater(id).then((result) => {
+        if (result.kind === "refused") {
+          services.ghostVault.setTheaterEligibility(id, result);
+          profileMessage = `THEATER UNAVAILABLE · ${result.detail}`;
+        }
+      });
+    },
+    compareGhostCapsule: (id) => {
+      const capsule = services.ghostVault.snapshot().capsules.find((entry) => entry.id === id);
+      if (capsule?.healthy !== true || capsule.status !== "complete" || !capsule.theaterEligible) {
+        profileMessage = "Only healthy, complete Ghost capsules can be compared.";
+        return;
+      }
+      if (comparisonSources.includes(id)) {
+        comparisonSources = comparisonSources.filter((source) => source !== id);
+        profileMessage = comparisonSources.length === 0 ? "Comparison selection cleared."
+          : `${String(comparisonSources.length)} comparison source(s) selected.`;
+        return;
+      }
+      if (comparisonSources.length >= 9) {
+        profileMessage = "A Ghost comparison can include at most nine sources.";
+        return;
+      }
+      comparisonSources = [...comparisonSources, id];
+      profileMessage = comparisonSources.length < 2
+        ? "Comparison source selected. Choose at least one more healthy Ghost capsule."
+        : `${String(comparisonSources.length)} comparison sources selected. Press COMPARE to open them.`;
+    },
+    openGhostComparison: () => {
+      if (comparisonSources.length < 2) {
+        profileMessage = "Choose at least two healthy Ghost capsules to compare.";
+        return;
+      }
+      const sources = Object.freeze([...comparisonSources]);
+      profileMessage = "opening semantic comparison...";
+      void services.enterGhostComparison(sources).then((opened) => {
+        if (opened) comparisonSources = [];
+        else profileMessage = "Those Ghost capsules could not open for comparison.";
+      });
+    },
+    publishReplay: (id) => { replayLibrary.publish(id); },
+    repairGhostCapsule: (id) => { services.ghostVault.repair(id); },
   };
   return Object.freeze(adapters);
 }

@@ -9,10 +9,14 @@ import { createLiveScreenActionBindings, type ScreenActionBindingPorts } from ".
 import { createLiveSettingsRenameAdapters, type SettingsRenameAdapters,
   type SettingsRenameServices } from "./live-settings-rename-adapters";
 import type { LegacyAppScreen } from "./legacy-state-controller";
+import type { AcademyScreenView } from "../presentation/screens/contracts";
+import type { FoundryScreenView } from "../presentation/screens/contracts";
+import type { GhostLabScreenView } from "../presentation/screens/contracts";
+import type { BotEvidenceScreenView, GhostPublicationScreenView, GhostSupportScreenView } from "../presentation/screens/contracts";
 
 type RendererBase = Omit<LiveScreenRendererOptions, "dispatch" | "renderPreview">;
 type ReplayBase = Omit<ReplayScreenServices, "renderers" | "categories" | "fallbackCategory" | "specialColor">;
-type LibraryBase = Omit<LibraryScreenServices, "renderers" | "enterReplay">;
+type LibraryBase = Omit<LibraryScreenServices, "renderers" | "enterReplay" | "enterGhostTheater" | "enterGhostComparison">;
 type SettingsBase = Omit<SettingsRenameServices, "renderers" | "setCodexGuide">;
 type RunServicesBase = Omit<RunScreenServices, "renderers" | "categories" | "fallbackCategory" |
   "categoryOrder" | "specialColor" | "abilityBadge">;
@@ -31,6 +35,12 @@ export interface LiveScreenPresentationOptions {
   readonly menuState: MenuScreenState;
   readonly menuServices: MenuServicesBase;
   readonly playground: Readonly<{ renderMenu: () => void; renderLab: () => void }>;
+  readonly academy: () => AcademyScreenView;
+  readonly foundry: () => FoundryScreenView;
+  readonly ghostLab: () => GhostLabScreenView;
+  readonly botEvidence: () => BotEvidenceScreenView;
+  readonly ghostPublication: () => GhostPublicationScreenView;
+  readonly ghostSupport: () => GhostSupportScreenView;
 }
 
 export interface LiveScreenPresentationComposition {
@@ -49,7 +59,7 @@ export interface LiveScreenPresentationComposition {
 function isLegacyScreen(value: string): value is LegacyAppScreen {
   return ["menu", "setup", "playing", "paused", "draft", "reserve", "tierup", "settings",
     "continue", "gameover", "win", "replay", "confirmquit", "shop", "codex", "profile",
-    "achievements", "leaderboards", "rename", "pgmenu", "pglab"].includes(value);
+    "achievements", "leaderboards", "rename", "pgmenu", "pglab", "academy", "foundry", "ghostlab", "botevidence", "ghostpublication", "ghostsupport"].includes(value);
 }
 
 /** Resolves the deliberately lazy screen-adapter cycle behind one strict composition boundary. */
@@ -73,6 +83,8 @@ export function createLiveScreenPresentationComposition(
   const library: LibraryScreenAdapters = createLiveLibraryScreenAdapters({
     ...options.library, renderers: renderer,
     enterReplay: (record, from) => replay.enter(record, isLegacyScreen(from) ? from : "profile"),
+    enterGhostTheater: (id) => replay.enterGhostCapsule(id, "profile"),
+    enterGhostComparison: (ids) => replay.enterGhostComparison(ids, "profile"),
   });
   const settings: SettingsRenameAdapters = createLiveSettingsRenameAdapters({
     ...options.settings, renderers: renderer,
@@ -102,6 +114,12 @@ export function createLiveScreenPresentationComposition(
       codex: library.renderCodex, profile: library.renderProfile, achievements: library.renderAchievements,
       leaderboards: library.renderLeaderboards, rename: settings.renderRename,
       pgmenu: options.playground.renderMenu, pglab: options.playground.renderLab,
+      academy: () => { renderer.academy(options.academy()); },
+      foundry: () => { renderer.foundry(options.foundry()); },
+      ghostlab: () => { renderer.ghostlab(options.ghostLab()); },
+      botevidence: () => { renderer.botevidence(options.botEvidence()); },
+      ghostpublication: () => { renderer.ghostpublication(options.ghostPublication()); },
+      ghostsupport: () => { renderer.ghostsupport(options.ghostSupport()); },
     }),
     chooseUpgrade: run.chooseUpgrade, chooseReserve: run.chooseReserve, chooseTier: run.chooseTierUp,
     rerollDraft: run.rerollDraft, dispatch,

@@ -35,7 +35,7 @@ export const EVENT_IDS = Object.freeze([
   "player.jump-started", "player.dash-started", "player.damaged", "player.healed",
   "player.shield-absorbed", "player.revived", "player.fell-out",
   "blade.swing-committed", "blade.hit", "blade.launch", "blade.slam", "blade.power-slam",
-  "blade.thrown", "blade.embedded", "blade.recalled", "blade.caught", "blade.stolen",
+  "blade.thrown", "blade.throw-resolved", "blade.embedded", "blade.recalled", "blade.caught", "blade.stolen",
   "combat.deflect", "combat.perfect-parry", "combat.kill", "combat.multikill", "combat.style-rank-changed",
   "projectile.spawned", "projectile.deflected", "projectile.owner-changed", "projectile.hit", "projectile.expired",
   "enemy.spawned", "enemy.attack-started", "enemy.status-changed", "enemy.defeated",
@@ -85,7 +85,7 @@ export type TearDifficultyId = typeof DIFFICULTY_IDS[number];
 export const CODEC_IDS = Object.freeze([
   "tear.player.v1", "tear.blade.v1", "tear.run.v1", "tear.world.v1", "tear.enemy.v1",
   "tear.boss.v1", "tear.projectile.v1", "tear.platform.v1", "tear.hazard.v1", "tear.ui.v1",
-  "tear.reward.v1", "tear.configuration.v1", "tear.rng.v1",
+  "tear.reward.v1", "tear.configuration.v1", "tear.rng.v1", "tear.cinematic.v1",
 ] as const);
 export const CODEC_REGISTRY = createStableRegistry("codec", CODEC_IDS);
 export type TearCodecId = typeof CODEC_IDS[number];

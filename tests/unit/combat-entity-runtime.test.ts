@@ -34,6 +34,21 @@ describe("combat entity runtime", () => {
     expect(projectile?.ownerId).toBe(actorId);
   });
 
+  it("resets every run-scoped identity allocation before a new world is initialized", () => {
+    const firstEnemy = entity(); const { runtime } = harness([firstEnemy]);
+    expect(runtime.id(firstEnemy, "enemy")).toBe("enemy:1");
+    runtime.restoreIdentityState({ nextEntityId: 10, nextWallSequence: 4, nextSlowZoneSequence: 7,
+      claimedIds: ["enemy:1", "enemy:9"] });
+
+    runtime.resetIdentity();
+
+    expect(runtime.captureIdentityState()).toEqual({
+      nextEntityId: 1, nextWallSequence: 1, nextSlowZoneSequence: 1, claimedIds: []
+    });
+    expect(runtime.id(firstEnemy, "enemy")).toBe("enemy:1");
+    expect(runtime.id(entity(), "enemy")).toBe("enemy:2");
+  });
+
   it("applies accepted projectile patches before recursively dispatching hit intents", () => {
     const shot = entity({ kind: "projectile", family: "ordinaryProjectile" }); const { runtime, events } = harness([], [shot]);
     const objects = new Map([["shot", shot]]); const intents: CombatEntityIntent[] = [{ type: "damage-player",

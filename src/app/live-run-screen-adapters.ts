@@ -1,6 +1,6 @@
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GamePlayer, GameRun } from "./game-runtime-state";
-import type { LiveRewardRuntime } from "./live-reward-runtime";
+import type { RewardRuntime } from "../gameplay/run/reward-runtime";
 import type { createLiveScreenRenderers } from "../presentation/screens/live-screen-renderers";
 import { buildAbilityCards, buildDraftCard, buildGameoverSnapshot, buildPausedSnapshot,
   buildResultLog, buildRunProgressSnapshot, buildTierCards, buildWinSnapshot,
@@ -11,7 +11,7 @@ type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "CG" | "CONFIG" | "DAI
   "SFX" | "UPGRADES" | "nextTierDesc">;
 type ActionRun = GameRun & { adRevived?: boolean };
 type Upgrade = GameRuntimeDependencies["UPGRADES"][number];
-type RewardRuntime = LiveRewardRuntime<Upgrade>;
+type UpgradeRewardRuntime = RewardRuntime<Upgrade>;
 type ScreenRenderers = ReturnType<typeof createLiveScreenRenderers>;
 type AbilityCategories = Parameters<typeof buildDraftCard>[2];
 type AbilityCategory = Parameters<typeof buildDraftCard>[3];
@@ -33,7 +33,7 @@ export interface RunScreenState {
 
 export interface RunScreenServices {
   readonly dependencies: Dependencies;
-  readonly reward: RewardRuntime;
+  readonly reward: UpgradeRewardRuntime;
   readonly renderers: ScreenRenderers;
   readonly categories: () => AbilityCategories;
   readonly fallbackCategory: () => AbilityCategory;
@@ -52,6 +52,7 @@ export interface RunScreenServices {
   readonly addShake: (amount: number) => void;
   readonly addFlash: (amount: number) => void;
   readonly requestPointer: () => void;
+  readonly playerWatch: () => Readonly<{ readonly status: string; readonly decisions: number }>;
 }
 
 export interface LiveRunScreenAdapters {
@@ -124,9 +125,13 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
     },
     renderPaused(): void {
       const run = state.run();
-      renderers.paused(buildPausedSnapshot({ summary: (run.isBossWave ? "BOSS" : "WAVE " + String(run.wave)) +
+      const playerWatch = services.playerWatch();
+      renderers.paused({ ...buildPausedSnapshot({ summary: (run.isBossWave ? "BOSS" : "WAVE " + String(run.wave)) +
         "   ·   " + String(run.score) + " pts   ·   " + services.formatTime(run.runTime),
-        abilities: abilityCards(), progress: progressRows() }));
+        abilities: abilityCards(), progress: progressRows() }),
+      ...(playerWatch.status === "running" || playerWatch.status === "paused"
+        ? { playerWatch: { status: playerWatch.status, decisions: playerWatch.decisions } as const }
+        : {}) });
     },
     renderConfirmQuit(): void { renderers.confirmquit({ id: "confirmquit" }); },
     renderContinue(): void {

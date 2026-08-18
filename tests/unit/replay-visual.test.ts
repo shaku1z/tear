@@ -6,6 +6,7 @@ import {
   migrateVisualRecording,
   verifyVisualReplayPacket,
   type VisualRecordingV2,
+  type VisualReplayProvenance,
 } from "../../src/replay/visual-replay";
 
 function visualFixture(samples = 20): VisualRecordingV2 {
@@ -88,6 +89,29 @@ describe("visual replay migration", () => {
 });
 
 describe("LegacyGhostEngine", () => {
+  it("notifies recorder sidecars with resolved, cloned Ghost 2 provenance", () => {
+    const observed: VisualReplayProvenance[] = [];
+    const suppliedBuild = { version: "observer-version", revision: "observer-revision", target: "observer-target" };
+    const ghost = new LegacyGhostEngine({
+      store: { get: () => null, set: () => undefined }, document: {} as Document, now: () => 1, random: () => 0.5,
+      defaults: { rulesetVersion: "resolved-rules", build: provenance.build, ticksPerSecond: 120, tearScore: () => provenance.tearScore },
+    });
+    ghost.setRecordingObserver({ started: (entry) => { observed.push(entry); }, stopped: () => undefined });
+
+    ghost.startRec({ runId: "observer-run", seed: "observer-seed", build: suppliedBuild });
+    suppliedBuild.version = "mutated-after-start";
+
+    const entry = observed[0];
+    expect(entry).toBeDefined();
+    if (entry === undefined) throw new Error("Ghost recorder observer did not receive start provenance");
+    expect(entry).toMatchObject({
+      runId: "observer-run", seed: "observer-seed", rulesetVersion: "resolved-rules", ticksPerSecond: 120,
+      build: { version: "observer-version", revision: "observer-revision", target: "observer-target" },
+    });
+    expect(entry).not.toBe(ghost.rec?.provenance);
+    expect(entry.build).not.toBe(suppliedBuild);
+  });
+
   it("keeps production visual recording passive when hybrid commands are disabled", () => {
     const values = new Map<string, string>();
     const store: ReplayStore = { get: (key) => values.get(key) ?? null, set: (key, value) => { values.set(key, value); } };

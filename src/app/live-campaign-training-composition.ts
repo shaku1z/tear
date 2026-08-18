@@ -5,6 +5,7 @@ import { cinematicLaunchPolicy, type CinematicPreference } from "./cinematic-pre
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "./game-runtime-state";
 import type { LiveGameHostState } from "./live-game-host-state";
+import type { LiveWorldEntityConstructionPort } from "./live-world-entity-factory";
 import type { LegacyAppScreen } from "./legacy-state-controller";
 import type { LiveRunControllerRegistry } from "./live-run-controller-api";
 import { createLiveCampaignHost } from "./live-campaign-host";
@@ -16,14 +17,23 @@ import type { PreparedVictory } from "../gameplay/run/outcome-planner";
 import type { RunDifficulty } from "../gameplay/run/session";
 import type { PlaygroundScreenModel } from "../gameplay/training/live-playground-presentation";
 import type { LiveWaveSpawnSpec } from "../gameplay/run/live-enemy-spawn";
+import type { FinaleIntent } from "../gameplay/campaign/finale-controller";
+import type {
+  FinaleMaximumFeelReceipt,
+  FinaleOutwardCallObserver,
+  FinaleWorldZoomReceipt,
+} from "../gameplay/campaign/finale-outward-call";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 type Controllers = LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
+type Cinema = InstanceType<GameRuntimeDependencies["Cinematics"]["Director"]>;
 
 export interface LiveCampaignTrainingOptions {
   readonly dependencies: GameRuntimeDependencies;
+  readonly entities: LiveWorldEntityConstructionPort;
   readonly state: LiveGameHostState;
   readonly lifecycle: RunLifecycleController;
+  readonly cinema: Cinema;
   readonly controllers: Controllers;
   readonly width: number;
   readonly height: number;
@@ -55,12 +65,14 @@ export interface LiveCampaignTrainingOptions {
   readonly setFlash: (value: number) => void;
   readonly setSlowMotion: (value: number) => void;
   readonly setHitStop: (value: number) => void;
-  readonly setWorldZoom: (value: number, immediate: boolean) => void;
+  readonly setWorldZoom: (value: number, immediate: boolean) => FinaleWorldZoomReceipt;
   readonly renderMenu: (model: PlaygroundScreenModel) => void;
   readonly renderLab: (model: PlaygroundScreenModel) => void;
   readonly abilityColors: () => Readonly<Record<string, Readonly<{ color: string }>>>;
   readonly emitMusicEvent: (name: string, detail?: Readonly<Record<string, unknown>>) => void;
   readonly showRank: (rank: string) => void;
+  readonly observeFinaleIntents?: (intents: readonly FinaleIntent[]) => void;
+  readonly observeFinaleOutwardCall?: FinaleOutwardCallObserver;
 }
 
 /** Composes campaign, training, cinematics, weapon feedback, and style progression. */
@@ -72,20 +84,28 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
     return style;
   };
   const campaign = createLiveCampaignHost({
-    dependencies: d, state: options.state,
+    dependencies: d, state: options.state, cinema: options.cinema,
     installStage: (controller) => { options.controllers.installStage(controller); },
     lifecycle: options.lifecycle, activatePreparedWave: options.controllers.api.activatePreparedWave,
     prepareVictory: options.controllers.api.prepareVictoryRecord, win: options.controllers.api.winRun,
     achievementsEnabled: () => requireStyle().tracks(),
     checkAchievements: () => { requireStyle().check(); },
     resetStageAchievements: () => { requireStyle().achievements.stageReset(); },
-    rememberBiome(name) { d.PROFILE.maxStat("biomesSeen", d.PROFILE.markBiome(name)); requireStyle().check(); },
+    rememberBiome(name) { d.biomeProgressPersistence.remember(name); requireStyle().check(); },
     cinematicPreference: options.applySettingsCinematicPreference,
-    addFlash: (amount) => { options.setFlash(Math.max(options.getFlash(), amount)); },
-    addShake: (amount) => { options.setShake(Math.max(options.getShake(), amount)); },
+    addFlash: (amount): FinaleMaximumFeelReceipt => {
+      const before = options.getFlash(); options.setFlash(Math.max(before, amount));
+      return Object.freeze({ requested: amount, before, after: options.getFlash(), aggregation: "maximum" });
+    },
+    addShake: (amount): FinaleMaximumFeelReceipt => {
+      const before = options.getShake(); options.setShake(Math.max(before, amount));
+      return Object.freeze({ requested: amount, before, after: options.getShake(), aggregation: "maximum" });
+    },
     formatTime: (seconds) => requireStyle().formatTime(seconds),
-    setWorldZoom: (value) => { options.setWorldZoom(value, true); },
+    setWorldZoom: (value) => options.setWorldZoom(value, true),
     width: options.width, height: options.height,
+    ...(options.observeFinaleIntents === undefined ? {} : { observeFinaleIntents: options.observeFinaleIntents }),
+    ...(options.observeFinaleOutwardCall === undefined ? {} : { observeFinaleOutwardCall: options.observeFinaleOutwardCall }),
   });
 
   const addFloater = (x: number, y: number, text: string, big = false, color = "#000"): void => {
@@ -140,7 +160,8 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
     clearBossBeat: () => { options.state.setBossBeat(null); },
     setWorldZoom: (value) => { options.setWorldZoom(value, false); },
     spawnWisp: (x, y, lane) => {
-      const wisp = new d.VoidWisp(x, y); wisp.voidLane = lane; wisp.spawnT = 0.25;
+      const wisp = options.entities.createEnemy("void-wisp", x, y, options.run()) as GameEnemy & { voidLane: string };
+      wisp.voidLane = lane; wisp.spawnT = 0.25;
       options.state.enemies().push(wisp);
     },
     addFlash: (amount) => { weapon.addFlash(amount); }, addShake: (amount) => { weapon.addShake(amount); },
@@ -154,8 +175,11 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
   });
 
   style = createLiveStyleHost({
-    dependencies: d, state: options.state, tutorial: training.tutorial,
-    captureGhost: (trick, x, y, importance) => { d.GHOST.event(trick, x, y); d.GHOST.snapshot(options.canvas, importance); },
+    dependencies: d, entities: options.entities, state: options.state, tutorial: training.tutorial,
+    captureGhost: (trick, x, y, importance) => {
+      d.GAMEPLAY_EVENTS.emit({ kind: "effect", effect: trick, x, y });
+      d.GHOST.snapshot(options.canvas, importance);
+    },
     rankUp: (rank) => { options.showRank(rank); d.SFX.rankup(); },
     musicRankChanged: (rank) => { options.emitMusicEvent("combo-rank-changed", { rankId: rank }); },
     addProjectile: (projectile) => { options.projectiles().push(projectile); },

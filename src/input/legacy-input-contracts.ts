@@ -171,6 +171,7 @@ export interface LegacyInput {
   setMode(mode: InputMode): void;
   startSemanticRecording(): void;
   stopSemanticRecording(): void;
+  discardSemanticInput(): void;
   drainSemanticActions(tick: number, aimTurn?: number): readonly CommandEnvelope<GameAction>[];
   syncSemanticMovement(): void;
   setPadTether(held: boolean): void;

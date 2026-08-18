@@ -1,20 +1,23 @@
 import type { CampaignStage, ChapterPage } from "../gameplay/campaign/chapter-controller";
 import type { PreparedVictory } from "../gameplay/run/outcome-planner";
 import type { CampaignCinematicChannel } from "./live-campaign-sequences";
-import {
-  beginFinaleRestoration,
-  launchAdventureFinale,
-  launchCampaignChapter,
-  severNextFinaleAnchor,
-} from "./live-campaign-sequences";
+import { launchCampaignChapter } from "./live-campaign-sequences";
 import { cinematicLaunchPolicy, type CinematicPreference } from "./cinematic-preference";
 import {
   dispatchChapterIntents,
-  dispatchFinaleIntents,
   type ChapterIntentPorts,
-  type FinaleIntentPorts,
 } from "./campaign-intent-coordinator";
+import {
+  createFinaleRuntime,
+  type FinaleBladeSegment,
+  type FinaleIntentPorts,
+} from "../gameplay/campaign/finale-runtime";
+import type { FinaleIntent } from "../gameplay/campaign/finale-controller";
 import type { CampaignRuntimeState } from "./campaign-runtime-state";
+import { parseCampaignChapterBindingSpec, stageCampaignChapterBinding,
+  type CampaignChapterBindingPort, type CampaignChapterBindingSpecV1 } from
+  "../gameplay/campaign/chapter-cinematic-binding";
+import type { CinematicDirectorBinding } from "../gameplay/runtime/cinematic-director";
 
 export interface LiveCampaignRun {
   readonly mode: string;
@@ -39,13 +42,7 @@ export interface LiveCampaignBlade {
   readonly tipVY?: number;
 }
 
-export interface LiveFinaleBladeSegment {
-  readonly previousX: number;
-  readonly previousY: number;
-  readonly x: number;
-  readonly y: number;
-  readonly speed: number;
-}
+export type LiveFinaleBladeSegment = FinaleBladeSegment;
 
 export interface LiveCampaignRuntimePort {
   readonly runtime: CampaignRuntimeState;
@@ -59,6 +56,7 @@ export interface LiveCampaignRuntimePort {
   readonly activationDeferred: () => boolean;
   readonly chapterIntents: ChapterIntentPorts;
   readonly finaleIntents: FinaleIntentPorts;
+  readonly observeFinaleIntents?: (intents: readonly FinaleIntent[]) => void;
   readonly clearBossBeat: () => void;
   readonly prepareVictory: (campaign: boolean, persistFinale: boolean) => PreparedVictory;
   readonly win: (campaign: boolean) => void;
@@ -76,17 +74,45 @@ export interface LiveCampaignRuntimeApi {
   readonly beginFinaleRestoration: () => void;
   readonly tryFinaleBladeCut: (segment: LiveFinaleBladeSegment) => void;
   readonly startAdventureFinale: (death?: Readonly<{ x: number; y: number }>, recovered?: boolean) => void;
+  readonly stageChapterBinding: (value: unknown) => StagedLiveChapterBinding | null;
+  readonly installChapterBinding: (value: unknown) => CinematicDirectorBinding | undefined;
+}
+
+export interface StagedLiveChapterBinding {
+  readonly binding: CinematicDirectorBinding;
+  readonly spec: CampaignChapterBindingSpecV1;
+  install(): void;
 }
 
 /** Bound campaign API that owns all spanning chapter/finale orchestration and intent dispatch. */
 export function createLiveCampaignRuntime(port: LiveCampaignRuntimePort): LiveCampaignRuntimeApi {
-  const velocityComponent = (value: number | null | undefined, fallback: number): number =>
-    value == null || value === 0 || Number.isNaN(value) ? fallback : value;
   const dispatchChapter = (intents: Parameters<typeof dispatchChapterIntents>[0]): void => {
     dispatchChapterIntents(intents, port.chapterIntents);
   };
-  const dispatchFinale = (intents: Parameters<typeof dispatchFinaleIntents>[0]): void => {
-    dispatchFinaleIntents(intents, port.finaleIntents);
+  const finale = createFinaleRuntime({
+    runtime: port.runtime, cinema: port.cinema, run: port.run, player: port.player, blade: port.blade,
+    intents: port.finaleIntents, prepareVictory: port.prepareVictory, win: port.win,
+    formatTime: port.formatTime, viewport: port.viewport, perfectColor: port.perfectColor,
+    reducedMotion: port.reducedMotion, lowGraphics: port.lowGraphics,
+    ...(port.observeFinaleIntents === undefined ? {} : { observeIntents: port.observeFinaleIntents }),
+  });
+  const chapterBindingPort = (): CampaignChapterBindingPort => ({
+    dispatch: dispatchChapter,
+    preparedWave: port.preparedWave,
+    activationDeferred: port.activationDeferred,
+    clear: () => { port.runtime.clearChapterBinding(); },
+  });
+  const stageChapterBinding = (value: unknown): StagedLiveChapterBinding | null => {
+    if (value === null || value === undefined) return null;
+    const spec = parseCampaignChapterBindingSpec(value);
+    const stage = port.stageAt(spec.stageIndex);
+    if (stage?.chapter === undefined) throw new RangeError(`campaign chapter stage ${String(spec.stageIndex)} is unavailable`);
+    const staged = stageCampaignChapterBinding(spec, stage, chapterBindingPort());
+    return Object.freeze({
+      binding: staged.binding,
+      spec: staged.spec,
+      install() { port.runtime.installChapterBinding(staged); },
+    });
   };
   const api: LiveCampaignRuntimeApi = {
     loreBusy: () => {
@@ -111,48 +137,16 @@ export function createLiveCampaignRuntime(port: LiveCampaignRuntimePort): LiveCa
         clearBossBeat: port.clearBossBeat,
       });
     },
-    severFinaleAnchor: (assisted) => {
-      const blade = port.blade();
-      return severNextFinaleAnchor({
-        runtime: port.runtime,
-        velocity: { x: velocityComponent(blade.tipVX, 0), y: velocityComponent(blade.tipVY, -1) },
-        perfectColor: port.perfectColor(), reducedMotion: port.reducedMotion(), lowGraphics: port.lowGraphics(),
-        dispatch: dispatchFinale,
-      }, assisted);
-    },
-    beginFinaleRestoration: () => {
-      beginFinaleRestoration(port.runtime, port.viewport.width, dispatchFinale);
-    },
-    tryFinaleBladeCut: (segment) => {
-      dispatchFinale(port.runtime.finaleController.tryBladeCut(
-        segment, port.perfectColor(), port.reducedMotion(), port.lowGraphics(),
-      ));
-      port.runtime.syncFinale();
-    },
-    startAdventureFinale: (death, recovered = false) => {
-      const run = port.run();
-      if (run === null) return;
-      if (run.mode !== "campaign") { port.win(false); return; }
-      port.runtime.resetFinale();
-      const prepared = recovered && run._victoryPrepared !== undefined
-        ? run._victoryPrepared
-        : port.prepareVictory(true, true);
-      const player = port.player();
-      launchAdventureFinale({
-        runtime: port.runtime, cinema: port.cinema, viewportWidth: port.viewport.width, dispatch: dispatchFinale,
-        input: {
-          campaign: true, recovered, ...(death === undefined ? {} : { death }),
-          ...(run.finalBossDeath === undefined ? {} : { rememberedDeath: run.finalBossDeath }),
-          prepared, player: { x: player.x, y: player.y }, viewport: port.viewport,
-          score: run.score, formattedTime: port.formatTime(run.runTime), perfectColor: port.perfectColor(),
-          reducedMotion: port.reducedMotion(), lowGraphics: port.lowGraphics(),
-        },
-        stopPlayer: () => { player.vx = 0; player.vy = 0; player.onGround = false; },
-        assistVelocity: () => {
-          const blade = port.blade();
-          return { x: velocityComponent(blade.tipVX, 0), y: velocityComponent(blade.tipVY, -1) };
-        },
-      });
+    severFinaleAnchor: finale.severAnchor,
+    beginFinaleRestoration: finale.beginRestoration,
+    tryFinaleBladeCut: finale.tryBladeCut,
+    startAdventureFinale: finale.start,
+    stageChapterBinding,
+    installChapterBinding: (value) => {
+      const staged = stageChapterBinding(value);
+      if (staged === null) { port.runtime.resetChapter(); return undefined; }
+      staged.install();
+      return staged.binding;
     },
   };
   return Object.freeze(api);

@@ -4,6 +4,7 @@ export * from "./live-recording-controller";
 export * from "./live-run-start-controller";
 export * from "./live-wave-controller";
 export * from "./reward-selection";
+export * from "./reward-runtime";
 export * from "./run-replacement";
 export * from "./session";
 export * from "./spawn-scheduler";

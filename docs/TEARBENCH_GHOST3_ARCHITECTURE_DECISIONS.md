@@ -156,6 +156,21 @@ Certification requires the canonical full gate, affected arbitrary states,
 complete journeys, Graveyard and base evidence, interaction matrices, and the
 cross-version preservation corpus from one intended worktree state.
 
+## D14 — Align TearBench to the redesigned runtime boundary
+
+The accepted correction in
+[`TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md`](TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md)
+is a blocking architecture requirement. TearBench is not permitted to turn the
+transitional live runtime's closure-owned mutable world, concrete app model
+types, or Ghost 2 compatibility events into its permanent simulation contract.
+
+The migration introduces narrow inward-facing simulation capabilities, native
+typed gameplay events with independent Ghost 2 and Ghost 3 adapters, a shared
+DOM-free simulation composition, and mechanically enforced dependency
+directions. It is tracked as C27A and must pass before C29, C30, or C31-C36 can
+make completion claims. Architecture-dependent C22-C27 evidence must then be
+rerun; it is not silently grandfathered.
+
 ## Ownership
 
 Ownership here means the authoritative module boundary, not a particular person.

@@ -22,7 +22,7 @@ export interface TearHeadlessEpisode<TScenario, TObservation> {
   readonly id: string;
   readonly scenario: TScenario;
   readonly observations: readonly TObservation[];
-  readonly outcome: "terminated" | "truncated";
+  readonly outcome: "terminated" | "truncated" | "cancelled" | "timed-out";
   readonly ticks: number;
   readonly semanticHash: string;
   readonly metrics: Readonly<Record<string, number>>;
@@ -32,6 +32,16 @@ export interface TearHeadlessRunOptions<TScenario> {
   readonly id: string;
   readonly scenario: TScenario;
   readonly maxTicks: number;
+}
+
+/** Cooperative limits: a synchronous simulation checks them between fixed ticks. */
+export interface TearHeadlessExecutionControl {
+  readonly now?: () => number;
+  readonly timeoutMilliseconds?: number;
+  readonly isCancelled?: () => boolean;
+  /** Observes a completed source tick; it cannot alter simulation control flow. */
+  readonly onStep?: (tick: number) => void;
+  readonly onArtifact?: (tick: number, artifact: unknown) => void;
 }
 
 export class TearHeadlessRunner<TScenario, TObservation, TAction> {
@@ -45,22 +55,44 @@ export class TearHeadlessRunner<TScenario, TObservation, TAction> {
     options: TearHeadlessRunOptions<TScenario>,
     policy: TearHeadlessPolicy<TObservation, TAction>,
     batchSize = 1,
+    control: TearHeadlessExecutionControl = {},
   ): TearHeadlessEpisode<TScenario, TObservation> {
     if (!Number.isSafeInteger(batchSize) || batchSize < 1) throw new RangeError("batchSize must be positive");
+    if (control.timeoutMilliseconds !== undefined
+      && (!Number.isFinite(control.timeoutMilliseconds) || control.timeoutMilliseconds < 0)) {
+      throw new RangeError("headless timeout must be a non-negative finite number");
+    }
+    const now = control.now ?? (() => performance.now());
+    const startedAt = now();
     const observations: TObservation[] = [this.#environment.reset(options.scenario)];
     let outcome: TearHeadlessEpisode<TScenario, TObservation>["outcome"] = "truncated";
     let metrics: Readonly<Record<string, number>> = {};
-    for (let tick = 1; tick <= options.maxTicks; tick += batchSize) {
+    const stopOutcome = (): "cancelled" | "timed-out" | undefined => {
+      if (control.isCancelled?.() === true) return "cancelled";
+      if (control.timeoutMilliseconds !== undefined && now() - startedAt >= control.timeoutMilliseconds) return "timed-out";
+      return undefined;
+    };
+    let steps = 0;
+    while (steps < options.maxTicks) {
+      const stopped = stopOutcome();
+      if (stopped !== undefined) { outcome = stopped; break; }
       const input = observations.slice(-batchSize);
       const actionBatches = policy.decide(input);
-      for (const actions of actionBatches) {
+      const permitted = actionBatches.slice(0, Math.min(batchSize, options.maxTicks - steps));
+      if (permitted.length === 0) throw new RangeError("headless policy must provide at least one action batch");
+      for (const actions of permitted) {
         const transition = this.#environment.step(actions);
+        steps += 1;
         observations.push(transition.observation);
         metrics = transition.metrics ?? metrics;
+        control.onStep?.(steps);
+        if (transition.artifact !== undefined) control.onArtifact?.(steps, transition.artifact);
         if (transition.terminated) { outcome = "terminated"; break; }
         if (transition.truncated) { outcome = "truncated"; break; }
+        const stoppedAfterStep = stopOutcome();
+        if (stoppedAfterStep !== undefined) { outcome = stoppedAfterStep; break; }
       }
-      if (outcome === "terminated") break;
+      if (outcome !== "truncated" || steps >= options.maxTicks) break;
     }
     const ticks = observations.length - 1;
     return Object.freeze({
@@ -81,6 +113,7 @@ export type TearHeadlessJob<TScenario> = TearHeadlessRunOptions<TScenario>;
 
 export interface TearArtifactSample {
   readonly episodeId: string;
+  readonly tick?: number;
   readonly artifact: unknown;
 }
 
@@ -100,6 +133,20 @@ export class BoundedArtifactSampler {
   samples(): readonly TearArtifactSample[] { return Object.freeze([...this.#samples]); }
 }
 
+export interface TearHeadlessPoolRunOptions<TScenario, TObservation> {
+  readonly batchSize?: number;
+  readonly controlForJob?: (job: TearHeadlessJob<TScenario>) => TearHeadlessExecutionControl | undefined;
+  readonly artifactSampler?: BoundedArtifactSampler;
+  /** Synchronous bounded consumer; it must report/drop pressure without retaining an unbounded queue. */
+  readonly artifactConsumer?: (sample: TearArtifactSample) => void;
+  readonly now?: () => number;
+  readonly onCompleted?: (
+    job: TearHeadlessJob<TScenario>,
+    episode: TearHeadlessEpisode<TScenario, TObservation>,
+    elapsedMilliseconds: number,
+  ) => void;
+}
+
 export class TearHeadlessEnvironmentPool<TScenario, TObservation, TAction> {
   readonly #size: number;
   readonly #createEnvironment: () => TearHeadlessEnvironment<TScenario, TObservation, TAction>;
@@ -113,6 +160,7 @@ export class TearHeadlessEnvironmentPool<TScenario, TObservation, TAction> {
   async run(
     jobs: readonly TearHeadlessJob<TScenario>[],
     createPolicy: (job: TearHeadlessJob<TScenario>) => TearHeadlessPolicy<TObservation, TAction>,
+    options: TearHeadlessPoolRunOptions<TScenario, TObservation> = {},
   ): Promise<readonly TearHeadlessEpisode<TScenario, TObservation>[]> {
     const results = new Map<number, TearHeadlessEpisode<TScenario, TObservation>>();
     let cursor = 0;
@@ -125,7 +173,19 @@ export class TearHeadlessEnvironmentPool<TScenario, TObservation, TAction> {
         const environment = this.#createEnvironment();
         const runner = new TearHeadlessRunner(environment);
         try {
-          results.set(index, runner.run(job, createPolicy(job), 8));
+          const control = options.controlForJob?.(job);
+          const startedAt = (options.now ?? (() => performance.now()))();
+          const episode = runner.run(job, createPolicy(job), options.batchSize ?? 8, {
+            ...control,
+            onArtifact: (tick, artifact) => {
+              control?.onArtifact?.(tick, artifact);
+              const sample = Object.freeze({ episodeId: job.id, tick, artifact });
+              options.artifactSampler?.consider(sample);
+              options.artifactConsumer?.(sample);
+            },
+          });
+          results.set(index, episode);
+          options.onCompleted?.(job, episode, Math.max(0, (options.now ?? (() => performance.now()))() - startedAt));
         } finally {
           runner.dispose();
         }

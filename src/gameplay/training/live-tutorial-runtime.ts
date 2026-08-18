@@ -6,6 +6,7 @@ import {
   type TutorialMark,
 } from "./tutorial-controller";
 import { tutorialArenaDefinition, type TutorialArenaId } from "./tutorial-arenas";
+import type { CONFIG as GameConfiguration } from "../../config/game-config";
 
 export interface LiveTutorialEnemy {
   readonly kind: string;
@@ -34,6 +35,7 @@ export interface LiveTutorialPlayer {
 }
 
 export interface LiveTutorialPort<TEnemy extends LiveTutorialEnemy> {
+  readonly config: typeof GameConfiguration;
   readonly viewportWidth: number;
   readonly groundY: () => number;
   readonly skipPressed: () => boolean;
@@ -94,7 +96,7 @@ export interface LiveTutorialRuntime {
 export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
   port: LiveTutorialPort<TEnemy>,
 ): LiveTutorialRuntime {
-  const controller = new TutorialController();
+  const controller = new TutorialController(port.config);
   const lessonView = (): LiveTutorialLessonView => {
     const lesson = controller.step();
     return {
