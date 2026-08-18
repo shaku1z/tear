@@ -50,6 +50,8 @@ function expectFiniteNumbers(value: unknown, path: string, seen = new Set<object
 }
 
 describe("weapon-by-ability conformance", () => {
+  // This matrix clones and evolves every upgrade for every final-five weapon;
+  // under the complete release suite it can exceed Vitest's 5s default.
   it("applies and fully evolves every ability for every weapon without invalid state", () => {
     const baseline = structuredClone(CONFIG);
     try {
@@ -71,5 +73,5 @@ describe("weapon-by-ability conformance", () => {
     } finally {
       Object.assign(CONFIG, baseline);
     }
-  });
+  }, 30_000);
 });
