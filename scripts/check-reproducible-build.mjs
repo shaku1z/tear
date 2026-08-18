@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, join, relative, resolve } from "node:path";
+import { basename, join, posix, relative, resolve } from "node:path";
 
 const projectRoot = resolve(import.meta.dirname, "..");
 const temporaryRoot = await mkdtemp(join(tmpdir(), "tear-repro-"));
@@ -54,6 +54,26 @@ function packageCrazyGames() {
   }
 }
 
+function isRevisionAsset(name) {
+  return /^audio\/cues\/[^/]+\/opus\/revisions\/[^/]+\//u.test(name);
+}
+
+async function activeRevisionAssets(root, files) {
+  const referenced = new Set();
+  const cueNames = [...files].filter((name) => /^audio\/cues\/[^/]+\/cue\.json$/u.test(name));
+  for (const cueName of cueNames) {
+    const cue = JSON.parse(await readFile(join(root, ...cueName.split("/")), "utf8"));
+    for (const stem of Array.isArray(cue?.stems) ? cue.stems : []) {
+      for (const source of Array.isArray(stem?.sources) ? stem.sources : []) {
+        if (typeof source?.url !== "string") continue;
+        const candidate = posix.normalize(posix.join(posix.dirname(cueName), source.url.replaceAll("\\", "/")));
+        if (isRevisionAsset(candidate) && files.has(candidate)) referenced.add(candidate);
+      }
+    }
+  }
+  return referenced;
+}
+
 async function archiveHash() {
   return createHash("sha256").update(await readFile(crazyGamesArchive)).digest("hex");
 }
@@ -80,8 +100,10 @@ async function assertArtifactBoundary(target, hashes, root) {
     }
     const html = await readFile(join(root, "index.html"), "utf8");
     if (/(?:src|href)="\/assets\//u.test(html)) throw new Error("CrazyGames output contains root-absolute game assets");
+    const activeRevisions = await activeRevisionAssets(root, files);
+    const packagedFiles = [...files].filter((file) => !isRevisionAsset(file) || activeRevisions.has(file));
     let totalBytes = 0;
-    for (const file of files) totalBytes += (await stat(join(root, file))).size;
+    for (const file of packagedFiles) totalBytes += (await stat(join(root, file))).size;
     if (files.size > 1_500) throw new Error(`CrazyGames output exceeds the 1,500-file portal limit: ${String(files.size)}`);
     // The final-five runtime and the canonical stem catalog are both shipped
     // to the portal target. Keep a bounded 22.5 MiB unpacked ceiling while
