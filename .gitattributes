@@ -18,3 +18,6 @@ js/DESIGN_SYSTEM.md export-ignore
 public/vendor/tear-score/*.js text eol=lf
 public/vendor/tear-score/*.json text eol=lf
 public/vendor/tear-score/*.md text eol=lf
+docs/tearbench-ghost3-requirements.json text eol=lf
+docs/TEARBENCH_GHOST3_NON_LOSSY_REQUIREMENTS_ANNEX.md text eol=lf
+docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md text eol=lf

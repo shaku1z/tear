@@ -76,11 +76,35 @@ function isStandalonePwaArtifact(name) {
     || basename.startsWith("workbox-");
 }
 
+function isRevisionAsset(name) {
+  return /^audio\/cues\/[^/]+\/opus\/revisions\/[^/]+\//u.test(name);
+}
+
+async function activeRevisionAssets(input, names) {
+  const referenced = new Set();
+  const cueNames = names.filter((name) => /^audio\/cues\/[^/]+\/cue\.json$/u.test(name));
+  for (const cueName of cueNames) {
+    const cue = JSON.parse(await readFile(path.join(input, ...cueName.split("/")), "utf8"));
+    for (const stem of Array.isArray(cue?.stems) ? cue.stems : []) {
+      for (const source of Array.isArray(stem?.sources) ? stem.sources : []) {
+        if (typeof source?.url !== "string") continue;
+        const candidate = path.posix.normalize(path.posix.join(path.posix.dirname(cueName), source.url.replaceAll("\\", "/")));
+        if (isRevisionAsset(candidate) && names.includes(candidate)) referenced.add(candidate);
+      }
+    }
+  }
+  return referenced;
+}
+
 async function main() {
   if (!(await stat(input).catch(() => undefined))?.isDirectory()) {
     throw new Error("dist/crazygames is missing; run pnpm build:crazygames first");
   }
-  const names = await filesBelow(input);
+  const allNames = await filesBelow(input);
+  const activeRevisions = await activeRevisionAssets(input, allNames);
+  const names = allNames.filter((name) => !isRevisionAsset(name) || activeRevisions.has(name));
+  const prunedRevisionCount = allNames.length - names.length;
+  if (prunedRevisionCount > 0) console.log(`Excluded ${prunedRevisionCount} unreachable revision asset(s) from CrazyGames package`);
   if (!names.includes("index.html")) throw new Error("CrazyGames package must have index.html at its root");
   if (names.some((name) => name.endsWith(".map") || isRepositoryMaterial(name))) {
     throw new Error("CrazyGames package contains development or repository artifacts");
