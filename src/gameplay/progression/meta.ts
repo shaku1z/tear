@@ -116,6 +116,22 @@ export function createMetaProgression<Upgrade extends UpgradeDefinition, ApplyCo
 ): Readonly<{ META: MetaProgression<ApplyContext>; SHOP: readonly ShopItem<ApplyContext>[] }> {
   const { config, random } = dependencies;
   let shop: readonly ShopItem<ApplyContext>[] = [];
+
+  function assertProgressionContext(context: ApplyContext | null | undefined): asserts context is ApplyContext {
+    const candidate = context as Partial<ApplyContext>;
+    if (context === undefined || context === null) {
+      throw new TypeError("Meta progression context is required");
+    }
+    if (candidate.player === undefined) {
+      throw new TypeError("Meta progression context missing player");
+    }
+    if (candidate.blade === undefined) {
+      throw new TypeError("Meta progression context missing blade");
+    }
+    if (candidate.mods === undefined) {
+      throw new TypeError("Meta progression context missing mods");
+    }
+  }
   const meta: MetaProgression<ApplyContext> = {
     data: migrateMetaData({}),
     load() {
@@ -146,7 +162,13 @@ export function createMetaProgression<Upgrade extends UpgradeDefinition, ApplyCo
       if (dependencies.cloud.loggedIn()) void dependencies.cloud.push();
       return true;
     },
-    apply(context) { for (const item of shop) { const level = this.level(item.id); if (level > 0) item.apply(level, context); } },
+    apply(context) {
+      assertProgressionContext(context);
+      for (const item of shop) {
+        const level = this.level(item.id);
+        if (level > 0) item.apply(level, context);
+      }
+    },
     merge(remote) {
       const incoming = migrateMetaData(remote);
       this.data.lifetimeEarned = Math.max(this.data.lifetimeEarned, incoming.lifetimeEarned);

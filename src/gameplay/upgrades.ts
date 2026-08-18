@@ -317,7 +317,6 @@ const UPGRADES: readonly UpgradeDefinition[] = [
     apply: ({ config }) => {
       config.blade.damageScale *= 1.30; config.blade.maxDamage = Math.round(config.blade.maxDamage * 1.20);
       config.blade.throw.damage *= 1.30; config.blade.throw.damageFromSpeed *= 1.30;
-      config.weapons.riftlock.razorDamage *= 1.30;
       config.player.dmgTakenMult *= 1.25;
     } },
 
@@ -567,6 +566,25 @@ function upWeight(u: UpgradeDefinition): number {
   if (u.unique) return 0.6;
   return 1;
 }
+
+function assertUpgradeContext(context: UpgradeApplyContext | null | undefined): asserts context is UpgradeApplyContext {
+  const candidate = context as Partial<UpgradeApplyContext>;
+  if (context === undefined || context === null) {
+    throw new TypeError("Upgrade context is required");
+  }
+  if (candidate.config === undefined) {
+    throw new TypeError("Upgrade context missing config");
+  }
+  if (candidate.player === undefined) {
+    throw new TypeError("Upgrade context missing player");
+  }
+  if (candidate.blade === undefined) {
+    throw new TypeError("Upgrade context missing blade");
+  }
+  if (candidate.mods === undefined) {
+    throw new TypeError("Upgrade context missing mods");
+  }
+}
 // roll N distinct choices; owned unique/special abilities are excluded.
 function rollUpgrades(n: number, mods: UpgradeMods | null | undefined, opts?: RollUpgradeOptions): UpgradeDefinition[] {
   if (!opts?.random) throw new TypeError("rollUpgrades requires a deterministic RandomSource");
@@ -603,6 +621,7 @@ function rollUpgrades(n: number, mods: UpgradeMods | null | undefined, opts?: Ro
 }
 
 function applyUpgrade(up: UpgradeDefinition, ctx: UpgradeApplyContext): void {
+  assertUpgradeContext(ctx);
   ctx.mods.owned[up.id] = (ctx.mods.owned[up.id] ?? 0) + 1;
   ctx.mods.ownedList.push(up.id);
   ctx.mods.tier[up.id] ??= 1;   // acquired at tier 1
@@ -627,6 +646,7 @@ function nextTierDesc(up: UpgradeDefinition, mods: UpgradeMods): string {
   return t?.desc ?? "";
 }
 function tierUp(id: string, ctx: UpgradeApplyContext): void {
+  assertUpgradeContext(ctx);
   const up = UPGRADES.find((u) => u.id === id);
   if (!up?.tiers) return;
   const cur = ctx.mods.tier[id] ?? 1;
