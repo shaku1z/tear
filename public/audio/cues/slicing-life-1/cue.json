@@ -33,7 +33,7 @@
       "seamMode": "hard",
       "sources": [
         {
-          "url": "opus/revisions/6e0c00ea65944d1d839321fcf6a65272/rhythm.ogg",
+          "url": "opus/revisions/84c9186846cf493aa3b921f09e4a7e88/rhythm.ogg",
           "mime": "audio/ogg; codecs=\"opus\""
         }
       ]
@@ -46,7 +46,7 @@
       "seamMode": "hard",
       "sources": [
         {
-          "url": "opus/revisions/6e0c00ea65944d1d839321fcf6a65272/pulse.ogg",
+          "url": "opus/revisions/84c9186846cf493aa3b921f09e4a7e88/pulse.ogg",
           "mime": "audio/ogg; codecs=\"opus\""
         }
       ]
@@ -60,7 +60,7 @@
       "crossfadeFrames": 1440,
       "sources": [
         {
-          "url": "opus/revisions/6e0c00ea65944d1d839321fcf6a65272/foundation.ogg",
+          "url": "opus/revisions/84c9186846cf493aa3b921f09e4a7e88/foundation.ogg",
           "mime": "audio/ogg; codecs=\"opus\""
         }
       ]
@@ -74,7 +74,7 @@
       "crossfadeFrames": 1440,
       "sources": [
         {
-          "url": "opus/revisions/6e0c00ea65944d1d839321fcf6a65272/melody.ogg",
+          "url": "opus/revisions/84c9186846cf493aa3b921f09e4a7e88/melody.ogg",
           "mime": "audio/ogg; codecs=\"opus\""
         }
       ]
