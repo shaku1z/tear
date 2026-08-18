@@ -28,7 +28,7 @@ This matrix is the release evidence checklist. A target is not ready because it 
 
 - Five repeated start/play/quit cycles show bounded enemies, projectiles, effects, audio voices, nodes, listeners, timers, and caches.
 - Simulation/render/frame p95 values, long tasks, startup, bundle gzip, file count, and total artifact bytes stay within checked budgets.
-- CrazyGames remains below Tear's 20 MiB mobile-homepage artifact budget and 1,500 files, with no root-absolute game asset paths.
+- CrazyGames remains below Tear's 22.5 MiB unpacked mobile-homepage artifact budget (and the 20.5 MiB compressed upload-package budget) and 1,500 files, with no root-absolute game asset paths.
 - Standalone and CrazyGames builds are byte-for-byte reproducible and contain no source, tests, plans, repository metadata, or opposite-target integrations.
 - `pnpm package:crazygames` builds only the portal target and emits a verified ZIP whose `index.html` is at the archive root.
 - Wrangler dry-run uploads only `dist/standalone` and reports no source-tree assets.

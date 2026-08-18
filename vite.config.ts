@@ -64,6 +64,29 @@ function targetDependencyBoundary(target: "standalone" | "crazygames"): Plugin {
   };
 }
 
+/** Keep the async application composition below the release transfer budget. */
+function applicationChunk(id: string): string | undefined {
+  const normalized = id.replaceAll("\\", "/");
+  const source = normalized.indexOf("/src/");
+  if (source < 0) return undefined;
+  const relative = normalized.slice(source + "/src/".length);
+  const topLevel = relative.split("/")[0] ?? "";
+  if (topLevel === "app") {
+    const file = relative.split("/").at(-1) ?? "";
+    if (file === "live-game-runtime.ts" || file === "live-frame-runtime.ts" || file === "runtime-frame-coordinator.ts") return "runtime-app-loop";
+    if (file.includes("library") || file.includes("academy") || file.includes("foundry") || file.includes("ghost-theater")) return "runtime-app-catalog";
+    if (file.includes("combat") || file.includes("world-")) return "runtime-app-combat";
+    if (file.includes("run-") || file.includes("campaign") || file.includes("wave") || file.includes("outcome")) return "runtime-app-run";
+    return "runtime-app-core";
+  }
+  if (topLevel === "gameplay") {
+    const area = relative.split("/").slice(1, 2)[0] ?? "core";
+    return `gameplay-${area}`;
+  }
+  if (["presentation", "audio", "ghost", "tearbench", "agents", "input", "persistence", "platform", "replay", "simulation", "diagnostics", "domain", "config"].includes(topLevel)) return `runtime-${topLevel}`;
+  return undefined;
+}
+
 export default defineConfig(({ mode }) => {
   const testBuild = mode === "test-standalone" || mode === "test-crazygames";
   const target = mode === "crazygames" || mode === "test-crazygames" ? "crazygames" : "standalone";
@@ -113,6 +136,9 @@ export default defineConfig(({ mode }) => {
       sourcemap: false,
       target: "baseline-widely-available",
       reportCompressedSize: true,
+      rollupOptions: {
+        output: { manualChunks: applicationChunk },
+      },
     },
   };
 });
