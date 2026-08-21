@@ -105,7 +105,9 @@ function assertAtMost(actual, budget, label) {
 
 async function exerciseCombat(page, durationMs, onSample, minimumSamples = 0) {
   const startedAt = Date.now();
-  const deadline = startedAt + durationMs + 20_000;
+  const minimumCollectionRateFps = 10;
+  const sampleCollectionBoundMs = Math.ceil(minimumSamples / minimumCollectionRateFps * 1000);
+  const deadline = startedAt + Math.max(durationMs + 20_000, sampleCollectionBoundMs);
   let direction = "d";
   let frameSamples = 0;
   await page.keyboard.down(direction);
