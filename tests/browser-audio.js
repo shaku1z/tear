@@ -152,8 +152,14 @@ async function assertVisibilityLifecycle(page, baseline) {
       audio: window.__TEAR_CATALOG_DEBUG__.audio.snapshot(),
       contexts: window.__tearAudioContextCount,
     }));
-    await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().resources.activeVoices === 0);
-    const settledRepeated = await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot());
+    const settledRepeatedHandle = await page.waitForFunction(() => {
+      const snapshot = window.__TEAR_CATALOG_DEBUG__.audio.snapshot();
+      return snapshot.resources.activeVoices === 0 && snapshot.resources.activeVoiceGraphNodes === 0
+        ? snapshot
+        : false;
+    });
+    const settledRepeated = await settledRepeatedHandle.jsonValue();
+    await settledRepeatedHandle.dispose();
     assert.equal(repeated.contexts, 1, "repeated runs retain one host-owned AudioContext");
     assert.equal(settledRepeated.resources.activeVoiceGraphNodes, 0, "scheduled voice nodes are released");
     assert.equal(settledRepeated.resources.lifecycleListeners, resourceBaseline.lifecycleListeners,
