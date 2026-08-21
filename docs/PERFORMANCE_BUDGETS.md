@@ -22,4 +22,6 @@ pnpm test:browser:performance
 
 The test writes its measured profile to `test-results/browser-performance.json` and exits non-zero on a regression. Override only the localhost port with `TEAR_PERF_PORT`; budgets stay checked in so CI and local runs evaluate the same contract.
 
+Pull requests and `main` run this contract once in a separate `performance` job on the pinned `ubuntu-24.04` image. The functional `check` job does not repeat it. Both jobs are required release evidence: isolating the measurement prevents the preceding browser suite from contaminating its host while leaving every numeric budget unchanged.
+
 When hardware-independent changes deliberately alter the representative workload, capture several clean runs, document why the contract changed, and update the workload and budget together. Do not raise a threshold solely to silence one overloaded or contended machine.

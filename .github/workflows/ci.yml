@@ -41,7 +41,7 @@ jobs:
             git diff --name-only "${{ github.sha }}^" "${{ github.sha }}" > artifacts/tearbench/changed-files.txt
           fi
           pnpm tearbench ci --files-from artifacts/tearbench/changed-files.txt
-      - run: xvfb-run -a pnpm check
+      - run: xvfb-run -a pnpm check:functional
         env:
           TEAR_HEADED_VISIBILITY: "1"
       - uses: actions/upload-artifact@v4
@@ -52,4 +52,27 @@ jobs:
             artifacts/tear-crazygames.zip
             artifacts/tearbench
           if-no-files-found: error
+          retention-days: 14
+
+  performance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: xvfb-run -a pnpm check:performance
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tear-performance-${{ github.sha }}
+          path: test-results/browser-performance.json
+          if-no-files-found: warn
           retention-days: 14
