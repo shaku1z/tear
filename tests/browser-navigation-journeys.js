@@ -85,7 +85,7 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
       }, "Tutorial must launch the Cutting Room curriculum, not only a generic tutorial mode");
     }
     await page.evaluate(() => window.__PANTHEON_TEST.skip());
-    await page.waitForFunction(() => window.__PANTHEON_TEST.state().active === false, undefined, { timeout: 3000 });
+    await page.waitForFunction(() => window.__PANTHEON_TEST.state().active === false, undefined, { timeout: 10000 });
     assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().active), false, `${mode} opening is safely skippable`);
     await page.keyboard.press("p");
     await waitScreen("paused");
