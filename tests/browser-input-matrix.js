@@ -4,6 +4,23 @@ const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 
+async function moveCapturedPointer(page, from, to) {
+  await page.evaluate(({ previous, next }) => {
+    const canvas = document.querySelector("canvas");
+    const event = new MouseEvent("mousemove", {
+      bubbles: true,
+      cancelable: true,
+      clientX: next.x,
+      clientY: next.y,
+    });
+    Object.defineProperties(event, {
+      movementX: { value: next.x - previous.x },
+      movementY: { value: next.y - previous.y },
+    });
+    canvas.dispatchEvent(event);
+  }, { previous: from, next: to });
+}
+
 async function main() {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
   const port = Number(process.env.TEAR_INPUT_TEST_PORT || 8128);
@@ -163,7 +180,7 @@ async function main() {
   const aimBeforeMove = await controller.evaluate(() => window.__PANTHEON_TEST.state().bladeAim);
   assert.ok(aimBeforeMove, "recorded live play exposes the physical blade aim");
   const reachBeforeMove = Math.hypot(aimBeforeMove.x, aimBeforeMove.y);
-  await controller.mouse.move(800, 475);
+  await moveCapturedPointer(controller, { x: 800, y: 450 }, { x: 800, y: 475 });
   await controller.waitForFunction((before) => {
     const after = window.__PANTHEON_TEST.state().bladeAim;
     return after && Math.hypot(after.x, after.y) < before - 8;
@@ -171,7 +188,7 @@ async function main() {
   const aimAfterShortMove = await controller.evaluate(() => window.__PANTHEON_TEST.state().bladeAim);
   assert.ok(aimAfterShortMove && Math.hypot(aimAfterShortMove.x, aimAfterShortMove.y) < reachBeforeMove - 8,
     "a short captured movement preserves the source reticle distance instead of expanding to full reach");
-  await controller.mouse.move(1_050, 475, { steps: 2 });
+  await moveCapturedPointer(controller, { x: 800, y: 475 }, { x: 1_050, y: 475 });
   await controller.waitForFunction((before) => {
     const after = window.__PANTHEON_TEST.state().bladeAim;
     return after && after.x > before.x + 10;
