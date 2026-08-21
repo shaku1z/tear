@@ -32,16 +32,24 @@ jobs:
         run: |
           set -euo pipefail
           gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" > validation.json
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" > validation-artifacts.json
           node --input-type=module <<'NODE'
           import { readFileSync, appendFileSync } from "node:fs";
           const run = JSON.parse(readFileSync("validation.json", "utf8"));
+          const artifactListing = JSON.parse(readFileSync("validation-artifacts.json", "utf8"));
           const errors = [];
           if (run.name !== "Validate") errors.push(`workflow ${run.name} is not Validate`);
           if (run.conclusion !== "success") errors.push(`conclusion ${run.conclusion} is not success`);
           if (run.head_repository?.full_name !== process.env.GITHUB_REPOSITORY) errors.push("validation belongs to another repository");
           if (!/^[0-9a-f]{40}$/.test(run.head_sha)) errors.push("validation has no full head SHA");
+          const releaseArtifacts = (artifactListing.artifacts ?? []).filter((artifact) =>
+            /^tear-release-targets-[0-9a-f]{40}$/.test(artifact.name) && artifact.expired !== true);
+          if (releaseArtifacts.length !== 1) errors.push(`validation has ${releaseArtifacts.length} current release artifacts`);
           if (errors.length) throw new Error(errors.join("; "));
-          appendFileSync(process.env.GITHUB_OUTPUT, `sha=${run.head_sha}\nrun_id=${run.id}\n`);
+          const artifact = releaseArtifacts[0];
+          const artifactSha = artifact.name.slice("tear-release-targets-".length);
+          appendFileSync(process.env.GITHUB_OUTPUT,
+            `sha=${artifactSha}\nhead_sha=${run.head_sha}\nrun_id=${run.id}\nartifact_name=${artifact.name}\n`);
           NODE
       - uses: actions/checkout@v4
         with:
@@ -57,7 +65,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v4
         with:
-          name: tear-release-targets-${{ steps.validation.outputs.sha }}
+          name: ${{ steps.validation.outputs.artifact_name }}
           path: .
           github-token: ${{ github.token }}
           run-id: ${{ steps.validation.outputs.run_id }}

@@ -23,8 +23,9 @@ closure SHA will be frozen in the G1 closure record.
   `Production`; local `pnpm deploy` performs a dry-run only.
 - Standalone and CrazyGames builds carry deterministic repository, full-SHA,
   target, and artifact-hash attribution.
-- Preview and production workflows consume the exact validated artifact rather
-  than rebuilding a different tree.
+- Production consumes the exact validated artifact rather than rebuilding a
+  different tree. Preview artifact resolution is being corrected to bind to
+  the validated run's release artifact SHA instead of assuming its branch SHA.
 - Wiki synchronization is downstream of successful production release instead
   of every game push.
 - PR `#1` is labeled `do-not-merge` and titled
@@ -38,6 +39,10 @@ closure SHA will be frozen in the G1 closure record.
 - Functional CI job `96672829683` in run `32448658427` passed the complete
   `check:functional` contract and uploaded its attributable release artifact
   for candidate `b4652e39f860cbae966be1509a6c1cafa9f22a53`.
+- Required job `96727452676` in run `32467607156` passed for branch candidate
+  `1582f175ea485a9f1ec3ce12f91f04ec9aef44c4`. Its release artifact
+  `tear-release-targets-b5e5a9909213ff4eee05f707f8d650fdd50a7e82` exposed
+  the PR-merge-SHA versus branch-SHA mismatch in preview artifact lookup.
 - Focused local performance evidence after the active-window reset measured
   desktop simulation/render/frame p95 at `0.8 / 0.8 / 1.6 ms` with zero new
   long tasks.
@@ -60,25 +65,25 @@ closure SHA will be frozen in the G1 closure record.
   retained manifest, 15 tier paths, 13 model profiles, and a 55-page Astro
   build without invoking the retired `js/` synchronizer.
 - Wiki ruleset `21119805` now requires current status `check` on protected
-  `master`. The wiki PR remains unmerged because Cloudflare Workers Builds is
-  still connected and reacted independently to the branch.
+  `master`.
+- Cloudflare Workers Builds configurations for both `tear` and `tear-wiki`
+  were deleted on 2026-08-21. Subsequent configuration reads returned error
+  `12040` (no build configuration), while both Worker settings endpoints
+  continued to return HTTP 200. The live Workers were preserved.
 - The failing hourly wiki workflow `Synchronize game data` (`311912849`) is
   `disabled_manually`. It retains a retired-file fetch and direct protected
   branch push, so it must remain disabled until G6 replaces that contract.
 
 ## Open blockers
 
-1. **Cloudflare Workers Builds:** the obsolete Cloudflare Git integration still
-   creates independent `Workers Builds: tear` and `Workers Builds: tear-wiki`
-   checks and attempts its own publication paths. Disconnect both before their
-   canonical PRs merge so GitHub Actions is the only ordinary deploy authority.
-2. **Protected Cloudflare credentials:** add a least-privilege
+1. **Protected Cloudflare credentials:** add a least-privilege
    `CLOUDFLARE_API_TOKEN` to the GitHub `Preview` and `Production` environments.
    Do not copy a broad local OAuth credential into GitHub.
 
 ## Remaining G1 sequence
 
-- [ ] Disconnect Cloudflare Workers Builds for `tear` and `tear-wiki`.
+- [x] Disconnect Cloudflare Workers Builds for `tear` and `tear-wiki`; verify
+      both live Worker services remain present.
 - [ ] Install scoped Preview and Production environment tokens.
 - [ ] Merge wiki PR `#2` only after Workers Builds is disconnected; confirm
       exact-main `check` is green and no production publication occurred.
