@@ -149,6 +149,7 @@ async function main() {
   if (await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked)) {
     await controller.keyboard.press("Escape");
     await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused");
+    await controller.mouse.move(880, 440);
     await controller.mouse.move(900, 450);
     await controller.waitForFunction(() => document.body.dataset.imode === "mouse");
     await controller.evaluate(() => window.__PANTHEON_TEST.resume());
@@ -199,6 +200,7 @@ async function main() {
   await controller.keyboard.press("KeyK");
   await controller.waitForFunction(() => document.body.dataset.imode === "keyboard");
   assert.equal(await controller.evaluate(() => document.body.dataset.imode), "keyboard");
+  await controller.mouse.move(880, 440);
   await controller.mouse.move(900, 450);
   await controller.waitForFunction(() => document.body.dataset.imode === "mouse");
   await controller.evaluate(() => {
