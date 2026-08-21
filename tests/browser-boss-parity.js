@@ -141,11 +141,18 @@ withJourney({ name: "boss oracle parity", port: 8237 }, async ({ page }) => {
   const fullHealth = (await bossSnapshot(page, "warden")).hp;
   await page.mouse.click(800, 450);
   await page.waitForFunction(() => document.pointerLockElement !== null, undefined, { timeout: 5000 });
-  for (let index = 0; index < 180; index += 1) {
+  let damaged = await bossSnapshot(page, "warden");
+  for (let index = 0; index < 240 && damaged.hp >= fullHealth; index += 1) {
+    const simulationTick = await page.evaluate(
+      () => window.__TEAR_DIAGNOSTICS__.snapshot().gauges.simulationTick || 0,
+    );
     const angle = index * 0.48, radius = index % 2 === 0 ? 70 : 240;
     await page.mouse.move(800 + Math.cos(angle) * radius, 650 + Math.sin(angle) * radius);
-    await page.waitForTimeout(10);
+    await page.waitForFunction((tick) =>
+      (window.__TEAR_DIAGNOSTICS__.snapshot().gauges.simulationTick || 0) > tick,
+    simulationTick, { timeout: 1000 });
+    if (index % 12 === 11) damaged = await bossSnapshot(page, "warden");
   }
-  const damaged = await bossSnapshot(page, "warden");
+  damaged = await bossSnapshot(page, "warden");
   assert.ok(damaged.hp < fullHealth, `captured-pointer held blade must damage the live boss (${String(damaged.hp)} < ${String(fullHealth)})`);
 });
