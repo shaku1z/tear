@@ -1,0 +1,92 @@
+name: Rehearse Cloudflare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      validation_run_id:
+        description: Successful Validate run ID whose exact artifact will be rehearsed
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: cloudflare-preview
+  cancel-in-progress: false
+
+jobs:
+  rehearse:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: Preview
+    steps:
+      - name: Resolve successful validation evidence
+        id: validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.validation_run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" > validation.json
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts" > validation-artifacts.json
+          node --input-type=module <<'NODE'
+          import { readFileSync, appendFileSync } from "node:fs";
+          const run = JSON.parse(readFileSync("validation.json", "utf8"));
+          const artifactListing = JSON.parse(readFileSync("validation-artifacts.json", "utf8"));
+          const errors = [];
+          if (run.name !== "Validate") errors.push(`workflow ${run.name} is not Validate`);
+          if (run.conclusion !== "success") errors.push(`conclusion ${run.conclusion} is not success`);
+          if (run.head_repository?.full_name !== process.env.GITHUB_REPOSITORY) errors.push("validation belongs to another repository");
+          if (!/^[0-9a-f]{40}$/.test(run.head_sha)) errors.push("validation has no full head SHA");
+          const releaseArtifacts = (artifactListing.artifacts ?? []).filter((artifact) =>
+            /^tear-release-targets-[0-9a-f]{40}$/.test(artifact.name) && artifact.expired !== true);
+          if (releaseArtifacts.length !== 1) errors.push(`validation has ${releaseArtifacts.length} current release artifacts`);
+          if (errors.length) throw new Error(errors.join("; "));
+          const artifact = releaseArtifacts[0];
+          const artifactSha = artifact.name.slice("tear-release-targets-".length);
+          appendFileSync(process.env.GITHUB_OUTPUT,
+            `sha=${artifactSha}\nhead_sha=${run.head_sha}\nrun_id=${run.id}\nartifact_name=${artifact.name}\n`);
+          NODE
+      - uses: actions/checkout@v4
+        with:
+          # Keep every executable script and the Wrangler configuration on the
+          # protected branch. The candidate contributes only its validated
+          # release artifact, never secret-bearing executable code.
+          ref: main
+          fetch-depth: 1
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.validation.outputs.artifact_name }}
+          # Isolate untrusted archive paths from the trusted checkout. Only the
+          # verified standalone directory is passed to Wrangler below.
+          path: candidate-release
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.validation.outputs.run_id }}
+      - name: Verify exact validated standalone artifact
+        env:
+          TEAR_RELEASE_SHA: ${{ steps.validation.outputs.sha }}
+        run: node scripts/verify-release-artifact.mjs standalone candidate-release/dist/standalone
+      - name: Rehearse attributed deployment
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RELEASE_SHA: ${{ steps.validation.outputs.sha }}
+          VALIDATION_RUN_ID: ${{ steps.validation.outputs.run_id }}
+        shell: bash
+        run: >-
+          pnpm exec wrangler deploy --config wrangler.preview.jsonc
+          --assets candidate-release/dist/standalone
+          --message "preview git:${RELEASE_SHA} validate:${VALIDATION_RUN_ID}"

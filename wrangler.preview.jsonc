@@ -1,9 +1,9 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "tear",
+  "name": "tear-preview",
   "compatibility_date": "2026-07-21",
-  // Production receives the exact standalone artifact that passed Validate.
-  // Wrangler must never rebuild a different tree during publication.
+  "workers_dev": true,
+  "preview_urls": true,
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1

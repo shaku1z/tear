@@ -38,6 +38,11 @@ class SampleRing {
     this.#size = Math.min(this.#size + 1, this.#values.length);
   }
 
+  clear(): void {
+    this.#cursor = 0;
+    this.#size = 0;
+  }
+
   summary(): TimingSummary {
     const sorted = Array.from(this.#values.subarray(0, this.#size)).sort((left, right) => left - right);
     return Object.freeze({
@@ -71,6 +76,11 @@ export class PerformanceMonitor {
   gauge(name: string, value: number): void {
     if (name.length === 0 || !Number.isFinite(value)) return;
     this.#gauges.set(name, value);
+  }
+
+  /** Clears percentile windows while retaining long-task and gauge history. */
+  resetTimingSamples(): void {
+    for (const timing of Object.values(this.#timings)) timing.clear();
   }
 
   snapshot(): PerformanceDiagnosticsSnapshot {

@@ -20,4 +20,18 @@ describe("PerformanceMonitor", () => {
       gauges: { enemies: 8, projectiles: 4 },
     });
   });
+
+  it("resets timing samples without erasing long-task or gauge history", () => {
+    const monitor = new PerformanceMonitor(2);
+    monitor.record("frame", 60);
+    monitor.record("simulation", 4);
+    monitor.gauge("enemies", 8);
+    monitor.resetTimingSamples();
+    expect(monitor.snapshot()).toMatchObject({
+      simulation: { samples: 0 },
+      frame: { samples: 0 },
+      longTasks: 1,
+      gauges: { enemies: 8 },
+    });
+  });
 });

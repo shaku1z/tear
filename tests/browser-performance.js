@@ -11,6 +11,17 @@ const port = Number(process.env.TEAR_PERF_PORT || 8126);
 const baseUrl = `http://127.0.0.1:${port}`;
 const selectedScenario = process.env.TEAR_PERF_SCENARIO || "all";
 
+function installedStableChromePath() {
+  const candidates = process.platform === "win32"
+    ? ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"]
+    : process.platform === "linux"
+      ? ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable"]
+      : process.platform === "darwin"
+        ? ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"]
+        : [];
+  return candidates.find((candidate) => fs.existsSync(candidate));
+}
+
 function contentType(file) {
   if (file.endsWith(".js")) return "text/javascript";
   if (file.endsWith(".html")) return "text/html";
@@ -103,13 +114,18 @@ function assertAtMost(actual, budget, label) {
   assert.ok(actual <= budget, `${label}: ${actual} exceeded budget ${budget}`);
 }
 
-async function exerciseCombat(page, durationMs, onSample) {
+async function exerciseCombat(page, durationMs, onSample, minimumSamples = 0, minimumCollectionRateFps = 10) {
   const startedAt = Date.now();
+  const sampleCollectionBoundMs = Math.ceil(minimumSamples / minimumCollectionRateFps * 1000);
+  const deadline = startedAt + Math.max(durationMs + 20_000, sampleCollectionBoundMs);
   let direction = "d";
+  let frameSamples = 0;
   await page.keyboard.down(direction);
   let iteration = 0;
   try {
-    while (Date.now() - startedAt < durationMs) {
+    while (Date.now() - startedAt < durationMs || frameSamples < minimumSamples) {
+      assert.ok(Date.now() < deadline,
+        `active combat produced ${frameSamples}/${minimumSamples} required frame samples before the bounded deadline`);
       if (iteration % 4 === 0) await page.mouse.click(800, 450, { button: "right" });
       else await page.mouse.click(800, 450);
       if (iteration > 0 && iteration % 12 === 0) {
@@ -118,12 +134,15 @@ async function exerciseCombat(page, durationMs, onSample) {
         await page.keyboard.down(direction);
       }
       await page.waitForTimeout(90);
-      if (onSample) await onSample(await diagnostics(page));
+      const snapshot = await diagnostics(page);
+      frameSamples = snapshot.frame.samples;
+      if (onSample) await onSample(snapshot);
       iteration++;
     }
   } finally {
     await page.keyboard.up(direction);
   }
+  return frameSamples;
 }
 
 async function activeGameplayScenario(browser, pageErrors, scenario, label) {
@@ -140,7 +159,14 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
     for (const name of Object.keys(peakGauges)) peakGauges[name] = Math.max(peakGauges[name], gauge(snapshot, name));
   };
   await spawnRepresentativeEnemies(page, scenario.enemySpawnCommands, samplePeak);
-  await exerciseCombat(page, scenario.durationMs, samplePeak);
+  await page.evaluate(() => window.__TEAR_DIAGNOSTICS__.resetTimingSamples());
+  const activeFrameSamples = await exerciseCombat(
+    page,
+    scenario.durationMs,
+    samplePeak,
+    scenario.minimumSamples,
+    scenario.minimumCollectionRateFps,
+  );
   const snapshot = await diagnostics(page);
   const result = {
     simulation: snapshot.simulation,
@@ -149,8 +175,8 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
     newLongTasks: snapshot.longTasks - longTasksBefore,
     peakGauges,
   };
-  assert.ok(snapshot.frame.samples >= scenario.minimumSamples,
-    `${label} produced ${snapshot.frame.samples}/${scenario.minimumSamples} required frame samples`);
+  assert.ok(activeFrameSamples >= scenario.minimumSamples,
+    `${label} produced ${activeFrameSamples}/${scenario.minimumSamples} required active frame samples`);
   assertAtMost(snapshot.simulation.p95Ms, scenario.simulationP95Ms, `${label} simulation p95 ms`);
   assertAtMost(snapshot.render.p95Ms, scenario.renderP95Ms, `${label} render p95 ms`);
   assertAtMost(snapshot.frame.p95Ms, scenario.frameP95Ms, `${label} frame-work p95 ms`);
@@ -204,11 +230,11 @@ async function repeatedRunScenario(browser, pageErrors) {
   let browser;
   try {
     await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
-    const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+    const chromePath = installedStableChromePath();
     browser = await chromium.launch({
       headless: budgets.referenceProfile.headless,
       args: ["--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--enable-precise-memory-info"],
-      ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}),
+      ...(chromePath ? { executablePath: chromePath } : {}),
     });
     const pageErrors = [];
     assert.ok(["all", "active", "constrained", "cycles"].includes(selectedScenario),
@@ -224,6 +250,7 @@ async function repeatedRunScenario(browser, pageErrors) {
       : undefined;
     assert.deepEqual(pageErrors, [], `browser page errors: ${pageErrors.join("\n")}`);
     const report = { capturedAt: new Date().toISOString(), referenceProfile: budgets.referenceProfile,
+      browserRuntime: { version: browser.version(), executable: chromePath || "playwright-bundled-chromium" },
       ...(activeGameplay && { activeGameplay }), ...(constrainedGameplay && { constrainedGameplay }), ...(runCycles && { runCycles }) };
     const output = path.resolve(projectRoot, "test-results", "browser-performance.json");
     fs.mkdirSync(path.dirname(output), { recursive: true });

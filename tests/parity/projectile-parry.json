@@ -3,6 +3,7 @@
   "id": "projectile-parry",
   "contract": "projectile-parry",
   "description": "A deterministic ordinary hostile projectile crossing a real held-blade tip, covering perfect classification, homing reflection, counter damage, Riposte guard, stat credit, and source impact.",
+  "pointerLock": false,
   "viewport": {
     "width": 1600,
     "height": 900

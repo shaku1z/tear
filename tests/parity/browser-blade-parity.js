@@ -546,6 +546,16 @@ async function captureTrace(browser, kind, baseUrl, root, fixture) {
   }
   await installAdapter(page, kind, fixture);
   await installTickBridge(page);
+  if (fixture.pointerLock === false) {
+    await page.evaluate(async () => {
+      const canvas = document.querySelector("canvas");
+      Object.defineProperty(canvas, "requestPointerLock", {
+        configurable: true,
+        value: () => Promise.resolve(),
+      });
+      if (document.pointerLockElement !== null) await document.exitPointerLock();
+    });
+  }
   await page.mouse.click(10, 10);
   await settle(page);
   const escapeIndex = fixture.actions.findIndex((action) => action.type === "keyPress" && action.key === "Escape");

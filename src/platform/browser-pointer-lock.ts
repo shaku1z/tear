@@ -4,6 +4,8 @@ export interface PointerLockTarget {
 
 /** Browser capability adapter; callers never need to catch unsupported or rejected pointer-lock requests. */
 export class BrowserPointerLock {
+  #requestPending = false;
+
   readonly api = Object.freeze({
     request: (): void => { this.request(); },
     release: (): void => { this.release(); },
@@ -15,9 +17,15 @@ export class BrowserPointerLock {
   ) {}
 
   request(): void {
+    if (this.#requestPending) return;
     try {
       const result = this.target.requestPointerLock?.();
-      if (result instanceof Promise) void result.catch(() => undefined);
+      if (result !== undefined && typeof result.then === "function") {
+        this.#requestPending = true;
+        void Promise.resolve(result)
+          .catch(() => undefined)
+          .finally(() => { this.#requestPending = false; });
+      }
     } catch { /* Unsupported or gesture-gated requests safely degrade. */ }
   }
 

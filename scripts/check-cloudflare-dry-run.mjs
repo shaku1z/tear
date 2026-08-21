@@ -1,7 +1,8 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import process from "node:process";
+import { RELEASE_REPOSITORY, verifyReleaseArtifact } from "./release-artifact.mjs";
 
 const projectRoot = resolve(import.meta.dirname, "..");
 const wranglerCli = resolve(projectRoot, "node_modules", "wrangler", "bin", "wrangler.js");
@@ -11,6 +12,17 @@ const config = readFileSync(resolve(projectRoot, "wrangler.jsonc"), "utf8");
 if (!/"directory"\s*:\s*"\.\/dist\/standalone"/u.test(config)) {
   throw new Error("wrangler.jsonc must deploy only ./dist/standalone");
 }
+if (!existsSync(resolve(expectedAssets, "build-info.json"))) {
+  throw new Error("dist/standalone/build-info.json is required before a Cloudflare dry-run");
+}
+const revision = spawnSync("git", ["rev-parse", "HEAD"], { cwd: projectRoot, encoding: "utf8", stdio: "pipe" });
+if (revision.status !== 0) throw new Error(`failed to resolve build revision: ${revision.stderr || revision.stdout}`);
+await verifyReleaseArtifact({
+  directory: expectedAssets,
+  expectedRepository: process.env.GITHUB_REPOSITORY || RELEASE_REPOSITORY,
+  expectedSha: revision.stdout.trim().toLowerCase(),
+  expectedTarget: "standalone",
+});
 
 const result = spawnSync(process.execPath, [wranglerCli, "deploy", "--dry-run"], {
   cwd: projectRoot,

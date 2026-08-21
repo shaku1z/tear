@@ -7,7 +7,7 @@ Tear's runtime regression gate measures the production standalone build through 
 - 1600×900 desktop viewport in headless Chromium or installed stable Chrome.
 - Production standalone bundle served from `dist/standalone` over localhost.
 - A repeatable playground workload: all eight keyboard spawn commands, sustained movement, primary attacks, blade throws, and normal rendering. Gauges are sampled during spawning so short-lived peaks remain visible.
-- The diagnostics ring retains the latest 600 frames. The 12-second desktop and 8-second constrained active windows replace boot/menu samples before their percentile assertions.
+- The diagnostics ring retains the latest 600 frames. The performance fixture clears its timing samples after setup, while preserving long-task and gauge history, then requires at least 500 desktop or 300 constrained active-combat frames. The authored 12-second and 8-second windows are minimum durations rather than substitutes for those sample requirements. Collection remains bounded at a minimum diagnostic cadence of 10 frames/second for desktop and 5 frames/second under intentional 4× CPU throttling; the cadence bound changes only how long the fixture may wait, not the required sample count or timing budgets.
 - The constrained profile applies Chromium's 4× CPU throttle to the same authored workload, approximating the low-power Chromebook/mobile CPUs relevant to the portal release.
 - Five additional start/quit cycles verify that run initialization resets enemies and projectiles to zero, bounds authored run-start visual effects, and retains no more than 16 MiB of additional JavaScript heap after forced collection.
 
@@ -21,5 +21,7 @@ pnpm test:browser:performance
 ```
 
 The test writes its measured profile to `test-results/browser-performance.json` and exits non-zero on a regression. Override only the localhost port with `TEAR_PERF_PORT`; budgets stay checked in so CI and local runs evaluate the same contract.
+
+Pull requests and `main` run the deterministic functional contract in the required `check` job. The machine-sensitive performance contract runs once for the final release candidate on a controlled host through `pnpm check`; its report records the exact browser executable and version. Keeping performance evidence off a variable shared runner avoids turning host contention into a gameplay budget change while preserving every numeric threshold.
 
 When hardware-independent changes deliberately alter the representative workload, capture several clean runs, document why the contract changed, and update the workload and budget together. Do not raise a threshold solely to silence one overloaded or contended machine.

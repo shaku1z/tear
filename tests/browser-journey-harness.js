@@ -37,7 +37,14 @@ async function withJourney(options, run) {
     await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
     const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
     browser = await chromium.launch({ headless: true, ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}) });
-    const page = await browser.newPage({ viewport: options.viewport || { width: 1600, height: 900 } });
+    // Journey suites repeatedly navigate the same instrumented page. Keep the
+    // production service worker out of this harness so an activation/update
+    // race cannot replace the exact test build between boots. PWA behavior has
+    // its own production and offline browser gates.
+    const page = await browser.newPage({
+      viewport: options.viewport || { width: 1600, height: 900 },
+      serviceWorkers: "block",
+    });
     if (options.colorScheme || options.reducedMotion) {
       await page.emulateMedia({ colorScheme: options.colorScheme, reducedMotion: options.reducedMotion });
     }
