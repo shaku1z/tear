@@ -23,6 +23,7 @@
 - Rollback: restore refs from the verified bundle or full Git-directory ZIP;
   restore product branches to the baseline SHAs; no production rollback is
   needed because G0 made no deployment
-- Reviewer decision: pending independent read-only closure review
-- Closure status: PENDING REVIEW
-
+- Reviewer decision: approved by an independent read-only audit after requiring
+  the documentation commit, final bundle rebuild, second-read SHA-256
+  verification, and isolated bare-mirror restore drills
+- Closure status: CLOSED

@@ -1,6 +1,6 @@
 # TEAR Program Normalization and Release Governance Master Plan
 
-**Status:** Executing — G0 preservation and baseline capture open
+**Status:** Executing — G0 closed; G1 eligible
 
 **Prepared:** 2026-08-20
 
@@ -257,43 +257,43 @@ unattributed production or branch mutation while normalization is underway.
 
 ### Entry checklist
 
-- [ ] User explicitly authorizes execution of G0.
-- [ ] Game, music, and wiki working trees are rechecked for user changes.
-- [ ] No agent/editor bridge besides the designated executor has write
+- [x] User explicitly authorizes execution of G0.
+- [x] Game, music, and wiki working trees are rechecked for user changes.
+- [x] No agent/editor bridge besides the designated executor has write
       authority.
 
 ### Objectives
 
-- [ ] Record exact local/remote refs, worktrees, open PRs, default branches,
+- [x] Record exact local/remote refs, worktrees, open PRs, default branches,
       tags, stashes, upstream mappings, GitHub checks, Cloudflare versions, and
       public endpoint headers.
-- [ ] Record all unreachable commits and inspect nested ignored Git
+- [x] Record all unreachable commits and inspect nested ignored Git
       repositories before garbage collection or artifact cleanup.
-- [ ] Create temporary archival refs for every chosen unreachable or
+- [x] Create temporary archival refs for every chosen unreachable or
       reflog-only object before bundling; prove those refs from a fresh bundle
       clone before any local reference is removed.
-- [ ] Create a dated Git bundle for **every ref** in the game repository.
-- [ ] Create separate dated bundles for the music and wiki repositories.
-- [ ] Generate SHA-256 records and prove each bundle with `git bundle verify`.
-- [ ] Run `git fsck` and retain its output with the baseline ledger.
-- [ ] Create annotated immutable tags for the legacy oracle (`ee5e931`) and any
+- [x] Create a dated Git bundle for **every ref** in the game repository.
+- [x] Create separate dated bundles for the music and wiki repositories.
+- [x] Generate SHA-256 records and prove each bundle with `git bundle verify`.
+- [x] Run `git fsck` and retain its output with the baseline ledger.
+- [x] Create annotated immutable tags for the legacy oracle (`ee5e931`) and any
       baseline that is proven necessary after review.
-- [ ] Record, but do not delete, every non-Git copy and orphaned worktree path.
-- [ ] Declare a temporary production change freeze until G1 closes.
+- [x] Record, but do not delete, every non-Git copy and orphaned worktree path.
+- [x] Declare a temporary production change freeze until G1 closes.
 
 ### Checkpoint G0-A — midpoint pause
 
-- [ ] All three repositories have bundle and hash evidence.
-- [ ] Every unique local commit is reachable from a bundle or annotated tag.
-- [ ] External deployment state is recorded without changing it.
-- [ ] Remaining unknown ownership is listed explicitly.
+- [x] All three repositories have bundle and hash evidence.
+- [x] Every unique local commit is reachable from a bundle or annotated tag.
+- [x] External deployment state is recorded without changing it.
+- [x] Remaining unknown ownership is listed explicitly.
 
 ### Close conditions
 
-- [ ] A new clone can list all preserved refs from each bundle.
-- [ ] The baseline ledger is committed on a short-lived plan/governance branch.
-- [ ] No branch, worktree, file copy, PR, or deployment has yet been deleted.
-- [ ] G0 closure record is approved; only then may G1 open.
+- [x] A new clone can list all preserved refs from each bundle.
+- [x] The baseline ledger is committed on a short-lived plan/governance branch.
+- [x] No branch, worktree, file copy, PR, or deployment has yet been deleted.
+- [x] G0 closure record is approved; only then may G1 open.
 
 ---
 
@@ -842,7 +842,7 @@ Create one record per goal under the future canonical checkpoint location.
 
 ## 14. Master objective checklist
 
-- [ ] G0 closed — truth and recovery are frozen.
+- [x] G0 closed — truth and recovery are frozen.
 - [ ] G1 closed — release authority is protected, green, and attributable.
 - [ ] G2 closed — unique work and canonical branches are reconciled.
 - [ ] G3 closed — obsolete branches/worktrees are removed safely.
