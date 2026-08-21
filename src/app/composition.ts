@@ -221,7 +221,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
       configurable: true,
       value: Object.freeze({
         snapshot: () => DIAG.snapshot(),
-        resetTimingSamples: () => DIAG.resetTimingSamples(),
+        resetTimingSamples: () => { DIAG.resetTimingSamples(); },
       }),
     });
     compositionWindow.__TEAR_CATALOG_DEBUG__ = Object.freeze({
