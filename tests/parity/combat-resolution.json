@@ -3,6 +3,7 @@
   "id": "combat-resolution",
   "contract": "combat-resolution",
   "description": "A deterministic real held-blade strike covering damage, knockback, hit immunity, kill credit, collection cleanup, and stun recovery.",
+  "pointerLock": false,
   "viewport": {
     "width": 1600,
     "height": 900
