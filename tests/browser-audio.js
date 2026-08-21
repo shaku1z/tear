@@ -4,45 +4,10 @@ const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 
-const headedVisibility = process.env.TEAR_HEADED_VISIBILITY === "1";
-
 async function assertVisibilityLifecycle(page, baseline) {
-  if (headedVisibility) {
-    const occludingPage = await page.context().newPage();
-    await occludingPage.goto("about:blank");
-    await occludingPage.bringToFront();
-    try {
-      await page.waitForFunction(({ hidden }) => {
-        const resources = window.__TEAR_CATALOG_DEBUG__.audio.snapshot().resources;
-        return document.visibilityState === "hidden"
-          && resources.visibilityTransitions.hidden > hidden
-          && resources.system.temporaryMuteReasons.includes("visibility");
-      }, baseline, { timeout: 3_000 });
-    } catch (error) {
-      const observed = await page.evaluate(() => {
-        const resources = window.__TEAR_CATALOG_DEBUG__.audio.snapshot().resources;
-        return {
-          visibilityState: document.visibilityState,
-          hidden: document.hidden,
-          transitions: resources.visibilityTransitions,
-          muteReasons: resources.system.temporaryMuteReasons,
-        };
-      });
-      throw new Error(`headed Chrome did not hide the game tab: ${JSON.stringify(observed)}`, { cause: error });
-    }
-    await page.bringToFront();
-    await page.waitForFunction(({ visible }) => {
-      const resources = window.__TEAR_CATALOG_DEBUG__.audio.snapshot().resources;
-      return document.visibilityState === "visible"
-        && resources.visibilityTransitions.visible > visible
-        && !resources.system.temporaryMuteReasons.includes("visibility");
-    }, baseline, { timeout: 10_000 });
-    await occludingPage.close();
-    return;
-  }
-
-  // Local headless Chrome does not model tab occlusion. CI runs the headed branch
-  // under Xvfb; this explicit simulation keeps local contracts portable.
+  // Tab occlusion is window-manager behavior and is not portable through Xvfb.
+  // Drive the browser event deterministically and assert the application's
+  // complete hidden/visible mute lifecycle instead.
   const setSimulatedVisibility = async (hidden) => page.evaluate((nextHidden) => {
     Object.defineProperties(document, {
       hidden: { configurable: true, get: () => nextHidden },
@@ -85,10 +50,7 @@ async function assertVisibilityLifecycle(page, baseline) {
 
   const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
   const browser = await chromium.launch({
-    headless: !headedVisibility,
-    ...(headedVisibility ? {
-      ignoreDefaultArgs: ["--disable-backgrounding-occluded-windows", "--disable-renderer-backgrounding"],
-    } : {}),
+    headless: true,
     ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}),
   });
   try {
@@ -163,7 +125,6 @@ async function assertVisibilityLifecycle(page, baseline) {
 
     const lifecycleBefore = after.audio.resources.visibilityTransitions;
     await assertVisibilityLifecycle(page, lifecycleBefore);
-    if (headedVisibility) console.log("headed visibility lifecycle passed");
 
     await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.audio.exerciseRoutes());
     await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().resources.activeVoices === 0);

@@ -42,8 +42,6 @@ jobs:
           fi
           pnpm tearbench ci --files-from artifacts/tearbench/changed-files.txt
       - run: xvfb-run -a pnpm check:functional
-        env:
-          TEAR_HEADED_VISIBILITY: "1"
       - uses: actions/upload-artifact@v4
         with:
           name: tear-release-targets-${{ github.sha }}

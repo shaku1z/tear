@@ -11,6 +11,17 @@ const port = Number(process.env.TEAR_PERF_PORT || 8126);
 const baseUrl = `http://127.0.0.1:${port}`;
 const selectedScenario = process.env.TEAR_PERF_SCENARIO || "all";
 
+function installedStableChromePath() {
+  const candidates = process.platform === "win32"
+    ? ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"]
+    : process.platform === "linux"
+      ? ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable"]
+      : process.platform === "darwin"
+        ? ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"]
+        : [];
+  return candidates.find((candidate) => fs.existsSync(candidate));
+}
+
 function contentType(file) {
   if (file.endsWith(".js")) return "text/javascript";
   if (file.endsWith(".html")) return "text/html";
@@ -214,11 +225,11 @@ async function repeatedRunScenario(browser, pageErrors) {
   let browser;
   try {
     await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
-    const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+    const chromePath = installedStableChromePath();
     browser = await chromium.launch({
       headless: budgets.referenceProfile.headless,
       args: ["--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--enable-precise-memory-info"],
-      ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}),
+      ...(chromePath ? { executablePath: chromePath } : {}),
     });
     const pageErrors = [];
     assert.ok(["all", "active", "constrained", "cycles"].includes(selectedScenario),
@@ -234,6 +245,7 @@ async function repeatedRunScenario(browser, pageErrors) {
       : undefined;
     assert.deepEqual(pageErrors, [], `browser page errors: ${pageErrors.join("\n")}`);
     const report = { capturedAt: new Date().toISOString(), referenceProfile: budgets.referenceProfile,
+      browserRuntime: { version: browser.version(), executable: chromePath || "playwright-bundled-chromium" },
       ...(activeGameplay && { activeGameplay }), ...(constrainedGameplay && { constrainedGameplay }), ...(runCycles && { runCycles }) };
     const output = path.resolve(projectRoot, "test-results", "browser-performance.json");
     fs.mkdirSync(path.dirname(output), { recursive: true });
