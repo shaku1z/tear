@@ -7,7 +7,7 @@ Tear's runtime regression gate measures the production standalone build through 
 - 1600×900 desktop viewport in headless Chromium or installed stable Chrome.
 - Production standalone bundle served from `dist/standalone` over localhost.
 - A repeatable playground workload: all eight keyboard spawn commands, sustained movement, primary attacks, blade throws, and normal rendering. Gauges are sampled during spawning so short-lived peaks remain visible.
-- The diagnostics ring retains the latest 600 frames. The 12-second desktop and 8-second constrained active windows replace boot/menu samples before their percentile assertions.
+- The diagnostics ring retains the latest 600 frames. The desktop and constrained measurements each require 600 new active-combat frames, so their percentile assertions cannot retain boot, menu, or spawn-setup samples; the authored 12-second and 8-second windows are minimum durations rather than substitutes for the sample requirement.
 - The constrained profile applies Chromium's 4× CPU throttle to the same authored workload, approximating the low-power Chromebook/mobile CPUs relevant to the portal release.
 - Five additional start/quit cycles verify that run initialization resets enemies and projectiles to zero, bounds authored run-start visual effects, and retains no more than 16 MiB of additional JavaScript heap after forced collection.
 

@@ -6,7 +6,7 @@ describe("PerformanceMonitor", () => {
     const monitor = new PerformanceMonitor(4);
     for (const value of [1, 2, 3, 100, 4]) monitor.record("frame", value);
     const snapshot = monitor.snapshot();
-    expect(snapshot.frame).toEqual({ samples: 4, p50Ms: 3, p95Ms: 100, maxMs: 100 });
+    expect(snapshot.frame).toEqual({ samples: 4, totalSamples: 5, p50Ms: 3, p95Ms: 100, maxMs: 100 });
     expect(snapshot.longTasks).toBe(1);
   });
 
@@ -16,7 +16,7 @@ describe("PerformanceMonitor", () => {
     monitor.gauge("projectiles", 4);
     monitor.gauge("enemies", 8);
     expect(monitor.snapshot()).toMatchObject({
-      simulation: { samples: 0 },
+      simulation: { samples: 0, totalSamples: 0 },
       gauges: { enemies: 8, projectiles: 4 },
     });
   });

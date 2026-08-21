@@ -106,6 +106,7 @@ function assertAtMost(actual, budget, label) {
 async function exerciseCombat(page, durationMs, onSample, minimumSamples = 0) {
   const startedAt = Date.now();
   const deadline = startedAt + durationMs + 20_000;
+  const samplesBefore = (await diagnostics(page)).frame.totalSamples;
   let direction = "d";
   let frameSamples = 0;
   await page.keyboard.down(direction);
@@ -123,13 +124,14 @@ async function exerciseCombat(page, durationMs, onSample, minimumSamples = 0) {
       }
       await page.waitForTimeout(90);
       const snapshot = await diagnostics(page);
-      frameSamples = snapshot.frame.samples;
+      frameSamples = snapshot.frame.totalSamples - samplesBefore;
       if (onSample) await onSample(snapshot);
       iteration++;
     }
   } finally {
     await page.keyboard.up(direction);
   }
+  return frameSamples;
 }
 
 async function activeGameplayScenario(browser, pageErrors, scenario, label) {
@@ -146,7 +148,7 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
     for (const name of Object.keys(peakGauges)) peakGauges[name] = Math.max(peakGauges[name], gauge(snapshot, name));
   };
   await spawnRepresentativeEnemies(page, scenario.enemySpawnCommands, samplePeak);
-  await exerciseCombat(page, scenario.durationMs, samplePeak, scenario.minimumSamples);
+  const activeFrameSamples = await exerciseCombat(page, scenario.durationMs, samplePeak, scenario.minimumSamples);
   const snapshot = await diagnostics(page);
   const result = {
     simulation: snapshot.simulation,
@@ -155,8 +157,8 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
     newLongTasks: snapshot.longTasks - longTasksBefore,
     peakGauges,
   };
-  assert.ok(snapshot.frame.samples >= scenario.minimumSamples,
-    `${label} produced ${snapshot.frame.samples}/${scenario.minimumSamples} required frame samples`);
+  assert.ok(activeFrameSamples >= scenario.minimumSamples,
+    `${label} produced ${activeFrameSamples}/${scenario.minimumSamples} required active frame samples`);
   assertAtMost(snapshot.simulation.p95Ms, scenario.simulationP95Ms, `${label} simulation p95 ms`);
   assertAtMost(snapshot.render.p95Ms, scenario.renderP95Ms, `${label} render p95 ms`);
   assertAtMost(snapshot.frame.p95Ms, scenario.frameP95Ms, `${label} frame-work p95 ms`);
