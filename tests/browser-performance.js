@@ -114,9 +114,8 @@ function assertAtMost(actual, budget, label) {
   assert.ok(actual <= budget, `${label}: ${actual} exceeded budget ${budget}`);
 }
 
-async function exerciseCombat(page, durationMs, onSample, minimumSamples = 0) {
+async function exerciseCombat(page, durationMs, onSample, minimumSamples = 0, minimumCollectionRateFps = 10) {
   const startedAt = Date.now();
-  const minimumCollectionRateFps = 10;
   const sampleCollectionBoundMs = Math.ceil(minimumSamples / minimumCollectionRateFps * 1000);
   const deadline = startedAt + Math.max(durationMs + 20_000, sampleCollectionBoundMs);
   let direction = "d";
@@ -161,7 +160,13 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
   };
   await spawnRepresentativeEnemies(page, scenario.enemySpawnCommands, samplePeak);
   await page.evaluate(() => window.__TEAR_DIAGNOSTICS__.resetTimingSamples());
-  const activeFrameSamples = await exerciseCombat(page, scenario.durationMs, samplePeak, scenario.minimumSamples);
+  const activeFrameSamples = await exerciseCombat(
+    page,
+    scenario.durationMs,
+    samplePeak,
+    scenario.minimumSamples,
+    scenario.minimumCollectionRateFps,
+  );
   const snapshot = await diagnostics(page);
   const result = {
     simulation: snapshot.simulation,
