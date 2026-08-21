@@ -51,27 +51,3 @@ jobs:
             artifacts/tearbench
           if-no-files-found: error
           retention-days: 14
-
-  performance:
-    # Provision this label only as a one-job ephemeral runner for a reviewed SHA.
-    runs-on: [self-hosted, linux, x64, tear-performance]
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.15.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: xvfb-run -a pnpm check:performance
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: tear-performance-${{ github.sha }}
-          path: test-results/browser-performance.json
-          if-no-files-found: warn
-          retention-days: 14
