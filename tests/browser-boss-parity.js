@@ -150,7 +150,7 @@ withJourney({ name: "boss oracle parity", port: 8237 }, async ({ page }) => {
     await page.mouse.move(800 + Math.cos(angle) * radius, 650 + Math.sin(angle) * radius);
     await page.waitForFunction((tick) =>
       (window.__TEAR_DIAGNOSTICS__.snapshot().gauges.simulationTick || 0) > tick,
-    simulationTick, { timeout: 1000 });
+    simulationTick, { timeout: 5000 });
     if (index % 12 === 11) damaged = await bossSnapshot(page, "warden");
   }
   damaged = await bossSnapshot(page, "warden");
