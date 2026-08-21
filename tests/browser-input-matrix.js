@@ -143,8 +143,6 @@ async function main() {
   await controller.mouse.click(800, 450);
   await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked);
   assert.equal(await controller.locator("#lockhint").evaluate((hint) => getComputedStyle(hint).display), "none");
-  const aimBeforeMove = await controller.evaluate(() => window.__PANTHEON_TEST.state().bladeAim);
-  assert.ok(aimBeforeMove, "recorded live play exposes the physical blade aim");
   assert.equal(await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording), true,
     "every live run owns one shared canonical device-input session independently of Ghost 2");
   for (const mode of ["campaign", "endless", "gauntlet", "bossonly", "sandbox"]) {
@@ -162,6 +160,8 @@ async function main() {
   await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLockAllowed);
   await controller.mouse.click(800, 450);
   await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked);
+  const aimBeforeMove = await controller.evaluate(() => window.__PANTHEON_TEST.state().bladeAim);
+  assert.ok(aimBeforeMove, "recorded live play exposes the physical blade aim");
   const reachBeforeMove = Math.hypot(aimBeforeMove.x, aimBeforeMove.y);
   await controller.mouse.move(800, 475);
   await controller.waitForFunction((before) => {
