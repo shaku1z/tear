@@ -53,7 +53,8 @@ jobs:
           retention-days: 14
 
   performance:
-    runs-on: ubuntu-24.04
+    # Provision this label only as a one-job ephemeral runner for a reviewed SHA.
+    runs-on: [self-hosted, linux, x64, tear-performance]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
