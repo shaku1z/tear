@@ -43,6 +43,10 @@ function cloudflareHeaders(target: "standalone" | "crazygames"): Plugin {
           "  X-Content-Type-Options: nosniff",
           "  Referrer-Policy: strict-origin-when-cross-origin",
           "",
+          "/build-info.json",
+          "  Cache-Control: public, max-age=0, must-revalidate",
+          "  X-Content-Type-Options: nosniff",
+          "",
         ].join("\n"),
       });
     },

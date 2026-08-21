@@ -6,7 +6,7 @@ import { basename, join, posix, relative, resolve } from "node:path";
 
 const projectRoot = resolve(import.meta.dirname, "..");
 const temporaryRoot = await mkdtemp(join(tmpdir(), "tear-repro-"));
-const viteCli = resolve(projectRoot, "node_modules", "vite", "bin", "vite.js");
+const buildTarget = resolve(projectRoot, "scripts", "build-target.mjs");
 const crazyGamesPackager = resolve(projectRoot, "scripts", "package-crazygames.mjs");
 const crazyGamesArchive = resolve(projectRoot, "artifacts", "tear-crazygames.zip");
 
@@ -29,7 +29,7 @@ async function fileHashes(root) {
 }
 
 function build(target, output) {
-  const result = spawnSync(process.execPath, [viteCli, "build", "--mode", target, "--outDir", output, "--emptyOutDir"], {
+  const result = spawnSync(process.execPath, [buildTarget, target, "--out-dir", output], {
     cwd: projectRoot,
     encoding: "utf8",
     stdio: "pipe",

@@ -1,0 +1,77 @@
+name: Rehearse Cloudflare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      validation_run_id:
+        description: Successful Validate run ID whose exact artifact will be rehearsed
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: cloudflare-preview
+  cancel-in-progress: false
+
+jobs:
+  rehearse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: Preview
+    steps:
+      - name: Resolve successful validation evidence
+        id: validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.validation_run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" > validation.json
+          node --input-type=module <<'NODE'
+          import { readFileSync, appendFileSync } from "node:fs";
+          const run = JSON.parse(readFileSync("validation.json", "utf8"));
+          const errors = [];
+          if (run.name !== "Validate") errors.push(`workflow ${run.name} is not Validate`);
+          if (run.conclusion !== "success") errors.push(`conclusion ${run.conclusion} is not success`);
+          if (run.head_repository?.full_name !== process.env.GITHUB_REPOSITORY) errors.push("validation belongs to another repository");
+          if (!/^[0-9a-f]{40}$/.test(run.head_sha)) errors.push("validation has no full head SHA");
+          if (errors.length) throw new Error(errors.join("; "));
+          appendFileSync(process.env.GITHUB_OUTPUT, `sha=${run.head_sha}\nrun_id=${run.id}\n`);
+          NODE
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.validation.outputs.sha }}
+          fetch-depth: 1
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: tear-release-targets-${{ steps.validation.outputs.sha }}
+          path: .
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.validation.outputs.run_id }}
+      - name: Verify exact validated standalone artifact
+        env:
+          TEAR_RELEASE_SHA: ${{ steps.validation.outputs.sha }}
+        run: pnpm release:verify-artifact
+      - name: Rehearse attributed deployment
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RELEASE_SHA: ${{ steps.validation.outputs.sha }}
+          VALIDATION_RUN_ID: ${{ steps.validation.outputs.run_id }}
+        shell: bash
+        run: >-
+          pnpm exec wrangler deploy --config wrangler.preview.jsonc
+          --message "preview git:${RELEASE_SHA} validate:${VALIDATION_RUN_ID}"

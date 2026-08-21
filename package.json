@@ -10,11 +10,11 @@
     "dev": "vite --mode standalone",
     "dev:crazygames": "vite --mode crazygames",
     "build": "pnpm build:standalone && pnpm build:crazygames",
-    "build:standalone": "vite build --mode standalone",
-    "build:crazygames": "vite build --mode crazygames",
+    "build:standalone": "node scripts/build-target.mjs standalone",
+    "build:crazygames": "node scripts/build-target.mjs crazygames",
     "build:test": "pnpm build:test:standalone && pnpm build:test:crazygames",
-    "build:test:standalone": "vite build --mode test-standalone",
-    "build:test:crazygames": "vite build --mode test-crazygames",
+    "build:test:standalone": "node scripts/build-target.mjs test-standalone",
+    "build:test:crazygames": "node scripts/build-target.mjs test-crazygames",
     "package:crazygames": "pnpm build:crazygames && node scripts/package-crazygames.mjs",
     "package:crazygames:existing": "node scripts/package-crazygames.mjs",
     "preview": "vite preview --mode standalone",
@@ -185,7 +185,10 @@
     "check:nightly": "pnpm check",
     "check:weekly": "pnpm test:endurance && pnpm exec vitest run tests/unit/ghost-replay-world.test.ts tests/unit/ghost-capsule-vault.test.ts",
     "check": "pnpm requirements:check && pnpm typecheck && pnpm lint && pnpm check:architecture && pnpm test:preservation-corpus && pnpm test:unit:without-preservation-corpus && pnpm test:parity:unit && pnpm test:weapons && pnpm check:tear-score && pnpm build && pnpm check:test-isolation && pnpm test:browser:production-isolation && pnpm check:bundles && pnpm check:crazygames-package && pnpm check:reproducible && pnpm check:cloudflare && pnpm check:ghost-cloud && pnpm build:test && pnpm test:browser && pnpm test:browser:features && pnpm test:browser:bosses && pnpm test:browser:journeys && pnpm test:browser:agent-journey && pnpm test:browser:tear-runtime && pnpm test:browser:state-forge && pnpm test:browser:input && pnpm test:browser:blade-lifecycle && pnpm test:browser:player-locomotion && pnpm test:browser:enemy-charge && pnpm test:browser:combat-resolution && pnpm test:browser:ranged-cycle && pnpm test:browser:projectile-parry && pnpm test:browser:mirror-pursuit && pnpm test:browser:responsive && pnpm test:browser:performance && pnpm test:browser:audio && pnpm test:browser:platform && pnpm test:browser:crazygames-iframe && pnpm test:pwa",
-    "deploy": "pnpm check && wrangler deploy"
+    "deploy": "pnpm deploy:dry-run",
+    "deploy:dry-run": "pnpm build:standalone && pnpm check:cloudflare",
+    "release:preflight": "node scripts/release-preflight.mjs",
+    "release:verify-artifact": "node scripts/verify-release-artifact.mjs standalone"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -29,6 +29,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
+      - name: Prove release preflight rejects unsafe repository states
+        run: node --test tests/release-preflight.test.mjs
       - name: Select and run diff-aware TearBench evidence
         shell: bash
         run: |
@@ -44,7 +46,7 @@ jobs:
           TEAR_HEADED_VISIBILITY: "1"
       - uses: actions/upload-artifact@v4
         with:
-          name: tear-release-targets
+          name: tear-release-targets-${{ github.sha }}
           path: |
             dist
             artifacts/tear-crazygames.zip

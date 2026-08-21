@@ -21,6 +21,30 @@ async function bossSnapshot(page, bossId) {
   return page.evaluate((id) => window.TEAR_WEAPON_DEBUG().enemies.find((enemy) => enemy.bossId === id), bossId);
 }
 
+async function waitForBossSimulationAdvance(page, bossId, initialAliveT, minimumAdvance, timeout = 5000) {
+  // Fixed-step catch-up is deliberately capped, so a busy CI renderer may drop
+  // wall time instead of converting a long frame into an unbounded tick burst.
+  // Observe the authored simulation clock directly while retaining a hard
+  // browser timeout and the caller's exact postcondition assertion.
+  await page.waitForFunction(({ id, threshold }) => {
+    const boss = window.TEAR_WEAPON_DEBUG?.().enemies.find((enemy) => enemy.bossId === id);
+    return boss?.aliveT > threshold;
+  }, { id: bossId, threshold: initialAliveT + minimumAdvance }, { timeout }).catch(() => {});
+  return bossSnapshot(page, bossId);
+}
+
+async function waitForBossCombatProgress(page, bossId, initial, minimumAdvance, timeout = 5000) {
+  await page.waitForFunction(({ id, threshold, origin }) => {
+    const boss = window.TEAR_WEAPON_DEBUG?.().enemies.find((enemy) => enemy.bossId === id);
+    return boss?.aliveT > threshold && Math.hypot(boss.x - origin.x, boss.y - origin.y) > 1;
+  }, {
+    id: bossId,
+    threshold: initial.aliveT + minimumAdvance,
+    origin: { x: initial.x, y: initial.y },
+  }, { timeout }).catch(() => {});
+  return bossSnapshot(page, bossId);
+}
+
 async function forcePhase(page, bossId, fraction, cinematicId) {
   await page.evaluate((value) => window.__PANTHEON_TEST.setBossHealthFraction(value), fraction);
   await page.waitForFunction((id) => window.__PANTHEON_TEST.state().active
@@ -40,8 +64,8 @@ withJourney({ name: "boss oracle parity", port: 8237 }, async ({ page }) => {
   for (const bossId of BOSSES) {
     await startReadyBoss(page, bossId);
     const before = await bossSnapshot(page, bossId);
-    await page.waitForTimeout(bossId === "echo" ? 2200 : 1200);
-    const after = await bossSnapshot(page, bossId);
+    const after = await waitForBossCombatProgress(page, bossId, before, 0.8,
+      bossId === "echo" ? 7000 : 5000);
     assert.ok(after.aliveT > before.aliveT + 0.8, `${bossId} AI must keep receiving fixed ticks after its intro`);
     assert.ok(distance(before, after) > 1, `${bossId} must leave its arrival pose after its intro`);
     if (bossId === "echo") assert.equal(after.live, true, "the Echo mirror brain must be live");
@@ -56,14 +80,12 @@ withJourney({ name: "boss oracle parity", port: 8237 }, async ({ page }) => {
     await startReadyBoss(page, bossId);
     const phaseTwo = await forcePhase(page, bossId, 0.5, firstScene);
     assert.equal(phaseTwo.phase, 2, `${bossId} must enter phase two`);
-    await page.waitForTimeout(900);
-    const phaseTwoMoving = await bossSnapshot(page, bossId);
+    const phaseTwoMoving = await waitForBossSimulationAdvance(page, bossId, phaseTwo.aliveT, 0.6);
     assert.ok(phaseTwoMoving.aliveT > phaseTwo.aliveT + 0.6, `${bossId} phase-two AI must resume after ritual`);
 
     const phaseThree = await forcePhase(page, bossId, 0.2, finalScene);
     assert.equal(phaseThree.phase, 3, `${bossId} must enter phase three`);
-    await page.waitForTimeout(900);
-    const phaseThreeMoving = await bossSnapshot(page, bossId);
+    const phaseThreeMoving = await waitForBossSimulationAdvance(page, bossId, phaseThree.aliveT, 0.6);
     assert.ok(phaseThreeMoving.aliveT > phaseThree.aliveT + 0.6, `${bossId} final-phase AI must resume after ritual`);
   }
 
@@ -82,8 +104,7 @@ withJourney({ name: "boss oracle parity", port: 8237 }, async ({ page }) => {
     for (let index = 0; index < 12; index += 1) window.__PANTHEON_TEST.advance();
   });
   await page.waitForFunction(() => !window.__PANTHEON_TEST.state().active, undefined, { timeout: 5000 });
-  await page.waitForTimeout(900);
-  aldric = await bossSnapshot(page, "aldric");
+  aldric = await waitForBossSimulationAdvance(page, "aldric", aldric.aliveT, 0.6);
   assert.equal(aldric.mode, "frenzy", "Aldric must rise into frenzy after the kneel");
 
   // Echo has no dialogue channel in the source-of-truth fight: phase two splits
@@ -99,8 +120,7 @@ withJourney({ name: "boss oracle parity", port: 8237 }, async ({ page }) => {
     return debug.enemies.find((enemy) => enemy.bossId === "echo")?.phase === 3 && debug.enemies.length === 1;
   }, undefined, { timeout: 5000 });
   const echoFinalStart = await bossSnapshot(page, "echo");
-  await page.waitForTimeout(1800);
-  echo = await bossSnapshot(page, "echo");
+  echo = await waitForBossSimulationAdvance(page, "echo", echoFinalStart.aliveT, 1.2, 7000);
   assert.ok(echo.aliveT > echoFinalStart.aliveT + 1.2, "Echo's final reflection brain must keep simulating");
 
   // Source's phase-two request crosses a typed adapter into the void-descent
@@ -111,8 +131,7 @@ withJourney({ name: "boss oracle parity", port: 8237 }, async ({ page }) => {
   assert.equal(sourceVoid.phase, 2, "Source must enter phase two");
   assert.equal(sourceVoid.mode, "void", "Source descent must hand off into void combat");
   assert.equal(sourceVoid.voidPending, false, "Source descent request must be consumed exactly once");
-  await page.waitForTimeout(1500);
-  const sourceMoving = await bossSnapshot(page, "source");
+  const sourceMoving = await waitForBossSimulationAdvance(page, "source", sourceVoid.aliveT, 0.8, 7000);
   assert.ok(sourceMoving.aliveT > sourceVoid.aliveT + 0.8, "Source AI must resume after its authored void-arrival grace");
 
   // Prove damage through the actual captured-pointer + held-blade path. This is
