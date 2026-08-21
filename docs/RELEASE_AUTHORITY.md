@@ -6,7 +6,10 @@ Cloudflare is a publication target, not an independent source branch.
 ## Validated artifact flow
 
 1. A pull request is integrated into protected `main`.
-2. the `Validate` workflow runs the full `pnpm check` gate at that exact SHA.
+2. The `Validate` workflow runs the deterministic `pnpm check:functional`
+   contract at that exact SHA and uploads the resulting targets. The complete
+   `pnpm check`, including controlled-host performance evidence, runs once for
+   the final release candidate before the gate closes.
 3. `Validate` uploads `tear-release-targets-<sha>`. Each target contains
    `build-info.json` with the repository, full SHA, target, file count, and a
    deterministic artifact hash.
@@ -45,10 +48,12 @@ The release preflight rejects, before Wrangler can run:
 
 ## Rehearsal and production
 
-`Rehearse Cloudflare Release` accepts a successful Validate run ID, downloads
-that run's exact artifact, verifies it, and publishes only to the separate
-`tear-preview` Worker through the `Preview` environment. It never changes the
-`tear` production Worker or its custom domain.
+`Rehearse Cloudflare Release` runs only from protected `main`, accepts a
+successful Validate run ID, downloads that run's exact artifact, verifies it
+with trusted `main` tooling, and publishes only to the separate `tear-preview`
+Worker through the `Preview` environment. Candidate source is never executed
+in the secret-bearing deploy step. The rehearsal never changes the `tear`
+production Worker or its custom domain.
 
 `Deploy Cloudflare Production` is manual even after Validate succeeds. A green
 check is necessary but never sufficient to deploy. Its required environment

@@ -18,6 +18,7 @@ concurrency:
 
 jobs:
   rehearse:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
@@ -53,7 +54,10 @@ jobs:
           NODE
       - uses: actions/checkout@v4
         with:
-          ref: ${{ steps.validation.outputs.sha }}
+          # Keep every executable script and the Wrangler configuration on the
+          # protected branch. The candidate contributes only its validated
+          # release artifact, never secret-bearing executable code.
+          ref: main
           fetch-depth: 1
       - uses: pnpm/action-setup@v4
         with:
@@ -66,13 +70,15 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: ${{ steps.validation.outputs.artifact_name }}
-          path: .
+          # Isolate untrusted archive paths from the trusted checkout. Only the
+          # verified standalone directory is passed to Wrangler below.
+          path: candidate-release
           github-token: ${{ github.token }}
           run-id: ${{ steps.validation.outputs.run_id }}
       - name: Verify exact validated standalone artifact
         env:
           TEAR_RELEASE_SHA: ${{ steps.validation.outputs.sha }}
-        run: pnpm release:verify-artifact
+        run: node scripts/verify-release-artifact.mjs standalone candidate-release/dist/standalone
       - name: Rehearse attributed deployment
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -82,4 +88,5 @@ jobs:
         shell: bash
         run: >-
           pnpm exec wrangler deploy --config wrangler.preview.jsonc
+          --assets candidate-release/dist/standalone
           --message "preview git:${RELEASE_SHA} validate:${VALIDATION_RUN_ID}"

@@ -70,6 +70,13 @@ closure SHA will be frozen in the G1 closure record.
   were deleted on 2026-08-21. Subsequent configuration reads returned error
   `12040` (no build configuration), while both Worker settings endpoints
   continued to return HTTP 200. The live Workers were preserved.
+- Preview publication is restricted to workflow runs on protected `main`.
+  Trusted `main` supplies Wrangler and its fixed `tear-preview` configuration;
+  a candidate contributes only the exact validated release artifact, so PR
+  source cannot execute in the secret-bearing deployment step.
+- GitHub environment `Preview` now requires reviewer `shaku1z` and accepts only
+  protected branches. It has no Cloudflare credential yet, so this control was
+  established without granting publication access.
 - The failing hourly wiki workflow `Synchronize game data` (`311912849`) is
   `disabled_manually`. It retains a retired-file fetch and direct protected
   branch push, so it must remain disabled until G6 replaces that contract.
