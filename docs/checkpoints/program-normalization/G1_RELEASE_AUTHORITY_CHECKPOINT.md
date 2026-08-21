@@ -75,23 +75,32 @@ closure SHA will be frozen in the G1 closure record.
   a candidate contributes only the exact validated release artifact, so PR
   source cannot execute in the secret-bearing deployment step.
 - GitHub environment `Preview` now requires reviewer `shaku1z` and accepts only
-  protected branches. It has no Cloudflare credential yet, so this control was
-  established without granting publication access.
+  protected branches. That approval and branch boundary was established before
+  its Cloudflare credential was installed.
+- Separate account-owned Cloudflare tokens named `TEAR GitHub Preview` and
+  `TEAR GitHub Production` were created with only `Workers Scripts: Write`.
+  GitHub environment secret records confirm `CLOUDFLARE_API_TOKEN` was added to
+  `Preview` at `2026-08-21T09:51:34Z` and `Production` at
+  `2026-08-21T09:52:57Z`; their values were never recorded in repository
+  evidence.
+- Both secret-bearing workflows reject dispatch unless the workflow itself is
+  running from protected `main`. Production names the existing `Production`
+  environment exactly; branch restrictions and required review remain intact.
 - The failing hourly wiki workflow `Synchronize game data` (`311912849`) is
   `disabled_manually`. It retains a retired-file fetch and direct protected
   branch push, so it must remain disabled until G6 replaces that contract.
 
 ## Open blockers
 
-1. **Protected Cloudflare credentials:** add a least-privilege
-   `CLOUDFLARE_API_TOKEN` to the GitHub `Preview` and `Production` environments.
-   Do not copy a broad local OAuth credential into GitHub.
+No external credential blocker remains. Canonical integration, the final full
+gate, artifact verification, and preview rehearsal are still outstanding.
 
 ## Remaining G1 sequence
 
 - [x] Disconnect Cloudflare Workers Builds for `tear` and `tear-wiki`; verify
       both live Worker services remain present.
-- [ ] Install scoped Preview and Production environment tokens.
+- [x] Install distinct account-owned, Workers-Scripts-only Preview and
+      Production environment tokens without recording their values.
 - [ ] Merge wiki PR `#2` only after Workers Builds is disconnected; confirm
       exact-main `check` is green and no production publication occurred.
 - [ ] Obtain a green required `check` context for the exact candidate.

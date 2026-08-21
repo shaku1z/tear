@@ -46,7 +46,7 @@ async function waitForBossSimulationAdvance(page, bossId, initialAliveT, minimum
   await page.waitForFunction(({ id, threshold }) => {
     const boss = window.TEAR_WEAPON_DEBUG?.().enemies.find((enemy) => enemy.bossId === id);
     return boss?.aliveT > threshold;
-  }, { id: bossId, threshold: initialAliveT + minimumAdvance }, { timeout }).catch(() => {});
+  }, { id: bossId, threshold: initialAliveT + minimumAdvance }, { timeout });
   return bossSnapshot(page, bossId);
 }
 
@@ -58,7 +58,7 @@ async function waitForBossCombatProgress(page, bossId, initial, minimumAdvance, 
     id: bossId,
     threshold: initial.aliveT + minimumAdvance,
     origin: { x: initial.x, y: initial.y },
-  }, { timeout }).catch(() => {});
+  }, { timeout });
   return bossSnapshot(page, bossId);
 }
 
