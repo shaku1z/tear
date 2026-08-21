@@ -106,7 +106,6 @@ function assertAtMost(actual, budget, label) {
 async function exerciseCombat(page, durationMs, onSample, minimumSamples = 0) {
   const startedAt = Date.now();
   const deadline = startedAt + durationMs + 20_000;
-  const samplesBefore = (await diagnostics(page)).frame.totalSamples;
   let direction = "d";
   let frameSamples = 0;
   await page.keyboard.down(direction);
@@ -124,7 +123,7 @@ async function exerciseCombat(page, durationMs, onSample, minimumSamples = 0) {
       }
       await page.waitForTimeout(90);
       const snapshot = await diagnostics(page);
-      frameSamples = snapshot.frame.totalSamples - samplesBefore;
+      frameSamples = snapshot.frame.samples;
       if (onSample) await onSample(snapshot);
       iteration++;
     }
@@ -148,6 +147,7 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
     for (const name of Object.keys(peakGauges)) peakGauges[name] = Math.max(peakGauges[name], gauge(snapshot, name));
   };
   await spawnRepresentativeEnemies(page, scenario.enemySpawnCommands, samplePeak);
+  await page.evaluate(() => window.__TEAR_DIAGNOSTICS__.resetTimingSamples());
   const activeFrameSamples = await exerciseCombat(page, scenario.durationMs, samplePeak, scenario.minimumSamples);
   const snapshot = await diagnostics(page);
   const result = {

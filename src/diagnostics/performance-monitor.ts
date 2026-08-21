@@ -2,7 +2,6 @@ export type TimingKind = "simulation" | "render" | "frame";
 
 export interface TimingSummary {
   readonly samples: number;
-  readonly totalSamples: number;
   readonly p50Ms: number;
   readonly p95Ms: number;
   readonly maxMs: number;
@@ -26,7 +25,6 @@ class SampleRing {
   readonly #values: Float64Array;
   #cursor = 0;
   #size = 0;
-  #total = 0;
 
   constructor(capacity: number) {
     if (!Number.isSafeInteger(capacity) || capacity < 1) throw new RangeError("capacity must be a positive integer");
@@ -38,14 +36,17 @@ class SampleRing {
     this.#values[this.#cursor] = value;
     this.#cursor = (this.#cursor + 1) % this.#values.length;
     this.#size = Math.min(this.#size + 1, this.#values.length);
-    this.#total += 1;
+  }
+
+  clear(): void {
+    this.#cursor = 0;
+    this.#size = 0;
   }
 
   summary(): TimingSummary {
     const sorted = Array.from(this.#values.subarray(0, this.#size)).sort((left, right) => left - right);
     return Object.freeze({
       samples: sorted.length,
-      totalSamples: this.#total,
       p50Ms: percentile(sorted, 0.5),
       p95Ms: percentile(sorted, 0.95),
       maxMs: sorted.at(-1) ?? 0,
@@ -75,6 +76,11 @@ export class PerformanceMonitor {
   gauge(name: string, value: number): void {
     if (name.length === 0 || !Number.isFinite(value)) return;
     this.#gauges.set(name, value);
+  }
+
+  /** Clears percentile windows while retaining long-task and gauge history. */
+  resetTimingSamples(): void {
+    for (const timing of Object.values(this.#timings)) timing.clear();
   }
 
   snapshot(): PerformanceDiagnosticsSnapshot {

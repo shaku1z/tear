@@ -219,7 +219,10 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     });
     Object.defineProperty(window, "__TEAR_DIAGNOSTICS__", {
       configurable: true,
-      value: Object.freeze({ snapshot: () => DIAG.snapshot() }),
+      value: Object.freeze({
+        snapshot: () => DIAG.snapshot(),
+        resetTimingSamples: () => DIAG.resetTimingSamples(),
+      }),
     });
     compositionWindow.__TEAR_CATALOG_DEBUG__ = Object.freeze({
       weapons: WEAPONS.map((weapon) => ({ id: weapon.id, throwIdentity: weapon.throwIdentity, ratings: weapon.ratings })),
