@@ -103,13 +103,17 @@ function assertAtMost(actual, budget, label) {
   assert.ok(actual <= budget, `${label}: ${actual} exceeded budget ${budget}`);
 }
 
-async function exerciseCombat(page, durationMs, onSample) {
+async function exerciseCombat(page, durationMs, onSample, minimumSamples = 0) {
   const startedAt = Date.now();
+  const deadline = startedAt + durationMs + 20_000;
   let direction = "d";
+  let frameSamples = 0;
   await page.keyboard.down(direction);
   let iteration = 0;
   try {
-    while (Date.now() - startedAt < durationMs) {
+    while (Date.now() - startedAt < durationMs || frameSamples < minimumSamples) {
+      assert.ok(Date.now() < deadline,
+        `active combat produced ${frameSamples}/${minimumSamples} required frame samples before the bounded deadline`);
       if (iteration % 4 === 0) await page.mouse.click(800, 450, { button: "right" });
       else await page.mouse.click(800, 450);
       if (iteration > 0 && iteration % 12 === 0) {
@@ -118,7 +122,9 @@ async function exerciseCombat(page, durationMs, onSample) {
         await page.keyboard.down(direction);
       }
       await page.waitForTimeout(90);
-      if (onSample) await onSample(await diagnostics(page));
+      const snapshot = await diagnostics(page);
+      frameSamples = snapshot.frame.samples;
+      if (onSample) await onSample(snapshot);
       iteration++;
     }
   } finally {
@@ -140,7 +146,7 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
     for (const name of Object.keys(peakGauges)) peakGauges[name] = Math.max(peakGauges[name], gauge(snapshot, name));
   };
   await spawnRepresentativeEnemies(page, scenario.enemySpawnCommands, samplePeak);
-  await exerciseCombat(page, scenario.durationMs, samplePeak);
+  await exerciseCombat(page, scenario.durationMs, samplePeak, scenario.minimumSamples);
   const snapshot = await diagnostics(page);
   const result = {
     simulation: snapshot.simulation,
