@@ -21,6 +21,23 @@ async function bossSnapshot(page, bossId) {
   return page.evaluate((id) => window.TEAR_WEAPON_DEBUG().enemies.find((enemy) => enemy.bossId === id), bossId);
 }
 
+async function moveCapturedPointer(page, from, to) {
+  await page.evaluate(({ previous, next }) => {
+    const canvas = document.querySelector("canvas");
+    const event = new MouseEvent("mousemove", {
+      bubbles: true,
+      cancelable: true,
+      clientX: next.x,
+      clientY: next.y,
+    });
+    Object.defineProperties(event, {
+      movementX: { value: next.x - previous.x },
+      movementY: { value: next.y - previous.y },
+    });
+    canvas.dispatchEvent(event);
+  }, { previous: from, next: to });
+}
+
 async function waitForBossSimulationAdvance(page, bossId, initialAliveT, minimumAdvance, timeout = 5000) {
   // Fixed-step catch-up is deliberately capped, so a busy CI renderer may drop
   // wall time instead of converting a long frame into an unbounded tick burst.
@@ -142,12 +159,15 @@ withJourney({ name: "boss oracle parity", port: 8237 }, async ({ page }) => {
   await page.mouse.click(800, 450);
   await page.waitForFunction(() => document.pointerLockElement !== null, undefined, { timeout: 5000 });
   let damaged = await bossSnapshot(page, "warden");
+  let pointer = { x: 800, y: 450 };
   for (let index = 0; index < 240 && damaged.hp >= fullHealth; index += 1) {
     const simulationTick = await page.evaluate(
       () => window.__TEAR_DIAGNOSTICS__.snapshot().gauges.simulationTick || 0,
     );
     const angle = index * 0.48, radius = index % 2 === 0 ? 70 : 240;
-    await page.mouse.move(800 + Math.cos(angle) * radius, 650 + Math.sin(angle) * radius);
+    const nextPointer = { x: 800 + Math.cos(angle) * radius, y: 650 + Math.sin(angle) * radius };
+    await moveCapturedPointer(page, pointer, nextPointer);
+    pointer = nextPointer;
     await page.waitForFunction((tick) =>
       (window.__TEAR_DIAGNOSTICS__.snapshot().gauges.simulationTick || 0) > tick,
     simulationTick, { timeout: 5000 });
