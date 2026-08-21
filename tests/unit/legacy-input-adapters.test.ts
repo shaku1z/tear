@@ -56,12 +56,11 @@ describe("legacy input adapter", () => {
     let lockRequests = 0;
     const canvas = new EventTarget() as HTMLCanvasElement;
     Object.defineProperties(canvas, {
-      requestPointerLock: { value: () => { lockRequests += 1; } },
       getBoundingClientRect: { value: () => ({ left: 0, top: 0, width: 1_600, height: 900 }) },
     });
     let pointerLockElement: Element | null = null;
     Object.defineProperty(documentTarget, "pointerLockElement", { get: () => pointerLockElement });
-    input.init(canvas);
+    input.init(canvas, () => { lockRequests += 1; });
     const pointerEvent = (type: string, values: Readonly<Record<string, number>>): Event => {
       const event = new Event(type);
       for (const [key, value] of Object.entries(values)) Object.defineProperty(event, key, { value });

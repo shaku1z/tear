@@ -180,7 +180,7 @@ export interface LegacyInput {
   touchActive(): boolean;
   buzz(pattern: number | number[]): void;
   touchLayout(): TouchLayout;
-  init(canvas: HTMLCanvasElement): void;
+  init(canvas: HTMLCanvasElement, requestPointerLock?: () => void): void;
   consumeDelta(): Point;
   left(): boolean;
   right(): boolean;

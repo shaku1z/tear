@@ -20,10 +20,10 @@ export function createLiveBrowserRuntime(d: BrowserDependencies): LiveBrowserRun
   if (!(element instanceof HTMLCanvasElement)) throw new Error("Tear requires a #game canvas");
   const context = element.getContext("2d");
   if (context === null) throw new Error("Tear requires a 2D canvas context");
-  d.Input.init(element);
+  const pointer = new BrowserPointerLock(element, d.browserDocument);
+  d.Input.init(element, pointer.api.request);
   const viewport = new CanvasViewport(element, d.CONFIG.view.w, d.CONFIG.view.h, d.OVERSCAN, d.SAFE, d.browserWindow, d.browserDocument);
   viewport.start();
-  const pointer = new BrowserPointerLock(element, d.browserDocument);
   bindFullscreenButton(d.browserDocument);
   const parameters = new URLSearchParams(d.browserWindow.location.search);
   return Object.freeze({ canvas: element, context, width: d.CONFIG.view.w, height: d.CONFIG.view.h, viewport,

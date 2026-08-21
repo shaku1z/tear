@@ -139,7 +139,7 @@ const Input: LegacyInput = {
   },
   textEntryMode: false,
 
-  init(canvas) {
+  init(canvas, requestPointerLock = () => undefined) {
     window.addEventListener("keydown", (e) => {
       if (this.textEntryMode) return;
       if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab"].includes(e.code)) e.preventDefault();
@@ -192,7 +192,7 @@ const Input: LegacyInput = {
       this.clickX = p.x; this.clickY = p.y;
       this.clicked = true; this.clickSource = "mouse";
       this.setMode("mouse");
-      if (this.allowLock && !this.locked) void canvas.requestPointerLock();
+      if (this.allowLock && !this.locked) requestPointerLock();
     });
     // right-click = throw / recall the blade (no context menu)
     canvas.addEventListener("contextmenu", (e) => { e.preventDefault(); });
