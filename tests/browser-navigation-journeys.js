@@ -97,6 +97,7 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
   }
 
   await boot();
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().attract?.ready === true, undefined, { timeout: 10000 });
   const initialAttract = await page.evaluate(() => window.__PANTHEON_TEST.state().attract || null);
   assert.ok(initialAttract, "built artifact must expose the read-only Attract summary in PANTHEON_DEBUG");
   assert.equal(initialAttract.ready, true, "attract mode is active on the menu");

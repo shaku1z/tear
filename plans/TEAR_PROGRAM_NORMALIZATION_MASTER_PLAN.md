@@ -1,6 +1,6 @@
 # TEAR Program Normalization and Release Governance Master Plan
 
-**Status:** Executing — G0 and G1 closed; G2 eligible
+**Status:** Executing — G0 and G1 closed; G2 open at G2-A
 
 **Prepared:** 2026-08-20
 
@@ -8,14 +8,23 @@
 
 **Initial canonical game baseline:** `shaku1z/tear` `main` at `0bef91dc4970740c80b1969416c0573680bcaf89`
 
-**Current G1 closure candidate:** `shaku1z/tear` `main` at `9b545b0382fb8c015da7a3410932a1d09e88750b`
+**Current canonical game `main`:** `shaku1z/tear` at
+`0aa3896cce5ac31e60409e4a3cd6517e81cc8f3f` (the earlier G1 candidate
+`9b545b0382fb8c015da7a3410932a1d09e88750b` is its immediate parent)
 
-**Current goal state:** G0 CLOSED; G1 CLOSED; G2 ELIGIBLE. G2 remains
-integration-gated behind the reviewed PR for the G1 closure candidate.
+**Current goal state:** G0 CLOSED; G1 CLOSED; G2 OPEN at checkpoint G2-A. G2
+remains open and integration-gated; its close conditions are not satisfied.
 
-**Music repository baseline:** `shaku1z/tear-score` `main` at `766b910`; current candidate branch at `1611bbb`
+**Music repository state:** `shaku1z/tear-score` protected `origin/main` at
+`207b83d`; Stage 1 review tip `origin/codex/g2-music-canonicalization` is
+`9d96484` at the 2026-08-22 10:40:05 -04:00 snapshot. The isolated worktree
+is active in Stage 2, so this is a timestamped observation; the candidate
+remains on HOLD until the G2 music release-train audit and clean full gate.
 
-**Wiki repository baseline:** `shaku1z/tear-wiki` remote `master` at `b57efda`; the pre-fetch local checkout was stale at `f183b49`
+**Wiki repository state:** fetched protected/default remote `master` at
+`27c67acfc076624b65e95e65d095adc4908ee21e`; local `master` remains the stale
+rollback checkout at `f183b495cc0ee21f9296c7fedcd05cf83ac5eba8`, tracking
+`origin/master` and eight commits behind at the same snapshot.
 
 This document is the single sequencing authority for correcting the current
 TEAR repository, naming, workspace, documentation, wiki, and deployment state.
@@ -109,6 +118,10 @@ terms. Compatibility names require explicit expiry tracking.
 
 ### 2.2 Music repository
 
+The following is the G0-era baseline inventory, retained for historical
+comparison. The live Stage 1/Stage 2 refs and worktree status are timestamped
+in the G2-A ledger; do not read these baseline values as current heads.
+
 - The repository still named `tear-score` is clean, but its checked-out branch
   is `codex/samply-dropbox-review-sync`, not `main`.
 - That branch is **51 commits ahead and zero behind** `main`. It contains the
@@ -132,6 +145,11 @@ terms. Compatibility names require explicit expiry tracking.
   soundtrack operations application.
 
 ### 2.3 Wiki repository and public wiki
+
+The following is the G0-era baseline inventory, retained for historical
+comparison. The live protected/default `origin/master` and stale local
+checkout are timestamped in the G2-A ledger; do not read these baseline
+values as current branch or ruleset state.
 
 - `tear-wiki` is a separate repository whose pre-fetch local `master` was
   clean but seven sync commits behind live remote `master` (`b57efda`). The G0
@@ -395,11 +413,21 @@ place approved modern work on the correct canonical branch through review.
 
 ### Checkpoint G2-A — midpoint pause
 
-- [ ] Every unmerged game ref has a written `integrate`, `archive`, or
-      `reject-never-merge` decision.
-- [ ] Every decision names its evidence and rollback ref.
-- [ ] Music candidate scope and provenance are fully reviewed.
-- [ ] No legacy JS implementation has entered modern `main`.
+- [x] Every unmerged game ref has a written `integrate`, `archive`, or
+      `reject-never-merge` decision. See
+      `docs/checkpoints/program-normalization/G2_A_DECISION_LEDGER.md` for the
+      exact ref-level ledger and the separate quarantine/hold decisions.
+- [x] Every decision names its evidence and rollback ref.
+- [ ] Music candidate scope and provenance are fully reviewed. The candidate
+      remains on HOLD pending the clean-clone audit, full gate, vendored-source
+      reachability proof, canonical-game guard review, and PR.
+- [x] No legacy JS implementation has entered modern `main`; the definitive
+      Final Five policy rejects legacy re-entry.
+- [x] Cutting Room is recorded as superseded by the current `main` lineage;
+      its shipped Field Test contract is Charger evade followed by recovery
+      punish, while launch/projectile mixed testing remains future-only.
+- [x] Wiki canonical-branch decision is recorded: retain `master` during G2;
+      defer the broken data-contract migration to G6.
 
 ### Close conditions
 
