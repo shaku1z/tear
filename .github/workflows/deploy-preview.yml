@@ -86,7 +86,15 @@ jobs:
           RELEASE_SHA: ${{ steps.validation.outputs.sha }}
           VALIDATION_RUN_ID: ${{ steps.validation.outputs.run_id }}
         shell: bash
-        run: >-
-          pnpm exec wrangler deploy --config wrangler.preview.jsonc
-          --assets candidate-release/dist/standalone
-          --message "preview git:${RELEASE_SHA} validate:${VALIDATION_RUN_ID}"
+        run: |
+          set -euo pipefail
+          normalized_token="$(printf '%s' "${CLOUDFLARE_API_TOKEN}" | tr -d '\r\n')"
+          if [[ -z "${normalized_token}" ]]; then
+            echo "Preview Cloudflare API token is empty after newline normalization." >&2
+            exit 1
+          fi
+          echo "::add-mask::${normalized_token}"
+          export CLOUDFLARE_API_TOKEN="${normalized_token}"
+          pnpm exec wrangler deploy --config wrangler.preview.jsonc \
+            --assets candidate-release/dist/standalone \
+            --message "preview git:${RELEASE_SHA} validate:${VALIDATION_RUN_ID}"
