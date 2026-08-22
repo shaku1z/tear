@@ -8,6 +8,43 @@
 
 export type CompatibilityClass = "A" | "B" | "C" | "D";
 
+export type MusicRightsClaimKey =
+  | "gameUse"
+  | "streamSafe"
+  | "vodSafe"
+  | "albumRelease"
+  | "commercialDistribution";
+
+export type MusicRightsClaimStatus = "asserted" | "unknown" | "blocked" | "cleared";
+
+export type MusicRightsClaimBasis = "owner-assertion" | "documented-clearance";
+
+export type MusicRightsClaimReason = "no-clearance-record" | "program-hold";
+
+export interface MusicRightsClaim {
+  readonly status: MusicRightsClaimStatus;
+  readonly basis?: MusicRightsClaimBasis;
+  readonly reason?: MusicRightsClaimReason;
+  readonly evidenceRef?: string;
+}
+
+/**
+ * Additive rights metadata mirrored from the canonical music catalog.
+ *
+ * Game-use assertion and external-release clearance are intentionally separate:
+ * a work can be playable in Tear while streaming, VOD, album, and commercial
+ * distribution remain un-cleared.
+ */
+export interface MusicRights {
+  readonly gameUse: boolean;
+  readonly streamSafe: boolean;
+  readonly vodSafe: boolean;
+  readonly albumRelease: boolean;
+  readonly commercialDistribution: boolean;
+  readonly territories: readonly string[];
+  readonly claims: Readonly<Record<MusicRightsClaimKey, MusicRightsClaim>>;
+}
+
 /** Where music is being asked to play. */
 export type MusicContext = "shell" | "menu" | "shop" | "codex" | "gameplay" | "boss" | "victory" | "replay" | "archive";
 
@@ -34,7 +71,7 @@ export interface MusicWork {
   readonly tags: readonly string[];
   readonly stations: readonly string[];
   readonly unlock: { readonly type: string; readonly bossId?: string; readonly biome?: string };
-  readonly rights: Readonly<Record<string, unknown>>;
+  readonly rights: MusicRights;
   readonly versions: Readonly<Record<string, MusicVersion>>;
 }
 
