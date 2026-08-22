@@ -250,3 +250,13 @@ reachability and restore drill.
 
 **Checkpoint decision:** G2-A is recorded and reviewable. G2 remains OPEN;
 G3, G4, G5, G6, and G7 remain locked by the master plan.
+
+## Supersession note — final G2 state
+
+This ledger is the historical G2-A midpoint snapshot. Its HOLD and OPEN
+statements are superseded by the approved final state recorded in
+[`G2_CLOSURE.md`](G2_CLOSURE.md): game PR #2 is at `85f1ec9`, music PR #3 is
+merged at `1ba4ee4` with protected `main` at `4f7a872`, and the recorded
+hosted/full gates are green. Branches and worktrees remain preserved,
+Cloudflare production remains frozen, and G3 is still locked until the
+closure PR merges.
