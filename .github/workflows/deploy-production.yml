@@ -17,8 +17,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  protected-main:
+    name: Protected main gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require protected main ref
+        env:
+          WORKFLOW_REF: ${{ github.ref }}
+          REF_PROTECTED: ${{ github.ref_protected }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${WORKFLOW_REF}" != "refs/heads/main" ]]; then
+            echo "::error::Production deployment must run from refs/heads/main (found ${WORKFLOW_REF})."
+            exit 1
+          fi
+          if [[ "${REF_PROTECTED}" != "true" ]]; then
+            echo "::error::Production deployment requires GitHub's protected-main context."
+            exit 1
+          fi
   deploy:
-    if: github.ref == 'refs/heads/main'
+    needs: protected-main
+    if: github.ref == 'refs/heads/main' && needs['protected-main'].result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:

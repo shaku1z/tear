@@ -1,11 +1,13 @@
 # G1 Checkpoint — Release Authority
 
 **Status:** OPEN — release controls remain  
-**Recorded:** 2026-08-21  
-**Candidate branch:** `codex/program-normalization-g1`  
-**Pull request:** `#2` (`ci: establish attributable release authority`)  
-**Candidate:** the current tip of `codex/program-normalization-g1`; the exact
-closure SHA will be frozen in the G1 closure record.
+**Recorded:** 2026-08-22
+**Candidate branch:** `codex/g1-release-closure-candidate`
+**Pull request:** pending
+**Candidate base:** `main` at `9b545b0382fb8c015da7a3410932a1d09e88750b`.
+The earlier implementation was integrated through PR `#2`; this document now
+records the evidence review for the new closure candidate. The exact closure
+SHA will be frozen only in an approved G1 closure record.
 
 ## Controls established
 
@@ -24,8 +26,11 @@ closure SHA will be frozen in the G1 closure record.
 - Standalone and CrazyGames builds carry deterministic repository, full-SHA,
   target, and artifact-hash attribution.
 - Production consumes the exact validated artifact rather than rebuilding a
-  different tree. Preview artifact resolution is being corrected to bind to
-  the validated run's release artifact SHA instead of assuming its branch SHA.
+  different tree. Preview artifact resolution binds to the validated run's
+  release artifact SHA instead of assuming its branch SHA.
+- The production workflow now has a no-secret `protected-main` job gate. The
+  environment-backed `deploy` job depends on that gate and enters the existing
+  case-sensitive `Production` environment only after it succeeds.
 - Wiki synchronization is downstream of successful production release instead
   of every game push.
 - PR `#1` is labeled `do-not-merge` and titled
@@ -90,10 +95,44 @@ closure SHA will be frozen in the G1 closure record.
   `disabled_manually`. It retains a retired-file fetch and direct protected
   branch push, so it must remain disabled until G6 replaces that contract.
 
+## Closure-candidate evidence review (2026-08-22)
+
+- Validate run `32571321610` succeeded from `main` at
+  `9b545b0382fb8c015da7a3410932a1d09e88750b`; required job `97027073498`
+  passed and uploaded `tear-release-targets-9b545b0382fb8c015da7a3410932a1d09e88750b`.
+- The GitHub artifact record is `9475495881` with archive digest
+  `sha256:2326589490f8ccff6f199430a13a4dc05c726d88a118d7a12707f48e6377049d`.
+  Independent verification of the downloaded standalone target passed with
+  artifact hash
+  `f93be4ee46f20b572ce0464010e64394be9412e7800527ac2d341a9d0bbcb1d8` and
+  `111` artifact files.
+- Preview rehearsal run `32572769987` succeeded from the same SHA; job
+  `97030609365` published only `tear-preview` at
+  `https://tear-preview.shatheartboy.workers.dev` with Cloudflare version
+  `940bfa1c-24dd-4d29-a78b-e3164abfd28d`.
+- The live preview `build-info.json` exactly reports repository `shaku1z/tear`,
+  SHA `9b545b0382fb8c015da7a3410932a1d09e88750b`, target `standalone`, hash
+  algorithm `sha256-path-size-content-v1`, artifact hash
+  `f93be4ee46f20b572ce0464010e64394be9412e7800527ac2d341a9d0bbcb1d8`, and
+  `111` artifact files.
+- Production was unchanged by the rehearsal: the retained `tear` receipt
+  remains the `d5d8…` / `5f1d5e2d-5d10-4c73-9eb2-0b7f7066f47b` pair, and the
+  retained `tear-wiki` receipt remains the `bbcc…` /
+  `b72b4f0e-5ae0-4439-9b74-cca7d3fd8d1c` pair.
+
+This evidence advances the candidate but does not close G1.
+
 ## Open blockers
 
-No external credential blocker remains. Canonical integration, the final full
-gate, artifact verification, and preview rehearsal are still outstanding.
+The following closure evidence remains pending and must not be inferred from
+the successful hosted `check:functional` run or preview rehearsal:
+
+- the complete controlled-host `pnpm check` from the exact intended final
+  candidate, including its machine-sensitive performance evidence;
+- a retained production-credential receipt proving the protected `Production`
+  environment configuration without recording secret values; and
+- final ruleset, environment, and release-evidence exports attached to the
+  approved G1 closure record.
 
 ## Remaining G1 sequence
 
@@ -103,11 +142,15 @@ gate, artifact verification, and preview rehearsal are still outstanding.
       Production environment tokens without recording their values.
 - [ ] Merge wiki PR `#2` only after Workers Builds is disconnected; confirm
       exact-main `check` is green and no production publication occurred.
-- [ ] Obtain a green required `check` context for the exact candidate.
+- [x] Obtain a green required `check` context for the exact candidate in
+      Validate run `32571321610`.
 - [ ] Run the complete `pnpm check` release gate once from the final G1
       candidate on the controlled local host; preserve all performance budgets.
-- [ ] Download and independently verify that exact CI artifact.
-- [ ] Rehearse a non-production deployment to `tear-preview` and verify live
-      `build-info.json` commit/hash attribution.
+- [x] Download and independently verify that exact CI artifact; see archive
+      `9475495881` and the hash above.
+- [x] Rehearse a non-production deployment to `tear-preview` and verify live
+      `build-info.json` commit/hash attribution in run `32572769987`.
+- [ ] Retain production-credential evidence for the protected `Production`
+      environment without recording secret values.
 - [ ] Export final rulesets and environment/release evidence to the G1 closure
       record; only then close G1 and open G2.

@@ -15,14 +15,17 @@ Cloudflare is a publication target, not an independent source branch.
    deterministic artifact hash.
 4. A maintainer manually starts `Deploy Cloudflare Production` with the
    successful Validate run ID.
-5. The protected `production` environment provides the approval boundary and
-   scoped Cloudflare credentials.
-6. The workflow proves the checkout is clean `main`, tracks `origin/main`, is
+5. The protected `Production` environment provides the approval boundary and
+   scoped Cloudflare credentials. The spelling is case-sensitive and matches
+   the configured GitHub environment.
+6. A no-secret `protected-main` job proves the workflow is executing from
+   protected `main`; the environment-backed deployment job depends on it.
+7. The workflow proves the checkout is clean `main`, tracks `origin/main`, is
    neither ahead nor behind it, and exactly equals the validated SHA.
-7. The workflow downloads rather than rebuilds the validated artifact,
+8. The workflow downloads rather than rebuilds the validated artifact,
    verifies its metadata/hash, and publishes it with the Git SHA and Validate
    run ID in the Cloudflare version message.
-8. Only after Wrangler succeeds does the workflow dispatch the deployed SHA to
+9. Only after Wrangler succeeds does the workflow dispatch the deployed SHA to
    `shaku1z/tear-wiki`.
 
 `build-info.json` is excluded from its own artifact hash to avoid a circular

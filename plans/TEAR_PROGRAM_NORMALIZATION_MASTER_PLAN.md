@@ -1,12 +1,14 @@
 # TEAR Program Normalization and Release Governance Master Plan
 
-**Status:** Executing — G0 closed; G1 eligible
+**Status:** Executing — G0 closed; G1 open (closure candidate under review)
 
 **Prepared:** 2026-08-20
 
 **Execution authorization:** Granted by the user on 2026-08-20
 
-**Canonical game baseline:** `shaku1z/tear` `main` at `0bef91dc4970740c80b1969416c0573680bcaf89`
+**Initial canonical game baseline:** `shaku1z/tear` `main` at `0bef91dc4970740c80b1969416c0573680bcaf89`
+
+**Current G1 closure candidate:** `shaku1z/tear` `main` at `9b545b0382fb8c015da7a3410932a1d09e88750b`
 
 **Music repository baseline:** `shaku1z/tear-score` `main` at `766b910`; current candidate branch at `1611bbb`
 
@@ -315,7 +317,7 @@ through the ordinary project workflow.
       `main`, has `origin/main` as upstream, is exactly equal to it, and has the
       expected release evidence.
 - [ ] Move production deployment into a GitHub Actions environment named
-      `production` with protected secrets and an explicit approval boundary.
+      `Production` with protected secrets and an explicit approval boundary.
 - [ ] Keep a guarded local dry-run/preview path; do not leave an ordinary local
       command able to publish from an arbitrary branch.
 - [ ] Generate deterministic build metadata containing repository, full Git
