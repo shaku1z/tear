@@ -3,7 +3,7 @@
 **Status:** OPEN — release controls remain  
 **Recorded:** 2026-08-22
 **Candidate branch:** `codex/g1-release-closure-candidate`
-**Pull request:** pending
+**Pull request:** `#6` (`ci: gate production on protected main`)
 **Candidate base:** `main` at `9b545b0382fb8c015da7a3410932a1d09e88750b`.
 The earlier implementation was integrated through PR `#2`; this document now
 records the evidence review for the new closure candidate. The exact closure
