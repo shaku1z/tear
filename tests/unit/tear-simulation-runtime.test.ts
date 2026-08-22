@@ -87,6 +87,25 @@ describe("TearSimulationRuntime", () => {
     expect(headless.events).toEqual(live.events);
   });
 
+  it("computes an authoritative hash once, only when a consumer requests it", () => {
+    let reads = 0;
+    const runtime = new TearSimulationRuntime<Readonly<{ tick: number; observed: number }>>({
+      actionPort: { apply(input, tick, actions): void { input.beginTick(tick, actions); } },
+      step(): void { /* The lazy-hash contract is independent of world mutation. */ },
+      snapshot: (tick) => Object.freeze({
+        tick,
+        get observed(): number { reads += 1; return 7; },
+      }),
+    });
+
+    const result = runtime.advanceOne([]);
+    expect(reads).toBe(0);
+    const firstHash = result.stateHash;
+    expect(reads).toBe(1);
+    expect(result.stateHash).toBe(firstHash);
+    expect(reads).toBe(1);
+  });
+
   it("surrounds only executed live ticks without exposing a second step route", () => {
     const { runtime } = createKernel();
     const order: string[] = [];
