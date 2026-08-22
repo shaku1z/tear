@@ -1,8 +1,9 @@
 # TEAR Program Normalization and Release Governance Master Plan
 
-**Status:** Executing — G0, G1, and G2 closed by protected merge of PR #9;
-G3 eligible only after a fresh post-merge ref observation. This status becomes
-canonical when this record is merged to protected `main`.
+**Status:** G3 acceptance-complete and closed by this record when merged to
+protected `main`; G4 remains locked until that protected merge and a fresh
+post-merge ref/Validate observation both pass. No G4 implementation or
+deployment is opened by G3.
 
 **Prepared:** 2026-08-20
 
@@ -10,26 +11,31 @@ canonical when this record is merged to protected `main`.
 
 **Initial canonical game baseline:** `shaku1z/tear` `main` at `0bef91dc4970740c80b1969416c0573680bcaf89`
 
-**Current canonical game `main`:** `shaku1z/tear` at the G2 game PR #8
-squash merge `85f1ec9` (hosted required run `32593016694` is green).
+**Current canonical game `main`:** `shaku1z/tear` at
+`f6b694e83921da8c69f1ad86af6c14a500482c6a` (`f6b694e`), the protected
+post-G2 canonical tip.
 
-**Current goal state:** G0 CLOSED; G1 CLOSED; G2 CLOSED by protected merge of
-PR #9. This closure statement becomes canonical only when this record is
-present on protected `main`; G3 is eligible only after a fresh post-merge ref
-observation. No G3 cleanup action is authorized by this record.
+**Current goal state:** G0 CLOSED; G1 CLOSED; G2 CLOSED; G3 cleanup and
+recovery evidence complete. G3 is canonical only when this record is present
+on protected `main` and its post-merge Validate/ref observation is green. G4
+opens only after that observation; G6 synchronization repair and G7
+production certification remain future work.
 
-**Music repository state:** `shaku1z/tear-score` protected `origin/main` is
-at merge commit `1ba4ee4` after music PR #3. The PR head/preserved source
-branch is at `4f7a872`; GitHub auto-deleted that source branch after the merge
-and it was immediately restored at the exact tip. Hosted checks `32592376530`
-and post-merge `32592533520` are green. The final clean `pnpm check` is
-recorded by log SHA
+**Music repository state:** `shaku1z/tear-score` protected `main` is clean at
+`1ba4ee4d7a73de32d93fc4212f941f32e779560b` (`1ba4ee4`) after music PR #3.
+Its preserved canonicalization tip is `4f7a872`; hosted checks
+`32592376530` and post-merge `32592533520` are green. The final clean
+`pnpm check` is recorded by log SHA
 `7A9CE1595EB5E5363B8FE3C518A1FBE9B11F676656F3790D0D7A006B2DE3B69C`.
 
-**Wiki repository state:** fetched protected/default remote `master` at
-`27c67acfc076624b65e95e65d095adc4908ee21e`; local `master` remains the stale
-rollback checkout at `f183b495cc0ee21f9296c7fedcd05cf83ac5eba8`, tracking
-`origin/master` and eight commits behind at the same snapshot.
+**Wiki repository state:** protected/default `main` is clean at
+`37b9a7d92c6566f1ff9b8424c5b12b609c0114e4` (`37b9a7d`). Migration PR #3
+squash-merged at `ec461168591c6b33396ddf3d57976e5709dc204c`; retirement PR #4
+squash-merged at `37b9a7d`. The obsolete `master` ref was retired only after
+the annotated baseline tag and supplemental all-ref restore proof. PR #3
+Validate/post-merge runs were `32602863708`/`32602897926`; PR #4
+Validate/post-merge runs were `32603336657`/`32603365794`. Sync remains
+disabled/fail-closed pending G6, and the `tear-wiki` Worker remains frozen.
 
 This document is the single sequencing authority for correcting the current
 TEAR repository, naming, workspace, documentation, wiki, and deployment state.
@@ -470,44 +476,70 @@ confirms these facts.
 ## 7. G3 — Remove obsolete refs and normalize worktrees
 
 **Goal:** Reduce branches and worktrees to intentional active lines without
-losing recoverability.
+losing recoverability. **Acceptance:** complete by the consolidated audit and
+the closure record at
+`docs/checkpoints/program-normalization/G3_CLOSURE.md`; canonical closure
+requires that record to land through protected `main` and pass its post-merge
+observation.
 
 ### Game branches already merged and eligible after verification
 
-- [ ] `backup/main-pre-final-five-20260730`
-- [ ] `codex/architectural-redesign`
-- [ ] `codex/cutting-room-ghost3-integration`
-- [ ] `codex/final-five-weapon-roster`
-- [ ] `codex/ghost3-autonomous-completion-plan`
-- [ ] `codex/main-normalization`
-- [ ] `codex/pantheon-iv`
-- [ ] `codex/pantheon-v`
-- [ ] `codex/pantheon-vi`
-- [ ] `codex/pre-main-switch-backup`
-- [ ] `codex/tearscore-normalization`
-- [ ] `codex/weapons-abilities-overhaul` after the oracle tag is verified
-- [ ] `design-system`
+- [x] `backup/main-pre-final-five-20260730` — removed by the exact G3
+      allowlist; retained by the game all-ref/phase-4 bundles and archive tag
+      coverage.
+- [x] `codex/architectural-redesign` — removed by the exact G3 allowlist;
+      retained by the game archive tag and restore assertions.
+- [x] `codex/cutting-room-ghost3-integration` — removed by the exact G3
+      allowlist; retained by the game archive tag and restore assertions.
+- [x] `codex/final-five-weapon-roster` — removed by the exact G3 allowlist;
+      retained by the game archive tag and restore assertions.
+- [x] `codex/ghost3-autonomous-completion-plan` — removed by the exact G3
+      allowlist; retained by the game archive tag and restore assertions.
+- [x] `codex/main-normalization` — removed by the exact G3 allowlist; retained
+      by the game archive tag and restore assertions.
+- [x] `codex/pantheon-iv` — removed by the exact G3 allowlist; retained by the
+      game archive tag and restore assertions.
+- [x] `codex/pantheon-v` — removed by the exact G3 allowlist; retained by the
+      game archive tag and restore assertions.
+- [x] `codex/pantheon-vi` — removed by the exact G3 allowlist; retained by the
+      game archive tag and restore assertions.
+- [x] `codex/pre-main-switch-backup` — removed by the exact G3 allowlist;
+      retained by the game archive tag and restore assertions.
+- [x] `codex/tearscore-normalization` — removed by the exact G3 allowlist;
+      retained by the game archive tag and restore assertions.
+- [x] `codex/weapons-abilities-overhaul` — oracle tag verified before exact
+      removal; the locked oracle remains at `ee5e93141d67cc02505b2227b3be0b10d1819e1c`.
+- [x] `design-system` — removed by the exact G3 allowlist; retained by the
+      game archive tag and restore assertions.
 
 ### Cleanup objectives
 
-- [ ] Close obsolete PR #1 without merging it.
-- [ ] Remove clean registered worktrees for merged branches first, then remove
-      their local branches, then their remote branches.
-- [ ] Correct active-branch upstreams: same-name remote when intentionally
-      published, otherwise no upstream. A feature/experiment branch must never
-      silently track `origin/main`.
-- [ ] Convert needed recovery branches into annotated tags and dated bundles;
-      tags are historical pointers, not development lines.
-- [ ] Keep the locked oracle worktree as comparison-only.
-- [ ] Keep at most the canonical main worktree, the locked oracle, and one or
-      two explicitly active short-lived worktrees.
-- [ ] Delete no dirty worktree. A worktree with unknown files returns to G2.
-- [ ] Remove the music feature branch only after its canonical merge and
-      reproducibility proof.
-- [ ] Migrate wiki `master` to `main` only after GitHub default branch,
+- [x] Close obsolete PR #1 without merging it. The legacy unsafe wiki PR #1
+      was closed without merge before the retirement gate.
+- [x] Remove clean registered worktrees for merged branches first, then remove
+      their local branches, then their remote branches. Phase 4 records exactly
+      48 local and 25 remote deletions; dirty worktrees were preserved.
+- [x] Correct active-branch upstreams: all three canonical roots now have only
+      local `main` tracking same-name `origin/main`; no feature branch remains
+      to silently track `origin/main`.
+- [x] Convert needed recovery branches into annotated tags and dated bundles;
+      tags are historical pointers, not development lines. The original,
+      phase-4, dirty-worktree, and wiki supplemental bundles all verify.
+- [x] Keep the locked oracle worktree as comparison-only at
+      `C:\Users\realm\Desktop\game\Tear-oracle`.
+- [x] Keep at most the canonical main worktree, the locked oracle, and one or
+      two explicitly active short-lived worktrees. The final registered state
+      is game root plus locked oracle, music root, and wiki root only.
+- [x] Delete no dirty worktree. Dirty game evidence was preserved by the phase
+      2 receipts; no dirty registered worktree was removed by phase 4.
+- [x] Remove the music feature branch only after its canonical merge and
+      reproducibility proof. Music `main` is `1ba4ee4`; its clean `pnpm check`
+      log is retained by the G2/G3 receipts.
+- [x] Migrate wiki `master` to `main` only after GitHub default branch,
       Cloudflare Worker build/source settings, custom-domain routing, workflow
       triggers, local remotes, and documentation are updated as one
-      rollback-capable slice.
+      rollback-capable slice. PR #3 performed the migration and PR #4 completed
+      the workflow/retirement gate; Cloudflare remained frozen and unmutated.
 
 ### Target steady state
 
@@ -519,18 +551,28 @@ losing recoverability.
 
 ### Checkpoint G3-A — midpoint pause
 
-- [ ] Branch deletion candidates are still reachable from verified backups.
-- [ ] `git worktree list` contains no stale registered worktree.
-- [ ] Remote branch list matches open PRs plus approved temporary exceptions.
-- [ ] The legacy oracle remains locked and clearly labeled.
+- [x] Branch deletion candidates are still reachable from verified backups;
+      phase-4 coverage and restore assertions report zero failures.
+- [x] `git worktree list` contains no stale registered worktree.
+- [x] Remote branch list matches open PRs plus approved temporary exceptions:
+      each canonical repository now has exactly one remote head, `main`, and
+      zero open PRs.
+- [x] The legacy oracle remains locked and clearly labeled.
 
 ### Close conditions
 
-- [ ] Fresh branch/ref inventory meets the target table.
-- [ ] Fresh clones of all three repositories select the canonical branch.
-- [ ] No open PR targets legacy or unsafe deployment configuration.
-- [ ] Restore drill from the G0 bundle succeeds.
-- [ ] G3 closure record is approved; only then may G4 open.
+- [x] Fresh branch/ref inventory meets the target table: game, music, and wiki
+      each have one local and one remote `main` branch.
+- [x] Fresh clones of all three repositories select `main` and resolve the
+      expected canonical commits.
+- [x] No open PR targets legacy or unsafe deployment configuration; the three
+      repositories report zero open PRs and the legacy wiki PR #1 is closed.
+- [x] Restore drills from the original and phase-4 bundles, plus the wiki
+      supplemental bundle, succeed with `git fsck --full` exit `0` and recover
+      retired refs/tags.
+- [x] G3 closure record is approved by protected merge and post-merge
+      observation; only then may G4 open. G4 remains locked until that final
+      observation is recorded.
 
 ---
 
@@ -903,9 +945,12 @@ Create one record per goal under the future canonical checkpoint location.
 - [x] G0 closed — truth and recovery are frozen.
 - [x] G1 closed — release authority is protected, green, and attributable.
 - [x] G2 closed — unique work and canonical branches are reconciled by
-      protected PR #9. This is authoritative only when this record is present
-      on protected `main`; G3 remains unchecked.
-- [ ] G3 closed — obsolete branches/worktrees are removed safely.
+      protected PR #9.
+- [x] G3 closed — obsolete branches/worktrees are removed safely, all three
+      canonical repositories have one protected `main`, and recovery is
+      proven by tags, bundles, and restore/fsck evidence in the G3 closure
+      record. This becomes canonical on protected merge and post-merge
+      observation of this record.
 - [ ] G4 closed — permanent terminology is implemented with migrations.
 - [ ] G5 closed — repositories, docs, and local workspace are organized.
 - [ ] G6 closed — wiki synchronizes from the modern typed manifest.
