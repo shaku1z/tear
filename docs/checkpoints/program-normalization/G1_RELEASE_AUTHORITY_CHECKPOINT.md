@@ -115,6 +115,10 @@ SHA will be frozen only in an approved G1 closure record.
   algorithm `sha256-path-size-content-v1`, artifact hash
   `f93be4ee46f20b572ce0464010e64394be9412e7800527ac2d341a9d0bbcb1d8`, and
   `111` artifact files.
+- The exact-main controlled worktree `C:\tmp\Tear-g1-controlled-check` ran
+  one `pnpm check` from `9b545b0382fb8c015da7a3410932a1d09e88750b` with exit
+  code `0` after `622448ms`; it was clean before and after and required no
+  retry.
 - Production was unchanged by the rehearsal: the retained `tear` receipt
   remains the `d5d8…` / `5f1d5e2d-5d10-4c73-9eb2-0b7f7066f47b` pair, and the
   retained `tear-wiki` receipt remains the `bbcc…` /
@@ -127,8 +131,6 @@ This evidence advances the candidate but does not close G1.
 The following closure evidence remains pending and must not be inferred from
 the successful hosted `check:functional` run or preview rehearsal:
 
-- the complete controlled-host `pnpm check` from the exact intended final
-  candidate, including its machine-sensitive performance evidence;
 - a retained production-credential receipt proving the protected `Production`
   environment configuration without recording secret values; and
 - final ruleset, environment, and release-evidence exports attached to the
@@ -144,8 +146,9 @@ the successful hosted `check:functional` run or preview rehearsal:
       exact-main `check` is green and no production publication occurred.
 - [x] Obtain a green required `check` context for the exact candidate in
       Validate run `32571321610`.
-- [ ] Run the complete `pnpm check` release gate once from the final G1
-      candidate on the controlled local host; preserve all performance budgets.
+- [x] Run the complete `pnpm check` release gate once from the final G1
+      candidate on the controlled local host; see the clean exact-main run
+      above and preserve all performance budgets.
 - [x] Download and independently verify that exact CI artifact; see archive
       `9475495881` and the hash above.
 - [x] Rehearse a non-production deployment to `tear-preview` and verify live

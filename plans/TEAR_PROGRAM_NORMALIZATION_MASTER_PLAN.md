@@ -338,7 +338,7 @@ through the ordinary project workflow.
 
 ### Checkpoint G1-A — midpoint pause
 
-- [ ] Current game `main` now has a green full gate from the exact candidate.
+- [x] Current game `main` now has a green full gate from the exact candidate.
 - [ ] A simulated wrong-branch, dirty-tree, behind-main, and ahead-main deploy
       is rejected before Wrangler runs.
 - [ ] Cloudflare dry-run still uploads only `dist/standalone`.
