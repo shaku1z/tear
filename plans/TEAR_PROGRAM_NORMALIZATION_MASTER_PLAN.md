@@ -1,6 +1,8 @@
 # TEAR Program Normalization and Release Governance Master Plan
 
-**Status:** Executing — G0 and G1 closed; G2 open at G2-A
+**Status:** Executing — G0, G1, and G2 closed by protected merge of PR #9;
+G3 eligible only after a fresh post-merge ref observation. This status becomes
+canonical when this record is merged to protected `main`.
 
 **Prepared:** 2026-08-20
 
@@ -8,18 +10,21 @@
 
 **Initial canonical game baseline:** `shaku1z/tear` `main` at `0bef91dc4970740c80b1969416c0573680bcaf89`
 
-**Current canonical game `main`:** `shaku1z/tear` at
-`0aa3896cce5ac31e60409e4a3cd6517e81cc8f3f` (the earlier G1 candidate
-`9b545b0382fb8c015da7a3410932a1d09e88750b` is its immediate parent)
+**Current canonical game `main`:** `shaku1z/tear` at the G2 game PR #8
+squash merge `85f1ec9` (hosted required run `32593016694` is green).
 
-**Current goal state:** G0 CLOSED; G1 CLOSED; G2 OPEN at checkpoint G2-A. G2
-remains open and integration-gated; its close conditions are not satisfied.
+**Current goal state:** G0 CLOSED; G1 CLOSED; G2 CLOSED by protected merge of
+PR #9. This closure statement becomes canonical only when this record is
+present on protected `main`; G3 is eligible only after a fresh post-merge ref
+observation. No G3 cleanup action is authorized by this record.
 
-**Music repository state:** `shaku1z/tear-score` protected `origin/main` at
-`207b83d`; Stage 1 review tip `origin/codex/g2-music-canonicalization` is
-`9d96484` at the 2026-08-22 10:40:05 -04:00 snapshot. The isolated worktree
-is active in Stage 2, so this is a timestamped observation; the candidate
-remains on HOLD until the G2 music release-train audit and clean full gate.
+**Music repository state:** `shaku1z/tear-score` protected `origin/main` is
+at merge commit `1ba4ee4` after music PR #3. The PR head/preserved source
+branch is at `4f7a872`; GitHub auto-deleted that source branch after the merge
+and it was immediately restored at the exact tip. Hosted checks `32592376530`
+and post-merge `32592533520` are green. The final clean `pnpm check` is
+recorded by log SHA
+`7A9CE1595EB5E5363B8FE3C518A1FBE9B11F676656F3790D0D7A006B2DE3B69C`.
 
 **Wiki repository state:** fetched protected/default remote `master` at
 `27c67acfc076624b65e95e65d095adc4908ee21e`; local `master` remains the stale
@@ -396,19 +401,19 @@ place approved modern work on the correct canonical branch through review.
 
 ### Music canonicalization objectives
 
-- [ ] Audit the full 51-commit candidate as a release train, including source,
+- [x] Audit the full 51-commit candidate as a release train, including source,
       generated audio, licenses, large binaries, secrets, local paths, and
       promotion boundaries.
-- [ ] Run the candidate's complete `pnpm check` from a clean checkout.
-- [ ] Verify that vendored game commit `7633f1e` remains reachable after the
+- [x] Run the candidate's complete `pnpm check` from a clean checkout.
+- [x] Verify that vendored game commit `7633f1e` remains reachable after the
       proposed music-main integration.
-- [ ] Review the canonical game-root guard at `1611bbb` against the actual game
+- [x] Review the canonical game-root guard at `1611bbb` against the actual game
       root and the new G1 release policy.
-- [ ] Integrate through a reviewable PR after music CI exists. Because the
+- [x] Integrate through a reviewable PR after music CI exists. Because the
       branch is zero-behind, preserve its intentional commit history unless a
       specific commit is rejected; do not collapse it merely for cosmetic
       neatness.
-- [ ] Delete no source branch until the merged music `main` passes CI and a
+- [x] Delete no source branch until the merged music `main` passes CI and a
       fresh clone can build the same adapter/vendor artifacts.
 
 ### Checkpoint G2-A — midpoint pause
@@ -418,9 +423,9 @@ place approved modern work on the correct canonical branch through review.
       `docs/checkpoints/program-normalization/G2_A_DECISION_LEDGER.md` for the
       exact ref-level ledger and the separate quarantine/hold decisions.
 - [x] Every decision names its evidence and rollback ref.
-- [ ] Music candidate scope and provenance are fully reviewed. The candidate
-      remains on HOLD pending the clean-clone audit, full gate, vendored-source
-      reachability proof, canonical-game guard review, and PR.
+- [x] Music candidate scope and provenance are fully reviewed. The candidate
+      passed the clean-clone audit, full gate, vendored-source reachability
+      proof, canonical-game guard review, and protected PR merge.
 - [x] No legacy JS implementation has entered modern `main`; the definitive
       Final Five policy rejects legacy re-entry.
 - [x] Cutting Room is recorded as superseded by the current `main` lineage;
@@ -431,14 +436,34 @@ place approved modern work on the correct canonical branch through review.
 
 ### Close conditions
 
-- [ ] Game `main` contains all approved unique modern work and none of the
+- [x] Game `main` contains all approved unique modern work and none of the
       rejected legacy lines.
-- [ ] Music `main` contains the approved modern music program and the vendored
+- [x] Music `main` contains the approved modern music program and the vendored
       game source commit is reachable from it.
-- [ ] Wiki canonical branch migration decision is recorded but the broken data
+- [x] Wiki canonical branch migration decision is recorded but the broken data
       contract remains scheduled for G6.
-- [ ] All three canonical branches are clean, protected, and green.
-- [ ] G2 closure record is approved; only then may G3 open.
+- [x] The three canonical remote refs are clean, protected, and green at the
+      recorded integration commits. The wiki remains on protected `master`;
+      its migration and synchronization repair remain deferred to G6. Stale
+      local worktrees are explicitly G3 scope and are not represented by this
+      remote-ref check.
+- [x] G2 is closed by the protected merge of PR #9. This checkbox is
+      authoritative only when this record is present on protected `main`;
+      G3 remains eligible only after a fresh post-merge ref observation.
+
+### G2 final pause and boundary
+
+The final G2 state is recorded in
+`docs/checkpoints/program-normalization/G2_CLOSURE.md`. The integrated game
+change is the exact game PR #8 squash merge `85f1ec9`; the music PR #3
+merge commit on protected `main` is `1ba4ee4`, with its restored source
+branch at `4f7a872`. The game PR #8 source branch remains at `d2b5855`.
+The canonical Final Five remains **Sword, Hammer, Greatsword, Chainblade,
+Riftlock**. All preserved branches and worktrees remain intact, and Cloudflare
+production remains frozen with no deployment performed. Protected PR #9 is the
+approval mechanism; once this record is present on protected `main`, G2 is
+closed and G3 is eligible only after a fresh post-merge ref observation
+confirms these facts.
 
 ---
 
@@ -877,7 +902,9 @@ Create one record per goal under the future canonical checkpoint location.
 
 - [x] G0 closed — truth and recovery are frozen.
 - [x] G1 closed — release authority is protected, green, and attributable.
-- [ ] G2 closed — unique work and canonical branches are reconciled.
+- [x] G2 closed — unique work and canonical branches are reconciled by
+      protected PR #9. This is authoritative only when this record is present
+      on protected `main`; G3 remains unchecked.
 - [ ] G3 closed — obsolete branches/worktrees are removed safely.
 - [ ] G4 closed — permanent terminology is implemented with migrations.
 - [ ] G5 closed — repositories, docs, and local workspace are organized.

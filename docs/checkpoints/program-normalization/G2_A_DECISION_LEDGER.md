@@ -250,3 +250,18 @@ reachability and restore drill.
 
 **Checkpoint decision:** G2-A is recorded and reviewable. G2 remains OPEN;
 G3, G4, G5, G6, and G7 remain locked by the master plan.
+
+## Supersession note — final G2 state
+
+This ledger is the historical G2-A midpoint snapshot. Its HOLD and OPEN
+statements are superseded once this record is present on protected `main`
+through PR #9; the completed integration evidence is recorded in
+[`G2_CLOSURE.md`](G2_CLOSURE.md). Game PR #8 is integrated at `85f1ec9`;
+music PR #3 is merged on protected `main` at `1ba4ee4`, while its restored
+source branch remains at `4f7a872`. The music source branch was auto-deleted
+after merge and immediately restored at that exact tip; the game source branch
+remains at `d2b5855`. The recorded hosted/full gates are green. Remote
+canonical refs are clean, protected, and green; stale local worktrees remain
+G3 scope. Branches and worktrees remain preserved, Cloudflare production
+remains frozen. Once PR #9 places this record on protected `main`, G2 is
+closed and G3 is eligible only after a fresh post-merge ref observation.
