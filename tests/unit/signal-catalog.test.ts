@@ -6,6 +6,7 @@ import {
   findWork,
   selectVersion,
   stationWorks,
+  type MusicRights,
   type SignalCatalog,
 } from "../../src/audio/signal/catalog";
 
@@ -13,10 +14,58 @@ const catalog = JSON.parse(
   readFileSync(resolve(import.meta.dirname, "../../public/audio/catalog.json"), "utf8"),
 ) as SignalCatalog;
 
+const EXPECTED_WORK_IDS = [
+  "fillet",
+  "shopkeeper",
+  "the-source",
+  "beserker",
+  "slicing-life-1",
+  "slicing-life-2",
+  "looking-out",
+  "reflection-of-the-bladeless",
+  "bladeless",
+  "steady",
+  "troubleshooting",
+] as const;
+
+function expectedRights(workId: string): MusicRights {
+  return {
+    gameUse: true,
+    streamSafe: false,
+    vodSafe: false,
+    albumRelease: false,
+    commercialDistribution: false,
+    territories: [],
+    claims: {
+      gameUse: {
+        status: "asserted",
+        basis: "owner-assertion",
+        evidenceRef: `docs/audio/RIGHTS_REGISTER.md#${workId}-game-use`,
+      },
+      streamSafe: {
+        status: "unknown",
+        reason: "no-clearance-record",
+      },
+      vodSafe: {
+        status: "unknown",
+        reason: "no-clearance-record",
+      },
+      albumRelease: {
+        status: "blocked",
+        reason: "program-hold",
+      },
+      commercialDistribution: {
+        status: "blocked",
+        reason: "program-hold",
+      },
+    },
+  };
+}
+
 describe("THE SIGNAL catalog", () => {
   it("loads every source work with a playable adaptive cue", () => {
     expect(catalog.format).toBe("tear-signal-catalog");
-    expect(catalog.works.length).toBeGreaterThanOrEqual(10);
+    expect(catalog.works.map((work) => work.id)).toEqual([...EXPECTED_WORK_IDS]);
     for (const work of catalog.works) {
       const adaptive = work.versions["adaptive-game"];
       expect(adaptive?.available, `${work.id} adaptive-game`).toBe(true);
@@ -70,10 +119,10 @@ describe("THE SIGNAL catalog", () => {
     expect(works).toContain("beserker");
   });
 
-  it("gives every work shippable rights metadata", () => {
+  it("mirrors the canonical conservative rights contract for all eleven works", () => {
+    expect(catalog.works).toHaveLength(EXPECTED_WORK_IDS.length);
     for (const work of catalog.works) {
-      expect(work.rights.gameUse, work.id).toBe(true);
-      expect(work.rights.streamSafe, work.id).toBe(true);
+      expect(work.rights, work.id).toEqual(expectedRights(work.id));
     }
   });
 });

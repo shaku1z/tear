@@ -30,12 +30,34 @@
       },
       "rights": {
         "gameUse": true,
-        "streamSafe": true,
-        "vodSafe": true,
-        "albumRelease": true,
-        "territories": [
-          "worldwide"
-        ]
+        "streamSafe": false,
+        "vodSafe": false,
+        "albumRelease": false,
+        "commercialDistribution": false,
+        "territories": [],
+        "claims": {
+          "gameUse": {
+            "status": "asserted",
+            "basis": "owner-assertion",
+            "evidenceRef": "docs/audio/RIGHTS_REGISTER.md#fillet-game-use"
+          },
+          "streamSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "vodSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "albumRelease": {
+            "status": "blocked",
+            "reason": "program-hold"
+          },
+          "commercialDistribution": {
+            "status": "blocked",
+            "reason": "program-hold"
+          }
+        }
       },
       "versions": {
         "adaptive-game": {
@@ -93,12 +115,34 @@
       },
       "rights": {
         "gameUse": true,
-        "streamSafe": true,
-        "vodSafe": true,
-        "albumRelease": true,
-        "territories": [
-          "worldwide"
-        ]
+        "streamSafe": false,
+        "vodSafe": false,
+        "albumRelease": false,
+        "commercialDistribution": false,
+        "territories": [],
+        "claims": {
+          "gameUse": {
+            "status": "asserted",
+            "basis": "owner-assertion",
+            "evidenceRef": "docs/audio/RIGHTS_REGISTER.md#shopkeeper-game-use"
+          },
+          "streamSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "vodSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "albumRelease": {
+            "status": "blocked",
+            "reason": "program-hold"
+          },
+          "commercialDistribution": {
+            "status": "blocked",
+            "reason": "program-hold"
+          }
+        }
       },
       "versions": {
         "adaptive-game": {
@@ -169,12 +213,34 @@
       },
       "rights": {
         "gameUse": true,
-        "streamSafe": true,
-        "vodSafe": true,
-        "albumRelease": true,
-        "territories": [
-          "worldwide"
-        ]
+        "streamSafe": false,
+        "vodSafe": false,
+        "albumRelease": false,
+        "commercialDistribution": false,
+        "territories": [],
+        "claims": {
+          "gameUse": {
+            "status": "asserted",
+            "basis": "owner-assertion",
+            "evidenceRef": "docs/audio/RIGHTS_REGISTER.md#the-source-game-use"
+          },
+          "streamSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "vodSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "albumRelease": {
+            "status": "blocked",
+            "reason": "program-hold"
+          },
+          "commercialDistribution": {
+            "status": "blocked",
+            "reason": "program-hold"
+          }
+        }
       },
       "versions": {
         "adaptive-game": {
@@ -244,12 +310,34 @@
       },
       "rights": {
         "gameUse": true,
-        "streamSafe": true,
-        "vodSafe": true,
-        "albumRelease": true,
-        "territories": [
-          "worldwide"
-        ]
+        "streamSafe": false,
+        "vodSafe": false,
+        "albumRelease": false,
+        "commercialDistribution": false,
+        "territories": [],
+        "claims": {
+          "gameUse": {
+            "status": "asserted",
+            "basis": "owner-assertion",
+            "evidenceRef": "docs/audio/RIGHTS_REGISTER.md#beserker-game-use"
+          },
+          "streamSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "vodSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "albumRelease": {
+            "status": "blocked",
+            "reason": "program-hold"
+          },
+          "commercialDistribution": {
+            "status": "blocked",
+            "reason": "program-hold"
+          }
+        }
       },
       "versions": {
         "adaptive-game": {
@@ -318,12 +406,34 @@
       },
       "rights": {
         "gameUse": true,
-        "streamSafe": true,
-        "vodSafe": true,
-        "albumRelease": true,
-        "territories": [
-          "worldwide"
-        ]
+        "streamSafe": false,
+        "vodSafe": false,
+        "albumRelease": false,
+        "commercialDistribution": false,
+        "territories": [],
+        "claims": {
+          "gameUse": {
+            "status": "asserted",
+            "basis": "owner-assertion",
+            "evidenceRef": "docs/audio/RIGHTS_REGISTER.md#slicing-life-1-game-use"
+          },
+          "streamSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "vodSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "albumRelease": {
+            "status": "blocked",
+            "reason": "program-hold"
+          },
+          "commercialDistribution": {
+            "status": "blocked",
+            "reason": "program-hold"
+          }
+        }
       },
       "versions": {
         "adaptive-game": {
@@ -381,12 +491,34 @@
       },
       "rights": {
         "gameUse": true,
-        "streamSafe": true,
-        "vodSafe": true,
-        "albumRelease": true,
-        "territories": [
-          "worldwide"
-        ]
+        "streamSafe": false,
+        "vodSafe": false,
+        "albumRelease": false,
+        "commercialDistribution": false,
+        "territories": [],
+        "claims": {
+          "gameUse": {
+            "status": "asserted",
+            "basis": "owner-assertion",
+            "evidenceRef": "docs/audio/RIGHTS_REGISTER.md#slicing-life-2-game-use"
+          },
+          "streamSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "vodSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "albumRelease": {
+            "status": "blocked",
+            "reason": "program-hold"
+          },
+          "commercialDistribution": {
+            "status": "blocked",
+            "reason": "program-hold"
+          }
+        }
       },
       "versions": {
         "adaptive-game": {
@@ -456,12 +588,34 @@
       },
       "rights": {
         "gameUse": true,
-        "streamSafe": true,
-        "vodSafe": true,
-        "albumRelease": true,
-        "territories": [
-          "worldwide"
-        ]
+        "streamSafe": false,
+        "vodSafe": false,
+        "albumRelease": false,
+        "commercialDistribution": false,
+        "territories": [],
+        "claims": {
+          "gameUse": {
+            "status": "asserted",
+            "basis": "owner-assertion",
+            "evidenceRef": "docs/audio/RIGHTS_REGISTER.md#looking-out-game-use"
+          },
+          "streamSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "vodSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "albumRelease": {
+            "status": "blocked",
+            "reason": "program-hold"
+          },
+          "commercialDistribution": {
+            "status": "blocked",
+            "reason": "program-hold"
+          }
+        }
       },
       "versions": {
         "adaptive-game": {
@@ -519,12 +673,34 @@
       },
       "rights": {
         "gameUse": true,
-        "streamSafe": true,
-        "vodSafe": true,
-        "albumRelease": true,
-        "territories": [
-          "worldwide"
-        ]
+        "streamSafe": false,
+        "vodSafe": false,
+        "albumRelease": false,
+        "commercialDistribution": false,
+        "territories": [],
+        "claims": {
+          "gameUse": {
+            "status": "asserted",
+            "basis": "owner-assertion",
+            "evidenceRef": "docs/audio/RIGHTS_REGISTER.md#reflection-of-the-bladeless-game-use"
+          },
+          "streamSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "vodSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "albumRelease": {
+            "status": "blocked",
+            "reason": "program-hold"
+          },
+          "commercialDistribution": {
+            "status": "blocked",
+            "reason": "program-hold"
+          }
+        }
       },
       "versions": {
         "adaptive-game": {
@@ -581,12 +757,34 @@
       },
       "rights": {
         "gameUse": true,
-        "streamSafe": true,
-        "vodSafe": true,
-        "albumRelease": true,
-        "territories": [
-          "worldwide"
-        ]
+        "streamSafe": false,
+        "vodSafe": false,
+        "albumRelease": false,
+        "commercialDistribution": false,
+        "territories": [],
+        "claims": {
+          "gameUse": {
+            "status": "asserted",
+            "basis": "owner-assertion",
+            "evidenceRef": "docs/audio/RIGHTS_REGISTER.md#bladeless-game-use"
+          },
+          "streamSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "vodSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "albumRelease": {
+            "status": "blocked",
+            "reason": "program-hold"
+          },
+          "commercialDistribution": {
+            "status": "blocked",
+            "reason": "program-hold"
+          }
+        }
       },
       "versions": {
         "adaptive-game": {
@@ -643,12 +841,34 @@
       },
       "rights": {
         "gameUse": true,
-        "streamSafe": true,
-        "vodSafe": true,
-        "albumRelease": true,
-        "territories": [
-          "worldwide"
-        ]
+        "streamSafe": false,
+        "vodSafe": false,
+        "albumRelease": false,
+        "commercialDistribution": false,
+        "territories": [],
+        "claims": {
+          "gameUse": {
+            "status": "asserted",
+            "basis": "owner-assertion",
+            "evidenceRef": "docs/audio/RIGHTS_REGISTER.md#steady-game-use"
+          },
+          "streamSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "vodSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "albumRelease": {
+            "status": "blocked",
+            "reason": "program-hold"
+          },
+          "commercialDistribution": {
+            "status": "blocked",
+            "reason": "program-hold"
+          }
+        }
       },
       "versions": {
         "adaptive-game": {
@@ -704,12 +924,34 @@
       },
       "rights": {
         "gameUse": true,
-        "streamSafe": true,
-        "vodSafe": true,
-        "albumRelease": true,
-        "territories": [
-          "worldwide"
-        ]
+        "streamSafe": false,
+        "vodSafe": false,
+        "albumRelease": false,
+        "commercialDistribution": false,
+        "territories": [],
+        "claims": {
+          "gameUse": {
+            "status": "asserted",
+            "basis": "owner-assertion",
+            "evidenceRef": "docs/audio/RIGHTS_REGISTER.md#troubleshooting-game-use"
+          },
+          "streamSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "vodSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "albumRelease": {
+            "status": "blocked",
+            "reason": "program-hold"
+          },
+          "commercialDistribution": {
+            "status": "blocked",
+            "reason": "program-hold"
+          }
+        }
       },
       "versions": {
         "adaptive-game": {
