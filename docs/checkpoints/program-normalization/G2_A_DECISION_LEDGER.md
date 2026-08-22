@@ -9,6 +9,11 @@
 **Execution branch:** `codex/g2-canonical-reconciliation`
 
 **Canonical game SHA:** `0aa3896cce5ac31e60409e4a3cd6517e81cc8f3f` (`main` = `origin/main`)
+
+**Live-ref snapshot:** 2026-08-22 10:40:05 -04:00, after non-pruning fetches
+of the game, music, and wiki remotes. The music and wiki values below are
+observations at that time; active work may advance them afterward.
+
 **Scope of this checkpoint:** documentation only; no product, branch, worktree,
 deployment, repository-setting, or external-repository mutation
 
@@ -154,7 +159,15 @@ delete any music branch.
 | Local `main` | `766b910d07264fd81154be29a3d809c63de5c310` | Preserved G0 baseline; local checkout is two commits behind `origin/main` |
 | `codex/samply-dropbox-review-sync` | `1611bbb6e6e60d6e9ee1b18d74742c178393f266` | The 51-commit modern candidate; includes vendoring/control-plane work |
 | Vendored source commit | `7633f1e49b15073a28b7d5d0b84e2c12cdb463b9` | Game-vendored TEAR Music source revision; must remain reachable after integration |
-| `codex/g2-music-canonicalization` | `a013975d305681ece5b7299097d01c2a0ffdb1c1` | G2 review line after merging current music `origin/main`; its worktree is currently dirty and is not canonical |
+| Stage 1 `origin/codex/g2-music-canonicalization` | `9d96484c901b62f27910574da292bf303947542c` | Recorded remote tip at this snapshot; no newer remote Stage 2 commit was observed |
+
+Stage 1 recorded a clean isolated worktree at
+`C:\tmp\tear-score-g2-music-canonicalization` at remote tip `9d96484…`.
+The same isolated worktree is now the active Stage 2 workspace and has 11
+uncommitted path entries (observed at this snapshot); its current status must not be
+mistaken for the Stage 1 clean-checkout evidence. The Stage 1 tip and clean
+state are therefore timestamped observations, not a claim that active work
+will remain clean.
 
 The HOLD is substantive, not a scheduling label. The candidate still needs:
 
@@ -183,8 +196,8 @@ do not create or migrate to `main` in this goal.
 
 | Wiki ref | Exact SHA | Disposition |
 | --- | --- | --- |
-| Local `master` | `f183b495cc0ee21f9296c7fedcd05cf83ac5eba8` | Retain as the local rollback checkout; tag `archive/program-normalization-g0-master-20260820` |
-| `origin/master` / remote default | `b57efdaa8774d889555f4708edbe5b1cc6d3ab17` | Retain as the remote canonical/default branch; local checkout remains seven commits behind until a reviewed sync decision |
+| Local `master` | `f183b495cc0ee21f9296c7fedcd05cf83ac5eba8` | Retain as the stale local rollback checkout; its configured upstream is `origin/master` and it is eight commits behind the fetched remote at this snapshot. Tag: `archive/program-normalization-g0-master-20260820` |
+| `origin/master` / protected remote default | `27c67acfc076624b65e95e65d095adc4908ee21e` | Retain as the fetched remote canonical/default branch; ruleset `21119805` is active and protects `master` |
 | `codex/program-normalization-g1` | `8bf83add033ff61d623d58d723df239bf7a70e10` | Retain as review/evidence line; do not merge as a branch-renaming shortcut |
 | Wiki ruleset | `21119805` | G1 evidence records protected `master` with required `check` |
 
