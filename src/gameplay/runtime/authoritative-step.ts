@@ -28,7 +28,15 @@ export class AuthoritativeStepController<State> {
     this.#dependencies.applyActions(tick, actions);
     this.#dependencies.step(seconds);
     const state = this.#dependencies.snapshot(tick);
-    const result = Object.freeze({ tick, state, stateHash: stableVerificationHash(state) });
+    let cachedStateHash: string | undefined;
+    const result = Object.freeze({
+      tick,
+      state,
+      get stateHash(): string {
+        cachedStateHash ??= stableVerificationHash(state);
+        return cachedStateHash;
+      },
+    });
     this.#lastTick = tick; this.#lastResult = result;
     return result;
   }
