@@ -2,9 +2,10 @@
 
 **Recorded:** 2026-08-22 (America/New_York)
 
-**Closure status:** `CLOSURE-PENDING` until this record is approved by the
-protected merge of PR #9. After that merge, this record closes G2; G3 remains
-locked until a fresh state observation confirms the final refs.
+**Closure status:** `CLOSED` by protected merge of PR #9. This record becomes
+authoritative only when present on protected `main`; its presence there proves
+approval. G3 remains locked until a fresh post-merge ref observation confirms
+the final refs.
 
 ## Baseline and final refs
 
@@ -70,9 +71,8 @@ production deployment.
 
 ## Remaining work and boundaries
 
-No substantive G2 integration condition remains; formal closure is pending the
-protected merge of PR #9. The following are intentionally outside this
-closure:
+G2 is closed by the protected merge of PR #9. The following are intentionally
+outside this closure:
 
 - G3 branch/worktree cleanup and restore drills;
 - G4 permanent terminology migration;
@@ -81,8 +81,8 @@ closure:
 - G7 release certification and Cloudflare deployment.
 
 These goals remain locked until their stated predecessors close. In
-particular, G3 may begin only after this closure PR merges and the final refs
-are re-observed.
+particular, G3 may begin only after PR #9 places this record on protected
+`main` and a fresh post-merge ref observation confirms the final refs.
 
 ## Rollback
 
@@ -91,6 +91,6 @@ state, and restore the affected exact ref from the G0 all-ref bundle or full
 Git-directory archive. Revert the reviewed integration PR only through the
 protected canonical branch workflow, then rerun the owning goal's checks.
 
-**Reviewer decision:** Pending protected merge of PR #9. PR #9 is the
-approval mechanism; no reviewer approval or closed-G2 claim is made before
-that merge. Production remains frozen.
+**Reviewer decision:** Approved by the protected merge of PR #9. This
+statement is self-authenticating only when this record is present on protected
+`main`. Production remains frozen.

@@ -1,6 +1,8 @@
 # TEAR Program Normalization and Release Governance Master Plan
 
-**Status:** Executing — G0 and G1 closed; G2 closure pending PR #9; G3 locked
+**Status:** Executing — G0, G1, and G2 closed by protected merge of PR #9;
+G3 eligible only after a fresh post-merge ref observation. This status becomes
+canonical when this record is merged to protected `main`.
 
 **Prepared:** 2026-08-20
 
@@ -11,9 +13,10 @@
 **Current canonical game `main`:** `shaku1z/tear` at the G2 game PR #8
 squash merge `85f1ec9` (hosted required run `32593016694` is green).
 
-**Current goal state:** G0 CLOSED; G1 CLOSED; G2 integration is complete but
-its closure is pending approval through PR #9. G3 remains LOCKED until that
-protected PR merges; no G3 cleanup action is authorized by this record.
+**Current goal state:** G0 CLOSED; G1 CLOSED; G2 CLOSED by protected merge of
+PR #9. This closure statement becomes canonical only when this record is
+present on protected `main`; G3 is eligible only after a fresh post-merge ref
+observation. No G3 cleanup action is authorized by this record.
 
 **Music repository state:** `shaku1z/tear-score` protected `origin/main` is
 at merge commit `1ba4ee4` after music PR #3. The PR head/preserved source
@@ -444,23 +447,23 @@ place approved modern work on the correct canonical branch through review.
       its migration and synchronization repair remain deferred to G6. Stale
       local worktrees are explicitly G3 scope and are not represented by this
       remote-ref check.
-- [ ] G2 closure PR #9 is merged through the protected review path. Until
-      that approval merge occurs, G2 remains closure-pending and G3 remains
-      locked.
+- [x] G2 is closed by the protected merge of PR #9. This checkbox is
+      authoritative only when this record is present on protected `main`;
+      G3 remains eligible only after a fresh post-merge ref observation.
 
 ### G2 final pause and boundary
 
-The intended final G2 state is recorded for review in
+The final G2 state is recorded in
 `docs/checkpoints/program-normalization/G2_CLOSURE.md`. The integrated game
 change is the exact game PR #8 squash merge `85f1ec9`; the music PR #3
 merge commit on protected `main` is `1ba4ee4`, with its restored source
 branch at `4f7a872`. The game PR #8 source branch remains at `d2b5855`.
 The canonical Final Five remains **Sword, Hammer, Greatsword, Chainblade,
 Riftlock**. All preserved branches and worktrees remain intact, and Cloudflare
-production remains frozen with no deployment performed. PR #9 is the approval
-mechanism: before it merges, G2 is closure-pending; after its protected merge,
-G2 is closed and G3 may begin only after a fresh state observation confirms
-these facts.
+production remains frozen with no deployment performed. Protected PR #9 is the
+approval mechanism; once this record is present on protected `main`, G2 is
+closed and G3 is eligible only after a fresh post-merge ref observation
+confirms these facts.
 
 ---
 
@@ -899,8 +902,9 @@ Create one record per goal under the future canonical checkpoint location.
 
 - [x] G0 closed — truth and recovery are frozen.
 - [x] G1 closed — release authority is protected, green, and attributable.
-- [ ] G2 closed — unique work and canonical branches are reconciled; closure
-      is pending the protected merge of PR #9.
+- [x] G2 closed — unique work and canonical branches are reconciled by
+      protected PR #9. This is authoritative only when this record is present
+      on protected `main`; G3 remains unchecked.
 - [ ] G3 closed — obsolete branches/worktrees are removed safely.
 - [ ] G4 closed — permanent terminology is implemented with migrations.
 - [ ] G5 closed — repositories, docs, and local workspace are organized.
