@@ -82,8 +82,9 @@ candidate is integrated through its reviewed pull request.
   a candidate contributes only the exact validated release artifact, so PR
   source cannot execute in the secret-bearing deployment step.
 - GitHub environment `Preview` now requires reviewer `shaku1z` and accepts only
-  protected branches. That approval and branch boundary was established before
-  its Cloudflare credential was installed.
+  the custom main-only branch policy (`protected_branches:false`,
+  `custom_branch_policies:true`). That approval and branch boundary was
+  established before its Cloudflare credential was installed.
 - Separate account-owned Cloudflare tokens named `TEAR GitHub Preview` and
   `TEAR GitHub Production` were created with only `Workers Scripts: Write`.
   GitHub environment secret records confirm `CLOUDFLARE_API_TOKEN` was added to
