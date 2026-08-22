@@ -54,9 +54,11 @@ shared playground layout. This is deliberately a baseline-only teaching run:
 - `READ THE CHARGE` uses a real baseline Charger. Only a dash *away from its
   live committed charge* earns the evade; only a subsequent blade hit inside
   recovery earns the punish. Generic dashes and cuts cannot complete it.
-- `FIELD TEST` combines a fresh charge evade, recovery punish, upward opening,
-  and projectile deflection in `THE FIELD`. It uses no draft, shop, meta, or
-  tutorial damage bonus and hands directly into the same no-wave practice arena.
+- `FIELD TEST` is the shipped two-step encounter in `THE FIELD`: evade a fresh
+  committed Charger attack, then land a blade hit during its recovery. It uses
+  no draft, shop, meta, or tutorial damage bonus and hands directly into the
+  same no-wave practice arena. Upward-launch and projectile mixed testing are
+  future work, not Field Test completion requirements.
 - The coach ghosts for both encounter rooms are sampled from the production
   Player movement model, so their escape routes are physically possible.
 
@@ -476,6 +478,10 @@ the tether rather than falsely implying unlimited recall.
 
 ## Act III: Read and survive a fight
 
+The mixed launch/projectile encounter described in this act is future-only. It
+is not a description of the shipped Field Test: the shipped contract is only
+the Charger evade followed by a recovery punish.
+
 ### Block 7: Answer a threat
 
 **Question:** Can the player read intent and choose a safe response?
@@ -711,11 +717,11 @@ An objective owns:
 
 The shipped Cutting Room now additionally includes:
 
-- [x] Add enemy-language training and a baseline-only mixed encounter with
-  actual Charger `commit`/`recover` evidence plus a ranged response.
+- [x] Add enemy-language training and a baseline-only Field Test with actual
+  Charger `commit`/`recover` evidence: evade the charge, then punish recovery.
 - [x] Hand off immediately to the no-wave practice arena after course completion.
-- [ ] Add explicit wave cadence, a technique summary, and a post-completion
-  practice selector.
+- [ ] Add launch/projectile mixed testing, explicit wave cadence, a technique
+  summary, and a post-completion practice selector.
 - Add contextual first-run campaign onboarding for the real draft/shop screens;
   keep them absent from the tutorial.
 - Retire version 1 only after completion and abandonment metrics meet targets.
