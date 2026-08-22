@@ -2,24 +2,27 @@
 
 **Recorded:** 2026-08-22 (America/New_York)
 
-**Closure status:** `CLOSED` for the approved integration state. G3 remains
-locked until this closure PR is merged and a fresh state observation confirms
-the final refs.
+**Closure status:** `CLOSURE-PENDING` until this record is approved by the
+protected merge of PR #9. After that merge, this record closes G2; G3 remains
+locked until a fresh state observation confirms the final refs.
 
 ## Baseline and final refs
 
-- Game G2 integration: PR #2 squash merge `85f1ec9` on protected `main`.
+- Game G2 integration: PR #8 squash merge `85f1ec9` on protected `main`.
   Hosted required run `32593016694` is green.
-- Music integration: PR #3 merge `1ba4ee4`; protected music `main` is now at
-  `4f7a872`. Hosted PR run `32592376530` and post-merge run `32592533520`
-  are green.
+- Music integration: PR #3 merge commit `1ba4ee4` is on protected music
+  `main`; the PR head/preserved source branch is `4f7a872`. GitHub
+  auto-deleted that source branch after merge and it was immediately restored
+  at the exact tip. Hosted PR run `32592376530` and post-merge run
+  `32592533520` are green.
+- Game PR #8 source branch remains at `d2b5855`.
 - Wiki canonical branch: protected `master` at `27c67ac`. Validate run
   `32471047656` is green. Wiki branch migration and synchronization repair
   remain explicitly deferred to G6.
 
 ## Authorized scope
 
-G2 reconciled approved modern work into the canonical game and music branches,
+G2 reconciled the reviewed modern work into the canonical game and music branches,
 verified that the typed game remains the only active product implementation,
 and recorded dispositions for divergent lines. G2 did not authorize branch or
 worktree deletion, terminology migration, wiki synchronization repair, or
@@ -54,16 +57,22 @@ production deployment.
 - Music hosted PR and post-merge validation: green
   (`32592376530`, `32592533520`).
 - Wiki hosted validation: green (`32471047656`).
-- Protected canonical branches are clean and green at the recorded refs.
+- The three canonical remote refs are clean, protected, and green at the
+  recorded integration commits. This does not assert that every local
+  worktree is clean; stale local worktrees and their normalization are G3
+  scope.
 - Preserved branches, worktrees, bundles, tags, and recovery evidence remain
-  intact. No source branch was deleted.
+  intact. GitHub auto-deleted the music source branch after its merge; it was
+  immediately restored at the exact `4f7a872` tip. The game source branch
+  remains at `d2b5855`.
 - Cloudflare production is frozen. No game, music, or wiki deployment was
   performed as part of G2.
 
 ## Remaining work and boundaries
 
-G2 has no unclosed integration condition. The following are intentionally
-outside this closure:
+No substantive G2 integration condition remains; formal closure is pending the
+protected merge of PR #9. The following are intentionally outside this
+closure:
 
 - G3 branch/worktree cleanup and restore drills;
 - G4 permanent terminology migration;
@@ -82,4 +91,6 @@ state, and restore the affected exact ref from the G0 all-ref bundle or full
 Git-directory archive. Revert the reviewed integration PR only through the
 protected canonical branch workflow, then rerun the owning goal's checks.
 
-**Reviewer decision:** Approved G2 closure record; production remains frozen.
+**Reviewer decision:** Pending protected merge of PR #9. PR #9 is the
+approval mechanism; no reviewer approval or closed-G2 claim is made before
+that merge. Production remains frozen.
