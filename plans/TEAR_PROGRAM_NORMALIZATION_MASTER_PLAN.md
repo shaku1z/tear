@@ -46,31 +46,31 @@ the failed gate.
 These are settled program truths, not questions for future implementers.
 
 - [x] The redesigned TypeScript/Vite architecture under `src/` is the current
-      game. The retired `js/` monolith is comparison/migration evidence only.
+  game. The retired `js/` monolith is comparison/migration evidence only.
 - [x] The canonical Final Five are, in stable order: **Sword, Hammer,
-      Greatsword, Chainblade, Riftlock**.
+  Greatsword, Chainblade, Riftlock**.
 - [x] Spear and Ringblade are retired weapon identifiers. They may remain only
-      in migration maps, historical evidence, and clearly marked archived plans.
+  in migration maps, historical evidence, and clearly marked archived plans.
 - [x] `main` is the only long-lived production branch for the game.
 - [x] Cloudflare production must be attributable to one exact, green `main`
-      commit. A separate deployment branch is forbidden.
+  commit. A separate deployment branch is forbidden.
 - [x] TearBench keeps its name.
 - [x] The permanent terminology direction is:
 
-| Current/ambiguous term           | Permanent term          | Scope                                              |
-| -------------------------------- | ----------------------- | -------------------------------------------------- |
-| TearScore                        | **TEAR Music**          | Whole music product/repository identity            |
-| TearScore runtime                | **Adaptive Soundtrack** | In-game adaptive playback engine                   |
-| THE SIGNAL                       | **Music**               | Player-facing music area                           |
-| Foundry Studio (audio)           | **Soundtrack Desk**     | Private soundtrack operations application          |
-| Foundry (agent training)         | **Training Operations** | Automated agent-training operations                |
-| State Forge / State Forge Studio | **Scenario Console**    | Deterministic scenario construction and inspection |
-| Ghost Studio                     | **Replay Editor**       | Replay editing surface                             |
-| Ghost Lab                        | **Replay Hub**          | Replay inspection and navigation surface           |
-| TearBot                          | **Game Agent**          | Scripted/learned gameplay agent                    |
-| Academy                          | **Training Archive**    | Curated training data and review surface           |
-| Watch Agent                      | **Run Monitor**         | Active/aggregate run observation                   |
-| TearBench                        | **TearBench**           | Verification and evidence program; unchanged       |
+| Current/ambiguous term | Permanent term | Scope |
+|---|---|---|
+| TearScore | **TEAR Music** | Whole music product/repository identity |
+| TearScore runtime | **Adaptive Soundtrack** | In-game adaptive playback engine |
+| THE SIGNAL | **Music** | Player-facing music area |
+| Foundry Studio (audio) | **Soundtrack Desk** | Private soundtrack operations application |
+| Foundry (agent training) | **Training Operations** | Automated agent-training operations |
+| State Forge / State Forge Studio | **Scenario Console** | Deterministic scenario construction and inspection |
+| Ghost Studio | **Replay Editor** | Replay editing surface |
+| Ghost Lab | **Replay Hub** | Replay inspection and navigation surface |
+| TearBot | **Game Agent** | Scripted/learned gameplay agent |
+| Academy | **Training Archive** | Curated training data and review surface |
+| Watch Agent | **Run Monitor** | Active/aggregate run observation |
+| TearBench | **TearBench** | Verification and evidence program; unchanged |
 
 Compatibility identifiers may temporarily retain old strings, but user-facing
 copy, canonical documentation, new APIs, and new files must use the permanent
@@ -233,17 +233,17 @@ values as current branch or ruleset state.
 
 Only one goal may be **OPEN** at a time.
 
-| Order | Goal                                            | Initial state | Opens when                | Closes when                                                                             |
-| ----: | ----------------------------------------------- | ------------- | ------------------------- | --------------------------------------------------------------------------------------- |
-|    G0 | Freeze and record truth                         | ELIGIBLE      | User authorizes execution | Baseline ledger and backups are verified                                                |
-|    G1 | Establish release authority                     | LOCKED        | G0 closed                 | Protected, green, attributable release path exists                                      |
-|    G2 | Reconcile unique work and canonical branches    | LOCKED        | G1 closed                 | All unique refs have a written disposition and canonical branches contain approved work |
-|    G3 | Remove obsolete refs and normalize worktrees    | LOCKED        | G2 closed                 | Branch/worktree targets are met and recovery is proven                                  |
-|    G4 | Normalize permanent terminology                 | LOCKED        | G3 closed                 | Public/internal names and migrations pass their gates                                   |
-|    G5 | Organize repositories, documents, and workspace | LOCKED        | G4 closed                 | Information architecture and local workspace policy are enforced                        |
-|    G6 | Replace the wiki synchronization contract       | LOCKED        | G5 closed                 | Wiki proves exact current game SHA and modern content                                   |
-|    G7 | Certify and deploy the converged program        | LOCKED        | G6 closed                 | Live game/wiki provenance and post-deploy evidence match                                |
-|    G8 | Operate the prevention loop                     | LOCKED        | G7 closed                 | Never permanently closes; produces recurring evidence                                   |
+| Order | Goal | Initial state | Opens when | Closes when |
+|---:|---|---|---|---|
+| G0 | Freeze and record truth | ELIGIBLE | User authorizes execution | Baseline ledger and backups are verified |
+| G1 | Establish release authority | LOCKED | G0 closed | Protected, green, attributable release path exists |
+| G2 | Reconcile unique work and canonical branches | LOCKED | G1 closed | All unique refs have a written disposition and canonical branches contain approved work |
+| G3 | Remove obsolete refs and normalize worktrees | LOCKED | G2 closed | Branch/worktree targets are met and recovery is proven |
+| G4 | Normalize permanent terminology | LOCKED | G3 closed | Public/internal names and migrations pass their gates |
+| G5 | Organize repositories, documents, and workspace | LOCKED | G4 closed | Information architecture and local workspace policy are enforced |
+| G6 | Replace the wiki synchronization contract | LOCKED | G5 closed | Wiki proves exact current game SHA and modern content |
+| G7 | Certify and deploy the converged program | LOCKED | G6 closed | Live game/wiki provenance and post-deploy evidence match |
+| G8 | Operate the prevention loop | LOCKED | G7 closed | Never permanently closes; produces recurring evidence |
 
 No prior ad-hoc work automatically closes a goal. Every goal needs a new
 closure record from the final intended commit state.
@@ -385,16 +385,16 @@ place approved modern work on the correct canonical branch through review.
 
 ### Game unique-work queue
 
-| Ref                                               | Verified unique content          | Required disposition                                                                                       |
-| ------------------------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `codex/cutting-room-2`                            | Four unique modern commits       | Focused feature audit; migrate approved slices from current `main`, test, then integrate or archive        |
-| `experiment/system-memory-wave-run`               | Two experimental commits         | Keep quarantined only if experiment is active; otherwise archive as tag/bundle                             |
-| `codex/main-repair-weapon-core`                   | Alternative one-commit guard fix | Compare against current `main`; retain only missing behavior, never merge blindly                          |
-| detached `426b4ff`                                | Alternate receipt/evidence line  | Compare with merged successor; archive unless it contains unique valid evidence                            |
-| rendering and pristine-OST plan branches          | Unique planning documents        | Preserve approved documents in canonical plan/archive locations, not as permanent branches                 |
-| `archive/invalid-legacy-final-five-weapon-roster` | 41 legacy JS commits             | Never merge; preserve only as clearly named historical archive/tag/bundle                                  |
-| `feat/tear-score-integration`                     | Eight legacy JS/audio commits    | Never merge; modern vendored engine supersedes it; archive only                                            |
-| `rescue/*`                                        | Recovery/WIP pointers            | Compare hashes against archive refs and `main`; preserve genuinely unique material, then retire refs in G3 |
+| Ref | Verified unique content | Required disposition |
+|---|---|---|
+| `codex/cutting-room-2` | Four unique modern commits | Focused feature audit; migrate approved slices from current `main`, test, then integrate or archive |
+| `experiment/system-memory-wave-run` | Two experimental commits | Keep quarantined only if experiment is active; otherwise archive as tag/bundle |
+| `codex/main-repair-weapon-core` | Alternative one-commit guard fix | Compare against current `main`; retain only missing behavior, never merge blindly |
+| detached `426b4ff` | Alternate receipt/evidence line | Compare with merged successor; archive unless it contains unique valid evidence |
+| rendering and pristine-OST plan branches | Unique planning documents | Preserve approved documents in canonical plan/archive locations, not as permanent branches |
+| `archive/invalid-legacy-final-five-weapon-roster` | 41 legacy JS commits | Never merge; preserve only as clearly named historical archive/tag/bundle |
+| `feat/tear-score-integration` | Eight legacy JS/audio commits | Never merge; modern vendored engine supersedes it; archive only |
+| `rescue/*` | Recovery/WIP pointers | Compare hashes against archive refs and `main`; preserve genuinely unique material, then retire refs in G3 |
 
 ### Music canonicalization objectives
 
@@ -453,8 +453,8 @@ place approved modern work on the correct canonical branch through review.
 The intended final G2 state is recorded for review in
 `docs/checkpoints/program-normalization/G2_CLOSURE.md`. The integrated game
 change is the exact game PR #8 squash merge `85f1ec9`; the music PR #3
-merge commit on protected `main` is `1ba4ee4`, with its restored source branch
-at `4f7a872`. The game PR #8 source branch remains at `d2b5855`.
+merge commit on protected `main` is `1ba4ee4`, with its restored source
+branch at `4f7a872`. The game PR #8 source branch remains at `d2b5855`.
 The canonical Final Five remains **Sword, Hammer, Greatsword, Chainblade,
 Riftlock**. All preserved branches and worktrees remain intact, and Cloudflare
 production remains frozen with no deployment performed. PR #9 is the approval
@@ -508,11 +508,11 @@ losing recoverability.
 
 ### Target steady state
 
-| Repository | Long-lived branches |                 Temporary branches | Historical storage                          |
-| ---------- | ------------------: | ---------------------------------: | ------------------------------------------- |
-| Game       |         `main` only | 0 normally; 1–2 active PR branches | annotated tags + offline bundles            |
-| Music      |         `main` only | 0 normally; 1–2 active PR branches | annotated tags + release/provenance records |
-| Wiki       |         `main` only |     0 normally; 1 active PR branch | annotated release tags as needed            |
+| Repository | Long-lived branches | Temporary branches | Historical storage |
+|---|---:|---:|---|
+| Game | `main` only | 0 normally; 1–2 active PR branches | annotated tags + offline bundles |
+| Music | `main` only | 0 normally; 1–2 active PR branches | annotated tags + release/provenance records |
+| Wiki | `main` only | 0 normally; 1 active PR branch | annotated release tags as needed |
 
 ### Checkpoint G3-A — midpoint pause
 
