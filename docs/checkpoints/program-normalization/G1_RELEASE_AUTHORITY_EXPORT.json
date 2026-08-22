@@ -1,0 +1,144 @@
+{
+  "generated_at": "2026-08-22T12:48:38.8239315Z",
+  "api_version": "2026-03-10",
+  "repository": "shaku1z/tear",
+  "mutations": [
+    {
+      "method": "PUT",
+      "path": "/repos/shaku1z/tear/environments/Preview",
+      "request": {
+        "wait_timer": 0,
+        "prevent_self_review": false,
+        "reviewers": [{ "type": "User", "id": 221584530 }],
+        "deployment_branch_policy": {
+          "protected_branches": false,
+          "custom_branch_policies": true
+        },
+        "can_admins_bypass": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/repos/shaku1z/tear/environments/Preview/deployment-branch-policies",
+      "request": { "name": "main", "type": "branch" }
+    },
+    {
+      "method": "PUT",
+      "path": "/repos/shaku1z/tear/environments/Production",
+      "request": {
+        "wait_timer": 0,
+        "prevent_self_review": false,
+        "reviewers": [{ "type": "User", "id": 221584530 }],
+        "deployment_branch_policy": {
+          "protected_branches": false,
+          "custom_branch_policies": true
+        },
+        "can_admins_bypass": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/repos/shaku1z/tear/environments/Production/deployment-branch-policies",
+      "request": { "name": "main", "type": "branch" }
+    }
+  ],
+  "rulesets": [
+    {
+      "repository": "shaku1z/tear",
+      "id": 21119803,
+      "name": "Canonical branch authority",
+      "target": "branch",
+      "source": "shaku1z/tear",
+      "enforcement": "active",
+      "ref_name_include": ["refs/heads/main"],
+      "rules": ["deletion", "non_fast_forward", "pull_request", "required_status_checks"],
+      "required_status_checks": ["check"],
+      "bypass_actors": [],
+      "current_user_can_bypass": "never"
+    },
+    {
+      "repository": "shaku1z/tear-score",
+      "id": 21119804,
+      "name": "Canonical branch authority",
+      "target": "branch",
+      "source": "shaku1z/tear-score",
+      "enforcement": "active",
+      "ref_name_include": ["refs/heads/main"],
+      "rules": ["deletion", "non_fast_forward", "pull_request", "required_status_checks"],
+      "required_status_checks": ["check"],
+      "bypass_actors": [],
+      "current_user_can_bypass": "never"
+    },
+    {
+      "repository": "shaku1z/tear-wiki",
+      "id": 21119805,
+      "name": "Canonical branch authority",
+      "target": "branch",
+      "source": "shaku1z/tear-wiki",
+      "enforcement": "active",
+      "ref_name_include": ["refs/heads/master"],
+      "rules": ["deletion", "non_fast_forward", "pull_request", "required_status_checks"],
+      "required_status_checks": ["check"],
+      "bypass_actors": [],
+      "current_user_can_bypass": "never"
+    }
+  ],
+  "environments": [
+    {
+      "id": 16999251879,
+      "name": "Preview",
+      "can_admins_bypass": true,
+      "wait_timer": 0,
+      "wait_timer_rule_present": false,
+      "prevent_self_review": false,
+      "required_reviewers": [{ "type": "User", "id": 221584530, "login": "shaku1z" }],
+      "deployment_branch_policy": {
+        "protected_branches": false,
+        "custom_branch_policies": true
+      },
+      "deployment_branch_policies": [
+        { "id": 57987612, "name": "main", "type": "branch" }
+      ],
+      "secret_metadata": [
+        {
+          "name": "CLOUDFLARE_ACCOUNT_ID",
+          "created_at": "2026-08-21T01:12:38Z",
+          "updated_at": "2026-08-21T01:12:38Z"
+        },
+        {
+          "name": "CLOUDFLARE_API_TOKEN",
+          "created_at": "2026-08-21T09:51:34Z",
+          "updated_at": "2026-08-22T12:19:48Z"
+        }
+      ]
+    },
+    {
+      "id": 16669577135,
+      "name": "Production",
+      "can_admins_bypass": true,
+      "wait_timer": 0,
+      "wait_timer_rule_present": false,
+      "prevent_self_review": false,
+      "required_reviewers": [{ "type": "User", "id": 221584530, "login": "shaku1z" }],
+      "deployment_branch_policy": {
+        "protected_branches": false,
+        "custom_branch_policies": true
+      },
+      "deployment_branch_policies": [
+        { "id": 57987627, "name": "main", "type": "branch" }
+      ],
+      "secret_metadata": [
+        {
+          "name": "CLOUDFLARE_ACCOUNT_ID",
+          "created_at": "2026-08-21T01:12:38Z",
+          "updated_at": "2026-08-21T01:12:38Z"
+        },
+        {
+          "name": "CLOUDFLARE_API_TOKEN",
+          "created_at": "2026-08-21T09:52:57Z",
+          "updated_at": "2026-08-22T12:41:33Z"
+        }
+      ]
+    }
+  ]
+}

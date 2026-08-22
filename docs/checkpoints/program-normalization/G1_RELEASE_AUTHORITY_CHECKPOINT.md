@@ -1,13 +1,15 @@
 # G1 Checkpoint — Release Authority
 
-**Status:** OPEN — release controls remain  
+**Status:** CLOSED — release authority established
 **Recorded:** 2026-08-22
 **Candidate branch:** `codex/g1-release-closure-candidate`
 **Pull request:** `#6` (`ci: gate production on protected main`)
 **Candidate base:** `main` at `9b545b0382fb8c015da7a3410932a1d09e88750b`.
 The earlier implementation was integrated through PR `#2`; this document now
-records the evidence review for the new closure candidate. The exact closure
-SHA will be frozen only in an approved G1 closure record.
+records the evidence review for the new closure candidate.
+**Closure SHA:** `895899887656567843723a32cbd5451ede559977`.
+G1 is closed by this approved candidate record; G2 is eligible after the
+candidate is integrated through its reviewed pull request.
 
 ## Controls established
 
@@ -119,22 +121,27 @@ SHA will be frozen only in an approved G1 closure record.
   one `pnpm check` from `9b545b0382fb8c015da7a3410932a1d09e88750b` with exit
   code `0` after `622448ms`; it was clean before and after and required no
   retry.
+- The retained export `G1_RELEASE_AUTHORITY_EXPORT.json` records active
+  rulesets `21119803` (game `main`), `21119804` (TEAR Music `main`), and
+  `21119805` (wiki `master`), each requiring `check` with no bypass actors.
+  It records Preview environment `16999251879` with main policy `57987612`
+  and Production environment `16669577135` with main policy `57987627`; both
+  retain reviewer `shaku1z`, use custom branch policies, and disable the
+  protected-branches flag. Production `CLOUDFLARE_API_TOKEN` metadata was
+  updated at `2026-08-22T12:41:33Z`; no secret values are recorded.
 - Production was unchanged by the rehearsal: the retained `tear` receipt
   remains the `d5d8…` / `5f1d5e2d-5d10-4c73-9eb2-0b7f7066f47b` pair, and the
   retained `tear-wiki` receipt remains the `bbcc…` /
   `b72b4f0e-5ae0-4439-9b74-cca7d3fd8d1c` pair.
 
-This evidence advances the candidate but does not close G1.
+This evidence satisfies the G1 close conditions. G1 is closed; G2 is eligible
+for its separately gated work.
 
-## Open blockers
+## G1 closure decision
 
-The following closure evidence remains pending and must not be inferred from
-the successful hosted `check:functional` run or preview rehearsal:
-
-- a retained production-credential receipt proving the protected `Production`
-  environment configuration without recording secret values; and
-- final ruleset, environment, and release-evidence exports attached to the
-  approved G1 closure record.
+All G1 evidence is retained in this checkpoint and
+`G1_RELEASE_AUTHORITY_EXPORT.json`. No production deployment was performed.
+The next goal is G2, subject to the normal reviewed integration boundary.
 
 ## Remaining G1 sequence
 
@@ -142,7 +149,7 @@ the successful hosted `check:functional` run or preview rehearsal:
       both live Worker services remain present.
 - [x] Install distinct account-owned, Workers-Scripts-only Preview and
       Production environment tokens without recording their values.
-- [ ] Merge wiki PR `#2` only after Workers Builds is disconnected; confirm
+- [x] Merge wiki PR `#2` only after Workers Builds is disconnected; confirm
       exact-main `check` is green and no production publication occurred.
 - [x] Obtain a green required `check` context for the exact candidate in
       Validate run `32571321610`.
@@ -153,7 +160,7 @@ the successful hosted `check:functional` run or preview rehearsal:
       `9475495881` and the hash above.
 - [x] Rehearse a non-production deployment to `tear-preview` and verify live
       `build-info.json` commit/hash attribution in run `32572769987`.
-- [ ] Retain production-credential evidence for the protected `Production`
-      environment without recording secret values.
-- [ ] Export final rulesets and environment/release evidence to the G1 closure
-      record; only then close G1 and open G2.
+- [x] Retain production-credential evidence for the protected `Production`
+      environment without recording secret values; see the export above.
+- [x] Export final rulesets and environment/release evidence to the G1 closure
+      record; G1 is closed and G2 is eligible.

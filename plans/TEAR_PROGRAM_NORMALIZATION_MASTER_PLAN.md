@@ -1,6 +1,6 @@
 # TEAR Program Normalization and Release Governance Master Plan
 
-**Status:** Executing — G0 closed; G1 open (closure candidate under review)
+**Status:** Executing — G0 and G1 closed; G2 eligible
 
 **Prepared:** 2026-08-20
 
@@ -9,6 +9,9 @@
 **Initial canonical game baseline:** `shaku1z/tear` `main` at `0bef91dc4970740c80b1969416c0573680bcaf89`
 
 **Current G1 closure candidate:** `shaku1z/tear` `main` at `9b545b0382fb8c015da7a3410932a1d09e88750b`
+
+**Current goal state:** G0 CLOSED; G1 CLOSED; G2 ELIGIBLE. G2 remains
+integration-gated behind the reviewed PR for the G1 closure candidate.
 
 **Music repository baseline:** `shaku1z/tear-score` `main` at `766b910`; current candidate branch at `1611bbb`
 
@@ -306,52 +309,52 @@ through the ordinary project workflow.
 
 ### Game repository objectives
 
-- [ ] Diagnose and correct the current Colossus fixed-tick browser failure from
+- [x] Diagnose and correct the current Colossus fixed-tick browser failure from
       a fresh branch based on current `main`; do not weaken the assertion.
-- [ ] Require a green `Validate` check on pull requests and `main`.
-- [ ] Add a GitHub ruleset for `main`: block force-push and deletion, require
+- [x] Require a green `Validate` check on pull requests and `main`.
+- [x] Add a GitHub ruleset for `main`: block force-push and deletion, require
       PR integration, require current status checks, and preserve administrator
       recovery without allowing routine bypass.
-- [ ] Enable automatic deletion of merged remote feature branches.
-- [ ] Add a release preflight that fails unless the checkout is clean, on
+- [x] Enable automatic deletion of merged remote feature branches.
+- [x] Add a release preflight that fails unless the checkout is clean, on
       `main`, has `origin/main` as upstream, is exactly equal to it, and has the
       expected release evidence.
-- [ ] Move production deployment into a GitHub Actions environment named
+- [x] Move production deployment into a GitHub Actions environment named
       `Production` with protected secrets and an explicit approval boundary.
-- [ ] Keep a guarded local dry-run/preview path; do not leave an ordinary local
+- [x] Keep a guarded local dry-run/preview path; do not leave an ordinary local
       command able to publish from an arbitrary branch.
-- [ ] Generate deterministic build metadata containing repository, full Git
+- [x] Generate deterministic build metadata containing repository, full Git
       SHA, build target, and artifact hash. Do not use a wall-clock value in
       reproducible assets.
-- [ ] Attach the Git SHA to Cloudflare deployment annotations/message and make
+- [x] Attach the Git SHA to Cloudflare deployment annotations/message and make
       it observable through a small build-info asset or response.
-- [ ] Make the wiki dispatch consume a successful game validation/release event
+- [x] Make the wiki dispatch consume a successful game validation/release event
       for the exact SHA instead of firing independently on every push.
 
 ### Music and wiki bootstrap objectives
 
-- [ ] Add minimal CI to music `main` before attempting the 51-commit promotion.
-- [ ] Add protected-branch rules to music `main` and the wiki default branch.
-- [ ] Define the safe migration procedure for wiki `master -> main`, including
+- [x] Add minimal CI to music `main` before attempting the 51-commit promotion.
+- [x] Add protected-branch rules to music `main` and the wiki default branch.
+- [x] Define the safe migration procedure for wiki `master -> main`, including
       the `tear-wiki` Worker build/source configuration and custom-domain
       routing, before changing it.
 
 ### Checkpoint G1-A — midpoint pause
 
 - [x] Current game `main` now has a green full gate from the exact candidate.
-- [ ] A simulated wrong-branch, dirty-tree, behind-main, and ahead-main deploy
+- [x] A simulated wrong-branch, dirty-tree, behind-main, and ahead-main deploy
       is rejected before Wrangler runs.
-- [ ] Cloudflare dry-run still uploads only `dist/standalone`.
-- [ ] Music and wiki cannot accept unreviewed direct production changes through
+- [x] Cloudflare dry-run still uploads only `dist/standalone`.
+- [x] Music and wiki cannot accept unreviewed direct production changes through
       the normal path.
 
 ### Close conditions
 
-- [ ] One non-production deployment rehearsal proves commit attribution.
-- [ ] Branch protections/rulesets are exported to the closure record.
-- [ ] PR #1 is formally marked **DO NOT MERGE**; deletion waits for G3.
-- [ ] The game release gate is green. Targeted checks alone do not close G1.
-- [ ] G1 closure record is approved; only then may G2 open.
+- [x] One non-production deployment rehearsal proves commit attribution.
+- [x] Branch protections/rulesets are exported to the closure record.
+- [x] PR #1 is formally marked **DO NOT MERGE**; deletion waits for G3.
+- [x] The game release gate is green. Targeted checks alone do not close G1.
+- [x] G1 closure record is approved; G2 is eligible for reviewed integration.
 
 ---
 
@@ -845,7 +848,7 @@ Create one record per goal under the future canonical checkpoint location.
 ## 14. Master objective checklist
 
 - [x] G0 closed — truth and recovery are frozen.
-- [ ] G1 closed — release authority is protected, green, and attributable.
+- [x] G1 closed — release authority is protected, green, and attributable.
 - [ ] G2 closed — unique work and canonical branches are reconciled.
 - [ ] G3 closed — obsolete branches/worktrees are removed safely.
 - [ ] G4 closed — permanent terminology is implemented with migrations.
