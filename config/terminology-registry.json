@@ -1,0 +1,1726 @@
+{
+  "schemaVersion": 1,
+  "registryId": "g4-terminology-v1",
+  "status": "governance-only",
+  "policy": {
+    "scope": "Permanent product terminology and compatibility governance. This slice adds checks and does not rename live modules, packages, hosts, persisted keys, or historical content.",
+    "deprecatedAliasMatching": "Case-insensitive exact phrase matching for configured aliases; user-facing source literals are scanned, while code/path compatibility remains explicitly allowlisted.",
+    "allowlistRule": "Every compatibility exception is path-scoped, term-scoped, owned, justified, evidenced, and expires at a named removal gate. Wildcards are intentionally narrow.",
+    "historyRule": "Immutable history is readable but never rewritten for naming. New source files cannot inherit a history exception unless they match an explicitly immutable historical path."
+  },
+  "terms": [
+    {
+      "id": "tear-music",
+      "displayName": "TEAR Music",
+      "codeId": "tear-music",
+      "deprecatedAliases": [
+        "TearScore",
+        "tear-score"
+      ],
+      "deprecatedCopyAliases": [
+        "TearScore",
+        "tear-score"
+      ],
+      "persistenceImpact": {
+        "scope": "audio vendor paths, cue/catalog formats, replay metadata, provenance, package/scripts, bundle-budget keys",
+        "legacyRead": [
+          "TearScoreReplayMetadata",
+          "tear-score-stem-cue",
+          "tear-signal-catalog",
+          "public/vendor/tear-score/**"
+        ],
+        "canonicalWrite": "TEAR Music / tear-music naming only after the compatibility window",
+        "preserve": [
+          "provenance URLs",
+          "sourceRootHash",
+          "replay semantics",
+          "historical audio fixtures"
+        ]
+      },
+      "owner": "Audio platform/vendor provenance owner with replay-envelope and audio-catalog owners",
+      "compatibilityStrategy": "Dual-read old audio metadata, cue/catalog formats, vendor paths, package aliases, and imported artifacts; canonical-write new names while preserving provenance and unknown fields.",
+      "removalCheckpoint": {
+        "id": "G4-B-MUSIC",
+        "condition": "Remove legacy aliases only after redirects, provenance URLs, package aliases, vendoring scripts, the Soundtrack Desk target, old replay/save readers, and imported-artifact reads pass the music migration gate."
+      }
+    },
+    {
+      "id": "adaptive-soundtrack",
+      "displayName": "Adaptive Soundtrack",
+      "codeId": "adaptive-soundtrack",
+      "deprecatedAliases": [
+        "TearScore runtime"
+      ],
+      "deprecatedCopyAliases": [
+        "TearScore runtime"
+      ],
+      "persistenceImpact": {
+        "scope": "audio backend/session/replay presentation metadata only",
+        "legacyRead": [
+          "MusicRunSessionMetadata",
+          "MusicReplayMetadata",
+          "legacy audio runtime metadata"
+        ],
+        "canonicalWrite": "Adaptive Soundtrack/Music contract names",
+        "preserve": [
+          "semantic replay events",
+          "seed",
+          "verification",
+          "audio provenance"
+        ]
+      },
+      "owner": "Audio composition/music-director owner with replay metadata owner",
+      "compatibilityStrategy": "Rename only audio-specific product vocabulary; retain generic runtime infrastructure and legacy synth fallback as implementation details.",
+      "removalCheckpoint": {
+        "id": "G4-B-ADAPTIVE-SOUNDTRACK",
+        "condition": "Retire audio-specific legacy runtime aliases after adaptive tier/session behavior, fallback, metadata, and replay round-trip gates pass; generic runtime names remain unchanged."
+      }
+    },
+    {
+      "id": "music",
+      "displayName": "Music",
+      "codeId": "music",
+      "deprecatedAliases": [
+        "THE SIGNAL",
+        "Signal"
+      ],
+      "deprecatedCopyAliases": [
+        "THE SIGNAL",
+        "Signal"
+      ],
+      "deprecatedCopyAliasPathPatterns": {
+        "THE SIGNAL": [
+          "src/audio/signal/now-playing.ts",
+          "src/app/settings-controller.ts",
+          "src/presentation/menu-setup-snapshots.ts",
+          "src/presentation/screens/menu-setup.ts",
+          "src/presentation/settings-snapshots.ts"
+        ],
+        "Signal": [
+          "src/audio/signal/now-playing.ts",
+          "src/app/settings-controller.ts",
+          "src/presentation/menu-setup-snapshots.ts",
+          "src/presentation/screens/menu-setup.ts",
+          "src/presentation/settings-snapshots.ts"
+        ]
+      },
+      "persistenceImpact": {
+        "scope": "settings tab, station/catalog formats, audio routing and now-playing snapshots",
+        "legacyRead": [
+          "settings tab signal",
+          "tear-signal-catalog"
+        ],
+        "canonicalWrite": "music settings route and Music catalog vocabulary",
+        "preserve": [
+          "station IDs",
+          "cue IDs",
+          "routing semantics",
+          "old bookmarks"
+        ]
+      },
+      "owner": "Audio signal/catalog owner with settings navigation and presentation owners",
+      "compatibilityStrategy": "Accept old signal tab/deep links and catalog format while emitting Music labels/routes and preserving station/cue identity.",
+      "removalCheckpoint": {
+        "id": "G4-B-MUSIC-SURFACE",
+        "condition": "Remove signal aliases after settings navigation, catalog dual-read, now-playing snapshots, accessibility labels, and old bookmarks pass the release-window gate."
+      }
+    },
+    {
+      "id": "training-operations",
+      "displayName": "Training Operations",
+      "codeId": "training-operations",
+      "deprecatedAliases": [
+        "Foundry",
+        "Agent Foundry",
+        "Foundry agent training"
+      ],
+      "deprecatedCopyAliases": [
+        "Foundry",
+        "Agent Foundry",
+        "Foundry agent training"
+      ],
+      "persistenceImpact": {
+        "scope": "agent-training jobs, schedules, execution bindings, launches, recovery, monitoring and promotion receipts",
+        "legacyRead": [
+          "foundry-job:*",
+          "foundry-launch-profile:*",
+          "tear-foundry-*"
+        ],
+        "canonicalWrite": "Training Operations labels and future canonical format names",
+        "preserve": [
+          "job hashes",
+          "lease/attempt identity",
+          "promotion lineage",
+          "unknown extensions",
+          "historical receipts"
+        ]
+      },
+      "owner": "Agent training operations owner across Foundry jobs, launch/recovery persistence, and app routing",
+      "compatibilityStrategy": "Dual-read active v1-v4 Foundry artifacts and route/action aliases; canonical-write Training Operations only after job and recovery evidence is observed.",
+      "removalCheckpoint": {
+        "id": "G4-B-TRAINING-OPERATIONS",
+        "condition": "Remove Foundry aliases after all active v1-v4 artifacts, imported jobs, route aliases, recovery, promotion, and monitoring compatibility tests pass and the release checkpoint is signed."
+      }
+    },
+    {
+      "id": "scenario-console",
+      "displayName": "Scenario Console",
+      "codeId": "scenario-console",
+      "deprecatedAliases": [
+        "State Forge",
+        "State Forge Studio",
+        "state-forge"
+      ],
+      "deprecatedCopyAliases": [
+        "State Forge",
+        "State Forge Studio"
+      ],
+      "persistenceImpact": {
+        "scope": "scenario launch, state timeline, .tearsdl imports, replay/capsule provenance and evidence routes",
+        "legacyRead": [
+          "state-forge.live-sandbox",
+          "state-forge-live-*",
+          "tear-state-timeline v2",
+          "state-forge.imported-child"
+        ],
+        "canonicalWrite": "Scenario Console display/route vocabulary over existing TearBench codecs",
+        "preserve": [
+          "src/tearbench paths",
+          "codec versions",
+          "scenario IDs",
+          "evidence routes",
+          "hashes"
+        ]
+      },
+      "owner": "TearBench scenario-console facade owner with State Forge codec/runtime bridge owner",
+      "compatibilityStrategy": "Add a Scenario Console facade and route aliases over existing State Forge/TearBench hosts; do not move src/tearbench or rewrite codecs.",
+      "removalCheckpoint": {
+        "id": "G4-B-SCENARIO-CONSOLE",
+        "condition": "Remove State Forge UI/route aliases only after old deep links, timeline/replay/capsule reads, imported .tearsdl artifacts, and evidence hashes pass; TearBench paths remain stable."
+      }
+    },
+    {
+      "id": "replay-editor",
+      "displayName": "Replay Editor",
+      "codeId": "replay-editor",
+      "deprecatedAliases": [
+        "Ghost Studio"
+      ],
+      "deprecatedCopyAliases": [
+        "Ghost Studio"
+      ],
+      "persistenceImpact": {
+        "scope": "ghost-studio-edl v1 local edit decision lists and replay-screen actions",
+        "legacyRead": [
+          "ghost-studio-edl v1"
+        ],
+        "canonicalWrite": "Replay Editor EDL/action vocabulary",
+        "preserve": [
+          "sourceGhostId",
+          "sourceRootHash",
+          "clips",
+          "edlHash",
+          "local export semantics"
+        ]
+      },
+      "owner": "Replay presentation/EDL owner with ghost replay compatibility owner",
+      "compatibilityStrategy": "Read old EDL/action aliases and write canonical Replay Editor labels without changing clip or source-root hashes.",
+      "removalCheckpoint": {
+        "id": "G4-B-REPLAY-EDITOR",
+        "condition": "Remove Ghost Studio aliases after EDL v1 reads, canonical writes, local export, replay-screen routes, and old bookmarks pass."
+      }
+    },
+    {
+      "id": "replay-hub",
+      "displayName": "Replay Hub",
+      "codeId": "replay-hub",
+      "deprecatedAliases": [
+        "Ghost Lab"
+      ],
+      "deprecatedCopyAliases": [
+        "Ghost Lab"
+      ],
+      "persistenceImpact": {
+        "scope": "legacy screen route and disposable live-run inspection panel",
+        "legacyRead": [
+          "LegacyScreenId ghostlab",
+          "ghostlab.disposable-live-run"
+        ],
+        "canonicalWrite": "Replay Hub route/display vocabulary",
+        "preserve": [
+          "scenario ID",
+          "seed",
+          "tags",
+          "unavailable-state behavior",
+          "historical Ghost Lab evidence"
+        ]
+      },
+      "owner": "Legacy navigation/replay hub owner with TearBench disposable panel owner",
+      "compatibilityStrategy": "Route old Ghost Lab IDs/deep links to Replay Hub while retaining the disposable inspection panel contract and safe unavailable cards.",
+      "removalCheckpoint": {
+        "id": "G4-B-REPLAY-HUB",
+        "condition": "Remove Ghost Lab aliases after deep links, card destinations, unavailable-state behavior, and disposable-panel compatibility evidence pass."
+      }
+    },
+    {
+      "id": "game-agent",
+      "displayName": "Game Agent",
+      "codeId": "game-agent",
+      "deprecatedAliases": [
+        "TearBot"
+      ],
+      "deprecatedCopyAliases": [
+        "TearBot"
+      ],
+      "persistenceImpact": {
+        "scope": "human calibration, ladder evaluation, v3 canonical evaluation, evidence reports and promoted-candidate bindings",
+        "legacyRead": [
+          "tearbot-human-calibration-*",
+          "tearbot-ladder-*",
+          "tearbot-v3-canonical-*"
+        ],
+        "canonicalWrite": "Game Agent labels with existing report formats dual-read",
+        "preserve": [
+          "consent",
+          "custody",
+          "participant identity",
+          "thresholds",
+          "report hashes",
+          "Foundry promotion binding"
+        ]
+      },
+      "owner": "Agents/ladder/evaluation owner with bot-evidence and Watch integration owners",
+      "compatibilityStrategy": "Keep TearBot persistence namespaces readable while changing public labels and route aliases to Game Agent; do not merge Watch Agent persistence.",
+      "removalCheckpoint": {
+        "id": "G4-B-GAME-AGENT",
+        "condition": "Remove TearBot aliases after calibration, ladder, v3 evaluation, promoted-candidate, report-reader, and browser-journey compatibility passes."
+      }
+    },
+    {
+      "id": "training-archive",
+      "displayName": "Training Archive",
+      "codeId": "training-archive",
+      "deprecatedAliases": [
+        "Academy",
+        "Agent Academy"
+      ],
+      "deprecatedCopyAliases": [
+        "Academy",
+        "Agent Academy"
+      ],
+      "persistenceImpact": {
+        "scope": "candidate/corpus/consent/custody/inspection/policy/training-dataset records",
+        "legacyRead": [
+          "academy-*",
+          "tear-academy-*"
+        ],
+        "canonicalWrite": "Training Archive labels with governed custody formats preserved",
+        "preserve": [
+          "consent",
+          "privacy",
+          "source attestation",
+          "custody state",
+          "terminal anchors",
+          "hashes"
+        ]
+      },
+      "owner": "Training data custody/consent owner with Academy routes and headless intake owner",
+      "compatibilityStrategy": "Dual-read Academy records and route aliases; canonical-write Training Archive without expanding trainer execution authority.",
+      "removalCheckpoint": {
+        "id": "G4-B-TRAINING-ARCHIVE",
+        "condition": "Remove Academy aliases after candidate/corpus/consent/custody/inspection/policy/dataset artifacts, privacy fixtures, and headless intake gates pass."
+      }
+    },
+    {
+      "id": "run-monitor",
+      "displayName": "Run Monitor",
+      "codeId": "run-monitor",
+      "deprecatedAliases": [
+        "Watch Agent"
+      ],
+      "deprecatedCopyAliases": [
+        "Watch Agent"
+      ],
+      "persistenceImpact": {
+        "scope": "watch harness, watch-policy journal, production isolation and Foundry post-promotion monitoring declarations",
+        "legacyRead": [
+          "watch-policy:v1:<timestamp>:<run>",
+          "__TEAR_WATCH_AGENT__"
+        ],
+        "canonicalWrite": "Run Monitor display/route vocabulary while retaining internal watch-policy authority names",
+        "preserve": [
+          "journal timestamp/run identity",
+          "Foundry monitoring authority",
+          "unknown fields",
+          "production isolation contract"
+        ]
+      },
+      "owner": "Watch host/monitoring owner with Game Agent and Foundry post-promotion monitoring owners",
+      "compatibilityStrategy": "Map old watchagent query/global/DOM labels to Run Monitor; keep internal watch-policy journal and authority names separate from UI naming.",
+      "removalCheckpoint": {
+        "id": "G4-B-RUN-MONITOR",
+        "condition": "Remove public Watch Agent aliases after journals, production isolation, browser journeys, Foundry monitoring, and route aliases pass."
+      }
+    },
+    {
+      "id": "tearbench",
+      "displayName": "TearBench",
+      "codeId": "TearBench",
+      "deprecatedAliases": [],
+      "deprecatedCopyAliases": [],
+      "unchanged": true,
+      "persistenceImpact": {
+        "scope": "TearBench scenarios, codecs, evidence routes, workflows and preservation corpus",
+        "legacyRead": [
+          "existing TearBench formats and evidence"
+        ],
+        "canonicalWrite": "Unchanged",
+        "preserve": [
+          "src/tearbench",
+          "requirement IDs",
+          "preservation hashes",
+          "replay schemas",
+          "historical wording"
+        ]
+      },
+      "owner": "TearBench/evidence infrastructure owner",
+      "compatibilityStrategy": "No rename in this program; Scenario Console is a facade over existing TearBench State Forge hosts.",
+      "removalCheckpoint": {
+        "id": "never",
+        "condition": "Never remove or rename TearBench as part of terminology normalization."
+      }
+    }
+  ],
+  "userFacingCopyScan": {
+    "pathPatterns": [
+      "src/presentation/**/*.ts",
+      "src/presentation/**/*.tsx",
+      "src/app/**/*screen*.ts",
+      "src/app/live-*-home.ts",
+      "src/app/live-interface-composition.ts",
+      "src/app/live-screen-*.ts",
+      "src/app/settings-controller.ts",
+      "src/audio/signal/*.ts",
+      "src/agents/live-watch-agent-*.ts",
+      "src/ghost/player-experiences.ts",
+      "src/tearbench/browser/*.ts",
+      "public/**/*.json",
+      "public/**/*.html",
+      "index.html",
+      "docs/*.md",
+      "README.md"
+    ],
+    "sourceLiteralExtensions": [
+      ".ts",
+      ".tsx"
+    ],
+    "wholeTextExtensions": [
+      ".json",
+      ".html",
+      ".md"
+    ],
+    "ignoredPathPatterns": [
+      "node_modules/**",
+      "dist/**",
+      "artifacts/**",
+      "Tear-archives/**"
+    ]
+  },
+  "allowlists": {
+    "immutableHistory": [
+      {
+        "id": "history-normalization-plans",
+        "pathPattern": "plans/**",
+        "termIds": [
+          "tear-music",
+          "adaptive-soundtrack",
+          "music",
+          "training-operations",
+          "scenario-console",
+          "replay-editor",
+          "replay-hub",
+          "game-agent",
+          "training-archive",
+          "run-monitor",
+          "tearbench"
+        ],
+        "owner": "Program normalization history owner",
+        "reason": "Planning records are historical decision evidence and must retain original terminology.",
+        "testEvidence": [
+          "docs/checkpoints/program-normalization/G0_BASELINE_LEDGER.md",
+          "docs/checkpoints/program-normalization/G3_CLOSURE.md"
+        ],
+        "expiry": {
+          "checkpoint": "never",
+          "condition": "Immutable historical plans are never rewritten solely for naming."
+        }
+      },
+      {
+        "id": "history-checkpoints",
+        "pathPattern": "docs/checkpoints/**",
+        "termIds": [
+          "tear-music",
+          "adaptive-soundtrack",
+          "music",
+          "training-operations",
+          "scenario-console",
+          "replay-editor",
+          "replay-hub",
+          "game-agent",
+          "training-archive",
+          "run-monitor",
+          "tearbench"
+        ],
+        "owner": "Program normalization history owner",
+        "reason": "Checkpoint ledgers and closure artifacts are hash-bound historical evidence.",
+        "testEvidence": [
+          "git fsck --full",
+          "preserved checkpoint hashes"
+        ],
+        "expiry": {
+          "checkpoint": "never",
+          "condition": "Do not rewrite checkpoint content or regenerate requirement IDs for terminology."
+        }
+      },
+      {
+        "id": "history-ghost3",
+        "pathPattern": "docs/ghost3/**",
+        "termIds": [
+          "tear-music",
+          "adaptive-soundtrack",
+          "music",
+          "training-operations",
+          "scenario-console",
+          "replay-editor",
+          "replay-hub",
+          "game-agent",
+          "training-archive",
+          "run-monitor",
+          "tearbench"
+        ],
+        "owner": "Ghost preservation owner",
+        "reason": "Ghost3 requirements/catalogs/closure artifacts are historical evidence.",
+        "testEvidence": [
+          "ghost preservation corpus tests",
+          "stored Ghost3 hashes"
+        ],
+        "expiry": {
+          "checkpoint": "never",
+          "condition": "Historical Ghost3 wording and hashes remain unchanged."
+        }
+      },
+      {
+        "id": "history-source-specs",
+        "pathPattern": "docs/source/**",
+        "termIds": [
+          "tear-music",
+          "adaptive-soundtrack",
+          "music",
+          "training-operations",
+          "scenario-console",
+          "replay-editor",
+          "replay-hub",
+          "game-agent",
+          "training-archive",
+          "run-monitor",
+          "tearbench"
+        ],
+        "owner": "Program normalization history owner",
+        "reason": "Long-form source specifications preserve the terminology used by their authored era.",
+        "testEvidence": [
+          "requirements:check",
+          "preserved documentation hashes"
+        ],
+        "expiry": {
+          "checkpoint": "never",
+          "condition": "Historical source specifications are not rewritten for naming."
+        }
+      },
+      {
+        "id": "history-ghost3-top-level-docs",
+        "pathPattern": "docs/TEARBENCH_GHOST3_*.md",
+        "termIds": ["tear-music", "training-operations", "scenario-console", "replay-editor", "replay-hub", "game-agent", "training-archive", "run-monitor", "tearbench"],
+        "owner": "Ghost preservation owner",
+        "reason": "Top-level Ghost3 architecture, program, ledger and requirements documents are preserved historical evidence.",
+        "testEvidence": ["ghost preservation corpus tests", "stored Ghost3 hashes"],
+        "expiry": {
+          "checkpoint": "never",
+          "condition": "Historical Ghost3 wording and hashes remain unchanged."
+        }
+      },
+      {
+        "id": "history-runtime-alignment",
+        "pathPattern": "docs/TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md",
+        "termIds": ["training-operations", "scenario-console", "game-agent", "tearbench"],
+        "owner": "TearBench architecture history owner",
+        "reason": "The runtime alignment document records a prior architecture decision and is hash-bound evidence.",
+        "testEvidence": ["check:architecture", "preserved documentation hashes"],
+        "expiry": {
+          "checkpoint": "never",
+          "condition": "Do not rewrite historical runtime alignment wording solely for terminology."
+        }
+      },
+      {
+        "id": "history-vendored-tear-score",
+        "pathPattern": "public/vendor/tear-score/**",
+        "termIds": [
+          "tear-music"
+        ],
+        "owner": "Audio vendor provenance owner",
+        "reason": "Vendored third-party artifact paths and manifests are provenance-bound and must stay readable during migration.",
+        "testEvidence": [
+          "check:tear-score",
+          "audio browser smoke",
+          "vendor manifest verification"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC",
+          "condition": "Retain until shipped canonical provenance is verified; then remove only through the audio migration PR."
+        }
+      },
+      {
+        "id": "history-tearbench-evidence-routes",
+        "pathPattern": "src/tearbench/evidence-routes.json",
+        "termIds": [
+          "scenario-console",
+          "replay-hub",
+          "tearbench"
+        ],
+        "owner": "TearBench/evidence infrastructure owner",
+        "reason": "Evidence route IDs and descriptions are hash-bound and must not be rewritten.",
+        "testEvidence": [
+          "requirements:check",
+          "TearBench evidence route tests",
+          "preservation corpus"
+        ],
+        "expiry": {
+          "checkpoint": "never",
+          "condition": "Preserved evidence routes retain original IDs and wording."
+        }
+      }
+    ],
+    "mutableCompatibility": [
+      {
+        "id": "compat-audio-source",
+        "pathPattern": "src/audio/tear-score-*.ts",
+        "termIds": [
+          "tear-music"
+        ],
+        "owner": "Audio platform owner",
+        "reason": "Existing adapter/module names remain readable until the narrow audio rename slice.",
+        "testEvidence": [
+          "tests/unit/tear-score-module.test.ts",
+          "tests/contract/audio-tear-score.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC",
+          "condition": "Remove after canonical TEAR Music adapter/module imports and provenance checks pass."
+        }
+      },
+      {
+        "id": "compat-audio-bootstrap",
+        "pathPattern": "src/entrypoints/bootstrap.ts",
+        "termIds": [
+          "tear-music",
+          "adaptive-soundtrack"
+        ],
+        "owner": "Audio composition owner",
+        "reason": "Bootstrap still installs the legacy audio adapter while canonical governance is introduced.",
+        "testEvidence": [
+          "tests/unit/audio-system.test.ts",
+          "tests/browser-audio.js"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC",
+          "condition": "Remove when the canonical adapter is installed and fallback behavior is proven."
+        }
+      },
+      {
+        "id": "compat-audio-composition",
+        "pathPattern": "src/app/composition.ts",
+        "termIds": [
+          "tear-music",
+          "adaptive-soundtrack"
+        ],
+        "owner": "Audio composition owner",
+        "reason": "Composition owns the current adapter and music-director wiring.",
+        "testEvidence": [
+          "tests/unit/audio-system.test.ts",
+          "tests/unit/music-director.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-ADAPTIVE-SOUNDTRACK",
+          "condition": "Remove after adaptive backend registry and fallback wiring use canonical vocabulary."
+        }
+      },
+      {
+        "id": "compat-audio-stems",
+        "pathPattern": "src/audio/stems/stem-cue-backend.ts",
+        "termIds": [
+          "tear-music",
+          "music"
+        ],
+        "owner": "Audio catalog/stems owner",
+        "reason": "Stem cue and station contracts consume legacy catalog/cue formats during dual-read.",
+        "testEvidence": [
+          "tests/unit/signal-catalog.test.ts",
+          "tests/unit/music-routing.test.ts",
+          "tests/unit/signal-station.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC-SURFACE",
+          "condition": "Remove after cue/catalog aliases write canonical Music forms."
+        }
+      },
+      {
+        "id": "compat-audio-signal",
+        "pathPattern": "src/audio/signal/now-playing.ts",
+        "termIds": [
+          "music",
+          "tear-music"
+        ],
+        "owner": "Audio signal/catalog owner",
+        "reason": "Signal module names and literal compatibility labels remain active until the Music surface migration.",
+        "testEvidence": [
+          "tests/unit/signal-catalog.test.ts",
+          "tests/unit/signal-now-playing.test.ts",
+          "tests/unit/signal-shell-routing.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC-SURFACE",
+          "condition": "Remove after Music route/catalog aliases and snapshots pass."
+        }
+      },
+      {
+        "id": "compat-audio-routing-loader",
+        "pathPattern": "src/audio/signal/music-routing-loader/*.ts",
+        "termIds": [
+          "music"
+        ],
+        "owner": "Audio routing owner",
+        "reason": "Routing-loader compatibility paths retain old signal vocabulary.",
+        "testEvidence": [
+          "tests/unit/music-routing.test.ts",
+          "tests/unit/music-routing-vocabulary.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC-SURFACE",
+          "condition": "Remove after canonical Music routing format is the sole writer."
+        }
+      },
+      {
+        "id": "compat-audio-legacy",
+        "pathPattern": "src/audio/legacy-synth*.ts",
+        "termIds": [
+          "adaptive-soundtrack",
+          "music"
+        ],
+        "owner": "Audio fallback owner",
+        "reason": "Legacy synth fallback must remain readable and is not a generic runtime rename.",
+        "testEvidence": [
+          "tests/unit/legacy-synth-runtime-receipts.test.ts",
+          "tests/unit/audio-live-legacy.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-ADAPTIVE-SOUNDTRACK",
+          "condition": "Remove only audio-specific labels after fallback and receipt tests pass."
+        }
+      },
+      {
+        "id": "compat-audio-replay",
+        "pathPattern": "src/replay/*.ts",
+        "termIds": [
+          "tear-music",
+          "adaptive-soundtrack"
+        ],
+        "owner": "Replay-envelope owner",
+        "reason": "Replay metadata readers must accept legacy audio names without rewriting historical semantics.",
+        "testEvidence": [
+          "tests/unit/replay-envelope.test.ts",
+          "tests/unit/replay-visual.test.ts",
+          "tests/contract/replay-round-trip.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC",
+          "condition": "Remove after old replay envelopes and visual provenance round-trip."
+        }
+      },
+      {
+        "id": "compat-audio-public-catalog",
+        "pathPattern": "public/audio/catalog.json",
+        "termIds": [
+          "tear-music",
+          "music"
+        ],
+        "owner": "Audio catalog owner",
+        "reason": "Current catalog format and notes remain readable while new canonical catalog provenance is introduced.",
+        "testEvidence": [
+          "tests/unit/signal-catalog.test.ts",
+          "check:tear-score"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC",
+          "condition": "Remove after canonical catalog ships with verified provenance."
+        }
+      },
+      {
+        "id": "compat-audio-cues",
+        "pathPattern": "public/audio/cues/*/cue.json",
+        "termIds": [
+          "tear-music"
+        ],
+        "owner": "Audio cue owner",
+        "reason": "Existing cue fixtures use the legacy stem format during dual-read.",
+        "testEvidence": [
+          "tests/contract/audio-tear-score.test.ts",
+          "tests/browser-audio.js"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC",
+          "condition": "Remove after all cue fixtures are canonicalized and legacy reads remain tested."
+        }
+      },
+      {
+        "id": "compat-audio-vendor-scripts",
+        "pathPattern": "scripts/vendor-tear-score-esm.mjs",
+        "termIds": [
+          "tear-music"
+        ],
+        "owner": "Audio vendor provenance owner",
+        "reason": "Vendoring script name is a compatibility boundary until the provenance migration.",
+        "testEvidence": [
+          "check:tear-score",
+          "tests/contract/audio-tear-score.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC",
+          "condition": "Remove after canonical vendoring script and manifest are shipped."
+        }
+      },
+      {
+        "id": "compat-audio-provenance-script",
+        "pathPattern": "scripts/verify-tear-score-provenance.mjs",
+        "termIds": [
+          "tear-music"
+        ],
+        "owner": "Audio vendor provenance owner",
+        "reason": "Provenance checker remains the current safety gate.",
+        "testEvidence": [
+          "check:tear-score"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC",
+          "condition": "Replace only after canonical provenance verification is equivalent."
+        }
+      },
+      {
+        "id": "compat-audio-budget-script",
+        "pathPattern": "scripts/check-bundle-budget.mjs",
+        "termIds": [
+          "tear-music"
+        ],
+        "owner": "Build/bundle owner",
+        "reason": "Bundle budget currently names the legacy audio vendor.",
+        "testEvidence": [
+          "check:bundles"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC",
+          "condition": "Remove after canonical bundle budget key is established without changing limits."
+        }
+      },
+      {
+        "id": "compat-audio-budget-config",
+        "pathPattern": "config/bundle-budgets.json",
+        "termIds": [
+          "tear-music"
+        ],
+        "owner": "Build/bundle owner",
+        "reason": "Budget key is configuration compatibility data, not user-facing copy.",
+        "testEvidence": [
+          "check:bundles"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC",
+          "condition": "Remove after canonical budget key migration and fixture update."
+        }
+      },
+      {
+        "id": "compat-audio-package",
+        "pathPattern": "package.json",
+        "termIds": [
+          "tear-music"
+        ],
+        "owner": "Build/package owner",
+        "reason": "Existing check script remains a compatibility gate until the audio rename slice.",
+        "testEvidence": [
+          "check:tear-score",
+          "check:functional"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC",
+          "condition": "Remove after canonical package script aliases are wired."
+        }
+      },
+      {
+        "id": "compat-audio-gitattributes",
+        "pathPattern": ".gitattributes",
+        "termIds": [
+          "tear-music"
+        ],
+        "owner": "Repository provenance owner",
+        "reason": "Vendor path attributes protect the current binary artifact boundary.",
+        "testEvidence": [
+          "git diff --check",
+          "vendor provenance gate"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC",
+          "condition": "Remove after canonical vendor path attributes are present."
+        }
+      },
+      {
+        "id": "compat-foundry-source",
+        "pathPattern": "src/agents/foundry-job-*.ts",
+        "termIds": [
+          "training-operations"
+        ],
+        "owner": "Training Operations owner",
+        "reason": "Active v1-v4 Foundry job modules are retained until their persistence migration.",
+        "testEvidence": [
+          "tests/unit/foundry-job-*.test.ts",
+          "tests/unit/live-foundry-screen.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-TRAINING-OPERATIONS",
+          "condition": "Remove after all job-family readers/writers use canonical module names."
+        }
+      },
+      {
+        "id": "compat-foundry-agents",
+        "pathPattern": "src/agents/*foundry*.ts",
+        "termIds": [
+          "training-operations"
+        ],
+        "owner": "Training Operations owner",
+        "reason": "Foundry launch, ladder and online/offline training modules share the active compatibility boundary.",
+        "testEvidence": [
+          "tests/unit/tearbot-ladder-foundry.test.ts",
+          "tests/unit/offline-rl-training.test.ts",
+          "tests/unit/online-rl-training.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-TRAINING-OPERATIONS",
+          "condition": "Remove after training module imports and artifacts migrate."
+        }
+      },
+      {
+        "id": "compat-foundry-app",
+        "pathPattern": "src/app/live-foundry-*.ts",
+        "termIds": [
+          "training-operations"
+        ],
+        "owner": "Training Operations route owner",
+        "reason": "Current app screen/scheduler retains Foundry display and route compatibility.",
+        "testEvidence": [
+          "tests/unit/live-foundry-screen.test.ts",
+          "tests/unit/live-foundry-scheduler.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-TRAINING-OPERATIONS",
+          "condition": "Remove after Training Operations screen and scheduler are canonical."
+        }
+      },
+      {
+        "id": "compat-foundry-presentation",
+        "pathPattern": "src/presentation/screens/foundry.ts",
+        "termIds": [
+          "training-operations"
+        ],
+        "owner": "Training Operations presentation owner",
+        "reason": "Existing FOUNDRY copy is retained until the public surface migration.",
+        "testEvidence": [
+          "tests/unit/screen-renderers.test.ts",
+          "tests/unit/live-foundry-screen.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-TRAINING-OPERATIONS",
+          "condition": "Remove after canonical public labels and accessibility copy ship."
+        }
+      },
+      {
+        "id": "compat-foundry-routing",
+        "pathPattern": "src/domain/screen-actions.ts",
+        "termIds": [
+          "training-operations",
+          "replay-hub",
+          "training-archive"
+        ],
+        "owner": "Navigation contract owner",
+        "reason": "Typed route/action IDs are dual-read compatibility boundaries.",
+        "testEvidence": [
+          "tests/unit/app-legacy-state-controller.test.ts",
+          "tests/unit/live-screen-action-bindings.test.ts",
+          "tests/unit/screen-registry.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-TRAINING-OPERATIONS",
+          "condition": "Remove old route/action aliases only after canonical destinations are proven."
+        }
+      },
+      {
+        "id": "compat-foundry-home",
+        "pathPattern": "src/app/live-ghost-lab-home.ts",
+        "termIds": [
+          "training-operations",
+          "replay-hub",
+          "training-archive",
+          "run-monitor",
+          "scenario-console"
+        ],
+        "owner": "Replay Hub navigation owner",
+        "reason": "Legacy home cards expose existing safe destinations while canonical labels are introduced.",
+        "testEvidence": [
+          "tests/unit/live-ghost-lab-home.test.ts",
+          "tests/browser-ghost-lab-home.js"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-REPLAY-HUB",
+          "condition": "Remove old card labels after Replay Hub routes and canonical surface labels pass."
+        }
+      },
+      {
+        "id": "compat-foundry-config",
+        "pathPattern": "vite.config.ts",
+        "termIds": [
+          "training-operations"
+        ],
+        "owner": "Build/chunk owner",
+        "reason": "Runtime app chunk grouping retains Foundry module boundaries during migration.",
+        "testEvidence": [
+          "check:architecture",
+          "build:test:standalone"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-TRAINING-OPERATIONS",
+          "condition": "Remove after canonical chunk names are proven without changing split behavior."
+        }
+      },
+      {
+        "id": "compat-state-forge-app",
+        "pathPattern": "src/app/live-state-forge-*.ts",
+        "termIds": [
+          "scenario-console"
+        ],
+        "owner": "Scenario Console runtime owner",
+        "reason": "State Forge runtime bridge remains active beneath the future Scenario Console facade.",
+        "testEvidence": [
+          "tests/unit/live-state-forge-runtime-bridge.test.ts",
+          "tests/browser-state-forge-runtime.js"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-SCENARIO-CONSOLE",
+          "condition": "Remove after facade routes and codec adapters are canonical."
+        }
+      },
+      {
+        "id": "compat-state-forge-tearbench",
+        "pathPattern": "src/tearbench/state-forge-*.ts",
+        "termIds": [
+          "scenario-console"
+        ],
+        "owner": "TearBench scenario owner",
+        "reason": "Existing State Forge codecs/timelines are the preserved implementation beneath Scenario Console.",
+        "testEvidence": [
+          "tests/unit/tearbench-state-forge-*.test.ts",
+          "tests/unit/tearbench-state-codecs.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "never",
+          "condition": "Do not rename preserved TearBench modules solely for terminology."
+        }
+      },
+      {
+        "id": "compat-state-forge-browser",
+        "pathPattern": "src/tearbench/browser/state-forge-*.ts",
+        "termIds": [
+          "scenario-console"
+        ],
+        "owner": "Scenario Console browser owner",
+        "reason": "Existing browser host and studio UI remain compatible while the facade is added.",
+        "testEvidence": [
+          "tests/browser-state-forge-studio.js",
+          "tests/unit/tearbench-state-forge-studio.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-SCENARIO-CONSOLE",
+          "condition": "Remove only after Scenario Console UI route aliases and visual labels pass."
+        }
+      },
+      {
+        "id": "compat-state-forge-host",
+        "pathPattern": "src/tearbench/browser/live-state-forge-studio-host.ts",
+        "termIds": [
+          "scenario-console"
+        ],
+        "owner": "Scenario Console browser owner",
+        "reason": "Studio host exposes the existing State Forge compatibility surface.",
+        "testEvidence": [
+          "tests/browser-state-forge-studio.js",
+          "tests/unit/tearbench-state-forge-studio.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-SCENARIO-CONSOLE",
+          "condition": "Remove after canonical host labels are verified without moving src/tearbench."
+        }
+      },
+      {
+        "id": "compat-state-forge-index",
+        "pathPattern": "src/tearbench/browser/index.ts",
+        "termIds": [
+          "scenario-console"
+        ],
+        "owner": "TearBench browser owner",
+        "reason": "Existing browser barrel keeps State Forge exports stable for imported tools.",
+        "testEvidence": [
+          "tests/unit/tearbench-contracts.test.ts",
+          "check:architecture"
+        ],
+        "expiry": {
+          "checkpoint": "never",
+          "condition": "Preserve TearBench exports; add aliases rather than removing old names."
+        }
+      },
+      {
+        "id": "compat-replay-editor-ghost",
+        "pathPattern": "src/ghost/player-experiences.ts",
+        "termIds": [
+          "replay-editor"
+        ],
+        "owner": "Replay EDL owner",
+        "reason": "Ghost replay/EDL implementation remains the source of truth beneath Replay Editor.",
+        "testEvidence": [
+          "tests/unit/ghost-player-experiences.test.ts",
+          "tests/unit/ghost-studio-cut-list-theater.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-REPLAY-EDITOR",
+          "condition": "Remove only after EDL v1 dual-read and canonical Replay Editor exports pass."
+        }
+      },
+      {
+        "id": "compat-replay-editor-app",
+        "pathPattern": "src/app/*replay*.ts",
+        "termIds": [
+          "replay-editor"
+        ],
+        "owner": "Replay screen owner",
+        "reason": "Replay action adapters retain studio aliases until Replay Editor routing is available.",
+        "testEvidence": [
+          "tests/unit/live-replay-screen-adapter.test.ts",
+          "tests/unit/ghost-studio-cut-list-theater.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-REPLAY-EDITOR",
+          "condition": "Remove after canonical replay-editor action IDs and old route aliases pass."
+        }
+      },
+      {
+        "id": "compat-replay-editor-actions",
+        "pathPattern": "src/domain/screen-actions.ts",
+        "termIds": [
+          "replay-editor"
+        ],
+        "owner": "Navigation contract owner",
+        "reason": "replay.studio action IDs are serialized UI compatibility names.",
+        "testEvidence": [
+          "tests/unit/live-screen-action-bindings.test.ts",
+          "tests/unit/app-legacy-state-controller.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-REPLAY-EDITOR",
+          "condition": "Remove only after old replay.studio actions map to canonical Replay Editor actions."
+        }
+      },
+      {
+        "id": "compat-replay-hub-screen",
+        "pathPattern": "src/presentation/screens/ghost-lab.ts",
+        "termIds": [
+          "replay-hub"
+        ],
+        "owner": "Replay Hub presentation owner",
+        "reason": "Existing Ghost Lab screen is the active surface to be aliased, not rewritten in this slice.",
+        "testEvidence": [
+          "tests/unit/screen-renderers.test.ts",
+          "tests/browser-ghost-lab-home.js"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-REPLAY-HUB",
+          "condition": "Remove after Replay Hub public copy and unavailable cards ship."
+        }
+      },
+      {
+        "id": "compat-replay-hub-app",
+        "pathPattern": "src/app/live-ghost-lab-home.ts",
+        "termIds": [
+          "replay-hub"
+        ],
+        "owner": "Replay Hub navigation owner",
+        "reason": "Legacy ghostlab home route remains readable while canonical Replay Hub route is introduced.",
+        "testEvidence": [
+          "tests/unit/live-ghost-lab-home.test.ts",
+          "tests/browser-ghost-lab-home.js"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-REPLAY-HUB",
+          "condition": "Remove old ghostlab labels after route aliases and cards pass."
+        }
+      },
+      {
+        "id": "compat-replay-hub-panel",
+        "pathPattern": "src/tearbench/browser/ghost-lab-panel.ts",
+        "termIds": [
+          "replay-hub"
+        ],
+        "owner": "TearBench disposable-panel owner",
+        "reason": "Ghost Lab disposable live-run panel is a test harness compatibility surface.",
+        "testEvidence": [
+          "tests/browser-ghost-lab-home.js",
+          "tests/browser-ghost-lab-production-isolation.js"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-REPLAY-HUB",
+          "condition": "Remove after Replay Hub harness alias and production isolation evidence pass."
+        }
+      },
+      {
+        "id": "compat-game-agent-source",
+        "pathPattern": "src/agents/tearbot-*.ts",
+        "termIds": [
+          "game-agent"
+        ],
+        "owner": "Game Agent evaluation owner",
+        "reason": "Human calibration, ladder, and v3 evaluation modules retain persisted TearBot names.",
+        "testEvidence": [
+          "tests/unit/tearbot-human-calibration-source.test.ts",
+          "tests/unit/tearbot-ladder-evaluation.test.ts",
+          "tests/unit/tearbot-v3-canonical-evaluation.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-GAME-AGENT",
+          "condition": "Remove after report readers and canonical Game Agent namespaces are dual-read."
+        }
+      },
+      {
+        "id": "compat-game-agent-watch",
+        "pathPattern": "src/agents/live-watch-agent-*.ts",
+        "termIds": [
+          "game-agent",
+          "run-monitor"
+        ],
+        "owner": "Game Agent/Run Monitor integration owner",
+        "reason": "Panel copy intentionally contains both old TearBot and Watch Agent labels until the surfaces separate.",
+        "testEvidence": [
+          "tests/unit/watch-build-choice.test.ts",
+          "tests/browser-c32-agent-journeys.js"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-GAME-AGENT",
+          "condition": "Remove old labels after Game Agent and Run Monitor UI boundaries are explicit."
+        }
+      },
+      {
+        "id": "compat-game-agent-app",
+        "pathPattern": "src/app/live-bot-evidence-controller.ts",
+        "termIds": [
+          "game-agent"
+        ],
+        "owner": "Game Agent evidence owner",
+        "reason": "Bot evidence controller keeps the current evidence route while canonical display naming is staged.",
+        "testEvidence": [
+          "tests/unit/tearbot-v3-canonical-evaluation.test.ts",
+          "tests/unit/ghost-player-experiences.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-GAME-AGENT",
+          "condition": "Remove after Game Agent evidence route labels and report readers pass."
+        }
+      },
+      {
+        "id": "compat-game-agent-ghost",
+        "pathPattern": "src/ghost/player-experiences.ts",
+        "termIds": [
+          "game-agent"
+        ],
+        "owner": "Game Agent ghost integration owner",
+        "reason": "Coach/player experiences expose current TearBot evidence labels alongside ghost replay behavior.",
+        "testEvidence": [
+          "tests/unit/ghost-coach.test.ts",
+          "tests/unit/ghost-player-experiences.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-GAME-AGENT",
+          "condition": "Remove old labels after Game Agent ghost evidence stays semantically identical."
+        }
+      },
+      {
+        "id": "compat-training-archive-source",
+        "pathPattern": "src/agents/academy-*.ts",
+        "termIds": [
+          "training-archive"
+        ],
+        "owner": "Training Archive custody owner",
+        "reason": "Academy custody/corpus modules define persisted governance formats and remain unchanged until migration.",
+        "testEvidence": [
+          "tests/unit/academy-candidate-custody.test.ts",
+          "tests/unit/academy-candidate-source-attestation.test.ts",
+          "tests/unit/agent-academy.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-TRAINING-ARCHIVE",
+          "condition": "Remove only after all Academy record readers/writers use canonical labels."
+        }
+      },
+      {
+        "id": "compat-training-archive-app",
+        "pathPattern": "src/app/live-academy-screen.ts",
+        "termIds": [
+          "training-archive"
+        ],
+        "owner": "Training Archive route owner",
+        "reason": "Academy screen remains the current governed custody UI.",
+        "testEvidence": [
+          "tests/unit/browser-academy-inspection.test.ts",
+          "tests/unit/screen-renderers.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-TRAINING-ARCHIVE",
+          "condition": "Remove after Training Archive route and custody copy pass."
+        }
+      },
+      {
+        "id": "compat-training-archive-presentation",
+        "pathPattern": "src/presentation/screens/academy.ts",
+        "termIds": [
+          "training-archive"
+        ],
+        "owner": "Training Archive presentation owner",
+        "reason": "Existing Academy consent/custody labels must remain readable while the display migration is staged.",
+        "testEvidence": [
+          "tests/unit/screen-renderers.test.ts",
+          "tests/browser-academy-inspection.js"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-TRAINING-ARCHIVE",
+          "condition": "Remove after canonical Training Archive copy and accessibility labels ship."
+        }
+      },
+      {
+        "id": "compat-training-archive-headless",
+        "pathPattern": "src/tearbench/production-headless-academy-intake.ts",
+        "termIds": [
+          "training-archive"
+        ],
+        "owner": "Training Archive headless-intake owner",
+        "reason": "Headless intake format is a compatibility boundary for governed records.",
+        "testEvidence": [
+          "tests/unit/production-headless-academy-intake.test.ts",
+          "check:c30:foundation"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-TRAINING-ARCHIVE",
+          "condition": "Remove after canonical intake labels and custody evidence pass."
+        }
+      },
+      {
+        "id": "compat-run-monitor-host",
+        "pathPattern": "src/agents/live-watch-agent-*.ts",
+        "termIds": [
+          "run-monitor"
+        ],
+        "owner": "Run Monitor host owner",
+        "reason": "Watch host/panel and internal authority names remain active until Run Monitor is surfaced.",
+        "testEvidence": [
+          "tests/unit/watch-build-choice.test.ts",
+          "tests/browser-agent-autonomy.js"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-RUN-MONITOR",
+          "condition": "Remove public labels only after journal and monitor route compatibility passes."
+        }
+      },
+      {
+        "id": "compat-run-monitor-app",
+        "pathPattern": "src/app/live-watch-agent-*.ts",
+        "termIds": [
+          "run-monitor"
+        ],
+        "owner": "Run Monitor app owner",
+        "reason": "Current Watch Agent screen/controller is the implementation beneath the canonical display surface.",
+        "testEvidence": [
+          "tests/unit/live-watch-agent-screen.test.ts",
+          "tests/browser-c32-agent-journeys.js"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-RUN-MONITOR",
+          "condition": "Remove after canonical Run Monitor route and labels pass."
+        }
+      },
+      {
+        "id": "compat-run-monitor-bridge",
+        "pathPattern": "src/tearbench/browser/live-runtime-bridge.ts",
+        "termIds": [
+          "run-monitor"
+        ],
+        "owner": "TearBench runtime bridge owner",
+        "reason": "Watch-agent query/global bridge is a test-only compatibility contract.",
+        "testEvidence": [
+          "tests/browser-c32-agent-journeys.js",
+          "tests/browser-production-runtime-isolation.js"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-RUN-MONITOR",
+          "condition": "Remove only after Run Monitor harness alias and isolation checks pass."
+        }
+      },
+      {
+        "id": "compat-watch-host-foundry",
+        "pathPattern": "src/agents/live-watch-agent-host.ts",
+        "termIds": ["training-operations"],
+        "owner": "Training Operations/Run Monitor integration owner",
+        "reason": "The watch host records the current Foundry monitoring authority while the public surfaces are separated.",
+        "testEvidence": ["tests/unit/foundry-job-v3-post-promotion-monitor.test.ts", "tests/unit/foundry-job-v4-post-promotion-monitor.test.ts"],
+        "expiry": {
+          "checkpoint": "G4-B-TRAINING-OPERATIONS",
+          "condition": "Remove after Foundry monitoring authority is canonicalized under Training Operations."
+        }
+      },
+      {
+        "id": "compat-interface-composition-surfaces",
+        "pathPattern": "src/app/live-interface-composition.ts",
+        "termIds": ["training-archive", "training-operations"],
+        "owner": "Navigation/presentation owner",
+        "reason": "The live interface composition owns current Academy and Foundry surface bindings.",
+        "testEvidence": ["tests/unit/live-interface-composition.test.ts", "tests/unit/screen-renderers.test.ts"],
+        "expiry": {
+          "checkpoint": "G4-A",
+          "condition": "Update when canonical Training Archive and Training Operations surfaces are wired."
+        }
+      },
+      {
+        "id": "compat-screen-action-bindings-academy",
+        "pathPattern": "src/app/live-screen-action-bindings.ts",
+        "termIds": ["training-archive"],
+        "owner": "Navigation contract owner",
+        "reason": "Academy actions remain a typed compatibility route until Training Archive is canonical.",
+        "testEvidence": ["tests/unit/live-screen-action-bindings.test.ts", "tests/unit/app-legacy-state-controller.test.ts"],
+        "expiry": {
+          "checkpoint": "G4-B-TRAINING-ARCHIVE",
+          "condition": "Remove after Academy action aliases route to canonical Training Archive actions."
+        }
+      },
+      {
+        "id": "compat-settings-controller-signal",
+        "pathPattern": "src/app/settings-controller.ts",
+        "termIds": ["music"],
+        "owner": "Music settings owner",
+        "reason": "Settings controller retains the signal tab alias and snapshots during the Music surface migration.",
+        "testEvidence": ["tests/unit/settings-controller.test.ts", "tests/unit/settings-snapshots.test.ts"],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC-SURFACE",
+          "condition": "Remove after Music settings route aliases and snapshots pass."
+        }
+      },
+      {
+        "id": "compat-menu-setup-snapshots-signal",
+        "pathPattern": "src/presentation/menu-setup-snapshots.ts",
+        "termIds": ["music"],
+        "owner": "Music presentation owner",
+        "reason": "Menu/setup snapshots preserve the current signal vocabulary until copy migration.",
+        "testEvidence": ["tests/unit/menu-setup-snapshots.test.ts", "tests/unit/settings-snapshots.test.ts"],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC-SURFACE",
+          "condition": "Update snapshots with canonical Music labels and retain old fixture coverage."
+        }
+      },
+      {
+        "id": "compat-cold-screen-renderers",
+        "pathPattern": "src/presentation/screens/cold-screen-renderers.ts",
+        "termIds": ["training-archive", "training-operations"],
+        "owner": "Navigation/presentation owner",
+        "reason": "Cold screen route labels remain compatible while canonical public surfaces are staged.",
+        "testEvidence": ["tests/unit/screen-renderers.test.ts", "tests/unit/screen-registry.test.ts"],
+        "expiry": {
+          "checkpoint": "G4-A",
+          "condition": "Update when Training Archive and Training Operations renderers are canonical."
+        }
+      },
+      {
+        "id": "compat-screen-index",
+        "pathPattern": "src/presentation/screens/index.ts",
+        "termIds": ["training-archive", "training-operations"],
+        "owner": "Presentation registry owner",
+        "reason": "Screen registry exports retain current names for import compatibility.",
+        "testEvidence": ["tests/unit/screen-registry.test.ts", "check:architecture"],
+        "expiry": {
+          "checkpoint": "G4-A",
+          "condition": "Add canonical exports before removing old names in the narrow surface PR."
+        }
+      },
+      {
+        "id": "compat-menu-setup-surfaces",
+        "pathPattern": "src/presentation/screens/menu-setup.ts",
+        "termIds": ["training-archive", "training-operations", "replay-hub", "music"],
+        "owner": "Menu/navigation owner",
+        "reason": "Main menu labels and settings route aliases remain current until canonical surface migration.",
+        "testEvidence": ["tests/unit/menu-setup-snapshots.test.ts", "tests/unit/ui-navigation.test.ts", "tests/browser-navigation-journeys.js"],
+        "expiry": {
+          "checkpoint": "G4-A",
+          "condition": "Update menu copy/routes with canonical labels after each destination compatibility gate passes."
+        }
+      },
+      {
+        "id": "compat-settings-snapshots-signal",
+        "pathPattern": "src/presentation/settings-snapshots.ts",
+        "termIds": ["music"],
+        "owner": "Music presentation owner",
+        "reason": "Settings snapshot headings/tabs retain THE SIGNAL compatibility copy.",
+        "testEvidence": ["tests/unit/settings-snapshots.test.ts", "tests/unit/signal-now-playing.test.ts"],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC-SURFACE",
+          "condition": "Update snapshot labels after Music tab route and accessibility aliases pass."
+        }
+      },
+      {
+        "id": "compat-current-docs-audio",
+        "pathPattern": "docs/TEAR_SCORE_INTEGRATION.md",
+        "termIds": [
+          "tear-music",
+          "adaptive-soundtrack"
+        ],
+        "owner": "Program documentation owner",
+        "reason": "Current integration document is a mutable migration target, retained until the audio slice updates it.",
+        "testEvidence": [
+          "check:terminology",
+          "check:tear-score"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC",
+          "condition": "Update to canonical TEAR Music/Adaptive Soundtrack names in the audio migration PR."
+        }
+      },
+      {
+        "id": "compat-current-docs-inventory",
+        "pathPattern": "docs/FEATURE_INVENTORY.md",
+        "termIds": [
+          "tear-music",
+          "training-operations",
+          "replay-editor",
+          "replay-hub",
+          "game-agent",
+          "training-archive",
+          "run-monitor",
+          "scenario-console",
+          "music"
+        ],
+        "owner": "Program documentation owner",
+        "reason": "Current feature inventory records active implementation names and is updated in terminology slices.",
+        "testEvidence": [
+          "check:terminology",
+          "docs/checkpoints/program-normalization/G4_A_TERMINOLOGY_REGISTRY.md"
+        ],
+        "expiry": {
+          "checkpoint": "G4-A",
+          "condition": "Remove old labels when each current feature inventory entry is canonicalized with compatibility evidence."
+        }
+      },
+      {
+        "id": "compat-current-docs-architecture",
+        "pathPattern": "docs/ARCHITECTURE*.md",
+        "termIds": [
+          "tear-music",
+          "training-operations",
+          "scenario-console",
+          "replay-editor",
+          "replay-hub",
+          "game-agent",
+          "training-archive",
+          "run-monitor",
+          "music"
+        ],
+        "owner": "Program architecture documentation owner",
+        "reason": "Current architecture docs describe active legacy modules before narrow rename PRs.",
+        "testEvidence": [
+          "check:architecture",
+          "check:terminology"
+        ],
+        "expiry": {
+          "checkpoint": "G4-A",
+          "condition": "Update only nonhistorical current architecture docs as each owner migrates."
+        }
+      },
+      {
+        "id": "compat-current-docs-release",
+        "pathPattern": "docs/RELEASE_MATRIX.md",
+        "termIds": [
+          "tear-music"
+        ],
+        "owner": "Release documentation owner",
+        "reason": "Release matrix records the current audio backend compatibility boundary.",
+        "testEvidence": [
+          "check:terminology",
+          "check:bundles"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC",
+          "condition": "Update after canonical audio vendor/provenance gate is shipped."
+        }
+      },
+      {
+        "id": "compat-current-docs-contributing",
+        "pathPattern": "CONTRIBUTING.md",
+        "termIds": [
+          "tear-music"
+        ],
+        "owner": "Repository documentation owner",
+        "reason": "Contributor documentation retains current vendor terminology until the audio migration.",
+        "testEvidence": [
+          "check:terminology",
+          "check:tear-score"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC",
+          "condition": "Update after canonical vendoring workflow lands."
+        }
+      }
+    ]
+  },
+  "activeRoster": {
+    "id": "final-five-v1",
+    "sourceOfTruth": "src/gameplay/weapon-selection.ts",
+    "sourceExpression": "WEAPON_IDS",
+    "canonicalIds": [
+      "sword",
+      "hammer",
+      "greatsword",
+      "chainblade",
+      "riftlock"
+    ],
+    "canonicalDisplayNames": [
+      "Sword",
+      "Hammer",
+      "Greatsword",
+      "Chainblade",
+      "Riftlock"
+    ],
+    "retiredIds": [
+      "spear",
+      "ringblade"
+    ],
+    "migrationMap": {
+      "spear": "greatsword",
+      "ringblade": "riftlock"
+    },
+    "copyScanPathPatterns": [
+      "src/gameplay/weapon-selection.ts",
+      "src/gameplay/weapons.ts",
+      "src/presentation/screens/**/*.ts",
+      "src/app/**/*screen*.ts",
+      "public/**/*.html",
+      "public/**/*.json",
+      "index.html",
+      "tests/unit/weapon-selection.test.ts"
+    ],
+    "migrationAllowlist": [
+      {
+        "id": "roster-migration-source",
+        "pathPattern": "src/gameplay/weapon-selection.ts",
+        "termIds": [
+          "spear",
+          "ringblade"
+        ],
+        "owner": "Weapon selection/save/replay migration owner",
+        "reason": "The only active migration map accepts retired saved selections and maps them to the final five.",
+        "testEvidence": [
+          "tests/unit/weapon-selection.test.ts",
+          "tests/unit/replay-envelope.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-WEAPON-ROSTER",
+          "condition": "Retain until legacy saves/imports are proven; canonical replay packets must continue rejecting retired IDs."
+        }
+      },
+      {
+        "id": "roster-migration-test",
+        "pathPattern": "tests/unit/weapon-selection.test.ts",
+        "termIds": [
+          "spear",
+          "ringblade"
+        ],
+        "owner": "Weapon selection/save/replay migration owner",
+        "reason": "Focused fixtures prove the exact Spear/Ringblade compatibility map.",
+        "testEvidence": [
+          "tests/unit/weapon-selection.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-WEAPON-ROSTER",
+          "condition": "Retain while legacy migration behavior is supported."
+        }
+      }
+    ],
+    "historyAllowlist": [
+      {
+        "id": "roster-history-plans",
+        "pathPattern": "plans/**",
+        "termIds": [
+          "spear",
+          "ringblade"
+        ],
+        "owner": "Weapon roster history owner",
+        "reason": "Roster plans are historical design/evidence records and retain retired identifiers.",
+        "testEvidence": [
+          "docs/checkpoints/C24*.md",
+          "docs/checkpoints/C40*.md"
+        ],
+        "expiry": {
+          "checkpoint": "never",
+          "condition": "Do not rewrite historical roster plans for naming."
+        }
+      },
+      {
+        "id": "roster-history-checkpoints",
+        "pathPattern": "docs/checkpoints/**",
+        "termIds": [
+          "spear",
+          "ringblade"
+        ],
+        "owner": "Weapon roster history owner",
+        "reason": "C24/C40 evidence and ledgers are hash-bound historical records.",
+        "testEvidence": [
+          "tests/unit/c40-weapon-roster-evidence-index.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "never",
+          "condition": "Preserve evidence hashes and requirement IDs."
+        }
+      },
+      {
+        "id": "roster-history-docs",
+        "pathPattern": "docs/TEARBENCH_C40_WEAPON_ROSTER_EVIDENCE_INDEX.md",
+        "termIds": [
+          "spear",
+          "ringblade"
+        ],
+        "owner": "Weapon roster history owner",
+        "reason": "C40 evidence index is a current preserved evidence document, not player-facing roster copy.",
+        "testEvidence": [
+          "tests/unit/c40-weapon-roster-evidence-index.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "never",
+          "condition": "Never rewrite preserved C40 wording solely for terminology."
+        }
+      }
+    ]
+  }
+}
