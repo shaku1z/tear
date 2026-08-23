@@ -1,0 +1,131 @@
+{
+  "format": "tear-workspace-recovery-second-wave-policy",
+  "schemaVersion": 1,
+  "repository": "shaku1z/tear",
+  "boundary": {
+    "fetch": false,
+    "mutation": "report-only-until-separate-apply-approval",
+    "selection": "exact-source-name-and-root-argument-only",
+    "looseFiles": "excluded",
+    "archiveRecoveryRoots": "excluded",
+    "canonicalRoots": "excluded"
+  },
+  "retention": {
+    "mode": "one-floor-for-entire-operation",
+    "minimumUtc": "2027-03-31T23:59:59.000Z",
+    "reason": "retain through post-G8 review before any later disposition"
+  },
+  "sourceRoots": [
+    { "id": "second-wave-tear-architectural-main-candidate", "name": "Tear-architectural-main-candidate", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-budget-architecture", "name": "Tear-budget-architecture", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-budget-baseline", "name": "Tear-budget-baseline", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-g1-controlled-check", "name": "Tear-g1-controlled-check", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-g2-closure-docs", "name": "Tear-g2-closure-docs", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-g2-music-rights-mirror", "name": "Tear-g2-music-rights-mirror", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-g2-vendor-repro-20260822-1530", "name": "tear-g2-vendor-repro-20260822-1530", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-g3-dirty-restore-20260822-01", "name": "tear-g3-dirty-restore-20260822-01", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-g3-dirty-verify-20260822-01", "name": "tear-g3-dirty-verify-20260822-01", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-g3-final-acceptance-185813", "name": "tear-g3-final-acceptance-185813", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-g3-phase4-final-restore-20260822-01", "name": "tear-g3-phase4-final-restore-20260822-01", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-g3-phase4-predelete-restore-20260822-01", "name": "tear-g3-phase4-predelete-restore-20260822-01", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-g3-restore-drill-20260822-01", "name": "tear-g3-restore-drill-20260822-01", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-g4-agent-baseline", "name": "Tear-g4-agent-baseline", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-main-normalization", "name": "Tear-main-normalization", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-music-adaptive-soundtrack-handoff-7662fc9-v2", "name": "tear-music-adaptive-soundtrack-handoff-7662fc9-v2", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-music-adaptive-soundtrack-handoff-c973362-superseded-v1", "name": "tear-music-adaptive-soundtrack-handoff-c973362-superseded-v1", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-ogg-determinism-probe", "name": "tear-ogg-determinism-probe", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-program-normalization-g1-final-gate", "name": "Tear-program-normalization-g1-final-gate", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-program-normalization-g1-release-gate", "name": "Tear-program-normalization-g1-release-gate", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-program-normalization-g1-release-gate-v2", "name": "Tear-program-normalization-g1-release-gate-v2", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-program-normalization-g1-release-gate-v3", "name": "Tear-program-normalization-g1-release-gate-v3", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-score-g2-audit-1611bbb", "name": "tear-score-g2-audit-1611bbb", "rootArgument": "temp-root", "retentionClass": "high-risk-long-retention" },
+    { "id": "second-wave-tear-score-g2-clean-702b57e7", "name": "tear-score-g2-clean-702b57e7", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-score-g2-clean-typecheck", "name": "tear-score-g2-clean-typecheck", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-score-g2-determinism-acceptance-4f7a872", "name": "tear-score-g2-determinism-acceptance-4f7a872", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-score-g2-final-3ff4b72", "name": "tear-score-g2-final-3ff4b72", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-score-g2-final-4f7a872-20260822-144925", "name": "tear-score-g2-final-4f7a872-20260822-144925", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-score-g2-final-a051e1ac", "name": "tear-score-g2-final-a051e1ac", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-score-g2-music-canonicalization", "name": "tear-score-g2-music-canonicalization", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-score-g2-provision-cache-702b57e7", "name": "tear-score-g2-provision-cache-702b57e7", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-score-pack-check", "name": "tear-score-pack-check", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-score-program-normalization-g1", "name": "tear-score-program-normalization-g1", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-tearscore-normalization", "name": "Tear-tearscore-normalization", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-wiki-g3-fresh-20260822-final", "name": "tear-wiki-g3-fresh-20260822-final", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-wiki-g3-master-retirement-fresh-final-20260822", "name": "tear-wiki-g3-master-retirement-fresh-final-20260822", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-wiki-g3-master-retirement-restore-20260822", "name": "tear-wiki-g3-master-retirement-restore-20260822", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-wiki-g3-master-retirement-restore-final-20260822", "name": "tear-wiki-g3-master-retirement-restore-final-20260822", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-wiki-g3-master-retirement-restore-final-main-20260822", "name": "tear-wiki-g3-master-retirement-restore-final-main-20260822", "rootArgument": "temp-root" },
+    { "id": "second-wave-tear-cutting-room", "name": "Tear-cutting-room", "rootArgument": "workspace-root" },
+    { "id": "second-wave-tear-cutting-room-ghost3", "name": "Tear-cutting-room-ghost3", "rootArgument": "workspace-root" },
+    { "id": "second-wave-tear-final-five-weapon-roster", "name": "Tear-final-five-weapon-roster", "rootArgument": "workspace-root" },
+    { "id": "second-wave-tear-final-five-weapon-roster-redesign", "name": "Tear-final-five-weapon-roster-redesign", "rootArgument": "workspace-root" },
+    { "id": "second-wave-tear-system-memory-baseline", "name": "Tear-system-memory-baseline", "rootArgument": "workspace-root" },
+    { "id": "second-wave-tear-system-memory-mutation", "name": "Tear-system-memory-mutation", "rootArgument": "workspace-root" }
+  ],
+  "exclusions": {
+    "canonicalRoots": ["Tear", "tear-score", "tear-wiki", "Tear-oracle"],
+    "archiveRecoveryRoots": ["Tear-archives", "tear-git-recovery-*", "tear-g3-preservation-audit-*", "tear-g5-*"],
+    "looseFiles": "all",
+    "unlistedDirectories": "all",
+    "unrelatedRoots": "all"
+  },
+  "runtime": {
+    "operation": "same-volume-whole-root-rename-only",
+    "destination": "new-child-under-existing-dated-g5-recovery-group",
+    "restore": "not-implemented",
+    "copy": false,
+    "delete": false,
+    "overwrite": false,
+    "fetch": false,
+    "reparsePoints": "refuse"
+  },
+  "compatibility": {
+    "reportFormat": "tear-workspace-recovery-report",
+    "reportSchemaVersion": 1,
+    "legacyRootArgumentFallback": {
+      "publication-copy": "temp-root",
+      "other": "workspace-root"
+    }
+  },
+  "protected": {
+    "segments": [
+      ".git",
+      ".github",
+      "node_modules",
+      "dist",
+      "build",
+      "coverage",
+      "test-results",
+      "artifacts",
+      ".wrangler",
+      ".tmp-tone-host-esm",
+      "Tear-archives",
+      "Tear-oracle"
+    ],
+    "namePatterns": [
+      "^Tear-archives$",
+      "^tear-git-recovery-",
+      "^tear-g3-preservation-audit-",
+      "^Tear-oracle$",
+      "^\\.env(?:\\..*)?$",
+      "\\.local.*$",
+      "^settings\\.local\\.json$",
+      "(?:secret|credential|token|password)",
+      "^id_rsa(?:\\..*)?$",
+      "\\.(?:pem|key|p12|pfx|kdbx|crt|cer)$"
+    ]
+  },
+  "limits": {
+    "maxSourceCandidates": 64,
+    "maxEntries": 100000,
+    "maxBytes": 2147483648,
+    "maxDepth": 64,
+    "maxPointerBytes": 4096,
+    "maxSingleFileBytes": 134217728,
+    "maxPreservedManifestBytes": 16777216
+  },
+  "hash": {
+    "algorithm": "sha256",
+    "pathEncoding": "relative-posix-v1"
+  }
+}

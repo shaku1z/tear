@@ -7,7 +7,9 @@ import process from "node:process";
 import { RELEASE_REPOSITORY } from "./release-artifact.mjs";
 import { normalizeRepositoryIdentifier } from "./repository-identity.mjs";
 import {
-  readWorkspaceRecoveryPolicy,
+  readWorkspaceRecoveryPolicyBundle,
+  rootArgumentForSource,
+  WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_FORMAT,
   WORKSPACE_RECOVERY_REPORT_FORMAT,
 } from "./report-workspace-recovery.mjs";
 
@@ -206,6 +208,12 @@ function assertRootLayout(report, repoRoot, reportPath) {
   if (!samePath(path.dirname(archive.path), workspace.path)) fail("archive-root must be a direct child of workspace-root");
   if (samePath(workspace.path, temp.path) || isPathInside(workspace.path, temp.path, { allowEqual: true }) || isPathInside(temp.path, workspace.path, { allowEqual: true })) fail("temp-root must be disjoint from workspace-root");
   if (samePath(repo, archive.path) || isPathInside(repo, archive.path, { allowEqual: true }) || isPathInside(archive.path, repo, { allowEqual: true })) fail("repo-root and archive-root overlap");
+  if (inputs.rootArguments !== undefined) {
+    if (typeof inputs.rootArguments !== "object" || inputs.rootArguments === null) fail("report rootArguments must be an object");
+    for (const [argument, expected] of [["workspace-root", workspace.path], ["temp-root", temp.path], ["archive-root", archive.path]]) {
+      if (!samePath(inputs.rootArguments[argument], expected)) fail(`report rootArguments.${argument} does not match its canonical root`);
+    }
+  }
   const reportInspection = inspectCanonical(reportPath, "report", "file");
   if (!isPathInside(archive.path, reportInspection.path)) fail("report must be inside archive-root");
   const reportRelative = path.relative(archive.path, reportInspection.path).split(path.sep);
@@ -214,16 +222,21 @@ function assertRootLayout(report, repoRoot, reportPath) {
   return { workspace, temp, archive, group };
 }
 
-function sourceKindAllowed(source, sourcePath, workspace, temp) {
-  const parent = path.dirname(sourcePath);
-  if (source.id === "publication-copy") return samePath(parent, temp.path) && path.basename(sourcePath).toLowerCase() === "tear-main-publication";
-  if (!samePath(parent, workspace.path)) return false;
+function sourceKindAllowed(source, sourcePath, roots, policyBundle) {
+  const rootArgument = rootArgumentForSource(source);
+  const expectedParent = rootArgument === "temp-root" ? roots.temp.path : rootArgument === "workspace-root" ? roots.workspace.path : null;
+  if (expectedParent === null || !samePath(path.dirname(sourcePath), expectedParent)) return false;
+  if (policyBundle.kind === "second-wave") {
+    const allowlisted = policyBundle.policy.sourceRoots.find((candidate) => candidate.id === source.id && candidate.name === source.name);
+    return allowlisted !== undefined && allowlisted.rootArgument === rootArgument;
+  }
+  if (source.id === "publication-copy") return path.basename(sourcePath).toLowerCase() === "tear-main-publication";
   if (source.id === "invalid-gsm-worktrees") return SOURCE_NAME_PATTERN.test(path.basename(sourcePath));
   if (source.id === "receipt-copies") return RECEIPT_NAMES.has(path.basename(sourcePath).toLowerCase());
   return false;
 }
 
-function verifySources(report, roots) {
+function verifySources(report, roots, policyBundle) {
   const sources = report.sources;
   if (!Array.isArray(sources)) fail("report sources are incomplete");
   const candidateRoots = report.inputs.candidateRoots.map((value) => path.resolve(value));
@@ -232,17 +245,25 @@ function verifySources(report, roots) {
   const verified = [];
   for (const source of sources) {
     if (!source || typeof source !== "object" || typeof source.id !== "string" || typeof source.name !== "string") fail("report contains an invalid source record");
+    const rootArgument = rootArgumentForSource(source);
+    if (!['workspace-root', 'temp-root'].includes(rootArgument)) fail(`source has an invalid rootArgument: ${source.name}`);
     const sourcePath = path.resolve(source.absolutePath ?? "");
     const candidateIndex = candidateRoots.findIndex((candidate) => samePath(candidate, sourcePath));
     if (candidateIndex < 0 || seen.has(comparablePath(sourcePath))) fail(`source root is not an exact report candidate: ${sourcePath}`);
     seen.add(comparablePath(sourcePath));
     const inspection = inspectCanonical(sourcePath, `source ${source.name}`, "directory");
-    if (!sourceKindAllowed(source, inspection.path, roots.workspace, roots.temp)) fail(`source has an invalid exact-name or parent: ${inspection.path}`);
+    if (policyBundle.kind === "second-wave" && source.rootArgument !== rootArgument) fail(`source rootArgument is invalid: ${source.name}`);
+    if (!sourceKindAllowed(source, inspection.path, roots, policyBundle)) fail(`source has an invalid exact-name or parent: ${inspection.path}`);
     if (samePath(inspection.path, roots.archive.path) || isPathInside(inspection.path, roots.archive.path, { allowEqual: true }) || isPathInside(roots.archive.path, inspection.path, { allowEqual: true }) || samePath(inspection.path, roots.workspace.path) || samePath(inspection.path, roots.temp.path) || samePath(inspection.path, roots.repo.path)) fail(`source overlaps a protected root: ${inspection.path}`);
     if (source.rootDecision !== "scanned") fail(`source ${source.name} was not scanned in the supplied report`);
-    verified.push({ ...source, path: inspection.path });
+    verified.push({ ...source, rootArgument, path: inspection.path });
   }
   if (seen.size !== candidateRoots.length) fail("report candidate roots and source records differ");
+  if (policyBundle.kind === "second-wave") {
+    const expected = policyBundle.policy.sourceRoots;
+    const actual = new Set(verified.map((source) => `${source.id}\0${source.name}\0${source.rootArgument}`));
+    if (actual.size !== expected.length || expected.some((source) => !actual.has(`${source.id}\0${source.name}\0${source.rootArgument}`))) fail("report source set does not exactly match the second-wave allowlist");
+  }
   for (let left = 0; left < verified.length; left += 1) {
     for (let right = left + 1; right < verified.length; right += 1) {
       if (samePath(verified[left].path, verified[right].path) || isPathInside(verified[left].path, verified[right].path, { allowEqual: true }) || isPathInside(verified[right].path, verified[left].path, { allowEqual: true })) fail("source roots overlap");
@@ -508,6 +529,7 @@ function buildManifest({ report, reportPath, reportSha256, policySha256, repo, r
         sourceId: source.id,
         sourceName: source.name,
         sourceRoot: source.path,
+        rootArgument: source.rootArgument,
         relativePath,
         originalPath: prepared.entry.absolutePath,
         plannedPath: path.join(destination.path, source.name, relativePath.split("/").join(path.sep)),
@@ -531,6 +553,7 @@ function buildManifest({ report, reportPath, reportSha256, policySha256, repo, r
         sourceId: source.id,
         sourceName: source.name,
         sourceRoot: source.path,
+        rootArgument: source.rootArgument,
         relativePath: emptyDirectory.relativePath,
         originalPath: emptyDirectory.absolutePath,
         plannedPath: path.join(destination.path, source.name, emptyDirectory.relativePath.split("/").join(path.sep)),
@@ -566,7 +589,12 @@ function buildManifest({ report, reportPath, reportSha256, policySha256, repo, r
       workspaceRoot: roots.workspace.path,
       tempRoot: roots.temp.path,
       archiveRoot: roots.archive.path,
-      sourceRoots: sources.map((source) => ({ id: source.id, name: source.name, path: source.path })),
+      rootArguments: {
+        "workspace-root": roots.workspace.path,
+        "temp-root": roots.temp.path,
+        "archive-root": roots.archive.path,
+      },
+      sourceRoots: sources.map((source) => ({ id: source.id, name: source.name, rootArgument: source.rootArgument, path: source.path })),
     },
     destination: {
       path: destination.path,
@@ -606,6 +634,13 @@ function buildManifest({ report, reportPath, reportSha256, policySha256, repo, r
         sha256: reportSha256,
         protectedGitStoreHashCoverage: "not-evaluated-by-this-preparer; no preservation claim",
       },
+      ...(report.inputs?.allowlist ? {
+        allowlist: {
+          format: report.inputs.allowlist.format,
+          path: report.inputs.allowlist.path,
+          sha256: report.inputs.allowlist.sha256,
+        },
+      } : {}),
       reportGeneratedAtUtc: report.generatedAtUtc,
       reportStatus: report.summary?.status ?? "unknown",
       destinationCreated: false,
@@ -630,11 +665,20 @@ export function runWorkspaceQuarantinePreparation(options = {}) {
   const policyPath = path.resolve(options.policyPath);
   const repoRoot = path.resolve(options.repoRoot);
   const policyInspection = inspectCanonical(policyPath, "policy", "file");
-  const expectedPolicyPath = path.join(repoRoot, "preservation", "workspace-recovery-policy.json");
-  if (!samePath(policyInspection.path, expectedPolicyPath)) fail("policy must be the current canonical repository policy");
-  const loadedPolicy = readWorkspaceRecoveryPolicy(policyInspection.path);
+  const expectedPolicyPaths = [
+    path.join(repoRoot, "preservation", "workspace-recovery-policy.json"),
+    path.join(repoRoot, "preservation", "workspace-recovery-second-wave-sources.json"),
+  ];
+  if (!expectedPolicyPaths.some((expectedPath) => samePath(policyInspection.path, expectedPath))) fail("policy must be a current canonical repository recovery policy");
+  const loadedPolicy = readWorkspaceRecoveryPolicyBundle(policyInspection.path);
   if (loadedPolicy.errors.length > 0) fail(`workspace recovery policy is invalid:\n- ${loadedPolicy.errors.join("\n- ")}`);
   if (loadedPolicy.sha256 !== String(report.policySha256 ?? "").toLowerCase()) fail("current policy SHA-256 does not match the report");
+  if (loadedPolicy.kind === "second-wave") {
+    if (report.inputs?.allowlist?.format !== WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_FORMAT || !samePath(report.inputs.allowlist.path, policyInspection.path) || report.inputs.allowlist.sha256 !== loadedPolicy.sha256) fail("second-wave report allowlist provenance does not match the current allowlist");
+    if (new Date(report.retainUntilUtc).getTime() < new Date(loadedPolicy.policy.retention.minimumUtc).getTime()) fail(`second-wave retain-until must be on or after ${loadedPolicy.policy.retention.minimumUtc}`);
+  } else if (report.inputs?.allowlist !== undefined) {
+    fail("first-wave report must not carry second-wave allowlist provenance");
+  }
   const repo = verifyRepository(repoRoot, report.repositoryState);
   const roots = assertRootLayout(report, repo.path, reportRead.path);
   roots.repo = repo;
@@ -642,13 +686,13 @@ export function runWorkspaceQuarantinePreparation(options = {}) {
   if (expectedOwner === "" || String(options.owner).trim() !== expectedOwner) fail("owner does not match the report");
   const retainUntilUtc = parseRetention(String(options.retainUntil), now);
   if (retainUntilUtc !== report.retainUntilUtc) fail("retain-until does not match the report");
-  const sources = verifySources(report, roots);
+  const sources = verifySources(report, roots, loadedPolicy);
   const destination = destinationPlan(options.destination, roots, reportRead.path, sources);
   const outputPath = outputPathSafe(options.outputPath, roots, destination, sources);
   const evidenceBudget = { entries: 0, bytes: 0 };
   const preparedEntriesBySource = sources.map((source) => {
-    const current = inspectSourceEvidence(source, loadedPolicy.policy, evidenceBudget);
-    const { preparedEntries, emptyDirectories } = validateReportEntries(source, current, loadedPolicy.policy);
+    const current = inspectSourceEvidence(source, loadedPolicy.scanPolicy ?? loadedPolicy.policy, evidenceBudget);
+    const { preparedEntries, emptyDirectories } = validateReportEntries(source, current, loadedPolicy.scanPolicy ?? loadedPolicy.policy);
     return { source, entries: preparedEntries, emptyDirectories, summary: sourceSummary(preparedEntries, emptyDirectories) };
   });
   const generatedAtUtc = new Date(now.getTime()).toISOString();
