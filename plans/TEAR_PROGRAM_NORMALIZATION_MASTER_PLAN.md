@@ -912,12 +912,22 @@ This is a target classification, not permission for a bulk move.
       revalidation, records numbered immutable events and a completion receipt,
       and supports safe resume; restore remains a separate future slice.
 - [x] Add a separate, exact-name second-wave source allowlist for the reviewed
-      45 remaining directory roots. Reports bind the allowlist path/SHA and
-      each source's explicit `rootArgument`; preparation and apply reject
-      canonical/archive roots, wrong parents, extra/missing/case-colliding
-      sources, and report/manifest provenance mismatches. One retention floor
-      runs through `2027-03-31T23:59:59.000Z`; the allowlist is capability-only
-      and does not claim a real second-wave report, manifest, move, or G5 close.
+      45 remaining directory roots. The allowlist now defines five immutable
+      ordinary partitions covering 43 roots plus one explicitly deferred
+      dependency group containing the opaque-reparse source
+      (`Tear-budget-architecture/node_modules`) and its target
+      (`Tear-tearscore-normalization`). Reports require an explicit partition
+      ID and bind its exact source IDs, root arguments, and audited byte
+      provenance; preparation and apply reject canonical/archive roots, wrong
+      parents, either deferred dependency source, extra/missing/case-colliding
+      sources, cross-partition evidence, and report/manifest provenance
+      mismatches. One retention floor runs through
+      `2027-03-31T23:59:59.000Z`; the allowlist is capability-only and does
+      not claim a real second-wave report, manifest, move, or G5 close. The
+      compatibility boundary is explicit-partition-v1-only: pre-partition
+      second-wave evidence is intentionally invalidated and rejected; the
+      failed all-at-once attempt hit the 2 GiB cap and produced no report, so
+      no successful prior artifact exists.
 - [ ] Add `quarantine-artifacts.mjs` only after the report manifest, owner,
       retention date, and recovery procedure receive a separate review; no
       quarantine or deletion is authorized by the report slice.
