@@ -21,6 +21,7 @@ export * from "./knowledge-libraries";
 export * from "./coach";
 export * from "./coach-practice";
 export * from "./player-experiences";
+export * from "./replay-editor";
 export * from "./cloud-publication";
 export * from "./local-publication-job";
 export * from "./publication-consent-ledger";

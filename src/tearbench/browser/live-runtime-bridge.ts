@@ -8,7 +8,7 @@ import type {
   TearRuntimeEnvironment,
 } from "../live-runtime-contracts";
 import { createLiveTearRuntimeEnvironment } from "../live-runtime-environment";
-import { installGhostLabPanel } from "./ghost-lab-panel";
+import { installReplayHubPanel } from "./replay-hub";
 import { installLiveScenarioConsole } from "./scenario-console";
 import type { TearGhostManifest } from "../../ghost/capsule-vault";
 import type { GhostReadCapsule } from "../../ghost/capsule-reader";
@@ -98,7 +98,7 @@ export function installLiveTearRuntimeBridge(
     writable: false,
     value: factory,
   });
-  installGhostLabPanel(factory);
+  installReplayHubPanel(factory);
   installLiveScenarioConsole(factory);
   if (new URLSearchParams(target.location.search).get("watchagent") === "1") {
     void Promise.all([

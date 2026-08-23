@@ -275,8 +275,10 @@ withJourney({ name: "C22 live Tear runtime", port: 8137 }, async ({ page }) => {
   assert.equal(new Set(Object.values(cleanProcessCanonicalHashes)).size, 1,
     `clean-process canonical hashes diverged: ${JSON.stringify(cleanProcessCanonicalHashes)}`);
   const labUrl = new URL(page.url());
-  labUrl.searchParams.set("ghostlab", "1");
+  labUrl.searchParams.set("replay-hub", "1");
+  labUrl.searchParams.delete("ghostlab");
   await page.goto(labUrl.toString(), { waitUntil: "domcontentloaded" });
+  await page.waitForSelector('[data-surface="replay-hub"]');
   await page.waitForSelector("#tear-ghost-lab");
   await page.getByRole("button", { name: "Launch disposable run" }).click();
   await page.waitForFunction(() => document.querySelector("#tear-ghost-lab-state")?.textContent.includes("\"running\""));
@@ -285,5 +287,11 @@ withJourney({ name: "C22 live Tear runtime", port: 8137 }, async ({ page }) => {
   assert.match(labText, /"events"/);
   assert.match(labText, /"rng"/);
   assert.match(labText, /"invariants"/);
+  const legacyLabUrl = new URL(page.url());
+  legacyLabUrl.searchParams.delete("replay-hub");
+  legacyLabUrl.searchParams.set("ghostlab", "1");
+  await page.goto(legacyLabUrl.toString(), { waitUntil: "domcontentloaded" });
+  await page.waitForSelector("#tear-ghost-lab");
+  await page.waitForSelector('[data-surface="replay-hub"]');
   console.log("C22 live Tear runtime bridge passed");
 });

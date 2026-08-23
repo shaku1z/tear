@@ -1,7 +1,7 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 
-withJourney({ name: "C37 normal Ghost Lab home", port: 8179 }, async ({ page, waitScreen }) => {
+withJourney({ name: "C37 normal Replay Hub home", port: 8179 }, async ({ page, waitScreen }) => {
   const text = [];
   await page.evaluate(() => {
     const captured = [];
@@ -12,11 +12,11 @@ withJourney({ name: "C37 normal Ghost Lab home", port: 8179 }, async ({ page, wa
     };
     window.__TEAR_C37_GHOST_LAB_TEXT__ = captured;
   });
-  await page.mouse.click(780, 757); // normal main-menu GHOST LAB control
+  await page.mouse.click(780, 757); // normal main-menu REPLAY HUB control
   await waitScreen("ghostlab");
   const labText = await page.evaluate(() => window.__TEAR_C37_GHOST_LAB_TEXT__);
-  for (const expected of ["GHOST LAB", "AVAILABLE LOCALLY", "NOT YET PLAYER-SAFE", "UNAVAILABLE / WATCH", "UNAVAILABLE / STATE FORGE", "UNAVAILABLE / BOT LADDER", "UNAVAILABLE / STUDIO"]) {
-    assert.ok(labText.includes(expected), `Ghost Lab did not visibly render ${expected}: ${labText.slice(-80).join(" | ")}`);
+  for (const expected of ["REPLAY HUB", "AVAILABLE LOCALLY", "NOT YET PLAYER-SAFE", "UNAVAILABLE / WATCH", "UNAVAILABLE / SCENARIO CONSOLE", "UNAVAILABLE / BOT LADDER", "UNAVAILABLE / REPLAY EDITOR"]) {
+    assert.ok(labText.includes(expected), `Replay Hub did not visibly render ${expected}: ${labText.slice(-80).join(" | ")}`);
   }
   await page.mouse.click(475, 224); // Academy
   await waitScreen("academy");
@@ -31,5 +31,5 @@ withJourney({ name: "C37 normal Ghost Lab home", port: 8179 }, async ({ page, wa
   await waitScreen("profile");
   assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "profile");
   assert.ok((await page.evaluate(() => window.__TEAR_C37_GHOST_LAB_TEXT__)).includes("VAULT"), "Ghost Lab Vault action did not render the normal Vault result state");
-}).then(() => console.log("browser normal Ghost Lab home passed"))
+}).then(() => console.log("browser normal Replay Hub home passed"))
   .catch((error) => { console.error(error); process.exit(1); });
