@@ -1,6 +1,6 @@
 # Tear — Architecture / Code-Quality / Combat Audit + Phased Plan
 
-> Historical record: this audit predates the Vite/TypeScript architectural redesign. Its `js/` and query-version paths describe the audited baseline, not the current source layout or release process. See `ARCHITECTURE_REDESIGN.md` and `DEPLOYMENT.md` for current guidance.
+> Historical record: this audit predates the Vite/TypeScript architectural redesign. Its `js/` and query-version paths describe the audited baseline, not the current source layout or release process. [ARCHITECTURE_REDESIGN.md](ARCHITECTURE_REDESIGN.md) is the historical migration plan; current authority is [ARCHITECTURE.md](../ARCHITECTURE.md) and root [DEPLOYMENT.md](../../DEPLOYMENT.md).
 
 _Audit only. No code changed. Nothing ships without an explicit go-ahead on the actual diff._
 
