@@ -964,14 +964,20 @@ This is a target classification, not permission for a bulk move.
       prerequisites. No deletion occurred.
 - [x] Compare non-Git `Tear-main-publication` and `Tear-receipt-clean` copies
       against the canonical reachable tree and the preservation corpus by
-      SHA-256/path using the read-only comparator. The external report
-      `g5-preserved-copy-comparison-5f83b1c.json` (SHA-256
-      `a363d43a10d6ecaea48963209c27faec781a6a4f82dce522731edf30c27dda7b`)
-      found no unmatched hashable unique files and no hash/missing-file
-      mismatches, but did find canonical path conflicts and protected/unhashed
-      entries. Recoverable disposal remains unchecked until those conflicts,
-      protected entries, the other receipt copies, and retention ownership are
-      explicitly resolved.
+      SHA-256/path using the strict v2 read-only comparator. The immutable v1
+      report remains `g5-preserved-copy-comparison-5f83b1c.json` (SHA-256
+      `a363d43a10d6ecaea48963209c27faec781a6a4f82dce522731edf30c27dda7b`),
+      and the new v2 report is
+      `g5-preserved-copy-comparison-5f83b1c-v2.json` (SHA-256
+      `ffc0de545717b9b14345f55f95e3f6117e0ab2960b35957cd2443bdb5c5f567a`).
+      V2 records 5 unmatched hashable contents in `Tear-main-publication` and
+      1 in `Tear-receipt-clean`, including path conflicts with no equal SHA
+      elsewhere. The comparator verifies exact manifest hashes, source
+      identity/restore mappings, canonical origin and expected head, safe
+      realpaths, and manifest coverage of ordinary target files. Its output is
+      read-only evidence and authorizes no disposal; protected entries, all
+      unmatched/path-conflict entries, the other receipt copies, and retention
+      ownership remain explicitly unresolved.
 - [ ] Treat `C:/tmp/Tear-main-publication` as forbidden for development and
       deployment. It is an unregistered, divergent copy and is the likely
       residue behind the earlier `main is already used by worktree` conflict.

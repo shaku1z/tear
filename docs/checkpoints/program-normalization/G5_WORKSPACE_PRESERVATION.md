@@ -82,27 +82,36 @@ preservation manifest, and compared SHA-256/path identity with the canonical
 game tree and all other hashed preservation roots. It did not mutate, copy,
 delete, quarantine, or descend into protected content.
 
-External evidence: `g5-preserved-copy-comparison-5f83b1c.json`, SHA-256
-`a363d43a10d6ecaea48963209c27faec781a6a4f82dce522731edf30c27dda7b` in the
-same dated archive group. The canonical content reference was clean `main`
-equal to `origin/main` at `5f83b1c`; the temporary clean evidence worktree was
-removed after the read-only run.
+The original v1 evidence remains immutable at
+`g5-preserved-copy-comparison-5f83b1c.json` (SHA-256
+`a363d43a10d6ecaea48963209c27faec781a6a4f82dce522731edf30c27dda7b`). A
+strict v2 rerun was written only as the new file
+`g5-preserved-copy-comparison-5f83b1c-v2.json` (SHA-256
+`ffc0de545717b9b14345f55f95e3f6117e0ab2960b35957cd2443bdb5c5f567a`) in the
+same dated archive group. It required the exact manifest SHA-256 values, exact
+clean-main expected head, canonical GitHub origin, safe realpaths, and an
+existing archive-group output parent. The canonical content reference was
+clean `main` equal to `origin/main` at `5f83b1c`; the temporary clean evidence
+worktree was removed after the read-only run.
 
 - `Tear-main-publication`: 1,267 manifest entries; 1,265 hashable entries,
-  zero hash mismatches/missing files, zero content with no canonical/corpus/
-  peer match, 1,156 canonical exact-path matches, 94 canonical path conflicts,
+  zero hash mismatches/missing files, 5 unmatched contents (including
+  canonical path conflicts with no equal SHA elsewhere), 1,156 canonical
+  exact-path matches, 94 canonical path conflicts,
   2 canonical content duplicates, 13 preservation exact-path matches, and 2
   protected/unhashed entries (`node_modules` and `src/presentation/ui-tokens.ts`).
 - `Tear-receipt-clean`: 1,240 manifest entries; 1,238 hashable entries,
-  zero hash mismatches/missing files, zero content with no canonical/corpus/
-  peer match, 1,042 canonical exact-path matches, 185 canonical path conflicts,
+  zero hash mismatches/missing files, 1 unmatched content (including a
+  canonical path conflict with no equal SHA elsewhere), 1,042 canonical
+  exact-path matches, 185 canonical path conflicts,
   2 canonical content duplicates, 9 preservation exact-path matches, and 2
   protected/unhashed entries with the same paths.
 
-The result supports “no unmatched hashable unique files” for these two copies,
-but does not authorize disposal: canonical path conflicts are retained for
-review, protected content remains unknown by policy, and the other receipt
-copies (`Tear-receipt-clean2`/`3`) were not dispositioned by this slice.
+The v2 result does not authorize disposal: unmatched contents and canonical
+path conflicts are retained for review, protected content remains unknown by
+policy, and the other receipt copies (`Tear-receipt-clean2`/`3`) were not
+dispositioned by this slice. The comparator is read-only and its output never
+authorizes disposal, deletion, overwrite, or mutation.
 
 ## Soundtrack Desk canonical-root contract
 
