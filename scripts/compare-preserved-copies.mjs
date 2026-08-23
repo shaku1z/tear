@@ -31,6 +31,7 @@ function normalizeOriginUrl(value) {
   if (urlMatch) {
     try {
       const parsed = new URL(raw);
+      if (parsed.username !== "" || parsed.password !== "" || parsed.port !== "") return "";
       raw = `${parsed.hostname}${parsed.pathname}`;
     } catch {
       return "";
@@ -269,6 +270,7 @@ function validateSelectedSourceBindings(entries, targetNames) {
       const record = records[0];
       if (typeof record.id !== "string" || typeof record.path !== "string" || record.name !== sourceName) throw new Error(`selected source-root record is incomplete: ${sourceName}`);
       const sourceRoot = path.resolve(record.path);
+      assertNoReparsePath(sourceRoot, `selected source root ${sourceName}`);
       const rootArgument = typeof record.rootArgument === "string" ? record.rootArgument : rootArgumentForPath(entry.manifest, sourceRoot);
       const bindingKey = `${record.id}\u0000${sourceName}\u0000${sourceRoot.toLowerCase()}\u0000${rootArgument}`;
       bindings.set(bindingKey, { sourceId: record.id, sourceName, sourceRoot, rootArgument, manifest: entry.manifest, destination: entry.manifest.destination?.path });
@@ -560,7 +562,16 @@ function main() {
     if (!options.payloadRoot || !options.archiveGroupRoot || !options.expectedHead || !options.output || options.manifestPaths.length === 0) throw new Error("--payload, --archive-group-root, --expected-head, --manifest, and --output are required");
     if (options.expectedManifestSha256.length !== options.manifestPaths.length) throw new Error("every --manifest requires exactly one --manifest-sha256");
     const output = path.resolve(options.output);
-    if (fs.existsSync(output)) throw new Error(`output must be new-only and must not already exist: ${output}`);
+    const outputExists = (() => {
+      try {
+        fs.lstatSync(output);
+        return true;
+      } catch (error) {
+        if (error.code === "ENOENT") return false;
+        throw error;
+      }
+    })();
+    if (outputExists) throw new Error(`output must be new-only and must not already exist: ${output}`);
     if (isInside(options.payloadRoot, output) || isInside(options.repoRoot, output)) throw new Error("output must remain outside the canonical repository and preserved payload");
     const outputParent = path.dirname(output);
     if (!fs.existsSync(outputParent) || !fs.lstatSync(outputParent).isDirectory()) throw new Error(`output parent must be an existing directory: ${outputParent}`);
@@ -569,7 +580,13 @@ function main() {
     const report = comparePreservedCopies(options);
     assertNoReparsePath(outputParent, "output parent before write", { allowMissingFinal: false });
     assertRealPathInside(options.archiveGroupRoot, outputParent, "output parent before write", true);
-    if (fs.existsSync(output)) throw new Error(`output was created concurrently and will not be overwritten: ${output}`);
+    try {
+      fs.lstatSync(output);
+      throw new Error(`output was created concurrently and will not be overwritten: ${output}`);
+    } catch (error) {
+      if (error.message.includes("output was created concurrently")) throw error;
+      if (error.code !== "ENOENT") throw error;
+    }
     fs.writeFileSync(output, `${JSON.stringify(report, null, 2)}\n`, "utf8");
     const summary = report.copies.map((copy) => `${copy.sourceName}: ${copy.summary.manifestEntries} entries, ${copy.summary.unmatchedContent} unmatched, ${copy.summary.duplicateContent} duplicate, ${copy.summary.protectedUnhashedEntries} protected/unhashed`).join("; ");
     console.log(`preserved-copy comparison written: ${output}`);
