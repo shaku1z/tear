@@ -2,8 +2,8 @@ import { installPrimaryMusicBackend } from "./music-backend-registry";
 import { BiomeStemBackend, type LoadedCueRef } from "./stems/biome-stem-backend";
 import { StemCueMusicBackend } from "./stems/stem-cue-backend";
 import type { StemCueManifest } from "./stems/types";
-import type { SignalCatalog } from "./signal/catalog";
-import { FALLBACK_MUSIC_ROUTING, loadMusicRouting } from "./signal/music-routing-loader";
+import { parseMusicCatalog, type MusicCatalog } from "./music/catalog";
+import { FALLBACK_MUSIC_ROUTING, loadMusicRouting } from "./music/music-routing-loader";
 import { requestedFoundryPreview } from "./foundry-preview";
 
 /** Stage name (music `biomeId`) → recorded cue id. */
@@ -25,7 +25,7 @@ const ROUTED_CUE_IDS = [
  * works actually playable. Without this, `pickNext` can return a work the backend
  * has never heard of and routing silently falls back to canonical (audit D2).
  */
-function playableCueIds(catalog: SignalCatalog | null): readonly string[] {
+function playableCueIds(catalog: MusicCatalog | null): readonly string[] {
   if (!catalog) return ROUTED_CUE_IDS;
   const fromCatalog = catalog.works
     .filter((work) => work.versions["adaptive-game"]?.available === true)
@@ -62,9 +62,9 @@ export function requestedStemsMode(): { mode: "biome" } | { mode: "single"; cueI
 /** Installs the biome-routed recorded-cue engine as the primary music backend. */
 export async function installBiomeStemBackend(): Promise<boolean> {
   try {
-    // THE SIGNAL catalog is optional: without it, routing stays canonical.
+    // The Music catalog is optional: without it, routing stays canonical.
     const catalog = await fetch(new URL("audio/catalog.json", document.baseURI).href)
-      .then((r) => (r.ok ? (r.json() as Promise<SignalCatalog>) : null))
+      .then((r) => (r.ok ? r.json().then(parseMusicCatalog) : null))
       .catch(() => null);
     const routing = await loadMusicRouting();
     const settled = await Promise.allSettled(playableCueIds(catalog).map(fetchCue));

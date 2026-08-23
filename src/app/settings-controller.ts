@@ -1,7 +1,7 @@
 import type { LegacyAudioCompatibility } from "../audio/legacy-live-audio";
 import { setMusicMode } from "../audio/music-mode";
-import { MENU_MUSIC_DEFAULT, isMenuMusicChoice, setMenuMusic } from "../audio/signal/loadout";
-import { isStationChoice, setActiveStation } from "../audio/signal/active-station";
+import { MENU_MUSIC_DEFAULT, isMenuMusicChoice, setMenuMusic } from "../audio/music/loadout";
+import { isStationChoice, setActiveStation } from "../audio/music/active-station";
 import { sanitizeCinematicPreference, type CinematicPreference } from "./cinematic-preference";
 
 export type { CinematicPreference } from "./cinematic-preference";
@@ -51,9 +51,9 @@ export interface GameSettings extends Record<string, unknown> {
   glyphStyle: GlyphPreference;
   autoPauseDisconnect: boolean;
   musicMode: MusicModePreference;
-  /** THE SIGNAL: which work plays on the menu/shell ("default" = canonical). */
+  /** Music: which work plays on the menu/shell ("default" = canonical). */
   menuMusic: string;
-  /** THE SIGNAL: active radio station ("canonical" = Director mode). */
+  /** Music: active radio station ("canonical" = Director mode). */
   station: string;
 }
 

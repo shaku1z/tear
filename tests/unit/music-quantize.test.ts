@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextBoundaryTime, secondsPerBar } from "../../src/audio/signal/quantize";
+import { nextBoundaryTime, secondsPerBar } from "../../src/audio/music/quantize";
 
 describe("phrase quantization", () => {
   it("computes bar length from tempo and metre", () => {

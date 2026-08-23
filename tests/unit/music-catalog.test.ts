@@ -4,15 +4,17 @@ import { describe, expect, it } from "vitest";
 import {
   findStation,
   findWork,
+  musicCatalogSemanticProjection,
+  parseMusicCatalog,
   selectVersion,
   stationWorks,
   type MusicRights,
-  type SignalCatalog,
-} from "../../src/audio/signal/catalog";
+} from "../../src/audio/music/catalog";
 
-const catalog = JSON.parse(
+const authoredCatalog = JSON.parse(
   readFileSync(resolve(import.meta.dirname, "../../public/audio/catalog.json"), "utf8"),
-) as SignalCatalog;
+) as Record<string, unknown>;
+const catalog = parseMusicCatalog(authoredCatalog);
 
 const EXPECTED_WORK_IDS = [
   "fillet",
@@ -62,9 +64,9 @@ function expectedRights(workId: string): MusicRights {
   };
 }
 
-describe("THE SIGNAL catalog", () => {
+describe("Music catalog", () => {
   it("loads every source work with a playable adaptive cue", () => {
-    expect(catalog.format).toBe("tear-signal-catalog");
+    expect(catalog.format).toBe("tear-music-catalog");
     expect(catalog.works.map((work) => work.id)).toEqual([...EXPECTED_WORK_IDS]);
     for (const work of catalog.works) {
       const adaptive = work.versions["adaptive-game"];
@@ -124,5 +126,13 @@ describe("THE SIGNAL catalog", () => {
     for (const work of catalog.works) {
       expect(work.rights, work.id).toEqual(expectedRights(work.id));
     }
+  });
+
+  it("normalizes the legacy catalog format without changing semantic content or cue IDs", () => {
+    const legacy = parseMusicCatalog({ ...authoredCatalog, format: "tear-signal-catalog" });
+    expect(legacy).toEqual(catalog);
+    expect(musicCatalogSemanticProjection(legacy)).toEqual(musicCatalogSemanticProjection(catalog));
+    expect(legacy.works.flatMap((work) => Object.values(work.versions).map((version) => version.cue)))
+      .toEqual(catalog.works.flatMap((work) => Object.values(work.versions).map((version) => version.cue)));
   });
 });

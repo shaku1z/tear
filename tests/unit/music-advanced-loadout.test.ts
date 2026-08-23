@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import type { SignalCatalog } from "../../src/audio/signal/catalog";
-import { createStationState } from "../../src/audio/signal/station";
+import type { MusicCatalog } from "../../src/audio/music/catalog";
+import { createStationState } from "../../src/audio/music/station";
 import {
   DEFAULT_LOADOUT,
   effectivePolicy,
@@ -10,11 +10,11 @@ import {
   resolveSlot,
   slotForBiome,
   type AdvancedLoadout,
-} from "../../src/audio/signal/advanced-loadout";
+} from "../../src/audio/music/advanced-loadout";
 
 const catalog = JSON.parse(
   readFileSync(resolve(import.meta.dirname, "../../public/audio/catalog.json"), "utf8"),
-) as SignalCatalog;
+) as MusicCatalog;
 
 const opts = (seed = 1) => ({
   catalog, context: "gameplay" as const, stationState: createStationState(), seed,

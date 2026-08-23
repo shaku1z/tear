@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { FALLBACK_MUSIC_ROUTING } from "../../src/audio/signal/music-routing-loader";
-import { resolveMusicRoute } from "../../src/audio/signal/music-routing-resolver";
-import { validateMusicRoutingManifest } from "../../src/audio/signal/music-routing-validate";
+import { FALLBACK_MUSIC_ROUTING } from "../../src/audio/music/music-routing-loader";
+import { resolveMusicRoute } from "../../src/audio/music/music-routing-resolver";
+import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
 
 describe("data-driven music routing", () => {
   it("reproduces the accepted canonical map for each campaign biome", () => {

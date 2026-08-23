@@ -5,13 +5,13 @@ import {
   nowPlayingLabel,
   onNowPlayingChange,
   setNowPlaying,
-} from "../../src/audio/signal/now-playing";
+} from "../../src/audio/music/now-playing";
 import {
   getActiveStation,
   isStationChoice,
   setActiveStation,
   stationLabel,
-} from "../../src/audio/signal/active-station";
+} from "../../src/audio/music/active-station";
 
 describe("Now Playing", () => {
   it("labels the card with work and station", () => {
@@ -24,6 +24,11 @@ describe("Now Playing", () => {
     setNowPlaying({ workId: "the-source", title: "The Source", stationId: null, stationName: null, tier: 0 });
     expect(nowPlayingLabel()).toBe("THE SOURCE");
     expect(nowPlayingDetail()).toContain("BREATH");
+  });
+
+  it("uses Music in empty-state and detail accessibility labels", () => {
+    expect(nowPlayingLabel({ workId: "", title: "—", stationId: null, stationName: null, tier: 0 })).toBe("MUSIC — NO TRACK");
+    expect(nowPlayingDetail({ workId: "a", title: "A", stationId: null, stationName: null, tier: 0 })).toContain("MUSIC");
   });
 
   it("notifies listeners only when something actually changed", () => {

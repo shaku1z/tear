@@ -1,19 +1,19 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import type { SignalCatalog } from "../../src/audio/signal/catalog";
+import type { MusicCatalog } from "../../src/audio/music/catalog";
 import {
   createStationState,
   pickNext,
   remember,
   toggleFavourite,
-} from "../../src/audio/signal/station";
+} from "../../src/audio/music/station";
 
 const catalog = JSON.parse(
   readFileSync(resolve(import.meta.dirname, "../../public/audio/catalog.json"), "utf8"),
-) as SignalCatalog;
+) as MusicCatalog;
 
-describe("THE SIGNAL station engine", () => {
+describe("Music station engine", () => {
   it("picks a gameplay-safe entry from a station", () => {
     const entry = pickNext(catalog, "cutline", "gameplay", createStationState(), 1);
     expect(entry).not.toBeNull();
