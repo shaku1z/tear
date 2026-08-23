@@ -810,6 +810,15 @@ authority indexes are `docs/README.md` and `plans/README.md`; they classify the
 current tree without claiming that any later move or workspace cleanup is
 complete.
 
+This G5 docs-checker slice adds `scripts/check-docs.mjs`, its focused permanent
+`tests/docs-authority-checker.test.mjs` coverage, and the `check:docs`/`test:docs`
+package commands, both gated immediately after `requirements:check` in
+`check:functional`. The checker scans only tracked root/docs/plans/tear-wiki
+Markdown, validates local links without network access, enforces the exact
+nine-file root table, and asserts the ten fixed TearBench paths remain present.
+No document move, workspace cleanup, dependency change, or production mutation
+is claimed.
+
 **Goal:** Make authority obvious without destabilizing the working architecture.
 
 ### Intended game repository information architecture
@@ -859,7 +868,10 @@ This is a target classification, not permission for a bulk move.
       relocate it only after replacement commands are documented.
 - [ ] Separate generated TearBench catalogs from narrative docs only through an
       atomic scripts+paths+CI migration. Do not move hash-bound files manually.
-- [ ] Add a link/path checker and a documentation authority check.
+- [x] Add `scripts/check-docs.mjs` as the scoped link/path and documentation
+      authority check; `pnpm check:docs` is included immediately after
+      `requirements:check` in the functional gate, with focused `test:docs`
+      coverage for canonical success and negative link/table cases.
 - [ ] Add artifact retention commands/policy; generated artifacts remain
       ignored and never enter deployment bundles.
 - [ ] Add `pnpm check:workspace` to verify canonical-root identity, expected
