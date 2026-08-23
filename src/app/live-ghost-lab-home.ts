@@ -10,7 +10,7 @@ export class LiveGhostLabHomeController {
       id: "ghostlab",
       subtitle: "local replay routes and clearly bounded availability",
       routes: Object.freeze([
-        Object.freeze({ id: "academy", label: "ACADEMY", detail: "Inspect local training custody and consent decisions." }),
+        Object.freeze({ id: "training-archive", label: "TRAINING ARCHIVE", detail: "Inspect local training custody and consent decisions." }),
         Object.freeze({ id: "foundry", label: "FOUNDRY STATUS", detail: "Read local recovery and schedule projections." }),
         Object.freeze({ id: "vault", label: "REPLAY VAULT", detail: "Open local capsules; Theater and Coach stay capsule-gated." }),
         Object.freeze({ id: "botevidence", label: "GAME AGENT EVIDENCE", detail: "Read one exact retained Game Agent evaluation report when available." }),

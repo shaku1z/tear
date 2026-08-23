@@ -5,7 +5,7 @@ export type TearAcademyInspectionState =
   | Readonly<{ status: "ready"; snapshot: TearAcademyInspectionSnapshotV1 }>
   | Readonly<{ status: "unavailable"; reason: string }>;
 
-/** Async persistence boundary for the synchronous Academy screen renderer. */
+/** Async persistence boundary for the synchronous Training Archive screen renderer. */
 export class TearAcademyInspectionController {
   #state: TearAcademyInspectionState = Object.freeze({ status: "loading" });
   #loading: Promise<TearAcademyInspectionState> | undefined;
@@ -13,7 +13,7 @@ export class TearAcademyInspectionController {
 
   constructor(stores: TearAcademyInspectionStores | undefined) {
     this.#stores = stores;
-    if (this.#stores === undefined) this.#state = Object.freeze({ status: "unavailable", reason: "Academy storage is unavailable in this runtime" });
+    if (this.#stores === undefined) this.#state = Object.freeze({ status: "unavailable", reason: "Training Archive storage is unavailable in this runtime" });
   }
 
   snapshot(): TearAcademyInspectionState { return this.#state; }
@@ -26,7 +26,7 @@ export class TearAcademyInspectionController {
       this.#loading = undefined;
       return this.#state;
     }).catch((error: unknown) => {
-      this.#state = Object.freeze({ status: "unavailable", reason: error instanceof Error ? error.message : "Academy storage could not be read" });
+      this.#state = Object.freeze({ status: "unavailable", reason: error instanceof Error ? error.message : "Training Archive storage could not be read" });
       this.#loading = undefined;
       return this.#state;
     });

@@ -321,7 +321,7 @@
       "owner": "Training data custody/consent owner with Academy routes and headless intake owner",
       "compatibilityStrategy": "Dual-read Academy records and route aliases; canonical-write Training Archive without expanding trainer execution authority.",
       "removalCheckpoint": {
-        "id": "G4-B-TRAINING-ARCHIVE",
+        "id": "G4-G-TRAINING-ARCHIVE",
         "condition": "Remove Academy aliases after candidate/corpus/consent/custody/inspection/policy/dataset artifacts, privacy fixtures, and headless intake gates pass."
       }
     },
@@ -1417,7 +1417,7 @@
           "tests/unit/agent-academy.test.ts"
         ],
         "expiry": {
-          "checkpoint": "G4-B-TRAINING-ARCHIVE",
+          "checkpoint": "G4-G-TRAINING-ARCHIVE",
           "condition": "Remove only after all Academy record readers/writers use canonical labels."
         }
       },
@@ -1434,7 +1434,7 @@
           "tests/unit/screen-renderers.test.ts"
         ],
         "expiry": {
-          "checkpoint": "G4-B-TRAINING-ARCHIVE",
+          "checkpoint": "G4-G-TRAINING-ARCHIVE",
           "condition": "Remove after Training Archive route and custody copy pass."
         }
       },
@@ -1451,7 +1451,7 @@
           "tests/browser-academy-inspection.js"
         ],
         "expiry": {
-          "checkpoint": "G4-B-TRAINING-ARCHIVE",
+          "checkpoint": "G4-G-TRAINING-ARCHIVE",
           "condition": "Remove after canonical Training Archive copy and accessibility labels ship."
         }
       },
@@ -1468,8 +1468,25 @@
           "check:c30:foundation"
         ],
         "expiry": {
-          "checkpoint": "G4-B-TRAINING-ARCHIVE",
+          "checkpoint": "G4-G-TRAINING-ARCHIVE",
           "condition": "Remove after canonical intake labels and custody evidence pass."
+        }
+      },
+      {
+        "id": "compat-training-archive-presentation-facade",
+        "pathPattern": "src/presentation/screens/training-archive.ts",
+        "termIds": [
+          "training-archive"
+        ],
+        "owner": "Training Archive presentation facade owner",
+        "reason": "The canonical presentation facade must reference the preserved Academy renderer until its implementation can be renamed without changing the screen contract.",
+        "testEvidence": [
+          "tests/unit/training-archive-compat.test.ts",
+          "tests/unit/screen-renderers.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-G-TRAINING-ARCHIVE",
+          "condition": "Remove after the Training Archive renderer implementation and screen contract are independently canonical."
         }
       },
       {
@@ -1555,7 +1572,7 @@
         "reason": "Academy actions remain a typed compatibility route until Training Archive is canonical.",
         "testEvidence": ["tests/unit/live-screen-action-bindings.test.ts", "tests/unit/app-legacy-state-controller.test.ts"],
         "expiry": {
-          "checkpoint": "G4-B-TRAINING-ARCHIVE",
+          "checkpoint": "G4-G-TRAINING-ARCHIVE",
           "condition": "Remove after Academy action aliases route to canonical Training Archive actions."
         }
       },

@@ -13,6 +13,7 @@ import { AchievementToastController } from "./achievement-toast-controller";
 import { TouchOnboardingController } from "./touch-onboarding-controller";
 
 export { createLiveAcademyScreen } from "./live-academy-screen";
+export { createLiveTrainingArchiveScreen } from "./training-archive";
 export { createLiveFoundryScreen } from "./live-foundry-screen";
 export { createLiveReplayHub, createLiveGhostLabHome } from "./replay-hub";
 export { LiveBotEvidenceController } from "./live-bot-evidence-controller";

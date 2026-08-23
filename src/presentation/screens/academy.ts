@@ -1,5 +1,6 @@
 import type { AcademyScreenView, ScreenRenderContext } from "./contracts";
 import { backControl } from "./screen-primitives";
+import { TRAINING_ARCHIVE_ACTIONS } from "../../agents/training-archive";
 
 export function createAcademyRenderers(context: ScreenRenderContext) {
   return Object.freeze({
@@ -7,14 +8,14 @@ export function createAcademyRenderers(context: ScreenRenderContext) {
       const { ui, canvas, width } = context;
       const panelX = width / 2 - 320;
       let y = 120;
-      ui.header(canvas, "ACADEMY", view.subtitle, context.enterAmount);
+      ui.header(canvas, "TRAINING ARCHIVE", view.subtitle, context.enterAmount);
       ui.panel(canvas, panelX, y, 640, Math.max(160, 56 + view.rows.length * 34));
       y += 38;
-      if (view.status === "loading") ui.text(canvas, "Reading Academy custody...", width / 2, y, ui.t.type.body, "center", ui.t.alpha.muted);
+      if (view.status === "loading") ui.text(canvas, "Reading Training Archive custody...", width / 2, y, ui.t.type.body, "center", ui.t.alpha.muted);
       else if (view.status === "unavailable") {
         ui.text(canvas, view.subtitle, width / 2, y, ui.t.type.body, "center", ui.t.alpha.muted);
         ui.text(canvas, "Check browser storage permissions, then try again.", width / 2, y + 34, ui.t.type.caption, "center", ui.t.alpha.muted);
-        context.enqueue({ x: width / 2 - 110, y: y + 62, w: 220, h: 46, label: "TRY AGAIN", action: { type: "academy.retry" } });
+        context.enqueue({ x: width / 2 - 110, y: y + 62, w: 220, h: 46, label: "TRY AGAIN", action: { type: TRAINING_ARCHIVE_ACTIONS.retry } });
       }
       else {
         view.rows.forEach((row) => { ui.text(canvas, row.label, width / 2 - 288, y, ui.t.type.body, "left"); ui.displayText(canvas, row.value, width / 2 + 288, y, ui.t.type.body, "right"); y += 34; });
@@ -25,13 +26,13 @@ export function createAcademyRenderers(context: ScreenRenderContext) {
         const recordHeight = Math.max(84, 46 + visibleRecords.length * 74);
         ui.panel(canvas, panelX, recordY, 640, recordHeight);
         ui.sectionLabel(canvas, `DURABLE RECORDS ${String(recordOffset + 1)}-${String(recordOffset + visibleRecords.length)} / ${String(view.records.length)}`, panelX + 24, recordY + 30, 592);
-        if (view.records.length === 0) ui.text(canvas, "No governed records are stored in this Academy.", panelX + 24, recordY + 64, ui.t.type.caption, "left", ui.t.alpha.muted);
+        if (view.records.length === 0) ui.text(canvas, "No governed records are stored in this Training Archive.", panelX + 24, recordY + 64, ui.t.type.caption, "left", ui.t.alpha.muted);
         else visibleRecords.forEach((record, index) => {
           const recordTop = recordY + 52 + index * 74;
           ui.displayText(canvas, record.id, panelX + 24, recordTop, ui.t.type.label, "left");
           ui.text(canvas, record.state.toUpperCase(), panelX + 592, recordTop, ui.t.type.caption, "right", ui.t.alpha.soft);
           ui.text(canvas, record.detail, panelX + 24, recordTop + 20, ui.t.type.caption, "left", ui.t.alpha.muted);
-          if (record.canWithdrawModelTraining && record.candidateHash !== undefined) context.enqueue({ x: panelX + 332, y: recordTop + 30, w: 260, h: 36, label: "WITHDRAW TRAINING CONSENT", action: { type: "academy.record.withdrawModelTraining", candidateHash: record.candidateHash } });
+          if (record.canWithdrawModelTraining && record.candidateHash !== undefined) context.enqueue({ x: panelX + 332, y: recordTop + 30, w: 260, h: 36, label: "WITHDRAW TRAINING CONSENT", action: { type: TRAINING_ARCHIVE_ACTIONS.withdrawModelTraining, candidateHash: record.candidateHash } });
         });
         const manifestY = recordY + recordHeight + 20;
         const manifestPageSize = 3;
@@ -63,8 +64,8 @@ export function createAcademyRenderers(context: ScreenRenderContext) {
           ui.sectionLabel(canvas, "HUMAN CALIBRATION CONSENT", panelX + 24, consentY + 30, 592);
           ui.displayText(canvas, calibration.state.replaceAll("-", " ").toUpperCase(), panelX + 24, consentY + 56, ui.t.type.label, "left");
           ui.text(canvas, calibration.detail, panelX + 24, consentY + 78, ui.t.type.caption, "left", ui.t.alpha.muted);
-          if (calibration.canOptIn) context.enqueue({ x: panelX + 332, y: consentY + 52, w: 260, h: 40, label: "ALLOW ANONYMOUS CALIBRATION", action: { type: "academy.humanCalibration.optIn", consent: "anonymous-improvement" } });
-          if (calibration.canRevoke) context.enqueue({ x: panelX + 392, y: consentY + 52, w: 200, h: 40, label: "REVOKE CONSENT", action: { type: "academy.humanCalibration.revoke" } });
+          if (calibration.canOptIn) context.enqueue({ x: panelX + 332, y: consentY + 52, w: 260, h: 40, label: "ALLOW ANONYMOUS CALIBRATION", action: { type: TRAINING_ARCHIVE_ACTIONS.humanCalibrationOptIn, consent: "anonymous-improvement" } });
+          if (calibration.canRevoke) context.enqueue({ x: panelX + 392, y: consentY + 52, w: 200, h: 40, label: "REVOKE CONSENT", action: { type: TRAINING_ARCHIVE_ACTIONS.humanCalibrationRevoke } });
         }
         const programY = consentY + consentHeight + (calibration === undefined ? 0 : 20);
         const programs = view.daggerPrograms ?? [];
@@ -74,16 +75,16 @@ export function createAcademyRenderers(context: ScreenRenderContext) {
         const programHeight = Math.max(84, 46 + visiblePrograms.length * 74);
         ui.panel(canvas, panelX, programY, 640, programHeight);
         ui.sectionLabel(canvas, `DAGGER PROGRAMS ${String(programOffset + 1)}-${String(programOffset + visiblePrograms.length)} / ${String(programs.length)}`, panelX + 24, programY + 30, 592);
-        if (programs.length === 0) ui.text(canvas, "No DAgger programs are stored in this Academy.", panelX + 24, programY + 64, ui.t.type.caption, "left", ui.t.alpha.muted);
+        if (programs.length === 0) ui.text(canvas, "No DAgger programs are stored in this Training Archive.", panelX + 24, programY + 64, ui.t.type.caption, "left", ui.t.alpha.muted);
         else visiblePrograms.forEach((program, index) => {
           const programTop = programY + 52 + index * 74;
           ui.displayText(canvas, program.id, panelX + 24, programTop, ui.t.type.label, "left");
           ui.text(canvas, program.state, panelX + 592, programTop, ui.t.type.caption, "right", ui.t.alpha.soft);
           ui.text(canvas, program.detail, panelX + 24, programTop + 20, ui.t.type.caption, "left", ui.t.alpha.muted);
-          if (program.canAdvance) context.enqueue({ x: panelX + 392, y: programTop + 28, w: 200, h: 40, label: "ADVANCE PLAN", action: { type: "academy.dagger.advance", id: program.programId ?? program.id } });
+          if (program.canAdvance) context.enqueue({ x: panelX + 392, y: programTop + 28, w: 200, h: 40, label: "ADVANCE PLAN", action: { type: TRAINING_ARCHIVE_ACTIONS.daggerAdvance, id: program.programId ?? program.id } });
           if (program.canReview && program.correctionHash !== undefined) {
-            context.enqueue({ x: panelX + 392, y: programTop + 28, w: 94, h: 40, label: "ACCEPT", action: { type: "academy.dagger.review", id: program.programId ?? program.id, correctionHash: program.correctionHash, disposition: "accepted" } });
-            context.enqueue({ x: panelX + 498, y: programTop + 28, w: 94, h: 40, label: "REJECT", action: { type: "academy.dagger.review", id: program.programId ?? program.id, correctionHash: program.correctionHash, disposition: "rejected" } });
+            context.enqueue({ x: panelX + 392, y: programTop + 28, w: 94, h: 40, label: "ACCEPT", action: { type: TRAINING_ARCHIVE_ACTIONS.daggerReview, id: program.programId ?? program.id, correctionHash: program.correctionHash, disposition: "accepted" } });
+            context.enqueue({ x: panelX + 498, y: programTop + 28, w: 94, h: 40, label: "REJECT", action: { type: TRAINING_ARCHIVE_ACTIONS.daggerReview, id: program.programId ?? program.id, correctionHash: program.correctionHash, disposition: "rejected" } });
           }
         });
         const canScrollDown = recordOffset < Math.max(0, view.records.length - recordPageSize)
