@@ -677,7 +677,7 @@ function eventDestinationPath(event) {
   return typeof event.destination === "object" && event.destination !== null ? event.destination.path : event.destination;
 }
 
-function validateJournalIntegrity(journal, core) {
+function validateJournalIntegrity(journal, core, { requireApplyComplete = false } = {}) {
   const sourceByName = new Map(core.sources.map((source) => [source.name.toLowerCase(), source]));
   const sourceIndex = new Map(core.sources.map((source, index) => [source.name, index]));
   const started = new Set();
@@ -688,6 +688,7 @@ function validateJournalIntegrity(journal, core) {
   let destinationCreated = false;
   let resumePreflightCompleted = false;
   let applyCompleted = false;
+  let applyCompleteCount = 0;
 
   for (const [index, record] of journal.records.entries()) {
     const event = record.event;
@@ -735,20 +736,22 @@ function validateJournalIntegrity(journal, core) {
       case "apply-complete":
         if (!destinationCreateStarted || applyCompleted || terminal.size !== core.sources.length || event.sourceCount !== core.sources.length || !samePath(eventDestinationPath(event), core.destination)) fail(`journal apply-complete is invalid: ${record.name}`);
         applyCompleted = true;
+        applyCompleteCount += 1;
         break;
       default:
         fail(`journal event type is not allowed: ${record.name}`);
     }
   }
   if (!runStarted || !preflightCompleted || !destinationCreateStarted) fail("journal lifecycle is incomplete");
+  if (requireApplyComplete && applyCompleteCount !== 1) fail("journal must contain exactly one apply-complete terminal event before receipt validation");
 }
 
 function validateCompletionReceipt(receiptRecord, journalPath, core) {
+  const journal = journalFiles(journalPath);
+  validateJournalIntegrity(journal, core, { requireApplyComplete: true });
   const receipt = receiptRecord.receipt;
   if (receipt.format !== WORKSPACE_PRESERVATION_QUARANTINE_FORMAT || receipt.schemaVersion !== 1 || receipt.kind !== "completion-receipt" || receipt.status !== "complete") fail("completion receipt format or status is invalid");
   if (receipt.reportSha256 !== core.reportRead.sha256 || receipt.manifestSha256 !== core.manifestRead.sha256 || receipt.policySha256 !== core.policySha256 || String(receipt.head).toLowerCase() !== core.evidenceHead || !samePath(receipt.destination, core.destination) || receipt.sourceCount !== core.sources.length || receipt.mutation !== "same-volume-whole-root-rename-only") fail("completion receipt identity does not match supplied evidence");
-  const journal = journalFiles(journalPath);
-  validateJournalIntegrity(journal, core);
   if (receipt.eventCount !== journal.records.length || receipt.eventsSha256 !== eventHash(journal)) fail("completion receipt event hash or count does not match the immutable journal");
   return receipt;
 }
@@ -779,6 +782,8 @@ function performMoves(core, journalPath, options, journal) {
     if (options.interruptAfterMoves !== undefined && moveCount >= options.interruptAfterMoves) throw new WorkspacePreservationQuarantineError("injected interruption after whole-root rename");
     writeEvent(journalPath, "move-complete", { sourceName: source.name, sourcePath: source.path, destinationPath: targetPath });
   }
+  if (typeof options.beforeFinalCompletionVerification === "function") options.beforeFinalCompletionVerification(core);
+  preflightCompleted(core);
   writeEvent(journalPath, "apply-complete", { sourceCount: core.sources.length, destination: core.destination });
   return writeReceipt(journalPath, core, core.sources.length, journalFiles(journalPath).records.length);
 }

@@ -309,6 +309,58 @@ test("rejects fabricated journal event identity and tampered completion receipt"
   }
 });
 
+test("requires exactly one authenticated apply-complete event before accepting a receipt", () => {
+  const fixture = createFixture();
+  try {
+    const evidence = createEvidence(fixture);
+    runWorkspacePreservationQuarantine(options(fixture, evidence));
+    const applyCompleteName = fs.readdirSync(evidence.journalPath).find((name) => {
+      if (!name.endsWith(".json")) return false;
+      return JSON.parse(fs.readFileSync(path.join(evidence.journalPath, name), "utf8")).type === "apply-complete";
+    });
+    assert.notEqual(applyCompleteName, undefined);
+    fs.rmSync(path.join(evidence.journalPath, applyCompleteName));
+    const eventNames = fs.readdirSync(evidence.journalPath)
+      .filter((name) => /^\d{6}-[a-z0-9-]+\.json$/u.test(name))
+      .sort();
+    const eventsHash = createHash("sha256");
+    for (const name of eventNames) eventsHash.update(fs.readFileSync(path.join(evidence.journalPath, name)));
+    const receiptPath = path.join(evidence.journalPath, "completion-receipt.json");
+    const receipt = JSON.parse(fs.readFileSync(receiptPath, "utf8"));
+    receipt.eventCount = eventNames.length;
+    receipt.eventsSha256 = eventsHash.digest("hex");
+    fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+    assert.throws(() => runWorkspacePreservationQuarantine(options(fixture, evidence, { resume: true })), /exactly one apply-complete/u);
+  } finally {
+    cleanup(fixture);
+  }
+});
+
+test("final destination verification blocks certification after a post-last-move mutation and resumes safely", () => {
+  const fixture = createFixture();
+  try {
+    const evidence = createEvidence(fixture);
+    const concurrentMutation = path.join(evidence.destination, "gsm-one", "post-last-move-mutation.txt");
+    assert.throws(() => runWorkspacePreservationQuarantine(options(fixture, evidence, {
+      beforeFinalCompletionVerification: () => {
+        fs.writeFileSync(concurrentMutation, "concurrent mutation\n", "utf8");
+      },
+    })), /whole-root evidence was added/u);
+    assert.equal(fs.existsSync(path.join(evidence.journalPath, "completion-receipt.json")), false);
+    const eventTypes = fs.readdirSync(evidence.journalPath)
+      .filter((name) => /^\d{6}-[a-z0-9-]+\.json$/u.test(name))
+      .map((name) => JSON.parse(fs.readFileSync(path.join(evidence.journalPath, name), "utf8")).type);
+    assert.equal(eventTypes.includes("apply-complete"), false);
+    assert.equal(eventTypes.includes("move-complete"), true);
+    fs.rmSync(concurrentMutation);
+    const receipt = runWorkspacePreservationQuarantine(options(fixture, evidence, { resume: true }));
+    assert.equal(receipt.status, "complete");
+    assert.equal(fs.existsSync(path.join(evidence.journalPath, "completion-receipt.json")), true);
+  } finally {
+    cleanup(fixture);
+  }
+});
+
 test("CLI does not expose restore or selective-entry mutation paths", () => {
   for (const forbidden of ["--restore", "--selective", "--copy", "--delete"]) {
     const result = spawnSync(process.execPath, [applyScript, forbidden], { encoding: "utf8", stdio: "pipe" });
