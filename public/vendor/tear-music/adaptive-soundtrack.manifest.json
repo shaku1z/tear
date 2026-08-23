@@ -1,0 +1,58 @@
+{
+  "format": "tear-music-adaptive-soundtrack-release",
+  "schemaVersion": 2,
+  "product": "TEAR Music",
+  "runtime": "Adaptive Soundtrack",
+  "packageName": "@tear-music/adaptive-soundtrack",
+  "runtimeGlobal": "AdaptiveSoundtrack",
+  "entrypoints": {
+    "browser": "adaptive-soundtrack.iife.js",
+    "browserMap": "adaptive-soundtrack.iife.js.map",
+    "module": "index.mjs",
+    "commonjs": "index.js",
+    "types": "index.d.ts"
+  },
+  "manifestFile": "adaptive-soundtrack.manifest.json",
+  "compatibility": {
+    "legacy": {
+      "packageName": "@tear-score/adapter-tear",
+      "runtimeGlobal": "TearScore",
+      "browser": "tear-score.iife.js",
+      "browserMap": "tear-score.iife.js.map",
+      "manifest": "tear-score.manifest.json"
+    }
+  },
+  "engineRepository": "shaku1z/tear-music",
+  "engineCommit": "7662fc95769d2ed022593c10f308ec10f054edfc",
+  "version": "0.1.0-alpha.1",
+  "builtAt": "2026-08-23T06:35:29.104Z",
+  "bundleSha256": "906654f32f98480c3bec2c8cb0cfe46a7d2462588a25cad2177ed042c82be90c",
+  "toneVersion": "14.9.17",
+  "artifactIntegrity": {
+    "browser": {
+      "path": "adaptive-soundtrack.iife.js",
+      "bytes": 68155,
+      "sha256": "906654f32f98480c3bec2c8cb0cfe46a7d2462588a25cad2177ed042c82be90c"
+    },
+    "browserMap": {
+      "path": "adaptive-soundtrack.iife.js.map",
+      "bytes": 305031,
+      "sha256": "29dbf136040b2b13c7bccaa161571afd63e5af71f2211f0c82bc13a5fb633bdf"
+    },
+    "module": {
+      "path": "index.mjs",
+      "bytes": 67717,
+      "sha256": "9b88e9597657c44ae5830c67666d089730c156e4b17a993596e9d0c0ab3a5eb7"
+    },
+    "commonjs": {
+      "path": "index.js",
+      "bytes": 68985,
+      "sha256": "5901b7a9ded1b732a522e5c41b14b6dcdfac44d7490d6404be816cca4219250d"
+    },
+    "types": {
+      "path": "index.d.ts",
+      "bytes": 9836,
+      "sha256": "c0c44f45cf6f0ee3da0ceee9706206afd0fb102c715450635fb195b174f383b5"
+    }
+  }
+}

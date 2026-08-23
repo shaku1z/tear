@@ -9,9 +9,9 @@ import {
 } from "./tear-score-adapter";
 
 /**
- * Canonical future asset locations. The loader preloads the paired host and
+ * Canonical vendored asset locations. The loader preloads the paired host and
  * the canonical module imports that same URL relatively; keeping the pair
- * explicit avoids placeholder vendor files today.
+ * explicit prevents a partial vendor from silently selecting another host.
  */
 export const ADAPTIVE_SOUNDTRACK_MODULE_PATH =
   "vendor/tear-music/adaptive-soundtrack.esm.js";
@@ -73,6 +73,19 @@ function readModule(value: unknown): AdaptiveSoundtrackModule | null {
   };
 }
 
+export async function withPinnedToneHost<T>(tone: unknown, load: () => Promise<T>): Promise<T> {
+  const runtime = globalThis as typeof globalThis & { Tone?: unknown };
+  const hadOwnTone = Object.prototype.hasOwnProperty.call(runtime, "Tone");
+  const previousTone = runtime.Tone;
+  runtime.Tone = tone;
+  try {
+    return await load();
+  } finally {
+    if (hadOwnTone) runtime.Tone = previousTone;
+    else delete runtime.Tone;
+  }
+}
+
 const loadCanonicalModule: AdaptiveSoundtrackModuleLoader = async () => {
   if (typeof document === "undefined") {
     throw new Error("Adaptive Soundtrack ESM requires a browser document");
@@ -82,9 +95,14 @@ const loadCanonicalModule: AdaptiveSoundtrackModuleLoader = async () => {
   // module also imports this same URL relatively; the browser module cache
   // prevents a second evaluation.
   const toneHost = new URL(ADAPTIVE_SOUNDTRACK_TONE_HOST_PATH, document.baseURI).href;
-  await import(/* @vite-ignore */ toneHost);
+  const tone = (await import(/* @vite-ignore */ toneHost)) as unknown;
+  // The accepted Adaptive Soundtrack ESM release consumes the pinned Tone
+  // host through the historical global boundary. Assign the namespace loaded
+  // from the byte-pinned host explicitly; do not let a different global or
+  // browser-bundled Tone version satisfy the canonical artifact. The bridge
+  // is restored immediately after module evaluation, including rejection.
   const source = new URL(ADAPTIVE_SOUNDTRACK_MODULE_PATH, document.baseURI).href;
-  return import(/* @vite-ignore */ source);
+  return withPinnedToneHost(tone, () => import(/* @vite-ignore */ source));
 };
 
 async function loadAdaptiveSoundtrackClient(

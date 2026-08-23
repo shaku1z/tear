@@ -83,10 +83,18 @@ async function assertVisibilityLifecycle(page, baseline) {
         }
       };
     });
+    const musicVendorRequests = [];
+    page.on("request", (request) => {
+      const url = request.url();
+      if (url.includes("/vendor/tear-music/") || url.includes("/vendor/tear-score/")) {
+        musicVendorRequests.push(new URL(url).pathname);
+      }
+    });
     await page.route("**/*", (route) => {
       const url = route.request().url();
-      // This page exercises the pinned TearScore fallback specifically. Recorded
-      // stems are the normal primary backend and have their own contract suite.
+      // Recorded stems are the normal primary backend and have their own
+      // contract suite. With cues unavailable, this page exercises the
+      // canonical Adaptive Soundtrack vendor path.
       if (url.includes("/audio/cues/")) route.abort("failed");
       else if (url.startsWith(`${baseUrl}/`)) route.continue();
       else route.abort();
@@ -113,6 +121,14 @@ async function assertVisibilityLifecycle(page, baseline) {
     }));
     assert.equal(after.contexts, 1);
     assert.equal(after.audio.backend, "tear-score@0.1.0-alpha.1");
+    assert.ok(musicVendorRequests.includes("/vendor/tear-music/adaptive-soundtrack.esm.js"),
+      "canonical Adaptive Soundtrack module was evaluated");
+    assert.ok(musicVendorRequests.includes("/vendor/tear-music/tone-host-14.9.17.esm.js"),
+      "canonical paired Tone host was loaded");
+    assert.equal(musicVendorRequests.some((request) => request.includes("/vendor/tear-score/")), false,
+      "canonical success does not invoke the legacy vendor fallback");
+    assert.equal(await page.evaluate(() => Object.prototype.hasOwnProperty.call(window, "Tone")), false,
+      "canonical Tone bridge is restored after module evaluation");
     assert.equal(after.audio.resources.lifecycleInstalled, true);
     assert.equal(after.audio.resources.lifecycleListeners, 4);
     assert.deepEqual(after.audio.resources.system, {
@@ -187,10 +203,19 @@ async function assertVisibilityLifecycle(page, baseline) {
 
     const fallback = await browser.newPage();
     const fallbackErrors = [];
+    const fallbackVendorRequests = [];
     fallback.on("pageerror", (error) => fallbackErrors.push(error.stack || error.message));
+    fallback.on("request", (request) => {
+      const url = request.url();
+      if (url.includes("/vendor/tear-music/") || url.includes("/vendor/tear-score/")) {
+        fallbackVendorRequests.push(new URL(url).pathname);
+      }
+    });
     await fallback.route("**/*", (route) => {
       const url = route.request().url();
-      if (url.includes("/vendor/tear-score/") || url.includes("/audio/cues/")) route.abort("failed");
+      // Block only the canonical generation to prove the existing pinned
+      // TearScore vendor remains a working compatibility fallback.
+      if (url.includes("/vendor/tear-music/") || url.includes("/audio/cues/")) route.abort("failed");
       else if (url.startsWith(`${baseUrl}/`)) route.continue();
       else route.abort();
     });
@@ -199,8 +224,12 @@ async function assertVisibilityLifecycle(page, baseline) {
     await fallback.keyboard.press("Shift");
     await fallback.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running", undefined, { timeout: 20000 });
     const fallbackAudio = await fallback.evaluate(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot());
-    assert.equal(fallbackAudio.backend, "legacy-synth", "blocked TearScore assets select the exclusive legacy fallback");
-    assert.equal(fallbackAudio.resources.legacySequencer.running, true);
+    assert.equal(fallbackAudio.backend, "tear-score@0.1.0-alpha.1", "blocked canonical assets select the pinned TearScore fallback");
+    assert.equal(fallbackVendorRequests.includes("/vendor/tear-score/tear-score.esm.js"), true,
+      "legacy TearScore module was loaded after canonical failure");
+    assert.equal(fallbackVendorRequests.includes("/vendor/tear-score/tone-host-14.9.17.esm.js"), true,
+      "legacy paired Tone host was loaded after canonical failure");
+    assert.equal(fallbackAudio.resources.legacySequencer.running, false);
     assert.equal(fallbackAudio.resources.system.effectsBackendNodes, 15);
     await fallback.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false })));
     await fallback.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "disposed");
@@ -214,6 +243,42 @@ async function assertVisibilityLifecycle(page, baseline) {
     assert.equal(fallbackDisposed.system.effectsBackendNodes, 0);
     assert.deepEqual(fallbackErrors, []);
     await fallback.close();
+
+    const legacySynthFallback = await browser.newPage();
+    const legacySynthErrors = [];
+    legacySynthFallback.on("pageerror", (error) => legacySynthErrors.push(error.stack || error.message));
+    await legacySynthFallback.route("**/*", (route) => {
+      const url = route.request().url();
+      // Keep the pre-existing final fallback evidence: both vendored music
+      // generations and recorded cues are unavailable, so legacy synth is the
+      // only backend allowed to initialize.
+      if (url.includes("/vendor/tear-music/") || url.includes("/vendor/tear-score/") || url.includes("/audio/cues/")) route.abort("failed");
+      else if (url.startsWith(`${baseUrl}/`)) route.continue();
+      else route.abort();
+    });
+    await legacySynthFallback.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, { waitUntil: "domcontentloaded", timeout: 20000 });
+    await legacySynthFallback.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__?.audio, undefined, { timeout: 20000 });
+    await legacySynthFallback.keyboard.press("Shift");
+    await legacySynthFallback.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running", undefined, { timeout: 20000 });
+    const legacySynthAudio = await legacySynthFallback.evaluate(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot());
+    assert.equal(legacySynthAudio.backend, "legacy-synth", "blocked canonical and TearScore assets select the final legacy-synth fallback");
+    assert.equal(legacySynthAudio.resources.legacySequencer.running, true);
+    assert.equal(legacySynthAudio.resources.system.effectsBackendNodes, 15);
+    await legacySynthFallback.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false })));
+    await legacySynthFallback.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "disposed");
+    const legacySynthDisposed = await legacySynthFallback.evaluate(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().resources);
+    assert.equal(legacySynthDisposed.legacySequencer.running, false, "legacy synth interval is cleared");
+    assert.equal(legacySynthDisposed.activeVoices, 0);
+    assert.equal(legacySynthDisposed.activeVoiceGraphNodes, 0);
+    assert.equal(legacySynthDisposed.lifecycleListeners, 0);
+    assert.deepEqual(legacySynthDisposed.system, {
+      contexts: 0,
+      mixerNodes: 0,
+      effectsBackendNodes: 0,
+      temporaryMuteReasons: [],
+    });
+    assert.deepEqual(legacySynthErrors, []);
+    await legacySynthFallback.close();
   } finally {
     await browser.close();
     server.closeAllConnections();
