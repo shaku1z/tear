@@ -6,7 +6,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
-import { comparePreservedCopies } from "../scripts/compare-preserved-copies.mjs";
+import { comparePreservedCopies, writeExclusiveReport } from "../scripts/compare-preserved-copies.mjs";
 
 function git(root, argumentsList) {
   const result = spawnSync("git", ["-C", root, ...argumentsList], { encoding: "utf8", stdio: "pipe" });
@@ -199,6 +199,18 @@ test("requires an existing archive group at the comparison boundary", () => {
   const value = fixture();
   try {
     assert.throws(() => compare(value, { archiveGroupRoot: path.join(value.base, "missing") }), /archive-group-root must be an existing directory/u);
+  } finally {
+    fs.rmSync(value.base, { recursive: true, force: true });
+  }
+});
+
+test("exclusive report creation refuses a competing or pre-existing writer", () => {
+  const value = fixture();
+  try {
+    const output = path.join(value.archiveGroupRoot, "exclusive-output.json");
+    writeExclusiveReport(output, { writer: "first" });
+    assert.throws(() => writeExclusiveReport(output, { writer: "second" }), /new-only and was created concurrently or already exists/u);
+    assert.deepEqual(JSON.parse(fs.readFileSync(output, "utf8")), { writer: "first" });
   } finally {
     fs.rmSync(value.base, { recursive: true, force: true });
   }

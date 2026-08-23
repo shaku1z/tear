@@ -533,6 +533,15 @@ export function comparePreservedCopies({
   };
 }
 
+export function writeExclusiveReport(output, report) {
+  try {
+    fs.writeFileSync(output, `${JSON.stringify(report, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
+  } catch (error) {
+    if (error?.code === "EEXIST") throw new Error(`output must be new-only and was created concurrently or already exists: ${output}`, { cause: error });
+    throw error;
+  }
+}
+
 function parseArguments(argumentsList) {
   const options = { repoRoot: process.cwd(), targetNames: [], manifestPaths: [], expectedManifestSha256: [] };
   for (let index = 0; index < argumentsList.length; index += 1) {
@@ -587,7 +596,7 @@ function main() {
       if (error.message.includes("output was created concurrently")) throw error;
       if (error.code !== "ENOENT") throw error;
     }
-    fs.writeFileSync(output, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+    writeExclusiveReport(output, report);
     const summary = report.copies.map((copy) => `${copy.sourceName}: ${copy.summary.manifestEntries} entries, ${copy.summary.unmatchedContent} unmatched, ${copy.summary.duplicateContent} duplicate, ${copy.summary.protectedUnhashedEntries} protected/unhashed`).join("; ");
     console.log(`preserved-copy comparison written: ${output}`);
     console.log(summary);

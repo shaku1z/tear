@@ -163,8 +163,9 @@ This record closes only the bounded whole-root preservation lane. G5 remains
 OPEN for:
 
 - review and disposition of the remaining non-Git publication/receipt copies
-  and the forbidden divergent temporary copy (the two compared copies have no
-  unmatched hashable unique files, but conflicts/protected unknowns remain);
+  and the forbidden divergent temporary copy (v2 found 5 unmatched contents in
+  `Tear-main-publication` and 1 in `Tear-receipt-clean`; conflicts/protected
+  unknowns remain);
 - adoption of one canonical parent layout and the Soundtrack Desk canonical
   game-root discovery/configuration contract;
 - any separate artifact-retention quarantine decision and tool, which is not
